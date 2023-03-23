@@ -1,0 +1,16 @@
+intput
+output
+.idea
+__pycache__
+build
+dist
+tmp
+lib
+build.log
+*.db
+*.airunner
+main.build
+main.dist
+main.onefile-build
+settings.pickle
+.run
