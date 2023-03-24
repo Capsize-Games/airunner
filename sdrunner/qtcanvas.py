@@ -150,7 +150,10 @@ class Canvas:
 
     @property
     def current_active_image(self):
-        return self.current_layer.images[self.current_layer_index]
+        try:
+            return self.current_layer.images[self.current_layer_index]
+        except IndexError:
+            return None
 
     @property
     def current_layer(self):
@@ -665,6 +668,8 @@ class Canvas:
 
     def copy_image(self):
         im = self.current_active_image
+        if not im:
+            return
         output = io.BytesIO()
         if self.parent.is_windows:
             im.save(output, format="DIB")
