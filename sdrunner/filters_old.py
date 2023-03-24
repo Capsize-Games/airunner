@@ -1,9 +1,9 @@
 import os
-
 from PIL import ImageEnhance, Image, ImageFilter
 from PIL.ImageFilter import GaussianBlur, BoxBlur, UnsharpMask, Filter
 from PyQt6 import uic
-from aiengine.qtvar import FloatVar, IntVar
+
+from util import load_ui
 
 
 class ColorBalanceFilter(Filter):
@@ -50,8 +50,7 @@ class FilterBase:
         self.canvas = parent.canvas
 
     def show(self):
-        HERE = os.path.dirname(os.path.abspath(__file__))
-        self.filter_window = uic.loadUi(os.path.join(HERE, "..", f"pyqt/{self.ui_name}.ui"))
+        self.filter_window = load_ui(self.ui_name)
         self.filter_window.setWindowTitle(self.window_title)
 
     def cancel_filter(self):

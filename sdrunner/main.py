@@ -11,13 +11,12 @@ from PyQt6 import uic, QtCore, QtGui
 from PyQt6.QtWidgets import QApplication, QLabel, QWidget, QColorDialog, QFileDialog, QVBoxLayout
 from PyQt6.QtCore import QPoint, pyqtSlot, QRect
 from PyQt6.QtGui import QPainter, QIcon, QColor, QGuiApplication
-from aiengine.logger import logger
 from aiengine.qtvar import TQDMVar, ImageVar, MessageHandlerVar, ErrorHandlerVar
 from aiengine.settings import AIRUNNER_VERSION, MAX_SEED, AVAILABLE_SCHEDULERS_BY_ACTION, MODELS
 from qtcanvas import Canvas
 from settingsmanager import SettingsManager
 from runai_client import OfflineClient
-from windows.filters import FilterGaussianBlur, FilterBoxBlur, FilterUnsharpMask, FilterSaturation, \
+from filters import FilterGaussianBlur, FilterBoxBlur, FilterUnsharpMask, FilterSaturation, \
     FilterColorBalance, FilterPixelArt
 import qdarktheme
 
@@ -401,7 +400,10 @@ class MainWindow(QApplication):
             self.window.layer_up_button.setIcon(QtGui.QIcon(os.path.join(HERE, "src/icons/arrow-up.png")))
             self.window.layer_down_button.setIcon(QtGui.QIcon(os.path.join(HERE, "src/icons/arrow-down.png")))
             self.window.delete_layer_button.setIcon(QtGui.QIcon(os.path.join(HERE, "src/icons/delete.png")))
-            qdarktheme.setup_theme("light")
+            try:
+                qdarktheme.setup_theme("light")
+            except PermissionError:
+                pass
 
     def layer_up_button(self):
         self.canvas.move_layer_up(self.canvas.current_layer)
