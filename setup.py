@@ -1,11 +1,45 @@
-"""
-A standard python setup.py file for aiengine that allows users to install with pip
-"""
 from setuptools import setup, find_packages
 
+requirements = [
+    "aiengine==1.8.9"
+    "torch==1.13.1",
+    "torchvision==0.14.1",
+    "torchaudio==0.13.1",
+    "lightning==1.9.0",
+    "nvidia-pyindex",
+    "nvidia-tensorrt==8.4.3.1",
+    "tensorflow==2.9.3",
+    "triton==2.0.0.dev20221202",
+    "pyre-extensions==0.0.23",
+    "einops==0.6.0",
+    "ninja==1.11.1",
+    "JIT==0.2.7",
+    "xformers==0.0.16",
+    "pillow==9.4.0",
+    "ninja==1.11.1",
+    "fernet==1.0.1",
+    "pillow==9.4.0",
+    "safetensors==0.2.7",
+    "taming-transformers-rom1504==0.0.6",
+    "accelerate==0.15.0",
+    "transformers==4.26.0",
+    "bitsandbytes==0.36.0.post2",
+    "numpy==1.23.4",
+    "pyinstaller==5.7.0",
+    "scipy==1.10.0",
+    "opencv-python==4.7.0.68",
+    "deepspeed==0.8.0",
+    "zstandard",
+]
+
 setup(
-    name='sdrunner',
+    name='airunner',
     version='1.8.9',
-    description='A python library for AI',
-    author='Capsize LLC',
+    license="",
+    author="Capsize LLC",
+    author_email="contact@capsize.gg",
+    description="A Stable Diffusion GUI",
+    packages=find_packages(),
+    install_requires=requirements,
+    url="https://github.com/huggingface/diffusers",
 )
