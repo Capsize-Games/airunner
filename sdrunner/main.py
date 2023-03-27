@@ -11,8 +11,8 @@ from PyQt6 import uic, QtCore, QtGui
 from PyQt6.QtWidgets import QApplication, QLabel, QWidget, QColorDialog, QFileDialog, QVBoxLayout
 from PyQt6.QtCore import QPoint, pyqtSlot, QRect
 from PyQt6.QtGui import QPainter, QIcon, QColor, QGuiApplication
-from aiengine.qtvar import TQDMVar, ImageVar, MessageHandlerVar, ErrorHandlerVar
-from aiengine.settings import AIRUNNER_VERSION, MAX_SEED, AVAILABLE_SCHEDULERS_BY_ACTION, MODELS
+from aihandler.qtvar import TQDMVar, ImageVar, MessageHandlerVar, ErrorHandlerVar
+from aihandler.settings import AIRUNNER_VERSION, MAX_SEED, AVAILABLE_SCHEDULERS_BY_ACTION, MODELS
 from qtcanvas import Canvas
 from settingsmanager import SettingsManager
 from runai_client import OfflineClient
