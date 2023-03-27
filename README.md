@@ -5,6 +5,8 @@ AI Runner allows you to run Stable Diffusion locally using your own hardware. It
 
 ![img.png](img.png)
 
+## [Download the official build on itch.io](https://capsizegames.itch.io/ai-runner)!
+
 ---
 
 ## Development
