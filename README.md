@@ -19,7 +19,7 @@ AI Runner allows you to run Stable Diffusion locally using your own hardware. It
 
 #### Pypi installation
 
-`pip install chatairunner`
+`pip install airunner`
 
 #### Development installation
 
