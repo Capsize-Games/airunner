@@ -11,7 +11,7 @@ setup(
     license="AGPL-3.0",
     author_email="contact@capsize.gg",
     url="https://github.com/w4ffl35/airunner",
-    package_dir={"": "airunner"},
+    package_dir={"": "sdrunner"},
     packages=find_packages("sdrunner"),
     python_requires=">=3.10.0",
     install_requires=[
