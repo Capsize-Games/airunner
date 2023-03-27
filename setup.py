@@ -3,13 +3,18 @@ from setuptools import setup, find_packages
 setup(
     name='airunner',
     version='1.8.9',
-    license="",
     author="Capsize LLC",
-    author_email="contact@capsize.gg",
     description="A Stable Diffusion GUI",
-    packages=find_packages(),
-    url="https://github.com/huggingface/diffusers",
+    long_description="",
+    long_description_content_type="",
+    keywords="ai, chatbot, chat, ai",
+    license="AGPL-3.0",
+    author_email="contact@capsize.gg",
+    url="https://github.com/w4ffl35/airunner",
+    package_dir={"": "airunner"},
+    packages=find_packages("sdrunner"),
+    python_requires=">=3.10.0",
     install_requires=[
-        "aihandler==1.8.10",
+        "aihandler==1.8.11",
     ]
 )
