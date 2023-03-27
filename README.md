@@ -29,7 +29,9 @@ AI Runner allows you to run Stable Diffusion locally using your own hardware. It
 
 #### Pypi installation
 
-`pip install airunner`
+- `pip install airunner`
+- `pip install git+https://github.com/w4ffl35/diffusers.git@ckpt_fix`
+- `pip install git+https://github.com/w4ffl35/transformers.git@tensor_fix`
 
 #### Development installation
 
