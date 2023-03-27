@@ -5,7 +5,7 @@ setup(
     version='1.8.10',
     author="Capsize LLC",
     description="A Stable Diffusion GUI",
-    long_description="",
+    long_description=open("README.md", "r", encoding="utf-8").read(),
     long_description_content_type="",
     keywords="ai, chatbot, chat, ai",
     license="AGPL-3.0",
