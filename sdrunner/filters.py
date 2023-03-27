@@ -3,7 +3,7 @@ import os
 from PIL import ImageEnhance, Image, ImageFilter
 from PIL.ImageFilter import GaussianBlur, BoxBlur, UnsharpMask, Filter
 from PyQt6 import uic
-from aiengine.qtvar import FloatVar, IntVar
+from aihandler.qtvar import FloatVar, IntVar
 
 
 class ColorBalanceFilter(Filter):

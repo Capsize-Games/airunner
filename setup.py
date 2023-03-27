@@ -10,6 +10,6 @@ setup(
     packages=find_packages(),
     url="https://github.com/huggingface/diffusers",
     install_requires=[
-        "aiengine==1.8.10",
+        "aihandler==1.8.10",
     ]
 )
