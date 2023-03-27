@@ -40,6 +40,6 @@ Use this installation method if you intend to modify the source code of Chat AI.
 - pip-23.0.1
 
 1. Fork this repo on github
-2. `git clone https://github.com/Capsize-Games/airunner`
+2. Clone it
 3. `cd airunner && pip install -r requirements.txt`
 4. `cd sdrunner && python main.py`
