@@ -3,8 +3,8 @@ import queue
 import time
 from PyQt6 import QtCore
 from PyQt6.QtCore import QThread
-from aiengine.qtvar import BooleanVar
-from aiengine.runner import SDRunner
+from aihandler.qtvar import BooleanVar
+from aihandler.runner import SDRunner
 import logging
 
 

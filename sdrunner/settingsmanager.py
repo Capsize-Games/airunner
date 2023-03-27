@@ -1,8 +1,8 @@
 import os
 import pickle
 
-from aiengine.database import RunAISettings
-from aiengine.qtvar import BooleanVar, StringVar, IntVar, FloatVar, DoubleVar
+from aihandler.database import RunAISettings
+from aihandler.qtvar import BooleanVar, StringVar, IntVar, FloatVar, DoubleVar
 
 available_tools = [
     "",

@@ -6,7 +6,7 @@ AI Runner official repository which houses the templates and primary client code
 
 ## Installation
 
-`pip install aiengine`
+`pip install aihandler`
 
 ---
 
