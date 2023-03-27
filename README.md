@@ -15,7 +15,7 @@ AI Runner allows you to run Stable Diffusion locally using your own hardware. It
 
 ## Bundled Installation
 
-[Official Build can be acquired here](https://capsizegames.itch.io/ai-runner) for those who want to use a compiled version of Chat AI without having to install any additional requirements
+[Official Build can be acquired here](https://capsizegames.itch.io/ai-runner) for those who want to use a compiled version of AI Runner without having to install any additional requirements
 
 ---
 
