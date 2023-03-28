@@ -42,3 +42,23 @@ Use this installation method if you intend to modify the source code of Chat AI.
 2. `git clone https://github.com/Capsize-Games/airunner`
 3. `cd airunner && pip install -r requirements.txt`
 4. `cd sdrunner && python main.py`
+
+---
+
+## Usage
+
+### Keyboard / Mouse controls
+
+The following are some previous undocumented features
+
+Misc
+- `hold middle mouse + drag` - Pan the canvas
+
+With the brush tool selected:
+- `hold left or right mouse and drag` - Draw on the canvas
+
+With the eraser tool selected:
+- `hold left or right mouse and drag` - Erase on the canvas
+
+With the active grid area tool selected:
+- `hold ctrl or shift and scroll up or down` - Changes the width and height of the active grid area
