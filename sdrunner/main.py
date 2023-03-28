@@ -12,7 +12,7 @@ from PyQt6.QtWidgets import QApplication, QLabel, QWidget, QColorDialog, QFileDi
 from PyQt6.QtCore import QPoint, pyqtSlot, QRect
 from PyQt6.QtGui import QPainter, QIcon, QColor, QGuiApplication
 from aihandler.qtvar import TQDMVar, ImageVar, MessageHandlerVar, ErrorHandlerVar
-from aihandler.settings import AIRUNNER_VERSION, MAX_SEED, AVAILABLE_SCHEDULERS_BY_ACTION, MODELS
+from aihandler.settings import AIRUNNER_VERSION, MAX_SEED, AVAILABLE_SCHEDULERS_BY_ACTION, MODELS, LOG_LEVEL
 from qtcanvas import Canvas
 from settingsmanager import SettingsManager
 from runai_client import OfflineClient
@@ -220,6 +220,9 @@ class MainWindow(QApplication):
         return sys.platform.startswith("win") or sys.platform.startswith("cygwin") or sys.platform.startswith("msys")
 
     def __init__(self, *args, **kwargs):
+        from PyQt6 import uic
+        uic.properties.logger.setLevel(LOG_LEVEL)
+        uic.uiparser.logger.setLevel(LOG_LEVEL)
         super().__init__(*args, **kwargs)
         self.tqdm_var = TQDMVar()
         self.tqdm_var.my_signal.connect(self.tqdm_callback)
