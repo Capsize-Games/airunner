@@ -1,3 +1,4 @@
+import pkg_resources
 import os
 import pickle
 import random
@@ -12,7 +13,7 @@ from PyQt6.QtWidgets import QApplication, QLabel, QWidget, QColorDialog, QFileDi
 from PyQt6.QtCore import QPoint, pyqtSlot, QRect
 from PyQt6.QtGui import QPainter, QIcon, QColor, QGuiApplication
 from aihandler.qtvar import TQDMVar, ImageVar, MessageHandlerVar, ErrorHandlerVar
-from aihandler.settings import AIRUNNER_VERSION, MAX_SEED, AVAILABLE_SCHEDULERS_BY_ACTION, MODELS
+from aihandler.settings import MAX_SEED, AVAILABLE_SCHEDULERS_BY_ACTION, MODELS, LOG_LEVEL
 from qtcanvas import Canvas
 from settingsmanager import SettingsManager
 from runai_client import OfflineClient
@@ -220,7 +221,11 @@ class MainWindow(QApplication):
         return sys.platform.startswith("win") or sys.platform.startswith("cygwin") or sys.platform.startswith("msys")
 
     def __init__(self, *args, **kwargs):
+        from PyQt6 import uic
+        uic.properties.logger.setLevel(LOG_LEVEL)
+        uic.uiparser.logger.setLevel(LOG_LEVEL)
         super().__init__(*args, **kwargs)
+        self.version = pkg_resources.get_distribution("airunner").version
         self.tqdm_var = TQDMVar()
         self.tqdm_var.my_signal.connect(self.tqdm_callback)
 
@@ -486,7 +491,7 @@ class MainWindow(QApplication):
             self.setStyleSheet(stream.read())
 
     def set_window_title(self):
-        self.window.setWindowTitle(f"AI Runner {AIRUNNER_VERSION} {self.document_name}")
+        self.window.setWindowTitle(f"AI Runner {self.version} {self.document_name}")
 
     def update_brush_size(self, val):
         self.settings_manager.settings.mask_brush_size.set(val)
@@ -585,7 +590,7 @@ class MainWindow(QApplication):
         # save self.canvas.layers as pickle
         data = {
             "layers": self.canvas.layers,
-            "version": AIRUNNER_VERSION,
+            "version": self.version,
             "image_pivot_point": self.canvas.image_pivot_point,
             "image_root_point": self.canvas.image_root_point,
         }
@@ -1178,7 +1183,7 @@ class MainWindow(QApplication):
         HERE = os.path.dirname(os.path.abspath(__file__))
         about_window = uic.loadUi(os.path.join(HERE, "pyqt/about.ui"))
         about_window.setWindowTitle(f"About AI Runner")
-        about_window.title.setText(f"AI Runner v{AIRUNNER_VERSION}")
+        about_window.title.setText(f"AI Runner v{self.version}")
         about_window.exec()
 
     def handle_grid_line_color_button(self):
