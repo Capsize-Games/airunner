@@ -1,5 +1,12 @@
 [![Banner](banner.png)](https://capsizegames.itch.io/ai-runner)
 [![Upload Python Package](https://github.com/Capsize-Games/airunner/actions/workflows/python-publish.yml/badge.svg)](https://github.com/Capsize-Games/airunner/actions/workflows/python-publish.yml)
+[![Discord](https://img.shields.io/discord/839511291466219541?color=5865F2&logo=discord&logoColor=white)](https://discord.gg/PUVDDCJ7gz)
+![GitHub](https://img.shields.io/github/license/Capsize-Games/airunner)
+![GitHub last commit](https://img.shields.io/github/last-commit/Capsize-Games/airunner)
+![GitHub issues](https://img.shields.io/github/issues/Capsize-Games/airunner)
+![GitHub closed issues](https://img.shields.io/github/issues-closed/Capsize-Games/airunner)
+![GitHub pull requests](https://img.shields.io/github/issues-pr/Capsize-Games/airunner)
+![GitHub closed pull requests](https://img.shields.io/github/issues-pr-closed/Capsize-Games/airunner)
 
 AI Runner allows you to run Stable Diffusion locally using your own hardware. It comes with drawing tools and an infinite canvas which lets you outpaint to any size you wish.
 
