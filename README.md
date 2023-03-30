@@ -10,13 +10,21 @@
 
 AI Runner allows you to run Stable Diffusion locally using your own hardware. It comes with drawing tools and an infinite canvas which lets you outpaint to any size you wish.
 
-![img.png](img.png)
 
-## [Download the official build on itch.io](https://capsizegames.itch.io/ai-runner)!
+![img.png](img.png)
 
 ---
 
-## Development
+## [Download the official build on itch.io](https://capsizegames.itch.io/ai-runner)!
+
+This is the compiled version of AI Runner which you can use without installing any additional dependencies.
+
+---
+
+## Pypi installation
+
+If you would like to use AI Runner as a library, follow this method of installation.
+Currently there isn't much of an external API so using AI Runner as a library is not recommended.
 
 ### Prerequisites
 
@@ -24,28 +32,50 @@ AI Runner allows you to run Stable Diffusion locally using your own hardware. It
 - Python 3.10.6
 - pip-23.0.1
 
-#### Pypi installation
 
 - `pip install airunner`
 - `pip install git+https://github.com/w4ffl35/diffusers.git@ckpt_fix`
 - `pip install git+https://github.com/w4ffl35/transformers.git@tensor_fix`
 
-#### Development installation
+---
 
-Use this installation method if you intend to modify the source code of Chat AI.
+## Using AI Runner
 
-- Ubuntu 20.04+ or Windows 10+
-- Python 3.10.6
-- pip-23.0.1
-
-1. Fork this repo on github
-2. `git clone https://github.com/Capsize-Games/airunner`
-3. `cd airunner && pip install -r requirements.txt`
-4. `cd sdrunner && python main.py`
+Type what you would like to see int the prompt textbox. Type what you would like to guide the generator away from
+in the negative prompt textbox. Click the "Generate" button to generate an image. Adjust settings as you see fit.
 
 ---
 
-## Usage
+### Model support
+
+Stable Diffusion v1 and v2 models are supported in the following formats
+
+#### File formats
+
+- Diffusers
+- Safetensors
+- ckpt files
+- Textual Inversion embeddings
+
+#### Models
+
+- txt2txt
+- img2img
+- txt2pix
+- inpaint / outpaint
+- controlnet
+
+---
+
+### Custom models
+
+1. Place your custom models in a folder of your choice, for example `~/stablediffusion`
+2. If you have textual embeddings place them in `~/<your_folder>/embeddings`
+2. Start the app and navigate to settings > preferences
+3. Add the absolute path to the folder you chose to store your models in
+4. Click OK and restart the app
+
+---
 
 ### Keyboard / Mouse controls
 
