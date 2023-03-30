@@ -33,9 +33,11 @@ Currently there isn't much of an external API so using AI Runner as a library is
 - pip-23.0.1
 
 
-- `pip install airunner`
-- `pip install git+https://github.com/w4ffl35/diffusers.git@ckpt_fix`
-- `pip install git+https://github.com/w4ffl35/transformers.git@tensor_fix`
+```
+pip install https://github.com/w4ffl35/diffusers/archive/refs/tags/v0.14.0.ckpt_fix.tar.gz
+pip install https://github.com/w4ffl35/transformers/archive/refs/tags/tensor_fix-v1.0.2.tar.gz
+pip install airunner
+```
 
 ---
 
