@@ -196,6 +196,10 @@ class MainWindow(QApplication):
     def is_windows(self):
         return sys.platform.startswith("win") or sys.platform.startswith("cygwin") or sys.platform.startswith("msys")
 
+    @property
+    def grid_size(self):
+        return self.settings_manager.settings.size.get()
+
     def __init__(self, *args, **kwargs):
         from PyQt6 import uic
         uic.properties.logger.setLevel(LOG_LEVEL)
@@ -1055,10 +1059,6 @@ class MainWindow(QApplication):
     def handle_width_slider_change(self, val):
         self.window.width_spinbox.setValue(val)
         self.width = val
-
-    @property
-    def grid_size(self):
-        return self.settings_manager.settings.size.get()
 
     def handle_width_spinbox_change(self, val):
         self.window.width_slider.setValue(int(val))
