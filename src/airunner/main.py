@@ -1212,27 +1212,19 @@ class MainWindow(QApplication):
         advanced_window = uic.loadUi(os.path.join(HERE, "pyqt/advanced_settings.ui"))
         advanced_window.setWindowTitle(f"Advanced")
         settings = self.settings_manager.settings
-
-        advanced_window.use_lastchannels.setChecked(settings.use_last_channels.get() == True)
-        use_enable_sequential_cpu_offload = settings.use_enable_sequential_cpu_offload.get() == True
-        advanced_window.use_enable_sequential_cpu_offload.setChecked(use_enable_sequential_cpu_offload)
-        advanced_window.use_attention_slicing.setChecked(settings.use_attention_slicing.get() == True)
-        advanced_window.use_tf32.setChecked(settings.use_tf32.get() == True)
-        advanced_window.use_cudnn_benchmark.setChecked(settings.use_cudnn_benchmark.get() == True)
-        advanced_window.use_enable_vae_slicing.setChecked(settings.use_enable_vae_slicing.get() == True)
-        advanced_window.use_xformers.setChecked(settings.use_xformers.get() == True)
-        advanced_window.enable_model_cpu_offload.setChecked(settings.enable_model_cpu_offload.get() == True)
-
-        # listen to changes in the checkboxes and update the settings
-        advanced_window.use_lastchannels.stateChanged.connect(lambda val, settings=settings: settings.use_last_channels.set(val == 2))
-        advanced_window.use_enable_sequential_cpu_offload.stateChanged.connect(lambda val, settings=settings: settings.use_enable_sequential_cpu_offload.set(val == 2))
-        advanced_window.use_attention_slicing.stateChanged.connect(lambda val, settings=settings: settings.use_attention_slicing.set(val == 2))
-        advanced_window.use_tf32.stateChanged.connect(lambda val, settings=settings: settings.use_tf32.set(val == 2))
-        advanced_window.use_cudnn_benchmark.stateChanged.connect(lambda val, settings=settings: settings.use_cudnn_benchmark.set(val == 2))
-        advanced_window.use_enable_vae_slicing.stateChanged.connect(lambda val, settings=settings: settings.use_enable_vae_slicing.set(val == 2))
-        advanced_window.use_xformers.stateChanged.connect(lambda val, settings=settings: settings.use_xformers.set(val == 2))
-        advanced_window.enable_model_cpu_offload.stateChanged.connect(lambda val, settings=settings: settings.enable_model_cpu_offload.set(val == 2))
-
+        checkbox_settings = [
+            (advanced_window.use_lastchannels, settings.use_last_channels),
+            (advanced_window.use_enable_sequential_cpu_offload, settings.use_enable_sequential_cpu_offload),
+            (advanced_window.use_attention_slicing, settings.use_attention_slicing),
+            (advanced_window.use_tf32, settings.use_tf32),
+            (advanced_window.use_cudnn_benchmark, settings.use_cudnn_benchmark),
+            (advanced_window.use_enable_vae_slicing, settings.use_enable_vae_slicing),
+            (advanced_window.use_xformers, settings.use_xformers),
+            (advanced_window.enable_model_cpu_offload, settings.enable_model_cpu_offload),
+        ]
+        for checkbox, setting in checkbox_settings:
+            checkbox.setChecked(setting.get() == True)
+            checkbox.stateChanged.connect(lambda val, setting=setting: setting.set(val == 2))
         advanced_window.exec()
 
     def show_canvas_color(self):
