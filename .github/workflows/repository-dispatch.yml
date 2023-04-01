@@ -26,7 +26,6 @@ jobs:
         run: |
           docker pull $DOCKER_IMAGE
           docker run --rm \
-            --user airunner \
             -e BUTLER_API_KEY=${{ secrets.BUTLER_API_KEY }} \
             -e ITCHIO_USERNAME=${{ secrets.ITCHIO_USERNAME }} \
             -e DEV_ENV=0 \
