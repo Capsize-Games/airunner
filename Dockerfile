@@ -76,10 +76,3 @@ FROM install_apps as more_env
 ENV PATH="/usr/local/lib/python3.10:/usr/local/lib/python3.10/bin:${PATH}"
 ENV PYTHONPATH="/usr/local/lib/python3.10:/usr/local/lib/python3.10/bin:${PYTHONPATH}"
 RUN pip install pyinstaller
-
-FROM more_env as user
-USER root
-# create a user to run the app
-WORKDIR /app
-RUN groupadd -r airunnergroup && useradd -r -g airunnergroup airunner
-RUN chown -R airunner:airunnergroup /app
