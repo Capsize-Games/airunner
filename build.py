@@ -1,23 +1,29 @@
 import os
-import requests
+import urllib.request
+import json
 
 
 def install_latest(repo):
-    response = requests.get(f'https://api.github.com/repos/{repo}/releases/latest')
-    response = response.json()
-    tag_name = response["tag_name"]
+    url = f'https://api.github.com/repos/{repo}/releases/latest'
+    with urllib.request.urlopen(url) as response:
+        data = response.read().decode('utf-8')
+    data = json.loads(data)
+    tag_name = data["tag_name"]
     tar_url = f'https://github.com/{repo}/archive/{tag_name}.tar.gz'
     os.system(f'python3 -m pip install {tar_url}')
 
 
 def get_latest_version_tag(repo):
-    response = requests.get(f'https://api.github.com/repos/{repo}/releases/latest')
-    response = response.json()
-    tag_name = response["tag_name"]
+    url = f'https://api.github.com/repos/{repo}/releases/latest'
+    with urllib.request.urlopen(url) as response:
+        data = response.read().decode('utf-8')
+    data = json.loads(data)
+    tag_name = data["tag_name"]
     # strip the v
     if tag_name.startswith("v"):
         tag_name = tag_name[1:]
     return tag_name
+
 
 
 def clone(repo):
