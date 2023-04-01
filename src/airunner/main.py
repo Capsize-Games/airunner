@@ -352,38 +352,32 @@ class MainWindow(QApplication):
 
     def set_stylesheet(self):
         HERE = os.path.dirname(os.path.abspath(__file__))
+        icons = {
+            "darkmode_button": "weather-night",
+            "move_button": "move",
+            "active_grid_area_button": "stop",
+            "eraser_button": "eraser",
+            "brush_button": "pen",
+            "grid_button": "grid",
+            "nsfw_button": "underwear",
+            "focus_button": "camera-focus",
+            "undo_button": "undo",
+            "redo_button": "redo",
+            "new_layer": "file-add",
+            "layer_up_button": "arrow-up",
+            "layer_down_button": "arrow-down",
+            "delete_layer_button": "delete"
+        }
         if self.settings_manager.settings.dark_mode_enabled.get():
             qdarktheme.setup_theme("dark")
-            # change self.window.darkmode_button icon to weather-sunny.png
-            self.window.darkmode_button.setIcon(QtGui.QIcon(os.path.join(HERE, "src/icons/weather-sunny.png")))
-            self.window.active_grid_area_button.setIcon(QtGui.QIcon(os.path.join(HERE, "src/icons/stop-light.png")))
-            self.window.eraser_button.setIcon(QtGui.QIcon(os.path.join(HERE, "src/icons/eraser-light.png")))
-            self.window.brush_button.setIcon(QtGui.QIcon(os.path.join(HERE, "src/icons/pen-light.png")))
-            self.window.move_button.setIcon(QtGui.QIcon(os.path.join(HERE, "src/icons/move-light.png")))
-            self.window.grid_button.setIcon(QtGui.QIcon(os.path.join(HERE, "src/icons/grid-light.png")))
-            self.window.nsfw_button.setIcon(QtGui.QIcon(os.path.join(HERE, "src/icons/underwear-light.png")))
-            self.window.focus_button.setIcon(QtGui.QIcon(os.path.join(HERE, "src/icons/camera-focus-light.png")))
-            self.window.undo_button.setIcon(QtGui.QIcon(os.path.join(HERE, "src/icons/undo-light.png")))
-            self.window.redo_button.setIcon(QtGui.QIcon(os.path.join(HERE, "src/icons/redo-light.png")))
-            self.window.new_layer.setIcon(QtGui.QIcon(os.path.join(HERE, "src/icons/file-add-light.png")))
-            self.window.layer_up_button.setIcon(QtGui.QIcon(os.path.join(HERE, "src/icons/arrow-up-light.png")))
-            self.window.layer_down_button.setIcon(QtGui.QIcon(os.path.join(HERE, "src/icons/arrow-down-light.png")))
-            self.window.delete_layer_button.setIcon(QtGui.QIcon(os.path.join(HERE, "src/icons/delete-light.png")))
+            icons["darkmode_button"] = "weather-sunny"
+            for button, icon in icons.items():
+                if icon != "weather-sunny":
+                    icon = icon + "-light"
+                getattr(self.window, button).setIcon(QtGui.QIcon(os.path.join(HERE, f"src/icons/{icon}.png")))
         else:
-            self.window.darkmode_button.setIcon(QtGui.QIcon(os.path.join(HERE, "src/icons/weather-night.png")))
-            self.window.move_button.setIcon(QtGui.QIcon(os.path.join(HERE, "src/icons/move.png")))
-            self.window.active_grid_area_button.setIcon(QtGui.QIcon(os.path.join(HERE, "src/icons/stop.png")))
-            self.window.eraser_button.setIcon(QtGui.QIcon(os.path.join(HERE, "src/icons/eraser.png")))
-            self.window.brush_button.setIcon(QtGui.QIcon(os.path.join(HERE, "src/icons/pen.png")))
-            self.window.grid_button.setIcon(QtGui.QIcon(os.path.join(HERE, "src/icons/grid.png")))
-            self.window.nsfw_button.setIcon(QtGui.QIcon(os.path.join(HERE, "src/icons/underwear.png")))
-            self.window.focus_button.setIcon(QtGui.QIcon(os.path.join(HERE, "src/icons/camera-focus.png")))
-            self.window.undo_button.setIcon(QtGui.QIcon(os.path.join(HERE, "src/icons/undo.png")))
-            self.window.redo_button.setIcon(QtGui.QIcon(os.path.join(HERE, "src/icons/redo.png")))
-            self.window.new_layer.setIcon(QtGui.QIcon(os.path.join(HERE, "src/icons/file-add.png")))
-            self.window.layer_up_button.setIcon(QtGui.QIcon(os.path.join(HERE, "src/icons/arrow-up.png")))
-            self.window.layer_down_button.setIcon(QtGui.QIcon(os.path.join(HERE, "src/icons/arrow-down.png")))
-            self.window.delete_layer_button.setIcon(QtGui.QIcon(os.path.join(HERE, "src/icons/delete.png")))
+            for button, icon in icons.items():
+                getattr(self.window, button).setIcon(QtGui.QIcon(os.path.join(HERE, f"src/icons/{icon}.png")))
             try:
                 qdarktheme.setup_theme("light")
             except PermissionError:
