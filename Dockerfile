@@ -43,22 +43,6 @@ RUN ln -snf /usr/share/zoneinfo/$TZ /etc/localtime && echo $TZ > /etc/timezone \
     && update-alternatives --install /usr/bin/gcc gcc /usr/bin/gcc-9 60 --slave /usr/bin/g++ g++ /usr/bin/g++-9 \
     && rm -rf /var/lib/apt/lists/*
 
-FROM base_image as cuda_install
-USER root
-WORKDIR /tmp
-COPY libs/cuda_11.7.1_515.65.01_linux.run cuda_11.7.1_515.65.01_linux.run
-RUN sh cuda_11.7.1_515.65.01_linux.run --silent --toolkit --toolkitpath=/usr/local/cuda-11.7 \
-    && rm cuda_11.7.1_515.65.01_linux.run
-
-FROM cuda_install as cudnn_install
-WORKDIR /tmp
-COPY libs/cudnn-linux-x86_64-8.6.0.163_cuda11-archive.tar.xz /tmp
-RUN tar -xvf cudnn-linux-x86_64-8.6.0.163_cuda11-archive.tar.xz \
-    && cp cudnn-*-archive/include/cudnn*.h /usr/local/cuda/include \
-    && cp -P cudnn-*-archive/lib/libcudnn* /usr/local/cuda/lib64 \
-    && chmod a+r /usr/local/cuda/include/cudnn*.h /usr/local/cuda/lib64/libcudnn* \
-    && rm -rf cudnn-*-archive
-
 FROM base_image as install_requirements
 USER root
 WORKDIR /app
@@ -70,13 +54,9 @@ RUN pip install --upgrade setuptools
 RUN pip install --upgrade wheel
 RUN pip install aihandler
 RUN pip install accelerate
+RUN pip install requests
 
-FROM install_requirements as add_user
-RUN useradd -ms /bin/bash joe
-USER root
-WORKDIR /app
-
-FROM add_user as fix_tcl
+FROM install_requirements as fix_tcl
 USER root
 RUN ln -s /usr/share/tcltk/tcl8.6 /usr/share/tcltk/tcl8
 
