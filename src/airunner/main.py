@@ -20,29 +20,6 @@ from filters import FilterGaussianBlur, FilterBoxBlur, FilterUnsharpMask, Filter
     FilterColorBalance, FilterPixelArt
 import qdarktheme
 
-history_event_types = {
-    "draw": "Draw",
-    "erase": "Erase",
-    "clear": "Clear",
-    "load": "Load",
-}
-
-
-class ColorBalanceFilter(Filter):
-    name = "Color Balance"
-
-    def __init__(self, cyan_red=0, magenta_green=0, yellow_blue=0):
-        self.cyan_red = cyan_red
-        self.magenta_green = magenta_green
-        self.yellow_blue = yellow_blue
-
-    def filter(self, image):
-        # Apply enhancement
-        image = ImageEnhance.Color(image).enhance(1.0 + self.cyan_red)
-        image = ImageEnhance.Color(image).enhance(1.0 + self.magenta_green)
-        image = ImageEnhance.Color(image).enhance(1.0 + self.yellow_blue)
-        return image
-
 
 class History:
     event_history = []
@@ -219,6 +196,10 @@ class MainWindow(QApplication):
     def is_windows(self):
         return sys.platform.startswith("win") or sys.platform.startswith("cygwin") or sys.platform.startswith("msys")
 
+    @property
+    def grid_size(self):
+        return self.settings_manager.settings.size.get()
+
     def __init__(self, *args, **kwargs):
         from PyQt6 import uic
         uic.properties.logger.setLevel(LOG_LEVEL)
@@ -371,38 +352,32 @@ class MainWindow(QApplication):
 
     def set_stylesheet(self):
         HERE = os.path.dirname(os.path.abspath(__file__))
+        icons = {
+            "darkmode_button": "weather-night",
+            "move_button": "move",
+            "active_grid_area_button": "stop",
+            "eraser_button": "eraser",
+            "brush_button": "pen",
+            "grid_button": "grid",
+            "nsfw_button": "underwear",
+            "focus_button": "camera-focus",
+            "undo_button": "undo",
+            "redo_button": "redo",
+            "new_layer": "file-add",
+            "layer_up_button": "arrow-up",
+            "layer_down_button": "arrow-down",
+            "delete_layer_button": "delete"
+        }
         if self.settings_manager.settings.dark_mode_enabled.get():
             qdarktheme.setup_theme("dark")
-            # change self.window.darkmode_button icon to weather-sunny.png
-            self.window.darkmode_button.setIcon(QtGui.QIcon(os.path.join(HERE, "src/icons/weather-sunny.png")))
-            self.window.active_grid_area_button.setIcon(QtGui.QIcon(os.path.join(HERE, "src/icons/stop-light.png")))
-            self.window.eraser_button.setIcon(QtGui.QIcon(os.path.join(HERE, "src/icons/eraser-light.png")))
-            self.window.brush_button.setIcon(QtGui.QIcon(os.path.join(HERE, "src/icons/pen-light.png")))
-            self.window.move_button.setIcon(QtGui.QIcon(os.path.join(HERE, "src/icons/move-light.png")))
-            self.window.grid_button.setIcon(QtGui.QIcon(os.path.join(HERE, "src/icons/grid-light.png")))
-            self.window.nsfw_button.setIcon(QtGui.QIcon(os.path.join(HERE, "src/icons/underwear-light.png")))
-            self.window.focus_button.setIcon(QtGui.QIcon(os.path.join(HERE, "src/icons/camera-focus-light.png")))
-            self.window.undo_button.setIcon(QtGui.QIcon(os.path.join(HERE, "src/icons/undo-light.png")))
-            self.window.redo_button.setIcon(QtGui.QIcon(os.path.join(HERE, "src/icons/redo-light.png")))
-            self.window.new_layer.setIcon(QtGui.QIcon(os.path.join(HERE, "src/icons/file-add-light.png")))
-            self.window.layer_up_button.setIcon(QtGui.QIcon(os.path.join(HERE, "src/icons/arrow-up-light.png")))
-            self.window.layer_down_button.setIcon(QtGui.QIcon(os.path.join(HERE, "src/icons/arrow-down-light.png")))
-            self.window.delete_layer_button.setIcon(QtGui.QIcon(os.path.join(HERE, "src/icons/delete-light.png")))
+            icons["darkmode_button"] = "weather-sunny"
+            for button, icon in icons.items():
+                if icon != "weather-sunny":
+                    icon = icon + "-light"
+                getattr(self.window, button).setIcon(QtGui.QIcon(os.path.join(HERE, f"src/icons/{icon}.png")))
         else:
-            self.window.darkmode_button.setIcon(QtGui.QIcon(os.path.join(HERE, "src/icons/weather-night.png")))
-            self.window.move_button.setIcon(QtGui.QIcon(os.path.join(HERE, "src/icons/move.png")))
-            self.window.active_grid_area_button.setIcon(QtGui.QIcon(os.path.join(HERE, "src/icons/stop.png")))
-            self.window.eraser_button.setIcon(QtGui.QIcon(os.path.join(HERE, "src/icons/eraser.png")))
-            self.window.brush_button.setIcon(QtGui.QIcon(os.path.join(HERE, "src/icons/pen.png")))
-            self.window.grid_button.setIcon(QtGui.QIcon(os.path.join(HERE, "src/icons/grid.png")))
-            self.window.nsfw_button.setIcon(QtGui.QIcon(os.path.join(HERE, "src/icons/underwear.png")))
-            self.window.focus_button.setIcon(QtGui.QIcon(os.path.join(HERE, "src/icons/camera-focus.png")))
-            self.window.undo_button.setIcon(QtGui.QIcon(os.path.join(HERE, "src/icons/undo.png")))
-            self.window.redo_button.setIcon(QtGui.QIcon(os.path.join(HERE, "src/icons/redo.png")))
-            self.window.new_layer.setIcon(QtGui.QIcon(os.path.join(HERE, "src/icons/file-add.png")))
-            self.window.layer_up_button.setIcon(QtGui.QIcon(os.path.join(HERE, "src/icons/arrow-up.png")))
-            self.window.layer_down_button.setIcon(QtGui.QIcon(os.path.join(HERE, "src/icons/arrow-down.png")))
-            self.window.delete_layer_button.setIcon(QtGui.QIcon(os.path.join(HERE, "src/icons/delete.png")))
+            for button, icon in icons.items():
+                getattr(self.window, button).setIcon(QtGui.QIcon(os.path.join(HERE, f"src/icons/{icon}.png")))
             try:
                 qdarktheme.setup_theme("light")
             except PermissionError:
@@ -1079,10 +1054,6 @@ class MainWindow(QApplication):
         self.window.width_spinbox.setValue(val)
         self.width = val
 
-    @property
-    def grid_size(self):
-        return self.settings_manager.settings.size.get()
-
     def handle_width_spinbox_change(self, val):
         self.window.width_slider.setValue(int(val))
         self.width = int(val)
@@ -1241,27 +1212,19 @@ class MainWindow(QApplication):
         advanced_window = uic.loadUi(os.path.join(HERE, "pyqt/advanced_settings.ui"))
         advanced_window.setWindowTitle(f"Advanced")
         settings = self.settings_manager.settings
-
-        advanced_window.use_lastchannels.setChecked(settings.use_last_channels.get() == True)
-        use_enable_sequential_cpu_offload = settings.use_enable_sequential_cpu_offload.get() == True
-        advanced_window.use_enable_sequential_cpu_offload.setChecked(use_enable_sequential_cpu_offload)
-        advanced_window.use_attention_slicing.setChecked(settings.use_attention_slicing.get() == True)
-        advanced_window.use_tf32.setChecked(settings.use_tf32.get() == True)
-        advanced_window.use_cudnn_benchmark.setChecked(settings.use_cudnn_benchmark.get() == True)
-        advanced_window.use_enable_vae_slicing.setChecked(settings.use_enable_vae_slicing.get() == True)
-        advanced_window.use_xformers.setChecked(settings.use_xformers.get() == True)
-        advanced_window.enable_model_cpu_offload.setChecked(settings.enable_model_cpu_offload.get() == True)
-
-        # listen to changes in the checkboxes and update the settings
-        advanced_window.use_lastchannels.stateChanged.connect(lambda val, settings=settings: settings.use_last_channels.set(val == 2))
-        advanced_window.use_enable_sequential_cpu_offload.stateChanged.connect(lambda val, settings=settings: settings.use_enable_sequential_cpu_offload.set(val == 2))
-        advanced_window.use_attention_slicing.stateChanged.connect(lambda val, settings=settings: settings.use_attention_slicing.set(val == 2))
-        advanced_window.use_tf32.stateChanged.connect(lambda val, settings=settings: settings.use_tf32.set(val == 2))
-        advanced_window.use_cudnn_benchmark.stateChanged.connect(lambda val, settings=settings: settings.use_cudnn_benchmark.set(val == 2))
-        advanced_window.use_enable_vae_slicing.stateChanged.connect(lambda val, settings=settings: settings.use_enable_vae_slicing.set(val == 2))
-        advanced_window.use_xformers.stateChanged.connect(lambda val, settings=settings: settings.use_xformers.set(val == 2))
-        advanced_window.enable_model_cpu_offload.stateChanged.connect(lambda val, settings=settings: settings.enable_model_cpu_offload.set(val == 2))
-
+        checkbox_settings = [
+            (advanced_window.use_lastchannels, settings.use_last_channels),
+            (advanced_window.use_enable_sequential_cpu_offload, settings.use_enable_sequential_cpu_offload),
+            (advanced_window.use_attention_slicing, settings.use_attention_slicing),
+            (advanced_window.use_tf32, settings.use_tf32),
+            (advanced_window.use_cudnn_benchmark, settings.use_cudnn_benchmark),
+            (advanced_window.use_enable_vae_slicing, settings.use_enable_vae_slicing),
+            (advanced_window.use_xformers, settings.use_xformers),
+            (advanced_window.enable_model_cpu_offload, settings.enable_model_cpu_offload),
+        ]
+        for checkbox, setting in checkbox_settings:
+            checkbox.setChecked(setting.get() == True)
+            checkbox.stateChanged.connect(lambda val, setting=setting: setting.set(val == 2))
         advanced_window.exec()
 
     def show_canvas_color(self):
