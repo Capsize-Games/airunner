@@ -21,6 +21,23 @@ This is the compiled version of AI Runner which you can use without installing a
 
 ---
 
+## Docker
+
+Build Docker image.
+```
+docker-compose build linux
+```
+
+Build AI Runner using Docker
+```
+docker-compose run linux bash /app/build.sh
+```
+
+Run the app using Docker
+```
+docker-compose run linux python3 /app/main.py
+```
+
 ## Pypi installation
 
 If you would like to use AI Runner as a library, follow this method of installation.
