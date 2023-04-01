@@ -39,4 +39,4 @@ jobs:
             -e DISABLE_TELEMETRY=1 \
             -e TCL_LIBDIR_PATH=/usr/lib/x86_64-linux-gnu/ \
             -e TK_LIBDIR_PATH=/usr/lib/x86_64-linux-gnu/ \
-            ghcr.io/Capsize-Games/airunner/airunner:linux /build.sh
+            ghcr.io/Capsize-Games/airunner/airunner:linux bash build.sh
