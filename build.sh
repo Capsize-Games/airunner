@@ -1,7 +1,7 @@
 #!/usr/bin/bash
 # this should be called from within docker to kick off a build
 DISABLE_TELEMETRY=1
-pip install requests
+python3 -m pip install requests
 python3 /app/build.py
 DEV_ENV=0 AIRUNNER_ENVIRONMENT="prod" PYTHONOPTIMIZE=0 python3 -m PyInstaller --log-level=INFO --noconfirm  /app/specs/build.airunner.linux.prod.spec 2>&1 | tee build.log
 chown -R 1000:1000 dist
