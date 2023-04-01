@@ -65,6 +65,8 @@ COPY build.sh build.sh
 COPY build.py build.py
 COPY build.airunner.linux.prod.spec build.airunner.linux.prod.spec
 COPY linux.itch.toml linux.itch.toml
+COPY v1.yaml v1.yaml
+COPY v2.yaml v2.yaml
 COPY src/airunner/src/icons src/airunner/src/icons
 COPY src/airunner/pyqt src/airunner/pyqt
 RUN python3 -c "from accelerate.utils import write_basic_config; write_basic_config(mixed_precision='fp16')"
@@ -74,3 +76,10 @@ FROM install_apps as more_env
 ENV PATH="/usr/local/lib/python3.10:/usr/local/lib/python3.10/bin:${PATH}"
 ENV PYTHONPATH="/usr/local/lib/python3.10:/usr/local/lib/python3.10/bin:${PYTHONPATH}"
 RUN pip install pyinstaller
+
+FROM more_env as user
+USER root
+# create a user to run the app
+WORKDIR /app
+RUN groupadd -r airunnergroup && useradd -r -g airunnergroup airunner
+RUN chown -R airunner:airunnergroup /app
