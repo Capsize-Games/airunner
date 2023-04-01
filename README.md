@@ -13,7 +13,6 @@ AI Runner allows you to run Stable Diffusion locally using your own hardware. It
 
 ![img.png](img.png)
 
----
 
 ## [Download the official build on itch.io](https://capsizegames.itch.io/ai-runner)!
 
@@ -21,7 +20,15 @@ This is the compiled version of AI Runner which you can use without installing a
 
 ---
 
-## Docker
+## Development installation
+
+### Prerequisites
+
+- Ubuntu 20.04+ or Windows 10+
+- Python 3.10.6
+- pip-23.0.1
+
+#### Docker
 
 Build Docker image.
 ```
@@ -38,28 +45,22 @@ Run the app using Docker
 docker-compose run linux python3 /app/main.py
 ```
 
-## Pypi installation
+#### Pypi installation
 
 If you would like to use AI Runner as a library, follow this method of installation.
 Currently there isn't much of an external API so using AI Runner as a library is not recommended.
 
-### Prerequisites
-
-- Ubuntu 20.04+ or Windows 10+
-- Python 3.10.6
-- pip-23.0.1
-
-Windows
+##### Windows
 ```
 pip install torch==1.13.1 torchvision==0.14.1 torchaudio==0.13.1 --index-url https://download.pytorch.org/whl/cu117
 pip install aihandlerwindows
 pip install https://github.com/w4ffl35/diffusers/archive/refs/tags/v0.14.0.ckpt_fix.tar.gz
 pip install https://github.com/w4ffl35/transformers/archive/refs/tags/tensor_fix-v1.0.2.tar.gz
 pip install https://github.com/acpopescu/bitsandbytes/releases/download/v0.37.2-win.0/bitsandbytes-0.37.2-py3-none-any.whl
-pip install airunnerwindows --no-deps
+pip install airunner --no-deps
 ```
 
-Linux
+##### Linux
 ```
 pip install https://github.com/w4ffl35/diffusers/archive/refs/tags/v0.14.0.ckpt_fix.tar.gz
 pip install https://github.com/w4ffl35/transformers/archive/refs/tags/tensor_fix-v1.0.2.tar.gz
