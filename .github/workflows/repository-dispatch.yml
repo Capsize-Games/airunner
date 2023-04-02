@@ -1,4 +1,4 @@
-name: Run airunner on Linux
+name: Linux Build
 
 on:
   release:
