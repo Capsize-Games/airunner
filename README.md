@@ -22,17 +22,21 @@ This is the compiled version of AI Runner which you can use without installing a
 
 ## Development installation
 
-### Prerequisites
+**Prerequisites**
 
 - Ubuntu 20.04+ or Windows 10+
 - Python 3.10.6
 - pip-23.0.1
 
-#### Docker
+---
 
-Build Docker image.
+### Docker
+
+[Current builds of AI Runner are compiled with pyinstaller on docker.](https://github.com/Capsize-Games/airunner/pkgs/container/airunner%2Fairunner)
+
+Pull Docker container from repo
 ```
-docker-compose build linux
+docker pull ghcr.io/capsize-games/airunner/airunner:linux
 ```
 
 Build AI Runner using Docker
@@ -45,12 +49,22 @@ Run the app using Docker
 docker-compose run linux python3 /app/main.py
 ```
 
-#### Pypi installation
+Re-build Docker image locally
+```
+docker-compose build linux
+```
+
+Compile the app locally
+```
+docker run --rm ghcr.io/capsize-games/airunner/airunner:linux bash build.sh
+```
+
+### Pypi installation
 
 If you would like to use AI Runner as a library, follow this method of installation.
 Currently there isn't much of an external API so using AI Runner as a library is not recommended.
 
-##### Windows
+#### Windows
 ```
 pip install torch==1.13.1 torchvision==0.14.1 torchaudio==0.13.1 --index-url https://download.pytorch.org/whl/cu117
 pip install aihandlerwindows
@@ -60,11 +74,54 @@ pip install https://github.com/acpopescu/bitsandbytes/releases/download/v0.37.2-
 pip install airunner --no-deps
 ```
 
-##### Linux
+#### Linux
 ```
 pip install https://github.com/w4ffl35/diffusers/archive/refs/tags/v0.14.0.ckpt_fix.tar.gz
 pip install https://github.com/w4ffl35/transformers/archive/refs/tags/tensor_fix-v1.0.2.tar.gz
 pip install airunner
+```
+
+---
+
+### Source
+
+#### Windows
+
+Install required libraries
+```
+pip install torch==1.13.1 torchvision==0.14.1 torchaudio==0.13.1 --index-url https://download.pytorch.org/whl/cu117
+pip install https://github.com/w4ffl35/diffusers/archive/refs/tags/v0.14.0.ckpt_fix.tar.gz
+pip install https://github.com/w4ffl35/transformers/archive/refs/tags/tensor_fix-v1.0.2.tar.gz
+pip install https://github.com/acpopescu/bitsandbytes/releases/download/v0.37.2-win.0/bitsandbytes-0.37.2-py3-none-any.whl
+```
+
+Clone handler
+```
+git clone -b develop-windows https://github.com/Capsize-Games/aihandler.git
+cd aihandler && pip install -e .
+```
+
+Clone AI Runner
+```
+git clone -b develop https://github.com/Capsize-Games/airunner.git
+```
+
+Run
+```
+python airunner/src/airunner/main.py
+```
+
+#### Linux
+
+Clone handler and install
+```
+git clone develop https://github.com/Capsize-Games/aihandler.git
+cd aihandler && pip install -e .
+```
+
+Clone AI Runner
+```
+git clone -b develop https://github.com/Capsize-Games/aihandler.git
 ```
 
 ---
@@ -95,15 +152,23 @@ Stable Diffusion v1 and v2 models are supported in the following formats
 - inpaint / outpaint
 - controlnet
 
+#### Stable Diffusion Path (custom model folder)
+
+AI Runner has several models listed in the model dropdown by default.
+When you attempt to use a model the program will automatically download
+it from huggingface.co.
+
+If you want to use your own models that you've downloaded or trained, plcae
+them into a folder of your choice then in the tool bar
+navigate to `Settings > Preferences` and add the absolute path to the folder you created.
+
+![img_1.png](img_1.png)
+
 ---
 
-### Custom models
+#### Textual Inversion
 
-1. Place your custom models in a folder of your choice, for example `~/stablediffusion`
-2. If you have textual embeddings place them in `~/<your_folder>/embeddings`
-2. Start the app and navigate to settings > preferences
-3. Add the absolute path to the folder you chose to store your models in
-4. Click OK and restart the app
+Place textual inversion embeddings in a folder called `embeddings` inside of your custom model folder.
 
 ---
 
