@@ -5,31 +5,16 @@ from PyInstaller.utils.hooks import copy_metadata, collect_data_files
 import sys ; sys.setrecursionlimit(sys.getrecursionlimit() * 5)
 os.environ["AIRUNNER_ENVIRONMENT"] = "prod"
 os.environ["LD_LIBRARY_PATH"] = "/usr/local/lib/python3.10/dist-packages/PyQt6/Qt6/lib/:/usr/lib/x86_64-linux-gnu/wine-development/:/usr/local/lib/python3.10/dist-packages/h5py.libs/:/usr/local/lib/python3.10/dist-packages/scipy.libs/:/usr/local/lib/python3.10/dist-packages/tokenizers.libs/:/usr/local/lib/python3.10/dist-packages/Pillow.libs/:/usr/local/lib/python3.10/dist-packages/opencv_python.libs/:/usr/local/lib/python3.10/dist-packages/torchaudio/lib/:/usr/local/lib/python3.10/dist-packages/torch/lib/:/usr/lib/python3.10:/usr/lib/x86_64-linux-gnu/:/usr/local/lib/:/usr/local/lib/python3.10:/usr/local/lib/python3.10/dist-packages"
-os.environ["PATH"] = f"{os.environ['PATH']}:/usr/local/cuda/lib64"
-os.environ["PATH"] = f"{os.environ['PATH']}:/usr/local/cuda-11.7/targets/x86_64-linux/lib/"
-os.environ["PATH"] = f"{os.environ['PATH']}:/usr/local/lib/python3.10/dist-packages/tensorrt/"
-os.environ["PATH"] = f"{os.environ['PATH']}:/usr/local/lib/python3.10/dist-packages/opencv_python.libs/"
-os.environ["PATH"] = f"{os.environ['PATH']}:/usr/lib/x86_64-linux-gnu/"
-os.environ["PATH"] = f"{os.environ['PATH']}:/usr/local/lib/python3.10/dist-packages/Pillow.libs/"
-os.environ["PATH"] = f"{os.environ['PATH']}:/usr/local/lib/python3.10/dist-packages/tokenizers.libs/"
-os.environ["PATH"] = f"{os.environ['PATH']}:/usr/local/lib/python3.10/dist-packages/xformers/triton"
-os.environ["PATH"] = f"{os.environ['PATH']}:/usr/local/lib/python3.10/dist-packages/nvidia/cuda_runtime/lib/"
-os.environ["PATH"] = f"{os.environ['PATH']}:/usr/local/lib/python3.10/dist-packages/nvidia/cudnn/lib"
-os.environ["PATH"] = f"{os.environ['PATH']}:/usr/local/lib/python3.10/dist-packages/numpy.libs"
-os.environ["PATH"] = f"{os.environ['PATH']}:/usr/local/lib/python3.10/dist-packages/h5py.libs"
-os.environ["PATH"] = f"{os.environ['PATH']}:/usr/local/lib/python3.10/dist-packages/torchaudio/lib/"
-os.environ["PATH"] = f"{os.environ['PATH']}:/usr/local/lib/python3.10/dist-packages/torch/lib/"
-os.environ["PATH"] = f"{os.environ['PATH']}:/usr/local/lib/python3.10/dist-packages/torch/bin"
-os.environ["PATH"] = f"{os.environ['PATH']}:/usr/local/lib/python3.10/dist-packages/torch/_C"
-os.environ["PATH"] = f"{os.environ['PATH']}:/usr/local/lib/python3.10/dist-packages/torch"
-os.environ["PATH"] = f"{os.environ['PATH']}:/usr/local/lib/python3.10/dist-packages/triton"
-os.environ["PATH"] = f"{os.environ['PATH']}:/usr/local/lib/python3.10/dist-packages/triton/_C"
-os.environ["PYTHONPATH"]=f"${os.environ['PYTHONPATH']}:/usr/local/lib/python3.10/dist-packages"
 block_cipher = None
 DEBUGGING = True
-ONE_fILE = False
-ROOT = "/app/airunner"
-DIST = "/app/dist/airunner"
+EXCLUDE_BINARIES = True
+EXE_NAME = "airunner"  # used when creating a binary instead of a folder
+EXE_STRIP = False
+EXE_UPX = True
+EXE_RUNTIME_TMP_DIR = None
+COLLECT_NAME = 'airunner'
+COLLECT_STRIP = False
+COLLECT_UPX = True
 datas = []
 datas += copy_metadata('aihandler')
 datas += copy_metadata('tqdm')
@@ -49,14 +34,11 @@ datas += collect_data_files("pytorch_lightning", include_py_files=True)
 datas += collect_data_files("lightning_fabric", include_py_files=True)
 datas += collect_data_files("transformers", include_py_files=True)
 datas += collect_data_files("xformers", include_py_files=True)
-datas += collect_data_files("deepspeed", include_py_files=True)
-
 a = Analysis(
     [
-        f'{ROOT}/src/airunner/main.py',
+        f'./airunner/src/airunner/main.py',
     ],
     pathex=[
-        f"{ROOT}/src/airunner/pyqt/",
         "/usr/local/lib/python3.10/dist-packages/",
         "/usr/local/lib/python3.10/dist-packages/torch/lib",
         "/usr/local/lib/python3.10/dist-packages/tokenizers",
@@ -65,19 +47,17 @@ a = Analysis(
         "/usr/local/lib/python3.10/dist-packages/xformers",
         "/usr/local/lib/python3.10/dist-packages/xformers/triton",
         "/usr/lib/x86_64-linux-gnu/",
-        "/usr/local/lib/python3.10/dist-packages/torch/lib/",
     ],
     binaries=[
-        ('/usr/lib/x86_64-linux-gnu/libpython3.10.so.1.0', '.'),
         ('/usr/local/lib/python3.10/dist-packages/nvidia/cudnn/lib/libcudnn_ops_infer.so.8', '.'),
         ('/usr/local/lib/python3.10/dist-packages/nvidia/cudnn/lib/libcudnn_cnn_infer.so.8', '.'),
-        ('/usr/lib/x86_64-linux-gnu/libtcl8.6.so', '.')
     ],
     datas=datas,
     hiddenimports=[
         "aihandler",
         "JIT",
-        "triton","triton._C",
+        "triton",
+        "triton._C",
         "triton._C.libtriton",
         "xformers",
         "xformers.ops",
@@ -115,83 +95,62 @@ a = Analysis(
     cipher=block_cipher,
     noarchive=False,
 )
-
 pyz = PYZ(
-  a.pure,
-  a.zipped_data,
-  cipher=block_cipher
+    a.pure,
+    a.zipped_data,
+    cipher=block_cipher
+)
+exe = EXE(
+    pyz,
+    a.scripts,
+    [],
+    exclude_binaries=EXCLUDE_BINARIES,
+    name=EXE_NAME,
+    debug=DEBUGGING,
+    strip=EXE_STRIP,
+    upx=EXE_UPX,
+    runtime_tmpdir=EXE_RUNTIME_TMP_DIR,
+    console=DEBUGGING
+)
+coll = COLLECT(
+    exe,
+    a.binaries,
+    a.zipfiles,
+    a.datas,
+    strip=COLLECT_STRIP,
+    upx=COLLECT_UPX,
+    upx_exclude=[],
+    name=COLLECT_NAME
 )
 
-if ONE_fILE:
-    splash = Splash(f'{ROOT}/src/airunner/src/splashscreen.png',
-      binaries=a.binaries,
-      datas=a.datas,
-      text_pos=(10, 50),
-      text_size=12,
-      text_color='black',
-      text_font='Arial',
-      text='Loading...',
-    )
-    exe = EXE(pyz,
-      a.scripts,
-      splash,
-      splash.binaries,
-      a.zipfiles,
-      a.datas,
-      name='airunner',
-      debug=DEBUGGING,
-      strip=False,
-      upx=True,
-      runtime_tmpdir=None,
-      console=DEBUGGING
-    )
-else:
-    exe = EXE(
-      pyz,
-      a.scripts,
-      [],
-      exclude_binaries=False,
-      name='airunner',
-      debug=DEBUGGING,
-      strip=False,
-      upx=True,
-      runtime_tmpdir=None,
-      console=DEBUGGING
-    )
-    coll = COLLECT(
-      exe,
-        a.binaries,
-        a.zipfiles,
-        a.datas,
-        strip=False,
-        upx=True,
-        upx_exclude=[],
-        name='airunner'
-    )
-    print("*"*100)
-    # list everything in this directory
-    print(os.listdir(f'{ROOT}/src/airunner/pyqt'))
-    print("*" * 100)
+# copy files for distribution
+shutil.copytree('./src/airunner/pyqt', './dist/airunner/pyqt')
+shutil.copyfile('./linux.itch.toml', './dist/airunner/.itch.toml')
+shutil.copytree('./src/airunner/src/icons', './dist/airunner/src/icons')
 
-    shutil.copytree(
-        f'{ROOT}/src/airunner/pyqt',
-        f'{DIST}/pyqt'
-    )
+# copy sd config files
+os.makedirs('./dist/airunner/diffusers/pipelines/stable_diffusion', exist_ok=True)
+for file in ["v1.yaml", "v2.yaml"]:
+    shutil.copyfile(f'./{file}', f'./dist/airunner/diffusers/pipelines/stable_diffusion/{file}')
 
-    shutil.copyfile(
-        f'{ROOT}/linux.itch.toml',
-        f'{DIST}/.itch.toml'
-    )
 
-    shutil.copytree(
-        f'{ROOT}/src/airunner/src/icons',
-        f'{DIST}/src/icons'
-    )
+#############################################################
+#### The following fixes are for Triton #####################
 
-    for file in ["v1.yaml", "v2.yaml"]:
-        # create f'{DIST}/diffusers/pipelines/stable_diffusion' if it doesn't exist
-        os.makedirs(f'{DIST}/diffusers/pipelines/stable_diffusion', exist_ok=True)
-        shutil.copyfile(
-            f'{ROOT}/{file}',
-            f'{DIST}/diffusers/pipelines/stable_diffusion/{file}'
-        )
+# run compileall on ./dist/airunner/triton/runtime/jit.py and then mv ./dist/airunner/triton/runtime/__pycache__/jit.cpython-310.pyc to ./dist/airunner/triton/runtime/jit.pyc
+shutil.move(
+    '/usr/local/lib/python3.10/dist-packages/triton/runtime/__pycache__/jit.cpython-310.pyc',
+    './dist/airunner/triton/runtime/jit.pyc'
+)
+
+# do the same thing for ./dist/airunner/triton/compiler.py
+shutil.move(
+    '/usr/local/lib/python3.10/dist-packages/triton/__pycache__/compiler.cpython-310.pyc',
+    './dist/airunner/triton/compiler.pyc'
+)
+
+for file in [ "random" ]:
+    shutil.move(
+        f'/usr/local/lib/python3.10/dist-packages/JIT/__pycache__/{file}.cpython-310.pyc',
+        './dist/airunner/{file}.pyc'
+    )
