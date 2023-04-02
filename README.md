@@ -35,13 +35,27 @@ This is the compiled version of AI Runner which you can use without installing a
 [Current builds of AI Runner are compiled with pyinstaller on docker.](https://github.com/Capsize-Games/airunner/pkgs/container/airunner%2Fairunner)
 
 **Pull Docker container from repo**
+
+Linux
 ```
 docker pull ghcr.io/capsize-games/airunner/airunner:linux
 ```
 
-**Build AI Runner using Docker**
+Windows
 ```
-docker-compose run linux bash /app/build.sh
+docker pull ghcr.io/capsize-games/airunner/airunner:windows
+```
+
+**Build Docker**
+
+Linux
+```
+docker-compose -f build
+```
+
+Windows
+```
+docker-compose -f docker-compose.windows.yml build
 ```
 
 **Run the app using Docker**
