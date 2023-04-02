@@ -1,8 +1,8 @@
 name: Run airunner on Linux
 
 on:
-  pull_request:
-    branches: [ "master" ]
+  release:
+    types: [ published ]
   workflow_dispatch:
 
 env:
