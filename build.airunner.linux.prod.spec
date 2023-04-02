@@ -4,11 +4,32 @@ import shutil
 from PyInstaller.utils.hooks import copy_metadata, collect_data_files
 import sys ; sys.setrecursionlimit(sys.getrecursionlimit() * 5)
 os.environ["AIRUNNER_ENVIRONMENT"] = "prod"
+os.environ["LD_LIBRARY_PATH"] = "/usr/local/lib/python3.10/dist-packages/PyQt6/Qt6/lib/:/usr/lib/x86_64-linux-gnu/wine-development/:/usr/local/lib/python3.10/dist-packages/h5py.libs/:/usr/local/lib/python3.10/dist-packages/scipy.libs/:/usr/local/lib/python3.10/dist-packages/tokenizers.libs/:/usr/local/lib/python3.10/dist-packages/Pillow.libs/:/usr/local/lib/python3.10/dist-packages/opencv_python.libs/:/usr/local/lib/python3.10/dist-packages/torchaudio/lib/:/usr/local/lib/python3.10/dist-packages/torch/lib/:/usr/lib/python3.10:/usr/lib/x86_64-linux-gnu/:/usr/local/lib/:/usr/local/lib/python3.10:/usr/local/lib/python3.10/dist-packages"
+os.environ["PATH"] = f"{os.environ['PATH']}:/usr/local/cuda/lib64"
+os.environ["PATH"] = f"{os.environ['PATH']}:/usr/local/cuda-11.7/targets/x86_64-linux/lib/"
+os.environ["PATH"] = f"{os.environ['PATH']}:/usr/local/lib/python3.10/dist-packages/tensorrt/"
+os.environ["PATH"] = f"{os.environ['PATH']}:/usr/local/lib/python3.10/dist-packages/opencv_python.libs/"
+os.environ["PATH"] = f"{os.environ['PATH']}:/usr/lib/x86_64-linux-gnu/"
+os.environ["PATH"] = f"{os.environ['PATH']}:/usr/local/lib/python3.10/dist-packages/Pillow.libs/"
+os.environ["PATH"] = f"{os.environ['PATH']}:/usr/local/lib/python3.10/dist-packages/tokenizers.libs/"
+os.environ["PATH"] = f"{os.environ['PATH']}:/usr/local/lib/python3.10/dist-packages/xformers/triton"
+os.environ["PATH"] = f"{os.environ['PATH']}:/usr/local/lib/python3.10/dist-packages/nvidia/cuda_runtime/lib/"
+os.environ["PATH"] = f"{os.environ['PATH']}:/usr/local/lib/python3.10/dist-packages/nvidia/cudnn/lib"
+os.environ["PATH"] = f"{os.environ['PATH']}:/usr/local/lib/python3.10/dist-packages/numpy.libs"
+os.environ["PATH"] = f"{os.environ['PATH']}:/usr/local/lib/python3.10/dist-packages/h5py.libs"
+os.environ["PATH"] = f"{os.environ['PATH']}:/usr/local/lib/python3.10/dist-packages/torchaudio/lib/"
+os.environ["PATH"] = f"{os.environ['PATH']}:/usr/local/lib/python3.10/dist-packages/torch/lib/"
+os.environ["PATH"] = f"{os.environ['PATH']}:/usr/local/lib/python3.10/dist-packages/torch/bin"
+os.environ["PATH"] = f"{os.environ['PATH']}:/usr/local/lib/python3.10/dist-packages/torch/_C"
+os.environ["PATH"] = f"{os.environ['PATH']}:/usr/local/lib/python3.10/dist-packages/torch"
+os.environ["PATH"] = f"{os.environ['PATH']}:/usr/local/lib/python3.10/dist-packages/triton"
+os.environ["PATH"] = f"{os.environ['PATH']}:/usr/local/lib/python3.10/dist-packages/triton/_C"
+os.environ["PYTHONPATH"]=f"${os.environ['PYTHONPATH']}:/usr/local/lib/python3.10/dist-packages"
 block_cipher = None
-DEBUGGING = False
+DEBUGGING = True
 ONE_fILE = False
 ROOT = "/app/airunner"
-DIST = "./dist/airunner"
+DIST = "/app/dist/airunner"
 datas = []
 datas += copy_metadata('aihandler')
 datas += copy_metadata('tqdm')
@@ -44,6 +65,7 @@ a = Analysis(
         "/usr/local/lib/python3.10/dist-packages/xformers",
         "/usr/local/lib/python3.10/dist-packages/xformers/triton",
         "/usr/lib/x86_64-linux-gnu/",
+        "/usr/local/lib/python3.10/dist-packages/torch/lib/",
     ],
     binaries=[
         ('/usr/lib/x86_64-linux-gnu/libpython3.10.so.1.0', '.'),
@@ -55,8 +77,7 @@ a = Analysis(
     hiddenimports=[
         "aihandler",
         "JIT",
-        "triton",
-        "triton._C",
+        "triton","triton._C",
         "triton._C.libtriton",
         "xformers",
         "xformers.ops",
@@ -66,10 +87,6 @@ a = Analysis(
         "diffusers",
         "transformers",
         "nvidia",
-        "taming",
-        "taming.modules",
-        "taming.modules.vqvae",
-        "taming.modules.vqvae.quantize",
         "torch",
         "torchvision",
         "torchvision.io",
@@ -133,7 +150,7 @@ else:
       pyz,
       a.scripts,
       [],
-      exclude_binaries=True,
+      exclude_binaries=False,
       name='airunner',
       debug=DEBUGGING,
       strip=False,
@@ -151,6 +168,10 @@ else:
         upx_exclude=[],
         name='airunner'
     )
+    print("*"*100)
+    # list everything in this directory
+    print(os.listdir(f'{ROOT}/src/airunner/pyqt'))
+    print("*" * 100)
 
     shutil.copytree(
         f'{ROOT}/src/airunner/pyqt',
