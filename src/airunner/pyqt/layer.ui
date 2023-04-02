@@ -29,7 +29,7 @@
       </size>
      </property>
      <property name="styleSheet">
-      <string notr="true">border-color: rgb(51, 209, 122);</string>
+      <string notr="true">border-color: rgb(62, 18, 110);</string>
      </property>
      <property name="frameShape">
       <enum>QFrame::StyledPanel</enum>
