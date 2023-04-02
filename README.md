@@ -69,11 +69,6 @@ docker run --rm -v $(pwd)/dist:/app/dist -v $(pwd)/build:/app/build ghcr.io/caps
 ```
 Run it with `./dist/airunner/airunner`
 
-**Compile the app locally**
-```
-docker run --rm ghcr.io/capsize-games/airunner/airunner:linux bash build.sh
-```
-
 ### Pypi installation
 
 If you would like to use AI Runner as a library, follow this method of installation.
