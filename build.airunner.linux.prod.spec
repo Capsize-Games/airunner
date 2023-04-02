@@ -131,7 +131,7 @@ shutil.copytree('./src/airunner/src/icons', './dist/airunner/src/icons')
 # copy sd config files
 os.makedirs('./dist/airunner/diffusers/pipelines/stable_diffusion', exist_ok=True)
 for file in ["v1.yaml", "v2.yaml"]:
-    shutil.copyfile(f'./{file}', f'./dist/airunner/diffusers/pipelines/stable_diffusion/{file}')
+    shutil.copyfile(f'./{file}', f'./dist/airunner/{file}')
 
 
 #############################################################

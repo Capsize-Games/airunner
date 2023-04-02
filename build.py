@@ -31,6 +31,8 @@ def clone(repo):
     os.system(f'git clone https://github.com/{repo}.git /app/{repo.split("/")[1]}')
 
 
+# remove diffusers
+os.system("python3 -m pip uninstall diffusers -y")
 # install repos
 install_latest("w4ffl35/diffusers")
 install_latest("w4ffl35/transformers")
