@@ -4,7 +4,23 @@ import shutil
 from PyInstaller.utils.hooks import copy_metadata, collect_data_files
 import sys ; sys.setrecursionlimit(sys.getrecursionlimit() * 5)
 os.environ["AIRUNNER_ENVIRONMENT"] = "prod"
-os.environ["LD_LIBRARY_PATH"] = "/usr/local/lib/python3.10/dist-packages/PyQt6/Qt6/lib/:/usr/lib/x86_64-linux-gnu/wine-development/:/usr/local/lib/python3.10/dist-packages/h5py.libs/:/usr/local/lib/python3.10/dist-packages/scipy.libs/:/usr/local/lib/python3.10/dist-packages/tokenizers.libs/:/usr/local/lib/python3.10/dist-packages/Pillow.libs/:/usr/local/lib/python3.10/dist-packages/opencv_python.libs/:/usr/local/lib/python3.10/dist-packages/torchaudio/lib/:/usr/local/lib/python3.10/dist-packages/torch/lib/:/usr/lib/python3.10:/usr/lib/x86_64-linux-gnu/:/usr/local/lib/:/usr/local/lib/python3.10:/usr/local/lib/python3.10/dist-packages"
+libraries = [
+    "/usr/local/lib/python3.10/dist-packages/PyQt6/Qt6/lib/",
+    "/usr/lib/x86_64-linux-gnu/wine-development/",
+    "/usr/local/lib/python3.10/dist-packages/h5py.libs/",
+    "/usr/local/lib/python3.10/dist-packages/scipy.libs/",
+    "/usr/local/lib/python3.10/dist-packages/tokenizers.libs/",
+    "/usr/local/lib/python3.10/dist-packages/Pillow.libs/",
+    "/usr/local/lib/python3.10/dist-packages/opencv_python.libs/",
+    "/usr/local/lib/python3.10/dist-packages/torchaudio/lib/",
+    "/usr/local/lib/python3.10/dist-packages/torch/lib/",
+    "/usr/lib/python3.10",
+    "/usr/lib/x86_64-linux-gnu/",
+    "/usr/local/lib/",
+    "/usr/local/lib/python3.10",
+    "/usr/local/lib/python3.10/dist-packages"
+]
+os.environ["LD_LIBRARY_PATH"] = ":".join(libraries)
 block_cipher = None
 DEBUGGING = True
 EXCLUDE_BINARIES = True
@@ -130,9 +146,8 @@ shutil.copytree('./src/airunner/src/icons', './dist/airunner/src/icons')
 
 # copy sd config files
 os.makedirs('./dist/airunner/diffusers/pipelines/stable_diffusion', exist_ok=True)
-for file in ["v1.yaml", "v2.yaml"]:
-    shutil.copyfile(f'./{file}', f'./dist/airunner/{file}')
-
+shutil.copyfile('./v1.yaml', './dist/airunner/v1.yaml')
+shutil.copyfile('./v2.yaml', './dist/airunner/v2.yaml')
 
 #############################################################
 #### The following fixes are for Triton #####################
@@ -152,5 +167,5 @@ shutil.move(
 for file in [ "random" ]:
     shutil.move(
         f'/usr/local/lib/python3.10/dist-packages/JIT/__pycache__/{file}.cpython-310.pyc',
-        './dist/airunner/{file}.pyc'
+        f'./dist/airunner/{file}.pyc'
     )
