@@ -10,7 +10,7 @@ name: Upload Python Package
 
 on:
   release:
-    types: []
+    types: [ published ]
   workflow_dispatch:
 
 permissions:
