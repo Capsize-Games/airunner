@@ -35,13 +35,27 @@ This is the compiled version of AI Runner which you can use without installing a
 [Current builds of AI Runner are compiled with pyinstaller on docker.](https://github.com/Capsize-Games/airunner/pkgs/container/airunner%2Fairunner)
 
 **Pull Docker container from repo**
+
+Linux
 ```
 docker pull ghcr.io/capsize-games/airunner/airunner:linux
 ```
 
-**Build AI Runner using Docker**
+Windows
 ```
-docker-compose run linux bash /app/build.sh
+docker pull ghcr.io/capsize-games/airunner/airunner:windows
+```
+
+**Build Docker**
+
+Linux
+```
+docker-compose -f build
+```
+
+Windows
+```
+docker-compose -f docker-compose.windows.yml build
 ```
 
 **Run the app using Docker**
@@ -55,11 +69,6 @@ docker run --rm -v $(pwd)/dist:/app/dist -v $(pwd)/build:/app/build ghcr.io/caps
 ```
 Run it with `./dist/airunner/airunner`
 
-**Compile the app locally**
-```
-docker run --rm ghcr.io/capsize-games/airunner/airunner:linux bash build.sh
-```
-
 ### Pypi installation
 
 If you would like to use AI Runner as a library, follow this method of installation.
@@ -69,7 +78,7 @@ Currently there isn't much of an external API so using AI Runner as a library is
 ```
 pip install torch==1.13.1 torchvision==0.14.1 torchaudio==0.13.1 --index-url https://download.pytorch.org/whl/cu117
 pip install aihandlerwindows
-pip install https://github.com/w4ffl35/diffusers/archive/refs/tags/v0.14.0.ckpt_fix.tar.gz
+pip install https://github.com/w4ffl35/diffusers/archive/refs/tags/v0.14.0.ckpt_fix_0.0.1.tar.gz
 pip install https://github.com/w4ffl35/transformers/archive/refs/tags/tensor_fix-v1.0.2.tar.gz
 pip install https://github.com/acpopescu/bitsandbytes/releases/download/v0.37.2-win.0/bitsandbytes-0.37.2-py3-none-any.whl
 pip install airunner --no-deps
@@ -77,7 +86,7 @@ pip install airunner --no-deps
 
 #### Linux
 ```
-pip install https://github.com/w4ffl35/diffusers/archive/refs/tags/v0.14.0.ckpt_fix.tar.gz
+pip install https://github.com/w4ffl35/diffusers/archive/refs/tags/v0.14.0.ckpt_fix_0.0.1.tar.gz
 pip install https://github.com/w4ffl35/transformers/archive/refs/tags/tensor_fix-v1.0.2.tar.gz
 pip install airunner
 ```
@@ -91,7 +100,7 @@ pip install airunner
 Install required libraries
 ```
 pip install torch==1.13.1 torchvision==0.14.1 torchaudio==0.13.1 --index-url https://download.pytorch.org/whl/cu117
-pip install https://github.com/w4ffl35/diffusers/archive/refs/tags/v0.14.0.ckpt_fix.tar.gz
+pip install https://github.com/w4ffl35/diffusers/archive/refs/tags/v0.14.0.ckpt_fix_0.0.1.tar.gz
 pip install https://github.com/w4ffl35/transformers/archive/refs/tags/tensor_fix-v1.0.2.tar.gz
 pip install https://github.com/acpopescu/bitsandbytes/releases/download/v0.37.2-win.0/bitsandbytes-0.37.2-py3-none-any.whl
 ```
