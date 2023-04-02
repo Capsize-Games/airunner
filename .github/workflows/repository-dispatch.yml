@@ -26,7 +26,6 @@ jobs:
         run: |
           docker pull $DOCKER_IMAGE
           docker run --rm \
-            --user airunner \
             -e BUTLER_API_KEY=${{ secrets.BUTLER_API_KEY }} \
             -e ITCHIO_USERNAME=${{ secrets.ITCHIO_USERNAME }} \
             -e DEV_ENV=0 \
@@ -34,7 +33,6 @@ jobs:
             -e AIRUNNER_OS=linux \
             -e PYTORCH_CUDA_ALLOC_CONF=garbage_collection_threshold:0.9,max_split_size_mb:512 \
             -e NUMBA_CACHE_DIR=/tmp/numba_cache \
-            -e LD_LIBRARY_PATH=/usr/lib/python3.10:/usr/lib/x86_64-linux-gnu/:/usr/local/lib/:/usr/local/lib/python3.10:/usr/local/lib/python3.10/dist-packages \
             -e DISABLE_TELEMETRY=1 \
             -e TCL_LIBDIR_PATH=/usr/lib/x86_64-linux-gnu/ \
             -e TK_LIBDIR_PATH=/usr/lib/x86_64-linux-gnu/ \
