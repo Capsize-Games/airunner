@@ -39,6 +39,9 @@ RUN ln -snf /usr/share/zoneinfo/$TZ /etc/localtime && echo $TZ > /etc/timezone \
     && apt-get install patchelf -y \
     && apt-get install ccache -y \
     && apt-get install -y libxcb-xinerama0 \
+    && apt-get install -y libgtk-3-0 \
+    && apt-get install qt6-qpa-plugins -y \
+    && apt-get install libgl1-mesa-glx libglib2.0-0 libsm6 libxext6 libxrender-dev libxcb-xinerama0 -y \
     && rm -rf /var/lib/apt/lists/ \
     && update-alternatives --install /usr/bin/gcc gcc /usr/bin/gcc-9 60 --slave /usr/bin/g++ g++ /usr/bin/g++-9 \
     && rm -rf /var/lib/apt/lists/*
