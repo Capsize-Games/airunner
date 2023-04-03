@@ -12,27 +12,17 @@ from PyQt6.QtCore import QPoint, pyqtSlot, QRect
 from PyQt6.QtGui import QPainter, QIcon, QColor, QGuiApplication
 from aihandler.qtvar import TQDMVar, ImageVar, MessageHandlerVar, ErrorHandlerVar
 from aihandler.settings import MAX_SEED, AVAILABLE_SCHEDULERS_BY_ACTION, MODELS, LOG_LEVEL
+from airunner.history import History
+from airunner.windows.about import AboutWindow
+from airunner.windows.advanced_settings import AdvancedSettings
+from airunner.windows.grid_settings import GridSettings
+from airunner.windows.preferences import PreferencesWindow
 from qtcanvas import Canvas
 from settingsmanager import SettingsManager
 from runai_client import OfflineClient
 from filters import FilterGaussianBlur, FilterBoxBlur, FilterUnsharpMask, FilterSaturation, \
     FilterColorBalance, FilterPixelArt
 import qdarktheme
-
-
-class History:
-    event_history = []
-    undone_history = []
-
-    def add_event(self, data: dict):
-        self.event_history.append(data)
-        self.undone_history = []
-
-
-class ErrorHandler:
-    @staticmethod
-    def handle_error(error):
-        print(error)
 
 
 class MainWindow(QApplication):
@@ -219,7 +209,7 @@ class MainWindow(QApplication):
         self.history = History()
 
         # create settings manager
-        self.settings_manager = SettingsManager(app=self)
+        self.settings_manager = SettingsManager()
 
         # listen to signal on self.settings_manager.settings.canvas_color
         self.settings_manager.settings.canvas_color.my_signal.connect(self.update_canvas_color)
@@ -318,6 +308,12 @@ class MainWindow(QApplication):
         # set the sliders of
         self.set_size_form_element_step_values()
 
+        self.settings_manager.settings.size.my_signal.connect(self.set_size_form_element_step_values)
+        self.settings_manager.settings.line_width.my_signal.connect(self.set_size_form_element_step_values)
+        self.settings_manager.settings.show_grid.my_signal.connect(self.canvas.update)
+        self.settings_manager.settings.snap_to_grid.my_signal.connect(self.canvas.update)
+        self.settings_manager.settings.line_color.my_signal.connect(self.canvas.update_grid_pen)
+
         self.exec()
 
     def set_size_form_element_step_values(self):
@@ -332,6 +328,7 @@ class MainWindow(QApplication):
         self.window.height_slider.minimum = size
         self.window.width_spinbox.minimum = size
         self.window.height_spinbox.minimum = size
+        self.canvas.update()
 
     def center(self):
         availableGeometry = QGuiApplication.primaryScreen().availableGeometry()
@@ -903,8 +900,8 @@ class MainWindow(QApplication):
             self.message_handler("")
 
     def update_canvas_color(self, color):
-        self.window.canvas.setStyleSheet(f"background-color: {color};")
-        self.window.canvas.setAutoFillBackground(True)
+        self.window.canvas_container.setStyleSheet(f"background-color: {color};")
+        self.window.canvas_container.setAutoFillBackground(True)
 
     def initialize_tabs(self):
         # load all the forms
@@ -1140,103 +1137,21 @@ class MainWindow(QApplication):
     def tab_changed_callback(self, index):
         self.canvas.update()
 
-    def handle_grid_size_change(self, val):
-        self.settings_manager.settings.size.set(val)
-        self.set_size_form_element_step_values()
-        self.canvas.update()
-
-    def handle_line_width_change(self, val):
-        self.settings_manager.settings.line_width.set(val)
-        self.canvas.update()
-
-    def handle_show_grid_checkbox(self, val):
-        self.settings_manager.settings.show_grid.set(val == 2)
-        self.canvas.update()
-
-    def handle_snap_to_grid_checkbox(self, val):
-        self.settings_manager.settings.snap_to_grid.set(val == 2)
-        self.canvas.update()
-
     def show_about(self):
-        # display pyqt/about.ui popup window
-        HERE = os.path.dirname(os.path.abspath(__file__))
-        about_window = uic.loadUi(os.path.join(HERE, "pyqt/about.ui"))
-        about_window.setWindowTitle(f"About AI Runner")
-        about_window.title.setText(f"AI Runner")
-        about_window.exec()
-
-    def handle_grid_line_color_button(self):
-        # display color picker for self.settings_manager.settings.grid_line_color
-        color = QColorDialog.getColor()
-        if color.isValid():
-            self.settings_manager.settings.line_color.set(color.name())
-            self.canvas.update_grid_pen()
-            self.canvas.update()
+        AboutWindow(self.settings_manager)
 
     def show_grid_settings(self):
-        HERE = os.path.dirname(os.path.abspath(__file__))
-        grid_settings_window = uic.loadUi(os.path.join(HERE, "pyqt/grid_settings.ui"))
-        grid_settings_window.setWindowTitle(f"Grid Settings")
-
-        grid_settings_window.gridLineColorButton.clicked.connect(self.handle_grid_line_color_button)
-
-        # set the grid_settings_window settings values to the current settings
-        grid_settings_window.grid_size_spinbox.setValue(self.settings_manager.settings.size.get())
-
-        # on change of grid_size_spinbox, update the settings
-        grid_settings_window.grid_size_spinbox.valueChanged.connect(self.handle_grid_size_change)
-
-        grid_settings_window.grid_line_width_spinbox.setValue(self.settings_manager.settings.line_width.get())
-        grid_settings_window.grid_line_width_spinbox.valueChanged.connect(self.handle_line_width_change)
-
-        # show_grid_checkbox
-        grid_settings_window.show_grid_checkbox.setChecked(self.settings_manager.settings.show_grid.get() == True)
-        grid_settings_window.show_grid_checkbox.stateChanged.connect(self.handle_show_grid_checkbox)
-
-        # snap_to_grid_checkbox
-        grid_settings_window.snap_to_grid_checkbox.setChecked(self.settings_manager.settings.snap_to_grid.get() == True)
-        grid_settings_window.snap_to_grid_checkbox.stateChanged.connect(self.handle_snap_to_grid_checkbox)
-
-        grid_settings_window.exec()
+        GridSettings(self.settings_manager)
 
     def do_invert(self):
         self.canvas.invert_image()
         self.canvas.update()
 
     def show_preferences(self):
-        HERE = os.path.dirname(os.path.abspath(__file__))
-        preferences_window = uic.loadUi(os.path.join(HERE, "pyqt/preferences.ui"))
-        preferences_window.setWindowTitle(f"Preferences")
-        preferences_window.sd_path.setText(self.settings_manager.settings.model_base_path.get())
-        def browse_for_model_base_path(line_edit):
-            path = QFileDialog.getExistingDirectory(None, "Select Directory")
-            line_edit.setText(path)
-            self.settings_manager.settings.model_base_path.set(path)
-        preferences_window.browseButton.clicked.connect(lambda: browse_for_model_base_path(preferences_window.sd_path))
-        preferences_window.hf_token.setText(self.settings_manager.settings.hf_api_key.get())
-        preferences_window.hf_token.textChanged.connect(lambda val: self.settings_manager.settings.hf_api_key.set(val))
-        preferences_window.sd_path.textChanged.connect(lambda val: self.settings_manager.settings.model_base_path.set(val))
-        preferences_window.exec()
+        PreferencesWindow(self.settings_manager)
 
     def show_advanced(self):
-        HERE = os.path.dirname(os.path.abspath(__file__))
-        advanced_window = uic.loadUi(os.path.join(HERE, "pyqt/advanced_settings.ui"))
-        advanced_window.setWindowTitle(f"Advanced")
-        settings = self.settings_manager.settings
-        checkbox_settings = [
-            (advanced_window.use_lastchannels, settings.use_last_channels),
-            (advanced_window.use_enable_sequential_cpu_offload, settings.use_enable_sequential_cpu_offload),
-            (advanced_window.use_attention_slicing, settings.use_attention_slicing),
-            (advanced_window.use_tf32, settings.use_tf32),
-            (advanced_window.use_cudnn_benchmark, settings.use_cudnn_benchmark),
-            (advanced_window.use_enable_vae_slicing, settings.use_enable_vae_slicing),
-            (advanced_window.use_xformers, settings.use_xformers),
-            (advanced_window.enable_model_cpu_offload, settings.enable_model_cpu_offload),
-        ]
-        for checkbox, setting in checkbox_settings:
-            checkbox.setChecked(setting.get() == True)
-            checkbox.stateChanged.connect(lambda val, setting=setting: setting.set(val == 2))
-        advanced_window.exec()
+        AdvancedSettings(self.settings_manager)
 
     def show_canvas_color(self):
         # show a color widget dialog and set the canvas color
