@@ -69,8 +69,8 @@ COPY build.sh build.sh
 COPY build.py build.py
 COPY build.airunner.linux.prod.spec build.airunner.linux.prod.spec
 COPY linux.itch.toml linux.itch.toml
-COPY v1.yaml v1.yaml
-COPY v2.yaml v2.yaml
+COPY src/airunner/v1.yaml v1.yaml
+COPY src/airunner/v2.yaml v2.yaml
 COPY src/airunner/src/icons src/airunner/src/icons
 COPY src/airunner/pyqt src/airunner/pyqt
 RUN python3 -c "from accelerate.utils import write_basic_config; write_basic_config(mixed_precision='fp16')"
