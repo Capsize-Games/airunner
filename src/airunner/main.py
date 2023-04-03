@@ -5,8 +5,7 @@ import sys
 import cv2
 import numpy as np
 import torch
-from PIL.ImageFilter import Filter
-from PIL import Image, ImageEnhance
+from PIL import Image
 from PyQt6 import uic, QtCore, QtGui
 from PyQt6.QtWidgets import QApplication, QLabel, QWidget, QColorDialog, QFileDialog, QVBoxLayout
 from PyQt6.QtCore import QPoint, pyqtSlot, QRect
