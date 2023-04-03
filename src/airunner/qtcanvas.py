@@ -298,6 +298,7 @@ class Canvas:
             QColor(self.settings_manager.settings.line_color.get()),
             self.settings_manager.settings.line_width.get()
         )
+        self.update()
 
     def image_handler_old(self, active_img, data):
         action = data["action"]
