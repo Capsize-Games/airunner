@@ -874,24 +874,11 @@ class MainWindow(QApplication):
 
     def initialize_tabs(self):
         # load all the forms
+        sections = ["txt2img", "img2img", "depth2img", "pix2pix", "outpaint", "controlnet"]
         HERE = os.path.dirname(os.path.abspath(__file__))
-        txt2img_form = uic.loadUi(os.path.join(HERE, "pyqt/generate_form.ui"))
-        img2img_form = uic.loadUi(os.path.join(HERE, "pyqt/generate_form.ui"))
-        depth2img_form = uic.loadUi(os.path.join(HERE, "pyqt/generate_form.ui"))
-        pix2pix_form = uic.loadUi(os.path.join(HERE, "pyqt/generate_form.ui"))
-        inout_paint_form = uic.loadUi(os.path.join(HERE, "pyqt/generate_form.ui"))
-        controlnet_form = uic.loadUi(os.path.join(HERE, "pyqt/generate_form.ui"))
-        # super_resolution_form = uic.loadUi("pyqt/generate_form.ui")
-
-        self.tabs = {
-            "txt2img": txt2img_form,
-            "img2img": img2img_form,
-            "depth2img": depth2img_form,
-            "pix2pix": pix2pix_form,
-            "outpaint": inout_paint_form,
-            # "super_resolution": super_resolution_form,
-            "controlnet": controlnet_form,
-        }
+        self.tabs = {}
+        for tab in sections:
+            self.tabs[tab] = uic.loadUi(os.path.join(HERE, "pyqt/generate_form.ui"))
 
         for tab in self.tabs:
             if tab != "controlnet":
@@ -916,13 +903,8 @@ class MainWindow(QApplication):
 
 
         # add all the tabs
-        self.window.tabWidget.addTab(txt2img_form, "txt2img")
-        self.window.tabWidget.addTab(img2img_form, "img2img")
-        self.window.tabWidget.addTab(depth2img_form, "depth2img")
-        self.window.tabWidget.addTab(pix2pix_form, "pix2pix")
-        self.window.tabWidget.addTab(inout_paint_form, "in/out paint")
-        # self.window.tabWidget.addTab(super_resolution_form, "super resolution")
-        self.window.tabWidget.addTab(controlnet_form, "controlnet")
+        for tab in sections:
+            self.window.tabWidget.addTab(self.tabs[tab], tab)
 
         embedding_names = self.get_list_of_available_embedding_names()
         # iterate over each tab and connect steps_slider with steps_spinbox
@@ -1014,12 +996,8 @@ class MainWindow(QApplication):
         self.window.tabWidget.currentChanged.connect(self.tab_changed_callback)
 
         # add callbacks
-        txt2img_form.generate.clicked.connect(self.generate_callback)
-        img2img_form.generate.clicked.connect(self.generate_callback)
-        depth2img_form.generate.clicked.connect(self.generate_callback)
-        pix2pix_form.generate.clicked.connect(self.generate_callback)
-        inout_paint_form.generate.clicked.connect(self.generate_callback)
-        controlnet_form.generate.clicked.connect(self.generate_callback)
+        for tab in sections:
+            self.tabs[tab].generate.clicked.connect(self.generate_callback)
         # super_resolution_form.generate.clicked.connect(self.generate_callback)
 
         self.canvas = Canvas(self)
