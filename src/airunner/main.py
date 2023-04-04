@@ -498,7 +498,7 @@ class MainWindow(QApplication):
 
             # show a border around layer_obj if it is the selected index
             if self.canvas.current_layer_index == index:
-                layer_obj.frame.setStyleSheet("background-color: green;")
+                layer_obj.frame.setStyleSheet("background-color: layer_obj.frame.setStyleSheet("background-color: rgb(62, 145, 175);")
 
             # enable delete button in layer_obj
             layer_obj.visible_button.setIcon(QIcon("src/icons/eye.png" if layer.visible else "src/icons/eye-off.png"))
