@@ -1,4 +1,5 @@
 [![Banner](banner.png)](https://capsizegames.itch.io/ai-runner)
+[![Windows Build](https://github.com/Capsize-Games/airunner/actions/workflows/repository-dispatch-windows.yml/badge.svg)](https://github.com/Capsize-Games/airunner/actions/workflows/repository-dispatch-windows.yml)
 [![Run airunner on Linux](https://github.com/Capsize-Games/airunner/actions/workflows/repository-dispatch.yml/badge.svg)](https://github.com/Capsize-Games/airunner/actions/workflows/repository-dispatch.yml)
 [![Upload Python Package](https://github.com/Capsize-Games/airunner/actions/workflows/python-publish.yml/badge.svg)](https://github.com/Capsize-Games/airunner/actions/workflows/python-publish.yml)
 [![Discord](https://img.shields.io/discord/839511291466219541?color=5865F2&logo=discord&logoColor=white)](https://discord.gg/PUVDDCJ7gz)
