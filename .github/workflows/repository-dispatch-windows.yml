@@ -1,0 +1,37 @@
+name: Windows Build
+
+on:
+  release:
+    types: [ published ]
+  workflow_dispatch:
+
+env:
+  DOCKER_IMAGE: ghcr.io/capsize-games/airunner/airunner:windows
+  BUTLER_API_KEY: ${{ secrets.BUTLER_API_KEY }}
+  CR_PAT: ${{ secrets.CR_PAT }}
+  CR_REPO: ${{ secrets.CR_REPO }}
+  CR_USERNAME: ${{ secrets.CR_USERNAME }}
+
+jobs:
+  run-airunner:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Login to GitHub Container Registry
+        uses: docker/login-action@v1
+        with:
+          registry: ghcr.io
+          username: ${{ github.repository_owner }}
+          password: ${{ secrets.CR_PAT }}
+      - name: Run airunner on Windows
+        run: |
+          docker pull $DOCKER_IMAGE
+          docker run --rm \
+            -e BUTLER_API_KEY=${{ secrets.BUTLER_API_KEY }} \
+            -e ITCHIO_USERNAME=${{ secrets.ITCHIO_USERNAME }} \
+            -e DEV_ENV=0 \
+            -e AIRUNNER_ENVIRONMENT=prod \
+            -e AIRUNNER_OS=windows \
+            -e PYTORCH_CUDA_ALLOC_CONF=garbage_collection_threshold:0.9,max_split_size_mb:512 \
+            -e NUMBA_CACHE_DIR=/tmp/numba_cache \
+            -e DISABLE_TELEMETRY=1 \
+            ghcr.io/capsize-games/airunner/airunner:windows bash build.windows.sh
