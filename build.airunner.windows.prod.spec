@@ -9,35 +9,16 @@ os.environ["PYTHONOPTIMIZE"] = "0"
 block_cipher = None
 ROOT = "Z:\\app\\"
 DIST = "./dist/airunner"
-
-os.environ["PYTHONOPTIMIZE"] = "0"
-os.environ["LD_LIBRARY_PATH"] = "C:\\Program Files\\NVIDIA GPU Computing Toolkit\\CUDA\\v11.7\\bin"
-os.environ["PATH"] = f"{os.environ['PATH']};C:\\"
-os.environ["PATH"] = f"{os.environ['PATH']};C:\\Program Files\\NVIDIA\CUDNN\\8.6.0.163\\lib"
-os.environ["PATH"] = f"{os.environ['PATH']};C:\\Program Files\\NVIDIA GPU Computing Toolkit\\CUDA\\v11.7\\bin"
-os.environ["PYTHONPATH"] = f"C:\\"
-os.environ["PYTHONPATH"] = f"{os.environ['PYTHONPATH']};C:\\PortableGit"
-os.environ["PYTHONPATH"] = f"{os.environ['PYTHONPATH']};C:\\Program Files\\NVIDIA\\CUDNN\\v8.6.0.163\\bin"
-os.environ["PYTHONPATH"] = f"{os.environ['PYTHONPATH']};C:\\Program Files\\NVIDIA GPU Computing Toolkit\\CUDA\\v11.7\\bin"
-os.environ["LD_LIBRARY_PATH"] = f"{os.environ['PATH']};{os.environ['PYTHONPATH']};{os.environ['LD_LIBRARY_PATH']}"
-os.environ["DISABLE_TELEMETRY"] = f"true"
-os.environ["HF_ENDPOINT"] = f""
-os.environ["HF_HUB_DISABLE_PROGRESS_BARS"] = f"0"
-os.environ["HF_HUB_DISABLE_SYMLINKS_WARNING"] = f"1"
-os.environ["HF_HUB_ENABLE_HF_TRANSFER"] = f"0"
-os.environ["USE_SAFETENSORS"] = f"true"
-os.environ["NVIDIA_VISIBLE_DEVICES"] = f"true"
-os.environ["XFORMERS_MORE_DETAILS"] = f"1"
-
+os.environ["AIRUNNER_ENVIRONMENT"] = "prod"
 DEBUGGING = True
 EXCLUDE_BINARIES = False
 EXE_NAME = "airunner"  # used when creating a binary instead of a folder
 EXE_STRIP = False
-EXE_UPX = True
+EXE_UPX = False
 EXE_RUNTIME_TMP_DIR = None
 COLLECT_NAME = 'airunner'
 COLLECT_STRIP = False
-COLLECT_UPX = True
+COLLECT_UPX = False
 
 datas = []
 datas += copy_metadata('aihandlerwindows')
@@ -119,12 +100,35 @@ a = Analysis(
         "scipy",
     ],
     hookspath=[],
+    hooksconfig={},
     runtime_hooks=[],
     excludes=[
-        "tensorboard",
+        "arrow",
+        "cmake",
+        "dnspython",
+        "email-validator",
+        "google-auth",
+        "google-auth-oauthlib",
+        "google-pasta",
+        "importlib-metadata",
+        "inquirer",
+        "keras",
+        "keyring",
+        "Markdown",
+        "markdown-it-py",
+        "MarkupSafe",
+        "pyinstaller",
+        "pyinstaller-hooks-contrib",
+        "python-apt",
+        "python-dotenv",
+        "python-editor",
+        "python-multipart",
+        "SecretStorage",
         "torchaudio",
-        "markupsafe",
-        "google",
+        "unattended-upgrades",
+        "watchfiles",
+        "websocket-client",
+        "websockets",
     ],
     win_no_prefer_redirects=False,
     win_private_assemblies=False,
@@ -136,7 +140,6 @@ pyz = PYZ(
     a.zipped_data,
     cipher=block_cipher
 )
-
 exe = EXE(
     pyz,
     a.scripts,
@@ -163,6 +166,9 @@ coll = COLLECT(
     upx=COLLECT_UPX,
     upx_exclude=[],
     name=COLLECT_NAME,
+    onefile=False,
+    onedir=True,
+    upx_dir="C:\\Python310\\Scripts\\"
 )
 shutil.copytree(
     f'{ROOT}/airunner/src/airunner/pyqt',
