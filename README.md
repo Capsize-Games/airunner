@@ -67,6 +67,8 @@ docker-compose run linux python3 /app/main.py
 **Build latest version** of AI Runner using Docker locally - this will output a `build` and `dist` folder on your machine.
 ```
 docker run --rm -v $(pwd)/dist:/app/dist -v $(pwd)/build:/app/build ghcr.io/capsize-games/airunner/airunner:linux bash build.sh
+
+docker run --rm -v $(pwd)/dist:/app/dist -v $(pwd)/build:/app/build ghcr.io/capsize-games/airunner/airunner:windows bash build.windows.sh
 ```
 Run it with `./dist/airunner/airunner`
 
