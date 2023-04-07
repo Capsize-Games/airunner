@@ -9,25 +9,10 @@ services:
       context: ./
       dockerfile: ./windows.Dockerfile
     environment:
-      - DISPLAY=:X0
       - DEV_ENV=1
       - AIRUNNER_ENVIRONMENT=dev
       - AIRUNNER_OS=windows
       - PYTORCH_CUDA_ALLOC_CONF=garbage_collection_threshold:0.9,max_split_size_mb:512
       - NUMBA_CACHE_DIR=/tmp/numba_cache
-      - WINE_HOMEDRIVE=Z
-      - WINE_HOMEPATH=home\airunner
-      - WINEARCH=win64
-      - WINEPREFIX=/home/.wine-win10
-      - HF_HOME=/home/${USER}/.cache/huggingface
-      - DS_BUILD_AIO=0
-      - DS_BUILD_SPARSE_ATTN=0
-      - PATH=/home/.wine-win10/drive_c/
-      - PYTHONOPTIMIZE=0
-      - PATH=/home/.wine-win10/drive_c:/home/.wine-win10/drive_c/Python310/Lib/site-packages:/home/.wine-win10/drive_c/PortableGit:/home/.wine-win10/drive_c/Program\ Files/NVIDIA/CUDNN/v8.6.0.163/bin:/home/.wine-win10/drive_c/Program\ Files/NVIDIA\ GPU\ Computing\ Toolkit/CUDA/v11.7/bin:${PATH}
-      - PYTHONPATH=/home/.wine-win10/drive_c/Python310
       - LD_LIBRARY_PATH=/home/.wine-win10/drive_c/Program\ Files/NVIDIA\ GPU\ Computing\ Toolkit/CUDA/v11.7/lib/x64
-    volumes:
-      - ${PWD}/dist:/root/.wine/drive_c/dist
-      - ${PWD}/build:/root/.wine/drive_c/build
-    command: ["wine64", "C:\\Python310\\python.exe", "-m", "PyInstaller", "--log-level=INFO", "--noconfirm", "Z://build.airunner.windows.prod.spec"]
+      - DISABLE_TELEMETRY=1
