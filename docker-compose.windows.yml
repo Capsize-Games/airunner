@@ -27,3 +27,7 @@ services:
       - PATH=/home/.wine-win10/drive_c:/home/.wine-win10/drive_c/Python310/Lib/site-packages:/home/.wine-win10/drive_c/PortableGit:/home/.wine-win10/drive_c/Program\ Files/NVIDIA/CUDNN/v8.6.0.163/bin:/home/.wine-win10/drive_c/Program\ Files/NVIDIA\ GPU\ Computing\ Toolkit/CUDA/v11.7/bin:${PATH}
       - PYTHONPATH=/home/.wine-win10/drive_c/Python310
       - LD_LIBRARY_PATH=/home/.wine-win10/drive_c/Program\ Files/NVIDIA\ GPU\ Computing\ Toolkit/CUDA/v11.7/lib/x64
+    volumes:
+      - ${PWD}/dist:/root/.wine/drive_c/dist
+      - ${PWD}/build:/root/.wine/drive_c/build
+    command: ["wine64", "C:\\Python310\\python.exe", "-m", "PyInstaller", "--log-level=INFO", "--noconfirm", "Z://build.airunner.windows.prod.spec"]
