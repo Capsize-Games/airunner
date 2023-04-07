@@ -13,8 +13,9 @@ available_tools = [
 ]
 
 
+
+
 class SettingsManager:
-    _instance = None
     app = None
     settings = None
 
@@ -41,16 +42,8 @@ class SettingsManager:
             self.font_size
         )
 
-    def __new__(cls, app=None):
-        if cls._instance is None:
-            cls._instance = super().__new__(cls)
-            cls._instance.__init__(app=app)
-        cls.app = app
-        return cls._instance
 
     def __init__(self, app=None):
-        # if not app:
-        #     raise Exception("SettingsManager must be initialized with an app")
         self.settings = RunAISettings(app=self)
         self.settings.initialize(self.settings.read())
         self.font_name = "song ti"
