@@ -59,6 +59,11 @@ RUN pip install --upgrade wheel
 RUN pip install aihandler
 RUN pip install accelerate
 RUN pip install requests
+RUN git clone https://github.com/Capsize-Games/airunner.git /app/airunner \
+    && cd /app/airunner \
+    && git checkout master \
+    && git pull \
+    && pip install -e .
 
 FROM install_requirements as fix_tcl
 USER root
