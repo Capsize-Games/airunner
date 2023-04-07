@@ -68,7 +68,7 @@ docker-compose run linux python3 /app/main.py
 ```
 docker run --rm -v $(pwd)/dist:/app/dist -v $(pwd)/build:/app/build ghcr.io/capsize-games/airunner/airunner:linux bash build.sh
 
-docker run --rm -v $(pwd)/dist:/app/dist -v $(pwd)/build:/app/build ghcr.io/capsize-games/airunner/airunner:windows bash build.windows.sh
+docker run --rm -m 24g --cpus=12 -v $(pwd)/dist:/app/dist -v $(pwd)/build:/app/build ghcr.io/capsize-games/airunner/airunner:windows bash build.windows.sh
 ```
 Run it with `./dist/airunner/airunner`
 
