@@ -275,6 +275,7 @@ class MainWindow(QApplication):
         self.window.actionCopy.triggered.connect(self.copy_image)
 
         self.window.brush_size_slider.valueChanged.connect(self.update_brush_size)
+        self.window.brush_size_spinbox.valueChanged.connect(self.brush_spinbox_change)
 
         self.initialize_filters()
 
@@ -307,6 +308,9 @@ class MainWindow(QApplication):
 
         # set the sliders of
         self.set_size_form_element_step_values()
+
+        self.window.brush_size_slider.setValue(self.settings_manager.settings.mask_brush_size.get())
+        self.window.brush_size_spinbox.setValue(self.settings_manager.settings.mask_brush_size.get())
 
         self.settings_manager.settings.size.my_signal.connect(self.set_size_form_element_step_values)
         self.settings_manager.settings.line_width.my_signal.connect(self.set_size_form_element_step_values)
@@ -464,6 +468,11 @@ class MainWindow(QApplication):
 
     def update_brush_size(self, val):
         self.settings_manager.settings.mask_brush_size.set(val)
+        self.window.brush_size_spinbox.setValue(val)
+
+    def brush_spinbox_change(self, val):
+        self.settings_manager.settings.mask_brush_size.set(val)
+        self.window.brush_size_slider.setValue(val)
 
     def new_layer(self):
         self.canvas.add_layer()
