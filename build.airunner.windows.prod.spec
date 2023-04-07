@@ -13,18 +13,12 @@ DIST = "./dist/airunner"
 os.environ["PYTHONOPTIMIZE"] = "0"
 os.environ["LD_LIBRARY_PATH"] = "C:\\Program Files\\NVIDIA GPU Computing Toolkit\\CUDA\\v11.7\\bin"
 os.environ["PATH"] = f"{os.environ['PATH']};C:\\"
-os.environ["PATH"] = f"{os.environ['PATH']};C:\\Users\\mainr\\AppData\\Local\\Programs\\Python\\Python310"
-os.environ["PATH"] = f"{os.environ['PATH']};C:\\Users\\mainr\\PycharmProjects\\runaiux\\venv\\Lib\\site-packages"
-os.environ["PATH"] = f"{os.environ['PATH']};C:\\Users\\mainr\\PycharmProjects\\runaiux\\venv\\Lib\\site-packages\\lib"
 os.environ["PATH"] = f"{os.environ['PATH']};C:\\Program Files\\NVIDIA\CUDNN\\8.6.0.163\\lib"
 os.environ["PATH"] = f"{os.environ['PATH']};C:\\Program Files\\NVIDIA GPU Computing Toolkit\\CUDA\\v11.7\\bin"
-os.environ.setdefault("PYTHONPATH", "C:\\Users\\mainr\\PycharmProjects\\runaiux\\venv\\Lib\\site-packages")
-os.environ["PYTHONPATH"] = f"{os.environ['PYTHONPATH']};C:\\"
-os.environ["PYTHONPATH"] = f"{os.environ['PYTHONPATH']};C:\\Users\\mainr\\AppData\\Local\\Programs\\Python\\Python310"
+os.environ["PYTHONPATH"] = f"C:\\"
 os.environ["PYTHONPATH"] = f"{os.environ['PYTHONPATH']};C:\\PortableGit"
 os.environ["PYTHONPATH"] = f"{os.environ['PYTHONPATH']};C:\\Program Files\\NVIDIA\\CUDNN\\v8.6.0.163\\bin"
 os.environ["PYTHONPATH"] = f"{os.environ['PYTHONPATH']};C:\\Program Files\\NVIDIA GPU Computing Toolkit\\CUDA\\v11.7\\bin"
-os.environ["PYTHONPATH"] = f"{os.environ['PYTHONPATH']};C:\\Users\\mainr\\PycharmProjects\\runaiux\\venv\\Lib\\site-packages\\torch\\lib"
 os.environ["LD_LIBRARY_PATH"] = f"{os.environ['PATH']};{os.environ['PYTHONPATH']};{os.environ['LD_LIBRARY_PATH']}"
 os.environ["DISABLE_TELEMETRY"] = f"true"
 os.environ["HF_ENDPOINT"] = f""
@@ -35,7 +29,7 @@ os.environ["USE_SAFETENSORS"] = f"true"
 os.environ["NVIDIA_VISIBLE_DEVICES"] = f"true"
 os.environ["XFORMERS_MORE_DETAILS"] = f"1"
 
-DEBUGGING = False
+DEBUGGING = True
 EXCLUDE_BINARIES = False
 EXE_NAME = "airunner"  # used when creating a binary instead of a folder
 EXE_STRIP = False
@@ -170,7 +164,6 @@ coll = COLLECT(
     upx_exclude=[],
     name=COLLECT_NAME,
 )
-
 shutil.copytree(
     f'{ROOT}/airunner/src/airunner/pyqt',
     f'{DIST}/pyqt'
