@@ -78,6 +78,7 @@ COPY src/airunner/v1.yaml v1.yaml
 COPY src/airunner/v2.yaml v2.yaml
 COPY src/airunner/src/icons src/airunner/src/icons
 COPY src/airunner/pyqt src/airunner/pyqt
+COPY setup.py setup.py
 RUN python3 -c "from accelerate.utils import write_basic_config; write_basic_config(mixed_precision='fp16')"
 RUN pip uninstall nvidia-cublas-cu11 -y
 
