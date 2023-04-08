@@ -130,30 +130,11 @@ COPY src/airunner/src/icons /app/src/airunner/src/icons
 COPY src/airunner/pyqt /app/src/airunner/pyqt
 RUN cp /usr/lib/x86_64-linux-gnu/wine/api-ms-win-shcore-scaling-l1-1-1.dll /home/.wine-win10/drive_c/api-ms-win-shcore-scaling-l1-1-1.dll
 
-FROM source_files as precompile_hooks
-RUN wine64 C:\\Python310\\python.exe -m py_compile C:\\Python310\\lib\\site-packages\\_pyinstaller_hooks_contrib\\hooks\\stdhooks\\hook-cv2.py
-RUN wine64 C:\\Python310\\python.exe -m py_compile C:\\Python310\\Lib\\site-packages\\numpy\\_pyinstaller\\hook-numpy.py
-RUN wine64 C:\\Python310\\python.exe -m py_compile C:\\Python310\\lib\\site-packages\\PyInstaller\\hooks\\hook-multiprocessing.util.py
-RUN wine64 C:\\Python310\\python.exe -m py_compile C:\\Python310\\lib\\site-packages\\PyInstaller\\hooks\\hook-xml.py
-RUN wine64 C:\\Python310\\python.exe -m py_compile C:\\Python310\\lib\\site-packages\\PyInstaller\\hooks\\hook-platform.py
-RUN wine64 C:\\Python310\\python.exe -m py_compile C:\\Python310\\lib\\site-packages\\PyInstaller\\hooks\\hook-sysconfig.py
-RUN wine64 C:\\Python310\\python.exe -m py_compile C:\\Python310\\lib\\site-packages\\PyInstaller\\hooks\\hook-xml.etree.cElementTree.py
-RUN wine64 C:\\Python310\\python.exe -m py_compile C:\\Python310\\lib\\site-packages\\_pyinstaller_hooks_contrib\\hooks\\stdhooks\\hook-torch.py
-RUN wine64 C:\\Python310\\python.exe -m py_compile C:\\Python310\\lib\\site-packages\\PyInstaller\\hooks\\hook-packaging.py
-RUN wine64 C:\\Python310\\python.exe -m py_compile C:\\Python310\\lib\\site-packages\\PyInstaller\\hooks\\hook-pkg_resources.py
-RUN wine64 C:\\Python310\\python.exe -m py_compile C:\\Python310\\lib\\site-packages\\PyInstaller\\hooks\\pre_safe_import_module\\hook-six.moves.py
-RUN wine64 C:\\Python310\\python.exe -m py_compile C:\\Python310\\lib\\site-packages\\PyInstaller\\hooks\\hook-scipy.py
-RUN wine64 C:\\Python310\\python.exe -m py_compile C:\\Python310\\lib\\site-packages\\PyInstaller\\hooks\\hook-scipy.sparse.csgraph.py
-RUN wine64 C:\\Python310\\python.exe -m py_compile C:\\Python310\\lib\\site-packages\\PyInstaller\\hooks\\hook-scipy.linalg.py
-RUN wine64 C:\\Python310\\python.exe -m py_compile C:\\Python310\\lib\\site-packages\\PyInstaller\\hooks\\hook-sqlite3.py
-RUN wine64 C:\\Python310\\python.exe -m py_compile C:\\Python310\\lib\\site-packages\\PyInstaller\\hooks\\hook-scipy.spatial.transform.rotation.py
-RUN wine64 C:\\Python310\\python.exe -m py_compile C:\\Python310\\lib\\site-packages\\PyInstaller\\hooks\\hook-PIL.py
-RUN wine64 C:\\Python310\\python.exe -m py_compile C:\\Python310\\lib\\site-packages\\PyInstaller\\hooks\\hook-PIL.Image.py
-RUN wine64 C:\\Python310\\python.exe -m py_compile C:\\Python310\\lib\\site-packages\\PyInstaller\\hooks\\hook-PIL.ImageFilter.py
-RUN wine64 C:\\Python310\\python.exe -m py_compile C:\\Python310\\lib\\site-packages\\PyInstaller\\hooks\\hook-xml.dom.domreg.py
-RUN wine64 C:\\Python310\\python.exe -m py_compile C:\\Python310\\lib\\site-packages\\PyInstaller\\hooks\\pre_safe_import_module\\hook-urllib3.packages.six.moves.py
-RUN wine64 C:\\Python310\\python.exe -m py_compile C:\\Python310\\lib\\site-packages\\_pyinstaller_hooks_contrib\\hooks\\stdhooks\\hook-charset_normalizer.py
-RUN wine64 C:\\Python310\\python.exe -m py_compile C:\\Python310\\lib\\site-packages\\_pyinstaller_hooks_contrib\\hooks\\stdhooks\\hook-certifi.py
-#RUN wine64 C:\\Python310\\python.exe -m py_compile C:\\Python310\\lib\\site-packages\\PyInstaller\\hooks\\hook-pygments.py
-#RUN wine64 C:\\Python310\\python.exe -m py_compile C:\\Python310\\lib\\site-packages\\PyInstaller\\hooks\\hook-importlib_metadata.py
-RUN wine64 C:\\Python310\\python.exe -m py_compile C:\\Python310\\lib\\site-packages\\_pyinstaller_hooks_contrib\\hooks\\pre_safe_import_module\\hook-tensorflow.py
+FROM source_files as build
+RUN wine64 C:\\Python310\\python.exe -m pip install airunner --no-deps
+
+# clone the https://github.com/Capsize-Games/airunner.git repo into wine and pip install using wine python.exe:
+#WORKDIR /home/.wine-win10/drive_c/airunner
+#RUN git clone https://github.com/Capsize-Games/airunner.git /home/.wine-win10/drive_c/airunner
+# set workdir to C:\\airunner
+#RUN wine64 C:\\Python310\\python.exe -m pip install -e C:\\airunner --no-deps
