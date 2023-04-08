@@ -20,7 +20,7 @@ echo "Deploying airunner to itch.io"
 echo "============================================"
 echo ""
 chown -R 1000:1000 dist
-LATEST_TAG=$(curl -s https://api.github.com/repos/Capsize-Games/airunner/releases/latest | grep tag_name | cut -d '"' -f 4 | sed 's/v//')
+LATEST_TAG=$(grep -oP '(?<=version=).*(?=,)' setup.py | tr -d "'")
 echo "Latest tag: $LATEST_TAG"
 wget https://dl.itch.ovh/butler/linux-amd64/head/butler && chmod +x butler
 ./butler push ./dist/airunner capsizegames/ai-runner:ubuntu --userversion $LATEST_TAG
