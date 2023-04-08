@@ -117,6 +117,10 @@ RUN wine64 C:\\Python310\\python.exe -m pip install https://github.com/w4ffl35/d
 RUN wine64 C:\\Python310\\python.exe -m pip install https://github.com/w4ffl35/transformers/archive/refs/tags/tensor_fix-v1.0.2.tar.gz
 RUN wine64 C:\\Python310\\python.exe -m pip install https://github.com/acpopescu/bitsandbytes/releases/download/v0.37.2-win.0/bitsandbytes-0.37.2-py3-none-any.whl
 RUN wine64 C:\\Python310\\python.exe -m pip install aihandlerwindows
+RUN wine64 C:\\Python310\\python.exe -m pip install requests
+RUN git clone https://github.com/Capsize-Games/airunner.git /app/airunner
+WORKDIR /app/airunner
+RUN wine64 C:\\Python310\\python.exe -m pip install -e . --no-deps
 RUN wine64 C:\\Python310\\python.exe -c "from accelerate.utils import write_basic_config; write_basic_config(mixed_precision='fp16')"
 
 FROM install_libs as source_files
@@ -129,12 +133,3 @@ COPY src/airunner/v2.yaml /app/v2.yaml
 COPY src/airunner/src/icons /app/src/airunner/src/icons
 COPY src/airunner/pyqt /app/src/airunner/pyqt
 RUN cp /usr/lib/x86_64-linux-gnu/wine/api-ms-win-shcore-scaling-l1-1-1.dll /home/.wine-win10/drive_c/api-ms-win-shcore-scaling-l1-1-1.dll
-
-FROM source_files as build
-RUN wine64 C:\\Python310\\python.exe -m pip install airunner --no-deps
-
-# clone the https://github.com/Capsize-Games/airunner.git repo into wine and pip install using wine python.exe:
-#WORKDIR /home/.wine-win10/drive_c/airunner
-#RUN git clone https://github.com/Capsize-Games/airunner.git /home/.wine-win10/drive_c/airunner
-# set workdir to C:\\airunner
-#RUN wine64 C:\\Python310\\python.exe -m pip install -e C:\\airunner --no-deps
