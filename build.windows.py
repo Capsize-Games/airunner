@@ -31,20 +31,6 @@ def install_latest(repo, branch="master"):
     os.system(f'C:\\Python310\\python.exe -m pip install .')
 
 
-
-def get_latest_version_tag(repo):
-    url = f'https://api.github.com/repos/{repo}/releases/latest'
-    with urllib.request.urlopen(url) as response:
-        data = response.read().decode('utf-8')
-    data = json.loads(data)
-    tag_name = data["tag_name"]
-    # strip the v
-    if tag_name.startswith("v"):
-        tag_name = tag_name[1:]
-    return tag_name
-
-
-
 def clone(repo):
     # clone repo into /app
     os.system(f'Z:\\cmd\\git.exe clone https://github.com/{repo}.git /app/{repo.split("/")[1]}')
@@ -56,5 +42,4 @@ os.system("C:\\Python310\\python.exe -m pip uninstall diffusers -y")
 install_latest("w4ffl35/diffusers")
 install_latest("w4ffl35/transformers")
 install_latest("Capsize-Games/aihandler", branch="develop-windows")
-version = get_latest_version_tag("Capsize-Games/airunner")
 os.system("C:\\Python310\\python.exe -m pip install bitsandbytes-cuda102")
