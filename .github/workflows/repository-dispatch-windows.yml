@@ -25,27 +25,17 @@ jobs:
       - name: Run airunner on Windows
         run: |
           docker pull $DOCKER_IMAGE
-          docker run -d \
-            --name airunner_windows \
-            -e DEV_ENV=1 \
-            -e AIRUNNER_ENVIRONMENT=dev \
-            -e AIRUNNER_OS=windows \
+          docker run --rm \
+            -e BUTLER_API_KEY=${{ secrets.BUTLER_API_KEY }} \
+            -e ITCHIO_USERNAME=${{ secrets.ITCHIO_USERNAME }} \
+            -e DEV_ENV=0 \
+            -e AIRUNNER_ENVIRONMENT=prod \
+            -e AIRUNNER_OS=linux \
             -e PYTORCH_CUDA_ALLOC_CONF=garbage_collection_threshold:0.9,max_split_size_mb:512 \
             -e NUMBA_CACHE_DIR=/tmp/numba_cache \
-            -e LD_LIBRARY_PATH=/home/.wine-win10/drive_c/Program\ Files/NVIDIA\ GPU\ Computing\ Toolkit/CUDA/v11.7/lib/x64 \
             -e DISABLE_TELEMETRY=1 \
-            -e DISPLAY=:X0 \
-            -e WINE_HOMEDRIVE=Z \
-            -e WINE_HOMEPATH=home\airunner \
-            -e WINEARCH=win64 \
-            -e WINEPREFIX=/home/.wine-win10 \
-            -e HF_HOME=/home/${USER}/.cache/huggingface \
-            -e DS_BUILD_AIO=0 \
-            -e DS_BUILD_SPARSE_ATTN=0 \
-            -e PATH=/home/.wine-win10/drive_c/ \
-            -e PYTHONOPTIMIZE=0 \
-            -e PATH=/home/.wine-win10/drive_c:/home/.wine-win10/drive_c/Python310/Lib/site-packages:/home/.wine-win10/drive_c/PortableGit:/home/.wine-win10/drive_c/Program\ Files/NVIDIA/CUDNN/v8.6.0.163/bin:/home/.wine-win10/drive_c/Program\ Files/NVIDIA\ GPU\ Computing\ Toolkit/CUDA/v11.7/bin:${PATH} \
-            -e PYTHONPATH=/home/.wine-win10/drive_c/Python310 \
-            ghcr.io/capsize-games/airunner/airunner:windows \
-            bash /app/build.windows.sh
+            -e TCL_LIBDIR_PATH=/usr/lib/x86_64-linux-gnu/ \
+            -e TK_LIBDIR_PATH=/usr/lib/x86_64-linux-gnu/ \
+            ghcr.io/capsize-games/airunner/airunner:windows bash build.windows.sh
+        
 
