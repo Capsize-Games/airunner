@@ -37,5 +37,3 @@ jobs:
             -e TCL_LIBDIR_PATH=/usr/lib/x86_64-linux-gnu/ \
             -e TK_LIBDIR_PATH=/usr/lib/x86_64-linux-gnu/ \
             ghcr.io/capsize-games/airunner/airunner:windows bash build.windows.sh
-        
-
