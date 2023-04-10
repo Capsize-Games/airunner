@@ -27,7 +27,4 @@ services:
       - PYTHONOPTIMIZE=0
       - PATH=/home/.wine-win10/drive_c:/home/.wine-win10/drive_c/Python310/Lib/site-packages:/home/.wine-win10/drive_c/PortableGit:/home/.wine-win10/drive_c/Program\ Files/NVIDIA/CUDNN/v8.6.0.163/bin:/home/.wine-win10/drive_c/Program\ Files/NVIDIA\ GPU\ Computing\ Toolkit/CUDA/v11.7/bin:${PATH}
       - PYTHONPATH=/home/.wine-win10/drive_c/Python310
-#    volumes:
-#      - ${PWD}/windist:/app/dist
-#      - ${PWD}/build:/app/build
-    command: bash /app/build.windows.sh
+    command: wine64 Z:\\app\\build.windows.cmd
