@@ -10,7 +10,7 @@ RUN ln -snf /usr/share/zoneinfo/$TZ /etc/localtime && echo $TZ > /etc/timezone \
     && dpkg --add-architecture i386 \
     && apt-get update \
     && apt-get install -y libtinfo6 git wget curl vim software-properties-common gcc-9 g++-9 bash build-essential libssl-dev libffi-dev libgl1-mesa-dev nvidia-cuda-toolkit xclip libjpeg-dev zlib1g-dev libpng-dev \
-    && -rf /var/lib/apt/lists/ \
+    && rm -rf /var/lib/apt/lists/ \
     && update-alternatives --install /usr/bin/gcc gcc /usr/bin/gcc-9 60 --slave /usr/bin/g++ g++ /usr/bin/g++-9
 
 FROM base_image as wine_support
@@ -98,7 +98,7 @@ RUN wine64 C:\\Python310\\python.exe -m pip install -e . --no-deps \
     && wine64 C:\\Python310\\python.exe -c "from accelerate.utils import write_basic_config; write_basic_config(mixed_precision='fp16')"
 
 FROM install_libs as source_files
-COPY build.windows.sh /app/build.windows.sh
+COPY build.windows.cmd /app/build.windows.cmd
 COPY build.windows.py /app/build.windows.py
 COPY build.airunner.windows.prod.spec /app/build.airunner.windows.prod.spec
 COPY windows.itch.toml /app/windows.itch.toml
@@ -108,3 +108,9 @@ COPY src/airunner/src/icons /app/src/airunner/src/icons
 COPY src/airunner/pyqt /app/src/airunner/pyqt
 COPY setup.py /app/setup.py
 RUN cp /usr/lib/x86_64-linux-gnu/wine/api-ms-win-shcore-scaling-l1-1-1.dll /home/.wine-win10/drive_c/api-ms-win-shcore-scaling-l1-1-1.dll
+
+FROM source_files as install_butler
+RUN wget https://broth.itch.ovh/butler/windows-amd64/15.21.0/archive/default -O butler-windows-amd64.zip
+RUN unzip butler-windows-amd64.zip -d butler-windows-amd64
+RUN mv butler-windows-amd64/butler.exe /home/.wine-win10/drive_c/Python310/Scripts/butler.exe
+RUN rm -rf butler-windows-amd64 butler-windows-amd64.zip
