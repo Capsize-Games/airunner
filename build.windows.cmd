@@ -1,4 +1,5 @@
 @echo off
+cd Z:\app
 rem This should be called from within Docker to kick off a build
 set DISABLE_TELEMETRY=1
 echo.
