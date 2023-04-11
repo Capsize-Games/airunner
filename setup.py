@@ -1,8 +1,10 @@
 from setuptools import setup, find_packages
 
+from airunner.version import VERSION
+
 setup(
     name='airunner',
-    version='1.8.21',
+    version=VERSION,
     author="Capsize LLC",
     description="A Stable Diffusion GUI",
     long_description=open("README.md", "r", encoding="utf-8").read(),
