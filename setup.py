@@ -1,6 +1,6 @@
 from setuptools import setup, find_packages
 
-from airunner.version import VERSION
+from version import VERSION
 
 setup(
     name='airunner',
