@@ -1,5 +1,7 @@
 # Contributing to AIRunner
 
+All commits must be signed.
+
 If you would like to contribute to AIRunner, please follow the guidelines below.
 
 ## Installation
