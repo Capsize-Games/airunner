@@ -18,4 +18,8 @@ services:
       - DISABLE_TELEMETRY=1
       - TCL_LIBDIR_PATH=/usr/lib/x86_64-linux-gnu/
       - TK_LIBDIR_PATH=/usr/lib/x86_64-linux-gnu/
-    command: bash /app/build.sh
+    command: /bin/bash
+    volumes:
+      - ./:/app
+      - ./dist:/app/dist
+      - ./build:/app/build

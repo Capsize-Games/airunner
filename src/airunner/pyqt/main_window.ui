@@ -145,35 +145,6 @@
        <property name="verticalSpacing">
         <number>9</number>
        </property>
-       <item row="3" column="0">
-        <widget class="QScrollArea" name="layers">
-         <property name="frameShadow">
-          <enum>QFrame::Plain</enum>
-         </property>
-         <property name="widgetResizable">
-          <bool>true</bool>
-         </property>
-         <property name="alignment">
-          <set>Qt::AlignLeading|Qt::AlignLeft|Qt::AlignTop</set>
-         </property>
-         <widget class="QWidget" name="scrollAreaWidgetContents">
-          <property name="geometry">
-           <rect>
-            <x>0</x>
-            <y>0</y>
-            <width>239</width>
-            <height>316</height>
-           </rect>
-          </property>
-          <property name="sizePolicy">
-           <sizepolicy hsizetype="Preferred" vsizetype="Preferred">
-            <horstretch>0</horstretch>
-            <verstretch>0</verstretch>
-           </sizepolicy>
-          </property>
-         </widget>
-        </widget>
-       </item>
        <item row="4" column="0">
         <widget class="QWidget" name="horizontalWidget" native="true">
          <property name="sizePolicy">
@@ -650,19 +621,6 @@
           <property name="bottomMargin">
            <number>9</number>
           </property>
-          <item row="0" column="0">
-           <widget class="QToolButton" name="primary_color_button">
-            <property name="sizePolicy">
-             <sizepolicy hsizetype="MinimumExpanding" vsizetype="Fixed">
-              <horstretch>0</horstretch>
-              <verstretch>0</verstretch>
-             </sizepolicy>
-            </property>
-            <property name="text">
-             <string/>
-            </property>
-           </widget>
-          </item>
           <item row="0" column="1">
            <widget class="QToolButton" name="secondary_color_button">
             <property name="sizePolicy">
@@ -676,7 +634,50 @@
             </property>
            </widget>
           </item>
+          <item row="0" column="0">
+           <widget class="QToolButton" name="primary_color_button">
+            <property name="sizePolicy">
+             <sizepolicy hsizetype="MinimumExpanding" vsizetype="Fixed">
+              <horstretch>0</horstretch>
+              <verstretch>0</verstretch>
+             </sizepolicy>
+            </property>
+            <property name="text">
+             <string/>
+            </property>
+           </widget>
+          </item>
          </layout>
+        </widget>
+       </item>
+       <item row="3" column="0">
+        <widget class="QScrollArea" name="layers">
+         <property name="frameShadow">
+          <enum>QFrame::Plain</enum>
+         </property>
+         <property name="widgetResizable">
+          <bool>true</bool>
+         </property>
+         <property name="alignment">
+          <set>Qt::AlignLeading|Qt::AlignLeft|Qt::AlignTop</set>
+         </property>
+         <widget class="QWidget" name="scrollAreaWidgetContents">
+          <property name="geometry">
+           <rect>
+            <x>0</x>
+            <y>0</y>
+            <width>239</width>
+            <height>316</height>
+           </rect>
+          </property>
+          <property name="sizePolicy">
+           <sizepolicy hsizetype="Preferred" vsizetype="Preferred">
+            <horstretch>0</horstretch>
+            <verstretch>0</verstretch>
+           </sizepolicy>
+          </property>
+          <layout class="QVBoxLayout" name="verticalLayout"/>
+         </widget>
         </widget>
        </item>
       </layout>
@@ -1138,6 +1139,19 @@
            </widget>
           </item>
           <item>
+           <widget class="QPushButton" name="wordballoon_button">
+            <property name="maximumSize">
+             <size>
+              <width>30</width>
+              <height>30</height>
+             </size>
+            </property>
+            <property name="text">
+             <string/>
+            </property>
+           </widget>
+          </item>
+          <item>
            <widget class="QPushButton" name="undo_button">
             <property name="sizePolicy">
              <sizepolicy hsizetype="Expanding" vsizetype="Expanding">
@@ -1306,7 +1320,10 @@
     <property name="title">
      <string>Settings</string>
     </property>
+    <addaction name="actionExtensions"/>
+    <addaction name="separator"/>
     <addaction name="actionPreferences"/>
+    <addaction name="separator"/>
     <addaction name="actionGrid"/>
     <addaction name="actionCanvas_color"/>
     <addaction name="actionResize_on_Paste"/>
@@ -1337,6 +1354,9 @@
      <string>Help</string>
     </property>
     <addaction name="actionAbout"/>
+    <addaction name="actionBug_report"/>
+    <addaction name="actionReport_vulnerability"/>
+    <addaction name="actionDiscord"/>
    </widget>
    <addaction name="menuFile"/>
    <addaction name="menuEdit"/>
@@ -1530,6 +1550,26 @@
   <action name="actionPixel_Art_2">
    <property name="text">
     <string>Pixel Art</string>
+   </property>
+  </action>
+  <action name="actionBug_report">
+   <property name="text">
+    <string>Bug report</string>
+   </property>
+  </action>
+  <action name="actionReport_vulnerability">
+   <property name="text">
+    <string>Report vulnerability</string>
+   </property>
+  </action>
+  <action name="actionDiscord">
+   <property name="text">
+    <string>Discord</string>
+   </property>
+  </action>
+  <action name="actionExtensions">
+   <property name="text">
+    <string>Extensions</string>
    </property>
   </action>
  </widget>
