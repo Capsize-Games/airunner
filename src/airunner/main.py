@@ -1,13 +1,17 @@
+import importlib
+import io
 import os
 import pickle
 import random
 import sys
+import zipfile
 import cv2
 import numpy as np
+import requests
 import torch
 from PIL import Image
 from PyQt6 import uic, QtCore, QtGui
-from PyQt6.QtWidgets import QApplication, QLabel, QWidget, QColorDialog, QFileDialog, QVBoxLayout
+from PyQt6.QtWidgets import QApplication, QLabel, QWidget, QColorDialog, QFileDialog, QVBoxLayout, QDialog
 from PyQt6.QtCore import QPoint, pyqtSlot, QRect
 from PyQt6.QtGui import QPainter, QIcon, QColor, QGuiApplication
 from aihandler.qtvar import TQDMVar, ImageVar, MessageHandlerVar, ErrorHandlerVar
@@ -17,6 +21,7 @@ from airunner.windows.about import AboutWindow
 from airunner.windows.advanced_settings import AdvancedSettings
 from airunner.windows.grid_settings import GridSettings
 from airunner.windows.preferences import PreferencesWindow
+from airunner.windows.video import VideoPopup
 from qtcanvas import Canvas
 from settingsmanager import SettingsManager
 from runai_client import OfflineClient
@@ -37,6 +42,7 @@ class MainWindow(QApplication):
             "outpaint",
             # "superresolution",
             "controlnet",
+            "txt2vid",
         ]
     current_filter = None
     tabs = {}
@@ -44,6 +50,7 @@ class MainWindow(QApplication):
     _document_name = "Untitled"
     _is_dirty = False
     is_saved = False
+    _embedding_names = []
 
     @property
     def current_index(self):
@@ -188,6 +195,12 @@ class MainWindow(QApplication):
     @property
     def grid_size(self):
         return self.settings_manager.settings.size.get()
+
+    @property
+    def embedding_names(self):
+        if self._embedding_names is None:
+            self._embedding_names = self.get_list_of_available_embedding_names()
+        return self._embedding_names
 
     def __init__(self, *args, **kwargs):
         from PyQt6 import uic
@@ -440,6 +453,18 @@ class MainWindow(QApplication):
             self.canvas.update()
             self.window.width_slider.setValue(size)
             self.window.width_spinbox.setValue(size)
+
+    def load_embeddings(self, tab):
+        # create a widget that can be added to scroll area
+        container = QWidget()
+        container.setLayout(QVBoxLayout())
+        for embedding_name in self.embedding_names:
+            label = QLabel(embedding_name)
+            # add label to the contianer
+            container.layout().addWidget(label)
+            # on double click of label insert it into the prompt
+            label.mouseDoubleClickEvent = lambda event, _label=label: self.insert_into_prompt(_label.text())
+        tab.embeddings.setWidget(container)
 
     def get_list_of_available_embedding_names(self):
         embeddings_folder = os.path.join(self.settings_manager.settings.model_base_path.get(), "embeddings")
@@ -900,7 +925,14 @@ class MainWindow(QApplication):
             message_var=self.message_var,
         )
 
+    def video_handler(self, data):
+        filename = data["video_filename"]
+        VideoPopup(settings_manager=self.settings_manager, file_path=filename)
+
     def image_handler(self, image, data, nsfw_content_detected):
+        if data["action"] == "txt2vid":
+            return self.video_handler(data)
+
         self.stop_progress_bar(data["action"])
         if nsfw_content_detected and self.settings_manager.settings.nsfw_filter.get():
             self.message_handler("NSFW content detected, try again.", error=True)
@@ -914,7 +946,7 @@ class MainWindow(QApplication):
 
     def initialize_tabs(self):
         # load all the forms
-        sections = ["txt2img", "img2img", "depth2img", "pix2pix", "outpaint", "controlnet"]
+        sections = ["txt2img", "img2img", "depth2img", "pix2pix", "outpaint", "controlnet", "txt2vid"]
         HERE = os.path.dirname(os.path.abspath(__file__))
         self.tabs = {}
         for tab in sections:
@@ -936,30 +968,24 @@ class MainWindow(QApplication):
                 ]
                 for option in controlnet_options:
                     self.tabs[tab].controlnet_dropdown.addItem(option)
-            if tab in ["txt2img", "pix2pix", "outpaint", "super_resolution"]:
+            if tab in ["txt2img", "pix2pix", "outpaint", "super_resolution", "txt2vid"]:
                 self.tabs[tab].strength.deleteLater()
-            if tab in ["txt2img", "img2img", "depth2img", "outpaint", "controlnet", "super_resolution"]:
+            if tab in ["txt2img", "img2img", "depth2img", "outpaint", "controlnet", "super_resolution", "txt2vid"]:
                 self.tabs[tab].image_scale_box.deleteLater()
+            if tab in ["txt2vid"]:
+                self.tabs[tab].scheduler_label.deleteLater()
+                self.tabs[tab].scheduler_dropdown.deleteLater()
 
 
         # add all the tabs
         for tab in sections:
             self.window.tabWidget.addTab(self.tabs[tab], tab)
 
-        embedding_names = self.get_list_of_available_embedding_names()
         # iterate over each tab and connect steps_slider with steps_spinbox
         for tab_name in self.tabs.keys():
             tab = self.tabs[tab_name]
-            # create a widget that can be added to scroll area
-            container = QWidget()
-            container.setLayout(QVBoxLayout())
-            for embedding_name in embedding_names:
-                label = QLabel(embedding_name)
-                # add label to the contianer
-                container.layout().addWidget(label)
-                # on double click of label insert it into the prompt
-                label.mouseDoubleClickEvent = lambda event, _label=label: self.insert_into_prompt(_label.text())
-            tab.embeddings.setWidget(container)
+            self.load_embeddings(tab)
+            self.do_generator_tab_injection(tab_name, tab)
 
             tab.steps_slider.valueChanged.connect(lambda val, _tab=tab: self.handle_steps_slider_change(val, _tab))
             tab.steps_spinbox.valueChanged.connect(lambda val, _tab=tab: self.handle_steps_spinbox_change(val, _tab))
@@ -973,12 +999,12 @@ class MainWindow(QApplication):
             )
 
             # set schedulers for each tab
-            tab.scheduler_dropdown.addItems(AVAILABLE_SCHEDULERS_BY_ACTION[tab_name])
-
-            # on change of tab.scheduler_dropdown set the scheduler in self.settings_manager
-            tab.scheduler_dropdown.currentIndexChanged.connect(
-                lambda val, _tab=tab, _section=tab_name: self.set_scheduler(_tab, _section, val)
-            )
+            if tab_name not in ["txt2vid"]:
+                tab.scheduler_dropdown.addItems(AVAILABLE_SCHEDULERS_BY_ACTION[tab_name])
+                # on change of tab.scheduler_dropdown set the scheduler in self.settings_manager
+                tab.scheduler_dropdown.currentIndexChanged.connect(
+                    lambda val, _tab=tab, _section=tab_name: self.set_scheduler(_tab, _section, val)
+                )
 
             # scale slider
             tab.scale_slider.valueChanged.connect(lambda val, _tab=tab: self.handle_scale_slider_change(val, _tab))
@@ -1348,6 +1374,7 @@ class MainWindow(QApplication):
             controlnet = controlnet_dropdown.currentText()
             controlnet = controlnet.lower()
             use_controlnet = controlnet != "none"
+
         options = {
             f"{action}_prompt": prompt,
             f"{action}_negative_prompt": negative_prompt,
