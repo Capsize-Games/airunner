@@ -86,7 +86,7 @@ Currently there isn't much of an external API so using AI Runner as a library is
 ```
 pip install torch==1.13.1 torchvision==0.14.1 torchaudio==0.13.1 --index-url https://download.pytorch.org/whl/cu117
 pip install aihandlerwindows
-pip install https://github.com/w4ffl35/diffusers/archive/refs/tags/v0.14.0.ckpt_fix_0.0.1.tar.gz
+pip install https://github.com/w4ffl35/diffusers/archive/refs/tags/v0.15.0.ckpt_fix_0.0.1.tar.gz
 pip install https://github.com/w4ffl35/transformers/archive/refs/tags/tensor_fix-v1.0.2.tar.gz
 pip install https://github.com/acpopescu/bitsandbytes/releases/download/v0.37.2-win.0/bitsandbytes-0.37.2-py3-none-any.whl
 pip install airunner --no-deps
@@ -94,9 +94,9 @@ pip install airunner --no-deps
 
 #### Linux
 ```
-pip install https://github.com/w4ffl35/diffusers/archive/refs/tags/v0.14.0.ckpt_fix_0.0.1.tar.gz
-pip install https://github.com/w4ffl35/transformers/archive/refs/tags/tensor_fix-v1.0.2.tar.gz
 pip install airunner
+pip install https://github.com/w4ffl35/diffusers/archive/refs/tags/v0.15.0.ckpt_fix_0.0.1.tar.gz --no-deps
+pip install https://github.com/w4ffl35/transformers/archive/refs/tags/tensor_fix-v1.0.2.tar.gz --no-deps
 ```
 
 ---
@@ -108,9 +108,6 @@ pip install airunner
 Install required libraries
 ```
 pip install torch==1.13.1 torchvision==0.14.1 torchaudio==0.13.1 --index-url https://download.pytorch.org/whl/cu117
-pip install https://github.com/w4ffl35/diffusers/archive/refs/tags/v0.14.0.ckpt_fix_0.0.1.tar.gz
-pip install https://github.com/w4ffl35/transformers/archive/refs/tags/tensor_fix-v1.0.2.tar.gz
-pip install https://github.com/acpopescu/bitsandbytes/releases/download/v0.37.2-win.0/bitsandbytes-0.37.2-py3-none-any.whl
 ```
 
 Clone handler
@@ -122,6 +119,14 @@ cd aihandler && pip install -e .
 Clone AI Runner
 ```
 git clone -b develop https://github.com/Capsize-Games/airunner.git
+cd airunner && pip install -e .
+```
+
+Install dependencies
+```
+pip install https://github.com/w4ffl35/diffusers/archive/refs/tags/v0.15.0.ckpt_fix_0.0.1.tar.gz --no-deps
+pip install https://github.com/w4ffl35/transformers/archive/refs/tags/tensor_fix-v1.0.2.tar.gz --no-deps
+pip install https://github.com/acpopescu/bitsandbytes/releases/download/v0.37.2-win.0/bitsandbytes-0.37.2-py3-none-any.whl
 ```
 
 Run
