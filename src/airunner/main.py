@@ -4,6 +4,7 @@ import os
 import pickle
 import random
 import sys
+import webbrowser
 import zipfile
 import cv2
 import numpy as np
@@ -16,6 +17,7 @@ from PyQt6.QtCore import QPoint, pyqtSlot, QRect
 from PyQt6.QtGui import QPainter, QIcon, QColor, QGuiApplication
 from aihandler.qtvar import TQDMVar, ImageVar, MessageHandlerVar, ErrorHandlerVar
 from aihandler.settings import MAX_SEED, AVAILABLE_SCHEDULERS_BY_ACTION, MODELS, LOG_LEVEL
+from aihandler.util import get_extensions_from_url
 from airunner.history import History
 from airunner.windows.about import AboutWindow
 from airunner.windows.advanced_settings import AdvancedSettings
@@ -223,6 +225,8 @@ class MainWindow(QApplication):
 
         # create settings manager
         self.settings_manager = SettingsManager()
+        self.get_extensions_from_url()
+        self.initialize_active_extensions()
 
         # listen to signal on self.settings_manager.settings.canvas_color
         self.settings_manager.settings.canvas_color.my_signal.connect(self.update_canvas_color)
@@ -1074,6 +1078,9 @@ class MainWindow(QApplication):
         self.window.actionAbout.triggered.connect(self.show_about)
         self.window.actionCanvas_color.triggered.connect(self.show_canvas_color)
         self.window.actionAdvanced.triggered.connect(self.show_advanced)
+        self.window.actionBug_report.triggered.connect(lambda: webbrowser.open("https://github.com/Capsize-Games/airunner/issues/new?assignees=&labels=&template=bug_report.md&title="))
+        self.window.actionReport_vulnerability.triggered.connect(lambda: webbrowser.open("https://github.com/Capsize-Games/airunner/security/advisories/new"))
+        self.window.actionDiscord.triggered.connect(lambda: webbrowser.open("https://discord.gg/PUVDDCJ7gz"))
 
         self.window.actionInvert.triggered.connect(self.do_invert)
 
