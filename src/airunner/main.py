@@ -1104,6 +1104,10 @@ class MainWindow(QApplication):
                 tab.strength_slider.valueChanged.connect(lambda val, _tab=tab: self.handle_strength_slider_change(val, _tab))
                 tab.strength_spinbox.valueChanged.connect(lambda val, _tab=tab: self.handle_strength_spinbox_change(val, _tab))
 
+            if section == "txt2vid":
+                # change the label tab.samples_groupbox label to "Frames"
+                tab.samples_groupbox.setTitle("Frames")
+
             # seed slider
             # seed is QTextEdit
             def text_changed(tab):
@@ -1419,7 +1423,7 @@ class MainWindow(QApplication):
             sm.seed.set(seed)
             # set random_seed on current tab
             self.tabs[action].seed.setText(str(seed))
-        if action in ("txt2img", "img2img", "pix2pix", "depth2img"):
+        if action in ("txt2img", "img2img", "pix2pix", "depth2img", "txt2vid"):
             samples = sm.n_samples.get()
         else:
             samples = 1
