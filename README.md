@@ -71,7 +71,7 @@ docker-compose run linux python3 /app/main.py
 
 **Build latest version** of AI Runner using Docker locally - this will output a `build` and `dist` folder on your machine.
 ```
-docker run --rm -v $(pwd)/dist:/app/dist -v $(pwd)/build:/app/build ghcr.io/capsize-games/airunner/airunner:linux bash build.sh
+docker run --rm -v $(pwd):/app -v $(pwd)/dist:/app/dist -v $(pwd)/build:/app/build ghcr.io/capsize-games/airunner/airunner:linux bash build.sh
 
 docker run --rm -m 24g --cpus=12 -v $(pwd)/dist:/app/dist -v $(pwd)/build:/app/build ghcr.io/capsize-games/airunner/airunner:windows bash build.windows.sh
 ```
@@ -146,6 +146,14 @@ Clone AI Runner
 ```
 git clone -b develop https://github.com/Capsize-Games/aihandler.git
 ```
+
+---
+
+### Txt2video support
+
+#### Linux
+
+Install the codecs `sudo apt-get install ubuntu-restricted-extras`
 
 ---
 
