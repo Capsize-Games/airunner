@@ -16,3 +16,4 @@ main.onefile-build
 settings.pickle
 .run
 *egg-info*
+venv
