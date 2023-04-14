@@ -69,7 +69,7 @@ ENV DISPLAY=:0
 RUN apt-get install -y mesa-utils \
     && apt-get install -y libgl1-mesa-glx \
     && wine64 C:\\Python310\\python.exe -m pip install --upgrade pyinstaller \
-    && wine64 C:\\Python310\\python.exe -m pip install torch==1.13.1 torchvision==0.14.1 torchaudio==0.13.1 --index-url https://download.pytorch.org/whl/cu117 \
+    && wine64 C:\\Python310\\python.exe -m pip install torch torchvision torchaudio --index-url https://download.pytorch.org/whl/cu117 \
     && wine64 reg add "HKEY_CURRENT_USER\Environment" /v PATH /t REG_EXPAND_SZ /d "C:\\;Z:\\app\\lib\\PortableGit\\cmd;C:\\Program Files\\NVIDIA\\CUDNN\\v8.6.0.163\\bin;C:\\Program Files\\NVIDIA GPU Computing Toolkit\\CUDA\\v11.7\\bin;C:\\Python310;C:\\Python310\\site-packages;C:\\Python310\\site-packages\\lib;%PATH%" /f \
     && apt install git \
     && chown root:root /home/.wine-win10 \
@@ -86,7 +86,7 @@ RUN wget https://github.com/upx/upx/releases/download/v4.0.2/upx-4.0.2-win64.zip
 
 FROM install_upx as install_libs
 USER root
-RUN wine64 C:\\Python310\\python.exe -m pip install torch==1.13.1 torchvision==0.14.1 torchaudio==0.13.1 --index-url https://download.pytorch.org/whl/cu117 \
+RUN wine64 C:\\Python310\\python.exe -m pip install torch torchvision torchaudio --index-url https://download.pytorch.org/whl/cu117 \
     && wine64 C:\\Python310\\python.exe -m pip install https://github.com/acpopescu/bitsandbytes/releases/download/v0.37.2-win.0/bitsandbytes-0.37.2-py3-none-any.whl \
     && wine64 C:\\Python310\\python.exe -m pip install aihandlerwindows \
     && wine64 C:\\Python310\\python.exe -m pip install requests \

@@ -522,7 +522,7 @@
     </widget>
    </item>
    <item row="12" column="0" colspan="2">
-    <widget class="QGroupBox" name="groupBox_23">
+    <widget class="QGroupBox" name="samples_groupbox">
      <property name="sizePolicy">
       <sizepolicy hsizetype="MinimumExpanding" vsizetype="Preferred">
        <horstretch>0</horstretch>
@@ -568,7 +568,7 @@
        <number>1</number>
       </property>
       <property name="maximum">
-       <number>100</number>
+       <number>200</number>
       </property>
       <property name="orientation">
        <enum>Qt::Horizontal</enum>
@@ -593,7 +593,7 @@
        <number>1</number>
       </property>
       <property name="maximum">
-       <number>100</number>
+       <number>200</number>
       </property>
      </widget>
      <widget class="QPushButton" name="interrupt_button">
@@ -779,8 +779,8 @@
            <rect>
             <x>0</x>
             <y>0</y>
-            <width>98</width>
-            <height>48</height>
+            <width>323</width>
+            <height>109</height>
            </rect>
           </property>
           <layout class="QVBoxLayout" name="verticalLayout"/>
