@@ -1,22 +1,31 @@
+import importlib
+import io
 import os
 import pickle
 import random
 import sys
+import webbrowser
+import zipfile
 import cv2
 import numpy as np
+import requests
 import torch
 from PIL import Image
 from PyQt6 import uic, QtCore, QtGui
-from PyQt6.QtWidgets import QApplication, QLabel, QWidget, QColorDialog, QFileDialog, QVBoxLayout
+from PyQt6.QtWidgets import QApplication, QLabel, QWidget, QColorDialog, QFileDialog, QVBoxLayout, QDialog, QSpacerItem, \
+    QSizePolicy
 from PyQt6.QtCore import QPoint, pyqtSlot, QRect
 from PyQt6.QtGui import QPainter, QIcon, QColor, QGuiApplication
 from aihandler.qtvar import TQDMVar, ImageVar, MessageHandlerVar, ErrorHandlerVar
 from aihandler.settings import MAX_SEED, AVAILABLE_SCHEDULERS_BY_ACTION, MODELS, LOG_LEVEL
+from aihandler.util import get_extensions_from_path, import_extension_class
 from airunner.history import History
 from airunner.windows.about import AboutWindow
 from airunner.windows.advanced_settings import AdvancedSettings
+from airunner.windows.extensions import ExtensionsWindow
 from airunner.windows.grid_settings import GridSettings
 from airunner.windows.preferences import PreferencesWindow
+from airunner.windows.video import VideoPopup
 from qtcanvas import Canvas
 from settingsmanager import SettingsManager
 from runai_client import OfflineClient
@@ -37,6 +46,7 @@ class MainWindow(QApplication):
             "outpaint",
             # "superresolution",
             "controlnet",
+            "txt2vid",
         ]
     current_filter = None
     tabs = {}
@@ -44,6 +54,7 @@ class MainWindow(QApplication):
     _document_name = "Untitled"
     _is_dirty = False
     is_saved = False
+    _embedding_names = []
 
     @property
     def current_index(self):
@@ -189,6 +200,12 @@ class MainWindow(QApplication):
     def grid_size(self):
         return self.settings_manager.settings.size.get()
 
+    @property
+    def embedding_names(self):
+        if self._embedding_names is None:
+            self._embedding_names = self.get_list_of_available_embedding_names()
+        return self._embedding_names
+
     def __init__(self, *args, **kwargs):
         from PyQt6 import uic
         uic.properties.logger.setLevel(LOG_LEVEL)
@@ -210,6 +227,7 @@ class MainWindow(QApplication):
 
         # create settings manager
         self.settings_manager = SettingsManager()
+        # self.get_extensions_from_path()
 
         # listen to signal on self.settings_manager.settings.canvas_color
         self.settings_manager.settings.canvas_color.my_signal.connect(self.update_canvas_color)
@@ -319,6 +337,76 @@ class MainWindow(QApplication):
         self.settings_manager.settings.line_color.my_signal.connect(self.canvas.update_grid_pen)
 
         self.exec()
+
+    ##############################################
+    #  Begin extension functions
+    ##############################################
+    active_extensions = []
+
+    def get_extensions_from_path(self):
+        """
+        Initialize extensions by loading them from the extensions_directory.
+        These are extensions that have been activated by the user.
+        Extensions can be activated by manually adding them to the extensions folder
+        or by browsing for them in the extensions menu and activating them there.
+
+        This method initializes active extensions.
+        :return:
+        """
+        extensions = []
+        base_path = self.settings_manager.settings.model_base_path.get()
+        extension_path = os.path.join(base_path, "extensions")
+        available_extensions = get_extensions_from_path(extension_path)
+        if available_extensions:
+            for extension in available_extensions:
+                if extension.enabled:
+                    repo = extension.repo.get()
+                    name = repo.split("/")[-1]
+                    print("REPO", repo)
+                    path = os.path.join(extension_path, name)
+                    if os.path.exists(path):
+                        extension_files = [f for f in os.listdir(path) if
+                                           os.path.isfile(os.path.join(path, f)) and f == 'main.py']
+                        for file_name in extension_files:
+                            module_name = file_name[:-3]
+                            spec = importlib.util.spec_from_file_location(module_name,
+                                                                          os.path.join(path, file_name))
+                            module = importlib.util.module_from_spec(spec)
+                            spec.loader.exec_module(module)
+
+                            # initialize extension settings
+                            ExtensionClass = getattr(module, 'Extension')
+                            SettingsClass = getattr(module, 'Settings')
+                            settings = SettingsClass(app=self)
+                            for key, value in settings.__dict__.items():
+                                self.settings_manager.settings.__dict__[key] = value
+
+                            # initialize the extension
+                            extensions.append(ExtensionClass(self.settings_manager))
+
+        self.settings_manager.settings.available_extensions.set(extensions)
+        print("*" * 100)
+        print(f"EXTENSIONS LOADED ({len(extensions)}): ", extensions)
+        print("*" * 100)
+
+    def do_generator_tab_injection(self, tab_name, tab):
+        """
+        Ibjects extensions into the generator tab widget.
+        :param tab_name:
+        :param tab:
+        :return:
+        """
+        for extension in self.settings_manager.settings.available_extensions.get():
+            extension.generator_tab_injection(tab, tab_name)
+
+    def do_generate_data_injection(self, data):
+        for extension in self.settings_manager.settings.available_extensions.get():
+            data = extension.generate_data_injection(data)
+        return data
+
+    ##############################################
+    #  End extension functions
+    ##############################################
 
     def set_size_form_element_step_values(self):
         size = self.grid_size
@@ -441,6 +529,18 @@ class MainWindow(QApplication):
             self.window.width_slider.setValue(size)
             self.window.width_spinbox.setValue(size)
 
+    def load_embeddings(self, tab):
+        # create a widget that can be added to scroll area
+        container = QWidget()
+        container.setLayout(QVBoxLayout())
+        for embedding_name in self.embedding_names:
+            label = QLabel(embedding_name)
+            # add label to the contianer
+            container.layout().addWidget(label)
+            # on double click of label insert it into the prompt
+            label.mouseDoubleClickEvent = lambda event, _label=label: self.insert_into_prompt(_label.text())
+        tab.embeddings.setWidget(container)
+
     def get_list_of_available_embedding_names(self):
         embeddings_folder = os.path.join(self.settings_manager.settings.model_base_path.get(), "embeddings")
         tokens = []
@@ -514,6 +614,8 @@ class MainWindow(QApplication):
 
             container.layout().addWidget(layer_obj)
             index += 1
+        # add a spacer to the bottom of the container
+        container.layout().addSpacerItem(QSpacerItem(0, 0, QSizePolicy.Policy.Minimum, QSizePolicy.Policy.Expanding))
         self.window.layers.setWidget(container)
         self.container = container
 
@@ -900,7 +1002,14 @@ class MainWindow(QApplication):
             message_var=self.message_var,
         )
 
+    def video_handler(self, data):
+        filename = data["video_filename"]
+        VideoPopup(settings_manager=self.settings_manager, file_path=filename)
+
     def image_handler(self, image, data, nsfw_content_detected):
+        if data["action"] == "txt2vid":
+            return self.video_handler(data)
+
         self.stop_progress_bar(data["action"])
         if nsfw_content_detected and self.settings_manager.settings.nsfw_filter.get():
             self.message_handler("NSFW content detected, try again.", error=True)
@@ -914,7 +1023,7 @@ class MainWindow(QApplication):
 
     def initialize_tabs(self):
         # load all the forms
-        sections = ["txt2img", "img2img", "depth2img", "pix2pix", "outpaint", "controlnet"]
+        sections = ["txt2img", "img2img", "depth2img", "pix2pix", "outpaint", "controlnet", "txt2vid"]
         HERE = os.path.dirname(os.path.abspath(__file__))
         self.tabs = {}
         for tab in sections:
@@ -936,30 +1045,24 @@ class MainWindow(QApplication):
                 ]
                 for option in controlnet_options:
                     self.tabs[tab].controlnet_dropdown.addItem(option)
-            if tab in ["txt2img", "pix2pix", "outpaint", "super_resolution"]:
+            if tab in ["txt2img", "pix2pix", "outpaint", "super_resolution", "txt2vid"]:
                 self.tabs[tab].strength.deleteLater()
-            if tab in ["txt2img", "img2img", "depth2img", "outpaint", "controlnet", "super_resolution"]:
+            if tab in ["txt2img", "img2img", "depth2img", "outpaint", "controlnet", "super_resolution", "txt2vid"]:
                 self.tabs[tab].image_scale_box.deleteLater()
+            if tab in ["txt2vid"]:
+                self.tabs[tab].scheduler_label.deleteLater()
+                self.tabs[tab].scheduler_dropdown.deleteLater()
 
 
         # add all the tabs
         for tab in sections:
             self.window.tabWidget.addTab(self.tabs[tab], tab)
 
-        embedding_names = self.get_list_of_available_embedding_names()
         # iterate over each tab and connect steps_slider with steps_spinbox
         for tab_name in self.tabs.keys():
             tab = self.tabs[tab_name]
-            # create a widget that can be added to scroll area
-            container = QWidget()
-            container.setLayout(QVBoxLayout())
-            for embedding_name in embedding_names:
-                label = QLabel(embedding_name)
-                # add label to the contianer
-                container.layout().addWidget(label)
-                # on double click of label insert it into the prompt
-                label.mouseDoubleClickEvent = lambda event, _label=label: self.insert_into_prompt(_label.text())
-            tab.embeddings.setWidget(container)
+            self.load_embeddings(tab)
+            self.do_generator_tab_injection(tab_name, tab)
 
             tab.steps_slider.valueChanged.connect(lambda val, _tab=tab: self.handle_steps_slider_change(val, _tab))
             tab.steps_spinbox.valueChanged.connect(lambda val, _tab=tab: self.handle_steps_spinbox_change(val, _tab))
@@ -973,12 +1076,12 @@ class MainWindow(QApplication):
             )
 
             # set schedulers for each tab
-            tab.scheduler_dropdown.addItems(AVAILABLE_SCHEDULERS_BY_ACTION[tab_name])
-
-            # on change of tab.scheduler_dropdown set the scheduler in self.settings_manager
-            tab.scheduler_dropdown.currentIndexChanged.connect(
-                lambda val, _tab=tab, _section=tab_name: self.set_scheduler(_tab, _section, val)
-            )
+            if tab_name not in ["txt2vid"]:
+                tab.scheduler_dropdown.addItems(AVAILABLE_SCHEDULERS_BY_ACTION[tab_name])
+                # on change of tab.scheduler_dropdown set the scheduler in self.settings_manager
+                tab.scheduler_dropdown.currentIndexChanged.connect(
+                    lambda val, _tab=tab, _section=tab_name: self.set_scheduler(_tab, _section, val)
+                )
 
             # scale slider
             tab.scale_slider.valueChanged.connect(lambda val, _tab=tab: self.handle_scale_slider_change(val, _tab))
@@ -1000,6 +1103,10 @@ class MainWindow(QApplication):
                 tab.strength_spinbox.setValue(strength / 100)
                 tab.strength_slider.valueChanged.connect(lambda val, _tab=tab: self.handle_strength_slider_change(val, _tab))
                 tab.strength_spinbox.valueChanged.connect(lambda val, _tab=tab: self.handle_strength_spinbox_change(val, _tab))
+
+            if section == "txt2vid":
+                # change the label tab.samples_groupbox label to "Frames"
+                tab.samples_groupbox.setTitle("Frames")
 
             # seed slider
             # seed is QTextEdit
@@ -1048,10 +1155,20 @@ class MainWindow(QApplication):
         self.window.actionAbout.triggered.connect(self.show_about)
         self.window.actionCanvas_color.triggered.connect(self.show_canvas_color)
         self.window.actionAdvanced.triggered.connect(self.show_advanced)
+        self.window.actionBug_report.triggered.connect(lambda: webbrowser.open("https://github.com/Capsize-Games/airunner/issues/new?assignees=&labels=&template=bug_report.md&title="))
+        self.window.actionReport_vulnerability.triggered.connect(lambda: webbrowser.open("https://github.com/Capsize-Games/airunner/security/advisories/new"))
+        self.window.actionDiscord.triggered.connect(lambda: webbrowser.open("https://discord.gg/PUVDDCJ7gz"))
+        self.window.actionExtensions.triggered.connect(self.show_extensions)
+
+        # remove extensions menu item for now
+        self.window.actionExtensions.deleteLater()
 
         self.window.actionInvert.triggered.connect(self.do_invert)
 
         self.initialize_size_form_elements()
+
+    def show_extensions(self):
+        self.extensions_window = ExtensionsWindow(self)
 
     def initialize_size_form_elements(self):
         # width form elements
@@ -1306,7 +1423,7 @@ class MainWindow(QApplication):
             sm.seed.set(seed)
             # set random_seed on current tab
             self.tabs[action].seed.setText(str(seed))
-        if action in ("txt2img", "img2img", "pix2pix", "depth2img"):
+        if action in ("txt2img", "img2img", "pix2pix", "depth2img", "txt2vid"):
             samples = sm.n_samples.get()
         else:
             samples = 1
@@ -1348,6 +1465,7 @@ class MainWindow(QApplication):
             controlnet = controlnet_dropdown.currentText()
             controlnet = controlnet.lower()
             use_controlnet = controlnet != "none"
+
         options = {
             f"{action}_prompt": prompt,
             f"{action}_negative_prompt": negative_prompt,
@@ -1401,7 +1519,7 @@ class MainWindow(QApplication):
                 **memory_options
             }
         }
-
+        data = self.do_generate_data_injection(data)
         self.client.message = data
 
     def active_rect(self):
