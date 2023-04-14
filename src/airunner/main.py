@@ -12,7 +12,8 @@ import requests
 import torch
 from PIL import Image
 from PyQt6 import uic, QtCore, QtGui
-from PyQt6.QtWidgets import QApplication, QLabel, QWidget, QColorDialog, QFileDialog, QVBoxLayout, QDialog
+from PyQt6.QtWidgets import QApplication, QLabel, QWidget, QColorDialog, QFileDialog, QVBoxLayout, QDialog, QSpacerItem, \
+    QSizePolicy
 from PyQt6.QtCore import QPoint, pyqtSlot, QRect
 from PyQt6.QtGui import QPainter, QIcon, QColor, QGuiApplication
 from aihandler.qtvar import TQDMVar, ImageVar, MessageHandlerVar, ErrorHandlerVar
@@ -613,6 +614,8 @@ class MainWindow(QApplication):
 
             container.layout().addWidget(layer_obj)
             index += 1
+        # add a spacer to the bottom of the container
+        container.layout().addSpacerItem(QSpacerItem(0, 0, QSizePolicy.Policy.Minimum, QSizePolicy.Policy.Expanding))
         self.window.layers.setWidget(container)
         self.container = container
 
