@@ -202,7 +202,6 @@ a = Analysis(
         "soupsieve",
         "starlette",
         "starsessions",
-        "sympy",
         "tensorboard",
         "tensorboard-data-server",
         "tensorboard-plugin-wit",
