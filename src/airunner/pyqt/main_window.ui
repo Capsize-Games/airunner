@@ -1319,7 +1319,10 @@
     <property name="title">
      <string>Settings</string>
     </property>
+    <addaction name="actionExtensions"/>
+    <addaction name="separator"/>
     <addaction name="actionPreferences"/>
+    <addaction name="separator"/>
     <addaction name="actionGrid"/>
     <addaction name="actionCanvas_color"/>
     <addaction name="actionResize_on_Paste"/>
@@ -1354,16 +1357,10 @@
     <addaction name="actionReport_vulnerability"/>
     <addaction name="actionDiscord"/>
    </widget>
-   <widget class="QMenu" name="menuExtensions">
-    <property name="title">
-     <string>Extensions</string>
-    </property>
-   </widget>
    <addaction name="menuFile"/>
    <addaction name="menuEdit"/>
    <addaction name="menuSettings"/>
    <addaction name="menuFilters"/>
-   <addaction name="menuExtensions"/>
    <addaction name="menuAbout"/>
   </widget>
   <widget class="QStatusBar" name="statusbar"/>
@@ -1567,6 +1564,11 @@
   <action name="actionDiscord">
    <property name="text">
     <string>Discord</string>
+   </property>
+  </action>
+  <action name="actionExtensions">
+   <property name="text">
+    <string>Extensions</string>
    </property>
   </action>
  </widget>

@@ -17,10 +17,11 @@ from PyQt6.QtCore import QPoint, pyqtSlot, QRect
 from PyQt6.QtGui import QPainter, QIcon, QColor, QGuiApplication
 from aihandler.qtvar import TQDMVar, ImageVar, MessageHandlerVar, ErrorHandlerVar
 from aihandler.settings import MAX_SEED, AVAILABLE_SCHEDULERS_BY_ACTION, MODELS, LOG_LEVEL
-from aihandler.util import get_extensions_from_url
+from aihandler.util import get_extensions_from_path, import_extension_class
 from airunner.history import History
 from airunner.windows.about import AboutWindow
 from airunner.windows.advanced_settings import AdvancedSettings
+from airunner.windows.extensions import ExtensionsWindow
 from airunner.windows.grid_settings import GridSettings
 from airunner.windows.preferences import PreferencesWindow
 from airunner.windows.video import VideoPopup
@@ -225,8 +226,7 @@ class MainWindow(QApplication):
 
         # create settings manager
         self.settings_manager = SettingsManager()
-        self.get_extensions_from_url()
-        self.initialize_active_extensions()
+        # self.get_extensions_from_path()
 
         # listen to signal on self.settings_manager.settings.canvas_color
         self.settings_manager.settings.canvas_color.my_signal.connect(self.update_canvas_color)
@@ -336,6 +336,76 @@ class MainWindow(QApplication):
         self.settings_manager.settings.line_color.my_signal.connect(self.canvas.update_grid_pen)
 
         self.exec()
+
+    ##############################################
+    #  Begin extension functions
+    ##############################################
+    active_extensions = []
+
+    def get_extensions_from_path(self):
+        """
+        Initialize extensions by loading them from the extensions_directory.
+        These are extensions that have been activated by the user.
+        Extensions can be activated by manually adding them to the extensions folder
+        or by browsing for them in the extensions menu and activating them there.
+
+        This method initializes active extensions.
+        :return:
+        """
+        extensions = []
+        base_path = self.settings_manager.settings.model_base_path.get()
+        extension_path = os.path.join(base_path, "extensions")
+        available_extensions = get_extensions_from_path(extension_path)
+        if available_extensions:
+            for extension in available_extensions:
+                if extension.enabled:
+                    repo = extension.repo.get()
+                    name = repo.split("/")[-1]
+                    print("REPO", repo)
+                    path = os.path.join(extension_path, name)
+                    if os.path.exists(path):
+                        extension_files = [f for f in os.listdir(path) if
+                                           os.path.isfile(os.path.join(path, f)) and f == 'main.py']
+                        for file_name in extension_files:
+                            module_name = file_name[:-3]
+                            spec = importlib.util.spec_from_file_location(module_name,
+                                                                          os.path.join(path, file_name))
+                            module = importlib.util.module_from_spec(spec)
+                            spec.loader.exec_module(module)
+
+                            # initialize extension settings
+                            ExtensionClass = getattr(module, 'Extension')
+                            SettingsClass = getattr(module, 'Settings')
+                            settings = SettingsClass(app=self)
+                            for key, value in settings.__dict__.items():
+                                self.settings_manager.settings.__dict__[key] = value
+
+                            # initialize the extension
+                            extensions.append(ExtensionClass(self.settings_manager))
+
+        self.settings_manager.settings.available_extensions.set(extensions)
+        print("*" * 100)
+        print(f"EXTENSIONS LOADED ({len(extensions)}): ", extensions)
+        print("*" * 100)
+
+    def do_generator_tab_injection(self, tab_name, tab):
+        """
+        Ibjects extensions into the generator tab widget.
+        :param tab_name:
+        :param tab:
+        :return:
+        """
+        for extension in self.settings_manager.settings.available_extensions.get():
+            extension.generator_tab_injection(tab, tab_name)
+
+    def do_generate_data_injection(self, data):
+        for extension in self.settings_manager.settings.available_extensions.get():
+            data = extension.generate_data_injection(data)
+        return data
+
+    ##############################################
+    #  End extension functions
+    ##############################################
 
     def set_size_form_element_step_values(self):
         size = self.grid_size
@@ -1081,10 +1151,17 @@ class MainWindow(QApplication):
         self.window.actionBug_report.triggered.connect(lambda: webbrowser.open("https://github.com/Capsize-Games/airunner/issues/new?assignees=&labels=&template=bug_report.md&title="))
         self.window.actionReport_vulnerability.triggered.connect(lambda: webbrowser.open("https://github.com/Capsize-Games/airunner/security/advisories/new"))
         self.window.actionDiscord.triggered.connect(lambda: webbrowser.open("https://discord.gg/PUVDDCJ7gz"))
+        self.window.actionExtensions.triggered.connect(self.show_extensions)
+
+        # remove extensions menu item for now
+        self.window.actionExtensions.deleteLater()
 
         self.window.actionInvert.triggered.connect(self.do_invert)
 
         self.initialize_size_form_elements()
+
+    def show_extensions(self):
+        self.extensions_window = ExtensionsWindow(self)
 
     def initialize_size_form_elements(self):
         # width form elements
@@ -1435,7 +1512,7 @@ class MainWindow(QApplication):
                 **memory_options
             }
         }
-
+        data = self.do_generate_data_injection(data)
         self.client.message = data
 
     def active_rect(self):
