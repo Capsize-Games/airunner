@@ -1138,6 +1138,19 @@
            </widget>
           </item>
           <item>
+           <widget class="QPushButton" name="wordballoon_button">
+            <property name="maximumSize">
+             <size>
+              <width>30</width>
+              <height>30</height>
+             </size>
+            </property>
+            <property name="text">
+             <string/>
+            </property>
+           </widget>
+          </item>
+          <item>
            <widget class="QPushButton" name="undo_button">
             <property name="sizePolicy">
              <sizepolicy hsizetype="Expanding" vsizetype="Expanding">
@@ -1337,11 +1350,20 @@
      <string>Help</string>
     </property>
     <addaction name="actionAbout"/>
+    <addaction name="actionBug_report"/>
+    <addaction name="actionReport_vulnerability"/>
+    <addaction name="actionDiscord"/>
+   </widget>
+   <widget class="QMenu" name="menuExtensions">
+    <property name="title">
+     <string>Extensions</string>
+    </property>
    </widget>
    <addaction name="menuFile"/>
    <addaction name="menuEdit"/>
    <addaction name="menuSettings"/>
    <addaction name="menuFilters"/>
+   <addaction name="menuExtensions"/>
    <addaction name="menuAbout"/>
   </widget>
   <widget class="QStatusBar" name="statusbar"/>
@@ -1530,6 +1552,21 @@
   <action name="actionPixel_Art_2">
    <property name="text">
     <string>Pixel Art</string>
+   </property>
+  </action>
+  <action name="actionBug_report">
+   <property name="text">
+    <string>Bug report</string>
+   </property>
+  </action>
+  <action name="actionReport_vulnerability">
+   <property name="text">
+    <string>Report vulnerability</string>
+   </property>
+  </action>
+  <action name="actionDiscord">
+   <property name="text">
+    <string>Discord</string>
    </property>
   </action>
  </widget>
