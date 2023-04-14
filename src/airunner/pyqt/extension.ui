@@ -6,24 +6,64 @@
    <rect>
     <x>0</x>
     <y>0</y>
-    <width>624</width>
-    <height>112</height>
+    <width>572</width>
+    <height>192</height>
    </rect>
   </property>
   <property name="windowTitle">
    <string>Form</string>
   </property>
+  <widget class="Line" name="line">
+   <property name="geometry">
+    <rect>
+     <x>10</x>
+     <y>170</y>
+     <width>551</width>
+     <height>16</height>
+    </rect>
+   </property>
+   <property name="orientation">
+    <enum>Qt::Horizontal</enum>
+   </property>
+  </widget>
   <widget class="QWidget" name="">
    <property name="geometry">
     <rect>
-     <x>12</x>
-     <y>10</y>
-     <width>594</width>
-     <height>93</height>
+     <x>13</x>
+     <y>11</y>
+     <width>547</width>
+     <height>148</height>
     </rect>
    </property>
    <layout class="QGridLayout" name="gridLayout">
-    <item row="0" column="0" rowspan="2" colspan="2">
+    <property name="sizeConstraint">
+     <enum>QLayout::SetDefaultConstraint</enum>
+    </property>
+    <item row="1" column="0">
+     <widget class="QLabel" name="descriptionLabel">
+      <property name="font">
+       <font>
+        <pointsize>11</pointsize>
+       </font>
+      </property>
+      <property name="text">
+       <string>A short description about the plugin</string>
+      </property>
+     </widget>
+    </item>
+    <item row="2" column="0">
+     <widget class="QLabel" name="urlLabel">
+      <property name="font">
+       <font>
+        <pointsize>9</pointsize>
+       </font>
+      </property>
+      <property name="text">
+       <string>https://github.com/&lt;author&gt;/&lt;repo&gt;</string>
+      </property>
+     </widget>
+    </item>
+    <item row="0" column="0" colspan="4">
      <widget class="QCheckBox" name="checkBox">
       <property name="minimumSize">
        <size>
@@ -38,57 +78,24 @@
        </font>
       </property>
       <property name="text">
-       <string>LoRA v1.0.0</string>
+       <string>Extension v0.0.0</string>
       </property>
      </widget>
     </item>
-    <item row="0" column="2" rowspan="6" colspan="2">
-     <widget class="Line" name="line">
-      <property name="orientation">
-       <enum>Qt::Vertical</enum>
-      </property>
-     </widget>
-    </item>
-    <item row="1" column="3" rowspan="2">
-     <widget class="QPushButton" name="pushButton">
-      <property name="text">
-       <string>Install</string>
-      </property>
-     </widget>
-    </item>
-    <item row="2" column="0" rowspan="2" colspan="2">
-     <widget class="QLabel" name="label_2">
+    <item row="3" column="0">
+     <widget class="QLabel" name="reviewedLabel">
       <property name="font">
        <font>
-        <pointsize>11</pointsize>
+        <pointsize>8</pointsize>
        </font>
       </property>
       <property name="text">
-       <string>A short description about the plugin</string>
+       <string>unreviewed</string>
       </property>
      </widget>
     </item>
-    <item row="3" column="3" rowspan="2">
-     <widget class="QPushButton" name="pushButton_2">
-      <property name="text">
-       <string>Remove</string>
-      </property>
-     </widget>
-    </item>
-    <item row="4" column="0" colspan="2">
-     <widget class="QLabel" name="label_3">
-      <property name="font">
-       <font>
-        <pointsize>9</pointsize>
-       </font>
-      </property>
-      <property name="text">
-       <string>https://github.com/Capsize-Games/airunner-lora</string>
-      </property>
-     </widget>
-    </item>
-    <item row="5" column="0">
-     <widget class="QLabel" name="label">
+    <item row="4" column="0">
+     <widget class="QLabel" name="officialLabel">
       <property name="font">
        <font>
         <pointsize>8</pointsize>
@@ -99,15 +106,17 @@
       </property>
      </widget>
     </item>
-    <item row="5" column="1">
-     <widget class="QLabel" name="label_4">
-      <property name="font">
-       <font>
-        <pointsize>8</pointsize>
-       </font>
-      </property>
+    <item row="1" column="3">
+     <widget class="QPushButton" name="installButton">
       <property name="text">
-       <string>unreviewed</string>
+       <string>Install</string>
+      </property>
+     </widget>
+    </item>
+    <item row="2" column="3">
+     <widget class="QPushButton" name="removeButton">
+      <property name="text">
+       <string>Remove</string>
       </property>
      </widget>
     </item>

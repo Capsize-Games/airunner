@@ -6,15 +6,40 @@
    <rect>
     <x>0</x>
     <y>0</y>
-    <width>649</width>
-    <height>525</height>
+    <width>610</width>
+    <height>322</height>
    </rect>
+  </property>
+  <property name="minimumSize">
+   <size>
+    <width>610</width>
+    <height>250</height>
+   </size>
+  </property>
+  <property name="maximumSize">
+   <size>
+    <width>610</width>
+    <height>650</height>
+   </size>
   </property>
   <property name="windowTitle">
    <string>Dialog</string>
   </property>
   <layout class="QGridLayout" name="gridLayout">
    <item row="0" column="0">
+    <widget class="QLabel" name="label">
+     <property name="font">
+      <font>
+       <pointsize>14</pointsize>
+       <bold>true</bold>
+      </font>
+     </property>
+     <property name="text">
+      <string>Extensions</string>
+     </property>
+    </widget>
+   </item>
+   <item row="2" column="0">
     <widget class="QScrollArea" name="scrollArea">
      <property name="widgetResizable">
       <bool>true</bool>
@@ -24,11 +49,18 @@
        <rect>
         <x>0</x>
         <y>0</y>
-        <width>629</width>
-        <height>505</height>
+        <width>590</width>
+        <height>251</height>
        </rect>
       </property>
      </widget>
+    </widget>
+   </item>
+   <item row="1" column="0">
+    <widget class="QLabel" name="label_2">
+     <property name="text">
+      <string>You must restart AI Runner for any changes to be applied.</string>
+     </property>
     </widget>
    </item>
   </layout>
