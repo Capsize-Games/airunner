@@ -84,7 +84,7 @@ Currently there isn't much of an external API so using AI Runner as a library is
 
 #### Windows
 ```
-pip install torch==1.13.1 torchvision==0.14.1 torchaudio==0.13.1 --index-url https://download.pytorch.org/whl/cu117
+pip install torch torchvision torchaudio --index-url https://download.pytorch.org/whl/cu117
 pip install aihandlerwindows
 pip install https://github.com/w4ffl35/diffusers/archive/refs/tags/v0.15.0.ckpt_fix_0.0.1.tar.gz
 pip install https://github.com/w4ffl35/transformers/archive/refs/tags/tensor_fix-v1.0.2.tar.gz
@@ -107,7 +107,7 @@ pip install https://github.com/w4ffl35/transformers/archive/refs/tags/tensor_fix
 
 Install required libraries
 ```
-pip install torch==1.13.1 torchvision==0.14.1 torchaudio==0.13.1 --index-url https://download.pytorch.org/whl/cu117
+pip install torch torchvision torchaudio --index-url https://download.pytorch.org/whl/cu117
 ```
 
 Clone handler
