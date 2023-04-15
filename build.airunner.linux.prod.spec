@@ -56,7 +56,7 @@ datas += collect_data_files("sympy", include_py_files=True)
 datas += collect_data_files("opencv-python", include_py_files=True)
 a = Analysis(
     [
-        f'./src/airunner/main.py',
+        f'./airunner/src/airunner/main.py',
     ],
     pathex=[
         "/usr/local/lib/python3.10/dist-packages/",
