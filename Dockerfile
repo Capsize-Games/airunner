@@ -59,16 +59,7 @@ RUN pip install --upgrade wheel
 RUN pip install torch torchvision torchaudio
 RUN pip install accelerate
 RUN pip install requests
-RUN git clone https://github.com/Capsize-Games/aihandler.git /app/aihandler \
-    && cd /app/aihandler \
-    && git checkout master \
-    && git pull \
-    && pip install -e .
-RUN git clone https://github.com/Capsize-Games/airunner.git /app/airunner \
-    && cd /app/airunner \
-    && git checkout master \
-    && git pull \
-    && pip install -e . --no-deps
+RUN pip install aihandler
 
 FROM install_requirements as fix_tcl
 USER root
@@ -85,7 +76,6 @@ COPY src/airunner/src/icons src/airunner/src/icons
 COPY src/airunner/pyqt src/airunner/pyqt
 COPY setup.py setup.py
 RUN python3 -c "from accelerate.utils import write_basic_config; write_basic_config(mixed_precision='fp16')"
-RUN pip uninstall nvidia-cublas-cu11 -y
 
 FROM install_apps as more_env
 ENV PATH="/usr/local/lib/python3.10:/usr/local/lib/python3.10/bin:${PATH}"

@@ -26,10 +26,10 @@ from airunner.windows.extensions import ExtensionsWindow
 from airunner.windows.grid_settings import GridSettings
 from airunner.windows.preferences import PreferencesWindow
 from airunner.windows.video import VideoPopup
-from qtcanvas import Canvas
-from settingsmanager import SettingsManager
-from runai_client import OfflineClient
-from filters import FilterGaussianBlur, FilterBoxBlur, FilterUnsharpMask, FilterSaturation, \
+from airunner.qtcanvas import Canvas
+from airunner.settingsmanager import SettingsManager
+from airunner.runai_client import OfflineClient
+from airunner.filters import FilterGaussianBlur, FilterBoxBlur, FilterUnsharpMask, FilterSaturation, \
     FilterColorBalance, FilterPixelArt
 import qdarktheme
 
