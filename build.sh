@@ -7,7 +7,7 @@ echo "============================================"
 echo "Installing dependencies"
 echo "============================================"
 echo ""
-python3 /app/build.py
+python3 /app/dobuild.py
 echo ""
 echo "============================================"
 echo "Build airunner for linux"
