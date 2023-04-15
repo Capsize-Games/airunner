@@ -7,13 +7,13 @@ echo "============================================"
 echo "Installing dependencies"
 echo "============================================"
 echo ""
-python3 /app/dobuild.py
+python3 /app/airunner/dobuild.py
 echo ""
 echo "============================================"
 echo "Build airunner for linux"
 echo "============================================"
 echo ""
-DEV_ENV=0 AIRUNNER_ENVIRONMENT="prod" PYTHONOPTIMIZE=0 python3 -m PyInstaller --log-level=INFO --noconfirm  build.airunner.linux.prod.spec 2>&1 | tee build.log
+DEV_ENV=0 AIRUNNER_ENVIRONMENT="prod" PYTHONOPTIMIZE=0 python3 -m PyInstaller --log-level=INFO --noconfirm  /app/airunner/build.airunner.linux.prod.spec 2>&1 | tee build.log
 echo ""
 echo "============================================"
 echo "Deploying airunner to itch.io"
