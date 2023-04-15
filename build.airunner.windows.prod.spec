@@ -58,7 +58,7 @@ a = Analysis(
         "C:\\Users\\root\\AppData\\Local\\Programs\\Python\\Python310\\",
     ],
     binaries=[
-        ("C:\\Python310\\Lib\\site-packages\\torchvision\\cudart64_110.dll", "."),
+        #("C:\\Python310\\Lib\\site-packages\\torchvision\\cudart64_110.dll", "."),
         ("C:\\Python310\\tcl\\tk8.6\\demos\\text.tcl", "."),
         ("C:\\Python310\\tcl\\tk8.6\\ttk\\fonts.tcl", "."),
         ("C:\\Python310\\tcl\\tk8.6\\ttk\\utils.tcl", "."),

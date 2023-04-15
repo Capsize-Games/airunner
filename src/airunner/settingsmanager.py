@@ -1,3 +1,4 @@
+import json
 import os
 import pickle
 
@@ -54,38 +55,41 @@ class SettingsManager:
             self.save_settings()
 
     def save_settings(self):
-        HERE = os.path.dirname(os.path.abspath(__file__))
-        f = open(os.path.join(HERE, "settings.pickle"), "wb")
-        # create dict of all settings
-        settings = {}
-        for key, value in self.settings.__dict__.items():
-            if isinstance(value, BooleanVar):
-                settings[key] = value.get()
-            elif isinstance(value, StringVar):
-                settings[key] = value.get()
-            elif isinstance(value, IntVar):
-                settings[key] = value.get()
-            elif isinstance(value, FloatVar):
-                settings[key] = value.get()
-            elif isinstance(value, DoubleVar):
-                settings[key] = value.get()
-        pickle.dump(settings, f)
+        HOME = os.path.expanduser("~")
+        with open(os.path.join(HOME, "airunner_settings.json"), "w") as f:
+            settings = {}
+            for key, value in self.settings.__dict__.items():
+                if isinstance(value, BooleanVar):
+                    settings[key] = value.get()
+                elif isinstance(value, StringVar):
+                    settings[key] = value.get()
+                elif isinstance(value, IntVar):
+                    settings[key] = value.get()
+                elif isinstance(value, FloatVar):
+                    settings[key] = value.get()
+                elif isinstance(value, DoubleVar):
+                    settings[key] = value.get()
+            json.dump(settings, f)
 
     def load_settings(self):
-        HERE = os.path.dirname(os.path.abspath(__file__))
-        f = open(os.path.join(HERE, "settings.pickle"), "rb")
-        settings = pickle.load(f)
-        for key, value in self.settings.__dict__.items():
-            if isinstance(value, BooleanVar):
-                value.set(settings[key])
-            elif isinstance(value, StringVar):
-                value.set(settings[key])
-            elif isinstance(value, IntVar):
-                value.set(settings[key])
-            elif isinstance(value, FloatVar):
-                value.set(settings[key])
-            elif isinstance(value, DoubleVar):
-                value.set(settings[key])
+        HOME = os.path.expanduser("~")
+        path = os.path.join(HOME, "airunner_settings.json")
+        # check if exists
+        if not os.path.exists(path):
+            return
+        with open(path, "r") as f:
+            settings = json.load(f)
+            for key, value in self.settings.__dict__.items():
+                if isinstance(value, BooleanVar):
+                    value.set(settings[key])
+                elif isinstance(value, StringVar):
+                    value.set(settings[key])
+                elif isinstance(value, IntVar):
+                    value.set(settings[key])
+                elif isinstance(value, FloatVar):
+                    value.set(settings[key])
+                elif isinstance(value, DoubleVar):
+                    value.set(settings[key])
 
 
 
