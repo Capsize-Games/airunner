@@ -603,7 +603,9 @@ class MainWindow(QApplication):
 
             # show a border around layer_obj if it is the selected index
             if self.canvas.current_layer_index == index:
-                layer_obj.frame.setStyleSheet("background-color: green;")
+                layer_obj.frame.setStyleSheet("background-color: #c7f6fc; border: 1px solid #000000;")
+            else:
+                layer_obj.frame.setStyleSheet("background-color: #ffffff; border: 1px solid #333333;")
 
             # enable delete button in layer_obj
             layer_obj.visible_button.setIcon(QIcon("src/icons/eye.png" if layer.visible else "src/icons/eye-off.png"))
@@ -627,12 +629,12 @@ class MainWindow(QApplication):
     def set_current_layer(self, index):
         item = self.container.layout().itemAt(self.canvas.current_layer_index)
         if item:
-            item.widget().frame.setStyleSheet("")
+            item.widget().frame.setStyleSheet("background-color: #ffffff; border: 1px solid #333333;")
         self.canvas.current_layer_index = index
         # green border should only be on the outter frame not all elements
         item = self.container.layout().itemAt(self.canvas.current_layer_index)
         if item:
-            item.widget().frame.setStyleSheet("background-color: green;")
+            item.widget().frame.setStyleSheet("background-color: #c7f6fc; border: 1px solid #000000;")
 
     def new_document(self):
         self.canvas = Canvas(self)
