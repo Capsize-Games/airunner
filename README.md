@@ -72,6 +72,7 @@ docker-compose run linux python3 /app/main.py
 **Build latest version** of AI Runner using Docker locally - this will output a `build` and `dist` folder on your machine.
 ```
 docker run --rm -v $(pwd):/app -v $(pwd)/dist:/app/dist -v $(pwd)/build:/app/build ghcr.io/capsize-games/airunner/airunner:linux bash build.sh
+docker run -it -v $(pwd):/app/airunner -v $(pwd)/dist:/app/dist -v $(pwd)/build:/app/build ghcr.io/capsize-games/airunner/airunner:windows wine64 build.windows.cmd
 
 docker run --rm -m 24g --cpus=12 -v $(pwd)/dist:/app/dist -v $(pwd)/build:/app/build ghcr.io/capsize-games/airunner/airunner:windows bash build.windows.sh
 ```
@@ -85,15 +86,15 @@ Currently there isn't much of an external API so using AI Runner as a library is
 #### Windows
 ```
 pip install torch torchvision torchaudio --index-url https://download.pytorch.org/whl/cu117
-pip install aihandlerwindows
+pip install airunner
 pip install https://github.com/w4ffl35/diffusers/archive/refs/tags/v0.15.0.ckpt_fix_0.0.1.tar.gz
 pip install https://github.com/w4ffl35/transformers/archive/refs/tags/tensor_fix-v1.0.2.tar.gz
 pip install https://github.com/acpopescu/bitsandbytes/releases/download/v0.37.2-win.0/bitsandbytes-0.37.2-py3-none-any.whl
-pip install airunner --no-deps
 ```
 
 #### Linux
 ```
+pip install torch torchvision torchaudio bitsandbytes
 pip install airunner
 pip install https://github.com/w4ffl35/diffusers/archive/refs/tags/v0.15.0.ckpt_fix_0.0.1.tar.gz --no-deps
 pip install https://github.com/w4ffl35/transformers/archive/refs/tags/tensor_fix-v1.0.2.tar.gz --no-deps
