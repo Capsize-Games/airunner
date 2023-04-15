@@ -50,8 +50,7 @@ class FilterBase:
         self.canvas = parent.canvas
 
     def show(self):
-        HERE = os.path.dirname(os.path.abspath(__file__))
-        self.filter_window = uic.loadUi(os.path.join(HERE, f"pyqt/{self.ui_name}.ui"))
+        self.filter_window = uic.loadUi(os.path.join(f"pyqt/{self.ui_name}.ui"))
         self.filter_window.setWindowTitle(self.window_title)
 
     def cancel_filter(self):
