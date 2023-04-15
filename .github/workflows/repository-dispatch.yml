@@ -15,12 +15,12 @@ env:
 jobs:
   buildLinux:
     runs-on: ghcr.io/capsize-games/airunner/airunner:linux
-    name: Build for Linux
-    run: |
-      bash /app/build.sh
+    steps:
+      - name: Build Linux
+        run: bash /app/build.sh
   buildWindows:
     runs-on: ghcr.io/capsize-games/airunner/airunner:linux
-    name: Build for Windows
-    run: |
-      bash wine64 Z:\\app\\build.windows.cmd
+    steps:
+      - name: Build for Windows
+        run: bash wine64 Z:\\app\\build.windows.cmd
 
