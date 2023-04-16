@@ -57,6 +57,14 @@ class MainWindow(QApplication):
     _embedding_names = []
 
     @property
+    def layer_highlight_style(self):
+        return f"background-color: #c7f6fc; border: 1px solid #000000; color: #000000;"
+
+    @property
+    def layer_normal_style(self):
+        return "background-color: #ffffff; border: 1px solid #333333; color: #333;"
+
+    @property
     def current_index(self):
         return self.window.tabWidget.currentIndex()
 
@@ -603,9 +611,9 @@ class MainWindow(QApplication):
 
             # show a border around layer_obj if it is the selected index
             if self.canvas.current_layer_index == index:
-                layer_obj.frame.setStyleSheet("background-color: #c7f6fc; border: 1px solid #000000;")
+                layer_obj.frame.setStyleSheet(self.layer_highlight_style)
             else:
-                layer_obj.frame.setStyleSheet("background-color: #ffffff; border: 1px solid #333333;")
+                layer_obj.frame.setStyleSheet(self.layer_normal_style)
 
             # enable delete button in layer_obj
             layer_obj.visible_button.setIcon(QIcon("src/icons/eye.png" if layer.visible else "src/icons/eye-off.png"))
@@ -629,12 +637,12 @@ class MainWindow(QApplication):
     def set_current_layer(self, index):
         item = self.container.layout().itemAt(self.canvas.current_layer_index)
         if item:
-            item.widget().frame.setStyleSheet("background-color: #ffffff; border: 1px solid #333333;")
+            item.widget().frame.setStyleSheet(self.layer_normal_style)
         self.canvas.current_layer_index = index
         # green border should only be on the outter frame not all elements
         item = self.container.layout().itemAt(self.canvas.current_layer_index)
         if item:
-            item.widget().frame.setStyleSheet("background-color: #c7f6fc; border: 1px solid #000000;")
+            item.widget().frame.setStyleSheet(self.layer_highlight_style)
 
     def new_document(self):
         self.canvas = Canvas(self)
