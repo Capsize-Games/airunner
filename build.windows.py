@@ -1,23 +1,21 @@
 import os
-import urllib.request
-import json
 
 
 def install_latest(repo, branch="master"):
     # Clone the repository
     os.chdir('Z:\\')
-    os.system(f'Z:\\cmd\\git.exe clone https://github.com/{repo}.git')
+    os.system(f'C:\\cmd\\git.exe clone https://github.com/{repo}.git')
 
     # Change directory to the cloned repository
     repo_name = repo.split('/')[-1]
     os.chdir(repo_name)
 
     # Fetch all the tags in the repository
-    os.system('Z:\\cmd\\git.exe fetch --tags')
+    os.system('C:\\cmd\\git.exe fetch --tags')
 
     # Get the latest tag on the specified branch or on all branches
-    os.system(f'Z:\\cmd\\git.exe checkout {branch}')
-    tags = os.popen('Z:\\cmd\\git.exe tag --merged').read().splitlines()
+    os.system(f'C:\\cmd\\git.exe checkout {branch}')
+    tags = os.popen('C:\\cmd\\git.exe tag --merged').read().splitlines()
     latest_tag = None
     for tag in tags:
         if branch is None or tag.startswith(f'v{branch}-'):
@@ -26,7 +24,7 @@ def install_latest(repo, branch="master"):
     if latest_tag:
         latest_tag = latest_tag.strip()
         # Switch to the latest tag
-        os.system(f'Z:\\cmd\\git.exe checkout {latest_tag}')
+        os.system(f'C:\\cmd\\git.exe checkout {latest_tag}')
 
     # Install the package
     os.system(f'C:\\Python310\\python.exe -m pip install .')
