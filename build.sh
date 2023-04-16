@@ -22,5 +22,4 @@ echo ""
 chown -R 1000:1000 dist
 LATEST_TAG=$(grep -oP '(?<=version=).*(?=,)' setup.py | tr -d "'")
 echo "Latest tag: $LATEST_TAG"
-wget https://dl.itch.ovh/butler/linux-amd64/head/butler && chmod +x butler
-./butler push ./dist/airunner capsizegames/ai-runner:ubuntu --userversion $LATEST_TAG
+echo $LATEST_TAG > ./dist/VERSION
