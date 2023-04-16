@@ -14,7 +14,7 @@ from PIL import Image
 from PyQt6 import uic, QtCore, QtGui
 from PyQt6.QtWidgets import QApplication, QLabel, QWidget, QColorDialog, QFileDialog, QVBoxLayout, QDialog, QSpacerItem, \
     QSizePolicy
-from PyQt6.QtCore import QPoint, pyqtSlot, QRect
+from PyQt6.QtCore import QPoint, pyqtSlot, QRect, QPointF
 from PyQt6.QtGui import QPainter, QIcon, QColor, QGuiApplication
 from aihandler.qtvar import TQDMVar, ImageVar, MessageHandlerVar, ErrorHandlerVar
 from aihandler.settings import MAX_SEED, AVAILABLE_SCHEDULERS_BY_ACTION, MODELS, LOG_LEVEL
@@ -31,6 +31,7 @@ from airunner.settingsmanager import SettingsManager
 from airunner.runai_client import OfflineClient
 from airunner.filters import FilterGaussianBlur, FilterBoxBlur, FilterUnsharpMask, FilterSaturation, \
     FilterColorBalance, FilterPixelArt
+from airunner.balloon import Balloon
 import qdarktheme
 
 
@@ -918,6 +919,21 @@ class MainWindow(QApplication):
     def focus_button_clicked(self):
         self.canvas.recenter()
 
+    def word_balloon_button_clicked(self):
+        """
+        Create and add a word balloon to the canvas.
+        :return:
+        """
+        # create a layer
+        self.canvas.add_layer()
+        # create a word balloon
+        word_balloon = Balloon()
+        word_balloon.setGeometry(100, 100, 200, 100)
+        word_balloon.set_tail_pos(QPointF(50, 100))
+        # add the widget to the canvas
+        self.canvas.current_layer.widgets.append(word_balloon)
+        self.show_layers()
+
     def show_initialize_buttons(self):
         self.window.eraser_button.clicked.connect(lambda: self.set_tool("eraser"))
         self.window.brush_button.clicked.connect(lambda: self.set_tool("brush"))
@@ -931,6 +947,7 @@ class MainWindow(QApplication):
         self.window.redo_button.clicked.connect(self.redo)
         self.window.nsfw_button.clicked.connect(self.toggle_nsfw_filter)
         self.window.focus_button.clicked.connect(self.focus_button_clicked)
+        self.window.wordballoon_button.clicked.connect(self.word_balloon_button_clicked)
         self.set_button_colors()
         self.window.grid_button.setChecked(
             self.settings_manager.settings.show_grid.get() == True
