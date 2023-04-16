@@ -32,12 +32,13 @@ def install_latest(repo, branch="master"):
 
 def clone(repo):
     # clone repo into /app
-    os.system(f'C:\\MinGit-2.40.0-64-bit\\git.exe clone https://github.com/{repo}.git /app/{repo.split("/")[1]}')
+    os.system(f'C:\\cmd\\git.exe clone https://github.com/{repo}.git /app/{repo.split("/")[1]}')
 
-
-# remove diffusers
-os.system("C:\\Python310\\python.exe -m pip uninstall diffusers -y")
-# install repos
-install_latest("Capsize-Games/aihandler")
-os.system("C:\\Python310\\python.exe -m pip install https://github.com/w4ffl35/diffusers/archive/refs/tags/v0.15.0.ckpt_fix.tar.gz --no-deps")
+clone("Capsize-Games/airunner")
+os.chdir("Z:\\app\\airunner")
+os.system("C:\\cmd\\git.exe checkout master")
+os.system("C:\\cmd\\git.exe pull")
+os.system("C:\\Python310\\python.exe -m pip install .")
+os.system("C:\\Python310\\python.exe -m pip uninstall nvidia-cublas-cu11 -y")
+os.system("C:\\Python310\\python.exe -m pip install bitsandbytes==0.38.0 -y")
 os.system("C:\\Python310\\python.exe -m pip install bitsandbytes-cuda102")

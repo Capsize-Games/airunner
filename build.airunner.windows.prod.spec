@@ -7,7 +7,7 @@ os.environ["AIRUNNER_ENVIRONMENT"] = "prod"
 os.environ["DEV_ENV"] = "0"
 os.environ["PYTHONOPTIMIZE"] = "0"
 block_cipher = None
-ROOT = "Z:\\app\\"
+ROOT = "Z:\\app\\airunner"
 DIST = "./dist/airunner"
 os.environ["AIRUNNER_ENVIRONMENT"] = "prod"
 DEBUGGING = True
@@ -43,7 +43,7 @@ datas += collect_data_files("tensorflow", include_py_files=True)
 
 a = Analysis(
     [
-        f'{ROOT}airunner\\src\\airunner\\main.py',
+        f'{ROOT}\\src\\airunner\\main.py',
     ],
     pathex=[
         "C:\\Python310\\Lib\\site-packages",
@@ -260,7 +260,7 @@ coll = COLLECT(
     upx_dir="C:\\Python310\\Scripts\\"
 )
 shutil.copytree(
-    f'{ROOT}/airunner/src/airunner/pyqt',
+    f'{ROOT}/src/airunner/pyqt',
     f'{DIST}/pyqt'
 )
 shutil.copyfile(
@@ -268,14 +268,14 @@ shutil.copyfile(
     f'{DIST}/.itch.toml'
 )
 shutil.copytree(
-    f'{ROOT}/airunner/src/airunner/src/icons',
+    f'{ROOT}/src/airunner/src/icons',
     f'{DIST}/src/icons'
 )
 shutil.copytree(
-    f'{ROOT}/airunner/src/airunner/v1.yaml',
+    f'{ROOT}/src/airunner/v1.yaml',
     f'{DIST}/v1.yaml'
 )
 shutil.copytree(
-    f'{ROOT}/airunner/src/airunner/v2.yaml',
+    f'{ROOT}/src/airunner/v2.yaml',
     f'{DIST}/v2.yaml'
 )
