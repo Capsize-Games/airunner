@@ -271,3 +271,11 @@ shutil.copytree(
     f'{ROOT}/airunner/src/airunner/src/icons',
     f'{DIST}/src/icons'
 )
+shutil.copytree(
+    f'{ROOT}/airunner/src/airunner/v1.yaml',
+    f'{DIST}/v1.yaml'
+)
+shutil.copytree(
+    f'{ROOT}/airunner/src/airunner/v2.yaml',
+    f'{DIST}/v2.yaml'
+)
