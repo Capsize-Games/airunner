@@ -452,11 +452,20 @@ class Canvas:
         if not self.saving:
             self.draw_grid(painter)
 
-        # draw image
-        self.draw_images(painter)
+        layers = self.layers.copy()
+        layers.reverse()
+        for index in range(len(layers)):
+            layer = layers[index]
+            if not layer.visible:
+                continue
+            # draw image
+            self.draw_images(layer, index, painter)
 
-        # draw user lines
-        self.draw_user_lines(painter)
+            # draw user lines
+            self.draw_user_lines(layer, index, painter)
+
+            # draw widgets
+            self.draw_widgets(layer, index, painter)
 
         self.draw_selection_box(painter)
 
@@ -508,26 +517,6 @@ class Canvas:
             painter.drawLine(x, 0, x, self.canvas_container.height())
             x += self.grid_size
 
-    @property
-    def active_grid_area_color(self):
-        if self.parent.current_section == "txt2img":
-            brush_color = QColor(0, 255, 0)
-        elif self.parent.current_section == "img2img":
-            brush_color = QColor(255, 0, 0)
-        elif self.parent.current_section == "depth2img":
-            brush_color = QColor(0, 0, 255)
-        elif self.parent.current_section == "pix2pix":
-            brush_color = QColor(255, 255, 0)
-        elif self.parent.current_section == "outpaint":
-            brush_color = QColor(0, 255, 255)
-        elif self.parent.current_section == "superresolution":
-            brush_color = QColor(255, 0, 255)
-        elif self.parent.current_section == "controlnet":
-            brush_color = QColor(255, 255, 255)
-        else:
-            brush_color = QColor(0, 0, 0)
-        return brush_color
-
     def draw_active_grid_area_container(self, painter):
         """
         Draw a rectangle around the active grid area of
@@ -555,29 +544,65 @@ class Canvas:
         image = image.convert("RGBA")
         self.current_layer.images.append(ImageData(location, image))
 
-    def draw_images(self, painter):
-        index = 0
-        layers = self.layers.copy()
-        layers.reverse()
-        for layer in layers:
-            if not layer.visible:
-                continue
-            for image in layer.images:
-                # display PIL.image as QPixmap
-                img = image.image
-                if self.parent.current_filter and index == self.current_layer_index:
-                    img = img.filter(self.parent.current_filter)
-                qimage = ImageQt(img)
-                pixmap = QPixmap.fromImage(qimage)
+    ######
+    # Drawing functions: render images, widgets and lines to canvas
+    ######
+    def draw_images(self, layer, index, painter):
+        for image in layer.images:
+            # display PIL.image as QPixmap
+            img = image.image
+            if self.parent.current_filter and index == self.current_layer_index:
+                img = img.filter(self.parent.current_filter)
+            qimage = ImageQt(img)
+            pixmap = QPixmap.fromImage(qimage)
 
-                # apply the layer offset
-                x = image.position.x() + self.pos_x
-                y = image.position.y() + self.pos_y
-                location = QPoint(int(x), int(y)) + self.current_layer.offset
+            # apply the layer offset
+            x = image.position.x() + self.pos_x
+            y = image.position.y() + self.pos_y
+            location = QPoint(int(x), int(y)) + self.current_layer.offset
 
-                # draw the image
-                painter.drawPixmap(location, pixmap)
-            index += 1
+            # draw the image
+            painter.drawPixmap(location, pixmap)
+
+    def draw_widgets(self, layer, index, painter):
+        for widget in layer.widgets:
+            widget.draw(painter)
+
+    def draw_user_lines(self, layer, index, painter):
+        painter.setBrush(self.brush)
+        for line in layer.lines:
+            pen = line.pen
+            pen.setCapStyle(Qt.PenCapStyle.RoundCap)
+            painter.setPen(pen)
+            start = QPointF(line.start_point.x() + self.pos_x, line.start_point.y() + self.pos_y)
+            end = QPointF(line.end_point.x() + self.pos_x, line.end_point.y() + self.pos_y)
+
+            # also apply the layer offset
+            offset = QPointF(self.current_layer.offset.x(), self.current_layer.offset.y())
+            start += offset
+            end += offset
+
+            # create a QPainterPath to hold the curve
+            path = QPainterPath()
+            path.moveTo(QPointF(start.x(), start.y()))
+
+            # calculate control points for the Bezier curve
+            dx = end.x() - start.x()
+            dy = end.y() - start.y()
+            ctrl1 = QPointF(start.x() + dx / 3, start.y() + dy / 3)
+            ctrl2 = QPointF(end.x() - dx / 3, end.y() - dy / 3)
+
+            # add the curve to the path
+            path.cubicTo(ctrl1, ctrl2, end)
+
+            # create a QPolygonF from the path to draw the curve
+            polygons = path.toSubpathPolygons()
+            if len(polygons) > 0:
+                curve = QPolygonF(polygons[0])
+                painter.drawPolyline(curve)
+    ######
+    # End Drawing functions
+    ######
 
     def invert_image(self):
         # convert image mode to RGBA
@@ -585,45 +610,6 @@ class Canvas:
             image.image = image.image.convert("RGB")
             image.image = ImageOps.invert(image.image)
             image.image = image.image.convert("RGBA")
-
-    def draw_user_lines(self, painter):
-        painter.setBrush(self.brush)
-        layers = self.layers.copy()
-        layers.reverse()
-        for layer in layers:
-            if not layer.visible:
-                continue
-            for line in layer.lines:
-                pen = line.pen
-                pen.setCapStyle(Qt.PenCapStyle.RoundCap)
-                painter.setPen(pen)
-                start = QPointF(line.start_point.x() + self.pos_x, line.start_point.y() + self.pos_y)
-                end = QPointF(line.end_point.x() + self.pos_x, line.end_point.y() + self.pos_y)
-
-                # also apply the layer offset
-                offset = QPointF(self.current_layer.offset.x(), self.current_layer.offset.y())
-                start += offset
-                end += offset
-
-                # create a QPainterPath to hold the curve
-                path = QPainterPath()
-                path.moveTo(QPointF(start.x(), start.y()))
-
-                # calculate control points for the Bezier curve
-                dx = end.x() - start.x()
-                dy = end.y() - start.y()
-                ctrl1 = QPointF(start.x() + dx / 3, start.y() + dy / 3)
-                ctrl2 = QPointF(end.x() - dx / 3, end.y() - dy / 3)
-
-                # add the curve to the path
-                path.cubicTo(ctrl1, ctrl2, end)
-
-                # create a QPolygonF from the path to draw the curve
-                polygons = path.toSubpathPolygons()
-                if len(polygons) > 0:
-                    curve = QPolygonF(polygons[0])
-                    painter.drawPolyline(curve)
-        # convert to QImage and combine with self.current_layer.image
 
     def draw_selection_box(self, painter):
         if self.select_start is not None and self.select_end is not None:
