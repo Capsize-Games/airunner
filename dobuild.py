@@ -22,13 +22,13 @@ def clone(repo):
 
 
 # install repos
-install_latest("Capsize-Games/aihandler")
-install_latest("w4ffl35/diffusers", False)
-install_latest("w4ffl35/transformers", False)
-# change into /app/airunner and update
+clone("Capsize-Games/airunner")
 os.chdir("/app/airunner")
 os.system("git checkout master")
 os.system("git pull")
 os.system("pip install -e . --no-deps")
+install_latest("w4ffl35/diffusers", False)
+install_latest("w4ffl35/transformers", False)
+# change into /app/airunner and update
 os.system("python3 -m pip uninstall nvidia-cublas-cu11 -y")
 os.system("python3 -m pip install bitsandbytes-cuda102")
