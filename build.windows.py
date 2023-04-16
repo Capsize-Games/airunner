@@ -37,7 +37,7 @@ def clone(repo):
 
 
 # remove diffusers
-os.system("C:\\Python310\\python.exe -m pip uninstall diffusers -y")
+os.system("C:\\Python310\\python.exe -m pip uninstall diffusers")
 # install repos
 install_latest("Capsize-Games/aihandler", branch="develop-windows")
 os.system("C:\\Python310\\python.exe -m pip install https://github.com/w4ffl35/diffusers/archive/refs/tags/v0.15.0.ckpt_fix.tar.gz --no-deps")
