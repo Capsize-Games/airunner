@@ -56,7 +56,7 @@ datas += collect_data_files("sympy", include_py_files=True)
 datas += collect_data_files("opencv-python", include_py_files=True)
 a = Analysis(
     [
-        f'./src/airunner/main.py',
+        f'/app/airunner/src/airunner/main.py',
     ],
     pathex=[
         "/usr/local/lib/python3.10/dist-packages/",
@@ -264,31 +264,31 @@ coll = COLLECT(
 )
 
 # copy files for distribution
-shutil.copytree('./src/airunner/pyqt', './dist/airunner/pyqt')
-shutil.copyfile('./linux.itch.toml', './dist/airunner/.itch.toml')
-shutil.copytree('./src/airunner/src/icons', './dist/airunner/src/icons')
+shutil.copytree('/app/airunner/src/airunner/pyqt', '/app/dist/airunner/pyqt')
+shutil.copyfile('/app/airunner/linux.itch.toml', '/app/dist/airunner/.itch.toml')
+shutil.copytree('/app/airunner/src/airunner/src/icons', '/app/dist/airunner/src/icons')
 
 # copy sd config files
-os.makedirs('./dist/airunner/diffusers/pipelines/stable_diffusion', exist_ok=True)
-shutil.copyfile('./src/airunner/v1.yaml', './dist/airunner/v1.yaml')
-shutil.copyfile('./src/airunner/v2.yaml', './dist/airunner/v2.yaml')
+os.makedirs('/dist/airunner/diffusers/pipelines/stable_diffusion', exist_ok=True)
+shutil.copyfile('/app/airunner/src/airunner/v1.yaml', '/app/dist/airunner/v1.yaml')
+shutil.copyfile('/app/airunner/src/airunner/v2.yaml', '/app/dist/airunner/v2.yaml')
 
 #############################################################
 #### The following fixes are for Triton #####################
 
-# run compileall on ./dist/airunner/triton/runtime/jit.py and then mv ./dist/airunner/triton/runtime/__pycache__/jit.cpython-310.pyc to ./dist/airunner/triton/runtime/jit.pyc
+# run compileall on /app/dist/airunner/triton/runtime/jit.py and then mv /app/dist/airunner/triton/runtime/__pycache__/jit.cpython-310.pyc to /app/dist/airunner/triton/runtime/jit.pyc
 shutil.copyfile(
     '/usr/local/lib/python3.10/dist-packages/triton/runtime/__pycache__/jit.cpython-310.pyc',
-    './dist/airunner/triton/runtime/jit.pyc'
+    '/app/dist/airunner/triton/runtime/jit.pyc'
 )
 
-# do the same thing for ./dist/airunner/triton/compiler.py
+# do the same thing for /app/dist/airunner/triton/compiler.py
 shutil.copyfile(
     '/usr/local/lib/python3.10/dist-packages/triton/__pycache__/compiler.cpython-310.pyc',
-    './dist/airunner/triton/compiler.pyc'
+    '/app/dist/airunner/triton/compiler.pyc'
 )
 
 shutil.copyfile(
     f'/usr/local/lib/python3.10/dist-packages/JIT/__pycache__/random.cpython-310.pyc',
-    f'./dist/airunner/random.pyc'
+    f'/app/dist/airunner/random.pyc'
 )
