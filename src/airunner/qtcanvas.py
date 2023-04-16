@@ -190,10 +190,13 @@ class Canvas:
             self.current_layer.images[index].image = image.image.filter(self.parent.current_filter)
             index += 1
 
+    def get_layers_copy(self):
+        return [layer for layer in self.layers]
+
     def delete_layer(self, index):
         self.parent.history.add_event({
             "event": "delete_layer",
-            "layers": [layer for layer in self.layers],
+            "layers": self.get_layers_copy(),
             "layer_index": self.current_layer_index
         })
 
@@ -245,16 +248,13 @@ class Canvas:
         self.update()
 
     def add_layer(self):
+        self.parent.history.add_event({
+            "event": "new_layer",
+            "layers": self.get_layers_copy(),
+            "layer_index": self.current_layer_index
+        })
         layer_name = f"Layer {len(self.layers) + 1}"
         self.layers.insert(0, LayerData(len(self.layers), layer_name))
-
-        if len(self.layers) > 1:
-            self.parent.history.add_event({
-                "event": "new_layer",
-                "layer": self.layers[0],
-                "layer_index": self.current_layer_index
-            })
-
         self.set_current_layer(0)
 
     def __init__(
@@ -646,19 +646,13 @@ class Canvas:
         self.update()
 
     def handle_erase(self, event):
+        self.is_erasing = True
         # Erase any line segments that intersect with the current position of the mouse
         brush_size = self.settings_manager.settings.mask_brush_size.get()
         start = event.pos() - QPoint(self.pos_x, self.pos_y) - self.image_pivot_point
         for i, line in enumerate(self.current_layer.lines):
             # check if line intersects with start using brush size radius
             if line.intersects(start, brush_size):
-                if not self.is_erasing:
-                    self.is_erasing = True
-                    self.parent.history.add_event({
-                        "event": "erase",
-                        "layer_index": self.current_layer_index,
-                        "lines": self.current_layer.lines.copy()
-                    })
                 self.current_layer.lines.pop(i)
                 self.update()
 
@@ -808,6 +802,11 @@ class Canvas:
             self.select_start = event.pos()
         if event.button() in (Qt.MouseButton.LeftButton, Qt.MouseButton.RightButton):
             if self.brush_selected:
+                self.parent.history.add_event({
+                    "event": "draw",
+                    "layer_index": self.current_layer_index,
+                    "lines": self.current_layer.lines.copy()
+                })
                 self.start_drawing_line_index = len(self.current_layer.lines)
                 start = event.pos() - QPoint(self.pos_x, self.pos_y)
                 end = event.pos() - QPoint(self.pos_x, self.pos_y)
@@ -847,8 +846,19 @@ class Canvas:
 
         self.update()
 
+    def get_image_copy(self, index):
+        return [ImageData(imageData.position, imageData.image.copy()) for imageData in self.layers[index].images]
+
     def handle_tool(self, event):
         if self.eraser_selected:
+            if not self.is_erasing:
+                print("erase")
+                self.parent.history.add_event({
+                    "event": "erase",
+                    "layer_index": self.current_layer_index,
+                    "lines": self.current_layer.lines.copy(),
+                    "images": self.get_image_copy(self.current_layer_index)
+                })
             self.handle_erase(event)
             self.parent.is_dirty = True
         elif self.brush_selected:
@@ -892,15 +902,9 @@ class Canvas:
         if event.button() in (Qt.MouseButton.LeftButton, Qt.MouseButton.RightButton):
             if self.brush_selected:
                 self.stop_drawing_line_index = len(self.current_layer.lines)
-                self.parent.history.add_event({
-                    "event": "draw",
-                    "layer_index": self.current_layer_index,
-                    "start_line_index": self.start_drawing_line_index,
-                    "end_line_index": self.stop_drawing_line_index
-                })
                 self.update()
             elif self.eraser_selected:
-                is_erasing = False
+                self.is_erasing = False
         elif event.button() == Qt.MouseButton.MiddleButton:
             # Start dragging the canvas when the middle or right mouse button is pressed
             self.drag_pos = event.pos()
