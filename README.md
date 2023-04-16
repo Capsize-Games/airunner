@@ -57,6 +57,13 @@ docker tag ghcr.io/capsize-games/airunner/airunner:linux ghcr.io/capsize-games/a
 docker push ghcr.io/capsize-games/airunner/airunner:linux
 ```
 
+Windows
+```
+docker-compose -f docker-compose.windows.yml build
+docker tag ghcr.io/capsize-games/airunner/airunner:windows ghcr.io/capsize-games/airunner/airunner:windows
+docker push ghcr.io/capsize-games/airunner/airunner:windows
+```
+
 **Run the app using Docker**
 ```
 docker-compose run linux python3 /app/main.py

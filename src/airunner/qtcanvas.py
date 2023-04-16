@@ -69,12 +69,14 @@ class LayerData:
         self.offset = offset
         self.lines = []
         self.images = []
+        self.widgets = []
         self.uuid = uuid.uuid4()
 
     def clear(self, index):
         self.index = index
         self.lines = []
         self.images = []
+        self.widgets = []
         self.visible = True
         self.opacity = 1.0
         self.name = f"Layer {self.index + 1}"
@@ -84,69 +86,6 @@ class Canvas:
     saving = False
     select_start = None
     select_end = None
-
-    def set_current_layer(self, index):
-        self.current_layer_index = index
-
-    def apply_filter(self):
-        index = 0
-        for image in self.current_layer.images:
-            self.current_layer.images[index].image = image.image.filter(self.parent.current_filter)
-            index += 1
-
-    def delete_layer(self, index):
-        self.parent.history.add_event({
-            "event": "delete_layer",
-            "layers": [layer for layer in self.layers],
-            "layer_index": self.current_layer_index
-        })
-
-        if len(self.layers) == 1:
-            self.layers = [LayerData(0, "Layer 1")]
-        else:
-            try:
-                self.layers.pop(index)
-            except IndexError:
-                pass
-        self.parent.show_layers()
-        self.update()
-
-    def toggle_layer_visibility(self, layer):
-        layer.visible = not layer.visible
-        self.update()
-
-    def track_layer_move_history(self):
-        layer_order = []
-        for layer in self.layers:
-            layer_order.append(layer.uuid)
-        self.parent.history.add_event({
-            "event": "move_layer",
-            "layer_order": layer_order,
-            "layer_index": self.current_layer_index
-        })
-
-    def move_layer_up(self, layer):
-        index = self.layers.index(layer)
-        if index == 0:
-            return
-        # track the current layer order
-        self.track_layer_move_history()
-        self.layers.remove(layer)
-        self.layers.insert(index - 1, layer)
-        self.current_layer_index = index - 1
-        self.parent.show_layers()
-        self.update()
-
-    def move_layer_down(self, layer):
-        index = self.layers.index(layer)
-        if index == len(self.layers) - 1:
-            return
-        self.track_layer_move_history()
-        self.layers.remove(layer)
-        self.layers.insert(index + 1, layer)
-        self.current_layer_index = index + 1
-        self.parent.show_layers()
-        self.update()
 
     @property
     def current_active_image(self):
@@ -222,17 +161,100 @@ class Canvas:
     def mouse_pos(self):
         return self.canvas_container.mapFromGlobal(QCursor.pos())
 
+    @property
+    def active_grid_area_color(self):
+        if self.parent.current_section == "txt2img":
+            brush_color = QColor(0, 255, 0)
+        elif self.parent.current_section == "img2img":
+            brush_color = QColor(255, 0, 0)
+        elif self.parent.current_section == "depth2img":
+            brush_color = QColor(0, 0, 255)
+        elif self.parent.current_section == "pix2pix":
+            brush_color = QColor(255, 255, 0)
+        elif self.parent.current_section == "outpaint":
+            brush_color = QColor(0, 255, 255)
+        elif self.parent.current_section == "superresolution":
+            brush_color = QColor(255, 0, 255)
+        elif self.parent.current_section == "controlnet":
+            brush_color = QColor(255, 255, 255)
+        else:
+            brush_color = QColor(0, 0, 0)
+        return brush_color
+
+    def set_current_layer(self, index):
+        self.current_layer_index = index
+
+    def apply_filter(self):
+        index = 0
+        for image in self.current_layer.images:
+            self.current_layer.images[index].image = image.image.filter(self.parent.current_filter)
+            index += 1
+
+    def get_layers_copy(self):
+        return [layer for layer in self.layers]
+
+    def delete_layer(self, index):
+        self.parent.history.add_event({
+            "event": "delete_layer",
+            "layers": self.get_layers_copy(),
+            "layer_index": self.current_layer_index
+        })
+
+        if len(self.layers) == 1:
+            self.layers = [LayerData(0, "Layer 1")]
+        else:
+            try:
+                self.layers.pop(index)
+            except IndexError:
+                pass
+        self.parent.show_layers()
+        self.update()
+
+    def toggle_layer_visibility(self, layer):
+        layer.visible = not layer.visible
+        self.update()
+
+    def track_layer_move_history(self):
+        layer_order = []
+        for layer in self.layers:
+            layer_order.append(layer.uuid)
+        self.parent.history.add_event({
+            "event": "move_layer",
+            "layer_order": layer_order,
+            "layer_index": self.current_layer_index
+        })
+
+    def move_layer_up(self, layer):
+        index = self.layers.index(layer)
+        if index == 0:
+            return
+        # track the current layer order
+        self.track_layer_move_history()
+        self.layers.remove(layer)
+        self.layers.insert(index - 1, layer)
+        self.current_layer_index = index - 1
+        self.parent.show_layers()
+        self.update()
+
+    def move_layer_down(self, layer):
+        index = self.layers.index(layer)
+        if index == len(self.layers) - 1:
+            return
+        self.track_layer_move_history()
+        self.layers.remove(layer)
+        self.layers.insert(index + 1, layer)
+        self.current_layer_index = index + 1
+        self.parent.show_layers()
+        self.update()
+
     def add_layer(self):
+        self.parent.history.add_event({
+            "event": "new_layer",
+            "layers": self.get_layers_copy(),
+            "layer_index": self.current_layer_index
+        })
         layer_name = f"Layer {len(self.layers) + 1}"
         self.layers.insert(0, LayerData(len(self.layers), layer_name))
-
-        if len(self.layers) > 1:
-            self.parent.history.add_event({
-                "event": "new_layer",
-                "layer": self.layers[0],
-                "layer_index": self.current_layer_index
-            })
-
         self.set_current_layer(0)
 
     def __init__(
@@ -430,11 +452,20 @@ class Canvas:
         if not self.saving:
             self.draw_grid(painter)
 
-        # draw image
-        self.draw_images(painter)
+        layers = self.layers.copy()
+        layers.reverse()
+        for index in range(len(layers)):
+            layer = layers[index]
+            if not layer.visible:
+                continue
+            # draw image
+            self.draw_images(layer, index, painter)
 
-        # draw user lines
-        self.draw_user_lines(painter)
+            # draw user lines
+            self.draw_user_lines(layer, index, painter)
+
+            # draw widgets
+            self.draw_widgets(layer, index, painter)
 
         self.draw_selection_box(painter)
 
@@ -486,26 +517,6 @@ class Canvas:
             painter.drawLine(x, 0, x, self.canvas_container.height())
             x += self.grid_size
 
-    @property
-    def active_grid_area_color(self):
-        if self.parent.current_section == "txt2img":
-            brush_color = QColor(0, 255, 0)
-        elif self.parent.current_section == "img2img":
-            brush_color = QColor(255, 0, 0)
-        elif self.parent.current_section == "depth2img":
-            brush_color = QColor(0, 0, 255)
-        elif self.parent.current_section == "pix2pix":
-            brush_color = QColor(255, 255, 0)
-        elif self.parent.current_section == "outpaint":
-            brush_color = QColor(0, 255, 255)
-        elif self.parent.current_section == "superresolution":
-            brush_color = QColor(255, 0, 255)
-        elif self.parent.current_section == "controlnet":
-            brush_color = QColor(255, 255, 255)
-        else:
-            brush_color = QColor(0, 0, 0)
-        return brush_color
-
     def draw_active_grid_area_container(self, painter):
         """
         Draw a rectangle around the active grid area of
@@ -533,29 +544,65 @@ class Canvas:
         image = image.convert("RGBA")
         self.current_layer.images.append(ImageData(location, image))
 
-    def draw_images(self, painter):
-        index = 0
-        layers = self.layers.copy()
-        layers.reverse()
-        for layer in layers:
-            if not layer.visible:
-                continue
-            for image in layer.images:
-                # display PIL.image as QPixmap
-                img = image.image
-                if self.parent.current_filter and index == self.current_layer_index:
-                    img = img.filter(self.parent.current_filter)
-                qimage = ImageQt(img)
-                pixmap = QPixmap.fromImage(qimage)
+    ######
+    # Drawing functions: render images, widgets and lines to canvas
+    ######
+    def draw_images(self, layer, index, painter):
+        for image in layer.images:
+            # display PIL.image as QPixmap
+            img = image.image
+            if self.parent.current_filter and index == self.current_layer_index:
+                img = img.filter(self.parent.current_filter)
+            qimage = ImageQt(img)
+            pixmap = QPixmap.fromImage(qimage)
 
-                # apply the layer offset
-                x = image.position.x() + self.pos_x
-                y = image.position.y() + self.pos_y
-                location = QPoint(int(x), int(y)) + self.current_layer.offset
+            # apply the layer offset
+            x = image.position.x() + self.pos_x
+            y = image.position.y() + self.pos_y
+            location = QPoint(int(x), int(y)) + self.current_layer.offset
 
-                # draw the image
-                painter.drawPixmap(location, pixmap)
-            index += 1
+            # draw the image
+            painter.drawPixmap(location, pixmap)
+
+    def draw_widgets(self, layer, index, painter):
+        for widget in layer.widgets:
+            widget.draw(painter)
+
+    def draw_user_lines(self, layer, index, painter):
+        painter.setBrush(self.brush)
+        for line in layer.lines:
+            pen = line.pen
+            pen.setCapStyle(Qt.PenCapStyle.RoundCap)
+            painter.setPen(pen)
+            start = QPointF(line.start_point.x() + self.pos_x, line.start_point.y() + self.pos_y)
+            end = QPointF(line.end_point.x() + self.pos_x, line.end_point.y() + self.pos_y)
+
+            # also apply the layer offset
+            offset = QPointF(self.current_layer.offset.x(), self.current_layer.offset.y())
+            start += offset
+            end += offset
+
+            # create a QPainterPath to hold the curve
+            path = QPainterPath()
+            path.moveTo(QPointF(start.x(), start.y()))
+
+            # calculate control points for the Bezier curve
+            dx = end.x() - start.x()
+            dy = end.y() - start.y()
+            ctrl1 = QPointF(start.x() + dx / 3, start.y() + dy / 3)
+            ctrl2 = QPointF(end.x() - dx / 3, end.y() - dy / 3)
+
+            # add the curve to the path
+            path.cubicTo(ctrl1, ctrl2, end)
+
+            # create a QPolygonF from the path to draw the curve
+            polygons = path.toSubpathPolygons()
+            if len(polygons) > 0:
+                curve = QPolygonF(polygons[0])
+                painter.drawPolyline(curve)
+    ######
+    # End Drawing functions
+    ######
 
     def invert_image(self):
         # convert image mode to RGBA
@@ -563,45 +610,6 @@ class Canvas:
             image.image = image.image.convert("RGB")
             image.image = ImageOps.invert(image.image)
             image.image = image.image.convert("RGBA")
-
-    def draw_user_lines(self, painter):
-        painter.setBrush(self.brush)
-        layers = self.layers.copy()
-        layers.reverse()
-        for layer in layers:
-            if not layer.visible:
-                continue
-            for line in layer.lines:
-                pen = line.pen
-                pen.setCapStyle(Qt.PenCapStyle.RoundCap)
-                painter.setPen(pen)
-                start = QPointF(line.start_point.x() + self.pos_x, line.start_point.y() + self.pos_y)
-                end = QPointF(line.end_point.x() + self.pos_x, line.end_point.y() + self.pos_y)
-
-                # also apply the layer offset
-                offset = QPointF(self.current_layer.offset.x(), self.current_layer.offset.y())
-                start += offset
-                end += offset
-
-                # create a QPainterPath to hold the curve
-                path = QPainterPath()
-                path.moveTo(QPointF(start.x(), start.y()))
-
-                # calculate control points for the Bezier curve
-                dx = end.x() - start.x()
-                dy = end.y() - start.y()
-                ctrl1 = QPointF(start.x() + dx / 3, start.y() + dy / 3)
-                ctrl2 = QPointF(end.x() - dx / 3, end.y() - dy / 3)
-
-                # add the curve to the path
-                path.cubicTo(ctrl1, ctrl2, end)
-
-                # create a QPolygonF from the path to draw the curve
-                polygons = path.toSubpathPolygons()
-                if len(polygons) > 0:
-                    curve = QPolygonF(polygons[0])
-                    painter.drawPolyline(curve)
-        # convert to QImage and combine with self.current_layer.image
 
     def draw_selection_box(self, painter):
         if self.select_start is not None and self.select_end is not None:
@@ -638,19 +646,13 @@ class Canvas:
         self.update()
 
     def handle_erase(self, event):
+        self.is_erasing = True
         # Erase any line segments that intersect with the current position of the mouse
         brush_size = self.settings_manager.settings.mask_brush_size.get()
         start = event.pos() - QPoint(self.pos_x, self.pos_y) - self.image_pivot_point
         for i, line in enumerate(self.current_layer.lines):
             # check if line intersects with start using brush size radius
             if line.intersects(start, brush_size):
-                if not self.is_erasing:
-                    self.is_erasing = True
-                    self.parent.history.add_event({
-                        "event": "erase",
-                        "layer_index": self.current_layer_index,
-                        "lines": self.current_layer.lines.copy()
-                    })
                 self.current_layer.lines.pop(i)
                 self.update()
 
@@ -800,6 +802,11 @@ class Canvas:
             self.select_start = event.pos()
         if event.button() in (Qt.MouseButton.LeftButton, Qt.MouseButton.RightButton):
             if self.brush_selected:
+                self.parent.history.add_event({
+                    "event": "draw",
+                    "layer_index": self.current_layer_index,
+                    "lines": self.current_layer.lines.copy()
+                })
                 self.start_drawing_line_index = len(self.current_layer.lines)
                 start = event.pos() - QPoint(self.pos_x, self.pos_y)
                 end = event.pos() - QPoint(self.pos_x, self.pos_y)
@@ -839,8 +846,18 @@ class Canvas:
 
         self.update()
 
+    def get_image_copy(self, index):
+        return [ImageData(imageData.position, imageData.image.copy()) for imageData in self.layers[index].images]
+
     def handle_tool(self, event):
         if self.eraser_selected:
+            if not self.is_erasing:
+                self.parent.history.add_event({
+                    "event": "erase",
+                    "layer_index": self.current_layer_index,
+                    "lines": self.current_layer.lines.copy(),
+                    "images": self.get_image_copy(self.current_layer_index)
+                })
             self.handle_erase(event)
             self.parent.is_dirty = True
         elif self.brush_selected:
@@ -884,15 +901,9 @@ class Canvas:
         if event.button() in (Qt.MouseButton.LeftButton, Qt.MouseButton.RightButton):
             if self.brush_selected:
                 self.stop_drawing_line_index = len(self.current_layer.lines)
-                self.parent.history.add_event({
-                    "event": "draw",
-                    "layer_index": self.current_layer_index,
-                    "start_line_index": self.start_drawing_line_index,
-                    "end_line_index": self.stop_drawing_line_index
-                })
                 self.update()
             elif self.eraser_selected:
-                is_erasing = False
+                self.is_erasing = False
         elif event.button() == Qt.MouseButton.MiddleButton:
             # Start dragging the canvas when the middle or right mouse button is pressed
             self.drag_pos = event.pos()

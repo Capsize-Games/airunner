@@ -14,7 +14,7 @@ from PIL import Image
 from PyQt6 import uic, QtCore, QtGui
 from PyQt6.QtWidgets import QApplication, QLabel, QWidget, QColorDialog, QFileDialog, QVBoxLayout, QDialog, QSpacerItem, \
     QSizePolicy
-from PyQt6.QtCore import QPoint, pyqtSlot, QRect
+from PyQt6.QtCore import QPoint, pyqtSlot, QRect, QPointF
 from PyQt6.QtGui import QPainter, QIcon, QColor, QGuiApplication
 from aihandler.qtvar import TQDMVar, ImageVar, MessageHandlerVar, ErrorHandlerVar
 from aihandler.settings import MAX_SEED, AVAILABLE_SCHEDULERS_BY_ACTION, MODELS, LOG_LEVEL
@@ -31,6 +31,7 @@ from airunner.settingsmanager import SettingsManager
 from airunner.runai_client import OfflineClient
 from airunner.filters import FilterGaussianBlur, FilterBoxBlur, FilterUnsharpMask, FilterSaturation, \
     FilterColorBalance, FilterPixelArt
+from airunner.balloon import Balloon
 import qdarktheme
 
 
@@ -55,6 +56,14 @@ class MainWindow(QApplication):
     _is_dirty = False
     is_saved = False
     _embedding_names = []
+
+    @property
+    def layer_highlight_style(self):
+        return f"background-color: #c7f6fc; border: 1px solid #000000; color: #000000;"
+
+    @property
+    def layer_normal_style(self):
+        return "background-color: #ffffff; border: 1px solid #333333; color: #333;"
 
     @property
     def current_index(self):
@@ -603,9 +612,9 @@ class MainWindow(QApplication):
 
             # show a border around layer_obj if it is the selected index
             if self.canvas.current_layer_index == index:
-                layer_obj.frame.setStyleSheet("background-color: #c7f6fc; border: 1px solid #000000;")
+                layer_obj.frame.setStyleSheet(self.layer_highlight_style)
             else:
-                layer_obj.frame.setStyleSheet("background-color: #ffffff; border: 1px solid #333333;")
+                layer_obj.frame.setStyleSheet(self.layer_normal_style)
 
             # enable delete button in layer_obj
             layer_obj.visible_button.setIcon(QIcon("src/icons/eye.png" if layer.visible else "src/icons/eye-off.png"))
@@ -629,12 +638,12 @@ class MainWindow(QApplication):
     def set_current_layer(self, index):
         item = self.container.layout().itemAt(self.canvas.current_layer_index)
         if item:
-            item.widget().frame.setStyleSheet("background-color: #ffffff; border: 1px solid #333333;")
+            item.widget().frame.setStyleSheet(self.layer_normal_style)
         self.canvas.current_layer_index = index
         # green border should only be on the outter frame not all elements
         item = self.container.layout().itemAt(self.canvas.current_layer_index)
         if item:
-            item.widget().frame.setStyleSheet("background-color: #c7f6fc; border: 1px solid #000000;")
+            item.widget().frame.setStyleSheet(self.layer_highlight_style)
 
     def new_document(self):
         self.canvas = Canvas(self)
@@ -764,30 +773,29 @@ class MainWindow(QApplication):
         self.canvas.layers = sorted_layers
 
     def undo_draw(self, previous_event):
-        start_line_index = previous_event["start_line_index"]
-        end_line_index = previous_event["end_line_index"]
-        # delete all lines in range start_line_index to end_line_index
-        previous_event["lines"] = self.canvas.layers[previous_event["layer_index"]].lines[start_line_index:end_line_index]
-        self.history.undone_history.append(previous_event)
-        del self.canvas.layers[previous_event["layer_index"]].lines[start_line_index:end_line_index]
-        self.canvas.update()
+        index = previous_event["layer_index"]
+        lines = previous_event["lines"]
+        previous_event["lines"] = self.canvas.layers[index].lines.copy()
+        self.canvas.layers[index].lines = lines
+        return previous_event
 
     def undo_erase(self, previous_event):
         # add lines to layer
-        lines = self.canvas.layers[previous_event["layer_index"]].lines
-        self.canvas.layers[previous_event["layer_index"]].lines = previous_event["lines"]
-        previous_event["lines"] = lines
-        self.history.undone_history.append(previous_event)
-        self.canvas.update()
+        lines = previous_event["lines"]
+        images = previous_event["images"]
+        index = previous_event["layer_index"]
+        previous_event["lines"] = self.canvas.layers[index].lines
+        previous_event["images"] = self.canvas.get_image_copy(index)
+        self.canvas.layers[index].lines = lines
+        self.canvas.layers[index].images = images
+        return previous_event
 
-    def undo_delete(self, previous_event):
-        # delete layer
-        layer = previous_event["layer"]
-        self.canvas.layers = [l for l in self.canvas.layers if l != layer]
-        self.history.undone_history.append(previous_event)
+    def undo_new_layer(self, previous_event):
+        layers = self.canvas.get_layers_copy()
+        self.canvas.layers = previous_event["layers"]
         self.canvas.current_layer_index = previous_event["layer_index"]
-        self.canvas.update()
-        self.show_layers()
+        previous_event["layers"] = layers
+        return previous_event
 
     def undo_move_layer(self, previous_event):
         layer_order = []
@@ -797,31 +805,34 @@ class MainWindow(QApplication):
         previous_event["layer_order"] = layer_order
         self.history.undone_history.append(previous_event)
         self.canvas.current_layer_index = previous_event["layer_index"]
-        self.canvas.update()
-        self.show_layers()
+        return previous_event
 
     def undo_delete_layer(self, previous_event):
-        layers = self.canvas.layers
+        layers = self.canvas.get_layers_copy()
         self.canvas.layers = previous_event["layers"]
-        previous_event["layers"] = layers
-        self.history.undone_history.append(previous_event)
         self.canvas.current_layer_index = previous_event["layer_index"]
-        self.canvas.update()
-        self.show_layers()
+        previous_event["layers"] = layers
+        return previous_event
 
     def undo_set_image(self, previous_event):
         # replace layer images with original images
         images = previous_event["images"]
+        layer_index = previous_event["layer_index"]
         current_image_root_point = QPoint(self.canvas.image_root_point.x(), self.canvas.image_root_point.y())
         current_image_pivot_point = QPoint(self.canvas.image_pivot_point.x(), self.canvas.image_pivot_point.y())
         self.canvas.image_root_point = previous_event["previous_image_root_point"]
         self.canvas.image_pivot_point = previous_event["previous_image_pivot_point"]
-        previous_event["images"] = self.canvas.layers[previous_event["layer_index"]].images
+        previous_event["images"] = self.canvas.get_image_copy(layer_index)
         previous_event["previous_image_root_point"] = current_image_root_point
         previous_event["previous_image_pivot_point"] = current_image_pivot_point
         self.canvas.layers[previous_event["layer_index"]].images = images
-        self.history.undone_history.append(previous_event)
-        self.canvas.update()
+        return previous_event
+
+    def undo_add_widget(self, previous_event):
+        widets = previous_event["widgets"]
+        previous_event["widgets"] = self.canvas.layers[previous_event["layer_index"]].widgets
+        self.canvas.layers[previous_event["layer_index"]].widgets = widets
+        return previous_event
 
     def undo(self):
         if len(self.history.event_history) == 0:
@@ -829,32 +840,48 @@ class MainWindow(QApplication):
         previous_event = self.history.event_history.pop()
         event_name = previous_event["event"]
         if event_name == "draw":
-            self.undo_draw(previous_event)
+            previous_event = self.undo_draw(previous_event)
         elif event_name == "erase":
-            self.undo_erase(previous_event)
+            previous_event = self.undo_erase(previous_event)
         elif event_name == "new_layer":
-            self.undo_delete(previous_event)
+            if len(self.canvas.layers) == 1:
+                self.history.event_history.append(previous_event)
+                return
+            previous_event = self.undo_new_layer(previous_event)
         elif event_name == "move_layer":
             self.undo_move_layer(previous_event)
         elif event_name == "delete_layer":
             self.undo_delete_layer(previous_event)
         elif event_name == "set_image":
             self.undo_set_image(previous_event)
+        elif event_name == "add_widget":
+            self.undo_add_widget(previous_event)
+        self.history.undone_history.append(previous_event)
+        self.show_layers()
+        self.canvas.update()
 
     def redo_draw(self, undone_event):
         lines = undone_event["lines"]
-        self.canvas.layers[undone_event["layer_index"]].lines.extend(lines)
+        undone_event["lines"] = self.canvas.layers[undone_event["layer_index"]].lines
+        self.canvas.layers[undone_event["layer_index"]].lines = lines
+        return undone_event
 
     def redo_erase(self, undone_event):
-        lines = self.canvas.layers[undone_event["layer_index"]].lines
-        self.canvas.layers[undone_event["layer_index"]].lines = undone_event["lines"]
-        undone_event["lines"] = lines
+        lines = undone_event["lines"]
+        images = undone_event["images"]
+        layer_index = undone_event["layer_index"]
+        undone_event["lines"] = self.canvas.layers[layer_index].lines.copy()
+        undone_event["images"] = self.canvas.get_image_copy(layer_index)
+        self.canvas.layers[undone_event["layer_index"]].lines = lines
+        self.canvas.layers[undone_event["layer_index"]].images = images
+        return undone_event
 
     def redo_new_layer(self, undone_event):
-        self.canvas.layers.insert(0, undone_event["layer"])
+        layers = self.canvas.get_layers_copy()
+        self.canvas.layers = undone_event["layers"]
         self.canvas.current_layer_index = undone_event["layer_index"]
-        self.canvas.update()
-        self.show_layers()
+        undone_event["layers"] = layers
+        return undone_event
 
     def redo_move_layer(self, undone_event):
         layer_order = []
@@ -863,29 +890,35 @@ class MainWindow(QApplication):
         self.resort_layers(undone_event)
         undone_event["layer_order"] = layer_order
         self.canvas.current_layer_index = undone_event["layer_index"]
-        self.canvas.update()
-        self.show_layers()
+        return undone_event
 
     def redo_delete_layer(self, undone_event):
-        layers = self.canvas.layers
+        layers = self.canvas.get_layers_copy()
         self.canvas.layers = undone_event["layers"]
-        undone_event["layers"] = layers
         self.canvas.current_layer_index = undone_event["layer_index"]
-        self.canvas.update()
-        self.show_layers()
+        undone_event["layers"] = layers
+        return undone_event
 
     def redo_set_image(self, undone_event):
         layers = self.canvas.layers
         images = undone_event["images"]
+        layer_index = undone_event["layer_index"]
         current_image_root_point = QPoint(self.canvas.image_root_point.x(), self.canvas.image_root_point.y())
         current_image_pivot_point = QPoint(self.canvas.image_pivot_point.x(), self.canvas.image_pivot_point.y())
         self.canvas.image_root_point = undone_event["previous_image_root_point"]
         self.canvas.image_pivot_point = undone_event["previous_image_pivot_point"]
-        undone_event["images"] = layers[undone_event["layer_index"]].images
+        undone_event["images"] = self.canvas.get_image_copy(layer_index)
         undone_event["previous_image_root_point"] = current_image_root_point
         undone_event["previous_image_pivot_point"] = current_image_pivot_point
         self.canvas.layers[undone_event["layer_index"]].images = images
-        self.canvas.update()
+        return undone_event
+
+    def redo_add_widget(self, undone_event):
+        # add widget
+        widgets = undone_event["widgets"]
+        undone_event["widgets"] = self.canvas.layers[undone_event["layer_index"]].widgets
+        self.canvas.layers[undone_event["layer_index"]].widgets = widgets
+        return undone_event
 
     def redo(self):
         if len(self.history.undone_history) == 0:
@@ -893,22 +926,44 @@ class MainWindow(QApplication):
         undone_event = self.history.undone_history.pop()
         event_name = undone_event["event"]
         if event_name == "draw":
-            self.redo_draw(undone_event)
+            undone_event = self.redo_draw(undone_event)
         elif event_name == "erase":
-            self.redo_erase(undone_event)
+            undone_event = self.redo_erase(undone_event)
         elif event_name == "new_layer":
-            self.redo_new_layer(undone_event)
+            undone_event = self.redo_new_layer(undone_event)
         elif event_name == "move_layer":
-            self.redo_move_layer(undone_event)
+            undone_event = self.redo_move_layer(undone_event)
         elif event_name == "delete_layer":
-            self.redo_delete_layer(undone_event)
+            undone_event = self.redo_delete_layer(undone_event)
         elif event_name == "set_image":
-            self.redo_set_image(undone_event)
-        self.canvas.update()
+            undone_event = self.redo_set_image(undone_event)
+        elif event_name == "add_widget":
+            undone_event = self.redo_add_widget(undone_event)
         self.history.event_history.append(undone_event)
+        self.show_layers()
+        self.canvas.update()
 
     def focus_button_clicked(self):
         self.canvas.recenter()
+
+    def word_balloon_button_clicked(self):
+        """
+        Create and add a word balloon to the canvas.
+        :return:
+        """
+        # create a word balloon
+        word_balloon = Balloon()
+        word_balloon.setGeometry(100, 100, 200, 100)
+        word_balloon.set_tail_pos(QPointF(50, 100))
+        # add the widget to the canvas
+        self.history.add_event({
+            "event": "add_widget",
+            "layer_index": self.canvas.current_layer_index,
+            "widgets": self.canvas.current_layer.widgets.copy(),
+        })
+        self.canvas.current_layer.widgets.append(word_balloon)
+        self.show_layers()
+        self.canvas.update()
 
     def show_initialize_buttons(self):
         self.window.eraser_button.clicked.connect(lambda: self.set_tool("eraser"))
@@ -923,6 +978,7 @@ class MainWindow(QApplication):
         self.window.redo_button.clicked.connect(self.redo)
         self.window.nsfw_button.clicked.connect(self.toggle_nsfw_filter)
         self.window.focus_button.clicked.connect(self.focus_button_clicked)
+        self.window.wordballoon_button.clicked.connect(self.word_balloon_button_clicked)
         self.set_button_colors()
         self.window.grid_button.setChecked(
             self.settings_manager.settings.show_grid.get() == True
@@ -1016,8 +1072,10 @@ class MainWindow(QApplication):
         if nsfw_content_detected and self.settings_manager.settings.nsfw_filter.get():
             self.message_handler("NSFW content detected, try again.", error=True)
         else:
+            self.canvas.add_layer()
             self.canvas.image_handler(image, data)
             self.message_handler("")
+            self.show_layers()
 
     def update_canvas_color(self, color):
         self.window.canvas_container.setStyleSheet(f"background-color: {color};")
