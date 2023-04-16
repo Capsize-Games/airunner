@@ -71,5 +71,8 @@ ENV PATH="/usr/local/lib/python3.10:/usr/local/lib/python3.10/bin:${PATH}"
 ENV PYTHONPATH="/usr/local/lib/python3.10:/usr/local/lib/python3.10/bin:${PYTHONPATH}"
 RUN pip install pyinstaller
 RUN pip install bitsandbytes-cuda102
+
+FROM more_env as build_files
+WORKDIR /app
 COPY dobuild.py dobuild.py
 COPY build.sh build.sh
