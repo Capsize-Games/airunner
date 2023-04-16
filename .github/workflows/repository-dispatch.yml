@@ -13,7 +13,7 @@ env:
   CR_USERNAME: ${{ secrets.CR_USERNAME }}
 
 jobs:
-  buildAndDeployItch:
+  buildLinux:
     runs-on: ubuntu-latest
     steps:
       - name: Login to GitHub Container Registry
@@ -38,7 +38,51 @@ jobs:
             -e DISABLE_TELEMETRY=1 \
             -e TCL_LIBDIR_PATH=/usr/lib/x86_64-linux-gnu/ \
             -e TK_LIBDIR_PATH=/usr/lib/x86_64-linux-gnu/ \
+            -v $(pwd)/dist:/app/dist \
             ghcr.io/capsize-games/airunner/airunner:linux bash build.sh
+      - name: Create and upload artifact
+        uses: actions/upload-artifact@v2
+        with:
+          name: dist
+          path: dist/airunner
+  deployLinux:
+    needs: buildLinux
+    name: Deploy Linux to itch.io 🚀
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v2
+
+      - uses: actions/download-artifact@v2
+        with:
+          name: dist
+          path: dist/airunner
+
+      - name: Display structure of root files
+        run: ls -R
+        working-directory: dist/airunner
+
+      - name: Deploy 🚀
+        uses: KikimoraGames/itch-publish@v0.0.3
+        with:
+          butlerApiKey: ${{secrets.BUTLER_API_KEY}}
+          gameData: ./dist/airunner
+          itchUsername: capsizegames
+          itchGameId: ai-runner
+          buildChannel: ubuntu
+          buildNumberFile: ./dist/VERSION
+  buildWindows:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Login to GitHub Container Registry
+        uses: docker/login-action@v1
+        with:
+          registry: ghcr.io
+          username: ${{ github.repository_owner }}
+          password: ${{ secrets.CR_PAT }}
+      - name: Pull docker image
+        run: |
+          docker pull $DOCKER_IMAGE
       - name: Build for Windows
         run: |
           docker pull $DOCKER_IMAGE
@@ -54,3 +98,34 @@ jobs:
             -e TCL_LIBDIR_PATH=/usr/lib/x86_64-linux-gnu/ \
             -e TK_LIBDIR_PATH=/usr/lib/x86_64-linux-gnu/ \
             ghcr.io/capsize-games/airunner/airunner:windows wine64 Z:\\app\\build.windows.cmd
+      - name: Create and upload artifact
+        uses: actions/upload-artifact@v2
+        with:
+          name: dist
+          path: dist/airunner
+  deployWindows:
+    needs: buildWindows
+    name: Deploy Windows to itch.io 🚀
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v2
+
+      - uses: actions/download-artifact@v2
+        with:
+          name: dist
+          path: dist/airunner
+
+      - name: Display structure of root files
+        run: ls -R
+        working-directory: dist/airunner
+
+      - name: Deploy 🚀
+        uses: KikimoraGames/itch-publish@v0.0.3
+        with:
+          butlerApiKey: ${{secrets.BUTLER_API_KEY}}
+          gameData: ./dist/airunner
+          itchUsername: capsizegames
+          itchGameId: ai-runner
+          buildChannel: windows
+          buildNumberFile: ./dist/VERSION
