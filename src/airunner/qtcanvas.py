@@ -69,12 +69,14 @@ class LayerData:
         self.offset = offset
         self.lines = []
         self.images = []
+        self.widgets = []
         self.uuid = uuid.uuid4()
 
     def clear(self, index):
         self.index = index
         self.lines = []
         self.images = []
+        self.widgets = []
         self.visible = True
         self.opacity = 1.0
         self.name = f"Layer {self.index + 1}"
