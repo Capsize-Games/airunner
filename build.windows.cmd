@@ -7,7 +7,7 @@ echo "============================================"
 echo "Installing dependencies"
 echo "============================================"
 echo.
-C:\Python310\python.exe Z:\app\airunner\build.windows.py
+C:\Python310\python.exe Z:\app\build.windows.py
 echo.
 echo "============================================"
 echo "Build airunner for windows"
