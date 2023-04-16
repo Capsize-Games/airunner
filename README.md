@@ -71,9 +71,11 @@ docker-compose run linux python3 /app/main.py
 
 **Build latest version** of AI Runner using Docker locally - this will output a `build` and `dist` folder on your machine.
 ```
-docker run --rm -v $(pwd):/app -v $(pwd)/dist:/app/dist -v $(pwd)/build:/app/build ghcr.io/capsize-games/airunner/airunner:linux bash build.sh
-docker run -it -v $(pwd):/app/airunner -v $(pwd)/dist:/app/dist -v $(pwd)/build:/app/build ghcr.io/capsize-games/airunner/airunner:windows wine64 build.windows.cmd
+linux
+docker run -it -e DEV_ENV=0 -e AIRUNNER_ENVIRONMENT=prod -e AIRUNNER_OS=linux -e PYTORCH_CUDA_ALLOC_CONF=garbage_collection_threshold:0.9,max_split_size_mb:512 -e NUMBA_CACHE_DIR=/tmp/numba_cache -e DISABLE_TELEMETRY=1 -e TCL_LIBDIR_PATH=/usr/lib/x86_64-linux-gnu/ -e TK_LIBDIR_PATH=/usr/lib/x86_64-linux-gnu/ -v $(pwd)/build:/app/build -v $(pwd)/dist:/app/dist -v $(pwd)/../diffusers:/app/diffusers ghcr.io/capsize-games/airunner/airunner:linux bash build.sh
 
+windows
+docker run -it -e DEV_ENV=0 -e AIRUNNER_ENVIRONMENT=prod -e AIRUNNER_OS=windows -e PYTORCH_CUDA_ALLOC_CONF=garbage_collection_threshold:0.9,max_split_size_mb:512 -e NUMBA_CACHE_DIR=/tmp/numba_cache -e DISABLE_TELEMETRY=1 -v $(pwd)/build:/app/build -v $(pwd)/dist:/app/dist -v $(pwd)/../diffusers:/app/diffusers ghcr.io/capsize-games/airunner/airunner:windows wine64 build.windows.cmd
 docker run --rm -m 24g --cpus=12 -v $(pwd)/dist:/app/dist -v $(pwd)/build:/app/build ghcr.io/capsize-games/airunner/airunner:windows bash build.windows.sh
 ```
 Run it with `./dist/airunner/airunner`
