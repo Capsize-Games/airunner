@@ -40,5 +40,4 @@ os.system("C:\\Python310\\python.exe -m pip uninstall diffusers -y")
 # install repos
 install_latest("Capsize-Games/aihandler")
 os.system("C:\\Python310\\python.exe -m pip install https://github.com/w4ffl35/diffusers/archive/refs/tags/v0.15.0.ckpt_fix.tar.gz --no-deps")
-os.system("C:\\Python310\\python.exe -m pip install https://github.com/w4ffl35/transformers/archive/refs/tags/tensor_fix-v1.0.2.tar.gz --no-deps")
 os.system("C:\\Python310\\python.exe -m pip install bitsandbytes-cuda102")
