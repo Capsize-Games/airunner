@@ -66,7 +66,10 @@ FROM fix_tcl as install_apps
 RUN python3 -c "from accelerate.utils import write_basic_config; write_basic_config(mixed_precision='fp16')"
 
 FROM install_apps as more_env
+WORKDIR /app
 ENV PATH="/usr/local/lib/python3.10:/usr/local/lib/python3.10/bin:${PATH}"
 ENV PYTHONPATH="/usr/local/lib/python3.10:/usr/local/lib/python3.10/bin:${PYTHONPATH}"
 RUN pip install pyinstaller
 RUN pip install bitsandbytes-cuda102
+COPY dobuild.py dobuild.py
+COPY build.sh build.sh
