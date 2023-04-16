@@ -53,7 +53,6 @@ datas += collect_data_files("lightning_fabric", include_py_files=True)
 datas += collect_data_files("transformers", include_py_files=True)
 datas += collect_data_files("xformers", include_py_files=True)
 datas += collect_data_files("sympy", include_py_files=True)
-datas += collect_data_files("opencv-python", include_py_files=True)
 a = Analysis(
     [
         f'/app/airunner/src/airunner/main.py',
@@ -71,6 +70,7 @@ a = Analysis(
     binaries=[
         ('/usr/local/lib/python3.10/dist-packages/nvidia/cudnn/lib/libcudnn_ops_infer.so.8', '.'),
         ('/usr/local/lib/python3.10/dist-packages/nvidia/cudnn/lib/libcudnn_cnn_infer.so.8', '.'),
+        ('/usr/lib/x86_64-linux-gnu/libgstgl-1.0.so.0', '.'),
     ],
     datas=datas,
     hiddenimports=[
