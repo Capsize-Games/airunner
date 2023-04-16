@@ -1,0 +1,100 @@
+name: Linux Build
+
+on:
+  release:
+    types: [ published ]
+  workflow_dispatch:
+
+env:
+  DOCKER_IMAGE: ghcr.io/capsize-games/airunner/airunner:linux
+  BUTLER_API_KEY: ${{ secrets.BUTLER_API_KEY }}
+  CR_PAT: ${{ secrets.CR_PAT }}
+  CR_REPO: ${{ secrets.CR_REPO }}
+  CR_USERNAME: ${{ secrets.CR_USERNAME }}
+
+jobs:
+  buildLinux:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Login to GitHub Container Registry
+        uses: docker/login-action@v1
+        with:
+          registry: ghcr.io
+          username: ${{ github.repository_owner }}
+          password: ${{ secrets.CR_PAT }}
+      - name: Pull docker image
+        run: |
+          docker pull $DOCKER_IMAGE
+      - name: Build Linux
+        run: |
+          docker run --rm \
+            -e BUTLER_API_KEY=${{ secrets.BUTLER_API_KEY }} \
+            -e ITCHIO_USERNAME=${{ secrets.ITCHIO_USERNAME }} \
+            -e DEV_ENV=0 \
+            -e AIRUNNER_ENVIRONMENT=prod \
+            -e AIRUNNER_OS=linux \
+            -e PYTORCH_CUDA_ALLOC_CONF=garbage_collection_threshold:0.9,max_split_size_mb:512 \
+            -e NUMBA_CACHE_DIR=/tmp/numba_cache \
+            -e DISABLE_TELEMETRY=1 \
+            -e TCL_LIBDIR_PATH=/usr/lib/x86_64-linux-gnu/ \
+            -e TK_LIBDIR_PATH=/usr/lib/x86_64-linux-gnu/ \
+            -v $(pwd)/dist:/app/dist \
+            ghcr.io/capsize-games/airunner/airunner:linux bash build.sh
+#  buildWindows:
+#    runs-on: ubuntu-latest
+#    steps:
+#      - name: Login to GitHub Container Registry
+#        uses: docker/login-action@v1
+#        with:
+#          registry: ghcr.io
+#          username: ${{ github.repository_owner }}
+#          password: ${{ secrets.CR_PAT }}
+#      - name: Pull docker image
+#        run: |
+#          docker pull $DOCKER_IMAGE
+#      - name: Build for Windows
+#        run: |
+#          docker pull $DOCKER_IMAGE
+#          docker run --rm \
+#            -e BUTLER_API_KEY=${{ secrets.BUTLER_API_KEY }} \
+#            -e ITCHIO_USERNAME=${{ secrets.ITCHIO_USERNAME }} \
+#            -e DEV_ENV=0 \
+#            -e AIRUNNER_ENVIRONMENT=prod \
+#            -e AIRUNNER_OS=linux \
+#            -e PYTORCH_CUDA_ALLOC_CONF=garbage_collection_threshold:0.9,max_split_size_mb:512 \
+#            -e NUMBA_CACHE_DIR=/tmp/numba_cache \
+#            -e DISABLE_TELEMETRY=1 \
+#            -e TCL_LIBDIR_PATH=/usr/lib/x86_64-linux-gnu/ \
+#            -e TK_LIBDIR_PATH=/usr/lib/x86_64-linux-gnu/ \
+#            ghcr.io/capsize-games/airunner/airunner:windows wine64 Z:\\app\\build.windows.cmd
+#      - name: Create and upload artifact
+#        uses: actions/upload-artifact@v2
+#        with:
+#          name: dist
+#          path: /app/dist/airunner
+#  deployWindows:
+#    needs: buildWindows
+#    name: Deploy Windows to itch.io 🚀
+#    runs-on: ubuntu-latest
+#    steps:
+#      - name: Checkout code
+#        uses: actions/checkout@v2
+#
+#      - uses: actions/download-artifact@v2
+#        with:
+#          name: dist
+#          path: dist/airunner
+#
+#      - name: Display structure of root files
+#        run: ls -R
+#        working-directory: dist/airunner
+#
+#      - name: Deploy 🚀
+#        uses: KikimoraGames/itch-publish@v0.0.3
+#        with:
+#          butlerApiKey: ${{secrets.BUTLER_API_KEY}}
+#          gameData: ./dist/airunner
+#          itchUsername: capsizegames
+#          itchGameId: ai-runner
+#          buildChannel: windows
+#          buildNumberFile: ./dist/VERSION
