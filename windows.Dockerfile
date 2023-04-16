@@ -40,7 +40,7 @@ RUN wget https://www.python.org/ftp/python/3.10.8/python-3.10.8-amd64.exe \
 FROM install_python as install_git
 RUN apt-get install -y unzip \
     && wget https://github.com/git-for-windows/git/releases/download/v2.40.0.windows.1/MinGit-2.40.0-64-bit.zip -O MinGit-2.40.0-64-bit.zip \
-    && unzip -o MinGit-2.40.0-64-bit.zip \
+    && unzip -o MinGit-2.40.0-64-bit.zip -d /home/.wine-win10/drive_c/ \
     && rm MinGit-2.40.0-64-bit.zip
 
 FROM install_git as final
@@ -69,7 +69,6 @@ ENV DISPLAY=:0
 RUN apt-get install -y mesa-utils \
     && apt-get install -y libgl1-mesa-glx \
     && wine64 C:\\Python310\\python.exe -m pip install --upgrade pyinstaller \
-    && wine64 C:\\Python310\\python.exe -m pip install torch torchvision torchaudio --index-url https://download.pytorch.org/whl/cu117 \
     && wine64 reg add "HKEY_CURRENT_USER\Environment" /v PATH /t REG_EXPAND_SZ /d "C:\\;Z:\\app\\lib\\PortableGit\\cmd;C:\\Program Files\\NVIDIA\\CUDNN\\v8.6.0.163\\bin;C:\\Program Files\\NVIDIA GPU Computing Toolkit\\CUDA\\v11.7\\bin;C:\\Python310;C:\\Python310\\site-packages;C:\\Python310\\site-packages\\lib;%PATH%" /f \
     && apt install git \
     && chown root:root /home/.wine-win10 \
@@ -90,12 +89,9 @@ RUN wine64 C:\\Python310\\python.exe -m pip install torch==2.0.0 torchvision==0.
     && wine64 C:\\Python310\\python.exe -m pip install https://github.com/acpopescu/bitsandbytes/releases/download/v0.37.2-win.0/bitsandbytes-0.37.2-py3-none-any.whl \
     && wine64 C:\\Python310\\python.exe -m pip install aihandler \
     && wine64 C:\\Python310\\python.exe -m pip install requests \
-    && wine64 C:\\Python310\\python.exe -m pip install accelerate \
-    && git clone https://github.com/Capsize-Games/airunner.git /app/airunner
+    && wine64 C:\\Python310\\python.exe -m pip install accelerate
 WORKDIR /app/airunner
-RUN wine64 C:\\Python310\\python.exe -m pip install -e . --no-deps \
-    && wine64 C:\\Python310\\python.exe -c "from accelerate.utils import write_basic_config; write_basic_config(mixed_precision='fp16')" \
-    && wine64 C:\\Python310\\python.exe -m pip install https://github.com/w4ffl35/diffusers/archive/refs/tags/v0.15.0.ckpt_fix.tar.gz --no-deps
+RUN wine64 C:\\Python310\\python.exe -c "from accelerate.utils import write_basic_config; write_basic_config(mixed_precision='fp16')"
 
 FROM install_libs as source_files
 RUN cp /usr/lib/x86_64-linux-gnu/wine/api-ms-win-shcore-scaling-l1-1-1.dll /home/.wine-win10/drive_c/api-ms-win-shcore-scaling-l1-1-1.dll
@@ -105,3 +101,9 @@ RUN wget https://broth.itch.ovh/butler/windows-amd64/15.21.0/archive/default -O 
 RUN unzip butler-windows-amd64.zip -d butler-windows-amd64
 RUN mv butler-windows-amd64/butler.exe /home/.wine-win10/drive_c/Python310/Scripts/butler.exe
 RUN rm -rf butler-windows-amd64 butler-windows-amd64.zip
+
+FROM install_butler as build_files
+WORKDIR /app
+COPY build.windows.py build.windows.py
+COPY build.windows.cmd build.windows.cmd
+COPY build.airunner.linux.prod.spec build.airunner.linux.prod.spec
