@@ -5,6 +5,7 @@ import json
 
 def install_latest(repo, branch="master"):
     # Clone the repository
+    os.chdir('Z:\\')
     os.system(f'Z:\\cmd\\git.exe clone https://github.com/{repo}.git')
 
     # Change directory to the cloned repository
@@ -33,13 +34,13 @@ def install_latest(repo, branch="master"):
 
 def clone(repo):
     # clone repo into /app
-    os.system(f'Z:\\cmd\\git.exe clone https://github.com/{repo}.git /app/{repo.split("/")[1]}')
+    os.system(f'C:\\MinGit-2.40.0-64-bit\\git.exe clone https://github.com/{repo}.git /app/{repo.split("/")[1]}')
 
 
 # remove diffusers
-os.system("C:\\Python310\\python.exe -m pip uninstall diffusers")
+os.system("C:\\Python310\\python.exe -m pip uninstall diffusers -y")
 # install repos
 install_latest("Capsize-Games/aihandler", branch="develop-windows")
-os.system("C:\\Python310\\python.exe -m pip install https://github.com/w4ffl35/diffusers/archive/refs/tags/v0.15.0.ckpt_fix.tar.gz --no-deps")
-os.system("C:\\Python310\\python.exe -m pip install https://github.com/w4ffl35/transformers/archive/refs/tags/tensor_fix-v1.0.2.tar.gz --no-deps")
-os.system("C:\\Python310\\python.exe -m pip install bitsandbytes-cuda102")
+os.system("C:\\Python310\\python.exe -m pip install -y https://github.com/w4ffl35/diffusers/archive/refs/tags/v0.15.0.ckpt_fix.tar.gz --no-deps")
+os.system("C:\\Python310\\python.exe -m pip install -y https://github.com/w4ffl35/transformers/archive/refs/tags/tensor_fix-v1.0.2.tar.gz --no-deps")
+os.system("C:\\Python310\\python.exe -m pip install -y bitsandbytes-cuda102")
