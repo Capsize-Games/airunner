@@ -44,7 +44,7 @@ jobs:
         uses: actions/upload-artifact@v2
         with:
           name: dist
-          path: dist/airunner
+          path: /app/dist/airunner
   deployLinux:
     needs: buildLinux
     name: Deploy Linux to itch.io 🚀
@@ -102,7 +102,7 @@ jobs:
         uses: actions/upload-artifact@v2
         with:
           name: dist
-          path: dist/airunner
+          path: /app/dist/airunner
   deployWindows:
     needs: buildWindows
     name: Deploy Windows to itch.io 🚀
