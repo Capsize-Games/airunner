@@ -19,5 +19,4 @@ echo "============================================"
 echo "Deploying airunner to itch.io"
 echo "============================================"
 echo.
-C:\Python310\python.exe -c "import sys; sys.path.append('Z:\\app'); import version; import os; os.system(f'C:\\Python310\\Scripts\\butler.exe push Z:\\app\\dist\\airunner capsizegames/ai-runner:windows --userversion {version.VERSION}')"
-
+C:\Python310\python.exe -c "import sys; sys.path.append('Z:\\app'); import version; open('Z:\\app\\dist\\VERSION', 'w').write(version.VERSION)"
