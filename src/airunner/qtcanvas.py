@@ -852,7 +852,6 @@ class Canvas:
     def handle_tool(self, event):
         if self.eraser_selected:
             if not self.is_erasing:
-                print("erase")
                 self.parent.history.add_event({
                     "event": "erase",
                     "layer_index": self.current_layer_index,
