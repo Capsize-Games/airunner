@@ -95,20 +95,9 @@ RUN wine64 C:\\Python310\\python.exe -m pip install torch==2.0.0 torchvision==0.
 WORKDIR /app/airunner
 RUN wine64 C:\\Python310\\python.exe -m pip install -e . --no-deps \
     && wine64 C:\\Python310\\python.exe -c "from accelerate.utils import write_basic_config; write_basic_config(mixed_precision='fp16')" \
-    && wine64 C:\\Python310\\python.exe -m pip install https://github.com/w4ffl35/diffusers/archive/refs/tags/v0.15.0.ckpt_fix.tar.gz --no-deps \
-    && wine64 C:\\Python310\\python.exe -m pip install https://github.com/w4ffl35/transformers/archive/refs/tags/tensor_fix-v1.0.2.tar.gz --no-deps
+    && wine64 C:\\Python310\\python.exe -m pip install https://github.com/w4ffl35/diffusers/archive/refs/tags/v0.15.0.ckpt_fix.tar.gz --no-deps
 
 FROM install_libs as source_files
-COPY build.windows.cmd /app/build.windows.cmd
-COPY build.windows.py /app/build.windows.py
-COPY build.airunner.windows.prod.spec /app/build.airunner.windows.prod.spec
-COPY windows.itch.toml /app/windows.itch.toml
-COPY src/airunner/v1.yaml /app/v1.yaml
-COPY src/airunner/v2.yaml /app/v2.yaml
-COPY src/airunner/src/icons /app/src/airunner/src/icons
-COPY src/airunner/pyqt /app/src/airunner/pyqt
-COPY setup.py /app/setup.py
-COPY version.py /app/version.py
 RUN cp /usr/lib/x86_64-linux-gnu/wine/api-ms-win-shcore-scaling-l1-1-1.dll /home/.wine-win10/drive_c/api-ms-win-shcore-scaling-l1-1-1.dll
 
 FROM source_files as install_butler
