@@ -22,7 +22,7 @@ def clone(repo):
 
 
 # remove diffusers
-os.system("python3 -m pip uninstall diffusers -y")
+os.system("python3 -m pip uninstall diffusers")
 # install repos
 install_latest("Capsize-Games/aihandler")
 install_latest("w4ffl35/diffusers", False)
@@ -32,5 +32,5 @@ os.chdir("/app/airunner")
 os.system("git checkout master")
 os.system("git pull")
 os.system("pip install -e . --no-deps")
-os.system("python3 -m pip uninstall nvidia-cublas-cu11 -y")
-os.system("python3 -m pip install bitsandbytes-cuda102 -y")
+os.system("python3 -m pip uninstall nvidia-cublas-cu11")
+os.system("python3 -m pip install bitsandbytes-cuda102")
