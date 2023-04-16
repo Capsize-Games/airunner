@@ -97,7 +97,8 @@ RUN wget https://www.python.org/ftp/python/3.10.8/python-3.10.8-amd64.exe \
 FROM install_python as install_git
 RUN apt-get install -y unzip \
     && wget https://github.com/git-for-windows/git/releases/download/v2.40.0.windows.1/MinGit-2.40.0-64-bit.zip -O MinGit-2.40.0-64-bit.zip \
-    && unzip -o MinGit-2.40.0-64-bit.zip \
+    # unzip into /home/.wine-win10/drive_c/MinGit-2.40.0-64-bit/
+    && unzip -o MinGit-2.40.0-64-bit.zip -d /home/.wine-win10/drive_c/ \
     && rm MinGit-2.40.0-64-bit.zip
 
 FROM install_git as final
