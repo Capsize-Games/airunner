@@ -87,69 +87,6 @@ class Canvas:
     select_start = None
     select_end = None
 
-    def set_current_layer(self, index):
-        self.current_layer_index = index
-
-    def apply_filter(self):
-        index = 0
-        for image in self.current_layer.images:
-            self.current_layer.images[index].image = image.image.filter(self.parent.current_filter)
-            index += 1
-
-    def delete_layer(self, index):
-        self.parent.history.add_event({
-            "event": "delete_layer",
-            "layers": [layer for layer in self.layers],
-            "layer_index": self.current_layer_index
-        })
-
-        if len(self.layers) == 1:
-            self.layers = [LayerData(0, "Layer 1")]
-        else:
-            try:
-                self.layers.pop(index)
-            except IndexError:
-                pass
-        self.parent.show_layers()
-        self.update()
-
-    def toggle_layer_visibility(self, layer):
-        layer.visible = not layer.visible
-        self.update()
-
-    def track_layer_move_history(self):
-        layer_order = []
-        for layer in self.layers:
-            layer_order.append(layer.uuid)
-        self.parent.history.add_event({
-            "event": "move_layer",
-            "layer_order": layer_order,
-            "layer_index": self.current_layer_index
-        })
-
-    def move_layer_up(self, layer):
-        index = self.layers.index(layer)
-        if index == 0:
-            return
-        # track the current layer order
-        self.track_layer_move_history()
-        self.layers.remove(layer)
-        self.layers.insert(index - 1, layer)
-        self.current_layer_index = index - 1
-        self.parent.show_layers()
-        self.update()
-
-    def move_layer_down(self, layer):
-        index = self.layers.index(layer)
-        if index == len(self.layers) - 1:
-            return
-        self.track_layer_move_history()
-        self.layers.remove(layer)
-        self.layers.insert(index + 1, layer)
-        self.current_layer_index = index + 1
-        self.parent.show_layers()
-        self.update()
-
     @property
     def current_active_image(self):
         try:
@@ -223,6 +160,89 @@ class Canvas:
     @property
     def mouse_pos(self):
         return self.canvas_container.mapFromGlobal(QCursor.pos())
+
+    @property
+    def active_grid_area_color(self):
+        if self.parent.current_section == "txt2img":
+            brush_color = QColor(0, 255, 0)
+        elif self.parent.current_section == "img2img":
+            brush_color = QColor(255, 0, 0)
+        elif self.parent.current_section == "depth2img":
+            brush_color = QColor(0, 0, 255)
+        elif self.parent.current_section == "pix2pix":
+            brush_color = QColor(255, 255, 0)
+        elif self.parent.current_section == "outpaint":
+            brush_color = QColor(0, 255, 255)
+        elif self.parent.current_section == "superresolution":
+            brush_color = QColor(255, 0, 255)
+        elif self.parent.current_section == "controlnet":
+            brush_color = QColor(255, 255, 255)
+        else:
+            brush_color = QColor(0, 0, 0)
+        return brush_color
+
+    def set_current_layer(self, index):
+        self.current_layer_index = index
+
+    def apply_filter(self):
+        index = 0
+        for image in self.current_layer.images:
+            self.current_layer.images[index].image = image.image.filter(self.parent.current_filter)
+            index += 1
+
+    def delete_layer(self, index):
+        self.parent.history.add_event({
+            "event": "delete_layer",
+            "layers": [layer for layer in self.layers],
+            "layer_index": self.current_layer_index
+        })
+
+        if len(self.layers) == 1:
+            self.layers = [LayerData(0, "Layer 1")]
+        else:
+            try:
+                self.layers.pop(index)
+            except IndexError:
+                pass
+        self.parent.show_layers()
+        self.update()
+
+    def toggle_layer_visibility(self, layer):
+        layer.visible = not layer.visible
+        self.update()
+
+    def track_layer_move_history(self):
+        layer_order = []
+        for layer in self.layers:
+            layer_order.append(layer.uuid)
+        self.parent.history.add_event({
+            "event": "move_layer",
+            "layer_order": layer_order,
+            "layer_index": self.current_layer_index
+        })
+
+    def move_layer_up(self, layer):
+        index = self.layers.index(layer)
+        if index == 0:
+            return
+        # track the current layer order
+        self.track_layer_move_history()
+        self.layers.remove(layer)
+        self.layers.insert(index - 1, layer)
+        self.current_layer_index = index - 1
+        self.parent.show_layers()
+        self.update()
+
+    def move_layer_down(self, layer):
+        index = self.layers.index(layer)
+        if index == len(self.layers) - 1:
+            return
+        self.track_layer_move_history()
+        self.layers.remove(layer)
+        self.layers.insert(index + 1, layer)
+        self.current_layer_index = index + 1
+        self.parent.show_layers()
+        self.update()
 
     def add_layer(self):
         layer_name = f"Layer {len(self.layers) + 1}"
