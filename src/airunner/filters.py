@@ -29,7 +29,6 @@ class SaturationFilter(Filter):
         self.factor = factor
 
     def filter(self, image):
-        print(image)
         return ImageEnhance.Color(image).enhance(1.0 + self.factor)
 
 
