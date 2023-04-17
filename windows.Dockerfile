@@ -86,8 +86,8 @@ RUN wget https://github.com/upx/upx/releases/download/v4.0.2/upx-4.0.2-win64.zip
 FROM install_upx as install_libs
 USER root
 RUN wine64 C:\\Python310\\python.exe -m pip install torch==2.0.0 torchvision==0.15.1 torchaudio==2.0.1 --index-url https://download.pytorch.org/whl/cu117 \
-    && wine64 C:\\Python310\\python.exe -m pip install https://github.com/acpopescu/bitsandbytes/releases/download/v0.37.2-win.0/bitsandbytes-0.37.2-py3-none-any.whl \
-    && wine64 C:\\Python310\\python.exe -m pip install aihandler \
+    && wine64 C:\\Python310\\python.exe -m pip install https://github.com/acpopescu/bitsandbytes/releases/download/v0.38.0-win0/bitsandbytes-0.38.1-py3-none-any.whl \
+    && wine64 C:\\Python310\\python.exe -m pip install aihandler==1.9.5 \
     && wine64 C:\\Python310\\python.exe -m pip install requests \
     && wine64 C:\\Python310\\python.exe -m pip install accelerate
 WORKDIR /app/airunner
