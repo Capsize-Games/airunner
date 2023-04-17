@@ -107,6 +107,8 @@ a = Analysis(
     hooksconfig={},
     runtime_hooks=[],
     excludes=[
+        "tcl",
+        "tcl8",
         # "absl-py",
         # "aiohttp",
         # "aiosignal",
