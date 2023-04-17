@@ -31,6 +31,7 @@ datas += copy_metadata('numpy')
 datas += copy_metadata('tokenizers')
 datas += copy_metadata('transformers')
 datas += copy_metadata('rich')
+datas += copy_metadata('sympy')
 datas += copy_metadata('tensorflow')
 datas += copy_metadata('scipy')
 datas += collect_data_files("torch", include_py_files=True)
@@ -40,6 +41,7 @@ datas += collect_data_files("lightning_fabric", include_py_files=True)
 datas += collect_data_files("transformers", include_py_files=True)
 datas += collect_data_files("xformers", include_py_files=True)
 datas += collect_data_files("tensorflow", include_py_files=True)
+datas += collect_data_files("sympy", include_py_files=True)
 
 a = Analysis(
     [
