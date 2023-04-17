@@ -9,11 +9,15 @@
 ![GitHub pull requests](https://img.shields.io/github/issues-pr/Capsize-Games/airunner)
 ![GitHub closed pull requests](https://img.shields.io/github/issues-pr-closed/Capsize-Games/airunner)
 
+---
+
+### Stable Diffusion on your own hardware 
+
+No web server to run, additional requirements to install or technical knowledge required. [Just download the compiled package](https://capsizegames.itch.io/ai-runner) and run to start generating AI Art.
+
+---
 
 ![img.png](img.png)
-
-AI Runner allows you to easily run Stable Diffusion on your own hardware. No web server to run, additional requirements 
-to install or technical knowledge required.
 
 ## Features
 
