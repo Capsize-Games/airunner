@@ -43,6 +43,7 @@ datas += copy_metadata('tokenizers')
 datas += copy_metadata('transformers')
 datas += copy_metadata('rich')
 datas += copy_metadata('sympy')
+datas += copy_metadata('bitsandbytes')
 datas += copy_metadata('opencv-python')
 datas += collect_data_files("torch", include_py_files=True)
 datas += collect_data_files("torchvision", include_py_files=True)
@@ -175,8 +176,8 @@ a = Analysis(
         # "mpmath",
         # "multidict",
         # "mypy-extensions",
-        # "ninja",
-        # "nvidia-pyindex",
+        "ninja",
+        "nvidia-pyindex",
         # "oauthlib",
         # "opt-einsum",
         # "ordered-set",
@@ -197,7 +198,7 @@ a = Analysis(
         # "python-dotenv",
         # "python-editor",
         # "python-multipart",
-        # "pytz",
+        "pytz",
         # "PyYAML",
         # "readchar",
         # "rfc3986",

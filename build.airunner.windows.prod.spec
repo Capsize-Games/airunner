@@ -1,6 +1,7 @@
 # -*- mode: python ; coding: utf-8 -*-
 import os
 import sys ; sys.setrecursionlimit(sys.getrecursionlimit() * 5)
+os.environ["PATH"] = "C:\\;Z:\\app\\lib\\PortableGit\\cmd;C:\\Program Files\\NVIDIA\\CUDNN\\v8.6.0.163\\bin;C:\\Program Files\\NVIDIA GPU Computing Toolkit\\CUDA\\v11.7\\bin;C:\\Python310;C:\\Python310\\site-packages;C:\\Python310\\site-packages\\lib;C:\\Python310\\Scripts;%PATH%"
 import shutil
 from PyInstaller.utils.hooks import copy_metadata, collect_data_files
 os.environ["AIRUNNER_ENVIRONMENT"] = "prod"
@@ -14,11 +15,11 @@ DEBUGGING = True
 EXCLUDE_BINARIES = True
 EXE_NAME = "airunner"  # used when creating a binary instead of a folder
 EXE_STRIP = False
-EXE_UPX = False
+EXE_UPX = True
 EXE_RUNTIME_TMP_DIR = None
 COLLECT_NAME = 'airunner'
 COLLECT_STRIP = False
-COLLECT_UPX = False
+COLLECT_UPX = True
 
 datas = []
 datas += copy_metadata('aihandler')
@@ -61,15 +62,8 @@ a = Analysis(
     ],
     binaries=[
         #("C:\\Python310\\Lib\\site-packages\\torchvision\\cudart64_110.dll", "."),
-        ("C:\\Python310\\tcl\\tk8.6\\demos\\text.tcl", "."),
-        ("C:\\Python310\\tcl\\tk8.6\\ttk\\fonts.tcl", "."),
-        ("C:\\Python310\\tcl\\tk8.6\\ttk\\utils.tcl", "."),
-        ("C:\\Python310\\tcl\\tk8.6\\ttk\\cursors.tcl", "."),
-        ("C:\\Python310\\DLLs\\tcl86t.dll", "."),
-        ("C:\\Python310\\DLLs\\tk86t.dll", "."),
         ("C:\\Python310\\vcruntime140.dll", "."),
         ("C:\\Python310\\vcruntime140_1.dll", "."),
-        ("C:\\Python310\\tcl\\tcl8.6\\tzdata", "."),
         ("C:\\windows\\syswow64\\msvcp140.dll", "."),
         ("C:\\api-ms-win-shcore-scaling-l1-1-1.dll", "."),
         ("C:\\Python310\\Lib\\site-packages\\tensorflow\\python\\util\\_pywrap_utils.pyd", "."),
@@ -100,8 +94,8 @@ a = Analysis(
         "psutil",
         "matplotlib",
         "bitsandbytes",
-        "PIL._tkinter_finder",
         "scipy",
+        "sympy",
     ],
     hookspath=[],
     hooksconfig={},
@@ -170,8 +164,8 @@ a = Analysis(
         # "mpmath",
         # "multidict",
         # "mypy-extensions",
-        # "ninja",
-        # "nvidia-pyindex",
+        "ninja",
+        "nvidia-pyindex",
         # "oauthlib",
         # "opt-einsum",
         # "ordered-set",
@@ -192,7 +186,7 @@ a = Analysis(
         # "python-dotenv",
         # "python-editor",
         # "python-multipart",
-        # "pytz",
+        "pytz",
         # "PyYAML",
         # "readchar",
         # "rfc3986",
@@ -261,12 +255,10 @@ coll = COLLECT(
     a.zipfiles,
     a.datas,
     strip=COLLECT_STRIP,
-    upx=COLLECT_UPX,
-    upx_exclude=[],
     name=COLLECT_NAME,
     onefile=False,
     onedir=True,
-    upx_dir="C:\\Python310\\Scripts\\"
+    upx_dir="C:\\Python310\\Scripts\\",
 )
 shutil.copytree(
     f'{ROOT}/src/airunner/pyqt',
