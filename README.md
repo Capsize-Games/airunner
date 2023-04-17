@@ -90,7 +90,7 @@ Currently there isn't much of an external API so using AI Runner as a library is
 pip install torch torchvision torchaudio --index-url https://download.pytorch.org/whl/cu117
 pip install airunner
 pip install https://github.com/w4ffl35/diffusers/archive/refs/tags/v0.15.0.ckpt_fix_0.0.1.tar.gz
-pip install https://github.com/acpopescu/bitsandbytes/releases/download/v0.37.2-win.0/bitsandbytes-0.37.2-py3-none-any.whl
+pip install https://github.com/acpopescu/bitsandbytes/releases/download/v0.38.0-win0/bitsandbytes-0.38.1-py3-none-any.whl
 ```
 
 #### Linux
