@@ -104,5 +104,5 @@ FROM install_butler as build_files
 WORKDIR /app
 COPY build.windows.py build.windows.py
 COPY build.windows.cmd build.windows.cmd
-COPY build.airunner.linux.prod.spec build.airunner.linux.prod.spec
+COPY build.airunner.windows.prod.spec build.airunner.windows.prod.spec
 COPY version.py version.py

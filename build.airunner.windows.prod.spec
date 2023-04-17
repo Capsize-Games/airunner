@@ -11,7 +11,7 @@ ROOT = "Z:\\app\\airunner"
 DIST = "./dist/airunner"
 os.environ["AIRUNNER_ENVIRONMENT"] = "prod"
 DEBUGGING = True
-EXCLUDE_BINARIES = False
+EXCLUDE_BINARIES = True
 EXE_NAME = "airunner"  # used when creating a binary instead of a folder
 EXE_STRIP = False
 EXE_UPX = False
@@ -239,12 +239,14 @@ exe = EXE(
     pyz,
     a.scripts,
     [],
+    exclude_binaries=EXCLUDE_BINARIES,
     name=EXE_NAME,
     debug=DEBUGGING,
-    bootloader_ignore_signals=False,
     strip=EXE_STRIP,
     upx=EXE_UPX,
+    runtime_tmpdir=EXE_RUNTIME_TMP_DIR,
     console=DEBUGGING,
+    bootloader_ignore_signals=False,
     disable_windowed_traceback=False,
     argv_emulation=False,
     target_arch=None,
