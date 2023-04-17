@@ -23,3 +23,5 @@ services:
       - ./:/app
       - ./dist:/app/dist
       - ./build:/app/build
+    working_dir: /app
+    runtime: nvidia

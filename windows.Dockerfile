@@ -105,4 +105,6 @@ WORKDIR /app
 COPY build.windows.py build.windows.py
 COPY build.windows.cmd build.windows.cmd
 COPY build.airunner.windows.prod.spec build.airunner.windows.prod.spec
-COPY version.py version.py
+RUN wget https://github.com/upx/upx/releases/download/v4.0.2/upx-4.0.2-win64.zip \
+    && unzip -o upx-4.0.2-win64.zip \
+    && cp upx-4.0.2-win64/* /home/.wine-win10/drive_c/Python310/Scripts/
