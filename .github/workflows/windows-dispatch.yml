@@ -33,10 +33,8 @@ jobs:
             -e ITCHIO_USERNAME=${{ secrets.ITCHIO_USERNAME }} \
             -e DEV_ENV=0 \
             -e AIRUNNER_ENVIRONMENT=prod \
-            -e AIRUNNER_OS=linux \
+            -e AIRUNNER_OS=windows \
             -e PYTORCH_CUDA_ALLOC_CONF=garbage_collection_threshold:0.9,max_split_size_mb:512 \
             -e NUMBA_CACHE_DIR=/tmp/numba_cache \
             -e DISABLE_TELEMETRY=1 \
-            -e TCL_LIBDIR_PATH=/usr/lib/x86_64-linux-gnu/ \
-            -e TK_LIBDIR_PATH=/usr/lib/x86_64-linux-gnu/ \
             ghcr.io/capsize-games/airunner/airunner:windows wine64 Z:\\app\\build.windows.cmd
