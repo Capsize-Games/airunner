@@ -13,7 +13,7 @@
 
 ### Stable Diffusion on your own hardware 
 
-No web server to run, additional requirements to install or technical knowledge required. [Just download the compiled package](https://capsizegames.itch.io/ai-runner) and run to start generating AI Art.
+No web server to run, additional requirements to install or technical knowledge required. [Just download the compiled package](https://capsizegames.itch.io/ai-runner) and start generating AI Art!
 
 ---
 
