@@ -12,7 +12,7 @@ ROOT = "Z:\\app\\airunner"
 DIST = "./dist/airunner"
 os.environ["AIRUNNER_ENVIRONMENT"] = "prod"
 DEBUGGING = True
-EXCLUDE_BINARIES = True
+EXCLUDE_BINARIES = False
 EXE_NAME = "airunner"  # used when creating a binary instead of a folder
 EXE_STRIP = False
 EXE_UPX = True
@@ -35,6 +35,7 @@ datas += copy_metadata('rich')
 datas += copy_metadata('sympy')
 datas += copy_metadata('tensorflow')
 datas += copy_metadata('scipy')
+datas += copy_metadata('bitsandbytes')
 datas += collect_data_files("torch", include_py_files=True)
 datas += collect_data_files("torchvision", include_py_files=True)
 datas += collect_data_files("pytorch_lightning", include_py_files=True)
@@ -42,6 +43,7 @@ datas += collect_data_files("lightning_fabric", include_py_files=True)
 datas += collect_data_files("transformers", include_py_files=True)
 datas += collect_data_files("xformers", include_py_files=True)
 datas += collect_data_files("tensorflow", include_py_files=True)
+datas += collect_data_files("bitsandbytes", include_py_files=True)
 datas += collect_data_files("sympy", include_py_files=True)
 
 a = Analysis(
@@ -61,7 +63,7 @@ a = Analysis(
         "C:\\Users\\root\\AppData\\Local\\Programs\\Python\\Python310\\",
     ],
     binaries=[
-        #("C:\\Python310\\Lib\\site-packages\\torchvision\\cudart64_110.dll", "."),
+        ("C:\\Python310\\Lib\\site-packages\\torchvision\\cudart64_110.dll", "."),
         ("C:\\Python310\\vcruntime140.dll", "."),
         ("C:\\Python310\\vcruntime140_1.dll", "."),
         ("C:\\windows\\syswow64\\msvcp140.dll", "."),
@@ -133,6 +135,7 @@ a = Analysis(
         # "flatbuffers",
         # "frozenlist",
         # "gast",
+        "google",
         "google-auth",
         "google-auth-oauthlib",
         "google-pasta",
