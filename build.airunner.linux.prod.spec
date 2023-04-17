@@ -145,6 +145,7 @@ a = Analysis(
         # "flatbuffers",
         # "frozenlist",
         # "gast",
+        "google",
         "google-auth",
         "google-auth-oauthlib",
         "google-pasta",
