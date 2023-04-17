@@ -21,13 +21,13 @@ No web server to run, additional requirements to install or technical knowledge 
 
 ![img.png](img.png)
 
-## Features
+## ⭐ Features
 
 Easily generate AI art using Stable Diffusion.
 
 - Easy setup - download and run. No need to install any requirements*
 - Fast! Generate images in approximately 2 seconds using an RTX 2080s, 512x512 dimensions, 20 steps euler_a (approximately 10 seconds for 512x512 20 steps Euler A on 1080gtx). Also runs on CPU†
-- txt2img, img2img, inpaint, outpaint, pix2pix, depth2img, controlnet
+- txt2img, img2img, inpaint, outpaint, pix2pix, depth2img, controlnet, txt2vid
 - Layers and drawing tools
 - Image filters
 - Dark mode
@@ -37,18 +37,14 @@ Easily generate AI art using Stable Diffusion.
 - Fast load time, responsive interface
 - Pure python - does not rely on a webserver
 
----
+### Requirements
 
-## Installation
+- Cuda capable GPU (2080s or higher recommended)
+- At least 10gb of RAM
+- at least 5.8gb of disc space to install AI Runner
 
-### [Download the official build on itch.io](https://capsizegames.itch.io/ai-runner)!
-
-This is the compiled version of AI Runner which you can use without installing any additional dependencies.
-
-For those interested in installing the development version, there are three options to choose from. 
-
-[See the installation 
-wiki page for more information](https://github.com/Capsize-Games/airunner/wiki/Installation-instructions)
+The core AI Runner  program takes approximately 5.8gb of disc space to install, however the size of each model varies. 
+Typically models are between 2.5gb to 10gb in size. The more models you download, the more disc space you will need.
 
 ---
 
@@ -58,11 +54,13 @@ wiki page for more information](https://github.com/Capsize-Games/airunner/wiki/I
 
 ---
 
-## Requirements
+## 🔧 Installation
 
-- Cuda capable GPU (2080s or higher recommended)
-- At least 10gb of RAM
-- at least 5.8gb of disc space to install AI Runner
+### [Download the official build on itch.io](https://capsizegames.itch.io/ai-runner)!
 
-The core AI Runner  program takes approximately 5.8gb of disc space to install, however the size of each model varies. 
-Typically models are between 2.5gb to 10gb in size. The more models you download, the more disc space you will need.
+This is the compiled version of AI Runner which you can use without installing any additional dependencies.
+
+For those interested in installing the development version, there are three options to choose from. 
+
+[See the installation 
+wiki page for more information](https://github.com/Capsize-Games/airunner/wiki/Installation-instructions)
