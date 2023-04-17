@@ -95,7 +95,7 @@ pip install https://github.com/acpopescu/bitsandbytes/releases/download/v0.37.2-
 
 #### Linux
 ```
-pip install torch torchvision torchaudio bitsandbytes
+pip install torch torchvision torchaudio bitsandbytes triton==2.0.0
 pip install airunner
 pip install https://github.com/w4ffl35/diffusers/archive/refs/tags/v0.15.0.ckpt_fix_0.0.1.tar.gz --no-deps
 ```
