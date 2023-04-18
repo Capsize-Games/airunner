@@ -19,5 +19,4 @@ echo "============================================"
 echo "Deploying airunner to itch.io"
 echo "============================================"
 echo.
-@REM we will set VERSION using the /app/VERSION file contents:
-C:\Python310\python.exe -c Z:\app\butler.windows.py
+C:\Python310\python.exe Z:\app\butler.windows.py
