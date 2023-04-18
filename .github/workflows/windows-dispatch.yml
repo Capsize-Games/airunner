@@ -1,8 +1,6 @@
 name: Windows Build
 
 on:
-  release:
-    types: [ published ]
   workflow_dispatch:
 
 env:
