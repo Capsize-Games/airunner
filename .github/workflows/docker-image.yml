@@ -16,4 +16,4 @@ jobs:
     steps:
     - uses: actions/checkout@v3
     - name: Build the Docker image
-      run: docker build -v $(pwd):/app . --file windows.Dockerfile --tag ghcr.io/capsize-games/airunner/airunner:windows
+      run: docker build . --file windows.Dockerfile --tag ghcr.io/capsize-games/airunner/airunner:windows
