@@ -1,86 +1,13 @@
 import io
 import subprocess
 import uuid
-import PIL
 from PIL import Image, ImageOps, ImageDraw, ImageGrab
 from PIL.ImageQt import ImageQt
 from PyQt6.QtCore import Qt, QPoint, QRect, QPointF
 from PyQt6.QtGui import QColor, QPainter, QPen, QBrush, QPixmap, QCursor, QPainterPath, QPolygonF
-
-
-class ImageData:
-    def __init__(self, position: QPoint, image: Image):
-        self.position = position
-        self.image = image
-
-
-class LineData:
-    @property
-    def pen(self):
-        pen = self._pen if self._pen else {
-            "color": "#000000",
-            "width": 1,
-            "style": Qt.PenStyle.SolidLine
-        }
-        return QPen(
-            QColor(pen["color"]),
-            pen["width"],
-            pen["style"]
-        )
-
-    def __init__(self, start_point: QPoint, end_point: QPoint, pen: QPen, layer_index: int):
-        self.start_point = start_point
-        self.end_point = end_point
-        # do not store as a qpen, store as a dict
-        self._pen = {
-            "color": pen.color(),
-            "width": pen.width(),
-            "style": pen.style()
-        }
-        self.layer_index = layer_index
-
-    def intersects(self, start: QPoint, brush_size: int):
-        # check x and use brush size
-        if self.start_point.x() > start.x() - brush_size and self.start_point.x() < start.x() + brush_size:
-            if self.start_point.y() > start.y() - brush_size and self.start_point.y() < start.y() + brush_size:
-                return True
-        return False
-
-
-class LayerData:
-    @property
-    def image(self):
-        if len(self.images) > 0:
-            return self.images[0]
-        return None
-
-    def __init__(
-        self,
-        index: int,
-        name: str,
-        visible: bool = True,
-        opacity: float = 1.0,
-        offset: QPoint = QPoint(0, 0)
-    ):
-        self.index = index
-        self.name = name
-        self.visible = visible
-        self.opacity = opacity
-        self.offset = offset
-        self.lines = []
-        self.images = []
-        self.widgets = []
-        self.uuid = uuid.uuid4()
-
-    def clear(self, index):
-        self.index = index
-        self.lines = []
-        self.images = []
-        self.widgets = []
-        self.visible = True
-        self.opacity = 1.0
-        self.name = f"Layer {self.index + 1}"
-
+from airunner.models.layerdata import LayerData
+from airunner.models.imagedata import ImageData
+from airunner.models.linedata import LineData
 
 class Canvas:
     saving = False
