@@ -77,3 +77,5 @@ FROM more_env as build_files
 WORKDIR /app
 COPY dobuild.py dobuild.py
 COPY build.sh build.sh
+COPY build.airunner.linux.prod.spec build.airunner.linux.prod.spec
+COPY setup.py setup.py
