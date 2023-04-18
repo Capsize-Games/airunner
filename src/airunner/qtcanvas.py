@@ -278,6 +278,7 @@ class Canvas:
         :param processed_image: the image to update the canvas with
         :return:
         """
+        processed_image = processed_image.convert("RGBA")
         section = data["action"] if not section else section
         outpaint_box_rect = data["options"]["outpaint_box_rect"]
         processed_image, image_root_point, image_pivot_point = self.handle_outpaint(
