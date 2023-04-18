@@ -54,4 +54,4 @@ jobs:
             -e TCL_LIBDIR_PATH=/usr/lib/x86_64-linux-gnu/ \
             -e TK_LIBDIR_PATH=/usr/lib/x86_64-linux-gnu/ \
             -v $(pwd)/dist:/app/dist \
-            ghcr.io/capsize-games/airunner/airunner:linux bash build.sh
+            ghcr.io/capsize-games/airunner/airunner:linux bash /app/build.sh
