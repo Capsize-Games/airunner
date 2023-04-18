@@ -3,6 +3,10 @@ name: Windows Build
 on:
   push:
     branches: [ "master" ]
+  pull_request:
+    types:
+      - synchronize
+      - closed
   workflow_dispatch:
 
 env:
