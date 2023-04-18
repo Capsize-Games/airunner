@@ -1,6 +1,5 @@
 import io
 import subprocess
-import uuid
 from PIL import Image, ImageOps, ImageDraw, ImageGrab
 from PIL.ImageQt import ImageQt
 from PyQt6.QtCore import Qt, QPoint, QRect, QPointF
