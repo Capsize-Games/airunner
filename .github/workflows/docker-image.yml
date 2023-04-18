@@ -1,4 +1,4 @@
-name: Docker Image CI
+name: Windows Docker Image
 
 on:
   push:
@@ -8,12 +8,17 @@ on:
   workflow_dispatch:
 
 jobs:
-
   build:
-
     runs-on: ubuntu-latest
-
     steps:
     - uses: actions/checkout@v3
     - name: Build the Docker image
       run: docker build . --file windows.Dockerfile --tag ghcr.io/capsize-games/airunner/airunner:windows
+    - name: Login to GitHub Container Registry
+      uses: docker/login-action@v1
+      with:
+        registry: ghcr.io
+        username: ${{ github.repository_owner }}
+        password: ${{ secrets.CR_PAT }}
+    - name: Push Docker image to Container Registry
+      run: docker push ghcr.io/capsize-games/airunner/airunner:windows
