@@ -3,14 +3,13 @@ USER root
 ENV TZ=America/Denver
 RUN ln -snf /usr/share/zoneinfo/$TZ /etc/localtime && echo $TZ > /etc/timezone \
     && apt-get update \
-    && apt-get upgrade -y \
     && apt install software-properties-common -y \
     && add-apt-repository ppa:ubuntu-toolchain-r/test \
     && apt-get update \
     && dpkg --add-architecture i386 \
     && apt-get update \
-    && apt-get install -y libtinfo6 git wget curl vim software-properties-common gcc-9 g++-9 bash build-essential libssl-dev libffi-dev libgl1-mesa-dev nvidia-cuda-toolkit xclip libjpeg-dev zlib1g-dev libpng-dev \
-    && rm -rf /var/lib/apt/lists/ \
+    && apt-get install -y libtinfo6 git wget software-properties-common gcc-9 g++-9 bash build-essential libssl-dev libffi-dev libgl1-mesa-dev nvidia-cuda-toolkit xclip libjpeg-dev zlib1g-dev libpng-dev --no-install-recommends \
+    && rm -rf /var/lib/apt/lists/* \
     && update-alternatives --install /usr/bin/gcc gcc /usr/bin/gcc-9 60 --slave /usr/bin/g++ g++ /usr/bin/g++-9
 
 FROM base_image as wine_support
@@ -23,7 +22,8 @@ RUN apt-get update \
     && apt-key add winehq.key \
     && add-apt-repository 'deb https://dl.winehq.org/wine-builds/ubuntu/ focal main' \
     && apt-get update \
-    && apt-get install -y coreutils winbind xvfb winehq-stable winetricks x11-apps wine64 wine32 winbind cabextract \
+    && apt-get install -y coreutils winbind xvfb winehq-stable winetricks x11-apps wine64 wine32 winbind cabextract --no-install-recommends \
+    && rm -rf /var/lib/apt/lists/* \
     && winetricks win10
 
 FROM wine_support as winegecko
@@ -38,7 +38,9 @@ RUN wget https://www.python.org/ftp/python/3.10.8/python-3.10.8-amd64.exe \
     && rm -rf /tmp/.X99-lock
 
 FROM install_python as install_git
-RUN apt-get install -y unzip \
+RUN apt-get update \
+    && apt-get install -y unzip --no-install-recommends \
+    && rm -rf /var/lib/apt/lists/* \
     && wget https://github.com/git-for-windows/git/releases/download/v2.40.0.windows.1/MinGit-2.40.0-64-bit.zip -O MinGit-2.40.0-64-bit.zip \
     && unzip -o MinGit-2.40.0-64-bit.zip -d /home/.wine-win10/drive_c/ \
     && rm MinGit-2.40.0-64-bit.zip
@@ -66,11 +68,13 @@ FROM final as install_apps
 WORKDIR /app
 USER root
 ENV DISPLAY=:0
-RUN apt-get install -y mesa-utils \
-    && apt-get install -y libgl1-mesa-glx \
+RUN apt-get update \
+    && apt-get install -y mesa-utils --no-install-recommends \
+    && apt-get install -y libgl1-mesa-glx --no-install-recommends \
     && wine64 C:\\Python310\\python.exe -m pip install --upgrade pyinstaller \
     && wine64 reg add "HKEY_CURRENT_USER\Environment" /v PATH /t REG_EXPAND_SZ /d "C:\\;Z:\\app\\lib\\PortableGit\\cmd;C:\\Program Files\\NVIDIA\\CUDNN\\v8.6.0.163\\bin;C:\\Program Files\\NVIDIA GPU Computing Toolkit\\CUDA\\v11.7\\bin;C:\\Python310;C:\\Python310\\site-packages;C:\\Python310\\site-packages\\lib;%PATH%" /f \
-    && apt install git \
+    && apt install git --no-install-recommends \
+    && rm -rf /var/lib/apt/lists/* \
     && chown root:root /home/.wine-win10 \
     && mkdir -p root:root /home/.wine-win10/drive_c/users/root && chown -R root:root root:root /home/.wine-win10/drive_c/users/root \
     && chown -R root:root /home/.wine-win10/drive_c/users/root \
