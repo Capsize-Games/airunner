@@ -3,7 +3,6 @@
 [![Windows Build](https://github.com/Capsize-Games/airunner/actions/workflows/windows-dispatch.yml/badge.svg)](https://github.com/Capsize-Games/airunner/actions/workflows/windows-dispatch.yml)
 [![Linux Build](https://github.com/Capsize-Games/airunner/actions/workflows/linux-dispatch.yml/badge.svg)](https://github.com/Capsize-Games/airunner/actions/workflows/linux-dispatch.yml)
 [![PyPi](https://github.com/Capsize-Games/airunner/actions/workflows/pypi-dispatch.yml/badge.svg)](https://github.com/Capsize-Games/airunner/actions/workflows/pypi-dispatch.yml)
-[![Windows Docker Image](https://github.com/Capsize-Games/airunner/actions/workflows/docker-image.yml/badge.svg)](https://github.com/Capsize-Games/airunner/actions/workflows/docker-image.yml)
 ![GitHub](https://img.shields.io/github/license/Capsize-Games/airunner)
 ![GitHub last commit](https://img.shields.io/github/last-commit/Capsize-Games/airunner)
 ![GitHub issues](https://img.shields.io/github/issues/Capsize-Games/airunner)
