@@ -6,7 +6,7 @@ on:
   workflow_dispatch:
 
 env:
-  DOCKER_IMAGE: ghcr.io/capsize-games/airunner/airunner:linux
+  DOCKER_IMAGE: ghcr.io/capsize-games/airunner/airunner:windows
   BUTLER_API_KEY: ${{ secrets.BUTLER_API_KEY }}
   CR_PAT: ${{ secrets.CR_PAT }}
   CR_REPO: ${{ secrets.CR_REPO }}
