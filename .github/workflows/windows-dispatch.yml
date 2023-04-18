@@ -1,12 +1,8 @@
 name: Windows Build
 
 on:
-  push:
-    branches: [ "master" ]
-  pull_request:
-    types:
-      - synchronize
-      - closed
+  release:
+    types: [ published ]
   workflow_dispatch:
 
 env:
