@@ -17,16 +17,7 @@ env:
   CR_USERNAME: ${{ secrets.CR_USERNAME }}
 
 jobs:
-  release-on-merge:
-    runs-on: ubuntu-latest
-    env:
-      GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
-    steps:
-      - uses: rymndhng/release-on-push-action@master
-        with:
-          bump_version_scheme: patch  # override with release:major|minor|patch in PR label
   buildDocker:
-    needs: release-on-merge
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v3
