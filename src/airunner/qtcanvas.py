@@ -298,7 +298,8 @@ class Canvas:
 
     def handle_outpaint(self, outpaint_box_rect, outpainted_image, action):
         if len(self.current_layer.images) == 0:
-            return outpainted_image, self.image_root_point, self.image_pivot_point
+            point = QPoint(outpaint_box_rect.x(), outpaint_box_rect.y())
+            return outpainted_image, self.image_root_point, point
 
         # make a copy of the current canvas image
         existing_image_copy = self.current_layer.images[0].image.copy()
