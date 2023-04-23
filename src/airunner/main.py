@@ -1072,7 +1072,8 @@ class MainWindow(QApplication):
         if nsfw_content_detected and self.settings_manager.settings.nsfw_filter.get():
             self.message_handler("NSFW content detected, try again.", error=True)
         else:
-            self.canvas.add_layer()
+            if data["action"] != "outpaint":
+                self.canvas.add_layer()
             self.canvas.image_handler(image, data)
             self.message_handler("")
             self.show_layers()
