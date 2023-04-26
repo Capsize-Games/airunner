@@ -1,9 +1,6 @@
 import os
-import time
-
 from PyQt6 import uic
 from PyQt6.QtWidgets import QWidget, QVBoxLayout
-
 from aihandler.util import get_extensions_from_url, download_extension
 from airunner.windows.base_window import BaseWindow
 
@@ -13,14 +10,14 @@ class ExtensionsWindow(BaseWindow):
     window_title = "Extensions"
 
     def initialize_window(self):
-        available_extensions = get_extensions_from_url(self)
+        available_extensions = get_extensions_from_url(self.settings_manager.app)
         container = QWidget()
         container.setLayout(QVBoxLayout())
         for extension in available_extensions:
             widget = uic.loadUi(os.path.join(f"pyqt/extension.ui"))
-            widget.checkBox.setChecked(extension.enabled.get() is True)
+            widget.checkBox.setChecked(extension.name.get() in self.settings_manager.settings.enabled_extensions.get())
             widget.checkBox.setText(f"{extension.name.get()} - {extension.version.get()}")
-            widget.checkBox.stateChanged.connect(self.on_checkbox_state_changed)
+            widget.checkBox.stateChanged.connect(lambda value, _extension=extension: self.on_checkbox_state_changed(value, _extension))
             widget.descriptionLabel.setText(extension.description.get())
             url = f"https://github.com/{extension.repo.get()}"
             widget.urlLabel.setText(url)
@@ -59,10 +56,17 @@ class ExtensionsWindow(BaseWindow):
 
             # add widget to self.template.scrollArea:QScrollArea
             container.layout().addWidget(widget)
+            self.settings_manager.settings.available_extensions.append(extension)
         self.template.scrollArea.setWidget(container)
 
-    def on_checkbox_state_changed(self, state):
-        print(state)
+    def on_checkbox_state_changed(self, state, extension):
+        extension.enabled.set(state == 2)
+        # add extension to self.settings_manager.settings.enabled_extensions
+        if state == 2:
+            self.settings_manager.settings.enabled_extensions.append(extension.name.get())
+        elif extension.name.get() in self.settings_manager.settings.enabled_extensions.get():
+            self.settings_manager.settings.enabled_extensions.remove(extension.name.get())
+        self.settings_manager.save_settings()
 
     def remove(self, path, button, install_button):
         install_button.setEnabled(False)
@@ -87,7 +91,6 @@ class ExtensionsWindow(BaseWindow):
         if button.text() == "Update":
             self.update(repo, url, path, button, remove_button)
             return
-
         button.setText("...")
         button.setEnabled(False)
         self.template.repaint()

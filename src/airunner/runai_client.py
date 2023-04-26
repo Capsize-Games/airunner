@@ -63,6 +63,7 @@ class OfflineClient(QtCore.QObject):
         super().__init__(
             parent=kwargs.get("parent", None)
         )
+        self.settings_manager = kwargs.get("settings_manager", None)
         self.quit_event = BooleanVar()
         self.queue = queue.Queue()
         self.res_queue = queue.Queue()
@@ -93,6 +94,7 @@ class OfflineClient(QtCore.QObject):
             tqdm_var=self.tqdm_var,
             image_var=self.image_var,
             message_var=self.message_var,
+            settings_manager=self.settings_manager,
         )
 
     def handle_response(self, response):

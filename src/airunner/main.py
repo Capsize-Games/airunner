@@ -212,51 +212,74 @@ class MainWindow(QApplication):
         return self._embedding_names
 
     def __init__(self, *args, **kwargs):
-        from PyQt6 import uic
-        uic.properties.logger.setLevel(LOG_LEVEL)
-        uic.uiparser.logger.setLevel(LOG_LEVEL)
+        self.set_log_levels()
         super().__init__(*args, **kwargs)
-        self.tqdm_var = TQDMVar()
-        self.tqdm_var.my_signal.connect(self.tqdm_callback)
+        self.initialize()
+        self.display()
+        self.settings_manager.enable_save()
+        self.exec()
 
-        self.message_var = MessageHandlerVar()
-        self.message_var.my_signal.connect(self.message_handler)
-        self.error_var = ErrorHandlerVar()
-        self.error_var.my_signal.connect(self.error_handler)
-
-        self.image_var = ImageVar()
-        self.image_var.my_signal.connect(self.image_handler)
-
-        # initialize history
-        self.history = History()
-
-        # create settings manager
-        self.settings_manager = SettingsManager()
-        # self.get_extensions_from_path()
-
-        # listen to signal on self.settings_manager.settings.canvas_color
-        self.settings_manager.settings.canvas_color.my_signal.connect(self.update_canvas_color)
-
-        # initialize window
-        HERE = os.path.dirname(os.path.abspath(__file__))
-        self.window = uic.loadUi(os.path.join(HERE, "pyqt/main_window.ui"))
-
-        self.center()
-
-        # add title to window
-        self.set_window_title()
-
-        self.show_initialize_buttons()
-
+    def initialize(self):
+        self.initialize_tqdm()
+        self.initialize_handlers()
+        self.initialize_window()
+        self.initialize_history()
+        self.initialize_settings_manager()
+        self.initialize_canvas()
         self.initialize_tabs()
+        self.initialize_size_sliders()
+        self.initialize_layer_buttons()
+        self.initialize_menu_bar()
+        self.initialize_filters()
+        self.initialize_shortcuts()
+        self.initialize_tool_buttons()
+        self.initialize_stable_diffusion()
 
-        # initialize filters
-        self.filter_gaussian_blur = FilterGaussianBlur(parent=self)
-        self.window.actionGaussian_Blur.triggered.connect(self.filter_gaussian_blur.show)
+    def initialize_canvas(self):
+        self.canvas = Canvas(self)
+        self.settings_manager.settings.show_grid.my_signal.connect(self.canvas.update)
+        self.settings_manager.settings.snap_to_grid.my_signal.connect(self.canvas.update)
+        self.settings_manager.settings.line_color.my_signal.connect(self.canvas.update_grid_pen)
 
-        self.filter_pixel_art = FilterPixelArt(parent=self)
-        self.window.actionPixel_Art.triggered.connect(self.filter_pixel_art.show)
+    def initialize_settings_manager(self):
+        self.settings_manager = SettingsManager()
+        self.settings_manager.disable_save()
+        self.get_extensions_from_path()
+        self.settings_manager.settings.canvas_color.my_signal.connect(self.update_canvas_color)
+        self.settings_manager.settings.size.my_signal.connect(self.set_size_form_element_step_values)
+        self.settings_manager.settings.line_width.my_signal.connect(self.set_size_form_element_step_values)
 
+    def initialize_size_sliders(self):
+        self.window.width_slider.setValue(self.width)
+        self.window.height_slider.setValue(self.height)
+        self.window.width_spinbox.setValue(self.width)
+        self.window.height_spinbox.setValue(self.height)
+        self.window.brush_size_slider.setValue(self.settings.mask_brush_size.get())
+        self.window.brush_size_slider.valueChanged.connect(self.update_brush_size)
+        self.window.brush_size_spinbox.valueChanged.connect(self.brush_spinbox_change)
+        self.window.brush_size_slider.setValue(self.settings_manager.settings.mask_brush_size.get())
+        self.window.brush_size_spinbox.setValue(self.settings_manager.settings.mask_brush_size.get())
+        self.set_size_form_element_step_values()
+
+    def initialize_layer_buttons(self):
+        self.window.new_layer.clicked.connect(self.new_layer)
+        self.window.layer_up_button.clicked.connect(self.layer_up_button)
+        self.window.layer_down_button.clicked.connect(self.layer_down_button)
+        self.window.delete_layer_button.clicked.connect(self.delete_layer_button)
+
+    def initialize_menu_bar(self):
+        self.window.actionNew.triggered.connect(self.new_document)
+        self.window.actionSave.triggered.connect(self.save_document)
+        self.window.actionLoad.triggered.connect(self.load_document)
+        self.window.actionImport.triggered.connect(self.import_image)
+        self.window.actionExport.triggered.connect(self.export_image)
+        self.window.actionQuit.triggered.connect(self.quit)
+        self.window.actionPaste.triggered.connect(self.paste_image)
+        self.window.actionCopy.triggered.connect(self.copy_image)
+        self.window.actionResize_on_Paste.triggered.connect(self.toggle_resize_on_paste)
+        self.initialize_filter_actions()
+
+    def initialize_filter_actions(self):
         self.filter_box_blur = FilterBoxBlur(parent=self)
         self.window.actionBox_Blur.triggered.connect(self.filter_box_blur.show)
         self.filter_unsharp_mask = FilterUnsharpMask(parent=self)
@@ -266,50 +289,27 @@ class MainWindow(QApplication):
         self.filter_color_balance = FilterColorBalance(parent=self)
         self.window.actionColor_Balance.triggered.connect(self.filter_color_balance.show)
 
-        # initialize sizes
-        self.window.width_slider.setValue(self.width)
-        self.window.height_slider.setValue(self.height)
-        self.window.width_spinbox.setValue(self.width)
-        self.window.height_spinbox.setValue(self.height)
-        grid_size = self.canvas.grid_size
+    def initialize_shortcuts(self):
+        # on shift + mouse scroll change working width
+        self.window.wheelEvent = self.change_width
 
-        self.window.brush_size_slider.setValue(self.settings.mask_brush_size.get())
-
-        self.show_layers()
-
-        self.window.actionUndo.triggered.connect(self.undo)
-        self.window.actionRedo.triggered.connect(self.redo)
-
-        self.window.new_layer.clicked.connect(self.new_layer)
-        self.window.layer_up_button.clicked.connect(self.layer_up_button)
-        self.window.layer_down_button.clicked.connect(self.layer_down_button)
-        self.window.delete_layer_button.clicked.connect(self.delete_layer_button)
-
-        self.window.show()
-
-        self.window.actionNew.triggered.connect(self.new_document)
-        self.window.actionSave.triggered.connect(self.save_document)
-        self.window.actionLoad.triggered.connect(self.load_document)
-        self.window.actionImport.triggered.connect(self.import_image)
-        self.window.actionExport.triggered.connect(self.export_image)
-        self.window.actionQuit.triggered.connect(self.quit)
-
-        self.window.actionPaste.triggered.connect(self.paste_image)
-        self.window.actionCopy.triggered.connect(self.copy_image)
-
-        self.window.brush_size_slider.valueChanged.connect(self.update_brush_size)
-        self.window.brush_size_spinbox.valueChanged.connect(self.brush_spinbox_change)
-
-        self.initialize_filters()
-
-        self.initialize_shortcuts()
-
-        # start stable diffusion
-        self.initialize_stable_diffusion()
-
-        self.window.actionResize_on_Paste.triggered.connect(self.toggle_resize_on_paste)
-
-        # set tool button based on current tool
+    def initialize_tool_buttons(self):
+        self.window.eraser_button.clicked.connect(lambda: self.set_tool("eraser"))
+        self.window.brush_button.clicked.connect(lambda: self.set_tool("brush"))
+        self.window.active_grid_area_button.clicked.connect(lambda: self.set_tool("active_grid_area"))
+        self.window.move_button.clicked.connect(lambda: self.set_tool("move"))
+        # self.window.select_button.clicked.connect(lambda: self.set_tool("select"))
+        self.window.primary_color_button.clicked.connect(self.set_primary_color)
+        self.window.secondary_color_button.clicked.connect(self.set_secondary_color)
+        self.window.grid_button.clicked.connect(self.toggle_grid)
+        self.window.undo_button.clicked.connect(self.undo)
+        self.window.redo_button.clicked.connect(self.redo)
+        self.window.nsfw_button.clicked.connect(self.toggle_nsfw_filter)
+        self.window.focus_button.clicked.connect(self.focus_button_clicked)
+        self.window.wordballoon_button.clicked.connect(self.word_balloon_button_clicked)
+        self.set_button_colors()
+        self.window.grid_button.setChecked(self.settings_manager.settings.show_grid.get() == True)
+        self.window.nsfw_button.setChecked(self.settings_manager.settings.nsfw_filter.get() == True)
         if self.canvas.active_grid_area_selected:
             self.window.active_grid_area_button.setChecked(True)
         if self.canvas.eraser_selected:
@@ -322,26 +322,209 @@ class MainWindow(QApplication):
             self.window.grid_button.setChecked(True)
         if self.settings_manager.settings.nsfw_filter.get():
             self.window.nsfw_button.setChecked(True)
-
         self.window.darkmode_button.clicked.connect(self.toggle_darkmode)
-        self.set_stylesheet()
 
-        # hide self.window.move_button
+    def initialize_filters(self):
+        self.filter_gaussian_blur = FilterGaussianBlur(parent=self)
+        self.window.actionGaussian_Blur.triggered.connect(self.filter_gaussian_blur.show)
+        self.filter_pixel_art = FilterPixelArt(parent=self)
+        self.window.actionPixel_Art.triggered.connect(self.filter_pixel_art.show)
+
+    def initialize_tqdm(self):
+        self.tqdm_var = TQDMVar()
+        self.tqdm_var.my_signal.connect(self.tqdm_callback)
+
+    def initialize_handlers(self):
+        self.message_var = MessageHandlerVar()
+        self.message_var.my_signal.connect(self.message_handler)
+        self.error_var = ErrorHandlerVar()
+        self.error_var.my_signal.connect(self.error_handler)
+        self.image_var = ImageVar()
+        self.image_var.my_signal.connect(self.image_handler)
+
+    def initialize_history(self):
+        self.history = History()
+        self.initialize_history_buttons()
+
+    def initialize_history_buttons(self):
+        self.window.actionUndo.triggered.connect(self.undo)
+        self.window.actionRedo.triggered.connect(self.redo)
+
+    def initialize_window(self):
+        HERE = os.path.dirname(os.path.abspath(__file__))
+        self.window = uic.loadUi(os.path.join(HERE, "pyqt/main_window.ui"))
+        self.center()
+        self.set_window_title()
+
+    def initialize_stable_diffusion(self):
+        self.client = OfflineClient(
+            app=self,
+            tqdm_var=self.tqdm_var,
+            image_var=self.image_var,
+            error_var=self.error_var,
+            message_var=self.message_var,
+            settings_manager=self.settings_manager,
+        )
+
+    def initialize_tabs(self):
+        # load all the forms
+        sections = ["txt2img", "img2img", "depth2img", "pix2pix", "outpaint", "controlnet", "txt2vid"]
+        HERE = os.path.dirname(os.path.abspath(__file__))
+        self.tabs = {}
+        for tab in sections:
+            self.tabs[tab] = uic.loadUi(os.path.join(HERE, "pyqt/generate_form.ui"))
+
+        for tab in self.tabs:
+            if tab != "controlnet":
+                self.tabs[tab].controlnet_label.deleteLater()
+                self.tabs[tab].controlnet_dropdown.deleteLater()
+            else:
+                controlnet_options = [
+                    "Canny",
+                    "Depth",
+                    "Hed",
+                    "MLSD",
+                    "Normal",
+                    "Scribble",
+                    "Segmentation",
+                ]
+                for option in controlnet_options:
+                    self.tabs[tab].controlnet_dropdown.addItem(option)
+            if tab in ["txt2img", "pix2pix", "outpaint", "super_resolution", "txt2vid"]:
+                self.tabs[tab].strength.deleteLater()
+            if tab in ["txt2img", "img2img", "depth2img", "outpaint", "controlnet", "super_resolution", "txt2vid"]:
+                self.tabs[tab].image_scale_box.deleteLater()
+            if tab in ["txt2vid"]:
+                self.tabs[tab].scheduler_label.deleteLater()
+                self.tabs[tab].scheduler_dropdown.deleteLater()
+
+
+        # add all the tabs
+        for tab in sections:
+            self.window.tabWidget.addTab(self.tabs[tab], tab)
+
+        # iterate over each tab and connect steps_slider with steps_spinbox
+        for tab_name in self.tabs.keys():
+            tab = self.tabs[tab_name]
+            self.load_embeddings(tab)
+            self.do_generator_tab_injection(tab_name, tab)
+
+            tab.steps_slider.valueChanged.connect(lambda val, _tab=tab: self.handle_steps_slider_change(val, _tab))
+            tab.steps_spinbox.valueChanged.connect(lambda val, _tab=tab: self.handle_steps_spinbox_change(val, _tab))
+
+            # load models by section
+            self.load_model_by_section(tab, tab_name)
+
+            # on change of tab.model_dropdown set the model in self.settings_manager
+            tab.model_dropdown.currentIndexChanged.connect(
+                lambda val, _tab=tab, _section=tab_name: self.set_model(_tab, _section, val)
+            )
+
+            # set schedulers for each tab
+            if tab_name not in ["txt2vid"]:
+                tab.scheduler_dropdown.addItems(AVAILABLE_SCHEDULERS_BY_ACTION[tab_name])
+                # on change of tab.scheduler_dropdown set the scheduler in self.settings_manager
+                tab.scheduler_dropdown.currentIndexChanged.connect(
+                    lambda val, _tab=tab, _section=tab_name: self.set_scheduler(_tab, _section, val)
+                )
+
+            # scale slider
+            tab.scale_slider.valueChanged.connect(lambda val, _tab=tab: self.handle_scale_slider_change(val, _tab))
+            tab.scale_spinbox.valueChanged.connect(lambda val, _tab=tab: self.handle_scale_spinbox_change(val, _tab))
+
+            tab.image_scale_slider.valueChanged.connect(lambda val, _tab=tab: self.handle_image_scale_slider_change(val, _tab))
+            tab.image_scale_spinbox.valueChanged.connect(lambda val, _tab=tab: self.handle_image_scale_spinbox_change(val, _tab))
+
+            # strength slider
+            section = tab_name
+            if section in ["img2img", "depth2img", "controlnet"]:
+                if section == "img2img":
+                    strength = self.settings_manager.settings.img2img_strength.get()
+                elif section == "depth2img":
+                    strength = self.settings_manager.settings.depth2img_strength.get()
+                elif section == "controlnet":
+                    strength = self.settings_manager.settings.controlnet_strength.get()
+                tab.strength_slider.setValue(int(strength * 100))
+                tab.strength_spinbox.setValue(strength / 100)
+                tab.strength_slider.valueChanged.connect(lambda val, _tab=tab: self.handle_strength_slider_change(val, _tab))
+                tab.strength_spinbox.valueChanged.connect(lambda val, _tab=tab: self.handle_strength_spinbox_change(val, _tab))
+
+            if section == "txt2vid":
+                # change the label tab.samples_groupbox label to "Frames"
+                tab.samples_groupbox.setTitle("Frames")
+
+            # seed slider
+            # seed is QTextEdit
+            def text_changed(tab):
+                try:
+                    val = int(tab.seed.toPlainText())
+                    self.seed = val
+                except ValueError:
+                    pass
+
+            def handle_random_checkbox_change(val, _tab):
+                if val == 2:
+                    self.random_seed = True
+                else:
+                    self.random_seed = False
+                _tab.seed.setEnabled(not self.random_seed)
+
+            tab.seed.textChanged.connect(lambda _tab=tab: text_changed(_tab))
+            tab.random_checkbox.stateChanged.connect(lambda val, _tab=tab: handle_random_checkbox_change(val, _tab))
+
+            tab.random_checkbox.setChecked(self.random_seed == True)
+
+            # samples slider
+            tab.samples_slider.valueChanged.connect(lambda val, _tab=tab: self.handle_samples_slider_change(val, _tab))
+            tab.samples_spinbox.valueChanged.connect(lambda val, _tab=tab: self.handle_samples_spinbox_change(val, _tab))
+
+            # if samples is greater than 1 enable the interrupt_button
+            if tab.samples_spinbox.value() > 1:
+                tab.interrupt_button.setEnabled(tab.samples_spinbox.value() > 1)
+
+            self.set_default_values(tab_name, tab)
+
+        # assign callback to generate function on tab
+        self.window.tabWidget.currentChanged.connect(self.tab_changed_callback)
+
+        # add callbacks
+        for tab in sections:
+            self.tabs[tab].generate.clicked.connect(self.generate_callback)
+        # super_resolution_form.generate.clicked.connect(self.generate_callback)
+
+        # set up all callbacks on window menu bar
+        self.window.actionGrid.triggered.connect(self.show_grid_settings)
+        self.window.actionPreferences.triggered.connect(self.show_preferences)
+        self.window.actionAbout.triggered.connect(self.show_about)
+        self.window.actionCanvas_color.triggered.connect(self.show_canvas_color)
+        self.window.actionAdvanced.triggered.connect(self.show_advanced)
+        self.window.actionBug_report.triggered.connect(lambda: webbrowser.open("https://github.com/Capsize-Games/airunner/issues/new?assignees=&labels=&template=bug_report.md&title="))
+        self.window.actionReport_vulnerability.triggered.connect(lambda: webbrowser.open("https://github.com/Capsize-Games/airunner/security/advisories/new"))
+        self.window.actionDiscord.triggered.connect(lambda: webbrowser.open("https://discord.gg/PUVDDCJ7gz"))
+        self.window.actionExtensions.triggered.connect(self.show_extensions)
+
+        self.window.actionInvert.triggered.connect(self.do_invert)
+
+        self.initialize_size_form_elements()
+
+    def initialize_size_form_elements(self):
+        # width form elements
+        self.window.width_slider.valueChanged.connect(lambda val: self.handle_width_slider_change(val))
+        self.window.width_spinbox.valueChanged.connect(lambda val: self.handle_width_spinbox_change(val))
+
+        # height form elements
+        self.window.height_slider.valueChanged.connect(lambda val: self.handle_height_slider_change(val))
+        self.window.height_spinbox.valueChanged.connect(lambda val: self.handle_height_spinbox_change(val))
+
+    def display(self):
+        self.window.show()
+        self.show_layers()
+        self.set_stylesheet()
         self.window.move_button.hide()
 
-        # set the sliders of
-        self.set_size_form_element_step_values()
-
-        self.window.brush_size_slider.setValue(self.settings_manager.settings.mask_brush_size.get())
-        self.window.brush_size_spinbox.setValue(self.settings_manager.settings.mask_brush_size.get())
-
-        self.settings_manager.settings.size.my_signal.connect(self.set_size_form_element_step_values)
-        self.settings_manager.settings.line_width.my_signal.connect(self.set_size_form_element_step_values)
-        self.settings_manager.settings.show_grid.my_signal.connect(self.canvas.update)
-        self.settings_manager.settings.snap_to_grid.my_signal.connect(self.canvas.update)
-        self.settings_manager.settings.line_color.my_signal.connect(self.canvas.update_grid_pen)
-
-        self.exec()
+    def set_log_levels(self):
+        uic.properties.logger.setLevel(LOG_LEVEL)
+        uic.uiparser.logger.setLevel(LOG_LEVEL)
 
     ##############################################
     #  Begin extension functions
@@ -362,37 +545,21 @@ class MainWindow(QApplication):
         base_path = self.settings_manager.settings.model_base_path.get()
         extension_path = os.path.join(base_path, "extensions")
         available_extensions = get_extensions_from_path(extension_path)
-        if available_extensions:
-            for extension in available_extensions:
-                if extension.enabled:
-                    repo = extension.repo.get()
-                    name = repo.split("/")[-1]
-                    print("REPO", repo)
-                    path = os.path.join(extension_path, name)
-                    if os.path.exists(path):
-                        extension_files = [f for f in os.listdir(path) if
-                                           os.path.isfile(os.path.join(path, f)) and f == 'main.py']
-                        for file_name in extension_files:
-                            module_name = file_name[:-3]
-                            spec = importlib.util.spec_from_file_location(module_name,
-                                                                          os.path.join(path, file_name))
+        for extension in available_extensions:
+            if extension.name.get() in self.settings_manager.settings.enabled_extensions.get():
+                repo = extension.repo.get()
+                name = repo.split("/")[-1]
+                path = os.path.join(extension_path, name)
+                if os.path.exists(path):
+                    for f in os.listdir(path):
+                        if os.path.isfile(os.path.join(path, f)) and f == "main.py":
+                            # get Extension class from main.py
+                            spec = importlib.util.spec_from_file_location("main", os.path.join(path, f))
                             module = importlib.util.module_from_spec(spec)
                             spec.loader.exec_module(module)
-
-                            # initialize extension settings
-                            ExtensionClass = getattr(module, 'Extension')
-                            SettingsClass = getattr(module, 'Settings')
-                            settings = SettingsClass(app=self)
-                            for key, value in settings.__dict__.items():
-                                self.settings_manager.settings.__dict__[key] = value
-
-                            # initialize the extension
-                            extensions.append(ExtensionClass(self.settings_manager))
-
-        self.settings_manager.settings.available_extensions.set(extensions)
-        print("*" * 100)
-        print(f"EXTENSIONS LOADED ({len(extensions)}): ", extensions)
-        print("*" * 100)
+                            extension_class = getattr(module, "Extension")
+                            extensions.append(extension_class(self.settings_manager))
+        self.settings_manager.settings.active_extensions.set(extensions)
 
     def do_generator_tab_injection(self, tab_name, tab):
         """
@@ -401,11 +568,11 @@ class MainWindow(QApplication):
         :param tab:
         :return:
         """
-        for extension in self.settings_manager.settings.available_extensions.get():
+        for extension in self.settings_manager.settings.active_extensions.get():
             extension.generator_tab_injection(tab, tab_name)
 
     def do_generate_data_injection(self, data):
-        for extension in self.settings_manager.settings.available_extensions.get():
+        for extension in self.settings_manager.settings.active_extensions.get():
             data = extension.generate_data_injection(data)
         return data
 
@@ -491,10 +658,6 @@ class MainWindow(QApplication):
     def toggle_resize_on_paste(self):
         self.settings_manager.settings.resize_on_paste.set(self.window.actionResize_on_Paste.isChecked())
 
-    def initialize_shortcuts(self):
-        # on shift + mouse scroll change working width
-        self.window.wheelEvent = self.change_width
-
     def change_width(self, event):
         grid_size = self.grid_size
 
@@ -557,9 +720,6 @@ class MainWindow(QApplication):
                     trained_token = loaded_learned_embeds["name"]
                 tokens.append(trained_token)
         return tokens
-
-    def initialize_filters(self):
-        pass
 
     def toggle_stylesheet(self, path):
         # use fopen to open the file
@@ -642,7 +802,7 @@ class MainWindow(QApplication):
             item.widget().frame.setStyleSheet(self.layer_highlight_style)
 
     def new_document(self):
-        self.canvas = Canvas(self)
+        self.initialize_canvas()
         self.is_saved = False
         self.is_dirty = False
         self._document_name = "Untitled"
@@ -961,28 +1121,6 @@ class MainWindow(QApplication):
         self.show_layers()
         self.canvas.update()
 
-    def show_initialize_buttons(self):
-        self.window.eraser_button.clicked.connect(lambda: self.set_tool("eraser"))
-        self.window.brush_button.clicked.connect(lambda: self.set_tool("brush"))
-        self.window.active_grid_area_button.clicked.connect(lambda: self.set_tool("active_grid_area"))
-        self.window.move_button.clicked.connect(lambda: self.set_tool("move"))
-        #self.window.select_button.clicked.connect(lambda: self.set_tool("select"))
-        self.window.primary_color_button.clicked.connect(self.set_primary_color)
-        self.window.secondary_color_button.clicked.connect(self.set_secondary_color)
-        self.window.grid_button.clicked.connect(self.toggle_grid)
-        self.window.undo_button.clicked.connect(self.undo)
-        self.window.redo_button.clicked.connect(self.redo)
-        self.window.nsfw_button.clicked.connect(self.toggle_nsfw_filter)
-        self.window.focus_button.clicked.connect(self.focus_button_clicked)
-        self.window.wordballoon_button.clicked.connect(self.word_balloon_button_clicked)
-        self.set_button_colors()
-        self.window.grid_button.setChecked(
-            self.settings_manager.settings.show_grid.get() == True
-        )
-        self.window.nsfw_button.setChecked(
-            self.settings_manager.settings.nsfw_filter.get() == True
-        )
-
     def set_button_colors(self):
         # set self.window.primaryColorButton color
         self.window.primary_color_button.setStyleSheet(
@@ -1047,15 +1185,6 @@ class MainWindow(QApplication):
 
         self.window.status_label.setText(msg)
 
-    def initialize_stable_diffusion(self):
-        self.client = OfflineClient(
-            app=self,
-            tqdm_var=self.tqdm_var,
-            image_var=self.image_var,
-            error_var=self.error_var,
-            message_var=self.message_var,
-        )
-
     def video_handler(self, data):
         filename = data["video_filename"]
         VideoPopup(settings_manager=self.settings_manager, file_path=filename)
@@ -1078,163 +1207,8 @@ class MainWindow(QApplication):
         self.window.canvas_container.setStyleSheet(f"background-color: {color};")
         self.window.canvas_container.setAutoFillBackground(True)
 
-    def initialize_tabs(self):
-        # load all the forms
-        sections = ["txt2img", "img2img", "depth2img", "pix2pix", "outpaint", "controlnet", "txt2vid"]
-        HERE = os.path.dirname(os.path.abspath(__file__))
-        self.tabs = {}
-        for tab in sections:
-            self.tabs[tab] = uic.loadUi(os.path.join(HERE, "pyqt/generate_form.ui"))
-
-        for tab in self.tabs:
-            if tab != "controlnet":
-                self.tabs[tab].controlnet_label.deleteLater()
-                self.tabs[tab].controlnet_dropdown.deleteLater()
-            else:
-                controlnet_options = [
-                    "Canny",
-                    "Depth",
-                    "Hed",
-                    "MLSD",
-                    "Normal",
-                    "Scribble",
-                    "Segmentation",
-                ]
-                for option in controlnet_options:
-                    self.tabs[tab].controlnet_dropdown.addItem(option)
-            if tab in ["txt2img", "pix2pix", "outpaint", "super_resolution", "txt2vid"]:
-                self.tabs[tab].strength.deleteLater()
-            if tab in ["txt2img", "img2img", "depth2img", "outpaint", "controlnet", "super_resolution", "txt2vid"]:
-                self.tabs[tab].image_scale_box.deleteLater()
-            if tab in ["txt2vid"]:
-                self.tabs[tab].scheduler_label.deleteLater()
-                self.tabs[tab].scheduler_dropdown.deleteLater()
-
-
-        # add all the tabs
-        for tab in sections:
-            self.window.tabWidget.addTab(self.tabs[tab], tab)
-
-        # iterate over each tab and connect steps_slider with steps_spinbox
-        for tab_name in self.tabs.keys():
-            tab = self.tabs[tab_name]
-            self.load_embeddings(tab)
-            self.do_generator_tab_injection(tab_name, tab)
-
-            tab.steps_slider.valueChanged.connect(lambda val, _tab=tab: self.handle_steps_slider_change(val, _tab))
-            tab.steps_spinbox.valueChanged.connect(lambda val, _tab=tab: self.handle_steps_spinbox_change(val, _tab))
-
-            # load models by section
-            self.load_model_by_section(tab, tab_name)
-
-            # on change of tab.model_dropdown set the model in self.settings_manager
-            tab.model_dropdown.currentIndexChanged.connect(
-                lambda val, _tab=tab, _section=tab_name: self.set_model(_tab, _section, val)
-            )
-
-            # set schedulers for each tab
-            if tab_name not in ["txt2vid"]:
-                tab.scheduler_dropdown.addItems(AVAILABLE_SCHEDULERS_BY_ACTION[tab_name])
-                # on change of tab.scheduler_dropdown set the scheduler in self.settings_manager
-                tab.scheduler_dropdown.currentIndexChanged.connect(
-                    lambda val, _tab=tab, _section=tab_name: self.set_scheduler(_tab, _section, val)
-                )
-
-            # scale slider
-            tab.scale_slider.valueChanged.connect(lambda val, _tab=tab: self.handle_scale_slider_change(val, _tab))
-            tab.scale_spinbox.valueChanged.connect(lambda val, _tab=tab: self.handle_scale_spinbox_change(val, _tab))
-
-            tab.image_scale_slider.valueChanged.connect(lambda val, _tab=tab: self.handle_image_scale_slider_change(val, _tab))
-            tab.image_scale_spinbox.valueChanged.connect(lambda val, _tab=tab: self.handle_image_scale_spinbox_change(val, _tab))
-
-            # strength slider
-            section = tab_name
-            if section in ["img2img", "depth2img", "controlnet"]:
-                if section == "img2img":
-                    strength = self.settings_manager.settings.img2img_strength.get()
-                elif section == "depth2img":
-                    strength = self.settings_manager.settings.depth2img_strength.get()
-                elif section == "controlnet":
-                    strength = self.settings_manager.settings.controlnet_strength.get()
-                tab.strength_slider.setValue(int(strength * 100))
-                tab.strength_spinbox.setValue(strength / 100)
-                tab.strength_slider.valueChanged.connect(lambda val, _tab=tab: self.handle_strength_slider_change(val, _tab))
-                tab.strength_spinbox.valueChanged.connect(lambda val, _tab=tab: self.handle_strength_spinbox_change(val, _tab))
-
-            if section == "txt2vid":
-                # change the label tab.samples_groupbox label to "Frames"
-                tab.samples_groupbox.setTitle("Frames")
-
-            # seed slider
-            # seed is QTextEdit
-            def text_changed(tab):
-                try:
-                    val = int(tab.seed.toPlainText())
-                    self.seed = val
-                except ValueError:
-                    pass
-
-            def handle_random_checkbox_change(val, _tab):
-                if val == 2:
-                    self.random_seed = True
-                else:
-                    self.random_seed = False
-                _tab.seed.setEnabled(not self.random_seed)
-
-            tab.seed.textChanged.connect(lambda _tab=tab: text_changed(_tab))
-            tab.random_checkbox.stateChanged.connect(lambda val, _tab=tab: handle_random_checkbox_change(val, _tab))
-
-            tab.random_checkbox.setChecked(self.random_seed == True)
-
-            # samples slider
-            tab.samples_slider.valueChanged.connect(lambda val, _tab=tab: self.handle_samples_slider_change(val, _tab))
-            tab.samples_spinbox.valueChanged.connect(lambda val, _tab=tab: self.handle_samples_spinbox_change(val, _tab))
-
-            # if samples is greater than 1 enable the interrupt_button
-            if tab.samples_spinbox.value() > 1:
-                tab.interrupt_button.setEnabled(tab.samples_spinbox.value() > 1)
-
-            self.set_default_values(tab_name, tab)
-
-        # assign callback to generate function on tab
-        self.window.tabWidget.currentChanged.connect(self.tab_changed_callback)
-
-        # add callbacks
-        for tab in sections:
-            self.tabs[tab].generate.clicked.connect(self.generate_callback)
-        # super_resolution_form.generate.clicked.connect(self.generate_callback)
-
-        self.canvas = Canvas(self)
-
-        # set up all callbacks on window menu bar
-        self.window.actionGrid.triggered.connect(self.show_grid_settings)
-        self.window.actionPreferences.triggered.connect(self.show_preferences)
-        self.window.actionAbout.triggered.connect(self.show_about)
-        self.window.actionCanvas_color.triggered.connect(self.show_canvas_color)
-        self.window.actionAdvanced.triggered.connect(self.show_advanced)
-        self.window.actionBug_report.triggered.connect(lambda: webbrowser.open("https://github.com/Capsize-Games/airunner/issues/new?assignees=&labels=&template=bug_report.md&title="))
-        self.window.actionReport_vulnerability.triggered.connect(lambda: webbrowser.open("https://github.com/Capsize-Games/airunner/security/advisories/new"))
-        self.window.actionDiscord.triggered.connect(lambda: webbrowser.open("https://discord.gg/PUVDDCJ7gz"))
-        self.window.actionExtensions.triggered.connect(self.show_extensions)
-
-        # remove extensions menu item for now
-        self.window.actionExtensions.deleteLater()
-
-        self.window.actionInvert.triggered.connect(self.do_invert)
-
-        self.initialize_size_form_elements()
-
     def show_extensions(self):
-        self.extensions_window = ExtensionsWindow(self)
-
-    def initialize_size_form_elements(self):
-        # width form elements
-        self.window.width_slider.valueChanged.connect(lambda val: self.handle_width_slider_change(val))
-        self.window.width_spinbox.valueChanged.connect(lambda val: self.handle_width_spinbox_change(val))
-
-        # height form elements
-        self.window.height_slider.valueChanged.connect(lambda val: self.handle_height_slider_change(val))
-        self.window.height_spinbox.valueChanged.connect(lambda val: self.handle_height_spinbox_change(val))
+        self.extensions_window = ExtensionsWindow(self.settings_manager)
 
     def insert_into_prompt(self, text):
         # insert text into current tab prompt
