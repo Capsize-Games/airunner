@@ -278,6 +278,7 @@ class MainWindow(QApplication):
         self.window.actionCopy.triggered.connect(self.copy_image)
         self.window.actionResize_on_Paste.triggered.connect(self.toggle_resize_on_paste)
         self.initialize_filter_actions()
+        self.window.actionResize_on_Paste.setChecked(self.settings_manager.settings.resize_on_paste.get())
 
     def initialize_filter_actions(self):
         self.filter_box_blur = FilterBoxBlur(parent=self)
