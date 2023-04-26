@@ -9,15 +9,18 @@ class BaseExtension:
     extension_directory = None
 
     def __init__(self, settings_manager=None):
-        self._settings_manager = settings_manager
+        self.settings_manager = settings_manager
 
     @property
     def settings(self):
-        return self._settings_manager.settings
+        return self.settings_manager.settings
 
     @property
     def model_base_path(self):
-        return self._settings_manager.settings.model_base_path.get()
+        return self.settings_manager.settings.model_base_path.get()
+
+    def save_settings(self):
+        self.settings_manager.save_settings()
 
     def load_template(self, template_name):
         path = self.model_base_path
