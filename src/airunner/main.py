@@ -34,7 +34,6 @@ import qdarktheme
 
 class MainWindow(QApplication):
     progress_bar_started = False
-    use_pixels = False
     action = "txt2img"
     sections = [
             "txt2img",
