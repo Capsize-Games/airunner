@@ -1,24 +1,21 @@
 import importlib
-import io
 import os
 import pickle
 import random
 import sys
 import webbrowser
-import zipfile
 import cv2
 import numpy as np
-import requests
 import torch
 from PIL import Image
 from PyQt6 import uic, QtCore, QtGui
-from PyQt6.QtWidgets import QApplication, QLabel, QWidget, QColorDialog, QFileDialog, QVBoxLayout, QDialog, QSpacerItem, \
+from PyQt6.QtWidgets import QApplication, QLabel, QWidget, QColorDialog, QFileDialog, QVBoxLayout, QSpacerItem, \
     QSizePolicy
 from PyQt6.QtCore import QPoint, pyqtSlot, QRect, QPointF
 from PyQt6.QtGui import QPainter, QIcon, QColor, QGuiApplication
 from aihandler.qtvar import TQDMVar, ImageVar, MessageHandlerVar, ErrorHandlerVar
 from aihandler.settings import MAX_SEED, AVAILABLE_SCHEDULERS_BY_ACTION, MODELS, LOG_LEVEL
-from aihandler.util import get_extensions_from_path, import_extension_class
+from aihandler.util import get_extensions_from_path
 from airunner.history import History
 from airunner.windows.about import AboutWindow
 from airunner.windows.advanced_settings import AdvancedSettings
@@ -27,7 +24,7 @@ from airunner.windows.grid_settings import GridSettings
 from airunner.windows.preferences import PreferencesWindow
 from airunner.windows.video import VideoPopup
 from airunner.qtcanvas import Canvas
-from airunner.settingsmanager import SettingsManager
+from aihandler.settings_manager import SettingsManager
 from airunner.runai_client import OfflineClient
 from airunner.filters import FilterGaussianBlur, FilterBoxBlur, FilterUnsharpMask, FilterSaturation, \
     FilterColorBalance, FilterPixelArt
