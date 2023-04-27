@@ -382,12 +382,18 @@ class MainWindow(QApplication):
             else:
                 controlnet_options = [
                     "Canny",
-                    "Depth",
-                    "Hed",
                     "MLSD",
+                    "Depth",
                     "Normal",
-                    "Scribble",
                     "Segmentation",
+                    "Lineart",
+                    "Openpose",
+                    "Scribble",
+                    "Softedge",
+                    "Pixel2Pixel",
+                    "Inpaint",
+                    "Shuffle",
+                    "Anime",
                 ]
                 for option in controlnet_options:
                     self.tabs[tab].controlnet_dropdown.addItem(option)
