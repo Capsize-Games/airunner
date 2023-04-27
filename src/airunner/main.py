@@ -220,11 +220,11 @@ class MainWindow(QApplication):
         self.exec()
 
     def initialize(self):
+        self.initialize_settings_manager()
         self.initialize_tqdm()
         self.initialize_handlers()
         self.initialize_window()
         self.initialize_history()
-        self.initialize_settings_manager()
         self.initialize_canvas()
         self.initialize_tabs()
         self.initialize_size_sliders()
@@ -278,7 +278,7 @@ class MainWindow(QApplication):
         self.window.actionCopy.triggered.connect(self.copy_image)
         self.window.actionResize_on_Paste.triggered.connect(self.toggle_resize_on_paste)
         self.initialize_filter_actions()
-        self.window.actionResize_on_Paste.setChecked(self.settings_manager.settings.resize_on_paste.get())
+        self.window.actionResize_on_Paste.setChecked(self.settings_manager.settings.resize_on_paste.get() == True)
 
     def initialize_filter_actions(self):
         self.filter_box_blur = FilterBoxBlur(parent=self)
