@@ -414,7 +414,7 @@ class MainWindow(QApplication):
         for tab_name in self.tabs.keys():
             tab = self.tabs[tab_name]
             self.load_embeddings(tab)
-            self.do_generator_tab_injection(tab_name, tab)
+            self.do_generator_tab_injection(tab, tab_name)
 
             tab.steps_slider.valueChanged.connect(lambda val, _tab=tab: self.handle_steps_slider_change(val, _tab))
             tab.steps_spinbox.valueChanged.connect(lambda val, _tab=tab: self.handle_steps_spinbox_change(val, _tab))
@@ -568,7 +568,7 @@ class MainWindow(QApplication):
                             extensions.append(extension_class(self.settings_manager))
         self.settings_manager.settings.active_extensions.set(extensions)
 
-    def do_generator_tab_injection(self, tab_name, tab):
+    def do_generator_tab_injection(self, tab, tab_name):
         """
         Ibjects extensions into the generator tab widget.
         :param tab_name:
