@@ -29,6 +29,7 @@ from airunner.runai_client import OfflineClient
 from airunner.filters import FilterGaussianBlur, FilterBoxBlur, FilterUnsharpMask, FilterSaturation, \
     FilterColorBalance, FilterPixelArt
 from airunner.balloon import Balloon
+from airunner.extensions import BaseExtension
 import qdarktheme
 
 
