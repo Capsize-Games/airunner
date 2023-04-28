@@ -3,8 +3,10 @@ import torch
 from PyQt6.QtWidgets import QLabel, QWidget, QVBoxLayout
 
 
-class EmbeddingManager:
+class EmbeddingMixin:
     _embedding_names = None
+    settings_manager = None
+    window = None
 
     @property
     def embedding_names(self):

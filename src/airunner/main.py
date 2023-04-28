@@ -13,10 +13,10 @@ from PyQt6.QtCore import QPoint, pyqtSlot, QRect, QPointF
 from PyQt6.QtGui import QPainter, QIcon, QColor, QGuiApplication
 from aihandler.qtvar import TQDMVar, ImageVar, MessageHandlerVar, ErrorHandlerVar
 from aihandler.settings import MAX_SEED, AVAILABLE_SCHEDULERS_BY_ACTION, MODELS, LOG_LEVEL
-from airunner.managers.embedding_manager import EmbeddingManager
-from airunner.managers.extension_manager import ExtensionManager
+from airunner.mixins.embedding_mixin import EmbeddingMixin
+from airunner.mixins.extension_mixin import ExtensionMixin
+from airunner.mixins.layer_mixin import LayerMixin
 from airunner.history import History
-from airunner.managers.layer_manager import LayerManager
 from airunner.windows.about import AboutWindow
 from airunner.windows.advanced_settings import AdvancedSettings
 from airunner.windows.extensions import ExtensionsWindow
@@ -34,9 +34,9 @@ import qdarktheme
 
 class MainWindow(
     QApplication,
-    ExtensionManager,
-    EmbeddingManager,
-    LayerManager
+    ExtensionMixin,
+    EmbeddingMixin,
+    LayerMixin
 ):
     progress_bar_started = False
     action = "txt2img"
