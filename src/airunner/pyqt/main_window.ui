@@ -145,7 +145,7 @@
        <property name="verticalSpacing">
         <number>9</number>
        </property>
-       <item row="4" column="0">
+       <item row="5" column="0">
         <widget class="QWidget" name="horizontalWidget" native="true">
          <property name="sizePolicy">
           <sizepolicy hsizetype="Fixed" vsizetype="Preferred">
@@ -650,7 +650,7 @@
          </layout>
         </widget>
        </item>
-       <item row="3" column="0">
+       <item row="4" column="0">
         <widget class="QScrollArea" name="layers">
          <property name="frameShadow">
           <enum>QFrame::Plain</enum>
@@ -667,7 +667,7 @@
             <x>0</x>
             <y>0</y>
             <width>239</width>
-            <height>316</height>
+            <height>289</height>
            </rect>
           </property>
           <property name="sizePolicy">
@@ -678,6 +678,13 @@
           </property>
           <layout class="QVBoxLayout" name="verticalLayout"/>
          </widget>
+        </widget>
+       </item>
+       <item row="3" column="0">
+        <widget class="QCheckBox" name="singleLayerCheckbox">
+         <property name="text">
+          <string>Treat as single layer</string>
+         </property>
         </widget>
        </item>
       </layout>

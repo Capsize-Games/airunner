@@ -218,7 +218,7 @@ class MainWindow(
         self.initialize_canvas()
         self.initialize_tabs()
         self.initialize_size_sliders()
-        self.initialize_layer_buttons()
+        LayerMixin.initialize(self)
         self.initialize_menu_bar()
         self.initialize_filters()
         self.initialize_shortcuts()

@@ -11,6 +11,7 @@ class LayerMixin:
     window = None
     canvas = None
     history = None
+    layers_as_single = False
 
     @property
     def layer_highlight_style(self):
@@ -20,11 +21,15 @@ class LayerMixin:
     def layer_normal_style(self):
         return "background-color: #ffffff; border: 1px solid #333333; color: #333;"
 
-    def initialize_layer_buttons(self):
+    def initialize(self):
         self.window.new_layer.clicked.connect(self.new_layer)
         self.window.layer_up_button.clicked.connect(self.layer_up_button)
         self.window.layer_down_button.clicked.connect(self.layer_down_button)
         self.window.delete_layer_button.clicked.connect(self.delete_layer_button)
+        self.window.singleLayerCheckbox.stateChanged.connect(self.set_layers_as_single)
+
+    def set_layers_as_single(self, state):
+        self.layers_as_single = state == 2
 
     def undo_new_layer(self, previous_event):
         layers = self.canvas.get_layers_copy()
