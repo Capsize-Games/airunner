@@ -325,6 +325,9 @@ class MainWindow(QApplication):
             self.window.nsfw_button.setChecked(True)
         self.window.darkmode_button.clicked.connect(self.toggle_darkmode)
 
+        # remove word balloon button until next release
+        self.window.wordballoon_button.setParent(None)
+
     def initialize_filters(self):
         self.filter_gaussian_blur = FilterGaussianBlur(parent=self)
         self.window.actionGaussian_Blur.triggered.connect(self.filter_gaussian_blur.show)
