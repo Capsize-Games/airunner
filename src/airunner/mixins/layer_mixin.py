@@ -4,12 +4,13 @@ from PyQt6.QtWidgets import QWidget, QVBoxLayout, QSpacerItem, QSizePolicy
 from PyQt6.QtGui import QIcon
 
 
-class LayerManager:
+class LayerMixin:
     """
     This is a mixin class for the main window that handles the layer manager.
     """
     window = None
     canvas = None
+    history = None
 
     @property
     def layer_highlight_style(self):
