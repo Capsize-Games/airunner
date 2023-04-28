@@ -3,7 +3,11 @@ import os
 from aihandler.util import get_extensions_from_path
 
 
-class ExtensionManager:
+class ExtensionMixin:
+    """
+    This is a mixin class that is used to manage extensions.
+    """
+    settings_manager = None
     active_extensions = []
 
     def get_extensions_from_path(self):
