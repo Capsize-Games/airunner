@@ -74,6 +74,7 @@ a = Analysis(
     hiddenimports=[
         "aihandler",
         "airunner",
+        "airunner.extensions",
         "accelerate",
         "xformers",
         "xformers.ops",
