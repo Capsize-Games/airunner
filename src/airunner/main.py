@@ -16,6 +16,8 @@ from PyQt6.QtGui import QPainter, QIcon, QColor, QGuiApplication
 from aihandler.qtvar import TQDMVar, ImageVar, MessageHandlerVar, ErrorHandlerVar
 from aihandler.settings import MAX_SEED, AVAILABLE_SCHEDULERS_BY_ACTION, MODELS, LOG_LEVEL
 from aihandler.util import get_extensions_from_path
+from airunner.embedding_manager import EmbeddingManager
+from airunner.extension_manager import ExtensionManager
 from airunner.history import History
 from airunner.windows.about import AboutWindow
 from airunner.windows.advanced_settings import AdvancedSettings
@@ -33,7 +35,11 @@ from airunner.extensions import BaseExtension
 import qdarktheme
 
 
-class MainWindow(QApplication):
+class MainWindow(
+    QApplication,
+    ExtensionManager,
+    EmbeddingManager
+):
     progress_bar_started = False
     action = "txt2img"
     sections = [
@@ -52,7 +58,6 @@ class MainWindow(QApplication):
     _document_name = "Untitled"
     _is_dirty = False
     is_saved = False
-    _embedding_names = []
 
     @property
     def layer_highlight_style(self):
@@ -205,12 +210,6 @@ class MainWindow(QApplication):
     @property
     def grid_size(self):
         return self.settings_manager.settings.size.get()
-
-    @property
-    def embedding_names(self):
-        if self._embedding_names is None:
-            self._embedding_names = self.get_list_of_available_embedding_names()
-        return self._embedding_names
 
     def __init__(self, *args, **kwargs):
         self.set_log_levels()
@@ -537,63 +536,6 @@ class MainWindow(QApplication):
         uic.properties.logger.setLevel(LOG_LEVEL)
         uic.uiparser.logger.setLevel(LOG_LEVEL)
 
-    ##############################################
-    #  Begin extension functions
-    ##############################################
-    active_extensions = []
-
-    def get_extensions_from_path(self):
-        """
-        Initialize extensions by loading them from the extensions_directory.
-        These are extensions that have been activated by the user.
-        Extensions can be activated by manually adding them to the extensions folder
-        or by browsing for them in the extensions menu and activating them there.
-
-        This method initializes active extensions.
-        :return:
-        """
-        extensions = []
-        base_path = self.settings_manager.settings.model_base_path.get()
-        extension_path = os.path.join(base_path, "extensions")
-        if not os.path.exists(extension_path):
-            return extensions
-        available_extensions = get_extensions_from_path(extension_path)
-        for extension in available_extensions:
-            if extension.name.get() in self.settings_manager.settings.enabled_extensions.get():
-                repo = extension.repo.get()
-                name = repo.split("/")[-1]
-                path = os.path.join(extension_path, name)
-                if os.path.exists(path):
-                    print(path)
-                    for f in os.listdir(path):
-                        if os.path.isfile(os.path.join(path, f)) and f == "main.py":
-                            # get Extension class from main.py
-                            spec = importlib.util.spec_from_file_location("main", os.path.join(path, f))
-                            module = importlib.util.module_from_spec(spec)
-                            spec.loader.exec_module(module)
-                            extension_class = getattr(module, "Extension")
-                            extensions.append(extension_class(self.settings_manager))
-        self.settings_manager.settings.active_extensions.set(extensions)
-
-    def do_generator_tab_injection(self, tab, tab_name):
-        """
-        Ibjects extensions into the generator tab widget.
-        :param tab_name:
-        :param tab:
-        :return:
-        """
-        for extension in self.settings_manager.settings.active_extensions.get():
-            extension.generator_tab_injection(tab, tab_name)
-
-    def do_generate_data_injection(self, data):
-        for extension in self.settings_manager.settings.active_extensions.get():
-            data = extension.generate_data_injection(data)
-        return data
-
-    ##############################################
-    #  End extension functions
-    ##############################################
-
     def set_size_form_element_step_values(self):
         size = self.grid_size
         self.window.width_slider.singleStep = size
@@ -710,30 +652,6 @@ class MainWindow(QApplication):
             self.canvas.update()
             self.window.width_slider.setValue(size)
             self.window.width_spinbox.setValue(size)
-
-    def load_embeddings(self, tab):
-        # create a widget that can be added to scroll area
-        container = QWidget()
-        container.setLayout(QVBoxLayout())
-        for embedding_name in self.embedding_names:
-            label = QLabel(embedding_name)
-            # add label to the contianer
-            container.layout().addWidget(label)
-            # on double click of label insert it into the prompt
-            label.mouseDoubleClickEvent = lambda event, _label=label: self.insert_into_prompt(_label.text())
-        tab.embeddings.setWidget(container)
-
-    def get_list_of_available_embedding_names(self):
-        embeddings_folder = os.path.join(self.settings_manager.settings.model_base_path.get(), "embeddings")
-        tokens = []
-        if os.path.exists(embeddings_folder):
-            for f in os.listdir(embeddings_folder):
-                loaded_learned_embeds = torch.load(os.path.join(embeddings_folder, f), map_location="cpu")
-                trained_token = list(loaded_learned_embeds.keys())[0]
-                if trained_token == "string_to_token":
-                    trained_token = loaded_learned_embeds["name"]
-                tokens.append(trained_token)
-        return tokens
 
     def toggle_stylesheet(self, path):
         # use fopen to open the file
@@ -1223,11 +1141,6 @@ class MainWindow(QApplication):
 
     def show_extensions(self):
         self.extensions_window = ExtensionsWindow(self.settings_manager)
-
-    def insert_into_prompt(self, text):
-        # insert text into current tab prompt
-        tab = self.window.tabWidget.currentWidget()
-        tab.prompt.insertPlainText(text)
 
     def handle_width_slider_change(self, val):
         self.window.width_spinbox.setValue(val)
