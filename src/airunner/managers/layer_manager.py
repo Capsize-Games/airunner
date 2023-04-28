@@ -5,6 +5,12 @@ from PyQt6.QtGui import QIcon
 
 
 class LayerManager:
+    """
+    This is a mixin class for the main window that handles the layer manager.
+    """
+    window = None
+    canvas = None
+
     @property
     def layer_highlight_style(self):
         return f"background-color: #c7f6fc; border: 1px solid #000000; color: #000000;"
@@ -60,9 +66,10 @@ class LayerManager:
         self.show_layers()
 
     def show_layers(self):
-        # iterate over layers and add to self.window.layers list widget
-        # each layer should be a layer.ui file item populated with the data from the layer object within
-        # self.canvas.layers
+        """
+        This function is called when the layers need to be updated.
+        :return:
+        """
 
         # create an object which can contain a layer_obj and then be added to layers.setWidget
         container = QWidget()
@@ -70,9 +77,6 @@ class LayerManager:
 
         index = 0
         for layer in self.canvas.layers:
-            # add layer to self.window.layers list widget
-            # each layer should be a layer.ui file item populated with the data from the layer object within
-            # self.canvas.layers
             HERE = os.path.dirname(os.path.abspath(__file__))
             layer_obj = uic.loadUi(os.path.join(HERE, "..", "pyqt/layer.ui"))
             layer_obj.layer_name.setText(layer.name)
@@ -88,17 +92,15 @@ class LayerManager:
             else:
                 layer_obj.frame.setStyleSheet(self.layer_normal_style)
 
-            # enable delete button in layer_obj
             layer_obj.visible_button.setIcon(QIcon("src/icons/eye.png" if layer.visible else "src/icons/eye-off.png"))
-            #layer_obj.delete_button.clicked.connect(lambda _, _index=index: self.canvas.delete_layer(_index))
             layer_obj.visible_button.clicked.connect(lambda _, _layer=layer, _layer_obj=layer_obj: self.toggle_layer_visibility(_layer, _layer_obj))
-            # layer_obj.up_button.clicked.connect(lambda _, _layer=layer: self.canvas.move_layer_up(_layer))
-            # layer_obj.down_button.clicked.connect(lambda _, _layer=layer: self.canvas.move_layer_down(_layer))
 
             container.layout().addWidget(layer_obj)
             index += 1
+
         # add a spacer to the bottom of the container
         container.layout().addSpacerItem(QSpacerItem(0, 0, QSizePolicy.Policy.Minimum, QSizePolicy.Policy.Expanding))
+
         self.window.layers.setWidget(container)
         self.container = container
 
@@ -112,7 +114,6 @@ class LayerManager:
         if item:
             item.widget().frame.setStyleSheet(self.layer_normal_style)
         self.canvas.current_layer_index = index
-        # green border should only be on the outter frame not all elements
         item = self.container.layout().itemAt(self.canvas.current_layer_index)
         if item:
             item.widget().frame.setStyleSheet(self.layer_highlight_style)
@@ -121,7 +122,6 @@ class LayerManager:
         pass
 
     def resort_layers(self, event):
-        # move layer back to original position
         layer_order = event["layer_order"]
         # rearrange the current layers to match the layer order before the move
         sorted_layers = []
