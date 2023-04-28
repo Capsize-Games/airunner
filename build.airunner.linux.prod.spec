@@ -76,6 +76,8 @@ a = Analysis(
     datas=datas,
     hiddenimports=[
         "aihandler",
+        "airunner",
+        "airunner.extensions",
         "JIT",
         "triton",
         "triton._C",
