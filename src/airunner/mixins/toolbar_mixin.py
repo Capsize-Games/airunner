@@ -2,6 +2,12 @@ import os
 from PyQt6 import QtGui
 from PyQt6.QtWidgets import QColorDialog
 import qdarktheme
+import webbrowser
+from airunner.windows.about import AboutWindow
+from airunner.windows.advanced_settings import AdvancedSettings
+from airunner.windows.extensions import ExtensionsWindow
+from airunner.windows.grid_settings import GridSettings
+from airunner.windows.preferences import PreferencesWindow
 
 
 class ToolbarMixin:
@@ -41,6 +47,46 @@ class ToolbarMixin:
 
         # remove word balloon button until next release
         self.window.wordballoon_button.setParent(None)
+
+        self.window.actionGrid.triggered.connect(self.show_grid_settings)
+        self.window.actionPreferences.triggered.connect(self.show_preferences)
+        self.window.actionAbout.triggered.connect(self.show_about)
+        self.window.actionCanvas_color.triggered.connect(self.show_canvas_color)
+        self.window.actionAdvanced.triggered.connect(self.show_advanced)
+        self.window.actionBug_report.triggered.connect(lambda: webbrowser.open(
+            "https://github.com/Capsize-Games/airunner/issues/new?assignees=&labels=&template=bug_report.md&title="))
+        self.window.actionReport_vulnerability.triggered.connect(
+            lambda: webbrowser.open("https://github.com/Capsize-Games/airunner/security/advisories/new"))
+        self.window.actionDiscord.triggered.connect(lambda: webbrowser.open("https://discord.gg/PUVDDCJ7gz"))
+        self.window.actionExtensions.triggered.connect(self.show_extensions)
+        self.window.actionInvert.triggered.connect(self.do_invert)
+
+    def do_invert(self):
+        self.canvas.invert_image()
+        self.canvas.update()
+
+    def show_extensions(self):
+        self.extensions_window = ExtensionsWindow(self.settings_manager)
+
+    def show_canvas_color(self):
+        # show a color widget dialog and set the canvas color
+        color = QColorDialog.getColor()
+        if color.isValid():
+            color = color.name()
+            self.settings_manager.settings.canvas_color.set(color)
+            self.canvas.set_canvas_color()
+
+    def show_about(self):
+        AboutWindow(self.settings_manager)
+
+    def show_grid_settings(self):
+        GridSettings(self.settings_manager)
+
+    def show_preferences(self):
+        PreferencesWindow(self.settings_manager)
+
+    def show_advanced(self):
+        AdvancedSettings(self.settings_manager)
 
     def set_tool(self, tool):
         # uncheck all buttons that are not this tool
