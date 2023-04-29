@@ -8,6 +8,7 @@ from airunner.models.layerdata import LayerData
 from airunner.models.imagedata import ImageData
 from airunner.models.linedata import LineData
 
+
 class Canvas:
     saving = False
     select_start = None
@@ -665,6 +666,7 @@ class Canvas:
         self.create_image(QPoint(0, 0), image)
 
     def pen(self, event):
+        brush_color = "#ffffff"
         if event.button() == Qt.MouseButton.LeftButton or Qt.MouseButton.LeftButton in event.buttons():
             brush_color = self.settings_manager.settings.primary_color.get()
         elif event.button() == Qt.MouseButton.RightButton or Qt.MouseButton.RightButton in event.buttons():

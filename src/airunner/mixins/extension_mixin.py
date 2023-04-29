@@ -3,8 +3,17 @@ import os
 from aihandler.util import get_extensions_from_path
 
 
-class ExtensionManager:
+class ExtensionMixin:
+    """
+    This is a mixin class that is used to manage extensions.
+    """
     active_extensions = []
+
+    def initialize(self):
+        for tab_name in self.tabs.keys():
+            self.do_generator_tab_injection(self.tabs[tab_name], tab_name)
+        self.do_menubar_injection()
+        self.do_toolbar_injection()
 
     def get_extensions_from_path(self):
         """
@@ -28,7 +37,6 @@ class ExtensionManager:
                 name = repo.split("/")[-1]
                 path = os.path.join(extension_path, name)
                 if os.path.exists(path):
-                    print(path)
                     for f in os.listdir(path):
                         if os.path.isfile(os.path.join(path, f)) and f == "main.py":
                             # get Extension class from main.py
@@ -49,7 +57,10 @@ class ExtensionManager:
         for extension in self.settings_manager.settings.active_extensions.get():
             extension.generator_tab_injection(tab, tab_name)
 
-    def do_generate_data_injection(self, data):
+    def do_menubar_injection(self):
         for extension in self.settings_manager.settings.active_extensions.get():
-            data = extension.generate_data_injection(data)
-        return data
+            extension.menubar_injection(self.window.menubar)
+
+    def do_toolbar_injection(self):
+        for extension in self.settings_manager.settings.active_extensions.get():
+            extension.toolbar_injection(self.window.horizontalFrame)
