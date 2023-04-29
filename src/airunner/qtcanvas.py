@@ -8,6 +8,7 @@ from airunner.models.layerdata import LayerData
 from airunner.models.imagedata import ImageData
 from airunner.models.linedata import LineData
 
+
 class Canvas:
     saving = False
     select_start = None

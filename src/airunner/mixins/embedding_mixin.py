@@ -1,7 +1,6 @@
 import os
 import torch
 from PyQt6.QtWidgets import QLabel, QWidget, QVBoxLayout
-
 from airunner.mixins.base_mixin import BaseMixin
 
 
