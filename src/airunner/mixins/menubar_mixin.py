@@ -1,4 +1,3 @@
-import pickle
 from PyQt6.QtWidgets import QFileDialog
 from airunner.filters import FilterBoxBlur, FilterUnsharpMask, FilterSaturation, FilterColorBalance, FilterGaussianBlur, \
     FilterPixelArt
