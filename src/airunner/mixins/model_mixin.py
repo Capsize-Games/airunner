@@ -1,9 +1,8 @@
 import os
 from aihandler.settings import MODELS
-from airunner.mixins.base_mixin import BaseMixin
 
 
-class ModelMixin(BaseMixin):
+class ModelMixin:
     def refresh_model_list(self):
         for i in range(self.window.tabWidget.count()):
             self.load_model_by_section(self.window.tabWidget.widget(i), self.sections[i])

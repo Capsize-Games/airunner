@@ -1,8 +1,7 @@
-from airunner.mixins.base_mixin import BaseMixin
 from airunner.qtcanvas import Canvas
 
 
-class CanvasMixin(BaseMixin):
+class CanvasMixin:
     def initialize(self):
         self.canvas = Canvas(self)
         self.settings_manager.settings.show_grid.my_signal.connect(self.canvas.update)
