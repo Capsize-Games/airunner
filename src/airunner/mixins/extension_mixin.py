@@ -31,7 +31,6 @@ class ExtensionMixin:
                 name = repo.split("/")[-1]
                 path = os.path.join(extension_path, name)
                 if os.path.exists(path):
-                    print(path)
                     for f in os.listdir(path):
                         if os.path.isfile(os.path.join(path, f)) and f == "main.py":
                             # get Extension class from main.py
