@@ -147,7 +147,6 @@ class GeneratorMixin:
         for tab_name in self.tabs.keys():
             tab = self.tabs[tab_name]
             self.load_embeddings(tab)
-            self.do_generator_tab_injection(tab, tab_name)
 
             tab.steps_slider.valueChanged.connect(lambda val, _tab=tab: self.handle_steps_slider_change(val, _tab))
             tab.steps_spinbox.valueChanged.connect(lambda val, _tab=tab: self.handle_steps_spinbox_change(val, _tab))
@@ -551,16 +550,6 @@ class GeneratorMixin:
         }
         data = self.do_generate_data_injection(data)
         self.client.message = data
-
-    def do_generator_tab_injection(self, tab, tab_name):
-        """
-        Ibjects extensions into the generator tab widget.
-        :param tab_name:
-        :param tab:
-        :return:
-        """
-        for extension in self.settings_manager.settings.active_extensions.get():
-            extension.generator_tab_injection(tab, tab_name)
 
     def do_generate_data_injection(self, data):
         for extension in self.settings_manager.settings.active_extensions.get():
