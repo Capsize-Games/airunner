@@ -3,6 +3,7 @@ from PyQt6 import QtGui
 from PyQt6.QtWidgets import QColorDialog
 import qdarktheme
 import webbrowser
+from airunner.mixins.base_mixin import BaseMixin
 from airunner.windows.about import AboutWindow
 from airunner.windows.advanced_settings import AdvancedSettings
 from airunner.windows.extensions import ExtensionsWindow
@@ -10,12 +11,7 @@ from airunner.windows.grid_settings import GridSettings
 from airunner.windows.preferences import PreferencesWindow
 
 
-class ToolbarMixin:
-    window = None
-    settings_manager = None
-    canvas = None
-    history = None
-
+class ToolbarMixin(BaseMixin):
     def initialize(self):
         self.window.eraser_button.clicked.connect(lambda: self.set_tool("eraser"))
         self.window.brush_button.clicked.connect(lambda: self.set_tool("brush"))
@@ -27,7 +23,6 @@ class ToolbarMixin:
         self.window.grid_button.clicked.connect(self.toggle_grid)
         self.window.nsfw_button.clicked.connect(self.toggle_nsfw_filter)
         self.window.focus_button.clicked.connect(self.focus_button_clicked)
-        # self.window.wordballoon_button.clicked.connect(self.word_balloon_button_clicked)
         self.set_button_colors()
         self.window.grid_button.setChecked(self.settings_manager.settings.show_grid.get() == True)
         self.window.nsfw_button.setChecked(self.settings_manager.settings.nsfw_filter.get() == True)
@@ -44,10 +39,6 @@ class ToolbarMixin:
         if self.settings_manager.settings.nsfw_filter.get():
             self.window.nsfw_button.setChecked(True)
         self.window.darkmode_button.clicked.connect(self.toggle_darkmode)
-
-        # remove word balloon button until next release
-        self.window.wordballoon_button.setParent(None)
-
         self.window.actionGrid.triggered.connect(self.show_grid_settings)
         self.window.actionPreferences.triggered.connect(self.show_preferences)
         self.window.actionAbout.triggered.connect(self.show_about)
@@ -143,25 +134,6 @@ class ToolbarMixin:
 
     def focus_button_clicked(self):
         self.canvas.recenter()
-
-    # def word_balloon_button_clicked(self):
-    #     """
-    #     Create and add a word balloon to the canvas.
-    #     :return:
-    #     """
-    #     # create a word balloon
-    #     word_balloon = Balloon()
-    #     word_balloon.setGeometry(100, 100, 200, 100)
-    #     word_balloon.set_tail_pos(QPointF(50, 100))
-    #     # add the widget to the canvas
-    #     self.history.add_event({
-    #         "event": "add_widget",
-    #         "layer_index": self.canvas.current_layer_index,
-    #         "widgets": self.canvas.current_layer.widgets.copy(),
-    #     })
-    #     self.canvas.current_layer.widgets.append(word_balloon)
-    #     self.show_layers()
-    #     self.canvas.update()
 
     def toggle_darkmode(self):
         self.settings_manager.settings.dark_mode_enabled.set(not self.settings_manager.settings.dark_mode_enabled.get())

@@ -7,15 +7,11 @@ from PyQt6 import uic
 from PyQt6.QtCore import QPoint, QRect
 from PyQt6.QtGui import QColor
 from aihandler.settings import MAX_SEED, AVAILABLE_SCHEDULERS_BY_ACTION, MODELS
+from airunner.mixins.base_mixin import BaseMixin
 from airunner.windows.video import VideoPopup
 
 
-class GeneratorMixin:
-    settings_manager = None
-    canvas = None
-    window = None
-    settings = None
-
+class GeneratorMixin(BaseMixin):
     @property
     def width(self):
         return int(self.settings_manager.settings.working_width.get())
