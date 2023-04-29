@@ -31,30 +31,6 @@ class LayerMixin:
     def set_layers_as_single(self, state):
         self.layers_as_single = state == 2
 
-    def undo_new_layer(self, previous_event):
-        layers = self.canvas.get_layers_copy()
-        self.canvas.layers = previous_event["layers"]
-        self.canvas.current_layer_index = previous_event["layer_index"]
-        previous_event["layers"] = layers
-        return previous_event
-
-    def undo_move_layer(self, previous_event):
-        layer_order = []
-        for layer in self.canvas.layers:
-            layer_order.append(layer.uuid)
-        self.resort_layers(previous_event)
-        previous_event["layer_order"] = layer_order
-        self.history.undone_history.append(previous_event)
-        self.canvas.current_layer_index = previous_event["layer_index"]
-        return previous_event
-
-    def undo_delete_layer(self, previous_event):
-        layers = self.canvas.get_layers_copy()
-        self.canvas.layers = previous_event["layers"]
-        self.canvas.current_layer_index = previous_event["layer_index"]
-        previous_event["layers"] = layers
-        return previous_event
-
     def layer_up_button(self):
         self.canvas.move_layer_up(self.canvas.current_layer)
         self.show_layers()
@@ -126,37 +102,3 @@ class LayerMixin:
 
     def delete_layer(self):
         pass
-
-    def resort_layers(self, event):
-        layer_order = event["layer_order"]
-        # rearrange the current layers to match the layer order before the move
-        sorted_layers = []
-        for uuid in layer_order:
-            for layer in self.canvas.layers:
-                if layer.uuid == uuid:
-                    sorted_layers.append(layer)
-                    break
-        self.canvas.layers = sorted_layers
-
-    def redo_new_layer(self, undone_event):
-        layers = self.canvas.get_layers_copy()
-        self.canvas.layers = undone_event["layers"]
-        self.canvas.current_layer_index = undone_event["layer_index"]
-        undone_event["layers"] = layers
-        return undone_event
-
-    def redo_move_layer(self, undone_event):
-        layer_order = []
-        for layer in self.canvas.layers:
-            layer_order.append(layer.uuid)
-        self.resort_layers(undone_event)
-        undone_event["layer_order"] = layer_order
-        self.canvas.current_layer_index = undone_event["layer_index"]
-        return undone_event
-
-    def redo_delete_layer(self, undone_event):
-        layers = self.canvas.get_layers_copy()
-        self.canvas.layers = undone_event["layers"]
-        self.canvas.current_layer_index = undone_event["layer_index"]
-        undone_event["layers"] = layers
-        return undone_event
