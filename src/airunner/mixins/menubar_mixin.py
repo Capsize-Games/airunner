@@ -1,10 +1,9 @@
 from PyQt6.QtWidgets import QFileDialog
 from airunner.filters import FilterBoxBlur, FilterUnsharpMask, FilterSaturation, FilterColorBalance, FilterGaussianBlur, \
     FilterPixelArt
-from airunner.mixins.base_mixin import BaseMixin
 
 
-class MenubarMixin(BaseMixin):
+class MenubarMixin:
     def initialize(self):
         self.window.actionNew.triggered.connect(self.new_document)
         self.window.actionSave.triggered.connect(self.save_document)
@@ -17,6 +16,9 @@ class MenubarMixin(BaseMixin):
         self.window.actionResize_on_Paste.triggered.connect(self.toggle_resize_on_paste)
         self.initialize_filter_actions()
         self.window.actionResize_on_Paste.setChecked(self.settings_manager.settings.resize_on_paste.get() == True)
+
+    def quit(self):
+        print("QUIT WAS CALLED")
 
     def initialize_filter_actions(self):
         self.filter_gaussian_blur = FilterGaussianBlur(parent=self)

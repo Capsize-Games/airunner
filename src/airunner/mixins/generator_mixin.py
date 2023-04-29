@@ -7,11 +7,12 @@ from PyQt6 import uic
 from PyQt6.QtCore import QPoint, QRect
 from PyQt6.QtGui import QColor
 from aihandler.settings import MAX_SEED, AVAILABLE_SCHEDULERS_BY_ACTION, MODELS
-from airunner.mixins.base_mixin import BaseMixin
 from airunner.windows.video import VideoPopup
 
 
-class GeneratorMixin(BaseMixin):
+class GeneratorMixin:
+    tabs = None
+
     @property
     def width(self):
         return int(self.settings_manager.settings.working_width.get())
@@ -103,12 +104,11 @@ class GeneratorMixin(BaseMixin):
         self.settings.scheduler_var.set(val)
 
     def initialize(self):
-        # load all the forms
         sections = ["txt2img", "img2img", "depth2img", "pix2pix", "outpaint", "controlnet", "txt2vid"]
-        HERE = os.path.dirname(os.path.abspath(__file__))
         self.tabs = {}
         for tab in sections:
-            self.tabs[tab] = uic.loadUi(os.path.join(HERE, "..", "pyqt/generate_form.ui"))
+            self.tabs[tab] = uic.loadUi(os.path.join(
+                os.path.dirname(os.path.abspath(__file__)), "..", "pyqt/generate_form.ui"))
 
         for tab in self.tabs:
             if tab != "controlnet":
@@ -140,8 +140,6 @@ class GeneratorMixin(BaseMixin):
                 self.tabs[tab].scheduler_label.deleteLater()
                 self.tabs[tab].scheduler_dropdown.deleteLater()
 
-
-        # add all the tabs
         for tab in sections:
             self.window.tabWidget.addTab(self.tabs[tab], tab)
 
@@ -174,11 +172,14 @@ class GeneratorMixin(BaseMixin):
             tab.scale_slider.valueChanged.connect(lambda val, _tab=tab: self.handle_scale_slider_change(val, _tab))
             tab.scale_spinbox.valueChanged.connect(lambda val, _tab=tab: self.handle_scale_spinbox_change(val, _tab))
 
-            tab.image_scale_slider.valueChanged.connect(lambda val, _tab=tab: self.handle_image_scale_slider_change(val, _tab))
-            tab.image_scale_spinbox.valueChanged.connect(lambda val, _tab=tab: self.handle_image_scale_spinbox_change(val, _tab))
+            tab.image_scale_slider.valueChanged.connect(
+                lambda val, _tab=tab: self.handle_image_scale_slider_change(val, _tab))
+            tab.image_scale_spinbox.valueChanged.connect(
+                lambda val, _tab=tab: self.handle_image_scale_spinbox_change(val, _tab))
 
             # strength slider
             section = tab_name
+            strength = 0
             if section in ["img2img", "depth2img", "controlnet"]:
                 if section == "img2img":
                     strength = self.settings_manager.settings.img2img_strength.get()
@@ -188,37 +189,26 @@ class GeneratorMixin(BaseMixin):
                     strength = self.settings_manager.settings.controlnet_strength.get()
                 tab.strength_slider.setValue(int(strength * 100))
                 tab.strength_spinbox.setValue(strength / 100)
-                tab.strength_slider.valueChanged.connect(lambda val, _tab=tab: self.handle_strength_slider_change(val, _tab))
-                tab.strength_spinbox.valueChanged.connect(lambda val, _tab=tab: self.handle_strength_spinbox_change(val, _tab))
+                tab.strength_slider.valueChanged.connect(
+                    lambda val, _tab=tab: self.handle_strength_slider_change(val, _tab))
+                tab.strength_spinbox.valueChanged.connect(
+                    lambda val, _tab=tab: self.handle_strength_spinbox_change(val, _tab))
 
             if section == "txt2vid":
                 # change the label tab.samples_groupbox label to "Frames"
                 tab.samples_groupbox.setTitle("Frames")
 
-            # seed slider
-            # seed is QTextEdit
-            def text_changed(tab):
-                try:
-                    val = int(tab.seed.toPlainText())
-                    self.seed = val
-                except ValueError:
-                    pass
+            tab.seed.textChanged.connect(lambda _tab=tab: self.text_changed(_tab))
+            tab.random_checkbox.stateChanged.connect(
+                lambda val, _tab=tab: self.handle_random_checkbox_change(val, _tab))
 
-            def handle_random_checkbox_change(val, _tab):
-                if val == 2:
-                    self.random_seed = True
-                else:
-                    self.random_seed = False
-                _tab.seed.setEnabled(not self.random_seed)
-
-            tab.seed.textChanged.connect(lambda _tab=tab: text_changed(_tab))
-            tab.random_checkbox.stateChanged.connect(lambda val, _tab=tab: handle_random_checkbox_change(val, _tab))
-
-            tab.random_checkbox.setChecked(self.random_seed == True)
+            tab.random_checkbox.setChecked(self.random_seed is True)
 
             # samples slider
-            tab.samples_slider.valueChanged.connect(lambda val, _tab=tab: self.handle_samples_slider_change(val, _tab))
-            tab.samples_spinbox.valueChanged.connect(lambda val, _tab=tab: self.handle_samples_spinbox_change(val, _tab))
+            tab.samples_slider.valueChanged.connect(
+                lambda val, _tab=tab: self.handle_samples_slider_change(val, _tab))
+            tab.samples_spinbox.valueChanged.connect(
+                lambda val, _tab=tab: self.handle_samples_spinbox_change(val, _tab))
 
             # if samples is greater than 1 enable the interrupt_button
             if tab.samples_spinbox.value() > 1:
@@ -237,6 +227,20 @@ class GeneratorMixin(BaseMixin):
         self.initialize_size_form_elements()
 
         self.initialize_size_sliders()
+
+    def text_changed(self, tab):
+        try:
+            val = int(tab.seed.toPlainText())
+            self.seed = val
+        except ValueError:
+            pass
+
+    def handle_random_checkbox_change(self, val, _tab):
+        if val == 2:
+            self.random_seed = True
+        else:
+            self.random_seed = False
+        _tab.seed.setEnabled(not self.random_seed)
 
     def video_handler(self, data):
         filename = data["video_filename"]
@@ -362,12 +366,20 @@ class GeneratorMixin(BaseMixin):
                 start: QPoint = line.start_point
                 end: QPoint = line.end_point
                 color: QColor = line._pen["color"]
-                image = cv2.line(image, (start.x(), start.y()), (end.x(), end.y()), (color.red(), color.green(), color.blue()), int(line._pen["width"]))
+                image = cv2.line(
+                    image,
+                    (start.x(), start.y()),
+                    (end.x(), end.y()),
+                    (color.red(), color.green(), color.blue()),
+                    int(line._pen["width"]))
                 # convert numpy array to PIL.Image
                 image = Image.fromarray(image)
 
             img = image.copy().convert("RGBA")
-            new_image = Image.new("RGBA", (self.settings.working_width.get(), self.settings.working_height.get()), (0, 0, 0))
+            new_image = Image.new(
+                "RGBA",
+                (self.settings.working_width.get(), self.settings.working_height.get()),
+                (0, 0, 0))
 
             cropped_outpaint_box_rect = self.active_rect()
             crop_location = (
@@ -459,7 +471,6 @@ class GeneratorMixin(BaseMixin):
 
         # set the model data
         model = tab.model_dropdown.currentText()
-        model_path = None
         model_branch = None
         section_name = action
         if section_name in ["txt2img", "img2img"]:
@@ -611,3 +622,11 @@ class GeneratorMixin(BaseMixin):
         self.window.brush_size_slider.setValue(self.settings_manager.settings.mask_brush_size.get())
         self.window.brush_size_spinbox.setValue(self.settings_manager.settings.mask_brush_size.get())
         self.set_size_form_element_step_values()
+
+    def update_brush_size(self, val):
+        self.settings_manager.settings.mask_brush_size.set(val)
+        self.window.brush_size_spinbox.setValue(val)
+
+    def brush_spinbox_change(self, val):
+        self.settings_manager.settings.mask_brush_size.set(val)
+        self.window.brush_size_slider.setValue(val)
