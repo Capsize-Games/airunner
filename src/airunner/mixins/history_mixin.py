@@ -1,9 +1,8 @@
 from PyQt6.QtCore import QPoint
 from airunner.history import History
-from airunner.mixins.base_mixin import BaseMixin
 
 
-class HistoryMixin(BaseMixin):
+class HistoryMixin:
     history = None
     window = None
     canvas = None
@@ -61,7 +60,6 @@ class HistoryMixin(BaseMixin):
         return previous_event
 
     def undo_set_image(self, previous_event):
-        # replace layer images with original images
         images = previous_event["images"]
         layer_index = previous_event["layer_index"]
         current_image_root_point = QPoint(self.canvas.image_root_point.x(), self.canvas.image_root_point.y())
@@ -123,7 +121,6 @@ class HistoryMixin(BaseMixin):
         return undone_event
 
     def redo_set_image(self, undone_event):
-        layers = self.canvas.layers
         images = undone_event["images"]
         layer_index = undone_event["layer_index"]
         current_image_root_point = QPoint(self.canvas.image_root_point.x(), self.canvas.image_root_point.y())

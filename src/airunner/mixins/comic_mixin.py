@@ -1,9 +1,8 @@
 from PyQt6.QtCore import QPointF
 from airunner.balloon import Balloon
-from airunner.mixins.base_mixin import BaseMixin
 
 
-class ComicMixin(BaseMixin):
+class ComicMixin:
     def initialize(self):
         self.window.wordballoon_button.clicked.connect(self.word_balloon_button_clicked)
 
