@@ -8,6 +8,7 @@ from PyQt6.QtGui import QGuiApplication
 from aihandler.qtvar import TQDMVar, ImageVar, MessageHandlerVar, ErrorHandlerVar
 from aihandler.settings import LOG_LEVEL
 from airunner.mixins.canvas_mixin import CanvasMixin
+from airunner.mixins.comic_mixin import ComicMixin
 from airunner.mixins.embedding_mixin import EmbeddingMixin
 from airunner.mixins.extension_mixin import ExtensionMixin
 from airunner.mixins.generator_mixin import GeneratorMixin
@@ -33,6 +34,7 @@ class MainWindow(
     ModelMixin,
     CanvasMixin,
     GeneratorMixin,
+    ComicMixin,
 ):
     progress_bar_started = False
     action = "txt2img"
