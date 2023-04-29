@@ -2,13 +2,10 @@ import pickle
 from PyQt6.QtWidgets import QFileDialog
 from airunner.filters import FilterBoxBlur, FilterUnsharpMask, FilterSaturation, FilterColorBalance, FilterGaussianBlur, \
     FilterPixelArt
+from airunner.mixins.base_mixin import BaseMixin
 
 
-class MenubarMixin:
-    window = None
-    canvas = None
-    settings_manager = None
-
+class MenubarMixin(BaseMixin):
     def initialize(self):
         self.window.actionNew.triggered.connect(self.new_document)
         self.window.actionSave.triggered.connect(self.save_document)
