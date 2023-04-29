@@ -6,17 +6,17 @@ import webbrowser
 import cv2
 import numpy as np
 from PIL import Image
-from PyQt6 import uic, QtCore, QtGui
-from PyQt6.QtWidgets import QApplication, QWidget, QColorDialog, QFileDialog, QVBoxLayout, QSpacerItem, \
-    QSizePolicy
-from PyQt6.QtCore import QPoint, pyqtSlot, QRect, QPointF
-from PyQt6.QtGui import QPainter, QIcon, QColor, QGuiApplication
+from PyQt6 import uic, QtCore
+from PyQt6.QtWidgets import QApplication, QColorDialog, QFileDialog
+from PyQt6.QtCore import QPoint, pyqtSlot, QRect
+from PyQt6.QtGui import QPainter, QColor, QGuiApplication
 from aihandler.qtvar import TQDMVar, ImageVar, MessageHandlerVar, ErrorHandlerVar
 from aihandler.settings import MAX_SEED, AVAILABLE_SCHEDULERS_BY_ACTION, MODELS, LOG_LEVEL
 from airunner.mixins.embedding_mixin import EmbeddingMixin
 from airunner.mixins.extension_mixin import ExtensionMixin
+from airunner.mixins.history_mixin import HistoryMixin
 from airunner.mixins.layer_mixin import LayerMixin
-from airunner.history import History
+from airunner.mixins.toolbar_mixin import ToolbarMixin
 from airunner.windows.about import AboutWindow
 from airunner.windows.advanced_settings import AdvancedSettings
 from airunner.windows.extensions import ExtensionsWindow
@@ -28,7 +28,6 @@ from aihandler.settings_manager import SettingsManager
 from airunner.runai_client import OfflineClient
 from airunner.filters import FilterGaussianBlur, FilterBoxBlur, FilterUnsharpMask, FilterSaturation, \
     FilterColorBalance, FilterPixelArt
-from airunner.balloon import Balloon
 import qdarktheme
 
 
@@ -36,7 +35,9 @@ class MainWindow(
     QApplication,
     ExtensionMixin,
     EmbeddingMixin,
-    LayerMixin
+    LayerMixin,
+    ToolbarMixin,
+    HistoryMixin,
 ):
     progress_bar_started = False
     action = "txt2img"
@@ -214,7 +215,7 @@ class MainWindow(
         self.initialize_tqdm()
         self.initialize_handlers()
         self.initialize_window()
-        self.initialize_history()
+        HistoryMixin.initialize(self)
         self.initialize_canvas()
         self.initialize_tabs()
         self.initialize_size_sliders()
@@ -222,7 +223,7 @@ class MainWindow(
         self.initialize_menu_bar()
         self.initialize_filters()
         self.initialize_shortcuts()
-        self.initialize_tool_buttons()
+        ToolbarMixin.initialize(self)
         self.initialize_stable_diffusion()
 
     def initialize_canvas(self):
@@ -278,40 +279,6 @@ class MainWindow(
         # on shift + mouse scroll change working width
         self.window.wheelEvent = self.change_width
 
-    def initialize_tool_buttons(self):
-        self.window.eraser_button.clicked.connect(lambda: self.set_tool("eraser"))
-        self.window.brush_button.clicked.connect(lambda: self.set_tool("brush"))
-        self.window.active_grid_area_button.clicked.connect(lambda: self.set_tool("active_grid_area"))
-        self.window.move_button.clicked.connect(lambda: self.set_tool("move"))
-        # self.window.select_button.clicked.connect(lambda: self.set_tool("select"))
-        self.window.primary_color_button.clicked.connect(self.set_primary_color)
-        self.window.secondary_color_button.clicked.connect(self.set_secondary_color)
-        self.window.grid_button.clicked.connect(self.toggle_grid)
-        self.window.undo_button.clicked.connect(self.undo)
-        self.window.redo_button.clicked.connect(self.redo)
-        self.window.nsfw_button.clicked.connect(self.toggle_nsfw_filter)
-        self.window.focus_button.clicked.connect(self.focus_button_clicked)
-        self.window.wordballoon_button.clicked.connect(self.word_balloon_button_clicked)
-        self.set_button_colors()
-        self.window.grid_button.setChecked(self.settings_manager.settings.show_grid.get() == True)
-        self.window.nsfw_button.setChecked(self.settings_manager.settings.nsfw_filter.get() == True)
-        if self.canvas.active_grid_area_selected:
-            self.window.active_grid_area_button.setChecked(True)
-        if self.canvas.eraser_selected:
-            self.window.eraser_button.setChecked(True)
-        if self.canvas.brush_selected:
-            self.window.brush_button.setChecked(True)
-        if self.canvas.move_selected:
-            self.window.move_button.setChecked(True)
-        if self.settings_manager.settings.snap_to_grid.get():
-            self.window.grid_button.setChecked(True)
-        if self.settings_manager.settings.nsfw_filter.get():
-            self.window.nsfw_button.setChecked(True)
-        self.window.darkmode_button.clicked.connect(self.toggle_darkmode)
-
-        # remove word balloon button until next release
-        self.window.wordballoon_button.setParent(None)
-
     def initialize_filters(self):
         self.filter_gaussian_blur = FilterGaussianBlur(parent=self)
         self.window.actionGaussian_Blur.triggered.connect(self.filter_gaussian_blur.show)
@@ -329,14 +296,6 @@ class MainWindow(
         self.error_var.my_signal.connect(self.error_handler)
         self.image_var = ImageVar()
         self.image_var.my_signal.connect(self.image_handler)
-
-    def initialize_history(self):
-        self.history = History()
-        self.initialize_history_buttons()
-
-    def initialize_history_buttons(self):
-        self.window.actionUndo.triggered.connect(self.undo)
-        self.window.actionRedo.triggered.connect(self.redo)
 
     def initialize_window(self):
         HERE = os.path.dirname(os.path.abspath(__file__))
@@ -546,43 +505,6 @@ class MainWindow(
     def copy_image(self):
         self.canvas.copy_image()
 
-    def toggle_darkmode(self):
-        self.settings_manager.settings.dark_mode_enabled.set(not self.settings_manager.settings.dark_mode_enabled.get())
-        self.set_stylesheet()
-
-    def set_stylesheet(self):
-        HERE = os.path.dirname(os.path.abspath(__file__))
-        icons = {
-            "darkmode_button": "weather-night",
-            "move_button": "move",
-            "active_grid_area_button": "stop",
-            "eraser_button": "eraser",
-            "brush_button": "pen",
-            "grid_button": "grid",
-            "nsfw_button": "underwear",
-            "focus_button": "camera-focus",
-            "undo_button": "undo",
-            "redo_button": "redo",
-            "new_layer": "file-add",
-            "layer_up_button": "arrow-up",
-            "layer_down_button": "arrow-down",
-            "delete_layer_button": "delete"
-        }
-        if self.settings_manager.settings.dark_mode_enabled.get():
-            qdarktheme.setup_theme("dark")
-            icons["darkmode_button"] = "weather-sunny"
-            for button, icon in icons.items():
-                if icon != "weather-sunny":
-                    icon = icon + "-light"
-                getattr(self.window, button).setIcon(QtGui.QIcon(os.path.join(HERE, f"src/icons/{icon}.png")))
-        else:
-            for button, icon in icons.items():
-                getattr(self.window, button).setIcon(QtGui.QIcon(os.path.join(HERE, f"src/icons/{icon}.png")))
-            try:
-                qdarktheme.setup_theme("light")
-            except PermissionError:
-                pass
-
     def toggle_resize_on_paste(self):
         self.settings_manager.settings.resize_on_paste.set(self.window.actionResize_on_Paste.isChecked())
 
@@ -744,205 +666,6 @@ class MainWindow(
         if file_path == "":
             return
         self.canvas.save_image(file_path)
-
-    def toggle_grid(self, event):
-        self.settings_manager.settings.show_grid.set(
-            event
-        )
-        self.canvas.update()
-
-    def toggle_nsfw_filter(self, val):
-        self.settings_manager.settings.nsfw_filter.set(val)
-        self.canvas.update()
-
-    def undo_draw(self, previous_event):
-        index = previous_event["layer_index"]
-        lines = previous_event["lines"]
-        previous_event["lines"] = self.canvas.layers[index].lines.copy()
-        self.canvas.layers[index].lines = lines
-        return previous_event
-
-    def undo_erase(self, previous_event):
-        # add lines to layer
-        lines = previous_event["lines"]
-        images = previous_event["images"]
-        index = previous_event["layer_index"]
-        previous_event["lines"] = self.canvas.layers[index].lines
-        previous_event["images"] = self.canvas.get_image_copy(index)
-        self.canvas.layers[index].lines = lines
-        self.canvas.layers[index].images = images
-        return previous_event
-
-    def undo_set_image(self, previous_event):
-        # replace layer images with original images
-        images = previous_event["images"]
-        layer_index = previous_event["layer_index"]
-        current_image_root_point = QPoint(self.canvas.image_root_point.x(), self.canvas.image_root_point.y())
-        current_image_pivot_point = QPoint(self.canvas.image_pivot_point.x(), self.canvas.image_pivot_point.y())
-        self.canvas.image_root_point = previous_event["previous_image_root_point"]
-        self.canvas.image_pivot_point = previous_event["previous_image_pivot_point"]
-        previous_event["images"] = self.canvas.get_image_copy(layer_index)
-        previous_event["previous_image_root_point"] = current_image_root_point
-        previous_event["previous_image_pivot_point"] = current_image_pivot_point
-        self.canvas.layers[previous_event["layer_index"]].images = images
-        return previous_event
-
-    def undo_add_widget(self, previous_event):
-        widets = previous_event["widgets"]
-        previous_event["widgets"] = self.canvas.layers[previous_event["layer_index"]].widgets
-        self.canvas.layers[previous_event["layer_index"]].widgets = widets
-        return previous_event
-
-    def undo(self):
-        if len(self.history.event_history) == 0:
-            return
-        previous_event = self.history.event_history.pop()
-        event_name = previous_event["event"]
-        if event_name == "draw":
-            previous_event = self.undo_draw(previous_event)
-        elif event_name == "erase":
-            previous_event = self.undo_erase(previous_event)
-        elif event_name == "new_layer":
-            if len(self.canvas.layers) == 1:
-                self.history.event_history.append(previous_event)
-                return
-            previous_event = self.undo_new_layer(previous_event)
-        elif event_name == "move_layer":
-            self.undo_move_layer(previous_event)
-        elif event_name == "delete_layer":
-            self.undo_delete_layer(previous_event)
-        elif event_name == "set_image":
-            self.undo_set_image(previous_event)
-        elif event_name == "add_widget":
-            self.undo_add_widget(previous_event)
-        self.history.undone_history.append(previous_event)
-        self.show_layers()
-        self.canvas.update()
-
-    def redo_draw(self, undone_event):
-        lines = undone_event["lines"]
-        undone_event["lines"] = self.canvas.layers[undone_event["layer_index"]].lines
-        self.canvas.layers[undone_event["layer_index"]].lines = lines
-        return undone_event
-
-    def redo_erase(self, undone_event):
-        lines = undone_event["lines"]
-        images = undone_event["images"]
-        layer_index = undone_event["layer_index"]
-        undone_event["lines"] = self.canvas.layers[layer_index].lines.copy()
-        undone_event["images"] = self.canvas.get_image_copy(layer_index)
-        self.canvas.layers[undone_event["layer_index"]].lines = lines
-        self.canvas.layers[undone_event["layer_index"]].images = images
-        return undone_event
-
-    def redo_set_image(self, undone_event):
-        layers = self.canvas.layers
-        images = undone_event["images"]
-        layer_index = undone_event["layer_index"]
-        current_image_root_point = QPoint(self.canvas.image_root_point.x(), self.canvas.image_root_point.y())
-        current_image_pivot_point = QPoint(self.canvas.image_pivot_point.x(), self.canvas.image_pivot_point.y())
-        self.canvas.image_root_point = undone_event["previous_image_root_point"]
-        self.canvas.image_pivot_point = undone_event["previous_image_pivot_point"]
-        undone_event["images"] = self.canvas.get_image_copy(layer_index)
-        undone_event["previous_image_root_point"] = current_image_root_point
-        undone_event["previous_image_pivot_point"] = current_image_pivot_point
-        self.canvas.layers[undone_event["layer_index"]].images = images
-        return undone_event
-
-    def redo_add_widget(self, undone_event):
-        # add widget
-        widgets = undone_event["widgets"]
-        undone_event["widgets"] = self.canvas.layers[undone_event["layer_index"]].widgets
-        self.canvas.layers[undone_event["layer_index"]].widgets = widgets
-        return undone_event
-
-    def redo(self):
-        if len(self.history.undone_history) == 0:
-            return
-        undone_event = self.history.undone_history.pop()
-        event_name = undone_event["event"]
-        if event_name == "draw":
-            undone_event = self.redo_draw(undone_event)
-        elif event_name == "erase":
-            undone_event = self.redo_erase(undone_event)
-        elif event_name == "new_layer":
-            undone_event = self.redo_new_layer(undone_event)
-        elif event_name == "move_layer":
-            undone_event = self.redo_move_layer(undone_event)
-        elif event_name == "delete_layer":
-            undone_event = self.redo_delete_layer(undone_event)
-        elif event_name == "set_image":
-            undone_event = self.redo_set_image(undone_event)
-        elif event_name == "add_widget":
-            undone_event = self.redo_add_widget(undone_event)
-        self.history.event_history.append(undone_event)
-        self.show_layers()
-        self.canvas.update()
-
-    def focus_button_clicked(self):
-        self.canvas.recenter()
-
-    def word_balloon_button_clicked(self):
-        """
-        Create and add a word balloon to the canvas.
-        :return:
-        """
-        # create a word balloon
-        word_balloon = Balloon()
-        word_balloon.setGeometry(100, 100, 200, 100)
-        word_balloon.set_tail_pos(QPointF(50, 100))
-        # add the widget to the canvas
-        self.history.add_event({
-            "event": "add_widget",
-            "layer_index": self.canvas.current_layer_index,
-            "widgets": self.canvas.current_layer.widgets.copy(),
-        })
-        self.canvas.current_layer.widgets.append(word_balloon)
-        self.show_layers()
-        self.canvas.update()
-
-    def set_button_colors(self):
-        # set self.window.primaryColorButton color
-        self.window.primary_color_button.setStyleSheet(
-            f"background-color: {self.settings_manager.settings.primary_color.get()};"
-        )
-        self.window.secondary_color_button.setStyleSheet(
-            f"background-color: {self.settings_manager.settings.secondary_color.get()};"
-        )
-
-    def set_primary_color(self):
-        # display a color picker
-        color = QColorDialog.getColor()
-        if color.isValid():
-            self.settings_manager.settings.primary_color.set(color.name())
-            self.set_button_colors()
-
-    def set_secondary_color(self):
-        # display a color picker
-        color = QColorDialog.getColor()
-        if color.isValid():
-            self.settings_manager.settings.secondary_color.set(color.name())
-            self.set_button_colors()
-
-    def set_tool(self, tool):
-        # uncheck all buttons that are not this tool
-        if tool != "brush":
-            self.window.brush_button.setChecked(False)
-        if tool != "eraser":
-            self.window.eraser_button.setChecked(False)
-        if tool != "active_grid_area":
-            self.window.active_grid_area_button.setChecked(False)
-        if tool != "move":
-            self.window.move_button.setChecked(False)
-        # if tool != "select":
-        #     self.window.select_button.setChecked(False)
-
-        if self.settings_manager.settings.current_tool.get() != tool:
-            self.settings_manager.settings.current_tool.set(tool)
-        else:
-            self.settings_manager.settings.current_tool.set(None)
-
-        self.canvas.update_cursor()
 
     def message_handler(self, msg):
         try:
