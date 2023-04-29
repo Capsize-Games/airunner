@@ -1,37 +1,5 @@
-import os
-import pickle
-import random
-import sys
-import webbrowser
-import cv2
-import numpy as np
-from PIL import Image
-from PyQt6 import uic, QtCore
-from PyQt6.QtWidgets import QApplication, QColorDialog, QFileDialog
-from PyQt6.QtCore import QPoint, pyqtSlot, QRect
-from PyQt6.QtGui import QPainter, QColor, QGuiApplication
-from aihandler.qtvar import TQDMVar, ImageVar, MessageHandlerVar, ErrorHandlerVar
-from aihandler.settings import MAX_SEED, AVAILABLE_SCHEDULERS_BY_ACTION, MODELS, LOG_LEVEL
 from airunner.mixins.base_mixin import BaseMixin
-from airunner.mixins.embedding_mixin import EmbeddingMixin
-from airunner.mixins.extension_mixin import ExtensionMixin
-from airunner.mixins.history_mixin import HistoryMixin
-from airunner.mixins.layer_mixin import LayerMixin
-from airunner.mixins.menubar_mixin import MenubarMixin
-from airunner.mixins.model_mixin import ModelMixin
-from airunner.mixins.toolbar_mixin import ToolbarMixin
-from airunner.windows.about import AboutWindow
-from airunner.windows.advanced_settings import AdvancedSettings
-from airunner.windows.extensions import ExtensionsWindow
-from airunner.windows.grid_settings import GridSettings
-from airunner.windows.preferences import PreferencesWindow
-from airunner.windows.video import VideoPopup
 from airunner.qtcanvas import Canvas
-from aihandler.settings_manager import SettingsManager
-from airunner.runai_client import OfflineClient
-from airunner.filters import FilterGaussianBlur, FilterBoxBlur, FilterUnsharpMask, FilterSaturation, \
-    FilterColorBalance, FilterPixelArt
-import qdarktheme
 
 
 class CanvasMixin(BaseMixin):
