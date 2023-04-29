@@ -141,6 +141,7 @@ class MainWindow(
         self.initialize_shortcuts()
         ToolbarMixin.initialize(self)
         self.initialize_stable_diffusion()
+        ExtensionMixin.initialize(self)
 
     def initialize_settings_manager(self):
         self.settings_manager = SettingsManager()
