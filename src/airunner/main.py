@@ -25,7 +25,6 @@ import qdarktheme
 
 class MainWindow(
     QApplication,
-    ExtensionMixin,
     EmbeddingMixin,
     LayerMixin,
     ToolbarMixin,
@@ -35,6 +34,7 @@ class MainWindow(
     CanvasMixin,
     GeneratorMixin,
     ComicMixin,
+    ExtensionMixin,
 ):
     current_filter = None
     tabs = {}
