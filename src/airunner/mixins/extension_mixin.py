@@ -42,18 +42,3 @@ class ExtensionMixin:
                             extension_class = getattr(module, "Extension")
                             extensions.append(extension_class(self.settings_manager))
         self.settings_manager.settings.active_extensions.set(extensions)
-
-    def do_generator_tab_injection(self, tab, tab_name):
-        """
-        Ibjects extensions into the generator tab widget.
-        :param tab_name:
-        :param tab:
-        :return:
-        """
-        for extension in self.settings_manager.settings.active_extensions.get():
-            extension.generator_tab_injection(tab, tab_name)
-
-    def do_generate_data_injection(self, data):
-        for extension in self.settings_manager.settings.active_extensions.get():
-            data = extension.generate_data_injection(data)
-        return data
