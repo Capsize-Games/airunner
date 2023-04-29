@@ -2,15 +2,13 @@ import os
 from PyQt6 import uic
 from PyQt6.QtWidgets import QWidget, QVBoxLayout, QSpacerItem, QSizePolicy
 from PyQt6.QtGui import QIcon
+from airunner.mixins.base_mixin import BaseMixin
 
 
-class LayerMixin:
+class LayerMixin(BaseMixin):
     """
     This is a mixin class for the main window that handles the layer manager.
     """
-    window = None
-    canvas = None
-    history = None
     layers_as_single = False
 
     @property

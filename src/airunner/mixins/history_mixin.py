@@ -1,8 +1,9 @@
 from PyQt6.QtCore import QPoint
 from airunner.history import History
+from airunner.mixins.base_mixin import BaseMixin
 
 
-class HistoryMixin:
+class HistoryMixin(BaseMixin):
     history = None
     window = None
     canvas = None

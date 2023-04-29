@@ -2,11 +2,11 @@ import os
 import torch
 from PyQt6.QtWidgets import QLabel, QWidget, QVBoxLayout
 
+from airunner.mixins.base_mixin import BaseMixin
 
-class EmbeddingMixin:
+
+class EmbeddingMixin(BaseMixin):
     _embedding_names = None
-    settings_manager = None
-    window = None
 
     @property
     def embedding_names(self):
