@@ -1,33 +1,24 @@
 import os
 import pickle
-import random
 import sys
-import webbrowser
-import cv2
-import numpy as np
-from PIL import Image
 from PyQt6 import uic, QtCore
-from PyQt6.QtWidgets import QApplication, QColorDialog, QFileDialog
-from PyQt6.QtCore import QPoint, pyqtSlot, QRect
-from PyQt6.QtGui import QPainter, QColor, QGuiApplication
+from PyQt6.QtWidgets import QApplication, QFileDialog
+from PyQt6.QtCore import pyqtSlot
+from PyQt6.QtGui import QGuiApplication
 from aihandler.qtvar import TQDMVar, ImageVar, MessageHandlerVar, ErrorHandlerVar
-from aihandler.settings import MAX_SEED, AVAILABLE_SCHEDULERS_BY_ACTION, MODELS, LOG_LEVEL
+from aihandler.settings import LOG_LEVEL
+from airunner.mixins.canvas_mixin import CanvasMixin
 from airunner.mixins.embedding_mixin import EmbeddingMixin
 from airunner.mixins.extension_mixin import ExtensionMixin
+from airunner.mixins.generator_mixin import GeneratorMixin
 from airunner.mixins.history_mixin import HistoryMixin
 from airunner.mixins.layer_mixin import LayerMixin
+from airunner.mixins.menubar_mixin import MenubarMixin
+from airunner.mixins.model_mixin import ModelMixin
 from airunner.mixins.toolbar_mixin import ToolbarMixin
-from airunner.windows.about import AboutWindow
-from airunner.windows.advanced_settings import AdvancedSettings
-from airunner.windows.extensions import ExtensionsWindow
-from airunner.windows.grid_settings import GridSettings
-from airunner.windows.preferences import PreferencesWindow
 from airunner.windows.video import VideoPopup
-from airunner.qtcanvas import Canvas
 from aihandler.settings_manager import SettingsManager
 from airunner.runai_client import OfflineClient
-from airunner.filters import FilterGaussianBlur, FilterBoxBlur, FilterUnsharpMask, FilterSaturation, \
-    FilterColorBalance, FilterPixelArt
 import qdarktheme
 
 
@@ -38,6 +29,10 @@ class MainWindow(
     LayerMixin,
     ToolbarMixin,
     HistoryMixin,
+    MenubarMixin,
+    ModelMixin,
+    CanvasMixin,
+    GeneratorMixin,
 ):
     progress_bar_started = False
     action = "txt2img"
@@ -71,96 +66,6 @@ class MainWindow(
         settings = self.settings_manager.settings
         settings.set_namespace(self.current_section)
         return settings
-
-    @property
-    def steps(self):
-        return self.settings.steps.get()
-
-    @steps.setter
-    def steps(self, val):
-        self.settings.steps.set(val)
-
-    @property
-    def scale(self):
-        return self.settings.scale.get()
-
-    @scale.setter
-    def scale(self, val):
-        self.settings.scale.set(val)
-
-    @property
-    def image_scale(self):
-        return self.settings.image_guidance_scale.get()
-
-    @image_scale.setter
-    def image_scale(self, val):
-        self.settings.image_guidance_scale.set(val)
-
-    @property
-    def strength(self):
-        return self.settings.strength.get()
-
-    @strength.setter
-    def strength(self, val):
-        self.settings.strength.set(val)
-
-    @property
-    def seed(self):
-        return self.settings.seed.get()
-
-    @seed.setter
-    def seed(self, val):
-        self.settings.seed.set(val)
-
-    @property
-    def random_seed(self):
-        return self.settings.random_seed.get()
-
-    @random_seed.setter
-    def random_seed(self, val):
-        self.settings.random_seed.set(val)
-
-    @property
-    def samples(self):
-        return self.settings.n_samples.get()
-
-    @samples.setter
-    def samples(self, val):
-        self.settings.n_samples.set(val)
-
-    @property
-    def model(self):
-        return self.settings.model_var.get()
-
-    @model.setter
-    def model(self, val):
-        self.settings.model_var.set(val)
-
-    @property
-    def scheduler(self):
-        return self.settings.scheduler_var.get()
-
-    @scheduler.setter
-    def scheduler(self, val):
-        self.settings.scheduler_var.set(val)
-
-    @property
-    def width(self):
-        return int(self.settings_manager.settings.working_width.get())
-
-    @width.setter
-    def width(self, val):
-        self.settings_manager.settings.working_width.set(val)
-        self.canvas.update()
-
-    @property
-    def height(self):
-        return int(self.settings_manager.settings.working_height.get())
-
-    @height.setter
-    def height(self, val):
-        self.settings_manager.settings.working_height.set(val)
-        self.canvas.update()
 
     @property
     def is_dirty(self):
@@ -205,6 +110,10 @@ class MainWindow(
     def __init__(self, *args, **kwargs):
         self.set_log_levels()
         super().__init__(*args, **kwargs)
+        self.tqdm_var = None
+        self.message_var = None
+        self.error_var = None
+        self.image_var = None
         self.initialize()
         self.display()
         self.settings_manager.enable_save()
@@ -216,21 +125,14 @@ class MainWindow(
         self.initialize_handlers()
         self.initialize_window()
         HistoryMixin.initialize(self)
-        self.initialize_canvas()
-        self.initialize_tabs()
+        CanvasMixin.initialize(self)
+        GeneratorMixin.initialize(self)
         self.initialize_size_sliders()
         LayerMixin.initialize(self)
-        self.initialize_menu_bar()
-        self.initialize_filters()
+        MenubarMixin.initialize(self)
         self.initialize_shortcuts()
         ToolbarMixin.initialize(self)
         self.initialize_stable_diffusion()
-
-    def initialize_canvas(self):
-        self.canvas = Canvas(self)
-        self.settings_manager.settings.show_grid.my_signal.connect(self.canvas.update)
-        self.settings_manager.settings.snap_to_grid.my_signal.connect(self.canvas.update)
-        self.settings_manager.settings.line_color.my_signal.connect(self.canvas.update_grid_pen)
 
     def initialize_settings_manager(self):
         self.settings_manager = SettingsManager()
@@ -240,50 +142,9 @@ class MainWindow(
         self.settings_manager.settings.size.my_signal.connect(self.set_size_form_element_step_values)
         self.settings_manager.settings.line_width.my_signal.connect(self.set_size_form_element_step_values)
 
-    def initialize_size_sliders(self):
-        self.window.width_slider.setValue(self.width)
-        self.window.height_slider.setValue(self.height)
-        self.window.width_spinbox.setValue(self.width)
-        self.window.height_spinbox.setValue(self.height)
-        self.window.brush_size_slider.setValue(self.settings.mask_brush_size.get())
-        self.window.brush_size_slider.valueChanged.connect(self.update_brush_size)
-        self.window.brush_size_spinbox.valueChanged.connect(self.brush_spinbox_change)
-        self.window.brush_size_slider.setValue(self.settings_manager.settings.mask_brush_size.get())
-        self.window.brush_size_spinbox.setValue(self.settings_manager.settings.mask_brush_size.get())
-        self.set_size_form_element_step_values()
-
-    def initialize_menu_bar(self):
-        self.window.actionNew.triggered.connect(self.new_document)
-        self.window.actionSave.triggered.connect(self.save_document)
-        self.window.actionLoad.triggered.connect(self.load_document)
-        self.window.actionImport.triggered.connect(self.import_image)
-        self.window.actionExport.triggered.connect(self.export_image)
-        self.window.actionQuit.triggered.connect(self.quit)
-        self.window.actionPaste.triggered.connect(self.paste_image)
-        self.window.actionCopy.triggered.connect(self.copy_image)
-        self.window.actionResize_on_Paste.triggered.connect(self.toggle_resize_on_paste)
-        self.initialize_filter_actions()
-        self.window.actionResize_on_Paste.setChecked(self.settings_manager.settings.resize_on_paste.get() == True)
-
-    def initialize_filter_actions(self):
-        self.filter_box_blur = FilterBoxBlur(parent=self)
-        self.window.actionBox_Blur.triggered.connect(self.filter_box_blur.show)
-        self.filter_unsharp_mask = FilterUnsharpMask(parent=self)
-        self.window.actionUnsharp_Mask.triggered.connect(self.filter_unsharp_mask.show)
-        self.filter_saturation = FilterSaturation(parent=self)
-        self.window.actionSaturation.triggered.connect(self.filter_saturation.show)
-        self.filter_color_balance = FilterColorBalance(parent=self)
-        self.window.actionColor_Balance.triggered.connect(self.filter_color_balance.show)
-
     def initialize_shortcuts(self):
         # on shift + mouse scroll change working width
         self.window.wheelEvent = self.change_width
-
-    def initialize_filters(self):
-        self.filter_gaussian_blur = FilterGaussianBlur(parent=self)
-        self.window.actionGaussian_Blur.triggered.connect(self.filter_gaussian_blur.show)
-        self.filter_pixel_art = FilterPixelArt(parent=self)
-        self.window.actionPixel_Art.triggered.connect(self.filter_pixel_art.show)
 
     def initialize_tqdm(self):
         self.tqdm_var = TQDMVar()
@@ -312,162 +173,6 @@ class MainWindow(
             message_var=self.message_var,
             settings_manager=self.settings_manager,
         )
-
-    def initialize_tabs(self):
-        # load all the forms
-        sections = ["txt2img", "img2img", "depth2img", "pix2pix", "outpaint", "controlnet", "txt2vid"]
-        HERE = os.path.dirname(os.path.abspath(__file__))
-        self.tabs = {}
-        for tab in sections:
-            self.tabs[tab] = uic.loadUi(os.path.join(HERE, "pyqt/generate_form.ui"))
-
-        for tab in self.tabs:
-            if tab != "controlnet":
-                self.tabs[tab].controlnet_label.deleteLater()
-                self.tabs[tab].controlnet_dropdown.deleteLater()
-            else:
-                controlnet_options = [
-                    "Canny",
-                    "MLSD",
-                    "Depth",
-                    "Normal",
-                    "Segmentation",
-                    "Lineart",
-                    "Openpose",
-                    "Scribble",
-                    "Softedge",
-                    "Pixel2Pixel",
-                    "Inpaint",
-                    "Shuffle",
-                    "Anime",
-                ]
-                for option in controlnet_options:
-                    self.tabs[tab].controlnet_dropdown.addItem(option)
-            if tab in ["txt2img", "pix2pix", "outpaint", "super_resolution", "txt2vid"]:
-                self.tabs[tab].strength.deleteLater()
-            if tab in ["txt2img", "img2img", "depth2img", "outpaint", "controlnet", "super_resolution", "txt2vid"]:
-                self.tabs[tab].image_scale_box.deleteLater()
-            if tab in ["txt2vid"]:
-                self.tabs[tab].scheduler_label.deleteLater()
-                self.tabs[tab].scheduler_dropdown.deleteLater()
-
-
-        # add all the tabs
-        for tab in sections:
-            self.window.tabWidget.addTab(self.tabs[tab], tab)
-
-        # iterate over each tab and connect steps_slider with steps_spinbox
-        for tab_name in self.tabs.keys():
-            tab = self.tabs[tab_name]
-            self.load_embeddings(tab)
-            self.do_generator_tab_injection(tab, tab_name)
-
-            tab.steps_slider.valueChanged.connect(lambda val, _tab=tab: self.handle_steps_slider_change(val, _tab))
-            tab.steps_spinbox.valueChanged.connect(lambda val, _tab=tab: self.handle_steps_spinbox_change(val, _tab))
-
-            # load models by section
-            self.load_model_by_section(tab, tab_name)
-
-            # on change of tab.model_dropdown set the model in self.settings_manager
-            tab.model_dropdown.currentIndexChanged.connect(
-                lambda val, _tab=tab, _section=tab_name: self.set_model(_tab, _section, val)
-            )
-
-            # set schedulers for each tab
-            if tab_name not in ["txt2vid"]:
-                tab.scheduler_dropdown.addItems(AVAILABLE_SCHEDULERS_BY_ACTION[tab_name])
-                # on change of tab.scheduler_dropdown set the scheduler in self.settings_manager
-                tab.scheduler_dropdown.currentIndexChanged.connect(
-                    lambda val, _tab=tab, _section=tab_name: self.set_scheduler(_tab, _section, val)
-                )
-
-            # scale slider
-            tab.scale_slider.valueChanged.connect(lambda val, _tab=tab: self.handle_scale_slider_change(val, _tab))
-            tab.scale_spinbox.valueChanged.connect(lambda val, _tab=tab: self.handle_scale_spinbox_change(val, _tab))
-
-            tab.image_scale_slider.valueChanged.connect(lambda val, _tab=tab: self.handle_image_scale_slider_change(val, _tab))
-            tab.image_scale_spinbox.valueChanged.connect(lambda val, _tab=tab: self.handle_image_scale_spinbox_change(val, _tab))
-
-            # strength slider
-            section = tab_name
-            if section in ["img2img", "depth2img", "controlnet"]:
-                if section == "img2img":
-                    strength = self.settings_manager.settings.img2img_strength.get()
-                elif section == "depth2img":
-                    strength = self.settings_manager.settings.depth2img_strength.get()
-                elif section == "controlnet":
-                    strength = self.settings_manager.settings.controlnet_strength.get()
-                tab.strength_slider.setValue(int(strength * 100))
-                tab.strength_spinbox.setValue(strength / 100)
-                tab.strength_slider.valueChanged.connect(lambda val, _tab=tab: self.handle_strength_slider_change(val, _tab))
-                tab.strength_spinbox.valueChanged.connect(lambda val, _tab=tab: self.handle_strength_spinbox_change(val, _tab))
-
-            if section == "txt2vid":
-                # change the label tab.samples_groupbox label to "Frames"
-                tab.samples_groupbox.setTitle("Frames")
-
-            # seed slider
-            # seed is QTextEdit
-            def text_changed(tab):
-                try:
-                    val = int(tab.seed.toPlainText())
-                    self.seed = val
-                except ValueError:
-                    pass
-
-            def handle_random_checkbox_change(val, _tab):
-                if val == 2:
-                    self.random_seed = True
-                else:
-                    self.random_seed = False
-                _tab.seed.setEnabled(not self.random_seed)
-
-            tab.seed.textChanged.connect(lambda _tab=tab: text_changed(_tab))
-            tab.random_checkbox.stateChanged.connect(lambda val, _tab=tab: handle_random_checkbox_change(val, _tab))
-
-            tab.random_checkbox.setChecked(self.random_seed == True)
-
-            # samples slider
-            tab.samples_slider.valueChanged.connect(lambda val, _tab=tab: self.handle_samples_slider_change(val, _tab))
-            tab.samples_spinbox.valueChanged.connect(lambda val, _tab=tab: self.handle_samples_spinbox_change(val, _tab))
-
-            # if samples is greater than 1 enable the interrupt_button
-            if tab.samples_spinbox.value() > 1:
-                tab.interrupt_button.setEnabled(tab.samples_spinbox.value() > 1)
-
-            self.set_default_values(tab_name, tab)
-
-        # assign callback to generate function on tab
-        self.window.tabWidget.currentChanged.connect(self.tab_changed_callback)
-
-        # add callbacks
-        for tab in sections:
-            self.tabs[tab].generate.clicked.connect(self.generate_callback)
-        # super_resolution_form.generate.clicked.connect(self.generate_callback)
-
-        # set up all callbacks on window menu bar
-        self.window.actionGrid.triggered.connect(self.show_grid_settings)
-        self.window.actionPreferences.triggered.connect(self.show_preferences)
-        self.window.actionAbout.triggered.connect(self.show_about)
-        self.window.actionCanvas_color.triggered.connect(self.show_canvas_color)
-        self.window.actionAdvanced.triggered.connect(self.show_advanced)
-        self.window.actionBug_report.triggered.connect(lambda: webbrowser.open("https://github.com/Capsize-Games/airunner/issues/new?assignees=&labels=&template=bug_report.md&title="))
-        self.window.actionReport_vulnerability.triggered.connect(lambda: webbrowser.open("https://github.com/Capsize-Games/airunner/security/advisories/new"))
-        self.window.actionDiscord.triggered.connect(lambda: webbrowser.open("https://discord.gg/PUVDDCJ7gz"))
-        self.window.actionExtensions.triggered.connect(self.show_extensions)
-
-        self.window.actionInvert.triggered.connect(self.do_invert)
-
-        self.initialize_size_form_elements()
-
-    def initialize_size_form_elements(self):
-        # width form elements
-        self.window.width_slider.valueChanged.connect(lambda val: self.handle_width_slider_change(val))
-        self.window.width_spinbox.valueChanged.connect(lambda val: self.handle_width_spinbox_change(val))
-
-        # height form elements
-        self.window.height_slider.valueChanged.connect(lambda val: self.handle_height_slider_change(val))
-        self.window.height_spinbox.valueChanged.connect(lambda val: self.handle_height_spinbox_change(val))
 
     def display(self):
         self.window.show()
@@ -498,15 +203,6 @@ class MainWindow(
         frameGeometry = self.window.frameGeometry()
         frameGeometry.moveCenter(availableGeometry.center())
         self.window.move(frameGeometry.topLeft())
-
-    def paste_image(self):
-        self.canvas.paste_image_from_clipboard()
-
-    def copy_image(self):
-        self.canvas.copy_image()
-
-    def toggle_resize_on_paste(self):
-        self.settings_manager.settings.resize_on_paste.set(self.window.actionResize_on_Paste.isChecked())
 
     def change_width(self, event):
         grid_size = self.grid_size
@@ -565,24 +261,6 @@ class MainWindow(
         self.settings_manager.settings.mask_brush_size.set(val)
         self.window.brush_size_slider.setValue(val)
 
-    def new_document(self):
-        self.initialize_canvas()
-        self.is_saved = False
-        self.is_dirty = False
-        self._document_name = "Untitled"
-        self.set_window_title()
-        # clear the layers list widget
-        self.window.layers.setWidget(None)
-        self.current_filter = None
-        self.canvas.update()
-        self.show_layers()
-
-    def save_document(self):
-        if not self.is_saved:
-            return self.saveas_document()
-        document_name = f"{self._document_name}.airunner"
-        self.do_save(document_name)
-
     def saveas_document(self):
         # get file path
         file_path, _ = QFileDialog.getSaveFileName(
@@ -611,6 +289,45 @@ class MainWindow(
         self.set_window_title()
         self.is_saved = True
         self.is_dirty = False
+
+    def message_handler(self, msg):
+        try:
+            self.window.status_label.setStyleSheet("color: black;")
+        except Exception as e:
+            print("something went wrong while setting label")
+            print(e)
+
+        try:
+            self.window.status_label.setText(msg["response"])
+        except TypeError:
+            self.window.status_label.setText("")
+
+    def error_handler(self, msg):
+        try:
+            self.window.status_label.setStyleSheet("color: red;")
+        except Exception as e:
+            print("something went wrong while setting label")
+            print(e)
+
+        self.window.status_label.setText(msg)
+
+    def new_document(self):
+        self.initialize_canvas()
+        self.is_saved = False
+        self.is_dirty = False
+        self._document_name = "Untitled"
+        self.set_window_title()
+        # clear the layers list widget
+        self.window.layers.setWidget(None)
+        self.current_filter = None
+        self.canvas.update()
+        self.show_layers()
+
+    def save_document(self):
+        if not self.is_saved:
+            return self.saveas_document()
+        document_name = f"{self._document_name}.airunner"
+        self.do_save(document_name)
 
     def load_document(self):
         self.new_document()
@@ -646,444 +363,6 @@ class MainWindow(
         self.is_saved = True
         self.set_window_title()
         self.show_layers()
-
-    def import_image(self):
-        file_path, _ = QFileDialog.getOpenFileName(
-            self.window, "Import Image", "", "Image Files (*.png *.jpg *.jpeg)"
-        )
-        if file_path == "":
-            return
-        self.canvas.load_image(file_path)
-        self.canvas.update()
-
-    def export_image(self):
-        file_path, _ = QFileDialog.getSaveFileName(
-            self.window,
-            "Export Image",
-            "",
-            "Image Files (*.png *.jpg *.jpeg)"
-        )
-        if file_path == "":
-            return
-        self.canvas.save_image(file_path)
-
-    def message_handler(self, msg):
-        try:
-            self.window.status_label.setStyleSheet("color: black;")
-        except Exception as e:
-            print("something went wrong while setting label")
-            print(e)
-
-        try:
-            self.window.status_label.setText(msg["response"])
-        except TypeError:
-            self.window.status_label.setText("")
-
-    def error_handler(self, msg):
-        try:
-            self.window.status_label.setStyleSheet("color: red;")
-        except Exception as e:
-            print("something went wrong while setting label")
-            print(e)
-
-        self.window.status_label.setText(msg)
-
-    def video_handler(self, data):
-        filename = data["video_filename"]
-        VideoPopup(settings_manager=self.settings_manager, file_path=filename)
-
-    def image_handler(self, image, data, nsfw_content_detected):
-        if data["action"] == "txt2vid":
-            return self.video_handler(data)
-
-        self.stop_progress_bar(data["action"])
-        if nsfw_content_detected and self.settings_manager.settings.nsfw_filter.get():
-            self.message_handler("NSFW content detected, try again.", error=True)
-        else:
-            if data["action"] != "outpaint":
-                self.canvas.add_layer()
-            self.canvas.image_handler(image, data)
-            self.message_handler("")
-            self.show_layers()
-
-    def update_canvas_color(self, color):
-        self.window.canvas_container.setStyleSheet(f"background-color: {color};")
-        self.window.canvas_container.setAutoFillBackground(True)
-
-    def show_extensions(self):
-        self.extensions_window = ExtensionsWindow(self.settings_manager)
-
-    def handle_width_slider_change(self, val):
-        self.window.width_spinbox.setValue(val)
-        self.width = val
-
-    def handle_width_spinbox_change(self, val):
-        self.window.width_slider.setValue(int(val))
-        self.width = int(val)
-
-    def handle_height_slider_change(self, val):
-        self.window.height_spinbox.setValue(int(val))
-        self.height = int(val)
-
-    def handle_height_spinbox_change(self, val):
-        self.window.height_slider.setValue(int(val))
-        self.height = int(val)
-
-    def handle_steps_slider_change(self, val, tab):
-        tab.steps_spinbox.setValue(int(val))
-        self.steps = int(val)
-
-    def handle_steps_spinbox_change(self, val, tab):
-        tab.steps_slider.setValue(int(val))
-        self.steps = int(val)
-
-    def handle_scale_slider_change(self, val, tab):
-        tab.scale_spinbox.setValue(val / 100.0)
-        self.scale = val
-
-    def handle_image_scale_slider_change(self, val, tab):
-        tab.image_scale_spinbox.setValue(val / 100.0)
-        try:
-            self.image_scale = val
-        except:
-            pass
-
-    def handle_image_scale_spinbox_change(self, val, tab):
-        tab.image_scale_slider.setValue(int(val * 100))
-        try:
-            self.image_scale = val * 100
-        except:
-            pass
-
-    def handle_scale_spinbox_change(self, val, tab):
-        tab.scale_slider.setValue(int(val * 100))
-        self.scale = val * 100
-
-    def handle_strength_slider_change(self, val, tab):
-        tab.strength_spinbox.setValue(val / 100.0)
-        self.strength = val
-
-    def handle_strength_spinbox_change(self, val, tab):
-        tab.strength_slider.setValue(int(val * 100))
-        self.strength = val
-
-    def handle_seed_spinbox_change(self, val, tab):
-        tab.seed.setText(str(int(val)))
-        self.seed = int(val)
-
-    def handle_samples_slider_change(self, val, tab):
-        tab.samples_spinbox.setValue(int(val))
-        self.samples = int(val)
-        tab.interrupt_button.setEnabled(tab.samples_spinbox.value() > 1)
-
-    def handle_samples_spinbox_change(self, val, tab):
-        tab.samples_slider.setValue(int(val))
-        self.samples = int(val)
-        tab.interrupt_button.setEnabled(tab.samples_spinbox.value() > 1)
-
-    def set_model(self, tab, section, val):
-        model = tab.model_dropdown.currentText()
-        self.model = model
-
-    def set_scheduler(self, tab, section, val):
-        scheduler = tab.scheduler_dropdown.currentText()
-        self.scheduler = scheduler
-
-    def tab_changed_callback(self, index):
-        self.canvas.update()
-
-    def show_about(self):
-        AboutWindow(self.settings_manager)
-
-    def show_grid_settings(self):
-        GridSettings(self.settings_manager)
-
-    def do_invert(self):
-        self.canvas.invert_image()
-        self.canvas.update()
-
-    def show_preferences(self):
-        PreferencesWindow(self.settings_manager)
-
-    def show_advanced(self):
-        AdvancedSettings(self.settings_manager)
-
-    def show_canvas_color(self):
-        # show a color widget dialog and set the canvas color
-        color = QColorDialog.getColor()
-        if color.isValid():
-            color = color.name()
-            self.settings_manager.settings.canvas_color.set(color)
-            self.canvas.set_canvas_color()
-
-    def generate_callback(self):
-        #self.new_layer()
-        self.generate(True)
-
-    def draw_something(self):
-        painter = QPainter(self.window.canvas_container.pixmap())
-        painter.drawLine(10, 10, 300, 200)
-        painter.end()
-
-    def prep_video(self):
-        pass
-
-    def set_default_values(self, section, tab):
-        tab.steps_spinbox.setValue(self.steps)
-        tab.scale_spinbox.setValue(self.scale / 100)
-        if section == "pix2pix":
-            val = self.settings_manager.settings.pix2pix_image_guidance_scale.get()
-            tab.image_scale_spinbox.setValue(val / 100)
-            tab.image_scale_slider.setValue(val)
-        try:
-            tab.strength_spinbox.setValue(self.strength / 100)
-        except:
-            pass
-        tab.seed.setText(str(self.seed))
-        tab.samples_spinbox.setValue(self.samples)
-        tab.model_dropdown.setCurrentText(self.model)
-        tab.scheduler_dropdown.setCurrentText(self.scheduler)
-
-    def generate(
-        self,
-        do_generate=False,
-        image=None,
-        mask=None
-    ):
-        if self.use_pixels:
-            self.requested_image = image
-            self.start_progress_bar(self.current_section)
-            try:
-                image = self.canvas.current_layer.images[0].image
-            except IndexError:
-                image = None
-
-            if image is None:
-                # create a transparent image the size of self.canvas.active_grid_area_rect
-                width = self.settings_manager.settings.working_width.get()
-                height = self.settings_manager.settings.working_height.get()
-                image = Image.new("RGBA", (int(width), int(height)), (0, 0, 0, 0))
-
-            lines = self.canvas.current_layer.lines
-            # combine lines with image
-            for line in lines:
-                # convert PIL.Image to numpy array
-                image = np.array(image)
-                start: QPoint = line.start_point
-                end: QPoint = line.end_point
-                color: QColor = line._pen["color"]
-                image = cv2.line(image, (start.x(), start.y()), (end.x(), end.y()), (color.red(), color.green(), color.blue()), int(line._pen["width"]))
-                # convert numpy array to PIL.Image
-                image = Image.fromarray(image)
-
-            img = image.copy().convert("RGBA")
-            new_image = Image.new("RGBA", (self.settings.working_width.get(), self.settings.working_height.get()), (0, 0, 0))
-
-            cropped_outpaint_box_rect = self.active_rect()
-            crop_location = (
-                cropped_outpaint_box_rect.x() - self.canvas.image_pivot_point.x(),
-                cropped_outpaint_box_rect.y() - self.canvas.image_pivot_point.y(),
-                cropped_outpaint_box_rect.width() - self.canvas.image_pivot_point.x(),
-                cropped_outpaint_box_rect.height() - self.canvas.image_pivot_point.y()
-            )
-            new_image.paste(img.crop(crop_location), (0, 0))
-            # save new_image to disc
-            mask = Image.new("RGB", (new_image.width, new_image.height), (255, 255, 255))
-            for x in range(new_image.width):
-                for y in range(new_image.height):
-                    try:
-                        if new_image.getpixel((x, y))[3] != 0:
-                            mask.putpixel((x, y), (0, 0, 0))
-                    except IndexError:
-                        pass
-
-            # convert image to rgb
-            image = new_image.convert("RGB")
-
-            self.do_generate({
-                "mask": mask,
-                "image": image,
-                "location": self.canvas.active_grid_area_rect
-            })
-        elif self.action == "vid2vid":
-            images = self.prep_video()
-            self.do_generate({
-                "images": images
-            })
-        else:
-            self.do_generate()
-
-    def start_progress_bar(self, section):
-        # progressBar: QProgressBar = self.tabs[section].progressBar
-        # progressBar.setRange(0, 0)
-        if self.progress_bar_started:
-            return
-        self.progress_bar_started = True
-        self.tqdm_callback_triggered = False
-        self.stop_progress_bar(section)
-        self.tabs[section].progressBar.setRange(0, 0)
-        self.tqdm_var.set({
-            "step": 0,
-            "total": 0,
-            "action": section,
-            "image": None,
-            "data": None
-        })
-
-    def stop_progress_bar(self, section):
-        self.tabs[section].progressBar.reset()
-        self.tabs[section].progressBar.setRange(0, 100)
-
-    def do_generate(self, extra_options=None):
-        if not extra_options:
-            extra_options = {}
-
-        # self.start_progress_bar(self.current_section)
-
-        action = self.current_section
-        tab = self.tabs[action]
-        # get the name of the model from the model_dropdown
-        sm = self.settings_manager.settings
-        sm.set_namespace(action)
-
-        if sm.random_seed.get():
-            # randomize seed
-            seed = random.randint(0, MAX_SEED)
-            sm.seed.set(seed)
-            # set random_seed on current tab
-            self.tabs[action].seed.setText(str(seed))
-        if action in ("txt2img", "img2img", "pix2pix", "depth2img", "txt2vid"):
-            samples = sm.n_samples.get()
-        else:
-            samples = 1
-
-        prompt = self.tabs[action].prompt.toPlainText()
-        negative_prompt = self.tabs[action].negative_prompt.toPlainText()
-        if self.random_seed:
-            seed = random.randint(0, MAX_SEED)
-            self.settings.seed.set(seed)
-        else:
-            seed = sm.seed.get()
-        # set model, model_path and model_branch
-        # model = sm.model_var.get()
-
-        # set the model data
-        model = tab.model_dropdown.currentText()
-        model_path = None
-        model_branch = None
-        section_name = action
-        if section_name in ["txt2img", "img2img"]:
-            section_name = "generate"
-        if model in MODELS[section_name]:
-            model_path = MODELS[section_name][model]["path"]
-            model_branch = MODELS[section_name][model].get("branch", "main")
-        elif model not in self.models:
-            model_names = list(MODELS[section_name].keys())
-            model = model_names[0]
-            model_path = MODELS[section_name][model]["path"]
-            model_branch = MODELS[section_name][model].get("branch", "main")
-        else:
-            model_path = model
-
-        # get controlnet_dropdown from active tab
-        use_controlnet = False
-        controlnet = ""
-        if action == "controlnet":
-            controlnet_dropdown = self.tabs[action].controlnet_dropdown
-            # get controlnet from controlnet_dropdown
-            controlnet = controlnet_dropdown.currentText()
-            controlnet = controlnet.lower()
-            use_controlnet = controlnet != "none"
-
-        options = {
-            f"{action}_prompt": prompt,
-            f"{action}_negative_prompt": negative_prompt,
-            f"{action}_steps": sm.steps.get(),
-            f"{action}_ddim_eta": sm.ddim_eta.get(),  # only applies to ddim scheduler
-            f"{action}_n_iter": 1,
-            f"{action}_width": sm.working_width.get(),
-            f"{action}_height": sm.working_height.get(),
-            f"{action}_n_samples": samples,
-            f"{action}_scale": sm.scale.get() / 100,
-            f"{action}_seed": seed,
-            f"{action}_model": model,
-            f"{action}_scheduler": sm.scheduler_var.get(),
-            f"{action}_model_path": model_path,
-            f"{action}_model_branch": model_branch,
-            f"width": sm.working_width.get(),
-            f"height": sm.working_height.get(),
-            "do_nsfw_filter": self.settings_manager.settings.nsfw_filter.get(),
-            "model_base_path": sm.model_base_path.get(),
-            "pos_x": 0,
-            "pos_y": 0,
-            "outpaint_box_rect": self.active_rect(),
-            "hf_token": self.settings_manager.settings.hf_api_key.get(),
-            "enable_model_cpu_offload": sm.enable_model_cpu_offload.get(),
-            "use_controlnet": use_controlnet,
-            "controlnet": controlnet,
-        }
-        if action == "superresolution":
-            options["original_image_width"] = self.canvas.current_active_image.width
-            options["original_image_height"] = self.canvas.current_active_image.height
-
-        if action in ["img2img", "depth2img", "pix2pix", "controlnet"]:
-            options[f"{action}_strength"] = sm.strength.get() / 100.0
-
-        if action == "pix2pix":
-            options[f"pix2pix_image_guidance_scale"] = sm.pix2pix_image_guidance_scale.get()
-        memory_options = {
-            "use_last_channels": sm.use_last_channels.get(),
-            "use_enable_sequential_cpu_offload": sm.use_enable_sequential_cpu_offload.get(),
-            "use_attention_slicing": sm.use_attention_slicing.get(),
-            "use_tf32": sm.use_tf32.get(),
-            "use_cudnn_benchmark": sm.use_cudnn_benchmark.get(),
-            "use_enable_vae_slicing": sm.use_enable_vae_slicing.get(),
-            "use_xformers": sm.use_xformers.get(),
-        }
-        data = {
-            "action": action,
-            "options": {
-                **options,
-                **extra_options,
-                **memory_options
-            }
-        }
-        data = self.do_generate_data_injection(data)
-        self.client.message = data
-
-    def active_rect(self):
-        rect = QRect(
-            self.canvas.active_grid_area_rect.x(),
-            self.canvas.active_grid_area_rect.y(),
-            self.canvas.active_grid_area_rect.width(),
-            self.canvas.active_grid_area_rect.height(),
-        )
-        rect.translate(-self.canvas.pos_x, -self.canvas.pos_y)
-
-        return rect
-
-    def refresh_model_list(self):
-        for i in range(self.window.tabWidget.count()):
-            self.load_model_by_section(self.window.tabWidget.widget(i), self.sections[i])
-
-    def load_model_by_section(self, tab, section_name):
-        if section_name in ["txt2img", "img2img"]:
-            section_name = "generate"
-        models = self.load_default_models(section_name)
-        models += self.load_models_from_path()
-        self.models = models
-        tab.model_dropdown.addItems(models)
-
-    def load_default_models(self, section_name):
-        return [
-            k for k in MODELS[section_name].keys()
-        ]
-
-    def load_models_from_path(self):
-        path = os.path.join(self.settings_manager.settings.model_base_path.get())
-        if os.path.exists(path):
-            return [os.path.join(path, model) for model in os.listdir(path)]
-        return []
 
 
 if __name__ == "__main__":
