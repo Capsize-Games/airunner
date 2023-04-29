@@ -36,24 +36,38 @@ class MainWindow(
     GeneratorMixin,
     ComicMixin,
 ):
-    progress_bar_started = False
-    action = "txt2img"
-    sections = [
-            "txt2img",
-            "img2img",
-            "depth2img",
-            "pix2pix",
-            "outpaint",
-            # "superresolution",
-            "controlnet",
-            "txt2vid",
-        ]
     current_filter = None
     tabs = {}
     tqdm_callback_triggered = False
     _document_name = "Untitled"
     _is_dirty = False
     is_saved = False
+    action = "txt2img"
+    tqdm_var = None
+    message_var = None
+    error_var = None
+    image_var = None
+    progress_bar_started = False
+    window = None
+    history = None
+    canvas = None
+    settings_manager = None
+    sections = [
+        "txt2img",
+        "img2img",
+        "depth2img",
+        "pix2pix",
+        "outpaint",
+        # "superresolution",
+        "controlnet",
+        "txt2vid",
+    ]
+    models = None
+    client = None
+
+    @property
+    def grid_size(self):
+        return self.settings_manager.settings.size.get()
 
     @property
     def current_index(self):
@@ -62,6 +76,11 @@ class MainWindow(
     @property
     def current_section(self):
         return self.sections[self.current_index]
+
+    @property
+    def use_pixels(self):
+        # get name of current tab
+        return self.current_section in ("txt2img", "img2img", "pix2pix", "depth2img", "outpaint", "controlnet")
 
     @property
     def settings(self):
@@ -77,11 +96,6 @@ class MainWindow(
     def is_dirty(self, val):
         self._is_dirty = val
         self.set_window_title()
-
-    @property
-    def use_pixels(self):
-        # get name of current tab
-        return self.current_section in ("txt2img", "img2img", "pix2pix", "depth2img", "outpaint", "controlnet")
 
     @property
     def document_name(self):
@@ -105,17 +119,9 @@ class MainWindow(
     def is_windows(self):
         return sys.platform.startswith("win") or sys.platform.startswith("cygwin") or sys.platform.startswith("msys")
 
-    @property
-    def grid_size(self):
-        return self.settings_manager.settings.size.get()
-
     def __init__(self, *args, **kwargs):
         self.set_log_levels()
         super().__init__(*args, **kwargs)
-        self.tqdm_var = None
-        self.message_var = None
-        self.error_var = None
-        self.image_var = None
         self.initialize()
         self.display()
         self.settings_manager.enable_save()
@@ -186,20 +192,6 @@ class MainWindow(
         uic.properties.logger.setLevel(LOG_LEVEL)
         uic.uiparser.logger.setLevel(LOG_LEVEL)
 
-    def set_size_form_element_step_values(self):
-        size = self.grid_size
-        self.window.width_slider.singleStep = size
-        self.window.height_slider.singleStep = size
-        self.window.width_spinbox.singleStep = size
-        self.window.height_spinbox.singleStep = size
-        self.window.width_slider.pageStep = size
-        self.window.height_slider.pageStep = size
-        self.window.width_slider.minimum = size
-        self.window.height_slider.minimum = size
-        self.window.width_spinbox.minimum = size
-        self.window.height_spinbox.minimum = size
-        self.canvas.update()
-
     def center(self):
         availableGeometry = QGuiApplication.primaryScreen().availableGeometry()
         frameGeometry = self.window.frameGeometry()
@@ -253,15 +245,63 @@ class MainWindow(
             self.setStyleSheet(stream.read())
 
     def set_window_title(self):
+        """
+        Overrides base method to set the window title
+        :return:
+        """
         self.window.setWindowTitle(f"AI Runner {self.document_name}")
 
-    def update_brush_size(self, val):
-        self.settings_manager.settings.mask_brush_size.set(val)
-        self.window.brush_size_spinbox.setValue(val)
+    def new_document(self):
+        CanvasMixin.initialize(self)
+        self.is_saved = False
+        self.is_dirty = False
+        self._document_name = "Untitled"
+        self.set_window_title()
+        # clear the layers list widget
+        self.window.layers.setWidget(None)
+        self.current_filter = None
+        self.canvas.update()
+        self.show_layers()
 
-    def brush_spinbox_change(self, val):
-        self.settings_manager.settings.mask_brush_size.set(val)
-        self.window.brush_size_slider.setValue(val)
+    def message_handler(self, msg, error=False):
+        try:
+            self.window.status_label.setStyleSheet("color: black;")
+        except Exception as e:
+            print("something went wrong while setting label")
+            print(e)
+
+        try:
+            self.window.status_label.setText(msg["response"])
+        except TypeError:
+            self.window.status_label.setText("")
+
+    def error_handler(self, msg):
+        try:
+            self.window.status_label.setStyleSheet("color: red;")
+        except Exception as e:
+            print("something went wrong while setting label")
+            print(e)
+
+        self.window.status_label.setText(msg)
+
+    def set_size_form_element_step_values(self):
+        """
+        This function is called when grid_size is changed in the settings.
+
+        :return:
+        """
+        size = self.grid_size
+        self.window.width_slider.singleStep = size
+        self.window.height_slider.singleStep = size
+        self.window.width_spinbox.singleStep = size
+        self.window.height_spinbox.singleStep = size
+        self.window.width_slider.pageStep = size
+        self.window.height_slider.pageStep = size
+        self.window.width_slider.minimum = size
+        self.window.height_slider.minimum = size
+        self.window.width_spinbox.minimum = size
+        self.window.height_spinbox.minimum = size
+        self.canvas.update()
 
     def saveas_document(self):
         # get file path
@@ -291,39 +331,6 @@ class MainWindow(
         self.set_window_title()
         self.is_saved = True
         self.is_dirty = False
-
-    def message_handler(self, msg):
-        try:
-            self.window.status_label.setStyleSheet("color: black;")
-        except Exception as e:
-            print("something went wrong while setting label")
-            print(e)
-
-        try:
-            self.window.status_label.setText(msg["response"])
-        except TypeError:
-            self.window.status_label.setText("")
-
-    def error_handler(self, msg):
-        try:
-            self.window.status_label.setStyleSheet("color: red;")
-        except Exception as e:
-            print("something went wrong while setting label")
-            print(e)
-
-        self.window.status_label.setText(msg)
-
-    def new_document(self):
-        self.initialize_canvas()
-        self.is_saved = False
-        self.is_dirty = False
-        self._document_name = "Untitled"
-        self.set_window_title()
-        # clear the layers list widget
-        self.window.layers.setWidget(None)
-        self.current_filter = None
-        self.canvas.update()
-        self.show_layers()
 
     def save_document(self):
         if not self.is_saved:

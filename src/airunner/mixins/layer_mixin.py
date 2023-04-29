@@ -2,10 +2,9 @@ import os
 from PyQt6 import uic
 from PyQt6.QtWidgets import QWidget, QVBoxLayout, QSpacerItem, QSizePolicy
 from PyQt6.QtGui import QIcon
-from airunner.mixins.base_mixin import BaseMixin
 
 
-class LayerMixin(BaseMixin):
+class LayerMixin:
     """
     This is a mixin class for the main window that handles the layer manager.
     """
@@ -73,7 +72,8 @@ class LayerMixin(BaseMixin):
                 layer_obj.frame.setStyleSheet(self.layer_normal_style)
 
             layer_obj.visible_button.setIcon(QIcon("src/icons/eye.png" if layer.visible else "src/icons/eye-off.png"))
-            layer_obj.visible_button.clicked.connect(lambda _, _layer=layer, _layer_obj=layer_obj: self.toggle_layer_visibility(_layer, _layer_obj))
+            layer_obj.visible_button.clicked.connect(
+                lambda _, _layer=layer, _layer_obj=layer_obj: self.toggle_layer_visibility(_layer, _layer_obj))
 
             container.layout().addWidget(layer_obj)
             index += 1

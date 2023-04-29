@@ -3,7 +3,6 @@ from PyQt6 import QtGui
 from PyQt6.QtWidgets import QColorDialog
 import qdarktheme
 import webbrowser
-from airunner.mixins.base_mixin import BaseMixin
 from airunner.windows.about import AboutWindow
 from airunner.windows.advanced_settings import AdvancedSettings
 from airunner.windows.extensions import ExtensionsWindow
@@ -11,7 +10,7 @@ from airunner.windows.grid_settings import GridSettings
 from airunner.windows.preferences import PreferencesWindow
 
 
-class ToolbarMixin(BaseMixin):
+class ToolbarMixin:
     def initialize(self):
         self.window.eraser_button.clicked.connect(lambda: self.set_tool("eraser"))
         self.window.brush_button.clicked.connect(lambda: self.set_tool("brush"))
