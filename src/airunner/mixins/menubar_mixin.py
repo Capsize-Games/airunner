@@ -17,9 +17,6 @@ class MenubarMixin:
         self.initialize_filter_actions()
         self.window.actionResize_on_Paste.setChecked(self.settings_manager.settings.resize_on_paste.get() == True)
 
-    def quit(self):
-        print("QUIT WAS CALLED")
-
     def initialize_filter_actions(self):
         self.filter_gaussian_blur = FilterGaussianBlur(parent=self)
         self.window.actionGaussian_Blur.triggered.connect(self.filter_gaussian_blur.show)
