@@ -12,6 +12,7 @@ from PyQt6.QtCore import QPoint, pyqtSlot, QRect
 from PyQt6.QtGui import QPainter, QColor, QGuiApplication
 from aihandler.qtvar import TQDMVar, ImageVar, MessageHandlerVar, ErrorHandlerVar
 from aihandler.settings import MAX_SEED, AVAILABLE_SCHEDULERS_BY_ACTION, MODELS, LOG_LEVEL
+from airunner.mixins.base_mixin import BaseMixin
 from airunner.mixins.embedding_mixin import EmbeddingMixin
 from airunner.mixins.extension_mixin import ExtensionMixin
 from airunner.mixins.history_mixin import HistoryMixin
@@ -33,10 +34,7 @@ from airunner.filters import FilterGaussianBlur, FilterBoxBlur, FilterUnsharpMas
 import qdarktheme
 
 
-class CanvasMixin:
-    window = None
-    settings_manager = None
-
+class CanvasMixin(BaseMixin):
     def initialize(self):
         self.canvas = Canvas(self)
         self.settings_manager.settings.show_grid.my_signal.connect(self.canvas.update)
