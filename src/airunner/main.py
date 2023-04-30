@@ -1,14 +1,13 @@
 import os
 import pickle
 import sys
-
-import PyQt6
 from PyQt6 import uic, QtCore
 from PyQt6.QtWidgets import QApplication, QFileDialog
 from PyQt6.QtCore import pyqtSlot
 from PyQt6.QtGui import QGuiApplication
 from aihandler.qtvar import TQDMVar, ImageVar, MessageHandlerVar, ErrorHandlerVar
 from aihandler.settings import LOG_LEVEL
+from airunner.mixins.brushes_mixin import BrushesMixin
 from airunner.mixins.canvas_mixin import CanvasMixin
 from airunner.mixins.comic_mixin import ComicMixin
 from airunner.mixins.embedding_mixin import EmbeddingMixin
@@ -37,6 +36,7 @@ class MainWindow(
     GeneratorMixin,
     ComicMixin,
     ExtensionMixin,
+    BrushesMixin,
 ):
     current_filter = None
     tabs = {}
@@ -146,6 +146,7 @@ class MainWindow(
         ToolbarMixin.initialize(self)
         self.initialize_stable_diffusion()
         ExtensionMixin.initialize(self)
+        BrushesMixin.initialize(self)
 
     def initialize_settings_manager(self):
         self.settings_manager = SettingsManager()
