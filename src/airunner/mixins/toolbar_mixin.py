@@ -17,8 +17,6 @@ class ToolbarMixin:
         self.window.active_grid_area_button.clicked.connect(lambda: self.set_tool("active_grid_area"))
         self.window.move_button.clicked.connect(lambda: self.set_tool("move"))
         # self.window.select_button.clicked.connect(lambda: self.set_tool("select"))
-        self.window.primary_color_button.clicked.connect(self.set_primary_color)
-        self.window.secondary_color_button.clicked.connect(self.set_secondary_color)
         self.window.grid_button.clicked.connect(self.toggle_grid)
         self.window.nsfw_button.clicked.connect(self.toggle_nsfw_filter)
         self.window.focus_button.clicked.connect(self.focus_button_clicked)
@@ -97,29 +95,6 @@ class ToolbarMixin:
             self.settings_manager.settings.current_tool.set(None)
 
         self.canvas.update_cursor()
-
-    def set_primary_color(self):
-        # display a color picker
-        color = QColorDialog.getColor()
-        if color.isValid():
-            self.settings_manager.settings.primary_color.set(color.name())
-            self.set_button_colors()
-
-    def set_button_colors(self):
-        # set self.window.primaryColorButton color
-        self.window.primary_color_button.setStyleSheet(
-            f"background-color: {self.settings_manager.settings.primary_color.get()};"
-        )
-        self.window.secondary_color_button.setStyleSheet(
-            f"background-color: {self.settings_manager.settings.secondary_color.get()};"
-        )
-
-    def set_secondary_color(self):
-        # display a color picker
-        color = QColorDialog.getColor()
-        if color.isValid():
-            self.settings_manager.settings.secondary_color.set(color.name())
-            self.set_button_colors()
 
     def toggle_grid(self, event):
         self.settings_manager.settings.show_grid.set(

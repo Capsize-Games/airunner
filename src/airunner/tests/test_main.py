@@ -1,14 +1,13 @@
 import unittest
-
-from PyQt6.QtWidgets import QApplication
-
 from airunner.main import MainWindow
-
+WINDOW = None
 
 class TestMain(unittest.TestCase):
     def setUp(self):
-        self.main_window = MainWindow([], testing=True)
+        global WINDOW
+        if not WINDOW:
+            WINDOW = MainWindow([], testing=True)
+        self.main_window = WINDOW
 
     def test_main(self):
         self.assertEqual(self.main_window.window.windowTitle(), "AI Runner Untitled")
-
