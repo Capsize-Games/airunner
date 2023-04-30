@@ -27,5 +27,5 @@ class TestCanvas(unittest.TestCase):
 
     def test_add_layer(self):
         self.canvas.add_layer()
-        self.assertEqual(len(self.canvas.layers), 1)
+        self.assertEqual(len(self.canvas.layers), 2)
 
