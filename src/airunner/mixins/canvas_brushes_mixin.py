@@ -1,7 +1,6 @@
 from PIL.ImageDraw import ImageDraw
 from PyQt6.QtCore import Qt, QPointF, QPoint
 from PyQt6.QtGui import QPainter, QPainterPath, QColor, QPen
-
 from airunner.models.linedata import LineData
 
 
