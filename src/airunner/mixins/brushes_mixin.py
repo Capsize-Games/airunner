@@ -13,7 +13,6 @@ class BrushesMixin:
 
     def set_primary_brush_opacity(self, value):
         self.settings_manager.settings.primary_brush_opacity.set(int(value))
-        print(value)
         self.canvas.update()
 
     def set_secondary_brush_opacity(self, value):
