@@ -19,6 +19,7 @@ class EmbeddingMixin:
             label = QLabel(embedding_name)
             container.layout().addWidget(label)
             label.mouseDoubleClickEvent = lambda event, _label=label: self.insert_into_prompt(_label.text())
+        container.layout().addStretch()
         tab.embeddings.setWidget(container)
 
     def get_list_of_available_embedding_names(self):
