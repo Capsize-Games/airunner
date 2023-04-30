@@ -72,4 +72,8 @@ wiki page for more information](https://github.com/Capsize-Games/airunner/wiki/I
 
 Unit tests can be run using the following command:
 
+**All tests:**
 `python -m unittest discover tests`
+
+**Individual test:**
+`python -m unittest tests.test_canvas`

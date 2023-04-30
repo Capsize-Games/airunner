@@ -1,6 +1,8 @@
 import os
 import pickle
 import sys
+
+import PyQt6
 from PyQt6 import uic, QtCore
 from PyQt6.QtWidgets import QApplication, QFileDialog
 from PyQt6.QtCore import pyqtSlot
@@ -121,13 +123,13 @@ class MainWindow(
 
     def __init__(self, *args, **kwargs):
         self.set_log_levels()
-        testing = kwargs.pop("testing", False)
+        self.testing = kwargs.pop("testing", False)
         super().__init__(*args, **kwargs)
         self.initialize()
         self.display()
         self.settings_manager.enable_save()
-        if testing: return
-        self.exec()
+        if not self.testing:
+            self.exec()
 
     def initialize(self):
         self.initialize_settings_manager()
@@ -186,7 +188,15 @@ class MainWindow(
         )
 
     def display(self):
-        self.window.show()
+        if not self.testing:
+            self.window.show()
+        else:
+            # do not show the window when testing, otherwise it will block the tests
+            # self.window.hide()
+            # the above solution doesn't work, gives this error:
+            # QBasicTimer::start: QBasicTimer can only be used with threads started with QThread
+            # so instead we do this in order to run without showing the window:
+            self.window.showMinimized()
         self.show_layers()
         self.set_stylesheet()
         self.window.move_button.hide()
