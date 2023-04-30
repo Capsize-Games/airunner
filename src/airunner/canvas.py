@@ -1,10 +1,7 @@
-import io
-import subprocess
-from PIL import Image, ImageOps, ImageDraw, ImageGrab
-from PIL.ImageQt import ImageQt
-from PyQt6.QtCore import Qt, QPoint, QRect, QPointF
-from PyQt6.QtGui import QColor, QPainter, QPen, QBrush, QPixmap, QCursor
-
+from PIL import Image
+from PyQt6.QtCore import Qt, QPoint, QRect
+from PyQt6.QtGui import QColor, QPainter, QPen, QBrush, QCursor
+from airunner.cursors.circle_brush import CircleCursor
 from airunner.mixins.canvas_active_grid_area_mixin import CanvasActiveGridAreaMixin
 from airunner.mixins.canvas_brushes_mixin import CanvasBrushesMixin
 from airunner.mixins.canvas_grid_mixin import CanvasGridMixin
@@ -12,29 +9,7 @@ from airunner.mixins.canvas_image_mixin import CanvasImageMixin
 from airunner.mixins.canvas_layer_mixin import CanvasLayerMixin
 from airunner.mixins.canvas_selectionbox_mixin import CanvasSelectionboxMixin
 from airunner.mixins.canvas_widgets_mixin import CanvasWidgetsMixin
-from airunner.models.layerdata import LayerData
-from airunner.models.imagedata import ImageData
 from airunner.models.linedata import LineData
-
-
-def CircleCursor(outline_color, fill_color, pixmap_size=32):
-    # create a pixmap with the desired size for the cursor shape
-    pixmap = QPixmap(pixmap_size, pixmap_size)
-    pixmap.fill(Qt.GlobalColor.transparent)  # make the background of the pixmap transparent
-
-    # draw a circle in the pixmap
-    painter = QPainter(pixmap)
-    painter.setRenderHint(QPainter.RenderHint.Antialiasing)  # make the edges of the circle smoother
-    pen = QPen(QColor(outline_color))
-    pen.setWidth(2)
-    brush = QBrush(QColor(fill_color))
-    painter.setPen(pen)
-    painter.setBrush(brush)
-    painter.drawEllipse(0, 0, pixmap_size, pixmap_size)
-    painter.end()
-
-    # create a cursor from the pixmap
-    return QCursor(pixmap, pixmap_size // 2, pixmap_size // 2)
 
 
 class Canvas(
@@ -235,24 +210,6 @@ class Canvas(
             CanvasWidgetsMixin.draw(self, layer, index)
         CanvasSelectionboxMixin.paint_event(self, event)
         CanvasActiveGridAreaMixin.paint_event(self, event)
-
-    def draw_cursor(self, event):
-        if self.brush_selected or self.eraser_selected:
-            painter = QPainter(self.canvas_container)
-            painter.setBrush(self.brush)
-            painter.setRenderHint(QPainter.RenderHint.Antialiasing)
-            painter.setPen(QPen(QColor(255, 255, 255, 255), 1, Qt.PenStyle.SolidLine))
-
-            # get mouse position
-            x = self.mouse_position.x()
-            y = self.mouse_position.y()
-
-            # get the center of the brush
-            x -= int(self.brush_size / 2)
-            y -= int(self.brush_size / 2)
-
-            painter.drawEllipse(x, y, self.brush_size, self.brush_size)
-            painter.end()
 
     def enter_event(self, event):
         self.update_cursor()
