@@ -69,8 +69,16 @@ class Canvas:
         return QColor(self.settings_manager.settings.primary_color.get())
 
     @property
+    def primary_brush_opacity(self):
+        return self.settings_manager.settings.primary_brush_opacity.get()
+
+    @property
     def secondary_color(self):
         return QColor(self.settings_manager.settings.secondary_color.get())
+
+    @property
+    def secondary_brush_opacity(self):
+        return self.settings_manager.settings.secondary_brush_opacity.get()
 
     @property
     def is_dragging(self):
@@ -502,7 +510,10 @@ class Canvas:
         for line in layer.lines:
             pen = line.pen
             pen.setCapStyle(Qt.PenCapStyle.RoundCap)
+            pen.setJoinStyle(Qt.PenJoinStyle.RoundJoin)
+
             painter.setPen(pen)
+            painter.setOpacity(line.opacity / 255)
             start = QPointF(line.start_point.x() + self.pos_x, line.start_point.y() + self.pos_y)
             end = QPointF(line.end_point.x() + self.pos_x, line.end_point.y() + self.pos_y)
 
@@ -672,21 +683,27 @@ class Canvas:
         elif event.button() == Qt.MouseButton.RightButton or Qt.MouseButton.RightButton in event.buttons():
             brush_color = self.settings_manager.settings.secondary_color.get()
         brush_color = QColor(brush_color)
-        return QPen(
+        pen = QPen(
             brush_color,
             self.settings_manager.settings.mask_brush_size.get()
         )
+        return pen
 
     def handle_draw(self, event):
         # Continue drawing the current line as the mouse is moved but use brush_size
         # to control the radius of the line being drawn
         start = event.pos() - QPoint(self.pos_x, self.pos_y)
         pen = self.pen(event)
+        opacity = 255
+        if event.button() == Qt.MouseButton.LeftButton or Qt.MouseButton.LeftButton in event.buttons():
+            opacity = self.primary_brush_opacity
+        elif event.button() == Qt.MouseButton.RightButton or Qt.MouseButton.RightButton in event.buttons():
+            opacity = self.secondary_brush_opacity
         if len(self.current_layer.lines) > 0:
-            previous = LineData(self.current_layer.lines[-1].start_point, start, pen, self.current_layer_index)
+            previous = LineData(self.current_layer.lines[-1].start_point, start, pen, self.current_layer_index, opacity)
             self.current_layer.lines[-1] = previous
         end = event.pos() - QPoint(self.pos_x, self.pos_y)
-        line_data = LineData(start, end, pen, self.current_layer_index)
+        line_data = LineData(start, end, pen, self.current_layer_index, opacity)
         self.current_layer.lines.append(line_data)
         self.update()
 
@@ -741,7 +758,12 @@ class Canvas:
                 start = event.pos() - QPoint(self.pos_x, self.pos_y)
                 end = event.pos() - QPoint(self.pos_x, self.pos_y)
                 pen = self.pen(event)
-                line = LineData(start, end, pen, self.current_layer_index)
+                opacity = 255
+                if event.button() == Qt.MouseButton.LeftButton:
+                    opacity = self.primary_brush_opacity
+                elif event.button() == Qt.MouseButton.RightButton:
+                    opacity = self.secondary_brush_opacity
+                line = LineData(start, end, pen, self.current_layer_index, opacity)
                 start += self.layers[self.current_layer_index].offset
                 end += self.layers[self.current_layer_index].offset
                 self.current_layer.lines += [line]
