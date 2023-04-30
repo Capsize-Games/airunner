@@ -1,4 +1,4 @@
-from airunner.qtcanvas import Canvas
+from airunner.canvas import Canvas
 
 
 class CanvasMixin:
