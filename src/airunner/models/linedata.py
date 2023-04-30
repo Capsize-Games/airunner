@@ -8,7 +8,8 @@ class LineData:
         pen = self._pen if self._pen else {
             "color": "#000000",
             "width": 1,
-            "style": Qt.PenStyle.SolidLine
+            "style": Qt.PenStyle.SolidLine,
+            "opacity": 255
         }
         return QPen(
             QColor(pen["color"]),
@@ -16,14 +17,19 @@ class LineData:
             pen["style"]
         )
 
-    def __init__(self, start_point: QPoint, end_point: QPoint, pen: QPen, layer_index: int):
+    @property
+    def opacity(self):
+        return self._pen["opacity"] if self._pen else 255
+
+    def __init__(self, start_point: QPoint, end_point: QPoint, pen: QPen, layer_index: int, opacity: int):
         self.start_point = start_point
         self.end_point = end_point
         # do not store as a qpen, store as a dict
         self._pen = {
             "color": pen.color(),
             "width": pen.width(),
-            "style": pen.style()
+            "style": pen.style(),
+            "opacity": opacity
         }
         self.layer_index = layer_index
 
