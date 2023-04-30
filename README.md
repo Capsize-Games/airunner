@@ -65,3 +65,15 @@ For those interested in installing the development version, there are three opti
 
 [See the installation 
 wiki page for more information](https://github.com/Capsize-Games/airunner/wiki/Installation-instructions)
+
+---
+
+### Unit tests
+
+Unit tests can be run using the following command:
+
+**All tests:**
+`python -m unittest discover tests`
+
+**Individual test:**
+`python -m unittest tests.test_canvas`
