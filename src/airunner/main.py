@@ -121,10 +121,12 @@ class MainWindow(
 
     def __init__(self, *args, **kwargs):
         self.set_log_levels()
+        testing = kwargs.pop("testing", False)
         super().__init__(*args, **kwargs)
         self.initialize()
         self.display()
         self.settings_manager.enable_save()
+        if testing: return
         self.exec()
 
     def initialize(self):
