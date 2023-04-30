@@ -2,7 +2,7 @@ import io
 import subprocess
 from PIL import Image, ImageOps, ImageDraw, ImageGrab
 from PIL.ImageQt import ImageQt
-from PyQt6.QtCore import Qt, QPoint, QRect
+from PyQt6.QtCore import Qt, QPoint, QRect, QPointF
 from PyQt6.QtGui import QColor, QPainter, QPen, QBrush, QPixmap, QCursor
 
 from airunner.mixins.canvas_active_grid_area_mixin import CanvasActiveGridAreaMixin
@@ -15,6 +15,26 @@ from airunner.mixins.canvas_widgets_mixin import CanvasWidgetsMixin
 from airunner.models.layerdata import LayerData
 from airunner.models.imagedata import ImageData
 from airunner.models.linedata import LineData
+
+
+def CircleCursor(outline_color, fill_color, pixmap_size=32):
+    # create a pixmap with the desired size for the cursor shape
+    pixmap = QPixmap(pixmap_size, pixmap_size)
+    pixmap.fill(Qt.GlobalColor.transparent)  # make the background of the pixmap transparent
+
+    # draw a circle in the pixmap
+    painter = QPainter(pixmap)
+    painter.setRenderHint(QPainter.RenderHint.Antialiasing)  # make the edges of the circle smoother
+    pen = QPen(QColor(outline_color))
+    pen.setWidth(2)
+    brush = QBrush(QColor(fill_color))
+    painter.setPen(pen)
+    painter.setBrush(brush)
+    painter.drawEllipse(0, 0, pixmap_size, pixmap_size)
+    painter.end()
+
+    # create a cursor from the pixmap
+    return QCursor(pixmap, pixmap_size // 2, pixmap_size // 2)
 
 
 class Canvas(
@@ -64,6 +84,22 @@ class Canvas(
     def mouse_pos(self):
         return self.canvas_container.mapFromGlobal(QCursor.pos())
 
+    @property
+    def brush_size(self):
+        return self.settings_manager.settings.mask_brush_size.get()
+
+    @property
+    def canvas_container(self):
+        return self.parent.window.canvas_container
+
+    @property
+    def settings_manager(self):
+        return self.parent.settings_manager
+
+    @property
+    def mouse_position(self):
+        return self.canvas_container.mapFromGlobal(QCursor.pos())
+
     def __init__(
         self,
         parent=None
@@ -76,15 +112,12 @@ class Canvas(
         self.start_drawing_line_index = 0
         self.stop_drawing_line_index = 0
         self.parent = parent
-        self.settings_manager = parent.settings_manager
+        self.image_pivot_point = QPoint(0, 0)
+        self.image_root_point = QPoint(0, 0)
 
         CanvasGridMixin.initialize(self)
         CanvasActiveGridAreaMixin.initialize(self)
         CanvasLayerMixin.initialize(self)
-
-        self.image_pivot_point = QPoint(0, 0)
-        self.image_root_point = QPoint(0, 0)
-        self.canvas_container = parent.window.canvas_container
 
         # Set initial position and size of the canvas
         self.canvas_container.setGeometry(QRect(
@@ -99,11 +132,10 @@ class Canvas(
         self.canvas_container.mousePressEvent = self.mouse_press_event
         self.canvas_container.mouseMoveEvent = self.mouse_move_event
         self.canvas_container.mouseReleaseEvent = self.mouse_release_event
+
         # on mouse hover
         self.canvas_container.enterEvent = self.enter_event
         self.canvas_container.leaveEvent = self.leave_event
-
-        #self.setParent(parent)
 
         # Set the default brush color for drawing
         self.brush = QBrush()
@@ -204,12 +236,30 @@ class Canvas(
         CanvasSelectionboxMixin.paint_event(self, event)
         CanvasActiveGridAreaMixin.paint_event(self, event)
 
+    def draw_cursor(self, event):
+        if self.brush_selected or self.eraser_selected:
+            painter = QPainter(self.canvas_container)
+            painter.setBrush(self.brush)
+            painter.setRenderHint(QPainter.RenderHint.Antialiasing)
+            painter.setPen(QPen(QColor(255, 255, 255, 255), 1, Qt.PenStyle.SolidLine))
+
+            # get mouse position
+            x = self.mouse_position.x()
+            y = self.mouse_position.y()
+
+            # get the center of the brush
+            x -= int(self.brush_size / 2)
+            y -= int(self.brush_size / 2)
+
+            painter.drawEllipse(x, y, self.brush_size, self.brush_size)
+            painter.end()
+
     def enter_event(self, event):
         self.update_cursor()
 
     def update_cursor(self):
         if self.brush_selected or self.eraser_selected:
-            self.canvas_container.setCursor(Qt.CursorShape.CrossCursor)
+            self.canvas_container.setCursor(CircleCursor(Qt.GlobalColor.white, Qt.GlobalColor.transparent, self.brush_size))
         elif self.move_selected:
             self.canvas_container.setCursor(Qt.CursorShape.OpenHandCursor)
         elif self.active_grid_area_selected:
