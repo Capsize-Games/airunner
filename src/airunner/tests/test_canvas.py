@@ -1,5 +1,5 @@
 import unittest
-from airunner.qtcanvas import Canvas
+from airunner.canvas import Canvas
 from airunner.main import MainWindow
 WINDOW = None
 
