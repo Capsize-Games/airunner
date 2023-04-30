@@ -1,7 +1,8 @@
 import unittest
-from airunner.qtcanvas import Canvas
+from airunner.canvas import Canvas
 from airunner.main import MainWindow
 WINDOW = None
+
 
 class TestCanvas(unittest.TestCase):
     def setUp(self):
@@ -27,5 +28,4 @@ class TestCanvas(unittest.TestCase):
 
     def test_add_layer(self):
         self.canvas.add_layer()
-        self.assertEqual(len(self.canvas.layers), 1)
-
+        self.assertEqual(len(self.canvas.layers), 2)
