@@ -58,45 +58,6 @@ class CanvasBrushesMixin:
         painter.drawPath(path)
         painter.end()
 
-    # def draw_user_lines(self, layer, index, painter):
-    #     painter.setRenderHint(QPainter.RenderHint.Antialiasing)
-    #
-    #     for line in layer.lines:
-    #         path = QPainterPath()
-    #         pen = line.pen
-    #         pen.setCapStyle(Qt.PenCapStyle.RoundCap)
-    #         pen.setJoinStyle(Qt.PenJoinStyle.RoundJoin)
-    #
-    #         brush = QBrush(line.color)
-    #         brush.setStyle(Qt.BrushStyle.SolidPattern)
-    #
-    #         path.setFillRule(Qt.FillRule.WindingFill)
-    #         path.addEllipse(QPointF(0, 0), line.width / 2, line.width / 2)
-    #
-    #         start = QPointF(line.start_point.x() + self.pos_x, line.start_point.y() + self.pos_y)
-    #         end = QPointF(line.end_point.x() + self.pos_x, line.end_point.y() + self.pos_y)
-    #
-    #         # also apply the layer offset
-    #         offset = QPointF(self.current_layer.offset.x(), self.current_layer.offset.y())
-    #         start += offset
-    #         end += offset
-    #
-    #         # calculate control points for the Bezier curve
-    #         dx = end.x() - start.x()
-    #         dy = end.y() - start.y()
-    #         ctrl1 = QPointF(start.x() + dx / 3, start.y() + dy / 3)
-    #         ctrl2 = QPointF(end.x() - dx / 3, end.y() - dy / 3)
-    #
-    #         # add the curve to the path
-    #         path.moveTo(start)
-    #         path.cubicTo(ctrl1, ctrl2, end)
-    #
-    #         # draw the path with the appropriate pen and brush
-    #         painter.setPen(pen)
-    #         painter.setBrush(brush)
-    #         painter.setOpacity(line.opacity / 255)
-    #         painter.drawPath(path)
-
     def handle_erase(self, event):
         self.is_erasing = True
         # Erase any line segments that intersect with the current position of the mouse
