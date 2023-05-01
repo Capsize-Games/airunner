@@ -148,6 +148,7 @@ class MainWindow(
         ExtensionMixin.initialize(self)
         BrushesMixin.initialize(self)
         EmbeddingMixin.initialize(self)
+        ModelMixin.initialize(self)
 
     def initialize_settings_manager(self):
         self.settings_manager = SettingsManager()
