@@ -1,8 +1,12 @@
+import cv2
+import numpy as np
 from PIL.ImageDraw import ImageDraw
 from PyQt6.QtCore import Qt, QPointF, QPoint
-from PyQt6.QtGui import QPainter, QPainterPath, QColor, QPen
-from airunner.models.linedata import LineData
+from PyQt6.QtGui import QPainter, QPainterPath, QColor, QPen, QImage
 
+from airunner.models.imagedata import ImageData
+from airunner.models.linedata import LineData
+from PIL import Image
 
 class CanvasBrushesMixin:
     @property
@@ -23,11 +27,24 @@ class CanvasBrushesMixin:
 
     def draw(self, layer, index):
         painter = QPainter(self.canvas_container)
+        # we want to draw the lines to a QImage first, then convert the QImage to a PIL Image by using the
+        # ImageDraw class
+        # this is because the ImageDraw class is much faster than QPainter:
+        # first create an empty QImage
+        #image = QImage(self.canvas_container.size(), QImage.Format.Format_ARGB32)
+        # fill the image with a transparent color
+        #image.fill(Qt.GlobalColor.transparent)
+        # create a QPainter to draw on the QImage
+        #painter = QPainter(image)
+
         painter.setBrush(self.brush)
         painter.setRenderHint(QPainter.RenderHint.Antialiasing)
 
         # create a QPainterPath to hold the entire line
         path = QPainterPath()
+        if len(layer.lines) == 0:
+            painter.end()
+            return
         for line in layer.lines:
             pen = line.pen
             pen.setCapStyle(Qt.PenCapStyle.RoundCap)
@@ -57,6 +74,54 @@ class CanvasBrushesMixin:
         # draw the entire line with a single drawPath call
         painter.drawPath(path)
         painter.end()
+
+    def rasterize_lines(self):
+        # only grab lines:
+        img = QImage(self.canvas_container.size(), QImage.Format.Format_ARGB32)
+        img.fill(Qt.GlobalColor.transparent)
+        painter = QPainter(img)
+        painter.setBrush(self.brush)
+        painter.setRenderHint(QPainter.RenderHint.Antialiasing)
+        path = QPainterPath()
+        for line in self.current_layer.lines:
+            pen = line.pen
+            pen.setCapStyle(Qt.PenCapStyle.RoundCap)
+            pen.setJoinStyle(Qt.PenJoinStyle.RoundJoin)
+
+            painter.setPen(pen)
+            painter.setOpacity(line.opacity / 255)
+
+            start = QPointF(line.start_point.x() + self.pos_x, line.start_point.y() + self.pos_y)
+            end = QPointF(line.end_point.x() + self.pos_x, line.end_point.y() + self.pos_y)
+
+            # also apply the layer offset
+            offset = QPointF(self.current_layer.offset.x(), self.current_layer.offset.y())
+            start += offset
+            end += offset
+
+            # calculate control points for the Bezier curve
+            dx = end.x() - start.x()
+            dy = end.y() - start.y()
+            ctrl1 = QPointF(start.x() + dx / 3, start.y() + dy / 3)
+            ctrl2 = QPointF(end.x() - dx / 3, end.y() - dy / 3)
+
+            # add the curve to the path
+            path.moveTo(start)
+            path.cubicTo(ctrl1, ctrl2, end)
+
+        painter.drawPath(path)
+        painter.end()
+
+        # convert to PIL Image
+        pil_image = Image.fromqpixmap(img)
+        if len(self.current_layer.images) == 0:
+            self.current_layer.images.append(ImageData(QPoint(0, 0), pil_image))
+        else:
+            existing_image = self.current_layer.images[0].image
+            # merge the new image with the existing image
+            existing_image.alpha_composite(pil_image)
+            self.current_layer.images[0] = ImageData(QPoint(0, 0), existing_image)
+        self.current_layer.lines.clear()
 
     def handle_erase(self, event):
         self.is_erasing = True
