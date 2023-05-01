@@ -36,3 +36,11 @@ class BaseExtension:
         :return:
         """
         pass
+
+    def preferences_injection(self, window):
+        """
+        Override this method to inject a widget into the preferences window.
+        :param preferences:
+        :return:
+        """
+        pass
