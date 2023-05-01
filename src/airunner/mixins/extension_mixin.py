@@ -44,7 +44,7 @@ class ExtensionMixin:
                             module = importlib.util.module_from_spec(spec)
                             spec.loader.exec_module(module)
                             extension_class = getattr(module, "Extension")
-                            extensions.append(extension_class(self.settings_manager))
+                            extensions.append(extension_class(self, self.settings_manager))
         self.settings_manager.settings.active_extensions.set(extensions)
 
     def do_generator_tab_injection(self, tab, tab_name):
@@ -55,12 +55,21 @@ class ExtensionMixin:
         :return:
         """
         for extension in self.settings_manager.settings.active_extensions.get():
-            extension.generator_tab_injection(tab, tab_name)
+            try:
+                extension.generator_tab_injection(tab, tab_name)
+            except AttributeError:
+                pass
 
     def do_menubar_injection(self):
         for extension in self.settings_manager.settings.active_extensions.get():
-            extension.menubar_injection(self.window.menubar)
+            try:
+                extension.menubar_injection(self.window.menubar)
+            except AttributeError:
+                pass
 
     def do_toolbar_injection(self):
         for extension in self.settings_manager.settings.active_extensions.get():
-            extension.toolbar_injection(self.window.horizontalFrame)
+            try:
+                extension.toolbar_injection(self.window.horizontalFrame)
+            except AttributeError:
+                pass
