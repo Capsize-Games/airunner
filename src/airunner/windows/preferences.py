@@ -9,22 +9,18 @@ class PreferencesWindow(BaseWindow):
     def initialize_window(self):
         self.template.browseButton.clicked.connect(
             lambda: self.browse_for_model_base_path(self.template.sd_path))
-        self.template.hf_token.textChanged.connect(
-            lambda val: self.settings_manager.settings.hf_api_key.set(val))
         self.template.sd_path.textChanged.connect(
             lambda val: self.settings_manager.settings.model_base_path.set(val))
         self.template.embeddings_path.textChanged.connect(
             lambda val: self.settings_manager.settings.embeddings_path.set(val))
-        self.template.lora_path.textChanged.connect(
-            lambda val: self.settings_manager.settings.lora_path.set(val))
         self.template.embeddings_browse_button.clicked.connect(
             lambda: self.browse_for_embeddings_path(self.template.embeddings_path))
-        self.template.lora_browse_button.clicked.connect(
-            lambda: self.browse_for_lora_path(self.template.lora_path))
         self.template.sd_path.setText(self.settings_manager.settings.model_base_path.get())
         self.template.embeddings_path.setText(self.settings_manager.settings.embeddings_path.get())
-        self.template.lora_path.setText(self.settings_manager.settings.lora_path.get())
-        self.template.hf_token.setText(self.settings_manager.settings.hf_api_key.get())
+        # self.template.hf_token.textChanged.connect(
+        #     lambda val: self.settings_manager.settings.hf_api_key.set(val))
+        # self.template.hf_token.setText(self.settings_manager.settings.hf_api_key.get())
+        self.app.do_preferences_injection(self)
 
     def browse_for_embeddings_path(self, line_edit):
         path = QFileDialog.getExistingDirectory(None, "Select Directory")
