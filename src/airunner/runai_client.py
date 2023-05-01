@@ -63,6 +63,7 @@ class OfflineClient(QtCore.QObject):
         super().__init__(
             parent=kwargs.get("parent", None)
         )
+        self.app = kwargs.get("app", None)
         self.settings_manager = kwargs.get("settings_manager", None)
         self.quit_event = BooleanVar()
         self.queue = queue.Queue()
