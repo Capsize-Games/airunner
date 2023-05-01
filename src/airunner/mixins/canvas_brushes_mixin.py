@@ -1,6 +1,6 @@
 import cv2
 import numpy as np
-from PIL.ImageDraw import ImageDraw
+from PIL import ImageDraw
 from PyQt6.QtCore import Qt, QPointF, QPoint
 from PyQt6.QtGui import QPainter, QPainterPath, QColor, QPen, QImage
 
@@ -128,13 +128,6 @@ class CanvasBrushesMixin:
         # Erase any line segments that intersect with the current position of the mouse
         brush_size = self.settings_manager.settings.mask_brush_size.get()
         start = event.pos() - QPoint(self.pos_x, self.pos_y) - self.image_pivot_point
-        for i, line in enumerate(self.current_layer.lines):
-            # check if line intersects with start using brush size radius
-            if line.intersects(start, brush_size):
-                self.current_layer.lines.pop(i)
-                self.update()
-
-        # erase pixels from image
         if len(self.current_layer.images) > 0:
             image = self.current_layer.images[0].image
             if image:
