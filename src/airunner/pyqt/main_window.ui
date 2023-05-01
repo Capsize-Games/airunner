@@ -1373,6 +1373,7 @@
     <addaction name="separator"/>
     <addaction name="actionGrid"/>
     <addaction name="actionCanvas_color"/>
+    <addaction name="separator"/>
     <addaction name="actionResize_on_Paste"/>
     <addaction name="separator"/>
     <addaction name="actionAdvanced"/>
@@ -1475,7 +1476,7 @@
   </action>
   <action name="actionPreferences">
    <property name="text">
-    <string>Preferences</string>
+    <string>Path Preferences</string>
    </property>
   </action>
   <action name="actionCanvas_color">
@@ -1523,7 +1524,7 @@
   </action>
   <action name="actionAdvanced">
    <property name="text">
-    <string>Advanced</string>
+    <string>Memory Settings</string>
    </property>
   </action>
   <action name="actionGaussian_Blur">
@@ -1617,6 +1618,14 @@
   <action name="actionExtensions">
    <property name="text">
     <string>Extensions</string>
+   </property>
+  </action>
+  <action name="actionShow_image_preview">
+   <property name="checkable">
+    <bool>true</bool>
+   </property>
+   <property name="text">
+    <string>Show image preview</string>
    </property>
   </action>
  </widget>
