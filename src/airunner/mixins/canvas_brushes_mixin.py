@@ -115,12 +115,12 @@ class CanvasBrushesMixin:
         # convert to PIL Image
         pil_image = Image.fromqpixmap(img)
         if len(self.current_layer.images) == 0:
-            self.current_layer.images.append(ImageData(QPoint(0, 0), pil_image))
+            self.current_layer.images.append(ImageData(QPoint(self.pos_x, self.pos_y), pil_image))
         else:
             existing_image = self.current_layer.images[0].image
             # merge the new image with the existing image
             existing_image.alpha_composite(pil_image)
-            self.current_layer.images[0] = ImageData(QPoint(0, 0), existing_image)
+            self.current_layer.images[0] = ImageData(QPoint(self.pos_x, self.pos_y), existing_image)
         self.current_layer.lines.clear()
 
     def handle_erase(self, event):
