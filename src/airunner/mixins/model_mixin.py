@@ -3,9 +3,17 @@ from aihandler.settings import MODELS
 
 
 class ModelMixin:
+    def initialize(self):
+        self.settings_manager.settings.model_base_path.my_signal.connect(self.refresh_model_list)
+
     def refresh_model_list(self):
         for i in range(self.window.tabWidget.count()):
-            self.load_model_by_section(self.window.tabWidget.widget(i), self.sections[i])
+            tab = self.window.tabWidget.widget(i)
+            self.clear_model_list(tab)
+            self.load_model_by_section(tab, self.sections[i])
+
+    def clear_model_list(self, tab):
+        tab.model_dropdown.clear()
 
     def load_model_by_section(self, tab, section_name):
         if section_name in ["txt2img", "img2img"]:
