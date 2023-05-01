@@ -8,7 +8,8 @@ class BaseExtension:
     """
     extension_directory = None
 
-    def __init__(self, settings_manager=None):
+    def __init__(self, app, settings_manager=None):
+        self.app = app
         self.settings_manager = settings_manager
 
     @property
