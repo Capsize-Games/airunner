@@ -190,6 +190,9 @@ class MainWindow(
             settings_manager=self.settings_manager,
         )
 
+    def save_settings(self):
+        self.settings_manager.save_settings()
+
     def display(self):
         if not self.testing:
             self.window.show()
