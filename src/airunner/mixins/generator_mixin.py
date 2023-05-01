@@ -11,8 +11,6 @@ from airunner.windows.video import VideoPopup
 
 
 class GeneratorMixin:
-    tabs = None
-
     @property
     def width(self):
         return int(self.settings_manager.settings.working_width.get())
@@ -106,7 +104,7 @@ class GeneratorMixin:
     def initialize(self):
         sections = ["txt2img", "img2img", "depth2img", "pix2pix", "outpaint", "controlnet", "txt2vid"]
         self.tabs = {}
-        for tab in sections:
+        for tab in self.sections:
             self.tabs[tab] = uic.loadUi(os.path.join(
                 os.path.dirname(os.path.abspath(__file__)), "..", "pyqt/generate_form.ui"))
 
@@ -146,7 +144,6 @@ class GeneratorMixin:
         # iterate over each tab and connect steps_slider with steps_spinbox
         for tab_name in self.tabs.keys():
             tab = self.tabs[tab_name]
-            self.load_embeddings(tab)
 
             tab.steps_slider.valueChanged.connect(lambda val, _tab=tab: self.handle_steps_slider_change(val, _tab))
             tab.steps_spinbox.valueChanged.connect(lambda val, _tab=tab: self.handle_steps_spinbox_change(val, _tab))
