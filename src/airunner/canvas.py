@@ -325,6 +325,8 @@ class Canvas(
             # Start dragging the canvas when the middle or right mouse button is pressed
             self.drag_pos = event.pos()
 
+        self.rasterize_lines()
+
     def handle_select(self, event):
         if self.select_selected:
             if self.select_start is None:
