@@ -73,3 +73,11 @@ class ExtensionMixin:
                 extension.toolbar_injection(self.window.horizontalFrame)
             except AttributeError:
                 pass
+
+    def do_preferences_injection(self, window):
+        for extension in self.settings_manager.settings.active_extensions.get():
+            try:
+                extension.preferences_injection(window)
+            except AttributeError:
+                pass
+
