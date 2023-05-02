@@ -19,7 +19,7 @@ class ModelMixin:
         if section_name in ["txt2img", "img2img"]:
             section_name = "generate"
         models = self.load_default_models(section_name)
-        models += self.load_models_from_path()
+        models += self.load_models_from_path(self.settings_manager.settings.model_base_path.get())
         self.models = models
         tab.model_dropdown.addItems(models)
 
@@ -28,8 +28,13 @@ class ModelMixin:
             k for k in MODELS[section_name].keys()
         ]
 
-    def load_models_from_path(self):
-        path = os.path.join(self.settings_manager.settings.model_base_path.get())
+    def load_models_from_path(self, path, models = None):
+        if models is None:
+            models = []
         if os.path.exists(path):
-            return [os.path.join(path, model) for model in os.listdir(path)]
-        return []
+            for f in os.listdir(path):
+                if os.path.isdir(os.path.join(path, f)):
+                    models = self.load_models_from_path(os.path.join(path, f), models)
+                elif f.endswith(".pt") or f.endswith(".safetensors") or f.endswith(".ckpt"):
+                    models.append(f)
+        return models
