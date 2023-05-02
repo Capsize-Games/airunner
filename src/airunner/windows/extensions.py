@@ -27,12 +27,14 @@ class ExtensionsWindow(BaseWindow):
             extension_repo = extension.repo.get()
             name = extension_repo.split("/")[-1]
             base_path = self.settings_manager.settings.model_base_path.get()
-            extension_path = os.path.join(base_path, "extensions", name)
+            extensions_path = self.settings_manager.settings.extensions_path.get() or "extensions"
+            if extensions_path == "extensions":
+                extensions_path = os.path.join(base_path, extensions_path)
             widget.installButton.clicked.connect(
                 lambda x,
                 _repo=extension_repo,
                 _url=url,
-                _path=os.path.join(base_path, "extensions"),
+                _path=extensions_path,
                 _btn=widget.installButton,
                 _remove_btn=widget.removeButton:
                     self.install(_repo, _url, _path, _btn, _remove_btn)
@@ -41,10 +43,10 @@ class ExtensionsWindow(BaseWindow):
                 lambda x,
                 _btn=widget.removeButton,
                 _install_btn=widget.installButton,
-                _pth=extension_path:
+                _pth=extensions_path:
                     self.remove(_pth, _btn, _install_btn)
             )
-            if os.path.exists(extension_path):
+            if os.path.exists(extensions_path):
                 # change the download button to "update"
                 widget.installButton.setText("Update")
                 # enable the remove button

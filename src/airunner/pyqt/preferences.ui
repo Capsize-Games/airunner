@@ -41,7 +41,7 @@
          </font>
         </property>
         <property name="text">
-         <string>Embeddings</string>
+         <string>Embeddings Path</string>
         </property>
        </widget>
       </item>
@@ -72,18 +72,19 @@
         </item>
        </layout>
       </item>
-      <item row="1" column="0">
-       <widget class="QLabel" name="label_2">
-        <property name="text">
-         <string>Place ckpt, safetensor and diffusion Stable Diffusion models here.</string>
-        </property>
-        <property name="alignment">
-         <set>Qt::AlignLeading|Qt::AlignLeft|Qt::AlignTop</set>
-        </property>
-        <property name="wordWrap">
-         <bool>true</bool>
-        </property>
-       </widget>
+      <item row="10" column="0">
+       <layout class="QHBoxLayout" name="horizontalLayout_3">
+        <item>
+         <widget class="QLineEdit" name="extensions_path"/>
+        </item>
+        <item>
+         <widget class="QPushButton" name="extensions_browse_button">
+          <property name="text">
+           <string>Browse</string>
+          </property>
+         </widget>
+        </item>
+       </layout>
       </item>
       <item row="7" column="0">
        <widget class="Line" name="line_2">
@@ -92,18 +93,12 @@
         </property>
        </widget>
       </item>
-      <item row="9" column="0">
-       <spacer name="verticalSpacer">
-        <property name="orientation">
-         <enum>Qt::Vertical</enum>
+      <item row="1" column="0">
+       <widget class="QLabel" name="label_2">
+        <property name="text">
+         <string>Folder that contains custom models</string>
         </property>
-        <property name="sizeHint" stdset="0">
-         <size>
-          <width>17</width>
-          <height>98</height>
-         </size>
-        </property>
-       </spacer>
+       </widget>
       </item>
       <item row="6" column="0">
        <layout class="QHBoxLayout" name="horizontalLayout_2">
@@ -128,6 +123,25 @@
         </property>
         <property name="text">
          <string>Model Path</string>
+        </property>
+       </widget>
+      </item>
+      <item row="9" column="0">
+       <widget class="QLabel" name="label_4">
+        <property name="text">
+         <string>Fold which will contain installed extensions</string>
+        </property>
+       </widget>
+      </item>
+      <item row="8" column="0">
+       <widget class="QLabel" name="label_3">
+        <property name="font">
+         <font>
+          <bold>true</bold>
+         </font>
+        </property>
+        <property name="text">
+         <string>Extensions Path</string>
         </property>
        </widget>
       </item>
