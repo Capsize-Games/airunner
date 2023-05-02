@@ -20,7 +20,18 @@ class PreferencesWindow(BaseWindow):
         # self.template.hf_token.textChanged.connect(
         #     lambda val: self.settings_manager.settings.hf_api_key.set(val))
         # self.template.hf_token.setText(self.settings_manager.settings.hf_api_key.get())
+        self.template.extensions_path.textChanged.connect(
+            lambda val: self.settings_manager.settings.extensions_path.set(val))
+        self.template.extensions_path.setText(
+            self.settings_manager.settings.extensions_path.get())
+        self.template.extensions_browse_button.clicked.connect(
+            lambda: self.browse_for_extensions_path(self.template.extensions_path))
         self.app.do_preferences_injection(self)
+
+    def browse_for_extensions_path(self, line_edit):
+        path = QFileDialog.getExistingDirectory(None, "Select Directory")
+        line_edit.setText(path)
+        self.settings_manager.settings.extensions_path.set(path)
 
     def browse_for_embeddings_path(self, line_edit):
         path = QFileDialog.getExistingDirectory(None, "Select Directory")
