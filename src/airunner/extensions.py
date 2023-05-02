@@ -1,5 +1,6 @@
 import os
 from PyQt6 import uic
+from PyQt6.uic.exceptions import UIFileException
 
 
 class BaseExtension:
@@ -25,7 +26,13 @@ class BaseExtension:
 
     def load_template(self, template_name):
         path = self.model_base_path
-        return uic.loadUi(os.path.join(path, "extensions", self.extension_directory, "templates", f"{template_name}.ui"))
+        extensions_path = self.settings_manager.settings.extensions_path.get() or "extensions"
+        if extensions_path == "extensions":
+            extensions_path = os.path.join(path, extensions_path)
+        try:
+            return uic.loadUi(os.path.join(extensions_path, self.extension_directory, "templates", f"{template_name}.ui"))
+        except UIFileException:
+            return None
 
     def generator_tab_injection(self, tab, name=None):
         """
