@@ -178,17 +178,20 @@ class CanvasImageMixin:
         processed_image, image_root_point, image_pivot_point = self.handle_outpaint(
             outpaint_box_rect, processed_image, section
         )
-        history_event = {
+
+        self.image_root_point = image_root_point
+        self.image_pivot_point = image_pivot_point
+        self.add_image_to_canvas(processed_image)
+
+    def add_image_to_canvas(self, image):
+        self.parent.history.add_event({
             "event": "set_image",
             "layer_index": self.current_layer_index,
             "images": self.current_layer.images,
             "previous_image_root_point": self.image_root_point,
             "previous_image_pivot_point": self.image_pivot_point,
-        }
-        self.parent.history.add_event(history_event)
-        self.image_root_point = image_root_point
-        self.image_pivot_point = image_pivot_point
-        self.current_layer.images = [ImageData(image_pivot_point, processed_image)]
+        })
+        self.current_layer.images = [ImageData(self.image_pivot_point, image)]
 
     def get_image_copy(self, index):
         return [ImageData(imageData.position, imageData.image.copy()) for imageData in self.layers[index].images]
