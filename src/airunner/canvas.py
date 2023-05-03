@@ -282,11 +282,11 @@ class Canvas(
             self.select_start = event.pos()
         if event.button() in (Qt.MouseButton.LeftButton, Qt.MouseButton.RightButton):
             if self.brush_selected:
-                self.parent.history.add_event({
-                    "event": "draw",
-                    "layer_index": self.current_layer_index,
-                    "lines": self.current_layer.lines.copy()
-                })
+                # self.parent.history.add_event({
+                #     "event": "draw",
+                #     "layer_index": self.current_layer_index,
+                #     "lines": self.current_layer.lines.copy()
+                # })
                 self.start_drawing_line_index = len(self.current_layer.lines)
                 start = event.pos() - QPoint(self.pos_x, self.pos_y)
                 end = event.pos() - QPoint(self.pos_x, self.pos_y)
@@ -325,7 +325,15 @@ class Canvas(
             # Start dragging the canvas when the middle or right mouse button is pressed
             self.drag_pos = event.pos()
 
+        # self.parent.history.add_event({
+        #     "event": "set_image",
+        #     "layer_index": self.current_layer_index,
+        #     "images": self.current_layer.images,
+        #     "previous_image_root_point": self.image_root_point,
+        #     "previous_image_pivot_point": self.image_pivot_point,
+        # })
         self.rasterize_lines()
+
 
     def handle_select(self, event):
         if self.select_selected:
