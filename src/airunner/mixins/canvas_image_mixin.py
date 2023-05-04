@@ -142,22 +142,6 @@ class CanvasImageMixin:
         self.saving = False
         self.update()
 
-    def image_handler_old(self, active_img, data):
-        action = data["action"]
-        rect: QRect = data["options"]["outpaint_box_rect"]
-        rect: QRect = data["options"]["outpaint_box_rect"]
-        x = rect.x()
-        y = rect.y()
-        if len(self.current_layer.images) > 0:
-            # merge with previous image
-            image = self.current_layer.images[0].image
-            image.paste(active_img, (int(x), int(y)))
-            self.current_layer.images = [ImageData(QPoint(int(x), int(y)), image)]
-        else:
-            self.current_layer.images = [ImageData(QPoint(int(x), int(y)), active_img)]
-        self.current_layer.lines = []
-        self.update()
-
     def image_handler(self, active_img, data):
         self.update_image_canvas(data["action"], data, active_img)
         self.current_layer.lines = []
@@ -182,6 +166,78 @@ class CanvasImageMixin:
         self.image_root_point = image_root_point
         self.image_pivot_point = image_pivot_point
         self.add_image_to_canvas(processed_image)
+
+    def handle_outpaint(self, outpaint_box_rect, outpainted_image, action):
+        if len(self.current_layer.images) == 0:
+            point = QPoint(outpaint_box_rect.x(), outpaint_box_rect.y())
+            return outpainted_image, self.image_root_point, point
+
+        # make a copy of the current canvas image
+        existing_image_copy = self.current_layer.images[0].image.copy()
+        width = existing_image_copy.width
+        height = existing_image_copy.height
+        working_width = self.settings_manager.settings.working_width.get()
+        working_height = self.settings_manager.settings.working_height.get()
+
+        is_drawing_left = outpaint_box_rect.x() < self.image_pivot_point.x()
+        is_drawing_up = outpaint_box_rect.y() < self.image_pivot_point.y()
+
+        if is_drawing_left:
+            # get the x overlap of the outpaint box and the image
+            x_overlap = min(width, outpaint_box_rect.width()) - max(0, outpaint_box_rect.x())
+        else:
+            # get the x overlap of the outpaint box and the image
+            x_overlap = min(width, outpaint_box_rect.width()) - max(0, outpaint_box_rect.x() - self.image_pivot_point.x())
+
+        if is_drawing_up:
+            # get the y overlap of the outpaint box and the image
+            y_overlap = min(height, outpaint_box_rect.height()) - max(0, outpaint_box_rect.y())
+        else:
+            # get the y overlap of the outpaint box and the image
+            y_overlap = min(height, outpaint_box_rect.height()) - max(0, outpaint_box_rect.y() - self.image_pivot_point.y())
+
+        # get the x and y overlap of the outpaint box and the image
+        new_dimensions = (int(width + working_width - x_overlap), int(height + working_height - y_overlap))
+        if new_dimensions[0] < width:
+            new_dimensions = (width, new_dimensions[1])
+        if new_dimensions[1] < height:
+            new_dimensions = (new_dimensions[0], height)
+        new_image = Image.new("RGBA", new_dimensions, (0, 0, 0, 0))
+        new_image_a = Image.new("RGBA", new_dimensions, (0, 0, 0, 0))
+        new_image_b = Image.new("RGBA", new_dimensions, (0, 0, 0, 0))
+        existing_image_pos = [0, 0]
+        image_root_point = QPoint(self.image_root_point.x(), self.image_root_point.y())
+        image_pivot_point = QPoint(self.image_pivot_point.x(), self.image_pivot_point.y())
+        if is_drawing_left:
+            current_x_pos = abs(outpaint_box_rect.x() - image_pivot_point.x())
+            left_overlap = abs(outpaint_box_rect.x()) - abs(image_root_point.x())
+            image_root_point.setX(width + left_overlap)
+            image_pivot_point.setX(int(outpaint_box_rect.x()))
+            existing_image_pos = [current_x_pos, existing_image_pos[1]]
+            pos_x = max(0, outpaint_box_rect.x() + self.image_pivot_point.x())
+        else:
+            pos_x = max(0, outpaint_box_rect.x() - self.image_pivot_point.x())
+        if is_drawing_up:
+            current_y_pos = abs(outpaint_box_rect.y() - image_pivot_point.y())
+            up_overlap = abs(outpaint_box_rect.y()) - abs(image_root_point.y())
+            image_root_point.setY(height + up_overlap)
+            image_pivot_point.setY(int(outpaint_box_rect.y()))
+            existing_image_pos = [existing_image_pos[0], current_y_pos]
+            pos_y = max(0, outpaint_box_rect.y() + self.image_pivot_point.y())
+        else:
+            pos_y = max(0, outpaint_box_rect.y() - self.image_pivot_point.y())
+
+        new_image_a.paste(outpainted_image, (int(pos_x), int(pos_y)))
+        new_image_b.paste(existing_image_copy, (int(existing_image_pos[0]), int(existing_image_pos[1])))
+
+        if action == "outpaint":
+            new_image = Image.alpha_composite(new_image, new_image_a)
+            new_image = Image.alpha_composite(new_image, new_image_b)
+        else:
+            new_image = Image.alpha_composite(new_image, new_image_b)
+            new_image = Image.alpha_composite(new_image, new_image_a)
+
+        return new_image, image_root_point, image_pivot_point
 
     def add_image_to_canvas(self, image):
         self.parent.history.add_event({
