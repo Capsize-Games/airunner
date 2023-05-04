@@ -136,8 +136,14 @@ class CanvasImageMixin:
         self.update()
 
     def save_image(self, image_path):
+        if self.current_layer.image is None:
+            return
         image = self.current_layer.image.image
         image = image.convert("RGBA")
+        if not "." in image_path:
+            image_path += ".png"
+        if not image_path.endswith(".png") and not image_path.endswith(".gif"):
+            image = image.convert("RGB")
         image.save(image_path)
         self.saving = False
         self.update()
