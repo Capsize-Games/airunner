@@ -323,6 +323,7 @@ class GeneratorMixin:
     def prep_video(self):
         pass
 
+    @property
     def active_rect(self):
         rect = QRect(
             self.canvas.active_grid_area_rect.x(),
@@ -377,7 +378,7 @@ class GeneratorMixin:
                 (self.settings.working_width.get(), self.settings.working_height.get()),
                 (0, 0, 0))
 
-            cropped_outpaint_box_rect = self.active_rect()
+            cropped_outpaint_box_rect = self.active_rect
             crop_location = (
                 cropped_outpaint_box_rect.x() - self.canvas.image_pivot_point.x(),
                 cropped_outpaint_box_rect.y() - self.canvas.image_pivot_point.y(),
@@ -513,7 +514,7 @@ class GeneratorMixin:
             "model_base_path": sm.model_base_path.get(),
             "pos_x": 0,
             "pos_y": 0,
-            "outpaint_box_rect": self.active_rect(),
+            "outpaint_box_rect": self.active_rect,
             "hf_token": self.settings_manager.settings.hf_api_key.get(),
             "enable_model_cpu_offload": sm.enable_model_cpu_offload.get(),
             "use_controlnet": use_controlnet,

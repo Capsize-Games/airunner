@@ -1,12 +1,9 @@
-import cv2
-import numpy as np
 from PIL import ImageDraw
-from PyQt6.QtCore import Qt, QPointF, QPoint
+from PyQt6.QtCore import Qt, QPointF, QPoint, QSize
 from PyQt6.QtGui import QPainter, QPainterPath, QColor, QPen, QImage
-
-from airunner.models.imagedata import ImageData
 from airunner.models.linedata import LineData
 from PIL import Image
+
 
 class CanvasBrushesMixin:
     @property
@@ -27,16 +24,6 @@ class CanvasBrushesMixin:
 
     def draw(self, layer, index):
         painter = QPainter(self.canvas_container)
-        # we want to draw the lines to a QImage first, then convert the QImage to a PIL Image by using the
-        # ImageDraw class
-        # this is because the ImageDraw class is much faster than QPainter:
-        # first create an empty QImage
-        #image = QImage(self.canvas_container.size(), QImage.Format.Format_ARGB32)
-        # fill the image with a transparent color
-        #image.fill(Qt.GlobalColor.transparent)
-        # create a QPainter to draw on the QImage
-        #painter = QPainter(image)
-
         painter.setBrush(self.brush)
         painter.setRenderHint(QPainter.RenderHint.Antialiasing)
 
@@ -75,13 +62,59 @@ class CanvasBrushesMixin:
         painter.drawPath(path)
         painter.end()
 
+    def get_line_extremities(self):
+        # in order to get the size of the image we need to determine the left, right, top and bottom most points
+        # of the lines
+        left = 0
+        right = 0
+        top = 0
+        bottom = 0
+        for line in self.current_layer.lines:
+            start = line.start_point
+            end = line.end_point
+            if start.x() < left:
+                left = start.x()
+            if start.x() > right:
+                right = start.x()
+            if start.y() < top:
+                top = start.y()
+            if start.y() > bottom:
+                bottom = start.y()
+            if end.x() < left:
+                left = end.x()
+            if end.x() > right:
+                right = end.x()
+            if end.y() < top:
+                top = end.y()
+            if end.y() > bottom:
+                bottom = end.y()
+
+        # if the layer has an image, we need to determine if the image is larger than the lines
+        if len(self.current_layer.images) > 0:
+            image = self.current_layer.images[0].image
+            image_width, image_height = image.size
+            if image_width > right - left:
+                right = image_width
+            if image_height > bottom - top:
+                bottom = image_height
+        return top, left, bottom, right
+
     def rasterize_lines(self):
-        # only grab lines:
-        img = QImage(self.canvas_container.size(), QImage.Format.Format_ARGB32)
+        if len(self.current_layer.lines) == 0:
+            return
+        top, left, bottom, right = self.get_line_extremities()
+        # create a QImage with the size of the lines
+        img = QImage(QSize(right - left, bottom - top), QImage.Format.Format_ARGB32)
         img.fill(Qt.GlobalColor.transparent)
         painter = QPainter(img)
         painter.setBrush(self.brush)
         painter.setRenderHint(QPainter.RenderHint.Antialiasing)
+        path = self.create_image_path(painter)
+        painter.drawPath(path)
+        painter.end()
+        self.convert_pixmap_to_pil_image(img)
+
+    def create_image_path(self, painter):
         path = QPainterPath()
         for line in self.current_layer.lines:
             pen = line.pen
@@ -108,15 +141,29 @@ class CanvasBrushesMixin:
             # add the curve to the path
             path.moveTo(start)
             path.cubicTo(ctrl1, ctrl2, end)
-        painter.drawPath(path)
-        painter.end()
+        return path
 
+    def convert_pixmap_to_pil_image(self, img):
         # convert to PIL Image
         pil_image = Image.fromqpixmap(img)
+        current_image_width = 0
+        current_image_height = 0
+        existing_image = None
+
         if len(self.current_layer.images) > 0:
+            current_image_width = self.current_layer.images[0].image.width
+            current_image_height = self.current_layer.images[0].image.height
             existing_image = self.current_layer.images[0].image.copy()
-            existing_image.alpha_composite(pil_image)
-            pil_image = existing_image
+
+        width = pil_image.width if pil_image.width > current_image_width else current_image_width
+        height = pil_image.height if pil_image.height > current_image_height else current_image_height
+        composite_image = Image.new("RGBA", (width, height), (0, 0, 0, 0))
+
+        if existing_image:
+             composite_image.paste(existing_image, (0, 0))
+
+        composite_image.alpha_composite(pil_image, (-self.pos_x, -self.pos_y))
+        pil_image = composite_image
         self.current_layer.lines.clear()
         self.add_image_to_canvas(pil_image)
 
