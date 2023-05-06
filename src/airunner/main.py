@@ -3,7 +3,7 @@ import pickle
 import sys
 from PyQt6 import uic, QtCore
 from PyQt6.QtWidgets import QApplication, QFileDialog
-from PyQt6.QtCore import pyqtSlot
+from PyQt6.QtCore import pyqtSlot, Qt
 from PyQt6.QtGui import QGuiApplication
 from aihandler.qtvar import TQDMVar, ImageVar, MessageHandlerVar, ErrorHandlerVar
 from aihandler.settings import LOG_LEVEL
@@ -128,8 +128,16 @@ class MainWindow(
         self.initialize()
         self.display()
         self.settings_manager.enable_save()
+        # on window resize:
+        # self.applicationStateChanged.connect(self.on_state_changed)
         if not self.testing:
             self.exec()
+
+    def on_state_changed(self, state):
+        if state == Qt.ApplicationState.ApplicationActive:
+            self.canvas.pos_x = int(self.window.x() / 4)
+            self.canvas.pos_y = int(self.window.y() / 2)
+            self.canvas.update()
 
     def initialize(self):
         self.initialize_settings_manager()
