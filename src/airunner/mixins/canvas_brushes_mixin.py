@@ -1,11 +1,14 @@
 from PIL import ImageDraw
-from PyQt6.QtCore import Qt, QPointF, QPoint, QSize
+from PyQt6.QtCore import Qt, QPointF, QPoint, QSize, QRect
 from PyQt6.QtGui import QPainter, QPainterPath, QColor, QPen, QImage
 from airunner.models.linedata import LineData
 from PIL import Image
 
 
 class CanvasBrushesMixin:
+    _point = None
+    active_canvas_rect = QRect(0, 0, 0, 0)
+
     @property
     def primary_color(self):
         return QColor(self.settings_manager.settings.primary_color.get())
@@ -63,48 +66,47 @@ class CanvasBrushesMixin:
         painter.end()
 
     def get_line_extremities(self):
-        # in order to get the size of the image we need to determine the left, right, top and bottom most points
-        # of the lines
         left = 0
         right = 0
         top = 0
         bottom = 0
         for line in self.current_layer.lines:
-            start = line.start_point
-            end = line.end_point
-            if start.x() < left:
-                left = start.x()
-            if start.x() > right:
-                right = start.x()
-            if start.y() < top:
-                top = start.y()
-            if start.y() > bottom:
-                bottom = start.y()
-            if end.x() < left:
-                left = end.x()
-            if end.x() > right:
-                right = end.x()
-            if end.y() < top:
-                top = end.y()
-            if end.y() > bottom:
-                bottom = end.y()
-
-        # if the layer has an image, we need to determine if the image is larger than the lines
-        if len(self.current_layer.images) > 0:
-            image = self.current_layer.images[0].image
-            image_width, image_height = image.size
-            if image_width > right - left:
-                right = image_width
-            if image_height > bottom - top:
-                bottom = image_height
-        return top, left, bottom, right
+            start_x = line.start_point.x()
+            start_y = line.start_point.y()
+            end_x = line.end_point.x()
+            end_y = line.end_point.y()
+            if start_x < left:
+                left = start_x
+            if start_x > right:
+                right = start_x
+            if start_y < top:
+                top = start_y
+            if start_y > bottom:
+                bottom = start_y
+            if end_x < left:
+                left = end_x
+            if end_x > right:
+                right = end_x
+            if end_y < top:
+                top = end_y
+            if end_y > bottom:
+                bottom = end_y
+        # if len(self.current_layer.images) > 0:
+        #     image = self.current_layer.images[0].image
+        #     image_width, image_height = image.size
+        #     if image_width > right - left:
+        #         right = image_width
+        #     if image_height > bottom - top:
+        #         bottom = image_height
+        brush_size = self.settings_manager.settings.mask_brush_size.get()
+        return top-brush_size, left-brush_size, bottom + brush_size, right + brush_size
 
     def rasterize_lines(self):
         if len(self.current_layer.lines) == 0:
             return
         top, left, bottom, right = self.get_line_extremities()
         # create a QImage with the size of the lines
-        img = QImage(QSize(right - left, bottom - top), QImage.Format.Format_ARGB32)
+        img = QImage(QSize(right, bottom), QImage.Format.Format_ARGB32)
         img.fill(Qt.GlobalColor.transparent)
         painter = QPainter(img)
         painter.setBrush(self.brush)
@@ -112,7 +114,7 @@ class CanvasBrushesMixin:
         path = self.create_image_path(painter)
         painter.drawPath(path)
         painter.end()
-        self.convert_pixmap_to_pil_image(img)
+        self.convert_pixmap_to_pil_image(img, top, left, bottom, right)
 
     def create_image_path(self, painter):
         path = QPainterPath()
@@ -143,33 +145,69 @@ class CanvasBrushesMixin:
             path.cubicTo(ctrl1, ctrl2, end)
         return path
 
-    def convert_pixmap_to_pil_image(self, img):
-        # convert to PIL Image
-        pil_image = Image.fromqpixmap(img)
-        current_image_width = 0
-        current_image_height = 0
+    def rasterized_lines_image_size(self, new_image, existing_image=None):
+        width = new_image.width
+        height = new_image.height
+        if existing_image:
+            if new_image.width < existing_image.width:
+                width = existing_image.width
+            if new_image.height < existing_image.height:
+                height = existing_image.height
+        if self.active_canvas_rect.width() > width:
+            width = self.active_canvas_rect.width()
+        if self.active_canvas_rect.height() > height:
+            height = self.active_canvas_rect.height()
+        return width, height
+
+    max_left = 0
+    max_top = 0
+    max_right = 0
+    max_bottom = 0
+
+    def convert_pixmap_to_pil_image(self, img, top, left, bottom, right):
+        new_image = Image.fromqpixmap(img)
         existing_image = None
-
+        self.active_canvas_rect = QRect(left, top, right, bottom)
         if len(self.current_layer.images) > 0:
-            current_image_width = self.current_layer.images[0].image.width
-            current_image_height = self.current_layer.images[0].image.height
             existing_image = self.current_layer.images[0].image.copy()
+        width, height = self.rasterized_lines_image_size(new_image, existing_image)
+        point = QPoint(0, 0)
+        pos = (-self.pos_x, -self.pos_y)
+        if self.pos_x > 0:
+            # pos = (self.pos_x, pos[1])
+            point.setX(-self.pos_x)
+        if self.pos_y > 0:
+            pos = (pos[0], self.pos_y)
+            point.setY(-self.pos_y)
+        new_width = width
+        new_height = height
 
-        width = pil_image.width if pil_image.width > current_image_width else current_image_width
-        height = pil_image.height if pil_image.height > current_image_height else current_image_height
-        composite_image = Image.new("RGBA", (width, height), (0, 0, 0, 0))
+        if self.pos_x > 0 and self.pos_x > self.max_left:
+            new_width = width + self.pos_x - self.max_left
+            self.max_left = self.pos_x
+        if self.pos_y > 0 and self.pos_y > self.max_top:
+            new_height = height + self.pos_y - self.max_top
+            self.max_top = self.pos_y
+        if self.pos_x < 0 and abs(self.pos_x) > self.max_right:
+            self.max_right = abs(self.pos_x)
+        if self.pos_y < 0 and abs(self.pos_y) > self.max_bottom:
+            self.max_bottom = abs(self.pos_y)
+
+        composite_image = Image.new("RGBA", (new_width, new_height), (255, 0, 0, 255))
+
+        # show debug info
+        self.parent.window.debug_label.setText(
+            f"rect ({left}, {top}, {right}, {bottom}) | point: {point.x()}, {point.y()} | pos: {pos[0]}, {pos[1]} | size: {width}, {height}"
+        )
 
         if existing_image:
-             composite_image.paste(existing_image, (0, 0))
-
-        composite_image.alpha_composite(pil_image, (-self.pos_x, -self.pos_y))
-        pil_image = composite_image
+            composite_image.alpha_composite(existing_image, (0, 0))
+        composite_image.alpha_composite(new_image, pos)
         self.current_layer.lines.clear()
-        self.add_image_to_canvas(pil_image)
+        self.add_image_to_canvas_new(composite_image, point, self.image_root_point)
 
     def handle_erase(self, event):
         self.is_erasing = True
-        # Erase any line segments that intersect with the current position of the mouse
         brush_size = self.settings_manager.settings.mask_brush_size.get()
         start = event.pos() - QPoint(self.pos_x, self.pos_y) - self.image_pivot_point
         if len(self.current_layer.images) > 0:

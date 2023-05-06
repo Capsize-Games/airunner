@@ -780,6 +780,20 @@
          </property>
         </spacer>
        </item>
+       <item>
+        <widget class="QLabel" name="debug_label">
+         <property name="text">
+          <string/>
+         </property>
+        </widget>
+       </item>
+       <item>
+        <widget class="QLabel" name="canvas_position">
+         <property name="text">
+          <string>0, 0</string>
+         </property>
+        </widget>
+       </item>
       </layout>
      </widget>
     </item>
@@ -1375,6 +1389,7 @@
     <addaction name="actionCanvas_color"/>
     <addaction name="separator"/>
     <addaction name="actionResize_on_Paste"/>
+    <addaction name="actionImage_to_new_layer"/>
     <addaction name="separator"/>
     <addaction name="actionAdvanced"/>
     <addaction name="separator"/>
@@ -1473,20 +1488,32 @@
    <property name="text">
     <string>Grid</string>
    </property>
+   <property name="toolTip">
+    <string>Grid settings</string>
+   </property>
   </action>
   <action name="actionPreferences">
    <property name="text">
     <string>Path Preferences</string>
+   </property>
+   <property name="toolTip">
+    <string>Modify model path and more</string>
    </property>
   </action>
   <action name="actionCanvas_color">
    <property name="text">
     <string>Canvas color</string>
    </property>
+   <property name="toolTip">
+    <string>Change the color of the canvas</string>
+   </property>
   </action>
   <action name="actionReset_Settings">
    <property name="text">
     <string>Reset Settings</string>
+   </property>
+   <property name="toolTip">
+    <string>Reset all settings to default</string>
    </property>
   </action>
   <action name="actionResize_on_Paste">
@@ -1494,7 +1521,10 @@
     <bool>true</bool>
    </property>
    <property name="text">
-    <string>Resize on Paste</string>
+    <string>Resize on Import</string>
+   </property>
+   <property name="toolTip">
+    <string>Resize the image to active grid area when importing</string>
    </property>
   </action>
   <action name="actionMemory">
@@ -1525,6 +1555,9 @@
   <action name="actionAdvanced">
    <property name="text">
     <string>Memory Settings</string>
+   </property>
+   <property name="toolTip">
+    <string>Change memory settings</string>
    </property>
   </action>
   <action name="actionGaussian_Blur">
@@ -1619,6 +1652,9 @@
    <property name="text">
     <string>Extensions</string>
    </property>
+   <property name="toolTip">
+    <string>Install, update and delete extensions</string>
+   </property>
   </action>
   <action name="actionShow_image_preview">
    <property name="checkable">
@@ -1626,6 +1662,17 @@
    </property>
    <property name="text">
     <string>Show image preview</string>
+   </property>
+  </action>
+  <action name="actionImage_to_new_layer">
+   <property name="checkable">
+    <bool>true</bool>
+   </property>
+   <property name="text">
+    <string>Image to new layer</string>
+   </property>
+   <property name="toolTip">
+    <string>Send generated images to new layer</string>
    </property>
   </action>
  </widget>
