@@ -65,32 +65,33 @@ class CanvasBrushesMixin:
         painter.drawPath(path)
         painter.end()
 
+    left = None
+    right = None
+    top = None
+    bottom = None
+
     def get_line_extremities(self):
-        left = 0
-        right = 0
-        top = 0
-        bottom = 0
         for line in self.current_layer.lines:
             start_x = line.start_point.x()
             start_y = line.start_point.y()
             end_x = line.end_point.x()
             end_y = line.end_point.y()
-            if start_x < left:
-                left = start_x
-            if start_x > right:
-                right = start_x
-            if start_y < top:
-                top = start_y
-            if start_y > bottom:
-                bottom = start_y
-            if end_x < left:
-                left = end_x
-            if end_x > right:
-                right = end_x
-            if end_y < top:
-                top = end_y
-            if end_y > bottom:
-                bottom = end_y
+            if self.left is None or start_x < self.left:
+                self.left = start_x
+            if self.right is None or start_x > self.right:
+                self.right = start_x
+            if self.top is None or start_y < self.top:
+                self.top = start_y
+            if self.bottom is None or start_y > self.bottom:
+                self.bottom = start_y
+            if end_x < self.left:
+                self.left = end_x
+            if end_x > self.right:
+                self.right = end_x
+            if end_y < self.top:
+                self.top = end_y
+            if end_y > self.bottom:
+                self.bottom = end_y
         # if len(self.current_layer.images) > 0:
         #     image = self.current_layer.images[0].image
         #     image_width, image_height = image.size
@@ -99,7 +100,7 @@ class CanvasBrushesMixin:
         #     if image_height > bottom - top:
         #         bottom = image_height
         brush_size = self.settings_manager.settings.mask_brush_size.get()
-        return top-brush_size, left-brush_size, bottom + brush_size, right + brush_size
+        return self.top-brush_size, self.left-brush_size, self.bottom + brush_size, self.right + brush_size
 
     def rasterize_lines(self):
         if len(self.current_layer.lines) == 0:
@@ -176,14 +177,18 @@ class CanvasBrushesMixin:
         if self.pos_x > 0:
             # pos = (self.pos_x, pos[1])
             point.setX(-self.pos_x)
+        else:
+            point.setX(left)
         if self.pos_y > 0:
             pos = (pos[0], self.pos_y)
             point.setY(-self.pos_y)
-        new_width = width
-        new_height = height
+        else:
+            point.setY(top)
+        new_width = width + self.max_left
+        new_height = height + self.max_top
 
         if self.pos_x > 0 and self.pos_x > self.max_left:
-            new_width = width + self.pos_x - self.max_left
+            new_width = width + self.pos_x + self.max_left
             self.max_left = self.pos_x
         if self.pos_y > 0 and self.pos_y > self.max_top:
             new_height = height + self.pos_y - self.max_top
@@ -193,18 +198,20 @@ class CanvasBrushesMixin:
         if self.pos_y < 0 and abs(self.pos_y) > self.max_bottom:
             self.max_bottom = abs(self.pos_y)
 
+
+
         composite_image = Image.new("RGBA", (new_width, new_height), (255, 0, 0, 255))
 
         # show debug info
         self.parent.window.debug_label.setText(
-            f"rect ({left}, {top}, {right}, {bottom}) | point: {point.x()}, {point.y()} | pos: {pos[0]}, {pos[1]} | size: {width}, {height}"
+            f"rect ({left}, {top}, {right}, {bottom}) | point: {point.x()}, {point.y()} | pos: {pos[0]}, {pos[1]} | size: {new_width}, {new_height}"
         )
 
         if existing_image:
-            composite_image.alpha_composite(existing_image, (0, 0))
-        composite_image.alpha_composite(new_image, pos)
+            composite_image.alpha_composite(existing_image, (0, 0), (0, 0, self.right, self.bottom))
+        composite_image.alpha_composite(new_image, (-self.pos_x, -self.pos_y), (0, 0, self.right, self.bottom))
         self.current_layer.lines.clear()
-        self.add_image_to_canvas_new(composite_image, point, self.image_root_point)
+        self.add_image_to_canvas_new(composite_image, QPoint(0, 0), self.image_root_point)
 
     def handle_erase(self, event):
         self.is_erasing = True

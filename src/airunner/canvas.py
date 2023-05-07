@@ -235,13 +235,17 @@ class Canvas(
             # Start dragging the canvas when the middle or right mouse button is pressed
             self.drag_pos = event.pos()
 
+    last_mouse_pos = None
     def mouse_move_event(self, event):
+        self.parent.window.mouse_location.setText(f"{event.pos().x()}, {event.pos().y()}")
         # check if LeftButton is pressed
         if Qt.MouseButton.LeftButton in event.buttons() or Qt.MouseButton.RightButton in event.buttons():
+            self.last_mouse_pos = event.pos()
             self.handle_tool(event)
             self.update()
         elif self.drag_pos is not None:
             self.handle_move_canvas(event)
+        # set x and y in self.parent.window.mouse_location
 
     def mouse_release_event(self, event):
         if event.button() in (Qt.MouseButton.LeftButton, Qt.MouseButton.RightButton):
