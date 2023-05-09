@@ -165,6 +165,9 @@ class CanvasBrushesMixin:
     max_right = 0
     max_bottom = 0
 
+    last_left = None
+    last_top = None
+
     def convert_pixmap_to_pil_image(self, img, top, left, bottom, right):
         new_image = Image.fromqpixmap(img)
         existing_image = None
@@ -184,8 +187,8 @@ class CanvasBrushesMixin:
             point.setY(-self.pos_y)
         else:
             point.setY(top)
-        new_width = width + self.max_left
-        new_height = height + self.max_top
+        new_width = width
+        new_height = height
 
         if self.pos_x > 0 and self.pos_x > self.max_left:
             new_width = width + self.pos_x + self.max_left
@@ -198,8 +201,6 @@ class CanvasBrushesMixin:
         if self.pos_y < 0 and abs(self.pos_y) > self.max_bottom:
             self.max_bottom = abs(self.pos_y)
 
-
-
         composite_image = Image.new("RGBA", (new_width, new_height), (255, 0, 0, 255))
 
         # show debug info
@@ -208,10 +209,33 @@ class CanvasBrushesMixin:
         )
 
         if existing_image:
-            composite_image.alpha_composite(existing_image, (0, 0), (0, 0, self.right, self.bottom))
-        composite_image.alpha_composite(new_image, (-self.pos_x, -self.pos_y), (0, 0, self.right, self.bottom))
+            if not self.last_left or self.last_left != self.max_left:
+                if self.last_left:
+                    l = self.max_left - self.last_left
+                    self.last_left = self.max_left
+                else:
+                    self.last_left = self.max_left
+                    l = self.last_left
+            else:
+                l = 0
+            if not self.last_top or self.last_top != self.max_top:
+                if self.last_top:
+                    t = self.max_top - self.last_top
+                    self.last_top = self.max_top - self.last_top
+                else:
+                    self.last_top = self.max_top
+                    t = self.last_top
+            else:
+                t = 0
+            composite_image.alpha_composite(existing_image, (l, t), (0, 0, self.right, self.bottom))
+        pos_x = -self.pos_x if self.pos_x < 0 or self.pos_x == 0 else 0
+        pos_y = -self.pos_y if self.pos_y < 0 or self.pos_y == 0 else 0
+        pos_x = -left if pos_x > 0 else pos_x
+        pos_y = -top if pos_y > 0 else pos_y
+
+        composite_image.alpha_composite(new_image, (pos_x, pos_y), (0, 0, self.right, self.bottom))
         self.current_layer.lines.clear()
-        self.add_image_to_canvas_new(composite_image, QPoint(0, 0), self.image_root_point)
+        self.add_image_to_canvas_new(composite_image, QPoint(-self.max_left, -self.max_top), self.image_root_point)
 
     def handle_erase(self, event):
         self.is_erasing = True
