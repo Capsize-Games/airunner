@@ -201,7 +201,7 @@ class CanvasBrushesMixin:
         if self.pos_y < 0 and abs(self.pos_y) > self.max_bottom:
             self.max_bottom = abs(self.pos_y)
 
-        composite_image = Image.new("RGBA", (new_width, new_height), (255, 0, 0, 255))
+        composite_image = Image.new("RGBA", (new_width, new_height), (0, 0, 0, 0))
 
         # show debug info
         self.parent.window.debug_label.setText(
@@ -209,6 +209,8 @@ class CanvasBrushesMixin:
         )
 
         if existing_image:
+            existing_image_width = existing_image.width
+            existing_image_height = existing_image.height
             if not self.last_left or self.last_left != self.max_left:
                 if self.last_left:
                     l = self.max_left - self.last_left
@@ -227,7 +229,7 @@ class CanvasBrushesMixin:
                     t = self.last_top
             else:
                 t = 0
-            composite_image.alpha_composite(existing_image, (l, t), (0, 0, self.right, self.bottom))
+            composite_image.alpha_composite(existing_image, (l, t), (0, 0, existing_image_width, existing_image_height))
         pos_x = -self.pos_x if self.pos_x < 0 or self.pos_x == 0 else 0
         pos_y = -self.pos_y if self.pos_y < 0 or self.pos_y == 0 else 0
         pos_x = -left if pos_x > 0 else pos_x
