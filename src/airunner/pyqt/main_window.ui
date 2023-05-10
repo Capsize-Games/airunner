@@ -768,13 +768,6 @@
         </widget>
        </item>
        <item>
-        <widget class="QLabel" name="mouse_location">
-         <property name="text">
-          <string>0, 0</string>
-         </property>
-        </widget>
-       </item>
-       <item>
         <spacer name="horizontalSpacer_2">
          <property name="orientation">
           <enum>Qt::Horizontal</enum>
