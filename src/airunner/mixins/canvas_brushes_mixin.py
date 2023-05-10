@@ -201,9 +201,9 @@ class CanvasBrushesMixin:
         composite_image = Image.new("RGBA", (new_width, new_height), (0, 0, 0, 0))
 
         # show debug info
-        self.parent.window.debug_label.setText(
-            f"rect ({left}, {top}, {right}, {bottom}) | point: {point.x()}, {point.y()} | pos: {pos[0]}, {pos[1]} | size: {new_width}, {new_height}"
-        )
+        # self.parent.window.debug_label.setText(
+        #     f"rect ({left}, {top}, {right}, {bottom}) | point: {point.x()}, {point.y()} | pos: {pos[0]}, {pos[1]} | size: {new_width}, {new_height}"
+        # )
 
         if existing_image:
             existing_image_width = existing_image.width
