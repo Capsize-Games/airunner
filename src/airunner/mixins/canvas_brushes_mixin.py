@@ -8,6 +8,16 @@ from PIL import Image
 class CanvasBrushesMixin:
     _point = None
     active_canvas_rect = QRect(0, 0, 0, 0)
+    left_line_extremity = None
+    right_line_extremity = None
+    top_line_extremity = None
+    bottom_line_extremity = None
+    max_left = 0
+    max_top = 0
+    max_right = 0
+    max_bottom = 0
+    last_left = None
+    last_top = None
 
     @property
     def primary_color(self):
@@ -65,33 +75,28 @@ class CanvasBrushesMixin:
         painter.drawPath(path)
         painter.end()
 
-    left = None
-    right = None
-    top = None
-    bottom = None
-
     def get_line_extremities(self):
         for line in self.current_layer.lines:
             start_x = line.start_point.x()
             start_y = line.start_point.y()
             end_x = line.end_point.x()
             end_y = line.end_point.y()
-            if self.left is None or start_x < self.left:
-                self.left = start_x
-            if self.right is None or start_x > self.right:
-                self.right = start_x
-            if self.top is None or start_y < self.top:
-                self.top = start_y
-            if self.bottom is None or start_y > self.bottom:
-                self.bottom = start_y
-            if end_x < self.left:
-                self.left = end_x
-            if end_x > self.right:
-                self.right = end_x
-            if end_y < self.top:
-                self.top = end_y
-            if end_y > self.bottom:
-                self.bottom = end_y
+            if self.left_line_extremity is None or start_x < self.left_line_extremity:
+                self.left_line_extremity = start_x
+            if self.right_line_extremity is None or start_x > self.right_line_extremity:
+                self.right_line_extremity = start_x
+            if self.top_line_extremity is None or start_y < self.top_line_extremity:
+                self.top_line_extremity = start_y
+            if self.bottom_line_extremity is None or start_y > self.bottom_line_extremity:
+                self.bottom_line_extremity = start_y
+            if end_x < self.left_line_extremity:
+                self.left_line_extremity = end_x
+            if end_x > self.right_line_extremity:
+                self.right_line_extremity = end_x
+            if end_y < self.top_line_extremity:
+                self.top_line_extremity = end_y
+            if end_y > self.bottom_line_extremity:
+                self.bottom_line_extremity = end_y
         # if len(self.current_layer.images) > 0:
         #     image = self.current_layer.images[0].image
         #     image_width, image_height = image.size
@@ -100,7 +105,7 @@ class CanvasBrushesMixin:
         #     if image_height > bottom - top:
         #         bottom = image_height
         brush_size = self.settings_manager.settings.mask_brush_size.get()
-        return self.top-brush_size, self.left-brush_size, self.bottom + brush_size, self.right + brush_size
+        return self.top_line_extremity - brush_size, self.left_line_extremity - brush_size, self.bottom_line_extremity + brush_size, self.right_line_extremity + brush_size
 
     def rasterize_lines(self):
         if len(self.current_layer.lines) == 0:
@@ -159,14 +164,6 @@ class CanvasBrushesMixin:
         if self.active_canvas_rect.height() > height:
             height = self.active_canvas_rect.height()
         return width, height
-
-    max_left = 0
-    max_top = 0
-    max_right = 0
-    max_bottom = 0
-
-    last_left = None
-    last_top = None
 
     def convert_pixmap_to_pil_image(self, img, top, left, bottom, right):
         new_image = Image.fromqpixmap(img)
@@ -235,7 +232,7 @@ class CanvasBrushesMixin:
         pos_x = -left if pos_x > 0 else pos_x
         pos_y = -top if pos_y > 0 else pos_y
 
-        composite_image.alpha_composite(new_image, (pos_x, pos_y), (0, 0, self.right, self.bottom))
+        composite_image.alpha_composite(new_image, (pos_x, pos_y), (0, 0, self.right_line_extremity, self.bottom_line_extremity))
         self.current_layer.lines.clear()
         self.add_image_to_canvas_new(composite_image, QPoint(-self.max_left, -self.max_top), self.image_root_point)
 
