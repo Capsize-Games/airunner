@@ -46,7 +46,10 @@ class ExtensionMixin:
                             module = importlib.util.module_from_spec(spec)
                             spec.loader.exec_module(module)
                             ExtensionClass = getattr(module, "Extension")
-                            extensions.append(ExtensionClass(self, self.settings_manager))
+                            try:
+                                extensions.append(ExtensionClass(self, self.settings_manager))
+                            except TypeError:
+                                pass
         self.settings_manager.settings.active_extensions.set(extensions)
 
     def do_generator_tab_injection(self, tab, tab_name):
