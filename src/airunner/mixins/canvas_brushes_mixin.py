@@ -16,8 +16,8 @@ class CanvasBrushesMixin:
     max_top = 0
     max_right = 0
     max_bottom = 0
-    last_left = None
-    last_top = None
+    last_left = 0
+    last_top = 0
 
     @property
     def primary_color(self):
@@ -97,13 +97,10 @@ class CanvasBrushesMixin:
                 self.top_line_extremity = end_y
             if end_y > self.bottom_line_extremity:
                 self.bottom_line_extremity = end_y
-        # if len(self.current_layer.images) > 0:
-        #     image = self.current_layer.images[0].image
-        #     image_width, image_height = image.size
-        #     if image_width > right - left:
-        #         right = image_width
-        #     if image_height > bottom - top:
-        #         bottom = image_height
+        if self.top_line_extremity > -self.pos_y:
+            self.top_line_extremity = -self.pos_y
+        if self.left_line_extremity > -self.pos_x:
+            self.left_line_extremity = -self.pos_x
         brush_size = self.settings_manager.settings.mask_brush_size.get()
         return self.top_line_extremity - brush_size, self.left_line_extremity - brush_size, self.bottom_line_extremity + brush_size, self.right_line_extremity + brush_size
 
@@ -111,8 +108,17 @@ class CanvasBrushesMixin:
         if len(self.current_layer.lines) == 0:
             return
         top, left, bottom, right = self.get_line_extremities()
+
+        left = min(self.max_left, left)
+        top = min(self.max_top, top)
+        right = max(self.max_right, right)
+        bottom = max(self.max_bottom, bottom)
+
         # create a QImage with the size of the lines
-        img = QImage(QSize(right, bottom), QImage.Format.Format_ARGB32)
+        brush_size = self.settings_manager.settings.mask_brush_size.get()
+        width = brush_size + right - left
+        height = brush_size + bottom - top
+        img = QImage(QSize(width, height), QImage.Format.Format_ARGB32)
         img.fill(Qt.GlobalColor.transparent)
         painter = QPainter(img)
         painter.setBrush(self.brush)
@@ -151,70 +157,60 @@ class CanvasBrushesMixin:
             path.cubicTo(ctrl1, ctrl2, end)
         return path
 
-    def rasterized_lines_image_size(self, new_image, existing_image=None):
-        width = new_image.width
-        height = new_image.height
-        if existing_image:
-            if new_image.width < existing_image.width:
-                width = existing_image.width
-            if new_image.height < existing_image.height:
-                height = existing_image.height
-        if self.active_canvas_rect.width() > width:
-            width = self.active_canvas_rect.width()
-        if self.active_canvas_rect.height() > height:
-            height = self.active_canvas_rect.height()
-        return width, height
-
     def convert_pixmap_to_pil_image(self, img: Image, top: int, left: int, bottom: int, right: int):
+        self.max_left = left if left < self.max_left else self.max_left
+        self.max_top = top if top < self.max_top else self.max_top
+        self.max_right = right if right > self.max_right else self.max_right
+        self.max_bottom = bottom if bottom > self.max_bottom else self.max_bottom
+
         img = Image.fromqpixmap(img)
-        current_image = None
-        if len(self.current_layer.images) > 0:
-            current_image = self.current_layer.images[0].image.copy()
+        current_image = self.current_layer.images[0].image.copy() if len(self.current_layer.images) > 0 else None
+        width = abs(right) + abs(left)
+        height = abs(bottom) + abs(top)
+        existing_image_width = current_image.width if current_image else 0
+        existing_image_height = current_image.height if current_image else 0
 
-        width = abs(right)
-        height = abs(bottom)
+        composite_width = existing_image_width if existing_image_width > width else width
+        composite_height = existing_image_height if existing_image_height > height else height
 
-        pos_x = 0 if (self.pos_x < 0 or self.pos_x == 0) else abs(self.pos_x)
-        pos_y = 0 if (self.pos_y < 0 or self.pos_y == 0) else abs(self.pos_y)
-
-        existing_image_width = 0
-        existing_image_height = 0
-        if current_image:
-            existing_image_width = current_image.width
-            existing_image_height = current_image.height
-
-        composite_width = width
-        composite_height = height
-
-        if existing_image_height > composite_height:
-            composite_height = existing_image_height
-        if existing_image_width > composite_width:
-            composite_width = existing_image_width
+        if composite_width < (self.max_right - self.max_left):
+            composite_width = self.max_right - self.max_left
+        if composite_height < (self.max_bottom - self.max_top):
+            composite_height = self.max_bottom - self.max_top
 
         composite_image = Image.new('RGBA', (composite_width, composite_height), (255, 0, 0, 255))
 
+        q_point_x = self.max_left
+        q_point_y = self.max_top
+        composite_img_dest = QPoint(q_point_x, q_point_y)
+
+        pos_x = 0
+        pos_y = 0
+
+        if self.last_left != self.max_left:
+            last_left = self.last_left
+            self.last_left = self.max_left
+            pos_x = -self.last_left + last_left
+        if self.last_top != self.max_top:
+            last_top = self.last_top
+            self.last_top = self.max_top
+            pos_y = -self.last_top + last_top
+
+        new_img_dest_pos_x = -(self.pos_x - abs(left))
+        new_img_dest_pos_y = -(self.pos_y - abs(top))
+
+        # self.parent.window.debug_label.setText(
+        #     f"W/H: {width}x{height} | imgdest: {new_img_dest_pos_x}, {new_img_dest_pos_y} | ext: {self.left_line_extremity}, {self.top_line_extremity}, {self.right_line_extremity}, {self.bottom_line_extremity} | max: {self.max_left}, {self.max_top} {self.max_right} {self.max_bottom} | last: {self.last_left}, {self.last_top}"
+        # )
+
+        # add current image to the composite image
         if current_image:
-            if not self.last_left or self.last_left != self.max_left:
-                if self.last_left:
-                    l = self.max_left - self.last_left
-                    self.last_left = self.max_left
-                else:
-                    self.last_left = self.max_left
-                    l = self.last_left
-            else:
-                l = 0
-            if not self.last_top or self.last_top != self.max_top:
-                if self.last_top:
-                    t = self.max_top - self.last_top
-                    self.last_top = self.max_top - self.last_top
-                else:
-                    self.last_top = self.max_top
-                    t = self.last_top
-            else:
-                t = 0
-            composite_image.alpha_composite(current_image, (l, t), (0, 0, existing_image_width, existing_image_height))
-        composite_image.alpha_composite(img, (-self.pos_x, -self.pos_y))
-        self.add_image_to_canvas_new(composite_image, QPoint(0, 0), self.image_root_point)
+            existing_img_dest = (pos_x, pos_y)
+            existing_img_source = (0, 0)
+            composite_image.alpha_composite(current_image, existing_img_dest, existing_img_source)
+        new_img_dest = (new_img_dest_pos_x, new_img_dest_pos_y)
+        composite_image.alpha_composite(img, new_img_dest)
+        self.add_image_to_canvas_new(composite_image, composite_img_dest, self.image_root_point)
         self.current_layer.lines.clear()
 
     def handle_erase(self, event):
