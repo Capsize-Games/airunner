@@ -178,7 +178,7 @@ class CanvasBrushesMixin:
         if composite_height < (self.max_bottom - self.max_top):
             composite_height = self.max_bottom - self.max_top
 
-        composite_image = Image.new('RGBA', (composite_width, composite_height), (255, 0, 0, 255))
+        composite_image = Image.new('RGBA', (composite_width, composite_height), (0, 0, 0, 0))
 
         q_point_x = self.max_left
         q_point_y = self.max_top
