@@ -8,8 +8,6 @@ class LayerMixin:
     """
     This is a mixin class for the main window that handles the layer manager.
     """
-    layers_as_single = False
-
     @property
     def layer_highlight_style(self):
         return f"background-color: #c7f6fc; border: 1px solid #000000; color: #000000;"
@@ -23,10 +21,6 @@ class LayerMixin:
         self.window.layer_up_button.clicked.connect(self.layer_up_button)
         self.window.layer_down_button.clicked.connect(self.layer_down_button)
         self.window.delete_layer_button.clicked.connect(self.delete_layer_button)
-        self.window.singleLayerCheckbox.stateChanged.connect(self.set_layers_as_single)
-
-    def set_layers_as_single(self, state):
-        self.layers_as_single = state == 2
 
     def layer_up_button(self):
         self.canvas.move_layer_up(self.canvas.current_layer)
