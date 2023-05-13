@@ -11,8 +11,6 @@ from airunner.windows.video import VideoPopup
 
 
 class GeneratorMixin:
-    tabs = None
-
     @property
     def width(self):
         return int(self.settings_manager.settings.working_width.get())
@@ -106,7 +104,7 @@ class GeneratorMixin:
     def initialize(self):
         sections = ["txt2img", "img2img", "depth2img", "pix2pix", "outpaint", "controlnet", "txt2vid"]
         self.tabs = {}
-        for tab in sections:
+        for tab in self.sections:
             self.tabs[tab] = uic.loadUi(os.path.join(
                 os.path.dirname(os.path.abspath(__file__)), "..", "pyqt/generate_form.ui"))
 
@@ -146,7 +144,6 @@ class GeneratorMixin:
         # iterate over each tab and connect steps_slider with steps_spinbox
         for tab_name in self.tabs.keys():
             tab = self.tabs[tab_name]
-            self.load_embeddings(tab)
 
             tab.steps_slider.valueChanged.connect(lambda val, _tab=tab: self.handle_steps_slider_change(val, _tab))
             tab.steps_spinbox.valueChanged.connect(lambda val, _tab=tab: self.handle_steps_spinbox_change(val, _tab))
@@ -253,7 +250,7 @@ class GeneratorMixin:
         if nsfw_content_detected and self.settings_manager.settings.nsfw_filter.get():
             self.message_handler("NSFW content detected, try again.", error=True)
         else:
-            if data["action"] != "outpaint":
+            if data["action"] != "outpaint" and self.settings_manager.settings.image_to_new_layer.get():
                 self.canvas.add_layer()
             self.canvas.image_handler(image, data)
             self.message_handler("")
@@ -326,6 +323,7 @@ class GeneratorMixin:
     def prep_video(self):
         pass
 
+    @property
     def active_rect(self):
         rect = QRect(
             self.canvas.active_grid_area_rect.x(),
@@ -380,7 +378,7 @@ class GeneratorMixin:
                 (self.settings.working_width.get(), self.settings.working_height.get()),
                 (0, 0, 0))
 
-            cropped_outpaint_box_rect = self.active_rect()
+            cropped_outpaint_box_rect = self.active_rect
             crop_location = (
                 cropped_outpaint_box_rect.x() - self.canvas.image_pivot_point.x(),
                 cropped_outpaint_box_rect.y() - self.canvas.image_pivot_point.y(),
@@ -516,7 +514,7 @@ class GeneratorMixin:
             "model_base_path": sm.model_base_path.get(),
             "pos_x": 0,
             "pos_y": 0,
-            "outpaint_box_rect": self.active_rect(),
+            "outpaint_box_rect": self.active_rect,
             "hf_token": self.settings_manager.settings.hf_api_key.get(),
             "enable_model_cpu_offload": sm.enable_model_cpu_offload.get(),
             "use_controlnet": use_controlnet,

@@ -1,10 +1,17 @@
-from PIL.ImageDraw import ImageDraw
-from PyQt6.QtCore import Qt, QPointF, QPoint
-from PyQt6.QtGui import QPainter, QPainterPath, QColor, QPen
+from PIL import ImageDraw
+from PyQt6.QtCore import Qt, QPointF, QPoint, QSize, QRect
+from PyQt6.QtGui import QPainter, QPainterPath, QColor, QPen, QImage
 from airunner.models.linedata import LineData
+from PIL import Image
 
 
 class CanvasBrushesMixin:
+    _point = None
+    active_canvas_rect = QRect(0, 0, 0, 0)
+    opacity = None
+    color = None
+    width = None
+
     @property
     def primary_color(self):
         return QColor(self.settings_manager.settings.primary_color.get())
@@ -22,17 +29,29 @@ class CanvasBrushesMixin:
         return self.settings_manager.settings.secondary_brush_opacity.get()
 
     def draw(self, layer, index):
-        painter = QPainter(self.canvas_container)
-        painter.setBrush(self.brush)
-        painter.setRenderHint(QPainter.RenderHint.Antialiasing)
-
-        # create a QPainterPath to hold the entire line
         path = QPainterPath()
+        painter = None
         for line in layer.lines:
             pen = line.pen
             pen.setCapStyle(Qt.PenCapStyle.RoundCap)
             pen.setJoinStyle(Qt.PenJoinStyle.RoundJoin)
-
+            if self.width is None or self.width != line.width:
+                self.width = line.width
+                self.draw_path(path, painter)
+                painter = None
+            if self.color is None or self.color != line.color:
+                self.color = line.color
+                self.draw_path(path, painter)
+                painter = None
+            if self.opacity is None or self.opacity != line.opacity:
+                self.opacity = line.opacity
+                self.draw_path(path, painter)
+                painter = None
+            if not painter:
+                painter = QPainter(self.canvas_container)
+                painter.setBrush(self.brush)
+                painter.setRenderHint(QPainter.RenderHint.Antialiasing)
+                path = QPainterPath()
             painter.setPen(pen)
             painter.setOpacity(line.opacity / 255)
 
@@ -55,8 +74,12 @@ class CanvasBrushesMixin:
             path.cubicTo(ctrl1, ctrl2, end)
 
         # draw the entire line with a single drawPath call
-        painter.drawPath(path)
-        painter.end()
+        self.draw_path(path, painter)
+
+    def draw_path(self, path, painter):
+        if painter:
+            painter.drawPath(path)
+            painter.end()
 
     def handle_erase(self, event):
         self.is_erasing = True
@@ -94,8 +117,6 @@ class CanvasBrushesMixin:
         return pen
 
     def handle_draw(self, event):
-        # Continue drawing the current line as the mouse is moved but use brush_size
-        # to control the radius of the line being drawn
         start = event.pos() - QPoint(self.pos_x, self.pos_y)
         pen = self.pen(event)
         opacity = 255
@@ -106,7 +127,22 @@ class CanvasBrushesMixin:
         if len(self.current_layer.lines) > 0:
             previous = LineData(self.current_layer.lines[-1].start_point, start, pen, self.current_layer_index, opacity)
             self.current_layer.lines[-1] = previous
-        end = event.pos() - QPoint(self.pos_x, self.pos_y)
+
+            if self.shift_is_pressed:  # draw a strait line by combining the line segments
+                if len(self.current_layer.lines) > self.start_drawing_line_index:
+                    start_line = self.current_layer.lines[self.start_drawing_line_index]
+                    end_line = self.current_layer.lines[self.stop_drawing_line_index - 1]
+                    new_line_data = LineData(
+                        start_line.start_point,
+                        end_line.end_point,
+                        start_line.pen,
+                        start_line.layer_index,
+                        start_line.opacity
+                    )
+                    self.current_layer.lines = self.current_layer.lines[:self.start_drawing_line_index]
+                    self.current_layer.lines.append(new_line_data)
+
+        end = event.pos() - QPoint(self.pos_x + 1, self.pos_y)
         line_data = LineData(start, end, pen, self.current_layer_index, opacity)
         self.current_layer.lines.append(line_data)
         self.update()
