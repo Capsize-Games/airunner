@@ -235,7 +235,8 @@ class Canvas(
                     "layer_index": self.current_layer_index,
                     "lines": self.current_layer.lines.copy()
                 })
-                self.start_drawing_line_index = len(self.current_layer.lines)
+                if not self.left_mouse_button_down and not self.right_mouse_button_down:
+                    self.start_drawing_line_index = len(self.current_layer.lines)
                 start = event.pos() - QPoint(self.pos_x, self.pos_y)
                 end = event.pos() - QPoint(self.pos_x, self.pos_y)
                 pen = self.pen(event)
@@ -276,6 +277,9 @@ class Canvas(
 
     def mouse_release_event(self, event):
         if event.button() in (Qt.MouseButton.LeftButton, Qt.MouseButton.RightButton):
+            self.left_mouse_button_down = False
+            self.right_mouse_button_down = False
+            self.start_drawing_line_index = None
             if self.brush_selected:
                 self.stop_drawing_line_index = len(self.current_layer.lines)
                 self.update()
