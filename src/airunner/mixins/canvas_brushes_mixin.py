@@ -127,6 +127,16 @@ class CanvasBrushesMixin:
         if len(self.current_layer.lines) > 0:
             previous = LineData(self.current_layer.lines[-1].start_point, start, pen, self.current_layer_index, opacity)
             self.current_layer.lines[-1] = previous
+
+            if self.shift_is_pressed:  # draw a strait line by combining the line segments
+                self.current_layer.lines = [LineData(
+                    self.current_layer.lines[self.start_drawing_line_index].start_point,
+                    self.current_layer.lines[self.stop_drawing_line_index - 1].end_point,
+                    self.current_layer.lines[self.start_drawing_line_index].pen,
+                    self.current_layer.lines[self.start_drawing_line_index].layer_index,
+                    self.current_layer.lines[self.start_drawing_line_index].opacity
+                )]
+
         end = event.pos() - QPoint(self.pos_x + 1, self.pos_y)
         line_data = LineData(start, end, pen, self.current_layer_index, opacity)
         self.current_layer.lines.append(line_data)
