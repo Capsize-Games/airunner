@@ -24,6 +24,7 @@ class Canvas(
     saving = False
     select_start = None
     select_end = None
+    shift_is_pressed = False
 
     @property
     def current_layer(self):
@@ -108,6 +109,12 @@ class Canvas(
         self.canvas_container.mouseMoveEvent = self.mouse_move_event
         self.canvas_container.mouseReleaseEvent = self.mouse_release_event
 
+        # on shift down
+        self.canvas_container.keyPressEvent = self.key_press_event
+
+        # on key up
+        self.canvas_container.keyReleaseEvent = self.key_release_event
+
         # on mouse hover
         self.canvas_container.enterEvent = self.enter_event
         self.canvas_container.leaveEvent = self.leave_event
@@ -120,6 +127,14 @@ class Canvas(
         self.drag_pos = QPoint(0, 0)
 
         self.set_canvas_color()
+
+    def key_press_event(self, event):
+        if event.key() == Qt.Key.Key_Shift:
+            self.shift_is_pressed = True
+
+    def key_release_event(self, event):
+        if event.key() == Qt.Key.Key_Shift:
+            self.shift_is_pressed = False
 
     def set_canvas_color(self):
         self.canvas_container.setStyleSheet(f"background-color: {self.settings_manager.settings.canvas_color.get()};")
@@ -206,6 +221,10 @@ class Canvas(
 
         self.layers[self.current_layer_index].offset = point
 
+    left_mouse_button_down = False
+    right_mouse_button_down = False
+    brush_start = None
+
     def mouse_press_event(self, event):
         if event.button() == Qt.MouseButton.LeftButton:
             self.select_start = event.pos()
@@ -229,6 +248,16 @@ class Canvas(
                 start += self.layers[self.current_layer_index].offset
                 end += self.layers[self.current_layer_index].offset
                 self.current_layer.lines += [line]
+
+                if event.button() == Qt.MouseButton.LeftButton and not self.left_mouse_button_down:
+                    self.right_mouse_button_down = False
+                    self.left_mouse_button_down = True
+                    self.brush_start = start
+                elif event.button() == Qt.MouseButton.RightButton and not self.right_mouse_button_down:
+                    self.left_mouse_button_down = False
+                    self.right_mouse_button_down = True
+                    self.brush_start = start
+
             self.handle_tool(event)
             self.update()
         elif event.button() == Qt.MouseButton.MiddleButton:
