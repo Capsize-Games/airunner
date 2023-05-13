@@ -27,15 +27,17 @@ class ExtensionMixin:
         """
         extensions = []
         base_path = self.settings_manager.settings.model_base_path.get()
-        extension_path = os.path.join(base_path, "extensions")
-        if not os.path.exists(extension_path):
+        extensions_path = self.settings_manager.settings.extensions_path.get() or "extensions"
+        if extensions_path == "extensions":
+            extensions_path = os.path.join(base_path, extensions_path)
+        if not os.path.exists(extensions_path):
             return extensions
-        available_extensions = get_extensions_from_path(extension_path)
+        available_extensions = get_extensions_from_path(extensions_path)
         for extension in available_extensions:
             if extension.name.get() in self.settings_manager.settings.enabled_extensions.get():
                 repo = extension.repo.get()
                 name = repo.split("/")[-1]
-                path = os.path.join(extension_path, name)
+                path = os.path.join(extensions_path, name)
                 if os.path.exists(path):
                     for f in os.listdir(path):
                         if os.path.isfile(os.path.join(path, f)) and f == "main.py":
@@ -43,8 +45,11 @@ class ExtensionMixin:
                             spec = importlib.util.spec_from_file_location("main", os.path.join(path, f))
                             module = importlib.util.module_from_spec(spec)
                             spec.loader.exec_module(module)
-                            extension_class = getattr(module, "Extension")
-                            extensions.append(extension_class(self.settings_manager))
+                            ExtensionClass = getattr(module, "Extension")
+                            try:
+                                extensions.append(ExtensionClass(self, self.settings_manager))
+                            except TypeError:
+                                pass
         self.settings_manager.settings.active_extensions.set(extensions)
 
     def do_generator_tab_injection(self, tab, tab_name):
@@ -55,12 +60,29 @@ class ExtensionMixin:
         :return:
         """
         for extension in self.settings_manager.settings.active_extensions.get():
-            extension.generator_tab_injection(tab, tab_name)
+            try:
+                extension.generator_tab_injection(tab, tab_name)
+            except AttributeError:
+                pass
 
     def do_menubar_injection(self):
         for extension in self.settings_manager.settings.active_extensions.get():
-            extension.menubar_injection(self.window.menubar)
+            try:
+                extension.menubar_injection(self.window.menubar)
+            except AttributeError:
+                pass
 
     def do_toolbar_injection(self):
         for extension in self.settings_manager.settings.active_extensions.get():
-            extension.toolbar_injection(self.window.horizontalFrame)
+            try:
+                extension.toolbar_injection(self.window.horizontalFrame)
+            except AttributeError:
+                pass
+
+    def do_preferences_injection(self, window):
+        for extension in self.settings_manager.settings.active_extensions.get():
+            try:
+                extension.preferences_injection(window)
+            except AttributeError:
+                pass
+
