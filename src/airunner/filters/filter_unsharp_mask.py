@@ -29,42 +29,42 @@ class FilterUnsharpMask(FilterBase):
             self.filter_window.radius_spinbox.setValue(val)
             self.filter_window.radius_spinbox.update()
             self.filter_window.radius_slider.update()
-            update_filter()
+            self.preview_filter()
 
         def handle_unsharp_radius_spinbox_change(val):
             self.unsharp_radius = val
             self.filter_window.radius_slider.setValue(int(val))
             self.filter_window.radius_spinbox.update()
             self.filter_window.radius_slider.update()
-            update_filter()
+            self.preview_filter()
 
         def handle_unsharp_percent_slider_change(val):
             self.unsharp_percent = val
             self.filter_window.percent_spinbox.setValue(val)
             self.filter_window.percent_spinbox.update()
             self.filter_window.percent_slider.update()
-            update_filter()
+            self.preview_filter()
 
         def handle_unsharp_percent_spinbox_change(val):
             self.unsharp_percent = val
             self.filter_window.percent_slider.setValue(int(val))
             self.filter_window.percent_spinbox.update()
             self.filter_window.percent_slider.update()
-            update_filter()
+            self.preview_filter()
 
         def handle_unsharp_threshold_slider_change(val):
             self.unsharp_threshold = val
             self.filter_window.threshold_spinbox.setValue(val)
             self.filter_window.threshold_spinbox.update()
             self.filter_window.threshold_slider.update()
-            update_filter()
+            self.preview_filter()
 
         def handle_unsharp_threshold_spinbox_change(val):
             self.unsharp_threshold = val
             self.filter_window.threshold_slider.setValue(int(val))
             self.filter_window.threshold_spinbox.update()
             self.filter_window.threshold_slider.update()
-            update_filter()
+            self.preview_filter()
 
         # set the gaussian_blur_window settings values to the current settings
         self.filter_window.radius_slider.setValue(int(self.unsharp_radius))
@@ -85,7 +85,7 @@ class FilterUnsharpMask(FilterBase):
         # on ok button click, apply the filter
         self.filter_window.buttonBox.rejected.connect(self.cancel_filter)
         self.filter_window.buttonBox.accepted.connect(self.apply_filter)
-
+        self.preview_filter()
         self.parent.current_filter = self.filter
 
         self.filter_window.exec()
