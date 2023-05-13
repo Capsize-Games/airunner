@@ -211,11 +211,11 @@ class Canvas(
             self.select_start = event.pos()
         if event.button() in (Qt.MouseButton.LeftButton, Qt.MouseButton.RightButton):
             if self.brush_selected:
-                # self.parent.history.add_event({
-                #     "event": "draw",
-                #     "layer_index": self.current_layer_index,
-                #     "lines": self.current_layer.lines.copy()
-                # })
+                self.parent.history.add_event({
+                    "event": "draw",
+                    "layer_index": self.current_layer_index,
+                    "lines": self.current_layer.lines.copy()
+                })
                 self.start_drawing_line_index = len(self.current_layer.lines)
                 start = event.pos() - QPoint(self.pos_x, self.pos_y)
                 end = event.pos() - QPoint(self.pos_x, self.pos_y)
