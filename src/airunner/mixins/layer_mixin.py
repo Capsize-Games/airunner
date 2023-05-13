@@ -50,8 +50,7 @@ class LayerMixin:
 
         index = 0
         for layer in self.canvas.layers:
-            HERE = os.path.dirname(os.path.abspath(__file__))
-            layer_obj = uic.loadUi(os.path.join(HERE, "..", "pyqt/layer.ui"))
+            layer_obj = uic.loadUi(os.path.join("pyqt/layer.ui"))
             layer_obj.layer_name.setText(layer.name)
 
             # onclick of layer_obj set as the current layer index on self.canvas
