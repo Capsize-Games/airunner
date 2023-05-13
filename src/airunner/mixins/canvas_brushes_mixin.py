@@ -8,16 +8,9 @@ from PIL import Image
 class CanvasBrushesMixin:
     _point = None
     active_canvas_rect = QRect(0, 0, 0, 0)
-    left_line_extremity = 0
-    right_line_extremity = 0
-    top_line_extremity = 0
-    bottom_line_extremity = 0
-    max_left = 0
-    max_top = 0
-    max_right = 0
-    max_bottom = 0
-    last_left = 0
-    last_top = 0
+    opacity = None
+    color = None
+    width = None
 
     @property
     def primary_color(self):
@@ -36,20 +29,29 @@ class CanvasBrushesMixin:
         return self.settings_manager.settings.secondary_brush_opacity.get()
 
     def draw(self, layer, index):
-        painter = QPainter(self.canvas_container)
-        painter.setBrush(self.brush)
-        painter.setRenderHint(QPainter.RenderHint.Antialiasing)
-
-        # create a QPainterPath to hold the entire line
         path = QPainterPath()
-        if len(layer.lines) == 0:
-            painter.end()
-            return
+        painter = None
         for line in layer.lines:
             pen = line.pen
             pen.setCapStyle(Qt.PenCapStyle.RoundCap)
             pen.setJoinStyle(Qt.PenJoinStyle.RoundJoin)
-
+            if self.width is None or self.width != line.width:
+                self.width = line.width
+                self.draw_path(path, painter)
+                painter = None
+            if self.color is None or self.color != line.color:
+                self.color = line.color
+                self.draw_path(path, painter)
+                painter = None
+            if self.opacity is None or self.opacity != line.opacity:
+                self.opacity = line.opacity
+                self.draw_path(path, painter)
+                painter = None
+            if not painter:
+                painter = QPainter(self.canvas_container)
+                painter.setBrush(self.brush)
+                painter.setRenderHint(QPainter.RenderHint.Antialiasing)
+                path = QPainterPath()
             painter.setPen(pen)
             painter.setOpacity(line.opacity / 255)
 
@@ -72,8 +74,12 @@ class CanvasBrushesMixin:
             path.cubicTo(ctrl1, ctrl2, end)
 
         # draw the entire line with a single drawPath call
-        painter.drawPath(path)
-        painter.end()
+        self.draw_path(path, painter)
+
+    def draw_path(self, path, painter):
+        if painter:
+            painter.drawPath(path)
+            painter.end()
 
     def handle_erase(self, event):
         self.is_erasing = True
