@@ -5,7 +5,7 @@ from airunner.filters.blur_filter import BlurFilter
 class FilterBoxBlur(BlurFilter):
     ui_name = "box_blur_window"
     window_title = "Box Blur"
-    default_value = 50.0
+    default_value = 1.0
 
     @property
     def filter(self):
