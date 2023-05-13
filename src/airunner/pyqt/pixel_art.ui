@@ -108,13 +108,6 @@
     </layout>
    </item>
    <item row="1" column="0">
-    <widget class="QCheckBox" name="enabled">
-     <property name="text">
-      <string>Keep enabled</string>
-     </property>
-    </widget>
-   </item>
-   <item row="2" column="0">
     <widget class="QDialogButtonBox" name="buttonBox">
      <property name="orientation">
       <enum>Qt::Horizontal</enum>

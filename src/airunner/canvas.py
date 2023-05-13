@@ -24,6 +24,7 @@ class Canvas(
     saving = False
     select_start = None
     select_end = None
+    shift_is_pressed = False
 
     @property
     def current_layer(self):
@@ -108,6 +109,12 @@ class Canvas(
         self.canvas_container.mouseMoveEvent = self.mouse_move_event
         self.canvas_container.mouseReleaseEvent = self.mouse_release_event
 
+        # on shift down
+        self.parent.window.keyPressEvent = self.key_press_event
+
+        # on key up
+        self.parent.window.keyReleaseEvent = self.key_release_event
+
         # on mouse hover
         self.canvas_container.enterEvent = self.enter_event
         self.canvas_container.leaveEvent = self.leave_event
@@ -121,77 +128,13 @@ class Canvas(
 
         self.set_canvas_color()
 
-    def handle_outpaint(self, outpaint_box_rect, outpainted_image, action):
-        if len(self.current_layer.images) == 0:
-            point = QPoint(outpaint_box_rect.x(), outpaint_box_rect.y())
-            return outpainted_image, self.image_root_point, point
+    def key_press_event(self, event):
+        if event.key() == Qt.Key.Key_Shift:
+            self.shift_is_pressed = True
 
-        # make a copy of the current canvas image
-        existing_image_copy = self.current_layer.images[0].image.copy()
-        width = existing_image_copy.width
-        height = existing_image_copy.height
-        working_width = self.settings_manager.settings.working_width.get()
-        working_height = self.settings_manager.settings.working_height.get()
-
-        is_drawing_left = outpaint_box_rect.x() < self.image_pivot_point.x()
-        is_drawing_up = outpaint_box_rect.y() < self.image_pivot_point.y()
-
-        if is_drawing_left:
-            # get the x overlap of the outpaint box and the image
-            x_overlap = min(width, outpaint_box_rect.width()) - max(0, outpaint_box_rect.x())
-        else:
-            # get the x overlap of the outpaint box and the image
-            x_overlap = min(width, outpaint_box_rect.width()) - max(0, outpaint_box_rect.x() - self.image_pivot_point.x())
-
-        if is_drawing_up:
-            # get the y overlap of the outpaint box and the image
-            y_overlap = min(height, outpaint_box_rect.height()) - max(0, outpaint_box_rect.y())
-        else:
-            # get the y overlap of the outpaint box and the image
-            y_overlap = min(height, outpaint_box_rect.height()) - max(0, outpaint_box_rect.y() - self.image_pivot_point.y())
-
-        # get the x and y overlap of the outpaint box and the image
-        new_dimensions = (int(width + working_width - x_overlap), int(height + working_height - y_overlap))
-        if new_dimensions[0] < width:
-            new_dimensions = (width, new_dimensions[1])
-        if new_dimensions[1] < height:
-            new_dimensions = (new_dimensions[0], height)
-        new_image = Image.new("RGBA", new_dimensions, (0, 0, 0, 0))
-        new_image_a = Image.new("RGBA", new_dimensions, (0, 0, 0, 0))
-        new_image_b = Image.new("RGBA", new_dimensions, (0, 0, 0, 0))
-        existing_image_pos = [0, 0]
-        image_root_point = QPoint(self.image_root_point.x(), self.image_root_point.y())
-        image_pivot_point = QPoint(self.image_pivot_point.x(), self.image_pivot_point.y())
-        if is_drawing_left:
-            current_x_pos = abs(outpaint_box_rect.x() - image_pivot_point.x())
-            left_overlap = abs(outpaint_box_rect.x()) - abs(image_root_point.x())
-            image_root_point.setX(width + left_overlap)
-            image_pivot_point.setX(int(outpaint_box_rect.x()))
-            existing_image_pos = [current_x_pos, existing_image_pos[1]]
-            pos_x = max(0, outpaint_box_rect.x() + self.image_pivot_point.x())
-        else:
-            pos_x = max(0, outpaint_box_rect.x() - self.image_pivot_point.x())
-        if is_drawing_up:
-            current_y_pos = abs(outpaint_box_rect.y() - image_pivot_point.y())
-            up_overlap = abs(outpaint_box_rect.y()) - abs(image_root_point.y())
-            image_root_point.setY(height + up_overlap)
-            image_pivot_point.setY(int(outpaint_box_rect.y()))
-            existing_image_pos = [existing_image_pos[0], current_y_pos]
-            pos_y = max(0, outpaint_box_rect.y() + self.image_pivot_point.y())
-        else:
-            pos_y = max(0, outpaint_box_rect.y() - self.image_pivot_point.y())
-
-        new_image_a.paste(outpainted_image, (int(pos_x), int(pos_y)))
-        new_image_b.paste(existing_image_copy, (int(existing_image_pos[0]), int(existing_image_pos[1])))
-
-        if action == "outpaint":
-            new_image = Image.alpha_composite(new_image, new_image_a)
-            new_image = Image.alpha_composite(new_image, new_image_b)
-        else:
-            new_image = Image.alpha_composite(new_image, new_image_b)
-            new_image = Image.alpha_composite(new_image, new_image_a)
-
-        return new_image, image_root_point, image_pivot_point
+    def key_release_event(self, event):
+        if event.key() == Qt.Key.Key_Shift:
+            self.shift_is_pressed = False
 
     def set_canvas_color(self):
         self.canvas_container.setStyleSheet(f"background-color: {self.settings_manager.settings.canvas_color.get()};")
@@ -245,6 +188,7 @@ class Canvas(
         self.pos_y += event.pos().y() - self.drag_pos.y()
         self.drag_pos = event.pos()
         self.update()
+        self.parent.window.canvas_position.setText(f"X: {self.pos_x}, Y: {self.pos_y}")
 
     def handle_move_layer(self, event):
         point = QPoint(
@@ -277,6 +221,10 @@ class Canvas(
 
         self.layers[self.current_layer_index].offset = point
 
+    left_mouse_button_down = False
+    right_mouse_button_down = False
+    brush_start = None
+
     def mouse_press_event(self, event):
         if event.button() == Qt.MouseButton.LeftButton:
             self.select_start = event.pos()
@@ -287,7 +235,8 @@ class Canvas(
                     "layer_index": self.current_layer_index,
                     "lines": self.current_layer.lines.copy()
                 })
-                self.start_drawing_line_index = len(self.current_layer.lines)
+                if not self.left_mouse_button_down and not self.right_mouse_button_down:
+                    self.start_drawing_line_index = len(self.current_layer.lines)
                 start = event.pos() - QPoint(self.pos_x, self.pos_y)
                 end = event.pos() - QPoint(self.pos_x, self.pos_y)
                 pen = self.pen(event)
@@ -300,15 +249,27 @@ class Canvas(
                 start += self.layers[self.current_layer_index].offset
                 end += self.layers[self.current_layer_index].offset
                 self.current_layer.lines += [line]
+
+                if event.button() == Qt.MouseButton.LeftButton and not self.left_mouse_button_down:
+                    self.right_mouse_button_down = False
+                    self.left_mouse_button_down = True
+                    self.brush_start = start
+                elif event.button() == Qt.MouseButton.RightButton and not self.right_mouse_button_down:
+                    self.left_mouse_button_down = False
+                    self.right_mouse_button_down = True
+                    self.brush_start = start
+
             self.handle_tool(event)
             self.update()
         elif event.button() == Qt.MouseButton.MiddleButton:
             # Start dragging the canvas when the middle or right mouse button is pressed
             self.drag_pos = event.pos()
 
+    last_mouse_pos = None
     def mouse_move_event(self, event):
         # check if LeftButton is pressed
         if Qt.MouseButton.LeftButton in event.buttons() or Qt.MouseButton.RightButton in event.buttons():
+            self.last_mouse_pos = event.pos()
             self.handle_tool(event)
             self.update()
         elif self.drag_pos is not None:
@@ -316,6 +277,9 @@ class Canvas(
 
     def mouse_release_event(self, event):
         if event.button() in (Qt.MouseButton.LeftButton, Qt.MouseButton.RightButton):
+            self.left_mouse_button_down = False
+            self.right_mouse_button_down = False
+            self.start_drawing_line_index = None
             if self.brush_selected:
                 self.stop_drawing_line_index = len(self.current_layer.lines)
                 self.update()
@@ -324,6 +288,16 @@ class Canvas(
         elif event.button() == Qt.MouseButton.MiddleButton:
             # Start dragging the canvas when the middle or right mouse button is pressed
             self.drag_pos = event.pos()
+
+        # self.parent.history.add_event({
+        #     "event": "set_image",
+        #     "layer_index": self.current_layer_index,
+        #     "images": self.current_layer.images,
+        #     "previous_image_root_point": self.image_root_point,
+        #     "previous_image_pivot_point": self.image_pivot_point,
+        # })
+        # self.rasterize_lines()
+
 
     def handle_select(self, event):
         if self.select_selected:

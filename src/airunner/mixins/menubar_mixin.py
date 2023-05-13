@@ -1,6 +1,11 @@
 from PyQt6.QtWidgets import QFileDialog
-from airunner.filters import FilterBoxBlur, FilterUnsharpMask, FilterSaturation, FilterColorBalance, FilterGaussianBlur, \
-    FilterPixelArt
+
+from airunner.filters.filter_box_blur import FilterBoxBlur
+from airunner.filters.filter_color_balance import FilterColorBalance
+from airunner.filters.filter_gaussian_blur import FilterGaussianBlur
+from airunner.filters.filter_pixel_art import FilterPixelArt
+from airunner.filters.filter_saturation import FilterSaturation
+from airunner.filters.filter_unsharp_mask import FilterUnsharpMask
 
 
 class MenubarMixin:
@@ -14,8 +19,10 @@ class MenubarMixin:
         self.window.actionPaste.triggered.connect(self.paste_image)
         self.window.actionCopy.triggered.connect(self.copy_image)
         self.window.actionResize_on_Paste.triggered.connect(self.toggle_resize_on_paste)
+        self.window.actionImage_to_new_layer.triggered.connect(self.toggle_image_to_new_layer)
         self.initialize_filter_actions()
         self.window.actionResize_on_Paste.setChecked(self.settings_manager.settings.resize_on_paste.get() == True)
+        self.window.actionImage_to_new_layer.setChecked(self.settings_manager.settings.image_to_new_layer.get() == True)
 
     def initialize_filter_actions(self):
         self.filter_gaussian_blur = FilterGaussianBlur(parent=self)
@@ -59,3 +66,6 @@ class MenubarMixin:
 
     def toggle_resize_on_paste(self):
         self.settings_manager.settings.resize_on_paste.set(self.window.actionResize_on_Paste.isChecked())
+
+    def toggle_image_to_new_layer(self):
+        self.settings_manager.settings.image_to_new_layer.set(self.window.actionImage_to_new_layer.isChecked())
