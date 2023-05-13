@@ -110,10 +110,10 @@ class Canvas(
         self.canvas_container.mouseReleaseEvent = self.mouse_release_event
 
         # on shift down
-        self.canvas_container.keyPressEvent = self.key_press_event
+        self.parent.window.keyPressEvent = self.key_press_event
 
         # on key up
-        self.canvas_container.keyReleaseEvent = self.key_release_event
+        self.parent.window.keyReleaseEvent = self.key_release_event
 
         # on mouse hover
         self.canvas_container.enterEvent = self.enter_event
