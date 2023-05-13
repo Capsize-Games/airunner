@@ -117,8 +117,6 @@ class CanvasBrushesMixin:
         return pen
 
     def handle_draw(self, event):
-        # Continue drawing the current line as the mouse is moved but use brush_size
-        # to control the radius of the line being drawn
         start = event.pos() - QPoint(self.pos_x, self.pos_y)
         pen = self.pen(event)
         opacity = 255
@@ -129,7 +127,7 @@ class CanvasBrushesMixin:
         if len(self.current_layer.lines) > 0:
             previous = LineData(self.current_layer.lines[-1].start_point, start, pen, self.current_layer_index, opacity)
             self.current_layer.lines[-1] = previous
-        end = event.pos() - QPoint(self.pos_x, self.pos_y)
+        end = event.pos() - QPoint(self.pos_x + 1, self.pos_y)
         line_data = LineData(start, end, pen, self.current_layer_index, opacity)
         self.current_layer.lines.append(line_data)
         self.update()
