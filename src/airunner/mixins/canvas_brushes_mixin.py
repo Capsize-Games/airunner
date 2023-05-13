@@ -8,10 +8,10 @@ from PIL import Image
 class CanvasBrushesMixin:
     _point = None
     active_canvas_rect = QRect(0, 0, 0, 0)
-    left_line_extremity = None
-    right_line_extremity = None
-    top_line_extremity = None
-    bottom_line_extremity = None
+    left_line_extremity = 0
+    right_line_extremity = 0
+    top_line_extremity = 0
+    bottom_line_extremity = 0
     max_left = 0
     max_top = 0
     max_right = 0
@@ -75,148 +75,18 @@ class CanvasBrushesMixin:
         painter.drawPath(path)
         painter.end()
 
-    def get_line_extremities(self):
-        for line in self.current_layer.lines:
-            start_x = line.start_point.x()
-            start_y = line.start_point.y()
-            end_x = line.end_point.x()
-            end_y = line.end_point.y()
-            if self.left_line_extremity is None or start_x < self.left_line_extremity:
-                self.left_line_extremity = start_x
-            if self.right_line_extremity is None or start_x > self.right_line_extremity:
-                self.right_line_extremity = start_x
-            if self.top_line_extremity is None or start_y < self.top_line_extremity:
-                self.top_line_extremity = start_y
-            if self.bottom_line_extremity is None or start_y > self.bottom_line_extremity:
-                self.bottom_line_extremity = start_y
-            if end_x < self.left_line_extremity:
-                self.left_line_extremity = end_x
-            if end_x > self.right_line_extremity:
-                self.right_line_extremity = end_x
-            if end_y < self.top_line_extremity:
-                self.top_line_extremity = end_y
-            if end_y > self.bottom_line_extremity:
-                self.bottom_line_extremity = end_y
-        if self.top_line_extremity > -self.pos_y:
-            self.top_line_extremity = -self.pos_y
-        if self.left_line_extremity > -self.pos_x:
-            self.left_line_extremity = -self.pos_x
-        brush_size = self.settings_manager.settings.mask_brush_size.get()
-        return self.top_line_extremity - brush_size, self.left_line_extremity - brush_size, self.bottom_line_extremity + brush_size, self.right_line_extremity + brush_size
-
-    def rasterize_lines(self):
-        if len(self.current_layer.lines) == 0:
-            return
-        top, left, bottom, right = self.get_line_extremities()
-
-        left = min(self.max_left, left)
-        top = min(self.max_top, top)
-        right = max(self.max_right, right)
-        bottom = max(self.max_bottom, bottom)
-
-        # create a QImage with the size of the lines
-        brush_size = self.settings_manager.settings.mask_brush_size.get()
-        width = brush_size + right - left
-        height = brush_size + bottom - top
-        img = QImage(QSize(width, height), QImage.Format.Format_ARGB32)
-        img.fill(Qt.GlobalColor.transparent)
-        painter = QPainter(img)
-        painter.setBrush(self.brush)
-        painter.setRenderHint(QPainter.RenderHint.Antialiasing)
-        path = self.create_image_path(painter)
-        painter.drawPath(path)
-        painter.end()
-        self.convert_pixmap_to_pil_image(img, top, left, bottom, right)
-
-    def create_image_path(self, painter):
-        path = QPainterPath()
-        for line in self.current_layer.lines:
-            pen = line.pen
-            pen.setCapStyle(Qt.PenCapStyle.RoundCap)
-            pen.setJoinStyle(Qt.PenJoinStyle.RoundJoin)
-
-            painter.setPen(pen)
-            painter.setOpacity(line.opacity / 255)
-
-            start = QPointF(line.start_point.x() + self.pos_x, line.start_point.y() + self.pos_y)
-            end = QPointF(line.end_point.x() + self.pos_x, line.end_point.y() + self.pos_y)
-
-            # also apply the layer offset
-            offset = QPointF(self.current_layer.offset.x(), self.current_layer.offset.y())
-            start += offset
-            end += offset
-
-            # calculate control points for the Bezier curve
-            dx = end.x() - start.x()
-            dy = end.y() - start.y()
-            ctrl1 = QPointF(start.x() + dx / 3, start.y() + dy / 3)
-            ctrl2 = QPointF(end.x() - dx / 3, end.y() - dy / 3)
-
-            # add the curve to the path
-            path.moveTo(start)
-            path.cubicTo(ctrl1, ctrl2, end)
-        return path
-
-    def convert_pixmap_to_pil_image(self, img: Image, top: int, left: int, bottom: int, right: int):
-        self.max_left = left if left < self.max_left else self.max_left
-        self.max_top = top if top < self.max_top else self.max_top
-        self.max_right = right if right > self.max_right else self.max_right
-        self.max_bottom = bottom if bottom > self.max_bottom else self.max_bottom
-
-        img = Image.fromqpixmap(img)
-        current_image = self.current_layer.images[0].image.copy() if len(self.current_layer.images) > 0 else None
-        width = abs(right) + abs(left)
-        height = abs(bottom) + abs(top)
-        existing_image_width = current_image.width if current_image else 0
-        existing_image_height = current_image.height if current_image else 0
-
-        composite_width = existing_image_width if existing_image_width > width else width
-        composite_height = existing_image_height if existing_image_height > height else height
-
-        if composite_width < (self.max_right - self.max_left):
-            composite_width = self.max_right - self.max_left
-        if composite_height < (self.max_bottom - self.max_top):
-            composite_height = self.max_bottom - self.max_top
-
-        composite_image = Image.new('RGBA', (composite_width, composite_height), (0, 0, 0, 0))
-
-        q_point_x = self.max_left
-        q_point_y = self.max_top
-        composite_img_dest = QPoint(q_point_x, q_point_y)
-
-        pos_x = 0
-        pos_y = 0
-
-        if self.last_left != self.max_left:
-            last_left = self.last_left
-            self.last_left = self.max_left
-            pos_x = -self.last_left + last_left
-        if self.last_top != self.max_top:
-            last_top = self.last_top
-            self.last_top = self.max_top
-            pos_y = -self.last_top + last_top
-
-        new_img_dest_pos_x = -(self.pos_x - abs(left))
-        new_img_dest_pos_y = -(self.pos_y - abs(top))
-
-        # self.parent.window.debug_label.setText(
-        #     f"W/H: {width}x{height} | imgdest: {new_img_dest_pos_x}, {new_img_dest_pos_y} | ext: {self.left_line_extremity}, {self.top_line_extremity}, {self.right_line_extremity}, {self.bottom_line_extremity} | max: {self.max_left}, {self.max_top} {self.max_right} {self.max_bottom} | last: {self.last_left}, {self.last_top}"
-        # )
-
-        # add current image to the composite image
-        if current_image:
-            existing_img_dest = (pos_x, pos_y)
-            existing_img_source = (0, 0)
-            composite_image.alpha_composite(current_image, existing_img_dest, existing_img_source)
-        new_img_dest = (new_img_dest_pos_x, new_img_dest_pos_y)
-        composite_image.alpha_composite(img, new_img_dest)
-        self.add_image_to_canvas_new(composite_image, composite_img_dest, self.image_root_point)
-        self.current_layer.lines.clear()
-
     def handle_erase(self, event):
         self.is_erasing = True
+        # Erase any line segments that intersect with the current position of the mouse
         brush_size = self.settings_manager.settings.mask_brush_size.get()
         start = event.pos() - QPoint(self.pos_x, self.pos_y) - self.image_pivot_point
+        for i, line in enumerate(self.current_layer.lines):
+            # check if line intersects with start using brush size radius
+            if line.intersects(start, brush_size):
+                self.current_layer.lines.pop(i)
+                self.update()
+
+        # erase pixels from image
         if len(self.current_layer.images) > 0:
             image = self.current_layer.images[0].image
             if image:

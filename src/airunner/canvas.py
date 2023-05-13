@@ -263,7 +263,7 @@ class Canvas(
         #     "previous_image_root_point": self.image_root_point,
         #     "previous_image_pivot_point": self.image_pivot_point,
         # })
-        self.rasterize_lines()
+        # self.rasterize_lines()
 
 
     def handle_select(self, event):
