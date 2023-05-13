@@ -105,8 +105,7 @@ class GeneratorMixin:
         sections = ["txt2img", "img2img", "depth2img", "pix2pix", "outpaint", "controlnet", "txt2vid"]
         self.tabs = {}
         for tab in self.sections:
-            self.tabs[tab] = uic.loadUi(os.path.join(
-                os.path.dirname(os.path.abspath(__file__)), "..", "pyqt/generate_form.ui"))
+            self.tabs[tab] = uic.loadUi(os.path.join("pyqt/generate_form.ui"))
 
         for tab in self.tabs:
             if tab != "controlnet":
