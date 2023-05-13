@@ -250,7 +250,7 @@ class GeneratorMixin:
         if nsfw_content_detected and self.settings_manager.settings.nsfw_filter.get():
             self.message_handler("NSFW content detected, try again.", error=True)
         else:
-            if data["action"] != "outpaint":
+            if data["action"] != "outpaint" and self.settings_manager.settings.image_to_new_layer.get():
                 self.canvas.add_layer()
             self.canvas.image_handler(image, data)
             self.message_handler("")
