@@ -1,6 +1,11 @@
 from PyQt6.QtWidgets import QFileDialog
-from airunner.filters import FilterBoxBlur, FilterUnsharpMask, FilterSaturation, FilterColorBalance, FilterGaussianBlur, \
-    FilterPixelArt
+
+from airunner.filters.filter_box_blur import FilterBoxBlur
+from airunner.filters.filter_color_balance import FilterColorBalance
+from airunner.filters.filter_gaussian_blur import FilterGaussianBlur
+from airunner.filters.filter_pixel_art import FilterPixelArt
+from airunner.filters.filter_saturation import FilterSaturation
+from airunner.filters.filter_unsharp_mask import FilterUnsharpMask
 
 
 class MenubarMixin:
