@@ -30,17 +30,17 @@ class BlurFilter(FilterBase):
         # on ok button click, apply the filter
         self.filter_window.buttonBox.rejected.connect(self.cancel_filter)
         self.filter_window.buttonBox.accepted.connect(self.apply_filter)
-
+        self.preview_filter()
         self.filter_window.exec()
 
     def handle_blur_radius_slider_change(self, val):
         self.blur_radius.set(float(val))
         self.filter_window.blur_spinbox.setValue(float(val))
-        self.parent.current_filter = self.filter
+        self.preview_filter()
         self.canvas.update()
 
     def handle_blur_radius_spinbox_change(self, val):
         self.blur_radius.set(val)
         self.filter_window.blur_slider.setValue(int(val))
-        self.parent.current_filter = self.filter
+        self.preview_filter()
         self.update_canvas()
