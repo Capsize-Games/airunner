@@ -8,6 +8,8 @@ from airunner.models.imagedata import ImageData
 
 
 class CanvasImageMixin:
+    working_image = None
+
     @property
     def current_active_image(self):
         try:
@@ -15,11 +17,22 @@ class CanvasImageMixin:
         except IndexError:
             return None
 
-    def apply_filter(self):
-        index = 0
-        for image in self.current_layer.images:
-            self.current_layer.images[index].image = image.image.filter(self.parent.current_filter)
-            index += 1
+    def apply_filter(self, filter):
+        if self.working_image is None:
+            self.working_image = self.current_active_image.image.copy()
+        self.current_layer.images[0].image = self.working_image.filter(filter)
+        self.working_image = None
+
+    def preview_filter(self, filter):
+        if self.working_image is None:
+            self.working_image = self.current_active_image.image.copy()
+        image = self.working_image.copy()
+        self.current_active_image.image = image.filter(filter)
+        self.current_layer.images[0] = self.current_active_image
+
+    def cancel_filter(self):
+        self.current_layer.images[0].image = self.working_image
+        self.working_image = None
 
     def draw(self, layer, index):
         painter = QPainter(self.canvas_container)

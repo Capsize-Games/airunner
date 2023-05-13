@@ -24,10 +24,14 @@ class FilterBase:
 
     def cancel_filter(self):
         self.filter_window.close()
-        self.parent.current_filter = None
+        self.parent.canvas.cancel_filter()
         self.update_canvas()
 
     def apply_filter(self):
-        self.canvas.apply_filter()
+        self.parent.canvas.apply_filter(self.filter)
         self.filter_window.close()
+        self.update_canvas()
+
+    def preview_filter(self):
+        self.parent.canvas.preview_filter(self.filter)
         self.update_canvas()
