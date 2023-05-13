@@ -42,10 +42,7 @@ class FilterPixelArt(FilterBase):
         self.filter_window.buttonBox.accepted.connect(self.apply_filter)
 
         # apply the filter
-        self.parent.current_filter = self.filter
-        self.canvas.apply_filter()
-        self.update_canvas()
-
+        self.preview_filter()
         self.filter_window.exec()
 
     def handle_number_of_colors_change_slider(self, val):
@@ -59,7 +56,7 @@ class FilterPixelArt(FilterBase):
     def handle_number_of_colors_change(self, val):
         self.number_of_colors = val
         self.parent.current_filter = self.filter
-        self.canvas.update()
+        self.preview_filter()
 
     def handle_base_size_change_slider(self, val):
         val = val - (val % 16)
@@ -74,4 +71,4 @@ class FilterPixelArt(FilterBase):
     def handle_base_size_change(self, val):
         self.base_size = val
         self.parent.current_filter = self.filter
-        self.canvas.update()
+        self.preview_filter()
