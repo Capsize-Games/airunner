@@ -19,6 +19,7 @@ class MenubarMixin:
         self.window.actionPaste.triggered.connect(self.paste_image)
         self.window.actionCopy.triggered.connect(self.copy_image)
         self.window.actionResize_on_Paste.triggered.connect(self.toggle_resize_on_paste)
+        self.window.actionImage_to_new_layer.triggered.connect(self.toggle_image_to_new_layer)
         self.initialize_filter_actions()
         self.window.actionResize_on_Paste.setChecked(self.settings_manager.settings.resize_on_paste.get() == True)
 
@@ -64,3 +65,6 @@ class MenubarMixin:
 
     def toggle_resize_on_paste(self):
         self.settings_manager.settings.resize_on_paste.set(self.window.actionResize_on_Paste.isChecked())
+
+    def toggle_image_to_new_layer(self):
+        self.settings_manager.settings.image_to_new_layer.set(self.window.actionImage_to_new_layer.isChecked())
