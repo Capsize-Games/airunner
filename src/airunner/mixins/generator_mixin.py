@@ -182,7 +182,7 @@ class GeneratorMixin:
                     strength = self.settings_manager.settings.depth2img_strength.get()
                 elif section == "controlnet":
                     strength = self.settings_manager.settings.controlnet_strength.get()
-                tab.strength_slider.setValue(int(strength * 100))
+                tab.strength_slider.setValue(int(strength))
                 tab.strength_spinbox.setValue(strength / 100)
                 tab.strength_slider.valueChanged.connect(
                     lambda val, _tab=tab: self.handle_strength_slider_change(val, _tab))
