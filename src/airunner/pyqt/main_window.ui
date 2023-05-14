@@ -1374,8 +1374,6 @@
     <property name="title">
      <string>Settings</string>
     </property>
-    <addaction name="actionExtensions"/>
-    <addaction name="separator"/>
     <addaction name="actionPreferences"/>
     <addaction name="separator"/>
     <addaction name="actionGrid"/>
