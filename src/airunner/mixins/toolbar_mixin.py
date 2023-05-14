@@ -46,15 +46,21 @@ class ToolbarMixin:
         self.window.actionReport_vulnerability.triggered.connect(
             lambda: webbrowser.open("https://github.com/Capsize-Games/airunner/security/advisories/new"))
         self.window.actionDiscord.triggered.connect(lambda: webbrowser.open("https://discord.gg/PUVDDCJ7gz"))
+        # self.initialize_toolbar_extensions()  # TODO: Extensions
+
+    """
+    TODO: Extensions
+    def initialize_toolbar_extensions(self):
         self.window.actionExtensions.triggered.connect(self.show_extensions)
         self.window.actionInvert.triggered.connect(self.do_invert)
+    
+    def show_extensions(self):
+        self.extensions_window = ExtensionsWindow(self.settings_manager)
+    """
 
     def do_invert(self):
         self.canvas.invert_image()
         self.canvas.update()
-
-    def show_extensions(self):
-        self.extensions_window = ExtensionsWindow(self.settings_manager)
 
     def show_canvas_color(self):
         # show a color widget dialog and set the canvas color

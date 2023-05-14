@@ -545,13 +545,16 @@ class GeneratorMixin:
                 **memory_options
             }
         }
-        data = self.do_generate_data_injection(data)
+        # data = self.do_generate_data_injection(data)  # TODO: Extensions
         self.client.message = data
 
+    """
+    TODO: Extensions
     def do_generate_data_injection(self, data):
         for extension in self.settings_manager.settings.active_extensions.get():
             data = extension.generate_data_injection(data)
         return data
+    """
 
     def tab_changed_callback(self, index):
         self.canvas.update()
