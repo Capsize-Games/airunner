@@ -62,10 +62,10 @@ class CanvasImageMixin:
             return
         output = io.BytesIO()
         if self.parent.is_windows:
-            im.save(output, format="DIB")
+            im.image.save(output, format="DIB")
             self.image_to_system_clipboard_windows(output.getvalue())
         else:
-            im.save(output, format="PNG")
+            im.image.save(output, format="PNG")
             self.image_to_system_clipboard_linux(output.getvalue())
 
     def image_to_system_clipboard_windows(self, data):
@@ -122,6 +122,7 @@ class CanvasImageMixin:
                 image.thumbnail((self.settings_manager.settings.working_width.get(),
                                  self.settings_manager.settings.working_height.get()), Image.ANTIALIAS)
         self.create_image(QPoint(0, 0), image)
+        self.update()
 
     def create_image(self, location, image):
         """

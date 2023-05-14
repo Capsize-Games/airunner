@@ -82,5 +82,3 @@ class InpaintMerged:
 
         self.base_model.unet.load_state_dict(primary_model_state_dict)
         return self.base_model
-
-
