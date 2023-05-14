@@ -69,3 +69,34 @@ class CanvasActiveGridAreaMixin:
             self.settings_manager.settings.working_height.get()
         )
         painter.drawRect(rect)
+
+        # draw a second rectangle around the active grid area
+        # to make it more visible
+        pen = QPen(
+            self.active_grid_area_color,
+            self.settings_manager.settings.line_width.get() + 1
+        )
+        painter.setPen(pen)
+        size = 4
+        rect = QRect(
+            self.active_grid_area_rect.x() + size,
+            self.active_grid_area_rect.y() + size,
+            self.settings_manager.settings.working_width.get() - (size * 2),
+            self.settings_manager.settings.working_height.get() - (size * 2)
+        )
+        painter.drawRect(rect)
+
+        # draw a thirder black border in the center of the two rectangles
+        pen = QPen(
+            QColor(0, 0, 0),
+            self.settings_manager.settings.line_width.get() + 1
+        )
+        painter.setPen(pen)
+        size = 2
+        rect = QRect(
+            self.active_grid_area_rect.x() + size,
+            self.active_grid_area_rect.y() + size,
+            self.settings_manager.settings.working_width.get() - (size * 2),
+            self.settings_manager.settings.working_height.get() - (size * 2)
+        )
+        painter.drawRect(rect)
