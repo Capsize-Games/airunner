@@ -114,7 +114,6 @@ class ToolbarMixin:
         self.set_stylesheet()
 
     def set_stylesheet(self):
-        HERE = os.path.dirname(os.path.abspath(__file__))
         icons = {
             "darkmode_button": "weather-night",
             "move_button": "move",
@@ -137,10 +136,10 @@ class ToolbarMixin:
             for button, icon in icons.items():
                 if icon != "weather-sunny":
                     icon = icon + "-light"
-                getattr(self.window, button).setIcon(QtGui.QIcon(os.path.join(HERE, f"../src/icons/{icon}.png")))
+                getattr(self.window, button).setIcon(QtGui.QIcon(os.path.join(f"src/icons/{icon}.png")))
         else:
             for button, icon in icons.items():
-                getattr(self.window, button).setIcon(QtGui.QIcon(os.path.join(HERE, f"../src/icons/{icon}.png")))
+                getattr(self.window, button).setIcon(QtGui.QIcon(os.path.join(f"src/icons/{icon}.png")))
             try:
                 qdarktheme.setup_theme("light")
             except PermissionError:
