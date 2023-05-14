@@ -17,9 +17,16 @@ class PreferencesWindow(BaseWindow):
             lambda: self.browse_for_embeddings_path(self.template.embeddings_path))
         self.template.sd_path.setText(self.settings_manager.settings.model_base_path.get())
         self.template.embeddings_path.setText(self.settings_manager.settings.embeddings_path.get())
+
+        # Removing extensions settings until feature is complete:
         # self.template.hf_token.textChanged.connect(
         #     lambda val: self.settings_manager.settings.hf_api_key.set(val))
         # self.template.hf_token.setText(self.settings_manager.settings.hf_api_key.get())
+        # self.initialize_extensions()  TODO: Extensions
+
+    """
+    TODO: Extensions
+    def initialize_extensions(self):
         self.template.extensions_path.textChanged.connect(
             lambda val: self.settings_manager.settings.extensions_path.set(val))
         self.template.extensions_path.setText(
@@ -27,11 +34,12 @@ class PreferencesWindow(BaseWindow):
         self.template.extensions_browse_button.clicked.connect(
             lambda: self.browse_for_extensions_path(self.template.extensions_path))
         self.app.do_preferences_injection(self)
-
+    
     def browse_for_extensions_path(self, line_edit):
         path = QFileDialog.getExistingDirectory(None, "Select Directory")
         line_edit.setText(path)
         self.settings_manager.settings.extensions_path.set(path)
+    """
 
     def browse_for_embeddings_path(self, line_edit):
         path = QFileDialog.getExistingDirectory(None, "Select Directory")
