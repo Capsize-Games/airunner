@@ -57,11 +57,7 @@ class EmbeddingMixin:
                 # check if f is directory
                 if os.path.isdir(os.path.join(embeddings_path, f)):
                     return self.find_embeddings_in_path(os.path.join(embeddings_path, f), tokens)
-                loaded_learned_embeds = torch.load(os.path.join(embeddings_path, f), map_location="cpu")
-                trained_token = list(loaded_learned_embeds.keys())[0]
-                if trained_token == "string_to_token":
-                    trained_token = loaded_learned_embeds["name"]
-                tokens.append(trained_token)
+                tokens.append(f.split(".")[0])
         return tokens
 
     def insert_into_prompt(self, text):
