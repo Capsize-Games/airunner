@@ -130,6 +130,7 @@ class MainWindow(
         self.settings_manager.enable_save()
         # on window resize:
         # self.applicationStateChanged.connect(self.on_state_changed)
+        self.window.wordballoon_button.hide()  # hide word balloon
         if not self.testing:
             self.exec()
 
@@ -153,7 +154,7 @@ class MainWindow(
         self.initialize_shortcuts()
         ToolbarMixin.initialize(self)
         self.initialize_stable_diffusion()
-        ExtensionMixin.initialize(self)
+        # ExtensionMixin.initialize(self)  TODO: Extensions
         BrushesMixin.initialize(self)
         EmbeddingMixin.initialize(self)
         ModelMixin.initialize(self)
@@ -161,7 +162,7 @@ class MainWindow(
     def initialize_settings_manager(self):
         self.settings_manager = SettingsManager()
         self.settings_manager.disable_save()
-        self.get_extensions_from_path()
+        # self.get_extensions_from_path()  TODO: Extensions
         self.settings_manager.settings.canvas_color.my_signal.connect(self.update_canvas_color)
         self.settings_manager.settings.size.my_signal.connect(self.set_size_form_element_step_values)
         self.settings_manager.settings.line_width.my_signal.connect(self.set_size_form_element_step_values)
