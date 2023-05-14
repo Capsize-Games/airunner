@@ -73,5 +73,6 @@ class CanvasLayerMixin:
                 self.layers.pop(index)
             except IndexError:
                 pass
+        self.current_layer_index = 0
         self.parent.show_layers()
         self.update()
