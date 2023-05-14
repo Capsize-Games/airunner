@@ -6,11 +6,16 @@ from PIL import Image
 from PyQt6 import uic
 from PyQt6.QtCore import QPoint, QRect
 from PyQt6.QtGui import QColor
+from PyQt6.QtWidgets import QWidget, QVBoxLayout, QScrollArea
+from PyQt6.uic.exceptions import UIFileException
+
 from aihandler.settings import MAX_SEED, AVAILABLE_SCHEDULERS_BY_ACTION, MODELS
 from airunner.windows.video import VideoPopup
 
 
 class GeneratorMixin:
+    lora_loaded = False
+
     @property
     def width(self):
         return int(self.settings_manager.settings.working_width.get())
@@ -220,8 +225,8 @@ class GeneratorMixin:
         # super_resolution_form.generate.clicked.connect(self.generate_callback)
 
         self.initialize_size_form_elements()
-
         self.initialize_size_sliders()
+        self.initialize_lora()
 
     def text_changed(self, tab):
         try:
@@ -507,6 +512,7 @@ class GeneratorMixin:
             f"{action}_scheduler": sm.scheduler_var.get(),
             f"{action}_model_path": model_path,
             f"{action}_model_branch": model_branch,
+            f"{action}_lora": self.settings_manager.settings.available_loras[action],
             f"width": sm.working_width.get(),
             f"height": sm.working_height.get(),
             "do_nsfw_filter": self.settings_manager.settings.nsfw_filter.get(),
@@ -591,6 +597,14 @@ class GeneratorMixin:
         self.window.height_slider.setValue(int(val))
         self.height = int(val)
 
+    def update_brush_size(self, val):
+        self.settings_manager.settings.mask_brush_size.set(val)
+        self.window.brush_size_spinbox.setValue(val)
+
+    def brush_spinbox_change(self, val):
+        self.settings_manager.settings.mask_brush_size.set(val)
+        self.window.brush_size_slider.setValue(val)
+
     def initialize_size_form_elements(self):
         # width form elements
         self.window.width_slider.valueChanged.connect(lambda val: self.handle_width_slider_change(val))
@@ -612,10 +626,110 @@ class GeneratorMixin:
         self.window.brush_size_spinbox.setValue(self.settings_manager.settings.mask_brush_size.get())
         self.set_size_form_element_step_values()
 
-    def update_brush_size(self, val):
-        self.settings_manager.settings.mask_brush_size.set(val)
-        self.window.brush_size_spinbox.setValue(val)
+    def initialize_lora(self):
+        self.lora_loaded = False
+        self.settings_manager.settings.lora_path.my_signal.connect(self.refresh_lora)
+        self.refresh_lora()
 
-    def brush_spinbox_change(self, val):
-        self.settings_manager.settings.mask_brush_size.set(val)
-        self.window.brush_size_slider.setValue(val)
+    def refresh_lora(self):
+        self.settings_manager.settings.available_loras = {}
+        for tab_name in self.tabs.keys():
+            tab = self.tabs[tab_name]
+            self.load_lora_tab(tab, tab_name)
+
+    def available_loras(self, tab_name):
+        base_path = self.settings_manager.settings.model_base_path.get()
+        lora_path = self.settings_manager.settings.lora_path.get() or "lora"
+        if lora_path == "lora":
+            lora_path = os.path.join(base_path, lora_path)
+        if not os.path.exists(lora_path):
+            return []
+        if tab_name not in self.settings_manager.settings.available_loras.keys():
+            self.settings_manager.settings.available_loras[tab_name] = []
+            self.settings_manager.enable_save()
+            self.settings_manager.settings.available_loras[tab_name] = self.get_list_of_available_loras(tab_name, lora_path)
+            self.settings_manager.save_settings()
+        return self.settings_manager.settings.available_loras[tab_name]
+
+    def get_list_of_available_loras(self, tab_name, lora_path, lora_names=None):
+        if lora_names is None:
+            lora_names = []
+        if not os.path.exists(lora_path):
+            return lora_names
+        possible_line_endings = ["ckpt", "safetensors", "bin"]
+        for f in os.listdir(lora_path):
+            if os.path.isdir(os.path.join(lora_path, f)):
+                lora_names = self.get_list_of_available_loras(tab_name, os.path.join(lora_path, f), lora_names)
+            if f.split(".")[-1] in possible_line_endings:
+                name = f.split(".")[0]
+                scale = 100.0
+                enabled = True
+                # check if we have scale in self.settings_manager.settings.available_loras[tab_name]
+                if tab_name in self.settings_manager.settings.available_loras:
+                    loras = self.settings_manager.settings.available_loras[tab_name] or []
+                    for lora in loras:
+                        if lora["name"] == name:
+                            scale = lora["scale"]
+                            enabled = lora["enabled"]
+                            break
+                lora_names.append({
+                    "name": name,
+                    "scale": scale,
+                    "enabled": enabled,
+                    "loaded": False
+                })
+        return lora_names
+
+    def load_lora_tab(self, tab, tab_name=None):
+        container = QWidget()
+        container.setLayout(QVBoxLayout())
+        for lora in self.available_loras(tab_name):
+            lora_widget = self.load_template("lora_simplified")
+            #lora_widget.enabledCheckbox.setText(lora["name"])
+            lora_widget.label.setText(lora["name"])
+            # scale = lora["scale"]
+            # enabled = lora["enabled"]
+            # lora_widget.scaleSlider.setValue(int(scale))
+            # lora_widget.scaleSpinBox.setValue(scale / 100)
+            # lora_widget.enabledCheckbox.setChecked(enabled)
+            container.layout().addWidget(lora_widget)
+            # lora_widget.scaleSlider.valueChanged.connect(
+            #     lambda value, _lora_widget=lora_widget, _lora=lora, _tab_name=tab_name:
+            #     self.handle_lora_slider(_lora, _lora_widget, value, _tab_name))
+            # lora_widget.scaleSpinBox.valueChanged.connect(
+            #     lambda value, _lora_widget=lora_widget, _lora=lora, _tab_name=tab_name:
+            #     self.handle_lora_spinbox(_lora, _lora_widget, value, _tab_name))
+            # lora_widget.enabledCheckbox.stateChanged.connect(
+            #     lambda value, _lora=lora, _tab_name=tab_name:
+            #     self.toggle_lora(lora, value, _tab_name))
+        # add a vertical spacer to the end of the container
+        container.layout().addStretch()
+        # display tabs of tab.PromptTabsSection which is a QTabWidget
+        tab.lora_scroll_area.setWidget(container)
+
+    def load_template(self, template_name):
+        try:
+            return uic.loadUi(
+                os.path.join("pyqt", f"{template_name}.ui"))
+        except UIFileException:
+            return None
+
+    def toggle_lora(self, lora, value, tab_name):
+        for n in range(len(self.available_loras(tab_name))):
+            if self.settings_manager.settings.available_loras[tab_name][n]["name"] == lora["name"]:
+                self.settings_manager.settings.available_loras[tab_name][n]["enabled"] = value == 2
+        self.settings_manager.save_settings()
+
+    def handle_lora_slider(self, lora, lora_widget, value, tab_name):
+        for n in range(len(self.available_loras(tab_name))):
+            if self.settings_manager.settings.available_loras[tab_name][n]["name"] == lora["name"]:
+                self.settings_manager.settings.available_loras[tab_name][n]["scale"] = value / 100
+        lora_widget.scaleSpinBox.setValue(lora["scale"])
+        self.settings_manager.save_settings()
+
+    def handle_lora_spinbox(self, lora, lora_widget, value, tab_name):
+        for n in range(len(self.available_loras(tab_name))):
+            if self.settings_manager.settings.available_loras[tab_name][n]["name"] == lora["name"]:
+                self.settings_manager.settings.available_loras[tab_name][n]["scale"] = value * 100
+        lora_widget.scaleSlider.setValue(int(lora["scale"]))
+        self.settings_manager.save_settings()
