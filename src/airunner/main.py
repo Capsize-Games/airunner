@@ -130,6 +130,7 @@ class MainWindow(
         self.settings_manager.enable_save()
         # on window resize:
         # self.applicationStateChanged.connect(self.on_state_changed)
+        self.window.wordballoon_button.hide()  # hide word balloon
         if not self.testing:
             self.exec()
 
