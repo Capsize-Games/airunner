@@ -56,9 +56,16 @@ WORKDIR /app
 RUN pip install --upgrade pip
 RUN pip install --upgrade setuptools
 RUN pip install --upgrade wheel
-RUN pip install torch torchvision torchaudio bitsandbytes accelerate requests aihandler cmake
+RUN pip install bitsandbytes accelerate requests aihandler cmake
+RUN pip install torch torchvision torchaudio --index-url https://download.pytorch.org/whl/cu118
 
-FROM install_requirements as fix_tcl
+FROM install_requirements as install_triton
+RUN git clone https://github.com/openai/triton /app/triton \
+    && cd /app/triton/python \
+    && git checkout v2.0.0 \
+    && pip install .
+
+FROM install_triton as fix_tcl
 USER root
 RUN ln -s /usr/share/tcltk/tcl8.6 /usr/share/tcltk/tcl8
 
