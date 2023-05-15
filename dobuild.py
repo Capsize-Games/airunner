@@ -21,11 +21,6 @@ def clone(repo):
     os.system(f'git clone https://github.com/{repo}.git /app/{repo.split("/")[1]}')
 
 
-# install triton
-clone("openai/triton")
-os.chdir("/app/triton")
-os.system("python3 -m pip install .")
-
 # install repos
 clone("Capsize-Games/airunner")
 os.chdir("/app/airunner")
