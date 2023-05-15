@@ -20,7 +20,7 @@ def clone(repo):
     # clone repo into /app
     os.system(f'git clone https://github.com/{repo}.git /app/{repo.split("/")[1]}')
 
-
+# pytorch-triton 2.1.0+7d1a95b046
 # install repos
 clone("Capsize-Games/airunner")
 os.chdir("/app/airunner")
