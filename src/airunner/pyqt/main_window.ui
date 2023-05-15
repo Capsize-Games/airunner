@@ -549,7 +549,7 @@
              <number>8</number>
             </property>
             <property name="maximum">
-             <number>2560</number>
+             <number>4096</number>
             </property>
             <property name="singleStep">
              <number>8</number>
@@ -595,7 +595,7 @@
              <number>8</number>
             </property>
             <property name="maximum">
-             <number>2560</number>
+             <number>4096</number>
             </property>
             <property name="singleStep">
              <number>8</number>
@@ -653,7 +653,7 @@
              <number>1</number>
             </property>
             <property name="maximum">
-             <number>2560</number>
+             <number>4096</number>
             </property>
             <property name="singleStep">
              <number>8</number>
@@ -704,7 +704,7 @@
              <number>8</number>
             </property>
             <property name="maximum">
-             <number>2560</number>
+             <number>4096</number>
             </property>
             <property name="singleStep">
              <number>8</number>
