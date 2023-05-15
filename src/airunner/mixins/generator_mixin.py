@@ -542,6 +542,8 @@ class GeneratorMixin:
             "use_cudnn_benchmark": sm.use_cudnn_benchmark.get(),
             "use_enable_vae_slicing": sm.use_enable_vae_slicing.get(),
             "use_xformers": sm.use_xformers.get(),
+            "use_accelerated_transformers": sm.use_accelerated_transformers.get(),
+            "use_torch_compile": sm.use_torch_compile.get(),
             "use_tiled_vae": sm.use_tiled_vae.get(),
         }
         data = {
