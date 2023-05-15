@@ -16,6 +16,13 @@ echo ""
 DEV_ENV=0 AIRUNNER_ENVIRONMENT="prod" PYTHONOPTIMIZE=0 python3 -m PyInstaller --log-level=INFO --noconfirm  /app/airunner/build.airunner.linux.prod.spec 2>&1 | tee build.log
 echo ""
 echo "============================================"
+echo "Copy timm to dist"
+echo "============================================"
+echo ""
+cp -R /usr/local/lib/python3.10/dist-packages/timm ./dist/airunner/
+mv ./dist/airunner/pyqt/advanced_settings_dist.ui ./dist/airunner/pyqt/advanced_settings.ui
+echo ""
+echo "============================================"
 echo "Deploying airunner to itch.io"
 echo "============================================"
 echo ""
