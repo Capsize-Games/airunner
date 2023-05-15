@@ -15,6 +15,8 @@ class AdvancedSettings(BaseWindow):
             (self.template.use_cudnn_benchmark, settings.use_cudnn_benchmark),
             (self.template.use_enable_vae_slicing, settings.use_enable_vae_slicing),
             (self.template.use_xformers, settings.use_xformers),
+            (self.template.use_accelerated_transformers, settings.use_accelerated_transformers),
+            (self.template.use_torch_compile, settings.use_torch_compile),
             (self.template.use_tiled_vae, settings.use_tiled_vae),
             (self.template.enable_model_cpu_offload, settings.enable_model_cpu_offload),
         ]
