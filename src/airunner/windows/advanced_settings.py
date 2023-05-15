@@ -1,4 +1,5 @@
 from airunner.windows.base_window import BaseWindow
+import platform
 
 
 class AdvancedSettings(BaseWindow):
@@ -23,3 +24,9 @@ class AdvancedSettings(BaseWindow):
         for checkbox, setting in checkbox_settings:
             checkbox.setChecked(setting.get() == True)
             checkbox.stateChanged.connect(lambda val, setting=setting: setting.set(val == 2))
+
+        # on windows disable self.template.use_torch_compile
+        if platform.system() == "Windows":
+            self.template.use_torch_compile.setChecked(False)
+            self.template.use_torch_compile.setEnabled(False)
+            self.settings_manager.settings.use_torch_compile.set(False)
