@@ -30,4 +30,5 @@ os.system("python3 -m pip install .")
 os.system("python3 -m pip uninstall nvidia-cublas-cu11 -y")
 os.system("python3 -m pip install bitsandbytes==0.38.0 -y")
 os.system("python3 -m pip install bitsandbytes-cuda102")
+os.system("python3 -m pip install torch torchvision torchaudio --index-url https://download.pytorch.org/whl/cu118")
 
