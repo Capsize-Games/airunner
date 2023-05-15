@@ -90,9 +90,9 @@ RUN wget https://github.com/upx/upx/releases/download/v4.0.2/upx-4.0.2-win64.zip
 FROM install_upx as install_libs
 USER root
 RUN wine64 C:\\Python310\\python.exe -m pip install torch torchvision torchaudio --index-url https://download.pytorch.org/whl/cu118 \
-    # && wine64 C:\\Python310\\python.exe -m pip install https://huggingface.co/r4ziel/xformers_pre_built/resolve/main/triton-2.0.0-cp310-cp310-win_amd64.whl \
     && wine64 C:\\Python310\\python.exe -m pip install https://github.com/acpopescu/bitsandbytes/releases/download/v0.38.0-win0/bitsandbytes-0.38.1-py3-none-any.whl \
     && wine64 C:\\Python310\\python.exe -m pip install aihandler
+    # && wine64 C:\\Python310\\python.exe -m pip install https://huggingface.co/r4ziel/xformers_pre_built/resolve/main/triton-2.0.0-cp310-cp310-win_amd64.whl \
 WORKDIR /app
 RUN wine64 C:\\Python310\\python.exe -c "from accelerate.utils import write_basic_config; write_basic_config(mixed_precision='fp16')"
 
