@@ -56,7 +56,7 @@ WORKDIR /app
 RUN pip install --upgrade pip
 RUN pip install --upgrade setuptools
 RUN pip install --upgrade wheel
-RUN pip install torch torchvision torchaudio bitsandbytes accelerate requests aihandler
+RUN pip install torch torchvision torchaudio bitsandbytes accelerate requests aihandler cmake
 
 FROM install_requirements as fix_tcl
 USER root
