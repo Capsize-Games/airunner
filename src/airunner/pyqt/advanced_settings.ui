@@ -72,10 +72,17 @@
         </property>
        </widget>
       </item>
-      <item row="7" column="0">
+      <item row="8" column="0">
        <widget class="QCheckBox" name="use_xformers">
         <property name="text">
          <string>Use Xformers</string>
+        </property>
+       </widget>
+      </item>
+      <item row="7" column="0">
+       <widget class="QCheckBox" name="use_tiled_vae">
+        <property name="text">
+         <string>Use tiled vae</string>
         </property>
        </widget>
       </item>
