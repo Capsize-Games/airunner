@@ -6,8 +6,8 @@
    <rect>
     <x>0</x>
     <y>0</y>
-    <width>277</width>
-    <height>301</height>
+    <width>245</width>
+    <height>382</height>
    </rect>
   </property>
   <property name="windowTitle">
@@ -26,63 +26,77 @@
       <item row="0" column="0">
        <widget class="QCheckBox" name="use_lastchannels">
         <property name="text">
-         <string>Use Last Channels</string>
+         <string>Last Channels</string>
         </property>
        </widget>
       </item>
       <item row="1" column="0">
        <widget class="QCheckBox" name="use_enable_sequential_cpu_offload">
         <property name="text">
-         <string>Enable Sequential CPU offload</string>
+         <string>Sequential CPU offload</string>
         </property>
        </widget>
       </item>
       <item row="2" column="0">
        <widget class="QCheckBox" name="enable_model_cpu_offload">
         <property name="text">
-         <string>Enable Model CPU offload</string>
+         <string>Model CPU offload</string>
         </property>
        </widget>
       </item>
       <item row="3" column="0">
        <widget class="QCheckBox" name="use_attention_slicing">
         <property name="text">
-         <string>Use Attention Slicing</string>
+         <string>Attention Slicing</string>
         </property>
        </widget>
       </item>
       <item row="4" column="0">
        <widget class="QCheckBox" name="use_tf32">
         <property name="text">
-         <string>Use TF32</string>
+         <string>TF32</string>
         </property>
        </widget>
       </item>
       <item row="5" column="0">
        <widget class="QCheckBox" name="use_cudnn_benchmark">
         <property name="text">
-         <string>Use CUDNN Benchmark</string>
+         <string>CUDNN Benchmark</string>
         </property>
        </widget>
       </item>
       <item row="6" column="0">
        <widget class="QCheckBox" name="use_enable_vae_slicing">
         <property name="text">
-         <string>Enable vae Slicing</string>
-        </property>
-       </widget>
-      </item>
-      <item row="8" column="0">
-       <widget class="QCheckBox" name="use_xformers">
-        <property name="text">
-         <string>Use Xformers</string>
+         <string>Vae Slicing</string>
         </property>
        </widget>
       </item>
       <item row="7" column="0">
        <widget class="QCheckBox" name="use_tiled_vae">
         <property name="text">
-         <string>Use tiled vae</string>
+         <string>Tile vae</string>
+        </property>
+       </widget>
+      </item>
+      <item row="8" column="0">
+       <widget class="QCheckBox" name="use_xformers">
+        <property name="text">
+         <string>Xformers</string>
+        </property>
+       </widget>
+      </item>
+      <item row="9" column="0">
+       <widget class="QCheckBox" name="use_accelerated_transformers">
+        <property name="text">
+         <string>Accelerated Transformers</string>
+        </property>
+       </widget>
+      </item>
+      <item row="10" column="0">
+       <widget class="QCheckBox" name="use_torch_compile">
+        <property name="text">
+         <string>Torch Compile</string>
         </property>
        </widget>
       </item>
