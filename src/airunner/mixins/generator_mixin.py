@@ -521,7 +521,6 @@ class GeneratorMixin:
             "pos_y": 0,
             "outpaint_box_rect": self.active_rect,
             "hf_token": self.settings_manager.settings.hf_api_key.get(),
-            "enable_model_cpu_offload": sm.enable_model_cpu_offload.get(),
             "use_controlnet": use_controlnet,
             "controlnet": controlnet,
         }
@@ -537,11 +536,13 @@ class GeneratorMixin:
         memory_options = {
             "use_last_channels": sm.use_last_channels.get(),
             "use_enable_sequential_cpu_offload": sm.use_enable_sequential_cpu_offload.get(),
+            "enable_model_cpu_offload": sm.enable_model_cpu_offload.get(),
             "use_attention_slicing": sm.use_attention_slicing.get(),
             "use_tf32": sm.use_tf32.get(),
             "use_cudnn_benchmark": sm.use_cudnn_benchmark.get(),
             "use_enable_vae_slicing": sm.use_enable_vae_slicing.get(),
             "use_xformers": sm.use_xformers.get(),
+            "use_tiled_vae": sm.use_tiled_vae.get(),
         }
         data = {
             "action": action,
