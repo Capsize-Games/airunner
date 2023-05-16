@@ -100,3 +100,7 @@ class CanvasActiveGridAreaMixin:
             self.settings_manager.settings.working_height.get() - (size * 2)
         )
         painter.drawRect(rect)
+
+    def reset_settings(self):
+        self.window.width_slider.setValue(self.settings_manager.settings.working_width.get())
+        self.window.height_slider.setValue(self.settings_manager.settings.working_height.get())
