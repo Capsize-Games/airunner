@@ -7,23 +7,30 @@ class AdvancedSettings(BaseWindow):
     window_title = "Memory Settings"
 
     def initialize_window(self):
-        settings = self.settings_manager.settings
-        checkbox_settings = [
-            (self.template.use_lastchannels, settings.use_last_channels),
-            (self.template.use_enable_sequential_cpu_offload, settings.use_enable_sequential_cpu_offload),
-            (self.template.use_attention_slicing, settings.use_attention_slicing),
-            (self.template.use_tf32, settings.use_tf32),
-            (self.template.use_enable_vae_slicing, settings.use_enable_vae_slicing),
-            (self.template.use_xformers, settings.use_xformers),
-            (self.template.use_accelerated_transformers, settings.use_accelerated_transformers),
-            (self.template.use_tiled_vae, settings.use_tiled_vae),
-            (self.template.enable_model_cpu_offload, settings.enable_model_cpu_offload),
-        ]
-        for checkbox, setting in checkbox_settings:
-            checkbox.setChecked(setting.get() == True)
-            checkbox.stateChanged.connect(lambda val, setting=setting: setting.set(val == 2))
+        checkbox_settings = {
+            "use_last_channels": self.template.use_lastchannels,
+            "use_attention_slicing": self.template.use_attention_slicing,
+            "use_tf32": self.template.use_tf32,
+            "use_enable_vae_slicing": self.template.use_enable_vae_slicing,
+            "use_xformers": self.template.use_xformers,
+            "use_accelerated_transformers": self.template.use_accelerated_transformers,
+            "use_tiled_vae": self.template.use_tiled_vae,
+            "enable_model_cpu_offload": self.template.enable_model_cpu_offload,
+            "use_enable_sequential_cpu_offload": self.template.use_enable_sequential_cpu_offload,
+        }
+        for name, checkbox in checkbox_settings.items():
+            checkbox.setChecked(self.settings_manager.settings.__getattribute__(name).get() is True)
+            checkbox.stateChanged.connect(lambda val, _name=name: self.handle_state_change(val, _name))
 
         # TODO: torch compile once it is available on windows and in compiled python
         # self.template.use_torch_compile.setChecked(False)
         # self.template.use_torch_compile.setEnabled(False)
         # self.settings_manager.settings.use_torch_compile.set(False)
+
+    def handle_state_change(self, val, name):
+        self.settings_manager.settings.__getattribute__(name).set(val == 2)
+        if name == "use_enable_sequential_cpu_offload" and val == 2:
+            self.template.enable_model_cpu_offload.setChecked(False)
+        elif name == "enable_model_cpu_offload" and val == 2:
+            self.template.use_enable_sequential_cpu_offload.setChecked(False)
+
