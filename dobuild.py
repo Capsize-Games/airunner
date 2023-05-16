@@ -28,6 +28,5 @@ os.system("git checkout master")
 os.system("git pull")
 os.system("python3 -m pip install .")
 os.system("python3 -m pip uninstall nvidia-cublas-cu11 nvidia-cublas-cu12 -y")
-os.system("python3 -m pip uninstall torchvision torchaudio -y")
-os.system("python3 -m pip install torch torchvision torchaudio --index-url https://download.pytorch.org/whl/cu118")
+os.system("python3 -m pip install torch torchvision torchaudio --index-url https://download.pytorch.org/whl/cu118 --upgrade")
 
