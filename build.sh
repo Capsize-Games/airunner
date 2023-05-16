@@ -20,7 +20,6 @@ echo "Copy timm to dist"
 echo "============================================"
 echo ""
 cp -R /usr/local/lib/python3.10/dist-packages/timm ./dist/airunner/
-mv ./dist/airunner/pyqt/advanced_settings_dist.ui ./dist/airunner/pyqt/advanced_settings.ui
 echo ""
 echo "============================================"
 echo "Deploying airunner to itch.io"
