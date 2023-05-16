@@ -15,6 +15,6 @@ setup(
     packages=find_packages("src"),
     python_requires=">=3.10.0",
     install_requires=[
-        "aihandler==1.11.0",
+        "aihandler==1.11.1",
     ]
 )
