@@ -66,10 +66,19 @@ class MainWindow(
     ]
     models = None
     client = None
+    _override_section = None
 
     @property
     def grid_size(self):
         return self.settings_manager.settings.size.get()
+
+    @property
+    def override_section(self):
+        return self._override_section
+
+    @override_section.setter
+    def override_section(self, val):
+        self._override_section = val
 
     @property
     def current_index(self):
@@ -77,6 +86,8 @@ class MainWindow(
 
     @property
     def current_section(self):
+        if self.override_section:
+            return self.override_section
         return self.sections[self.current_index]
 
     @property
@@ -134,6 +145,12 @@ class MainWindow(
         if not self.testing:
             self.exec()
 
+    def reset_settings(self):
+        GeneratorMixin.reset_settings(self)
+        BrushesMixin.reset_settings(self)
+        self.canvas.reset_settings()
+        ToolbarMixin.set_stylesheet(self)
+
     def on_state_changed(self, state):
         if state == Qt.ApplicationState.ApplicationActive:
             self.canvas.pos_x = int(self.window.x() / 4)
@@ -158,6 +175,9 @@ class MainWindow(
         BrushesMixin.initialize(self)
         EmbeddingMixin.initialize(self)
         ModelMixin.initialize(self)
+        if self.settings_manager.settings.force_reset.get():
+            self.reset_settings()
+            self.settings_manager.settings.force_reset.set(False)
 
     def initialize_settings_manager(self):
         self.settings_manager = SettingsManager()
