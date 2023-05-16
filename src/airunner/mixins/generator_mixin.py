@@ -228,6 +228,14 @@ class GeneratorMixin:
         self.initialize_size_sliders()
         self.initialize_lora()
 
+    def reset_settings(self):
+        self.settings_manager.reset_settings_to_default()
+        for tab_name in self.tabs.keys():
+            tab = self.tabs[tab_name]
+            self.set_default_values(tab_name, tab)
+        self.canvas.update()
+
+
     def text_changed(self, tab):
         try:
             val = int(tab.seed.toPlainText())
@@ -569,11 +577,14 @@ class GeneratorMixin:
         self.canvas.update()
 
     def set_default_values(self, section, tab):
+        self.override_section = section
         tab.steps_spinbox.setValue(self.steps)
         tab.scale_spinbox.setValue(self.scale / 100)
         if section == "pix2pix":
             val = self.settings_manager.settings.pix2pix_image_guidance_scale.get()
             tab.image_scale_spinbox.setValue(val / 100)
+            if type(val) == float:
+                val = int(val * 100)
             tab.image_scale_slider.setValue(val)
         try:
             tab.strength_spinbox.setValue(self.strength / 100)
@@ -582,7 +593,11 @@ class GeneratorMixin:
         tab.seed.setText(str(self.seed))
         tab.samples_spinbox.setValue(self.samples)
         tab.model_dropdown.setCurrentText(self.model)
-        tab.scheduler_dropdown.setCurrentText(self.scheduler)
+        try:
+            tab.scheduler_dropdown.setCurrentText(self.scheduler)
+        except RuntimeError:
+            pass
+        self.override_section = None
 
     def handle_width_slider_change(self, val):
         self.window.width_spinbox.setValue(val)
