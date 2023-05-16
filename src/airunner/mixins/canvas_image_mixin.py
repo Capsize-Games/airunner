@@ -24,6 +24,8 @@ class CanvasImageMixin:
         self.working_image = None
 
     def preview_filter(self, filter):
+        if not self.current_active_image:
+            return
         if self.working_image is None:
             self.working_image = self.current_active_image.image.copy()
         image = self.working_image.copy()
