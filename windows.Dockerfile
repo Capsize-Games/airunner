@@ -1,4 +1,4 @@
-FROM ubuntu:latest as base_image
+FROM ubuntu:22.04 as base_image
 USER root
 ENV TZ=America/Denver
 RUN ln -snf /usr/share/zoneinfo/$TZ /etc/localtime && echo $TZ > /etc/timezone \
@@ -22,7 +22,10 @@ RUN apt-get update \
     && apt-key add winehq.key \
     && add-apt-repository 'deb https://dl.winehq.org/wine-builds/ubuntu/ focal main' \
     && apt-get update \
-    && apt-get install -y coreutils winbind xvfb winehq-stable winetricks x11-apps wine64 wine32 winbind cabextract --no-install-recommends \
+    && apt-get install aptitude -y
+RUN aptitude install wine32:i386 -y
+RUN apt-get install -y coreutils winbind xvfb wine-stable-i386 winehq-stable winetricks x11-apps wine64
+RUN apt-get install -y winbind cabextract --no-install-recommends \
     && rm -rf /var/lib/apt/lists/* \
     && winetricks win10
 
