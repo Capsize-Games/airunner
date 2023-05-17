@@ -41,7 +41,7 @@ class CanvasImageMixin:
             self.current_layer.images[n].image = self.working_images[n].image.copy().filter(filter)
 
     def cancel_filter(self):
-        self.current_layer.images[0].image = self.working_images
+        self.current_layer.images = self.working_images
         self.working_images = None
 
     def draw(self, layer, index):
@@ -53,8 +53,6 @@ class CanvasImageMixin:
         for image in layer.images:
             # display PIL.image as QPixmap
             img = image.image
-            if self.parent.current_filter and index == self.current_layer_index:
-                img = img.filter(self.parent.current_filter)
             qimage = ImageQt(img)
             pixmap = QPixmap.fromImage(qimage)
 
