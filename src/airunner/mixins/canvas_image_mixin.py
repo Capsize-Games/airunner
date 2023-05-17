@@ -8,7 +8,7 @@ from airunner.models.imagedata import ImageData
 
 
 class CanvasImageMixin:
-    working_image = None
+    working_images = None
 
     @property
     def current_active_image(self):
@@ -18,22 +18,30 @@ class CanvasImageMixin:
             return None
 
     def apply_filter(self, filter):
-        if self.working_image is None:
-            self.working_image = self.current_active_image.image.copy()
-        self.current_layer.images[0].image = self.working_image.filter(filter)
-        self.working_image = None
+        if len(self.current_layer.images) == 0:
+            return
+        if self.working_images is None:
+            self.working_images = self.get_image_copy(self.current_layer_index)
+        self.parent.history.add_event({
+            "event": "apply_filter",
+            "layer_index": self.current_layer_index,
+            "images": self.working_images,
+        })
+        for n in range(0, len(self.working_images)):
+            self.current_layer.images[n].image = self.current_layer.images[n].image.filter(filter)
+        self.working_images = None
 
     def preview_filter(self, filter):
-        if not self.current_active_image:
+        if len(self.current_layer.images) == 0:
             return
-        if self.working_image is None:
-            self.working_image = self.current_active_image.image.copy()
-        image = self.working_image.copy()
-        self.current_layer.images[0].image = image.filter(filter)
+        if self.working_images is None:
+            self.working_images = self.get_image_copy(self.current_layer_index)
+        for n in range(0, len(self.working_images)):
+            self.current_layer.images[n].image = self.working_images[n].image.copy().filter(filter)
 
     def cancel_filter(self):
-        self.current_layer.images[0].image = self.working_image
-        self.working_image = None
+        self.current_layer.images[0].image = self.working_images
+        self.working_images = None
 
     def draw(self, layer, index):
         painter = QPainter(self.canvas_container)
