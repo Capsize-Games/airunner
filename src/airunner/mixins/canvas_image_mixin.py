@@ -29,8 +29,7 @@ class CanvasImageMixin:
         if self.working_image is None:
             self.working_image = self.current_active_image.image.copy()
         image = self.working_image.copy()
-        self.current_active_image.image = image.filter(filter)
-        self.current_layer.images[0] = self.current_active_image
+        self.current_layer.images[0].image = image.filter(filter)
 
     def cancel_filter(self):
         self.current_layer.images[0].image = self.working_image
