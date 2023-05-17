@@ -10,6 +10,8 @@ class ExportPreferences(BaseWindow):
 
     def initialize_window(self):
         self.template.actionAuto_export_images.setChecked(self.settings_manager.settings.auto_export_images.get() is True)
+        self.template.actionAuto_export_images.stateChanged.connect(
+            lambda val: self.settings_manager.settings.auto_export_images.set(val == 2))
         self.template.image_path.textChanged.connect(
             lambda val: self.settings_manager.settings.image_path.set(val))
         self.template.image_path_browse_button.clicked.connect(
@@ -29,7 +31,6 @@ class ExportPreferences(BaseWindow):
         self.checkbox_settings = {
             "image_export_metadata_prompt": self.template.metadata_prompt,
             "image_export_metadata_negative_prompt": self.template.metadata_negative_prompt,
-            "image_export_metadata_action": self.template.metadata_action,
             "image_export_metadata_scale": self.template.metadata_scale,
             "image_export_metadata_seed": self.template.metadata_seed,
             "image_export_metadata_steps": self.template.metadata_steps,
