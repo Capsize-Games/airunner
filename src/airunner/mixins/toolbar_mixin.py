@@ -46,19 +46,24 @@ class ToolbarMixin:
         self.window.actionReport_vulnerability.triggered.connect(
             lambda: webbrowser.open("https://github.com/Capsize-Games/airunner/security/advisories/new"))
         self.window.actionDiscord.triggered.connect(lambda: webbrowser.open("https://discord.gg/PUVDDCJ7gz"))
+        self.window.actionInvert.triggered.connect(self.do_invert)
         # self.initialize_toolbar_extensions()  # TODO: Extensions
 
     """
     TODO: Extensions
     def initialize_toolbar_extensions(self):
         self.window.actionExtensions.triggered.connect(self.show_extensions)
-        self.window.actionInvert.triggered.connect(self.do_invert)
     
     def show_extensions(self):
         self.extensions_window = ExtensionsWindow(self.settings_manager)
     """
 
     def do_invert(self):
+        self.history.add_event({
+            "event": "apply_filter",
+            "layer_index": self.canvas.current_layer_index,
+            "images": self.canvas.get_image_copy(self.canvas.current_layer_index),
+        })
         self.canvas.invert_image()
         self.canvas.update()
 
