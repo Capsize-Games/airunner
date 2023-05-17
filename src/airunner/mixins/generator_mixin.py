@@ -505,6 +505,11 @@ class GeneratorMixin:
             controlnet = controlnet.lower()
             use_controlnet = controlnet != "none"
 
+        try:
+            available_lora = self.settings_manager.settings.available_loras[action]
+        except KeyError:
+            available_lora = []
+
         options = {
             f"{action}_prompt": prompt,
             f"{action}_negative_prompt": negative_prompt,
@@ -520,7 +525,7 @@ class GeneratorMixin:
             f"{action}_scheduler": sm.scheduler_var.get(),
             f"{action}_model_path": model_path,
             f"{action}_model_branch": model_branch,
-            f"{action}_lora": self.settings_manager.settings.available_loras[action],
+            f"{action}_lora": available_lora,
             f"width": sm.working_width.get(),
             f"height": sm.working_height.get(),
             "do_nsfw_filter": self.settings_manager.settings.nsfw_filter.get(),
