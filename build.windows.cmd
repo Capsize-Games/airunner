@@ -16,6 +16,12 @@ echo.
 C:\Python310\python.exe -m PyInstaller --log-level=INFO --noconfirm  Z:\app\build.airunner.windows.prod.spec 2>&1
 echo.
 echo "============================================"
+echo "Copy timm to dist"
+echo "============================================"
+echo.
+xcopy /E /I /Y C:\Python310\Lib\site-packages\timm Z:\app\dist\airunner\timm
+echo.
+echo "============================================"
 echo "Deploying airunner to itch.io"
 echo "============================================"
 echo.
