@@ -13,7 +13,7 @@
   <property name="windowTitle">
    <string>Dialog</string>
   </property>
-  <widget class="QWidget" name="">
+  <widget class="QWidget" name="layoutWidget">
    <property name="geometry">
     <rect>
      <x>11</x>
@@ -23,17 +23,11 @@
     </rect>
    </property>
    <layout class="QGridLayout" name="gridLayout">
-    <item row="13" column="0">
-     <widget class="QCheckBox" name="metadata_action">
-      <property name="text">
-       <string>Action</string>
-      </property>
-     </widget>
-    </item>
     <item row="0" column="0" colspan="2">
      <widget class="QCheckBox" name="actionAuto_export_images">
       <property name="font">
        <font>
+        <weight>75</weight>
         <bold>true</bold>
        </font>
       </property>
@@ -87,6 +81,7 @@
      <widget class="QLabel" name="label">
       <property name="font">
        <font>
+        <weight>75</weight>
         <bold>true</bold>
        </font>
       </property>
@@ -99,6 +94,7 @@
      <widget class="QLabel" name="label_5">
       <property name="font">
        <font>
+        <weight>75</weight>
         <bold>true</bold>
        </font>
       </property>
@@ -107,24 +103,10 @@
       </property>
      </widget>
     </item>
-    <item row="16" column="1">
-     <widget class="QCheckBox" name="metadata_ddim_eta">
-      <property name="text">
-       <string>DDIM ETA</string>
-      </property>
-     </widget>
-    </item>
     <item row="8" column="0" colspan="4">
      <widget class="Line" name="line_2">
       <property name="orientation">
        <enum>Qt::Horizontal</enum>
-      </property>
-     </widget>
-    </item>
-    <item row="14" column="0">
-     <widget class="QCheckBox" name="metadata_scale">
-      <property name="text">
-       <string>Scale</string>
       </property>
      </widget>
     </item>
@@ -138,52 +120,10 @@
     <item row="4" column="0" colspan="3">
      <widget class="QLineEdit" name="image_path"/>
     </item>
-    <item row="15" column="0">
-     <widget class="QCheckBox" name="metadata_seed">
-      <property name="text">
-       <string>Seed</string>
-      </property>
-     </widget>
-    </item>
     <item row="5" column="0" colspan="4">
      <widget class="Line" name="line_3">
       <property name="orientation">
        <enum>Qt::Horizontal</enum>
-      </property>
-     </widget>
-    </item>
-    <item row="15" column="1">
-     <widget class="QCheckBox" name="metadata_scheduler">
-      <property name="text">
-       <string>Scheduler</string>
-      </property>
-     </widget>
-    </item>
-    <item row="13" column="1">
-     <widget class="QCheckBox" name="metadata_model">
-      <property name="text">
-       <string>Model</string>
-      </property>
-     </widget>
-    </item>
-    <item row="14" column="1">
-     <widget class="QCheckBox" name="metadata_model_branch">
-      <property name="text">
-       <string>Model Branch</string>
-      </property>
-     </widget>
-    </item>
-    <item row="11" column="1">
-     <widget class="QCheckBox" name="metadata_iterations">
-      <property name="text">
-       <string>Iterations</string>
-      </property>
-     </widget>
-    </item>
-    <item row="16" column="0">
-     <widget class="QCheckBox" name="metadata_steps">
-      <property name="text">
-       <string>Steps</string>
       </property>
      </widget>
     </item>
@@ -204,6 +144,7 @@
       <property name="font">
        <font>
         <pointsize>10</pointsize>
+        <weight>75</weight>
         <bold>true</bold>
        </font>
       </property>
@@ -226,6 +167,7 @@
      <widget class="QLabel" name="label_3">
       <property name="font">
        <font>
+        <weight>75</weight>
         <bold>true</bold>
        </font>
       </property>
@@ -237,10 +179,66 @@
     <item row="7" column="0" colspan="4">
      <widget class="QComboBox" name="image_type_dropdown"/>
     </item>
-    <item row="12" column="1">
+    <item row="13" column="0">
+     <widget class="QCheckBox" name="metadata_scale">
+      <property name="text">
+       <string>Scale</string>
+      </property>
+     </widget>
+    </item>
+    <item row="14" column="0">
+     <widget class="QCheckBox" name="metadata_seed">
+      <property name="text">
+       <string>Seed</string>
+      </property>
+     </widget>
+    </item>
+    <item row="15" column="0">
+     <widget class="QCheckBox" name="metadata_steps">
+      <property name="text">
+       <string>Steps</string>
+      </property>
+     </widget>
+    </item>
+    <item row="16" column="0">
+     <widget class="QCheckBox" name="metadata_iterations">
+      <property name="text">
+       <string>Iterations</string>
+      </property>
+     </widget>
+    </item>
+    <item row="11" column="1">
      <widget class="QCheckBox" name="metadata_samples">
       <property name="text">
        <string>Samples</string>
+      </property>
+     </widget>
+    </item>
+    <item row="12" column="1">
+     <widget class="QCheckBox" name="metadata_model">
+      <property name="text">
+       <string>Model</string>
+      </property>
+     </widget>
+    </item>
+    <item row="13" column="1">
+     <widget class="QCheckBox" name="metadata_model_branch">
+      <property name="text">
+       <string>Model Branch</string>
+      </property>
+     </widget>
+    </item>
+    <item row="14" column="1">
+     <widget class="QCheckBox" name="metadata_scheduler">
+      <property name="text">
+       <string>Scheduler</string>
+      </property>
+     </widget>
+    </item>
+    <item row="15" column="1">
+     <widget class="QCheckBox" name="metadata_ddim_eta">
+      <property name="text">
+       <string>DDIM ETA</string>
       </property>
      </widget>
     </item>

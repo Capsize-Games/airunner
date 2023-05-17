@@ -12,7 +12,6 @@ from aihandler.settings import MAX_SEED, AVAILABLE_SCHEDULERS_BY_ACTION, MODELS
 from airunner.windows.video import VideoPopup
 from PIL import PngImagePlugin
 
-
 class GeneratorMixin:
     lora_loaded = False
 
@@ -333,12 +332,11 @@ class GeneratorMixin:
         metadata = PngImagePlugin.PngInfo()
         options = data["options"]
         action = data["action"]
+        metadata.add_text("action", action)
         if self.settings_manager.settings.image_export_metadata_prompt.get() is True:
             metadata.add_text("prompt", options[f'{action}_prompt'])
         if self.settings_manager.settings.image_export_metadata_negative_prompt.get() is True:
             metadata.add_text("negative_prompt", options[f'{action}_negative_prompt'])
-        if self.settings_manager.settings.image_export_metadata_action.get() is True:
-            metadata.add_text("action", action)
         if self.settings_manager.settings.image_export_metadata_scale.get() is True:
             metadata.add_text("scale", str(options[f"{action}_scale"]))
         if self.settings_manager.settings.image_export_metadata_seed.get() is True:
