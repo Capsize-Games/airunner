@@ -22,6 +22,12 @@ echo ""
 cp -R /usr/local/lib/python3.10/dist-packages/timm ./dist/airunner/
 echo ""
 echo "============================================"
+echo "Copy libtorch_cuda_linalg.so to dist"
+echo "============================================"
+echo ""
+cp /app/dist/airunner/torch/lib/libtorch_cuda_linalg.so ./dist/airunner/
+echo ""
+echo "============================================"
 echo "Deploying airunner to itch.io"
 echo "============================================"
 echo ""
