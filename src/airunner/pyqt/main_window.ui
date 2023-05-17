@@ -1381,7 +1381,8 @@
     <addaction name="separator"/>
     <addaction name="actionResize_on_Paste"/>
     <addaction name="actionImage_to_new_layer"/>
-    <addaction name="actionAuto_export_images"/>
+    <addaction name="separator"/>
+    <addaction name="actionImage_export_settings"/>
     <addaction name="separator"/>
     <addaction name="actionAdvanced"/>
     <addaction name="separator"/>
@@ -1502,7 +1503,7 @@
   </action>
   <action name="actionReset_Settings">
    <property name="text">
-    <string>Reset Settings</string>
+    <string>Reset Settings to Default</string>
    </property>
    <property name="toolTip">
     <string>Reset all settings to default</string>
@@ -1546,7 +1547,7 @@
   </action>
   <action name="actionAdvanced">
    <property name="text">
-    <string>Memory Settings</string>
+    <string>Memory Preferences</string>
    </property>
    <property name="toolTip">
     <string>Change memory settings</string>
@@ -1673,6 +1674,14 @@
    </property>
    <property name="text">
     <string>Auto export images</string>
+   </property>
+   <property name="toolTip">
+    <string>Automatically export newly generated images to a folder</string>
+   </property>
+  </action>
+  <action name="actionImage_export_settings">
+   <property name="text">
+    <string>Import / export preferences</string>
    </property>
   </action>
  </widget>
