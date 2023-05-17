@@ -4,7 +4,6 @@ from PyQt6.QtWidgets import QColorDialog
 import qdarktheme
 import webbrowser
 from airunner.windows.about import AboutWindow
-from airunner.windows.advanced_settings import AdvancedSettings
 from airunner.windows.extensions import ExtensionsWindow
 from airunner.windows.grid_settings import GridSettings
 from airunner.windows.preferences import PreferencesWindow
@@ -40,7 +39,6 @@ class ToolbarMixin:
         self.window.actionPreferences.triggered.connect(self.show_preferences)
         self.window.actionAbout.triggered.connect(self.show_about)
         self.window.actionCanvas_color.triggered.connect(self.show_canvas_color)
-        self.window.actionAdvanced.triggered.connect(self.show_advanced)
         self.window.actionBug_report.triggered.connect(lambda: webbrowser.open(
             "https://github.com/Capsize-Games/airunner/issues/new?assignees=&labels=&template=bug_report.md&title="))
         self.window.actionReport_vulnerability.triggered.connect(
@@ -83,9 +81,6 @@ class ToolbarMixin:
 
     def show_preferences(self):
         PreferencesWindow(self.settings_manager, app=self)
-
-    def show_advanced(self):
-        AdvancedSettings(self.settings_manager)
 
     def set_tool(self, tool):
         # uncheck all buttons that are not this tool
