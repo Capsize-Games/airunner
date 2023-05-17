@@ -21,9 +21,11 @@ class MenubarMixin:
         self.window.actionResize_on_Paste.triggered.connect(self.toggle_resize_on_paste)
         self.window.actionImage_to_new_layer.triggered.connect(self.toggle_image_to_new_layer)
         self.window.actionReset_Settings.triggered.connect(self.reset_settings)
+        self.window.actionAuto_export_images.triggered.connect(self.toggle_auto_export_images)
         self.initialize_filter_actions()
         self.window.actionResize_on_Paste.setChecked(self.settings_manager.settings.resize_on_paste.get() == True)
         self.window.actionImage_to_new_layer.setChecked(self.settings_manager.settings.image_to_new_layer.get() == True)
+        self.window.actionAuto_export_images.setChecked(self.settings_manager.settings.auto_export_images.get() == True)
 
     def initialize_filter_actions(self):
         self.filter_gaussian_blur = FilterGaussianBlur(parent=self)
@@ -70,3 +72,6 @@ class MenubarMixin:
 
     def toggle_image_to_new_layer(self):
         self.settings_manager.settings.image_to_new_layer.set(self.window.actionImage_to_new_layer.isChecked())
+
+    def toggle_auto_export_images(self):
+        self.settings_manager.settings.auto_export_images.set(self.window.actionAuto_export_images.isChecked())

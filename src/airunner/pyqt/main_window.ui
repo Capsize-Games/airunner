@@ -1381,6 +1381,7 @@
     <addaction name="separator"/>
     <addaction name="actionResize_on_Paste"/>
     <addaction name="actionImage_to_new_layer"/>
+    <addaction name="actionAuto_export_images"/>
     <addaction name="separator"/>
     <addaction name="actionAdvanced"/>
     <addaction name="separator"/>
@@ -1664,6 +1665,14 @@
    </property>
    <property name="toolTip">
     <string>Send generated images to new layer</string>
+   </property>
+  </action>
+  <action name="actionAuto_export_images">
+   <property name="checkable">
+    <bool>true</bool>
+   </property>
+   <property name="text">
+    <string>Auto export images</string>
    </property>
   </action>
  </widget>

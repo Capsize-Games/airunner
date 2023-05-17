@@ -19,9 +19,14 @@ class PreferencesWindow(BaseWindow):
             lambda val: self.settings_manager.settings.lora_path.set(val))
         self.template.lora_browse_button.clicked.connect(
             lambda: self.browse_for_lora_path(self.template.lora_path))
+        self.template.image_path.textChanged.connect(
+            lambda val: self.settings_manager.settings.image_path.set(val))
+        self.template.image_path_browse_button.clicked.connect(
+            lambda: self.browse_for_image_path(self.template.image_path))
         self.template.sd_path.setText(self.settings_manager.settings.model_base_path.get())
         self.template.embeddings_path.setText(self.settings_manager.settings.embeddings_path.get())
         self.template.lora_path.setText(self.settings_manager.settings.lora_path.get())
+        self.template.image_path.setText(self.settings_manager.settings.image_path.get())
 
         # Removing extensions settings until feature is complete:
         # self.template.hf_token.textChanged.connect(
@@ -60,3 +65,8 @@ class PreferencesWindow(BaseWindow):
         path = QFileDialog.getExistingDirectory(None, "Select Directory")
         line_edit.setText(path)
         self.settings_manager.settings.lora_path.set(path)
+
+    def browse_for_image_path(self, line_edit):
+        path = QFileDialog.getExistingDirectory(None, "Select Directory")
+        line_edit.setText(path)
+        self.settings_manager.settings.image_path.set(path)
