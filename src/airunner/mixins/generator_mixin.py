@@ -11,6 +11,7 @@ from PyQt6.uic.exceptions import UIFileException
 
 from aihandler.settings import MAX_SEED, AVAILABLE_SCHEDULERS_BY_ACTION, MODELS
 from airunner.windows.video import VideoPopup
+from PIL import PngImagePlugin
 
 
 class GeneratorMixin:
@@ -258,6 +259,9 @@ class GeneratorMixin:
         if data["action"] == "txt2vid":
             return self.video_handler(data)
 
+        if self.settings_manager.settings.auto_export_images.get():
+            self.auto_export_image(image, data)
+
         self.stop_progress_bar(data["action"])
         if nsfw_content_detected and self.settings_manager.settings.nsfw_filter.get():
             self.message_handler("NSFW content detected, try again.", error=True)
@@ -267,6 +271,47 @@ class GeneratorMixin:
             self.canvas.image_handler(image, data)
             self.message_handler("")
             self.show_layers()
+
+    def auto_export_image(self, image, data):
+        """
+        Export image along with stats to image_path
+        :return:
+        """
+        if data["action"] == "txt2vid":
+            return
+        base_path = self.settings_manager.settings.model_base_path.get()
+        image_path = self.settings_manager.settings.image_path.get()
+        image_path = "images" if image_path == "" else image_path
+        path = os.path.join(base_path, image_path) if image_path == "images" else image_path
+        if not os.path.exists(path):
+            os.makedirs(path)
+        # check for existing files, if they exist, increment the filename. filename should be in the format
+        # <action>_<seed>_<N>.png
+        extension = ".png"
+        filename = data["action"] + "_" + str(self.seed)
+        if os.path.exists(os.path.join(path, filename + extension)):
+            i = 1
+            while os.path.exists(os.path.join(path, filename + "_" + str(i) + extension)):
+                i += 1
+            filename = filename + "_" + str(i)
+        metadata = PngImagePlugin.PngInfo()
+        options = data["options"]
+        action = data["action"]
+        metadata.add_text("prompt", options[f'{action}_prompt'])
+        metadata.add_text("negative_prompt", options[f'{action}_negative_prompt'])
+        metadata.add_text("action", action)
+        metadata.add_text("scale", str(options[f"{action}_scale"]))
+        metadata.add_text("seed", str(options[f"{action}_seed"]))
+        metadata.add_text("steps", str(options[f"{action}_steps"]))
+        metadata.add_text("ddim_eta", str(options[f"{action}_ddim_eta"]))
+        metadata.add_text("n_iter", str(options[f"{action}_n_iter"]))
+        metadata.add_text("n_samples", str(options[f"{action}_n_samples"]))
+        metadata.add_text("model", str(options[f"{action}_model"]))
+        metadata.add_text("scheduler", str(options[f"{action}_scheduler"]))
+        metadata.add_text("model_branch", str(options[f"{action}_model_branch"]))
+        metadata.add_text("width", str(options[f"{action}_width"]))
+        metadata.add_text("height", str(options[f"{action}_height"]))
+        image.save(os.path.join(path, filename + extension), pnginfo=metadata)
 
     def handle_steps_slider_change(self, val, tab):
         tab.steps_spinbox.setValue(int(val))
