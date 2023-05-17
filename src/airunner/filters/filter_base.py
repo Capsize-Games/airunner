@@ -21,6 +21,8 @@ class FilterBase:
     def show(self):
         self.filter_window = uic.loadUi(os.path.join(f"pyqt/{self.ui_name}.ui"))
         self.filter_window.setWindowTitle(self.window_title)
+        # on escape, call the "cancel" button on the QDialogButtonBox
+        self.filter_window.keyPressEvent = lambda event: self.cancel_filter() if event.key() == 16777216 else None
 
     def cancel_filter(self):
         self.filter_window.close()
