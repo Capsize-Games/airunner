@@ -8,7 +8,6 @@ from PyQt6.QtCore import QPoint, QRect
 from PyQt6.QtGui import QColor
 from PyQt6.QtWidgets import QWidget, QVBoxLayout, QScrollArea
 from PyQt6.uic.exceptions import UIFileException
-
 from aihandler.settings import MAX_SEED, AVAILABLE_SCHEDULERS_BY_ACTION, MODELS
 from airunner.windows.video import VideoPopup
 from PIL import PngImagePlugin
@@ -272,6 +271,94 @@ class GeneratorMixin:
             self.message_handler("")
             self.show_layers()
 
+    def load_metadata(self, metadata):
+        if metadata:
+            action = metadata.get("action")
+            prompt = None
+            negative_prompt = None
+            if "prompt" in metadata:
+                prompt = metadata.get("prompt", "")
+            if "negative_prompt" in metadata:
+                negative_prompt = metadata.get("negative_prompt", "")
+            scale = metadata.get("scale", None)
+            seed = metadata.get("seed", None)
+            steps = metadata.get("steps", None)
+            ddim_eta = metadata.get("ddim_eta", None)
+            n_iter = metadata.get("n_iter", None)
+            n_samples = metadata.get("n_samples", None)
+            model = metadata.get("model", None)
+            # model_branch = metadata.get("model_branch", None)
+            scheduler = metadata.get("scheduler", None)
+            if prompt is not None:
+                self.tabs[action].prompt.setPlainText(prompt)
+            if negative_prompt is not None:
+                self.tabs[action].negative_prompt.setPlainText(negative_prompt)
+            if scale:
+                scale = float(scale)
+                self.tabs[action].scale_spinbox.setValue(float(scale))
+                self.tabs[action].scale_slider.setValue(int(float(scale) * 100))
+            if seed:
+                self.tabs[action].seed.setPlainText(seed)
+            if steps:
+                steps = int(steps)
+                self.tabs[action].steps_spinbox.setValue(steps)
+                self.tabs[action].steps_slider.setValue(steps)
+            if ddim_eta:
+                ddim_eta = float(ddim_eta)
+                self.tabs[action].ddim_eta_spinbox.setValue(ddim_eta)
+                self.tabs[action].ddim_eta_slider.setValue(ddim_eta * 100)
+            if n_iter:
+                n_iter = int(n_iter)
+                try:
+                    self.tabs[action].n_iter_spinbox.setValue(n_iter)
+                except AttributeError:
+                    pass
+                try:
+                    self.tabs[action].n_iter_slider.setValue(n_iter)
+                except AttributeError:
+                    pass
+            if n_samples:
+                n_samples = int(n_samples)
+                self.tabs[action].samples_spinbox.setValue(n_samples)
+                self.tabs[action].samples_slider.setValue(n_samples)
+            if model:
+                self.tabs[action].model_dropdown.setCurrentText(model)
+            if scheduler:
+                self.tabs[action].scheduler_dropdown.setCurrentText(scheduler)
+
+    def prepare_metadata(self, data):
+        if not self.settings_manager.settings.export_metadata.get() or \
+                self.settings_manager.settings.image_export_type.get() != "png":
+            return None
+        metadata = PngImagePlugin.PngInfo()
+        options = data["options"]
+        action = data["action"]
+        if self.settings_manager.settings.image_export_metadata_prompt.get() is True:
+            metadata.add_text("prompt", options[f'{action}_prompt'])
+        if self.settings_manager.settings.image_export_metadata_negative_prompt.get() is True:
+            metadata.add_text("negative_prompt", options[f'{action}_negative_prompt'])
+        if self.settings_manager.settings.image_export_metadata_action.get() is True:
+            metadata.add_text("action", action)
+        if self.settings_manager.settings.image_export_metadata_scale.get() is True:
+            metadata.add_text("scale", str(options[f"{action}_scale"]))
+        if self.settings_manager.settings.image_export_metadata_seed.get() is True:
+            metadata.add_text("seed", str(options[f"{action}_seed"]))
+        if self.settings_manager.settings.image_export_metadata_steps.get() is True:
+            metadata.add_text("steps", str(options[f"{action}_steps"]))
+        if self.settings_manager.settings.image_export_metadata_ddim_eta.get() is True:
+            metadata.add_text("ddim_eta", str(options[f"{action}_ddim_eta"]))
+        if self.settings_manager.settings.image_export_metadata_iterations.get() is True:
+            metadata.add_text("n_iter", str(options[f"{action}_n_iter"]))
+        if self.settings_manager.settings.image_export_metadata_samples.get() is True:
+            metadata.add_text("n_samples", str(options[f"{action}_n_samples"]))
+        if self.settings_manager.settings.image_export_metadata_model.get() is True:
+            metadata.add_text("model", str(options[f"{action}_model"]))
+        if self.settings_manager.settings.image_export_metadata_model_branch.get() is True:
+            metadata.add_text("model_branch", str(options[f"{action}_model_branch"]))
+        if self.settings_manager.settings.image_export_metadata_scheduler.get() is True:
+            metadata.add_text("scheduler", str(options[f"{action}_scheduler"]))
+        return metadata
+
     def auto_export_image(self, image, data):
         """
         Export image along with stats to image_path
@@ -287,31 +374,18 @@ class GeneratorMixin:
             os.makedirs(path)
         # check for existing files, if they exist, increment the filename. filename should be in the format
         # <action>_<seed>_<N>.png
-        extension = ".png"
+        extension = f".{self.settings_manager.settings.image_export_type.get()}"
         filename = data["action"] + "_" + str(self.seed)
         if os.path.exists(os.path.join(path, filename + extension)):
             i = 1
             while os.path.exists(os.path.join(path, filename + "_" + str(i) + extension)):
                 i += 1
             filename = filename + "_" + str(i)
-        metadata = PngImagePlugin.PngInfo()
-        options = data["options"]
-        action = data["action"]
-        metadata.add_text("prompt", options[f'{action}_prompt'])
-        metadata.add_text("negative_prompt", options[f'{action}_negative_prompt'])
-        metadata.add_text("action", action)
-        metadata.add_text("scale", str(options[f"{action}_scale"]))
-        metadata.add_text("seed", str(options[f"{action}_seed"]))
-        metadata.add_text("steps", str(options[f"{action}_steps"]))
-        metadata.add_text("ddim_eta", str(options[f"{action}_ddim_eta"]))
-        metadata.add_text("n_iter", str(options[f"{action}_n_iter"]))
-        metadata.add_text("n_samples", str(options[f"{action}_n_samples"]))
-        metadata.add_text("model", str(options[f"{action}_model"]))
-        metadata.add_text("scheduler", str(options[f"{action}_scheduler"]))
-        metadata.add_text("model_branch", str(options[f"{action}_model_branch"]))
-        metadata.add_text("width", str(options[f"{action}_width"]))
-        metadata.add_text("height", str(options[f"{action}_height"]))
-        image.save(os.path.join(path, filename + extension), pnginfo=metadata)
+        metadata = self.prepare_metadata(data)
+        if metadata:
+            image.save(os.path.join(path, filename + extension), pnginfo=metadata)
+        else:
+            image.save(os.path.join(path, filename + extension))
 
     def handle_steps_slider_change(self, val, tab):
         tab.steps_spinbox.setValue(int(val))

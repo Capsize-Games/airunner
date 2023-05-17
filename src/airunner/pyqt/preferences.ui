@@ -47,6 +47,11 @@
       </item>
       <item row="9" column="0">
        <widget class="QLabel" name="label_4">
+        <property name="font">
+         <font>
+          <pointsize>10</pointsize>
+         </font>
+        </property>
         <property name="text">
          <string>Folder that contains LoRA files</string>
         </property>
@@ -54,6 +59,11 @@
       </item>
       <item row="5" column="0">
        <widget class="QLabel" name="label_6">
+        <property name="font">
+         <font>
+          <pointsize>10</pointsize>
+         </font>
+        </property>
         <property name="text">
          <string>Folder that contains Textual Inversion files</string>
         </property>
@@ -155,6 +165,11 @@
       </item>
       <item row="1" column="0">
        <widget class="QLabel" name="label_2">
+        <property name="font">
+         <font>
+          <pointsize>10</pointsize>
+         </font>
+        </property>
         <property name="text">
          <string>Folder that contains custom models</string>
         </property>
@@ -174,6 +189,11 @@
       </item>
       <item row="13" column="0">
        <widget class="QLabel" name="label_8">
+        <property name="font">
+         <font>
+          <pointsize>10</pointsize>
+         </font>
+        </property>
         <property name="text">
          <string>Folder to auto export images to</string>
         </property>
