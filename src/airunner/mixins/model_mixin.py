@@ -19,7 +19,16 @@ class ModelMixin:
         if section_name in ["txt2img", "img2img"]:
             section_name = "generate"
         models = self.load_default_models(section_name)
-        models += self.load_models_from_path(self.settings_manager.settings.model_base_path.get())
+        path = ""
+        if section_name == "depth2img":
+            path = self.settings_manager.settings.depth2img_model_path.get()
+        elif section_name == "pix2pix":
+            path = self.settings_manager.settings.pix2pix_model_path.get()
+        elif section_name == "outpaint":
+            path = self.settings_manager.settings.outpaint_model_path.get()
+        if not path or path == "":
+            path = self.settings_manager.settings.model_base_path.get()
+        models += self.load_models_from_path(path)
         self.models = models
         tab.model_dropdown.addItems(models)
 
