@@ -74,7 +74,7 @@ class ToolbarMixin:
             self.canvas.set_canvas_color()
 
     def show_about(self):
-        AboutWindow(self.settings_manager)
+        AboutWindow(self.settings_manager, app=self)
 
     def show_grid_settings(self):
         GridSettings(self.settings_manager)
