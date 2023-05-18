@@ -7,6 +7,7 @@ class BaseWindow:
     window_title = ""
     settings_manager = None
     template = None
+
     def __init__(self, settings_manager, **kwargs):
         self.app = kwargs.get("app", None)
         self.settings_manager = settings_manager

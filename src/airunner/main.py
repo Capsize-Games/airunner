@@ -3,7 +3,7 @@ import pickle
 import sys
 from PyQt6 import uic, QtCore
 from PyQt6.QtWidgets import QApplication, QFileDialog
-from PyQt6.QtCore import pyqtSlot, Qt
+from PyQt6.QtCore import pyqtSlot, Qt, QThread, pyqtSignal, QObject
 from PyQt6.QtGui import QGuiApplication
 from aihandler.qtvar import TQDMVar, ImageVar, MessageHandlerVar, ErrorHandlerVar
 from aihandler.settings import LOG_LEVEL
@@ -18,7 +18,9 @@ from airunner.mixins.layer_mixin import LayerMixin
 from airunner.mixins.menubar_mixin import MenubarMixin
 from airunner.mixins.model_mixin import ModelMixin
 from airunner.mixins.toolbar_mixin import ToolbarMixin
+from airunner.windows.update_window import UpdateWindow
 from airunner.windows.video import VideoPopup
+from airunner.utils import get_version, get_latest_version
 from aihandler.settings_manager import SettingsManager
 from airunner.runai_client import OfflineClient
 import qdarktheme
@@ -67,6 +69,8 @@ class MainWindow(
     models = None
     client = None
     _override_section = None
+    _version = None
+    _latest_version = None
 
     @property
     def grid_size(self):
@@ -111,8 +115,23 @@ class MainWindow(
         self.set_window_title()
 
     @property
+    def version(self):
+        if self._version is None:
+            self._version = get_version()
+        return f"v{self._version}"
+
+    @property
+    def latest_version(self):
+        return self._latest_version
+
+    @latest_version.setter
+    def latest_version(self, val):
+        self._latest_version = val
+
+    @property
     def document_name(self):
-        return f"{self._document_name}{'*' if self.is_dirty else ''}"
+        name = f"{self._document_name}{'*' if self.is_dirty else ''}"
+        return f"{name} - {self.version}"
 
     @pyqtSlot(int, int, str, object, object)
     def tqdm_callback(self, step, total, action, image=None, data=None):
@@ -142,8 +161,42 @@ class MainWindow(
         # on window resize:
         # self.applicationStateChanged.connect(self.on_state_changed)
         self.window.wordballoon_button.hide()  # hide word balloon
+
+        if self.settings_manager.settings.latest_version_check.get():
+            self.check_for_latest_version()
+
         if not self.testing:
             self.exec()
+
+    def check_for_latest_version(self):
+        self.version_thread = QThread()
+        class VersionCheckWorker(QObject):
+            version = None
+            finished = pyqtSignal()
+            def get_latest_version(self):
+                self.version = f"v{get_latest_version()}"
+                self.finished.emit()
+        self.version_worker = VersionCheckWorker()
+        self.version_worker.moveToThread(self.version_thread)
+        self.version_thread.started.connect(self.version_worker.get_latest_version)
+        self.version_worker.finished.connect(self.handle_latest_version)
+        self.version_thread.start()
+
+    def handle_latest_version(self):
+        self.latest_version = self.version_worker.version
+        # call get_latest_version() in a separate thread
+        # to avoid blocking the UI, show a popup if version doesn't match self.version
+        # check if latest_version is greater than version using major, minor, patch
+        latest_major, latest_minor, latest_patch = self.latest_version[1:].split(".")
+        current_major, current_minor, current_patch = self.version[1:].split(".")
+        if int(latest_major) > int(current_major) or int(latest_minor) > int(current_minor) or int(latest_patch) > int(current_patch):
+            self.show_update_message()
+
+    def show_update_message(self):
+        self.window.debug_label.setText(f"New version available: {self.latest_version}")
+
+    def show_update_popup(self):
+        self.update_popup = UpdateWindow(self.settings_manager, app=self)
 
     def reset_settings(self):
         GeneratorMixin.reset_settings(self)
