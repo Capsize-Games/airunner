@@ -1,3 +1,5 @@
+import os
+import platform
 import torch
 from diffusers import StableDiffusionPipeline, StableDiffusionInpaintPipeline
 
@@ -82,3 +84,50 @@ class InpaintMerged:
 
         self.base_model.unet.load_state_dict(primary_model_state_dict)
         return self.base_model
+
+
+def get_version():
+    version = None
+
+    if platform.system() == "Windows":
+        # attempt to get from VERSION file in current directory (works for compiled exe only)
+        try:
+            with open("./VERSION", "r") as f:
+                version = f.read()
+        except Exception as e:
+            pass
+    else:
+        try:
+            # attempt to get from setup.py file in current directory (works for compiled python only)
+            with open("./setup.py", "r") as f:
+                version = f.read().strip()
+                version = version.split("version=")[1].split(",")[0]
+        except Exception as e:
+            pass
+    if not version:
+        # attempt to get from parent directory (works for uncompiled python only)
+        try:
+            with open("../../setup.py", "r") as f:
+                version = f.read().strip()
+                version = version.split("version=")[1].split(",")[0]
+        except Exception as e:
+            pass
+    if version:
+        # remove anything other than numbers and dots
+        version = "".join([c for c in version if c in "0123456789."])
+        return version
+    return ""
+
+
+def get_latest_version():
+    # get latest release from https://github.com/Capsize-Games/airunner/releases/latest
+    # follow the redirect to get the version number
+    import requests
+    import re
+    url = "https://github.com/Capsize-Games/airunner/releases/latest"
+    r = requests.get(url)
+    if r.status_code == 200:
+        m = re.search(r"\/Capsize-Games\/airunner\/releases\/tag\/v([0-9\.]+)", r.text)
+        if m:
+            return m.group(1)
+    return None
