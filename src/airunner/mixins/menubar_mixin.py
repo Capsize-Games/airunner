@@ -27,6 +27,13 @@ class MenubarMixin:
         self.window.actionImage_to_new_layer.setChecked(self.settings_manager.settings.image_to_new_layer.get() == True)
         self.window.actionAdvanced.triggered.connect(self.show_advanced)
         self.window.actionImage_export_settings.triggered.connect(self.show_export_preferences)
+        self.window.actionCheck_for_latest_version_on_startup.setChecked(
+            self.settings_manager.settings.latest_version_check.get() == True)
+        self.window.actionCheck_for_latest_version_on_startup.triggered.connect(
+            lambda: self.settings_manager.settings.latest_version_check.set(
+                self.window.actionCheck_for_latest_version_on_startup.isChecked()
+            )
+        )
 
     def initialize_filter_actions(self):
         self.filter_gaussian_blur = FilterGaussianBlur(parent=self)
