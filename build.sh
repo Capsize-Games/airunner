@@ -28,6 +28,12 @@ echo ""
 cp /app/dist/airunner/torch/lib/libtorch_cuda_linalg.so ./dist/airunner/
 echo ""
 echo "============================================"
+echo "Copy setup.py to dist"
+echo "============================================"
+echo ""
+cp /app/setup.py ./dist/airunner/
+echo ""
+echo "============================================"
 echo "Deploying airunner to itch.io"
 echo "============================================"
 echo ""
