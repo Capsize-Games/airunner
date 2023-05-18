@@ -1379,6 +1379,7 @@
     <addaction name="actionGrid"/>
     <addaction name="actionCanvas_color"/>
     <addaction name="separator"/>
+    <addaction name="actionCheck_for_latest_version_on_startup"/>
     <addaction name="actionResize_on_Paste"/>
     <addaction name="actionImage_to_new_layer"/>
     <addaction name="separator"/>
@@ -1682,6 +1683,14 @@
   <action name="actionImage_export_settings">
    <property name="text">
     <string>Import / export preferences</string>
+   </property>
+  </action>
+  <action name="actionCheck_for_latest_version_on_startup">
+   <property name="checkable">
+    <bool>true</bool>
+   </property>
+   <property name="text">
+    <string>Check for latest version on startup</string>
    </property>
   </action>
  </widget>
