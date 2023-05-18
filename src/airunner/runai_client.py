@@ -96,6 +96,7 @@ class OfflineClient(QtCore.QObject):
             image_var=self.image_var,
             message_var=self.message_var,
             settings_manager=self.settings_manager,
+            error_var=self.error_var,
         )
 
     def handle_response(self, response):
