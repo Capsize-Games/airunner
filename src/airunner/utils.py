@@ -89,14 +89,13 @@ class InpaintMerged:
 def get_version():
     version = None
 
-    if platform.system() == "Windows":
-        # attempt to get from VERSION file in current directory (works for compiled exe only)
-        try:
-            with open("./VERSION", "r") as f:
-                version = f.read()
-        except Exception as e:
-            pass
-    else:
+    try:
+        with open("./VERSION", "r") as f:
+            version = f.read()
+    except Exception as e:
+        pass
+
+    if not version:
         try:
             # attempt to get from setup.py file in current directory (works for compiled python only)
             with open("./setup.py", "r") as f:
@@ -104,6 +103,7 @@ def get_version():
                 version = version.split("version=")[1].split(",")[0]
         except Exception as e:
             pass
+
     if not version:
         # attempt to get from parent directory (works for uncompiled python only)
         try:
