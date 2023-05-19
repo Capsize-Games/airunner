@@ -29,7 +29,11 @@ class CanvasImageMixin:
             "images": self.working_images,
         })
         for n in range(0, len(self.working_images)):
-            self.current_layer.images[n].image = self.current_layer.images[n].image.filter(filter)
+            if type(filter).__name__ == "SaturationFilter":
+                filtered_image = filter.filter(self.current_layer.images[n].image)
+            else:
+                filtered_image = self.current_layer.images[n].image.filter(filter)
+            self.current_layer.images[n].image = filtered_image
         self.working_images = None
 
     def preview_filter(self, filter):
@@ -38,7 +42,12 @@ class CanvasImageMixin:
         if self.working_images is None:
             self.working_images = self.get_image_copy(self.current_layer_index)
         for n in range(0, len(self.working_images)):
-            self.current_layer.images[n].image = self.working_images[n].image.copy().filter(filter)
+            # check if filter is a SaturationFilter object
+            if type(filter).__name__ == "SaturationFilter":
+                filtered_image = filter.filter(self.working_images[n].image.copy())
+            else:
+                filtered_image = self.working_images[n].image.copy().filter(filter)
+            self.current_layer.images[n].image = filtered_image
 
     def cancel_filter(self):
         self.current_layer.images = self.working_images
@@ -50,6 +59,8 @@ class CanvasImageMixin:
         painter.end()
 
     def draw_images(self, layer, index, painter):
+        if not layer.images:
+            return
         for image in layer.images:
             # display PIL.image as QPixmap
             img = image.image

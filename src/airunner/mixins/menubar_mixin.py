@@ -45,7 +45,7 @@ class MenubarMixin:
         self.filter_unsharp_mask = FilterUnsharpMask(parent=self)
         self.window.actionUnsharp_Mask.triggered.connect(self.filter_unsharp_mask.show)
         self.filter_saturation = FilterSaturation(parent=self)
-        self.window.actionSaturation.triggered.connect(self.filter_saturation.show)
+        self.window.actionSaturation_Filter.triggered.connect(self.filter_saturation.show)
         self.filter_color_balance = FilterColorBalance(parent=self)
         self.window.actionColor_Balance.triggered.connect(self.filter_color_balance.show)
 
