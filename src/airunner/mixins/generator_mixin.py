@@ -10,6 +10,7 @@ from PyQt6.QtWidgets import QWidget, QVBoxLayout, QScrollArea
 from PyQt6.uic.exceptions import UIFileException
 from aihandler.settings import MAX_SEED, AVAILABLE_SCHEDULERS_BY_ACTION, MODELS
 from airunner.windows.video import VideoPopup
+from airunner.utils import load_default_models, load_models_from_path
 from PIL import PngImagePlugin
 
 class GeneratorMixin:
@@ -106,6 +107,8 @@ class GeneratorMixin:
         self.settings.scheduler_var.set(val)
 
     def initialize(self):
+        self.settings_manager.settings.model_base_path.my_signal.connect(self.refresh_model_list)
+
         sections = ["txt2img", "img2img", "depth2img", "pix2pix", "outpaint", "controlnet", "txt2vid"]
         self.tabs = {}
         for tab in self.sections:
@@ -226,6 +229,44 @@ class GeneratorMixin:
         self.initialize_size_form_elements()
         self.initialize_size_sliders()
         self.initialize_lora()
+
+    def refresh_model_list(self):
+        for i in range(self.window.tabWidget.count()):
+            tab = self.window.tabWidget.widget(i)
+            self.clear_model_list(tab)
+            self.load_model_by_section(tab, self.sections[i])
+
+    def clear_model_list(self, tab):
+        tab.model_dropdown.clear()
+
+    def load_model_by_section(self, tab, section_name):
+        if section_name in ["txt2img", "img2img"]:
+            section_name = "generate"
+
+        models = self.models if self.models else []
+        default_models = load_default_models(section_name)
+        path = ""
+        if section_name == "depth2img":
+            path = self.settings_manager.settings.depth2img_model_path.get()
+        elif section_name == "pix2pix":
+            path = self.settings_manager.settings.pix2pix_model_path.get()
+        elif section_name == "outpaint":
+            path = self.settings_manager.settings.outpaint_model_path.get()
+        if not path or path == "":
+            path = self.settings_manager.settings.model_base_path.get()
+        new_models = load_models_from_path(path)
+        
+        for model in default_models:
+            if model not in models:
+                models.append(model)
+
+        for model in new_models:
+            if model not in models:
+                models.append(model)
+        
+        self.models = models
+
+        tab.model_dropdown.addItems(models)
 
     def reset_settings(self):
         self.settings_manager.reset_settings_to_default()
@@ -601,16 +642,29 @@ class GeneratorMixin:
         section_name = action
         if section_name in ["txt2img", "img2img"]:
             section_name = "generate"
+
+        print("get model for", section_name)
+
         if model in MODELS[section_name]:
+            print("MODEL IS IN MODELS")
             model_path = MODELS[section_name][model]["path"]
             model_branch = MODELS[section_name][model].get("branch", "main")
         elif model not in self.models:
+            print("model is not in self.models")
             model_names = list(MODELS[section_name].keys())
             model = model_names[0]
             model_path = MODELS[section_name][model]["path"]
             model_branch = MODELS[section_name][model].get("branch", "main")
         else:
-            model_path = model
+            print("model is in self.models")
+            path = self.settings_manager.settings.model_base_path.get()
+            if action == "depth2img":
+                path = self.settings_manager.settings.depth2img_model_path.get()
+            elif action == "pix2pix":
+                path = self.settings_manager.settings.pix2pix_model_path.get()
+            elif action == "outpaint":
+                path = self.settings_manager.settings.outpaint_model_path.get()
+            model_path = os.path.join(path, model)
 
         # get controlnet_dropdown from active tab
         use_controlnet = False
