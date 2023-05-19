@@ -29,7 +29,7 @@ class CanvasImageMixin:
             "images": self.working_images,
         })
         for n in range(0, len(self.working_images)):
-            if type(filter).__name__ == "SaturationFilter":
+            if type(filter).__name__ in ["SaturationFilter", "ColorBalanceFilter"]:
                 filtered_image = filter.filter(self.current_layer.images[n].image)
             else:
                 filtered_image = self.current_layer.images[n].image.filter(filter)
@@ -43,7 +43,7 @@ class CanvasImageMixin:
             self.working_images = self.get_image_copy(self.current_layer_index)
         for n in range(0, len(self.working_images)):
             # check if filter is a SaturationFilter object
-            if type(filter).__name__ == "SaturationFilter":
+            if type(filter).__name__ in ["SaturationFilter", "ColorBalanceFilter"]:
                 filtered_image = filter.filter(self.working_images[n].image.copy())
             else:
                 filtered_image = self.working_images[n].image.copy().filter(filter)
