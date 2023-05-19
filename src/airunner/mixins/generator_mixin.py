@@ -854,6 +854,7 @@ class GeneratorMixin:
         for tab_name in self.tabs.keys():
             tab = self.tabs[tab_name]
             self.load_lora_tab(tab, tab_name)
+        self.initialize_lora_trigger_words()
 
     def available_loras(self, tab_name):
         base_path = self.settings_manager.settings.model_base_path.get()
@@ -877,11 +878,11 @@ class GeneratorMixin:
         if not os.path.exists(lora_path):
             return lora_names
         possible_line_endings = ["ckpt", "safetensors", "bin"]
-        for f in os.listdir(lora_path):
-            if os.path.isdir(os.path.join(lora_path, f)):
+        for lora_file in os.listdir(lora_path):
+            if os.path.isdir(os.path.join(lora_path, lora_file)):
                 lora_names = self.get_list_of_available_loras(tab_name, os.path.join(lora_path, f), lora_names)
-            if f.split(".")[-1] in possible_line_endings:
-                name = f.split(".")[0]
+            if lora_file.split(".")[-1] in possible_line_endings:
+                name = lora_file.split(".")[0]
                 scale = 100.0
                 enabled = True
                 # check if we have scale in self.settings_manager.settings.available_loras[tab_name]
@@ -916,6 +917,8 @@ class GeneratorMixin:
             lora_widget.scaleSpinBox.setValue(scale / 100)
             lora_widget.enabledCheckbox.setChecked(enabled)
             container.layout().addWidget(lora_widget)
+            lora_widget.trigger_word.textChanged.connect(
+                        lambda value, _lora_widget=lora_widget, _lora=lora, _tab_name=tab_name: self.handle_lora_trigger_word(_lora, _lora_widget, value))
             lora_widget.scaleSlider.valueChanged.connect(
                 lambda value, _lora_widget=lora_widget, _lora=lora, _tab_name=tab_name: self.handle_lora_slider(_lora, _lora_widget, value, _tab_name))
             lora_widget.scaleSpinBox.valueChanged.connect(
@@ -926,6 +929,36 @@ class GeneratorMixin:
         container.layout().addStretch()
         # display tabs of tab.PromptTabsSection which is a QTabWidget
         tab.lora_scroll_area.setWidget(container)
+    
+    def initialize_lora_trigger_words(self):
+        available_loras = self.settings_manager.settings.available_loras.get()
+        available_loras = available_loras['txt2img']
+
+        for lora in available_loras:
+            trigger_word = lora["trigger_word"] if "trigger_word" in lora else ""
+            for tab_name in self.tabs.keys():
+                tab = self.tabs[tab_name]
+                for i in range(tab.lora_scroll_area.widget().layout().count()):
+                    lora_widget = tab.lora_scroll_area.widget().layout().itemAt(i).widget()
+                    if lora_widget.enabledCheckbox.text() == lora["name"]:
+                        if trigger_word != "":
+                            lora_widget.trigger_word.setText(trigger_word)
+                        break
+
+    def handle_lora_trigger_word(self, lora, lora_widget, value):
+        available_loras = self.settings_manager.settings.available_loras.get()
+        for tab_name in self.tabs.keys():
+            for n in range(len(available_loras[tab_name])):
+                if available_loras[tab_name][n]["name"] == lora["name"]:
+                    available_loras[tab_name][n]["trigger_word"] = value
+                    lora_widget = None
+                    for i in range(self.tabs[tab_name].lora_scroll_area.widget().layout().count()):
+                        lora_widget = self.tabs[tab_name].lora_scroll_area.widget().layout().itemAt(i).widget()
+                        if lora_widget.enabledCheckbox.text() == lora["name"]:
+                            lora_widget.trigger_word.setText(value)
+                            break
+        self.settings_manager.settings.available_loras.set(available_loras)
+        self.settings_manager.save_settings()
 
     def load_template(self, template_name):
         try:
