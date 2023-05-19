@@ -16,7 +16,6 @@ from airunner.mixins.generator_mixin import GeneratorMixin
 from airunner.mixins.history_mixin import HistoryMixin
 from airunner.mixins.layer_mixin import LayerMixin
 from airunner.mixins.menubar_mixin import MenubarMixin
-from airunner.mixins.model_mixin import ModelMixin
 from airunner.mixins.toolbar_mixin import ToolbarMixin
 from airunner.windows.update_window import UpdateWindow
 from airunner.windows.video import VideoPopup
@@ -33,7 +32,6 @@ class MainWindow(
     ToolbarMixin,
     HistoryMixin,
     MenubarMixin,
-    ModelMixin,
     CanvasMixin,
     GeneratorMixin,
     ComicMixin,
@@ -227,7 +225,6 @@ class MainWindow(
         # ExtensionMixin.initialize(self)  TODO: Extensions
         BrushesMixin.initialize(self)
         EmbeddingMixin.initialize(self)
-        ModelMixin.initialize(self)
         if self.settings_manager.settings.force_reset.get():
             self.reset_settings()
             self.settings_manager.settings.force_reset.set(False)

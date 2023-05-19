@@ -3,6 +3,9 @@ import platform
 import torch
 from diffusers import StableDiffusionPipeline, StableDiffusionInpaintPipeline
 
+from aihandler.settings import MODELS
+
+
 def resize_image_to_working_size(image, settings):
     # get size of image
     width, height = image.size
@@ -131,3 +134,30 @@ def get_latest_version():
         if m:
             return m.group(1)
     return None
+
+
+def load_default_models(section_name):
+    return [
+        k for k in MODELS[section_name].keys()
+    ]
+
+
+def load_models_from_path(path, models = None):
+    if models is None:
+        models = []
+    if os.path.exists(path):
+        for f in os.listdir(path):
+            if os.path.isdir(os.path.join(path, f)):
+                folders_in_directory = os.listdir(os.path.join(path, f))
+                is_diffusers = True
+                for req_folder in ["feature_extractor", "safety_checker", "scheduler", "text_encoder", "tokenizer", "unet", "vae"]:
+                    if req_folder not in folders_in_directory:
+                        is_diffusers = False
+                        break
+                if is_diffusers:
+                    models.append(f)
+                else:
+                    models = load_models_from_path(os.path.join(path, f), models)
+            elif f.endswith(".pt") or f.endswith(".safetensors") or f.endswith(".ckpt"):
+                models.append(f)
+    return models

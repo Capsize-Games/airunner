@@ -1,14 +1,16 @@
 import os
 from PyQt6 import uic
+from PyQt6.QtWidgets import QWidget
+from aihandler.settings_manager import SettingsManager
 
 
 class BaseWindow:
-    template_name = ""
-    window_title = ""
-    settings_manager = None
-    template = None
+    template_name: str
+    window_title: str
+    settings_manager: SettingsManager
+    template: QWidget
 
-    def __init__(self, settings_manager, **kwargs):
+    def __init__(self, settings_manager: SettingsManager, **kwargs):
         self.app = kwargs.get("app", None)
         self.settings_manager = settings_manager
         settings_manager.disable_save()

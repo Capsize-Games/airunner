@@ -6,6 +6,7 @@ import webbrowser
 from airunner.windows.about import AboutWindow
 from airunner.windows.extensions import ExtensionsWindow
 from airunner.windows.grid_settings import GridSettings
+from airunner.windows.model_merger import ModelMerger
 from airunner.windows.preferences import PreferencesWindow
 
 
@@ -38,6 +39,7 @@ class ToolbarMixin:
         self.window.actionGrid.triggered.connect(self.show_grid_settings)
         self.window.actionPreferences.triggered.connect(self.show_preferences)
         self.window.actionAbout.triggered.connect(self.show_about)
+        self.window.actionModel_Merger.triggered.connect(self.show_model_merger)
         self.window.actionCanvas_color.triggered.connect(self.show_canvas_color)
         self.window.actionBug_report.triggered.connect(lambda: webbrowser.open(
             "https://github.com/Capsize-Games/airunner/issues/new?assignees=&labels=&template=bug_report.md&title="))
@@ -72,6 +74,9 @@ class ToolbarMixin:
             color = color.name()
             self.settings_manager.settings.canvas_color.set(color)
             self.canvas.set_canvas_color()
+
+    def show_model_merger(self):
+        ModelMerger(self.settings_manager, app=self)
 
     def show_about(self):
         AboutWindow(self.settings_manager, app=self)
