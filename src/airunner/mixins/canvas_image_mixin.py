@@ -38,9 +38,9 @@ class CanvasImageMixin:
         })
         for n in range(0, len(self.working_images)):
             if type(filter).__name__ in ["SaturationFilter", "ColorBalanceFilter", "RGBNoiseFilter"]:
-                filtered_image = filter.filter(self.current_layer.images[n].image)
+                filtered_image = filter.filter(self.working_images[n].image.copy())
             else:
-                filtered_image = self.current_layer.images[n].image.filter(filter)
+                filtered_image = self.working_images[n].image.copy().filter(filter)
             self.current_layer.images[n].image = filtered_image
         self.working_images = None
 
