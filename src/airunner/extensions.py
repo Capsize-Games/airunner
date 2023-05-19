@@ -14,10 +14,6 @@ class BaseExtension:
         self.settings_manager = settings_manager
 
     @property
-    def settings(self):
-        return self.settings_manager.settings
-
-    @property
     def model_base_path(self):
         return self.settings_manager.settings.model_base_path.get()
 

@@ -43,6 +43,22 @@ class GeneratorMixin:
         self.settings.steps.set(val)
 
     @property
+    def prompt(self):
+        return self.settings.prompt.get()
+
+    @prompt.setter
+    def prompt(self, val):
+        self.settings.prompt.set(val)
+
+    @property
+    def negative_prompt(self):
+        return self.settings.negative_prompt.get()
+
+    @negative_prompt.setter
+    def negative_prompt(self, val):
+        self.settings.negative_prompt.set(val)
+
+    @property
     def scale(self):
         return self.settings.scale.get()
 
@@ -150,6 +166,10 @@ class GeneratorMixin:
         # iterate over each tab and connect steps_slider with steps_spinbox
         for tab_name in self.tabs.keys():
             tab = self.tabs[tab_name]
+
+            # tab.prompt is QPlainTextEdit - on text change, call handle_prompt_change
+            tab.prompt.textChanged.connect(lambda _tab=tab: self.handle_prompt_change(_tab))
+            tab.negative_prompt.textChanged.connect(lambda _tab=tab: self.handle_negative_prompt_change(_tab))
 
             tab.steps_slider.valueChanged.connect(lambda val, _tab=tab: self.handle_steps_slider_change(val, _tab))
             tab.steps_spinbox.valueChanged.connect(lambda val, _tab=tab: self.handle_steps_spinbox_change(val, _tab))
@@ -430,6 +450,12 @@ class GeneratorMixin:
         tab.steps_spinbox.setValue(int(val))
         self.steps = int(val)
 
+    def handle_prompt_change(self, tab):
+        self.prompt = tab.prompt.toPlainText()
+
+    def handle_negative_prompt_change(self, tab):
+        self.negative_prompt = tab.negative_prompt.toPlainText()
+
     def handle_steps_spinbox_change(self, val, tab):
         tab.steps_slider.setValue(int(val))
         self.steps = int(val)
@@ -643,20 +669,15 @@ class GeneratorMixin:
         if section_name in ["txt2img", "img2img"]:
             section_name = "generate"
 
-        print("get model for", section_name)
-
         if model in MODELS[section_name]:
-            print("MODEL IS IN MODELS")
             model_path = MODELS[section_name][model]["path"]
             model_branch = MODELS[section_name][model].get("branch", "main")
         elif model not in self.models:
-            print("model is not in self.models")
             model_names = list(MODELS[section_name].keys())
             model = model_names[0]
             model_path = MODELS[section_name][model]["path"]
             model_branch = MODELS[section_name][model].get("branch", "main")
         else:
-            print("model is in self.models")
             path = self.settings_manager.settings.model_base_path.get()
             if action == "depth2img":
                 path = self.settings_manager.settings.depth2img_model_path.get()
@@ -754,6 +775,8 @@ class GeneratorMixin:
 
     def set_default_values(self, section, tab):
         self.override_section = section
+        tab.prompt.setPlainText(self.prompt)
+        tab.negative_prompt.setPlainText(self.negative_prompt)
         tab.steps_spinbox.setValue(self.steps)
         tab.scale_spinbox.setValue(self.scale / 100)
         if section == "pix2pix":
