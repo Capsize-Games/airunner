@@ -1397,6 +1397,7 @@
     <addaction name="actionBox_Blur"/>
     <addaction name="separator"/>
     <addaction name="actionUnsharp_Mask"/>
+    <addaction name="actionSaturation_Filter"/>
     <addaction name="actionPixel_Art"/>
     <addaction name="actionSaturation"/>
     <addaction name="actionColor_Balance"/>
@@ -1703,6 +1704,11 @@
   <action name="actionModel_Merger">
    <property name="text">
     <string>Model Merger</string>
+   </property>
+  </action>
+  <action name="actionSaturation_Filter">
+   <property name="text">
+    <string>Saturation</string>
    </property>
   </action>
  </widget>
