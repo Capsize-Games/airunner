@@ -7,7 +7,7 @@ from airunner.filters.filter_gaussian_blur import FilterGaussianBlur
 from airunner.filters.filter_pixel_art import FilterPixelArt
 from airunner.filters.filter_saturation import FilterSaturation
 from airunner.filters.filter_unsharp_mask import FilterUnsharpMask
-
+from airunner.filters.filter_rgb_noise import FilterRGBNoise
 
 class MenubarMixin:
     def initialize(self):
@@ -37,17 +37,19 @@ class MenubarMixin:
 
     def initialize_filter_actions(self):
         self.filter_gaussian_blur = FilterGaussianBlur(parent=self)
-        self.window.actionGaussian_Blur.triggered.connect(self.filter_gaussian_blur.show)
         self.filter_pixel_art = FilterPixelArt(parent=self)
-        self.window.actionPixel_Art.triggered.connect(self.filter_pixel_art.show)
         self.filter_box_blur = FilterBoxBlur(parent=self)
-        self.window.actionBox_Blur.triggered.connect(self.filter_box_blur.show)
         self.filter_unsharp_mask = FilterUnsharpMask(parent=self)
-        self.window.actionUnsharp_Mask.triggered.connect(self.filter_unsharp_mask.show)
         self.filter_saturation = FilterSaturation(parent=self)
-        self.window.actionSaturation_Filter.triggered.connect(self.filter_saturation.show)
         self.filter_color_balance = FilterColorBalance(parent=self)
+        self.filter_rgb_noise = FilterRGBNoise(parent=self)
+        self.window.actionGaussian_Blur_2.triggered.connect(self.filter_gaussian_blur.show)
+        self.window.actionPixel_Art.triggered.connect(self.filter_pixel_art.show)
+        self.window.actionBox_Blur_2.triggered.connect(self.filter_box_blur.show)
+        self.window.actionUnsharp_Mask.triggered.connect(self.filter_unsharp_mask.show)
+        self.window.actionSaturation_Filter.triggered.connect(self.filter_saturation.show)
         self.window.actionColor_Balance.triggered.connect(self.filter_color_balance.show)
+        self.window.actionRGB_Noise.triggered.connect(self.filter_rgb_noise.show)
 
     def import_image(self):
         file_path, _ = QFileDialog.getOpenFileName(

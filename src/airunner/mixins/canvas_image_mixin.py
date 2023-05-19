@@ -9,7 +9,17 @@ from PIL.ExifTags import TAGS
 
 
 class CanvasImageMixin:
-    working_images = None
+    _working_images = None
+
+    @property
+    def working_images(self):
+        if self._working_images is None:
+            self._working_images = self.get_image_copy(self.current_layer_index)
+        return self._working_images
+    
+    @working_images.setter
+    def working_images(self, value):
+        self._working_images = value
 
     @property
     def current_active_image(self):
@@ -21,15 +31,13 @@ class CanvasImageMixin:
     def apply_filter(self, filter):
         if len(self.current_layer.images) == 0:
             return
-        if self.working_images is None:
-            self.working_images = self.get_image_copy(self.current_layer_index)
         self.parent.history.add_event({
             "event": "apply_filter",
             "layer_index": self.current_layer_index,
             "images": self.working_images,
         })
         for n in range(0, len(self.working_images)):
-            if type(filter).__name__ in ["SaturationFilter", "ColorBalanceFilter"]:
+            if type(filter).__name__ in ["SaturationFilter", "ColorBalanceFilter", "RGBNoiseFilter"]:
                 filtered_image = filter.filter(self.current_layer.images[n].image)
             else:
                 filtered_image = self.current_layer.images[n].image.filter(filter)
@@ -37,13 +45,11 @@ class CanvasImageMixin:
         self.working_images = None
 
     def preview_filter(self, filter):
-        if len(self.current_layer.images) == 0:
+        if self.current_layer.images and len(self.current_layer.images) == 0:
             return
-        if self.working_images is None:
-            self.working_images = self.get_image_copy(self.current_layer_index)
         for n in range(0, len(self.working_images)):
             # check if filter is a SaturationFilter object
-            if type(filter).__name__ in ["SaturationFilter", "ColorBalanceFilter"]:
+            if type(filter).__name__ in ["SaturationFilter", "ColorBalanceFilter", "RGBNoiseFilter"]:
                 filtered_image = filter.filter(self.working_images[n].image.copy())
             else:
                 filtered_image = self.working_images[n].image.copy().filter(filter)
