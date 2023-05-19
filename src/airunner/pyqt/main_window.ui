@@ -1393,12 +1393,20 @@
     <property name="title">
      <string>Filters</string>
     </property>
-    <addaction name="actionGaussian_Blur"/>
-    <addaction name="actionBox_Blur"/>
+    <widget class="QMenu" name="menuBlur">
+     <property name="title">
+      <string>Blur</string>
+     </property>
+     <addaction name="separator"/>
+     <addaction name="actionGaussian_Blur_2"/>
+     <addaction name="actionBox_Blur_2"/>
+    </widget>
+    <addaction name="menuBlur"/>
     <addaction name="separator"/>
     <addaction name="actionColor_Balance"/>
     <addaction name="actionSaturation_Filter"/>
     <addaction name="actionUnsharp_Mask"/>
+    <addaction name="actionRGB_Noise"/>
     <addaction name="actionPixel_Art"/>
     <addaction name="separator"/>
     <addaction name="actionInvert"/>
@@ -1719,6 +1727,21 @@
   <action name="actionColor_Balance_2">
    <property name="text">
     <string>Color Balance</string>
+   </property>
+  </action>
+  <action name="actionRGB_Noise">
+   <property name="text">
+    <string>RGB Noise</string>
+   </property>
+  </action>
+  <action name="actionGaussian_Blur_2">
+   <property name="text">
+    <string>Gaussian Blur</string>
+   </property>
+  </action>
+  <action name="actionBox_Blur_2">
+   <property name="text">
+    <string>Box Blur</string>
    </property>
   </action>
  </widget>

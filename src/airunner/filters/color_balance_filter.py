@@ -10,7 +10,6 @@ class ColorBalanceFilter(Filter):
         self.magenta_green = magenta_green
         self.yellow_blue = yellow_blue
 
-
     def filter(self, image):
         red, green, blue, alpha = image.split()
         red = red.point(lambda i: i + (i * self.cyan_red))
@@ -18,4 +17,3 @@ class ColorBalanceFilter(Filter):
         blue = blue.point(lambda i: i + (i * self.yellow_blue))
         image = Image.merge("RGBA", (red, green, blue, alpha))
         return image
-
