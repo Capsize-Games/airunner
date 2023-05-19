@@ -187,7 +187,19 @@ class MainWindow(
         # check if latest_version is greater than version using major, minor, patch
         latest_major, latest_minor, latest_patch = self.latest_version[1:].split(".")
         current_major, current_minor, current_patch = self.version[1:].split(".")
-        if int(latest_major) > int(current_major) or int(latest_minor) > int(current_minor) or int(latest_patch) > int(current_patch):
+
+        latest_major = int(latest_major)
+        latest_minor = int(latest_minor)
+        latest_patch = int(latest_patch)
+        current_major = int(current_major)
+        current_minor = int(current_minor)
+        current_patch = int(current_patch)
+
+        if current_major == latest_major and current_minor == latest_minor and current_patch < latest_patch:
+            self.show_update_message()
+        elif current_major == latest_major and current_minor < latest_minor:
+            self.show_update_message()
+        elif current_major < latest_major:
             self.show_update_message()
 
     def show_update_message(self):
