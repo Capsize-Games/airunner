@@ -1396,11 +1396,10 @@
     <addaction name="actionGaussian_Blur"/>
     <addaction name="actionBox_Blur"/>
     <addaction name="separator"/>
-    <addaction name="actionUnsharp_Mask"/>
-    <addaction name="actionSaturation_Filter"/>
-    <addaction name="actionPixel_Art"/>
-    <addaction name="actionSaturation"/>
     <addaction name="actionColor_Balance"/>
+    <addaction name="actionSaturation_Filter"/>
+    <addaction name="actionUnsharp_Mask"/>
+    <addaction name="actionPixel_Art"/>
     <addaction name="separator"/>
     <addaction name="actionInvert"/>
    </widget>
@@ -1563,6 +1562,9 @@
    </property>
   </action>
   <action name="actionGaussian_Blur">
+   <property name="enabled">
+    <bool>true</bool>
+   </property>
    <property name="text">
     <string>Gaussian Blur</string>
    </property>
@@ -1595,15 +1597,18 @@
     <string>Saturation</string>
    </property>
    <property name="visible">
-    <bool>false</bool>
+    <bool>true</bool>
    </property>
   </action>
   <action name="actionColor_Balance">
+   <property name="enabled">
+    <bool>true</bool>
+   </property>
    <property name="text">
     <string>Color Balance</string>
    </property>
    <property name="visible">
-    <bool>false</bool>
+    <bool>true</bool>
    </property>
   </action>
   <action name="actionSave">
@@ -1709,6 +1714,11 @@
   <action name="actionSaturation_Filter">
    <property name="text">
     <string>Saturation</string>
+   </property>
+  </action>
+  <action name="actionColor_Balance_2">
+   <property name="text">
+    <string>Color Balance</string>
    </property>
   </action>
  </widget>
