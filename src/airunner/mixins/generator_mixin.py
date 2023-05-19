@@ -248,6 +248,7 @@ class GeneratorMixin:
 
         self.initialize_size_form_elements()
         self.initialize_size_sliders()
+
         self.initialize_lora()
 
     def refresh_model_list(self):
@@ -860,8 +861,8 @@ class GeneratorMixin:
         available_lora = self.settings_manager.settings.available_loras.get()
         if tab_name not in available_lora:
             available_lora[tab_name] = []
-            self.settings_manager.enable_save()
-            available_lora[tab_name] = self.get_list_of_available_loras(tab_name, lora_path)
+        self.settings_manager.enable_save()
+        available_lora[tab_name] = self.get_list_of_available_loras(tab_name, lora_path)
         self.settings_manager.settings.available_loras.set(available_lora)
         self.settings_manager.save_settings()
         return available_lora[tab_name]
@@ -899,8 +900,7 @@ class GeneratorMixin:
     def load_lora_tab(self, tab, tab_name=None):
         container = QWidget()
         container.setLayout(QVBoxLayout())
-        available_loras = self.settings_manager.settings.available_loras.get()
-        available_loras = available_loras[tab_name]
+        available_loras = self.available_loras(tab_name)
         for lora in available_loras:
             lora_widget = self.load_template("lora")
             lora_widget.enabledCheckbox.setText(lora["name"])
