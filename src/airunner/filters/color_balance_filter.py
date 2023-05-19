@@ -1,5 +1,5 @@
-from PIL import ImageEnhance
 from PIL.ImageFilter import Filter
+from PIL import Image
 
 
 class ColorBalanceFilter(Filter):
@@ -11,8 +11,9 @@ class ColorBalanceFilter(Filter):
         self.yellow_blue = yellow_blue
 
     def filter(self, image):
-        # Apply enhancement
-        image = ImageEnhance.Color(image).enhance(1.0 + self.cyan_red)
-        image = ImageEnhance.Color(image).enhance(1.0 + self.magenta_green)
-        image = ImageEnhance.Color(image).enhance(1.0 + self.yellow_blue)
+        red, green, blue, alpha = image.split()
+        red = red.point(lambda i: i + (i * self.cyan_red))
+        green = green.point(lambda i: i + (i * self.magenta_green))
+        blue = blue.point(lambda i: i + (i * self.yellow_blue))
+        image = Image.merge("RGBA", (red, green, blue, alpha))
         return image
