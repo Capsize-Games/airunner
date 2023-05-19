@@ -29,33 +29,34 @@ class FilterRGBNoise(FilterBase):
         super().show()
 
         working_images = self.parent.canvas.working_images
-        image = working_images[0].image.copy()
+        if len(working_images) > 0:
+            image = working_images[0].image.copy()
 
-        self.red_grain = Image.new("L", image.size)
-        self.green_grain = Image.new("L", image.size)
-        self.blue_grain = Image.new("L", image.size)
+            self.red_grain = Image.new("L", image.size)
+            self.green_grain = Image.new("L", image.size)
+            self.blue_grain = Image.new("L", image.size)
 
-        self.red_grain.putdata([random.randint(0, 255) for i in range(image.size[0] * image.size[1])])
-        self.green_grain.putdata([random.randint(0, 255) for i in range(image.size[0] * image.size[1])])
-        self.blue_grain.putdata([random.randint(0, 255) for i in range(image.size[0] * image.size[1])])
+            self.red_grain.putdata([random.randint(0, 255) for i in range(image.size[0] * image.size[1])])
+            self.green_grain.putdata([random.randint(0, 255) for i in range(image.size[0] * image.size[1])])
+            self.blue_grain.putdata([random.randint(0, 255) for i in range(image.size[0] * image.size[1])])
 
-        self.filter_window.red_slider.setValue(0)
-        self.filter_window.green_slider.setValue(0)
-        self.filter_window.blue_slider.setValue(0)
+            self.filter_window.red_slider.setValue(0)
+            self.filter_window.green_slider.setValue(0)
+            self.filter_window.blue_slider.setValue(0)
 
-        self.filter_window.red_spinbox.setValue(0)
-        self.filter_window.green_spinbox.setValue(0)
-        self.filter_window.blue_spinbox.setValue(0)
+            self.filter_window.red_spinbox.setValue(0)
+            self.filter_window.green_spinbox.setValue(0)
+            self.filter_window.blue_spinbox.setValue(0)
 
-        self.filter_window.red_slider.valueChanged.connect(self.noise_red_slider_change)
-        self.filter_window.green_slider.valueChanged.connect(self.noise_green_slider_change)
-        self.filter_window.blue_slider.valueChanged.connect(self.noise_blue_slider_change)
+            self.filter_window.red_slider.valueChanged.connect(self.noise_red_slider_change)
+            self.filter_window.green_slider.valueChanged.connect(self.noise_green_slider_change)
+            self.filter_window.blue_slider.valueChanged.connect(self.noise_blue_slider_change)
 
-        self.filter_window.red_spinbox.valueChanged.connect(self.noise_red_spinbox_change)
-        self.filter_window.green_spinbox.valueChanged.connect(self.noise_green_spinbox_change)
-        self.filter_window.blue_spinbox.valueChanged.connect(self.noise_blue_spinbox_change)
-        self.filter_window.buttonBox.rejected.connect(self.cancel_filter)
-        self.filter_window.buttonBox.accepted.connect(self.apply_filter)
+            self.filter_window.red_spinbox.valueChanged.connect(self.noise_red_spinbox_change)
+            self.filter_window.green_spinbox.valueChanged.connect(self.noise_green_spinbox_change)
+            self.filter_window.blue_spinbox.valueChanged.connect(self.noise_blue_spinbox_change)
+            self.filter_window.buttonBox.rejected.connect(self.cancel_filter)
+            self.filter_window.buttonBox.accepted.connect(self.apply_filter)
         self.preview_filter()
         self.filter_window.exec()
 
