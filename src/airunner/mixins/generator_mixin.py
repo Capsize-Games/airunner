@@ -276,17 +276,11 @@ class GeneratorMixin:
             path = self.settings_manager.settings.model_base_path.get()
         new_models = load_models_from_path(path)
         
-        for model in default_models:
-            if model not in models:
-                models.append(model)
-
-        for model in new_models:
-            if model not in models:
-                models.append(model)
-        
+        default_models += new_models
+        models += default_models
         self.models = models
 
-        tab.model_dropdown.addItems(models)
+        tab.model_dropdown.addItems(default_models)
 
     def reset_settings(self):
         self.settings_manager.reset_settings_to_default()
