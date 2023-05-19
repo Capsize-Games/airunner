@@ -9,4 +9,6 @@ class SaturationFilter(Filter):
         self.factor = factor
 
     def filter(self, image):
-        return ImageEnhance.Color(image).enhance(1.0 + self.factor)
+        # limit self.factor to 2 decimal places
+        self.factor = round(self.factor, 2)
+        return ImageEnhance.Color(image).enhance(self.factor)

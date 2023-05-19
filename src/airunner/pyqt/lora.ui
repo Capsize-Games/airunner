@@ -6,8 +6,8 @@
    <rect>
     <x>0</x>
     <y>0</y>
-    <width>168</width>
-    <height>77</height>
+    <width>378</width>
+    <height>108</height>
    </rect>
   </property>
   <property name="windowTitle">
@@ -16,14 +16,17 @@
   <layout class="QGridLayout" name="gridLayout_2">
    <item row="0" column="0">
     <layout class="QGridLayout" name="gridLayout">
-     <item row="0" column="0">
-      <widget class="QCheckBox" name="enabledCheckbox">
-       <property name="text">
-        <string>Some specific lora</string>
+     <item row="4" column="0">
+      <widget class="QLineEdit" name="trigger_word">
+       <property name="toolTip">
+        <string>&lt;html&gt;&lt;head/&gt;&lt;body&gt;&lt;p&gt;Some LoRA require a trigger word to activate.&lt;/p&gt;&lt;p&gt;Make a note here for your records.&lt;/p&gt;&lt;/body&gt;&lt;/html&gt;</string>
+       </property>
+       <property name="placeholderText">
+        <string>Trigger word</string>
        </property>
       </widget>
      </item>
-     <item row="1" column="0">
+     <item row="3" column="0">
       <layout class="QHBoxLayout" name="horizontalLayout">
        <item>
         <widget class="QSlider" name="scaleSlider">
@@ -46,6 +49,13 @@
         </widget>
        </item>
       </layout>
+     </item>
+     <item row="0" column="0">
+      <widget class="QCheckBox" name="enabledCheckbox">
+       <property name="text">
+        <string>Some specific lora</string>
+       </property>
+      </widget>
      </item>
     </layout>
    </item>

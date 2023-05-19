@@ -10,6 +10,7 @@ from PyQt6.QtWidgets import QWidget, QVBoxLayout, QScrollArea
 from PyQt6.uic.exceptions import UIFileException
 from aihandler.settings import MAX_SEED, AVAILABLE_SCHEDULERS_BY_ACTION, MODELS
 from airunner.windows.video import VideoPopup
+from airunner.utils import load_default_models, load_models_from_path
 from PIL import PngImagePlugin
 
 class GeneratorMixin:
@@ -40,6 +41,22 @@ class GeneratorMixin:
     @steps.setter
     def steps(self, val):
         self.settings.steps.set(val)
+
+    @property
+    def prompt(self):
+        return self.settings.prompt.get()
+
+    @prompt.setter
+    def prompt(self, val):
+        self.settings.prompt.set(val)
+
+    @property
+    def negative_prompt(self):
+        return self.settings.negative_prompt.get()
+
+    @negative_prompt.setter
+    def negative_prompt(self, val):
+        self.settings.negative_prompt.set(val)
 
     @property
     def scale(self):
@@ -106,6 +123,8 @@ class GeneratorMixin:
         self.settings.scheduler_var.set(val)
 
     def initialize(self):
+        self.settings_manager.settings.model_base_path.my_signal.connect(self.refresh_model_list)
+
         sections = ["txt2img", "img2img", "depth2img", "pix2pix", "outpaint", "controlnet", "txt2vid"]
         self.tabs = {}
         for tab in self.sections:
@@ -147,6 +166,10 @@ class GeneratorMixin:
         # iterate over each tab and connect steps_slider with steps_spinbox
         for tab_name in self.tabs.keys():
             tab = self.tabs[tab_name]
+
+            # tab.prompt is QPlainTextEdit - on text change, call handle_prompt_change
+            tab.prompt.textChanged.connect(lambda _tab=tab: self.handle_prompt_change(_tab))
+            tab.negative_prompt.textChanged.connect(lambda _tab=tab: self.handle_negative_prompt_change(_tab))
 
             tab.steps_slider.valueChanged.connect(lambda val, _tab=tab: self.handle_steps_slider_change(val, _tab))
             tab.steps_spinbox.valueChanged.connect(lambda val, _tab=tab: self.handle_steps_spinbox_change(val, _tab))
@@ -226,6 +249,38 @@ class GeneratorMixin:
         self.initialize_size_form_elements()
         self.initialize_size_sliders()
         self.initialize_lora()
+
+    def refresh_model_list(self):
+        for i in range(self.window.tabWidget.count()):
+            tab = self.window.tabWidget.widget(i)
+            self.clear_model_list(tab)
+            self.load_model_by_section(tab, self.sections[i])
+
+    def clear_model_list(self, tab):
+        tab.model_dropdown.clear()
+
+    def load_model_by_section(self, tab, section_name):
+        if section_name in ["txt2img", "img2img"]:
+            section_name = "generate"
+
+        models = self.models if self.models else []
+        default_models = load_default_models(section_name)
+        path = ""
+        if section_name == "depth2img":
+            path = self.settings_manager.settings.depth2img_model_path.get()
+        elif section_name == "pix2pix":
+            path = self.settings_manager.settings.pix2pix_model_path.get()
+        elif section_name == "outpaint":
+            path = self.settings_manager.settings.outpaint_model_path.get()
+        if not path or path == "":
+            path = self.settings_manager.settings.model_base_path.get()
+        new_models = load_models_from_path(path)
+        
+        default_models += new_models
+        models += default_models
+        self.models = models
+
+        tab.model_dropdown.addItems(default_models)
 
     def reset_settings(self):
         self.settings_manager.reset_settings_to_default()
@@ -388,6 +443,12 @@ class GeneratorMixin:
     def handle_steps_slider_change(self, val, tab):
         tab.steps_spinbox.setValue(int(val))
         self.steps = int(val)
+
+    def handle_prompt_change(self, tab):
+        self.prompt = tab.prompt.toPlainText()
+
+    def handle_negative_prompt_change(self, tab):
+        self.negative_prompt = tab.negative_prompt.toPlainText()
 
     def handle_steps_spinbox_change(self, val, tab):
         tab.steps_slider.setValue(int(val))
@@ -601,6 +662,7 @@ class GeneratorMixin:
         section_name = action
         if section_name in ["txt2img", "img2img"]:
             section_name = "generate"
+
         if model in MODELS[section_name]:
             model_path = MODELS[section_name][model]["path"]
             model_branch = MODELS[section_name][model].get("branch", "main")
@@ -610,7 +672,14 @@ class GeneratorMixin:
             model_path = MODELS[section_name][model]["path"]
             model_branch = MODELS[section_name][model].get("branch", "main")
         else:
-            model_path = model
+            path = self.settings_manager.settings.model_base_path.get()
+            if action == "depth2img":
+                path = self.settings_manager.settings.depth2img_model_path.get()
+            elif action == "pix2pix":
+                path = self.settings_manager.settings.pix2pix_model_path.get()
+            elif action == "outpaint":
+                path = self.settings_manager.settings.outpaint_model_path.get()
+            model_path = os.path.join(path, model)
 
         # get controlnet_dropdown from active tab
         use_controlnet = False
@@ -622,10 +691,12 @@ class GeneratorMixin:
             controlnet = controlnet.lower()
             use_controlnet = controlnet != "none"
 
-        try:
-            available_lora = self.settings_manager.settings.available_loras[action]
-        except KeyError:
-            available_lora = []
+        available_lora = self.settings_manager.settings.available_loras.get()
+        loras = available_lora[action]
+        available_lora = []
+        for lora in loras:
+            if lora["enabled"] and lora["scale"] > 0:
+                available_lora.append(lora)
 
         options = {
             f"{action}_prompt": prompt,
@@ -700,6 +771,8 @@ class GeneratorMixin:
 
     def set_default_values(self, section, tab):
         self.override_section = section
+        tab.prompt.setPlainText(self.prompt)
+        tab.negative_prompt.setPlainText(self.negative_prompt)
         tab.steps_spinbox.setValue(self.steps)
         tab.scale_spinbox.setValue(self.scale / 100)
         if section == "pix2pix":
@@ -772,10 +845,10 @@ class GeneratorMixin:
         self.refresh_lora()
 
     def refresh_lora(self):
-        self.settings_manager.settings.available_loras = {}
         for tab_name in self.tabs.keys():
             tab = self.tabs[tab_name]
             self.load_lora_tab(tab, tab_name)
+        self.initialize_lora_trigger_words()
 
     def available_loras(self, tab_name):
         base_path = self.settings_manager.settings.model_base_path.get()
@@ -784,12 +857,14 @@ class GeneratorMixin:
             lora_path = os.path.join(base_path, lora_path)
         if not os.path.exists(lora_path):
             return []
-        if tab_name not in self.settings_manager.settings.available_loras.keys():
-            self.settings_manager.settings.available_loras[tab_name] = []
+        available_lora = self.settings_manager.settings.available_loras.get()
+        if tab_name not in available_lora:
+            available_lora[tab_name] = []
             self.settings_manager.enable_save()
-            self.settings_manager.settings.available_loras[tab_name] = self.get_list_of_available_loras(tab_name, lora_path)
-            self.settings_manager.save_settings()
-        return self.settings_manager.settings.available_loras[tab_name]
+            available_lora[tab_name] = self.get_list_of_available_loras(tab_name, lora_path)
+        self.settings_manager.settings.available_loras.set(available_lora)
+        self.settings_manager.save_settings()
+        return available_lora[tab_name]
 
     def get_list_of_available_loras(self, tab_name, lora_path, lora_names=None):
         if lora_names is None:
@@ -797,16 +872,17 @@ class GeneratorMixin:
         if not os.path.exists(lora_path):
             return lora_names
         possible_line_endings = ["ckpt", "safetensors", "bin"]
-        for f in os.listdir(lora_path):
-            if os.path.isdir(os.path.join(lora_path, f)):
+        for lora_file in os.listdir(lora_path):
+            if os.path.isdir(os.path.join(lora_path, lora_file)):
                 lora_names = self.get_list_of_available_loras(tab_name, os.path.join(lora_path, f), lora_names)
-            if f.split(".")[-1] in possible_line_endings:
-                name = f.split(".")[0]
+            if lora_file.split(".")[-1] in possible_line_endings:
+                name = lora_file.split(".")[0]
                 scale = 100.0
                 enabled = True
                 # check if we have scale in self.settings_manager.settings.available_loras[tab_name]
-                if tab_name in self.settings_manager.settings.available_loras:
-                    loras = self.settings_manager.settings.available_loras[tab_name] or []
+                available_lora = self.settings_manager.settings.available_loras.get()
+                if tab_name in available_lora:
+                    loras = available_lora[tab_name] or []
                     for lora in loras:
                         if lora["name"] == name:
                             scale = lora["scale"]
@@ -823,29 +899,60 @@ class GeneratorMixin:
     def load_lora_tab(self, tab, tab_name=None):
         container = QWidget()
         container.setLayout(QVBoxLayout())
-        for lora in self.available_loras(tab_name):
-            lora_widget = self.load_template("lora_simplified")
-            #lora_widget.enabledCheckbox.setText(lora["name"])
-            lora_widget.label.setText(lora["name"])
-            # scale = lora["scale"]
-            # enabled = lora["enabled"]
-            # lora_widget.scaleSlider.setValue(int(scale))
-            # lora_widget.scaleSpinBox.setValue(scale / 100)
-            # lora_widget.enabledCheckbox.setChecked(enabled)
+        available_loras = self.settings_manager.settings.available_loras.get()
+        available_loras = available_loras[tab_name]
+        for lora in available_loras:
+            lora_widget = self.load_template("lora")
+            lora_widget.enabledCheckbox.setText(lora["name"])
+            #lora_widget.label.setText(lora["name"])
+            scale = lora["scale"]
+            enabled = lora["enabled"]
+            lora_widget.scaleSlider.setValue(int(scale))
+            lora_widget.scaleSpinBox.setValue(scale / 100)
+            lora_widget.enabledCheckbox.setChecked(enabled)
             container.layout().addWidget(lora_widget)
-            # lora_widget.scaleSlider.valueChanged.connect(
-            #     lambda value, _lora_widget=lora_widget, _lora=lora, _tab_name=tab_name:
-            #     self.handle_lora_slider(_lora, _lora_widget, value, _tab_name))
-            # lora_widget.scaleSpinBox.valueChanged.connect(
-            #     lambda value, _lora_widget=lora_widget, _lora=lora, _tab_name=tab_name:
-            #     self.handle_lora_spinbox(_lora, _lora_widget, value, _tab_name))
-            # lora_widget.enabledCheckbox.stateChanged.connect(
-            #     lambda value, _lora=lora, _tab_name=tab_name:
-            #     self.toggle_lora(lora, value, _tab_name))
+            lora_widget.trigger_word.textChanged.connect(
+                        lambda value, _lora_widget=lora_widget, _lora=lora, _tab_name=tab_name: self.handle_lora_trigger_word(_lora, _lora_widget, value))
+            lora_widget.scaleSlider.valueChanged.connect(
+                lambda value, _lora_widget=lora_widget, _lora=lora, _tab_name=tab_name: self.handle_lora_slider(_lora, _lora_widget, value, _tab_name))
+            lora_widget.scaleSpinBox.valueChanged.connect(
+                lambda value, _lora_widget=lora_widget, _lora=lora, _tab_name=tab_name: self.handle_lora_spinbox(_lora, _lora_widget, value, _tab_name))
+            lora_widget.enabledCheckbox.stateChanged.connect(
+                lambda value, _lora=lora, _tab_name=tab_name: self.toggle_lora(_lora, value, _tab_name))
         # add a vertical spacer to the end of the container
         container.layout().addStretch()
         # display tabs of tab.PromptTabsSection which is a QTabWidget
         tab.lora_scroll_area.setWidget(container)
+    
+    def initialize_lora_trigger_words(self):
+        available_loras = self.settings_manager.settings.available_loras.get()
+        available_loras = available_loras['txt2img']
+
+        for lora in available_loras:
+            trigger_word = lora["trigger_word"] if "trigger_word" in lora else ""
+            for tab_name in self.tabs.keys():
+                tab = self.tabs[tab_name]
+                for i in range(tab.lora_scroll_area.widget().layout().count()):
+                    lora_widget = tab.lora_scroll_area.widget().layout().itemAt(i).widget()
+                    if lora_widget.enabledCheckbox.text() == lora["name"]:
+                        if trigger_word != "":
+                            lora_widget.trigger_word.setText(trigger_word)
+                        break
+
+    def handle_lora_trigger_word(self, lora, lora_widget, value):
+        available_loras = self.settings_manager.settings.available_loras.get()
+        for tab_name in self.tabs.keys():
+            for n in range(len(available_loras[tab_name])):
+                if available_loras[tab_name][n]["name"] == lora["name"]:
+                    available_loras[tab_name][n]["trigger_word"] = value
+                    lora_widget = None
+                    for i in range(self.tabs[tab_name].lora_scroll_area.widget().layout().count()):
+                        lora_widget = self.tabs[tab_name].lora_scroll_area.widget().layout().itemAt(i).widget()
+                        if lora_widget.enabledCheckbox.text() == lora["name"]:
+                            lora_widget.trigger_word.setText(value)
+                            break
+        self.settings_manager.settings.available_loras.set(available_loras)
+        self.settings_manager.save_settings()
 
     def load_template(self, template_name):
         try:
@@ -855,21 +962,27 @@ class GeneratorMixin:
             return None
 
     def toggle_lora(self, lora, value, tab_name):
-        for n in range(len(self.available_loras(tab_name))):
-            if self.settings_manager.settings.available_loras[tab_name][n]["name"] == lora["name"]:
-                self.settings_manager.settings.available_loras[tab_name][n]["enabled"] = value == 2
+        available_loras = self.settings_manager.settings.available_loras.get()
+        for n in range(len(available_loras[tab_name])):
+            if available_loras[tab_name][n]["name"] == lora["name"]:
+                available_loras[tab_name][n]["enabled"] = value == 2
+        self.settings_manager.settings.available_loras.set(available_loras)
         self.settings_manager.save_settings()
 
     def handle_lora_slider(self, lora, lora_widget, value, tab_name):
-        for n in range(len(self.available_loras(tab_name))):
-            if self.settings_manager.settings.available_loras[tab_name][n]["name"] == lora["name"]:
-                self.settings_manager.settings.available_loras[tab_name][n]["scale"] = value / 100
+        available_loras = self.settings_manager.settings.available_loras.get()
+        for n in range(len(available_loras[tab_name])):
+            if available_loras[tab_name][n]["name"] == lora["name"]:
+                available_loras[tab_name][n]["scale"] = value / 100
         lora_widget.scaleSpinBox.setValue(lora["scale"])
+        self.settings_manager.settings.available_loras.set(available_loras)
         self.settings_manager.save_settings()
 
     def handle_lora_spinbox(self, lora, lora_widget, value, tab_name):
-        for n in range(len(self.available_loras(tab_name))):
-            if self.settings_manager.settings.available_loras[tab_name][n]["name"] == lora["name"]:
-                self.settings_manager.settings.available_loras[tab_name][n]["scale"] = value * 100
+        available_loras = self.settings_manager.settings.available_loras.get()
+        for n in range(len(available_loras[tab_name])):
+            if available_loras[tab_name][n]["name"] == lora["name"]:
+                available_loras[tab_name][n]["scale"] = value * 100
         lora_widget.scaleSlider.setValue(int(lora["scale"]))
+        self.settings_manager.settings.available_loras.set(available_loras)
         self.settings_manager.save_settings()

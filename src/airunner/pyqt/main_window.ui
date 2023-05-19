@@ -8,13 +8,13 @@
     <x>0</x>
     <y>0</y>
     <width>1195</width>
-    <height>788</height>
+    <height>880</height>
    </rect>
   </property>
   <property name="minimumSize">
    <size>
     <width>1195</width>
-    <height>788</height>
+    <height>880</height>
    </size>
   </property>
   <property name="windowTitle">
@@ -162,7 +162,7 @@
             <x>0</x>
             <y>0</y>
             <width>239</width>
-            <height>272</height>
+            <height>364</height>
            </rect>
           </property>
           <property name="sizePolicy">
@@ -1393,13 +1393,21 @@
     <property name="title">
      <string>Filters</string>
     </property>
-    <addaction name="actionGaussian_Blur"/>
-    <addaction name="actionBox_Blur"/>
+    <widget class="QMenu" name="menuBlur">
+     <property name="title">
+      <string>Blur</string>
+     </property>
+     <addaction name="separator"/>
+     <addaction name="actionGaussian_Blur_2"/>
+     <addaction name="actionBox_Blur_2"/>
+    </widget>
+    <addaction name="menuBlur"/>
     <addaction name="separator"/>
-    <addaction name="actionUnsharp_Mask"/>
-    <addaction name="actionPixel_Art"/>
-    <addaction name="actionSaturation"/>
     <addaction name="actionColor_Balance"/>
+    <addaction name="actionSaturation_Filter"/>
+    <addaction name="actionUnsharp_Mask"/>
+    <addaction name="actionRGB_Noise"/>
+    <addaction name="actionPixel_Art"/>
     <addaction name="separator"/>
     <addaction name="actionInvert"/>
    </widget>
@@ -1415,9 +1423,16 @@
     <addaction name="actionReport_vulnerability"/>
     <addaction name="actionDiscord"/>
    </widget>
+   <widget class="QMenu" name="menuModel_merge">
+    <property name="title">
+     <string>Tools</string>
+    </property>
+    <addaction name="actionModel_Merger"/>
+   </widget>
    <addaction name="menuFile"/>
    <addaction name="menuEdit"/>
    <addaction name="menuSettings"/>
+   <addaction name="menuModel_merge"/>
    <addaction name="menuFilters"/>
    <addaction name="menuAbout"/>
   </widget>
@@ -1555,6 +1570,9 @@
    </property>
   </action>
   <action name="actionGaussian_Blur">
+   <property name="enabled">
+    <bool>true</bool>
+   </property>
    <property name="text">
     <string>Gaussian Blur</string>
    </property>
@@ -1587,15 +1605,18 @@
     <string>Saturation</string>
    </property>
    <property name="visible">
-    <bool>false</bool>
+    <bool>true</bool>
    </property>
   </action>
   <action name="actionColor_Balance">
+   <property name="enabled">
+    <bool>true</bool>
+   </property>
    <property name="text">
     <string>Color Balance</string>
    </property>
    <property name="visible">
-    <bool>false</bool>
+    <bool>true</bool>
    </property>
   </action>
   <action name="actionSave">
@@ -1691,6 +1712,36 @@
    </property>
    <property name="text">
     <string>Check for latest version on startup</string>
+   </property>
+  </action>
+  <action name="actionModel_Merger">
+   <property name="text">
+    <string>Model Merger</string>
+   </property>
+  </action>
+  <action name="actionSaturation_Filter">
+   <property name="text">
+    <string>Saturation</string>
+   </property>
+  </action>
+  <action name="actionColor_Balance_2">
+   <property name="text">
+    <string>Color Balance</string>
+   </property>
+  </action>
+  <action name="actionRGB_Noise">
+   <property name="text">
+    <string>RGB Noise</string>
+   </property>
+  </action>
+  <action name="actionGaussian_Blur_2">
+   <property name="text">
+    <string>Gaussian Blur</string>
+   </property>
+  </action>
+  <action name="actionBox_Blur_2">
+   <property name="text">
+    <string>Box Blur</string>
    </property>
   </action>
  </widget>
