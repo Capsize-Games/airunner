@@ -1415,9 +1415,16 @@
     <addaction name="actionReport_vulnerability"/>
     <addaction name="actionDiscord"/>
    </widget>
+   <widget class="QMenu" name="menuModel_merge">
+    <property name="title">
+     <string>Tools</string>
+    </property>
+    <addaction name="actionModel_Merger"/>
+   </widget>
    <addaction name="menuFile"/>
    <addaction name="menuEdit"/>
    <addaction name="menuSettings"/>
+   <addaction name="menuModel_merge"/>
    <addaction name="menuFilters"/>
    <addaction name="menuAbout"/>
   </widget>
@@ -1691,6 +1698,11 @@
    </property>
    <property name="text">
     <string>Check for latest version on startup</string>
+   </property>
+  </action>
+  <action name="actionModel_Merger">
+   <property name="text">
+    <string>Model Merger</string>
    </property>
   </action>
  </widget>
