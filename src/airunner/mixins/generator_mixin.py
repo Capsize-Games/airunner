@@ -697,10 +697,12 @@ class GeneratorMixin:
             controlnet = controlnet.lower()
             use_controlnet = controlnet != "none"
 
-        try:
-            available_lora = self.settings_manager.settings.available_loras[action]
-        except KeyError:
-            available_lora = []
+        available_lora = self.settings_manager.settings.available_loras.get()
+        loras = available_lora[action]
+        available_lora = []
+        for lora in loras:
+            if lora["enabled"] and lora["scale"] > 0:
+                available_lora.append(lora)
 
         options = {
             f"{action}_prompt": prompt,
@@ -849,7 +851,6 @@ class GeneratorMixin:
         self.refresh_lora()
 
     def refresh_lora(self):
-        self.settings_manager.settings.available_loras = {}
         for tab_name in self.tabs.keys():
             tab = self.tabs[tab_name]
             self.load_lora_tab(tab, tab_name)
@@ -861,12 +862,14 @@ class GeneratorMixin:
             lora_path = os.path.join(base_path, lora_path)
         if not os.path.exists(lora_path):
             return []
-        if tab_name not in self.settings_manager.settings.available_loras.keys():
-            self.settings_manager.settings.available_loras[tab_name] = []
+        available_lora = self.settings_manager.settings.available_loras.get()
+        if tab_name not in available_lora:
+            available_lora[tab_name] = []
             self.settings_manager.enable_save()
-            self.settings_manager.settings.available_loras[tab_name] = self.get_list_of_available_loras(tab_name, lora_path)
-            self.settings_manager.save_settings()
-        return self.settings_manager.settings.available_loras[tab_name]
+            available_lora[tab_name] = self.get_list_of_available_loras(tab_name, lora_path)
+        self.settings_manager.settings.available_loras.set(available_lora)
+        self.settings_manager.save_settings()
+        return available_lora[tab_name]
 
     def get_list_of_available_loras(self, tab_name, lora_path, lora_names=None):
         if lora_names is None:
@@ -882,8 +885,9 @@ class GeneratorMixin:
                 scale = 100.0
                 enabled = True
                 # check if we have scale in self.settings_manager.settings.available_loras[tab_name]
-                if tab_name in self.settings_manager.settings.available_loras:
-                    loras = self.settings_manager.settings.available_loras[tab_name] or []
+                available_lora = self.settings_manager.settings.available_loras.get()
+                if tab_name in available_lora:
+                    loras = available_lora[tab_name] or []
                     for lora in loras:
                         if lora["name"] == name:
                             scale = lora["scale"]
@@ -900,25 +904,24 @@ class GeneratorMixin:
     def load_lora_tab(self, tab, tab_name=None):
         container = QWidget()
         container.setLayout(QVBoxLayout())
-        for lora in self.available_loras(tab_name):
-            lora_widget = self.load_template("lora_simplified")
-            #lora_widget.enabledCheckbox.setText(lora["name"])
-            lora_widget.label.setText(lora["name"])
-            # scale = lora["scale"]
-            # enabled = lora["enabled"]
-            # lora_widget.scaleSlider.setValue(int(scale))
-            # lora_widget.scaleSpinBox.setValue(scale / 100)
-            # lora_widget.enabledCheckbox.setChecked(enabled)
+        available_loras = self.settings_manager.settings.available_loras.get()
+        available_loras = available_loras[tab_name]
+        for lora in available_loras:
+            lora_widget = self.load_template("lora")
+            lora_widget.enabledCheckbox.setText(lora["name"])
+            #lora_widget.label.setText(lora["name"])
+            scale = lora["scale"]
+            enabled = lora["enabled"]
+            lora_widget.scaleSlider.setValue(int(scale))
+            lora_widget.scaleSpinBox.setValue(scale / 100)
+            lora_widget.enabledCheckbox.setChecked(enabled)
             container.layout().addWidget(lora_widget)
-            # lora_widget.scaleSlider.valueChanged.connect(
-            #     lambda value, _lora_widget=lora_widget, _lora=lora, _tab_name=tab_name:
-            #     self.handle_lora_slider(_lora, _lora_widget, value, _tab_name))
-            # lora_widget.scaleSpinBox.valueChanged.connect(
-            #     lambda value, _lora_widget=lora_widget, _lora=lora, _tab_name=tab_name:
-            #     self.handle_lora_spinbox(_lora, _lora_widget, value, _tab_name))
-            # lora_widget.enabledCheckbox.stateChanged.connect(
-            #     lambda value, _lora=lora, _tab_name=tab_name:
-            #     self.toggle_lora(lora, value, _tab_name))
+            lora_widget.scaleSlider.valueChanged.connect(
+                lambda value, _lora_widget=lora_widget, _lora=lora, _tab_name=tab_name: self.handle_lora_slider(_lora, _lora_widget, value, _tab_name))
+            lora_widget.scaleSpinBox.valueChanged.connect(
+                lambda value, _lora_widget=lora_widget, _lora=lora, _tab_name=tab_name: self.handle_lora_spinbox(_lora, _lora_widget, value, _tab_name))
+            lora_widget.enabledCheckbox.stateChanged.connect(
+                lambda value, _lora=lora, _tab_name=tab_name: self.toggle_lora(_lora, value, _tab_name))
         # add a vertical spacer to the end of the container
         container.layout().addStretch()
         # display tabs of tab.PromptTabsSection which is a QTabWidget
@@ -932,21 +935,27 @@ class GeneratorMixin:
             return None
 
     def toggle_lora(self, lora, value, tab_name):
-        for n in range(len(self.available_loras(tab_name))):
-            if self.settings_manager.settings.available_loras[tab_name][n]["name"] == lora["name"]:
-                self.settings_manager.settings.available_loras[tab_name][n]["enabled"] = value == 2
+        available_loras = self.settings_manager.settings.available_loras.get()
+        for n in range(len(available_loras[tab_name])):
+            if available_loras[tab_name][n]["name"] == lora["name"]:
+                available_loras[tab_name][n]["enabled"] = value == 2
+        self.settings_manager.settings.available_loras.set(available_loras)
         self.settings_manager.save_settings()
 
     def handle_lora_slider(self, lora, lora_widget, value, tab_name):
-        for n in range(len(self.available_loras(tab_name))):
-            if self.settings_manager.settings.available_loras[tab_name][n]["name"] == lora["name"]:
-                self.settings_manager.settings.available_loras[tab_name][n]["scale"] = value / 100
+        available_loras = self.settings_manager.settings.available_loras.get()
+        for n in range(len(available_loras[tab_name])):
+            if available_loras[tab_name][n]["name"] == lora["name"]:
+                available_loras[tab_name][n]["scale"] = value / 100
         lora_widget.scaleSpinBox.setValue(lora["scale"])
+        self.settings_manager.settings.available_loras.set(available_loras)
         self.settings_manager.save_settings()
 
     def handle_lora_spinbox(self, lora, lora_widget, value, tab_name):
-        for n in range(len(self.available_loras(tab_name))):
-            if self.settings_manager.settings.available_loras[tab_name][n]["name"] == lora["name"]:
-                self.settings_manager.settings.available_loras[tab_name][n]["scale"] = value * 100
+        available_loras = self.settings_manager.settings.available_loras.get()
+        for n in range(len(available_loras[tab_name])):
+            if available_loras[tab_name][n]["name"] == lora["name"]:
+                available_loras[tab_name][n]["scale"] = value * 100
         lora_widget.scaleSlider.setValue(int(lora["scale"]))
+        self.settings_manager.settings.available_loras.set(available_loras)
         self.settings_manager.save_settings()
