@@ -1,5 +1,7 @@
 import os
+import typing
 from PyQt6 import uic
+from PyQt6.QtCore import pyqtSlot, Qt, QThread, pyqtSignal, QObject
 from PyQt6.QtWidgets import QVBoxLayout
 from aihandler.settings import MODELS
 from airunner.utils import load_default_models, load_models_from_path
@@ -39,7 +41,9 @@ class ModelMerger(BaseWindow):
         self.template.merge_button.clicked.connect(self.merge_models)
         self.template.addModel_button.clicked.connect(self.add_new_model)
 
-    def load_models(self):
+    @property
+    def section(self):
+        action = "generate"
         if self.model_type == "txt2img / img2img":
             action = "generate"
         elif self.model_type == "inpaint / outpaint":
@@ -48,28 +52,44 @@ class ModelMerger(BaseWindow):
             action = "depth2img"
         elif self.model_type == "pix2pix":
             action = "pix2pix"
-        return load_default_models(action)
+        return action
+
+    @property
+    def output_path(self):
+        output_path = None
+        if self.section == "outpaint":
+            output_path = self.settings_manager.settings.outpaint_model_path.get()
+        elif self.section == "depth2img":
+            output_path = self.settings_manager.settings.depth2img_model_path.get()
+        elif self.section == "pix2pix":
+            output_path = self.settings_manager.settings.pix2pix_model_path.get()
+        if not output_path or output_path == "":
+            output_path = self.settings_manager.settings.model_base_path.get()
+        return output_path
+
+    def load_models(self):
+        return load_default_models(self.section)
 
     def change_model_type(self, index):
         self.model_type = self.template.model_types.currentText()
         self.models = []
-        if self.model_type == "txt2img / img2img":
+        if self.section == "generate":
             self.models = self.load_models()
             path = self.settings_manager.settings.model_base_path.get()
             self.models += load_models_from_path(path)
-        elif self.model_type == "inpaint / outpaint":
+        elif self.section == "outpaint":
             self.models = self.load_models()
             path = self.settings_manager.settings.outpaint_model_path.get()
             if not path or path == "":
                 path = self.settings_manager.settings.model_base_path.get()
             self.models += load_models_from_path(path)
-        elif self.model_type == "depth2img":
+        elif self.section == "depth2img":
             self.models = self.load_models()
             path = self.settings_manager.settings.depth2img_model_path.get()
             if not path or path == "":
                 path = self.settings_manager.settings.model_base_path.get()
             self.models += self.load_models()
-        elif self.model_type == "pix2pix":
+        elif self.section == "pix2pix":
             self.models = load_default_models("pix2pix")
             path = self.settings_manager.settings.pix2pix_model_path.get()
             if not path or path == "":
@@ -127,10 +147,40 @@ class ModelMerger(BaseWindow):
         for n in range(self.template.models.count()):
             self.template.models.setTabText(n, f"Model {n+1}")
 
+    def start_progress_bar(self):
+        self.template.progressBar.setRange(0, 0)
+    
+    def stop_progress_bar(self):
+        self.template.progressBar.reset()
+        self.template.progressBar.setRange(0, 100)
+
     def merge_models(self):
-        output_path = self.settings_manager.settings.outpaint_model_path.get()
-        if not output_path or output_path == "":
-            output_path = self.settings_manager.settings.model_base_path.get()
+        self.start_progress_bar()
+        self.template.merge_button.setEnabled(False)
+        # call do_model_merge in a separate thread
+        self.merge_thread = QThread()
+        class ModelMergeWorker(QObject):
+            version = None
+            finished = pyqtSignal()
+            def __init__(self, *args, **kwargs) -> None:
+                self.do_model_merge = kwargs.pop("do_model_merge")
+                super().__init__(*args)
+            def merge(self):
+                self.version = f"v{self.do_model_merge()}"
+                self.finished.emit()
+        self.merge_worker = ModelMergeWorker(do_model_merge=self.do_model_merge)
+        self.merge_worker.moveToThread(self.merge_thread)
+        self.merge_thread.started.connect(self.merge_worker.merge)
+        self.merge_worker.finished.connect(self.finalize_merge)
+        self.merge_thread.start()
+    
+    def finalize_merge(self):
+        self.stop_progress_bar()
+        self.merge_thread.quit()
+        self.template.merge_button.setEnabled(True)
+    
+    def do_model_merge(self):
+        
         models = []
         weights = []
         path = self.settings_manager.settings.model_base_path.get()
@@ -145,9 +195,8 @@ class ModelMerger(BaseWindow):
                 })
 
         model = self.template.base_models.currentText()
-        section_name = "outpaint"
-        if model in MODELS[section_name]:
-            model_path = MODELS[section_name][model]["path"]
+        if model in MODELS[self.section]:
+            model_path = MODELS[self.section][model]["path"]
         else:
             model_path = model
 
@@ -155,6 +204,6 @@ class ModelMerger(BaseWindow):
             model_path,
             models,
             weights,
-            output_path,
+            self.output_path,
             self.template.model_name.text(),
         )
