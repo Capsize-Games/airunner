@@ -29,4 +29,4 @@ os.system("git pull")
 os.system("python3 -m pip install .")
 os.system("python3 -m pip uninstall nvidia-cublas-cu11 nvidia-cublas-cu12 -y")
 os.system("python3 -m pip install torch torchvision torchaudio --index-url https://download.pytorch.org/whl/cu118 --upgrade")
-
+os.system("python3 -m pip install git+https://github.com/w4ffl35/diffusers@v0.16.2 --force-reinstall --no-deps")
