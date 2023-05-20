@@ -1,16 +1,7 @@
 FROM ubuntu:20.04 as base_image
 USER root
 ENV TZ=America/Denver
-RUN ln -snf /usr/share/zoneinfo/$TZ /etc/localtime && echo $TZ > /etc/timezone \
-    && apt-get update \
-    && apt install software-properties-common -y \
-    && add-apt-repository ppa:ubuntu-toolchain-r/test \
-    && apt-get update \
-    && dpkg --add-architecture i386 \
-    && apt-get update \
-    && apt-get install -y libtinfo6 git wget software-properties-common gcc-9 g++-9 bash build-essential libssl-dev libffi-dev libgl1-mesa-dev nvidia-cuda-toolkit xclip libjpeg-dev zlib1g-dev libpng-dev --no-install-recommends \
-    && rm -rf /var/lib/apt/lists/* \
-    && update-alternatives --install /usr/bin/gcc gcc /usr/bin/gcc-9 60 --slave /usr/bin/g++ g++ /usr/bin/g++-9
+RUN ln -snf /usr/share/zoneinfo/$TZ /etc/localtime && echo $TZ > /etc/timezone
 
 FROM base_image as wine_support
 ENV WINEDEBUG=fixme-all
@@ -18,11 +9,14 @@ ENV DISPLAY=:0
 ENV WINEARCH=win64
 ENV WINEPREFIX=/home/.wine-win10
 RUN apt-get update \
+    && apt install -y wget gnupg2 software-properties-common \
     && wget -nc https://dl.winehq.org/wine-builds/winehq.key \
+    && dpkg --add-architecture i386 \
     && apt-key add winehq.key \
     && add-apt-repository 'deb https://dl.winehq.org/wine-builds/ubuntu/ focal main' \
     && apt-get update \
-    && apt-get install -y coreutils winbind xvfb winehq-stable winetricks x11-apps wine64 wine32 winbind cabextract --no-install-recommends \
+    && apt-get install -y wine-stable-amd64 \
+    && apt-get install -y coreutils winbind xvfb winehq-stable winetricks x11-apps wine64 winbind cabextract --install-recommends \
     && rm -rf /var/lib/apt/lists/* \
     && winetricks win10
 
@@ -68,19 +62,18 @@ FROM final as install_apps
 WORKDIR /app
 USER root
 ENV DISPLAY=:0
-RUN apt-get update \
-    && apt-get install -y mesa-utils --no-install-recommends \
-    && apt-get install -y libgl1-mesa-glx --no-install-recommends \
-    && wine64 C:\\Python310\\python.exe -m pip install --upgrade pyinstaller \
-    && wine64 reg add "HKEY_CURRENT_USER\Environment" /v PATH /t REG_EXPAND_SZ /d "C:\\;Z:\\app\\lib\\PortableGit\\cmd;C:\\Program Files\\NVIDIA\\CUDNN\\v8.6.0.163\\bin;C:\\Program Files\\NVIDIA GPU Computing Toolkit\\CUDA\\v11.7\\bin;C:\\Python310;C:\\Python310\\site-packages;C:\\Python310\\site-packages\\lib;%PATH%" /f \
-    && apt install git --no-install-recommends \
-    && rm -rf /var/lib/apt/lists/* \
-    && chown root:root /home/.wine-win10 \
-    && mkdir -p root:root /home/.wine-win10/drive_c/users/root && chown -R root:root root:root /home/.wine-win10/drive_c/users/root \
-    && chown -R root:root /home/.wine-win10/drive_c/users/root \
-    && mkdir -p /app/.cache/mesa_shader_cache && chown -R root:root /app/.cache/mesa_shader_cache \
-    && mkdir -p /home/.wine-win10/drive_c/users/root/AppData/Roaming && chown -R root:root /home/.wine-win10/drive_c/users/root/AppData/Roaming \
-    && mkdir -p /home/.wine-win10/drive_c/users/root/AppData/Local && chown -R root:root /home/.wine-win10/drive_c/users/root/AppData/Local
+RUN apt-get update
+RUN apt-get install -y mesa-utils --no-install-recommends
+RUN apt-get install -y libgl1-mesa-glx --no-install-recommends
+RUN wine64 C:\\Python310\\python.exe -m pip install --upgrade pyinstaller
+RUN wine64 reg add "HKEY_CURRENT_USER\Environment" /v PATH /t REG_EXPAND_SZ /d "C:\\;Z:\\app\\lib\\PortableGit\\cmd;C:\\Program Files\\NVIDIA\\CUDNN\\v8.6.0.163\\bin;C:\\Program Files\\NVIDIA GPU Computing Toolkit\\CUDA\\v11.7\\bin;C:\\Python310;C:\\Python310\\site-packages;C:\\Python310\\site-packages\\lib;%PATH%" /f
+RUN rm -rf /var/lib/apt/lists/*
+RUN chown root:root /home/.wine-win10
+RUN mkdir -p root:root /home/.wine-win10/drive_c/users/root && chown -R root:root root:root /home/.wine-win10/drive_c/users/root
+RUN chown -R root:root /home/.wine-win10/drive_c/users/root
+RUN mkdir -p /app/.cache/mesa_shader_cache && chown -R root:root /app/.cache/mesa_shader_cache
+RUN mkdir -p /home/.wine-win10/drive_c/users/root/AppData/Roaming && chown -R root:root /home/.wine-win10/drive_c/users/root/AppData/Roaming
+RUN mkdir -p /home/.wine-win10/drive_c/users/root/AppData/Local && chown -R root:root /home/.wine-win10/drive_c/users/root/AppData/Local
 
 FROM install_apps as install_upx
 RUN wget https://github.com/upx/upx/releases/download/v4.0.2/upx-4.0.2-win64.zip \
@@ -89,7 +82,7 @@ RUN wget https://github.com/upx/upx/releases/download/v4.0.2/upx-4.0.2-win64.zip
 
 FROM install_upx as install_libs
 USER root
-RUN wine64 C:\\Python310\\python.exe -m pip install torch==2.0.0 torchvision==0.15.1 torchaudio==2.0.1 --index-url https://download.pytorch.org/whl/cu117 \
+RUN wine64 C:\\Python310\\python.exe -m pip install torch torchvision --index-url https://download.pytorch.org/whl/cu118 --upgrade \
     && wine64 C:\\Python310\\python.exe -m pip install https://github.com/acpopescu/bitsandbytes/releases/download/v0.38.0-win0/bitsandbytes-0.38.1-py3-none-any.whl \
     && wine64 C:\\Python310\\python.exe -m pip install aihandler
 WORKDIR /app
