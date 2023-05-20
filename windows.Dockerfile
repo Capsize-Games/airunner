@@ -9,6 +9,7 @@ RUN ln -snf /usr/share/zoneinfo/$TZ /etc/localtime && echo $TZ > /etc/timezone \
     && dpkg --add-architecture i386 \
     && apt-get update \
     && apt-get install -y libtinfo6 git wget software-properties-common gcc-9 g++-9 bash build-essential libssl-dev libffi-dev libgl1-mesa-dev nvidia-cuda-toolkit xclip libjpeg-dev zlib1g-dev libpng-dev --no-install-recommends \
+    && apt-get autoremove -y \
     && rm -rf /var/lib/apt/lists/* \
     && update-alternatives --install /usr/bin/gcc gcc /usr/bin/gcc-9 60 --slave /usr/bin/g++ g++ /usr/bin/g++-9
 
@@ -26,7 +27,10 @@ RUN apt-get update \
 RUN aptitude install wine32:i386 -y
 RUN apt-get install -y coreutils winbind xvfb wine-stable-i386 winehq-stable winetricks x11-apps wine64
 RUN apt-get install -y winbind cabextract --no-install-recommends \
+    && aptitude autoclean -y \
+    && apt-get autoremove -y \
     && rm -rf /var/lib/apt/lists/* \
+    && rm -rf /var/lib/aptitude/* \
     && winetricks win10
 
 FROM wine_support as winegecko
@@ -43,6 +47,7 @@ RUN wget https://www.python.org/ftp/python/3.10.8/python-3.10.8-amd64.exe \
 FROM install_python as install_git
 RUN apt-get update \
     && apt-get install -y unzip --no-install-recommends \
+    && apt-get autoremove -y \
     && rm -rf /var/lib/apt/lists/* \
     && wget https://github.com/git-for-windows/git/releases/download/v2.40.0.windows.1/MinGit-2.40.0-64-bit.zip -O MinGit-2.40.0-64-bit.zip \
     && unzip -o MinGit-2.40.0-64-bit.zip -d /home/.wine-win10/drive_c/ \
@@ -77,6 +82,7 @@ RUN apt-get update \
     && xvfb-run -e /dev/stdout wine64 C:\\Python310\\python.exe -m pip install --upgrade pyinstaller \
     && xvfb-run -e /dev/stdout wine64 reg add "HKEY_CURRENT_USER\Environment" /v PATH /t REG_EXPAND_SZ /d "C:\\;Z:\\app\\lib\\PortableGit\\cmd;C:\\Program Files\\NVIDIA\\CUDNN\\v8.6.0.163\\bin;C:\\Program Files\\NVIDIA GPU Computing Toolkit\\CUDA\\v11.7\\bin;C:\\Python310;C:\\Python310\\site-packages;C:\\Python310\\site-packages\\lib;%PATH%" /f \
     && apt install git --no-install-recommends \
+    && apt-get autoremove -y \
     && rm -rf /var/lib/apt/lists/* \
     && chown root:root /home/.wine-win10 \
     && mkdir -p root:root /home/.wine-win10/drive_c/users/root && chown -R root:root root:root /home/.wine-win10/drive_c/users/root \
@@ -102,19 +108,19 @@ FROM install_libs as source_files
 RUN cp /usr/lib/x86_64-linux-gnu/wine/api-ms-win-shcore-scaling-l1-1-1.dll /home/.wine-win10/drive_c/api-ms-win-shcore-scaling-l1-1-1.dll
 
 FROM source_files as install_butler
-RUN wget https://broth.itch.ovh/butler/windows-amd64/15.21.0/archive/default -O butler-windows-amd64.zip
-RUN unzip butler-windows-amd64.zip -d butler-windows-amd64
-RUN mv butler-windows-amd64/butler.exe /home/.wine-win10/drive_c/Python310/Scripts/butler.exe
-RUN rm -rf butler-windows-amd64 butler-windows-amd64.zip
+RUN wget https://broth.itch.ovh/butler/windows-amd64/15.21.0/archive/default -O butler-windows-amd64.zip \
+    && unzip butler-windows-amd64.zip -d butler-windows-amd64 \
+    && mv butler-windows-amd64/butler.exe /home/.wine-win10/drive_c/Python310/Scripts/butler.exe \
+    && rm -rf butler-windows-amd64 butler-windows-amd64.zip
 
 FROM install_butler as diffusers_patch
 USER root
-RUN rm -f /tmp/.X99-lock
-RUN wget https://github.com/w4ffl35/diffusers/archive/refs/tags/v0.16.2.zip
-RUN unzip v0.16.2.zip
-RUN mv diffusers-0.16.2 /home/.wine-win10/drive_c/
-RUN rm -rf v0.16.2.zip
-RUN xvfb-run -e /dev/stdout wine64 C:\\Python310\\python.exe -m pip install C:\\diffusers-0.16.2 --no-deps --force-reinstall
+RUN rm -f /tmp/.X99-lock \
+    && wget https://github.com/w4ffl35/diffusers/archive/refs/tags/v0.16.2.zip \
+    && unzip v0.16.2.zip \
+    && mv diffusers-0.16.2 /home/.wine-win10/drive_c/ \
+    && rm -rf v0.16.2.zip \
+    && xvfb-run -e /dev/stdout wine64 C:\\Python310\\python.exe -m pip install C:\\diffusers-0.16.2 --no-deps --force-reinstall
 
 FROM diffusers_patch as build_files
 WORKDIR /app
