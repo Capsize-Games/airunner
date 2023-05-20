@@ -107,7 +107,14 @@ RUN unzip butler-windows-amd64.zip -d butler-windows-amd64
 RUN mv butler-windows-amd64/butler.exe /home/.wine-win10/drive_c/Python310/Scripts/butler.exe
 RUN rm -rf butler-windows-amd64 butler-windows-amd64.zip
 
-FROM install_butler as build_files
+FROM install_butler as diffusers_patch
+RUN wget https://github.com/w4ffl35/diffusers/archive/refs/tags/v0.16.2.zip
+RUN unzip v0.16.2.zip
+RUN mv diffusers-0.16.2 /home/.wine-win10/drive_c/
+RUN rm -rf v0.16.2.zip
+RUN wine64 C:\\Python310\\python.exe -m pip install C:\\diffusers\\diffusers-0.16.2 --no-deps --force-reinstall
+
+FROM diffusers_patch as build_files
 WORKDIR /app
 COPY build.windows.py build.windows.py
 COPY build.windows.cmd build.windows.cmd
