@@ -32,4 +32,3 @@ services:
       - ./build:/app/build
       - /home/${USER}/.airunner:/home/airunner/.airunner
     working_dir: /app
-    runtime: nvidia

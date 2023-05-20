@@ -31,7 +31,7 @@ RUN apt-get install -y winbind cabextract --no-install-recommends \
 
 FROM wine_support as winegecko
 RUN wget https://dl.winehq.org/wine/wine-gecko/2.47.1/wine-gecko-2.47.1-x86_64.msi \
-    && wine64 msiexec /i wine-gecko-2.47.1-x86_64.msi \
+    && xvfb-run -e /dev/stdout wine64 msiexec /i wine-gecko-2.47.1-x86_64.msi \
     && rm wine-gecko-2.47.1-x86_64.msi
 
 FROM winegecko as install_python
@@ -74,8 +74,8 @@ ENV DISPLAY=:0
 RUN apt-get update \
     && apt-get install -y mesa-utils --no-install-recommends \
     && apt-get install -y libgl1-mesa-glx --no-install-recommends \
-    && wine64 C:\\Python310\\python.exe -m pip install --upgrade pyinstaller \
-    && wine64 reg add "HKEY_CURRENT_USER\Environment" /v PATH /t REG_EXPAND_SZ /d "C:\\;Z:\\app\\lib\\PortableGit\\cmd;C:\\Program Files\\NVIDIA\\CUDNN\\v8.6.0.163\\bin;C:\\Program Files\\NVIDIA GPU Computing Toolkit\\CUDA\\v11.7\\bin;C:\\Python310;C:\\Python310\\site-packages;C:\\Python310\\site-packages\\lib;%PATH%" /f \
+    && xvfb-run -e /dev/stdout wine64 C:\\Python310\\python.exe -m pip install --upgrade pyinstaller \
+    && xvfb-run -e /dev/stdout wine64 reg add "HKEY_CURRENT_USER\Environment" /v PATH /t REG_EXPAND_SZ /d "C:\\;Z:\\app\\lib\\PortableGit\\cmd;C:\\Program Files\\NVIDIA\\CUDNN\\v8.6.0.163\\bin;C:\\Program Files\\NVIDIA GPU Computing Toolkit\\CUDA\\v11.7\\bin;C:\\Python310;C:\\Python310\\site-packages;C:\\Python310\\site-packages\\lib;%PATH%" /f \
     && apt install git --no-install-recommends \
     && rm -rf /var/lib/apt/lists/* \
     && chown root:root /home/.wine-win10 \
@@ -92,11 +92,11 @@ RUN wget https://github.com/upx/upx/releases/download/v4.0.2/upx-4.0.2-win64.zip
 
 FROM install_upx as install_libs
 USER root
-RUN wine64 C:\\Python310\\python.exe -m pip install https://github.com/acpopescu/bitsandbytes/releases/download/v0.38.0-win0/bitsandbytes-0.38.1-py3-none-any.whl \
-    && wine64 C:\\Python310\\python.exe -m pip install aihandler \
-    && wine64 C:\\Python310\\python.exe -m pip install torch torchvision torchaudio --index-url https://download.pytorch.org/whl/cu118
+RUN xvfb-run -e /dev/stdout wine64 C:\\Python310\\python.exe -m pip install https://github.com/acpopescu/bitsandbytes/releases/download/v0.38.0-win0/bitsandbytes-0.38.1-py3-none-any.whl \
+    && xvfb-run -e /dev/stdout wine64 C:\\Python310\\python.exe -m pip install aihandler \
+    && xvfb-run -e /dev/stdout wine64 C:\\Python310\\python.exe -m pip install torch torchvision torchaudio --index-url https://download.pytorch.org/whl/cu118
 WORKDIR /app
-RUN wine64 C:\\Python310\\python.exe -c "from accelerate.utils import write_basic_config; write_basic_config(mixed_precision='fp16')"
+RUN xvfb-run -e /dev/stdout wine64 C:\\Python310\\python.exe -c "from accelerate.utils import write_basic_config; write_basic_config(mixed_precision='fp16')"
 
 FROM install_libs as source_files
 RUN cp /usr/lib/x86_64-linux-gnu/wine/api-ms-win-shcore-scaling-l1-1-1.dll /home/.wine-win10/drive_c/api-ms-win-shcore-scaling-l1-1-1.dll
@@ -108,11 +108,13 @@ RUN mv butler-windows-amd64/butler.exe /home/.wine-win10/drive_c/Python310/Scrip
 RUN rm -rf butler-windows-amd64 butler-windows-amd64.zip
 
 FROM install_butler as diffusers_patch
+USER root
+RUN rm -f /tmp/.X99-lock
 RUN wget https://github.com/w4ffl35/diffusers/archive/refs/tags/v0.16.2.zip
 RUN unzip v0.16.2.zip
 RUN mv diffusers-0.16.2 /home/.wine-win10/drive_c/
 RUN rm -rf v0.16.2.zip
-RUN wine64 C:\\Python310\\python.exe -m pip install C:\\diffusers\\diffusers-0.16.2 --no-deps --force-reinstall
+RUN xvfb-run -e /dev/stdout wine64 C:\\Python310\\python.exe -m pip install C:\\diffusers-0.16.2 --no-deps --force-reinstall
 
 FROM diffusers_patch as build_files
 WORKDIR /app
