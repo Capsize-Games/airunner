@@ -693,7 +693,10 @@ class GeneratorMixin:
             use_controlnet = controlnet != "none"
 
         available_lora = self.settings_manager.settings.available_loras.get()
-        loras = available_lora[action]
+        try:
+            loras = available_lora[action]
+        except KeyError:
+            loras = []
         available_lora = []
         for lora in loras:
             if lora["enabled"] and lora["scale"] > 0:
@@ -926,7 +929,10 @@ class GeneratorMixin:
     
     def initialize_lora_trigger_words(self):
         available_loras = self.settings_manager.settings.available_loras.get()
-        available_loras = available_loras['txt2img']
+        try:
+            available_loras = available_loras['txt2img']
+        except KeyError:
+            available_loras = []
 
         for lora in available_loras:
             trigger_word = lora["trigger_word"] if "trigger_word" in lora else ""
