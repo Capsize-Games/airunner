@@ -109,6 +109,8 @@ FROM diffusers_patch as install_airunner
 USER root
 RUN rm -rf /tmp/.X99-lock
 RUN xvfb-run -e /dev/stdout wine64 C:\\Python310\\python.exe -m pip install torch torchvision --index-url https://download.pytorch.org/whl/cu118 --upgrade
+RUN rm -rf /tmp/.X99-lock
+RUN xvfb-run -e /dev/stdout wine64 C:\\Python310\\python.exe -m pip install pywin32
 
 FROM install_airunner as build_files
 WORKDIR /app
