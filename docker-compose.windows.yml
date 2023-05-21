@@ -27,7 +27,7 @@ services:
     command: wine64 Z:\\app\\build.windows.cmd
     volumes:
       - /tmp/.X11-unix:/tmp/.X11-unix
-      - ./:/app/airunner
+#      - ./:/app/airunner
       - ./dist:/app/dist
       - ./build:/app/build
       - /home/${USER}/.airunner:/home/airunner/.airunner
