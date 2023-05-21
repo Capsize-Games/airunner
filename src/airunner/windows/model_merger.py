@@ -10,7 +10,7 @@ from airunner.windows.base_window import BaseWindow
 
 class ModelMerger(BaseWindow):
     template_name = "model_merger"
-    window_title = "Model Merger"
+    window_title = "Model Merger (experimental)"
     widgets = []
     total_models = 1
     models = []
@@ -23,9 +23,7 @@ class ModelMerger(BaseWindow):
         self.template.model_types.currentIndexChanged.connect(self.change_model_type)
 
         self.models = self.load_models()
-        path = self.settings_manager.settings.outpaint_model_path.get()
-        if not path or path == "":
-            path = self.settings_manager.settings.model_base_path.get()
+        path = self.settings_manager.settings.model_base_path.get()
         self.models += load_models_from_path(path)
         self.template.base_models.addItems(self.models)
 
@@ -43,15 +41,11 @@ class ModelMerger(BaseWindow):
 
     @property
     def section(self):
-        action = "generate"
-        if self.model_type == "txt2img / img2img":
-            action = "generate"
-        elif self.model_type == "inpaint / outpaint":
+        action = self.model_type
+        if self.model_type == "inpaint / outpaint":
             action = "outpaint"
-        elif self.model_type == "depth2img":
-            action = "depth2img"
-        elif self.model_type == "pix2pix":
-            action = "pix2pix"
+        elif self.model_type == "txt2img / img2img":
+            action = "txt2img"
         return action
 
     @property
@@ -180,7 +174,6 @@ class ModelMerger(BaseWindow):
         self.template.merge_button.setEnabled(True)
     
     def do_model_merge(self):
-        
         models = []
         weights = []
         path = self.settings_manager.settings.model_base_path.get()
@@ -195,10 +188,19 @@ class ModelMerger(BaseWindow):
                 })
 
         model = self.template.base_models.currentText()
-        if model in MODELS[self.section]:
-            model_path = MODELS[self.section][model]["path"]
+        section = self.section
+        if section == "txt2img":
+            section = "generate"
+        if model in MODELS[section]:
+            model_path = MODELS[section][model]["path"]
         else:
-            model_path = model
+            if self.section == "depth2img":
+                path = self.settings_manager.settings.depth2img_model_path.get()
+            elif self.section == "pix2pix":
+                path = self.settings_manager.settings.pix2pix_model_path.get()
+            elif self.section == "outpaint":
+                path = self.settings_manager.settings.outpaint_model_path.get()
+            model_path = os.path.join(path, model)
 
         self.app.client.sd_runner.merge_models(
             model_path,
@@ -206,4 +208,5 @@ class ModelMerger(BaseWindow):
             weights,
             self.output_path,
             self.template.model_name.text(),
+            self.section
         )
