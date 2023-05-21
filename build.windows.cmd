@@ -27,14 +27,6 @@ echo "============================================"
 echo.
 xcopy /E /I /Y C:\Python310\Lib\site-packages\torch\lib\libtorch_cuda_linalg.so Z:\app\dist\airunner\libtorch_cuda_linalg.so
 echo.
-xcopy /E /I /Y C:\Python310\Lib\site-packages\timm Z:\app\dist\airunner\timm
-echo.
-echo "============================================"
-echo "Copy setup.py to dist"
-echo "============================================"
-echo.
-xcopy /E /I /Y Z:\app\setup.py Z:\app\dist\airunner\setup.py
-echo.
 echo "============================================"
 echo "Deploying airunner to itch.io"
 echo "============================================"
