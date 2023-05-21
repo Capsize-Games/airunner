@@ -94,6 +94,7 @@ class CanvasImageMixin:
             self.image_to_system_clipboard_linux(output.getvalue())
 
     def image_to_system_clipboard_windows(self, data):
+        import win32clipboard
         win32clipboard.OpenClipboard()
         win32clipboard.EmptyClipboard()
         win32clipboard.SetClipboardData(win32clipboard.CF_DIB, data)
@@ -107,12 +108,14 @@ class CanvasImageMixin:
             pass
 
     def image_to_system_clipboard_windows(self, data):
+        import win32clipboard
         win32clipboard.OpenClipboard()
         win32clipboard.EmptyClipboard()
         win32clipboard.SetClipboardData(win32clipboard.CF_DIB, data)
         win32clipboard.CloseClipboard()
 
     def image_from_system_clipboard_windows(self):
+        import win32clipboard
         try:
             win32clipboard.OpenClipboard()
             data = win32clipboard.GetClipboardData(win32clipboard.CF_DIB)
