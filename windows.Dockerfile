@@ -82,8 +82,7 @@ RUN wget https://github.com/upx/upx/releases/download/v4.0.2/upx-4.0.2-win64.zip
 
 FROM install_upx as install_libs
 USER root
-RUN wine64 C:\\Python310\\python.exe -m pip install torch torchvision --index-url https://download.pytorch.org/whl/cu118 --upgrade \
-    && wine64 C:\\Python310\\python.exe -m pip install https://github.com/acpopescu/bitsandbytes/releases/download/v0.38.0-win0/bitsandbytes-0.38.1-py3-none-any.whl \
+RUN wine64 C:\\Python310\\python.exe -m pip install https://github.com/acpopescu/bitsandbytes/releases/download/v0.38.0-win0/bitsandbytes-0.38.1-py3-none-any.whl \
     && wine64 C:\\Python310\\python.exe -m pip install aihandler
 WORKDIR /app
 RUN wine64 C:\\Python310\\python.exe -c "from accelerate.utils import write_basic_config; write_basic_config(mixed_precision='fp16')"
@@ -106,7 +105,12 @@ RUN rm -f /tmp/.X99-lock \
     && rm -rf v0.16.2.zip \
     && xvfb-run -e /dev/stdout wine64 C:\\Python310\\python.exe -m pip install C:\\diffusers-0.16.2 --no-deps --force-reinstall
 
-FROM diffusers_patch as build_files
+FROM diffusers_patch as install_airunner
+USER root
+RUN rm -rf /tmp/.X99-lock
+RUN xvfb-run -e /dev/stdout wine64 C:\\Python310\\python.exe -m pip install torch torchvision --index-url https://download.pytorch.org/whl/cu118 --upgrade
+
+FROM install_airunner as build_files
 WORKDIR /app
 COPY build.windows.py build.windows.py
 COPY build.windows.cmd build.windows.cmd
