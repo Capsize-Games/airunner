@@ -99,6 +99,7 @@ a = Analysis(
         "bitsandbytes",
         "scipy",
         "sympy",
+        "pywin32",
     ],
     hookspath=[],
     hooksconfig={},
