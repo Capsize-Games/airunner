@@ -63,11 +63,11 @@ a = Analysis(
         "C:\\Users\\root\\AppData\\Local\\Programs\\Python\\Python310\\",
     ],
     binaries=[
-        ("C:\\Python310\\Lib\\site-packages\\torchvision\\cudart64_110.dll", "."),
+        #("C:\\Python310\\Lib\\site-packages\\torchvision\\cudart64_110.dll", "."),
         ("C:\\Python310\\vcruntime140.dll", "."),
         ("C:\\Python310\\vcruntime140_1.dll", "."),
         ("C:\\windows\\syswow64\\msvcp140.dll", "."),
-        ("C:\\api-ms-win-shcore-scaling-l1-1-1.dll", "."),
+        ("C:\\api-ms-win-shcore-scaling-l1-1-1.dll.so", "."),
         ("C:\\Python310\\Lib\\site-packages\\tensorflow\\python\\util\\_pywrap_utils.pyd", "."),
     ],
     datas=datas,
@@ -283,4 +283,8 @@ shutil.copyfile(
 shutil.copyfile(
     f'{ROOT}/src/airunner/v2.yaml',
     f'{DIST}/v2.yaml'
+)
+shutil.copyfile(
+    f'Z:\\app\\setup.py',
+    f'{DIST}/setup.py'
 )
