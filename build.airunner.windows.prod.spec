@@ -63,7 +63,7 @@ a = Analysis(
         "C:\\Users\\root\\AppData\\Local\\Programs\\Python\\Python310\\",
     ],
     binaries=[
-        #("C:\\Python310\\Lib\\site-packages\\torchvision\\cudart64_110.dll", "."),
+        ("C:\\Python310\\Lib\\site-packages\\torchvision\\cudart64_110.dll", "."),
         ("C:\\Python310\\vcruntime140.dll", "."),
         ("C:\\Python310\\vcruntime140_1.dll", "."),
         ("C:\\windows\\syswow64\\msvcp140.dll", "."),
