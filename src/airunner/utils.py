@@ -137,6 +137,8 @@ def get_latest_version():
 
 
 def load_default_models(section_name):
+    if section_name == "txt2img":
+        section_name = "generate"
     return [
         k for k in MODELS[section_name].keys()
     ]
