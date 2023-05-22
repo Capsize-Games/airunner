@@ -125,7 +125,7 @@ class GeneratorMixin:
     def initialize(self):
         self.settings_manager.settings.model_base_path.my_signal.connect(self.refresh_model_list)
 
-        sections = ["txt2img", "img2img", "depth2img", "pix2pix", "outpaint", "controlnet", "upscale", "txt2vid"]
+        sections = ["txt2img", "img2img", "depth2img", "pix2pix", "outpaint", "controlnet", "upscale", "superresolution", "txt2vid"]
         self.tabs = {}
         for tab in self.sections:
             self.tabs[tab] = uic.loadUi(os.path.join("pyqt/generate_form.ui"))
@@ -152,9 +152,9 @@ class GeneratorMixin:
                 ]
                 for option in controlnet_options:
                     self.tabs[tab].controlnet_dropdown.addItem(option)
-            if tab in ["txt2img", "pix2pix", "outpaint", "upscale", "super_resolution", "txt2vid"]:
+            if tab in ["txt2img", "pix2pix", "outpaint", "upscale", "superresolution", "txt2vid"]:
                 self.tabs[tab].strength.deleteLater()
-            if tab in ["txt2img", "img2img", "depth2img", "outpaint", "controlnet", "super_resolution", "txt2vid"]:
+            if tab in ["txt2img", "img2img", "depth2img", "outpaint", "controlnet", "superresolution", "txt2vid"]:
                 self.tabs[tab].image_scale_box.deleteLater()
             if tab in ["txt2vid"]:
                 self.tabs[tab].scheduler_label.deleteLater()
@@ -244,7 +244,6 @@ class GeneratorMixin:
         # add callbacks
         for tab in sections:
             self.tabs[tab].generate.clicked.connect(self.generate_callback)
-        # super_resolution_form.generate.clicked.connect(self.generate_callback)
 
         self.initialize_size_form_elements()
         self.initialize_size_sliders()
@@ -735,8 +734,8 @@ class GeneratorMixin:
             "controlnet": controlnet,
         }
         if action == "superresolution":
-            options["original_image_width"] = self.canvas.current_active_image.width
-            options["original_image_height"] = self.canvas.current_active_image.height
+            options["original_image_width"] = self.canvas.current_active_image.image.width
+            options["original_image_height"] = self.canvas.current_active_image.image.height
 
         if action in ["img2img", "depth2img", "pix2pix", "controlnet"]:
             options[f"{action}_strength"] = sm.strength.get() / 100.0
