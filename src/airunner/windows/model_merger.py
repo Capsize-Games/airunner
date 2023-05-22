@@ -18,7 +18,7 @@ class ModelMerger(BaseWindow):
 
 
     def initialize_window(self):
-        model_types = ["txt2img / img2img", "inpaint / outpaint", "depth2img", "pix2pix", "upscale"]
+        model_types = ["txt2img / img2img", "inpaint / outpaint", "depth2img", "pix2pix", "upscale", "superresolution"]
         self.template.model_types.addItems(model_types)
         self.template.model_types.currentIndexChanged.connect(self.change_model_type)
 
@@ -46,8 +46,6 @@ class ModelMerger(BaseWindow):
             action = "outpaint"
         elif self.model_type == "txt2img / img2img":
             action = "txt2img"
-        elif self.model_type == "upscale":
-            action = "upscale"
         return action
 
     @property
