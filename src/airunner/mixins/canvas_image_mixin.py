@@ -234,8 +234,8 @@ class CanvasImageMixin:
         existing_image_copy = self.current_layer.images[0].image.copy()
         width = existing_image_copy.width
         height = existing_image_copy.height
-        working_width = self.settings_manager.settings.working_width.get()
-        working_height = self.settings_manager.settings.working_height.get()
+        working_width = outpainted_image.width
+        working_height = outpainted_image.height
 
         is_drawing_left = outpaint_box_rect.x() < self.image_pivot_point.x()
         is_drawing_up = outpaint_box_rect.y() < self.image_pivot_point.y()
