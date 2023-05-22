@@ -161,8 +161,8 @@
            <rect>
             <x>0</x>
             <y>0</y>
-            <width>239</width>
-            <height>364</height>
+            <width>231</width>
+            <height>405</height>
            </rect>
           </property>
           <property name="sizePolicy">
@@ -520,6 +520,7 @@
             <property name="font">
              <font>
               <pointsize>10</pointsize>
+              <weight>50</weight>
               <bold>false</bold>
              </font>
             </property>
@@ -613,6 +614,7 @@
             <property name="font">
              <font>
               <pointsize>10</pointsize>
+              <weight>50</weight>
               <bold>false</bold>
              </font>
             </property>
@@ -1344,7 +1346,7 @@
      <x>0</x>
      <y>0</y>
      <width>1195</width>
-     <height>22</height>
+     <height>21</height>
     </rect>
    </property>
    <widget class="QMenu" name="menuFile">
@@ -1369,6 +1371,9 @@
     <addaction name="actionPaste"/>
     <addaction name="actionUndo"/>
     <addaction name="actionRedo"/>
+    <addaction name="separator"/>
+    <addaction name="actionRotate_90_clockwise"/>
+    <addaction name="actionRotate_90_counter_clockwise"/>
    </widget>
    <widget class="QMenu" name="menuSettings">
     <property name="title">
@@ -1742,6 +1747,22 @@
   <action name="actionBox_Blur_2">
    <property name="text">
     <string>Box Blur</string>
+   </property>
+  </action>
+  <action name="actionRotate_90_clockwise">
+   <property name="text">
+    <string>Rotate 90° clockwise</string>
+   </property>
+   <property name="shortcut">
+    <string>Ctrl+R</string>
+   </property>
+  </action>
+  <action name="actionRotate_90_counter_clockwise">
+   <property name="text">
+    <string>Rotate 90° counter clockwise</string>
+   </property>
+   <property name="shortcut">
+    <string>Ctrl+Shift+R</string>
    </property>
   </action>
  </widget>
