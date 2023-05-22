@@ -21,6 +21,10 @@ class PreferencesWindow(BaseWindow):
             lambda val: self.settings_manager.settings.pix2pix_model_path.set(val))
         self.template.inpaint_outpaint_browse_button.clicked.connect(
             lambda: self.browse_for_inpaint_outpaint_model_path(self.template.inpaint_outpaint_model_path))
+        self.template.upscale_model_path.textChanged.connect(
+            lambda val: self.settings_manager.settings.upscale_model_path.set(val))
+        self.template.upscale_browse_button.clicked.connect(
+            lambda: self.browse_for_upscale_model_path(self.template.upscale_model_path))
         self.template.inpaint_outpaint_model_path.textChanged.connect(
             lambda val: self.settings_manager.settings.outpaint_model_path.set(val))
         self.template.embeddings_path.textChanged.connect(
@@ -122,3 +126,11 @@ class PreferencesWindow(BaseWindow):
             self.settings_manager.settings.outpaint_model_path.get())
         line_edit.setText(path)
         self.settings_manager.settings.outpaint_model_path.set(path)
+
+    def browse_for_upscale_model_path(self, line_edit):
+        path = QFileDialog.getExistingDirectory(
+            None,
+            "Select Directory",
+            self.settings_manager.settings.upscale_model_path.get())
+        line_edit.setText(path)
+        self.settings_manager.settings.upscale_model_path.set(path)
