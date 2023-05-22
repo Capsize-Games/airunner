@@ -18,7 +18,7 @@ class ModelMerger(BaseWindow):
 
 
     def initialize_window(self):
-        model_types = ["txt2img / img2img", "inpaint / outpaint", "depth2img", "pix2pix"]
+        model_types = ["txt2img / img2img", "inpaint / outpaint", "depth2img", "pix2pix", "upscale"]
         self.template.model_types.addItems(model_types)
         self.template.model_types.currentIndexChanged.connect(self.change_model_type)
 
@@ -46,6 +46,8 @@ class ModelMerger(BaseWindow):
             action = "outpaint"
         elif self.model_type == "txt2img / img2img":
             action = "txt2img"
+        elif self.model_type == "upscale":
+            action = "upscale"
         return action
 
     @property
@@ -57,6 +59,8 @@ class ModelMerger(BaseWindow):
             output_path = self.settings_manager.settings.depth2img_model_path.get()
         elif self.section == "pix2pix":
             output_path = self.settings_manager.settings.pix2pix_model_path.get()
+        elif self.section == "upscale":
+            output_path = self.settings_manager.settings.upscale_model_path.get()
         if not output_path or output_path == "":
             output_path = self.settings_manager.settings.model_base_path.get()
         return output_path
@@ -74,6 +78,12 @@ class ModelMerger(BaseWindow):
         elif self.section == "outpaint":
             self.models = self.load_models()
             path = self.settings_manager.settings.outpaint_model_path.get()
+            if not path or path == "":
+                path = self.settings_manager.settings.model_base_path.get()
+            self.models += load_models_from_path(path)
+        elif self.section == "upscale":
+            self.models = self.load_models()
+            path = self.settings_manager.settings.upscale_model_path.get()
             if not path or path == "":
                 path = self.settings_manager.settings.model_base_path.get()
             self.models += load_models_from_path(path)

@@ -125,7 +125,7 @@ class GeneratorMixin:
     def initialize(self):
         self.settings_manager.settings.model_base_path.my_signal.connect(self.refresh_model_list)
 
-        sections = ["txt2img", "img2img", "depth2img", "pix2pix", "outpaint", "controlnet", "txt2vid"]
+        sections = ["txt2img", "img2img", "depth2img", "pix2pix", "outpaint", "controlnet", "upscale", "txt2vid"]
         self.tabs = {}
         for tab in self.sections:
             self.tabs[tab] = uic.loadUi(os.path.join("pyqt/generate_form.ui"))
@@ -152,7 +152,7 @@ class GeneratorMixin:
                 ]
                 for option in controlnet_options:
                     self.tabs[tab].controlnet_dropdown.addItem(option)
-            if tab in ["txt2img", "pix2pix", "outpaint", "super_resolution", "txt2vid"]:
+            if tab in ["txt2img", "pix2pix", "outpaint", "upscale", "super_resolution", "txt2vid"]:
                 self.tabs[tab].strength.deleteLater()
             if tab in ["txt2img", "img2img", "depth2img", "outpaint", "controlnet", "super_resolution", "txt2vid"]:
                 self.tabs[tab].image_scale_box.deleteLater()
@@ -273,6 +273,8 @@ class GeneratorMixin:
             path = self.settings_manager.settings.pix2pix_model_path.get()
         elif section_name == "outpaint":
             path = self.settings_manager.settings.outpaint_model_path.get()
+        elif section_name == "upscale":
+            path = self.settings_manager.settings.upscale_model_path.get()
         if not path or path == "":
             path = self.settings_manager.settings.model_base_path.get()
         new_models = load_models_from_path(path)
@@ -322,6 +324,7 @@ class GeneratorMixin:
         else:
             if data["action"] != "outpaint" and self.settings_manager.settings.image_to_new_layer.get():
                 self.canvas.add_layer()
+            # print width and height of image
             self.canvas.image_handler(image, data)
             self.message_handler("")
             self.show_layers()
@@ -680,6 +683,8 @@ class GeneratorMixin:
                 path = self.settings_manager.settings.pix2pix_model_path.get()
             elif action == "outpaint":
                 path = self.settings_manager.settings.outpaint_model_path.get()
+            elif action == "upscale":
+                path = self.settings_manager.settings.upscale_model_path.get()
             model_path = os.path.join(path, model)
 
         # get controlnet_dropdown from active tab
