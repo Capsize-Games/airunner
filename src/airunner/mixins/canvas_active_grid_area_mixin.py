@@ -17,6 +17,8 @@ class CanvasActiveGridAreaMixin:
             brush_color = QColor(255, 255, 0)
         elif self.parent.current_section == "outpaint":
             brush_color = QColor(0, 255, 255)
+        elif self.parent.current_section == "upscale":
+            brush_color = QColor(255, 0, 155)
         elif self.parent.current_section == "superresolution":
             brush_color = QColor(255, 0, 255)
         elif self.parent.current_section == "controlnet":
