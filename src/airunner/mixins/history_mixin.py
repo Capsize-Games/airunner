@@ -85,6 +85,13 @@ class HistoryMixin:
         self.canvas.layers[previous_event["layer_index"]].widgets = widets
         return previous_event
 
+    def undo_rotate(self, previous_event):
+        images = previous_event["images"]
+        index = previous_event["layer_index"]
+        previous_event["images"] = self.canvas.get_image_copy(index)
+        self.canvas.layers[index].images = images
+        return previous_event
+
     def undo(self):
         if len(self.history.event_history) == 0:
             return
@@ -109,6 +116,8 @@ class HistoryMixin:
             self.undo_add_widget(previous_event)
         elif event_name == "apply_filter":
             self.undo_apply_filter(previous_event)
+        elif event_name == "rotate":
+            self.undo_rotate(previous_event)
         self.history.undone_history.append(previous_event)
         self.show_layers()
         self.canvas.update()
@@ -179,6 +188,13 @@ class HistoryMixin:
         self.canvas.layers[index].images = images
         return previous_event
 
+    def redo_rotate(self, undone_event):
+        images = undone_event["images"]
+        layer_index = undone_event["layer_index"]
+        undone_event["images"] = self.canvas.get_image_copy(layer_index)
+        self.canvas.layers[undone_event["layer_index"]].images = images
+        return undone_event
+
     def redo(self):
         if len(self.history.undone_history) == 0:
             return
@@ -200,6 +216,8 @@ class HistoryMixin:
             undone_event = self.redo_add_widget(undone_event)
         elif event_name == "apply_filter":
             undone_event = self.redo_apply_filter(undone_event)
+        elif event_name == "rotate":
+            undone_event = self.redo_rotate(undone_event)
         self.history.event_history.append(undone_event)
         self.show_layers()
         self.canvas.update()

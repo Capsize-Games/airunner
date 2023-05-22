@@ -24,7 +24,7 @@ class CanvasImageMixin:
     @property
     def current_active_image(self):
         try:
-            return self.current_layer.images[self.current_layer_index]
+            return self.current_layer.images[0]
         except IndexError:
             return None
 
@@ -309,3 +309,23 @@ class CanvasImageMixin:
 
     def get_image_copy(self, index):
         return [ImageData(imageData.position, imageData.image.copy()) for imageData in self.layers[index].images]
+
+    def rotate_90_clockwise(self):
+        if self.current_active_image:
+            self.parent.history.add_event({
+                "event": "rotate",
+                "layer_index": self.current_layer_index,
+                "images": self.get_image_copy(self.current_layer_index)
+            })
+            self.current_active_image.image = self.current_active_image.image.transpose(Image.ROTATE_270)
+            self.update()
+
+    def rotate_90_counterclockwise(self):
+        if self.current_active_image:
+            self.parent.history.add_event({
+                "event": "rotate",
+                "layer_index": self.current_layer_index,
+                "images": self.get_image_copy(self.current_layer_index)
+            })
+            self.current_active_image.image = self.current_active_image.image.transpose(Image.ROTATE_90)
+            self.update()
