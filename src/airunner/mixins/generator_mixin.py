@@ -528,6 +528,12 @@ class GeneratorMixin:
 
         return rect
 
+    def tab_has_embeddings(self, tab):
+        return tab not in ["upscale", "superresolution", "txt2vid"]
+
+    def tab_has_lora(self, tab):
+        return tab not in ["upscale", "superresolution", "txt2vid"]
+
     def generate(
         self,
         do_generate=False,
@@ -855,7 +861,12 @@ class GeneratorMixin:
     def refresh_lora(self):
         for tab_name in self.tabs.keys():
             tab = self.tabs[tab_name]
-            self.load_lora_tab(tab, tab_name)
+            if not self.tab_has_lora(tab_name):
+                tab.PromptTabsSection.removeTab(2)
+            else:
+                self.load_lora_tab(tab, tab_name)
+            if not self.tab_has_embeddings(tab_name):
+                tab.PromptTabsSection.removeTab(1)
         self.initialize_lora_trigger_words()
 
     def available_loras(self, tab_name):
@@ -930,7 +941,7 @@ class GeneratorMixin:
         container.layout().addStretch()
         # display tabs of tab.PromptTabsSection which is a QTabWidget
         tab.lora_scroll_area.setWidget(container)
-    
+
     def initialize_lora_trigger_words(self):
         available_loras = self.settings_manager.settings.available_loras.get()
         try:
@@ -942,6 +953,8 @@ class GeneratorMixin:
             trigger_word = lora["trigger_word"] if "trigger_word" in lora else ""
             for tab_name in self.tabs.keys():
                 tab = self.tabs[tab_name]
+                if not self.tab_has_lora(tab_name):
+                    continue
                 for i in range(tab.lora_scroll_area.widget().layout().count()):
                     lora_widget = tab.lora_scroll_area.widget().layout().itemAt(i).widget()
                     if lora_widget.enabledCheckbox.text() == lora["name"]:
