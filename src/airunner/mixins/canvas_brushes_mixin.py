@@ -2,6 +2,7 @@ from PIL import ImageDraw
 from PyQt6.QtCore import Qt, QPointF, QPoint, QSize, QRect
 from PyQt6.QtGui import QPainter, QPainterPath, QColor, QPen, QImage
 from airunner.models.linedata import LineData
+from airunner.models.imagedata import ImageData
 from PIL import Image
 
 
@@ -11,6 +12,10 @@ class CanvasBrushesMixin:
     opacity = None
     color = None
     width = None
+    
+    @property
+    def is_drawing(self):
+        return self.left_mouse_button_down or self.right_mouse_button_down
 
     @property
     def primary_color(self):
