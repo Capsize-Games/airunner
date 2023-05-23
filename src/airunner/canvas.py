@@ -274,7 +274,7 @@ class Canvas(
             self.update()
         elif self.drag_pos is not None:
             self.handle_move_canvas(event)
-
+    
     def mouse_release_event(self, event):
         if event.button() in (Qt.MouseButton.LeftButton, Qt.MouseButton.RightButton):
             self.left_mouse_button_down = False

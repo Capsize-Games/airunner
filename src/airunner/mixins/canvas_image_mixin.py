@@ -24,7 +24,7 @@ class CanvasImageMixin:
     @property
     def current_active_image(self):
         try:
-            return self.current_layer.images[self.current_layer_index]
+            return self.current_layer.images[0]
         except IndexError:
             return None
 
@@ -234,8 +234,8 @@ class CanvasImageMixin:
         existing_image_copy = self.current_layer.images[0].image.copy()
         width = existing_image_copy.width
         height = existing_image_copy.height
-        working_width = self.settings_manager.settings.working_width.get()
-        working_height = self.settings_manager.settings.working_height.get()
+        working_width = outpainted_image.width
+        working_height = outpainted_image.height
 
         is_drawing_left = outpaint_box_rect.x() < self.image_pivot_point.x()
         is_drawing_up = outpaint_box_rect.y() < self.image_pivot_point.y()
@@ -309,3 +309,23 @@ class CanvasImageMixin:
 
     def get_image_copy(self, index):
         return [ImageData(imageData.position, imageData.image.copy()) for imageData in self.layers[index].images]
+
+    def rotate_90_clockwise(self):
+        if self.current_active_image:
+            self.parent.history.add_event({
+                "event": "rotate",
+                "layer_index": self.current_layer_index,
+                "images": self.get_image_copy(self.current_layer_index)
+            })
+            self.current_active_image.image = self.current_active_image.image.transpose(Image.ROTATE_270)
+            self.update()
+
+    def rotate_90_counterclockwise(self):
+        if self.current_active_image:
+            self.parent.history.add_event({
+                "event": "rotate",
+                "layer_index": self.current_layer_index,
+                "images": self.get_image_copy(self.current_layer_index)
+            })
+            self.current_active_image.image = self.current_active_image.image.transpose(Image.ROTATE_90)
+            self.update()

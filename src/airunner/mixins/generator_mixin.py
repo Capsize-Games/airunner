@@ -6,16 +6,15 @@ from PIL import Image
 from PyQt6 import uic
 from PyQt6.QtCore import QPoint, QRect
 from PyQt6.QtGui import QColor
-from PyQt6.QtWidgets import QWidget, QVBoxLayout, QScrollArea
 from PyQt6.uic.exceptions import UIFileException
 from aihandler.settings import MAX_SEED, AVAILABLE_SCHEDULERS_BY_ACTION, MODELS
 from airunner.windows.video import VideoPopup
 from airunner.utils import load_default_models, load_models_from_path
+from airunner.mixins.lora_mixin import LoraMixin
 from PIL import PngImagePlugin
 
-class GeneratorMixin:
-    lora_loaded = False
 
+class GeneratorMixin(LoraMixin):
     @property
     def width(self):
         return int(self.settings_manager.settings.working_width.get())
@@ -125,7 +124,7 @@ class GeneratorMixin:
     def initialize(self):
         self.settings_manager.settings.model_base_path.my_signal.connect(self.refresh_model_list)
 
-        sections = ["txt2img", "img2img", "depth2img", "pix2pix", "outpaint", "controlnet", "txt2vid"]
+        sections = ["txt2img", "img2img", "depth2img", "pix2pix", "outpaint", "controlnet", "upscale", "superresolution", "txt2vid"]
         self.tabs = {}
         for tab in self.sections:
             self.tabs[tab] = uic.loadUi(os.path.join("pyqt/generate_form.ui"))
@@ -152,9 +151,9 @@ class GeneratorMixin:
                 ]
                 for option in controlnet_options:
                     self.tabs[tab].controlnet_dropdown.addItem(option)
-            if tab in ["txt2img", "pix2pix", "outpaint", "super_resolution", "txt2vid"]:
+            if tab in ["txt2img", "pix2pix", "outpaint", "upscale", "superresolution", "txt2vid"]:
                 self.tabs[tab].strength.deleteLater()
-            if tab in ["txt2img", "img2img", "depth2img", "outpaint", "controlnet", "super_resolution", "txt2vid"]:
+            if tab in ["txt2img", "img2img", "depth2img", "outpaint", "controlnet", "superresolution", "txt2vid"]:
                 self.tabs[tab].image_scale_box.deleteLater()
             if tab in ["txt2vid"]:
                 self.tabs[tab].scheduler_label.deleteLater()
@@ -244,11 +243,9 @@ class GeneratorMixin:
         # add callbacks
         for tab in sections:
             self.tabs[tab].generate.clicked.connect(self.generate_callback)
-        # super_resolution_form.generate.clicked.connect(self.generate_callback)
 
         self.initialize_size_form_elements()
         self.initialize_size_sliders()
-
         self.initialize_lora()
 
     def refresh_model_list(self):
@@ -273,6 +270,8 @@ class GeneratorMixin:
             path = self.settings_manager.settings.pix2pix_model_path.get()
         elif section_name == "outpaint":
             path = self.settings_manager.settings.outpaint_model_path.get()
+        elif section_name == "upscale":
+            path = self.settings_manager.settings.upscale_model_path.get()
         if not path or path == "":
             path = self.settings_manager.settings.model_base_path.get()
         new_models = load_models_from_path(path)
@@ -322,6 +321,7 @@ class GeneratorMixin:
         else:
             if data["action"] != "outpaint" and self.settings_manager.settings.image_to_new_layer.get():
                 self.canvas.add_layer()
+            # print width and height of image
             self.canvas.image_handler(image, data)
             self.message_handler("")
             self.show_layers()
@@ -526,6 +526,9 @@ class GeneratorMixin:
 
         return rect
 
+    def tab_has_embeddings(self, tab):
+        return tab not in ["upscale", "superresolution", "txt2vid"]
+
     def generate(
         self,
         do_generate=False,
@@ -680,6 +683,8 @@ class GeneratorMixin:
                 path = self.settings_manager.settings.pix2pix_model_path.get()
             elif action == "outpaint":
                 path = self.settings_manager.settings.outpaint_model_path.get()
+            elif action == "upscale":
+                path = self.settings_manager.settings.upscale_model_path.get()
             model_path = os.path.join(path, model)
 
         # get controlnet_dropdown from active tab
@@ -691,16 +696,6 @@ class GeneratorMixin:
             controlnet = controlnet_dropdown.currentText()
             controlnet = controlnet.lower()
             use_controlnet = controlnet != "none"
-
-        available_lora = self.settings_manager.settings.available_loras.get()
-        try:
-            loras = available_lora[action]
-        except KeyError:
-            loras = []
-        available_lora = []
-        for lora in loras:
-            if lora["enabled"] and lora["scale"] > 0:
-                available_lora.append(lora)
 
         options = {
             f"{action}_prompt": prompt,
@@ -717,7 +712,7 @@ class GeneratorMixin:
             f"{action}_scheduler": sm.scheduler_var.get(),
             f"{action}_model_path": model_path,
             f"{action}_model_branch": model_branch,
-            f"{action}_lora": available_lora,
+            f"{action}_lora": self.available_lora(action),
             f"width": sm.working_width.get(),
             f"height": sm.working_height.get(),
             "do_nsfw_filter": self.settings_manager.settings.nsfw_filter.get(),
@@ -730,8 +725,8 @@ class GeneratorMixin:
             "controlnet": controlnet,
         }
         if action == "superresolution":
-            options["original_image_width"] = self.canvas.current_active_image.width
-            options["original_image_height"] = self.canvas.current_active_image.height
+            options["original_image_width"] = self.canvas.current_active_image.image.width
+            options["original_image_height"] = self.canvas.current_active_image.image.height
 
         if action in ["img2img", "depth2img", "pix2pix", "controlnet"]:
             options[f"{action}_strength"] = sm.strength.get() / 100.0
@@ -843,152 +838,9 @@ class GeneratorMixin:
         self.window.brush_size_spinbox.setValue(self.settings_manager.settings.mask_brush_size.get())
         self.set_size_form_element_step_values()
 
-    def initialize_lora(self):
-        self.lora_loaded = False
-        self.settings_manager.settings.lora_path.my_signal.connect(self.refresh_lora)
-        self.refresh_lora()
-
-    def refresh_lora(self):
-        for tab_name in self.tabs.keys():
-            tab = self.tabs[tab_name]
-            self.load_lora_tab(tab, tab_name)
-        self.initialize_lora_trigger_words()
-
-    def available_loras(self, tab_name):
-        base_path = self.settings_manager.settings.model_base_path.get()
-        lora_path = self.settings_manager.settings.lora_path.get() or "lora"
-        if lora_path == "lora":
-            lora_path = os.path.join(base_path, lora_path)
-        if not os.path.exists(lora_path):
-            return []
-        available_lora = self.settings_manager.settings.available_loras.get()
-        if tab_name not in available_lora:
-            available_lora[tab_name] = []
-        self.settings_manager.enable_save()
-        available_lora[tab_name] = self.get_list_of_available_loras(tab_name, lora_path)
-        self.settings_manager.settings.available_loras.set(available_lora)
-        self.settings_manager.save_settings()
-        return available_lora[tab_name]
-
-    def get_list_of_available_loras(self, tab_name, lora_path, lora_names=None):
-        if lora_names is None:
-            lora_names = []
-        if not os.path.exists(lora_path):
-            return lora_names
-        possible_line_endings = ["ckpt", "safetensors", "bin"]
-        for lora_file in os.listdir(lora_path):
-            if os.path.isdir(os.path.join(lora_path, lora_file)):
-                lora_names = self.get_list_of_available_loras(tab_name, os.path.join(lora_path, f), lora_names)
-            if lora_file.split(".")[-1] in possible_line_endings:
-                name = lora_file.split(".")[0]
-                scale = 100.0
-                enabled = True
-                # check if we have scale in self.settings_manager.settings.available_loras[tab_name]
-                available_lora = self.settings_manager.settings.available_loras.get()
-                if tab_name in available_lora:
-                    loras = available_lora[tab_name] or []
-                    for lora in loras:
-                        if lora["name"] == name:
-                            scale = lora["scale"]
-                            enabled = lora["enabled"]
-                            break
-                lora_names.append({
-                    "name": name,
-                    "scale": scale,
-                    "enabled": enabled,
-                    "loaded": False
-                })
-        return lora_names
-
-    def load_lora_tab(self, tab, tab_name=None):
-        container = QWidget()
-        container.setLayout(QVBoxLayout())
-        available_loras = self.available_loras(tab_name)
-        for lora in available_loras:
-            lora_widget = self.load_template("lora")
-            lora_widget.enabledCheckbox.setText(lora["name"])
-            #lora_widget.label.setText(lora["name"])
-            scale = lora["scale"]
-            enabled = lora["enabled"]
-            lora_widget.scaleSlider.setValue(int(scale))
-            lora_widget.scaleSpinBox.setValue(scale / 100)
-            lora_widget.enabledCheckbox.setChecked(enabled)
-            container.layout().addWidget(lora_widget)
-            lora_widget.trigger_word.textChanged.connect(
-                        lambda value, _lora_widget=lora_widget, _lora=lora, _tab_name=tab_name: self.handle_lora_trigger_word(_lora, _lora_widget, value))
-            lora_widget.scaleSlider.valueChanged.connect(
-                lambda value, _lora_widget=lora_widget, _lora=lora, _tab_name=tab_name: self.handle_lora_slider(_lora, _lora_widget, value, _tab_name))
-            lora_widget.scaleSpinBox.valueChanged.connect(
-                lambda value, _lora_widget=lora_widget, _lora=lora, _tab_name=tab_name: self.handle_lora_spinbox(_lora, _lora_widget, value, _tab_name))
-            lora_widget.enabledCheckbox.stateChanged.connect(
-                lambda value, _lora=lora, _tab_name=tab_name: self.toggle_lora(_lora, value, _tab_name))
-        # add a vertical spacer to the end of the container
-        container.layout().addStretch()
-        # display tabs of tab.PromptTabsSection which is a QTabWidget
-        tab.lora_scroll_area.setWidget(container)
-    
-    def initialize_lora_trigger_words(self):
-        available_loras = self.settings_manager.settings.available_loras.get()
-        try:
-            available_loras = available_loras['txt2img']
-        except KeyError:
-            available_loras = []
-
-        for lora in available_loras:
-            trigger_word = lora["trigger_word"] if "trigger_word" in lora else ""
-            for tab_name in self.tabs.keys():
-                tab = self.tabs[tab_name]
-                for i in range(tab.lora_scroll_area.widget().layout().count()):
-                    lora_widget = tab.lora_scroll_area.widget().layout().itemAt(i).widget()
-                    if lora_widget.enabledCheckbox.text() == lora["name"]:
-                        if trigger_word != "":
-                            lora_widget.trigger_word.setText(trigger_word)
-                        break
-
-    def handle_lora_trigger_word(self, lora, lora_widget, value):
-        available_loras = self.settings_manager.settings.available_loras.get()
-        for tab_name in self.tabs.keys():
-            for n in range(len(available_loras[tab_name])):
-                if available_loras[tab_name][n]["name"] == lora["name"]:
-                    available_loras[tab_name][n]["trigger_word"] = value
-                    lora_widget = None
-                    for i in range(self.tabs[tab_name].lora_scroll_area.widget().layout().count()):
-                        lora_widget = self.tabs[tab_name].lora_scroll_area.widget().layout().itemAt(i).widget()
-                        if lora_widget.enabledCheckbox.text() == lora["name"]:
-                            lora_widget.trigger_word.setText(value)
-                            break
-        self.settings_manager.settings.available_loras.set(available_loras)
-        self.settings_manager.save_settings()
-
     def load_template(self, template_name):
         try:
             return uic.loadUi(
                 os.path.join("pyqt", f"{template_name}.ui"))
         except UIFileException:
             return None
-
-    def toggle_lora(self, lora, value, tab_name):
-        available_loras = self.settings_manager.settings.available_loras.get()
-        for n in range(len(available_loras[tab_name])):
-            if available_loras[tab_name][n]["name"] == lora["name"]:
-                available_loras[tab_name][n]["enabled"] = value == 2
-        self.settings_manager.settings.available_loras.set(available_loras)
-        self.settings_manager.save_settings()
-
-    def handle_lora_slider(self, lora, lora_widget, value, tab_name):
-        available_loras = self.settings_manager.settings.available_loras.get()
-        for n in range(len(available_loras[tab_name])):
-            if available_loras[tab_name][n]["name"] == lora["name"]:
-                available_loras[tab_name][n]["scale"] = value / 100
-        lora_widget.scaleSpinBox.setValue(lora["scale"])
-        self.settings_manager.settings.available_loras.set(available_loras)
-        self.settings_manager.save_settings()
-
-    def handle_lora_spinbox(self, lora, lora_widget, value, tab_name):
-        available_loras = self.settings_manager.settings.available_loras.get()
-        for n in range(len(available_loras[tab_name])):
-            if available_loras[tab_name][n]["name"] == lora["name"]:
-                available_loras[tab_name][n]["scale"] = value * 100
-        lora_widget.scaleSlider.setValue(int(lora["scale"]))
-        self.settings_manager.settings.available_loras.set(available_loras)
-        self.settings_manager.save_settings()
