@@ -60,8 +60,9 @@ class MainWindow(
         "depth2img",
         "pix2pix",
         "outpaint",
-        # "superresolution",
         "controlnet",
+        "upscale",
+        "superresolution",
         "txt2vid",
     ]
     models = None
@@ -95,7 +96,7 @@ class MainWindow(
     @property
     def use_pixels(self):
         # get name of current tab
-        return self.current_section in ("txt2img", "img2img", "pix2pix", "depth2img", "outpaint", "controlnet")
+        return self.current_section in ("txt2img", "img2img", "pix2pix", "depth2img", "outpaint", "controlnet", "superresolution", "upscale")
 
     @property
     def settings(self):
