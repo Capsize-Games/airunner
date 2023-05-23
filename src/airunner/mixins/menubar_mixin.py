@@ -22,6 +22,8 @@ class MenubarMixin:
         self.window.actionResize_on_Paste.triggered.connect(self.toggle_resize_on_paste)
         self.window.actionImage_to_new_layer.triggered.connect(self.toggle_image_to_new_layer)
         self.window.actionReset_Settings.triggered.connect(self.reset_settings)
+        self.window.actionRotate_90_clockwise.triggered.connect(self.canvas.rotate_90_clockwise)
+        self.window.actionRotate_90_counter_clockwise.triggered.connect(self.canvas.rotate_90_counterclockwise)
         self.initialize_filter_actions()
         self.window.actionResize_on_Paste.setChecked(self.settings_manager.settings.resize_on_paste.get() == True)
         self.window.actionImage_to_new_layer.setChecked(self.settings_manager.settings.image_to_new_layer.get() == True)
