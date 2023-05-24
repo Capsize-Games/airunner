@@ -329,3 +329,13 @@ class CanvasImageMixin:
             })
             self.current_active_image.image = self.current_active_image.image.transpose(Image.ROTATE_90)
             self.update()
+
+    def add_image_to_canvas_new(self, image, image_pivot_point, image_root_point):
+        self.parent.history.add_event({
+            "event": "set_image",
+            "layer_index": self.current_layer_index,
+            "images": self.current_layer.images,
+            "previous_image_root_point": image_root_point,
+            "previous_image_pivot_point": image_pivot_point,
+        })
+        self.current_layer.images = [ImageData(image_pivot_point, image)]
