@@ -129,6 +129,8 @@ class LoraMixin:
                     continue
                 for i in range(tab.lora_scroll_area.widget().layout().count()):
                     lora_widget = tab.lora_scroll_area.widget().layout().itemAt(i).widget()
+                    if not lora_widget:
+                        continue
                     if lora_widget.enabledCheckbox.text() == lora["name"]:
                         if trigger_word != "":
                             lora_widget.trigger_word.setText(trigger_word)
