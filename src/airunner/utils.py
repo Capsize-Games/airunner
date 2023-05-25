@@ -152,8 +152,9 @@ def load_models_from_path(path, models = None):
             if os.path.isdir(os.path.join(path, f)):
                 folders_in_directory = os.listdir(os.path.join(path, f))
                 is_diffusers = True
-                for req_folder in ["feature_extractor", "safety_checker", "scheduler", "text_encoder", "tokenizer", "unet", "vae"]:
+                for req_folder in ["scheduler", "text_encoder", "tokenizer", "unet", "vae"]:
                     if req_folder not in folders_in_directory:
+                        print(f"req_folder {req_folder} is not in {os.path.join(path, f)}")
                         is_diffusers = False
                         break
                 if is_diffusers:
@@ -162,4 +163,6 @@ def load_models_from_path(path, models = None):
                     models = load_models_from_path(os.path.join(path, f), models)
             elif f.endswith(".pt") or f.endswith(".safetensors") or f.endswith(".ckpt"):
                 models.append(f)
+    # sort models by name
+    models.sort()
     return models
