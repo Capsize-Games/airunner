@@ -155,9 +155,6 @@ class GeneratorMixin(LoraMixin):
                 self.tabs[tab].strength.deleteLater()
             if tab in ["txt2img", "img2img", "depth2img", "outpaint", "controlnet", "superresolution", "txt2vid"]:
                 self.tabs[tab].image_scale_box.deleteLater()
-            if tab in ["txt2vid"]:
-                self.tabs[tab].scheduler_label.deleteLater()
-                self.tabs[tab].scheduler_dropdown.deleteLater()
 
         for tab in sections:
             self.window.tabWidget.addTab(self.tabs[tab], tab)
@@ -182,12 +179,10 @@ class GeneratorMixin(LoraMixin):
             )
 
             # set schedulers for each tab
-            if tab_name not in ["txt2vid"]:
-                tab.scheduler_dropdown.addItems(AVAILABLE_SCHEDULERS_BY_ACTION[tab_name])
-                # on change of tab.scheduler_dropdown set the scheduler in self.settings_manager
-                tab.scheduler_dropdown.currentIndexChanged.connect(
-                    lambda val, _tab=tab, _section=tab_name: self.set_scheduler(_tab, _section, val)
-                )
+            tab.scheduler_dropdown.addItems(AVAILABLE_SCHEDULERS_BY_ACTION[tab_name])
+            tab.scheduler_dropdown.currentIndexChanged.connect(
+                lambda val, _tab=tab, _section=tab_name: self.set_scheduler(_tab, _section, val)
+            )
 
             # scale slider
             tab.scale_slider.valueChanged.connect(lambda val, _tab=tab: self.handle_scale_slider_change(val, _tab))
