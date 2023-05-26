@@ -156,11 +156,6 @@ class GeneratorMixin(LoraMixin):
             if tab in ["txt2img", "img2img", "depth2img", "outpaint", "controlnet", "superresolution", "txt2vid"]:
                 self.tabs[tab].image_scale_box.deleteLater()
 
-            if tab not in ["txt2img", "img2img"]:
-                self.tabs[tab].upscale_checkBox.deleteLater()
-            else:
-                self.tabs[tab].upscale_checkBox.stateChanged.connect(self.handle_upscale_checkBox_change)
-
         for tab in sections:
             self.window.tabWidget.addTab(self.tabs[tab], tab)
 
@@ -247,12 +242,6 @@ class GeneratorMixin(LoraMixin):
         self.initialize_size_form_elements()
         self.initialize_size_sliders()
         self.initialize_lora()
-
-    def handle_upscale_checkBox_change(self):
-        if self.window.tabWidget.currentWidget().upscale_checkBox.isChecked():
-            self.settings_manager.settings.upscale_images.set(True)
-        else:
-            self.settings_manager.settings.upscale_images.set(False)
 
     def refresh_model_list(self):
         for i in range(self.window.tabWidget.count()):
