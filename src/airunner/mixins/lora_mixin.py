@@ -5,6 +5,8 @@ from PyQt6.QtWidgets import QWidget, QVBoxLayout
 class LoraMixin:
     lora_loaded = False
 
+    total_lora_by_section = {}
+
     def initialize(self):
         self.initialize_lora()
 
@@ -56,11 +58,18 @@ class LoraMixin:
         return available_lora[tab_name]
 
     def get_list_of_available_loras(self, tab_name, lora_path, lora_names=None):
+        if tab_name not in self.total_lora_by_section:
+            self.total_lora_by_section[tab_name] = {
+                "total": 0,
+                "enabled": 0
+            }
+
         if lora_names is None:
             lora_names = []
         if not os.path.exists(lora_path):
             return lora_names
         possible_line_endings = ["ckpt", "safetensors", "bin"]
+
         for lora_file in os.listdir(lora_path):
             if os.path.isdir(os.path.join(lora_path, lora_file)):
                 lora_names = self.get_list_of_available_loras(tab_name, os.path.join(lora_path, lora_file), lora_names)
@@ -78,6 +87,9 @@ class LoraMixin:
                             scale = lora["scale"]
                             enabled = lora["enabled"]
                             trigger_word = lora["trigger_word"]
+                            self.total_lora_by_section[tab_name]["total"] += 1
+                            if enabled:
+                                self.total_lora_by_section[tab_name]["enabled"] += 1
                             break
                 lora_names.append({
                     "name": name,
@@ -114,6 +126,8 @@ class LoraMixin:
         container.layout().addStretch()
         # display tabs of tab.PromptTabsSection which is a QTabWidget
         tab.lora_scroll_area.setWidget(container)
+        # set the tab name
+        self.update_lora_tab_name(tab_name)
 
     def initialize_lora_trigger_words(self):
         available_loras = self.settings_manager.settings.available_loras.get()
@@ -162,8 +176,19 @@ class LoraMixin:
         for n in range(len(available_loras[tab_name])):
             if available_loras[tab_name][n]["name"] == lora["name"]:
                 available_loras[tab_name][n]["enabled"] = value == 2
+                if value == 2:
+                    self.total_lora_by_section[tab_name]["enabled"] += 1
+                else:
+                    self.total_lora_by_section[tab_name]["enabled"] -= 1
+                self.update_lora_tab_name(tab_name)
         self.settings_manager.settings.available_loras.set(available_loras)
         self.settings_manager.save_settings()
+
+    def update_lora_tab_name(self, tab_name):
+        self.tabs[tab_name].PromptTabsSection.setTabText(
+            2,
+            f'LoRA ({self.total_lora_by_section[tab_name]["enabled"]}/{self.total_lora_by_section[tab_name]["total"]})'
+        )
 
     def handle_lora_slider(self, lora, lora_widget, value, tab_name):
         available_loras = self.settings_manager.settings.available_loras.get()
