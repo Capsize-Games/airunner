@@ -68,6 +68,7 @@ class LoraMixin:
                 name = lora_file.split(".")[0]
                 scale = 100.0
                 enabled = True
+                trigger_word = ""
                 # check if we have scale in self.settings_manager.settings.available_loras[tab_name]
                 available_lora = self.settings_manager.settings.available_loras.get()
                 if tab_name in available_lora:
