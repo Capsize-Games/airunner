@@ -162,6 +162,8 @@ class GeneratorMixin(LoraMixin):
             if tab in ["txt2img", "img2img", "depth2img", "outpaint", "controlnet", "superresolution", "txt2vid"]:
                 self.tabs[tab].image_scale_box.deleteLater()
 
+            self.tabs[tab].interrupt_button.clicked.connect(self.interrupt)
+
         for tab in sections:
             self.window.tabWidget.addTab(self.tabs[tab], tab)
 
@@ -248,6 +250,10 @@ class GeneratorMixin(LoraMixin):
         self.initialize_size_form_elements()
         self.initialize_size_sliders()
         self.initialize_lora()
+
+    def interrupt(self):
+        print("Interrupting...")
+        self.client.sd_runner.cancel()
 
     def refresh_model_list(self):
         for i in range(self.window.tabWidget.count()):
