@@ -121,6 +121,12 @@ class GeneratorMixin(LoraMixin):
     def scheduler(self, val):
         self.settings.scheduler_var.set(val)
 
+    def update_prompt(self, prompt):
+        self.tabs[self.current_section].prompt.setPlainText(prompt)
+
+    def update_negative_prompt(self, prompt):
+        self.tabs[self.current_section].negative_prompt.setPlainText(prompt)
+
     def initialize(self):
         self.settings_manager.settings.model_base_path.my_signal.connect(self.refresh_model_list)
 
