@@ -20,7 +20,7 @@ from airunner.mixins.toolbar_mixin import ToolbarMixin
 from airunner.windows.update_window import UpdateWindow
 from airunner.windows.video import VideoPopup
 from airunner.utils import get_version, get_latest_version
-from aihandler.settings_manager import SettingsManager
+from aihandler.settings_manager import SettingsManager, PromptManager
 from airunner.runai_client import OfflineClient
 import qdarktheme
 
@@ -54,6 +54,7 @@ class MainWindow(
     history = None
     canvas = None
     settings_manager = None
+    prompts_manager = None
     sections = [
         "txt2img",
         "img2img",
@@ -222,6 +223,7 @@ class MainWindow(
             self.canvas.update()
 
     def initialize(self):
+        self.initialize_saved_prompts()
         self.initialize_settings_manager()
         self.initialize_tqdm()
         self.initialize_handlers()
@@ -241,6 +243,10 @@ class MainWindow(
         if self.settings_manager.settings.force_reset.get():
             self.reset_settings()
             self.settings_manager.settings.force_reset.set(False)
+
+    def initialize_saved_prompts(self):
+        self.prompts_manager = PromptManager()
+        self.prompts_manager.enable_save()
 
     def initialize_settings_manager(self):
         self.settings_manager = SettingsManager()

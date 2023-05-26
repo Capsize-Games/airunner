@@ -1,5 +1,7 @@
-from PyQt6.QtWidgets import QFileDialog
+from PyQt6.QtWidgets import QFileDialog, QScrollArea, QVBoxLayout, QGridLayout
+from PyQt6 import uic
 from airunner.windows.advanced_settings import AdvancedSettings
+from airunner.windows.base_window import BaseWindow
 from airunner.windows.export_preferences import ExportPreferences
 from airunner.filters.filter_box_blur import FilterBoxBlur
 from airunner.filters.filter_color_balance import FilterColorBalance
@@ -8,6 +10,8 @@ from airunner.filters.filter_pixel_art import FilterPixelArt
 from airunner.filters.filter_saturation import FilterSaturation
 from airunner.filters.filter_unsharp_mask import FilterUnsharpMask
 from airunner.filters.filter_rgb_noise import FilterRGBNoise
+from airunner.windows.prompt_browser import PromptBrowser
+
 
 class MenubarMixin:
     def initialize(self):
@@ -36,6 +40,20 @@ class MenubarMixin:
                 self.window.actionCheck_for_latest_version_on_startup.isChecked()
             )
         )
+        self.window.actionSave_prompt.triggered.connect(self.save_prompt)
+        self.window.actionPrompt_Browser.triggered.connect(self.show_prompt_browser)
+
+    def show_prompt_browser(self):
+        PromptBrowser(settings_manager=self.prompts_manager, app=self)
+
+    def save_prompt(self):
+        saved_prompts = self.prompts_manager.settings.prompts.get()
+        saved_prompts.append({
+            'prompt': self.prompt,
+            'negative_prompt': self.negative_prompt
+        })
+        self.prompts_manager.settings.prompts.set(saved_prompts)
+        self.prompts_manager.save_settings()
 
     def initialize_filter_actions(self):
         self.filter_gaussian_blur = FilterGaussianBlur(parent=self)
