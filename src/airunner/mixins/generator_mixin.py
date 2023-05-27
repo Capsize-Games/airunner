@@ -16,6 +16,14 @@ from PIL import PngImagePlugin
 
 class GeneratorMixin(LoraMixin):
     @property
+    def model_base_path(self):
+        return self.settings.model_base_path.get()
+
+    @model_base_path.setter
+    def model_base_path(self, val):
+        self.settings.model_base_path.set(val)
+
+    @property
     def width(self):
         return int(self.settings_manager.settings.working_width.get())
 
@@ -40,6 +48,14 @@ class GeneratorMixin(LoraMixin):
     @steps.setter
     def steps(self, val):
         self.settings.steps.set(val)
+
+    @property
+    def ddim_eta(self):
+        return self.settings.ddim_eta.get()
+
+    @ddim_eta.setter
+    def ddim_eta(self, val):
+        self.settings.ddim_eta.set(val)
 
     @property
     def prompt(self):
@@ -642,18 +658,15 @@ class GeneratorMixin(LoraMixin):
 
         action = self.current_section
         tab = self.tabs[action]
-        # get the name of the model from the model_dropdown
-        sm = self.settings_manager.settings
-        sm.set_namespace(action)
 
-        if sm.random_seed.get():
+        if self.random_seed:
             # randomize seed
             seed = random.randint(0, MAX_SEED)
-            sm.seed.set(seed)
+            self.seed = seed
             # set random_seed on current tab
             self.tabs[action].seed.setText(str(seed))
         if action in ("txt2img", "img2img", "pix2pix", "depth2img", "txt2vid"):
-            samples = sm.n_samples.get()
+            samples = self.samples
         else:
             samples = 1
 
@@ -663,9 +676,7 @@ class GeneratorMixin(LoraMixin):
             seed = random.randint(0, MAX_SEED)
             self.settings.seed.set(seed)
         else:
-            seed = sm.seed.get()
-        # set model, model_path and model_branch
-        # model = sm.model_var.get()
+            seed = self.seed
 
         # set the model data
         model = tab.model_dropdown.currentText()
@@ -707,23 +718,23 @@ class GeneratorMixin(LoraMixin):
         options = {
             f"{action}_prompt": prompt,
             f"{action}_negative_prompt": negative_prompt,
-            f"{action}_steps": sm.steps.get(),
-            f"{action}_ddim_eta": sm.ddim_eta.get(),  # only applies to ddim scheduler
+            f"{action}_steps": self.steps,
+            f"{action}_ddim_eta": self.ddim_eta,  # only applies to ddim scheduler
             f"{action}_n_iter": 1,
-            f"{action}_width": sm.working_width.get(),
-            f"{action}_height": sm.working_height.get(),
+            f"{action}_width": self.width,
+            f"{action}_height": self.height,
             f"{action}_n_samples": samples,
-            f"{action}_scale": sm.scale.get() / 100,
+            f"{action}_scale": self.scale / 100,
             f"{action}_seed": seed,
             f"{action}_model": model,
-            f"{action}_scheduler": sm.scheduler_var.get(),
+            f"{action}_scheduler": self.scheduler,
             f"{action}_model_path": model_path,
             f"{action}_model_branch": model_branch,
             f"{action}_lora": self.available_lora(action),
-            f"width": sm.working_width.get(),
-            f"height": sm.working_height.get(),
+            f"width": self.width,
+            f"height": self.height,
             "do_nsfw_filter": self.settings_manager.settings.nsfw_filter.get(),
-            "model_base_path": sm.model_base_path.get(),
+            "model_base_path": self.model_base_path,
             "pos_x": 0,
             "pos_y": 0,
             "outpaint_box_rect": self.active_rect,
@@ -736,22 +747,22 @@ class GeneratorMixin(LoraMixin):
             options["original_image_height"] = self.canvas.current_active_image.image.height
 
         if action in ["img2img", "depth2img", "pix2pix", "controlnet"]:
-            options[f"{action}_strength"] = sm.strength.get() / 100.0
+            options[f"{action}_strength"] = self.strength / 100.0
 
         if action == "pix2pix":
-            options[f"pix2pix_image_guidance_scale"] = sm.pix2pix_image_guidance_scale.get()
+            options[f"pix2pix_image_guidance_scale"] = self.image_scale
         memory_options = {
-            "use_last_channels": sm.use_last_channels.get(),
-            "use_enable_sequential_cpu_offload": sm.use_enable_sequential_cpu_offload.get(),
-            "enable_model_cpu_offload": sm.enable_model_cpu_offload.get(),
-            "use_attention_slicing": sm.use_attention_slicing.get(),
-            "use_tf32": sm.use_tf32.get(),
-            "use_cudnn_benchmark": sm.use_cudnn_benchmark.get(),
-            "use_enable_vae_slicing": sm.use_enable_vae_slicing.get(),
-            "use_xformers": sm.use_xformers.get(),
-            "use_accelerated_transformers": sm.use_accelerated_transformers.get(),
-            "use_torch_compile": sm.use_torch_compile.get(),
-            "use_tiled_vae": sm.use_tiled_vae.get(),
+            "use_last_channels": self.settings_manager.settings.use_last_channels.get(),
+            "use_enable_sequential_cpu_offload": self.settings_manager.settings.use_enable_sequential_cpu_offload.get(),
+            "enable_model_cpu_offload": self.settings_manager.settings.enable_model_cpu_offload.get(),
+            "use_attention_slicing": self.settings_manager.settings.use_attention_slicing.get(),
+            "use_tf32": self.settings_manager.settings.use_tf32.get(),
+            "use_cudnn_benchmark": self.settings_manager.settings.use_cudnn_benchmark.get(),
+            "use_enable_vae_slicing": self.settings_manager.settings.use_enable_vae_slicing.get(),
+            "use_xformers": self.settings_manager.settings.use_xformers.get(),
+            "use_accelerated_transformers": self.settings_manager.settings.use_accelerated_transformers.get(),
+            "use_torch_compile": self.settings_manager.settings.use_torch_compile.get(),
+            "use_tiled_vae": self.settings_manager.settings.use_tiled_vae.get(),
         }
         data = {
             "action": action,
