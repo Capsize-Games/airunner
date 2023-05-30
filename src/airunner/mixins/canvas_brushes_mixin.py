@@ -174,6 +174,14 @@ class CanvasBrushesMixin:
             self.min_x = min_x
             self.min_y = min_y
 
+            image = self.current_layer.images[0].image if len(self.current_layer.images) > 0 else None
+            if image:
+                position = self.current_layer.images[0].position
+                min_x = min(min_x, position.x())
+                min_y = min(min_y, position.y())
+                max_x = max(max_x, image.width)
+                max_y = max(max_y, image.height)
+
             if self.left_line_extremity is None or min_x < self.left_line_extremity:
                 self.left_line_extremity = min_x
             if self.right_line_extremity is None or max_x > self.right_line_extremity:
