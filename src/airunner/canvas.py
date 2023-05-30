@@ -25,6 +25,10 @@ class Canvas(
     select_start = None
     select_end = None
     shift_is_pressed = False
+    left_mouse_button_down = False
+    right_mouse_button_down = False
+    brush_start = None
+    last_mouse_pos = None
 
     @property
     def current_layer(self):
@@ -221,10 +225,6 @@ class Canvas(
 
         self.layers[self.current_layer_index].offset = point
 
-    left_mouse_button_down = False
-    right_mouse_button_down = False
-    brush_start = None
-
     def mouse_press_event(self, event):
         if event.button() == Qt.MouseButton.LeftButton:
             self.select_start = event.pos()
@@ -265,7 +265,6 @@ class Canvas(
             # Start dragging the canvas when the middle or right mouse button is pressed
             self.drag_pos = event.pos()
 
-    last_mouse_pos = None
     def mouse_move_event(self, event):
         # check if LeftButton is pressed
         if Qt.MouseButton.LeftButton in event.buttons() or Qt.MouseButton.RightButton in event.buttons():
@@ -290,7 +289,6 @@ class Canvas(
             # Start dragging the canvas when the middle or right mouse button is pressed
             self.drag_pos = event.pos()
         self.rasterize_lines()
-
 
     def handle_select(self, event):
         if self.select_selected:
