@@ -99,6 +99,8 @@ class CanvasBrushesMixin:
         brush_size = int(self.settings_manager.settings.mask_brush_size.get() / 2)
         image = self.current_layer.images[0].image if len(self.current_layer.images) > 0 else None
         image_pos = self.current_layer.images[0].position if len(self.current_layer.images) > 0 else None
+        if image is None:
+            return
         start = event.pos() - QPoint(self.pos_x, self.pos_y) - image_pos
         if image:
             image = image.copy()
