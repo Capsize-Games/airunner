@@ -19,6 +19,7 @@ class CanvasBrushesMixin:
     last_top = 0
     min_x = 0
     min_y = 0
+    last_pos = None
     
     @property
     def is_drawing(self):
@@ -96,13 +97,20 @@ class CanvasBrushesMixin:
     def handle_erase(self, event):
         self.is_erasing = True
         brush_size = int(self.settings_manager.settings.mask_brush_size.get() / 2)
-        start = event.pos() - QPoint(self.pos_x, self.pos_y)
         image = self.current_layer.images[0].image if len(self.current_layer.images) > 0 else None
         image_pos = self.current_layer.images[0].position if len(self.current_layer.images) > 0 else None
-        start -= image_pos
+        start = event.pos() - QPoint(self.pos_x, self.pos_y) - image_pos
         if image:
             image = image.copy()
             draw = ImageDraw.Draw(image)
+            if self.last_pos is None:
+                self.last_pos = start
+            draw.line([
+                self.last_pos.x(),
+                self.last_pos.y(),
+                start.x(),
+                start.y()
+            ], fill=(0, 0, 0, 0), width=brush_size*2, joint="curve")
             draw.ellipse((
                 start.x() - brush_size,
                 start.y() - brush_size,
@@ -110,6 +118,7 @@ class CanvasBrushesMixin:
                 start.y() + brush_size
             ), fill=(0, 0, 0, 0))
             self.current_layer.images[0].image = image
+            self.last_pos = start
             self.update()
         self.update()
 
