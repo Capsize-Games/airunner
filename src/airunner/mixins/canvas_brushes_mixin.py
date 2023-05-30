@@ -149,16 +149,15 @@ class CanvasBrushesMixin:
         self.current_layer.lines.append(line_data)
         self.update()
 
-    left_line_extremity = 0
-    right_line_extremity = 0
-    top_line_extremity = 0
-    bottom_line_extremity = 0
-    max_left = 0
-    max_top = 0
-    max_right = 0
-    max_bottom = 0
+    left_line_extremity = None
+    right_line_extremity = None
+    top_line_extremity = None
+    bottom_line_extremity = None
     last_left = 0
     last_top = 0
+    min_x = 0
+    min_y = 0
+
 
     def get_line_extremities(self):
         for line in self.current_layer.lines:
@@ -166,43 +165,45 @@ class CanvasBrushesMixin:
             start_y = line.start_point.y()
             end_x = line.end_point.x()
             end_y = line.end_point.y()
-            if self.left_line_extremity is None or start_x < self.left_line_extremity:
-                self.left_line_extremity = start_x
-            if self.right_line_extremity is None or start_x > self.right_line_extremity:
-                self.right_line_extremity = start_x
-            if self.top_line_extremity is None or start_y < self.top_line_extremity:
-                self.top_line_extremity = start_y
-            if self.bottom_line_extremity is None or start_y > self.bottom_line_extremity:
-                self.bottom_line_extremity = start_y
-            if end_x < self.left_line_extremity:
-                self.left_line_extremity = end_x
-            if end_x > self.right_line_extremity:
-                self.right_line_extremity = end_x
-            if end_y < self.top_line_extremity:
-                self.top_line_extremity = end_y
-            if end_y > self.bottom_line_extremity:
-                self.bottom_line_extremity = end_y
-        if self.top_line_extremity > -self.pos_y:
-            self.top_line_extremity = -self.pos_y
-        if self.left_line_extremity > -self.pos_x:
-            self.left_line_extremity = -self.pos_x
-        brush_size = self.settings_manager.settings.mask_brush_size.get()
-        return self.top_line_extremity - brush_size, self.left_line_extremity - brush_size, self.bottom_line_extremity + brush_size, self.right_line_extremity + brush_size
+
+            brush_size = int(self.settings_manager.settings.mask_brush_size.get() / 2)
+            min_x = min(start_x, end_x) - brush_size
+            min_y = min(start_y, end_y) - brush_size
+            max_x = max(start_x, end_x) + brush_size
+            max_y = max(start_y, end_y) + brush_size
+            self.min_x = min_x
+            self.min_y = min_y
+
+            image = self.current_layer.images[0].image if len(self.current_layer.images) > 0 else None
+            if image:
+                position = self.current_layer.images[0].position
+                min_x = min(min_x, position.x())
+                min_y = min(min_y, position.y())
+                max_x = max(max_x, image.width)
+                max_y = max(max_y, image.height)
+
+            if self.left_line_extremity is None or min_x < self.left_line_extremity:
+                self.left_line_extremity = min_x
+            if self.right_line_extremity is None or max_x > self.right_line_extremity:
+                self.right_line_extremity = max_x
+            if self.top_line_extremity is None or min_y < self.top_line_extremity:
+                self.top_line_extremity = min_y
+            if self.bottom_line_extremity is None or max_y > self.bottom_line_extremity:
+                self.bottom_line_extremity = max_y
+        return self.top_line_extremity, self.left_line_extremity, self.bottom_line_extremity, self.right_line_extremity
 
     def rasterize_lines(self):
         if len(self.current_layer.lines) == 0:
             return
         top, left, bottom, right = self.get_line_extremities()
 
-        left = min(self.max_left, left)
-        top = min(self.max_top, top)
-        right = max(self.max_right, right)
-        bottom = max(self.max_bottom, bottom)
-
         # create a QImage with the size of the lines
-        brush_size = self.settings_manager.settings.mask_brush_size.get()
-        width = brush_size + right - left
-        height = brush_size + bottom - top
+        min_x = min(left, right)
+        min_y = min(top, bottom)
+        max_x = max(left, right)
+        max_y = max(top, bottom)
+        width = abs(max_x - min_x)
+        height = abs(max_y - min_y)
         img = QImage(QSize(width, height), QImage.Format.Format_ARGB32)
         img.fill(Qt.GlobalColor.transparent)
         painter = QPainter(img)
@@ -223,8 +224,8 @@ class CanvasBrushesMixin:
             painter.setPen(pen)
             painter.setOpacity(line.opacity / 255)
 
-            start = QPointF(line.start_point.x() + self.pos_x, line.start_point.y() + self.pos_y)
-            end = QPointF(line.end_point.x() + self.pos_x, line.end_point.y() + self.pos_y)
+            start = QPointF(line.start_point.x() - self.left_line_extremity, line.start_point.y() - self.top_line_extremity)
+            end = QPointF(line.end_point.x() - self.left_line_extremity, line.end_point.y() - self.top_line_extremity)
 
             # also apply the layer offset
             offset = QPointF(self.current_layer.offset.x(), self.current_layer.offset.y())
@@ -243,46 +244,37 @@ class CanvasBrushesMixin:
         return path
 
     def convert_pixmap_to_pil_image(self, img: Image, top: int, left: int, bottom: int, right: int):
-        self.max_left = left if left < self.max_left else self.max_left
-        self.max_top = top if top < self.max_top else self.max_top
-        self.max_right = right if right > self.max_right else self.max_right
-        self.max_bottom = bottom if bottom > self.max_bottom else self.max_bottom
-
         img = Image.fromqpixmap(img)
+        width = img.width
+        height = img.height
         current_image = self.current_layer.images[0].image.copy() if len(self.current_layer.images) > 0 else None
-        width = abs(right) + abs(left)
-        height = abs(bottom) + abs(top)
         existing_image_width = current_image.width if current_image else 0
         existing_image_height = current_image.height if current_image else 0
 
-        composite_width = existing_image_width if existing_image_width > width else width
-        composite_height = existing_image_height if existing_image_height > height else height
-
-        if composite_width < (self.max_right - self.max_left):
-            composite_width = self.max_right - self.max_left
-        if composite_height < (self.max_bottom - self.max_top):
-            composite_height = self.max_bottom - self.max_top
+        composite_width = width
+        composite_height = height
+        if existing_image_width > composite_width:
+            composite_width = existing_image_width
+        if existing_image_height > composite_height:
+            composite_height = existing_image_height
 
         composite_image = Image.new('RGBA', (composite_width, composite_height), (0, 0, 0, 0))
-
-        q_point_x = self.max_left
-        q_point_y = self.max_top
-        composite_img_dest = QPoint(q_point_x, q_point_y)
+        composite_img_dest = QPoint(left, top)
 
         pos_x = 0
         pos_y = 0
 
-        if self.last_left != self.max_left:
+        if self.last_left != left:
             last_left = self.last_left
-            self.last_left = self.max_left
+            self.last_left = left
             pos_x = -self.last_left + last_left
-        if self.last_top != self.max_top:
+        if self.last_top != top:
             last_top = self.last_top
-            self.last_top = self.max_top
+            self.last_top = top
             pos_y = -self.last_top + last_top
 
-        new_img_dest_pos_x = -(self.pos_x - abs(left))
-        new_img_dest_pos_y = -(self.pos_y - abs(top))
+        new_img_dest_pos_x = 0
+        new_img_dest_pos_y = 0
 
         # self.parent.window.debug_label.setText(
         #     f"W/H: {width}x{height} | imgdest: {new_img_dest_pos_x}, {new_img_dest_pos_y} | ext: {self.left_line_extremity}, {self.top_line_extremity}, {self.right_line_extremity}, {self.bottom_line_extremity} | max: {self.max_left}, {self.max_top} {self.max_right} {self.max_bottom} | last: {self.last_left}, {self.last_top}"
