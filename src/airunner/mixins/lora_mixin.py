@@ -84,7 +84,7 @@ class LoraMixin:
                         if lora["name"] == name:
                             scale = lora["scale"]
                             enabled = lora["enabled"]
-                            trigger_word = lora["trigger_word"]
+                            trigger_word = lora["trigger_word"] if trigger_word in lora else ""
                             self.total_lora_by_section[tab_name]["total"] += 1
                             if enabled:
                                 self.total_lora_by_section[tab_name]["enabled"] += 1
@@ -183,6 +183,8 @@ class LoraMixin:
         self.settings_manager.save_settings()
 
     def update_lora_tab_name(self, tab_name):
+        if tab_name not in self.total_lora_by_section:
+            self.total_lora_by_section[tab_name] = {"total": 0, "enabled": 0}
         self.tabs[tab_name].PromptTabsSection.setTabText(
             2,
             f'LoRA ({self.total_lora_by_section[tab_name]["enabled"]}/{self.total_lora_by_section[tab_name]["total"]})'
