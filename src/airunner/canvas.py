@@ -171,6 +171,7 @@ class Canvas(
         self.canvas_container.setCursor(QCursor(Qt.CursorShape.ArrowCursor))
 
     def update(self):
+        self.parent.window.canvas_position.setText(f"X: {self.pos_x}, Y: {self.pos_y}")
         self.canvas_container.update()
 
     def clear(self):
@@ -188,7 +189,6 @@ class Canvas(
         self.pos_y += event.pos().y() - self.drag_pos.y()
         self.drag_pos = event.pos()
         self.update()
-        self.parent.window.canvas_position.setText(f"X: {self.pos_x}, Y: {self.pos_y}")
 
     def handle_move_layer(self, event):
         point = QPoint(
