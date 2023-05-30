@@ -58,18 +58,16 @@ class LoraMixin:
         return available_lora[tab_name]
 
     def get_list_of_available_loras(self, tab_name, lora_path, lora_names=None):
-        if tab_name not in self.total_lora_by_section:
-            self.total_lora_by_section[tab_name] = {
-                "total": 0,
-                "enabled": 0
-            }
+        self.total_lora_by_section[tab_name] = {
+            "total": 0,
+            "enabled": 0
+        }
 
         if lora_names is None:
             lora_names = []
         if not os.path.exists(lora_path):
             return lora_names
         possible_line_endings = ["ckpt", "safetensors", "bin"]
-
         for lora_file in os.listdir(lora_path):
             if os.path.isdir(os.path.join(lora_path, lora_file)):
                 lora_names = self.get_list_of_available_loras(tab_name, os.path.join(lora_path, lora_file), lora_names)
