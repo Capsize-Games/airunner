@@ -284,18 +284,11 @@ class Canvas(
                 self.stop_drawing_line_index = len(self.current_layer.lines)
                 self.update()
             elif self.eraser_selected:
+                self.last_pos = None
                 self.is_erasing = False
         elif event.button() == Qt.MouseButton.MiddleButton:
             # Start dragging the canvas when the middle or right mouse button is pressed
             self.drag_pos = event.pos()
-
-        # self.parent.history.add_event({
-        #     "event": "set_image",
-        #     "layer_index": self.current_layer_index,
-        #     "images": self.current_layer.images,
-        #     "previous_image_root_point": self.image_root_point,
-        #     "previous_image_pivot_point": self.image_pivot_point,
-        # })
         self.rasterize_lines()
 
 
