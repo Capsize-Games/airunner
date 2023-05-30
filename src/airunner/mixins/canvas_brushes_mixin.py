@@ -11,6 +11,14 @@ class CanvasBrushesMixin:
     opacity = None
     color = None
     width = None
+    left_line_extremity = None
+    right_line_extremity = None
+    top_line_extremity = None
+    bottom_line_extremity = None
+    last_left = 0
+    last_top = 0
+    min_x = 0
+    min_y = 0
     
     @property
     def is_drawing(self):
@@ -148,16 +156,6 @@ class CanvasBrushesMixin:
         line_data = LineData(start, end, pen, self.current_layer_index, opacity)
         self.current_layer.lines.append(line_data)
         self.update()
-
-    left_line_extremity = None
-    right_line_extremity = None
-    top_line_extremity = None
-    bottom_line_extremity = None
-    last_left = 0
-    last_top = 0
-    min_x = 0
-    min_y = 0
-
 
     def get_line_extremities(self):
         for line in self.current_layer.lines:
