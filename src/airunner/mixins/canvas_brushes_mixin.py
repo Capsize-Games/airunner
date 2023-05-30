@@ -2,7 +2,6 @@ from PIL import ImageDraw
 from PyQt6.QtCore import Qt, QPointF, QPoint, QSize, QRect
 from PyQt6.QtGui import QPainter, QPainterPath, QColor, QPen, QImage
 from airunner.models.linedata import LineData
-from airunner.models.imagedata import ImageData
 from PIL import Image
 
 
@@ -88,24 +87,22 @@ class CanvasBrushesMixin:
 
     def handle_erase(self, event):
         self.is_erasing = True
-        # Erase any line segments that intersect with the current position of the mouse
-        brush_size = self.settings_manager.settings.mask_brush_size.get()
-        start = event.pos() - QPoint(self.pos_x, self.pos_y) - self.image_pivot_point
-        for i, line in enumerate(self.current_layer.lines):
-            # check if line intersects with start using brush size radius
-            if line.intersects(start, brush_size):
-                self.current_layer.lines.pop(i)
-                self.update()
-
-        # erase pixels from image
-        if len(self.current_layer.images) > 0:
-            image = self.current_layer.images[0].image
-            if image:
-                image = image.copy()
-                draw = ImageDraw.Draw(image)
-                draw.ellipse((start.x() - brush_size, start.y() - brush_size, start.x() + brush_size, start.y() + brush_size), fill=(0, 0, 0, 0))
-                self.current_layer.images[0].image = image
-                self.update()
+        brush_size = int(self.settings_manager.settings.mask_brush_size.get() / 2)
+        start = event.pos() - QPoint(self.pos_x, self.pos_y)
+        image = self.current_layer.images[0].image if len(self.current_layer.images) > 0 else None
+        image_pos = self.current_layer.images[0].position if len(self.current_layer.images) > 0 else None
+        start -= image_pos
+        if image:
+            image = image.copy()
+            draw = ImageDraw.Draw(image)
+            draw.ellipse((
+                start.x() - brush_size,
+                start.y() - brush_size,
+                start.x() + brush_size,
+                start.y() + brush_size
+            ), fill=(0, 0, 0, 0))
+            self.current_layer.images[0].image = image
+            self.update()
         self.update()
 
     def pen(self, event):
