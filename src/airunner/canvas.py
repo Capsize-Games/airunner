@@ -288,7 +288,9 @@ class Canvas(
         elif event.button() == Qt.MouseButton.MiddleButton:
             # Start dragging the canvas when the middle or right mouse button is pressed
             self.drag_pos = event.pos()
-        self.rasterize_lines()
+
+        self.rasterize_lines(self.current_layer.lines)
+        self.current_layer.lines.clear()
 
     def handle_select(self, event):
         if self.select_selected:

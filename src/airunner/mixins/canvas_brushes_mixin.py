@@ -1,8 +1,25 @@
 from PIL import ImageDraw
-from PyQt6.QtCore import Qt, QPointF, QPoint, QSize, QRect
-from PyQt6.QtGui import QPainter, QPainterPath, QColor, QPen, QImage
+from PyQt6.QtCore import Qt, QPointF, QPoint, QSize, QRect, QThread, QObject, pyqtSignal
+from PyQt6.QtGui import QPainter, QPainterPath, QColor, QPen, QImage, QBrush
 from airunner.models.linedata import LineData
 from PIL import Image
+
+
+class RasterizationWorker(QObject):
+    finished = pyqtSignal()
+
+    def __init__(self, *args, **kwargs):
+        self.convert_pixmap_to_pil_image = kwargs.pop('convert_pixmap_to_pil_image')
+        self.img = kwargs.pop('img')
+        self.top = kwargs.pop('top')
+        self.left = kwargs.pop('left')
+        self.bottom = kwargs.pop('bottom')
+        self.right = kwargs.pop('right')
+        super().__init__(*args)
+
+    def run(self):
+        self.convert_pixmap_to_pil_image(self.img, self.top, self.left, self.bottom, self.right)
+        self.finished.emit()
 
 
 class CanvasBrushesMixin:
@@ -20,6 +37,8 @@ class CanvasBrushesMixin:
     min_x = 0
     min_y = 0
     last_pos = None
+    thread = None
+    worker = None
     
     @property
     def is_drawing(self):
@@ -88,6 +107,10 @@ class CanvasBrushesMixin:
 
         # draw the entire line with a single drawPath call
         self.draw_path(path, painter)
+
+        max_lines = 20
+        if len(self.current_layer.lines) > max_lines:
+            self.rasterize_lines(self.current_layer.lines[:10])
 
     def draw_path(self, path, painter):
         if painter:
@@ -168,8 +191,8 @@ class CanvasBrushesMixin:
         self.current_layer.lines.append(line_data)
         self.update()
 
-    def get_line_extremities(self):
-        for line in self.current_layer.lines:
+    def get_line_extremities(self, lines):
+        for line in lines:
             start_x = line.start_point.x()
             start_y = line.start_point.y()
             end_x = line.end_point.x()
@@ -193,10 +216,10 @@ class CanvasBrushesMixin:
                 self.bottom_line_extremity = max_y
         return self.top_line_extremity, self.left_line_extremity, self.bottom_line_extremity, self.right_line_extremity
 
-    def rasterize_lines(self):
-        if len(self.current_layer.lines) == 0:
+    def rasterize_lines(self, lines):
+        if len(lines) == 0:
             return
-        top, left, bottom, right = self.get_line_extremities()
+        top, left, bottom, right = self.get_line_extremities(lines)
 
         # create a QImage with the size of the lines
         min_x = min(left, right)
@@ -210,17 +233,45 @@ class CanvasBrushesMixin:
         painter = QPainter(img)
         painter.setBrush(self.brush)
         painter.setRenderHint(QPainter.RenderHint.Antialiasing)
-        path = self.create_image_path(painter)
+        path = self.create_image_path(painter, lines)
         painter.drawPath(path)
         painter.end()
-        self.convert_pixmap_to_pil_image(img, top, left, bottom, right)
+        if self.thread is None:
+            self.thread = QThread()
+            self.worker = RasterizationWorker(
+                convert_pixmap_to_pil_image=self.convert_pixmap_to_pil_image,
+                img=img,
+                top=top,
+                left=left,
+                bottom=bottom,
+                right=right
+            )
+            self.worker.moveToThread(self.thread)
+            self.thread.started.connect(self.worker.run)
+            self.worker.finished.connect(self.finalize_pixmap)
+            self.thread.start()
 
-    def create_image_path(self, painter):
+    def finalize_pixmap(self):
+        # clear lines
+        self.current_layer.lines = self.current_layer.lines[10:]
+        self.thread.quit()
+        self.thread.wait()
+        self.thread = None
+
+    def create_image_path(self, painter, lines):
         path = QPainterPath()
-        for line in self.current_layer.lines:
+        path.setFillRule(Qt.FillRule.WindingFill)
+        """
+        The following code will have overlapping circles which will create a smooth line however
+        it will also create a lot of overlapping pixels which will make the image look darker
+        and darker the more lines are drawn. This is not what we want.
+        In order to fix this we need to create a path that will only draw the outline of the
+        overlapping circles.
+        """
+        for line in lines:
             pen = line.pen
             pen.setCapStyle(Qt.PenCapStyle.RoundCap)
-            pen.setJoinStyle(Qt.PenJoinStyle.RoundJoin)
+            pen.setJoinStyle(Qt.PenJoinStyle.MiterJoin)
 
             painter.setPen(pen)
             painter.setOpacity(line.opacity / 255)
@@ -294,4 +345,3 @@ class CanvasBrushesMixin:
         new_img_dest = (new_img_dest_pos_x, new_img_dest_pos_y)
         composite_image.alpha_composite(img, new_img_dest)
         self.add_image_to_canvas_new(composite_image, composite_img_dest, self.image_root_point)
-        self.current_layer.lines.clear()
