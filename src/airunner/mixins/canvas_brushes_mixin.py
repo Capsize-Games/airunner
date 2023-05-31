@@ -183,14 +183,6 @@ class CanvasBrushesMixin:
             self.min_x = min_x
             self.min_y = min_y
 
-            image = self.current_layer.images[0].image if len(self.current_layer.images) > 0 else None
-            if image:
-                position = self.current_layer.images[0].position
-                min_x = min(min_x, position.x())
-                min_y = min(min_y, position.y())
-                max_x = max(max_x, image.width)
-                max_y = max(max_y, image.height)
-
             if self.left_line_extremity is None or min_x < self.left_line_extremity:
                 self.left_line_extremity = min_x
             if self.right_line_extremity is None or max_x > self.right_line_extremity:
@@ -267,7 +259,12 @@ class CanvasBrushesMixin:
         if existing_image_height > composite_height:
             composite_height = existing_image_height
 
-        composite_image = Image.new('RGBA', (composite_width, composite_height), (0, 0, 0, 0))
+        do_new_image = False
+        if composite_width > existing_image_width or composite_height > existing_image_height:
+            composite_image = Image.new('RGBA', (composite_width, composite_height), (0, 0, 0, 0))
+            do_new_image = True
+        else:
+            composite_image = current_image
         composite_img_dest = QPoint(left, top)
 
         pos_x = 0
@@ -290,7 +287,7 @@ class CanvasBrushesMixin:
         # )
 
         # add current image to the composite image
-        if current_image:
+        if current_image and do_new_image:
             existing_img_dest = (pos_x, pos_y)
             existing_img_source = (0, 0)
             composite_image.alpha_composite(current_image, existing_img_dest, existing_img_source)
@@ -298,4 +295,3 @@ class CanvasBrushesMixin:
         composite_image.alpha_composite(img, new_img_dest)
         self.add_image_to_canvas_new(composite_image, composite_img_dest, self.image_root_point)
         self.current_layer.lines.clear()
-
