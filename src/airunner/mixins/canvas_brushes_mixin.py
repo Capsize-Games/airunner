@@ -1,6 +1,6 @@
 from PIL import ImageDraw
 from PyQt6.QtCore import Qt, QPointF, QPoint, QSize, QRect, QThread, QObject, pyqtSignal
-from PyQt6.QtGui import QPainter, QPainterPath, QColor, QPen, QImage, QBrush
+from PyQt6.QtGui import QPainter, QPainterPath, QColor, QPen, QImage, QBrush, QPainterPathStroker
 from airunner.models.linedata import LineData
 from PIL import Image
 
@@ -25,9 +25,8 @@ class RasterizationWorker(QObject):
 class CanvasBrushesMixin:
     _point = None
     active_canvas_rect = QRect(0, 0, 0, 0)
-    opacity = None
     color = None
-    width = None
+    line_width = None
     left_line_extremity = None
     right_line_extremity = None
     top_line_extremity = None
@@ -39,7 +38,7 @@ class CanvasBrushesMixin:
     last_pos = None
     thread = None
     worker = None
-    
+
     @property
     def is_drawing(self):
         return self.left_mouse_button_down or self.right_mouse_button_down
@@ -49,16 +48,8 @@ class CanvasBrushesMixin:
         return QColor(self.settings_manager.settings.primary_color.get())
 
     @property
-    def primary_brush_opacity(self):
-        return self.settings_manager.settings.primary_brush_opacity.get()
-
-    @property
     def secondary_color(self):
         return QColor(self.settings_manager.settings.secondary_color.get())
-
-    @property
-    def secondary_brush_opacity(self):
-        return self.settings_manager.settings.secondary_brush_opacity.get()
 
     def draw(self, layer, index):
         path = QPainterPath()
@@ -67,16 +58,12 @@ class CanvasBrushesMixin:
             pen = line.pen
             pen.setCapStyle(Qt.PenCapStyle.RoundCap)
             pen.setJoinStyle(Qt.PenJoinStyle.RoundJoin)
-            if self.width is None or self.width != line.width:
-                self.width = line.width
+            if self.line_width is None or self.line_width != line.width:
+                self.line_width = line.width
                 self.draw_path(path, painter)
                 painter = None
             if self.color is None or self.color != line.color:
                 self.color = line.color
-                self.draw_path(path, painter)
-                painter = None
-            if self.opacity is None or self.opacity != line.opacity:
-                self.opacity = line.opacity
                 self.draw_path(path, painter)
                 painter = None
             if not painter:
@@ -85,7 +72,6 @@ class CanvasBrushesMixin:
                 painter.setRenderHint(QPainter.RenderHint.Antialiasing)
                 path = QPainterPath()
             painter.setPen(pen)
-            painter.setOpacity(line.opacity / 255)
 
             start = QPointF(line.start_point.x() + self.pos_x, line.start_point.y() + self.pos_y)
             end = QPointF(line.end_point.x() + self.pos_x, line.end_point.y() + self.pos_y)
@@ -109,8 +95,11 @@ class CanvasBrushesMixin:
         self.draw_path(path, painter)
 
         max_lines = 20
-        if len(self.current_layer.lines) > max_lines:
-            self.rasterize_lines(self.current_layer.lines[:10])
+        if (
+            (self.is_drawing and len(self.current_layer.lines) > max_lines)
+            or (not self.is_drawing and len(self.current_layer.lines) > 0)
+        ):
+            self.rasterize_lines()
 
     def draw_path(self, path, painter):
         if painter:
@@ -163,13 +152,8 @@ class CanvasBrushesMixin:
     def handle_draw(self, event):
         start = event.pos() - QPoint(self.pos_x, self.pos_y)
         pen = self.pen(event)
-        opacity = 255
-        if event.button() == Qt.MouseButton.LeftButton or Qt.MouseButton.LeftButton in event.buttons():
-            opacity = self.primary_brush_opacity
-        elif event.button() == Qt.MouseButton.RightButton or Qt.MouseButton.RightButton in event.buttons():
-            opacity = self.secondary_brush_opacity
         if len(self.current_layer.lines) > 0:
-            previous = LineData(self.current_layer.lines[-1].start_point, start, pen, self.current_layer_index, opacity)
+            previous = LineData(self.current_layer.lines[-1].start_point, start, pen, self.current_layer_index)
             self.current_layer.lines[-1] = previous
 
             if self.shift_is_pressed:  # draw a strait line by combining the line segments
@@ -180,14 +164,13 @@ class CanvasBrushesMixin:
                         start_line.start_point,
                         end_line.end_point,
                         start_line.pen,
-                        start_line.layer_index,
-                        start_line.opacity
+                        start_line.layer_index
                     )
                     self.current_layer.lines = self.current_layer.lines[:self.start_drawing_line_index]
                     self.current_layer.lines.append(new_line_data)
 
         end = event.pos() - QPoint(self.pos_x + 1, self.pos_y)
-        line_data = LineData(start, end, pen, self.current_layer_index, opacity)
+        line_data = LineData(start, end, pen, self.current_layer_index)
         self.current_layer.lines.append(line_data)
         self.update()
 
@@ -216,9 +199,13 @@ class CanvasBrushesMixin:
                 self.bottom_line_extremity = max_y
         return self.top_line_extremity, self.left_line_extremity, self.bottom_line_extremity, self.right_line_extremity
 
-    def rasterize_lines(self, lines):
-        if len(lines) == 0:
+    def rasterize_lines(self, final=False):
+        total_lines = 10
+        if len(self.current_layer.lines) < total_lines or final:
+            total_lines = len(self.current_layer.lines)
+        if len(self.current_layer.lines[:total_lines]) == 0 or self.thread is not None:
             return
+        lines = self.current_layer.lines[:total_lines]
         top, left, bottom, right = self.get_line_extremities(lines)
 
         # create a QImage with the size of the lines
@@ -236,45 +223,36 @@ class CanvasBrushesMixin:
         path = self.create_image_path(painter, lines)
         painter.drawPath(path)
         painter.end()
-        if self.thread is None:
-            self.thread = QThread()
-            self.worker = RasterizationWorker(
-                convert_pixmap_to_pil_image=self.convert_pixmap_to_pil_image,
-                img=img,
-                top=top,
-                left=left,
-                bottom=bottom,
-                right=right
-            )
-            self.worker.moveToThread(self.thread)
-            self.thread.started.connect(self.worker.run)
-            self.worker.finished.connect(self.finalize_pixmap)
-            self.thread.start()
+        self.thread = QThread()
+        self.worker = RasterizationWorker(
+            convert_pixmap_to_pil_image=self.convert_pixmap_to_pil_image,
+            img=img,
+            top=top,
+            left=left,
+            bottom=bottom,
+            right=right
+        )
+        self.worker.moveToThread(self.thread)
+        self.thread.started.connect(self.worker.run)
+        self.worker.finished.connect(lambda _total_lines=total_lines: self.finalize_pixmap(_total_lines, final))
+        self.thread.start()
 
-    def finalize_pixmap(self):
-        # clear lines
-        self.current_layer.lines = self.current_layer.lines[10:]
+    def finalize_pixmap(self, total_lines, final=False):
         self.thread.quit()
         self.thread.wait()
+        self.current_layer.lines = self.current_layer.lines[total_lines:]
         self.thread = None
+        if len(self.current_layer.lines) > 0 and final:
+            self.rasterize_lines(final=True)
 
     def create_image_path(self, painter, lines):
         path = QPainterPath()
         path.setFillRule(Qt.FillRule.WindingFill)
-        """
-        The following code will have overlapping circles which will create a smooth line however
-        it will also create a lot of overlapping pixels which will make the image look darker
-        and darker the more lines are drawn. This is not what we want.
-        In order to fix this we need to create a path that will only draw the outline of the
-        overlapping circles.
-        """
         for line in lines:
             pen = line.pen
             pen.setCapStyle(Qt.PenCapStyle.RoundCap)
-            pen.setJoinStyle(Qt.PenJoinStyle.MiterJoin)
-
+            pen.setJoinStyle(Qt.PenJoinStyle.RoundJoin)
             painter.setPen(pen)
-            painter.setOpacity(line.opacity / 255)
 
             start = QPointF(line.start_point.x() - self.left_line_extremity, line.start_point.y() - self.top_line_extremity)
             end = QPointF(line.end_point.x() - self.left_line_extremity, line.end_point.y() - self.top_line_extremity)
