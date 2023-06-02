@@ -240,12 +240,7 @@ class Canvas(
                 start = event.pos() - QPoint(self.pos_x, self.pos_y)
                 end = event.pos() - QPoint(self.pos_x, self.pos_y)
                 pen = self.pen(event)
-                opacity = 255
-                if event.button() == Qt.MouseButton.LeftButton:
-                    opacity = self.primary_brush_opacity
-                elif event.button() == Qt.MouseButton.RightButton:
-                    opacity = self.secondary_brush_opacity
-                line = LineData(start, end, pen, self.current_layer_index, opacity)
+                line = LineData(start, end, pen, self.current_layer_index)
                 start += self.layers[self.current_layer_index].offset
                 end += self.layers[self.current_layer_index].offset
                 self.current_layer.lines += [line]
@@ -281,16 +276,13 @@ class Canvas(
             self.start_drawing_line_index = None
             if self.brush_selected:
                 self.stop_drawing_line_index = len(self.current_layer.lines)
-                self.update()
             elif self.eraser_selected:
                 self.last_pos = None
                 self.is_erasing = False
+            self.rasterize_lines(final=True)
         elif event.button() == Qt.MouseButton.MiddleButton:
             # Start dragging the canvas when the middle or right mouse button is pressed
             self.drag_pos = event.pos()
-
-        self.rasterize_lines(self.current_layer.lines)
-        self.current_layer.lines.clear()
 
     def handle_select(self, event):
         if self.select_selected:
