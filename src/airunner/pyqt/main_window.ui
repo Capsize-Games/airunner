@@ -162,7 +162,7 @@
             <x>0</x>
             <y>0</y>
             <width>239</width>
-            <height>364</height>
+            <height>408</height>
            </rect>
           </property>
           <property name="sizePolicy">
@@ -360,19 +360,6 @@
           <property name="bottomMargin">
            <number>9</number>
           </property>
-          <item row="2" column="0">
-           <widget class="QSlider" name="primary_brush_opacity_slider">
-            <property name="maximum">
-             <number>255</number>
-            </property>
-            <property name="value">
-             <number>255</number>
-            </property>
-            <property name="orientation">
-             <enum>Qt::Horizontal</enum>
-            </property>
-           </widget>
-          </item>
           <item row="0" column="0">
            <widget class="QToolButton" name="primary_color_button">
             <property name="sizePolicy">
@@ -396,33 +383,6 @@
             </property>
             <property name="text">
              <string/>
-            </property>
-           </widget>
-          </item>
-          <item row="2" column="1">
-           <widget class="QSlider" name="secondary_brush_opacity_slider">
-            <property name="maximum">
-             <number>255</number>
-            </property>
-            <property name="value">
-             <number>255</number>
-            </property>
-            <property name="orientation">
-             <enum>Qt::Horizontal</enum>
-            </property>
-           </widget>
-          </item>
-          <item row="3" column="1">
-           <widget class="QLabel" name="label_4">
-            <property name="text">
-             <string>Opacity 100</string>
-            </property>
-           </widget>
-          </item>
-          <item row="3" column="0">
-           <widget class="QLabel" name="label_3">
-            <property name="text">
-             <string>Opacity 100</string>
             </property>
            </widget>
           </item>

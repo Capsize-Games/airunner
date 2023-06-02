@@ -8,6 +8,8 @@ class LayerMixin:
     """
     This is a mixin class for the main window that handles the layer manager.
     """
+    layer_opacity = []
+
     @property
     def layer_highlight_style(self):
         return f"background-color: #c7f6fc; border: 1px solid #000000; color: #000000;"
@@ -48,10 +50,18 @@ class LayerMixin:
         container = QWidget()
         container.setLayout(QVBoxLayout())
 
-        index = 0
-        for layer in self.canvas.layers:
+        for index in range(len(self.canvas.layers)):
+            layer = self.canvas.layers[index]
             layer_obj = uic.loadUi(os.path.join("pyqt/layer.ui"))
             layer_obj.layer_name.setText(layer.name)
+
+            if index not in self.layer_opacity:
+                self.layer_opacity.append(100)
+
+            layer_obj.opacity_slider.valueChanged.connect(lambda val, _layer=layer_obj: self.slider_set_layer_opacity(val, _layer, index))
+            layer_obj.opacity_spinbox.valueChanged.connect(lambda val, _layer=layer_obj: self.spinbox_set_layer_opacity(val, _layer, index))
+            layer_obj.opacity_slider.setValue(self.layer_opacity[index])
+            layer_obj.opacity_spinbox.setValue(self.layer_opacity[index] / 100)
 
             # onclick of layer_obj set as the current layer index on self.canvas
             layer_obj.mousePressEvent = lambda event, _layer=layer: self.set_current_layer(
@@ -69,13 +79,22 @@ class LayerMixin:
                 lambda _, _layer=layer, _layer_obj=layer_obj: self.toggle_layer_visibility(_layer, _layer_obj))
 
             container.layout().addWidget(layer_obj)
-            index += 1
 
         # add a spacer to the bottom of the container
         container.layout().addSpacerItem(QSpacerItem(0, 0, QSizePolicy.Policy.Minimum, QSizePolicy.Policy.Expanding))
 
         self.window.layers.setWidget(container)
         self.container = container
+
+    def slider_set_layer_opacity(self, val, layer_obj, index):
+        val = val / 100
+        self.layer_opacity[index] = val
+        layer_obj.opacity_spinbox.setValue(val)
+
+    def spinbox_set_layer_opacity(self, val, layer_obj, index):
+        val = int(val * 100)
+        self.layer_opacity[index] = val
+        layer_obj.opacity_slider.setValue(val)
 
     def toggle_layer_visibility(self, layer, layer_obj):
         # change the eye icon of the visible_button on the layer
