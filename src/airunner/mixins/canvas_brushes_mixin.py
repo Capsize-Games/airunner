@@ -21,6 +21,7 @@ class RasterizationWorker(QObject):
         self.convert_pixmap_to_pil_image(self.img, self.top, self.left, self.bottom, self.right)
         self.finished.emit()
 
+
 class RasterizationTask(QRunnable):
     def __init__(self, worker):
         super().__init__()
@@ -28,6 +29,7 @@ class RasterizationTask(QRunnable):
 
     def run(self):
         self.worker.run()
+
 
 class CanvasBrushesMixin:
     _point = None
