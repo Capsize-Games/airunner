@@ -269,15 +269,17 @@ class CanvasBrushesMixin:
         return self.top_line_extremity, self.left_line_extremity, self.bottom_line_extremity, self.right_line_extremity
 
     def rasterize_lines(self, final=False):
-        max_lines = len(self.current_layer.lines)#10
+        max_lines = len(self.current_layer.lines)
 
         lines = self.current_layer.lines[:max_lines]
         top, left, bottom, right = self.get_line_extremities(lines)
+        if not top or not left or not bottom or not right:
+            return
 
         # create a QImage with the size of the lines
         min_x = min(left, right)
-        min_y = min(top, bottom)
         max_x = max(left, right)
+        min_y = min(top, bottom)
         max_y = max(top, bottom)
         width = abs(max_x - min_x)
         height = abs(max_y - min_y)
