@@ -26,7 +26,6 @@ class Canvas(
     select_end = None
     shift_is_pressed = False
     left_mouse_button_down = False
-    right_mouse_button_down = False
     brush_start = None
     last_mouse_pos = None
 
@@ -89,8 +88,6 @@ class Canvas(
         self.pos_y = 0
         self.current_layer_index = 0
         self.is_erasing = False
-        self.start_drawing_line_index = 0
-        self.stop_drawing_line_index = 0
         self.parent = parent
         self.image_pivot_point = QPoint(0, 0)
         self.image_root_point = QPoint(0, 0)
@@ -98,6 +95,7 @@ class Canvas(
         CanvasGridMixin.initialize(self)
         CanvasActiveGridAreaMixin.initialize(self)
         CanvasLayerMixin.initialize(self)
+        CanvasBrushesMixin.initialize(self)
 
         # Set initial position and size of the canvas
         self.canvas_container.setGeometry(QRect(
@@ -228,35 +226,18 @@ class Canvas(
     def mouse_press_event(self, event):
         if event.button() == Qt.MouseButton.LeftButton:
             self.select_start = event.pos()
-        if event.button() in (Qt.MouseButton.LeftButton, Qt.MouseButton.RightButton):
             if self.brush_selected:
-                self.parent.history.add_event({
-                    "event": "draw",
-                    "layer_index": self.current_layer_index,
-                    "lines": self.current_layer.lines.copy()
-                })
-                if not self.left_mouse_button_down and not self.right_mouse_button_down:
-                    self.start_drawing_line_index = len(self.current_layer.lines)
+                self.last_mouse_pos = event.pos()
                 start = event.pos() - QPoint(self.pos_x, self.pos_y)
                 end = event.pos() - QPoint(self.pos_x, self.pos_y)
                 pen = self.pen(event)
-                opacity = 255
-                if event.button() == Qt.MouseButton.LeftButton:
-                    opacity = self.primary_brush_opacity
-                elif event.button() == Qt.MouseButton.RightButton:
-                    opacity = self.secondary_brush_opacity
-                line = LineData(start, end, pen, self.current_layer_index, opacity)
+                line = LineData(start, end, pen, self.current_layer_index)
                 start += self.layers[self.current_layer_index].offset
                 end += self.layers[self.current_layer_index].offset
                 self.current_layer.lines += [line]
 
                 if event.button() == Qt.MouseButton.LeftButton and not self.left_mouse_button_down:
-                    self.right_mouse_button_down = False
                     self.left_mouse_button_down = True
-                    self.brush_start = start
-                elif event.button() == Qt.MouseButton.RightButton and not self.right_mouse_button_down:
-                    self.left_mouse_button_down = False
-                    self.right_mouse_button_down = True
                     self.brush_start = start
 
             self.handle_tool(event)
@@ -267,28 +248,23 @@ class Canvas(
 
     def mouse_move_event(self, event):
         # check if LeftButton is pressed
-        if Qt.MouseButton.LeftButton in event.buttons() or Qt.MouseButton.RightButton in event.buttons():
+        if Qt.MouseButton.LeftButton in event.buttons():
             self.last_mouse_pos = event.pos()
             self.handle_tool(event)
             self.update()
-        elif self.drag_pos is not None:
+        elif Qt.MouseButton.MiddleButton in event.buttons() and self.drag_pos is not None:
             self.handle_move_canvas(event)
     
     def mouse_release_event(self, event):
-        if event.button() in (Qt.MouseButton.LeftButton, Qt.MouseButton.RightButton):
+        if event.button() == Qt.MouseButton.LeftButton:
             self.left_mouse_button_down = False
-            self.right_mouse_button_down = False
-            self.start_drawing_line_index = None
-            if self.brush_selected:
-                self.stop_drawing_line_index = len(self.current_layer.lines)
-                self.update()
-            elif self.eraser_selected:
+            if self.eraser_selected:
                 self.last_pos = None
                 self.is_erasing = False
+            self.rasterize_lines(final=True)
         elif event.button() == Qt.MouseButton.MiddleButton:
             # Start dragging the canvas when the middle or right mouse button is pressed
             self.drag_pos = event.pos()
-        self.rasterize_lines()
 
     def handle_select(self, event):
         if self.select_selected:

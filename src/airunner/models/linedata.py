@@ -9,17 +9,12 @@ class LineData:
             "color": "#000000",
             "width": 1,
             "style": Qt.PenStyle.SolidLine,
-            "opacity": 255
         }
         return QPen(
             QColor(pen["color"]),
             pen["width"],
             pen["style"]
         )
-
-    @property
-    def opacity(self):
-        return self._pen["opacity"] if self._pen else 255
 
     @property
     def color(self):
@@ -38,8 +33,7 @@ class LineData:
         start_point: QPoint,
         end_point: QPoint,
         pen: QPen,
-        layer_index: int,
-        opacity: int
+        layer_index: int
     ):
         self.start_point = start_point
         self.end_point = end_point
@@ -47,8 +41,7 @@ class LineData:
         self._pen = {
             "color": pen.color(),
             "width": pen.width(),
-            "style": pen.style(),
-            "opacity": opacity
+            "style": pen.style()
         }
         self.layer_index = layer_index
 
