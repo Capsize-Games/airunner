@@ -79,6 +79,20 @@ class Canvas(
     def mouse_position(self):
         return self.canvas_container.mapFromGlobal(QCursor.pos())
 
+    def get_layer_opacity(self, index):
+        return self.layers[index].opacity
+
+    def set_layer_opacity(self, index, opacity):
+        self.layers[index].opacity = opacity
+        self.update()
+        self.set_image_opacity(opacity)
+
+    def set_image_opacity(self, opacity):
+        if len(self.current_layer.images) > 0:
+            image = self.current_layer.images[0].image
+            image.putalpha(int(opacity * 255))
+            self.current_layer.images[0].image = image
+
     def __init__(
         self,
         parent=None

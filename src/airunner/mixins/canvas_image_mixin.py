@@ -159,6 +159,7 @@ class CanvasImageMixin:
         # convert image to RGBA
         image = image.convert("RGBA")
         self.current_layer.images.append(ImageData(location, image))
+        self.set_image_opacity(self.get_layer_opacity(self.current_layer_index))
 
     def invert_image(self):
         # convert image mode to RGBA
