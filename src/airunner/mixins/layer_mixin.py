@@ -8,13 +8,6 @@ class LayerMixin:
     """
     This is a mixin class for the main window that handles the layer manager.
     """
-    def get_layer_opacity(self, index):
-        return self.canvas.layers[index].opacity
-
-    def set_layer_opacity(self, index, opacity):
-        self.canvas.layers[index].opacity = opacity
-        self.canvas.update()
-
     @property
     def layer_highlight_style(self):
         return f"background-color: #c7f6fc; border: 1px solid #000000; color: #000000;"
@@ -64,7 +57,7 @@ class LayerMixin:
                 lambda val, _layer=layer_obj, _index=index: self.slider_set_layer_opacity(val, _layer, _index))
             layer_obj.opacity_spinbox.valueChanged.connect(
                 lambda val, _layer=layer_obj, _index=index: self.spinbox_set_layer_opacity(val, _layer, _index))
-            opacity = self.get_layer_opacity(index)
+            opacity = self.canvas.get_layer_opacity(index)
             layer_obj.opacity_slider.setValue(int(opacity * 100))
             layer_obj.opacity_spinbox.setValue(opacity)
 
@@ -91,13 +84,13 @@ class LayerMixin:
 
     def slider_set_layer_opacity(self, val, layer_obj, index):
         val = val / 100
-        self.set_layer_opacity(index, val)
+        self.canvas.set_layer_opacity(index, val)
         layer_obj.opacity_spinbox.setValue(val)
         self.canvas.layers[index].opacity = val
 
     def spinbox_set_layer_opacity(self, val, layer_obj, index):
+        self.canvas.set_layer_opacity(index, val)
         val = int(val * 100)
-        self.set_layer_opacity(index, val)
         layer_obj.opacity_slider.setValue(val)
         self.canvas.layers[index].opacity = val
 
