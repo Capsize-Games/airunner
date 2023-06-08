@@ -32,22 +32,8 @@ class RasterizationTask(QRunnable):
 
 
 class CanvasBrushesMixin:
-    _point = None
-    active_canvas_rect = QRect(0, 0, 0, 0)
-    color = None
-    line_width = None
-    left_line_extremity = None
-    right_line_extremity = None
-    top_line_extremity = None
-    bottom_line_extremity = None
-    last_left = 0
-    last_top = 0
-    min_x = 0
-    min_y = 0
-    last_pos = None
     thread = None
     worker = None
-    started = True
 
     @property
     def is_drawing(self):
@@ -57,9 +43,102 @@ class CanvasBrushesMixin:
     def primary_color(self):
         return QColor(self.settings_manager.settings.primary_color.get())
 
+    @property
+    def left_line_extremity(self):
+        return self.current_layer.left_line_extremity
+
+    @left_line_extremity.setter
+    def left_line_extremity(self, value):
+        self.current_layer.left_line_extremity = value
+
+    @property
+    def right_line_extremity(self):
+        return self.current_layer.right_line_extremity
+
+    @right_line_extremity.setter
+    def right_line_extremity(self, value):
+        self.current_layer.right_line_extremity = value
+
+    @property
+    def top_line_extremity(self):
+        return self.current_layer.top_line_extremity
+
+    @top_line_extremity.setter
+    def top_line_extremity(self, value):
+        self.current_layer.top_line_extremity = value
+
+    @property
+    def bottom_line_extremity(self):
+        return self.current_layer.bottom_line_extremity
+
+    @bottom_line_extremity.setter
+    def bottom_line_extremity(self, value):
+        self.current_layer.bottom_line_extremity = value
+
+    @property
+    def last_left(self):
+        return self.current_layer.last_left
+
+    @last_left.setter
+    def last_left(self, value):
+        self.current_layer.last_left = value
+
+    @property
+    def last_top(self):
+        return self.current_layer.last_top
+
+    @last_top.setter
+    def last_top(self, value):
+        self.current_layer.last_top = value
+
+    @property
+    def min_x(self):
+        return self.current_layer.min_x
+
+    @min_x.setter
+    def min_x(self, value):
+        self.current_layer.min_x = value
+
+    @property
+    def min_y(self):
+        return self.current_layer.min_y
+
+    @min_y.setter
+    def min_y(self, value):
+        self.current_layer.min_y = value
+
+    @property
+    def last_pos(self):
+        return self.current_layer.last_pos
+
+    @last_pos.setter
+    def last_pos(self, value):
+        self.current_layer.last_pos = value
+
+    @property
+    def color(self):
+        return self.current_layer.color
+
+    @color.setter
+    def color(self, value):
+        self.current_layer.color = value
+
+    @property
+    def line_width(self):
+        return self.current_layer.line_width
+
+    @line_width.setter
+    def line_width(self, value):
+        self.current_layer.line_width = value
+
+    @property
+    def opacity(self):
+        return self.current_layer.opacity
+
     def initialize(self):
         self.thread_pool = QThreadPool()
         self.thread_pool.setMaxThreadCount(4)
+        self._location_data = {}
 
     def draw(self, layer, index):
         path = QPainterPath()
@@ -68,6 +147,7 @@ class CanvasBrushesMixin:
             pen = line.pen
             pen.setCapStyle(Qt.PenCapStyle.RoundCap)
             pen.setJoinStyle(Qt.PenJoinStyle.RoundJoin)
+            # set opacity based on current_layer opacity
             if self.line_width is None or self.line_width != line.width:
                 self.line_width = line.width
                 self.draw_path(path, painter)
@@ -80,6 +160,7 @@ class CanvasBrushesMixin:
                 painter = QPainter(self.canvas_container)
                 painter.setBrush(self.brush)
                 painter.setRenderHint(QPainter.RenderHint.Antialiasing)
+                painter.setOpacity(self.opacity)
                 path = QPainterPath()
             painter.setPen(pen)
 
@@ -103,13 +184,6 @@ class CanvasBrushesMixin:
 
         # draw the entire line with a single drawPath call
         self.draw_path(path, painter)
-
-        # max_lines = 20
-        # if (
-        #     self.is_drawing and len(self.current_layer.lines) > max_lines
-        # ):
-        #     self.rasterize_lines()
-        # self.rasterize_lines()
 
     def draw_path(self, path, painter):
         if painter:
@@ -196,11 +270,6 @@ class CanvasBrushesMixin:
 
     def rasterize_lines(self, final=False):
         max_lines = len(self.current_layer.lines)#10
-        total_lines = len(self.current_layer.lines)
-        # if (not self.is_drawing and total_lines < max_lines) or final:
-        #     max_lines = len(self.current_layer.lines)
-        # if total_lines == 0:
-        #     return
 
         lines = self.current_layer.lines[:max_lines]
         top, left, bottom, right = self.get_line_extremities(lines)
@@ -217,6 +286,7 @@ class CanvasBrushesMixin:
         painter = QPainter(img)
         painter.setBrush(self.brush)
         painter.setRenderHint(QPainter.RenderHint.Antialiasing)
+        painter.setOpacity(self.opacity)
         path = self.create_image_path(painter, lines)
         painter.drawPath(path)
         painter.end()
@@ -236,15 +306,6 @@ class CanvasBrushesMixin:
 
     def finalize_pixmap(self, max_lines, final=False):
         self.current_layer.lines = self.current_layer.lines[max_lines:]
-        # self.thread.quit()
-        # self.thread.wait()
-        # if max_lines >= len(self.current_layer.lines):
-        #     self.current_layer.lines = []
-        # else:
-        #     self.current_layer.lines = self.current_layer.lines[max_lines:]
-        # self.thread = None
-        # if len(self.current_layer.lines) > 0 and final:
-        #     self.rasterize_lines(final=True)
 
     def create_image_path(self, painter, lines):
         path = QPainterPath()
@@ -312,10 +373,6 @@ class CanvasBrushesMixin:
 
         new_img_dest_pos_x = 0
         new_img_dest_pos_y = 0
-
-        # self.parent.window.debug_label.setText(
-        #     f"W/H: {width}x{height} | imgdest: {new_img_dest_pos_x}, {new_img_dest_pos_y} | ext: {self.left_line_extremity}, {self.top_line_extremity}, {self.right_line_extremity}, {self.bottom_line_extremity} | max: {self.max_left}, {self.max_top} {self.max_right} {self.max_bottom} | last: {self.last_left}, {self.last_top}"
-        # )
 
         # add current image to the composite image
         if current_image and do_new_image:

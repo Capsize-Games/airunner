@@ -51,10 +51,7 @@ class CanvasLayerMixin:
         })
         layer_name = f"Layer {len(self.layers) + 1}"
         self.layers.insert(0, LayerData(len(self.layers), layer_name))
-        self.set_current_layer(0)
-
-    def set_current_layer(self, index):
-        self.current_layer_index = index
+        self.parent.set_current_layer(0)
 
     def get_layers_copy(self):
         return [layer for layer in self.layers]

@@ -27,6 +27,18 @@ class LayerData:
         self.widgets = []
         self.uuid = uuid.uuid4()
 
+        self.left_line_extremity = None
+        self.right_line_extremity = None
+        self.top_line_extremity = None
+        self.bottom_line_extremity = None
+        self.last_left = 0
+        self.last_top = 0
+        self.min_x = 0
+        self.min_y = 0
+        self.last_pos = None
+        self.color = None
+        self.line_width = None
+
     def clear(self, index):
         self.index = index
         self.lines = []
