@@ -1,6 +1,6 @@
 from PIL import ImageDraw
-from PyQt6.QtCore import Qt, QPointF, QPoint, QSize, QRect, QThread, QObject, pyqtSignal
-from PyQt6.QtGui import QPainter, QPainterPath, QColor, QPen, QImage, QBrush, QPainterPathStroker
+from PyQt6.QtCore import Qt, QPointF, QPoint, QSize, QRect, QThread, QObject, pyqtSignal, QTimer, QRunnable, QThreadPool
+from PyQt6.QtGui import QPainter, QPainterPath, QColor, QPen, QImage
 from airunner.models.linedata import LineData
 from PIL import Image
 
@@ -21,6 +21,13 @@ class RasterizationWorker(QObject):
         self.convert_pixmap_to_pil_image(self.img, self.top, self.left, self.bottom, self.right)
         self.finished.emit()
 
+class RasterizationTask(QRunnable):
+    def __init__(self, worker):
+        super().__init__()
+        self.worker = worker
+
+    def run(self):
+        self.worker.run()
 
 class CanvasBrushesMixin:
     _point = None
@@ -38,6 +45,7 @@ class CanvasBrushesMixin:
     last_pos = None
     thread = None
     worker = None
+    started = True
 
     @property
     def is_drawing(self):
@@ -47,9 +55,9 @@ class CanvasBrushesMixin:
     def primary_color(self):
         return QColor(self.settings_manager.settings.primary_color.get())
 
-    @property
-    def secondary_color(self):
-        return QColor(self.settings_manager.settings.secondary_color.get())
+    def initialize(self):
+        self.thread_pool = QThreadPool()
+        self.thread_pool.setMaxThreadCount(4)
 
     def draw(self, layer, index):
         path = QPainterPath()
@@ -94,12 +102,12 @@ class CanvasBrushesMixin:
         # draw the entire line with a single drawPath call
         self.draw_path(path, painter)
 
-        max_lines = 20
-        if (
-            (self.is_drawing and len(self.current_layer.lines) > max_lines)
-            or (not self.is_drawing and len(self.current_layer.lines) > 0)
-        ):
-            self.rasterize_lines()
+        # max_lines = 20
+        # if (
+        #     self.is_drawing and len(self.current_layer.lines) > max_lines
+        # ):
+        #     self.rasterize_lines()
+        # self.rasterize_lines()
 
     def draw_path(self, path, painter):
         if painter:
@@ -140,8 +148,6 @@ class CanvasBrushesMixin:
         brush_color = "#ffffff"
         if event.button() == Qt.MouseButton.LeftButton or Qt.MouseButton.LeftButton in event.buttons():
             brush_color = self.settings_manager.settings.primary_color.get()
-        elif event.button() == Qt.MouseButton.RightButton or Qt.MouseButton.RightButton in event.buttons():
-            brush_color = self.settings_manager.settings.secondary_color.get()
         brush_color = QColor(brush_color)
         pen = QPen(
             brush_color,
@@ -155,19 +161,6 @@ class CanvasBrushesMixin:
         if len(self.current_layer.lines) > 0:
             previous = LineData(self.current_layer.lines[-1].start_point, start, pen, self.current_layer_index)
             self.current_layer.lines[-1] = previous
-
-            if self.shift_is_pressed:  # draw a strait line by combining the line segments
-                if len(self.current_layer.lines) > self.start_drawing_line_index:
-                    start_line = self.current_layer.lines[self.start_drawing_line_index]
-                    end_line = self.current_layer.lines[self.stop_drawing_line_index - 1]
-                    new_line_data = LineData(
-                        start_line.start_point,
-                        end_line.end_point,
-                        start_line.pen,
-                        start_line.layer_index
-                    )
-                    self.current_layer.lines = self.current_layer.lines[:self.start_drawing_line_index]
-                    self.current_layer.lines.append(new_line_data)
 
         end = event.pos() - QPoint(self.pos_x + 1, self.pos_y)
         line_data = LineData(start, end, pen, self.current_layer_index)
@@ -200,12 +193,14 @@ class CanvasBrushesMixin:
         return self.top_line_extremity, self.left_line_extremity, self.bottom_line_extremity, self.right_line_extremity
 
     def rasterize_lines(self, final=False):
-        total_lines = 10
-        if len(self.current_layer.lines) < total_lines or final:
-            total_lines = len(self.current_layer.lines)
-        if len(self.current_layer.lines[:total_lines]) == 0 or self.thread is not None:
-            return
-        lines = self.current_layer.lines[:total_lines]
+        max_lines = len(self.current_layer.lines)#10
+        total_lines = len(self.current_layer.lines)
+        # if (not self.is_drawing and total_lines < max_lines) or final:
+        #     max_lines = len(self.current_layer.lines)
+        # if total_lines == 0:
+        #     return
+
+        lines = self.current_layer.lines[:max_lines]
         top, left, bottom, right = self.get_line_extremities(lines)
 
         # create a QImage with the size of the lines
@@ -223,8 +218,8 @@ class CanvasBrushesMixin:
         path = self.create_image_path(painter, lines)
         painter.drawPath(path)
         painter.end()
-        self.thread = QThread()
-        self.worker = RasterizationWorker(
+
+        worker = RasterizationWorker(
             convert_pixmap_to_pil_image=self.convert_pixmap_to_pil_image,
             img=img,
             top=top,
@@ -232,24 +227,29 @@ class CanvasBrushesMixin:
             bottom=bottom,
             right=right
         )
-        self.worker.moveToThread(self.thread)
-        self.thread.started.connect(self.worker.run)
-        self.worker.finished.connect(lambda _total_lines=total_lines: self.finalize_pixmap(_total_lines, final))
-        self.thread.start()
+        task = RasterizationTask(worker)
+        self.thread_pool.start(task)
+        # task.setAutoDelete(True)
+        task.worker.finished.connect(lambda _max_lines=max_lines, _final=final: self.finalize_pixmap(_max_lines, _final))
 
-    def finalize_pixmap(self, total_lines, final=False):
-        self.thread.quit()
-        self.thread.wait()
-        self.current_layer.lines = self.current_layer.lines[total_lines:]
-        self.thread = None
-        if len(self.current_layer.lines) > 0 and final:
-            self.rasterize_lines(final=True)
+    def finalize_pixmap(self, max_lines, final=False):
+        self.current_layer.lines = self.current_layer.lines[max_lines:]
+        # self.thread.quit()
+        # self.thread.wait()
+        # if max_lines >= len(self.current_layer.lines):
+        #     self.current_layer.lines = []
+        # else:
+        #     self.current_layer.lines = self.current_layer.lines[max_lines:]
+        # self.thread = None
+        # if len(self.current_layer.lines) > 0 and final:
+        #     self.rasterize_lines(final=True)
 
     def create_image_path(self, painter, lines):
         path = QPainterPath()
         path.setFillRule(Qt.FillRule.WindingFill)
         for line in lines:
             pen = line.pen
+            pen.setColor(line.color)
             pen.setCapStyle(Qt.PenCapStyle.RoundCap)
             pen.setJoinStyle(Qt.PenJoinStyle.RoundJoin)
             painter.setPen(pen)
