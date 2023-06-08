@@ -8,7 +8,12 @@ class LayerMixin:
     """
     This is a mixin class for the main window that handles the layer manager.
     """
-    layer_opacity = []
+    def get_layer_opacity(self, index):
+        return self.canvas.layers[index].opacity
+
+    def set_layer_opacity(self, index, opacity):
+        self.canvas.layers[index].opacity = opacity
+        self.canvas.update()
 
     @property
     def layer_highlight_style(self):
@@ -50,23 +55,21 @@ class LayerMixin:
         container = QWidget()
         container.setLayout(QVBoxLayout())
 
-        for index in range(len(self.canvas.layers)):
-            layer = self.canvas.layers[index]
+        for layer in self.canvas.layers:
+            index = self.canvas.layers.index(layer)
             layer_obj = uic.loadUi(os.path.join("pyqt/layer.ui"))
             layer_obj.layer_name.setText(layer.name)
 
-            if index not in self.layer_opacity:
-                self.layer_opacity.append(100)
-
-            layer_obj.opacity_slider.valueChanged.connect(lambda val, _layer=layer_obj: self.slider_set_layer_opacity(val, _layer, index))
-            layer_obj.opacity_spinbox.valueChanged.connect(lambda val, _layer=layer_obj: self.spinbox_set_layer_opacity(val, _layer, index))
-            layer_obj.opacity_slider.setValue(self.layer_opacity[index])
-            layer_obj.opacity_spinbox.setValue(self.layer_opacity[index] / 100)
+            layer_obj.opacity_slider.valueChanged.connect(
+                lambda val, _layer=layer_obj, _index=index: self.slider_set_layer_opacity(val, _layer, _index))
+            layer_obj.opacity_spinbox.valueChanged.connect(
+                lambda val, _layer=layer_obj, _index=index: self.spinbox_set_layer_opacity(val, _layer, _index))
+            opacity = self.get_layer_opacity(index)
+            layer_obj.opacity_slider.setValue(int(opacity * 100))
+            layer_obj.opacity_spinbox.setValue(opacity)
 
             # onclick of layer_obj set as the current layer index on self.canvas
-            layer_obj.mousePressEvent = lambda event, _layer=layer: self.set_current_layer(
-                self.canvas.layers.index(_layer)
-            )
+            layer_obj.mousePressEvent = lambda event, _layer=layer, _index=index: self.set_current_layer(_index)
 
             # show a border around layer_obj if it is the selected index
             if self.canvas.current_layer_index == index:
@@ -88,13 +91,15 @@ class LayerMixin:
 
     def slider_set_layer_opacity(self, val, layer_obj, index):
         val = val / 100
-        self.layer_opacity[index] = val
+        self.set_layer_opacity(index, val)
         layer_obj.opacity_spinbox.setValue(val)
+        self.canvas.layers[index].opacity = val
 
     def spinbox_set_layer_opacity(self, val, layer_obj, index):
         val = int(val * 100)
-        self.layer_opacity[index] = val
+        self.set_layer_opacity(index, val)
         layer_obj.opacity_slider.setValue(val)
+        self.canvas.layers[index].opacity = val
 
     def toggle_layer_visibility(self, layer, layer_obj):
         # change the eye icon of the visible_button on the layer
@@ -102,13 +107,17 @@ class LayerMixin:
         layer_obj.visible_button.setIcon(QIcon("src/icons/eye.png" if layer.visible else "src/icons/eye-off.png"))
 
     def set_current_layer(self, index):
-        item = self.container.layout().itemAt(self.canvas.current_layer_index)
-        if item:
-            item.widget().frame.setStyleSheet(self.layer_normal_style)
+        if not hasattr(self, "container"):
+            return
+        if self.container:
+            item = self.container.layout().itemAt(self.canvas.current_layer_index)
+            if item:
+                item.widget().frame.setStyleSheet(self.layer_normal_style)
         self.canvas.current_layer_index = index
-        item = self.container.layout().itemAt(self.canvas.current_layer_index)
-        if item:
-            item.widget().frame.setStyleSheet(self.layer_highlight_style)
+        if self.container:
+            item = self.container.layout().itemAt(self.canvas.current_layer_index)
+            if item:
+                item.widget().frame.setStyleSheet(self.layer_highlight_style)
 
     def delete_layer(self):
         pass
