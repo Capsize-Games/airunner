@@ -192,7 +192,7 @@ class Canvas(
 
     def clear(self):
         self.current_layer.lines = []
-        self.current_layer.images = []
+        self.current_layer.image_data = None
         self.update()
 
     def recenter(self):
@@ -227,7 +227,7 @@ class Canvas(
             rect = rect.united(QRect(line.start_point, line.end_point))
 
         try:
-            rect = rect.united(QRect(self.current_layer.images[0].position.x(), self.current_layer.images[0].position.y(), self.current_layer.images[0].image.size[0], self.current_layer.images[0].image.size[1]))
+            rect = rect.united(QRect(self.current_layer.image_data.position.x(), self.current_layer.image_data.position.y(), self.current_layer.image_data.image.size[0], self.current_layer.image_data.image.size[1]))
         except IndexError:
             pass
 
