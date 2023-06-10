@@ -12,52 +12,51 @@ class CanvasImageMixin:
     _working_images = None
 
     @property
-    def working_images(self):
+    def image_data(self):
         if self._working_images is None:
             self._working_images = self.get_image_copy(self.current_layer_index)
         return self._working_images
     
-    @working_images.setter
-    def working_images(self, value):
+    @image_data.setter
+    def image_data(self, value):
         self._working_images = value
 
     @property
     def current_active_image(self):
         try:
-            return self.current_layer.images[0]
+            return self.current_layer.image_data
         except IndexError:
             return None
 
     def apply_filter(self, filter):
-        if len(self.current_layer.images) == 0:
+        if self.current_layer.image_data.image is None:
             return
         self.parent.history.add_event({
             "event": "apply_filter",
             "layer_index": self.current_layer_index,
-            "images": self.working_images,
+            "images": self.image_data,
         })
-        for n in range(0, len(self.working_images)):
-            if type(filter).__name__ in ["SaturationFilter", "ColorBalanceFilter", "RGBNoiseFilter"]:
-                filtered_image = filter.filter(self.working_images[n].image.copy())
-            else:
-                filtered_image = self.working_images[n].image.copy().filter(filter)
-            self.current_layer.images[n].image = filtered_image
-        self.working_images = None
+
+        if type(filter).__name__ in ["SaturationFilter", "ColorBalanceFilter", "RGBNoiseFilter"]:
+            filtered_image = filter.filter(self.image_data.image.copy())
+        else:
+            filtered_image = self.image_data.image.copy().filter(filter)
+        self.current_layer.image_data.image = filtered_image
+        self.image_data = None
 
     def preview_filter(self, filter):
-        if self.current_layer.images and len(self.current_layer.images) == 0:
+        if self.current_layer.image_data.image is None:
             return
-        for n in range(0, len(self.working_images)):
-            # check if filter is a SaturationFilter object
-            if type(filter).__name__ in ["SaturationFilter", "ColorBalanceFilter", "RGBNoiseFilter"]:
-                filtered_image = filter.filter(self.working_images[n].image.copy())
-            else:
-                filtered_image = self.working_images[n].image.copy().filter(filter)
-            self.current_layer.images[n].image = filtered_image
+        # check if filter is a SaturationFilter object
+        if type(filter).__name__ in ["SaturationFilter", "ColorBalanceFilter", "RGBNoiseFilter"]:
+            filtered_image = filter.filter(self.image_data.image.copy())
+        else:
+            filtered_image = self.image_data.image.copy().filter(filter)
+        self.current_layer.image_data.image = filtered_image
 
     def cancel_filter(self):
-        self.current_layer.images = self.working_images
-        self.working_images = None
+        self.current_layer.image_data = self.image_data
+        self.image_data = None
 
     def draw(self, layer, index):
         painter = QPainter(self.canvas_container)
@@ -65,21 +64,23 @@ class CanvasImageMixin:
         painter.end()
 
     def draw_images(self, layer, index, painter):
-        if not layer.images:
+        if not layer.image_data:
             return
-        for image in layer.images:
-            # display PIL.image as QPixmap
-            img = image.image
-            qimage = ImageQt(img)
-            pixmap = QPixmap.fromImage(qimage)
+        image_data = layer.image_data
+        # display PIL.image as QPixmap
+        img = image_data.image
+        if not img:
+            return
+        qimage = ImageQt(img)
+        pixmap = QPixmap.fromImage(qimage)
 
-            # apply the layer offset
-            x = image.position.x() + self.pos_x
-            y = image.position.y() + self.pos_y
-            location = QPoint(int(x), int(y)) + self.current_layer.offset
+        # apply the layer offset
+        x = image_data.position.x() + self.pos_x
+        y = image_data.position.y() + self.pos_y
+        location = QPoint(int(x), int(y)) + self.current_layer.offset
 
-            # draw the image
-            painter.drawPixmap(location, pixmap)
+        # draw the image
+        painter.drawPixmap(location, pixmap)
 
     def copy_image(self):
         im = self.current_active_image
@@ -158,15 +159,18 @@ class CanvasImageMixin:
         """
         # convert image to RGBA
         image = image.convert("RGBA")
-        self.current_layer.images.append(ImageData(location, image))
+        self.current_layer.image_data = ImageData(location, image, self.current_layer.opacity)
         self.set_image_opacity(self.get_layer_opacity(self.current_layer_index))
 
     def invert_image(self):
         # convert image mode to RGBA
-        for image in self.current_layer.images:
-            image.image = image.image.convert("RGB")
-            image.image = ImageOps.invert(image.image)
-            image.image = image.image.convert("RGBA")
+        image_data = self.current_layer.image_data
+        if image_data.image is not None:
+            r, g, b, a = image_data.image.split()
+            r = ImageOps.invert(r)
+            g = ImageOps.invert(g)
+            b = ImageOps.invert(b)
+            image_data.image = Image.merge("RGBA", (r, g, b, a))
 
     def load_image(self, image_path):
         image = Image.open(image_path)
@@ -189,9 +193,9 @@ class CanvasImageMixin:
         self.parent.load_metadata(metadata)
 
     def save_image(self, image_path):
-        if self.current_layer.image is None:
+        if self.current_layer.image_data.image is None:
             return
-        image = self.current_layer.image.image
+        image = self.current_layer.image_data.image
         image = image.convert("RGBA")
         if not "." in image_path:
             image_path += ".png"
@@ -226,13 +230,23 @@ class CanvasImageMixin:
         self.image_pivot_point = image_pivot_point
         self.add_image_to_canvas(processed_image)
 
-    def handle_outpaint(self, outpaint_box_rect, outpainted_image, action):
-        if len(self.current_layer.images) == 0:
+    def insert_rasterized_line_image(self, rect, img):
+        processed_image, image_root_point, image_pivot_point = self.handle_outpaint(
+            rect, img
+        )
+
+        self.image_root_point = image_root_point
+        self.image_pivot_point = image_pivot_point
+        self.add_image_to_canvas(processed_image)
+
+
+    def handle_outpaint(self, outpaint_box_rect, outpainted_image, action=None):
+        if self.current_layer.image_data.image is None:
             point = QPoint(outpaint_box_rect.x(), outpaint_box_rect.y())
             return outpainted_image, self.image_root_point, point
 
         # make a copy of the current canvas image
-        existing_image_copy = self.current_layer.images[0].image.copy()
+        existing_image_copy = self.current_layer.image_data.image.copy()
         width = existing_image_copy.width
         height = existing_image_copy.height
         working_width = outpainted_image.width
@@ -302,14 +316,17 @@ class CanvasImageMixin:
         self.parent.history.add_event({
             "event": "set_image",
             "layer_index": self.current_layer_index,
-            "images": self.current_layer.images,
+            "images": self.current_layer.image_data,
             "previous_image_root_point": self.image_root_point,
             "previous_image_pivot_point": self.image_pivot_point,
         })
-        self.current_layer.images = [ImageData(self.image_pivot_point, image)]
+        self.current_layer.image_data = ImageData(self.image_pivot_point, image, self.current_layer.opacity)
 
     def get_image_copy(self, index):
-        return [ImageData(imageData.position, imageData.image.copy()) for imageData in self.layers[index].images]
+        image_data = self.layers[index].image_data
+        if not image_data.image:
+            return None
+        return ImageData(image_data.position, image_data.image.copy(), self.current_layer.opacity)
 
     def rotate_90_clockwise(self):
         if self.current_active_image:
@@ -335,8 +352,10 @@ class CanvasImageMixin:
         self.parent.history.add_event({
             "event": "set_image",
             "layer_index": self.current_layer_index,
-            "images": self.current_layer.images,
+            "images": self.current_layer.image_data,
             "previous_image_root_point": image_root_point,
             "previous_image_pivot_point": image_pivot_point,
         })
-        self.current_layer.images = [ImageData(image_pivot_point, image)]
+        self.image_pivot_point = image_pivot_point
+        self.current_layer.image_data = ImageData(image_pivot_point, image, self.current_layer.opacity)
+
