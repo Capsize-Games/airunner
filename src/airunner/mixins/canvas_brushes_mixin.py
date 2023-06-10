@@ -1,4 +1,4 @@
-from PIL import ImageDraw
+from PIL import ImageDraw, ImageFilter, UnidentifiedImageError
 from PyQt6.QtCore import Qt, QPointF, QPoint, QSize, QRect, QThread, QObject, pyqtSignal, QTimer, QRunnable, QThreadPool
 from PyQt6.QtGui import QPainter, QPainterPath, QColor, QPen, QImage
 from airunner.models.linedata import LineData
@@ -45,7 +45,7 @@ class CanvasBrushesMixin:
 
     @property
     def left_line_extremity(self):
-        return self.current_layer.left_line_extremity
+        return self.current_layer.left_line_extremity if self.current_layer.left_line_extremity else 0
 
     @left_line_extremity.setter
     def left_line_extremity(self, value):
@@ -53,7 +53,7 @@ class CanvasBrushesMixin:
 
     @property
     def right_line_extremity(self):
-        return self.current_layer.right_line_extremity
+        return self.current_layer.right_line_extremity if self.current_layer.right_line_extremity else 0
 
     @right_line_extremity.setter
     def right_line_extremity(self, value):
@@ -61,7 +61,7 @@ class CanvasBrushesMixin:
 
     @property
     def top_line_extremity(self):
-        return self.current_layer.top_line_extremity
+        return self.current_layer.top_line_extremity if self.current_layer.top_line_extremity else 0
 
     @top_line_extremity.setter
     def top_line_extremity(self, value):
@@ -69,7 +69,7 @@ class CanvasBrushesMixin:
 
     @property
     def bottom_line_extremity(self):
-        return self.current_layer.bottom_line_extremity
+        return self.current_layer.bottom_line_extremity if self.current_layer.bottom_line_extremity else 0
 
     @bottom_line_extremity.setter
     def bottom_line_extremity(self, value):
@@ -159,8 +159,7 @@ class CanvasBrushesMixin:
             if not painter:
                 painter = QPainter(self.canvas_container)
                 painter.setBrush(self.brush)
-                painter.setRenderHint(QPainter.RenderHint.Antialiasing)
-                painter.setOpacity(self.opacity)
+                painter.setOpacity(1.0)
                 path = QPainterPath()
             painter.setPen(pen)
 
@@ -193,8 +192,8 @@ class CanvasBrushesMixin:
     def handle_erase(self, event):
         self.is_erasing = True
         brush_size = int(self.settings_manager.settings.mask_brush_size.get() / 2)
-        image = self.current_layer.images[0].image if len(self.current_layer.images) > 0 else None
-        image_pos = self.current_layer.images[0].position if len(self.current_layer.images) > 0 else None
+        image = self.current_layer.image_data.image if self.current_layer.image_data.image is not None else None
+        image_pos = self.current_layer.image_data.position if self.current_layer.image_data.image is not None else None
         if image is None:
             return
         start = event.pos() - QPoint(self.pos_x, self.pos_y) - image_pos
@@ -215,7 +214,7 @@ class CanvasBrushesMixin:
                 start.x() + brush_size,
                 start.y() + brush_size
             ), fill=(0, 0, 0, 0))
-            self.current_layer.images[0].image = image
+            self.current_layer.image_data.image = image
             self.last_pos = start
             self.update()
         self.update()
@@ -255,26 +254,21 @@ class CanvasBrushesMixin:
             min_y = min(start_y, end_y) - brush_size
             max_x = max(start_x, end_x) + brush_size
             max_y = max(start_y, end_y) + brush_size
-            self.min_x = min_x
-            self.min_y = min_y
 
-            if self.left_line_extremity is None or min_x < self.left_line_extremity:
-                self.left_line_extremity = min_x
-            if self.right_line_extremity is None or max_x > self.right_line_extremity:
-                self.right_line_extremity = max_x
-            if self.top_line_extremity is None or min_y < self.top_line_extremity:
-                self.top_line_extremity = min_y
-            if self.bottom_line_extremity is None or max_y > self.bottom_line_extremity:
-                self.bottom_line_extremity = max_y
+            self.left_line_extremity = min(self.left_line_extremity, min_x)
+            self.right_line_extremity = max(self.right_line_extremity, max_x)
+            self.top_line_extremity = min(self.top_line_extremity, min_y)
+            self.bottom_line_extremity = max(self.bottom_line_extremity, max_y)
+
         return self.top_line_extremity, self.left_line_extremity, self.bottom_line_extremity, self.right_line_extremity
 
     def rasterize_lines(self, final=False):
         max_lines = len(self.current_layer.lines)
+        if max_lines == 0:
+            return
 
         lines = self.current_layer.lines[:max_lines]
         top, left, bottom, right = self.get_line_extremities(lines)
-        if not top or not left or not bottom or not right:
-            return
 
         # create a QImage with the size of the lines
         min_x = min(left, right)
@@ -287,8 +281,7 @@ class CanvasBrushesMixin:
         img.fill(Qt.GlobalColor.transparent)
         painter = QPainter(img)
         painter.setBrush(self.brush)
-        painter.setRenderHint(QPainter.RenderHint.Antialiasing)
-        painter.setOpacity(self.opacity)
+        painter.setOpacity(1.0)
         path = self.create_image_path(painter, lines)
         painter.drawPath(path)
         painter.end()
@@ -308,6 +301,7 @@ class CanvasBrushesMixin:
 
     def finalize_pixmap(self, max_lines, final=False):
         self.current_layer.lines = self.current_layer.lines[max_lines:]
+        self.update()
 
     def create_image_path(self, painter, lines):
         path = QPainterPath()
@@ -339,48 +333,8 @@ class CanvasBrushesMixin:
         return path
 
     def convert_pixmap_to_pil_image(self, img: Image, top: int, left: int, bottom: int, right: int):
-        img = Image.fromqpixmap(img)
-        width = img.width
-        height = img.height
-        current_image = self.current_layer.images[0].image.copy() if len(self.current_layer.images) > 0 else None
-        existing_image_width = current_image.width if current_image else 0
-        existing_image_height = current_image.height if current_image else 0
-
-        composite_width = width
-        composite_height = height
-        if existing_image_width > composite_width:
-            composite_width = existing_image_width
-        if existing_image_height > composite_height:
-            composite_height = existing_image_height
-
-        do_new_image = False
-        if composite_width > existing_image_width or composite_height > existing_image_height:
-            composite_image = Image.new('RGBA', (composite_width, composite_height), (0, 0, 0, 0))
-            do_new_image = True
-        else:
-            composite_image = current_image
-        composite_img_dest = QPoint(left, top)
-
-        pos_x = 0
-        pos_y = 0
-
-        if self.last_left != left:
-            last_left = self.last_left
-            self.last_left = left
-            pos_x = -self.last_left + last_left
-        if self.last_top != top:
-            last_top = self.last_top
-            self.last_top = top
-            pos_y = -self.last_top + last_top
-
-        new_img_dest_pos_x = 0
-        new_img_dest_pos_y = 0
-
-        # add current image to the composite image
-        if current_image and do_new_image:
-            existing_img_dest = (pos_x, pos_y)
-            existing_img_source = (0, 0)
-            composite_image.alpha_composite(current_image, existing_img_dest, existing_img_source)
-        new_img_dest = (new_img_dest_pos_x, new_img_dest_pos_y)
-        composite_image.alpha_composite(img, new_img_dest)
-        self.add_image_to_canvas_new(composite_image, composite_img_dest, self.image_root_point)
+        try:
+            img = Image.fromqpixmap(img)
+        except UnidentifiedImageError:
+            return None
+        self.insert_rasterized_line_image(QRect(left, top, right, bottom), img)
