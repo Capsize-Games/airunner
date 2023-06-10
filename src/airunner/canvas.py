@@ -88,10 +88,30 @@ class Canvas(
         self.set_image_opacity(opacity)
 
     def set_image_opacity(self, opacity):
-        if len(self.current_layer.images) > 0:
-            image = self.current_layer.images[0].image
-            image.putalpha(int(opacity * 255))
-            self.current_layer.images[0].image = image
+        opacity = 255 * opacity
+        r,g,b,a = self.current_layer.image_data.image.split()
+        if opacity > 0:
+            diff = opacity - self.current_layer.image_data.opacity
+            # check if we are increasing or decreasing opacity
+            if diff < 0:
+                a = a.point(lambda i: self.lower_opacity(i, diff))
+            else:
+                a = a.point(lambda i: self.raise_opacity(i, diff))
+        self.current_layer.image_data.opacity = opacity
+        image = Image.merge('RGBA', (r, g, b, a))
+        self.current_layer.image_data.image = image
+
+    def lower_opacity(self, i, diff):
+        if i == 0:
+            return 0
+        total = i + diff
+        return total if total > 0 else i
+
+    def raise_opacity(self, i, diff):
+        if i == 0:
+            return 0
+        total = i + diff
+        return total
 
     def __init__(
         self,
@@ -270,7 +290,7 @@ class Canvas(
             self.handle_move_canvas(event)
     
     def mouse_release_event(self, event):
-        if event.button() == Qt.MouseButton.LeftButton:
+        if event.button() == Qt.MouseButton.LeftButton and self.brush_selected:
             self.left_mouse_button_down = False
             if self.eraser_selected:
                 self.last_pos = None
