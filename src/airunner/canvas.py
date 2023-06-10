@@ -85,33 +85,7 @@ class Canvas(
     def set_layer_opacity(self, index, opacity):
         self.layers[index].opacity = opacity
         self.update()
-        self.set_image_opacity(opacity)
-
-    def set_image_opacity(self, opacity):
-        opacity = 255 * opacity
-        r,g,b,a = self.current_layer.image_data.image.split()
-        if opacity > 0:
-            diff = opacity - self.current_layer.image_data.opacity
-            # check if we are increasing or decreasing opacity
-            if diff < 0:
-                a = a.point(lambda i: self.lower_opacity(i, diff))
-            else:
-                a = a.point(lambda i: self.raise_opacity(i, diff))
-        self.current_layer.image_data.opacity = opacity
-        image = Image.merge('RGBA', (r, g, b, a))
-        self.current_layer.image_data.image = image
-
-    def lower_opacity(self, i, diff):
-        if i == 0:
-            return 0
-        total = i + diff
-        return total if total > 0 else i
-
-    def raise_opacity(self, i, diff):
-        if i == 0:
-            return 0
-        total = i + diff
-        return total
+        self.current_layer.image_data.image = self.apply_opacity(self.current_layer.image_data.image, opacity)
 
     def __init__(
         self,
@@ -290,12 +264,13 @@ class Canvas(
             self.handle_move_canvas(event)
     
     def mouse_release_event(self, event):
-        if event.button() == Qt.MouseButton.LeftButton and self.brush_selected:
+        if event.button() == Qt.MouseButton.LeftButton:
             self.left_mouse_button_down = False
             if self.eraser_selected:
                 self.last_pos = None
                 self.is_erasing = False
-            self.rasterize_lines(final=True)
+            elif self.brush_selected:
+                self.rasterize_lines(final=True)
         elif event.button() == Qt.MouseButton.MiddleButton:
             # Start dragging the canvas when the middle or right mouse button is pressed
             self.drag_pos = event.pos()

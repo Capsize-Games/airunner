@@ -239,7 +239,6 @@ class CanvasImageMixin:
         self.image_pivot_point = image_pivot_point
         self.add_image_to_canvas(processed_image)
 
-
     def handle_outpaint(self, outpaint_box_rect, outpainted_image, action=None):
         if self.current_layer.image_data.image is None:
             point = QPoint(outpaint_box_rect.x(), outpaint_box_rect.y())
@@ -320,7 +319,31 @@ class CanvasImageMixin:
             "previous_image_root_point": self.image_root_point,
             "previous_image_pivot_point": self.image_pivot_point,
         })
+        image = self.apply_opacity(image, self.current_layer.opacity)
         self.current_layer.image_data = ImageData(self.image_pivot_point, image, self.current_layer.opacity)
+
+    def lower_opacity(self, i, diff):
+        if i == 0:
+            return 0
+        total = i + diff
+        return total if total > 0 else i
+
+    def raise_opacity(self, i, diff):
+        if i == 0:
+            return 0
+        total = i + diff
+        return total
+
+    def apply_opacity(self, image, target_opacity):
+        if not image:
+            return image
+        target_opacity = 255 * target_opacity
+        if target_opacity == 0:
+            target_opacity = 1
+        r, g, b, a = image.split()
+        a = a.point(lambda i: target_opacity if i > 0 else 0)
+        image.putalpha(a)
+        return image
 
     def get_image_copy(self, index):
         image_data = self.layers[index].image_data
