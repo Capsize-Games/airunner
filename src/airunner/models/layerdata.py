@@ -1,14 +1,10 @@
 import uuid
 from PyQt6.QtCore import QPoint
 
+from airunner.models.imagedata import ImageData
+
 
 class LayerData:
-    @property
-    def image(self):
-        if len(self.images) > 0:
-            return self.images[0]
-        return None
-
     def __init__(
         self,
         index: int,
@@ -23,7 +19,7 @@ class LayerData:
         self.opacity = opacity
         self.offset = offset
         self.lines = []
-        self.images = []
+        self.image_data = ImageData(QPoint(0, 0), None, 1.0)
         self.widgets = []
         self.uuid = uuid.uuid4()
 
@@ -42,7 +38,7 @@ class LayerData:
     def clear(self, index):
         self.index = index
         self.lines = []
-        self.images = []
+        self.image_data = None
         self.widgets = []
         self.visible = True
         self.opacity = 1.0
