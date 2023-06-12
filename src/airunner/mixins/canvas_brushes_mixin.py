@@ -36,14 +36,6 @@ class CanvasBrushesMixin:
     worker = None
 
     @property
-    def is_drawing(self):
-        return self.left_mouse_button_down and self.brush_selected
-
-    @property
-    def primary_color(self):
-        return QColor(self.settings_manager.settings.primary_color.get())
-
-    @property
     def left_line_extremity(self):
         return self.current_layer.left_line_extremity if self.current_layer.left_line_extremity else 0
 
