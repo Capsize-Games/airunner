@@ -182,7 +182,9 @@ class Canvas(
 
     def update(self):
         self.parent.window.canvas_position.setText(f"X: {self.pos_x}, Y: {self.pos_y}")
-        self.canvas_container.update()
+        rect = self.canvas_container.contentsRect()
+        rect = QRect(0, 0, rect.width(), rect.height())
+        self.canvas_container.update(rect)
 
     def clear(self):
         self.current_layer.lines = []
