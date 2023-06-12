@@ -1,4 +1,4 @@
-FROM ubuntu:latest as base_image
+FROM ubuntu:22.04 as base_image
 USER root
 ENV TZ=America/Denver
 RUN ln -snf /usr/share/zoneinfo/$TZ /etc/localtime && echo $TZ > /etc/timezone \
