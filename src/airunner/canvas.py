@@ -79,13 +79,22 @@ class Canvas(
     def mouse_position(self):
         return self.canvas_container.mapFromGlobal(QCursor.pos())
 
+    @property
+    def is_drawing(self):
+        return self.left_mouse_button_down and self.brush_selected
+
+    @property
+    def primary_color(self):
+        return QColor(self.settings_manager.settings.primary_color.get())
+
     def get_layer_opacity(self, index):
         return self.layers[index].opacity
 
     def set_layer_opacity(self, index, opacity):
-        self.layers[index].opacity = opacity
+        layer = self.layers[index]
+        layer.opacity = opacity
         self.update()
-        self.current_layer.image_data.image = self.apply_opacity(self.current_layer.image_data.image, opacity)
+        layer.image_data.image = self.apply_opacity(layer.image_data.image, opacity)
 
     def __init__(
         self,
