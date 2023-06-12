@@ -79,19 +79,22 @@ class Canvas(
     def mouse_position(self):
         return self.canvas_container.mapFromGlobal(QCursor.pos())
 
+    @property
+    def is_drawing(self):
+        return self.left_mouse_button_down and self.brush_selected
+
+    @property
+    def primary_color(self):
+        return QColor(self.settings_manager.settings.primary_color.get())
+
     def get_layer_opacity(self, index):
         return self.layers[index].opacity
 
     def set_layer_opacity(self, index, opacity):
-        self.layers[index].opacity = opacity
+        layer = self.layers[index]
+        layer.opacity = opacity
         self.update()
-        self.set_image_opacity(opacity)
-
-    def set_image_opacity(self, opacity):
-        if len(self.current_layer.images) > 0:
-            image = self.current_layer.images[0].image
-            image.putalpha(int(opacity * 255))
-            self.current_layer.images[0].image = image
+        layer.image_data.image = self.apply_opacity(layer.image_data.image, opacity)
 
     def __init__(
         self,
@@ -144,6 +147,10 @@ class Canvas(
 
         self.set_canvas_color()
 
+    def timerEvent(self, event):
+        if not self.is_drawing:
+            self.rasterize_lines(final=True)
+
     def key_press_event(self, event):
         if event.key() == Qt.Key.Key_Shift:
             self.shift_is_pressed = True
@@ -188,11 +195,13 @@ class Canvas(
 
     def update(self):
         self.parent.window.canvas_position.setText(f"X: {self.pos_x}, Y: {self.pos_y}")
-        self.canvas_container.update()
+        rect = self.canvas_container.contentsRect()
+        rect = QRect(0, 0, rect.width(), rect.height())
+        self.canvas_container.update(rect)
 
     def clear(self):
         self.current_layer.lines = []
-        self.current_layer.images = []
+        self.current_layer.image_data = None
         self.update()
 
     def recenter(self):
@@ -227,7 +236,7 @@ class Canvas(
             rect = rect.united(QRect(line.start_point, line.end_point))
 
         try:
-            rect = rect.united(QRect(self.current_layer.images[0].position.x(), self.current_layer.images[0].position.y(), self.current_layer.images[0].image.size[0], self.current_layer.images[0].image.size[1]))
+            rect = rect.united(QRect(self.current_layer.image_data.position.x(), self.current_layer.image_data.position.y(), self.current_layer.image_data.image.size[0], self.current_layer.image_data.image.size[1]))
         except IndexError:
             pass
 
@@ -275,7 +284,8 @@ class Canvas(
             if self.eraser_selected:
                 self.last_pos = None
                 self.is_erasing = False
-            self.rasterize_lines(final=True)
+            elif self.brush_selected:
+                self.rasterize_lines(final=True)
         elif event.button() == Qt.MouseButton.MiddleButton:
             # Start dragging the canvas when the middle or right mouse button is pressed
             self.drag_pos = event.pos()

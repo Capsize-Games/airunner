@@ -56,7 +56,7 @@ class HistoryMixin:
         previous_event["lines"] = self.canvas.layers[index].lines
         previous_event["images"] = self.canvas.get_image_copy(index)
         self.canvas.layers[index].lines = lines
-        self.canvas.layers[index].images = images
+        self.canvas.layers[index].image_data = images
         return previous_event
 
     def undo_set_image(self, previous_event):
@@ -69,14 +69,14 @@ class HistoryMixin:
         previous_event["images"] = self.canvas.get_image_copy(layer_index)
         previous_event["previous_image_root_point"] = current_image_root_point
         previous_event["previous_image_pivot_point"] = current_image_pivot_point
-        self.canvas.layers[previous_event["layer_index"]].images = images
+        self.canvas.layers[previous_event["layer_index"]].image_data = images
         return previous_event
 
     def undo_apply_filter(self, previous_event):
         images = previous_event["images"]
         index = previous_event["layer_index"]
         previous_event["images"] = self.canvas.get_image_copy(index)
-        self.canvas.layers[index].images = images
+        self.canvas.layers[index].image_data = images
         return previous_event
 
     def undo_add_widget(self, previous_event):
@@ -89,7 +89,7 @@ class HistoryMixin:
         images = previous_event["images"]
         index = previous_event["layer_index"]
         previous_event["images"] = self.canvas.get_image_copy(index)
-        self.canvas.layers[index].images = images
+        self.canvas.layers[index].image_data = images
         return previous_event
 
     def undo(self):
@@ -135,7 +135,7 @@ class HistoryMixin:
         undone_event["lines"] = self.canvas.layers[layer_index].lines.copy()
         undone_event["images"] = self.canvas.get_image_copy(layer_index)
         self.canvas.layers[undone_event["layer_index"]].lines = lines
-        self.canvas.layers[undone_event["layer_index"]].images = images
+        self.canvas.layers[undone_event["layer_index"]].image_data = images
         return undone_event
 
     def redo_set_image(self, undone_event):
@@ -148,7 +148,7 @@ class HistoryMixin:
         undone_event["images"] = self.canvas.get_image_copy(layer_index)
         undone_event["previous_image_root_point"] = current_image_root_point
         undone_event["previous_image_pivot_point"] = current_image_pivot_point
-        self.canvas.layers[undone_event["layer_index"]].images = images
+        self.canvas.layers[undone_event["layer_index"]].image_data = images
         return undone_event
 
     def redo_add_widget(self, undone_event):
@@ -185,14 +185,14 @@ class HistoryMixin:
         images = previous_event["images"]
         index = previous_event["layer_index"]
         previous_event["images"] = self.canvas.get_image_copy(index)
-        self.canvas.layers[index].images = images
+        self.canvas.layers[index].image_data = images
         return previous_event
 
     def redo_rotate(self, undone_event):
         images = undone_event["images"]
         layer_index = undone_event["layer_index"]
         undone_event["images"] = self.canvas.get_image_copy(layer_index)
-        self.canvas.layers[undone_event["layer_index"]].images = images
+        self.canvas.layers[undone_event["layer_index"]].image_data = images
         return undone_event
 
     def redo(self):

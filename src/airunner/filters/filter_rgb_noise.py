@@ -28,9 +28,9 @@ class FilterRGBNoise(FilterBase):
     def show(self):
         super().show()
 
-        working_images = self.parent.canvas.working_images
-        if len(working_images) > 0:
-            image = working_images[0].image.copy()
+        working_images = self.parent.canvas.current_active_image
+        if working_images is not None:
+            image = working_images.image.copy()
 
             self.red_grain = Image.new("L", image.size)
             self.green_grain = Image.new("L", image.size)

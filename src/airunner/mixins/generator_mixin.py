@@ -561,10 +561,8 @@ class GeneratorMixin(LoraMixin):
         if self.use_pixels:
             self.requested_image = image
             self.start_progress_bar(self.current_section)
-            try:
-                image = self.canvas.current_layer.images[0].image
-            except IndexError:
-                image = None
+            image_data = self.canvas.current_layer.image_data
+            image = image_data.image if image_data else None
 
             if image is None:
                 # create a transparent image the size of self.canvas.active_grid_area_rect
