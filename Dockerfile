@@ -7,7 +7,6 @@ RUN ln -snf /usr/share/zoneinfo/$TZ /etc/localtime && echo $TZ > /etc/timezone \
     && apt install software-properties-common -y \
     && add-apt-repository ppa:ubuntu-toolchain-r/test \
     && apt-get update \
-    && dpkg --add-architecture i386 \
     && apt-get update \
     && apt install libtinfo6 -y \
     && apt-get install -y git \
@@ -39,9 +38,7 @@ RUN ln -snf /usr/share/zoneinfo/$TZ /etc/localtime && echo $TZ > /etc/timezone \
     && apt-get install ccache -y \
     && apt-get install -y libxcb-xinerama0 \
     && apt-get install -y libgtk-3-0 \
-    && apt-get install qt6-qpa-plugins -y \
     && apt-get install libgl1-mesa-glx libglib2.0-0 libsm6 libxext6 libxrender-dev libxcb-xinerama0 -y \
-    && apt-get install -y qt6-base-dev \
     && apt-get install -y gstreamer1.0-gl \
     && rm -rf /var/lib/apt/lists/ \
     && update-alternatives --install /usr/bin/gcc gcc /usr/bin/gcc-9 60 --slave /usr/bin/g++ g++ /usr/bin/g++-9 \
@@ -53,11 +50,11 @@ WORKDIR /app
 ENV XFORMERS_MORE_DETAILS=1
 RUN pip install nvidia-pyindex
 WORKDIR /app
-RUN pip install --upgrade pip
-RUN pip install --upgrade setuptools
-RUN pip install --upgrade wheel
-RUN pip install bitsandbytes accelerate requests aihandler cmake
-RUN pip install torch torchvision torchaudio --index-url https://download.pytorch.org/whl/cu118
+RUN pip install --upgrade pip \
+    && pip install --upgrade setuptools \
+    && pip install --upgrade wheel \
+    && pip install bitsandbytes accelerate requests aihandler cmake \
+    && pip install torch torchvision torchaudio --index-url https://download.pytorch.org/whl/cu118
 
 FROM install_requirements as install_triton
 RUN git clone https://github.com/openai/triton /app/triton \
