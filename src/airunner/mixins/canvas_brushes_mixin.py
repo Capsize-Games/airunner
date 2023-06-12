@@ -37,7 +37,7 @@ class CanvasBrushesMixin:
 
     @property
     def is_drawing(self):
-        return self.left_mouse_button_down or self.right_mouse_button_down
+        return self.left_mouse_button_down and self.brush_selected
 
     @property
     def primary_color(self):

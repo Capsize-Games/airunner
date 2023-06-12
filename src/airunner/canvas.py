@@ -138,6 +138,10 @@ class Canvas(
 
         self.set_canvas_color()
 
+    def timerEvent(self, event):
+        if not self.is_drawing:
+            self.rasterize_lines(final=True)
+
     def key_press_event(self, event):
         if event.key() == Qt.Key.Key_Shift:
             self.shift_is_pressed = True
