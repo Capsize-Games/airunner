@@ -11,15 +11,20 @@ class FilterPixelArt(FilterBase):
 
     @property
     def filter(self):
-        return PixelFilter(
-            number_of_colors=self.number_of_colors,
-            smoothing=self.smoothing,
-            base_size=self.base_size
-        )
+        if self._filter is None:
+            self._filter = PixelFilter(
+                number_of_colors=self.number_of_colors,
+                smoothing=self.smoothing,
+                base_size=self.base_size
+            )
+        else:
+            self._filter.number_of_colors = self.number_of_colors
+            self._filter.smoothing = self.smoothing
+            self._filter.base_size = self.base_size
+        return self._filter
 
     def show(self):
         super().show()
-        self.parent.current_filter = self.filter
 
         # set the gaussian_blur_window settings values to the current settings
         self.filter_window.number_of_colors_slider.setValue(self.number_of_colors)
@@ -55,7 +60,6 @@ class FilterPixelArt(FilterBase):
 
     def handle_number_of_colors_change(self, val):
         self.number_of_colors = val
-        self.parent.current_filter = self.filter
         self.preview_filter()
 
     def handle_base_size_change_slider(self, val):
@@ -70,5 +74,4 @@ class FilterPixelArt(FilterBase):
 
     def handle_base_size_change(self, val):
         self.base_size = val
-        self.parent.current_filter = self.filter
         self.preview_filter()

@@ -5,10 +5,11 @@ from PyQt6 import uic
 class FilterBase:
     ui_name = ""
     window_title = ""
+    _filter = None
 
     @property
     def filter(self):
-        return None
+        return self._filter
 
     def update_canvas(self):
         self.canvas.update()
