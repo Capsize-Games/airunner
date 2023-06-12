@@ -37,7 +37,7 @@ class CanvasImageMixin:
             "images": self.image_data,
         })
 
-        if type(filter).__name__ in ["SaturationFilter", "ColorBalanceFilter", "RGBNoiseFilter"]:
+        if type(filter).__name__ in ["SaturationFilter", "ColorBalanceFilter", "RGBNoiseFilter", "PixelFilter"]:
             filtered_image = filter.filter(self.image_data.image.copy())
         else:
             filtered_image = self.image_data.image.copy().filter(filter)
@@ -48,7 +48,7 @@ class CanvasImageMixin:
         if self.current_layer.image_data.image is None:
             return
         # check if filter is a SaturationFilter object
-        if type(filter).__name__ in ["SaturationFilter", "ColorBalanceFilter", "RGBNoiseFilter"]:
+        if type(filter).__name__ in ["SaturationFilter", "ColorBalanceFilter", "RGBNoiseFilter", "PixelFilter"]:
             filtered_image = filter.filter(self.image_data.image.copy())
         else:
             filtered_image = self.image_data.image.copy().filter(filter)
