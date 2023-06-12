@@ -165,8 +165,14 @@ class MainWindow(
         if self.settings_manager.settings.latest_version_check.get():
             self.check_for_latest_version()
 
+        # check for self.current_layer.lines every 100ms
+        self.timer = self.startTimer(100)
+
         if not self.testing:
             self.exec()
+
+    def timerEvent(self, event):
+        self.canvas.timerEvent(event)
 
     def check_for_latest_version(self):
         self.version_thread = QThread()
