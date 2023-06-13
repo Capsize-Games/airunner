@@ -1,11 +1,18 @@
 import os
-from PyQt6.QtWidgets import QWidget, QVBoxLayout
+from PyQt6.QtWidgets import QWidget, QVBoxLayout, QCheckBox
+from PyQt6 import QtCore
 
 
 class LoraMixin:
     lora_loaded = False
 
     total_lora_by_section = {}
+
+    def toggle_all_lora(self, checked, tab):
+        for i in range(tab.lora_scroll_area.widget().layout().count()):
+            lora_widget = tab.lora_scroll_area.widget().layout().itemAt(i).widget()
+            if lora_widget:
+                lora_widget.enabledCheckbox.setChecked(checked)
 
     def initialize(self):
         self.initialize_lora()
@@ -124,6 +131,11 @@ class LoraMixin:
         container.layout().addStretch()
         # display tabs of tab.PromptTabsSection which is a QTabWidget
         tab.lora_scroll_area.setWidget(container)
+
+        # if all lora are checked set toggleAllLora
+        if self.total_lora_by_section[tab_name]["total"] == self.total_lora_by_section[tab_name]["enabled"]:
+            tab.toggleAllLora.setChecked(True)
+
         # set the tab name
         self.update_lora_tab_name(tab_name)
 
