@@ -187,6 +187,8 @@ class GeneratorMixin(LoraMixin):
         for tab_name in self.tabs.keys():
             tab = self.tabs[tab_name]
 
+            tab.toggleAllLora.clicked.connect(lambda checked, _tab=tab: self.toggle_all_lora(checked, _tab))
+
             # tab.prompt is QPlainTextEdit - on text change, call handle_prompt_change
             tab.prompt.textChanged.connect(lambda _tab=tab: self.handle_prompt_change(_tab))
             tab.negative_prompt.textChanged.connect(lambda _tab=tab: self.handle_negative_prompt_change(_tab))
