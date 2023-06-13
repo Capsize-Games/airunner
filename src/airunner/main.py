@@ -298,6 +298,7 @@ class MainWindow(
         self.settings_manager.save_settings()
 
     def display(self):
+        self.set_stylesheet()
         if not self.testing:
             self.window.show()
         else:
@@ -308,7 +309,6 @@ class MainWindow(
             # so instead we do this in order to run without showing the window:
             self.window.showMinimized()
         self.show_layers()
-        self.set_stylesheet()
         self.window.move_button.hide()
 
     def set_log_levels(self):
