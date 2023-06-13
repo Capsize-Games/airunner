@@ -323,7 +323,7 @@ class Canvas(
                     "event": "erase",
                     "layer_index": self.current_layer_index,
                     "lines": self.current_layer.lines.copy(),
-                    "images": self.get_image_copy(self.current_layer_index)
+                    "images": self.image_data_copy(self.current_layer_index)
                 })
             self.handle_erase(event)
             self.parent.is_dirty = True
