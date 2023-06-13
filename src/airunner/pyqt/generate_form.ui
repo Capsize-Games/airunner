@@ -174,7 +174,7 @@
        <string>LoRA</string>
       </attribute>
       <layout class="QGridLayout" name="gridLayout">
-       <item row="0" column="0">
+       <item row="1" column="0">
         <widget class="QScrollArea" name="lora_scroll_area">
          <property name="widgetResizable">
           <bool>true</bool>
@@ -185,10 +185,23 @@
             <x>0</x>
             <y>0</y>
             <width>323</width>
-            <height>129</height>
+            <height>100</height>
            </rect>
           </property>
          </widget>
+        </widget>
+       </item>
+       <item row="0" column="0">
+        <widget class="QCheckBox" name="toggleAllLora">
+         <property name="text">
+          <string>Toggle all</string>
+         </property>
+         <property name="checked">
+          <bool>false</bool>
+         </property>
+         <property name="tristate">
+          <bool>false</bool>
+         </property>
         </widget>
        </item>
       </layout>
