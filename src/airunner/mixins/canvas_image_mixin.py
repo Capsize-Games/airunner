@@ -9,17 +9,17 @@ from PIL.ExifTags import TAGS
 
 
 class CanvasImageMixin:
-    _working_images = None
+    _image_data_copy = None
 
     @property
     def image_data(self):
-        if self._working_images is None:
-            self._working_images = self.get_image_copy(self.current_layer_index)
-        return self._working_images
+        if self._image_data_copy is None:
+            self._image_data_copy = self.image_data_copy(self.current_layer_index)
+        return self._image_data_copy
     
     @image_data.setter
     def image_data(self, value):
-        self._working_images = value
+        self._image_data_copy = value
 
     @property
     def current_active_image(self):
@@ -38,9 +38,9 @@ class CanvasImageMixin:
         })
 
         if type(filter).__name__ in ["SaturationFilter", "ColorBalanceFilter", "RGBNoiseFilter", "PixelFilter"]:
-            filtered_image = filter.filter(self.image_data.image.copy())
+            filtered_image = filter.filter(self.image_data.image)
         else:
-            filtered_image = self.image_data.image.copy().filter(filter)
+            filtered_image = self.image_data.image.filter(filter)
         self.current_layer.image_data.image = filtered_image
         self.image_data = None
 
@@ -49,9 +49,9 @@ class CanvasImageMixin:
             return
         # check if filter is a SaturationFilter object
         if type(filter).__name__ in ["SaturationFilter", "ColorBalanceFilter", "RGBNoiseFilter", "PixelFilter"]:
-            filtered_image = filter.filter(self.image_data.image.copy())
+            filtered_image = filter.filter(self.image_data.image)
         else:
-            filtered_image = self.image_data.image.copy().filter(filter)
+            filtered_image = self.image_data.image.filter(filter)
         self.current_layer.image_data.image = filtered_image
 
     def cancel_filter(self):
@@ -63,24 +63,37 @@ class CanvasImageMixin:
         self.draw_images(layer, index, painter)
         painter.end()
 
-    def draw_images(self, layer, index, painter):
-        if not layer.image_data:
+    def visible_image(self, layer=None, image_data=None):
+        """
+        Returns an image that is cropped to the visible area of the canvas
+        :param layer:
+        :return: Image
+        """
+        if layer:
+            image_data = layer.image_data
+
+        if not image_data or not image_data.image:
             return
-        image_data = layer.image_data
-        # display PIL.image as QPixmap
-        img = image_data.image
-        if not img:
-            return
-        qimage = ImageQt(img)
-        pixmap = QPixmap.fromImage(qimage)
 
         # apply the layer offset
         x = image_data.position.x() + self.pos_x
         y = image_data.position.y() + self.pos_y
-        location = QPoint(int(x), int(y)) + self.current_layer.offset
+        location = QPoint(int(x), int(y))# + layer.offset
 
-        # draw the image
-        painter.drawPixmap(location, pixmap)
+        rect = self.viewport_rect
+
+        # only create a image of the visible area, apply offset
+        img = image_data.image.copy().crop((rect.x() - location.x(), rect.y() - location.y(),
+                        rect.x() + rect.width() - location.x(), rect.y() + rect.height() - location.y()))
+        return img
+
+    def draw_images(self, layer, index, painter):
+        img = self.visible_image(layer=layer)
+        if not img:
+            return
+        qimage = ImageQt(img)
+        pixmap = QPixmap.fromImage(qimage)
+        painter.drawPixmap(QPoint(0, 0), pixmap)
 
     def copy_image(self):
         im = self.current_active_image
@@ -345,7 +358,7 @@ class CanvasImageMixin:
         image.putalpha(a)
         return image
 
-    def get_image_copy(self, index):
+    def image_data_copy(self, index):
         image_data = self.layers[index].image_data
         if not image_data.image:
             return None
@@ -356,7 +369,7 @@ class CanvasImageMixin:
             self.parent.history.add_event({
                 "event": "rotate",
                 "layer_index": self.current_layer_index,
-                "images": self.get_image_copy(self.current_layer_index)
+                "images": self.image_data_copy(self.current_layer_index)
             })
             self.current_active_image.image = self.current_active_image.image.transpose(Image.ROTATE_270)
             self.update()
@@ -366,7 +379,7 @@ class CanvasImageMixin:
             self.parent.history.add_event({
                 "event": "rotate",
                 "layer_index": self.current_layer_index,
-                "images": self.get_image_copy(self.current_layer_index)
+                "images": self.image_data_copy(self.current_layer_index)
             })
             self.current_active_image.image = self.current_active_image.image.transpose(Image.ROTATE_90)
             self.update()
