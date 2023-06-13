@@ -62,7 +62,7 @@ class ToolbarMixin:
         self.history.add_event({
             "event": "apply_filter",
             "layer_index": self.canvas.current_layer_index,
-            "images": self.canvas.get_image_copy(self.canvas.current_layer_index),
+            "images": self.canvas.image_data_copy(self.canvas.current_layer_index),
         })
         self.canvas.invert_image()
         self.canvas.update()
