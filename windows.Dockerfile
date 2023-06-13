@@ -96,16 +96,7 @@ RUN unzip butler-windows-amd64.zip -d butler-windows-amd64
 RUN mv butler-windows-amd64/butler.exe /home/.wine-win10/drive_c/Python310/Scripts/butler.exe
 RUN rm -rf butler-windows-amd64 butler-windows-amd64.zip
 
-FROM install_butler as diffusers_patch
-USER root
-RUN rm -f /tmp/.X99-lock \
-    && wget https://github.com/w4ffl35/diffusers/archive/refs/tags/v0.16.2.zip \
-    && unzip v0.16.2.zip \
-    && mv diffusers-0.16.2 /home/.wine-win10/drive_c/ \
-    && rm -rf v0.16.2.zip \
-    && xvfb-run -e /dev/stdout wine64 C:\\Python310\\python.exe -m pip install C:\\diffusers-0.16.2 --no-deps --force-reinstall
-
-FROM diffusers_patch as install_airunner
+FROM install_butler as install_airunner
 USER root
 RUN rm -rf /tmp/.X99-lock
 RUN xvfb-run -e /dev/stdout wine64 C:\\Python310\\python.exe -m pip install torch torchvision --index-url https://download.pytorch.org/whl/cu118 --upgrade
