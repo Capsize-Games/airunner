@@ -133,8 +133,9 @@ class LoraMixin:
         tab.lora_scroll_area.setWidget(container)
 
         # if all lora are checked set toggleAllLora
-        if self.total_lora_by_section[tab_name]["total"] == self.total_lora_by_section[tab_name]["enabled"]:
-            tab.toggleAllLora.setChecked(True)
+        if tab_name in self.total_lora_by_section:
+            if self.total_lora_by_section[tab_name]["total"] == self.total_lora_by_section[tab_name]["enabled"]:
+                tab.toggleAllLora.setChecked(True)
 
         # set the tab name
         self.update_lora_tab_name(tab_name)
