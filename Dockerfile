@@ -7,7 +7,6 @@ RUN ln -snf /usr/share/zoneinfo/$TZ /etc/localtime && echo $TZ > /etc/timezone \
     && apt install software-properties-common -y \
     && add-apt-repository ppa:ubuntu-toolchain-r/test \
     && apt-get update \
-    && apt-get update \
     && apt install libtinfo6 -y \
     && apt-get install -y git \
     && apt-get install -y wget \
@@ -54,13 +53,14 @@ RUN pip install --upgrade pip \
     && pip install --upgrade setuptools \
     && pip install --upgrade wheel \
     && pip install bitsandbytes accelerate requests aihandler cmake \
-    && pip install torch torchvision torchaudio --index-url https://download.pytorch.org/whl/cu118
+    && pip install torch torchvision --index-url https://download.pytorch.org/whl/cu118
 
 FROM install_requirements as install_triton
 RUN git clone https://github.com/openai/triton /app/triton \
     && cd /app/triton/python \
     && git checkout v2.0.0 \
-    && pip install .
+    && pip install . \
+    && rm -rf /app/triton
 
 FROM install_triton as fix_tcl
 USER root
