@@ -251,7 +251,6 @@ class CanvasBrushesMixin:
             self.right_line_extremity = max(self.right_line_extremity, max_x)
             self.top_line_extremity = min(self.top_line_extremity, min_y)
             self.bottom_line_extremity = max(self.bottom_line_extremity, max_y)
-
         return self.top_line_extremity, self.left_line_extremity, self.bottom_line_extremity, self.right_line_extremity
 
     def rasterize_lines(self, final=False):
@@ -261,12 +260,15 @@ class CanvasBrushesMixin:
 
         lines = self.current_layer.lines[:max_lines]
         top, left, bottom, right = self.get_line_extremities(lines)
+        brush_size = self.settings_manager.settings.mask_brush_size.get()
+        if brush_size > 1:
+            brush_size = int(brush_size / 2)
 
         # create a QImage with the size of the lines
-        min_x = min(left, right)
-        max_x = max(left, right)
-        min_y = min(top, bottom)
-        max_y = max(top, bottom)
+        min_x = min(left, right) - brush_size
+        max_x = max(left, right) + brush_size
+        min_y = min(top, bottom) - brush_size
+        max_y = max(top, bottom) + brush_size
         width = abs(max_x - min_x)
         height = abs(max_y - min_y)
         img = QImage(QSize(width, height), QImage.Format.Format_ARGB32)

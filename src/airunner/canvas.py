@@ -87,6 +87,12 @@ class Canvas(
     def primary_color(self):
         return QColor(self.settings_manager.settings.primary_color.get())
 
+    @property
+    def viewport_rect(self):
+        rect = self.canvas_container.contentsRect()
+        rect = QRect(0, 0, rect.width(), rect.height())
+        return rect
+
     def get_layer_opacity(self, index):
         return self.layers[index].opacity
 
@@ -148,8 +154,7 @@ class Canvas(
         self.set_canvas_color()
 
     def timerEvent(self, event):
-        if not self.is_drawing:
-            self.rasterize_lines(final=True)
+        pass
 
     def key_press_event(self, event):
         if event.key() == Qt.Key.Key_Shift:
@@ -195,9 +200,8 @@ class Canvas(
 
     def update(self):
         self.parent.window.canvas_position.setText(f"X: {self.pos_x}, Y: {self.pos_y}")
-        rect = self.canvas_container.contentsRect()
-        rect = QRect(0, 0, rect.width(), rect.height())
-        self.canvas_container.update(rect)
+
+        self.canvas_container.update(self.viewport_rect)
 
     def clear(self):
         self.current_layer.lines = []
@@ -236,7 +240,12 @@ class Canvas(
             rect = rect.united(QRect(line.start_point, line.end_point))
 
         try:
-            rect = rect.united(QRect(self.current_layer.image_data.position.x(), self.current_layer.image_data.position.y(), self.current_layer.image_data.image.size[0], self.current_layer.image_data.image.size[1]))
+            rect = rect.united(QRect(
+                self.current_layer.image_data.position.x(),
+                self.current_layer.image_data.position.y(),
+                self.current_layer.image_data.image.size[0],
+                self.current_layer.image_data.image.size[1]
+            ))
         except IndexError:
             pass
 
