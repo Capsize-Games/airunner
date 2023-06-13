@@ -138,7 +138,8 @@ class CanvasImageMixin:
             image = Image.open(io.BytesIO(data))
             return image
         except Exception as e:
-            ErrorWindow(message=str(e))
+            #self.parent.error_handler(str(e))
+            print(e)
             return None
 
     def image_from_system_clipboard_linux(self):
@@ -173,7 +174,7 @@ class CanvasImageMixin:
         # convert image to RGBA
         image = image.convert("RGBA")
         self.current_layer.image_data = ImageData(location, image, self.current_layer.opacity)
-        self.set_image_opacity(self.get_layer_opacity(self.current_layer_index))
+        #self.set_image_opacity(self.get_layer_opacity(self.current_layer_index))
 
     def invert_image(self):
         # convert image mode to RGBA
