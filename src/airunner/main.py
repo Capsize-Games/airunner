@@ -152,6 +152,9 @@ class MainWindow(
         return sys.platform.startswith("win") or sys.platform.startswith("cygwin") or sys.platform.startswith("msys")
 
     def __init__(self, *args, **kwargs):
+        # enable hardware acceleration
+        QApplication.setAttribute(Qt.ApplicationAttribute.AA_UseDesktopOpenGL)
+
         self.set_log_levels()
         self.testing = kwargs.pop("testing", False)
         super().__init__(*args, **kwargs)
