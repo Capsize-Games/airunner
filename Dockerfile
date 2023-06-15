@@ -2,43 +2,42 @@ FROM ubuntu:22.04 as base_image
 USER root
 ENV TZ=America/Denver
 RUN ln -snf /usr/share/zoneinfo/$TZ /etc/localtime && echo $TZ > /etc/timezone \
-    && apt-get update \
-    && apt-get upgrade -y \
+    && apt update \
+    && apt upgrade -y \
     && apt install software-properties-common -y \
     && add-apt-repository ppa:ubuntu-toolchain-r/test \
-    && apt-get update \
-    && apt install libtinfo6 -y \
-    && apt-get install -y git \
-    && apt-get install -y wget \
-    && apt-get install -y curl \
-    && apt-get install -y vim \
-    && apt-get install -y software-properties-common \
-    && apt-get install -y gcc-9 \
-    && apt-get install -y g++-9 \
-    && apt-get install -y bash \
-    && apt-get install -y build-essential \
-    && apt-get install -y libssl-dev \
-    && apt-get install -y libffi-dev \
-    && apt-get install -y libgl1-mesa-dev \
-    && apt-get install -y nvidia-cuda-toolkit \
-    && apt-get install -y xclip \
-    && apt-get install -y libjpeg-dev \
-    && apt-get install -y zlib1g-dev \
-    && apt-get install -y libpng-dev \
-    && apt-get install patchelf -y \
-    && add-apt-repository ppa:deadsnakes/ppa -y \
+    && add-apt-repository ppa:deadsnakes/ppa \
     && apt update \
+    && apt install libtinfo6 -y \
+    && apt install -y git \
+    && apt install -y wget \
+    && apt install -y curl \
+    && apt install -y vim \
+    && apt install -y software-properties-common \
+    && apt install -y gcc-9 \
+    && apt install -y g++-9 \
+    && apt install -y bash \
+    && apt install -y build-essential \
+    && apt install -y libssl-dev \
+    && apt install -y libffi-dev \
+    && apt install -y libgl1-mesa-dev \
+    && apt install -y xclip \
+    && apt install -y libjpeg-dev \
+    && apt install -y zlib1g-dev \
+    && apt install -y libpng-dev \
+    && apt install patchelf -y \
     && apt install python3.10 -y \
     && apt install python3.10-distutils -y \
     && apt install python3-pip -y \
     && apt install python3.10-tk -y \
     && apt install -y upx \
-    && apt-get install patchelf -y \
-    && apt-get install ccache -y \
-    && apt-get install -y libxcb-xinerama0 \
-    && apt-get install -y libgtk-3-0 \
-    && apt-get install libgl1-mesa-glx libglib2.0-0 libsm6 libxext6 libxrender-dev libxcb-xinerama0 -y \
-    && apt-get install -y gstreamer1.0-gl \
+    && apt install patchelf -y \
+    && apt install ccache -y \
+    && apt install -y libxcb-xinerama0 \
+    && apt install -y libgtk-3-0 \
+    && apt install libgl1-mesa-glx libglib2.0-0 libsm6 libxext6 libxrender-dev libxcb-xinerama0 -y \
+    && apt install -y gstreamer1.0-gl \
+    && apt install -y nvidia-cuda-toolkit \
     && rm -rf /var/lib/apt/lists/ \
     && update-alternatives --install /usr/bin/gcc gcc /usr/bin/gcc-9 60 --slave /usr/bin/g++ g++ /usr/bin/g++-9 \
     && rm -rf /var/lib/apt/lists/*
