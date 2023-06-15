@@ -1,4 +1,4 @@
-FROM ubuntu:22.04 as base_image
+FROM ubuntu:20.04 as base_image
 USER root
 ENV TZ=America/Denver
 RUN ln -snf /usr/share/zoneinfo/$TZ /etc/localtime && echo $TZ > /etc/timezone \
@@ -6,13 +6,10 @@ RUN ln -snf /usr/share/zoneinfo/$TZ /etc/localtime && echo $TZ > /etc/timezone \
     && apt upgrade -y \
     && apt install software-properties-common -y \
     && add-apt-repository ppa:ubuntu-toolchain-r/test \
-    && add-apt-repository ppa:deadsnakes/ppa \
     && apt update \
-    && apt install libtinfo6 -y \
+    && apt install -y libtinfo6 \
     && apt install -y git \
     && apt install -y wget \
-    && apt install -y curl \
-    && apt install -y vim \
     && apt install -y software-properties-common \
     && apt install -y gcc-9 \
     && apt install -y g++-9 \
@@ -25,19 +22,27 @@ RUN ln -snf /usr/share/zoneinfo/$TZ /etc/localtime && echo $TZ > /etc/timezone \
     && apt install -y libjpeg-dev \
     && apt install -y zlib1g-dev \
     && apt install -y libpng-dev \
-    && apt install patchelf -y \
-    && apt install python3.10 -y \
-    && apt install python3.10-distutils -y \
-    && apt install python3-pip -y \
-    && apt install python3.10-tk -y \
+    && apt install -y patchelf \
+    && add-apt-repository ppa:deadsnakes/ppa \
+    && apt update \
+    && apt install -y python3.10 \
+    && apt install -y python3.10-distutils \
+    && apt install -y python3-pip \
+    && apt install -y python3.10-tk \
     && apt install -y upx \
-    && apt install patchelf -y \
-    && apt install ccache -y \
+    && apt install -y patchelf \
+    && apt install -y ccache \
     && apt install -y libxcb-xinerama0 \
     && apt install -y libgtk-3-0 \
-    && apt install libgl1-mesa-glx libglib2.0-0 libsm6 libxext6 libxrender-dev libxcb-xinerama0 -y \
+    && apt install -y libgl1-mesa-glx \
+    && apt install -y libglib2.0-0 \
+    && apt install -y libsm6 \
+    && apt install -y libxext6 \
+    && apt install -y libxrender-dev \
+    && apt install -y libxcb-xinerama0 \
     && apt install -y gstreamer1.0-gl \
     && apt install -y nvidia-cuda-toolkit \
+    && apt-get clean \
     && rm -rf /var/lib/apt/lists/ \
     && update-alternatives --install /usr/bin/gcc gcc /usr/bin/gcc-9 60 --slave /usr/bin/g++ g++ /usr/bin/g++-9 \
     && rm -rf /var/lib/apt/lists/*
@@ -48,11 +53,15 @@ WORKDIR /app
 ENV XFORMERS_MORE_DETAILS=1
 RUN pip install nvidia-pyindex
 WORKDIR /app
-RUN pip install --upgrade pip \
-    && pip install --upgrade setuptools \
-    && pip install --upgrade wheel \
-    && pip install bitsandbytes accelerate requests aihandler cmake \
-    && pip install triton
+RUN pip install --upgrade pip
+RUN pip install --upgrade setuptools
+RUN pip install --upgrade wheel
+RUN pip install bitsandbytes
+RUN pip install accelerate
+RUN pip install requests
+RUN pip install aihandler
+RUN pip install cmake
+RUN pip install triton
 
 FROM install_requirements as fix_tcl
 USER root
