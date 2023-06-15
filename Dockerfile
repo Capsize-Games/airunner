@@ -52,16 +52,9 @@ RUN pip install --upgrade pip \
     && pip install --upgrade setuptools \
     && pip install --upgrade wheel \
     && pip install bitsandbytes accelerate requests aihandler cmake \
-    && pip install torch torchvision --index-url https://download.pytorch.org/whl/cu118
+    && pip install triton
 
-FROM install_requirements as install_triton
-RUN git clone https://github.com/openai/triton /app/triton \
-    && cd /app/triton/python \
-    && git checkout v2.0.0 \
-    && pip install . \
-    && rm -rf /app/triton
-
-FROM install_triton as fix_tcl
+FROM install_requirements as fix_tcl
 USER root
 RUN ln -s /usr/share/tcltk/tcl8.6 /usr/share/tcltk/tcl8
 
