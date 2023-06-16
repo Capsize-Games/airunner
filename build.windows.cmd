@@ -28,6 +28,12 @@ echo.
 xcopy /E /I /Y C:\Python310\Lib\site-packages\torch\lib\libtorch_cuda_linalg.so Z:\app\dist\airunner\libtorch_cuda_linalg.so
 echo.
 echo "============================================"
+echo "Copy /usr/local/lib/python3.10/dist-packages/Pillow-9.5.0.dist-info to ./dist/airunner/Pillow-9.5.0.dist-info"
+echo "============================================"
+echo.
+xcopy /E /I /Y C:\Python310\Lib\site-packages\Pillow-9.5.0.dist-info Z:\app\dist\airunner\Pillow-9.5.0.dist-info
+echo.
+echo "============================================"
 echo "Deploying airunner to itch.io"
 echo "============================================"
 echo.

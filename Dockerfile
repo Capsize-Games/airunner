@@ -7,8 +7,6 @@ RUN ln -snf /usr/share/zoneinfo/$TZ /etc/localtime && echo $TZ > /etc/timezone \
     && apt install software-properties-common -y \
     && add-apt-repository ppa:ubuntu-toolchain-r/test \
     && apt-get update \
-    && dpkg --add-architecture i386 \
-    && apt-get update \
     && apt install libtinfo6 -y \
     && apt-get install -y git \
     && apt-get install -y wget \
@@ -20,7 +18,7 @@ RUN ln -snf /usr/share/zoneinfo/$TZ /etc/localtime && echo $TZ > /etc/timezone \
     && apt-get install -y libssl-dev \
     && apt-get install -y libffi-dev \
     && apt-get install -y libgl1-mesa-dev \
-    && apt-get install -y nvidia-cuda-toolkit \
+#    && apt-get install -y nvidia-cuda-toolkit \
     && apt-get install -y xclip \
     && apt-get install -y libjpeg-dev \
     && apt-get install -y zlib1g-dev \
@@ -36,7 +34,7 @@ RUN ln -snf /usr/share/zoneinfo/$TZ /etc/localtime && echo $TZ > /etc/timezone \
     && apt-get install patchelf -y \
     && apt-get install ccache -y \
     && apt-get install -y libxcb-xinerama0 \
-    && apt-get install -y libgtk-3-0 \
+#    && apt-get install -y libgtk-3-0 \
     && apt-get install qt6-qpa-plugins -y \
     && apt-get install libgl1-mesa-glx libglib2.0-0 libsm6 libxext6 libxrender-dev libxcb-xinerama0 -y \
     && apt-get install -y qt6-base-dev \
@@ -54,8 +52,9 @@ WORKDIR /app
 RUN pip install --upgrade pip
 RUN pip install --upgrade setuptools
 RUN pip install --upgrade wheel
-RUN pip install bitsandbytes accelerate requests aihandler triton cmake
-RUN pip uninstall nvidia-cublas-cu11 nvidia-cublas-cu12 -y
+RUN pip install bitsandbytes requests aihandler triton cmake
+RUN pip uninstall torch torchvision -y
+RUN pip install torch torchvision --index-url https://download.pytorch.org/whl/cu118 --upgrade
 
 FROM install_requirements as fix_tcl
 USER root
@@ -63,13 +62,13 @@ RUN ln -s /usr/share/tcltk/tcl8.6 /usr/share/tcltk/tcl8
 
 FROM fix_tcl as install_apps
 RUN python3 -c "from accelerate.utils import write_basic_config; write_basic_config(mixed_precision='fp16')"
+RUN pip uninstall nvidia-cublas-cu11 nvidia-cublas-cu12 -y
 
 FROM install_apps as more_env
 WORKDIR /app
 ENV PATH="/usr/local/lib/python3.10:/usr/local/lib/python3.10/bin:${PATH}"
 ENV PYTHONPATH="/usr/local/lib/python3.10:/usr/local/lib/python3.10/bin:${PYTHONPATH}"
 RUN pip install pyinstaller
-RUN pip uninstall torch torchvision -y
 
 FROM more_env as build_files
 WORKDIR /app
