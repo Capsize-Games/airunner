@@ -54,7 +54,7 @@ WORKDIR /app
 RUN pip install --upgrade pip
 RUN pip install --upgrade setuptools
 RUN pip install --upgrade wheel
-RUN pip install bitsandbytes accelerate requests aihandler triton cmake
+RUN pip install bitsandbytes requests aihandler triton cmake
 RUN pip uninstall nvidia-cublas-cu11 nvidia-cublas-cu12 -y
 
 FROM install_requirements as fix_tcl
@@ -69,7 +69,6 @@ WORKDIR /app
 ENV PATH="/usr/local/lib/python3.10:/usr/local/lib/python3.10/bin:${PATH}"
 ENV PYTHONPATH="/usr/local/lib/python3.10:/usr/local/lib/python3.10/bin:${PYTHONPATH}"
 RUN pip install pyinstaller
-RUN pip uninstall torch torchvision -y
 
 FROM more_env as build_files
 WORKDIR /app
