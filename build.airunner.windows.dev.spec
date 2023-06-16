@@ -1,14 +1,14 @@
 # -*- mode: python ; coding: utf-8 -*-
 import os
 import sys ; sys.setrecursionlimit(sys.getrecursionlimit() * 5)
-os.environ["PATH"] = "C:\\;Z:\\app\\lib\\PortableGit\\cmd;C:\\Program Files\\NVIDIA\\CUDNN\\v8.6.0.163\\bin;C:\\Program Files\\NVIDIA GPU Computing Toolkit\\CUDA\\v11.7\\bin;C:\\Python310;C:\\Python310\\site-packages;C:\\Python310\\site-packages\\lib;C:\\Python310\\Scripts;%PATH%"
+os.environ["PATH"] = "C:\\;C:\\Program Files\\NVIDIA\\CUDNN\\v8.6.0.163\\bin;C:\\Program Files\\NVIDIA GPU Computing Toolkit\\CUDA\\v11.7\\bin;C:\\Python310;C:\\Python310\\site-packages;C:\\Python310\\site-packages\\lib;C:\\Python310\\Scripts;%PATH%"
 import shutil
 from PyInstaller.utils.hooks import copy_metadata, collect_data_files
 os.environ["AIRUNNER_ENVIRONMENT"] = "prod"
 os.environ["DEV_ENV"] = "0"
 os.environ["PYTHONOPTIMIZE"] = "0"
 block_cipher = None
-ROOT = "Z:\\app\\airunner"
+ROOT = "."
 DIST = "./dist/airunner"
 os.environ["AIRUNNER_ENVIRONMENT"] = "prod"
 DEBUGGING = True
@@ -38,6 +38,7 @@ datas += copy_metadata('scipy')
 datas += copy_metadata('bitsandbytes')
 datas += collect_data_files("torch", include_py_files=True)
 datas += collect_data_files("torchvision", include_py_files=True)
+datas += collect_data_files("JIT", include_py_files=True)
 datas += collect_data_files("pytorch_lightning", include_py_files=True)
 datas += collect_data_files("lightning_fabric", include_py_files=True)
 datas += collect_data_files("transformers", include_py_files=True)
@@ -51,30 +52,31 @@ a = Analysis(
         f'{ROOT}\\src\\airunner\\main.py',
     ],
     pathex=[
-        "C:\\Python310\\Lib\\site-packages",
-        "C:\\Python310\\Lib\\site-packages\\tokenizers",
-        "C:\\Python310\\Lib\\site-packages\\tensorflow_io_gcs_filesystem\\core\\python\\ops",
-        "C:\\Python310\\Lib\\site-packages\\bitsandbytes\\",
-        "C:\\Python310\\Lib\\site-packages\\tensorflow\\python\\data\\experimental\\service\\",
-        "C:\\Python310\\Lib\\site-packages\\torch\\lib",
-        "C:\\Python310\\Lib\\site-packages\\PyQt6",
-        "C:\\Users\\root\\AppData\\Local\\Programs\\Python\\Python310\\Lib\\site-packages\\tensorflow\\python\\data\\experimental\\service\\",
-        "C:\\Python310\\Lib\\site-packages\\xformers\\",
-        "C:\\Users\\root\\AppData\\Local\\Programs\\Python\\Python310\\",
+        ".\\venv\\Lib\\site-packages",
+        ".\\venv\\Lib\\site-packages\\tokenizers",
+        ".\\venv\\Lib\\site-packages\\tensorflow_io_gcs_filesystem\\core\\python\\ops",
+        ".\\venv\\Lib\\site-packages\\bitsandbytes\\",
+        ".\\venv\\Lib\\site-packages\\tensorflow\\python\\data\\experimental\\service\\",
+        ".\\venv\\Lib\\site-packages\\torch\\lib",
+        ".\\venv\\Lib\\site-packages\\PyQt6",
+        # "C:\\Users\\root\\AppData\\Local\\Programs\\Python\\Python310\\Lib\\site-packages\\tensorflow\\python\\data\\experimental\\service\\",
+        ".\\venv\\Lib\\site-packages\\xformers\\",
+        # "C:\\Users\\root\\AppData\\Local\\Programs\\Python\\Python310\\",
     ],
     binaries=[
-        ("C:\\Python310\\Lib\\site-packages\\torchvision\\cudart64_110.dll", "."),
-        ("C:\\Python310\\vcruntime140.dll", "."),
-        ("C:\\Python310\\vcruntime140_1.dll", "."),
-        ("C:\\windows\\syswow64\\msvcp140.dll", "."),
-        ("C:\\api-ms-win-shcore-scaling-l1-1-1.dll.so", "."),
-        ("C:\\Python310\\Lib\\site-packages\\tensorflow\\python\\util\\_pywrap_utils.pyd", "."),
+        (".\\venv\\Lib\\site-packages\\torchvision\\cudart64_110.dll", "."),
+        (".\\venv\\Lib\\site-packages\\PyQt6\\Qt6\\bin\\vcruntime140.dll", "."),
+        (".\\venv\\Lib\\site-packages\\PyQt6\\Qt6\\bin\\vcruntime140_1.dll", "."),
+        (".\\venv\\Lib\\site-packages\\PyQt6\\Qt6\\bin\\msvcp140.dll", "."),
+        # ("C:\\api-ms-win-shcore-scaling-l1-1-1.dll.so", "."),
+        (".\\venv\\Lib\\site-packages\\tensorflow\\python\\util\\_pywrap_utils.pyd", "."),
     ],
     datas=datas,
     hiddenimports=[
         "aihandler",
         "airunner",
         "airunner.extensions",
+        "JIT",
         "accelerate",
         "xformers",
         "xformers.ops",
@@ -192,6 +194,6 @@ shutil.copyfile(
     f'{DIST}/v2.yaml'
 )
 shutil.copyfile(
-    f'Z:\\app\\setup.py',
+    f'.\\setup.py',
     f'{DIST}/setup.py'
 )
