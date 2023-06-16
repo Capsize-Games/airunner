@@ -34,6 +34,12 @@ echo ""
 cp /app/setup.py ./dist/airunner/
 echo ""
 echo "============================================"
+echo "Copy /usr/local/lib/python3.10/dist-packages/Pillow-9.5.0.dist-info to ./dist/airunner/Pillow-9.5.0.dist-info"
+echo "============================================"
+echo ""
+cp -R /usr/local/lib/python3.10/dist-packages/Pillow-9.5.0.dist-info ./dist/airunner/
+echo ""
+echo "============================================"
 echo "Deploying airunner to itch.io"
 echo "============================================"
 echo ""
