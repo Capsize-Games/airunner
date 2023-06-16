@@ -1,48 +1,46 @@
-FROM ubuntu:20.04 as base_image
+FROM ubuntu:22.04 as base_image
 USER root
 ENV TZ=America/Denver
 RUN ln -snf /usr/share/zoneinfo/$TZ /etc/localtime && echo $TZ > /etc/timezone \
-    && apt update \
-    && apt upgrade -y \
+    && apt-get update \
+    && apt-get upgrade -y \
     && apt install software-properties-common -y \
     && add-apt-repository ppa:ubuntu-toolchain-r/test \
+    && apt-get update \
+    && dpkg --add-architecture i386 \
+    && apt-get update \
+    && apt install libtinfo6 -y \
+    && apt-get install -y git \
+    && apt-get install -y wget \
+    && apt-get install -y software-properties-common \
+    && apt-get install -y gcc-9 \
+    && apt-get install -y g++-9 \
+    && apt-get install -y bash \
+    && apt-get install -y build-essential \
+    && apt-get install -y libssl-dev \
+    && apt-get install -y libffi-dev \
+    && apt-get install -y libgl1-mesa-dev \
+    && apt-get install -y nvidia-cuda-toolkit \
+    && apt-get install -y xclip \
+    && apt-get install -y libjpeg-dev \
+    && apt-get install -y zlib1g-dev \
+    && apt-get install -y libpng-dev \
+    && apt-get install patchelf -y \
+    && add-apt-repository ppa:deadsnakes/ppa -y \
     && apt update \
-    && apt install -y libtinfo6 \
-    && apt install -y git \
-    && apt install -y wget \
-    && apt install -y software-properties-common \
-    && apt install -y gcc-9 \
-    && apt install -y g++-9 \
-    && apt install -y bash \
-    && apt install -y build-essential \
-    && apt install -y libssl-dev \
-    && apt install -y libffi-dev \
-    && apt install -y libgl1-mesa-dev \
-    && apt install -y xclip \
-    && apt install -y libjpeg-dev \
-    && apt install -y zlib1g-dev \
-    && apt install -y libpng-dev \
-    && apt install -y patchelf \
-    && add-apt-repository ppa:deadsnakes/ppa \
-    && apt update \
-    && apt install -y python3.10 \
-    && apt install -y python3.10-distutils \
-    && apt install -y python3-pip \
-    && apt install -y python3.10-tk \
+    && apt install python3.10 -y \
+    && apt install python3.10-distutils -y \
+    && apt install python3-pip -y \
+    && apt install python3.10-tk -y \
     && apt install -y upx \
-    && apt install -y patchelf \
-    && apt install -y ccache \
-    && apt install -y libxcb-xinerama0 \
-    && apt install -y libgtk-3-0 \
-    && apt install -y libgl1-mesa-glx \
-    && apt install -y libglib2.0-0 \
-    && apt install -y libsm6 \
-    && apt install -y libxext6 \
-    && apt install -y libxrender-dev \
-    && apt install -y libxcb-xinerama0 \
-    && apt install -y gstreamer1.0-gl \
-    && apt install -y nvidia-cuda-toolkit \
-    && apt-get clean \
+    && apt-get install patchelf -y \
+    && apt-get install ccache -y \
+    && apt-get install -y libxcb-xinerama0 \
+    && apt-get install -y libgtk-3-0 \
+    && apt-get install qt6-qpa-plugins -y \
+    && apt-get install libgl1-mesa-glx libglib2.0-0 libsm6 libxext6 libxrender-dev libxcb-xinerama0 -y \
+    && apt-get install -y qt6-base-dev \
+    && apt-get install -y gstreamer1.0-gl \
     && rm -rf /var/lib/apt/lists/ \
     && update-alternatives --install /usr/bin/gcc gcc /usr/bin/gcc-9 60 --slave /usr/bin/g++ g++ /usr/bin/g++-9 \
     && rm -rf /var/lib/apt/lists/*
@@ -56,12 +54,8 @@ WORKDIR /app
 RUN pip install --upgrade pip
 RUN pip install --upgrade setuptools
 RUN pip install --upgrade wheel
-RUN pip install bitsandbytes
-RUN pip install accelerate
-RUN pip install requests
-RUN pip install aihandler
-RUN pip install cmake
-RUN pip install triton
+RUN pip install bitsandbytes accelerate requests aihandler triton cmake
+RUN pip uninstall nvidia-cublas-cu11 nvidia-cublas-cu12 -y
 
 FROM install_requirements as fix_tcl
 USER root
@@ -75,6 +69,7 @@ WORKDIR /app
 ENV PATH="/usr/local/lib/python3.10:/usr/local/lib/python3.10/bin:${PATH}"
 ENV PYTHONPATH="/usr/local/lib/python3.10:/usr/local/lib/python3.10/bin:${PYTHONPATH}"
 RUN pip install pyinstaller
+RUN pip uninstall torch torchvision -y
 
 FROM more_env as build_files
 WORKDIR /app
