@@ -391,7 +391,10 @@ class MainWindow(
 
     def message_handler(self, msg, error=False):
         try:
-            self.window.status_label.setStyleSheet("color: black;")
+            if self.settings_manager.settings.dark_mode_enabled.get():
+                self.window.status_label.setStyleSheet("color: #ffffff;")
+            else:
+                self.window.status_label.setStyleSheet("color: black;")
         except Exception as e:
             print("something went wrong while setting label")
             print(e)
