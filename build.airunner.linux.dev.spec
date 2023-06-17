@@ -5,15 +5,15 @@ from PyInstaller.utils.hooks import copy_metadata, collect_data_files
 import sys ; sys.setrecursionlimit(sys.getrecursionlimit() * 5)
 os.environ["AIRUNNER_ENVIRONMENT"] = "prod"
 libraries = [
-    "/usr/local/lib/python3.10/dist-packages/PyQt6/Qt6/lib/",
+    "./venv/lib/python3.10/site-packages/PyQt6/Qt6/lib/",
     "/usr/lib/x86_64-linux-gnu/wine-development/",
-    "/usr/local/lib/python3.10/dist-packages/h5py.libs/",
-    "/usr/local/lib/python3.10/dist-packages/scipy.libs/",
-    "/usr/local/lib/python3.10/dist-packages/tokenizers.libs/",
-    "/usr/local/lib/python3.10/dist-packages/Pillow.libs/",
-    "/usr/local/lib/python3.10/dist-packages/opencv_python.libs/",
-    "/usr/local/lib/python3.10/dist-packages/torchaudio/lib/",
-    "/usr/local/lib/python3.10/dist-packages/torch/lib/",
+    "./venv/lib/python3.10/site-packages/h5py.libs/",
+    "./venv/lib/python3.10/site-packages/scipy.libs/",
+    "./venv/lib/python3.10/site-packages/tokenizers.libs/",
+    "./venv/lib/python3.10/site-packages/Pillow.libs/",
+    "./venv/lib/python3.10/site-packages/opencv_python.libs/",
+    "./venv/lib/python3.10/site-packages/torchaudio/lib/",
+    "./venv/lib/python3.10/site-packages/torch/lib/",
     "/usr/lib/python3.10",
     "/usr/lib/x86_64-linux-gnu/",
     "/usr/local/lib/",
@@ -56,21 +56,21 @@ datas += collect_data_files("xformers", include_py_files=True)
 datas += collect_data_files("sympy", include_py_files=True)
 a = Analysis(
     [
-        f'/app/airunner/src/airunner/main.py',
+        f'./src/airunner/main.py',
     ],
     pathex=[
-        "/usr/local/lib/python3.10/dist-packages/",
-        "/usr/local/lib/python3.10/dist-packages/torch/lib",
-        "/usr/local/lib/python3.10/dist-packages/tokenizers",
-        "/usr/local/lib/python3.10/dist-packages/tensorflow",
-        "/usr/local/lib/python3.10/dist-packages/triton",
-        "/usr/local/lib/python3.10/dist-packages/xformers",
-        "/usr/local/lib/python3.10/dist-packages/xformers/triton",
+        "./venv/lib/python3.10/site-packages/",
+        "./venv/lib/python3.10/site-packages/torch/lib",
+        "./venv/lib/python3.10/site-packages/tokenizers",
+        "./venv/lib/python3.10/site-packages/tensorflow",
+        "./venv/lib/python3.10/site-packages/triton",
+        "./venv/lib/python3.10/site-packages/xformers",
+        "./venv/lib/python3.10/site-packages/xformers/triton",
         "/usr/lib/x86_64-linux-gnu/",
     ],
     binaries=[
-        ('/usr/local/lib/python3.10/dist-packages/nvidia/cudnn/lib/libcudnn_ops_infer.so.8', '.'),
-        ('/usr/local/lib/python3.10/dist-packages/nvidia/cudnn/lib/libcudnn_cnn_infer.so.8', '.'),
+        ('./venv/lib/python3.10/site-packages/nvidia/cudnn/lib/libcudnn_ops_infer.so.8', '.'),
+        ('./venv/lib/python3.10/site-packages/nvidia/cudnn/lib/libcudnn_cnn_infer.so.8', '.'),
         ('/usr/lib/x86_64-linux-gnu/libgstgl-1.0.so.0', '.'),
     ],
     datas=datas,
@@ -176,31 +176,31 @@ coll = COLLECT(
 )
 
 # copy files for distribution
-shutil.copytree('/app/airunner/src/airunner/pyqt', '/app/dist/airunner/pyqt')
-shutil.copyfile('/app/airunner/linux.itch.toml', '/app/dist/airunner/.itch.toml')
-shutil.copytree('/app/airunner/src/airunner/src/icons', '/app/dist/airunner/src/icons')
+shutil.copytree('./src/airunner/pyqt', './dist/airunner/pyqt')
+shutil.copyfile('./linux.itch.toml', './dist/airunner/.itch.toml')
+shutil.copytree('./src/airunner/src/icons', './dist/airunner/src/icons')
 
 # copy sd config files
-os.makedirs('/dist/airunner/diffusers/pipelines/stable_diffusion', exist_ok=True)
-shutil.copyfile('/app/airunner/src/airunner/v1.yaml', '/app/dist/airunner/v1.yaml')
-shutil.copyfile('/app/airunner/src/airunner/v2.yaml', '/app/dist/airunner/v2.yaml')
+os.makedirs('./dist/airunner/diffusers/pipelines/stable_diffusion', exist_ok=True)
+shutil.copyfile('./src/airunner/v1.yaml', './dist/airunner/v1.yaml')
+shutil.copyfile('./src/airunner/v2.yaml', './dist/airunner/v2.yaml')
 
 #############################################################
 #### The following fixes are for Triton #####################
 
-# run compileall on /app/dist/airunner/triton/runtime/jit.py and then mv /app/dist/airunner/triton/runtime/__pycache__/jit.cpython-310.pyc to /app/dist/airunner/triton/runtime/jit.pyc
+# run compileall on ./dist/airunner/triton/runtime/jit.py and then mv ./dist/airunner/triton/runtime/__pycache__/jit.cpython-310.pyc to ./dist/airunner/triton/runtime/jit.pyc
 shutil.copyfile(
-    '/usr/local/lib/python3.10/dist-packages/triton/runtime/__pycache__/jit.cpython-310.pyc',
-    '/app/dist/airunner/triton/runtime/jit.pyc'
+    './venv/lib/python3.10/site-packages/triton/runtime/__pycache__/jit.cpython-310.pyc',
+    './dist/airunner/triton/runtime/jit.pyc'
 )
 
-# do the same thing for /app/dist/airunner/triton/compiler.py
+# do the same thing for ./dist/airunner/triton/compiler.py
 shutil.copyfile(
-    '/usr/local/lib/python3.10/dist-packages/triton/__pycache__/compiler.cpython-310.pyc',
-    '/app/dist/airunner/triton/compiler.pyc'
+    './venv/lib/python3.10/site-packages/triton/__pycache__/compiler.cpython-310.pyc',
+    './dist/airunner/triton/compiler.pyc'
 )
 
 shutil.copyfile(
-    f'/usr/local/lib/python3.10/dist-packages/JIT/__pycache__/random.cpython-310.pyc',
-    f'/app/dist/airunner/random.pyc'
+    f'./venv/lib/python3.10/site-packages/JIT/__pycache__/random.cpython-310.pyc',
+    f'./dist/airunner/random.pyc'
 )
