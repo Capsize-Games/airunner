@@ -13,7 +13,7 @@ echo "============================================"
 echo "Build airunner for linux"
 echo "============================================"
 echo ""
-DEV_ENV=0 AIRUNNER_ENVIRONMENT="prod" PYTHONOPTIMIZE=0 python3 -m PyInstaller --log-level=INFO --noconfirm  /app/airunner/build.airunner.linux.prod.spec 2>&1 | tee build.log
+DEV_ENV=0 AIRUNNER_ENVIRONMENT="prod" PYTHONOPTIMIZE=0 python3 -m PyInstaller --log-level=INFO --noconfirm  /app/build.airunner.linux.prod.spec 2>&1 | tee build.log
 echo ""
 echo "============================================"
 echo "Copy timm to dist"
@@ -25,7 +25,7 @@ echo "============================================"
 echo "Copy libtorch_cuda_linalg.so to dist"
 echo "============================================"
 echo ""
-cp /app/dist/airunner/torch/lib/libtorch_cuda_linalg.so ./dist/airunner/
+cp /usr/local/lib/python3.10/dist-packages/torch/lib/libtorch_cuda_linalg.so ./dist/airunner/
 echo ""
 echo "============================================"
 echo "Copy setup.py to dist"
