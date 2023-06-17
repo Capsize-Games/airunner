@@ -533,8 +533,12 @@ class GeneratorMixin(LoraMixin):
         self.scheduler = scheduler
 
     def generate_callback(self):
-        #self.new_layer()
-        self.generate(True)
+        # check that the correct model is in use for txt2vid
+        if self.current_section == "txt2vid" and self.tabs[self.current_section].model_dropdown.currentText() != "damo-vilab":
+            self.error_handler("Must use damo-vilab model with txt2vid")
+        else:
+            self.generate(True)
+
 
     def prep_video(self):
         pass
