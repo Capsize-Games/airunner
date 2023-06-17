@@ -7,7 +7,7 @@
     <x>0</x>
     <y>0</y>
     <width>370</width>
-    <height>793</height>
+    <height>822</height>
    </rect>
   </property>
   <property name="sizePolicy">
@@ -796,7 +796,7 @@
      </widget>
     </widget>
    </item>
-   <item row="13" column="0">
+   <item row="14" column="0">
     <widget class="QPushButton" name="generate">
      <property name="sizePolicy">
       <sizepolicy hsizetype="Minimum" vsizetype="Preferred">
@@ -809,7 +809,7 @@
      </property>
     </widget>
    </item>
-   <item row="13" column="1">
+   <item row="14" column="1">
     <widget class="QProgressBar" name="progressBar">
      <property name="sizePolicy">
       <sizepolicy hsizetype="Expanding" vsizetype="Preferred">
@@ -825,6 +825,13 @@
      </property>
      <property name="value">
       <number>0</number>
+     </property>
+    </widget>
+   </item>
+   <item row="13" column="0" colspan="2">
+    <widget class="QCheckBox" name="kadinsky">
+     <property name="text">
+      <string>Use Kadinksy</string>
      </property>
     </widget>
    </item>
