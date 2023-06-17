@@ -58,6 +58,14 @@ class GeneratorMixin(LoraMixin):
         self.settings.ddim_eta.set(val)
 
     @property
+    def use_kadinsky(self):
+        return self.settings.use_kadinsky.get()
+
+    @use_kadinsky.setter
+    def use_kadinsky(self, val):
+        self.settings.use_kadinsky.set(val)
+
+    @property
     def prompt(self):
         return self.settings.prompt.get()
 
@@ -152,6 +160,7 @@ class GeneratorMixin(LoraMixin):
             self.tabs[tab] = uic.loadUi(os.path.join("pyqt/generate_form.ui"))
 
         for tab in self.tabs:
+            self.override_section = tab
             if tab != "controlnet":
                 self.tabs[tab].controlnet_label.deleteLater()
                 self.tabs[tab].controlnet_dropdown.deleteLater()
@@ -178,13 +187,23 @@ class GeneratorMixin(LoraMixin):
             if tab in ["txt2img", "img2img", "depth2img", "outpaint", "controlnet", "superresolution", "txt2vid"]:
                 self.tabs[tab].image_scale_box.deleteLater()
 
+            if tab in ["txt2img", "img2img", "outpaint"]:
+                self.tabs[tab].kadinsky.stateChanged.connect(lambda state, _tab=tab: self.handle_kadinsky_change(state, _tab))
+                self.tabs[tab].kadinsky.setChecked(self.use_kadinsky is True)
+                self.tabs[tab].model_dropdown.setEnabled(self.use_kadinsky is False)
+            else:
+                self.tabs[tab].kadinsky.deleteLater()
+
             self.tabs[tab].interrupt_button.clicked.connect(self.interrupt)
+
+        self.override_section = None
 
         for tab in sections:
             self.window.tabWidget.addTab(self.tabs[tab], tab)
 
         # iterate over each tab and connect steps_slider with steps_spinbox
         for tab_name in self.tabs.keys():
+            self.override_section = tab_name
             tab = self.tabs[tab_name]
 
             tab.toggleAllLora.clicked.connect(lambda checked, _tab=tab: self.toggle_all_lora(checked, _tab))
@@ -255,8 +274,8 @@ class GeneratorMixin(LoraMixin):
             # if samples is greater than 1 enable the interrupt_button
             if tab.samples_spinbox.value() > 1:
                 tab.interrupt_button.setEnabled(tab.samples_spinbox.value() > 1)
-
             self.set_default_values(tab_name, tab)
+            self.override_section = None
 
         # assign callback to generate function on tab
         self.window.tabWidget.currentChanged.connect(self.tab_changed_callback)
@@ -268,6 +287,10 @@ class GeneratorMixin(LoraMixin):
         self.initialize_size_form_elements()
         self.initialize_size_sliders()
         self.initialize_lora()
+
+    def handle_kadinsky_change(self, state, tab):
+        self.use_kadinsky = state == 2
+        self.tabs[tab].model_dropdown.setEnabled(state == 0)
 
     def interrupt(self):
         print("Interrupting...")
@@ -735,6 +758,7 @@ class GeneratorMixin(LoraMixin):
             f"{action}_model_path": model_path,
             f"{action}_model_branch": model_branch,
             f"{action}_lora": self.available_lora(action),
+            f"{action}_use_kadinsky": self.use_kadinsky,
             f"width": self.width,
             f"height": self.height,
             "do_nsfw_filter": self.settings_manager.settings.nsfw_filter.get(),
@@ -746,6 +770,8 @@ class GeneratorMixin(LoraMixin):
             "use_controlnet": use_controlnet,
             "controlnet": controlnet,
         }
+        print("N"*100)
+        print(self.use_kadinsky)
         if action == "superresolution":
             options["original_image_width"] = self.canvas.current_active_image.image.width
             options["original_image_height"] = self.canvas.current_active_image.image.height
@@ -791,7 +817,6 @@ class GeneratorMixin(LoraMixin):
         self.canvas.update()
 
     def set_default_values(self, section, tab):
-        self.override_section = section
         tab.prompt.setPlainText(self.prompt)
         tab.negative_prompt.setPlainText(self.negative_prompt)
         tab.steps_spinbox.setValue(self.steps)
@@ -813,7 +838,6 @@ class GeneratorMixin(LoraMixin):
             tab.scheduler_dropdown.setCurrentText(self.scheduler)
         except RuntimeError:
             pass
-        self.override_section = None
 
     def handle_width_slider_change(self, val):
         self.window.width_spinbox.setValue(val)
