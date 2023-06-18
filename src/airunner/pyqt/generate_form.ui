@@ -159,8 +159,8 @@
            <rect>
             <x>0</x>
             <y>0</y>
-            <width>323</width>
-            <height>109</height>
+            <width>98</width>
+            <height>48</height>
            </rect>
           </property>
           <layout class="QVBoxLayout" name="verticalLayout"/>
@@ -184,8 +184,8 @@
            <rect>
             <x>0</x>
             <y>0</y>
-            <width>323</width>
-            <height>100</height>
+            <width>98</width>
+            <height>28</height>
            </rect>
           </property>
          </widget>
@@ -320,7 +320,7 @@
           <number>1</number>
          </property>
          <property name="maximum">
-          <number>100</number>
+          <number>200</number>
          </property>
          <property name="orientation">
           <enum>Qt::Horizontal</enum>
@@ -351,7 +351,7 @@
           <number>1</number>
          </property>
          <property name="maximum">
-          <number>100</number>
+          <number>200</number>
          </property>
         </widget>
        </item>
