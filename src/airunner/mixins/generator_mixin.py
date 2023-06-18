@@ -770,8 +770,6 @@ class GeneratorMixin(LoraMixin):
             "use_controlnet": use_controlnet,
             "controlnet": controlnet,
         }
-        print("N"*100)
-        print(self.use_kadinsky)
         if action == "superresolution":
             options["original_image_width"] = self.canvas.current_active_image.image.width
             options["original_image_height"] = self.canvas.current_active_image.image.height
