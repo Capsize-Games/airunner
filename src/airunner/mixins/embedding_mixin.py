@@ -57,7 +57,12 @@ class EmbeddingMixin:
                 # check if f is directory
                 if os.path.isdir(os.path.join(embeddings_path, f)):
                     return self.find_embeddings_in_path(os.path.join(embeddings_path, f), tokens)
-                tokens.append(f.split(".")[0])
+                words = f.split(".")
+                # if the last word is pt, ckpt, or pth, then join all words except the last one
+                if words[-1] in ["pt", "ckpt", "pth", "safetensors"]:
+                    words = words[:-1]
+                words = ".".join(words).lower()
+                tokens.append(words)
         return tokens
 
     def insert_into_prompt(self, text):
