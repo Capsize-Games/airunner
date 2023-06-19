@@ -176,11 +176,41 @@ class Canvas(
             layer = layers[index]
             if not layer.visible:
                 continue
+            if self.settings_manager.settings.show_active_image_area.get():
+                self.draw_active_image_area()
             CanvasImageMixin.draw(self, layer, index)
             CanvasBrushesMixin.draw(self, layer, index)
             CanvasWidgetsMixin.draw(self, layer, index)
         CanvasSelectionboxMixin.paint_event(self, event)
         CanvasActiveGridAreaMixin.paint_event(self, event)
+
+    def draw_active_image_area(self):
+        """
+        Draw a border around the active image area and fill the background with white
+        :return:
+        """
+        # first iterate over all layers and get extremities
+        left = None
+        top = None
+        right = None
+        bottom = None
+        for layer in self.layers:
+            image_data = layer.image_data
+            if image_data.image is None:
+                continue
+            left = min(left, image_data.position.x()) if left is not None else image_data.position.x()
+            top = min(top, image_data.position.y()) if top is not None else image_data.position.y()
+            right = max(right, image_data.image.width) if right is not None else image_data.image.width
+            bottom = max(bottom, image_data.image.height) if bottom is not None else image_data.image.height
+        if left is None or top is None or right is None or bottom is None:
+            return
+
+        painter = QPainter(self.canvas_container)
+        color = QColor(255, 255, 255, 128)
+        painter.setPen(color)
+        painter.setBrush(color)
+        painter.drawRect(self.pos_x + left, self.pos_y + top, right, bottom)
+        painter.end()
 
     def enter_event(self, event):
         self.update_cursor()
