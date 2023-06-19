@@ -7,6 +7,8 @@ from PyQt6.QtGui import QPainter, QPixmap
 from airunner.models.imagedata import ImageData
 from PIL.ExifTags import TAGS
 
+from airunner.models.layerdata import LayerData
+
 
 class CanvasImageMixin:
     _image_data_copy = None
@@ -60,10 +62,13 @@ class CanvasImageMixin:
 
     def draw(self, layer, index):
         painter = QPainter(self.canvas_container)
-        self.draw_images(layer, index, painter)
+        self.draw_images(layer, painter)
         painter.end()
 
-    def visible_image(self, layer=None, image_data=None):
+    def visible_mask(self, layer=None, image_data=None):
+        return self.visible_image(layer=layer, image_data=image_data, mask=True)
+
+    def visible_image(self, layer=None, image_data=None, mask=False):
         """
         Returns an image that is cropped to the visible area of the canvas
         :param layer:
@@ -72,7 +77,11 @@ class CanvasImageMixin:
         if layer:
             image_data = layer.image_data
 
-        if not image_data or not image_data.image:
+        if not image_data:
+            return
+
+        img = image_data.image if not mask else image_data.mask
+        if not img:
             return
 
         # apply the layer offset
@@ -83,17 +92,26 @@ class CanvasImageMixin:
         rect = self.viewport_rect
 
         # only create a image of the visible area, apply offset
-        img = image_data.image.copy().crop((rect.x() - location.x(), rect.y() - location.y(),
-                        rect.x() + rect.width() - location.x(), rect.y() + rect.height() - location.y()))
+        img = img.copy().crop((
+            rect.x() - location.x(),
+            rect.y() - location.y(),
+            rect.x() + rect.width() - location.x(),
+            rect.y() + rect.height() - location.y()
+        ))
         return img
 
-    def draw_images(self, layer, index, painter):
+    def draw_images(self, layer, painter):
         img = self.visible_image(layer=layer)
-        if not img:
-            return
-        qimage = ImageQt(img)
-        pixmap = QPixmap.fromImage(qimage)
-        painter.drawPixmap(QPoint(0, 0), pixmap)
+        if img:
+            qimage = ImageQt(img)
+            pixmap = QPixmap.fromImage(qimage)
+            painter.drawPixmap(QPoint(0, 0), pixmap)
+        if layer.mask_mode_active or True:
+            img = self.visible_image(layer=layer, mask=True)
+            if img:
+                qimage = ImageQt(img)
+                pixmap = QPixmap.fromImage(qimage)
+                painter.drawPixmap(QPoint(0, 0), pixmap)
 
     def copy_image(self):
         im = self.current_active_image_data
@@ -173,7 +191,12 @@ class CanvasImageMixin:
         """
         # convert image to RGBA
         image = image.convert("RGBA")
-        self.current_layer.image_data = ImageData(location, image, self.current_layer.opacity)
+        self.current_layer.image_data = ImageData(
+            position=location,
+            image=image,
+            opacity=self.current_layer.opacity,
+            mask=None
+        )
         #self.set_image_opacity(self.get_layer_opacity(self.current_layer_index))
 
     def invert_image(self):
@@ -247,25 +270,56 @@ class CanvasImageMixin:
     def insert_rasterized_line_image(self, rect: QRect, img: Image, is_mask: bool, layer: LayerData):
         existing_image = layer.image_data.image
         # combine img with existing image
-        if existing_image is not None:
-            # determine which image is larger
-            width = max(existing_image.width, img.width)
-            height = max(existing_image.height, img.height)
-            # create a new image with the larger dimensions
+        pos = [0, 0]
+        if existing_image is None:
+            point = QPoint(rect.x(), rect.y())
+            width = img.width
+            height = img.height
             new_image = Image.new("RGBA", (width, height), (0, 0, 0, 0))
-            # paste the existing image onto the new image
+        else:
+            point = QPoint(
+                min(rect.x(), layer.image_data.position.x()),
+                min(rect.y(), layer.image_data.position.y())
+            )
+            if point.x() < rect.x():
+                pos[0] = abs(point.x()) + rect.x()
+            if point.y() < rect.y():
+                pos[1] = abs(point.y()) + rect.y()
+            existing_position = layer.image_data.position
+            is_drawing_left = rect.x() < existing_position.x()
+            is_drawing_right = rect.width() > (existing_image.width + existing_position.x())
+            is_drawing_top = rect.y() < existing_position.y()
+            is_drawing_bottom = rect.height() > (existing_image.height + existing_position.y())
+
+            x_overlap = 0
+            if is_drawing_left:
+                x_overlap = existing_position.x() - rect.x()
+            if is_drawing_right:
+                x_overlap += rect.width() - (existing_image.width + existing_position.x())
+            y_overlap = 0
+            if is_drawing_top:
+                y_overlap = existing_position.y() - rect.y()
+            if is_drawing_bottom:
+                y_overlap += rect.height() - (existing_image.height + existing_position.y())
+
+            if is_drawing_left or is_drawing_right:
+                width = existing_image.width + x_overlap
+            else:
+                width = max(existing_image.width, img.width)
+            if is_drawing_top or is_drawing_bottom:
+                height = existing_image.height + y_overlap
+            else:
+                height = max(existing_image.height, img.height)
+            new_image = Image.new("RGBA", (width, height), (0, 0, 0, 0))
+
+        if existing_image:
             pos_x = layer.image_data.position.x() - rect.x() if rect.x() < layer.image_data.position.x() else 0
             pos_y = layer.image_data.position.y() - rect.y() if rect.y() < layer.image_data.position.y() else 0
             new_image.alpha_composite(existing_image, (pos_x, pos_y))
-            # paste the new image onto the existing image
-            new_image.alpha_composite(img, (0, 0))
-            img = new_image
-        image_root_point = QPoint(rect.x(), rect.y())
-        image_pivot_point = QPoint(rect.x(), rect.y())
-        processed_image = img
-        self.image_root_point = image_root_point
-        self.image_pivot_point = image_pivot_point
-        self.add_image_to_canvas(processed_image, is_mask)
+        new_image.alpha_composite(img, (pos[0], pos[1]))
+        self.image_root_point = point
+        self.image_pivot_point = self.image_root_point
+        self.add_image_to_canvas(new_image, is_mask)
 
     def handle_outpaint(self, outpaint_box_rect, outpainted_image, action=None):
         if self.current_layer.image_data.image is None:
@@ -344,7 +398,7 @@ class CanvasImageMixin:
 
         return new_image, image_root_point, image_pivot_point
 
-    def add_image_to_canvas(self, image):
+    def add_image_to_canvas(self, image, is_mask=False):
         self.parent.history.add_event({
             "event": "set_image",
             "layer_index": self.current_layer_index,
@@ -352,8 +406,19 @@ class CanvasImageMixin:
             "previous_image_root_point": self.image_root_point,
             "previous_image_pivot_point": self.image_pivot_point,
         })
-        image = self.apply_opacity(image, self.current_layer.opacity)
-        self.current_layer.image_data = ImageData(self.image_pivot_point, image, self.current_layer.opacity)
+        if is_mask:
+            mask = self.apply_opacity(image, self.mask_opacity)
+            image = self.current_layer.image_data.image
+        else:
+            mask = self.current_layer.image_data.mask
+            image = self.apply_opacity(image, self.current_layer.opacity)
+
+        self.current_layer.image_data = ImageData(
+            position=self.image_pivot_point,
+            image=image,
+            opacity=self.current_layer.opacity,
+            mask=mask
+        )
 
     def lower_opacity(self, i, diff):
         if i == 0:
@@ -380,9 +445,12 @@ class CanvasImageMixin:
 
     def image_data_copy(self, index):
         image_data = self.layers[index].image_data
-        if not image_data.image:
-            return None
-        return ImageData(image_data.position, image_data.image.copy(), self.current_layer.opacity)
+        return ImageData(
+            position=image_data.position,
+            image=image_data.image.copy() if image_data.image else None,
+            opacity=self.current_layer.opacity,
+            mask=image_data.mask.copy() if image_data.mask else None
+        )
 
     def rotate_90_clockwise(self):
         if self.current_active_image_data:
@@ -391,7 +459,8 @@ class CanvasImageMixin:
                 "layer_index": self.current_layer_index,
                 "images": self.image_data_copy(self.current_layer_index)
             })
-            self.current_active_image.image = self.current_active_image.image.transpose(Image.ROTATE_270)
+            self.current_active_image_data.image = self.current_active_image_data.image.transpose(Image.ROTATE_270)
+            self.current_active_image_data.mask = self.current_active_image_data.mask.transpose(Image.ROTATE_270)
             self.update()
 
     def rotate_90_counterclockwise(self):
@@ -401,17 +470,6 @@ class CanvasImageMixin:
                 "layer_index": self.current_layer_index,
                 "images": self.image_data_copy(self.current_layer_index)
             })
-            self.current_active_image.image = self.current_active_image.image.transpose(Image.ROTATE_90)
+            self.current_active_image_data.image = self.current_active_image_data.image.transpose(Image.ROTATE_90)
+            self.current_active_image_data.mask = self.current_active_image_data.mask.transpose(Image.ROTATE_90)
             self.update()
-
-    def add_image_to_canvas_new(self, image, image_pivot_point, image_root_point):
-        self.parent.history.add_event({
-            "event": "set_image",
-            "layer_index": self.current_layer_index,
-            "images": self.current_layer.image_data,
-            "previous_image_root_point": image_root_point,
-            "previous_image_pivot_point": image_pivot_point,
-        })
-        self.image_pivot_point = image_pivot_point
-        self.current_layer.image_data = ImageData(image_pivot_point, image, self.current_layer.opacity)
-
