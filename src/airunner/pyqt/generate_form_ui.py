@@ -396,9 +396,9 @@ class Ui_Form(object):
         self.progressBar.setProperty("value", 0)
         self.progressBar.setObjectName("progressBar")
         self.formLayout.setWidget(14, QtWidgets.QFormLayout.ItemRole.FieldRole, self.progressBar)
-        self.kadinsky = QtWidgets.QCheckBox(parent=Form)
-        self.kadinsky.setObjectName("kadinsky")
-        self.formLayout.setWidget(13, QtWidgets.QFormLayout.ItemRole.SpanningRole, self.kadinsky)
+        self.kandinsky = QtWidgets.QCheckBox(parent=Form)
+        self.kandinsky.setObjectName("kandinsky")
+        self.formLayout.setWidget(13, QtWidgets.QFormLayout.ItemRole.SpanningRole, self.kandinsky)
 
         self.retranslateUi(Form)
         self.PromptTabsSection.setCurrentIndex(0)
@@ -426,4 +426,4 @@ class Ui_Form(object):
         self.samples_groupbox.setTitle(_translate("Form", "Samples"))
         self.interrupt_button.setText(_translate("Form", "Interrupt"))
         self.generate.setText(_translate("Form", "Generate"))
-        self.kadinsky.setText(_translate("Form", "Use Kadinksy"))
+        self.kandinsky.setText(_translate("Form", "Use Kandinksy"))
