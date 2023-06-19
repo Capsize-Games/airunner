@@ -22,7 +22,7 @@ class CanvasImageMixin:
         self._image_data_copy = value
 
     @property
-    def current_active_image(self):
+    def current_active_image_data(self):
         try:
             return self.current_layer.image_data
         except IndexError:
@@ -96,7 +96,7 @@ class CanvasImageMixin:
         painter.drawPixmap(QPoint(0, 0), pixmap)
 
     def copy_image(self):
-        im = self.current_active_image
+        im = self.current_active_image_data
         if not im:
             return
         output = io.BytesIO()
@@ -385,7 +385,7 @@ class CanvasImageMixin:
         return ImageData(image_data.position, image_data.image.copy(), self.current_layer.opacity)
 
     def rotate_90_clockwise(self):
-        if self.current_active_image:
+        if self.current_active_image_data:
             self.parent.history.add_event({
                 "event": "rotate",
                 "layer_index": self.current_layer_index,
@@ -395,7 +395,7 @@ class CanvasImageMixin:
             self.update()
 
     def rotate_90_counterclockwise(self):
-        if self.current_active_image:
+        if self.current_active_image_data:
             self.parent.history.add_event({
                 "event": "rotate",
                 "layer_index": self.current_layer_index,
