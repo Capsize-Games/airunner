@@ -37,7 +37,7 @@ class CanvasBrushesMixin:
 
     @property
     def left_line_extremity(self):
-        return self.current_layer.left_line_extremity if self.current_layer.left_line_extremity else 0
+        return self.current_layer.left_line_extremity
 
     @left_line_extremity.setter
     def left_line_extremity(self, value):
@@ -45,7 +45,7 @@ class CanvasBrushesMixin:
 
     @property
     def right_line_extremity(self):
-        return self.current_layer.right_line_extremity if self.current_layer.right_line_extremity else 0
+        return self.current_layer.right_line_extremity
 
     @right_line_extremity.setter
     def right_line_extremity(self, value):
@@ -53,7 +53,7 @@ class CanvasBrushesMixin:
 
     @property
     def top_line_extremity(self):
-        return self.current_layer.top_line_extremity if self.current_layer.top_line_extremity else 0
+        return self.current_layer.top_line_extremity
 
     @top_line_extremity.setter
     def top_line_extremity(self, value):
@@ -61,7 +61,7 @@ class CanvasBrushesMixin:
 
     @property
     def bottom_line_extremity(self):
-        return self.current_layer.bottom_line_extremity if self.current_layer.bottom_line_extremity else 0
+        return self.current_layer.bottom_line_extremity
 
     @bottom_line_extremity.setter
     def bottom_line_extremity(self, value):
@@ -244,13 +244,24 @@ class CanvasBrushesMixin:
             brush_size = int(self.settings_manager.settings.mask_brush_size.get() / 2)
             min_x = min(start_x, end_x) - brush_size
             min_y = min(start_y, end_y) - brush_size
-            max_x = max(start_x, end_x) + brush_size
-            max_y = max(start_y, end_y) + brush_size
-
-            self.left_line_extremity = min(self.left_line_extremity, min_x)
-            self.right_line_extremity = max(self.right_line_extremity, max_x)
-            self.top_line_extremity = min(self.top_line_extremity, min_y)
-            self.bottom_line_extremity = max(self.bottom_line_extremity, max_y)
+            max_x = max(start_x, end_x) - brush_size
+            max_y = max(start_y, end_y) - brush_size
+            if self.left_line_extremity is None:
+                self.left_line_extremity = min_x
+            else:
+                self.left_line_extremity = min(self.left_line_extremity, min_x)
+            if self.right_line_extremity is None:
+                self.right_line_extremity = max_x
+            else:
+                self.right_line_extremity = max(self.right_line_extremity, max_x)
+            if self.top_line_extremity is None:
+                self.top_line_extremity = min_y
+            else:
+                self.top_line_extremity = min(self.top_line_extremity, min_y)
+            if self.bottom_line_extremity is None:
+                self.bottom_line_extremity = max_y
+            else:
+                self.bottom_line_extremity = max(self.bottom_line_extremity, max_y)
         return self.top_line_extremity, self.left_line_extremity, self.bottom_line_extremity, self.right_line_extremity
 
     def rasterize_lines(self, final=False):
