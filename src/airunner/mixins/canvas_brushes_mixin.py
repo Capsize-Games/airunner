@@ -1,6 +1,7 @@
 from PIL import ImageDraw, ImageFilter, UnidentifiedImageError
 from PyQt6.QtCore import Qt, QPointF, QPoint, QSize, QRect, QThread, QObject, pyqtSignal, QTimer, QRunnable, QThreadPool
 from PyQt6.QtGui import QPainter, QPainterPath, QColor, QPen, QImage
+from airunner.models.layerdata import LayerData
 from airunner.models.linedata import LineData
 from PIL import Image
 
@@ -15,10 +16,20 @@ class RasterizationWorker(QObject):
         self.left = kwargs.pop('left')
         self.bottom = kwargs.pop('bottom')
         self.right = kwargs.pop('right')
+        self.is_mask = kwargs.pop('is_mask')
+        self.layer = kwargs.pop("layer")
         super().__init__(*args)
 
     def run(self):
-        self.convert_pixmap_to_pil_image(self.img, self.top, self.left, self.bottom, self.right)
+        self.convert_pixmap_to_pil_image(
+            self.img,
+            self.top,
+            self.left,
+            self.bottom,
+            self.right,
+            self.is_mask,
+            self.layer
+        )
         self.finished.emit()
 
 
@@ -34,6 +45,10 @@ class RasterizationTask(QRunnable):
 class CanvasBrushesMixin:
     thread = None
     worker = None
+
+    @property
+    def mask_brush_color(self):
+        return QColor(255, 0, 0, int(255 * self.mask_opacity))
 
     @property
     def left_line_extremity(self):
@@ -130,7 +145,6 @@ class CanvasBrushesMixin:
     def initialize(self):
         self.thread_pool = QThreadPool()
         self.thread_pool.setMaxThreadCount(4)
-        self._location_data = {}
 
     def draw(self, layer, index):
         path = QPainterPath()
@@ -145,13 +159,13 @@ class CanvasBrushesMixin:
                 self.draw_path(path, painter)
                 painter = None
             if self.color is None or self.color != line.color:
-                self.color = line.color
+                self.color = self.mask_brush_color if layer.mask_mode_active else line.color
                 self.draw_path(path, painter)
                 painter = None
             if not painter:
                 painter = QPainter(self.canvas_container)
                 painter.setBrush(self.brush)
-                painter.setOpacity(1.0)
+                painter.setOpacity(1.0 if not layer.mask_mode_active else self.mask_opacity)
                 path = QPainterPath()
             painter.setPen(pen)
 
@@ -183,6 +197,8 @@ class CanvasBrushesMixin:
 
     def handle_erase(self, event):
         self.is_erasing = True
+        if len(self.current_layer.lines) > 0:
+            self.rasterize_lines(final=True)
         brush_size = int(self.settings_manager.settings.mask_brush_size.get() / 2)
         image = self.current_layer.image_data.image if self.current_layer.image_data.image is not None else None
         image_pos = self.current_layer.image_data.position if self.current_layer.image_data.image is not None else None
@@ -215,6 +231,8 @@ class CanvasBrushesMixin:
         brush_color = "#ffffff"
         if event.button() == Qt.MouseButton.LeftButton or Qt.MouseButton.LeftButton in event.buttons():
             brush_color = self.settings_manager.settings.primary_color.get()
+        if self.current_layer.mask_mode_active:
+            brush_color = self.mask_brush_color
         brush_color = QColor(brush_color)
         pen = QPen(
             brush_color,
@@ -244,8 +262,8 @@ class CanvasBrushesMixin:
             brush_size = int(self.settings_manager.settings.mask_brush_size.get() / 2)
             min_x = min(start_x, end_x) - brush_size
             min_y = min(start_y, end_y) - brush_size
-            max_x = max(start_x, end_x) - brush_size
-            max_y = max(start_y, end_y) - brush_size
+            max_x = max(start_x, end_x) + brush_size
+            max_y = max(start_y, end_y) + brush_size
             if self.left_line_extremity is None:
                 self.left_line_extremity = min_x
             else:
@@ -277,16 +295,16 @@ class CanvasBrushesMixin:
 
         # create a QImage with the size of the lines
         min_x = min(left, right) - brush_size
-        max_x = max(left, right) + brush_size
+        max_x = max(left, right) - brush_size
         min_y = min(top, bottom) - brush_size
-        max_y = max(top, bottom) + brush_size
+        max_y = max(top, bottom) - brush_size
         width = abs(max_x - min_x)
         height = abs(max_y - min_y)
         img = QImage(QSize(width, height), QImage.Format.Format_ARGB32)
         img.fill(Qt.GlobalColor.transparent)
         painter = QPainter(img)
         painter.setBrush(self.brush)
-        painter.setOpacity(1.0)
+        painter.setOpacity(1.0 if not self.current_layer.mask_mode_active else self.mask_opacity)
         path = self.create_image_path(painter, lines)
         painter.drawPath(path)
         painter.end()
@@ -297,7 +315,9 @@ class CanvasBrushesMixin:
             top=top,
             left=left,
             bottom=bottom,
-            right=right
+            right=right,
+            is_mask=self.current_layer.mask_mode_active,
+            layer=self.current_layer
         )
         task = RasterizationTask(worker)
         self.thread_pool.start(task)
@@ -313,7 +333,10 @@ class CanvasBrushesMixin:
         path.setFillRule(Qt.FillRule.WindingFill)
         for line in lines:
             pen = line.pen
-            pen.setColor(line.color)
+            color = line.color
+            if self.current_layer.mask_mode_active:
+                color = self.mask_brush_color
+            pen.setColor(color)
             pen.setCapStyle(Qt.PenCapStyle.RoundCap)
             pen.setJoinStyle(Qt.PenJoinStyle.RoundJoin)
             painter.setPen(pen)
@@ -337,9 +360,23 @@ class CanvasBrushesMixin:
             path.cubicTo(ctrl1, ctrl2, end)
         return path
 
-    def convert_pixmap_to_pil_image(self, img: Image, top: int, left: int, bottom: int, right: int):
+    def convert_pixmap_to_pil_image(
+        self,
+        img: Image,
+        top: int,
+        left: int,
+        bottom: int,
+        right: int,
+        is_mask: bool,
+        layer: LayerData
+    ):
         try:
             img = Image.fromqpixmap(img)
         except UnidentifiedImageError:
             return None
-        self.insert_rasterized_line_image(QRect(left, top, right, bottom), img)
+        self.insert_rasterized_line_image(
+            QRect(left, top, right, bottom),
+            img,
+            is_mask,
+            layer
+        )
