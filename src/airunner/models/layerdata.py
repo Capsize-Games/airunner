@@ -5,6 +5,15 @@ from airunner.models.imagedata import ImageData
 
 
 class LayerData:
+    @property
+    def mask_mode_active(self):
+        return self._mask_mode_active
+
+    @mask_mode_active.setter
+    def mask_mode_active(self, value):
+        self._mask_mode_active = value
+        self.image_data.mask_mode_active = value
+
     def __init__(
         self,
         index: int,
@@ -13,13 +22,19 @@ class LayerData:
         opacity: float = 1.0,
         offset: QPoint = QPoint(0, 0)
     ):
+        self._mask_mode_active = False
         self.index = index
         self.name = name
         self.visible = visible
         self.opacity = opacity
         self.offset = offset
         self.lines = []
-        self.image_data = ImageData(QPoint(0, 0), None, 1.0)
+        self.image_data = ImageData(
+            position=QPoint(0, 0),
+            image=None,
+            opacity=1.0,
+            mask=None
+        )
         self.widgets = []
         self.uuid = uuid.uuid4()
 
