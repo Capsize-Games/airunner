@@ -199,7 +199,10 @@ class GeneratorMixin(LoraMixin):
         self.override_section = None
 
         for tab in sections:
-            self.window.tabWidget.addTab(self.tabs[tab], tab)
+            display_name = tab
+            if display_name == "outpaint":
+                display_name = "inpaint / outpaint"
+            self.window.tabWidget.addTab(self.tabs[tab], display_name)
 
         # iterate over each tab and connect steps_slider with steps_spinbox
         for tab_name in self.tabs.keys():
