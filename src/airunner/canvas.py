@@ -28,6 +28,7 @@ class Canvas(
     left_mouse_button_down = False
     brush_start = None
     last_mouse_pos = None
+    mask_opacity = 0.5
 
     @property
     def current_layer(self):

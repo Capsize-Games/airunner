@@ -162,7 +162,7 @@
             <x>0</x>
             <y>0</y>
             <width>239</width>
-            <height>408</height>
+            <height>381</height>
            </rect>
           </property>
           <property name="sizePolicy">
@@ -665,6 +665,13 @@
            </widget>
           </item>
          </layout>
+        </widget>
+       </item>
+       <item row="3" column="0">
+        <widget class="QCheckBox" name="maskModeCheckbox">
+         <property name="text">
+          <string>Mask mode (for inpainting)</string>
+         </property>
         </widget>
        </item>
       </layout>
@@ -1335,6 +1342,8 @@
     <addaction name="actionResize_on_Paste"/>
     <addaction name="actionImage_to_new_layer"/>
     <addaction name="separator"/>
+    <addaction name="actionShow_Active_Image_Area"/>
+    <addaction name="separator"/>
     <addaction name="actionImage_export_settings"/>
     <addaction name="separator"/>
     <addaction name="actionAdvanced"/>
@@ -1722,6 +1731,14 @@
   <action name="actionPrompt_Browser">
    <property name="text">
     <string>Prompt Browser</string>
+   </property>
+  </action>
+  <action name="actionShow_Active_Image_Area">
+   <property name="checkable">
+    <bool>true</bool>
+   </property>
+   <property name="text">
+    <string>Show Active Image Area</string>
    </property>
   </action>
  </widget>

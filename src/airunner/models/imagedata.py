@@ -14,8 +14,17 @@ class ImageData:
             r, g, b, a = self._image.split()
             self.backup = a
 
-    def __init__(self, position: QPoint, image: Image, opacity: float):
+    def __init__(
+        self,
+        position: QPoint,
+        image: Image,
+        opacity: float,
+        mask: Image = None
+    ):
+        self._image = None
+        self.mask_mode_active = False
         self.backup = None
         self.position = position
         self.image = image
+        self.mask = mask
         self.opacity = opacity * 255
