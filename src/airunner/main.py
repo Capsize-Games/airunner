@@ -252,6 +252,12 @@ class MainWindow(
         if self.settings_manager.settings.force_reset.get():
             self.reset_settings()
             self.settings_manager.settings.force_reset.set(False)
+        self.window.actionShow_Active_Image_Area.setChecked(self.settings_manager.settings.show_active_image_area.get() == True)
+        self.window.actionShow_Active_Image_Area.triggered.connect(self.toggle_show_active_image_area)
+
+    def toggle_show_active_image_area(self):
+        self.settings_manager.settings.show_active_image_area.set(self.window.actionShow_Active_Image_Area.isChecked())
+        self.canvas.update()
 
     def initialize_saved_prompts(self):
         self.prompts_manager = PromptManager()
