@@ -244,11 +244,25 @@ class CanvasImageMixin:
         self.image_pivot_point = image_pivot_point
         self.add_image_to_canvas(processed_image)
 
-    def insert_rasterized_line_image(self, rect, img):
-        processed_image, image_root_point, image_pivot_point = self.handle_outpaint(
-            rect, img
-        )
-
+    def insert_rasterized_line_image(self, rect: QRect, img: Image, is_mask: bool, layer: LayerData):
+        existing_image = layer.image_data.image
+        # combine img with existing image
+        if existing_image is not None:
+            # determine which image is larger
+            width = max(existing_image.width, img.width)
+            height = max(existing_image.height, img.height)
+            # create a new image with the larger dimensions
+            new_image = Image.new("RGBA", (width, height), (0, 0, 0, 0))
+            # paste the existing image onto the new image
+            pos_x = layer.image_data.position.x() - rect.x() if rect.x() < layer.image_data.position.x() else 0
+            pos_y = layer.image_data.position.y() - rect.y() if rect.y() < layer.image_data.position.y() else 0
+            new_image.alpha_composite(existing_image, (pos_x, pos_y))
+            # paste the new image onto the existing image
+            new_image.alpha_composite(img, (0, 0))
+            img = new_image
+        image_root_point = QPoint(rect.x(), rect.y())
+        image_pivot_point = QPoint(rect.x(), rect.y())
+        processed_image = img
         self.image_root_point = image_root_point
         self.image_pivot_point = image_pivot_point
         self.add_image_to_canvas(processed_image)
