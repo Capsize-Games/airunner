@@ -265,7 +265,7 @@ class CanvasImageMixin:
         processed_image = img
         self.image_root_point = image_root_point
         self.image_pivot_point = image_pivot_point
-        self.add_image_to_canvas(processed_image)
+        self.add_image_to_canvas(processed_image, is_mask)
 
     def handle_outpaint(self, outpaint_box_rect, outpainted_image, action=None):
         if self.current_layer.image_data.image is None:
@@ -276,28 +276,33 @@ class CanvasImageMixin:
         existing_image_copy = self.current_layer.image_data.image.copy()
         width = existing_image_copy.width
         height = existing_image_copy.height
-        working_width = outpainted_image.width
-        working_height = outpainted_image.height
 
         is_drawing_left = outpaint_box_rect.x() < self.image_pivot_point.x()
+        is_drawing_right = outpaint_box_rect.width() > (width - abs(self.current_layer.image_data.position.x()))
         is_drawing_up = outpaint_box_rect.y() < self.image_pivot_point.y()
+        is_drawing_down = outpaint_box_rect.height() > (height - abs(self.current_layer.image_data.position.y()))
 
+        x_overlap = 0
         if is_drawing_left:
-            # get the x overlap of the outpaint box and the image
-            x_overlap = min(width, outpaint_box_rect.width()) - max(0, outpaint_box_rect.x())
-        else:
-            # get the x overlap of the outpaint box and the image
-            x_overlap = min(width, outpaint_box_rect.width()) - max(0, outpaint_box_rect.x() - self.image_pivot_point.x())
+            x_overlap = self.image_pivot_point.x() - outpaint_box_rect.x()
+        if is_drawing_right:
+            x_overlap += outpaint_box_rect.width() - (width - abs(self.current_layer.image_data.position.x()))
 
+        y_overlap = 0
         if is_drawing_up:
-            # get the y overlap of the outpaint box and the image
-            y_overlap = min(height, outpaint_box_rect.height()) - max(0, outpaint_box_rect.y())
-        else:
-            # get the y overlap of the outpaint box and the image
-            y_overlap = min(height, outpaint_box_rect.height()) - max(0, outpaint_box_rect.y() - self.image_pivot_point.y())
+            y_overlap = self.image_pivot_point.y() - outpaint_box_rect.y()
+        if is_drawing_down:
+            y_overlap += outpaint_box_rect.height() - (height - abs(self.current_layer.image_data.position.y()))
 
-        # get the x and y overlap of the outpaint box and the image
-        new_dimensions = (int(width + working_width - x_overlap), int(height + working_height - y_overlap))
+        if is_drawing_left or is_drawing_right:
+            x = width + x_overlap
+        else:
+            x = width
+        if is_drawing_up or is_drawing_down:
+            y = height + y_overlap
+        else:
+            y = height
+        new_dimensions = (int(x), int(y))
         if new_dimensions[0] < width:
             new_dimensions = (width, new_dimensions[1])
         if new_dimensions[1] < height:
