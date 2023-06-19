@@ -28,7 +28,7 @@ class FilterRGBNoise(FilterBase):
     def show(self):
         super().show()
 
-        working_images = self.parent.canvas.current_active_image
+        working_images = self.parent.canvas.current_active_image_data
         if working_images is not None:
             image = working_images.image.copy()
 

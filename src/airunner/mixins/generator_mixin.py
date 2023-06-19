@@ -774,8 +774,8 @@ class GeneratorMixin(LoraMixin):
             "controlnet": controlnet,
         }
         if action == "superresolution":
-            options["original_image_width"] = self.canvas.current_active_image.image.width
-            options["original_image_height"] = self.canvas.current_active_image.image.height
+            options["original_image_width"] = self.canvas.current_active_image_data.image.width
+            options["original_image_height"] = self.canvas.current_active_image_data.image.height
 
         if action in ["img2img", "depth2img", "pix2pix", "controlnet"]:
             options[f"{action}_strength"] = self.strength / 100.0
