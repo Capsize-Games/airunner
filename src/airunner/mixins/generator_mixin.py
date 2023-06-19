@@ -58,12 +58,12 @@ class GeneratorMixin(LoraMixin):
         self.settings.ddim_eta.set(val)
 
     @property
-    def use_kadinsky(self):
-        return self.settings.use_kadinsky.get()
+    def use_kandinsky(self):
+        return self.settings.use_kandinsky.get()
 
-    @use_kadinsky.setter
-    def use_kadinsky(self, val):
-        self.settings.use_kadinsky.set(val)
+    @use_kandinsky.setter
+    def use_kandinsky(self, val):
+        self.settings.use_kandinsky.set(val)
 
     @property
     def prompt(self):
@@ -188,11 +188,11 @@ class GeneratorMixin(LoraMixin):
                 self.tabs[tab].image_scale_box.deleteLater()
 
             if tab in ["txt2img", "img2img", "outpaint"]:
-                self.tabs[tab].kadinsky.stateChanged.connect(lambda state, _tab=tab: self.handle_kadinsky_change(state, _tab))
-                self.tabs[tab].kadinsky.setChecked(self.use_kadinsky is True)
-                self.tabs[tab].model_dropdown.setEnabled(self.use_kadinsky is False)
+                self.tabs[tab].kandinsky.stateChanged.connect(lambda state, _tab=tab: self.handle_kandinsky_change(state, _tab))
+                self.tabs[tab].kandinsky.setChecked(self.use_kandinsky is True)
+                self.tabs[tab].model_dropdown.setEnabled(self.use_kandinsky is False)
             else:
-                self.tabs[tab].kadinsky.deleteLater()
+                self.tabs[tab].kandinsky.deleteLater()
 
             self.tabs[tab].interrupt_button.clicked.connect(self.interrupt)
 
@@ -288,8 +288,8 @@ class GeneratorMixin(LoraMixin):
         self.initialize_size_sliders()
         self.initialize_lora()
 
-    def handle_kadinsky_change(self, state, tab):
-        self.use_kadinsky = state == 2
+    def handle_kandinsky_change(self, state, tab):
+        self.use_kandinsky = state == 2
         self.tabs[tab].model_dropdown.setEnabled(state == 0)
 
     def interrupt(self):
@@ -758,7 +758,7 @@ class GeneratorMixin(LoraMixin):
             f"{action}_model_path": model_path,
             f"{action}_model_branch": model_branch,
             f"{action}_lora": self.available_lora(action),
-            f"{action}_use_kadinsky": self.use_kadinsky,
+            f"{action}_use_kandinsky": self.use_kandinsky,
             f"width": self.width,
             f"height": self.height,
             "do_nsfw_filter": self.settings_manager.settings.nsfw_filter.get(),
