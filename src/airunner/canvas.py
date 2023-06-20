@@ -31,6 +31,22 @@ class Canvas(
     mask_opacity = 0.5
 
     @property
+    def image_pivot_point(self):
+        return self.current_layer.image_data.image_pivot_point
+
+    @image_pivot_point.setter
+    def image_pivot_point(self, value):
+        self.current_layer.image_data.image_pivot_point = value
+
+    @property
+    def image_root_point(self):
+        return self.current_layer.image_data.image_root_point
+
+    @image_root_point.setter
+    def image_root_point(self, value):
+        self.current_layer.image_data.image_root_point = value
+
+    @property
     def current_layer(self):
         if len(self.layers) == 0:
             return None
@@ -113,8 +129,6 @@ class Canvas(
         self.current_layer_index = 0
         self.is_erasing = False
         self.parent = parent
-        self.image_pivot_point = QPoint(0, 0)
-        self.image_root_point = QPoint(0, 0)
 
         CanvasGridMixin.initialize(self)
         CanvasActiveGridAreaMixin.initialize(self)
