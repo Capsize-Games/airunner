@@ -39,7 +39,6 @@ class MainWindow(
     BrushesMixin,
 ):
     current_filter = None
-    tabs = {}
     tqdm_callback_triggered = False
     _document_name = "Untitled"
     _is_dirty = False
@@ -55,17 +54,6 @@ class MainWindow(
     canvas = None
     settings_manager = None
     prompts_manager = None
-    sections = [
-        "txt2img",
-        "img2img",
-        "depth2img",
-        "pix2pix",
-        "outpaint",
-        "controlnet",
-        "upscale",
-        "superresolution",
-        "txt2vid",
-    ]
     models = None
     client = None
     _override_section = None
@@ -84,15 +72,69 @@ class MainWindow(
     def override_section(self, val):
         self._override_section = val
 
+    tab_sections = [
+        "stablediffusion",
+        "kandinsky"
+    ]
+    sections = {
+        "stablediffusion": [
+            "txt2img",
+            "img2img",
+            "depth2img",
+            "pix2pix",
+            "outpaint",
+            "controlnet",
+            "upscale",
+            "superresolution",
+            "txt2vid",
+        ],
+        "kandinsky": [
+            "txt2img",
+            "img2img",
+            "outpaint",
+        ]
+    }
+    _tabs = {
+        "stablediffusion": {},
+        "kandinsky": {}
+    }
+
+    @property
+    def currentTabSection(self):
+        return self.tab_sections[self.window.sectionTabWidget.currentIndex()]
+
+    @property
+    def tabs(self):
+        return self._tabs[self.currentTabSection]
+
+    @tabs.setter
+    def tabs(self, val):
+        self._tabs[self.currentTabSection] = val
+
+    @property
+    def tabWidget(self):
+        if self.currentTabSection == "stablediffusion":
+            return self.window.stableDiffusionTabWidget
+        else:
+            return self.window.kandinskyTabWidget
+
+    @property
+    def generator_type(self):
+        """
+        Returns either stablediffusion or kandinsky
+        :return: string
+        """
+        return self._generator_type
+
     @property
     def current_index(self):
-        return self.window.tabWidget.currentIndex()
+        return self.tabWidget.currentIndex()
 
     @property
     def current_section(self):
         if self.override_section:
             return self.override_section
-        return self.sections[self.current_index]
+        return self.sections[self.currentTabSection][self.current_index]
 
     @property
     def use_pixels(self):
@@ -102,7 +144,7 @@ class MainWindow(
     @property
     def settings(self):
         settings = self.settings_manager.settings
-        settings.set_namespace(self.current_section)
+        settings.set_namespace(self.current_section, self.currentTabSection)
         return settings
 
     @property

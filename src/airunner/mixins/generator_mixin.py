@@ -16,6 +16,10 @@ from PIL import PngImagePlugin
 
 class GeneratorMixin(LoraMixin):
     @property
+    def available_models(self):
+        return MODELS
+
+    @property
     def model_base_path(self):
         return self.settings.model_base_path.get()
 
@@ -56,14 +60,6 @@ class GeneratorMixin(LoraMixin):
     @ddim_eta.setter
     def ddim_eta(self, val):
         self.settings.ddim_eta.set(val)
-
-    @property
-    def use_kandinsky(self):
-        return self.settings.use_kandinsky.get()
-
-    @use_kandinsky.setter
-    def use_kandinsky(self, val):
-        self.settings.use_kandinsky.set(val)
 
     @property
     def prompt(self):
@@ -154,166 +150,168 @@ class GeneratorMixin(LoraMixin):
     def initialize(self):
         self.settings_manager.settings.model_base_path.my_signal.connect(self.refresh_model_list)
 
-        sections = ["txt2img", "img2img", "depth2img", "pix2pix", "outpaint", "controlnet", "upscale", "superresolution", "txt2vid"]
-        self.tabs = {}
-        for tab in self.sections:
-            self.tabs[tab] = uic.loadUi(os.path.join("pyqt/generate_form.ui"))
+        for tab_section in self.tab_sections:
+            for tab in self.sections[tab_section]:
+                self._tabs[tab_section][tab] = uic.loadUi(os.path.join("pyqt/generate_form.ui"))
 
-        for tab in self.tabs:
-            self.override_section = tab
-            if tab != "controlnet":
-                self.tabs[tab].controlnet_label.deleteLater()
-                self.tabs[tab].controlnet_dropdown.deleteLater()
-            else:
-                controlnet_options = [
-                    "Canny",
-                    "MLSD",
-                    "Depth",
-                    "Normal",
-                    "Segmentation",
-                    "Lineart",
-                    "Openpose",
-                    "Scribble",
-                    "Softedge",
-                    "Pixel2Pixel",
-                    "Inpaint",
-                    "Shuffle",
-                    "Anime",
-                ]
-                for option in controlnet_options:
-                    self.tabs[tab].controlnet_dropdown.addItem(option)
-            if tab in ["txt2img", "pix2pix", "outpaint", "upscale", "superresolution", "txt2vid"]:
-                self.tabs[tab].strength.deleteLater()
-            if tab in ["txt2img", "img2img", "depth2img", "outpaint", "controlnet", "superresolution", "txt2vid"]:
-                self.tabs[tab].image_scale_box.deleteLater()
+                override_section = tab
+                if tab_section == "kandinsky":
+                    self._tabs[tab_section][tab].PromptTabsSection.removeTab(2)
+                    self._tabs[tab_section][tab].PromptTabsSection.removeTab(1)
+                    override_section = f"kandinsky_{tab}"
 
-            if tab in ["txt2img", "img2img", "outpaint"]:
-                self.tabs[tab].kandinsky.stateChanged.connect(lambda state, _tab=tab: self.handle_kandinsky_change(state, _tab))
-                self.tabs[tab].kandinsky.setChecked(self.use_kandinsky is True)
-                self.tabs[tab].model_dropdown.setEnabled(self.use_kandinsky is False)
-            else:
-                self.tabs[tab].kandinsky.deleteLater()
+                self.override_section = override_section
+                if tab != "controlnet":
+                    self._tabs[tab_section][tab].controlnet_label.deleteLater()
+                    self._tabs[tab_section][tab].controlnet_dropdown.deleteLater()
+                else:
+                    controlnet_options = [
+                        "Canny",
+                        "MLSD",
+                        "Depth",
+                        "Normal",
+                        "Segmentation",
+                        "Lineart",
+                        "Openpose",
+                        "Scribble",
+                        "Softedge",
+                        "Pixel2Pixel",
+                        "Inpaint",
+                        "Shuffle",
+                        "Anime",
+                    ]
+                    for option in controlnet_options:
+                        self._tabs[tab_section][tab].controlnet_dropdown.addItem(option)
+                if tab in ["txt2img", "pix2pix", "outpaint", "upscale", "superresolution", "txt2vid"]:
+                    self._tabs[tab_section][tab].strength.deleteLater()
+                if tab in ["txt2img", "img2img", "depth2img", "outpaint", "controlnet", "superresolution", "txt2vid"]:
+                    self._tabs[tab_section][tab].image_scale_box.deleteLater()
 
-            self.tabs[tab].interrupt_button.clicked.connect(self.interrupt)
+                self._tabs[tab_section][tab].interrupt_button.clicked.connect(self.interrupt)
 
         self.override_section = None
 
-        for tab in sections:
-            display_name = tab
-            if display_name == "outpaint":
-                display_name = "inpaint / outpaint"
-            self.window.tabWidget.addTab(self.tabs[tab], display_name)
+        for tab_section in self.tab_sections:
+            for tab in self.sections[tab_section]:
+                display_name = tab
+                if display_name == "outpaint":
+                    display_name = "inpaint / outpaint"
 
-        # iterate over each tab and connect steps_slider with steps_spinbox
-        for tab_name in self.tabs.keys():
-            self.override_section = tab_name
-            tab = self.tabs[tab_name]
+                if tab_section == "stablediffusion":
+                    self.window.stableDiffusionTabWidget.addTab(self._tabs[tab_section][tab], display_name)
+                else:
+                    self.window.kandinskyTabWidget.addTab(self._tabs[tab_section][tab], display_name)
 
-            tab.toggleAllLora.clicked.connect(lambda checked, _tab=tab: self.toggle_all_lora(checked, _tab))
+            # iterate over each tab and connect steps_slider with steps_spinbox
+            for tab_name in self._tabs[tab_section].keys():
+                self.override_section = f"kandinsky_{tab_name}" if tab_section == "kandinsky" else tab_name
+                tab = self._tabs[tab_section][tab_name]
 
-            # tab.prompt is QPlainTextEdit - on text change, call handle_prompt_change
-            tab.prompt.textChanged.connect(lambda _tab=tab: self.handle_prompt_change(_tab))
-            tab.negative_prompt.textChanged.connect(lambda _tab=tab: self.handle_negative_prompt_change(_tab))
+                tab.toggleAllLora.clicked.connect(lambda checked, _tab=tab: self.toggle_all_lora(checked, _tab))
 
-            tab.steps_slider.valueChanged.connect(lambda val, _tab=tab: self.handle_steps_slider_change(val, _tab))
-            tab.steps_spinbox.valueChanged.connect(lambda val, _tab=tab: self.handle_steps_spinbox_change(val, _tab))
+                # tab.prompt is QPlainTextEdit - on text change, call handle_prompt_change
+                tab.prompt.textChanged.connect(lambda _tab=tab: self.handle_prompt_change(_tab))
+                tab.negative_prompt.textChanged.connect(lambda _tab=tab: self.handle_negative_prompt_change(_tab))
 
-            # load models by section
-            self.load_model_by_section(tab, tab_name)
+                tab.steps_slider.valueChanged.connect(lambda val, _tab=tab: self.handle_steps_slider_change(val, _tab))
+                tab.steps_spinbox.valueChanged.connect(lambda val, _tab=tab: self.handle_steps_spinbox_change(val, _tab))
 
-            # on change of tab.model_dropdown set the model in self.settings_manager
-            tab.model_dropdown.currentIndexChanged.connect(
-                lambda val, _tab=tab, _section=tab_name: self.set_model(_tab, _section, val)
-            )
+                # load models by section
+                self.load_model_by_section(tab_section, tab, tab_name)
 
-            # set schedulers for each tab
-            tab.scheduler_dropdown.addItems(AVAILABLE_SCHEDULERS_BY_ACTION[tab_name])
-            tab.scheduler_dropdown.currentIndexChanged.connect(
-                lambda val, _tab=tab, _section=tab_name: self.set_scheduler(_tab, _section, val)
-            )
+                # on change of tab.model_dropdown set the model in self.settings_manager
+                tab.model_dropdown.currentIndexChanged.connect(
+                    lambda val, _tab=tab, _section=tab_name: self.set_model(_tab, _section, val)
+                )
 
-            # scale slider
-            tab.scale_slider.valueChanged.connect(lambda val, _tab=tab: self.handle_scale_slider_change(val, _tab))
-            tab.scale_spinbox.valueChanged.connect(lambda val, _tab=tab: self.handle_scale_spinbox_change(val, _tab))
+                # set schedulers for each tab
+                tab.scheduler_dropdown.addItems(AVAILABLE_SCHEDULERS_BY_ACTION[tab_name])
+                tab.scheduler_dropdown.currentIndexChanged.connect(
+                    lambda val, _tab=tab, _section=tab_name: self.set_scheduler(_tab, _section, val)
+                )
 
-            tab.image_scale_slider.valueChanged.connect(
-                lambda val, _tab=tab: self.handle_image_scale_slider_change(val, _tab))
-            tab.image_scale_spinbox.valueChanged.connect(
-                lambda val, _tab=tab: self.handle_image_scale_spinbox_change(val, _tab))
+                # scale slider
+                tab.scale_slider.valueChanged.connect(lambda val, _tab=tab: self.handle_scale_slider_change(val, _tab))
+                tab.scale_spinbox.valueChanged.connect(lambda val, _tab=tab: self.handle_scale_spinbox_change(val, _tab))
 
-            # strength slider
-            section = tab_name
-            strength = 0
-            if section in ["img2img", "depth2img", "controlnet"]:
-                if section == "img2img":
-                    strength = self.settings_manager.settings.img2img_strength.get()
-                elif section == "depth2img":
-                    strength = self.settings_manager.settings.depth2img_strength.get()
-                elif section == "controlnet":
-                    strength = self.settings_manager.settings.controlnet_strength.get()
-                tab.strength_slider.setValue(int(strength))
-                tab.strength_spinbox.setValue(strength / 100)
-                tab.strength_slider.valueChanged.connect(
-                    lambda val, _tab=tab: self.handle_strength_slider_change(val, _tab))
-                tab.strength_spinbox.valueChanged.connect(
-                    lambda val, _tab=tab: self.handle_strength_spinbox_change(val, _tab))
+                tab.image_scale_slider.valueChanged.connect(
+                    lambda val, _tab=tab: self.handle_image_scale_slider_change(val, _tab))
+                tab.image_scale_spinbox.valueChanged.connect(
+                    lambda val, _tab=tab: self.handle_image_scale_spinbox_change(val, _tab))
 
-            if section == "txt2vid":
-                # change the label tab.samples_groupbox label to "Frames"
-                tab.samples_groupbox.setTitle("Frames")
+                # strength slider
+                section = tab_name
+                strength = 0
+                if section in ["img2img", "depth2img", "controlnet"]:
+                    if section == "img2img":
+                        strength = self.settings_manager.settings.img2img_strength.get()
+                    elif section == "depth2img":
+                        strength = self.settings_manager.settings.depth2img_strength.get()
+                    elif section == "controlnet":
+                        strength = self.settings_manager.settings.controlnet_strength.get()
+                    tab.strength_slider.setValue(int(strength))
+                    tab.strength_spinbox.setValue(strength / 100)
+                    tab.strength_slider.valueChanged.connect(
+                        lambda val, _tab=tab: self.handle_strength_slider_change(val, _tab))
+                    tab.strength_spinbox.valueChanged.connect(
+                        lambda val, _tab=tab: self.handle_strength_spinbox_change(val, _tab))
 
-            tab.seed.textChanged.connect(lambda _tab=tab: self.text_changed(_tab))
-            tab.random_checkbox.stateChanged.connect(
-                lambda val, _tab=tab: self.handle_random_checkbox_change(val, _tab))
+                if section == "txt2vid":
+                    # change the label tab.samples_groupbox label to "Frames"
+                    tab.samples_groupbox.setTitle("Frames")
 
-            tab.random_checkbox.setChecked(self.random_seed is True)
+                tab.seed.textChanged.connect(lambda _tab=tab: self.text_changed(_tab))
+                tab.random_checkbox.stateChanged.connect(
+                    lambda val, _tab=tab: self.handle_random_checkbox_change(val, _tab))
 
-            # samples slider
-            tab.samples_slider.valueChanged.connect(
-                lambda val, _tab=tab: self.handle_samples_slider_change(val, _tab))
-            tab.samples_spinbox.valueChanged.connect(
-                lambda val, _tab=tab: self.handle_samples_spinbox_change(val, _tab))
+                tab.random_checkbox.setChecked(self.random_seed is True)
 
-            # if samples is greater than 1 enable the interrupt_button
-            if tab.samples_spinbox.value() > 1:
-                tab.interrupt_button.setEnabled(tab.samples_spinbox.value() > 1)
-            self.set_default_values(tab_name, tab)
-            self.override_section = None
+                # samples slider
+                tab.samples_slider.valueChanged.connect(
+                    lambda val, _tab=tab: self.handle_samples_slider_change(val, _tab))
+                tab.samples_spinbox.valueChanged.connect(
+                    lambda val, _tab=tab: self.handle_samples_spinbox_change(val, _tab))
 
-        # assign callback to generate function on tab
-        self.window.tabWidget.currentChanged.connect(self.tab_changed_callback)
+                # if samples is greater than 1 enable the interrupt_button
+                if tab.samples_spinbox.value() > 1:
+                    tab.interrupt_button.setEnabled(tab.samples_spinbox.value() > 1)
+                self.set_default_values(tab_name, tab)
+                self.override_section = None
+
+            # assign callback to generate function on tab
+            if tab_section == "stablediffusion":
+                self.window.stableDiffusionTabWidget.currentChanged.connect(self.tab_changed_callback)
+            else:
+                self.window.kandinskyTabWidget.currentChanged.connect(self.tab_changed_callback)
 
         # add callbacks
-        for tab in sections:
-            self.tabs[tab].generate.clicked.connect(self.generate_callback)
+        for tab_section in self.tab_sections:
+            for tab in self.sections[tab_section]:
+                self._tabs[tab_section][tab].generate.clicked.connect(self.generate_callback)
 
         self.initialize_size_form_elements()
         self.initialize_size_sliders()
         self.initialize_lora()
-
-    def handle_kandinsky_change(self, state, tab):
-        self.use_kandinsky = state == 2
-        self.tabs[tab].model_dropdown.setEnabled(state == 0)
 
     def interrupt(self):
         print("Interrupting...")
         self.client.sd_runner.cancel()
 
     def refresh_model_list(self):
-        for i in range(self.window.tabWidget.count()):
-            tab = self.window.tabWidget.widget(i)
+        for i in range(self.tabWidget.count()):
+            tab = self.tabWidget.widget(i)
             self.clear_model_list(tab)
-            self.load_model_by_section(tab, self.sections[i])
+            self.load_model_by_section(self.currentTabSection, tab, self.sections[self.currentTabSection][i])
 
     def clear_model_list(self, tab):
         tab.model_dropdown.clear()
 
-    def load_model_by_section(self, tab, section_name):
+    def load_model_by_section(self, tab_section, tab, section_name):
         if section_name in ["txt2img", "img2img"]:
             section_name = "generate"
 
         models = self.models if self.models else []
-        default_models = load_default_models(section_name)
+        default_models = load_default_models(tab_section, section_name)
         path = ""
         if section_name == "depth2img":
             path = self.settings_manager.settings.depth2img_model_path.get()
@@ -325,9 +323,10 @@ class GeneratorMixin(LoraMixin):
             path = self.settings_manager.settings.upscale_model_path.get()
         if not path or path == "":
             path = self.settings_manager.settings.model_base_path.get()
-        new_models = load_models_from_path(path)
-        
-        default_models += new_models
+
+        if tab_section == "stablediffusion":
+            new_models = load_models_from_path(path)
+            default_models += new_models
         models += default_models
         self.models = models
 
@@ -715,14 +714,16 @@ class GeneratorMixin(LoraMixin):
         if section_name in ["txt2img", "img2img"]:
             section_name = "generate"
 
-        if model in MODELS[section_name]:
-            model_path = MODELS[section_name][model]["path"]
-            model_branch = MODELS[section_name][model].get("branch", "main")
+        section_name = f"{self.currentTabSection}_{section_name}"
+
+        if model in self.available_models[section_name]:
+            model_path = self.available_models[section_name][model]["path"]
+            model_branch = self.available_models[section_name][model].get("branch", "main")
         elif model not in self.models:
-            model_names = list(MODELS[section_name].keys())
+            model_names = list(self.available_models[section_name].keys())
             model = model_names[0]
-            model_path = MODELS[section_name][model]["path"]
-            model_branch = MODELS[section_name][model].get("branch", "main")
+            model_path = self.available_models[section_name][model]["path"]
+            model_branch = self.available_models[section_name][model].get("branch", "main")
         else:
             path = self.settings_manager.settings.model_base_path.get()
             if action == "depth2img":
@@ -761,7 +762,7 @@ class GeneratorMixin(LoraMixin):
             f"{action}_model_path": model_path,
             f"{action}_model_branch": model_branch,
             f"{action}_lora": self.available_lora(action),
-            f"{action}_use_kandinsky": self.use_kandinsky,
+            f"generator_section": self.currentTabSection,
             f"width": self.width,
             f"height": self.height,
             "do_nsfw_filter": self.settings_manager.settings.nsfw_filter.get(),
