@@ -64,7 +64,7 @@ class ModelMerger(BaseWindow):
         return output_path
 
     def load_models(self):
-        return load_default_models(self.section)
+        return load_default_models("stablediffusion", self.section)
 
     def change_model_type(self, index):
         self.model_type = self.template.model_types.currentText()
@@ -92,7 +92,7 @@ class ModelMerger(BaseWindow):
                 path = self.settings_manager.settings.model_base_path.get()
             self.models += self.load_models()
         elif self.section == "pix2pix":
-            self.models = load_default_models("pix2pix")
+            self.models = load_default_models("stablediffusion", "pix2pix")
             path = self.settings_manager.settings.pix2pix_model_path.get()
             if not path or path == "":
                 path = self.settings_manager.settings.model_base_path.get()

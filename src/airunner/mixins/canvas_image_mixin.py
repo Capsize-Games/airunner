@@ -259,9 +259,18 @@ class CanvasImageMixin:
         processed_image = processed_image.convert("RGBA")
         section = data["action"] if not section else section
         outpaint_box_rect = data["options"]["outpaint_box_rect"]
-        processed_image, image_root_point, image_pivot_point = self.handle_outpaint(
-            outpaint_box_rect, processed_image, section
-        )
+        if section not in["superresolution", "upscale"]:
+            processed_image, image_root_point, image_pivot_point = self.handle_outpaint(
+                outpaint_box_rect, processed_image, section
+            )
+        else:
+            # if we are upscaling (or using superresolution) we want to replace the existing image with the new
+            # one so that there is no undesired overlapping of images.
+            # to do this, the handle_outpaint function is skipped and we reset the coordinates to 0,0
+            image_root_point = QPoint(0, 0)
+            image_pivot_point = QPoint(0, 0)
+            self.pos_x = 0
+            self.pos_y = 0
 
         self.image_root_point = image_root_point
         self.image_pivot_point = image_pivot_point

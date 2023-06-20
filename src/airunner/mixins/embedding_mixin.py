@@ -66,5 +66,5 @@ class EmbeddingMixin:
         return tokens
 
     def insert_into_prompt(self, text):
-        tab = self.window.tabWidget.currentWidget()
+        tab = self.tabWidget.currentWidget()
         tab.prompt.insertPlainText(text)

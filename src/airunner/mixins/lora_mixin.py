@@ -38,6 +38,9 @@ class LoraMixin:
         self.refresh_lora()
 
     def refresh_lora(self):
+        # print available attributes on self
+        if not self.tabs:
+            return
         for tab_name in self.tabs.keys():
             tab = self.tabs[tab_name]
             if not self.tab_has_lora(tab_name):

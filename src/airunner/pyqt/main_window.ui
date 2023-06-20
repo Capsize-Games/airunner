@@ -53,7 +53,7 @@
      <number>0</number>
     </property>
     <item row="3" column="0">
-     <widget class="QTabWidget" name="tabWidget">
+     <widget class="QTabWidget" name="sectionTabWidget">
       <property name="sizePolicy">
        <sizepolicy hsizetype="MinimumExpanding" vsizetype="Expanding">
         <horstretch>0</horstretch>
@@ -62,7 +62,7 @@
       </property>
       <property name="minimumSize">
        <size>
-        <width>400</width>
+        <width>410</width>
         <height>0</height>
        </size>
       </property>
@@ -79,13 +79,13 @@
        <string notr="true"/>
       </property>
       <property name="tabPosition">
-       <enum>QTabWidget::West</enum>
+       <enum>QTabWidget::North</enum>
       </property>
       <property name="tabShape">
        <enum>QTabWidget::Rounded</enum>
       </property>
       <property name="currentIndex">
-       <number>-1</number>
+       <number>0</number>
       </property>
       <property name="elideMode">
        <enum>Qt::ElideNone</enum>
@@ -97,11 +97,45 @@
        <bool>false</bool>
       </property>
       <property name="movable">
-       <bool>true</bool>
+       <bool>false</bool>
       </property>
       <property name="tabBarAutoHide">
        <bool>false</bool>
       </property>
+      <widget class="QWidget" name="tab">
+       <attribute name="title">
+        <string>Stable Diffusion</string>
+       </attribute>
+       <layout class="QGridLayout" name="gridLayout_4">
+        <item row="0" column="0">
+         <widget class="QTabWidget" name="stableDiffusionTabWidget">
+          <property name="tabPosition">
+           <enum>QTabWidget::West</enum>
+          </property>
+          <property name="movable">
+           <bool>true</bool>
+          </property>
+         </widget>
+        </item>
+       </layout>
+      </widget>
+      <widget class="QWidget" name="tab_2">
+       <attribute name="title">
+        <string>Kandinsky</string>
+       </attribute>
+       <layout class="QGridLayout" name="gridLayout_5">
+        <item row="0" column="0">
+         <widget class="QTabWidget" name="kandinskyTabWidget">
+          <property name="tabPosition">
+           <enum>QTabWidget::West</enum>
+          </property>
+          <property name="currentIndex">
+           <number>-1</number>
+          </property>
+         </widget>
+        </item>
+       </layout>
+      </widget>
      </widget>
     </item>
     <item row="3" column="2">
