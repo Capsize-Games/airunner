@@ -62,13 +62,7 @@ class HistoryMixin:
     def undo_set_image(self, previous_event):
         images = previous_event["images"]
         layer_index = previous_event["layer_index"]
-        current_image_root_point = QPoint(self.canvas.image_root_point.x(), self.canvas.image_root_point.y())
-        current_image_pivot_point = QPoint(self.canvas.image_pivot_point.x(), self.canvas.image_pivot_point.y())
-        self.canvas.image_root_point = previous_event["previous_image_root_point"]
-        self.canvas.image_pivot_point = previous_event["previous_image_pivot_point"]
         previous_event["images"] = self.canvas.image_data_copy(layer_index)
-        previous_event["previous_image_root_point"] = current_image_root_point
-        previous_event["previous_image_pivot_point"] = current_image_pivot_point
         self.canvas.layers[previous_event["layer_index"]].image_data = images
         return previous_event
 
@@ -143,8 +137,6 @@ class HistoryMixin:
         layer_index = undone_event["layer_index"]
         current_image_root_point = QPoint(self.canvas.image_root_point.x(), self.canvas.image_root_point.y())
         current_image_pivot_point = QPoint(self.canvas.image_pivot_point.x(), self.canvas.image_pivot_point.y())
-        self.canvas.image_root_point = undone_event["previous_image_root_point"]
-        self.canvas.image_pivot_point = undone_event["previous_image_pivot_point"]
         undone_event["images"] = self.canvas.image_data_copy(layer_index)
         undone_event["previous_image_root_point"] = current_image_root_point
         undone_event["previous_image_pivot_point"] = current_image_pivot_point
