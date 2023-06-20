@@ -106,7 +106,7 @@ class CanvasImageMixin:
             qimage = ImageQt(img)
             pixmap = QPixmap.fromImage(qimage)
             painter.drawPixmap(QPoint(0, 0), pixmap)
-        if layer.mask_mode_active or True:
+        if layer.mask_mode_active:
             img = self.visible_image(layer=layer, mask=True)
             if img:
                 qimage = ImageQt(img)
