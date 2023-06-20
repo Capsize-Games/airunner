@@ -19,8 +19,12 @@ class ImageData:
         position: QPoint,
         image: Image,
         opacity: float,
-        mask: Image = None
+        mask: Image = None,
+        image_pivot_point: QPoint = QPoint(0, 0),
+        image_root_point: QPoint = QPoint(0, 0)
     ):
+        self.image_pivot_point = image_pivot_point
+        self.image_root_point = image_root_point
         self._image = None
         self.mask_mode_active = False
         self.backup = None
