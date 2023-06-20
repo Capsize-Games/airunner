@@ -272,7 +272,6 @@ class CanvasImageMixin:
             self.pos_x = 0
             self.pos_y = 0
 
-        print("update_image_canvas", "image_root_point", "image_pivot_point", image_root_point, image_pivot_point)
         self.add_image_to_canvas(
             processed_image,
             image_root_point=image_root_point,
