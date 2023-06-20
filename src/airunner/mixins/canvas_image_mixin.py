@@ -463,22 +463,30 @@ class CanvasImageMixin:
 
     def rotate_90_clockwise(self):
         if self.current_active_image_data:
+            if not self.current_active_image_data.image and not self.current_active_image_data.mask:
+                return
             self.parent.history.add_event({
                 "event": "rotate",
                 "layer_index": self.current_layer_index,
                 "images": self.image_data_copy(self.current_layer_index)
             })
-            self.current_active_image_data.image = self.current_active_image_data.image.transpose(Image.ROTATE_270)
-            self.current_active_image_data.mask = self.current_active_image_data.mask.transpose(Image.ROTATE_270)
+            if self.current_active_image_data.image:
+                self.current_active_image_data.image = self.current_active_image_data.image.transpose(Image.ROTATE_270)
+            if self.current_active_image_data.mask:
+                self.current_active_image_data.mask = self.current_active_image_data.mask.transpose(Image.ROTATE_270)
             self.update()
 
     def rotate_90_counterclockwise(self):
         if self.current_active_image_data:
+            if not self.current_active_image_data or (not self.current_active_image_data.image and not self.current_active_image_data.mask):
+                return
             self.parent.history.add_event({
                 "event": "rotate",
                 "layer_index": self.current_layer_index,
                 "images": self.image_data_copy(self.current_layer_index)
             })
-            self.current_active_image_data.image = self.current_active_image_data.image.transpose(Image.ROTATE_90)
-            self.current_active_image_data.mask = self.current_active_image_data.mask.transpose(Image.ROTATE_90)
+            if self.current_active_image_data.image:
+                self.current_active_image_data.image = self.current_active_image_data.image.transpose(Image.ROTATE_90)
+            if self.current_active_image_data.mask:
+                self.current_active_image_data.mask = self.current_active_image_data.mask.transpose(Image.ROTATE_90)
             self.update()
