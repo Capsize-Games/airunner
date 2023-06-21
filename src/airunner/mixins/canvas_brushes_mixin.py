@@ -16,7 +16,6 @@ class RasterizationWorker(QObject):
         self.left = kwargs.pop('left')
         self.bottom = kwargs.pop('bottom')
         self.right = kwargs.pop('right')
-        self.is_mask = kwargs.pop('is_mask')
         self.layer = kwargs.pop("layer")
         super().__init__(*args)
 
@@ -27,7 +26,6 @@ class RasterizationWorker(QObject):
             self.left,
             self.bottom,
             self.right,
-            self.is_mask,
             self.layer
         )
         self.finished.emit()
@@ -45,10 +43,6 @@ class RasterizationTask(QRunnable):
 class CanvasBrushesMixin:
     thread = None
     worker = None
-
-    @property
-    def mask_brush_color(self):
-        return QColor(255, 0, 0, int(255 * self.mask_opacity))
 
     @property
     def left_line_extremity(self):
@@ -159,13 +153,13 @@ class CanvasBrushesMixin:
                 self.draw_path(path, painter)
                 painter = None
             if self.color is None or self.color != line.color:
-                self.color = self.mask_brush_color if layer.mask_mode_active else line.color
+                self.color = line.color
                 self.draw_path(path, painter)
                 painter = None
             if not painter:
                 painter = QPainter(self.canvas_container)
                 painter.setBrush(self.brush)
-                painter.setOpacity(1.0 if not layer.mask_mode_active else self.mask_opacity)
+                painter.setOpacity(1.0)
                 path = QPainterPath()
             painter.setPen(pen)
 
@@ -231,8 +225,6 @@ class CanvasBrushesMixin:
         brush_color = "#ffffff"
         if event.button() == Qt.MouseButton.LeftButton or Qt.MouseButton.LeftButton in event.buttons():
             brush_color = self.settings_manager.settings.primary_color.get()
-        if self.current_layer.mask_mode_active:
-            brush_color = self.mask_brush_color
         brush_color = QColor(brush_color)
         pen = QPen(
             brush_color,
@@ -304,7 +296,7 @@ class CanvasBrushesMixin:
         img.fill(Qt.GlobalColor.transparent)
         painter = QPainter(img)
         painter.setBrush(self.brush)
-        painter.setOpacity(1.0 if not self.current_layer.mask_mode_active else self.mask_opacity)
+        painter.setOpacity(1.0)
         path = self.create_image_path(painter, lines)
         painter.drawPath(path)
         painter.end()
@@ -316,7 +308,6 @@ class CanvasBrushesMixin:
             left=left,
             bottom=bottom,
             right=right,
-            is_mask=self.current_layer.mask_mode_active,
             layer=self.current_layer
         )
         task = RasterizationTask(worker)
@@ -334,8 +325,6 @@ class CanvasBrushesMixin:
         for line in lines:
             pen = line.pen
             color = line.color
-            if self.current_layer.mask_mode_active:
-                color = self.mask_brush_color
             pen.setColor(color)
             pen.setCapStyle(Qt.PenCapStyle.RoundCap)
             pen.setJoinStyle(Qt.PenJoinStyle.RoundJoin)
@@ -367,7 +356,6 @@ class CanvasBrushesMixin:
         left: int,
         bottom: int,
         right: int,
-        is_mask: bool,
         layer: LayerData
     ):
         try:
@@ -377,6 +365,5 @@ class CanvasBrushesMixin:
         self.insert_rasterized_line_image(
             QRect(left, top, right, bottom),
             img,
-            is_mask,
             layer
         )

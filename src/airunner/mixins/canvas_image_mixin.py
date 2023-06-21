@@ -65,10 +65,7 @@ class CanvasImageMixin:
         self.draw_images(layer, painter)
         painter.end()
 
-    def visible_mask(self, layer=None, image_data=None):
-        return self.visible_image(layer=layer, image_data=image_data, mask=True)
-
-    def visible_image(self, layer=None, image_data=None, mask=False):
+    def visible_image(self, layer=None, image_data=None):
         """
         Returns an image that is cropped to the visible area of the canvas
         :param layer:
@@ -80,7 +77,7 @@ class CanvasImageMixin:
         if not image_data:
             return
 
-        img = image_data.image if not mask else image_data.mask
+        img = image_data.image
         if not img:
             return
 
@@ -106,12 +103,6 @@ class CanvasImageMixin:
             qimage = ImageQt(img)
             pixmap = QPixmap.fromImage(qimage)
             painter.drawPixmap(QPoint(0, 0), pixmap)
-        if layer.mask_mode_active:
-            img = self.visible_image(layer=layer, mask=True)
-            if img:
-                qimage = ImageQt(img)
-                pixmap = QPixmap.fromImage(qimage)
-                painter.drawPixmap(QPoint(0, 0), pixmap)
 
     def copy_image(self):
         im = self.current_active_image_data
@@ -194,8 +185,7 @@ class CanvasImageMixin:
         self.current_layer.image_data = ImageData(
             position=location,
             image=image,
-            opacity=self.current_layer.opacity,
-            mask=None
+            opacity=self.current_layer.opacity
         )
         #self.set_image_opacity(self.get_layer_opacity(self.current_layer_index))
 
@@ -278,7 +268,7 @@ class CanvasImageMixin:
             image_pivot_point=image_pivot_point
         )
 
-    def insert_rasterized_line_image(self, rect: QRect, img: Image, is_mask: bool, layer: LayerData):
+    def insert_rasterized_line_image(self, rect: QRect, img: Image, layer: LayerData):
         existing_image = layer.image_data.image
         # combine img with existing image
         pos = [0, 0]
@@ -332,7 +322,6 @@ class CanvasImageMixin:
             new_image,
             image_root_point=point,
             image_pivot_point=point,
-            is_mask=is_mask,
             layer=layer
         )
 
@@ -416,18 +405,13 @@ class CanvasImageMixin:
 
         return new_image, image_root_point, image_pivot_point
 
-    def add_image_to_canvas(self, image, image_root_point, image_pivot_point, is_mask=False, layer:LayerData=None):
+    def add_image_to_canvas(self, image, image_root_point, image_pivot_point, layer:LayerData=None):
         self.parent.history.add_event({
             "event": "set_image",
             "layer_index": self.current_layer_index,
             "images": self.current_layer.image_data
         })
-        if is_mask:
-            mask = self.apply_opacity(image, self.mask_opacity)
-            image = self.current_layer.image_data.image
-        else:
-            mask = self.current_layer.image_data.mask
-            image = self.apply_opacity(image, self.current_layer.opacity)
+        image = self.apply_opacity(image, self.current_layer.opacity)
 
         if not layer:
             layer = self.current_layer
@@ -436,7 +420,6 @@ class CanvasImageMixin:
             position=image_pivot_point,
             image=image,
             opacity=self.current_layer.opacity,
-            mask=mask,
             image_root_point=image_root_point,
             image_pivot_point=image_pivot_point
         )
@@ -470,14 +453,13 @@ class CanvasImageMixin:
             position=image_data.position,
             image=image_data.image.copy() if image_data.image else None,
             opacity=self.current_layer.opacity,
-            mask=image_data.mask.copy() if image_data.mask else None,
             image_pivot_point=image_data.image_pivot_point,
             image_root_point=image_data.image_root_point
         )
 
     def rotate_90_clockwise(self):
         if self.current_active_image_data:
-            if not self.current_active_image_data.image and not self.current_active_image_data.mask:
+            if not self.current_active_image_data.image:
                 return
             self.parent.history.add_event({
                 "event": "rotate",
@@ -486,13 +468,11 @@ class CanvasImageMixin:
             })
             if self.current_active_image_data.image:
                 self.current_active_image_data.image = self.current_active_image_data.image.transpose(Image.ROTATE_270)
-            if self.current_active_image_data.mask:
-                self.current_active_image_data.mask = self.current_active_image_data.mask.transpose(Image.ROTATE_270)
             self.update()
 
     def rotate_90_counterclockwise(self):
         if self.current_active_image_data:
-            if not self.current_active_image_data or (not self.current_active_image_data.image and not self.current_active_image_data.mask):
+            if not self.current_active_image_data or not self.current_active_image_data.image:
                 return
             self.parent.history.add_event({
                 "event": "rotate",
@@ -501,6 +481,4 @@ class CanvasImageMixin:
             })
             if self.current_active_image_data.image:
                 self.current_active_image_data.image = self.current_active_image_data.image.transpose(Image.ROTATE_90)
-            if self.current_active_image_data.mask:
-                self.current_active_image_data.mask = self.current_active_image_data.mask.transpose(Image.ROTATE_90)
             self.update()
