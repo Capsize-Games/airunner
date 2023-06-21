@@ -207,8 +207,6 @@ class MainWindow(
         # self.applicationStateChanged.connect(self.on_state_changed)
         self.window.wordballoon_button.hide()  # hide word balloon
 
-        self.window.maskModeCheckbox.stateChanged.connect(self.on_mask_mode_changed)
-
         if self.settings_manager.settings.latest_version_check.get():
             self.check_for_latest_version()
 
@@ -217,10 +215,6 @@ class MainWindow(
 
         if not self.testing:
             self.exec()
-
-    def on_mask_mode_changed(self):
-        self.canvas.current_layer.mask_mode_active = self.window.maskModeCheckbox.isChecked()
-        self.canvas.update()
 
     def timerEvent(self, event):
         self.canvas.timerEvent(event)

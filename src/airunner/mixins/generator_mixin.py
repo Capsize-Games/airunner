@@ -586,8 +586,7 @@ class GeneratorMixin(LoraMixin):
     def generate(
         self,
         do_generate=False,
-        image=None,
-        mask=None
+        image=None
     ):
         if self.use_pixels:
             self.requested_image = image
