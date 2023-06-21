@@ -34,6 +34,7 @@ class GeneratorMixin(LoraMixin):
     @width.setter
     def width(self, val):
         self.settings_manager.settings.working_width.set(val)
+        self.set_final_size_label()
         self.canvas.update()
 
     @property
@@ -43,6 +44,7 @@ class GeneratorMixin(LoraMixin):
     @height.setter
     def height(self, val):
         self.settings_manager.settings.working_height.set(val)
+        self.set_final_size_label()
         self.canvas.update()
 
     @property
@@ -141,6 +143,30 @@ class GeneratorMixin(LoraMixin):
     def scheduler(self, val):
         self.settings.scheduler_var.set(val)
 
+    @property
+    def downscale_amount(self):
+        return self.settings.downscale_amount.get()
+
+    @downscale_amount.setter
+    def downscale_amount(self, val):
+        self.settings.downscale_amount.set(val)
+
+    @property
+    def do_upscale_by_active_grid(self):
+        return self.settings.do_upscale_by_active_grid.get()
+
+    @do_upscale_by_active_grid.setter
+    def do_upscale_by_active_grid(self, val):
+        self.settings.do_upscale_by_active_grid.set(val)
+
+    @property
+    def do_upscale_full_image(self):
+        return self.settings.do_upscale_full_image.get()
+
+    @do_upscale_full_image.setter
+    def do_upscale_full_image(self, val):
+        self.settings.do_upscale_full_image.set(val)
+
     def update_prompt(self, prompt):
         self.tabs[self.current_section].prompt.setPlainText(prompt)
 
@@ -149,19 +175,20 @@ class GeneratorMixin(LoraMixin):
 
     def initialize(self):
         self.settings_manager.settings.model_base_path.my_signal.connect(self.refresh_model_list)
-        for tab_section in self.tab_sections:  # iterate over each tab section (stablediffusion, kandinsky)
-            for tab in self.sections[tab_section]:  # iterate over each section within the tab section (txt2img, img2img, etc)
-                self._tabs[tab_section][tab] = uic.loadUi(os.path.join("pyqt/generate_form.ui"))
+        for tab_section in self._tabs.keys():  # iterate over each tab section (stablediffusion, kandinsky)
+            self.override_tab_section = tab_section
+            for tab in self.tabs.keys():  # iterate over each section within the tab section (txt2img, img2img, etc)
+                self.tabs[tab] = uic.loadUi(os.path.join("pyqt/generate_form.ui"))
 
                 # Remove embeddings and LoRA for Kandinsky sections as they are not supported
                 if tab_section == "kandinsky":
-                    self._tabs[tab_section][tab].PromptTabsSection.removeTab(2)
-                    self._tabs[tab_section][tab].PromptTabsSection.removeTab(1)
+                    self.tabs[tab].PromptTabsSection.removeTab(2)
+                    self.tabs[tab].PromptTabsSection.removeTab(1)
 
                 # set up the override_section for the tab so that we can force which tab is active
                 # this is a hack in order to get around the auto-switching of tabs when the user
                 # changes the section
-                override_section = f"kandinsky_{tab}" if tab_section == "kandinsky" else tab
+                override_section = tab
                 self.override_section = override_section
 
                 # Initialize controlnet dropdown for controlnet section
@@ -182,7 +209,7 @@ class GeneratorMixin(LoraMixin):
                         "Anime",
                     ]
                     for option in controlnet_options:
-                        self._tabs[tab_section][tab].controlnet_dropdown.addItem(option)
+                        self.tabs[tab].controlnet_dropdown.addItem(option)
 
                 """
                 The generator widget contains many different settings, however not all settings are
@@ -191,40 +218,70 @@ class GeneratorMixin(LoraMixin):
                 """
                 # delete strength slider for given sections
                 if tab in ["txt2img", "pix2pix", "outpaint", "upscale", "superresolution", "txt2vid"]:
-                    self._tabs[tab_section][tab].strength.deleteLater()
+                    self.tabs[tab].strength.deleteLater()
 
                 # delete image scale box for given sections
                 if tab in ["txt2img", "img2img", "depth2img", "outpaint", "controlnet", "superresolution", "txt2vid"]:
-                    self._tabs[tab_section][tab].image_scale_box.deleteLater()
+                    self.tabs[tab].image_scale_box.deleteLater()
 
                 # delete the sample slider for given sections
                 if tab in ["upscale", "superresolution"]:
-                    self._tabs[tab_section][tab].samples_groupbox.deleteLater()
+                    self.tabs[tab].samples_groupbox.deleteLater()
+                    self.tabs[tab].full_image_radiobutton.setChecked(self.do_upscale_full_image == True)
+                    self.tabs[tab].active_grid_radiobutton.setChecked(self.do_upscale_by_active_grid == True)
+                    # handle radiobutton change
+                    self.tabs[tab].full_image_radiobutton.toggled.connect(
+                        lambda val, _tab=self.tabs[tab]: self.handle_upscale_full_image_change(val, _tab)
+                    )
+                    self.tabs[tab].active_grid_radiobutton.toggled.connect(
+                        lambda val, _tab=self.tabs[tab]: self.handle_upscale_active_grid_change(val, _tab)
+                    )
+                    self.tabs[tab].downscale_spinbox.setValue(self.downscale_amount)
+                    self.tabs[tab].downscale_spinbox.valueChanged.connect(
+                        lambda val, _tab=self.tabs[tab]: self.handle_downscale_spinbox_change(val, _tab)
+                    )
+                    self.set_final_size_label(self.tabs[tab])
+                else:
+                    # delete downscale settings for sections that are not upscale or superresolution
+                    self.tabs[tab].downscale_settings.deleteLater()
+                    self.tabs[tab].downscale_settings_radiobuttons.deleteLater()
+                    self.tabs[tab].downscale_settings_sizes.deleteLater()
+                    self.tabs[tab].active_grid_radiobutton.deleteLater()
+                    self.tabs[tab].full_image_radiobutton.deleteLater()
+                    self.tabs[tab].downscale_label.deleteLater()
+                    self.tabs[tab].downscale_amount_container.deleteLater()
+                    self.tabs[tab].downscale_spinbox.deleteLater()
+                    self.tabs[tab].final_size_label.deleteLater()
+                    self.tabs[tab].final_size.deleteLater()
 
                 # delete controlnet settings for sections that are not controlnet
                 if tab != "controlnet":
-                    self._tabs[tab_section][tab].controlnet_label.deleteLater()
-                    self._tabs[tab_section][tab].controlnet_dropdown.deleteLater()
+                    self.tabs[tab].controlnet_label.deleteLater()
+                    self.tabs[tab].controlnet_dropdown.deleteLater()
 
-                self._tabs[tab_section][tab].interrupt_button.clicked.connect(self.interrupt)
+
+                self.tabs[tab].interrupt_button.clicked.connect(self.interrupt)
 
         self.override_section = None
 
-        for tab_section in self.tab_sections:
-            for tab in self.sections[tab_section]:
+        for tab_section in self._tabs.keys():
+            self.override_tab_section = tab_section
+            for tab in self.tabs.keys():
                 display_name = tab
                 if display_name == "outpaint":
                     display_name = "inpaint / outpaint"
 
                 if tab_section == "stablediffusion":
-                    self.window.stableDiffusionTabWidget.addTab(self._tabs[tab_section][tab], display_name)
+                    self.window.stableDiffusionTabWidget.addTab(self.tabs[tab], display_name)
                 else:
-                    self.window.kandinskyTabWidget.addTab(self._tabs[tab_section][tab], display_name)
+                    self.window.kandinskyTabWidget.addTab(self.tabs[tab], display_name)
+
+                self.tabs[tab].generate.clicked.connect(self.generate_callback)
 
             # iterate over each tab and connect steps_slider with steps_spinbox
-            for tab_name in self._tabs[tab_section].keys():
-                self.override_section = f"kandinsky_{tab_name}" if tab_section == "kandinsky" else tab_name
-                tab = self._tabs[tab_section][tab_name]
+            for tab_name in self.tabs.keys():
+                self.override_section = tab_name
+                tab = self.tabs[tab_name]
 
                 tab.toggleAllLora.clicked.connect(lambda checked, _tab=tab: self.toggle_all_lora(checked, _tab))
 
@@ -306,14 +363,66 @@ class GeneratorMixin(LoraMixin):
             else:
                 self.window.kandinskyTabWidget.currentChanged.connect(self.tab_changed_callback)
 
-        # add callbacks
-        for tab_section in self.tab_sections:
-            for tab in self.sections[tab_section]:
-                self._tabs[tab_section][tab].generate.clicked.connect(self.generate_callback)
+        self.override_tab_section = None
 
         self.initialize_size_form_elements()
         self.initialize_size_sliders()
         self.initialize_lora()
+
+    def handle_downscale_spinbox_change(self, value, tab):
+        current_value = self.downscale_amount
+        new_value = value
+        if value == 1:
+            if value > current_value or value == current_value:
+                new_value = 2
+            else:
+                new_value = 0
+        self.downscale_amount = value
+        tab.downscale_spinbox.setValue(new_value)
+        self.set_final_size_label(tab)
+
+    def set_final_size_label(self, tab=None):
+        if tab is None:
+            tab = self.tabs[self.current_section]
+
+        if self.current_section not in ["upscale", "superresolution"]:
+            return
+
+        image = self.canvas.current_layer.image_data.image
+        if image:
+            if self.do_upscale_by_active_grid:
+                width = self.canvas.active_grid_area_rect.width()
+                height = self.canvas.active_grid_area_rect.height()
+            else:
+                width = image.width
+                height = image.height
+        else:
+            width = 0
+            height = 0
+
+        if self.downscale_amount > 0:
+            width = width // self.downscale_amount
+            height = height // self.downscale_amount
+
+        if self.current_section == "upscale":
+            width = width * 2
+            height = height * 2
+        elif self.current_section == "superresolution":
+            width = width * 4
+            height = height * 4
+
+        # set final_size label text
+        tab.final_size.setText(f"{width}x{height}")
+
+    def handle_upscale_full_image_change(self, value, tab):
+        self.do_upscale_full_image = value
+        self.do_upscale_by_active_grid = value == False
+        self.set_final_size_label(tab)
+
+    def handle_upscale_active_grid_change(self, value, tab):
+        self.do_upscale_by_active_grid = value
+        self.do_upscale_full_image = value == False
+        self.set_final_size_label(tab)
 
     def interrupt(self):
         print("Interrupting...")
@@ -606,7 +715,30 @@ class GeneratorMixin(LoraMixin):
         return tab not in ["upscale", "superresolution", "txt2vid"]
 
     def generate(self, image=None):
-        if self.use_pixels:
+        if self.current_section in ("upscale", "superresolution") and self.do_upscale_full_image:
+            image_data = self.canvas.current_layer.image_data
+            image = image_data.image if image_data else None
+            if image is None:
+                self.error_handler("No image to upscale")
+                return
+            downscale_amount = self.downscale_amount
+            if downscale_amount > 0:
+                # downscale the image first
+                image = image.resize(
+                    (
+                        int(image.width // downscale_amount),
+                        int(image.height // downscale_amount),
+                    ),
+                    Image.BICUBIC,
+                )
+            self.requested_image = image
+            self.start_progress_bar(self.current_section)
+            self.do_generate({
+                "mask": image.convert("RGB"),
+                "image": image.convert("RGB"),
+                "location": image_data.position
+            })
+        elif self.use_pixels:
             self.requested_image = image
             self.start_progress_bar(self.current_section)
             image_data = self.canvas.current_layer.image_data
@@ -617,23 +749,6 @@ class GeneratorMixin(LoraMixin):
                 width = self.settings_manager.settings.working_width.get()
                 height = self.settings_manager.settings.working_height.get()
                 image = Image.new("RGBA", (int(width), int(height)), (0, 0, 0, 0))
-
-            lines = self.canvas.current_layer.lines
-            # combine lines with image
-            for line in lines:
-                # convert PIL.Image to numpy array
-                image = np.array(image)
-                start: QPoint = line.start_point
-                end: QPoint = line.end_point
-                color: QColor = line._pen["color"]
-                image = cv2.line(
-                    image,
-                    (start.x(), start.y()),
-                    (end.x(), end.y()),
-                    (color.red(), color.green(), color.blue()),
-                    int(line._pen["width"]))
-                # convert numpy array to PIL.Image
-                image = Image.fromarray(image)
 
             img = image.copy().convert("RGBA")
             new_image = Image.new(
@@ -820,6 +935,7 @@ class GeneratorMixin(LoraMixin):
                 **memory_options
             }
         }
+        print(data)
         # data = self.do_generate_data_injection(data)  # TODO: Extensions
         self.client.message = data
 
@@ -832,6 +948,7 @@ class GeneratorMixin(LoraMixin):
     """
 
     def tab_changed_callback(self, index):
+        self.set_final_size_label()
         self.canvas.update()
 
     def set_default_values(self, section, tab):

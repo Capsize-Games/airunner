@@ -57,6 +57,7 @@ class MainWindow(
     models = None
     client = None
     _override_section = None
+    _override_tab_section = None
     _version = None
     _latest_version = None
 
@@ -72,36 +73,38 @@ class MainWindow(
     def override_section(self, val):
         self._override_section = val
 
-    tab_sections = [
-        "stablediffusion",
-        "kandinsky"
-    ]
-    sections = {
-        "stablediffusion": [
-            "txt2img",
-            "img2img",
-            "depth2img",
-            "pix2pix",
-            "outpaint",
-            "controlnet",
-            "upscale",
-            "superresolution",
-            "txt2vid",
-        ],
-        "kandinsky": [
-            "txt2img",
-            "img2img",
-            "outpaint",
-        ]
-    }
+    @property
+    def override_tab_section(self):
+        return self._override_tab_section
+
+    @override_tab_section.setter
+    def override_tab_section(self, val):
+        self._override_tab_section = val
+
     _tabs = {
-        "stablediffusion": {},
-        "kandinsky": {}
+        "stablediffusion": {
+            "txt2img": None,
+            "img2img": None,
+            "depth2img": None,
+            "pix2pix": None,
+            "outpaint": None,
+            "controlnet": None,
+            "upscale": None,
+            "superresolution": None,
+            "txt2vid": None,
+        },
+        "kandinsky": {
+            "txt2img": None,
+            "img2img": None,
+            "outpaint": None,
+        }
     }
 
     @property
     def currentTabSection(self):
-        return self.tab_sections[self.window.sectionTabWidget.currentIndex()]
+        if self.override_tab_section:
+            return self.override_tab_section
+        return list(self._tabs.keys())[self.window.sectionTabWidget.currentIndex()]
 
     @property
     def tabs(self):
@@ -134,12 +137,21 @@ class MainWindow(
     def current_section(self):
         if self.override_section:
             return self.override_section
-        return self.sections[self.currentTabSection][self.current_index]
+        return list(self._tabs[self.currentTabSection].keys())[self.current_index]
 
     @property
     def use_pixels(self):
         # get name of current tab
-        return self.current_section in ("txt2img", "img2img", "pix2pix", "depth2img", "outpaint", "controlnet", "superresolution", "upscale")
+        return self.current_section in (
+            "txt2img",
+            "img2img",
+            "pix2pix",
+            "depth2img",
+            "outpaint",
+            "controlnet",
+            "superresolution",
+            "upscale"
+        )
 
     @property
     def settings(self):
