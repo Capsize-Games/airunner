@@ -429,10 +429,10 @@ class GeneratorMixin(LoraMixin):
         self.client.sd_runner.cancel()
 
     def refresh_model_list(self):
-        for i in range(self.tabWidget.count()):
+        for i, section in enumerate(self._tabs[self.currentTabSection].keys()):
             tab = self.tabWidget.widget(i)
             self.clear_model_list(tab)
-            self.load_model_by_section(self.currentTabSection, tab, self.sections[self.currentTabSection][i])
+            self.load_model_by_section(self.currentTabSection, tab, section)
 
     def clear_model_list(self, tab):
         tab.model_dropdown.clear()
