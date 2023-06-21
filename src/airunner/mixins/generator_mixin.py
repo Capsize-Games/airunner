@@ -149,22 +149,23 @@ class GeneratorMixin(LoraMixin):
 
     def initialize(self):
         self.settings_manager.settings.model_base_path.my_signal.connect(self.refresh_model_list)
-
-        for tab_section in self.tab_sections:
-            for tab in self.sections[tab_section]:
+        for tab_section in self.tab_sections:  # iterate over each tab section (stablediffusion, kandinsky)
+            for tab in self.sections[tab_section]:  # iterate over each section within the tab section (txt2img, img2img, etc)
                 self._tabs[tab_section][tab] = uic.loadUi(os.path.join("pyqt/generate_form.ui"))
 
-                override_section = tab
+                # Remove embeddings and LoRA for Kandinsky sections as they are not supported
                 if tab_section == "kandinsky":
                     self._tabs[tab_section][tab].PromptTabsSection.removeTab(2)
                     self._tabs[tab_section][tab].PromptTabsSection.removeTab(1)
-                    override_section = f"kandinsky_{tab}"
 
+                # set up the override_section for the tab so that we can force which tab is active
+                # this is a hack in order to get around the auto-switching of tabs when the user
+                # changes the section
+                override_section = f"kandinsky_{tab}" if tab_section == "kandinsky" else tab
                 self.override_section = override_section
-                if tab != "controlnet":
-                    self._tabs[tab_section][tab].controlnet_label.deleteLater()
-                    self._tabs[tab_section][tab].controlnet_dropdown.deleteLater()
-                else:
+
+                # Initialize controlnet dropdown for controlnet section
+                if tab == "controlnet":
                     controlnet_options = [
                         "Canny",
                         "MLSD",
@@ -182,10 +183,28 @@ class GeneratorMixin(LoraMixin):
                     ]
                     for option in controlnet_options:
                         self._tabs[tab_section][tab].controlnet_dropdown.addItem(option)
+
+                """
+                The generator widget contains many different settings, however not all settings are
+                available to each section. Rather than creating a new widget for each section, it is
+                easier to delete the settings that are not available for a given section.
+                """
+                # delete strength slider for given sections
                 if tab in ["txt2img", "pix2pix", "outpaint", "upscale", "superresolution", "txt2vid"]:
                     self._tabs[tab_section][tab].strength.deleteLater()
+
+                # delete image scale box for given sections
                 if tab in ["txt2img", "img2img", "depth2img", "outpaint", "controlnet", "superresolution", "txt2vid"]:
                     self._tabs[tab_section][tab].image_scale_box.deleteLater()
+
+                # delete the sample slider for given sections
+                if tab in ["upscale", "superresolution"]:
+                    self._tabs[tab_section][tab].samples_groupbox.deleteLater()
+
+                # delete controlnet settings for sections that are not controlnet
+                if tab != "controlnet":
+                    self._tabs[tab_section][tab].controlnet_label.deleteLater()
+                    self._tabs[tab_section][tab].controlnet_dropdown.deleteLater()
 
                 self._tabs[tab_section][tab].interrupt_button.clicked.connect(self.interrupt)
 
