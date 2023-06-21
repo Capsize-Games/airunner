@@ -39,7 +39,6 @@ class MainWindow(
     BrushesMixin,
 ):
     current_filter = None
-    tabs = {}
     tqdm_callback_triggered = False
     _document_name = "Untitled"
     _is_dirty = False
@@ -55,20 +54,10 @@ class MainWindow(
     canvas = None
     settings_manager = None
     prompts_manager = None
-    sections = [
-        "txt2img",
-        "img2img",
-        "depth2img",
-        "pix2pix",
-        "outpaint",
-        "controlnet",
-        "upscale",
-        "superresolution",
-        "txt2vid",
-    ]
     models = None
     client = None
     _override_section = None
+    _override_tab_section = None
     _version = None
     _latest_version = None
 
@@ -85,24 +74,89 @@ class MainWindow(
         self._override_section = val
 
     @property
+    def override_tab_section(self):
+        return self._override_tab_section
+
+    @override_tab_section.setter
+    def override_tab_section(self, val):
+        self._override_tab_section = val
+
+    _tabs = {
+        "stablediffusion": {
+            "txt2img": None,
+            "img2img": None,
+            "depth2img": None,
+            "pix2pix": None,
+            "outpaint": None,
+            "controlnet": None,
+            "upscale": None,
+            "superresolution": None,
+            "txt2vid": None,
+        },
+        "kandinsky": {
+            "txt2img": None,
+            "img2img": None,
+            "outpaint": None,
+        }
+    }
+
+    @property
+    def currentTabSection(self):
+        if self.override_tab_section:
+            return self.override_tab_section
+        return list(self._tabs.keys())[self.window.sectionTabWidget.currentIndex()]
+
+    @property
+    def tabs(self):
+        return self._tabs[self.currentTabSection]
+
+    @tabs.setter
+    def tabs(self, val):
+        self._tabs[self.currentTabSection] = val
+
+    @property
+    def tabWidget(self):
+        if self.currentTabSection == "stablediffusion":
+            return self.window.stableDiffusionTabWidget
+        else:
+            return self.window.kandinskyTabWidget
+
+    @property
+    def generator_type(self):
+        """
+        Returns either stablediffusion or kandinsky
+        :return: string
+        """
+        return self._generator_type
+
+    @property
     def current_index(self):
-        return self.window.tabWidget.currentIndex()
+        return self.tabWidget.currentIndex()
 
     @property
     def current_section(self):
         if self.override_section:
             return self.override_section
-        return self.sections[self.current_index]
+        return list(self._tabs[self.currentTabSection].keys())[self.current_index]
 
     @property
     def use_pixels(self):
         # get name of current tab
-        return self.current_section in ("txt2img", "img2img", "pix2pix", "depth2img", "outpaint", "controlnet", "superresolution", "upscale")
+        return self.current_section in (
+            "txt2img",
+            "img2img",
+            "pix2pix",
+            "depth2img",
+            "outpaint",
+            "controlnet",
+            "superresolution",
+            "upscale"
+        )
 
     @property
     def settings(self):
         settings = self.settings_manager.settings
-        settings.set_namespace(self.current_section)
+        settings.set_namespace(self.current_section, self.currentTabSection)
         return settings
 
     @property
@@ -252,6 +306,12 @@ class MainWindow(
         if self.settings_manager.settings.force_reset.get():
             self.reset_settings()
             self.settings_manager.settings.force_reset.set(False)
+        self.window.actionShow_Active_Image_Area.setChecked(self.settings_manager.settings.show_active_image_area.get() == True)
+        self.window.actionShow_Active_Image_Area.triggered.connect(self.toggle_show_active_image_area)
+
+    def toggle_show_active_image_area(self):
+        self.settings_manager.settings.show_active_image_area.set(self.window.actionShow_Active_Image_Area.isChecked())
+        self.canvas.update()
 
     def initialize_saved_prompts(self):
         self.prompts_manager = PromptManager()
@@ -391,7 +451,10 @@ class MainWindow(
 
     def message_handler(self, msg, error=False):
         try:
-            self.window.status_label.setStyleSheet("color: black;")
+            if self.settings_manager.settings.dark_mode_enabled.get():
+                self.window.status_label.setStyleSheet("color: #ffffff;")
+            else:
+                self.window.status_label.setStyleSheet("color: black;")
         except Exception as e:
             print("something went wrong while setting label")
             print(e)
