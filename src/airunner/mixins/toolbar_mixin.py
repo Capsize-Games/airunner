@@ -143,6 +143,7 @@ class ToolbarMixin:
         }
         if self.settings_manager.settings.dark_mode_enabled.get():
             qdarktheme.setup_theme("dark")
+            self.window.status_label.setStyleSheet("color: #ffffff;")
             icons["darkmode_button"] = "weather-sunny"
             for button, icon in icons.items():
                 if icon != "weather-sunny":
@@ -153,5 +154,6 @@ class ToolbarMixin:
                 getattr(self.window, button).setIcon(QtGui.QIcon(os.path.join(f"src/icons/{icon}.png")))
             try:
                 qdarktheme.setup_theme("light")
+                self.window.status_label.setStyleSheet("color: #000000;")
             except PermissionError:
                 pass

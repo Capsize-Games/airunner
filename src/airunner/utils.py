@@ -136,9 +136,10 @@ def get_latest_version():
     return None
 
 
-def load_default_models(section_name):
+def load_default_models(tab_section, section_name):
     if section_name == "txt2img":
         section_name = "generate"
+    section_name = f"{tab_section}_{section_name}"
     return [
         k for k in MODELS[section_name].keys()
     ]
