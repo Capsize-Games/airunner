@@ -935,7 +935,6 @@ class GeneratorMixin(LoraMixin):
                 **memory_options
             }
         }
-        print(data)
         # data = self.do_generate_data_injection(data)  # TODO: Extensions
         self.client.message = data
 
