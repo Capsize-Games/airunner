@@ -251,7 +251,10 @@ class CanvasImageMixin:
         outpaint_box_rect = data["options"]["outpaint_box_rect"]
         if section not in["superresolution", "upscale"]:
             processed_image, image_root_point, image_pivot_point = self.handle_outpaint(
-                outpaint_box_rect, processed_image, section
+                outpaint_box_rect,
+                processed_image,
+                section,
+                is_kandinsky=data["options"].get("generator_section") == "kandinsky"
             )
         else:
             # if we are upscaling (or using superresolution) we want to replace the existing image with the new
@@ -325,7 +328,7 @@ class CanvasImageMixin:
             layer=layer
         )
 
-    def handle_outpaint(self, outpaint_box_rect, outpainted_image, action=None):
+    def handle_outpaint(self, outpaint_box_rect, outpainted_image, action=None, is_kandinsky=False):
         if self.current_layer.image_data.image is None:
             point = QPoint(outpaint_box_rect.x(), outpaint_box_rect.y())
             return outpainted_image, self.image_root_point, point
@@ -396,7 +399,7 @@ class CanvasImageMixin:
         new_image_a.paste(outpainted_image, (int(pos_x), int(pos_y)))
         new_image_b.paste(existing_image_copy, (int(existing_image_pos[0]), int(existing_image_pos[1])))
 
-        if action == "outpaint":
+        if action == "outpaint" and not is_kandinsky:
             new_image = Image.alpha_composite(new_image, new_image_a)
             new_image = Image.alpha_composite(new_image, new_image_b)
         else:
