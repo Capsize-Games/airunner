@@ -19,14 +19,18 @@ class LayerData:
         self.opacity = opacity
         self.offset = offset
         self.lines = []
-        self.image_data = ImageData(QPoint(0, 0), None, 1.0)
+        self.image_data = ImageData(
+            position=QPoint(0, 0),
+            image=None,
+            opacity=1.0
+        )
         self.widgets = []
         self.uuid = uuid.uuid4()
 
-        self.left_line_extremity = 0
-        self.right_line_extremity = 0
-        self.top_line_extremity = 0
-        self.bottom_line_extremity = 0
+        self.left_line_extremity = None
+        self.right_line_extremity = None
+        self.top_line_extremity = None
+        self.bottom_line_extremity = None
         self.last_left = 0
         self.last_top = 0
         self.min_x = 0

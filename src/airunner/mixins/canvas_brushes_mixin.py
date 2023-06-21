@@ -1,6 +1,7 @@
 from PIL import ImageDraw, ImageFilter, UnidentifiedImageError
 from PyQt6.QtCore import Qt, QPointF, QPoint, QSize, QRect, QThread, QObject, pyqtSignal, QTimer, QRunnable, QThreadPool
 from PyQt6.QtGui import QPainter, QPainterPath, QColor, QPen, QImage
+from airunner.models.layerdata import LayerData
 from airunner.models.linedata import LineData
 from PIL import Image
 
@@ -15,10 +16,18 @@ class RasterizationWorker(QObject):
         self.left = kwargs.pop('left')
         self.bottom = kwargs.pop('bottom')
         self.right = kwargs.pop('right')
+        self.layer = kwargs.pop("layer")
         super().__init__(*args)
 
     def run(self):
-        self.convert_pixmap_to_pil_image(self.img, self.top, self.left, self.bottom, self.right)
+        self.convert_pixmap_to_pil_image(
+            self.img,
+            self.top,
+            self.left,
+            self.bottom,
+            self.right,
+            self.layer
+        )
         self.finished.emit()
 
 
@@ -37,7 +46,7 @@ class CanvasBrushesMixin:
 
     @property
     def left_line_extremity(self):
-        return self.current_layer.left_line_extremity if self.current_layer.left_line_extremity else 0
+        return self.current_layer.left_line_extremity
 
     @left_line_extremity.setter
     def left_line_extremity(self, value):
@@ -45,7 +54,7 @@ class CanvasBrushesMixin:
 
     @property
     def right_line_extremity(self):
-        return self.current_layer.right_line_extremity if self.current_layer.right_line_extremity else 0
+        return self.current_layer.right_line_extremity
 
     @right_line_extremity.setter
     def right_line_extremity(self, value):
@@ -53,7 +62,7 @@ class CanvasBrushesMixin:
 
     @property
     def top_line_extremity(self):
-        return self.current_layer.top_line_extremity if self.current_layer.top_line_extremity else 0
+        return self.current_layer.top_line_extremity
 
     @top_line_extremity.setter
     def top_line_extremity(self, value):
@@ -61,7 +70,7 @@ class CanvasBrushesMixin:
 
     @property
     def bottom_line_extremity(self):
-        return self.current_layer.bottom_line_extremity if self.current_layer.bottom_line_extremity else 0
+        return self.current_layer.bottom_line_extremity
 
     @bottom_line_extremity.setter
     def bottom_line_extremity(self, value):
@@ -130,7 +139,6 @@ class CanvasBrushesMixin:
     def initialize(self):
         self.thread_pool = QThreadPool()
         self.thread_pool.setMaxThreadCount(4)
-        self._location_data = {}
 
     def draw(self, layer, index):
         path = QPainterPath()
@@ -183,6 +191,8 @@ class CanvasBrushesMixin:
 
     def handle_erase(self, event):
         self.is_erasing = True
+        if len(self.current_layer.lines) > 0:
+            self.rasterize_lines(final=True)
         brush_size = int(self.settings_manager.settings.mask_brush_size.get() / 2)
         image = self.current_layer.image_data.image if self.current_layer.image_data.image is not None else None
         image_pos = self.current_layer.image_data.position if self.current_layer.image_data.image is not None else None
@@ -246,11 +256,22 @@ class CanvasBrushesMixin:
             min_y = min(start_y, end_y) - brush_size
             max_x = max(start_x, end_x) + brush_size
             max_y = max(start_y, end_y) + brush_size
-
-            self.left_line_extremity = min(self.left_line_extremity, min_x)
-            self.right_line_extremity = max(self.right_line_extremity, max_x)
-            self.top_line_extremity = min(self.top_line_extremity, min_y)
-            self.bottom_line_extremity = max(self.bottom_line_extremity, max_y)
+            if self.left_line_extremity is None:
+                self.left_line_extremity = min_x
+            else:
+                self.left_line_extremity = min(self.left_line_extremity, min_x)
+            if self.right_line_extremity is None:
+                self.right_line_extremity = max_x
+            else:
+                self.right_line_extremity = max(self.right_line_extremity, max_x)
+            if self.top_line_extremity is None:
+                self.top_line_extremity = min_y
+            else:
+                self.top_line_extremity = min(self.top_line_extremity, min_y)
+            if self.bottom_line_extremity is None:
+                self.bottom_line_extremity = max_y
+            else:
+                self.bottom_line_extremity = max(self.bottom_line_extremity, max_y)
         return self.top_line_extremity, self.left_line_extremity, self.bottom_line_extremity, self.right_line_extremity
 
     def rasterize_lines(self, final=False):
@@ -266,9 +287,9 @@ class CanvasBrushesMixin:
 
         # create a QImage with the size of the lines
         min_x = min(left, right) - brush_size
-        max_x = max(left, right) + brush_size
+        max_x = max(left, right) - brush_size
         min_y = min(top, bottom) - brush_size
-        max_y = max(top, bottom) + brush_size
+        max_y = max(top, bottom) - brush_size
         width = abs(max_x - min_x)
         height = abs(max_y - min_y)
         img = QImage(QSize(width, height), QImage.Format.Format_ARGB32)
@@ -286,7 +307,8 @@ class CanvasBrushesMixin:
             top=top,
             left=left,
             bottom=bottom,
-            right=right
+            right=right,
+            layer=self.current_layer
         )
         task = RasterizationTask(worker)
         self.thread_pool.start(task)
@@ -302,7 +324,8 @@ class CanvasBrushesMixin:
         path.setFillRule(Qt.FillRule.WindingFill)
         for line in lines:
             pen = line.pen
-            pen.setColor(line.color)
+            color = line.color
+            pen.setColor(color)
             pen.setCapStyle(Qt.PenCapStyle.RoundCap)
             pen.setJoinStyle(Qt.PenJoinStyle.RoundJoin)
             painter.setPen(pen)
@@ -326,9 +349,21 @@ class CanvasBrushesMixin:
             path.cubicTo(ctrl1, ctrl2, end)
         return path
 
-    def convert_pixmap_to_pil_image(self, img: Image, top: int, left: int, bottom: int, right: int):
+    def convert_pixmap_to_pil_image(
+        self,
+        img: Image,
+        top: int,
+        left: int,
+        bottom: int,
+        right: int,
+        layer: LayerData
+    ):
         try:
             img = Image.fromqpixmap(img)
         except UnidentifiedImageError:
             return None
-        self.insert_rasterized_line_image(QRect(left, top, right, bottom), img)
+        self.insert_rasterized_line_image(
+            QRect(left, top, right, bottom),
+            img,
+            layer
+        )

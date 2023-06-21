@@ -20,7 +20,6 @@ services:
       - TK_LIBDIR_PATH=/usr/lib/x86_64-linux-gnu/
     command: /bin/bash
     volumes:
-      - ./:/app
       - ./dist:/app/dist
       - ./build:/app/build
     working_dir: /app
