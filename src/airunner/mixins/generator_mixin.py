@@ -391,8 +391,8 @@ class GeneratorMixin(LoraMixin):
         image = self.canvas.current_layer.image_data.image
         if image:
             if self.do_upscale_by_active_grid:
-                width = self.canvas.active_grid_area_rect.width()
-                height = self.canvas.active_grid_area_rect.height()
+                width = self.settings_manager.settings.working_width.get()
+                height = self.settings_manager.settings.working_height.get()
             else:
                 width = image.width
                 height = image.height
