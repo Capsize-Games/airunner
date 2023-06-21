@@ -583,11 +583,7 @@ class GeneratorMixin(LoraMixin):
     def tab_has_embeddings(self, tab):
         return tab not in ["upscale", "superresolution", "txt2vid"]
 
-    def generate(
-        self,
-        do_generate=False,
-        image=None
-    ):
+    def generate(self, image=None):
         if self.use_pixels:
             self.requested_image = image
             self.start_progress_bar(self.current_section)
@@ -643,7 +639,6 @@ class GeneratorMixin(LoraMixin):
 
             # convert image to rgb
             image = new_image.convert("RGB")
-
             self.do_generate({
                 "mask": mask,
                 "image": image,
