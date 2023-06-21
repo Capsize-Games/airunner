@@ -225,7 +225,10 @@ class GeneratorMixin(LoraMixin):
                 )
 
                 # set schedulers for each tab
-                tab.scheduler_dropdown.addItems(AVAILABLE_SCHEDULERS_BY_ACTION[tab_name])
+                scheduler_action = tab_name
+                if tab_section == "kandinsky":
+                    scheduler_action = f"kandinsky_{tab_name}"
+                tab.scheduler_dropdown.addItems(AVAILABLE_SCHEDULERS_BY_ACTION[scheduler_action])
                 tab.scheduler_dropdown.currentIndexChanged.connect(
                     lambda val, _tab=tab, _section=tab_name: self.set_scheduler(_tab, _section, val)
                 )
