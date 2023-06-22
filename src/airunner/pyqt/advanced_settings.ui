@@ -6,8 +6,8 @@
    <rect>
     <x>0</x>
     <y>0</y>
-    <width>342</width>
-    <height>539</height>
+    <width>372</width>
+    <height>555</height>
    </rect>
   </property>
   <property name="windowTitle">
@@ -67,45 +67,19 @@
          </widget>
         </item>
         <item>
-         <widget class="Line" name="line_8">
-          <property name="orientation">
-           <enum>Qt::Horizontal</enum>
-          </property>
-         </widget>
-        </item>
-        <item>
-         <widget class="QCheckBox" name="use_xformers">
-          <property name="font">
-           <font>
-            <bold>true</bold>
-           </font>
-          </property>
-          <property name="toolTip">
-           <string>&lt;html&gt;&lt;head/&gt;&lt;body&gt;&lt;p&gt;&lt;span style=&quot; font-weight:400;&quot;&gt;It is recommended to leave this enabled for faster inference and reduced memory consumption.&lt;/span&gt;&lt;/p&gt;&lt;/body&gt;&lt;/html&gt;</string>
-          </property>
-          <property name="text">
-           <string>Xformers</string>
-          </property>
-         </widget>
-        </item>
-        <item>
          <widget class="QLabel" name="label_9">
           <property name="font">
            <font>
             <pointsize>10</pointsize>
-            <italic>false</italic>
            </font>
           </property>
           <property name="text">
-           <string>Faster inference, lower VRAM usage</string>
-          </property>
-          <property name="indent">
-           <number>-1</number>
+           <string>Keep this checked to take advantage of torch 2.0</string>
           </property>
          </widget>
         </item>
         <item>
-         <widget class="Line" name="line_7">
+         <widget class="Line" name="line_8">
           <property name="orientation">
            <enum>Qt::Horizontal</enum>
           </property>
@@ -173,7 +147,7 @@
            </font>
           </property>
           <property name="text">
-           <string>May slow inference on some models</string>
+           <string>May slow inference on some models, speed up on others</string>
           </property>
           <property name="indent">
            <number>-1</number>
@@ -287,7 +261,7 @@
            </font>
           </property>
           <property name="text">
-           <string>Less accurate, faster inference with floats</string>
+           <string>Faster inference if running on CPU</string>
           </property>
           <property name="indent">
            <number>-1</number>
