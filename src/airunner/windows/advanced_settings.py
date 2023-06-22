@@ -12,7 +12,6 @@ class AdvancedSettings(BaseWindow):
             "use_attention_slicing": self.template.use_attention_slicing,
             "use_tf32": self.template.use_tf32,
             "use_enable_vae_slicing": self.template.use_enable_vae_slicing,
-            "use_xformers": self.template.use_xformers,
             "use_accelerated_transformers": self.template.use_accelerated_transformers,
             "use_tiled_vae": self.template.use_tiled_vae,
             "enable_model_cpu_offload": self.template.enable_model_cpu_offload,

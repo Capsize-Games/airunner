@@ -922,7 +922,6 @@ class GeneratorMixin(LoraMixin):
             "use_tf32": self.settings_manager.settings.use_tf32.get(),
             "use_cudnn_benchmark": self.settings_manager.settings.use_cudnn_benchmark.get(),
             "use_enable_vae_slicing": self.settings_manager.settings.use_enable_vae_slicing.get(),
-            "use_xformers": self.settings_manager.settings.use_xformers.get(),
             "use_accelerated_transformers": self.settings_manager.settings.use_accelerated_transformers.get(),
             "use_torch_compile": self.settings_manager.settings.use_torch_compile.get(),
             "use_tiled_vae": self.settings_manager.settings.use_tiled_vae.get(),

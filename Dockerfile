@@ -46,7 +46,6 @@ RUN ln -snf /usr/share/zoneinfo/$TZ /etc/localtime && echo $TZ > /etc/timezone \
 FROM base_image as install_requirements
 USER root
 WORKDIR /app
-ENV XFORMERS_MORE_DETAILS=1
 RUN pip install nvidia-pyindex
 WORKDIR /app
 RUN pip install --upgrade pip
