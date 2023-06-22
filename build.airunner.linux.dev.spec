@@ -52,7 +52,6 @@ datas += collect_data_files("triton", include_py_files=True)
 datas += collect_data_files("pytorch_lightning", include_py_files=True)
 datas += collect_data_files("lightning_fabric", include_py_files=True)
 datas += collect_data_files("transformers", include_py_files=True)
-datas += collect_data_files("xformers", include_py_files=True)
 datas += collect_data_files("sympy", include_py_files=True)
 a = Analysis(
     [
@@ -64,8 +63,6 @@ a = Analysis(
         "./venv/lib/python3.10/site-packages/tokenizers",
         "./venv/lib/python3.10/site-packages/tensorflow",
         "./venv/lib/python3.10/site-packages/triton",
-        "./venv/lib/python3.10/site-packages/xformers",
-        "./venv/lib/python3.10/site-packages/xformers/triton",
         "/usr/lib/x86_64-linux-gnu/",
     ],
     binaries=[
@@ -82,10 +79,6 @@ a = Analysis(
         "triton",
         "triton._C",
         "triton._C.libtriton",
-        "xformers",
-        "xformers.ops",
-        "xformers.triton",
-        "xformers.triton.softmax",
         "tqdm",
         "diffusers",
         "transformers",
