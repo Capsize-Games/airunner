@@ -60,6 +60,8 @@ class MainWindow(
     _override_tab_section = None
     _version = None
     _latest_version = None
+    use_interpolation = None
+    add_image_to_canvas_signal = pyqtSignal(dict)
 
     @property
     def grid_size(self):
