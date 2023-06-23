@@ -1,11 +1,8 @@
 import os
 import random
-import cv2
-import numpy as np
 from PIL import Image
 from PyQt6 import uic
-from PyQt6.QtCore import QPoint, QRect
-from PyQt6.QtGui import QColor
+from PyQt6.QtCore import QRect, pyqtSignal
 from PyQt6.uic.exceptions import UIFileException
 from aihandler.settings import MAX_SEED, AVAILABLE_SCHEDULERS_BY_ACTION, MODELS
 from airunner.windows.video import VideoPopup
