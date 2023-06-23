@@ -1,6 +1,5 @@
-from PIL import Image
 from PyQt6.QtCore import Qt, QPoint, QRect
-from PyQt6.QtGui import QColor, QPainter, QPen, QBrush, QCursor
+from PyQt6.QtGui import QColor, QPainter, QBrush, QCursor
 from airunner.cursors.circle_brush import CircleCursor
 from airunner.mixins.canvas_active_grid_area_mixin import CanvasActiveGridAreaMixin
 from airunner.mixins.canvas_brushes_mixin import CanvasBrushesMixin
@@ -133,6 +132,7 @@ class Canvas(
         CanvasActiveGridAreaMixin.initialize(self)
         CanvasLayerMixin.initialize(self)
         CanvasBrushesMixin.initialize(self)
+        CanvasImageMixin.initialize(self)
 
         # Set initial position and size of the canvas
         self.canvas_container.setGeometry(QRect(

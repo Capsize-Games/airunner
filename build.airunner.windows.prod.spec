@@ -41,7 +41,6 @@ datas += collect_data_files("torchvision", include_py_files=True)
 datas += collect_data_files("pytorch_lightning", include_py_files=True)
 datas += collect_data_files("lightning_fabric", include_py_files=True)
 datas += collect_data_files("transformers", include_py_files=True)
-datas += collect_data_files("xformers", include_py_files=True)
 datas += collect_data_files("tensorflow", include_py_files=True)
 datas += collect_data_files("bitsandbytes", include_py_files=True)
 datas += collect_data_files("sympy", include_py_files=True)
@@ -59,7 +58,6 @@ a = Analysis(
         "C:\\Python310\\Lib\\site-packages\\torch\\lib",
         "C:\\Python310\\Lib\\site-packages\\PyQt6",
         "C:\\Users\\root\\AppData\\Local\\Programs\\Python\\Python310\\Lib\\site-packages\\tensorflow\\python\\data\\experimental\\service\\",
-        "C:\\Python310\\Lib\\site-packages\\xformers\\",
         "C:\\Users\\root\\AppData\\Local\\Programs\\Python\\Python310\\",
     ],
     binaries=[
@@ -76,8 +74,6 @@ a = Analysis(
         "airunner",
         "airunner.extensions",
         "accelerate",
-        "xformers",
-        "xformers.ops",
         "tqdm",
         "diffusers",
         "transformers",

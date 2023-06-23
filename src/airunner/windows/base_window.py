@@ -1,5 +1,6 @@
 import os
 from PyQt6 import uic
+from PyQt6.QtCore import Qt
 from PyQt6.QtWidgets import QWidget
 from aihandler.settings_manager import SettingsManager
 
@@ -9,6 +10,7 @@ class BaseWindow:
     window_title: str = ""
     settings_manager: SettingsManager = None
     template: QWidget = None
+    is_modal: bool = False  # allow the window to be treated as a modal
 
     def __init__(self, settings_manager: SettingsManager, **kwargs):
         self.app = kwargs.get("app", None)
@@ -18,10 +20,15 @@ class BaseWindow:
         settings_manager.disable_save()
         self.template = uic.loadUi(os.path.join(f"pyqt/{self.template_name}.ui"))
         self.template.setWindowTitle(self.window_title)
+        if self.is_modal:
+            self.template.setWindowModality(Qt.WindowModality.WindowModal)
         self.initialize_window()
         settings_manager.enable_save()
         if exec:
-            self.template.exec()
+            self.show()
+
+    def show(self):
+        self.template.exec()
 
     def initialize_window(self):
         pass
