@@ -1,11 +1,8 @@
 import os
 import random
-import cv2
-import numpy as np
 from PIL import Image
 from PyQt6 import uic
-from PyQt6.QtCore import QPoint, QRect
-from PyQt6.QtGui import QColor
+from PyQt6.QtCore import QRect, pyqtSignal
 from PyQt6.uic.exceptions import UIFileException
 from aihandler.settings import MAX_SEED, AVAILABLE_SCHEDULERS_BY_ACTION, MODELS
 from airunner.windows.video import VideoPopup
@@ -15,6 +12,8 @@ from PIL import PngImagePlugin
 
 
 class GeneratorMixin(LoraMixin):
+    generate_signal = pyqtSignal(dict)
+
     @property
     def available_models(self):
         return MODELS
@@ -167,6 +166,10 @@ class GeneratorMixin(LoraMixin):
     def do_upscale_full_image(self, val):
         self.settings.do_upscale_full_image.set(val)
 
+    @property
+    def image_to_new_layer(self):
+        return self.settings_manager.settings.image_to_new_layer.get()
+
     def update_prompt(self, prompt):
         self.tabs[self.current_section].prompt.setPlainText(prompt)
 
@@ -174,6 +177,7 @@ class GeneratorMixin(LoraMixin):
         self.tabs[self.current_section].negative_prompt.setPlainText(prompt)
 
     def initialize(self):
+        # create an emitter that will be triggered when generate is called
         self.settings_manager.settings.model_base_path.my_signal.connect(self.refresh_model_list)
         for tab_section in self._tabs.keys():  # iterate over each tab section (stablediffusion, kandinsky)
             self.override_tab_section = tab_section
@@ -258,7 +262,6 @@ class GeneratorMixin(LoraMixin):
                 if tab != "controlnet":
                     self.tabs[tab].controlnet_label.deleteLater()
                     self.tabs[tab].controlnet_dropdown.deleteLater()
-
 
                 self.tabs[tab].interrupt_button.clicked.connect(self.interrupt)
 
@@ -500,7 +503,7 @@ class GeneratorMixin(LoraMixin):
         if nsfw_content_detected and self.settings_manager.settings.nsfw_filter.get():
             self.message_handler("NSFW content detected, try again.", error=True)
         else:
-            if data["action"] != "outpaint" and self.settings_manager.settings.image_to_new_layer.get():
+            if data["action"] != "outpaint" and self.image_to_new_layer and self.canvas.current_layer.image_data.image is not None:
                 self.canvas.add_layer()
             # print width and height of image
             self.canvas.image_handler(image, data)
@@ -898,6 +901,7 @@ class GeneratorMixin(LoraMixin):
             f"height": self.height,
             "do_nsfw_filter": self.settings_manager.settings.nsfw_filter.get(),
             "model_base_path": self.model_base_path,
+            "unet_model_path": self.settings_manager.settings.unet_model_path.get(),
             "pos_x": 0,
             "pos_y": 0,
             "outpaint_box_rect": self.active_rect,
@@ -905,6 +909,7 @@ class GeneratorMixin(LoraMixin):
             "use_controlnet": use_controlnet,
             "controlnet": controlnet,
         }
+
         if action == "superresolution":
             options["original_image_width"] = self.canvas.current_active_image_data.image.width
             options["original_image_height"] = self.canvas.current_active_image_data.image.height
@@ -914,6 +919,13 @@ class GeneratorMixin(LoraMixin):
 
         if action == "pix2pix":
             options[f"pix2pix_image_guidance_scale"] = self.image_scale
+
+        """
+        Emitting generate_signal with options allows us to pass more options to the dict from
+        modal windows such as the image interpolation window.
+        """
+        self.generate_signal.emit(options)
+
         memory_options = {
             "use_last_channels": self.settings_manager.settings.use_last_channels.get(),
             "use_enable_sequential_cpu_offload": self.settings_manager.settings.use_enable_sequential_cpu_offload.get(),
@@ -922,11 +934,11 @@ class GeneratorMixin(LoraMixin):
             "use_tf32": self.settings_manager.settings.use_tf32.get(),
             "use_cudnn_benchmark": self.settings_manager.settings.use_cudnn_benchmark.get(),
             "use_enable_vae_slicing": self.settings_manager.settings.use_enable_vae_slicing.get(),
-            "use_xformers": self.settings_manager.settings.use_xformers.get(),
             "use_accelerated_transformers": self.settings_manager.settings.use_accelerated_transformers.get(),
             "use_torch_compile": self.settings_manager.settings.use_torch_compile.get(),
             "use_tiled_vae": self.settings_manager.settings.use_tiled_vae.get(),
         }
+
         data = {
             "action": action,
             "options": {
