@@ -901,7 +901,6 @@ class GeneratorMixin(LoraMixin):
             f"height": self.height,
             "do_nsfw_filter": self.settings_manager.settings.nsfw_filter.get(),
             "model_base_path": self.model_base_path,
-            "unet_model_path": self.settings_manager.settings.unet_model_path.get(),
             "pos_x": 0,
             "pos_y": 0,
             "outpaint_box_rect": self.active_rect,
