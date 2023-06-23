@@ -1,7 +1,5 @@
-from PyQt6.QtWidgets import QFileDialog, QScrollArea, QVBoxLayout, QGridLayout
-from PyQt6 import uic
+from PyQt6.QtWidgets import QFileDialog
 from airunner.windows.advanced_settings import AdvancedSettings
-from airunner.windows.base_window import BaseWindow
 from airunner.windows.export_preferences import ExportPreferences
 from airunner.filters.filter_box_blur import FilterBoxBlur
 from airunner.filters.filter_color_balance import FilterColorBalance
@@ -10,10 +8,13 @@ from airunner.filters.filter_pixel_art import FilterPixelArt
 from airunner.filters.filter_saturation import FilterSaturation
 from airunner.filters.filter_unsharp_mask import FilterUnsharpMask
 from airunner.filters.filter_rgb_noise import FilterRGBNoise
+from airunner.windows.image_interpolation import ImageInterpolation
 from airunner.windows.prompt_browser import PromptBrowser
 
 
 class MenubarMixin:
+    image_interpolation_window = None
+
     def initialize(self):
         self.window.actionNew.triggered.connect(self.new_document)
         self.window.actionSave.triggered.connect(self.save_document)
@@ -42,6 +43,7 @@ class MenubarMixin:
         )
         self.window.actionSave_prompt.triggered.connect(self.save_prompt)
         self.window.actionPrompt_Browser.triggered.connect(self.show_prompt_browser)
+        self.window.image_interpolation.triggered.connect(self.show_image_interpolation)
 
     def show_prompt_browser(self):
         PromptBrowser(settings_manager=self.prompts_manager, app=self)
@@ -72,24 +74,30 @@ class MenubarMixin:
         self.window.actionRGB_Noise.triggered.connect(self.filter_rgb_noise.show)
 
     def import_image(self):
-        file_path, _ = QFileDialog.getOpenFileName(
-            self.window, "Import Image", "", "Image Files (*.png *.jpg *.jpeg)"
-        )
+        file_path, _ = self.display_file_import_dialog()
         if file_path == "":
             return
         self.canvas.load_image(file_path)
         self.canvas.update()
 
     def export_image(self):
-        file_path, _ = QFileDialog.getSaveFileName(
-            self.window,
-            "Export Image",
-            "",
-            "Image Files (*.png *.jpg *.jpeg)"
-        )
+        file_path, _ = self.display_file_export_dialog()
         if file_path == "":
             return
         self.canvas.save_image(file_path)
+
+    def display_file_export_dialog(self):
+        return QFileDialog.getSaveFileName(
+            self.window,
+            "Export Image",
+            "",
+            "Image Files (*.png *.jpg *.jpeg *.gif)"
+        )
+
+    def display_import_image_dialog(self, label="Import Image"):
+        return QFileDialog.getOpenFileName(
+            self.window, label, "", "Image Files (*.png *.jpg *.jpeg)"
+        )
 
     def paste_image(self):
         self.canvas.paste_image_from_clipboard()
@@ -108,3 +116,8 @@ class MenubarMixin:
 
     def show_export_preferences(self):
         ExportPreferences(self.settings_manager)
+
+    def show_image_interpolation(self):
+        self.image_interpolation_window = ImageInterpolation(self.settings_manager, app=self, exec=False)
+        self.image_interpolation_window.show()
+        self.image_interpolation_window = None
