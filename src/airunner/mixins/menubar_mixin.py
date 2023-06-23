@@ -74,7 +74,7 @@ class MenubarMixin:
         self.window.actionRGB_Noise.triggered.connect(self.filter_rgb_noise.show)
 
     def import_image(self):
-        file_path, _ = self.display_file_import_dialog()
+        file_path, _ = self.display_import_image_dialog()
         if file_path == "":
             return
         self.canvas.load_image(file_path)
