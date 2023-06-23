@@ -1398,6 +1398,7 @@
     <addaction name="actionPixel_Art"/>
     <addaction name="separator"/>
     <addaction name="actionInvert"/>
+    <addaction name="actionFilm"/>
    </widget>
    <widget class="QMenu" name="menuAbout">
     <property name="tearOffEnabled">
@@ -1779,6 +1780,11 @@
   <action name="image_interpolation">
    <property name="text">
     <string>Image Interpolation</string>
+   </property>
+  </action>
+  <action name="actionFilm">
+   <property name="text">
+    <string>Film</string>
    </property>
   </action>
  </widget>

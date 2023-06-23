@@ -47,6 +47,7 @@ class ToolbarMixin:
             lambda: webbrowser.open("https://github.com/Capsize-Games/airunner/security/advisories/new"))
         self.window.actionDiscord.triggered.connect(lambda: webbrowser.open("https://discord.gg/PUVDDCJ7gz"))
         self.window.actionInvert.triggered.connect(self.do_invert)
+        self.window.actionFilm.triggered.connect(self.do_film)
         # self.initialize_toolbar_extensions()  # TODO: Extensions
 
     """
@@ -66,6 +67,9 @@ class ToolbarMixin:
         })
         self.canvas.invert_image()
         self.canvas.update()
+
+    def do_film(self):
+        self.canvas.film_filter()
 
     def show_canvas_color(self):
         # show a color widget dialog and set the canvas color
