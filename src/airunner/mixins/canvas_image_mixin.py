@@ -1,9 +1,12 @@
 import io
+import random
 import subprocess
 from PIL import Image, ImageGrab, ImageOps
 from PIL.ImageQt import ImageQt
 from PyQt6.QtCore import QPoint, QRect
 from PyQt6.QtGui import QPainter, QPixmap
+from PIL.ImageFilter import GaussianBlur
+from airunner.filters.rgb_noise_filter import RGBNoiseFilter
 from airunner.models.imagedata import ImageData
 from PIL.ExifTags import TAGS
 from airunner.models.layerdata import LayerData
@@ -200,6 +203,28 @@ class CanvasImageMixin:
             g = ImageOps.invert(g)
             b = ImageOps.invert(b)
             image_data.image = Image.merge("RGBA", (r, g, b, a))
+
+    def film_filter(self):
+        working_images = self.parent.canvas.current_active_image_data
+        if working_images is not None:
+            self.parent.history.add_event({
+                "event": "apply_filter",
+                "layer_index": self.current_layer_index,
+                "images": self.image_data,
+            })
+            image = working_images.image.copy()
+            red_grain = Image.new("L", image.size)
+            green_grain = Image.new("L", image.size)
+            blue_grain = Image.new("L", image.size)
+            red_grain.putdata([random.randint(0, 255) for _i in range(image.size[0] * image.size[1])])
+            green_grain.putdata([random.randint(0, 255) for _i in range(image.size[0] * image.size[1])])
+            blue_grain.putdata([random.randint(0, 255) for _i in range(image.size[0] * image.size[1])])
+            filter = RGBNoiseFilter(0.1, 0.1, 0.1, red_grain, green_grain, blue_grain)
+            filtered_image = filter.filter(self.image_data.image)
+            filtered_image = filtered_image.filter(GaussianBlur(radius=0.03 * 20))
+            self.current_layer.image_data.image = filtered_image
+            self.image_data = None
+        self.update()
 
     def load_image(self, image_path):
         image = Image.open(image_path)
