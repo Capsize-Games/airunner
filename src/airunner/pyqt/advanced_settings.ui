@@ -261,7 +261,7 @@
            </font>
           </property>
           <property name="text">
-           <string>Faster inference if running on CPU</string>
+           <string>faster matrix multiplications on ampere achitecture</string>
           </property>
           <property name="indent">
            <number>-1</number>

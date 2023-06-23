@@ -16,15 +16,13 @@ class AdvancedSettings(BaseWindow):
             "use_tiled_vae": self.template.use_tiled_vae,
             "enable_model_cpu_offload": self.template.enable_model_cpu_offload,
             "use_enable_sequential_cpu_offload": self.template.use_enable_sequential_cpu_offload,
+            #"use_torch_compile": self.template.use_torch_compile,
         }
         for name, checkbox in checkbox_settings.items():
             checkbox.setChecked(self.settings_manager.settings.__getattribute__(name).get() is True)
             checkbox.stateChanged.connect(lambda val, _name=name: self.handle_state_change(val, _name))
 
         # TODO: torch compile once it is available on windows and in compiled python
-        # self.template.use_torch_compile.setChecked(False)
-        # self.template.use_torch_compile.setEnabled(False)
-        # self.settings_manager.settings.use_torch_compile.set(False)
 
     def handle_state_change(self, val, name):
         self.settings_manager.settings.__getattribute__(name).set(val == 2)

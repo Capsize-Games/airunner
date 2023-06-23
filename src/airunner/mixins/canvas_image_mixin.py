@@ -6,7 +6,6 @@ from PyQt6.QtCore import QPoint, QRect
 from PyQt6.QtGui import QPainter, QPixmap
 from airunner.models.imagedata import ImageData
 from PIL.ExifTags import TAGS
-
 from airunner.models.layerdata import LayerData
 
 
@@ -29,6 +28,9 @@ class CanvasImageMixin:
             return self.current_layer.image_data
         except IndexError:
             return None
+
+    def initialize(self):
+        pass
 
     def apply_filter(self, filter):
         if self.current_layer.image_data.image is None:
@@ -219,10 +221,11 @@ class CanvasImageMixin:
             metadata = None
         self.parent.load_metadata(metadata)
 
-    def save_image(self, image_path):
+    def save_image(self, image_path, image=None):
         if self.current_layer.image_data.image is None:
             return
-        image = self.current_layer.image_data.image
+        if image is None:
+            image = self.current_layer.image_data.image
         image = image.convert("RGBA")
         if not "." in image_path:
             image_path += ".png"
@@ -265,11 +268,26 @@ class CanvasImageMixin:
             self.pos_x = 0
             self.pos_y = 0
 
-        self.add_image_to_canvas(
-            processed_image,
-            image_root_point=image_root_point,
-            image_pivot_point=image_pivot_point
-        )
+        data = {
+            "processed_image": processed_image,
+            "image_root_point": image_root_point,
+            "image_pivot_point": image_pivot_point,
+            "add_image_to_canvas": True
+        }
+
+        """
+        We pass data through an emitter so that it can be modified by other classes and adding to canvas
+        can be interrupted if needed. For example, the image interpolation window takes the processed image
+        and displays it in the window rather than on the canvas.
+        """
+        self.parent.add_image_to_canvas_signal.emit(data)
+
+        if data["add_image_to_canvas"]:
+            self.add_image_to_canvas(
+                data["processed_image"],
+                image_root_point=data["image_root_point"],
+                image_pivot_point=data["image_pivot_point"]
+            )
 
     def insert_rasterized_line_image(self, rect: QRect, img: Image, layer: LayerData):
         existing_image = layer.image_data.image

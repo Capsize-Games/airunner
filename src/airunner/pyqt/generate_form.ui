@@ -7,7 +7,7 @@
     <x>0</x>
     <y>0</y>
     <width>370</width>
-    <height>898</height>
+    <height>890</height>
    </rect>
   </property>
   <property name="sizePolicy">
@@ -208,14 +208,14 @@
      </widget>
     </widget>
    </item>
-   <item row="1" column="0">
+   <item row="3" column="0">
     <widget class="QLabel" name="label">
      <property name="text">
       <string>Model</string>
      </property>
     </widget>
    </item>
-   <item row="2" column="0" colspan="2">
+   <item row="4" column="0" colspan="2">
     <widget class="QComboBox" name="model_dropdown">
      <property name="sizePolicy">
       <sizepolicy hsizetype="Preferred" vsizetype="Preferred">
@@ -231,14 +231,14 @@
      </property>
     </widget>
    </item>
-   <item row="3" column="0">
+   <item row="5" column="0">
     <widget class="QLabel" name="scheduler_label">
      <property name="text">
       <string>Scheduler</string>
      </property>
     </widget>
    </item>
-   <item row="4" column="0" colspan="2">
+   <item row="6" column="0" colspan="2">
     <widget class="QComboBox" name="scheduler_dropdown">
      <property name="sizePolicy">
       <sizepolicy hsizetype="Preferred" vsizetype="Preferred">
@@ -254,17 +254,17 @@
      </property>
     </widget>
    </item>
-   <item row="5" column="0">
+   <item row="7" column="0">
     <widget class="QLabel" name="controlnet_label">
      <property name="text">
       <string>Controlnet</string>
      </property>
     </widget>
    </item>
-   <item row="6" column="0" colspan="2">
+   <item row="8" column="0" colspan="2">
     <widget class="QComboBox" name="controlnet_dropdown"/>
    </item>
-   <item row="7" column="0" colspan="2">
+   <item row="10" column="0" colspan="2">
     <widget class="QGroupBox" name="groupBox_21">
      <property name="sizePolicy">
       <sizepolicy hsizetype="MinimumExpanding" vsizetype="Preferred">
@@ -359,7 +359,7 @@
      </widget>
     </widget>
    </item>
-   <item row="8" column="0" colspan="2">
+   <item row="11" column="0" colspan="2">
     <widget class="QGroupBox" name="scale_box">
      <property name="sizePolicy">
       <sizepolicy hsizetype="MinimumExpanding" vsizetype="Preferred">
@@ -451,7 +451,7 @@
      </widget>
     </widget>
    </item>
-   <item row="9" column="0" colspan="2">
+   <item row="12" column="0" colspan="2">
     <widget class="QGroupBox" name="image_scale_box">
      <property name="sizePolicy">
       <sizepolicy hsizetype="MinimumExpanding" vsizetype="Preferred">
@@ -537,7 +537,7 @@
      </widget>
     </widget>
    </item>
-   <item row="10" column="0" colspan="2">
+   <item row="13" column="0" colspan="2">
     <widget class="QGroupBox" name="strength">
      <property name="sizePolicy">
       <sizepolicy hsizetype="MinimumExpanding" vsizetype="Preferred">
@@ -626,7 +626,7 @@
      </widget>
     </widget>
    </item>
-   <item row="11" column="0" colspan="2">
+   <item row="14" column="0" colspan="2">
     <widget class="QGroupBox" name="groupBox_24">
      <property name="sizePolicy">
       <sizepolicy hsizetype="MinimumExpanding" vsizetype="Preferred">
@@ -697,7 +697,7 @@
      </widget>
     </widget>
    </item>
-   <item row="12" column="0" colspan="2">
+   <item row="15" column="0" colspan="2">
     <widget class="QGroupBox" name="samples_groupbox">
      <property name="sizePolicy">
       <sizepolicy hsizetype="MinimumExpanding" vsizetype="Preferred">
@@ -796,7 +796,7 @@
      </widget>
     </widget>
    </item>
-   <item row="13" column="0" colspan="2">
+   <item row="16" column="0" colspan="2">
     <layout class="QGridLayout" name="downscale_settings">
      <item row="1" column="0">
       <layout class="QVBoxLayout" name="downscale_settings_radiobuttons">
@@ -887,7 +887,7 @@
      </item>
     </layout>
    </item>
-   <item row="16" column="0" colspan="2">
+   <item row="20" column="0" colspan="2">
     <layout class="QHBoxLayout" name="horizontalLayout_3">
      <item>
       <widget class="QPushButton" name="generate">
