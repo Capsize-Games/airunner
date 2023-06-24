@@ -19,6 +19,7 @@ class GridSettings(BaseWindow):
 
     def handle_show_grid_checkbox(self, val):
         self.settings_manager.settings.show_grid.set(val == 2)
+        self.app.canvas.update()
 
     def handle_snap_to_grid_checkbox(self, val):
         self.settings_manager.settings.snap_to_grid.set(val == 2)
