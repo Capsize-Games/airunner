@@ -206,7 +206,7 @@ class CanvasImageMixin:
 
     def film_filter(self):
         working_images = self.parent.canvas.current_active_image_data
-        if working_images is not None:
+        if working_images.image is not None:
             self.parent.history.add_event({
                 "event": "apply_filter",
                 "layer_index": self.current_layer_index,
