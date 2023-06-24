@@ -62,7 +62,7 @@ class LoraMixin:
         if tab_name not in available_lora:
             available_lora[tab_name] = []
         self.settings_manager.enable_save()
-        available_lora[tab_name] = self.get_list_of_available_loras(tab_name, lora_path)
+        available_lora[tab_name] = self.get_list_of_available_loras(tab_name, lora_path, lora_names=available_lora[tab_name])
         self.settings_manager.settings.available_loras.set(available_lora)
         self.settings_manager.save_settings()
         return available_lora[tab_name]
@@ -78,6 +78,7 @@ class LoraMixin:
         if not os.path.exists(lora_path):
             return lora_names
         possible_line_endings = ["ckpt", "safetensors", "bin"]
+        new_loras = []
         for lora_file in os.listdir(lora_path):
             if os.path.isdir(os.path.join(lora_path, lora_file)):
                 lora_names = self.get_list_of_available_loras(tab_name, os.path.join(lora_path, lora_file), lora_names)
@@ -99,13 +100,33 @@ class LoraMixin:
                             if enabled:
                                 self.total_lora_by_section[tab_name]["enabled"] += 1
                             break
-                lora_names.append({
+                new_loras.append({
                     "name": name,
                     "scale": scale,
                     "enabled": enabled,
                     "loaded": False,
                     "trigger_word": trigger_word
                 })
+        # check if name already in lora_names:
+        for old_lora in lora_names:
+            name = old_lora["name"]
+            found = False
+            for new_lora in new_loras:
+                if new_lora["name"] == name:
+                    found = True
+                    break
+            if not found:
+                lora_names.remove(old_lora)
+        merge_lora = []
+        for new_lora in new_loras:
+            name = new_lora["name"]
+            found = False
+            for current_lora in lora_names:
+                if current_lora["name"] == name:
+                    found = True
+            if not found:
+                merge_lora.append(new_lora)
+        lora_names.extend(merge_lora)
         return lora_names
 
     def load_lora_tab(self, tab, tab_name=None):
@@ -116,18 +137,18 @@ class LoraMixin:
             lora_widget = self.load_template("lora")
             lora_widget.enabledCheckbox.setText(lora["name"])
             # lora_widget.label.setText(lora["name"])
-            scale = lora["scale"]
             enabled = lora["enabled"]
-            lora_widget.scaleSlider.setValue(int(scale))
-            lora_widget.scaleSpinBox.setValue(scale / 100)
             lora_widget.enabledCheckbox.setChecked(enabled)
             container.layout().addWidget(lora_widget)
-            lora_widget.scaleSlider.valueChanged.connect(
-                lambda value, _lora_widget=lora_widget, _lora=lora, _tab_name=tab_name: self.handle_lora_slider(
-                    _lora, _lora_widget, value, _tab_name))
-            lora_widget.scaleSpinBox.valueChanged.connect(
-                lambda value, _lora_widget=lora_widget, _lora=lora, _tab_name=tab_name: self.handle_lora_spinbox(
-                    _lora, _lora_widget, value, _tab_name))
+            # scale = lora["scale"]
+            # lora_widget.scaleSlider.setValue(int(scale))
+            # lora_widget.scaleSpinBox.setValue(scale / 100)
+            # lora_widget.scaleSlider.valueChanged.connect(
+            #     lambda value, _lora_widget=lora_widget, _lora=lora, _tab_name=tab_name: self.handle_lora_slider(
+            #         _lora, _lora_widget, value, _tab_name))
+            # lora_widget.scaleSpinBox.valueChanged.connect(
+            #     lambda value, _lora_widget=lora_widget, _lora=lora, _tab_name=tab_name: self.handle_lora_spinbox(
+            #         _lora, _lora_widget, value, _tab_name))
             lora_widget.enabledCheckbox.stateChanged.connect(
                 lambda value, _lora=lora, _tab_name=tab_name: self.toggle_lora(_lora, value, _tab_name))
         # add a vertical spacer to the end of the container
@@ -176,12 +197,6 @@ class LoraMixin:
             for n in range(len(available_loras[tab_name])):
                 if available_loras[tab_name][n]["name"] == lora["name"]:
                     available_loras[tab_name][n]["trigger_word"] = value
-                    lora_widget = None
-                    for i in range(self.tabs[tab_name].lora_scroll_area.widget().layout().count()):
-                        lora_widget = self.tabs[tab_name].lora_scroll_area.widget().layout().itemAt(i).widget()
-                        if lora_widget.enabledCheckbox.text() == lora["name"]:
-                            lora_widget.trigger_word.setText(value)
-                            break
         self.settings_manager.settings.available_loras.set(available_loras)
         self.settings_manager.save_settings()
 
