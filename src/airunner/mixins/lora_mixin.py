@@ -208,10 +208,11 @@ class LoraMixin:
 
     def handle_lora_slider(self, lora, lora_widget, value, tab_name):
         available_loras = self.settings_manager.settings.available_loras.get()
+        float_val = value / 100
         for n in range(len(available_loras[tab_name])):
             if available_loras[tab_name][n]["name"] == lora["name"]:
-                available_loras[tab_name][n]["scale"] = value / 100
-        lora_widget.scaleSpinBox.setValue(lora["scale"])
+                available_loras[tab_name][n]["scale"] = float_val
+        lora_widget.scaleSpinBox.setValue(float_val)
         self.settings_manager.settings.available_loras.set(available_loras)
         self.settings_manager.save_settings()
 
@@ -219,7 +220,7 @@ class LoraMixin:
         available_loras = self.settings_manager.settings.available_loras.get()
         for n in range(len(available_loras[tab_name])):
             if available_loras[tab_name][n]["name"] == lora["name"]:
-                available_loras[tab_name][n]["scale"] = value * 100
-        lora_widget.scaleSlider.setValue(int(lora["scale"]))
+                available_loras[tab_name][n]["scale"] = value
+        lora_widget.scaleSlider.setValue(int(value * 100))
         self.settings_manager.settings.available_loras.set(available_loras)
         self.settings_manager.save_settings()
