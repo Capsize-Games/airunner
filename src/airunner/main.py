@@ -252,8 +252,11 @@ class MainWindow(
         # call get_latest_version() in a separate thread
         # to avoid blocking the UI, show a popup if version doesn't match self.version
         # check if latest_version is greater than version using major, minor, patch
-        latest_major, latest_minor, latest_patch = self.latest_version[1:].split(".")
         current_major, current_minor, current_patch = self.version[1:].split(".")
+        try:
+            latest_major, latest_minor, latest_patch = self.latest_version[1:].split(".")
+        except ValueError:
+            latest_major, latest_minor, latest_patch = 0, 0, 0
 
         latest_major = int(latest_major)
         latest_minor = int(latest_minor)
