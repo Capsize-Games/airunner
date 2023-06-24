@@ -86,7 +86,7 @@ class ToolbarMixin:
         AboutWindow(self.settings_manager, app=self)
 
     def show_grid_settings(self):
-        GridSettings(self.settings_manager)
+        GridSettings(self.settings_manager, app=self)
 
     def show_preferences(self):
         PreferencesWindow(self.settings_manager, app=self)
