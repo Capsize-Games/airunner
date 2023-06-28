@@ -19,12 +19,9 @@ class DeterministicGenerationWindow(BaseWindow):
 
     def close_event(self, _event):
         self.app.close_deterministic_generation_window()
-        # remove self.app.generate_signal.connect(self.handle_generate_signal)
-        self.app.generate_signal.disconnect(self.handle_generate_signal)
         self.template.close()
 
     def initialize_window(self):
-        self.app.generate_signal.connect(self.handle_generate_signal)
         self.add_image_widgets_to_canvas()
         self.template.closeEvent = self.close_event
         # self.app.add_image_to_canvas_signal.connect(self.handle_add_image_to_canvas_signal)
@@ -59,10 +56,6 @@ class DeterministicGenerationWindow(BaseWindow):
         self.data["options"]["outpaint_box_rect"] = self.app.active_rect
         self.app.canvas.update_image_canvas(self.data["action"], self.data, image)
         self.data["force_add_to_canvas"] = False
-
-    def handle_generate_signal(self, options):
-        options["deterministic_generation"] = True
-        #options["interpolation_data"] = self.get_interpolation_data()
 
     def handle_add_image_to_canvas_signal(self, data):
         #data["add_image_to_canvas"] = False
