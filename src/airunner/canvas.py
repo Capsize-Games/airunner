@@ -243,7 +243,7 @@ class Canvas(
         self.canvas_container.setCursor(QCursor(Qt.CursorShape.ArrowCursor))
 
     def update(self):
-        self.parent.window.canvas_position.setText(f"X: {self.pos_x}, Y: {self.pos_y}")
+        self.parent.window.canvas_position.setText(f"X: {-self.pos_x}, Y: {self.pos_y}")
 
         self.canvas_container.update(self.viewport_rect)
 
