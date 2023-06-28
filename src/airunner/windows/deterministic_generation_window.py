@@ -1,9 +1,4 @@
-import os
-from PIL import Image
 from PyQt6 import uic
-from PyQt6.QtCore import Qt, QPoint
-from PyQt6.QtGui import QPixmap, QImage
-from PyQt6.QtWidgets import QFileDialog, QSpacerItem, QSizePolicy, QLabel
 
 from airunner.utils import image_to_pixmap
 from airunner.windows.base_window import BaseWindow
@@ -59,11 +54,20 @@ class DeterministicGenerationWindow(BaseWindow):
     def to_canvas(self, index):
         image = self.images[index]
         image = image.convert("RGBA")
-        self.app.canvas.add_image_to_canvas(image, QPoint(0, 0), QPoint(0, 0), use_outpaint=True)
+        #self.app.canvas.add_image_to_canvas(image, QPoint(0, 0), QPoint(0, 0), use_outpaint=True)
+        self.data["force_add_to_canvas"] = True
+        self.data["options"]["outpaint_box_rect"] = self.app.active_rect
+        self.app.canvas.update_image_canvas(self.data["action"], self.data, image)
+        self.data["force_add_to_canvas"] = False
 
     def handle_generate_signal(self, options):
         options["deterministic_generation"] = True
         #options["interpolation_data"] = self.get_interpolation_data()
 
     def handle_add_image_to_canvas_signal(self, data):
-        data["add_image_to_canvas"] = False
+        #data["add_image_to_canvas"] = False
+        pass
+
+    def update_images(self, images):
+        self.images = images
+        self.add_image_widgets_to_canvas()
