@@ -35,7 +35,7 @@ class ToolbarMixin:
             self.window.grid_button.setChecked(True)
         if self.settings_manager.settings.nsfw_filter.get():
             self.window.nsfw_button.setChecked(True)
-        self.window.darkmode_button.clicked.connect(self.toggle_darkmode)
+        self.window.actionDark_mode.triggered.connect(self.toggle_darkmode)
         self.window.actionGrid.triggered.connect(self.show_grid_settings)
         self.window.actionPreferences.triggered.connect(self.show_preferences)
         self.window.actionAbout.triggered.connect(self.show_about)
@@ -48,6 +48,7 @@ class ToolbarMixin:
         self.window.actionDiscord.triggered.connect(lambda: webbrowser.open("https://discord.gg/PUVDDCJ7gz"))
         self.window.actionInvert.triggered.connect(self.do_invert)
         self.window.actionFilm.triggered.connect(self.do_film)
+        self.set_darkmode_checkbox()
         # self.initialize_toolbar_extensions()  # TODO: Extensions
 
     """
@@ -127,10 +128,13 @@ class ToolbarMixin:
     def toggle_darkmode(self):
         self.settings_manager.settings.dark_mode_enabled.set(not self.settings_manager.settings.dark_mode_enabled.get())
         self.set_stylesheet()
+        self.set_darkmode_checkbox()
+
+    def set_darkmode_checkbox(self):
+        self.window.actionDark_mode.setChecked(self.settings_manager.settings.dark_mode_enabled.get())
 
     def set_stylesheet(self):
         icons = {
-            "darkmode_button": "weather-night",
             "move_button": "move",
             "active_grid_area_button": "stop",
             "eraser_button": "eraser",
@@ -148,7 +152,6 @@ class ToolbarMixin:
         if self.settings_manager.settings.dark_mode_enabled.get():
             qdarktheme.setup_theme("dark")
             self.window.status_label.setStyleSheet("color: #ffffff;")
-            icons["darkmode_button"] = "weather-sunny"
             for button, icon in icons.items():
                 if icon != "weather-sunny":
                     icon = icon + "-light"
