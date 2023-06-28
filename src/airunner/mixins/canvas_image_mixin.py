@@ -307,7 +307,7 @@ class CanvasImageMixin:
         """
         self.parent.add_image_to_canvas_signal.emit(processed_data)
         is_deterministic = data["options"][f"deterministic_generation"]
-        if processed_data["add_image_to_canvas"] and not is_deterministic:
+        if processed_data["add_image_to_canvas"] and (not is_deterministic or data["force_add_to_canvas"]):
             self.add_image_to_canvas(
                 processed_data["processed_image"],
                 image_root_point=processed_data["image_root_point"],
@@ -454,15 +454,13 @@ class CanvasImageMixin:
 
         return new_image, image_root_point, image_pivot_point
 
-    def add_image_to_canvas(self, image, image_root_point, image_pivot_point, layer:LayerData=None, use_outpaint=False):
+    def add_image_to_canvas(self, image, image_root_point, image_pivot_point, layer:LayerData=None):
         self.parent.history.add_event({
             "event": "set_image",
             "layer_index": self.current_layer_index,
             "images": self.current_layer.image_data
         })
         image = self.apply_opacity(image, self.current_layer.opacity)
-        if use_outpaint:
-            image, image_root_point, image_pivot_point = self.handle_outpaint(self.active_grid_area_rect, image)
 
         if not layer:
             layer = self.current_layer
