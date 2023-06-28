@@ -907,8 +907,6 @@ class GeneratorMixin(LoraMixin):
         self.set_seed()
 
         if self.deterministic_data and self.deterministic:
-            print("x"*80)
-            print("Deterministic generation")
             return self.do_deterministic_generation(extra_options)
 
         # self.start_progress_bar(self.current_section)
