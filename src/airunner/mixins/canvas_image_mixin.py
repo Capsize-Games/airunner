@@ -293,7 +293,7 @@ class CanvasImageMixin:
             self.pos_x = 0
             self.pos_y = 0
 
-        data = {
+        processed_data = {
             "processed_image": processed_image,
             "image_root_point": image_root_point,
             "image_pivot_point": image_pivot_point,
@@ -305,14 +305,17 @@ class CanvasImageMixin:
         can be interrupted if needed. For example, the image interpolation window takes the processed image
         and displays it in the window rather than on the canvas.
         """
-        self.parent.add_image_to_canvas_signal.emit(data)
-
-        if data["add_image_to_canvas"]:
+        self.parent.add_image_to_canvas_signal.emit(processed_data)
+        is_deterministic = data["options"][f"deterministic_generation"]
+        if processed_data["add_image_to_canvas"] and not is_deterministic:
             self.add_image_to_canvas(
-                data["processed_image"],
-                image_root_point=data["image_root_point"],
-                image_pivot_point=data["image_pivot_point"]
+                processed_data["processed_image"],
+                image_root_point=processed_data["image_root_point"],
+                image_pivot_point=processed_data["image_pivot_point"]
             )
+        elif is_deterministic:
+            self.deterministic_images = processed_data["images"]
+            self.open_deterministic_window()
 
     def insert_rasterized_line_image(self, rect: QRect, img: Image, layer: LayerData):
         existing_image = layer.image_data.image
@@ -451,13 +454,15 @@ class CanvasImageMixin:
 
         return new_image, image_root_point, image_pivot_point
 
-    def add_image_to_canvas(self, image, image_root_point, image_pivot_point, layer:LayerData=None):
+    def add_image_to_canvas(self, image, image_root_point, image_pivot_point, layer:LayerData=None, use_outpaint=False):
         self.parent.history.add_event({
             "event": "set_image",
             "layer_index": self.current_layer_index,
             "images": self.current_layer.image_data
         })
         image = self.apply_opacity(image, self.current_layer.opacity)
+        if use_outpaint:
+            image, image_root_point, image_pivot_point = self.handle_outpaint(self.active_grid_area_rect, image)
 
         if not layer:
             layer = self.current_layer
@@ -469,6 +474,7 @@ class CanvasImageMixin:
             image_root_point=image_root_point,
             image_pivot_point=image_pivot_point
         )
+        self.update()
 
     def lower_opacity(self, i, diff):
         if i == 0:
