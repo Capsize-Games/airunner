@@ -4,6 +4,7 @@ from PyQt6 import uic
 from PyQt6.QtCore import Qt, QPoint
 from PyQt6.QtGui import QPixmap, QImage
 from PyQt6.QtWidgets import QFileDialog, QSpacerItem, QSizePolicy, QLabel
+from airunner.utils import image_to_pixmap
 from airunner.windows.base_window import BaseWindow
 from functools import partial
 
@@ -66,34 +67,6 @@ class ImageInterpolation(BaseWindow):
         self.app.window.sectionTabWidget.setCurrentIndex(1)
         self.app.window.stableDiffusionTabWidget.setCurrentIndex(0)
 
-    def image_to_pixmap(self, image: Image, size=None):
-        """
-        Converts a PIL image to a QPixmap.
-        :param image:
-        :return:
-        """
-        image_width = image.width
-        image_height = image.height
-
-        # scaale the image to the new width and height preserving the aspect ratio
-        if size is not None:
-            aspect_ratio = image_width / image_height
-            if image_width > image_height:
-                image_width = size
-                image_height = int(image_width / aspect_ratio)
-            else:
-                image_height = size
-                image_width = int(image_height * aspect_ratio)
-        image_copy = image.copy()
-        image_copy = image_copy.resize((image_width, image_height))
-        new_image = Image.new("RGB", (size, size))
-        new_image.paste(image_copy, (int((size - image_width) / 2), int((size - image_height) / 2)))
-        return QPixmap.fromImage(
-            QImage(
-                new_image.tobytes("raw", "RGB"), size, size, QImage.Format.Format_RGB888
-            )
-        )
-
     def handle_interpolated_image(self, image):
         """
         Called from the image processing pipeline after an image is generated. It displays
@@ -102,7 +75,7 @@ class ImageInterpolation(BaseWindow):
         :return:
         """
         widget = uic.loadUi(os.path.join("pyqt/generated_image.ui"))
-        pixmap = self.image_to_pixmap(image, 256)
+        pixmap = image_to_pixmap(image, 256)
         widget.image_container.setPixmap(pixmap)
         container = self.template.generate_scroll_area.widget()
         self.template.interpolated_images_label.hide()
@@ -126,7 +99,7 @@ class ImageInterpolation(BaseWindow):
         index = widget.slot_combobox.currentIndex()
         interpolation_widget = interpoloation_container.layout().itemAt(index).widget()
         widget_id = id(interpolation_widget)
-        pixmap = self.image_to_pixmap(image, 128)
+        pixmap = image_to_pixmap(image, 128)
         interpolation_widget.image_container.setPixmap(pixmap)
         self.images[widget_id] = image
 
@@ -245,7 +218,7 @@ class ImageInterpolation(BaseWindow):
             widget.image_container.setPixmap(QPixmap())
             return
         # convert pil image to pixmap
-        pixmap = self.image_to_pixmap(image, 128)
+        pixmap = image_to_pixmap(image, 128)
         widget.image_container.setPixmap(pixmap)
 
     def handle_interpolation_import_image_button(self, val, widget):
@@ -254,7 +227,7 @@ class ImageInterpolation(BaseWindow):
         if file_path == "":
             return
         image = Image.open(file_path)
-        pixmap = self.image_to_pixmap(image, 128)
+        pixmap = image_to_pixmap(image, 128)
         widget.layer_combobox.setCurrentIndex(0)
         widget.image_container.setPixmap(pixmap)
         widget_id = id(widget)

@@ -5,6 +5,7 @@ from PyQt6 import uic
 from PyQt6.QtCore import QRect, pyqtSignal
 from PyQt6.uic.exceptions import UIFileException
 from aihandler.settings import MAX_SEED, AVAILABLE_SCHEDULERS_BY_ACTION, MODELS
+from airunner.windows.deterministic_generation_window import DeterministicGenerationWindow
 from airunner.windows.video import VideoPopup
 from airunner.utils import load_default_models, load_models_from_path
 from airunner.mixins.lora_mixin import LoraMixin
@@ -13,6 +14,17 @@ from PIL import PngImagePlugin
 
 class GeneratorMixin(LoraMixin):
     generate_signal = pyqtSignal(dict)
+    deterministic_generation_window = None
+    deterministic_images = []
+    deterministic_data = None
+
+    @property
+    def deterministic(self):
+        return self.settings.deterministic.get()
+
+    @deterministic.setter
+    def deterministic(self, val):
+        self.settings.deterministic.set(val == True)
 
     @property
     def available_models(self):
@@ -263,7 +275,17 @@ class GeneratorMixin(LoraMixin):
                     self.tabs[tab].controlnet_label.deleteLater()
                     self.tabs[tab].controlnet_dropdown.deleteLater()
 
+                if tab in ["upscale", "superresolution", "txt2vid"] or tab_section == "kandinsky":
+                    self.tabs[tab].to_canvas_radio.deleteLater()
+                    self.tabs[tab].deterministic_radio.deleteLater()
+
+                # set up the deterministic vs regular geneartion radio buttons
                 self.tabs[tab].interrupt_button.clicked.connect(self.interrupt)
+                self.tabs[tab].to_canvas_radio.setChecked(not self.deterministic)
+                self.tabs[tab].deterministic_radio.setChecked(self.deterministic)
+                self.tabs[tab].deterministic_radio.toggled.connect(
+                    lambda val, _tab=self.tabs[tab]: self.handle_deterministic_radio_change(val, _tab)
+                )
 
         self.override_section = None
 
@@ -371,6 +393,9 @@ class GeneratorMixin(LoraMixin):
         self.initialize_size_form_elements()
         self.initialize_size_sliders()
         self.initialize_lora()
+
+    def handle_deterministic_radio_change(self, val, tab):
+        self.deterministic = tab.deterministic_radio.isChecked()
 
     def handle_downscale_spinbox_change(self, value, tab):
         current_value = self.downscale_amount
@@ -492,21 +517,24 @@ class GeneratorMixin(LoraMixin):
         filename = data["video_filename"]
         VideoPopup(settings_manager=self.settings_manager, file_path=filename)
 
-    def image_handler(self, image, data, nsfw_content_detected):
+    def image_handler(self, images, data, nsfw_content_detected):
         if data["action"] == "txt2vid":
             return self.video_handler(data)
 
         if self.settings_manager.settings.auto_export_images.get():
-            self.auto_export_image(image, data)
+            self.auto_export_image(images[0], data)
 
         self.stop_progress_bar(data["action"])
         if nsfw_content_detected and self.settings_manager.settings.nsfw_filter.get():
             self.message_handler("NSFW content detected, try again.", error=True)
+        elif data["options"][f"deterministic_generation"]:
+            self.deterministic_images = images
+            DeterministicGenerationWindow(self.settings_manager, app=self, images=self.deterministic_images, data=data)
         else:
             if data["action"] != "outpaint" and self.image_to_new_layer and self.canvas.current_layer.image_data.image is not None:
                 self.canvas.add_layer()
             # print width and height of image
-            self.canvas.image_handler(image, data)
+            self.canvas.image_handler(images[0], data)
             self.message_handler("")
             self.show_layers()
 
@@ -698,7 +726,6 @@ class GeneratorMixin(LoraMixin):
         else:
             self.generate(True)
 
-
     def prep_video(self):
         pass
 
@@ -716,6 +743,22 @@ class GeneratorMixin(LoraMixin):
 
     def tab_has_embeddings(self, tab):
         return tab not in ["upscale", "superresolution", "txt2vid"]
+
+    def new_batch(self, index, image, data):
+        """
+        Generate a batch of images using deterministic geneartion based on a previous deterministic generation
+        batch. The previous seed that was chosen should be re-used with the index added to it to generate the new
+        batch of images.
+        :return:
+        """
+        action = data["action"]
+        if not data["options"]["deterministic_seed"]:
+            data["options"][f"{action}_seed"] = data["options"][f"{action}_seed"] + index
+        self.deterministic_data = data
+        self.deterministic_index = index
+        self.generate(image)
+        self.deterministic_data = None
+        self.deterministic_images = None
 
     def generate(self, image=None):
         if self.current_section in ("upscale", "superresolution") and self.do_upscale_full_image:
@@ -813,21 +856,68 @@ class GeneratorMixin(LoraMixin):
         self.tabs[section].progressBar.reset()
         self.tabs[section].progressBar.setRange(0, 100)
 
+    def set_seed(self):
+        """
+        Set the seed - either set to random, deterministic or keep current, then display the seed in the UI.
+        :return:
+        """
+        if self.deterministic_data:
+            action = self.deterministic_data["action"]
+            self.seed = self.deterministic_data["options"][f"{action}_seed"]
+        elif self.random_seed:
+            seed = random.randint(0, MAX_SEED)
+            self.seed = seed
+        self.tabs[self.current_section].seed.setText(str(self.seed))
+
+    def get_memory_options(self):
+        return {
+            "use_last_channels": self.settings_manager.settings.use_last_channels.get(),
+            "use_enable_sequential_cpu_offload": self.settings_manager.settings.use_enable_sequential_cpu_offload.get(),
+            "enable_model_cpu_offload": self.settings_manager.settings.enable_model_cpu_offload.get(),
+            "use_attention_slicing": self.settings_manager.settings.use_attention_slicing.get(),
+            "use_tf32": self.settings_manager.settings.use_tf32.get(),
+            "use_cudnn_benchmark": self.settings_manager.settings.use_cudnn_benchmark.get(),
+            "use_enable_vae_slicing": self.settings_manager.settings.use_enable_vae_slicing.get(),
+            "use_accelerated_transformers": self.settings_manager.settings.use_accelerated_transformers.get(),
+            "use_torch_compile": self.settings_manager.settings.use_torch_compile.get(),
+            "use_tiled_vae": self.settings_manager.settings.use_tiled_vae.get(),
+        }
+
+    def do_deterministic_generation(self, extra_options):
+        action = self.deterministic_data["action"]
+        options = self.deterministic_data["options"]
+        options[f"{action}_prompt"] = self.deterministic_data[f"{action}_prompt"][self.deterministic_index]
+        memory_options = self.get_memory_options()
+        data = {
+            "action": action,
+            "options": {
+                **options,
+                **extra_options,
+                **memory_options,
+                "deterministic_generation": True,
+                "deterministic_seed": True,
+            }
+        }
+        self.client.message = data
+
     def do_generate(self, extra_options=None):
         if not extra_options:
             extra_options = {}
+
+        self.set_seed()
+
+        if self.deterministic_data and self.deterministic:
+            print("x"*80)
+            print("Deterministic generation")
+            return self.do_deterministic_generation(extra_options)
 
         # self.start_progress_bar(self.current_section)
 
         action = self.current_section
         tab = self.tabs[action]
 
-        if self.random_seed:
-            # randomize seed
-            seed = random.randint(0, MAX_SEED)
-            self.seed = seed
-            # set random_seed on current tab
-            self.tabs[action].seed.setText(str(seed))
+        self.settings.seed.set(self.seed)
+
         if action in ("txt2img", "img2img", "pix2pix", "depth2img", "txt2vid"):
             samples = self.samples
         else:
@@ -835,11 +925,6 @@ class GeneratorMixin(LoraMixin):
 
         prompt = self.tabs[action].prompt.toPlainText()
         negative_prompt = self.tabs[action].negative_prompt.toPlainText()
-        if self.random_seed:
-            seed = random.randint(0, MAX_SEED)
-            self.settings.seed.set(seed)
-        else:
-            seed = self.seed
 
         # set the model data
         model = tab.model_dropdown.currentText()
@@ -879,7 +964,6 @@ class GeneratorMixin(LoraMixin):
             controlnet = controlnet_dropdown.currentText()
             controlnet = controlnet.lower()
             use_controlnet = controlnet != "none"
-
         options = {
             f"{action}_prompt": prompt,
             f"{action}_negative_prompt": negative_prompt,
@@ -890,7 +974,7 @@ class GeneratorMixin(LoraMixin):
             f"{action}_height": self.height,
             f"{action}_n_samples": samples,
             f"{action}_scale": self.scale / 100,
-            f"{action}_seed": seed,
+            f"{action}_seed": self.seed,
             f"{action}_model": model,
             f"{action}_scheduler": self.scheduler,
             f"{action}_model_path": model_path,
@@ -907,6 +991,8 @@ class GeneratorMixin(LoraMixin):
             "hf_token": self.settings_manager.settings.hf_api_key.get(),
             "use_controlnet": use_controlnet,
             "controlnet": controlnet,
+            "deterministic_generation": self.deterministic,
+            "deterministic_seed": False,
         }
 
         if action == "superresolution":
@@ -925,18 +1011,7 @@ class GeneratorMixin(LoraMixin):
         """
         self.generate_signal.emit(options)
 
-        memory_options = {
-            "use_last_channels": self.settings_manager.settings.use_last_channels.get(),
-            "use_enable_sequential_cpu_offload": self.settings_manager.settings.use_enable_sequential_cpu_offload.get(),
-            "enable_model_cpu_offload": self.settings_manager.settings.enable_model_cpu_offload.get(),
-            "use_attention_slicing": self.settings_manager.settings.use_attention_slicing.get(),
-            "use_tf32": self.settings_manager.settings.use_tf32.get(),
-            "use_cudnn_benchmark": self.settings_manager.settings.use_cudnn_benchmark.get(),
-            "use_enable_vae_slicing": self.settings_manager.settings.use_enable_vae_slicing.get(),
-            "use_accelerated_transformers": self.settings_manager.settings.use_accelerated_transformers.get(),
-            "use_torch_compile": self.settings_manager.settings.use_torch_compile.get(),
-            "use_tiled_vae": self.settings_manager.settings.use_tiled_vae.get(),
-        }
+        memory_options = self.get_memory_options()
 
         data = {
             "action": action,
