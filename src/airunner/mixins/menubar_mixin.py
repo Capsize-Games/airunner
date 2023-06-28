@@ -125,8 +125,12 @@ class MenubarMixin:
         self.image_interpolation_window = None
 
     def show_deterministic_generation(self):
-        self.deterministic_window = DeterministicGenerationWindow(self.settings_manager, app=self, exec=False, images=self.deterministic_images)
-        self.deterministic_window.show()
+        if not self.deterministic_window:
+            self.deterministic_window = DeterministicGenerationWindow(self.settings_manager, app=self, exec=False, images=self.deterministic_images)
+            self.deterministic_window.show()
+            self.deterministic_window = None
+        else:
+            self.deterministic_window.update_images(self.deterministic_images)
 
     def close_deterministic_generation_window(self):
         self.deterministic_window = None
