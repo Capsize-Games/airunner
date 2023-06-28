@@ -5,7 +5,7 @@ from PyQt6 import uic, QtCore
 from PyQt6.QtWidgets import QApplication, QFileDialog
 from PyQt6.QtCore import pyqtSlot, Qt, QThread, pyqtSignal, QObject
 from PyQt6.QtGui import QGuiApplication
-from aihandler.qtvar import TQDMVar, ImageVar, MessageHandlerVar, ErrorHandlerVar
+from aihandler.qtvar import TQDMVar, ImageVar, MessageHandlerVar, ErrorHandlerVar, StringVar
 from aihandler.settings import LOG_LEVEL
 from airunner.mixins.brushes_mixin import BrushesMixin
 from airunner.mixins.canvas_mixin import CanvasMixin
@@ -227,8 +227,28 @@ class MainWindow(
         # check for self.current_layer.lines every 100ms
         self.timer = self.startTimer(100)
 
+        self.set_size_increment_levels()
+
         if not self.testing:
             self.exec()
+
+    def set_size_increment_levels(self):
+        size = self.canvas.grid_size
+        self.window.width_slider.setSingleStep(size)
+        self.window.width_slider.singleStep = size
+        self.window.width_slider.tickInterval = size
+        self.window.width_slider.minimum = size
+        self.window.width_spinbox.setSingleStep(size)
+        self.window.width_spinbox.minimum = size
+
+        self.window.height_slider.setSingleStep(size)
+        self.window.height_slider.pagestep = size
+        self.window.height_slider.tickInterval = size
+        self.window.height_slider.minimum = size
+        self.window.height_spinbox.setSingleStep(size)
+        self.window.height_spinbox.minimum = size
+
+
 
     def timerEvent(self, event):
         self.canvas.timerEvent(event)
@@ -348,7 +368,7 @@ class MainWindow(
 
     def initialize_window(self):
         HERE = os.path.dirname(os.path.abspath(__file__))
-        self.window = uic.loadUi(os.path.join(HERE, "pyqt/main_window.ui"))
+        self.window = uic.loadUi(os.path.join(HERE, "pyqt/main_window_new.ui"))
         self.center()
         self.set_window_title()
 

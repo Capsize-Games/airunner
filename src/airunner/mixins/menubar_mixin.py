@@ -1,5 +1,6 @@
 from PyQt6.QtWidgets import QFileDialog
 from airunner.windows.advanced_settings import AdvancedSettings
+from airunner.windows.deterministic_generation_window import DeterministicGenerationWindow
 from airunner.windows.export_preferences import ExportPreferences
 from airunner.filters.filter_box_blur import FilterBoxBlur
 from airunner.filters.filter_color_balance import FilterColorBalance
@@ -44,6 +45,7 @@ class MenubarMixin:
         self.window.actionSave_prompt.triggered.connect(self.save_prompt)
         self.window.actionPrompt_Browser.triggered.connect(self.show_prompt_browser)
         self.window.image_interpolation.triggered.connect(self.show_image_interpolation)
+        self.window.actionDeterministic_generation.triggered.connect(self.show_deterministic_generation)
 
     def show_prompt_browser(self):
         PromptBrowser(settings_manager=self.prompts_manager, app=self)
@@ -121,3 +123,12 @@ class MenubarMixin:
         self.image_interpolation_window = ImageInterpolation(self.settings_manager, app=self, exec=False)
         self.image_interpolation_window.show()
         self.image_interpolation_window = None
+
+    def show_deterministic_generation(self):
+        self.deterministic_window = DeterministicGenerationWindow(self.settings_manager, app=self, exec=False, images=self.deterministic_images)
+        self.deterministic_window.show()
+
+    def close_deterministic_generation_window(self):
+        self.deterministic_window = None
+        self.deterministic_data = None
+        self.deterministic_images = None
