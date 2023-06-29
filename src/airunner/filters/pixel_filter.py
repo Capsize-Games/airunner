@@ -4,16 +4,23 @@ from PIL import Image, ImageFilter
 class PixelFilter(ImageFilter.Filter):
     name = "Resize Filter"
     current_number_of_colors = 0
-    image = None
 
     def __init__(self, number_of_colors=24, smoothing=1, base_size=16):
         self.number_of_colors = number_of_colors
         self.smoothing = smoothing
         self.base_size = base_size
+        self.image = None
+        self.image_id = None
 
     def filter(self, image):
+        reset_colors = False
+        if not self.image_id or self.image_id != id(image):
+            self.image_id = id(image)
+            self.image = image
+            reset_colors = True
+
         # Reduce number of colors
-        if self.current_number_of_colors != self.number_of_colors:
+        if self.current_number_of_colors != self.number_of_colors or reset_colors:
             self.current_number_of_colors = self.number_of_colors
             quantized = image.quantize(self.number_of_colors)
             self.image = quantized.convert("RGBA")
