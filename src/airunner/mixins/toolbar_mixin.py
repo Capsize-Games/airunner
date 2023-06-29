@@ -131,7 +131,7 @@ class ToolbarMixin:
         self.set_darkmode_checkbox()
 
     def set_darkmode_checkbox(self):
-        self.window.actionDark_mode.setChecked(self.settings_manager.settings.dark_mode_enabled.get())
+        self.window.actionDark_mode.setChecked(self.settings_manager.settings.dark_mode_enabled.get() == True)
 
     def set_stylesheet(self):
         icons = {
