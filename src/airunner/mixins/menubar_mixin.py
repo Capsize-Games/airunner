@@ -15,6 +15,7 @@ from airunner.windows.prompt_browser import PromptBrowser
 
 class MenubarMixin:
     image_interpolation_window = None
+    deterministic_window = None
 
     def initialize(self):
         self.window.actionNew.triggered.connect(self.new_document)
