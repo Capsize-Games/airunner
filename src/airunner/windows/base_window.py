@@ -22,6 +22,7 @@ class BaseWindow:
         self.template.setWindowTitle(self.window_title)
         if self.is_modal:
             self.template.setWindowModality(Qt.WindowModality.WindowModal)
+            self.template.setWindowFlag(Qt.WindowType.WindowStaysOnTopHint)
         self.initialize_window()
         settings_manager.enable_save()
         if exec:
