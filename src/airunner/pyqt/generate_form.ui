@@ -107,6 +107,11 @@
            <height>16777215</height>
           </size>
          </property>
+         <property name="font">
+          <font>
+           <pointsize>10</pointsize>
+          </font>
+         </property>
          <property name="frameShadow">
           <enum>QFrame::Sunken</enum>
          </property>
@@ -144,6 +149,11 @@
            <width>16777215</width>
            <height>16777215</height>
           </size>
+         </property>
+         <property name="font">
+          <font>
+           <pointsize>10</pointsize>
+          </font>
          </property>
         </widget>
        </item>
@@ -1087,8 +1097,8 @@
            <rect>
             <x>0</x>
             <y>0</y>
-            <width>313</width>
-            <height>720</height>
+            <width>98</width>
+            <height>48</height>
            </rect>
           </property>
           <layout class="QVBoxLayout" name="verticalLayout"/>
@@ -1112,8 +1122,8 @@
            <rect>
             <x>0</x>
             <y>0</y>
-            <width>313</width>
-            <height>713</height>
+            <width>98</width>
+            <height>28</height>
            </rect>
           </property>
          </widget>
