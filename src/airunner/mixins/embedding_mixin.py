@@ -1,5 +1,8 @@
 import os
+from functools import partial
+
 import torch
+from PyQt6 import uic
 from PyQt6.QtWidgets import QLabel, QWidget, QVBoxLayout
 
 
@@ -35,9 +38,11 @@ class EmbeddingMixin:
         container = QWidget()
         container.setLayout(QVBoxLayout())
         for embedding_name in self.embedding_names:
-            label = QLabel(embedding_name)
-            container.layout().addWidget(label)
-            label.mouseDoubleClickEvent = lambda event, _label=label: self.insert_into_prompt(_label.text())
+            widget = uic.loadUi("pyqt/embedding.ui")
+            widget.label.setText(embedding_name)
+            widget.to_prompt_button.clicked.connect(partial(self.insert_into_prompt, f"{embedding_name}"))
+            widget.to_negative_prompt_button.clicked.connect(partial(self.insert_into_prompt, f"{embedding_name}", True))
+            container.layout().addWidget(widget)
         container.layout().addStretch()
         tab.embeddings.setWidget(container)
 
@@ -65,6 +70,13 @@ class EmbeddingMixin:
                 tokens.append(words)
         return tokens
 
-    def insert_into_prompt(self, text):
+    def insert_into_prompt(self, text, negative_prompt=False):
         tab = self.tabWidget.currentWidget()
-        tab.prompt.insertPlainText(text)
+        if negative_prompt:
+            current_text = tab.negative_prompt.toPlainText()
+            text = f"{current_text}, {text}" if current_text != "" else text
+            tab.negative_prompt.setPlainText(text)
+        else:
+            current_text = tab.prompt.toPlainText()
+            text = f"{current_text}, {text}" if current_text != "" else text
+            tab.prompt.setPlainText(text)
