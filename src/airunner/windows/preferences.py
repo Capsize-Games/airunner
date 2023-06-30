@@ -39,13 +39,19 @@ class PreferencesWindow(BaseWindow):
             lambda val: self.settings_manager.settings.image_path.set(val))
         self.template.image_path_browse_button.clicked.connect(
             lambda: self.browse_for_image_path(self.template.image_path))
+        self.template.video_path.textChanged.connect(
+            lambda val: self.settings_manager.settings.video_path.set(val))
+        self.template.video_path_browse_button.clicked.connect(
+            lambda: self.browse_for_video_path(self.template.video_path))
         self.template.sd_path.setText(self.settings_manager.settings.model_base_path.get())
         self.template.depthtoimg_model_path.setText(self.settings_manager.settings.depth2img_model_path.get())
         self.template.pixtopix_model_path.setText(self.settings_manager.settings.pix2pix_model_path.get())
         self.template.inpaint_outpaint_model_path.setText(self.settings_manager.settings.outpaint_model_path.get())
+        self.template.upscale_model_path.setText(self.settings_manager.settings.upscale_model_path.get())
         self.template.embeddings_path.setText(self.settings_manager.settings.embeddings_path.get())
         self.template.lora_path.setText(self.settings_manager.settings.lora_path.get())
         self.template.image_path.setText(self.settings_manager.settings.image_path.get())
+        self.template.video_path.setText(self.settings_manager.settings.video_path.get())
 
         # Removing extensions settings until feature is complete:
         # self.template.hf_token.textChanged.connect(
@@ -101,6 +107,14 @@ class PreferencesWindow(BaseWindow):
             self.settings_manager.settings.image_path.get())
         line_edit.setText(path)
         self.settings_manager.settings.image_path.set(path)
+
+    def browse_for_video_path(self, line_edit):
+        path = QFileDialog.getExistingDirectory(
+            None,
+            "Select Directory",
+            self.settings_manager.settings.video_path.get())
+        line_edit.setText(path)
+        self.settings_manager.settings.video_path.set(path)
 
     def browse_for_depthtoimg_model_path(self, line_edit):
         # get path, not file
