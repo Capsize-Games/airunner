@@ -6,7 +6,7 @@
    <rect>
     <x>0</x>
     <y>0</y>
-    <width>522</width>
+    <width>457</width>
     <height>429</height>
    </rect>
   </property>
@@ -114,16 +114,6 @@
        </property>
        <property name="text">
         <string>Export metadata</string>
-       </property>
-      </widget>
-     </item>
-     <item row="0" column="2">
-      <widget class="QCheckBox" name="import_metadata">
-       <property name="toolTip">
-        <string>&lt;html&gt;&lt;head/&gt;&lt;body&gt;&lt;p&gt;Automatically load metadata into generator options. &lt;/p&gt;&lt;p&gt;Only works with PNG files.&lt;/p&gt;&lt;/body&gt;&lt;/html&gt;</string>
-       </property>
-       <property name="text">
-        <string>Import metadata</string>
        </property>
       </widget>
      </item>
@@ -242,6 +232,16 @@
         </size>
        </property>
       </spacer>
+     </item>
+     <item row="7" column="1">
+      <widget class="QCheckBox" name="import_metadata">
+       <property name="toolTip">
+        <string>&lt;html&gt;&lt;head/&gt;&lt;body&gt;&lt;p&gt;Automatically load metadata into generator options. &lt;/p&gt;&lt;p&gt;Only works with PNG files.&lt;/p&gt;&lt;/body&gt;&lt;/html&gt;</string>
+       </property>
+       <property name="text">
+        <string>Import metadata</string>
+       </property>
+      </widget>
      </item>
     </layout>
    </item>
