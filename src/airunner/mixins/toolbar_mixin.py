@@ -5,9 +5,7 @@ import qdarktheme
 import webbrowser
 from airunner.windows.about import AboutWindow
 from airunner.windows.extensions import ExtensionsWindow
-from airunner.windows.grid_settings import GridSettings
 from airunner.windows.model_merger import ModelMerger
-from airunner.windows.preferences import PreferencesWindow
 
 
 class ToolbarMixin:
@@ -35,12 +33,8 @@ class ToolbarMixin:
             self.window.grid_button.setChecked(True)
         if self.settings_manager.settings.nsfw_filter.get():
             self.window.nsfw_button.setChecked(True)
-        self.window.actionDark_mode.triggered.connect(self.toggle_darkmode)
-        self.window.actionGrid.triggered.connect(self.show_grid_settings)
-        self.window.actionPreferences.triggered.connect(self.show_preferences)
         self.window.actionAbout.triggered.connect(self.show_about)
         self.window.actionModel_Merger.triggered.connect(self.show_model_merger)
-        self.window.actionCanvas_color.triggered.connect(self.show_canvas_color)
         self.window.actionBug_report.triggered.connect(lambda: webbrowser.open(
             "https://github.com/Capsize-Games/airunner/issues/new?assignees=&labels=&template=bug_report.md&title="))
         self.window.actionReport_vulnerability.triggered.connect(
@@ -48,7 +42,6 @@ class ToolbarMixin:
         self.window.actionDiscord.triggered.connect(lambda: webbrowser.open("https://discord.gg/PUVDDCJ7gz"))
         self.window.actionInvert.triggered.connect(self.do_invert)
         self.window.actionFilm.triggered.connect(self.do_film)
-        self.set_darkmode_checkbox()
         # self.initialize_toolbar_extensions()  # TODO: Extensions
 
     """
@@ -86,12 +79,6 @@ class ToolbarMixin:
     def show_about(self):
         AboutWindow(self.settings_manager, app=self)
 
-    def show_grid_settings(self):
-        GridSettings(self.settings_manager, app=self)
-
-    def show_preferences(self):
-        PreferencesWindow(self.settings_manager, app=self)
-
     def set_tool(self, tool):
         # uncheck all buttons that are not this tool
         if tool != "brush":
@@ -126,12 +113,7 @@ class ToolbarMixin:
         self.canvas.recenter()
 
     def toggle_darkmode(self):
-        self.settings_manager.settings.dark_mode_enabled.set(not self.settings_manager.settings.dark_mode_enabled.get())
         self.set_stylesheet()
-        self.set_darkmode_checkbox()
-
-    def set_darkmode_checkbox(self):
-        self.window.actionDark_mode.setChecked(self.settings_manager.settings.dark_mode_enabled.get() == True)
 
     def set_stylesheet(self):
         icons = {

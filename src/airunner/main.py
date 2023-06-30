@@ -17,6 +17,7 @@ from airunner.mixins.history_mixin import HistoryMixin
 from airunner.mixins.layer_mixin import LayerMixin
 from airunner.mixins.menubar_mixin import MenubarMixin
 from airunner.mixins.toolbar_mixin import ToolbarMixin
+from airunner.windows.settings import SettingsWindow
 from airunner.windows.update_window import UpdateWindow
 from airunner.windows.video import VideoPopup
 from airunner.utils import get_version, get_latest_version
@@ -332,11 +333,10 @@ class MainWindow(
             self.reset_settings()
             self.settings_manager.settings.force_reset.set(False)
         self.window.actionShow_Active_Image_Area.setChecked(self.settings_manager.settings.show_active_image_area.get() == True)
-        self.window.actionShow_Active_Image_Area.triggered.connect(self.toggle_show_active_image_area)
+        self.window.actionSettings.triggered.connect(self.show_settings)
 
-    def toggle_show_active_image_area(self):
-        self.settings_manager.settings.show_active_image_area.set(self.window.actionShow_Active_Image_Area.isChecked())
-        self.canvas.update()
+    def show_settings(self):
+        SettingsWindow(self.settings_manager, app=self)
 
     def initialize_saved_prompts(self):
         self.prompts_manager = PromptManager()
@@ -346,7 +346,6 @@ class MainWindow(
         self.settings_manager = SettingsManager()
         self.settings_manager.disable_save()
         # self.get_extensions_from_path()  TODO: Extensions
-        self.settings_manager.settings.canvas_color.my_signal.connect(self.update_canvas_color)
         self.settings_manager.settings.size.my_signal.connect(self.set_size_form_element_step_values)
         self.settings_manager.settings.line_width.my_signal.connect(self.set_size_form_element_step_values)
 
