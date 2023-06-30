@@ -17,6 +17,9 @@
    <property name="leftMargin">
     <number>0</number>
    </property>
+   <property name="rightMargin">
+    <number>0</number>
+   </property>
    <item row="0" column="0">
     <layout class="QGridLayout" name="gridLayout">
      <item row="3" column="0">
