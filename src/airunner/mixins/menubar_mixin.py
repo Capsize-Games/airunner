@@ -99,7 +99,7 @@ class MenubarMixin:
 
     def show_deterministic_generation(self):
         if not self.deterministic_window:
-            self.deterministic_window = DeterministicGenerationWindow(self.settings_manager, app=self, exec=False, images=self.deterministic_images)
+            self.deterministic_window = DeterministicGenerationWindow(self.settings_manager, app=self, exec=False, images=self.deterministic_images, data=self.data)
             self.deterministic_window.show()
             self.deterministic_window = None
         else:

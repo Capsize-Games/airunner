@@ -63,6 +63,7 @@ class MainWindow(
     _latest_version = None
     use_interpolation = None
     add_image_to_canvas_signal = pyqtSignal(dict)
+    data = None  # this is set in the generator_mixin image_handler function and used for deterministic generation
 
     @property
     def grid_size(self):
