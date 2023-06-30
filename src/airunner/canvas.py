@@ -411,3 +411,8 @@ class Canvas(
     def reset_settings(self):
         self.parent.window.width_slider.setValue(self.settings_manager.settings.working_width.get())
         self.parent.window.height_slider.setValue(self.settings_manager.settings.working_height.get())
+
+    def update_canvas_color(self, color):
+        self.parent.window.canvas_container.setStyleSheet(f"background-color: {color};")
+        self.parent.window.canvas_container.setAutoFillBackground(True)
+        self.update()
