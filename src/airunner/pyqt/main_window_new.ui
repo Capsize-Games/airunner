@@ -1428,9 +1428,10 @@
      <string>File</string>
     </property>
     <addaction name="actionNew"/>
-    <addaction name="separator"/>
-    <addaction name="actionSave"/>
     <addaction name="actionLoad"/>
+    <addaction name="actionSave"/>
+    <addaction name="separator"/>
+    <addaction name="actionSettings"/>
     <addaction name="separator"/>
     <addaction name="actionExport"/>
     <addaction name="actionImport"/>
@@ -1450,29 +1451,6 @@
     <addaction name="separator"/>
     <addaction name="actionRotate_90_clockwise"/>
     <addaction name="actionRotate_90_counter_clockwise"/>
-   </widget>
-   <widget class="QMenu" name="menuSettings">
-    <property name="title">
-     <string>Settings</string>
-    </property>
-    <addaction name="actionPreferences"/>
-    <addaction name="separator"/>
-    <addaction name="actionGrid"/>
-    <addaction name="actionCanvas_color"/>
-    <addaction name="separator"/>
-    <addaction name="actionCheck_for_latest_version_on_startup"/>
-    <addaction name="actionResize_on_Paste"/>
-    <addaction name="actionImage_to_new_layer"/>
-    <addaction name="separator"/>
-    <addaction name="actionShow_Active_Image_Area"/>
-    <addaction name="separator"/>
-    <addaction name="actionImage_export_settings"/>
-    <addaction name="separator"/>
-    <addaction name="actionAdvanced"/>
-    <addaction name="separator"/>
-    <addaction name="actionReset_Settings"/>
-    <addaction name="separator"/>
-    <addaction name="actionDark_mode"/>
    </widget>
    <widget class="QMenu" name="menuFilters">
     <property name="title">
@@ -1524,7 +1502,6 @@
    </widget>
    <addaction name="menuFile"/>
    <addaction name="menuEdit"/>
-   <addaction name="menuSettings"/>
    <addaction name="menuModel_merge"/>
    <addaction name="menuFilters"/>
    <addaction name="menuAbout"/>
@@ -1902,6 +1879,11 @@
   <action name="actionConsole_window">
    <property name="text">
     <string>Console window</string>
+   </property>
+  </action>
+  <action name="actionSettings">
+   <property name="text">
+    <string>Settings</string>
    </property>
   </action>
  </widget>

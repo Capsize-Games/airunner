@@ -1,7 +1,5 @@
 from PyQt6.QtWidgets import QFileDialog
-from airunner.windows.advanced_settings import AdvancedSettings
 from airunner.windows.deterministic_generation_window import DeterministicGenerationWindow
-from airunner.windows.export_preferences import ExportPreferences
 from airunner.filters.filter_box_blur import FilterBoxBlur
 from airunner.filters.filter_color_balance import FilterColorBalance
 from airunner.filters.filter_gaussian_blur import FilterGaussianBlur
@@ -26,23 +24,9 @@ class MenubarMixin:
         self.window.actionQuit.triggered.connect(self.quit)
         self.window.actionPaste.triggered.connect(self.paste_image)
         self.window.actionCopy.triggered.connect(self.copy_image)
-        self.window.actionResize_on_Paste.triggered.connect(self.toggle_resize_on_paste)
-        self.window.actionImage_to_new_layer.triggered.connect(self.toggle_image_to_new_layer)
-        self.window.actionReset_Settings.triggered.connect(self.reset_settings)
         self.window.actionRotate_90_clockwise.triggered.connect(self.canvas.rotate_90_clockwise)
         self.window.actionRotate_90_counter_clockwise.triggered.connect(self.canvas.rotate_90_counterclockwise)
         self.initialize_filter_actions()
-        self.window.actionResize_on_Paste.setChecked(self.settings_manager.settings.resize_on_paste.get() == True)
-        self.window.actionImage_to_new_layer.setChecked(self.settings_manager.settings.image_to_new_layer.get() == True)
-        self.window.actionAdvanced.triggered.connect(self.show_advanced)
-        self.window.actionImage_export_settings.triggered.connect(self.show_export_preferences)
-        self.window.actionCheck_for_latest_version_on_startup.setChecked(
-            self.settings_manager.settings.latest_version_check.get() == True)
-        self.window.actionCheck_for_latest_version_on_startup.triggered.connect(
-            lambda: self.settings_manager.settings.latest_version_check.set(
-                self.window.actionCheck_for_latest_version_on_startup.isChecked()
-            )
-        )
         self.window.actionSave_prompt.triggered.connect(self.save_prompt)
         self.window.actionPrompt_Browser.triggered.connect(self.show_prompt_browser)
         self.window.image_interpolation.triggered.connect(self.show_image_interpolation)
@@ -107,18 +91,6 @@ class MenubarMixin:
 
     def copy_image(self):
         self.canvas.copy_image()
-
-    def toggle_resize_on_paste(self):
-        self.settings_manager.settings.resize_on_paste.set(self.window.actionResize_on_Paste.isChecked())
-
-    def toggle_image_to_new_layer(self):
-        self.settings_manager.settings.image_to_new_layer.set(self.window.actionImage_to_new_layer.isChecked())
-
-    def show_advanced(self):
-        AdvancedSettings(self.settings_manager)
-
-    def show_export_preferences(self):
-        ExportPreferences(self.settings_manager)
 
     def show_image_interpolation(self):
         self.image_interpolation_window = ImageInterpolation(self.settings_manager, app=self, exec=False)
