@@ -12,7 +12,7 @@
 
 ---
 
-### Stable Diffusion on your own hardware 
+### Stable Diffusion and Kandinsky on your own hardware 
 
 No web server to run, additional requirements to install or technical knowledge required. 
 
@@ -20,7 +20,7 @@ No web server to run, additional requirements to install or technical knowledge 
 
 ---
 
-![img.png](img.png)
+![Screenshot from 2023-06-30 10-43-49](https://github.com/Capsize-Games/airunner/assets/25737761/72e0dd26-53ca-4d5c-8f07-b6327a59b50c)
 
 ## ⭐ Features
 
