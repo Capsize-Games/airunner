@@ -518,6 +518,7 @@ class GeneratorMixin(LoraMixin):
         VideoPopup(settings_manager=self.settings_manager, file_path=filename)
 
     def image_handler(self, images, data, nsfw_content_detected):
+        self.data = data
         if data["action"] == "txt2vid":
             return self.video_handler(data)
 
