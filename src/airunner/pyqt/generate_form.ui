@@ -1189,6 +1189,11 @@
            <height>50</height>
           </size>
          </property>
+         <property name="font">
+          <font>
+           <pointsize>10</pointsize>
+          </font>
+         </property>
          <property name="widgetResizable">
           <bool>true</bool>
          </property>
@@ -1198,7 +1203,7 @@
             <x>0</x>
             <y>0</y>
             <width>400</width>
-            <height>605</height>
+            <height>707</height>
            </rect>
           </property>
           <layout class="QVBoxLayout" name="verticalLayout"/>
@@ -1223,7 +1228,7 @@
             <x>0</x>
             <y>0</y>
             <width>400</width>
-            <height>598</height>
+            <height>700</height>
            </rect>
           </property>
          </widget>
