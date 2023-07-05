@@ -51,31 +51,23 @@ class HeaderWidget(BaseWidget):
         # had layoutHorizontalSpacing to the layout
         self.frame.layout().setHorizontalSpacing(10)
 
-        # create a push button for color
-        self.color_button = QPushButton()
-        self.color_button.setFixedSize(100, 30)
-        self.update_color_button()
-        self.color_button.clicked.connect(self.app.set_primary_color)
         try:
             self.frame.layout().addWidget(self.width_slider_widget, 0, 7, 1, 1)
             self.frame.layout().addWidget(self.height_slider_widget, 0, 8, 1, 1)
             self.frame.layout().addWidget(self.brush_size_slider_widget, 0, 9, 1, 1)
-            #self.frame.layout().addWidget(self.color_button, 0, 10, 1, 1)
         except Exception as e:
             print(e)
 
         self.update_widget_values()
-
-    @pyqtSlot(str)
-    def update_color_button(self, message=""):
-        print(message)
-        color = self.settings_manager.settings.primary_color.get()
-        self.color_button.setStyleSheet(f"background-color: {color}; border-radius: 0; border: 1px solid #d2d2d2;")
+        self.app.register_setting_handler("size", self.update_widget_values)
 
     def update_widget_values(self):
         if self.settings_manager:
             brush_size = self.settings_manager.settings.mask_brush_size.get()
             self.brush_size_slider_widget.update_value(brush_size)
+
+            self.width_slider_widget.set_tick_value(self.app.grid_size)
+            self.height_slider_widget.set_tick_value(self.app.grid_size)
             self.width_slider_widget.update_value(self.app.working_width)
             self.height_slider_widget.update_value(self.app.working_height)
             self.app.set_size_form_element_step_values()

@@ -93,16 +93,16 @@ class SliderWidget(QWidget):
 
         uic.loadUi("pyqt/widgets/slider.ui", self)
 
-        self.slider_minimum = slider_minimum
-        self.slider_maximum = slider_maximum
-        self.slider_tick_interval = slider_tick_interval
         self.slider_callback = slider_callback
+        self.slider_maximum = slider_maximum
+        self.slider_minimum = slider_minimum
+        self.slider_tick_interval = slider_tick_interval
         self.slider_single_step = slider_single_step
         self.slider_page_step = slider_page_step
-        self.spinbox_minimum = spinbox_minimum
-        self.spinbox_maximum = spinbox_maximum
         self.spinbox_single_step = spinbox_single_step
         self.spinbox_page_step = spinbox_page_step
+        self.spinbox_minimum = spinbox_minimum
+        self.spinbox_maximum = spinbox_maximum
         self.label_text = label_text
 
         self.label = QLabel(f"{self.label_text} 0")
@@ -169,3 +169,17 @@ class SliderWidget(QWidget):
     def update_value(self, val):
         self.slider.setValue(val)
         self.label.setText(f"{self.label_text} {str(val)}")
+
+    def set_tick_value(self, val):
+        """
+        This will set all intervals in spinbox and slider to the same amount.
+        :param val:
+        :return:
+        """
+        self.slider_minimum = val
+        self.slider_tick_interval = val
+        self.slider_single_step = val
+        self.slider_page_step = val
+        self.spinbox_single_step = val
+        self.spinbox_page_step = val
+        self.spinbox_minimum = val
