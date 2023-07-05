@@ -26,27 +26,48 @@
    <property name="bottomMargin">
     <number>0</number>
    </property>
-   <item row="2" column="0">
-    <widget class="QPushButton" name="to_prompt_button">
+   <property name="spacing">
+    <number>0</number>
+   </property>
+   <item row="2" column="1">
+    <widget class="QPushButton" name="to_negative_prompt_button">
+     <property name="minimumSize">
+      <size>
+       <width>90</width>
+       <height>0</height>
+      </size>
+     </property>
      <property name="font">
       <font>
        <pointsize>10</pointsize>
       </font>
      </property>
      <property name="text">
-      <string>To Prompt</string>
+      <string>Neg Prompt</string>
+     </property>
+     <property name="flat">
+      <bool>true</bool>
      </property>
     </widget>
    </item>
-   <item row="2" column="1">
-    <widget class="QPushButton" name="to_negative_prompt_button">
+   <item row="2" column="0">
+    <widget class="QPushButton" name="to_prompt_button">
+     <property name="minimumSize">
+      <size>
+       <width>90</width>
+       <height>0</height>
+      </size>
+     </property>
      <property name="font">
       <font>
        <pointsize>10</pointsize>
       </font>
      </property>
      <property name="text">
-      <string>To Negative Prompt</string>
+      <string>Prompt</string>
+     </property>
+     <property name="flat">
+      <bool>true</bool>
      </property>
     </widget>
    </item>
@@ -61,6 +82,19 @@
       <string>TextLabel</string>
      </property>
     </widget>
+   </item>
+   <item row="2" column="2">
+    <spacer name="horizontalSpacer">
+     <property name="orientation">
+      <enum>Qt::Horizontal</enum>
+     </property>
+     <property name="sizeHint" stdset="0">
+      <size>
+       <width>40</width>
+       <height>20</height>
+      </size>
+     </property>
+    </spacer>
    </item>
   </layout>
  </widget>
