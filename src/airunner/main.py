@@ -496,36 +496,14 @@ class MainWindow(
         # if the shift key is pressed
         if QtCore.Qt.KeyboardModifier.ShiftModifier in event.modifiers():
             delta = event.angleDelta().y()
-
-            if delta < 0:
-                delta = delta / 2
-
-            size = int(self.settings_manager.settings.working_height.get() + delta)
-            size = int(size / grid_size) * grid_size
-
-            if size < grid_size:
-                size = grid_size
-
-            self.height = size
-            self.canvas.update()
-            self.header_widget.height_slider_widget.slider.setValue(size)
+            increment = grid_size if delta > 0 else -grid_size
+            self.working_width = int(self.working_width + increment)
 
         # if the control key is pressed
         if QtCore.Qt.KeyboardModifier.ControlModifier in event.modifiers():
             delta = event.angleDelta().y()
-
-            if delta < 0:
-                delta = delta / 2
-
-            size = int(self.settings_manager.settings.working_width.get() + delta)
-            size = int(size / grid_size) * grid_size
-
-            if size < grid_size:
-                size = grid_size
-
-            self.width = size
-            self.canvas.update()
-            self.header_widget.width_slider_widget.slider.setValue(size)
+            increment = grid_size if delta > 0 else -grid_size
+            self.working_height = int(self.working_height + increment)
 
     def toggle_stylesheet(self, path):
         # use fopen to open the file
