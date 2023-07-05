@@ -218,8 +218,9 @@ class CanvasBrushesMixin:
             ), fill=(0, 0, 0, 0))
             self.current_layer.image_data.image = image
             self.last_pos = start
+            self.current_layer.layer_widget.set_thumbnail()
             self.update()
-        self.update()
+        #self.update()
 
     def pen(self, event):
         brush_color = "#ffffff"
