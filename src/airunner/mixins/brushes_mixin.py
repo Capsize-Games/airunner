@@ -1,23 +1,14 @@
+from PyQt6.QtGui import QColor
 from PyQt6.QtWidgets import QColorDialog
 
 
 class BrushesMixin:
-    def initialize(self):
-        self.window.primary_color_button.clicked.connect(self.set_primary_color)
-        self.set_button_colors()
-
-    def reset_settings(self):
-        self.window.primary_color_button.setStyleSheet(f"background-color: {self.settings_manager.settings.primary_color.get()};")
-        self.window.brush_size_slider.setValue(self.settings_manager.settings.size.get())
-
     def set_primary_color(self):
-        # display a color picker
-        color = QColorDialog.getColor()
+        # display a color picker and keep on top
+        color_name:str = self.settings_manager.settings.primary_color.get()
+        qcolor = QColor(color_name)
+        color_dialog = QColorDialog(self)
+        # color = self.layout().addWidget(color_dialog)
+        color = color_dialog.getColor(qcolor, None, "Select Color")
         if color.isValid():
             self.settings_manager.settings.primary_color.set(color.name())
-            self.set_button_colors()
-
-    def set_button_colors(self):
-        self.window.primary_color_button.setStyleSheet(
-            f"background-color: {self.settings_manager.settings.primary_color.get()};"
-        )
