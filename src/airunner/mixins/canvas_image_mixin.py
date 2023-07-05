@@ -105,9 +105,11 @@ class CanvasImageMixin:
     def draw_images(self, layer, painter):
         img = self.visible_image(layer=layer)
         if img:
+            offset = layer.offset
             qimage = ImageQt(img)
             pixmap = QPixmap.fromImage(qimage)
             painter.drawPixmap(QPoint(0, 0), pixmap)
+            # painter.drawPixmap(offset, pixmap)
 
     def copy_image(self):
         im = self.current_active_image_data
@@ -472,6 +474,9 @@ class CanvasImageMixin:
             image_root_point=image_root_point,
             image_pivot_point=image_pivot_point
         )
+        # get layer widget from self.parent.tool_menu_widget.layer_container_widget.layers
+
+        layer.layer_widget.set_thumbnail()
         self.update()
 
     def lower_opacity(self, i, diff):
