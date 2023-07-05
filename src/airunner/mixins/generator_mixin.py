@@ -1,8 +1,11 @@
 import os
 import random
+from functools import partial
+
 from PIL import Image
-from PyQt6 import uic
-from PyQt6.QtCore import QRect, pyqtSignal
+from PyQt6 import uic, QtWidgets
+from PyQt6.QtCore import QRect, pyqtSignal, Qt
+from PyQt6.QtGui import QShortcut, QKeySequence
 from PyQt6.uic.exceptions import UIFileException
 from aihandler.settings import MAX_SEED, AVAILABLE_SCHEDULERS_BY_ACTION, MODELS
 from airunner.windows.deterministic_generation_window import DeterministicGenerationWindow
@@ -39,21 +42,21 @@ class GeneratorMixin(LoraMixin):
         self.settings.model_base_path.set(val)
 
     @property
-    def width(self):
+    def working_width(self):
         return int(self.settings_manager.settings.working_width.get())
 
-    @width.setter
-    def width(self, val):
+    @working_width.setter
+    def working_width(self, val):
         self.settings_manager.settings.working_width.set(val)
         self.set_final_size_label()
         self.canvas.update()
 
     @property
-    def height(self):
+    def working_height(self):
         return int(self.settings_manager.settings.working_height.get())
 
-    @height.setter
-    def height(self, val):
+    @working_height.setter
+    def working_height(self, val):
         self.settings_manager.settings.working_height.set(val)
         self.set_final_size_label()
         self.canvas.update()
@@ -196,10 +199,21 @@ class GeneratorMixin(LoraMixin):
             for tab in self.tabs.keys():  # iterate over each section within the tab section (txt2img, img2img, etc)
                 self.tabs[tab] = uic.loadUi(os.path.join("pyqt/generate_form.ui"))
 
-                # Remove embeddings and LoRA for Kandinsky sections as they are not supported
-                if tab_section == "kandinsky":
-                    self.tabs[tab].PromptTabsSection.removeTab(2)
-                    self.tabs[tab].PromptTabsSection.removeTab(1)
+                self.tabs[tab].setStyleSheet("""
+                    QTabWidget::pane { 
+                        border: 0;
+                        border-left: 0;
+                        border-radius: 0px;
+                        background: #222222;
+                    }
+                    QTabBar::tab { 
+                        border-radius: 0px; 
+                        margin: 0px; 
+                        padding: 5px 10px;
+                        border: 0px;
+                        font-size: 9pt;
+                    }
+                """)
 
                 # set up the override_section for the tab so that we can force which tab is active
                 # this is a hack in order to get around the auto-switching of tabs when the user
@@ -297,9 +311,9 @@ class GeneratorMixin(LoraMixin):
                     display_name = "inpaint / outpaint"
 
                 if tab_section == "stablediffusion":
-                    self.window.stableDiffusionTabWidget.addTab(self.tabs[tab], display_name)
+                    self.generator_tab_widget.stableDiffusionTabWidget.addTab(self.tabs[tab], display_name)
                 else:
-                    self.window.kandinskyTabWidget.addTab(self.tabs[tab], display_name)
+                    self.generator_tab_widget.kandinskyTabWidget.addTab(self.tabs[tab], display_name)
 
                 self.tabs[tab].generate.clicked.connect(self.generate_callback)
 
@@ -307,8 +321,6 @@ class GeneratorMixin(LoraMixin):
             for tab_name in self.tabs.keys():
                 self.override_section = tab_name
                 tab = self.tabs[tab_name]
-
-                tab.toggleAllLora.clicked.connect(lambda checked, _tab=tab: self.toggle_all_lora(checked, _tab))
 
                 # tab.prompt is QPlainTextEdit - on text change, call handle_prompt_change
                 tab.prompt.textChanged.connect(lambda _tab=tab: self.handle_prompt_change(_tab))
@@ -384,15 +396,18 @@ class GeneratorMixin(LoraMixin):
 
             # assign callback to generate function on tab
             if tab_section == "stablediffusion":
-                self.window.stableDiffusionTabWidget.currentChanged.connect(self.tab_changed_callback)
+                self.generator_tab_widget.stableDiffusionTabWidget.currentChanged.connect(self.tab_changed_callback)
             else:
-                self.window.kandinskyTabWidget.currentChanged.connect(self.tab_changed_callback)
+                self.generator_tab_widget.kandinskyTabWidget.currentChanged.connect(self.tab_changed_callback)
 
         self.override_tab_section = None
 
-        self.initialize_size_form_elements()
-        self.initialize_size_sliders()
+        self.tool_menu_widget.initialize()
         self.initialize_lora()
+
+        # listen to F5 keypress and call self.generate_callback
+        self.generate_shortcut = QShortcut(QKeySequence(Qt.Key.Key_F5), self)
+        self.generate_shortcut.activated.connect(self.generate_callback)
 
     def handle_deterministic_radio_change(self, val, tab):
         self.deterministic = tab.deterministic_radio.isChecked()
@@ -538,7 +553,7 @@ class GeneratorMixin(LoraMixin):
             # print width and height of image
             self.canvas.image_handler(images[0], data)
             self.message_handler("")
-            self.show_layers()
+            self.canvas.show_layers()
 
     def load_metadata(self, metadata):
         if metadata:
@@ -970,8 +985,8 @@ class GeneratorMixin(LoraMixin):
             f"{action}_steps": self.steps,
             f"{action}_ddim_eta": self.ddim_eta,  # only applies to ddim scheduler
             f"{action}_n_iter": 1,
-            f"{action}_width": self.width,
-            f"{action}_height": self.height,
+            f"{action}_width": self.working_width,
+            f"{action}_height": self.working_height,
             f"{action}_n_samples": samples,
             f"{action}_scale": self.scale / 100,
             f"{action}_seed": self.seed,
@@ -981,8 +996,8 @@ class GeneratorMixin(LoraMixin):
             f"{action}_model_branch": model_branch,
             f"{action}_lora": self.available_lora(action),
             f"generator_section": self.currentTabSection,
-            f"width": self.width,
-            f"height": self.height,
+            f"width": self.working_width,
+            f"height": self.working_height,
             "do_nsfw_filter": self.settings_manager.settings.nsfw_filter.get(),
             "model_base_path": self.model_base_path,
             "pos_x": 0,
@@ -1058,51 +1073,6 @@ class GeneratorMixin(LoraMixin):
             tab.scheduler_dropdown.setCurrentText(self.scheduler)
         except RuntimeError:
             pass
-
-    def handle_width_slider_change(self, val):
-        self.window.width_spinbox.setValue(val)
-        self.width = val
-
-    def handle_width_spinbox_change(self, val):
-        self.window.width_slider.setValue(int(val))
-        self.width = int(val)
-
-    def handle_height_slider_change(self, val):
-        self.window.height_spinbox.setValue(int(val))
-        self.height = int(val)
-
-    def handle_height_spinbox_change(self, val):
-        self.window.height_slider.setValue(int(val))
-        self.height = int(val)
-
-    def update_brush_size(self, val):
-        self.settings_manager.settings.mask_brush_size.set(val)
-        self.window.brush_size_spinbox.setValue(val)
-
-    def brush_spinbox_change(self, val):
-        self.settings_manager.settings.mask_brush_size.set(val)
-        self.window.brush_size_slider.setValue(val)
-
-    def initialize_size_form_elements(self):
-        # width form elements
-        self.window.width_slider.valueChanged.connect(lambda val: self.handle_width_slider_change(val))
-        self.window.width_spinbox.valueChanged.connect(lambda val: self.handle_width_spinbox_change(val))
-
-        # height form elements
-        self.window.height_slider.valueChanged.connect(lambda val: self.handle_height_slider_change(val))
-        self.window.height_spinbox.valueChanged.connect(lambda val: self.handle_height_spinbox_change(val))
-
-    def initialize_size_sliders(self):
-        self.window.width_slider.setValue(self.width)
-        self.window.height_slider.setValue(self.height)
-        self.window.width_spinbox.setValue(self.width)
-        self.window.height_spinbox.setValue(self.height)
-        self.window.brush_size_slider.setValue(self.settings.mask_brush_size.get())
-        self.window.brush_size_slider.valueChanged.connect(self.update_brush_size)
-        self.window.brush_size_spinbox.valueChanged.connect(self.brush_spinbox_change)
-        self.window.brush_size_slider.setValue(self.settings_manager.settings.mask_brush_size.get())
-        self.window.brush_size_spinbox.setValue(self.settings_manager.settings.mask_brush_size.get())
-        self.set_size_form_element_step_values()
 
     def load_template(self, template_name):
         try:

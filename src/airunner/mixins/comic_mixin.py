@@ -4,7 +4,7 @@ from airunner.balloon import Balloon
 
 class ComicMixin:
     def initialize(self):
-        self.window.wordballoon_button.clicked.connect(self.word_balloon_button_clicked)
+        self.wordballoon_button.clicked.connect(self.word_balloon_button_clicked)
 
     def word_balloon_button_clicked(self):
         """
