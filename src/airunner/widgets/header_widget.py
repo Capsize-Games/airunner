@@ -60,6 +60,8 @@ class HeaderWidget(BaseWidget):
 
         self.update_widget_values()
         self.app.register_setting_handler("size", self.update_widget_values)
+        self.app.register_setting_handler("working_width", self.update_widget_values)
+        self.app.register_setting_handler("working_height", self.update_widget_values)
 
     def update_widget_values(self):
         if self.settings_manager:
