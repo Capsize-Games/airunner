@@ -9,7 +9,7 @@ class CanvasWidget(BaseWidget):
 
     def __init__(self, *args, **kwargs):
         super().__init__(*args, **kwargs)
-        self.initialize_debugging()
+        # self.initialize_debugging()
 
     def initialize_debugging(self):
         # create a panel that will contain labels for debugging
