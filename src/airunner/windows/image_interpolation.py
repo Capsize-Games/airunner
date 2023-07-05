@@ -64,8 +64,8 @@ class ImageInterpolation(BaseWindow):
         Clicking the Kandinsky button activates the Kandinsky txt2img tab.
         :return:
         """
-        self.app.window.sectionTabWidget.setCurrentIndex(1)
-        self.app.window.stableDiffusionTabWidget.setCurrentIndex(0)
+        self.app.generator_tab_widget.sectionTabWidget.setCurrentIndex(1)
+        self.app.generator_tab_widget.stableDiffusionTabWidget.setCurrentIndex(0)
 
     def handle_interpolated_image(self, image):
         """

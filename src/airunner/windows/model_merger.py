@@ -69,7 +69,7 @@ class ModelMerger(BaseWindow):
     def change_model_type(self, index):
         self.model_type = self.template.model_types.currentText()
         self.models = []
-        if self.section == "generate":
+        if self.section == "stablediffusion_generate":
             self.models = self.load_models()
             path = self.settings_manager.settings.model_base_path.get()
             self.models += load_models_from_path(path)
@@ -198,7 +198,7 @@ class ModelMerger(BaseWindow):
         model = self.template.base_models.currentText()
         section = self.section
         if section == "txt2img":
-            section = "generate"
+            section = "stablediffusion_generate"
         if model in MODELS[section]:
             model_path = MODELS[section][model]["path"]
         else:
