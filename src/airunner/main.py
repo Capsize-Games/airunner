@@ -10,7 +10,6 @@ from PyQt6.QtGui import QGuiApplication, QPixmap, QShortcut, QKeySequence, QKeyE
 from aihandler.qtvar import TQDMVar, ImageVar, MessageHandlerVar, ErrorHandlerVar
 from aihandler.logger import logger
 from aihandler.settings import LOG_LEVEL
-from airunner.mixins.brushes_mixin import BrushesMixin
 from airunner.mixins.canvas_mixin import CanvasMixin
 from airunner.mixins.comic_mixin import ComicMixin
 from airunner.mixins.embedding_mixin import EmbeddingMixin
@@ -41,8 +40,7 @@ class MainWindow(
     CanvasMixin,
     GeneratorMixin,
     ComicMixin,
-    ExtensionMixin,
-    BrushesMixin,
+    ExtensionMixin
 ):
     current_filter = None
     tqdm_callback_triggered = False
@@ -327,7 +325,6 @@ class MainWindow(
     def reset_settings(self):
         logger.info("Resetting settings...")
         GeneratorMixin.reset_settings(self)
-        BrushesMixin.reset_settings(self)
         self.canvas.reset_settings()
 
     def on_state_changed(self, state):
@@ -378,12 +375,25 @@ class MainWindow(
         ToolbarMixin.initialize(self)
         EmbeddingMixin.initialize(self)
 
+    # a list of tuples that represents a signal name and its handler
+    registered_settings_handlers = []
+
+    def register_setting_handler(self, signal, handler):
+        """
+        Connect a signal to a handler. Signals must be part of settings_manager.settings
+        in order to be registered later in the connect_signals() method.
+        :param signal:
+        :param handler:
+        :return:
+        """
+        self.registered_settings_handlers.append((signal, handler))
+
     def connect_signals(self):
         logger.info("Connecting signals...")
         self.canvas._is_dirty.connect(self.set_window_title)
-        self.settings_manager.settings.primary_color.connect(
-            self.header_widget.update_color_button
-        )
+
+        for signal, handler in self.registered_settings_handlers:
+            getattr(self.settings_manager.settings, signal).connect(handler)
 
     def instantiate_widgets(self):
         logger.info("Instantiating widgets...")
