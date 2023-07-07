@@ -82,10 +82,6 @@ class ToolbarMixin:
         )
         self.canvas.update()
 
-    def toggle_nsfw_filter(self, val):
-        self.settings_manager.settings.nsfw_filter.set(val)
-        self.canvas.update()
-
     def focus_button_clicked(self):
         self.canvas.recenter()
 

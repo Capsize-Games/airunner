@@ -69,6 +69,7 @@ class MainWindow(
     status_error_color = "#ff0000"
     status_normal_color_light = "#000000"
     status_normal_color_dark = "#ffffff"
+    is_started = False
 
     @property
     def is_dark(self):
@@ -104,10 +105,9 @@ class MainWindow(
         "stablediffusion": {
             "txt2img": None,
             "img2img": None,
+            "outpaint": None,
             "depth2img": None,
             "pix2pix": None,
-            "outpaint": None,
-            "controlnet": None,
             "upscale": None,
             "superresolution": None,
             "txt2vid": None,
