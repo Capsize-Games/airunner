@@ -215,6 +215,14 @@ class MainWindow(
     def is_windows(self):
         return sys.platform.startswith("win") or sys.platform.startswith("cygwin") or sys.platform.startswith("msys")
 
+    @property
+    def is_maximized(self):
+        return self.settings_manager.settings.is_maximized.get()
+
+    @is_maximized.setter
+    def is_maximized(self, val):
+        self.settings_manager.settings.is_maximized.set(val)
+
     def __init__(self, *args, **kwargs):
         logger.info("Starting AI Runnner...")
         # enable hardware acceleration
@@ -246,6 +254,24 @@ class MainWindow(
         if not self.testing:
             logger.info("Executing window...")
             self.display()
+        self.set_window_state()
+        self.is_started = True
+
+    def resizeEvent(self, event):
+        if not self.is_started:
+            return
+        state = self.windowState()
+        if state == Qt.WindowState.WindowMaximized:
+            timer = QTimer(self)
+            timer.setSingleShot(True)
+            timer.timeout.connect(self.checkWindowState)
+            timer.start(100)
+        else:
+            self.checkWindowState()
+
+    def checkWindowState(self):
+        state = self.windowState()
+        self.is_maximized = state == Qt.WindowState.WindowMaximized
 
     def keyPressEvent(self, event):
         if event.key() == Qt.Key.Key_Control:
@@ -479,6 +505,14 @@ class MainWindow(
             # so instead we do this in order to run without showing the window:
             self.showMinimized()
         self.canvas.show_layers()
+
+    def set_window_state(self):
+        if self.is_maximized:
+            print("is_maximized")
+            self.showMaximized()
+        else:
+            print("is_normal")
+            self.showNormal()
 
     def set_log_levels(self):
         uic.properties.logger.setLevel(LOG_LEVEL)
