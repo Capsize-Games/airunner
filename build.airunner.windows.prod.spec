@@ -180,7 +180,7 @@ shutil.copytree(
     f'{DIST}/src/icons'
 )
 shutil.copytree(
-    f'{ROOT}/data',
+    f'{ROOT}/src/airunner/data',
     f'{DIST}/data'
 )
 shutil.copyfile(
