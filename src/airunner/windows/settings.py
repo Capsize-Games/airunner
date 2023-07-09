@@ -1,6 +1,3 @@
-import os
-
-from PyQt6 import uic
 from PyQt6.QtCore import Qt, QSize
 from PyQt6.QtGui import QStandardItemModel, QStandardItem, QBrush, QColor, QPainter
 from PyQt6.QtWidgets import QStyledItemDelegate, QStyleOptionViewItem, QLabel, QWidget, QVBoxLayout
@@ -9,6 +6,7 @@ from airunner.windows.base_window import BaseWindow
 # open the version file from the root of the project and get the VERSION variable string from it
 from airunner.windows.export_preferences_widget import ExportPreferencesWidget
 from airunner.windows.grid_widget import GridWidget
+from airunner.windows.hf_api_key_widget import HFAPIKeyWidget
 from airunner.windows.memory_widget import MemoryWidget
 from airunner.windows.paths_widget import PathsWidget
 
@@ -103,6 +101,11 @@ class SettingsWindow(BaseWindow):
                         "display_name": "Check for updates",
                         "checkable": True
                     },
+                    {
+                        "name": "hf_api_key",
+                        "display_name": "API Key",
+                        "checkable": False
+                    }
                     # {
                     #     "name": "reset_settings",
                     #     "display_name": "Reset settings to default",
@@ -203,7 +206,8 @@ class SettingsWindow(BaseWindow):
             "paths": PathsWidget,
             "export_preferences": ExportPreferencesWidget,
             "grid": GridWidget,
-            "memory": MemoryWidget
+            "memory": MemoryWidget,
+            "hf_api_key": HFAPIKeyWidget,
         }
         if name in widgets:
             widget_object = widgets[name](
