@@ -123,36 +123,9 @@ class SliderWidget(QWidget):
         self.spinbox.valueChanged.connect(lambda val: self.handle_slider_change(int(val * self.slider_maximum)))
 
     def set_stylesheet(self):
-        self.slider.setStyleSheet("""
-           QSlider::handle:horizontal { 
-               height: 20px;
-               width: 25px;
-               border: 1px solid #5483d0;
-               border-radius: 0px;
-           }
-           QSlider::handle:horizontal:hover {
-               background-color: #5483d0;
-           }
-           QSlider::groove:horizontal {
-               height: 25px;
-               background-color: transparent;
-               border: transparent;
-               border: 1px solid #555;
-               border-right: 0px;
-               border-radius: 0px;
-           }
-           background-color: transparent;
-       """)
-        self.label.setStyleSheet("""
-            font-size: 9pt;
-            color: #ffffff;
-        """)
-        self.spinbox.setStyleSheet("""
-            background-color: #444444;
-            border-left: none;
-            border-color: #555;
-            border-radius: 0px;
-        """)
+        self.slider.setStyleSheet(self.app.css("slider"))
+        self.label.setStyleSheet(self.app.css("slider_label"))
+        self.spinbox.setStyleSheet(self.app.css("slider_spinbox"))
 
     def handle_slider_change(self, val):
         position = val#self.slider.sliderPosition()
