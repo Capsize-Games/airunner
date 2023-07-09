@@ -18,40 +18,14 @@ class ToolMenuWidget(BaseWidget):
         self.tab_widget.layout().setContentsMargins(0, 0, 0, 0)
         self.lora_container_widget = LoraContainerWidget(app=self.app)
         self.embeddings_container_widget = EmbeddingsContainerWidget(app=self.app)
-        self.tab_widget.setStyleSheet("""
-            QTabBar::tab { 
-                font-size: 10pt;
-            }
-            QTabWidget::pane { 
-                border: 0;
-                border-top: 1px solid #121212;
-                border-bottom: 1px solid #121212;
-                border-radius: 0px; 
-            }
-            QTabBar::tab { 
-                border-radius: 0px; 
-                margin: 0px; 
-                padding: 5px 10px;
-                border: 0px;
-            }
-            QTabBar::tab:selected { 
-                background-color: #5483d0;
-                color: white;
-                border: 0px;
-            }
-        """)
+        self.tab_widget.setStyleSheet(self.app.css("toolmenu_tab_widget"))
 
         self.tab_widget.addTab(self.embeddings_container_widget, "Embeddings")
         self.tab_widget.addTab(self.lora_container_widget, "LoRa")
-        self.embeddings_container_widget.setStyleSheet("""
-        background-color: #151515;
-        """)
-        self.lora_container_widget.setStyleSheet("""
-        background-color: #151515;
-        """)
 
         self.layer_container_widget = LayerContainerWidget(app=self.app)
         self.opacity_widget = SliderWidget(
+            app=self.app,
             label_text="Layer Opacity:",
             slider_callback=self.app.canvas.set_layer_opacity,
         )
@@ -98,10 +72,7 @@ class ToolMenuWidget(BaseWidget):
         self.layer_container_widget.delete_layer_button.clicked.connect(self.app.canvas.delete_layer)
 
     def set_stylesheet(self):
-        self.layer_container_widget.set_stylesheet()
-        self.layer_container_widget.setStyleSheet("""
-            #layers {
-                border: 0px;
-                background-color: #151515;
-            }
-        """)
+        self.layer_container_widget.setStyleSheet(self.app.css("layer_container_widget"))
+        self.layer_container_widget.setStyleSheet(self.app.css("layer_container_widget"))
+        self.embeddings_container_widget.setStyleSheet(self.app.css("embeddings_container"))
+        self.lora_container_widget.setStyleSheet(self.app.css("lora_container"))
