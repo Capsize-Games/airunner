@@ -16,12 +16,7 @@ class ToolBarWidget(BaseWidget):
 
     def set_stylesheet(self):
         super().set_stylesheet()
-        self.setStyleSheet("""
-            QFrame {
-                background-color: #121212;
-                border-radius: 0px;
-            }
-        """)
+        self.setStyleSheet(self.app.css("toolbar_widget"))
 
     def initialize(self):
         self.eraser_button.clicked.connect(lambda: self.app.set_tool("eraser"))
