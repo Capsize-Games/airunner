@@ -121,15 +121,6 @@ class Canvas(
         rect = QRect(0, 0, rect.width(), rect.height())
         return rect
 
-    # layer properties
-    @property
-    def layer_highlight_style(self):
-        return f"background-color: #8ab4f7; color: #333333; border: none; border-radius: 0px;"
-
-    @property
-    def layer_normal_style(self):
-        return "background-color: transparent; color: #d2d2d2; border: none; border-radius: 0px;"
-
     def get_layer_opacity(self, index):
         return self.layers[index].opacity
 
@@ -274,7 +265,7 @@ class Canvas(
         self.canvas_container.setCursor(QCursor(Qt.CursorShape.ArrowCursor))
 
     def update(self):
-        self.parent.canvas_position.setText(f"X: {-self.pos_x}, Y: {self.pos_y}")
+        self.parent.canvas_position = f"X {-self.pos_x: 05d} Y {self.pos_y: 05d}"
 
         self.canvas_container.update(self.viewport_rect)
 
