@@ -173,9 +173,9 @@ coll = COLLECT(
 shutil.copytree('/app/airunner/src/airunner/pyqt', '/app/dist/airunner/pyqt')
 shutil.copyfile('/app/airunner/linux.itch.toml', '/app/dist/airunner/.itch.toml')
 shutil.copytree('/app/airunner/src/airunner/src/icons', '/app/dist/airunner/src/icons')
-shutil.copytree('./src/airunner/data', './dist/airunner/data')
-shutil.copyfile('./src/airunner/src/icon_256.png', './dist/airunner/src/icon_256.png')
-shutil.copyfile('./src/airunner/src/splashscreen.png', './dist/airunner/src/splashscreen.png')
+shutil.copytree('/app/airunner/src/airunner/data', '/app/dist/airunner/data')
+shutil.copyfile('/app/airunner/src/airunner/src/icon_256.png', '/app/dist/airunner/src/icon_256.png')
+shutil.copyfile('/app/airunner/src/airunner/src/splashscreen.png', '/app/dist/airunner/src/splashscreen.png')
 
 # copy sd config files
 os.makedirs('/dist/airunner/diffusers/pipelines/stable_diffusion', exist_ok=True)
