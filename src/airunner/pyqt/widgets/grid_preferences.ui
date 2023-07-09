@@ -49,7 +49,11 @@
     </widget>
    </item>
    <item row="1" column="0">
-    <widget class="QSpinBox" name="grid_size_spinbox"/>
+    <widget class="QSpinBox" name="grid_size_spinbox">
+     <property name="maximum">
+      <number>512</number>
+     </property>
+    </widget>
    </item>
    <item row="8" column="0">
     <spacer name="verticalSpacer">

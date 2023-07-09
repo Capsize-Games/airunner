@@ -1,8 +1,11 @@
 import os
 import random
+from functools import partial
+
 from PIL import Image
-from PyQt6 import uic
-from PyQt6.QtCore import QRect, pyqtSignal
+from PyQt6 import uic, QtWidgets
+from PyQt6.QtCore import QRect, pyqtSignal, Qt
+from PyQt6.QtGui import QShortcut, QKeySequence
 from PyQt6.uic.exceptions import UIFileException
 from aihandler.settings import MAX_SEED, AVAILABLE_SCHEDULERS_BY_ACTION, MODELS
 from airunner.windows.deterministic_generation_window import DeterministicGenerationWindow
@@ -39,21 +42,21 @@ class GeneratorMixin(LoraMixin):
         self.settings.model_base_path.set(val)
 
     @property
-    def width(self):
+    def working_width(self):
         return int(self.settings_manager.settings.working_width.get())
 
-    @width.setter
-    def width(self, val):
+    @working_width.setter
+    def working_width(self, val):
         self.settings_manager.settings.working_width.set(val)
         self.set_final_size_label()
         self.canvas.update()
 
     @property
-    def height(self):
+    def working_height(self):
         return int(self.settings_manager.settings.working_height.get())
 
-    @height.setter
-    def height(self, val):
+    @working_height.setter
+    def working_height(self, val):
         self.settings_manager.settings.working_height.set(val)
         self.set_final_size_label()
         self.canvas.update()
@@ -113,6 +116,33 @@ class GeneratorMixin(LoraMixin):
     @strength.setter
     def strength(self, val):
         self.settings.strength.set(val)
+
+    @property
+    def enable_controlnet(self):
+        return self.settings.enable_controlnet.get()
+
+    @enable_controlnet.setter
+    def enable_controlnet(self, val):
+        self.settings.enable_controlnet.set(val)
+
+    @property
+    def controlnet(self):
+        controlnet = self.settings.controlnet_var.get()
+        if controlnet == "":
+            return None
+        return controlnet
+
+    @controlnet.setter
+    def controlnet(self, val):
+        self.settings.controlnet_var.set(val)
+
+    @property
+    def controlnet_guidance_scale(self):
+        return self.settings.controlnet_guidance_scale.get()
+
+    @controlnet_guidance_scale.setter
+    def controlnet_guidance_scale(self, val):
+        self.settings.controlnet_guidance_scale.set(val)
 
     @property
     def seed(self):
@@ -196,10 +226,7 @@ class GeneratorMixin(LoraMixin):
             for tab in self.tabs.keys():  # iterate over each section within the tab section (txt2img, img2img, etc)
                 self.tabs[tab] = uic.loadUi(os.path.join("pyqt/generate_form.ui"))
 
-                # Remove embeddings and LoRA for Kandinsky sections as they are not supported
-                if tab_section == "kandinsky":
-                    self.tabs[tab].PromptTabsSection.removeTab(2)
-                    self.tabs[tab].PromptTabsSection.removeTab(1)
+                self.tabs[tab].setStyleSheet(self.css("generator_tab"))
 
                 # set up the override_section for the tab so that we can force which tab is active
                 # this is a hack in order to get around the auto-switching of tabs when the user
@@ -208,24 +235,53 @@ class GeneratorMixin(LoraMixin):
                 self.override_section = override_section
 
                 # Initialize controlnet dropdown for controlnet section
-                if tab == "controlnet":
+                if tab in ["txt2img", "img2img", "outpaint"] and tab_section != "kandinsky":
                     controlnet_options = [
                         "Canny",
                         "MLSD",
-                        "Depth",
-                        "Normal",
-                        "Segmentation",
-                        "Lineart",
+                        "Depth Leres",
+                        "Depth Leres++",
+                        "Depth Midas",
+                        # "Depth Zoe",
+                        "Normal Bae",
+                        # "Normal Midas",
+                        # "Segmentation",
+                        "Lineart Anime",
+                        "Lineart Coarse",
+                        "Lineart Realistic",
                         "Openpose",
-                        "Scribble",
-                        "Softedge",
-                        "Pixel2Pixel",
-                        "Inpaint",
+                        "Openpose Face",
+                        "Openpose Faceonly",
+                        "Openpose Full",
+                        "Openpose Hand",
+                        "Scribble Hed",
+                        "Scribble Pidinet",
+                        "Softedge Hed",
+                        "Softedge Hedsafe",
+                        "Softedge Pidinet",
+                        "Softedge Pidsafe",
+                        # "Pixel2Pixel",
+                        # "Inpaint",
                         "Shuffle",
-                        "Anime",
                     ]
-                    for option in controlnet_options:
+                    controlnet = self.controlnet
+                    current_index = 0
+                    self.tabs[tab].controlnet_dropdown.addItem("")
+                    for index, option in enumerate(controlnet_options):
+                        if option.lower() == controlnet:
+                            current_index = index+1
                         self.tabs[tab].controlnet_dropdown.addItem(option)
+                    self.tabs[tab].controlnet_dropdown.setCurrentIndex(current_index)
+                    self.tabs[tab].controlnet_dropdown.currentIndexChanged.connect(
+                        partial(self.update_controlnet, tab))
+                else:
+                    self.tabs[tab].controlnet_label.deleteLater()
+                    self.tabs[tab].controlnet_dropdown.deleteLater()
+                    self.tabs[tab].controlnet_guidance_scale_slider.deleteLater()
+                    self.tabs[tab].controlnet_guidance_scale_spinbox.deleteLater()
+                    self.tabs[tab].controlnet_groupbox.deleteLater()
+                    self.tabs[tab].enable_controlnet_checkbox.deleteLater()
+
 
                 """
                 The generator widget contains many different settings, however not all settings are
@@ -237,7 +293,7 @@ class GeneratorMixin(LoraMixin):
                     self.tabs[tab].strength.deleteLater()
 
                 # delete image scale box for given sections
-                if tab in ["txt2img", "img2img", "depth2img", "outpaint", "controlnet", "superresolution", "txt2vid"]:
+                if tab in ["txt2img", "img2img", "depth2img", "outpaint", "superresolution", "txt2vid"]:
                     self.tabs[tab].image_scale_box.deleteLater()
 
                 # delete the sample slider for given sections
@@ -270,11 +326,6 @@ class GeneratorMixin(LoraMixin):
                     self.tabs[tab].final_size_label.deleteLater()
                     self.tabs[tab].final_size.deleteLater()
 
-                # delete controlnet settings for sections that are not controlnet
-                if tab != "controlnet":
-                    self.tabs[tab].controlnet_label.deleteLater()
-                    self.tabs[tab].controlnet_dropdown.deleteLater()
-
                 if tab in ["upscale", "superresolution", "txt2vid"] or tab_section == "kandinsky":
                     self.tabs[tab].to_canvas_radio.deleteLater()
                     self.tabs[tab].deterministic_radio.deleteLater()
@@ -285,6 +336,11 @@ class GeneratorMixin(LoraMixin):
                 self.tabs[tab].deterministic_radio.setChecked(self.deterministic)
                 self.tabs[tab].deterministic_radio.toggled.connect(
                     lambda val, _tab=self.tabs[tab]: self.handle_deterministic_radio_change(val, _tab)
+                )
+                self.tabs[tab].use_prompt_builder_checkbox.setChecked(
+                    self.settings_manager.settings.use_prompt_builder_checkbox.get())
+                self.tabs[tab].use_prompt_builder_checkbox.toggled.connect(
+                    lambda val: self.settings_manager.settings.use_prompt_builder_checkbox.set(val)
                 )
 
         self.override_section = None
@@ -297,9 +353,9 @@ class GeneratorMixin(LoraMixin):
                     display_name = "inpaint / outpaint"
 
                 if tab_section == "stablediffusion":
-                    self.window.stableDiffusionTabWidget.addTab(self.tabs[tab], display_name)
+                    self.generator_tab_widget.stableDiffusionTabWidget.addTab(self.tabs[tab], display_name)
                 else:
-                    self.window.kandinskyTabWidget.addTab(self.tabs[tab], display_name)
+                    self.generator_tab_widget.kandinskyTabWidget.addTab(self.tabs[tab], display_name)
 
                 self.tabs[tab].generate.clicked.connect(self.generate_callback)
 
@@ -307,8 +363,6 @@ class GeneratorMixin(LoraMixin):
             for tab_name in self.tabs.keys():
                 self.override_section = tab_name
                 tab = self.tabs[tab_name]
-
-                tab.toggleAllLora.clicked.connect(lambda checked, _tab=tab: self.toggle_all_lora(checked, _tab))
 
                 # tab.prompt is QPlainTextEdit - on text change, call handle_prompt_change
                 tab.prompt.textChanged.connect(lambda _tab=tab: self.handle_prompt_change(_tab))
@@ -352,13 +406,30 @@ class GeneratorMixin(LoraMixin):
                     elif section == "depth2img":
                         strength = self.settings_manager.settings.depth2img_strength.get()
                     elif section == "controlnet":
-                        strength = self.settings_manager.settings.controlnet_strength.get()
+                        strength = self.settings_manager.settings.controlnet_guidance_scale.get()
                     tab.strength_slider.setValue(int(strength))
                     tab.strength_spinbox.setValue(strength / 100)
                     tab.strength_slider.valueChanged.connect(
                         lambda val, _tab=tab: self.handle_strength_slider_change(val, _tab))
                     tab.strength_spinbox.valueChanged.connect(
                         lambda val, _tab=tab: self.handle_strength_spinbox_change(val, _tab))
+
+                # controlnet strength slider
+                if section in ["txt2img", "img2img", "outpaint"]:
+                    controlnet_guidance_scale = self.settings.controlnet_guidance_scale.get()
+                    tab.controlnet_guidance_scale_slider.setValue(int(controlnet_guidance_scale))
+                    tab.controlnet_guidance_scale_spinbox.setValue(controlnet_guidance_scale / 100)
+                    tab.controlnet_guidance_scale_slider.valueChanged.connect(
+                        lambda val, _tab=tab: self.handle_controlnet_guidance_scale_slider_change(val, _tab))
+                    tab.controlnet_guidance_scale_spinbox.valueChanged.connect(
+                        lambda val, _tab=tab: self.handle_controlnet_guidance_scale_spinbox_change(val, _tab))
+
+                if section in ["txt2img", "img2img", "outpaint"]:
+                    # controlnet settings
+                    tab.enable_controlnet_checkbox.setChecked(self.settings.enable_controlnet.get())
+                    tab.enable_controlnet_checkbox.stateChanged.connect(
+                        partial(self.handle_controlnet_checkbox_change, tab))
+                    self.toggle_controlnet_elements(tab)
 
                 if section == "txt2vid":
                     # change the label tab.samples_groupbox label to "Frames"
@@ -384,15 +455,34 @@ class GeneratorMixin(LoraMixin):
 
             # assign callback to generate function on tab
             if tab_section == "stablediffusion":
-                self.window.stableDiffusionTabWidget.currentChanged.connect(self.tab_changed_callback)
+                self.generator_tab_widget.stableDiffusionTabWidget.currentChanged.connect(self.tab_changed_callback)
             else:
-                self.window.kandinskyTabWidget.currentChanged.connect(self.tab_changed_callback)
+                self.generator_tab_widget.kandinskyTabWidget.currentChanged.connect(self.tab_changed_callback)
 
         self.override_tab_section = None
 
-        self.initialize_size_form_elements()
-        self.initialize_size_sliders()
+        self.tool_menu_widget.initialize()
         self.initialize_lora()
+
+        # listen to F5 keypress and call self.generate_callback
+        self.generate_shortcut = QShortcut(QKeySequence(Qt.Key.Key_F5), self)
+        self.generate_shortcut.activated.connect(self.generate_callback)
+
+    def update_controlnet(self, tab, index):
+        controlnet = self.tabs[tab].controlnet_dropdown.itemText(index)
+        controlnet = controlnet.lower()
+        if controlnet == "":
+            controlnet = None
+        self.settings.controlnet_var.set(controlnet)
+
+    def handle_controlnet_checkbox_change(self, tab, val):
+        self.enable_controlnet = val == 2
+        self.toggle_controlnet_elements(tab)
+
+    def toggle_controlnet_elements(self, tab):
+        tab.controlnet_dropdown.setEnabled(self.enable_controlnet)
+        tab.controlnet_guidance_scale_slider.setEnabled(self.enable_controlnet)
+        tab.controlnet_guidance_scale_spinbox.setEnabled(self.enable_controlnet)
 
     def handle_deterministic_radio_change(self, val, tab):
         self.deterministic = tab.deterministic_radio.isChecked()
@@ -538,7 +628,7 @@ class GeneratorMixin(LoraMixin):
             # print width and height of image
             self.canvas.image_handler(images[0], data)
             self.message_handler("")
-            self.show_layers()
+            self.canvas.show_layers()
 
     def load_metadata(self, metadata):
         if metadata:
@@ -698,6 +788,14 @@ class GeneratorMixin(LoraMixin):
     def handle_strength_spinbox_change(self, val, tab):
         tab.strength_slider.setValue(int(val * 100))
         self.strength = val
+
+    def handle_controlnet_guidance_scale_slider_change(self, val, tab):
+        tab.controlnet_guidance_scale_spinbox.setValue(val / 100.0)
+        self.controlnet_guidance_scale = val
+
+    def handle_controlnet_guidance_scale_spinbox_change(self, val, tab):
+        tab.controlnet_guidance_scale_slider.setValue(int(val * 100))
+        self.controlnet_guidance_scale = val
 
     def handle_seed_spinbox_change(self, val, tab):
         tab.seed.setText(str(int(val)))
@@ -956,22 +1054,14 @@ class GeneratorMixin(LoraMixin):
             model_path = os.path.join(path, model)
 
         # get controlnet_dropdown from active tab
-        use_controlnet = False
-        controlnet = ""
-        if action == "controlnet":
-            controlnet_dropdown = self.tabs[action].controlnet_dropdown
-            # get controlnet from controlnet_dropdown
-            controlnet = controlnet_dropdown.currentText()
-            controlnet = controlnet.lower()
-            use_controlnet = controlnet != "none"
         options = {
             f"{action}_prompt": prompt,
             f"{action}_negative_prompt": negative_prompt,
             f"{action}_steps": self.steps,
             f"{action}_ddim_eta": self.ddim_eta,  # only applies to ddim scheduler
             f"{action}_n_iter": 1,
-            f"{action}_width": self.width,
-            f"{action}_height": self.height,
+            f"{action}_width": self.working_width,
+            f"{action}_height": self.working_height,
             f"{action}_n_samples": samples,
             f"{action}_scale": self.scale / 100,
             f"{action}_seed": self.seed,
@@ -980,17 +1070,18 @@ class GeneratorMixin(LoraMixin):
             f"{action}_model_path": model_path,
             f"{action}_model_branch": model_branch,
             f"{action}_lora": self.available_lora(action),
+            f"{action}_controlnet_conditioning_scale": self.controlnet_guidance_scale,
             f"generator_section": self.currentTabSection,
-            f"width": self.width,
-            f"height": self.height,
+            f"width": self.working_width,
+            f"height": self.working_height,
             "do_nsfw_filter": self.settings_manager.settings.nsfw_filter.get(),
             "model_base_path": self.model_base_path,
             "pos_x": 0,
             "pos_y": 0,
             "outpaint_box_rect": self.active_rect,
             "hf_token": self.settings_manager.settings.hf_api_key.get(),
-            "use_controlnet": use_controlnet,
-            "controlnet": controlnet,
+            "enable_controlnet": self.enable_controlnet and self.controlnet is not None,
+            "controlnet": self.controlnet,
             "deterministic_generation": self.deterministic,
             "deterministic_seed": False,
         }
@@ -999,7 +1090,7 @@ class GeneratorMixin(LoraMixin):
             options["original_image_width"] = self.canvas.current_active_image_data.image.width
             options["original_image_height"] = self.canvas.current_active_image_data.image.height
 
-        if action in ["img2img", "depth2img", "pix2pix", "controlnet"]:
+        if action in ["txt2img", "img2img", "outpaint", "depth2img", "pix2pix"]:
             options[f"{action}_strength"] = self.strength / 100.0
 
         if action == "pix2pix":
@@ -1058,51 +1149,6 @@ class GeneratorMixin(LoraMixin):
             tab.scheduler_dropdown.setCurrentText(self.scheduler)
         except RuntimeError:
             pass
-
-    def handle_width_slider_change(self, val):
-        self.window.width_spinbox.setValue(val)
-        self.width = val
-
-    def handle_width_spinbox_change(self, val):
-        self.window.width_slider.setValue(int(val))
-        self.width = int(val)
-
-    def handle_height_slider_change(self, val):
-        self.window.height_spinbox.setValue(int(val))
-        self.height = int(val)
-
-    def handle_height_spinbox_change(self, val):
-        self.window.height_slider.setValue(int(val))
-        self.height = int(val)
-
-    def update_brush_size(self, val):
-        self.settings_manager.settings.mask_brush_size.set(val)
-        self.window.brush_size_spinbox.setValue(val)
-
-    def brush_spinbox_change(self, val):
-        self.settings_manager.settings.mask_brush_size.set(val)
-        self.window.brush_size_slider.setValue(val)
-
-    def initialize_size_form_elements(self):
-        # width form elements
-        self.window.width_slider.valueChanged.connect(lambda val: self.handle_width_slider_change(val))
-        self.window.width_spinbox.valueChanged.connect(lambda val: self.handle_width_spinbox_change(val))
-
-        # height form elements
-        self.window.height_slider.valueChanged.connect(lambda val: self.handle_height_slider_change(val))
-        self.window.height_spinbox.valueChanged.connect(lambda val: self.handle_height_spinbox_change(val))
-
-    def initialize_size_sliders(self):
-        self.window.width_slider.setValue(self.width)
-        self.window.height_slider.setValue(self.height)
-        self.window.width_spinbox.setValue(self.width)
-        self.window.height_spinbox.setValue(self.height)
-        self.window.brush_size_slider.setValue(self.settings.mask_brush_size.get())
-        self.window.brush_size_slider.valueChanged.connect(self.update_brush_size)
-        self.window.brush_size_spinbox.valueChanged.connect(self.brush_spinbox_change)
-        self.window.brush_size_slider.setValue(self.settings_manager.settings.mask_brush_size.get())
-        self.window.brush_size_spinbox.setValue(self.settings_manager.settings.mask_brush_size.get())
-        self.set_size_form_element_step_values()
 
     def load_template(self, template_name):
         try:

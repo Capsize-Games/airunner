@@ -68,14 +68,14 @@ class ExtensionMixin:
     def do_menubar_injection(self):
         for extension in self.settings_manager.settings.active_extensions.get():
             try:
-                extension.menubar_injection(self.window.menubar)
+                extension.menubar_injection(self.menubar)
             except AttributeError:
                 pass
 
     def do_toolbar_injection(self):
         for extension in self.settings_manager.settings.active_extensions.get():
             try:
-                extension.toolbar_injection(self.window.horizontalFrame)
+                extension.toolbar_injection(self.horizontalFrame)
             except AttributeError:
                 pass
 

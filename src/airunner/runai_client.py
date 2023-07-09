@@ -83,6 +83,7 @@ class OfflineClient(QtCore.QObject):
         #     name="init stable diffusion runner"
         # )
         # sd_runner_thread.join()
+        self.logger.info("Starting offline client")
         self.init_sd_runner()
         self.force_request_worker_reset()
 
@@ -90,6 +91,7 @@ class OfflineClient(QtCore.QObject):
         # save sd_runner to disc and load from it next time
         # this is to avoid the overhead of creating a new sd_runner
         # every time we start the client
+        self.logger.info("Initialzing SDRunner")
         self.sd_runner = SDRunner(
             app=self.app,
             tqdm_var=self.tqdm_var,

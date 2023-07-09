@@ -53,6 +53,7 @@ datas += collect_data_files("pytorch_lightning", include_py_files=True)
 datas += collect_data_files("lightning_fabric", include_py_files=True)
 datas += collect_data_files("transformers", include_py_files=True)
 datas += collect_data_files("sympy", include_py_files=True)
+datas += collect_data_files("controlnet_aux", include_py_files=True)
 a = Analysis(
     [
         f'/app/airunner/src/airunner/main.py',
@@ -172,6 +173,9 @@ coll = COLLECT(
 shutil.copytree('/app/airunner/src/airunner/pyqt', '/app/dist/airunner/pyqt')
 shutil.copyfile('/app/airunner/linux.itch.toml', '/app/dist/airunner/.itch.toml')
 shutil.copytree('/app/airunner/src/airunner/src/icons', '/app/dist/airunner/src/icons')
+shutil.copytree('./src/airunner/data', './dist/airunner/data')
+shutil.copyfile('./src/airunner/src/icon_256.png', './dist/airunner/src/icon_256.png')
+shutil.copyfile('./src/airunner/src/splashscreen.png', './dist/airunner/src/splashscreen.png')
 
 # copy sd config files
 os.makedirs('/dist/airunner/diffusers/pipelines/stable_diffusion', exist_ok=True)

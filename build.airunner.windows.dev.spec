@@ -45,7 +45,7 @@ datas += collect_data_files("transformers", include_py_files=True)
 datas += collect_data_files("tensorflow", include_py_files=True)
 datas += collect_data_files("bitsandbytes", include_py_files=True)
 datas += collect_data_files("sympy", include_py_files=True)
-
+datas += collect_data_files("controlnet_aux", include_py_files=True)
 a = Analysis(
     [
         f'{ROOT}\\src\\airunner\\main.py',
@@ -180,6 +180,18 @@ shutil.copyfile(
 shutil.copytree(
     f'{ROOT}/src/airunner/src/icons',
     f'{DIST}/src/icons'
+)
+shutil.copytree(
+    f'{ROOT}/src/airunner/data',
+    f'{DIST}/data'
+)
+shutil.copyfile(
+    f'{ROOT}/src/airunner/src/icon_256.png',
+    f'{DIST}/src/icon_256.png'
+)
+shutil.copyfile(
+    f'{ROOT}/src/airunner/src/splashscreen.png',
+    f'{DIST}/src/splashscreen.png'
 )
 shutil.copyfile(
     f'{ROOT}/src/airunner/v1.yaml',
