@@ -18,7 +18,7 @@ class Ui_Form(object):
         sizePolicy.setVerticalStretch(0)
         sizePolicy.setHeightForWidth(Form.sizePolicy().hasHeightForWidth())
         Form.setSizePolicy(sizePolicy)
-        Form.setMinimumSize(QtCore.QSize(428, 0))
+        Form.setMinimumSize(QtCore.QSize(262, 0))
         Form.setMaximumSize(QtCore.QSize(16777215, 16777215))
         Form.setStyleSheet("b")
         self.gridLayout = QtWidgets.QGridLayout(Form)
