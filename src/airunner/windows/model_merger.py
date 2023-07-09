@@ -69,7 +69,7 @@ class ModelMerger(BaseWindow):
     def change_model_type(self, index):
         self.model_type = self.template.model_types.currentText()
         self.models = []
-        if self.section == "generate":
+        if self.section == "stablediffusion_generate":
             self.models = self.load_models()
             path = self.settings_manager.settings.model_base_path.get()
             self.models += load_models_from_path(path)
@@ -198,7 +198,9 @@ class ModelMerger(BaseWindow):
         model = self.template.base_models.currentText()
         section = self.section
         if section == "txt2img":
-            section = "generate"
+            section = "stablediffusion_generate"
+        else:
+            section = f"stablediffusion_{section}"
         if model in MODELS[section]:
             model_path = MODELS[section][model]["path"]
         else:
@@ -208,6 +210,8 @@ class ModelMerger(BaseWindow):
                 path = self.settings_manager.settings.pix2pix_model_path.get()
             elif self.section == "outpaint":
                 path = self.settings_manager.settings.outpaint_model_path.get()
+            elif self.section == "upscale":
+                path = self.settings_manager.settings.upscale_model_path.get()
             model_path = os.path.join(path, model)
 
         self.app.client.sd_runner.merge_models(
