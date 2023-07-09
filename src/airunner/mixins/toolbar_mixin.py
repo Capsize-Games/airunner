@@ -4,8 +4,6 @@ from PyQt6.QtWidgets import QColorDialog
 import qdarktheme
 import webbrowser
 from airunner.windows.about import AboutWindow
-from airunner.windows.easy_prompt import EasyPromptWindow
-from airunner.windows.extensions import ExtensionsWindow
 from airunner.windows.model_merger import ModelMerger
 from airunner.windows.settings import SettingsWindow
 
@@ -23,7 +21,6 @@ class ToolbarMixin:
         self.actionDiscord.triggered.connect(lambda: webbrowser.open("https://discord.gg/PUVDDCJ7gz"))
         self.actionInvert.triggered.connect(self.do_invert)
         self.actionFilm.triggered.connect(self.do_film)
-        self.actionEasy_prompt.triggered.connect(self.show_easy_prompt)
         self.actionSettings.triggered.connect(self.show_settings)
         # self.initialize_toolbar_extensions()  # TODO: Extensions
 
@@ -35,9 +32,6 @@ class ToolbarMixin:
     def show_extensions(self):
         self.extensions_window = ExtensionsWindow(self.settings_manager)
     """
-
-    def show_easy_prompt(self):
-        EasyPromptWindow(self.settings_manager, app=self)
 
     def show_settings(self):
         SettingsWindow(self.settings_manager, app=self)
