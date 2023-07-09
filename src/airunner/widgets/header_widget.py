@@ -95,10 +95,4 @@ class HeaderWidget(BaseWidget):
 
     def set_stylesheet(self):
         super().set_stylesheet()
-        self.setStyleSheet("""
-            #frame {
-                border-radius: 0px;
-                border: 0px;
-                border-bottom: 1px solid #333333;
-            }
-        """)
+        self.setStyleSheet(self.app.css("header_widget"))
