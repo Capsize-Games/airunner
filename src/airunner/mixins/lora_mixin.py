@@ -125,7 +125,7 @@ class LoraMixin:
         container.setLayout(QVBoxLayout())
         available_loras = self.available_loras(tab_name)
         for lora in available_loras:
-            lora_widget = LoraWidget(lora=lora)
+            lora_widget = LoraWidget(app=self, lora=lora)
 
             # lora_widget.label.setText(lora["name"])
 
