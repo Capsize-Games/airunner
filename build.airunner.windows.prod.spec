@@ -44,7 +44,7 @@ datas += collect_data_files("transformers", include_py_files=True)
 datas += collect_data_files("tensorflow", include_py_files=True)
 datas += collect_data_files("bitsandbytes", include_py_files=True)
 datas += collect_data_files("sympy", include_py_files=True)
-
+datas += collect_data_files("controlnet_aux", include_py_files=True)
 a = Analysis(
     [
         f'{ROOT}\\src\\airunner\\main.py',

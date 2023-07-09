@@ -53,6 +53,7 @@ datas += collect_data_files("pytorch_lightning", include_py_files=True)
 datas += collect_data_files("lightning_fabric", include_py_files=True)
 datas += collect_data_files("transformers", include_py_files=True)
 datas += collect_data_files("sympy", include_py_files=True)
+datas += collect_data_files("controlnet_aux", include_py_files=True)
 a = Analysis(
     [
         f'/app/airunner/src/airunner/main.py',
