@@ -5,6 +5,8 @@ import torch
 from PyQt6 import uic
 from PyQt6.QtWidgets import QLabel, QWidget, QVBoxLayout
 
+from airunner.widgets.embedding_widget import EmbeddingWidget
+
 
 class EmbeddingMixin:
     _embedding_names = None
@@ -38,13 +40,13 @@ class EmbeddingMixin:
         container = QWidget()
         container.setLayout(QVBoxLayout())
         for embedding_name in self.embedding_names:
-            widget = uic.loadUi("pyqt/embedding.ui")
-            widget.label.setText(embedding_name)
-            widget.to_prompt_button.clicked.connect(partial(self.insert_into_prompt, f"{embedding_name}"))
-            widget.to_negative_prompt_button.clicked.connect(partial(self.insert_into_prompt, f"{embedding_name}", True))
-            container.layout().addWidget(widget)
+            embedding_widget = EmbeddingWidget(
+                app=self,
+                name=embedding_name
+            )
+            container.layout().addWidget(embedding_widget)
         container.layout().addStretch()
-        tab.embeddings.setWidget(container)
+        self.tool_menu_widget.embeddings_container_widget.embeddings.setWidget(container)
 
     def get_list_of_available_embedding_names(self):
         embeddings_path = self.settings_manager.settings.embeddings_path.get() or "embeddings"

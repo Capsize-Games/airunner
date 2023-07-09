@@ -8,14 +8,14 @@ class HistoryMixin:
     canvas = None
 
     def initialize(self):
-        self.window.undo_button.clicked.connect(self.undo)
-        self.window.redo_button.clicked.connect(self.redo)
+        self.header_widget.undo_button.clicked.connect(self.undo)
+        self.header_widget.redo_button.clicked.connect(self.redo)
         self.history = History()
         self.initialize_history_buttons()
 
     def initialize_history_buttons(self):
-        self.window.actionUndo.triggered.connect(self.undo)
-        self.window.actionRedo.triggered.connect(self.redo)
+        self.actionUndo.triggered.connect(self.undo)
+        self.actionRedo.triggered.connect(self.redo)
 
     def undo_new_layer(self, previous_event):
         layers = self.canvas.get_layers_copy()
@@ -113,7 +113,7 @@ class HistoryMixin:
         elif event_name == "rotate":
             self.undo_rotate(previous_event)
         self.history.undone_history.append(previous_event)
-        self.show_layers()
+        self.canvas.show_layers()
         self.canvas.update()
 
     def redo_draw(self, undone_event):
@@ -211,7 +211,7 @@ class HistoryMixin:
         elif event_name == "rotate":
             undone_event = self.redo_rotate(undone_event)
         self.history.event_history.append(undone_event)
-        self.show_layers()
+        self.canvas.show_layers()
         self.canvas.update()
 
     def resort_layers(self, event):
