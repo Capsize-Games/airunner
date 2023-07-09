@@ -40,6 +40,7 @@ class BaseWidget(QWidget):
         spinbox_maximum=100,
     ):
         return SliderWidget(
+            app=self.app,
             label_text=label_text,
             slider_callback=slider_callback,
             slider_minimum=slider_minimum,
