@@ -15,6 +15,7 @@ class LayerContainerWidget(BaseWidget):
 
         # add stretch to bottom of scrollAreaWidgetContents
         self.scrollAreaWidgetContents.layout().addStretch()
+        self.set_stylesheet()
 
     def set_stylesheet(self):
         super().set_stylesheet()
