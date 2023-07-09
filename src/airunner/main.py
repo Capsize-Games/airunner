@@ -239,7 +239,6 @@ class MainWindow(
     def __init__(self, *args, **kwargs):
         logger.info("Starting AI Runnner...")
         # enable hardware acceleration
-        QApplication.setAttribute(Qt.ApplicationAttribute.AA_UseDesktopOpenGL)
         qdarktheme.enable_hi_dpi()
 
         self.set_log_levels()
