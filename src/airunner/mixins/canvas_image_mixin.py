@@ -105,9 +105,11 @@ class CanvasImageMixin:
     def draw_images(self, layer, painter):
         img = self.visible_image(layer=layer)
         if img:
+            offset = layer.offset
             qimage = ImageQt(img)
             pixmap = QPixmap.fromImage(qimage)
             painter.drawPixmap(QPoint(0, 0), pixmap)
+            # painter.drawPixmap(offset, pixmap)
 
     def copy_image(self):
         im = self.current_active_image_data
@@ -386,23 +388,33 @@ class CanvasImageMixin:
 
         pivot_point = self.image_pivot_point
         root_point = self.image_root_point
+        current_image_position = self.current_layer.image_data.position
 
         is_drawing_left = outpaint_box_rect.x() < pivot_point.x()
-        is_drawing_right = outpaint_box_rect.width() > (width - abs(self.current_layer.image_data.position.x()))
+        is_drawing_right = outpaint_box_rect.width() > (width + current_image_position.x())
         is_drawing_up = outpaint_box_rect.y() < pivot_point.y()
-        is_drawing_down = outpaint_box_rect.height() > (height - abs(self.current_layer.image_data.position.y()))
+        is_drawing_down = outpaint_box_rect.height() > (height + current_image_position.y())
+
+        image_left = pivot_point.x()
+        image_right = width + image_left
+        image_top = pivot_point.y()
+        image_bottom = height + image_top
+        outpaint_box_right = outpaint_box_rect.width()
+        outpaint_box_left = outpaint_box_rect.x()
+        outpaint_box_top = outpaint_box_rect.y()
+        outpaint_box_bottom = outpaint_box_rect.height()
 
         x_overlap = 0
         if is_drawing_left:
-            x_overlap = pivot_point.x() - outpaint_box_rect.x()
+            x_overlap = image_left - outpaint_box_left
         if is_drawing_right:
-            x_overlap += outpaint_box_rect.width() - (width - abs(self.current_layer.image_data.position.x()))
+            x_overlap += outpaint_box_right - image_right
 
         y_overlap = 0
         if is_drawing_up:
-            y_overlap = pivot_point.y() - outpaint_box_rect.y()
+            y_overlap = image_top - outpaint_box_top
         if is_drawing_down:
-            y_overlap += outpaint_box_rect.height() - (height - abs(self.current_layer.image_data.position.y()))
+            y_overlap += outpaint_box_bottom - image_bottom
 
         if is_drawing_left or is_drawing_right:
             x = width + x_overlap
@@ -417,6 +429,7 @@ class CanvasImageMixin:
             new_dimensions = (width, new_dimensions[1])
         if new_dimensions[1] < height:
             new_dimensions = (new_dimensions[0], height)
+
         new_image = Image.new("RGBA", new_dimensions, (0, 0, 0, 0))
         new_image_a = Image.new("RGBA", new_dimensions, (0, 0, 0, 0))
         new_image_b = Image.new("RGBA", new_dimensions, (0, 0, 0, 0))
@@ -429,7 +442,7 @@ class CanvasImageMixin:
             image_root_point.setX(width + left_overlap)
             image_pivot_point.setX(int(outpaint_box_rect.x()))
             existing_image_pos = [current_x_pos, existing_image_pos[1]]
-            pos_x = max(0, outpaint_box_rect.x() + pivot_point.x())
+            pos_x = max(0, outpaint_box_rect.x() - pivot_point.x())
         else:
             pos_x = max(0, outpaint_box_rect.x() - pivot_point.x())
         if is_drawing_up:
@@ -438,9 +451,25 @@ class CanvasImageMixin:
             image_root_point.setY(height + up_overlap)
             image_pivot_point.setY(int(outpaint_box_rect.y()))
             existing_image_pos = [existing_image_pos[0], current_y_pos]
-            pos_y = max(0, outpaint_box_rect.y() + pivot_point.y())
+            pos_y = max(0, outpaint_box_rect.y() - pivot_point.y())
         else:
             pos_y = max(0, outpaint_box_rect.y() - pivot_point.y())
+
+        # self.parent.canvas_widget.set_debug_text(
+        #     outpaint_box_rect=outpaint_box_rect,
+        #     image_pivot_point=pivot_point,
+        #     image_root_point=root_point,
+        #     is_drawing_left=is_drawing_left,
+        #     is_drawing_right=is_drawing_right,
+        #     is_drawing_up=is_drawing_up,
+        #     is_drawing_down=is_drawing_down,
+        #     x_overlap=x_overlap,
+        #     y_overlap=y_overlap,
+        #     new_dimensions=new_dimensions,
+        #     current_image_position=current_image_position,
+        #     image_dimensions=(width, height),
+        #     pos=(int(pos_x), int(pos_y)),
+        # )
 
         new_image_a.paste(outpainted_image, (int(pos_x), int(pos_y)))
         new_image_b.paste(existing_image_copy, (int(existing_image_pos[0]), int(existing_image_pos[1])))
@@ -472,6 +501,9 @@ class CanvasImageMixin:
             image_root_point=image_root_point,
             image_pivot_point=image_pivot_point
         )
+        # get layer widget from self.parent.tool_menu_widget.layer_container_widget.layers
+
+        layer.layer_widget.set_thumbnail()
         self.update()
 
     def lower_opacity(self, i, diff):
