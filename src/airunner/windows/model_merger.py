@@ -199,6 +199,8 @@ class ModelMerger(BaseWindow):
         section = self.section
         if section == "txt2img":
             section = "stablediffusion_generate"
+        else:
+            section = f"stablediffusion_{section}"
         if model in MODELS[section]:
             model_path = MODELS[section][model]["path"]
         else:
@@ -208,6 +210,8 @@ class ModelMerger(BaseWindow):
                 path = self.settings_manager.settings.pix2pix_model_path.get()
             elif self.section == "outpaint":
                 path = self.settings_manager.settings.outpaint_model_path.get()
+            elif self.section == "upscale":
+                path = self.settings_manager.settings.upscale_model_path.get()
             model_path = os.path.join(path, model)
 
         self.app.client.sd_runner.merge_models(
