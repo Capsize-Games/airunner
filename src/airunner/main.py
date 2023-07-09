@@ -2,6 +2,8 @@ import os
 import pickle
 import sys
 from functools import partial
+import psutil
+import torch
 from PyQt6 import uic, QtCore
 from PyQt6.QtWidgets import QApplication, QFileDialog, QSplashScreen, QMainWindow, QLabel, QVBoxLayout, QDialog, \
     QSplitter
@@ -313,6 +315,7 @@ class MainWindow(
 
     def timerEvent(self, event):
         self.canvas.timerEvent(event)
+        self.update_system_stats()
 
     def check_for_latest_version(self):
         self.version_thread = QThread()
@@ -678,6 +681,12 @@ class MainWindow(
         self.is_saved = True
         self.set_window_title()
         self.canvas.show_layers()
+
+    def update_system_stats(self):
+        system_memory_percentage = psutil.virtual_memory().percent
+        cuda_memory = f"VRAM allocated {torch.cuda.memory_allocated() / 1024 ** 3:.1f}GB cached {torch.cuda.memory_cached() / 1024 ** 3:.1f}GB"
+        system_memory = f"RAM {system_memory_percentage:.1f}%"
+        self.footer_widget.system_status.setText(f"{system_memory}, {cuda_memory}")
 
 
 if __name__ == "__main__":
