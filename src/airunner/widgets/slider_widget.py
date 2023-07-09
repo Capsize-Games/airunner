@@ -77,6 +77,7 @@ class SliderWidget(QWidget):
         self.spinbox.minimum = val
 
     def __init__(self, *args, **kwargs):
+        self.app = kwargs.pop("app", None)
         slider_minimum = kwargs.pop("slider_minimum", 0)
         slider_maximum = kwargs.pop("slider_maximum", 100)
         slider_tick_interval = kwargs.pop("slider_tick_interval", 8)
