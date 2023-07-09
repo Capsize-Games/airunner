@@ -574,6 +574,7 @@ class MainWindow(
         else:
             print("is_normal")
             self.showNormal()
+        self.set_splitter_sizes()
 
     def set_log_levels(self):
         uic.properties.logger.setLevel(LOG_LEVEL)
