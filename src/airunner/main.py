@@ -29,6 +29,7 @@ from airunner.utils import get_version, get_latest_version
 from aihandler.settings_manager import SettingsManager, PromptManager
 from airunner.runai_client import OfflineClient
 import qdarktheme
+from PyQt6.QtGui import QIcon
 
 
 class MainWindow(
@@ -95,11 +96,13 @@ class MainWindow(
     def override_tab_section(self, val):
         self._override_tab_section = val
 
-    # convience properties to access widget elements
     @property
     def canvas_position(self):
-        return self.footer_widget.canvas_position
-    # end convience properties
+        return self.canvas_widget.canvas_position
+
+    @canvas_position.setter
+    def canvas_position(self, val):
+        self.canvas_widget.canvas_position.setText(val)
 
     _tabs = {
         "stablediffusion": {
@@ -477,6 +480,7 @@ class MainWindow(
         self.window = uic.loadUi(os.path.join(HERE, "pyqt/main_window_new.ui"), self)
         self.center()
         self.set_window_title()
+        self.set_window_icon()
 
     def initialize_stable_diffusion(self):
         logger.info("Initializing stable diffusion...")
@@ -552,6 +556,9 @@ class MainWindow(
         :return:
         """
         self.setWindowTitle(f"AI Runner {self.document_name}")
+
+    def set_window_icon(self):
+        self.setWindowIcon(QIcon("src/icon_256.png"))
 
     def new_document(self):
         CanvasMixin.initialize(self)
@@ -666,6 +673,7 @@ class MainWindow(
 
 
 if __name__ == "__main__":
+    QApplication.setAttribute(Qt.ApplicationAttribute.AA_UseDesktopOpenGL)
     app = QApplication([])
 
     def display_splash_screen(app):
