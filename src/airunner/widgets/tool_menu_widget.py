@@ -1,5 +1,4 @@
-from PyQt6.QtCore import Qt
-from PyQt6.QtWidgets import QTabWidget, QGridLayout, QColorDialog, QVBoxLayout, QWidget
+from PyQt6.QtWidgets import QTabWidget, QGridLayout, QColorDialog, QVBoxLayout, QWidget, QLineEdit
 from airunner.widgets.base_widget import BaseWidget
 #from airunner.widgets.brush_widget import BrushWidget
 from airunner.widgets.color_picker import ColorPicker
@@ -35,10 +34,23 @@ class ToolMenuWidget(BaseWidget):
 
         # create QColorDialog as a widget and add it to the right_toolbar
         color_dialog = ColorPicker()
-        color_dialog.colorSelected.connect(self.handle_color_selected)
         color_dialog.currentColorChanged.connect(self.handle_current_color_changed)
+        # add a input box to the layout
+        input_box = QLineEdit()
+        input_box.setPlaceholderText("Enter a hex color")
+        input_box.setFixedWidth(200)
+        input_box.setFixedHeight(30)
+        input_box.setObjectName("color_picker_input_box")
+        self.layout().addWidget(input_box)
+        self.color_input_box = input_box
 
-        self.tab_widget.addTab(color_dialog, "Pen Color")
+        widget = QWidget()
+        grid = QGridLayout(widget)
+        grid.addWidget(color_dialog, 0, 0, 1, 1)
+        grid.addWidget(input_box, 1, 0, 1, 1)
+        self.tab_widget.addTab(widget, "Pen Color")
+        # prevent grid from stretching
+        widget.setMaximumHeight(260)
 
         # add to grid
         #self.right_toolbar.layout().addWidget(self.brush_widget, 1, 0, 1, 1)
@@ -49,10 +61,8 @@ class ToolMenuWidget(BaseWidget):
         self.initialize_layer_buttons()
         #self.brush_widget.primary_color_button.clicked.connect(self.app.set_primary_color)
 
-    def handle_color_selected(self, val):
-        print("color selected", val)
-
     def handle_current_color_changed(self, val):
+        self.color_input_box.setText(val.name())
         self.settings_manager.settings.primary_color.set(val.name())
 
     def set_opacity_slider(self, val):
