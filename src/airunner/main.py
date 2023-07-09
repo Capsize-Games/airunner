@@ -569,10 +569,8 @@ class MainWindow(
 
     def set_window_state(self):
         if self.is_maximized:
-            print("is_maximized")
             self.showMaximized()
         else:
-            print("is_normal")
             self.showNormal()
         self.set_splitter_sizes()
 
