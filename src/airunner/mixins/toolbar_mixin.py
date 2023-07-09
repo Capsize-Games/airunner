@@ -1,7 +1,4 @@
-import os
-from PyQt6 import QtGui
 from PyQt6.QtWidgets import QColorDialog
-import qdarktheme
 import webbrowser
 from airunner.windows.about import AboutWindow
 from airunner.windows.model_merger import ModelMerger
