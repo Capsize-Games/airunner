@@ -470,6 +470,41 @@ class MainWindow(
         self.gridLayout.addWidget(self.toolbar_widget, 1, 3, 1, 1)
         self.gridLayout.addWidget(self.footer_widget, 2, 0, 1, 4)
 
+    def set_splitter_sizes(self):
+        bottom_sizes = self.settings_manager.settings.bottom_splitter_sizes.get()
+        main_sizes = self.settings_manager.settings.main_splitter_sizes.get()
+        if bottom_sizes[1] == -1:
+            bottom_sizes[1] = 520
+        if main_sizes[0] == -1:
+            main_sizes[0] = self.generator_tab_widget.minimumWidth()
+        if main_sizes[1] == -1:
+            main_sizes[1] = 520
+        if main_sizes[2] == -1:
+            main_sizes[2] = self.tool_menu_widget.minimumWidth()
+        self.center_splitter.setSizes(bottom_sizes)
+        self.splitter.setSizes(main_sizes)
+
+    def handle_main_splitter_moved(self, pos, index):
+        left_width = self.splitter.widget(0).width()
+        center_width = self.splitter.widget(1).width()
+        right_width = self.splitter.widget(2).width()
+        window_width = self.width()
+        if index == 2 and window_width - pos == 60:
+            right_width = 0
+        if index == 1 and pos == 1:
+            left_width = 0
+        current_sizes = self.settings_manager.settings.main_splitter_sizes.get()
+        if index == 1:
+            right_width = current_sizes[2]
+        if index == 2:
+            left_width = current_sizes[0]
+        self.settings_manager.settings.main_splitter_sizes.set([left_width, center_width, right_width])
+
+    def handle_bottom_splitter_moved(self, pos, index):
+        top_height = self.center_splitter.widget(0).height()
+        bottom_height = self.center_splitter.widget(1).height()
+        self.settings_manager.settings.bottom_splitter_sizes.set([top_height, bottom_height])
+
     def initialize_saved_prompts(self):
         self.prompts_manager = PromptManager()
         self.prompts_manager.enable_save()
