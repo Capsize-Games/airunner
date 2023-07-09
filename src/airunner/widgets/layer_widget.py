@@ -1,6 +1,5 @@
 import os
 from PyQt6 import QtGui
-
 from airunner.utils import image_to_pixmap
 from airunner.widgets.base_widget import BaseWidget
 
@@ -13,12 +12,14 @@ class LayerWidget(BaseWidget):
         super().__init__(*args, **kwargs)
         self.set_icon()
         self.layout().setContentsMargins(0, 0, 0, 0)
-        self.setStyleSheet("""
-        font-size: 9pt;
-        """)
-        self.thumbnail_label.setStyleSheet("border: 1px solid #121212; width: 32px; height: 32px;")
         self.set_thumbnail()
-        self.visible_button.setStyleSheet("border: 1px solid #333333")
+        self.set_stylesheet()
+
+    def set_stylesheet(self):
+        super().set_stylesheet()
+        self.setStyleSheet(self.app.css("layer_widget"))
+        self.thumbnail_label.setStyleSheet(self.app.css("thumbnail_label"))
+        self.visible_button.setStyleSheet(self.app.css("border-light"))
 
     def set_thumbnail(self):
         image = self.data.image_data.image
