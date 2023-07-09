@@ -558,9 +558,9 @@ class Canvas(
 
             # show a border around layer_obj if it is the selected index
             if self.current_layer_index == index:
-                layer_obj.frame.setStyleSheet(self.layer_highlight_style)
+                layer_obj.frame.setStyleSheet(self.parent.css("layer_highlight_style"))
             else:
-                layer_obj.frame.setStyleSheet(self.layer_normal_style)
+                layer_obj.frame.setStyleSheet(self.parent.css("layer_normal_style"))
 
             layer_obj.set_icon()
             layer_obj.visible_button.clicked.connect(
@@ -585,14 +585,17 @@ class Canvas(
         if not hasattr(self, "container"):
             return
         if self.container:
-            item = self.container.layout().itemAt(self.current_layer_index)
-            if item:
-                item.widget().frame.setStyleSheet(self.layer_normal_style)
+            try:
+                item = self.container.layout().itemAt(self.current_layer_index)
+                if item:
+                    item.widget().frame.setStyleSheet(self.parent.css("layer_normal_style"))
+            except RuntimeError:
+                item = None
         self.current_layer_index = index
         if self.container:
             item = self.container.layout().itemAt(self.current_layer_index)
             if item:
-                item.widget().frame.setStyleSheet(self.layer_highlight_style)
+                item.widget().frame.setStyleSheet(self.parent.css("layer_highlight_style"))
         # change the layer opacity
         self.parent.tool_menu_widget.set_opacity_slider(
             int(self.current_layer.opacity * 100)
