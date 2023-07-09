@@ -18,6 +18,7 @@ from airunner.mixins.generator_mixin import GeneratorMixin
 from airunner.mixins.history_mixin import HistoryMixin
 from airunner.mixins.menubar_mixin import MenubarMixin
 from airunner.mixins.toolbar_mixin import ToolbarMixin
+from airunner.themes import Themes
 from airunner.widgets.canvas_widget import CanvasWidget
 from airunner.widgets.footer_widget import FooterWidget
 from airunner.widgets.generator_tab_widget import GeneratorTabWidget
@@ -221,6 +222,13 @@ class MainWindow(
     @property
     def is_maximized(self):
         return self.settings_manager.settings.is_maximized.get()
+
+    _themes = None
+    @property
+    def css(self):
+        if self._themes is None:
+            self._themes = Themes(self.settings_manager)
+        return self._themes.css
 
     @is_maximized.setter
     def is_maximized(self, val):
