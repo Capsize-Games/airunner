@@ -5,10 +5,9 @@ from functools import partial
 import psutil
 import torch
 from PyQt6 import uic, QtCore
-from PyQt6.QtWidgets import QApplication, QFileDialog, QSplashScreen, QMainWindow, QLabel, QVBoxLayout, QDialog, \
-    QSplitter
-from PyQt6.QtCore import pyqtSlot, Qt, QThread, pyqtSignal, QObject, QTimer, QEvent
-from PyQt6.QtGui import QGuiApplication, QPixmap, QShortcut, QKeySequence, QKeyEvent
+from PyQt6.QtWidgets import QApplication, QFileDialog, QSplashScreen, QMainWindow, QSplitter, QTabWidget
+from PyQt6.QtCore import pyqtSlot, Qt, QThread, pyqtSignal, QObject, QTimer
+from PyQt6.QtGui import QGuiApplication, QPixmap, QShortcut, QKeySequence
 from aihandler.qtvar import TQDMVar, ImageVar, MessageHandlerVar, ErrorHandlerVar
 from aihandler.logger import logger
 from aihandler.settings import LOG_LEVEL
@@ -24,6 +23,7 @@ from airunner.themes import Themes
 from airunner.widgets.canvas_widget import CanvasWidget
 from airunner.widgets.footer_widget import FooterWidget
 from airunner.widgets.generator_tab_widget import GeneratorTabWidget
+from airunner.widgets.prompt_builder import PromptBuilderWidget
 from airunner.widgets.tool_bar_widget import ToolBarWidget
 from airunner.widgets.tool_menu_widget import ToolMenuWidget
 from airunner.widgets.header_widget import HeaderWidget
@@ -449,13 +449,25 @@ class MainWindow(
         self.gridLayout.setColumnStretch(1, 1)
         self.gridLayout.addWidget(self.header_widget, 0, 0, 1, 4)
 
-        splitter = QSplitter()
-        splitter.addWidget(self.generator_tab_widget)
-        splitter.addWidget(self.canvas_widget)
-        splitter.addWidget(self.tool_menu_widget)
-        splitter.setStretchFactor(1, 1)
-        splitter.setSizes([self.generator_tab_widget.minimumWidth(), 520, self.tool_menu_widget.minimumWidth()])
-        self.gridLayout.addWidget(splitter, 1, 0, 1, 3)
+        self.splitter = QSplitter()
+        self.center_splitter = QSplitter(Qt.Orientation.Vertical)
+        prompt_builder = PromptBuilderWidget(app=self)
+        center_panel = QTabWidget()
+        center_panel.setStyleSheet(self.css("center_panel"))
+        center_panel.setTabPosition(QTabWidget.TabPosition.South)
+        center_panel.addTab(prompt_builder, "Prompt Builder")
+        self.center_splitter.setStretchFactor(1, 1)
+        self.center_splitter.setStretchFactor(2, 0)
+        self.splitter.addWidget(self.generator_tab_widget)
+        self.center_splitter.addWidget(self.canvas_widget)
+        self.center_splitter.addWidget(center_panel)
+        # listen to center_splitter size changes
+        self.center_splitter.splitterMoved.connect(self.handle_bottom_splitter_moved)
+        self.splitter.addWidget(self.center_splitter)
+        self.splitter.addWidget(self.tool_menu_widget)
+        self.splitter.setStretchFactor(1, 1)
+        self.splitter.splitterMoved.connect(self.handle_main_splitter_moved)
+        self.gridLayout.addWidget(self.splitter, 1, 0, 1, 3)
         self.gridLayout.addWidget(self.toolbar_widget, 1, 3, 1, 1)
         self.gridLayout.addWidget(self.footer_widget, 2, 0, 1, 4)
 
