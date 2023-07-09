@@ -226,21 +226,7 @@ class GeneratorMixin(LoraMixin):
             for tab in self.tabs.keys():  # iterate over each section within the tab section (txt2img, img2img, etc)
                 self.tabs[tab] = uic.loadUi(os.path.join("pyqt/generate_form.ui"))
 
-                self.tabs[tab].setStyleSheet("""
-                    QTabWidget::pane { 
-                        border: 0;
-                        border-left: 0;
-                        border-radius: 0px;
-                        background: #222222;
-                    }
-                    QTabBar::tab { 
-                        border-radius: 0px; 
-                        margin: 0px; 
-                        padding: 5px 10px;
-                        border: 0px;
-                        font-size: 9pt;
-                    }
-                """)
+                self.tabs[tab].setStyleSheet(self.css("generator_tab"))
 
                 # set up the override_section for the tab so that we can force which tab is active
                 # this is a hack in order to get around the auto-switching of tabs when the user
@@ -249,7 +235,7 @@ class GeneratorMixin(LoraMixin):
                 self.override_section = override_section
 
                 # Initialize controlnet dropdown for controlnet section
-                if tab in ["txt2img", "img2img", "outpaint"]:
+                if tab in ["txt2img", "img2img", "outpaint"] and tab_section != "kandinsky":
                     controlnet_options = [
                         "Canny",
                         "MLSD",
@@ -350,6 +336,11 @@ class GeneratorMixin(LoraMixin):
                 self.tabs[tab].deterministic_radio.setChecked(self.deterministic)
                 self.tabs[tab].deterministic_radio.toggled.connect(
                     lambda val, _tab=self.tabs[tab]: self.handle_deterministic_radio_change(val, _tab)
+                )
+                self.tabs[tab].use_prompt_builder_checkbox.setChecked(
+                    self.settings_manager.settings.use_prompt_builder_checkbox.get())
+                self.tabs[tab].use_prompt_builder_checkbox.toggled.connect(
+                    lambda val: self.settings_manager.settings.use_prompt_builder_checkbox.set(val)
                 )
 
         self.override_section = None
