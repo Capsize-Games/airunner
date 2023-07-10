@@ -609,10 +609,11 @@
       },
       "weights": {
         "age": 1.4,
-        "gender": 1.4,
-        "ethnicity": 1.4,
+        "gender": 1.2,
+        "location": 1.3,
+        "ethnicity": 1.1,
         "skin_tone": 0.8,
-        "body_type": 1.3,
+        "body_type": 1.2,
         "hair_color": 1.0,
         "hair_length": 1.0,
         "facial_hair": 1.1,
@@ -629,9 +630,9 @@
         "pants": 1.0,
         "shoes": 1.0,
         "accessories": 1.0,
-        "emotion": 1.3,
+        "emotion": 1.2,
         "personality": 1.0,
-        "descriptive_traits": 1.3,
+        "descriptive_traits": 1.2,
         "occupation": 1.0
       },
       "variables": {
@@ -641,6 +642,28 @@
           "max": 100
         },
         "gender": ["Male", "Female"],
+        "location": ["train station", "airport", "beach", "mountain", "park", "forest", "desert", "countryside",
+                     "city center", "residential area", "office building", "school", "library", "hospital",
+                     "shopping mall", "restaurant", "coffee shop", "bar", "nightclub", "hotel", "museum", "gallery",
+                     "theater", "stadium", "amusement park", "zoo", "farm", "harbor", "riverbank", "lake", "bridge",
+                     "cave", "island", "waterfall", "ruins", "church", "temple", "mosque", "synagogue", "castle",
+                     "palace", "marketplace", "subway station", "bus stop", "train tracks", "campsite", "campus",
+                     "skyscraper", "wind farm", "power plant", "construction site", "warehouse", "jungle",
+                     "underground tunnel", "volcano", "observatory", "prison", "garden",
+                     "farmhouse", "vineyard", "race track", "skate park", "cemetery", "mine",
+                     "golf course", "ski resort", "apartment building", "factory", "quarry", "pier", "aquarium",
+                     "planetarium", "radio tower", "water tower", "playground", "gas station", "highway",
+                     "cruise ship", "helipad", "space station", "junkyard", "wasteland", "island resort",
+                     "floating market", "train yard", "bamboo forest", "coral reef", "football stadium",
+                     "racecourse", "seaside cliffs", "gondola", "prairie", "hot air balloon", "windmill", "outback",
+                     "carnival", "fairground", "deserted island", "lakeside cabin", "abandoned factory",
+                     "boardwalk", "bamboo grove", "fishing village", "iceberg", "garden maze", "beachside villa",
+                     "snowy village", "castle ruins", "cottage", "waterfront", "oasis", "treehouse",
+                     "floating island", "cliffside village", "shipwreck", "lighthouse", "tropical rainforest",
+                     "cave dwelling", "apartment balcony", "suspension bridge", "ancient temple", "skydiving",
+                     "paragliding", "ice cave", "glacier", "board game cafe", "gymnasium", "skating rink",
+                     "school bus", "bookstore", "vintage shop", "street market", "rooftop garden", "rooftop bar",
+                     "tea plantation", "rice terrace", "night market", "food court"],
         "hair_color":  ["Black", "Brown", "Blonde", "Red", "Gray", "White"],
         "ethnicity": ["Caucasian", "African-American", "Asian", "Hispanic", "Indian", "Middle Eastern", "Japanese", "Chinese", "Korean"],
         "eye_color":  ["Brown", "Blue", "Green", "Hazel", "Gray"],
@@ -678,18 +701,27 @@
           "cond": "gender"
         },
         {
-          "text": "$gender named $$gender_name ",
-          "cond": "gender"
-        },
-        {
           "text": "person ",
           "not_cond": [
             "ethnicity", "gender"
           ]
         },
         {
-          "text": "who is $age",
-          "cond": "age"
+          "text": "at $location. ",
+          "cond": "location"
+        },
+        {
+          "text": ". ",
+          "not_cond": "location"
+        },
+        {
+          "text": "$$gender_name is $age ",
+          "cond": ["age", "gender"]
+        },
+        {
+          "text": "The person is $age ",
+          "cond": ["age"],
+          "not_cond": ["gender"]
         },
         {
           "text": "$hair_length ",
@@ -740,6 +772,12 @@
         {
           "text": "$$gender_name is (wearing $pants), ",
           "cond": "pants"
+        },
+        {
+          "text": "wearing $clothing ",
+          "not_cond": [
+            "pants", "shirt"
+          ]
         },
         {
           "text": "$$gender_name is (wearing $shoes), ",
