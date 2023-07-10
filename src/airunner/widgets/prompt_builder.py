@@ -1,5 +1,4 @@
 import json
-import os
 import random
 import re
 from functools import partial
@@ -9,14 +8,10 @@ from aihandler.prompt_parser import PromptParser
 from airunner.widgets.base_widget import BaseWidget
 
 
-HERE = os.path.dirname(os.path.abspath(__file__))
-prompt_data = json.load(open(os.path.join("data/prompts.json"), "r"))
-prompt_data["age"] = [str(n) for n in range(18, 100)]
-
-
 class PromptBuilderWidget(BaseWidget):
     name = "prompt_builder"
     data = {}
+    prompt_variables = {}
     auto_prompt_weight = 0.5
     text_prompt_weight = 0.5
     negative_auto_prompt_weight = 0.5
@@ -29,6 +24,8 @@ class PromptBuilderWidget(BaseWidget):
 
         # load data
         self.data = self.load_data("prompts")
+        self.prompt_variables = self.load_data("prompt_variables")
+        self.prompt_variables["age"] = [str(n) for n in range(18, 100)]
 
         self.scroll_layout = QVBoxLayout(self.scrollArea.widget())
 
@@ -288,8 +285,8 @@ class PromptBuilderWidget(BaseWidget):
             print(generated_prompt)
 
         if category:
-            generated_prompt = PromptParser.parse(prompt_data, category, generated_prompt, variables, weighted_variables, seed=self.app.seed)
-            generated_prompt = PromptParser.parse(prompt_data, category, generated_prompt, variables, weighted_variables,
+            generated_prompt = PromptParser.parse(self.prompt_variables, category, generated_prompt, variables, weighted_variables, seed=self.app.seed)
+            generated_prompt = PromptParser.parse(self.prompt_variables, category, generated_prompt, variables, weighted_variables,
                                                   seed=self.app.seed)
 
             # extract style from prompt - find |{style:style_name}| and replace with empty string,
@@ -335,7 +332,7 @@ class PromptBuilderWidget(BaseWidget):
                 negative_prompt_style = "cartoon"
 
 
-            prompt = PromptParser.parse(prompt_data, category, prompt, variables, weighted_variables, seed=self.app.seed)
+            prompt = PromptParser.parse(self.prompt_variables, category, prompt, variables, weighted_variables, seed=self.app.seed)
             text_weight = self.text_prompt_weight
             auto_weight = self.auto_prompt_weight
             generated_prompt = generated_prompt.strip()
@@ -347,10 +344,10 @@ class PromptBuilderWidget(BaseWidget):
             text_weight = self.negative_text_prompt_weight
             auto_weight = self.negative_auto_prompt_weight
             generated_negative_prompt = self.data["categories"][category]["prompts"][prompt_category][prompt_type]["negative_prompt"][negative_prompt_style]
-            generated_negative_prompt = PromptParser.parse(prompt_data, category, generated_negative_prompt, seed=self.app.seed)
+            generated_negative_prompt = PromptParser.parse(self.prompt_variables, category, generated_negative_prompt, seed=self.app.seed)
             generated_negative_prompt = generated_negative_prompt.strip()
             if negative_prompt != "" and text_weight > 0 and auto_weight > 0:
-                negative_prompt = PromptParser.parse(prompt_data, category, negative_prompt, seed=self.app.seed)
+                negative_prompt = PromptParser.parse(self.prompt_variables, category, negative_prompt, seed=self.app.seed)
                 negative_prompt = f'("{negative_prompt}", "{generated_negative_prompt}").blend({text_weight}, {auto_weight})'
             elif text_weight == 0 or negative_prompt == "":
                 negative_prompt = generated_negative_prompt
@@ -452,6 +449,7 @@ class PromptBuilderWidget(BaseWidget):
             self.populate_prompt_widgets(category)
 
     def load_data(self, file_name):
+        #HERE = os.path.dirname(os.path.abspath(__file__))
         file = f"data/{file_name}.json"
         with open(file, "r") as f:
             data = json.load(f)
