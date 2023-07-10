@@ -282,7 +282,6 @@ class PromptBuilderWidget(BaseWidget):
                         elif value != "Random":
                             variables[variable] = [value]
             generated_prompt = self.build_appearance_prompt(style, variables, category)
-            print(generated_prompt)
 
         if category:
             generated_prompt = PromptParser.parse(self.prompt_variables, category, generated_prompt, variables, weighted_variables, seed=self.app.seed)
@@ -357,6 +356,13 @@ class PromptBuilderWidget(BaseWidget):
     def has_variable(self, variable, available_variables):
         return variable in available_variables and available_variables[variable] != [""]
 
+    def process_variable(self, var):
+        if isinstance(var, dict):
+            if "range" in var:
+                if "type" in var and var["type"] == "range":
+                    var = random.randint(var["min"], var["max"])
+        return var
+
     def build_conditional_prompt(self, conditionals, style, vars, category, appearance):
         for conditional in conditionals:
             text = None
@@ -374,8 +380,9 @@ class PromptBuilderWidget(BaseWidget):
                 next = conditional["next"]
             if "else" in conditional:
                 else_value = conditional["else"]
+            has_cond = True
+            not_cond_val = True
             if text and cond:
-                has_cond = True
                 if isinstance(cond, list):
                     for cond_var in cond:
                         if not self.has_variable(cond_var, vars):
@@ -383,12 +390,7 @@ class PromptBuilderWidget(BaseWidget):
                 else:
                     if not self.has_variable(cond, vars):
                         has_cond = False
-                if has_cond:
-                    appearance += text
-                elif else_value:
-                    appearance += else_value
-            elif text and not_cond:
-                not_cond_val = True
+            if text and not_cond:
                 if isinstance(not_cond, list):
                     for not_cond_var in not_cond:
                         if self.has_variable(not_cond_var, vars):
@@ -396,10 +398,11 @@ class PromptBuilderWidget(BaseWidget):
                 else:
                     if self.has_variable(not_cond, vars):
                         not_cond_val = False
-                if not_cond_val:
-                    appearance += text
-            elif text:
+            if text and not_cond_val and has_cond:
+                text = self.process_variable(text)
                 appearance += text
+            elif else_value:
+                appearance += self.process_variable(text)
             if next:
                 if cond and not text:
                     if self.has_variable(cond, vars):
@@ -449,7 +452,6 @@ class PromptBuilderWidget(BaseWidget):
             self.populate_prompt_widgets(category)
 
     def load_data(self, file_name):
-        #HERE = os.path.dirname(os.path.abspath(__file__))
         file = f"data/{file_name}.json"
         with open(file, "r") as f:
             data = json.load(f)
