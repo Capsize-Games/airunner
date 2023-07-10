@@ -11,6 +11,7 @@ from airunner.widgets.base_widget import BaseWidget
 class PromptBuilderWidget(BaseWidget):
     name = "prompt_builder"
     data = {}
+    prompt_variables = {}
     auto_prompt_weight = 0.5
     text_prompt_weight = 0.5
     negative_auto_prompt_weight = 0.5
@@ -23,6 +24,8 @@ class PromptBuilderWidget(BaseWidget):
 
         # load data
         self.data = self.load_data("prompts")
+        self.prompt_variables = self.load_data("prompt_variables")
+        self.prompt_variables["age"] = [str(n) for n in range(18, 100)]
 
         self.scroll_layout = QVBoxLayout(self.scrollArea.widget())
 
@@ -135,15 +138,18 @@ class PromptBuilderWidget(BaseWidget):
         # clear items from self.scroll_grid
         self.clear_scroll_grid()
         data = self.settings_manager.settings.prompt_generator_weighted_values.get()
-        for index, variable in enumerate(self.data["categories"][category]["variables"].keys()):
-            if category in data and variable in data[category]:
-                weighted_value = data[category][variable]
-            else:
-                weighted_value = {
-                    "value": "",
-                    "weight": self.data["categories"][category]["weights"][variable]
-                }
-            self.create_prompt_widget(category, variable, weighted_value, index)
+        try:
+            for index, variable in enumerate(self.data["categories"][category]["variables"].keys()):
+                if category in data and variable in data[category]:
+                    weighted_value = data[category][variable]
+                else:
+                    weighted_value = {
+                        "value": "",
+                        "weight": self.data["categories"][category]["weights"][variable]
+                    }
+                self.create_prompt_widget(category, variable, weighted_value, index)
+        except KeyError:
+            pass
         self.scroll_layout.layout().addStretch()
 
     def create_prompt_widget(self, category, variable, weighted_value, index):
@@ -279,8 +285,8 @@ class PromptBuilderWidget(BaseWidget):
             print(generated_prompt)
 
         if category:
-            generated_prompt = PromptParser.parse(category, generated_prompt, variables, weighted_variables, seed=self.app.seed)
-            generated_prompt = PromptParser.parse(category, generated_prompt, variables, weighted_variables,
+            generated_prompt = PromptParser.parse(self.prompt_variables, category, generated_prompt, variables, weighted_variables, seed=self.app.seed)
+            generated_prompt = PromptParser.parse(self.prompt_variables, category, generated_prompt, variables, weighted_variables,
                                                   seed=self.app.seed)
 
             # extract style from prompt - find |{style:style_name}| and replace with empty string,
@@ -326,7 +332,7 @@ class PromptBuilderWidget(BaseWidget):
                 negative_prompt_style = "cartoon"
 
 
-            prompt = PromptParser.parse(category, prompt, variables, weighted_variables, seed=self.app.seed)
+            prompt = PromptParser.parse(self.prompt_variables, category, prompt, variables, weighted_variables, seed=self.app.seed)
             text_weight = self.text_prompt_weight
             auto_weight = self.auto_prompt_weight
             generated_prompt = generated_prompt.strip()
@@ -338,10 +344,10 @@ class PromptBuilderWidget(BaseWidget):
             text_weight = self.negative_text_prompt_weight
             auto_weight = self.negative_auto_prompt_weight
             generated_negative_prompt = self.data["categories"][category]["prompts"][prompt_category][prompt_type]["negative_prompt"][negative_prompt_style]
-            generated_negative_prompt = PromptParser.parse(category, generated_negative_prompt, seed=self.app.seed)
+            generated_negative_prompt = PromptParser.parse(self.prompt_variables, category, generated_negative_prompt, seed=self.app.seed)
             generated_negative_prompt = generated_negative_prompt.strip()
             if negative_prompt != "" and text_weight > 0 and auto_weight > 0:
-                negative_prompt = PromptParser.parse(category, negative_prompt, seed=self.app.seed)
+                negative_prompt = PromptParser.parse(self.prompt_variables, category, negative_prompt, seed=self.app.seed)
                 negative_prompt = f'("{negative_prompt}", "{generated_negative_prompt}").blend({text_weight}, {auto_weight})'
             elif text_weight == 0 or negative_prompt == "":
                 negative_prompt = generated_negative_prompt
@@ -417,23 +423,33 @@ class PromptBuilderWidget(BaseWidget):
             category = self.basic_category.currentText()
         elif prompt_type == "advanced":
             category = self.advanced_category.currentText()
-        prompts = list(self.data["categories"][category]["prompts"][prompt_type].keys())
+        try:
+            prompts = list(self.data["categories"][category]["prompts"][prompt_type].keys())
+        except KeyError:
+            prompts = []
         if prompt_type == "basic":
             self.basic_prompt.clear()
             self.basic_prompt.addItems(prompts)
             self.basic_prompts = prompts
             self.settings_manager.settings.prompt_generator_basic_category.set(category)
-            self.settings_manager.settings.prompt_generator_basic_prompt.set(prompts[0])
+            try:
+                self.settings_manager.settings.prompt_generator_basic_prompt.set(prompts[0])
+            except IndexError:
+                pass
         else:
             self.advanced_prompt.clear()
             self.advanced_prompt.addItems(prompts)
             self.advanced_prompts = prompts
             self.settings_manager.settings.prompt_generator_advanced_category.set(category)
-            self.settings_manager.settings.prompt_generator_advanced_prompt.set(prompts[0])
+            try:
+                self.settings_manager.settings.prompt_generator_advanced_prompt.set(prompts[0])
+            except IndexError:
+                pass
         if prompt_type == "advanced":
             self.populate_prompt_widgets(category)
 
     def load_data(self, file_name):
+        #HERE = os.path.dirname(os.path.abspath(__file__))
         file = f"data/{file_name}.json"
         with open(file, "r") as f:
             data = json.load(f)
