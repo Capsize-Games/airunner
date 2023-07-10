@@ -38,6 +38,8 @@ class PromptBuilderWidget(BaseWidget):
         self.advanced_category.addItems(self.categories)
         self.basic_category.currentIndexChanged.connect(partial(self.set_prompts, "basic"))
         self.advanced_category.currentIndexChanged.connect(partial(self.set_prompts, "advanced"))
+        self.set_prompts("basic")
+        self.set_prompts("advanced")
 
         # initialize style dropdowns
         self.styles = self.data["styles"]
