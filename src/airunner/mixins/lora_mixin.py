@@ -27,8 +27,8 @@ class LoraMixin:
         return tab not in ["upscale", "superresolution", "txt2vid"]
 
     def available_lora(self, action):
-        available_lora = self.loras
-        for lora in available_lora:
+        available_lora = []
+        for lora in self.loras:
             if lora["enabled"] and lora["scale"] > 0:
                 available_lora.append(lora)
         return available_lora
