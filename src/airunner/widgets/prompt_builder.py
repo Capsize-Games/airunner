@@ -38,6 +38,8 @@ class PromptBuilderWidget(BaseWidget):
         self.advanced_category.addItems(self.categories)
         self.basic_category.currentIndexChanged.connect(partial(self.set_prompts, "basic"))
         self.advanced_category.currentIndexChanged.connect(partial(self.set_prompts, "advanced"))
+        self.set_prompts("basic")
+        self.set_prompts("advanced")
 
         # initialize style dropdowns
         self.styles = self.data["styles"]
@@ -287,6 +289,7 @@ class PromptBuilderWidget(BaseWidget):
             generated_prompt = PromptParser.parse(self.prompt_variables, category, generated_prompt, variables, weighted_variables, seed=self.app.seed)
             generated_prompt = PromptParser.parse(self.prompt_variables, category, generated_prompt, variables, weighted_variables,
                                                   seed=self.app.seed)
+            print(generated_prompt)
 
             # extract style from prompt - find |{style:style_name}| and replace with empty string,
             # then split the found string and assign to style variable
@@ -422,10 +425,12 @@ class PromptBuilderWidget(BaseWidget):
         return f"($style, $color, ({style})++), {appearance}"
 
     def set_prompts(self, prompt_type):
+        print("set_prompts")
         if prompt_type == "basic":
             category = self.basic_category.currentText()
         elif prompt_type == "advanced":
             category = self.advanced_category.currentText()
+        print(prompt_type)
         try:
             prompts = list(self.data["categories"][category]["prompts"][prompt_type].keys())
         except KeyError:
