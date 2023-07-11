@@ -38,6 +38,7 @@ class BaseWidget(QWidget):
         spinbox_page_step=0.01,
         spinbox_minimum=0,
         spinbox_maximum=100,
+        display_as_float=False
     ):
         return SliderWidget(
             app=self.app,
@@ -51,7 +52,8 @@ class BaseWidget(QWidget):
             spinbox_single_step=spinbox_single_step,
             spinbox_page_step=spinbox_page_step,
             spinbox_minimum=spinbox_minimum,
-            spinbox_maximum=spinbox_maximum
+            spinbox_maximum=spinbox_maximum,
+            display_as_float=display_as_float
         )
 
     def add_to_grid(self, widget, row, column, row_span=1, column_span=1):

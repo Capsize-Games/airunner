@@ -88,7 +88,7 @@ class CanvasActiveGridAreaMixin:
         )
         painter.drawRect(rect)
 
-        # draw a thirder black border in the center of the two rectangles
+        # draw a third black border in the center of the two rectangles
         pen = QPen(
             QColor(0, 0, 0),
             self.settings_manager.settings.line_width.get() + 1
