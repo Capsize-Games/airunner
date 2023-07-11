@@ -392,7 +392,6 @@ class GeneratorMixin(LoraMixin):
             self.set_default_values(tab_name, tab)
         self.canvas.update()
 
-
     def text_changed(self, tab):
         try:
             val = int(tab.seed.toPlainText())
@@ -560,11 +559,7 @@ class GeneratorMixin(LoraMixin):
             image.save(os.path.join(path, filename + extension))
 
     def generate_callback(self):
-        # check that the correct model is in use for txt2vid
-        if self.current_section == "txt2vid" and self.tabs[self.current_section].model_dropdown.currentText() != "damo-vilab":
-            self.error_handler("Must use damo-vilab model with txt2vid")
-        else:
-            self.generate(True)
+        self.generate(True)
 
     def prep_video(self):
         pass
