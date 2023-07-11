@@ -26,18 +26,26 @@ class HeaderWidget(BaseWidget):
             slider_callback=self.width_slider_callback,
             slider_minimum=size,
             slider_maximum=4096,
+            spinbox_minimum=size,
+            spinbox_maximum=4096,
             slider_tick_interval=size,
             slider_single_step=size,
             slider_page_step=size,
+            spinbox_single_step=size,
+            spinbox_page_step=size,
         )
         self.height_slider_widget = self.create_slider_widget(
             label_text="Active Grid Height:",
             slider_callback=self.height_slider_callback,
             slider_minimum=size,
             slider_maximum=4096,
+            spinbox_minimum=size,
+            spinbox_maximum=4096,
             slider_tick_interval=size,
             slider_single_step=size,
             slider_page_step=size,
+            spinbox_single_step=size,
+            spinbox_page_step=size,
         )
 
         self.file_new_button.clicked.connect(self.app.new_document)

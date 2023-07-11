@@ -3,6 +3,7 @@ from PyQt6.QtGui import QColor, QPainter, QPen, QBrush, QPixmap, QCursor
 
 
 def CircleCursor(outline_color, fill_color, pixmap_size=32):
+    pixmap_size = int(pixmap_size)
     # create a pixmap with the desired size for the cursor shape
     pixmap = QPixmap(pixmap_size, pixmap_size)
     pixmap.fill(Qt.GlobalColor.transparent)  # make the background of the pixmap transparent
