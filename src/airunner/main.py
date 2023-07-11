@@ -209,9 +209,6 @@ class MainWindow(
         if step == 0 and total == 0:
             current = 0
         else:
-            if self.progress_bar_started and not self.tqdm_callback_triggered:
-                self.tqdm_callback_triggered = True
-                self.generator_tab_widget.data[action]["progressBar"].setRange(0, 100)
             try:
                 current = (step / total)
             except ZeroDivisionError:
