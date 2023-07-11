@@ -300,7 +300,6 @@ class PromptBuilderWidget(BaseWidget):
                 variables,
                 weighted_variables,
                 self.app.seed)
-
             # extract style from prompt - find |{style:style_name}| and replace with empty string,
             # then split the found string and assign to style variable
             style = re.findall(r"\|style:(.*?)\|", generated_prompt)
