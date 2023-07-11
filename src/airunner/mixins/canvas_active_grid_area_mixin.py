@@ -23,6 +23,8 @@ class CanvasActiveGridAreaMixin:
             brush_color = QColor(255, 0, 255)
         elif self.parent.current_section == "controlnet":
             brush_color = QColor(255, 255, 255)
+        elif self.parent.current_section == "txt2vid":
+            brush_color = QColor(144, 144, 144)
         else:
             brush_color = QColor(0, 0, 0)
         return brush_color
