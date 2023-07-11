@@ -301,7 +301,7 @@ class GeneratorTabWidget(BaseWidget):
         group_box.setObjectName("seed_groupbox")
         group_box.setTitle("Manual Seed")
         group_box.setCheckable(True)
-        group_box.setChecked(self.app.random_seed)
+        group_box.setChecked(not self.app.random_seed)
         group_box.toggled.connect(
             partial(self.handle_value_change, "random_seed", widget=group_box))
         grid_layout = QGridLayout(group_box)
