@@ -155,6 +155,7 @@ class GeneratorTabWidget(BaseWidget):
         current_model = self.app.model
         self.load_model_by_section(self.tab_section, self.tab)
         model_widget.setCurrentText(current_model)
+        self.data[self.tab_section][self.tab]["model_dropdown_widget"] = model_widget
         self.add_widget_to_grid(model_label)
         self.add_widget_to_grid(model_widget)
 
@@ -171,6 +172,7 @@ class GeneratorTabWidget(BaseWidget):
         scheduler_widget.setCurrentText(self.app.scheduler)
         scheduler_widget.currentTextChanged.connect(
             partial(self.handle_value_change, "scheduler", widget=scheduler_widget))
+        self.data[self.tab_section][self.tab]["scheduler_dropdown_widget"] = scheduler_widget
         self.add_widget_to_grid(scheduler_label)
         self.add_widget_to_grid(scheduler_widget)
 
@@ -254,6 +256,7 @@ class GeneratorTabWidget(BaseWidget):
             spinbox_minimum=1,
             slider_minimum=1
         )
+        self.data[self.tab_section][self.tab]["steps_slider_widget"] = steps_slider
         self.add_widget_to_grid(steps_slider)
 
     def add_scale_widgets(self):
@@ -268,6 +271,7 @@ class GeneratorTabWidget(BaseWidget):
             spinbox_single_step=0.01,
             spinbox_page_step=0.01
         )
+        self.data[self.tab_section][self.tab]["scale_slider_widget"] = scale_slider
         self.add_widget_to_grid(scale_slider)
 
     def add_image_scale_widgets(self):
@@ -322,6 +326,8 @@ class GeneratorTabWidget(BaseWidget):
 
         grid_layout.addWidget(seed_spinbox)
 
+        self.data[self.tab_section][self.tab]["seed_widget"] = seed_spinbox
+
         self.add_widget_to_grid(group_box)
 
     def add_samples_widgets(self):
@@ -344,6 +350,7 @@ class GeneratorTabWidget(BaseWidget):
             spinbox_minimum=1,
             slider_minimum=1
         )
+        self.data[self.tab_section][self.tab]["samples_slider_widget"] = samples_widget
         widget = QWidget()
         horizontal_layout = QHBoxLayout(widget)
         horizontal_layout.setContentsMargins(0, 0, 0, 0)
@@ -421,8 +428,6 @@ class GeneratorTabWidget(BaseWidget):
         # check if progressbar in stablediffusion is running
         try:
             progressbar = self.data["stablediffusion"][section]["progressBar"]
-            if not self.data["stablediffusion"][section]["progress_bar_started"]:
-                progressbar = None
         except KeyError:
             progressbar = None
         if progressbar is None:
