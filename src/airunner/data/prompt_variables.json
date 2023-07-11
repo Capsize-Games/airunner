@@ -1,12 +1,4 @@
 {
-  "clothing": ["a suit", "a dress", "a t-shirt", "a jacket", "a hat", "a tie", "a skirt", "a blouse",
-                     "a coat", "a sweater", "a pair of pants", "a pair of shorts", "a pair of shoes",
-                     "a pair of boots", "a pair of sandals", "a pair of sneakers", "a pair of high heels",
-                     "a pair of loafers", "a pair of slippers", "a pair of flip flops", "a pair of gloves",
-                     "a pair of mittens", "a pair of socks", "a pair of stockings", "a pair of leggings",
-                     "a pair of tights", "a pair of jeans", "a pair of pajamas",
-                     "a pair of glasses", "a pair of sunglasses", "a pair of earrings", "a pair of bracelets",
-                     "a pair of rings", "a pair of necklaces", "a pair of suspenders", "a pair of overalls"],
   "time": ["morning", "afternoon", "evening", "night"],
   "emotion": ["happy", "sad", "angry", "surprised", "disgusted", "scared", "neutral", "confused", "bored",
                     "excited", "tired", "calm", "relaxed", "energetic", "stressed", "anxious", "depressed",
