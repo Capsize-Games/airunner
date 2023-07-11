@@ -671,14 +671,22 @@
         "skin_tone": ["Light", "Medium", "Dark"],
         "body_type": ["Thin", "Average", "Athletic", "Muscular", "Overweight"],
         "facial_hair": ["Clean-shaven", "Mustache", "Beard", "Goatee"],
+        "clothing": ["a suit", "a dress", "a t-shirt", "a jacket", "a hat", "a tie", "a skirt", "a blouse",
+                     "a coat", "a sweater", "a pair of pants", "a pair of shorts", "a pair of shoes",
+                     "a pair of boots", "a pair of sandals", "a pair of sneakers", "a pair of high heels",
+                     "a pair of loafers", "a pair of slippers", "a pair of flip flops", "a pair of gloves",
+                     "a pair of mittens", "a pair of socks", "a pair of stockings", "a pair of leggings",
+                     "a pair of tights", "a pair of jeans", "a pair of pajamas",
+                     "a pair of glasses", "a pair of sunglasses", "a pair of earrings", "a pair of bracelets",
+                     "a pair of rings", "a pair of necklaces", "a pair of suspenders", "a pair of overalls"],
         "glasses": ["Reading-glasses", "Sunglasses"],
-        "hat": ["Baseball Cap", "Beanie", "Cowboy Hat", "Fedora", "Hard Hat"],
+        "hat": ["Baseball Cap", "Beanie", "Cowboy Hat", "Fedora", "Hard Hat", "Sombrero", "Top Hat", "Visor", "Headband", "Bandana"],
         "shirt": ["T-Shirt", "Button-Up shirt", "Sweater", "Jacket", "Suit"],
-        "pants": ["Shorts", "Jeans", "Slacks"],
+        "pants": ["Shorts", "Jeans", "Slacks", "Sweatpants", "Skirt", "Dress", "Leggings", "Tights", "Pajamas", "Overalls", "Jumpsuit", "Swimsuit"],
         "shoes": ["Sneakers", "Dress Shoes", "Boots"],
         "accessories": ["Necklace", "Watch", "Bracelet", "Ring", "Earrings", "Piercings"],
         "tattoos": ["Arm", "Leg", "Chest", "Back", "Face", "Neck", "Hand", "Foot"],
-        "piercings": ["Ear", "Nose", "Eyebrow", "Lip", "Tongue", "Nipple", "Belly Button", "Genital"],
+        "piercings": ["Ear", "Nose", "Eyebrow", "Lip", "Tongue", "Belly Button"],
         "scars": ["Face", "Arm", "Leg", "Chest", "Back", "Neck", "Hand", "Foot"],
         "birthmarks": ["Face", "Arm", "Leg", "Chest", "Back", "Neck", "Hand", "Foot"],
         "disabilities": ["Blind", "Deaf", "Wheelchair", "Missing Limb", "Other"],
@@ -776,7 +784,7 @@
         {
           "text": "wearing $clothing ",
           "not_cond": [
-            "pants", "shirt"
+            "clothing"
           ]
         },
         {
