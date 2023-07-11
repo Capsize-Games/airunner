@@ -507,7 +507,9 @@ class MainWindow(
         self.settings_manager.settings.bottom_splitter_sizes.set([top_height, bottom_height])
 
     def initialize_saved_prompts(self):
+        print("INITIALZING PROMPTS")
         self.prompts_manager = PromptManager()
+        print(self.prompts_manager.settings.prompts)
         self.prompts_manager.enable_save()
 
     def initialize_settings_manager(self):
