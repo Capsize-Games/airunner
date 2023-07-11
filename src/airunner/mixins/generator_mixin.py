@@ -294,10 +294,10 @@ class GeneratorMixin(LoraMixin):
         return self.settings_manager.settings.image_to_new_layer.get()
 
     def update_prompt(self, prompt):
-        self.tabs[self.current_section].prompt.setPlainText(prompt)
+        self.generator_tab_widget.set_prompt(prompt)
 
     def update_negative_prompt(self, prompt):
-        self.tabs[self.current_section].negative_prompt.setPlainText(prompt)
+        self.generator_tab_widget.set_negative_prompt(prompt)
 
     def initialize(self):
         self.tool_menu_widget.initialize()
