@@ -62,6 +62,7 @@ RUN ln -s /usr/share/tcltk/tcl8.6 /usr/share/tcltk/tcl8
 FROM fix_tcl as install_apps
 RUN python3 -c "from accelerate.utils import write_basic_config; write_basic_config(mixed_precision='fp16')"
 RUN pip uninstall nvidia-cublas-cu11 nvidia-cublas-cu12 -y
+RUN pip uninstall xformers -y
 
 FROM install_apps as more_env
 WORKDIR /app
