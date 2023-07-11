@@ -98,6 +98,10 @@ class GeneratorTabWidget(BaseWidget):
             partial(self.handle_value_change, "negative_prompt", widget=negative_prompt_widget))
         horizontal_layout.addWidget(prompt_label)
         horizontal_layout.addWidget(use_prompt_builder_checkbox)
+
+        self.data[self.tab_section][self.tab]["prompt_widget"] = prompt_widget
+        self.data[self.tab_section][self.tab]["negative_prompt_widget"] = negative_prompt_widget
+
         self.add_widget_to_grid(prompt_label_container)
         self.add_widget_to_grid(prompt_widget)
         self.add_widget_to_grid(negative_label)
@@ -513,3 +517,9 @@ class GeneratorTabWidget(BaseWidget):
             default_models += new_models
         models += default_models
         self.app.models = models
+
+    def set_prompt(self, prompt):
+        self.data[self.app.currentTabSection][self.app.current_section]["prompt_widget"].setPlainText(prompt)
+
+    def set_negative_prompt(self, prompt):
+        self.data[self.app.currentTabSection][self.app.current_section]["negative_prompt_widget"].setPlainText(prompt)
