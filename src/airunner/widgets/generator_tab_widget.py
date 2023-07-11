@@ -129,6 +129,8 @@ class GeneratorTabWidget(BaseWidget):
             path = self.settings_manager.settings.outpaint_model_path.get()
         elif section_name == "upscale":
             path = self.settings_manager.settings.upscale_model_path.get()
+        elif section_name == "txt2vid":
+            path = self.settings_manager.settings.txt2vid_model_path.get()
         if not path or path == "":
             path = self.settings_manager.settings.model_base_path.get()
 
