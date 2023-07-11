@@ -7,10 +7,13 @@ class PromptBrowser(BaseWindow):
     template_name = "prompt_browser"
     window_title = "Prompt Browser"
 
+    @property
+    def prompts_manager(self):
+        return self.settings_manager
+
     def initialize_window(self):
         container = QWidget()
         container.setLayout(QVBoxLayout())
-        self.prompts_manager = self.settings_manager
         for prompt in self.prompts_manager.settings.prompts.get():
             widget = uic.loadUi('pyqt/prompt_browser_prompt_widget.ui')
             widget.prompt.setText(prompt['prompt'])

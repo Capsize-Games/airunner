@@ -50,6 +50,7 @@ class GeneratorTabWidget(BaseWidget):
         self.col = 0
         self.layout = None
         widget = QWidget(self)
+        widget.setStyleSheet("font-size: 9pt;")
         self.layout = QGridLayout(widget)
         self.add_prompt_widgets()
         self.add_model_widgets()
@@ -97,6 +98,10 @@ class GeneratorTabWidget(BaseWidget):
             partial(self.handle_value_change, "negative_prompt", widget=negative_prompt_widget))
         horizontal_layout.addWidget(prompt_label)
         horizontal_layout.addWidget(use_prompt_builder_checkbox)
+
+        self.data[self.tab_section][self.tab]["prompt_widget"] = prompt_widget
+        self.data[self.tab_section][self.tab]["negative_prompt_widget"] = negative_prompt_widget
+
         self.add_widget_to_grid(prompt_label_container)
         self.add_widget_to_grid(prompt_widget)
         self.add_widget_to_grid(negative_label)
@@ -300,7 +305,7 @@ class GeneratorTabWidget(BaseWidget):
         group_box.setObjectName("seed_groupbox")
         group_box.setTitle("Manual Seed")
         group_box.setCheckable(True)
-        group_box.setChecked(self.app.random_seed)
+        group_box.setChecked(not self.app.random_seed)
         group_box.toggled.connect(
             partial(self.handle_value_change, "random_seed", widget=group_box))
         grid_layout = QGridLayout(group_box)
@@ -512,3 +517,9 @@ class GeneratorTabWidget(BaseWidget):
             default_models += new_models
         models += default_models
         self.app.models = models
+
+    def set_prompt(self, prompt):
+        self.data[self.app.currentTabSection][self.app.current_section]["prompt_widget"].setPlainText(prompt)
+
+    def set_negative_prompt(self, prompt):
+        self.data[self.app.currentTabSection][self.app.current_section]["negative_prompt_widget"].setPlainText(prompt)
