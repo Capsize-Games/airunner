@@ -105,6 +105,7 @@ FROM install_airunner as install_torch
 USER root
 RUN wine64 C:\\Python310\\python.exe -m pip uninstall torch torchvision -y
 RUN wine64 C:\\Python310\\python.exe -m pip install torch torchvision --index-url https://download.pytorch.org/whl/cu118 --upgrade
+RUN wine64 C:\\Python310\\python.exe -m pip uninstall xformers -y
 
 FROM install_torch as build_files
 WORKDIR /app
