@@ -195,3 +195,6 @@ class SliderWidget(QWidget):
         self.spinbox_single_step = val
         self.spinbox_page_step = val
         self.spinbox_minimum = val
+
+    def setValue(self, val):
+        self.slider.setValue(val)
