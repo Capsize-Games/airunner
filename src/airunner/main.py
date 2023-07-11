@@ -1,6 +1,7 @@
 import os
 import pickle
 import sys
+import traceback
 from functools import partial
 import psutil
 import torch
@@ -210,12 +211,12 @@ class MainWindow(
         else:
             if self.progress_bar_started and not self.tqdm_callback_triggered:
                 self.tqdm_callback_triggered = True
-                self.tabs[action].progressBar.setRange(0, 100)
+                self.generator_tab_widget.data[action]["progressBar"].setRange(0, 100)
             try:
                 current = (step / total)
             except ZeroDivisionError:
                 current = 0
-        self.tabs[action].progressBar.setValue(int(current * 100))
+        self.generator_tab_widget.set_progress_bar_value(action, int(current * 100))
 
     @property
     def is_windows(self):
@@ -363,7 +364,7 @@ class MainWindow(
 
     def reset_settings(self):
         logger.info("Resetting settings...")
-        GeneratorMixin.reset_settings(self)
+        # GeneratorMixin.reset_settings(self)
         self.canvas.reset_settings()
 
     def on_state_changed(self, state):
@@ -386,9 +387,9 @@ class MainWindow(
         self.footer_widget.set_stylesheet()
 
     def initialize(self):
+        self.initialize_settings_manager()
         self.instantiate_widgets()
         self.initialize_saved_prompts()
-        self.initialize_settings_manager()
         self.initialize_tqdm()
         self.initialize_handlers()
         self.initialize_window()
@@ -755,7 +756,19 @@ if __name__ == "__main__":
     splash = display_splash_screen(app)
 
     def show_main_application(splash):
-        window = MainWindow()
+        try:
+            window = MainWindow()
+        except Exception as e:
+            # print a stacktrace to see where the original error occurred
+            # we want to see the original error path using the traceback
+            traceback.print_exc()
+
+            print(e)
+            splash.finish(None)
+            sys.exit("""
+                An error occurred while initializing the application. 
+                Please report this issue on GitHub or Discord."
+            """)
         splash.finish(window)
         window.raise_()
 
