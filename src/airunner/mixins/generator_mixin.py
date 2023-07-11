@@ -436,6 +436,12 @@ class GeneratorMixin(LoraMixin):
             self.canvas.show_layers()
 
     def load_metadata(self, metadata):
+        """
+        Early return to patch import of image until a real fix is implemented
+        :param metadata:
+        :return:
+        """
+        """
         if metadata:
             action = metadata.get("action")
             prompt = None
@@ -489,6 +495,9 @@ class GeneratorMixin(LoraMixin):
                 self.tabs[action].model_dropdown.setCurrentText(model)
             if scheduler:
                 self.tabs[action].scheduler_dropdown.setCurrentText(scheduler)
+        """
+        return
+
 
     def prepare_metadata(self, data):
         if not self.settings_manager.settings.export_metadata.get() or \
