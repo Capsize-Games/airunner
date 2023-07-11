@@ -143,8 +143,6 @@
     <addaction name="separator"/>
     <addaction name="actionModel_Merger"/>
     <addaction name="separator"/>
-    <addaction name="actionPrompt_Browser"/>
-    <addaction name="separator"/>
     <addaction name="actionEasy_prompt"/>
    </widget>
    <addaction name="menuFile"/>
