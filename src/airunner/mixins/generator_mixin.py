@@ -458,43 +458,36 @@ class GeneratorMixin(LoraMixin):
             model = metadata.get("model", None)
             # model_branch = metadata.get("model_branch", None)
             scheduler = metadata.get("scheduler", None)
+
+            widgets = self.generator_tab_widget.data["stablediffusion"][action]
+            prompt_widget = widgets["prompt_widget"]
+            negative_prompt_widget = widgets["negative_prompt_widget"]
+            scale_slider_widget = widgets["scale_slider_widget"]
+            seed_widget = widgets["seed_widget"]
+            steps_slider_widget = widgets["steps_slider_widget"]
+            samples_slider_widget = widgets["samples_slider_widget"]
+            model_dropdown_widget = widgets["model_dropdown_widget"]
+            scheduler_dropdown_widget = widgets["scheduler_dropdown_widget"]
+
             if prompt is not None:
-                self.tabs[action].prompt.setPlainText(prompt)
+                prompt_widget.setPlainText(prompt)
             if negative_prompt is not None:
-                self.tabs[action].negative_prompt.setPlainText(negative_prompt)
+                negative_prompt_widget.setPlainText(negative_prompt)
             if scale:
                 scale = float(scale)
-                self.tabs[action].scale_spinbox.setValue(float(scale))
-                self.tabs[action].scale_slider.setValue(int(float(scale) * 100))
+                scale_slider_widget.setValue(int(float(scale) * 100))
             if seed:
-                self.tabs[action].seed.setPlainText(seed)
+                seed_widget.setText(str(seed))
             if steps:
                 steps = int(steps)
-                self.tabs[action].steps_spinbox.setValue(steps)
-                self.tabs[action].steps_slider.setValue(steps)
-            if ddim_eta:
-                ddim_eta = float(ddim_eta)
-                self.tabs[action].ddim_eta_spinbox.setValue(ddim_eta)
-                self.tabs[action].ddim_eta_slider.setValue(ddim_eta * 100)
-            if n_iter:
-                n_iter = int(n_iter)
-                try:
-                    self.tabs[action].n_iter_spinbox.setValue(n_iter)
-                except AttributeError:
-                    pass
-                try:
-                    self.tabs[action].n_iter_slider.setValue(n_iter)
-                except AttributeError:
-                    pass
+                steps_slider_widget.setValue(steps)
             if n_samples:
                 n_samples = int(n_samples)
-                self.tabs[action].samples_spinbox.setValue(n_samples)
-                self.tabs[action].samples_slider.setValue(n_samples)
+                samples_slider_widget.setValue(n_samples)
             if model:
-                self.tabs[action].model_dropdown.setCurrentText(model)
+                model_dropdown_widget.setCurrentText(model)
             if scheduler:
-                self.tabs[action].scheduler_dropdown.setCurrentText(scheduler)
-        """
+                scheduler_dropdown_widget.setCurrentText(scheduler)
         return
 
 
