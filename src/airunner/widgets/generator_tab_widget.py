@@ -50,6 +50,7 @@ class GeneratorTabWidget(BaseWidget):
         self.col = 0
         self.layout = None
         widget = QWidget(self)
+        widget.setStyleSheet("font-size: 9pt;")
         self.layout = QGridLayout(widget)
         self.add_prompt_widgets()
         self.add_model_widgets()
