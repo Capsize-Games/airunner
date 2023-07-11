@@ -73,12 +73,13 @@ class EmbeddingMixin:
         return tokens
 
     def insert_into_prompt(self, text, negative_prompt=False):
-        tab = self.tabWidget.currentWidget()
+        prompt_widget = self.generator_tab_widget.data[self.currentTabSection][self.current_section]["prompt_widget"]
+        negative_prompt_widget = self.generator_tab_widget.data[self.currentTabSection][self.current_section]["negative_prompt_widget"]
         if negative_prompt:
-            current_text = tab.negative_prompt.toPlainText()
+            current_text = negative_prompt_widget.toPlainText()
             text = f"{current_text}, {text}" if current_text != "" else text
-            tab.negative_prompt.setPlainText(text)
+            negative_prompt_widget.setPlainText(text)
         else:
-            current_text = tab.prompt.toPlainText()
+            current_text = prompt_widget.toPlainText()
             text = f"{current_text}, {text}" if current_text != "" else text
-            tab.prompt.setPlainText(text)
+            prompt_widget.setPlainText(text)
