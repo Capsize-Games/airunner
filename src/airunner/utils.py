@@ -179,7 +179,7 @@ def load_default_models(tab_section, section_name):
 def load_models_from_path(path, models = None):
     if models is None:
         models = []
-    if os.path.exists(path):
+    if path and os.path.exists(path):
         for f in os.listdir(path):
             if os.path.isdir(os.path.join(path, f)):
                 folders_in_directory = os.listdir(os.path.join(path, f))
