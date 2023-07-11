@@ -30,7 +30,7 @@ class ImageInterpolation(BaseWindow):
         """
         This is a hack to make the Kandinsky txt2img generate button say "Interpolate" instead of "Generate"
         """
-        self.app._tabs["kandinsky"]["txt2img"].generate.setText("Interpolate")
+        self.app.generator_tab_widget.data["kandinsky"]["txt2img"]["generate_button"].setText("Interpolate")
 
         """
         We also set use_interpolation and the get_interpolation_data function on the parent so that when we click
@@ -134,7 +134,7 @@ class ImageInterpolation(BaseWindow):
         :param event:
         :return:
         """
-        self.app._tabs["kandinsky"]["txt2img"].generate.setText("Generate")
+        self.app.generator_tab_widget.data["kandinsky"]["txt2img"]["generate_button"].setText("Generate")
         self.app.use_interpolation = False
         self.app.get_interpolation_data = None
         self.template.close()
