@@ -406,6 +406,7 @@ class GeneratorTabWidget(BaseWidget):
         progressBar.setValue(0)
         self.data[self.tab_section][self.tab]["progressBar"] = progressBar
         self.data[self.tab_section][self.tab]["progress_bar_started"] = False
+        self.data[self.tab_section][self.tab]["generate_button"] = generate_button
 
         horizontal_layout_a.addRow(to_canvas_radio, deterministic_radio)
         horizontal_layout_b.addWidget(generate_button)
