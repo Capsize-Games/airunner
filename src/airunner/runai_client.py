@@ -70,9 +70,6 @@ class OfflineClient(QtCore.QObject):
         self.res_queue = queue.Queue()
         self.quit_event.set(False)
         self.logger = logging.getLogger()
-        self.image_var = kwargs.get("image_var")
-        self.error_var = kwargs.get("error_var")
-        self.tqdm_var = kwargs.get("tqdm_var")
         self.message_var = kwargs.get("message_var")
         self.do_start()
 
@@ -94,11 +91,8 @@ class OfflineClient(QtCore.QObject):
         self.logger.info("Initialzing SDRunner")
         self.sd_runner = SDRunner(
             app=self.app,
-            tqdm_var=self.tqdm_var,
-            image_var=self.image_var,
             message_var=self.message_var,
             settings_manager=self.settings_manager,
-            error_var=self.error_var,
         )
 
     def handle_response(self, response):
@@ -140,11 +134,7 @@ class OfflineClient(QtCore.QObject):
             (action in ("inpaint", "outpaint") and self.sd_runner.action in ("txt2img", "img2img")):
             self.sd_runner.initialized = False
 
-        self.sd_runner.generator_sample(
-            data,
-            self.image_var,
-            self.error_var
-        )
+        self.sd_runner.generator_sample(data)
 
     def create_worker_thread(self):
         # start worker in a new thread using the self.worker method
