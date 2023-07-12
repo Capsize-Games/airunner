@@ -11,7 +11,7 @@ from PyQt6.QtCore import pyqtSlot, Qt, QThread, pyqtSignal, QObject, QTimer
 from PyQt6.QtGui import QGuiApplication, QPixmap, QShortcut, QKeySequence
 from aihandler.qtvar import TQDMVar, ImageVar, MessageHandlerVar, ErrorHandlerVar
 from aihandler.logger import logger
-from aihandler.settings import LOG_LEVEL
+from aihandler.settings import LOG_LEVEL, MessageCode
 from airunner.mixins.canvas_mixin import CanvasMixin
 from airunner.mixins.comic_mixin import ComicMixin
 from airunner.mixins.embedding_mixin import EmbeddingMixin
@@ -52,10 +52,7 @@ class MainWindow(
     _document_name = "Untitled"
     is_saved = False
     action = "txt2img"
-    tqdm_var = None
     message_var = None
-    error_var = None
-    image_var = None
     progress_bar_started = False
     window = None
     history = None
@@ -203,17 +200,6 @@ class MainWindow(
     def document_name(self):
         name = f"{self._document_name}{'*' if self.canvas and self.canvas.is_dirty else ''}"
         return f"{name} - {self.version}"
-
-    @pyqtSlot(int, int, str, object, object)
-    def tqdm_callback(self, step, total, action, image=None, data=None):
-        if step == 0 and total == 0:
-            current = 0
-        else:
-            try:
-                current = (step / total)
-            except ZeroDivisionError:
-                current = 0
-        self.generator_tab_widget.set_progress_bar_value(action, int(current * 100))
 
     @property
     def is_windows(self):
@@ -387,7 +373,6 @@ class MainWindow(
         self.initialize_settings_manager()
         self.instantiate_widgets()
         self.initialize_saved_prompts()
-        self.initialize_tqdm()
         self.initialize_handlers()
         self.initialize_window()
         self.initialize_widgets()
@@ -431,6 +416,8 @@ class MainWindow(
 
         for signal, handler in self.registered_settings_handlers:
             getattr(self.settings_manager.settings, signal).connect(handler)
+
+        self.model_var.connect(self.enable_embeddings)
 
     def instantiate_widgets(self):
         logger.info("Instantiating widgets...")
@@ -520,17 +507,9 @@ class MainWindow(
         # on shift + mouse scroll change working width
         self.wheelEvent = self.change_width
 
-    def initialize_tqdm(self):
-        self.tqdm_var = TQDMVar()
-        self.tqdm_var.my_signal.connect(self.tqdm_callback)
-
     def initialize_handlers(self):
         self.message_var = MessageHandlerVar()
         self.message_var.my_signal.connect(self.message_handler)
-        self.error_var = ErrorHandlerVar()
-        self.error_var.my_signal.connect(self.error_handler)
-        self.image_var = ImageVar()
-        self.image_var.my_signal.connect(self.image_handler)
 
     def initialize_window(self):
         HERE = os.path.dirname(os.path.abspath(__file__))
@@ -543,9 +522,6 @@ class MainWindow(
         logger.info("Initializing stable diffusion...")
         self.client = OfflineClient(
             app=self,
-            tqdm_var=self.tqdm_var,
-            image_var=self.image_var,
-            error_var=self.error_var,
             message_var=self.message_var,
             settings_manager=self.settings_manager,
         )
@@ -636,15 +612,83 @@ class MainWindow(
             f"color: {self.status_error_color if error else color};"
         )
 
-    def message_handler(self, msg):
-        if isinstance(msg, dict):
-            msg = msg["response"]
-        self.set_status_label(msg)
+    @pyqtSlot(dict)
+    def message_handler(self, response: dict):
+        try:
+            code = response["code"]
+        except TypeError:
+            logger.error(f"Invalid response message: {response}")
+            traceback.print_exc()
+            return
+        message = response["message"]
+        {
+            MessageCode.STATUS: self.handle_status,
+            MessageCode.ERROR: self.handle_error,
+            MessageCode.PROGRESS: self.handle_progress,
+            MessageCode.IMAGE_GENERATED: self.handle_image_generated,
+            MessageCode.EMBEDDING_LOAD_FAILED: self.handle_embedding_load_failed,
+        }.get(code, self.handle_unknown)(message)
 
-    def error_handler(self, msg):
-        if isinstance(msg, dict):
-            msg = msg["response"]
-        self.set_status_label(msg, error=True)
+    def handle_image_generated(self, message):
+        images = message["images"]
+        data = message["data"]
+        nsfw_content_detected = message["nsfw_content_detected"]
+        self.clear_status_message()
+        self.data = data
+        if data["action"] == "txt2vid":
+            return self.video_handler(data)
+
+        if self.settings_manager.settings.auto_export_images.get():
+            self.auto_export_image(images[0], data)
+
+        self.generator_tab_widget.stop_progress_bar(
+            data["action"])
+        if nsfw_content_detected and self.settings_manager.settings.nsfw_filter.get():
+            self.message_handler("NSFW content detected, try again.", error=True)
+        elif data["options"][f"deterministic_generation"]:
+            self.deterministic_images = images
+            DeterministicGenerationWindow(self.settings_manager, app=self, images=self.deterministic_images,
+                                          data=data)
+        else:
+            if data[
+                "action"] != "outpaint" and self.image_to_new_layer and self.canvas.current_layer.image_data.image is not None:
+                self.canvas.add_layer()
+            # print width and height of image
+            self.canvas.image_handler(images[0], data)
+            self.message_handler("")
+            self.canvas.show_layers()
+
+    def handle_status(self, message):
+        self.set_status_label(message)
+
+    def handle_error(self, message):
+        self.set_status_label(message, error=True)
+
+    def handle_progress(self, message):
+        step = message.get("step")
+        total = message.get("total")
+        action = message.get("action")
+        image = message.get("image")
+        data = message.get("data")
+
+        if step == 0 and total == 0:
+            current = 0
+        else:
+            try:
+                current = (step / total)
+            except ZeroDivisionError:
+                current = 0
+        self.generator_tab_widget.set_progress_bar_value(action, int(current * 100))
+
+    def handle_embedding_load_failed(self, message):
+        # TODO:
+        #  on model change, re-enable the buttons
+        embedding_name = message["embedding_name"]
+        model_name = message["model_name"]
+        self.disable_embedding(embedding_name, model_name)
+
+    def handle_unknown(self, message):
+        logger.error(f"Unknown message code: {message}")
 
     def clear_status_message(self):
         self.set_status_label("")
