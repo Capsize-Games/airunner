@@ -330,8 +330,10 @@ class GeneratorMixin(LoraMixin):
         if tab is None:
             tab = self.tabs[self.current_section]
 
-        if self.current_section not in ["upscale", "superresolution"]:
-            return
+        """
+        Early return to hack aronud final size for now
+        """
+        return
 
         image = self.canvas.current_layer.image_data.image
         if image:
