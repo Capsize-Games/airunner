@@ -6,7 +6,8 @@ from functools import partial
 import psutil
 import torch
 from PyQt6 import uic, QtCore
-from PyQt6.QtWidgets import QApplication, QFileDialog, QSplashScreen, QMainWindow, QSplitter, QTabWidget
+from PyQt6.QtWidgets import QApplication, QFileDialog, QSplashScreen, QMainWindow, QSplitter, QTabWidget, QWidget, \
+    QVBoxLayout
 from PyQt6.QtCore import pyqtSlot, Qt, QThread, pyqtSignal, QObject, QTimer
 from PyQt6.QtGui import QGuiApplication, QPixmap, QShortcut, QKeySequence
 from aihandler.qtvar import TQDMVar, ImageVar, MessageHandlerVar, ErrorHandlerVar
@@ -14,7 +15,6 @@ from aihandler.logger import logger
 from aihandler.settings import LOG_LEVEL, MessageCode
 from airunner.mixins.canvas_mixin import CanvasMixin
 from airunner.mixins.comic_mixin import ComicMixin
-from airunner.mixins.embedding_mixin import EmbeddingMixin
 from airunner.mixins.extension_mixin import ExtensionMixin
 from airunner.mixins.generator_mixin import GeneratorMixin
 from airunner.mixins.history_mixin import HistoryMixin
@@ -22,6 +22,7 @@ from airunner.mixins.menubar_mixin import MenubarMixin
 from airunner.mixins.toolbar_mixin import ToolbarMixin
 from airunner.themes import Themes
 from airunner.widgets.canvas_widget import CanvasWidget
+from airunner.widgets.embedding_widget import EmbeddingWidget
 from airunner.widgets.footer_widget import FooterWidget
 from airunner.widgets.generator_tab_widget import GeneratorTabWidget
 from airunner.widgets.prompt_builder import PromptBuilderWidget
@@ -38,7 +39,6 @@ from PyQt6.QtGui import QIcon
 
 class MainWindow(
     QMainWindow,
-    EmbeddingMixin,
     ToolbarMixin,
     HistoryMixin,
     MenubarMixin,
@@ -72,6 +72,16 @@ class MainWindow(
     status_normal_color_light = "#000000"
     status_normal_color_dark = "#ffffff"
     is_started = False
+
+    _embedding_names = None
+    widgets = {}
+    bad_model_embedding_map = {}
+
+    @property
+    def embedding_names(self):
+        if self._embedding_names is None:
+            self._embedding_names = self.get_list_of_available_embedding_names()
+        return self._embedding_names
 
     @property
     def is_dark(self):
@@ -395,7 +405,6 @@ class MainWindow(
         GeneratorMixin.initialize(self)
         MenubarMixin.initialize(self)
         ToolbarMixin.initialize(self)
-        EmbeddingMixin.initialize(self)
 
     # a list of tuples that represents a signal name and its handler
     registered_settings_handlers = []
@@ -418,6 +427,7 @@ class MainWindow(
             getattr(self.settings_manager.settings, signal).connect(handler)
 
         self.model_var.connect(self.enable_embeddings)
+        self.settings_manager.settings.embeddings_path.my_signal.connect(self.update_embedding_names)
 
     def instantiate_widgets(self):
         logger.info("Instantiating widgets...")
@@ -776,6 +786,84 @@ class MainWindow(
         cuda_memory = f"VRAM allocated {torch.cuda.memory_allocated() / 1024 ** 3:.1f}GB cached {torch.cuda.memory_cached() / 1024 ** 3:.1f}GB"
         system_memory = f"RAM {system_memory_percentage:.1f}%"
         self.footer_widget.system_status.setText(f"{system_memory}, {cuda_memory}")
+
+    def update_embedding_names(self, _):
+        self._embedding_names = None
+        for tab_name in self.tabs.keys():
+            tab = self.tabs[tab_name]
+            # clear embeddings
+            try:
+                tab.embeddings.widget().deleteLater()
+            except AttributeError:
+                pass
+            self.load_embeddings(tab)
+
+    def register_widget(self, name, widget):
+        self.widgets[name] = widget
+
+    def disable_embedding(self, name, model_name):
+        self.widgets[name].setEnabled(False)
+        if name not in self.bad_model_embedding_map:
+            self.bad_model_embedding_map[name] = []
+        if model_name not in self.bad_model_embedding_map[name]:
+            self.bad_model_embedding_map[name].append(model_name)
+
+    def enable_embeddings(self, model):
+        for name in self.widgets.keys():
+            enable = True
+            if name in self.bad_model_embedding_map:
+                if self.model in self.bad_model_embedding_map[name]:
+                    enable = False
+            self.widgets[name].setEnabled(enable)
+
+    def load_embeddings(self, tab):
+        container = QWidget()
+        container.setLayout(QVBoxLayout())
+        for embedding_name in self.embedding_names:
+            embedding_widget = EmbeddingWidget(
+                app=self,
+                name=embedding_name
+            )
+            self.register_widget(embedding_name, embedding_widget)
+            container.layout().addWidget(embedding_widget)
+        container.layout().addStretch()
+        self.tool_menu_widget.embeddings_container_widget.embeddings.setWidget(container)
+
+    def get_list_of_available_embedding_names(self):
+        embeddings_path = self.settings_manager.settings.embeddings_path.get() or "embeddings"
+        if embeddings_path == "embeddings":
+            embeddings_path = os.path.join(self.settings_manager.settings.model_base_path.get(), embeddings_path)
+        return self.find_embeddings_in_path(embeddings_path)
+
+    def find_embeddings_in_path(self, embeddings_path, tokens=None):
+        if tokens is None:
+            tokens = []
+        if not os.path.exists(embeddings_path):
+            return tokens
+        if os.path.exists(embeddings_path):
+            for f in os.listdir(embeddings_path):
+                # check if f is directory
+                if os.path.isdir(os.path.join(embeddings_path, f)):
+                    return self.find_embeddings_in_path(os.path.join(embeddings_path, f), tokens)
+                words = f.split(".")
+                # if the last word is pt, ckpt, or pth, then join all words except the last one
+                if words[-1] in ["pt", "ckpt", "pth", "safetensors"]:
+                    words = words[:-1]
+                words = ".".join(words).lower()
+                tokens.append(words)
+        return tokens
+
+    def insert_into_prompt(self, text, negative_prompt=False):
+        prompt_widget = self.generator_tab_widget.data[self.currentTabSection][self.current_section]["prompt_widget"]
+        negative_prompt_widget = self.generator_tab_widget.data[self.currentTabSection][self.current_section]["negative_prompt_widget"]
+        if negative_prompt:
+            current_text = negative_prompt_widget.toPlainText()
+            text = f"{current_text}, {text}" if current_text != "" else text
+            negative_prompt_widget.setPlainText(text)
+        else:
+            current_text = prompt_widget.toPlainText()
+            text = f"{current_text}, {text}" if current_text != "" else text
+            prompt_widget.setPlainText(text)
 
 
 if __name__ == "__main__":
