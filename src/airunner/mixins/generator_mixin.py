@@ -5,8 +5,7 @@ from PyQt6 import uic
 from PyQt6.QtCore import QRect, pyqtSignal, Qt
 from PyQt6.QtGui import QShortcut, QKeySequence
 from PyQt6.uic.exceptions import UIFileException
-from aihandler.settings import MAX_SEED, AVAILABLE_SCHEDULERS_BY_ACTION, MODELS
-from airunner.windows.deterministic_generation_window import DeterministicGenerationWindow
+from aihandler.settings import MAX_SEED, MODELS
 from airunner.windows.video import VideoPopup
 from airunner.mixins.lora_mixin import LoraMixin
 from PIL import PngImagePlugin
@@ -187,11 +186,12 @@ class GeneratorMixin(LoraMixin):
 
     @property
     def use_prompt_builder_checkbox(self):
-        return self.use_prompt_builder_checkbox_var.get()
+        val = self.use_prompt_builder_checkbox_var.get()
+        return val == 2 or val == True
 
     @use_prompt_builder_checkbox.setter
     def use_prompt_builder_checkbox(self, val):
-        self.use_prompt_builder_checkbox_var.set(val)
+        self.use_prompt_builder_checkbox_var.set(val == True or val == 2)
 
     @property
     def controlnet_scale_var(self):

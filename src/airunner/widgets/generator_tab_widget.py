@@ -515,6 +515,9 @@ class GeneratorTabWidget(BaseWidget):
     def handle_value_change(self, attr_name, value=None, widget=None):
         attr = getattr(self.app, f"{attr_name}_var")
 
+        if attr_name in ["prompt", "negative_prompt"]:
+            self.app.prompt_builder.process_prompt()
+
         if attr_name == "random_seed":
             value = not value
         elif attr_name == "seed":
