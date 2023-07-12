@@ -326,30 +326,6 @@ class GeneratorMixin(LoraMixin):
             controlnet = None
         self.settings.controlnet_var.set(controlnet)
 
-    def handle_controlnet_checkbox_change(self, tab, val):
-        self.enable_controlnet = val == 2
-        self.toggle_controlnet_elements(tab)
-
-    def toggle_controlnet_elements(self, tab):
-        tab.controlnet_dropdown.setEnabled(self.enable_controlnet)
-        tab.controlnet_guidance_scale_slider.setEnabled(self.enable_controlnet)
-        tab.controlnet_guidance_scale_spinbox.setEnabled(self.enable_controlnet)
-
-    def handle_deterministic_radio_change(self, val, tab):
-        self.deterministic = tab.deterministic_radio.isChecked()
-
-    def handle_downscale_spinbox_change(self, value, tab):
-        current_value = self.downscale_amount
-        new_value = value
-        if value == 1:
-            if value > current_value or value == current_value:
-                new_value = 2
-            else:
-                new_value = 0
-        self.downscale_amount = value
-        tab.downscale_spinbox.setValue(new_value)
-        self.set_final_size_label(tab)
-
     def set_final_size_label(self, tab=None):
         if tab is None:
             tab = self.tabs[self.current_section]
