@@ -31,6 +31,18 @@ class MenubarMixin:
         self.actionPrompt_Browser.triggered.connect(self.show_prompt_browser)
         self.image_interpolation.triggered.connect(self.show_image_interpolation)
         self.actionDeterministic_generation.triggered.connect(self.show_deterministic_generation)
+        self.actionClear_all_prompts.triggered.connect(self.clear_all_prompts)
+
+    def clear_all_prompts(self):
+        for tab_section in self._tabs.keys():
+            self.override_tab_section = tab_section
+            for tab in self.tabs.keys():
+                self.override_section = tab
+                self.prompt = ""
+                self.negative_prompt = ""
+                self.generator_tab_widget.clear_prompts(tab_section, tab)
+        self.override_tab_section = None
+        self.override_section = None
 
     def show_prompt_browser(self):
         PromptBrowser(settings_manager=self.prompts_manager, app=self)
