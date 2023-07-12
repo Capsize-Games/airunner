@@ -3,7 +3,7 @@ import random
 import re
 from functools import partial
 from PyQt6 import uic
-from PyQt6.QtWidgets import QVBoxLayout
+from PyQt6.QtWidgets import QVBoxLayout, QGridLayout
 from aihandler.prompt_parser import PromptParser
 from airunner.widgets.base_widget import BaseWidget
 
