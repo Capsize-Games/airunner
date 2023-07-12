@@ -124,12 +124,16 @@ class MainWindow(
             "pix2pix": None,
             "upscale": None,
             "superresolution": None,
-            "txt2vid": None,
+            "txt2vid": None
         },
         "kandinsky": {
             "txt2img": None,
             "img2img": None,
             "outpaint": None,
+        },
+        "shapegif": {
+            "txt2img": None,
+            "img2img": None,
         }
     }
 
@@ -151,13 +155,17 @@ class MainWindow(
     def tabWidget(self):
         if self.currentTabSection == "stablediffusion":
             return self.generator_tab_widget.stableDiffusionTabWidget
-        else:
+        elif self.currentTabSection == "kandinsky":
             return self.generator_tab_widget.kandinskyTabWidget
+        elif self.currentTabSection == "shapegif":
+            return self.generator_tab_widget.shapegifTabWidget
+        else:
+            raise Exception("Invalid tab section")
 
     @property
     def generator_type(self):
         """
-        Returns either stablediffusion or kandinsky
+        Returns either stablediffusion, shapegif, kandinsky
         :return: string
         """
         return self._generator_type
