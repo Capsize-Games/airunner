@@ -143,6 +143,18 @@ class GeneratorMixin(LoraMixin):
         self.strength_var.set(val)
 
     @property
+    def zeroshot_var(self):
+        return self.settings.zeroshot
+
+    @property
+    def zeroshot(self):
+        return self.zeroshot_var.get()
+
+    @zeroshot.setter
+    def zeroshot(self, val):
+        self.zeroshot_var.set(val)
+
+    @property
     def enable_controlnet_var(self):
         return self.settings.enable_controlnet
 
@@ -716,6 +728,7 @@ class GeneratorMixin(LoraMixin):
             "controlnet": self.controlnet,
             "deterministic_generation": self.deterministic,
             "deterministic_seed": False,
+            "zeroshot": self.zeroshot
         }
 
         if action == "superresolution":
