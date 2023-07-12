@@ -410,30 +410,6 @@ class GeneratorMixin(LoraMixin):
         filename = data["video_filename"]
         VideoPopup(settings_manager=self.settings_manager, file_path=filename)
 
-    def image_handler(self, images, data, nsfw_content_detected):
-        self.clear_status_message()
-        self.data = data
-        if data["action"] == "txt2vid":
-            return self.video_handler(data)
-
-        if self.settings_manager.settings.auto_export_images.get():
-            self.auto_export_image(images[0], data)
-
-        self.generator_tab_widget.stop_progress_bar(
-            data["action"])
-        if nsfw_content_detected and self.settings_manager.settings.nsfw_filter.get():
-            self.message_handler("NSFW content detected, try again.", error=True)
-        elif data["options"][f"deterministic_generation"]:
-            self.deterministic_images = images
-            DeterministicGenerationWindow(self.settings_manager, app=self, images=self.deterministic_images, data=data)
-        else:
-            if data["action"] != "outpaint" and self.image_to_new_layer and self.canvas.current_layer.image_data.image is not None:
-                self.canvas.add_layer()
-            # print width and height of image
-            self.canvas.image_handler(images[0], data)
-            self.message_handler("")
-            self.canvas.show_layers()
-
     def load_metadata(self, metadata):
         """
         Early return to patch import of image until a real fix is implemented
