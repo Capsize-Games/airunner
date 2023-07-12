@@ -5,7 +5,7 @@ from PyQt6.QtWidgets import QWidget, QGridLayout, QPlainTextEdit, QLabel, QCombo
 from airunner.utils import load_default_models, load_models_from_path
 from airunner.widgets.base_widget import BaseWidget
 from airunner.widgets.slider_widget import SliderWidget
-from aihandler.settings import MAX_SEED, AVAILABLE_SCHEDULERS_BY_ACTION, MODELS
+from aihandler.settings import MAX_SEED, AVAILABLE_SCHEDULERS_BY_ACTION, MODELS, MessageCode
 
 
 class GeneratorTabWidget(BaseWidget):
@@ -453,12 +453,15 @@ class GeneratorTabWidget(BaseWidget):
         self.data[tab_section][section]["progress_bar_started"] = True
         self.data[tab_section][section]["tqdm_callback_triggered"] = False
         self.data[tab_section][section]["progressBar"].setRange(0, 0)
-        self.app.tqdm_var.set({
-            "step": 0,
-            "total": 0,
-            "action": section,
-            "image": None,
-            "data": None
+        self.app.message_var.emit({
+            "message": {
+                "step": 0,
+                "total": 0,
+                "action": section,
+                "image": None,
+                "data": None
+            },
+            "code": MessageCode.PROGRESS
         })
 
     def add_widget_to_grid(self, widget, row=None, col=0):
