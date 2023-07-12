@@ -44,6 +44,10 @@ class PathsWidget(CustomWidget):
             lambda val: self.settings_manager.settings.image_path.set(val))
         self.image_path_browse_button.clicked.connect(
             lambda: self.browse_for_image_path(self.image_path))
+        self.gif_path.textChanged.connect(
+            lambda val: self.settings_manager.settings.gif_path.set(val))
+        self.gif_path_browse_button.clicked.connect(
+            lambda: self.browse_for_gif_path(self.gif_path))
         self.video_path.textChanged.connect(
             lambda val: self.settings_manager.settings.video_path.set(val))
         self.video_path_browse_button.clicked.connect(
@@ -121,6 +125,14 @@ class PathsWidget(CustomWidget):
             self.settings_manager.settings.image_path.get())
         line_edit.setText(path)
         self.settings_manager.settings.image_path.set(path)
+
+    def browse_for_gif_path(self, line_edit):
+        path = QFileDialog.getExistingDirectory(
+            None,
+            "Select Directory",
+            self.settings_manager.settings.gif_path.get())
+        line_edit.setText(path)
+        self.settings_manager.settings.gif_path.set(path)
 
     def browse_for_video_path(self, line_edit):
         path = QFileDialog.getExistingDirectory(
