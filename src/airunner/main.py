@@ -29,6 +29,7 @@ from airunner.widgets.prompt_builder import PromptBuilderWidget
 from airunner.widgets.tool_bar_widget import ToolBarWidget
 from airunner.widgets.tool_menu_widget import ToolMenuWidget
 from airunner.widgets.header_widget import HeaderWidget
+from airunner.windows.deterministic_generation_window import DeterministicGenerationWindow
 from airunner.windows.update_window import UpdateWindow
 from airunner.utils import get_version, get_latest_version
 from aihandler.settings_manager import SettingsManager, PromptManager
