@@ -454,11 +454,13 @@ class MainWindow(
 
         self.splitter = QSplitter()
         self.center_splitter = QSplitter(Qt.Orientation.Vertical)
-        prompt_builder = PromptBuilderWidget(app=self)
+        self.prompt_builder = PromptBuilderWidget(app=self)
         center_panel = QTabWidget()
         center_panel.setStyleSheet(self.css("center_panel"))
         center_panel.setTabPosition(QTabWidget.TabPosition.South)
-        center_panel.addTab(prompt_builder, "Prompt Builder")
+        center_panel.addTab(self.prompt_builder, "Prompt Builder")
+        # auto hide tabs
+        center_panel.tabBar().hide()
         self.center_splitter.setStretchFactor(1, 1)
         self.center_splitter.setStretchFactor(2, 0)
         self.splitter.addWidget(self.generator_tab_widget)
@@ -510,9 +512,7 @@ class MainWindow(
         self.settings_manager.settings.bottom_splitter_sizes.set([top_height, bottom_height])
 
     def initialize_saved_prompts(self):
-        print("INITIALZING PROMPTS")
         self.prompts_manager = PromptManager()
-        print(self.prompts_manager.settings.prompts)
         self.prompts_manager.enable_save()
 
     def initialize_settings_manager(self):

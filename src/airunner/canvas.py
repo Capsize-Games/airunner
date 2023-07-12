@@ -587,13 +587,16 @@ class Canvas(
         if self.container:
             try:
                 item = self.container.layout().itemAt(self.current_layer_index)
-                if item:
-                    item.widget().frame.setStyleSheet(self.parent.css("layer_normal_style"))
             except RuntimeError:
                 item = None
+            if item:
+                item.widget().frame.setStyleSheet(self.parent.css("layer_normal_style"))
         self.current_layer_index = index
         if self.container:
-            item = self.container.layout().itemAt(self.current_layer_index)
+            try:
+                item = self.container.layout().itemAt(self.current_layer_index)
+            except RuntimeError:
+                item = None
             if item:
                 item.widget().frame.setStyleSheet(self.parent.css("layer_highlight_style"))
         # change the layer opacity
