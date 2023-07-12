@@ -352,13 +352,17 @@
         {
           "cond": "emotion",
           "next": [
-            {
-              "text": "The $architecture looks ",
-              "else": "The building looks "
-            },
-            {
-              "text": "$emotion. "
-            }
+            [
+              {
+                "text": "The $architecture looks ",
+                "else": "The building looks "
+              }
+            ],
+            [
+              {
+                "text": "$emotion. "
+              }
+            ]
           ]
         },
         {
@@ -366,14 +370,18 @@
             "var": "location",
             "text": "The $location is ",
             "next": [
-              {
-                "text": "$weather ",
-                "cond": "weather"
-              },
-              {
-                "text": "$time. ",
+              [
+                {
+                  "text": "$weather ",
+                  "cond": "weather"
+                }
+              ],
+              [
+                {
+                  "text": "$time. ",
                   "cond": "time"
-              }
+                }
+              ]
             ]
           }
         },
@@ -872,14 +880,18 @@
         {
           "cond": "adjective",
           "next": [
-            {
-              "text": "The $food looks ",
-              "cond": "food",
-              "else": "The food looks "
-            },
-            {
-              "text": "$adjective "
-            }
+            [
+              {
+               "text": "The $food looks ",
+                "cond": "food",
+                "else": "The food looks "
+              }
+            ],
+            [
+              {
+                "text": "$adjective "
+              }
+            ]
           ]
         },
         {
