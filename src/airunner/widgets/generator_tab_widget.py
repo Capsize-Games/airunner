@@ -26,6 +26,10 @@ class GeneratorTabWidget(BaseWidget):
                 self.add_tab(section=tab_section, tab=tab)
         self.release_tab_section()
 
+    def clear_prompts(self, tab_section, tab):
+        self.data[tab_section][tab]['prompt_widget'].setPlainText("")
+        self.data[tab_section][tab]['negative_prompt_widget'].setPlainText("")
+
     def add_tab(self, section, tab):
         self.app.override_section = tab
         self.data[section][tab] = {}
