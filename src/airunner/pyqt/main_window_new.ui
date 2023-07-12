@@ -12,7 +12,7 @@
    </rect>
   </property>
   <property name="sizePolicy">
-   <sizepolicy hsizetype="Preferred" vsizetype="Preferred">
+   <sizepolicy hsizetype="MinimumExpanding" vsizetype="Preferred">
     <horstretch>0</horstretch>
     <verstretch>0</verstretch>
    </sizepolicy>
@@ -20,7 +20,7 @@
   <property name="minimumSize">
    <size>
     <width>0</width>
-    <height>0</height>
+    <height>900</height>
    </size>
   </property>
   <property name="windowTitle">
@@ -97,6 +97,8 @@
     <addaction name="separator"/>
     <addaction name="actionRotate_90_clockwise"/>
     <addaction name="actionRotate_90_counter_clockwise"/>
+    <addaction name="separator"/>
+    <addaction name="actionClear_all_prompts"/>
    </widget>
    <widget class="QMenu" name="menuFilters">
     <property name="title">
@@ -534,6 +536,14 @@
   <action name="actionEasy_prompt">
    <property name="text">
     <string>Easy prompt</string>
+   </property>
+  </action>
+  <action name="actionClear_all_prompts">
+   <property name="text">
+    <string>Clear all prompts</string>
+   </property>
+   <property name="toolTip">
+    <string>Remove text from all prompts and negative prompts</string>
    </property>
   </action>
  </widget>
