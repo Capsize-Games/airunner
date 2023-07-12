@@ -410,63 +410,6 @@ class GeneratorMixin(LoraMixin):
         filename = data["video_filename"]
         VideoPopup(settings_manager=self.settings_manager, file_path=filename)
 
-    def load_metadata(self, metadata):
-        """
-        Early return to patch import of image until a real fix is implemented
-        :param metadata:
-        :return:
-        """
-        """
-        if metadata:
-            action = metadata.get("action")
-            prompt = None
-            negative_prompt = None
-            if "prompt" in metadata:
-                prompt = metadata.get("prompt", "")
-            if "negative_prompt" in metadata:
-                negative_prompt = metadata.get("negative_prompt", "")
-            scale = metadata.get("scale", None)
-            seed = metadata.get("seed", None)
-            steps = metadata.get("steps", None)
-            ddim_eta = metadata.get("ddim_eta", None)
-            n_iter = metadata.get("n_iter", None)
-            n_samples = metadata.get("n_samples", None)
-            model = metadata.get("model", None)
-            # model_branch = metadata.get("model_branch", None)
-            scheduler = metadata.get("scheduler", None)
-
-            widgets = self.generator_tab_widget.data["stablediffusion"][action]
-            prompt_widget = widgets["prompt_widget"]
-            negative_prompt_widget = widgets["negative_prompt_widget"]
-            scale_slider_widget = widgets["scale_slider_widget"]
-            seed_widget = widgets["seed_widget"]
-            steps_slider_widget = widgets["steps_slider_widget"]
-            samples_slider_widget = widgets["samples_slider_widget"]
-            model_dropdown_widget = widgets["model_dropdown_widget"]
-            scheduler_dropdown_widget = widgets["scheduler_dropdown_widget"]
-
-            if prompt is not None:
-                prompt_widget.setPlainText(prompt)
-            if negative_prompt is not None:
-                negative_prompt_widget.setPlainText(negative_prompt)
-            if scale:
-                scale = float(scale)
-                scale_slider_widget.setValue(int(float(scale) * 100))
-            if seed:
-                seed_widget.setText(str(seed))
-            if steps:
-                steps = int(steps)
-                steps_slider_widget.setValue(steps)
-            if n_samples:
-                n_samples = int(n_samples)
-                samples_slider_widget.setValue(n_samples)
-            if model:
-                model_dropdown_widget.setCurrentText(model)
-            if scheduler:
-                scheduler_dropdown_widget.setCurrentText(scheduler)
-        return
-
-
     def prepare_metadata(self, data):
         if not self.settings_manager.settings.export_metadata.get() or \
                 self.settings_manager.settings.image_export_type.get() != "png":
