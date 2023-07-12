@@ -18,11 +18,11 @@ class HeaderWidget(BaseWidget):
         size = self.app.grid_size
 
         self.brush_size_slider_widget = self.create_slider_widget(
-            label_text="Brush Size:",
+            label_text="Brush Size",
             slider_callback=self.brush_size_slider_callback
         )
         self.width_slider_widget = self.create_slider_widget(
-            label_text="Active Grid Width:",
+            label_text="Active Grid Width",
             slider_callback=self.width_slider_callback,
             slider_minimum=size,
             slider_maximum=4096,
@@ -35,7 +35,7 @@ class HeaderWidget(BaseWidget):
             spinbox_page_step=size,
         )
         self.height_slider_widget = self.create_slider_widget(
-            label_text="Active Grid Height:",
+            label_text="Active Grid Height",
             slider_callback=self.height_slider_callback,
             slider_minimum=size,
             slider_maximum=4096,
