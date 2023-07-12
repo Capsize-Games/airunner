@@ -61,6 +61,10 @@ class ToolMenuWidget(BaseWidget):
         self.initialize_layer_buttons()
         #self.brush_widget.primary_color_button.clicked.connect(self.app.set_primary_color)
 
+        for tab_name in self.app.tabs.keys():
+            tab = self.app.tabs[tab_name]
+            self.app.load_embeddings(tab)
+
     def handle_current_color_changed(self, val):
         self.color_input_box.setText(val.name())
         self.settings_manager.settings.primary_color.set(val.name())
