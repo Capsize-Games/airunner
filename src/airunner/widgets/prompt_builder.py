@@ -297,7 +297,6 @@ class PromptBuilderWidget(BaseWidget):
         # build the negative prompt
         negative_prompt_style_prefix = ""
         for style_category in self.data["styles"].keys():
-            print(style_category, image_style)
             if image_style in self.data["styles"][style_category]["styles"]:
                 negative_prompt_style_prefix = self.data["styles"][style_category]["negative_prompt"]
                 break

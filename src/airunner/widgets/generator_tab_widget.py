@@ -381,7 +381,6 @@ class GeneratorTabWidget(BaseWidget):
         # create a checkbox for zeroshot
         zeroshot_checkbox = QCheckBox("Zero Shot")
         zeroshot_checkbox.setObjectName("zeroshot_checkbox")
-        print("zeroshot", self.app.settings.zeroshot)
         zeroshot_checkbox.setChecked(self.app.zeroshot)
         zeroshot_checkbox.toggled.connect(
             partial(self.handle_value_change, "zeroshot", widget=zeroshot_checkbox))
