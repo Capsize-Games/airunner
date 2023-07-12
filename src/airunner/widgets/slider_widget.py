@@ -122,7 +122,7 @@ class SliderWidget(QWidget):
         self.spinbox_maximum = spinbox_maximum
         self.label_text = label_text
 
-        self.label = QLabel(f"{self.label_text} 0")
+        self.label = QLabel(f"{self.label_text}")
         self.set_stylesheet()
         self.layout().removeWidget(self.slider)
         self.layout().removeWidget(self.spinbox)
@@ -134,10 +134,13 @@ class SliderWidget(QWidget):
         self.slider.valueChanged.connect(self.handle_slider_change)
         #self.slider.valueChanged.connect(lambda value: self.spinbox.setValue(value / self.slider_maximum))
         self.layout().addWidget(self.label, 0, 0, 1, 1)
-        self.spinbox.lineEdit().hide()
-        self.spinbox.setFixedWidth(25)
+        # self.spinbox.lineEdit().hide()
+        self.spinbox.setFixedWidth(75)
         self.spinbox.valueChanged.connect(self.handle_spinbox_change)
         self.slider.setValue(int(current_value))
+
+        if not self.display_as_float:
+            self.spinbox.setDecimals(0)
 
     def set_stylesheet(self):
         self.slider.setStyleSheet(self.app.css("slider"))
@@ -148,7 +151,7 @@ class SliderWidget(QWidget):
         normalized = val / self.spinbox_maximum
         slider_val = normalized * self.slider_maximum
         self.slider.setValue(round(slider_val))
-        self.update_label()
+        # self.update_label()
 
     def handle_slider_change(self, val):
         position = val#self.slider.sliderPosition()
@@ -163,7 +166,7 @@ class SliderWidget(QWidget):
         spinbox_val = round(spinbox_val, 2)
         self.spinbox.setValue(spinbox_val)
 
-        self.update_label()
+        # self.update_label()
         if self.slider_callback:
             self.slider_callback(adjusted_value)
 
@@ -173,14 +176,14 @@ class SliderWidget(QWidget):
         if self.display_as_float:
             val = self.spinbox.value()
 
-        self.update_label()
+        # self.update_label()
 
-    def update_label(self):
-        if self.display_as_float:
-            val = f"{self.spinbox.value():.2f}"
-        else:
-            val = f"{int(self.spinbox.value())}"
-        self.label.setText(f"{self.label_text} {val}")
+    # def update_label(self):
+    #     if self.display_as_float:
+    #         val = f"{self.spinbox.value():.2f}"
+    #     else:
+    #         val = f"{int(self.spinbox.value())}"
+    #     self.label.setText(f"{self.label_text} {val}")
 
     def set_tick_value(self, val):
         """
