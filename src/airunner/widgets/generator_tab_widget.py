@@ -53,6 +53,7 @@ class GeneratorTabWidget(BaseWidget):
         widget.setStyleSheet("font-size: 9pt;")
         self.layout = QGridLayout(widget)
         self.add_prompt_widgets()
+        self.add_zeroshot_widget()
         self.add_model_widgets()
         self.add_scheduler_widgets()
         self.add_controlnet_widgets()
@@ -120,6 +121,10 @@ class GeneratorTabWidget(BaseWidget):
 
         models = self.app.models if self.app.models else []
         default_models = load_default_models(tab_section, section_name)
+        zeroshot_models = None
+        if section_name == "txt2vid":
+            zeroshot_models = []
+            zeroshot_models = load_default_models(tab_section, "generate")
         path = ""
         if section_name == "depth2img":
             path = self.settings_manager.settings.depth2img_model_path.get()
@@ -137,10 +142,15 @@ class GeneratorTabWidget(BaseWidget):
         if tab_section == "stablediffusion":
             new_models = load_models_from_path(path)
             default_models += new_models
+            if zeroshot_models:
+                zeroshot_models += load_models_from_path(self.settings_manager.settings.model_base_path.get())
         models += default_models
         self.models = models
 
-        self.data[self.app.currentTabSection][section]["model_dropdown"].addItems(default_models)
+        if section_name == "txt2vid" and self.app.zeroshot:
+            default_models = zeroshot_models
+
+        self.data[tab_section][section]["model_dropdown"].addItems(default_models)
 
     def add_model_widgets(self):
         self.load_section_models()
@@ -163,6 +173,8 @@ class GeneratorTabWidget(BaseWidget):
         scheduler_action = self.tab
         if self.tab_section == "kandinsky":
             scheduler_action = f"kandinsky_{self.tab}"
+        elif self.tab_section == "shapegif":
+            scheduler_action = f"shapegif_{self.tab}"
         scheduler_label = QLabel(self)
         scheduler_label.setObjectName("scheduler_label")
         scheduler_label.setText("Scheduler")
@@ -177,8 +189,8 @@ class GeneratorTabWidget(BaseWidget):
         self.add_widget_to_grid(scheduler_widget)
 
     def add_controlnet_widgets(self):
-        if self.tab not in ["txt2img", "img2img", "outpaint"] \
-                or self.tab_section == "kandinsky":
+        if self.tab not in ["txt2img", "img2img", "outpaint", "txt2vid"] \
+                or self.tab_section == "kandinsky" or self.tab_section == "shapegif":
             return
         controlnet_options = [
             "Canny",
@@ -359,6 +371,19 @@ class GeneratorTabWidget(BaseWidget):
         horizontal_layout.addWidget(interrupt_button)
         self.add_widget_to_grid(widget)
 
+    def add_zeroshot_widget(self):
+        if self.tab != "txt2vid":
+            return
+        # create a checkbox for zeroshot
+        zeroshot_checkbox = QCheckBox("Zero Shot")
+        zeroshot_checkbox.setObjectName("zeroshot_checkbox")
+        print("zeroshot", self.app.settings.zeroshot)
+        zeroshot_checkbox.setChecked(self.app.zeroshot)
+        zeroshot_checkbox.toggled.connect(
+            partial(self.handle_value_change, "zeroshot", widget=zeroshot_checkbox))
+
+        self.add_widget_to_grid(zeroshot_checkbox)
+
     def add_frames_widgets(self):
         if self.tab != "txt2vid":
             return
@@ -435,6 +460,11 @@ class GeneratorTabWidget(BaseWidget):
                 progressbar = self.data["kandinsky"][section]["progressBar"]
             except KeyError:
                 progressbar = None
+        if progressbar is None:
+            try:
+                progressbar = self.data["shapegif"][section]["progressBar"]
+            except KeyError:
+                progressbar = None
         if not progressbar:
             return
         if progressbar.maximum() == 0:
@@ -509,11 +539,15 @@ class GeneratorTabWidget(BaseWidget):
                     except AttributeError:
                         print("something went wrong while setting the value")
 
+        if attr_name == "zeroshot":
+            self.refresh_model_list()
+
     def set_stylesheet(self):
         super().set_stylesheet()
         self.sectionTabWidget.setStyleSheet(self.app.css("section_tab_widget"))
         self.stableDiffusionTabWidget.setStyleSheet(self.app.css("pipeline"))
         self.kandinskyTabWidget.setStyleSheet(self.app.css("pipeline"))
+        self.shapegifTabWidget.setStyleSheet(self.app.css("pipeline"))
 
     def load_section_models(self):
         models = self.app.models if self.app.models else []
