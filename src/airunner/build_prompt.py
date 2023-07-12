@@ -54,11 +54,7 @@ class BuildPrompt:
             next = []
             else_cond = None
             if "text" in conditional:
-                try:
-                    text = conditional["text"]
-                except TypeError:
-                    print("ERROR")
-                    print(conditional)
+                text = conditional["text"]
             if "cond" in conditional:
                 cond = conditional["cond"]
             if "not_cond" in conditional:
@@ -134,7 +130,6 @@ class BuildPrompt:
 
             if success:
                 for next_conditionals in next:
-                    print("doing next", next_conditionals)
                     prompt = cls.build_conditional_prompt(
                         next_conditionals,
                         vars,
