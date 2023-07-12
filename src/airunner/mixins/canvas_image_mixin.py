@@ -230,7 +230,6 @@ class CanvasImageMixin:
 
     def load_image(self, image_path):
         image = Image.open(image_path)
-        self.load_metadata(image)
 
         # if settings_manager.settings.resize_on_paste, resize the image to working width and height while mainting its aspect ratio
         if self.settings_manager.settings.resize_on_paste.get():
@@ -238,15 +237,6 @@ class CanvasImageMixin:
 
         self.create_image(QPoint(0, 0), image)
         self.update()
-
-    def load_metadata(self, image):
-        if not self.settings_manager.settings.import_metadata.get():
-            return
-        try:
-            metadata = image.text
-        except AttributeError:
-            metadata = None
-        self.parent.load_metadata(metadata)
 
     def save_image(self, image_path, image=None):
         if self.current_layer.image_data.image is None:
