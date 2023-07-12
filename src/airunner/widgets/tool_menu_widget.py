@@ -25,7 +25,7 @@ class ToolMenuWidget(BaseWidget):
         self.layer_container_widget = LayerContainerWidget(app=self.app)
         self.opacity_widget = SliderWidget(
             app=self.app,
-            label_text="Layer Opacity:",
+            label_text="Layer Opacity",
             slider_callback=self.app.canvas.set_layer_opacity
         )
         self.opacity_widget.slider.setValue(100)
