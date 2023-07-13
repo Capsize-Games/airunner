@@ -508,7 +508,7 @@ class Canvas(
     def get_layers_copy(self):
         return [layer for layer in self.layers]
 
-    def delete_layer(self, index):
+    def delete_layer(self):
         self.parent.history.add_event({
             "event": "delete_layer",
             "layers": self.get_layers_copy(),
@@ -518,7 +518,7 @@ class Canvas(
             self.layers = [LayerData(0, "Layer 1")]
         else:
             try:
-                layer = self.layers.pop(index)
+                layer = self.layers.pop(self.current_layer_index)
                 self.container.layout().removeWidget(layer.layer_widget)
                 layer.layer_widget.deleteLater()
             except IndexError:
