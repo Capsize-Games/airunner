@@ -76,7 +76,7 @@ class MainWindow(
     is_started = False
 
     _embedding_names = None
-    widgets = {}
+    embedding_widgets = {}
     bad_model_embedding_map = {}
 
     @property
@@ -829,23 +829,23 @@ class MainWindow(
                 pass
             self.load_embeddings(tab)
 
-    def register_widget(self, name, widget):
-        self.widgets[name] = widget
+    def register_embedding_widget(self, name, widget):
+        self.embedding_widgets[name] = widget
 
     def disable_embedding(self, name, model_name):
-        self.widgets[name].setEnabled(False)
+        self.embedding_widgets[name].setEnabled(False)
         if name not in self.bad_model_embedding_map:
             self.bad_model_embedding_map[name] = []
         if model_name not in self.bad_model_embedding_map[name]:
             self.bad_model_embedding_map[name].append(model_name)
 
-    def enable_embeddings(self, model):
-        for name in self.widgets.keys():
+    def enable_embeddings(self):
+        for name in self.embedding_widgets.keys():
             enable = True
             if name in self.bad_model_embedding_map:
                 if self.model in self.bad_model_embedding_map[name]:
                     enable = False
-            self.widgets[name].setEnabled(enable)
+            self.embedding_widgets[name].setEnabled(enable)
 
     def load_embeddings(self, tab):
         container = QWidget()
@@ -855,7 +855,7 @@ class MainWindow(
                 app=self,
                 name=embedding_name
             )
-            self.register_widget(embedding_name, embedding_widget)
+            self.register_embedding_widget(embedding_name, embedding_widget)
             container.layout().addWidget(embedding_widget)
         container.layout().addStretch()
         self.tool_menu_widget.embeddings_container_widget.embeddings.setWidget(container)
