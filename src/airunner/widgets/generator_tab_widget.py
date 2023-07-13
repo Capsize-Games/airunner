@@ -87,6 +87,7 @@ class GeneratorTabWidget(BaseWidget):
         use_prompt_builder_checkbox.setChecked(self.app.use_prompt_builder_checkbox)
         use_prompt_builder_checkbox.stateChanged.connect(
             partial(self.handle_value_change, "use_prompt_builder_checkbox", widget=use_prompt_builder_checkbox))
+        self.data[self.tab_section][self.tab]["use_prompt_builder_checkbox"] = use_prompt_builder_checkbox
         prompt_widget = QPlainTextEdit(self)
         prompt_widget.setObjectName("prompt")
         prompt_widget.setPlainText(self.app.prompt)
@@ -110,6 +111,11 @@ class GeneratorTabWidget(BaseWidget):
             self.data[self.tab_section][self.tab]["negative_prompt_widget"] = negative_prompt_widget
             self.add_widget_to_grid(negative_label)
             self.add_widget_to_grid(negative_prompt_widget)
+
+    def toggle_all_prompt_builder_checkboxes(self, state):
+        for tab_section in self.data.keys():
+            for section in self.data[tab_section].keys():
+                self.data[tab_section][section]["use_prompt_builder_checkbox"].setChecked(state)
 
     def refresh_model_list(self):
         for i, section in enumerate(self.app._tabs[self.app.currentTabSection].keys()):
