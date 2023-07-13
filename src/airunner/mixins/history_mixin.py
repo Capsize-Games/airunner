@@ -224,3 +224,6 @@ class HistoryMixin:
                     sorted_layers.append(layer)
                     break
         self.canvas.layers = sorted_layers
+
+    def clear_history(self):
+        self.history.clear()
