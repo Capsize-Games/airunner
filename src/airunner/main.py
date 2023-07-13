@@ -614,13 +614,13 @@ class MainWindow(
         self.setWindowIcon(QIcon("src/icon_256.png"))
 
     def new_document(self):
-        CanvasMixin.initialize(self)
+        self.canvas.clear_layers()
+        self.clear_history()
+        #CanvasMixin.initialize(self)
         self.is_saved = False
         self.canvas.is_dirty = False
         self._document_name = "Untitled"
         self.set_window_title()
-        # clear the layers list widget
-        #self.tool_menu_widget.layers.setWidget(None)
         self.current_filter = None
         self.canvas.update()
         self.canvas.show_layers()
