@@ -86,31 +86,29 @@ class GeneratorTabWidget(BaseWidget):
         use_prompt_builder_checkbox.setChecked(self.app.use_prompt_builder_checkbox)
         use_prompt_builder_checkbox.stateChanged.connect(
             partial(self.handle_value_change, "use_prompt_builder_checkbox", widget=use_prompt_builder_checkbox))
-
         prompt_widget = QPlainTextEdit(self)
         prompt_widget.setObjectName("prompt")
         prompt_widget.setPlainText(self.app.prompt)
         prompt_widget.textChanged.connect(
             partial(self.handle_value_change, "prompt", widget=prompt_widget))
-
-        negative_label = QLabel(self)
-        negative_label.setObjectName("negative_prompt_label")
-        negative_label.setText("Negative Prompt")
-        negative_prompt_widget = QPlainTextEdit(self)
-        negative_prompt_widget.setObjectName("negative_prompt")
-        negative_prompt_widget.setPlainText(self.app.negative_prompt)
-        negative_prompt_widget.textChanged.connect(
-            partial(self.handle_value_change, "negative_prompt", widget=negative_prompt_widget))
         horizontal_layout.addWidget(prompt_label)
-        horizontal_layout.addWidget(use_prompt_builder_checkbox)
-
         self.data[self.tab_section][self.tab]["prompt_widget"] = prompt_widget
-        self.data[self.tab_section][self.tab]["negative_prompt_widget"] = negative_prompt_widget
-
         self.add_widget_to_grid(prompt_label_container)
         self.add_widget_to_grid(prompt_widget)
-        self.add_widget_to_grid(negative_label)
-        self.add_widget_to_grid(negative_prompt_widget)
+
+        if self.app.currentTabSection != "shapegif":
+            negative_label = QLabel(self)
+            negative_label.setObjectName("negative_prompt_label")
+            negative_label.setText("Negative Prompt")
+            negative_prompt_widget = QPlainTextEdit(self)
+            negative_prompt_widget.setObjectName("negative_prompt")
+            negative_prompt_widget.setPlainText(self.app.negative_prompt)
+            negative_prompt_widget.textChanged.connect(
+                partial(self.handle_value_change, "negative_prompt", widget=negative_prompt_widget))
+            horizontal_layout.addWidget(use_prompt_builder_checkbox)
+            self.data[self.tab_section][self.tab]["negative_prompt_widget"] = negative_prompt_widget
+            self.add_widget_to_grid(negative_label)
+            self.add_widget_to_grid(negative_prompt_widget)
 
     def refresh_model_list(self):
         for i, section in enumerate(self.app._tabs[self.app.currentTabSection].keys()):
@@ -452,33 +450,30 @@ class GeneratorTabWidget(BaseWidget):
         self.add_widget_to_grid(widget_b)
         generate_button.clicked.connect(partial(self.app.generate, progressBar))
 
-    def set_progress_bar_value(self, section, value):
+    def set_progress_bar_value(self, tab_section, section, value):
         # check if progressbar in stablediffusion is running
         try:
-            progressbar = self.data["stablediffusion"][section]["progressBar"]
+            progressbar = self.data[tab_section][section]["progressBar"]
         except KeyError:
             progressbar = None
-        if progressbar is None:
-            try:
-                progressbar = self.data["kandinsky"][section]["progressBar"]
-            except KeyError:
-                progressbar = None
-        if progressbar is None:
-            try:
-                progressbar = self.data["shapegif"][section]["progressBar"]
-            except KeyError:
-                progressbar = None
         if not progressbar:
             return
         if progressbar.maximum() == 0:
             progressbar.setRange(0, 100)
         progressbar.setValue(value)
 
-    def stop_progress_bar(self, section):
-        # self.data[section]["progress_bar_started"] = False
-        # self.data[section]["progressBar"].reset()
-        # self.data[section]["progressBar"].setRange(0, 100)
-        pass
+    def stop_progress_bar(self, tab_section, section):
+        print("stop progress bar", tab_section, section)
+        try:
+            progressbar = self.data[tab_section][section]["progressBar"]
+        except KeyError:
+            progressbar = None
+        if not progressbar:
+            print("failed to find progress bar")
+            return
+        progressbar.setRange(0, 100)
+        progressbar.setValue(100)
+        self.data[tab_section][section]["progress_bar_started"] = False
 
     def start_progress_bar(self, tab_section, section):
         if self.data[tab_section][section]["progress_bar_started"]:
