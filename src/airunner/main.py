@@ -1,5 +1,6 @@
 import os
 import pickle
+import signal
 import sys
 import traceback
 from functools import partial
@@ -437,6 +438,7 @@ class MainWindow(
 
         self.model_var.connect(self.enable_embeddings)
         self.settings_manager.settings.embeddings_path.my_signal.connect(self.update_embedding_names)
+        self.seed_var.my_signal.connect(self.prompt_builder.process_prompt)
 
     def instantiate_widgets(self):
         logger.info("Instantiating widgets...")
