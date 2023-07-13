@@ -140,10 +140,9 @@ class BuildPrompt:
         return prompt
 
     @classmethod
-    def build_prompt(cls, conditionals, image_style, vars, category):
-        prefix = f"($style, $color, ({image_style})++)"
+    def build_prompt(cls, conditionals, vars, category):
         prompt = cls.build_conditional_prompt(
             conditionals,
             vars,
             category)
-        return f"{prefix}, {prompt}".strip()
+        return prompt.strip()
