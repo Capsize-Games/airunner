@@ -638,8 +638,8 @@ class MainWindow(
         try:
             code = response["code"]
         except TypeError:
-            logger.error(f"Invalid response message: {response}")
-            traceback.print_exc()
+            # logger.error(f"Invalid response message: {response}")
+            # traceback.print_exc()
             return
         message = response["message"]
         {
