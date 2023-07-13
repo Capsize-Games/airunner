@@ -738,14 +738,27 @@ class MainWindow(
 
     def do_save(self, document_name):
         # save self.canvas.layers as pickle
+        layers = []
+        # we need to save self.canvas.layers but it contains a QWdget
+        # so we will remove the QWidget from each layer, add the layer to a new
+        # list and then restore the QWidget
+        layer_widgets = []
+        for layer in self.canvas.layers:
+            layer_widgets.append(layer.layer_widget)
+            layer.layer_widget = None
+            layers.append(layer)
         data = {
-            "layers": self.canvas.layers,
+            "layers": layers,
             "image_pivot_point": self.canvas.image_pivot_point,
             "image_root_point": self.canvas.image_root_point,
         }
         with open(document_name, "wb") as f:
             pickle.dump(data, f)
+        # restore the QWidget
+        for i, layer in enumerate(layers):
+            layer.layer_widget = layer_widgets[i]
         # get the document name stripping .airunner from the end
+        self._document_path = document_name
         self._document_name = document_name.split("/")[-1].split(".")[0]
         self.set_window_title()
         self.is_saved = True
@@ -754,8 +767,7 @@ class MainWindow(
     def save_document(self):
         if not self.is_saved:
             return self.saveas_document()
-        document_name = f"{self._document_name}.airunner"
-        self.do_save(document_name)
+        self.do_save(self._document_path)
 
     def load_document(self):
         self.new_document()
@@ -781,6 +793,7 @@ class MainWindow(
                 layers = data
 
         # get the document name stripping .airunner from the end
+        self._document_path = file_path
         self._document_name = file_path.split("/")[-1].split(".")[0]
 
         # load document data
