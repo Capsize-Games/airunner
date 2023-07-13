@@ -43,12 +43,10 @@ datas += copy_metadata('tokenizers')
 datas += copy_metadata('transformers')
 datas += copy_metadata('rich')
 datas += copy_metadata('sympy')
-datas += copy_metadata('bitsandbytes')
 datas += copy_metadata('opencv-python')
 datas += collect_data_files("torch", include_py_files=True)
 datas += collect_data_files("torchvision", include_py_files=True)
 datas += collect_data_files("JIT", include_py_files=True)
-datas += collect_data_files("triton", include_py_files=True)
 datas += collect_data_files("pytorch_lightning", include_py_files=True)
 datas += collect_data_files("lightning_fabric", include_py_files=True)
 datas += collect_data_files("transformers", include_py_files=True)
@@ -63,7 +61,6 @@ a = Analysis(
         "./venv/lib/python3.10/site-packages/torch/lib",
         "./venv/lib/python3.10/site-packages/tokenizers",
         "./venv/lib/python3.10/site-packages/tensorflow",
-        "./venv/lib/python3.10/site-packages/triton",
         "/usr/lib/x86_64-linux-gnu/",
     ],
     binaries=[
@@ -77,9 +74,6 @@ a = Analysis(
         "airunner",
         "airunner.extensions",
         "JIT",
-        "triton",
-        "triton._C",
-        "triton._C.libtriton",
         "tqdm",
         "diffusers",
         "transformers",
@@ -99,7 +93,6 @@ a = Analysis(
         "inspect",
         "psutil",
         "matplotlib",
-        "bitsandbytes",
         "numpy",
         "PIL._tkinter_finder",
         "sympy",
@@ -181,21 +174,6 @@ shutil.copyfile('./src/airunner/src/splashscreen.png', './dist/airunner/src/spla
 os.makedirs('./dist/airunner/diffusers/pipelines/stable_diffusion', exist_ok=True)
 shutil.copyfile('./src/airunner/v1.yaml', './dist/airunner/v1.yaml')
 shutil.copyfile('./src/airunner/v2.yaml', './dist/airunner/v2.yaml')
-
-#############################################################
-#### The following fixes are for Triton #####################
-
-# run compileall on ./dist/airunner/triton/runtime/jit.py and then mv ./dist/airunner/triton/runtime/__pycache__/jit.cpython-310.pyc to ./dist/airunner/triton/runtime/jit.pyc
-shutil.copyfile(
-    './venv/lib/python3.10/site-packages/triton/runtime/__pycache__/jit.cpython-310.pyc',
-    './dist/airunner/triton/runtime/jit.pyc'
-)
-
-# do the same thing for ./dist/airunner/triton/compiler.py
-shutil.copyfile(
-    './venv/lib/python3.10/site-packages/triton/__pycache__/compiler.cpython-310.pyc',
-    './dist/airunner/triton/compiler.pyc'
-)
 
 shutil.copyfile(
     f'./venv/lib/python3.10/site-packages/JIT/__pycache__/random.cpython-310.pyc',
