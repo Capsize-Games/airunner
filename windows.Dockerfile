@@ -45,7 +45,6 @@ RUN export PATH="$(winepath -u "C:\Python310\Scripts"):$PATH" \
     && export PATH="$(winepath -u "C:\Python310\site-packages"):$PATH" \
     && export PATH="$(winepath -u "C:\Python310\site-packages\Pillow.libs"):$PATH" \
     && export PATH="$(winepath -u "C:\Python310\site-packages\tokenizers.libs"):$PATH" \
-    && export PATH="$(winepath -u "C:\Python310\site-packages\xformers\triton"):$PATH" \
     && export PATH="$(winepath -u "C:\Python310\site-packages\nvidia\cuda_runtime\lib"):$PATH" \
     && export PATH="$(winepath -u "C:\Python310\site-packages\nvidia\cudnn\lib"):$PATH" \
     && export PATH="$(winepath -u "C:\Python310\site-packages\numpy.libs"):$PATH" \
@@ -55,8 +54,6 @@ RUN export PATH="$(winepath -u "C:\Python310\Scripts"):$PATH" \
     && export PATH="$(winepath -u "C:\Python310\site-packages\torch\bin"):$PATH" \
     && export PATH="$(winepath -u "C:\Python310\site-packages\torch\_C"):$PATH" \
     && export PATH="$(winepath -u "C:\Python310\site-packages\torch"):$PATH" \
-    && export PATH="$(winepath -u "C:\Python310\site-packages\triton"):$PATH" \
-    && export PATH="$(winepath -u "C:\Python310\site-packages\triton/_C"):$PATH"
 
 FROM final as install_apps
 WORKDIR /app
@@ -82,8 +79,7 @@ RUN wget https://github.com/upx/upx/releases/download/v4.0.2/upx-4.0.2-win64.zip
 
 FROM install_upx as install_libs
 USER root
-RUN wine64 C:\\Python310\\python.exe -m pip install https://github.com/acpopescu/bitsandbytes/releases/download/v0.38.0-win0/bitsandbytes-0.38.1-py3-none-any.whl \
-    && wine64 C:\\Python310\\python.exe -m pip install aihandler
+RUN wine64 C:\\Python310\\python.exe -m pip install aihandler
 WORKDIR /app
 RUN wine64 C:\\Python310\\python.exe -c "from accelerate.utils import write_basic_config; write_basic_config(mixed_precision='fp16')"
 
