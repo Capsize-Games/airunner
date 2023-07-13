@@ -30,7 +30,6 @@ class MenubarMixin:
         self.actionSave_prompt.triggered.connect(self.save_prompt)
         self.actionPrompt_Browser.triggered.connect(self.show_prompt_browser)
         self.image_interpolation.triggered.connect(self.show_image_interpolation)
-        self.actionDeterministic_generation.triggered.connect(self.show_deterministic_generation)
         self.actionClear_all_prompts.triggered.connect(self.clear_all_prompts)
 
     def clear_all_prompts(self):
