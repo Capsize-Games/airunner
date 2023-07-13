@@ -51,7 +51,7 @@ WORKDIR /app
 RUN pip install --upgrade pip
 RUN pip install --upgrade setuptools
 RUN pip install --upgrade wheel
-RUN pip install bitsandbytes requests aihandler triton cmake
+RUN pip install requests aihandler cmake
 RUN pip uninstall torch torchvision -y
 RUN pip install torch torchvision --index-url https://download.pytorch.org/whl/cu118 --upgrade
 

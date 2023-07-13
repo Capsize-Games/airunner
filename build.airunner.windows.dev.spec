@@ -35,7 +35,6 @@ datas += copy_metadata('rich')
 datas += copy_metadata('sympy')
 datas += copy_metadata('tensorflow')
 datas += copy_metadata('scipy')
-datas += copy_metadata('bitsandbytes')
 datas += collect_data_files("torch", include_py_files=True)
 datas += collect_data_files("torchvision", include_py_files=True)
 datas += collect_data_files("JIT", include_py_files=True)
@@ -43,7 +42,6 @@ datas += collect_data_files("pytorch_lightning", include_py_files=True)
 datas += collect_data_files("lightning_fabric", include_py_files=True)
 datas += collect_data_files("transformers", include_py_files=True)
 datas += collect_data_files("tensorflow", include_py_files=True)
-datas += collect_data_files("bitsandbytes", include_py_files=True)
 datas += collect_data_files("sympy", include_py_files=True)
 datas += collect_data_files("controlnet_aux", include_py_files=True)
 a = Analysis(
@@ -54,7 +52,6 @@ a = Analysis(
         ".\\venv\\Lib\\site-packages",
         ".\\venv\\Lib\\site-packages\\tokenizers",
         ".\\venv\\Lib\\site-packages\\tensorflow_io_gcs_filesystem\\core\\python\\ops",
-        ".\\venv\\Lib\\site-packages\\bitsandbytes\\",
         ".\\venv\\Lib\\site-packages\\tensorflow\\python\\data\\experimental\\service\\",
         ".\\venv\\Lib\\site-packages\\torch\\lib",
         ".\\venv\\Lib\\site-packages\\PyQt6",
@@ -94,7 +91,6 @@ a = Analysis(
         "inspect",
         "psutil",
         "matplotlib",
-        "bitsandbytes",
         "scipy",
         "sympy",
         "pywin32",
