@@ -145,7 +145,7 @@
     <addaction name="separator"/>
     <addaction name="actionModel_Merger"/>
     <addaction name="separator"/>
-    <addaction name="actionEasy_prompt"/>
+    <addaction name="actionPrompt_Browser"/>
    </widget>
    <addaction name="menuFile"/>
    <addaction name="menuEdit"/>
@@ -482,11 +482,6 @@
     <string>Save prompt</string>
    </property>
   </action>
-  <action name="actionPrompt_Browser">
-   <property name="text">
-    <string>Prompt Browser</string>
-   </property>
-  </action>
   <action name="actionShow_Active_Image_Area">
    <property name="checkable">
     <bool>true</bool>
@@ -533,9 +528,9 @@
     <string>Settings</string>
    </property>
   </action>
-  <action name="actionEasy_prompt">
+  <action name="actionPrompt_Browser">
    <property name="text">
-    <string>Easy prompt</string>
+    <string>Prompt browser</string>
    </property>
   </action>
   <action name="actionClear_all_prompts">
