@@ -659,17 +659,25 @@ class MainWindow(
         if data["action"] == "txt2vid":
             return self.video_handler(data)
 
+        self.generator_tab_widget.stop_progress_bar(
+            data["tab_section"], data["action"]
+        )
+
         if self.settings_manager.settings.auto_export_images.get():
             self.auto_export_image(images[0], data)
 
         self.generator_tab_widget.stop_progress_bar(
-            data["action"])
+            data["tab_section"], data["action"]
+        )
         if nsfw_content_detected and self.settings_manager.settings.nsfw_filter.get():
             self.message_handler("NSFW content detected, try again.", error=True)
         elif data["options"][f"deterministic_generation"]:
             self.deterministic_images = images
-            DeterministicGenerationWindow(self.settings_manager, app=self, images=self.deterministic_images,
-                                          data=data)
+            DeterministicGenerationWindow(
+                self.settings_manager,
+                app=self,
+                images=self.deterministic_images,
+                data=data)
         else:
             if data[
                 "action"] != "outpaint" and self.image_to_new_layer and self.canvas.current_layer.image_data.image is not None:
@@ -689,8 +697,7 @@ class MainWindow(
         step = message.get("step")
         total = message.get("total")
         action = message.get("action")
-        image = message.get("image")
-        data = message.get("data")
+        tab_section = message.get("tab_section")
 
         if step == 0 and total == 0:
             current = 0
@@ -699,7 +706,7 @@ class MainWindow(
                 current = (step / total)
             except ZeroDivisionError:
                 current = 0
-        self.generator_tab_widget.set_progress_bar_value(action, int(current * 100))
+        self.generator_tab_widget.set_progress_bar_value(tab_section, action, int(current * 100))
 
     def handle_embedding_load_failed(self, message):
         # TODO:
