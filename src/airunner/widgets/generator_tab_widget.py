@@ -19,6 +19,8 @@ class GeneratorTabWidget(BaseWidget):
         self.layout = None
         self.app.settings_manager.settings.model_base_path.my_signal.connect(self.refresh_model_list)
         # add all tabs
+        self.sectionTabWidget.currentChanged.connect(self.app.update)
+        self.sectionTabWidget.currentChanged.connect(self.app.enable_embeddings)
         for tab_section in self.app._tabs.keys():
             self.force_tab_section(tab_section, None)
             self.data[tab_section] = {}
@@ -42,9 +44,8 @@ class GeneratorTabWidget(BaseWidget):
             "inpaint / outpaint" if tab == "outpaint" else tab
         )
         # on tab change
-        tab_section.currentChanged.connect(
-            partial(self.app.update)
-        )
+        tab_section.currentChanged.connect(self.app.update)
+        tab_section.currentChanged.connect(self.app.enable_embeddings)
 
     def generate_form(self, tab_section, tab):
         self.tab_section = tab_section
