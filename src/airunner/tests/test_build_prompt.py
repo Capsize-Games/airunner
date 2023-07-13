@@ -14,11 +14,10 @@ class TestBuildPrompt(unittest.TestCase):
         self.assertEqual(
             BuildPrompt.build_prompt(
                 conditionals=builder,
-                image_style="contemporary",
                 vars={},
                 category="person"
             ),
-            "($style, $color, (contemporary)++), A person ."
+            "A person ."
         )
 
     def test_ethnicity(self):
@@ -26,13 +25,12 @@ class TestBuildPrompt(unittest.TestCase):
         self.assertEqual(
             BuildPrompt.build_prompt(
                 conditionals=builder,
-                image_style="contemporary",
                 vars={
                     "ethnicity": ["asdf"]
                 },
                 category="person"
             ),
-            "($style, $color, (contemporary)++), A $ethnicity ."
+            "A $ethnicity ."
         )
 
     def test_gender(self):
@@ -40,13 +38,12 @@ class TestBuildPrompt(unittest.TestCase):
         self.assertEqual(
             BuildPrompt.build_prompt(
                 conditionals=builder,
-                image_style="contemporary",
                 vars={
                     "gender": ["asdf"]
                 },
                 category="person"
             ),
-            "($style, $color, (contemporary)++), A $gender person named $$gender_name ."
+            "A $gender person named $$gender_name ."
         )
 
     def test_no_gender_with_age(self):
@@ -54,13 +51,12 @@ class TestBuildPrompt(unittest.TestCase):
         self.assertEqual(
             BuildPrompt.build_prompt(
                 conditionals=builder,
-                image_style="contemporary",
                 vars={
                     "age": ["asdf"]
                 },
                 category="person"
             ),
-            "($style, $color, (contemporary)++), A person . The person is $age"
+            "A person . The person is $age"
         )
 
     def test_hair_length_and_color(self):
@@ -68,14 +64,13 @@ class TestBuildPrompt(unittest.TestCase):
         self.assertEqual(
             BuildPrompt.build_prompt(
                 conditionals=builder,
-                image_style="contemporary",
                 vars={
                     "hair_length": ["asdf"],
                     "hair_color": ["asdf"]
                 },
                 category="person"
             ),
-            "($style, $color, (contemporary)++), A person . ($hair_length $hair_color hair.)"
+            "A person . ($hair_length $hair_color hair.)"
         )
 
     def test_gender_body_type(self):
@@ -83,14 +78,13 @@ class TestBuildPrompt(unittest.TestCase):
         self.assertEqual(
             BuildPrompt.build_prompt(
                 conditionals=builder,
-                image_style="contemporary",
                 vars={
                     "gender": ["asdf"],
                     "body_type": ["asdf"],
                 },
                 category="person"
             ),
-            "($style, $color, (contemporary)++), A $gender person named $$gender_name . $$gender_name has a ($body_type body-type),"
+            "A $gender person named $$gender_name . $$gender_name has a ($body_type body-type),"
         )
 
     def test_body_type(self):
@@ -98,13 +92,12 @@ class TestBuildPrompt(unittest.TestCase):
         self.assertEqual(
             BuildPrompt.build_prompt(
                 conditionals=builder,
-                image_style="contemporary",
                 vars={
                     "body_type": ["asdf"],
                 },
                 category="person"
             ),
-            "($style, $color, (contemporary)++), A person . The person has a ($body_type body-type),"
+            "A person . The person has a ($body_type body-type),"
         )
 
     def test_gender_wearing(self):
@@ -112,13 +105,12 @@ class TestBuildPrompt(unittest.TestCase):
         self.assertEqual(
             BuildPrompt.build_prompt(
                 conditionals=builder,
-                image_style="contemporary",
                 vars={
                     "shoes": ["asdf"],
                 },
                 category="person"
             ),
-            "($style, $color, (contemporary)++), A person . the person (wearing $shoes),"
+            "A person . the person (wearing $shoes),"
         )
 
     def test_next(self):
@@ -126,12 +118,11 @@ class TestBuildPrompt(unittest.TestCase):
         self.assertEqual(
             BuildPrompt.build_prompt(
                 conditionals=builder,
-                image_style="contemporary",
                 vars={
                     "animal": ["asdf"],
                     "emotion": ["asdf"],
                 },
                 category="person"
             ),
-            "($style, $color, (contemporary)++), A $animal , captured in motion. The $animal looks $emotion. vibrant and lively, natural composition, perfect lighting, an amazing sight."
+            "A $animal , captured in motion. The $animal looks $emotion. vibrant and lively, natural composition, perfect lighting, an amazing sight."
         )

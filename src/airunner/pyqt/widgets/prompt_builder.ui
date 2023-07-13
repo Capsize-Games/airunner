@@ -6,7 +6,7 @@
    <rect>
     <x>0</x>
     <y>0</y>
-    <width>816</width>
+    <width>541</width>
     <height>405</height>
    </rect>
   </property>
@@ -337,7 +337,7 @@
              <rect>
               <x>0</x>
               <y>0</y>
-              <width>390</width>
+              <width>248</width>
               <height>214</height>
              </rect>
             </property>
@@ -346,6 +346,9 @@
          </item>
          <item row="0" column="2">
           <layout class="QVBoxLayout" name="verticalLayout_3">
+           <property name="spacing">
+            <number>6</number>
+           </property>
            <item>
             <widget class="QLabel" name="label_16">
              <property name="sizePolicy">
@@ -370,6 +373,37 @@
               <string>Prompt</string>
              </property>
             </widget>
+           </item>
+           <item>
+            <layout class="QHBoxLayout" name="horizontalLayout">
+             <property name="spacing">
+              <number>6</number>
+             </property>
+             <item>
+              <widget class="QLineEdit" name="prompt_prefix">
+               <property name="font">
+                <font>
+                 <pointsize>8</pointsize>
+                </font>
+               </property>
+               <property name="placeholderText">
+                <string>Prompt prefix</string>
+               </property>
+              </widget>
+             </item>
+             <item>
+              <widget class="QLineEdit" name="prompt_suffix">
+               <property name="font">
+                <font>
+                 <pointsize>8</pointsize>
+                </font>
+               </property>
+               <property name="placeholderText">
+                <string>Prompt suffix</string>
+               </property>
+              </widget>
+             </item>
+            </layout>
            </item>
            <item>
             <widget class="QTextBrowser" name="advanced_prompt_text">
@@ -425,6 +459,37 @@
               <string>Negative Prompt</string>
              </property>
             </widget>
+           </item>
+           <item>
+            <layout class="QHBoxLayout" name="horizontalLayout_2">
+             <property name="spacing">
+              <number>6</number>
+             </property>
+             <item>
+              <widget class="QLineEdit" name="negative_prompt_prefix">
+               <property name="font">
+                <font>
+                 <pointsize>8</pointsize>
+                </font>
+               </property>
+               <property name="placeholderText">
+                <string>Negative prefix</string>
+               </property>
+              </widget>
+             </item>
+             <item>
+              <widget class="QLineEdit" name="negative_prompt_suffix">
+               <property name="font">
+                <font>
+                 <pointsize>8</pointsize>
+                </font>
+               </property>
+               <property name="placeholderText">
+                <string>Negative suffix</string>
+               </property>
+              </widget>
+             </item>
+            </layout>
            </item>
            <item>
             <widget class="QTextBrowser" name="advanced_negative_prompt_text">
@@ -586,46 +651,20 @@
        </item>
        <item row="0" column="0">
         <layout class="QGridLayout" name="gridLayout_10">
-         <item row="0" column="0">
-          <widget class="QLabel" name="label_2">
-           <property name="sizePolicy">
-            <sizepolicy hsizetype="Maximum" vsizetype="Maximum">
-             <horstretch>0</horstretch>
-             <verstretch>0</verstretch>
-            </sizepolicy>
-           </property>
+         <item row="1" column="4">
+          <widget class="QRadioButton" name="advanced_radio">
            <property name="font">
             <font>
              <pointsize>8</pointsize>
-             <bold>true</bold>
             </font>
            </property>
            <property name="text">
-            <string>Category</string>
+            <string>Advanced</string>
            </property>
           </widget>
          </item>
-         <item row="0" column="1">
-          <widget class="QLabel" name="label">
-           <property name="sizePolicy">
-            <sizepolicy hsizetype="Maximum" vsizetype="Preferred">
-             <horstretch>0</horstretch>
-             <verstretch>0</verstretch>
-            </sizepolicy>
-           </property>
-           <property name="font">
-            <font>
-             <pointsize>8</pointsize>
-             <bold>true</bold>
-            </font>
-           </property>
-           <property name="text">
-            <string>Prompt</string>
-           </property>
-          </widget>
-         </item>
-         <item row="1" column="2">
-          <widget class="QComboBox" name="advanced_style">
+         <item row="1" column="3">
+          <widget class="QComboBox" name="prompt_style">
            <property name="sizePolicy">
             <sizepolicy hsizetype="MinimumExpanding" vsizetype="Fixed">
              <horstretch>0</horstretch>
@@ -652,7 +691,7 @@
           </widget>
          </item>
          <item row="1" column="1">
-          <widget class="QComboBox" name="advanced_prompt">
+          <widget class="QComboBox" name="prompt_genre">
            <property name="sizePolicy">
             <sizepolicy hsizetype="MinimumExpanding" vsizetype="Fixed">
              <horstretch>0</horstretch>
@@ -665,12 +704,6 @@
              <height>22</height>
             </size>
            </property>
-           <property name="maximumSize">
-            <size>
-             <width>16777215</width>
-             <height>16777215</height>
-            </size>
-           </property>
            <property name="font">
             <font>
              <pointsize>9</pointsize>
@@ -678,8 +711,21 @@
            </property>
           </widget>
          </item>
-         <item row="1" column="0">
-          <widget class="QComboBox" name="advanced_category">
+         <item row="0" column="1">
+          <widget class="QLabel" name="label">
+           <property name="font">
+            <font>
+             <pointsize>8</pointsize>
+             <bold>true</bold>
+            </font>
+           </property>
+           <property name="text">
+            <string>Genre</string>
+           </property>
+          </widget>
+         </item>
+         <item row="1" column="2">
+          <widget class="QComboBox" name="prompt_color">
            <property name="sizePolicy">
             <sizepolicy hsizetype="MinimumExpanding" vsizetype="Fixed">
              <horstretch>0</horstretch>
@@ -692,12 +738,6 @@
              <height>22</height>
             </size>
            </property>
-           <property name="maximumSize">
-            <size>
-             <width>16777215</width>
-             <height>16777215</height>
-            </size>
-           </property>
            <property name="font">
             <font>
              <pointsize>9</pointsize>
@@ -705,7 +745,26 @@
            </property>
           </widget>
          </item>
-         <item row="0" column="2">
+         <item row="0" column="0">
+          <widget class="QLabel" name="label_2">
+           <property name="sizePolicy">
+            <sizepolicy hsizetype="Maximum" vsizetype="Maximum">
+             <horstretch>0</horstretch>
+             <verstretch>0</verstretch>
+            </sizepolicy>
+           </property>
+           <property name="font">
+            <font>
+             <pointsize>8</pointsize>
+             <bold>true</bold>
+            </font>
+           </property>
+           <property name="text">
+            <string>Category</string>
+           </property>
+          </widget>
+         </item>
+         <item row="0" column="3">
           <widget class="QLabel" name="label_11">
            <property name="sizePolicy">
             <sizepolicy hsizetype="Maximum" vsizetype="Preferred">
@@ -724,19 +783,7 @@
            </property>
           </widget>
          </item>
-         <item row="1" column="3">
-          <widget class="QRadioButton" name="advanced_radio">
-           <property name="font">
-            <font>
-             <pointsize>8</pointsize>
-            </font>
-           </property>
-           <property name="text">
-            <string>Advanced</string>
-           </property>
-          </widget>
-         </item>
-         <item row="0" column="3">
+         <item row="0" column="4">
           <widget class="QRadioButton" name="basic_radio">
            <property name="font">
             <font>
@@ -745,6 +792,46 @@
            </property>
            <property name="text">
             <string>Basic</string>
+           </property>
+          </widget>
+         </item>
+         <item row="0" column="2">
+          <widget class="QLabel" name="label_8">
+           <property name="font">
+            <font>
+             <pointsize>8</pointsize>
+             <bold>true</bold>
+            </font>
+           </property>
+           <property name="text">
+            <string>Color</string>
+           </property>
+          </widget>
+         </item>
+         <item row="1" column="0">
+          <widget class="QComboBox" name="prompt_category">
+           <property name="sizePolicy">
+            <sizepolicy hsizetype="MinimumExpanding" vsizetype="Fixed">
+             <horstretch>0</horstretch>
+             <verstretch>0</verstretch>
+            </sizepolicy>
+           </property>
+           <property name="minimumSize">
+            <size>
+             <width>80</width>
+             <height>22</height>
+            </size>
+           </property>
+           <property name="maximumSize">
+            <size>
+             <width>16777215</width>
+             <height>16777215</height>
+            </size>
+           </property>
+           <property name="font">
+            <font>
+             <pointsize>9</pointsize>
+            </font>
            </property>
           </widget>
          </item>
