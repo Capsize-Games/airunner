@@ -439,6 +439,9 @@ class MainWindow(
         self.model_var.connect(self.enable_embeddings)
         self.settings_manager.settings.embeddings_path.my_signal.connect(self.update_embedding_names)
         self.seed_var.my_signal.connect(self.prompt_builder.process_prompt)
+        self.settings_manager.settings.use_prompt_builder_checkbox.my_signal.connect(
+            self.generator_tab_widget.toggle_all_prompt_builder_checkboxes
+        )
 
     def instantiate_widgets(self):
         logger.info("Instantiating widgets...")
