@@ -878,6 +878,11 @@ class MainWindow(
 
 
 if __name__ == "__main__":
+    def signal_handler(signal, frame):
+        print("\nExiting...")
+        sys.exit(0)
+
+    signal.signal(signal.SIGINT, signal_handler)
     QApplication.setAttribute(Qt.ApplicationAttribute.AA_UseDesktopOpenGL)
     app = QApplication([])
 
