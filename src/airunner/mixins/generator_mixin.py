@@ -5,7 +5,7 @@ from PyQt6 import uic
 from PyQt6.QtCore import QRect, pyqtSignal, Qt
 from PyQt6.QtGui import QShortcut, QKeySequence
 from PyQt6.uic.exceptions import UIFileException
-from aihandler.settings import MAX_SEED, MODELS
+from aihandler.settings import MAX_SEED, MODELS, MessageCode
 from airunner.windows.video import VideoPopup
 from airunner.mixins.lora_mixin import LoraMixin
 from PIL import PngImagePlugin
@@ -502,7 +502,10 @@ class GeneratorMixin(LoraMixin):
             image_data = self.canvas.current_layer.image_data
             image = image_data.image if image_data else None
             if image is None:
-                self.error_handler("No image to upscale")
+                self.message_var.emit({
+                    "code": MessageCode.ERROR,
+                    "message": "No image to upscale",
+                })
                 return
             downscale_amount = self.downscale_amount
             if downscale_amount > 0:
