@@ -5,8 +5,7 @@ from PyQt6 import uic
 from PyQt6.QtCore import QRect, pyqtSignal, Qt
 from PyQt6.QtGui import QShortcut, QKeySequence
 from PyQt6.uic.exceptions import UIFileException
-from aihandler.settings import MAX_SEED, AVAILABLE_SCHEDULERS_BY_ACTION, MODELS
-from airunner.windows.deterministic_generation_window import DeterministicGenerationWindow
+from aihandler.settings import MAX_SEED, MODELS, MessageCode
 from airunner.windows.video import VideoPopup
 from airunner.mixins.lora_mixin import LoraMixin
 from PIL import PngImagePlugin
@@ -143,6 +142,18 @@ class GeneratorMixin(LoraMixin):
         self.strength_var.set(val)
 
     @property
+    def zeroshot_var(self):
+        return self.settings.zeroshot
+
+    @property
+    def zeroshot(self):
+        return self.zeroshot_var.get()
+
+    @zeroshot.setter
+    def zeroshot(self, val):
+        self.zeroshot_var.set(val)
+
+    @property
     def enable_controlnet_var(self):
         return self.settings.enable_controlnet
 
@@ -175,11 +186,12 @@ class GeneratorMixin(LoraMixin):
 
     @property
     def use_prompt_builder_checkbox(self):
-        return self.use_prompt_builder_checkbox_var.get()
+        val = self.use_prompt_builder_checkbox_var.get()
+        return val == 2 or val == True
 
     @use_prompt_builder_checkbox.setter
     def use_prompt_builder_checkbox(self, val):
-        self.use_prompt_builder_checkbox_var.set(val)
+        self.use_prompt_builder_checkbox_var.set(val == True or val == 2)
 
     @property
     def controlnet_scale_var(self):
@@ -314,36 +326,14 @@ class GeneratorMixin(LoraMixin):
             controlnet = None
         self.settings.controlnet_var.set(controlnet)
 
-    def handle_controlnet_checkbox_change(self, tab, val):
-        self.enable_controlnet = val == 2
-        self.toggle_controlnet_elements(tab)
-
-    def toggle_controlnet_elements(self, tab):
-        tab.controlnet_dropdown.setEnabled(self.enable_controlnet)
-        tab.controlnet_guidance_scale_slider.setEnabled(self.enable_controlnet)
-        tab.controlnet_guidance_scale_spinbox.setEnabled(self.enable_controlnet)
-
-    def handle_deterministic_radio_change(self, val, tab):
-        self.deterministic = tab.deterministic_radio.isChecked()
-
-    def handle_downscale_spinbox_change(self, value, tab):
-        current_value = self.downscale_amount
-        new_value = value
-        if value == 1:
-            if value > current_value or value == current_value:
-                new_value = 2
-            else:
-                new_value = 0
-        self.downscale_amount = value
-        tab.downscale_spinbox.setValue(new_value)
-        self.set_final_size_label(tab)
-
     def set_final_size_label(self, tab=None):
         if tab is None:
             tab = self.tabs[self.current_section]
 
-        if self.current_section not in ["upscale", "superresolution"]:
-            return
+        """
+        Early return to hack aronud final size for now
+        """
+        return
 
         image = self.canvas.current_layer.image_data.image
         if image:
@@ -392,7 +382,6 @@ class GeneratorMixin(LoraMixin):
             self.set_default_values(tab_name, tab)
         self.canvas.update()
 
-
     def text_changed(self, tab):
         try:
             val = int(tab.seed.toPlainText())
@@ -410,94 +399,6 @@ class GeneratorMixin(LoraMixin):
     def video_handler(self, data):
         filename = data["video_filename"]
         VideoPopup(settings_manager=self.settings_manager, file_path=filename)
-
-    def image_handler(self, images, data, nsfw_content_detected):
-        self.clear_status_message()
-        self.data = data
-        if data["action"] == "txt2vid":
-            return self.video_handler(data)
-
-        if self.settings_manager.settings.auto_export_images.get():
-            self.auto_export_image(images[0], data)
-
-        self.generator_tab_widget.stop_progress_bar(
-            data["action"])
-        if nsfw_content_detected and self.settings_manager.settings.nsfw_filter.get():
-            self.message_handler("NSFW content detected, try again.", error=True)
-        elif data["options"][f"deterministic_generation"]:
-            self.deterministic_images = images
-            DeterministicGenerationWindow(self.settings_manager, app=self, images=self.deterministic_images, data=data)
-        else:
-            if data["action"] != "outpaint" and self.image_to_new_layer and self.canvas.current_layer.image_data.image is not None:
-                self.canvas.add_layer()
-            # print width and height of image
-            self.canvas.image_handler(images[0], data)
-            self.message_handler("")
-            self.canvas.show_layers()
-
-    def load_metadata(self, metadata):
-        """
-        Early return to patch import of image until a real fix is implemented
-        :param metadata:
-        :return:
-        """
-        """
-        if metadata:
-            action = metadata.get("action")
-            prompt = None
-            negative_prompt = None
-            if "prompt" in metadata:
-                prompt = metadata.get("prompt", "")
-            if "negative_prompt" in metadata:
-                negative_prompt = metadata.get("negative_prompt", "")
-            scale = metadata.get("scale", None)
-            seed = metadata.get("seed", None)
-            steps = metadata.get("steps", None)
-            ddim_eta = metadata.get("ddim_eta", None)
-            n_iter = metadata.get("n_iter", None)
-            n_samples = metadata.get("n_samples", None)
-            model = metadata.get("model", None)
-            # model_branch = metadata.get("model_branch", None)
-            scheduler = metadata.get("scheduler", None)
-            if prompt is not None:
-                self.tabs[action].prompt.setPlainText(prompt)
-            if negative_prompt is not None:
-                self.tabs[action].negative_prompt.setPlainText(negative_prompt)
-            if scale:
-                scale = float(scale)
-                self.tabs[action].scale_spinbox.setValue(float(scale))
-                self.tabs[action].scale_slider.setValue(int(float(scale) * 100))
-            if seed:
-                self.tabs[action].seed.setPlainText(seed)
-            if steps:
-                steps = int(steps)
-                self.tabs[action].steps_spinbox.setValue(steps)
-                self.tabs[action].steps_slider.setValue(steps)
-            if ddim_eta:
-                ddim_eta = float(ddim_eta)
-                self.tabs[action].ddim_eta_spinbox.setValue(ddim_eta)
-                self.tabs[action].ddim_eta_slider.setValue(ddim_eta * 100)
-            if n_iter:
-                n_iter = int(n_iter)
-                try:
-                    self.tabs[action].n_iter_spinbox.setValue(n_iter)
-                except AttributeError:
-                    pass
-                try:
-                    self.tabs[action].n_iter_slider.setValue(n_iter)
-                except AttributeError:
-                    pass
-            if n_samples:
-                n_samples = int(n_samples)
-                self.tabs[action].samples_spinbox.setValue(n_samples)
-                self.tabs[action].samples_slider.setValue(n_samples)
-            if model:
-                self.tabs[action].model_dropdown.setCurrentText(model)
-            if scheduler:
-                self.tabs[action].scheduler_dropdown.setCurrentText(scheduler)
-        """
-        return
-
 
     def prepare_metadata(self, data):
         if not self.settings_manager.settings.export_metadata.get() or \
@@ -560,11 +461,7 @@ class GeneratorMixin(LoraMixin):
             image.save(os.path.join(path, filename + extension))
 
     def generate_callback(self):
-        # check that the correct model is in use for txt2vid
-        if self.current_section == "txt2vid" and self.tabs[self.current_section].model_dropdown.currentText() != "damo-vilab":
-            self.error_handler("Must use damo-vilab model with txt2vid")
-        else:
-            self.generate(True)
+        self.generate(True)
 
     def prep_video(self):
         pass
@@ -605,7 +502,10 @@ class GeneratorMixin(LoraMixin):
             image_data = self.canvas.current_layer.image_data
             image = image_data.image if image_data else None
             if image is None:
-                self.error_handler("No image to upscale")
+                self.message_var.emit({
+                    "code": MessageCode.ERROR,
+                    "message": "No image to upscale",
+                })
                 return
             downscale_amount = self.downscale_amount
             if downscale_amount > 0:
@@ -809,6 +709,7 @@ class GeneratorMixin(LoraMixin):
             "controlnet": self.controlnet,
             "deterministic_generation": self.deterministic,
             "deterministic_seed": False,
+            "zeroshot": self.zeroshot
         }
 
         if action == "superresolution":

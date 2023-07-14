@@ -25,7 +25,7 @@ class ToolMenuWidget(BaseWidget):
         self.layer_container_widget = LayerContainerWidget(app=self.app)
         self.opacity_widget = SliderWidget(
             app=self.app,
-            label_text="Layer Opacity:",
+            label_text="Layer Opacity",
             slider_callback=self.app.canvas.set_layer_opacity
         )
         self.opacity_widget.slider.setValue(100)
@@ -60,6 +60,10 @@ class ToolMenuWidget(BaseWidget):
 
         self.initialize_layer_buttons()
         #self.brush_widget.primary_color_button.clicked.connect(self.app.set_primary_color)
+
+        for tab_name in self.app.tabs.keys():
+            tab = self.app.tabs[tab_name]
+            self.app.load_embeddings(tab)
 
     def handle_current_color_changed(self, val):
         self.color_input_box.setText(val.name())

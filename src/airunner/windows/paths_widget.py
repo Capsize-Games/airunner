@@ -28,6 +28,10 @@ class PathsWidget(CustomWidget):
             lambda: self.browse_for_upscale_model_path(self.upscale_model_path))
         self.inpaint_outpaint_model_path.textChanged.connect(
             lambda val: self.settings_manager.settings.outpaint_model_path.set(val))
+        self.txt2vid_model_path.textChanged.connect(
+            lambda val: self.settings_manager.settings.txt2vid_model_path.set(val))
+        self.txt2vid_browse_button.clicked.connect(
+            lambda: self.browse_for_txt2vid_model_path(self.txt2vid_model_path))
         self.embeddings_path.textChanged.connect(
             lambda val: self.settings_manager.settings.embeddings_path.set(val))
         self.embeddings_browse_button.clicked.connect(
@@ -40,6 +44,10 @@ class PathsWidget(CustomWidget):
             lambda val: self.settings_manager.settings.image_path.set(val))
         self.image_path_browse_button.clicked.connect(
             lambda: self.browse_for_image_path(self.image_path))
+        self.gif_path.textChanged.connect(
+            lambda val: self.settings_manager.settings.gif_path.set(val))
+        self.gif_path_browse_button.clicked.connect(
+            lambda: self.browse_for_gif_path(self.gif_path))
         self.video_path.textChanged.connect(
             lambda val: self.settings_manager.settings.video_path.set(val))
         self.video_path_browse_button.clicked.connect(
@@ -48,6 +56,7 @@ class PathsWidget(CustomWidget):
         self.depthtoimg_model_path.setText(self.settings_manager.settings.depth2img_model_path.get())
         self.pixtopix_model_path.setText(self.settings_manager.settings.pix2pix_model_path.get())
         self.inpaint_outpaint_model_path.setText(self.settings_manager.settings.outpaint_model_path.get())
+        self.txt2vid_model_path.setText(self.settings_manager.settings.txt2vid_model_path.get())
         self.upscale_model_path.setText(self.settings_manager.settings.upscale_model_path.get())
         self.embeddings_path.setText(self.settings_manager.settings.embeddings_path.get())
         self.lora_path.setText(self.settings_manager.settings.lora_path.get())
@@ -76,6 +85,14 @@ class PathsWidget(CustomWidget):
         line_edit.setText(path)
         self.settings_manager.settings.extensions_path.set(path)
     """
+
+    def browse_for_txt2vid_model_path(self, line_edit):
+        path = QFileDialog.getExistingDirectory(
+            None,
+            "Select Directory",
+            self.settings_manager.settings.txt2vid_model_path.get())
+        line_edit.setText(path)
+        self.settings_manager.settings.txt2vid_model_path.set(path)
 
     def browse_for_model_base_path(self, line_edit):
         path = QFileDialog.getExistingDirectory(
@@ -108,6 +125,14 @@ class PathsWidget(CustomWidget):
             self.settings_manager.settings.image_path.get())
         line_edit.setText(path)
         self.settings_manager.settings.image_path.set(path)
+
+    def browse_for_gif_path(self, line_edit):
+        path = QFileDialog.getExistingDirectory(
+            None,
+            "Select Directory",
+            self.settings_manager.settings.gif_path.get())
+        line_edit.setText(path)
+        self.settings_manager.settings.gif_path.set(path)
 
     def browse_for_video_path(self, line_edit):
         path = QFileDialog.getExistingDirectory(

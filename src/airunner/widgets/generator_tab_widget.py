@@ -5,7 +5,7 @@ from PyQt6.QtWidgets import QWidget, QGridLayout, QPlainTextEdit, QLabel, QCombo
 from airunner.utils import load_default_models, load_models_from_path
 from airunner.widgets.base_widget import BaseWidget
 from airunner.widgets.slider_widget import SliderWidget
-from aihandler.settings import MAX_SEED, AVAILABLE_SCHEDULERS_BY_ACTION, MODELS
+from aihandler.settings import MAX_SEED, AVAILABLE_SCHEDULERS_BY_ACTION, MODELS, MessageCode
 
 
 class GeneratorTabWidget(BaseWidget):
@@ -19,12 +19,18 @@ class GeneratorTabWidget(BaseWidget):
         self.layout = None
         self.app.settings_manager.settings.model_base_path.my_signal.connect(self.refresh_model_list)
         # add all tabs
+        self.sectionTabWidget.currentChanged.connect(self.app.update)
+        self.sectionTabWidget.currentChanged.connect(self.app.enable_embeddings)
         for tab_section in self.app._tabs.keys():
             self.force_tab_section(tab_section, None)
             self.data[tab_section] = {}
             for tab in self.app.tabs.keys():
                 self.add_tab(section=tab_section, tab=tab)
         self.release_tab_section()
+
+    def clear_prompts(self, tab_section, tab):
+        self.data[tab_section][tab]['prompt_widget'].setPlainText("")
+        self.data[tab_section][tab]['negative_prompt_widget'].setPlainText("")
 
     def add_tab(self, section, tab):
         self.app.override_section = tab
@@ -38,9 +44,8 @@ class GeneratorTabWidget(BaseWidget):
             "inpaint / outpaint" if tab == "outpaint" else tab
         )
         # on tab change
-        tab_section.currentChanged.connect(
-            partial(self.app.update)
-        )
+        tab_section.currentChanged.connect(self.app.update)
+        tab_section.currentChanged.connect(self.app.enable_embeddings)
 
     def generate_form(self, tab_section, tab):
         self.tab_section = tab_section
@@ -53,6 +58,7 @@ class GeneratorTabWidget(BaseWidget):
         widget.setStyleSheet("font-size: 9pt;")
         self.layout = QGridLayout(widget)
         self.add_prompt_widgets()
+        self.add_zeroshot_widget()
         self.add_model_widgets()
         self.add_scheduler_widgets()
         self.add_controlnet_widgets()
@@ -81,31 +87,35 @@ class GeneratorTabWidget(BaseWidget):
         use_prompt_builder_checkbox.setChecked(self.app.use_prompt_builder_checkbox)
         use_prompt_builder_checkbox.stateChanged.connect(
             partial(self.handle_value_change, "use_prompt_builder_checkbox", widget=use_prompt_builder_checkbox))
-
+        self.data[self.tab_section][self.tab]["use_prompt_builder_checkbox"] = use_prompt_builder_checkbox
         prompt_widget = QPlainTextEdit(self)
         prompt_widget.setObjectName("prompt")
         prompt_widget.setPlainText(self.app.prompt)
         prompt_widget.textChanged.connect(
             partial(self.handle_value_change, "prompt", widget=prompt_widget))
-
-        negative_label = QLabel(self)
-        negative_label.setObjectName("negative_prompt_label")
-        negative_label.setText("Negative Prompt")
-        negative_prompt_widget = QPlainTextEdit(self)
-        negative_prompt_widget.setObjectName("negative_prompt")
-        negative_prompt_widget.setPlainText(self.app.negative_prompt)
-        negative_prompt_widget.textChanged.connect(
-            partial(self.handle_value_change, "negative_prompt", widget=negative_prompt_widget))
         horizontal_layout.addWidget(prompt_label)
-        horizontal_layout.addWidget(use_prompt_builder_checkbox)
-
         self.data[self.tab_section][self.tab]["prompt_widget"] = prompt_widget
-        self.data[self.tab_section][self.tab]["negative_prompt_widget"] = negative_prompt_widget
-
         self.add_widget_to_grid(prompt_label_container)
         self.add_widget_to_grid(prompt_widget)
-        self.add_widget_to_grid(negative_label)
-        self.add_widget_to_grid(negative_prompt_widget)
+
+        if self.app.currentTabSection != "shapegif":
+            negative_label = QLabel(self)
+            negative_label.setObjectName("negative_prompt_label")
+            negative_label.setText("Negative Prompt")
+            negative_prompt_widget = QPlainTextEdit(self)
+            negative_prompt_widget.setObjectName("negative_prompt")
+            negative_prompt_widget.setPlainText(self.app.negative_prompt)
+            negative_prompt_widget.textChanged.connect(
+                partial(self.handle_value_change, "negative_prompt", widget=negative_prompt_widget))
+            horizontal_layout.addWidget(use_prompt_builder_checkbox)
+            self.data[self.tab_section][self.tab]["negative_prompt_widget"] = negative_prompt_widget
+            self.add_widget_to_grid(negative_label)
+            self.add_widget_to_grid(negative_prompt_widget)
+
+    def toggle_all_prompt_builder_checkboxes(self, state):
+        for tab_section in self.data.keys():
+            for section in self.data[tab_section].keys():
+                self.data[tab_section][section]["use_prompt_builder_checkbox"].setChecked(state)
 
     def refresh_model_list(self):
         for i, section in enumerate(self.app._tabs[self.app.currentTabSection].keys()):
@@ -120,6 +130,10 @@ class GeneratorTabWidget(BaseWidget):
 
         models = self.app.models if self.app.models else []
         default_models = load_default_models(tab_section, section_name)
+        zeroshot_models = None
+        if section_name == "txt2vid":
+            zeroshot_models = []
+            zeroshot_models = load_default_models(tab_section, "generate")
         path = ""
         if section_name == "depth2img":
             path = self.settings_manager.settings.depth2img_model_path.get()
@@ -129,16 +143,23 @@ class GeneratorTabWidget(BaseWidget):
             path = self.settings_manager.settings.outpaint_model_path.get()
         elif section_name == "upscale":
             path = self.settings_manager.settings.upscale_model_path.get()
+        elif section_name == "txt2vid":
+            path = self.settings_manager.settings.txt2vid_model_path.get()
         if not path or path == "":
             path = self.settings_manager.settings.model_base_path.get()
 
         if tab_section == "stablediffusion":
             new_models = load_models_from_path(path)
             default_models += new_models
+            if zeroshot_models:
+                zeroshot_models += load_models_from_path(self.settings_manager.settings.model_base_path.get())
         models += default_models
         self.models = models
 
-        self.data[self.app.currentTabSection][section]["model_dropdown"].addItems(default_models)
+        if section_name == "txt2vid" and self.app.zeroshot:
+            default_models = zeroshot_models
+
+        self.data[tab_section][section]["model_dropdown"].addItems(default_models)
 
     def add_model_widgets(self):
         self.load_section_models()
@@ -153,6 +174,7 @@ class GeneratorTabWidget(BaseWidget):
         current_model = self.app.model
         self.load_model_by_section(self.tab_section, self.tab)
         model_widget.setCurrentText(current_model)
+        self.data[self.tab_section][self.tab]["model_dropdown_widget"] = model_widget
         self.add_widget_to_grid(model_label)
         self.add_widget_to_grid(model_widget)
 
@@ -160,6 +182,8 @@ class GeneratorTabWidget(BaseWidget):
         scheduler_action = self.tab
         if self.tab_section == "kandinsky":
             scheduler_action = f"kandinsky_{self.tab}"
+        elif self.tab_section == "shapegif":
+            scheduler_action = f"shapegif_{self.tab}"
         scheduler_label = QLabel(self)
         scheduler_label.setObjectName("scheduler_label")
         scheduler_label.setText("Scheduler")
@@ -169,12 +193,13 @@ class GeneratorTabWidget(BaseWidget):
         scheduler_widget.setCurrentText(self.app.scheduler)
         scheduler_widget.currentTextChanged.connect(
             partial(self.handle_value_change, "scheduler", widget=scheduler_widget))
+        self.data[self.tab_section][self.tab]["scheduler_dropdown_widget"] = scheduler_widget
         self.add_widget_to_grid(scheduler_label)
         self.add_widget_to_grid(scheduler_widget)
 
     def add_controlnet_widgets(self):
-        if self.tab not in ["txt2img", "img2img", "outpaint"] \
-                or self.tab_section == "kandinsky":
+        if self.tab not in ["txt2img", "img2img", "outpaint", "txt2vid"] \
+                or self.tab_section == "kandinsky" or self.tab_section == "shapegif":
             return
         controlnet_options = [
             "Canny",
@@ -252,6 +277,7 @@ class GeneratorTabWidget(BaseWidget):
             spinbox_minimum=1,
             slider_minimum=1
         )
+        self.data[self.tab_section][self.tab]["steps_slider_widget"] = steps_slider
         self.add_widget_to_grid(steps_slider)
 
     def add_scale_widgets(self):
@@ -266,6 +292,7 @@ class GeneratorTabWidget(BaseWidget):
             spinbox_single_step=0.01,
             spinbox_page_step=0.01
         )
+        self.data[self.tab_section][self.tab]["scale_slider_widget"] = scale_slider
         self.add_widget_to_grid(scale_slider)
 
     def add_image_scale_widgets(self):
@@ -320,6 +347,8 @@ class GeneratorTabWidget(BaseWidget):
 
         grid_layout.addWidget(seed_spinbox)
 
+        self.data[self.tab_section][self.tab]["seed_widget"] = seed_spinbox
+
         self.add_widget_to_grid(group_box)
 
     def add_samples_widgets(self):
@@ -342,6 +371,7 @@ class GeneratorTabWidget(BaseWidget):
             spinbox_minimum=1,
             slider_minimum=1
         )
+        self.data[self.tab_section][self.tab]["samples_slider_widget"] = samples_widget
         widget = QWidget()
         horizontal_layout = QHBoxLayout(widget)
         horizontal_layout.setContentsMargins(0, 0, 0, 0)
@@ -349,6 +379,18 @@ class GeneratorTabWidget(BaseWidget):
         horizontal_layout.addWidget(samples_widget)
         horizontal_layout.addWidget(interrupt_button)
         self.add_widget_to_grid(widget)
+
+    def add_zeroshot_widget(self):
+        if self.tab != "txt2vid":
+            return
+        # create a checkbox for zeroshot
+        zeroshot_checkbox = QCheckBox("Zero Shot")
+        zeroshot_checkbox.setObjectName("zeroshot_checkbox")
+        zeroshot_checkbox.setChecked(self.app.zeroshot)
+        zeroshot_checkbox.toggled.connect(
+            partial(self.handle_value_change, "zeroshot", widget=zeroshot_checkbox))
+
+        self.add_widget_to_grid(zeroshot_checkbox)
 
     def add_frames_widgets(self):
         if self.tab != "txt2vid":
@@ -415,30 +457,30 @@ class GeneratorTabWidget(BaseWidget):
         self.add_widget_to_grid(widget_b)
         generate_button.clicked.connect(partial(self.app.generate, progressBar))
 
-    def set_progress_bar_value(self, section, value):
+    def set_progress_bar_value(self, tab_section, section, value):
         # check if progressbar in stablediffusion is running
         try:
-            progressbar = self.data["stablediffusion"][section]["progressBar"]
-            if not self.data["stablediffusion"][section]["progress_bar_started"]:
-                progressbar = None
+            progressbar = self.data[tab_section][section]["progressBar"]
         except KeyError:
             progressbar = None
-        if progressbar is None:
-            try:
-                progressbar = self.data["kandinsky"][section]["progressBar"]
-            except KeyError:
-                progressbar = None
         if not progressbar:
             return
         if progressbar.maximum() == 0:
             progressbar.setRange(0, 100)
         progressbar.setValue(value)
 
-    def stop_progress_bar(self, section):
-        # self.data[section]["progress_bar_started"] = False
-        # self.data[section]["progressBar"].reset()
-        # self.data[section]["progressBar"].setRange(0, 100)
-        pass
+    def stop_progress_bar(self, tab_section, section):
+        print("stop progress bar", tab_section, section)
+        try:
+            progressbar = self.data[tab_section][section]["progressBar"]
+        except KeyError:
+            progressbar = None
+        if not progressbar:
+            print("failed to find progress bar")
+            return
+        progressbar.setRange(0, 100)
+        progressbar.setValue(100)
+        self.data[tab_section][section]["progress_bar_started"] = False
 
     def start_progress_bar(self, tab_section, section):
         if self.data[tab_section][section]["progress_bar_started"]:
@@ -446,12 +488,15 @@ class GeneratorTabWidget(BaseWidget):
         self.data[tab_section][section]["progress_bar_started"] = True
         self.data[tab_section][section]["tqdm_callback_triggered"] = False
         self.data[tab_section][section]["progressBar"].setRange(0, 0)
-        self.app.tqdm_var.set({
-            "step": 0,
-            "total": 0,
-            "action": section,
-            "image": None,
-            "data": None
+        self.app.message_var.emit({
+            "message": {
+                "step": 0,
+                "total": 0,
+                "action": section,
+                "image": None,
+                "data": None
+            },
+            "code": MessageCode.PROGRESS
         })
 
     def add_widget_to_grid(self, widget, row=None, col=0):
@@ -470,6 +515,9 @@ class GeneratorTabWidget(BaseWidget):
 
     def handle_value_change(self, attr_name, value=None, widget=None):
         attr = getattr(self.app, f"{attr_name}_var")
+
+        if attr_name in ["prompt", "negative_prompt"]:
+            self.app.prompt_builder.process_prompt()
 
         if attr_name == "random_seed":
             value = not value
@@ -499,11 +547,15 @@ class GeneratorTabWidget(BaseWidget):
                     except AttributeError:
                         print("something went wrong while setting the value")
 
+        if attr_name == "zeroshot":
+            self.refresh_model_list()
+
     def set_stylesheet(self):
         super().set_stylesheet()
         self.sectionTabWidget.setStyleSheet(self.app.css("section_tab_widget"))
         self.stableDiffusionTabWidget.setStyleSheet(self.app.css("pipeline"))
         self.kandinskyTabWidget.setStyleSheet(self.app.css("pipeline"))
+        self.shapegifTabWidget.setStyleSheet(self.app.css("pipeline"))
 
     def load_section_models(self):
         models = self.app.models if self.app.models else []
