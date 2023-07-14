@@ -7,7 +7,7 @@ setup(
     description="A Stable Diffusion GUI",
     long_description=open("README.md", "r", encoding="utf-8").read(),
     long_description_content_type="text/markdown",
-    keywords="ai, chatbot, chat, ai",
+    keywords="ai, stable diffusion, art, ai art, stablediffusion",
     license="AGPL-3.0",
     author_email="contact@capsize.gg",
     url="https://github.com/Capsize-Games/airunner",
