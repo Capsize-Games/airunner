@@ -104,3 +104,6 @@ class HeaderWidget(BaseWidget):
     def set_stylesheet(self):
         super().set_stylesheet()
         self.setStyleSheet(self.app.css("header_widget"))
+        self.brush_size_slider_widget.set_stylesheet()
+        self.width_slider_widget.set_stylesheet()
+        self.height_slider_widget.set_stylesheet()
