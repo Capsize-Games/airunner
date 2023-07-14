@@ -159,11 +159,14 @@ def get_latest_version():
     import requests
     import re
     url = "https://github.com/Capsize-Games/airunner/releases/latest"
-    r = requests.get(url)
-    if r.status_code == 200:
-        m = re.search(r"\/Capsize-Games\/airunner\/releases\/tag\/v([0-9\.]+)", r.text)
-        if m:
-            return m.group(1)
+    try:
+        r = requests.get(url)
+        if r.status_code == 200:
+            m = re.search(r"\/Capsize-Games\/airunner\/releases\/tag\/v([0-9\.]+)", r.text)
+            if m:
+                return m.group(1)
+    except ConnectionError:
+        return None
     return None
 
 

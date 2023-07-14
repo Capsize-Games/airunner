@@ -508,7 +508,7 @@ class Canvas(
     def get_layers_copy(self):
         return [layer for layer in self.layers]
 
-    def delete_layer(self, index):
+    def delete_layer(self):
         self.parent.history.add_event({
             "event": "delete_layer",
             "layers": self.get_layers_copy(),
@@ -518,12 +518,22 @@ class Canvas(
             self.layers = [LayerData(0, "Layer 1")]
         else:
             try:
-                self.layers.pop(index)
+                layer = self.layers.pop(self.current_layer_index)
+                self.container.layout().removeWidget(layer.layer_widget)
+                layer.layer_widget.deleteLater()
             except IndexError:
                 pass
         self.current_layer_index = 0
         self.show_layers()
         self.update()
+
+    def clear_layers(self):
+        # delete all widgets from self.container.layout()
+        for index, layer in enumerate(self.layers):
+            self.container.layout().removeWidget(layer.layer_widget)
+            layer.layer_widget.deleteLater()
+        self.layers = [LayerData(0, "Layer 1")]
+        self.current_layer_index = 0
 
     def layer_up(self):
         self.move_layer_up(self.current_layer)
@@ -585,12 +595,9 @@ class Canvas(
         if not hasattr(self, "container"):
             return
         if self.container:
-            try:
-                item = self.container.layout().itemAt(self.current_layer_index)
-                if item:
-                    item.widget().frame.setStyleSheet(self.parent.css("layer_normal_style"))
-            except RuntimeError:
-                item = None
+            item = self.container.layout().itemAt(self.current_layer_index)
+            if item:
+                item.widget().frame.setStyleSheet(self.parent.css("layer_normal_style"))
         self.current_layer_index = index
         if self.container:
             item = self.container.layout().itemAt(self.current_layer_index)
