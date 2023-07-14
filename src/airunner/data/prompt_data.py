@@ -74,11 +74,10 @@ class PromptData:
         else:
             weighted_variables = {}
 
+        variables = self.filter_variables(category, image_genre, image_color, image_style)
         if not self.advanced:
             generated_prompt = self.get_basic_prompt_by_category(category, "standard")
-            variables = self.variables
         else:
-            variables = self.filter_variables(category, image_genre, image_color, image_style)
             generated_prompt = BuildPrompt.build_prompt(
                 conditionals=self.get_builder_by_category(category),
                 vars=variables,
@@ -89,9 +88,9 @@ class PromptData:
             generated_prompt = generated_prompt.strip()
             generated_prompt.replace("( ", "(")
 
-            prefix = f"{self.prompt_prefix}, " if self.prompt_prefix != "" else ""
-            suffix = f", {self.prompt_suffix}" if self.prompt_suffix != "" else ""
-            generated_prompt = f"{prefix}($composition_genre, $composition_color, ($composition_style)++) {generated_prompt}{suffix}"
+        prefix = f"{self.prompt_prefix}, " if self.prompt_prefix != "" else ""
+        suffix = f", {self.prompt_suffix}" if self.prompt_suffix != "" else ""
+        generated_prompt = f"{prefix}($composition_genre, $composition_color, ($composition_style)++) {generated_prompt}{suffix}"
 
         # build the negative prompt
         prefix = f"{self.negative_prompt_prefix}, " if self.negative_prompt_prefix != "" else ""
