@@ -1,20 +1,21 @@
 import os
 import pickle
+import signal
 import sys
 import traceback
 from functools import partial
 import psutil
 import torch
 from PyQt6 import uic, QtCore
-from PyQt6.QtWidgets import QApplication, QFileDialog, QSplashScreen, QMainWindow, QSplitter, QTabWidget
+from PyQt6.QtWidgets import QApplication, QFileDialog, QSplashScreen, QMainWindow, QSplitter, QTabWidget, QWidget, \
+    QVBoxLayout
 from PyQt6.QtCore import pyqtSlot, Qt, QThread, pyqtSignal, QObject, QTimer
 from PyQt6.QtGui import QGuiApplication, QPixmap, QShortcut, QKeySequence
 from aihandler.qtvar import TQDMVar, ImageVar, MessageHandlerVar, ErrorHandlerVar
 from aihandler.logger import logger
-from aihandler.settings import LOG_LEVEL
+from aihandler.settings import LOG_LEVEL, MessageCode
 from airunner.mixins.canvas_mixin import CanvasMixin
 from airunner.mixins.comic_mixin import ComicMixin
-from airunner.mixins.embedding_mixin import EmbeddingMixin
 from airunner.mixins.extension_mixin import ExtensionMixin
 from airunner.mixins.generator_mixin import GeneratorMixin
 from airunner.mixins.history_mixin import HistoryMixin
@@ -22,12 +23,14 @@ from airunner.mixins.menubar_mixin import MenubarMixin
 from airunner.mixins.toolbar_mixin import ToolbarMixin
 from airunner.themes import Themes
 from airunner.widgets.canvas_widget import CanvasWidget
+from airunner.widgets.embedding_widget import EmbeddingWidget
 from airunner.widgets.footer_widget import FooterWidget
 from airunner.widgets.generator_tab_widget import GeneratorTabWidget
 from airunner.widgets.prompt_builder import PromptBuilderWidget
 from airunner.widgets.tool_bar_widget import ToolBarWidget
 from airunner.widgets.tool_menu_widget import ToolMenuWidget
 from airunner.widgets.header_widget import HeaderWidget
+from airunner.windows.deterministic_generation_window import DeterministicGenerationWindow
 from airunner.windows.update_window import UpdateWindow
 from airunner.utils import get_version, get_latest_version
 from aihandler.settings_manager import SettingsManager, PromptManager
@@ -38,7 +41,6 @@ from PyQt6.QtGui import QIcon
 
 class MainWindow(
     QMainWindow,
-    EmbeddingMixin,
     ToolbarMixin,
     HistoryMixin,
     MenubarMixin,
@@ -52,10 +54,7 @@ class MainWindow(
     _document_name = "Untitled"
     is_saved = False
     action = "txt2img"
-    tqdm_var = None
     message_var = None
-    error_var = None
-    image_var = None
     progress_bar_started = False
     window = None
     history = None
@@ -75,6 +74,16 @@ class MainWindow(
     status_normal_color_light = "#000000"
     status_normal_color_dark = "#ffffff"
     is_started = False
+
+    _embedding_names = None
+    embedding_widgets = {}
+    bad_model_embedding_map = {}
+
+    @property
+    def embedding_names(self):
+        if self._embedding_names is None:
+            self._embedding_names = self.get_list_of_available_embedding_names()
+        return self._embedding_names
 
     @property
     def is_dark(self):
@@ -117,12 +126,16 @@ class MainWindow(
             "pix2pix": None,
             "upscale": None,
             "superresolution": None,
-            "txt2vid": None,
+            "txt2vid": None
         },
         "kandinsky": {
             "txt2img": None,
             "img2img": None,
             "outpaint": None,
+        },
+        "shapegif": {
+            "txt2img": None,
+            "img2img": None,
         }
     }
 
@@ -144,13 +157,17 @@ class MainWindow(
     def tabWidget(self):
         if self.currentTabSection == "stablediffusion":
             return self.generator_tab_widget.stableDiffusionTabWidget
-        else:
+        elif self.currentTabSection == "kandinsky":
             return self.generator_tab_widget.kandinskyTabWidget
+        elif self.currentTabSection == "shapegif":
+            return self.generator_tab_widget.shapegifTabWidget
+        else:
+            raise Exception("Invalid tab section")
 
     @property
     def generator_type(self):
         """
-        Returns either stablediffusion or kandinsky
+        Returns either stablediffusion, shapegif, kandinsky
         :return: string
         """
         return self._generator_type
@@ -203,20 +220,6 @@ class MainWindow(
     def document_name(self):
         name = f"{self._document_name}{'*' if self.canvas and self.canvas.is_dirty else ''}"
         return f"{name} - {self.version}"
-
-    @pyqtSlot(int, int, str, object, object)
-    def tqdm_callback(self, step, total, action, image=None, data=None):
-        if step == 0 and total == 0:
-            current = 0
-        else:
-            if self.progress_bar_started and not self.tqdm_callback_triggered:
-                self.tqdm_callback_triggered = True
-                self.generator_tab_widget.data[action]["progressBar"].setRange(0, 100)
-            try:
-                current = (step / total)
-            except ZeroDivisionError:
-                current = 0
-        self.generator_tab_widget.set_progress_bar_value(action, int(current * 100))
 
     @property
     def is_windows(self):
@@ -390,7 +393,6 @@ class MainWindow(
         self.initialize_settings_manager()
         self.instantiate_widgets()
         self.initialize_saved_prompts()
-        self.initialize_tqdm()
         self.initialize_handlers()
         self.initialize_window()
         self.initialize_widgets()
@@ -413,7 +415,6 @@ class MainWindow(
         GeneratorMixin.initialize(self)
         MenubarMixin.initialize(self)
         ToolbarMixin.initialize(self)
-        EmbeddingMixin.initialize(self)
 
     # a list of tuples that represents a signal name and its handler
     registered_settings_handlers = []
@@ -435,6 +436,13 @@ class MainWindow(
         for signal, handler in self.registered_settings_handlers:
             getattr(self.settings_manager.settings, signal).connect(handler)
 
+        self.model_var.connect(self.enable_embeddings)
+        self.settings_manager.settings.embeddings_path.my_signal.connect(self.update_embedding_names)
+        self.seed_var.my_signal.connect(self.prompt_builder.process_prompt)
+        self.settings_manager.settings.use_prompt_builder_checkbox.my_signal.connect(
+            self.generator_tab_widget.toggle_all_prompt_builder_checkboxes
+        )
+
     def instantiate_widgets(self):
         logger.info("Instantiating widgets...")
         self.generator_tab_widget = GeneratorTabWidget(app=self)
@@ -451,11 +459,13 @@ class MainWindow(
 
         self.splitter = QSplitter()
         self.center_splitter = QSplitter(Qt.Orientation.Vertical)
-        prompt_builder = PromptBuilderWidget(app=self)
+        self.prompt_builder = PromptBuilderWidget(app=self)
         center_panel = QTabWidget()
         center_panel.setStyleSheet(self.css("center_panel"))
         center_panel.setTabPosition(QTabWidget.TabPosition.South)
-        center_panel.addTab(prompt_builder, "Prompt Builder")
+        center_panel.addTab(self.prompt_builder, "Prompt Builder")
+        # auto hide tabs
+        center_panel.tabBar().hide()
         self.center_splitter.setStretchFactor(1, 1)
         self.center_splitter.setStretchFactor(2, 0)
         self.splitter.addWidget(self.generator_tab_widget)
@@ -507,9 +517,7 @@ class MainWindow(
         self.settings_manager.settings.bottom_splitter_sizes.set([top_height, bottom_height])
 
     def initialize_saved_prompts(self):
-        print("INITIALZING PROMPTS")
         self.prompts_manager = PromptManager()
-        print(self.prompts_manager.settings.prompts)
         self.prompts_manager.enable_save()
 
     def initialize_settings_manager(self):
@@ -523,17 +531,9 @@ class MainWindow(
         # on shift + mouse scroll change working width
         self.wheelEvent = self.change_width
 
-    def initialize_tqdm(self):
-        self.tqdm_var = TQDMVar()
-        self.tqdm_var.my_signal.connect(self.tqdm_callback)
-
     def initialize_handlers(self):
         self.message_var = MessageHandlerVar()
         self.message_var.my_signal.connect(self.message_handler)
-        self.error_var = ErrorHandlerVar()
-        self.error_var.my_signal.connect(self.error_handler)
-        self.image_var = ImageVar()
-        self.image_var.my_signal.connect(self.image_handler)
 
     def initialize_window(self):
         HERE = os.path.dirname(os.path.abspath(__file__))
@@ -546,9 +546,6 @@ class MainWindow(
         logger.info("Initializing stable diffusion...")
         self.client = OfflineClient(
             app=self,
-            tqdm_var=self.tqdm_var,
-            image_var=self.image_var,
-            error_var=self.error_var,
             message_var=self.message_var,
             settings_manager=self.settings_manager,
         )
@@ -620,13 +617,13 @@ class MainWindow(
         self.setWindowIcon(QIcon("src/icon_256.png"))
 
     def new_document(self):
-        CanvasMixin.initialize(self)
+        self.canvas.clear_layers()
+        self.clear_history()
+        #CanvasMixin.initialize(self)
         self.is_saved = False
         self.canvas.is_dirty = False
         self._document_name = "Untitled"
         self.set_window_title()
-        # clear the layers list widget
-        #self.tool_menu_widget.layers.setWidget(None)
         self.current_filter = None
         self.canvas.update()
         self.canvas.show_layers()
@@ -639,15 +636,90 @@ class MainWindow(
             f"color: {self.status_error_color if error else color};"
         )
 
-    def message_handler(self, msg):
-        if isinstance(msg, dict):
-            msg = msg["response"]
-        self.set_status_label(msg)
+    @pyqtSlot(dict)
+    def message_handler(self, response: dict):
+        try:
+            code = response["code"]
+        except TypeError:
+            # logger.error(f"Invalid response message: {response}")
+            # traceback.print_exc()
+            return
+        message = response["message"]
+        {
+            MessageCode.STATUS: self.handle_status,
+            MessageCode.ERROR: self.handle_error,
+            MessageCode.PROGRESS: self.handle_progress,
+            MessageCode.IMAGE_GENERATED: self.handle_image_generated,
+            MessageCode.EMBEDDING_LOAD_FAILED: self.handle_embedding_load_failed,
+        }.get(code, self.handle_unknown)(message)
 
-    def error_handler(self, msg):
-        if isinstance(msg, dict):
-            msg = msg["response"]
-        self.set_status_label(msg, error=True)
+    def handle_image_generated(self, message):
+        images = message["images"]
+        data = message["data"]
+        nsfw_content_detected = message["nsfw_content_detected"]
+        self.clear_status_message()
+        self.data = data
+        if data["action"] == "txt2vid":
+            return self.video_handler(data)
+
+        self.generator_tab_widget.stop_progress_bar(
+            data["tab_section"], data["action"]
+        )
+
+        if self.settings_manager.settings.auto_export_images.get():
+            self.auto_export_image(images[0], data)
+
+        self.generator_tab_widget.stop_progress_bar(
+            data["tab_section"], data["action"]
+        )
+        if nsfw_content_detected and self.settings_manager.settings.nsfw_filter.get():
+            self.message_handler("NSFW content detected, try again.", error=True)
+        elif data["options"][f"deterministic_generation"]:
+            self.deterministic_images = images
+            DeterministicGenerationWindow(
+                self.settings_manager,
+                app=self,
+                images=self.deterministic_images,
+                data=data)
+        else:
+            if data[
+                "action"] != "outpaint" and self.image_to_new_layer and self.canvas.current_layer.image_data.image is not None:
+                self.canvas.add_layer()
+            # print width and height of image
+            self.canvas.image_handler(images[0], data)
+            self.message_handler("")
+            self.canvas.show_layers()
+
+    def handle_status(self, message):
+        self.set_status_label(message)
+
+    def handle_error(self, message):
+        self.set_status_label(message, error=True)
+
+    def handle_progress(self, message):
+        step = message.get("step")
+        total = message.get("total")
+        action = message.get("action")
+        tab_section = message.get("tab_section")
+
+        if step == 0 and total == 0:
+            current = 0
+        else:
+            try:
+                current = (step / total)
+            except ZeroDivisionError:
+                current = 0
+        self.generator_tab_widget.set_progress_bar_value(tab_section, action, int(current * 100))
+
+    def handle_embedding_load_failed(self, message):
+        # TODO:
+        #  on model change, re-enable the buttons
+        embedding_name = message["embedding_name"]
+        model_name = message["model_name"]
+        self.disable_embedding(embedding_name, model_name)
+
+    def handle_unknown(self, message):
+        logger.error(f"Unknown message code: {message}")
 
     def clear_status_message(self):
         self.set_status_label("")
@@ -676,14 +748,27 @@ class MainWindow(
 
     def do_save(self, document_name):
         # save self.canvas.layers as pickle
+        layers = []
+        # we need to save self.canvas.layers but it contains a QWdget
+        # so we will remove the QWidget from each layer, add the layer to a new
+        # list and then restore the QWidget
+        layer_widgets = []
+        for layer in self.canvas.layers:
+            layer_widgets.append(layer.layer_widget)
+            layer.layer_widget = None
+            layers.append(layer)
         data = {
-            "layers": self.canvas.layers,
+            "layers": layers,
             "image_pivot_point": self.canvas.image_pivot_point,
             "image_root_point": self.canvas.image_root_point,
         }
         with open(document_name, "wb") as f:
             pickle.dump(data, f)
+        # restore the QWidget
+        for i, layer in enumerate(layers):
+            layer.layer_widget = layer_widgets[i]
         # get the document name stripping .airunner from the end
+        self._document_path = document_name
         self._document_name = document_name.split("/")[-1].split(".")[0]
         self.set_window_title()
         self.is_saved = True
@@ -692,8 +777,7 @@ class MainWindow(
     def save_document(self):
         if not self.is_saved:
             return self.saveas_document()
-        document_name = f"{self._document_name}.airunner"
-        self.do_save(document_name)
+        self.do_save(self._document_path)
 
     def load_document(self):
         self.new_document()
@@ -719,6 +803,7 @@ class MainWindow(
                 layers = data
 
         # get the document name stripping .airunner from the end
+        self._document_path = file_path
         self._document_name = file_path.split("/")[-1].split(".")[0]
 
         # load document data
@@ -736,8 +821,90 @@ class MainWindow(
         system_memory = f"RAM {system_memory_percentage:.1f}%"
         self.footer_widget.system_status.setText(f"{system_memory}, {cuda_memory}")
 
+    def update_embedding_names(self, _):
+        self._embedding_names = None
+        for tab_name in self.tabs.keys():
+            tab = self.tabs[tab_name]
+            # clear embeddings
+            try:
+                tab.embeddings.widget().deleteLater()
+            except AttributeError:
+                pass
+            self.load_embeddings(tab)
+
+    def register_embedding_widget(self, name, widget):
+        self.embedding_widgets[name] = widget
+
+    def disable_embedding(self, name, model_name):
+        self.embedding_widgets[name].setEnabled(False)
+        if name not in self.bad_model_embedding_map:
+            self.bad_model_embedding_map[name] = []
+        if model_name not in self.bad_model_embedding_map[name]:
+            self.bad_model_embedding_map[name].append(model_name)
+
+    def enable_embeddings(self):
+        for name in self.embedding_widgets.keys():
+            enable = True
+            if name in self.bad_model_embedding_map:
+                if self.model in self.bad_model_embedding_map[name]:
+                    enable = False
+            self.embedding_widgets[name].setEnabled(enable)
+
+    def load_embeddings(self, tab):
+        container = QWidget()
+        container.setLayout(QVBoxLayout())
+        for embedding_name in self.embedding_names:
+            embedding_widget = EmbeddingWidget(
+                app=self,
+                name=embedding_name
+            )
+            self.register_embedding_widget(embedding_name, embedding_widget)
+            container.layout().addWidget(embedding_widget)
+        container.layout().addStretch()
+        self.tool_menu_widget.embeddings_container_widget.embeddings.setWidget(container)
+
+    def get_list_of_available_embedding_names(self):
+        embeddings_path = self.settings_manager.settings.embeddings_path.get() or "embeddings"
+        if embeddings_path == "embeddings":
+            embeddings_path = os.path.join(self.settings_manager.settings.model_base_path.get(), embeddings_path)
+        return self.find_embeddings_in_path(embeddings_path)
+
+    def find_embeddings_in_path(self, embeddings_path, tokens=None):
+        if tokens is None:
+            tokens = []
+        if not os.path.exists(embeddings_path):
+            return tokens
+        if os.path.exists(embeddings_path):
+            for f in os.listdir(embeddings_path):
+                # check if f is directory
+                if os.path.isdir(os.path.join(embeddings_path, f)):
+                    return self.find_embeddings_in_path(os.path.join(embeddings_path, f), tokens)
+                words = f.split(".")
+                if words[-1] in ["pt", "ckpt", "pth", "safetensors"]:
+                    words = words[:-1]
+                words = ".".join(words).lower()
+                tokens.append(words)
+        return tokens
+
+    def insert_into_prompt(self, text, negative_prompt=False):
+        prompt_widget = self.generator_tab_widget.data[self.currentTabSection][self.current_section]["prompt_widget"]
+        negative_prompt_widget = self.generator_tab_widget.data[self.currentTabSection][self.current_section]["negative_prompt_widget"]
+        if negative_prompt:
+            current_text = negative_prompt_widget.toPlainText()
+            text = f"{current_text}, {text}" if current_text != "" else text
+            negative_prompt_widget.setPlainText(text)
+        else:
+            current_text = prompt_widget.toPlainText()
+            text = f"{current_text}, {text}" if current_text != "" else text
+            prompt_widget.setPlainText(text)
+
 
 if __name__ == "__main__":
+    def signal_handler(signal, frame):
+        print("\nExiting...")
+        sys.exit(0)
+
+    signal.signal(signal.SIGINT, signal_handler)
     QApplication.setAttribute(Qt.ApplicationAttribute.AA_UseDesktopOpenGL)
     app = QApplication([])
 
