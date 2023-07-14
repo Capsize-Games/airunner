@@ -174,6 +174,7 @@ class Themes:
             "slider_label": """
                 font-size: 9pt;
                 color: #ffffff;
+                font-weight: bold;
             """,
             "slider_spinbox": """
                 background-color: #444444;
