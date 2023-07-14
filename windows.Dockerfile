@@ -53,7 +53,7 @@ RUN export PATH="$(winepath -u "C:\Python310\Scripts"):$PATH" \
     && export PATH="$(winepath -u "C:\Python310\site-packages\torch\lib"):$PATH" \
     && export PATH="$(winepath -u "C:\Python310\site-packages\torch\bin"):$PATH" \
     && export PATH="$(winepath -u "C:\Python310\site-packages\torch\_C"):$PATH" \
-    && export PATH="$(winepath -u "C:\Python310\site-packages\torch"):$PATH" \
+    && export PATH="$(winepath -u "C:\Python310\site-packages\torch"):$PATH"
 
 FROM final as install_apps
 WORKDIR /app
