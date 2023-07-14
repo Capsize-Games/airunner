@@ -86,7 +86,7 @@ class ToolMenuWidget(BaseWidget):
         self.layer_container_widget.delete_layer_button.clicked.connect(self.app.canvas.delete_layer)
 
     def set_stylesheet(self):
-        self.layer_container_widget.setStyleSheet(self.app.css("layer_container_widget"))
-        self.layer_container_widget.setStyleSheet(self.app.css("layer_container_widget"))
+        self.layer_container_widget.set_stylesheet()
         self.embeddings_container_widget.setStyleSheet(self.app.css("embeddings_container"))
         self.lora_container_widget.setStyleSheet(self.app.css("lora_container"))
+        self.opacity_widget.set_stylesheet()

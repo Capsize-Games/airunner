@@ -246,6 +246,7 @@ class GeneratorTabWidget(BaseWidget):
             spinbox_minimum=0.0,
             spinbox_maximum=1.0
         )
+        self.data[self.tab_section][self.tab]["controlnet_scale_slider"] = controlnet_scale_slider
         group_box = QGroupBox(self)
         group_box.setObjectName("controlnet_groupbox")
         group_box.setTitle("Controlnet")
@@ -309,6 +310,7 @@ class GeneratorTabWidget(BaseWidget):
             spinbox_single_step=0.01,
             spinbox_page_step=0.01
         )
+        self.data[self.tab_section][self.tab]["image_scale_slider"] = image_scale_slider
         self.add_widget_to_grid(image_scale_slider)
 
     def add_strength_widgets(self):
@@ -325,6 +327,7 @@ class GeneratorTabWidget(BaseWidget):
             spinbox_single_step=0.01,
             spinbox_page_step=0.01
         )
+        self.data[self.tab_section][self.tab]["strength_slider"] = strength_slider
         self.add_widget_to_grid(strength_slider)
 
     def add_seed_widgets(self):
@@ -412,6 +415,7 @@ class GeneratorTabWidget(BaseWidget):
             spinbox_minimum=1,
             slider_minimum=1
         )
+        self.data[self.tab_section][self.tab]["samples_slider_widget"] = samples_widget
         widget = QWidget()
         horizontal_layout = QHBoxLayout(widget)
         horizontal_layout.setContentsMargins(0, 0, 0, 0)
@@ -556,6 +560,21 @@ class GeneratorTabWidget(BaseWidget):
         self.stableDiffusionTabWidget.setStyleSheet(self.app.css("pipeline"))
         self.kandinskyTabWidget.setStyleSheet(self.app.css("pipeline"))
         self.shapegifTabWidget.setStyleSheet(self.app.css("pipeline"))
+
+        for tab_section in self.data.keys():
+            for tab in self.data[tab_section].keys():
+                if "controlnet_scale_slider" in self.data[tab_section][tab]:
+                    self.data[tab_section][tab]["controlnet_scale_slider"].set_stylesheet()
+                if "steps_slider_widget" in self.data[tab_section][tab]:
+                    self.data[tab_section][tab]["steps_slider_widget"].set_stylesheet()
+                if "scale_slider_widget" in self.data[tab_section][tab]:
+                    self.data[tab_section][tab]["scale_slider_widget"].set_stylesheet()
+                if "image_scale_slider" in self.data[tab_section][tab]:
+                    self.data[tab_section][tab]["image_scale_slider"].set_stylesheet()
+                if "strength_slider" in self.data[tab_section][tab]:
+                    self.data[tab_section][tab]["strength_slider"].set_stylesheet()
+                if "samples_slider_widget" in self.data[tab_section][tab]:
+                    self.data[tab_section][tab]["samples_slider_widget"].set_stylesheet()
 
     def load_section_models(self):
         models = self.app.models if self.app.models else []
