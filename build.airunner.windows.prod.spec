@@ -35,6 +35,7 @@ datas += copy_metadata('rich')
 datas += copy_metadata('sympy')
 datas += copy_metadata('tensorflow')
 datas += copy_metadata('scipy')
+datas += copy_metadata('google')
 datas += collect_data_files("torch", include_py_files=True)
 datas += collect_data_files("torchvision", include_py_files=True)
 datas += collect_data_files("pytorch_lightning", include_py_files=True)
@@ -71,6 +72,10 @@ a = Analysis(
         "airunner",
         "airunner.extensions",
         "accelerate",
+        "google",
+        "google-auth",
+        "google-auth-oauthlib",
+        "google-pasta",
         "tqdm",
         "diffusers",
         "transformers",
@@ -102,10 +107,6 @@ a = Analysis(
         "cmake",
         "cryptography",
         "email-validator",
-        "google",
-        "google-auth",
-        "google-auth-oauthlib",
-        "google-pasta",
         "Jinja2",
         "lightning-cloud",
         "Markdown",
