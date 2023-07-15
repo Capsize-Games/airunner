@@ -86,29 +86,21 @@ class CanvasImageMixin:
         if not img:
             return
 
-        # apply the layer offset
-        x = image_data.position.x() + self.pos_x
-        y = image_data.position.y() + self.pos_y
-        location = QPoint(int(x), int(y))# + layer.offset
-
-        rect = self.viewport_rect
-
-        # only create a image of the visible area, apply offset
         img = img.copy().crop((
-            rect.x() - location.x(),
-            rect.y() - location.y(),
-            rect.x() + rect.width() - location.x(),
-            rect.y() + rect.height() - location.y()
+            self.viewport_rect.x(),
+            self.viewport_rect.y(),
+            self.viewport_rect.width(),
+            self.viewport_rect.height()
         ))
         return img
 
     def draw_images(self, layer, painter):
         img = self.visible_image(layer=layer)
         if img:
-            offset = layer.offset
+            offset = layer.offset + QPoint(self.pos_x, self.pos_y)
             qimage = ImageQt(img)
             pixmap = QPixmap.fromImage(qimage)
-            painter.drawPixmap(QPoint(0, 0), pixmap)
+            painter.drawPixmap(offset, pixmap)
             # painter.drawPixmap(offset, pixmap)
 
     def copy_image(self):
