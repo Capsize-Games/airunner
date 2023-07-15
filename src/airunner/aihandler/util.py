@@ -3,7 +3,7 @@ import io
 import importlib
 import zipfile
 import requests
-from aihandler.qtvar import ExtensionVar
+from airunner.aihandler.qtvar import ExtensionVar
 
 
 def get_extensions_from_url(app):

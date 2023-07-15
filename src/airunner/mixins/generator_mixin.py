@@ -5,7 +5,7 @@ from PyQt6 import uic
 from PyQt6.QtCore import QRect, pyqtSignal, Qt
 from PyQt6.QtGui import QShortcut, QKeySequence
 from PyQt6.uic.exceptions import UIFileException
-from aihandler.settings import MAX_SEED, MODELS, MessageCode
+from airunner.aihandler.settings import MAX_SEED, MODELS, MessageCode
 from airunner.windows.video import VideoPopup
 from airunner.mixins.lora_mixin import LoraMixin
 from PIL import PngImagePlugin

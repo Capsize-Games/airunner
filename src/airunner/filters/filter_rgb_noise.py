@@ -1,5 +1,4 @@
 from airunner.filters.filter_base import FilterBase
-from aihandler.qtvar import FloatVar
 from airunner.filters.rgb_noise_filter import RGBNoiseFilter
 from PIL import Image
 import random

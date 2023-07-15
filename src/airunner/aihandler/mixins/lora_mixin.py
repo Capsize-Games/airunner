@@ -1,7 +1,7 @@
 import os
 import torch
-from aihandler.settings import LOG_LEVEL
-from aihandler.logger import logger
+from airunner.aihandler.settings import LOG_LEVEL
+from airunner.aihandler.logger import logger
 import logging
 logging.disable(LOG_LEVEL)
 logger.set_level(logger.DEBUG)

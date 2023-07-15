@@ -1,6 +1,6 @@
 import importlib
 import os
-from aihandler.util import get_extensions_from_path
+from airunner.aihandler.util import get_extensions_from_path
 
 
 class ExtensionMixin:
