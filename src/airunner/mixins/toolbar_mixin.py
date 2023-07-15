@@ -48,14 +48,6 @@ class ToolbarMixin:
     def show_about(self):
         AboutWindow(self.settings_manager, app=self)
 
-    def set_tool(self, tool):
-        self.toolbar_widget.set_tool(tool)
-        if self.settings_manager.settings.current_tool.get() != tool:
-            self.settings_manager.settings.current_tool.set(tool)
-        else:
-            self.settings_manager.settings.current_tool.set(None)
-        self.canvas.update_cursor()
-
     def toggle_grid(self, event):
         self.settings_manager.settings.show_grid.set(
             event
