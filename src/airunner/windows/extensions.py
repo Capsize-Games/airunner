@@ -1,7 +1,7 @@
 import os
 from PyQt6 import uic
 from PyQt6.QtWidgets import QWidget, QVBoxLayout
-from aihandler.util import get_extensions_from_url, download_extension
+from airunner.aihandler.util import get_extensions_from_url, download_extension
 from airunner.windows.base_window import BaseWindow
 
 
