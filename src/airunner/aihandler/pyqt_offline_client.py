@@ -1,13 +1,13 @@
 import json
 import traceback
 
-from aihandler.logger import logger
+from airunner.aihandler.logger import logger
 import queue
 import time
 from PyQt6 import QtCore
 from PyQt6.QtCore import QThread
-from aihandler.qtvar import BooleanVar
-from aihandler.settings import LOG_LEVEL
+from airunner.aihandler.qtvar import BooleanVar
+from airunner.aihandler.settings import LOG_LEVEL
 
 
 class OfflineClient(QtCore.QObject):
