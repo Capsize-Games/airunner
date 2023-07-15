@@ -1,7 +1,7 @@
 import json
 import random
 
-from aihandler.prompt_parser import PromptParser
+from airunner.aihandler.prompt_parser import PromptParser
 from airunner.build_prompt import BuildPrompt
 
 
