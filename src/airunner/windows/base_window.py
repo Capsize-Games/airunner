@@ -2,7 +2,7 @@ import os
 from PyQt6 import uic
 from PyQt6.QtCore import Qt
 from PyQt6.QtWidgets import QWidget
-from aihandler.settings_manager import SettingsManager
+from airunner.aihandler.settings_manager import SettingsManager
 
 
 class BaseWindow:

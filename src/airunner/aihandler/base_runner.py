@@ -1,8 +1,8 @@
 import traceback
 from PyQt6.QtCore import QObject
-from aihandler.logger import logger
-from aihandler.settings_manager import SettingsManager
-from aihandler.settings import AIRUNNER_ENVIRONMENT, LOG_LEVEL, MessageCode
+from airunner.aihandler.logger import logger
+from airunner.aihandler.settings_manager import SettingsManager
+from airunner.aihandler.settings import AIRUNNER_ENVIRONMENT, LOG_LEVEL, MessageCode
 
 
 class BaseRunner(QObject):

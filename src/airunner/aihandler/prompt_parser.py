@@ -1,7 +1,7 @@
 import numpy as np
 
-from aihandler.prompt_variable import PromptVariable
-from aihandler.prompt_weight_bridge import PromptWeightBridge
+from airunner.aihandler.prompt_variable import PromptVariable
+from airunner.aihandler.prompt_weight_bridge import PromptWeightBridge
 
 
 class PromptParser:

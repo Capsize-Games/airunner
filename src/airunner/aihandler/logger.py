@@ -1,5 +1,5 @@
 import logging
-from aihandler.settings import LOG_LEVEL
+from airunner.aihandler.settings import LOG_LEVEL
 
 
 class Logger:

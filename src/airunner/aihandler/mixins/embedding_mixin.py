@@ -1,7 +1,7 @@
 import os
 import torch
-from aihandler.logger import logger
-from aihandler.settings import MessageCode
+from airunner.aihandler.logger import logger
+from airunner.aihandler.settings import MessageCode
 
 
 class EmbeddingMixin:

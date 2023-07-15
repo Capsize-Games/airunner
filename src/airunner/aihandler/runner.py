@@ -5,20 +5,20 @@ import numpy as np
 import requests
 from controlnet_aux.processor import Processor
 from diffusers.utils import export_to_gif
-from aihandler.base_runner import BaseRunner
-from aihandler.mixins.kandinsky_mixin import KandinskyMixin
+from airunner.aihandler.base_runner import BaseRunner
+from airunner.aihandler.mixins.kandinsky_mixin import KandinskyMixin
 import traceback
 import torch
-from aihandler.logger import logger
+from airunner.aihandler.logger import logger
 from PIL import Image
-from aihandler.mixins.merge_mixin import MergeMixin
-from aihandler.mixins.lora_mixin import LoraMixin
-from aihandler.mixins.memory_efficient_mixin import MemoryEfficientMixin
-from aihandler.mixins.embedding_mixin import EmbeddingMixin
-from aihandler.mixins.txttovideo_mixin import TexttovideoMixin
-from aihandler.mixins.compel_mixin import CompelMixin
-from aihandler.mixins.scheduler_mixin import SchedulerMixin
-from aihandler.settings import MessageCode, MAX_SEED
+from airunner.aihandler.mixins.merge_mixin import MergeMixin
+from airunner.aihandler.mixins.lora_mixin import LoraMixin
+from airunner.aihandler.mixins.memory_efficient_mixin import MemoryEfficientMixin
+from airunner.aihandler.mixins.embedding_mixin import EmbeddingMixin
+from airunner.aihandler.mixins.txttovideo_mixin import TexttovideoMixin
+from airunner.aihandler.mixins.compel_mixin import CompelMixin
+from airunner.aihandler.mixins.scheduler_mixin import SchedulerMixin
+from airunner.aihandler.settings import MessageCode, MAX_SEED
 
 os.environ["DISABLE_TELEMETRY"] = "1"
 os.environ["HF_HUB_OFFLINE"] = "1"

@@ -4,6 +4,7 @@ from PyQt6 import uic
 from PyQt6.QtWidgets import QGridLayout
 from airunner.data.prompt_data import PromptData
 from airunner.widgets.base_widget import BaseWidget
+from airunner.widgets.prompt_builder_form import PromptBuilderForm
 
 
 class PromptBuilderWidget(BaseWidget):

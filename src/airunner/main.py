@@ -11,9 +11,11 @@ from PyQt6.QtWidgets import QApplication, QFileDialog, QSplashScreen, QMainWindo
     QVBoxLayout
 from PyQt6.QtCore import pyqtSlot, Qt, QThread, pyqtSignal, QObject, QTimer
 from PyQt6.QtGui import QGuiApplication, QPixmap, QShortcut, QKeySequence
-from aihandler.qtvar import TQDMVar, ImageVar, MessageHandlerVar, ErrorHandlerVar
-from aihandler.logger import logger
-from aihandler.settings import LOG_LEVEL, MessageCode
+
+from airunner.aihandler.database import GENERATORS
+from airunner.aihandler.qtvar import TQDMVar, ImageVar, MessageHandlerVar, ErrorHandlerVar
+from airunner.aihandler.logger import logger
+from airunner.aihandler.settings import LOG_LEVEL, MessageCode
 from airunner.mixins.canvas_mixin import CanvasMixin
 from airunner.mixins.comic_mixin import ComicMixin
 from airunner.mixins.extension_mixin import ExtensionMixin
@@ -33,7 +35,7 @@ from airunner.widgets.header_widget import HeaderWidget
 from airunner.windows.deterministic_generation_window import DeterministicGenerationWindow
 from airunner.windows.update_window import UpdateWindow
 from airunner.utils import get_version, get_latest_version
-from aihandler.settings_manager import SettingsManager, PromptManager
+from airunner.aihandler.settings_manager import SettingsManager, PromptManager
 from airunner.runai_client import OfflineClient
 import qdarktheme
 from PyQt6.QtGui import QIcon

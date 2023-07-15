@@ -1,6 +1,6 @@
 import os
-from aihandler.qtvar import Var, BooleanVar, IntVar, StringVar, DoubleVar, FloatVar, ListVar, DictVar
-from aihandler.settings import \
+from airunner.aihandler.qtvar import Var, BooleanVar, IntVar, StringVar, DoubleVar, FloatVar, ListVar, DictVar
+from airunner.aihandler.settings import \
     DEFAULT_MODEL, \
     DEFAULT_SCHEDULER, \
     DEFAULT_CANVAS_COLOR, \
