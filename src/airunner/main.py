@@ -391,6 +391,14 @@ class MainWindow(
         self.toolbar_widget.set_stylesheet()
         self.footer_widget.set_stylesheet()
 
+        # change the icons in the toolmenu
+        if self.settings_manager.settings.dark_mode_enabled.get():
+            self.actionUndo.setIcon(QIcon(os.path.join("src/icons/007-undo-light.png")))
+            self.actionRedo.setIcon(QIcon(os.path.join("src/icons/008-redo-light.png")))
+        else:
+            self.actionUndo.setIcon(QIcon(os.path.join("src/icons/007-undo.png")))
+            self.actionRedo.setIcon(QIcon(os.path.join("src/icons/008-redo.png")))
+
     def initialize(self):
         self.initialize_settings_manager()
         self.instantiate_widgets()
