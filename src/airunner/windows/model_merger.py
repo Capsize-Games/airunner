@@ -3,7 +3,7 @@ import typing
 from PyQt6 import uic
 from PyQt6.QtCore import pyqtSlot, Qt, QThread, pyqtSignal, QObject
 from PyQt6.QtWidgets import QVBoxLayout
-from aihandler.settings import MODELS
+from airunner.aihandler.settings import MODELS
 from airunner.utils import load_default_models, load_models_from_path
 from airunner.windows.base_window import BaseWindow
 

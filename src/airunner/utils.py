@@ -5,7 +5,7 @@ from PIL import Image
 from PyQt6.QtGui import QPixmap, QImage
 from diffusers import StableDiffusionPipeline, StableDiffusionInpaintPipeline
 
-from aihandler.settings import MODELS
+from airunner.aihandler.settings import MODELS
 
 
 def image_to_pixmap(image: Image, size=None):

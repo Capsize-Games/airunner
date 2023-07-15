@@ -1,8 +1,8 @@
 import os
 import json
-from aihandler.database import RunAISettings, PromptSettings
-from aihandler.qtvar import Var, BooleanVar, StringVar, IntVar, FloatVar, DoubleVar, ListVar
-# from aihandler.qtvar import ExtensionVar  TODO: extensions
+from airunner.aihandler.database import RunAISettings, PromptSettings
+from airunner.aihandler.qtvar import Var, BooleanVar, StringVar, IntVar, FloatVar, DoubleVar, ListVar
+# from airunner.aihandler.qtvar import ExtensionVar  TODO: extensions
 
 available_tools = [
     "",

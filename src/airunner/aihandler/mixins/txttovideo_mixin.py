@@ -2,7 +2,7 @@ import os
 import imageio
 import numpy as np
 from PIL import Image
-from aihandler.logger import logger
+from airunner.aihandler.logger import logger
 
 
 class TexttovideoMixin:
