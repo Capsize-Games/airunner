@@ -77,28 +77,26 @@
     <addaction name="actionLoad"/>
     <addaction name="actionSave"/>
     <addaction name="separator"/>
-    <addaction name="actionSettings"/>
-    <addaction name="separator"/>
-    <addaction name="actionExport"/>
-    <addaction name="actionImport"/>
-    <addaction name="separator"/>
-    <addaction name="actionSave_prompt"/>
-    <addaction name="separator"/>
     <addaction name="actionQuit"/>
    </widget>
    <widget class="QMenu" name="menuEdit">
     <property name="title">
      <string>Edit</string>
     </property>
-    <addaction name="actionCopy"/>
-    <addaction name="actionPaste"/>
+    <addaction name="separator"/>
     <addaction name="actionUndo"/>
     <addaction name="actionRedo"/>
+    <addaction name="separator"/>
+    <addaction name="actionCut"/>
+    <addaction name="actionCopy"/>
+    <addaction name="actionPaste"/>
     <addaction name="separator"/>
     <addaction name="actionRotate_90_clockwise"/>
     <addaction name="actionRotate_90_counter_clockwise"/>
     <addaction name="separator"/>
     <addaction name="actionClear_all_prompts"/>
+    <addaction name="separator"/>
+    <addaction name="actionSettings"/>
    </widget>
    <widget class="QMenu" name="menuFilters">
     <property name="title">
@@ -143,10 +141,31 @@
     <addaction name="separator"/>
     <addaction name="actionModel_Merger"/>
     <addaction name="separator"/>
+   </widget>
+   <widget class="QMenu" name="menuView">
+    <property name="title">
+     <string>View</string>
+    </property>
+   </widget>
+   <widget class="QMenu" name="menuImage">
+    <property name="title">
+     <string>Image</string>
+    </property>
+    <addaction name="actionImport"/>
+    <addaction name="actionExport"/>
+   </widget>
+   <widget class="QMenu" name="menuPrompts">
+    <property name="title">
+     <string>Prompts</string>
+    </property>
+    <addaction name="actionSave_prompt"/>
     <addaction name="actionPrompt_Browser"/>
    </widget>
    <addaction name="menuFile"/>
    <addaction name="menuEdit"/>
+   <addaction name="menuImage"/>
+   <addaction name="menuPrompts"/>
+   <addaction name="menuView"/>
    <addaction name="menuModel_merge"/>
    <addaction name="menuFilters"/>
    <addaction name="menuAbout"/>
@@ -193,14 +212,28 @@
    </property>
   </action>
   <action name="actionUndo">
+   <property name="icon">
+    <iconset>
+     <normaloff>../src/icons/007-undo.png</normaloff>../src/icons/007-undo.png</iconset>
+   </property>
    <property name="text">
     <string>Undo</string>
+   </property>
+   <property name="toolTip">
+    <string>Undo</string>
+   </property>
+   <property name="whatsThis">
+    <string/>
    </property>
    <property name="shortcut">
     <string>Ctrl+Z</string>
    </property>
   </action>
   <action name="actionRedo">
+   <property name="icon">
+    <iconset>
+     <normaloff>../src/icons/008-redo.png</normaloff>../src/icons/008-redo.png</iconset>
+   </property>
    <property name="text">
     <string>Redo</string>
    </property>
@@ -523,7 +556,7 @@
   </action>
   <action name="actionSettings">
    <property name="text">
-    <string>Settings</string>
+    <string>Preferences</string>
    </property>
   </action>
   <action name="actionPrompt_Browser">
@@ -537,6 +570,38 @@
    </property>
    <property name="toolTip">
     <string>Remove text from all prompts and negative prompts</string>
+   </property>
+  </action>
+  <action name="actionUndo_2">
+   <property name="icon">
+    <iconset>
+     <normaloff>../src/icons/007-undo.png</normaloff>../src/icons/007-undo.png</iconset>
+   </property>
+   <property name="text">
+    <string>Undo</string>
+   </property>
+   <property name="shortcut">
+    <string>Ctrl+Z</string>
+   </property>
+  </action>
+  <action name="actionRedo_2">
+   <property name="icon">
+    <iconset>
+     <normaloff>../src/icons/008-redo.png</normaloff>../src/icons/008-redo.png</iconset>
+   </property>
+   <property name="text">
+    <string>Redo</string>
+   </property>
+   <property name="shortcut">
+    <string>Ctrl+Y</string>
+   </property>
+  </action>
+  <action name="actionCut">
+   <property name="text">
+    <string>Cut</string>
+   </property>
+   <property name="shortcut">
+    <string>Ctrl+X</string>
    </property>
   </action>
  </widget>
