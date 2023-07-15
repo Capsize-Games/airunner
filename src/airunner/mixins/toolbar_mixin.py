@@ -8,7 +8,6 @@ from airunner.windows.settings import SettingsWindow
 class ToolbarMixin:
     def initialize(self):
         self.toolbar_widget.initialize()
-        # self.select_button.clicked.connect(lambda: self.set_tool("select"))
         self.actionAbout.triggered.connect(self.show_about)
         self.actionModel_Merger.triggered.connect(self.show_model_merger)
         self.actionBug_report.triggered.connect(lambda: webbrowser.open(
@@ -19,16 +18,6 @@ class ToolbarMixin:
         self.actionInvert.triggered.connect(self.do_invert)
         self.actionFilm.triggered.connect(self.do_film)
         self.actionSettings.triggered.connect(self.show_settings)
-        # self.initialize_toolbar_extensions()  # TODO: Extensions
-
-    """
-    TODO: Extensions
-    def initialize_toolbar_extensions(self):
-        self.actionExtensions.triggered.connect(self.show_extensions)
-    
-    def show_extensions(self):
-        self.extensions_window = ExtensionsWindow(self.settings_manager)
-    """
 
     def show_settings(self):
         SettingsWindow(self.settings_manager, app=self)
