@@ -61,7 +61,7 @@
         <verstretch>0</verstretch>
        </sizepolicy>
       </property>
-      <layout class="QVBoxLayout" name="verticalLayout" stretch="">
+      <layout class="QVBoxLayout" name="verticalLayout">
        <property name="spacing">
         <number>0</number>
        </property>
@@ -160,6 +160,9 @@
           <height>40</height>
          </size>
         </property>
+        <property name="toolTip">
+         <string>Move layer up</string>
+        </property>
         <property name="styleSheet">
          <string notr="true">border-color: rgb(61, 56, 70);</string>
         </property>
@@ -194,6 +197,9 @@
           <width>40</width>
           <height>40</height>
          </size>
+        </property>
+        <property name="toolTip">
+         <string>Move layer down</string>
         </property>
         <property name="styleSheet">
          <string notr="true">border-color: rgb(61, 56, 70);</string>
@@ -242,6 +248,9 @@
           <width>40</width>
           <height>40</height>
          </size>
+        </property>
+        <property name="toolTip">
+         <string>Delete layer</string>
         </property>
         <property name="styleSheet">
          <string notr="true">border-color: rgb(61, 56, 70);</string>
