@@ -1,5 +1,4 @@
-import torch
-from airunner.aihandler.logger import logger
+from airunner.aihandler.logger import Logger as logger
 
 
 class KandinskyMixin:
