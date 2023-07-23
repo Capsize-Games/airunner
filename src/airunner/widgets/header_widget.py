@@ -12,6 +12,7 @@ class HeaderWidget(BaseWidget):
         "open_button": "034-folder",
         "save_button": "033-diskette",
         "file_new_button": "036-new-document",
+        "export_button": "export",
     }
 
     def initialize(self):
@@ -51,6 +52,7 @@ class HeaderWidget(BaseWidget):
         self.file_new_button.clicked.connect(self.app.new_document)
         self.save_button.clicked.connect(self.app.save_document)
         self.open_button.clicked.connect(self.app.load_document)
+        self.export_button.clicked.connect(self.app.quick_export)
 
         # add layoutBottomMargin to the layout
         self.layout().setContentsMargins(0, 0, 0, 0)
@@ -60,9 +62,9 @@ class HeaderWidget(BaseWidget):
         self.frame.layout().setHorizontalSpacing(10)
 
         try:
-            self.frame.layout().addWidget(self.width_slider_widget, 0, 7, 1, 1)
-            self.frame.layout().addWidget(self.height_slider_widget, 0, 8, 1, 1)
-            self.frame.layout().addWidget(self.brush_size_slider_widget, 0, 9, 1, 1)
+            self.frame.layout().addWidget(self.width_slider_widget, 0, 8, 1, 1)
+            self.frame.layout().addWidget(self.height_slider_widget, 0, 9, 1, 1)
+            self.frame.layout().addWidget(self.brush_size_slider_widget, 0, 10, 1, 1)
         except Exception as e:
             print(e)
 
