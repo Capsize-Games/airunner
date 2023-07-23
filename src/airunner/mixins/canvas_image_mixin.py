@@ -44,7 +44,7 @@ class CanvasImageMixin:
             "images": self.image_data,
         })
 
-        if type(filter).__name__ in ["SaturationFilter", "ColorBalanceFilter", "RGBNoiseFilter", "PixelFilter", "HalftoneFilter"]:
+        if type(filter).__name__ in ["SaturationFilter", "ColorBalanceFilter", "RGBNoiseFilter", "PixelFilter", "HalftoneFilter", "RegistrationErrorFilter"]:
             filtered_image = filter.filter(self.image_data.image)
         else:
             filtered_image = self.image_data.image.filter(filter)
@@ -55,7 +55,7 @@ class CanvasImageMixin:
         if self.current_layer.image_data.image is None:
             return
         # check if filter is a SaturationFilter object
-        if type(filter).__name__ in ["SaturationFilter", "ColorBalanceFilter", "RGBNoiseFilter", "PixelFilter", "HalftoneFilter"]:
+        if type(filter).__name__ in ["SaturationFilter", "ColorBalanceFilter", "RGBNoiseFilter", "PixelFilter", "HalftoneFilter", "RegistrationErrorFilter"]:
             filtered_image = filter.filter(self.image_data.image)
         else:
             filtered_image = self.image_data.image.filter(filter)
