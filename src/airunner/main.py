@@ -18,7 +18,6 @@ from airunner.aihandler.pyqt_client import OfflineClient
 from airunner.aihandler.settings import LOG_LEVEL, MessageCode
 from airunner.mixins.canvas_mixin import CanvasMixin
 from airunner.mixins.comic_mixin import ComicMixin
-from airunner.mixins.extension_mixin import ExtensionMixin
 from airunner.mixins.generator_mixin import GeneratorMixin
 from airunner.mixins.history_mixin import HistoryMixin
 from airunner.mixins.menubar_mixin import MenubarMixin
@@ -47,8 +46,7 @@ class MainWindow(
     MenubarMixin,
     CanvasMixin,
     GeneratorMixin,
-    ComicMixin,
-    ExtensionMixin
+    ComicMixin
 ):
     current_filter = None
     tqdm_callback_triggered = False
