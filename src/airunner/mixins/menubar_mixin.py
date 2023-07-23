@@ -1,4 +1,6 @@
 from PyQt6.QtWidgets import QFileDialog
+
+from airunner.filters.filter_halftone import FilterHalftone
 from airunner.windows.deterministic_generation_window import DeterministicGenerationWindow
 from airunner.filters.filter_box_blur import FilterBoxBlur
 from airunner.filters.filter_color_balance import FilterColorBalance
@@ -58,6 +60,7 @@ class MenubarMixin:
     def initialize_filter_actions(self):
         self.filter_gaussian_blur = FilterGaussianBlur(parent=self)
         self.filter_pixel_art = FilterPixelArt(parent=self)
+        self.filter_halftone = FilterHalftone(parent=self)
         self.filter_box_blur = FilterBoxBlur(parent=self)
         self.filter_unsharp_mask = FilterUnsharpMask(parent=self)
         self.filter_saturation = FilterSaturation(parent=self)
@@ -65,6 +68,7 @@ class MenubarMixin:
         self.filter_rgb_noise = FilterRGBNoise(parent=self)
         self.actionGaussian_Blur_2.triggered.connect(self.filter_gaussian_blur.show)
         self.actionPixel_Art.triggered.connect(self.filter_pixel_art.show)
+        self.actionHalftone.triggered.connect(self.filter_halftone.show)
         self.actionBox_Blur_2.triggered.connect(self.filter_box_blur.show)
         self.actionUnsharp_Mask.triggered.connect(self.filter_unsharp_mask.show)
         self.actionSaturation_Filter.triggered.connect(self.filter_saturation.show)

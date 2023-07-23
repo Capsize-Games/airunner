@@ -1,11 +1,15 @@
+import base64
 import os
 import gc
 import re
+from io import BytesIO
+
 import numpy as np
 import requests
 from controlnet_aux.processor import Processor
 from diffusers.utils import export_to_gif
-from airunner.aihandler.base_runner import BaseRunner
+
+from airunner.aihandler.enums import FilterType
 from airunner.aihandler.mixins.kandinsky_mixin import KandinskyMixin
 import traceback
 import torch
@@ -26,7 +30,6 @@ os.environ["TRANSFORMERS_OFFLINE"] = "1"
 
 
 class SDRunner(
-    BaseRunner,
     MergeMixin,
     LoraMixin,
     MemoryEfficientMixin,
@@ -162,7 +165,7 @@ class SDRunner(
 
     @property
     def seed(self):
-        return self.options.get(f"{self.action}_seed", 42) + self.current_sample
+        return self.options.get(f"seed", 42) + self.current_sample
 
     @property
     def deterministic_seed(self):
@@ -174,14 +177,14 @@ class SDRunner(
 
     @property
     def prompt(self):
-        prompt = self.options.get(f"{self.action}_prompt", "")
-        self.requested_data[f"{self.action}_prompt"] = prompt
+        prompt = self.options.get(f"prompt", "")
+        self.requested_data[f"prompt"] = prompt
         return prompt
 
     @property
     def negative_prompt(self):
-        negative_prompt = self.options.get(f"{self.action}_negative_prompt", "")
-        self.requested_data[f"{self.action}_negative_prompt"] = negative_prompt
+        negative_prompt = self.options.get(f"negative_prompt", "")
+        self.requested_data[f"negative_prompt"] = negative_prompt
         return negative_prompt
 
     @property
@@ -190,43 +193,43 @@ class SDRunner(
 
     @property
     def guidance_scale(self):
-        return self.options.get(f"{self.action}_scale", 7.5)
+        return self.options.get(f"scale", 7.5)
 
     @property
     def image_guidance_scale(self):
-        return self.options.get(f"{self.action}_image_scale", 1.5)
+        return self.options.get(f"image_scale", 1.5)
 
     @property
     def height(self):
-        return self.options.get(f"{self.action}_height", 512)
+        return self.options.get(f"height", 512)
 
     @property
     def width(self):
-        return self.options.get(f"{self.action}_width", 512)
+        return self.options.get(f"width", 512)
 
     @property
     def steps(self):
-        return self.options.get(f"{self.action}_steps", 20)
+        return self.options.get(f"steps", 20)
 
     @property
     def ddim_eta(self):
-        return self.options.get(f"{self.action}_ddim_eta", 0.5)
+        return self.options.get(f"ddim_eta", 0.5)
 
     @property
     def batch_size(self):
-        return self.options.get(f"{self.action}_n_samples", 1)
+        return self.options.get(f"n_samples", 1)
 
     @property
     def pos_x(self):
-        return self.options.get(f"{self.action}_pos_x", 0)
+        return self.options.get(f"pos_x", 0)
 
     @property
     def pos_y(self):
-        return self.options.get(f"{self.action}_pos_y", 0)
+        return self.options.get(f"pos_y", 0)
 
     @property
     def outpaint_box_rect(self):
-        return self.options.get(f"{self.action}_box_rect", "")
+        return self.options.get(f"box_rect", "")
 
     @property
     def hf_token(self):
@@ -234,7 +237,7 @@ class SDRunner(
 
     @property
     def strength(self):
-        return self.options.get(f"{self.action}_strength", 1)
+        return self.options.get(f"strength", 1)
 
     @property
     def image(self):
@@ -297,16 +300,12 @@ class SDRunner(
         return self.options.get("use_torch_compile", False) == True
 
     @property
-    def model_base_path(self):
-        return self.options.get("model_base_path", None)
-
-    @property
     def is_sd_xl(self):
         return self.model == "Stable Diuffions XL 0.9"
 
     @property
     def model(self):
-        return self.options.get(f"{self.action}_model", None)
+        return self.options.get(f"model", None)
 
     @property
     def do_mega_scale(self):
@@ -391,20 +390,60 @@ class SDRunner(
             self._current_model = model
 
     @property
+    def model_base_path(self):
+        return self.options.get("model_base_path", None)
+
+    @property
+    def gif_path(self):
+        return self.options.get("gif_path", None)
+
+    @property
+    def image_path(self):
+        return self.options.get("image_path", None)
+
+    @property
+    def lora_path(self):
+        return self.options.get("lora_path", None)
+
+    @property
+    def embeddings_path(self):
+        return self.options.get("embeddings_path", None)
+
+    @property
+    def video_path(self):
+        return self.options.get("video_path", None)
+
+    @property
+    def outpaint_model_path(self):
+        return self.options.get("outpaint_model_path", None)
+
+    @property
+    def pix2pix_model_path(self):
+        return self.options.get("pix2pix_model_path", None)
+
+    @property
+    def depth2img_model_path(self):
+        return self.options.get("depth2img_model_path", None)
+
+    @property
+    def upscale_model_path(self):
+        return self.options.get("upscale_model_path", None)
+
+    @property
     def model_path(self):
         if self.current_model and os.path.exists(self.current_model):
             return self.current_model
         path = None
         if self.is_outpaint:
-            path = self.settings_manager.settings.outpaint_model_path.get()
+            path = self.outpaint_model_path
         elif self.is_pix2pix:
-            path = self.settings_manager.settings.pix2pix_model_path.get()
+            path = self.pix2pix_model_path
         elif self.is_depth2img:
-            path = self.settings_manager.settings.depth2img_model_path.get()
+            path = self.depth2img_model_path
         elif self.is_superresolution or self.is_upscale:
-            path = self.settings_manager.settings.upscale_model_path.get()
+            path = self.upscale_model_path
         if path is None or path == "":
-            path = self.settings_manager.settings.model_base_path.get()
+            path = self.model_base_path
         if self.current_model:
             path = os.path.join(path, self.current_model)
         if not os.path.exists(path):
@@ -443,7 +482,7 @@ class SDRunner(
 
     @property
     def controlnet_conditioning_scale(self):
-        return self.options.get(f"{self.action}_controlnet_conditioning_scale", 1000) / 1000.0
+        return self.options.get(f"controlnet_conditioning_scale", 1000) / 1000.0
 
     @property
     def controlnet_guess_mode(self):
@@ -609,6 +648,10 @@ class SDRunner(
         except requests.ConnectionError:
             return False
 
+    @property
+    def filters(self):
+        return self.options.get("filters", {})
+
     def clear_memory(self):
         logger.info("Clearing memory")
         torch.cuda.empty_cache()
@@ -633,8 +676,8 @@ class SDRunner(
         logger.info(f"Preparing options...")
         action = data["action"]
         options = data["options"]
-        requested_model = options.get(f"{action}_model", None)
-        enable_controlnet = options["enable_controlnet"]
+        requested_model = options.get(f"model", None)
+        enable_controlnet = options.get("enable_controlnet", False)
 
         # do model reload checks here
         if (
@@ -651,8 +694,8 @@ class SDRunner(
             or (not self.controlnet_loaded and enable_controlnet)):
             self.initialized = False
 
-        if self.prompt != options.get(f"{action}_prompt") or \
-           self.negative_prompt != options.get(f"{action}_negative_prompt") or \
+        if self.prompt != options.get(f"prompt") or \
+           self.negative_prompt != options.get(f"negative_prompt") or \
            action != self.action or \
            self.reload_model:
             self._prompt_embeds = None
@@ -672,8 +715,15 @@ class SDRunner(
         if value:
             self._safety_checker.to(self.device)
 
+    @property
+    def is_dev_env(self):
+        return AIRUNNER_ENVIRONMENT == "dev"
+
     def __init__(self, *args, **kwargs):
-        super().__init__(*args, **kwargs)
+        logger.set_level(LOG_LEVEL)
+        self.app = kwargs.get("app", None)
+        self._message_var = kwargs.get("message_var", None)
+        self._message_handler = kwargs.get("message_handler", None)
         self._safety_checker = None
         self._controlnet = None
         self.txt2img = None
@@ -684,6 +734,25 @@ class SDRunner(
         self.superresolution = None
         self.txt2vid = None
         self.upscale = None
+
+    def send_message(self, message, code=None):
+        code = code or MessageCode.STATUS
+        formatted_message = {
+            "code": code,
+            "message": message
+        }
+        if self._message_handler:
+            self._message_handler(formatted_message)
+        elif self._message_var:
+            self._message_var.emit(formatted_message)
+
+    def error_handler(self, error):
+        message = str(error)
+        if "got an unexpected keyword argument 'image'" in message and self.action in ["outpaint", "pix2pix", "depth2img"]:
+            message = f"This model does not support {self.action}"
+        traceback.print_exc()
+        logger.error(error)
+        self.send_message(message, MessageCode.ERROR)
 
     def initialize_safety_checker(self):
         if not hasattr(self.pipe, "safety_checker") or not self.pipe.safety_checker:
@@ -797,7 +866,7 @@ class SDRunner(
             args.update(kwargs)
         if self.use_kandinsky:
             return self.kandinsky_call_pipe(**kwargs)
-        if not self.is_pix2pix and len(self.options[f"{self.action}_lora"]) > 0 and len(self.loaded_lora) > 0:
+        if not self.is_pix2pix and len(self.available_lora) > 0 and len(self.loaded_lora) > 0:
             args["cross_attention_kwargs"] = {"scale": 1.0}
 
         if self.deterministic_generation:
@@ -843,19 +912,19 @@ class SDRunner(
         images = self.pipe(**kwargs).images
 
         try:
-            path = self.settings_manager.settings.gif_path.get()
+            path = self.gif_path
         except AttributeError:
             path = None
 
         if not path or path == "":
             try:
-                path = self.settings_manager.settings.image_path.get()
+                path = self.image_path
             except AttributeError:
                 path = None
 
         if not path or path == "":
             try:
-                path = self.settings_manager.settings.model_base_path.get()
+                path = self.model_base_path
             except AttributeError:
                 path = None
 
@@ -1039,7 +1108,7 @@ class SDRunner(
             return data
         logger.info("Process prompt")
         if self.deterministic_seed:
-            prompt = data["options"][f"{self.action}_prompt"]
+            prompt = data["options"][f"prompt"]
             if ".blend(" in prompt:
                 # replace .blend([0-9.]+, [0-9.]+) with ""
                 prompt = re.sub(r"\.blend\([0-9.]+, [0-9.]+\)", "", prompt)
@@ -1057,8 +1126,8 @@ class SDRunner(
             is_deterministic=True if self.deterministic_seed else False,
             is_batch=self.deterministic_generation,
         )
-        data["options"][f"{self.action}_prompt"] = prompt
-        data["options"][f"{self.action}_negative_prompt"] = negative_prompt
+        data["options"][f"prompt"] = prompt
+        data["options"][f"negative_prompt"] = negative_prompt
         print(prompt)
         print(negative_prompt)
         self.clear_prompt_embeds()
@@ -1106,6 +1175,31 @@ class SDRunner(
 
         self.current_sample = 0
 
+    def apply_filters(self, image, filters):
+        for image_filter in filters:
+            filter_type = FilterType(image_filter["filter_name"])
+            if filter_type is FilterType.PIXEL_ART:
+                scale = 4
+                colors = 24
+                for option in image_filter["options"]:
+                    option_name = option["name"]
+                    val = option["value"]
+                    if option_name == "scale":
+                        scale = val
+                    elif option_name == "colors":
+                        colors = val
+                width = image.width
+                height = image.height
+                image = image.quantize(colors)
+                image = image.resize((int(width / scale), int(height / scale)), resample=Image.NEAREST)
+                image = image.resize((width, height), resample=Image.NEAREST)
+        return image
+
+    def image_to_base64(self, image):
+        buffered = BytesIO()
+        image.save(buffered, format="PNG")
+        return base64.b64encode(buffered.getvalue()).decode("utf-8")
+
     def image_handler(self, images, data, nsfw_content_detected):
         if images:
             tab_section = "stablediffusion"
@@ -1114,9 +1208,23 @@ class SDRunner(
             elif self.is_shapegif:
                 tab_section = "shapegif"
             data["tab_section"] = tab_section
+
+            # apply filters and convert to base64 if requested
+            has_filters = self.filters != {}
+
+            do_base64 = data.get("do_base64", False)
+            if has_filters or do_base64:
+                for i, image in enumerate(images):
+                    if has_filters:
+                        image = self.apply_filters(image, self.filters)
+                    if do_base64:
+                        image = self.image_to_base64(image)
+                    images[i] = image
+
             self.send_message({
                 "images": images,
                 "data": data,
+                "request_type": data.get("request_type", None),
                 "nsfw_content_detected": nsfw_content_detected == True,
             }, MessageCode.IMAGE_GENERATED)
 
@@ -1456,7 +1564,7 @@ class SDRunner(
         # get model and switch to it
 
         # get models from database
-        model_name = self.options.get(f"{self.action}_model", None)
+        model_name = self.options.get(f"model", None)
 
         self.send_message(f"Loading model {model_name}")
 
@@ -1465,6 +1573,6 @@ class SDRunner(
         if self._is_ckpt_file(model_name):
             self.current_model = model_name
         else:
-            self.current_model = self.options.get(f"{self.action}_model_path", None)
-            self.current_model_branch = self.options.get(f"{self.action}_model_branch", None)
+            self.current_model = self.options.get(f"model_path", None)
+            self.current_model_branch = self.options.get(f"model_branch", None)
     # end model methods
