@@ -235,13 +235,16 @@ class MainWindow(
             self._themes = Themes(self.settings_manager)
         return self._themes.css
 
+    @property
+    def image_path(self):
+        return self.settings_manager.settings.image_path.get()
+
     @is_maximized.setter
     def is_maximized(self, val):
         self.settings_manager.settings.is_maximized.set(val)
 
     def __init__(self, *args, **kwargs):
         logger.info("Starting AI Runnner...")
-        # enable hardware acceleration
         qdarktheme.enable_hi_dpi()
 
         self.set_log_levels()
