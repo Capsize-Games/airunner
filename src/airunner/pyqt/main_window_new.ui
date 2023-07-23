@@ -117,10 +117,11 @@
     <addaction name="actionUnsharp_Mask"/>
     <addaction name="actionRGB_Noise"/>
     <addaction name="actionPixel_Art"/>
+    <addaction name="actionHalftone"/>
+    <addaction name="actionRegistration_error"/>
     <addaction name="separator"/>
     <addaction name="actionInvert"/>
     <addaction name="actionFilm"/>
-    <addaction name="actionHalftone"/>
    </widget>
    <widget class="QMenu" name="menuAbout">
     <property name="tearOffEnabled">
@@ -612,6 +613,11 @@
    </property>
    <property name="shortcut">
     <string>Ctrl+Shift+E</string>
+   </property>
+  </action>
+  <action name="actionRegistration_error">
+   <property name="text">
+    <string>Registration error</string>
    </property>
   </action>
  </widget>
