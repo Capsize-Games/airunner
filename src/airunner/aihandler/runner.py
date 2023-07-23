@@ -61,6 +61,7 @@ class SDRunner(
     }
     _model = None
     reload_model = False
+    requested_data = None
 
     # controlnet atributes
     processor = None
@@ -274,7 +275,6 @@ class SDRunner(
     @property
     def do_nsfw_filter(self):
         return self.options.get("do_nsfw_filter", True) == True
-
 
     @property
     def use_compel(self):
@@ -652,6 +652,36 @@ class SDRunner(
     def filters(self):
         return self.options.get("filters", {})
 
+    @property
+    def safety_checker(self):
+        return self._safety_checker
+
+    @safety_checker.setter
+    def safety_checker(self, value):
+        self._safety_checker = value
+        if value:
+            self._safety_checker.to(self.device)
+
+    @property
+    def is_dev_env(self):
+        return AIRUNNER_ENVIRONMENT == "dev"
+
+    def __init__(self, *args, **kwargs):
+        logger.set_level(LOG_LEVEL)
+        self.app = kwargs.get("app", None)
+        self._message_var = kwargs.get("message_var", None)
+        self._message_handler = kwargs.get("message_handler", None)
+        self._safety_checker = None
+        self._controlnet = None
+        self.txt2img = None
+        self.img2img = None
+        self.pix2pix = None
+        self.outpaint = None
+        self.depth2img = None
+        self.superresolution = None
+        self.txt2vid = None
+        self.upscale = None
+
     def clear_memory(self):
         logger.info("Clearing memory")
         torch.cuda.empty_cache()
@@ -704,36 +734,6 @@ class SDRunner(
         self.data = data
         if not self.use_kandinsky:
             torch.backends.cuda.matmul.allow_tf32 = self.use_tf32
-
-    @property
-    def safety_checker(self):
-        return self._safety_checker
-
-    @safety_checker.setter
-    def safety_checker(self, value):
-        self._safety_checker = value
-        if value:
-            self._safety_checker.to(self.device)
-
-    @property
-    def is_dev_env(self):
-        return AIRUNNER_ENVIRONMENT == "dev"
-
-    def __init__(self, *args, **kwargs):
-        logger.set_level(LOG_LEVEL)
-        self.app = kwargs.get("app", None)
-        self._message_var = kwargs.get("message_var", None)
-        self._message_handler = kwargs.get("message_handler", None)
-        self._safety_checker = None
-        self._controlnet = None
-        self.txt2img = None
-        self.img2img = None
-        self.pix2pix = None
-        self.outpaint = None
-        self.depth2img = None
-        self.superresolution = None
-        self.txt2vid = None
-        self.upscale = None
 
     def send_message(self, message, code=None):
         code = code or MessageCode.STATUS
@@ -1095,8 +1095,6 @@ class SDRunner(
         image = upscaled_image  # .resize((original_image_width, original_image_height), Image.BILINEAR)
 
         return [image]
-
-    requested_data = None
 
     def process_prompts(self, data, seed):
         """
