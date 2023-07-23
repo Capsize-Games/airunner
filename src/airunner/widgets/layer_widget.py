@@ -30,6 +30,8 @@ class LayerWidget(BaseWidget):
         else:
             self.thumbnail_label.width = 32
             self.thumbnail_label.height = 32
+            # clear the thumbnail
+            self.thumbnail_label.setPixmap(QtGui.QPixmap())
 
     def set_icon(self):
         is_dark = self.app.settings_manager.settings.dark_mode_enabled.get()
