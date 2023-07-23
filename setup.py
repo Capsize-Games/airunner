@@ -50,6 +50,11 @@ setup(
         "sympy==1.12.0",
         "regex",
         "matplotlib==3.7.2",
-        "invisible-watermark==0.2.0"
+        "invisible-watermark==0.2.0",
+        "torch==2.0.1",
+        "torchvision==0.15.2"
+    ],
+    dependency_links=[
+        "https://download.pytorch.org/whl/cu118"
     ]
 )
