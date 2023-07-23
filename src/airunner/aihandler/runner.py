@@ -66,6 +66,7 @@ class SDRunner(
     processor = None
     current_controlnet_type = None
     controlnet_loaded = False
+
     # end controlnet atributes
 
     # controlnet properties
@@ -308,7 +309,7 @@ class SDRunner(
 
     @property
     def do_mega_scale(self):
-        #return self.is_superresolution
+        # return self.is_superresolution
         return False
 
     @property
@@ -574,8 +575,8 @@ class SDRunner(
         )
 
         if (self.enable_controlnet
-            and not self.is_ckpt_model
-            and not self.is_safetensors):
+                and not self.is_ckpt_model
+                and not self.is_safetensors):
             return self.controlnet_action_diffuser
 
         if self.is_sd_xl:
@@ -706,23 +707,23 @@ class SDRunner(
 
         # do model reload checks here
         if (
-            self.is_pipe_loaded and (  # memory options change
+                self.is_pipe_loaded and (  # memory options change
                 self.use_enable_sequential_cpu_offload != options.get("use_enable_sequential_cpu_offload", True)
-            )
+        )
         ) or (  # model change
-            self.model is not None
-            and self.model != requested_model
+                self.model is not None
+                and self.model != requested_model
         ):
             self.reload_model = True
 
         if ((self.controlnet_loaded and not enable_controlnet)
-            or (not self.controlnet_loaded and enable_controlnet)):
+                or (not self.controlnet_loaded and enable_controlnet)):
             self.initialized = False
 
         if self.prompt != options.get(f"prompt") or \
-           self.negative_prompt != options.get(f"negative_prompt") or \
-           action != self.action or \
-           self.reload_model:
+                self.negative_prompt != options.get(f"negative_prompt") or \
+                action != self.action or \
+                self.reload_model:
             self._prompt_embeds = None
             self._negative_prompt_embeds = None
 
@@ -743,7 +744,8 @@ class SDRunner(
 
     def error_handler(self, error):
         message = str(error)
-        if "got an unexpected keyword argument 'image'" in message and self.action in ["outpaint", "pix2pix", "depth2img"]:
+        if "got an unexpected keyword argument 'image'" in message and self.action in ["outpaint", "pix2pix",
+                                                                                       "depth2img"]:
             message = f"This model does not support {self.action}"
         traceback.print_exc()
         logger.error(error)
@@ -869,7 +871,7 @@ class SDRunner(
                 if self.deterministic_seed:
                     generator = [self.generator(seed=_i) for _i in range(4)]
                 else:
-                    generator = [self.generator(seed=self.seed+i) for i in range(4)]
+                    generator = [self.generator(seed=self.seed + i) for i in range(4)]
                 args["generator"] = generator
 
             if not self.is_upscale and not self.is_superresolution and not self.is_txt2vid:
@@ -1247,8 +1249,8 @@ class SDRunner(
         if self.is_txt2vid:
             data["video_filename"] = self.txt2vid_file
         steps = int(self.steps * self.strength) if (
-            not self.enable_controlnet and
-            (self.is_img2img or self.is_depth2img)
+                not self.enable_controlnet and
+                (self.is_img2img or self.is_depth2img)
         ) else self.steps
         self.send_message({
             "step": step,
@@ -1268,8 +1270,8 @@ class SDRunner(
         return image
 
     def generator_sample(
-        self,
-        data: dict
+            self,
+            data: dict
     ):
         self.send_message(f"Generating {'video' if self.is_txt2vid else 'image'}...")
 
@@ -1330,19 +1332,20 @@ class SDRunner(
     """
     Controlnet methods
     """
+
     def load_controlnet_from_ckpt(self, pipeline, config):
-            pipeline = self.controlnet_action_diffuser(
-                vae=pipeline.vae,
-                text_encoder=pipeline.text_encoder,
-                tokenizer=pipeline.tokenizer,
-                unet=pipeline.unet,
-                controlnet=self.controlnet(),
-                scheduler=pipeline.scheduler,
-                safety_checker=pipeline.safety_checker,
-                feature_extractor=pipeline.feature_extractor
-            )
-            self.controlnet_loaded = True
-            return pipeline
+        pipeline = self.controlnet_action_diffuser(
+            vae=pipeline.vae,
+            text_encoder=pipeline.text_encoder,
+            tokenizer=pipeline.tokenizer,
+            unet=pipeline.unet,
+            controlnet=self.controlnet(),
+            scheduler=pipeline.scheduler,
+            safety_checker=pipeline.safety_checker,
+            feature_extractor=pipeline.feature_extractor
+        )
+        self.controlnet_loaded = True
+        return pipeline
 
     def load_controlnet(self):
         logger.info(f"Loading controlnet {self.controlnet_type} self.controlnet_model {self.controlnet_model}")
@@ -1385,6 +1388,7 @@ class SDRunner(
             "controlnet_conditioning_scale": self.controlnet_conditioning_scale,
         }}
         return kwargs
+
     # end controlnet methods
 
     # Model methods
@@ -1422,21 +1426,21 @@ class SDRunner(
             kwargs["variant"] = "fp16"
 
         do_load_controlnet = (
-            (not self.controlnet_loaded and self.enable_controlnet) or
-            (self.controlnet_loaded and self.enable_controlnet)
+                (not self.controlnet_loaded and self.enable_controlnet) or
+                (self.controlnet_loaded and self.enable_controlnet)
         )
         do_unload_controlnet = (
-            (self.controlnet_loaded and not self.enable_controlnet) or
-            (not self.controlnet_loaded and not self.enable_controlnet)
+                (self.controlnet_loaded and not self.enable_controlnet) or
+                (not self.controlnet_loaded and not self.enable_controlnet)
         )
 
         reuse_pipeline = (
-            (self.is_txt2img and self.txt2img is None and self.img2img) or
-            (self.is_img2img and self.img2img is None and self.txt2img) or
-            ((
-                (self.is_txt2img and self.txt2img) or
-                (self.is_img2img and self.img2img)
-            ) and (do_load_controlnet or do_unload_controlnet))
+                (self.is_txt2img and self.txt2img is None and self.img2img) or
+                (self.is_img2img and self.img2img is None and self.txt2img) or
+                ((
+                         (self.is_txt2img and self.txt2img) or
+                         (self.is_img2img and self.img2img)
+                 ) and (do_load_controlnet or do_unload_controlnet))
         )
 
         if reuse_pipeline and not self.reload_model:
