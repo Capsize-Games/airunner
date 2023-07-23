@@ -409,27 +409,27 @@ class GeneratorMixin(LoraMixin):
         action = data["action"]
         metadata.add_text("action", action)
         if self.settings_manager.settings.image_export_metadata_prompt.get() is True:
-            metadata.add_text("prompt", options[f'{action}_prompt'])
+            metadata.add_text("prompt", options[f'prompt'])
         if self.settings_manager.settings.image_export_metadata_negative_prompt.get() is True:
-            metadata.add_text("negative_prompt", options[f'{action}_negative_prompt'])
+            metadata.add_text("negative_prompt", options[f'negative_prompt'])
         if self.settings_manager.settings.image_export_metadata_scale.get() is True:
-            metadata.add_text("scale", str(options[f"{action}_scale"]))
+            metadata.add_text("scale", str(options[f"scale"]))
         if self.settings_manager.settings.image_export_metadata_seed.get() is True:
-            metadata.add_text("seed", str(options[f"{action}_seed"]))
+            metadata.add_text("seed", str(options[f"seed"]))
         if self.settings_manager.settings.image_export_metadata_steps.get() is True:
-            metadata.add_text("steps", str(options[f"{action}_steps"]))
+            metadata.add_text("steps", str(options[f"steps"]))
         if self.settings_manager.settings.image_export_metadata_ddim_eta.get() is True:
-            metadata.add_text("ddim_eta", str(options[f"{action}_ddim_eta"]))
+            metadata.add_text("ddim_eta", str(options[f"ddim_eta"]))
         if self.settings_manager.settings.image_export_metadata_iterations.get() is True:
-            metadata.add_text("n_iter", str(options[f"{action}_n_iter"]))
+            metadata.add_text("n_iter", str(options[f"n_iter"]))
         if self.settings_manager.settings.image_export_metadata_samples.get() is True:
-            metadata.add_text("n_samples", str(options[f"{action}_n_samples"]))
+            metadata.add_text("n_samples", str(options[f"n_samples"]))
         if self.settings_manager.settings.image_export_metadata_model.get() is True:
-            metadata.add_text("model", str(options[f"{action}_model"]))
+            metadata.add_text("model", str(options[f"model"]))
         if self.settings_manager.settings.image_export_metadata_model_branch.get() is True:
-            metadata.add_text("model_branch", str(options[f"{action}_model_branch"]))
+            metadata.add_text("model_branch", str(options[f"model_branch"]))
         if self.settings_manager.settings.image_export_metadata_scheduler.get() is True:
-            metadata.add_text("scheduler", str(options[f"{action}_scheduler"]))
+            metadata.add_text("scheduler", str(options[f"scheduler"]))
         return metadata
 
     def auto_export_image(self, image, data):
@@ -490,7 +490,7 @@ class GeneratorMixin(LoraMixin):
         """
         action = data["action"]
         if not data["options"]["deterministic_seed"]:
-            data["options"][f"{action}_seed"] = data["options"][f"{action}_seed"] + index
+            data["options"][f"seed"] = data["options"][f"seed"] + index
         self.deterministic_data = data
         self.deterministic_index = index
         self.generate(image)
@@ -588,7 +588,7 @@ class GeneratorMixin(LoraMixin):
         """
         if self.deterministic_data:
             action = self.deterministic_data["action"]
-            self.seed = self.deterministic_data["options"][f"{action}_seed"]
+            self.seed = self.deterministic_data["options"][f"seed"]
         elif self.random_seed:
             seed = random.randint(0, MAX_SEED)
             self.seed = seed
@@ -611,7 +611,7 @@ class GeneratorMixin(LoraMixin):
     def do_deterministic_generation(self, extra_options):
         action = self.deterministic_data["action"]
         options = self.deterministic_data["options"]
-        options[f"{action}_prompt"] = self.deterministic_data[f"{action}_prompt"][self.deterministic_index]
+        options[f"prompt"] = self.deterministic_data[f"prompt"][self.deterministic_index]
         memory_options = self.get_memory_options()
         data = {
             "action": action,
@@ -680,27 +680,24 @@ class GeneratorMixin(LoraMixin):
 
         # get controlnet_dropdown from active tab
         options = {
-            f"{action}_prompt": prompt,
-            f"{action}_negative_prompt": negative_prompt,
-            f"{action}_steps": self.steps,
-            f"{action}_ddim_eta": self.ddim_eta,  # only applies to ddim scheduler
-            f"{action}_n_iter": 1,
-            f"{action}_width": self.working_width,
-            f"{action}_height": self.working_height,
-            f"{action}_n_samples": samples,
-            f"{action}_scale": self.scale / 100,
-            f"{action}_seed": self.seed,
-            f"{action}_model": model,
-            f"{action}_scheduler": self.scheduler,
-            f"{action}_model_path": model_path,
-            f"{action}_model_branch": model_branch,
-            f"{action}_lora": self.available_lora(action),
-            f"{action}_controlnet_conditioning_scale": self.controlnet_guidance_scale,
-            f"generator_section": self.currentTabSection,
-            f"width": self.working_width,
-            f"height": self.working_height,
+            "prompt": prompt,
+            "negative_prompt": negative_prompt,
+            "steps": self.steps,
+            "ddim_eta": self.ddim_eta,  # only applies to ddim scheduler
+            "n_iter": 1,
+            "n_samples": samples,
+            "scale": self.scale / 100,
+            "seed": self.seed,
+            "model": model,
+            "scheduler": self.scheduler,
+            "model_path": model_path,
+            "model_branch": model_branch,
+            "lora": self.available_lora(action),
+            "controlnet_conditioning_scale": self.controlnet_guidance_scale,
+            "generator_section": self.currentTabSection,
+            "width": self.working_width,
+            "height": self.working_height,
             "do_nsfw_filter": self.settings_manager.settings.nsfw_filter.get(),
-            "model_base_path": self.model_base_path,
             "pos_x": 0,
             "pos_y": 0,
             "outpaint_box_rect": self.active_rect,
@@ -709,7 +706,17 @@ class GeneratorMixin(LoraMixin):
             "controlnet": self.controlnet,
             "deterministic_generation": self.deterministic,
             "deterministic_seed": False,
-            "zeroshot": self.zeroshot
+            "zeroshot": self.zeroshot,
+            "model_base_path": self.model_base_path,
+            "outpaint_model_path": self.settings_manager.settings.outpaint_model_path.get(),
+            "pix2pix_model_path": self.settings_manager.settings.pix2pix_model_path.get(),
+            "depth2img_model_path": self.settings_manager.settings.depth2img_model_path.get(),
+            "upscale_model_path": self.settings_manager.settings.upscale_model_path.get(),
+            "gif_path": self.settings_manager.settings.gif_path.get(),
+            "image_path": self.settings_manager.settings.image_path.get(),
+            "lora_path": self.settings_manager.settings.lora_path.get(),
+            "embeddings_path": self.settings_manager.settings.embeddings_path.get(),
+            "video_path": self.settings_manager.settings.video_path.get(),
         }
 
         if action == "superresolution":
@@ -717,7 +724,7 @@ class GeneratorMixin(LoraMixin):
             options["original_image_height"] = self.canvas.current_active_image_data.image.height
 
         if action in ["txt2img", "img2img", "outpaint", "depth2img", "pix2pix"]:
-            options[f"{action}_strength"] = self.strength / 100.0
+            options[f"strength"] = self.strength / 100.0
 
         if action == "pix2pix":
             options[f"pix2pix_image_guidance_scale"] = self.image_scale

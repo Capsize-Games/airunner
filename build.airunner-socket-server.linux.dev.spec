@@ -5,7 +5,6 @@ from PyInstaller.utils.hooks import copy_metadata, collect_data_files
 import sys ; sys.setrecursionlimit(sys.getrecursionlimit() * 5)
 os.environ["AIRUNNER_ENVIRONMENT"] = "prod"
 libraries = [
-    "./venv/lib/python3.10/site-packages/PyQt6/Qt6/lib/",
     "/usr/lib/x86_64-linux-gnu/wine-development/",
     "./venv/lib/python3.10/site-packages/h5py.libs/",
     "./venv/lib/python3.10/site-packages/scipy.libs/",
@@ -24,11 +23,11 @@ os.environ["LD_LIBRARY_PATH"] = ":".join(libraries)
 block_cipher = None
 DEBUGGING = True
 EXCLUDE_BINARIES = True
-EXE_NAME = "airunner"  # used when creating a binary instead of a folder
+EXE_NAME = "airunner-socket-server"  # used when creating a binary instead of a folder
 EXE_STRIP = False
 EXE_UPX = True
 EXE_RUNTIME_TMP_DIR = None
-COLLECT_NAME = 'airunner'
+COLLECT_NAME = 'airunner-socket-server'
 COLLECT_STRIP = False
 COLLECT_UPX = True
 datas = []
@@ -53,7 +52,7 @@ datas += collect_data_files("sympy", include_py_files=True)
 datas += collect_data_files("controlnet_aux", include_py_files=True)
 a = Analysis(
     [
-        f'./src/airunner/main.py',
+        f'./src/airunner/aihandler/socket_server.py',
     ],
     pathex=[
         "./venv/lib/python3.10/site-packages/",
@@ -69,8 +68,6 @@ a = Analysis(
     ],
     datas=datas,
     hiddenimports=[
-        "airunner",
-        "airunner.extensions",
         "JIT",
         "tqdm",
         "diffusers",
@@ -161,19 +158,14 @@ coll = COLLECT(
 )
 
 # copy files for distribution
-shutil.copytree('./src/airunner/pyqt', './dist/airunner/pyqt')
-shutil.copyfile('./linux.itch.toml', './dist/airunner/.itch.toml')
-shutil.copytree('./src/airunner/src/icons', './dist/airunner/src/icons')
-shutil.copytree('./src/airunner/data', './dist/airunner/data')
-shutil.copyfile('./src/airunner/src/icon_256.png', './dist/airunner/src/icon_256.png')
-shutil.copyfile('./src/airunner/src/splashscreen.png', './dist/airunner/src/splashscreen.png')
+shutil.copytree('./src/airunner/data', './dist/airunner-socket-server/data')
 
 # copy sd config files
 os.makedirs('./dist/airunner/diffusers/pipelines/stable_diffusion', exist_ok=True)
-shutil.copyfile('./src/airunner/v1.yaml', './dist/airunner/v1.yaml')
-shutil.copyfile('./src/airunner/v2.yaml', './dist/airunner/v2.yaml')
+shutil.copyfile('./src/airunner/v1.yaml', './dist/airunner-socket-server/v1.yaml')
+shutil.copyfile('./src/airunner/v2.yaml', './dist/airunner-socket-server/v2.yaml')
 
 shutil.copyfile(
     f'./venv/lib/python3.10/site-packages/JIT/__pycache__/random.cpython-310.pyc',
-    f'./dist/airunner/random.pyc'
+    f'./dist/airunner-socket-server/random.pyc'
 )

@@ -134,8 +134,8 @@ class PromptBuilderWidget(BaseWidget):
         """
         self.process_prompt()
         if self.app.use_prompt_builder_checkbox:
-            options[f"{self.app.action}_prompt"] = self.advanced_prompt_text.toPlainText()
-            options[f"{self.app.action}_negative_prompt"] = self.advanced_negative_prompt_text.toPlainText()
+            options[f"prompt"] = self.advanced_prompt_text.toPlainText()
+            options[f"negative_prompt"] = self.advanced_negative_prompt_text.toPlainText()
             options[f"prompt_data"] = self.prompt_data
 
     def set_stylesheet(self):

@@ -58,14 +58,14 @@ class SchedulerMixin:
         if (
             not force_scheduler_name and
             self._scheduler and not self.do_change_scheduler and
-            self.options.get(f"{self.action}_scheduler") == self.current_scheduler_name
+            self.options.get(f"scheduler") == self.current_scheduler_name
         ):
             return self._scheduler
 
         if not self.model_path or self.model_path == "":
             traceback.print_stack()
             raise Exception("Chicken / egg problem, model path not set")
-        self.current_scheduler_name = force_scheduler_name if force_scheduler_name else self.options.get(f"{self.action}_scheduler")
+        self.current_scheduler_name = force_scheduler_name if force_scheduler_name else self.options.get(f"scheduler")
         scheduler_name = force_scheduler_name if force_scheduler_name else self.scheduler_name
         if not force_scheduler_name and scheduler_name not in AVAILABLE_SCHEDULERS_BY_ACTION[self.scheduler_section]:
             scheduler_name = AVAILABLE_SCHEDULERS_BY_ACTION[self.scheduler_section][0]
@@ -123,7 +123,7 @@ class SchedulerMixin:
             logger.warning("Unable to change scheduler, model_path is not set")
 
     def _prepare_scheduler(self):
-        scheduler_name = self.options.get(f"{self.action}_scheduler", "euler_a")
+        scheduler_name = self.options.get(f"scheduler", "euler_a")
         if self.scheduler_name != scheduler_name:
             logger.info("Prepare scheduler")
             self.send_message("Preparing scheduler...")

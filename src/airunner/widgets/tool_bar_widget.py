@@ -56,6 +56,10 @@ class ToolBarWidget(BaseWidget):
             self.grid_button.setChecked(True)
         self.toggle_nsfw_filter(self.app.settings_manager.settings.nsfw_filter.get())
 
+        self.crop_button.deleteLater()
+        self.move_button.deleteLater()
+        self.select_button.deleteLater()
+
     def set_tool(self, tool):
         # uncheck all buttons that are not currently selected
         for button_name in self.tool_buttons:

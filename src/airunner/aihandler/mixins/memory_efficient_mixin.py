@@ -10,38 +10,6 @@ logger.set_level(logger.DEBUG)
 class MemoryEfficientMixin:
     torch_compile_applied: bool = False
 
-    @property
-    def use_last_channels(self):
-        return self.settings_manager.settings.use_last_channels.get() and not self.is_txt2vid
-
-    @property
-    def use_enable_sequential_cpu_offload(self):
-        return self.settings_manager.settings.use_enable_sequential_cpu_offload.get()
-
-    @property
-    def use_attention_slicing(self):
-        return self.settings_manager.settings.use_attention_slicing.get()
-
-    @property
-    def use_tf32(self):
-        return self.settings_manager.settings.use_tf32.get()
-
-    @property
-    def enable_vae_slicing(self):
-        return self.settings_manager.settings.use_enable_vae_slicing.get()
-
-    @property
-    def use_accelerated_transformers(self):
-        return self.cuda_is_available and self.settings_manager.settings.use_accelerated_transformers.get()
-
-    @property
-    def use_torch_compile(self):
-        return self.settings_manager.settings.use_torch_compile.get()
-
-    @property
-    def use_tiled_vae(self):
-        return self.settings_manager.settings.use_tiled_vae.get()
-
     def apply_last_channels(self):
         if self.use_kandinsky or self.is_txt2vid or self.is_shapegif:
             return
@@ -90,7 +58,7 @@ class MemoryEfficientMixin:
     def apply_accelerated_transformers(self):
         if self.use_kandinsky:
             return
-        if not (self.cuda_is_available and self.settings_manager.settings.use_accelerated_transformers.get()):
+        if not self.cuda_is_available or not self.use_accelerated_transformers:
             logger.info("Disabling accelerated transformers")
             self.pipe.unet.set_default_attn_processor()
 
@@ -119,7 +87,7 @@ class MemoryEfficientMixin:
         if unet_path is None or unet_path == "":
             unet_path = os.path.join(self.model_base_path, "compiled_unet")
         file_path = os.path.join(os.path.join(unet_path, self.model_path))
-        model_name = self.options.get(f"{self.action}_model", None)
+        model_name = self.options.get(f"model", None)
         file_name = f"{model_name}.pt"
         if os.path.exists(os.path.join(file_path, file_name)):
             self.load_unet(file_path, file_name)

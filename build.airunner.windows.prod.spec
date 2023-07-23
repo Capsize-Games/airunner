@@ -22,7 +22,6 @@ COLLECT_STRIP = False
 COLLECT_UPX = True
 
 datas = []
-datas += copy_metadata('aihandler')
 datas += copy_metadata('tqdm')
 datas += copy_metadata('regex')
 datas += copy_metadata('requests')
@@ -67,7 +66,6 @@ a = Analysis(
     ],
     datas=datas,
     hiddenimports=[
-        "aihandler",
         "airunner",
         "airunner.extensions",
         "accelerate",
