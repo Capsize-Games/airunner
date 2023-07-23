@@ -115,13 +115,16 @@ class CanvasImageMixin:
         im = self.current_active_image_data
         if not im:
             return
-        output = io.BytesIO()
-        if self.parent.is_windows:
-            im.image.save(output, format="DIB")
-            self.image_to_system_clipboard_windows(output.getvalue())
-        else:
-            im.image.save(output, format="PNG")
-            self.image_to_system_clipboard_linux(output.getvalue())
+        try:
+            output = io.BytesIO()
+            if self.parent.is_windows:
+                im.image.save(output, format="DIB")
+                self.image_to_system_clipboard_windows(output.getvalue())
+            else:
+                im.image.save(output, format="PNG")
+                self.image_to_system_clipboard_linux(output.getvalue())
+        except AttributeError:
+            pass
 
     def image_to_system_clipboard_windows(self, data):
         import win32clipboard
