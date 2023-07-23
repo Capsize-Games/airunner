@@ -9,7 +9,7 @@ class TexttovideoMixin:
     @property
     def video_path(self):
         path = os.path.join(self.model_base_path, "videos")
-        video_path = self.settings_manager.settings.video_path.get()
+        video_path = self.video_path
         if video_path and video_path != "":
             path = video_path
         if not os.path.exists(path):

@@ -20,6 +20,7 @@ class OfflineClient(QtCore.QObject):
     request_worker = None
     response_worker_thread = None
     request_worker_thread = None
+    do_base64: bool = False
 
     @property
     def message(self):
@@ -34,10 +35,10 @@ class OfflineClient(QtCore.QObject):
         Set the message property
         """
         if msg == "cancel":
-            self.logger.info("cancel message recieved")
+            logger.info("cancel message recieved")
             self.cancel()
         else:
-            self.logger.info("Putting message in queue")
+            logger.info("Putting message in queue")
             self.queue.put(msg)
 
     @property
@@ -64,14 +65,14 @@ class OfflineClient(QtCore.QObject):
         super().__init__(
             parent=kwargs.get("parent", None)
         )
+        self.do_base64 = kwargs.get("do_base64", None)
         self.app = kwargs.get("app", None)
-        self.settings_manager = kwargs.get("settings_manager", None)
         self.quit_event = BooleanVar()
         self.queue = queue.Queue()
         self.res_queue = queue.Queue()
         self.quit_event.set(False)
-        self.logger = logging.getLogger()
         self.message_var = kwargs.get("message_var")
+        self.message_handler = kwargs.get("message_handler")
         self.do_start()
 
     def do_start(self):
@@ -81,7 +82,7 @@ class OfflineClient(QtCore.QObject):
         #     name="init stable diffusion runner"
         # )
         # sd_runner_thread.join()
-        self.logger.info("Starting offline client")
+        logger.info("Starting offline client")
         self.init_sd_runner()
         self.force_request_worker_reset()
 
@@ -89,11 +90,11 @@ class OfflineClient(QtCore.QObject):
         # save sd_runner to disc and load from it next time
         # this is to avoid the overhead of creating a new sd_runner
         # every time we start the client
-        self.logger.info("Initialzing SDRunner")
+        logger.info("Initialzing SDRunner")
         self.sd_runner = SDRunner(
             app=self.app,
             message_var=self.message_var,
-            settings_manager=self.settings_manager,
+            message_handler=self.message_handler
         )
 
     def handle_response(self, response):
@@ -109,12 +110,14 @@ class OfflineClient(QtCore.QObject):
             self.message = response
 
     def handle_error(self, error):
-        self.logger.error(error)
+        logger.error(error)
 
     def callback(self, data):
         action = data.get("action")
-        model = None
-        model = data["options"][f"{data['action']}_model"]
+        model = data["options"][f"model"]
+
+        data["do_base64"] = self.do_base64
+
         # on model change, reload the runner
         if (action in ("txt2img", "img2img") and self.current_txt2img_model != model) or (action in ("inpaint", "outpaint") and self.current_inpaint_model != model):
             do_reload = False
