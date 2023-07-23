@@ -1,5 +1,6 @@
 import logging
 from airunner.aihandler.settings import LOG_LEVEL
+import warnings
 
 
 class Logger:
@@ -7,29 +8,22 @@ class Logger:
     Wrapper class for logging
     """
 
-    def __init__(self):
-        # disable warnings
-        import warnings
-        warnings.filterwarnings("ignore")
+    # disable warnings
+    warnings.filterwarnings("ignore")
 
-        self.DEBUG = logging.DEBUG
-        self.INFO = logging.INFO
-        self.WARNING = logging.WARNING
-        self.ERROR = logging.ERROR
-        self.FATAL = logging.FATAL
+    DEBUG = logging.DEBUG
+    INFO = logging.INFO
+    WARNING = logging.WARNING
+    ERROR = logging.ERROR
+    FATAL = logging.FATAL
 
-        self.logger = logging.getLogger()
-        self.stream_handler = logging.StreamHandler()
-        self.set_level(logging.DEBUG)
-        self.formatter = logging.Formatter("%(asctime)s - %(name)s - %(levelname)s - %(message)s - %(lineno)d")
-        self.stream_handler.setFormatter(self.formatter)
-        self.logger.addHandler(self.stream_handler)
-        logging.disable(LOG_LEVEL)
-        logging.getLogger("lightning").setLevel(logging.WARNING)
-        logging.getLogger("lightning_fabric.utilities.seed").setLevel(logging.WARNING)
-        self.set_level(self.DEBUG)
+    logger = logging.getLogger()
+    stream_handler = logging.StreamHandler()
 
-    def set_level(self, level):
+    formatter = logging.Formatter("%(asctime)s - %(name)s - %(levelname)s - %(message)s - %(lineno)d")
+
+    @classmethod
+    def set_level(cls, level):
         """
         Set the logging level
         :param level:
@@ -37,40 +31,50 @@ class Logger:
         """
         if level is None:
             level = logging.DEBUG
-        self.logger.setLevel(level)
-        self.stream_handler.setLevel(level)
+        cls.logger.setLevel(level)
+        cls.stream_handler.setLevel(level)
 
-    def debug(self, msg):
+    @classmethod
+    def debug(cls, msg):
         """
         Log info message
         :param msg:
         :return: None
         """
-        self.logger.debug(msg)
+        cls.logger.debug(msg)
 
-    def info(self, msg):
+    @classmethod
+    def info(cls, msg):
         """
         Log info message
         :param msg:
         :return: None
         """
-        self.logger.info(msg)
+        cls.logger.info(msg)
 
-    def warning(self, msg):
+    @classmethod
+    def warning(cls, msg):
         """
         Log warning message
         :param msg:
         :return: None
         """
-        self.logger.warning(msg)
+        cls.logger.warning(msg)
 
-    def error(self, msg):
+    @classmethod
+    def error(cls, msg):
         """
         Log error message
         :param msg:
         :return: None
         """
-        self.logger.error(msg)
+        cls.logger.error(msg)
 
 
-logger = Logger()
+Logger.set_level(logging.DEBUG)
+Logger.stream_handler.setFormatter(Logger.formatter)
+Logger.logger.addHandler(Logger.stream_handler)
+logging.disable(LOG_LEVEL)
+logging.getLogger("lightning").setLevel(logging.WARNING)
+logging.getLogger("lightning_fabric.utilities.seed").setLevel(logging.WARNING)
+Logger.set_level(logging.DEBUG)
