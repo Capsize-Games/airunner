@@ -86,21 +86,29 @@ class CanvasImageMixin:
         if not img:
             return
 
+        # apply the layer offset
+        x = image_data.position.x() + self.pos_x
+        y = image_data.position.y() + self.pos_y
+        location = QPoint(int(x), int(y))  # + layer.offset
+
+        rect = self.viewport_rect
+
+        # only create a image of the visible area, apply offset
         img = img.copy().crop((
-            self.viewport_rect.x(),
-            self.viewport_rect.y(),
-            self.viewport_rect.width(),
-            self.viewport_rect.height()
+            rect.x() - location.x(),
+            rect.y() - location.y(),
+            rect.x() + rect.width() - location.x(),
+            rect.y() + rect.height() - location.y()
         ))
         return img
 
     def draw_images(self, layer, painter):
         img = self.visible_image(layer=layer)
         if img:
-            offset = layer.offset + QPoint(self.pos_x, self.pos_y)
+            offset = layer.offset
             qimage = ImageQt(img)
             pixmap = QPixmap.fromImage(qimage)
-            painter.drawPixmap(offset, pixmap)
+            painter.drawPixmap(QPoint(0, 0), pixmap)
             # painter.drawPixmap(offset, pixmap)
 
     def copy_image(self):
@@ -146,7 +154,7 @@ class CanvasImageMixin:
             image = Image.open(io.BytesIO(data))
             return image
         except Exception as e:
-            #self.parent.error_handler(str(e))
+            # self.parent.error_handler(str(e))
             print(e)
             return None
 
@@ -186,7 +194,7 @@ class CanvasImageMixin:
             image=image,
             opacity=self.current_layer.opacity
         )
-        #self.set_image_opacity(self.get_layer_opacity(self.current_layer_index))
+        # self.set_image_opacity(self.get_layer_opacity(self.current_layer_index))
 
     def invert_image(self):
         # convert image mode to RGBA
@@ -225,7 +233,8 @@ class CanvasImageMixin:
 
         # if settings_manager.settings.resize_on_paste, resize the image to working width and height while mainting its aspect ratio
         if self.settings_manager.settings.resize_on_paste.get():
-            image.thumbnail((self.settings_manager.settings.working_width.get(), self.settings_manager.settings.working_height.get()), Image.ANTIALIAS)
+            image.thumbnail((self.settings_manager.settings.working_width.get(),
+                             self.settings_manager.settings.working_height.get()), Image.ANTIALIAS)
 
         self.create_image(QPoint(0, 0), image)
         self.update()
@@ -261,7 +270,7 @@ class CanvasImageMixin:
         processed_image = processed_image.convert("RGBA")
         section = data["action"] if not section else section
         outpaint_box_rect = data["options"]["outpaint_box_rect"]
-        if section not in["superresolution", "upscale"]:
+        if section not in ["superresolution", "upscale"]:
             processed_image, image_root_point, image_pivot_point = self.handle_outpaint(
                 outpaint_box_rect,
                 processed_image,
@@ -465,7 +474,7 @@ class CanvasImageMixin:
 
         return new_image, image_root_point, image_pivot_point
 
-    def add_image_to_canvas(self, image, image_root_point, image_pivot_point, layer:LayerData=None):
+    def add_image_to_canvas(self, image, image_root_point, image_pivot_point, layer: LayerData = None):
         self.parent.history.add_event({
             "event": "set_image",
             "layer_index": self.current_layer_index,
