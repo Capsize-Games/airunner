@@ -60,7 +60,6 @@ class SDRunner(
         "options": {}
     }
     _model = None
-    reload_model = False
     requested_data = None
 
     # controlnet atributes
