@@ -120,6 +120,7 @@
     <addaction name="separator"/>
     <addaction name="actionInvert"/>
     <addaction name="actionFilm"/>
+    <addaction name="actionHalftone"/>
    </widget>
    <widget class="QMenu" name="menuAbout">
     <property name="tearOffEnabled">
@@ -153,6 +154,8 @@
     </property>
     <addaction name="actionImport"/>
     <addaction name="actionExport"/>
+    <addaction name="separator"/>
+    <addaction name="actionQuick_Export"/>
    </widget>
    <widget class="QMenu" name="menuPrompts">
     <property name="title">
@@ -602,6 +605,19 @@
    </property>
    <property name="shortcut">
     <string>Ctrl+X</string>
+   </property>
+  </action>
+  <action name="actionHalftone">
+   <property name="text">
+    <string>Halftone</string>
+   </property>
+  </action>
+  <action name="actionQuick_Export">
+   <property name="text">
+    <string>Fast Export</string>
+   </property>
+   <property name="shortcut">
+    <string>Ctrl+Shift+E</string>
    </property>
   </action>
  </widget>

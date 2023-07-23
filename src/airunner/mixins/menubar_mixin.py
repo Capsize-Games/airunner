@@ -1,3 +1,5 @@
+import os
+
 from PyQt6.QtWidgets import QFileDialog
 
 from airunner.filters.filter_halftone import FilterHalftone
@@ -23,6 +25,7 @@ class MenubarMixin:
         self.actionLoad.triggered.connect(self.load_document)
         self.actionImport.triggered.connect(self.import_image)
         self.actionExport.triggered.connect(self.export_image)
+        self.actionQuick_Export.triggered.connect(self.quick_export)
         self.actionQuit.triggered.connect(self.quit)
         self.actionPaste.triggered.connect(self.paste_image)
         self.actionCopy.triggered.connect(self.copy_image)
@@ -87,6 +90,21 @@ class MenubarMixin:
         if file_path == "":
             return
         self.canvas.save_image(file_path)
+
+    def quick_export(self):
+        if os.path.isdir(self.image_path) is False:
+            self.choose_image_export_path()
+        if os.path.isdir(self.image_path) is False:
+            return
+        self.auto_export_image(self.canvas.current_layer.image_data.image)
+
+
+    def choose_image_export_path(self):
+        # display a dialog to choose the export path
+        path = QFileDialog.getExistingDirectory(None, "Select Directory")
+        if path == "":
+            return
+        self.settings_manager.settings.image_path.set(path)
 
     def display_file_export_dialog(self):
         return QFileDialog.getSaveFileName(

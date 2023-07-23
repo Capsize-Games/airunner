@@ -8,25 +8,25 @@ class ToolBarWidget(BaseWidget):
     icons = {
         # "move_button": "013-move-selector",
         "active_grid_area_button": "038-drag",
-        "move_button": "013-move-selector",
-        "select_button": "040-select",
-        "crop_button": "001-crop",
-        "zoom_button": "015-zoom-in",
         "eraser_button": "014-eraser",
         "brush_button": "011-pencil",
         "grid_button": "032-pixels",
         "nsfw_button": "039-18",
         "focus_button": "037-focus",
-        "settings_button": "settings"
+        "settings_button": "settings",
+        # "move_button": "013-move-selector",
+        # "select_button": "040-select",
+        # "crop_button": "001-crop",
+        # "zoom_button": "015-zoom-in",
     }
     tool_buttons = [
         "eraser",
         "brush",
         "active_grid_area",
-        "move",
-        "select",
-        "crop",
-        "zoom"
+        # "move",
+        # "select",
+        # "crop",
+        # "zoom"
     ]
 
     def set_stylesheet(self):
@@ -59,6 +59,7 @@ class ToolBarWidget(BaseWidget):
         self.crop_button.deleteLater()
         self.move_button.deleteLater()
         self.select_button.deleteLater()
+        self.zoom_button.deleteLater()
 
     def set_tool(self, tool):
         # uncheck all buttons that are not currently selected

@@ -432,12 +432,12 @@ class GeneratorMixin(LoraMixin):
             metadata.add_text("scheduler", str(options[f"scheduler"]))
         return metadata
 
-    def auto_export_image(self, image, data):
+    def auto_export_image(self, image, data=None):
         """
         Export image along with stats to image_path
         :return:
         """
-        if data["action"] == "txt2vid":
+        if data and data["action"] == "txt2vid":
             return
         base_path = self.settings_manager.settings.model_base_path.get()
         image_path = self.settings_manager.settings.image_path.get()
@@ -447,18 +447,28 @@ class GeneratorMixin(LoraMixin):
             os.makedirs(path)
         # check for existing files, if they exist, increment the filename. filename should be in the format
         # <action>_<seed>_<N>.png
-        extension = f".{self.settings_manager.settings.image_export_type.get()}"
-        filename = data["action"] + "_" + str(self.seed)
+        extension = self.settings_manager.settings.image_export_type.get()
+        if extension == "":
+            extension = "png"
+        extension = f".{extension}"
+        if data:
+            filename = data["action"] + "_" + str(self.seed)
+        else:
+            filename = "image"
         if os.path.exists(os.path.join(path, filename + extension)):
             i = 1
             while os.path.exists(os.path.join(path, filename + "_" + str(i) + extension)):
                 i += 1
             filename = filename + "_" + str(i)
-        metadata = self.prepare_metadata(data)
+        if data:
+            metadata = self.prepare_metadata(data)
+        else:
+            metadata = None
         if metadata:
             image.save(os.path.join(path, filename + extension), pnginfo=metadata)
         else:
             image.save(os.path.join(path, filename + extension))
+        self.set_status_label(f"Image exported to {os.path.join(path, filename + extension)}")
 
     def generate_callback(self):
         self.generate(True)
