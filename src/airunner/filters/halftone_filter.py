@@ -26,7 +26,6 @@ class HalftoneFilter(ImageFilter.Filter):
 
     def filter(self, image):
         img = image.convert(self.color_mode)
-        print(self.color_mode)
         sample = self.sample + 2
 
         width, height = img.size
