@@ -143,11 +143,6 @@
     <addaction name="actionModel_Merger"/>
     <addaction name="separator"/>
    </widget>
-   <widget class="QMenu" name="menuView">
-    <property name="title">
-     <string>View</string>
-    </property>
-   </widget>
    <widget class="QMenu" name="menuImage">
     <property name="title">
      <string>Image</string>
@@ -168,7 +163,6 @@
    <addaction name="menuEdit"/>
    <addaction name="menuImage"/>
    <addaction name="menuPrompts"/>
-   <addaction name="menuView"/>
    <addaction name="menuModel_merge"/>
    <addaction name="menuFilters"/>
    <addaction name="menuAbout"/>
