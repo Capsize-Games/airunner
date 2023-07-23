@@ -627,11 +627,11 @@ class SDRunner(
 
     @property
     def is_ckpt_model(self):
-        return self._is_ckpt_file(self.model)
+        return self.is_ckpt_file(self.model)
 
     @property
     def is_safetensors(self):
-        return self._is_safetensor_file(self.model)
+        return self.is_safetensor_file(self.model)
 
     @property
     def data_type(self):
@@ -695,7 +695,7 @@ class SDRunner(
             self.compel_proc = None
             self.prompt_embeds = None
             self.negative_prompt_embeds = None
-            self._load_model()
+            self.load_model()
             self.reload_model = False
             self.initialized = True
 
@@ -1136,7 +1136,7 @@ class SDRunner(
         if self.do_clear_kandinsky:
             self.clear_kandinsky()
         self._prepare_scheduler()
-        self._prepare_model()
+        self.prepare_model()
         self.initialize()
         self._change_scheduler()
 
@@ -1413,7 +1413,7 @@ class SDRunner(
                 del val
         self.clear_memory()
 
-    def _load_model(self):
+    def load_model(self):
         logger.info("Loading model...")
         self.torch_compile_applied = False
         self.lora_loaded = False
@@ -1542,22 +1542,17 @@ class SDRunner(
             self.img2img = pipe
             self.txt2img = None
 
-    def _is_ckpt_file(self, model):
+    def is_ckpt_file(self, model):
         if not model:
             raise ValueError("ckpt path is empty")
         return model.endswith(".ckpt")
 
-    def _is_safetensor_file(self, model):
+    def is_safetensor_file(self, model):
         if not model:
             raise ValueError("safetensors path is empty")
         return model.endswith(".safetensors")
 
-    def _do_reload_model(self):
-        logger.info("Reloading model")
-        if self.reload_model:
-            self._load_model()
-
-    def _prepare_model(self):
+    def prepare_model(self):
         logger.info("Prepare model")
         # get model and switch to it
 
@@ -1568,7 +1563,7 @@ class SDRunner(
 
         self._previous_model = self.current_model
 
-        if self._is_ckpt_file(model_name):
+        if self.is_ckpt_file(model_name):
             self.current_model = model_name
         else:
             self.current_model = self.options.get(f"model_path", None)
