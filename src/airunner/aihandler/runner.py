@@ -449,15 +449,8 @@ class SDRunner(
     @property
     def cuda_error_message(self):
         if self.is_superresolution and self.scheduler_name == "DDIM":
-            return f"""
-            Unable to run the model at {self.width}x{self.height} resolution using the DDIM scheduler. 
-            Try changing the scheduler to LMS or PNDM and try again.
-            """
-
-        return f"""
-        You may not have enough GPU memory to run the model at {self.width}x{self.height} resolution. 
-        Potential solutions: try again, restart the application, use a smaller size, upgrade your GPU.
-        """
+            return f"Unable to run the model at {self.width}x{self.height} resolution using the DDIM scheduler. Try changing the scheduler to LMS or PNDM and try again."
+        return f"You may not have enough GPU memory to run the model at {self.width}x{self.height} resolution. Potential solutions: try again, restart the application, use a smaller size, upgrade your GPU."
 
     @property
     def is_pipe_loaded(self):
@@ -849,12 +842,12 @@ class SDRunner(
             images = None
             if output:
                 try:
-                    images = output["images"]
+                    images = output.images
                 except AttributeError:
                     pass
                 if self.action_has_safety_checker:
                     try:
-                        nsfw_content_detected = output["nsfw_content_detected"]
+                        nsfw_content_detected = output.nsfw_content_detected
                     except AttributeError:
                         pass
             return images, nsfw_content_detected
@@ -1334,9 +1327,6 @@ class SDRunner(
             self.scheduler_name = ""
             self._current_model = ""
             self.local_files_only = True
-
-            # handle the error (sends to client)
-            self.log_error(error)
 
     def cancel(self):
         self.do_cancel = True
