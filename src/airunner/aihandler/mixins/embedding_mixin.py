@@ -1,6 +1,5 @@
 import os
-import torch
-from airunner.aihandler.logger import logger
+from airunner.aihandler.logger import Logger as logger
 from airunner.aihandler.settings import MessageCode
 
 
