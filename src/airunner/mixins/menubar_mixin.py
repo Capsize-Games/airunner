@@ -121,6 +121,7 @@ class MenubarMixin:
 
     def paste_image(self):
         self.canvas.paste_image_from_clipboard()
+        self.canvas.current_layer.layer_widget.set_thumbnail()
 
     def copy_image(self):
         self.canvas.copy_image()
