@@ -12,9 +12,9 @@ from PyQt6.QtWidgets import QApplication, QFileDialog, QSplashScreen, QMainWindo
 from PyQt6.QtCore import pyqtSlot, Qt, QThread, pyqtSignal, QObject, QTimer
 from PyQt6.QtGui import QGuiApplication, QPixmap, QShortcut, QKeySequence
 
-from airunner.aihandler.database import GENERATORS
-from airunner.aihandler.qtvar import TQDMVar, ImageVar, MessageHandlerVar, ErrorHandlerVar
-from airunner.aihandler.logger import logger
+from airunner.aihandler.qtvar import MessageHandlerVar
+from airunner.aihandler.logger import Logger as logger
+from airunner.aihandler.pyqt_client import OfflineClient
 from airunner.aihandler.settings import LOG_LEVEL, MessageCode
 from airunner.mixins.canvas_mixin import CanvasMixin
 from airunner.mixins.comic_mixin import ComicMixin

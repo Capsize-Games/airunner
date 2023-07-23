@@ -1,5 +1,5 @@
 import traceback
-from airunner.aihandler.logger import logger
+from airunner.aihandler.logger import Logger as logger
 from airunner.aihandler.settings import AVAILABLE_SCHEDULERS_BY_ACTION
 from airunner.aihandler.settings import DPM_PP_2M_K
 

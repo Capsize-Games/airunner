@@ -2,7 +2,7 @@ from PyQt6.QtCore import Qt, QPoint, QRect
 from PyQt6.QtGui import QColor, QPainter, QBrush, QCursor, QIcon
 from PyQt6.QtWidgets import QSpacerItem, QSizePolicy, QVBoxLayout, QWidget
 
-from airunner.aihandler.logger import logger
+from airunner.aihandler.logger import Logger as logger
 from airunner.aihandler.qtvar import BooleanVar
 from airunner.cursors.circle_brush import CircleCursor
 from airunner.mixins.canvas_active_grid_area_mixin import CanvasActiveGridAreaMixin
