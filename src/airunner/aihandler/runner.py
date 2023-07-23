@@ -668,6 +668,60 @@ class SDRunner(
     def is_dev_env(self):
         return AIRUNNER_ENVIRONMENT == "dev"
 
+    @staticmethod
+    def latents_to_image(latents: torch.Tensor):
+        image = latents.permute(0, 2, 3, 1)
+        image = image.detach().cpu().numpy()
+        image = image[0]
+        image = (image * 255).astype(np.uint8)
+        image = Image.fromarray(image)
+        return image
+
+    @staticmethod
+    def clear_memory():
+        logger.info("Clearing memory")
+        torch.cuda.empty_cache()
+        gc.collect()
+
+    @staticmethod
+    def apply_filters(image, filters):
+        for image_filter in filters:
+            filter_type = FilterType(image_filter["filter_name"])
+            if filter_type is FilterType.PIXEL_ART:
+                scale = 4
+                colors = 24
+                for option in image_filter["options"]:
+                    option_name = option["name"]
+                    val = option["value"]
+                    if option_name == "scale":
+                        scale = val
+                    elif option_name == "colors":
+                        colors = val
+                width = image.width
+                height = image.height
+                image = image.quantize(colors)
+                image = image.resize((int(width / scale), int(height / scale)), resample=Image.NEAREST)
+                image = image.resize((width, height), resample=Image.NEAREST)
+        return image
+
+    @staticmethod
+    def image_to_base64(image):
+        buffered = BytesIO()
+        image.save(buffered, format="PNG")
+        return base64.b64encode(buffered.getvalue()).decode("utf-8")
+
+    @staticmethod
+    def is_ckpt_file(model):
+        if not model:
+            raise ValueError("ckpt path is empty")
+        return model.endswith(".ckpt")
+
+    @staticmethod
+    def is_safetensor_file(model):
+        if not model:
+            raise ValueError("safetensors path is empty")
+        return model.endswith(".safetensors")
+
     def __init__(self, **kwargs):
         logger.set_level(LOG_LEVEL)
         self.app = kwargs.get("app", None)
@@ -683,11 +737,6 @@ class SDRunner(
         self.superresolution = None
         self.txt2vid = None
         self.upscale = None
-
-    def clear_memory(self):
-        logger.info("Clearing memory")
-        torch.cuda.empty_cache()
-        gc.collect()
 
     def initialize(self):
         # get classname of self.action_diffuser
@@ -1171,31 +1220,6 @@ class SDRunner(
 
         self.current_sample = 0
 
-    def apply_filters(self, image, filters):
-        for image_filter in filters:
-            filter_type = FilterType(image_filter["filter_name"])
-            if filter_type is FilterType.PIXEL_ART:
-                scale = 4
-                colors = 24
-                for option in image_filter["options"]:
-                    option_name = option["name"]
-                    val = option["value"]
-                    if option_name == "scale":
-                        scale = val
-                    elif option_name == "colors":
-                        colors = val
-                width = image.width
-                height = image.height
-                image = image.quantize(colors)
-                image = image.resize((int(width / scale), int(height / scale)), resample=Image.NEAREST)
-                image = image.resize((width, height), resample=Image.NEAREST)
-        return image
-
-    def image_to_base64(self, image):
-        buffered = BytesIO()
-        image.save(buffered, format="PNG")
-        return base64.b64encode(buffered.getvalue()).decode("utf-8")
-
     def image_handler(self, images, data, nsfw_content_detected):
         if images:
             tab_section = "stablediffusion"
@@ -1261,14 +1285,6 @@ class SDRunner(
             "data": data,
             "tab_section": tab_section
         }, code=MessageCode.PROGRESS)
-
-    def latents_to_image(self, latents: torch.Tensor):
-        image = latents.permute(0, 2, 3, 1)
-        image = image.detach().cpu().numpy()
-        image = image[0]
-        image = (image * 255).astype(np.uint8)
-        image = Image.fromarray(image)
-        return image
 
     def generator_sample(
             self,
@@ -1541,16 +1557,6 @@ class SDRunner(
         elif self.is_img2img:
             self.img2img = pipe
             self.txt2img = None
-
-    def is_ckpt_file(self, model):
-        if not model:
-            raise ValueError("ckpt path is empty")
-        return model.endswith(".ckpt")
-
-    def is_safetensor_file(self, model):
-        if not model:
-            raise ValueError("safetensors path is empty")
-        return model.endswith(".safetensors")
 
     def prepare_model(self):
         logger.info("Prepare model")
