@@ -126,6 +126,12 @@ class CanvasImageMixin:
         except AttributeError:
             pass
 
+    def cut_image(self):
+        self.copy_image()
+        self.current_layer.clear()
+        self.current_layer.layer_widget.set_thumbnail()
+        self.update()
+
     def image_to_system_clipboard_windows(self, data):
         import win32clipboard
         win32clipboard.OpenClipboard()

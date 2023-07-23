@@ -29,6 +29,7 @@ class MenubarMixin:
         self.actionQuit.triggered.connect(self.quit)
         self.actionPaste.triggered.connect(self.paste_image)
         self.actionCopy.triggered.connect(self.copy_image)
+        self.actionCut.triggered.connect(self.cut_image)
         self.actionRotate_90_clockwise.triggered.connect(self.canvas.rotate_90_clockwise)
         self.actionRotate_90_counter_clockwise.triggered.connect(self.canvas.rotate_90_counterclockwise)
         self.initialize_filter_actions()
@@ -125,6 +126,9 @@ class MenubarMixin:
 
     def copy_image(self):
         self.canvas.copy_image()
+
+    def cut_image(self):
+        self.canvas.cut_image()
 
     def show_image_interpolation(self):
         self.image_interpolation_window = ImageInterpolation(self.settings_manager, app=self, exec=False)
