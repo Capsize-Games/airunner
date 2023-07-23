@@ -450,7 +450,7 @@ class SDRunner(
     def cuda_error_message(self):
         if self.is_superresolution and self.scheduler_name == "DDIM":
             return f"Unable to run the model at {self.width}x{self.height} resolution using the DDIM scheduler. Try changing the scheduler to LMS or PNDM and try again."
-        return f"You may not have enough GPU memory to run the model at {self.width}x{self.height} resolution. Potential solutions: try again, restart the application, use a smaller size, upgrade your GPU."
+        return f"VRAM too low for {self.width}x{self.height} resolution. Potential solutions: try again, use a different model, restart the application, use a smaller size, upgrade your GPU."
 
     @property
     def is_pipe_loaded(self):
@@ -827,7 +827,9 @@ class SDRunner(
             output = self.call_pipe(**kwargs)
         except Exception as e:
             error_message = str(e)
-            if "Scheduler.step() got an unexpected keyword argument" in str(e):
+            if "PYTORCH_CUDA_ALLOC_CONF" in str(e):
+                error_message = self.cuda_error_message
+            elif "Scheduler.step() got an unexpected keyword argument" in str(e):
                 error_message = "Invalid scheduler"
                 self.clear_scheduler()
             self.log_error(error_message)
@@ -1306,14 +1308,13 @@ class SDRunner(
         except Exception as e:
             error = e
             if "PYTORCH_CUDA_ALLOC_CONF" in str(e):
-                error_message = self.cuda_error_message
+                error = self.cuda_error_message
                 self.clear_memory()
             else:
                 error_message = f"Error during generation"
                 traceback.print_exc()
 
         if error:
-            self.log_error(error, error_message)
             self.initialized = False
             self.reload_model = True
             if error_message == "model_not_found" and self.local_files_only and self.has_internet_connection:
@@ -1324,6 +1325,8 @@ class SDRunner(
                 return self.generator_sample(data)
             elif not self.has_internet_connection:
                 self.log_error("Please check your internet connection and try again.")
+            else:
+                self.log_error(error, error_message)
             self.scheduler_name = ""
             self._current_model = ""
             self.local_files_only = True
