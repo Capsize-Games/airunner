@@ -250,31 +250,31 @@ class SDRunner(
 
     @property
     def enable_model_cpu_offload(self):
-        return self.options.get("enable_model_cpu_offload", False) == True
+        return self.options.get("enable_model_cpu_offload", False) is True
 
     @property
     def use_attention_slicing(self):
-        return self.options.get("use_attention_slicing", False) == True
+        return self.options.get("use_attention_slicing", False) is True
 
     @property
     def use_tf32(self):
-        return self.options.get("use_tf32", False) == True
+        return self.options.get("use_tf32", False) is True
 
     @property
     def use_last_channels(self):
-        return self.options.get("use_last_channels", True) == True
+        return self.options.get("use_last_channels", True) is True
 
     @property
     def use_enable_sequential_cpu_offload(self):
-        return self.options.get("use_enable_sequential_cpu_offload", True) == True
+        return self.options.get("use_enable_sequential_cpu_offload", True) is True
 
     @property
     def use_enable_vae_slicing(self):
-        return self.options.get("use_enable_vae_slicing", False) == True
+        return self.options.get("use_enable_vae_slicing", False) is True
 
     @property
     def do_nsfw_filter(self):
-        return self.options.get("do_nsfw_filter", True) == True
+        return self.options.get("do_nsfw_filter", True) is True
 
     @property
     def use_compel(self):
@@ -287,17 +287,17 @@ class SDRunner(
     def use_tiled_vae(self):
         if self.use_kandinsky:
             return False
-        return self.options.get("use_tiled_vae", False) == True
+        return self.options.get("use_tiled_vae", False) is True
 
     @property
     def use_accelerated_transformers(self):
         if self.use_kandinsky:
             return False
-        return self.options.get("use_accelerated_transformers", False) == True
+        return self.options.get("use_accelerated_transformers", False) is True
 
     @property
     def use_torch_compile(self):
-        return self.options.get("use_torch_compile", False) == True
+        return self.options.get("use_torch_compile", False) is True
 
     @property
     def is_sd_xl(self):
@@ -330,7 +330,7 @@ class SDRunner(
 
     @property
     def is_zeroshot(self):
-        return self.options.get("zeroshot", False) == True
+        return self.options.get("zeroshot", False) is True
 
     @property
     def is_shapegif(self):
