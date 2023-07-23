@@ -4,20 +4,22 @@ from airunner.aihandler.logger import Logger as logger
 import logging
 logging.disable(LOG_LEVEL)
 logger.set_level(logger.DEBUG)
-from collections import defaultdict
-from safetensors.torch import load_file
 
 
 class LoraMixin:
+    @property
+    def available_lora(self):
+        return self.options.get(f"lora", [])
+
     def add_lora_to_pipe(self):
         self.loaded_lora = []
         self.apply_lora()
 
     def apply_lora(self):
-        model_base_path = self.settings_manager.settings.model_base_path.get()
-        lora_path = self.settings_manager.settings.lora_path.get() or "lora"
+        model_base_path = self.model_base_path
+        lora_path = self.lora_path
         path = os.path.join(model_base_path, lora_path) if lora_path == "lora" else lora_path
-        for lora in self.options[f"{self.action}_lora"]:
+        for lora in self.available_lora:
             if lora["enabled"] == False:
                 continue
             filepath = None
