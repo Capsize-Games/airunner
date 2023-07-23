@@ -368,10 +368,6 @@ class SDRunner(
         return self.options.get("use_interpolation", False)
 
     @property
-    def use_interpolation(self):
-        return self.options.get("use_interpolation", False)
-
-    @property
     def interpolation_data(self):
         return self.options.get("interpolation_data", None)
 
