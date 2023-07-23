@@ -36,7 +36,6 @@ from airunner.windows.deterministic_generation_window import DeterministicGenera
 from airunner.windows.update_window import UpdateWindow
 from airunner.utils import get_version, get_latest_version
 from airunner.aihandler.settings_manager import SettingsManager, PromptManager
-from airunner.runai_client import OfflineClient
 import qdarktheme
 from PyQt6.QtGui import QIcon
 
