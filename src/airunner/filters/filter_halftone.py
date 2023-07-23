@@ -1,6 +1,5 @@
 from airunner.filters.filter_base import FilterBase
 from airunner.filters.halftone_filter import HalftoneFilter
-from airunner.filters.pixel_filter import PixelFilter
 
 
 class FilterHalftone(FilterBase):
