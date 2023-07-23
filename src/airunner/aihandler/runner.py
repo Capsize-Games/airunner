@@ -449,9 +449,15 @@ class SDRunner(
     @property
     def cuda_error_message(self):
         if self.is_superresolution and self.scheduler_name == "DDIM":
-            return f"Unable to run the model at {self.width}x{self.height} resolution using the DDIM scheduler. Try changing the scheduler to LMS or PNDM and try again."
+            return f"""
+            Unable to run the model at {self.width}x{self.height} resolution using the DDIM scheduler. 
+            Try changing the scheduler to LMS or PNDM and try again.
+            """
 
-        return f"You may not have enough GPU memory to run the model at {self.width}x{self.height} resolution. Potential solutions: try again, restart the application, use a smaller size, upgrade your GPU."
+        return f"""
+        You may not have enough GPU memory to run the model at {self.width}x{self.height} resolution. 
+        Potential solutions: try again, restart the application, use a smaller size, upgrade your GPU.
+        """
 
     @property
     def is_pipe_loaded(self):
@@ -639,7 +645,7 @@ class SDRunner(
     @property
     def has_internet_connection(self):
         try:
-            response = requests.get('https://huggingface.co/')
+            _response = requests.get('https://huggingface.co/')
             return True
         except requests.ConnectionError:
             return False
@@ -662,7 +668,7 @@ class SDRunner(
     def is_dev_env(self):
         return AIRUNNER_ENVIRONMENT == "dev"
 
-    def __init__(self, *args, **kwargs):
+    def __init__(self, **kwargs):
         logger.set_level(LOG_LEVEL)
         self.app = kwargs.get("app", None)
         self._message_var = kwargs.get("message_var", None)
@@ -706,24 +712,19 @@ class SDRunner(
         enable_controlnet = options.get("enable_controlnet", False)
 
         # do model reload checks here
-        if (
-                self.is_pipe_loaded and (  # memory options change
-                self.use_enable_sequential_cpu_offload != options.get("use_enable_sequential_cpu_offload", True)
-        )
-        ) or (  # model change
-                self.model is not None
-                and self.model != requested_model
-        ):
+        if (self.is_pipe_loaded and (  # memory options change
+            self.use_enable_sequential_cpu_offload != options.get("use_enable_sequential_cpu_offload", True))) or \
+           (self.model is not None and self.model != requested_model):  # model change
             self.reload_model = True
 
-        if ((self.controlnet_loaded and not enable_controlnet)
-                or (not self.controlnet_loaded and enable_controlnet)):
+        if ((self.controlnet_loaded and not enable_controlnet) or
+           (not self.controlnet_loaded and enable_controlnet)):
             self.initialized = False
 
         if self.prompt != options.get(f"prompt") or \
-                self.negative_prompt != options.get(f"negative_prompt") or \
-                action != self.action or \
-                self.reload_model:
+           self.negative_prompt != options.get(f"negative_prompt") or \
+           action != self.action or \
+           self.reload_model:
             self._prompt_embeds = None
             self._negative_prompt_embeds = None
 
@@ -799,12 +800,12 @@ class SDRunner(
             images = None
             if output:
                 try:
-                    images = output.images
+                    images = output["images"]
                 except AttributeError:
                     pass
                 if self.action_has_safety_checker:
                     try:
-                        nsfw_content_detected = output.nsfw_content_detected
+                        nsfw_content_detected = output["nsfw_content_detected"]
                     except AttributeError:
                         pass
             return images, nsfw_content_detected
@@ -824,7 +825,7 @@ class SDRunner(
             # self.pipe = self.call_pipe_extension(**kwargs)  TODO: extensions
             try:
                 self.add_lora_to_pipe()
-            except Exception as e:
+            except Exception as _e:
                 self.error_handler("Selected LoRA are not supported with this model")
                 self.reload_model = True
                 return
@@ -849,7 +850,7 @@ class SDRunner(
                         "prompt_embeds": self.prompt_embeds,
                         "negative_prompt_embeds": self.negative_prompt_embeds,
                     })
-                except Exception as e:
+                except Exception as _e:
                     args.update({
                         "prompt": self.prompt,
                         "negative_prompt": self.negative_prompt,
@@ -979,7 +980,7 @@ class SDRunner(
             result.append(output.images[1:])
         return {"frames": result}
 
-    def prepare_extra_args(self, data, image, mask):
+    def prepare_extra_args(self, _data, image, mask):
         action = self.action
         extra_args = {
         }
@@ -1106,7 +1107,7 @@ class SDRunner(
             prompt = data["options"][f"prompt"]
             if ".blend(" in prompt:
                 # replace .blend([0-9.]+, [0-9.]+) with ""
-                prompt = re.sub(r"\.blend\([0-9.]+, [0-9.]+\)", "", prompt)
+                prompt = re.sub(r"\.blend\([\d.]+, [\d.]+\)", "", prompt)
                 # find this pattern r'\("(.*)", "(.*)"\)'
                 match = re.search(r'\("(.*)", "(.*)"\)', prompt)
                 # get the first and second group
@@ -1220,7 +1221,7 @@ class SDRunner(
                 "images": images,
                 "data": data,
                 "request_type": data.get("request_type", None),
-                "nsfw_content_detected": nsfw_content_detected == True,
+                "nsfw_content_detected": nsfw_content_detected is True,
             }, MessageCode.IMAGE_GENERATED)
 
     def final_callback(self):
@@ -1314,8 +1315,8 @@ class SDRunner(
                 return self.generator_sample(data)
             elif not self.has_internet_connection:
                 self.log_error("Please check your internet connection and try again.")
-            self.scheduler_name = None
-            self._current_model = None
+            self.scheduler_name = ""
+            self._current_model = ""
             self.local_files_only = True
 
             # handle the error (sends to client)
@@ -1333,7 +1334,7 @@ class SDRunner(
     Controlnet methods
     """
 
-    def load_controlnet_from_ckpt(self, pipeline, config):
+    def load_controlnet_from_ckpt(self, pipeline, _config):
         pipeline = self.controlnet_action_diffuser(
             vae=pipeline.vae,
             text_encoder=pipeline.text_encoder,
