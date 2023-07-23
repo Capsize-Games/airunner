@@ -79,7 +79,6 @@ RUN wget https://github.com/upx/upx/releases/download/v4.0.2/upx-4.0.2-win64.zip
 
 FROM install_upx as install_libs
 USER root
-RUN wine64 C:\\Python310\\python.exe -m pip install aihandler
 WORKDIR /app
 RUN wine64 C:\\Python310\\python.exe -c "from accelerate.utils import write_basic_config; write_basic_config(mixed_precision='fp16')"
 
