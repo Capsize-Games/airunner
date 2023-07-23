@@ -1,6 +1,6 @@
 import os
 from airunner.aihandler.settings import LOG_LEVEL
-from airunner.aihandler.logger import logger
+from airunner.aihandler.logger import Logger as logger
 import logging
 logging.disable(LOG_LEVEL)
 logger.set_level(logger.DEBUG)

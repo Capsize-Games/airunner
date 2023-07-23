@@ -1,4 +1,4 @@
-from airunner.aihandler.logger import logger
+from airunner.aihandler.logger import Logger as logger
 from compel import Compel, DiffusersTextualInversionManager
 
 

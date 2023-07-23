@@ -9,7 +9,7 @@ from airunner.aihandler.base_runner import BaseRunner
 from airunner.aihandler.mixins.kandinsky_mixin import KandinskyMixin
 import traceback
 import torch
-from airunner.aihandler.logger import logger
+from airunner.aihandler.logger import Logger as logger
 from PIL import Image
 from airunner.aihandler.mixins.merge_mixin import MergeMixin
 from airunner.aihandler.mixins.lora_mixin import LoraMixin
@@ -18,7 +18,7 @@ from airunner.aihandler.mixins.embedding_mixin import EmbeddingMixin
 from airunner.aihandler.mixins.txttovideo_mixin import TexttovideoMixin
 from airunner.aihandler.mixins.compel_mixin import CompelMixin
 from airunner.aihandler.mixins.scheduler_mixin import SchedulerMixin
-from airunner.aihandler.settings import MessageCode, MAX_SEED
+from airunner.aihandler.settings import MessageCode, MAX_SEED, LOG_LEVEL, AIRUNNER_ENVIRONMENT
 
 os.environ["DISABLE_TELEMETRY"] = "1"
 os.environ["HF_HUB_OFFLINE"] = "1"

@@ -4,9 +4,9 @@ import time
 from PyQt6 import QtCore
 from PyQt6.QtCore import QThread
 
+from airunner.aihandler.logger import Logger as logger
 from airunner.aihandler.qtvar import BooleanVar
 from airunner.aihandler.runner import SDRunner
-import logging
 
 
 class OfflineClient(QtCore.QObject):
