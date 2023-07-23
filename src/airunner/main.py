@@ -272,6 +272,9 @@ class MainWindow(
         self.set_window_state()
         self.is_started = True
 
+        # change the color of tooltips
+        self.setStyleSheet("QToolTip { color: #000000; background-color: #ffffff; border: 1px solid black; }")
+
     def resizeEvent(self, event):
         if not self.is_started:
             return
