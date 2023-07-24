@@ -40,11 +40,10 @@ class MergeMixin:
 
 
         if base_model_path.endswith('.ckpt') or base_model_path.endswith('.safetensors'):
-            pipe = self._load_ckpt_model(
+            pipe = self.load_ckpt_model(
                 path=base_model_path,
                 is_safetensors=base_model_path.endswith('.safetensors'),
-                scheduler_name="Euler a",
-                local_files_only=False
+                scheduler_name="Euler a"
             )
         else:
             pipe = PipeCLS.from_pretrained(
@@ -54,9 +53,8 @@ class MergeMixin:
         for index in range(len(models_to_merge_path)):
             weight = weights[index]
             model_path = models_to_merge_path[index]
-            print("LOADING MODEL TO MERGE FROM PRETRAINED", model_path)
             if model_path.endswith('.ckpt') or model_path.endswith('.safetensors'):
-                model = self._load_ckpt_model(
+                model = self.load_ckpt_model(
                     path=model_path,
                     is_safetensors=model_path.endswith('.safetensors'),
                     scheduler_name="Euler a"
