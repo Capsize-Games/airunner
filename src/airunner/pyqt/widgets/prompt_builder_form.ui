@@ -122,7 +122,7 @@
         </layout>
        </item>
        <item>
-        <widget class="QTextBrowser" name="advanced_prompt_text">
+        <widget class="QTextBrowser" name="prompt_text">
          <property name="sizePolicy">
           <sizepolicy hsizetype="MinimumExpanding" vsizetype="Expanding">
            <horstretch>0</horstretch>
@@ -208,7 +208,7 @@
         </layout>
        </item>
        <item>
-        <widget class="QTextBrowser" name="advanced_negative_prompt_text">
+        <widget class="QTextBrowser" name="negative_prompt_text">
          <property name="sizePolicy">
           <sizepolicy hsizetype="MinimumExpanding" vsizetype="Expanding">
            <horstretch>0</horstretch>

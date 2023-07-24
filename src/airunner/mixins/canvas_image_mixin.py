@@ -1,7 +1,9 @@
 import io
 import random
 import subprocess
-from PIL import Image, ImageGrab, ImageOps
+
+import numpy as np
+from PIL import Image, ImageGrab, ImageOps, ImageEnhance
 from PIL.ImageQt import ImageQt
 from PyQt6.QtCore import QPoint, QRect
 from PyQt6.QtGui import QPainter, QPixmap

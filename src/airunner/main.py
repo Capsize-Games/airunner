@@ -184,16 +184,19 @@ class MainWindow(
     @property
     def use_pixels(self):
         # get name of current tab
-        return self.current_section in (
-            "txt2img",
-            "img2img",
-            "pix2pix",
-            "depth2img",
-            "outpaint",
-            "controlnet",
-            "superresolution",
-            "upscale"
-        )
+        if self.current_section == "txt2img" and self.enable_controlnet and self.controlnet is not None:
+            use_pixels = True
+        else:
+            use_pixels = self.current_section in (
+                "img2img",
+                "pix2pix",
+                "depth2img",
+                "outpaint",
+                "controlnet",
+                "superresolution",
+                "upscale"
+            )
+        return use_pixels
 
     @property
     def settings(self):
