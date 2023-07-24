@@ -1,7 +1,6 @@
 import random
-from functools import partial
-from PyQt6 import uic
-from PyQt6.QtWidgets import QGridLayout
+
+from airunner.aihandler.settings import MAX_SEED
 from airunner.data.prompt_data import PromptData
 from airunner.widgets.base_widget import BaseWidget
 from airunner.widgets.prompt_builder_form import PromptBuilderForm
@@ -16,6 +15,147 @@ class PromptBuilderWidget(BaseWidget):
     negative_text_prompt_weight = 0.5
     prompt_types = None
     unprocessed_prompts = {}
+    current_tab = "a"
+
+    @property
+    def prompt_generator_category(self):
+        if self.current_tab == "a":
+            return self.settings_manager.settings.prompt_generator_category_a.get()
+        else:
+            return self.settings_manager.settings.prompt_generator_category_b.get()
+
+    @prompt_generator_category.setter
+    def prompt_generator_category(self, value):
+        if self.current_tab == "a":
+            self.settings_manager.settings.prompt_generator_category_a.set(value)
+        else:
+            self.settings_manager.settings.prompt_generator_category_b.set(value)
+
+    @property
+    def prompt_generator_prompt(self):
+        if self.current_tab == "a":
+            return self.settings_manager.settings.prompt_generator_prompt_a.get()
+        else:
+            return self.settings_manager.settings.prompt_generator_prompt_b.get()
+
+    @prompt_generator_prompt.setter
+    def prompt_generator_prompt(self, value):
+        if self.current_tab == "a":
+            self.settings_manager.settings.prompt_generator_prompt_a.set(value)
+        else:
+            self.settings_manager.settings.prompt_generator_prompt_b.set(value)
+
+    @property
+    def prompt_generator_weighted_values(self):
+        if self.current_tab == "a":
+            return self.settings_manager.settings.prompt_generator_weighted_values_a.get()
+        else:
+            return self.settings_manager.settings.prompt_generator_weighted_values_b.get()
+
+    @prompt_generator_weighted_values.setter
+    def prompt_generator_weighted_values(self, value):
+        if self.current_tab == "a":
+            self.settings_manager.settings.prompt_generator_weighted_values_a.set(value)
+        else:
+            self.settings_manager.settings.prompt_generator_weighted_values_b.set(value)
+
+    @property
+    def prompt_generator_prompt_genre(self):
+        if self.current_tab == "a":
+            return self.settings_manager.settings.prompt_generator_prompt_genre_a.get()
+        else:
+            return self.settings_manager.settings.prompt_generator_prompt_genre_b.get()
+
+    @prompt_generator_prompt_genre.setter
+    def prompt_generator_prompt_genre(self, value):
+        if self.current_tab == "a":
+            self.settings_manager.settings.prompt_generator_prompt_genre_a.set(value)
+        else:
+            self.settings_manager.settings.prompt_generator_prompt_genre_b.set(value)
+
+    @property
+    def prompt_generator_prompt_color(self):
+        if self.current_tab == "a":
+            return self.settings_manager.settings.prompt_generator_prompt_color_a.get()
+        else:
+            return self.settings_manager.settings.prompt_generator_prompt_color_b.get()
+
+    @prompt_generator_prompt_color.setter
+    def prompt_generator_prompt_color(self, value):
+        if self.current_tab == "a":
+            self.settings_manager.settings.prompt_generator_prompt_color_a.set(value)
+        else:
+            self.settings_manager.settings.prompt_generator_prompt_color_b.set(value)
+
+    @property
+    def prompt_generator_prompt_style(self):
+        if self.current_tab == "a":
+            return self.settings_manager.settings.prompt_generator_prompt_style_a.get()
+        else:
+            return self.settings_manager.settings.prompt_generator_prompt_style_b.get()
+
+    @prompt_generator_prompt_style.setter
+    def prompt_generator_prompt_style(self, value):
+        if self.current_tab == "a":
+            self.settings_manager.settings.prompt_generator_prompt_style_a.set(value)
+        else:
+            self.settings_manager.settings.prompt_generator_prompt_style_b.set(value)
+
+    @property
+    def prompt_generator_prefix(self):
+        if self.current_tab == "a":
+            return self.settings_manager.settings.prompt_generator_prefix_a.get()
+        else:
+            return self.settings_manager.settings.prompt_generator_prefix_b.get()
+
+    @prompt_generator_prefix.setter
+    def prompt_generator_prefix(self, value):
+        if self.current_tab == "a":
+            self.settings_manager.settings.prompt_generator_prefix_a.set(value)
+        else:
+            self.settings_manager.settings.prompt_generator_prefix_b.set(value)
+
+    @property
+    def prompt_generator_suffix(self):
+        if self.current_tab == "a":
+            return self.settings_manager.settings.prompt_generator_suffix_a.get()
+        else:
+            return self.settings_manager.settings.prompt_generator_suffix_b.get()
+
+    @prompt_generator_suffix.setter
+    def prompt_generator_suffix(self, value):
+        if self.current_tab == "a":
+            self.settings_manager.settings.prompt_generator_suffix_a.set(value)
+        else:
+            self.settings_manager.settings.prompt_generator_suffix_b.set(value)
+
+    @property
+    def negative_prompt_generator_prefix(self):
+        if self.current_tab == "a":
+            return self.settings_manager.settings.negative_prompt_generator_prefix_a.get()
+        else:
+            return self.settings_manager.settings.negative_prompt_generator_prefix_b.get()
+
+    @negative_prompt_generator_prefix.setter
+    def negative_prompt_generator_prefix(self, value):
+        if self.current_tab == "a":
+            self.settings_manager.settings.negative_prompt_generator_prefix_a.set(value)
+        else:
+            self.settings_manager.settings.negative_prompt_generator_prefix_b.set(value)
+
+    @property
+    def negative_prompt_generator_suffix(self):
+        if self.current_tab == "a":
+            return self.settings_manager.settings.negative_prompt_generator_suffix_a.get()
+        else:
+            return self.settings_manager.settings.negative_prompt_generator_suffix_b.get()
+
+    @negative_prompt_generator_suffix.setter
+    def negative_prompt_generator_suffix(self, value):
+        if self.current_tab == "a":
+            self.settings_manager.settings.negative_prompt_generator_suffix_a.set(value)
+        else:
+            self.settings_manager.settings.negative_prompt_generator_suffix_b.set(value)
 
     def __init__(self, *args, **kwargs):
         super().__init__(*args, **kwargs)
@@ -29,21 +169,53 @@ class PromptBuilderWidget(BaseWidget):
         This function initializes the tab forms for each prompt blender tab.
         :return:
         """
-        prompt_builder_form_a = PromptBuilderForm(
+        self.current_tab = "a"
+        self.prompt_builder_form_a = PromptBuilderForm(
+            parent=self,
             app=self.app,
             prompt_builder_widget=self)
 
-        prompt_builder_form_b = PromptBuilderForm(
+        self.current_tab = "b"
+        self.prompt_builder_form_b = PromptBuilderForm(
+            parent=self,
             app=self.app,
             prompt_builder_widget=self)
+        self.current_tab = "a"
         # add to tab
-        self.tabs.addTab(prompt_builder_form_a, "Prompt A")
-        self.tabs.addTab(prompt_builder_form_b, "Prompt B")
+        self.tabs.addTab(self.prompt_builder_form_a, "Prompt A")
+        self.tabs.addTab(self.prompt_builder_form_b, "Prompt B")
+        self.prompt_builder_form_a.initialize_dropdown_values()
+        self.prompt_builder_form_b.initialize_dropdown_values()
 
+        # on self.tabs change, update the prompt builder form
+        self.tabs.currentChanged.connect(self.handle_tab_changed)
 
         self.initialize_weight_sliders()
         self.initialize_weights()
         self.app.generate_signal.connect(self.inject_prompt)
+
+        self.prompt_blend_type.setCurrentIndex(self.settings_manager.settings.prompt_blend_type.get())
+        self.prompt_blend_type.currentIndexChanged.connect(self.handle_prompt_blend_type_change)
+        self.update_blend_sliders()
+
+    def handle_tab_changed(self):
+        self.current_tab = "a" if self.tabs.currentIndex() == 0 else "b"
+        self.process_prompt()
+
+    def handle_prompt_blend_type_change(self, index):
+        self.settings_manager.settings.prompt_blend_type.set(index)
+        self.update_blend_sliders()
+        self.process_prompt()
+
+    def update_blend_sliders(self):
+        if self.settings_manager.settings.prompt_blend_type.get() == 0:
+            # disable the blending weight sliders
+            self.prompt_weight_distribution_slider.setEnabled(False)
+            self.negative_prompt_weight_distribution_slider.setEnabled(False)
+        else:
+            # enable the blending weight sliders
+            self.prompt_weight_distribution_slider.setEnabled(True)
+            self.negative_prompt_weight_distribution_slider.setEnabled(True)
 
     def initialize_weights(self):
         auto_prompt_weight = self.settings_manager.settings.auto_prompt_weight.get()
@@ -79,8 +251,8 @@ class PromptBuilderWidget(BaseWidget):
 
     def process_prompt(self):
         if not self.settings_manager.settings.use_prompt_builder_checkbox.get():
-            # self.advanced_prompt_text.setPlainText("")
-            # self.advanced_negative_prompt_text.setPlainText("")
+            # self.prompt_text.setPlainText("")
+            # self.negative_prompt_text.setPlainText("")
             return
 
         # get composition values from dropdowns in current tab
@@ -88,22 +260,45 @@ class PromptBuilderWidget(BaseWidget):
         current_tab = self.tabs.currentWidget()
         if current_tab is None:
             return
-        category = self.settings_manager.settings.prompt_generator_category.get()
-        image_genre = self.settings_manager.settings.prompt_generator_prompt_genre.get()
-        image_color = self.settings_manager.settings.prompt_generator_prompt_color.get()
-        image_style = self.settings_manager.settings.prompt_generator_prompt_style.get()
+
+        prompt_a = ""
+        negative_prompt_a = ""
+        seed = self.app.seed if not self.app.seed_override else self.app.seed_override
+        if self.settings_manager.settings.prompt_blend_type.get() == 1:
+            prompt_a = self.app.prompt
+            negative_prompt_a = self.app.negative_prompt
+        elif self.settings_manager.settings.prompt_blend_type.get() == 2:
+            prev_tab = self.current_tab
+            self.current_tab = "b" if prev_tab == "a" else "a"
+            prompt_a, negative_prompt_a = self.build_prompts("", "", seed)
+            self.current_tab = prev_tab
+            random.seed(seed)
+            seed = random.randint(0, MAX_SEED)
+
+        prompt, negative_prompt = self.build_prompts(prompt_a, negative_prompt_a, seed)
+
+        # save processed prompts
+        current_tab.prompt_text.setPlainText(prompt)
+        current_tab.negative_prompt_text.setPlainText(negative_prompt)
+
+    def build_prompts(self, prompt_a="", negative_prompt_a="", seed=None):
+        if seed is None:
+            seed = self.app.seed if not self.app.seed_override else self.app.seed_override
+        category = self.prompt_generator_category
+        image_genre = self.prompt_generator_prompt_genre
+        image_color = self.prompt_generator_prompt_color
+        image_style = self.prompt_generator_prompt_style
         if category == "" or category is None:
             category = "Random"
+        prompt_prefix = self.prompt_generator_prefix
+        prompt_suffix = self.prompt_generator_suffix
+        negative_prompt_prefix = self.negative_prompt_generator_prefix
+        negative_prompt_suffix = self.negative_prompt_generator_suffix
+        weighted_variables = self.prompt_generator_weighted_values
 
-        prompt_prefix = self.settings_manager.settings.prompt_generator_prefix.get()
-        prompt_suffix = self.settings_manager.settings.prompt_generator_suffix.get()
-        negative_prompt_prefix = self.settings_manager.settings.negative_prompt_generator_prefix.get()
-        negative_prompt_suffix = self.settings_manager.settings.negative_prompt_generator_suffix.get()
-
-        weighted_variables = self.settings_manager.settings.prompt_generator_weighted_values.get()
-        prompt, negative_prompt = self.prompt_data.build_prompts(
-            prompt=self.app.prompt,
-            negative_prompt=self.app.negative_prompt,
+        return self.prompt_data.build_prompts(
+            prompt=prompt_a,
+            negative_prompt=negative_prompt_a,
             text_prompt_weight=self.text_prompt_weight,
             auto_prompt_weight=self.auto_prompt_weight,
             prompt_prefix=prompt_prefix,
@@ -113,17 +308,13 @@ class PromptBuilderWidget(BaseWidget):
             negative_text_prompt_weight=self.negative_text_prompt_weight,
             negative_auto_prompt_weight=self.negative_auto_prompt_weight,
             weighted_variables=weighted_variables,
-            seed=self.app.seed,
+            seed=seed,
             category=category,
             image_genre=image_genre,
             image_color=image_color,
             image_style=image_style,
             advanced=self.settings_manager.settings.prompt_generator_advanced.get()
         )
-
-        # save processed prompts
-        current_tab.advanced_prompt_text.setPlainText(prompt)
-        current_tab.advanced_negative_prompt_text.setPlainText(negative_prompt)
 
     def inject_prompt(self, options):
         """
@@ -133,9 +324,10 @@ class PromptBuilderWidget(BaseWidget):
         :return:
         """
         self.process_prompt()
+        current_tab = self.tabs.currentWidget()
         if self.app.use_prompt_builder_checkbox:
-            options[f"prompt"] = self.advanced_prompt_text.toPlainText()
-            options[f"negative_prompt"] = self.advanced_negative_prompt_text.toPlainText()
+            options[f"prompt"] = current_tab.prompt_text.toPlainText()
+            options[f"negative_prompt"] = current_tab.negative_prompt_text.toPlainText()
             options[f"prompt_data"] = self.prompt_data
 
     def set_stylesheet(self):

@@ -17,10 +17,10 @@ class PromptParser:
         parsed_prompt = PromptWeightBridge.convert(prompt)
 
         # next we will run variable translation on the prompt
-        parsed_prompt = PromptVariable.parse(
-            parsed_prompt, variables, weights, seed)
-        parsed_prompt = PromptVariable.parse(
-            parsed_prompt, variables, weights, seed)
+        # we will run this twice to ensure that double variables are replaced
+        for n in range(2):
+            parsed_prompt = PromptVariable.parse(
+                parsed_prompt, variables, weights, seed)
         parsed_prompt = parsed_prompt.strip()
 
         return parsed_prompt
