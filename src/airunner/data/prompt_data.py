@@ -53,6 +53,8 @@ class PromptData:
         self.image_style = kwargs.get("image_style", self.image_style)
         self.advanced = kwargs.get("advanced", self.advanced)
 
+        random.seed(self.seed)
+
         category = self.category
         while category == "Random":
             category = random.choice(self.categories)
@@ -90,7 +92,18 @@ class PromptData:
 
         prefix = f"{self.prompt_prefix}, " if self.prompt_prefix != "" else ""
         suffix = f", {self.prompt_suffix}" if self.prompt_suffix != "" else ""
-        generated_prompt = f"{prefix}($composition_genre, $composition_color, ($composition_style)++) {generated_prompt}{suffix}"
+
+        # build promprt description
+        description_vars = []
+        if self.image_genre != "" and self.image_genre is not None:
+            description_vars.append("$composition_genre")
+        if self.image_color != "" and self.image_color is not None:
+            description_vars.append("$composition_color")
+        if self.image_style != "" and self.image_style is not None:
+            description_vars.append("($composition_style)++")
+        description = f"({', '.join(description_vars)}) " if len(description_vars) > 0 else ""
+
+        generated_prompt = f"{prefix}{description}{generated_prompt}{suffix}"
 
         # build the negative prompt
         prefix = f"{self.negative_prompt_prefix}, " if self.negative_prompt_prefix != "" else ""
@@ -166,16 +179,46 @@ class PromptData:
         variables = self.prepare_variables(category, genre, color, style)
 
         weighted_variables = self.weighted_variables
+
+        filtered_variables = {}
+
+        if category == "Random":
+            filtered_variables["composition_category"] = variables["composition_category"]
+        elif category != "" and category is not None:
+            filtered_variables["composition_category"] = [category]
+
+        if genre == "Random":
+            filtered_variables["composition_genre"] = variables["composition_genre"]
+        elif genre != "" and genre is not None:
+            filtered_variables["composition_genre"] = [genre]
+
+        if color == "Random":
+            filtered_variables["composition_color"] = variables["composition_color"]
+        elif color != "" and color is not None:
+            filtered_variables["composition_color"] = [color]
+
+        if style == "Random":
+            filtered_variables["composition_style"] = variables["composition_style"]
+        elif style != "" and style is not None:
+            filtered_variables["composition_style"] = [style]
         if category in weighted_variables:
             weighted_variables = weighted_variables[category]
             for variable in weighted_variables.keys():
                 if variable in variables:
-                    value = weighted_variables[variable]["value"]
-                    if value == "":
-                        del variables[variable]
-                    elif value != "Random":
-                        variables[variable] = [value]
-        return variables
+                    try:
+                        value = weighted_variables[variable]["value"]
+                    except KeyError:
+                        value = ""
+                    if value == "" or value is None:
+                        continue
+                    if value == "Random":
+                        filtered_variables[variable] = variables[variable]
+                    else:
+                        filtered_variables[variable] = [value]
+                    if variable == "gender":
+                        filtered_variables["male_name"] = variables["male_name"]
+                        filtered_variables["female_name"] = variables["female_name"]
+        return filtered_variables
 
     def load_variables(self, category):
         """
