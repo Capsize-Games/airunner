@@ -1,7 +1,8 @@
 import random
 from functools import partial
 from PyQt6 import uic
-from PyQt6.QtWidgets import QGridLayout
+from PyQt6.QtWidgets import QGridLayout, QSpacerItem, QSizePolicy
+
 from airunner.widgets.base_widget import BaseWidget
 
 
@@ -44,21 +45,25 @@ class PromptBuilderForm(BaseWidget):
         self.prompt_category_current_index = 0
         self.prompt_category.addItems(self.prompt_data.categories)
         self.prompt_category.currentIndexChanged.connect(partial(self.set_prompts, "advanced"))
+        self.prompt_category.lineEdit().setReadOnly(True)
 
     def initialize_genre_dropdowns(self):
         # initialize genre dropdowns
         self.prompt_genre.addItems(self.prompt_data.genres)
         self.prompt_genre.currentIndexChanged.connect(partial(self.set_genre))
+        self.prompt_genre.lineEdit().setReadOnly(True)
 
     def initialize_color_dropdowns(self):
         # initialize color dropdowns
         self.prompt_color.addItems(self.prompt_data.colors)
         self.prompt_color.currentIndexChanged.connect(partial(self.set_color))
+        self.prompt_color.lineEdit().setReadOnly(True)
 
     def initialize_style_dropdowns(self):
         # initialize style dropdowns
         self.prompt_style.addItems(self.prompt_data.styles)
         self.prompt_style.currentIndexChanged.connect(partial(self.set_style))
+        self.prompt_style.lineEdit().setReadOnly(True)
 
     def initialize_dropdown_values(self):
         # check for index in
@@ -179,7 +184,9 @@ class PromptBuilderForm(BaseWidget):
                 self.create_prompt_widget(category, variable, weighted_value, index)
         except KeyError:
             pass
-        # self.scroll_layout.layout().addStretch()
+        spacer = QSpacerItem(0, 0, QSizePolicy.Policy.Minimum, QSizePolicy.Policy.Expanding)
+        total_rows = self.scroll_layout.layout().rowCount()
+        self.scroll_layout.layout().addItem(spacer, total_rows+1, 0)
 
     def create_prompt_widget(self, category, variable, weighted_value, index):
         widget = uic.loadUi(f"pyqt/widgets/prompt_builder_variable_widget.ui")
@@ -205,6 +212,8 @@ class PromptBuilderForm(BaseWidget):
             pass
         widget.combobox.currentIndexChanged.connect(partial(
             self.handle_combobox_change, category, variable, widget))
+        # prevent widget.combobox from being edited, but leave it editable
+        widget.combobox.lineEdit().setReadOnly(True)
         self.scroll_layout.layout().addWidget(widget, index // 2, index % 2, 1, 1)
 
     def weighted_values(self, category, variable):
