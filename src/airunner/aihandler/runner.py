@@ -1159,8 +1159,6 @@ class SDRunner(
                 generated_prompt = match.group(2)
                 prompt_data.prompt = prompt
                 prompt_data.generated_prompt = generated_prompt
-                print(prompt)
-                print(generated_prompt)
         prompt, negative_prompt = prompt_data.build_prompts(
             seed=seed,
             is_deterministic=True if self.deterministic_seed else False,
@@ -1168,8 +1166,6 @@ class SDRunner(
         )
         data["options"][f"prompt"] = prompt
         data["options"][f"negative_prompt"] = negative_prompt
-        print(prompt)
-        print(negative_prompt)
         self.clear_prompt_embeds()
         self.process_data(data)
         return data
