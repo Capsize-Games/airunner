@@ -281,10 +281,13 @@
         </font>
        </property>
        <property name="editable">
-        <bool>false</bool>
+        <bool>true</bool>
        </property>
        <property name="insertPolicy">
         <enum>QComboBox::InsertAlphabetically</enum>
+       </property>
+       <property name="sizeAdjustPolicy">
+        <enum>QComboBox::AdjustToContentsOnFirstShow</enum>
        </property>
       </widget>
      </item>
@@ -308,10 +311,13 @@
         </font>
        </property>
        <property name="editable">
-        <bool>false</bool>
+        <bool>true</bool>
        </property>
        <property name="insertPolicy">
         <enum>QComboBox::InsertAlphabetically</enum>
+       </property>
+       <property name="sizeAdjustPolicy">
+        <enum>QComboBox::AdjustToContentsOnFirstShow</enum>
        </property>
       </widget>
      </item>
@@ -348,10 +354,13 @@
         </font>
        </property>
        <property name="editable">
-        <bool>false</bool>
+        <bool>true</bool>
        </property>
        <property name="insertPolicy">
         <enum>QComboBox::InsertAlphabetically</enum>
+       </property>
+       <property name="sizeAdjustPolicy">
+        <enum>QComboBox::AdjustToContentsOnFirstShow</enum>
        </property>
       </widget>
      </item>
@@ -444,10 +453,13 @@
         </font>
        </property>
        <property name="editable">
-        <bool>false</bool>
+        <bool>true</bool>
        </property>
        <property name="insertPolicy">
         <enum>QComboBox::InsertAlphabetically</enum>
+       </property>
+       <property name="sizeAdjustPolicy">
+        <enum>QComboBox::AdjustToContentsOnFirstShow</enum>
        </property>
       </widget>
      </item>
