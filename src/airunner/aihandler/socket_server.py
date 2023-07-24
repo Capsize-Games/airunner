@@ -1,9 +1,7 @@
-import os
 import signal
 import socket
 import json
 import time
-import argparse
 
 from airunner.aihandler.offline_client import OfflineClient
 from airunner.aihandler.settings import MessageCode
@@ -12,6 +10,7 @@ from airunner.aihandler.logger import Logger as logger
 
 class SocketServer:
     client_socket = None
+    server_socket = None
 
     def __init__(self, **kwargs):
         self.keep_alive = kwargs.get("keep_alive", False)
@@ -27,6 +26,8 @@ class SocketServer:
         self.start_server()
 
     def start_server(self):
+        if self.client.stopped():
+            return
         try:
             self.start()
             self.run()
@@ -143,33 +144,19 @@ class SocketServer:
     def stop(self):
         if self.client_socket:
             self.client_socket.close()
-        self.server_socket.close()
+        if self.server_socket:
+            self.server_socket.close()
         self.running = False
         time.sleep(2)
 
     def close_server(self, signal, frame):
+        logger.info("stopping threads")
+        self.client.stop()
+        logger.info("waiting for response worker thread")
+        self.client.response_worker_thread.join()
+        logger.info("waiting for request worker thread")
+        self.client.request_worker_thread.join()
         logger.info("Closing server")
         self.stop()
         logger.info("Exiting")
-        os._exit(0)
 
-
-if __name__ == "__main__":
-    """
-    Example usage:
-        python socket_server.py --server 127.0.0.1 --port 5000 --keep-alive --filters pixelart
-    """
-    parser = argparse.ArgumentParser()
-    parser.add_argument("--server", default="127.0.0.1")
-    parser.add_argument("--port", default=5000)
-    parser.add_argument("--keep-alive", action="store_true", default=False)
-    parser.add_argument("--packet-size", default=1024)
-
-    args = parser.parse_args()
-
-    SocketServer(
-        server=args.server,
-        port=args.port,
-        keep_alive=args.keep_alive,
-        packet_size=args.packet_size
-    )
