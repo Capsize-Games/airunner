@@ -64,7 +64,14 @@ class OfflineClient:
         self.res_queue = queue.Queue()
         self.message_var = kwargs.get("message_var")
         self.message_handler = kwargs.get("message_handler")
+        self.stop_event = threading.Event()
         self.do_start()
+
+    def stop(self):
+        self.stop_event.set()
+
+    def stopped(self):
+        return self.stop_event.is_set()
 
     def do_start(self):
         logger.info("Starting client")
@@ -143,7 +150,7 @@ class RequestWorker:
         self.callback = callback
 
     def startWork(self):
-        while True:
+        while not self.client.stopped():
             if not self.client.queue.empty():
                 try:
                     msg = self.client.queue.get(timeout=1)
@@ -160,7 +167,7 @@ class ResponseWorker:
         self.client = client
 
     def startWork(self):
-        while True:
+        while not self.client.stopped():
             try:
                 msg = self.client.res_queue.get(timeout=1)
             except queue.Empty:
