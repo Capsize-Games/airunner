@@ -155,7 +155,7 @@ class PromptBuilderForm(BaseWidget):
         for i in reversed(range(self.scroll_layout.count())):
             widget = self.scroll_layout.itemAt(i).widget()
             if widget is not None:
-                variable = widget.groupbox.title().lower()
+                variable = widget.label.text().lower()
                 try:
                     weight = self.prompt_data.variable_weights_by_category(category, variable)
                     widget.spinbox.setValue(weight)
@@ -234,8 +234,10 @@ class PromptBuilderForm(BaseWidget):
 
     def handle_weight_spinbox_change(self, category, variable, widget, value):
         data = self.weighted_values(category, variable)
+        value = round(value, 2)
         data[category][variable]["weight"] = value
         self.parent.prompt_generator_weighted_values = data
+        self.process_prompt()
 
     def update_weight_spinbox(self, category, variable, widget):
         data = self.weighted_values(category, variable)
