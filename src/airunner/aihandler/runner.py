@@ -442,7 +442,7 @@ class SDRunner(
             path = self.model_base_path
         if self.current_model:
             path = os.path.join(path, self.current_model)
-        if not os.path.exists(path):
+        if not os.path.exists(path if path else ""):
             return self.current_model
         return path
 
@@ -1478,12 +1478,12 @@ class SDRunner(
                     kwargs["controlnet"] = self.controlnet()
 
                 if self.is_ckpt_model or self.is_safetensors:
-                    self.pipe = self.action_diffuser.from_single_file(
+                    logger.info("loading ckpt or safetensors model")
+                    self.pipe = self.load_ckpt_model(
                         self.model_path,
-                        use_safetensors=True,
-                        torch_dtype=self.data_type,
-                        **kwargs)
-                    self.pipe.scheduler = self.load_scheduler(config=self.pipe.scheduler.config)
+                        is_safetensors=self.is_safetensors,
+                        data_type=self.data_type,
+                        device=self.device)
                 else:
                     self.pipe = self.action_diffuser.from_pretrained(
                         self.model_path,
@@ -1505,6 +1505,98 @@ class SDRunner(
         self.pipe.model_path = self.model_path
 
         self.load_learned_embed_in_clip()
+
+    def load_ckpt_model(
+            self,
+            path=None,
+            is_safetensors=False,
+            data_type=None,
+            device=None,
+            scheduler_name=None
+    ):
+        logger.info(f"Loading ckpt file {path}")
+        if not data_type:
+            data_type = self.data_type
+        try:
+            pipeline = self.download_from_original_stable_diffusion_ckpt(
+                path=path,
+                is_safetensors=is_safetensors,
+                device=device,
+                scheduler_name=scheduler_name
+            )
+        except Exception as e:
+            self.error_handler("Unable to load ckpt file")
+            raise e
+        # to half
+        # determine which data type to move the model to
+        pipeline.vae.to(data_type)
+        pipeline.text_encoder.to(data_type)
+        pipeline.unet.to(data_type)
+        return pipeline
+
+    def download_from_original_stable_diffusion_ckpt(
+            self,
+            config="v1.yaml",
+            path=None,
+            is_safetensors=False,
+            scheduler_name=None,
+            device=None
+    ):
+        from diffusers.pipelines.stable_diffusion.convert_from_ckpt import \
+            download_from_original_stable_diffusion_ckpt
+        if not scheduler_name:
+            scheduler_name = self.scheduler_name
+        if not path:
+            if self.is_txt2img or self.is_img2img:
+                path = self.settings_manager.settings.model_base_path.get()
+            elif self.is_depth2img:
+                path = self.settings_manager.settings.depth2img_model_path.get()
+            elif self.is_pix2pix:
+                path = self.settings_manager.settings.pix2pix_model_path.get()
+            elif self.is_outpaint:
+                path = self.settings_manager.settings.outpaint_model_path.get()
+            elif self.is_superresolution or self.is_upscale:
+                path = self.settings_manager.settings.upscale_model_path.get()
+            path = f"{path}/{self.model}"
+        if not device:
+            device = self.device
+        try:
+            # check if config is a file
+            if not os.path.exists(config):
+                HERE = os.path.dirname(os.path.abspath(__file__))
+                config = os.path.join(HERE, config)
+
+            pipe = download_from_original_stable_diffusion_ckpt(
+                checkpoint_path=path,
+                original_config_file=config,
+                device=device,
+                scheduler_type="ddim",
+                from_safetensors=is_safetensors,
+                local_files_only=self.local_files_only,
+                pipeline_class=self.action_diffuser,
+            )
+            if self.enable_controlnet:
+                pipe = self.load_controlnet_from_ckpt(pipe, config=config)
+            logger.info("LOADING SCHEDULER")
+            old_model_path = self.current_model
+            self.current_model = path
+            pipe.scheduler = self.load_scheduler(config=pipe.scheduler.config)
+            self.current_model = old_model_path
+            return pipe
+        # find exception: RuntimeError: Error(s) in loading state_dict for UNet2DConditionModel
+        except RuntimeError as e:
+            if e.args[0].startswith("Error(s) in loading state_dict for UNet2DConditionModel") and config == "v1.yaml":
+                logger.info("Failed to load model with v1.yaml config file, trying v2.yaml")
+                return self.download_from_original_stable_diffusion_ckpt(
+                    config="v2.yaml",
+                    path=path,
+                    is_safetensors=is_safetensors,
+                    scheduler_name=scheduler_name,
+                    device=device
+                )
+            else:
+                print("Something went wrong loading the model file", e)
+                raise e
 
     def clear_controlnet(self):
         self._controlnet = None
