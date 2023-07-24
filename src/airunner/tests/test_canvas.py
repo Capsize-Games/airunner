@@ -1,6 +1,6 @@
 import unittest
 from airunner.canvas import Canvas
-from airunner.main import MainWindow
+from airunner.app import MainWindow
 WINDOW = None
 
 
