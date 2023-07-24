@@ -16,6 +16,7 @@ class GeneratorMixin(LoraMixin):
     deterministic_generation_window = None
     deterministic_images = []
     deterministic_data = None
+    seed_override = None  # used when generating multiple samples
 
     @property
     def deterministic_var(self):
@@ -372,8 +373,7 @@ class GeneratorMixin(LoraMixin):
         self.set_final_size_label(tab)
 
     def interrupt(self):
-        print("Interrupting...")
-        self.client.sd_runner.cancel()
+        self.client.cancel()
 
     def reset_settings(self):
         self.settings_manager.reset_settings_to_default()
@@ -471,7 +471,7 @@ class GeneratorMixin(LoraMixin):
         self.set_status_label(f"Image exported to {os.path.join(path, filename + extension)}")
 
     def generate_callback(self):
-        self.generate(True)
+        self.generate()
 
     def prep_video(self):
         pass
@@ -498,7 +498,6 @@ class GeneratorMixin(LoraMixin):
         batch of images.
         :return:
         """
-        action = data["action"]
         if not data["options"]["deterministic_seed"]:
             data["options"][f"seed"] = data["options"][f"seed"] + index
         self.deterministic_data = data
@@ -508,6 +507,17 @@ class GeneratorMixin(LoraMixin):
         self.deterministic_images = None
 
     def generate(self, image=None):
+        seed = None
+        if self.samples > 1:
+            self.client.do_process_queue = False
+        for n in range(self.samples):
+            if self.use_prompt_builder_checkbox and n > 0:
+                seed = self.seed + n
+            self.call_generate(image, seed=seed)
+        self.seed_override = None
+        self.client.do_process_queue = True
+
+    def call_generate(self, image=None, seed=None):
         if self.current_section in ("upscale", "superresolution") and self.do_upscale_full_image:
             image_data = self.canvas.current_layer.image_data
             image = image_data.image if image_data else None
@@ -533,7 +543,7 @@ class GeneratorMixin(LoraMixin):
                 "mask": image.convert("RGB"),
                 "image": image.convert("RGB"),
                 "location": image_data.position
-            })
+            }, seed=seed)
         elif self.use_pixels:
             self.requested_image = image
             self.start_progress_bar()
@@ -576,14 +586,14 @@ class GeneratorMixin(LoraMixin):
                 "mask": mask,
                 "image": image,
                 "location": self.canvas.active_grid_area_rect
-            })
+            }, seed=seed)
         elif self.action == "vid2vid":
             images = self.prep_video()
             self.do_generate({
                 "images": images
-            })
+            }, seed=seed)
         else:
-            self.do_generate()
+            self.do_generate(seed=seed)
 
     def start_progress_bar(self):
         # progressBar: QProgressBar = self.tabs[section].progressBar
@@ -635,11 +645,16 @@ class GeneratorMixin(LoraMixin):
         }
         self.client.message = data
 
-    def do_generate(self, extra_options=None):
+    def do_generate(self, extra_options=None, seed=None):
         if not extra_options:
             extra_options = {}
 
-        self.set_seed()
+        if not seed:
+            self.set_seed()
+            seed = self.seed
+            self.seed_override = None
+        else:
+            self.seed_override = seed
 
         if self.deterministic_data and self.deterministic:
             return self.do_deterministic_generation(extra_options)
@@ -647,14 +662,6 @@ class GeneratorMixin(LoraMixin):
         # self.start_progress_bar(self.current_section)
 
         action = self.current_section
-        tab = self.tabs[action]
-
-        self.settings.seed.set(self.seed)
-
-        if action in ("txt2img", "img2img", "pix2pix", "depth2img", "txt2vid"):
-            samples = self.samples
-        else:
-            samples = 1
 
         prompt = self.prompt
         negative_prompt = self.negative_prompt
@@ -695,9 +702,9 @@ class GeneratorMixin(LoraMixin):
             "steps": self.steps,
             "ddim_eta": self.ddim_eta,  # only applies to ddim scheduler
             "n_iter": 1,
-            "n_samples": samples,
+            "n_samples": 1,
             "scale": self.scale / 100,
-            "seed": self.seed,
+            "seed": seed,
             "model": model,
             "scheduler": self.scheduler,
             "model_path": model_path,
@@ -755,7 +762,6 @@ class GeneratorMixin(LoraMixin):
                 **memory_options
             }
         }
-        # data = self.do_generate_data_injection(data)  # TODO: Extensions
         self.client.message = data
 
     """
