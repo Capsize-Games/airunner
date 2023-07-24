@@ -921,7 +921,7 @@
     },
     "person": {
       "prompts": {
-        "standard": "($style, $color, $image_style), A $ethnicity $gender named $$gender_name at $location. $$gender_name is $age with $hair_length length $hair_color hair, $eye_color eyes, wearing $clothing. $$gender_name is $emotion. It is $weather at $time, detailed photo, excellent composition, detailed facial features, hyper realistic, perfectly symmetrical, A perfect photo|style:$image_style|"
+        "standard": "($composition_genre, $composition_color, ($composition_style)++), A $ethnicity $gender named $$gender_name at $location. $$gender_name is $age with $hair_length length $hair_color hair, $eye_color eyes, wearing $clothing. $$gender_name is $emotion. It is $weather at $time, detailed photo, excellent composition, detailed facial features, hyper realistic, perfectly symmetrical, A perfect photo|style:$image_style|"
       },
       "negative_prompt": "(bad facial features), (indistinct facial features), (mangled hands)",
       "weights": {
@@ -1366,7 +1366,8 @@
         "cctv footage",
         "bodycam footage",
         "found footage",
-        "VHS footage"
+        "grainy vhs footage",
+        "claymation"
       ],
       "negative_prompt": "not real, cartoon, comic, illustration, anime, drawing, art, painting, cgi, bad facial features, indistinct facial features"
     },
@@ -1383,12 +1384,14 @@
     },
     "cartoon": {
       "styles": [
-        "caricature",
-        "cartoon",
-        "anime",
-        "comic book",
-        "graphic novel",
-        "manga"
+        "caricature drawing",
+        "cartoon illustration",
+        "anime illustration",
+        "comic book illustration",
+        "graphic novel illustration",
+        "manga illustration",
+        "cel animation",
+        "digital animation"
       ],
       "negative_prompt": "real, painting, masterpiece, cgi, photograph, real photo, picture, bad facial features, indistinct facial features"
     },
