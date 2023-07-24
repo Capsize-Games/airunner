@@ -21,6 +21,7 @@ class OfflineClient(QtCore.QObject):
     response_worker_thread = None
     request_worker_thread = None
     do_base64: bool = False
+    do_process_queue: bool = True
 
     @property
     def message(self):
@@ -59,7 +60,10 @@ class OfflineClient(QtCore.QObject):
         self.res_queue.put(msg)
 
     def cancel(self):
+        logger.info("Canceling")
         self.sd_runner.cancel()
+        while not self.queue.empty():
+            self.queue.get()
 
     def __init__(self, **kwargs):
         super().__init__(
@@ -195,7 +199,7 @@ class RequestWorker(QtCore.QObject):
     def startWork(self):
         while True:
             # check if we are connected to server
-            if not self.client.queue.empty():
+            if not self.client.queue.empty() and self.client.do_process_queue:
                 try:
                     msg = self.client.queue.get(timeout=1)
                 except queue.Empty:
