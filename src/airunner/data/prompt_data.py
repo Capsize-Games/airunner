@@ -93,17 +93,28 @@ class PromptData:
         prefix = f"{self.prompt_prefix}, " if self.prompt_prefix != "" else ""
         suffix = f", {self.prompt_suffix}" if self.prompt_suffix != "" else ""
 
-        # build promprt description
-        description_vars = []
-        if self.image_genre != "" and self.image_genre is not None:
-            description_vars.append("$composition_genre")
-        if self.image_color != "" and self.image_color is not None:
-            description_vars.append("$composition_color")
-        if self.image_style != "" and self.image_style is not None:
-            description_vars.append("($composition_style)++")
-        description = f"({', '.join(description_vars)}) " if len(description_vars) > 0 else ""
+        # build the description of the image
+        image_genre = None if self.image_genre == "" else self.image_genre
+        image_style = None if self.image_style == "" else self.image_style
+        image_color = None if self.image_color == "" else self.image_color
+        description = ""
+        if image_genre:
+            description = "(A $composition_genre"
+            if image_style:
+                description += " ($composition_style)++)+++"
+            else:
+                description += ")++++"
+        elif image_style:
+            description += "(A $composition_style)+++"
+        if image_color:
+            if description != "":
+                description += f" with "
+            description += "($composition_color colors)++++"
+        description.strip()
+        if description != "":
+            description = f"({description}) of "
 
-        generated_prompt = f"{prefix}{description}{generated_prompt}{suffix}"
+        generated_prompt = f"{prefix}{description}({generated_prompt})+{suffix}"
 
         # build the negative prompt
         prefix = f"{self.negative_prompt_prefix}, " if self.negative_prompt_prefix != "" else ""
