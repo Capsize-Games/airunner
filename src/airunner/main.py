@@ -688,6 +688,8 @@ class MainWindow(
         self.generator_tab_widget.stop_progress_bar(
             data["tab_section"], data["action"]
         )
+        # get max progressbar value
+        self.generator_tab_widget.update_queue_label()
         if nsfw_content_detected and self.settings_manager.settings.nsfw_filter.get():
             self.message_handler("NSFW content detected, try again.", error=True)
         elif data["options"][f"deterministic_generation"]:

@@ -354,6 +354,8 @@ class GeneratorTabWidget(BaseWidget):
 
         self.add_widget_to_grid(group_box)
 
+    queue_label = None
+
     def add_samples_widgets(self):
         if self.tab == "txt2vid":
             return
@@ -375,6 +377,7 @@ class GeneratorTabWidget(BaseWidget):
             slider_minimum=1
         )
         self.data[self.tab_section][self.tab]["samples_slider_widget"] = samples_widget
+        self.data[self.tab_section][self.tab]["queue_label"] = QLabel("Items in queue: 0")
         widget = QWidget()
         horizontal_layout = QHBoxLayout(widget)
         horizontal_layout.setContentsMargins(0, 0, 0, 0)
@@ -382,6 +385,15 @@ class GeneratorTabWidget(BaseWidget):
         horizontal_layout.addWidget(samples_widget)
         horizontal_layout.addWidget(interrupt_button)
         self.add_widget_to_grid(widget)
+        self.add_widget_to_grid(self.data[self.tab_section][self.tab]["queue_label"])
+
+    def update_queue_label(self):
+        for section in self.data.keys():
+            for tab in self.data[section].keys():
+                try:
+                    self.data[section][tab]["queue_label"].setText(f"Items in queue: {self.app.client.queue.qsize()}")
+                except KeyError:
+                    pass
 
     def add_zeroshot_widget(self):
         if self.tab != "txt2vid":
