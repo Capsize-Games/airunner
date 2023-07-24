@@ -235,6 +235,7 @@ class PromptBuilderForm(BaseWidget):
     def handle_weight_spinbox_change(self, category, variable, widget, value):
         data = self.weighted_values(category, variable)
         data[category][variable]["weight"] = value
+        self.parent.prompt_generator_weighted_values = data
 
     def update_weight_spinbox(self, category, variable, widget):
         data = self.weighted_values(category, variable)
