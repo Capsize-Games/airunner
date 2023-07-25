@@ -32,14 +32,12 @@ datas += copy_metadata('tokenizers')
 datas += copy_metadata('transformers')
 datas += copy_metadata('rich')
 datas += copy_metadata('sympy')
-datas += copy_metadata('tensorflow')
 datas += copy_metadata('scipy')
 datas += collect_data_files("torch", include_py_files=True)
 datas += collect_data_files("torchvision", include_py_files=True)
 datas += collect_data_files("pytorch_lightning", include_py_files=True)
 datas += collect_data_files("lightning_fabric", include_py_files=True)
 datas += collect_data_files("transformers", include_py_files=True)
-datas += collect_data_files("tensorflow", include_py_files=True)
 datas += collect_data_files("sympy", include_py_files=True)
 datas += collect_data_files("controlnet_aux", include_py_files=True)
 a = Analysis(
@@ -49,11 +47,8 @@ a = Analysis(
     pathex=[
         "C:\\Python310\\Lib\\site-packages",
         "C:\\Python310\\Lib\\site-packages\\tokenizers",
-        "C:\\Python310\\Lib\\site-packages\\tensorflow_io_gcs_filesystem\\core\\python\\ops",
-        "C:\\Python310\\Lib\\site-packages\\tensorflow\\python\\data\\experimental\\service\\",
         "C:\\Python310\\Lib\\site-packages\\torch\\lib",
         "C:\\Python310\\Lib\\site-packages\\PyQt6",
-        "C:\\Users\\root\\AppData\\Local\\Programs\\Python\\Python310\\Lib\\site-packages\\tensorflow\\python\\data\\experimental\\service\\",
         "C:\\Users\\root\\AppData\\Local\\Programs\\Python\\Python310\\",
     ],
     binaries=[
@@ -62,7 +57,6 @@ a = Analysis(
         ("C:\\Python310\\vcruntime140_1.dll", "."),
         ("C:\\windows\\syswow64\\msvcp140.dll", "."),
         ("C:\\api-ms-win-shcore-scaling-l1-1-1.dll.so", "."),
-        ("C:\\Python310\\Lib\\site-packages\\tensorflow\\python\\util\\_pywrap_utils.pyd", "."),
     ],
     datas=datas,
     hiddenimports=[
