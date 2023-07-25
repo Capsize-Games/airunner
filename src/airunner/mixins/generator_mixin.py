@@ -747,6 +747,7 @@ class GeneratorMixin(LoraMixin):
             "lora_path": self.settings_manager.settings.lora_path.get(),
             "embeddings_path": self.settings_manager.settings.embeddings_path.get(),
             "video_path": self.settings_manager.settings.video_path.get(),
+            "clip_skip": self.clip_skip,
         }
 
         if action == "superresolution":
