@@ -115,3 +115,6 @@ RUN wget https://github.com/upx/upx/releases/download/v4.0.2/upx-4.0.2-win64.zip
 RUN LATEST_TAG=$(grep -oP '(?<=version=).*(?=,)' /app/setup.py | tr -d '"') \
     && echo $LATEST_TAG \
     && echo $LATEST_TAG > VERSION
+
+FROM build_files as install_diffusers
+RUN wine64 C:\\Python310\\python.exe -m pip install https://github.com/w4ffl35/diffusers/archive/refs/tags/v0.18.2-fix_convert_from_ckpt.zip
