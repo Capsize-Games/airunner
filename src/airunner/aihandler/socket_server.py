@@ -42,7 +42,7 @@ class SocketServer:
     def start(self):
         self.server_socket = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
         self.server_socket.setsockopt(socket.SOL_SOCKET, socket.SO_REUSEADDR, 1)  # set SO_REUSEADDR option
-        self.server_socket.bind((self.server, self.port))
+        self.server_socket.bind((self.server, int(self.port)))
         self.server_socket.listen(1)
         self.server_socket.settimeout(1)
         signal.signal(signal.SIGINT, self.close_server)
@@ -149,7 +149,7 @@ class SocketServer:
         self.running = False
         time.sleep(2)
 
-    def close_server(self, signal, frame):
+    def close_server(self, signal=None, frame=None):
         logger.info("stopping threads")
         self.client.stop()
         logger.info("waiting for response worker thread")

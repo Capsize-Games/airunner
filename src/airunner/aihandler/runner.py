@@ -661,6 +661,12 @@ class SDRunner(
     def is_dev_env(self):
         return AIRUNNER_ENVIRONMENT == "dev"
 
+    current_clip_skip = 0
+
+    @property
+    def clip_skip(self):
+        return self.options.get("clip_skip", 0)
+
     @staticmethod
     def latents_to_image(latents: torch.Tensor):
         image = latents.permute(0, 2, 3, 1)
@@ -1468,7 +1474,7 @@ class SDRunner(
 
                 kwargs.update({
                     "local_files_only": self.local_files_only,
-                    "use_auth_token": self.data["options"]["hf_token"],
+                    "use_auth_token": self.data["options"].get("hf_token", ""),
                 })
 
                 if self.is_superresolution:
@@ -1542,8 +1548,6 @@ class SDRunner(
             scheduler_name=None,
             device=None
     ):
-        from diffusers.pipelines.stable_diffusion.convert_from_ckpt import \
-            download_from_original_stable_diffusion_ckpt
         if not scheduler_name:
             scheduler_name = self.scheduler_name
         if not path:
@@ -1566,6 +1570,8 @@ class SDRunner(
                 HERE = os.path.dirname(os.path.abspath(__file__))
                 config = os.path.join(HERE, config)
 
+            from airunner.aihandler.download_from_original_stable_diffusion_ckpt import \
+                download_from_original_stable_diffusion_ckpt
             pipe = download_from_original_stable_diffusion_ckpt(
                 checkpoint_path=path,
                 original_config_file=config,
@@ -1573,6 +1579,7 @@ class SDRunner(
                 scheduler_type="ddim",
                 from_safetensors=is_safetensors,
                 local_files_only=self.local_files_only,
+                extract_ema=False,
                 pipeline_class=self.action_diffuser,
             )
             if self.enable_controlnet:
