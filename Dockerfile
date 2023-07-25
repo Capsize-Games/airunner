@@ -76,3 +76,6 @@ COPY dobuild.py dobuild.py
 COPY build.sh build.sh
 COPY build.airunner.linux.prod.spec build.airunner.linux.prod.spec
 COPY setup.py setup.py
+
+FROM build_files as install_diffusers
+RUN pip install https://github.com/w4ffl35/diffusers/archive/refs/tags/v0.18.2-fix_convert_from_ckpt.zip
