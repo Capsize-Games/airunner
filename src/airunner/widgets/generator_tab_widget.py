@@ -377,6 +377,21 @@ class GeneratorTabWidget(BaseWidget):
             slider_minimum=1
         )
         self.data[self.tab_section][self.tab]["samples_slider_widget"] = samples_widget
+        clip_skip_widget = SliderWidget(
+            app=self.app,
+            label_text="Clip Skip",
+            slider_callback=partial(self.handle_value_change, "clip_skip"),
+            current_value=self.app.clip_skip,
+            slider_maximum=11,
+            spinbox_maximum=12.0,
+            display_as_float=False,
+            spinbox_single_step=1,
+            spinbox_page_step=1,
+            spinbox_minimum=0,
+            slider_minimum=0
+        )
+        self.data[self.tab_section][self.tab]["clip_skip_slider_widget"] = clip_skip_widget
+
         self.data[self.tab_section][self.tab]["queue_label"] = QLabel("Items in queue: 0")
         widget = QWidget()
         horizontal_layout = QHBoxLayout(widget)
@@ -384,6 +399,7 @@ class GeneratorTabWidget(BaseWidget):
         horizontal_layout.setSpacing(10)
         horizontal_layout.addWidget(samples_widget)
         horizontal_layout.addWidget(interrupt_button)
+        self.add_widget_to_grid(clip_skip_widget)
         self.add_widget_to_grid(widget)
         self.add_widget_to_grid(self.data[self.tab_section][self.tab]["queue_label"])
 
