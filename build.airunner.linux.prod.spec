@@ -59,7 +59,6 @@ a = Analysis(
         "/usr/local/lib/python3.10/dist-packages/",
         "/usr/local/lib/python3.10/dist-packages/torch/lib",
         "/usr/local/lib/python3.10/dist-packages/tokenizers",
-        "/usr/local/lib/python3.10/dist-packages/tensorflow",
         "/usr/lib/x86_64-linux-gnu/",
     ],
     binaries=[

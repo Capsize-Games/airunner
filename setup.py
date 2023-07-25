@@ -36,7 +36,6 @@ setup(
         "requests-oauthlib==1.3.1",
         "safetensors==0.3.1",
         "scipy==1.10.1",
-        "tensorflow==2.12.0",
         "tokenizers==0.13.3",
         "tqdm==4.65.0",
         "charset-normalizer==3.1.0",
