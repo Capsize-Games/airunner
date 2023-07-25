@@ -53,6 +53,7 @@ DEFAULT_GENERATOR_SETTINGS = {
     "enable_controlnet": False,
     "controlnet_guidance_scale": 50,
     "zeroshot": False,
+    "clip_skip": 0,
 }
 GENERATOR_TYPES = {
     "prompt": StringVar,
@@ -78,6 +79,7 @@ GENERATOR_TYPES = {
     "enable_controlnet": BooleanVar,
     "controlnet_guidance_scale": IntVar,
     "zeroshot": BooleanVar,
+    "clip_skip": IntVar,
 }
 USER = os.environ.get("USER", "")
 default_model_path = os.path.join("/", "home", USER, "stablediffusion")
