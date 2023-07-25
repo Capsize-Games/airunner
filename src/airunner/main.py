@@ -49,6 +49,7 @@ if __name__ == "__main__":
         splash.finish(window)
         window.raise_()
 
+    # argument parsing for socket server
     parser = argparse.ArgumentParser()
     parser.add_argument("--ss", action="store_true", default=False)
     parser.add_argument("--server", default="127.0.0.1")
