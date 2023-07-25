@@ -56,11 +56,14 @@ class MemoryEfficientMixin:
                 logger.warning("Tiled vae not supported for this model")
 
     def apply_accelerated_transformers(self):
+        from diffusers.models.attention_processor import AttnProcessor2_0
         if self.use_kandinsky:
             return
         if not self.cuda_is_available or not self.use_accelerated_transformers:
             logger.info("Disabling accelerated transformers")
             self.pipe.unet.set_default_attn_processor()
+        else:
+            self.pipe.unet.set_attn_processor(AttnProcessor2_0())
 
     def save_unet(self, file_path, file_name):
         logger.info(f"Saving compiled torch model {file_name}")
