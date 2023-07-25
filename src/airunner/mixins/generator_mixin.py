@@ -231,6 +231,18 @@ class GeneratorMixin(LoraMixin):
         self.random_seed_var.set(val)
 
     @property
+    def clip_skip_var(self):
+        return self.settings.clip_skip
+
+    @property
+    def clip_skip(self):
+        return self.clip_skip_var.get()
+
+    @clip_skip.setter
+    def clip_skip(self, val):
+        self.clip_skip_var.set(val)
+
+    @property
     def samples_var(self):
         return self.settings.n_samples
 
