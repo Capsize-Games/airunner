@@ -8,6 +8,7 @@ from airunner.widgets.base_widget import BaseWidget
 
 class PromptBuilderForm(BaseWidget):
     name = "prompt_builder_form"
+    template_dir = "prompt_builder/templates/"
     prompt_types = None
     unprocessed_prompts = {}
 
@@ -189,7 +190,7 @@ class PromptBuilderForm(BaseWidget):
         self.scroll_layout.layout().addItem(spacer, total_rows+1, 0)
 
     def create_prompt_widget(self, category, variable, weighted_value, index):
-        widget = uic.loadUi(f"pyqt/widgets/prompt_builder_variable_widget.ui")
+        widget = uic.loadUi(f"{self.template_dir}prompt_builder_variable_widget.ui")
         widget.label.setText(variable.capitalize())
 
         # set default weights

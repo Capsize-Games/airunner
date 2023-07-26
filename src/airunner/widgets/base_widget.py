@@ -8,6 +8,7 @@ from airunner.widgets.slider_widget import SliderWidget
 class BaseWidget(QWidget):
     name = None
     icons = {}
+    template_dir = "pyqt/widgets/"
 
     @property
     def is_dark(self):
@@ -63,7 +64,7 @@ class BaseWidget(QWidget):
         self.app = kwargs.pop("app", None)
         super().__init__(*args, **kwargs)
         if self.name:
-            uic.loadUi(f"pyqt/widgets/{self.name}.ui", self)
+            uic.loadUi(f"{self.template_dir}{self.name}.ui", self)
 
     def set_stylesheet(self):
         for button, icon in self.icons.items():
