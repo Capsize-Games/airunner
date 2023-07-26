@@ -14,7 +14,7 @@ class MessageCode(Enum):
     EMBEDDING_LOAD_FAILED = 600
 
 
-class Schedulers(Enum):
+class Scheduler(Enum):
     EULER_ANCESTRAL = "Euler a"
     EULER = "Euler"
     LMS = "LMS"
@@ -31,10 +31,10 @@ class Schedulers(Enum):
     DEIS = "DEIS"
     DPM_2M_SDE_K = "DPM 2M SDE Karras"
     PLMS = "PLMS"
-    DDIMInverse = "DDIM Inverse"
-    IPNM = "IPNM"
-    REPAINT = "RePaint"
-    KVE = "Karras Variance exploding"
-    VESDE = "VE-SDE"
-    VPSDE = "VP-SDE"
-    VQDIFFUSION = "VQ Diffusion"
+    # DDIMInverse = "DDIM Inverse"
+    # IPNM = "IPNM"
+    # REPAINT = "RePaint"
+    # KVE = "Karras Variance exploding"
+    # VESDE = "VE-SDE"
+    # VPSDE = "VP-SDE"
+    # VQDIFFUSION = "VQ Diffusion"
