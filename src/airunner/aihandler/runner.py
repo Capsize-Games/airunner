@@ -1515,13 +1515,14 @@ class SDRunner(
         self.load_learned_embed_in_clip()
 
     def load_text_encoder(self, pipeline):
-        if self.pipe.text_encoder.config.num_hidden_layers > 12:
+        if not pipeline or pipeline.text_encoder.config.num_hidden_layers > 12:
             return pipeline
         from transformers import CLIPTextModel
         pipeline.text_encoder = CLIPTextModel.from_pretrained(
             "openai/clip-vit-large-patch14",
             num_hidden_layers=12 - self.clip_skip,
             torch_dtype=self.data_type,
+            local_files_only=self.local_files_only,
         )
         self.current_clip_skip = self.clip_skip
         return pipeline
