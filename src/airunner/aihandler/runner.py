@@ -1289,7 +1289,8 @@ class SDRunner(
     ):
         self.process_data(data)
         if self.current_clip_skip != self.clip_skip and self.pipe is not None:
-            self.reload_model = True
+            if self.pipe.text_encoder.config.num_hidden_layers <= 12:
+                self.reload_model = True
 
         self.send_message(f"Generating {'video' if self.is_txt2vid else 'image'}...")
 
@@ -1514,12 +1515,12 @@ class SDRunner(
         self.load_learned_embed_in_clip()
 
     def load_text_encoder(self, pipeline):
+        if self.pipe.text_encoder.config.num_hidden_layers > 12:
+            return pipeline
         from transformers import CLIPTextModel
-        pipeline.text_encoder = None
         pipeline.text_encoder = CLIPTextModel.from_pretrained(
-            "runwayml/stable-diffusion-v1-5",
-            subfolder="text_encoder",
-            num_hidden_layers=12-self.clip_skip,
+            "openai/clip-vit-large-patch14",
+            num_hidden_layers=12 - self.clip_skip,
             torch_dtype=self.data_type,
         )
         self.current_clip_skip = self.clip_skip
@@ -1540,7 +1541,7 @@ class SDRunner(
         return pipeline
 
     def download_from_original_stable_diffusion_ckpt(self, path):
-        from airunner.aihandler.download_from_original_stable_diffusion_ckpt import \
+        from diffusers.pipelines.stable_diffusion.convert_from_ckpt import \
             download_from_original_stable_diffusion_ckpt
         try:
             pipe = download_from_original_stable_diffusion_ckpt(
@@ -1550,7 +1551,13 @@ class SDRunner(
                 from_safetensors=self.is_safetensors,
                 local_files_only=self.local_files_only,
                 extract_ema=False,
-                pipeline_class=self.action_diffuser
+                pipeline_class=self.action_diffuser,
+                config_files={
+                    "v1": "v1.yaml",
+                    "v2": "v2.yaml",
+                    "xl": "sd_xl_base.yaml",
+                    "xl_refiner": "sd_xl_refiner.yaml"
+                }
             )
             if self.enable_controlnet:
                 pipe = self.load_controlnet_from_ckpt(pipe)
