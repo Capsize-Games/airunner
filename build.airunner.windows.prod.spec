@@ -187,6 +187,14 @@ shutil.copyfile(
     f'{DIST}/v2.yaml'
 )
 shutil.copyfile(
+    f'{ROOT}/src/airunner/sd_xl_base.yaml',
+    f'{DIST}/sd_xl_base.yaml'
+)
+shutil.copyfile(
+    f'{ROOT}/src/airunner/sd_xl_refiner.yaml',
+    f'{DIST}/sd_xl_refiner.yaml'
+)
+shutil.copyfile(
     f'Z:\\app\\setup.py',
     f'{DIST}/setup.py'
 )
