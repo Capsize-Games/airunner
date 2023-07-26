@@ -7,7 +7,7 @@ from PyQt6 import uic, QtCore
 from PyQt6.QtWidgets import QApplication, QFileDialog, QMainWindow, QSplitter, QTabWidget, QWidget, \
     QVBoxLayout
 from PyQt6.QtCore import pyqtSlot, Qt, QThread, pyqtSignal, QObject, QTimer
-from PyQt6.QtGui import QGuiApplication, QPixmap, QShortcut, QKeySequence
+from PyQt6.QtGui import QGuiApplication, QShortcut, QKeySequence
 
 from airunner.aihandler.qtvar import MessageHandlerVar
 from airunner.aihandler.logger import Logger as logger
@@ -24,7 +24,7 @@ from airunner.widgets.canvas_widget import CanvasWidget
 from airunner.widgets.embedding_widget import EmbeddingWidget
 from airunner.widgets.footer_widget import FooterWidget
 from airunner.widgets.generator_tab_widget import GeneratorTabWidget
-from airunner.widgets.prompt_builder import PromptBuilderWidget
+from airunner.prompt_builder.widgets.prompt_builder import PromptBuilderWidget
 from airunner.widgets.tool_bar_widget import ToolBarWidget
 from airunner.widgets.tool_menu_widget import ToolMenuWidget
 from airunner.widgets.header_widget import HeaderWidget

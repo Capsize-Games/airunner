@@ -1,13 +1,14 @@
 import random
 
 from airunner.aihandler.settings import MAX_SEED
-from airunner.data.prompt_data import PromptData
+from airunner.prompt_builder.prompt_data import PromptData
 from airunner.widgets.base_widget import BaseWidget
-from airunner.widgets.prompt_builder_form import PromptBuilderForm
+from airunner.prompt_builder.widgets.prompt_builder_form import PromptBuilderForm
 
 
 class PromptBuilderWidget(BaseWidget):
     name = "prompt_builder"
+    template_dir = "prompt_builder/templates/"
     prompt_data = None
     auto_prompt_weight = 0.5
     text_prompt_weight = 0.5
