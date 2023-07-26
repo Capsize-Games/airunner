@@ -8,6 +8,7 @@ from PyQt6.QtWidgets import QApplication, QSplashScreen
 from PyQt6.QtCore import Qt, QTimer
 from PyQt6.QtGui import QGuiApplication, QPixmap
 
+from airunner.aihandler.settings import SERVER
 from airunner.aihandler.socket_server import SocketServer
 from airunner.main_window import MainWindow
 from airunner.utils import get_version
@@ -52,15 +53,15 @@ if __name__ == "__main__":
     # argument parsing for socket server
     parser = argparse.ArgumentParser()
     parser.add_argument("--ss", action="store_true", default=False)
-    parser.add_argument("--server", default="127.0.0.1")
-    parser.add_argument("--port", default=5000)
+    parser.add_argument("--host", default=SERVER["host"])
+    parser.add_argument("--port", default=SERVER["port"])
     parser.add_argument("--keep-alive", action="store_true", default=False)
-    parser.add_argument("--packet-size", default=1024)
+    parser.add_argument("--packet-size", default=SERVER["port"])
     args = parser.parse_args()
 
     if args.ss:
         SocketServer(
-            server=args.server,
+            host=args.host,
             port=args.port,
             keep_alive=args.keep_alive,
             packet_size=args.packet_size
