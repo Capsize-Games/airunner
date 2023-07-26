@@ -61,6 +61,7 @@ class SDRunner(
     }
     _model = None
     requested_data = None
+    current_clip_skip = 0
 
     # controlnet atributes
     processor = None
@@ -660,8 +661,6 @@ class SDRunner(
     @property
     def is_dev_env(self):
         return AIRUNNER_ENVIRONMENT == "dev"
-
-    current_clip_skip = 0
 
     @property
     def clip_skip(self):
@@ -1627,4 +1626,3 @@ class SDRunner(
         else:
             self.current_model = self.options.get(f"model_path", None)
             self.current_model_branch = self.options.get(f"model_branch", None)
-    # end model methods
