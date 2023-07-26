@@ -122,7 +122,6 @@
     <addaction name="separator"/>
     <addaction name="actionInvert"/>
     <addaction name="actionFilm"/>
-    <addaction name="actionOld_Comic"/>
    </widget>
    <widget class="QMenu" name="menuAbout">
     <property name="tearOffEnabled">
