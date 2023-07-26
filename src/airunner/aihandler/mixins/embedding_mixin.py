@@ -1,6 +1,6 @@
 import os
 from airunner.aihandler.logger import Logger as logger
-from airunner.aihandler.settings import MessageCode
+from airunner.aihandler.enums import MessageCode
 
 
 class EmbeddingMixin:
