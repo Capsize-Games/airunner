@@ -171,6 +171,8 @@ shutil.copyfile('/app/airunner/src/airunner/src/splashscreen.png', '/app/dist/ai
 os.makedirs('/dist/airunner/diffusers/pipelines/stable_diffusion', exist_ok=True)
 shutil.copyfile('/app/airunner/src/airunner/v1.yaml', '/app/dist/airunner/v1.yaml')
 shutil.copyfile('/app/airunner/src/airunner/v2.yaml', '/app/dist/airunner/v2.yaml')
+shutil.copyfile('/app/airunner/src/airunner/sd_xl_base.yaml', '/app/dist/airunner/sd_xl_base.yaml')
+shutil.copyfile('/app/airunner/src/airunner/sd_xl_refiner.yaml', '/app/dist/airunner/sd_xl_refiner.yaml')
 
 shutil.copyfile(
     f'/usr/local/lib/python3.10/dist-packages/JIT/__pycache__/random.cpython-310.pyc',
