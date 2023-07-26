@@ -14,7 +14,7 @@ class SocketServer:
 
     def __init__(self, **kwargs):
         self.keep_alive = kwargs.get("keep_alive", False)
-        self.server = kwargs.get("server")
+        self.host = kwargs.get("host")
         self.port = kwargs.get("port")
         self.packet_size = kwargs.get("packet_size", 1024)
         self.client = OfflineClient(
@@ -22,7 +22,7 @@ class SocketServer:
             message_handler=self.message_handler
         )
         logger.info("Starting server")
-        logger.info(f"Listening at {self.server}:{self.port}")
+        logger.info(f"Listening at {self.host}:{self.port}")
         self.start_server()
 
     def start_server(self):
@@ -42,7 +42,7 @@ class SocketServer:
     def start(self):
         self.server_socket = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
         self.server_socket.setsockopt(socket.SOL_SOCKET, socket.SO_REUSEADDR, 1)  # set SO_REUSEADDR option
-        self.server_socket.bind((self.server, int(self.port)))
+        self.server_socket.bind((self.host, int(self.port)))
         self.server_socket.listen(1)
         self.server_socket.settimeout(1)
         signal.signal(signal.SIGINT, self.close_server)
