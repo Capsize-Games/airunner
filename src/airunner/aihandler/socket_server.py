@@ -4,7 +4,7 @@ import json
 import time
 
 from airunner.aihandler.offline_client import OfflineClient
-from airunner.aihandler.settings import MessageCode
+from airunner.aihandler.enums import MessageCode
 from airunner.aihandler.logger import Logger as logger
 
 

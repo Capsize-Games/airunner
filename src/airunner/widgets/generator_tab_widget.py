@@ -5,7 +5,8 @@ from PyQt6.QtWidgets import QWidget, QGridLayout, QPlainTextEdit, QLabel, QCombo
 from airunner.utils import load_default_models, load_models_from_path
 from airunner.widgets.base_widget import BaseWidget
 from airunner.widgets.slider_widget import SliderWidget
-from airunner.aihandler.settings import MAX_SEED, AVAILABLE_SCHEDULERS_BY_ACTION, MODELS, MessageCode
+from airunner.aihandler.settings import MAX_SEED, AVAILABLE_SCHEDULERS_BY_ACTION, MODELS
+from airunner.aihandler.enums import MessageCode
 
 
 class GeneratorTabWidget(BaseWidget):
