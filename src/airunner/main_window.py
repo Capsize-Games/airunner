@@ -4,7 +4,7 @@ import sys
 import psutil
 import torch
 from PyQt6 import uic, QtCore
-from PyQt6.QtWidgets import QApplication, QFileDialog, QSplashScreen, QMainWindow, QSplitter, QTabWidget, QWidget, \
+from PyQt6.QtWidgets import QApplication, QFileDialog, QMainWindow, QSplitter, QTabWidget, QWidget, \
     QVBoxLayout
 from PyQt6.QtCore import pyqtSlot, Qt, QThread, pyqtSignal, QObject, QTimer
 from PyQt6.QtGui import QGuiApplication, QPixmap, QShortcut, QKeySequence
@@ -12,9 +12,9 @@ from PyQt6.QtGui import QGuiApplication, QPixmap, QShortcut, QKeySequence
 from airunner.aihandler.qtvar import MessageHandlerVar
 from airunner.aihandler.logger import Logger as logger
 from airunner.aihandler.pyqt_client import OfflineClient
-from airunner.aihandler.settings import LOG_LEVEL, MessageCode
+from airunner.aihandler.settings import LOG_LEVEL
+from airunner.aihandler.enums import MessageCode
 from airunner.mixins.canvas_mixin import CanvasMixin
-from airunner.mixins.comic_mixin import ComicMixin
 from airunner.mixins.generator_mixin import GeneratorMixin
 from airunner.mixins.history_mixin import HistoryMixin
 from airunner.mixins.menubar_mixin import MenubarMixin
@@ -42,8 +42,7 @@ class MainWindow(
     HistoryMixin,
     MenubarMixin,
     CanvasMixin,
-    GeneratorMixin,
-    ComicMixin
+    GeneratorMixin
 ):
     current_filter = None
     tqdm_callback_triggered = False
