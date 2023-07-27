@@ -36,8 +36,6 @@ class KandinskyMixin:
             args["strength"] = self.strength
         if self.is_outpaint:
             mask_image = kwargs.get("mask_image")
-            # invert mask image
-            mask_image = mask_image.point(lambda x: 255 - x)
             args["mask_image"] = mask_image
 
         return self.pipe(**args)
