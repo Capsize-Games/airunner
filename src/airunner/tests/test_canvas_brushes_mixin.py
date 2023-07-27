@@ -4,7 +4,7 @@ from PyQt6.QtCore import QPoint
 from PyQt6.QtGui import QPen
 
 from airunner.mixins.canvas_brushes_mixin import CanvasBrushesMixin
-from aihandler.settings_manager import SettingsManager
+from airunner.aihandler.settings_manager import SettingsManager
 from airunner.models.layerdata import LayerData
 from airunner.models.linedata import LineData
 
