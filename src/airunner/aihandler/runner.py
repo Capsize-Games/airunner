@@ -1181,10 +1181,11 @@ class SDRunner(
         self.prepare_options(data)
         if self.do_clear_kandinsky:
             self.clear_kandinsky()
-        self._prepare_scheduler()
+        self.prepare_scheduler()
         self.prepare_model()
         self.initialize()
-        self._change_scheduler()
+        if self.pipe:
+            self.change_scheduler()
 
     def generate(self, data: dict):
         logger.info("generate called")
