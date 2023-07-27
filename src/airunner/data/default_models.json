@@ -53,8 +53,8 @@
             "path": "Linaqruf/anything-v3.0",
             "branch": "main"
         },
-        "Stable Diuffions XL 0.9": {
-            "path": "stabilityai/stable-diffusion-xl-base-0.9",
+        "Stable Diuffion XL Base 1.0": {
+            "path": "stabilityai/stable-diffusion-xl-base-1.0",
             "branch": "fp16"
         }
     },
