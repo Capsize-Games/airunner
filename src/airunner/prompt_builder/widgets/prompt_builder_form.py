@@ -1,25 +1,35 @@
 import random
 from functools import partial
 from PyQt6 import uic
-from PyQt6.QtWidgets import QGridLayout
-from airunner.data.prompt_data import PromptData
+from PyQt6.QtWidgets import QGridLayout, QSpacerItem, QSizePolicy
+
 from airunner.widgets.base_widget import BaseWidget
 
 
-class PromptBuilderWidget(BaseWidget):
-    name = "prompt_builder"
-    prompt_data = None
-    auto_prompt_weight = 0.5
-    text_prompt_weight = 0.5
-    negative_auto_prompt_weight = 0.5
-    negative_text_prompt_weight = 0.5
+class PromptBuilderForm(BaseWidget):
+    name = "prompt_builder/prompt_builder_form"
     prompt_types = None
     unprocessed_prompts = {}
 
+    # this is the parent tab widget which initializes this widget
+    prompt_builder_widget = None
+
+    @property
+    def prompt_data(self):
+        return self.prompt_builder_widget.prompt_data
+
+    def process_prompt(self):
+        """
+        A pass-through function for the prompt builder widget to call
+        :return:
+        """
+        self.parent.process_prompt()
+
     def __init__(self, *args, **kwargs):
+        self.prompt_builder_widget = kwargs.pop("prompt_builder_widget")
         super().__init__(*args, **kwargs)
-        self.prompt_data = PromptData(file_name="prompts")
-        self.tabs.setStyleSheet(self.app.css("prompt_builder_widget"))
+        self.parent = kwargs.get("parent")
+        self.set_stylesheet()
         self.scroll_layout = QGridLayout(self.scrollArea.widget())
         self.initialize_category_dropdowns()
         self.initialize_genre_dropdowns()
@@ -29,43 +39,38 @@ class PromptBuilderWidget(BaseWidget):
         self.initialize_prefix_suffix_inputs()
         self.initialize_buttons()
         self.initialize_radio_buttons()
-        self.initialize_weight_sliders()
-        self.initialize_weights()
-        self.app.generate_signal.connect(self.inject_prompt)
 
     def initialize_category_dropdowns(self):
         # initialize category dropdowns
         self.prompt_category_current_index = 0
         self.prompt_category.addItems(self.prompt_data.categories)
         self.prompt_category.currentIndexChanged.connect(partial(self.set_prompts, "advanced"))
+        self.prompt_category.lineEdit().setReadOnly(True)
 
     def initialize_genre_dropdowns(self):
         # initialize genre dropdowns
         self.prompt_genre.addItems(self.prompt_data.genres)
         self.prompt_genre.currentIndexChanged.connect(partial(self.set_genre))
+        self.prompt_genre.lineEdit().setReadOnly(True)
 
     def initialize_color_dropdowns(self):
         # initialize color dropdowns
         self.prompt_color.addItems(self.prompt_data.colors)
         self.prompt_color.currentIndexChanged.connect(partial(self.set_color))
+        self.prompt_color.lineEdit().setReadOnly(True)
 
     def initialize_style_dropdowns(self):
         # initialize style dropdowns
         self.prompt_style.addItems(self.prompt_data.styles)
         self.prompt_style.currentIndexChanged.connect(partial(self.set_style))
-
-    def initialize_weights(self):
-        auto_prompt_weight = self.settings_manager.settings.auto_prompt_weight.get()
-        auto_negative_prompt_weight = self.settings_manager.settings.negative_auto_prompt_weight.get()
-        self.prompt_weight_distribution_slider.setValue(int(auto_prompt_weight * 100))
-        self.negative_prompt_weight_distribution_slider.setValue(int(auto_negative_prompt_weight * 100))
+        self.prompt_style.lineEdit().setReadOnly(True)
 
     def initialize_dropdown_values(self):
         # check for index in
-        prompt_category = self.settings_manager.settings.prompt_generator_category.get()
-        prompt_genre = self.settings_manager.settings.prompt_generator_prompt_genre.get()
-        prompt_color = self.settings_manager.settings.prompt_generator_prompt_color.get()
-        prompt_style = self.settings_manager.settings.prompt_generator_prompt_style.get()
+        prompt_category = self.parent.prompt_generator_category
+        prompt_genre = self.parent.prompt_generator_prompt_genre
+        prompt_color = self.parent.prompt_generator_prompt_color
+        prompt_style = self.parent.prompt_generator_prompt_style
 
         # initialize dropdown values
         prompt_category_index = self.prompt_category.findText(prompt_category)
@@ -78,30 +83,30 @@ class PromptBuilderWidget(BaseWidget):
         self.prompt_style.setCurrentIndex(prompt_style_index)
 
     def initialize_prefix_suffix_inputs(self):
-        self.prompt_prefix.setText(self.settings_manager.settings.prompt_generator_prefix.get())
-        self.prompt_suffix.setText(self.settings_manager.settings.prompt_generator_suffix.get())
+        self.prompt_prefix.setText(self.parent.prompt_generator_prefix)
+        self.prompt_suffix.setText(self.parent.prompt_generator_suffix)
         self.prompt_prefix.textChanged.connect(self.handle_prompt_prefix_change)
         self.prompt_suffix.textChanged.connect(self.handle_prompt_suffix_change)
 
-        self.negative_prompt_prefix.setText(self.settings_manager.settings.negative_prompt_generator_prefix.get())
-        self.negative_prompt_suffix.setText(self.settings_manager.settings.negative_prompt_generator_suffix.get())
+        self.negative_prompt_prefix.setText(self.parent.negative_prompt_generator_prefix)
+        self.negative_prompt_suffix.setText(self.parent.negative_prompt_generator_suffix)
         self.negative_prompt_prefix.textChanged.connect(self.handle_negative_prompt_prefix_change)
         self.negative_prompt_suffix.textChanged.connect(self.handle_negative_prompt_suffix_change)
 
     def handle_prompt_prefix_change(self, text):
-        self.settings_manager.settings.prompt_generator_prefix.set(text)
+        self.parent.prompt_generator_prefix = text
         self.process_prompt()
 
     def handle_prompt_suffix_change(self, text):
-        self.settings_manager.settings.prompt_generator_suffix.set(text)
+        self.parent.prompt_generator_suffix = text
         self.process_prompt()
 
     def handle_negative_prompt_prefix_change(self, text):
-        self.settings_manager.settings.negative_prompt_generator_prefix.set(text)
+        self.parent.negative_prompt_generator_prefix = text
         self.process_prompt()
 
     def handle_negative_prompt_suffix_change(self, text):
-        self.settings_manager.settings.negative_prompt_generator_suffix.set(text)
+        self.parent.negative_prompt_generator_suffix = text
         self.process_prompt()
 
     def initialize_buttons(self):
@@ -113,17 +118,11 @@ class PromptBuilderWidget(BaseWidget):
         self.set_prompts("advanced")
 
     def initialize_radio_buttons(self):
-        self.basic_radio.setChecked(self.settings_manager.settings.prompt_generator_advanced.get() == False)
-        self.advanced_radio.setChecked(self.settings_manager.settings.prompt_generator_advanced.get() == True)
+        self.basic_radio.setChecked(self.settings_manager.settings.prompt_generator_advanced.get() is False)
+        self.advanced_radio.setChecked(self.settings_manager.settings.prompt_generator_advanced.get() is True)
         self.basic_radio.toggled.connect(self.handle_advanced_basic_radio_change)
         self.advanced_radio.toggled.connect(self.handle_advanced_basic_radio_change)
         self.handle_advanced_basic_radio_change()
-
-    def initialize_weight_sliders(self):
-        self.prompt_weight_distribution_slider.valueChanged.connect(
-            self.handle_weight_distribution_slider_change)
-        self.negative_prompt_weight_distribution_slider.valueChanged.connect(
-            self.handle_negative_weight_distribution_slider_change)
 
     def handle_advanced_basic_radio_change(self):
         self.app.settings_manager.settings.prompt_generator_advanced.set(self.advanced_radio.isChecked())
@@ -156,7 +155,7 @@ class PromptBuilderWidget(BaseWidget):
         for i in reversed(range(self.scroll_layout.count())):
             widget = self.scroll_layout.itemAt(i).widget()
             if widget is not None:
-                variable = widget.groupbox.title().lower()
+                variable = widget.label.text().lower()
                 try:
                     weight = self.prompt_data.variable_weights_by_category(category, variable)
                     widget.spinbox.setValue(weight)
@@ -172,7 +171,7 @@ class PromptBuilderWidget(BaseWidget):
     def populate_prompt_widgets(self, category):
         # clear items from self.scroll_grid
         self.clear_scroll_grid()
-        data = self.settings_manager.settings.prompt_generator_weighted_values.get()
+        data = self.parent.prompt_generator_weighted_values
         try:
             for index, variable in enumerate(self.prompt_data.available_variables_by_category(category)):
                 if category in data and variable in data[category]:
@@ -185,10 +184,12 @@ class PromptBuilderWidget(BaseWidget):
                 self.create_prompt_widget(category, variable, weighted_value, index)
         except KeyError:
             pass
-        # self.scroll_layout.layout().addStretch()
+        spacer = QSpacerItem(0, 0, QSizePolicy.Policy.Minimum, QSizePolicy.Policy.Expanding)
+        total_rows = self.scroll_layout.layout().rowCount()
+        self.scroll_layout.layout().addItem(spacer, total_rows+1, 0)
 
     def create_prompt_widget(self, category, variable, weighted_value, index):
-        widget = uic.loadUi(f"pyqt/widgets/prompt_builder_variable_widget.ui")
+        widget = uic.loadUi(f"pyqt/widgets/prompt_builder/prompt_builder_variable_widget.ui")
         widget.label.setText(variable.capitalize())
 
         # set default weights
@@ -211,10 +212,12 @@ class PromptBuilderWidget(BaseWidget):
             pass
         widget.combobox.currentIndexChanged.connect(partial(
             self.handle_combobox_change, category, variable, widget))
+        # prevent widget.combobox from being edited, but leave it editable
+        widget.combobox.lineEdit().setReadOnly(True)
         self.scroll_layout.layout().addWidget(widget, index // 2, index % 2, 1, 1)
 
     def weighted_values(self, category, variable):
-        data = self.settings_manager.settings.prompt_generator_weighted_values.get()
+        data = self.parent.prompt_generator_weighted_values
         if category not in data:
             data[category] = {}
         if variable not in data[category]:
@@ -226,93 +229,20 @@ class PromptBuilderWidget(BaseWidget):
         value = widget.combobox.currentText()
         data[category][variable]["value"] = value
         data[category][variable]["weight"] = self.prompt_data.variable_weights_by_category(category, variable)
-        self.settings_manager.settings.prompt_generator_weighted_values.set(data)
+        self.parent.prompt_generator_weighted_values = data
         self.process_prompt()
 
     def handle_weight_spinbox_change(self, category, variable, widget, value):
         data = self.weighted_values(category, variable)
-        self.update_weight_slider(category, variable, widget)
+        value = round(value, 2)
         data[category][variable]["weight"] = value
+        self.parent.prompt_generator_weighted_values = data
+        self.process_prompt()
 
     def update_weight_spinbox(self, category, variable, widget):
         data = self.weighted_values(category, variable)
         widget.spinbox.setValue(data[category][variable]["weight"])
         self.process_prompt()
-
-    def handle_weight_distribution_slider_change(self, value):
-        self.auto_prompt_weight = 0.0 + (value / 100.0)
-        self.text_prompt_weight = 1.0 - self.auto_prompt_weight
-        self.auto_prompt_weight = round(self.auto_prompt_weight, 2)
-        self.text_prompt_weight = round(self.text_prompt_weight, 2)
-        self.auto_prompt_weight_label.setText(f"{self.auto_prompt_weight:.2f}")
-        self.text_prompt_weight_label.setText(f"{self.text_prompt_weight:.2f}")
-        self.settings_manager.settings.auto_prompt_weight.set(self.auto_prompt_weight)
-        self.process_prompt()
-
-    def handle_negative_weight_distribution_slider_change(self, value):
-        self.negative_auto_prompt_weight = 0.0 + (value / 100.0)
-        self.negative_text_prompt_weight = 1.0 - self.negative_auto_prompt_weight
-        self.negative_auto_prompt_weight = round(self.negative_auto_prompt_weight, 2)
-        self.negative_text_prompt_weight = round(self.negative_text_prompt_weight, 2)
-        self.negative_auto_prompt_weight_label.setText(f"{self.negative_auto_prompt_weight:.2f}")
-        self.negative_text_prompt_weight_label.setText(f"{self.negative_text_prompt_weight:.2f}")
-        self.settings_manager.settings.negative_auto_prompt_weight.set(self.negative_auto_prompt_weight)
-        self.process_prompt()
-
-    def process_prompt(self):
-        if not self.settings_manager.settings.use_prompt_builder_checkbox.get():
-            return
-
-        # get composition values from dropdowns
-        category = self.prompt_category.currentText()
-        image_genre = self.prompt_genre.currentText()
-        image_color = self.prompt_color.currentText()
-        image_style = self.prompt_style.currentText()
-        if category == "" or category is None:
-            category = "Random"
-
-        prompt_prefix = self.settings_manager.settings.prompt_generator_prefix.get()
-        prompt_suffix = self.settings_manager.settings.prompt_generator_suffix.get()
-        negative_prompt_prefix = self.settings_manager.settings.negative_prompt_generator_prefix.get()
-        negative_prompt_suffix = self.settings_manager.settings.negative_prompt_generator_suffix.get()
-
-        weighted_variables = self.settings_manager.settings.prompt_generator_weighted_values.get()
-        prompt, negative_prompt = self.prompt_data.build_prompts(
-            prompt=self.app.prompt,
-            negative_prompt=self.app.negative_prompt,
-            text_prompt_weight=self.text_prompt_weight,
-            auto_prompt_weight=self.auto_prompt_weight,
-            prompt_prefix=prompt_prefix,
-            prompt_suffix=prompt_suffix,
-            negative_prompt_prefix=negative_prompt_prefix,
-            negative_prompt_suffix=negative_prompt_suffix,
-            negative_text_prompt_weight=self.negative_text_prompt_weight,
-            negative_auto_prompt_weight=self.negative_auto_prompt_weight,
-            weighted_variables=weighted_variables,
-            seed=self.app.seed,
-            category=category,
-            image_genre=image_genre,
-            image_color=image_color,
-            image_style=image_style,
-            advanced=self.settings_manager.settings.prompt_generator_advanced.get()
-        )
-
-        # save processed prompts
-        self.advanced_prompt_text.setPlainText(prompt)
-        self.advanced_negative_prompt_text.setPlainText(negative_prompt)
-
-    def inject_prompt(self, options):
-        """
-        Injects the prompts into the options dictionary which is
-        passed to the runner.
-        :param options:
-        :return:
-        """
-        self.process_prompt()
-        if self.app.use_prompt_builder_checkbox:
-            options[f"{self.app.action}_prompt"] = self.advanced_prompt_text.toPlainText()
-            options[f"{self.app.action}_negative_prompt"] = self.advanced_negative_prompt_text.toPlainText()
-            options[f"prompt_data"] = self.prompt_data
 
     def set_prompts(self, prompt_type):
         category = self.prompt_category.currentText()
@@ -321,9 +251,9 @@ class PromptBuilderWidget(BaseWidget):
         except KeyError:
             prompts = []
         self.prompt_types = prompts
-        self.settings_manager.settings.prompt_generator_category.set(category)
+        self.parent.prompt_generator_category = category
         try:
-            self.settings_manager.settings.prompt_generator_prompt.set(prompts[0])
+            self.parent.prompt_generator_prompt = prompts[0]
         except IndexError:
             pass
         if prompt_type == "advanced":
@@ -331,16 +261,13 @@ class PromptBuilderWidget(BaseWidget):
         self.process_prompt()
 
     def set_style(self):
-        self.settings_manager.settings.prompt_generator_prompt_style.set(
-            self.prompt_style.currentText())
+        self.parent.prompt_generator_prompt_style = self.prompt_style.currentText()
         self.process_prompt()
 
     def set_color(self):
-        self.settings_manager.settings.prompt_generator_prompt_color.set(
-            self.prompt_color.currentText())
+        self.parent.prompt_generator_prompt_color = self.prompt_color.currentText()
         self.process_prompt()
 
     def set_genre(self):
-        self.settings_manager.settings.prompt_generator_prompt_genre.set(
-            self.prompt_genre.currentText())
+        self.parent.prompt_generator_prompt_genre = self.prompt_genre.currentText()
         self.process_prompt()

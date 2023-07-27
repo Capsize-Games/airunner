@@ -2,7 +2,7 @@ import os
 from PyQt6 import uic
 from PyQt6.QtCore import Qt
 from PyQt6.QtWidgets import QWidget
-from aihandler.settings_manager import SettingsManager
+from airunner.aihandler.settings_manager import SettingsManager
 
 
 class BaseWindow:
@@ -15,17 +15,20 @@ class BaseWindow:
     def __init__(self, settings_manager: SettingsManager, **kwargs):
         self.app = kwargs.get("app", None)
         self.window_title = kwargs.get("window_title", self.window_title)
-        exec = kwargs.get("exec", True)
+        self.exec = kwargs.get("exec", True)
         self.settings_manager = settings_manager
         settings_manager.disable_save()
+        self.initialize_template()
+
+    def initialize_template(self):
         self.template = uic.loadUi(os.path.join(f"pyqt/{self.template_name}.ui"))
         self.template.setWindowTitle(self.window_title)
         if self.is_modal:
             self.template.setWindowModality(Qt.WindowModality.WindowModal)
             self.template.setWindowFlag(Qt.WindowType.WindowStaysOnTopHint)
         self.initialize_window()
-        settings_manager.enable_save()
-        if exec:
+        self.settings_manager.enable_save()
+        if self.exec:
             self.show()
 
     def show(self):

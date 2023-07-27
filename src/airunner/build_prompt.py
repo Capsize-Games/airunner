@@ -38,10 +38,7 @@ class BuildPrompt:
             else:
                 return prompt, True
         elif else_cond and else_cond_val:
-            if text:
-                return prompt + else_cond, True
-            else:
-                return prompt, True
+            return prompt + else_cond, True
         return prompt, False
 
     @classmethod
@@ -93,16 +90,7 @@ class BuildPrompt:
             else:
                 not_cond_val = True
 
-            else_cond_val = False
-            if else_cond:
-                if isinstance(else_cond, list):
-                    for else_cond_var in else_cond:
-                        if cls.has_variable(else_cond_var, vars):
-                            else_cond_val = True
-                            break
-                else:
-                    if cls.has_variable(else_cond, vars):
-                        else_cond_val = True
+            else_cond_val = True if else_cond else False
 
             or_cond_val = False
             if or_cond:
