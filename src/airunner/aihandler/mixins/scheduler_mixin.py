@@ -112,7 +112,7 @@ class SchedulerMixin:
                 logger.error(f"Unable to load scheduler {scheduler_name} from {self.model_path}")
         return self._scheduler
 
-    def _change_scheduler(self):
+    def change_scheduler(self):
         if not self.do_change_scheduler or not self.pipe:
             return
         if self.model_path and self.model_path != "":
@@ -122,7 +122,7 @@ class SchedulerMixin:
         else:
             logger.warning("Unable to change scheduler, model_path is not set")
 
-    def _prepare_scheduler(self):
+    def prepare_scheduler(self):
         scheduler_name = self.options.get(f"scheduler", "euler_a")
         if self.scheduler_name != scheduler_name:
             logger.info("Prepare scheduler")
