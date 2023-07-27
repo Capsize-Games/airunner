@@ -24,6 +24,7 @@ from airunner.aihandler.mixins.compel_mixin import CompelMixin
 from airunner.aihandler.mixins.scheduler_mixin import SchedulerMixin
 from airunner.aihandler.settings import MAX_SEED, LOG_LEVEL, AIRUNNER_ENVIRONMENT
 from airunner.aihandler.enums import MessageCode
+from airunner.prompt_builder.prompt_data import PromptData
 
 
 class SDRunner(
@@ -172,8 +173,12 @@ class SDRunner(
         return self.options.get("deterministic_seed", None)
 
     @property
+    def batch_size(self):
+        return 4 if self.deterministic_generation else 1
+
+    @property
     def prompt_data(self):
-        return self.options.get(f"prompt_data", None)
+        return self.options.get(f"prompt_data", PromptData(file_name="prompts"))
 
     @property
     def prompt(self):
@@ -216,7 +221,7 @@ class SDRunner(
         return self.options.get(f"ddim_eta", 0.5)
 
     @property
-    def batch_size(self):
+    def n_samples(self):
         return self.options.get(f"n_samples", 1)
 
     @property
@@ -888,7 +893,7 @@ class SDRunner(
                 "negative_prompt": self.negative_prompt,
             })
             if not self.is_zeroshot:
-                args["num_frames"] = self.batch_size
+                args["num_frames"] = self.n_samples
         elif not self.use_kandinsky:
             if self.use_compel:
                 try:
@@ -916,9 +921,9 @@ class SDRunner(
         if self.deterministic_generation:
             if self.is_txt2img:
                 if self.deterministic_seed:
-                    generator = [self.generator(seed=_i) for _i in range(4)]
+                    generator = [self.generator(seed=self.seed) for _i in range(self.batch_size)]
                 else:
-                    generator = [self.generator(seed=self.seed + i) for i in range(4)]
+                    generator = [self.generator(seed=self.seed + i) for i in range(self.batch_size)]
                 args["generator"] = generator
 
             if not self.is_upscale and not self.is_superresolution and not self.is_txt2vid:
@@ -988,7 +993,7 @@ class SDRunner(
         }
 
     def call_pipe_zeroshot(self, **kwargs):
-        video_length = self.batch_size
+        video_length = self.n_samples
         chunk_size = 4
         prompt = kwargs["prompt"]
         negative_prompt = kwargs["negative_prompt"]
@@ -1146,8 +1151,6 @@ class SDRunner(
         :return:
         """
         prompt_data = self.prompt_data
-        if prompt_data is None:
-            return data
         logger.info("Process prompt")
         if self.deterministic_seed:
             prompt = data["options"][f"prompt"]
@@ -1161,10 +1164,21 @@ class SDRunner(
                 generated_prompt = match.group(2)
                 prompt_data.prompt = prompt
                 prompt_data.generated_prompt = generated_prompt
+        else:
+            prompt = prompt_data.current_prompt \
+                if prompt_data.current_prompt and prompt_data.current_prompt != "" \
+                else self.prompt
+        negative_prompt = prompt_data.current_negative_prompt \
+            if prompt_data.current_negative_prompt \
+               and prompt_data.current_negative_prompt != "" \
+            else self.negative_prompt
         prompt, negative_prompt = prompt_data.build_prompts(
             seed=seed,
+            prompt=prompt,
+            negative_prompt=negative_prompt,
             is_deterministic=True if self.deterministic_seed else False,
             is_batch=self.deterministic_generation,
+            batch_size=self.batch_size
         )
         data["options"][f"prompt"] = prompt
         data["options"][f"negative_prompt"] = negative_prompt
@@ -1196,7 +1210,7 @@ class SDRunner(
         if self.is_txt2vid or self.is_upscale:
             total_to_generate = 1
         else:
-            total_to_generate = self.batch_size
+            total_to_generate = self.n_samples
 
         seed = self.seed
         for n in range(total_to_generate):

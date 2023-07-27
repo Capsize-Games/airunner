@@ -1,3 +1,6 @@
+import random
+import time
+
 import numpy as np
 
 from airunner.prompt_builder.prompt_variable import PromptVariable
@@ -27,6 +30,12 @@ class PromptParser:
 
     @classmethod
     def random_word(cls):
+        # we need to randomize the seed in order to get a random word
+        # this is because the seed is used to generate the random word
+        # so if we don't randomize the seed, we will get the same word
+        # every time
+        # get current time in nanoseconds
+        random.seed(time.time_ns())
         adjectives = [
             "beautiful",
             "gorgeous",
@@ -54,7 +63,6 @@ class PromptParser:
             "popular",
             "famous",
             "infamous",
-            "unknown",
             "mysterious",
             "scary",
             "frightening",
@@ -75,7 +83,7 @@ class PromptParser:
             "boiling",
             "burning",
         ]
-        return np.random.choice(adjectives)
+        return random.choice(adjectives)
 
     @classmethod
     def parse(
