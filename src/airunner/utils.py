@@ -1,11 +1,34 @@
 import os
-import platform
 import torch
 from PIL import Image
 from PyQt6.QtGui import QPixmap, QImage
-from diffusers import StableDiffusionPipeline, StableDiffusionInpaintPipeline
 
 from airunner.aihandler.settings import MODELS
+from airunner.aihandler.settings_manager import SettingsManager
+
+
+def initialize_os_environment():
+    settings_manager = SettingsManager()
+    hf_cache_path = settings_manager.settings.hf_cache_path.get()
+    print("INITIALIZING OS ENVIRONMENT", hf_cache_path)
+    if hf_cache_path != "":
+        # check if hf_cache_path exists
+        if os.path.exists(hf_cache_path):
+            os.unsetenv("HUGGINGFACE_HUB_CACHE")
+            os.environ["HUGGINGFACE_HUB_CACHE"] = hf_cache_path
+
+
+def default_hf_cache_dir():
+    default_home = os.path.join(os.path.expanduser("~"), ".cache")
+    hf_cache_home = os.path.expanduser(
+        os.getenv(
+            "HF_HOME",
+            os.path.join(os.getenv("XDG_CACHE_HOME", default_home), "huggingface"),
+        )
+    )
+    default_cache_path = os.path.join(hf_cache_home, "hub")
+    HUGGINGFACE_HUB_CACHE = os.getenv("HUGGINGFACE_HUB_CACHE", default_cache_path)
+    return HUGGINGFACE_HUB_CACHE
 
 
 def image_to_pixmap(image: Image, size=None):
@@ -63,6 +86,8 @@ def resize_image_to_working_size(image, settings):
 
 
 class InpaintMerged:
+    from diffusers import StableDiffusionPipeline, StableDiffusionInpaintPipeline
+
     """
     This is the same thing as run_modelmerger, but it is a class that can be extended.
     It does not save to disc, rather it uses DiffusionPipeline to load, combine and use the models.

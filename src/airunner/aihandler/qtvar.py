@@ -152,38 +152,5 @@ class LoraVar(Var):
         self.my_signal.emit(name, scale, enabled)
 
 
-# TODO: extensions
-class ExtensionVar(Var):
-    name = StringVar("")
-    description = StringVar("")
-    repo = StringVar("")
-    version = StringVar("")
-    reviewed = BooleanVar(False)
-    official = BooleanVar(False)
-    enabled = BooleanVar(False)
-    my_signal = pyqtSignal(str, bool)
-    object = None
-
-    def __init__(
-        self,
-        app=None,
-        name="",
-        description="",
-        repo="",
-        version="",
-        reviewed=False,
-        official=False,
-        enabled=False
-    ):
-        super().__init__(app, None)
-        self.name.set(name, skip_save=True)
-        self.description.set(description, skip_save=True)
-        self.repo.set(repo, skip_save=True)
-        self.version.set(version, skip_save=True)
-        self.reviewed.set(reviewed, skip_save=True)
-        self.official.set(official, skip_save=True)
-        self.enabled.set(enabled, skip_save=True)
-        self.enabled.my_signal.connect(self.emit)
-
     def emit(self):
         self.my_signal.emit(self.name.get(), self.enabled.get() == True)
