@@ -160,7 +160,7 @@ class PromptBuilderWidget(BaseWidget):
     def __init__(self, *args, **kwargs):
         super().__init__(*args, **kwargs)
         self.set_stylesheet()
-        self.prompt_data = PromptData(file_name="prompts")
+        self.prompt_data = PromptData(file_name="prompts", use_prompt_builder=True)
         self.initialize_tab_forms()
 
     def initialize_tab_forms(self):
