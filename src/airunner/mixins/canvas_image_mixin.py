@@ -1,7 +1,9 @@
 import io
 import random
 import subprocess
-from PIL import Image, ImageGrab, ImageOps
+
+import numpy as np
+from PIL import Image, ImageGrab, ImageOps, ImageEnhance
 from PIL.ImageQt import ImageQt
 from PyQt6.QtCore import QPoint, QRect
 from PyQt6.QtGui import QPainter, QPixmap
@@ -44,7 +46,7 @@ class CanvasImageMixin:
             "images": self.image_data,
         })
 
-        if type(filter).__name__ in ["SaturationFilter", "ColorBalanceFilter", "RGBNoiseFilter", "PixelFilter"]:
+        if type(filter).__name__ in ["SaturationFilter", "ColorBalanceFilter", "RGBNoiseFilter", "PixelFilter", "HalftoneFilter", "RegistrationErrorFilter"]:
             filtered_image = filter.filter(self.image_data.image)
         else:
             filtered_image = self.image_data.image.filter(filter)
@@ -55,7 +57,7 @@ class CanvasImageMixin:
         if self.current_layer.image_data.image is None:
             return
         # check if filter is a SaturationFilter object
-        if type(filter).__name__ in ["SaturationFilter", "ColorBalanceFilter", "RGBNoiseFilter", "PixelFilter"]:
+        if type(filter).__name__ in ["SaturationFilter", "ColorBalanceFilter", "RGBNoiseFilter", "PixelFilter", "HalftoneFilter", "RegistrationErrorFilter"]:
             filtered_image = filter.filter(self.image_data.image)
         else:
             filtered_image = self.image_data.image.filter(filter)
@@ -89,7 +91,7 @@ class CanvasImageMixin:
         # apply the layer offset
         x = image_data.position.x() + self.pos_x
         y = image_data.position.y() + self.pos_y
-        location = QPoint(int(x), int(y))# + layer.offset
+        location = QPoint(int(x), int(y))  # + layer.offset
 
         rect = self.viewport_rect
 
@@ -115,13 +117,22 @@ class CanvasImageMixin:
         im = self.current_active_image_data
         if not im:
             return
-        output = io.BytesIO()
-        if self.parent.is_windows:
-            im.image.save(output, format="DIB")
-            self.image_to_system_clipboard_windows(output.getvalue())
-        else:
-            im.image.save(output, format="PNG")
-            self.image_to_system_clipboard_linux(output.getvalue())
+        try:
+            output = io.BytesIO()
+            if self.parent.is_windows:
+                im.image.save(output, format="DIB")
+                self.image_to_system_clipboard_windows(output.getvalue())
+            else:
+                im.image.save(output, format="PNG")
+                self.image_to_system_clipboard_linux(output.getvalue())
+        except AttributeError:
+            pass
+
+    def cut_image(self):
+        self.copy_image()
+        self.current_layer.clear()
+        self.current_layer.layer_widget.set_thumbnail()
+        self.update()
 
     def image_to_system_clipboard_windows(self, data):
         import win32clipboard
@@ -154,7 +165,7 @@ class CanvasImageMixin:
             image = Image.open(io.BytesIO(data))
             return image
         except Exception as e:
-            #self.parent.error_handler(str(e))
+            # self.parent.error_handler(str(e))
             print(e)
             return None
 
@@ -194,7 +205,7 @@ class CanvasImageMixin:
             image=image,
             opacity=self.current_layer.opacity
         )
-        #self.set_image_opacity(self.get_layer_opacity(self.current_layer_index))
+        # self.set_image_opacity(self.get_layer_opacity(self.current_layer_index))
 
     def invert_image(self):
         # convert image mode to RGBA
@@ -233,7 +244,8 @@ class CanvasImageMixin:
 
         # if settings_manager.settings.resize_on_paste, resize the image to working width and height while mainting its aspect ratio
         if self.settings_manager.settings.resize_on_paste.get():
-            image.thumbnail((self.settings_manager.settings.working_width.get(), self.settings_manager.settings.working_height.get()), Image.ANTIALIAS)
+            image.thumbnail((self.settings_manager.settings.working_width.get(),
+                             self.settings_manager.settings.working_height.get()), Image.ANTIALIAS)
 
         self.create_image(QPoint(0, 0), image)
         self.update()
@@ -269,7 +281,7 @@ class CanvasImageMixin:
         processed_image = processed_image.convert("RGBA")
         section = data["action"] if not section else section
         outpaint_box_rect = data["options"]["outpaint_box_rect"]
-        if section not in["superresolution", "upscale"]:
+        if section not in ["superresolution", "upscale"]:
             processed_image, image_root_point, image_pivot_point = self.handle_outpaint(
                 outpaint_box_rect,
                 processed_image,
@@ -473,7 +485,7 @@ class CanvasImageMixin:
 
         return new_image, image_root_point, image_pivot_point
 
-    def add_image_to_canvas(self, image, image_root_point, image_pivot_point, layer:LayerData=None):
+    def add_image_to_canvas(self, image, image_root_point, image_pivot_point, layer: LayerData = None):
         self.parent.history.add_event({
             "event": "set_image",
             "layer_index": self.current_layer_index,

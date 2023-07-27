@@ -5,7 +5,8 @@ from PyQt6.QtWidgets import QWidget, QGridLayout, QPlainTextEdit, QLabel, QCombo
 from airunner.utils import load_default_models, load_models_from_path
 from airunner.widgets.base_widget import BaseWidget
 from airunner.widgets.slider_widget import SliderWidget
-from aihandler.settings import MAX_SEED, AVAILABLE_SCHEDULERS_BY_ACTION, MODELS, MessageCode
+from airunner.aihandler.settings import MAX_SEED, AVAILABLE_SCHEDULERS_BY_ACTION, MODELS
+from airunner.aihandler.enums import MessageCode
 
 
 class GeneratorTabWidget(BaseWidget):
@@ -354,6 +355,8 @@ class GeneratorTabWidget(BaseWidget):
 
         self.add_widget_to_grid(group_box)
 
+    queue_label = None
+
     def add_samples_widgets(self):
         if self.tab == "txt2vid":
             return
@@ -375,13 +378,39 @@ class GeneratorTabWidget(BaseWidget):
             slider_minimum=1
         )
         self.data[self.tab_section][self.tab]["samples_slider_widget"] = samples_widget
+        clip_skip_widget = SliderWidget(
+            app=self.app,
+            label_text="Clip Skip",
+            slider_callback=partial(self.handle_value_change, "clip_skip"),
+            current_value=self.app.clip_skip,
+            slider_maximum=11,
+            spinbox_maximum=12.0,
+            display_as_float=False,
+            spinbox_single_step=1,
+            spinbox_page_step=1,
+            spinbox_minimum=0,
+            slider_minimum=0
+        )
+        self.data[self.tab_section][self.tab]["clip_skip_slider_widget"] = clip_skip_widget
+
+        self.data[self.tab_section][self.tab]["queue_label"] = QLabel("Items in queue: 0")
         widget = QWidget()
         horizontal_layout = QHBoxLayout(widget)
         horizontal_layout.setContentsMargins(0, 0, 0, 0)
         horizontal_layout.setSpacing(10)
         horizontal_layout.addWidget(samples_widget)
         horizontal_layout.addWidget(interrupt_button)
+        self.add_widget_to_grid(clip_skip_widget)
         self.add_widget_to_grid(widget)
+        self.add_widget_to_grid(self.data[self.tab_section][self.tab]["queue_label"])
+
+    def update_queue_label(self):
+        for section in self.data.keys():
+            for tab in self.data[section].keys():
+                try:
+                    self.data[section][tab]["queue_label"].setText(f"Items in queue: {self.app.client.queue.qsize()}")
+                except KeyError:
+                    pass
 
     def add_zeroshot_widget(self):
         if self.tab != "txt2vid":
