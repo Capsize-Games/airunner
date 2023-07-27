@@ -32,7 +32,6 @@ COLLECT_NAME = 'airunner'
 COLLECT_STRIP = False
 COLLECT_UPX = True
 datas = []
-datas += copy_metadata('aihandler')
 datas += copy_metadata('tqdm')
 datas += copy_metadata('regex')
 datas += copy_metadata('requests')
@@ -70,7 +69,6 @@ a = Analysis(
     ],
     datas=datas,
     hiddenimports=[
-        "aihandler",
         "airunner",
         "airunner.extensions",
         "JIT",
@@ -174,6 +172,8 @@ shutil.copyfile('./src/airunner/src/splashscreen.png', './dist/airunner/src/spla
 os.makedirs('./dist/airunner/diffusers/pipelines/stable_diffusion', exist_ok=True)
 shutil.copyfile('./src/airunner/v1.yaml', './dist/airunner/v1.yaml')
 shutil.copyfile('./src/airunner/v2.yaml', './dist/airunner/v2.yaml')
+shutil.copyfile('./src/airunner/sd_xl_base.yaml', './dist/airunner/sd_xl_base.yaml')
+shutil.copyfile('./src/airunner/sd_xl_refiner.yaml', './dist/airunner/sd_xl_refiner.yaml')
 
 shutil.copyfile(
     f'./venv/lib/python3.10/site-packages/JIT/__pycache__/random.cpython-310.pyc',

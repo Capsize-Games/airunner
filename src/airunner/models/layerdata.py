@@ -39,11 +39,13 @@ class LayerData:
         self.color = None
         self.line_width = None
 
-    def clear(self, index):
-        self.index = index
+    def clear(self):
         self.lines = []
-        self.image_data = None
+        self.image_data = ImageData(
+            position=QPoint(0, 0),
+            image=None,
+            opacity=1.0
+        )
         self.widgets = []
         self.visible = True
         self.opacity = 1.0
-        self.name = f"Layer {self.index + 1}"

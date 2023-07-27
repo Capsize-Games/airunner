@@ -22,7 +22,6 @@ COLLECT_STRIP = False
 COLLECT_UPX = True
 
 datas = []
-datas += copy_metadata('aihandler')
 datas += copy_metadata('tqdm')
 datas += copy_metadata('regex')
 datas += copy_metadata('requests')
@@ -68,7 +67,6 @@ a = Analysis(
     ],
     datas=datas,
     hiddenimports=[
-        "aihandler",
         "airunner",
         "airunner.extensions",
         "JIT",
@@ -195,6 +193,14 @@ shutil.copyfile(
 shutil.copyfile(
     f'{ROOT}/src/airunner/v2.yaml',
     f'{DIST}/v2.yaml'
+)
+shutil.copyfile(
+    f'{ROOT}/src/airunner/sd_xl_base.yaml',
+    f'{DIST}/sd_xl_base.yaml'
+)
+shutil.copyfile(
+    f'{ROOT}/src/airunner/sd_xl_refiner.yaml',
+    f'{DIST}/sd_xl_refiner.yaml'
 )
 shutil.copyfile(
     f'.\\setup.py',
