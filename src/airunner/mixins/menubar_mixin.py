@@ -1,4 +1,9 @@
+import os
+
 from PyQt6.QtWidgets import QFileDialog
+
+from airunner.filters.filter_halftone import FilterHalftone
+from airunner.filters.filter_registration_error import FilterRegistrationError
 from airunner.windows.deterministic_generation_window import DeterministicGenerationWindow
 from airunner.filters.filter_box_blur import FilterBoxBlur
 from airunner.filters.filter_color_balance import FilterColorBalance
@@ -21,9 +26,11 @@ class MenubarMixin:
         self.actionLoad.triggered.connect(self.load_document)
         self.actionImport.triggered.connect(self.import_image)
         self.actionExport.triggered.connect(self.export_image)
+        self.actionQuick_Export.triggered.connect(self.quick_export)
         self.actionQuit.triggered.connect(self.quit)
         self.actionPaste.triggered.connect(self.paste_image)
         self.actionCopy.triggered.connect(self.copy_image)
+        self.actionCut.triggered.connect(self.cut_image)
         self.actionRotate_90_clockwise.triggered.connect(self.canvas.rotate_90_clockwise)
         self.actionRotate_90_counter_clockwise.triggered.connect(self.canvas.rotate_90_counterclockwise)
         self.initialize_filter_actions()
@@ -58,6 +65,8 @@ class MenubarMixin:
     def initialize_filter_actions(self):
         self.filter_gaussian_blur = FilterGaussianBlur(parent=self)
         self.filter_pixel_art = FilterPixelArt(parent=self)
+        self.filter_halftone = FilterHalftone(parent=self)
+        self.filter_registration_error = FilterRegistrationError(parent=self)
         self.filter_box_blur = FilterBoxBlur(parent=self)
         self.filter_unsharp_mask = FilterUnsharpMask(parent=self)
         self.filter_saturation = FilterSaturation(parent=self)
@@ -65,6 +74,8 @@ class MenubarMixin:
         self.filter_rgb_noise = FilterRGBNoise(parent=self)
         self.actionGaussian_Blur_2.triggered.connect(self.filter_gaussian_blur.show)
         self.actionPixel_Art.triggered.connect(self.filter_pixel_art.show)
+        self.actionHalftone.triggered.connect(self.filter_halftone.show)
+        self.actionRegistration_error.triggered.connect(self.filter_registration_error.show)
         self.actionBox_Blur_2.triggered.connect(self.filter_box_blur.show)
         self.actionUnsharp_Mask.triggered.connect(self.filter_unsharp_mask.show)
         self.actionSaturation_Filter.triggered.connect(self.filter_saturation.show)
@@ -84,6 +95,21 @@ class MenubarMixin:
             return
         self.canvas.save_image(file_path)
 
+    def quick_export(self):
+        if os.path.isdir(self.image_path) is False:
+            self.choose_image_export_path()
+        if os.path.isdir(self.image_path) is False:
+            return
+        self.auto_export_image(self.canvas.current_layer.image_data.image)
+
+
+    def choose_image_export_path(self):
+        # display a dialog to choose the export path
+        path = QFileDialog.getExistingDirectory(None, "Select Directory")
+        if path == "":
+            return
+        self.settings_manager.settings.image_path.set(path)
+
     def display_file_export_dialog(self):
         return QFileDialog.getSaveFileName(
             self.window,
@@ -99,9 +125,13 @@ class MenubarMixin:
 
     def paste_image(self):
         self.canvas.paste_image_from_clipboard()
+        self.canvas.current_layer.layer_widget.set_thumbnail()
 
     def copy_image(self):
         self.canvas.copy_image()
+
+    def cut_image(self):
+        self.canvas.cut_image()
 
     def show_image_interpolation(self):
         self.image_interpolation_window = ImageInterpolation(self.settings_manager, app=self, exec=False)
