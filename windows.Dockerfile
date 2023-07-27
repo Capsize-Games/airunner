@@ -117,4 +117,4 @@ RUN LATEST_TAG=$(grep -oP '(?<=version=).*(?=,)' /app/setup.py | tr -d '"') \
     && echo $LATEST_TAG > VERSION
 
 FROM build_files as install_diffusers
-RUN wine64 C:\\Python310\\python.exe -m pip install https://github.com/w4ffl35/diffusers/archive/refs/tags/v0.18.2-fix_convert_from_ckpt.zip
+RUN wine64 C:\\Python310\\python.exe -m pip install https://github.com/w4ffl35/diffusers/archive/refs/tags/v0.19.0-convert_from_ckpt_patch.zip
