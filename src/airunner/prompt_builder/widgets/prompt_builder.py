@@ -7,8 +7,7 @@ from airunner.prompt_builder.widgets.prompt_builder_form import PromptBuilderFor
 
 
 class PromptBuilderWidget(BaseWidget):
-    name = "prompt_builder"
-    template_dir = "prompt_builder/templates/"
+    name = "prompt_builder/prompt_builder"
     prompt_data = None
     auto_prompt_weight = 0.5
     text_prompt_weight = 0.5
