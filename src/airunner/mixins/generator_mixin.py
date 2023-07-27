@@ -513,14 +513,18 @@ class GeneratorMixin(LoraMixin):
         """
         if not data["options"]["deterministic_seed"]:
             data["options"][f"seed"] = data["options"][f"seed"] + index
+            seed = data["options"][f"seed"]
+        else:
+            seed = data["options"][f"deterministic_seed"]
         self.deterministic_data = data
         self.deterministic_index = index
-        self.generate(image)
+        self.generate(image, seed=seed)
         self.deterministic_data = None
         self.deterministic_images = None
 
-    def generate(self, image=None):
-        seed = None
+    def generate(self, image=None, seed=None):
+        if not seed:
+            seed = self.seed
         if self.samples > 1:
             self.client.do_process_queue = False
         for n in range(self.samples):
@@ -748,7 +752,7 @@ class GeneratorMixin(LoraMixin):
             "lora_path": self.settings_manager.settings.lora_path.get(),
             "embeddings_path": self.settings_manager.settings.embeddings_path.get(),
             "video_path": self.settings_manager.settings.video_path.get(),
-            "clip_skip": self.clip_skip,
+            "clip_skip": self.clip_skip
         }
 
         if action == "superresolution":
