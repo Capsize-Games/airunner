@@ -31,8 +31,9 @@ class PromptData:
     negative_prompt_prefix = ""
     negative_prompt_suffix = ""
 
-    def __init__(self, file_name=""):
+    def __init__(self, file_name="", use_prompt_builder=False):
         self.prepare_data(file_name=file_name)
+        self.use_prompt_builder = use_prompt_builder
 
     def build_prompts(self, **kwargs):
         self.current_prompt = kwargs.get("prompt", self.current_prompt)
@@ -52,90 +53,128 @@ class PromptData:
         self.image_color = kwargs.get("image_color", self.image_color)
         self.image_style = kwargs.get("image_style", self.image_style)
         self.advanced = kwargs.get("advanced", self.advanced)
+        self.is_deterministic = kwargs.get("is_deterministic", False)
+        self.is_batch = kwargs.get("is_batch", False)
+        self.batch_size = kwargs.get("batch_size", 1)
 
         random.seed(self.seed)
 
-        category = self.category
-        while category == "Random":
-            category = random.choice(self.categories)
+        if self.use_prompt_builder:
 
-        image_genre = self.image_genre
-        while image_genre == "Random":
-            image_genre = random.choice(self.genres)
+            category = self.category
+            while category == "Random":
+                category = random.choice(self.categories)
 
-        image_color = self.image_color
-        while image_color == "Random":
-            image_color = random.choice(self.colors)
+            image_genre = self.image_genre
+            while image_genre == "Random":
+                image_genre = random.choice(self.genres)
 
-        image_style = self.image_style
-        while image_style == "Random":
-            image_style = random.choice(self.styles)
+            image_color = self.image_color
+            while image_color == "Random":
+                image_color = random.choice(self.colors)
 
-        if category in self.weighted_variables:
-            weighted_variables = self.weighted_variables[category]
-        else:
-            weighted_variables = {}
+            image_style = self.image_style
+            while image_style == "Random":
+                image_style = random.choice(self.styles)
 
-        variables = self.filter_variables(category, image_genre, image_color, image_style)
-        if not self.advanced:
-            generated_prompt = self.get_basic_prompt_by_category(category, "standard")
-        else:
-            generated_prompt = BuildPrompt.build_prompt(
-                conditionals=self.get_builder_by_category(category),
-                vars=variables,
-                category=category
-            )
-
-            # clean the generated_prompt before parsing
-            generated_prompt = generated_prompt.strip()
-            generated_prompt.replace("( ", "(")
-
-        prefix = f"{self.prompt_prefix}, " if self.prompt_prefix != "" else ""
-        suffix = f", {self.prompt_suffix}" if self.prompt_suffix != "" else ""
-
-        # build the description of the image
-        image_genre = None if self.image_genre == "" else self.image_genre
-        image_style = None if self.image_style == "" else self.image_style
-        image_color = None if self.image_color == "" else self.image_color
-        description = ""
-        if image_genre:
-            description = "(A $composition_genre"
-            if image_style:
-                description += " ($composition_style)++)+++"
+            if category in self.weighted_variables:
+                weighted_variables = self.weighted_variables[category]
             else:
-                description += ")++++"
-        elif image_style:
-            description += "(A $composition_style)+++"
-        if image_color:
+                weighted_variables = {}
+
+            variables = self.filter_variables(category, image_genre, image_color, image_style)
+            if not self.advanced:
+                generated_prompt = self.get_basic_prompt_by_category(category, "standard")
+            else:
+                generated_prompt = BuildPrompt.build_prompt(
+                    conditionals=self.get_builder_by_category(category),
+                    vars=variables,
+                    category=category
+                )
+
+                # clean the generated_prompt before parsing
+                generated_prompt = generated_prompt.strip()
+                generated_prompt.replace("( ", "(")
+
+            prefix = f"{self.prompt_prefix}, " if self.prompt_prefix != "" else ""
+            suffix = f", {self.prompt_suffix}" if self.prompt_suffix != "" else ""
+
+            # build the description of the image
+            image_genre = None if self.image_genre == "" else self.image_genre
+            image_style = None if self.image_style == "" else self.image_style
+            image_color = None if self.image_color == "" else self.image_color
+            description = ""
+            if image_genre:
+                description = "(A $composition_genre"
+                if image_style:
+                    description += " ($composition_style)++)+++"
+                else:
+                    description += ")++++"
+            elif image_style:
+                description += "(A $composition_style)+++"
+            if image_color:
+                if description != "":
+                    description += f" with "
+                description += "($composition_color colors)++++"
+            description.strip()
             if description != "":
-                description += f" with "
-            description += "($composition_color colors)++++"
-        description.strip()
-        if description != "":
-            description = f"({description}) of "
+                description = f"({description}) of "
 
-        generated_prompt = f"{prefix}{description}({generated_prompt})+{suffix}"
+            generated_prompt = f"{prefix}{description}({generated_prompt})+{suffix}"
 
-        # build the negative prompt
-        prefix = f"{self.negative_prompt_prefix}, " if self.negative_prompt_prefix != "" else ""
-        suffix = f", {self.negative_prompt_suffix}" if self.negative_prompt_suffix != "" else ""
-        generated_negative_prompt = self.negative_prompt(category, image_style)
-        generated_negative_prompt = f"{prefix} {generated_negative_prompt} {suffix}"
+            # build the negative prompt
+            prefix = f"{self.negative_prompt_prefix}, " if self.negative_prompt_prefix != "" else ""
+            suffix = f", {self.negative_prompt_suffix}" if self.negative_prompt_suffix != "" else ""
+            generated_negative_prompt = self.negative_prompt(category, image_style)
+            generated_negative_prompt = f"{prefix} {generated_negative_prompt} {suffix}"
 
-        # process the prompts
-        prompt, negative_prompt = PromptParser.parse(
-            prompt=self.current_prompt,
-            negative_prompt=self.current_negative_prompt,
-            generated_prompt=generated_prompt,
-            generated_negative_prompt=generated_negative_prompt,
-            text_weight=self.text_prompt_weight,
-            auto_weight=self.auto_prompt_weight,
-            negative_text_weight=self.negative_text_prompt_weight,
-            negative_auto_weight=self.negative_auto_prompt_weight,
-            variables=variables,
-            weights=weighted_variables,
-            seed=self.seed)
+            # process the prompts
+            prompt, negative_prompt = PromptParser.parse(
+                prompt=self.current_prompt,
+                negative_prompt=self.current_negative_prompt,
+                generated_prompt=generated_prompt,
+                generated_negative_prompt=generated_negative_prompt,
+                text_weight=self.text_prompt_weight,
+                auto_weight=self.auto_prompt_weight,
+                negative_text_weight=self.negative_text_prompt_weight,
+                negative_auto_weight=self.negative_auto_prompt_weight,
+                variables=variables,
+                weights=weighted_variables,
+                seed=self.seed)
+        else:
+            prompt = self.current_prompt
+            negative_prompt = self.current_negative_prompt
+        if self.is_deterministic:
+            prompt, negative_prompt = self.process_deterministic_prompt(prompt, negative_prompt)
+        elif self.is_batch:
+            prompt, negative_prompt = self.process_batch_prompts(prompt, negative_prompt)
 
+        return prompt, negative_prompt
+
+    def process_deterministic_prompt(self, current_prompt, negative_prompt):
+        if isinstance(current_prompt, list):
+            prompt = current_prompt[0]
+        else:
+            prompt = current_prompt
+        prompt_list = [prompt]
+        for _n in range(1, self.batch_size):
+            prompt_list.append(f"{prompt}, {PromptParser.random_word()}")
+        if isinstance(negative_prompt, list):
+            negative_prompt = negative_prompt[0]
+        negative_prompt = [
+            f"{negative_prompt}" for _n in range(self.batch_size)
+        ]
+        return prompt_list, negative_prompt
+
+    def process_batch_prompts(self, prompt, negative_prompt):
+        if isinstance(prompt, list):
+            prompt = prompt[0]
+        prompt = [
+            prompt for _n in range(self.batch_size)
+        ]
+        negative_prompt = [
+            negative_prompt for _n in range(self.batch_size)
+        ]
         return prompt, negative_prompt
 
     def available_prompts_by_category(self, category):
