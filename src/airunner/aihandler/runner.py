@@ -25,10 +25,6 @@ from airunner.aihandler.mixins.scheduler_mixin import SchedulerMixin
 from airunner.aihandler.settings import MAX_SEED, LOG_LEVEL, AIRUNNER_ENVIRONMENT
 from airunner.aihandler.enums import MessageCode
 
-os.environ["DISABLE_TELEMETRY"] = "1"
-os.environ["HF_HUB_OFFLINE"] = "1"
-os.environ["TRANSFORMERS_OFFLINE"] = "1"
-
 
 class SDRunner(
     MergeMixin,
@@ -68,6 +64,7 @@ class SDRunner(
     processor = None
     current_controlnet_type = None
     controlnet_loaded = False
+    attempt_download = False
 
     # end controlnet atributes
 
@@ -872,7 +869,6 @@ class SDRunner(
             "callback": self.callback,
         }
         if not self.use_kandinsky and not self.is_txt2vid and not self.is_upscale and not self.is_superresolution:
-            # self.pipe = self.call_pipe_extension(**kwargs)  TODO: extensions
             try:
                 self.add_lora_to_pipe()
             except Exception as _e:
@@ -1188,6 +1184,8 @@ class SDRunner(
             self.change_scheduler()
 
     def generate(self, data: dict):
+        if not self.pipe:
+            return
         logger.info("generate called")
         self.do_cancel = False
         self.process_data(data)
@@ -1285,10 +1283,14 @@ class SDRunner(
         }, code=MessageCode.PROGRESS)
 
     def generator_sample(
-            self,
-            data: dict
+        self,
+        data: dict
     ):
         self.process_data(data)
+
+        if not self.pipe:
+            return
+
         if self.current_clip_skip != self.clip_skip and self.pipe is not None:
             if self.pipe.text_encoder.config.num_hidden_layers <= 12:
                 self.reload_model = True
@@ -1307,9 +1309,6 @@ class SDRunner(
         error_message = ""
         try:
             self.generate(data)
-        except OSError as e:
-            error_message = "model_not_found"
-            error = e
         except TypeError as e:
             error_message = f"TypeError during generation {self.action}"
             error = e
@@ -1325,13 +1324,7 @@ class SDRunner(
         if error:
             self.initialized = False
             self.reload_model = True
-            if error_message == "model_not_found" and self.local_files_only and self.has_internet_connection:
-                # check if we have an internet connection
-                self.send_message("Downloading model files...")
-                self.local_files_only = False
-                self.initialize()
-                return self.generator_sample(data)
-            elif not self.has_internet_connection:
+            if not self.has_internet_connection:
                 self.log_error("Please check your internet connection and try again.")
             else:
                 self.log_error(error, error_message)
@@ -1444,21 +1437,20 @@ class SDRunner(
             kwargs["variant"] = "fp16"
 
         do_load_controlnet = (
-                (not self.controlnet_loaded and self.enable_controlnet) or
-                (self.controlnet_loaded and self.enable_controlnet)
+            (not self.controlnet_loaded and self.enable_controlnet) or
+            (self.controlnet_loaded and self.enable_controlnet)
         )
         do_unload_controlnet = (
-                (self.controlnet_loaded and not self.enable_controlnet) or
-                (not self.controlnet_loaded and not self.enable_controlnet)
+            (self.controlnet_loaded and not self.enable_controlnet) or
+            (not self.controlnet_loaded and not self.enable_controlnet)
         )
-
         reuse_pipeline = (
-                (self.is_txt2img and self.txt2img is None and self.img2img) or
-                (self.is_img2img and self.img2img is None and self.txt2img) or
-                ((
-                         (self.is_txt2img and self.txt2img) or
-                         (self.is_img2img and self.img2img)
-                 ) and (do_load_controlnet or do_unload_controlnet))
+            (self.is_txt2img and self.txt2img is None and self.img2img) or
+            (self.is_img2img and self.img2img is None and self.txt2img) or
+            ((
+                     (self.is_txt2img and self.txt2img) or
+                     (self.is_img2img and self.img2img)
+             ) and (do_load_controlnet or do_unload_controlnet))
         )
 
         if reuse_pipeline and not self.reload_model:
@@ -1476,7 +1468,7 @@ class SDRunner(
                 logger.info("Using kandinsky model, circumventing model loading")
                 return
             else:
-                logger.info(f"Loading {self.model_path} from diffusers pipeline")
+                logger.info(f"{'Loading' if not self.attempt_download else 'Downloading'} {self.model_path} from diffusers pipeline")
 
                 kwargs.update({
                     "local_files_only": self.local_files_only,
@@ -1489,17 +1481,41 @@ class SDRunner(
                 if self.enable_controlnet:
                     kwargs["controlnet"] = self.controlnet()
 
-                if self.is_ckpt_model or self.is_safetensors:
-                    logger.info("loading ckpt or safetensors model")
-                    self.pipe = self.load_ckpt_model()
-                else:
-                    self.pipe = self.action_diffuser.from_pretrained(
-                        self.model_path,
-                        torch_dtype=self.data_type,
-                        scheduler=self.load_scheduler(),
-                        **kwargs
-                    )
-                    self.pipe = self.load_text_encoder(self.pipe)
+                try:
+                    if self.is_ckpt_model or self.is_safetensors:
+                        logger.info("loading ckpt or safetensors model")
+                        self.pipe = self.load_ckpt_model()
+                    else:
+
+                        self.pipe = self.action_diffuser.from_pretrained(
+                            self.model_path,
+                            torch_dtype=self.data_type,
+                            scheduler=self.load_scheduler(),
+                            **kwargs
+                        )
+                        self.pipe = self.load_text_encoder(self.pipe)
+                except OSError as e:
+                    if not self.attempt_download:
+                        if self.is_ckpt_model or self.is_safetensors:
+                            logger.info("Required files not found, attempting download...")
+                        else:
+                            logger.info("Model not found, attempting download...")
+                        # check if we have an internet connection
+                        self.send_message("Downloading model files...")
+                        self.local_files_only = False
+                        # self.initialize()
+                        self.attempt_download = True
+                        return self.generator_sample(self.requested_data)
+                    else:
+                        self.local_files_only = True
+                        self.attempt_download = False
+                        if self.is_ckpt_model or self.is_safetensors:
+                            self.log_error("Unable to download required files, check internet connection")
+                        else:
+                            self.log_error("Unable to download model, check internet connection")
+                        return
+
+                self.pipe = self.load_vae(self.pipe)
                 if not self.is_depth2img:
                     self.initialize_safety_checker()
                 self.controlnet_loaded = self.enable_controlnet
@@ -1514,6 +1530,20 @@ class SDRunner(
         self.pipe.model_path = self.model_path
 
         self.load_learned_embed_in_clip()
+
+    def load_vae(self, pipeline=None):
+        """
+        Set the VAE for the pipeline
+        :return:
+        """
+        if pipeline:
+            if self.is_outpaint:
+                from diffusers import AsymmetricAutoencoderKL
+                self.pipe.vae = AsymmetricAutoencoderKL.from_pretrained(
+                    "cross-attention/asymmetric-autoencoder-kl-x-1-5",
+                    local_files_only=self.local_files_only,
+                )
+        return pipeline
 
     def load_text_encoder(self, pipeline):
         if not pipeline or pipeline.text_encoder.config.num_hidden_layers > 12:
@@ -1530,11 +1560,7 @@ class SDRunner(
 
     def load_ckpt_model(self):
         logger.info(f"Loading ckpt file {self.model_path}")
-        try:
-            pipeline = self.download_from_original_stable_diffusion_ckpt(path=self.model_path)
-        except Exception as e:
-            self.error_handler(f"Unable to load ckpt file {str(e)}")
-            pipeline = None
+        pipeline = self.download_from_original_stable_diffusion_ckpt(path=self.model_path)
         if pipeline:
             pipeline.vae.to(self.data_type)
             pipeline = self.load_text_encoder(pipeline)
@@ -1545,31 +1571,28 @@ class SDRunner(
     def download_from_original_stable_diffusion_ckpt(self, path):
         from diffusers.pipelines.stable_diffusion.convert_from_ckpt import \
             download_from_original_stable_diffusion_ckpt
-        try:
-            pipe = download_from_original_stable_diffusion_ckpt(
-                checkpoint_path=path,
-                device=self.device,
-                scheduler_type="ddim",
-                from_safetensors=self.is_safetensors,
-                local_files_only=self.local_files_only,
-                extract_ema=False,
-                pipeline_class=self.action_diffuser,
-                config_files={
-                    "v1": "v1.yaml",
-                    "v2": "v2.yaml",
-                    "xl": "sd_xl_base.yaml",
-                    "xl_refiner": "sd_xl_refiner.yaml"
-                }
-            )
-            if self.enable_controlnet:
-                pipe = self.load_controlnet_from_ckpt(pipe)
-            old_model_path = self.current_model
-            self.current_model = path
-            pipe.scheduler = self.load_scheduler(config=pipe.scheduler.config)
-            self.current_model = old_model_path
-            return pipe
-        except RuntimeError as e:
-            self.error_handler(f"Something went wrong loading the model file {str(e)}")
+        pipe = download_from_original_stable_diffusion_ckpt(
+            checkpoint_path=path,
+            device=self.device,
+            scheduler_type="ddim",
+            from_safetensors=self.is_safetensors,
+            local_files_only=self.local_files_only,
+            extract_ema=False,
+            pipeline_class=self.action_diffuser,
+            config_files={
+                "v1": "v1.yaml",
+                "v2": "v2.yaml",
+                "xl": "sd_xl_base.yaml",
+                "xl_refiner": "sd_xl_refiner.yaml"
+            }
+        )
+        if self.enable_controlnet:
+            pipe = self.load_controlnet_from_ckpt(pipe)
+        old_model_path = self.current_model
+        self.current_model = path
+        pipe.scheduler = self.load_scheduler(config=pipe.scheduler.config)
+        self.current_model = old_model_path
+        return pipe
 
     def clear_controlnet(self):
         self._controlnet = None
@@ -1619,7 +1642,7 @@ class SDRunner(
         # get models from database
         model_name = self.options.get(f"model", None)
 
-        self.send_message(f"Loading model {model_name}")
+        self.send_message(f"{'Loading' if not self.attempt_download else 'Downloading'} model {model_name}")
 
         self._previous_model = self.current_model
 

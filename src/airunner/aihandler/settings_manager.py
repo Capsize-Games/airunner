@@ -2,7 +2,6 @@ import os
 import json
 from airunner.aihandler.database import RunAISettings, PromptSettings
 from airunner.aihandler.qtvar import Var, BooleanVar, StringVar, IntVar, FloatVar, DoubleVar, ListVar
-# from airunner.aihandler.qtvar import ExtensionVar  TODO: extensions
 
 available_tools = [
     "",
@@ -77,18 +76,6 @@ class SettingsManager:
         settings = {}
         for key, value in self.settings.__dict__.items():
             if isinstance(value, Var):
-                """
-                TODO: extensions
-                if key in ["available_extensions", "active_extensions"]:
-                    continue
-                elif key == "enabled_extensions":
-                    enabled_ext = []
-                    for ext in value.get():
-                        enabled_ext.append(ext)
-                    settings[key] = enabled_ext
-                else:
-                    settings[key] = value.get()
-                """
                 settings[key] = value.get()
             elif type(value) in [list, dict, int, float, str, bool]:
                 settings[key] = value
@@ -182,18 +169,6 @@ class PromptManager:
         settings = {}
         for key, value in self.settings.__dict__.items():
             if isinstance(value, Var):
-                """
-                TODO: extensions
-                if key in ["available_extensions", "active_extensions"]:
-                    continue
-                elif key == "enabled_extensions":
-                    enabled_ext = []
-                    for ext in value.get():
-                        enabled_ext.append(ext)
-                    settings[key] = enabled_ext
-                else:
-                    settings[key] = value.get()
-                """
                 settings[key] = value.get()
             elif type(value) in [list, dict, int, float, str, bool]:
                 settings[key] = value
