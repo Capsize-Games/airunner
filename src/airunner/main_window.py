@@ -8,7 +8,6 @@ from PyQt6.QtWidgets import QApplication, QFileDialog, QMainWindow, QSplitter, Q
     QVBoxLayout
 from PyQt6.QtCore import pyqtSlot, Qt, QThread, pyqtSignal, QObject, QTimer
 from PyQt6.QtGui import QGuiApplication, QShortcut, QKeySequence
-
 from airunner.aihandler.qtvar import MessageHandlerVar
 from airunner.aihandler.logger import Logger as logger
 from airunner.aihandler.pyqt_client import OfflineClient
@@ -535,7 +534,6 @@ class MainWindow(
     def initialize_settings_manager(self):
         self.settings_manager = SettingsManager()
         self.settings_manager.disable_save()
-        # self.get_extensions_from_path()  TODO: Extensions
         self.settings_manager.settings.size.my_signal.connect(self.set_size_form_element_step_values)
         self.settings_manager.settings.line_width.my_signal.connect(self.set_size_form_element_step_values)
 
@@ -549,7 +547,7 @@ class MainWindow(
 
     def initialize_window(self):
         HERE = os.path.dirname(os.path.abspath(__file__))
-        self.window = uic.loadUi(os.path.join(HERE, "pyqt/main_window_new.ui"), self)
+        self.window = uic.loadUi(os.path.join(HERE, "pyqt/main_window.ui"), self)
         self.center()
         self.set_window_title()
         self.set_window_icon()

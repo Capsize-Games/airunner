@@ -1,3 +1,19 @@
+import os
+
+"""
+OS environment variables must be initialized here before importing any other modules.
+This is due to the way huggingface diffusion models are imported.
+"""
+from airunner.aihandler.settings_manager import SettingsManager
+settings_manager = SettingsManager()
+hf_cache_path = settings_manager.settings.hf_cache_path.get()
+if hf_cache_path != "":
+    # check if hf_cache_path exists
+    if os.path.exists(hf_cache_path):
+        os.unsetenv("HUGGINGFACE_HUB_CACHE")
+        os.environ["HUGGINGFACE_HUB_CACHE"] = hf_cache_path
+os.environ["DISABLE_TELEMETRY"] = "1"
+
 import argparse
 import signal
 import sys

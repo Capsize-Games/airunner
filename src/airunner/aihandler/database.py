@@ -228,12 +228,19 @@ class RunAISettings(BaseSettings):
         self.hf_api_key = StringVar(app, "")
 
         # model settings
+        self.hf_cache_path = StringVar(app, "")
         self.model_base_path = StringVar(app, default_model_path)
         self.depth2img_model_path = StringVar(app)
         self.pix2pix_model_path = StringVar(app)
         self.outpaint_model_path = StringVar(app)
         self.upscale_model_path = StringVar(app)
         self.txt2vid_model_path = StringVar(app)
+        self.embeddings_path = StringVar(app, "")
+        self.lora_path = StringVar(app, "")
+        self.image_path = StringVar(app, "")
+        self.gif_path = StringVar(app, "")
+        self.video_path = StringVar(app, "")
+        self.hf_cache_path = StringVar(app, "")
 
         self.mask_brush_size = IntVar(app, 10)
 
@@ -248,32 +255,16 @@ class RunAISettings(BaseSettings):
             for generator in GENERATORS:
                 self.__dict__[f"{generator}_{key}"] = GENERATOR_TYPES[key](app, value)
 
-        """
-        TODO: extensions
-        self.available_extensions = ListVar(app, [])
-        self.enabled_extensions = ListVar(app, [])
-        self.active_extensions = ListVar(app, [])
-        self.extensions_path = StringVar(app, "")
-        """
-
         self.primary_brush_opacity = IntVar(app, DEFAULT_BRUSH_OPACITY)
         self.secondary_brush_opacity = IntVar(app, DEFAULT_BRUSH_OPACITY)
 
-        self.embeddings_path = StringVar(app, "")
-
-        self.lora_path = StringVar(app, "")
         self.available_loras = ListVar(app, [])
 
         self.force_reset = BooleanVar(app, True)
 
         # Image export preferences
         self.auto_export_images = BooleanVar(app)
-        self.image_path = StringVar(app, "")
-        self.gif_path = StringVar(app, "")
         self.image_export_type = StringVar(app, "png")
-
-        # Video export preferences
-        self.video_path = StringVar(app, "")
 
         ## Image export preferences metadata
         self.image_export_metadata_prompt = BooleanVar(app)
