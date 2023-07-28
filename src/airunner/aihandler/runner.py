@@ -3,18 +3,15 @@ import os
 import gc
 import re
 from io import BytesIO
-
+import traceback
+import torch
+from PIL import Image
 import numpy as np
 import requests
-from controlnet_aux.processor import Processor
-from diffusers.utils import export_to_gif
 
 from airunner.aihandler.enums import FilterType
 from airunner.aihandler.mixins.kandinsky_mixin import KandinskyMixin
-import traceback
-import torch
 from airunner.aihandler.logger import Logger as logger
-from PIL import Image
 from airunner.aihandler.mixins.merge_mixin import MergeMixin
 from airunner.aihandler.mixins.lora_mixin import LoraMixin
 from airunner.aihandler.mixins.memory_efficient_mixin import MemoryEfficientMixin
@@ -26,6 +23,33 @@ from airunner.aihandler.settings import MAX_SEED, LOG_LEVEL, AIRUNNER_ENVIRONMEN
 from airunner.aihandler.enums import MessageCode
 from airunner.prompt_builder.prompt_data import PromptData
 
+from controlnet_aux.processor import Processor
+
+from diffusers.utils import export_to_gif
+from diffusers import (
+    ControlNetModel,
+    DiffusionPipeline,
+    StableDiffusionPipeline,
+    StableDiffusionImg2ImgPipeline,
+    StableDiffusionInstructPix2PixPipeline,
+    StableDiffusionInpaintPipeline,
+    StableDiffusionDepth2ImgPipeline,
+    StableDiffusionUpscalePipeline,
+    StableDiffusionLatentUpscalePipeline,
+    StableDiffusionXLPipeline,
+    StableDiffusionXLImg2ImgPipeline,
+    TextToVideoSDPipeline,
+    VideoToVideoSDPipeline,
+    TextToVideoZeroPipeline,
+    KandinskyPipeline,
+    KandinskyImg2ImgPipeline,
+    AsymmetricAutoencoderKL,
+    StableDiffusionControlNetPipeline,
+    StableDiffusionControlNetImg2ImgPipeline,
+    StableDiffusionControlNetInpaintPipeline,
+)
+from diffusers.pipelines.stable_diffusion.convert_from_ckpt import download_from_original_stable_diffusion_ckpt
+from diffusers.pipelines.stable_diffusion import StableDiffusionSafetyChecker
 
 class SDRunner(
     MergeMixin,
@@ -66,53 +90,54 @@ class SDRunner(
     current_controlnet_type = None
     controlnet_loaded = False
     attempt_download = False
+    safety_checker_model = "CompVis/stable-diffusion-safety-checker"
+    text_encoder_model = "openai/clip-vit-large-patch14"
+    inpaint_vae_model = "cross-attention/asymmetric-autoencoder-kl-x-1-5"
 
     # end controlnet atributes
 
     # controlnet properties
     def controlnet(self):
-        if self._controlnet is None or self.current_controlnet_type != self.controlnet_type:
+        if self._controlnet is None \
+            or self.current_controlnet_type != self.controlnet_type:
             self._controlnet = self.load_controlnet()
         return self._controlnet
 
     @property
     def controlnet_model(self):
-        if self.controlnet_type == "canny":
-            return "lllyasviel/control_v11p_sd15_canny"
-        elif self.controlnet_type in [
-            "depth_leres", "depth_leres++", "depth_midas", "depth_zoe"
-        ]:
-            return "lllyasviel/control_v11f1p_sd15_depth"
-        elif self.controlnet_type == "mlsd":
-            return "lllyasviel/control_v11p_sd15_mlsd"
-        elif self.controlnet_type in ["normal_bae", "normal_midas"]:
-            return "lllyasviel/control_v11p_sd15_normalbae"
-        elif self.controlnet_type in ["scribble_hed", "scribble_pidinet"]:
-            return "lllyasviel/control_v11p_sd15_scribble"
-        elif self.controlnet_type == "segmentation":
-            return "lllyasviel/control_v11p_sd15_seg"
-        elif self.controlnet_type in ["lineart_coarse", "lineart_realistic"]:
-            return "lllyasviel/control_v11p_sd15_lineart"
-        elif self.controlnet_type == "lineart_anime":
-            return "lllyasviel/control_v11p_sd15s2_lineart_anime"
-        elif self.controlnet_type in [
-            "openpose", "openpose_face", "openpose_faceonly",
-            "openpose_full", "openpose_hand"
-        ]:
-            return "lllyasviel/control_v11p_sd15_openpose"
-        elif self.controlnet_type in [
-            "softedge_hed", "softedge_hedsafe",
-            "softedge_pidinet", "softedge_pidsafe"
-        ]:
-            return "lllyasviel/control_v11p_sd15_softedge"
-        elif self.controlnet_type == "pixel2pixel":
-            return "lllyasviel/control_v11e_sd15_ip2p"
-        elif self.controlnet_type == "inpaint":
-            return "lllyasviel/control_v11p_sd15_inpaint"
-        elif self.controlnet_type == "shuffle":
-            return "lllyasviel/control_v11e_sd15_shuffle"
-        raise Exception("Unknown controlnet type %s" % self.controlnet_type)
-        # end controlnet properties
+        controlnet_type_map = {
+            "canny": "lllyasviel/control_v11p_sd15_canny",
+            "depth_leres": "lllyasviel/control_v11f1p_sd15_depth",
+            "depth_leres++": "lllyasviel/control_v11f1p_sd15_depth",
+            "depth_midas": "lllyasviel/control_v11f1p_sd15_depth",
+            "depth_zoe": "lllyasviel/control_v11f1p_sd15_depth",
+            "mlsd": "lllyasviel/control_v11p_sd15_mlsd",
+            "normal_bae": "lllyasviel/control_v11p_sd15_normalbae",
+            "normal_midas": "lllyasviel/control_v11p_sd15_normalbae",
+            "scribble_hed": "lllyasviel/control_v11p_sd15_scribble",
+            "scribble_pidinet": "lllyasviel/control_v11p_sd15_scribble",
+            "segmentation": "lllyasviel/control_v11p_sd15_seg",
+            "lineart_coarse": "lllyasviel/control_v11p_sd15_lineart",
+            "lineart_realistic": "lllyasviel/control_v11p_sd15_lineart",
+            "lineart_anime": "lllyasviel/control_v11p_sd15s2_lineart_anime",
+            "openpose": "lllyasviel/control_v11p_sd15_openpose",
+            "openpose_face": "lllyasviel/control_v11p_sd15_openpose",
+            "openpose_faceonly": "lllyasviel/control_v11p_sd15_openpose",
+            "openpose_full": "lllyasviel/control_v11p_sd15_openpose",
+            "openpose_hand": "lllyasviel/control_v11p_sd15_openpose",
+            "softedge_hed": "lllyasviel/control_v11p_sd15_softedge",
+            "softedge_hedsafe": "lllyasviel/control_v11p_sd15_softedge",
+            "softedge_pidinet": "lllyasviel/control_v11p_sd15_softedge",
+            "softedge_pidsafe": "lllyasviel/control_v11p_sd15_softedge",
+            "pixel2pixel": "lllyasviel/control_v11e_sd15_ip2p",
+            "inpaint": "lllyasviel/control_v11p_sd15_inpaint",
+            "shuffle": "lllyasviel/control_v11e_sd15_shuffle"
+        }
+
+        try:
+            return controlnet_type_map[self.controlnet_type]
+        except KeyError:
+            raise Exception(f"Unknown controlnet type {self.controlnet_type}")
 
     @property
     def controlnet_type(self):
@@ -222,6 +247,8 @@ class SDRunner(
 
     @property
     def n_samples(self):
+        if self.is_txt2vid or self.is_upscale:
+            return 1
         return self.options.get(f"n_samples", 1)
 
     @property
@@ -543,11 +570,6 @@ class SDRunner(
 
     @property
     def controlnet_action_diffuser(self):
-        from diffusers import (
-            StableDiffusionControlNetPipeline,
-            StableDiffusionControlNetImg2ImgPipeline,
-            StableDiffusionControlNetInpaintPipeline,
-        )
         if self.is_txt2img or self.is_zeroshot:
             return StableDiffusionControlNetPipeline
         elif self.is_img2img:
@@ -559,23 +581,6 @@ class SDRunner(
 
     @property
     def action_diffuser(self):
-        from diffusers import (
-            DiffusionPipeline,
-            StableDiffusionPipeline,
-            StableDiffusionImg2ImgPipeline,
-            StableDiffusionInstructPix2PixPipeline,
-            StableDiffusionInpaintPipeline,
-            StableDiffusionDepth2ImgPipeline,
-            StableDiffusionUpscalePipeline,
-            StableDiffusionLatentUpscalePipeline,
-            StableDiffusionXLPipeline,
-            StableDiffusionXLImg2ImgPipeline,
-            TextToVideoSDPipeline,
-            VideoToVideoSDPipeline,
-            TextToVideoZeroPipeline,
-            KandinskyPipeline,
-            KandinskyImg2ImgPipeline
-        )
 
         if (self.enable_controlnet
                 and not self.is_ckpt_model
@@ -723,7 +728,7 @@ class SDRunner(
             raise ValueError("safetensors path is empty")
         return model.endswith(".safetensors")
 
-    def __init__(self, **kwargs):
+    def  __init__(self, **kwargs):
         logger.set_level(LOG_LEVEL)
         self.app = kwargs.get("app", None)
         self._message_var = kwargs.get("message_var", None)
@@ -804,15 +809,15 @@ class SDRunner(
 
     def initialize_safety_checker(self):
         if not hasattr(self.pipe, "safety_checker") or not self.pipe.safety_checker:
-            from diffusers.pipelines.stable_diffusion import StableDiffusionSafetyChecker
-            safety_checker = StableDiffusionSafetyChecker.from_pretrained(
-                "CompVis/stable-diffusion-safety-checker",
-                local_files_only=self.local_files_only
+            safety_checker = self.from_pretrained(
+                StableDiffusionSafetyChecker,
+                self.safety_checker_model
             )
             from transformers import AutoFeatureExtractor
-            feature_extractor = AutoFeatureExtractor.from_pretrained(
-                "CompVis/stable-diffusion-safety-checker",
-                local_files_only=self.local_files_only)
+            feature_extractor = self.from_pretrained(
+                AutoFeatureExtractor,
+                self.safety_checker_model
+            )
             self.pipe.safety_checker = safety_checker
             self.pipe.feature_extractor = feature_extractor
 
@@ -1207,13 +1212,9 @@ class SDRunner(
         if not self.use_kandinsky:
             self.send_message(f"Applying memory settings...")
             self.apply_memory_efficient_settings()
-        if self.is_txt2vid or self.is_upscale:
-            total_to_generate = 1
-        else:
-            total_to_generate = self.n_samples
 
         seed = self.seed
-        for n in range(total_to_generate):
+        for n in range(self.n_samples):
             data = self.process_prompts(data, seed)
             self.current_sample = n
             images, nsfw_content_detected = self.sample_diffusers_model(data)
@@ -1346,6 +1347,8 @@ class SDRunner(
             self._current_model = ""
             self.local_files_only = True
 
+        return self.pipe
+
     def cancel(self):
         self.do_cancel = True
 
@@ -1374,12 +1377,10 @@ class SDRunner(
 
     def load_controlnet(self):
         logger.info(f"Loading controlnet {self.controlnet_type} self.controlnet_model {self.controlnet_model}")
-        from diffusers import ControlNetModel
         self._controlnet = None
-        controlnet = ControlNetModel.from_pretrained(
+        controlnet = self.from_pretrained(
+            ControlNetModel,
             self.controlnet_model,
-            local_files_only=self.local_files_only,
-            torch_dtype=self.data_type
         )
         # self.load_controlnet_scheduler()
         return controlnet
@@ -1437,6 +1438,31 @@ class SDRunner(
                 del val
         self.clear_memory()
 
+    @property
+    def do_load_controlnet(self):
+        return (
+            (not self.controlnet_loaded and self.enable_controlnet) or
+            (self.controlnet_loaded and self.enable_controlnet)
+        )
+
+    @property
+    def do_unload_controlnet(self):
+        return (
+            (self.controlnet_loaded and not self.enable_controlnet) or
+            (not self.controlnet_loaded and not self.enable_controlnet)
+        )
+
+    @property
+    def do_reuse_pipeline(self):
+        return (
+            (self.is_txt2img and self.txt2img is None and self.img2img) or
+            (self.is_img2img and self.img2img is None and self.txt2img) or
+            ((
+                 (self.is_txt2img and self.txt2img) or
+                 (self.is_img2img and self.img2img)
+             ) and (self.do_load_controlnet or self.do_unload_controlnet))
+        )
+
     def load_model(self):
         logger.info("Loading model...")
         self.torch_compile_applied = False
@@ -1450,31 +1476,14 @@ class SDRunner(
         elif self.data_type == torch.float16:
             kwargs["variant"] = "fp16"
 
-        do_load_controlnet = (
-            (not self.controlnet_loaded and self.enable_controlnet) or
-            (self.controlnet_loaded and self.enable_controlnet)
-        )
-        do_unload_controlnet = (
-            (self.controlnet_loaded and not self.enable_controlnet) or
-            (not self.controlnet_loaded and not self.enable_controlnet)
-        )
-        reuse_pipeline = (
-            (self.is_txt2img and self.txt2img is None and self.img2img) or
-            (self.is_img2img and self.img2img is None and self.txt2img) or
-            ((
-                     (self.is_txt2img and self.txt2img) or
-                     (self.is_img2img and self.img2img)
-             ) and (do_load_controlnet or do_unload_controlnet))
-        )
-
-        if reuse_pipeline and not self.reload_model:
+        if self.do_reuse_pipeline and not self.reload_model:
             self.initialized = True
 
         # move all models except for our current action to the CPU
         if not self.initialized or self.reload_model:
             self.unload_unused_models()
-        elif reuse_pipeline:
-            self.reuse_pipeline(do_load_controlnet)
+        elif self.do_reuse_pipeline:
+            self.reuse_pipeline(self.do_load_controlnet)
 
         if self.pipe is None or self.reload_model:
             logger.info(f"Loading model from scratch {self.reload_model}")
@@ -1484,54 +1493,41 @@ class SDRunner(
             else:
                 logger.info(f"{'Loading' if not self.attempt_download else 'Downloading'} {self.model_path} from diffusers pipeline")
 
-                kwargs.update({
-                    "local_files_only": self.local_files_only,
-                    "use_auth_token": self.data["options"].get("hf_token", ""),
-                })
-
                 if self.is_superresolution:
                     kwargs["low_res_scheduler"] = self.load_scheduler(force_scheduler_name="DDPM")
 
                 if self.enable_controlnet:
                     kwargs["controlnet"] = self.controlnet()
 
-                try:
-                    if self.is_ckpt_model or self.is_safetensors:
-                        logger.info("loading ckpt or safetensors model")
+                if self.is_ckpt_model or self.is_safetensors:
+                    logger.info(f"loading {'safetensors' if self.is_safetensors else 'ckpt'} model")
+                    try:
                         self.pipe = self.load_ckpt_model()
-                    else:
+                    except OSError as e:
+                        return self.handle_missing_files()
+                else:
+                    logger.info(f"loading diffusers model")
+                    self.pipe = self.from_pretrained(
+                        diffuser_class=self.action_diffuser,
+                        model=self.model_path,
+                        scheduler=self.load_scheduler(),
+                        **kwargs
+                    )
 
-                        self.pipe = self.action_diffuser.from_pretrained(
-                            self.model_path,
-                            torch_dtype=self.data_type,
-                            scheduler=self.load_scheduler(),
-                            **kwargs
-                        )
-                        self.pipe = self.load_text_encoder(self.pipe)
-                except OSError as e:
-                    if not self.attempt_download:
-                        if self.is_ckpt_model or self.is_safetensors:
-                            logger.info("Required files not found, attempting download...")
-                        else:
-                            logger.info("Model not found, attempting download...")
-                        # check if we have an internet connection
-                        self.send_message("Downloading model files...")
-                        self.local_files_only = False
-                        # self.initialize()
-                        self.attempt_download = True
-                        return self.generator_sample(self.requested_data)
-                    else:
-                        self.local_files_only = True
-                        self.attempt_download = False
-                        if self.is_ckpt_model or self.is_safetensors:
-                            self.log_error("Unable to download required files, check internet connection")
-                        else:
-                            self.log_error("Unable to download model, check internet connection")
-                        return
+                if self.pipe is None:
+                    return
 
-                self.pipe = self.load_vae(self.pipe)
+                self.pipe = self.load_text_encoder(self.pipe)
+
+                if self.is_outpaint:
+                    self.pipe.vae = self.from_pretrained(
+                        AsymmetricAutoencoderKL,
+                        self.inpaint_vae_model
+                    )
+
                 if not self.is_depth2img:
                     self.initialize_safety_checker()
+
                 self.controlnet_loaded = self.enable_controlnet
 
                 if self.is_upscale:
@@ -1545,29 +1541,14 @@ class SDRunner(
 
         self.load_learned_embed_in_clip()
 
-    def load_vae(self, pipeline=None):
-        """
-        Set the VAE for the pipeline
-        :return:
-        """
-        if pipeline:
-            if self.is_outpaint:
-                from diffusers import AsymmetricAutoencoderKL
-                self.pipe.vae = AsymmetricAutoencoderKL.from_pretrained(
-                    "cross-attention/asymmetric-autoencoder-kl-x-1-5",
-                    local_files_only=self.local_files_only,
-                )
-        return pipeline
-
     def load_text_encoder(self, pipeline):
         if not pipeline or pipeline.text_encoder.config.num_hidden_layers > 12:
             return pipeline
         from transformers import CLIPTextModel
-        pipeline.text_encoder = CLIPTextModel.from_pretrained(
-            "openai/clip-vit-large-patch14",
+        pipeline.text_encoder = self.from_pretrained(
+            CLIPTextModel,
+            self.text_encoder_model,
             num_hidden_layers=12 - self.clip_skip,
-            torch_dtype=self.data_type,
-            local_files_only=self.local_files_only,
         )
         self.current_clip_skip = self.clip_skip
         return pipeline
@@ -1583,8 +1564,6 @@ class SDRunner(
         return pipeline
 
     def download_from_original_stable_diffusion_ckpt(self, path):
-        from diffusers.pipelines.stable_diffusion.convert_from_ckpt import \
-            download_from_original_stable_diffusion_ckpt
         pipe = download_from_original_stable_diffusion_ckpt(
             checkpoint_path=path,
             device=self.device,
@@ -1665,3 +1644,37 @@ class SDRunner(
         else:
             self.current_model = self.options.get(f"model_path", None)
             self.current_model_branch = self.options.get(f"model_branch", None)
+
+    def from_pretrained(self, diffuser_class, model, scheduler=None, **kwargs):
+        try:
+            return diffuser_class.from_pretrained(
+                model,
+                torch_dtype=self.data_type,
+                local_files_only=self.local_files_only,
+                scheduler=scheduler,
+                use_auth_token=self.data["options"]["hf_token"],
+                **kwargs
+            )
+        except OSError as e:
+            return self.handle_missing_files()
+
+    def handle_missing_files(self):
+        if not self.attempt_download:
+            if self.is_ckpt_model or self.is_safetensors:
+                logger.info("Required files not found, attempting download...")
+            else:
+                logger.info("Model not found, attempting download...")
+            # check if we have an internet connection
+            self.send_message("Downloading model files...")
+            self.local_files_only = False
+            self.attempt_download = True
+            return self.generator_sample(self.requested_data)
+        else:
+            self.local_files_only = True
+            self.attempt_download = False
+            if self.is_ckpt_model or self.is_safetensors:
+                self.log_error("Unable to download required files, check internet connection")
+            else:
+                self.log_error("Unable to download model, check internet connection")
+            self.initialized = False
+            return None

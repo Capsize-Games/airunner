@@ -1,5 +1,8 @@
 import os
 import json
+
+from filelock import FileLock
+
 from airunner.aihandler.database import RunAISettings, PromptSettings
 from airunner.aihandler.qtvar import Var, BooleanVar, StringVar, IntVar, FloatVar, DoubleVar, ListVar
 
@@ -80,17 +83,21 @@ class SettingsManager:
             elif type(value) in [list, dict, int, float, str, bool]:
                 settings[key] = value
         HOME = os.path.expanduser("~")
-        f = open(os.path.join(HOME, self.file_name), "w")
-        json.dump(settings, f)
+        lock = FileLock(os.path.join(HOME, self.file_name + ".lock"))
+        with lock:
+            with open(os.path.join(HOME, self.file_name), "w") as f:
+                json.dump(settings, f)
 
     def load_settings(self):
         self.disable_save()
         HOME = os.path.expanduser("~")
-        f = open(os.path.join(HOME, self.file_name), "r")
-        try:
-            settings = json.load(f)
-        except Exception as e:
-            settings = {}
+        lock = FileLock(os.path.join(HOME, self.file_name + ".lock"))
+        with lock:
+            with open(os.path.join(HOME, self.file_name), "r") as f:
+                try:
+                    settings = json.load(f)
+                except Exception as e:
+                    settings = {}
         for key in settings.keys():
             value = settings[key]
             try:
@@ -98,19 +105,6 @@ class SettingsManager:
             except Exception as e:
                 self.settings.__dict__[key] = value
         self.enable_save()
-
-    def set_prompt_triggers(self):
-        # cur_model = self.model_var.get()
-        # if cur_model != "":
-        #     cur_model = cur_model.split("/")[-1]
-        # models = MODELS[self.model_version.get()]
-        # for model in models:
-        #     if model["name"] == cur_model:
-        #         prompt_triggers = model["prompt_triggers"] if "prompt_triggers" in model else []
-        #         self.prompt_triggers.set("Prompt Triggers: " + ", ".join(prompt_triggers))
-        #         return
-        # self.prompt_triggers.set("")
-        pass
 
     def handle_model_change(self, section, option):
         self.settings.__dict__[f"{section}_model_var"].set(option)
@@ -173,17 +167,21 @@ class PromptManager:
             elif type(value) in [list, dict, int, float, str, bool]:
                 settings[key] = value
         HOME = os.path.expanduser("~")
-        f = open(os.path.join(HOME, self.file_name), "w")
-        json.dump(settings, f)
+        lock = FileLock(os.path.join(HOME, self.file_name + ".lock"))
+        with lock:
+            with open(os.path.join(HOME, self.file_name), "w") as f:
+                json.dump(settings, f)
 
     def load_settings(self):
         self.disable_save()
         HOME = os.path.expanduser("~")
-        f = open(os.path.join(HOME, self.file_name), "r")
-        try:
-            settings = json.load(f)
-        except Exception as e:
-            settings = {}
+        lock = FileLock(os.path.join(HOME, self.file_name + ".lock"))
+        with lock:
+            with open(os.path.join(HOME, self.file_name), "r") as f:
+                try:
+                    settings = json.load(f)
+                except Exception as e:
+                    settings = {}
         for key in settings.keys():
             value = settings[key]
             try:
