@@ -30,7 +30,7 @@ from airunner.widgets.header_widget import HeaderWidget
 from airunner.windows.deterministic_generation_window import DeterministicGenerationWindow
 from airunner.windows.update_window import UpdateWindow
 from airunner.utils import get_version, get_latest_version
-from airunner.aihandler.settings_manager import SettingsManager, PromptManager
+from airunner.aihandler.settings_manager import SettingsManager, PromptManager, ApplicationData
 import qdarktheme
 from PyQt6.QtGui import QIcon
 
@@ -54,6 +54,7 @@ class MainWindow(
     history = None
     canvas = None
     settings_manager = None
+    application_data = None
     prompts_manager = None
     models = None
     client = None
@@ -402,6 +403,7 @@ class MainWindow(
 
     def initialize(self):
         self.initialize_settings_manager()
+        self.initialize_data()
         self.instantiate_widgets()
         self.initialize_saved_prompts()
         self.initialize_handlers()
@@ -536,6 +538,9 @@ class MainWindow(
         self.settings_manager.disable_save()
         self.settings_manager.settings.size.my_signal.connect(self.set_size_form_element_step_values)
         self.settings_manager.settings.line_width.my_signal.connect(self.set_size_form_element_step_values)
+
+    def initialize_data(self):
+        self.application_data = ApplicationData()
 
     def initialize_shortcuts(self):
         # on shift + mouse scroll change working width

@@ -65,8 +65,6 @@ AVAILABLE_SCHEDULERS_BY_ACTION.update({
     "shapegif_img2img": [Scheduler.HEUN.value, ]
 })
 DEFAULT_SCHEDULER = SCHEDULERS[0]
-with open('data/default_models.json', 'r') as f:
-    MODELS = json.load(f)
 DEFAULT_MODEL = "Stable Diffusion V2"
 MIN_SEED = 0
 MAX_SEED = 4294967295
