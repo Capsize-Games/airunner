@@ -1,9 +1,9 @@
 import os
-import typing
 from PyQt6 import uic
-from PyQt6.QtCore import pyqtSlot, Qt, QThread, pyqtSignal, QObject
+from PyQt6.QtCore import QThread, pyqtSignal, QObject
 from PyQt6.QtWidgets import QVBoxLayout
-from airunner.aihandler.settings import MODELS
+
+from airunner.aihandler.database import ApplicationData
 from airunner.utils import load_default_models, load_models_from_path
 from airunner.windows.base_window import BaseWindow
 
@@ -26,6 +26,7 @@ class ModelMerger(BaseWindow):
         path = self.settings_manager.settings.model_base_path.get()
         self.models += load_models_from_path(path)
         self.template.base_models.addItems(self.models)
+        self.application_data = ApplicationData(app=self.app)
 
         # get standard models from model_base_path
         path = self.settings_manager.settings.model_base_path.get()
@@ -201,8 +202,9 @@ class ModelMerger(BaseWindow):
             section = "stablediffusion_generate"
         else:
             section = f"stablediffusion_{section}"
-        if model in MODELS[section]:
-            model_path = MODELS[section][model]["path"]
+        model_data = self.application_data.models.get()
+        if model in model_data[section]:
+            model_path = model_data[section][model]["path"]
         else:
             if self.section == "depth2img":
                 path = self.settings_manager.settings.depth2img_model_path.get()

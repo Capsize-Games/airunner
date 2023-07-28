@@ -103,6 +103,7 @@ GENERATORS = [
     "shapegif_img2img",
 ]
 
+
 class PropertyBase:
     """
     A base class used for collections of properties that are stored in the database.
@@ -415,3 +416,12 @@ class PromptSettings(BaseSettings):
 
     def initialize(self, settings=None):
         self.prompts = ListVar(self.app, [])
+
+
+class ApplicationData(BaseSettings):
+    namespace = "application_data"
+
+    def initialize(self, settings=None):
+        self.controlnet_models = DictVar(self.app, {})
+        self.models = DictVar(self.app, {})
+        self.pipelines = DictVar(self.app, {})
