@@ -102,10 +102,9 @@ class SchedulerMixin:
                 else:
                     kwargs["algorithm_type"] = "dpmsolver"
             try:
-                self._scheduler = scheduler_class.from_pretrained(
+                self._scheduler = self.from_pretrained(
+                    scheduler_class,
                     self.model_path,
-                    local_files_only=self.local_files_only,
-                    use_auth_token=self.data["options"]["hf_token"],
                     **kwargs
                 )
             except NotImplementedError as e:
