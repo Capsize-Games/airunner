@@ -69,9 +69,9 @@ class KandinskyMixin:
         if self.pipe:
             self.pipe.to("cpu")
         if not self.pipe_prior:
-            self.pipe_prior = KandinskyPriorPipeline.from_pretrained(
+            self.pipe_prior = self.from_pretrained(
+                KandinskyPriorPipeline,
                 "kandinsky-community/kandinsky-2-1-prior",
-                torch_dtype=self.data_type
             )
         self.pipe_prior.to("cuda")
 
@@ -87,9 +87,9 @@ class KandinskyMixin:
             model = "kandinsky-2-1-inpaint"
         self.pipe_prior.to("cpu")
         if not self.pipe:
-            self.pipe = class_name.from_pretrained(
+            self.pipe = self.from_pretrained(
+                class_name,
                 f"kandinsky-community/{model}",
-                torch_dtype=self.data_type
             )
         # self._change_scheduler()
         logger.info(f"Load safety checker")
