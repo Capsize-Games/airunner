@@ -6,14 +6,6 @@ from filelock import FileLock
 from airunner.aihandler.database import RunAISettings, PromptSettings
 from airunner.aihandler.qtvar import Var, BooleanVar, StringVar, IntVar, FloatVar, DoubleVar, ListVar
 
-available_tools = [
-    "",
-    # "select",
-    "pen",
-    # "eraser",
-    # "fill",
-]
-
 
 class SettingsManager:
     _instance = None
@@ -29,25 +21,6 @@ class SettingsManager:
     def current_tool(self):
         return self.settings.current_tool.get()
 
-    @property
-    def padding(self):
-        return 5
-
-    @property
-    def bold_font(self):
-        return (
-            self.font_name,
-            self.font_size,
-            "bold"
-        )
-
-    @property
-    def font(self):
-        return (
-            self.font_name,
-            self.font_size
-        )
-
     def __new__(cls, app=None):
         if cls._instance is None:
             cls._instance = super().__new__(cls)
@@ -60,8 +33,6 @@ class SettingsManager:
         #     raise Exception("SettingsManager must be initialized with an app")
         self.settings = RunAISettings(app=self)
         self.settings.initialize(self.settings.read())
-        self.font_name = "song ti"
-        self.font_size = 9
         try:
             self.load_settings()
         except Exception as e:
@@ -122,6 +93,7 @@ class SettingsManager:
         self.settings.reset_settings_to_default()
         self.save_settings()
 
+
 class PromptManager:
     _instance = None
     app = None
@@ -144,8 +116,73 @@ class PromptManager:
         #     raise Exception("SettingsManager must be initialized with an app")
         self.settings = PromptSettings(app=self)
         self.settings.initialize(self.settings.read())
-        self.font_name = "song ti"
-        self.font_size = 9
+        try:
+            self.load_settings()
+        except Exception as e:
+            self.save_settings()
+
+    def disable_save(self):
+        self.save_disabled = True
+
+    def enable_save(self):
+        self.save_disabled = False
+
+    def save_settings(self):
+        if self.save_disabled:
+            return
+        settings = {}
+        for key, value in self.settings.__dict__.items():
+            if isinstance(value, Var):
+                settings[key] = value.get()
+            elif type(value) in [list, dict, int, float, str, bool]:
+                settings[key] = value
+        HOME = os.path.expanduser("~")
+        lock = FileLock(os.path.join(HOME, self.file_name + ".lock"))
+        with lock:
+            with open(os.path.join(HOME, self.file_name), "w") as f:
+                json.dump(settings, f)
+
+    def load_settings(self):
+        self.disable_save()
+        HOME = os.path.expanduser("~")
+        lock = FileLock(os.path.join(HOME, self.file_name + ".lock"))
+        with lock:
+            with open(os.path.join(HOME, self.file_name), "r") as f:
+                try:
+                    settings = json.load(f)
+                except Exception as e:
+                    settings = {}
+        for key in settings.keys():
+            value = settings[key]
+            try:
+                self.settings.__dict__[key].set(value)
+            except Exception as e:
+                self.settings.__dict__[key] = value
+        self.enable_save()
+
+
+class ApplicationData:
+    _instance = None
+    app = None
+    settings = None
+    save_disabled = False
+
+    @property
+    def file_name(self):
+        return "application_data.json"
+
+    def __new__(cls, app=None):
+        if cls._instance is None:
+            cls._instance = super().__new__(cls)
+            cls._instance.__init__(app=app)
+        cls.app = app
+        return cls._instance
+
+    def __init__(self):
+        # if not app:
+        #     raise Exception("SettingsManager must be initialized with an app")
+        self.settings = PromptSettings(app=self)
+        self.settings.initialize(self.settings.read())
         try:
             self.load_settings()
         except Exception as e:

@@ -9,6 +9,7 @@ from PIL import Image
 import numpy as np
 import requests
 
+from airunner.aihandler.database import ApplicationData
 from airunner.aihandler.enums import FilterType
 from airunner.aihandler.mixins.kandinsky_mixin import KandinskyMixin
 from airunner.aihandler.logger import Logger as logger
@@ -25,31 +26,11 @@ from airunner.prompt_builder.prompt_data import PromptData
 
 from controlnet_aux.processor import Processor
 
+import diffusers
 from diffusers.utils import export_to_gif
-from diffusers import (
-    ControlNetModel,
-    DiffusionPipeline,
-    StableDiffusionPipeline,
-    StableDiffusionImg2ImgPipeline,
-    StableDiffusionInstructPix2PixPipeline,
-    StableDiffusionInpaintPipeline,
-    StableDiffusionDepth2ImgPipeline,
-    StableDiffusionUpscalePipeline,
-    StableDiffusionLatentUpscalePipeline,
-    StableDiffusionXLPipeline,
-    StableDiffusionXLImg2ImgPipeline,
-    TextToVideoSDPipeline,
-    VideoToVideoSDPipeline,
-    TextToVideoZeroPipeline,
-    KandinskyPipeline,
-    KandinskyImg2ImgPipeline,
-    AsymmetricAutoencoderKL,
-    StableDiffusionControlNetPipeline,
-    StableDiffusionControlNetImg2ImgPipeline,
-    StableDiffusionControlNetInpaintPipeline,
-)
-from diffusers.pipelines.stable_diffusion.convert_from_ckpt import download_from_original_stable_diffusion_ckpt
-from diffusers.pipelines.stable_diffusion import StableDiffusionSafetyChecker
+from diffusers.pipelines.stable_diffusion.convert_from_ckpt import \
+    download_from_original_stable_diffusion_ckpt
+
 
 class SDRunner(
     MergeMixin,
@@ -90,9 +71,9 @@ class SDRunner(
     current_controlnet_type = None
     controlnet_loaded = False
     attempt_download = False
-    safety_checker_model = "CompVis/stable-diffusion-safety-checker"
-    text_encoder_model = "openai/clip-vit-large-patch14"
-    inpaint_vae_model = "cross-attention/asymmetric-autoencoder-kl-x-1-5"
+    safety_checker_model = ""
+    text_encoder_model = ""
+    inpaint_vae_model = ""
 
     # end controlnet atributes
 
@@ -105,37 +86,12 @@ class SDRunner(
 
     @property
     def controlnet_model(self):
-        controlnet_type_map = {
-            "canny": "lllyasviel/control_v11p_sd15_canny",
-            "depth_leres": "lllyasviel/control_v11f1p_sd15_depth",
-            "depth_leres++": "lllyasviel/control_v11f1p_sd15_depth",
-            "depth_midas": "lllyasviel/control_v11f1p_sd15_depth",
-            "depth_zoe": "lllyasviel/control_v11f1p_sd15_depth",
-            "mlsd": "lllyasviel/control_v11p_sd15_mlsd",
-            "normal_bae": "lllyasviel/control_v11p_sd15_normalbae",
-            "normal_midas": "lllyasviel/control_v11p_sd15_normalbae",
-            "scribble_hed": "lllyasviel/control_v11p_sd15_scribble",
-            "scribble_pidinet": "lllyasviel/control_v11p_sd15_scribble",
-            "segmentation": "lllyasviel/control_v11p_sd15_seg",
-            "lineart_coarse": "lllyasviel/control_v11p_sd15_lineart",
-            "lineart_realistic": "lllyasviel/control_v11p_sd15_lineart",
-            "lineart_anime": "lllyasviel/control_v11p_sd15s2_lineart_anime",
-            "openpose": "lllyasviel/control_v11p_sd15_openpose",
-            "openpose_face": "lllyasviel/control_v11p_sd15_openpose",
-            "openpose_faceonly": "lllyasviel/control_v11p_sd15_openpose",
-            "openpose_full": "lllyasviel/control_v11p_sd15_openpose",
-            "openpose_hand": "lllyasviel/control_v11p_sd15_openpose",
-            "softedge_hed": "lllyasviel/control_v11p_sd15_softedge",
-            "softedge_hedsafe": "lllyasviel/control_v11p_sd15_softedge",
-            "softedge_pidinet": "lllyasviel/control_v11p_sd15_softedge",
-            "softedge_pidsafe": "lllyasviel/control_v11p_sd15_softedge",
-            "pixel2pixel": "lllyasviel/control_v11e_sd15_ip2p",
-            "inpaint": "lllyasviel/control_v11p_sd15_inpaint",
-            "shuffle": "lllyasviel/control_v11e_sd15_shuffle"
-        }
-
+        # read default and custom from application_data
+        data = self.application_data.controlnet_models.get()
+        # combine default and custom controlnet_models
+        data = {**data["default"], **data["custom"]}
         try:
-            return controlnet_type_map[self.controlnet_type]
+            return data[self.controlnet_type]
         except KeyError:
             raise Exception(f"Unknown controlnet type {self.controlnet_type}")
 
@@ -569,63 +525,31 @@ class SDRunner(
         return torch.cuda.is_available()
 
     @property
-    def controlnet_action_diffuser(self):
-        if self.is_txt2img or self.is_zeroshot:
-            return StableDiffusionControlNetPipeline
-        elif self.is_img2img:
-            return StableDiffusionControlNetImg2ImgPipeline
-        elif self.is_outpaint:
-            return StableDiffusionControlNetInpaintPipeline
-        else:
-            raise ValueError(f"Invalid action {self.action} unable to get controlnet action diffuser")
+    def model_data(self):
+        return self.options["model_data"]
 
     @property
     def action_diffuser(self):
+        pipelines = {
+            **self.application_data.pipelines.get()["default"],
+            **self.application_data.pipelines.get()["custom"]
+        }
 
-        if (self.enable_controlnet
-                and not self.is_ckpt_model
-                and not self.is_safetensors):
-            return self.controlnet_action_diffuser
+        version = self.model_data["version"]
+        pipeline = self.model_data["pipeline"]
+        category = self.model_data["category"]
 
-        if self.is_sd_xl:
-            if self.is_txt2img:
-                return StableDiffusionXLPipeline
-            elif self.is_img2img:
-                return StableDiffusionXLImg2ImgPipeline
-        if self.is_txt2img:
-            if self.is_shapegif:
-                return DiffusionPipeline
-            elif self.use_kandinsky:
-                return KandinskyPipeline
-            else:
-                return StableDiffusionPipeline
-        elif self.is_img2img:
-            if self.is_shapegif:
-                return DiffusionPipeline
-            elif self.use_kandinsky:
-                return KandinskyImg2ImgPipeline
-            else:
-                return StableDiffusionImg2ImgPipeline
-        elif self.is_pix2pix:
-            return StableDiffusionInstructPix2PixPipeline
-        elif self.is_outpaint:
-            return StableDiffusionInpaintPipeline
-        elif self.is_depth2img:
-            return StableDiffusionDepth2ImgPipeline
-        elif self.is_superresolution:
-            return StableDiffusionUpscalePipeline
-        elif self.is_txt2vid and self.is_zeroshot:
-            return TextToVideoZeroPipeline
-        elif self.is_txt2vid:
-            return TextToVideoSDPipeline
-        elif self.is_vid2vid:
-            return VideoToVideoSDPipeline
-        elif self.is_upscale:
-            return StableDiffusionLatentUpscalePipeline
-        elif self.is_shapegif:
-            return DiffusionPipeline
-        else:
-            return DiffusionPipeline
+        if pipeline not in pipelines:
+            raise ValueError(f"Invalid pipeline {pipeline}")
+
+        if version not in pipelines[pipeline]:
+            raise ValueError(f"Invalid version {version} for pipeline {pipeline}")
+
+        if category not in pipelines[pipeline][version]:
+            raise ValueError(f"Invalid category {category} for pipeline {pipeline} version {version}")
+
+        pipeline_classname = pipelines[pipeline][version][category]["classname"]
+        return getattr(diffusers, pipeline_classname)
 
     @property
     def is_ckpt_model(self):
@@ -730,6 +654,11 @@ class SDRunner(
 
     def  __init__(self, **kwargs):
         logger.set_level(LOG_LEVEL)
+        self.application_data = ApplicationData(app=self)
+        self.safety_checker_model = self.application_data.safety_checker.get()
+        self.text_encoder_model = self.application_data.text_encoder.get()
+        self.inpaint_vae_model = self.application_data.inpaint_vae.get()
+
         self.app = kwargs.get("app", None)
         self._message_var = kwargs.get("message_var", None)
         self._message_handler = kwargs.get("message_handler", None)
@@ -810,7 +739,7 @@ class SDRunner(
     def initialize_safety_checker(self):
         if not hasattr(self.pipe, "safety_checker") or not self.pipe.safety_checker:
             safety_checker = self.from_pretrained(
-                StableDiffusionSafetyChecker,
+                self.application_data.pipelines.get()["safetychecker"]["v1"]["stablediffusion"]["classname"],
                 self.safety_checker_model
             )
             from transformers import AutoFeatureExtractor
@@ -1379,7 +1308,7 @@ class SDRunner(
         logger.info(f"Loading controlnet {self.controlnet_type} self.controlnet_model {self.controlnet_model}")
         self._controlnet = None
         controlnet = self.from_pretrained(
-            ControlNetModel,
+            self.application_data.pipelines.get()["controlnet"]["v1"]["stablediffusion"]["classname"],
             self.controlnet_model,
         )
         # self.load_controlnet_scheduler()
@@ -1521,7 +1450,7 @@ class SDRunner(
 
                 if self.is_outpaint:
                     self.pipe.vae = self.from_pretrained(
-                        AsymmetricAutoencoderKL,
+                        getattr(diffusers, self.application_data.pipelines.get()["inpaint_vae"]["v1"]["stablediffusion"]["classname"]),
                         self.inpaint_vae_model
                     )
 
