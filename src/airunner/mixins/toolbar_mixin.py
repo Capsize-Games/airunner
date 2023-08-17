@@ -1,3 +1,5 @@
+from functools import partial
+
 from PyQt6.QtWidgets import QColorDialog
 import webbrowser
 from airunner.windows.about import AboutWindow
@@ -19,6 +21,16 @@ class ToolbarMixin:
         self.actionInvert.triggered.connect(self.do_invert)
         self.actionFilm.triggered.connect(self.do_film)
         self.actionSettings.triggered.connect(self.show_settings)
+
+        self.actionModel_Manager_2.triggered.connect(partial(self.show_section, "model_manager"))
+        self.actionControlNet.triggered.connect(partial(self.show_section, "controlnet"))
+        self.actionPrompt_Builder.triggered.connect(partial(self.show_section, "prompt_builder"))
+        self.actionEmbeddings.triggered.connect(partial(self.show_section, "embeddings"))
+        self.actionLoRA.triggered.connect(partial(self.show_section, "lora"))
+        self.actionPen.triggered.connect(partial(self.show_section, "pen"))
+        self.actionStableDiffusion.triggered.connect(partial(self.show_section, "stable_diffusion"))
+        self.actionKandinsky.triggered.connect(partial(self.show_section, "kandinsky"))
+        self.actionShap_E.triggered.connect(partial(self.show_section, "shapegif"))
 
     def show_settings(self):
         SettingsWindow(self.settings_manager, app=self)
