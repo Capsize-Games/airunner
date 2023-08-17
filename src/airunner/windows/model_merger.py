@@ -3,8 +3,6 @@ from PyQt6 import uic
 from PyQt6.QtCore import QThread, pyqtSignal, QObject
 from PyQt6.QtWidgets import QVBoxLayout
 
-from airunner.aihandler.database import ApplicationData
-from airunner.utils import load_default_models, load_models_from_path
 from airunner.windows.base_window import BaseWindow
 
 
@@ -21,20 +19,12 @@ class ModelMerger(BaseWindow):
         model_types = ["txt2img / img2img", "inpaint / outpaint", "depth2img", "pix2pix", "upscale", "superresolution"]
         self.template.model_types.addItems(model_types)
         self.template.model_types.currentIndexChanged.connect(self.change_model_type)
-
-        self.models = self.load_models()
-        path = self.settings_manager.settings.model_base_path.get()
-        self.models += load_models_from_path(path)
-        self.template.base_models.addItems(self.models)
-        self.application_data = ApplicationData(app=self.app)
+        self.template.base_models.addItems(self.app.available_model_names_by_section("txt2img"))
 
         # get standard models from model_base_path
-        path = self.settings_manager.settings.model_base_path.get()
-        self.models = load_models_from_path(path)
-        self.models.insert(0, "")
         # load the model_merger_model widget that will be used to add models
         for n in range(len(self.widgets), self.total_models):
-            self.add_model(self.models, n)
+            self.add_model(self.app.available_model_names_by_section("txt2img"), n)
         layout = QVBoxLayout()
         self.template.models.setLayout(layout)
         self.template.merge_button.clicked.connect(self.merge_models)
@@ -64,42 +54,10 @@ class ModelMerger(BaseWindow):
             output_path = self.settings_manager.settings.model_base_path.get()
         return output_path
 
-    def load_models(self):
-        return load_default_models("stablediffusion", self.section)
-
     def change_model_type(self, index):
         self.model_type = self.template.model_types.currentText()
-        self.models = []
-        if self.section == "stablediffusion_generate":
-            self.models = self.load_models()
-            path = self.settings_manager.settings.model_base_path.get()
-            self.models += load_models_from_path(path)
-        elif self.section == "outpaint":
-            self.models = self.load_models()
-            path = self.settings_manager.settings.outpaint_model_path.get()
-            if not path or path == "":
-                path = self.settings_manager.settings.model_base_path.get()
-            self.models += load_models_from_path(path)
-        elif self.section == "upscale":
-            self.models = self.load_models()
-            path = self.settings_manager.settings.upscale_model_path.get()
-            if not path or path == "":
-                path = self.settings_manager.settings.model_base_path.get()
-            self.models += load_models_from_path(path)
-        elif self.section == "depth2img":
-            self.models = self.load_models()
-            path = self.settings_manager.settings.depth2img_model_path.get()
-            if not path or path == "":
-                path = self.settings_manager.settings.model_base_path.get()
-            self.models += self.load_models()
-        elif self.section == "pix2pix":
-            self.models = load_default_models("stablediffusion", "pix2pix")
-            path = self.settings_manager.settings.pix2pix_model_path.get()
-            if not path or path == "":
-                path = self.settings_manager.settings.model_base_path.get()
-            self.models += self.load_models()
         self.template.base_models.clear()
-        self.template.base_models.addItems(self.models)
+        self.template.base_models.addItems(self.app.available_model_names_by_section(self.section))
     
     def add_new_model(self):
         self.total_models += 1
@@ -198,29 +156,18 @@ class ModelMerger(BaseWindow):
 
         model = self.template.base_models.currentText()
         section = self.section
-        if section == "txt2img":
-            section = "stablediffusion_generate"
-        else:
-            section = f"stablediffusion_{section}"
-        model_data = self.application_data.models.get()
-        if model in model_data[section]:
-            model_path = model_data[section][model]["path"]
-        else:
-            if self.section == "depth2img":
-                path = self.settings_manager.settings.depth2img_model_path.get()
-            elif self.section == "pix2pix":
-                path = self.settings_manager.settings.pix2pix_model_path.get()
-            elif self.section == "outpaint":
-                path = self.settings_manager.settings.outpaint_model_path.get()
-            elif self.section == "upscale":
-                path = self.settings_manager.settings.upscale_model_path.get()
-            model_path = os.path.join(path, model)
+        available_models_by_section = self.app.application_data.available_models_by_section(section)
+        model_data = None
+        for data in available_models_by_section:
+            if data["name"] == model:
+                model_data = data
 
-        self.app.client.sd_runner.merge_models(
-            model_path,
-            models,
-            weights,
-            self.output_path,
-            self.template.model_name.text(),
-            self.section
-        )
+        if model_data:
+            self.app.client.sd_runner.merge_models(
+                model_data["path"],
+                models,
+                weights,
+                self.output_path,
+                self.template.model_name.text(),
+                self.section
+            )
