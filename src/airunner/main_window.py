@@ -462,6 +462,20 @@ class MainWindow(
             self.generator_tab_widget.toggle_all_prompt_builder_checkboxes
         )
 
+        for tab_section in ["stablediffusion", "kandinsky", "shapegif"]:
+            for section in ["txt2img", "img2img", "pix2pix", "depth2img", "txt2vid"]:
+                if (tab_section == "kandinsky" or tab_section == "shapegif") and section not in ["txt2img", "img2img"]:
+                    continue
+                self.override_tab_section = tab_section
+                self.override_section = section
+                self.settings.enable_controlnet.connect(self.handle_toggle_controlnet)
+        self.override_tab_section = None
+        self.override_section = None
+
+    def handle_toggle_controlnet(self, value):
+        self.controlnet_settings.template.controlnet_groupbox.setChecked(value)
+        self.generator_tab_widget.use_controlnet_checkbox.setChecked(value)
+
     def instantiate_widgets(self):
         logger.info("Instantiating widgets...")
         self.generator_tab_widget = GeneratorTabWidget(app=self)
@@ -829,7 +843,6 @@ class MainWindow(
             data["tab_section"], data["action"]
         )
         # get max progressbar value
-        self.generator_tab_widget.update_queue_label()
         if nsfw_content_detected and self.settings_manager.settings.nsfw_filter.get():
             self.message_handler("NSFW content detected, try again.", error=True)
         elif data["options"][f"deterministic_generation"]:
