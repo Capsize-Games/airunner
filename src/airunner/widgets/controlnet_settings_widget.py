@@ -12,9 +12,6 @@ class ControlNetSettingsData:
     input_image: Image = None
     controlnet_image: Image = None
     use_active_grid_area: bool = False
-    keep_active_image_updated: bool = True
-    generate_control_image: bool = True
-    reuse_generated_image: bool = True
     controlnet_scale_slider: float = 1.0
 
 
@@ -25,9 +22,8 @@ class ControlNetSettingsWidget(BaseWidget):
 
     @property
     def active_grid_area_image(self):
-        if not self._active_grid_area_image or self.data.keep_active_image_updated:
-            if self.app.canvas.current_layer.image_data.image:
-                self._active_grid_area_image = self.app.canvas.current_layer.image_data.image.copy()
+        if self.app.canvas.current_layer.image_data.image:
+            self._active_grid_area_image = self.app.canvas.current_layer.image_data.image.copy()
         return self._active_grid_area_image
 
     @property
@@ -53,10 +49,6 @@ class ControlNetSettingsWidget(BaseWidget):
             partial(self.toggle_use_active_grid_area))
         self.template.use_imported_image.toggled.connect(
             partial(self.toggle_use_imported_image))
-        self.template.use_imported_control_image.toggled.connect(
-            partial(self.toggle_generate_control_image))
-        self.template.use_imported_control_image.toggled.connect(
-            partial(self.toggle_use_imported_controlnet_image))
         self.template.import_image_button.clicked.connect(
             self.import_input_image)
         self.template.import_control_image_button.clicked.connect(
@@ -65,25 +57,11 @@ class ControlNetSettingsWidget(BaseWidget):
             self.clear_input_image)
         self.template.clear_control_image_button.clicked.connect(
             self.clear_controlnet_input_image)
-        self.template.keep_active_image_updated.setChecked(self.data.keep_active_image_updated)
-        self.template.keep_active_image_updated.toggled.connect(
-            partial(self.toggle_keep_active_image_updated))
         self.app.image_generated.connect(self.handle_image_generated)
         self.app.controlnet_image_generated.connect(self.handle_controlnet_image_generated)
         self.template.export_generated_button.clicked.connect(self.export_generated_controlnet_image)
-        self.template.reuse_generated_image.setChecked(self.data.reuse_generated_image)
-        self.template.reuse_generated_image.toggled.connect(
-            partial(self.toggle_reuse_generated_controlnet_image))
-
-        self.template.generate_control_image.setChecked(self.data.generate_control_image)
 
         self.toggle_import_image_button()
-        self.toggle_refresh_button()
-        self.toggle_export_controlnet_image_button()
-        self.toggle_import_controlnet_image_button()
-
-    def toggle_reuse_generated_controlnet_image(self, value):
-        self.data.reuse_generated_image = value
 
     def export_generated_controlnet_image(self):
         file_path, _ = self.app.display_file_export_dialog()
@@ -95,48 +73,18 @@ class ControlNetSettingsWidget(BaseWidget):
         self.data.controlnet_image = self.app.controlnet_image
         self.set_controlnet_thumbnail(self.data.controlnet_image)
 
-    def toggle_generate_control_image(self, value):
-        print("toggle_generate_control_image", value)
-        self.data.generate_control_image = value
-        self.toggle_export_controlnet_image_button()
-        self.toggle_import_controlnet_image_button()
-
-    def toggle_use_imported_controlnet_image(self, value):
-        print("toggle_use_imported_controlnet_image", value)
-        self.data.generate_control_image = not value
-        self.toggle_export_controlnet_image_button()
-        self.toggle_import_controlnet_image_button()
-
-    def toggle_keep_active_image_updated(self, value):
-        self.data.keep_active_image_updated = value
-        if self.active_grid_area_image:
-            self.set_thumbnail(self.active_grid_area_image)
-
-    def toggle_export_controlnet_image_button(self):
-        self.template.export_generated_button.setEnabled(self.data.generate_control_image)
-        self.template.reuse_generated_image.setEnabled(self.data.generate_control_image)
-
-    def toggle_import_controlnet_image_button(self):
-        self.template.import_control_image_button.setEnabled(not self.data.generate_control_image)
-        self.template.clear_control_image_button.setEnabled(not self.data.generate_control_image)
-
     def toggle_import_image_button(self):
         self.template.import_image_button.setEnabled(not self.data.use_active_grid_area)
         self.template.clear_image_button.setEnabled(not self.data.use_active_grid_area)
 
-    def toggle_refresh_button(self):
-        self.template.keep_active_image_updated.setEnabled(self.data.use_active_grid_area)
-
     def toggle_use_imported_image(self, value):
         self.data.use_active_grid_area = not value
         self.set_thumbnail(self.data.input_image)
-        self.toggle_refresh_button()
         self.toggle_import_image_button()
 
     def toggle_use_active_grid_area(self, value):
         self.data.use_active_grid_area = value
         self.set_thumbnail(self.active_grid_area_image)
-        self.toggle_refresh_button()
         self.toggle_import_image_button()
 
     def clear_input_image(self):
