@@ -3,6 +3,7 @@ import pickle
 import sys
 import psutil
 import torch
+from PIL import Image
 from PyQt6 import uic, QtCore
 from PyQt6.QtWidgets import QApplication, QFileDialog, QMainWindow, QSplitter, QTabWidget, QWidget, \
     QVBoxLayout
@@ -20,10 +21,12 @@ from airunner.mixins.menubar_mixin import MenubarMixin
 from airunner.mixins.toolbar_mixin import ToolbarMixin
 from airunner.themes import Themes
 from airunner.widgets.canvas_widget import CanvasWidget
+from airunner.widgets.controlnet_settings_widget import ControlNetSettingsWidget
 from airunner.widgets.embedding_widget import EmbeddingWidget
 from airunner.widgets.footer_widget import FooterWidget
 from airunner.widgets.generator_tab_widget import GeneratorTabWidget
 from airunner.prompt_builder.widgets.prompt_builder import PromptBuilderWidget
+from airunner.widgets.model_manager import ModelManagerWidget
 from airunner.widgets.tool_bar_widget import ToolBarWidget
 from airunner.widgets.tool_menu_widget import ToolMenuWidget
 from airunner.widgets.header_widget import HeaderWidget
@@ -69,6 +72,7 @@ class MainWindow(
     status_normal_color_light = "#000000"
     status_normal_color_dark = "#ffffff"
     is_started = False
+    _themes = None
 
     _embedding_names = None
     embedding_widgets = {}
@@ -227,7 +231,6 @@ class MainWindow(
     def is_maximized(self):
         return self.settings_manager.settings.is_maximized.get()
 
-    _themes = None
     @property
     def css(self):
         if self._themes is None:
@@ -241,6 +244,10 @@ class MainWindow(
     @is_maximized.setter
     def is_maximized(self, val):
         self.settings_manager.settings.is_maximized.set(val)
+
+    def available_model_names_by_section(self, section):
+        for model in self.application_data.available_models_by_section(section):
+            yield model["name"]
 
     def __init__(self, *args, **kwargs):
         logger.info("Starting AI Runnner...")
@@ -392,7 +399,6 @@ class MainWindow(
         self.tool_menu_widget.set_stylesheet()
         self.toolbar_widget.set_stylesheet()
         self.footer_widget.set_stylesheet()
-
         # change the icons in the toolmenu
         if self.settings_manager.settings.dark_mode_enabled.get():
             self.actionUndo.setIcon(QIcon(os.path.join("src/icons/007-undo-light.png")))
@@ -472,18 +478,16 @@ class MainWindow(
 
         self.splitter = QSplitter()
         self.center_splitter = QSplitter(Qt.Orientation.Vertical)
-        self.prompt_builder = PromptBuilderWidget(app=self)
-        center_panel = QTabWidget()
-        center_panel.setStyleSheet(self.css("center_panel"))
-        center_panel.setTabPosition(QTabWidget.TabPosition.South)
-        center_panel.addTab(self.prompt_builder, "Prompt Builder")
+
+        self.create_center_panel()
+
         # auto hide tabs
-        center_panel.tabBar().hide()
+        # center_panel.tabBar().hide()
         self.center_splitter.setStretchFactor(1, 1)
         self.center_splitter.setStretchFactor(2, 0)
         self.splitter.addWidget(self.generator_tab_widget)
         self.center_splitter.addWidget(self.canvas_widget)
-        self.center_splitter.addWidget(center_panel)
+        self.center_splitter.addWidget(self.center_panel)
         # listen to center_splitter size changes
         self.center_splitter.splitterMoved.connect(self.handle_bottom_splitter_moved)
         self.splitter.addWidget(self.center_splitter)
@@ -493,6 +497,52 @@ class MainWindow(
         self.gridLayout.addWidget(self.splitter, 1, 0, 1, 3)
         self.gridLayout.addWidget(self.toolbar_widget, 1, 3, 1, 1)
         self.gridLayout.addWidget(self.footer_widget, 2, 0, 1, 4)
+
+    def create_center_panel(self):
+        self.prompt_builder = PromptBuilderWidget(app=self)
+        self.model_manager = ModelManagerWidget(app=self)
+        self.controlnet_settings = ControlNetSettingsWidget(app=self)
+
+        self.center_panel = QTabWidget()
+        self.center_panel.setStyleSheet(self.css("center_panel"))
+        self.center_panel.setTabPosition(QTabWidget.TabPosition.South)
+        self.center_panel.addTab(self.model_manager, "Model Manager")
+        self.center_panel.addTab(self.prompt_builder, "Prompt Builder")
+        self.center_panel.addTab(self.controlnet_settings, "ControlNet")
+
+    def handle_tab_section_changed(self):
+        self.update()
+        self.enable_embeddings()
+        self.enable_disable_controlnet_tab()
+
+    def handle_generator_tab_changed(self):
+        self.update()
+        self.enable_embeddings()
+        self.enable_disable_controlnet_tab()
+
+    def enable_disable_controlnet_tab(self):
+        enable = self.currentTabSection in ["stablediffusion"] and \
+                 self.current_section not in ["upscale", "superresolution"]
+        self.center_panel.setTabEnabled(2, enable)
+
+    def handle_value_change(self, attr_name, value=None, widget=None):
+        attr = getattr(self, f"{attr_name}_var")
+        if attr_name == "controlnet":
+            value = value.lower()
+
+        if value is not None:
+            attr.set(value)
+        else:
+            try:
+                attr.set(widget.toPlainText())
+            except AttributeError:
+                try:
+                    attr.set(widget.currentText())
+                except AttributeError:
+                    try:
+                        attr.set(widget.value())
+                    except AttributeError:
+                        print("something went wrong while setting the value")
 
     def set_splitter_sizes(self):
         bottom_sizes = self.settings_manager.settings.bottom_splitter_sizes.get()
@@ -665,8 +715,16 @@ class MainWindow(
             MessageCode.ERROR: self.handle_error,
             MessageCode.PROGRESS: self.handle_progress,
             MessageCode.IMAGE_GENERATED: self.handle_image_generated,
+            MessageCode.CONTROLNET_IMAGE_GENERATED: self.handle_controlnet_image_generated,
             MessageCode.EMBEDDING_LOAD_FAILED: self.handle_embedding_load_failed,
         }.get(code, self.handle_unknown)(message)
+
+    image_generated = pyqtSignal(bool)
+    controlnet_image_generated = pyqtSignal(bool)
+
+    def handle_controlnet_image_generated(self, message):
+        self.controlnet_image = message["image"]
+        self.controlnet_image_generated.emit(True)
 
     def handle_image_generated(self, message):
         images = message["images"]
@@ -706,6 +764,8 @@ class MainWindow(
             self.canvas.image_handler(images[0], data)
             self.message_handler("")
             self.canvas.show_layers()
+
+        self.image_generated.emit(True)
 
     def handle_status(self, message):
         self.set_status_label(message)
