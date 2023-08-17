@@ -116,7 +116,6 @@ class SocketClient:
                 pass
 
     def response_handler(self, response):
-        print(response)
         # res = json.loads(response, object_hook=lambda d: namedtuple('X', d.keys())(*d.values()))
         # print(res.request_type)
         # # convert res.images[0] base64 to PIL image and save
