@@ -9,7 +9,7 @@ setup(
     long_description_content_type="text/markdown",
     keywords="ai, stable diffusion, art, ai art, stablediffusion",
     license="AGPL-3.0",
-    author_email="contact@capsize.gg",
+    author_email="contact@capsizegames.com",
     url="https://github.com/Capsize-Games/airunner",
     package_dir={"": "src"},
     packages=find_packages("src"),
