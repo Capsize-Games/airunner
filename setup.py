@@ -22,6 +22,7 @@ setup(
         "omegaconf==2.3.0",
         "accelerate==0.20.3",
         "controlnet_aux==0.0.6",
+        "diffusers==0.20.0",
         "huggingface-hub==0.16.3",
         "numpy==1.23.5",
         "Pillow==9.5.0",
