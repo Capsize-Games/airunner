@@ -3,7 +3,6 @@ import pickle
 import sys
 import psutil
 import torch
-from PIL import Image
 from PyQt6 import uic, QtCore
 from PyQt6.QtWidgets import QApplication, QFileDialog, QMainWindow, QSplitter, QTabWidget, QWidget, \
     QVBoxLayout
@@ -77,6 +76,48 @@ class MainWindow(
     _embedding_names = None
     embedding_widgets = {}
     bad_model_embedding_map = {}
+    _tabs = {
+        "stablediffusion": {
+            "txt2img": None,
+            "img2img": None,
+            "outpaint": None,
+            "depth2img": None,
+            "pix2pix": None,
+            "upscale": None,
+            "superresolution": None,
+            "txt2vid": None
+        },
+        "kandinsky": {
+            "txt2img": None,
+            "img2img": None,
+            "outpaint": None,
+        },
+        "shapegif": {
+            "txt2img": None,
+            "img2img": None,
+        }
+    }
+    registered_settings_handlers = []
+    tab_sections = {
+        "left": {
+            "stable_diffusion": {
+                "widget": None,
+                "index": 0
+            },
+            "kandinsky": {
+                "widget": None,
+                "index": 1
+            },
+            "shapegif": {
+                "widget": None,
+                "index": 2
+            },
+        },
+        "center": {},
+        "right": {}
+    }
+    image_generated = pyqtSignal(bool)
+    controlnet_image_generated = pyqtSignal(bool)
 
     @property
     def embedding_names(self):
@@ -115,28 +156,6 @@ class MainWindow(
     @canvas_position.setter
     def canvas_position(self, val):
         self.canvas_widget.canvas_position.setText(val)
-
-    _tabs = {
-        "stablediffusion": {
-            "txt2img": None,
-            "img2img": None,
-            "outpaint": None,
-            "depth2img": None,
-            "pix2pix": None,
-            "upscale": None,
-            "superresolution": None,
-            "txt2vid": None
-        },
-        "kandinsky": {
-            "txt2img": None,
-            "img2img": None,
-            "outpaint": None,
-        },
-        "shapegif": {
-            "txt2img": None,
-            "img2img": None,
-        }
-    }
 
     @property
     def currentTabSection(self):
@@ -435,9 +454,6 @@ class MainWindow(
         MenubarMixin.initialize(self)
         ToolbarMixin.initialize(self)
 
-    # a list of tuples that represents a signal name and its handler
-    registered_settings_handlers = []
-
     def register_setting_handler(self, signal, handler):
         """
         Connect a signal to a handler. Signals must be part of settings_manager.settings
@@ -511,25 +527,6 @@ class MainWindow(
         self.gridLayout.addWidget(self.splitter, 1, 0, 1, 3)
         self.gridLayout.addWidget(self.toolbar_widget, 1, 3, 1, 1)
         self.gridLayout.addWidget(self.footer_widget, 2, 0, 1, 4)
-
-    tab_sections = {
-        "left": {
-            "stable_diffusion": {
-                "widget": None,
-                "index": 0
-            },
-            "kandinsky": {
-                "widget": None,
-                "index": 1
-            },
-            "shapegif": {
-                "widget": None,
-                "index": 2
-            },
-        },
-        "center": {},
-        "right": {}
-    }
 
     def track_tab_section(
         self,
@@ -815,9 +812,6 @@ class MainWindow(
             MessageCode.CONTROLNET_IMAGE_GENERATED: self.handle_controlnet_image_generated,
             MessageCode.EMBEDDING_LOAD_FAILED: self.handle_embedding_load_failed,
         }.get(code, self.handle_unknown)(message)
-
-    image_generated = pyqtSignal(bool)
-    controlnet_image_generated = pyqtSignal(bool)
 
     def handle_controlnet_image_generated(self, message):
         self.controlnet_image = message["image"]
