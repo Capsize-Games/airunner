@@ -322,12 +322,14 @@ class ModelManagerWidget(BaseWidget):
 
                     if key == "default":
                         model_widget.delete_button.hide()
-                        model_widget.edit_button.hide()
+                        model_widget.edit_button.deleteLater()
+                        model_widget.toolButton.deleteLater()
                     else:
                         model_widget.edit_button.clicked.connect(
                             partial(
                                 self.handle_edit_model,
-                                model
+                                model,
+                                index
                             )
                         )
                         model_widget.delete_button.clicked.connect(
@@ -338,6 +340,7 @@ class ModelManagerWidget(BaseWidget):
                                 index
                             )
                         )
+                        model_widget.toolButton.clicked.connect(partial(self.toggle_details, model_widget))
 
                     model_widget.name.setChecked(model["enabled"])
                     model_widget.name.stateChanged.connect(
@@ -349,8 +352,6 @@ class ModelManagerWidget(BaseWidget):
                     )
 
                     self.hide_details(model_widget)
-
-                    model_widget.toolButton.clicked.connect(partial(self.toggle_details, model_widget))
 
                     if key == "default":
                         self.default_tab.scrollAreaWidgetContents.layout().addWidget(model_widget)
@@ -376,8 +377,8 @@ class ModelManagerWidget(BaseWidget):
         for i in range(model_widget.details.layout().count()):
             model_widget.details.layout().itemAt(i).widget().hide()
 
-    def handle_edit_model(self, model):
-        print("edit button clicked")
+    def handle_edit_model(self, model, index):
+        print("edit button clicked", index)
         self.toggle_model_form_frame(show=True)
 
         categories = self.application_data.available_categories()
