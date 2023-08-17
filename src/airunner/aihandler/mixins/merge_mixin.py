@@ -47,8 +47,8 @@ class MergeMixin:
             )
         else:
             pipe = self.from_pretrained(
-                PipeCLS,
-                base_model_path
+                class_object=PipeCLS,
+                model=base_model_path
             )
         for index in range(len(models_to_merge_path)):
             weight = weights[index]
@@ -61,8 +61,8 @@ class MergeMixin:
                 )
             else:
                 model = self.from_pretrained(
-                    type(pipe),
-                    model_path
+                    class_object=type(pipe),
+                    model=model_path
                 )
 
             pipe.vae = self.merge_vae(pipe.vae, model.vae, weight["vae"])
