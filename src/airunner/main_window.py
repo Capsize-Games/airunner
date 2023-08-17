@@ -498,6 +498,66 @@ class MainWindow(
         self.gridLayout.addWidget(self.toolbar_widget, 1, 3, 1, 1)
         self.gridLayout.addWidget(self.footer_widget, 2, 0, 1, 4)
 
+    tab_sections = {
+        "left": {
+            "stable_diffusion": {
+                "widget": None,
+                "index": 0
+            },
+            "kandinsky": {
+                "widget": None,
+                "index": 1
+            },
+            "shapegif": {
+                "widget": None,
+                "index": 2
+            },
+        },
+        "center": {},
+        "right": {}
+    }
+
+    def track_tab_section(
+        self,
+        location: str,
+        section: str,
+        display_name: str,
+        widget: QWidget,
+        tab_widget: QTabWidget
+    ):
+        index = tab_widget.addTab(widget, display_name)
+        self.tab_sections[location][section] = {
+            "widget": widget,
+            "index": index
+        }
+
+    def show_section(self, section):
+        left_sections = self.tab_sections["left"].keys()
+        center_sections = self.tab_sections["center"].keys()
+        right_sections = self.tab_sections["right"].keys()
+
+        if section in left_sections:
+            if self.splitter.widget(0).width() <= self.default_splitter_sizes[0]:
+                main_sizes = self.settings_manager.settings.main_splitter_sizes.get()
+                main_sizes[0] = self.default_splitter_sizes[0] + 1
+                self.splitter.setSizes(main_sizes)
+            self.generator_tab_widget.sectionTabWidget.setCurrentIndex(self.tab_sections["left"][section]["index"])
+
+        if section in right_sections:
+            # right splitter is self.splitter.widget(2)
+            if self.splitter.widget(2).width() <= self.default_splitter_sizes[2]:
+                # set the width to 500
+                main_sizes = self.settings_manager.settings.main_splitter_sizes.get()
+                main_sizes[2] = self.default_splitter_sizes[2] + 1
+                self.splitter.setSizes(main_sizes)
+            self.tab_widget.setCurrentIndex(self.tab_sections["right"][section]["index"])
+
+        if section in center_sections:
+            # check if self.center_panel is collapsed and expand it if so
+            if self.center_splitter.sizes()[1] == 0:
+                self.center_splitter.setSizes([self.center_splitter.sizes()[0], 520])
+            self.center_panel.setCurrentIndex(self.tab_sections["center"][section]["index"])
+
     def create_center_panel(self):
         self.prompt_builder = PromptBuilderWidget(app=self)
         self.model_manager = ModelManagerWidget(app=self)
@@ -506,9 +566,28 @@ class MainWindow(
         self.center_panel = QTabWidget()
         self.center_panel.setStyleSheet(self.css("center_panel"))
         self.center_panel.setTabPosition(QTabWidget.TabPosition.South)
-        self.center_panel.addTab(self.model_manager, "Model Manager")
-        self.center_panel.addTab(self.prompt_builder, "Prompt Builder")
-        self.center_panel.addTab(self.controlnet_settings, "ControlNet")
+
+        self.track_tab_section(
+            "center",
+            "prompt_builder",
+            "Prompt Builder",
+            self.prompt_builder,
+            self.center_panel
+        )
+        self.track_tab_section(
+            "center",
+            "controlnet",
+            "ControlNet",
+            self.controlnet_settings,
+            self.center_panel
+        )
+        self.track_tab_section(
+            "center",
+            "model_manager",
+            "Model Manager",
+            self.model_manager,
+            self.center_panel
+        )
 
     def handle_tab_section_changed(self):
         self.update()
@@ -549,12 +628,16 @@ class MainWindow(
         main_sizes = self.settings_manager.settings.main_splitter_sizes.get()
         if bottom_sizes[1] == -1:
             bottom_sizes[1] = 520
+        self.default_splitter_sizes = [self.generator_tab_widget.minimumWidth(),
+                                       520,
+                                       self.tool_menu_widget.minimumWidth()]
+
         if main_sizes[0] == -1:
-            main_sizes[0] = self.generator_tab_widget.minimumWidth()
+            main_sizes[0] = self.default_splitter_sizes[0]
         if main_sizes[1] == -1:
-            main_sizes[1] = 520
+            main_sizes[1] = self.default_splitter_sizes[1]
         if main_sizes[2] == -1:
-            main_sizes[2] = self.tool_menu_widget.minimumWidth()
+            main_sizes[2] = self.default_splitter_sizes[2]
         self.center_splitter.setSizes(bottom_sizes)
         self.splitter.setSizes(main_sizes)
 

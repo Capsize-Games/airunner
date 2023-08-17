@@ -142,6 +142,17 @@
     <addaction name="image_interpolation"/>
     <addaction name="separator"/>
     <addaction name="actionModel_Merger"/>
+    <addaction name="separator"/>
+    <addaction name="actionStableDiffusion"/>
+    <addaction name="actionKandinsky"/>
+    <addaction name="actionShap_E"/>
+    <addaction name="separator"/>
+    <addaction name="actionPrompt_Builder"/>
+    <addaction name="actionControlNet"/>
+    <addaction name="actionModel_Manager_2"/>
+    <addaction name="actionEmbeddings"/>
+    <addaction name="actionLoRA"/>
+    <addaction name="actionPen"/>
    </widget>
    <widget class="QMenu" name="menuImage">
     <property name="title">
@@ -634,6 +645,51 @@
   <action name="actionModel_Manager">
    <property name="text">
     <string>Model Manager</string>
+   </property>
+  </action>
+  <action name="actionModel_Manager_2">
+   <property name="text">
+    <string>Model Manager</string>
+   </property>
+  </action>
+  <action name="actionControlNet">
+   <property name="text">
+    <string>ControlNet</string>
+   </property>
+  </action>
+  <action name="actionPrompt_Builder">
+   <property name="text">
+    <string>Prompt Builder</string>
+   </property>
+  </action>
+  <action name="actionEmbeddings">
+   <property name="text">
+    <string>Embeddings</string>
+   </property>
+  </action>
+  <action name="actionLoRA">
+   <property name="text">
+    <string>LoRA</string>
+   </property>
+  </action>
+  <action name="actionPen">
+   <property name="text">
+    <string>Pen</string>
+   </property>
+  </action>
+  <action name="actionStableDiffusion">
+   <property name="text">
+    <string>Stable Diffusion</string>
+   </property>
+  </action>
+  <action name="actionKandinsky">
+   <property name="text">
+    <string>Kandinsky</string>
+   </property>
+  </action>
+  <action name="actionShap_E">
+   <property name="text">
+    <string>Shap-E</string>
    </property>
   </action>
  </widget>
