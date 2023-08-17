@@ -5,7 +5,7 @@ from PyQt6 import uic
 from PyQt6.QtCore import QRect, pyqtSignal, Qt
 from PyQt6.QtGui import QShortcut, QKeySequence
 from PyQt6.uic.exceptions import UIFileException
-from airunner.aihandler.settings import MAX_SEED, MODELS
+from airunner.aihandler.settings import MAX_SEED
 from airunner.aihandler.enums import MessageCode
 from airunner.windows.video import VideoPopup
 from airunner.mixins.lora_mixin import LoraMixin
@@ -30,10 +30,6 @@ class GeneratorMixin(LoraMixin):
     @deterministic.setter
     def deterministic(self, val):
         self.deterministic_var.set(val == True)
-
-    @property
-    def available_models(self):
-        return MODELS
 
     @property
     def model_base_path(self):
@@ -206,6 +202,18 @@ class GeneratorMixin(LoraMixin):
     @controlnet_guidance_scale.setter
     def controlnet_guidance_scale(self, val):
         self.controlnet_scale_var.set(val)
+
+    @property
+    def variation_var(self):
+        return self.settings.variation
+
+    @property
+    def variation(self):
+        return self.variation_var.get()
+
+    @variation.setter
+    def variation(self, val):
+        self.variation_var.set(val)
 
     @property
     def seed_var(self):
@@ -667,7 +675,10 @@ class GeneratorMixin(LoraMixin):
         if not extra_options:
             extra_options = {}
 
-        if not seed:
+        if "image" in extra_options:
+            extra_options["image"] = self.controlnet_settings.current_image
+
+        if self.random_seed or not seed:
             self.set_seed()
             seed = self.seed
             self.seed_override = None
@@ -685,33 +696,27 @@ class GeneratorMixin(LoraMixin):
         negative_prompt = self.negative_prompt
 
         # set the model data
-        model = self.model
+        model_path = None
         model_branch = None
+        model_name = None
+
         section_name = action
-        if section_name in ["txt2img", "img2img"]:
-            section_name = "generate"
-
-        section_name = f"{self.currentTabSection}_{section_name}"
-
-        if model in self.available_models[section_name]:
-            model_path = self.available_models[section_name][model]["path"]
-            model_branch = self.available_models[section_name][model].get("branch", "main")
-        elif model not in self.models:
-            model_names = list(self.available_models[section_name].keys())
-            model = model_names[0]
-            model_path = self.available_models[section_name][model]["path"]
-            model_branch = self.available_models[section_name][model].get("branch", "main")
-        else:
-            path = self.settings_manager.settings.model_base_path.get()
-            if action == "depth2img":
-                path = self.settings_manager.settings.depth2img_model_path.get()
-            elif action == "pix2pix":
-                path = self.settings_manager.settings.pix2pix_model_path.get()
-            elif action == "outpaint":
-                path = self.settings_manager.settings.outpaint_model_path.get()
-            elif action == "upscale":
-                path = self.settings_manager.settings.upscale_model_path.get()
-            model_path = os.path.join(path, model)
+        models = self.application_data.available_models_by_section(section_name)
+        model_data = None
+        for model in models:
+            if isinstance(model, list):
+                for item in model:
+                    if item["name"] == self.model:
+                        model_path = item["path"]
+                        model_branch = item["branch"]
+                        model_data = item
+                        break
+            else:
+                if model["name"] == self.model:
+                    model_path = model["path"]
+                    model_branch = model["branch"]
+                    model_data = model
+                    break
 
         # get controlnet_dropdown from active tab
         options = {
@@ -723,7 +728,8 @@ class GeneratorMixin(LoraMixin):
             "n_samples": 1,
             "scale": self.scale / 100,
             "seed": seed,
-            "model": model,
+            "model": self.model,
+            "model_data": model_data,
             "scheduler": self.scheduler,
             "model_path": model_path,
             "model_branch": model_branch,
@@ -739,6 +745,7 @@ class GeneratorMixin(LoraMixin):
             "hf_token": self.settings_manager.settings.hf_api_key.get(),
             "enable_controlnet": self.enable_controlnet and self.controlnet is not None,
             "controlnet": self.controlnet,
+            "controlnet_image": self.controlnet_settings.current_controlnet_image,
             "deterministic_generation": self.deterministic,
             "deterministic_seed": False,
             "zeroshot": self.zeroshot,
@@ -752,7 +759,8 @@ class GeneratorMixin(LoraMixin):
             "lora_path": self.settings_manager.settings.lora_path.get(),
             "embeddings_path": self.settings_manager.settings.embeddings_path.get(),
             "video_path": self.settings_manager.settings.video_path.get(),
-            "clip_skip": self.clip_skip
+            "clip_skip": self.clip_skip,
+            "variation": self.variation
         }
 
         if action == "superresolution":
