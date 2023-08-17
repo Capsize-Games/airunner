@@ -540,7 +540,6 @@ class GeneratorMixin(LoraMixin):
                 seed = self.seed + n
             self.call_generate(image, seed=seed)
         self.seed_override = None
-        self.generator_tab_widget.update_queue_label()
         self.client.do_process_queue = True
 
     def call_generate(self, image=None, seed=None):
