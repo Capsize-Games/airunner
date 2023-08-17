@@ -142,7 +142,6 @@
     <addaction name="image_interpolation"/>
     <addaction name="separator"/>
     <addaction name="actionModel_Merger"/>
-    <addaction name="separator"/>
    </widget>
    <widget class="QMenu" name="menuImage">
     <property name="title">
@@ -630,6 +629,11 @@
   <action name="actionHuggingface_Cache_manager">
    <property name="text">
     <string>Browse Huggingface Cache</string>
+   </property>
+  </action>
+  <action name="actionModel_Manager">
+   <property name="text">
+    <string>Model Manager</string>
    </property>
   </action>
  </widget>
