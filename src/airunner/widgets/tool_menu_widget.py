@@ -1,7 +1,6 @@
-from PyQt6.QtWidgets import QTabWidget, QGridLayout, QColorDialog, QVBoxLayout, QWidget, QLineEdit
+from PyQt6.QtGui import QColor
+from PyQt6.QtWidgets import QTabWidget, QGridLayout, QColorDialog, QVBoxLayout, QWidget, QLineEdit, QPushButton
 from airunner.widgets.base_widget import BaseWidget
-#from airunner.widgets.brush_widget import BrushWidget
-from airunner.widgets.color_picker import ColorPicker
 from airunner.widgets.embeddings_container_widget import EmbeddingsContainerWidget
 from airunner.widgets.layer_container_widget import LayerContainerWidget
 from airunner.widgets.lora_container_widget import LoraContainerWidget
@@ -32,9 +31,16 @@ class ToolMenuWidget(BaseWidget):
 
         # self.lora_container_widget.toggleAllLora.clicked.connect(lambda checked, _tab=tab: self.toggle_all_lora(checked, _tab))
 
+        # create a button that is set to the primary color and on click open a QColorDialog
+        brush_color_widget_size = 128
+        self.brush_color_widget = QPushButton()
+        self.brush_color_widget.setFixedWidth(brush_color_widget_size)
+        self.brush_color_widget.setFixedHeight(brush_color_widget_size)
+        self.brush_color_widget.setStyleSheet(
+            f"background-color: {self.settings_manager.settings.primary_color.get()};")
+        self.brush_color_widget.clicked.connect(self.pick_brush_color)
+
         # create QColorDialog as a widget and add it to the right_toolbar
-        color_dialog = ColorPicker()
-        color_dialog.currentColorChanged.connect(self.handle_current_color_changed)
         # add a input box to the layout
         input_box = QLineEdit()
         input_box.setPlaceholderText("Enter a hex color")
@@ -46,7 +52,7 @@ class ToolMenuWidget(BaseWidget):
 
         widget = QWidget()
         grid = QGridLayout(widget)
-        grid.addWidget(color_dialog, 0, 0, 1, 1)
+        grid.addWidget(self.brush_color_widget, 0, 0, 1, 1)
         grid.addWidget(input_box, 1, 0, 1, 1)
         self.app.track_tab_section("right", "pen", "Pen Color", widget, self.app.tab_widget)
         # prevent grid from stretching
@@ -59,11 +65,19 @@ class ToolMenuWidget(BaseWidget):
         self.right_toolbar.layout().addWidget(self.layer_container_widget, 2, 0, 1, 1)
 
         self.initialize_layer_buttons()
-        #self.brush_widget.primary_color_button.clicked.connect(self.app.set_primary_color)
 
         for tab_name in self.app.tabs.keys():
             tab = self.app.tabs[tab_name]
             self.app.load_embeddings(tab)
+
+    def pick_brush_color(self):
+        current_color = self.settings_manager.settings.primary_color.get()
+        # open QColorDialog and set the current color to the primary color
+        color = QColorDialog.getColor(QColor(current_color), self)
+        if color.isValid():
+            self.settings_manager.settings.primary_color.set(color.name())
+            self.brush_color_widget.setStyleSheet(
+                f"background-color: {self.settings_manager.settings.primary_color.get()};")
 
     def handle_current_color_changed(self, val):
         self.color_input_box.setText(val.name())
