@@ -1,4 +1,5 @@
 import base64
+import importlib
 import os
 import gc
 import re
@@ -8,8 +9,9 @@ import torch
 from PIL import Image
 import numpy as np
 import requests
+from torchvision import transforms
 
-from airunner.aihandler.database import ApplicationData
+from airunner.aihandler.auto_pipeline import AutoImport
 from airunner.aihandler.enums import FilterType
 from airunner.aihandler.mixins.kandinsky_mixin import KandinskyMixin
 from airunner.aihandler.logger import Logger as logger
@@ -22,11 +24,11 @@ from airunner.aihandler.mixins.compel_mixin import CompelMixin
 from airunner.aihandler.mixins.scheduler_mixin import SchedulerMixin
 from airunner.aihandler.settings import MAX_SEED, LOG_LEVEL, AIRUNNER_ENVIRONMENT
 from airunner.aihandler.enums import MessageCode
+from airunner.aihandler.settings_manager import ApplicationData
 from airunner.prompt_builder.prompt_data import PromptData
 
 from controlnet_aux.processor import Processor
 
-import diffusers
 from diffusers.utils import export_to_gif
 from diffusers.pipelines.stable_diffusion.convert_from_ckpt import \
     download_from_original_stable_diffusion_ckpt
@@ -87,7 +89,7 @@ class SDRunner(
     @property
     def controlnet_model(self):
         # read default and custom from application_data
-        data = self.application_data.controlnet_models.get()
+        data = self.application_data.settings.controlnet_models.get()
         # combine default and custom controlnet_models
         data = {**data["default"], **data["custom"]}
         try:
@@ -288,7 +290,7 @@ class SDRunner(
 
     @property
     def is_sd_xl(self):
-        return self.model == "Stable Diuffions XL 0.9"
+        return self.model == "Stable Diffusion XL 0.9"
 
     @property
     def model(self):
@@ -414,24 +416,7 @@ class SDRunner(
 
     @property
     def model_path(self):
-        if self.current_model and os.path.exists(self.current_model):
-            return self.current_model
-        path = None
-        if self.is_outpaint:
-            path = self.outpaint_model_path
-        elif self.is_pix2pix:
-            path = self.pix2pix_model_path
-        elif self.is_depth2img:
-            path = self.depth2img_model_path
-        elif self.is_superresolution or self.is_upscale:
-            path = self.upscale_model_path
-        if path is None or path == "":
-            path = self.model_base_path
-        if self.current_model:
-            path = os.path.join(path, self.current_model)
-        if not os.path.exists(path if path else ""):
-            return self.current_model
-        return path
+        return self.model_data["path"]
 
     @property
     def cuda_error_message(self):
@@ -526,38 +511,19 @@ class SDRunner(
 
     @property
     def model_data(self):
-        return self.options["model_data"]
-
-    @property
-    def action_diffuser(self):
-        pipelines = {
-            **self.application_data.pipelines.get()["default"],
-            **self.application_data.pipelines.get()["custom"]
-        }
-
-        version = self.model_data["version"]
-        pipeline = self.model_data["pipeline"]
-        category = self.model_data["category"]
-
-        if pipeline not in pipelines:
-            raise ValueError(f"Invalid pipeline {pipeline}")
-
-        if version not in pipelines[pipeline]:
-            raise ValueError(f"Invalid version {version} for pipeline {pipeline}")
-
-        if category not in pipelines[pipeline][version]:
-            raise ValueError(f"Invalid category {category} for pipeline {pipeline} version {version}")
-
-        pipeline_classname = pipelines[pipeline][version][category]["classname"]
-        return getattr(diffusers, pipeline_classname)
+        return self.options.get("model_data", {})
 
     @property
     def is_ckpt_model(self):
-        return self.is_ckpt_file(self.model)
+        return self.is_ckpt_file(self.model_path)
 
     @property
     def is_safetensors(self):
-        return self.is_safetensor_file(self.model)
+        return self.is_safetensor_file(self.model_path)
+
+    @property
+    def is_single_file(self):
+        return self.is_ckpt_model or self.is_safetensors
 
     @property
     def data_type(self):
@@ -654,10 +620,10 @@ class SDRunner(
 
     def  __init__(self, **kwargs):
         logger.set_level(LOG_LEVEL)
-        self.application_data = ApplicationData(app=self)
-        self.safety_checker_model = self.application_data.safety_checker.get()
-        self.text_encoder_model = self.application_data.text_encoder.get()
-        self.inpaint_vae_model = self.application_data.inpaint_vae.get()
+        self.application_data = ApplicationData()
+        self.safety_checker_model = self.application_data.available_models_by_section("safety_checker")
+        self.text_encoder_model = self.application_data.available_models_by_section("text_encoder")
+        self.inpaint_vae_model = self.application_data.available_models_by_section("inpaint_vae")
 
         self.app = kwargs.get("app", None)
         self._message_var = kwargs.get("message_var", None)
@@ -674,8 +640,8 @@ class SDRunner(
         self.upscale = None
 
     def initialize(self):
-        # get classname of self.action_diffuser
-        if not self.initialized or self.reload_model:
+        if not self.initialized or self.reload_model or self.pipe is None:
+            logger.info("Initializing...")
             self.compel_proc = None
             self.prompt_embeds = None
             self.negative_prompt_embeds = None
@@ -738,17 +704,14 @@ class SDRunner(
 
     def initialize_safety_checker(self):
         if not hasattr(self.pipe, "safety_checker") or not self.pipe.safety_checker:
-            safety_checker = self.from_pretrained(
-                self.application_data.pipelines.get()["safetychecker"]["v1"]["stablediffusion"]["classname"],
-                self.safety_checker_model
+            self.pipe.safety_checker = self.from_pretrained(
+                pipeline_action="safety_checker",
+                model=self.safety_checker_model
             )
-            from transformers import AutoFeatureExtractor
-            feature_extractor = self.from_pretrained(
-                AutoFeatureExtractor,
-                self.safety_checker_model
+            self.pipe.feature_extractor = self.from_pretrained(
+                pipeline_action="feature_extractor",
+                model=self.safety_checker_model
             )
-            self.pipe.safety_checker = safety_checker
-            self.pipe.feature_extractor = feature_extractor
 
     def load_safety_checker(self):
         if not self.pipe:
@@ -796,7 +759,15 @@ class SDRunner(
                         pass
             return images, nsfw_content_detected
 
+    @property
+    def do_add_lora_to_pipe(self):
+        return not self.use_kandinsky \
+               and not self.is_txt2vid \
+               and not self.is_upscale \
+               and not self.is_superresolution
+
     def call_pipe(self, **kwargs):
+        logger.info(f"call_pipe called with use_kandinsky={self.use_kandinsky}")
         """
         Generate an image using the pipe
         :param kwargs:
@@ -807,7 +778,7 @@ class SDRunner(
             "guidance_scale": self.guidance_scale,
             "callback": self.callback,
         }
-        if not self.use_kandinsky and not self.is_txt2vid and not self.is_upscale and not self.is_superresolution:
+        if self.do_add_lora_to_pipe:
             try:
                 self.add_lora_to_pipe()
             except Exception as _e:
@@ -875,6 +846,7 @@ class SDRunner(
         if self.is_shapegif:
             return self.call_shapegif_pipe()
 
+        # print stacktrace
         return self.pipe(**args)
 
     def call_shapegif_pipe(self):
@@ -1123,8 +1095,6 @@ class SDRunner(
     def process_data(self, data: dict):
         self.requested_data = data
         self.prepare_options(data)
-        if self.do_clear_kandinsky:
-            self.clear_kandinsky()
         self.prepare_scheduler()
         self.prepare_model()
         self.initialize()
@@ -1132,7 +1102,7 @@ class SDRunner(
             self.change_scheduler()
 
     def generate(self, data: dict):
-        if not self.pipe:
+        if not self.pipe and not self.use_kandinsky:
             return
         logger.info("generate called")
         self.do_cancel = False
@@ -1208,7 +1178,7 @@ class SDRunner(
         data = self.data
         tab_section = "stablediffusion"
         if self.use_kandinsky:
-            tab_section = "stablediffusion"
+            tab_section = "kandinsky"
         elif self.is_shapegif:
             tab_section = "shapegif"
         if self.is_txt2vid:
@@ -1217,22 +1187,41 @@ class SDRunner(
                 not self.enable_controlnet and
                 (self.is_img2img or self.is_depth2img)
         ) else self.steps
-        self.send_message({
+        res = {
             "step": step,
             "total": steps,
             "action": self.action,
             "image": image,
             "data": data,
             "tab_section": tab_section
-        }, code=MessageCode.PROGRESS)
+        }
+        if self.use_kandinsky:
+            """
+            When a Kandinsky response is returned, also return the image embeds
+            and negative image embeds - these can be generated independently
+            with a separate seed and used to generate a new Kandinsky image.
+            Returning the generated embeds here as PIL images allows us to
+            """
+            image_embed = self.image_embeds.view(32, 24)
+            negative_image_embed = self.negative_image_embeds.view(32, 24)
+            transform = transforms.ToPILImage()
+            image_embed = transform(image_embed)
+            negative_image_embed = transform(negative_image_embed)
+            res.update({
+                "image_embed": image_embed,
+                "negative_image_embed": negative_image_embed
+            })
+        self.send_message(res, code=MessageCode.PROGRESS)
 
     def generator_sample(
         self,
         data: dict
     ):
+        logger.info("generator_sample called")
         self.process_data(data)
 
-        if not self.pipe:
+        if not self.pipe and not self.use_kandinsky:
+            logger.info("pipe is None")
             return
 
         if self.current_clip_skip != self.clip_skip and self.pipe is not None:
@@ -1289,6 +1278,21 @@ class SDRunner(
     """
     Controlnet methods
     """
+    @property
+    def controlnet_action_diffuser(self):
+        from diffusers import (
+            StableDiffusionControlNetPipeline,
+            StableDiffusionControlNetImg2ImgPipeline,
+            StableDiffusionControlNetInpaintPipeline,
+        )
+        if self.is_txt2img or self.is_zeroshot:
+            return StableDiffusionControlNetPipeline
+        elif self.is_img2img:
+            return StableDiffusionControlNetImg2ImgPipeline
+        elif self.is_outpaint:
+            return StableDiffusionControlNetInpaintPipeline
+        else:
+            raise ValueError(f"Invalid action {self.action} unable to get controlnet action diffuser")
 
     def load_controlnet_from_ckpt(self, pipeline):
         pipeline = self.controlnet_action_diffuser(
@@ -1308,8 +1312,8 @@ class SDRunner(
         logger.info(f"Loading controlnet {self.controlnet_type} self.controlnet_model {self.controlnet_model}")
         self._controlnet = None
         controlnet = self.from_pretrained(
-            self.application_data.pipelines.get()["controlnet"]["v1"]["stablediffusion"]["classname"],
-            self.controlnet_model,
+            pipeline_action="controlnet",
+            model=self.controlnet_model
         )
         # self.load_controlnet_scheduler()
         return controlnet
@@ -1328,12 +1332,31 @@ class SDRunner(
             return image
         logger.error("No controlnet processor found")
 
-    def load_controlnet_arguments(self, **kwargs):
-        image_key = "image" if self.is_txt2img else "control_image"
+    _controlnet_image = None
 
+    @property
+    def controlnet_image(self):
+        controlnet_image = self.options.get("controlnet_image", None)
+
+        if not controlnet_image and self.image:
+            controlnet_image = self.preprocess_for_controlnet(self.image)
+            self.send_message({
+                "image": controlnet_image,
+                "data": {
+                    "controlnet_image": controlnet_image
+                },
+                "request_type": None
+            }, MessageCode.CONTROLNET_IMAGE_GENERATED)
+
+        self._controlnet_image = controlnet_image
+
+        return self._controlnet_image
+
+    def load_controlnet_arguments(self, **kwargs):
         if not self.is_txt2vid:
+            image_key = "image" if self.is_txt2img else "control_image"
             kwargs = {**kwargs, **{
-                image_key: self.preprocess_for_controlnet(self.image),
+                image_key: self.controlnet_image,
             }}
 
         kwargs = {**kwargs, **{
@@ -1428,30 +1451,30 @@ class SDRunner(
                 if self.enable_controlnet:
                     kwargs["controlnet"] = self.controlnet()
 
-                if self.is_ckpt_model or self.is_safetensors:
+                if self.is_single_file:
                     logger.info(f"loading {'safetensors' if self.is_safetensors else 'ckpt'} model")
                     try:
                         self.pipe = self.load_ckpt_model()
                     except OSError as e:
                         return self.handle_missing_files()
                 else:
-                    logger.info(f"loading diffusers model")
+                    logger.info(f"loading diffusers model {self.model_path}")
                     self.pipe = self.from_pretrained(
-                        diffuser_class=self.action_diffuser,
                         model=self.model_path,
                         scheduler=self.load_scheduler(),
                         **kwargs
                     )
 
                 if self.pipe is None:
+                    logger.error("Failed to load pipeline")
                     return
 
                 self.pipe = self.load_text_encoder(self.pipe)
 
                 if self.is_outpaint:
                     self.pipe.vae = self.from_pretrained(
-                        getattr(diffusers, self.application_data.pipelines.get()["inpaint_vae"]["v1"]["stablediffusion"]["classname"]),
-                        self.inpaint_vae_model
+                        pipeline_action="inpaint_vae",
+                        model=self.inpaint_vae_model
                     )
 
                 if not self.is_depth2img:
@@ -1471,12 +1494,11 @@ class SDRunner(
         self.load_learned_embed_in_clip()
 
     def load_text_encoder(self, pipeline):
-        if not pipeline or pipeline.text_encoder.config.num_hidden_layers > 12:
+        if not pipeline or (pipeline.text_encoder and pipeline.text_encoder.config.num_hidden_layers > 12):
             return pipeline
-        from transformers import CLIPTextModel
         pipeline.text_encoder = self.from_pretrained(
-            CLIPTextModel,
-            self.text_encoder_model,
+            pipeline_action="text_encoder",
+            model=self.text_encoder_model,
             num_hidden_layers=12 - self.clip_skip,
         )
         self.current_clip_skip = self.clip_skip
@@ -1500,7 +1522,12 @@ class SDRunner(
             from_safetensors=self.is_safetensors,
             local_files_only=self.local_files_only,
             extract_ema=False,
-            pipeline_class=self.action_diffuser,
+            pipeline_class=AutoImport.class_object(
+                self.action,
+                self.model_data,
+                pipeline_action=self.action,
+                single_file=True
+            ),
             config_files={
                 "v1": "v1.yaml",
                 "v2": "v2.yaml",
@@ -1539,17 +1566,34 @@ class SDRunner(
             logger.warning("Failed to reuse pipeline")
             return
         kwargs = pipe.components
+
+        # either load from a pretrained model or from a pipe
         if do_load_controlnet:
             kwargs["controlnet"] = self.controlnet()
             self.controlnet_loaded = True
+            pipe = self.load_controlnet_from_ckpt(pipe)
         else:
             if "controlnet" in kwargs:
                 del kwargs["controlnet"]
             self.clear_controlnet()
-        if do_load_controlnet:
-            pipe = self.controlnet_action_diffuser(**kwargs)
-        else:
-            pipe = self.action_diffuser(**kwargs)
+
+            if self.is_single_file:
+                pipe = self.download_from_original_stable_diffusion_ckpt(self.model_path)
+            else:
+                print("self.model_path", self.model_path)
+                pretrained_object = AutoImport.class_object(
+                    self.action,
+                    self.model_data,
+                    pipeline_action=self.action,
+                    category=self.model_data["category"]
+                )
+                print("AutoImport.class_object", pretrained_object)
+                components = pipe.components
+                if "controlnet" in components:
+                    del components["controlnet"]
+                pipe = pretrained_object.from_pretrained(self.model_path, **components)
+                print("Pipe of class ", pipe.__class__.__name__)
+
         if self.is_txt2img:
             self.txt2img = pipe
             self.img2img = None
@@ -1567,24 +1611,33 @@ class SDRunner(
         self.send_message(f"{'Loading' if not self.attempt_download else 'Downloading'} model {model_name}")
 
         self._previous_model = self.current_model
-
-        if self.is_ckpt_file(model_name):
+        if self.is_single_file:
             self.current_model = model_name
         else:
             self.current_model = self.options.get(f"model_path", None)
             self.current_model_branch = self.options.get(f"model_branch", None)
 
-    def from_pretrained(self, diffuser_class, model, scheduler=None, **kwargs):
+    def from_pretrained(self, **kwargs):
+        pipeline_action = kwargs.pop("pipeline_action", self.model_data["pipeline_action"])
+        model = kwargs.pop("model", self.model_data)
+        if isinstance(model, list):
+            model = model[0]["path"]
+        elif isinstance(model, dict):
+            model = model["path"]
         try:
-            return diffuser_class.from_pretrained(
-                model,
+            return AutoImport.from_pretrained(
+                self.action,
+                model_data=self.model_data,
+                pipeline_action=pipeline_action,
+                category=kwargs.pop("category", self.model_data["category"]),
+                model=model,
                 torch_dtype=self.data_type,
                 local_files_only=self.local_files_only,
-                scheduler=scheduler,
                 use_auth_token=self.data["options"]["hf_token"],
                 **kwargs
             )
         except OSError as e:
+            logger.error(f"failed to load {model} from pretrained")
             return self.handle_missing_files()
 
     def handle_missing_files(self):
@@ -1592,6 +1645,8 @@ class SDRunner(
             if self.is_ckpt_model or self.is_safetensors:
                 logger.info("Required files not found, attempting download...")
             else:
+                import traceback
+                traceback.print_exc()
                 logger.info("Model not found, attempting download...")
             # check if we have an internet connection
             self.send_message("Downloading model files...")
