@@ -6,14 +6,26 @@
    <rect>
     <x>0</x>
     <y>0</y>
-    <width>1085</width>
-    <height>637</height>
+    <width>1051</width>
+    <height>638</height>
    </rect>
   </property>
   <property name="windowTitle">
    <string>Form</string>
   </property>
   <layout class="QGridLayout" name="gridLayout">
+   <property name="leftMargin">
+    <number>0</number>
+   </property>
+   <property name="topMargin">
+    <number>9</number>
+   </property>
+   <property name="rightMargin">
+    <number>0</number>
+   </property>
+   <property name="bottomMargin">
+    <number>0</number>
+   </property>
    <item row="0" column="0" colspan="2">
     <widget class="QGroupBox" name="controlnet_groupbox">
      <property name="font">
@@ -24,94 +36,43 @@
      <property name="title">
       <string>Use ControlNet</string>
      </property>
+     <property name="flat">
+      <bool>true</bool>
+     </property>
      <property name="checkable">
       <bool>true</bool>
      </property>
      <layout class="QGridLayout" name="gridLayout_3">
-      <item row="1" column="1">
+      <property name="leftMargin">
+       <number>0</number>
+      </property>
+      <item row="0" column="0" colspan="2">
+       <widget class="QFrame" name="model_frame">
+        <property name="minimumSize">
+         <size>
+          <width>0</width>
+          <height>50</height>
+         </size>
+        </property>
+        <property name="frameShape">
+         <enum>QFrame::NoFrame</enum>
+        </property>
+        <property name="frameShadow">
+         <enum>QFrame::Raised</enum>
+        </property>
+       </widget>
+      </item>
+      <item row="1" column="0" colspan="2">
        <layout class="QGridLayout" name="gridLayout_4">
-        <item row="1" column="0" alignment="Qt::AlignTop">
-         <widget class="QLabel" name="image_thumbnail">
-          <property name="minimumSize">
-           <size>
-            <width>128</width>
-            <height>128</height>
-           </size>
-          </property>
-          <property name="maximumSize">
-           <size>
-            <width>128</width>
-            <height>128</height>
-           </size>
-          </property>
-          <property name="styleSheet">
-           <string notr="true">border: 1px solid #d2d2d2; border-radius: 0;</string>
-          </property>
-          <property name="text">
-           <string/>
-          </property>
-         </widget>
-        </item>
-        <item row="0" column="0" colspan="3">
-         <widget class="QFrame" name="model_frame">
-          <property name="minimumSize">
-           <size>
-            <width>0</width>
-            <height>50</height>
-           </size>
-          </property>
-          <property name="frameShape">
-           <enum>QFrame::StyledPanel</enum>
-          </property>
-          <property name="frameShadow">
-           <enum>QFrame::Raised</enum>
-          </property>
-         </widget>
-        </item>
-        <item row="2" column="0" colspan="3">
-         <widget class="Line" name="line">
-          <property name="orientation">
-           <enum>Qt::Horizontal</enum>
-          </property>
-         </widget>
-        </item>
-        <item row="3" column="1">
+        <property name="leftMargin">
+         <number>15</number>
+        </property>
+        <property name="rightMargin">
+         <number>15</number>
+        </property>
+        <item row="2" column="1">
          <layout class="QGridLayout" name="gridLayout_5">
-          <item row="2" column="2">
-           <widget class="QCheckBox" name="reuse_generated_image">
-            <property name="minimumSize">
-             <size>
-              <width>80</width>
-              <height>0</height>
-             </size>
-            </property>
-            <property name="font">
-             <font>
-              <pointsize>9</pointsize>
-             </font>
-            </property>
-            <property name="text">
-             <string>Reuse</string>
-            </property>
-            <property name="checked">
-             <bool>true</bool>
-            </property>
-           </widget>
-          </item>
-          <item row="4" column="0">
-           <spacer name="verticalSpacer">
-            <property name="orientation">
-             <enum>Qt::Vertical</enum>
-            </property>
-            <property name="sizeHint" stdset="0">
-             <size>
-              <width>20</width>
-              <height>40</height>
-             </size>
-            </property>
-           </spacer>
-          </item>
-          <item row="3" column="2">
+          <item row="1" column="2">
            <widget class="QPushButton" name="clear_control_image_button">
             <property name="minimumSize">
              <size>
@@ -127,9 +88,26 @@
             <property name="text">
              <string>Clear</string>
             </property>
+            <property name="icon">
+             <iconset>
+              <normaloff>../../../src/icons/006-trash.png</normaloff>../../../src/icons/006-trash.png</iconset>
+            </property>
            </widget>
           </item>
-          <item row="3" column="1">
+          <item row="2" column="0">
+           <spacer name="verticalSpacer">
+            <property name="orientation">
+             <enum>Qt::Vertical</enum>
+            </property>
+            <property name="sizeHint" stdset="0">
+             <size>
+              <width>20</width>
+              <height>40</height>
+             </size>
+            </property>
+           </spacer>
+          </item>
+          <item row="1" column="0">
            <widget class="QPushButton" name="import_control_image_button">
             <property name="sizePolicy">
              <sizepolicy hsizetype="Minimum" vsizetype="Fixed">
@@ -151,9 +129,13 @@
             <property name="text">
              <string>Import</string>
             </property>
+            <property name="icon">
+             <iconset>
+              <normaloff>../../../src/icons/046-import.png</normaloff>../../../src/icons/046-import.png</iconset>
+            </property>
            </widget>
           </item>
-          <item row="2" column="1">
+          <item row="1" column="1">
            <widget class="QPushButton" name="export_generated_button">
             <property name="minimumSize">
              <size>
@@ -169,27 +151,10 @@
             <property name="text">
              <string>Export</string>
             </property>
-           </widget>
-          </item>
-          <item row="3" column="0">
-           <widget class="QRadioButton" name="use_imported_control_image">
-            <property name="minimumSize">
-             <size>
-              <width>100</width>
-              <height>0</height>
-             </size>
+            <property name="icon">
+             <iconset>
+              <normaloff>../../../src/icons/export.png</normaloff>../../../src/icons/export.png</iconset>
             </property>
-            <property name="font">
-             <font>
-              <pointsize>9</pointsize>
-             </font>
-            </property>
-            <property name="text">
-             <string>Imported</string>
-            </property>
-            <attribute name="buttonGroup">
-             <string notr="true">buttonGroup_2</string>
-            </attribute>
            </widget>
           </item>
           <item row="0" column="0">
@@ -201,38 +166,62 @@
              </font>
             </property>
             <property name="text">
-             <string>Controlnet image</string>
+             <string>Mask</string>
             </property>
-           </widget>
-          </item>
-          <item row="2" column="0">
-           <widget class="QRadioButton" name="generate_control_image">
-            <property name="minimumSize">
-             <size>
-              <width>100</width>
-              <height>0</height>
-             </size>
-            </property>
-            <property name="font">
-             <font>
-              <pointsize>9</pointsize>
-             </font>
-            </property>
-            <property name="text">
-             <string>Generated</string>
-            </property>
-            <property name="checked">
-             <bool>true</bool>
-            </property>
-            <attribute name="buttonGroup">
-             <string notr="true">buttonGroup_2</string>
-            </attribute>
            </widget>
           </item>
          </layout>
         </item>
-        <item row="3" column="0" alignment="Qt::AlignTop">
+        <item row="1" column="2">
+         <spacer name="horizontalSpacer">
+          <property name="orientation">
+           <enum>Qt::Horizontal</enum>
+          </property>
+          <property name="sizeHint" stdset="0">
+           <size>
+            <width>40</width>
+            <height>20</height>
+           </size>
+          </property>
+         </spacer>
+        </item>
+        <item row="2" column="2">
+         <spacer name="horizontalSpacer_2">
+          <property name="orientation">
+           <enum>Qt::Horizontal</enum>
+          </property>
+          <property name="sizeHint" stdset="0">
+           <size>
+            <width>40</width>
+            <height>20</height>
+           </size>
+          </property>
+         </spacer>
+        </item>
+        <item row="2" column="0" alignment="Qt::AlignTop">
          <widget class="QLabel" name="controlnet_image_thumbnail">
+          <property name="minimumSize">
+           <size>
+            <width>128</width>
+            <height>128</height>
+           </size>
+          </property>
+          <property name="maximumSize">
+           <size>
+            <width>128</width>
+            <height>128</height>
+           </size>
+          </property>
+          <property name="styleSheet">
+           <string notr="true">border: 1px solid #d2d2d2; border-radius: 0;</string>
+          </property>
+          <property name="text">
+           <string/>
+          </property>
+         </widget>
+        </item>
+        <item row="1" column="0" alignment="Qt::AlignTop">
+         <widget class="QLabel" name="image_thumbnail">
           <property name="minimumSize">
            <size>
             <width>128</width>
@@ -268,8 +257,15 @@
               <pointsize>9</pointsize>
              </font>
             </property>
+            <property name="toolTip">
+             <string>Import image</string>
+            </property>
             <property name="text">
              <string>Import</string>
+            </property>
+            <property name="icon">
+             <iconset>
+              <normaloff>../../../src/icons/046-import.png</normaloff>../../../src/icons/046-import.png</iconset>
             </property>
            </widget>
           </item>
@@ -288,7 +284,7 @@
              </font>
             </property>
             <property name="text">
-             <string>Current</string>
+             <string>Grid</string>
             </property>
             <property name="checked">
              <bool>false</bool>
@@ -296,24 +292,6 @@
             <attribute name="buttonGroup">
              <string notr="true">buttonGroup</string>
             </attribute>
-           </widget>
-          </item>
-          <item row="1" column="1">
-           <widget class="QCheckBox" name="keep_active_image_updated">
-            <property name="minimumSize">
-             <size>
-              <width>80</width>
-              <height>0</height>
-             </size>
-            </property>
-            <property name="font">
-             <font>
-              <pointsize>9</pointsize>
-             </font>
-            </property>
-            <property name="text">
-             <string>Refresh</string>
-            </property>
            </widget>
           </item>
           <item row="3" column="0">
@@ -370,6 +348,10 @@
             <property name="text">
              <string>Clear</string>
             </property>
+            <property name="icon">
+             <iconset>
+              <normaloff>../../../src/icons/006-trash.png</normaloff>../../../src/icons/006-trash.png</iconset>
+            </property>
            </widget>
           </item>
           <item row="0" column="0">
@@ -387,36 +369,23 @@
           </item>
          </layout>
         </item>
-        <item row="1" column="2">
-         <spacer name="horizontalSpacer">
-          <property name="orientation">
-           <enum>Qt::Horizontal</enum>
-          </property>
-          <property name="sizeHint" stdset="0">
-           <size>
-            <width>40</width>
-            <height>20</height>
-           </size>
-          </property>
-         </spacer>
-        </item>
-        <item row="3" column="2">
-         <spacer name="horizontalSpacer_2">
-          <property name="orientation">
-           <enum>Qt::Horizontal</enum>
-          </property>
-          <property name="sizeHint" stdset="0">
-           <size>
-            <width>40</width>
-            <height>20</height>
-           </size>
-          </property>
-         </spacer>
-        </item>
        </layout>
       </item>
      </layout>
     </widget>
+   </item>
+   <item row="1" column="0">
+    <spacer name="verticalSpacer_3">
+     <property name="orientation">
+      <enum>Qt::Vertical</enum>
+     </property>
+     <property name="sizeHint" stdset="0">
+      <size>
+       <width>20</width>
+       <height>40</height>
+      </size>
+     </property>
+    </spacer>
    </item>
   </layout>
  </widget>

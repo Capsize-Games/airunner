@@ -140,7 +140,6 @@
      <string>Tools</string>
     </property>
     <addaction name="image_interpolation"/>
-    <addaction name="separator"/>
     <addaction name="actionModel_Merger"/>
     <addaction name="separator"/>
     <addaction name="actionStableDiffusion"/>
@@ -150,6 +149,7 @@
     <addaction name="actionPrompt_Builder"/>
     <addaction name="actionControlNet"/>
     <addaction name="actionModel_Manager_2"/>
+    <addaction name="separator"/>
     <addaction name="actionEmbeddings"/>
     <addaction name="actionLoRA"/>
     <addaction name="actionPen"/>
