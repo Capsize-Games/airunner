@@ -3,14 +3,12 @@ import torch
 from PIL import Image
 from PyQt6.QtGui import QPixmap, QImage
 
-from airunner.aihandler.settings import MODELS
 from airunner.aihandler.settings_manager import SettingsManager
 
 
 def initialize_os_environment():
     settings_manager = SettingsManager()
     hf_cache_path = settings_manager.settings.hf_cache_path.get()
-    print("INITIALIZING OS ENVIRONMENT", hf_cache_path)
     if hf_cache_path != "":
         # check if hf_cache_path exists
         if os.path.exists(hf_cache_path):
@@ -195,33 +193,33 @@ def get_latest_version():
     return None
 
 
-def load_default_models(tab_section, section_name):
-    if section_name == "txt2img":
-        section_name = "generate"
-    section_name = f"{tab_section}_{section_name}"
-    return [
-        k for k in MODELS[section_name].keys()
-    ]
-
-
-def load_models_from_path(path, models = None):
-    if models is None:
-        models = []
-    if path and os.path.exists(path):
-        for f in os.listdir(path):
-            if os.path.isdir(os.path.join(path, f)):
-                folders_in_directory = os.listdir(os.path.join(path, f))
-                is_diffusers = True
-                for req_folder in ["scheduler", "text_encoder", "tokenizer", "unet", "vae"]:
-                    if req_folder not in folders_in_directory:
-                        is_diffusers = False
-                        break
-                if is_diffusers:
-                    models.append(f)
-                else:
-                    models = load_models_from_path(os.path.join(path, f), models)
-            elif f.endswith(".pt") or f.endswith(".safetensors") or f.endswith(".ckpt"):
-                models.append(f)
-    # sort models by name
-    models.sort()
-    return models
+# def load_default_models(tab_section, section_name):
+#     if section_name == "txt2img":
+#         section_name = "generate"
+#     section_name = f"{tab_section}_{section_name}"
+#     return [
+#         k for k in models[section_name].keys()
+#     ]
+#
+#
+# def load_models_from_path(path, models = None):
+#     if models is None:
+#         models = []
+#     if path and os.path.exists(path):
+#         for f in os.listdir(path):
+#             if os.path.isdir(os.path.join(path, f)):
+#                 folders_in_directory = os.listdir(os.path.join(path, f))
+#                 is_diffusers = True
+#                 for req_folder in ["scheduler", "text_encoder", "tokenizer", "unet", "vae"]:
+#                     if req_folder not in folders_in_directory:
+#                         is_diffusers = False
+#                         break
+#                 if is_diffusers:
+#                     models.append(f)
+#                 else:
+#                     models = load_models_from_path(os.path.join(path, f), models)
+#             elif f.endswith(".pt") or f.endswith(".safetensors") or f.endswith(".ckpt"):
+#                 models.append(f)
+#     # sort models by name
+#     models.sort()
+#     return models
