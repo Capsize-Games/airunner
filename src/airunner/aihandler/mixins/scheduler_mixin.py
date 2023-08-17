@@ -54,6 +54,9 @@ class SchedulerMixin:
         pass
 
     def load_scheduler(self, force_scheduler_name=None, config=None):
+        if self.use_kandinsky:
+            return None
+
         import diffusers
         if (
             not force_scheduler_name and
@@ -103,8 +106,8 @@ class SchedulerMixin:
                     kwargs["algorithm_type"] = "dpmsolver"
             try:
                 self._scheduler = self.from_pretrained(
-                    scheduler_class,
-                    self.model_path,
+                    class_object=scheduler_class,
+                    model=self.model_path,
                     **kwargs
                 )
             except NotImplementedError as e:
