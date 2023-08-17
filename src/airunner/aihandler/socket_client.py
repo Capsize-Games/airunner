@@ -122,6 +122,7 @@ class SocketClient:
         # base64image = res.images[0]
         # image = Image.open(base64image)
         # image.save("test.png")
+        pass
 
     def connect(self):
         self.socket = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
