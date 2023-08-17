@@ -54,6 +54,7 @@ DEFAULT_GENERATOR_SETTINGS = {
     "controlnet_guidance_scale": 50,
     "zeroshot": False,
     "clip_skip": 0,
+    "variation": False,
 }
 GENERATOR_TYPES = {
     "prompt": StringVar,
@@ -80,6 +81,7 @@ GENERATOR_TYPES = {
     "controlnet_guidance_scale": IntVar,
     "zeroshot": BooleanVar,
     "clip_skip": IntVar,
+    "variation": BooleanVar,
 }
 USER = os.environ.get("USER", "")
 default_model_path = os.path.join("/", "home", USER, "stablediffusion")
@@ -418,10 +420,11 @@ class PromptSettings(BaseSettings):
         self.prompts = ListVar(self.app, [])
 
 
-class ApplicationData(BaseSettings):
+class ApplicationSettings(BaseSettings):
     namespace = "application_data"
 
     def initialize(self, settings=None):
+        self.version = StringVar(self.app, "")
         self.controlnet_models = DictVar(self.app, {})
         self.models = DictVar(self.app, {})
         self.pipelines = DictVar(self.app, {})
