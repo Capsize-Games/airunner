@@ -1,7 +1,7 @@
 import os
 from PyQt6 import uic
 from PyQt6.QtCore import Qt
-from PyQt6.QtWidgets import QWidget
+from PyQt6.QtWidgets import QWidget, QVBoxLayout
 from airunner.aihandler.settings_manager import SettingsManager
 
 
@@ -21,7 +21,13 @@ class BaseWindow:
         self.initialize_template()
 
     def initialize_template(self):
-        self.template = uic.loadUi(os.path.join(f"pyqt/{self.template_name}.ui"))
+        template_path = os.path.join(f"pyqt/{self.template_name}.ui")
+        if os.path.exists(template_path):
+            self.template = uic.loadUi(template_path)
+        else:
+            # create an empty QWiddget with a vertical layout
+            self.template = QWidget()
+            self.template.setLayout(QVBoxLayout())
         self.template.setWindowTitle(self.window_title)
         if self.is_modal:
             self.template.setWindowModality(Qt.WindowModality.WindowModal)
