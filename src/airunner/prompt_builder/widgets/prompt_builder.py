@@ -194,8 +194,11 @@ class PromptBuilderWidget(BaseWidget):
         self.initialize_weights()
         self.app.generate_signal.connect(self.inject_prompt)
 
-        self.prompt_blend_type.setCurrentIndex(self.settings_manager.settings.prompt_blend_type.get())
-        self.prompt_blend_type.currentIndexChanged.connect(self.handle_prompt_blend_type_change)
+        self.prompt_builder_form_a.prompt_blend_type.setCurrentIndex(self.settings_manager.settings.prompt_blend_type.get())
+        self.prompt_builder_form_a.prompt_blend_type.currentIndexChanged.connect(self.handle_prompt_blend_type_change)
+        self.prompt_builder_form_b.prompt_blend_type.setCurrentIndex(self.settings_manager.settings.prompt_blend_type.get())
+        self.prompt_builder_form_b.prompt_blend_type.currentIndexChanged.connect(self.handle_prompt_blend_type_change)
+
         self.update_blend_sliders()
 
     def handle_tab_changed(self):
@@ -210,23 +213,33 @@ class PromptBuilderWidget(BaseWidget):
     def update_blend_sliders(self):
         if self.settings_manager.settings.prompt_blend_type.get() == 0:
             # disable the blending weight sliders
-            self.prompt_weight_distribution_slider.setEnabled(False)
-            self.negative_prompt_weight_distribution_slider.setEnabled(False)
+            self.prompt_builder_form_a.prompt_weight_distribution_slider.setEnabled(False)
+            self.prompt_builder_form_a.negative_prompt_weight_distribution_slider.setEnabled(False)
+            self.prompt_builder_form_b.prompt_weight_distribution_slider.setEnabled(False)
+            self.prompt_builder_form_b.negative_prompt_weight_distribution_slider.setEnabled(False)
         else:
             # enable the blending weight sliders
-            self.prompt_weight_distribution_slider.setEnabled(True)
-            self.negative_prompt_weight_distribution_slider.setEnabled(True)
+            self.prompt_builder_form_a.prompt_weight_distribution_slider.setEnabled(True)
+            self.prompt_builder_form_a.negative_prompt_weight_distribution_slider.setEnabled(True)
+            self.prompt_builder_form_b.prompt_weight_distribution_slider.setEnabled(True)
+            self.prompt_builder_form_b.negative_prompt_weight_distribution_slider.setEnabled(True)
 
     def initialize_weights(self):
         auto_prompt_weight = self.settings_manager.settings.auto_prompt_weight.get()
         auto_negative_prompt_weight = self.settings_manager.settings.negative_auto_prompt_weight.get()
-        self.prompt_weight_distribution_slider.setValue(int(auto_prompt_weight * 100))
-        self.negative_prompt_weight_distribution_slider.setValue(int(auto_negative_prompt_weight * 100))
+        self.prompt_builder_form_a.prompt_weight_distribution_slider.setValue(int(auto_prompt_weight * 100))
+        self.prompt_builder_form_a.negative_prompt_weight_distribution_slider.setValue(int(auto_negative_prompt_weight * 100))
+        self.prompt_builder_form_b.prompt_weight_distribution_slider.setValue(int(auto_prompt_weight * 100))
+        self.prompt_builder_form_b.negative_prompt_weight_distribution_slider.setValue(int(auto_negative_prompt_weight * 100))
 
     def initialize_weight_sliders(self):
-        self.prompt_weight_distribution_slider.valueChanged.connect(
+        self.prompt_builder_form_a.prompt_weight_distribution_slider.valueChanged.connect(
             self.handle_weight_distribution_slider_change)
-        self.negative_prompt_weight_distribution_slider.valueChanged.connect(
+        self.prompt_builder_form_a.negative_prompt_weight_distribution_slider.valueChanged.connect(
+            self.handle_negative_weight_distribution_slider_change)
+        self.prompt_builder_form_b.prompt_weight_distribution_slider.valueChanged.connect(
+            self.handle_weight_distribution_slider_change)
+        self.prompt_builder_form_b.negative_prompt_weight_distribution_slider.valueChanged.connect(
             self.handle_negative_weight_distribution_slider_change)
 
     def handle_weight_distribution_slider_change(self, value):
@@ -234,8 +247,12 @@ class PromptBuilderWidget(BaseWidget):
         self.text_prompt_weight = 1.0 - self.auto_prompt_weight
         self.auto_prompt_weight = round(self.auto_prompt_weight, 2)
         self.text_prompt_weight = round(self.text_prompt_weight, 2)
-        self.auto_prompt_weight_label.setText(f"{self.auto_prompt_weight:.2f}")
-        self.text_prompt_weight_label.setText(f"{self.text_prompt_weight:.2f}")
+        self.prompt_builder_form_a.auto_prompt_weight_label.setText(f"{self.auto_prompt_weight:.2f}")
+        self.prompt_builder_form_a.text_prompt_weight_label.setText(f"{self.text_prompt_weight:.2f}")
+        self.prompt_builder_form_b.auto_prompt_weight_label.setText(f"{self.auto_prompt_weight:.2f}")
+        self.prompt_builder_form_b.text_prompt_weight_label.setText(f"{self.text_prompt_weight:.2f}")
+        self.prompt_builder_form_a.prompt_weight_distribution_slider.setValue(int(self.auto_prompt_weight * 100))
+        self.prompt_builder_form_b.prompt_weight_distribution_slider.setValue(int(self.auto_prompt_weight * 100))
         self.settings_manager.settings.auto_prompt_weight.set(self.auto_prompt_weight)
         self.process_prompt()
 
@@ -244,8 +261,12 @@ class PromptBuilderWidget(BaseWidget):
         self.negative_text_prompt_weight = 1.0 - self.negative_auto_prompt_weight
         self.negative_auto_prompt_weight = round(self.negative_auto_prompt_weight, 2)
         self.negative_text_prompt_weight = round(self.negative_text_prompt_weight, 2)
-        self.negative_auto_prompt_weight_label.setText(f"{self.negative_auto_prompt_weight:.2f}")
-        self.negative_text_prompt_weight_label.setText(f"{self.negative_text_prompt_weight:.2f}")
+        self.prompt_builder_form_a.negative_auto_prompt_weight_label.setText(f"{self.negative_auto_prompt_weight:.2f}")
+        self.prompt_builder_form_a.negative_text_prompt_weight_label.setText(f"{self.negative_text_prompt_weight:.2f}")
+        self.prompt_builder_form_b.negative_auto_prompt_weight_label.setText(f"{self.negative_auto_prompt_weight:.2f}")
+        self.prompt_builder_form_b.negative_text_prompt_weight_label.setText(f"{self.negative_text_prompt_weight:.2f}")
+        self.prompt_builder_form_a.negative_prompt_weight_distribution_slider.setValue(int(self.negative_auto_prompt_weight * 100))
+        self.prompt_builder_form_b.negative_prompt_weight_distribution_slider.setValue(int(self.negative_auto_prompt_weight * 100))
         self.settings_manager.settings.negative_auto_prompt_weight.set(self.negative_auto_prompt_weight)
         self.process_prompt()
 
