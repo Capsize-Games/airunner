@@ -2,16 +2,26 @@ import re
 from functools import partial
 from PyQt6.QtWidgets import QWidget, QGridLayout, QPlainTextEdit, QLabel, QComboBox, QHBoxLayout, QRadioButton, \
     QPushButton, QProgressBar, QFormLayout, QCheckBox, QSpinBox, QLineEdit, QGroupBox
-from airunner.utils import load_default_models, load_models_from_path
 from airunner.widgets.base_widget import BaseWidget
 from airunner.widgets.slider_widget import SliderWidget
-from airunner.aihandler.settings import MAX_SEED, AVAILABLE_SCHEDULERS_BY_ACTION, MODELS
+from airunner.aihandler.settings import MAX_SEED, AVAILABLE_SCHEDULERS_BY_ACTION
 from airunner.aihandler.enums import MessageCode
 
 
 class GeneratorTabWidget(BaseWidget):
     name = "generator_tab"
     data = {}
+    queue_label = None
+    clip_skip_disabled_tabs = ["kandinsky", "shapegif"]
+    _random_image_embed_seed = False
+
+    @property
+    def random_image_embed_seed(self):
+        return self._random_image_embed_seed
+
+    @random_image_embed_seed.setter
+    def random_image_embed_seed(self, value):
+        self._random_image_embed_seed = value
 
     def __init__(self, *args, **kwargs):
         super().__init__(*args, **kwargs)
@@ -20,8 +30,10 @@ class GeneratorTabWidget(BaseWidget):
         self.layout = None
         self.app.settings_manager.settings.model_base_path.my_signal.connect(self.refresh_model_list)
         # add all tabs
-        self.sectionTabWidget.currentChanged.connect(self.app.update)
-        self.sectionTabWidget.currentChanged.connect(self.app.enable_embeddings)
+        # get the current tab name and pass it as section
+        self.sectionTabWidget.currentChanged.connect(partial(
+            self.app.handle_generator_tab_changed
+        ))
         for tab_section in self.app._tabs.keys():
             self.force_tab_section(tab_section, None)
             self.data[tab_section] = {}
@@ -45,8 +57,9 @@ class GeneratorTabWidget(BaseWidget):
             "inpaint / outpaint" if tab == "outpaint" else tab
         )
         # on tab change
-        tab_section.currentChanged.connect(self.app.update)
-        tab_section.currentChanged.connect(self.app.enable_embeddings)
+        tab_section.currentChanged.connect(partial(
+            self.app.handle_tab_section_changed
+        ))
 
     def generate_form(self, tab_section, tab):
         self.tab_section = tab_section
@@ -62,7 +75,6 @@ class GeneratorTabWidget(BaseWidget):
         self.add_zeroshot_widget()
         self.add_model_widgets()
         self.add_scheduler_widgets()
-        self.add_controlnet_widgets()
         self.add_seed_widgets()
         self.add_steps_widget()
         self.add_scale_widgets()
@@ -124,46 +136,10 @@ class GeneratorTabWidget(BaseWidget):
             self.load_model_by_section(self.app.currentTabSection, section)
 
     def load_model_by_section(self, tab_section, section):
-        if section in ["txt2img", "img2img"]:
-            section_name = "generate"
-        else:
-            section_name = section
-
-        models = self.app.models if self.app.models else []
-        default_models = load_default_models(tab_section, section_name)
-        zeroshot_models = None
-        if section_name == "txt2vid":
-            zeroshot_models = []
-            zeroshot_models = load_default_models(tab_section, "generate")
-        path = ""
-        if section_name == "depth2img":
-            path = self.settings_manager.settings.depth2img_model_path.get()
-        elif section_name == "pix2pix":
-            path = self.settings_manager.settings.pix2pix_model_path.get()
-        elif section_name == "outpaint":
-            path = self.settings_manager.settings.outpaint_model_path.get()
-        elif section_name == "upscale":
-            path = self.settings_manager.settings.upscale_model_path.get()
-        elif section_name == "txt2vid":
-            path = self.settings_manager.settings.txt2vid_model_path.get()
-        if not path or path == "":
-            path = self.settings_manager.settings.model_base_path.get()
-
-        if tab_section == "stablediffusion":
-            new_models = load_models_from_path(path)
-            default_models += new_models
-            if zeroshot_models:
-                zeroshot_models += load_models_from_path(self.settings_manager.settings.model_base_path.get())
-        models += default_models
-        self.models = models
-
-        if section_name == "txt2vid" and self.app.zeroshot:
-            default_models = zeroshot_models
-
-        self.data[tab_section][section]["model_dropdown"].addItems(default_models)
+        models = self.app.application_data.available_model_names(tab_section, section, enabled_only=True)
+        self.data[tab_section][section]["model_dropdown"].addItems(models)
 
     def add_model_widgets(self):
-        self.load_section_models()
         model_label = QLabel(self)
         model_label.setObjectName("model_label")
         model_label.setText("Model")
@@ -178,6 +154,12 @@ class GeneratorTabWidget(BaseWidget):
         self.data[self.tab_section][self.tab]["model_dropdown_widget"] = model_widget
         self.add_widget_to_grid(model_label)
         self.add_widget_to_grid(model_widget)
+
+    def update_available_models(self):
+        for section in self.data.keys():
+            for tab in self.data[section].keys():
+                self.data[section][tab]["model_dropdown_widget"].clear()
+                self.load_model_by_section(section, tab)
 
     def add_scheduler_widgets(self):
         scheduler_action = self.tab
@@ -197,73 +179,6 @@ class GeneratorTabWidget(BaseWidget):
         self.data[self.tab_section][self.tab]["scheduler_dropdown_widget"] = scheduler_widget
         self.add_widget_to_grid(scheduler_label)
         self.add_widget_to_grid(scheduler_widget)
-
-    def add_controlnet_widgets(self):
-        if self.tab not in ["txt2img", "img2img", "outpaint", "txt2vid"] \
-                or self.tab_section == "kandinsky" or self.tab_section == "shapegif":
-            return
-        controlnet_options = [
-            "Canny",
-            "MLSD",
-            "Depth Leres",
-            "Depth Leres++",
-            "Depth Midas",
-            # "Depth Zoe",
-            "Normal Bae",
-            # "Normal Midas",
-            # "Segmentation",
-            "Lineart Anime",
-            "Lineart Coarse",
-            "Lineart Realistic",
-            "Openpose",
-            "Openpose Face",
-            "Openpose Faceonly",
-            "Openpose Full",
-            "Openpose Hand",
-            "Scribble Hed",
-            "Scribble Pidinet",
-            "Softedge Hed",
-            "Softedge Hedsafe",
-            "Softedge Pidinet",
-            "Softedge Pidsafe",
-            # "Pixel2Pixel",
-            # "Inpaint",
-            "Shuffle",
-        ]
-
-        controlnet_widget = QComboBox(self)
-        controlnet_widget.setObjectName("controlnet_dropdown")
-        controlnet_widget.addItems(controlnet_options)
-        controlnet_widget.setCurrentText(self.app.controlnet)
-        controlnet_widget.currentTextChanged.connect(
-            partial(self.handle_value_change, "controlnet", widget=controlnet_widget))
-        controlnet_scale_slider = SliderWidget(
-            app=self.app,
-            label_text="Controlnet Scale",
-            slider_callback=partial(self.handle_value_change, "controlnet_scale"),
-            current_value=self.app.controlnet_guidance_scale,
-            slider_minimum=0,
-            slider_maximum=1000,
-            spinbox_minimum=0.0,
-            spinbox_maximum=1.0
-        )
-        self.data[self.tab_section][self.tab]["controlnet_scale_slider"] = controlnet_scale_slider
-        group_box = QGroupBox(self)
-        group_box.setObjectName("controlnet_groupbox")
-        group_box.setTitle("Controlnet")
-        group_box.setCheckable(True)
-        group_box.setChecked(self.app.enable_controlnet)
-        group_box.toggled.connect(
-            partial(self.handle_value_change, "enable_controlnet", widget=group_box))
-        grid_layout = QGridLayout(group_box)
-        widget = QWidget()
-        horizontal_layout = QHBoxLayout(widget)
-        horizontal_layout.addStretch(1)
-        horizontal_layout.setContentsMargins(0, 0, 0, 0)
-        grid_layout.addWidget(widget)
-        grid_layout.addWidget(controlnet_widget)
-        grid_layout.addWidget(controlnet_scale_slider)
-        self.add_widget_to_grid(group_box)
 
     def add_steps_widget(self):
         steps_slider = SliderWidget(
@@ -355,7 +270,26 @@ class GeneratorTabWidget(BaseWidget):
 
         self.add_widget_to_grid(group_box)
 
-    queue_label = None
+    def load_clip_skip_slider(self):
+        """
+        The following block will load the clip skip slider for any tab
+        that is not kandinsky or shapegif (essentially just stablediffusion tab)
+        """
+        clip_skip_widget = SliderWidget(
+            app=self.app,
+            label_text="Clip Skip",
+            slider_callback=partial(self.handle_value_change, "clip_skip"),
+            current_value=self.app.clip_skip,
+            slider_maximum=11,
+            spinbox_maximum=12.0,
+            display_as_float=False,
+            spinbox_single_step=1,
+            spinbox_page_step=1,
+            spinbox_minimum=0,
+            slider_minimum=0
+        )
+        self.data[self.tab_section][self.tab]["clip_skip_slider_widget"] = clip_skip_widget
+        self.add_widget_to_grid(clip_skip_widget)
 
     def add_samples_widgets(self):
         if self.tab == "txt2vid":
@@ -378,20 +312,9 @@ class GeneratorTabWidget(BaseWidget):
             slider_minimum=1
         )
         self.data[self.tab_section][self.tab]["samples_slider_widget"] = samples_widget
-        clip_skip_widget = SliderWidget(
-            app=self.app,
-            label_text="Clip Skip",
-            slider_callback=partial(self.handle_value_change, "clip_skip"),
-            current_value=self.app.clip_skip,
-            slider_maximum=11,
-            spinbox_maximum=12.0,
-            display_as_float=False,
-            spinbox_single_step=1,
-            spinbox_page_step=1,
-            spinbox_minimum=0,
-            slider_minimum=0
-        )
-        self.data[self.tab_section][self.tab]["clip_skip_slider_widget"] = clip_skip_widget
+
+        if self.tab_section not in self.clip_skip_disabled_tabs:
+            self.load_clip_skip_slider()
 
         self.data[self.tab_section][self.tab]["queue_label"] = QLabel("Items in queue: 0")
         widget = QWidget()
@@ -400,9 +323,17 @@ class GeneratorTabWidget(BaseWidget):
         horizontal_layout.setSpacing(10)
         horizontal_layout.addWidget(samples_widget)
         horizontal_layout.addWidget(interrupt_button)
-        self.add_widget_to_grid(clip_skip_widget)
         self.add_widget_to_grid(widget)
         self.add_widget_to_grid(self.data[self.tab_section][self.tab]["queue_label"])
+
+        if self.tab_section == "kandinsky":
+            # show a checkbox for self.app.variation
+            variation_checkbox = QCheckBox("Variation")
+            variation_checkbox.setObjectName("variation_checkbox")
+            variation_checkbox.setChecked(self.app.variation)
+            variation_checkbox.toggled.connect(
+                partial(self.handle_value_change, "variation", widget=variation_checkbox))
+            self.add_widget_to_grid(variation_checkbox)
 
     def update_queue_label(self):
         for section in self.data.keys():
@@ -604,20 +535,6 @@ class GeneratorTabWidget(BaseWidget):
                     self.data[tab_section][tab]["strength_slider"].set_stylesheet()
                 if "samples_slider_widget" in self.data[tab_section][tab]:
                     self.data[tab_section][tab]["samples_slider_widget"].set_stylesheet()
-
-    def load_section_models(self):
-        models = self.app.models if self.app.models else []
-        section = "generate" if self.app.current_section in ["txt2img", "img2img"] else self.app.current_section
-        default_models = load_default_models(self.app.currentTabSection, section)
-        if self.app.currentTabSection == "stablediffusion":
-            try:
-                path = getattr(self.app.settings_manager.settings, f"{section}_model_path").get()
-            except AttributeError:
-                path = getattr(self.app.settings_manager.settings, "model_base_path").get()
-            new_models = load_models_from_path(path)
-            default_models += new_models
-        models += default_models
-        self.app.models = models
 
     def set_prompt(self, prompt):
         self.data[self.app.currentTabSection][self.app.current_section]["prompt_widget"].setPlainText(prompt)
