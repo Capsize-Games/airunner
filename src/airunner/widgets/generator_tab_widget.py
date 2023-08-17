@@ -1,5 +1,7 @@
 import re
 from functools import partial
+
+from PyQt6 import uic
 from PyQt6.QtWidgets import QWidget, QGridLayout, QPlainTextEdit, QLabel, QComboBox, QHBoxLayout, QRadioButton, \
     QPushButton, QProgressBar, QFormLayout, QCheckBox, QSpinBox, QLineEdit, QGroupBox
 from airunner.widgets.base_widget import BaseWidget
@@ -11,7 +13,6 @@ from airunner.aihandler.enums import MessageCode
 class GeneratorTabWidget(BaseWidget):
     name = "generator_tab"
     data = {}
-    queue_label = None
     clip_skip_disabled_tabs = ["kandinsky", "shapegif"]
     _random_image_embed_seed = False
 
@@ -72,6 +73,8 @@ class GeneratorTabWidget(BaseWidget):
         widget.setStyleSheet("font-size: 9pt;")
         self.layout = QGridLayout(widget)
         self.add_prompt_widgets()
+        self.add_optional_tool_checkbox_widgets()
+        self.add_input_image_widgets()
         self.add_zeroshot_widget()
         self.add_model_widgets()
         self.add_scheduler_widgets()
@@ -94,13 +97,7 @@ class GeneratorTabWidget(BaseWidget):
         prompt_label = QLabel(self)
         prompt_label.setObjectName("prompt_label")
         prompt_label.setText("Prompt")
-        use_prompt_builder_checkbox = QCheckBox()
-        use_prompt_builder_checkbox.setObjectName("use_prompt_builder_checkbox")
-        use_prompt_builder_checkbox.setText("Use Prompt Builder")
-        use_prompt_builder_checkbox.setChecked(self.app.use_prompt_builder_checkbox)
-        use_prompt_builder_checkbox.stateChanged.connect(
-            partial(self.handle_value_change, "use_prompt_builder_checkbox", widget=use_prompt_builder_checkbox))
-        self.data[self.tab_section][self.tab]["use_prompt_builder_checkbox"] = use_prompt_builder_checkbox
+
         prompt_widget = QPlainTextEdit(self)
         prompt_widget.setObjectName("prompt")
         prompt_widget.setPlainText(self.app.prompt)
@@ -120,15 +117,65 @@ class GeneratorTabWidget(BaseWidget):
             negative_prompt_widget.setPlainText(self.app.negative_prompt)
             negative_prompt_widget.textChanged.connect(
                 partial(self.handle_value_change, "negative_prompt", widget=negative_prompt_widget))
-            horizontal_layout.addWidget(use_prompt_builder_checkbox)
             self.data[self.tab_section][self.tab]["negative_prompt_widget"] = negative_prompt_widget
             self.add_widget_to_grid(negative_label)
             self.add_widget_to_grid(negative_prompt_widget)
 
+    def add_optional_tool_checkbox_widgets(self):
+        if self.app.currentTabSection in ["shapegif"]:
+            return
+
+        stylesheet = "font-size: 8pt;"
+
+        # checkbox horizontal layout
+        checkbox_widget = QWidget(self)
+        checkbox_layout = QHBoxLayout(checkbox_widget)
+        checkbox_layout.setContentsMargins(0, 0, 0, 0)
+        checkbox_layout.setSpacing(5)
+        checkbox_widget.setLayout(checkbox_layout)
+
+        # use prompt builder checkbox
+        use_prompt_builder_checkbox = QCheckBox()
+        use_prompt_builder_checkbox.setStyleSheet(stylesheet)
+        use_prompt_builder_checkbox.setObjectName("use_prompt_builder_checkbox")
+        use_prompt_builder_checkbox.setText("Prompt Builder")
+        use_prompt_builder_checkbox.setChecked(self.app.use_prompt_builder_checkbox)
+        use_prompt_builder_checkbox.stateChanged.connect(
+            partial(self.handle_value_change, "use_prompt_builder_checkbox", widget=use_prompt_builder_checkbox))
+        self.data[self.tab_section][self.tab]["use_prompt_builder_checkbox"] = use_prompt_builder_checkbox
+        self.add_widget_to_grid(use_prompt_builder_checkbox)
+
+        # use controlnet checkbox
+        use_controlnet_checkbox = QCheckBox()
+        use_controlnet_checkbox.setStyleSheet(stylesheet)
+        use_controlnet_checkbox.setObjectName("use_controlnet_checkbox")
+        use_controlnet_checkbox.setText("ControlNet")
+        use_controlnet_checkbox.setChecked(self.app.enable_controlnet)
+        use_controlnet_checkbox.stateChanged.connect(
+            partial(self.handle_value_change, "enable_controlnet", widget=use_controlnet_checkbox))
+        self.data[self.tab_section][self.tab]["enable_controlnet"] = use_controlnet_checkbox
+        self.use_controlnet_checkbox = use_controlnet_checkbox
+
+        # add checkboxes to checkbox layout
+        checkbox_layout.addWidget(use_prompt_builder_checkbox)
+        checkbox_layout.addWidget(use_controlnet_checkbox)
+
+        # add the checkbox layout to the grid
+        self.add_widget_to_grid(checkbox_widget)
+
+    def add_input_image_widgets(self):
+        if self.app.current_section not in ["img2img", "pix2pix", "depth2img"]:
+            return
+        input_image_widget = uic.loadUi("pyqt/widgets/input_image.ui")
+        self.add_widget_to_grid(input_image_widget)
+
     def toggle_all_prompt_builder_checkboxes(self, state):
         for tab_section in self.data.keys():
             for section in self.data[tab_section].keys():
-                self.data[tab_section][section]["use_prompt_builder_checkbox"].setChecked(state)
+                try:
+                    self.data[tab_section][section]["use_prompt_builder_checkbox"].setChecked(state)
+                except KeyError:
+                    pass
 
     def refresh_model_list(self):
         for i, section in enumerate(self.app._tabs[self.app.currentTabSection].keys()):
@@ -316,7 +363,6 @@ class GeneratorTabWidget(BaseWidget):
         if self.tab_section not in self.clip_skip_disabled_tabs:
             self.load_clip_skip_slider()
 
-        self.data[self.tab_section][self.tab]["queue_label"] = QLabel("Items in queue: 0")
         widget = QWidget()
         horizontal_layout = QHBoxLayout(widget)
         horizontal_layout.setContentsMargins(0, 0, 0, 0)
@@ -324,7 +370,6 @@ class GeneratorTabWidget(BaseWidget):
         horizontal_layout.addWidget(samples_widget)
         horizontal_layout.addWidget(interrupt_button)
         self.add_widget_to_grid(widget)
-        self.add_widget_to_grid(self.data[self.tab_section][self.tab]["queue_label"])
 
         if self.tab_section == "kandinsky":
             # show a checkbox for self.app.variation
@@ -334,14 +379,6 @@ class GeneratorTabWidget(BaseWidget):
             variation_checkbox.toggled.connect(
                 partial(self.handle_value_change, "variation", widget=variation_checkbox))
             self.add_widget_to_grid(variation_checkbox)
-
-    def update_queue_label(self):
-        for section in self.data.keys():
-            for tab in self.data[section].keys():
-                try:
-                    self.data[section][tab]["queue_label"].setText(f"Items in queue: {self.app.client.queue.qsize()}")
-                except KeyError:
-                    pass
 
     def add_zeroshot_widget(self):
         if self.tab != "txt2vid":
