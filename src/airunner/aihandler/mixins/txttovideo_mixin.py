@@ -83,8 +83,6 @@ class TexttovideoMixin:
         imageio.mimsave(self.txt2vid_file, result, format="FFMPEG", codec="libx264")
 
         #print type of result
-        print(type(result[0]))
-        print(result[0])
         logger.info(f"Save complete")
         pil_image = Image.fromarray(result[0])
         return pil_image, None
