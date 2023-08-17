@@ -12,15 +12,15 @@ class ToolMenuWidget(BaseWidget):
     name = "tool_menu"
 
     def initialize(self):
-        self.tab_widget = QTabWidget()
-        self.tab_widget.setLayout(QGridLayout())
-        self.tab_widget.layout().setContentsMargins(0, 0, 0, 0)
+        self.app.tab_widget = QTabWidget()
+        self.app.tab_widget.setLayout(QGridLayout())
+        self.app.tab_widget.layout().setContentsMargins(0, 0, 0, 0)
         self.lora_container_widget = LoraContainerWidget(app=self.app)
         self.embeddings_container_widget = EmbeddingsContainerWidget(app=self.app)
-        self.tab_widget.setStyleSheet(self.app.css("toolmenu_tab_widget"))
+        self.app.tab_widget.setStyleSheet(self.app.css("toolmenu_tab_widget"))
 
-        self.tab_widget.addTab(self.embeddings_container_widget, "Embeddings")
-        self.tab_widget.addTab(self.lora_container_widget, "LoRa")
+        self.app.track_tab_section("right", "embeddings", "Embeddings", self.embeddings_container_widget, self.app.tab_widget)
+        self.app.track_tab_section("right", "lora", "LoRA", self.lora_container_widget, self.app.tab_widget)
 
         self.layer_container_widget = LayerContainerWidget(app=self.app)
         self.opacity_widget = SliderWidget(
@@ -48,13 +48,13 @@ class ToolMenuWidget(BaseWidget):
         grid = QGridLayout(widget)
         grid.addWidget(color_dialog, 0, 0, 1, 1)
         grid.addWidget(input_box, 1, 0, 1, 1)
-        self.tab_widget.addTab(widget, "Pen Color")
+        self.app.track_tab_section("right", "pen", "Pen Color", widget, self.app.tab_widget)
         # prevent grid from stretching
         widget.setMaximumHeight(260)
 
         # add to grid
         #self.right_toolbar.layout().addWidget(self.brush_widget, 1, 0, 1, 1)
-        self.right_toolbar.layout().addWidget(self.tab_widget, 0, 0, 1, 1)
+        self.right_toolbar.layout().addWidget(self.app.tab_widget, 0, 0, 1, 1)
         self.right_toolbar.layout().addWidget(self.opacity_widget, 1, 0, 1, 1)
         self.right_toolbar.layout().addWidget(self.layer_container_widget, 2, 0, 1, 1)
 
