@@ -63,7 +63,7 @@ class BaseWidget(QWidget):
         self.app = kwargs.pop("app", None)
         super().__init__(*args, **kwargs)
         if self.name:
-            uic.loadUi(f"pyqt/widgets/{self.name}.ui", self)
+            self.template = uic.loadUi(f"pyqt/widgets/{self.name}.ui", self)
 
     def set_stylesheet(self):
         for button, icon in self.icons.items():
