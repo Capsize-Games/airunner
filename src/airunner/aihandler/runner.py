@@ -445,6 +445,8 @@ class SDRunner(
 
     @property
     def enable_controlnet(self):
+        if self.image is None and self.controlnet_image is None:
+            return False
         return self.options.get("enable_controlnet", False)
 
     @property
