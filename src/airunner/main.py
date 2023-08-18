@@ -1,5 +1,7 @@
 import os
 
+from airunner.main_window import MainWindow
+
 """
 OS environment variables must be initialized here before importing any other modules.
 This is due to the way huggingface diffusion models are imported.
@@ -26,7 +28,6 @@ from PyQt6.QtGui import QGuiApplication, QPixmap
 
 from airunner.aihandler.settings import SERVER
 from airunner.aihandler.socket_server import SocketServer
-from airunner.main_window import MainWindow
 from airunner.utils import get_version
 
 

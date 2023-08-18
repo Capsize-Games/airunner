@@ -62,6 +62,12 @@
           <iconset>
            <normaloff>../../../src/icons/010-view.png</normaloff>../../../src/icons/010-view.png</iconset>
          </property>
+         <property name="checkable">
+          <bool>true</bool>
+         </property>
+         <property name="checked">
+          <bool>false</bool>
+         </property>
         </widget>
        </item>
        <item>

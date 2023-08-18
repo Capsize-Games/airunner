@@ -13,6 +13,7 @@ from airunner.aihandler.logger import Logger as logger
 from airunner.aihandler.pyqt_client import OfflineClient
 from airunner.aihandler.settings import LOG_LEVEL
 from airunner.aihandler.enums import MessageCode
+from airunner.airunner_api import AIRunnerAPI
 from airunner.mixins.canvas_mixin import CanvasMixin
 from airunner.mixins.generator_mixin import GeneratorMixin
 from airunner.mixins.history_mixin import HistoryMixin
@@ -45,6 +46,7 @@ class MainWindow(
     CanvasMixin,
     GeneratorMixin
 ):
+    api = None
     current_filter = None
     tqdm_callback_triggered = False
     _document_name = "Untitled"
@@ -72,6 +74,7 @@ class MainWindow(
     status_normal_color_dark = "#ffffff"
     is_started = False
     _themes = None
+    button_clicked_signal = pyqtSignal(dict)
 
     _embedding_names = None
     embedding_widgets = {}
@@ -272,6 +275,9 @@ class MainWindow(
         logger.info("Starting AI Runnner...")
         qdarktheme.enable_hi_dpi()
 
+        # set the api
+        self.api = AIRunnerAPI(window=self)
+
         self.set_log_levels()
         self.testing = kwargs.pop("testing", False)
         super().__init__(*args, **kwargs)
@@ -445,7 +451,25 @@ class MainWindow(
         self.actionShow_Active_Image_Area.setChecked(
             self.settings_manager.settings.show_active_image_area.get() == True
         )
+        self.initialize_default_buttons()
         self.connect_signals()
+
+    def initialize_default_buttons(self):
+        pass
+
+    @pyqtSlot(dict)
+    def handle_button_clicked(self, kwargs):
+        action = kwargs.get("action", "")
+        if action == "toggle_tool":
+            self.toggle_tool(kwargs["tool"])
+
+    def toggle_tool(self, tool):
+        # uncheck all buttons that are not currently selected
+        for button_name in self.toolbar_widget.tool_buttons:
+            button = getattr(self.toolbar_widget, f"{button_name}_button")
+            button.setChecked(tool == button_name)
+        self.settings.current_tool.set(tool)
+        self.canvas.update_cursor()
 
     def initialize_mixins(self):
         HistoryMixin.initialize(self)
@@ -487,6 +511,8 @@ class MainWindow(
                 self.settings.enable_controlnet.connect(self.handle_toggle_controlnet)
         self.override_tab_section = None
         self.override_section = None
+
+        self.button_clicked_signal.connect(self.handle_button_clicked)
 
     def handle_toggle_controlnet(self, value):
         self.controlnet_settings.template.controlnet_groupbox.setChecked(value)
