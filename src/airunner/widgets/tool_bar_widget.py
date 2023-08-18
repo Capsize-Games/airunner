@@ -1,4 +1,4 @@
-from functools import partial
+import os
 
 from airunner.widgets.base_widget import BaseWidget
 
@@ -6,7 +6,6 @@ from airunner.widgets.base_widget import BaseWidget
 class ToolBarWidget(BaseWidget):
     name = "toolbar"
     icons = {
-        # "move_button": "013-move-selector",
         "active_grid_area_button": "038-drag",
         "eraser_button": "014-eraser",
         "brush_button": "011-pencil",
@@ -14,66 +13,96 @@ class ToolBarWidget(BaseWidget):
         "nsfw_button": "039-18",
         "focus_button": "037-focus",
         "settings_button": "settings",
-        # "move_button": "013-move-selector",
-        # "select_button": "040-select",
-        # "crop_button": "001-crop",
-        # "zoom_button": "015-zoom-in",
     }
     tool_buttons = [
         "eraser",
         "brush",
         "active_grid_area",
-        # "move",
-        # "select",
-        # "crop",
-        # "zoom"
     ]
+
+    def icon_path(self, name):
+        if name in self.icons:
+            icon = self.icons[name]
+            return {
+                "light": os.path.join("src/icons", f"{icon}.png"),
+                "dark": os.path.join("src/icons", f"{icon}-light.png")
+            }
+        return None
 
     def set_stylesheet(self):
         super().set_stylesheet()
         self.setStyleSheet(self.app.css("toolbar_widget"))
 
     def initialize(self):
-        for button_name in self.tool_buttons:
-            button = getattr(self, f"{button_name}_button")
-            button.clicked.connect(partial(self.set_tool, button_name))
+        # add a stretch to the bottom of side_toolbar_container which has a QVBoxLayout
+        _index, self.active_grid_area_button = self.app.api.add_toolbar_button(
+            icon_path=self.icon_path("active_grid_area_button"),
+            tooltip="Toggle Active Grid Area",
+            checkable=True,
+            checked=self.canvas.active_grid_area_selected,
+            action="toggle_tool",
+            tool="active_grid_area",
+            row=0
+        )
+        _index, self.brush_button = self.app.api.add_toolbar_button(
+            icon_path=self.icon_path("brush_button"),
+            tooltip="Toggle Pen Tool",
+            checkable=True,
+            checked=self.canvas.brush_selected,
+            action="toggle_tool",
+            tool="brush",
+            row=1,
+        )
+        _index, self.eraser_button = self.app.api.add_toolbar_button(
+            icon_path=self.icon_path("eraser_button"),
+            tooltip="Toggle Eraser Tool",
+            checkable=True,
+            checked=self.canvas.eraser_selected,
+            action="toggle_tool",
+            tool="eraser",
+            row=2,
+        )
+        _index, self.focus_button = self.app.api.add_toolbar_button(
+            icon_path=self.icon_path("focus_button"),
+            tooltip="Focus the canvas",
+            tool="focus_button",
+            row=3,
+            callback=self.app.focus_button_clicked
+        )
+        _index, self.grid_button = self.app.api.add_toolbar_button(
+            icon_path=self.icon_path("grid_button"),
+            checkable=True,
+            checked=self.settings_manager.settings.show_grid.get() == True,
+            tooltip="Toggle grid",
+            tool="grid_button",
+            row=4,
+            callback=self.app.toggle_grid
+        )
+        _index, self.nsfw_button = self.app.api.add_toolbar_button(
+            icon_path=self.icon_path("nsfw_button"),
+            checkable=True,
+            checked=self.settings_manager.settings.nsfw_filter.get() == True,
+            tooltip="Toggle NSFW Filter",
+            tool="nsfw_button",
+            row=5,
+            callback=self.toggle_nsfw_filter
+        )
+        _index, self.settings_button = self.app.api.add_toolbar_button(
+            icon_path=self.icon_path("settings_button"),
+            tooltip="Settings",
+            tool="settings_button",
+            row=6,
+            callback=self.app.show_settings
+        )
+        self.set_nsfw_filter_tooltip()
+        self.side_toolbar_container.layout().addStretch(1)
 
-        self.grid_button.clicked.connect(self.app.toggle_grid)
-        self.nsfw_button.clicked.connect(self.toggle_nsfw_filter)
-        self.focus_button.clicked.connect(self.app.focus_button_clicked)
-        self.grid_button.setChecked(self.settings_manager.settings.show_grid.get() == True)
-        self.nsfw_button.setChecked(self.settings_manager.settings.nsfw_filter.get() == True)
-        self.settings_button.clicked.connect(self.app.show_settings)
-        if self.canvas.active_grid_area_selected:
-            self.active_grid_area_button.setChecked(True)
-        if self.canvas.eraser_selected:
-            self.eraser_button.setChecked(True)
-        if self.canvas.brush_selected:
-            self.brush_button.setChecked(True)
-        # if self.canvas.move_selected:
-        #     self.move_button.setChecked(True)
-        if self.settings_manager.settings.snap_to_grid.get():
-            self.grid_button.setChecked(True)
-        self.toggle_nsfw_filter(self.app.settings_manager.settings.nsfw_filter.get())
-
-        self.crop_button.deleteLater()
-        self.move_button.deleteLater()
-        self.select_button.deleteLater()
-        self.zoom_button.deleteLater()
-
-    def set_tool(self, tool):
-        # uncheck all buttons that are not currently selected
-        for button_name in self.tool_buttons:
-            button = getattr(self, f"{button_name}_button")
-            if tool != button_name:
-                button.setChecked(False)
-            elif tool == button_name and not button.isChecked():
-                tool = None
-        self.app.settings.current_tool.set(tool)
-        self.app.canvas.update_cursor()
-
-    def toggle_nsfw_filter(self, val):
-        self.app.settings_manager.settings.nsfw_filter.set(val)
+    def toggle_nsfw_filter(self):
+        self.app.settings_manager.settings.nsfw_filter.set(not self.app.settings_manager.settings.nsfw_filter.get())
         self.app.canvas.update()
-        # change the tooltip
-        self.nsfw_button.setToolTip("Click to enable NSFW filter" if not val else "Click to disable NSFW filter")
+        self.set_nsfw_filter_tooltip()
+        self.nsfw_button.setChecked(self.app.settings_manager.settings.nsfw_filter.get())
+
+    def set_nsfw_filter_tooltip(self):
+        nsfw_filter = self.app.settings_manager.settings.nsfw_filter.get()
+        self.nsfw_button.setToolTip("Click to enable NSFW filter" if not nsfw_filter else "Click to disable NSFW filter")
