@@ -19,6 +19,13 @@ class ControlNetSettingsWidget(BaseWidget):
     name = "controlnet_settings/controlnet_settings"
     _active_grid_area_image = None
     data: ControlNetSettingsData = None
+    icons = {
+        "import_image_button": "046-import",
+        "clear_image_button": "006-trash",
+        "export_generated_button": "export",
+        "import_control_image_button": "046-import",
+        "clear_control_image_button": "006-trash",
+    }
 
     @property
     def active_grid_area_image(self):
@@ -62,6 +69,7 @@ class ControlNetSettingsWidget(BaseWidget):
         self.template.export_generated_button.clicked.connect(self.export_generated_controlnet_image)
 
         self.toggle_import_image_button()
+        self.set_stylesheet()
 
     def export_generated_controlnet_image(self):
         file_path, _ = self.app.display_file_export_dialog()
