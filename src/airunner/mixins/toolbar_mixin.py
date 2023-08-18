@@ -77,10 +77,9 @@ class ToolbarMixin:
     def show_about(self):
         AboutWindow(self.settings_manager, app=self)
 
-    def toggle_grid(self, event):
+    def toggle_grid(self):
         self.settings_manager.settings.show_grid.set(
-            event
-        )
+            not self.settings_manager.settings.show_grid.get())
         self.canvas.update()
 
     def focus_button_clicked(self):
