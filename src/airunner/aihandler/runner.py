@@ -73,9 +73,11 @@ class SDRunner(
     current_controlnet_type = None
     controlnet_loaded = False
     attempt_download = False
+    downloading_controlnet = False
     safety_checker_model = ""
     text_encoder_model = ""
     inpaint_vae_model = ""
+    _controlnet_image = None
 
     # end controlnet atributes
 
@@ -647,6 +649,8 @@ class SDRunner(
             self.compel_proc = None
             self.prompt_embeds = None
             self.negative_prompt_embeds = None
+            if self.reload_model:
+                self.reset_applied_memory_settings()
             self.load_model()
             self.reload_model = False
             self.initialized = True
@@ -1603,6 +1607,16 @@ class SDRunner(
             self.img2img = pipe
             self.txt2img = None
 
+    def send_model_loading_message(self, model_name):
+        if self.attempt_download:
+            if self.downloading_controlnet:
+                message = f"Downloading controlnet model"
+            else:
+                message = f"Downloading model {model_name}"
+        else:
+            message = f"Loading model {model_name}"
+        self.send_message(message)
+
     def prepare_model(self):
         logger.info("Prepare model")
         # get model and switch to it
@@ -1610,7 +1624,7 @@ class SDRunner(
         # get models from database
         model_name = self.options.get(f"model", None)
 
-        self.send_message(f"{'Loading' if not self.attempt_download else 'Downloading'} model {model_name}")
+        self.send_model_loading_message(model_name)
 
         self._previous_model = self.current_model
         if self.is_single_file:
@@ -1640,9 +1654,9 @@ class SDRunner(
             )
         except OSError as e:
             logger.error(f"failed to load {model} from pretrained")
-            return self.handle_missing_files()
+            return self.handle_missing_files(pipeline_action)
 
-    def handle_missing_files(self):
+    def handle_missing_files(self, action):
         if not self.attempt_download:
             if self.is_ckpt_model or self.is_safetensors:
                 logger.info("Required files not found, attempting download...")
@@ -1654,10 +1668,13 @@ class SDRunner(
             self.send_message("Downloading model files...")
             self.local_files_only = False
             self.attempt_download = True
+            if action == "controlnet":
+                self.downloading_controlnet = True
             return self.generator_sample(self.requested_data)
         else:
             self.local_files_only = True
             self.attempt_download = False
+            self.downloading_controlnet = False
             if self.is_ckpt_model or self.is_safetensors:
                 self.log_error("Unable to download required files, check internet connection")
             else:
