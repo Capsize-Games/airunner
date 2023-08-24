@@ -568,6 +568,93 @@ class SDRunner(
     def clip_skip(self):
         return self.options.get("clip_skip", 0)
 
+    @property
+    def do_add_lora_to_pipe(self):
+        return not self.use_kandinsky \
+               and not self.is_txt2vid \
+               and not self.is_upscale \
+               and not self.is_superresolution
+
+    @property
+    def controlnet_action_diffuser(self):
+        from diffusers import (
+            StableDiffusionControlNetPipeline,
+            StableDiffusionControlNetImg2ImgPipeline,
+            StableDiffusionControlNetInpaintPipeline,
+        )
+        if self.is_txt2img or self.is_zeroshot:
+            return StableDiffusionControlNetPipeline
+        elif self.is_img2img:
+            return StableDiffusionControlNetImg2ImgPipeline
+        elif self.is_outpaint:
+            return StableDiffusionControlNetInpaintPipeline
+        else:
+            raise ValueError(f"Invalid action {self.action} unable to get controlnet action diffuser")
+
+    @property
+    def controlnet_image(self):
+        controlnet_image = self.options.get("controlnet_image", None)
+
+        if not controlnet_image and self.image:
+            controlnet_image = self.preprocess_for_controlnet(self.image)
+            self.send_message({
+                "image": controlnet_image,
+                "data": {
+                    "controlnet_image": controlnet_image
+                },
+                "request_type": None
+            }, MessageCode.CONTROLNET_IMAGE_GENERATED)
+
+        self._controlnet_image = controlnet_image
+
+        return self._controlnet_image
+
+    @property
+    def do_load_controlnet(self):
+        return (
+                (not self.controlnet_loaded and self.enable_controlnet) or
+                (self.controlnet_loaded and self.enable_controlnet)
+        )
+
+    @property
+    def do_unload_controlnet(self):
+        return (
+                (self.controlnet_loaded and not self.enable_controlnet) or
+                (not self.controlnet_loaded and not self.enable_controlnet)
+        )
+
+    @property
+    def do_reuse_pipeline(self):
+        return (
+                (self.is_txt2img and self.txt2img is None and self.img2img) or
+                (self.is_img2img and self.img2img is None and self.txt2img) or
+                ((
+                         (self.is_txt2img and self.txt2img) or
+                         (self.is_img2img and self.img2img)
+                 ) and (self.do_load_controlnet or self.do_unload_controlnet))
+        )
+
+    def  __init__(self, **kwargs):
+        logger.set_level(LOG_LEVEL)
+        self.application_data = ApplicationData()
+        self.safety_checker_model = self.application_data.available_models_by_section("safety_checker")
+        self.text_encoder_model = self.application_data.available_models_by_section("text_encoder")
+        self.inpaint_vae_model = self.application_data.available_models_by_section("inpaint_vae")
+
+        self.app = kwargs.get("app", None)
+        self._message_var = kwargs.get("message_var", None)
+        self._message_handler = kwargs.get("message_handler", None)
+        self._safety_checker = None
+        self._controlnet = None
+        self.txt2img = None
+        self.img2img = None
+        self.pix2pix = None
+        self.outpaint = None
+        self.depth2img = None
+        self.superresolution = None
+        self.txt2vid = None
+        self.upscale = None
+
     @staticmethod
     def latents_to_image(latents: torch.Tensor):
         image = latents.permute(0, 2, 3, 1)
@@ -621,27 +708,6 @@ class SDRunner(
         if not model:
             raise ValueError("safetensors path is empty")
         return model.endswith(".safetensors")
-
-    def  __init__(self, **kwargs):
-        logger.set_level(LOG_LEVEL)
-        self.application_data = ApplicationData()
-        self.safety_checker_model = self.application_data.available_models_by_section("safety_checker")
-        self.text_encoder_model = self.application_data.available_models_by_section("text_encoder")
-        self.inpaint_vae_model = self.application_data.available_models_by_section("inpaint_vae")
-
-        self.app = kwargs.get("app", None)
-        self._message_var = kwargs.get("message_var", None)
-        self._message_handler = kwargs.get("message_handler", None)
-        self._safety_checker = None
-        self._controlnet = None
-        self.txt2img = None
-        self.img2img = None
-        self.pix2pix = None
-        self.outpaint = None
-        self.depth2img = None
-        self.superresolution = None
-        self.txt2vid = None
-        self.upscale = None
 
     def initialize(self):
         if not self.initialized or self.reload_model or self.pipe is None:
@@ -764,13 +830,6 @@ class SDRunner(
                     except AttributeError:
                         pass
             return images, nsfw_content_detected
-
-    @property
-    def do_add_lora_to_pipe(self):
-        return not self.use_kandinsky \
-               and not self.is_txt2vid \
-               and not self.is_upscale \
-               and not self.is_superresolution
 
     def call_pipe(self, **kwargs):
         logger.info(f"call_pipe called with use_kandinsky={self.use_kandinsky}")
@@ -1281,25 +1340,6 @@ class SDRunner(
         traceback.print_exc()
         self.error_handler(message)
 
-    """
-    Controlnet methods
-    """
-    @property
-    def controlnet_action_diffuser(self):
-        from diffusers import (
-            StableDiffusionControlNetPipeline,
-            StableDiffusionControlNetImg2ImgPipeline,
-            StableDiffusionControlNetInpaintPipeline,
-        )
-        if self.is_txt2img or self.is_zeroshot:
-            return StableDiffusionControlNetPipeline
-        elif self.is_img2img:
-            return StableDiffusionControlNetImg2ImgPipeline
-        elif self.is_outpaint:
-            return StableDiffusionControlNetInpaintPipeline
-        else:
-            raise ValueError(f"Invalid action {self.action} unable to get controlnet action diffuser")
-
     def load_controlnet_from_ckpt(self, pipeline):
         pipeline = self.controlnet_action_diffuser(
             vae=pipeline.vae,
@@ -1338,26 +1378,6 @@ class SDRunner(
             return image
         logger.error("No controlnet processor found")
 
-    _controlnet_image = None
-
-    @property
-    def controlnet_image(self):
-        controlnet_image = self.options.get("controlnet_image", None)
-
-        if not controlnet_image and self.image:
-            controlnet_image = self.preprocess_for_controlnet(self.image)
-            self.send_message({
-                "image": controlnet_image,
-                "data": {
-                    "controlnet_image": controlnet_image
-                },
-                "request_type": None
-            }, MessageCode.CONTROLNET_IMAGE_GENERATED)
-
-        self._controlnet_image = controlnet_image
-
-        return self._controlnet_image
-
     def load_controlnet_arguments(self, **kwargs):
         if not self.is_txt2vid:
             image_key = "image" if self.is_txt2img else "control_image"
@@ -1373,9 +1393,6 @@ class SDRunner(
         }}
         return kwargs
 
-    # end controlnet methods
-
-    # Model methods
     def unload_unused_models(self):
         for action in [
             "txt2img",
@@ -1395,31 +1412,7 @@ class SDRunner(
                 setattr(self, action, None)
                 del val
         self.clear_memory()
-
-    @property
-    def do_load_controlnet(self):
-        return (
-            (not self.controlnet_loaded and self.enable_controlnet) or
-            (self.controlnet_loaded and self.enable_controlnet)
-        )
-
-    @property
-    def do_unload_controlnet(self):
-        return (
-            (self.controlnet_loaded and not self.enable_controlnet) or
-            (not self.controlnet_loaded and not self.enable_controlnet)
-        )
-
-    @property
-    def do_reuse_pipeline(self):
-        return (
-            (self.is_txt2img and self.txt2img is None and self.img2img) or
-            (self.is_img2img and self.img2img is None and self.txt2img) or
-            ((
-                 (self.is_txt2img and self.txt2img) or
-                 (self.is_img2img and self.img2img)
-             ) and (self.do_load_controlnet or self.do_unload_controlnet))
-        )
+        self.reset_applied_memory_settings()
 
     def load_model(self):
         logger.info("Loading model...")
