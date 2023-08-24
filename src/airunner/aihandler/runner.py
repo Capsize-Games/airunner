@@ -832,7 +832,6 @@ class SDRunner(
             return images, nsfw_content_detected
 
     def call_pipe(self, **kwargs):
-        logger.info(f"call_pipe called with use_kandinsky={self.use_kandinsky}")
         """
         Generate an image using the pipe
         :param kwargs:
@@ -867,16 +866,19 @@ class SDRunner(
         elif not self.use_kandinsky:
             if self.use_compel:
                 try:
+                    logger.info(f"Using compel")
                     args.update({
                         "prompt_embeds": self.prompt_embeds,
                         "negative_prompt_embeds": self.negative_prompt_embeds,
                     })
                 except Exception as _e:
+                    logger.warning("Compel failed: " + str(_e))
                     args.update({
                         "prompt": self.prompt,
                         "negative_prompt": self.negative_prompt,
                     })
             else:
+                logger.info(f"Using prompts")
                 args.update({
                     "prompt": self.prompt,
                     "negative_prompt": self.negative_prompt,
@@ -1394,6 +1396,7 @@ class SDRunner(
         return kwargs
 
     def unload_unused_models(self):
+        logger.info("Unloading unused models...")
         for action in [
             "txt2img",
             "img2img",
@@ -1442,7 +1445,7 @@ class SDRunner(
                 logger.info("Using kandinsky model, circumventing model loading")
                 return
             else:
-                logger.info(f"{'Loading' if not self.attempt_download else 'Downloading'} {self.model_path} from diffusers pipeline")
+                self.send_model_loading_message(self.model_path)
 
                 if self.is_superresolution:
                     kwargs["low_res_scheduler"] = self.load_scheduler(force_scheduler_name="DDPM")
@@ -1451,13 +1454,11 @@ class SDRunner(
                     kwargs["controlnet"] = self.controlnet()
 
                 if self.is_single_file:
-                    logger.info(f"loading {'safetensors' if self.is_safetensors else 'ckpt'} model")
                     try:
                         self.pipe = self.load_ckpt_model()
                     except OSError as e:
                         return self.handle_missing_files()
                 else:
-                    logger.info(f"loading diffusers model {self.model_path}")
                     self.pipe = self.from_pretrained(
                         model=self.model_path,
                         scheduler=self.load_scheduler(),
@@ -1543,12 +1544,13 @@ class SDRunner(
         return pipe
 
     def clear_controlnet(self):
+        logger.info("Clearing controlnet...")
         self._controlnet = None
         self.clear_memory()
         self.controlnet_loaded = False
 
     def reuse_pipeline(self, do_load_controlnet):
-        logger.info(f"{'Loading' if do_load_controlnet else 'Unloading'} controlnet")
+        logger.info("Reusing pipeline...")
         pipe = None
         if self.is_txt2img:
             if self.txt2img is None:
