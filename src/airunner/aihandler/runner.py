@@ -1570,8 +1570,8 @@ class SDRunner(
             else:
                 pipe = self.img2img
         if pipe is None:
-            self.clear_controlnet()
             logger.warning("Failed to reuse pipeline")
+            self.clear_controlnet()
             return
         kwargs = pipe.components
 
