@@ -45,7 +45,7 @@ setup(
         "typing_extensions==4.5.0",
         "urllib3==1.26.15",
         "transformers==4.31.0",
-        "compel==2.0.0",
+        "compel==2.0.2",
         "sympy==1.12.0",
         "regex",
         "matplotlib==3.7.2",
