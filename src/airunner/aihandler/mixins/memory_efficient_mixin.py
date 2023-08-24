@@ -10,9 +10,31 @@ logger.set_level(logger.DEBUG)
 class MemoryEfficientMixin:
     torch_compile_applied: bool = False
 
+    last_channels_applied: bool = None
+    vae_slicing_applied: bool = None
+    attention_slicing_applied: bool = None
+    tiled_vae_applied: bool = None
+    accelerated_transformers_applied: bool = None
+    cpu_offload_applied: bool = None
+    model_cpu_offload_applied: bool = None
+
+    def reset_applied_memory_settings(self):
+        self.last_channels_applied = None
+        self.vae_slicing_applied = None
+        self.attention_slicing_applied = None
+        self.tiled_vae_applied = None
+        self.accelerated_transformers_applied = None
+        self.cpu_offload_applied = None
+        self.model_cpu_offload_applied = None
+
     def apply_last_channels(self):
         if self.use_kandinsky or self.is_txt2vid or self.is_shapegif:
             return
+
+        if self.last_channels_applied == self.use_last_channels:
+            return
+
+        self.last_channels_applied = self.use_last_channels
         if self.use_last_channels:
             logger.info("Enabling torch.channels_last")
             self.pipe.unet.to(memory_format=torch.channels_last)
@@ -21,6 +43,10 @@ class MemoryEfficientMixin:
             self.pipe.unet.to(memory_format=torch.contiguous_format)
 
     def apply_vae_slicing(self):
+        if self.vae_slicing_applied == self.use_enable_vae_slicing:
+            return
+        self.vae_slicing_applied = self.use_enable_vae_slicing
+
         if self.action not in [
             "img2img", "depth2img", "pix2pix", "outpaint", "superresolution", "controlnet", "upscale"
         ] and not self.use_kandinsky:
@@ -38,6 +64,10 @@ class MemoryEfficientMixin:
                     pass
 
     def apply_attention_slicing(self):
+        if self.attention_slicing_applied == self.use_attention_slicing:
+            return
+        self.attention_slicing_applied = self.use_attention_slicing
+
         if self.use_attention_slicing:
             logger.info("Enabling attention slicing")
             self.pipe.enable_attention_slicing(1)
@@ -46,6 +76,10 @@ class MemoryEfficientMixin:
             self.pipe.disable_attention_slicing()
 
     def apply_tiled_vae(self):
+        if self.tiled_vae_applied == self.use_tiled_vae:
+            return
+        self.tiled_vae_applied = self.use_tiled_vae
+
         if self.use_tiled_vae:
             logger.info("Applying tiled vae")
             # from diffusers import UniPCMultistepScheduler
@@ -56,6 +90,10 @@ class MemoryEfficientMixin:
                 logger.warning("Tiled vae not supported for this model")
 
     def apply_accelerated_transformers(self):
+        if self.accelerated_transformers_applied == self.use_accelerated_transformers:
+            return
+        self.accelerated_transformers_applied = self.use_accelerated_transformers
+
         from diffusers.models.attention_processor import AttnProcessor2_0
         if self.use_kandinsky:
             return
@@ -83,27 +121,25 @@ class MemoryEfficientMixin:
             - No support for Windows
             - Fails with the compiled version of AI Runner
         Because of this, we are disabling it until a better solution is found.
-
+        """
         if not self.use_torch_compile or self.torch_compile_applied:
             return
-        unet_path = self.unet_model_path
-        if unet_path is None or unet_path == "":
-            unet_path = os.path.join(self.model_base_path, "compiled_unet")
-        file_path = os.path.join(os.path.join(unet_path, self.model_path))
+        # unet_path = self.unet_model_path
+        # if unet_path is None or unet_path == "":
+        #     unet_path = os.path.join(self.model_base_path, "compiled_unet")
+        # file_path = os.path.join(os.path.join(unet_path, self.model_path))
         model_name = self.options.get(f"model", None)
-        file_name = f"{model_name}.pt"
-        if os.path.exists(os.path.join(file_path, file_name)):
-            self.load_unet(file_path, file_name)
-            self.pipe.unet.to(memory_format=torch.channels_last)
-        else:
-            logger.info(f"Compiling torch model {model_name}")
-            self.pipe.unet.to(memory_format=torch.channels_last)
-            self.pipe.unet = torch.compile(self.pipe.unet)
-            self.pipe(prompt=self.prompt)
-            self.save_unet(file_path, file_name)
+        # file_name = f"{model_name}.pt"
+        # if os.path.exists(os.path.join(file_path, file_name)):
+        #     self.load_unet(file_path, file_name)
+        #     self.pipe.unet.to(memory_format=torch.channels_last)
+        # else:
+        logger.info(f"Compiling torch model {model_name}")
+        self.pipe.unet.to(memory_format=torch.channels_last)
+        self.pipe.unet = torch.compile(self.pipe.unet)
+        self.pipe(prompt=self.prompt)
+        # self.save_unet(file_path, file_name)
         self.torch_compile_applied = True
-        """
-        return
 
     def enable_memory_chunking(self):
         if self.is_txt2vid and not self.is_zeroshot:
@@ -112,7 +148,7 @@ class MemoryEfficientMixin:
     def move_pipe_to_cuda(self, pipe):
         if not self.use_enable_sequential_cpu_offload and not self.enable_model_cpu_offload:
             logger.info("Moving to cuda")
-            pipe.to("cuda", torch.half) if self.cuda_is_available else None
+            pipe.to("cuda") if self.cuda_is_available else None
         return pipe
 
     def move_pipe_to_cpu(self, pipe):
@@ -124,6 +160,10 @@ class MemoryEfficientMixin:
         return pipe
 
     def apply_cpu_offload(self):
+        if self.cpu_offload_applied == self.enable_model_cpu_offload:
+            return
+        self.cpu_offload_applied = self.enable_model_cpu_offload
+
         if self.use_enable_sequential_cpu_offload and not self.enable_model_cpu_offload:
             logger.info("Enabling sequential cpu offload")
             self.pipe = self.move_pipe_to_cpu(self.pipe)
@@ -134,6 +174,10 @@ class MemoryEfficientMixin:
                 self.pipe = self.move_pipe_to_cuda(self.pipe)
 
     def apply_model_offload(self):
+        if self.model_cpu_offload_applied == self.enable_model_cpu_offload:
+            return
+        self.model_cpu_offload_applied = self.enable_model_cpu_offload
+
         if self.enable_model_cpu_offload \
            and not self.use_enable_sequential_cpu_offload \
            and hasattr(self.pipe, "enable_model_cpu_offload"):
