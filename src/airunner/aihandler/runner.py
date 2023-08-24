@@ -1498,12 +1498,16 @@ class SDRunner(
     def load_text_encoder(self, pipeline):
         if not pipeline or (pipeline.text_encoder and pipeline.text_encoder.config.num_hidden_layers > 12):
             return pipeline
+
+        if self.clip_skip == self.current_clip_skip:
+            return pipeline
+
+        self.current_clip_skip = self.clip_skip
         pipeline.text_encoder = self.from_pretrained(
             pipeline_action="text_encoder",
             model=self.text_encoder_model,
             num_hidden_layers=12 - self.clip_skip,
         )
-        self.current_clip_skip = self.clip_skip
         return pipeline
 
     def load_ckpt_model(self):
