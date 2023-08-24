@@ -1317,6 +1317,7 @@ class SDRunner(
             if "PYTORCH_CUDA_ALLOC_CONF" in str(e):
                 error = self.cuda_error_message
                 self.clear_memory()
+                self.reset_applied_memory_settings()
             else:
                 error_message = f"Error during generation"
                 traceback.print_exc()
@@ -1441,6 +1442,7 @@ class SDRunner(
 
         if self.pipe is None or self.reload_model:
             logger.info(f"Loading model from scratch {self.reload_model}")
+            self.reset_applied_memory_settings()
             if self.use_kandinsky:
                 logger.info("Using kandinsky model, circumventing model loading")
                 return
@@ -1547,6 +1549,7 @@ class SDRunner(
         logger.info("Clearing controlnet...")
         self._controlnet = None
         self.clear_memory()
+        self.reset_applied_memory_settings()
         self.controlnet_loaded = False
 
     def reuse_pipeline(self, do_load_controlnet):
