@@ -63,6 +63,8 @@ class SDRunner(
     _data = {
         "options": {}
     }
+    current_prompt = None
+    current_negative_prompt = None
     _model = None
     requested_data = None
     current_clip_skip = 0
@@ -1162,10 +1164,16 @@ class SDRunner(
             is_batch=self.deterministic_generation,
             batch_size=self.batch_size
         )
-        data["options"][f"prompt"] = prompt
-        data["options"][f"negative_prompt"] = negative_prompt
-        self.clear_prompt_embeds()
-        self.process_data(data)
+
+        # we only update the prompt embed if prompt or negative prompt has changed
+        if negative_prompt != self.current_negative_prompt or prompt != self.current_prompt:
+            self.current_negative_prompt = negative_prompt
+            self.current_prompt = prompt
+            data["options"][f"prompt"] = prompt
+            data["options"][f"negative_prompt"] = negative_prompt
+            self.clear_prompt_embeds()
+            self.process_data(data)
+
         return data
 
     def process_data(self, data: dict):
