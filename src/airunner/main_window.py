@@ -272,7 +272,7 @@ class MainWindow(
             yield model["name"]
 
     def __init__(self, *args, **kwargs):
-        logger.info("Starting AI Runnner...")
+        logger.info("Starting AI Runnner")
         qdarktheme.enable_hi_dpi()
 
         # set the api
@@ -288,7 +288,7 @@ class MainWindow(
         # self.applicationStateChanged.connect(self.on_state_changed)
 
         if self.settings_manager.settings.latest_version_check.get():
-            logger.info("Checking for latest version...")
+            logger.info("Checking for latest version")
             self.check_for_latest_version()
 
         # check for self.current_layer.lines every 100ms
@@ -301,7 +301,7 @@ class MainWindow(
         self.generate_shortcut.activated.connect(self.toggle_fullscreen)
 
         if not self.testing:
-            logger.info("Executing window...")
+            logger.info("Executing window")
             self.display()
         self.set_window_state()
         self.is_started = True
@@ -349,7 +349,7 @@ class MainWindow(
         self.close()
 
     def closeEvent(self, event):
-        logger.info("Quitting...")
+        logger.info("Quitting")
         QApplication.quit()
 
     def timerEvent(self, event):
@@ -402,7 +402,7 @@ class MainWindow(
         self.update_popup = UpdateWindow(self.settings_manager, app=self)
 
     def reset_settings(self):
-        logger.info("Resetting settings...")
+        logger.info("Resetting settings")
         # GeneratorMixin.reset_settings(self)
         self.canvas.reset_settings()
 
@@ -413,7 +413,7 @@ class MainWindow(
             self.canvas.update()
 
     def set_stylesheet(self):
-        logger.info("Setting stylesheets...")
+        logger.info("Setting stylesheets")
         try:
             qdarktheme.setup_theme("dark" if self.settings_manager.settings.dark_mode_enabled.get() else "light")
         except PermissionError:
@@ -489,7 +489,7 @@ class MainWindow(
         self.registered_settings_handlers.append((signal, handler))
 
     def connect_signals(self):
-        logger.info("Connecting signals...")
+        logger.info("Connecting signals")
         self.canvas._is_dirty.connect(self.set_window_title)
 
         for signal, handler in self.registered_settings_handlers:
@@ -519,7 +519,7 @@ class MainWindow(
         self.generator_tab_widget.use_controlnet_checkbox.setChecked(value)
 
     def instantiate_widgets(self):
-        logger.info("Instantiating widgets...")
+        logger.info("Instantiating widgets")
         self.generator_tab_widget = GeneratorTabWidget(app=self)
         self.header_widget = HeaderWidget(app=self)
         self.canvas_widget = CanvasWidget(app=self)
@@ -528,7 +528,7 @@ class MainWindow(
         self.footer_widget = FooterWidget(app=self)
 
     def initialize_widgets(self):
-        logger.info("Initializing widgets...")
+        logger.info("Initializing widgets")
         self.gridLayout.setColumnStretch(1, 1)
         self.gridLayout.addWidget(self.header_widget, 0, 0, 1, 4)
 
@@ -728,7 +728,7 @@ class MainWindow(
         self.set_window_icon()
 
     def initialize_stable_diffusion(self):
-        logger.info("Initializing stable diffusion...")
+        logger.info("Initializing stable diffusion")
         self.client = OfflineClient(
             app=self,
             message_var=self.message_var,
@@ -739,7 +739,7 @@ class MainWindow(
         self.settings_manager.save_settings()
 
     def display(self):
-        logger.info("Displaying window...")
+        logger.info("Displaying window")
         self.set_stylesheet()
         if not self.testing:
             self.show()

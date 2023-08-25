@@ -17,7 +17,7 @@ class Logger:
     ERROR = logging.ERROR
     FATAL = logging.FATAL
 
-    logger = logging.getLogger()
+    logger = logging.getLogger("AI Runner")
     stream_handler = logging.StreamHandler()
 
     formatter = logging.Formatter("%(asctime)s - %(name)s - %(levelname)s - %(message)s - %(lineno)d")

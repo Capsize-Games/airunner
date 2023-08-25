@@ -471,7 +471,6 @@ class GeneratorTabWidget(BaseWidget):
         progressbar.setValue(value)
 
     def stop_progress_bar(self, tab_section, section):
-        print("stop progress bar", tab_section, section)
         try:
             progressbar = self.data[tab_section][section]["progressBar"]
         except KeyError:
