@@ -612,26 +612,26 @@ class SDRunner(
     @property
     def do_load_controlnet(self):
         return (
-                (not self.controlnet_loaded and self.enable_controlnet) or
-                (self.controlnet_loaded and self.enable_controlnet)
+            (not self.controlnet_loaded and self.enable_controlnet) or
+            (self.controlnet_loaded and self.enable_controlnet)
         )
 
     @property
     def do_unload_controlnet(self):
         return (
-                (self.controlnet_loaded and not self.enable_controlnet) or
-                (not self.controlnet_loaded and not self.enable_controlnet)
+            (self.controlnet_loaded and not self.enable_controlnet) or
+            (not self.controlnet_loaded and not self.enable_controlnet)
         )
 
     @property
     def do_reuse_pipeline(self):
         return (
-                (self.is_txt2img and self.txt2img is None and self.img2img) or
-                (self.is_img2img and self.img2img is None and self.txt2img) or
-                ((
-                         (self.is_txt2img and self.txt2img) or
-                         (self.is_img2img and self.img2img)
-                 ) and (self.do_load_controlnet or self.do_unload_controlnet))
+            (self.is_txt2img and self.txt2img is None and self.img2img) or
+            (self.is_img2img and self.img2img is None and self.txt2img) or
+            ((
+                (self.is_txt2img and self.txt2img) or
+                (self.is_img2img and self.img2img)
+            ) and (self.do_load_controlnet or self.do_unload_controlnet))
         )
 
     def  __init__(self, **kwargs):
