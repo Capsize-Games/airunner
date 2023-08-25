@@ -247,6 +247,10 @@ class SDRunner(
         return self.options.get(f"image", None)
 
     @property
+    def input_image(self):
+        return self.options.get("input_image", None)
+
+    @property
     def mask(self):
         return self.options.get(f"mask", None)
 
@@ -458,7 +462,7 @@ class SDRunner(
 
     @property
     def enable_controlnet(self):
-        if self.image is None and self.controlnet_image is None:
+        if self.input_image is None and self.controlnet_image is None:
             return False
         return self.options.get("enable_controlnet", False)
 
@@ -606,8 +610,8 @@ class SDRunner(
     def controlnet_image(self):
         controlnet_image = self.options.get("controlnet_image", None)
 
-        if not controlnet_image and self.image:
-            controlnet_image = self.preprocess_for_controlnet(self.image)
+        if not controlnet_image and self.input_image:
+            controlnet_image = self.preprocess_for_controlnet(self.input_image)
             self.send_message({
                 "image": controlnet_image,
                 "data": {
@@ -928,7 +932,6 @@ class SDRunner(
         if self.is_shapegif:
             return self.call_shapegif_pipe()
 
-        # print stacktrace
         return self.pipe(**args)
 
     def call_shapegif_pipe(self):
@@ -1539,11 +1542,16 @@ class SDRunner(
             return pipeline
 
         self.current_clip_skip = self.clip_skip
-        pipeline.text_encoder = self.from_pretrained(
+        text_encoder = self.from_pretrained(
             pipeline_action="text_encoder",
             model=self.text_encoder_model,
             num_hidden_layers=12 - self.clip_skip,
         )
+        if text_encoder.__class__.__name__ not in [
+            "StableDiffusionControlNetPipeline",
+            "StableDiffusionControlNetImg2ImgPipeline",
+            "StableDiffusionControlNetInpaintPipeline"]:
+            pipeline.text_encoder = text_encoder
         return pipeline
 
     def load_ckpt_model(self):
