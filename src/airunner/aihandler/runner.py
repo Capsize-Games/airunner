@@ -1469,7 +1469,7 @@ class SDRunner(
         # move all models except for our current action to the CPU
         if not self.initialized or self.reload_model:
             self.unload_unused_models()
-        elif self.do_reuse_pipeline:
+        elif self.pipe is None and self.do_reuse_pipeline:
             self.reuse_pipeline(self.do_load_controlnet)
 
         if self.pipe is None or self.reload_model:
