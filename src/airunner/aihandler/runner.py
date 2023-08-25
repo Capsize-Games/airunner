@@ -765,6 +765,9 @@ class SDRunner(
         if not self.use_kandinsky:
             torch.backends.cuda.matmul.allow_tf32 = self.use_tf32
 
+    def send_error(self, message):
+        self.send_message(message, MessageCode.ERROR)
+
     def send_message(self, message, code=None):
         code = code or MessageCode.STATUS
         formatted_message = {
