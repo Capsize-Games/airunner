@@ -711,7 +711,7 @@ class SDRunner(
 
     def initialize(self):
         if not self.initialized or self.reload_model or self.pipe is None:
-            logger.info("Initializing...")
+            logger.info("Initializing")
             self.compel_proc = None
             self.prompt_embeds = None
             self.negative_prompt_embeds = None
@@ -727,7 +727,7 @@ class SDRunner(
         return torch.Generator(device=device).manual_seed(seed)
 
     def prepare_options(self, data):
-        logger.info(f"Preparing options...")
+        logger.info(f"Preparing options")
         action = data["action"]
         options = data["options"]
         requested_model = options.get(f"model", None)
@@ -789,15 +789,17 @@ class SDRunner(
         if not self.pipe:
             return
         if not self.do_nsfw_filter:
+            logger.info("Disabling safety checker")
             self.pipe.safety_checker = None
         elif self.pipe.safety_checker is None:
+            logger.info("Loading safety checker")
             self.pipe.safety_checker = self.safety_checker
             if self.pipe.safety_checker:
                 self.pipe.safety_checker.to(self.device)
 
     def do_sample(self, **kwargs):
         logger.info(f"Sampling {self.action}")
-        self.send_message(f"Generating image...")
+        self.send_message(f"Generating image")
 
         try:
             logger.info(f"Generating image")
@@ -1176,7 +1178,7 @@ class SDRunner(
         self.process_data(data)
 
         if not self.use_kandinsky:
-            self.send_message(f"Applying memory settings...")
+            self.send_message(f"Applying memory settings")
             self.apply_memory_efficient_settings()
 
         seed = self.seed
@@ -1295,7 +1297,7 @@ class SDRunner(
             if self.pipe.text_encoder.config.num_hidden_layers <= 12:
                 self.reload_model = True
 
-        self.send_message(f"Generating {'video' if self.is_txt2vid else 'image'}...")
+        self.send_message(f"Generating {'video' if self.is_txt2vid else 'image'}")
 
         action = "depth2img" if data["action"] == "depth" else data["action"]
 
@@ -1397,7 +1399,7 @@ class SDRunner(
         return kwargs
 
     def unload_unused_models(self):
-        logger.info("Unloading unused models...")
+        logger.info("Unloading unused models")
         for action in [
             "txt2img",
             "img2img",
@@ -1419,7 +1421,7 @@ class SDRunner(
         self.reset_applied_memory_settings()
 
     def load_model(self):
-        logger.info("Loading model...")
+        logger.info("Loading model")
         self.torch_compile_applied = False
         self.lora_loaded = False
         self.embeds_loaded = False
@@ -1550,14 +1552,14 @@ class SDRunner(
         return pipe
 
     def clear_controlnet(self):
-        logger.info("Clearing controlnet...")
+        logger.info("Clearing controlnet")
         self._controlnet = None
         self.clear_memory()
         self.reset_applied_memory_settings()
         self.controlnet_loaded = False
 
     def reuse_pipeline(self, do_load_controlnet):
-        logger.info("Reusing pipeline...")
+        logger.info("Reusing pipeline")
         pipe = None
         if self.is_txt2img:
             if self.txt2img is None:
@@ -1588,19 +1590,16 @@ class SDRunner(
             if self.is_single_file:
                 pipe = self.download_from_original_stable_diffusion_ckpt(self.model_path)
             else:
-                print("self.model_path", self.model_path)
                 pretrained_object = AutoImport.class_object(
                     self.action,
                     self.model_data,
                     pipeline_action=self.action,
                     category=self.model_data["category"]
                 )
-                print("AutoImport.class_object", pretrained_object)
                 components = pipe.components
                 if "controlnet" in components:
                     del components["controlnet"]
                 pipe = pretrained_object.from_pretrained(self.model_path, **components)
-                print("Pipe of class ", pipe.__class__.__name__)
 
         if self.is_txt2img:
             self.txt2img = pipe
@@ -1661,14 +1660,18 @@ class SDRunner(
     def handle_missing_files(self, action):
         if not self.attempt_download:
             if self.is_ckpt_model or self.is_safetensors:
-                logger.info("Required files not found, attempting download...")
+                logger.info("Required files not found, attempting download")
             else:
                 import traceback
                 traceback.print_exc()
-                logger.info("Model not found, attempting download...")
+                logger.info("Model not found, attempting download")
             # check if we have an internet connection
-            self.send_message("Downloading model files...")
-            self.local_files_only = False
+            if self.allow_online_when_missing_files:
+                self.send_message("Downloading model files")
+                self.local_files_only = False
+            else:
+                self.send_error("Required files not found, enable online access to download and try again")
+                return None
             self.attempt_download = True
             if action == "controlnet":
                 self.downloading_controlnet = True
