@@ -69,6 +69,7 @@ class SDRunner(
     requested_data = None
     current_clip_skip = 0
     _allow_online_mode = None
+    current_load_controlnet = False
 
     # controlnet atributes
     processor = None
@@ -1470,8 +1471,10 @@ class SDRunner(
         # move all models except for our current action to the CPU
         if not self.initialized or self.reload_model:
             self.unload_unused_models()
-        elif self.pipe is None and self.do_reuse_pipeline:
+        elif self.pipe is None and self.do_reuse_pipeline or self.pipe and self.do_load_controlnet != self.current_load_controlnet:
             self.reuse_pipeline(self.do_load_controlnet)
+
+        self.current_load_controlnet = self.do_load_controlnet
 
         if self.pipe is None or self.reload_model:
             logger.info(f"Loading model from scratch {self.reload_model}")
@@ -1492,7 +1495,7 @@ class SDRunner(
                     try:
                         self.pipe = self.load_ckpt_model()
                     except OSError as e:
-                        return self.handle_missing_files()
+                        return self.handle_missing_files(self.action)
                 else:
                     self.pipe = self.from_pretrained(
                         model=self.model_path,
@@ -1550,6 +1553,7 @@ class SDRunner(
             pipeline.vae.to(self.data_type)
             pipeline = self.load_text_encoder(pipeline)
             self.current_clip_skip = self.clip_skip
+            pipeline.text_encoder.to(self.data_type)
             pipeline.unet.to(self.data_type)
         return pipeline
 
