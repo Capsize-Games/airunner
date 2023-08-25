@@ -59,12 +59,14 @@ class SettingsWindow(BaseWindow):
                     {
                         "name": "resize_on_import",
                         "display_name": "Resize on import",
-                        "checkable": True
+                        "checkable": True,
+                        "description": "If enabled, images will be resized to the active grid area size when pasted."
                     },
                     {
                         "name": "image_to_new_layer",
                         "display_name": "Image to new layer",
-                        "checkable": True
+                        "checkable": True,
+                        "description": "If enabled, images will be pasted to a new layer."
                     }
                 ]
             },
@@ -94,23 +96,31 @@ class SettingsWindow(BaseWindow):
                     {
                         "name": "dark_mode",
                         "display_name": "Dark Mode",
-                        "checkable": True
+                        "checkable": True,
+                        "description": "If enabled, AI Runner will use a dark theme."
                     },
                     {
                         "name": "check_for_updates",
                         "display_name": "Check for updates",
-                        "checkable": True
+                        "checkable": True,
+                        "description": "If enabled, AI Runner will check for updates on startup."
+                    },
+                ]
+            },
+            {
+                "section": "Huggingface.co settings",
+                "files": [
+                    {
+                        "name": "allow_online_mode",
+                        "display_name": "Allow online connection",
+                        "checkable": True,
+                        "description": "Allow online connection to Huggingface.co to download missing models. If disabled, you will only be able to use models that are already downloaded. Requires a restart."
                     },
                     {
                         "name": "hf_api_key",
                         "display_name": "API Key",
                         "checkable": False
-                    }
-                    # {
-                    #     "name": "reset_settings",
-                    #     "display_name": "Reset settings to default",
-                    #     "checkable": False
-                    # }
+                    },
                 ]
             }
         ]
@@ -121,7 +131,8 @@ class SettingsWindow(BaseWindow):
                     self.model.item(index),
                     file["name"],
                     file["display_name"],
-                    file["checkable"]
+                    file["checkable"],
+                    file["description"] if "description" in file else None
                 )
 
         self.scroll_widget = QWidget()
@@ -149,7 +160,7 @@ class SettingsWindow(BaseWindow):
         item.setSizeHint(QSize(0, 24))
         self.model.appendRow(item)
 
-    def add_file(self, parent_item, name, display_name, checkable=False):
+    def add_file(self, parent_item, name, display_name, checkable=False, description=None):
         file_item = QStandardItem(display_name)
         file_item.setCheckable(checkable)
         if checkable:
@@ -162,6 +173,8 @@ class SettingsWindow(BaseWindow):
                 checked = self.settings_manager.settings.dark_mode_enabled.get()
             elif name == "check_for_updates":
                 checked = self.settings_manager.settings.latest_version_check.get()
+            elif name == "allow_online_mode":
+                checked = self.settings_manager.settings.allow_online_mode.get()
 
             file_item.setCheckState(Qt.CheckState.Checked if checked else Qt.CheckState.Unchecked)
         # prevent file_item from being edited
@@ -169,6 +182,8 @@ class SettingsWindow(BaseWindow):
         file_item.setData(name, Qt.ItemDataRole.UserRole)
         file_item.setData(display_name, Qt.ItemDataRole.DisplayRole)
         file_item.setSizeHint(QSize(0, 24))
+        if description:
+            file_item.setToolTip(description)
         parent_item.appendRow(file_item)
 
     def on_item_clicked(self, index):
@@ -192,6 +207,9 @@ class SettingsWindow(BaseWindow):
         elif name == "check_for_updates":
             checked = item.checkState() == Qt.CheckState.Checked
             self.settings_manager.settings.latest_version_check.set(checked)
+        elif name == "allow_online_mode":
+            checked = item.checkState() == Qt.CheckState.Checked
+            self.settings_manager.settings.allow_online_mode.set(checked)
         elif name == "reset_settings":
             self.app.reset_settings()
         else:

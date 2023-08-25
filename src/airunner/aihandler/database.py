@@ -201,6 +201,7 @@ class RunAISettings(BaseSettings):
         self.dark_mode_enabled = BooleanVar(app)
         self.resize_on_paste = BooleanVar(app)
         self.image_to_new_layer = BooleanVar(app)
+        self.allow_online_mode = BooleanVar(app, True)
 
         # toolkit
         self.primary_color = StringVar(app, DEFAULT_BRUSH_PRIMARY_COLOR)
@@ -328,6 +329,7 @@ class RunAISettings(BaseSettings):
         self.outpaint_on_paste.set(False)
         self.resize_on_paste.set(False)
         self.image_to_new_layer.set(False)
+        self.allow_online_mode.set(True)
 
         # misc
         self.nsfw_filter.set(True)

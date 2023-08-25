@@ -24,7 +24,7 @@ from airunner.aihandler.mixins.compel_mixin import CompelMixin
 from airunner.aihandler.mixins.scheduler_mixin import SchedulerMixin
 from airunner.aihandler.settings import MAX_SEED, LOG_LEVEL, AIRUNNER_ENVIRONMENT
 from airunner.aihandler.enums import MessageCode
-from airunner.aihandler.settings_manager import ApplicationData
+from airunner.aihandler.settings_manager import ApplicationData, SettingsManager
 from airunner.prompt_builder.prompt_data import PromptData
 
 from controlnet_aux.processor import Processor
@@ -67,6 +67,7 @@ class SDRunner(
     _model = None
     requested_data = None
     current_clip_skip = 0
+    _allow_online_mode = None
 
     # controlnet atributes
     processor = None
@@ -78,10 +79,8 @@ class SDRunner(
     text_encoder_model = ""
     inpaint_vae_model = ""
     _controlnet_image = None
-
     # end controlnet atributes
 
-    # controlnet properties
     def controlnet(self):
         if self._controlnet is None \
             or self.current_controlnet_type != self.controlnet_type:
@@ -103,6 +102,16 @@ class SDRunner(
     def controlnet_type(self):
         controlnet_type = self.options.get("controlnet", "canny")
         return controlnet_type.replace(" ", "_")
+
+    @property
+    def allow_online_when_missing_files(self):
+        """
+        This settings prevents the application from going online when a file is missing.
+        :return:
+        """
+        if self._allow_online_mode is None:
+            self._allow_online_mode = self.settings_manager.settings.allow_online_mode.get()
+        return self._allow_online_mode
 
     @property
     def local_files_only(self):
@@ -636,6 +645,7 @@ class SDRunner(
 
     def  __init__(self, **kwargs):
         logger.set_level(LOG_LEVEL)
+        self.settings_manager = SettingsManager()
         self.application_data = ApplicationData()
         self.safety_checker_model = self.application_data.available_models_by_section("safety_checker")
         self.text_encoder_model = self.application_data.available_models_by_section("text_encoder")
@@ -1668,7 +1678,7 @@ class SDRunner(
                 self.send_message("Downloading model files")
                 self.local_files_only = False
             else:
-                self.send_error("Required files not found, enable online access to download and try again")
+                self.send_error("Required files not found, enable online access to download")
                 return None
             self.attempt_download = True
             if action == "controlnet":
