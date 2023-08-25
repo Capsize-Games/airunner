@@ -864,8 +864,12 @@ class MainWindow(
         )
         # get max progressbar value
         if nsfw_content_detected and self.settings_manager.settings.nsfw_filter.get():
-            self.message_handler("NSFW content detected, try again.", error=True)
-        elif data["options"][f"deterministic_generation"]:
+            self.message_handler({
+                "message": "NSFW content detected, try again.",
+                "code": MessageCode.ERROR
+            })
+
+        if data["options"][f"deterministic_generation"]:
             self.deterministic_images = images
             DeterministicGenerationWindow(
                 self.settings_manager,
