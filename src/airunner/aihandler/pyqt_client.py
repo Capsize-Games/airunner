@@ -117,31 +117,7 @@ class OfflineClient(QtCore.QObject):
         logger.error(error)
 
     def callback(self, data):
-        action = data.get("action")
-        model = data["options"][f"model"]
-
         data["do_base64"] = self.do_base64
-
-        # on model change, reload the runner
-        if (action in ("txt2img", "img2img") and self.current_txt2img_model != model) or (action in ("inpaint", "outpaint") and self.current_inpaint_model != model):
-            do_reload = False
-            if action in ("txt2img", "img2img"):
-                if self.current_txt2img_model is not None:
-                    do_reload = True
-                self.current_txt2img_model = model
-            elif action in ("inpaint", "outpaint"):
-                if self.current_inpaint_model is not None:
-                    do_reload = True
-                self.current_inpaint_model = model
-            if do_reload:
-                # self.init_sd_runner()
-                self.sd_runner.initialized = False
-                self.sd_runner.reload_model = True
-
-        if (action in ("txt2img", "img2img") and self.sd_runner.action in ("inpaint", "outpaint")) or \
-            (action in ("inpaint", "outpaint") and self.sd_runner.action in ("txt2img", "img2img")):
-            self.sd_runner.initialized = False
-
         self.sd_runner.generator_sample(data)
 
     def create_worker_thread(self):
