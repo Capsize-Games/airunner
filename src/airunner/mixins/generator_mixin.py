@@ -675,11 +675,7 @@ class GeneratorMixin(LoraMixin):
             extra_options = {}
 
         if self.enable_controlnet and "image" in extra_options:
-            extra_options["image"] = self.controlnet_settings.current_image
-
-        if self.current_section in ["img2img", "depth2img", "pix2pix"]:
-            # check if we are using an imported image or active grid area
-            pass
+            extra_options["input_image"] = self.controlnet_settings.current_image
 
         if self.random_seed or not seed:
             self.set_seed()
