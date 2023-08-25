@@ -868,7 +868,6 @@ class SDRunner(
         elif not self.use_kandinsky:
             if self.use_compel:
                 try:
-                    logger.info(f"Using compel")
                     args.update({
                         "prompt_embeds": self.prompt_embeds,
                         "negative_prompt_embeds": self.negative_prompt_embeds,
@@ -880,7 +879,6 @@ class SDRunner(
                         "negative_prompt": self.negative_prompt,
                     })
             else:
-                logger.info(f"Using prompts")
                 args.update({
                     "prompt": self.prompt,
                     "negative_prompt": self.negative_prompt,
