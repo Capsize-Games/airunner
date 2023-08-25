@@ -1,12 +1,11 @@
 import base64
-import importlib
 import os
 import gc
 import re
 from io import BytesIO
 import traceback
 import torch
-from PIL import Image
+from PIL import Image, ImageDraw, ImageFont
 import numpy as np
 import requests
 from torchvision import transforms
@@ -829,7 +828,7 @@ class SDRunner(
         if self.is_txt2vid:
             return self.handle_txt2vid_output(output)
         else:
-            nsfw_content_detected = None
+            nsfw_content_detected = []
             images = None
             if output:
                 try:
@@ -1062,7 +1061,7 @@ class SDRunner(
         from pytorch_lightning import seed_everything
         image = self.image
         mask = self.mask
-        nsfw_content_detected = None
+        nsfw_content_detected = []
         seed_everything(self.seed)
         extra_args = self.prepare_extra_args(data, image, mask)
 
@@ -1228,11 +1227,26 @@ class SDRunner(
                         image = self.image_to_base64(image)
                     images[i] = image
 
+            has_nsfw = False
+            for i, is_nsfw in enumerate(nsfw_content_detected):
+                if is_nsfw:
+                    has_nsfw = True
+                    # iterate over each image and add the word "NSFW" to the
+                    # center with bold white letters
+                    image = images[i]
+                    image = image.convert("RGBA")
+                    draw = ImageDraw.Draw(image)
+                    font = ImageFont.truetype("arial.ttf", 30)
+                    w, h = draw.textsize(f"NSFW", font=font)
+                    draw.text(((image.width - w) / 2, (image.height - h) / 2), "NSFW", font=font,
+                              fill=(255, 255, 255, 255))
+                    images[i] = image.convert("RGB")
+
             self.send_message({
                 "images": images,
                 "data": data,
                 "request_type": data.get("request_type", None),
-                "nsfw_content_detected": nsfw_content_detected is True,
+                "nsfw_content_detected": has_nsfw,
             }, MessageCode.IMAGE_GENERATED)
 
     def final_callback(self):
@@ -1290,10 +1304,7 @@ class SDRunner(
             })
         self.send_message(res, code=MessageCode.PROGRESS)
 
-    def generator_sample(
-        self,
-        data: dict
-    ):
+    def generator_sample(self, data: dict):
         logger.info("generator_sample called")
         self.process_data(data)
 
