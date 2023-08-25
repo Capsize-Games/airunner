@@ -833,7 +833,7 @@ class SDRunner(
         if self.is_txt2vid:
             return self.handle_txt2vid_output(output)
         else:
-            nsfw_content_detected = []
+            nsfw_content_detected = None
             images = None
             if output:
                 try:
@@ -1066,7 +1066,7 @@ class SDRunner(
         from pytorch_lightning import seed_everything
         image = self.image
         mask = self.mask
-        nsfw_content_detected = []
+        nsfw_content_detected = None
         seed_everything(self.seed)
         extra_args = self.prepare_extra_args(data, image, mask)
 
@@ -1239,19 +1239,20 @@ class SDRunner(
                     images[i] = image
 
             has_nsfw = False
-            for i, is_nsfw in enumerate(nsfw_content_detected):
-                if is_nsfw:
-                    has_nsfw = True
-                    # iterate over each image and add the word "NSFW" to the
-                    # center with bold white letters
-                    image = images[i]
-                    image = image.convert("RGBA")
-                    draw = ImageDraw.Draw(image)
-                    font = ImageFont.truetype("arial.ttf", 30)
-                    w, h = draw.textsize(f"NSFW", font=font)
-                    draw.text(((image.width - w) / 2, (image.height - h) / 2), "NSFW", font=font,
-                              fill=(255, 255, 255, 255))
-                    images[i] = image.convert("RGB")
+            if nsfw_content_detected is not None:
+                for i, is_nsfw in enumerate(nsfw_content_detected):
+                    if is_nsfw:
+                        has_nsfw = True
+                        # iterate over each image and add the word "NSFW" to the
+                        # center with bold white letters
+                        image = images[i]
+                        image = image.convert("RGBA")
+                        draw = ImageDraw.Draw(image)
+                        font = ImageFont.truetype("arial.ttf", 30)
+                        w, h = draw.textsize(f"NSFW", font=font)
+                        draw.text(((image.width - w) / 2, (image.height - h) / 2), "NSFW", font=font,
+                                  fill=(255, 255, 255, 255))
+                        images[i] = image.convert("RGB")
 
             self.send_message({
                 "images": images,
