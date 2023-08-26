@@ -754,6 +754,8 @@ class SDRunner(
             self.use_enable_sequential_cpu_offload != options.get("use_enable_sequential_cpu_offload", True))) or \
            (self.model is not None and self.model != requested_model):  # model change
             self.reload_model = True
+            self.clear_scheduler()
+            self.clear_controlnet()
 
         if ((self.controlnet_loaded and not enable_controlnet) or
            (not self.controlnet_loaded and enable_controlnet)):
@@ -1540,8 +1542,8 @@ class SDRunner(
 
         if self.clip_skip == self.current_clip_skip:
             return pipeline
-
         self.current_clip_skip = self.clip_skip
+
         text_encoder = self.from_pretrained(
             pipeline_action="text_encoder",
             model=self.text_encoder_model,
