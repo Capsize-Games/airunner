@@ -44,13 +44,18 @@ class ControlNetSettingsWidget(BaseWidget):
     def current_controlnet_image(self):
         return self.data.controlnet_image
 
+    def handle_toggle_controlnet(self, value):
+        if self.app.current_section not in ["txt2img", "img2img", "outpaint"] or \
+           self.app.currentTabSection != "stablediffusion":
+            value = False
+        self.app.handle_value_change("enable_controlnet", value)
+
     def __init__(self, *args, **kwargs):
         super().__init__(*args, **kwargs)
         self.data = ControlNetSettingsData()
-        
+
         self.template.controlnet_groupbox.setChecked(self.app.enable_controlnet)
-        self.template.controlnet_groupbox.toggled.connect(
-            partial(self.app.handle_value_change, "enable_controlnet"))
+        self.template.controlnet_groupbox.toggled.connect(self.handle_toggle_controlnet)
         self.add_controlnet_widgets()
         self.template.use_active_grid_area.toggled.connect(
             partial(self.toggle_use_active_grid_area))

@@ -46,7 +46,7 @@
       <property name="leftMargin">
        <number>0</number>
       </property>
-      <item row="0" column="0" colspan="2">
+      <item row="1" column="0" colspan="2">
        <widget class="QFrame" name="model_frame">
         <property name="minimumSize">
          <size>
@@ -62,7 +62,7 @@
         </property>
        </widget>
       </item>
-      <item row="1" column="0" colspan="2">
+      <item row="2" column="0" colspan="2">
        <layout class="QGridLayout" name="gridLayout_4">
         <property name="leftMargin">
          <number>15</number>
@@ -371,6 +371,18 @@
         </item>
        </layout>
       </item>
+      <item row="0" column="0">
+       <widget class="QLabel" name="label">
+        <property name="font">
+         <font>
+          <pointsize>9</pointsize>
+         </font>
+        </property>
+        <property name="text">
+         <string>ControlNet is only available for Stable Diffusion txt2img, img2img and inpaint.</string>
+        </property>
+       </widget>
+      </item>
      </layout>
     </widget>
    </item>
@@ -393,6 +405,5 @@
  <connections/>
  <buttongroups>
   <buttongroup name="buttonGroup"/>
-  <buttongroup name="buttonGroup_2"/>
  </buttongroups>
 </ui>
