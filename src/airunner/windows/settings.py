@@ -1,6 +1,6 @@
 from PyQt6.QtCore import Qt, QSize
 from PyQt6.QtGui import QStandardItemModel, QStandardItem, QBrush, QColor, QPainter
-from PyQt6.QtWidgets import QStyledItemDelegate, QStyleOptionViewItem, QLabel, QWidget, QVBoxLayout
+from PyQt6.QtWidgets import QStyledItemDelegate, QStyleOptionViewItem, QLabel, QWidget, QVBoxLayout, QPlainTextEdit
 
 from airunner.windows.base_window import BaseWindow
 # open the version file from the root of the project and get the VERSION variable string from it
@@ -181,18 +181,19 @@ class SettingsWindow(BaseWindow):
         file_item.setFlags(file_item.flags() & ~Qt.ItemFlag.ItemIsEditable)
         file_item.setData(name, Qt.ItemDataRole.UserRole)
         file_item.setData(display_name, Qt.ItemDataRole.DisplayRole)
+        file_item.setData(description, Qt.ItemDataRole.ToolTipRole)
         file_item.setSizeHint(QSize(0, 24))
-        if description:
-            file_item.setToolTip(description)
         parent_item.appendRow(file_item)
 
     def on_item_clicked(self, index):
         item = self.model.itemFromIndex(index)
         if item.parent() is None:
             return
+
         section = item.parent().data(Qt.ItemDataRole.DisplayRole)
         name = item.data(Qt.ItemDataRole.UserRole)
         display_name = item.data(Qt.ItemDataRole.DisplayRole)
+        description = item.data(Qt.ItemDataRole.ToolTipRole)
 
         if name == "resize_on_import":
             checked = item.checkState() == Qt.CheckState.Checked
@@ -212,10 +213,9 @@ class SettingsWindow(BaseWindow):
             self.settings_manager.settings.allow_online_mode.set(checked)
         elif name == "reset_settings":
             self.app.reset_settings()
-        else:
-            self.show_content(section, display_name, name)
+        self.show_content(section, display_name, name, description)
 
-    def show_content(self, section, display_name, name):
+    def show_content(self, section, display_name, name, description):
         # create a label widget
         label = QLabel(f"<p><b>{section} > {display_name}</b></p>")
 
@@ -237,6 +237,13 @@ class SettingsWindow(BaseWindow):
         self.scroll_layout.addWidget(label)
         if widget_object:
             self.scroll_layout.addWidget(widget_object)
+        elif description:
+            description_text_edit = QPlainTextEdit()
+            description_text_edit.setReadOnly(True)
+            description_text_edit.setPlainText(description)
+            description_text_edit.setFrameStyle(0)
+            description_text_edit.setStyleSheet("QPlainTextEdit { background-color: transparent; border: none; }")
+            self.scroll_layout.addWidget(description_text_edit)
 
     def clear_scroll_area(self):
         while self.scroll_layout.count():
