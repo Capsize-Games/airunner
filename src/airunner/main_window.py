@@ -638,8 +638,12 @@ class MainWindow(
 
     def enable_disable_controlnet_tab(self):
         enable = self.currentTabSection in ["stablediffusion"] and \
-                 self.current_section not in ["upscale", "superresolution"]
-        self.center_panel.setTabEnabled(2, enable)
+                 self.current_section in ["txt2img", "img2img", "outpaint"]
+        self.center_panel.setTabEnabled(1, enable)
+        if not enable:
+            self.controlnet_settings.template.controlnet_groupbox.setChecked(False)
+        else:
+            self.controlnet_settings.template.controlnet_groupbox.setChecked(self.enable_controlnet)
 
     def handle_value_change(self, attr_name, value=None, widget=None):
         attr = getattr(self, f"{attr_name}_var")
