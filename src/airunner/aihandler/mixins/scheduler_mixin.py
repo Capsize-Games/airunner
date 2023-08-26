@@ -47,11 +47,11 @@ class SchedulerMixin:
         return self.action
 
     def clear_scheduler(self):
-        # self.scheduler_name = ""
-        # self.do_change_scheduler = True
-        # self._scheduler = None
-        # self.current_scheduler_name = None
-        pass
+        logger.info("Clearing scheduler")
+        self.scheduler_name = ""
+        self.do_change_scheduler = True
+        self._scheduler = None
+        self.current_scheduler_name = None
 
     def load_scheduler(self, force_scheduler_name=None, config=None):
         if self.use_kandinsky:
