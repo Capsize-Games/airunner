@@ -1490,7 +1490,7 @@ class SDRunner(
             else:
                 self.send_model_loading_message(self.model_path)
 
-                if self.is_superresolution:
+                if self.is_upscale:
                     kwargs["low_res_scheduler"] = self.load_scheduler(force_scheduler_name="DDPM")
 
                 if self.enable_controlnet:
