@@ -485,11 +485,13 @@ class GeneratorMixin(LoraMixin):
             metadata = self.prepare_metadata(data)
         else:
             metadata = None
-        if metadata:
-            image.save(os.path.join(path, filename + extension), pnginfo=metadata)
-        else:
-            image.save(os.path.join(path, filename + extension))
-        self.set_status_label(f"Image exported to {os.path.join(path, filename + extension)}")
+
+        if image:
+            if metadata:
+                image.save(os.path.join(path, filename + extension), pnginfo=metadata)
+            else:
+                image.save(os.path.join(path, filename + extension))
+            self.set_status_label(f"Image exported to {os.path.join(path, filename + extension)}")
 
     def generate_callback(self):
         self.generate()
