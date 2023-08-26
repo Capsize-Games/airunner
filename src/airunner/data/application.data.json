@@ -191,7 +191,7 @@
                     "path": "cerspense/zeroscope_v2_576w",
                     "branch": "fp16",
                     "version": "SD 1.5",
-                    "category": "zeroscope",
+                    "category": "stablediffusion",
                     "pipeline_action": "txt2vid",
                     "enabled": true
                 },
@@ -200,7 +200,7 @@
                     "path": "cerspense/zeroscope_v2_XL",
                     "branch": "fp16",
                     "version": "SD 1.5",
-                    "category": "zeroscope",
+                    "category": "stablediffusion",
                     "pipeline_action": "txt2vid",
                     "enabled": true
                 },
@@ -209,7 +209,7 @@
                     "path": "damo-vilab/text-to-video-ms-1.7b",
                     "branch": "fp16",
                     "version": "SD 1.5",
-                    "category": "damo-vilab",
+                    "category": "stablediffusion",
                     "pipeline_action": "txt2vid",
                     "enabled": true
                 }
@@ -415,7 +415,7 @@
             "upscale": {
                 "SD 1.5": {
                     "stablediffusion": {
-                        "classname": "diffusers.StableDiffusionUpscalePipeline"
+                        "classname": "diffusers.StableDiffusionLatentUpscalePipeline"
                     }
                 }
             },
