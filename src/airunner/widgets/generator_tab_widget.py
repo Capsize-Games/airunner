@@ -14,6 +14,7 @@ class GeneratorTabWidget(BaseWidget):
     name = "generator_tab"
     data = {}
     clip_skip_disabled_tabs = ["kandinsky", "shapegif"]
+    clip_skip_disabled_sections = ["upscale", "superresolution", "txt2vid"]
     _random_image_embed_seed = False
 
     @property
@@ -144,21 +145,22 @@ class GeneratorTabWidget(BaseWidget):
             partial(self.handle_value_change, "use_prompt_builder_checkbox", widget=use_prompt_builder_checkbox))
         self.data[self.tab_section][self.tab]["use_prompt_builder_checkbox"] = use_prompt_builder_checkbox
         self.add_widget_to_grid(use_prompt_builder_checkbox)
+        checkbox_layout.addWidget(use_prompt_builder_checkbox)
 
         # use controlnet checkbox
-        use_controlnet_checkbox = QCheckBox()
-        use_controlnet_checkbox.setStyleSheet(stylesheet)
-        use_controlnet_checkbox.setObjectName("use_controlnet_checkbox")
-        use_controlnet_checkbox.setText("ControlNet")
-        use_controlnet_checkbox.setChecked(self.app.enable_controlnet)
-        use_controlnet_checkbox.stateChanged.connect(
-            partial(self.handle_value_change, "enable_controlnet", widget=use_controlnet_checkbox))
-        self.data[self.tab_section][self.tab]["enable_controlnet"] = use_controlnet_checkbox
-        self.use_controlnet_checkbox = use_controlnet_checkbox
+        if self.tab_section == "stablediffusion" and self.tab in ["txt2img", "img2img", "outpaint"]:
+            use_controlnet_checkbox = QCheckBox()
+            use_controlnet_checkbox.setStyleSheet(stylesheet)
+            use_controlnet_checkbox.setObjectName("use_controlnet_checkbox")
+            use_controlnet_checkbox.setText("ControlNet")
+            use_controlnet_checkbox.setChecked(self.app.enable_controlnet)
+            use_controlnet_checkbox.stateChanged.connect(
+                partial(self.handle_value_change, "enable_controlnet", widget=use_controlnet_checkbox))
+            self.data[self.tab_section][self.tab]["enable_controlnet"] = use_controlnet_checkbox
+            self.use_controlnet_checkbox = use_controlnet_checkbox
 
-        # add checkboxes to checkbox layout
-        checkbox_layout.addWidget(use_prompt_builder_checkbox)
-        checkbox_layout.addWidget(use_controlnet_checkbox)
+            # add checkboxes to checkbox layout
+            checkbox_layout.addWidget(use_controlnet_checkbox)
 
         # add the checkbox layout to the grid
         self.add_widget_to_grid(checkbox_widget)
@@ -360,7 +362,7 @@ class GeneratorTabWidget(BaseWidget):
         )
         self.data[self.tab_section][self.tab]["samples_slider_widget"] = samples_widget
 
-        if self.tab_section not in self.clip_skip_disabled_tabs:
+        if self.tab_section not in self.clip_skip_disabled_tabs and self.tab not in self.clip_skip_disabled_sections:
             self.load_clip_skip_slider()
 
         widget = QWidget()
