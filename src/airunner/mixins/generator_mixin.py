@@ -140,18 +140,6 @@ class GeneratorMixin(LoraMixin):
         self.strength_var.set(val)
 
     @property
-    def zeroshot_var(self):
-        return self.settings.zeroshot
-
-    @property
-    def zeroshot(self):
-        return self.zeroshot_var.get()
-
-    @zeroshot.setter
-    def zeroshot(self, val):
-        self.zeroshot_var.set(val)
-
-    @property
     def enable_controlnet_var(self):
         return self.settings.enable_controlnet
 
@@ -749,7 +737,6 @@ class GeneratorMixin(LoraMixin):
             "controlnet_image": self.controlnet_settings.current_controlnet_image,
             "deterministic_generation": self.deterministic,
             "deterministic_seed": False,
-            "zeroshot": self.zeroshot,
             "model_base_path": self.model_base_path,
             "outpaint_model_path": self.settings_manager.settings.outpaint_model_path.get(),
             "pix2pix_model_path": self.settings_manager.settings.pix2pix_model_path.get(),
