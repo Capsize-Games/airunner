@@ -30,5 +30,4 @@ class GeneratorSettings(Base):
     controlnet_var = Column(String, default="")
     enable_controlnet = Column(Boolean, default=False)
     controlnet_guidance_scale = Column(Integer, default=50)
-    zeroshot = Column(Boolean, default=False)
     clip_skip = Column(Integer, default=0)

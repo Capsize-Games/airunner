@@ -185,35 +185,7 @@
                     "enabled": true
                 }
             ],
-            "txt2vid": [
-                {
-                    "name": "Zeroscope v2",
-                    "path": "cerspense/zeroscope_v2_576w",
-                    "branch": "fp16",
-                    "version": "SD 1.5",
-                    "category": "stablediffusion",
-                    "pipeline_action": "txt2vid",
-                    "enabled": true
-                },
-                {
-                    "name": "Zeroscope v2 XL",
-                    "path": "cerspense/zeroscope_v2_XL",
-                    "branch": "fp16",
-                    "version": "SD 1.5",
-                    "category": "stablediffusion",
-                    "pipeline_action": "txt2vid",
-                    "enabled": true
-                },
-                {
-                    "name": "damo-vilab",
-                    "path": "damo-vilab/text-to-video-ms-1.7b",
-                    "branch": "fp16",
-                    "version": "SD 1.5",
-                    "category": "stablediffusion",
-                    "pipeline_action": "txt2vid",
-                    "enabled": true
-                }
-            ],
+
             "upscale": [
                 {
                     "name": "sd-x2-latent-upscaler",
@@ -429,13 +401,7 @@
             "txt2vid": {
                 "SD 1.5": {
                     "stablediffusion": {
-                        "classname": "diffusers.TextToVideoSDPipeline"
-                    },
-                    "damo-vilab": {
-                        "classname": "diffusers.TextToVideoSDPipeline"
-                    },
-                    "zeroscope": {
-                        "classname": "diffusers.DiffusionPipeline"
+                        "classname": "diffusers.TextToVideoZeroPipeline"
                     }
                 }
             },
