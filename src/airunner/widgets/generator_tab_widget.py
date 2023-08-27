@@ -156,13 +156,17 @@ class GeneratorTabWidget(BaseWidget):
             use_controlnet_checkbox.stateChanged.connect(
                 partial(self.handle_value_change, "enable_controlnet", widget=use_controlnet_checkbox))
             self.data[self.tab_section][self.tab]["enable_controlnet"] = use_controlnet_checkbox
-            self.use_controlnet_checkbox = use_controlnet_checkbox
+            self.data[self.tab_section][self.tab]["use_controlnet_checkbox"] = use_controlnet_checkbox
 
             # add checkboxes to checkbox layout
             checkbox_layout.addWidget(use_controlnet_checkbox)
 
         # add the checkbox layout to the grid
         self.add_widget_to_grid(checkbox_widget)
+
+    @property
+    def use_controlnet_checkbox(self):
+        return self.data[self.app.currentTabSection][self.app.current_section]["use_controlnet_checkbox"]
 
     def add_input_image_widgets(self):
         if self.app.current_section not in ["img2img", "pix2pix", "depth2img"]:
