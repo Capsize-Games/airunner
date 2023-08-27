@@ -76,7 +76,6 @@ class GeneratorTabWidget(BaseWidget):
         self.add_prompt_widgets()
         self.add_optional_tool_checkbox_widgets()
         self.add_input_image_widgets()
-        self.add_zeroshot_widget()
         self.add_model_widgets()
         self.add_scheduler_widgets()
         self.add_seed_widgets()
@@ -148,7 +147,7 @@ class GeneratorTabWidget(BaseWidget):
         checkbox_layout.addWidget(use_prompt_builder_checkbox)
 
         # use controlnet checkbox
-        if self.tab_section == "stablediffusion" and self.tab in ["txt2img", "img2img", "outpaint"]:
+        if self.tab_section == "stablediffusion" and self.tab in ["txt2img", "img2img", "outpaint", "txt2vid"]:
             use_controlnet_checkbox = QCheckBox()
             use_controlnet_checkbox.setStyleSheet(stylesheet)
             use_controlnet_checkbox.setObjectName("use_controlnet_checkbox")
@@ -185,7 +184,8 @@ class GeneratorTabWidget(BaseWidget):
             self.load_model_by_section(self.app.currentTabSection, section)
 
     def load_model_by_section(self, tab_section, section):
-        models = self.app.application_data.available_model_names(tab_section, section, enabled_only=True)
+        requested_section = "txt2img" if section == "txt2vid" else section
+        models = self.app.application_data.available_model_names(tab_section, requested_section, enabled_only=True)
         self.data[tab_section][section]["model_dropdown"].addItems(models)
 
     def add_model_widgets(self):
@@ -382,18 +382,6 @@ class GeneratorTabWidget(BaseWidget):
                 partial(self.handle_value_change, "variation", widget=variation_checkbox))
             self.add_widget_to_grid(variation_checkbox)
 
-    def add_zeroshot_widget(self):
-        if self.tab != "txt2vid":
-            return
-        # create a checkbox for zeroshot
-        zeroshot_checkbox = QCheckBox("Zero Shot")
-        zeroshot_checkbox.setObjectName("zeroshot_checkbox")
-        zeroshot_checkbox.setChecked(self.app.zeroshot)
-        zeroshot_checkbox.toggled.connect(
-            partial(self.handle_value_change, "zeroshot", widget=zeroshot_checkbox))
-
-        self.add_widget_to_grid(zeroshot_checkbox)
-
     def add_frames_widgets(self):
         if self.tab != "txt2vid":
             return
@@ -548,9 +536,6 @@ class GeneratorTabWidget(BaseWidget):
                         attr.set(widget.value())
                     except AttributeError:
                         print("something went wrong while setting the value")
-
-        if attr_name == "zeroshot":
-            self.refresh_model_list()
 
     def set_stylesheet(self):
         super().set_stylesheet()
