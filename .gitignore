@@ -17,4 +17,4 @@ settings.pickle
 .run
 *egg-info*
 venv
-extensions
+src/airunner/extensions/
