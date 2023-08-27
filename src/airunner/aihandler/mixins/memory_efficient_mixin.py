@@ -135,14 +135,14 @@ class MemoryEfficientMixin:
         #     self.pipe.unet.to(memory_format=torch.channels_last)
         # else:
         logger.info(f"Compiling torch model {model_name}")
-        self.pipe.unet.to(memory_format=torch.channels_last)
-        self.pipe.unet = torch.compile(self.pipe.unet)
+        #self.pipe.unet.to(memory_format=torch.channels_last)
+        self.pipe.unet = torch.compile(self.pipe.unet, mode="reduce-overhead", fullgraph=True)
         self.pipe(prompt=self.prompt)
         # self.save_unet(file_path, file_name)
         self.torch_compile_applied = True
 
     def enable_memory_chunking(self):
-        if self.is_txt2vid and not self.is_zeroshot:
+        if self.is_txt2vid:
             self.pipe.unet.enable_forward_chunking(chunk_size=1, dim=1)
 
     def move_pipe_to_cuda(self, pipe):
