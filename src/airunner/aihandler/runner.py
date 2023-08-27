@@ -335,10 +335,6 @@ class SDRunner(
         return self.action == "txt2img"
 
     @property
-    def is_zeroshot(self):
-        return self.options.get("zeroshot", False) is True
-
-    @property
     def is_shapegif(self):
         return self.options.get(f"generator_section") == "shapegif"
 
@@ -597,7 +593,7 @@ class SDRunner(
             StableDiffusionControlNetImg2ImgPipeline,
             StableDiffusionControlNetInpaintPipeline,
         )
-        if self.is_txt2img or self.is_zeroshot:
+        if self.is_txt2img or self.is_txt2vid:
             return StableDiffusionControlNetPipeline
         elif self.is_img2img:
             return StableDiffusionControlNetImg2ImgPipeline
@@ -835,8 +831,6 @@ class SDRunner(
             self.log_error(error_message)
             output = None
 
-        if self.is_zeroshot:
-            return self.handle_zeroshot_output(output)
         if self.is_txt2vid:
             return self.handle_txt2vid_output(output)
         else:
@@ -884,7 +878,7 @@ class SDRunner(
                 "prompt": self.prompt,
                 "negative_prompt": self.negative_prompt,
             })
-            if not self.is_zeroshot:
+            if not self.is_txt2vid:
                 args["num_frames"] = self.n_samples
         elif not self.use_kandinsky:
             if self.use_compel:
@@ -928,8 +922,8 @@ class SDRunner(
 
         self.load_safety_checker()
 
-        if self.is_zeroshot:
-            return self.call_pipe_zeroshot(**args)
+        if self.is_txt2vid:
+            return self.call_pipe_txt2vid(**args)
 
         if self.is_shapegif:
             return self.call_shapegif_pipe()
@@ -985,7 +979,7 @@ class SDRunner(
             "nsfw_content_detected": None,
         }
 
-    def call_pipe_zeroshot(self, **kwargs):
+    def call_pipe_txt2vid(self, **kwargs):
         video_length = self.n_samples
         chunk_size = 4
         prompt = kwargs["prompt"]
