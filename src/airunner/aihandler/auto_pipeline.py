@@ -32,8 +32,6 @@ class AutoImport:
         application_data = ApplicationData()
         if pipeline_action == "txt2img" and requested_action == "img2img":
             pipeline_action = "img2img"
-        if pipeline_action == "txt2vid" and category in ["damo-vilab", "zeroscope"]:
-            pipeline_action = category
         pipeline = application_data.available_pipeline_by_section(pipeline_action, version, category)
 
         try:

@@ -73,7 +73,7 @@ class TexttovideoMixin:
                 new_video_frames.append(np.array(image))
         return new_video_frames if len(new_video_frames) > 0 else video_frames
 
-    def handle_zeroshot_output(self, output):
+    def handle_txt2vid_output(self, output):
         if self.enable_controlnet:
             result = output["frames"]
         else:
@@ -85,17 +85,4 @@ class TexttovideoMixin:
         #print type of result
         logger.info(f"Save complete")
         pil_image = Image.fromarray(result[0])
-        return pil_image, None
-
-    def handle_txt2vid_output(self, output):
-        pil_image = None
-        if output:
-            from diffusers.utils import export_to_video
-            video_frames = output.frames
-            os.makedirs(os.path.dirname(self.txt2vid_file), exist_ok=True)
-            #self.enhance_video(video_frames)
-            export_to_video(video_frames, self.txt2vid_file)
-            pil_image = Image.fromarray(video_frames[0])
-        else:
-            print("failed to get output from txt2vid")
         return pil_image, None

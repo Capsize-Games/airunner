@@ -102,9 +102,5 @@ class GeneratorController(BaseController):
         return self.settings.controlnet_guidance_scale
 
     @property
-    def zeroshot(self):
-        return self.settings.zeroshot
-
-    @property
     def clip_skip(self):
         return self.settings.clip_skip
