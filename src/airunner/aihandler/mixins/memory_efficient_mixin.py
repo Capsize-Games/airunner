@@ -94,12 +94,12 @@ class MemoryEfficientMixin:
             return
         self.accelerated_transformers_applied = self.use_accelerated_transformers
 
-        from diffusers.models.attention_processor import AttnProcessor2_0
+        from diffusers.models.attention_processor import AttnProcessor, AttnProcessor2_0
         if self.use_kandinsky:
             return
         if not self.cuda_is_available or not self.use_accelerated_transformers:
             logger.info("Disabling accelerated transformers")
-            self.pipe.unet.set_default_attn_processor()
+            self.pipe.unet.set_attn_processor(AttnProcessor())
         else:
             self.pipe.unet.set_attn_processor(AttnProcessor2_0())
 
