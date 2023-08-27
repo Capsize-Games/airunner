@@ -928,7 +928,11 @@ class SDRunner(
         if self.is_shapegif:
             return self.call_shapegif_pipe()
 
-        return self.pipe(**args)
+        try:
+            return self.pipe(**args)
+        except AssertionError as e:
+            self.log_error("unknown Assertion error", e)
+            return None
 
     def call_shapegif_pipe(self):
         kwargs = {
