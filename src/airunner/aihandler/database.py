@@ -52,7 +52,6 @@ DEFAULT_GENERATOR_SETTINGS = {
     "controlnet_var": "",
     "enable_controlnet": False,
     "controlnet_guidance_scale": 50,
-    "zeroshot": False,
     "clip_skip": 0,
     "variation": False,
 }
@@ -79,7 +78,6 @@ GENERATOR_TYPES = {
     "controlnet_var": StringVar,
     "enable_controlnet": BooleanVar,
     "controlnet_guidance_scale": IntVar,
-    "zeroshot": BooleanVar,
     "clip_skip": IntVar,
     "variation": BooleanVar,
 }
