@@ -173,23 +173,20 @@ class BaseSettings(PropertyBase):
         the property on this classed based on namespace. If it is not found, it
         will raise the AttributeError again.
         """
-        try:
-            super().__getattribute__(name)
-        except AttributeError as e:
-            # check if the property is on this class
-            # check if name_spaced already in name
-            namespace = self.namespace
-            if self.generator == "kandinsky":
-                namespace = f"kandinsky_{namespace}"
-            if self.generator == "shapegif":
-                namespace = f"shapegif_{namespace}"
-            if name.startswith(namespace):
-                raise e
-            else:
-                name_spaced = f"{namespace}_{name}"
-                if hasattr(self, name_spaced):
-                    return getattr(self, name_spaced)
-            raise e
+        # check if the property is on this class
+        # check if name_spaced already in name
+        namespace = self.namespace
+        if self.generator != "stablediffusion":
+            namespace = f"{self.generator}_{namespace}"
+        if name.startswith(namespace):
+            name_spaced = name
+        else:
+            name_spaced = f"{namespace}_{name}"
+        if hasattr(self, name_spaced):
+            return getattr(self, name_spaced)
+        elif name.startswith(namespace):
+            name = name.replace(namespace, "")
+        return DEFAULT_GENERATOR_SETTINGS[name]
 
     def set_namespace(self, namespace, generator="stablediffusion"):
         self.namespace = namespace
@@ -211,6 +208,27 @@ class RunAISettings(BaseSettings):
     This class should be used to interact with the settings database from
     within the application.
     """
+    def __getattr__(self, name):
+        """
+        when a property is called such as `steps` and it is not found, an
+        AttributeError is raised. This function will catch that and try to find
+        the property on this classed based on namespace. If it is not found, it
+        will raise the AttributeError again.
+        """
+        # check if the property is on this class
+        # check if name_spaced already in name
+        namespace = self.namespace
+        if self.generator != "stablediffusion":
+            namespace = f"{self.generator}_{namespace}"
+        if name.startswith(namespace):
+            name_spaced = name
+        else:
+            name_spaced = f"{namespace}_{name}"
+        if hasattr(self, name_spaced):
+            return getattr(self, name_spaced)
+        elif name.startswith(namespace):
+            name = name.replace(namespace, "")
+        return DEFAULT_GENERATOR_SETTINGS[name]
 
     def initialize(self, settings=None):
         app = self.app
