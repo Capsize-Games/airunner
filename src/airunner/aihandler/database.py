@@ -38,7 +38,9 @@ DEFAULT_GENERATOR_SETTINGS = {
     "width": 512,
     "scale": 750,
     "seed": 42,
+    "latents_seed": 84,
     "random_seed": True,
+    "random_latents_seed": True,
     "model_var": DEFAULT_MODEL,
     "scheduler_var": DEFAULT_SCHEDULER,
     "prompt_triggers": "",
@@ -51,9 +53,22 @@ DEFAULT_GENERATOR_SETTINGS = {
     "deterministic": False,
     "controlnet_var": "",
     "enable_controlnet": False,
+    "enable_input_image": False,
     "controlnet_guidance_scale": 50,
     "clip_skip": 0,
     "variation": False,
+    "input_image_use_imported_image": False,
+    "input_image_use_grid_image": True,
+    "input_image_recycle_grid_image": True,
+    "input_image_mask_use_input_image": True,
+    "input_image_mask_use_imported_image": False,
+
+    "controlnet_input_image_link_to_input_image": True,
+    "controlnet_input_image_use_imported_image": False,
+    "controlnet_use_grid_image": False,
+    "controlnet_recycle_grid_image": False,
+    "controlnet_mask_link_input_image": True,
+    "controlnet_mask_use_imported_image": False
 }
 GENERATOR_TYPES = {
     "prompt": StringVar,
@@ -64,7 +79,9 @@ GENERATOR_TYPES = {
     "width": IntVar,
     "scale": DoubleVar,
     "seed": IntVar,
+    "latents_seed": IntVar,
     "random_seed": BooleanVar,
+    "random_latents_seed": BooleanVar,
     "model_var": StringVar,
     "scheduler_var": StringVar,
     "prompt_triggers": StringVar,
@@ -77,9 +94,22 @@ GENERATOR_TYPES = {
     "deterministic": BooleanVar,
     "controlnet_var": StringVar,
     "enable_controlnet": BooleanVar,
+    "enable_input_image": BooleanVar,
     "controlnet_guidance_scale": IntVar,
     "clip_skip": IntVar,
     "variation": BooleanVar,
+
+    "input_image_use_imported_image": BooleanVar,
+    "input_image_use_grid_image": BooleanVar,
+    "input_image_recycle_grid_image": BooleanVar,
+    "input_image_mask_use_input_image": BooleanVar,
+    "input_image_mask_use_imported_image": BooleanVar,
+    "controlnet_input_image_link_to_input_image": BooleanVar,
+    "controlnet_input_image_use_imported_image": BooleanVar,
+    "controlnet_use_grid_image": BooleanVar,
+    "controlnet_recycle_grid_image": BooleanVar,
+    "controlnet_mask_link_input_image": BooleanVar,
+    "controlnet_mask_use_imported_image": BooleanVar
 }
 USER = os.environ.get("USER", "")
 default_model_path = os.path.join("/", "home", USER, "stablediffusion")
@@ -320,6 +350,11 @@ class RunAISettings(BaseSettings):
         self.negative_prompt_generator_prefix_b = StringVar(app, "")
         self.negative_prompt_generator_suffix_b = StringVar(app, "")
 
+        self.current_tab = StringVar(app, "stablediffusion")
+        self.current_section_stablediffusion = StringVar(app, "txt2img")
+        self.current_section_kandinsky = StringVar(app, "txt2img")
+        self.current_section_shapegif = StringVar(app, "txt2img")
+
 
     def reset_settings_to_default(self):
         # pasting / generating
@@ -411,6 +446,11 @@ class RunAISettings(BaseSettings):
         self.prompt_generator_suffix_b.set("")
         self.negative_prompt_generator_prefix_b.set("")
         self.negative_prompt_generator_suffix_b.set("")
+
+        self.current_tab.set("stablediffusion")
+        self.current_section_stablediffusion.set("txt2img")
+        self.current_section_kandinsky.set("txt2img")
+        self.current_section_shapegif.set("txt2img")
 
 
 class PromptSettings(BaseSettings):
