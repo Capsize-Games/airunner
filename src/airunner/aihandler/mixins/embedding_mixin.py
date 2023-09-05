@@ -24,11 +24,12 @@ class EmbeddingMixin:
                     try:
                         self.pipe.load_textual_inversion(path, token=token, weight_name=f)
                     except Exception as e:
-                        self.send_message({
-                            "embedding_name": token,
-                            "model_name": self.model,
-                        }, MessageCode.EMBEDDING_LOAD_FAILED)
-                        logger.warning(e)
+                        if "already in tokenizer vocabulary" not in str(e):
+                            self.send_message({
+                                "embedding_name": token,
+                                "model_name": self.model,
+                            }, MessageCode.EMBEDDING_LOAD_FAILED)
+                            logger.warning(e)
             except AttributeError as e:
                 if "load_textual_inversion" in str(e):
                     embeddings_not_supported = True
