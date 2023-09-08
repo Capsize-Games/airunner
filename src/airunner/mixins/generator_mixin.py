@@ -431,6 +431,11 @@ class GeneratorMixin(LoraMixin):
     def generate_callback(self):
         self.generate()
 
+    def generate_deterministic_callback(self):
+        self.deterministic = True
+        self.generate()
+        self.deterministic = False
+
     def prep_video(self):
         pass
 
@@ -448,6 +453,16 @@ class GeneratorMixin(LoraMixin):
 
     def tab_has_embeddings(self, tab):
         return tab not in ["upscale", "superresolution", "txt2vid"]
+
+    @property
+    def deterministic_seed(self):
+        if not self._deterministic_seed:
+            self._deterministic_seed = self.seed
+        return self._deterministic_seed
+
+    @deterministic_seed.setter
+    def deterministic_seed(self, val):
+        self._deterministic_seed = val
 
     def new_batch(self, index, image, data):
         """
@@ -515,7 +530,9 @@ class GeneratorMixin(LoraMixin):
             image_data = self.canvas.current_layer.image_data
             image = image_data.image if image_data else None
 
-            if image is None:
+            if image is None and self.action == "txt2img":
+                return self.do_generate(seed=seed)
+            elif image is None:
                 # create a transparent image the size of self.canvas.active_grid_area_rect
                 width = self.settings_manager.settings.working_width.get()
                 height = self.settings_manager.settings.working_height.get()
@@ -701,7 +718,8 @@ class GeneratorMixin(LoraMixin):
             "controlnet": self.controlnet,
             "controlnet_image": self.controlnet_settings.current_controlnet_image,
             "deterministic_generation": self.deterministic,
-            "deterministic_seed": False,
+            "deterministic_style": self.tool_menu_widget.deterministic_widget.deterministic_style,
+            "deterministic_seed": None,
             "model_base_path": self.model_base_path,
             "outpaint_model_path": self.settings_manager.settings.outpaint_model_path.get(),
             "pix2pix_model_path": self.settings_manager.settings.pix2pix_model_path.get(),
