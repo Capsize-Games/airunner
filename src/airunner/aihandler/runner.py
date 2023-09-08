@@ -648,10 +648,7 @@ class SDRunner(
 
     @property
     def do_unload_controlnet(self):
-        return (
-            (self.controlnet_loaded and not self.enable_controlnet) or
-            (not self.controlnet_loaded and not self.enable_controlnet)
-        )
+        return not self.enable_controlnet and (self.pipe or self.controlnet_loaded)
 
     @property
     def do_reuse_pipeline(self):
@@ -1739,6 +1736,15 @@ class SDRunner(
         else:
             self.current_model = self.options.get(f"model_path", None)
             self.current_model_branch = self.options.get(f"model_branch", None)
+
+        if self.do_unload_controlnet:
+            self.unload_controlnet()
+
+    def unload_controlnet(self):
+        logger.info("Unloading controlnet")
+        if self.pipe:
+            self.pipe.controlnet = None
+        self.controlnet_loaded = False
 
     def from_pretrained(self, **kwargs):
         model = kwargs.pop("model", self.model_data)
