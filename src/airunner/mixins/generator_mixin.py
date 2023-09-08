@@ -2,7 +2,7 @@ import os
 import random
 from PIL import Image
 from PyQt6 import uic
-from PyQt6.QtCore import QRect, pyqtSignal, Qt
+from PyQt6.QtCore import QRect, pyqtSignal, Qt, QPoint
 from PyQt6.QtGui import QShortcut, QKeySequence
 from PyQt6.uic.exceptions import UIFileException
 from airunner.aihandler.settings import MAX_SEED
@@ -153,7 +153,9 @@ class GeneratorMixin(LoraMixin):
 
     @property
     def controlnet_var(self):
-        return self.settings.controlnet_var
+        if self.settings:
+            return self.settings.controlnet_var
+        return ""
 
     @property
     def controlnet(self):
