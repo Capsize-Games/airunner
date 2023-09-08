@@ -500,7 +500,11 @@ class GeneratorMixin(LoraMixin):
     def call_generate(self, image=None, seed=None):
         if self.current_section in ("upscale", "superresolution") and self.do_upscale_full_image:
             image_data = self.canvas.current_layer.image_data
-            image = image_data.image if image_data else None
+            if image_data:
+                location = image_data.position
+            else:
+                location = QPoint(0, 0)
+            image = self.generator_tab_widget.current_input_image
             if image is None:
                 self.message_var.emit({
                     "code": MessageCode.ERROR,
@@ -522,7 +526,7 @@ class GeneratorMixin(LoraMixin):
             self.do_generate({
                 "mask": image.convert("RGB"),
                 "image": image.convert("RGB"),
-                "location": image_data.position
+                "location": location
             }, seed=seed)
         elif self.use_pixels:
             self.requested_image = image
