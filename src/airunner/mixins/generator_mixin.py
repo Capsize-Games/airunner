@@ -228,6 +228,30 @@ class GeneratorMixin(LoraMixin):
         self.random_seed_var.set(val)
 
     @property
+    def latents_seed_var(self):
+        return self.settings.latents_seed
+
+    @property
+    def latents_seed(self):
+        return self.latents_seed_var.get()
+
+    @latents_seed.setter
+    def latents_seed(self, val):
+        self.latents_seed_var.set(val)
+
+    @property
+    def random_latents_seed_var(self):
+        return self.settings.random_latents_seed
+
+    @property
+    def random_latents_seed(self):
+        return self.random_latents_seed_var.get()
+
+    @random_latents_seed.setter
+    def random_latents_seed(self, val):
+        self.random_latents_seed_var.set(val)
+
+    @property
     def clip_skip_var(self):
         return self.settings.clip_skip
 
@@ -510,24 +534,27 @@ class GeneratorMixin(LoraMixin):
         :return:
         """
         if not data["options"]["deterministic_seed"]:
-            data["options"][f"seed"] = data["options"][f"seed"] + index
+            data["options"][f"seed"] = int(data["options"][f"seed"]) + index
             seed = data["options"][f"seed"]
         else:
             seed = data["options"][f"deterministic_seed"]
+        self.deterministic_seed = int(seed) + index
         self.deterministic_data = data
         self.deterministic_index = index
-        self.generate(image, seed=seed)
+        self.deterministic = True
+        self.generate(image, seed=self.deterministic_seed)
+        self.deterministic = False
         self.deterministic_data = None
         self.deterministic_images = None
 
     def generate(self, image=None, seed=None):
-        if not seed:
+        if seed is None:
             seed = self.seed
         if self.samples > 1:
             self.client.do_process_queue = False
         for n in range(self.samples):
             if self.use_prompt_builder_checkbox and n > 0:
-                seed = self.seed + n
+                seed = int(seed) + n
             self.call_generate(image, seed=seed)
         self.seed_override = None
         self.client.do_process_queue = True
@@ -616,18 +643,29 @@ class GeneratorMixin(LoraMixin):
         self.generator_tab_widget.start_progress_bar(
             self.currentTabSection, self.current_section)
 
-    def set_seed(self):
+    def set_seed(self, seed=None, latents_seed=None):
         """
         Set the seed - either set to random, deterministic or keep current, then display the seed in the UI.
         :return:
         """
+        self.set_primary_seed(seed)
+        self.set_latents_seed(latents_seed)
+        self.generator_tab_widget.update_seed()
+
+    def set_primary_seed(self, seed=None):
         if self.deterministic_data:
-            action = self.deterministic_data["action"]
             self.seed = self.deterministic_data["options"][f"seed"]
         elif self.random_seed:
-            seed = random.randint(0, MAX_SEED)
+            self.seed = random.randint(0, MAX_SEED)
+        elif seed is not None:
             self.seed = seed
-        self.generator_tab_widget.data[self.currentTabSection][self.current_section]["seed"].setText(str(self.seed))
+
+    def set_latents_seed(self, latents_seed=None):
+        if self.random_latents_seed:
+            random.seed()
+            latents_seed = random.randint(0, MAX_SEED)
+        if latents_seed is not None:
+            self.latents_seed = latents_seed
 
     def get_memory_options(self):
         return {
@@ -655,24 +693,27 @@ class GeneratorMixin(LoraMixin):
                 **extra_options,
                 **memory_options,
                 "deterministic_generation": True,
-                "deterministic_seed": True,
+                "deterministic_seed": self.deterministic_seed,
+                "deterministic_style": self.tool_menu_widget.deterministic_widget.deterministic_style
             }
         }
         self.client.message = data
 
-    def do_generate(self, extra_options=None, seed=None):
+    def do_generate(self, extra_options=None, seed=None, latents_seed=None):
         if not extra_options:
             extra_options = {}
 
         if self.enable_controlnet and "image" in extra_options:
             extra_options["input_image"] = self.controlnet_settings.current_image
 
-        if self.random_seed or not seed:
-            self.set_seed()
-            seed = self.seed
-            self.seed_override = None
-        else:
-            self.seed_override = seed
+        # if self.random_seed or not seed:
+        #     self.seed_override = None
+        # else:
+        #     self.seed_override = seed
+
+        self.set_seed(seed=seed, latents_seed=latents_seed)
+        seed = self.seed
+        latents_seed = self.latents_seed
 
         if self.deterministic_data and self.deterministic:
             return self.do_deterministic_generation(extra_options)
@@ -717,6 +758,7 @@ class GeneratorMixin(LoraMixin):
             "n_samples": 1,
             "scale": self.scale / 100,
             "seed": seed,
+            "latents_seed": latents_seed,
             "model": self.model,
             "model_data": model_data,
             "scheduler": self.scheduler,
