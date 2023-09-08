@@ -1,3 +1,4 @@
+import os
 import re
 from functools import partial
 
@@ -5,6 +6,9 @@ from PyQt6 import uic
 from PyQt6.QtWidgets import QWidget, QGridLayout, QPlainTextEdit, QLabel, QComboBox, QHBoxLayout, QRadioButton, \
     QPushButton, QProgressBar, QFormLayout, QCheckBox, QSpinBox, QLineEdit, QGroupBox
 from airunner.widgets.base_widget import BaseWidget
+from airunner.widgets.controlnet_settings_widget import ControlNetSettingsWidget
+from airunner.widgets.input_image_settings_widget import InputImageSettingsWidget
+from airunner.widgets.seed_widget import SeedWidget, LatentsSeedWidget
 from airunner.widgets.slider_widget import SliderWidget
 from airunner.aihandler.settings import MAX_SEED, AVAILABLE_SCHEDULERS_BY_ACTION
 from airunner.aihandler.enums import MessageCode
@@ -315,7 +319,10 @@ class GeneratorTabWidget(BaseWidget):
         seed_spinbox.textChanged.connect(
             partial(self.handle_value_change, "seed", widget=seed_spinbox))
 
-        self.data[self.tab_section][self.tab]["seed"] = seed_spinbox
+        seed_widget = SeedWidget(app=self.app)
+        seed_widget_latents = LatentsSeedWidget(app=self.app)
+        hbox.addWidget(seed_widget)
+        hbox.addWidget(seed_widget_latents)
 
         grid_layout.addWidget(seed_spinbox)
 
