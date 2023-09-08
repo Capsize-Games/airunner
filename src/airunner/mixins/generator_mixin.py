@@ -531,8 +531,7 @@ class GeneratorMixin(LoraMixin):
         elif self.use_pixels:
             self.requested_image = image
             self.start_progress_bar()
-            image_data = self.canvas.current_layer.image_data
-            image = image_data.image if image_data else None
+            image = self.generator_tab_widget.current_input_image
 
             if image is None and self.action == "txt2img":
                 return self.do_generate(seed=seed)
