@@ -342,7 +342,7 @@
             "outpaint": {
                 "SD 1.5": {
                     "stablediffusion": {
-                        "classname": "diffusers.AutoPipelineForInpainting",
+                        "classname": "diffusers.StableDiffusionInpaintPipeline",
                         "singlefile-classname": "diffusers.StableDiffusionInpaintPipeline"
                     },
                     "conrolnet": {
