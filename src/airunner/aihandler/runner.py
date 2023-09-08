@@ -363,7 +363,7 @@ class SDRunner(
 
     @property
     def is_img2img(self):
-        return self.action == "img2img"
+        return self.action == "txt2img" and self.image is not None
 
     @property
     def is_depth2img(self):
