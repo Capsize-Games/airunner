@@ -56,6 +56,7 @@ class PromptData:
         self.is_deterministic = kwargs.get("is_deterministic", False)
         self.is_batch = kwargs.get("is_batch", False)
         self.batch_size = kwargs.get("batch_size", 1)
+        self.deterministic_style = kwargs.get("deterministic_style")
 
         random.seed(self.seed)
 
@@ -140,25 +141,31 @@ class PromptData:
                 negative_auto_weight=self.negative_auto_prompt_weight,
                 variables=variables,
                 weights=weighted_variables,
-                seed=self.seed)
+                seed=self.seed,
+                deterministic_style=self.deterministic_style)
         else:
             prompt = self.current_prompt
             negative_prompt = self.current_negative_prompt
         if self.is_deterministic:
-            prompt, negative_prompt = self.process_deterministic_prompt(prompt, negative_prompt)
+            prompt, negative_prompt = self.process_deterministic_prompt(prompt, negative_prompt, self.deterministic_style)
         elif self.is_batch:
             prompt, negative_prompt = self.process_batch_prompts(prompt, negative_prompt)
 
         return prompt, negative_prompt
 
-    def process_deterministic_prompt(self, current_prompt, negative_prompt):
+    def process_deterministic_prompt(self, current_prompt, negative_prompt, deterministic_style):
+        print("process_deterministic_prompt", deterministic_style)
         if isinstance(current_prompt, list):
             prompt = current_prompt[0]
         else:
             prompt = current_prompt
         prompt_list = [prompt]
         for _n in range(1, self.batch_size):
-            prompt_list.append(f"{prompt}, {PromptParser.random_word()}")
+            if deterministic_style == "color":
+                word = f"{PromptParser.random_color()} color"
+            else:
+                word = PromptParser.random_word()
+            prompt_list.append(f"{prompt}, {word}")
         if isinstance(negative_prompt, list):
             negative_prompt = negative_prompt[0]
         negative_prompt = [
