@@ -29,6 +29,27 @@ class PromptParser:
         return parsed_prompt
 
     @classmethod
+    def random_color(cls):
+        random.seed(time.time_ns())
+        colors = [
+            "black and white",
+            "colorful",
+            "monochromatic",
+            "sepia",
+            "vibrant",
+            "pastel",
+            "dark",
+            "light",
+            "warm",
+            "cool",
+            "autumn",
+            "spring",
+            "summer",
+            "winter",
+        ]
+        return random.choice(colors)
+
+    @classmethod
     def random_word(cls):
         # we need to randomize the seed in order to get a random word
         # this is because the seed is used to generate the random word
@@ -102,6 +123,7 @@ class PromptParser:
         is_deterministic=False,
         is_batch=False,
         batch_size=4,
+        deterministic_style=None
     ):
         """
         Parses a prompt into a format that the AI can understand.
@@ -112,8 +134,12 @@ class PromptParser:
         generated_negative_prompt = cls.do_parse(generated_negative_prompt, variables, weights, seed)
 
         if is_deterministic:
-            prompt = [prompt + f", {cls.random_word()}" for _t in range(batch_size)]
-            generated_prompt = [generated_prompt + f", {cls.random_word()}" for _t in range(batch_size)]
+            if deterministic_style == "color":
+                word = cls.random_color()
+            else:
+                word = cls.random_word()
+            prompt = [prompt + f", {word}" for _t in range(batch_size)]
+            generated_prompt = [generated_prompt + f", {word}" for _t in range(batch_size)]
         elif is_batch:
             prompt = [prompt for _t in range(batch_size)]
             generated_prompt = [generated_prompt for _t in range(batch_size)]
