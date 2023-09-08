@@ -552,6 +552,8 @@ class MainWindow(
             self.settings_manager.settings.show_active_image_area.get() == True
         )
         self.initialize_default_buttons()
+        self.generator_tab_widget.initialize()
+        self.prompt_builder.process_prompt()
         self.connect_signals()
 
     def initialize_default_buttons(self):
