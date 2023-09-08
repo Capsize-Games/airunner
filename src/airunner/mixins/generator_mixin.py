@@ -635,6 +635,7 @@ class GeneratorMixin(LoraMixin):
                 **options,
                 **extra_options,
                 **memory_options,
+                "batch_size": self.tool_menu_widget.deterministic_widget.batch_size,
                 "deterministic_generation": True,
                 "deterministic_seed": self.deterministic_seed,
                 "deterministic_style": self.tool_menu_widget.deterministic_widget.deterministic_style
