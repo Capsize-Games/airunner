@@ -1111,8 +1111,9 @@ class MainWindow(
 
     def update_system_stats(self):
         system_memory_percentage = psutil.virtual_memory().percent
+        has_cuda = torch.cuda.is_available()
         queue_items = f"Queued items: {self.client.queue.qsize()}"
-        cuda_memory = f"VRAM allocated {torch.cuda.memory_allocated() / 1024 ** 3:.1f}GB cached {torch.cuda.memory_cached() / 1024 ** 3:.1f}GB"
+        cuda_memory = f"Using {'GPU' if has_cuda else 'CPU'}, VRAM allocated {torch.cuda.memory_allocated() / 1024 ** 3:.1f}GB cached {torch.cuda.memory_cached() / 1024 ** 3:.1f}GB"
         system_memory = f"RAM {system_memory_percentage:.1f}%"
         self.footer_widget.system_status.setText(f"{queue_items}, {system_memory}, {cuda_memory}")
 
