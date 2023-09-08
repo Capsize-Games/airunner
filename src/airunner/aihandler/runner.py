@@ -1075,12 +1075,12 @@ class SDRunner(
         action = self.action
         extra_args = {
         }
-        if action == "txt2img" or action == "txt2vid":
+        if self.is_txt2img or self.is_txt2vid:
             extra_args = {**extra_args, **{
                 "width": self.width,
                 "height": self.height,
             }}
-        if action == "img2img":
+        if self.is_img2img:
             extra_args = {**extra_args, **{
                 "image": image,
                 "strength": self.strength,
@@ -1090,14 +1090,15 @@ class SDRunner(
                 "image": image,
                 "image_guidance_scale": self.image_guidance_scale,
             }}
-        elif action == "depth2img":
+        elif self.is_depth2img:
             extra_args = {**extra_args, **{
                 "image": image,
                 "strength": self.strength,
+                "depth_map": self.depth_map
             }}
-        elif action == "txt2vid":
+        elif self.is_txt2vid:
             pass
-        elif action == "upscale":
+        elif self.is_upscale:
             extra_args = {**extra_args, **{
                 "image": image,
                 "image_guidance_scale": self.image_guidance_scale,
@@ -1106,7 +1107,7 @@ class SDRunner(
             extra_args = {**extra_args, **{
                 "image": image,
             }}
-        elif action == "outpaint":
+        elif self.is_outpaint:
             extra_args = {**extra_args, **{
                 "image": image,
                 "mask_image": mask,
