@@ -703,7 +703,7 @@ class GeneratorMixin(LoraMixin):
             "steps": self.steps,
             "ddim_eta": self.ddim_eta,  # only applies to ddim scheduler
             "n_iter": 1,
-            "n_samples": 1,
+            "n_samples": self.samples,
             "scale": self.scale / 100,
             "seed": seed,
             "latents_seed": latents_seed,
