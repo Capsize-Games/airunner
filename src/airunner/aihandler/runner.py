@@ -180,7 +180,8 @@ class SDRunner(
 
     @property
     def batch_size(self):
-        return 4 if self.deterministic_generation else 1
+        return self.options.get("batch_size", 4) if self.deterministic_generation \
+            else self.options.get("batch_size", 1)
 
     @property
     def prompt_data(self):
@@ -1218,7 +1219,8 @@ class SDRunner(
             negative_prompt=negative_prompt,
             is_deterministic=True if self.deterministic_seed else False,
             is_batch=self.deterministic_generation,
-            batch_size=self.batch_size
+            batch_size=self.batch_size,
+            deterministic_style=self.deterministic_style
         )
 
         # we only update the prompt embed if prompt or negative prompt has changed
