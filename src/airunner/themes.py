@@ -33,6 +33,98 @@ class Themes:
                     border: 0px;
                 }
             """,
+            "input_image_groupbox": """
+                QGroupBox {
+                    border-left: 0px;
+                    border-right: 0px;
+                    border-bottom: 0px;
+                    border-radius: 0px;
+                    font-size: 8pt;
+                }
+            """,
+            "controlnet_groupbox": """
+                QGroupBox {
+                    border-left: 0px;
+                    border-right: 0px;
+                    border-bottom: 0px;
+                    border-radius: 0px;
+                    font-size: 8pt;
+                }
+            """,
+            "input_image_tab_widget": """
+                QTabWidget::pane { 
+                    border: 0;
+                    border-radius: 0px;
+                    border: 1px solid #5483d0;
+                }
+                QTabBar::tab {
+                    border-radius: 0px; 
+                    margin: 0px;
+                    padding: 5px 10px;
+                    border: 0px;
+                }
+                QTabBar::tab {
+                    min-width: 90px;
+                    margin: 0px;
+                    padding: 0px;
+                    border: 0px;
+                    font-size: 8pt;
+                }
+                QTabBar::tab::first {
+                    min-width: 70px;
+                    margin: 0px;
+                    padding: 0px;
+                    border: 0px;
+                }
+                QTabBar::tab::last {
+                    min-width: 50px;
+                    margin: 0px;
+                    padding: 5px;
+                    border: 0px;
+                }
+                QTabBar::tab:selected { 
+                    background-color: #5483d0;
+                    color: white;
+                    border: 0px;
+                }
+            """,
+            "input_image_tab_widget_disabled": """
+                QTabWidget::pane { 
+                    border: 0;
+                    border-radius: 0px;
+                    border: 1px solid #111111;
+                }
+                QTabBar::tab {
+                    border-radius: 0px; 
+                    margin: 0px;
+                    padding: 5px 10px;
+                    border: 0px;
+                }
+                QTabBar::tab {
+                    min-width: 90px;
+                    margin: 0px;
+                    padding: 0px;
+                    border: 0px;
+                    font-size: 8pt;
+                }
+                QTabBar::tab::first {
+                    min-width: 70px;
+                    margin: 0px;
+                    padding: 0px;
+                    border: 0px;
+                }
+                QTabBar::tab::last {
+                    min-width: 50px;
+                    margin: 0px;
+                    padding: 5px;
+                    border: 0px;
+                }
+                QTabBar::tab:selected { 
+                    background-color: #111111;
+                    color: white;
+                    border: 0px;
+                }
+            """,
             "pipeline": """
                 QTabWidget::pane { 
                     border: 0;
@@ -44,7 +136,7 @@ class Themes:
                     margin: 0px; 
                     padding: 10px 5px;
                     border: 0px;
-                    font-size: 9pt;
+                    font-size: 8pt;
                     width: 12px;
                 }
                 QTabBar::tab:selected { 
@@ -72,7 +164,7 @@ class Themes:
             """,
             "toolmenu_tab_widget": """
                 QTabBar::tab { 
-                    font-size: 9pt;
+                    font-size: 8pt;
                 }
                 QTabWidget::pane { 
                     border: 0;
@@ -97,6 +189,11 @@ class Themes:
                 color: #333333;
                 border: none; border-radius: 0px;
             """,
+            "secondary_layer_highlight_style": """
+                background-color: #adccfd;
+                color: #333333;
+                border: none; border-radius: 0px;
+            """,
             "layer_normal_style": """
                 background-color: transparent;
                 color: #d2d2d2;
@@ -116,7 +213,7 @@ class Themes:
                     margin: 0px; 
                     padding: 5px 10px;
                     border: 0px;
-                    font-size: 9pt;
+                    font-size: 8pt;
                 }
                 QTabBar::tab:selected {
                     background-color: #5483d0;
@@ -136,7 +233,7 @@ class Themes:
                     margin: 0px; 
                     padding: 5px 10px;
                     border: 0px;
-                    font-size: 9pt;
+                    font-size: 8pt;
                 }
             """,
             "layer_container_widget": """
@@ -172,7 +269,7 @@ class Themes:
                background-color: transparent;
             """,
             "slider_label": """
-                font-size: 9pt;
+                font-size: 8pt;
                 color: #ffffff;
                 font-weight: bold;
             """,
@@ -181,6 +278,7 @@ class Themes:
                 border-left: none;
                 border-color: #555;
                 border-radius: 0px;
+                font-size: 8pt;
             """,
             "header_widget": """
                 #frame {
@@ -202,7 +300,7 @@ class Themes:
                     margin: 0px; 
                     padding: 5px 10px;
                     border: 0px;
-                    font-size: 9pt;
+                    font-size: 8pt;
                 }
                 QTabBar::tab:selected {
                     background-color: #5483d0;
@@ -255,7 +353,7 @@ class Themes:
                     margin: 0px; 
                     padding: 10px 5px;
                     border: 0px;
-                    font-size: 9pt;
+                    font-size: 8pt;
                     width: 12px;
                 }
                 QTabBar::tab:selected { 
@@ -283,7 +381,7 @@ class Themes:
             """,
             "toolmenu_tab_widget": """
                 QTabBar::tab { 
-                    font-size: 9pt;
+                    font-size: 8pt;
                 }
                 QTabWidget::pane { 
                     border: 0;
@@ -328,7 +426,7 @@ class Themes:
                     margin: 0px; 
                     padding: 5px 10px;
                     border: 0px;
-                    font-size: 9pt;
+                    font-size: 8pt;
                 }
                 QTabBar::tab:selected {
                     background-color: #5483d0;
@@ -348,7 +446,7 @@ class Themes:
                     margin: 0px; 
                     padding: 5px 10px;
                     border: 0px;
-                    font-size: 9pt;
+                    font-size: 8pt;
                 }
             """,
             "layer_container_widget": """
@@ -384,7 +482,7 @@ class Themes:
                background-color: transparent;
             """,
             "slider_label": """
-                font-size: 9pt;
+                font-size: 8pt;
                 color: #ffffff;
             """,
             "slider_spinbox": """
@@ -392,6 +490,7 @@ class Themes:
                 border-left: none;
                 border-color: #c2c2c2;
                 border-radius: 0px;
+                font-size: 8pt;
             """,
             "header_widget": """
                 #frame {
@@ -413,7 +512,7 @@ class Themes:
                     margin: 0px; 
                     padding: 5px 10px;
                     border: 0px;
-                    font-size: 9pt;
+                    font-size: 8pt;
                 }
                 QTabBar::tab:selected {
                     background-color: #5483d0;
@@ -424,12 +523,12 @@ class Themes:
         },
         "all": {
             "border-radius": "0px",
-            "font-size": "9pt",
+            "font-size": "8pt",
             "layer_widget": """
-                font-size: 9pt
+                font-size: 8pt
             """,
             "lora_widget": """
-                font-size: 9pt
+                font-size: 8pt
             """,
         },
     }
