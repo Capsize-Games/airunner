@@ -200,8 +200,16 @@ class GeneratorTabWidget(BaseWidget):
         self.add_widget_to_grid(use_prompt_builder_checkbox)
         grid_layout.addWidget(use_prompt_builder_checkbox, 0, 1, 1, 1)
 
-        # make second column right aligned
-        grid_layout.setColumnStretch(0, 1)
+        # create a push button with a settings icon
+        prompt_builder_settings_button = QPushButton(self)
+        prompt_builder_settings_button.setObjectName("prompt_builder_settings_button")
+        prompt_builder_settings_button.setText("⚙")
+        prompt_builder_settings_button.setStyleSheet(stylesheet)
+        prompt_builder_settings_button.clicked.connect(partial(self.app.show_section, "prompt_builder"))
+        grid_layout.addWidget(prompt_builder_settings_button, 0, 2, 1, 1)
+
+        # make final column right aligned
+        grid_layout.setColumnStretch(0, 2)
 
         prompt_widget = QPlainTextEdit(self)
         prompt_widget.setObjectName("prompt")
