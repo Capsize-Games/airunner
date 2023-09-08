@@ -179,6 +179,10 @@ class SDRunner(
         return self.options.get("deterministic_seed", None)
 
     @property
+    def deterministic_style(self):
+        return self.options.get("deterministic_style", None)
+
+    @property
     def batch_size(self):
         return self.options.get("batch_size", 4) if self.deterministic_generation \
             else self.options.get("batch_size", 1)
@@ -1218,7 +1222,7 @@ class SDRunner(
             seed=seed,
             prompt=prompt,
             negative_prompt=negative_prompt,
-            is_deterministic=True if self.deterministic_seed else False,
+            is_deterministic=self.deterministic_generation,
             is_batch=self.deterministic_generation,
             batch_size=self.batch_size,
             deterministic_style=self.deterministic_style
