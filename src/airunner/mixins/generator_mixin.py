@@ -410,13 +410,6 @@ class GeneratorMixin(LoraMixin):
     def interrupt(self):
         self.client.cancel()
 
-    def reset_settings(self):
-        self.settings_manager.reset_settings_to_default()
-        for tab_name in self.tabs.keys():
-            tab = self.tabs[tab_name]
-            self.set_default_values(tab_name, tab)
-        self.canvas.update()
-
     def text_changed(self, tab):
         try:
             val = int(tab.seed.toPlainText())
@@ -434,78 +427,6 @@ class GeneratorMixin(LoraMixin):
     def video_handler(self, data):
         filename = data["video_filename"]
         VideoPopup(settings_manager=self.settings_manager, file_path=filename)
-
-    def prepare_metadata(self, data):
-        if not self.settings_manager.settings.export_metadata.get() or \
-                self.settings_manager.settings.image_export_type.get() != "png":
-            return None
-        metadata = PngImagePlugin.PngInfo()
-        options = data["options"]
-        action = data["action"]
-        metadata.add_text("action", action)
-        if self.settings_manager.settings.image_export_metadata_prompt.get() is True:
-            metadata.add_text("prompt", options[f'prompt'])
-        if self.settings_manager.settings.image_export_metadata_negative_prompt.get() is True:
-            metadata.add_text("negative_prompt", options[f'negative_prompt'])
-        if self.settings_manager.settings.image_export_metadata_scale.get() is True:
-            metadata.add_text("scale", str(options[f"scale"]))
-        if self.settings_manager.settings.image_export_metadata_seed.get() is True:
-            metadata.add_text("seed", str(options[f"seed"]))
-        if self.settings_manager.settings.image_export_metadata_steps.get() is True:
-            metadata.add_text("steps", str(options[f"steps"]))
-        if self.settings_manager.settings.image_export_metadata_ddim_eta.get() is True:
-            metadata.add_text("ddim_eta", str(options[f"ddim_eta"]))
-        if self.settings_manager.settings.image_export_metadata_iterations.get() is True:
-            metadata.add_text("n_iter", str(options[f"n_iter"]))
-        if self.settings_manager.settings.image_export_metadata_samples.get() is True:
-            metadata.add_text("n_samples", str(options[f"n_samples"]))
-        if self.settings_manager.settings.image_export_metadata_model.get() is True:
-            metadata.add_text("model", str(options[f"model"]))
-        if self.settings_manager.settings.image_export_metadata_model_branch.get() is True:
-            metadata.add_text("model_branch", str(options[f"model_branch"]))
-        if self.settings_manager.settings.image_export_metadata_scheduler.get() is True:
-            metadata.add_text("scheduler", str(options[f"scheduler"]))
-        return metadata
-
-    def auto_export_image(self, image, data=None):
-        """
-        Export image along with stats to image_path
-        :return:
-        """
-        if data and data["action"] == "txt2vid":
-            return
-        base_path = self.settings_manager.settings.model_base_path.get()
-        image_path = self.settings_manager.settings.image_path.get()
-        image_path = "images" if image_path == "" else image_path
-        path = os.path.join(base_path, image_path) if image_path == "images" else image_path
-        if not os.path.exists(path):
-            os.makedirs(path)
-        # check for existing files, if they exist, increment the filename. filename should be in the format
-        # <action>_<seed>_<N>.png
-        extension = self.settings_manager.settings.image_export_type.get()
-        if extension == "":
-            extension = "png"
-        extension = f".{extension}"
-        if data:
-            filename = data["action"] + "_" + str(self.seed)
-        else:
-            filename = "image"
-        if os.path.exists(os.path.join(path, filename + extension)):
-            i = 1
-            while os.path.exists(os.path.join(path, filename + "_" + str(i) + extension)):
-                i += 1
-            filename = filename + "_" + str(i)
-        if data:
-            metadata = self.prepare_metadata(data)
-        else:
-            metadata = None
-
-        if image:
-            if metadata:
-                image.save(os.path.join(path, filename + extension), pnginfo=metadata)
-            else:
-                image.save(os.path.join(path, filename + extension))
-            self.set_status_label(f"Image exported to {os.path.join(path, filename + extension)}")
 
     def generate_callback(self):
         self.generate()
@@ -825,29 +746,6 @@ class GeneratorMixin(LoraMixin):
     def tab_changed_callback(self, index):
         self.set_final_size_label()
         self.canvas.update()
-
-    def set_default_values(self, section, tab):
-        tab.prompt.setPlainText(self.prompt)
-        tab.negative_prompt.setPlainText(self.negative_prompt)
-        tab.steps_spinbox.setValue(self.steps)
-        tab.scale_spinbox.setValue(self.scale / 100)
-        if section == "pix2pix":
-            val = self.settings_manager.settings.pix2pix_image_guidance_scale.get()
-            tab.image_scale_spinbox.setValue(val / 100)
-            if type(val) == float:
-                val = int(val * 100)
-            tab.image_scale_slider.setValue(val)
-        try:
-            tab.strength_spinbox.setValue(self.strength / 100)
-        except:
-            pass
-        tab.seed.setText(str(self.seed))
-        tab.samples_spinbox.setValue(self.samples)
-        tab.model_dropdown.setCurrentText(self.model)
-        try:
-            tab.scheduler_dropdown.setCurrentText(self.scheduler)
-        except RuntimeError:
-            pass
 
     def load_template(self, template_name):
         try:
