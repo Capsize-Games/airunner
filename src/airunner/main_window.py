@@ -1,6 +1,8 @@
 import os
 import pickle
 import sys
+import time
+
 import psutil
 import torch
 from PyQt6 import uic, QtCore
@@ -21,7 +23,6 @@ from airunner.mixins.menubar_mixin import MenubarMixin
 from airunner.mixins.toolbar_mixin import ToolbarMixin
 from airunner.themes import Themes
 from airunner.widgets.canvas_widget import CanvasWidget
-from airunner.widgets.controlnet_settings_widget import ControlNetSettingsWidget
 from airunner.widgets.embedding_widget import EmbeddingWidget
 from airunner.widgets.footer_widget import FooterWidget
 from airunner.widgets.generator_tab_widget import GeneratorTabWidget
@@ -32,7 +33,7 @@ from airunner.widgets.tool_menu_widget import ToolMenuWidget
 from airunner.widgets.header_widget import HeaderWidget
 from airunner.windows.deterministic_generation_window import DeterministicGenerationWindow
 from airunner.windows.update_window import UpdateWindow
-from airunner.utils import get_version, get_latest_version
+from airunner.utils import get_version, get_latest_version, auto_export_image
 from airunner.aihandler.settings_manager import SettingsManager, PromptManager, ApplicationData
 import qdarktheme
 from PyQt6.QtGui import QIcon
@@ -82,7 +83,6 @@ class MainWindow(
     _tabs = {
         "stablediffusion": {
             "txt2img": None,
-            "img2img": None,
             "outpaint": None,
             "depth2img": None,
             "pix2pix": None,
@@ -92,12 +92,10 @@ class MainWindow(
         },
         "kandinsky": {
             "txt2img": None,
-            "img2img": None,
             "outpaint": None,
         },
         "shapegif": {
-            "txt2img": None,
-            "img2img": None,
+            "txt2img": None
         }
     }
     registered_settings_handlers = []
@@ -210,7 +208,7 @@ class MainWindow(
             use_pixels = True
         else:
             use_pixels = self.current_section in (
-                "img2img",
+                "txt2img",
                 "pix2pix",
                 "depth2img",
                 "outpaint",
@@ -267,6 +265,106 @@ class MainWindow(
     def is_maximized(self, val):
         self.settings_manager.settings.is_maximized.set(val)
 
+    @property
+    def enable_input_image_var(self):
+        return self.settings.enable_input_image
+
+    @property
+    def enable_input_image(self):
+        return self.enable_input_image_var.get()
+
+    @enable_input_image.setter
+    def enable_input_image(self, val):
+        self.settings.enable_input_image.set(val)
+
+    @property
+    def input_image_use_imported_image(self):
+        return self.settings.input_image_use_imported_image.get()
+
+    @input_image_use_imported_image.setter
+    def input_image_use_imported_image(self, value):
+        self.settings.input_image_use_imported_image.set(value)
+
+    @property
+    def input_image_use_grid_image(self):
+        return self.settings.input_image_use_grid_image.get()
+
+    @input_image_use_grid_image.setter
+    def input_image_use_grid_image(self, value):
+        self.settings.input_image_use_grid_image.set(value)
+
+    @property
+    def input_image_recycle_grid_image(self):
+        return self.settings.input_image_recycle_grid_image.get()
+
+    @input_image_recycle_grid_image.setter
+    def input_image_recycle_grid_image(self, value):
+        self.settings.input_image_recycle_grid_image.set(value)
+
+    @property
+    def input_image_mask_use_input_image(self):
+        return self.settings.input_image_mask_use_input_image.get()
+
+    @input_image_mask_use_input_image.setter
+    def input_image_mask_use_input_image(self, value):
+        self.settings.input_image_mask_use_input_image.set(value)
+
+    @property
+    def input_image_mask_use_imported_image(self):
+        return self.settings.input_image_mask_use_imported_image.get()
+
+    @input_image_mask_use_imported_image.setter
+    def input_image_mask_use_imported_image(self, value):
+        self.settings.input_image_mask_use_imported_image.set(value)
+
+    @property
+    def controlnet_input_image_link_to_input_image(self):
+        return self.settings.controlnet_input_image_link_to_input_image.get()
+
+    @controlnet_input_image_link_to_input_image.setter
+    def controlnet_input_image_link_to_input_image(self, value):
+        self.settings.controlnet_input_image_link_to_input_image.set(value)
+
+    @property
+    def controlnet_input_image_use_imported_image(self):
+        return self.settings.controlnet_input_image_use_imported_image.get()
+
+    @controlnet_input_image_use_imported_image.setter
+    def controlnet_input_image_use_imported_image(self, value):
+        self.settings.controlnet_input_image_use_imported_image.set(value)
+
+    @property
+    def controlnet_use_grid_image(self):
+        return self.settings.controlnet_use_grid_image.get()
+
+    @controlnet_use_grid_image.setter
+    def controlnet_use_grid_image(self, value):
+        self.settings.controlnet_use_grid_image.set(value)
+
+    @property
+    def controlnet_recycle_grid_image(self):
+        return self.settings.controlnet_recycle_grid_image.get()
+
+    @controlnet_recycle_grid_image.setter
+    def controlnet_recycle_grid_image(self, value):
+        self.settings.controlnet_recycle_grid_image.set(value)
+
+    @property
+    def controlnet_mask_link_input_image(self):
+        return self.settings.controlnet_mask_link_input_image.get()
+
+    @controlnet_mask_link_input_image.setter
+    def controlnet_mask_link_input_image(self, value):
+        self.settings.controlnet_mask_link_input_image.set(value)
+
+    @property
+    def controlnet_mask_use_imported_image(self):
+        return self.settings.controlnet_mask_use_imported_image.get()
+
+    @controlnet_mask_use_imported_image.setter
+    def controlnet_mask_use_imported_image(self, value):
+        self.settings.controlnet_mask_use_imported_image.set(value)
+
     def available_model_names_by_section(self, section):
         for model in self.application_data.available_models_by_section(section):
             yield model["name"]
@@ -308,6 +406,9 @@ class MainWindow(
 
         # change the color of tooltips
         self.setStyleSheet("QToolTip { color: #000000; background-color: #ffffff; border: 1px solid black; }")
+
+    def update_controlnet_thumbnail(self):
+        self.generator_tab_widget.update_controlnet_thumbnail()
 
     def resizeEvent(self, event):
         if not self.is_started:
@@ -503,20 +604,15 @@ class MainWindow(
         )
 
         for tab_section in ["stablediffusion", "kandinsky", "shapegif"]:
-            for section in ["txt2img", "img2img", "pix2pix", "depth2img", "txt2vid"]:
-                if (tab_section == "kandinsky" or tab_section == "shapegif") and section not in ["txt2img", "img2img"]:
+            for section in ["txt2img", "pix2pix", "depth2img", "txt2vid"]:
+                if (tab_section == "kandinsky" or tab_section == "shapegif") and section not in ["txt2img"]:
                     continue
                 self.override_tab_section = tab_section
                 self.override_section = section
-                self.settings.enable_controlnet.connect(self.handle_toggle_controlnet)
         self.override_tab_section = None
         self.override_section = None
 
         self.button_clicked_signal.connect(self.handle_button_clicked)
-
-    def handle_toggle_controlnet(self, value):
-        self.controlnet_settings.template.controlnet_groupbox.setChecked(value)
-        self.generator_tab_widget.use_controlnet_checkbox.setChecked(value)
 
     def instantiate_widgets(self):
         logger.info("Instantiating widgets")
@@ -598,7 +694,6 @@ class MainWindow(
     def create_center_panel(self):
         self.prompt_builder = PromptBuilderWidget(app=self)
         self.model_manager = ModelManagerWidget(app=self)
-        self.controlnet_settings = ControlNetSettingsWidget(app=self)
 
         self.center_panel = QTabWidget()
         self.center_panel.setStyleSheet(self.css("center_panel"))
@@ -609,13 +704,6 @@ class MainWindow(
             "prompt_builder",
             "Prompt Builder",
             self.prompt_builder,
-            self.center_panel
-        )
-        self.track_tab_section(
-            "center",
-            "controlnet",
-            "ControlNet",
-            self.controlnet_settings,
             self.center_panel
         )
         self.track_tab_section(
