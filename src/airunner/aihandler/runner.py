@@ -343,7 +343,7 @@ class SDRunner(
 
     @property
     def is_txt2img(self):
-        return self.action == "txt2img"
+        return self.action == "txt2img" and self.image is None
 
     @property
     def is_shapegif(self):
