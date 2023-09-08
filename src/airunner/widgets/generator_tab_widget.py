@@ -3,8 +3,9 @@ import re
 from functools import partial
 
 from PyQt6 import uic
-from PyQt6.QtWidgets import QWidget, QGridLayout, QPlainTextEdit, QLabel, QComboBox, QHBoxLayout, QRadioButton, \
-    QPushButton, QProgressBar, QFormLayout, QCheckBox, QSpinBox, QLineEdit, QGroupBox
+from PyQt6.QtWidgets import QWidget, QGridLayout, QPlainTextEdit, QLabel, QHBoxLayout, \
+    QPushButton, QProgressBar, QFormLayout, QCheckBox
+
 from airunner.widgets.base_widget import BaseWidget
 from airunner.widgets.controlnet_settings_widget import ControlNetSettingsWidget
 from airunner.widgets.input_image_settings_widget import InputImageSettingsWidget
@@ -31,25 +32,31 @@ class GeneratorTabWidget(BaseWidget):
 
     def __init__(self, *args, **kwargs):
         super().__init__(*args, **kwargs)
+
+    def initialize(self):
         self.row = 0
         self.col = 0
         self.layout = None
+        self.app.settings_manager.disable_save()
         self.app.settings_manager.settings.model_base_path.my_signal.connect(self.refresh_model_list)
         # add all tabs
         # get the current tab name and pass it as section
-        self.sectionTabWidget.currentChanged.connect(partial(
-            self.app.handle_generator_tab_changed
-        ))
         for tab_section in self.app._tabs.keys():
             self.force_tab_section(tab_section, None)
             self.data[tab_section] = {}
             for tab in self.app.tabs.keys():
                 self.add_tab(section=tab_section, tab=tab)
         self.release_tab_section()
+        self.set_tabs()
+        self.sectionTabWidget.currentChanged.connect(partial(
+            self.handle_generator_tab_changed
+        ))
+        self.app.settings_manager.enable_save()
 
     def clear_prompts(self, tab_section, tab):
-        self.data[tab_section][tab]['prompt_widget'].setPlainText("")
-        self.data[tab_section][tab]['negative_prompt_widget'].setPlainText("")
+        self.data[tab_section][tab]["prompt_widget"].setPlainText("")
+        if "negative_prompt_widget" in self.data[tab_section][tab]:
+            self.data[tab_section][tab]["negative_prompt_widget"].setPlainText("")
 
     def add_tab(self, section, tab):
         self.app.override_section = tab
@@ -58,14 +65,93 @@ class GeneratorTabWidget(BaseWidget):
             self,
             f"{'stableDiffusion' if section == 'stablediffusion' else section}TabWidget"
         )
+        tab_name = tab
+        if tab_name == "outpaint":
+            tab_name = "inpaint / outpaint"
+        elif tab_name == "txt2img":
+            tab_name = "txt2img / img2img"
         tab_section.addTab(
             self.generate_form(section, tab),
-            "inpaint / outpaint" if tab == "outpaint" else tab
+            tab_name
         )
         # on tab change
         tab_section.currentChanged.connect(partial(
-            self.app.handle_tab_section_changed
+            self.handle_tab_section_changed
         ))
+
+    def handle_tab_section_changed(self):
+        self.app.update()
+        self.app.enable_embeddings()
+        self.app.current_section_by_tab = self.app.current_section
+
+    def handle_generator_tab_changed(self):
+        self.app.update()
+        self.app.enable_embeddings()
+        self.app.settings_manager.settings.current_tab.set(self.app.currentTabSection)
+        self.set_current_section_tab()
+
+    def set_tabs(self):
+        # get the tab section index
+        tab_section_index = None
+        current_tab = self.app.settings_manager.settings.current_tab.get()
+        tabs = self.app._tabs.keys()
+        if current_tab in list(tabs):
+            tab_section_index = list(tabs).index(current_tab)
+        if tab_section_index:
+            self.sectionTabWidget.setCurrentIndex(tab_section_index)
+
+        self.set_current_section_tab()
+
+    def set_current_section_tab(self):
+        current_tab = self.app.settings_manager.settings.current_tab.get()
+        # get the section index
+        section_index = None
+        current_section = self.app.current_section_by_tab
+        sections = self.app._tabs[current_tab].keys()
+        if current_section in list(sections):
+            section_index = list(sections).index(current_section)
+
+        if section_index:
+            if current_tab == "stablediffusion":
+                tab_section = self.stableDiffusionTabWidget
+            elif current_tab == "kandinsky":
+                tab_section = self.kandinskyTabWidget
+            elif current_tab == "shapegif":
+                tab_section = self.shapegifTabWidget
+            else:
+                tab_section = None
+            if tab_section:
+                tab_section.setCurrentIndex(section_index)
+
+    @property
+    def current_input_image_widget(self):
+        return self.current_section_data["input_image_widget"]
+
+    @property
+    def current_input_image(self):
+        if self.app.enable_input_image:
+            return self.current_input_image_widget.current_input_image
+        return None
+
+    @property
+    def controlnet_settings_widget(self):
+        return self.current_section_data.get("controlnet_settings_widget", None)
+
+    @property
+    def current_controlnet_input_image(self):
+        if self.controlnet_settings_widget:
+            return self.controlnet_settings_widget.current_image
+        return None
+
+    @property
+    def controlnet_image(self):
+        if self.controlnet_settings_widget:
+            return self.controlnet_settings_widget.current_controlnet_image
+        return None
+
+    def update_controlnet_thumbnail(self):
+        if self.controlnet_settings_widget:
+            self.controlnet_settings_widget.set_thumbnail()
 
     def generate_form(self, tab_section, tab):
         self.tab_section = tab_section
@@ -75,18 +161,16 @@ class GeneratorTabWidget(BaseWidget):
         self.col = 0
         self.layout = None
         widget = QWidget(self)
-        widget.setStyleSheet("font-size: 9pt;")
+        widget.setStyleSheet("font-size: 8pt;")
         self.layout = QGridLayout(widget)
         self.add_prompt_widgets()
         self.add_optional_tool_checkbox_widgets()
         self.add_input_image_widgets()
-        self.add_model_widgets()
-        self.add_scheduler_widgets()
+        self.add_controlnet_settings_widget(tab_section, tab)
+        self.add_model_scheduler_widgets()
         self.add_seed_widgets()
         self.add_steps_widget()
         self.add_scale_widgets()
-        self.add_image_scale_widgets()
-        self.add_strength_widgets()
         self.add_upscale_widgets()
         self.add_samples_widgets()
         self.add_frames_widgets()
@@ -150,33 +234,33 @@ class GeneratorTabWidget(BaseWidget):
         self.add_widget_to_grid(use_prompt_builder_checkbox)
         checkbox_layout.addWidget(use_prompt_builder_checkbox)
 
-        # use controlnet checkbox
-        if self.tab_section == "stablediffusion" and self.tab in ["txt2img", "img2img", "outpaint", "txt2vid"]:
-            use_controlnet_checkbox = QCheckBox()
-            use_controlnet_checkbox.setStyleSheet(stylesheet)
-            use_controlnet_checkbox.setObjectName("use_controlnet_checkbox")
-            use_controlnet_checkbox.setText("ControlNet")
-            use_controlnet_checkbox.setChecked(self.app.enable_controlnet)
-            use_controlnet_checkbox.stateChanged.connect(
-                partial(self.handle_value_change, "enable_controlnet", widget=use_controlnet_checkbox))
-            self.data[self.tab_section][self.tab]["enable_controlnet"] = use_controlnet_checkbox
-            self.data[self.tab_section][self.tab]["use_controlnet_checkbox"] = use_controlnet_checkbox
-
-            # add checkboxes to checkbox layout
-            checkbox_layout.addWidget(use_controlnet_checkbox)
-
         # add the checkbox layout to the grid
         self.add_widget_to_grid(checkbox_widget)
 
     @property
     def use_controlnet_checkbox(self):
-        return self.data[self.app.currentTabSection][self.app.current_section]["use_controlnet_checkbox"]
+        if "use_controlnet_checkbox" not in self.current_section_data:
+            return None
+        return self.current_section_data["use_controlnet_checkbox"]
 
     def add_input_image_widgets(self):
-        if self.app.current_section not in ["img2img", "pix2pix", "depth2img"]:
+        if self.app.current_section in ["txt2vid"]:
             return
-        input_image_widget = uic.loadUi("pyqt/widgets/input_image.ui")
+        input_image_widget = InputImageSettingsWidget(app=self.app)
+        self.data[self.tab_section][self.tab]["input_image_widget"] = input_image_widget
         self.add_widget_to_grid(input_image_widget)
+
+        self.data[self.tab_section][self.tab]["is_using_grid_input_image"] = True
+
+    @property
+    def is_using_grid_input_image(self):
+        return self.data[self.tab_section][self.tab]["is_using_grid_input_image"]
+
+    @property
+    def input_image(self):
+        if "input_image" in self.data[self.tab_section][self.tab]:
+            return self.data[self.tab_section][self.tab]["input_image"]
+        return None
 
     def toggle_all_prompt_builder_checkboxes(self, state):
         for tab_section in self.data.keys():
@@ -188,54 +272,52 @@ class GeneratorTabWidget(BaseWidget):
 
     def refresh_model_list(self):
         for i, section in enumerate(self.app._tabs[self.app.currentTabSection].keys()):
-            self.data[self.app.currentTabSection][section]["model_dropdown"].clear()
+            self.data[self.app.currentTabSection][section]["model_dropdown_widget"].clear()
             self.load_model_by_section(self.app.currentTabSection, section)
 
     def load_model_by_section(self, tab_section, section):
         requested_section = "txt2img" if section == "txt2vid" else section
         models = self.app.application_data.available_model_names(tab_section, requested_section, enabled_only=True)
-        self.data[tab_section][section]["model_dropdown"].addItems(models)
+        self.data[tab_section][section]["model_dropdown_widget"].addItems(models)
 
-    def add_model_widgets(self):
-        model_label = QLabel(self)
-        model_label.setObjectName("model_label")
-        model_label.setText("Model")
-        model_widget = QComboBox(self)
-        model_widget.setObjectName("model_dropdown")
-        model_widget.currentTextChanged.connect(
-            partial(self.handle_value_change, "model", widget=model_widget))
-        self.data[self.tab_section][self.tab]["model_dropdown"] = model_widget
-        current_model = self.app.model
+    def add_controlnet_settings_widget(self, tab_section, tab):
+        if tab_section not in ["kandinsky", "shapegif"] and tab in ["txt2img", "img2img", "outpaint", "txt2vid"]:
+            controlnet_settings_widget = ControlNetSettingsWidget(app=self.app)
+            self.data[self.tab_section][self.tab]["controlnet_settings_widget"] = controlnet_settings_widget
+            self.add_widget_to_grid(controlnet_settings_widget)
+
+    def add_model_scheduler_widgets(self):
+        widget = uic.loadUi(os.path.join(f"pyqt/widgets/model_scheduler_widget.ui"))
+        model_dropdown = widget.model_dropdown
+
+        scheduler_dropdown = widget.scheduler_dropdown
+        scheduler_action = self.tab
+        if self.tab_section == "kandinsky":
+            scheduler_action = f"kandinsky_{self.tab}"
+        elif self.tab_section == "shapegif":
+            scheduler_action = f"shapegif_{self.tab}"
+        scheduler_dropdown.addItems(AVAILABLE_SCHEDULERS_BY_ACTION[scheduler_action])
+        scheduler_dropdown.setCurrentText(self.app.scheduler)
+        scheduler_dropdown.currentTextChanged.connect(
+            partial(self.handle_value_change, "scheduler", widget=scheduler_dropdown))
+
+        self.data[self.tab_section][self.tab]["model_dropdown_widget"] = model_dropdown
+        self.data[self.tab_section][self.tab]["scheduler_dropdown_widget"] = scheduler_dropdown
+
         self.load_model_by_section(self.tab_section, self.tab)
-        model_widget.setCurrentText(current_model)
-        self.data[self.tab_section][self.tab]["model_dropdown_widget"] = model_widget
-        self.add_widget_to_grid(model_label)
-        self.add_widget_to_grid(model_widget)
+
+        current_model = self.app.model
+        model_dropdown.setCurrentText(current_model)
+        model_dropdown.currentTextChanged.connect(
+            partial(self.handle_value_change, "model", widget=model_dropdown))
+
+        self.add_widget_to_grid(widget)
 
     def update_available_models(self):
         for section in self.data.keys():
             for tab in self.data[section].keys():
                 self.data[section][tab]["model_dropdown_widget"].clear()
                 self.load_model_by_section(section, tab)
-
-    def add_scheduler_widgets(self):
-        scheduler_action = self.tab
-        if self.tab_section == "kandinsky":
-            scheduler_action = f"kandinsky_{self.tab}"
-        elif self.tab_section == "shapegif":
-            scheduler_action = f"shapegif_{self.tab}"
-        scheduler_label = QLabel(self)
-        scheduler_label.setObjectName("scheduler_label")
-        scheduler_label.setText("Scheduler")
-        scheduler_widget = QComboBox(self)
-        scheduler_widget.setObjectName("scheduler_dropdown")
-        scheduler_widget.addItems(AVAILABLE_SCHEDULERS_BY_ACTION[scheduler_action])
-        scheduler_widget.setCurrentText(self.app.scheduler)
-        scheduler_widget.currentTextChanged.connect(
-            partial(self.handle_value_change, "scheduler", widget=scheduler_widget))
-        self.data[self.tab_section][self.tab]["scheduler_dropdown_widget"] = scheduler_widget
-        self.add_widget_to_grid(scheduler_label)
-        self.add_widget_to_grid(scheduler_widget)
 
     def add_steps_widget(self):
         steps_slider = SliderWidget(
@@ -254,10 +336,10 @@ class GeneratorTabWidget(BaseWidget):
         self.data[self.tab_section][self.tab]["steps_slider_widget"] = steps_slider
         self.add_widget_to_grid(steps_slider)
 
-    def add_scale_widgets(self):
-        scale_slider = SliderWidget(
+    def get_scale_slider(self, label_text="Scale"):
+        return SliderWidget(
             app=self.app,
-            label_text="Scale",
+            label_text=label_text,
             slider_callback=partial(self.handle_value_change, "scale"),
             current_value=int(self.app.scale),
             slider_maximum=10000,
@@ -266,69 +348,36 @@ class GeneratorTabWidget(BaseWidget):
             spinbox_single_step=0.01,
             spinbox_page_step=0.01
         )
+
+    def add_scale_widgets(self):
+        if self.tab_section == "stablediffusion" and self.tab == "upscale":
+            return
+        scale_slider = self.get_scale_slider()
         self.data[self.tab_section][self.tab]["scale_slider_widget"] = scale_slider
         self.add_widget_to_grid(scale_slider)
 
-    def add_image_scale_widgets(self):
-        if self.tab in ["txt2img", "img2img", "outpaint", "depth2img", "superresolution", "txt2vid"]:
-            return
-        image_scale_slider = SliderWidget(
-            app=self.app,
-            label_text="Image Scale",
-            slider_callback=partial(self.handle_value_change, "image_scale"),
-            current_value=int(self.app.image_scale),
-            slider_maximum=10000,
-            spinbox_maximum=100.0,
-            display_as_float=True,
-            spinbox_single_step=0.01,
-            spinbox_page_step=0.01
-        )
-        self.data[self.tab_section][self.tab]["image_scale_slider"] = image_scale_slider
-        self.add_widget_to_grid(image_scale_slider)
+    @property
+    def current_section_data(self):
+        return self.data[self.app.currentTabSection][self.app.current_section]
 
-    def add_strength_widgets(self):
-        if self.tab in ["txt2img", "outpaint", "pix2pix", "upscale", "superresolution", "txt2vid"]:
-            return
-        strength_slider = SliderWidget(
-            app=self.app,
-            label_text="Strength",
-            slider_callback=partial(self.handle_value_change, "strength"),
-            current_value=self.app.strength,
-            slider_maximum=100,
-            spinbox_maximum=1.0,
-            display_as_float=True,
-            spinbox_single_step=0.01,
-            spinbox_page_step=0.01
-        )
-        self.data[self.tab_section][self.tab]["strength_slider"] = strength_slider
-        self.add_widget_to_grid(strength_slider)
+    def update_seed(self):
+        self.current_section_data["seed_widget"].update_seed()
+        self.current_section_data["seed_widget_latents"].update_seed()
 
     def add_seed_widgets(self):
-        group_box = QGroupBox(self)
-        group_box.setObjectName("seed_groupbox")
-        group_box.setTitle("Manual Seed")
-        group_box.setCheckable(True)
-        group_box.setChecked(not self.app.random_seed)
-        group_box.toggled.connect(
-            partial(self.handle_value_change, "random_seed", widget=group_box))
-        grid_layout = QGridLayout(group_box)
-
-        seed_spinbox = QLineEdit(self)
-        seed_spinbox.setObjectName("seed_spinbox")
-        seed_spinbox.setText(str(self.app.seed))
-        seed_spinbox.textChanged.connect(
-            partial(self.handle_value_change, "seed", widget=seed_spinbox))
+        hbox = QHBoxLayout()
+        hbox.setContentsMargins(0, 0, 0, 0)
+        container = QWidget()
+        container.setLayout(hbox)
 
         seed_widget = SeedWidget(app=self.app)
         seed_widget_latents = LatentsSeedWidget(app=self.app)
         hbox.addWidget(seed_widget)
         hbox.addWidget(seed_widget_latents)
 
-        grid_layout.addWidget(seed_spinbox)
-
-        self.data[self.tab_section][self.tab]["seed_widget"] = seed_spinbox
-
-        self.add_widget_to_grid(group_box)
+        self.add_widget_to_grid(container)
+        self.data[self.tab_section][self.tab]["seed_widget"] = seed_widget
+        self.data[self.tab_section][self.tab]["seed_widget_latents"] = seed_widget_latents
 
     def load_clip_skip_slider(self):
         """
@@ -354,10 +403,6 @@ class GeneratorTabWidget(BaseWidget):
     def add_samples_widgets(self):
         if self.tab == "txt2vid":
             return
-        interrupt_button = QPushButton("Interrupt")
-        interrupt_button.setObjectName("interrupt_button")
-        interrupt_button.clicked.connect(self.app.interrupt)
-        self.interrupt_button = interrupt_button
         samples_widget = SliderWidget(
             app=self.app,
             label_text="Samples",
@@ -376,13 +421,7 @@ class GeneratorTabWidget(BaseWidget):
         if self.tab_section not in self.clip_skip_disabled_tabs and self.tab not in self.clip_skip_disabled_sections:
             self.load_clip_skip_slider()
 
-        widget = QWidget()
-        horizontal_layout = QHBoxLayout(widget)
-        horizontal_layout.setContentsMargins(0, 0, 0, 0)
-        horizontal_layout.setSpacing(10)
-        horizontal_layout.addWidget(samples_widget)
-        horizontal_layout.addWidget(interrupt_button)
-        self.add_widget_to_grid(widget)
+        self.add_widget_to_grid(samples_widget)
 
         if self.tab_section == "kandinsky":
             # show a checkbox for self.app.variation
@@ -396,10 +435,6 @@ class GeneratorTabWidget(BaseWidget):
     def add_frames_widgets(self):
         if self.tab != "txt2vid":
             return
-        interrupt_button = QPushButton("Interrupt")
-        interrupt_button.setObjectName("interrupt_button")
-        interrupt_button.clicked.connect(self.app.interrupt)
-        self.interrupt_button = interrupt_button
         samples_widget = SliderWidget(
             app=self.app,
             label_text="Frames",
@@ -419,11 +454,13 @@ class GeneratorTabWidget(BaseWidget):
         horizontal_layout.setContentsMargins(0, 0, 0, 0)
         horizontal_layout.setSpacing(10)
         horizontal_layout.addWidget(samples_widget)
-        horizontal_layout.addWidget(interrupt_button)
         self.add_widget_to_grid(widget)
 
     def add_upscale_widgets(self):
-        pass
+        if self.tab_section != "stablediffusion" or self.tab != "upscale":
+            return
+        scale_slider = self.get_scale_slider(label_text="Input Image Scale")
+        self.data[self.tab_section][self.tab]["input_image_widget"].add_slider_to_scale_frame(scale_slider)
 
     def add_generate_widgets(self):
         widget_a = QWidget()
@@ -433,15 +470,7 @@ class GeneratorTabWidget(BaseWidget):
         horizontal_layout_a.setContentsMargins(0, 0, 0, 0)
         horizontal_layout_a.setSpacing(10)
         horizontal_layout_b.setContentsMargins(0, 0, 0, 0)
-        horizontal_layout_b.setSpacing(0)
-        to_canvas_radio = QRadioButton("Single")
-        to_canvas_radio.setChecked(not self.app.deterministic)
-        to_canvas_radio.toggled.connect(
-            partial(self.handle_value_change, "deterministic", widget=to_canvas_radio, value=False))
-        deterministic_radio = QRadioButton("Batch")
-        deterministic_radio.setChecked(self.app.deterministic)
-        deterministic_radio.toggled.connect(
-            partial(self.handle_value_change, "deterministic", widget=deterministic_radio))
+        horizontal_layout_b.setSpacing(5)
         generate_button = QPushButton("Generate")
         generate_button.setObjectName("generate_button")
         progressBar = QProgressBar(self)
@@ -452,9 +481,15 @@ class GeneratorTabWidget(BaseWidget):
         self.data[self.tab_section][self.tab]["progress_bar_started"] = False
         self.data[self.tab_section][self.tab]["generate_button"] = generate_button
 
-        horizontal_layout_a.addRow(to_canvas_radio, deterministic_radio)
+        interrupt_button = QPushButton("Interrupt")
+        interrupt_button.setObjectName("interrupt_button")
+        interrupt_button.clicked.connect(self.app.interrupt)
+        self.interrupt_button = interrupt_button
+
+        # horizontal_layout_a.addRow(to_canvas_radio, deterministic_radio)
         horizontal_layout_b.addWidget(generate_button)
         horizontal_layout_b.addWidget(progressBar)
+        horizontal_layout_b.addWidget(interrupt_button)
         self.add_widget_to_grid(widget_a)
         self.add_widget_to_grid(widget_b)
         generate_button.clicked.connect(partial(self.app.generate, progressBar))
@@ -563,15 +598,11 @@ class GeneratorTabWidget(BaseWidget):
                     self.data[tab_section][tab]["steps_slider_widget"].set_stylesheet()
                 if "scale_slider_widget" in self.data[tab_section][tab]:
                     self.data[tab_section][tab]["scale_slider_widget"].set_stylesheet()
-                if "image_scale_slider" in self.data[tab_section][tab]:
-                    self.data[tab_section][tab]["image_scale_slider"].set_stylesheet()
-                if "strength_slider" in self.data[tab_section][tab]:
-                    self.data[tab_section][tab]["strength_slider"].set_stylesheet()
                 if "samples_slider_widget" in self.data[tab_section][tab]:
                     self.data[tab_section][tab]["samples_slider_widget"].set_stylesheet()
 
     def set_prompt(self, prompt):
-        self.data[self.app.currentTabSection][self.app.current_section]["prompt_widget"].setPlainText(prompt)
+        self.current_section_data["prompt_widget"].setPlainText(prompt)
 
     def set_negative_prompt(self, prompt):
-        self.data[self.app.currentTabSection][self.app.current_section]["negative_prompt_widget"].setPlainText(prompt)
+        self.current_section_data["negative_prompt_widget"].setPlainText(prompt)
