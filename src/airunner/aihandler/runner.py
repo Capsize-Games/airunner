@@ -213,7 +213,7 @@ class SDRunner(
 
     @property
     def image_guidance_scale(self):
-        return self.options.get(f"image_scale", 1.5)
+        return self.options.get(f"image_guidance_scale", 1.5)
 
     @property
     def height(self):
