@@ -284,7 +284,8 @@ class PromptBuilderWidget(BaseWidget):
 
         prompt_a = ""
         negative_prompt_a = ""
-        seed = self.app.seed if not self.app.seed_override else self.app.seed_override
+        #seed = self.app.seed if not self.app.seed_override else self.app.seed_override
+        seed = self.app.seed
         if self.settings_manager.settings.prompt_blend_type.get() == 1:
             prompt_a = self.app.prompt
             negative_prompt_a = self.app.negative_prompt
@@ -303,8 +304,9 @@ class PromptBuilderWidget(BaseWidget):
         current_tab.negative_prompt_text.setPlainText(negative_prompt)
 
     def build_prompts(self, prompt_a="", negative_prompt_a="", seed=None):
-        if seed is None:
-            seed = self.app.seed if not self.app.seed_override else self.app.seed_override
+        # if seed is None:
+        #     seed = self.app.seed if not self.app.seed_override else self.app.seed_override
+        seed = self.app.seed
         category = self.prompt_generator_category
         image_genre = self.prompt_generator_prompt_genre
         image_color = self.prompt_generator_prompt_color

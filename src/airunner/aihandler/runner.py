@@ -162,7 +162,13 @@ class SDRunner(
 
     @property
     def seed(self):
-        return self.options.get(f"seed", 42) + self.current_sample
+        return int(self.options.get(f"seed", 42)) + self.current_sample
+
+    @property
+    def latents_seed(self):
+        return int(self.options.get(f"latents_seed", 84))
+
+    _current_latents_seed = None
 
     @property
     def deterministic_seed(self):
@@ -735,7 +741,8 @@ class SDRunner(
 
     def generator(self, device=None, seed=None):
         device = self.device if not device else device
-        seed = self.seed if not seed else seed
+        if seed is None:
+            seed = int(self.latents_seed)
         return torch.Generator(device=device).manual_seed(seed)
 
     def prepare_options(self, data):
@@ -848,6 +855,33 @@ class SDRunner(
                         pass
             return images, nsfw_content_detected
 
+    _latents = None
+    @property
+    def latents(self):
+        return self.generate_latents()
+
+    @latents.setter
+    def latents(self, value):
+        self._latents = value
+
+    def generate_latents(self):
+        width_scale = self.width / 512
+        height_scale = self.height / 512
+        latent_width = int(self.pipe.unet.config.sample_size * width_scale)
+        latent_height = int(self.pipe.unet.config.sample_size * height_scale)
+        batch_size = self.batch_size
+        return randn_tensor(
+            (
+                batch_size,
+                self.pipe.unet.config.in_channels,
+                latent_height,
+                latent_width,
+            ),
+            device=torch.device(self.device),
+            dtype=self.data_type,
+            generator=self.generator(self.device),
+        )
+
     def call_pipe(self, **kwargs):
         """
         Generate an image using the pipe
@@ -871,7 +905,7 @@ class SDRunner(
                 "prompt": self.prompt,
                 "negative_prompt": self.negative_prompt,
                 "image": kwargs.get("image"),
-                "generator": torch.manual_seed(self.seed),
+                "generator": self.generator(),
             })
         elif self.is_txt2vid:
             args.update({
@@ -908,9 +942,9 @@ class SDRunner(
         if self.deterministic_generation:
             if self.is_txt2img:
                 if self.deterministic_seed:
-                    generator = [self.generator(seed=self.seed) for _i in range(self.batch_size)]
+                    generator = [self.generator() for _i in range(self.batch_size)]
                 else:
-                    generator = [self.generator(seed=self.seed + i) for i in range(self.batch_size)]
+                    generator = [self.generator(seed=self.latents_seed + i) for i in range(self.batch_size)]
                 args["generator"] = generator
 
             if not self.is_upscale and not self.is_superresolution and not self.is_txt2vid:
@@ -927,6 +961,9 @@ class SDRunner(
 
         if self.is_shapegif:
             return self.call_shapegif_pipe()
+
+        if not self.is_img2img and not self.is_txt2vid:
+            args["latents"] = self.latents
 
         try:
             return self.pipe(**args)
@@ -976,7 +1013,7 @@ class SDRunner(
                 image,
                 os.path.join(
                     path,
-                    f"{self.prompt}_{self.seed}.gif")
+                    f"{self.prompt}_{self.latents_seed}.gif")
             )
         return {
             "images": None,
@@ -1071,7 +1108,7 @@ class SDRunner(
         image = self.image
         mask = self.mask
         nsfw_content_detected = None
-        seed_everything(self.seed)
+        seed_everything(self.latents_seed)
         extra_args = self.prepare_extra_args(data, image, mask)
 
         # do the sample
@@ -1163,6 +1200,7 @@ class SDRunner(
             if prompt_data.current_negative_prompt \
                and prompt_data.current_negative_prompt != "" \
             else self.negative_prompt
+
         prompt, negative_prompt = prompt_data.build_prompts(
             seed=seed,
             prompt=prompt,
@@ -1180,7 +1218,6 @@ class SDRunner(
             data["options"][f"negative_prompt"] = negative_prompt
             self.clear_prompt_embeds()
             self.process_data(data)
-
         return data
 
     def process_data(self, data: dict):
@@ -1203,7 +1240,7 @@ class SDRunner(
             self.send_message(f"Applying memory settings")
             self.apply_memory_efficient_settings()
 
-        seed = self.seed
+        seed = self.latents_seed
         for n in range(self.n_samples):
             data = self.process_prompts(data, seed)
             self.current_sample = n
@@ -1279,8 +1316,7 @@ class SDRunner(
             "tab_section": tab_section,
         }, code=MessageCode.PROGRESS)
 
-    def callback(self, step: int, _time_step, _latents):
-        # convert _latents to image
+    def callback(self, step: int, _time_step, latents):
         image = None
         data = self.data
         tab_section = "stablediffusion"
@@ -1300,7 +1336,8 @@ class SDRunner(
             "action": self.action,
             "image": image,
             "data": data,
-            "tab_section": tab_section
+            "tab_section": tab_section,
+            "latents": latents
         }
         if self.use_kandinsky:
             """

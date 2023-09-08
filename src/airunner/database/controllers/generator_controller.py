@@ -50,6 +50,14 @@ class GeneratorController(BaseController):
         return self.settings.random_seed
 
     @property
+    def latents_seed(self):
+        return self.settings.latents_seed
+
+    @property
+    def random_latents_seed(self):
+        return self.settings.random_latents_seed
+
+    @property
     def model_var(self):
         return self.settings.model_var
 
