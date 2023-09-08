@@ -766,7 +766,6 @@ class SDRunner(
         action = data["action"]
         options = data["options"]
         requested_model = options.get(f"model", None)
-        enable_controlnet = options.get("enable_controlnet", False)
 
         # do model reload checks here
         if (self.is_pipe_loaded and (  # memory options change
@@ -776,8 +775,8 @@ class SDRunner(
             self.clear_scheduler()
             self.clear_controlnet()
 
-        if ((self.controlnet_loaded and not enable_controlnet) or
-           (not self.controlnet_loaded and enable_controlnet)):
+        if ((self.controlnet_loaded and not self.enable_controlnet) or
+           (not self.controlnet_loaded and self.enable_controlnet)):
             self.initialized = False
 
         if self.prompt != options.get(f"prompt") or \
