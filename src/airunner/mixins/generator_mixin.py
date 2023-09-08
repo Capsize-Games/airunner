@@ -740,6 +740,12 @@ class GeneratorMixin(LoraMixin):
             "variation": self.variation
         }
 
+        options["enable_controlnet"] = self.enable_controlnet
+        options["controlnet"] = self.controlnet
+
+        if self.generator_tab_widget.controlnet_image:
+            options["controlnet_image"] = self.generator_tab_widget.controlnet_image
+
         if action == "superresolution":
             options["original_image_width"] = self.canvas.current_active_image_data.image.width
             options["original_image_height"] = self.canvas.current_active_image_data.image.height
