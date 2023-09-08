@@ -21,7 +21,7 @@ setup(
         "tqdm==4.65.0",
         "omegaconf==2.3.0",
         "accelerate==0.20.3",
-        "controlnet_aux==0.0.6",
+        "controlnet_aux==0.0.7",
         "diffusers==0.20.2",
         "huggingface-hub==0.16.3",
         "numpy==1.23.5",
