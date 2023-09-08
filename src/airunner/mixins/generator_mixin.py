@@ -646,8 +646,8 @@ class GeneratorMixin(LoraMixin):
         if not extra_options:
             extra_options = {}
 
-        if self.enable_controlnet and "image" in extra_options:
-            extra_options["input_image"] = self.controlnet_settings.current_image
+        if self.enable_controlnet:
+            extra_options["input_image"] = self.generator_tab_widget.current_controlnet_input_image
 
         # if self.random_seed or not seed:
         #     self.seed_override = None
