@@ -469,6 +469,10 @@ class SDRunner(
 
     @property
     def enable_controlnet(self):
+        if self.use_kandinsky or self.is_shapegif:
+            return False
+        if not self.is_txt2img and not self.is_img2img and not self.is_outpaint:
+            return False
         if self.input_image is None and self.controlnet_image is None:
             return False
         return self.options.get("enable_controlnet", False)
