@@ -4,6 +4,7 @@ from PyQt6.QtWidgets import QFileDialog
 
 from airunner.filters.filter_halftone import FilterHalftone
 from airunner.filters.filter_registration_error import FilterRegistrationError
+from airunner.utils import auto_export_image
 from airunner.windows.deterministic_generation_window import DeterministicGenerationWindow
 from airunner.filters.filter_box_blur import FilterBoxBlur
 from airunner.filters.filter_color_balance import FilterColorBalance
@@ -83,7 +84,7 @@ class MenubarMixin:
         self.actionRGB_Noise.triggered.connect(self.filter_rgb_noise.show)
 
     def import_image(self):
-        file_path, _ = self.display_import_image_dialog()
+        file_path, _ = self.display_import_image_dialog(directory=self.settings_manager.settings.image_path.get())
         if file_path == "":
             return
         self.canvas.load_image(file_path)
@@ -120,9 +121,9 @@ class MenubarMixin:
             "Image Files (*.png *.jpg *.jpeg *.gif)"
         )
 
-    def display_import_image_dialog(self, label="Import Image"):
+    def display_import_image_dialog(self, label="Import Image", directory=""):
         return QFileDialog.getOpenFileName(
-            self.window, label, "", "Image Files (*.png *.jpg *.jpeg)"
+            self.window, label, directory, "Image Files (*.png *.jpg *.jpeg)"
         )
 
     def paste_image(self):
