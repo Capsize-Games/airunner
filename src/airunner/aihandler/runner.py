@@ -1101,8 +1101,7 @@ class SDRunner(
             pass
         elif self.is_upscale:
             extra_args = {**extra_args, **{
-                "image": image,
-                "image_guidance_scale": self.image_guidance_scale,
+                "image": image
             }}
         elif self.is_superresolution:
             extra_args = {**extra_args, **{
