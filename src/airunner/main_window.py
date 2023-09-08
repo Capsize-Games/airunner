@@ -715,24 +715,25 @@ class MainWindow(
             self.center_panel
         )
 
-    def handle_tab_section_changed(self):
-        self.update()
-        self.enable_embeddings()
-        self.enable_disable_controlnet_tab()
+    @property
+    def current_section_by_tab(self):
+        current_tab = self.settings_manager.settings.current_tab.get()
+        if current_tab == "stablediffusion":
+            return self.settings_manager.settings.current_section_stablediffusion.get()
+        elif current_tab == "kandinsky":
+            return self.settings_manager.settings.current_section_kandinsky.get()
+        elif current_tab == "shapegif":
+            return self.settings_manager.settings.current_section_shapegif.get()
 
-    def handle_generator_tab_changed(self):
-        self.update()
-        self.enable_embeddings()
-        self.enable_disable_controlnet_tab()
-
-    def enable_disable_controlnet_tab(self):
-        enable = self.currentTabSection in ["stablediffusion"] and \
-                 self.current_section in ["txt2img", "img2img", "outpaint"]
-        self.center_panel.setTabEnabled(1, enable)
-        if not enable:
-            self.controlnet_settings.template.controlnet_groupbox.setChecked(False)
-        else:
-            self.controlnet_settings.template.controlnet_groupbox.setChecked(self.enable_controlnet)
+    @current_section_by_tab.setter
+    def current_section_by_tab(self, val):
+        current_tab = self.settings_manager.settings.current_tab.get()
+        if current_tab == "stablediffusion":
+            self.settings_manager.settings.current_section_stablediffusion.set(val)
+        elif current_tab == "kandinsky":
+            self.settings_manager.settings.current_section_kandinsky.set(val)
+        elif current_tab == "shapegif":
+            self.settings_manager.settings.current_section_shapegif.set(val)
 
     def handle_value_change(self, attr_name, value=None, widget=None):
         attr = getattr(self, f"{attr_name}_var")
