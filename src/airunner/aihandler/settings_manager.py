@@ -5,6 +5,7 @@ from filelock import FileLock
 
 from airunner.aihandler.database import RunAISettings, PromptSettings, ApplicationSettings
 from airunner.aihandler.qtvar import Var
+from airunner.aihandler.logger import Logger as logger
 
 
 class BaseSettingsManager:
@@ -242,9 +243,10 @@ class ApplicationData(BaseSettingsManager):
     def available_models_by_section(self, section):
         models_by_section = []
         models = self.available_models()
-        if section in models:
-            models_by_section = models[section]
-            if section == "img2img":
+        if section in models or section in ["img2img", "txt2vid"]:
+            if section in models:
+                models_by_section = models[section]
+            if section in ["img2img", "txt2vid"]:
                 models_by_section = [
                     *models_by_section,
                     *models["txt2img"]
