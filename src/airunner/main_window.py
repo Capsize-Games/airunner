@@ -952,7 +952,9 @@ class MainWindow(
         )
 
         if self.settings_manager.settings.auto_export_images.get():
-            self.auto_export_image(images[0], data)
+            path = auto_export_image(images[0], data, self.seed)
+            if path is not None:
+                self.set_status_label(f"Image exported to {path}")
 
         self.generator_tab_widget.stop_progress_bar(
             data["tab_section"], data["action"]
