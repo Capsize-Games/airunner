@@ -35,18 +35,12 @@ class Themes:
             """,
             "input_image_groupbox": """
                 QGroupBox {
-                    border-left: 0px;
-                    border-right: 0px;
-                    border-bottom: 0px;
                     border-radius: 0px;
                     font-size: 8pt;
                 }
             """,
             "controlnet_groupbox": """
                 QGroupBox {
-                    border-left: 0px;
-                    border-right: 0px;
-                    border-bottom: 0px;
                     border-radius: 0px;
                     font-size: 8pt;
                 }
