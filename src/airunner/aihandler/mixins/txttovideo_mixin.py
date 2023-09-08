@@ -18,7 +18,7 @@ class TexttovideoMixin:
 
     @property
     def txt2vid_file(self):
-        return os.path.join(self.video_path, f"{self.prompt}_{self.seed}.mp4")
+        return os.path.join(self.video_path, f"{self.prompt}_{self.latents_seed}.mp4")
 
     def enhance_video(self, video_frames):
         """
@@ -46,7 +46,7 @@ class TexttovideoMixin:
                     "img2img_n_samples": 20,
                     "img2img_strength": 0.5,
                     "img2img_scale": 7.5,
-                    "img2img_seed": self.seed,
+                    "img2img_seed": self.latents_seed,
                     "img2img_model": "Stable diffusion V2",
                     "img2img_scheduler": self.scheduler_name,
                     "img2img_model_path": "stabilityai/stable-diffusion-2-1-base",
