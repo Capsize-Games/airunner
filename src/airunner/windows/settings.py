@@ -34,7 +34,7 @@ class HighlightDelegate(QStyledItemDelegate):
 class SettingsWindow(BaseWindow):
     template_name = "settings"
     window_title = "AI Runner Settings"
-    is_modal = True
+    is_modal = False
 
     def initialize_window(self):
         self.model = QStandardItemModel()
