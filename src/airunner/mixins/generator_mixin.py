@@ -797,11 +797,10 @@ class GeneratorMixin(LoraMixin):
             options["original_image_width"] = self.canvas.current_active_image_data.image.width
             options["original_image_height"] = self.canvas.current_active_image_data.image.height
 
-        if action in ["txt2img", "img2img", "outpaint", "depth2img", "pix2pix"]:
-            options[f"strength"] = self.strength / 100.0
-
-        if action == "pix2pix":
-            options[f"pix2pix_image_guidance_scale"] = self.image_scale
+        if action in ["txt2img", "img2img", "outpaint", "depth2img"]:
+            options[f"strength"] = self.strength / 10000.0
+        elif action in ["pix2pix"]:
+            options[f"image_guidance_scale"] = self.image_scale / 10000.0 * 100.0
 
         """
         Emitting generate_signal with options allows us to pass more options to the dict from
