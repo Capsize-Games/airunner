@@ -1620,7 +1620,14 @@ class SDRunner(
             pipeline.unet.to(self.data_type)
         return pipeline
 
+    def get_pipeline_action(self, action=None):
+        action = self.action if not action else action
+        if action == "txt2img" and self.is_img2img:
+            action = "img2img"
+        return action
+
     def download_from_original_stable_diffusion_ckpt(self, path):
+        pipeline_action = self.get_pipeline_action()
         pipe = download_from_original_stable_diffusion_ckpt(
             checkpoint_path=path,
             device=self.device,
@@ -1631,7 +1638,7 @@ class SDRunner(
             pipeline_class=AutoImport.class_object(
                 self.action,
                 self.model_data,
-                pipeline_action=self.action,
+                pipeline_action=pipeline_action,
                 single_file=True
             ),
             config_files={
@@ -1688,10 +1695,11 @@ class SDRunner(
             if self.is_single_file:
                 pipe = self.download_from_original_stable_diffusion_ckpt(self.model_path)
             else:
+                pipeline_action = self.get_pipeline_action()
                 pretrained_object = AutoImport.class_object(
                     self.action,
                     self.model_data,
-                    pipeline_action=self.action,
+                    pipeline_action=pipeline_action,
                     category=self.model_data["category"]
                 )
                 components = pipe.components
@@ -1733,12 +1741,12 @@ class SDRunner(
             self.current_model_branch = self.options.get(f"model_branch", None)
 
     def from_pretrained(self, **kwargs):
-        pipeline_action = kwargs.pop("pipeline_action", self.model_data["pipeline_action"])
         model = kwargs.pop("model", self.model_data)
         if isinstance(model, list):
             model = model[0]["path"]
         elif isinstance(model, dict):
             model = model["path"]
+        pipeline_action = self.get_pipeline_action(kwargs.pop("pipeline_action", self.model_data["pipeline_action"]))
         try:
             return AutoImport.from_pretrained(
                 self.action,
