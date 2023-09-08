@@ -936,6 +936,7 @@ class MainWindow(
     def handle_controlnet_image_generated(self, message):
         self.controlnet_image = message["image"]
         self.controlnet_image_generated.emit(True)
+        self.generator_tab_widget.controlnet_settings_widget.handle_controlnet_image_generated()
 
     def handle_image_generated(self, message):
         images = message["images"]
