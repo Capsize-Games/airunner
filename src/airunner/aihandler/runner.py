@@ -927,8 +927,6 @@ class SDRunner(
                 "prompt": self.prompt,
                 "negative_prompt": self.negative_prompt,
             })
-            if not self.is_txt2vid:
-                args["num_frames"] = self.n_samples
         elif not self.use_kandinsky:
             if self.use_compel:
                 try:
