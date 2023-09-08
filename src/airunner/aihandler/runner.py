@@ -687,6 +687,13 @@ class SDRunner(
         return image
 
     @staticmethod
+    def image_to_latents(image: PIL.Image):
+        image = image.convert("RGBA")
+        image = transforms.ToTensor()(image)
+        image = image.unsqueeze(0)
+        return image
+
+    @staticmethod
     def clear_memory():
         logger.info("Clearing memory")
         torch.cuda.empty_cache()
