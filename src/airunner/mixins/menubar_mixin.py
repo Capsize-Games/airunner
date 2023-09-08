@@ -100,7 +100,9 @@ class MenubarMixin:
             self.choose_image_export_path()
         if os.path.isdir(self.image_path) is False:
             return
-        self.auto_export_image(self.canvas.current_layer.image_data.image)
+        path = auto_export_image(self.canvas.current_layer.image_data.image, seed=self.seed)
+        if path is not None:
+            self.set_status_label(f"Image exported to {path}")
 
 
     def choose_image_export_path(self):
