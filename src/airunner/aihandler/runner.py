@@ -4,6 +4,8 @@ import gc
 import re
 from io import BytesIO
 import traceback
+
+import PIL
 import torch
 from PIL import Image, ImageDraw, ImageFont
 import numpy as np
@@ -28,7 +30,7 @@ from airunner.prompt_builder.prompt_data import PromptData
 
 from controlnet_aux.processor import Processor
 
-from diffusers.utils import export_to_gif
+from diffusers.utils import export_to_gif, randn_tensor
 from diffusers.pipelines.stable_diffusion.convert_from_ckpt import \
     download_from_original_stable_diffusion_ckpt
 
@@ -102,7 +104,9 @@ class SDRunner(
 
     @property
     def controlnet_type(self):
-        controlnet_type = self.options.get("controlnet", "canny")
+        controlnet_type = self.options.get("controlnet", None)
+        if not controlnet_type:
+            controlnet_type = "canny"
         return controlnet_type.replace(" ", "_")
 
     @property
