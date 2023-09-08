@@ -220,9 +220,8 @@ class MainWindow(
 
     @property
     def settings(self):
-        settings = self.settings_manager.settings
-        settings.set_namespace(self.current_section, self.currentTabSection)
-        return settings
+        self.settings_manager.settings.set_namespace(self.current_section, self.currentTabSection)
+        return self.settings_manager.settings
 
     @property
     def version(self):
