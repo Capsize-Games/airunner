@@ -691,6 +691,10 @@ class GeneratorMixin(LoraMixin):
                     model_branch = model["branch"]
                     model_data = model
                     break
+        pipeline = self.application_data.available_pipeline_by_section(section_name, model_data["version"], model_data["category"])
+        if pipeline:
+            model_data["pipeline_class"] = pipeline
+            model_data["pipeline_action"] = section_name
 
         # get controlnet_dropdown from active tab
         options = {
