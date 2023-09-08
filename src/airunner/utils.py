@@ -224,3 +224,97 @@ def get_latest_version():
 #     # sort models by name
 #     models.sort()
 #     return models
+
+def prepare_metadata(data):
+    settings_manager = SettingsManager()
+    if not settings_manager.settings.export_metadata.get() or \
+            settings_manager.settings.image_export_type.get() != "png":
+        return None
+    from PIL import PngImagePlugin
+    metadata = PngImagePlugin.PngInfo()
+    options = data["options"]
+    action = data["action"]
+    metadata.add_text("action", action)
+    if settings_manager.settings.image_export_metadata_prompt.get() is True:
+        metadata.add_text("prompt", options[f'prompt'])
+    if settings_manager.settings.image_export_metadata_negative_prompt.get() is True:
+        metadata.add_text("negative_prompt", options[f'negative_prompt'])
+    if settings_manager.settings.image_export_metadata_scale.get() is True:
+        metadata.add_text("scale", str(options[f"scale"]))
+    if settings_manager.settings.image_export_metadata_seed.get() is True:
+        metadata.add_text("seed", str(options[f"seed"]))
+    if settings_manager.settings.image_export_metadata_steps.get() is True:
+        metadata.add_text("steps", str(options[f"steps"]))
+    if settings_manager.settings.image_export_metadata_ddim_eta.get() is True:
+        metadata.add_text("ddim_eta", str(options[f"ddim_eta"]))
+    if settings_manager.settings.image_export_metadata_iterations.get() is True:
+        metadata.add_text("n_iter", str(options[f"n_iter"]))
+    if settings_manager.settings.image_export_metadata_samples.get() is True:
+        metadata.add_text("n_samples", str(options[f"n_samples"]))
+    if settings_manager.settings.image_export_metadata_model.get() is True:
+        metadata.add_text("model", str(options[f"model"]))
+    if settings_manager.settings.image_export_metadata_model_branch.get() is True:
+        metadata.add_text("model_branch", str(options[f"model_branch"]))
+    if settings_manager.settings.image_export_metadata_scheduler.get() is True:
+        metadata.add_text("scheduler", str(options[f"scheduler"]))
+    return metadata
+
+def prepare_controlnet_metadata(data):
+    from PIL import PngImagePlugin
+    settings_manager = SettingsManager()
+    metadata = PngImagePlugin.PngInfo()
+    metadata.add_text("controlnet", str(data["controlnet"]))
+
+def auto_export_image(
+    image,
+    data=None,
+    seed=None,
+    type="image",
+):
+    if seed is None:
+        raise Exception("Seed must be set when auto exporting an image")
+    settings_manager = SettingsManager()
+    if data and "action" in data and data["action"] == "txt2vid":
+        return
+    base_path = settings_manager.settings.model_base_path.get()
+    if type == "image":
+        image_path = settings_manager.settings.image_path.get()
+        image_path = "images" if image_path == "" else image_path
+    elif type == "controlnet":
+        image_path = os.path.join(settings_manager.settings.image_path.get(), "controlnet_masks")
+    path = os.path.join(base_path, image_path) if image_path == "images" else image_path
+    if not os.path.exists(path):
+        os.makedirs(path)
+    extension = settings_manager.settings.image_export_type.get()
+    if extension == "":
+        extension = "png"
+    extension = f".{extension}"
+    filename = "image"
+    if data:
+        if type == "image":
+            filename = data["action"]
+        elif type == "controlnet":
+            filename = f"mask_{data['controlnet']}"
+    if seed:
+        filename = f"{filename}_{str(seed)}"
+    if os.path.exists(os.path.join(path, filename + extension)):
+        i = 1
+        while os.path.exists(os.path.join(path, filename + "_" + str(i) + extension)):
+            i += 1
+        filename = filename + "_" + str(i)
+    if data:
+        if type == "image":
+            metadata = prepare_metadata(data)
+        elif type == "controlnet":
+            metadata = prepare_controlnet_metadata(data)
+    else:
+        metadata = None
+
+    if image:
+        filename = filename + extension
+        if metadata:
+            image.save(os.path.join(path, filename), pnginfo=metadata)
+        else:
+            image.save(os.path.join(path, filename))
+        return os.path.join(path, filename)
+    return None
