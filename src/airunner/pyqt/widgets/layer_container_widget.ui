@@ -223,6 +223,29 @@
        </widget>
       </item>
       <item>
+       <widget class="QPushButton" name="merge_layer_button">
+        <property name="toolTip">
+         <string>Merge selected layers</string>
+        </property>
+        <property name="text">
+         <string/>
+        </property>
+        <property name="icon">
+         <iconset>
+          <normaloff>../../src/icons/002-merge.png</normaloff>../../src/icons/002-merge.png</iconset>
+        </property>
+        <property name="iconSize">
+         <size>
+          <width>24</width>
+          <height>24</height>
+         </size>
+        </property>
+        <property name="flat">
+         <bool>true</bool>
+        </property>
+       </widget>
+      </item>
+      <item>
        <spacer name="horizontalSpacer">
         <property name="orientation">
          <enum>Qt::Horizontal</enum>
