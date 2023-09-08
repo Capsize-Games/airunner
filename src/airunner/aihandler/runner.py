@@ -1086,7 +1086,7 @@ class SDRunner(
                 "image": image,
                 "strength": self.strength,
             }}
-        elif action == "pix2pix":
+        elif self.is_pix2pix:
             extra_args = {**extra_args, **{
                 "image": image,
                 "image_guidance_scale": self.image_guidance_scale,
