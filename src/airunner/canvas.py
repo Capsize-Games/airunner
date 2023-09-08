@@ -1,3 +1,6 @@
+from functools import partial
+
+from PIL import Image
 from PyQt6.QtCore import Qt, QPoint, QRect
 from PyQt6.QtGui import QColor, QPainter, QBrush, QCursor, QIcon
 from PyQt6.QtWidgets import QSpacerItem, QSizePolicy, QVBoxLayout, QWidget
@@ -32,6 +35,7 @@ class Canvas(
     brush_start = None
     last_mouse_pos = None
     _is_dirty = BooleanVar(False)
+    selected_layers = {}
 
     @property
     def is_dirty(self):
@@ -508,22 +512,88 @@ class Canvas(
     def get_layers_copy(self):
         return [layer for layer in self.layers]
 
-    def delete_layer(self):
+    def merge_selected_layers(self):
+        if self.current_layer_index not in self.selected_layers:
+            self.selected_layers[self.current_layer_index] = self.current_layer
+
+        selected_layer = self.current_layer
+
+        # get the rect of the new image based on the existing images extremities
+        # (left, top, width and height)
+        rect = QRect()
+        for layer in self.selected_layers.values():
+            image = layer.image_data.image
+            if image:
+                if (image.width+layer.image_data.position.x()) > rect.width():
+                    rect.setWidth(image.width+abs(layer.image_data.position.x()))
+                if (image.height+layer.image_data.position.y()) > rect.height():
+                    rect.setHeight(image.height+abs(layer.image_data.position.y()))
+                if layer.image_data.position.x() < rect.x():
+                    rect.setX(layer.image_data.position.x())
+                if layer.image_data.position.y() < rect.y():
+                    rect.setY(layer.image_data.position.y())
+
+        new_image = Image.new("RGBA", (rect.width(), rect.height()), (0, 0, 0, 0))
+
+        for index, layer in self.selected_layers.items():
+            # get an image object and merge it into the new image if it exists
+            image = layer.image_data.image
+            if image:
+                x = layer.image_data.position.x()
+                if x < 0:
+                    x = 0
+                y = layer.image_data.position.y()
+                if y < 0:
+                    y = 0
+                new_image.alpha_composite(
+                    image,
+                    (x, y)
+                )
+
+            # delete any layers which are not the current layer index
+            if index != self.current_layer_index:
+                self.delete_layer(layer=layer)
+
+        # if we have a new image object, set it as the current layer image
+        layer_index = self.get_index_by_layer(selected_layer)
+        self.current_layer_index = layer_index
+        if new_image:
+            self.layers[self.current_layer_index].image_data.image = new_image
+            self.layers[self.current_layer_index].image_data.position = QPoint(rect.x(), rect.y())
+
+        # reset the selected layers dictionary and refresh the canvas
+        self.selected_layers = {}
+        self.show_layers()
+        self.update()
+
+    def get_index_by_layer(self, layer):
+        for index, layer_object in enumerate(self.layers):
+            if layer is layer_object:
+                return index
+        return 0
+
+    def delete_layer(self, value=False, index=None, layer=None):
+        current_index = index
+        if layer and current_index is None:
+            for layer_index, layer_object in enumerate(self.layers):
+                if layer_object is layer:
+                    current_index = layer_index
+        if current_index is None:
+            current_index = self.current_layer_index
         self.parent.history.add_event({
             "event": "delete_layer",
             "layers": self.get_layers_copy(),
-            "layer_index": self.current_layer_index
+            "layer_index": current_index
         })
         if len(self.layers) == 1:
             self.layers = [LayerData(0, "Layer 1")]
         else:
             try:
-                layer = self.layers.pop(self.current_layer_index)
+                layer = self.layers.pop(current_index)
                 self.container.layout().removeWidget(layer.layer_widget)
                 layer.layer_widget.deleteLater()
             except IndexError:
                 pass
-        self.current_layer_index = 0
         self.show_layers()
         self.update()
 
@@ -564,7 +634,7 @@ class Canvas(
             layer_obj.layer_name.setText(layer.name)
 
             # onclick of layer_obj set as the current layer index on self
-            layer_obj.mousePressEvent = lambda event, _layer=layer, _index=index: self.set_current_layer(_index)
+            layer_obj.mousePressEvent = partial(self.handle_layer_click, layer, index)
 
             # show a border around layer_obj if it is the selected index
             if self.current_layer_index == index:
@@ -584,6 +654,26 @@ class Canvas(
 
         self.parent.tool_menu_widget.layer_container_widget.layers.setWidget(container)
         self.container = container
+
+    def handle_layer_click(self, layer, index, event):
+        # check if the control key is pressed
+        if event.modifiers() == Qt.KeyboardModifier.ControlModifier:
+            if self.container:
+                if index in self.selected_layers:
+                    widget = self.selected_layers[index].layer_widget
+                    if widget and index != self.current_layer_index:
+                        widget.frame.setStyleSheet(self.parent.css("layer_normal_style"))
+                        del self.selected_layers[index]
+                else:
+                    item = self.container.layout().itemAt(index)
+                    if item and index != self.current_layer_index:
+                        self.selected_layers[index] = layer
+                        self.selected_layers[index].layer_widget.frame.setStyleSheet(self.parent.css("secondary_layer_highlight_style"))
+        else:
+            for data in self.selected_layers.values():
+                data.layer_widget.frame.setStyleSheet(self.parent.css("layer_normal_style"))
+            self.set_current_layer(index)
+            self.selected_layers = {}
 
     def toggle_layer_visibility(self, layer, layer_obj):
         # change the eye icon of the visible_button on the layer
