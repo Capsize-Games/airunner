@@ -164,7 +164,6 @@ class GeneratorTabWidget(BaseWidget):
         widget.setStyleSheet("font-size: 8pt;")
         self.layout = QGridLayout(widget)
         self.add_prompt_widgets()
-        self.add_optional_tool_checkbox_widgets()
         self.add_input_image_widgets()
         self.add_controlnet_settings_widget(tab_section, tab)
         self.add_model_scheduler_widgets()
@@ -180,18 +179,35 @@ class GeneratorTabWidget(BaseWidget):
 
     def add_prompt_widgets(self):
         prompt_label_container = QWidget(self)
-        horizontal_layout = QHBoxLayout(prompt_label_container)
-        horizontal_layout.setContentsMargins(0, 0, 0, 0)
+        grid_layout = QGridLayout(prompt_label_container)
+        grid_layout.setContentsMargins(0, 0, 0, 0)
         prompt_label = QLabel(self)
         prompt_label.setObjectName("prompt_label")
         prompt_label.setText("Prompt")
+
+        stylesheet = "font-size: 8pt;"
+        grid_layout.addWidget(prompt_label, 0, 0, 1, 1)
+
+        # use prompt builder checkbox
+        use_prompt_builder_checkbox = QCheckBox()
+        use_prompt_builder_checkbox.setStyleSheet(stylesheet)
+        use_prompt_builder_checkbox.setObjectName("use_prompt_builder_checkbox")
+        use_prompt_builder_checkbox.setText("Use Prompt Builder")
+        use_prompt_builder_checkbox.setChecked(self.app.use_prompt_builder_checkbox)
+        use_prompt_builder_checkbox.stateChanged.connect(
+            partial(self.handle_value_change, "use_prompt_builder_checkbox", widget=use_prompt_builder_checkbox))
+        self.data[self.tab_section][self.tab]["use_prompt_builder_checkbox"] = use_prompt_builder_checkbox
+        self.add_widget_to_grid(use_prompt_builder_checkbox)
+        grid_layout.addWidget(use_prompt_builder_checkbox, 0, 1, 1, 1)
+
+        # make second column right aligned
+        grid_layout.setColumnStretch(0, 1)
 
         prompt_widget = QPlainTextEdit(self)
         prompt_widget.setObjectName("prompt")
         prompt_widget.setPlainText(self.app.prompt)
         prompt_widget.textChanged.connect(
             partial(self.handle_value_change, "prompt", widget=prompt_widget))
-        horizontal_layout.addWidget(prompt_label)
         self.data[self.tab_section][self.tab]["prompt_widget"] = prompt_widget
         self.add_widget_to_grid(prompt_label_container)
         self.add_widget_to_grid(prompt_widget)
@@ -208,34 +224,6 @@ class GeneratorTabWidget(BaseWidget):
             self.data[self.tab_section][self.tab]["negative_prompt_widget"] = negative_prompt_widget
             self.add_widget_to_grid(negative_label)
             self.add_widget_to_grid(negative_prompt_widget)
-
-    def add_optional_tool_checkbox_widgets(self):
-        if self.app.currentTabSection in ["shapegif"]:
-            return
-
-        stylesheet = "font-size: 8pt;"
-
-        # checkbox horizontal layout
-        checkbox_widget = QWidget(self)
-        checkbox_layout = QHBoxLayout(checkbox_widget)
-        checkbox_layout.setContentsMargins(0, 0, 0, 0)
-        checkbox_layout.setSpacing(5)
-        checkbox_widget.setLayout(checkbox_layout)
-
-        # use prompt builder checkbox
-        use_prompt_builder_checkbox = QCheckBox()
-        use_prompt_builder_checkbox.setStyleSheet(stylesheet)
-        use_prompt_builder_checkbox.setObjectName("use_prompt_builder_checkbox")
-        use_prompt_builder_checkbox.setText("Prompt Builder")
-        use_prompt_builder_checkbox.setChecked(self.app.use_prompt_builder_checkbox)
-        use_prompt_builder_checkbox.stateChanged.connect(
-            partial(self.handle_value_change, "use_prompt_builder_checkbox", widget=use_prompt_builder_checkbox))
-        self.data[self.tab_section][self.tab]["use_prompt_builder_checkbox"] = use_prompt_builder_checkbox
-        self.add_widget_to_grid(use_prompt_builder_checkbox)
-        checkbox_layout.addWidget(use_prompt_builder_checkbox)
-
-        # add the checkbox layout to the grid
-        self.add_widget_to_grid(checkbox_widget)
 
     @property
     def use_controlnet_checkbox(self):
