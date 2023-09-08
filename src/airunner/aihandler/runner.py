@@ -229,7 +229,7 @@ class SDRunner(
 
     @property
     def n_samples(self):
-        if self.is_txt2vid or self.is_upscale:
+        if self.is_upscale:
             return 1
         return self.options.get(f"n_samples", 1)
 
