@@ -1,6 +1,10 @@
+from PyQt6.QtCore import Qt
 from PyQt6.QtGui import QColor
-from PyQt6.QtWidgets import QTabWidget, QGridLayout, QColorDialog, QVBoxLayout, QWidget, QLineEdit, QPushButton
+from PyQt6.QtWidgets import QTabWidget, QGridLayout, QColorDialog, QVBoxLayout, QWidget, QLineEdit, QPushButton, \
+    QSplitter
 from airunner.widgets.base_widget import BaseWidget
+from airunner.widgets.batch_widget import BatchWidget
+from airunner.widgets.deterministic_widget import DeterministicWidget
 from airunner.widgets.embeddings_container_widget import EmbeddingsContainerWidget
 from airunner.widgets.layer_container_widget import LayerContainerWidget
 from airunner.widgets.lora_container_widget import LoraContainerWidget
@@ -16,6 +20,8 @@ class ToolMenuWidget(BaseWidget):
         self.app.tab_widget.layout().setContentsMargins(0, 0, 0, 0)
         self.lora_container_widget = LoraContainerWidget(app=self.app)
         self.embeddings_container_widget = EmbeddingsContainerWidget(app=self.app)
+        self.batch_widget = BatchWidget(app=self.app)
+        self.deterministic_widget = DeterministicWidget(app=self.app)
         self.app.tab_widget.setStyleSheet(self.app.css("toolmenu_tab_widget"))
 
         self.app.track_tab_section("right", "embeddings", "Embeddings", self.embeddings_container_widget, self.app.tab_widget)
@@ -60,11 +66,26 @@ class ToolMenuWidget(BaseWidget):
 
         # add to grid
         #self.right_toolbar.layout().addWidget(self.brush_widget, 1, 0, 1, 1)
-        self.right_toolbar.layout().addWidget(self.app.tab_widget, 0, 0, 1, 1)
-        self.right_toolbar.layout().addWidget(self.opacity_widget, 1, 0, 1, 1)
-        self.right_toolbar.layout().addWidget(self.layer_container_widget, 2, 0, 1, 1)
 
-        self.initialize_layer_buttons()
+        # create a split widget and add it to the right_toolbar
+        splitter = QSplitter(Qt.Orientation.Vertical)
+
+        splitter.addWidget(self.app.tab_widget)
+        splitter.addWidget(self.deterministic_widget)
+        splitter.addWidget(self.batch_widget)
+
+        vbox = QVBoxLayout()
+        vbox.setContentsMargins(5, 5, 5, 5)
+        vbox.addWidget(self.opacity_widget)
+        vbox.addWidget(self.layer_container_widget)
+        container = QWidget()
+        container.setLayout(vbox)
+        splitter.addWidget(container)
+
+        for n in range(4):
+            splitter.setCollapsible(n, False)
+
+        self.right_toolbar.layout().addWidget(splitter)
 
         for tab_name in self.app.tabs.keys():
             tab = self.app.tabs[tab_name]
@@ -93,14 +114,7 @@ class ToolMenuWidget(BaseWidget):
         #     self.settings_manager.settings.size.get())
         pass
 
-    def initialize_layer_buttons(self):
-        self.layer_container_widget.new_layer_button.clicked.connect(self.app.canvas.new_layer)
-        self.layer_container_widget.layer_up_button.clicked.connect(self.app.canvas.layer_up)
-        self.layer_container_widget.layer_down_button.clicked.connect(self.app.canvas.layer_down)
-        self.layer_container_widget.delete_layer_button.clicked.connect(self.app.canvas.delete_layer)
-
     def set_stylesheet(self):
-        self.layer_container_widget.set_stylesheet()
         self.embeddings_container_widget.setStyleSheet(self.app.css("embeddings_container"))
         self.lora_container_widget.setStyleSheet(self.app.css("lora_container"))
         self.opacity_widget.set_stylesheet()
