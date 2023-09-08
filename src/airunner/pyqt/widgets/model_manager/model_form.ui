@@ -30,7 +30,7 @@
     <widget class="QLabel" name="label_5">
      <property name="font">
       <font>
-       <pointsize>9</pointsize>
+       <pointsize>8</pointsize>
        <bold>true</bold>
       </font>
      </property>
@@ -43,7 +43,7 @@
     <widget class="QLineEdit" name="model_name">
      <property name="font">
       <font>
-       <pointsize>9</pointsize>
+       <pointsize>8</pointsize>
       </font>
      </property>
      <property name="placeholderText">
@@ -55,7 +55,7 @@
     <widget class="QLabel" name="path_label">
      <property name="font">
       <font>
-       <pointsize>9</pointsize>
+       <pointsize>8</pointsize>
        <bold>true</bold>
       </font>
      </property>
@@ -68,7 +68,7 @@
     <widget class="QLineEdit" name="path_line_edit">
      <property name="font">
       <font>
-       <pointsize>9</pointsize>
+       <pointsize>8</pointsize>
       </font>
      </property>
      <property name="placeholderText">
@@ -80,7 +80,7 @@
     <widget class="QLabel" name="branch_label">
      <property name="font">
       <font>
-       <pointsize>9</pointsize>
+       <pointsize>8</pointsize>
        <bold>true</bold>
       </font>
      </property>
@@ -93,7 +93,7 @@
     <widget class="QLineEdit" name="branch_line_edit">
      <property name="font">
       <font>
-       <pointsize>9</pointsize>
+       <pointsize>8</pointsize>
       </font>
      </property>
      <property name="placeholderText">
@@ -107,7 +107,7 @@
       <widget class="QLabel" name="label_7">
        <property name="font">
         <font>
-         <pointsize>9</pointsize>
+         <pointsize>8</pointsize>
          <bold>true</bold>
         </font>
        </property>
@@ -120,7 +120,7 @@
       <widget class="QLabel" name="label">
        <property name="font">
         <font>
-         <pointsize>9</pointsize>
+         <pointsize>8</pointsize>
          <bold>true</bold>
         </font>
        </property>
@@ -133,7 +133,7 @@
       <widget class="QComboBox" name="versions">
        <property name="font">
         <font>
-         <pointsize>9</pointsize>
+         <pointsize>8</pointsize>
         </font>
        </property>
       </widget>
@@ -142,7 +142,7 @@
       <widget class="QComboBox" name="category">
        <property name="font">
         <font>
-         <pointsize>9</pointsize>
+         <pointsize>8</pointsize>
         </font>
        </property>
       </widget>
@@ -155,7 +155,7 @@
       <widget class="QLabel" name="label_2">
        <property name="font">
         <font>
-         <pointsize>9</pointsize>
+         <pointsize>8</pointsize>
          <bold>true</bold>
         </font>
        </property>
@@ -168,7 +168,7 @@
       <widget class="QLabel" name="label_3">
        <property name="font">
         <font>
-         <pointsize>9</pointsize>
+         <pointsize>8</pointsize>
          <bold>true</bold>
         </font>
        </property>
@@ -181,7 +181,7 @@
       <widget class="QComboBox" name="pipeline_action">
        <property name="font">
         <font>
-         <pointsize>9</pointsize>
+         <pointsize>8</pointsize>
         </font>
        </property>
       </widget>
@@ -190,7 +190,7 @@
       <widget class="QLineEdit" name="pipeline_class_line_edit">
        <property name="font">
         <font>
-         <pointsize>9</pointsize>
+         <pointsize>8</pointsize>
         </font>
        </property>
        <property name="placeholderText">
@@ -204,7 +204,7 @@
     <widget class="QCheckBox" name="enabled">
      <property name="font">
       <font>
-       <pointsize>10</pointsize>
+       <pointsize>8</pointsize>
       </font>
      </property>
      <property name="text">
