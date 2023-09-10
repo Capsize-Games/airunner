@@ -184,6 +184,34 @@ class MainWindow(
             raise Exception("Invalid tab section")
 
     @property
+    def is_txt2img(self):
+        return self.current_section == "txt2img"
+
+    @property
+    def is_outpaint(self):
+        return self.current_section == "outpaint"
+
+    @property
+    def is_depth2img(self):
+        return self.current_section == "depth2img"
+
+    @property
+    def is_pix2pix(self):
+        return self.current_section == "pix2pix"
+
+    @property
+    def is_upscale(self):
+        return self.current_section == "upscale"
+
+    @property
+    def is_superresolution(self):
+        return self.current_section == "superresolution"
+
+    @property
+    def is_txt2vid(self):
+        return self.current_section == "txt2vid"
+
+    @property
     def generator_type(self):
         """
         Returns either stablediffusion, shapegif, kandinsky
