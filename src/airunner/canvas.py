@@ -724,6 +724,7 @@ class Canvas(
             # set the new image and update the grid
             self.current_active_image_data.image = new_image
             self.current_active_image_data.position = QPoint(point.x(), point.y())
+            self.current_active_image_data.image_pivot_point = QPoint(point.x(), point.y())
             self.update()
 
     def delete_inside_active_grid_area(self):
