@@ -432,6 +432,13 @@ class MainWindow(
         if event.key() == Qt.Key.Key_Shift:
             self.canvas.shift_is_pressed = True
 
+        # check if shift + delete is pressed
+        if event.key() == Qt.Key.Key_Delete:
+            if self.canvas.shift_is_pressed:
+                self.canvas.delete_outside_active_grid_area()
+            else:
+                self.canvas.delete_inside_active_grid_area()
+
     def keyReleaseEvent(self, event):
         if event.key() == Qt.Key.Key_Control:
             self.canvas.is_canvas_drag_mode = False
@@ -1127,6 +1134,9 @@ class MainWindow(
             except AttributeError:
                 pass
             self.load_embeddings(tab)
+
+    def update(self):
+        self.generator_tab_widget.update_thumbnails()
 
     def register_embedding_widget(self, name, widget):
         self.embedding_widgets[name] = widget

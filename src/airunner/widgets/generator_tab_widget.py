@@ -135,7 +135,15 @@ class GeneratorTabWidget(BaseWidget):
 
     @property
     def controlnet_settings_widget(self):
+        if not self.current_section_data:
+            return None
         return self.current_section_data.get("controlnet_settings_widget", None)
+
+    @property
+    def input_image_widget(self):
+        if not self.current_section_data:
+            return None
+        return self.current_section_data.get("input_image_widget", None)
 
     @property
     def current_controlnet_input_image(self):
@@ -148,6 +156,10 @@ class GeneratorTabWidget(BaseWidget):
         if self.controlnet_settings_widget:
             return self.controlnet_settings_widget.current_controlnet_image
         return None
+
+    def update_image_input_thumbnail(self):
+        if self.input_image_widget:
+            self.input_image_widget.set_thumbnail()
 
     def update_controlnet_thumbnail(self):
         if self.controlnet_settings_widget:
@@ -354,11 +366,18 @@ class GeneratorTabWidget(BaseWidget):
 
     @property
     def current_section_data(self):
-        return self.data[self.app.currentTabSection][self.app.current_section]
+        try:
+            return self.data[self.app.currentTabSection][self.app.current_section]
+        except KeyError:
+            return None
 
     def update_seed(self):
         self.current_section_data["seed_widget"].update_seed()
         self.current_section_data["seed_widget_latents"].update_seed()
+
+    def update_thumbnails(self):
+        self.update_image_input_thumbnail()
+        self.update_controlnet_thumbnail()
 
     def add_seed_widgets(self):
         hbox = QHBoxLayout()
