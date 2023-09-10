@@ -270,8 +270,8 @@ class Canvas(
 
     def update(self):
         self.parent.canvas_position = f"X {-self.pos_x: 05d} Y {self.pos_y: 05d}"
-
         self.canvas_container.update(self.viewport_rect)
+        self.parent.update()
 
     def clear(self):
         self.current_layer.lines = []
@@ -697,3 +697,39 @@ class Canvas(
         self.parent.tool_menu_widget.set_opacity_slider(
             int(self.current_layer.opacity * 100)
         )
+
+    def delete_outside_active_grid_area(self):
+        """
+        This function will find the active grid area and delete everything
+        on the outside of it for the current layer.
+        :return:
+        """
+        image = self.current_active_image_data.image
+        if image:
+            # get the sizes and location of the active grid area
+            width = self.settings_manager.settings.working_width.get()
+            height = self.settings_manager.settings.working_height.get()
+            point = self.active_grid_area_pivot_point
+
+            # create a new image and composite the old image into it
+            new_image = Image.new("RGBA", (width, height), (0, 0, 0, 0))
+            new_image.alpha_composite(
+                image,
+                (
+                    self.current_active_image_data.position.x() - point.x(),
+                    self.current_active_image_data.position.y() - point.y()
+                )
+            )
+
+            # set the new image and update the grid
+            self.current_active_image_data.image = new_image
+            self.current_active_image_data.position = QPoint(point.x(), point.y())
+            self.update()
+
+    def delete_inside_active_grid_area(self):
+        """
+        This function will find the active grid area and delete everything
+        on the inside of it for the current layer.
+        :return:
+        """
+        print("delete_inside_active_grid_area")
