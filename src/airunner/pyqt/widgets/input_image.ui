@@ -188,6 +188,9 @@
                      <bold>false</bold>
                     </font>
                    </property>
+                   <property name="cursor">
+                    <cursorShape>PointingHandCursor</cursorShape>
+                   </property>
                    <property name="toolTip">
                     <string>Import an Input Image</string>
                    </property>
@@ -216,6 +219,9 @@
                      <width>26</width>
                      <height>26</height>
                     </size>
+                   </property>
+                   <property name="cursor">
+                    <cursorShape>PointingHandCursor</cursorShape>
                    </property>
                    <property name="toolTip">
                     <string>Use the active grid image as the Input Image</string>
@@ -249,6 +255,9 @@
                      <height>26</height>
                     </size>
                    </property>
+                   <property name="cursor">
+                    <cursorShape>PointingHandCursor</cursorShape>
+                   </property>
                    <property name="toolTip">
                     <string>Reuse the same Input image each time - do not refresh it with the latest</string>
                    </property>
@@ -277,6 +286,9 @@
                      <width>26</width>
                      <height>26</height>
                     </size>
+                   </property>
+                   <property name="cursor">
+                    <cursorShape>PointingHandCursor</cursorShape>
                    </property>
                    <property name="toolTip">
                     <string>Clear the selected Input Image</string>
@@ -309,6 +321,12 @@
                    <width>72</width>
                    <height>72</height>
                   </size>
+                 </property>
+                 <property name="cursor">
+                  <cursorShape>PointingHandCursor</cursorShape>
+                 </property>
+                 <property name="toolTip">
+                  <string>Click to send image to canvas</string>
                  </property>
                  <property name="styleSheet">
                   <string notr="true">border: 1px solid #d2d2d2; border-radius: 0;</string>
@@ -415,6 +433,9 @@
                      <height>26</height>
                     </size>
                    </property>
+                   <property name="cursor">
+                    <cursorShape>PointingHandCursor</cursorShape>
+                   </property>
                    <property name="toolTip">
                     <string>Create a mask image based on the ControlNet Input Image</string>
                    </property>
@@ -447,6 +468,9 @@
                      <bold>false</bold>
                     </font>
                    </property>
+                   <property name="cursor">
+                    <cursorShape>PointingHandCursor</cursorShape>
+                   </property>
                    <property name="toolTip">
                     <string>Import a mask image from disk</string>
                    </property>
@@ -476,6 +500,9 @@
                      <height>26</height>
                     </size>
                    </property>
+                   <property name="cursor">
+                    <cursorShape>PointingHandCursor</cursorShape>
+                   </property>
                    <property name="toolTip">
                     <string>Export a generated mask image to disk</string>
                    </property>
@@ -504,6 +531,9 @@
                      <width>26</width>
                      <height>26</height>
                     </size>
+                   </property>
+                   <property name="cursor">
+                    <cursorShape>PointingHandCursor</cursorShape>
                    </property>
                    <property name="toolTip">
                     <string>Clear the mask image</string>
