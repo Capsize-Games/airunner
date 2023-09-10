@@ -1,6 +1,7 @@
 from functools import partial
 
 from PIL import Image
+from PyQt6.QtCore import QPoint
 from PyQt6.QtWidgets import QHBoxLayout, QWidget
 
 from airunner.utils import image_to_pixmap
@@ -141,7 +142,7 @@ class InputImageSettingsWidget(BaseWidget):
         if file_path == "":
             return
         image = Image.open(file_path)
-        image = image.convert("RGB")
+        image = image.convert("RGBA")
         self.input_image = image
         self.set_thumbnail()
 
@@ -199,7 +200,21 @@ class InputImageSettingsWidget(BaseWidget):
             self.template.image_thumbnail.setPixmap(image_to_pixmap(image, size=72))
         else:
             self.template.image_thumbnail.clear()
+
+        # on click of a QLabel called image_thumbnail, send the current input image to the canvas
+        self.template.image_thumbnail.mousePressEvent = self.send_active_image_to_canvas
+
         self.app.update_controlnet_thumbnail()
+
+    def send_active_image_to_canvas(self, value):
+        # send the current input image to the canvas
+        if not self.current_input_image:
+            return
+        self.app.canvas.current_active_image_data.image = self.current_input_image
+        self.app.canvas.current_active_image_data.position = QPoint(0, 0)
+        self.app.canvas.current_active_image_data.image_pivot_point = QPoint(0, 0)
+        self.app.canvas.current_active_image_data.image_root_point = QPoint(0, 0)
+        self.app.canvas.update()
 
     def import_input_image_mask(self):
         print("import input image mask")
