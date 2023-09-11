@@ -2,6 +2,7 @@ from PyQt6.QtCore import Qt, QSize
 from PyQt6.QtGui import QStandardItemModel, QStandardItem, QBrush, QColor, QPainter
 from PyQt6.QtWidgets import QStyledItemDelegate, QStyleOptionViewItem, QLabel, QWidget, QVBoxLayout, QPlainTextEdit
 
+from airunner.widgets.keyboard_shortcuts_widget import KeyboardShortcutsWidget
 from airunner.windows.base_window import BaseWindow
 # open the version file from the root of the project and get the VERSION variable string from it
 from airunner.windows.export_preferences_widget import ExportPreferencesWidget
@@ -86,6 +87,16 @@ class SettingsWindow(BaseWindow):
                     {
                         "name": "memory",
                         "display_name": "Memory",
+                        "checkable": False
+                    }
+                ]
+            },
+            {
+                "section": "Keyboard Shortcuts",
+                "files": [
+                    {
+                        "name": "keyboard_shortcuts",
+                        "display_name": "Keyboard Shortcuts",
                         "checkable": False
                     }
                 ]
@@ -222,6 +233,7 @@ class SettingsWindow(BaseWindow):
         widget_object = None
         widgets = {
             "paths": PathsWidget,
+            "keyboard_shortcuts": KeyboardShortcutsWidget,
             "export_preferences": ExportPreferencesWidget,
             "grid": GridWidget,
             "memory": MemoryWidget,
