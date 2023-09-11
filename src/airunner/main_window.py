@@ -1,21 +1,23 @@
 import os
 import pickle
 import sys
-import time
-
 import psutil
 import torch
+
 from PyQt6 import uic, QtCore
 from PyQt6.QtWidgets import QApplication, QFileDialog, QMainWindow, QSplitter, QTabWidget, QWidget, \
     QVBoxLayout
 from PyQt6.QtCore import pyqtSlot, Qt, QThread, pyqtSignal, QObject, QTimer
-from PyQt6.QtGui import QGuiApplication, QShortcut, QKeySequence
+from PyQt6.QtGui import QGuiApplication
+from PyQt6.QtGui import QIcon
+
 from airunner.aihandler.qtvar import MessageHandlerVar
 from airunner.aihandler.logger import Logger as logger
 from airunner.aihandler.pyqt_client import OfflineClient
 from airunner.aihandler.settings import LOG_LEVEL
 from airunner.aihandler.enums import MessageCode
 from airunner.airunner_api import AIRunnerAPI
+from airunner.input_event_manager import InputEventManager
 from airunner.mixins.canvas_mixin import CanvasMixin
 from airunner.mixins.generator_mixin import GeneratorMixin
 from airunner.mixins.history_mixin import HistoryMixin
@@ -35,8 +37,8 @@ from airunner.windows.deterministic_generation_window import DeterministicGenera
 from airunner.windows.update_window import UpdateWindow
 from airunner.utils import get_version, get_latest_version, auto_export_image
 from airunner.aihandler.settings_manager import SettingsManager, PromptManager, ApplicationData
+
 import qdarktheme
-from PyQt6.QtGui import QIcon
 
 
 class MainWindow(
@@ -422,8 +424,7 @@ class MainWindow(
         self.header_widget.set_size_increment_levels()
         self.clear_status_message()
 
-        self.generate_shortcut = QShortcut(QKeySequence(Qt.Key.Key_F11), self)
-        self.generate_shortcut.activated.connect(self.toggle_fullscreen)
+        self.register_keypress()
 
         if not self.testing:
             logger.info("Executing window")
@@ -453,26 +454,23 @@ class MainWindow(
         state = self.windowState()
         self.is_maximized = state == Qt.WindowState.WindowMaximized
 
-    def keyPressEvent(self, event):
-        if event.key() == Qt.Key.Key_Control:
-            self.canvas.is_canvas_drag_mode = True
+    def dragmode_pressed(self):
+        self.canvas.is_canvas_drag_mode = True
 
-        if event.key() == Qt.Key.Key_Shift:
-            self.canvas.shift_is_pressed = True
+    def dragmode_released(self):
+        self.canvas.is_canvas_drag_mode = False
 
-        # check if shift + delete is pressed
-        if event.key() == Qt.Key.Key_Delete:
-            if self.canvas.shift_is_pressed:
-                self.canvas.delete_outside_active_grid_area()
-            else:
-                self.canvas.delete_inside_active_grid_area()
+    def shift_pressed(self):
+        self.canvas.shift_is_pressed = True
 
-    def keyReleaseEvent(self, event):
-        if event.key() == Qt.Key.Key_Control:
-            self.canvas.is_canvas_drag_mode = False
+    def shift_released(self):
+        self.canvas.shift_is_pressed = False
 
-        if event.key() == Qt.Key.Key_Shift:
-            self.canvas.shift_is_pressed = False
+    def register_keypress(self):
+        self.keyboard_event_manager.register_keypress("fullscreen", self.toggle_fullscreen)
+        self.keyboard_event_manager.register_keypress("control_pressed", self.dragmode_pressed, self.dragmode_released)
+        self.keyboard_event_manager.register_keypress("shift_pressed", self.shift_pressed, self.shift_released)
+        self.keyboard_event_manager.register_keypress("delete_outside_active_grid_area", self.canvas.delete_outside_active_grid_area)
 
     def toggle_fullscreen(self):
         if self.isFullScreen():
@@ -568,6 +566,7 @@ class MainWindow(
             self.actionRedo.setIcon(QIcon(os.path.join("src/icons/008-redo.png")))
 
     def initialize(self):
+        self.keyboard_event_manager = InputEventManager(app=self)
         self.initialize_settings_manager()
         self.initialize_data()
         self.instantiate_widgets()
@@ -842,8 +841,10 @@ class MainWindow(
         self.application_data = ApplicationData()
 
     def initialize_shortcuts(self):
-        # on shift + mouse scroll change working width
-        self.wheelEvent = self.change_width
+        self.keyboard_event_manager.register_event(
+            "wheelEvent",
+            self.change_width
+        )
 
     def initialize_handlers(self):
         self.message_var = MessageHandlerVar()

@@ -351,9 +351,7 @@ class GeneratorMixin(LoraMixin):
         self.tool_menu_widget.initialize()
         self.initialize_lora()
 
-        # listen to F5 keypress and call self.generate_callback
-        self.generate_shortcut = QShortcut(QKeySequence(Qt.Key.Key_F5), self)
-        self.generate_shortcut.activated.connect(self.generate_callback)
+        self.keyboard_event_manager.register_keypress("generate", self.generate_callback)
 
     def update_controlnet(self, tab, index):
         controlnet = self.tabs[tab].controlnet_dropdown.itemText(index)
