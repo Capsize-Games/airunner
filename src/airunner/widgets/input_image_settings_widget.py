@@ -1,7 +1,6 @@
 from functools import partial
 
 from PIL import Image
-from PyQt6.QtCore import QPoint
 from PyQt6.QtWidgets import QHBoxLayout, QWidget
 
 from airunner.utils import image_to_pixmap
@@ -19,23 +18,21 @@ class InputImageSettingsWidget(BaseWidget):
         "use_grid_image_button": "032-pixels",
         "recycle_grid_image_button": "047-recycle",
         "clear_image_button": "006-trash",
-
-        "mask_link_to_input_image_button": "048-chain",
-        "mask_use_imported_image_button": "046-import",
-        "mask_export_image_button": "export",
-        "mask_clear_image_button": "006-trash",
+        "refresh_input_image_button": "050-refresh",
     }
 
     def __init__(self, *args, **kwargs):
         super().__init__(*args, **kwargs)
 
         self.initialize_input_image_buttons()
-        self.initialize_mask_image_buttons()
         self.app.add_image_to_canvas_signal.connect(self.handle_new_image)
         self.template.groupBox.setChecked(self.app.enable_input_image)
         self.template.groupBox.toggled.connect(self.handle_toggle_enable_input_image)
+        self.template.refresh_input_image_button.clicked.connect(self.clear_input_image)
         self.add_input_image_strength_scale_widget()
         self.set_stylesheet()
+        self.template.image_thumbnail.mousePressEvent = self.send_active_image_to_canvas
+        self.update_buttons(use_grid=self.app.input_image_use_grid_image)
 
     def add_input_image_strength_scale_widget(self):
         slider = None
@@ -116,16 +113,6 @@ class InputImageSettingsWidget(BaseWidget):
         self.template.clear_image_button.clicked.connect(self.clear_input_image)
         self.template.recycle_grid_image_button.clicked.connect(self.toggle_keep_refreshed)
 
-    def initialize_mask_image_buttons(self):
-        # initialize the states of each button
-        self.template.mask_import_image_button.clicked.connect(self.import_input_image_mask)
-        self.template.mask_link_to_input_image_button.setChecked(self.app.input_image_mask_use_input_image)
-        self.template.mask_use_imported_image_button.setChecked(self.app.input_image_mask_use_imported_image)
-
-        # setup handlers for each button
-        self.template.mask_export_image_button.clicked.connect(self.export_input_image_mask)
-        self.template.mask_clear_image_button.clicked.connect(self.clear_input_image_mask)
-
     def set_stylesheet(self):
         super().set_stylesheet()
         self.template.groupBox.setStyleSheet(self.app.css("input_image_groupbox"))
@@ -169,12 +156,19 @@ class InputImageSettingsWidget(BaseWidget):
         if use_grid:
             self.template.import_image_button.setEnabled(False)
             self.template.recycle_grid_image_button.setEnabled(True)
+            # hide the self.template.refresh_input_image_button button widget
+            self.template.refresh_input_image_button.show()
+            self.template.clear_image_button.hide()
+            self.set_button_icon(self.is_dark, "recycle_grid_image_button", self.icons["recycle_grid_image_button"])
             self.template.use_imported_image_button.setChecked(False)
             self.template.use_grid_image_button.setChecked(self.app.input_image_use_grid_image)
             self.template.recycle_grid_image_button.setChecked(self.app.input_image_recycle_grid_image)
         else:
             self.template.import_image_button.setEnabled(True)
             self.template.recycle_grid_image_button.setEnabled(False)
+            self.template.refresh_input_image_button.hide()
+            self.template.clear_image_button.show()
+            self.set_button_icon(not self.is_dark, "recycle_grid_image_button", self.icons["recycle_grid_image_button"])
             self.template.use_imported_image_button.setChecked(True)
             self.template.use_grid_image_button.setChecked(False)
             self.template.recycle_grid_image_button.setChecked(False)
@@ -201,20 +195,21 @@ class InputImageSettingsWidget(BaseWidget):
         else:
             self.template.image_thumbnail.clear()
 
-        # on click of a QLabel called image_thumbnail, send the current input image to the canvas
-        self.template.image_thumbnail.mousePressEvent = self.send_active_image_to_canvas
-
         self.app.update_controlnet_thumbnail()
 
     def send_active_image_to_canvas(self, value):
         # send the current input image to the canvas
         if not self.current_input_image:
             return
-        self.app.canvas.current_active_image_data.image = self.current_input_image
-        self.app.canvas.current_active_image_data.position = QPoint(0, 0)
-        self.app.canvas.current_active_image_data.image_pivot_point = QPoint(0, 0)
-        self.app.canvas.current_active_image_data.image_root_point = QPoint(0, 0)
+        self.app.canvas.update_image_canvas(
+            self.app.current_section,
+            {
+                "action": self.app.current_section,
+                "options": {
+                    "outpaint_box_rect": self.app.canvas.active_grid_area_rect,
+                    "generator_section": self.app.currentTabSection
+                }
+            },
+            self.current_input_image
+        )
         self.app.canvas.update()
-
-    def import_input_image_mask(self):
-        print("import input image mask")
