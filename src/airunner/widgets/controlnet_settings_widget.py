@@ -23,6 +23,7 @@ class ControlNetSettingsWidget(BaseWidget):
         "use_grid_image_button": "032-pixels",
         "recycle_grid_image_button": "047-recycle",
         "clear_image_button": "006-trash",
+        "refresh_input_image_button": "050-refresh",
 
         "mask_link_to_input_image_button": "048-chain",
         "mask_use_imported_image_button": "046-import",
@@ -43,7 +44,16 @@ class ControlNetSettingsWidget(BaseWidget):
             self.controlnet_image = value
         elif self.app.controlnet_mask_use_imported_image:
             self.imported_controlnet_image = value
+        self.toggle_mask_export_button(value is not None)
         self.set_mask_thumbnail()
+
+    def toggle_mask_export_button(self, enabled):
+        self.template.mask_export_image_button.setEnabled(enabled)
+        if enabled:
+            button_icon_color = self.is_dark
+        else:
+            button_icon_color = not self.is_dark
+        self.set_button_icon(button_icon_color, "mask_export_image_button", self.icons["mask_export_image_button"])
 
     @property
     def active_grid_area_image(self):
@@ -114,13 +124,35 @@ class ControlNetSettingsWidget(BaseWidget):
         self.app.controlnet_image_generated.connect(self.handle_controlnet_image_generated)
         self.template.mask_export_image_button.clicked.connect(self.export_generated_controlnet_image)
         self.template.recycle_grid_image_button.clicked.connect(self.toggle_keep_refreshed)
+        self.toggle_mask_export_button(False)
 
         self.template.mask_link_to_input_image_button.clicked.connect(self.toggle_mask_link)
         self.template.mask_use_imported_image_button.clicked.connect(self.toggle_mask_use_imported_image)
 
+        self.template.refresh_input_image_button.clicked.connect(self.clear_input_image)
+
         self.toggle_import_image_button()
-        self.toggle_buttons()
         self.set_stylesheet()
+        self.template.image_thumbnail.mousePressEvent = self.send_active_image_to_canvas
+        self.toggle_buttons()
+
+    def send_active_image_to_canvas(self, _value):
+        print("send_active_image_to_canvas", self.current_image)
+        # send the current input image to the canvas
+        if not self.current_image:
+            return
+        self.app.canvas.update_image_canvas(
+            self.app.current_section,
+            {
+                "action": self.app.current_section,
+                "options": {
+                    "outpaint_box_rect": self.app.canvas.active_grid_area_rect,
+                    "generator_section": self.app.currentTabSection
+                }
+            },
+            self.current_image
+        )
+        self.app.canvas.update()
 
     def toggle_mask_link(self, value):
         self.app.controlnet_mask_use_imported_image = not value
@@ -166,7 +198,8 @@ class ControlNetSettingsWidget(BaseWidget):
             },
             seed=self.app.seed
         )
-        self.app.set_status_label(f"Mask exported to {path}")
+        if path is not None:
+            self.app.set_status_label(f"Mask exported to {path}")
 
     @pyqtSlot(bool)
     def handle_controlnet_image_generated(self):
@@ -195,6 +228,19 @@ class ControlNetSettingsWidget(BaseWidget):
         self.toggle_import_image_button()
         self.toggle_use_grid_image()
         self.toggle_mask_buttons()
+        use_grid = self.app.controlnet_use_grid_image
+        if use_grid:
+            self.template.refresh_input_image_button.show()
+            self.template.clear_image_button.hide()
+            self.template.mask_clear_image_button.hide()
+            self.template.recycle_grid_image_button.setEnabled(True)
+            self.set_button_icon(self.is_dark, "recycle_grid_image_button", self.icons["recycle_grid_image_button"])
+        else:
+            self.template.refresh_input_image_button.hide()
+            self.template.clear_image_button.show()
+            self.template.mask_clear_image_button.show()
+            self.template.recycle_grid_image_button.setEnabled(False)
+            self.set_button_icon(not self.is_dark, "recycle_grid_image_button", self.icons["recycle_grid_image_button"])
 
     def toggle_mask_buttons(self):
         self.template.mask_import_button.setEnabled(self.app.controlnet_mask_use_imported_image)

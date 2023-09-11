@@ -65,10 +65,17 @@ class BaseWidget(QWidget):
         if self.name:
             self.template = uic.loadUi(f"pyqt/widgets/{self.name}.ui", self)
 
-    def set_stylesheet(self):
-        for button, icon in self.icons.items():
-            getattr(self, button).setIcon(
-                QtGui.QIcon(
-                    os.path.join(f"src/icons/{icon}{'-light' if self.is_dark else ''}.png")
-                )
+    def set_stylesheet(self, is_dark=None, button_name=None, icon=None):
+        is_dark = self.is_dark if is_dark is None else is_dark
+        if button_name is None or icon is None:
+            for button_name, icon in self.icons.items():
+                self.set_button_icon(is_dark, button_name, icon)
+        else:
+            self.set_button_icon(is_dark, button_name, icon)
+
+    def set_button_icon(self, is_dark, button_name, icon):
+        getattr(self, button_name).setIcon(
+            QtGui.QIcon(
+                os.path.join(f"src/icons/{icon}{'-light' if is_dark else ''}.png")
             )
+        )
