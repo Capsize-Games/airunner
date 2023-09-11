@@ -50,6 +50,9 @@
        <pointsize>8</pointsize>
       </font>
      </property>
+     <property name="cursor">
+      <cursorShape>PointingHandCursor</cursorShape>
+     </property>
      <property name="styleSheet">
       <string notr="true"/>
      </property>
@@ -159,6 +162,9 @@
                    <height>72</height>
                   </size>
                  </property>
+                 <property name="cursor">
+                  <cursorShape>PointingHandCursor</cursorShape>
+                 </property>
                  <property name="styleSheet">
                   <string notr="true">border: 1px solid #d2d2d2; border-radius: 0;</string>
                  </property>
@@ -216,6 +222,9 @@
                    <bold>false</bold>
                   </font>
                  </property>
+                 <property name="cursor">
+                  <cursorShape>PointingHandCursor</cursorShape>
+                 </property>
                  <property name="text">
                   <string>Import image</string>
                  </property>
@@ -263,6 +272,9 @@
                      <height>26</height>
                     </size>
                    </property>
+                   <property name="cursor">
+                    <cursorShape>PointingHandCursor</cursorShape>
+                   </property>
                    <property name="toolTip">
                     <string>Use the main Input Image for the ControlNet input image</string>
                    </property>
@@ -277,6 +289,9 @@
                     <bool>true</bool>
                    </property>
                    <property name="checked">
+                    <bool>true</bool>
+                   </property>
+                   <property name="flat">
                     <bool>true</bool>
                    </property>
                   </widget>
@@ -301,8 +316,11 @@
                      <bold>false</bold>
                     </font>
                    </property>
+                   <property name="cursor">
+                    <cursorShape>PointingHandCursor</cursorShape>
+                   </property>
                    <property name="toolTip">
-                    <string>Import a ControlNet Input Image</string>
+                    <string>Toggle imported input image</string>
                    </property>
                    <property name="text">
                     <string/>
@@ -312,6 +330,9 @@
                      <normaloff>../../src/icons/046-import.png</normaloff>../../src/icons/046-import.png</iconset>
                    </property>
                    <property name="checkable">
+                    <bool>true</bool>
+                   </property>
+                   <property name="flat">
                     <bool>true</bool>
                    </property>
                   </widget>
@@ -330,8 +351,11 @@
                      <height>26</height>
                     </size>
                    </property>
+                   <property name="cursor">
+                    <cursorShape>PointingHandCursor</cursorShape>
+                   </property>
                    <property name="toolTip">
-                    <string>Use the active grid image as the ControlNet Input Image</string>
+                    <string>Toggle active grid input image</string>
                    </property>
                    <property name="text">
                     <string/>
@@ -344,6 +368,9 @@
                     <bool>true</bool>
                    </property>
                    <property name="checked">
+                    <bool>true</bool>
+                   </property>
+                   <property name="flat">
                     <bool>true</bool>
                    </property>
                   </widget>
@@ -362,8 +389,11 @@
                      <height>26</height>
                     </size>
                    </property>
+                   <property name="cursor">
+                    <cursorShape>PointingHandCursor</cursorShape>
+                   </property>
                    <property name="toolTip">
-                    <string>Reuse the same Input image each time - do not refresh it with the latest</string>
+                    <string>Toggle reuse current input image</string>
                    </property>
                    <property name="text">
                     <string/>
@@ -373,6 +403,38 @@
                      <normaloff>../../src/icons/047-recycle.png</normaloff>../../src/icons/047-recycle.png</iconset>
                    </property>
                    <property name="checkable">
+                    <bool>true</bool>
+                   </property>
+                   <property name="flat">
+                    <bool>true</bool>
+                   </property>
+                  </widget>
+                 </item>
+                 <item>
+                  <widget class="QPushButton" name="refresh_input_image_button">
+                   <property name="minimumSize">
+                    <size>
+                     <width>26</width>
+                     <height>26</height>
+                    </size>
+                   </property>
+                   <property name="maximumSize">
+                    <size>
+                     <width>26</width>
+                     <height>26</height>
+                    </size>
+                   </property>
+                   <property name="toolTip">
+                    <string>Refresh current input image</string>
+                   </property>
+                   <property name="text">
+                    <string/>
+                   </property>
+                   <property name="icon">
+                    <iconset>
+                     <normaloff>../../src/icons/050-refresh.png</normaloff>../../src/icons/050-refresh.png</iconset>
+                   </property>
+                   <property name="flat">
                     <bool>true</bool>
                    </property>
                   </widget>
@@ -391,8 +453,11 @@
                      <height>26</height>
                     </size>
                    </property>
+                   <property name="cursor">
+                    <cursorShape>PointingHandCursor</cursorShape>
+                   </property>
                    <property name="toolTip">
-                    <string>Clear the selected ControlNet Input Image</string>
+                    <string>Clear imported input imagea</string>
                    </property>
                    <property name="text">
                     <string/>
@@ -400,6 +465,9 @@
                    <property name="icon">
                     <iconset>
                      <normaloff>../../src/icons/006-trash.png</normaloff>../../src/icons/006-trash.png</iconset>
+                   </property>
+                   <property name="flat">
+                    <bool>true</bool>
                    </property>
                   </widget>
                  </item>
@@ -429,6 +497,9 @@
                    <width>72</width>
                    <height>72</height>
                   </size>
+                 </property>
+                 <property name="cursor">
+                  <cursorShape>ArrowCursor</cursorShape>
                  </property>
                  <property name="styleSheet">
                   <string notr="true">border: 1px solid #d2d2d2; border-radius: 0;</string>
@@ -467,6 +538,9 @@
                    <pointsize>8</pointsize>
                    <bold>false</bold>
                   </font>
+                 </property>
+                 <property name="cursor">
+                  <cursorShape>PointingHandCursor</cursorShape>
                  </property>
                  <property name="text">
                   <string>Import image</string>
@@ -515,6 +589,9 @@
                      <height>26</height>
                     </size>
                    </property>
+                   <property name="cursor">
+                    <cursorShape>PointingHandCursor</cursorShape>
+                   </property>
                    <property name="toolTip">
                     <string>Create a mask image based on the ControlNet Input Image</string>
                    </property>
@@ -526,6 +603,9 @@
                      <normaloff>../../src/icons/048-chain.png</normaloff>../../src/icons/048-chain.png</iconset>
                    </property>
                    <property name="checkable">
+                    <bool>true</bool>
+                   </property>
+                   <property name="flat">
                     <bool>true</bool>
                    </property>
                   </widget>
@@ -550,6 +630,9 @@
                      <bold>false</bold>
                     </font>
                    </property>
+                   <property name="cursor">
+                    <cursorShape>PointingHandCursor</cursorShape>
+                   </property>
                    <property name="toolTip">
                     <string>Import a mask image from disk</string>
                    </property>
@@ -561,6 +644,9 @@
                      <normaloff>../../src/icons/046-import.png</normaloff>../../src/icons/046-import.png</iconset>
                    </property>
                    <property name="checkable">
+                    <bool>true</bool>
+                   </property>
+                   <property name="flat">
                     <bool>true</bool>
                    </property>
                   </widget>
@@ -579,6 +665,9 @@
                      <height>26</height>
                     </size>
                    </property>
+                   <property name="cursor">
+                    <cursorShape>PointingHandCursor</cursorShape>
+                   </property>
                    <property name="toolTip">
                     <string>Export a generated mask image to disk</string>
                    </property>
@@ -591,6 +680,9 @@
                    </property>
                    <property name="checkable">
                     <bool>false</bool>
+                   </property>
+                   <property name="flat">
+                    <bool>true</bool>
                    </property>
                   </widget>
                  </item>
@@ -608,6 +700,9 @@
                      <height>26</height>
                     </size>
                    </property>
+                   <property name="cursor">
+                    <cursorShape>PointingHandCursor</cursorShape>
+                   </property>
                    <property name="toolTip">
                     <string>Clear the mask image</string>
                    </property>
@@ -617,6 +712,9 @@
                    <property name="icon">
                     <iconset>
                      <normaloff>../../src/icons/006-trash.png</normaloff>../../src/icons/006-trash.png</iconset>
+                   </property>
+                   <property name="flat">
+                    <bool>true</bool>
                    </property>
                   </widget>
                  </item>

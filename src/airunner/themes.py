@@ -54,32 +54,17 @@ class Themes:
                 QTabBar::tab {
                     border-radius: 0px; 
                     margin: 0px;
-                    padding: 5px 10px;
                     border: 0px;
-                }
-                QTabBar::tab {
+                    height: 20px;
+                    min-height: 20px;
+                    max-height: 20px;
                     min-width: 90px;
-                    margin: 0px;
                     padding: 0px;
-                    border: 0px;
                     font-size: 8pt;
-                }
-                QTabBar::tab::first {
-                    min-width: 70px;
-                    margin: 0px;
-                    padding: 0px;
-                    border: 0px;
-                }
-                QTabBar::tab::last {
-                    min-width: 50px;
-                    margin: 0px;
-                    padding: 5px;
-                    border: 0px;
                 }
                 QTabBar::tab:selected { 
                     background-color: #5483d0;
                     color: white;
-                    border: 0px;
                 }
             """,
             "input_image_tab_widget_disabled": """
@@ -91,27 +76,13 @@ class Themes:
                 QTabBar::tab {
                     border-radius: 0px; 
                     margin: 0px;
-                    padding: 5px 10px;
                     border: 0px;
-                }
-                QTabBar::tab {
+                    height: 20px;
+                    min-height: 20px;
+                    max-height: 20px;
                     min-width: 90px;
-                    margin: 0px;
                     padding: 0px;
-                    border: 0px;
                     font-size: 8pt;
-                }
-                QTabBar::tab::first {
-                    min-width: 70px;
-                    margin: 0px;
-                    padding: 0px;
-                    border: 0px;
-                }
-                QTabBar::tab::last {
-                    min-width: 50px;
-                    margin: 0px;
-                    padding: 5px;
-                    border: 0px;
                 }
                 QTabBar::tab:selected { 
                     background-color: #111111;
@@ -336,6 +307,51 @@ class Themes:
                     border: 0px;
                 }
             """,
+            "input_image_tab_widget": """
+                QTabWidget::pane { 
+                    border: 0;
+                    border-radius: 0px;
+                    border: 1px solid #5483d0;
+                }
+                QTabBar::tab {
+                    border-radius: 0px; 
+                    margin: 0px;
+                    border: 0px;
+                    height: 20px;
+                    min-height: 20px;
+                    max-height: 20px;
+                    min-width: 90px;
+                    padding: 0px;
+                    font-size: 8pt;
+                }
+                QTabBar::tab:selected { 
+                    background-color: #5483d0;
+                    color: white;
+                }
+            """,
+            "input_image_tab_widget_disabled": """
+                QTabWidget::pane { 
+                    border: 0;
+                    border-radius: 0px;
+                    border: 1px solid #888888;
+                }
+                QTabBar::tab {
+                    border-radius: 0px; 
+                    margin: 0px;
+                    border: 0px;
+                    height: 20px;
+                    min-height: 20px;
+                    max-height: 20px;
+                    min-width: 90px;
+                    padding: 0px;
+                    font-size: 8pt;
+                }
+                QTabBar::tab:selected { 
+                    background-color: #888888;
+                    color: white;
+                    border: 0px;
+                }
+            """,
             "pipeline": """
                 QTabWidget::pane { 
                     border: 0;
@@ -477,10 +493,11 @@ class Themes:
             """,
             "slider_label": """
                 font-size: 8pt;
-                color: #ffffff;
+                font-weight: bold;
+                color: #00225a;
             """,
             "slider_spinbox": """
-                background-color: #a2a2a2;
+                background-color: #f2f2f2;
                 border-left: none;
                 border-color: #c2c2c2;
                 border-radius: 0px;
