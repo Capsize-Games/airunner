@@ -1,5 +1,5 @@
-from airunner.filters.filter_base import FilterBase
 from airunner.filters.registration_error_filter import RegistrationErrorFilter
+from airunner.filters.windows.filter_base import FilterBase
 
 
 class FilterRegistrationError(FilterBase):

@@ -1,7 +1,9 @@
-from airunner.filters.filter_base import FilterBase
 from airunner.filters.rgb_noise_filter import RGBNoiseFilter
 from PIL import Image
 import random
+
+from airunner.filters.windows.filter_base import FilterBase
+
 
 class FilterRGBNoise(FilterBase):
     ui_name = "noise_filter"
