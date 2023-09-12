@@ -1,5 +1,5 @@
-from airunner.filters.filter_base import FilterBase
 from airunner.filters.pixel_filter import PixelFilter
+from airunner.filters.windows.filter_base import FilterBase
 
 
 class FilterPixelArt(FilterBase):

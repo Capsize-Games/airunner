@@ -1,5 +1,5 @@
 from airunner.filters.color_balance_filter import ColorBalanceFilter
-from airunner.filters.filter_base import FilterBase
+from airunner.filters.windows.filter_base import FilterBase
 
 
 class FilterColorBalance(FilterBase):

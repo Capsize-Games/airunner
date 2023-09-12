@@ -1,5 +1,6 @@
 from PIL.ImageFilter import GaussianBlur
-from airunner.filters.blur_filter import BlurFilter
+
+from airunner.filters.windows.blur_filter import BlurFilter
 
 
 class FilterGaussianBlur(BlurFilter):

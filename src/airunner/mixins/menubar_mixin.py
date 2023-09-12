@@ -2,17 +2,17 @@ import os
 
 from PyQt6.QtWidgets import QFileDialog
 
-from airunner.filters.filter_halftone import FilterHalftone
-from airunner.filters.filter_registration_error import FilterRegistrationError
+from airunner.filters.windows.filter_halftone import FilterHalftone
+from airunner.filters.windows.filter_registration_error import FilterRegistrationError
 from airunner.utils import auto_export_image
 from airunner.windows.deterministic_generation_window import DeterministicGenerationWindow
-from airunner.filters.filter_box_blur import FilterBoxBlur
-from airunner.filters.filter_color_balance import FilterColorBalance
-from airunner.filters.filter_gaussian_blur import FilterGaussianBlur
-from airunner.filters.filter_pixel_art import FilterPixelArt
-from airunner.filters.filter_saturation import FilterSaturation
-from airunner.filters.filter_unsharp_mask import FilterUnsharpMask
-from airunner.filters.filter_rgb_noise import FilterRGBNoise
+from airunner.filters.windows.filter_box_blur import FilterBoxBlur
+from airunner.filters.windows.filter_color_balance import FilterColorBalance
+from airunner.filters.windows.filter_gaussian_blur import FilterGaussianBlur
+from airunner.filters.windows.filter_pixel_art import FilterPixelArt
+from airunner.filters.windows.filter_saturation import FilterSaturation
+from airunner.filters.windows.filter_unsharp_mask import FilterUnsharpMask
+from airunner.filters.windows.filter_rgb_noise import FilterRGBNoise
 from airunner.windows.image_interpolation import ImageInterpolation
 from airunner.windows.prompt_browser import PromptBrowser
 

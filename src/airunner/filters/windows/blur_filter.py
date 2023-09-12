@@ -1,4 +1,4 @@
-from airunner.filters.filter_base import FilterBase
+from airunner.filters.windows.filter_base import FilterBase
 
 
 class BlurFilter(FilterBase):

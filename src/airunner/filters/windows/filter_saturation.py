@@ -1,5 +1,5 @@
-from airunner.filters.filter_base import FilterBase
 from airunner.filters.saturation_filter import SaturationFilter
+from airunner.filters.windows.filter_base import FilterBase
 
 
 class FilterSaturation(FilterBase):

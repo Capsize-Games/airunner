@@ -1,5 +1,6 @@
 from PIL.ImageFilter import BoxBlur
-from airunner.filters.blur_filter import BlurFilter
+
+from airunner.filters.windows.blur_filter import BlurFilter
 
 
 class FilterBoxBlur(BlurFilter):
