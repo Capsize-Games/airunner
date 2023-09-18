@@ -7,6 +7,7 @@ from PyQt6.QtGui import QShortcut, QKeySequence
 from PyQt6.uic.exceptions import UIFileException
 from airunner.aihandler.settings import MAX_SEED
 from airunner.aihandler.enums import MessageCode
+from airunner.data.models import AIModel
 from airunner.windows.video import VideoPopup
 from airunner.mixins.lora_mixin import LoraMixin
 from PIL import PngImagePlugin
@@ -20,326 +21,204 @@ class GeneratorMixin(LoraMixin):
     seed_override = None  # used when generating multiple samples
 
     @property
-    def deterministic_var(self):
-        return self.settings.deterministic
-
-    @property
     def deterministic(self):
-        return self.deterministic_var.get()
+        return self.settings_manager.generator.deterministic
 
     @deterministic.setter
     def deterministic(self, val):
-        self.deterministic_var.set(val == True)
+        self.settings_manager.set_value("generator.deterministic", val == True)
 
     @property
     def model_base_path(self):
-        return self.settings.model_base_path.get()
+        return self.settings_manager.path_settings.model_base_path
 
     @model_base_path.setter
     def model_base_path(self, val):
-        self.settings.model_base_path.set(val)
+        self.settings_manager.set_value("model_base_path", val)
 
     @property
     def working_width(self):
-        return int(self.settings_manager.settings.working_width.get())
+        return int(self.settings_manager.working_width)
 
     @working_width.setter
     def working_width(self, val):
-        self.settings_manager.settings.working_width.set(val)
+        self.settings_manager.set_value("working_width", val)
         self.set_final_size_label()
         self.canvas.update()
 
     @property
     def working_height(self):
-        return int(self.settings_manager.settings.working_height.get())
+        return int(self.settings_manager.working_height)
 
     @working_height.setter
     def working_height(self, val):
-        self.settings_manager.settings.working_height.set(val)
+        self.settings_manager.set_value("working_height", val)
         self.set_final_size_label()
         self.canvas.update()
 
     @property
-    def steps_var(self):
-        return self.settings.steps
-
-    @property
     def steps(self):
-        return self.steps_var.get()
+        return self.settings_manager.generator.steps
 
     @steps.setter
     def steps(self, val):
-        self.steps_var.set(val)
+        self.settings_manager.set_value("generator.steps", val)
 
     @property
     def ddim_eta(self):
-        return self.settings.ddim_eta.get()
+        return self.settings_manager.ddim_eta
 
     @ddim_eta.setter
     def ddim_eta(self, val):
-        self.settings.ddim_eta.set(val)
-
-    @property
-    def prompt_var(self):
-        return self.settings.prompt
+        self.settings_manager.set_value("generator.ddim_eta", val)
 
     @property
     def prompt(self):
-        return self.prompt_var.get()
+        return self.settings_manager.generator.prompt
 
     @prompt.setter
     def prompt(self, val):
-        self.prompt_var.set(val)
-
-    @property
-    def negative_prompt_var(self):
-        return self.settings.negative_prompt
+        self.settings_manager.set_value("generator.prompt", val)
 
     @property
     def negative_prompt(self):
-        return self.negative_prompt_var.get()
+        return self.settings_manager.generator.negative_prompt
 
     @negative_prompt.setter
     def negative_prompt(self, val):
-        self.negative_prompt_var.set(val)
-
-    @property
-    def scale_var(self):
-        return self.settings.scale
+        self.settings_manager.set_value("generator.negative_prompt", val)
 
     @property
     def scale(self):
-        return self.scale_var.get()
+        return self.settings_manager.generator.scale
 
     @scale.setter
     def scale(self, val):
-        self.scale_var.set(val)
-
-    @property
-    def image_scale_var(self):
-        return self.settings.image_guidance_scale
+        self.settings_manager.set_value("generator.scale", val)
 
     @property
     def image_scale(self):
-        return self.image_scale_var.get()
+        return self.settings_manager.generator.image_guidance_scale
 
     @image_scale.setter
     def image_scale(self, val):
-        self.image_scale_var.set(val)
-
-    @property
-    def strength_var(self):
-        return self.settings.strength
+        self.settings_manager.set_value("generator.image_scale", val)
 
     @property
     def strength(self):
-        return self.strength_var.get()
+        return self.settings_manager.generator.strength
 
     @strength.setter
     def strength(self, val):
-        self.strength_var.set(val)
-
-    @property
-    def enable_controlnet_var(self):
-        return self.settings.enable_controlnet
+        self.settings_manager.set_value("generator.strength", val)
 
     @property
     def enable_controlnet(self):
-        return self.enable_controlnet_var.get()
+        return self.settings_manager.generator.enable_controlnet
 
     @enable_controlnet.setter
     def enable_controlnet(self, val):
-        self.enable_controlnet_var.set(val)
-
-    @property
-    def controlnet_var(self):
-        if self.settings:
-            return self.settings.controlnet_var
-        return ""
+        self.settings_manager.set_value("generator.enable_controlnet", val)
 
     @property
     def controlnet(self):
-        controlnet = self.controlnet_var.get()
+        controlnet = self.settings_manager.generator.controlnet
         if controlnet == "":
             return None
         return controlnet
 
     @controlnet.setter
     def controlnet(self, val):
-        self.controlnet_var.set(val)
-
-    @property
-    def use_prompt_builder_checkbox_var(self):
-        return self.settings.use_prompt_builder_checkbox
+        self.settings_manager.set_value("generator.controlnet", val)
 
     @property
     def use_prompt_builder_checkbox(self):
-        val = self.use_prompt_builder_checkbox_var.get()
-        return val == 2 or val == True
+        val = self.settings_manager.use_prompt_builder_checkbox
+        return val == True or val == 2
 
     @use_prompt_builder_checkbox.setter
     def use_prompt_builder_checkbox(self, val):
-        self.use_prompt_builder_checkbox_var.set(val == True or val == 2)
-
-    @property
-    def controlnet_scale_var(self):
-        return self.settings.controlnet_guidance_scale
+        self.settings_manager.set_value("use_prompt_builder_checkbox", val == True or val == 2)
 
     @property
     def controlnet_guidance_scale(self):
-        return self.controlnet_scale_var.get()
+        return self.settings_manager.generator.controlnet_guidance_scale
 
     @controlnet_guidance_scale.setter
     def controlnet_guidance_scale(self, val):
-        self.controlnet_scale_var.set(val)
-
-    @property
-    def variation_var(self):
-        return self.settings.variation
+        self.settings_manager.set_value("generator.controlnet_scale", val)
 
     @property
     def variation(self):
-        return self.variation_var.get()
+        return self.settings_manager.generator.variation
 
     @variation.setter
     def variation(self, val):
-        self.variation_var.set(val)
-
-    @property
-    def seed_var(self):
-        return self.settings.seed
+        self.settings_manager.set_value("generator.variation", val)
 
     @property
     def seed(self):
-        return self.seed_var.get()
+        return self.settings_manager.generator.seed
 
     @seed.setter
     def seed(self, val):
-        self.seed_var.set(val)
-
-    @property
-    def random_seed_var(self):
-        return self.settings.random_seed
+        self.settings_manager.set_value("generator.seed", val)
 
     @property
     def random_seed(self):
-        return self.random_seed_var.get()
+        return self.settings_manager.generator.random_seed
 
     @random_seed.setter
     def random_seed(self, val):
-        self.random_seed_var.set(val)
-
-    @property
-    def latents_seed_var(self):
-        return self.settings.latents_seed
+        self.settings_manager.set_value("generator.random_seed", val)
 
     @property
     def latents_seed(self):
-        return self.latents_seed_var.get()
+        return self.settings_manager.generator.latents_seed
 
     @latents_seed.setter
     def latents_seed(self, val):
-        self.latents_seed_var.set(val)
-
-    @property
-    def random_latents_seed_var(self):
-        return self.settings.random_latents_seed
+        self.settings_manager.set_value("generator.latents_seed", val)
 
     @property
     def random_latents_seed(self):
-        return self.random_latents_seed_var.get()
+        return self.settings_manager.generator.random_latents_seed
 
     @random_latents_seed.setter
     def random_latents_seed(self, val):
-        self.random_latents_seed_var.set(val)
-
-    @property
-    def clip_skip_var(self):
-        return self.settings.clip_skip
+        self.settings_manager.set_value("generator.random_latents_seed", val)
 
     @property
     def clip_skip(self):
-        return self.clip_skip_var.get()
+        return self.settings_manager.generator.clip_skip
 
     @clip_skip.setter
     def clip_skip(self, val):
-        self.clip_skip_var.set(val)
-
-    @property
-    def samples_var(self):
-        return self.settings.n_samples
+        self.settings_manager.set_value("generator.clip_skip", val)
 
     @property
     def samples(self):
-        return self.samples_var.get()
+        return self.settings_manager.generator.n_samples
 
     @samples.setter
     def samples(self, val):
-        self.samples_var.set(val)
-
-    @property
-    def model_var(self):
-        return self.settings.model_var
+        self.settings_manager.set_value("generator.n_samples", val)
 
     @property
     def model(self):
-        return self.model_var.get()
+        return self.settings_manager.generator.model
 
     @model.setter
     def model(self, val):
-        self.model_var.set(val)
-
-    @property
-    def scheduler_var(self):
-        return self.settings.scheduler_var
+        self.settings_manager.set_value("generator.model", val)
 
     @property
     def scheduler(self):
-        return self.scheduler_var.get()
+        return self.settings_manager.generator.scheduler
 
     @scheduler.setter
     def scheduler(self, val):
-        self.scheduler_var.set(val)
-
-    @property
-    def downscale_amount_var(self):
-        return self.settings.downscale_amount
-
-    @property
-    def downscale_amount(self):
-        return self.downscale_amount_var.get()
-
-    @downscale_amount.setter
-    def downscale_amount(self, val):
-        self.downscale_amount_var.set(val)
-
-    @property
-    def do_upscale_by_active_grid_var(self):
-        return self.settings.do_upscale_by_active_grid
-
-    @property
-    def do_upscale_by_active_grid(self):
-        return self.do_upscale_by_active_grid_var.get()
-
-    @do_upscale_by_active_grid.setter
-    def do_upscale_by_active_grid(self, val):
-        self.do_upscale_by_active_grid_var.set(val)
-
-    @property
-    def do_upscale_full_image_var(self):
-        return self.settings.do_upscale_full_image
-
-    @property
-    def do_upscale_full_image(self):
-        return self.do_upscale_full_image_var.get()
-
-    @do_upscale_full_image.setter
-    def do_upscale_full_image(self, val):
-        self.do_upscale_full_image_var.set(val)
-
-    @property
-    def image_to_new_layer(self):
-        return self.settings_manager.settings.image_to_new_layer.get()
+        self.settings_manager.set_value("generator.scheduler", val)
 
     def update_prompt(self, prompt):
         self.generator_tab_widget.set_prompt(prompt)
@@ -351,14 +230,14 @@ class GeneratorMixin(LoraMixin):
         self.tool_menu_widget.initialize()
         self.initialize_lora()
 
-        self.keyboard_event_manager.register_keypress("generate", self.generate_callback)
+        self.input_event_manager.register_keypress("generate", self.generate_callback)
 
     def update_controlnet(self, tab, index):
         controlnet = self.tabs[tab].controlnet_dropdown.itemText(index)
         controlnet = controlnet.lower()
         if controlnet == "":
             controlnet = None
-        self.settings.controlnet_var.set(controlnet)
+        self.settings_manager.set_value("generator.controlnet", controlnet)
 
     def set_final_size_label(self, tab=None):
         if tab is None:
@@ -372,8 +251,8 @@ class GeneratorMixin(LoraMixin):
         image = self.canvas.current_layer.image_data.image
         if image:
             if self.do_upscale_by_active_grid:
-                width = self.settings_manager.settings.working_width.get()
-                height = self.settings_manager.settings.working_height.get()
+                width = self.settings_manager.working_width
+                height = self.settings_manager.working_height
             else:
                 width = image.width
                 height = image.height
@@ -488,7 +367,8 @@ class GeneratorMixin(LoraMixin):
             seed = self.seed
         if self.samples > 1:
             self.client.do_process_queue = False
-        for n in range(self.samples):
+        total_samples = self.samples if not self.is_txt2vid else 1
+        for n in range(total_samples):
             if self.use_prompt_builder_checkbox and n > 0:
                 seed = int(seed) + n
             self.call_generate(image, seed=seed)
@@ -535,14 +415,14 @@ class GeneratorMixin(LoraMixin):
                 return self.do_generate(seed=seed)
             elif image is None:
                 # create a transparent image the size of self.canvas.active_grid_area_rect
-                width = self.settings_manager.settings.working_width.get()
-                height = self.settings_manager.settings.working_height.get()
+                width = self.settings_manager.working_width
+                height = self.settings_manager.working_height
                 image = Image.new("RGBA", (int(width), int(height)), (0, 0, 0, 0))
 
             img = image.copy().convert("RGBA")
             new_image = Image.new(
                 "RGBA",
-                (self.settings.working_width.get(), self.settings.working_height.get()),
+                (self.settings_manager.working_width, self.settings_manager.working_height),
                 (0, 0, 0))
 
             cropped_outpaint_box_rect = self.active_rect
@@ -610,16 +490,16 @@ class GeneratorMixin(LoraMixin):
 
     def get_memory_options(self):
         return {
-            "use_last_channels": self.settings_manager.settings.use_last_channels.get(),
-            "use_enable_sequential_cpu_offload": self.settings_manager.settings.use_enable_sequential_cpu_offload.get(),
-            "enable_model_cpu_offload": self.settings_manager.settings.enable_model_cpu_offload.get(),
-            "use_attention_slicing": self.settings_manager.settings.use_attention_slicing.get(),
-            "use_tf32": self.settings_manager.settings.use_tf32.get(),
-            "use_cudnn_benchmark": self.settings_manager.settings.use_cudnn_benchmark.get(),
-            "use_enable_vae_slicing": self.settings_manager.settings.use_enable_vae_slicing.get(),
-            "use_accelerated_transformers": self.settings_manager.settings.use_accelerated_transformers.get(),
-            "use_torch_compile": self.settings_manager.settings.use_torch_compile.get(),
-            "use_tiled_vae": self.settings_manager.settings.use_tiled_vae.get(),
+            "use_last_channels": self.settings_manager.memory_settings.use_last_channels,
+            "use_enable_sequential_cpu_offload": self.settings_manager.memory_settings.use_enable_sequential_cpu_offload,
+            "enable_model_cpu_offload": self.settings_manager.memory_settings.enable_model_cpu_offload,
+            "use_attention_slicing": self.settings_manager.memory_settings.use_attention_slicing,
+            "use_tf32": self.settings_manager.memory_settings.use_tf32,
+            "use_cudnn_benchmark": self.settings_manager.memory_settings.use_cudnn_benchmark,
+            "use_enable_vae_slicing": self.settings_manager.memory_settings.use_enable_vae_slicing,
+            "use_accelerated_transformers": self.settings_manager.memory_settings.use_accelerated_transformers,
+            "use_torch_compile": self.settings_manager.memory_settings.use_torch_compile,
+            "use_tiled_vae": self.settings_manager.memory_settings.use_tiled_vae,
         }
 
     def do_deterministic_generation(self, extra_options):
@@ -648,11 +528,6 @@ class GeneratorMixin(LoraMixin):
         if self.enable_controlnet:
             extra_options["input_image"] = self.generator_tab_widget.current_controlnet_input_image
 
-        # if self.random_seed or not seed:
-        #     self.seed_override = None
-        # else:
-        #     self.seed_override = seed
-
         self.set_seed(seed=seed, latents_seed=latents_seed)
         seed = self.seed
         latents_seed = self.latents_seed
@@ -660,39 +535,25 @@ class GeneratorMixin(LoraMixin):
         if self.deterministic_data and self.deterministic:
             return self.do_deterministic_generation(extra_options)
 
-        # self.start_progress_bar(self.current_section)
-
         action = self.current_section
 
         prompt = self.prompt
         negative_prompt = self.negative_prompt
 
         # set the model data
-        model_path = None
-        model_branch = None
-        model_name = None
-
-        section_name = action
-        models = self.application_data.available_models_by_section(section_name)
-        model_data = None
-        for model in models:
-            if isinstance(model, list):
-                for item in model:
-                    if item["name"] == self.model:
-                        model_path = item["path"]
-                        model_branch = item["branch"]
-                        model_data = item
-                        break
-            else:
-                if model["name"] == self.model:
-                    model_path = model["path"]
-                    model_branch = model["branch"]
-                    model_data = model
-                    break
-        pipeline = self.application_data.available_pipeline_by_section(section_name, model_data["version"], model_data["category"])
-        if pipeline:
-            model_data["pipeline_class"] = pipeline
-            model_data["pipeline_action"] = section_name
+        model = self.settings_manager.models.filter_by(name=self.model).first()
+        model_path = model.path
+        model_branch = model.branch
+        model_data = {
+            "name": model.name,
+            "path": model.path,
+            "branch": model.branch,
+            "version": model.version,
+            "category": model.category,
+            "pipeline_action": model.pipeline_action,
+            "enabled": model.enabled,
+            "default": model.default
+        }
 
         # get controlnet_dropdown from active tab
         options = {
@@ -715,25 +576,25 @@ class GeneratorMixin(LoraMixin):
             "generator_section": self.currentTabSection,
             "width": self.working_width,
             "height": self.working_height,
-            "do_nsfw_filter": self.settings_manager.settings.nsfw_filter.get(),
+            "do_nsfw_filter": self.settings_manager.nsfw_filter,
             "pos_x": 0,
             "pos_y": 0,
             "outpaint_box_rect": self.active_rect,
-            "hf_token": self.settings_manager.settings.hf_api_key.get(),
+            "hf_token": self.settings_manager.hf_api_key,
             "batch_size": self.tool_menu_widget.deterministic_widget.batch_size if self.deterministic else 1,
             "deterministic_generation": self.deterministic,
             "deterministic_style": self.tool_menu_widget.deterministic_widget.deterministic_style,
             "deterministic_seed": None,
             "model_base_path": self.model_base_path,
-            "outpaint_model_path": self.settings_manager.settings.outpaint_model_path.get(),
-            "pix2pix_model_path": self.settings_manager.settings.pix2pix_model_path.get(),
-            "depth2img_model_path": self.settings_manager.settings.depth2img_model_path.get(),
-            "upscale_model_path": self.settings_manager.settings.upscale_model_path.get(),
-            "gif_path": self.settings_manager.settings.gif_path.get(),
-            "image_path": self.settings_manager.settings.image_path.get(),
-            "lora_path": self.settings_manager.settings.lora_path.get(),
-            "embeddings_path": self.settings_manager.settings.embeddings_path.get(),
-            "video_path": self.settings_manager.settings.video_path.get(),
+            "outpaint_model_path": self.settings_manager.path_settings.outpaint_model_path,
+            "pix2pix_model_path": self.settings_manager.path_settings.pix2pix_model_path,
+            "depth2img_model_path": self.settings_manager.path_settings.depth2img_model_path,
+            "upscale_model_path": self.settings_manager.path_settings.upscale_model_path,
+            "gif_path": self.settings_manager.path_settings.gif_path,
+            "image_path": self.settings_manager.path_settings.image_path,
+            "lora_path": self.settings_manager.lora_path,
+            "embeddings_path": self.settings_manager.path_settings.embeddings_path,
+            "video_path": self.settings_manager.path_settings.video_path,
             "clip_skip": self.clip_skip,
             "variation": self.variation
         }

@@ -69,19 +69,19 @@ class Canvas(
 
     @property
     def select_selected(self):
-        return self.settings_manager.settings.current_tool.get() == "select"
+        return self.settings_manager.current_tool == "select"
 
     @property
     def eraser_selected(self):
-        return self.settings_manager.settings.current_tool.get() == "eraser"
+        return self.settings_manager.current_tool == "eraser"
 
     @property
     def brush_selected(self):
-        return self.settings_manager.settings.current_tool.get() == "brush"
+        return self.settings_manager.current_tool == "brush"
 
     @property
     def move_selected(self):
-        return self.settings_manager.settings.current_tool.get() == "move"
+        return self.settings_manager.current_tool == "move"
 
     @property
     def is_dragging(self):
@@ -97,7 +97,7 @@ class Canvas(
 
     @property
     def brush_size(self):
-        return self.settings_manager.settings.mask_brush_size.get()
+        return self.settings_manager.brush_settings.brush_size
 
     @property
     def canvas_container(self):
@@ -117,7 +117,7 @@ class Canvas(
 
     @property
     def primary_color(self):
-        return QColor(self.settings_manager.settings.primary_color.get())
+        return QColor(self.settings_manager.brush_settings.primary_color)
 
     @property
     def viewport_rect(self):
@@ -213,7 +213,7 @@ class Canvas(
             layer = layers[index]
             if not layer.visible:
                 continue
-            if self.settings_manager.settings.show_active_image_area.get():
+            if self.settings_manager.show_active_image_area:
                 self.draw_active_image_area()
             CanvasImageMixin.draw(self, layer, index)
             CanvasBrushesMixin.draw(self, layer, index)
@@ -295,7 +295,7 @@ class Canvas(
             event.pos().y() if self.drag_pos is not None else 0
         )
         # snap to grid
-        grid_size = self.settings_manager.settings.size.get()
+        grid_size = self.settings_manager.grid_settings.size
         point.setX(point.x() - (point.x() % grid_size))
         point.setY(point.y() - (point.y() % grid_size))
 
@@ -394,8 +394,8 @@ class Canvas(
                 self.select_end = event.pos()
 
         # snap to grid if enabled
-        if self.settings_manager.settings.snap_to_grid.get():
-            grid_size = self.settings_manager.settings.size.get()
+        if self.settings_manager.grid_settings.snap_to_grid:
+            grid_size = self.settings_manager.grid_settings.size
             self.select_start.setX(self.select_start.x() - (self.select_start.x() % grid_size))
             self.select_start.setY(self.select_start.y() - (self.select_start.y() % grid_size))
             self.select_end.setX(self.select_end.x() - (self.select_end.x() % grid_size))
@@ -433,14 +433,14 @@ class Canvas(
         )
 
         # drag from the center of active_grid_area_pivot_point based on the size
-        width = self.settings_manager.settings.working_width.get()
-        height = self.settings_manager.settings.working_height.get()
+        width = self.settings_manager.working_width
+        height = self.settings_manager.working_height
         point -= QPoint(
             int((width / 2) + self.pos_x),
             int((height / 2) + self.pos_y)
         )
 
-        if self.settings_manager.settings.snap_to_grid.get():
+        if self.settings_manager.grid_settings.snap_to_grid:
             point = QPoint(
                 point.x() - (point.x() % self.grid_size),
                 point.y() - (point.y() % self.grid_size)
@@ -452,11 +452,11 @@ class Canvas(
         self.update()
 
     def reset_settings(self):
-        self.parent.header_widget.width_slider_widget.slider.setValue(self.settings_manager.settings.working_width.get())
-        self.parent.header_widget.height_slider_widget.slider.setValue(self.settings_manager.settings.working_height.get())
+        self.parent.header_widget.width_slider_widget.slider.setValue(self.settings_manager.working_width)
+        self.parent.header_widget.height_slider_widget.slider.setValue(self.settings_manager.working_height)
 
     def set_canvas_color(self):
-        self.update_canvas_color(self.settings_manager.settings.canvas_color.get())
+        self.update_canvas_color(self.settings_manager.canvas_color)
 
     def update_canvas_color(self, color):
         self.parent.canvas_widget.canvas_container.setStyleSheet(f"""
@@ -707,8 +707,8 @@ class Canvas(
         image = self.current_active_image_data.image
         if image:
             # get the sizes and location of the active grid area
-            width = self.settings_manager.settings.working_width.get()
-            height = self.settings_manager.settings.working_height.get()
+            width = self.settings_manager.working_width
+            height = self.settings_manager.working_height
             point = self.active_grid_area_pivot_point
 
             # create a new image and composite the old image into it

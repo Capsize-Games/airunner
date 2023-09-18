@@ -16,7 +16,7 @@ class PromptBrowser(BaseWindow):
     def initialize_window(self):
         container = QWidget()
         container.setLayout(QVBoxLayout())
-        for index, prompt in enumerate(self.prompts_manager.settings.prompts.get()):
+        for index, prompt in enumerate(self.prompts_manager.settings.prompts):
             widget = uic.loadUi('pyqt/prompt_browser_prompt_widget.ui')
             widget.prompt.setText(prompt['prompt'])
             widget.negative_prompt.setText(prompt['negative_prompt'])
@@ -35,14 +35,14 @@ class PromptBrowser(BaseWindow):
         self.app.update_negative_prompt(prompt['negative_prompt'])
 
     def delete_prompt(self, prompt, widget):
-        prompts = self.prompts_manager.settings.prompts.get()
+        prompts = self.prompts_manager.settings.prompts
         prompts.remove(prompt)
         self.prompts_manager.settings.prompts.set(prompts)
         self.prompts_manager.save_settings()
         widget.deleteLater()
 
     def save_prompt(self, widget, index):
-        prompts = self.prompts_manager.settings.prompts.get()
+        prompts = self.prompts_manager.settings.prompts
         prompt = widget.prompt.toPlainText()
         negative_prompt = widget.negative_prompt.toPlainText()
         prompts[index]['prompt'] = prompt

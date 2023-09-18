@@ -102,23 +102,6 @@
     <property name="title">
      <string>Filters</string>
     </property>
-    <widget class="QMenu" name="menuBlur">
-     <property name="title">
-      <string>Blur</string>
-     </property>
-     <addaction name="separator"/>
-     <addaction name="actionGaussian_Blur_2"/>
-     <addaction name="actionBox_Blur_2"/>
-    </widget>
-    <addaction name="menuBlur"/>
-    <addaction name="separator"/>
-    <addaction name="actionColor_Balance"/>
-    <addaction name="actionSaturation_Filter"/>
-    <addaction name="actionUnsharp_Mask"/>
-    <addaction name="actionRGB_Noise"/>
-    <addaction name="actionPixel_Art"/>
-    <addaction name="actionHalftone"/>
-    <addaction name="actionRegistration_error"/>
     <addaction name="separator"/>
     <addaction name="actionInvert"/>
     <addaction name="actionFilm"/>
@@ -372,6 +355,9 @@
    </property>
   </action>
   <action name="actionColor_Balance">
+   <property name="checkable">
+    <bool>false</bool>
+   </property>
    <property name="enabled">
     <bool>true</bool>
    </property>

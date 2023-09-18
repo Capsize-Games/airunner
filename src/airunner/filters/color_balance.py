@@ -1,16 +1,10 @@
-from PIL.ImageFilter import Filter
 from PIL import Image
 
+from airunner.filters.base_filter import BaseFilter
 
-class ColorBalanceFilter(Filter):
-    name = "Color Balance"
 
-    def __init__(self, cyan_red=0, magenta_green=0, yellow_blue=0):
-        self.cyan_red = cyan_red
-        self.magenta_green = magenta_green
-        self.yellow_blue = yellow_blue
-
-    def filter(self, image):
+class ColorBalanceFilter(BaseFilter):
+    def apply_filter(self, image, _do_reset):
         red, green, blue, alpha = image.split()
         red = red.point(lambda i: i + (i * self.cyan_red))
         green = green.point(lambda i: i + (i * self.magenta_green))

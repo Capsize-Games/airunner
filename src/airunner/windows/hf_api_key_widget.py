@@ -9,9 +9,9 @@ class HFAPIKeyWidget(CustomWidget):
 
         # handle hf_api_key QLineEdit change
         self.hf_api_key.setEchoMode(QLineEdit.EchoMode.Password)
-        self.hf_api_key.setText(self.settings_manager.settings.hf_api_key.get())
+        self.hf_api_key.setText(self.settings_manager.hf_api_key)
         self.hf_api_key.textChanged.connect(self.handle_api_key_change)
         # treat self.hf_api_key.textChanged as a password by displaying masked text
 
     def handle_api_key_change(self, value):
-        self.settings_manager.settings.hf_api_key.set(value)
+        self.settings_manager.set_value("hf_api_key", value)

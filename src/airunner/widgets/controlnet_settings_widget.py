@@ -103,14 +103,14 @@ class ControlNetSettingsWidget(BaseWidget):
     def handle_toggle_controlnet(self, value):
         if self.app.currentTabSection != "stablediffusion":
             value = False
-        self.app.handle_value_change("enable_controlnet", value, self)
+        self.app.handle_value_change("generator.enable_controlnet", value, self)
         self.set_thumbnail()
         self.set_stylesheet()
 
     def __init__(self, *args, **kwargs):
         super().__init__(*args, **kwargs)
 
-        self.template.controlnet_groupbox.setChecked(self.app.enable_controlnet)
+        self.template.controlnet_groupbox.setChecked(self.app.settings_manager.generator.enable_controlnet)
         self.template.controlnet_groupbox.toggled.connect(self.handle_toggle_controlnet)
         self.add_controlnet_widgets()
         self.template.link_settings_button.clicked.connect(self.handle_link_settings_clicked)
@@ -278,7 +278,7 @@ class ControlNetSettingsWidget(BaseWidget):
         """
         file_path, _ = self.app.display_import_image_dialog(
             label="Import Input Image",
-            directory=self.app.settings_manager.settings.image_path.get()
+            directory=self.app.settings_manager.path_settings.image_path
         )
         if file_path == "":
             return
@@ -291,7 +291,7 @@ class ControlNetSettingsWidget(BaseWidget):
         it into the application for use with controlnet during image generation.
         :return:
         """
-        controlnet_image_mask_path = os.path.join(self.app.settings_manager.settings.image_path.get(), "controlnet_masks")
+        controlnet_image_mask_path = os.path.join(self.app.settings_manager.path_settings.image_path, "controlnet_masks")
         file_path, _ = self.app.display_import_image_dialog(
             label="Import Mask",
             directory=controlnet_image_mask_path
@@ -361,7 +361,7 @@ class ControlNetSettingsWidget(BaseWidget):
         controlnet_widget.addItems(controlnet_options)
         current_index = 0
         for index, controlnet_name in enumerate(controlnet_options):
-            if controlnet_name.lower() == self.app.controlnet:
+            if controlnet_name.lower() == self.app.settings_manager.generator.controlnet:
                 current_index = index
                 break
         controlnet_widget.setCurrentIndex(current_index)
@@ -375,8 +375,8 @@ class ControlNetSettingsWidget(BaseWidget):
         controlnet_scale_slider = SliderWidget(
             app=self.app,
             label_text="Scale",
-            slider_callback=partial(self.app.handle_value_change, "controlnet_scale"),
-            current_value=self.app.controlnet_guidance_scale,
+            slider_callback=partial(self.app.handle_value_change, "generator.controlnet_guidance_scale"),
+            current_value=self.app.settings_manager.generator.controlnet_guidance_scale,
             slider_minimum=0,
             slider_maximum=1000,
             spinbox_minimum=0.0,

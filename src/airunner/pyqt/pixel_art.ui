@@ -6,15 +6,15 @@
    <rect>
     <x>0</x>
     <y>0</y>
-    <width>208</width>
-    <height>188</height>
+    <width>356</width>
+    <height>146</height>
    </rect>
   </property>
   <property name="windowTitle">
    <string>Pixel Art</string>
   </property>
-  <layout class="QFormLayout" name="formLayout">
-   <item row="0" column="0">
+  <layout class="QGridLayout" name="gridLayout">
+   <item row="0" column="0" colspan="2">
     <layout class="QGridLayout" name="gridLayout_9">
      <item row="0" column="0">
       <layout class="QGridLayout" name="gridLayout_8">
@@ -33,6 +33,12 @@
        </item>
        <item row="0" column="0">
         <widget class="QLabel" name="label_8">
+         <property name="font">
+          <font>
+           <pointsize>9</pointsize>
+           <bold>true</bold>
+          </font>
+         </property>
          <property name="text">
           <string>Number of Colors</string>
          </property>
@@ -40,6 +46,11 @@
        </item>
        <item row="1" column="1">
         <widget class="QSpinBox" name="number_of_colors_spinbox">
+         <property name="font">
+          <font>
+           <pointsize>9</pointsize>
+          </font>
+         </property>
          <property name="minimum">
           <number>2</number>
          </property>
@@ -85,6 +96,12 @@
        </item>
        <item row="0" column="0">
         <widget class="QLabel" name="label_9">
+         <property name="font">
+          <font>
+           <pointsize>9</pointsize>
+           <bold>true</bold>
+          </font>
+         </property>
          <property name="text">
           <string>Base Size</string>
          </property>
@@ -92,6 +109,11 @@
        </item>
        <item row="1" column="1">
         <widget class="QSpinBox" name="base_size_spinbox">
+         <property name="font">
+          <font>
+           <pointsize>9</pointsize>
+          </font>
+         </property>
          <property name="minimum">
           <number>16</number>
          </property>
@@ -108,7 +130,24 @@
     </layout>
    </item>
    <item row="1" column="0">
+    <widget class="QCheckBox" name="auto_apply">
+     <property name="font">
+      <font>
+       <pointsize>9</pointsize>
+      </font>
+     </property>
+     <property name="text">
+      <string>Automatically apply filter</string>
+     </property>
+    </widget>
+   </item>
+   <item row="1" column="1">
     <widget class="QDialogButtonBox" name="buttonBox">
+     <property name="font">
+      <font>
+       <pointsize>9</pointsize>
+      </font>
+     </property>
      <property name="orientation">
       <enum>Qt::Horizontal</enum>
      </property>

@@ -34,7 +34,7 @@ class LayerWidget(BaseWidget):
             self.thumbnail_label.setPixmap(QtGui.QPixmap())
 
     def set_icon(self):
-        is_dark = self.app.settings_manager.settings.dark_mode_enabled.get()
+        is_dark = self.app.settings_manager.dark_mode_enabled
         filename = "src/icons/010-view" if self.data.visible else "src/icons/009-hide"
         self.visible_button.setIcon(QtGui.QIcon(
             os.path.join(f"{filename}{'-light' if is_dark else ''}.png")

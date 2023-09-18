@@ -1,5 +1,5 @@
-from airunner.aihandler.settings_manager import ApplicationData
 from airunner.aihandler.logger import Logger as logger
+from airunner.aihandler.settings_manager import SettingsManager
 
 
 class AutoImport:
@@ -29,22 +29,22 @@ class AutoImport:
     ):
         version = model_data["version"]
         category = category if category else model_data["category"]
-        application_data = ApplicationData()
         if pipeline_action == "txt2img" and requested_action == "img2img":
             pipeline_action = "img2img"
-        pipeline = application_data.available_pipeline_by_section(pipeline_action, version, category)
+        settings_manager = SettingsManager()
+        pipeline = settings_manager.available_pipeline_by_section(pipeline_action, version, category)
 
         try:
-            if single_file and "singlefile-classname" in pipeline:
-                classname = pipeline["singlefile-classname"]
+            if single_file and pipeline.singlefile_classname != "":
+                classname = pipeline.singlefile_classname
             else:
-                classname = pipeline["classname"]
+                classname = pipeline.classname
         except KeyError:
             logger.error(f"Failed to find classname for pipeline_action {pipeline_action} {version} {category}")
             return
-        pipeline = classname.split(".")
+        pipeline_classname = classname.split(".")
         module = None
-        for index, module_name in enumerate(pipeline):
+        for index, module_name in enumerate(pipeline_classname):
             if index == 0:
                 module = __import__(module_name)
             else:
