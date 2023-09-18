@@ -26,7 +26,7 @@ class InputImageSettingsWidget(BaseWidget):
 
         self.initialize_input_image_buttons()
         self.app.add_image_to_canvas_signal.connect(self.handle_new_image)
-        self.template.groupBox.setChecked(self.app.enable_input_image)
+        self.template.groupBox.setChecked(self.app.settings_manager.generator.enable_input_image)
         self.template.groupBox.toggled.connect(self.handle_toggle_enable_input_image)
         self.template.refresh_input_image_button.clicked.connect(self.clear_input_image)
         self.add_input_image_strength_scale_widget()
@@ -41,7 +41,7 @@ class InputImageSettingsWidget(BaseWidget):
                 app=self.app,
                 label_text="Input Image Scale",
                 slider_callback=partial(self.handle_image_strength_changed),
-                current_value=self.app.strength,
+                current_value=self.app.settings_manager.generator.strength,
                 slider_maximum=10000,
                 spinbox_maximum=100.0,
                 display_as_float=True,
@@ -52,7 +52,7 @@ class InputImageSettingsWidget(BaseWidget):
             if self.app.current_section not in ["pix2pix"]:
                 value = 10000
             else:
-                value = int(self.app.image_scale)
+                value = int(self.app.settings_manager.generator.image_guidance_scale)
 
             if self.app.current_section != "upscale":
                 slider = SliderWidget(
@@ -79,11 +79,11 @@ class InputImageSettingsWidget(BaseWidget):
         grid_layout.addWidget(widget)
         grid_layout.addWidget(slider)
 
-    def handle_image_strength_changed(self, value):
-        self.app.strength_var.set(value)
+    def handle_image_strength_changed(self, val):
+        self.settings_manager.set_value("generator.strength", val)
 
-    def handle_image_scale_changed(self, value):
-        self.app.image_scale_var.set(value)
+    def handle_image_scale_changed(self, val):
+        self.app.settings_manager.set_value("generator.image_scale", val)
 
     @property
     def active_grid_area_image(self):
@@ -100,7 +100,7 @@ class InputImageSettingsWidget(BaseWidget):
             return self.active_grid_area_image
 
     def handle_toggle_enable_input_image(self, value):
-        self.app.handle_value_change("enable_input_image", value, self)
+        self.app.handle_value_change("generator.enable_input_image", value, self)
         self.set_stylesheet()
 
     def initialize_input_image_buttons(self):
@@ -124,7 +124,7 @@ class InputImageSettingsWidget(BaseWidget):
 
     def import_input_image(self):
         file_path, _ = self.app.display_import_image_dialog(
-            directory=self.app.settings_manager.settings.image_path.get(),
+            directory=self.app.settings_manager.path_settings.image_path,
         )
         if file_path == "":
             return

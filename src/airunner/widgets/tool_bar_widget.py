@@ -72,7 +72,7 @@ class ToolBarWidget(BaseWidget):
         _index, self.grid_button = self.app.api.add_toolbar_button(
             icon_path=self.icon_path("grid_button"),
             checkable=True,
-            checked=self.settings_manager.settings.show_grid.get() == True,
+            checked=self.app.settings_manager.grid_settings.show_grid == True,
             tooltip="Toggle grid",
             tool="grid_button",
             row=4,
@@ -81,7 +81,7 @@ class ToolBarWidget(BaseWidget):
         _index, self.nsfw_button = self.app.api.add_toolbar_button(
             icon_path=self.icon_path("nsfw_button"),
             checkable=True,
-            checked=self.settings_manager.settings.nsfw_filter.get() == True,
+            checked=self.app.document.settings.nsfw_filter,
             tooltip="Toggle NSFW Filter",
             tool="nsfw_button",
             row=5,
@@ -98,11 +98,12 @@ class ToolBarWidget(BaseWidget):
         self.side_toolbar_container.layout().addStretch(1)
 
     def toggle_nsfw_filter(self):
-        self.app.settings_manager.settings.nsfw_filter.set(not self.app.settings_manager.settings.nsfw_filter.get())
+        self.settings_manager.set_value("nsfw_filter", not self.app.settings_manager.nsfw_filter)
+        self.app.db_save()
         self.app.canvas.update()
         self.set_nsfw_filter_tooltip()
-        self.nsfw_button.setChecked(self.app.settings_manager.settings.nsfw_filter.get())
+        self.nsfw_button.setChecked(self.app.document.settings.nsfw_filter)
 
     def set_nsfw_filter_tooltip(self):
-        nsfw_filter = self.app.settings_manager.settings.nsfw_filter.get()
+        nsfw_filter = self.app.settings_manager.nsfw_filter
         self.nsfw_button.setToolTip("Click to enable NSFW filter" if not nsfw_filter else "Click to disable NSFW filter")

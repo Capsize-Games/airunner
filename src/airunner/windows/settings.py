@@ -177,15 +177,15 @@ class SettingsWindow(BaseWindow):
         if checkable:
             checked = False
             if name == "resize_on_import":
-                checked = self.settings_manager.settings.resize_on_paste.get()
+                checked = self.app.settings_manager.resize_on_paste
             elif name == "image_to_new_layer":
-                checked = self.settings_manager.settings.image_to_new_layer.get()
+                checked = self.app.settings_manager.image_to_new_layer
             elif name == "dark_mode":
-                checked = self.settings_manager.settings.dark_mode_enabled.get()
+                checked = self.app.settings_manager.dark_mode_enabled
             elif name == "check_for_updates":
-                checked = self.settings_manager.settings.latest_version_check.get()
+                checked = self.app.settings_manager.latest_version_check
             elif name == "allow_online_mode":
-                checked = self.settings_manager.settings.allow_online_mode.get()
+                checked = self.app.settings_manager.allow_online_mode
 
             file_item.setCheckState(Qt.CheckState.Checked if checked else Qt.CheckState.Unchecked)
         # prevent file_item from being edited
@@ -208,20 +208,19 @@ class SettingsWindow(BaseWindow):
 
         if name == "resize_on_import":
             checked = item.checkState() == Qt.CheckState.Checked
-            self.settings_manager.settings.resize_on_paste.set(checked)
+            self.app.settings_manager.set_value("resize_on_paste", checked)
         elif name == "image_to_new_layer":
             checked = item.checkState() == Qt.CheckState.Checked
-            self.settings_manager.settings.image_to_new_layer.set(checked)
+            self.app.settings_manager.set_value("image_to_new_layer", checked)
         elif name == "dark_mode":
             checked = item.checkState() == Qt.CheckState.Checked
-            self.settings_manager.settings.dark_mode_enabled.set(checked)
-            self.app.toggle_darkmode()
+            self.app.settings_manager.set_value("dark_mode_enabled", checked)
         elif name == "check_for_updates":
             checked = item.checkState() == Qt.CheckState.Checked
-            self.settings_manager.settings.latest_version_check.set(checked)
+            self.app.settings_manager.set_value("latest_version_check", checked)
         elif name == "allow_online_mode":
             checked = item.checkState() == Qt.CheckState.Checked
-            self.settings_manager.settings.allow_online_mode.set(checked)
+            self.settings_manager.set_value("allow_online_mode", checked)
         elif name == "reset_settings":
             self.app.reset_settings()
         self.show_content(section, display_name, name, description)

@@ -7,7 +7,7 @@ This is due to the way huggingface diffusion models are imported.
 import os
 from airunner.aihandler.settings_manager import SettingsManager
 settings_manager = SettingsManager()
-hf_cache_path = settings_manager.settings.hf_cache_path.get()
+hf_cache_path = settings_manager.path_settings.hf_cache_path
 if hf_cache_path != "":
     # check if hf_cache_path exists
     if os.path.exists(hf_cache_path):

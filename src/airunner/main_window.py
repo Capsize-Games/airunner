@@ -1,6 +1,8 @@
 import os
 import pickle
 import sys
+from functools import partial
+
 import psutil
 import torch
 
@@ -17,6 +19,9 @@ from airunner.aihandler.pyqt_client import OfflineClient
 from airunner.aihandler.settings import LOG_LEVEL
 from airunner.aihandler.enums import MessageCode
 from airunner.airunner_api import AIRunnerAPI
+from airunner.automatic_filter_manager import AutomaticFilterManager
+from airunner.data.db import session
+from airunner.data.models import SplitterSection
 from airunner.input_event_manager import InputEventManager
 from airunner.mixins.canvas_mixin import CanvasMixin
 from airunner.mixins.generator_mixin import GeneratorMixin
@@ -36,7 +41,7 @@ from airunner.widgets.header_widget import HeaderWidget
 from airunner.windows.deterministic_generation_window import DeterministicGenerationWindow
 from airunner.windows.update_window import UpdateWindow
 from airunner.utils import get_version, get_latest_version, auto_export_image
-from airunner.aihandler.settings_manager import SettingsManager, PromptManager, ApplicationData
+from airunner.aihandler.settings_manager import SettingsManager, PromptManager
 
 import qdarktheme
 
@@ -50,6 +55,7 @@ class MainWindow(
     GeneratorMixin
 ):
     api = None
+    input_event_manager = None
     current_filter = None
     tqdm_callback_triggered = False
     _document_name = "Untitled"
@@ -60,8 +66,7 @@ class MainWindow(
     window = None
     history = None
     canvas = None
-    settings_manager = None
-    application_data = None
+    _settings_manager = None
     prompts_manager = None
     models = None
     client = None
@@ -122,6 +127,40 @@ class MainWindow(
     image_generated = pyqtSignal(bool)
     controlnet_image_generated = pyqtSignal(bool)
 
+    # # NEW DOCUMENT PROPERTIES
+    # def __getattr__(self, key):
+    #     return super().__getattr__(key)
+    #     #return getattr(self.settings_manager, key)
+    #
+    # def __setattr__(self, key, value):
+    #     if hasattr(self, key):
+    #         super().__setattr__(key, value)
+    #     else:
+    #         self.settings_manager.__setattr__(key, value)
+    #     # if self.settings_manager and self.settings_manager.hasattr(key):
+    #     #     setattr(self.settings_manager, key, value)
+    #     # else:
+    #     #     super().__setattr__(key, value)
+    # # END NEW DOCUMENT PROPERTIES
+
+    @property
+    def settings_manager(self):
+        if self._settings_manager is None:
+            self._settings_manager = SettingsManager(app=self)
+        return self._settings_manager
+
+    @settings_manager.setter
+    def settings_manager(self, val):
+        self._settings_manager = val
+
+    @property
+    def current_prompt_generator_settings(self):
+        """
+        Convenience property to get the current prompt generator settings
+        :return:
+        """
+        return self.settings_manager.prompt_generator_settings
+
     @property
     def embedding_names(self):
         if self._embedding_names is None:
@@ -130,11 +169,11 @@ class MainWindow(
 
     @property
     def is_dark(self):
-        return self.settings_manager.settings.dark_mode_enabled.get()
+        return self.settings_manager.dark_mode_enabled
 
     @property
     def grid_size(self):
-        return self.settings_manager.settings.size.get()
+        return self.settings_manager.grid_settings.size
 
     @property
     def override_section(self):
@@ -249,11 +288,6 @@ class MainWindow(
         return use_pixels
 
     @property
-    def settings(self):
-        self.settings_manager.settings.set_namespace(self.current_section, self.currentTabSection)
-        return self.settings_manager.settings
-
-    @property
     def version(self):
         if self._version is None:
             self._version = get_version()
@@ -278,124 +312,120 @@ class MainWindow(
 
     @property
     def is_maximized(self):
-        return self.settings_manager.settings.is_maximized.get()
+        return self.settings_manager.is_maximized
 
     @property
     def css(self):
         if self._themes is None:
-            self._themes = Themes(self.settings_manager)
+            self._themes = Themes(app=self)
         return self._themes.css
 
     @property
     def image_path(self):
-        return self.settings_manager.settings.image_path.get()
+        return self.settings_manager.path_settings.image_path
 
     @is_maximized.setter
     def is_maximized(self, val):
-        self.settings_manager.settings.is_maximized.set(val)
-
-    @property
-    def enable_input_image_var(self):
-        return self.settings.enable_input_image
+        self.settings_manager.set_value("is_maximized", val)
 
     @property
     def enable_input_image(self):
-        return self.enable_input_image_var.get()
+        return self.settings_manager.generator.enable_input_image
 
     @enable_input_image.setter
     def enable_input_image(self, val):
-        self.settings.enable_input_image.set(val)
+        self.settings_manager.set_value("generator.enable_input_image", val)
 
     @property
     def input_image_use_imported_image(self):
-        return self.settings.input_image_use_imported_image.get()
+        return self.settings_manager.generator.input_image_use_imported_image
 
     @input_image_use_imported_image.setter
-    def input_image_use_imported_image(self, value):
-        self.settings.input_image_use_imported_image.set(value)
+    def input_image_use_imported_image(self, val):
+        self.settings_manager.set_value("generator.input_image_use_imported_image", val)
 
     @property
     def input_image_use_grid_image(self):
-        return self.settings.input_image_use_grid_image.get()
+        return self.settings_manager.generator.input_image_use_grid_image
 
     @input_image_use_grid_image.setter
-    def input_image_use_grid_image(self, value):
-        self.settings.input_image_use_grid_image.set(value)
+    def input_image_use_grid_image(self, val):
+        self.settings_manager.set_value("generator.input_image_use_grid_image", val)
 
     @property
     def input_image_recycle_grid_image(self):
-        return self.settings.input_image_recycle_grid_image.get()
+        return self.settings_manager.generator.input_image_recycle_grid_image
 
     @input_image_recycle_grid_image.setter
-    def input_image_recycle_grid_image(self, value):
-        self.settings.input_image_recycle_grid_image.set(value)
+    def input_image_recycle_grid_image(self, val):
+        self.settings_manager.set_value("generator.input_image_recycle_grid_image", val)
 
     @property
     def input_image_mask_use_input_image(self):
-        return self.settings.input_image_mask_use_input_image.get()
+        return self.settings_manager.generator.input_image_mask_use_input_image
 
     @input_image_mask_use_input_image.setter
-    def input_image_mask_use_input_image(self, value):
-        self.settings.input_image_mask_use_input_image.set(value)
+    def input_image_mask_use_input_image(self, val):
+        self.settings_manager.set_value("generator.input_image_mask_use_input_image", val)
 
     @property
     def input_image_mask_use_imported_image(self):
-        return self.settings.input_image_mask_use_imported_image.get()
+        return self.settings_manager.generator.input_image_mask_use_imported_image
 
     @input_image_mask_use_imported_image.setter
-    def input_image_mask_use_imported_image(self, value):
-        self.settings.input_image_mask_use_imported_image.set(value)
+    def input_image_mask_use_imported_image(self, val):
+        self.settings_manager.set_value("generator.input_image_mask_use_imported_image", val)
 
     @property
     def controlnet_input_image_link_to_input_image(self):
-        return self.settings.controlnet_input_image_link_to_input_image.get()
+        return self.settings_manager.generator.controlnet_input_image_link_to_input_image
 
     @controlnet_input_image_link_to_input_image.setter
-    def controlnet_input_image_link_to_input_image(self, value):
-        self.settings.controlnet_input_image_link_to_input_image.set(value)
+    def controlnet_input_image_link_to_input_image(self, val):
+        self.settings_manager.set_value("generator.controlnet_input_image_link_to_input_image", val)
 
     @property
     def controlnet_input_image_use_imported_image(self):
-        return self.settings.controlnet_input_image_use_imported_image.get()
+        return self.settings_manager.generator.controlnet_input_image_use_imported_image
 
     @controlnet_input_image_use_imported_image.setter
-    def controlnet_input_image_use_imported_image(self, value):
-        self.settings.controlnet_input_image_use_imported_image.set(value)
+    def controlnet_input_image_use_imported_image(self, val):
+        self.settings_manager.set_value("generator.controlnet_input_image_use_imported_image", val)
 
     @property
     def controlnet_use_grid_image(self):
-        return self.settings.controlnet_use_grid_image.get()
+        return self.settings_manager.generator.controlnet_use_grid_image
 
     @controlnet_use_grid_image.setter
-    def controlnet_use_grid_image(self, value):
-        self.settings.controlnet_use_grid_image.set(value)
+    def controlnet_use_grid_image(self, val):
+        self.settings_manager.set_value("generator.controlnet_use_grid_image", val)
 
     @property
     def controlnet_recycle_grid_image(self):
-        return self.settings.controlnet_recycle_grid_image.get()
+        return self.settings_manager.generator.controlnet_recycle_grid_image
 
     @controlnet_recycle_grid_image.setter
-    def controlnet_recycle_grid_image(self, value):
-        self.settings.controlnet_recycle_grid_image.set(value)
+    def controlnet_recycle_grid_image(self, val):
+        self.settings_manager.set_value("generator.controlnet_recycle_grid_image", val)
 
     @property
     def controlnet_mask_link_input_image(self):
-        return self.settings.controlnet_mask_link_input_image.get()
+        return self.settings_manager.generator.controlnet_mask_link_input_image
 
     @controlnet_mask_link_input_image.setter
-    def controlnet_mask_link_input_image(self, value):
-        self.settings.controlnet_mask_link_input_image.set(value)
+    def controlnet_mask_link_input_image(self, val):
+        self.settings_manager.set_value("generator.controlnet_mask_link_input_image", val)
 
     @property
     def controlnet_mask_use_imported_image(self):
-        return self.settings.controlnet_mask_use_imported_image.get()
+        return self.settings_manager.generator.controlnet_mask_use_imported_image
 
     @controlnet_mask_use_imported_image.setter
-    def controlnet_mask_use_imported_image(self, value):
-        self.settings.controlnet_mask_use_imported_image.set(value)
+    def controlnet_mask_use_imported_image(self, val):
+        self.settings_manager.set_value("generator.controlnet_mask_use_imported_image", val)
 
     def available_model_names_by_section(self, section):
-        for model in self.application_data.available_models_by_section(section):
+        for model in self.settings_manager.available_models_by_category(section):
             yield model["name"]
 
     def __init__(self, *args, **kwargs):
@@ -407,14 +437,22 @@ class MainWindow(
 
         self.set_log_levels()
         self.testing = kwargs.pop("testing", False)
+
+        # initialize the document
+        from airunner.data.db import session
+        from airunner.data.models import Document
+        self.document = session.query(Document).first()
+
         super().__init__(*args, **kwargs)
 
+
         self.initialize()
-        self.settings_manager.enable_save()
+
+
         # on window resize:
         # self.applicationStateChanged.connect(self.on_state_changed)
 
-        if self.settings_manager.settings.latest_version_check.get():
+        if self.settings_manager.latest_version_check:
             logger.info("Checking for latest version")
             self.check_for_latest_version()
 
@@ -434,6 +472,9 @@ class MainWindow(
 
         # change the color of tooltips
         self.setStyleSheet("QToolTip { color: #000000; background-color: #ffffff; border: 1px solid black; }")
+
+    def db_save(self):
+        self.db.commit()
 
     def update_controlnet_thumbnail(self):
         self.generator_tab_widget.update_controlnet_thumbnail()
@@ -467,10 +508,10 @@ class MainWindow(
         self.canvas.shift_is_pressed = False
 
     def register_keypress(self):
-        self.keyboard_event_manager.register_keypress("fullscreen", self.toggle_fullscreen)
-        self.keyboard_event_manager.register_keypress("control_pressed", self.dragmode_pressed, self.dragmode_released)
-        self.keyboard_event_manager.register_keypress("shift_pressed", self.shift_pressed, self.shift_released)
-        self.keyboard_event_manager.register_keypress("delete_outside_active_grid_area", self.canvas.delete_outside_active_grid_area)
+        self.input_event_manager.register_keypress("fullscreen", self.toggle_fullscreen)
+        self.input_event_manager.register_keypress("control_pressed", self.dragmode_pressed, self.dragmode_released)
+        self.input_event_manager.register_keypress("shift_pressed", self.shift_pressed, self.shift_released)
+        self.input_event_manager.register_keypress("delete_outside_active_grid_area", self.canvas.delete_outside_active_grid_area)
 
     def toggle_fullscreen(self):
         if self.isFullScreen():
@@ -548,7 +589,7 @@ class MainWindow(
     def set_stylesheet(self):
         logger.info("Setting stylesheets")
         try:
-            qdarktheme.setup_theme("dark" if self.settings_manager.settings.dark_mode_enabled.get() else "light")
+            qdarktheme.setup_theme("dark" if self.settings_manager.dark_mode_enabled else "light")
         except PermissionError:
             pass
         self.generator_tab_widget.set_stylesheet()
@@ -558,7 +599,7 @@ class MainWindow(
         self.toolbar_widget.set_stylesheet()
         self.footer_widget.set_stylesheet()
         # change the icons in the toolmenu
-        if self.settings_manager.settings.dark_mode_enabled.get():
+        if self.settings_manager.dark_mode_enabled:
             self.actionUndo.setIcon(QIcon(os.path.join("src/icons/007-undo-light.png")))
             self.actionRedo.setIcon(QIcon(os.path.join("src/icons/008-redo-light.png")))
         else:
@@ -566,9 +607,11 @@ class MainWindow(
             self.actionRedo.setIcon(QIcon(os.path.join("src/icons/008-redo.png")))
 
     def initialize(self):
-        self.keyboard_event_manager = InputEventManager(app=self)
+        # self.automatic_filter_manager = AutomaticFilterManager(app=self)
+        # self.automatic_filter_manager.register_filter(PixelFilter, base_size=256)
+
+        self.input_event_manager = InputEventManager(app=self)
         self.initialize_settings_manager()
-        self.initialize_data()
         self.instantiate_widgets()
         self.initialize_saved_prompts()
         self.initialize_handlers()
@@ -579,11 +622,11 @@ class MainWindow(
         self.header_widget.set_size_increment_levels()
         self.initialize_shortcuts()
         self.initialize_stable_diffusion()
-        if self.settings_manager.settings.force_reset.get():
+        if self.settings_manager.force_reset:
             self.reset_settings()
-            self.settings_manager.settings.force_reset.set(False)
+            self.settings_manager.set_value("force_reset", False)
         self.actionShow_Active_Image_Area.setChecked(
-            self.settings_manager.settings.show_active_image_area.get() == True
+            self.settings_manager.show_active_image_area == True
         )
         self.initialize_default_buttons()
         self.generator_tab_widget.initialize()
@@ -604,7 +647,7 @@ class MainWindow(
         for button_name in self.toolbar_widget.tool_buttons:
             button = getattr(self.toolbar_widget, f"{button_name}_button")
             button.setChecked(tool == button_name)
-        self.settings.current_tool.set(tool)
+        self.settings_manager.set_value("current_tool", tool)
         self.canvas.update_cursor()
 
     def initialize_mixins(self):
@@ -614,29 +657,12 @@ class MainWindow(
         MenubarMixin.initialize(self)
         ToolbarMixin.initialize(self)
 
-    def register_setting_handler(self, signal, handler):
-        """
-        Connect a signal to a handler. Signals must be part of settings_manager.settings
-        in order to be registered later in the connect_signals() method.
-        :param signal:
-        :param handler:
-        :return:
-        """
-        self.registered_settings_handlers.append((signal, handler))
-
     def connect_signals(self):
         logger.info("Connecting signals")
         self.canvas._is_dirty.connect(self.set_window_title)
 
         for signal, handler in self.registered_settings_handlers:
-            getattr(self.settings_manager.settings, signal).connect(handler)
-
-        self.model_var.connect(self.enable_embeddings)
-        self.settings_manager.settings.embeddings_path.my_signal.connect(self.update_embedding_names)
-        self.seed_var.my_signal.connect(self.prompt_builder.process_prompt)
-        self.settings_manager.settings.use_prompt_builder_checkbox.my_signal.connect(
-            self.generator_tab_widget.toggle_all_prompt_builder_checkboxes
-        )
+            getattr(self.settings_manager, signal).connect(handler)
 
         for tab_section in ["stablediffusion", "kandinsky", "shapegif"]:
             for section in ["txt2img", "pix2pix", "depth2img", "txt2vid"]:
@@ -706,7 +732,7 @@ class MainWindow(
 
         if section in left_sections:
             if self.splitter.widget(0).width() <= self.default_splitter_sizes[0]:
-                main_sizes = self.settings_manager.settings.main_splitter_sizes.get()
+                main_sizes = self.settings_manager.main_splitter_sizes
                 main_sizes[0] = self.default_splitter_sizes[0] + 1
                 self.splitter.setSizes(main_sizes)
             self.generator_tab_widget.sectionTabWidget.setCurrentIndex(self.tab_sections["left"][section]["index"])
@@ -715,7 +741,7 @@ class MainWindow(
             # right splitter is self.splitter.widget(2)
             if self.splitter.widget(2).width() <= self.default_splitter_sizes[2]:
                 # set the width to 500
-                main_sizes = self.settings_manager.settings.main_splitter_sizes.get()
+                main_sizes = self.settings_manager.main_splitter_sizes
                 main_sizes[2] = self.default_splitter_sizes[2] + 1
                 self.splitter.setSizes(main_sizes)
             self.tab_widget.setCurrentIndex(self.tab_sections["right"][section]["index"])
@@ -751,46 +777,51 @@ class MainWindow(
 
     @property
     def current_section_by_tab(self):
-        current_tab = self.settings_manager.settings.current_tab.get()
+        current_tab = self.settings_manager.current_tab
         if current_tab == "stablediffusion":
-            return self.settings_manager.settings.current_section_stablediffusion.get()
+            return self.settings_manager.current_section_stablediffusion
         elif current_tab == "kandinsky":
-            return self.settings_manager.settings.current_section_kandinsky.get()
+            return self.settings_manager.current_section_kandinsky
         elif current_tab == "shapegif":
-            return self.settings_manager.settings.current_section_shapegif.get()
+            return self.settings_manager.current_section_shapegif
 
     @current_section_by_tab.setter
     def current_section_by_tab(self, val):
-        current_tab = self.settings_manager.settings.current_tab.get()
+        current_tab = self.settings_manager.current_tab
         if current_tab == "stablediffusion":
-            self.settings_manager.settings.current_section_stablediffusion.set(val)
+            self.settings_manager.set_value("current_section_stablediffusion", val)
         elif current_tab == "kandinsky":
-            self.settings_manager.settings.current_section_kandinsky.set(val)
+            self.settings_manager.set_value("current_section_kandinsky", val)
         elif current_tab == "shapegif":
-            self.settings_manager.settings.current_section_shapegif.set(val)
+            self.settings_manager.set_value("current_section_shapegif", val)
 
     def handle_value_change(self, attr_name, value=None, widget=None):
-        attr = getattr(self, f"{attr_name}_var")
-        if attr_name == "controlnet":
+        if attr_name == "generator.controlnet":
             value = value.lower()
 
-        if value is not None:
-            attr.set(value)
-        else:
+        if value is None:
             try:
-                attr.set(widget.toPlainText())
+                value = widget.toPlainText()
             except AttributeError:
                 try:
-                    attr.set(widget.currentText())
+                    value = widget.currentText()
                 except AttributeError:
                     try:
-                        attr.set(widget.value())
+                        value = widget.value()
                     except AttributeError:
-                        print("something went wrong while setting the value")
+                        print("something went wrong while setting the value 123")
+
+        self.settings_manager.set_value(attr_name, value)
 
     def set_splitter_sizes(self):
-        bottom_sizes = self.settings_manager.settings.bottom_splitter_sizes.get()
-        main_sizes = self.settings_manager.settings.main_splitter_sizes.get()
+        bottom_sizes = [0, 0]
+        main_sizes = [0, 0, 0]
+        for obj in self.settings_manager.splitter_sizes:
+            if obj.name == "center":
+                bottom_sizes[obj.order] = obj.size
+            elif obj.name == "main":
+                main_sizes[obj.order] = obj.size
+
         if bottom_sizes[1] == -1:
             bottom_sizes[1] = 520
         self.default_splitter_sizes = [self.generator_tab_widget.minimumWidth(),
@@ -807,6 +838,16 @@ class MainWindow(
         self.splitter.setSizes(main_sizes)
 
     def handle_main_splitter_moved(self, pos, index):
+        sizes = {
+            "left": session.query(SplitterSection).filter_by(
+                name="main",
+                order=0
+            ).first(),
+            "right": session.query(SplitterSection).filter_by(
+                name="main",
+                order=2
+            ).first()
+        }
         left_width = self.splitter.widget(0).width()
         center_width = self.splitter.widget(1).width()
         right_width = self.splitter.widget(2).width()
@@ -815,36 +856,92 @@ class MainWindow(
             right_width = 0
         if index == 1 and pos == 1:
             left_width = 0
-        current_sizes = self.settings_manager.settings.main_splitter_sizes.get()
         if index == 1:
-            right_width = current_sizes[2]
+            right_width = sizes["right"].size
         if index == 2:
-            left_width = current_sizes[0]
-        self.settings_manager.settings.main_splitter_sizes.set([left_width, center_width, right_width])
+            left_width = sizes["left"].size
+
+        updated_sizes = [left_width, center_width, right_width]
+        splitter_sizes = self.settings_manager.splitter_sizes
+        for n, obj in enumerate(splitter_sizes):
+            if obj.name == "main":
+                obj.size = updated_sizes[obj.order]
+        self.settings_manager.set_value("splitter_sizes", self.settings_manager.splitter_sizes)
 
     def handle_bottom_splitter_moved(self, pos, index):
         top_height = self.center_splitter.widget(0).height()
         bottom_height = self.center_splitter.widget(1).height()
-        self.settings_manager.settings.bottom_splitter_sizes.set([top_height, bottom_height])
+
+        for splitter_section in self.settings_manager.splitter_sizes:
+            if splitter_section.name == "center":
+                if splitter_section.order == 0:
+                    splitter_section.size = top_height
+                else:
+                    splitter_section.size = bottom_height
+        self.settings_manager.set_value(
+            "splitter_sizes",
+            self.settings_manager.splitter_sizes
+        )
 
     def initialize_saved_prompts(self):
         self.prompts_manager = PromptManager()
         self.prompts_manager.enable_save()
 
     def initialize_settings_manager(self):
-        self.settings_manager = SettingsManager()
-        self.settings_manager.disable_save()
-        self.settings_manager.settings.size.my_signal.connect(self.set_size_form_element_step_values)
-        self.settings_manager.settings.line_width.my_signal.connect(self.set_size_form_element_step_values)
+        self.settings_manager.changed_signal.connect(self.handle_changed_signal)
 
-    def initialize_data(self):
-        self.application_data = ApplicationData()
+    def handle_changed_signal(self, key, value):
+        if key == "size":
+            self.set_size_form_element_step_values()
+            self.header_widget.update_widget_values()
+        elif key == "line_width":
+            self.set_size_form_element_step_values()
+        elif key == "show_grid":
+            self.canvas.update()
+        elif key == "snap_to_grid":
+            self.canvas.update()
+        elif key == "line_color":
+            self.canvas.update_grid_pen()
+        elif key == "lora_path":
+            self.refresh_lora()
+        elif key == "model_base_path":
+            self.generator_tab_widget.refresh_model_list()
+        elif key == "working_width":
+            self.header_widget.update_widget_values()
+        elif key == "working_height":
+            self.header_widget.update_widget_values()
+        elif key == "embeddings_path":
+            self.update_embedding_names()
+        elif key == "generator.seed":
+            self.prompt_builder.process_prompt()
+        elif key == "use_prompt_builder_checkbox":
+            self.generator_tab_widget.toggle_all_prompt_builder_checkboxes(value)
+        elif key == "generator.model":
+            self.enable_embeddings()
+        elif key == "models":
+            self.model_manager.models_changed(key, value)
 
     def initialize_shortcuts(self):
-        self.keyboard_event_manager.register_event(
-            "wheelEvent",
-            self.change_width
-        )
+        event_callbacks = {
+            "wheelEvent": self.change_width,
+        }
+        keypress_callbacks = {
+            "brush_tool": partial(self.toggle_tool, "brush"),
+            "eraser_tool": partial(self.toggle_tool, "eraser"),
+            "active_grid_area_tool": partial(self.toggle_tool, "active_grid_area"),
+            "focus_canvas": self.focus_button_clicked,
+            "toggle_grid": self.toggle_grid,
+            "toggle_safety_checker": self.toolbar_widget.toggle_nsfw_filter,
+            "settings": self.show_settings,
+            "undo": self.undo,
+            "redo": self.redo,
+        }
+
+        for event, callback in event_callbacks.items():
+            self.input_event_manager.register_event(event, callback)
+
+        for event, callback in keypress_callbacks.items():
+            self.input_event_manager.register_keypress(event, callback)
 
     def initialize_handlers(self):
         self.message_var = MessageHandlerVar()
@@ -987,7 +1084,7 @@ class MainWindow(
             data["tab_section"], data["action"]
         )
 
-        if self.settings_manager.settings.auto_export_images.get():
+        if self.settings_manager.auto_export_images:
             path = auto_export_image(images[0], data, self.seed)
             if path is not None:
                 self.set_status_label(f"Image exported to {path}")
@@ -996,22 +1093,24 @@ class MainWindow(
             data["tab_section"], data["action"]
         )
         # get max progressbar value
-        if nsfw_content_detected and self.settings_manager.settings.nsfw_filter.get():
+        if nsfw_content_detected and self.settings_manager.nsfw_filter:
             self.message_handler({
                 "message": "NSFW content detected, try again.",
                 "code": MessageCode.ERROR
             })
+
+        images = self.post_process_images(images)
 
         if data["options"][f"deterministic_generation"]:
             self.deterministic_images = images
             DeterministicGenerationWindow(
                 self.settings_manager,
                 app=self,
-                images=self.deterministic_images,
+                images=images,
                 data=data)
         else:
             if data[
-                "action"] != "outpaint" and self.image_to_new_layer and self.canvas.current_layer.image_data.image is not None:
+                "action"] != "outpaint" and self.settings_manager.image_to_new_layer and self.canvas.current_layer.image_data.image is not None:
                 self.canvas.add_layer()
             # print width and height of image
             self.canvas.image_handler(images[0], data)
@@ -1019,6 +1118,9 @@ class MainWindow(
             self.canvas.show_layers()
 
         self.image_generated.emit(True)
+
+    def post_process_images(self, images):
+        return self.automatic_filter_manager.apply_filters(images)
 
     def handle_status(self, message):
         self.set_status_label(message)
@@ -1153,7 +1255,7 @@ class MainWindow(
         system_memory = f"RAM {system_memory_percentage:.1f}%"
         self.footer_widget.system_status.setText(f"{queue_items}, {system_memory}, {cuda_memory}")
 
-    def update_embedding_names(self, _):
+    def update_embedding_names(self):
         self._embedding_names = None
         for tab_name in self.tabs.keys():
             tab = self.tabs[tab_name]
@@ -1199,9 +1301,9 @@ class MainWindow(
         self.tool_menu_widget.embeddings_container_widget.embeddings.setWidget(container)
 
     def get_list_of_available_embedding_names(self):
-        embeddings_path = self.settings_manager.settings.embeddings_path.get() or "embeddings"
+        embeddings_path = self.settings_manager.path_settings.embeddings_path or "embeddings"
         if embeddings_path == "embeddings":
-            embeddings_path = os.path.join(self.settings_manager.settings.model_base_path.get(), embeddings_path)
+            embeddings_path = os.path.join(self.settings_manager.path_settings.model_base_path, embeddings_path)
         return self.find_embeddings_in_path(embeddings_path)
 
     def find_embeddings_in_path(self, embeddings_path, tokens=None):

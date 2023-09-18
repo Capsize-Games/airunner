@@ -7,10 +7,10 @@ from PyQt6 import uic
 from PyQt6.QtWidgets import QFileDialog
 
 from airunner.aihandler.download_civitai import DownloadCivitAI
-from airunner.aihandler.settings_manager import ApplicationData
+from airunner.data.models import AIModel
 from airunner.models.modeldata import ModelData
 from airunner.widgets.base_widget import BaseWidget
-
+from airunner.data.db import session
 
 class ModelManagerWidget(BaseWidget):
     name = "model_manager/model_manager"
@@ -47,17 +47,12 @@ class ModelManagerWidget(BaseWidget):
         return self._current_model_object
 
     def models_changed(self, key, model, value):
-        self.application_data.set_model_enabled(
-            key,
-            model,
-            value
-        )
+        model.enabled = True
+        self.settings_manager.update_model(model)
         self.update_generator_model_dropdown()
 
     def __init__(self, *args, **kwargs):
         super().__init__(*args, **kwargs)
-        self.application_data = ApplicationData()
-        self.application_data.settings.models.connect(self.models_changed)
 
         # load tabs
         self.default_tab = uic.loadUi("pyqt/widgets/model_manager/default.ui")
@@ -90,12 +85,12 @@ class ModelManagerWidget(BaseWidget):
     def scan_for_models(self):
         # look at model path and determine if we can import existing local models
         # first look at all files and folders inside of the model paths
-        base_model_path = self.settings_manager.settings.model_base_path.get()
-        depth2img_model_path = self.settings_manager.settings.depth2img_model_path.get()
-        pix2pix_model_path = self.settings_manager.settings.pix2pix_model_path.get()
-        outpaint_model_path = self.settings_manager.settings.outpaint_model_path.get()
-        upscale_model_path = self.settings_manager.settings.upscale_model_path.get()
-        txt2vid_model_path = self.settings_manager.settings.txt2vid_model_path.get()
+        base_model_path = self.settings_manager.path_settings.model_base_path
+        depth2img_model_path = self.settings_manager.path_settings.depth2img_model_path
+        pix2pix_model_path = self.settings_manager.path_settings.pix2pix_model_path
+        outpaint_model_path = self.settings_manager.path_settings.outpaint_model_path
+        upscale_model_path = self.settings_manager.path_settings.upscale_model_path
+        txt2vid_model_path = self.settings_manager.path_settings.txt2vid_model_path
         diffusers_folders = ["scheduler", "text_encoder", "tokenizer", "unet", "vae"]
         for key, model_path in {
             "txt2img": base_model_path,
@@ -105,6 +100,8 @@ class ModelManagerWidget(BaseWidget):
             "upscale": upscale_model_path,
             "txt2vid": txt2vid_model_path
         }.items():
+            if not model_path or not os.path.exists(model_path):
+                continue
             with os.scandir(model_path) as dir_object:
                 for entry in dir_object:
                     model = ModelData()
@@ -114,9 +111,8 @@ class ModelManagerWidget(BaseWidget):
                     model.category = "stablediffusion"
                     model.enabled = True
                     model.pipeline_action = key
-                    model.pipeline_class = \
-                        self.application_data.settings.pipelines.get()["default"][model.pipeline_action][model.version][
-                            model.category]["classname"]
+                    model.pipeline_class = self.settings_manager.get_pipeline_classname(
+                        model.pipeline_action, model.version, model.category)
 
                     if entry.is_file():  # ckpt or safetensors file
                         if entry.name.endswith(".ckpt") or entry.name.endswith(".safetensors"):
@@ -194,7 +190,7 @@ class ModelManagerWidget(BaseWidget):
         self.set_model_form_data()
 
     def download_path(self, file):
-        path = self.settings_manager.settings.model_base_path.get()
+        path = self.settings_manager.path_settings.model_base_path
         file_name = file["name"]
         return f"{path}/{file_name}"
 
@@ -221,7 +217,7 @@ class ModelManagerWidget(BaseWidget):
         self.import_tab.download_progress_bar.setValue(current_size)
         if current_size >= total_size:
             self.reset_form()
-            self.application_data.add_model(self.current_model_data, self.is_civitai)
+            self.settings_manager.add_model(self.current_model_data)
             self.show_items_in_scrollarea()
 
     def import_models(self):
@@ -263,13 +259,13 @@ class ModelManagerWidget(BaseWidget):
             return
         model_version_name = model_version["name"]
 
-        categories = self.application_data.available_categories()
+        categories = self.settings_manager.model_categories()
         self.model_form.category.clear()
         self.model_form.category.addItems(categories)
         category = "stablediffusion"
         self.model_form.category.setCurrentText(category)
+        actions = self.settings_manager.pipeline_actions
 
-        actions = self.application_data.settings.models.get()["default"].keys()
         self.model_form.pipeline_action.clear()
         self.model_form.pipeline_action.addItems(actions)
         pipeline_action = "txt2img"
@@ -279,15 +275,8 @@ class ModelManagerWidget(BaseWidget):
 
         self.model_form.model_name.setText(self.current_model_data["name"])
         version = model_version["baseModel"]
-        pipelines = self.application_data.settings.pipelines.get()
-        if version not in pipelines["default"][pipeline_action]:
-            pipelines["default"][pipeline_action][version] = {}
-        if category not in pipelines["default"][pipeline_action][version]:
-            pipelines["default"][pipeline_action][version][category] = {
-                "classname": pipelines["default"][pipeline_action]["SD 1.5"][category]["classname"]
-            }
-        pipeline_class = pipelines["default"][pipeline_action][version][category]["classname"]
-        versions = self.application_data.versions()
+        pipeline_class = self.settings_manager.get_pipeline_classname(pipeline_action, version, category)
+        versions = self.settings_manager.versions
         self.model_form.versions.clear()
         self.model_form.versions.addItems(versions)
         self.model_form.versions.setCurrentText(version)
@@ -303,8 +292,9 @@ class ModelManagerWidget(BaseWidget):
             self.model_form.branch_line_edit.hide()
 
     def show_items_in_scrollarea(self):
-        models = self.application_data.settings.models.get()
-        pipelines = self.application_data.settings.pipelines.get()
+        models = self.settings_manager.models.all()
+        print("MODELS TOTAL: ", len(models))
+        pipelines = self.settings_manager.pipelines
         for key in self.model_widgets.keys():
             for model_widget in self.model_widgets[key]:
                 model_widget.deleteLater()
@@ -312,69 +302,60 @@ class ModelManagerWidget(BaseWidget):
             "default": [],
             "custom": []
         }
-        for index, key in enumerate(models.keys()):
-            for pipeline in models[key].keys():
-                for index, model in enumerate(models[key][pipeline]):
-                    version = model["version"]
-                    category = model["category"]
-                    pipeline_action = model["pipeline_action"]
+        for index, model in enumerate(models):
+            version = model.version
+            category = model.category
+            pipeline_action = model.pipeline_action
 
-                    model_widget = uic.loadUi("pyqt/widgets/model_manager/model.ui")
-                    model_widget.path.setText(model["path"])
-                    model_widget.branch.setText(model["branch"])
-                    model_widget.version.setText(version)
-                    model_widget.category.setText(category)
-                    model_widget.pipeline_action.setText(pipeline_action)
-                    if version == "" or category == "":
-                        continue
-                    if "pipeline_class" in model:
-                        pipeline_class = model["pipeline_class"]
-                    else:
-                        pipeline_class = pipelines["default"][pipeline_action][version][category]["classname"]
-                    model_widget.pipeline_class.setText(pipeline_class)
-                    # model_widget.prompts.setText(model["prompts"])
-                    # model_widget.notes.setPlainText(model["notes"])
-                    model_widget.name.setText(model["name"])
+            model_widget = uic.loadUi("pyqt/widgets/model_manager/model.ui")
+            model_widget.path.setText(model.path)
+            model_widget.branch.setText(model.branch)
+            model_widget.version.setText(version)
+            model_widget.category.setText(category)
+            model_widget.pipeline_action.setText(pipeline_action)
+            if version == "" or category == "":
+                continue
+            pipeline_class = self.settings_manager.get_pipeline_classname(
+                pipeline_action, version, category)
+            model_widget.pipeline_class.setText(pipeline_class)
+            model_widget.name.setText(model.name)
 
-                    if key == "default":
-                        model_widget.delete_button.hide()
-                        model_widget.edit_button.deleteLater()
-                        model_widget.toolButton.deleteLater()
-                    else:
-                        model_widget.edit_button.clicked.connect(
-                            partial(
-                                self.handle_edit_model,
-                                model,
-                                index
-                            )
-                        )
-                        model_widget.delete_button.clicked.connect(
-                            partial(
-                                self.handle_delete_model,
-                                key,
-                                pipeline,
-                                index
-                            )
-                        )
-                        model_widget.toolButton.clicked.connect(partial(self.toggle_details, model_widget))
+            key = "default" if model.default else "custom"
 
-                    model_widget.name.setChecked(model["enabled"])
-                    model_widget.name.stateChanged.connect(
-                        partial(
-                            self.models_changed,
-                            key,
-                            model
-                        )
+            if key == "default":
+                model_widget.delete_button.hide()
+                model_widget.edit_button.deleteLater()
+                model_widget.toolButton.deleteLater()
+            else:
+                model_widget.edit_button.clicked.connect(
+                    partial(
+                        self.handle_edit_model,
+                        model,
+                        index
                     )
+                )
+                model_widget.delete_button.clicked.connect(
+                    partial(self.handle_delete_model, model)
+                )
+                model_widget.toolButton.clicked.connect(partial(self.toggle_details, model_widget))
 
-                    self.hide_details(model_widget)
+            model_widget.name.setChecked(model.enabled)
+            model_widget.name.stateChanged.connect(
+                partial(
+                    self.models_changed,
+                    key,
+                    model
+                )
+            )
 
-                    if key == "default":
-                        self.default_tab.scrollAreaWidgetContents.layout().addWidget(model_widget)
-                    elif key == "custom":
-                        self.custom_tab.scrollAreaWidgetContents.layout().addWidget(model_widget)
+            self.hide_details(model_widget)
 
-                    self.model_widgets[key].append(model_widget)
+            if key == "default":
+                self.default_tab.scrollAreaWidgetContents.layout().addWidget(model_widget)
+            elif key == "custom":
+                self.custom_tab.scrollAreaWidgetContents.layout().addWidget(model_widget)
+
+            self.model_widgets[key].append(model_widget)
 
     def toggle_details(self, model_widget):
         details_are_shown = getattr(model_widget, "details_are_shown", False)
@@ -397,30 +378,30 @@ class ModelManagerWidget(BaseWidget):
         print("edit button clicked", index)
         self.toggle_model_form_frame(show=True)
 
-        categories = self.application_data.available_categories()
+        categories = self.app.settings_manager.model_categories
         self.model_form.category.clear()
         self.model_form.category.addItems(categories)
-        self.model_form.category.setCurrentText(model["category"])
+        self.model_form.category.setCurrentText(model.category)
 
-        actions = self.application_data.settings.models.get()["default"].keys()
+        actions = self.settings_manager.pipeline_actions
         self.model_form.pipeline_action.clear()
         self.model_form.pipeline_action.addItems(actions)
-        self.model_form.pipeline_action.setCurrentText(model["pipeline_action"])
+        self.model_form.pipeline_action.setCurrentText(model.pipeline_action)
 
-        self.model_form.model_name.setText(model["name"])
-        pipelines = self.application_data.settings.pipelines.get()
-        pipeline_class = pipelines["default"][model["pipeline_action"]][model["version"]][model["category"]]["classname"]
+        self.model_form.model_name.setText(model.name)
+        pipeline_class = self.settings_manager.get_pipeline_classname(
+            model.pipeline_action, model.version, model.category)
         self.model_form.pipeline_class_line_edit.setText(pipeline_class)
         self.model_form.enabled.setChecked(True)
-        self.model_form.path_line_edit.setText(model["path"])
+        self.model_form.path_line_edit.setText(model.path)
 
-        versions = self.application_data.versions()
+        versions = self.settings_manager.versions
         self.model_form.versions.clear()
         self.model_form.versions.addItems(versions)
-        self.model_form.versions.setCurrentText(model["version"])
+        self.model_form.versions.setCurrentText(model.version)
 
-    def handle_delete_model(self, key, pipeline, index):
-        self.application_data.delete_model(key, pipeline, index)
+    def handle_delete_model(self, model):
+        self.settings_manager.delete_model(model)
         self.show_items_in_scrollarea()
         self.update_generator_model_dropdown()
 
@@ -453,75 +434,24 @@ class ModelManagerWidget(BaseWidget):
         self.save_model(self.current_model_object)
 
     def save_model(self, model):
-        # save the settings:
-        pipeline_action = model.pipeline_action
-        models = self.application_data.settings.models.get()
-        if pipeline_action not in models["custom"]:
-            models["custom"][pipeline_action] = []
-
-        # ensure that model does not already exist
-        model_exists = False
-        for index, existing_model in enumerate(models["custom"][pipeline_action]):
-            model_exists = (existing_model["name"] == model.name
-                and existing_model["path"] == model.path
-                and existing_model["branch"] == model.branch
-                and existing_model["version"] == model.version
-                and existing_model["category"] == model.category
-                and existing_model["pipeline_action"] == model.pipeline_action)
-            if model_exists:
-                break
-        data = {
-            "name": model.name,
-            "path": model.path,
-            "branch": model.branch,
-            "version": model.version,
-            "category": model.category,
-            "pipeline_action": pipeline_action,
-            "enabled": model.enabled
-        }
+        model_exists = session.query(AIModel).filter_by(
+            name=model.name,
+            path=model.path,
+            branch=model.branch,
+            version=model.version,
+            category=model.category,
+            pipeline_action=model.pipeline_action
+        ).first()
         if not model_exists:
-            models["custom"][pipeline_action].append(data)
-        self.application_data.settings.models.set(models)
-        self.application_data.save_settings()
-
-    def remove_new_model_form(self):
-        self.template.layout().removeWidget(self.current_model_form)
-        self.current_model_form.deleteLater()
-
-    def remove_current_model(self):
-        self.remove_new_model_form()
-        self.current_model_object = None
-        self.template.scan_for_models_button.show()
-
-    def save_current_model(self):
-        can_save_current_model = True
-        name = self.current_model_object.name
-        path = self.current_model_object.path
-        branch = self.current_model_object.branch
-        version = self.current_model_object.version
-        category = self.current_model_object.category
-        pipeline_action = self.current_model_object.pipeline_action
-        pipeline_class = self.current_model_object.pipeline_class
-        enabled = self.current_model_object.enabled == 2
-        for item in [name, path, branch, version, category, pipeline_action]:
-            if item == "":
-                can_save_current_model = False
-        if can_save_current_model:
-            data = {
-                "name": name,
-                "path": path,
-                "branch": branch,
-                "version": version,
-                "category": category,
-                "enabled": enabled,
-                "pipeline_action": pipeline_action,
-                "pipeline_class": pipeline_class,
-            }
-            if pipeline_action not in self.application_data.settings.models.get()["custom"]:
-                self.application_data.settings.models.get()["custom"][pipeline_action] = []
-            self.application_data.settings.models.get()["custom"][pipeline_action].append(data)
-            self.application_data.save_settings()
-            self.remove_current_model()
-            self.template.scan_for_models_button.show()
-        self.show_items_in_scrollarea()
-        self.update_generator_model_dropdown()
+            new_model = AIModel(
+                name=model.name,
+                path=model.path,
+                branch=model.branch,
+                version=model.version,
+                category=model.category,
+                pipeline_action=model.pipeline_action,
+                enabled=model.enabled,
+                default=False
+            )
+            session.add(new_model)
+            session.commit()

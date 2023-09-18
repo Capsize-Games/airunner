@@ -4,29 +4,29 @@ from PyQt6.QtGui import QColor, QPen, QPainter
 class CanvasGridMixin:
     @property
     def active_grid_area_selected(self):
-        return self.settings_manager.settings.current_tool.get() == "active_grid_area"
+        return self.settings_manager.current_tool == "active_grid_area"
 
     @property
     def grid_size(self):
-        return self.settings_manager.settings.size.get()
+        return self.settings_manager.grid_settings.size
 
     def initialize(self):
         # Set the grid line color and thickness
-        # convert self.settings_manager.settings.canvas_color.get() to QColor
+        # convert self.settings_manager.canvas_color to QColor
         self.grid_pen = QPen(
-            QColor(self.settings_manager.settings.line_color.get()),
-            self.settings_manager.settings.line_width.get()
+            QColor(self.settings_manager.grid_settings.line_color),
+            self.settings_manager.grid_settings.line_width
         )
 
     def update_grid_pen(self):
         self.grid_pen = QPen(
-            QColor(self.settings_manager.settings.line_color.get()),
-            self.settings_manager.settings.line_width.get()
+            QColor(self.settings_manager.grid_settings.line_color),
+            self.settings_manager.grid_settings.line_width
         )
         self.update()
 
     def draw_grid(self, painter):
-        if not self.settings_manager.settings.show_grid.get():
+        if not self.settings_manager.grid_settings.show_grid:
             return
 
         # Define the starting and ending coordinates for the grid lines
@@ -35,7 +35,7 @@ class CanvasGridMixin:
         start_y = self.pos_y % self.grid_size
         end_y = self.canvas_container.height()
 
-        line_width = self.settings_manager.settings.line_width.get()
+        line_width = self.settings_manager.grid_settings.line_width
         self.grid_pen.setWidth(line_width)
         # Draw horizontal grid lines
         y = start_y

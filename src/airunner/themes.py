@@ -544,15 +544,12 @@ class Themes:
         },
     }
 
-    def __init__(self, settings_manager):
-        self.settings_manager = settings_manager
-
-    def dark_mode_enabled(self):
-        return self.settings_manager.settings.dark_mode_enabled.get()
+    def __init__(self, app):
+        self.app = app
 
     def css(self, styles):
         theme_name = "light"
-        if self.dark_mode_enabled():
+        if self.app.is_dark:
             theme_name = "dark"
         try:
             return self.themes.get(theme_name, {}).get(styles, self.themes.get("all", {}).get(styles, ""))

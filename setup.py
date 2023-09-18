@@ -50,7 +50,8 @@ setup(
         "regex",
         "matplotlib==3.7.2",
         "torch==2.0.1",
-        "torchvision==0.15.2"
+        "torchvision==0.15.2",
+        "alembic==1.12.0"
     ],
     dependency_links=[
         "https://download.pytorch.org/whl/cu118"
