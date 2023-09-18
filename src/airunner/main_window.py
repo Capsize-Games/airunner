@@ -41,7 +41,7 @@ from airunner.widgets.header_widget import HeaderWidget
 from airunner.windows.deterministic_generation_window import DeterministicGenerationWindow
 from airunner.windows.update_window import UpdateWindow
 from airunner.utils import get_version, get_latest_version, auto_export_image
-from airunner.aihandler.settings_manager import SettingsManager, PromptManager
+from airunner.aihandler.settings_manager import SettingsManager
 
 import qdarktheme
 
@@ -67,7 +67,6 @@ class MainWindow(
     history = None
     canvas = None
     _settings_manager = None
-    prompts_manager = None
     models = None
     client = None
     _override_section = None
@@ -473,9 +472,6 @@ class MainWindow(
         # change the color of tooltips
         self.setStyleSheet("QToolTip { color: #000000; background-color: #ffffff; border: 1px solid black; }")
 
-    def db_save(self):
-        self.db.commit()
-
     def update_controlnet_thumbnail(self):
         self.generator_tab_widget.update_controlnet_thumbnail()
 
@@ -613,7 +609,6 @@ class MainWindow(
         self.input_event_manager = InputEventManager(app=self)
         self.initialize_settings_manager()
         self.instantiate_widgets()
-        self.initialize_saved_prompts()
         self.initialize_handlers()
         self.initialize_window()
         self.initialize_widgets()
@@ -882,10 +877,6 @@ class MainWindow(
             "splitter_sizes",
             self.settings_manager.splitter_sizes
         )
-
-    def initialize_saved_prompts(self):
-        self.prompts_manager = PromptManager()
-        self.prompts_manager.enable_save()
 
     def initialize_settings_manager(self):
         self.settings_manager.changed_signal.connect(self.handle_changed_signal)
