@@ -2,6 +2,8 @@ import os
 from PyQt6.QtWidgets import QWidget, QVBoxLayout, QCheckBox
 from PyQt6 import QtCore
 
+from airunner.data.db import session
+from airunner.data.models import Lora
 from airunner.widgets.lora_widget import LoraWidget
 
 
@@ -11,14 +13,10 @@ class LoraMixin:
 
     @property
     def loras(self):
-        available_loras = self.settings_manager.settings.available_loras.get()
-        if isinstance(available_loras, dict):
+        available_loras = Lora.get_all(session)
+        if not available_loras or isinstance(available_loras, dict):
             return []
         return available_loras
-
-    @loras.setter
-    def loras(self, value):
-        self.settings_manager.settings.available_loras.set(value)
 
     def initialize(self):
         self.initialize_lora()
@@ -35,7 +33,6 @@ class LoraMixin:
 
     def initialize_lora(self):
         self.lora_loaded = False
-        self.settings_manager.settings.lora_path.my_signal.connect(self.refresh_lora)
         self.refresh_lora()
 
     def refresh_lora(self):
@@ -47,15 +44,14 @@ class LoraMixin:
             self.load_lora_tab(tab, tab_name)
         self.initialize_lora_trigger_words()
 
-    def available_loras(self, tab_name):
-        base_path = self.settings_manager.settings.model_base_path.get()
-        lora_path = self.settings_manager.settings.lora_path.get() or "lora"
+    def get_available_loras(self, tab_name):
+        base_path = self.settings_manager.path_settings.model_base_path
+        lora_path = self.settings_manager.lora_path or "lora"
         if lora_path == "lora":
             lora_path = os.path.join(base_path, lora_path)
         if not os.path.exists(lora_path):
             return []
         available_lora = self.loras
-        self.settings_manager.enable_save()
         available_lora = self.get_list_of_available_loras(tab_name, lora_path, lora_names=available_lora)
         self.loras = available_lora
         self.settings_manager.save_settings()
@@ -123,7 +119,7 @@ class LoraMixin:
     def load_lora_tab(self, tab, tab_name=None):
         container = QWidget()
         container.setLayout(QVBoxLayout())
-        available_loras = self.available_loras(tab_name)
+        available_loras = self.get_available_loras(tab_name)
         for lora in available_loras:
             lora_widget = LoraWidget(app=self, lora=lora)
 
@@ -156,9 +152,7 @@ class LoraMixin:
         self.update_lora_tab_name(tab_name)
 
     def initialize_lora_trigger_words(self):
-        available_loras = self.loras
-
-        for lora in available_loras:
+        for lora in self.loras:
             trigger_word = lora["trigger_word"] if "trigger_word" in lora else ""
             for tab_name in self.tabs.keys():
                 tab = self.tabs[tab_name]

@@ -19,143 +19,83 @@ class PromptBuilderWidget(BaseWidget):
 
     @property
     def prompt_generator_category(self):
-        if self.current_tab == "a":
-            return self.settings_manager.settings.prompt_generator_category_a.get()
-        else:
-            return self.settings_manager.settings.prompt_generator_category_b.get()
+        return self.settings_manager.current_prompt_generator_settings.category
 
     @prompt_generator_category.setter
     def prompt_generator_category(self, value):
-        if self.current_tab == "a":
-            self.settings_manager.settings.prompt_generator_category_a.set(value)
-        else:
-            self.settings_manager.settings.prompt_generator_category_b.set(value)
+        self.settings_manager.set_value("current_prompt_generator_settings.category", value)
 
     @property
     def prompt_generator_prompt(self):
-        if self.current_tab == "a":
-            return self.settings_manager.settings.prompt_generator_prompt_a.get()
-        else:
-            return self.settings_manager.settings.prompt_generator_prompt_b.get()
+        return self.settings_manager.current_prompt_generator_settings.prompt
 
     @prompt_generator_prompt.setter
     def prompt_generator_prompt(self, value):
-        if self.current_tab == "a":
-            self.settings_manager.settings.prompt_generator_prompt_a.set(value)
-        else:
-            self.settings_manager.settings.prompt_generator_prompt_b.set(value)
+        self.settings_manager.set_value("current_prompt_generator_settings.prompt", value)
 
     @property
     def prompt_generator_weighted_values(self):
-        if self.current_tab == "a":
-            return self.settings_manager.settings.prompt_generator_weighted_values_a.get()
-        else:
-            return self.settings_manager.settings.prompt_generator_weighted_values_b.get()
+        return self.settings_manager.current_prompt_generator_settings.weighted_values
 
     @prompt_generator_weighted_values.setter
     def prompt_generator_weighted_values(self, value):
-        if self.current_tab == "a":
-            self.settings_manager.settings.prompt_generator_weighted_values_a.set(value)
-        else:
-            self.settings_manager.settings.prompt_generator_weighted_values_b.set(value)
+        self.settings_manager.set_value("current_prompt_generator_settings.weighted_values", value)
 
     @property
     def prompt_generator_prompt_genre(self):
-        if self.current_tab == "a":
-            return self.settings_manager.settings.prompt_generator_prompt_genre_a.get()
-        else:
-            return self.settings_manager.settings.prompt_generator_prompt_genre_b.get()
+        return self.settings_manager.current_prompt_generator_settings.prompt_genre
 
     @prompt_generator_prompt_genre.setter
     def prompt_generator_prompt_genre(self, value):
-        if self.current_tab == "a":
-            self.settings_manager.settings.prompt_generator_prompt_genre_a.set(value)
-        else:
-            self.settings_manager.settings.prompt_generator_prompt_genre_b.set(value)
+        self.settings_manager.set_value("current_prompt_generator_settings.prompt_genre", value)
 
     @property
     def prompt_generator_prompt_color(self):
-        if self.current_tab == "a":
-            return self.settings_manager.settings.prompt_generator_prompt_color_a.get()
-        else:
-            return self.settings_manager.settings.prompt_generator_prompt_color_b.get()
+        return self.settings_manager.current_prompt_generator_settings.prompt_color
 
     @prompt_generator_prompt_color.setter
     def prompt_generator_prompt_color(self, value):
-        if self.current_tab == "a":
-            self.settings_manager.settings.prompt_generator_prompt_color_a.set(value)
-        else:
-            self.settings_manager.settings.prompt_generator_prompt_color_b.set(value)
+        self.settings_manager.set_value("current_prompt_generator_settings.prompt_color", value)
 
     @property
     def prompt_generator_prompt_style(self):
-        if self.current_tab == "a":
-            return self.settings_manager.settings.prompt_generator_prompt_style_a.get()
-        else:
-            return self.settings_manager.settings.prompt_generator_prompt_style_b.get()
+        return self.settings_manager.current_prompt_generator_settings.prompt_style
 
     @prompt_generator_prompt_style.setter
     def prompt_generator_prompt_style(self, value):
-        if self.current_tab == "a":
-            self.settings_manager.settings.prompt_generator_prompt_style_a.set(value)
-        else:
-            self.settings_manager.settings.prompt_generator_prompt_style_b.set(value)
+        self.settings_manager.set_value("current_prompt_generator_settings.prompt_style", value)
 
     @property
     def prompt_generator_prefix(self):
-        if self.current_tab == "a":
-            return self.settings_manager.settings.prompt_generator_prefix_a.get()
-        else:
-            return self.settings_manager.settings.prompt_generator_prefix_b.get()
+        return self.settings_manager.current_prompt_generator_settings.prefix
 
     @prompt_generator_prefix.setter
     def prompt_generator_prefix(self, value):
-        if self.current_tab == "a":
-            self.settings_manager.settings.prompt_generator_prefix_a.set(value)
-        else:
-            self.settings_manager.settings.prompt_generator_prefix_b.set(value)
+        self.settings_manager.set_value("current_prompt_generator_settings.prefix", value)
 
     @property
     def prompt_generator_suffix(self):
-        if self.current_tab == "a":
-            return self.settings_manager.settings.prompt_generator_suffix_a.get()
-        else:
-            return self.settings_manager.settings.prompt_generator_suffix_b.get()
+        return self.settings_manager.current_prompt_generator_settings.suffix
 
     @prompt_generator_suffix.setter
     def prompt_generator_suffix(self, value):
-        if self.current_tab == "a":
-            self.settings_manager.settings.prompt_generator_suffix_a.set(value)
-        else:
-            self.settings_manager.settings.prompt_generator_suffix_b.set(value)
+        self.settings_manager.set_value("current_prompt_generator_settings.suffix", value)
 
     @property
     def negative_prompt_generator_prefix(self):
-        if self.current_tab == "a":
-            return self.settings_manager.settings.negative_prompt_generator_prefix_a.get()
-        else:
-            return self.settings_manager.settings.negative_prompt_generator_prefix_b.get()
+        return self.settings_manager.current_prompt_generator_settings.negative_prefix
 
     @negative_prompt_generator_prefix.setter
     def negative_prompt_generator_prefix(self, value):
-        if self.current_tab == "a":
-            self.settings_manager.settings.negative_prompt_generator_prefix_a.set(value)
-        else:
-            self.settings_manager.settings.negative_prompt_generator_prefix_b.set(value)
+        self.settings_manager.set_value("current_prompt_generator_settings.negative_prefix", value)
 
     @property
     def negative_prompt_generator_suffix(self):
-        if self.current_tab == "a":
-            return self.settings_manager.settings.negative_prompt_generator_suffix_a.get()
-        else:
-            return self.settings_manager.settings.negative_prompt_generator_suffix_b.get()
+        return self.settings_manager.current_prompt_generator_settings.negative_suffix
 
     @negative_prompt_generator_suffix.setter
     def negative_prompt_generator_suffix(self, value):
-        if self.current_tab == "a":
-            self.settings_manager.settings.negative_prompt_generator_suffix_a.set(value)
-        else:
-            self.settings_manager.settings.negative_prompt_generator_suffix_b.set(value)
+        self.settings_manager.set_value("current_prompt_generator_settings.negative_suffix", value)
 
     def __init__(self, *args, **kwargs):
         super().__init__(*args, **kwargs)
@@ -163,29 +103,26 @@ class PromptBuilderWidget(BaseWidget):
         self.prompt_data = PromptData(file_name="prompts", use_prompt_builder=True)
         self.initialize_tab_forms()
 
+    prompt_builder_forms = []
+
     def initialize_tab_forms(self):
         """
         Prompt blender allows multiple generated prompts to be blended together.
         This function initializes the tab forms for each prompt blender tab.
         :return:
         """
-        self.current_tab = "a"
-        self.prompt_builder_form_a = PromptBuilderForm(
-            parent=self,
-            app=self.app,
-            prompt_builder_widget=self)
-
-        self.current_tab = "b"
-        self.prompt_builder_form_b = PromptBuilderForm(
-            parent=self,
-            app=self.app,
-            prompt_builder_widget=self)
-        self.current_tab = "a"
-        # add to tab
-        self.tabs.addTab(self.prompt_builder_form_a, "Prompt A")
-        self.tabs.addTab(self.prompt_builder_form_b, "Prompt B")
-        self.prompt_builder_form_a.initialize_dropdown_values()
-        self.prompt_builder_form_b.initialize_dropdown_values()
+        for prompt_builder_settings in self.settings_manager.prompt_generator_settings:
+            form = PromptBuilderForm(
+                parent=self,
+                app=self.app,
+                prompt_builder_widget=self)
+            form.initialize_dropdown_values()
+            form.prompt_blend_type.setCurrentIndex(
+                self.settings_manager.current_prompt_generator_settings.prompt_blend_type)
+            form.prompt_blend_type.currentIndexChanged.connect(
+                self.handle_prompt_blend_type_change)
+            self.prompt_builder_forms.append(form)
+            self.tabs.addTab(form, prompt_builder_settings.name)
 
         # on self.tabs change, update the prompt builder form
         self.tabs.currentChanged.connect(self.handle_tab_changed)
@@ -194,11 +131,6 @@ class PromptBuilderWidget(BaseWidget):
         self.initialize_weights()
         self.app.generate_signal.connect(self.inject_prompt)
 
-        self.prompt_builder_form_a.prompt_blend_type.setCurrentIndex(self.settings_manager.settings.prompt_blend_type.get())
-        self.prompt_builder_form_a.prompt_blend_type.currentIndexChanged.connect(self.handle_prompt_blend_type_change)
-        self.prompt_builder_form_b.prompt_blend_type.setCurrentIndex(self.settings_manager.settings.prompt_blend_type.get())
-        self.prompt_builder_form_b.prompt_blend_type.currentIndexChanged.connect(self.handle_prompt_blend_type_change)
-
         self.update_blend_sliders()
 
     def handle_tab_changed(self):
@@ -206,54 +138,45 @@ class PromptBuilderWidget(BaseWidget):
         self.process_prompt()
 
     def handle_prompt_blend_type_change(self, index):
-        self.settings_manager.settings.prompt_blend_type.set(index)
+        self.settings_manager.set_value("current_prompt_generator_settings.prompt_blend_type", index)
         self.update_blend_sliders()
         self.process_prompt()
 
     def update_blend_sliders(self):
-        if self.settings_manager.settings.prompt_blend_type.get() == 0:
-            # disable the blending weight sliders
-            self.prompt_builder_form_a.prompt_weight_distribution_slider.setEnabled(False)
-            self.prompt_builder_form_a.negative_prompt_weight_distribution_slider.setEnabled(False)
-            self.prompt_builder_form_b.prompt_weight_distribution_slider.setEnabled(False)
-            self.prompt_builder_form_b.negative_prompt_weight_distribution_slider.setEnabled(False)
-        else:
-            # enable the blending weight sliders
-            self.prompt_builder_form_a.prompt_weight_distribution_slider.setEnabled(True)
-            self.prompt_builder_form_a.negative_prompt_weight_distribution_slider.setEnabled(True)
-            self.prompt_builder_form_b.prompt_weight_distribution_slider.setEnabled(True)
-            self.prompt_builder_form_b.negative_prompt_weight_distribution_slider.setEnabled(True)
+        for form in self.prompt_builder_forms:
+            form.prompt_weight_distribution_slider.setEnabled(self.settings_manager.prompt_blend_type != 0)
+            form.negative_prompt_weight_distribution_slider.setEnabled(self.settings_manager.prompt_blend_type != 0)
 
     def initialize_weights(self):
-        auto_prompt_weight = self.settings_manager.settings.auto_prompt_weight.get()
-        auto_negative_prompt_weight = self.settings_manager.settings.negative_auto_prompt_weight.get()
-        self.prompt_builder_form_a.prompt_weight_distribution_slider.setValue(int(auto_prompt_weight * 100))
-        self.prompt_builder_form_a.negative_prompt_weight_distribution_slider.setValue(int(auto_negative_prompt_weight * 100))
-        self.prompt_builder_form_b.prompt_weight_distribution_slider.setValue(int(auto_prompt_weight * 100))
-        self.prompt_builder_form_b.negative_prompt_weight_distribution_slider.setValue(int(auto_negative_prompt_weight * 100))
+        auto_prompt_weight = self.settings_manager.auto_prompt_weight
+        auto_negative_prompt_weight = self.settings_manager.negative_auto_prompt_weight
+        auto_prompt_weight = 0.0 if auto_prompt_weight is None else auto_prompt_weight
+        auto_negative_prompt_weight = 0.0 if auto_negative_prompt_weight is None else auto_negative_prompt_weight
+
+        for form in self.prompt_builder_forms:
+            form.prompt_weight_distribution_slider.setValue(int(auto_prompt_weight * 100))
+            form.negative_prompt_weight_distribution_slider.setValue(int(auto_negative_prompt_weight * 100))
 
     def initialize_weight_sliders(self):
-        self.prompt_builder_form_a.prompt_weight_distribution_slider.valueChanged.connect(
-            self.handle_weight_distribution_slider_change)
-        self.prompt_builder_form_a.negative_prompt_weight_distribution_slider.valueChanged.connect(
-            self.handle_negative_weight_distribution_slider_change)
-        self.prompt_builder_form_b.prompt_weight_distribution_slider.valueChanged.connect(
-            self.handle_weight_distribution_slider_change)
-        self.prompt_builder_form_b.negative_prompt_weight_distribution_slider.valueChanged.connect(
-            self.handle_negative_weight_distribution_slider_change)
+        for form in self.prompt_builder_forms:
+
+            form.prompt_weight_distribution_slider.valueChanged.connect(
+                self.handle_weight_distribution_slider_change)
+            form.negative_prompt_weight_distribution_slider.valueChanged.connect(
+                self.handle_negative_weight_distribution_slider_change)
 
     def handle_weight_distribution_slider_change(self, value):
         self.auto_prompt_weight = 0.0 + (value / 100.0)
         self.text_prompt_weight = 1.0 - self.auto_prompt_weight
         self.auto_prompt_weight = round(self.auto_prompt_weight, 2)
         self.text_prompt_weight = round(self.text_prompt_weight, 2)
-        self.prompt_builder_form_a.auto_prompt_weight_label.setText(f"{self.auto_prompt_weight:.2f}")
-        self.prompt_builder_form_a.text_prompt_weight_label.setText(f"{self.text_prompt_weight:.2f}")
-        self.prompt_builder_form_b.auto_prompt_weight_label.setText(f"{self.auto_prompt_weight:.2f}")
-        self.prompt_builder_form_b.text_prompt_weight_label.setText(f"{self.text_prompt_weight:.2f}")
-        self.prompt_builder_form_a.prompt_weight_distribution_slider.setValue(int(self.auto_prompt_weight * 100))
-        self.prompt_builder_form_b.prompt_weight_distribution_slider.setValue(int(self.auto_prompt_weight * 100))
-        self.settings_manager.settings.auto_prompt_weight.set(self.auto_prompt_weight)
+
+        for form in self.prompt_builder_forms:
+            form.auto_prompt_weight_label.setText(f"{self.auto_prompt_weight:.2f}")
+            form.text_prompt_weight_label.setText(f"{self.text_prompt_weight:.2f}")
+            form.prompt_weight_distribution_slider.setValue(int(self.auto_prompt_weight * 100))
+
+        self.settings_manager.set_value("auto_prompt_weight", self.auto_prompt_weight)
         self.process_prompt()
 
     def handle_negative_weight_distribution_slider_change(self, value):
@@ -261,17 +184,16 @@ class PromptBuilderWidget(BaseWidget):
         self.negative_text_prompt_weight = 1.0 - self.negative_auto_prompt_weight
         self.negative_auto_prompt_weight = round(self.negative_auto_prompt_weight, 2)
         self.negative_text_prompt_weight = round(self.negative_text_prompt_weight, 2)
-        self.prompt_builder_form_a.negative_auto_prompt_weight_label.setText(f"{self.negative_auto_prompt_weight:.2f}")
-        self.prompt_builder_form_a.negative_text_prompt_weight_label.setText(f"{self.negative_text_prompt_weight:.2f}")
-        self.prompt_builder_form_b.negative_auto_prompt_weight_label.setText(f"{self.negative_auto_prompt_weight:.2f}")
-        self.prompt_builder_form_b.negative_text_prompt_weight_label.setText(f"{self.negative_text_prompt_weight:.2f}")
-        self.prompt_builder_form_a.negative_prompt_weight_distribution_slider.setValue(int(self.negative_auto_prompt_weight * 100))
-        self.prompt_builder_form_b.negative_prompt_weight_distribution_slider.setValue(int(self.negative_auto_prompt_weight * 100))
-        self.settings_manager.settings.negative_auto_prompt_weight.set(self.negative_auto_prompt_weight)
+        for form in self.prompt_builder_forms:
+            form.negative_auto_prompt_weight_label.setText(f"{self.negative_auto_prompt_weight:.2f}")
+            form.negative_text_prompt_weight_label.setText(f"{self.negative_text_prompt_weight:.2f}")
+            form.negative_prompt_weight_distribution_slider.setValue(int(self.negative_auto_prompt_weight * 100))
+            form.negative_prompt_weight_distribution_slider.setValue(int(self.negative_auto_prompt_weight * 100))
+        self.settings_manager.set_value("negative_auto_prompt_weight", self.negative_auto_prompt_weight)
         self.process_prompt()
 
     def process_prompt(self):
-        if not self.settings_manager.settings.use_prompt_builder_checkbox.get():
+        if not self.settings_manager.use_prompt_builder_checkbox:
             # self.prompt_text.setPlainText("")
             # self.negative_prompt_text.setPlainText("")
             return
@@ -286,10 +208,10 @@ class PromptBuilderWidget(BaseWidget):
         negative_prompt_a = ""
         #seed = self.app.seed if not self.app.seed_override else self.app.seed_override
         seed = self.app.seed
-        if self.settings_manager.settings.prompt_blend_type.get() == 1:
+        if self.settings_manager.prompt_blend_type == 1:
             prompt_a = self.app.prompt
             negative_prompt_a = self.app.negative_prompt
-        elif self.settings_manager.settings.prompt_blend_type.get() == 2:
+        elif self.settings_manager.prompt_blend_type == 2:
             prev_tab = self.current_tab
             self.current_tab = "b" if prev_tab == "a" else "a"
             prompt_a, negative_prompt_a = self.build_prompts("", "", seed)
@@ -336,7 +258,7 @@ class PromptBuilderWidget(BaseWidget):
             image_genre=image_genre,
             image_color=image_color,
             image_style=image_style,
-            advanced=self.settings_manager.settings.prompt_generator_advanced.get()
+            advanced=self.settings_manager.prompt_generator_advanced
         )
 
     def inject_prompt(self, options):

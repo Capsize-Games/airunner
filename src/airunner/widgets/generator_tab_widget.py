@@ -37,8 +37,6 @@ class GeneratorTabWidget(BaseWidget):
         self.row = 0
         self.col = 0
         self.layout = None
-        self.app.settings_manager.disable_save()
-        self.app.settings_manager.settings.model_base_path.my_signal.connect(self.refresh_model_list)
         # add all tabs
         # get the current tab name and pass it as section
         for tab_section in self.app._tabs.keys():
@@ -51,7 +49,6 @@ class GeneratorTabWidget(BaseWidget):
         self.sectionTabWidget.currentChanged.connect(partial(
             self.handle_generator_tab_changed
         ))
-        self.app.settings_manager.enable_save()
 
     def clear_prompts(self, tab_section, tab):
         self.data[tab_section][tab]["prompt_widget"].setPlainText("")
@@ -87,13 +84,13 @@ class GeneratorTabWidget(BaseWidget):
     def handle_generator_tab_changed(self):
         self.app.update()
         self.app.enable_embeddings()
-        self.app.settings_manager.settings.current_tab.set(self.app.currentTabSection)
+        self.app.settings_manager.set_value("current_tab", self.app.currentTabSection)
         self.set_current_section_tab()
 
     def set_tabs(self):
         # get the tab section index
         tab_section_index = None
-        current_tab = self.app.settings_manager.settings.current_tab.get()
+        current_tab = self.app.settings_manager.current_tab
         tabs = self.app._tabs.keys()
         if current_tab in list(tabs):
             tab_section_index = list(tabs).index(current_tab)
@@ -103,7 +100,7 @@ class GeneratorTabWidget(BaseWidget):
         self.set_current_section_tab()
 
     def set_current_section_tab(self):
-        current_tab = self.app.settings_manager.settings.current_tab.get()
+        current_tab = self.app.settings_manager.current_tab
         # get the section index
         section_index = None
         current_section = self.app.current_section_by_tab
@@ -205,9 +202,9 @@ class GeneratorTabWidget(BaseWidget):
         use_prompt_builder_checkbox.setStyleSheet(stylesheet)
         use_prompt_builder_checkbox.setObjectName("use_prompt_builder_checkbox")
         use_prompt_builder_checkbox.setText("Use Prompt Builder")
-        use_prompt_builder_checkbox.setChecked(self.app.use_prompt_builder_checkbox)
+        use_prompt_builder_checkbox.setChecked(self.app.settings_manager.use_prompt_builder_checkbox)
         use_prompt_builder_checkbox.stateChanged.connect(
-            partial(self.handle_value_change, "use_prompt_builder_checkbox", widget=use_prompt_builder_checkbox))
+            partial(self.handle_value_change, "generator.use_prompt_builder_checkbox", widget=use_prompt_builder_checkbox))
         self.data[self.tab_section][self.tab]["use_prompt_builder_checkbox"] = use_prompt_builder_checkbox
         self.add_widget_to_grid(use_prompt_builder_checkbox)
         grid_layout.addWidget(use_prompt_builder_checkbox, 0, 1, 1, 1)
@@ -225,9 +222,9 @@ class GeneratorTabWidget(BaseWidget):
 
         prompt_widget = QPlainTextEdit(self)
         prompt_widget.setObjectName("prompt")
-        prompt_widget.setPlainText(self.app.prompt)
+        prompt_widget.setPlainText(self.app.settings_manager.generator.prompt)
         prompt_widget.textChanged.connect(
-            partial(self.handle_value_change, "prompt", widget=prompt_widget))
+            partial(self.handle_value_change, "generator.prompt", widget=prompt_widget))
         self.data[self.tab_section][self.tab]["prompt_widget"] = prompt_widget
         self.add_widget_to_grid(prompt_label_container)
         self.add_widget_to_grid(prompt_widget)
@@ -238,9 +235,9 @@ class GeneratorTabWidget(BaseWidget):
             negative_label.setText("Negative Prompt")
             negative_prompt_widget = QPlainTextEdit(self)
             negative_prompt_widget.setObjectName("negative_prompt")
-            negative_prompt_widget.setPlainText(self.app.negative_prompt)
+            negative_prompt_widget.setPlainText(self.app.settings_manager.generator.negative_prompt)
             negative_prompt_widget.textChanged.connect(
-                partial(self.handle_value_change, "negative_prompt", widget=negative_prompt_widget))
+                partial(self.handle_value_change, "generator.negative_prompt", widget=negative_prompt_widget))
             self.data[self.tab_section][self.tab]["negative_prompt_widget"] = negative_prompt_widget
             self.add_widget_to_grid(negative_label)
             self.add_widget_to_grid(negative_prompt_widget)
@@ -285,7 +282,8 @@ class GeneratorTabWidget(BaseWidget):
 
     def load_model_by_section(self, tab_section, section):
         requested_section = "txt2img" if section == "txt2vid" else section
-        models = self.app.application_data.available_model_names(tab_section, requested_section, enabled_only=True)
+        models = self.app.settings_manager.available_model_names(
+            pipeline_action=requested_section, category=tab_section)
         self.data[tab_section][section]["model_dropdown_widget"].addItems(models)
 
     def add_controlnet_settings_widget(self, tab_section, tab):
@@ -305,19 +303,19 @@ class GeneratorTabWidget(BaseWidget):
         elif self.tab_section == "shapegif":
             scheduler_action = f"shapegif_{self.tab}"
         scheduler_dropdown.addItems(AVAILABLE_SCHEDULERS_BY_ACTION[scheduler_action])
-        scheduler_dropdown.setCurrentText(self.app.scheduler)
+        scheduler_dropdown.setCurrentText(self.app.settings_manager.generator.scheduler)
         scheduler_dropdown.currentTextChanged.connect(
-            partial(self.handle_value_change, "scheduler", widget=scheduler_dropdown))
+            partial(self.handle_value_change, "generator.scheduler", widget=scheduler_dropdown))
 
         self.data[self.tab_section][self.tab]["model_dropdown_widget"] = model_dropdown
         self.data[self.tab_section][self.tab]["scheduler_dropdown_widget"] = scheduler_dropdown
 
         self.load_model_by_section(self.tab_section, self.tab)
 
-        current_model = self.app.model
+        current_model = self.app.settings_manager.generator.model
         model_dropdown.setCurrentText(current_model)
         model_dropdown.currentTextChanged.connect(
-            partial(self.handle_value_change, "model", widget=model_dropdown))
+            partial(self.handle_value_change, "generator.model", widget=model_dropdown))
 
         self.add_widget_to_grid(widget)
 
@@ -331,8 +329,8 @@ class GeneratorTabWidget(BaseWidget):
         steps_slider = SliderWidget(
             app=self.app,
             label_text="Steps",
-            slider_callback=partial(self.handle_value_change, "steps"),
-            current_value=int(self.app.steps),
+            slider_callback=partial(self.handle_value_change, "generator.steps"),
+            current_value=int(self.app.settings_manager.generator.steps),
             slider_maximum=200,
             spinbox_maximum=200.0,
             display_as_float=False,
@@ -348,8 +346,8 @@ class GeneratorTabWidget(BaseWidget):
         return SliderWidget(
             app=self.app,
             label_text=label_text,
-            slider_callback=partial(self.handle_value_change, "scale"),
-            current_value=int(self.app.scale),
+            slider_callback=partial(self.handle_value_change, "generator.scale"),
+            current_value=int(self.app.settings_manager.generator.scale),
             slider_maximum=10000,
             spinbox_maximum=100.0,
             display_as_float=True,
@@ -402,8 +400,8 @@ class GeneratorTabWidget(BaseWidget):
         clip_skip_widget = SliderWidget(
             app=self.app,
             label_text="Clip Skip",
-            slider_callback=partial(self.handle_value_change, "clip_skip"),
-            current_value=self.app.clip_skip,
+            slider_callback=partial(self.handle_value_change, "generator.clip_skip"),
+            current_value=self.app.settings_manager.generator.clip_skip,
             slider_maximum=11,
             spinbox_maximum=12.0,
             display_as_float=False,
@@ -421,8 +419,8 @@ class GeneratorTabWidget(BaseWidget):
         samples_widget = SliderWidget(
             app=self.app,
             label_text="Samples",
-            slider_callback=partial(self.handle_value_change, "samples"),
-            current_value=self.app.samples,
+            slider_callback=partial(self.handle_value_change, "generator.n_samples"),
+            current_value=self.app.settings_manager.generator.n_samples,
             slider_maximum=500,
             spinbox_maximum=500.0,
             display_as_float=False,
@@ -442,7 +440,7 @@ class GeneratorTabWidget(BaseWidget):
             # show a checkbox for self.app.variation
             variation_checkbox = QCheckBox("Variation")
             variation_checkbox.setObjectName("variation_checkbox")
-            variation_checkbox.setChecked(self.app.variation)
+            variation_checkbox.setChecked(self.app.settings_manager.generator.variation)
             variation_checkbox.toggled.connect(
                 partial(self.handle_value_change, "variation", widget=variation_checkbox))
             self.add_widget_to_grid(variation_checkbox)
@@ -453,8 +451,8 @@ class GeneratorTabWidget(BaseWidget):
         samples_widget = SliderWidget(
             app=self.app,
             label_text="Frames",
-            slider_callback=partial(self.handle_value_change, "samples"),
-            current_value=self.app.samples,
+            slider_callback=partial(self.handle_value_change, "generator.n_samples"),
+            current_value=self.app.settings_manager.generator.n_samples,
             slider_maximum=200,
             spinbox_maximum=200.0,
             display_as_float=False,
@@ -564,9 +562,7 @@ class GeneratorTabWidget(BaseWidget):
         self.app.override_tab_section = None
         self.app.override_section = None
 
-    def handle_value_change(self, attr_name, value=None, widget=None):
-        attr = getattr(self.app, f"{attr_name}_var")
-
+    def handle_value_change(self, attr_name, value=None, widget=None, val=None):
         if attr_name in ["prompt", "negative_prompt"]:
             self.app.prompt_builder.process_prompt()
 
@@ -580,23 +576,25 @@ class GeneratorTabWidget(BaseWidget):
                 value = 0
             if value > MAX_SEED:
                 value = MAX_SEED
-            widget.setText(str(value))
+            if widget:
+                widget.setText(str(value))
         elif attr_name == "controlnet":
             value = value.lower()
 
-        if value is not None:
-            attr.set(value)
-        else:
+
+        if widget:
             try:
-                attr.set(widget.toPlainText())
+                value = widget.toPlainText()
             except AttributeError:
                 try:
-                    attr.set(widget.currentText())
+                    value = widget.currentText()
                 except AttributeError:
                     try:
-                        attr.set(widget.value())
+                        value = widget.value()
                     except AttributeError:
-                        print("something went wrong while setting the value")
+                        print(f"something went wrong while setting the value for {attr_name}", widget)
+
+        self.app.settings_manager.set_value(attr_name, value)
 
     def set_stylesheet(self):
         super().set_stylesheet()
