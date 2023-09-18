@@ -43,7 +43,7 @@ class ToolMenuWidget(BaseWidget):
         self.brush_color_widget.setFixedWidth(brush_color_widget_size)
         self.brush_color_widget.setFixedHeight(brush_color_widget_size)
         self.brush_color_widget.setStyleSheet(
-            f"background-color: {self.settings_manager.settings.primary_color.get()};")
+            f"background-color: {self.app.settings_manager.brush_settings.primary_color};")
         self.brush_color_widget.clicked.connect(self.pick_brush_color)
 
         # create QColorDialog as a widget and add it to the right_toolbar
@@ -92,26 +92,26 @@ class ToolMenuWidget(BaseWidget):
             self.app.load_embeddings(tab)
 
     def pick_brush_color(self):
-        current_color = self.settings_manager.settings.primary_color.get()
+        current_color = self.app.settings_manager.brush_settings.primary_color
         # open QColorDialog and set the current color to the primary color
         color = QColorDialog.getColor(QColor(current_color), self)
         if color.isValid():
-            self.settings_manager.settings.primary_color.set(color.name())
+            self.settings_manager.set_value("primary_color", color.name())
             self.brush_color_widget.setStyleSheet(
-                f"background-color: {self.settings_manager.settings.primary_color.get()};")
+                f"background-color: {self.app.settings_manager.brush_settings.primary_color};")
 
     def handle_current_color_changed(self, val):
         self.color_input_box.setText(val.name())
-        self.settings_manager.settings.primary_color.set(val.name())
+        self.settings_manager.set_value("primary_color", val.name())
 
     def set_opacity_slider(self, val):
         self.opacity_widget.update_value(val)
 
     def reset_brush_colors(self):
         # self.brush_widget.primary_color_button.setStyleSheet(
-        #     f"background-color: {self.settings_manager.settings.primary_color.get()};")
+        #     f"background-color: {self.settings_manager.primary_color.get()};")
         # self.brush_widget.brush_size_slider.setValue(
-        #     self.settings_manager.settings.size.get())
+        #     self.settings_manager.grid_settings.size.get())
         pass
 
     def set_stylesheet(self):

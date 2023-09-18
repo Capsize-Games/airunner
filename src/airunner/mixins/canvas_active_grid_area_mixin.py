@@ -31,8 +31,8 @@ class CanvasActiveGridAreaMixin:
 
     @property
     def active_grid_area_rect(self):
-        width = self.settings_manager.settings.working_width.get()
-        height = self.settings_manager.settings.working_height.get()
+        width = self.settings_manager.working_width
+        height = self.settings_manager.working_height
 
         rect = QRect(
             self.active_grid_area_pivot_point.x(),
@@ -63,14 +63,14 @@ class CanvasActiveGridAreaMixin:
         painter.setBrush(QBrush(QColor(0, 0, 0, 0)))
         pen = QPen(
             self.active_grid_area_color,
-            self.settings_manager.settings.line_width.get()
+            self.settings_manager.grid_settings.line_width
         )
         painter.setPen(pen)
         rect = QRect(
             self.active_grid_area_rect.x(),
             self.active_grid_area_rect.y(),
-            self.settings_manager.settings.working_width.get(),
-            self.settings_manager.settings.working_height.get()
+            self.settings_manager.working_width,
+            self.settings_manager.working_height
         )
         painter.drawRect(rect)
 
@@ -78,33 +78,33 @@ class CanvasActiveGridAreaMixin:
         # to make it more visible
         pen = QPen(
             self.active_grid_area_color,
-            self.settings_manager.settings.line_width.get() + 1
+            self.settings_manager.grid_settings.line_width + 1
         )
         painter.setPen(pen)
         size = 4
         rect = QRect(
             self.active_grid_area_rect.x() + size,
             self.active_grid_area_rect.y() + size,
-            self.settings_manager.settings.working_width.get() - (size * 2),
-            self.settings_manager.settings.working_height.get() - (size * 2)
+            self.settings_manager.working_width - (size * 2),
+            self.settings_manager.working_height - (size * 2)
         )
         painter.drawRect(rect)
 
         # draw a third black border in the center of the two rectangles
         pen = QPen(
             QColor(0, 0, 0),
-            self.settings_manager.settings.line_width.get() + 1
+            self.settings_manager.grid_settings.line_width + 1
         )
         painter.setPen(pen)
         size = 2
         rect = QRect(
             self.active_grid_area_rect.x() + size,
             self.active_grid_area_rect.y() + size,
-            self.settings_manager.settings.working_width.get() - (size * 2),
-            self.settings_manager.settings.working_height.get() - (size * 2)
+            self.settings_manager.working_width - (size * 2),
+            self.settings_manager.working_height - (size * 2)
         )
         painter.drawRect(rect)
 
     def reset_settings(self):
-        self.width_slider.setValue(self.settings_manager.settings.working_width.get())
-        self.height_slider.setValue(self.settings_manager.settings.working_height.get())
+        self.width_slider.setValue(self.settings_manager.working_width)
+        self.height_slider.setValue(self.settings_manager.working_height)

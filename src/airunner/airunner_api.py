@@ -9,6 +9,10 @@ class AIRunnerAPI(QObject):
     window = None
     tracked_buttons = {}
 
+    @property
+    def app(self):
+        return self.window
+
     def __init__(self, *args, **kwargs):
         self.window = kwargs.pop("window")
         super().__init__(*args, **kwargs)

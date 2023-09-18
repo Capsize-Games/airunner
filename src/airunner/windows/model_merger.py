@@ -43,15 +43,15 @@ class ModelMerger(BaseWindow):
     def output_path(self):
         output_path = None
         if self.section == "outpaint":
-            output_path = self.settings_manager.settings.outpaint_model_path.get()
+            output_path = self.settings_manager.path_settings.outpaint_model_path
         elif self.section == "depth2img":
-            output_path = self.settings_manager.settings.depth2img_model_path.get()
+            output_path = self.settings_manager.path_settings.depth2img_model_path
         elif self.section == "pix2pix":
-            output_path = self.settings_manager.settings.pix2pix_model_path.get()
+            output_path = self.settings_manager.path_settings.pix2pix_model_path
         elif self.section == "upscale":
-            output_path = self.settings_manager.settings.upscale_model_path.get()
+            output_path = self.settings_manager.path_settings.upscale_model_path
         if not output_path or output_path == "":
-            output_path = self.settings_manager.settings.model_base_path.get()
+            output_path = self.settings_manager.path_settings.model_base_path
         return output_path
 
     def change_model_type(self, index):
@@ -143,7 +143,7 @@ class ModelMerger(BaseWindow):
     def do_model_merge(self):
         models = []
         weights = []
-        path = self.settings_manager.settings.model_base_path.get()
+        path = self.settings_manager.path_settings.model_base_path
 
         for widget in self.widgets:
             if widget.models.currentText() != "":
@@ -156,7 +156,7 @@ class ModelMerger(BaseWindow):
 
         model = self.template.base_models.currentText()
         section = self.section
-        available_models_by_section = self.app.application_data.available_models_by_section(section)
+        available_models_by_section = self.app.settings_manager.available_models_by_category(category=section)
         model_data = None
         for data in available_models_by_section:
             if data["name"] == model:
