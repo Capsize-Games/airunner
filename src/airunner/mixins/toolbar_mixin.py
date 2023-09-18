@@ -52,7 +52,7 @@ class ToolbarMixin:
         color = QColorDialog.getColor()
         if color.isValid():
             color = color.name()
-            self.settings_manager.settings.canvas_color.set(color)
+            self.settings_manager.set_value("canvas_color", color)
             self.canvas.set_canvas_color()
 
     def show_model_merger(self):
@@ -62,7 +62,7 @@ class ToolbarMixin:
         import subprocess
         import platform
         import os
-        path = self.settings_manager.settings.hf_cache_path.get()
+        path = self.settings_manager.path_settings.hf_cache_path
         if path == "":
             from airunner.utils import default_hf_cache_dir
             path = default_hf_cache_dir()
@@ -78,8 +78,7 @@ class ToolbarMixin:
         AboutWindow(self.settings_manager, app=self)
 
     def toggle_grid(self):
-        self.settings_manager.settings.show_grid.set(
-            not self.settings_manager.settings.show_grid.get())
+        self.settings_manager.set_value("grid_settings.show_grid", not self.settings_manager.grid_settings.show_grid)
         self.canvas.update()
 
     def focus_button_clicked(self):

@@ -17,7 +17,6 @@ class BaseWindow:
         self.window_title = kwargs.get("window_title", self.window_title)
         self.exec = kwargs.get("exec", True)
         self.settings_manager = settings_manager
-        settings_manager.disable_save()
         self.initialize_template()
 
     def initialize_template(self):
@@ -33,7 +32,6 @@ class BaseWindow:
             self.template.setWindowModality(Qt.WindowModality.WindowModal)
             self.template.setWindowFlag(Qt.WindowType.WindowStaysOnTopHint)
         self.initialize_window()
-        self.settings_manager.enable_save()
         if self.exec:
             self.show()
 

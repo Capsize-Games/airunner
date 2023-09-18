@@ -8,7 +8,6 @@ from PIL.ImageQt import ImageQt
 from PyQt6.QtCore import QPoint, QRect
 from PyQt6.QtGui import QPainter, QPixmap
 from PIL.ImageFilter import GaussianBlur
-from airunner.filters.rgb_noise_filter import RGBNoiseFilter
 from airunner.models.imagedata import ImageData
 from PIL.ExifTags import TAGS
 from airunner.models.layerdata import LayerData
@@ -187,10 +186,9 @@ class CanvasImageMixin:
         if not image:
             return
 
-        if self.settings_manager.settings.resize_on_paste.get():
-            if self.settings_manager.settings.resize_on_paste.get():
-                image.thumbnail((self.settings_manager.settings.working_width.get(),
-                                 self.settings_manager.settings.working_height.get()), Image.ANTIALIAS)
+        if self.parent.settings_manager.resize_on_paste:
+            image.thumbnail((self.settings_manager.working_width,
+                             self.settings_manager.working_height), Image.ANTIALIAS)
         self.create_image(QPoint(0, 0), image)
         self.update()
 
@@ -242,10 +240,10 @@ class CanvasImageMixin:
     def load_image(self, image_path):
         image = Image.open(image_path)
 
-        # if settings_manager.settings.resize_on_paste, resize the image to working width and height while mainting its aspect ratio
-        if self.settings_manager.settings.resize_on_paste.get():
-            image.thumbnail((self.settings_manager.settings.working_width.get(),
-                             self.settings_manager.settings.working_height.get()), Image.ANTIALIAS)
+        # if settings_manager.resize_on_paste, resize the image to working width and height while mainting its aspect ratio
+        if self.parent.settings_manager.resize_on_paste:
+            image.thumbnail((self.settings_manager.working_width,
+                             self.settings_manager.working_height), Image.ANTIALIAS)
 
         self.create_image(QPoint(0, 0), image)
         self.update()
@@ -280,13 +278,17 @@ class CanvasImageMixin:
         """
         processed_image = processed_image.convert("RGBA")
         section = data["action"] if not section else section
-        outpaint_box_rect = data["options"]["outpaint_box_rect"]
+        options = data.get("options", {})
+        outpaint_box_rect = options.get("outpaint_box_rect", None)
+        if not outpaint_box_rect:
+            raise Exception("outpaint_box_rect is required")
+
         if section not in ["superresolution", "upscale"]:
             processed_image, image_root_point, image_pivot_point = self.handle_outpaint(
                 outpaint_box_rect,
                 processed_image,
                 section,
-                is_kandinsky=data["options"].get("generator_section") == "kandinsky"
+                is_kandinsky=options.get("generator_section", "") == "kandinsky"
             )
         else:
             # if we are upscaling (or using superresolution) we want to replace the existing image with the new
@@ -310,8 +312,11 @@ class CanvasImageMixin:
         and displays it in the window rather than on the canvas.
         """
         self.parent.add_image_to_canvas_signal.emit(processed_data)
-        is_deterministic = data["options"][f"deterministic_generation"]
-        if processed_data["add_image_to_canvas"] and (not is_deterministic or data["force_add_to_canvas"]):
+        is_deterministic = False
+        if "deterministic_generation" in data["options"]:
+            is_deterministic = options.get("deterministic_generation")
+        force_add_to_canvas = options.get("force_add_to_canvas", False)
+        if processed_data["add_image_to_canvas"] and (not is_deterministic or force_add_to_canvas):
             self.add_image_to_canvas(
                 processed_data["processed_image"],
                 image_root_point=processed_data["image_root_point"],

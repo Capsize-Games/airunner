@@ -11,11 +11,7 @@ class BaseWidget(QWidget):
 
     @property
     def is_dark(self):
-        return self.settings_manager.settings.dark_mode_enabled.get()
-
-    @property
-    def settings(self):
-        return self.app.settings
+        return self.settings_manager.dark_mode_enabled
 
     @property
     def settings_manager(self):

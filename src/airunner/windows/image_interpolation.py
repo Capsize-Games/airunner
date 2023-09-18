@@ -223,7 +223,7 @@ class ImageInterpolation(BaseWindow):
 
     def handle_interpolation_import_image_button(self, val, widget):
         # display a file dialog to select an image
-        file_path, _ = self.app.display_import_image_dialog(label="Select an image", directory=self.app.settings_manager.settings.image_path.get())
+        file_path, _ = self.app.display_import_image_dialog(label="Select an image", directory=self.app.settings_manager.path_settings.image_path)
         if file_path == "":
             return
         image = Image.open(file_path)
