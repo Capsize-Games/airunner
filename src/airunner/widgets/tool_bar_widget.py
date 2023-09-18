@@ -99,7 +99,6 @@ class ToolBarWidget(BaseWidget):
 
     def toggle_nsfw_filter(self):
         self.settings_manager.set_value("nsfw_filter", not self.app.settings_manager.nsfw_filter)
-        self.app.db_save()
         self.app.canvas.update()
         self.set_nsfw_filter_tooltip()
         self.nsfw_button.setChecked(self.app.document.settings.nsfw_filter)
