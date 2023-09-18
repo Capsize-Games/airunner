@@ -10,7 +10,7 @@ Base.metadata.create_all(engine)
 Session = sessionmaker(bind=engine)
 session = Session()
 
-# Check if the database is empty
+
 if not session.query(ControlnetModel).first():
     # Populate the database with some seed data
     session.add(ControlnetModel(name="canny", path="lllyasviel/control_v11p_sd15_canny"))
@@ -454,6 +454,7 @@ if not session.query(Pipeline).first():
 if not session.query(PathSettings).first():
     session.add(PathSettings())
     session.commit()
+
 
 if not session.query(BrushSettings).first():
     session.add(BrushSettings())

@@ -4,94 +4,10 @@ import json
 from PyQt6.QtCore import QObject, pyqtSignal
 from filelock import FileLock
 
-from airunner.aihandler.database import PromptSettings, ApplicationSettings
 from airunner.aihandler.qtvar import Var, StringVar, IntVar, BooleanVar, FloatVar, DictVar
 from airunner.data.db import session
-from airunner.data.models import Settings, GeneratorSetting, AIModel, Pipeline, ControlnetModel, ImageFilter
-
-
-class BaseSettingsManager:
-    save_disabled = False
-    settings = None
-
-    @property
-    def default_file_name(self) -> str:
-        """
-        Override this property to return the default file name.
-        This is the file name that will be used to load the default settings.
-        Default files are stored in airunner/data
-        :return:
-        """
-        return ""
-
-    @property
-    def file_name(self) -> str:
-        """
-        Override this property to return the file name.
-        This is the file name that will be used to store and load the settings
-        :return:
-        """
-        return ""
-
-    def disable_save(self):
-        self.save_disabled = True
-
-    def enable_save(self):
-        self.save_disabled = False
-
-    def load_default_settings(self):
-        path = os.path.join("data", self.default_file_name)
-        if os.path.exists(path):
-            with open(path, "r") as f:
-                return json.load(f)
-        return {}
-
-    def prepare_data(self, data: dict):
-        settings = {}
-        if data == {}:
-            settings = self.load_default_settings()
-        for key, value in data.__dict__.items():
-            if isinstance(value, Var):
-                settings[key] = value.get()
-            elif type(value) in [list, dict, int, float, str, bool]:
-                settings[key] = value
-
-        # when settings is empty, then we will fill it with default values
-        if settings == {}:
-            settings = self.load_default_settings()
-        return settings
-
-    def save_file(self, settings):
-        home_path = os.path.expanduser("~")
-        lock = FileLock(os.path.join(home_path, self.file_name + ".lock"))
-        with lock:
-            with open(os.path.join(home_path, self.file_name), "w") as f:
-                json.dump(settings, f)
-
-    def save_settings(self):
-        if self.save_disabled:
-            return
-        settings = self.prepare_data(self.settings)
-        self.save_file(settings)
-
-    def load_settings(self):
-        self.disable_save()
-        home_path = os.path.expanduser("~")
-        if not os.path.exists(os.path.join(home_path, self.file_name)):
-            settings = self.load_default_settings()
-        else:
-            lock = FileLock(os.path.join(home_path, self.file_name + ".lock"))
-            with lock:
-                with open(os.path.join(home_path, self.file_name), "r") as f:
-                    settings = json.load(f)
-
-        for key in settings.keys():
-            value = settings[key]
-            try:
-                self.settings.__dict__[key].set(value)
-            except Exception as e:
-                self.settings.__dict__[key] = value
-
+from airunner.data.models import Settings, GeneratorSetting, AIModel, Pipeline, ControlnetModel, ImageFilter, Prompt, \
+    SavedPrompt
 
 document = None
 _app = None
@@ -104,26 +20,6 @@ variable_types = {
     "JSON": DictVar,
 }
 
-class GeneratorManager(QObject):
-    def __init__(self, settings, *args, **kwargs):
-        self.settings = settings
-        super().__init__(*args, **kwargs)
-
-    def __getattr__(self, name):
-        if document and hasattr(document.settings, name):
-            if name not in variables:
-                self.create_variable(name)
-                variables[name].set(self.get_database_value(name))
-            return variables[name]
-        return None
-
-    def __setattr__(self, name, value):
-        if document and hasattr(document.settings, name):
-            if name not in variables:
-                self.create_variable(name)
-            variables[name].set(value)
-            setattr(document.settings, name, value)
-
 
 class SettingsManager(QObject):
     saved_signal = pyqtSignal()
@@ -131,6 +27,34 @@ class SettingsManager(QObject):
     can_save = True
     section = "stablediffusion"
     tab = "txt2img"
+
+    @property
+    def prompts(self):
+        """
+        Return Prompt objects from the database
+        :return:
+        """
+        return session.query(SavedPrompt).all()
+
+    def create_saved_prompt(self, prompt, negative_prompt):
+        saved_prompt = SavedPrompt(
+            prompt=prompt,
+            negative_prompt=negative_prompt
+        )
+        session.add(saved_prompt)
+        session.commit()
+        self.save_and_emit("saved_prompt", saved_prompt)
+        self.changed_signal.emit("saved_prompt", saved_prompt)
+
+    def delete_prompt(self, saved_prompt):
+        session.delete(saved_prompt)
+        session.commit()
+        self.save_and_emit("saved_prompt", saved_prompt)
+        self.changed_signal.emit("saved_prompt", saved_prompt)
+
+    def save_and_emit(self, key, value):
+        self.save()
+        self.changed_signal.emit(key, value)
 
     def available_models_by_category(self, category):
         categories = [category]
@@ -306,28 +230,3 @@ class SettingsManager(QObject):
 
     def save(self):
         session.commit()
-
-
-class PromptManager(BaseSettingsManager):
-    _instance = None
-
-    @property
-    def file_name(self):
-        return "airunner.prompts.json"
-
-    def __new__(cls, app=None):
-        if cls._instance is None:
-            cls._instance = super().__new__(cls)
-            cls._instance.__init__()
-        cls.app = app
-        return cls._instance
-
-    def __init__(self):
-        # if not app:
-        #     raise Exception("SettingsManager must be initialized with an app")
-        self.settings = PromptSettings(app=self)
-        self.settings.initialize(self.settings.read())
-        try:
-            self.load_settings()
-        except Exception as e:
-            self.save_settings()
