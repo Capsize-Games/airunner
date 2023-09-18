@@ -8,7 +8,7 @@ from airunner.aihandler.settings_manager import SettingsManager
 
 def initialize_os_environment():
     settings_manager = SettingsManager()
-    hf_cache_path = settings_manager.settings.hf_cache_path.get()
+    hf_cache_path = settings_manager.path_settings.hf_cache_path
     if hf_cache_path != "":
         # check if hf_cache_path exists
         if os.path.exists(hf_cache_path):
@@ -62,8 +62,8 @@ def image_to_pixmap(image: Image, size=None):
 def resize_image_to_working_size(image, settings):
     # get size of image
     width, height = image.size
-    working_width = settings.working_width.get()
-    working_height = settings.working_height.get()
+    working_width = settings.working_width
+    working_height = settings.working_height
 
     # get the aspect ratio of the image
     aspect_ratio = width / height
@@ -227,35 +227,35 @@ def get_latest_version():
 
 def prepare_metadata(data):
     settings_manager = SettingsManager()
-    if not settings_manager.settings.export_metadata.get() or \
-            settings_manager.settings.image_export_type.get() != "png":
+    if not settings_manager.metadata_settings.export_metadata or \
+            settings_manager.image_export_type != "png":
         return None
     from PIL import PngImagePlugin
     metadata = PngImagePlugin.PngInfo()
     options = data["options"]
     action = data["action"]
     metadata.add_text("action", action)
-    if settings_manager.settings.image_export_metadata_prompt.get() is True:
+    if settings_manager.metadata_settings.image_export_metadata_prompt is True:
         metadata.add_text("prompt", options[f'prompt'])
-    if settings_manager.settings.image_export_metadata_negative_prompt.get() is True:
+    if settings_manager.metadata_settings.image_export_metadata_negative_prompt is True:
         metadata.add_text("negative_prompt", options[f'negative_prompt'])
-    if settings_manager.settings.image_export_metadata_scale.get() is True:
+    if settings_manager.metadata_settings.image_export_metadata_scale is True:
         metadata.add_text("scale", str(options[f"scale"]))
-    if settings_manager.settings.image_export_metadata_seed.get() is True:
+    if settings_manager.metadata_settings.image_export_metadata_seed is True:
         metadata.add_text("seed", str(options[f"seed"]))
-    if settings_manager.settings.image_export_metadata_steps.get() is True:
+    if settings_manager.metadata_settings.image_export_metadata_steps is True:
         metadata.add_text("steps", str(options[f"steps"]))
-    if settings_manager.settings.image_export_metadata_ddim_eta.get() is True:
+    if settings_manager.metadata_settings.image_export_metadata_ddim_eta is True:
         metadata.add_text("ddim_eta", str(options[f"ddim_eta"]))
-    if settings_manager.settings.image_export_metadata_iterations.get() is True:
+    if settings_manager.metadata_settings.image_export_metadata_iterations is True:
         metadata.add_text("n_iter", str(options[f"n_iter"]))
-    if settings_manager.settings.image_export_metadata_samples.get() is True:
+    if settings_manager.metadata_settings.image_export_metadata_samples is True:
         metadata.add_text("n_samples", str(options[f"n_samples"]))
-    if settings_manager.settings.image_export_metadata_model.get() is True:
+    if settings_manager.metadata_settings.image_export_metadata_model is True:
         metadata.add_text("model", str(options[f"model"]))
-    if settings_manager.settings.image_export_metadata_model_branch.get() is True:
+    if settings_manager.metadata_settings.image_export_metadata_model_branch is True:
         metadata.add_text("model_branch", str(options[f"model_branch"]))
-    if settings_manager.settings.image_export_metadata_scheduler.get() is True:
+    if settings_manager.metadata_settings.image_export_metadata_scheduler is True:
         metadata.add_text("scheduler", str(options[f"scheduler"]))
     return metadata
 
@@ -276,16 +276,16 @@ def auto_export_image(
     settings_manager = SettingsManager()
     if data and "action" in data and data["action"] == "txt2vid":
         return
-    base_path = settings_manager.settings.model_base_path.get()
+    base_path = settings_manager.path_settings.model_base_path
     if type == "image":
-        image_path = settings_manager.settings.image_path.get()
+        image_path = settings_manager.path_settings.image_path
         image_path = "images" if image_path == "" else image_path
     elif type == "controlnet":
-        image_path = os.path.join(settings_manager.settings.image_path.get(), "controlnet_masks")
+        image_path = os.path.join(settings_manager.path_settings.image_path, "controlnet_masks")
     path = os.path.join(base_path, image_path) if image_path == "images" else image_path
     if not os.path.exists(path):
         os.makedirs(path)
-    extension = settings_manager.settings.image_export_type.get()
+    extension = settings_manager.image_export_type
     if extension == "":
         extension = "png"
     extension = f".{extension}"

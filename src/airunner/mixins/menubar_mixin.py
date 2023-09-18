@@ -1,18 +1,11 @@
 import os
+from functools import partial
 
 from PyQt6.QtWidgets import QFileDialog
 
-from airunner.filters.windows.filter_halftone import FilterHalftone
-from airunner.filters.windows.filter_registration_error import FilterRegistrationError
+from airunner.filters.windows.filter_base import FilterBase
 from airunner.utils import auto_export_image
 from airunner.windows.deterministic_generation_window import DeterministicGenerationWindow
-from airunner.filters.windows.filter_box_blur import FilterBoxBlur
-from airunner.filters.windows.filter_color_balance import FilterColorBalance
-from airunner.filters.windows.filter_gaussian_blur import FilterGaussianBlur
-from airunner.filters.windows.filter_pixel_art import FilterPixelArt
-from airunner.filters.windows.filter_saturation import FilterSaturation
-from airunner.filters.windows.filter_unsharp_mask import FilterUnsharpMask
-from airunner.filters.windows.filter_rgb_noise import FilterRGBNoise
 from airunner.windows.image_interpolation import ImageInterpolation
 from airunner.windows.prompt_browser import PromptBrowser
 
@@ -55,7 +48,7 @@ class MenubarMixin:
         PromptBrowser(settings_manager=self.prompts_manager, app=self)
 
     def save_prompt(self):
-        saved_prompts = self.prompts_manager.settings.prompts.get()
+        saved_prompts = self.prompts_manager.settings.prompts
         saved_prompts.append({
             'prompt': self.prompt,
             'negative_prompt': self.negative_prompt
@@ -64,27 +57,16 @@ class MenubarMixin:
         self.prompts_manager.save_settings()
 
     def initialize_filter_actions(self):
-        self.filter_gaussian_blur = FilterGaussianBlur(parent=self)
-        self.filter_pixel_art = FilterPixelArt(parent=self)
-        self.filter_halftone = FilterHalftone(parent=self)
-        self.filter_registration_error = FilterRegistrationError(parent=self)
-        self.filter_box_blur = FilterBoxBlur(parent=self)
-        self.filter_unsharp_mask = FilterUnsharpMask(parent=self)
-        self.filter_saturation = FilterSaturation(parent=self)
-        self.filter_color_balance = FilterColorBalance(parent=self)
-        self.filter_rgb_noise = FilterRGBNoise(parent=self)
-        self.actionGaussian_Blur_2.triggered.connect(self.filter_gaussian_blur.show)
-        self.actionPixel_Art.triggered.connect(self.filter_pixel_art.show)
-        self.actionHalftone.triggered.connect(self.filter_halftone.show)
-        self.actionRegistration_error.triggered.connect(self.filter_registration_error.show)
-        self.actionBox_Blur_2.triggered.connect(self.filter_box_blur.show)
-        self.actionUnsharp_Mask.triggered.connect(self.filter_unsharp_mask.show)
-        self.actionSaturation_Filter.triggered.connect(self.filter_saturation.show)
-        self.actionColor_Balance.triggered.connect(self.filter_color_balance.show)
-        self.actionRGB_Noise.triggered.connect(self.filter_rgb_noise.show)
+        # add more filters:
+        for filter in self.settings_manager.get_image_filters():
+            action = self.menuFilters.addAction(filter.display_name)
+            action.triggered.connect(partial(self.display_filter_window, filter))
+
+    def display_filter_window(self, filter):
+        FilterBase(self, filter.name).show()
 
     def import_image(self):
-        file_path, _ = self.display_import_image_dialog(directory=self.settings_manager.settings.image_path.get())
+        file_path, _ = self.display_import_image_dialog(directory=self.settings_manager.path_settings.image_path)
         if file_path == "":
             return
         self.canvas.load_image(file_path)
@@ -111,7 +93,7 @@ class MenubarMixin:
         path = QFileDialog.getExistingDirectory(None, "Select Directory")
         if path == "":
             return
-        self.settings_manager.settings.image_path.set(path)
+        self.settings_manager.set_value("image_path", path)
 
     def display_file_export_dialog(self):
         return QFileDialog.getSaveFileName(

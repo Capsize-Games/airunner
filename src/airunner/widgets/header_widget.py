@@ -69,29 +69,26 @@ class HeaderWidget(BaseWidget):
             print(e)
 
         self.update_widget_values()
-        self.app.register_setting_handler("size", self.update_widget_values)
-        self.app.register_setting_handler("working_width", self.update_widget_values)
-        self.app.register_setting_handler("working_height", self.update_widget_values)
 
     def update_widget_values(self):
-        if self.settings_manager:
-            brush_size = self.settings_manager.settings.mask_brush_size.get()
+        if self.app.settings_manager:
+            brush_size = self.app.settings_manager.brush_settings.brush_size
             self.brush_size_slider_widget.update_value(brush_size)
 
             self.width_slider_widget.set_tick_value(self.app.grid_size)
             self.height_slider_widget.set_tick_value(self.app.grid_size)
-            self.width_slider_widget.update_value(self.app.working_width)
-            self.height_slider_widget.update_value(self.app.working_height)
+            self.width_slider_widget.update_value(self.app.settings_manager.working_width)
+            self.height_slider_widget.update_value(self.app.settings_manager.working_height)
             self.app.set_size_form_element_step_values()
 
     def brush_size_slider_callback(self, val):
-        self.settings_manager.settings.mask_brush_size.set(val)
+        self.app.settings_manager.set_value("mask_brush_size", val)
 
     def width_slider_callback(self, val):
-        self.app.working_width = val
+        self.settings_manager.set_value("working_width", val)
 
     def height_slider_callback(self, val):
-        self.app.working_height = val
+        self.settings_manager.set_value("working_height", val)
 
     def set_size_increment_levels(self):
         size = self.app.grid_size
