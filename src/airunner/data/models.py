@@ -1,7 +1,6 @@
 from sqlalchemy import Column, Integer, String, Boolean, ForeignKey, Float, JSON
 from sqlalchemy.ext.declarative import declarative_base
 from sqlalchemy.orm import relationship
-from airunner.aihandler.database import DEFAULT_GRID_SETTINGS
 
 Base = declarative_base()
 
@@ -34,7 +33,7 @@ class PromptOption(Base):
     __tablename__ = 'prompt_option'
 
     id = Column(Integer, primary_key=True)
-    prompt_id = Column(Integer, ForeignKey('prompt.id'))
+    prompt_id = Column(Integer, ForeignKey('prompts.id'))
     text = Column(String)
     cond = Column(String)
     else_cond = Column(String)
@@ -42,13 +41,21 @@ class PromptOption(Base):
 
 
 class Prompt(Base):
-    __tablename__ = 'prompt'
+    __tablename__ = 'prompts'
 
     id = Column(Integer, primary_key=True)
     name = Column(String)
     category_id = Column(Integer, ForeignKey('prompt_category.id'))
     category = relationship("PromptCategory", backref="prompts")
     options = relationship("PromptOption", backref="prompt")
+
+
+class SavedPrompt(Base):
+    __tablename__ = 'saved_prompts'
+
+    id = Column(Integer, primary_key=True)
+    prompt = Column(String)
+    negative_prompt = Column(String)
 
 
 class ControlnetModel(Base):
@@ -187,9 +194,9 @@ class GridSettings(Base):
     id = Column(Integer, primary_key=True)
     show_grid = Column(Boolean, default=True)
     snap_to_grid = Column(Boolean, default=True)
-    size = Column(Integer, default=DEFAULT_GRID_SETTINGS["size"])
-    line_width = Column(Integer, default=DEFAULT_GRID_SETTINGS["line_width"])
-    line_color = Column(String, default=DEFAULT_GRID_SETTINGS["line_color"])
+    size = Column(Integer, default=64)
+    line_width = Column(Integer, default=1)
+    line_color = Column(String, default="#121212")
     settings = relationship("Settings", back_populates="grid_settings")
 
 
