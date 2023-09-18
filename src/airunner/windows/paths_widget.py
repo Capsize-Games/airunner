@@ -33,7 +33,6 @@ class PathsWidget(CustomWidget):
             getattr(self, f"{element}_path").textChanged.connect(
                 partial(self.set_value, f"path_settings.{element}_path"))
             val = getattr(self.settings_manager.path_settings, f"{element}_path")
-            print("PATH", val)
             if element == "hf_cache" and val == "":
                 val = default_hf_cache_dir()
             getattr(self, f"{element}_path").setText(val)

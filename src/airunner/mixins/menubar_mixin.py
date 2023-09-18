@@ -45,16 +45,10 @@ class MenubarMixin:
         self.override_section = None
 
     def show_prompt_browser(self):
-        PromptBrowser(settings_manager=self.prompts_manager, app=self)
+        PromptBrowser(settings_manager=self.settings_manager, app=self)
 
     def save_prompt(self):
-        saved_prompts = self.prompts_manager.settings.prompts
-        saved_prompts.append({
-            'prompt': self.prompt,
-            'negative_prompt': self.negative_prompt
-        })
-        self.prompts_manager.settings.prompts.set(saved_prompts)
-        self.prompts_manager.save_settings()
+        self.settings_manager.create_saved_prompt(self.prompt, self.negative_prompt)
 
     def initialize_filter_actions(self):
         # add more filters:
