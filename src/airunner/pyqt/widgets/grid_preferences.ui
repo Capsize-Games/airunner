@@ -1,7 +1,7 @@
 <?xml version="1.0" encoding="UTF-8"?>
 <ui version="4.0">
- <class>Form</class>
- <widget class="QWidget" name="Form">
+ <class>grid_preferences</class>
+ <widget class="QWidget" name="grid_preferences">
   <property name="geometry">
    <rect>
     <x>0</x>
@@ -102,5 +102,22 @@
   </layout>
  </widget>
  <resources/>
- <connections/>
+ <connections>
+  <connection>
+   <sender>snap_to_grid_checkbox</sender>
+   <signal>toggled(bool)</signal>
+   <receiver>snap_to_grid_checkbox</receiver>
+   <slot>click()</slot>
+   <hints>
+    <hint type="sourcelabel">
+     <x>165</x>
+     <y>221</y>
+    </hint>
+    <hint type="destinationlabel">
+     <x>165</x>
+     <y>221</y>
+    </hint>
+   </hints>
+  </connection>
+ </connections>
 </ui>
