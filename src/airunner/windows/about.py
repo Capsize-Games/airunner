@@ -1,10 +1,10 @@
+from airunner.pyqt.about import Ui_about_window
 from airunner.windows.base_window import BaseWindow
 # open the version file from the root of the project and get the VERSION variable string from it
 
 
 class AboutWindow(BaseWindow):
-    template_name = "about"
-    window_title = "About AI Runner"
+    template_class_ = Ui_about_window
 
     def initialize_window(self):
-        self.template.title.setText(f"AI Runner {self.app.version}")
+        self.ui.title.setText(f"AI Runner {self.app.version}")

@@ -2,12 +2,13 @@ from functools import partial
 
 from PyQt6 import uic
 from PyQt6.QtWidgets import QWidget, QVBoxLayout
+
+from airunner.pyqt.prompt_browser import Ui_prompt_browser
 from airunner.windows.base_window import BaseWindow
 
 
 class PromptBrowser(BaseWindow):
-    template_name = "prompt_browser"
-    window_title = "Prompt Browser"
+    template_class_ = Ui_prompt_browser
 
     def initialize_window(self):
         container = QWidget()
