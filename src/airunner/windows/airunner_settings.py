@@ -2,6 +2,7 @@ from PyQt6.QtCore import Qt, QSize
 from PyQt6.QtGui import QStandardItemModel, QStandardItem, QBrush, QColor, QPainter
 from PyQt6.QtWidgets import QStyledItemDelegate, QStyleOptionViewItem, QLabel, QWidget, QVBoxLayout, QPlainTextEdit
 
+from airunner.pyqt.airunner_settings import Ui_airunner_settings
 from airunner.widgets.keyboard_shortcuts_widget import KeyboardShortcutsWidget
 from airunner.windows.base_window import BaseWindow
 # open the version file from the root of the project and get the VERSION variable string from it
@@ -33,15 +34,16 @@ class HighlightDelegate(QStyledItemDelegate):
 
 
 class SettingsWindow(BaseWindow):
-    template_name = "settings"
-    window_title = "AI Runner Settings"
     is_modal = False
+    template_class_ = Ui_airunner_settings
+    # template_name = "airunner_settings"
 
     def initialize_window(self):
+        print("initializing window")
         self.model = QStandardItemModel()
-        self.template.directory.setModel(self.model)
-        self.template.directory.setHeaderHidden(True)
-        self.template.directory.setIndentation(20)
+        self.ui.directory.setModel(self.model)
+        self.ui.directory.setHeaderHidden(True)
+        self.ui.directory.setIndentation(20)
 
         directory = [
             {
@@ -148,17 +150,17 @@ class SettingsWindow(BaseWindow):
 
         self.scroll_widget = QWidget()
         self.scroll_layout = QVBoxLayout(self.scroll_widget)
-        self.template.preferences.setWidget(self.scroll_widget)
+        self.ui.preferences.setWidget(self.scroll_widget)
 
-        self.highlight_delegate = HighlightDelegate(self.template.directory)
-        self.template.directory.setItemDelegate(self.highlight_delegate)
+        self.highlight_delegate = HighlightDelegate(self.ui.directory)
+        self.ui.directory.setItemDelegate(self.highlight_delegate)
 
-        self.template.directory.clicked.connect(self.on_item_clicked)
+        self.ui.directory.clicked.connect(self.on_item_clicked)
 
         # expand all directories
         for i in range(self.model.rowCount()):
             index = self.model.index(i, 0)
-            self.template.directory.setExpanded(index, True)
+            self.ui.directory.setExpanded(index, True)
 
     def add_directory(self, name, checkable=False):
         item = QStandardItem(name)

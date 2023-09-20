@@ -622,8 +622,6 @@ class Canvas(
         This function is called when the layers need to be updated.
         :return:
         """
-        logger.info("Showing layers")
-
         # create an object which can contain a layer_obj and then be added to layers.setWidget
         container = QWidget()
         container.setLayout(QVBoxLayout())

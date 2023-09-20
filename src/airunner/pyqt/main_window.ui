@@ -97,6 +97,7 @@
     <addaction name="actionClear_all_prompts"/>
     <addaction name="separator"/>
     <addaction name="actionSettings"/>
+    <addaction name="actionRun_setup_wizard"/>
    </widget>
    <widget class="QMenu" name="menuFilters">
     <property name="title">
@@ -676,6 +677,11 @@
   <action name="actionShap_E">
    <property name="text">
     <string>Shap-E</string>
+   </property>
+  </action>
+  <action name="actionRun_setup_wizard">
+   <property name="text">
+    <string>Run setup wizard</string>
    </property>
   </action>
  </widget>

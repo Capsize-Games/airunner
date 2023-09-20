@@ -1,25 +1,30 @@
-from PyQt6.QtWidgets import QColorDialog
+from airunner.pyqt.widgets.grid_preferences import Ui_grid_preferences
 from airunner.windows.custom_widget import CustomWidget
+
+from PyQt6.QtWidgets import QColorDialog
 
 
 class GridWidget(CustomWidget):
     def __init__(self, **kwargs):
-        super().__init__(**kwargs, filename="grid_preferences")
+        super().__init__(**kwargs)
 
-        self.gridLineColorButton.clicked.connect(self.handle_grid_line_color_button)
-        self.canvas_color.clicked.connect(self.handle_canvas_color_button)
+        self.ui = Ui_grid_preferences()
+        self.ui.setupUi(self)
 
-        self.grid_size_spinbox.setValue(self.settings_manager.grid_settings.size)
-        self.grid_size_spinbox.valueChanged.connect(self.handle_grid_size_change)
+        self.ui.gridLineColorButton.clicked.connect(self.handle_grid_line_color_button)
+        self.ui.canvas_color.clicked.connect(self.handle_canvas_color_button)
 
-        self.grid_line_width_spinbox.setValue(self.settings_manager.grid_settings.line_width)
-        self.grid_line_width_spinbox.valueChanged.connect(self.handle_line_width_change)
+        self.ui.grid_size_spinbox.setValue(self.settings_manager.grid_settings.size)
+        self.ui.grid_size_spinbox.valueChanged.connect(self.handle_grid_size_change)
 
-        self.show_grid_checkbox.setChecked(self.settings_manager.grid_settings.show_grid is True)
-        self.show_grid_checkbox.stateChanged.connect(self.handle_show_grid_checkbox)
+        self.ui.grid_line_width_spinbox.setValue(self.settings_manager.grid_settings.line_width)
+        self.ui.grid_line_width_spinbox.valueChanged.connect(self.handle_line_width_change)
 
-        self.snap_to_grid_checkbox.setChecked(self.settings_manager.grid_settings.snap_to_grid is True)
-        self.snap_to_grid_checkbox.stateChanged.connect(self.handle_snap_to_grid_checkbox)
+        self.ui.show_grid_checkbox.setChecked(self.settings_manager.grid_settings.show_grid is True)
+        self.ui.show_grid_checkbox.stateChanged.connect(self.handle_show_grid_checkbox)
+
+        self.ui.snap_to_grid_checkbox.setChecked(self.settings_manager.grid_settings.snap_to_grid is True)
+        self.ui.snap_to_grid_checkbox.stateChanged.connect(self.handle_snap_to_grid_checkbox)
 
     def handle_grid_line_color_button(self):
         color = QColorDialog.getColor()
