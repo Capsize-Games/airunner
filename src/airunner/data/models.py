@@ -5,12 +5,21 @@ from sqlalchemy.orm import relationship
 Base = declarative_base()
 
 
+class PromptStyleCategory(Base):
+    __tablename__ = 'prompt_style_category'
+
+    id = Column(Integer, primary_key=True)
+    name = Column(String)
+    negative_prompt = Column(String)
+
+
 class PromptStyle(Base):
     __tablename__ = 'prompt_style'
 
     id = Column(Integer, primary_key=True)
     name = Column(String)
-    negative_prompt = Column(String)
+    style_category_id = Column(Integer, ForeignKey('prompt_style_category.id'))
+    style_category = relationship("PromptStyleCategory", backref="styles")
 
 
 class PromptCategory(Base):
@@ -20,13 +29,33 @@ class PromptCategory(Base):
     name = Column(String)
 
 
-class PromptVariable(Base):
-    __tablename__ = 'prompt_variable'
+class PromptVariableCategory(Base):
+    __tablename__ = 'prompt_variable_category'
 
     id = Column(Integer, primary_key=True)
     name = Column(String)
-    category_id = Column(Integer, ForeignKey('prompt_category.id'))
-    category = relationship("PromptCategory", backref="variables")
+
+
+class PromptVariableCategoryWeight(Base):
+    __tablename__ = 'prompt_variable_category_weight'
+
+    id = Column(Integer, primary_key=True)
+    weight = Column(Float)
+    prompt_category_id = Column(Integer, ForeignKey('prompt_category.id'))
+    prompt_category = relationship("PromptCategory", backref="weights")
+    variable_category_id = Column(Integer, ForeignKey('prompt_variable_category.id'))
+    variable_category = relationship("PromptVariableCategory", backref="weights")
+
+
+class PromptVariable(Base):
+    __tablename__ = 'prompt_variables'
+
+    id = Column(Integer, primary_key=True)
+    value = Column(String)
+    prompt_category_id = Column(Integer, ForeignKey('prompt_category.id'))
+    prompt_category = relationship("PromptCategory", backref="variables")
+    variable_category_id = Column(Integer, ForeignKey('prompt_variable_category.id'))
+    variable_category = relationship("PromptVariableCategory", backref="variables")
 
 
 class PromptOption(Base):
@@ -34,10 +63,20 @@ class PromptOption(Base):
 
     id = Column(Integer, primary_key=True)
     prompt_id = Column(Integer, ForeignKey('prompts.id'))
-    text = Column(String)
-    cond = Column(String)
-    else_cond = Column(String)
-    next_cond = Column(String)
+    text = Column(String, default="")
+    cond = Column(String, default="")
+    else_cond = Column(String, default="")
+    or_cond = Column(String, default="")
+
+    next_cond_id = Column(Integer, ForeignKey('prompt_option.id'), nullable=True)
+    next_cond = Column(Integer, ForeignKey('prompt_option.id'), nullable=True)
+
+    next = relationship(
+        "PromptOption",
+        backref="prev",
+        remote_side=[id],
+        foreign_keys=[next_cond_id]
+    )
 
 
 class Prompt(Base):
@@ -47,7 +86,7 @@ class Prompt(Base):
     name = Column(String)
     category_id = Column(Integer, ForeignKey('prompt_category.id'))
     category = relationship("PromptCategory", backref="prompts")
-    options = relationship("PromptOption", backref="prompt")
+    options = relationship("PromptOption", backref="prompts")
 
 
 class SavedPrompt(Base):
