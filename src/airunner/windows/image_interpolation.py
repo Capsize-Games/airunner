@@ -1,17 +1,18 @@
 import os
 from PIL import Image
 from PyQt6 import uic
-from PyQt6.QtCore import Qt, QPoint
-from PyQt6.QtGui import QPixmap, QImage
-from PyQt6.QtWidgets import QFileDialog, QSpacerItem, QSizePolicy, QLabel
+from PyQt6.QtCore import QPoint
+from PyQt6.QtGui import QPixmap
+from PyQt6.QtWidgets import QLabel
+
+from airunner.pyqt.interpolation import Ui_interpolation_window
 from airunner.utils import image_to_pixmap
 from airunner.windows.base_window import BaseWindow
 from functools import partial
 
 
 class ImageInterpolation(BaseWindow):
-    template_name = "interpolation"
-    window_title = "Image Interpolation"
+    template_class_ = Ui_interpolation_window
     is_modal = True
 
     def __init__(self, *args, **kwargs):
@@ -21,10 +22,10 @@ class ImageInterpolation(BaseWindow):
         super().__init__(*args, **kwargs)
 
     def initialize_window(self):
-        self.interpolation_container = self.template.interpolation_scrollarea.widget()
+        self.interpolation_container = self.ui.interpolation_scrollarea.widget()
         self.interpolation_container_layout = self.interpolation_container.layout()
         self.add_interpolation_widget()
-        self.template.add_blend_option_button.clicked.connect(self.add_interpolation_widget)
+        self.ui.add_blend_option_button.clicked.connect(self.add_interpolation_widget)
         self.load_generate_form()
 
         """
@@ -48,8 +49,8 @@ class ImageInterpolation(BaseWindow):
         """
         self.app.image_interpolation_window = self
 
-        self.template.kandinsky_button.clicked.connect(self.handle_kandinsky_button)
-        self.template.closeEvent = self.handle_close
+        self.ui.kandinsky_button.clicked.connect(self.handle_kandinsky_button)
+        self.ui.closeEvent = self.handle_close
 
     def handle_generate_signal(self, options):
         options["use_interpolation"] = True
@@ -77,8 +78,8 @@ class ImageInterpolation(BaseWindow):
         widget = uic.loadUi(os.path.join("pyqt/generated_image.ui"))
         pixmap = image_to_pixmap(image, 256)
         widget.image_container.setPixmap(pixmap)
-        container = self.template.generate_scroll_area.widget()
-        self.template.interpolated_images_label.hide()
+        container = self.ui.generate_scroll_area.widget()
+        self.ui.interpolated_images_label.hide()
         widget.to_canvas_button.clicked.connect(partial(self.handle_interpolated_image_to_canvas_button, image=image))
         widget.export_button.clicked.connect(partial(self.handle_interpolated_image_export_button, image=image))
         widget.delete_button.clicked.connect(partial(self.handle_interpolated_image_delete_button, widget=widget))
@@ -125,7 +126,7 @@ class ImageInterpolation(BaseWindow):
     def handle_interpolated_image_delete_button(self, widget):
         widget.deleteLater()
         widget.setParent(None)
-        self.template.interpolated_images_label.show()
+        self.ui.interpolated_images_label.show()
 
     def handle_close(self, event):
         """
@@ -137,7 +138,7 @@ class ImageInterpolation(BaseWindow):
         self.app.generator_tab_widget.data["kandinsky"]["txt2img"]["generate_button"].setText("Generate")
         self.app.use_interpolation = False
         self.app.get_interpolation_data = None
-        self.template.close()
+        self.ui.close()
 
     def load_generate_form(self):
         pass
@@ -158,7 +159,7 @@ class ImageInterpolation(BaseWindow):
             widget.layer_combobox.addItem(layer.name)
         # on change of widget.layer_combobox, change the thumbnail
         widget.layer_combobox.currentIndexChanged.connect(partial(self.show_thumbnail, widget=widget))
-        self.template.interpolation_scrollarea.setWidget(self.interpolation_container)
+        self.ui.interpolation_scrollarea.setWidget(self.interpolation_container)
         # create a border around widget.image_container
         widget.import_image_button.clicked.connect(partial(self.handle_interpolation_import_image_button, widget=widget))
 
@@ -173,7 +174,7 @@ class ImageInterpolation(BaseWindow):
 
     def update_interpolation_slot_combobox(self):
         # iterate over all interpolation widgets and update the slot combobox
-        container = self.template.generate_scroll_area.widget()
+        container = self.ui.generate_scroll_area.widget()
         num_widgets = self.interpolation_container_layout.count()
         for i in range(container.layout().count()):
             interpolation_widget = container.layout().itemAt(i).widget()

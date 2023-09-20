@@ -1,13 +1,13 @@
 from PyQt6 import uic
 
+from airunner.pyqt.deterministic_generation_window import Ui_deterministic_generation_window
 from airunner.utils import image_to_pixmap
 from airunner.windows.base_window import BaseWindow
 from functools import partial
 
 
 class DeterministicGenerationWindow(BaseWindow):
-    template_name = "deterministic_generation_window"
-    window_title = "Deterministic Generation"
+    template_class_ = Ui_deterministic_generation_window
     is_modal = True
     images = []
     data = {}
@@ -19,11 +19,11 @@ class DeterministicGenerationWindow(BaseWindow):
 
     def close_event(self, _event):
         self.app.close_deterministic_generation_window()
-        self.template.close()
+        self.ui.close()
 
     def initialize_window(self):
         self.add_image_widgets_to_canvas()
-        self.template.closeEvent = self.close_event
+        self.ui.closeEvent = self.close_event
         # self.app.add_image_to_canvas_signal.connect(self.handle_add_image_to_canvas_signal)
 
     def add_image_widgets_to_canvas(self):
@@ -39,14 +39,14 @@ class DeterministicGenerationWindow(BaseWindow):
         widget.thumbnail.setPixmap(pixmap)
         widget.new_batch_button.clicked.connect(partial(self.new_batch, index))
         widget.to_canvas_button.clicked.connect(partial(self.to_canvas, index))
-        # replace self.template.widget_1 which is a QWidget with widget
+        # replace self.ui.widget_1 which is a QWidget with widget
         row = 0 if index < 2 else 1
         col = index % 2
-        self.template.gridLayout.addWidget(widget, row, col, 1, 1)
+        self.ui.gridLayout.addWidget(widget, row, col, 1, 1)
 
     def new_batch(self, index):
         self.app.new_batch(index, self.images[index], data=self.data)
-        self.template.close()
+        self.ui.close()
 
     def to_canvas(self, index):
         image = self.images[index]
