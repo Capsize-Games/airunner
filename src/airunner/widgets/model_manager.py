@@ -293,8 +293,6 @@ class ModelManagerWidget(BaseWidget):
 
     def show_items_in_scrollarea(self):
         models = self.settings_manager.models.all()
-        print("MODELS TOTAL: ", len(models))
-        pipelines = self.settings_manager.pipelines
         for key in self.model_widgets.keys():
             for model_widget in self.model_widgets[key]:
                 model_widget.deleteLater()
