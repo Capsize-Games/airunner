@@ -239,7 +239,7 @@ class CanvasBrushesMixin:
     def pen(self, event):
         brush_color = "#ffffff"
         if event.button() == Qt.MouseButton.LeftButton or Qt.MouseButton.LeftButton in event.buttons():
-            brush_color = self.parent.brush_settings.primary_color
+            brush_color = self.settings_manager.brush_settings.primary_color
         brush_color = QColor(brush_color)
         # brush_color = QColor(
         #     brush_color.red(),
@@ -272,7 +272,7 @@ class CanvasBrushesMixin:
             end_x = line.end_point.x()
             end_y = line.end_point.y()
 
-            brush_size = int(self.settings_manager / 2)
+            brush_size = int(self.settings_manager.brush_settings.brush_size / 2)
             min_x = min(start_x, end_x) - brush_size
             min_y = min(start_y, end_y) - brush_size
             max_x = max(start_x, end_x) + brush_size
