@@ -40,28 +40,36 @@ class PromptBuilderForm(BaseWidget):
         self.initialize_buttons()
         self.initialize_radio_buttons()
 
+    def variables_by_category(self, name):
+        variable_objects = self.settings_manager.variables_by_category(name)
+        return list(filter(None, [v.value for v in variable_objects]))
+
+    def prompts_by_category(self, name):
+        prompt_objects = self.settings_manager.prompts_by_category(name)
+        return list(filter(None, [p.name for p in prompt_objects]))
+
     def initialize_category_dropdowns(self):
         # initialize category dropdowns
         self.prompt_category_current_index = 0
-        self.prompt_category.addItems(self.prompt_data.categories)
+        self.prompt_category.addItems(self.variables_by_category("composition_category"))
         self.prompt_category.currentIndexChanged.connect(partial(self.set_prompts, "advanced"))
         self.prompt_category.lineEdit().setReadOnly(True)
 
     def initialize_genre_dropdowns(self):
         # initialize genre dropdowns
-        self.prompt_genre.addItems(self.prompt_data.genres)
+        self.prompt_genre.addItems(self.variables_by_category("composition_genre"))
         self.prompt_genre.currentIndexChanged.connect(partial(self.set_genre))
         self.prompt_genre.lineEdit().setReadOnly(True)
 
     def initialize_color_dropdowns(self):
         # initialize color dropdowns
-        self.prompt_color.addItems(self.prompt_data.colors)
+        self.prompt_color.addItems(self.variables_by_category("composition_color"))
         self.prompt_color.currentIndexChanged.connect(partial(self.set_color))
         self.prompt_color.lineEdit().setReadOnly(True)
 
     def initialize_style_dropdowns(self):
         # initialize style dropdowns
-        self.prompt_style.addItems(self.prompt_data.styles)
+        self.prompt_style.addItems(self.variables_by_category("composition_style"))
         self.prompt_style.currentIndexChanged.connect(partial(self.set_style))
         self.prompt_style.lineEdit().setReadOnly(True)
 
@@ -173,13 +181,13 @@ class PromptBuilderForm(BaseWidget):
         self.clear_scroll_grid()
         data = self.settings_manager.current_prompt_generator_settings.weighted_values
         try:
-            for index, variable in enumerate(self.prompt_data.available_variables_by_category(category)):
+            for index, variable in enumerate(self.variables_by_category(category)):
                 if category in data and variable in data[category]:
                     weighted_value = data[category][variable]
                 else:
                     weighted_value = {
                         "value": "",
-                        "weight": self.prompt_data.variable_weights_by_category(category, variable)
+                        "weight": self.settings_manager.variable_weights_by_category(category, variable).weight
                     }
                 self.create_prompt_widget(category, variable, weighted_value, index)
         except KeyError:
@@ -197,7 +205,7 @@ class PromptBuilderForm(BaseWidget):
         widget.spinbox.setValue(weight)
         widget.spinbox.valueChanged.connect(partial(
             self.handle_weight_spinbox_change, category, variable, widget))
-        items = self.prompt_data.variable_values_by_category(category, variable)
+        items = self.variables_by_category(category)
         if isinstance(items, dict):
             if items["type"] == "range":
                 items = [str(n) for n in range(items["min"], items["max"] + 1)]
@@ -247,7 +255,7 @@ class PromptBuilderForm(BaseWidget):
     def set_prompts(self, prompt_type):
         category = self.prompt_category.currentText()
         try:
-            prompts = list(self.prompt_data.available_prompts_by_category(category))
+            prompts = list(self.prompts_by_category(category))
         except KeyError:
             prompts = []
         self.prompt_types = prompts

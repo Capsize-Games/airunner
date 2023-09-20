@@ -1385,7 +1385,13 @@ variable_bootstrap_data = {
                    "valley", "underwater", "sky", "prairie", "castle", "moorland", "glacier"],
     "weather": ["sunny", "cloudy", "rainy", "snowy", "windy"],
     "eye_color": ["brown", "blue", "green", "hazel", "gray"],
-    "composition_category": [],
+    "composition_category": [
+        "animal",
+        "architecture",
+        "food",
+        "person",
+        "vehicle"
+    ],
     "composition_color": ["colorful", "black and white", "monochromatic", "sepia", "grayscale", "pastel", "neon",
                           "vibrant", "muted", "dark", "light", "warm", "cool", "bright", "pale", "bold", "subtle",
                           "contrasting", "complementary", "analogous", "triadic", "split-complementary",
@@ -1399,7 +1405,12 @@ variable_bootstrap_data = {
                           "expressionist", "surrealist", "cubist", "minimalist", "fauvist", "pointillist",
                           "post-impressionist", "post-modern", "baroque", "rococo", "romantic", "renaissance",
                           "neoclassical", "art nouveau", "art deco", "gothic", "classical", "acade"],
-    "composition_style": []
+    "composition_style": [
+        "realistic",
+        "artistic",
+        "cartoon",
+        "illustration"
+    ]
 }
 
 style_bootstrap_data = {
