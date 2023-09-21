@@ -175,8 +175,8 @@ shutil.copyfile(
     f'{DIST}/src/icon_256.png'
 )
 shutil.copyfile(
-    f'{ROOT}/src/airunner/src/splashscreen.png',
-    f'{DIST}/src/splashscreen.png'
+    f'{ROOT}/src/airunner/images/splashscreen.png',
+    f'{DIST}/images/splashscreen.png'
 )
 shutil.copyfile(
     f'{ROOT}/src/airunner/v1.yaml',
