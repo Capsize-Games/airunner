@@ -165,7 +165,7 @@ shutil.copyfile('/app/airunner/linux.itch.toml', '/app/dist/airunner/.itch.toml'
 shutil.copytree('/app/airunner/src/airunner/src/icons', '/app/dist/airunner/src/icons')
 shutil.copytree('/app/airunner/src/airunner/data', '/app/dist/airunner/data')
 shutil.copyfile('/app/airunner/src/airunner/src/icon_256.png', '/app/dist/airunner/src/icon_256.png')
-shutil.copyfile('/app/airunner/src/airunner/src/splashscreen.png', '/app/dist/airunner/src/splashscreen.png')
+shutil.copyfile('/app/airunner/src/airunner/images/splashscreen.png', '/app/dist/airunner/images/splashscreen.png')
 
 # copy sd config files
 os.makedirs('/dist/airunner/diffusers/pipelines/stable_diffusion', exist_ok=True)
