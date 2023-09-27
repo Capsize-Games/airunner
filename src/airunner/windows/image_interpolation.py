@@ -5,7 +5,7 @@ from PyQt6.QtCore import QPoint
 from PyQt6.QtGui import QPixmap
 from PyQt6.QtWidgets import QLabel
 
-from airunner.pyqt.interpolation import Ui_interpolation_window
+from airunner.pyqt.windows.interpolation.interpolation import Ui_interpolation_window
 from airunner.utils import image_to_pixmap
 from airunner.windows.base_window import BaseWindow
 from functools import partial

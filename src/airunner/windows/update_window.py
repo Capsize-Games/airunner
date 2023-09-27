@@ -1,4 +1,4 @@
-from airunner.pyqt.about import Ui_about_window
+from airunner.pyqt.windows.about.about import Ui_about_window
 from airunner.windows.base_window import BaseWindow
 # open the version file from the root of the project and get the VERSION variable string from it
 

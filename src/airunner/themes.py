@@ -1,3 +1,6 @@
+from airunner.aihandler.settings_manager import SettingsManager
+
+
 class Themes:
     themes = {
         "dark": {
@@ -544,12 +547,12 @@ class Themes:
         },
     }
 
-    def __init__(self, app):
-        self.app = app
+    def __init__(self):
+        self.settings_manager = SettingsManager()
 
     def css(self, styles):
         theme_name = "light"
-        if self.app.is_dark:
+        if self.settings_manager.dark_mode_enabled:
             theme_name = "dark"
         try:
             return self.themes.get(theme_name, {}).get(styles, self.themes.get("all", {}).get(styles, ""))

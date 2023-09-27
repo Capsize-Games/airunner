@@ -2,8 +2,46 @@ import os
 import torch
 from PIL import Image
 from PyQt6.QtGui import QPixmap, QImage
+from PyQt6.QtWidgets import QFileDialog, QApplication, QMainWindow
 
 from airunner.aihandler.settings_manager import SettingsManager
+
+
+def get_venv_python_executable():
+    """
+    Gets the python executable from the venv.
+    :return: executable path
+    """
+    venv_python_executable = os.path.join(
+        os.path.dirname(os.path.dirname(os.path.dirname(os.path.dirname(__file__)))),
+        "venv",
+        "bin",
+        "python",
+    )
+    if not os.path.exists(venv_python_executable):
+        venv_python_executable = os.path.join(
+            os.path.dirname(os.path.dirname(os.path.dirname(os.path.dirname(__file__)))),
+            "venv",
+            "Scripts",
+            "python.exe",
+        )
+    if not os.path.exists(venv_python_executable):
+        venv_python_executable = os.path.join(
+            os.path.dirname(os.path.dirname(os.path.dirname(os.path.dirname(__file__)))),
+            "venv",
+            "bin",
+            "python3",
+        )
+    if not os.path.exists(venv_python_executable):
+        venv_python_executable = os.path.join(
+            os.path.dirname(os.path.dirname(os.path.dirname(os.path.dirname(__file__)))),
+            "venv",
+            "Scripts",
+            "python3.exe",
+        )
+    if not os.path.exists(venv_python_executable):
+        raise Exception("Could not find python executable in venv")
+    return venv_python_executable
 
 
 def initialize_os_environment():
@@ -318,3 +356,16 @@ def auto_export_image(
             image.save(os.path.join(path, filename))
         return os.path.join(path, filename)
     return None
+
+
+def open_file_path(label="Import Image", directory="", file_type="Image Files (*.png *.jpg *.jpeg)"):
+    return QFileDialog.getOpenFileName(
+        None, label, directory, file_type
+    )
+
+
+def get_main_window():
+    app = QApplication.instance()
+    for widget in app.topLevelWidgets():
+        if isinstance(widget, QMainWindow):
+            return widget

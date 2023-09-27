@@ -3,7 +3,7 @@ from PyQt6 import uic
 from PyQt6.QtCore import QThread, pyqtSignal, QObject
 from PyQt6.QtWidgets import QVBoxLayout
 
-from airunner.pyqt.model_merger import Ui_model_merger
+from airunner.pyqt.widgets.model_merger.model_merger import Ui_model_merger
 from airunner.windows.base_window import BaseWindow
 
 

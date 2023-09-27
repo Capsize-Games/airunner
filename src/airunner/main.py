@@ -46,7 +46,7 @@ if __name__ == "__main__":
             screen = screens.at(0)
         except AttributeError:
             screen = screens[0]
-        pixmap = QPixmap("src/splashscreen.png")
+        pixmap = QPixmap("images/splashscreen.png")
         splash = QSplashScreen(screen, pixmap, QtCore.Qt.WindowType.WindowStaysOnTopHint)
         splash.show()
         # make message white
@@ -54,7 +54,7 @@ if __name__ == "__main__":
         app.processEvents()
         return splash
 
-    def show_main_application(splash):
+    def show_main_application(app, splash):
         try:
             window = MainWindow()
         except Exception as e:
@@ -68,6 +68,7 @@ if __name__ == "__main__":
                 An error occurred while initializing the application. 
                 Please report this issue on GitHub or Discord."
             """)
+        app.main_window = window
         splash.finish(window)
         window.raise_()
 
@@ -94,6 +95,6 @@ if __name__ == "__main__":
 
         splash = display_splash_screen(app)
 
-        QTimer.singleShot(50, partial(show_main_application, splash))
+        QTimer.singleShot(50, partial(show_main_application, app, splash))
 
         sys.exit(app.exec())
