@@ -2,14 +2,14 @@ import io
 import random
 import subprocess
 
-import numpy as np
-from PIL import Image, ImageGrab, ImageOps, ImageEnhance
+from PIL import Image, ImageGrab, ImageOps
 from PIL.ImageQt import ImageQt
 from PyQt6.QtCore import QPoint, QRect
 from PyQt6.QtGui import QPainter, QPixmap
 from PIL.ImageFilter import GaussianBlur
+
+from airunner.filters.rgb_noise import RGBNoiseFilter
 from airunner.models.imagedata import ImageData
-from PIL.ExifTags import TAGS
 from airunner.models.layerdata import LayerData
 
 
