@@ -2,8 +2,8 @@ from PyQt6.QtCore import Qt, QSize
 from PyQt6.QtGui import QStandardItemModel, QStandardItem, QBrush, QColor, QPainter
 from PyQt6.QtWidgets import QStyledItemDelegate, QStyleOptionViewItem, QLabel, QWidget, QVBoxLayout, QPlainTextEdit
 
-from airunner.pyqt.airunner_settings import Ui_airunner_settings
-from airunner.widgets.keyboard_shortcuts_widget import KeyboardShortcutsWidget
+from airunner.pyqt.widgets.keyboard_shortcuts.keyboard_shortcuts_widget import KeyboardShortcutsWidget
+from airunner.pyqt.windows.settings.airunner_settings import Ui_airunner_settings
 from airunner.windows.base_window import BaseWindow
 # open the version file from the root of the project and get the VERSION variable string from it
 from airunner.windows.export_preferences_widget import ExportPreferencesWidget

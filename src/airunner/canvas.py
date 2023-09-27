@@ -2,10 +2,9 @@ from functools import partial
 
 from PIL import Image
 from PyQt6.QtCore import Qt, QPoint, QRect
-from PyQt6.QtGui import QColor, QPainter, QBrush, QCursor, QIcon
+from PyQt6.QtGui import QColor, QPainter, QBrush, QCursor
 from PyQt6.QtWidgets import QSpacerItem, QSizePolicy, QVBoxLayout, QWidget
 
-from airunner.aihandler.logger import Logger as logger
 from airunner.aihandler.qtvar import BooleanVar
 from airunner.cursors.circle_brush import CircleCursor
 from airunner.mixins.canvas_active_grid_area_mixin import CanvasActiveGridAreaMixin
@@ -16,7 +15,7 @@ from airunner.mixins.canvas_selectionbox_mixin import CanvasSelectionboxMixin
 from airunner.mixins.canvas_widgets_mixin import CanvasWidgetsMixin
 from airunner.models.layerdata import LayerData
 from airunner.models.linedata import LineData
-from airunner.widgets.layer_widget import LayerWidget
+from airunner.pyqt.widgets.layers.layer_widget import LayerWidget
 
 
 class Canvas(
@@ -36,6 +35,7 @@ class Canvas(
     last_mouse_pos = None
     _is_dirty = BooleanVar(False)
     selected_layers = {}
+    container = None
 
     @property
     def is_dirty(self):
@@ -101,7 +101,7 @@ class Canvas(
 
     @property
     def canvas_container(self):
-        return self.parent.canvas_widget.canvas_container
+        return self.parent.ui.canvas_widget.ui.canvas_container
 
     @property
     def settings_manager(self):
@@ -128,7 +128,7 @@ class Canvas(
     def get_layer_opacity(self, index):
         return self.layers[index].opacity
 
-    def set_layer_opacity(self, opacity:int):
+    def set_layer_opacity(self, opacity: int):
         opacity = opacity / 100
         self.current_layer.opacity = opacity
         self.update()
@@ -249,7 +249,7 @@ class Canvas(
         painter.drawRect(self.pos_x + left, self.pos_y + top, right, bottom)
         painter.end()
 
-    def enter_event(self, event):
+    def enter_event(self, _event):
         self.update_cursor()
 
     def update_cursor(self):
@@ -257,7 +257,13 @@ class Canvas(
             # show as grab cursor
             self.canvas_container.setCursor(Qt.CursorShape.ClosedHandCursor)
         elif self.brush_selected or self.eraser_selected:
-            self.canvas_container.setCursor(CircleCursor(Qt.GlobalColor.white, Qt.GlobalColor.transparent, self.brush_size))
+            self.canvas_container.setCursor(
+                CircleCursor(
+                    Qt.GlobalColor.white,
+                    Qt.GlobalColor.transparent,
+                    self.brush_size
+                )
+            )
         elif self.move_selected:
             self.canvas_container.setCursor(Qt.CursorShape.OpenHandCursor)
         elif self.active_grid_area_selected:
@@ -265,7 +271,7 @@ class Canvas(
         else:
             self.canvas_container.setCursor(QCursor(Qt.CursorShape.ArrowCursor))
 
-    def leave_event(self, event):
+    def leave_event(self, _event):
         self.canvas_container.setCursor(QCursor(Qt.CursorShape.ArrowCursor))
 
     def update(self):
@@ -327,6 +333,7 @@ class Canvas(
         self.update()
 
     _is_canvas_drag_mode = False
+
     @property
     def is_canvas_drag_mode(self):
         return self._is_canvas_drag_mode
@@ -459,10 +466,10 @@ class Canvas(
         self.update_canvas_color(self.settings_manager.canvas_color)
 
     def update_canvas_color(self, color):
-        self.parent.canvas_widget.canvas_container.setStyleSheet(f"""
+        self.canvas_container.setStyleSheet(f"""
             background-color: {color};
         """)
-        self.parent.canvas_widget.canvas_container.setAutoFillBackground(True)
+        self.canvas_container.setAutoFillBackground(True)
         self.update()
 
     # Canvas layer functions
@@ -572,7 +579,7 @@ class Canvas(
                 return index
         return 0
 
-    def delete_layer(self, value=False, index=None, layer=None):
+    def delete_layer(self, _value=False, index=None, layer=None):
         current_index = index
         if layer and current_index is None:
             for layer_index, layer_object in enumerate(self.layers):
@@ -628,20 +635,20 @@ class Canvas(
 
         for layer in self.layers:
             index = self.layers.index(layer)
-            layer_obj = LayerWidget(app=self.parent, data=layer)
-            layer_obj.layer_name.setText(layer.name)
+            layer_obj = LayerWidget(data=layer)
+            layer_obj.ui.layer_name.setText(layer.name)
 
             # onclick of layer_obj set as the current layer index on self
             layer_obj.mousePressEvent = partial(self.handle_layer_click, layer, index)
 
             # show a border around layer_obj if it is the selected index
             if self.current_layer_index == index:
-                layer_obj.frame.setStyleSheet(self.parent.css("layer_highlight_style"))
+                layer_obj.ui.frame.setStyleSheet(self.parent.css("layer_highlight_style"))
             else:
-                layer_obj.frame.setStyleSheet(self.parent.css("layer_normal_style"))
+                layer_obj.ui.frame.setStyleSheet(self.parent.css("layer_normal_style"))
 
             layer_obj.set_icon()
-            layer_obj.visible_button.clicked.connect(
+            layer_obj.ui.visible_button.clicked.connect(
                 lambda _, _layer=layer, _layer_obj=layer_obj: self.toggle_layer_visibility(_layer, _layer_obj))
 
             container.layout().addWidget(layer_obj)
@@ -666,7 +673,9 @@ class Canvas(
                     item = self.container.layout().itemAt(index)
                     if item and index != self.current_layer_index:
                         self.selected_layers[index] = layer
-                        self.selected_layers[index].layer_widget.frame.setStyleSheet(self.parent.css("secondary_layer_highlight_style"))
+                        self.selected_layers[index].layer_widget.frame.setStyleSheet(
+                            self.parent.css("secondary_layer_highlight_style")
+                        )
         else:
             for data in self.selected_layers.values():
                 data.layer_widget.frame.setStyleSheet(self.parent.css("layer_normal_style"))
