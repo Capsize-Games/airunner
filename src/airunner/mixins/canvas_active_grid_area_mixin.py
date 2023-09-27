@@ -7,23 +7,31 @@ class CanvasActiveGridAreaMixin:
 
     @property
     def active_grid_area_color(self):
-        if self.parent.current_section == "txt2img":
+        current_tab = self.settings_manager.current_tab
+        if current_tab == "stablediffusion":
+            current_section = self.settings_manager.current_section_stablediffusion
+        elif current_tab == "kandinsky":
+            current_section = self.settings_manager.current_section_kandinsky
+        else:
+            current_section = self.settings_manager.current_section_shapegif
+
+        if current_section == "txt2img":
             brush_color = QColor(0, 255, 0)
-        elif self.parent.current_section == "img2img":
+        elif current_section == "img2img":
             brush_color = QColor(255, 0, 0)
-        elif self.parent.current_section == "depth2img":
+        elif current_section == "depth2img":
             brush_color = QColor(0, 0, 255)
-        elif self.parent.current_section == "pix2pix":
+        elif current_section == "pix2pix":
             brush_color = QColor(255, 255, 0)
-        elif self.parent.current_section == "outpaint":
+        elif current_section == "outpaint":
             brush_color = QColor(0, 255, 255)
-        elif self.parent.current_section == "upscale":
+        elif current_section == "upscale":
             brush_color = QColor(255, 0, 155)
-        elif self.parent.current_section == "superresolution":
+        elif current_section == "superresolution":
             brush_color = QColor(255, 0, 255)
-        elif self.parent.current_section == "controlnet":
+        elif current_section == "controlnet":
             brush_color = QColor(255, 255, 255)
-        elif self.parent.current_section == "txt2vid":
+        elif current_section == "txt2vid":
             brush_color = QColor(144, 144, 144)
         else:
             brush_color = QColor(0, 0, 0)
