@@ -11,15 +11,14 @@ from PyQt6.QtWidgets import QApplication, QFileDialog, QMainWindow, QSplitter, Q
     QVBoxLayout
 from PyQt6.QtCore import pyqtSlot, Qt, QThread, pyqtSignal, QObject, QTimer
 from PyQt6.QtGui import QGuiApplication
-from PyQt6.QtGui import QIcon
 
+from airunner import resources  # Do not remove, this line is needed to load the ui resource files
 from airunner.aihandler.qtvar import MessageHandlerVar
 from airunner.aihandler.logger import Logger as logger
 from airunner.aihandler.pyqt_client import OfflineClient
 from airunner.aihandler.settings import LOG_LEVEL
 from airunner.aihandler.enums import MessageCode
 from airunner.airunner_api import AIRunnerAPI
-from airunner.automatic_filter_manager import AutomaticFilterManager
 from airunner.data.db import session
 from airunner.data.models import SplitterSection
 from airunner.input_event_manager import InputEventManager
@@ -28,16 +27,14 @@ from airunner.mixins.generator_mixin import GeneratorMixin
 from airunner.mixins.history_mixin import HistoryMixin
 from airunner.mixins.menubar_mixin import MenubarMixin
 from airunner.mixins.toolbar_mixin import ToolbarMixin
+from airunner.pyqt.templates.main_window_new import Ui_MainWindow
+from airunner.pyqt.widgets.canvas.canvas_widget import CanvasWidget
+from airunner.pyqt.widgets.embeddings.embedding_widget import EmbeddingWidget
+from airunner.pyqt.widgets.footer.footer_widget import FooterWidget
+from airunner.pyqt.widgets.generator_form.generator_tab_widget import GeneratorTabWidget
+from airunner.pyqt.widgets.model_manager.model_manager_widget import ModelManagerWidget
+from airunner.pyqt.widgets.toolbar.tool_bar_widget import ToolBarWidget
 from airunner.themes import Themes
-from airunner.widgets.canvas_widget import CanvasWidget
-from airunner.widgets.embedding_widget import EmbeddingWidget
-from airunner.widgets.footer_widget import FooterWidget
-from airunner.widgets.generator_tab_widget import GeneratorTabWidget
-from airunner.prompt_builder.widgets.prompt_builder import PromptBuilderWidget
-from airunner.widgets.model_manager import ModelManagerWidget
-from airunner.widgets.tool_bar_widget import ToolBarWidget
-from airunner.widgets.tool_menu_widget import ToolMenuWidget
-from airunner.widgets.header_widget import HeaderWidget
 from airunner.windows.deterministic_generation_window import DeterministicGenerationWindow
 from airunner.windows.update_window import UpdateWindow
 from airunner.utils import get_version, get_latest_version, auto_export_image
@@ -191,6 +188,26 @@ class MainWindow(
         self._override_tab_section = val
 
     @property
+    def canvas_widget(self):
+        return self.ui.canvas_widget.ui
+
+    @property
+    def generator_tab_widget(self):
+        return self.ui.generator_widget
+
+    @property
+    def toolbar_widget(self):
+        return self.ui.toolbar_widget
+
+    @property
+    def prompt_builder(self):
+        return self.ui.prompt_builder
+
+    @property
+    def footer_widget(self):
+        return self.ui.footer_widget
+
+    @property
     def canvas_position(self):
         return self.canvas_widget.canvas_position
 
@@ -316,7 +333,7 @@ class MainWindow(
     @property
     def css(self):
         if self._themes is None:
-            self._themes = Themes(app=self)
+            self._themes = Themes()
         return self._themes.css
 
     @property
@@ -458,7 +475,7 @@ class MainWindow(
         # check for self.current_layer.lines every 100ms
         self.timer = self.startTimer(100)
 
-        self.header_widget.set_size_increment_levels()
+        # self.header_widget.set_size_increment_levels()
         self.clear_status_message()
 
         self.register_keypress()
@@ -524,7 +541,9 @@ class MainWindow(
 
     def timerEvent(self, event):
         self.canvas.timerEvent(event)
-        self.update_system_stats()
+        self.footer_widget.update_system_stats(
+            queue_size=self.client.queue.qsize()
+        )
 
     def check_for_latest_version(self):
         self.version_thread = QThread()
@@ -608,25 +627,29 @@ class MainWindow(
 
         self.input_event_manager = InputEventManager(app=self)
         self.initialize_settings_manager()
-        self.instantiate_widgets()
-        self.initialize_handlers()
         self.initialize_window()
-        self.initialize_widgets()
+        # self.instantiate_widgets()
+        self.initialize_handlers()
+        # self.initialize_widgets()
         self.initialize_mixins()
-        self.header_widget.initialize()
-        self.header_widget.set_size_increment_levels()
+        self.generate_signal.connect(self.handle_generate)
+        # self.header_widget.initialize()
+        # self.header_widget.set_size_increment_levels()
         self.initialize_shortcuts()
         self.initialize_stable_diffusion()
         if self.settings_manager.force_reset:
             self.reset_settings()
             self.settings_manager.set_value("force_reset", False)
-        self.actionShow_Active_Image_Area.setChecked(
-            self.settings_manager.show_active_image_area == True
-        )
+        # self.actionShow_Active_Image_Area.setChecked(
+        #     self.settings_manager.show_active_image_area == True
+        # )
         self.initialize_default_buttons()
         self.generator_tab_widget.initialize()
         self.prompt_builder.process_prompt()
         self.connect_signals()
+
+    def handle_generate(self):
+        self.prompt_builder.inject_prompt()
 
     def initialize_default_buttons(self):
         pass
@@ -670,41 +693,50 @@ class MainWindow(
 
         self.button_clicked_signal.connect(self.handle_button_clicked)
 
+        self.image_generated.connect(
+            self.ui.generator_widget.ui.generator_form.ui.controlnet_settings.handle_image_generated
+        )
+        self.controlnet_image_generated.connect(
+            self.ui.generator_widget.ui.generator_form.ui.controlnet_settings.handle_controlnet_image_generated
+        )
+
     def instantiate_widgets(self):
         logger.info("Instantiating widgets")
         self.generator_tab_widget = GeneratorTabWidget(app=self)
-        self.header_widget = HeaderWidget(app=self)
         self.canvas_widget = CanvasWidget(app=self)
-        self.tool_menu_widget = ToolMenuWidget(app=self)
+        # self.tool_menu_widget = ToolMenuWidget(app=self)
         self.toolbar_widget = ToolBarWidget(app=self)
         self.footer_widget = FooterWidget(app=self)
 
     def initialize_widgets(self):
-        logger.info("Initializing widgets")
-        self.gridLayout.setColumnStretch(1, 1)
-        self.gridLayout.addWidget(self.header_widget, 0, 0, 1, 4)
+        pass
 
-        self.splitter = QSplitter()
-        self.center_splitter = QSplitter(Qt.Orientation.Vertical)
-
-        self.create_center_panel()
-
-        # auto hide tabs
-        # center_panel.tabBar().hide()
-        self.center_splitter.setStretchFactor(1, 1)
-        self.center_splitter.setStretchFactor(2, 0)
-        self.splitter.addWidget(self.generator_tab_widget)
-        self.center_splitter.addWidget(self.canvas_widget)
-        self.center_splitter.addWidget(self.center_panel)
-        # listen to center_splitter size changes
-        self.center_splitter.splitterMoved.connect(self.handle_bottom_splitter_moved)
-        self.splitter.addWidget(self.center_splitter)
-        self.splitter.addWidget(self.tool_menu_widget)
-        self.splitter.setStretchFactor(1, 1)
-        self.splitter.splitterMoved.connect(self.handle_main_splitter_moved)
-        self.gridLayout.addWidget(self.splitter, 1, 0, 1, 3)
-        self.gridLayout.addWidget(self.toolbar_widget, 1, 3, 1, 1)
-        self.gridLayout.addWidget(self.footer_widget, 2, 0, 1, 4)
+    # def initialize_widgets(self):
+    #     logger.info("Initializing widgets")
+    #     # self.gridLayout.setColumnStretch(1, 1)
+    #     # self.gridLayout.addWidget(self.header_widget, 0, 0, 1, 4)
+    #
+    #     self.splitter = QSplitter()
+    #     self.center_splitter = QSplitter(Qt.Orientation.Vertical)
+    #
+    #     self.create_center_panel()
+    #
+    #     # auto hide tabs
+    #     # center_panel.tabBar().hide()
+    #     self.center_splitter.setStretchFactor(1, 1)
+    #     self.center_splitter.setStretchFactor(2, 0)
+    #     self.splitter.addWidget(self.generator_tab_widget)
+    #     self.center_splitter.addWidget(self.canvas_widget)
+    #     self.center_splitter.addWidget(self.center_panel)
+    #     # listen to center_splitter size changes
+    #     self.center_splitter.splitterMoved.connect(self.handle_bottom_splitter_moved)
+    #     self.splitter.addWidget(self.center_splitter)
+    #     # self.splitter.addWidget(self.tool_menu_widget)
+    #     self.splitter.setStretchFactor(1, 1)
+    #     self.splitter.splitterMoved.connect(self.handle_main_splitter_moved)
+    #     # self.gridLayout.addWidget(self.splitter, 1, 0, 1, 3)
+    #     # self.gridLayout.addWidget(self.toolbar_widget, 1, 3, 1, 1)
+    #     # self.gridLayout.addWidget(self.footer_widget, 2, 0, 1, 4)
 
     def track_tab_section(
         self,
@@ -748,27 +780,28 @@ class MainWindow(
             self.center_panel.setCurrentIndex(self.tab_sections["center"][section]["index"])
 
     def create_center_panel(self):
-        self.prompt_builder = PromptBuilderWidget(app=self)
-        self.model_manager = ModelManagerWidget(app=self)
-
-        self.center_panel = QTabWidget()
-        self.center_panel.setStyleSheet(self.css("center_panel"))
-        self.center_panel.setTabPosition(QTabWidget.TabPosition.South)
-
-        self.track_tab_section(
-            "center",
-            "prompt_builder",
-            "Prompt Builder",
-            self.prompt_builder,
-            self.center_panel
-        )
-        self.track_tab_section(
-            "center",
-            "model_manager",
-            "Model Manager",
-            self.model_manager,
-            self.center_panel
-        )
+        # self.prompt_builder = PromptBuilderWidget(app=self)
+        # self.model_manager = ModelManagerWidget(app=self)
+        #
+        # self.center_panel = QTabWidget()
+        # self.center_panel.setStyleSheet(self.css("center_panel"))
+        # self.center_panel.setTabPosition(QTabWidget.TabPosition.South)
+        #
+        # self.track_tab_section(
+        #     "center",
+        #     "prompt_builder",
+        #     "Prompt Builder",
+        #     self.prompt_builder,
+        #     self.center_panel
+        # )
+        # self.track_tab_section(
+        #     "center",
+        #     "model_manager",
+        #     "Model Manager",
+        #     self.model_manager,
+        #     self.center_panel
+        # )
+        pass
 
     @property
     def current_section_by_tab(self):
@@ -939,11 +972,11 @@ class MainWindow(
         self.message_var.my_signal.connect(self.message_handler)
 
     def initialize_window(self):
-        HERE = os.path.dirname(os.path.abspath(__file__))
-        self.window = uic.loadUi(os.path.join(HERE, "pyqt/main_window.ui"), self)
+        self.window = Ui_MainWindow()
+        self.window.setupUi(self)
+        self.ui = self.window
         self.center()
         self.set_window_title()
-        self.set_window_icon()
 
     def initialize_stable_diffusion(self):
         logger.info("Initializing stable diffusion")
@@ -958,7 +991,7 @@ class MainWindow(
 
     def display(self):
         logger.info("Displaying window")
-        self.set_stylesheet()
+        # self.set_stylesheet()
         if not self.testing:
             self.show()
         else:
@@ -1016,9 +1049,6 @@ class MainWindow(
         """
         self.setWindowTitle(f"AI Runner {self.document_name}")
 
-    def set_window_icon(self):
-        self.setWindowIcon(QIcon("src/icon_256.png"))
-
     def new_document(self):
         self.canvas.clear_layers()
         self.clear_history()
@@ -1034,8 +1064,8 @@ class MainWindow(
     def set_status_label(self, txt, error=False):
         color = self.status_normal_color_dark if self.is_dark else \
             self.status_normal_color_light
-        self.footer_widget.status_label.setText(txt)
-        self.footer_widget.status_label.setStyleSheet(
+        self.footer_widget.ui.status_label.setText(txt)
+        self.footer_widget.ui.status_label.setStyleSheet(
             f"color: {self.status_error_color if error else color};"
         )
 
@@ -1238,14 +1268,6 @@ class MainWindow(
         self.set_window_title()
         self.canvas.show_layers()
 
-    def update_system_stats(self):
-        system_memory_percentage = psutil.virtual_memory().percent
-        has_cuda = torch.cuda.is_available()
-        queue_items = f"Queued items: {self.client.queue.qsize()}"
-        cuda_memory = f"Using {'GPU' if has_cuda else 'CPU'}, VRAM allocated {torch.cuda.memory_allocated() / 1024 ** 3:.1f}GB cached {torch.cuda.memory_cached() / 1024 ** 3:.1f}GB"
-        system_memory = f"RAM {system_memory_percentage:.1f}%"
-        self.footer_widget.system_status.setText(f"{queue_items}, {system_memory}, {cuda_memory}")
-
     def update_embedding_names(self):
         self._embedding_names = None
         for tab_name in self.tabs.keys():
@@ -1289,7 +1311,7 @@ class MainWindow(
             self.register_embedding_widget(embedding_name, embedding_widget)
             container.layout().addWidget(embedding_widget)
         container.layout().addStretch()
-        self.tool_menu_widget.embeddings_container_widget.embeddings.setWidget(container)
+        # self.tool_menu_widget.embeddings_container_widget.embeddings.setWidget(container)
 
     def get_list_of_available_embedding_names(self):
         embeddings_path = self.settings_manager.path_settings.embeddings_path or "embeddings"

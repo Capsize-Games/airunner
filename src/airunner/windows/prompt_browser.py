@@ -3,7 +3,7 @@ from functools import partial
 from PyQt6 import uic
 from PyQt6.QtWidgets import QWidget, QVBoxLayout
 
-from airunner.pyqt.prompt_browser import Ui_prompt_browser
+from airunner.pyqt.windows.prompt_browser.prompt_browser import Ui_prompt_browser
 from airunner.windows.base_window import BaseWindow
 
 
@@ -22,10 +22,7 @@ class PromptBrowser(BaseWindow):
             widget.prompt.textChanged.connect(partial(self.save_prompt, widget, index))
             widget.negative_prompt.textChanged.connect(partial(self.save_prompt, widget, index))
             container.layout().addWidget(widget)
-
-            # self.template.scrollArea is a QScrollArea object
-            # we need to get the widget inside it to add our widget to it
-        self.template.scrollArea.setWidget(container)
+        self.ui.scrollArea.setWidget(container)
 
     def load_prompt(self, prompt):
         self.app.update_prompt(prompt.prompt)

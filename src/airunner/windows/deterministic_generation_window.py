@@ -1,6 +1,7 @@
 from PyQt6 import uic
 
-from airunner.pyqt.deterministic_generation_window import Ui_deterministic_generation_window
+from airunner.pyqt.windows.deterministic_generation.deterministic_generation_window import \
+    Ui_deterministic_generation_window
 from airunner.utils import image_to_pixmap
 from airunner.windows.base_window import BaseWindow
 from functools import partial
