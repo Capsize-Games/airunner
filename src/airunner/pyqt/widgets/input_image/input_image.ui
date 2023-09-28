@@ -74,7 +74,7 @@
          </font>
         </property>
         <property name="cursor">
-         <cursorShape>PointingHandCursor</cursorShape>
+         <cursorShape>ArrowCursor</cursorShape>
         </property>
         <property name="title">
          <string>Use Input Image</string>
@@ -233,14 +233,13 @@
                     <cursorShape>PointingHandCursor</cursorShape>
                    </property>
                    <property name="toolTip">
-                    <string>Toggle imported input image</string>
+                    <string>Imported input image</string>
                    </property>
                    <property name="text">
                     <string/>
                    </property>
                    <property name="icon">
-                    <iconset resource="../../../resources.qrc">
-                     <normaloff>:/icons/046-import.png</normaloff>:/icons/046-import.png</iconset>
+                    <iconset theme="insert-image"/>
                    </property>
                    <property name="checkable">
                     <bool>true</bool>
@@ -268,14 +267,13 @@
                     <cursorShape>PointingHandCursor</cursorShape>
                    </property>
                    <property name="toolTip">
-                    <string>Toggle active grid input image</string>
+                    <string>Active grid input image</string>
                    </property>
                    <property name="text">
                     <string/>
                    </property>
                    <property name="icon">
-                    <iconset resource="../../../resources.qrc">
-                     <normaloff>:/icons/032-pixels.png</normaloff>:/icons/032-pixels.png</iconset>
+                    <iconset theme="applications-graphics"/>
                    </property>
                    <property name="checkable">
                     <bool>true</bool>
@@ -306,13 +304,13 @@
                     <cursorShape>PointingHandCursor</cursorShape>
                    </property>
                    <property name="toolTip">
-                    <string>Toggle reuse current input image</string>
+                    <string>Lock current input image</string>
                    </property>
                    <property name="text">
                     <string/>
                    </property>
                    <property name="icon">
-                    <iconset resource="../../../resources.qrc">
+                    <iconset theme="emblem-readonly" resource="../../../resources.qrc">
                      <normaloff>:/icons/047-recycle.png</normaloff>:/icons/047-recycle.png</iconset>
                    </property>
                    <property name="checkable">
@@ -344,8 +342,7 @@
                     <string/>
                    </property>
                    <property name="icon">
-                    <iconset resource="../../../resources.qrc">
-                     <normaloff>:/icons/050-refresh.png</normaloff>:/icons/050-refresh.png</iconset>
+                    <iconset theme="mail-send-receive"/>
                    </property>
                    <property name="flat">
                     <bool>true</bool>
@@ -376,7 +373,7 @@
                     <string/>
                    </property>
                    <property name="icon">
-                    <iconset resource="../../../resources.qrc">
+                    <iconset theme="edit-clear" resource="../../../resources.qrc">
                      <normaloff>:/icons/006-trash.png</normaloff>:/icons/006-trash.png</iconset>
                    </property>
                    <property name="flat">
