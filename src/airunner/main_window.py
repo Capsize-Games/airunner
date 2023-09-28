@@ -1,14 +1,15 @@
 import os
 import pickle
 import sys
+import webbrowser
 from functools import partial
 
 import psutil
 import torch
 
 from PyQt6 import uic, QtCore
-from PyQt6.QtWidgets import QApplication, QFileDialog, QMainWindow, QSplitter, QTabWidget, QWidget, \
-    QVBoxLayout
+from PyQt6.QtWidgets import QApplication, QFileDialog, QMainWindow, QTabWidget, QWidget, \
+    QVBoxLayout, QLabel, QHBoxLayout
 from PyQt6.QtCore import pyqtSlot, Qt, QThread, pyqtSignal, QObject, QTimer
 from PyQt6.QtGui import QGuiApplication
 
@@ -21,23 +22,24 @@ from airunner.aihandler.enums import MessageCode
 from airunner.airunner_api import AIRunnerAPI
 from airunner.data.db import session
 from airunner.data.models import SplitterSection
+from airunner.filters.windows.filter_base import FilterBase
 from airunner.input_event_manager import InputEventManager
 from airunner.mixins.canvas_mixin import CanvasMixin
 from airunner.mixins.generator_mixin import GeneratorMixin
 from airunner.mixins.history_mixin import HistoryMixin
-from airunner.mixins.menubar_mixin import MenubarMixin
 from airunner.mixins.toolbar_mixin import ToolbarMixin
-from airunner.pyqt.templates.main_window_new import Ui_MainWindow
-from airunner.pyqt.widgets.canvas.canvas_widget import CanvasWidget
+from airunner.pyqt.templates.main_window_new_ui import Ui_MainWindow
 from airunner.pyqt.widgets.embeddings.embedding_widget import EmbeddingWidget
-from airunner.pyqt.widgets.footer.footer_widget import FooterWidget
-from airunner.pyqt.widgets.generator_form.generator_tab_widget import GeneratorTabWidget
-from airunner.pyqt.widgets.model_manager.model_manager_widget import ModelManagerWidget
-from airunner.pyqt.widgets.toolbar.tool_bar_widget import ToolBarWidget
 from airunner.themes import Themes
+from airunner.windows.about import AboutWindow
+from airunner.windows.airunner_settings import SettingsWindow
 from airunner.windows.deterministic_generation_window import DeterministicGenerationWindow
+from airunner.windows.image_interpolation import ImageInterpolation
+from airunner.windows.model_merger import ModelMerger
+from airunner.windows.prompt_browser import PromptBrowser
+from airunner.windows.setup_wizard import SetupWizard
 from airunner.windows.update_window import UpdateWindow
-from airunner.utils import get_version, get_latest_version, auto_export_image
+from airunner.utils import get_version, get_latest_version, auto_export_image, get_session, save_session
 from airunner.aihandler.settings_manager import SettingsManager
 
 import qdarktheme
@@ -47,7 +49,6 @@ class MainWindow(
     QMainWindow,
     ToolbarMixin,
     HistoryMixin,
-    MenubarMixin,
     CanvasMixin,
     GeneratorMixin
 ):
@@ -66,8 +67,8 @@ class MainWindow(
     _settings_manager = None
     models = None
     client = None
-    _override_section = None
-    _override_tab_section = None
+    override_current_generator = None
+    override_section = None
     _version = None
     _latest_version = None
     use_interpolation = None
@@ -79,6 +80,9 @@ class MainWindow(
     is_started = False
     _themes = None
     button_clicked_signal = pyqtSignal(dict)
+
+    image_interpolation_window = None
+    deterministic_window = None
 
     _embedding_names = None
     embedding_widgets = {}
@@ -123,22 +127,6 @@ class MainWindow(
     image_generated = pyqtSignal(bool)
     controlnet_image_generated = pyqtSignal(bool)
 
-    # # NEW DOCUMENT PROPERTIES
-    # def __getattr__(self, key):
-    #     return super().__getattr__(key)
-    #     #return getattr(self.settings_manager, key)
-    #
-    # def __setattr__(self, key, value):
-    #     if hasattr(self, key):
-    #         super().__setattr__(key, value)
-    #     else:
-    #         self.settings_manager.__setattr__(key, value)
-    #     # if self.settings_manager and self.settings_manager.hasattr(key):
-    #     #     setattr(self.settings_manager, key, value)
-    #     # else:
-    #     #     super().__setattr__(key, value)
-    # # END NEW DOCUMENT PROPERTIES
-
     @property
     def settings_manager(self):
         if self._settings_manager is None:
@@ -172,22 +160,6 @@ class MainWindow(
         return self.settings_manager.grid_settings.size
 
     @property
-    def override_section(self):
-        return self._override_section
-
-    @override_section.setter
-    def override_section(self, val):
-        self._override_section = val
-
-    @property
-    def override_tab_section(self):
-        return self._override_tab_section
-
-    @override_tab_section.setter
-    def override_tab_section(self, val):
-        self._override_tab_section = val
-
-    @property
     def canvas_widget(self):
         return self.ui.canvas_widget.ui
 
@@ -216,29 +188,37 @@ class MainWindow(
         self.canvas_widget.canvas_position.setText(val)
 
     @property
-    def currentTabSection(self):
-        if self.override_tab_section:
-            return self.override_tab_section
-        return list(self._tabs.keys())[self.generator_tab_widget.sectionTabWidget.currentIndex()]
+    def current_generator(self):
+        """
+        Returns the current generator (stablediffusion, kandinksy, etc) as
+        determined by the selected generator tab in the
+        generator_tab_widget. This value can be override by setting
+        the override_current_generator property.
+        :return: string
+        """
+        if self.override_current_generator:
+            return self.override_current_generator
+        return self.generator_tab_widget.current_generator
+
+    @property
+    def current_section(self):
+        """
+        Returns the current section (txt2img, outpaint, etc) as
+        determined by the selected sub-tab in the generator tab widget.
+        This value can be override by setting the override_section property.
+        :return: string
+        """
+        if self.override_section:
+            return self.override_section
+        return self.generator_tab_widget.current_section
 
     @property
     def tabs(self):
-        return self._tabs[self.currentTabSection]
+        return self._tabs[self.current_generator]
 
     @tabs.setter
     def tabs(self, val):
-        self._tabs[self.currentTabSection] = val
-
-    @property
-    def tabWidget(self):
-        if self.currentTabSection == "stablediffusion":
-            return self.generator_tab_widget.stableDiffusionTabWidget
-        elif self.currentTabSection == "kandinsky":
-            return self.generator_tab_widget.kandinskyTabWidget
-        elif self.currentTabSection == "shapegif":
-            return self.generator_tab_widget.shapegifTabWidget
-        else:
-            raise Exception("Invalid tab section")
+        self._tabs[self.current_generator] = val
 
     @property
     def is_txt2img(self):
@@ -275,16 +255,6 @@ class MainWindow(
         :return: string
         """
         return self._generator_type
-
-    @property
-    def current_index(self):
-        return self.tabWidget.currentIndex()
-
-    @property
-    def current_section(self):
-        if self.override_section:
-            return self.override_section
-        return list(self._tabs[self.currentTabSection].keys())[self.current_index]
 
     @property
     def use_pixels(self):
@@ -489,6 +459,221 @@ class MainWindow(
         # change the color of tooltips
         self.setStyleSheet("QToolTip { color: #000000; background-color: #ffffff; border: 1px solid black; }")
 
+        widget = QWidget()
+        hbox = QHBoxLayout()
+        widget.setLayout(hbox)
+        self.system_stats_label = QLabel("", widget)
+        widget.layout().addWidget(self.system_stats_label)
+        self.statusBar().addPermanentWidget(widget)
+
+    def quick_export(self):
+        if os.path.isdir(self.image_path) is False:
+            self.choose_image_export_path()
+        if os.path.isdir(self.image_path) is False:
+            return
+        path = auto_export_image(self.canvas.current_layer.image_data.image, seed=self.seed)
+        if path is not None:
+            self.set_status_label(f"Image exported to {path}")
+
+    """
+    Slot functions
+    
+    The following functions are defined in and connected to the appropriate
+    signals in the corresponding ui file.
+    """
+    def action_new_document_triggered(self):
+        self.new_document()
+
+    def action_save_document_triggered(self):
+        self.save_document()
+
+    def action_quick_export_image_triggered(self):
+        self.quick_export()
+
+    def action_export_image_triggered(self):
+        self.export_image()
+
+    def action_load_document_triggered(self):
+        self.load_document()
+
+    def action_import_image_triggered(self):
+        self.import_image()
+
+    def action_quit_triggered(self):
+        self.quit()
+
+    def action_undo_triggered(self):
+        self.undo()
+
+    def action_redo_triggered(self):
+        self.redo()
+
+    def action_paste_image_triggered(self):
+        self.paste_image()
+
+    def action_copy_image_triggered(self):
+        self.copy_image()
+
+    def action_cut_image_triggered(self):
+        self.cut_image()
+
+    def action_rotate_90_clockwise_triggered(self):
+        self.canvas.rotate_90_clockwise()
+
+    def action_rotate_90_counterclockwise_triggered(self):
+        self.canvas.rotate_90_counterclockwise()
+
+    def action_run_setup_wizard_triggered(self):
+        self.run_setup_wizard()
+
+    def action_save_prompt_triggered(self):
+        self.save_prompt()
+
+    def action_show_prompt_browser_triggered(self):
+        self.show_prompt_browser()
+
+    def action_show_image_interpolation_triggered(self):
+        self.show_image_interpolation()
+
+    def action_clear_all_prompts_triggered(self):
+        self.clear_all_prompts()
+
+    def action_show_model_manager(self):
+        self.show_section("model_manager")
+
+    def action_show_prompt_builder(self):
+        self.show_section("prompt_builder")
+
+    def action_show_controlnet(self):
+        self.show_section("controlnet")
+
+    def action_show_embeddings(self):
+        self.show_section("embeddings")
+
+    def action_show_lora(self):
+        self.show_section("lora")
+
+    def action_show_pen(self):
+        self.show_section("pen")
+
+    def action_show_stablediffusion(self):
+        self.show_section("stable_diffusion")
+
+    def action_show_kandinsky(self):
+        self.show_section("kandinsky")
+
+    def action_show_shape(self):
+        self.show_section("shapegif")
+
+    def action_show_hf_cache_manager(self):
+        import subprocess
+        import platform
+        import os
+        path = self.settings_manager.path_settings.hf_cache_path
+        if path == "":
+            from airunner.utils import default_hf_cache_dir
+            path = default_hf_cache_dir()
+        if platform.system() == "Windows":
+            subprocess.Popen(["explorer", os.path.realpath(path)])
+        elif platform.system() == "Darwin":
+            subprocess.Popen(["open", os.path.realpath(path)])
+        else:
+            subprocess.Popen(["xdg-open", os.path.realpath(path)])
+
+    def action_focus_button_triggered(self):
+        self.canvas.recenter()
+
+    def action_toggle_brush(self, active):
+        self.toggle_tool("brush")
+
+    def action_toggle_eraser(self, active):
+        self.toggle_tool("eraser")
+
+    def action_toggle_active_grid_area(self, active):
+        self.toggle_tool("active_grid_area")
+
+    def action_toggle_nsfw_filter_triggered(self, bool):
+        self.settings_manager.set_value("nsfw_filter", bool)
+        self.toggle_nsfw_filter()
+
+    def action_toggle_grid(self, active):
+        self.settings_manager.set_value("grid_settings.show_grid", active)
+        self.canvas.update()
+
+    def action_toggle_darkmode(self):
+        self.set_stylesheet()
+
+    def action_show_about_window(self):
+        AboutWindow(app=self)
+
+    def action_show_model_merger_window(self):
+        ModelMerger(app=self)
+
+    def action_show_settings(self):
+        SettingsWindow(app=self)
+
+    def action_open_bug_report(self):
+        webbrowser.open("https://github.com/Capsize-Games/airunner/issues/new?assignees=&labels=&template=bug_report.md&title=")
+
+    def action_open_discord(self):
+        webbrowser.open("https://github.com/Capsize-Games/airunner/security/advisories/new")
+
+    def tool_tab_index_changed(self, index):
+        print(index)
+
+    def bottom_panel_tab_index_changed(self, index):
+        print(index)
+
+    def right_splitter_moved(self, size, index):
+        print("right_splitter_moved")
+
+    def main_splitter_moved(self, size, index):
+        print("main_splitter_moved")
+
+    def content_splitter_moved(self, size, index):
+        print("content_splitter_moved")
+
+    def brush_size_slider_callback(self, val):
+        self.settings_manager.set_value("mask_brush_size", val)
+
+    def width_slider_callback(self, val):
+        self.settings_manager.set_value("working_width", val)
+
+    def height_slider_callback(self, val):
+        self.settings_manager.set_value("working_height", val)
+    """
+    End slot functions
+    """
+
+    def set_size_increment_levels(self):
+        size = self.grid_size
+        self.width_slider_widget.slider_single_step = size
+        self.width_slider_widget.slider_tick_interval = size
+
+        self.height_slider_widget.slider_single_step = size
+        self.height_slider_widget.slider_tick_interval = size
+
+        self.app.canvas.update()
+
+    def toggle_nsfw_filter(self):
+        self.canvas.update()
+        self.set_nsfw_filter_tooltip()
+
+    def set_nsfw_filter_tooltip(self):
+        nsfw_filter = self.settings_manager.nsfw_filter
+        self.ui.safety_checker_button.setToolTip(
+            f"Click to {'enable' if not nsfw_filter else 'disable'} NSFW filter"
+        )
+
+    def update_system_stats(self, queue_size):
+        system_memory_percentage = psutil.virtual_memory().percent
+        has_cuda = torch.cuda.is_available()
+        queue_items = f"Queued items: {queue_size}"
+        cuda_memory = f"Using {'GPU' if has_cuda else 'CPU'}, VRAM allocated {torch.cuda.memory_allocated() / 1024 ** 3:.1f}GB cached {torch.cuda.memory_cached() / 1024 ** 3:.1f}GB"
+        system_memory = f"RAM {system_memory_percentage:.1f}%"
+        self.system_stats_label.setText(
+            f"{queue_items}, {system_memory}, {cuda_memory}")
+
     def update_controlnet_thumbnail(self):
         self.generator_tab_widget.update_controlnet_thumbnail()
 
@@ -541,9 +726,10 @@ class MainWindow(
 
     def timerEvent(self, event):
         self.canvas.timerEvent(event)
-        self.footer_widget.update_system_stats(
-            queue_size=self.client.queue.qsize()
-        )
+        # self.footer_widget.update_system_stats(
+        #     queue_size=self.client.queue.qsize()
+        # )
+        self.update_system_stats(queue_size=self.client.queue.qsize())
 
     def check_for_latest_version(self):
         self.version_thread = QThread()
@@ -608,18 +794,11 @@ class MainWindow(
         except PermissionError:
             pass
         self.generator_tab_widget.set_stylesheet()
-        self.header_widget.set_stylesheet()
+        # self.header_widget.set_stylesheet()
         self.canvas_widget.set_stylesheet()
-        self.tool_menu_widget.set_stylesheet()
+        # self.tool_menu_widget.set_stylesheet()
         self.toolbar_widget.set_stylesheet()
         self.footer_widget.set_stylesheet()
-        # change the icons in the toolmenu
-        if self.settings_manager.dark_mode_enabled:
-            self.actionUndo.setIcon(QIcon(os.path.join("src/icons/007-undo-light.png")))
-            self.actionRedo.setIcon(QIcon(os.path.join("src/icons/008-redo-light.png")))
-        else:
-            self.actionUndo.setIcon(QIcon(os.path.join("src/icons/007-undo.png")))
-            self.actionRedo.setIcon(QIcon(os.path.join("src/icons/008-redo.png")))
 
     def initialize(self):
         # self.automatic_filter_manager = AutomaticFilterManager(app=self)
@@ -628,9 +807,8 @@ class MainWindow(
         self.input_event_manager = InputEventManager(app=self)
         self.initialize_settings_manager()
         self.initialize_window()
-        # self.instantiate_widgets()
         self.initialize_handlers()
-        # self.initialize_widgets()
+        self.connect_splitter_handlers()
         self.initialize_mixins()
         self.generate_signal.connect(self.handle_generate)
         # self.header_widget.initialize()
@@ -647,6 +825,16 @@ class MainWindow(
         self.generator_tab_widget.initialize()
         self.prompt_builder.process_prompt()
         self.connect_signals()
+        self.initialize_filter_actions()
+
+    def initialize_filter_actions(self):
+        # add more filters:
+        for filter in self.settings_manager.get_image_filters():
+            action = self.ui.menuFilters.addAction(filter.display_name)
+            action.triggered.connect(partial(self.display_filter_window, filter))
+
+    def display_filter_window(self, filter):
+        FilterBase(self, filter.name).show()
 
     def handle_generate(self):
         self.prompt_builder.inject_prompt()
@@ -672,7 +860,6 @@ class MainWindow(
         HistoryMixin.initialize(self)
         CanvasMixin.initialize(self)
         GeneratorMixin.initialize(self)
-        MenubarMixin.initialize(self)
         ToolbarMixin.initialize(self)
 
     def connect_signals(self):
@@ -682,61 +869,11 @@ class MainWindow(
         for signal, handler in self.registered_settings_handlers:
             getattr(self.settings_manager, signal).connect(handler)
 
-        for tab_section in ["stablediffusion", "kandinsky", "shapegif"]:
-            for section in ["txt2img", "pix2pix", "depth2img", "txt2vid"]:
-                if (tab_section == "kandinsky" or tab_section == "shapegif") and section not in ["txt2img"]:
-                    continue
-                self.override_tab_section = tab_section
-                self.override_section = section
-        self.override_tab_section = None
-        self.override_section = None
-
         self.button_clicked_signal.connect(self.handle_button_clicked)
 
-        self.image_generated.connect(
-            self.ui.generator_widget.ui.generator_form.ui.controlnet_settings.handle_image_generated
-        )
-        self.controlnet_image_generated.connect(
-            self.ui.generator_widget.ui.generator_form.ui.controlnet_settings.handle_controlnet_image_generated
-        )
-
-    def instantiate_widgets(self):
-        logger.info("Instantiating widgets")
-        self.generator_tab_widget = GeneratorTabWidget(app=self)
-        self.canvas_widget = CanvasWidget(app=self)
-        # self.tool_menu_widget = ToolMenuWidget(app=self)
-        self.toolbar_widget = ToolBarWidget(app=self)
-        self.footer_widget = FooterWidget(app=self)
-
-    def initialize_widgets(self):
-        pass
-
-    # def initialize_widgets(self):
-    #     logger.info("Initializing widgets")
-    #     # self.gridLayout.setColumnStretch(1, 1)
-    #     # self.gridLayout.addWidget(self.header_widget, 0, 0, 1, 4)
-    #
-    #     self.splitter = QSplitter()
-    #     self.center_splitter = QSplitter(Qt.Orientation.Vertical)
-    #
-    #     self.create_center_panel()
-    #
-    #     # auto hide tabs
-    #     # center_panel.tabBar().hide()
-    #     self.center_splitter.setStretchFactor(1, 1)
-    #     self.center_splitter.setStretchFactor(2, 0)
-    #     self.splitter.addWidget(self.generator_tab_widget)
-    #     self.center_splitter.addWidget(self.canvas_widget)
-    #     self.center_splitter.addWidget(self.center_panel)
-    #     # listen to center_splitter size changes
-    #     self.center_splitter.splitterMoved.connect(self.handle_bottom_splitter_moved)
-    #     self.splitter.addWidget(self.center_splitter)
-    #     # self.splitter.addWidget(self.tool_menu_widget)
-    #     self.splitter.setStretchFactor(1, 1)
-    #     self.splitter.splitterMoved.connect(self.handle_main_splitter_moved)
-    #     # self.gridLayout.addWidget(self.splitter, 1, 0, 1, 3)
-    #     # self.gridLayout.addWidget(self.toolbar_widget, 1, 3, 1, 1)
-    #     # self.gridLayout.addWidget(self.footer_widget, 2, 0, 1, 4)
+    def connect_splitter_handlers(self):
+        self.ui.content_splitter.splitterMoved.connect(self.handle_main_splitter_moved)
+        self.ui.main_splitter.splitterMoved.connect(self.handle_bottom_splitter_moved)
 
     def track_tab_section(
         self,
@@ -779,50 +916,6 @@ class MainWindow(
                 self.center_splitter.setSizes([self.center_splitter.sizes()[0], 520])
             self.center_panel.setCurrentIndex(self.tab_sections["center"][section]["index"])
 
-    def create_center_panel(self):
-        # self.prompt_builder = PromptBuilderWidget(app=self)
-        # self.model_manager = ModelManagerWidget(app=self)
-        #
-        # self.center_panel = QTabWidget()
-        # self.center_panel.setStyleSheet(self.css("center_panel"))
-        # self.center_panel.setTabPosition(QTabWidget.TabPosition.South)
-        #
-        # self.track_tab_section(
-        #     "center",
-        #     "prompt_builder",
-        #     "Prompt Builder",
-        #     self.prompt_builder,
-        #     self.center_panel
-        # )
-        # self.track_tab_section(
-        #     "center",
-        #     "model_manager",
-        #     "Model Manager",
-        #     self.model_manager,
-        #     self.center_panel
-        # )
-        pass
-
-    @property
-    def current_section_by_tab(self):
-        current_tab = self.settings_manager.current_tab
-        if current_tab == "stablediffusion":
-            return self.settings_manager.current_section_stablediffusion
-        elif current_tab == "kandinsky":
-            return self.settings_manager.current_section_kandinsky
-        elif current_tab == "shapegif":
-            return self.settings_manager.current_section_shapegif
-
-    @current_section_by_tab.setter
-    def current_section_by_tab(self, val):
-        current_tab = self.settings_manager.current_tab
-        if current_tab == "stablediffusion":
-            self.settings_manager.set_value("current_section_stablediffusion", val)
-        elif current_tab == "kandinsky":
-            self.settings_manager.set_value("current_section_kandinsky", val)
-        elif current_tab == "shapegif":
-            self.settings_manager.set_value("current_section_shapegif", val)
-
     def handle_value_change(self, attr_name, value=None, widget=None):
         if attr_name == "generator.controlnet":
             value = value.lower()
@@ -842,74 +935,101 @@ class MainWindow(
         self.settings_manager.set_value(attr_name, value)
 
     def set_splitter_sizes(self):
-        bottom_sizes = [0, 0]
-        main_sizes = [0, 0, 0]
-        for obj in self.settings_manager.splitter_sizes:
-            if obj.name == "center":
-                bottom_sizes[obj.order] = obj.size
-            elif obj.name == "main":
-                main_sizes[obj.order] = obj.size
+        """
+        Splitters are used to divide the window into sections. This function
+        intializes the sizes of each splitter section. The sizes are stored
+        in the database and are loaded when the application starts.
 
-        if bottom_sizes[1] == -1:
-            bottom_sizes[1] = 520
-        self.default_splitter_sizes = [self.generator_tab_widget.minimumWidth(),
-                                       520,
-                                       self.tool_menu_widget.minimumWidth()]
+        The SplitterSection model is used to store the sizes.
+        The name field for each SplitterSection is set to the name of its
+        corresponding widget.
 
-        if main_sizes[0] == -1:
-            main_sizes[0] = self.default_splitter_sizes[0]
-        if main_sizes[1] == -1:
-            main_sizes[1] = self.default_splitter_sizes[1]
-        if main_sizes[2] == -1:
-            main_sizes[2] = self.default_splitter_sizes[2]
-        self.center_splitter.setSizes(bottom_sizes)
-        self.splitter.setSizes(main_sizes)
+        main_splitter divides the top and bottom sections
+            Horizontal
+            Top section is the generator tab widget, canvas and tool menus.
+            Bottom section is a tool tab menu (model manager, prompt builder, etc).
+        content_splitter divides the left, center and right sections
+            Horizontal
+            Generator tab widgets are in the left panel.
+            Canvas is in the center panel.
+            Tool menus are in the right panel.
+        center_splitter
+            Vertical
+            Allows multiple grids or additional panels in the center area.
+        right_panel_splitter divides the right panel into sections
+            Vertical
+            Currently used for tool menus (embeddings, layers etc.).
+        :return:
+        """
+        session = get_session()
+
+        main_splitter_sections = session.query(SplitterSection.size).filter(
+            SplitterSection.name == "main_splitter"
+        ).order_by(
+            SplitterSection.order
+        ).all()
+
+        content_splitter_sections = session.query(SplitterSection.size).filter(
+            SplitterSection.name == "content_splitter"
+        ).order_by(
+            SplitterSection.order
+        ).all()
+
+        main_splitter_sizes = [size[0] for size in main_splitter_sections]
+        content_splitter_sizes = [size[0] for size in content_splitter_sections]
+
+        self.ui.main_splitter.setSizes(main_splitter_sizes)
+        self.ui.content_splitter.setSizes(content_splitter_sizes)
 
     def handle_main_splitter_moved(self, pos, index):
         sizes = {
             "left": session.query(SplitterSection).filter_by(
-                name="main",
+                name="content_splitter",
                 order=0
             ).first(),
             "right": session.query(SplitterSection).filter_by(
-                name="main",
+                name="content_splitter",
                 order=2
             ).first()
         }
-        left_width = self.splitter.widget(0).width()
-        center_width = self.splitter.widget(1).width()
-        right_width = self.splitter.widget(2).width()
+        col_a_width = self.ui.content_splitter.widget(0).width()
+        col_b_width = self.ui.content_splitter.widget(1).width()
+        col_c_width = self.ui.content_splitter.widget(2).width()
+        col_d_width = self.ui.content_splitter.widget(3).width()
         window_width = self.width()
-        if index == 2 and window_width - pos == 60:
-            right_width = 0
-        if index == 1 and pos == 1:
-            left_width = 0
-        if index == 1:
-            right_width = sizes["right"].size
-        if index == 2:
-            left_width = sizes["left"].size
 
-        updated_sizes = [left_width, center_width, right_width]
-        splitter_sizes = self.settings_manager.splitter_sizes
-        for n, obj in enumerate(splitter_sizes):
-            if obj.name == "main":
-                obj.size = updated_sizes[obj.order]
-        self.settings_manager.set_value("splitter_sizes", self.settings_manager.splitter_sizes)
+        if index == 2 and window_width - pos == 60:
+            col_c_width = 0
+        if index == 1 and pos == 1:
+            col_a_width = 0
+        if index == 1:
+            col_c_width = sizes["right"].size
+        if index == 2:
+            col_a_width = sizes["left"].size
+
+        updated_sizes = [col_a_width, col_b_width, col_c_width, col_d_width]
+        for n, size in enumerate(updated_sizes):
+            obj = session.query(SplitterSection).filter_by(
+                name="content_splitter",
+                order=n
+            ).first()
+            obj.size = size
+            save_session()
 
     def handle_bottom_splitter_moved(self, pos, index):
-        top_height = self.center_splitter.widget(0).height()
-        bottom_height = self.center_splitter.widget(1).height()
-
-        for splitter_section in self.settings_manager.splitter_sizes:
-            if splitter_section.name == "center":
-                if splitter_section.order == 0:
-                    splitter_section.size = top_height
-                else:
-                    splitter_section.size = bottom_height
-        self.settings_manager.set_value(
-            "splitter_sizes",
-            self.settings_manager.splitter_sizes
-        )
+        top_height = self.ui.main_splitter.widget(0).height()
+        bottom_height = self.ui.main_splitter.widget(1).height()
+        obj = session.query(SplitterSection).filter_by(
+            name="main_splitter",
+            order=0
+        ).first()
+        obj.size = top_height
+        obj_b = session.query(SplitterSection).filter_by(
+            name="main_splitter",
+            order=1
+        ).first()
+        obj_b.size = bottom_height
+        save_session()
 
     def initialize_settings_manager(self):
         self.settings_manager.changed_signal.connect(self.handle_changed_signal)
@@ -949,23 +1069,9 @@ class MainWindow(
         event_callbacks = {
             "wheelEvent": self.change_width,
         }
-        keypress_callbacks = {
-            "brush_tool": partial(self.toggle_tool, "brush"),
-            "eraser_tool": partial(self.toggle_tool, "eraser"),
-            "active_grid_area_tool": partial(self.toggle_tool, "active_grid_area"),
-            "focus_canvas": self.focus_button_clicked,
-            "toggle_grid": self.toggle_grid,
-            "toggle_safety_checker": self.toolbar_widget.toggle_nsfw_filter,
-            "settings": self.show_settings,
-            "undo": self.undo,
-            "redo": self.redo,
-        }
 
         for event, callback in event_callbacks.items():
             self.input_event_manager.register_event(event, callback)
-
-        for event, callback in keypress_callbacks.items():
-            self.input_event_manager.register_keypress(event, callback)
 
     def initialize_handlers(self):
         self.message_var = MessageHandlerVar()
@@ -1062,12 +1168,13 @@ class MainWindow(
         self.canvas.show_layers()
 
     def set_status_label(self, txt, error=False):
-        color = self.status_normal_color_dark if self.is_dark else \
-            self.status_normal_color_light
-        self.footer_widget.ui.status_label.setText(txt)
-        self.footer_widget.ui.status_label.setStyleSheet(
-            f"color: {self.status_error_color if error else color};"
-        )
+        # color = self.status_normal_color_dark if self.is_dark else \
+        #     self.status_normal_color_light
+        # self.footer_widget.ui.status_label.setText(txt)
+        # self.footer_widget.ui.status_label.setStyleSheet(
+        #     f"color: {self.status_error_color if error else color};"
+        # )
+        print(txt)
 
     @pyqtSlot(dict)
     def message_handler(self, response: dict):
@@ -1183,7 +1290,7 @@ class MainWindow(
 
         :return:
         """
-        self.header_widget.set_size_increment_levels()
+        self.set_size_increment_levels()
 
     def saveas_document(self):
         # get file path
@@ -1337,8 +1444,8 @@ class MainWindow(
         return tokens
 
     def insert_into_prompt(self, text, negative_prompt=False):
-        prompt_widget = self.generator_tab_widget.data[self.currentTabSection][self.current_section]["prompt_widget"]
-        negative_prompt_widget = self.generator_tab_widget.data[self.currentTabSection][self.current_section]["negative_prompt_widget"]
+        prompt_widget = self.generator_tab_widget.data[self.current_generator][self.current_section]["prompt_widget"]
+        negative_prompt_widget = self.generator_tab_widget.data[self.current_generator][self.current_section]["negative_prompt_widget"]
         if negative_prompt:
             current_text = negative_prompt_widget.toPlainText()
             text = f"{current_text}, {text}" if current_text != "" else text
@@ -1348,3 +1455,95 @@ class MainWindow(
             text = f"{current_text}, {text}" if current_text != "" else text
             prompt_widget.setPlainText(text)
 
+    def handle_generator_tab_changed(self):
+        self.enable_embeddings()
+        self.update()
+
+    def handle_tab_section_changed(self):
+        self.enable_embeddings()
+        self.update()
+
+    def release_tab_overrides(self):
+        self.override_current_generator = None
+        self.override_section = None
+
+    def run_setup_wizard(self):
+        SetupWizard(self.settings_manager, app=self)
+
+    def clear_all_prompts(self):
+        for tab_section in self._tabs.keys():
+            self.override_current_generator = tab_section
+            for tab in self.tabs.keys():
+                self.override_section = tab
+                self.prompt = ""
+                self.negative_prompt = ""
+                self.generator_tab_widget.clear_prompts(tab_section, tab)
+        self.override_current_generator = None
+        self.override_section = None
+
+    def show_prompt_browser(self):
+        PromptBrowser(settings_manager=self.settings_manager, app=self)
+
+    def save_prompt(self):
+        self.settings_manager.create_saved_prompt(self.prompt, self.negative_prompt)
+
+    def import_image(self):
+        file_path, _ = self.display_import_image_dialog(directory=self.settings_manager.path_settings.image_path)
+        if file_path == "":
+            return
+        self.canvas.load_image(file_path)
+        self.canvas.update()
+
+    def export_image(self):
+        file_path, _ = self.display_file_export_dialog()
+        if file_path == "":
+            return
+        self.canvas.save_image(file_path)
+
+    def choose_image_export_path(self):
+        # display a dialog to choose the export path
+        path = QFileDialog.getExistingDirectory(None, "Select Directory")
+        if path == "":
+            return
+        self.settings_manager.set_value("image_path", path)
+
+    def display_file_export_dialog(self):
+        return QFileDialog.getSaveFileName(
+            self.window,
+            "Export Image",
+            "",
+            "Image Files (*.png *.jpg *.jpeg *.gif)"
+        )
+
+    def display_import_image_dialog(self, label="Import Image", directory=""):
+        return QFileDialog.getOpenFileName(
+            self.window, label, directory, "Image Files (*.png *.jpg *.jpeg)"
+        )
+
+    def paste_image(self):
+        self.canvas.paste_image_from_clipboard()
+        self.canvas.current_layer.layer_widget.set_thumbnail()
+
+    def copy_image(self):
+        self.canvas.copy_image()
+
+    def cut_image(self):
+        self.canvas.cut_image()
+
+    def show_image_interpolation(self):
+        self.image_interpolation_window = ImageInterpolation(app=self, exec=False)
+        self.image_interpolation_window.show()
+        self.image_interpolation_window = None
+
+    def show_deterministic_generation(self):
+        if not self.deterministic_window:
+            self.deterministic_window = DeterministicGenerationWindow(app=self, exec=False, images=self.deterministic_images, data=self.data)
+            self.deterministic_window.show()
+            self.deterministic_window = None
+        else:
+            self.deterministic_window.update_images(self.deterministic_images)
+
+    def close_deterministic_generation_window(self):
+        self.deterministic_window = None
+        self.deterministic_data = None
+        self.deterministic_images = None

@@ -1,8 +1,9 @@
 """
-IMPORTANT
+*******************************************************************************
 Do not import anything prior to this block.
 OS environment variables must be initialized here before importing any other modules.
 This is due to the way huggingface diffusion models are imported.
+*******************************************************************************
 """
 import os
 from airunner.aihandler.settings_manager import SettingsManager
@@ -15,10 +16,10 @@ if hf_cache_path != "":
         os.environ["HUGGINGFACE_HUB_CACHE"] = hf_cache_path
 os.environ["DISABLE_TELEMETRY"] = "1"
 """
+*******************************************************************************
 All remaining imports must be below this block.
+*******************************************************************************
 """
-
-from airunner.main_window import MainWindow
 
 import argparse
 import signal
@@ -30,6 +31,7 @@ from PyQt6.QtWidgets import QApplication, QSplashScreen
 from PyQt6.QtCore import Qt, QTimer
 from PyQt6.QtGui import QGuiApplication, QPixmap
 
+from airunner.main_window import MainWindow
 from airunner.aihandler.settings import SERVER
 from airunner.aihandler.socket_server import SocketServer
 from airunner.utils import get_version
@@ -58,10 +60,7 @@ if __name__ == "__main__":
         try:
             window = MainWindow()
         except Exception as e:
-            # print a stacktrace to see where the original error occurred
-            # we want to see the original error path using the traceback
             traceback.print_exc()
-
             print(e)
             splash.finish(None)
             sys.exit("""
@@ -72,16 +71,23 @@ if __name__ == "__main__":
         splash.finish(window)
         window.raise_()
 
-    # argument parsing for socket server
-    parser = argparse.ArgumentParser()
-    parser.add_argument("--ss", action="store_true", default=False)
-    parser.add_argument("--host", default=SERVER["host"])
-    parser.add_argument("--port", default=SERVER["port"])
-    parser.add_argument("--keep-alive", action="store_true", default=False)
-    parser.add_argument("--packet-size", default=SERVER["port"])
-    args = parser.parse_args()
+    def prepare_argparser():
+        parser = argparse.ArgumentParser()
+        parser.add_argument("--ss", action="store_true", default=False)
+        parser.add_argument("--host", default=SERVER["host"])
+        parser.add_argument("--port", default=SERVER["port"])
+        parser.add_argument("--keep-alive", action="store_true", default=False)
+        parser.add_argument("--packet-size", default=SERVER["port"])
+        return parser.parse_args()
+
+    args = prepare_argparser()
 
     if args.ss:
+        """
+        Run as a socket server if --ss flag is passed.
+        This can be used to run the application on a remote machine or
+        to be accessed by other applications.
+        """
         SocketServer(
             host=args.host,
             port=args.port,
@@ -89,6 +95,11 @@ if __name__ == "__main__":
             packet_size=args.packet_size
         )
     else:
+        """
+        Run as a GUI application.
+        A splash screen is displayed while the application is loading
+        and a main window is displayed once the application is ready.
+        """
         signal.signal(signal.SIGINT, signal_handler)
         QApplication.setAttribute(Qt.ApplicationAttribute.AA_UseDesktopOpenGL)
         app = QApplication([])

@@ -9,14 +9,14 @@
 from PyQt6 import QtCore, QtGui, QtWidgets
 
 
-class Ui_Form(object):
-    def setupUi(self, Form):
-        Form.setObjectName("Form")
-        Form.resize(400, 161)
-        self.gridLayout = QtWidgets.QGridLayout(Form)
+class Ui_brush_widget(object):
+    def setupUi(self, brush_widget):
+        brush_widget.setObjectName("brush_widget")
+        brush_widget.resize(400, 161)
+        self.gridLayout = QtWidgets.QGridLayout(brush_widget)
         self.gridLayout.setContentsMargins(0, 0, 0, 0)
         self.gridLayout.setObjectName("gridLayout")
-        self.groupBox_4 = QtWidgets.QGroupBox(parent=Form)
+        self.groupBox_4 = QtWidgets.QGroupBox(parent=brush_widget)
         self.groupBox_4.setMinimumSize(QtCore.QSize(0, 25))
         font = QtGui.QFont()
         font.setPointSize(10)
@@ -41,10 +41,10 @@ class Ui_Form(object):
         self.gridLayout_3.addWidget(self.primary_color_button, 0, 0, 1, 1)
         self.gridLayout.addWidget(self.groupBox_4, 0, 0, 1, 1)
 
-        self.retranslateUi(Form)
-        QtCore.QMetaObject.connectSlotsByName(Form)
+        self.retranslateUi(brush_widget)
+        QtCore.QMetaObject.connectSlotsByName(brush_widget)
 
-    def retranslateUi(self, Form):
+    def retranslateUi(self, brush_widget):
         _translate = QtCore.QCoreApplication.translate
-        Form.setWindowTitle(_translate("Form", "Form"))
-        self.groupBox_4.setTitle(_translate("Form", "Brush color"))
+        brush_widget.setWindowTitle(_translate("brush_widget", "Form"))
+        self.groupBox_4.setTitle(_translate("brush_widget", "Brush color"))

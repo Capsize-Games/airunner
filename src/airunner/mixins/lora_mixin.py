@@ -1,10 +1,9 @@
 import os
-from PyQt6.QtWidgets import QWidget, QVBoxLayout, QCheckBox
-from PyQt6 import QtCore
+from PyQt6.QtWidgets import QWidget, QVBoxLayout
 
 from airunner.data.db import session
 from airunner.data.models import Lora
-from airunner.widgets.lora_widget import LoraWidget
+from airunner.pyqt.widgets.lora.lora_widget import LoraWidget
 
 
 class LoraMixin:
@@ -37,12 +36,13 @@ class LoraMixin:
 
     def refresh_lora(self):
         # print available attributes on self
-        if not self.tabs:
-            return
-        for tab_name in self.tabs.keys():
-            tab = self.tabs[tab_name]
-            self.load_lora_tab(tab, tab_name)
-        self.initialize_lora_trigger_words()
+        # if not self.tabs:
+        #     return
+        # for tab_name in self.tabs.keys():
+        #     tab = self.tabs[tab_name]
+        #     self.load_lora_tab(tab, tab_name)
+        # self.initialize_lora_trigger_words()
+        pass
 
     def get_available_loras(self, tab_name):
         base_path = self.settings_manager.path_settings.model_base_path

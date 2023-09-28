@@ -20,10 +20,10 @@ class Ui_seed_widget(object):
         self.random_button.setMinimumSize(QtCore.QSize(24, 24))
         self.random_button.setMaximumSize(QtCore.QSize(24, 24))
         self.random_button.setText("")
-        icon = QtGui.QIcon()
-        icon.addPixmap(QtGui.QPixmap("/home/joe/Projects/imagetopixel/airunner/src/airunner/pyqt/widgets/seed/../../src/icons/049-dice.png"), QtGui.QIcon.Mode.Normal, QtGui.QIcon.State.Off)
+        icon = QtGui.QIcon.fromTheme("view-refresh")
         self.random_button.setIcon(icon)
         self.random_button.setCheckable(True)
+        self.random_button.setFlat(True)
         self.random_button.setObjectName("random_button")
         self.gridLayout.addWidget(self.random_button, 1, 1, 1, 1)
         self.lineEdit = QtWidgets.QLineEdit(parent=seed_widget)
@@ -46,5 +46,6 @@ class Ui_seed_widget(object):
     def retranslateUi(self, seed_widget):
         _translate = QtCore.QCoreApplication.translate
         seed_widget.setWindowTitle(_translate("seed_widget", "Form"))
+        self.random_button.setToolTip(_translate("seed_widget", "Toggle random seed"))
         self.lineEdit.setPlaceholderText(_translate("seed_widget", "seed"))
         self.label.setText(_translate("seed_widget", "Seed"))

@@ -28,7 +28,7 @@ def build_ui(path):
         ui_file = str(ui_file)
         ui_file_name = os.path.basename(ui_file)
         ui_file_dir = os.path.dirname(ui_file)
-        ui_file_py = ui_file.replace(".ui", ".py")
+        ui_file_py = ui_file.replace(".ui", "_ui.py")
         print(f"Generating {ui_file_py}")
         subprocess.run(
             [

@@ -7,7 +7,7 @@ from filelock import FileLock
 from airunner.aihandler.qtvar import Var, StringVar, IntVar, BooleanVar, FloatVar, DictVar
 from airunner.data.db import session
 from airunner.data.models import Settings, GeneratorSetting, AIModel, Pipeline, ControlnetModel, ImageFilter, Prompt, \
-    SavedPrompt
+    SavedPrompt, PromptCategory, PromptVariable, PromptVariableCategory, PromptVariableCategoryWeight
 
 document = None
 _app = None
@@ -172,17 +172,20 @@ class SettingsManager(QObject):
 
     @property
     def generator(self):
+        return self.find_generator(self.section, self.tab)
+
+    def find_generator(self, section, tab):
         # using sqlalchemy, query the document.settings.generator_settings column
         # and find any with GeneratorSettings.section == self.section and GeneratorSettings.generator_name == self.tab
         # return the first result
         generator_settings = session.query(GeneratorSetting).filter_by(
-            section=self.section,
-            generator_name=self.tab
+            section=section,
+            generator_name=tab
         ).join(Settings).first()
         if generator_settings is None:
             generator_settings = GeneratorSetting(
-                section=self.section,
-                generator_name=self.tab,
+                section=section,
+                generator_name=tab,
                 settings_id=document.settings.id,
             )
             session.add(generator_settings)
@@ -227,6 +230,57 @@ class SettingsManager(QObject):
         setattr(obj, keys[-1], value)
         self.save()
         self.changed_signal.emit(key, value)
+
+    def get_value(self, key):
+        keys = key.split('.')
+        obj = self
+        for k in keys:
+            obj = getattr(obj, k)
+        return obj
+
+    @property
+    def current_tab_action(self):
+        current_tab = self.current_tab
+        if current_tab == "stablediffusion":
+            return self.current_section_stablediffusion
+        elif current_tab == "kandinsky":
+            return self.current_section_kandinsky
+        else:
+            return self.current_section_shapegif
+
+    @property
+    def prompt_builder_prompts(self):
+        return session.query(Prompt).all()
+
+    @property
+    def prompt_categories(self):
+        return session.query(PromptCategory).all()
+
+    def variables_by_category(self, category_name):
+        variable_category = session.query(PromptVariableCategory).filter_by(name=category_name).first()
+        return session.query(PromptVariable).filter_by(variable_category=variable_category).all()
+
+    def prompts_by_category(self, category_name):
+        category = session.query(PromptCategory).filter_by(name=category_name).first()
+        return session.query(Prompt).filter_by(category=category).all()
+
+    def variable_weights_by_category(self, category, variable_name):
+        variable = session.query(PromptVariable).filter_by(value=variable_name).first()
+        return session.query(PromptVariableCategoryWeight).filter_by(
+            prompt_category_id=variable.prompt_category_id,
+            variable_category_id=variable.variable_category_id
+        ).first()
+
+    def optimize_memory_settings(self):
+        self.set_value("memory_settings.use_last_channels", True)
+        self.set_value("memory_settings.use_attention_slicing", False)
+        self.set_value("memory_settings.use_tf32", False)
+        self.set_value("memory_settings.use_enable_vae_slicing", True)
+        self.set_value("memory_settings.use_accelerated_transformers", True)
+        self.set_value("memory_settings.use_tiled_vae", True)
+        self.set_value("memory_settings.enable_model_cpu_offload", False)
+        self.set_value("memory_settings.use_enable_sequential_cpu_offload", False)
+        self.set_value("memory_settings.use_cudnn_benchmark", True)
 
     def save(self):
         session.commit()

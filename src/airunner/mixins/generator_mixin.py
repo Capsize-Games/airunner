@@ -227,7 +227,7 @@ class GeneratorMixin(LoraMixin):
         self.generator_tab_widget.set_negative_prompt(prompt)
 
     def initialize(self):
-        self.tool_menu_widget.initialize()
+        # self.tool_menu_widget.initialize()
         self.initialize_lora()
 
         self.input_event_manager.register_keypress("generate", self.generate_callback)
@@ -462,7 +462,7 @@ class GeneratorMixin(LoraMixin):
         # progressBar: QProgressBar = self.tabs[section].progressBar
         # progressBar.setRange(0, 0)
         self.generator_tab_widget.start_progress_bar(
-            self.currentTabSection, self.current_section)
+            self.current_generator, self.current_section)
 
     def set_seed(self, seed=None, latents_seed=None):
         """
@@ -573,7 +573,7 @@ class GeneratorMixin(LoraMixin):
             "model_branch": model_branch,
             "lora": self.available_lora(action),
             "controlnet_conditioning_scale": self.controlnet_guidance_scale,
-            "generator_section": self.currentTabSection,
+            "generator_section": self.current_generator,
             "width": self.working_width,
             "height": self.working_height,
             "do_nsfw_filter": self.settings_manager.nsfw_filter,

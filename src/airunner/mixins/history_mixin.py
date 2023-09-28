@@ -8,14 +8,14 @@ class HistoryMixin:
     canvas = None
 
     def initialize(self):
-        self.header_widget.undo_button.clicked.connect(self.undo)
-        self.header_widget.redo_button.clicked.connect(self.redo)
+        self.ui.undo_button.clicked.connect(self.undo)
+        self.ui.redo_button.clicked.connect(self.redo)
         self.history = History()
         self.initialize_history_buttons()
 
     def initialize_history_buttons(self):
-        self.actionUndo.triggered.connect(self.undo)
-        self.actionRedo.triggered.connect(self.redo)
+        self.ui.actionUndo.triggered.connect(self.undo)
+        self.ui.actionRedo.triggered.connect(self.redo)
 
     def undo_new_layer(self, previous_event):
         layers = self.canvas.get_layers_copy()

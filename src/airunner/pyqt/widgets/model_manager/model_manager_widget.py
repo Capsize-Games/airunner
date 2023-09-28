@@ -11,7 +11,7 @@ from airunner.data.models import AIModel
 from airunner.models.modeldata import ModelData
 from airunner.pyqt.widgets.base_widget import BaseWidget
 from airunner.data.db import session
-from airunner.pyqt.widgets.model_manager.model_manager import Ui_model_manager
+from airunner.pyqt.widgets.model_manager.model_manager_ui import Ui_model_manager
 
 
 class ModelManagerWidget(BaseWidget):
