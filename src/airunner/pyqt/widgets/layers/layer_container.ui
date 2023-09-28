@@ -1,35 +1,27 @@
 <?xml version="1.0" encoding="UTF-8"?>
 <ui version="4.0">
- <class>Form</class>
- <widget class="QWidget" name="Form">
+ <class>layer_container</class>
+ <widget class="QWidget" name="layer_container">
   <property name="geometry">
    <rect>
     <x>0</x>
     <y>0</y>
-    <width>277</width>
-    <height>318</height>
+    <width>435</width>
+    <height>323</height>
    </rect>
   </property>
   <property name="windowTitle">
    <string>Form</string>
   </property>
   <layout class="QGridLayout" name="gridLayout">
-   <property name="leftMargin">
-    <number>0</number>
-   </property>
-   <property name="topMargin">
-    <number>0</number>
-   </property>
-   <property name="rightMargin">
-    <number>0</number>
-   </property>
-   <property name="bottomMargin">
-    <number>0</number>
-   </property>
-   <property name="spacing">
-    <number>0</number>
-   </property>
-   <item row="0" column="0">
+   <item row="3" column="0">
+    <widget class="Line" name="line">
+     <property name="orientation">
+      <enum>Qt::Horizontal</enum>
+     </property>
+    </widget>
+   </item>
+   <item row="2" column="0">
     <widget class="QScrollArea" name="layers">
      <property name="styleSheet">
       <string notr="true">border-radius: 0px</string>
@@ -51,8 +43,8 @@
        <rect>
         <x>0</x>
         <y>0</y>
-        <width>277</width>
-        <height>278</height>
+        <width>417</width>
+        <height>225</height>
        </rect>
       </property>
       <property name="sizePolicy">
@@ -81,7 +73,7 @@
      </widget>
     </widget>
    </item>
-   <item row="1" column="0">
+   <item row="4" column="0">
     <widget class="QWidget" name="horizontalWidget" native="true">
      <property name="sizePolicy">
       <sizepolicy hsizetype="Expanding" vsizetype="Preferred">
@@ -132,13 +124,12 @@
          <string/>
         </property>
         <property name="icon">
-         <iconset>
-          <normaloff>../../src/icons/035-new.png</normaloff>../../src/icons/035-new.png</iconset>
+         <iconset theme="document-new"/>
         </property>
         <property name="iconSize">
          <size>
-          <width>24</width>
-          <height>24</height>
+          <width>20</width>
+          <height>20</height>
          </size>
         </property>
         <property name="flat">
@@ -170,13 +161,13 @@
          <string/>
         </property>
         <property name="icon">
-         <iconset>
-          <normaloff>../../src/icons/041-up-arrow.png</normaloff>../../src/icons/041-up-arrow.png</iconset>
+         <iconset theme="go-up" resource="../../../resources.qrc">
+          <normaloff>:/icons/041-up-arrow.png</normaloff>:/icons/041-up-arrow.png</iconset>
         </property>
         <property name="iconSize">
          <size>
-          <width>24</width>
-          <height>24</height>
+          <width>20</width>
+          <height>20</height>
          </size>
         </property>
         <property name="flat">
@@ -208,13 +199,13 @@
          <string/>
         </property>
         <property name="icon">
-         <iconset>
-          <normaloff>../../src/icons/042-down-arrow.png</normaloff>../../src/icons/042-down-arrow.png</iconset>
+         <iconset theme="go-down" resource="../../../resources.qrc">
+          <normaloff>:/icons/042-down-arrow.png</normaloff>:/icons/042-down-arrow.png</iconset>
         </property>
         <property name="iconSize">
          <size>
-          <width>24</width>
-          <height>24</height>
+          <width>20</width>
+          <height>20</height>
          </size>
         </property>
         <property name="flat">
@@ -231,13 +222,13 @@
          <string/>
         </property>
         <property name="icon">
-         <iconset>
-          <normaloff>../../src/icons/002-merge.png</normaloff>../../src/icons/002-merge.png</iconset>
+         <iconset theme="go-jump" resource="../../../resources.qrc">
+          <normaloff>:/icons/002-merge.png</normaloff>:/icons/002-merge.png</iconset>
         </property>
         <property name="iconSize">
          <size>
-          <width>24</width>
-          <height>24</height>
+          <width>20</width>
+          <height>20</height>
          </size>
         </property>
         <property name="flat">
@@ -282,13 +273,12 @@
          <string/>
         </property>
         <property name="icon">
-         <iconset>
-          <normaloff>../../src/icons/006-trash.png</normaloff>../../src/icons/006-trash.png</iconset>
+         <iconset theme="edit-clear"/>
         </property>
         <property name="iconSize">
          <size>
-          <width>24</width>
-          <height>24</height>
+          <width>20</width>
+          <height>20</height>
          </size>
         </property>
         <property name="flat">
@@ -299,8 +289,28 @@
      </layout>
     </widget>
    </item>
+   <item row="0" column="0">
+    <widget class="SliderWidget" name="opacity_widget" native="true"/>
+   </item>
+   <item row="1" column="0">
+    <widget class="Line" name="line_2">
+     <property name="orientation">
+      <enum>Qt::Horizontal</enum>
+     </property>
+    </widget>
+   </item>
   </layout>
  </widget>
- <resources/>
+ <customwidgets>
+  <customwidget>
+   <class>SliderWidget</class>
+   <extends>QWidget</extends>
+   <header>airunner/pyqt/widgets/slider/slider_widget</header>
+   <container>1</container>
+  </customwidget>
+ </customwidgets>
+ <resources>
+  <include location="../../../resources.qrc"/>
+ </resources>
  <connections/>
 </ui>

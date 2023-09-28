@@ -2,7 +2,7 @@ import os
 from PyQt6 import QtGui
 
 from airunner.pyqt.widgets.base_widget import BaseWidget
-from airunner.pyqt.widgets.layers.layer import Ui_LayerWidget
+from airunner.pyqt.widgets.layers.layer_ui import Ui_LayerWidget
 from airunner.themes import Themes
 from airunner.utils import image_to_pixmap
 

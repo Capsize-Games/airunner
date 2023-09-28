@@ -1,4 +1,4 @@
-from airunner.pyqt.widgets.grid_preferences.grid_preferences import Ui_grid_preferences
+from airunner.pyqt.widgets.grid_preferences.grid_preferences_ui import Ui_grid_preferences
 from airunner.windows.custom_widget import CustomWidget
 
 from PyQt6.QtWidgets import QColorDialog
