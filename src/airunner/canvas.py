@@ -657,7 +657,7 @@ class Canvas(
         # add a spacer to the bottom of the container
         container.layout().addSpacerItem(QSpacerItem(0, 0, QSizePolicy.Policy.Minimum, QSizePolicy.Policy.Expanding))
 
-        self.parent.tool_menu_widget.layer_container_widget.layers.setWidget(container)
+        # self.parent.tool_menu_widget.layer_container_widget.layers.setWidget(container)
         self.container = container
 
     def handle_layer_click(self, layer, index, event):
@@ -701,9 +701,9 @@ class Canvas(
             if item:
                 item.widget().frame.setStyleSheet(self.parent.css("layer_highlight_style"))
         # change the layer opacity
-        self.parent.tool_menu_widget.set_opacity_slider(
-            int(self.current_layer.opacity * 100)
-        )
+        # self.parent.tool_menu_widget.set_opacity_slider(
+        #     int(self.current_layer.opacity * 100)
+        # )
 
     def delete_outside_active_grid_area(self):
         """
