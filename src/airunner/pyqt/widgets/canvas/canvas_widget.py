@@ -1,8 +1,5 @@
-from PyQt6.QtCore import QRect, QPoint
-from PyQt6.QtWidgets import QFrame, QLabel, QGridLayout
-
 from airunner.pyqt.widgets.base_widget import BaseWidget
-from airunner.pyqt.widgets.canvas.canvas import Ui_canvas
+from airunner.pyqt.widgets.canvas.canvas_ui import Ui_canvas
 
 
 class CanvasWidget(BaseWidget):
