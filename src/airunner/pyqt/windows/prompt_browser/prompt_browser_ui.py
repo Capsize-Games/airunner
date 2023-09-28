@@ -1,4 +1,4 @@
-# Form implementation generated from reading ui file '/home/joe/Projects/imagetopixel/airunner/src/airunner/pyqt/prompt_browser.ui'
+# Form implementation generated from reading ui file '/home/joe/Projects/imagetopixel/airunner/src/airunner/pyqt/windows/prompt_browser/prompt_browser.ui'
 #
 # Created by: PyQt6 UI code generator 6.4.2
 #
@@ -9,13 +9,13 @@
 from PyQt6 import QtCore, QtGui, QtWidgets
 
 
-class Ui_Dialog(object):
-    def setupUi(self, Dialog):
-        Dialog.setObjectName("Dialog")
-        Dialog.resize(768, 597)
-        self.gridLayout_2 = QtWidgets.QGridLayout(Dialog)
+class Ui_prompt_browser(object):
+    def setupUi(self, prompt_browser):
+        prompt_browser.setObjectName("prompt_browser")
+        prompt_browser.resize(768, 597)
+        self.gridLayout_2 = QtWidgets.QGridLayout(prompt_browser)
         self.gridLayout_2.setObjectName("gridLayout_2")
-        self.scrollArea = QtWidgets.QScrollArea(parent=Dialog)
+        self.scrollArea = QtWidgets.QScrollArea(parent=prompt_browser)
         self.scrollArea.setWidgetResizable(True)
         self.scrollArea.setObjectName("scrollArea")
         self.scrollAreaWidgetContents = QtWidgets.QWidget()
@@ -24,9 +24,9 @@ class Ui_Dialog(object):
         self.scrollArea.setWidget(self.scrollAreaWidgetContents)
         self.gridLayout_2.addWidget(self.scrollArea, 0, 0, 1, 1)
 
-        self.retranslateUi(Dialog)
-        QtCore.QMetaObject.connectSlotsByName(Dialog)
+        self.retranslateUi(prompt_browser)
+        QtCore.QMetaObject.connectSlotsByName(prompt_browser)
 
-    def retranslateUi(self, Dialog):
+    def retranslateUi(self, prompt_browser):
         _translate = QtCore.QCoreApplication.translate
-        Dialog.setWindowTitle(_translate("Dialog", "Dialog"))
+        prompt_browser.setWindowTitle(_translate("prompt_browser", "Prompt Browser"))

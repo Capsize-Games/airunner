@@ -1,8 +1,9 @@
 from airunner.pyqt.widgets.base_widget import BaseWidget
+from airunner.pyqt.widgets.lora.lora_ui import Ui_lora
 
 
 class LoraWidget(BaseWidget):
-    name = "lora"
+    widget_class_ = Ui_lora
 
     def __init__(self, *args, **kwargs):
         self.lora = kwargs.pop("lora", None)

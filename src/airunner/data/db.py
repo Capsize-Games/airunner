@@ -1,6 +1,3 @@
-from sqlalchemy import create_engine
-from sqlalchemy.orm import sessionmaker
-
 from airunner.data.bootstrap.controlnet_bootstrap_data import controlnet_bootstrap_data
 from airunner.data.bootstrap.generator_bootstrap_data import sections_bootstrap_data
 from airunner.data.bootstrap.imagefilter_bootstrap_data import imagefilter_bootstrap_data
@@ -8,19 +5,18 @@ from airunner.data.bootstrap.model_bootstrap_data import model_bootstrap_data
 from airunner.data.bootstrap.pipeline_bootstrap_data import pipeline_bootstrap_data
 from airunner.data.bootstrap.prompt_bootstrap_data import prompt_bootstrap_data, style_bootstrap_data, \
     variable_bootstrap_data
-from airunner.data.models import Base, ControlnetModel, Pipeline, Document, Settings, PromptGeneratorSetting, \
+from airunner.data.models import ControlnetModel, Pipeline, Document, Settings, PromptGeneratorSetting, \
     GeneratorSetting, SplitterSection, GridSettings, MetadataSettings, PathSettings, MemorySettings, AIModel, \
     ImageFilter, ImageFilterValue, BrushSettings, Prompt, PromptVariable, PromptCategory, PromptOption, \
     PromptVariableCategory, PromptVariableCategoryWeight, PromptStyleCategory, PromptStyle
+from airunner.utils import get_session
 
-engine = create_engine('sqlite:///airunner.db')
-Base.metadata.create_all(engine)
+session = get_session()
 
-Session = sessionmaker(bind=engine)
-session = Session()
-
-
+# check if database is blank:
 if not session.query(Prompt).first():
+
+    # Add Prompt objects
     for prompt_option, data in prompt_bootstrap_data.items():
         category = PromptCategory(name=prompt_option)
         prompt = Prompt(
@@ -103,7 +99,6 @@ if not session.query(Prompt).first():
 
         session.commit()
 
-    # add extra variables to database
     for variable_category, data in variable_bootstrap_data.items():
         category = session.query(PromptVariableCategory).filter_by(name=variable_category).first()
         if not category:
@@ -117,8 +112,7 @@ if not session.query(Prompt).first():
             ))
         session.commit()
 
-
-if not session.query(PromptStyle).first():
+    # Add PromptStyle objects
     for style_category, data in style_bootstrap_data.items():
         category = PromptStyleCategory(name=style_category, negative_prompt=data["negative_prompt"])
         session.add(category)
@@ -130,51 +124,50 @@ if not session.query(PromptStyle).first():
             ))
         session.commit()
 
-
-if not session.query(ControlnetModel).first():
+    # Add ControlnetModel objects
     for name, path in controlnet_bootstrap_data.items():
         session.add(ControlnetModel(name=name, path=path))
     session.commit()
 
 
-if not session.query(AIModel).first():
+    # Add AIModel objects
     for model_data in model_bootstrap_data:
         session.add(AIModel(**model_data))
     session.commit()
 
 
-if not session.query(Pipeline).first():
+    # Add Pipeline objects
     for pipeline_data in pipeline_bootstrap_data:
         session.add(Pipeline(**pipeline_data))
     session.commit()
 
 
-if not session.query(PathSettings).first():
+    # Add PathSettings objects
     session.add(PathSettings())
     session.commit()
 
 
-if not session.query(BrushSettings).first():
+    # Add BrushSettings objects
     session.add(BrushSettings())
     session.commit()
 
 
-if not session.query(GridSettings).first():
+    # Add GridSettings objects
     session.add(GridSettings())
     session.commit()
 
 
-if not session.query(MetadataSettings).first():
+    # Add MetadataSettings objects
     session.add(MetadataSettings())
     session.commit()
 
 
-if not session.query(MemorySettings).first():
+    # Add MemorySettings objects
     session.add(MemorySettings())
     session.commit()
 
 
-if not session.query(ImageFilter).first():
+    # Add ImageFilter objects
     for filter in imagefilter_bootstrap_data:
         image_filter = ImageFilter(
             display_name=filter[0],
@@ -198,7 +191,7 @@ if not session.query(ImageFilter).first():
     filter_values = image_filter.image_filter_values
 
 
-if not session.query(Document).first():
+    # Add Document object
     settings = Settings(nsfw_filter=True)
     settings.prompt_generator_settings.append(
         PromptGeneratorSetting(
@@ -213,29 +206,33 @@ if not session.query(Document).first():
             settings_id=settings.id
         )
     )
-
     settings.splitter_sizes.append(SplitterSection(
-        name="main",
+        name="content_splitter",
         order=0,
-        size=-1
+        size=390
     ))
     settings.splitter_sizes.append(SplitterSection(
-        name="main",
+        name="content_splitter",
         order=1,
-        size=-1
+        size=512
     ))
     settings.splitter_sizes.append(SplitterSection(
-        name="main",
+        name="content_splitter",
         order=2,
-        size=-1
+        size=200
     ))
     settings.splitter_sizes.append(SplitterSection(
-        name="center",
+        name="content_splitter",
+        order=3,
+        size=64
+    ))
+    settings.splitter_sizes.append(SplitterSection(
+        name="main_splitter",
         order=0,
         size=520
     ))
     settings.splitter_sizes.append(SplitterSection(
-        name="center",
+        name="main_splitter",
         order=1,
         size=-1
     ))

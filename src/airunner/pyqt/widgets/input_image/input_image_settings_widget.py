@@ -3,9 +3,8 @@ from functools import partial
 from PIL import Image
 from PyQt6.QtWidgets import QHBoxLayout, QWidget
 
-from airunner.pyqt.widgets.input_image.input_image import Ui_input_image
+from airunner.pyqt.widgets.input_image.input_image_ui import Ui_input_image
 from airunner.pyqt.widgets.slider.slider_widget import SliderWidget
-from airunner.utils import image_to_pixmap
 from airunner.pyqt.widgets.base_widget import BaseWidget
 
 
@@ -27,12 +26,12 @@ class InputImageSettingsWidget(BaseWidget):
 
         self.initialize_input_image_buttons()
         # self.app.add_image_to_canvas_signal.connect(self.handle_new_image)
-        self.template.groupBox.setChecked(self.settings_manager.generator.enable_input_image)
-        self.template.groupBox.toggled.connect(self.handle_toggle_enable_input_image)
-        self.template.refresh_input_image_button.clicked.connect(self.clear_input_image)
+        self.ui.groupBox.setChecked(self.settings_manager.generator.enable_input_image)
+        self.ui.groupBox.toggled.connect(self.handle_toggle_enable_input_image)
+        self.ui.refresh_input_image_button.clicked.connect(self.clear_input_image)
         # self.add_input_image_strength_scale_widget()
         self.set_stylesheet()
-        self.template.image_thumbnail.mousePressEvent = self.send_active_image_to_canvas
+        self.ui.image_thumbnail.mousePressEvent = self.send_active_image_to_canvas
         self.update_buttons(use_grid=self.settings_manager.input_image_use_grid_image)
 
     def add_input_image_strength_scale_widget(self):
@@ -73,7 +72,7 @@ class InputImageSettingsWidget(BaseWidget):
             self.add_slider_to_scale_frame(slider)
 
     def add_slider_to_scale_frame(self, slider):
-        grid_layout = QHBoxLayout(self.template.scale_frame)
+        grid_layout = QHBoxLayout(self.ui.scale_frame)
         grid_layout.setSpacing(0)
         grid_layout.setContentsMargins(0, 0, 0, 0)
         widget = QWidget()
@@ -108,20 +107,20 @@ class InputImageSettingsWidget(BaseWidget):
         self.update_buttons(use_grid=self.settings_manager.input_image_use_grid_image)
 
         # setup handlers for each button
-        self.template.import_image_button.clicked.connect(self.import_input_image)
-        self.template.use_imported_image_button.clicked.connect(self.toggle_use_imported_image)
-        self.template.use_grid_image_button.clicked.connect(self.toggle_use_active_grid_area)
-        self.template.clear_image_button.clicked.connect(self.clear_input_image)
-        self.template.recycle_grid_image_button.clicked.connect(self.toggle_keep_refreshed)
+        self.ui.import_image_button.clicked.connect(self.import_input_image)
+        self.ui.use_imported_image_button.clicked.connect(self.toggle_use_imported_image)
+        self.ui.use_grid_image_button.clicked.connect(self.toggle_use_active_grid_area)
+        self.ui.clear_image_button.clicked.connect(self.clear_input_image)
+        self.ui.recycle_grid_image_button.clicked.connect(self.toggle_keep_refreshed)
 
     def set_stylesheet(self):
         # super().set_stylesheet()
-        # self.template.groupBox.setStyleSheet(self.app.css("input_image_groupbox"))
+        # self.ui.groupBox.setStyleSheet(self.app.css("input_image_groupbox"))
         #
         # if self.app.enable_input_image:
-        #     self.template.tabWidget.setStyleSheet(self.app.css("input_image_tab_widget"))
+        #     self.ui.tabWidget.setStyleSheet(self.app.css("input_image_tab_widget"))
         # else:
-        #     self.template.tabWidget.setStyleSheet(self.app.css("input_image_tab_widget_disabled"))
+        #     self.ui.tabWidget.setStyleSheet(self.app.css("input_image_tab_widget_disabled"))
         pass
 
     def import_input_image(self):
@@ -156,24 +155,24 @@ class InputImageSettingsWidget(BaseWidget):
 
     def update_buttons(self, use_grid):
         if use_grid:
-            self.template.import_image_button.setEnabled(False)
-            self.template.recycle_grid_image_button.setEnabled(True)
-            # hide the self.template.refresh_input_image_button button widget
-            self.template.refresh_input_image_button.show()
-            self.template.clear_image_button.hide()
+            self.ui.import_image_button.setEnabled(False)
+            self.ui.recycle_grid_image_button.setEnabled(True)
+            # hide the self.ui.refresh_input_image_button button widget
+            self.ui.refresh_input_image_button.show()
+            self.ui.clear_image_button.hide()
             self.set_button_icon(self.is_dark, "recycle_grid_image_button", self.icons["recycle_grid_image_button"])
-            self.template.use_imported_image_button.setChecked(False)
-            self.template.use_grid_image_button.setChecked(self.settings_manager.input_image_use_grid_image)
-            self.template.recycle_grid_image_button.setChecked(self.settings_manager.input_image_recycle_grid_image)
+            self.ui.use_imported_image_button.setChecked(False)
+            self.ui.use_grid_image_button.setChecked(self.settings_manager.input_image_use_grid_image)
+            self.ui.recycle_grid_image_button.setChecked(self.settings_manager.input_image_recycle_grid_image)
         else:
-            self.template.import_image_button.setEnabled(True)
-            self.template.recycle_grid_image_button.setEnabled(False)
-            self.template.refresh_input_image_button.hide()
-            self.template.clear_image_button.show()
+            self.ui.import_image_button.setEnabled(True)
+            self.ui.recycle_grid_image_button.setEnabled(False)
+            self.ui.refresh_input_image_button.hide()
+            self.ui.clear_image_button.show()
             self.set_button_icon(not self.is_dark, "recycle_grid_image_button", self.icons["recycle_grid_image_button"])
-            self.template.use_imported_image_button.setChecked(True)
-            self.template.use_grid_image_button.setChecked(False)
-            self.template.recycle_grid_image_button.setChecked(False)
+            self.ui.use_imported_image_button.setChecked(True)
+            self.ui.use_grid_image_button.setChecked(False)
+            self.ui.recycle_grid_image_button.setChecked(False)
 
     def toggle_keep_refreshed(self, value):
         self.settings_manager.input_image_recycle_grid_image = value
@@ -193,9 +192,9 @@ class InputImageSettingsWidget(BaseWidget):
     def set_thumbnail(self):
         # image = self.current_input_image
         # if image:
-        #     self.template.image_thumbnail.setPixmap(image_to_pixmap(image, size=72))
+        #     self.ui.image_thumbnail.setPixmap(image_to_pixmap(image, size=72))
         # else:
-        #     self.template.image_thumbnail.clear()
+        #     self.ui.image_thumbnail.clear()
         #
         # self.app.update_controlnet_thumbnail()
         pass
@@ -210,7 +209,7 @@ class InputImageSettingsWidget(BaseWidget):
                 "action": self.app.current_section,
                 "options": {
                     "outpaint_box_rect": self.app.canvas.active_grid_area_rect,
-                    "generator_section": self.app.currentTabSection
+                    "generator_section": self.app.current_generator
                 }
             },
             self.current_input_image

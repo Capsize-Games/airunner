@@ -4,7 +4,8 @@ from PIL import Image
 from PyQt6.QtGui import QPixmap, QImage
 from PyQt6.QtWidgets import QFileDialog, QApplication, QMainWindow
 
-from airunner.aihandler.settings_manager import SettingsManager
+
+SESSION = None
 
 
 def get_venv_python_executable():
@@ -45,6 +46,7 @@ def get_venv_python_executable():
 
 
 def initialize_os_environment():
+    from airunner.aihandler.settings_manager import SettingsManager
     settings_manager = SettingsManager()
     hf_cache_path = settings_manager.path_settings.hf_cache_path
     if hf_cache_path != "":
@@ -264,6 +266,7 @@ def get_latest_version():
 #     return models
 
 def prepare_metadata(data):
+    from airunner.aihandler.settings_manager import SettingsManager
     settings_manager = SettingsManager()
     if not settings_manager.metadata_settings.export_metadata or \
             settings_manager.image_export_type != "png":
@@ -298,6 +301,7 @@ def prepare_metadata(data):
     return metadata
 
 def prepare_controlnet_metadata(data):
+    from airunner.aihandler.settings_manager import SettingsManager
     from PIL import PngImagePlugin
     settings_manager = SettingsManager()
     metadata = PngImagePlugin.PngInfo()
@@ -309,6 +313,7 @@ def auto_export_image(
     seed=None,
     type="image",
 ):
+    from airunner.aihandler.settings_manager import SettingsManager
     if seed is None:
         raise Exception("Seed must be set when auto exporting an image")
     settings_manager = SettingsManager()
@@ -369,3 +374,22 @@ def get_main_window():
     for widget in app.topLevelWidgets():
         if isinstance(widget, QMainWindow):
             return widget
+
+
+def get_session():
+    global SESSION
+    if not SESSION:
+        from sqlalchemy import create_engine
+        from sqlalchemy.orm import sessionmaker
+        from airunner.data.models import Base
+
+        engine = create_engine('sqlite:///airunner.db')
+        Base.metadata.create_all(engine)
+        Session = sessionmaker(bind=engine)
+        SESSION = Session()
+    return SESSION
+
+
+def save_session():
+    session = get_session()
+    session.commit()

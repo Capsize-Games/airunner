@@ -9,7 +9,6 @@ from airunner.utils import get_main_window
 
 
 class BaseWidget(QWidget):
-    name = None
     widget_class_ = None
     icons = {}
     ui = None
@@ -59,12 +58,8 @@ class BaseWidget(QWidget):
         super().__init__(*args, **kwargs)
         self.app = get_main_window()
         self.settings_manager = SettingsManager()
-        if self.widget_class_:
-            self.template = self.widget_class_()
-            self.template.setupUi(self)
-            self.ui = self.template
-        elif self.name:
-            self.template = uic.loadUi(f"pyqt/widgets/{self.name}.ui", self)
+        self.ui = self.widget_class_()
+        self.ui.setupUi(self)
 
     def set_stylesheet(self, is_dark=None, button_name=None, icon=None):
         is_dark = self.is_dark if is_dark is None else is_dark

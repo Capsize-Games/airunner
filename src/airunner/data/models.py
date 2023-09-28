@@ -1,8 +1,55 @@
 from sqlalchemy import Column, Integer, String, Boolean, ForeignKey, Float, JSON
 from sqlalchemy.ext.declarative import declarative_base
 from sqlalchemy.orm import relationship
+from PyQt6.QtCore import Qt, QAbstractTableModel, QModelIndex
+
+
+class ModelBase(QAbstractTableModel):
+    _headers = []
+
+    def __init__(self, data):
+        super().__init__()
+        self._data = data
+
+    def rowCount(self, parent=QModelIndex()):
+        return len(self._data)
+
+    def columnCount(self, parent=QModelIndex()):
+        return len(self._headers)
+
+    def data(self, index, role=Qt.ItemDataRole.DisplayRole):
+        if role == Qt.ItemDataRole.DisplayRole:
+            row = index.row()
+            col = index.column()
+            attr = self._headers[col]["column_name"]
+            if hasattr(self._data[row], attr):
+                return getattr(self._data[row], attr)
+        return None
+
+    def headerData(self, section, orientation, role=Qt.ItemDataRole.DisplayRole):
+        if role == Qt.ItemDataRole.DisplayRole and orientation == Qt.Orientation.Horizontal:
+            return self._headers[section]["display_name"]
+        return None
+
 
 Base = declarative_base()
+
+
+class PromptStyleCategoryModel(ModelBase):
+    _headers = [
+        {
+            "display_name": "ID",
+            "column_name": "id"
+        },
+        {
+            "display_name": "Name",
+            "column_name": "name"
+        },
+        {
+            "display_name": "Negative Prompt",
+            "column_name": "negative_prompt"
+        }
+    ]
 
 
 class PromptStyleCategory(Base):
