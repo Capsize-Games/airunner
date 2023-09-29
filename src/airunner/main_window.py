@@ -39,7 +39,8 @@ from airunner.windows.model_merger import ModelMerger
 from airunner.windows.prompt_browser import PromptBrowser
 from airunner.windows.setup_wizard import SetupWizard
 from airunner.windows.update_window import UpdateWindow
-from airunner.utils import get_version, get_latest_version, auto_export_image, get_session, save_session
+from airunner.utils import get_version, get_latest_version, auto_export_image, get_session, save_session, \
+    create_airunner_paths
 from airunner.aihandler.settings_manager import SettingsManager
 
 import qdarktheme
@@ -466,6 +467,9 @@ class MainWindow(
         widget.layout().addWidget(self.system_stats_label)
         self.statusBar().addPermanentWidget(widget)
 
+        # create paths if they do not exist
+        create_airunner_paths()
+
     def quick_export(self):
         if os.path.isdir(self.image_path) is False:
             self.choose_image_export_path()
@@ -542,6 +546,7 @@ class MainWindow(
         self.show_section("model_manager")
 
     def action_show_prompt_builder(self):
+        print("action_show_prompt_builder")
         self.show_section("prompt_builder")
 
     def action_show_controlnet(self):
