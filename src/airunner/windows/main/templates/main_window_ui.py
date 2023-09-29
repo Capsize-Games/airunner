@@ -1,4 +1,4 @@
-# Form implementation generated from reading ui file '/home/joe/Projects/imagetopixel/airunner/src/airunner/../../src/airunner/pyqt/templates/main_window.ui'
+# Form implementation generated from reading ui file '/home/joe/Projects/imagetopixel/airunner/src/airunner/../../src/airunner/windows/main/templates/main_window.ui'
 #
 # Created by: PyQt6 UI code generator 6.4.2
 #
@@ -73,13 +73,13 @@ class Ui_MainWindow(object):
         self.actionPaste.setObjectName("actionPaste")
         self.actionUndo = QtGui.QAction(parent=MainWindow)
         icon = QtGui.QIcon()
-        icon.addPixmap(QtGui.QPixmap("/home/joe/Projects/imagetopixel/airunner/src/airunner/../../src/airunner/pyqt/templates/../src/icons/007-undo.png"), QtGui.QIcon.Mode.Normal, QtGui.QIcon.State.Off)
+        icon.addPixmap(QtGui.QPixmap("/home/joe/Projects/imagetopixel/airunner/src/airunner/../../src/airunner/windows/main/templates/../src/icons/007-undo.png"), QtGui.QIcon.Mode.Normal, QtGui.QIcon.State.Off)
         self.actionUndo.setIcon(icon)
         self.actionUndo.setWhatsThis("")
         self.actionUndo.setObjectName("actionUndo")
         self.actionRedo = QtGui.QAction(parent=MainWindow)
         icon1 = QtGui.QIcon()
-        icon1.addPixmap(QtGui.QPixmap("/home/joe/Projects/imagetopixel/airunner/src/airunner/../../src/airunner/pyqt/templates/../src/icons/008-redo.png"), QtGui.QIcon.Mode.Normal, QtGui.QIcon.State.Off)
+        icon1.addPixmap(QtGui.QPixmap("/home/joe/Projects/imagetopixel/airunner/src/airunner/../../src/airunner/windows/main/templates/../src/icons/008-redo.png"), QtGui.QIcon.Mode.Normal, QtGui.QIcon.State.Off)
         self.actionRedo.setIcon(icon1)
         self.actionRedo.setObjectName("actionRedo")
         self.actionGrid = QtGui.QAction(parent=MainWindow)

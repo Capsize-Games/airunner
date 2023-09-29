@@ -68,7 +68,7 @@ class Ui_LayerWidget(object):
         self.visible_button.setText("")
         icon = QtGui.QIcon()
         icon.addPixmap(QtGui.QPixmap(":/icons/src/icons/eye-off.png"), QtGui.QIcon.Mode.Normal, QtGui.QIcon.State.Off)
-        icon.addPixmap(QtGui.QPixmap("/airunner/widgets/layers/templates/../src/icons/eye.png"), QtGui.QIcon.Mode.Normal, QtGui.QIcon.State.On)
+        icon.addPixmap(QtGui.QPixmap("/home/joe/Projects/imagetopixel/airunner/src/airunner/../../src/airunner/widgets/layers/templates/../src/icons/eye.png"), QtGui.QIcon.Mode.Normal, QtGui.QIcon.State.On)
         icon.addPixmap(QtGui.QPixmap(":/icons/src/icons/eye.png"), QtGui.QIcon.Mode.Active, QtGui.QIcon.State.On)
         self.visible_button.setIcon(icon)
         self.visible_button.setCheckable(True)
