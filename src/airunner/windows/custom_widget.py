@@ -12,4 +12,4 @@ class CustomWidget(QWidget):
         self.app = app
         self.settings_manager = settings_manager
         if filename:
-            uic.loadUi(os.path.join(f"pyqt/widgets/{filename}.ui"), self)
+            uic.loadUi(os.path.join(f"widgets/{filename}.ui"), self)

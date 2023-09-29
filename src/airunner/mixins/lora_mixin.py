@@ -3,7 +3,7 @@ from PyQt6.QtWidgets import QWidget, QVBoxLayout
 
 from airunner.data.db import session
 from airunner.data.models import Lora
-from airunner.pyqt.widgets.lora.lora_widget import LoraWidget
+from airunner.widgets.lora.lora_widget import LoraWidget
 
 
 class LoraMixin:
