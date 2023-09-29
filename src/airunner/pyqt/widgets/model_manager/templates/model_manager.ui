@@ -60,7 +60,7 @@
       <string notr="true"/>
      </property>
      <property name="currentIndex">
-      <number>-1</number>
+      <number>0</number>
      </property>
      <property name="tabsClosable">
       <bool>false</bool>
@@ -68,10 +68,60 @@
      <property name="tabBarAutoHide">
       <bool>false</bool>
      </property>
+     <widget class="QWidget" name="default_tab">
+      <attribute name="title">
+       <string>Default</string>
+      </attribute>
+      <layout class="QGridLayout" name="gridLayout_2">
+       <item row="0" column="0">
+        <widget class="DefaultModelWidget" name="widget_2" native="true"/>
+       </item>
+      </layout>
+     </widget>
+     <widget class="QWidget" name="custom_tab">
+      <attribute name="title">
+       <string>Custom</string>
+      </attribute>
+      <layout class="QGridLayout" name="gridLayout_3">
+       <item row="0" column="0">
+        <widget class="CustomModelWidget" name="widget" native="true"/>
+       </item>
+      </layout>
+     </widget>
+     <widget class="QWidget" name="import_tab">
+      <attribute name="title">
+       <string>Import</string>
+      </attribute>
+      <layout class="QGridLayout" name="gridLayout_4">
+       <item row="0" column="0">
+        <widget class="ImportWidget" name="widget_3" native="true"/>
+       </item>
+      </layout>
+     </widget>
     </widget>
    </item>
   </layout>
  </widget>
+ <customwidgets>
+  <customwidget>
+   <class>CustomModelWidget</class>
+   <extends>QWidget</extends>
+   <header>airunner/pyqt/widgets/model_manager/custom_widget</header>
+   <container>1</container>
+  </customwidget>
+  <customwidget>
+   <class>DefaultModelWidget</class>
+   <extends>QWidget</extends>
+   <header>airunner/pyqt/widgets/model_manager/default_widget</header>
+   <container>1</container>
+  </customwidget>
+  <customwidget>
+   <class>ImportWidget</class>
+   <extends>QWidget</extends>
+   <header>airunner/pyqt/widgets/model_manager/import_widget</header>
+   <container>1</container>
+  </customwidget>
+ </customwidgets>
  <resources/>
  <connections/>
 </ui>

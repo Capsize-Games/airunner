@@ -4,6 +4,7 @@ from PIL import Image
 from PyQt6.QtGui import QPixmap, QImage
 from PyQt6.QtWidgets import QFileDialog, QApplication, QMainWindow
 
+from airunner.settings import SQLITE_DB_PATH
 
 SESSION = None
 
@@ -383,7 +384,7 @@ def get_session():
         from sqlalchemy.orm import sessionmaker
         from airunner.data.models import Base
 
-        engine = create_engine('sqlite:///airunner.db')
+        engine = create_engine(f"sqlite:///{SQLITE_DB_PATH}")
         Base.metadata.create_all(engine)
         Session = sessionmaker(bind=engine)
         SESSION = Session()

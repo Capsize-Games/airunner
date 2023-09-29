@@ -1,7 +1,7 @@
 <?xml version="1.0" encoding="UTF-8"?>
 <ui version="4.0">
- <class>Form</class>
- <widget class="QWidget" name="Form">
+ <class>model_widget</class>
+ <widget class="QWidget" name="model_widget">
   <property name="geometry">
    <rect>
     <x>0</x>
@@ -12,6 +12,27 @@
   </property>
   <property name="windowTitle">
    <string>Form</string>
+  </property>
+  <property name="branch" stdset="0">
+   <string/>
+  </property>
+  <property name="path" stdset="0">
+   <string/>
+  </property>
+  <property name="version" stdset="0">
+   <string/>
+  </property>
+  <property name="category" stdset="0">
+   <string/>
+  </property>
+  <property name="pipeline_action" stdset="0">
+   <string/>
+  </property>
+  <property name="pipeline_class" stdset="0">
+   <string/>
+  </property>
+  <property name="prompts" stdset="0">
+   <string/>
   </property>
   <layout class="QGridLayout" name="gridLayout">
    <property name="bottomMargin">
@@ -59,8 +80,8 @@
           <string/>
          </property>
          <property name="icon">
-          <iconset>
-           <normaloff>../../../src/icons/010-view.png</normaloff>../../../src/icons/010-view.png</iconset>
+          <iconset resource="../../../../resources.qrc">
+           <normaloff>:/icons/010-view-light.png</normaloff>:/icons/010-view-light.png</iconset>
          </property>
          <property name="checkable">
           <bool>true</bool>
@@ -91,8 +112,8 @@
           <string/>
          </property>
          <property name="icon">
-          <iconset>
-           <normaloff>../../../src/icons/settings.png</normaloff>../../../src/icons/settings.png</iconset>
+          <iconset resource="../../../../resources.qrc">
+           <normaloff>:/icons/settings-light.png</normaloff>:/icons/settings-light.png</iconset>
          </property>
         </widget>
        </item>
@@ -117,8 +138,8 @@
           <string/>
          </property>
          <property name="icon">
-          <iconset>
-           <normaloff>../../../src/icons/006-trash.png</normaloff>../../../src/icons/006-trash.png</iconset>
+          <iconset resource="../../../../resources.qrc">
+           <normaloff>:/icons/006-trash-light.png</normaloff>:/icons/006-trash-light.png</iconset>
          </property>
         </widget>
        </item>
@@ -369,6 +390,8 @@
    </item>
   </layout>
  </widget>
- <resources/>
+ <resources>
+  <include location="../../../../resources.qrc"/>
+ </resources>
  <connections/>
 </ui>
