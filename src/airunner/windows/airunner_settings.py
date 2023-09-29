@@ -3,6 +3,7 @@ from PyQt6.QtGui import QStandardItemModel, QStandardItem, QBrush, QColor, QPain
 from PyQt6.QtWidgets import QStyledItemDelegate, QStyleOptionViewItem, QLabel, QWidget, QVBoxLayout, QPlainTextEdit
 
 from airunner.pyqt.widgets.keyboard_shortcuts.keyboard_shortcuts_widget import KeyboardShortcutsWidget
+from airunner.pyqt.widgets.paths.paths_widget import PathsWidget
 from airunner.pyqt.windows.settings.airunner_settings_ui import Ui_airunner_settings
 from airunner.windows.base_window import BaseWindow
 # open the version file from the root of the project and get the VERSION variable string from it
@@ -10,7 +11,6 @@ from airunner.windows.export_preferences_widget import ExportPreferencesWidget
 from airunner.windows.grid_widget import GridWidget
 from airunner.windows.hf_api_key_widget import HFAPIKeyWidget
 from airunner.windows.memory_widget import MemoryWidget
-from airunner.windows.paths_widget import PathsWidget
 
 
 class HighlightDelegate(QStyledItemDelegate):
@@ -241,10 +241,13 @@ class SettingsWindow(BaseWindow):
             "hf_api_key": HFAPIKeyWidget,
         }
         if name in widgets:
-            widget_object = widgets[name](
-                app=self.app,
-                settings_manager=self.settings_manager
-            )
+            if name == "paths":
+                widget_object = widgets[name]()
+            else:
+                widget_object = widgets[name](
+                    app=self.app,
+                    settings_manager=self.settings_manager
+                )
 
         self.clear_scroll_area()
         self.scroll_layout.addWidget(label)

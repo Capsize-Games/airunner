@@ -21,7 +21,7 @@ class GeneratorForm(BaseWidget):
     @property
     def generator_name(self):
         try:
-            return self.parent().property("generator_name")
+            return self.property("generator_name")
         except Exception as e:
             print(e)
             return None

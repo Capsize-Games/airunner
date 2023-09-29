@@ -6,7 +6,7 @@
    <rect>
     <x>0</x>
     <y>0</y>
-    <width>127</width>
+    <width>330</width>
     <height>972</height>
    </rect>
   </property>
@@ -60,7 +60,7 @@
           <enum>QTabWidget::West</enum>
          </property>
          <property name="currentIndex">
-          <number>4</number>
+          <number>0</number>
          </property>
          <widget class="QWidget" name="tab_stablediffusion_txt2img">
           <property name="sizePolicy">
