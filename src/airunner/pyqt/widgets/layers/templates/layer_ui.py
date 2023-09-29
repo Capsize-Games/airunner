@@ -1,4 +1,4 @@
-# Form implementation generated from reading ui file '/home/joe/Projects/imagetopixel/airunner/src/airunner/pyqt/widgets/layers/templates/layer.ui'
+# Form implementation generated from reading ui file '/home/joe/Projects/imagetopixel/airunner/src/airunner/../../src/airunner/pyqt/widgets/layers/templates/layer.ui'
 #
 # Created by: PyQt6 UI code generator 6.4.2
 #
@@ -68,7 +68,7 @@ class Ui_LayerWidget(object):
         self.visible_button.setText("")
         icon = QtGui.QIcon()
         icon.addPixmap(QtGui.QPixmap(":/icons/src/icons/eye-off.png"), QtGui.QIcon.Mode.Normal, QtGui.QIcon.State.Off)
-        icon.addPixmap(QtGui.QPixmap("/home/joe/Projects/imagetopixel/airunner/src/airunner/pyqt/widgets/layers/templates/../src/icons/eye.png"), QtGui.QIcon.Mode.Normal, QtGui.QIcon.State.On)
+        icon.addPixmap(QtGui.QPixmap("/home/joe/Projects/imagetopixel/airunner/src/airunner/../../src/airunner/pyqt/widgets/layers/templates/../src/icons/eye.png"), QtGui.QIcon.Mode.Normal, QtGui.QIcon.State.On)
         icon.addPixmap(QtGui.QPixmap(":/icons/src/icons/eye.png"), QtGui.QIcon.Mode.Active, QtGui.QIcon.State.On)
         self.visible_button.setIcon(icon)
         self.visible_button.setCheckable(True)

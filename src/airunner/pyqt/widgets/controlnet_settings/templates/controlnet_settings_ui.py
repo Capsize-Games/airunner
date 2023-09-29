@@ -1,4 +1,4 @@
-# Form implementation generated from reading ui file '/home/joe/Projects/imagetopixel/airunner/src/airunner/pyqt/widgets/controlnet_settings/templates/controlnet_settings.ui'
+# Form implementation generated from reading ui file '/home/joe/Projects/imagetopixel/airunner/src/airunner/../../src/airunner/pyqt/widgets/controlnet_settings/templates/controlnet_settings.ui'
 #
 # Created by: PyQt6 UI code generator 6.4.2
 #
@@ -217,7 +217,7 @@ class Ui_controlnet_settings(object):
         self.mask_link_to_input_image_button.setCursor(QtGui.QCursor(QtCore.Qt.CursorShape.PointingHandCursor))
         self.mask_link_to_input_image_button.setText("")
         icon = QtGui.QIcon()
-        icon.addPixmap(QtGui.QPixmap("/home/joe/Projects/imagetopixel/airunner/src/airunner/pyqt/widgets/controlnet_settings/templates/../../src/icons/048-chain.png"), QtGui.QIcon.Mode.Normal, QtGui.QIcon.State.Off)
+        icon.addPixmap(QtGui.QPixmap("/home/joe/Projects/imagetopixel/airunner/src/airunner/../../src/airunner/pyqt/widgets/controlnet_settings/templates/../../src/icons/048-chain.png"), QtGui.QIcon.Mode.Normal, QtGui.QIcon.State.Off)
         self.mask_link_to_input_image_button.setIcon(icon)
         self.mask_link_to_input_image_button.setCheckable(True)
         self.mask_link_to_input_image_button.setFlat(True)
@@ -233,7 +233,7 @@ class Ui_controlnet_settings(object):
         self.mask_use_imported_image_button.setCursor(QtGui.QCursor(QtCore.Qt.CursorShape.PointingHandCursor))
         self.mask_use_imported_image_button.setText("")
         icon1 = QtGui.QIcon()
-        icon1.addPixmap(QtGui.QPixmap("/home/joe/Projects/imagetopixel/airunner/src/airunner/pyqt/widgets/controlnet_settings/templates/../../src/icons/046-import.png"), QtGui.QIcon.Mode.Normal, QtGui.QIcon.State.Off)
+        icon1.addPixmap(QtGui.QPixmap("/home/joe/Projects/imagetopixel/airunner/src/airunner/../../src/airunner/pyqt/widgets/controlnet_settings/templates/../../src/icons/046-import.png"), QtGui.QIcon.Mode.Normal, QtGui.QIcon.State.Off)
         self.mask_use_imported_image_button.setIcon(icon1)
         self.mask_use_imported_image_button.setCheckable(True)
         self.mask_use_imported_image_button.setFlat(True)
@@ -245,7 +245,7 @@ class Ui_controlnet_settings(object):
         self.mask_export_image_button.setCursor(QtGui.QCursor(QtCore.Qt.CursorShape.PointingHandCursor))
         self.mask_export_image_button.setText("")
         icon2 = QtGui.QIcon()
-        icon2.addPixmap(QtGui.QPixmap("/home/joe/Projects/imagetopixel/airunner/src/airunner/pyqt/widgets/controlnet_settings/templates/../../src/icons/export.png"), QtGui.QIcon.Mode.Normal, QtGui.QIcon.State.Off)
+        icon2.addPixmap(QtGui.QPixmap("/home/joe/Projects/imagetopixel/airunner/src/airunner/../../src/airunner/pyqt/widgets/controlnet_settings/templates/../../src/icons/export.png"), QtGui.QIcon.Mode.Normal, QtGui.QIcon.State.Off)
         self.mask_export_image_button.setIcon(icon2)
         self.mask_export_image_button.setCheckable(False)
         self.mask_export_image_button.setFlat(True)
@@ -257,7 +257,7 @@ class Ui_controlnet_settings(object):
         self.mask_clear_image_button.setCursor(QtGui.QCursor(QtCore.Qt.CursorShape.PointingHandCursor))
         self.mask_clear_image_button.setText("")
         icon3 = QtGui.QIcon()
-        icon3.addPixmap(QtGui.QPixmap("/home/joe/Projects/imagetopixel/airunner/src/airunner/pyqt/widgets/controlnet_settings/templates/../../src/icons/006-trash.png"), QtGui.QIcon.Mode.Normal, QtGui.QIcon.State.Off)
+        icon3.addPixmap(QtGui.QPixmap("/home/joe/Projects/imagetopixel/airunner/src/airunner/../../src/airunner/pyqt/widgets/controlnet_settings/templates/../../src/icons/006-trash.png"), QtGui.QIcon.Mode.Normal, QtGui.QIcon.State.Off)
         self.mask_clear_image_button.setIcon(icon3)
         self.mask_clear_image_button.setFlat(True)
         self.mask_clear_image_button.setObjectName("mask_clear_image_button")
