@@ -13,7 +13,6 @@ from PyQt6.QtWidgets import QApplication, QFileDialog, QMainWindow, QTabWidget, 
 from PyQt6.QtCore import pyqtSlot, Qt, QThread, pyqtSignal, QObject, QTimer
 from PyQt6.QtGui import QGuiApplication
 
-from airunner import resources  # Do not remove, this line is needed to load the ui resource files
 from airunner.aihandler.qtvar import MessageHandlerVar
 from airunner.aihandler.logger import Logger as logger
 from airunner.aihandler.pyqt_client import OfflineClient
@@ -31,14 +30,13 @@ from airunner.mixins.toolbar_mixin import ToolbarMixin
 from airunner.pyqt.templates.main_window_new_ui import Ui_MainWindow
 from airunner.pyqt.widgets.embeddings.embedding_widget import EmbeddingWidget
 from airunner.themes import Themes
-from airunner.windows.about import AboutWindow
-from airunner.windows.airunner_settings import SettingsWindow
-from airunner.windows.deterministic_generation_window import DeterministicGenerationWindow
-from airunner.windows.image_interpolation import ImageInterpolation
+from airunner.pyqt.windows.about.about import AboutWindow
+from airunner.pyqt.windows.settings.airunner_settings import SettingsWindow
+from airunner.pyqt.windows.deterministic_generation.deterministic_generation_window import DeterministicGenerationWindow
+from airunner.pyqt.windows.interpolation.image_interpolation import ImageInterpolation
 from airunner.windows.model_merger import ModelMerger
-from airunner.windows.prompt_browser import PromptBrowser
-from airunner.windows.setup_wizard import SetupWizard
-from airunner.windows.update_window import UpdateWindow
+from airunner.pyqt.windows.prompt_browser.prompt_browser import PromptBrowser
+from airunner.pyqt.windows.update.update_window import UpdateWindow
 from airunner.utils import get_version, get_latest_version, auto_export_image, get_session, save_session, \
     create_airunner_paths
 from airunner.aihandler.settings_manager import SettingsManager
@@ -526,9 +524,6 @@ class MainWindow(
 
     def action_rotate_90_counterclockwise_triggered(self):
         self.canvas.rotate_90_counterclockwise()
-
-    def action_run_setup_wizard_triggered(self):
-        self.run_setup_wizard()
 
     def action_save_prompt_triggered(self):
         self.save_prompt()
@@ -1471,9 +1466,6 @@ class MainWindow(
     def release_tab_overrides(self):
         self.override_current_generator = None
         self.override_section = None
-
-    def run_setup_wizard(self):
-        SetupWizard(self.settings_manager, app=self)
 
     def clear_all_prompts(self):
         for tab_section in self._tabs.keys():
