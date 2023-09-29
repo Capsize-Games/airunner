@@ -1,4 +1,4 @@
-# Form implementation generated from reading ui file '/home/joe/Projects/imagetopixel/airunner/src/airunner/pyqt/windows/deterministic_generation/deterministic_generation_window.ui'
+# Form implementation generated from reading ui file '/home/joe/Projects/imagetopixel/airunner/src/airunner/../../src/airunner/pyqt/windows/deterministic_generation/templates/deterministic_generation_window.ui'
 #
 # Created by: PyQt6 UI code generator 6.4.2
 #

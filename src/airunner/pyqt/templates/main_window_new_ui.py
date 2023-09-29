@@ -1,4 +1,4 @@
-# Form implementation generated from reading ui file '/home/joe/Projects/imagetopixel/airunner/src/airunner/pyqt/templates/main_window_new.ui'
+# Form implementation generated from reading ui file '/home/joe/Projects/imagetopixel/airunner/src/airunner/../../src/airunner/pyqt/templates/main_window_new.ui'
 #
 # Created by: PyQt6 UI code generator 6.4.2
 #
@@ -409,13 +409,13 @@ class Ui_MainWindow(object):
         self.actionPaste.setObjectName("actionPaste")
         self.actionUndo = QtGui.QAction(parent=MainWindow)
         icon8 = QtGui.QIcon()
-        icon8.addPixmap(QtGui.QPixmap("/home/joe/Projects/imagetopixel/airunner/src/airunner/pyqt/templates/../src/icons/007-undo.png"), QtGui.QIcon.Mode.Normal, QtGui.QIcon.State.Off)
+        icon8.addPixmap(QtGui.QPixmap("/home/joe/Projects/imagetopixel/airunner/src/airunner/../../src/airunner/pyqt/templates/../src/icons/007-undo.png"), QtGui.QIcon.Mode.Normal, QtGui.QIcon.State.Off)
         self.actionUndo.setIcon(icon8)
         self.actionUndo.setWhatsThis("")
         self.actionUndo.setObjectName("actionUndo")
         self.actionRedo = QtGui.QAction(parent=MainWindow)
         icon9 = QtGui.QIcon()
-        icon9.addPixmap(QtGui.QPixmap("/home/joe/Projects/imagetopixel/airunner/src/airunner/pyqt/templates/../src/icons/008-redo.png"), QtGui.QIcon.Mode.Normal, QtGui.QIcon.State.Off)
+        icon9.addPixmap(QtGui.QPixmap("/home/joe/Projects/imagetopixel/airunner/src/airunner/../../src/airunner/pyqt/templates/../src/icons/008-redo.png"), QtGui.QIcon.Mode.Normal, QtGui.QIcon.State.Off)
         self.actionRedo.setIcon(icon9)
         self.actionRedo.setObjectName("actionRedo")
         self.actionGrid = QtGui.QAction(parent=MainWindow)
@@ -670,7 +670,6 @@ class Ui_MainWindow(object):
         self.actionCut.triggered.connect(MainWindow.action_cut_image_triggered) # type: ignore
         self.actionRotate_90_clockwise.triggered.connect(MainWindow.action_rotate_90_clockwise_triggered) # type: ignore
         self.actionRotate_90_counter_clockwise.triggered.connect(MainWindow.action_rotate_90_counterclockwise_triggered) # type: ignore
-        self.actionRun_setup_wizard.triggered.connect(MainWindow.action_run_setup_wizard_triggered) # type: ignore
         self.actionSave_prompt.triggered.connect(MainWindow.action_save_prompt_triggered) # type: ignore
         self.actionPrompt_Browser.triggered.connect(MainWindow.action_show_prompt_browser_triggered) # type: ignore
         self.actionImage_Interpolation.triggered.connect(MainWindow.action_show_image_interpolation_triggered) # type: ignore
