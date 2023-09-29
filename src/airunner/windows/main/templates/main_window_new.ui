@@ -32,7 +32,7 @@
    <string>AI Runner</string>
   </property>
   <property name="windowIcon">
-   <iconset resource="../../resources.qrc">
+   <iconset resource="../../../resources.qrc">
     <normaloff>:/icons/icon_256.png</normaloff>:/icons/icon_256.png</iconset>
   </property>
   <widget class="QWidget" name="centralwidget">
@@ -617,7 +617,7 @@
             <string/>
            </property>
            <property name="icon">
-            <iconset resource="../../resources.qrc">
+            <iconset resource="../../../resources.qrc">
              <normaloff>:/icons/032-pixels-light.png</normaloff>:/icons/032-pixels-light.png</iconset>
            </property>
            <property name="iconSize">
@@ -652,7 +652,7 @@
             <string/>
            </property>
            <property name="icon">
-            <iconset resource="../../resources.qrc">
+            <iconset resource="../../../resources.qrc">
              <normaloff>:/icons/011-pencil-light.png</normaloff>:/icons/011-pencil-light.png</iconset>
            </property>
            <property name="iconSize">
@@ -687,7 +687,7 @@
             <string/>
            </property>
            <property name="icon">
-            <iconset resource="../../resources.qrc">
+            <iconset resource="../../../resources.qrc">
              <normaloff>:/icons/039-18-light.png</normaloff>:/icons/039-18-light.png</iconset>
            </property>
            <property name="iconSize">
@@ -722,7 +722,7 @@
             <string/>
            </property>
            <property name="icon">
-            <iconset resource="../../resources.qrc">
+            <iconset resource="../../../resources.qrc">
              <normaloff>:/icons/037-focus-light.png</normaloff>:/icons/037-focus-light.png</iconset>
            </property>
            <property name="iconSize">
@@ -754,7 +754,7 @@
             <string/>
            </property>
            <property name="icon">
-            <iconset resource="../../resources.qrc">
+            <iconset resource="../../../resources.qrc">
              <normaloff>:/icons/038-drag-light.png</normaloff>:/icons/038-drag-light.png</iconset>
            </property>
            <property name="iconSize">
@@ -789,7 +789,7 @@
             <string/>
            </property>
            <property name="icon">
-            <iconset resource="../../resources.qrc">
+            <iconset resource="../../../resources.qrc">
              <normaloff>:/icons/014-eraser-light.png</normaloff>:/icons/014-eraser-light.png</iconset>
            </property>
            <property name="iconSize">
@@ -824,7 +824,7 @@
             <string/>
            </property>
            <property name="icon">
-            <iconset resource="../../resources.qrc">
+            <iconset resource="../../../resources.qrc">
              <normaloff>:/icons/settings-light.png</normaloff>:/icons/settings-light.png</iconset>
            </property>
            <property name="iconSize">
@@ -989,6 +989,7 @@
      <string>View</string>
     </property>
     <addaction name="actionHuggingface_Cache_manager"/>
+    <addaction name="actionBrowse_AI_Runner_Path"/>
    </widget>
    <addaction name="menuFile"/>
    <addaction name="menuEdit"/>
@@ -1514,65 +1515,75 @@
     <string>Run setup wizard</string>
    </property>
   </action>
+  <action name="actionBrowse_AI_Runner_Path">
+   <property name="text">
+    <string>Browse AI Runner Path</string>
+   </property>
+  </action>
+  <action name="actionBrowse_Images_Path">
+   <property name="text">
+    <string>Browse Images Path</string>
+   </property>
+  </action>
  </widget>
  <customwidgets>
   <customwidget>
    <class>SliderWidget</class>
    <extends>QWidget</extends>
-   <header>airunner/widgets/slider/slider_widget</header>
+   <header>airunner/pyqt/widgets/slider/slider_widget</header>
    <container>1</container>
   </customwidget>
   <customwidget>
    <class>GeneratorTabWidget</class>
    <extends>QWidget</extends>
-   <header>airunner/widgets/generator_form/generator_tab_widget</header>
+   <header>airunner/pyqt/widgets/generator_form/generator_tab_widget</header>
    <container>1</container>
   </customwidget>
   <customwidget>
    <class>CanvasWidget</class>
    <extends>QWidget</extends>
-   <header>airunner/widgets/canvas/canvas_widget</header>
+   <header>airunner/pyqt/widgets/canvas/canvas_widget</header>
    <container>1</container>
   </customwidget>
   <customwidget>
    <class>PromptBuilderWidget</class>
    <extends>QWidget</extends>
-   <header>airunner/widgets/prompt_builder/prompt_builder_widget</header>
+   <header>airunner/pyqt/widgets/prompt_builder/prompt_builder_widget</header>
    <container>1</container>
   </customwidget>
   <customwidget>
    <class>ModelManagerWidget</class>
    <extends>QWidget</extends>
-   <header>airunner/widgets/model_manager/model_manager_widget</header>
+   <header>airunner/pyqt/widgets/model_manager/model_manager_widget</header>
    <container>1</container>
   </customwidget>
   <customwidget>
    <class>EmbeddingsContainerWidget</class>
    <extends>QWidget</extends>
-   <header>airunner/widgets/embeddings/embeddings_container_widget</header>
+   <header>airunner/pyqt/widgets/embeddings/embeddings_container_widget</header>
    <container>1</container>
   </customwidget>
   <customwidget>
    <class>LoraContainerWidget</class>
    <extends>QWidget</extends>
-   <header>airunner/widgets/lora/lora_container_widget</header>
+   <header>airunner/pyqt/widgets/lora/lora_container_widget</header>
    <container>1</container>
   </customwidget>
   <customwidget>
    <class>BrushContainerWidget</class>
    <extends>QWidget</extends>
-   <header>airunner/widgets/brush/brush_container_widget</header>
+   <header>airunner/pyqt/widgets/brush/brush_container_widget</header>
    <container>1</container>
   </customwidget>
   <customwidget>
    <class>LayerContainerWidget</class>
    <extends>QWidget</extends>
-   <header>airunner/widgets/layers/layer_container_widget</header>
+   <header>airunner/pyqt/widgets/layers/layer_container_widget</header>
    <container>1</container>
   </customwidget>
  </customwidgets>
  <resources>
-  <include location="../../resources.qrc"/>
+  <include location="../../../resources.qrc"/>
  </resources>
  <connections>
   <connection>
@@ -2327,6 +2338,22 @@
     </hint>
    </hints>
   </connection>
+  <connection>
+   <sender>actionBrowse_AI_Runner_Path</sender>
+   <signal>triggered()</signal>
+   <receiver>MainWindow</receiver>
+   <slot>action_triggered_browse_ai_runner_path()</slot>
+   <hints>
+    <hint type="sourcelabel">
+     <x>-1</x>
+     <y>-1</y>
+    </hint>
+    <hint type="destinationlabel">
+     <x>681</x>
+     <y>432</y>
+    </hint>
+   </hints>
+  </connection>
  </connections>
  <designerdata>
   <property name="gridDeltaX">
@@ -2391,5 +2418,6 @@
   <slot>action_show_prompt_browser_triggered()</slot>
   <slot>action_show_image_interpolation_triggered()</slot>
   <slot>action_clear_all_prompts_triggered()</slot>
+  <slot>action_triggered_browse_ai_runner_path()</slot>
  </slots>
 </ui>
