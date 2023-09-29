@@ -1493,7 +1493,8 @@ class MainWindow(
         self.settings_manager.create_saved_prompt(self.prompt, self.negative_prompt)
 
     def import_image(self):
-        file_path, _ = self.display_import_image_dialog(directory=self.settings_manager.path_settings.image_path)
+        file_path, _ = self.display_import_image_dialog(
+            directory=self.settings_manager.path_settings.image_path)
         if file_path == "":
             return
         self.canvas.load_image(file_path)
@@ -1522,7 +1523,10 @@ class MainWindow(
 
     def display_import_image_dialog(self, label="Import Image", directory=""):
         return QFileDialog.getOpenFileName(
-            self.window, label, directory, "Image Files (*.png *.jpg *.jpeg)"
+            self,
+            label,
+            directory,
+            "Image Files (*.png *.jpg *.jpeg)"
         )
 
     def paste_image(self):
