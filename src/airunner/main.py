@@ -31,7 +31,7 @@ from PyQt6.QtWidgets import QApplication, QSplashScreen
 from PyQt6.QtCore import Qt, QTimer
 from PyQt6.QtGui import QGuiApplication, QPixmap
 
-from airunner.main_window import MainWindow
+from airunner.pyqt.windows.main.main_window import MainWindow
 from airunner.aihandler.settings import SERVER
 from airunner.aihandler.socket_server import SocketServer
 from airunner.utils import get_version
