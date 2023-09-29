@@ -565,7 +565,7 @@ class MainWindow(
         self.show_section("shapegif")
 
     def action_triggered_browse_ai_runner_path(self):
-        path = self.settings_manager.path_settings.model_base_path
+        path = self.settings_manager.path_settings.base_path
         if path == "":
             path = BASE_PATH
         self.show_path(path)
@@ -1514,7 +1514,7 @@ class MainWindow(
 
     def display_file_export_dialog(self):
         return QFileDialog.getSaveFileName(
-            self.window,
+            self,
             "Export Image",
             "",
             "Image Files (*.png *.jpg *.jpeg *.gif)"
