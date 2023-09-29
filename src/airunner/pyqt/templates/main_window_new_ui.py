@@ -588,7 +588,6 @@ class Ui_MainWindow(object):
         self.menuEdit.addAction(self.actionClear_all_prompts)
         self.menuEdit.addSeparator()
         self.menuEdit.addAction(self.actionSettings)
-        self.menuEdit.addAction(self.actionRun_setup_wizard)
         self.menuFilters.addSeparator()
         self.menuFilters.addAction(self.actionInvert)
         self.menuFilters.addAction(self.actionFilm)
