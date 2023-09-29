@@ -1,4 +1,4 @@
-# Form implementation generated from reading ui file '/home/joe/Projects/imagetopixel/airunner/src/airunner/pyqt/widgets/model_manager/default.ui'
+# Form implementation generated from reading ui file '/home/joe/Projects/imagetopixel/airunner/src/airunner/pyqt/widgets/model_manager/templates/default.ui'
 #
 # Created by: PyQt6 UI code generator 6.4.2
 #
@@ -9,13 +9,13 @@
 from PyQt6 import QtCore, QtGui, QtWidgets
 
 
-class Ui_Form(object):
-    def setupUi(self, Form):
-        Form.setObjectName("Form")
-        Form.resize(400, 300)
-        self.gridLayout = QtWidgets.QGridLayout(Form)
+class Ui_default_model_widget(object):
+    def setupUi(self, default_model_widget):
+        default_model_widget.setObjectName("default_model_widget")
+        default_model_widget.resize(400, 300)
+        self.gridLayout = QtWidgets.QGridLayout(default_model_widget)
         self.gridLayout.setObjectName("gridLayout")
-        self.default_scroll_area = QtWidgets.QScrollArea(parent=Form)
+        self.default_scroll_area = QtWidgets.QScrollArea(parent=default_model_widget)
         self.default_scroll_area.setWidgetResizable(True)
         self.default_scroll_area.setObjectName("default_scroll_area")
         self.scrollAreaWidgetContents = QtWidgets.QWidget()
@@ -25,17 +25,17 @@ class Ui_Form(object):
         self.verticalLayout.setObjectName("verticalLayout")
         self.default_scroll_area.setWidget(self.scrollAreaWidgetContents)
         self.gridLayout.addWidget(self.default_scroll_area, 1, 0, 1, 1)
-        self.toggle_all = QtWidgets.QCheckBox(parent=Form)
+        self.toggle_all = QtWidgets.QCheckBox(parent=default_model_widget)
         font = QtGui.QFont()
         font.setPointSize(8)
         self.toggle_all.setFont(font)
         self.toggle_all.setObjectName("toggle_all")
         self.gridLayout.addWidget(self.toggle_all, 0, 0, 1, 1)
 
-        self.retranslateUi(Form)
-        QtCore.QMetaObject.connectSlotsByName(Form)
+        self.retranslateUi(default_model_widget)
+        QtCore.QMetaObject.connectSlotsByName(default_model_widget)
 
-    def retranslateUi(self, Form):
+    def retranslateUi(self, default_model_widget):
         _translate = QtCore.QCoreApplication.translate
-        Form.setWindowTitle(_translate("Form", "Form"))
-        self.toggle_all.setText(_translate("Form", "Toggle all"))
+        default_model_widget.setWindowTitle(_translate("default_model_widget", "Form"))
+        self.toggle_all.setText(_translate("default_model_widget", "Toggle all"))
