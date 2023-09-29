@@ -15,7 +15,7 @@ from airunner.mixins.canvas_selectionbox_mixin import CanvasSelectionboxMixin
 from airunner.mixins.canvas_widgets_mixin import CanvasWidgetsMixin
 from airunner.models.layerdata import LayerData
 from airunner.models.linedata import LineData
-from airunner.pyqt.widgets.layers.layer_widget import LayerWidget
+from airunner.widgets.layers.layer_widget import LayerWidget
 
 
 class Canvas(
