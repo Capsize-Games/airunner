@@ -1,6 +1,6 @@
 from airunner.pyqt.widgets.base_widget import BaseWidget
 from airunner.pyqt.widgets.paths.path_widget import PathWidget
-from airunner.pyqt.widgets.paths.paths_ui import Ui_paths_form
+from airunner.pyqt.widgets.paths.templates.paths_ui import Ui_paths_form
 
 
 class PathsWidget(BaseWidget):

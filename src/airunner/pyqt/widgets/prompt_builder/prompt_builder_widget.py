@@ -3,7 +3,7 @@ import random
 from airunner.aihandler.settings import MAX_SEED
 from airunner.pyqt.widgets.base_widget import BaseWidget
 from airunner.pyqt.widgets.prompt_builder.prompt_builder_form_widget import PromptBuilderForm
-from airunner.pyqt.widgets.prompt_builder.prompt_builder_ui import Ui_prompt_builder
+from airunner.pyqt.widgets.prompt_builder.templates.prompt_builder_ui import Ui_prompt_builder
 from airunner.themes import Themes
 
 
