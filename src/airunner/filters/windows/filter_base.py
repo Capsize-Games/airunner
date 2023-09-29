@@ -4,7 +4,7 @@ from functools import partial
 
 from PyQt6 import uic
 
-from airunner.pyqt.widgets.slider.slider_widget import SliderWidget
+from airunner.widgets.slider.slider_widget import SliderWidget
 
 
 class FilterBase:
@@ -79,7 +79,7 @@ class FilterBase:
             self._filter_values[filter_value.name] = filter_value
 
     def show(self):
-        self.filter_window = uic.loadUi(os.path.join(f"pyqt/widgets/base_filter.ui"))
+        self.filter_window = uic.loadUi(os.path.join(f"widgets/base_filter.ui"))
         self.filter_window.label.setText(self.image_filter_data.display_name)
 
         for key, filter_value in self._filter_values.items():
@@ -91,11 +91,11 @@ class FilterBase:
                 if not max_value:
                     max_value = 100
                 if filter_value.value_type == "float":
-                #     path = "pyqt/widgets/slider_spinbox_double.ui"
+                #     path = "widgets/slider_spinbox_double.ui"
                     spinbox_value = float(filter_value.value)
                     slider_value = int(spinbox_value * max_value)
                 else:
-                #     path = "pyqt/widgets/slider_spinbox.ui"
+                #     path = "widgets/slider_spinbox.ui"
                     slider_value = int(filter_value.value)
                 #     spinbox_value = int(filter_value.value)
 
