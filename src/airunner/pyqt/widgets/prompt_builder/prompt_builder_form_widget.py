@@ -4,7 +4,7 @@ from PyQt6 import uic
 from PyQt6.QtWidgets import QGridLayout, QSpacerItem, QSizePolicy
 
 from airunner.pyqt.widgets.base_widget import BaseWidget
-from airunner.pyqt.widgets.prompt_builder.prompt_builder_form_ui import Ui_prompt_builder_form
+from airunner.pyqt.widgets.prompt_builder.templates.prompt_builder_form_ui import Ui_prompt_builder_form
 
 
 class PromptBuilderForm(BaseWidget):

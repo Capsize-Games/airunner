@@ -1,5 +1,5 @@
 from airunner.pyqt.widgets.base_widget import BaseWidget
-from airunner.pyqt.widgets.seed.seed_ui import Ui_seed_widget
+from airunner.pyqt.widgets.seed.templates.seed_ui import Ui_seed_widget
 
 
 class SeedWidget(BaseWidget):

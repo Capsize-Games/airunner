@@ -3,7 +3,7 @@ from functools import partial
 from PyQt6.QtCore import pyqtSignal
 
 from airunner.pyqt.widgets.base_widget import BaseWidget
-from airunner.pyqt.widgets.generator_form.generatorform_ui import Ui_generator_form
+from airunner.pyqt.widgets.generator_form.templates.generatorform_ui import Ui_generator_form
 
 
 class GeneratorForm(BaseWidget):
