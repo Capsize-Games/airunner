@@ -55,6 +55,6 @@ def generate_resources():
 
 if __name__ == "__main__":
     for dir in ["templates", "widgets", "windows"]:
-        path = os.path.join("pyqt", dir)
+        path = os.path.join("src", "airunner", "pyqt", dir)
         build_ui(path)
     generate_resources()
