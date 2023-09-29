@@ -26,6 +26,7 @@ from airunner.input_event_manager import InputEventManager
 from airunner.mixins.canvas_mixin import CanvasMixin
 from airunner.mixins.generator_mixin import GeneratorMixin
 from airunner.mixins.history_mixin import HistoryMixin
+from airunner.settings import BASE_PATH
 from airunner.windows.main.templates.main_window_new_ui import Ui_MainWindow
 from airunner.widgets.embeddings.embedding_widget import EmbeddingWidget
 from airunner.themes import Themes
@@ -563,14 +564,23 @@ class MainWindow(
     def action_show_shape(self):
         self.show_section("shapegif")
 
+    def action_triggered_browse_ai_runner_path(self):
+        path = self.settings_manager.path_settings.model_base_path
+        if path == "":
+            path = BASE_PATH
+        self.show_path(path)
+
     def action_show_hf_cache_manager(self):
-        import subprocess
-        import platform
-        import os
         path = self.settings_manager.path_settings.hf_cache_path
         if path == "":
             from airunner.utils import default_hf_cache_dir
             path = default_hf_cache_dir()
+        self.show_path(path)
+
+    def show_path(self, path):
+        import subprocess
+        import platform
+        import os
         if platform.system() == "Windows":
             subprocess.Popen(["explorer", os.path.realpath(path)])
         elif platform.system() == "Darwin":
