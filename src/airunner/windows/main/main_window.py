@@ -26,7 +26,6 @@ from airunner.input_event_manager import InputEventManager
 from airunner.mixins.canvas_mixin import CanvasMixin
 from airunner.mixins.generator_mixin import GeneratorMixin
 from airunner.mixins.history_mixin import HistoryMixin
-from airunner.mixins.toolbar_mixin import ToolbarMixin
 from airunner.windows.main.templates.main_window_new_ui import Ui_MainWindow
 from airunner.widgets.embeddings.embedding_widget import EmbeddingWidget
 from airunner.themes import Themes
@@ -46,7 +45,6 @@ import qdarktheme
 
 class MainWindow(
     QMainWindow,
-    ToolbarMixin,
     HistoryMixin,
     CanvasMixin,
     GeneratorMixin
@@ -860,7 +858,6 @@ class MainWindow(
         HistoryMixin.initialize(self)
         CanvasMixin.initialize(self)
         GeneratorMixin.initialize(self)
-        ToolbarMixin.initialize(self)
 
     def connect_signals(self):
         logger.info("Connecting signals")
