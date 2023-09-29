@@ -1,4 +1,4 @@
-# Form implementation generated from reading ui file '/home/joe/Projects/imagetopixel/airunner/src/airunner/../../src/airunner/pyqt/templates/main_window_new.ui'
+# Form implementation generated from reading ui file '/home/joe/Projects/imagetopixel/airunner/src/airunner/../../src/airunner/windows/main/templates/main_window_new.ui'
 #
 # Created by: PyQt6 UI code generator 6.4.2
 #
@@ -409,13 +409,13 @@ class Ui_MainWindow(object):
         self.actionPaste.setObjectName("actionPaste")
         self.actionUndo = QtGui.QAction(parent=MainWindow)
         icon8 = QtGui.QIcon()
-        icon8.addPixmap(QtGui.QPixmap("/home/joe/Projects/imagetopixel/airunner/src/airunner/../../src/airunner/pyqt/templates/../src/icons/007-undo.png"), QtGui.QIcon.Mode.Normal, QtGui.QIcon.State.Off)
+        icon8.addPixmap(QtGui.QPixmap("/home/joe/Projects/imagetopixel/airunner/src/airunner/../../src/airunner/windows/main/templates/../src/icons/007-undo.png"), QtGui.QIcon.Mode.Normal, QtGui.QIcon.State.Off)
         self.actionUndo.setIcon(icon8)
         self.actionUndo.setWhatsThis("")
         self.actionUndo.setObjectName("actionUndo")
         self.actionRedo = QtGui.QAction(parent=MainWindow)
         icon9 = QtGui.QIcon()
-        icon9.addPixmap(QtGui.QPixmap("/home/joe/Projects/imagetopixel/airunner/src/airunner/../../src/airunner/pyqt/templates/../src/icons/008-redo.png"), QtGui.QIcon.Mode.Normal, QtGui.QIcon.State.Off)
+        icon9.addPixmap(QtGui.QPixmap("/home/joe/Projects/imagetopixel/airunner/src/airunner/../../src/airunner/windows/main/templates/../src/icons/008-redo.png"), QtGui.QIcon.Mode.Normal, QtGui.QIcon.State.Off)
         self.actionRedo.setIcon(icon9)
         self.actionRedo.setObjectName("actionRedo")
         self.actionGrid = QtGui.QAction(parent=MainWindow)
@@ -569,6 +569,10 @@ class Ui_MainWindow(object):
         self.actionShap_E.setObjectName("actionShap_E")
         self.actionRun_setup_wizard = QtGui.QAction(parent=MainWindow)
         self.actionRun_setup_wizard.setObjectName("actionRun_setup_wizard")
+        self.actionBrowse_AI_Runner_Path = QtGui.QAction(parent=MainWindow)
+        self.actionBrowse_AI_Runner_Path.setObjectName("actionBrowse_AI_Runner_Path")
+        self.actionBrowse_Images_Path = QtGui.QAction(parent=MainWindow)
+        self.actionBrowse_Images_Path.setObjectName("actionBrowse_Images_Path")
         self.menuFile.addAction(self.actionNew)
         self.menuFile.addAction(self.actionLoad)
         self.menuFile.addAction(self.actionSave)
@@ -616,6 +620,7 @@ class Ui_MainWindow(object):
         self.menuPrompts.addAction(self.actionSave_prompt)
         self.menuPrompts.addAction(self.actionPrompt_Browser)
         self.menuView.addAction(self.actionHuggingface_Cache_manager)
+        self.menuView.addAction(self.actionBrowse_AI_Runner_Path)
         self.menubar.addAction(self.menuFile.menuAction())
         self.menubar.addAction(self.menuEdit.menuAction())
         self.menubar.addAction(self.menuView.menuAction())
@@ -675,6 +680,7 @@ class Ui_MainWindow(object):
         self.actionImage_Interpolation.triggered.connect(MainWindow.action_show_image_interpolation_triggered) # type: ignore
         self.actionClear_all_prompts.triggered.connect(MainWindow.action_clear_all_prompts_triggered) # type: ignore
         self.actionSettings.triggered.connect(MainWindow.action_show_settings) # type: ignore
+        self.actionBrowse_AI_Runner_Path.triggered.connect(MainWindow.action_triggered_browse_ai_runner_path) # type: ignore
         QtCore.QMetaObject.connectSlotsByName(MainWindow)
 
     def retranslateUi(self, MainWindow):
@@ -804,6 +810,8 @@ class Ui_MainWindow(object):
         self.actionKandinsky.setText(_translate("MainWindow", "Kandinsky"))
         self.actionShap_E.setText(_translate("MainWindow", "Shap-E"))
         self.actionRun_setup_wizard.setText(_translate("MainWindow", "Run setup wizard"))
+        self.actionBrowse_AI_Runner_Path.setText(_translate("MainWindow", "Browse AI Runner Path"))
+        self.actionBrowse_Images_Path.setText(_translate("MainWindow", "Browse Images Path"))
 from airunner.widgets.brush.brush_container_widget import BrushContainerWidget
 from airunner.widgets.canvas.canvas_widget import CanvasWidget
 from airunner.widgets.embeddings.embeddings_container_widget import EmbeddingsContainerWidget

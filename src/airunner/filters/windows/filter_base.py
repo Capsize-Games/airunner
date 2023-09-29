@@ -79,7 +79,7 @@ class FilterBase:
             self._filter_values[filter_value.name] = filter_value
 
     def show(self):
-        self.filter_window = uic.loadUi(os.path.join(f"widgets/base_filter.ui"))
+        self.filter_window = uic.loadUi(os.path.join(f"widgets/base_filter/templates/base_filter.ui"))
         self.filter_window.label.setText(self.image_filter_data.display_name)
 
         for key, filter_value in self._filter_values.items():
