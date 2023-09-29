@@ -8,7 +8,6 @@ from PyQt6.QtCore import QPoint, QRect
 from PyQt6.QtGui import QPainter, QPixmap
 from PIL.ImageFilter import GaussianBlur
 
-from airunner.filters.rgb_noise import RGBNoiseFilter
 from airunner.models.imagedata import ImageData
 from airunner.models.layerdata import LayerData
 
