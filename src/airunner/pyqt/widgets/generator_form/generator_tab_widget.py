@@ -8,7 +8,7 @@ from airunner.pyqt.widgets.base_widget import BaseWidget
 from airunner.aihandler.settings import MAX_SEED
 from airunner.aihandler.enums import MessageCode
 from airunner.pyqt.widgets.controlnet_settings.controlnet_settings_widget import ControlNetSettingsWidget
-from airunner.pyqt.widgets.generator_form.generator_tab_ui import Ui_generator_tab
+from airunner.pyqt.widgets.generator_form.templates.generator_tab_ui import Ui_generator_tab
 from airunner.pyqt.widgets.slider.slider_widget import SliderWidget
 
 

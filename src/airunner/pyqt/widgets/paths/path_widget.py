@@ -3,7 +3,7 @@ import os
 from PyQt6.QtWidgets import QFileDialog
 
 from airunner.pyqt.widgets.base_widget import BaseWidget
-from airunner.pyqt.widgets.paths.path_ui import Ui_path_widget
+from airunner.pyqt.widgets.paths.templates.path_ui import Ui_path_widget
 from airunner.utils import default_hf_cache_dir
 
 

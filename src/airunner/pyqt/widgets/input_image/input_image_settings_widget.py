@@ -3,7 +3,7 @@ from functools import partial
 from PIL import Image
 from PyQt6.QtWidgets import QHBoxLayout, QWidget
 
-from airunner.pyqt.widgets.input_image.input_image_ui import Ui_input_image
+from airunner.pyqt.widgets.input_image.templates.input_image_ui import Ui_input_image
 from airunner.pyqt.widgets.slider.slider_widget import SliderWidget
 from airunner.pyqt.widgets.base_widget import BaseWidget
 
