@@ -11,7 +11,7 @@ from airunner.data.models import AIModel
 from airunner.models.modeldata import ModelData
 from airunner.pyqt.widgets.base_widget import BaseWidget
 from airunner.data.db import session
-from airunner.pyqt.widgets.model_manager.model_manager_ui import Ui_model_manager
+from airunner.pyqt.widgets.model_manager.templates.model_manager_ui import Ui_model_manager
 
 
 class ModelManagerWidget(BaseWidget):
@@ -57,9 +57,9 @@ class ModelManagerWidget(BaseWidget):
         super().__init__(*args, **kwargs)
 
         # load tabs
-        self.default_tab = uic.loadUi("pyqt/widgets/model_manager/default.ui")
-        self.custom_tab = uic.loadUi("pyqt/widgets/model_manager/custom.ui")
-        self.import_tab = uic.loadUi("pyqt/widgets/model_manager/import.ui")
+        self.default_tab = uic.loadUi("pyqt/widgets/model_manager/templates/default.ui")
+        self.custom_tab = uic.loadUi("pyqt/widgets/model_manager/templates/custom.ui")
+        self.import_tab = uic.loadUi("pyqt/widgets/model_manager/templates/import.ui")
         self.ui.tabs.addTab(self.default_tab, "Default")
         self.ui.tabs.addTab(self.custom_tab, "Custom")
         self.ui.tabs.addTab(self.import_tab, "Import")
@@ -307,7 +307,7 @@ class ModelManagerWidget(BaseWidget):
             category = model.category
             pipeline_action = model.pipeline_action
 
-            model_widget = uic.loadUi("pyqt/widgets/model_manager/model.ui")
+            model_widget = uic.loadUi("pyqt/widgets/model_manager/templates/model.ui")
             model_widget.path.setText(model.path)
             model_widget.branch.setText(model.branch)
             model_widget.version.setText(version)
