@@ -27,7 +27,7 @@ from airunner.mixins.canvas_mixin import CanvasMixin
 from airunner.mixins.generator_mixin import GeneratorMixin
 from airunner.mixins.history_mixin import HistoryMixin
 from airunner.mixins.toolbar_mixin import ToolbarMixin
-from airunner.pyqt.templates.main_window_new_ui import Ui_MainWindow
+from airunner.pyqt.windows.main.templates.main_window_new_ui import Ui_MainWindow
 from airunner.pyqt.widgets.embeddings.embedding_widget import EmbeddingWidget
 from airunner.themes import Themes
 from airunner.pyqt.windows.about.about import AboutWindow
