@@ -97,7 +97,7 @@ class SliderWidget(QWidget):
 
         super().__init__(*args, **kwargs)
 
-        uic.loadUi("pyqt/widgets/slider/slider.ui", self)
+        uic.loadUi("pyqt/widgets/slider/templates/slider.ui", self)
 
         if parent:
             self.setParent(parent)
