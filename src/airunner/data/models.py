@@ -1,3 +1,5 @@
+import os
+
 from sqlalchemy import Column, Integer, String, Boolean, ForeignKey, Float, JSON
 from sqlalchemy.ext.declarative import declarative_base
 from sqlalchemy.orm import relationship
@@ -323,23 +325,99 @@ class MemorySettings(Base):
     settings = relationship("Settings", back_populates="memory_settings")
 
 
+BASE_PATH = os.path.join(os.path.expanduser("~"), ".airunner")
+MODELS_PATH = os.path.join(BASE_PATH, "models")
+DEFAULT_PATHS = {
+    "base": BASE_PATH,
+    "models": {
+        "txt2img": "",
+        "depth2img": "",
+        "pix2pix": "",
+        "inpaint": "",
+        "upscale": "",
+        "txt2vid": "",
+        "embeddings": "",
+        "lora": "",
+    },
+    "other": {
+        "images": "",
+        "gifs": "",
+        "videos": "",
+    },
+}
+for k,v in DEFAULT_PATHS["models"].items():
+    DEFAULT_PATHS["models"][k] = os.path.join(MODELS_PATH, k)
+for k,v in DEFAULT_PATHS["other"].items():
+    DEFAULT_PATHS["other"][k] = os.path.join(BASE_PATH, k)
+
 class PathSettings(Base):
     __tablename__ = 'path_settings'
 
     id = Column(Integer, primary_key=True)
     hf_cache_path = Column(String, default="")
-    model_base_path = Column(String, default="")
-    depth2img_model_path = Column(String, default="")
-    pix2pix_model_path = Column(String, default="")
-    outpaint_model_path = Column(String, default="")
-    upscale_model_path = Column(String, default="")
-    txt2vid_model_path = Column(String, default="")
-    embeddings_path = Column(String, default="")
-    lora_path = Column(String, default="")
-    image_path = Column(String, default="")
-    gif_path = Column(String, default="")
-    video_path = Column(String, default="")
+    base_path = Column(String, default=DEFAULT_PATHS["base"])
+    txt2img_model_path = Column(String, default=DEFAULT_PATHS["models"]["txt2img"])
+    depth2img_model_path = Column(String, default=DEFAULT_PATHS["models"]["depth2img"])
+    pix2pix_model_path = Column(String, default=DEFAULT_PATHS["models"]["pix2pix"])
+    inpaint_model_path = Column(String, default=DEFAULT_PATHS["models"]["inpaint"])
+    upscale_model_path = Column(String, default=DEFAULT_PATHS["models"]["upscale"])
+    txt2vid_model_path = Column(String, default=DEFAULT_PATHS["models"]["txt2vid"])
+    embeddings_model_path = Column(String, default=os.path.join(MODELS_PATH, "embeddings"))
+    lora_model_path = Column(String, default=os.path.join(MODELS_PATH, "lora"))
+    image_path = Column(String, default=os.path.join(BASE_PATH, "images"))
+    gif_path = Column(String, default=os.path.join(BASE_PATH, "gifs"))
+    video_path = Column(String, default=os.path.join(BASE_PATH, "videos"))
     settings = relationship("Settings", back_populates="path_settings")
+
+    @property
+    def embeddings_path(self):
+        return self.embeddings_model_path
+
+    @embeddings_path.setter
+    def embeddings_path(self, value):
+        self.embeddings_model_path = value
+
+    @property
+    def lora_path(self):
+        return self.lora_model_path
+
+    @lora_path.setter
+    def lora_path(self, value):
+        self.lora_model_path = value
+
+    @property
+    def model_base_path(self):
+        return self.txt2img_model_path
+
+    @model_base_path.setter
+    def model_base_path(self, value):
+        self.base_path = value
+
+    @property
+    def outpaint_model_path(self):
+        return self.inpaint_model_path
+
+    @outpaint_model_path.setter
+    def outpaint_model_path(self, value):
+        self.inpaint_model_path = value
+
+
+    def reset_paths(self):
+        self.hf_cache_path = ""
+        self.base_path = DEFAULT_PATHS["base"]
+        self.txt2img_model_path = DEFAULT_PATHS["models"]["txt2img"]
+        self.depth2img_model_path = DEFAULT_PATHS["models"]["depth2img"]
+        self.pix2pix_model_path = DEFAULT_PATHS["models"]["pix2pix"]
+        self.inpaint_model_path = DEFAULT_PATHS["models"]["inpaint"]
+        self.upscale_model_path = DEFAULT_PATHS["models"]["upscale"]
+        self.txt2vid_model_path = DEFAULT_PATHS["models"]["txt2vid"]
+        self.embeddings_model_path = DEFAULT_PATHS["models"]["embeddings"]
+        self.lora_model_path = DEFAULT_PATHS["models"]["lora"]
+        self.image_path = DEFAULT_PATHS["other"]["image"]
+        self.gif_path = DEFAULT_PATHS["other"]["gif"]
+        self.video_path = DEFAULT_PATHS["other"]["video"]
+        from airunner.utils import save_session
+        save_session()
 
 
 class BrushSettings(Base):
