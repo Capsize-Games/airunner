@@ -187,8 +187,8 @@ class Ui_MainWindow(object):
         self.right_panel_splitter.setOrientation(QtCore.Qt.Orientation.Vertical)
         self.right_panel_splitter.setChildrenCollapsible(False)
         self.right_panel_splitter.setObjectName("right_panel_splitter")
-        self.tabWidget_2 = QtWidgets.QTabWidget(parent=self.right_panel_splitter)
-        self.tabWidget_2.setObjectName("tabWidget_2")
+        self.tool_tab_widget = QtWidgets.QTabWidget(parent=self.right_panel_splitter)
+        self.tool_tab_widget.setObjectName("tool_tab_widget")
         self.tab_embeddings = QtWidgets.QWidget()
         self.tab_embeddings.setObjectName("tab_embeddings")
         self.gridLayout_6 = QtWidgets.QGridLayout(self.tab_embeddings)
@@ -196,7 +196,7 @@ class Ui_MainWindow(object):
         self.embeddings_container_widget = EmbeddingsContainerWidget(parent=self.tab_embeddings)
         self.embeddings_container_widget.setObjectName("embeddings_container_widget")
         self.gridLayout_6.addWidget(self.embeddings_container_widget, 0, 0, 1, 1)
-        self.tabWidget_2.addTab(self.tab_embeddings, "")
+        self.tool_tab_widget.addTab(self.tab_embeddings, "")
         self.tab_lora = QtWidgets.QWidget()
         self.tab_lora.setObjectName("tab_lora")
         self.gridLayout_7 = QtWidgets.QGridLayout(self.tab_lora)
@@ -204,7 +204,7 @@ class Ui_MainWindow(object):
         self.lora_container_widget = LoraContainerWidget(parent=self.tab_lora)
         self.lora_container_widget.setObjectName("lora_container_widget")
         self.gridLayout_7.addWidget(self.lora_container_widget, 0, 0, 1, 1)
-        self.tabWidget_2.addTab(self.tab_lora, "")
+        self.tool_tab_widget.addTab(self.tab_lora, "")
         self.tab_pen_color = QtWidgets.QWidget()
         self.tab_pen_color.setObjectName("tab_pen_color")
         self.gridLayout_8 = QtWidgets.QGridLayout(self.tab_pen_color)
@@ -212,7 +212,7 @@ class Ui_MainWindow(object):
         self.brush_container_widget = BrushContainerWidget(parent=self.tab_pen_color)
         self.brush_container_widget.setObjectName("brush_container_widget")
         self.gridLayout_8.addWidget(self.brush_container_widget, 0, 0, 1, 1)
-        self.tabWidget_2.addTab(self.tab_pen_color, "")
+        self.tool_tab_widget.addTab(self.tab_pen_color, "")
         self.frame = QtWidgets.QFrame(parent=self.right_panel_splitter)
         self.frame.setFrameShape(QtWidgets.QFrame.Shape.StyledPanel)
         self.frame.setFrameShadow(QtWidgets.QFrame.Shadow.Raised)
@@ -349,9 +349,9 @@ class Ui_MainWindow(object):
         self.verticalLayout.addWidget(self.settings_button)
         spacerItem1 = QtWidgets.QSpacerItem(20, 40, QtWidgets.QSizePolicy.Policy.Minimum, QtWidgets.QSizePolicy.Policy.Expanding)
         self.verticalLayout.addItem(spacerItem1)
-        self.tabWidget = QtWidgets.QTabWidget(parent=self.main_splitter)
-        self.tabWidget.setTabPosition(QtWidgets.QTabWidget.TabPosition.South)
-        self.tabWidget.setObjectName("tabWidget")
+        self.bottom_panel_tab_widget = QtWidgets.QTabWidget(parent=self.main_splitter)
+        self.bottom_panel_tab_widget.setTabPosition(QtWidgets.QTabWidget.TabPosition.South)
+        self.bottom_panel_tab_widget.setObjectName("bottom_panel_tab_widget")
         self.tab_3 = QtWidgets.QWidget()
         self.tab_3.setObjectName("tab_3")
         self.gridLayout_4 = QtWidgets.QGridLayout(self.tab_3)
@@ -359,7 +359,7 @@ class Ui_MainWindow(object):
         self.model_manager = ModelManagerWidget(parent=self.tab_3)
         self.model_manager.setObjectName("model_manager")
         self.gridLayout_4.addWidget(self.model_manager, 0, 0, 1, 1)
-        self.tabWidget.addTab(self.tab_3, "")
+        self.bottom_panel_tab_widget.addTab(self.tab_3, "")
         self.tab_4 = QtWidgets.QWidget()
         self.tab_4.setObjectName("tab_4")
         self.gridLayout_3 = QtWidgets.QGridLayout(self.tab_4)
@@ -367,7 +367,7 @@ class Ui_MainWindow(object):
         self.prompt_builder = PromptBuilderWidget(parent=self.tab_4)
         self.prompt_builder.setObjectName("prompt_builder")
         self.gridLayout_3.addWidget(self.prompt_builder, 0, 0, 1, 1)
-        self.tabWidget.addTab(self.tab_4, "")
+        self.bottom_panel_tab_widget.addTab(self.tab_4, "")
         self.gridLayout.addWidget(self.main_splitter, 1, 0, 1, 1)
         MainWindow.setCentralWidget(self.centralwidget)
         self.menubar = QtWidgets.QMenuBar(parent=MainWindow)
@@ -627,8 +627,8 @@ class Ui_MainWindow(object):
         self.menubar.addAction(self.menuAbout.menuAction())
 
         self.retranslateUi(MainWindow)
-        self.tabWidget_2.setCurrentIndex(0)
-        self.tabWidget.setCurrentIndex(0)
+        self.tool_tab_widget.setCurrentIndex(0)
+        self.bottom_panel_tab_widget.setCurrentIndex(0)
         self.actionHuggingface_Cache_manager.triggered.connect(MainWindow.action_show_hf_cache_manager) # type: ignore
         self.actionModel_Merger.triggered.connect(MainWindow.action_show_model_merger_window) # type: ignore
         self.actionAbout.triggered.connect(MainWindow.action_show_about_window) # type: ignore
@@ -652,8 +652,8 @@ class Ui_MainWindow(object):
         self.open_button.clicked.connect(MainWindow.action_load_document_triggered) # type: ignore
         self.save_button.clicked.connect(MainWindow.action_save_document_triggered) # type: ignore
         self.export_button.clicked.connect(MainWindow.action_quick_export_image_triggered) # type: ignore
-        self.tabWidget_2.currentChanged['int'].connect(MainWindow.tool_tab_index_changed) # type: ignore
-        self.tabWidget.currentChanged['int'].connect(MainWindow.bottom_panel_tab_index_changed) # type: ignore
+        self.tool_tab_widget.currentChanged['int'].connect(MainWindow.tool_tab_index_changed) # type: ignore
+        self.bottom_panel_tab_widget.currentChanged['int'].connect(MainWindow.bottom_panel_tab_index_changed) # type: ignore
         self.right_panel_splitter.splitterMoved['int','int'].connect(MainWindow.right_splitter_moved) # type: ignore
         self.main_splitter.splitterMoved['int','int'].connect(MainWindow.main_splitter_moved) # type: ignore
         self.content_splitter.splitterMoved['int','int'].connect(MainWindow.content_splitter_moved) # type: ignore
@@ -676,6 +676,7 @@ class Ui_MainWindow(object):
         self.actionPrompt_Browser.triggered.connect(MainWindow.action_show_prompt_browser_triggered) # type: ignore
         self.actionImage_Interpolation.triggered.connect(MainWindow.action_show_image_interpolation_triggered) # type: ignore
         self.actionClear_all_prompts.triggered.connect(MainWindow.action_clear_all_prompts_triggered) # type: ignore
+        self.actionSettings.triggered.connect(MainWindow.action_show_settings) # type: ignore
         QtCore.QMetaObject.connectSlotsByName(MainWindow)
 
     def retranslateUi(self, MainWindow):
@@ -690,11 +691,11 @@ class Ui_MainWindow(object):
         self.height_slider.setProperty("slider_callback", _translate("MainWindow", "height_slider_callback"))
         self.brush_size_slider.setProperty("label_text", _translate("MainWindow", "Brush Size"))
         self.brush_size_slider.setProperty("slider_callback", _translate("MainWindow", "brush_size_slider_callback"))
-        self.tabWidget_2.setTabText(self.tabWidget_2.indexOf(self.tab_embeddings), _translate("MainWindow", "Embeddings"))
-        self.tabWidget_2.setTabText(self.tabWidget_2.indexOf(self.tab_lora), _translate("MainWindow", "LoRA"))
-        self.tabWidget_2.setTabText(self.tabWidget_2.indexOf(self.tab_pen_color), _translate("MainWindow", "Pen"))
-        self.tabWidget.setTabText(self.tabWidget.indexOf(self.tab_3), _translate("MainWindow", "Model Manager"))
-        self.tabWidget.setTabText(self.tabWidget.indexOf(self.tab_4), _translate("MainWindow", "Prompt Builder"))
+        self.tool_tab_widget.setTabText(self.tool_tab_widget.indexOf(self.tab_embeddings), _translate("MainWindow", "Embeddings"))
+        self.tool_tab_widget.setTabText(self.tool_tab_widget.indexOf(self.tab_lora), _translate("MainWindow", "LoRA"))
+        self.tool_tab_widget.setTabText(self.tool_tab_widget.indexOf(self.tab_pen_color), _translate("MainWindow", "Pen"))
+        self.bottom_panel_tab_widget.setTabText(self.bottom_panel_tab_widget.indexOf(self.tab_3), _translate("MainWindow", "Model Manager"))
+        self.bottom_panel_tab_widget.setTabText(self.bottom_panel_tab_widget.indexOf(self.tab_4), _translate("MainWindow", "Prompt Builder"))
         self.menuFile.setTitle(_translate("MainWindow", "File"))
         self.menuEdit.setTitle(_translate("MainWindow", "Edit"))
         self.menuFilters.setTitle(_translate("MainWindow", "Filters"))
