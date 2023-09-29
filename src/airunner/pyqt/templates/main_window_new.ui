@@ -1774,8 +1774,8 @@
    <slot>action_toggle_grid(bool)</slot>
    <hints>
     <hint type="sourcelabel">
-     <x>1348</x>
-     <y>99</y>
+     <x>1272</x>
+     <y>120</y>
     </hint>
     <hint type="destinationlabel">
      <x>775</x>
@@ -1790,8 +1790,8 @@
    <slot>action_toggle_brush(bool)</slot>
    <hints>
     <hint type="sourcelabel">
-     <x>1348</x>
-     <y>145</y>
+     <x>1272</x>
+     <y>161</y>
     </hint>
     <hint type="destinationlabel">
      <x>775</x>
@@ -1806,8 +1806,8 @@
    <slot>action_toggle_active_grid_area(bool)</slot>
    <hints>
     <hint type="sourcelabel">
-     <x>1348</x>
-     <y>274</y>
+     <x>1272</x>
+     <y>284</y>
     </hint>
     <hint type="destinationlabel">
      <x>775</x>
@@ -1822,8 +1822,8 @@
    <slot>action_toggle_eraser(bool)</slot>
    <hints>
     <hint type="sourcelabel">
-     <x>1348</x>
-     <y>299</y>
+     <x>1272</x>
+     <y>325</y>
     </hint>
     <hint type="destinationlabel">
      <x>775</x>
@@ -1838,8 +1838,8 @@
    <slot>action_focus_button_triggered()</slot>
    <hints>
     <hint type="sourcelabel">
-     <x>1348</x>
-     <y>233</y>
+     <x>1272</x>
+     <y>243</y>
     </hint>
     <hint type="destinationlabel">
      <x>775</x>
@@ -1854,8 +1854,8 @@
    <slot>action_show_settings()</slot>
    <hints>
     <hint type="sourcelabel">
-     <x>1348</x>
-     <y>348</y>
+     <x>1272</x>
+     <y>366</y>
     </hint>
     <hint type="destinationlabel">
      <x>775</x>
@@ -2094,8 +2094,8 @@
    <slot>action_toggle_nsfw_filter_triggered(bool)</slot>
    <hints>
     <hint type="sourcelabel">
-     <x>1322</x>
-     <y>183</y>
+     <x>1272</x>
+     <y>202</y>
     </hint>
     <hint type="destinationlabel">
      <x>1105</x>
@@ -2248,22 +2248,6 @@
    </hints>
   </connection>
   <connection>
-   <sender>actionRun_setup_wizard</sender>
-   <signal>triggered()</signal>
-   <receiver>MainWindow</receiver>
-   <slot>action_run_setup_wizard_triggered()</slot>
-   <hints>
-    <hint type="sourcelabel">
-     <x>-1</x>
-     <y>-1</y>
-    </hint>
-    <hint type="destinationlabel">
-     <x>681</x>
-     <y>432</y>
-    </hint>
-   </hints>
-  </connection>
-  <connection>
    <sender>actionSave_prompt</sender>
    <signal>triggered()</signal>
    <receiver>MainWindow</receiver>
@@ -2403,7 +2387,6 @@
   <slot>action_cut_image_triggered()</slot>
   <slot>action_rotate_90_clockwise_triggered()</slot>
   <slot>action_rotate_90_counterclockwise_triggered()</slot>
-  <slot>action_run_setup_wizard_triggered()</slot>
   <slot>action_save_prompt_triggered()</slot>
   <slot>action_show_prompt_browser_triggered()</slot>
   <slot>action_show_image_interpolation_triggered()</slot>

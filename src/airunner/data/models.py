@@ -5,6 +5,8 @@ from sqlalchemy.ext.declarative import declarative_base
 from sqlalchemy.orm import relationship
 from PyQt6.QtCore import Qt, QAbstractTableModel, QModelIndex
 
+from airunner.settings import BASE_PATH
+
 
 class ModelBase(QAbstractTableModel):
     _headers = []
@@ -325,7 +327,6 @@ class MemorySettings(Base):
     settings = relationship("Settings", back_populates="memory_settings")
 
 
-BASE_PATH = os.path.join(os.path.expanduser("~"), ".airunner")
 MODELS_PATH = os.path.join(BASE_PATH, "models")
 DEFAULT_PATHS = {
     "base": BASE_PATH,
