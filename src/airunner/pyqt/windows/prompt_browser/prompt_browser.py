@@ -3,7 +3,7 @@ from functools import partial
 from PyQt6 import uic
 from PyQt6.QtWidgets import QWidget, QVBoxLayout
 
-from airunner.pyqt.windows.prompt_browser.prompt_browser_ui import Ui_prompt_browser
+from airunner.pyqt.windows.prompt_browser.templates.prompt_browser_ui import Ui_prompt_browser
 from airunner.windows.base_window import BaseWindow
 
 
