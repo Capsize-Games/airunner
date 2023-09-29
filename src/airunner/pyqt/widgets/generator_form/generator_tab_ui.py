@@ -12,7 +12,7 @@ from PyQt6 import QtCore, QtGui, QtWidgets
 class Ui_generator_tab(object):
     def setupUi(self, generator_tab):
         generator_tab.setObjectName("generator_tab")
-        generator_tab.resize(127, 972)
+        generator_tab.resize(330, 972)
         sizePolicy = QtWidgets.QSizePolicy(QtWidgets.QSizePolicy.Policy.Preferred, QtWidgets.QSizePolicy.Policy.Preferred)
         sizePolicy.setHorizontalStretch(0)
         sizePolicy.setVerticalStretch(0)
@@ -214,7 +214,7 @@ class Ui_generator_tab(object):
 
         self.retranslateUi(generator_tab)
         self.generator_tabs.setCurrentIndex(0)
-        self.tab_widget_stablediffusion.setCurrentIndex(4)
+        self.tab_widget_stablediffusion.setCurrentIndex(0)
         self.tab_widget_kandinsky.setCurrentIndex(1)
         self.tab_widget_shape.setCurrentIndex(0)
         QtCore.QMetaObject.connectSlotsByName(generator_tab)

@@ -520,7 +520,7 @@
         <property name="childrenCollapsible">
          <bool>false</bool>
         </property>
-        <widget class="QTabWidget" name="tabWidget_2">
+        <widget class="QTabWidget" name="tool_tab_widget">
          <property name="currentIndex">
           <number>0</number>
          </property>
@@ -854,7 +854,7 @@
         </layout>
        </widget>
       </widget>
-      <widget class="QTabWidget" name="tabWidget">
+      <widget class="QTabWidget" name="bottom_panel_tab_widget">
        <property name="tabPosition">
         <enum>QTabWidget::South</enum>
        </property>
@@ -1945,7 +1945,7 @@
    </hints>
   </connection>
   <connection>
-   <sender>tabWidget_2</sender>
+   <sender>tool_tab_widget</sender>
    <signal>currentChanged(int)</signal>
    <receiver>MainWindow</receiver>
    <slot>tool_tab_index_changed(int)</slot>
@@ -1961,7 +1961,7 @@
    </hints>
   </connection>
   <connection>
-   <sender>tabWidget</sender>
+   <sender>bottom_panel_tab_widget</sender>
    <signal>currentChanged(int)</signal>
    <receiver>MainWindow</receiver>
    <slot>bottom_panel_tab_index_changed(int)</slot>
@@ -2317,6 +2317,22 @@
    <signal>triggered()</signal>
    <receiver>MainWindow</receiver>
    <slot>action_clear_all_prompts_triggered()</slot>
+   <hints>
+    <hint type="sourcelabel">
+     <x>-1</x>
+     <y>-1</y>
+    </hint>
+    <hint type="destinationlabel">
+     <x>681</x>
+     <y>432</y>
+    </hint>
+   </hints>
+  </connection>
+  <connection>
+   <sender>actionSettings</sender>
+   <signal>triggered()</signal>
+   <receiver>MainWindow</receiver>
+   <slot>action_show_settings()</slot>
    <hints>
     <hint type="sourcelabel">
      <x>-1</x>
