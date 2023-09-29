@@ -928,7 +928,6 @@
     <addaction name="actionClear_all_prompts"/>
     <addaction name="separator"/>
     <addaction name="actionSettings"/>
-    <addaction name="actionRun_setup_wizard"/>
    </widget>
    <widget class="QMenu" name="menuFilters">
     <property name="title">
