@@ -393,3 +393,29 @@ def get_session():
 def save_session():
     session = get_session()
     session.commit()
+
+
+def create_airunner_paths():
+    from airunner.data.models import PathSettings
+    import os
+    session = get_session()
+    path_settings = session.query(PathSettings).first()
+    if path_settings:
+        paths = [
+            path_settings.base_path,
+            path_settings.txt2img_model_path,
+            path_settings.depth2img_model_path,
+            path_settings.pix2pix_model_path,
+            path_settings.outpaint_model_path,
+            path_settings.upscale_model_path,
+            path_settings.txt2vid_model_path,
+            path_settings.embeddings_path,
+            path_settings.lora_path,
+            path_settings.image_path,
+            path_settings.gif_path,
+            path_settings.video_path
+        ]
+        for index, path in enumerate(paths):
+            if not os.path.exists(path):
+                print("cerating path", index, path)
+                os.makedirs(path)
