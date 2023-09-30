@@ -12,7 +12,7 @@ from PyQt6 import QtCore, QtGui, QtWidgets
 class Ui_input_image(object):
     def setupUi(self, input_image):
         input_image.setObjectName("input_image")
-        input_image.resize(296, 175)
+        input_image.resize(296, 193)
         input_image.setMaximumSize(QtCore.QSize(16777215, 16777215))
         self.gridLayout_2 = QtWidgets.QGridLayout(input_image)
         self.gridLayout_2.setContentsMargins(0, 0, 0, 0)
@@ -54,12 +54,13 @@ class Ui_input_image(object):
         self.gridLayout.setObjectName("gridLayout")
         self.verticalLayout = QtWidgets.QVBoxLayout()
         self.verticalLayout.setObjectName("verticalLayout")
-        self.image_thumbnail = QtWidgets.QLabel(parent=self.tab_7)
+        self.image_thumbnail = QtWidgets.QPushButton(parent=self.tab_7)
         self.image_thumbnail.setMinimumSize(QtCore.QSize(72, 72))
-        self.image_thumbnail.setMaximumSize(QtCore.QSize(72, 72))
         self.image_thumbnail.setCursor(QtGui.QCursor(QtCore.Qt.CursorShape.PointingHandCursor))
-        self.image_thumbnail.setStyleSheet("border: 1px solid #d2d2d2; border-radius: 0;")
+        self.image_thumbnail.setStyleSheet("border-radius: 0;")
         self.image_thumbnail.setText("")
+        self.image_thumbnail.setIconSize(QtCore.QSize(72, 72))
+        self.image_thumbnail.setFlat(False)
         self.image_thumbnail.setObjectName("image_thumbnail")
         self.verticalLayout.addWidget(self.image_thumbnail)
         self.gridLayout.addLayout(self.verticalLayout, 0, 0, 1, 1)
@@ -96,7 +97,8 @@ class Ui_input_image(object):
         self.use_imported_image_button.setFont(font)
         self.use_imported_image_button.setCursor(QtGui.QCursor(QtCore.Qt.CursorShape.PointingHandCursor))
         self.use_imported_image_button.setText("")
-        icon = QtGui.QIcon.fromTheme("insert-image")
+        icon = QtGui.QIcon()
+        icon.addPixmap(QtGui.QPixmap(":/icons/025-gallery-light.png"), QtGui.QIcon.Mode.Normal, QtGui.QIcon.State.Off)
         self.use_imported_image_button.setIcon(icon)
         self.use_imported_image_button.setCheckable(True)
         self.use_imported_image_button.setFlat(True)
@@ -107,8 +109,9 @@ class Ui_input_image(object):
         self.use_grid_image_button.setMaximumSize(QtCore.QSize(26, 26))
         self.use_grid_image_button.setCursor(QtGui.QCursor(QtCore.Qt.CursorShape.PointingHandCursor))
         self.use_grid_image_button.setText("")
-        icon = QtGui.QIcon.fromTheme("applications-graphics")
-        self.use_grid_image_button.setIcon(icon)
+        icon1 = QtGui.QIcon()
+        icon1.addPixmap(QtGui.QPixmap(":/icons/032-pixels-light.png"), QtGui.QIcon.Mode.Normal, QtGui.QIcon.State.Off)
+        self.use_grid_image_button.setIcon(icon1)
         self.use_grid_image_button.setCheckable(True)
         self.use_grid_image_button.setChecked(True)
         self.use_grid_image_button.setFlat(True)
@@ -119,8 +122,9 @@ class Ui_input_image(object):
         self.recycle_grid_image_button.setMaximumSize(QtCore.QSize(26, 26))
         self.recycle_grid_image_button.setCursor(QtGui.QCursor(QtCore.Qt.CursorShape.PointingHandCursor))
         self.recycle_grid_image_button.setText("")
-        icon = QtGui.QIcon.fromTheme("emblem-readonly")
-        self.recycle_grid_image_button.setIcon(icon)
+        icon2 = QtGui.QIcon()
+        icon2.addPixmap(QtGui.QPixmap(":/icons/047-recycle-light.png"), QtGui.QIcon.Mode.Normal, QtGui.QIcon.State.Off)
+        self.recycle_grid_image_button.setIcon(icon2)
         self.recycle_grid_image_button.setCheckable(True)
         self.recycle_grid_image_button.setFlat(True)
         self.recycle_grid_image_button.setObjectName("recycle_grid_image_button")
@@ -128,9 +132,11 @@ class Ui_input_image(object):
         self.refresh_input_image_button = QtWidgets.QPushButton(parent=self.tab_7)
         self.refresh_input_image_button.setMinimumSize(QtCore.QSize(26, 26))
         self.refresh_input_image_button.setMaximumSize(QtCore.QSize(26, 26))
+        self.refresh_input_image_button.setCursor(QtGui.QCursor(QtCore.Qt.CursorShape.PointingHandCursor))
         self.refresh_input_image_button.setText("")
-        icon = QtGui.QIcon.fromTheme("mail-send-receive")
-        self.refresh_input_image_button.setIcon(icon)
+        icon3 = QtGui.QIcon()
+        icon3.addPixmap(QtGui.QPixmap(":/icons/050-refresh-light.png"), QtGui.QIcon.Mode.Normal, QtGui.QIcon.State.Off)
+        self.refresh_input_image_button.setIcon(icon3)
         self.refresh_input_image_button.setFlat(True)
         self.refresh_input_image_button.setObjectName("refresh_input_image_button")
         self.horizontalLayout_2.addWidget(self.refresh_input_image_button)
@@ -139,8 +145,9 @@ class Ui_input_image(object):
         self.clear_image_button.setMaximumSize(QtCore.QSize(26, 26))
         self.clear_image_button.setCursor(QtGui.QCursor(QtCore.Qt.CursorShape.PointingHandCursor))
         self.clear_image_button.setText("")
-        icon = QtGui.QIcon.fromTheme("edit-clear")
-        self.clear_image_button.setIcon(icon)
+        icon4 = QtGui.QIcon()
+        icon4.addPixmap(QtGui.QPixmap(":/icons/006-trash-light.png"), QtGui.QIcon.Mode.Normal, QtGui.QIcon.State.Off)
+        self.clear_image_button.setIcon(icon4)
         self.clear_image_button.setFlat(True)
         self.clear_image_button.setObjectName("clear_image_button")
         self.horizontalLayout_2.addWidget(self.clear_image_button)
@@ -148,23 +155,29 @@ class Ui_input_image(object):
         self.gridLayout.addLayout(self.verticalLayout_2, 0, 2, 3, 1)
         self.tabWidget.addTab(self.tab_7, "")
         self.gridLayout_5.addWidget(self.tabWidget, 1, 0, 1, 1)
-        self.scale_frame = QtWidgets.QFrame(parent=self.groupBox)
-        self.scale_frame.setFrameShape(QtWidgets.QFrame.Shape.NoFrame)
-        self.scale_frame.setFrameShadow(QtWidgets.QFrame.Shadow.Plain)
-        self.scale_frame.setObjectName("scale_frame")
-        self.gridLayout_5.addWidget(self.scale_frame, 0, 0, 1, 1)
+        self.scale_widget = SliderWidget(parent=self.groupBox)
+        self.scale_widget.setObjectName("scale_widget")
+        self.gridLayout_5.addWidget(self.scale_widget, 0, 0, 1, 1)
         self.gridLayout_3.addWidget(self.groupBox, 0, 0, 1, 1)
         self.gridLayout_2.addWidget(self.widget, 0, 0, 1, 1)
 
         self.retranslateUi(input_image)
         self.tabWidget.setCurrentIndex(0)
+        self.groupBox.toggled['bool'].connect(input_image.action_toggled_use_input_image) # type: ignore
+        self.import_image_button.clicked.connect(input_image.action_clicked_button_import_image) # type: ignore
+        self.refresh_input_image_button.clicked.connect(input_image.action_clicked_button_refresh_grid_image) # type: ignore
+        self.clear_image_button.clicked.connect(input_image.action_clicked_button_clear_input_image) # type: ignore
+        self.recycle_grid_image_button.toggled['bool'].connect(input_image.action_toggled_button_refresh_input_image) # type: ignore
+        self.recycle_grid_image_button.toggled['bool'].connect(input_image.action_toggled_button_lock_grid_image) # type: ignore
+        self.use_grid_image_button.toggled['bool'].connect(input_image.action_toggled_button_use_grid_image) # type: ignore
+        self.use_imported_image_button.toggled['bool'].connect(input_image.action_toggled_button_use_imported_image) # type: ignore
+        self.image_thumbnail.clicked.connect(input_image.action_clicked_button_thumbnail) # type: ignore
         QtCore.QMetaObject.connectSlotsByName(input_image)
 
     def retranslateUi(self, input_image):
         _translate = QtCore.QCoreApplication.translate
         input_image.setWindowTitle(_translate("input_image", "Form"))
         self.groupBox.setTitle(_translate("input_image", "Use Input Image"))
-        self.image_thumbnail.setToolTip(_translate("input_image", "Click to send image to canvas"))
         self.import_image_button.setText(_translate("input_image", "Import image"))
         self.use_imported_image_button.setToolTip(_translate("input_image", "Imported input image"))
         self.use_grid_image_button.setToolTip(_translate("input_image", "Active grid input image"))
@@ -172,3 +185,4 @@ class Ui_input_image(object):
         self.refresh_input_image_button.setToolTip(_translate("input_image", "Refresh current input image"))
         self.clear_image_button.setToolTip(_translate("input_image", "Clear imported input imagea"))
         self.tabWidget.setTabText(self.tabWidget.indexOf(self.tab_7), _translate("input_image", "Input Image"))
+from airunner.widgets.slider.slider_widget import SliderWidget

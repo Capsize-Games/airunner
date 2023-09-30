@@ -24,9 +24,6 @@ variable_types = {
 class SettingsManager(QObject):
     saved_signal = pyqtSignal()
     changed_signal = pyqtSignal(str, object)
-    can_save = True
-    section = "stablediffusion"
-    tab = "txt2img"
 
     @property
     def prompts(self):
@@ -194,6 +191,9 @@ class SettingsManager(QObject):
 
     def __init__(self, app=None, *args, **kwargs):
         global _app, document
+        self.can_save = True
+        self.section = "stablediffusion"
+        self.tab = "txt2img"
 
         if app:
             _app = app
@@ -218,11 +218,20 @@ class SettingsManager(QObject):
         return None
 
     def __setattr__(self, name, value):
+        if name in ["can_save", "section", "tab"]:
+            super().__setattr__(name, value)
+            return
         if document and hasattr(document.settings, name):
             setattr(document.settings, name, value)
             self.changed_signal.emit(name, value)
 
-    def set_value(self, key, value):
+    def set_value(self, key, value, section=None, tab=None):
+        _section = self.section
+        _tab = self.tab
+        if section:
+            self.section = section
+        if tab:
+            self.tab = tab
         keys = key.split('.')
         obj = self
         for k in keys[:-1]:  # Traverse till second last key
@@ -230,6 +239,8 @@ class SettingsManager(QObject):
         setattr(obj, keys[-1], value)
         self.save()
         self.changed_signal.emit(key, value)
+        self.section = _section
+        self.tab = _tab
 
     def get_value(self, key):
         keys = key.split('.')
