@@ -6,32 +6,20 @@ from PyQt6.QtCore import pyqtSlot
 from PyQt6.QtWidgets import QComboBox, QWidget, QHBoxLayout
 
 from airunner.widgets.controlnet_settings.templates.controlnet_settings_ui import Ui_controlnet_settings
+from airunner.widgets.input_image.input_image_settings_widget import InputImageSettingsWidget
 from airunner.widgets.slider.slider_widget import SliderWidget
 from airunner.themes import Themes
 from airunner.utils import image_to_pixmap, auto_export_image, open_file_path
-from airunner.widgets.base_widget import BaseWidget
 
 
-class ControlNetSettingsWidget(BaseWidget):
+class ControlNetSettingsWidget(InputImageSettingsWidget):
     widget_class_ = Ui_controlnet_settings
-    input_image = None
     controlnet_image = None
     imported_controlnet_image = None
     controlnet_scale_slider = 0
-    _active_grid_area_image = None
-    icons = {
-        "link_settings_button": "048-chain",
-        "use_imported_image_button": "046-import",
-        "use_grid_image_button": "032-pixels",
-        "recycle_grid_image_button": "047-recycle",
-        "clear_image_button": "006-trash",
-        "refresh_input_image_button": "050-refresh",
-
-        "mask_link_to_input_image_button": "048-chain",
-        "mask_use_imported_image_button": "046-import",
-        "mask_export_image_button": "export",
-        "mask_clear_image_button": "006-trash",
-    }
+    _current_input_image = None
+    _current_imported_image = None
+    _current_active_grid_area_image = None
 
     @property
     def current_controlnet_image(self):
@@ -51,21 +39,12 @@ class ControlNetSettingsWidget(BaseWidget):
 
     def toggle_mask_export_button(self, enabled):
         self.ui.mask_export_image_button.setEnabled(enabled)
-        if enabled:
-            button_icon_color = self.is_dark
-        else:
-            button_icon_color = not self.is_dark
-        self.set_button_icon(button_icon_color, "mask_export_image_button", self.icons["mask_export_image_button"])
 
     @property
     def active_grid_area_image(self):
         if self.app.canvas.current_layer.image_data.image:
             self._active_grid_area_image = self.app.canvas.current_layer.image_data.image.copy()
         return self._active_grid_area_image
-
-    _current_input_image = None
-    _current_imported_image = None
-    _current_active_grid_area_image= None
 
     @property
     def current_image(self):
@@ -101,45 +80,42 @@ class ControlNetSettingsWidget(BaseWidget):
         elif self.settings_manager.generator.controlnet_use_grid_image:
             self._current_active_grid_area_image = value
 
-
     def handle_toggle_controlnet(self, value):
         if self.settings_manager.current_tab != "stablediffusion":
             value = False
         self.settings_manager.set_value("generator.enable_controlnet", value)
         self.set_thumbnail()
-        self.set_stylesheet()
+        # self.set_stylesheet()
 
-    def __init__(self, *args, **kwargs):
-        super().__init__(*args, **kwargs)
+    def action_toggled_use_controlnet(self, val):
+        self.handle_toggle_controlnet(val)
 
-        self.ui.controlnet_groupbox.setChecked(self.settings_manager.generator.enable_controlnet)
-        self.ui.controlnet_groupbox.toggled.connect(self.handle_toggle_controlnet)
-        self.add_controlnet_widgets()
-        self.ui.link_settings_button.clicked.connect(self.handle_link_settings_clicked)
-        self.ui.use_grid_image_button.clicked.connect(partial(self.toggle_use_active_grid_area))
-        self.ui.use_imported_image_button.clicked.connect(self.toggle_use_imported_image)
-        self.ui.import_image_button.clicked.connect(self.import_input_image)
-        self.ui.mask_import_button.clicked.connect(self.import_controlnet_image)
-        self.ui.clear_image_button.clicked.connect(self.clear_input_image)
-        self.ui.mask_clear_image_button.clicked.connect(self.clear_controlnet_input_image)
-        self.ui.mask_export_image_button.clicked.connect(self.export_generated_controlnet_image)
-        self.ui.recycle_grid_image_button.clicked.connect(self.toggle_keep_refreshed)
-        self.toggle_mask_export_button(False)
+    def action_toggled_button_link_input_image(self, val):
+        self.handle_link_settings_clicked(val)
 
-        self.ui.mask_link_to_input_image_button.clicked.connect(self.toggle_mask_link)
-        self.ui.mask_use_imported_image_button.clicked.connect(self.toggle_mask_use_imported_image)
+    def action_toggled_button_import_image_mask(self, val):
+        self.import_controlnet_image()
 
-        self.ui.refresh_input_image_button.clicked.connect(self.clear_input_image)
+    def action_toggled_button_link_input_image_mask(self, val):
+        self.toggle_mask_link(val)
 
-        self.toggle_import_image_button()
-        self.set_stylesheet()
-        self.ui.image_thumbnail.mousePressEvent = self.send_active_image_to_canvas
-        self.toggle_buttons()
+    def action_toggled_button_use_input_image_mask(self, val):
+        self.toggle_mask_use_imported_image(val)
 
-    def send_active_image_to_canvas(self, _value):
-        print("send_active_image_to_canvas", self.current_image)
-        # send the current input image to the canvas
-        if not self.current_image:
+    def action_clicked_button_thumbnail_mask(self):
+        self.send_active_mask_to_canvas()
+
+    def action_clicked_button_export_mask(self):
+        self.export_generated_controlnet_image()
+
+    def action_clicked_button_clear_input_image_mask(self):
+        self.clear_controlnet_input_image()
+
+    def action_clicked_button_import_image_mask(self):
+        self.import_controlnet_image()
+
+    def send_active_mask_to_canvas(self):
+        if not self.current_controlnet_image:
             return
 
         self.app.canvas.update_image_canvas(
@@ -151,7 +127,7 @@ class ControlNetSettingsWidget(BaseWidget):
                     "generator_section": self.settings_manager.current_generator_section
                 }
             },
-            self.current_image
+            self.current_controlnet_image
         )
         self.app.canvas.update()
 
@@ -167,9 +143,6 @@ class ControlNetSettingsWidget(BaseWidget):
         self.set_mask_thumbnail()
         self.toggle_buttons()
 
-    def toggle_keep_refreshed(self, value):
-        self.settings_manager.generator.controlnet_recycle_grid_image = value
-
     def handle_link_settings_clicked(self, value):
         """
         Use the same setting as input image
@@ -181,14 +154,6 @@ class ControlNetSettingsWidget(BaseWidget):
             self.settings_manager.generator.controlnet_use_grid_image = False
         self.toggle_buttons()
         self.set_thumbnail()
-
-    def set_stylesheet(self):
-        super().set_stylesheet()
-        self.ui.controlnet_groupbox.setStyleSheet(Themes().css("controlnet_groupbox"))
-        if self.settings_manager.generator.enable_controlnet:
-            self.ui.tabWidget.setStyleSheet(Themes().css("input_image_tab_widget"))
-        else:
-            self.ui.tabWidget.setStyleSheet(Themes().css("input_image_tab_widget_disabled"))
 
     def export_generated_controlnet_image(self):
         path = auto_export_image(
@@ -207,22 +172,6 @@ class ControlNetSettingsWidget(BaseWidget):
         self.current_controlnet_image = self.app.controlnet_image
         self.set_mask_thumbnail()
 
-    def toggle_use_imported_image(self, value):
-        self.settings_manager.generator.controlnet_input_image_use_imported_image = value
-        if value:
-            self.settings_manager.generator.controlnet_input_image_link_to_input_image = False
-            self.settings_manager.generator.controlnet_use_grid_image = False
-        self.toggle_buttons()
-        self.set_thumbnail()
-
-    def toggle_use_active_grid_area(self, value):
-        self.settings_manager.generator.controlnet_use_grid_image = value
-        if value:
-            self.settings_manager.generator.controlnet_input_image_link_to_input_image = False
-            self.settings_manager.generator.controlnet_input_image_use_imported_image = False
-        self.toggle_buttons()
-        self.set_thumbnail()
-
     def toggle_buttons(self):
         self.toggle_import_image_button()
         self.toggle_link_input_image_button()
@@ -235,13 +184,11 @@ class ControlNetSettingsWidget(BaseWidget):
             self.ui.clear_image_button.hide()
             self.ui.mask_clear_image_button.hide()
             self.ui.recycle_grid_image_button.setEnabled(True)
-            self.set_button_icon(self.is_dark, "recycle_grid_image_button", self.icons["recycle_grid_image_button"])
         else:
             self.ui.refresh_input_image_button.hide()
             self.ui.clear_image_button.show()
             self.ui.mask_clear_image_button.show()
             self.ui.recycle_grid_image_button.setEnabled(False)
-            self.set_button_icon(not self.is_dark, "recycle_grid_image_button", self.icons["recycle_grid_image_button"])
 
     def toggle_mask_buttons(self):
         self.ui.mask_import_button.setEnabled(self.settings_manager.generator.controlnet_mask_use_imported_image)
@@ -264,27 +211,8 @@ class ControlNetSettingsWidget(BaseWidget):
         self.ui.use_grid_image_button.setChecked(use_grid_image)
         self.ui.recycle_grid_image_button.setChecked(use_grid_image and self.settings_manager.generator.controlnet_recycle_grid_image)
 
-    def clear_input_image(self):
-        self.input_image = None
-        self.set_thumbnail()
-
     def clear_controlnet_input_image(self):
         self.current_controlnet_image = None
-
-    def import_input_image(self):
-        """
-        Allow user to browse for a controlnet image on disk and import
-        it into the application for use with controlnet during image generation.
-        :return:
-        """
-        file_path, _ = open_file_path(
-            label="Import Input Image",
-            directory=self.settings_manager.path_settings.image_path
-        )
-        if file_path == "":
-            return
-        self.input_image = Image.open(file_path)
-        self.set_thumbnail()
 
     def import_controlnet_image(self):
         """
@@ -305,17 +233,6 @@ class ControlNetSettingsWidget(BaseWidget):
     def handle_image_generated(self):
         if self.settings_manager.generator.controlnet_use_grid_image:
             self.set_thumbnail()
-
-    def set_thumbnail(self):
-        print(self.app.generator_tab_widget)
-        if self.cached_image is not self.current_image:
-            self.current_controlnet_image = None
-            self.cached_image = self.current_image
-        image = self.current_image
-        if image:
-            self.ui.image_thumbnail.setPixmap(image_to_pixmap(image, size=72))
-        else:
-            self.ui.image_thumbnail.clear()
 
     def set_mask_thumbnail(self):
         image = self.current_controlnet_image

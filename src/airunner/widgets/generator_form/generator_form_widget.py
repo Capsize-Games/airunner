@@ -80,7 +80,6 @@ class GeneratorForm(BaseWidget):
     def handle_textbox_change(self, key, widget_name):
         widget = getattr(self.ui, widget_name)
         value = widget.toPlainText()
-        print(self.generator_section, self.generator_name, key)
         setattr(self.generator_settings, key, value)
         self.save_db_session()
         self.changed_signal.emit(key, value)
@@ -90,6 +89,25 @@ class GeneratorForm(BaseWidget):
         self.load_models()
         self.set_form_values()
         self.initialize_handlers()
+        self.set_controlnet_settings_properties()
+        self.set_input_image_widget_properties()
+
+    def set_controlnet_settings_properties(self):
+        # self.ui.controlnet_settings.update_generator_properties(
+        #     self.generator_section,
+        #     self.generator_name
+        # )
+        pass
+
+    def set_input_image_widget_properties(self):
+        self.ui.input_image_widget.initialize(
+            self.generator_name,
+            self.generator_section
+        )
+        self.ui.controlnet_settings.initialize(
+            self.generator_name,
+            self.generator_section
+        )
 
     def clear_prompts(self):
         self.ui.prompt.clear()
@@ -131,12 +149,12 @@ class GeneratorForm(BaseWidget):
             self.app.generate,
             self.ui.progress_bar
         ))
-        self.app.image_generated.connect(
-            self.ui.controlnet_settings.handle_image_generated
-        )
-        self.app.controlnet_image_generated.connect(
-            self.ui.controlnet_settings.handle_controlnet_image_generated
-        )
+        # self.app.image_generated.connect(
+        #     self.ui.controlnet_settings.handle_image_generated
+        # )
+        # self.app.controlnet_image_generated.connect(
+        #     self.ui.controlnet_settings.handle_controlnet_image_generated
+        # )
 
     def clear_models(self):
         self.ui.model.clear()

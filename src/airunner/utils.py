@@ -17,7 +17,7 @@ def get_venv_python_executable():
     venv_python_executable = os.path.join(
         os.path.dirname(os.path.dirname(os.path.dirname(os.path.dirname(__file__)))),
         "venv",
-        "bin",
+        "../../bin",
         "python",
     )
     if not os.path.exists(venv_python_executable):
@@ -31,7 +31,7 @@ def get_venv_python_executable():
         venv_python_executable = os.path.join(
             os.path.dirname(os.path.dirname(os.path.dirname(os.path.dirname(__file__)))),
             "venv",
-            "bin",
+            "../../bin",
             "python3",
         )
     if not os.path.exists(venv_python_executable):
