@@ -46,15 +46,15 @@ def generate_resources():
         [
             "pyside6-rcc",
             "-o",
-            "resources.py",
-            "resources.qrc",
+            "src/airunner/resources_rc.py",
+            "src/airunner/resources.qrc",
         ],
         cwd=str(Path(__file__).parent.parent),
     )
 
 
 if __name__ == "__main__":
-    for dir in ["templates", "widgets", "windows"]:
-        path = os.path.join("src", "airunner", "pyqt", dir)
+    for dir in ["widgets", "windows"]:
+        path = os.path.join("src", "airunner", dir)
         build_ui(path)
     generate_resources()
