@@ -110,7 +110,6 @@ class GeneratorTabWidget(BaseWidget):
         for tab in self.ui.tab_widget_shape.findChildren(GeneratorForm):
             tab.initialize()
 
-
     def find_generator_form(self, tab_section, tab):
         obj = getattr(self.ui, f"tab_{tab_section}_{tab}")
         return obj.findChild(QWidget, f"generator_form_{tab_section}_{tab}")

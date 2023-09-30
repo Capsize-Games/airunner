@@ -3,6 +3,7 @@ import pickle
 import sys
 import webbrowser
 from functools import partial
+from airunner.resources_rc import *
 
 import psutil
 import torch
@@ -540,7 +541,6 @@ class MainWindow(
         self.show_section("model_manager")
 
     def action_show_prompt_builder(self):
-        print("action_show_prompt_builder")
         self.show_section("prompt_builder")
 
     def action_show_controlnet(self):

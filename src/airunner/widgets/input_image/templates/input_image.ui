@@ -7,7 +7,7 @@
     <x>0</x>
     <y>0</y>
     <width>296</width>
-    <height>175</height>
+    <height>193</height>
    </rect>
   </property>
   <property name="maximumSize">
@@ -120,14 +120,8 @@
              <item row="0" column="0">
               <layout class="QVBoxLayout" name="verticalLayout">
                <item>
-                <widget class="QLabel" name="image_thumbnail">
+                <widget class="QPushButton" name="image_thumbnail">
                  <property name="minimumSize">
-                  <size>
-                   <width>72</width>
-                   <height>72</height>
-                  </size>
-                 </property>
-                 <property name="maximumSize">
                   <size>
                    <width>72</width>
                    <height>72</height>
@@ -136,14 +130,20 @@
                  <property name="cursor">
                   <cursorShape>PointingHandCursor</cursorShape>
                  </property>
-                 <property name="toolTip">
-                  <string>Click to send image to canvas</string>
-                 </property>
                  <property name="styleSheet">
-                  <string notr="true">border: 1px solid #d2d2d2; border-radius: 0;</string>
+                  <string notr="true">border-radius: 0;</string>
                  </property>
                  <property name="text">
                   <string/>
+                 </property>
+                 <property name="iconSize">
+                  <size>
+                   <width>72</width>
+                   <height>72</height>
+                  </size>
+                 </property>
+                 <property name="flat">
+                  <bool>false</bool>
                  </property>
                 </widget>
                </item>
@@ -239,7 +239,8 @@
                     <string/>
                    </property>
                    <property name="icon">
-                    <iconset theme="insert-image"/>
+                    <iconset resource="../../../resources.qrc">
+                     <normaloff>:/icons/025-gallery-light.png</normaloff>:/icons/025-gallery-light.png</iconset>
                    </property>
                    <property name="checkable">
                     <bool>true</bool>
@@ -273,7 +274,8 @@
                     <string/>
                    </property>
                    <property name="icon">
-                    <iconset theme="applications-graphics"/>
+                    <iconset resource="../../../resources.qrc">
+                     <normaloff>:/icons/032-pixels-light.png</normaloff>:/icons/032-pixels-light.png</iconset>
                    </property>
                    <property name="checkable">
                     <bool>true</bool>
@@ -310,8 +312,8 @@
                     <string/>
                    </property>
                    <property name="icon">
-                    <iconset theme="emblem-readonly" resource="../../../resources.qrc">
-                     <normaloff>:/icons/047-recycle.png</normaloff>:/icons/047-recycle.png</iconset>
+                    <iconset resource="../../../resources.qrc">
+                     <normaloff>:/icons/047-recycle-light.png</normaloff>:/icons/047-recycle-light.png</iconset>
                    </property>
                    <property name="checkable">
                     <bool>true</bool>
@@ -335,6 +337,9 @@
                      <height>26</height>
                     </size>
                    </property>
+                   <property name="cursor">
+                    <cursorShape>PointingHandCursor</cursorShape>
+                   </property>
                    <property name="toolTip">
                     <string>Refresh current input image</string>
                    </property>
@@ -342,7 +347,8 @@
                     <string/>
                    </property>
                    <property name="icon">
-                    <iconset theme="mail-send-receive"/>
+                    <iconset resource="../../../resources.qrc">
+                     <normaloff>:/icons/050-refresh-light.png</normaloff>:/icons/050-refresh-light.png</iconset>
                    </property>
                    <property name="flat">
                     <bool>true</bool>
@@ -373,8 +379,8 @@
                     <string/>
                    </property>
                    <property name="icon">
-                    <iconset theme="edit-clear" resource="../../../resources.qrc">
-                     <normaloff>:/icons/006-trash.png</normaloff>:/icons/006-trash.png</iconset>
+                    <iconset resource="../../../resources.qrc">
+                     <normaloff>:/icons/006-trash-light.png</normaloff>:/icons/006-trash-light.png</iconset>
                    </property>
                    <property name="flat">
                     <bool>true</bool>
@@ -390,14 +396,7 @@
           </widget>
          </item>
          <item row="0" column="0">
-          <widget class="QFrame" name="scale_frame">
-           <property name="frameShape">
-            <enum>QFrame::NoFrame</enum>
-           </property>
-           <property name="frameShadow">
-            <enum>QFrame::Plain</enum>
-           </property>
-          </widget>
+          <widget class="SliderWidget" name="scale_widget" native="true"/>
          </item>
         </layout>
        </widget>
@@ -407,8 +406,172 @@
    </item>
   </layout>
  </widget>
+ <customwidgets>
+  <customwidget>
+   <class>SliderWidget</class>
+   <extends>QWidget</extends>
+   <header>airunner/widgets/slider/slider_widget</header>
+   <container>1</container>
+  </customwidget>
+ </customwidgets>
  <resources>
   <include location="../../../resources.qrc"/>
  </resources>
- <connections/>
+ <connections>
+  <connection>
+   <sender>groupBox</sender>
+   <signal>toggled(bool)</signal>
+   <receiver>input_image</receiver>
+   <slot>action_toggled_use_input_image(bool)</slot>
+   <hints>
+    <hint type="sourcelabel">
+     <x>44</x>
+     <y>7</y>
+    </hint>
+    <hint type="destinationlabel">
+     <x>17</x>
+     <y>0</y>
+    </hint>
+   </hints>
+  </connection>
+  <connection>
+   <sender>import_image_button</sender>
+   <signal>clicked()</signal>
+   <receiver>input_image</receiver>
+   <slot>action_clicked_button_import_image()</slot>
+   <hints>
+    <hint type="sourcelabel">
+     <x>121</x>
+     <y>113</y>
+    </hint>
+    <hint type="destinationlabel">
+     <x>34</x>
+     <y>0</y>
+    </hint>
+   </hints>
+  </connection>
+  <connection>
+   <sender>refresh_input_image_button</sender>
+   <signal>clicked()</signal>
+   <receiver>input_image</receiver>
+   <slot>action_clicked_button_refresh_grid_image()</slot>
+   <hints>
+    <hint type="sourcelabel">
+     <x>270</x>
+     <y>170</y>
+    </hint>
+    <hint type="destinationlabel">
+     <x>245</x>
+     <y>0</y>
+    </hint>
+   </hints>
+  </connection>
+  <connection>
+   <sender>clear_image_button</sender>
+   <signal>clicked()</signal>
+   <receiver>input_image</receiver>
+   <slot>action_clicked_button_clear_input_image()</slot>
+   <hints>
+    <hint type="sourcelabel">
+     <x>298</x>
+     <y>170</y>
+    </hint>
+    <hint type="destinationlabel">
+     <x>295</x>
+     <y>0</y>
+    </hint>
+   </hints>
+  </connection>
+  <connection>
+   <sender>recycle_grid_image_button</sender>
+   <signal>toggled(bool)</signal>
+   <receiver>input_image</receiver>
+   <slot>action_toggled_button_refresh_input_image(bool)</slot>
+   <hints>
+    <hint type="sourcelabel">
+     <x>242</x>
+     <y>170</y>
+    </hint>
+    <hint type="destinationlabel">
+     <x>252</x>
+     <y>0</y>
+    </hint>
+   </hints>
+  </connection>
+  <connection>
+   <sender>recycle_grid_image_button</sender>
+   <signal>toggled(bool)</signal>
+   <receiver>input_image</receiver>
+   <slot>action_toggled_button_lock_grid_image(bool)</slot>
+   <hints>
+    <hint type="sourcelabel">
+     <x>242</x>
+     <y>170</y>
+    </hint>
+    <hint type="destinationlabel">
+     <x>243</x>
+     <y>0</y>
+    </hint>
+   </hints>
+  </connection>
+  <connection>
+   <sender>use_grid_image_button</sender>
+   <signal>toggled(bool)</signal>
+   <receiver>input_image</receiver>
+   <slot>action_toggled_button_use_grid_image(bool)</slot>
+   <hints>
+    <hint type="sourcelabel">
+     <x>214</x>
+     <y>170</y>
+    </hint>
+    <hint type="destinationlabel">
+     <x>295</x>
+     <y>0</y>
+    </hint>
+   </hints>
+  </connection>
+  <connection>
+   <sender>use_imported_image_button</sender>
+   <signal>toggled(bool)</signal>
+   <receiver>input_image</receiver>
+   <slot>action_toggled_button_use_imported_image(bool)</slot>
+   <hints>
+    <hint type="sourcelabel">
+     <x>175</x>
+     <y>158</y>
+    </hint>
+    <hint type="destinationlabel">
+     <x>186</x>
+     <y>0</y>
+    </hint>
+   </hints>
+  </connection>
+  <connection>
+   <sender>image_thumbnail</sender>
+   <signal>clicked()</signal>
+   <receiver>input_image</receiver>
+   <slot>action_clicked_button_thumbnail()</slot>
+   <hints>
+    <hint type="sourcelabel">
+     <x>67</x>
+     <y>107</y>
+    </hint>
+    <hint type="destinationlabel">
+     <x>84</x>
+     <y>0</y>
+    </hint>
+   </hints>
+  </connection>
+ </connections>
+ <slots>
+  <slot>action_toggled_use_input_image(bool)</slot>
+  <slot>action_clicked_button_thumbnail()</slot>
+  <slot>action_clicked_button_import_image()</slot>
+  <slot>action_toggled_button_use_imported_image(bool)</slot>
+  <slot>action_toggled_button_use_grid_image(bool)</slot>
+  <slot>action_toggled_button_lock_grid_image(bool)</slot>
+  <slot>action_clicked_button_refresh_grid_image()</slot>
+  <slot>action_clicked_button_clear_input_image()</slot>
+  <slot>action_toggled_button_refresh_input_image(bool)</slot>
+ </slots>
 </ui>

@@ -7,7 +7,7 @@
    <rect>
     <x>0</x>
     <y>0</y>
-    <width>1364</width>
+    <width>1238</width>
     <height>866</height>
    </rect>
   </property>
@@ -600,7 +600,7 @@
         </property>
         <layout class="QVBoxLayout" name="verticalLayout">
          <item>
-          <widget class="QPushButton" name="toggle_grid_button">
+          <widget class="QPushButton" name="toggle_active_grid_area_button">
            <property name="sizePolicy">
             <sizepolicy hsizetype="Fixed" vsizetype="Fixed">
              <horstretch>0</horstretch>
@@ -618,7 +618,7 @@
            </property>
            <property name="icon">
             <iconset resource="../../../resources.qrc">
-             <normaloff>:/icons/032-pixels-light.png</normaloff>:/icons/032-pixels-light.png</iconset>
+             <normaloff>:/icons/038-drag-light.png</normaloff>:/icons/038-drag-light.png</iconset>
            </property>
            <property name="iconSize">
             <size>
@@ -670,7 +670,7 @@
           </widget>
          </item>
          <item>
-          <widget class="QPushButton" name="safety_checker_button">
+          <widget class="QPushButton" name="toggle_eraser_button">
            <property name="sizePolicy">
             <sizepolicy hsizetype="Fixed" vsizetype="Fixed">
              <horstretch>0</horstretch>
@@ -688,7 +688,42 @@
            </property>
            <property name="icon">
             <iconset resource="../../../resources.qrc">
-             <normaloff>:/icons/039-18-light.png</normaloff>:/icons/039-18-light.png</iconset>
+             <normaloff>:/icons/014-eraser-light.png</normaloff>:/icons/014-eraser-light.png</iconset>
+           </property>
+           <property name="iconSize">
+            <size>
+             <width>18</width>
+             <height>18</height>
+            </size>
+           </property>
+           <property name="checkable">
+            <bool>true</bool>
+           </property>
+           <property name="flat">
+            <bool>true</bool>
+           </property>
+          </widget>
+         </item>
+         <item>
+          <widget class="QPushButton" name="toggle_grid_button">
+           <property name="sizePolicy">
+            <sizepolicy hsizetype="Fixed" vsizetype="Fixed">
+             <horstretch>0</horstretch>
+             <verstretch>0</verstretch>
+            </sizepolicy>
+           </property>
+           <property name="minimumSize">
+            <size>
+             <width>35</width>
+             <height>35</height>
+            </size>
+           </property>
+           <property name="text">
+            <string/>
+           </property>
+           <property name="icon">
+            <iconset resource="../../../resources.qrc">
+             <normaloff>:/icons/032-pixels-light.png</normaloff>:/icons/032-pixels-light.png</iconset>
            </property>
            <property name="iconSize">
             <size>
@@ -737,7 +772,7 @@
           </widget>
          </item>
          <item>
-          <widget class="QPushButton" name="toggle_active_grid_area_button">
+          <widget class="QPushButton" name="safety_checker_button">
            <property name="sizePolicy">
             <sizepolicy hsizetype="Fixed" vsizetype="Fixed">
              <horstretch>0</horstretch>
@@ -755,42 +790,7 @@
            </property>
            <property name="icon">
             <iconset resource="../../../resources.qrc">
-             <normaloff>:/icons/038-drag-light.png</normaloff>:/icons/038-drag-light.png</iconset>
-           </property>
-           <property name="iconSize">
-            <size>
-             <width>18</width>
-             <height>18</height>
-            </size>
-           </property>
-           <property name="checkable">
-            <bool>true</bool>
-           </property>
-           <property name="flat">
-            <bool>true</bool>
-           </property>
-          </widget>
-         </item>
-         <item>
-          <widget class="QPushButton" name="toggle_eraser_button">
-           <property name="sizePolicy">
-            <sizepolicy hsizetype="Fixed" vsizetype="Fixed">
-             <horstretch>0</horstretch>
-             <verstretch>0</verstretch>
-            </sizepolicy>
-           </property>
-           <property name="minimumSize">
-            <size>
-             <width>35</width>
-             <height>35</height>
-            </size>
-           </property>
-           <property name="text">
-            <string/>
-           </property>
-           <property name="icon">
-            <iconset resource="../../../resources.qrc">
-             <normaloff>:/icons/014-eraser-light.png</normaloff>:/icons/014-eraser-light.png</iconset>
+             <normaloff>:/icons/039-18-light.png</normaloff>:/icons/039-18-light.png</iconset>
            </property>
            <property name="iconSize">
             <size>
@@ -891,7 +891,7 @@
     <rect>
      <x>0</x>
      <y>0</y>
-     <width>1364</width>
+     <width>1238</width>
      <height>22</height>
     </rect>
    </property>
@@ -1530,55 +1530,55 @@
   <customwidget>
    <class>SliderWidget</class>
    <extends>QWidget</extends>
-   <header>airunner/pyqt/widgets/slider/slider_widget</header>
+   <header>airunner/widgets/slider/slider_widget</header>
    <container>1</container>
   </customwidget>
   <customwidget>
    <class>GeneratorTabWidget</class>
    <extends>QWidget</extends>
-   <header>airunner/pyqt/widgets/generator_form/generator_tab_widget</header>
+   <header>airunner/widgets/generator_form/generator_tab_widget</header>
    <container>1</container>
   </customwidget>
   <customwidget>
    <class>CanvasWidget</class>
    <extends>QWidget</extends>
-   <header>airunner/pyqt/widgets/canvas/canvas_widget</header>
+   <header>airunner/widgets/canvas/canvas_widget</header>
    <container>1</container>
   </customwidget>
   <customwidget>
    <class>PromptBuilderWidget</class>
    <extends>QWidget</extends>
-   <header>airunner/pyqt/widgets/prompt_builder/prompt_builder_widget</header>
+   <header>airunner/widgets/prompt_builder/prompt_builder_widget</header>
    <container>1</container>
   </customwidget>
   <customwidget>
    <class>ModelManagerWidget</class>
    <extends>QWidget</extends>
-   <header>airunner/pyqt/widgets/model_manager/model_manager_widget</header>
+   <header>airunner/widgets/model_manager/model_manager_widget</header>
    <container>1</container>
   </customwidget>
   <customwidget>
    <class>EmbeddingsContainerWidget</class>
    <extends>QWidget</extends>
-   <header>airunner/pyqt/widgets/embeddings/embeddings_container_widget</header>
+   <header>airunner/widgets/embeddings/embeddings_container_widget</header>
    <container>1</container>
   </customwidget>
   <customwidget>
    <class>LoraContainerWidget</class>
    <extends>QWidget</extends>
-   <header>airunner/pyqt/widgets/lora/lora_container_widget</header>
+   <header>airunner/widgets/lora/lora_container_widget</header>
    <container>1</container>
   </customwidget>
   <customwidget>
    <class>BrushContainerWidget</class>
    <extends>QWidget</extends>
-   <header>airunner/pyqt/widgets/brush/brush_container_widget</header>
+   <header>airunner/widgets/brush/brush_container_widget</header>
    <container>1</container>
   </customwidget>
   <customwidget>
    <class>LayerContainerWidget</class>
    <extends>QWidget</extends>
-   <header>airunner/pyqt/widgets/layers/layer_container_widget</header>
+   <header>airunner/widgets/layers/layer_container_widget</header>
    <container>1</container>
   </customwidget>
  </customwidgets>
@@ -1785,7 +1785,7 @@
    <slot>action_toggle_grid(bool)</slot>
    <hints>
     <hint type="sourcelabel">
-     <x>1272</x>
+     <x>1167</x>
      <y>120</y>
     </hint>
     <hint type="destinationlabel">
@@ -1801,7 +1801,7 @@
    <slot>action_toggle_brush(bool)</slot>
    <hints>
     <hint type="sourcelabel">
-     <x>1272</x>
+     <x>1167</x>
      <y>161</y>
     </hint>
     <hint type="destinationlabel">
@@ -1817,7 +1817,7 @@
    <slot>action_toggle_active_grid_area(bool)</slot>
    <hints>
     <hint type="sourcelabel">
-     <x>1272</x>
+     <x>1167</x>
      <y>284</y>
     </hint>
     <hint type="destinationlabel">
@@ -1833,7 +1833,7 @@
    <slot>action_toggle_eraser(bool)</slot>
    <hints>
     <hint type="sourcelabel">
-     <x>1272</x>
+     <x>1167</x>
      <y>325</y>
     </hint>
     <hint type="destinationlabel">
@@ -1849,7 +1849,7 @@
    <slot>action_focus_button_triggered()</slot>
    <hints>
     <hint type="sourcelabel">
-     <x>1272</x>
+     <x>1167</x>
      <y>243</y>
     </hint>
     <hint type="destinationlabel">
@@ -1865,7 +1865,7 @@
    <slot>action_show_settings()</slot>
    <hints>
     <hint type="sourcelabel">
-     <x>1272</x>
+     <x>1167</x>
      <y>366</y>
     </hint>
     <hint type="destinationlabel">
@@ -2078,7 +2078,7 @@
     </hint>
     <hint type="destinationlabel">
      <x>56</x>
-     <y>-16</y>
+     <y>0</y>
     </hint>
    </hints>
   </connection>
@@ -2105,12 +2105,12 @@
    <slot>action_toggle_nsfw_filter_triggered(bool)</slot>
    <hints>
     <hint type="sourcelabel">
-     <x>1272</x>
+     <x>1167</x>
      <y>202</y>
     </hint>
     <hint type="destinationlabel">
      <x>1105</x>
-     <y>-13</y>
+     <y>0</y>
     </hint>
    </hints>
   </connection>
