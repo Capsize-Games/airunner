@@ -16,6 +16,9 @@
     <height>16777215</height>
    </size>
   </property>
+  <property name="acceptDrops">
+   <bool>false</bool>
+  </property>
   <property name="windowTitle">
    <string>Form</string>
   </property>
@@ -130,8 +133,11 @@
                  <property name="cursor">
                   <cursorShape>PointingHandCursor</cursorShape>
                  </property>
+                 <property name="acceptDrops">
+                  <bool>false</bool>
+                 </property>
                  <property name="styleSheet">
-                  <string notr="true">border-radius: 0;</string>
+                  <string notr="true">border-radius: 0; background: #fff;</string>
                  </property>
                  <property name="text">
                   <string/>
