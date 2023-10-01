@@ -23,10 +23,9 @@ from airunner.aihandler.settings import LOG_LEVEL
 from airunner.aihandler.enums import MessageCode
 from airunner.airunner_api import AIRunnerAPI
 from airunner.data.db import session
-from airunner.data.models import SplitterSection
+from airunner.data.models import SplitterSection, Prompt
 from airunner.filters.windows.filter_base import FilterBase
 from airunner.input_event_manager import InputEventManager
-from airunner.mixins.generator_mixin import GeneratorMixin
 from airunner.mixins.history_mixin import HistoryMixin
 from airunner.settings import BASE_PATH
 from airunner.widgets.status.status_widget import StatusWidget
@@ -46,11 +45,12 @@ from airunner.aihandler.settings_manager import SettingsManager
 
 import qdarktheme
 
+from airunner.windows.video import VideoPopup
+
 
 class MainWindow(
     QMainWindow,
-    HistoryMixin,
-    GeneratorMixin
+    HistoryMixin
 ):
     api = None
     input_event_manager = None
@@ -221,34 +221,6 @@ class MainWindow(
         self._tabs[self.current_generator] = val
 
     @property
-    def is_txt2img(self):
-        return self.current_section == "txt2img"
-
-    @property
-    def is_outpaint(self):
-        return self.current_section == "outpaint"
-
-    @property
-    def is_depth2img(self):
-        return self.current_section == "depth2img"
-
-    @property
-    def is_pix2pix(self):
-        return self.current_section == "pix2pix"
-
-    @property
-    def is_upscale(self):
-        return self.current_section == "upscale"
-
-    @property
-    def is_superresolution(self):
-        return self.current_section == "superresolution"
-
-    @property
-    def is_txt2vid(self):
-        return self.current_section == "txt2vid"
-
-    @property
     def generator_type(self):
         """
         Returns either stablediffusion, shapegif, kandinsky
@@ -257,21 +229,16 @@ class MainWindow(
         return self._generator_type
 
     @property
-    def use_pixels(self):
-        # get name of current tab
-        if self.current_section == "txt2img" and self.enable_controlnet and self.controlnet is not None:
-            use_pixels = True
-        else:
-            use_pixels = self.current_section in (
-                "txt2img",
-                "pix2pix",
-                "depth2img",
-                "outpaint",
-                "controlnet",
-                "superresolution",
-                "upscale"
-            )
-        return use_pixels
+    def deterministic_batch_size(self):
+        return self.ui.deterministic_panel_widget.batch_size
+
+    @property
+    def deterministic_seed(self):
+        return self.ui.deterministic_panel_widget.ui.deterministic_seed.seed
+
+    @property
+    def deterministic_category(self):
+        return self.ui.deterministic_panel_widget.category
 
     @property
     def version(self):
@@ -409,6 +376,20 @@ class MainWindow(
     @controlnet_mask_use_imported_image.setter
     def controlnet_mask_use_imported_image(self, val):
         self.settings_manager.set_value("generator.controlnet_mask_use_imported_image", val)
+
+    @property
+    def current_layer(self):
+        return self.ui.layer_widget.current_layer
+
+    @property
+    def current_layer_image_data(self):
+        return self.ui.layer_widget.current_layer.image_data
+
+    def send_message(self, code, message):
+        self.message_var.emit({
+            "code": code,
+            "message": message,
+        })
 
     def available_model_names_by_section(self, section):
         for model in self.settings_manager.available_models_by_category(section):
@@ -683,9 +664,6 @@ class MainWindow(
             f"Click to {'enable' if not nsfw_filter else 'disable'} NSFW filter"
         )
 
-    def update_controlnet_thumbnail(self):
-        self.generator_tab_widget.update_controlnet_thumbnail()
-
     def resizeEvent(self, event):
         if not self.is_started:
             return
@@ -784,7 +762,6 @@ class MainWindow(
 
     def reset_settings(self):
         logger.info("Resetting settings")
-        # GeneratorMixin.reset_settings(self)
         self.canvas.reset_settings()
 
     def on_state_changed(self, state):
@@ -861,7 +838,6 @@ class MainWindow(
     def initialize_mixins(self):
         HistoryMixin.initialize(self)
         self.canvas = Canvas()
-        GeneratorMixin.initialize(self)
 
     def connect_signals(self):
         logger.info("Connecting signals")
@@ -1196,6 +1172,10 @@ class MainWindow(
         self.controlnet_image = message["image"]
         self.controlnet_image_generated.emit(True)
         self.generator_tab_widget.controlnet_settings_widget.handle_controlnet_image_generated()
+
+    def video_handler(self, data):
+        filename = data["video_filename"]
+        VideoPopup(settings_manager=self.settings_manager, file_path=filename)
 
     def handle_image_generated(self, message):
         images = message["images"]
@@ -1546,3 +1526,21 @@ class MainWindow(
         self.deterministic_window = None
         self.deterministic_data = None
         self.deterministic_images = None
+
+    def load_prompt(self, prompt: Prompt):
+        """
+        Loads prompt values from a Prompt model instance.
+        :param prompt: PromptModel
+        :return:
+        """
+        self.update_prompt(prompt.prompt)
+        self.update_negative_prompt(prompt.negative_prompt)
+
+    def update_prompt(self, prompt_value):
+        self.generator_tab_widget.update_prompt(prompt_value)
+
+    def update_negative_prompt(self, prompt_value):
+        self.generator_tab_widget.update_negative_prompt(prompt_value)
+
+    def new_batch(self, index, image, data):
+        self.generator_tab_widget.current_generator.new_batch(index, image, data)
