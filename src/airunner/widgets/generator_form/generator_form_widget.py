@@ -1,5 +1,4 @@
 import random
-from functools import partial
 
 from PIL import Image
 from PyQt6.QtCore import pyqtSignal, QRect
@@ -16,7 +15,6 @@ from airunner.widgets.slider.slider_widget import SliderWidget
 class GeneratorForm(BaseWidget):
     widget_class_ = Ui_generator_form
     changed_signal = pyqtSignal(str, object)
-    generate_signal = pyqtSignal(dict)
     deterministic_generation_window = None
     deterministic_images = []
     deterministic_data = None
@@ -25,6 +23,8 @@ class GeneratorForm(BaseWidget):
     deterministic_index = 0
     requested_image = None
     deterministic_seed = None
+    initialized = False
+    parent = None
 
     @property
     def is_txt2img(self):
@@ -382,7 +382,7 @@ class GeneratorForm(BaseWidget):
         Emitting generate_signal with options allows us to pass more options to the dict from
         modal windows such as the image interpolation window.
         """
-        self.generate_signal.emit(options)
+        self.app.generate_signal.emit(options)
 
         memory_options = self.get_memory_options()
 
@@ -488,7 +488,6 @@ class GeneratorForm(BaseWidget):
         self.save_db_session()
         self.changed_signal.emit(key, value)
 
-    initialized = False
     def initialize(self):
         self.settings_manager.generator_section = self.generator_section
         self.settings_manager.generator_name = self.generator_name
@@ -496,7 +495,6 @@ class GeneratorForm(BaseWidget):
         self.load_models()
         self.load_schedulers()
         self.set_form_values()
-        self.initialize_handlers()
         self.set_controlnet_settings_properties()
         self.set_input_image_widget_properties()
 
@@ -576,29 +574,8 @@ class GeneratorForm(BaseWidget):
             self.generator_settings.negative_prompt
         )
         self.ui.use_prompt_builder_checkbox.setChecked(
-            self.settings_manager.use_prompt_builder_checkbox
+            self.settings_manager.generator.use_prompt_builder
         )
-
-    def initialize_handlers(self):
-        self.ui.use_prompt_builder_checkbox.stateChanged.connect(partial(
-            self.handle_checkbox_change,
-            "use_prompt_builder_checkbox",
-            "use_prompt_builder_checkbox",
-        ))
-        self.ui.prompt_builder_settings_button.clicked.connect(partial(
-            self.app.show_section,
-            "prompt_builder"
-        ))
-        self.ui.generate_button.clicked.connect(partial(
-            self.app.generate,
-            self.ui.progress_bar
-        ))
-        # self.app.image_generated.connect(
-        #     self.ui.controlnet_settings.handle_image_generated
-        # )
-        # self.app.controlnet_image_generated.connect(
-        #     self.ui.controlnet_settings.handle_controlnet_image_generated
-        # )
 
     def clear_models(self):
         self.ui.model.clear()
