@@ -273,6 +273,7 @@ class GeneratorSetting(Base):
     controlnet_recycle_grid_image = Column(Boolean, default=False)
     controlnet_mask_link_input_image = Column(Boolean, default=False)
     controlnet_mask_use_imported_image = Column(Boolean, default=False)
+    use_prompt_builder = Column(Boolean, default=False)
 
 
 class PromptGeneratorSetting(Base):
@@ -519,7 +520,6 @@ class Settings(Base):
     use_interpolation = Column(Boolean, default=False)
     is_maximized = Column(Boolean, default=False)
     splitter_sizes = relationship("SplitterSection", backref="settings")
-    use_prompt_builder_checkbox = Column(Boolean, default=False)
     auto_prompt_weight = Column(Float, default=0.0)
     auto_negative_prompt_weight = Column(Float, default=0.5)
     negative_auto_prompt_weight = Column(Float, default=0.5)

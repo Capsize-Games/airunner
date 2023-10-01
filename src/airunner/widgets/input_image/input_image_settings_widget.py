@@ -226,7 +226,7 @@ class InputImageSettingsWidget(BaseWidget):
         else:
             self.ui.image_thumbnail.setIcon(QIcon())
 
-        self.app.update_controlnet_thumbnail()
+        # self.app.update_controlnet_thumbnail()
 
     def send_active_image_to_canvas(self):
         # send the current input image to the canvas
