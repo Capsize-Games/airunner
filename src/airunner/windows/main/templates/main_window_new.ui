@@ -555,22 +555,8 @@
           </layout>
          </widget>
         </widget>
-        <widget class="QFrame" name="frame">
-         <property name="frameShape">
-          <enum>QFrame::StyledPanel</enum>
-         </property>
-         <property name="frameShadow">
-          <enum>QFrame::Raised</enum>
-         </property>
-        </widget>
-        <widget class="QFrame" name="frame_2">
-         <property name="frameShape">
-          <enum>QFrame::StyledPanel</enum>
-         </property>
-         <property name="frameShadow">
-          <enum>QFrame::Raised</enum>
-         </property>
-        </widget>
+        <widget class="DeterministicWidget" name="deterministic_panel_widget" native="true"/>
+        <widget class="BatchWidget" name="batch_container_widget" native="true"/>
         <widget class="QFrame" name="frame_3">
          <property name="frameShape">
           <enum>QFrame::StyledPanel</enum>
@@ -1581,6 +1567,18 @@
    <header>airunner/widgets/layers/layer_container_widget</header>
    <container>1</container>
   </customwidget>
+  <customwidget>
+   <class>DeterministicWidget</class>
+   <extends>QWidget</extends>
+   <header>airunner/widgets/deterministic/deterministic_widget</header>
+   <container>1</container>
+  </customwidget>
+  <customwidget>
+   <class>BatchWidget</class>
+   <extends>QWidget</extends>
+   <header>airunner/widgets/batch/batch_widget</header>
+   <container>1</container>
+  </customwidget>
  </customwidgets>
  <resources>
   <include location="../../../resources.qrc"/>
@@ -1786,7 +1784,7 @@
    <hints>
     <hint type="sourcelabel">
      <x>1167</x>
-     <y>120</y>
+     <y>243</y>
     </hint>
     <hint type="destinationlabel">
      <x>775</x>
@@ -1818,7 +1816,7 @@
    <hints>
     <hint type="sourcelabel">
      <x>1167</x>
-     <y>284</y>
+     <y>120</y>
     </hint>
     <hint type="destinationlabel">
      <x>775</x>
@@ -1834,7 +1832,7 @@
    <hints>
     <hint type="sourcelabel">
      <x>1167</x>
-     <y>325</y>
+     <y>202</y>
     </hint>
     <hint type="destinationlabel">
      <x>775</x>
@@ -1850,7 +1848,7 @@
    <hints>
     <hint type="sourcelabel">
      <x>1167</x>
-     <y>243</y>
+     <y>284</y>
     </hint>
     <hint type="destinationlabel">
      <x>775</x>
@@ -2106,7 +2104,7 @@
    <hints>
     <hint type="sourcelabel">
      <x>1167</x>
-     <y>202</y>
+     <y>325</y>
     </hint>
     <hint type="destinationlabel">
      <x>1105</x>

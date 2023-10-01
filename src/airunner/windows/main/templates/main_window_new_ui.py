@@ -213,14 +213,10 @@ class Ui_MainWindow(object):
         self.brush_container_widget.setObjectName("brush_container_widget")
         self.gridLayout_8.addWidget(self.brush_container_widget, 0, 0, 1, 1)
         self.tool_tab_widget.addTab(self.tab_pen_color, "")
-        self.frame = QtWidgets.QFrame(parent=self.right_panel_splitter)
-        self.frame.setFrameShape(QtWidgets.QFrame.Shape.StyledPanel)
-        self.frame.setFrameShadow(QtWidgets.QFrame.Shadow.Raised)
-        self.frame.setObjectName("frame")
-        self.frame_2 = QtWidgets.QFrame(parent=self.right_panel_splitter)
-        self.frame_2.setFrameShape(QtWidgets.QFrame.Shape.StyledPanel)
-        self.frame_2.setFrameShadow(QtWidgets.QFrame.Shadow.Raised)
-        self.frame_2.setObjectName("frame_2")
+        self.deterministic_panel_widget = DeterministicWidget(parent=self.right_panel_splitter)
+        self.deterministic_panel_widget.setObjectName("deterministic_panel_widget")
+        self.batch_container_widget = BatchWidget(parent=self.right_panel_splitter)
+        self.batch_container_widget.setObjectName("batch_container_widget")
         self.frame_3 = QtWidgets.QFrame(parent=self.right_panel_splitter)
         self.frame_3.setFrameShape(QtWidgets.QFrame.Shape.StyledPanel)
         self.frame_3.setFrameShadow(QtWidgets.QFrame.Shadow.Raised)
@@ -812,8 +808,10 @@ class Ui_MainWindow(object):
         self.actionRun_setup_wizard.setText(_translate("MainWindow", "Run setup wizard"))
         self.actionBrowse_AI_Runner_Path.setText(_translate("MainWindow", "Browse AI Runner Path"))
         self.actionBrowse_Images_Path.setText(_translate("MainWindow", "Browse Images Path"))
+from airunner.widgets.batch.batch_widget import BatchWidget
 from airunner.widgets.brush.brush_container_widget import BrushContainerWidget
 from airunner.widgets.canvas.canvas_widget import CanvasWidget
+from airunner.widgets.deterministic.deterministic_widget import DeterministicWidget
 from airunner.widgets.embeddings.embeddings_container_widget import EmbeddingsContainerWidget
 from airunner.widgets.generator_form.generator_tab_widget import GeneratorTabWidget
 from airunner.widgets.layers.layer_container_widget import LayerContainerWidget
