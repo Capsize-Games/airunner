@@ -43,19 +43,25 @@ class GeneratorForm(BaseWidget):
     signals in the corresponding ui file.
     """
     def handle_prompt_changed(self):
-        self.handle_textbox_change("prompt", "prompt")
+        self.handle_textbox_change("generator.prompt", "prompt")
 
     def handle_negative_prompt_changed(self):
-        self.handle_textbox_change("negative_prompt", "negative_prompt")
+        self.handle_textbox_change("generator.negative_prompt", "negative_prompt")
 
     def toggle_prompt_builder_checkbox(self, toggled):
         pass
 
     def handle_model_changed(self, name):
-        pass
+        if not self.initialized:
+            return
+        self.settings_manager.set_value("generator.model", name)
+        self.changed_signal.emit("generator.model", name)
 
     def handle_scheduler_changed(self, name):
-        pass
+        if not self.initialized:
+            return
+        self.settings_manager.set_value("generator.scheduler", name)
+        self.changed_signal.emit("generator.scheduler", name)
 
     def toggle_variation(self, toggled):
         pass
@@ -83,11 +89,14 @@ class GeneratorForm(BaseWidget):
     def handle_textbox_change(self, key, widget_name):
         widget = getattr(self.ui, widget_name)
         value = widget.toPlainText()
-        setattr(self.generator_settings, key, value)
+        setattr(self.settings_manager, key, value)
         self.save_db_session()
         self.changed_signal.emit(key, value)
 
+    initialized = False
     def initialize(self):
+        self.settings_manager.generator_section = self.generator_section
+        self.settings_manager.generator_name = self.generator_name
         self.clear_prompts()
         self.load_models()
         self.load_schedulers()
@@ -108,6 +117,21 @@ class GeneratorForm(BaseWidget):
             if current_value is not None:
                 widget.setProperty("current_value", current_value)
             widget.initialize()
+
+        self.ui.seed_widget.setProperty("generator_section", self.generator_section)
+        self.ui.seed_widget.setProperty("generator_name", self.generator_name)
+        self.ui.seed_widget.initialize(
+            self.generator_section,
+            self.generator_name
+        )
+
+        self.ui.seed_widget_latents.setProperty("generator_section", self.generator_section)
+        self.ui.seed_widget_latents.setProperty("generator_name", self.generator_name)
+        self.ui.seed_widget_latents.initialize(
+            self.generator_section,
+            self.generator_name
+        )
+        self.initialized = True
 
     def set_controlnet_settings_properties(self):
         self.ui.controlnet_settings.initialize(

@@ -33,6 +33,8 @@ class InputImageSettingsWidget(BaseWidget):
 
     @property
     def current_input_image(self):
+        if not self.settings_manager.generator:
+            return None
         if self.settings_manager.generator.input_image_use_imported_image:
             return self.input_image
         elif self.settings_manager.generator.input_image_use_grid_image:
@@ -45,9 +47,10 @@ class InputImageSettingsWidget(BaseWidget):
     ):
         self.setProperty("generator_name", generator_name)
         self.setProperty("generator_section", generator_section)
-        self.settings_manager.section = generator_name
-        self.settings_manager.tab = generator_section
-        self.ui.groupBox.setChecked(self.settings_manager.generator.enable_input_image)
+        self.settings_manager.generator_name = generator_name
+        self.settings_manager.generator_section = generator_section
+        if self.settings_manager.generator:
+            self.ui.groupBox.setChecked(self.settings_manager.generator.enable_input_image)
         self.update_buttons()
         self.ui.groupBox.setTitle(self.property("checkbox_label"))
         self.ui.scale_slider_widget.initialize()
@@ -175,6 +178,9 @@ class InputImageSettingsWidget(BaseWidget):
         self.set_thumbnail(self.input_image)
 
     def update_buttons(self):
+        if not self.settings_manager.generator:
+            return
+
         if self.settings_manager.generator.input_image_use_grid_image:
             self.ui.import_image_button.setEnabled(False)
             self.ui.recycle_grid_image_button.setEnabled(True)

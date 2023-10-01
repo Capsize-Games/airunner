@@ -244,10 +244,10 @@ if not session.query(Prompt).first():
     settings.metadata_settings = session.query(MetadataSettings).first()
     settings.memory_settings = session.query(MemorySettings).first()
 
-    for section in sections_bootstrap_data:
-        for generator_name in sections_bootstrap_data[section]:
+    for generator_name, generator_sections in sections_bootstrap_data.items():
+        for generator_section in generator_sections:
             settings.generator_settings.append(GeneratorSetting(
-                section=section,
+                section=generator_section,
                 generator_name=generator_name
             ))
 
