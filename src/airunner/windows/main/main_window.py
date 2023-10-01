@@ -468,6 +468,8 @@ class MainWindow(
         # create paths if they do not exist
         create_airunner_paths()
 
+        self.ui.layer_widget.initialize()
+
     def quick_export(self):
         if os.path.isdir(self.image_path) is False:
             self.choose_image_export_path()
