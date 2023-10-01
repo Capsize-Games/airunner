@@ -6,7 +6,7 @@
    <rect>
     <x>0</x>
     <y>0</y>
-    <width>624</width>
+    <width>663</width>
     <height>1139</height>
    </rect>
   </property>
@@ -47,7 +47,7 @@
        <rect>
         <x>0</x>
         <y>0</y>
-        <width>624</width>
+        <width>663</width>
         <height>1139</height>
        </rect>
       </property>
@@ -181,7 +181,7 @@
            <item row="6" column="0">
             <layout class="QVBoxLayout" name="verticalLayout_5">
              <item>
-              <widget class="QCheckBox" name="checkBox_2">
+              <widget class="QCheckBox" name="variation_checkbox">
                <property name="text">
                 <string>Variation</string>
                </property>
@@ -204,7 +204,7 @@
                 </widget>
                </item>
                <item>
-                <widget class="QPushButton" name="pushButton_5">
+                <widget class="QPushButton" name="interrupt_button">
                  <property name="text">
                   <string>Interrupt</string>
                  </property>
@@ -459,6 +459,43 @@
            <item row="5" column="0">
             <layout class="QHBoxLayout" name="horizontalLayout_7">
              <item>
+              <widget class="SliderWidget" name="ddim_eta_slider_widget" native="true">
+               <property name="label_text" stdset="0">
+                <string>DDIM ETA</string>
+               </property>
+               <property name="slider_callback" stdset="0">
+                <string notr="true">handle_value_change</string>
+               </property>
+               <property name="current_value" stdset="0">
+                <number>1</number>
+               </property>
+               <property name="slider_maximum" stdset="0">
+                <number>10</number>
+               </property>
+               <property name="spinbox_maximum" stdset="0">
+                <number>10</number>
+               </property>
+               <property name="display_as_float" stdset="0">
+                <bool>false</bool>
+               </property>
+               <property name="spinbox_single_step" stdset="0">
+                <number>1</number>
+               </property>
+               <property name="spinbox_page_step" stdset="0">
+                <number>1</number>
+               </property>
+               <property name="spinbox_minimum" stdset="0">
+                <number>1</number>
+               </property>
+               <property name="slider_minimum" stdset="0">
+                <number>1</number>
+               </property>
+               <property name="settings_property" stdset="0">
+                <string notr="true">generator.ddim_eta</string>
+               </property>
+              </widget>
+             </item>
+             <item>
               <widget class="SliderWidget" name="frames_slider_widget" native="true">
                <property name="label_text" stdset="0">
                 <string>Frames</string>
@@ -582,7 +619,7 @@
    <slot>toggle_prompt_builder_checkbox(bool)</slot>
    <hints>
     <hint type="sourcelabel">
-     <x>482</x>
+     <x>621</x>
      <y>16</y>
     </hint>
     <hint type="destinationlabel">
@@ -598,8 +635,8 @@
    <slot>handle_model_changed(QString)</slot>
    <hints>
     <hint type="sourcelabel">
-     <x>232</x>
-     <y>852</y>
+     <x>234</x>
+     <y>927</y>
     </hint>
     <hint type="destinationlabel">
      <x>492</x>
@@ -614,8 +651,8 @@
    <slot>handle_scheduler_changed(QString)</slot>
    <hints>
     <hint type="sourcelabel">
-     <x>480</x>
-     <y>849</y>
+     <x>611</x>
+     <y>927</y>
     </hint>
     <hint type="destinationlabel">
      <x>7</x>
@@ -624,14 +661,14 @@
    </hints>
   </connection>
   <connection>
-   <sender>checkBox_2</sender>
+   <sender>variation_checkbox</sender>
    <signal>toggled(bool)</signal>
    <receiver>generator_form</receiver>
    <slot>toggle_variation(bool)</slot>
    <hints>
     <hint type="sourcelabel">
-     <x>33</x>
-     <y>900</y>
+     <x>34</x>
+     <y>1098</y>
     </hint>
     <hint type="destinationlabel">
      <x>492</x>
@@ -656,13 +693,13 @@
    </hints>
   </connection>
   <connection>
-   <sender>pushButton_5</sender>
+   <sender>interrupt_button</sender>
    <signal>clicked()</signal>
    <receiver>generator_form</receiver>
    <slot>handle_interrupt_button_clicked()</slot>
    <hints>
     <hint type="sourcelabel">
-     <x>551</x>
+     <x>650</x>
      <y>1113</y>
     </hint>
     <hint type="destinationlabel">
