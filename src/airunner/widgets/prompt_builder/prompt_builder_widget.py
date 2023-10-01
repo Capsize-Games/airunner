@@ -192,7 +192,7 @@ class PromptBuilderWidget(BaseWidget):
         self.process_prompt()
 
     def process_prompt(self):
-        if not self.settings_manager.use_prompt_builder_checkbox:
+        if not self.settings_manager.generator.use_prompt_builder:
             # self.prompt_text.setPlainText("")
             # self.negative_prompt_text.setPlainText("")
             return
@@ -269,7 +269,7 @@ class PromptBuilderWidget(BaseWidget):
         """
         self.process_prompt()
         current_tab = self.tabs.currentWidget()
-        if self.app.use_prompt_builder_checkbox:
+        if self.settings_manager.generator.use_prompt_builder:
             options[f"prompt"] = current_tab.prompt_text.toPlainText()
             options[f"negative_prompt"] = current_tab.negative_prompt_text.toPlainText()
             options[f"prompt_data"] = self.prompt_data

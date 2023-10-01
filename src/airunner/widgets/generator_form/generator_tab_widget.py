@@ -1,5 +1,6 @@
 import re
 
+from PyQt6.QtCore import pyqtSignal
 from PyQt6.QtWidgets import QWidget, QGridLayout, QProgressBar, QTabWidget
 
 from airunner.widgets.base_widget import BaseWidget
@@ -9,6 +10,7 @@ from airunner.widgets.generator_form.templates.generator_tab_ui import Ui_genera
 
 class GeneratorTabWidget(BaseWidget):
     widget_class_ = Ui_generator_tab
+    generate_signal = pyqtSignal(dict)
     data = {}
     clip_skip_disabled_tabs = ["kandinsky", "shapegif"]
     clip_skip_disabled_sections = ["upscale", "superresolution", "txt2vid"]
