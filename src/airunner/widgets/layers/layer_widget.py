@@ -1,3 +1,5 @@
+from functools import partial
+
 from PyQt6 import QtGui
 
 from airunner.widgets.base_widget import BaseWidget
@@ -11,8 +13,16 @@ class LayerWidget(BaseWidget):
 
     def __init__(self, *args, **kwargs):
         self.layer_data = kwargs.pop("layer_data", None)
+        self.layer_index = kwargs.pop("layer_index", None)
         super().__init__(*args, **kwargs)
         self.set_thumbnail()
+
+        # listen for click on entire widget
+        self.ui.mousePressEvent = partial(self.action_clicked, self.layer_data, self.layer_index)
+        self.ui.layer_name.setText(self.layer_data.name)
+
+    def action_clicked(self):
+        print("select layer")
 
     def action_clicked_button_toggle_layer_visibility(self):
         pass

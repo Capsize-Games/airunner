@@ -514,11 +514,26 @@ class Canvas(
             "layer_index": self.current_layer_index
         })
         layer_name = f"Layer {len(self.layers) + 1}"
-        self.layers.insert(0, LayerData(len(self.layers), layer_name))
-        self.set_current_layer(0)
+        layer = LayerData(len(self.layers), layer_name)
+        index = 0
+        self.layers.insert(index, layer)
+        self.set_current_layer(index)
+        return layer, index
 
     def get_layers_copy(self):
         return [layer for layer in self.layers]
+
+    def delete_selected_layers(self):
+        self.parent.history.add_event({
+            "event": "delete_layer",
+            "layers": self.get_layers_copy(),
+            "layer_index": self.current_layer_index
+        })
+        for index, layer in self.selected_layers.items():
+            self.delete_layer(index=index, layer=layer)
+        self.selected_layers = {}
+        self.show_layers()
+        self.update()
 
     def merge_selected_layers(self):
         if self.current_layer_index not in self.selected_layers:
