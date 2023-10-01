@@ -3,7 +3,6 @@ from PyQt6 import QtGui
 from PyQt6.QtWidgets import QWidget
 
 from airunner.aihandler.settings_manager import SettingsManager
-from airunner.widgets.slider.slider_widget import SliderWidget
 from airunner.utils import get_main_window
 
 
@@ -19,36 +18,6 @@ class BaseWidget(QWidget):
     @property
     def canvas(self):
         return self.app.canvas
-
-    def create_slider_widget(
-        self,
-        label_text,
-        slider_callback,
-        slider_minimum=1,
-        slider_maximum=100,
-        slider_tick_interval=1,
-        slider_single_step=1,
-        slider_page_step=1,
-        spinbox_single_step=0.01,
-        spinbox_page_step=0.01,
-        spinbox_minimum=0,
-        spinbox_maximum=100,
-        display_as_float=False
-    ):
-        return SliderWidget(
-            label_text=label_text,
-            slider_callback=slider_callback,
-            slider_minimum=slider_minimum,
-            slider_maximum=slider_maximum,
-            slider_tick_interval=slider_tick_interval,
-            slider_single_step=slider_single_step,
-            slider_page_step=slider_page_step,
-            spinbox_single_step=spinbox_single_step,
-            spinbox_page_step=spinbox_page_step,
-            spinbox_minimum=spinbox_minimum,
-            spinbox_maximum=spinbox_maximum,
-            display_as_float=display_as_float
-        )
 
     def add_to_grid(self, widget, row, column, row_span=1, column_span=1):
         self.layout().addWidget(widget, row, column, row_span, column_span)

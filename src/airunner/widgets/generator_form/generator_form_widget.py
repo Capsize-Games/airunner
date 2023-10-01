@@ -2,8 +2,11 @@ from functools import partial
 
 from PyQt6.QtCore import pyqtSignal
 
+from airunner.data.models import ActionScheduler
+from airunner.utils import get_session
 from airunner.widgets.base_widget import BaseWidget
 from airunner.widgets.generator_form.templates.generatorform_ui import Ui_generator_form
+from airunner.widgets.slider.slider_widget import SliderWidget
 
 
 class GeneratorForm(BaseWidget):
@@ -87,10 +90,15 @@ class GeneratorForm(BaseWidget):
     def initialize(self):
         self.clear_prompts()
         self.load_models()
+        self.load_schedulers()
         self.set_form_values()
         self.initialize_handlers()
         self.set_controlnet_settings_properties()
         self.set_input_image_widget_properties()
+
+        # find all SliderWidget widgets in the template and call initialize
+        for widget in self.findChildren(SliderWidget):
+            widget.initialize()
 
     def set_controlnet_settings_properties(self):
         # self.ui.controlnet_settings.update_generator_properties(
@@ -123,6 +131,15 @@ class GeneratorForm(BaseWidget):
             pipeline_action=requested_section,
             category=self.generator_name)
         self.ui.model.addItems(models)
+
+    def load_schedulers(self):
+        session = get_session()
+        schedulers = session.query(ActionScheduler).filter(
+            ActionScheduler.section == self.generator_section,
+            ActionScheduler.generator_name == self.generator_name
+        ).all()
+        scheduler_names = [s.scheduler.display_name for s in schedulers]
+        self.ui.scheduler.addItems(scheduler_names)
 
     def set_form_values(self):
         self.ui.prompt.setPlainText(

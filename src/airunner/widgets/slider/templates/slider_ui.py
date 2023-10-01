@@ -9,15 +9,15 @@
 from PyQt6 import QtCore, QtGui, QtWidgets
 
 
-class Ui_Form(object):
-    def setupUi(self, Form):
-        Form.setObjectName("Form")
-        Form.resize(242, 93)
-        self.gridLayout = QtWidgets.QGridLayout(Form)
+class Ui_slider_widget(object):
+    def setupUi(self, slider_widget):
+        slider_widget.setObjectName("slider_widget")
+        slider_widget.resize(242, 93)
+        self.gridLayout = QtWidgets.QGridLayout(slider_widget)
         self.gridLayout.setContentsMargins(0, 0, 0, 0)
         self.gridLayout.setSpacing(0)
         self.gridLayout.setObjectName("gridLayout")
-        self.slider = QtWidgets.QSlider(parent=Form)
+        self.slider = QtWidgets.QSlider(parent=slider_widget)
         sizePolicy = QtWidgets.QSizePolicy(QtWidgets.QSizePolicy.Policy.Expanding, QtWidgets.QSizePolicy.Policy.Preferred)
         sizePolicy.setHorizontalStretch(0)
         sizePolicy.setVerticalStretch(0)
@@ -29,7 +29,7 @@ class Ui_Form(object):
         self.slider.setOrientation(QtCore.Qt.Orientation.Horizontal)
         self.slider.setObjectName("slider")
         self.gridLayout.addWidget(self.slider, 0, 0, 1, 1)
-        self.spinbox = QtWidgets.QDoubleSpinBox(parent=Form)
+        self.spinbox = QtWidgets.QDoubleSpinBox(parent=slider_widget)
         self.spinbox.setStyleSheet("background-color: transparent;")
         self.spinbox.setWrapping(False)
         self.spinbox.setFrame(False)
@@ -41,9 +41,9 @@ class Ui_Form(object):
         self.spinbox.setObjectName("spinbox")
         self.gridLayout.addWidget(self.spinbox, 0, 1, 1, 1)
 
-        self.retranslateUi(Form)
-        QtCore.QMetaObject.connectSlotsByName(Form)
+        self.retranslateUi(slider_widget)
+        QtCore.QMetaObject.connectSlotsByName(slider_widget)
 
-    def retranslateUi(self, Form):
+    def retranslateUi(self, slider_widget):
         _translate = QtCore.QCoreApplication.translate
-        Form.setWindowTitle(_translate("Form", "Form"))
+        slider_widget.setWindowTitle(_translate("slider_widget", "Form"))

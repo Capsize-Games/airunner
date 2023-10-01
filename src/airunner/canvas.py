@@ -63,7 +63,7 @@ class Canvas(
 
     @property
     def current_layer_index(self):
-        return self.current_layer_index
+        return self.app.ui.layer_widget.current_layer_index
 
     @property
     def layers(self):

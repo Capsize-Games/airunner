@@ -298,3 +298,6 @@ class LayerContainerWidget(BaseWidget):
             self.current_layer.image_data.image,
             opacity
         )
+
+    def show_layers(self):
+        pass
