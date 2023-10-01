@@ -164,6 +164,9 @@
                  <height>0</height>
                 </size>
                </property>
+               <property name="acceptDrops">
+                <bool>false</bool>
+               </property>
                <property name="generator_section" stdset="0">
                 <string/>
                </property>
@@ -182,6 +185,9 @@
                  <width>0</width>
                  <height>0</height>
                 </size>
+               </property>
+               <property name="acceptDrops">
+                <bool>false</bool>
                </property>
                <property name="generator_section" stdset="0">
                 <string/>

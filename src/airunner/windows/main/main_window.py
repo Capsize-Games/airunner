@@ -470,6 +470,9 @@ class MainWindow(
 
         self.ui.layer_widget.initialize()
 
+        self.ui.toggle_grid_button.setChecked(self.settings_manager.grid_settings.show_grid)
+        self.ui.safety_checker_button.setChecked(self.settings_manager.nsfw_filter)
+
     def quick_export(self):
         if os.path.isdir(self.image_path) is False:
             self.choose_image_export_path()
@@ -594,13 +597,22 @@ class MainWindow(
         self.canvas.recenter()
 
     def action_toggle_brush(self, active):
-        self.toggle_tool("brush")
+        if active:
+            self.toggle_tool("brush")
+            self.ui.toggle_active_grid_area_button.setChecked(False)
+            self.ui.toggle_eraser_button.setChecked(False)
 
     def action_toggle_eraser(self, active):
-        self.toggle_tool("eraser")
+        if active:
+            self.toggle_tool("eraser")
+            self.ui.toggle_active_grid_area_button.setChecked(False)
+            self.ui.toggle_brush_button.setChecked(False)
 
     def action_toggle_active_grid_area(self, active):
-        self.toggle_tool("active_grid_area")
+        if active:
+            self.toggle_tool("active_grid_area")
+            self.ui.toggle_brush_button.setChecked(False)
+            self.ui.toggle_eraser_button.setChecked(False)
 
     def action_toggle_nsfw_filter_triggered(self, bool):
         self.settings_manager.set_value("nsfw_filter", bool)
@@ -859,10 +871,6 @@ class MainWindow(
             self.toggle_tool(kwargs["tool"])
 
     def toggle_tool(self, tool):
-        # uncheck all buttons that are not currently selected
-        for button_name in self.toolbar_widget.tool_buttons:
-            button = getattr(self.toolbar_widget, f"{button_name}_button")
-            button.setChecked(tool == button_name)
         self.settings_manager.set_value("current_tool", tool)
         self.canvas.update_cursor()
 
