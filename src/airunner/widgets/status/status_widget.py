@@ -14,7 +14,7 @@ class StatusWidget(BaseWidget):
         queue_stats = f"Queued items: {queue_size}"
         cuda_status = f"Using {'GPU' if has_cuda else 'CPU'}"
         vram_stats = f"VRAM allocated {torch.cuda.memory_allocated() / 1024 ** 3:.1f}GB cached {torch.cuda.memory_cached() / 1024 ** 3:.1f}GB"
-        ram_stats = f"RAM {psutil.virtual_memory().percent:.1f}%"
+        ram_stats = f"RAM used {psutil.virtual_memory().percent:.1f}%"
         self.ui.nsfw_status.setText(nsfw_status)
         self.ui.cuda_status.setText(cuda_status)
         self.ui.queue_stats.setText(queue_stats)
