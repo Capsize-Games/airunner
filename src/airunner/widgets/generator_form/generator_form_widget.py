@@ -98,14 +98,22 @@ class GeneratorForm(BaseWidget):
 
         # find all SliderWidget widgets in the template and call initialize
         for widget in self.findChildren(SliderWidget):
+            try:
+                current_value = getattr(
+                    self.generator_settings,
+                    widget.property("settings_property").split(".")[1]
+                )
+            except Exception as e:
+                current_value = None
+            if current_value is not None:
+                widget.setProperty("current_value", current_value)
             widget.initialize()
 
     def set_controlnet_settings_properties(self):
-        # self.ui.controlnet_settings.update_generator_properties(
-        #     self.generator_section,
-        #     self.generator_name
-        # )
-        pass
+        self.ui.controlnet_settings.initialize(
+            self.generator_name,
+            self.generator_section
+        )
 
     def set_input_image_widget_properties(self):
         self.ui.input_image_widget.initialize(
