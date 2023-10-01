@@ -345,7 +345,7 @@
         </spacer>
        </item>
        <item>
-        <widget class="SliderWidget" name="width_slider" native="true">
+        <widget class="SliderWidget" name="width_slider_widget" native="true">
          <property name="label_text" stdset="0">
           <string>Active Grid Width</string>
          </property>
@@ -382,7 +382,7 @@
         </widget>
        </item>
        <item>
-        <widget class="SliderWidget" name="height_slider" native="true">
+        <widget class="SliderWidget" name="height_slider_widget" native="true">
          <property name="slider_minimum" stdset="0">
           <number>64</number>
          </property>
