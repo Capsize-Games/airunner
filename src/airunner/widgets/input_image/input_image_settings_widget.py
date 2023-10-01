@@ -50,6 +50,7 @@ class InputImageSettingsWidget(BaseWidget):
         self.ui.groupBox.setChecked(self.settings_manager.generator.enable_input_image)
         self.update_buttons()
         self.ui.groupBox.setTitle(self.property("checkbox_label"))
+        self.ui.scale_slider_widget.initialize()
 
     def action_toggled_button_use_imported_image(self, val):
         self.toggle_use_imported_image(val)

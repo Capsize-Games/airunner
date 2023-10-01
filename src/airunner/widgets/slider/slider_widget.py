@@ -1,3 +1,5 @@
+from functools import partial
+
 from PyQt6 import uic
 from PyQt6.QtCore import Qt
 from PyQt6.QtWidgets import QWidget, QLabel, QSlider, QDoubleSpinBox
@@ -98,8 +100,12 @@ class SliderWidget(BaseWidget):
         current_value = self.property("current_value") or 0
         slider_name = self.property("slider_name") or None
         spinbox_name = self.property("spinbox_name") or None
+        settings_property = self.property("settings_property") or None
         self.display_as_float = self.property("display_as_float") or True
         self.divide_by = self.property("divide_by") or 1.0
+
+        if slider_callback != "":
+            slider_callback = partial(getattr(self.app, slider_callback), settings_property)
 
         # set slider and spinbox names
         if slider_name:
