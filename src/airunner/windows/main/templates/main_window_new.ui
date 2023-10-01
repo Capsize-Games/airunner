@@ -377,7 +377,7 @@
           <number>64</number>
          </property>
          <property name="slider_callback" stdset="0">
-          <string>width_slider_callback</string>
+          <string notr="true">width_slider_callback</string>
          </property>
         </widget>
        </item>
@@ -414,7 +414,7 @@
           <string>Active Grid Height</string>
          </property>
          <property name="slider_callback" stdset="0">
-          <string>height_slider_callback</string>
+          <string notr="true">height_slider_callback</string>
          </property>
         </widget>
        </item>
@@ -451,7 +451,7 @@
           <string>Brush Size</string>
          </property>
          <property name="slider_callback" stdset="0">
-          <string>brush_size_slider_callback</string>
+          <string notr="true">brush_size_slider_callback</string>
          </property>
         </widget>
        </item>
