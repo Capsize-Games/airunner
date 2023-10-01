@@ -307,7 +307,7 @@
                    </property>
                    <property name="icon">
                     <iconset resource="../../../resources.qrc">
-                     <normaloff>:/icons/025-gallery-light.png</normaloff>:/icons/025-gallery-light.png</iconset>
+                     <normaloff>:/icons/046-import-light.png</normaloff>:/icons/046-import-light.png</iconset>
                    </property>
                    <property name="checkable">
                     <bool>true</bool>
@@ -342,7 +342,7 @@
                    </property>
                    <property name="icon">
                     <iconset resource="../../../resources.qrc">
-                     <normaloff>:/icons/032-pixels-light.png</normaloff>:/icons/032-pixels-light.png</iconset>
+                     <normaloff>:/icons/025-gallery-light.png</normaloff>:/icons/025-gallery-light.png</iconset>
                    </property>
                    <property name="checkable">
                     <bool>true</bool>
@@ -624,7 +624,7 @@
                    </property>
                    <property name="icon">
                     <iconset resource="../../../resources.qrc">
-                     <normaloff>:/icons/025-gallery-light.png</normaloff>:/icons/025-gallery-light.png</iconset>
+                     <normaloff>:/icons/046-import-light.png</normaloff>:/icons/046-import-light.png</iconset>
                    </property>
                    <property name="checkable">
                     <bool>true</bool>
