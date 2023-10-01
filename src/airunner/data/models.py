@@ -39,6 +39,24 @@ class ModelBase(QAbstractTableModel):
 Base = declarative_base()
 
 
+class Scheduler(Base):
+    __tablename__ = "schedulers"
+
+    id = Column(Integer, primary_key=True)
+    name = Column(String)
+    display_name = Column(String)
+
+
+class ActionScheduler(Base):
+    __tablename__ = "action_schedulers"
+
+    id = Column(Integer, primary_key=True)
+    section = Column(String)
+    generator_name = Column(String)
+    scheduler_id = Column(Integer, ForeignKey('schedulers.id'))
+    scheduler = relationship("Scheduler", backref="action_schedulers")
+
+
 class PromptStyleCategoryModel(ModelBase):
     _headers = [
         {
