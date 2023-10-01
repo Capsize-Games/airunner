@@ -1,4 +1,4 @@
-# Form implementation generated from reading ui file '/home/joe/Projects/imagetopixel/airunner/src/airunner/../../src/airunner/widgets/batch/batch_widget.ui'
+# Form implementation generated from reading ui file '/home/joe/Projects/imagetopixel/airunner/src/airunner/../../src/airunner/widgets/batch/templates/batch_widget.ui'
 #
 # Created by: PyQt6 UI code generator 6.4.2
 #
@@ -9,18 +9,18 @@
 from PyQt6 import QtCore, QtGui, QtWidgets
 
 
-class Ui_Form(object):
-    def setupUi(self, Form):
-        Form.setObjectName("Form")
-        Form.resize(322, 137)
-        Form.setMaximumSize(QtCore.QSize(16777215, 137))
+class Ui_batch_widget(object):
+    def setupUi(self, batch_widget):
+        batch_widget.setObjectName("batch_widget")
+        batch_widget.resize(322, 137)
+        batch_widget.setMaximumSize(QtCore.QSize(16777215, 137))
         font = QtGui.QFont()
         font.setPointSize(8)
-        Form.setFont(font)
-        self.gridLayout_2 = QtWidgets.QGridLayout(Form)
+        batch_widget.setFont(font)
+        self.gridLayout_2 = QtWidgets.QGridLayout(batch_widget)
         self.gridLayout_2.setContentsMargins(9, 9, 9, 9)
         self.gridLayout_2.setObjectName("gridLayout_2")
-        self.groupBox_2 = QtWidgets.QGroupBox(parent=Form)
+        self.groupBox_2 = QtWidgets.QGroupBox(parent=batch_widget)
         font = QtGui.QFont()
         font.setPointSize(8)
         font.setBold(True)
@@ -38,13 +38,13 @@ class Ui_Form(object):
         self.total_batches.setObjectName("total_batches")
         self.gridLayout_3.addWidget(self.total_batches, 0, 0, 1, 1)
         self.gridLayout_2.addWidget(self.groupBox_2, 3, 0, 1, 1)
-        self.generate_batches_button = QtWidgets.QPushButton(parent=Form)
+        self.generate_batches_button = QtWidgets.QPushButton(parent=batch_widget)
         font = QtGui.QFont()
         font.setPointSize(8)
         self.generate_batches_button.setFont(font)
         self.generate_batches_button.setObjectName("generate_batches_button")
         self.gridLayout_2.addWidget(self.generate_batches_button, 4, 0, 1, 2)
-        self.groupBox = QtWidgets.QGroupBox(parent=Form)
+        self.groupBox = QtWidgets.QGroupBox(parent=batch_widget)
         font = QtGui.QFont()
         font.setPointSize(8)
         font.setBold(True)
@@ -62,26 +62,26 @@ class Ui_Form(object):
         self.images_per_batch.setObjectName("images_per_batch")
         self.gridLayout.addWidget(self.images_per_batch, 0, 0, 1, 1)
         self.gridLayout_2.addWidget(self.groupBox, 3, 1, 1, 1)
-        self.label = QtWidgets.QLabel(parent=Form)
+        self.label = QtWidgets.QLabel(parent=batch_widget)
         font = QtGui.QFont()
         font.setPointSize(10)
         font.setBold(True)
         self.label.setFont(font)
         self.label.setObjectName("label")
         self.gridLayout_2.addWidget(self.label, 1, 0, 1, 1)
-        self.line = QtWidgets.QFrame(parent=Form)
+        self.line = QtWidgets.QFrame(parent=batch_widget)
         self.line.setFrameShape(QtWidgets.QFrame.Shape.HLine)
         self.line.setFrameShadow(QtWidgets.QFrame.Shadow.Sunken)
         self.line.setObjectName("line")
         self.gridLayout_2.addWidget(self.line, 2, 0, 1, 2)
 
-        self.retranslateUi(Form)
-        QtCore.QMetaObject.connectSlotsByName(Form)
+        self.retranslateUi(batch_widget)
+        QtCore.QMetaObject.connectSlotsByName(batch_widget)
 
-    def retranslateUi(self, Form):
+    def retranslateUi(self, batch_widget):
         _translate = QtCore.QCoreApplication.translate
-        Form.setWindowTitle(_translate("Form", "Form"))
-        self.groupBox_2.setTitle(_translate("Form", "Batches"))
-        self.generate_batches_button.setText(_translate("Form", "Generate batches"))
-        self.groupBox.setTitle(_translate("Form", "Images per batch"))
-        self.label.setText(_translate("Form", "Batch Generation"))
+        batch_widget.setWindowTitle(_translate("batch_widget", "Form"))
+        self.groupBox_2.setTitle(_translate("batch_widget", "Batches"))
+        self.generate_batches_button.setText(_translate("batch_widget", "Generate batches"))
+        self.groupBox.setTitle(_translate("batch_widget", "Images per batch"))
+        self.label.setText(_translate("batch_widget", "Batch Generation"))
