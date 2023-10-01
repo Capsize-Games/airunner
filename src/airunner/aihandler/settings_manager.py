@@ -169,20 +169,22 @@ class SettingsManager(QObject):
 
     @property
     def generator(self):
-        return self.find_generator(self.section, self.tab)
+        return self.find_generator(self.generator_section, self.generator_name)
 
-    def find_generator(self, section, tab):
+    def find_generator(self, generator_section, generator_name):
         # using sqlalchemy, query the document.settings.generator_settings column
-        # and find any with GeneratorSettings.section == self.section and GeneratorSettings.generator_name == self.tab
+        # and find any with GeneratorSettings.section == self.generator_section and GeneratorSettings.generator_name == self.generator_name
         # return the first result
         generator_settings = session.query(GeneratorSetting).filter_by(
-            section=section,
-            generator_name=tab
+            section=generator_section,
+            generator_name=generator_name
         ).join(Settings).first()
         if generator_settings is None:
+            if not generator_section or generator_section == "" or not generator_name or generator_name == "":
+                return None
             generator_settings = GeneratorSetting(
-                section=section,
-                generator_name=tab,
+                section=generator_section,
+                generator_name=generator_name,
                 settings_id=document.settings.id,
             )
             session.add(generator_settings)
@@ -192,8 +194,8 @@ class SettingsManager(QObject):
     def __init__(self, app=None, *args, **kwargs):
         global _app, document
         self.can_save = True
-        self.section = "stablediffusion"
-        self.tab = "txt2img"
+        self.generator_section = "stablediffusion"
+        self.generator_name = "txt2img"
 
         if app:
             _app = app
@@ -218,20 +220,14 @@ class SettingsManager(QObject):
         return None
 
     def __setattr__(self, name, value):
-        if name in ["can_save", "section", "tab"]:
+        if name in ["can_save", "generator_section", "generator_name"]:
             super().__setattr__(name, value)
             return
         if document and hasattr(document.settings, name):
             setattr(document.settings, name, value)
             self.changed_signal.emit(name, value)
 
-    def set_value(self, key, value, section=None, tab=None):
-        _section = self.section
-        _tab = self.tab
-        if section:
-            self.section = section
-        if tab:
-            self.tab = tab
+    def set_value(self, key, value):
         keys = key.split('.')
         obj = self
         for k in keys[:-1]:  # Traverse till second last key
@@ -239,8 +235,6 @@ class SettingsManager(QObject):
         setattr(obj, keys[-1], value)
         self.save()
         self.changed_signal.emit(key, value)
-        self.section = _section
-        self.tab = _tab
 
     def get_value(self, key):
         keys = key.split('.')

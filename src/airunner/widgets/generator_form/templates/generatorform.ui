@@ -157,10 +157,24 @@
            <item row="2" column="0">
             <layout class="QHBoxLayout" name="horizontalLayout">
              <item>
-              <widget class="SeedWidget" name="seed_widget" native="true"/>
+              <widget class="SeedWidget" name="seed_widget" native="true">
+               <property name="generator_section" stdset="0">
+                <string/>
+               </property>
+               <property name="generator_name" stdset="0">
+                <string/>
+               </property>
+              </widget>
              </item>
              <item>
-              <widget class="LatentsSeedWidget" name="seed_widget_latents" native="true"/>
+              <widget class="LatentsSeedWidget" name="seed_widget_latents" native="true">
+               <property name="generator_section" stdset="0">
+                <string/>
+               </property>
+               <property name="generator_name" stdset="0">
+                <string/>
+               </property>
+              </widget>
              </item>
             </layout>
            </item>
