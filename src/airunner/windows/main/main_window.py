@@ -7,13 +7,10 @@ from functools import partial
 from airunner.canvas import Canvas
 from airunner.resources_rc import *
 
-import psutil
-import torch
-
 from PyQt6 import uic, QtCore
 from PyQt6.QtWidgets import QApplication, QFileDialog, QMainWindow, QTabWidget, QWidget, \
-    QVBoxLayout, QLabel, QHBoxLayout, QFrame
-from PyQt6.QtCore import pyqtSlot, Qt, QThread, pyqtSignal, QObject, QTimer, QLine
+    QVBoxLayout
+from PyQt6.QtCore import pyqtSlot, Qt, QThread, pyqtSignal, QObject, QTimer
 from PyQt6.QtGui import QGuiApplication
 
 from airunner.aihandler.qtvar import MessageHandlerVar
@@ -126,6 +123,10 @@ class MainWindow(
     }
     image_generated = pyqtSignal(bool)
     controlnet_image_generated = pyqtSignal(bool)
+
+    @property
+    def generate_signal(self):
+        return self.generator_tab_widget.generate_signal
 
     @property
     def settings_manager(self):
