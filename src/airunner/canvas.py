@@ -4,6 +4,7 @@ from PIL import Image
 from PyQt6.QtCore import Qt, QPoint, QRect
 from PyQt6.QtGui import QColor, QPainter, QBrush, QCursor
 from PyQt6.QtWidgets import QSpacerItem, QSizePolicy, QVBoxLayout, QWidget
+from PyQt6.uic.properties import QtGui
 
 from airunner.aihandler.qtvar import BooleanVar
 from airunner.cursors.circle_brush import CircleCursor
@@ -629,6 +630,7 @@ class Canvas(
         This function is called when the layers need to be updated.
         :return:
         """
+        return
         # create an object which can contain a layer_obj and then be added to layers.setWidget
         container = QWidget()
         container.setLayout(QVBoxLayout())
@@ -647,7 +649,6 @@ class Canvas(
             else:
                 layer_obj.ui.frame.setStyleSheet(self.parent.css("layer_normal_style"))
 
-            layer_obj.set_icon()
             layer_obj.ui.visible_button.clicked.connect(
                 lambda _, _layer=layer, _layer_obj=layer_obj: self.toggle_layer_visibility(_layer, _layer_obj))
 

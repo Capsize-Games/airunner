@@ -6,7 +6,7 @@
    <rect>
     <x>0</x>
     <y>0</y>
-    <width>220</width>
+    <width>254</width>
     <height>40</height>
    </rect>
   </property>
@@ -80,29 +80,29 @@
          <number>3</number>
         </property>
         <property name="leftMargin">
-         <number>3</number>
+         <number>0</number>
         </property>
         <property name="topMargin">
-         <number>3</number>
+         <number>0</number>
         </property>
         <property name="rightMargin">
-         <number>3</number>
+         <number>0</number>
         </property>
         <property name="bottomMargin">
-         <number>3</number>
+         <number>0</number>
         </property>
         <item>
-         <widget class="QLabel" name="thumbnail_label">
-          <property name="sizePolicy">
-           <sizepolicy hsizetype="Maximum" vsizetype="Maximum">
-            <horstretch>0</horstretch>
-            <verstretch>0</verstretch>
-           </sizepolicy>
+         <widget class="QLabel" name="thumbnail">
+          <property name="minimumSize">
+           <size>
+            <width>38</width>
+            <height>38</height>
+           </size>
           </property>
           <property name="maximumSize">
            <size>
-            <width>32</width>
-            <height>32</height>
+            <width>38</width>
+            <height>38</height>
            </size>
           </property>
           <property name="text">
@@ -119,6 +119,19 @@
            <string>Layer 1</string>
           </property>
          </widget>
+        </item>
+        <item>
+         <spacer name="horizontalSpacer">
+          <property name="orientation">
+           <enum>Qt::Horizontal</enum>
+          </property>
+          <property name="sizeHint" stdset="0">
+           <size>
+            <width>40</width>
+            <height>20</height>
+           </size>
+          </property>
+         </spacer>
         </item>
        </layout>
       </widget>
@@ -147,10 +160,9 @@
         <string/>
        </property>
        <property name="icon">
-        <iconset>
-         <normaloff>:/icons/src/icons/eye-off.png</normaloff>
-         <normalon>../src/icons/eye.png</normalon>
-         <activeon>:/icons/src/icons/eye.png</activeon>:/icons/src/icons/eye-off.png</iconset>
+        <iconset resource="../../../resources.qrc">
+         <normaloff>:/icons/009-hide-light.png</normaloff>
+         <normalon>:/icons/010-view-light.png</normalon>:/icons/009-hide-light.png</iconset>
        </property>
        <property name="checkable">
         <bool>true</bool>
@@ -165,7 +177,27 @@
   </layout>
  </widget>
  <resources>
-  <include location="../resources.qrc"/>
+  <include location="../../../resources.qrc"/>
  </resources>
- <connections/>
+ <connections>
+  <connection>
+   <sender>visible_button</sender>
+   <signal>clicked()</signal>
+   <receiver>LayerWidget</receiver>
+   <slot>action_clicked_button_toggle_layer_visibility()</slot>
+   <hints>
+    <hint type="sourcelabel">
+     <x>21</x>
+     <y>12</y>
+    </hint>
+    <hint type="destinationlabel">
+     <x>33</x>
+     <y>-13</y>
+    </hint>
+   </hints>
+  </connection>
+ </connections>
+ <slots>
+  <slot>action_clicked_button_toggle_layer_visibility()</slot>
+ </slots>
 </ui>
