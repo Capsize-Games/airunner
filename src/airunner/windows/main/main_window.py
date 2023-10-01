@@ -3,6 +3,8 @@ import pickle
 import sys
 import webbrowser
 from functools import partial
+
+from airunner.canvas import Canvas
 from airunner.resources_rc import *
 
 import psutil
@@ -24,7 +26,6 @@ from airunner.data.db import session
 from airunner.data.models import SplitterSection
 from airunner.filters.windows.filter_base import FilterBase
 from airunner.input_event_manager import InputEventManager
-from airunner.mixins.canvas_mixin import CanvasMixin
 from airunner.mixins.generator_mixin import GeneratorMixin
 from airunner.mixins.history_mixin import HistoryMixin
 from airunner.settings import BASE_PATH
@@ -48,7 +49,6 @@ import qdarktheme
 class MainWindow(
     QMainWindow,
     HistoryMixin,
-    CanvasMixin,
     GeneratorMixin
 ):
     api = None
@@ -478,7 +478,7 @@ class MainWindow(
             self.choose_image_export_path()
         if os.path.isdir(self.image_path) is False:
             return
-        path = auto_export_image(self.canvas.current_layer.image_data.image, seed=self.seed)
+        path = auto_export_image(self.ui.layer_widget.current_layer.image_data.image, seed=self.seed)
         if path is not None:
             self.set_status_label(f"Image exported to {path}")
 
@@ -876,7 +876,7 @@ class MainWindow(
 
     def initialize_mixins(self):
         HistoryMixin.initialize(self)
-        CanvasMixin.initialize(self)
+        self.canvas = Canvas()
         GeneratorMixin.initialize(self)
 
     def connect_signals(self):
@@ -1124,7 +1124,6 @@ class MainWindow(
             # QBasicTimer::start: QBasicTimer can only be used with threads started with QThread
             # so instead we do this in order to run without showing the window:
             self.showMinimized()
-        self.canvas.show_layers()
 
     def set_window_state(self):
         if self.is_maximized:
@@ -1173,16 +1172,15 @@ class MainWindow(
         self.setWindowTitle(f"AI Runner {self.document_name}")
 
     def new_document(self):
-        self.canvas.clear_layers()
+        self.ui.layer_widget.clear_layers()
         self.clear_history()
-        #CanvasMixin.initialize(self)
         self.is_saved = False
         self.canvas.is_dirty = False
         self._document_name = "Untitled"
         self.set_window_title()
         self.current_filter = None
         self.canvas.update()
-        self.canvas.show_layers()
+        self.ui.layer_widget.show_layers()
 
     def set_status_label(self, txt, error=False):
         # color = self.status_normal_color_dark if self.is_dark else \
@@ -1255,12 +1253,12 @@ class MainWindow(
                 data=data)
         else:
             if data[
-                "action"] != "outpaint" and self.settings_manager.image_to_new_layer and self.canvas.current_layer.image_data.image is not None:
-                self.canvas.add_layer()
+                "action"] != "outpaint" and self.settings_manager.image_to_new_layer and self.ui.layer_widget.current_layer.image_data.image is not None:
+                self.ui.layer_widget.add_layer()
             # print width and height of image
             self.canvas.image_handler(images[0], data)
             self.message_handler("")
-            self.canvas.show_layers()
+            self.ui.layer_widget.show_layers()
 
         self.image_generated.emit(True)
 
@@ -1324,13 +1322,13 @@ class MainWindow(
         self.do_save(file_path)
 
     def do_save(self, document_name):
-        # save self.canvas.layers as pickle
+        # save self.ui.layer_widget.layers as pickle
         layers = []
-        # we need to save self.canvas.layers but it contains a QWdget
+        # we need to save self.ui.layer_widget.layers but it contains a QWdget
         # so we will remove the QWidget from each layer, add the layer to a new
         # list and then restore the QWidget
         layer_widgets = []
-        for layer in self.canvas.layers:
+        for layer in self.ui.layer_widget.layers:
             layer_widgets.append(layer.layer_widget)
             layer.layer_widget = None
             layers.append(layer)
@@ -1384,13 +1382,13 @@ class MainWindow(
         self._document_name = file_path.split("/")[-1].split(".")[0]
 
         # load document data
-        self.canvas.layers = layers
+        self.ui.layer_widget.layers = layers
         self.canvas.image_pivot_point = image_pivot_point
         self.canvas.image_root_point = image_root_point
         self.canvas.update()
         self.is_saved = True
         self.set_window_title()
-        self.canvas.show_layers()
+        self.ui.layer_widget.show_layers()
 
     def update_embedding_names(self):
         self._embedding_names = None
@@ -1540,7 +1538,7 @@ class MainWindow(
 
     def paste_image(self):
         self.canvas.paste_image_from_clipboard()
-        self.canvas.current_layer.layer_widget.set_thumbnail()
+        self.ui.layer_widget.current_layer.layer_widget.set_thumbnail()
 
     def copy_image(self):
         self.canvas.copy_image()

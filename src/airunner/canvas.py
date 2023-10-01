@@ -1,10 +1,6 @@
-from functools import partial
-
 from PIL import Image
 from PyQt6.QtCore import Qt, QPoint, QRect
 from PyQt6.QtGui import QColor, QPainter, QBrush, QCursor
-from PyQt6.QtWidgets import QSpacerItem, QSizePolicy, QVBoxLayout, QWidget
-from PyQt6.uic.properties import QtGui
 
 from airunner.aihandler.qtvar import BooleanVar
 from airunner.cursors.circle_brush import CircleCursor
@@ -14,9 +10,8 @@ from airunner.mixins.canvas_grid_mixin import CanvasGridMixin
 from airunner.mixins.canvas_image_mixin import CanvasImageMixin
 from airunner.mixins.canvas_selectionbox_mixin import CanvasSelectionboxMixin
 from airunner.mixins.canvas_widgets_mixin import CanvasWidgetsMixin
-from airunner.models.layerdata import LayerData
 from airunner.models.linedata import LineData
-from airunner.widgets.layers.layer_widget import LayerWidget
+from airunner.utils import get_main_window
 
 
 class Canvas(
@@ -35,8 +30,8 @@ class Canvas(
     brush_start = None
     last_mouse_pos = None
     _is_dirty = BooleanVar(False)
-    selected_layers = {}
     container = None
+    _is_canvas_drag_mode = False
 
     @property
     def is_dirty(self):
@@ -64,9 +59,15 @@ class Canvas(
 
     @property
     def current_layer(self):
-        if len(self.layers) == 0:
-            return None
-        return self.layers[self.current_layer_index]
+        return self.app.ui.layer_widget.current_layer
+
+    @property
+    def current_layer_index(self):
+        return self.current_layer_index
+
+    @property
+    def layers(self):
+        return self.app.ui.layer_widget.layers
 
     @property
     def select_selected(self):
@@ -102,11 +103,11 @@ class Canvas(
 
     @property
     def canvas_container(self):
-        return self.parent.ui.canvas_widget.ui.canvas_container
+        return self.app.ui.canvas_widget.ui.canvas_container
 
     @property
     def settings_manager(self):
-        return self.parent.settings_manager
+        return self.app.settings_manager
 
     @property
     def mouse_position(self):
@@ -126,27 +127,21 @@ class Canvas(
         rect = QRect(0, 0, rect.width(), rect.height())
         return rect
 
-    def get_layer_opacity(self, index):
-        return self.layers[index].opacity
+    @property
+    def is_canvas_drag_mode(self):
+        return self._is_canvas_drag_mode
 
-    def set_layer_opacity(self, opacity: int):
-        opacity = opacity / 100
-        self.current_layer.opacity = opacity
-        self.update()
-        self.current_layer.image_data.image = self.apply_opacity(self.current_layer.image_data.image, opacity)
+    @is_canvas_drag_mode.setter
+    def is_canvas_drag_mode(self, value):
+        self._is_canvas_drag_mode = value
+        self.update_cursor()
 
-    def __init__(
-        self,
-        parent=None
-    ):
+    def __init__(self):
         self.canvas_rect = QRect(0, 0, 0, 0)
         self.pos_x = 0
         self.pos_y = 0
-        self.current_layer_index = 0
         self.is_erasing = False
-        self.parent = parent
-        self.layers = []
-        self.add_layer()
+        self.app = get_main_window()
 
         CanvasGridMixin.initialize(self)
         CanvasActiveGridAreaMixin.initialize(self)
@@ -161,17 +156,17 @@ class Canvas(
             int(self.canvas_rect.height())
         ))
 
-        # set self.parent paintEvent
+        # set self.app paintEvent
         self.canvas_container.paintEvent = self.paintEvent
         self.canvas_container.mousePressEvent = self.mouse_press_event
         self.canvas_container.mouseMoveEvent = self.mouse_move_event
         self.canvas_container.mouseReleaseEvent = self.mouse_release_event
 
         # on shift down
-        # self.parent.window.keyPressEvent = self.keyPressEvent
+        # self.app.window.keyPressEvent = self.keyPressEvent
 
         # on key up
-        # self.parent.window.keyReleaseEvent = self.keyReleaseEvent
+        # self.app.window.keyReleaseEvent = self.keyReleaseEvent
 
         # on mouse hover
         self.canvas_container.enterEvent = self.enter_event
@@ -276,9 +271,9 @@ class Canvas(
         self.canvas_container.setCursor(QCursor(Qt.CursorShape.ArrowCursor))
 
     def update(self):
-        self.parent.canvas_position = f"X {-self.pos_x: 05d} Y {self.pos_y: 05d}"
+        self.app.canvas_position = f"X {-self.pos_x: 05d} Y {self.pos_y: 05d}"
         self.canvas_container.update(self.viewport_rect)
-        self.parent.update()
+        self.app.update()
 
     def clear(self):
         self.current_layer.lines = []
@@ -295,54 +290,6 @@ class Canvas(
         self.pos_y += event.pos().y() - self.drag_pos.y()
         self.drag_pos = event.pos()
         self.update()
-
-    def handle_move_layer(self, event):
-        point = QPoint(
-            event.pos().x() if self.drag_pos is not None else 0,
-            event.pos().y() if self.drag_pos is not None else 0
-        )
-        # snap to grid
-        grid_size = self.settings_manager.grid_settings.size
-        point.setX(point.x() - (point.x() % grid_size))
-        point.setY(point.y() - (point.y() % grid_size))
-
-        # center the image
-        # point.setX(int((point.x() - self.current_layer.images[0].image.size[0] / 2)))
-        # point.setY(int((point.y() - self.current_layer.images[0].image.size[1] / 2)))
-
-        # establish a rect based on line points - we need the area that is being moved
-        # so that we can center the point on it
-        rect = QRect()
-        for line in self.current_layer.lines:
-            rect = rect.united(QRect(line.start_point, line.end_point))
-
-        try:
-            rect = rect.united(QRect(
-                self.current_layer.image_data.position.x(),
-                self.current_layer.image_data.position.y(),
-                self.current_layer.image_data.image.size[0],
-                self.current_layer.image_data.image.size[1]
-            ))
-        except IndexError:
-            pass
-
-        # center the point on the rect
-        point.setX(int(point.x() - int(rect.width() / 2)))
-        point.setY(int(point.y() - int(rect.height() / 2)))
-
-        self.layers[self.current_layer_index].offset = point
-        self.update()
-
-    _is_canvas_drag_mode = False
-
-    @property
-    def is_canvas_drag_mode(self):
-        return self._is_canvas_drag_mode
-
-    @is_canvas_drag_mode.setter
-    def is_canvas_drag_mode(self, value):
-        self._is_canvas_drag_mode = value
-        self.update_cursor()
 
     def mouse_press_event(self, event):
         if event.button() == Qt.MouseButton.LeftButton and self.is_canvas_drag_mode:
@@ -414,7 +361,7 @@ class Canvas(
     def handle_tool(self, event):
         if self.eraser_selected:
             if not self.is_erasing:
-                self.parent.history.add_event({
+                self.app.history.add_event({
                     "event": "erase",
                     "layer_index": self.current_layer_index,
                     "lines": self.current_layer.lines.copy(),
@@ -426,7 +373,7 @@ class Canvas(
             self.handle_draw(event)
             self.is_dirty = True
         elif self.move_selected:
-            self.handle_move_layer(event)
+            self.app.ui.layer_widget.handle_move_layer(event)
             self.is_dirty = True
         elif self.select_selected:
             self.handle_select(event)
@@ -460,8 +407,8 @@ class Canvas(
         self.update()
 
     def reset_settings(self):
-        self.parent.header_widget.width_slider_widget.slider.setValue(self.settings_manager.working_width)
-        self.parent.header_widget.height_slider_widget.slider.setValue(self.settings_manager.working_height)
+        self.app.header_widget.width_slider_widget.slider.setValue(self.settings_manager.working_width)
+        self.app.header_widget.height_slider_widget.slider.setValue(self.settings_manager.working_height)
 
     def set_canvas_color(self):
         self.update_canvas_color(self.settings_manager.canvas_color)
@@ -472,254 +419,6 @@ class Canvas(
         """)
         self.canvas_container.setAutoFillBackground(True)
         self.update()
-
-    # Canvas layer functions
-    def track_layer_move_history(self):
-        layer_order = []
-        for layer in self.layers:
-            layer_order.append(layer.uuid)
-        self.parent.history.add_event({
-            "event": "move_layer",
-            "layer_order": layer_order,
-            "layer_index": self.current_layer_index
-        })
-
-    def move_layer_up(self, layer):
-        index = self.layers.index(layer)
-        if index == 0:
-            return
-        # track the current layer order
-        self.track_layer_move_history()
-        self.layers.remove(layer)
-        self.layers.insert(index - 1, layer)
-        self.current_layer_index = index - 1
-        self.show_layers()
-        self.update()
-
-    def move_layer_down(self, layer):
-        index = self.layers.index(layer)
-        if index == len(self.layers) - 1:
-            return
-        self.track_layer_move_history()
-        self.layers.remove(layer)
-        self.layers.insert(index + 1, layer)
-        self.current_layer_index = index + 1
-        self.show_layers()
-        self.update()
-
-    def add_layer(self):
-        self.parent.history.add_event({
-            "event": "new_layer",
-            "layers": self.get_layers_copy(),
-            "layer_index": self.current_layer_index
-        })
-        layer_name = f"Layer {len(self.layers) + 1}"
-        layer = LayerData(len(self.layers), layer_name)
-        index = 0
-        self.layers.insert(index, layer)
-        self.set_current_layer(index)
-        return layer, index
-
-    def get_layers_copy(self):
-        return [layer for layer in self.layers]
-
-    def delete_selected_layers(self):
-        self.parent.history.add_event({
-            "event": "delete_layer",
-            "layers": self.get_layers_copy(),
-            "layer_index": self.current_layer_index
-        })
-        for index, layer in self.selected_layers.items():
-            self.delete_layer(index=index, layer=layer)
-        self.selected_layers = {}
-        self.show_layers()
-        self.update()
-
-    def merge_selected_layers(self):
-        if self.current_layer_index not in self.selected_layers:
-            self.selected_layers[self.current_layer_index] = self.current_layer
-
-        selected_layer = self.current_layer
-
-        # get the rect of the new image based on the existing images extremities
-        # (left, top, width and height)
-        rect = QRect()
-        for layer in self.selected_layers.values():
-            image = layer.image_data.image
-            if image:
-                if (image.width+layer.image_data.position.x()) > rect.width():
-                    rect.setWidth(image.width+abs(layer.image_data.position.x()))
-                if (image.height+layer.image_data.position.y()) > rect.height():
-                    rect.setHeight(image.height+abs(layer.image_data.position.y()))
-                if layer.image_data.position.x() < rect.x():
-                    rect.setX(layer.image_data.position.x())
-                if layer.image_data.position.y() < rect.y():
-                    rect.setY(layer.image_data.position.y())
-
-        new_image = Image.new("RGBA", (rect.width(), rect.height()), (0, 0, 0, 0))
-
-        for index, layer in self.selected_layers.items():
-            # get an image object and merge it into the new image if it exists
-            image = layer.image_data.image
-            if image:
-                x = layer.image_data.position.x()
-                if x < 0:
-                    x = 0
-                y = layer.image_data.position.y()
-                if y < 0:
-                    y = 0
-                new_image.alpha_composite(
-                    image,
-                    (x, y)
-                )
-
-            # delete any layers which are not the current layer index
-            if index != self.current_layer_index:
-                self.delete_layer(layer=layer)
-
-        # if we have a new image object, set it as the current layer image
-        layer_index = self.get_index_by_layer(selected_layer)
-        self.current_layer_index = layer_index
-        if new_image:
-            self.layers[self.current_layer_index].image_data.image = new_image
-            self.layers[self.current_layer_index].image_data.position = QPoint(rect.x(), rect.y())
-
-        # reset the selected layers dictionary and refresh the canvas
-        self.selected_layers = {}
-        self.show_layers()
-        self.update()
-
-    def get_index_by_layer(self, layer):
-        for index, layer_object in enumerate(self.layers):
-            if layer is layer_object:
-                return index
-        return 0
-
-    def delete_layer(self, _value=False, index=None, layer=None):
-        current_index = index
-        if layer and current_index is None:
-            for layer_index, layer_object in enumerate(self.layers):
-                if layer_object is layer:
-                    current_index = layer_index
-        if current_index is None:
-            current_index = self.current_layer_index
-        self.parent.history.add_event({
-            "event": "delete_layer",
-            "layers": self.get_layers_copy(),
-            "layer_index": current_index
-        })
-        if len(self.layers) == 1:
-            self.layers = [LayerData(0, "Layer 1")]
-        else:
-            try:
-                layer = self.layers.pop(current_index)
-                self.container.layout().removeWidget(layer.layer_widget)
-                layer.layer_widget.deleteLater()
-            except IndexError:
-                pass
-        self.show_layers()
-        self.update()
-
-    def clear_layers(self):
-        # delete all widgets from self.container.layout()
-        for index, layer in enumerate(self.layers):
-            self.container.layout().removeWidget(layer.layer_widget)
-            layer.layer_widget.deleteLater()
-        self.layers = [LayerData(0, "Layer 1")]
-        self.current_layer_index = 0
-
-    def layer_up(self):
-        self.move_layer_up(self.current_layer)
-        self.show_layers()
-
-    def layer_down(self):
-        self.move_layer_down(self.current_layer)
-        self.show_layers()
-
-    def new_layer(self):
-        self.add_layer()
-        self.show_layers()
-
-    def show_layers(self):
-        """
-        This function is called when the layers need to be updated.
-        :return:
-        """
-        return
-        # create an object which can contain a layer_obj and then be added to layers.setWidget
-        container = QWidget()
-        container.setLayout(QVBoxLayout())
-
-        for layer in self.layers:
-            index = self.layers.index(layer)
-            layer_obj = LayerWidget(data=layer)
-            layer_obj.ui.layer_name.setText(layer.name)
-
-            # onclick of layer_obj set as the current layer index on self
-            layer_obj.mousePressEvent = partial(self.handle_layer_click, layer, index)
-
-            # show a border around layer_obj if it is the selected index
-            if self.current_layer_index == index:
-                layer_obj.ui.frame.setStyleSheet(self.parent.css("layer_highlight_style"))
-            else:
-                layer_obj.ui.frame.setStyleSheet(self.parent.css("layer_normal_style"))
-
-            layer_obj.ui.visible_button.clicked.connect(
-                lambda _, _layer=layer, _layer_obj=layer_obj: self.toggle_layer_visibility(_layer, _layer_obj))
-
-            container.layout().addWidget(layer_obj)
-            layer.layer_widget = layer_obj
-
-        # add a spacer to the bottom of the container
-        container.layout().addSpacerItem(QSpacerItem(0, 0, QSizePolicy.Policy.Minimum, QSizePolicy.Policy.Expanding))
-
-        # self.parent.tool_menu_widget.layer_container_widget.layers.setWidget(container)
-        self.container = container
-
-    def handle_layer_click(self, layer, index, event):
-        # check if the control key is pressed
-        if event.modifiers() == Qt.KeyboardModifier.ControlModifier:
-            if self.container:
-                if index in self.selected_layers:
-                    widget = self.selected_layers[index].layer_widget
-                    if widget and index != self.current_layer_index:
-                        widget.frame.setStyleSheet(self.parent.css("layer_normal_style"))
-                        del self.selected_layers[index]
-                else:
-                    item = self.container.layout().itemAt(index)
-                    if item and index != self.current_layer_index:
-                        self.selected_layers[index] = layer
-                        self.selected_layers[index].layer_widget.frame.setStyleSheet(
-                            self.parent.css("secondary_layer_highlight_style")
-                        )
-        else:
-            for data in self.selected_layers.values():
-                data.layer_widget.frame.setStyleSheet(self.parent.css("layer_normal_style"))
-            self.set_current_layer(index)
-            self.selected_layers = {}
-
-    def toggle_layer_visibility(self, layer, layer_obj):
-        # change the eye icon of the visible_button on the layer
-        layer.visible = not layer.visible
-        self.update()
-        layer_obj.set_icon()
-
-    def set_current_layer(self, index):
-        if not hasattr(self, "container"):
-            return
-        if self.container:
-            item = self.container.layout().itemAt(self.current_layer_index)
-            if item:
-                item.widget().frame.setStyleSheet(self.parent.css("layer_normal_style"))
-        self.current_layer_index = index
-        if self.container:
-            item = self.container.layout().itemAt(self.current_layer_index)
-            if item:
-                item.widget().frame.setStyleSheet(self.parent.css("layer_highlight_style"))
-        # change the layer opacity
-        # self.parent.tool_menu_widget.set_opacity_slider(
-        #     int(self.current_layer.opacity * 100)
-        # )
 
     def delete_outside_active_grid_area(self):
         """

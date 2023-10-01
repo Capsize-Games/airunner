@@ -1,6 +1,7 @@
 from functools import partial
 
 from PyQt6 import QtGui
+from PyQt6.QtCore import Qt, QPoint
 
 from airunner.widgets.base_widget import BaseWidget
 from airunner.widgets.layers.templates.layer_ui import Ui_LayerWidget
@@ -10,16 +11,36 @@ from airunner.utils import image_to_pixmap
 class LayerWidget(BaseWidget):
     widget_class_ = Ui_LayerWidget
     layer_data = None
+    offset = QPoint(0, 0)
+    _previous_pos = None
 
     def __init__(self, *args, **kwargs):
         self.layer_data = kwargs.pop("layer_data", None)
         self.layer_index = kwargs.pop("layer_index", None)
+        self.layer_data.layer_widget = self
         super().__init__(*args, **kwargs)
         self.set_thumbnail()
 
         # listen for click on entire widget
         self.ui.mousePressEvent = partial(self.action_clicked, self.layer_data, self.layer_index)
         self.ui.layer_name.setText(self.layer_data.name)
+
+    def reset_position(self):
+        self._previous_pos = None
+
+    def mousePressEvent(self, event):
+        if event.button() == Qt.MouseButton.LeftButton:
+            self.offset = event.pos()
+
+    def mouseMoveEvent(self, event):
+        if not self._previous_pos:
+            print("setting previous pos")
+            self._previous_pos = self.pos()
+        if event.buttons() == Qt.MouseButton.LeftButton:
+            self.move(self.pos() + event.pos() - self.offset)
+
+    def mouseReleaseEvent(self, event):
+        self.move(self._previous_pos)
 
     def action_clicked(self):
         print("select layer")

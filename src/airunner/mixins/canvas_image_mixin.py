@@ -10,6 +10,7 @@ from PIL.ImageFilter import GaussianBlur
 
 from airunner.models.imagedata import ImageData
 from airunner.models.layerdata import LayerData
+from airunner.utils import apply_opacity_to_image
 
 
 class CanvasImageMixin:
@@ -38,7 +39,7 @@ class CanvasImageMixin:
     def apply_filter(self, filter):
         if self.current_layer.image_data.image is None:
             return
-        self.parent.history.add_event({
+        self.app.history.add_event({
             "event": "apply_filter",
             "layer_index": self.current_layer_index,
             "images": self.image_data,
@@ -117,7 +118,7 @@ class CanvasImageMixin:
             return
         try:
             output = io.BytesIO()
-            if self.parent.is_windows:
+            if self.app.is_windows:
                 im.image.save(output, format="DIB")
                 self.image_to_system_clipboard_windows(output.getvalue())
             else:
@@ -163,7 +164,7 @@ class CanvasImageMixin:
             image = Image.open(io.BytesIO(data))
             return image
         except Exception as e:
-            # self.parent.error_handler(str(e))
+            # self.app.error_handler(str(e))
             print(e)
             return None
 
@@ -177,7 +178,7 @@ class CanvasImageMixin:
             return None
 
     def paste_image_from_clipboard(self):
-        if self.parent.is_windows:
+        if self.app.is_windows:
             image = self.image_from_system_clipboard_windows()
         else:
             image = self.image_from_system_clipboard_linux()
@@ -185,7 +186,7 @@ class CanvasImageMixin:
         if not image:
             return
 
-        if self.parent.settings_manager.resize_on_paste:
+        if self.app.settings_manager.resize_on_paste:
             image.thumbnail((self.settings_manager.working_width,
                              self.settings_manager.working_height), Image.ANTIALIAS)
         self.create_image(QPoint(0, 0), image)
@@ -215,9 +216,9 @@ class CanvasImageMixin:
             image_data.image = Image.merge("RGBA", (r, g, b, a))
 
     def film_filter(self):
-        working_images = self.parent.canvas.current_active_image_data
+        working_images = self.app.canvas.current_active_image_data
         if working_images.image is not None:
-            self.parent.history.add_event({
+            self.app.history.add_event({
                 "event": "apply_filter",
                 "layer_index": self.current_layer_index,
                 "images": self.image_data,
@@ -240,7 +241,7 @@ class CanvasImageMixin:
         image = Image.open(image_path)
 
         # if settings_manager.resize_on_paste, resize the image to working width and height while mainting its aspect ratio
-        if self.parent.settings_manager.resize_on_paste:
+        if self.app.settings_manager.resize_on_paste:
             image.thumbnail((self.settings_manager.working_width,
                              self.settings_manager.working_height), Image.ANTIALIAS)
 
@@ -310,7 +311,7 @@ class CanvasImageMixin:
         can be interrupted if needed. For example, the image interpolation window takes the processed image
         and displays it in the window rather than on the canvas.
         """
-        self.parent.add_image_to_canvas_signal.emit(processed_data)
+        self.app.add_image_to_canvas_signal.emit(processed_data)
         is_deterministic = False
         if "deterministic_generation" in data["options"]:
             is_deterministic = options.get("deterministic_generation")
@@ -461,7 +462,7 @@ class CanvasImageMixin:
         else:
             pos_y = max(0, outpaint_box_rect.y() - pivot_point.y())
 
-        # self.parent.canvas_widget.set_debug_text(
+        # self.app.canvas_widget.set_debug_text(
         #     outpaint_box_rect=outpaint_box_rect,
         #     image_pivot_point=pivot_point,
         #     image_root_point=root_point,
@@ -490,12 +491,12 @@ class CanvasImageMixin:
         return new_image, image_root_point, image_pivot_point
 
     def add_image_to_canvas(self, image, image_root_point, image_pivot_point, layer: LayerData = None):
-        self.parent.history.add_event({
+        self.app.history.add_event({
             "event": "set_image",
             "layer_index": self.current_layer_index,
             "images": self.current_layer.image_data
         })
-        image = self.apply_opacity(image, self.current_layer.opacity)
+        image = apply_opacity_to_image(image, self.current_layer.opacity)
 
         if not layer:
             layer = self.current_layer
@@ -507,7 +508,7 @@ class CanvasImageMixin:
             image_root_point=image_root_point,
             image_pivot_point=image_pivot_point
         )
-        # get layer widget from self.parent.tool_menu_widget.layer_container_widget.layers
+        # get layer widget from self.app.tool_menu_widget.layer_container_widget.layers
 
         layer.layer_widget.set_thumbnail()
         self.update()
@@ -524,19 +525,8 @@ class CanvasImageMixin:
         total = i + diff
         return total
 
-    def apply_opacity(self, image, target_opacity):
-        if not image:
-            return image
-        target_opacity = 255 * target_opacity
-        if target_opacity == 0:
-            target_opacity = 1
-        r, g, b, a = image.split()
-        a = a.point(lambda i: target_opacity if i > 0 else 0)
-        image.putalpha(a)
-        return image
-
     def image_data_copy(self, index):
-        image_data = self.layers[index].image_data
+        image_data = self.app.ui.layer_widget.layers[index].image_data
         return ImageData(
             position=image_data.position,
             image=image_data.image.copy() if image_data.image else None,
@@ -549,7 +539,7 @@ class CanvasImageMixin:
         if self.current_active_image_data:
             if not self.current_active_image_data.image:
                 return
-            self.parent.history.add_event({
+            self.app.history.add_event({
                 "event": "rotate",
                 "layer_index": self.current_layer_index,
                 "images": self.image_data_copy(self.current_layer_index)
@@ -562,7 +552,7 @@ class CanvasImageMixin:
         if self.current_active_image_data:
             if not self.current_active_image_data or not self.current_active_image_data.image:
                 return
-            self.parent.history.add_event({
+            self.app.history.add_event({
                 "event": "rotate",
                 "layer_index": self.current_layer_index,
                 "images": self.image_data_copy(self.current_layer_index)

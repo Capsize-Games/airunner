@@ -19,6 +19,9 @@
    </item>
    <item row="2" column="0">
     <widget class="QScrollArea" name="layers">
+     <property name="acceptDrops">
+      <bool>true</bool>
+     </property>
      <property name="styleSheet">
       <string notr="true">border-radius: 0px</string>
      </property>

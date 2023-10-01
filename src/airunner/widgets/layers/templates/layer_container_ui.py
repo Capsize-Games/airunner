@@ -19,6 +19,7 @@ class Ui_layer_container(object):
         self.opacity_widget.setObjectName("opacity_widget")
         self.gridLayout.addWidget(self.opacity_widget, 0, 0, 1, 1)
         self.layers = QtWidgets.QScrollArea(parent=layer_container)
+        self.layers.setAcceptDrops(True)
         self.layers.setStyleSheet("border-radius: 0px")
         self.layers.setFrameShape(QtWidgets.QFrame.Shape.StyledPanel)
         self.layers.setFrameShadow(QtWidgets.QFrame.Shadow.Sunken)
