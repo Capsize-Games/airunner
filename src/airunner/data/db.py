@@ -8,7 +8,7 @@ from airunner.data.bootstrap.prompt_bootstrap_data import prompt_bootstrap_data,
 from airunner.data.models import ControlnetModel, Pipeline, Document, Settings, PromptGeneratorSetting, \
     GeneratorSetting, SplitterSection, GridSettings, MetadataSettings, PathSettings, MemorySettings, AIModel, \
     ImageFilter, ImageFilterValue, BrushSettings, Prompt, PromptVariable, PromptCategory, PromptOption, \
-    PromptVariableCategory, PromptVariableCategoryWeight, PromptStyleCategory, PromptStyle
+    PromptVariableCategory, PromptVariableCategoryWeight, PromptStyleCategory, PromptStyle, Scheduler, ActionScheduler
 from airunner.utils import get_session
 
 session = get_session()
@@ -255,4 +255,89 @@ if not session.query(Prompt).first():
         name="Untitled",
         settings=settings
     ))
+    session.commit()
+
+
+    available_schedulers = {}
+    for scheduler_data in [
+        ("Euler a", "EULER_ANCESTRAL"),
+        ("Euler", "EULER"),
+        ("LMS", "LMS"),
+        ("Heun", "HEUN"),
+        ("DPM2", "DPM2"),
+        ("DPM++ 2M", "DPM_PP_2M"),
+        ("DPM2 Karras", "DPM2_K"),
+        ("DPM2 a Karras", "DPM2_A_K"),
+        ("DPM++ 2M Karras", "DPM_PP_2M_K"),
+        ("DPM++ 2M SDE Karras", "DPM_PP_2M_SDE_K"),
+        ("DDIM", "DDIM"),
+        ("UniPC", "UNIPC"),
+        ("DDPM", "DDPM"),
+        ("DEIS", "DEIS"),
+        ("DPM 2M SDE Karras", "DPM_2M_SDE_K"),
+        ("PLMS", "PLMS"),
+    ]:
+        obj = Scheduler(
+            name=scheduler_data[1],
+            display_name=scheduler_data[0]
+        )
+        session.add(obj)
+        available_schedulers[scheduler_data[1]] = obj
+    session.commit()
+
+    generator_sections = {
+        "stablediffusion": {
+            "upscale": ["EULER"],
+            "superresolution": ["DDIM", "LMS", "PLMS"],
+        },
+        "kandinsky": {
+            "txt2img": [
+                "EULER_ANCESTRAL",
+                "DPM2_A_K",
+                "DDPM",
+                "DPM_PP_2M",
+                "DPM_PP_2M_K",
+                "DPM_2M_SDE_K",
+                "DPM_PP_2M_SDE_K",
+                "DDIM",
+            ],
+            "outpaint": [
+                "EULER_ANCESTRAL",
+                "DPM2_A_K",
+                "DDPM",
+                "DPM_PP_2M",
+                "DPM_PP_2M_K",
+                "DPM_2M_SDE_K",
+                "DPM_PP_2M_SDE_K",
+                "DDIM",
+            ]
+        },
+        "shapegif": {
+            "txt2img": ["HEUN"],
+        }
+    }
+
+    # add all of the schedulers for the defined generator sections
+    for generator, sections in generator_sections.items():
+        for section, schedulers in sections.items():
+            for scheduler in schedulers:
+                session.add(ActionScheduler(
+                    section=section,
+                    generator_name=generator,
+                    scheduler_id=session.query(Scheduler).filter_by(name=scheduler).first().id
+                ))
+    session.commit()
+
+    # add the rest of the stable diffusion schedulers
+    for k, v in available_schedulers.items():
+        for section in [
+            "txt2img", "depth2img", "pix2pix", "vid2vid",
+            "outpaint", "controlnet", "txt2vid"
+        ]:
+            obj = ActionScheduler(
+                section=section,
+                generator_name="stablediffusion",
+                scheduler_id=v.id
+            )
+            session.add(obj)
     session.commit()
