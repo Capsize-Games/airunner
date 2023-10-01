@@ -659,14 +659,9 @@ class MainWindow(
     def content_splitter_moved(self, size, index):
         print("content_splitter_moved")
 
-    def brush_size_slider_callback(self, val):
-        self.settings_manager.set_value("mask_brush_size", val)
-
-    def width_slider_callback(self, val):
-        self.settings_manager.set_value("working_width", val)
-
-    def height_slider_callback(self, val):
-        self.settings_manager.set_value("working_height", val)
+    def size_slider_changed_callback(self, value_name, value):
+        print(value_name, value)
+        self.settings_manager.set_value(value_name, value)
     """
     End slot functions
     """
@@ -1058,7 +1053,6 @@ class MainWindow(
     def handle_changed_signal(self, key, value):
         if key == "size":
             self.set_size_form_element_step_values()
-            self.header_widget.update_widget_values()
         elif key == "line_width":
             self.set_size_form_element_step_values()
         elif key == "show_grid":
@@ -1072,9 +1066,9 @@ class MainWindow(
         elif key == "model_base_path":
             self.generator_tab_widget.refresh_model_list()
         elif key == "working_width":
-            self.header_widget.update_widget_values()
+            pass
         elif key == "working_height":
-            self.header_widget.update_widget_values()
+            pass
         elif key == "embeddings_path":
             self.update_embedding_names()
         elif key == "generator.seed":
