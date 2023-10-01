@@ -104,9 +104,6 @@ class SliderWidget(BaseWidget):
         self.display_as_float = self.property("display_as_float") or True
         self.divide_by = self.property("divide_by") or 1.0
 
-        if label_text == "Active Grid Width":
-            print(label_text, slider_maximum)
-
         if slider_callback != "":
             slider_callback = partial(getattr(self.app, slider_callback), settings_property)
 
