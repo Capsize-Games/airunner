@@ -142,6 +142,10 @@ class SliderWidget(BaseWidget):
         if not self.display_as_float:
             self.ui.spinbox.setDecimals(0)
 
+    @property
+    def current_value(self):
+        return self.ui.slider.value()
+
     def set_stylesheet(self):
         self.ui.slider.setStyleSheet(self.app.css("slider"))
         self.label.setStyleSheet(self.app.css("slider_label"))

@@ -1,6 +1,7 @@
 from PyQt6.QtCore import Qt
 from PyQt6.QtWidgets import QDialog
 from airunner.aihandler.settings_manager import SettingsManager
+from airunner.utils import get_main_window
 
 
 class BaseWindow(QDialog):
@@ -11,9 +12,9 @@ class BaseWindow(QDialog):
 
     def __init__(self, **kwargs):
         super().__init__()
-        self.app = kwargs.get("app", None)
+        self.app = get_main_window()
         self.do_exec = kwargs.get("exec", True)
-        self.settings_manager = SettingsManager(app=self.app)
+        self.settings_manager = SettingsManager()
 
         self.ui = self.template_class_()
         self.ui.setupUi(self)
