@@ -25,6 +25,7 @@ class LayerContainerWidget(BaseWidget):
         self.ui.scrollAreaWidgetContents.layout().addSpacerItem(
             QSpacerItem(0, 0, QSizePolicy.Policy.Minimum, QSizePolicy.Policy.Expanding))
         self.add_layer()
+        self.ui.opacity_slider_widget.initialize()
 
     def action_clicked_button_add_new_layer(self):
         self.add_layer()

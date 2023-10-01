@@ -473,6 +473,10 @@ class MainWindow(
         self.ui.toggle_grid_button.setChecked(self.settings_manager.grid_settings.show_grid)
         self.ui.safety_checker_button.setChecked(self.settings_manager.nsfw_filter)
 
+        self.ui.width_slider_widget.initialize()
+        self.ui.height_slider_widget.initialize()
+        self.ui.brush_size_slider.initialize()
+
     def quick_export(self):
         if os.path.isdir(self.image_path) is False:
             self.choose_image_export_path()
@@ -669,13 +673,13 @@ class MainWindow(
 
     def set_size_increment_levels(self):
         size = self.grid_size
-        self.width_slider_widget.slider_single_step = size
-        self.width_slider_widget.slider_tick_interval = size
+        self.ui.width_slider_widget.slider_single_step = size
+        self.ui.width_slider_widget.slider_tick_interval = size
 
-        self.height_slider_widget.slider_single_step = size
-        self.height_slider_widget.slider_tick_interval = size
+        self.ui.height_slider_widget.slider_single_step = size
+        self.ui.height_slider_widget.slider_tick_interval = size
 
-        self.app.canvas.update()
+        self.canvas.update()
 
     def toggle_nsfw_filter(self):
         self.canvas.update()
