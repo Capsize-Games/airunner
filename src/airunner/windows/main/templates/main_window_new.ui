@@ -377,7 +377,13 @@
           <number>64</number>
          </property>
          <property name="slider_callback" stdset="0">
-          <string notr="true">width_slider_callback</string>
+          <string notr="true">size_slider_changed_callback</string>
+         </property>
+         <property name="settings_property" stdset="0">
+          <string notr="true">working_width</string>
+         </property>
+         <property name="display_as_float" stdset="0">
+          <bool>false</bool>
          </property>
         </widget>
        </item>
@@ -414,44 +420,56 @@
           <string>Active Grid Height</string>
          </property>
          <property name="slider_callback" stdset="0">
-          <string notr="true">height_slider_callback</string>
+          <string notr="true">size_slider_changed_callback</string>
+         </property>
+         <property name="settings_property" stdset="0">
+          <string>working_height</string>
+         </property>
+         <property name="display_as_float" stdset="0">
+          <bool>false</bool>
          </property>
         </widget>
        </item>
        <item>
         <widget class="SliderWidget" name="brush_size_slider" native="true">
          <property name="slider_minimum" stdset="0">
-          <number>64</number>
+          <number>1</number>
          </property>
          <property name="slider_maximum" stdset="0">
-          <number>4096</number>
+          <number>100</number>
          </property>
          <property name="spinbox_minimum" stdset="0">
-          <number>64</number>
+          <number>1</number>
          </property>
          <property name="spinbox_maximum" stdset="0">
-          <number>4096</number>
+          <number>100</number>
          </property>
          <property name="slider_tick_interval" stdset="0">
-          <number>64</number>
+          <number>1</number>
          </property>
          <property name="slider_single_step" stdset="0">
-          <number>64</number>
+          <number>1</number>
          </property>
          <property name="slider_page_step" stdset="0">
-          <number>64</number>
+          <number>10</number>
          </property>
          <property name="spinbox_single_step" stdset="0">
-          <number>64</number>
+          <number>1</number>
          </property>
          <property name="spinbox_page_step" stdset="0">
-          <number>64</number>
+          <number>10</number>
          </property>
          <property name="label_text" stdset="0">
           <string>Brush Size</string>
          </property>
          <property name="slider_callback" stdset="0">
-          <string notr="true">brush_size_slider_callback</string>
+          <string notr="true">size_slider_changed_callback</string>
+         </property>
+         <property name="settings_property" stdset="0">
+          <string notr="true">mask_brush_size</string>
+         </property>
+         <property name="display_as_float" stdset="0">
+          <bool>false</bool>
          </property>
         </widget>
        </item>
