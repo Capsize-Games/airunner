@@ -248,7 +248,7 @@ class GeneratorMixin(LoraMixin):
         """
         return
 
-        image = self.canvas.current_layer.image_data.image
+        image = self.ui.layer_widget.current_layer.image_data.image
         if image:
             if self.do_upscale_by_active_grid:
                 width = self.settings_manager.working_width
@@ -377,7 +377,7 @@ class GeneratorMixin(LoraMixin):
 
     def call_generate(self, image=None, seed=None):
         if self.current_section in ("upscale", "superresolution") and self.do_upscale_full_image:
-            image_data = self.canvas.current_layer.image_data
+            image_data = self.ui.layer_widget.current_layer.image_data
             if image_data:
                 location = image_data.position
             else:
