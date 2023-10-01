@@ -15,11 +15,9 @@ class Ui_layer_container(object):
         layer_container.resize(435, 323)
         self.gridLayout = QtWidgets.QGridLayout(layer_container)
         self.gridLayout.setObjectName("gridLayout")
-        self.line = QtWidgets.QFrame(parent=layer_container)
-        self.line.setFrameShape(QtWidgets.QFrame.Shape.HLine)
-        self.line.setFrameShadow(QtWidgets.QFrame.Shadow.Sunken)
-        self.line.setObjectName("line")
-        self.gridLayout.addWidget(self.line, 3, 0, 1, 1)
+        self.opacity_widget = SliderWidget(parent=layer_container)
+        self.opacity_widget.setObjectName("opacity_widget")
+        self.gridLayout.addWidget(self.opacity_widget, 0, 0, 1, 1)
         self.layers = QtWidgets.QScrollArea(parent=layer_container)
         self.layers.setStyleSheet("border-radius: 0px")
         self.layers.setFrameShape(QtWidgets.QFrame.Shape.StyledPanel)
@@ -124,9 +122,11 @@ class Ui_layer_container(object):
         self.delete_layer_button.setObjectName("delete_layer_button")
         self.horizontalLayout_8.addWidget(self.delete_layer_button)
         self.gridLayout.addWidget(self.horizontalWidget, 4, 0, 1, 1)
-        self.opacity_widget = SliderWidget(parent=layer_container)
-        self.opacity_widget.setObjectName("opacity_widget")
-        self.gridLayout.addWidget(self.opacity_widget, 0, 0, 1, 1)
+        self.line = QtWidgets.QFrame(parent=layer_container)
+        self.line.setFrameShape(QtWidgets.QFrame.Shape.HLine)
+        self.line.setFrameShadow(QtWidgets.QFrame.Shadow.Sunken)
+        self.line.setObjectName("line")
+        self.gridLayout.addWidget(self.line, 3, 0, 1, 1)
         self.line_2 = QtWidgets.QFrame(parent=layer_container)
         self.line_2.setFrameShape(QtWidgets.QFrame.Shape.HLine)
         self.line_2.setFrameShadow(QtWidgets.QFrame.Shadow.Sunken)
@@ -134,6 +134,11 @@ class Ui_layer_container(object):
         self.gridLayout.addWidget(self.line_2, 1, 0, 1, 1)
 
         self.retranslateUi(layer_container)
+        self.new_layer_button.clicked.connect(layer_container.action_clicked_button_add_new_layer) # type: ignore
+        self.layer_up_button.clicked.connect(layer_container.action_clicked_button_move_layer_up) # type: ignore
+        self.layer_down_button.clicked.connect(layer_container.action_clicked_button_move_layer_down) # type: ignore
+        self.merge_layer_button.clicked.connect(layer_container.action_clicked_button_merge_selected_layers) # type: ignore
+        self.delete_layer_button.clicked.connect(layer_container.action_clicked_button_delete_selected_layers) # type: ignore
         QtCore.QMetaObject.connectSlotsByName(layer_container)
 
     def retranslateUi(self, layer_container):

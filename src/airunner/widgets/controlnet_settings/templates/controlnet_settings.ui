@@ -6,8 +6,8 @@
    <rect>
     <x>0</x>
     <y>0</y>
-    <width>293</width>
-    <height>175</height>
+    <width>342</width>
+    <height>190</height>
    </rect>
   </property>
   <property name="maximumSize">
@@ -219,6 +219,9 @@
                </item>
                <item>
                 <layout class="QHBoxLayout" name="horizontalLayout_2">
+                 <property name="spacing">
+                  <number>2</number>
+                 </property>
                  <item>
                   <spacer name="horizontalSpacer">
                    <property name="orientation">
@@ -533,6 +536,9 @@
                </item>
                <item>
                 <layout class="QHBoxLayout" name="horizontalLayout_3">
+                 <property name="spacing">
+                  <number>2</number>
+                 </property>
                  <item>
                   <spacer name="horizontalSpacer_2">
                    <property name="orientation">

@@ -14,12 +14,8 @@
    <string>Form</string>
   </property>
   <layout class="QGridLayout" name="gridLayout">
-   <item row="3" column="0">
-    <widget class="Line" name="line">
-     <property name="orientation">
-      <enum>Qt::Horizontal</enum>
-     </property>
-    </widget>
+   <item row="0" column="0">
+    <widget class="SliderWidget" name="opacity_widget" native="true"/>
    </item>
    <item row="2" column="0">
     <widget class="QScrollArea" name="layers">
@@ -124,7 +120,8 @@
          <string/>
         </property>
         <property name="icon">
-         <iconset theme="document-new"/>
+         <iconset theme="document-new">
+          <normaloff>.</normaloff>.</iconset>
         </property>
         <property name="iconSize">
          <size>
@@ -273,7 +270,8 @@
          <string/>
         </property>
         <property name="icon">
-         <iconset theme="edit-clear"/>
+         <iconset theme="edit-clear">
+          <normaloff>.</normaloff>.</iconset>
         </property>
         <property name="iconSize">
          <size>
@@ -289,8 +287,12 @@
      </layout>
     </widget>
    </item>
-   <item row="0" column="0">
-    <widget class="SliderWidget" name="opacity_widget" native="true"/>
+   <item row="3" column="0">
+    <widget class="Line" name="line">
+     <property name="orientation">
+      <enum>Qt::Horizontal</enum>
+     </property>
+    </widget>
    </item>
    <item row="1" column="0">
     <widget class="Line" name="line_2">
@@ -312,5 +314,93 @@
  <resources>
   <include location="../../../resources.qrc"/>
  </resources>
- <connections/>
+ <connections>
+  <connection>
+   <sender>new_layer_button</sender>
+   <signal>clicked()</signal>
+   <receiver>layer_container</receiver>
+   <slot>action_clicked_button_add_new_layer()</slot>
+   <hints>
+    <hint type="sourcelabel">
+     <x>23</x>
+     <y>294</y>
+    </hint>
+    <hint type="destinationlabel">
+     <x>8</x>
+     <y>-16</y>
+    </hint>
+   </hints>
+  </connection>
+  <connection>
+   <sender>layer_up_button</sender>
+   <signal>clicked()</signal>
+   <receiver>layer_container</receiver>
+   <slot>action_clicked_button_move_layer_up()</slot>
+   <hints>
+    <hint type="sourcelabel">
+     <x>75</x>
+     <y>295</y>
+    </hint>
+    <hint type="destinationlabel">
+     <x>61</x>
+     <y>-10</y>
+    </hint>
+   </hints>
+  </connection>
+  <connection>
+   <sender>layer_down_button</sender>
+   <signal>clicked()</signal>
+   <receiver>layer_container</receiver>
+   <slot>action_clicked_button_move_layer_down()</slot>
+   <hints>
+    <hint type="sourcelabel">
+     <x>115</x>
+     <y>296</y>
+    </hint>
+    <hint type="destinationlabel">
+     <x>99</x>
+     <y>-8</y>
+    </hint>
+   </hints>
+  </connection>
+  <connection>
+   <sender>merge_layer_button</sender>
+   <signal>clicked()</signal>
+   <receiver>layer_container</receiver>
+   <slot>action_clicked_button_merge_selected_layers()</slot>
+   <hints>
+    <hint type="sourcelabel">
+     <x>138</x>
+     <y>297</y>
+    </hint>
+    <hint type="destinationlabel">
+     <x>137</x>
+     <y>-3</y>
+    </hint>
+   </hints>
+  </connection>
+  <connection>
+   <sender>delete_layer_button</sender>
+   <signal>clicked()</signal>
+   <receiver>layer_container</receiver>
+   <slot>action_clicked_button_delete_selected_layers()</slot>
+   <hints>
+    <hint type="sourcelabel">
+     <x>412</x>
+     <y>302</y>
+    </hint>
+    <hint type="destinationlabel">
+     <x>260</x>
+     <y>-13</y>
+    </hint>
+   </hints>
+  </connection>
+ </connections>
+ <slots>
+  <slot>action_clicked_button_add_new_layer()</slot>
+  <slot>action_clicked_button_move_layer_up()</slot>
+  <slot>action_clicked_button_move_layer_down()</slot>
+  <slot>action_clicked_button_merge_selected_layers()</slot>
+  <slot>action_clicked_button_delete_selected_layers()</slot>
+ </slots>
 </ui>
