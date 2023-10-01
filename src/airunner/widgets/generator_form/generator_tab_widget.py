@@ -179,7 +179,6 @@ class GeneratorTabWidget(BaseWidget):
         widget.setStyleSheet("font-size: 8pt;")
         self.layout = QGridLayout(widget)
         self.add_prompt_widgets()
-        # self.add_controlnet_settings_widget(tab_section, tab)
         # self.add_steps_widget()
         # self.add_scale_widgets()
         # self.add_upscale_widgets()
@@ -196,12 +195,6 @@ class GeneratorTabWidget(BaseWidget):
                     self.data[tab_section][section]["use_prompt_builder_checkbox"].setChecked(state)
                 except KeyError:
                     pass
-
-    def add_controlnet_settings_widget(self, tab_section, tab):
-        if tab_section not in ["kandinsky", "shapegif"] and tab in ["txt2img", "img2img", "outpaint", "txt2vid"]:
-            controlnet_settings_widget = ControlNetSettingsWidget(app=self.app)
-            self.current_generator_widget["controlnet_settings_widget"] = controlnet_settings_widget
-            self.add_widget_to_grid(controlnet_settings_widget)
 
     def update_available_models(self):
         self.find_widget
@@ -432,25 +425,6 @@ class GeneratorTabWidget(BaseWidget):
                         print(f"something went wrong while setting the value for {attr_name}", widget)
 
         self.settings_manager.set_value(attr_name, value)
-
-    def set_stylesheet(self):
-        # super().set_stylesheet()
-        # self.sectionTabWidget.setStyleSheet(self.app.css("section_tab_widget"))
-        # self.stableDiffusionTabWidget.setStyleSheet(self.app.css("pipeline"))
-        # self.kandinskyTabWidget.setStyleSheet(self.app.css("pipeline"))
-        # self.shapegifTabWidget.setStyleSheet(self.app.css("pipeline"))
-        pass
-
-        # for tab_section in self.data.keys():
-        #     for tab in self.data[tab_section].keys():
-        #         if "controlnet_scale_slider" in self.data[tab_section][tab]:
-        #             self.data[tab_section][tab]["controlnet_scale_slider"].set_stylesheet()
-        #         if "steps_slider_widget" in self.data[tab_section][tab]:
-        #             self.data[tab_section][tab]["steps_slider_widget"].set_stylesheet()
-        #         if "scale_slider_widget" in self.data[tab_section][tab]:
-        #             self.data[tab_section][tab]["scale_slider_widget"].set_stylesheet()
-        #         if "samples_slider_widget" in self.data[tab_section][tab]:
-        #             self.data[tab_section][tab]["samples_slider_widget"].set_stylesheet()
 
     def set_prompt(self, prompt):
         self.current_generator_widget.ui.prompt.setPlainText(prompt)
