@@ -402,7 +402,41 @@
           </widget>
          </item>
          <item row="0" column="0">
-          <widget class="SliderWidget" name="scale_widget" native="true"/>
+          <widget class="SliderWidget" name="scale_slider_widget" native="true">
+           <property name="label_text" stdset="0">
+            <string>Scale</string>
+           </property>
+           <property name="slider_callback" stdset="0">
+            <string notr="true">handle_value_change</string>
+           </property>
+           <property name="current_value" stdset="0">
+            <number>0</number>
+           </property>
+           <property name="slider_maximum" stdset="0">
+            <number>100</number>
+           </property>
+           <property name="spinbox_maximum" stdset="0">
+            <double>1.000000000000000</double>
+           </property>
+           <property name="display_as_float" stdset="0">
+            <bool>true</bool>
+           </property>
+           <property name="spinbox_single_step" stdset="0">
+            <double>0.010000000000000</double>
+           </property>
+           <property name="spinbox_page_step" stdset="0">
+            <double>0.100000000000000</double>
+           </property>
+           <property name="spinbox_minimum" stdset="0">
+            <double>0.000000000000000</double>
+           </property>
+           <property name="slider_minimum" stdset="0">
+            <number>0</number>
+           </property>
+           <property name="settings_property" stdset="0">
+            <string notr="true">generator.image_guidance_scale</string>
+           </property>
+          </widget>
          </item>
         </layout>
        </widget>

@@ -235,7 +235,7 @@
                 <number>1</number>
                </property>
                <property name="settings_property" stdset="0">
-                <string>n_samples</string>
+                <string>generator.n_samples</string>
                </property>
               </widget>
              </item>
@@ -272,7 +272,7 @@
                 <string notr="true">handle_value_change</string>
                </property>
                <property name="settings_property" stdset="0">
-                <string notr="true">clip_skip</string>
+                <string notr="true">generator.clip_skip</string>
                </property>
               </widget>
              </item>
@@ -405,7 +405,7 @@
                 <number>1</number>
                </property>
                <property name="settings_property" stdset="0">
-                <string notr="true">steps</string>
+                <string notr="true">generator.steps</string>
                </property>
               </widget>
              </item>
@@ -436,7 +436,7 @@
                 <string notr="true">handle_value_change</string>
                </property>
                <property name="settings_property" stdset="0">
-                <string notr="true">scale</string>
+                <string notr="true">generator.scale</string>
                </property>
               </widget>
              </item>
@@ -477,7 +477,7 @@
                 <number>1</number>
                </property>
                <property name="settings_property" stdset="0">
-                <string notr="true">n_samples</string>
+                <string notr="true">generator.n_samples</string>
                </property>
               </widget>
              </item>
