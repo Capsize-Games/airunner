@@ -104,6 +104,9 @@ class SliderWidget(BaseWidget):
         self.display_as_float = self.property("display_as_float") or True
         self.divide_by = self.property("divide_by") or 1.0
 
+        if label_text == "Active Grid Width":
+            print(label_text, slider_maximum)
+
         if slider_callback != "":
             slider_callback = partial(getattr(self.app, slider_callback), settings_property)
 
@@ -114,28 +117,28 @@ class SliderWidget(BaseWidget):
         if spinbox_name:
             self.ui.spinbox.setObjectName(spinbox_name)
 
-        self.ui.slider_callback = slider_callback
-        self.ui.slider_maximum = slider_maximum
-        self.ui.slider_minimum = slider_minimum
-        self.ui.slider_tick_interval = slider_tick_interval
-        self.ui.slider_single_step = slider_single_step
-        self.ui.slider_page_step = slider_page_step
-        self.ui.spinbox_single_step = spinbox_single_step
-        self.ui.spinbox_page_step = spinbox_page_step
-        self.ui.spinbox_minimum = spinbox_minimum
-        self.ui.spinbox_maximum = spinbox_maximum
-        self.ui.label_text = label_text
+        self.slider_callback = slider_callback
+        self.slider_maximum = slider_maximum
+        self.slider_minimum = slider_minimum
+        self.slider_tick_interval = slider_tick_interval
+        self.slider_single_step = slider_single_step
+        self.slider_page_step = slider_page_step
+        self.spinbox_single_step = spinbox_single_step
+        self.spinbox_page_step = spinbox_page_step
+        self.spinbox_minimum = spinbox_minimum
+        self.spinbox_maximum = spinbox_maximum
+        self.label_text = label_text
 
         self.label = QLabel(f"{label_text}")
         self.set_stylesheet()
         self.label.setAlignment(Qt.AlignmentFlag.AlignCenter)
         self.label.setAttribute(Qt.WidgetAttribute.WA_TransparentForMouseEvents)
         self.ui.slider.valueChanged.connect(self.handle_slider_change)
-        #self.ui.slider.valueChanged.connect(lambda value: self.ui.spinbox.setValue(value / self.ui.slider_maximum))
+        #self.ui.slider.valueChanged.connect(lambda value: self.ui.spinbox.setValue(value / self.slider_maximum))
         # add the label to the ui
-        self.layout().addWidget(self.label, 0, 0, 1, 2)
+        self.layout().addWidget(self.label, 0, 0, 1, 1)
         # self.ui.spinbox.lineEdit().hide()
-        self.ui.spinbox.setFixedWidth(75)
+        self.ui.spinbox.setFixedWidth(50)
         self.ui.spinbox.valueChanged.connect(self.handle_spinbox_change)
         self.ui.slider.setValue(int(current_value))
 
@@ -148,8 +151,8 @@ class SliderWidget(BaseWidget):
         self.ui.spinbox.setStyleSheet(self.app.css("slider_spinbox"))
 
     def handle_spinbox_change(self, val):
-        normalized = val / self.ui.spinbox_maximum
-        slider_val = normalized * self.ui.slider_maximum
+        normalized = val / self.spinbox_maximum
+        slider_val = normalized * self.slider_maximum
         self.ui.slider.setValue(round(slider_val))
         # self.update_label()
 
@@ -157,18 +160,18 @@ class SliderWidget(BaseWidget):
         position = val#self.ui.slider.sliderPosition()
         single_step = self.ui.slider.singleStep()
         adjusted_value = round(position / single_step) * single_step
-        if adjusted_value < self.ui.slider_minimum:
-            adjusted_value = self.ui.slider_minimum
+        if adjusted_value < self.slider_minimum:
+            adjusted_value = self.slider_minimum
         self.ui.slider.setValue(int(adjusted_value))
 
-        normalized = adjusted_value / self.ui.slider_maximum
-        spinbox_val = normalized * self.ui.spinbox_maximum
+        normalized = adjusted_value / self.slider_maximum
+        spinbox_val = normalized * self.spinbox_maximum
         spinbox_val = round(spinbox_val, 2)
         self.ui.spinbox.setValue(spinbox_val)
 
         # self.update_label()
-        if self.ui.slider_callback:
-            self.ui.slider_callback(adjusted_value)
+        if self.slider_callback:
+            self.slider_callback(adjusted_value)
 
     def update_value(self, val):
         self.ui.slider.setValue(int(val))
@@ -191,13 +194,13 @@ class SliderWidget(BaseWidget):
         :param val:
         :return:
         """
-        self.ui.slider_minimum = val
-        self.ui.slider_tick_interval = val
-        self.ui.slider_single_step = val
-        self.ui.slider_page_step = val
-        self.ui.spinbox_single_step = val
-        self.ui.spinbox_page_step = val
-        self.ui.spinbox_minimum = val
+        self.slider_minimum = val
+        self.slider_tick_interval = val
+        self.slider_single_step = val
+        self.slider_page_step = val
+        self.spinbox_single_step = val
+        self.spinbox_page_step = val
+        self.spinbox_minimum = val
 
     def setValue(self, val):
         self.ui.slider.setValue(val)
