@@ -12,8 +12,8 @@ import torch
 
 from PyQt6 import uic, QtCore
 from PyQt6.QtWidgets import QApplication, QFileDialog, QMainWindow, QTabWidget, QWidget, \
-    QVBoxLayout, QLabel, QHBoxLayout
-from PyQt6.QtCore import pyqtSlot, Qt, QThread, pyqtSignal, QObject, QTimer
+    QVBoxLayout, QLabel, QHBoxLayout, QFrame
+from PyQt6.QtCore import pyqtSlot, Qt, QThread, pyqtSignal, QObject, QTimer, QLine
 from PyQt6.QtGui import QGuiApplication
 
 from airunner.aihandler.qtvar import MessageHandlerVar
@@ -29,6 +29,7 @@ from airunner.input_event_manager import InputEventManager
 from airunner.mixins.generator_mixin import GeneratorMixin
 from airunner.mixins.history_mixin import HistoryMixin
 from airunner.settings import BASE_PATH
+from airunner.widgets.status.status_widget import StatusWidget
 from airunner.windows.main.templates.main_window_new_ui import Ui_MainWindow
 from airunner.widgets.embeddings.embedding_widget import EmbeddingWidget
 from airunner.themes import Themes
@@ -458,12 +459,8 @@ class MainWindow(
         # change the color of tooltips
         self.setStyleSheet("QToolTip { color: #000000; background-color: #ffffff; border: 1px solid black; }")
 
-        widget = QWidget()
-        hbox = QHBoxLayout()
-        widget.setLayout(hbox)
-        self.system_stats_label = QLabel("", widget)
-        widget.layout().addWidget(self.system_stats_label)
-        self.statusBar().addPermanentWidget(widget)
+        self.status_widget = StatusWidget()
+        self.statusBar().addPermanentWidget(self.status_widget)
 
         # create paths if they do not exist
         create_airunner_paths()
@@ -686,15 +683,6 @@ class MainWindow(
             f"Click to {'enable' if not nsfw_filter else 'disable'} NSFW filter"
         )
 
-    def update_system_stats(self, queue_size):
-        system_memory_percentage = psutil.virtual_memory().percent
-        has_cuda = torch.cuda.is_available()
-        queue_items = f"Queued items: {queue_size}"
-        cuda_memory = f"Using {'GPU' if has_cuda else 'CPU'}, VRAM allocated {torch.cuda.memory_allocated() / 1024 ** 3:.1f}GB cached {torch.cuda.memory_cached() / 1024 ** 3:.1f}GB"
-        system_memory = f"RAM {system_memory_percentage:.1f}%"
-        self.system_stats_label.setText(
-            f"{queue_items}, {system_memory}, {cuda_memory}")
-
     def update_controlnet_thumbnail(self):
         self.generator_tab_widget.update_controlnet_thumbnail()
 
@@ -747,10 +735,7 @@ class MainWindow(
 
     def timerEvent(self, event):
         self.canvas.timerEvent(event)
-        # self.footer_widget.update_system_stats(
-        #     queue_size=self.client.queue.qsize()
-        # )
-        self.update_system_stats(queue_size=self.client.queue.qsize())
+        self.status_widget.update_system_stats(queue_size=self.client.queue.qsize())
 
     def check_for_latest_version(self):
         self.version_thread = QThread()
