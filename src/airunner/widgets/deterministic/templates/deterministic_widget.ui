@@ -7,13 +7,13 @@
     <x>0</x>
     <y>0</y>
     <width>322</width>
-    <height>204</height>
+    <height>256</height>
    </rect>
   </property>
   <property name="maximumSize">
    <size>
     <width>16777215</width>
-    <height>204</height>
+    <height>16777215</height>
    </size>
   </property>
   <property name="font">
@@ -37,6 +37,38 @@
    <property name="bottomMargin">
     <number>9</number>
    </property>
+   <item row="2" column="0" colspan="2">
+    <widget class="QGroupBox" name="groupBox_2">
+     <property name="font">
+      <font>
+       <pointsize>8</pointsize>
+       <bold>true</bold>
+      </font>
+     </property>
+     <property name="title">
+      <string>Cateogry</string>
+     </property>
+     <layout class="QGridLayout" name="gridLayout_3">
+      <item row="0" column="0">
+       <widget class="QComboBox" name="category">
+        <property name="font">
+         <font>
+          <pointsize>8</pointsize>
+          <bold>true</bold>
+         </font>
+        </property>
+       </widget>
+      </item>
+     </layout>
+    </widget>
+   </item>
+   <item row="1" column="0" colspan="2">
+    <widget class="Line" name="line">
+     <property name="orientation">
+      <enum>Qt::Horizontal</enum>
+     </property>
+    </widget>
+   </item>
    <item row="3" column="0" colspan="2">
     <widget class="QGroupBox" name="groupBox">
      <property name="font">
@@ -84,7 +116,7 @@
      </property>
     </widget>
    </item>
-   <item row="4" column="0" colspan="2">
+   <item row="5" column="0" colspan="2">
     <widget class="QPushButton" name="generate_batches_button">
      <property name="font">
       <font>
@@ -96,40 +128,19 @@
      </property>
     </widget>
    </item>
-   <item row="2" column="0" colspan="2">
-    <widget class="QGroupBox" name="groupBox_2">
-     <property name="font">
-      <font>
-       <pointsize>8</pointsize>
-       <bold>true</bold>
-      </font>
-     </property>
-     <property name="title">
-      <string>Cateogry</string>
-     </property>
-     <layout class="QGridLayout" name="gridLayout_3">
-      <item row="0" column="0">
-       <widget class="QComboBox" name="category">
-        <property name="font">
-         <font>
-          <pointsize>8</pointsize>
-          <bold>true</bold>
-         </font>
-        </property>
-       </widget>
-      </item>
-     </layout>
-    </widget>
-   </item>
-   <item row="1" column="0" colspan="2">
-    <widget class="Line" name="line">
-     <property name="orientation">
-      <enum>Qt::Horizontal</enum>
-     </property>
-    </widget>
+   <item row="4" column="0" colspan="2">
+    <widget class="SeedWidget" name="deterministic_seed" native="true"/>
    </item>
   </layout>
  </widget>
+ <customwidgets>
+  <customwidget>
+   <class>SeedWidget</class>
+   <extends>QWidget</extends>
+   <header>airunner/widgets/seed/seed_widget</header>
+   <container>1</container>
+  </customwidget>
+ </customwidgets>
  <resources/>
  <connections/>
 </ui>

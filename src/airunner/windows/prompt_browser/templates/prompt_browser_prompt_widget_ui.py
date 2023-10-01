@@ -9,21 +9,21 @@
 from PyQt6 import QtCore, QtGui, QtWidgets
 
 
-class Ui_Form(object):
-    def setupUi(self, Form):
-        Form.setObjectName("Form")
-        Form.resize(616, 257)
-        self.gridLayout = QtWidgets.QGridLayout(Form)
+class Ui_prompt_widget(object):
+    def setupUi(self, prompt_widget):
+        prompt_widget.setObjectName("prompt_widget")
+        prompt_widget.resize(616, 257)
+        self.gridLayout = QtWidgets.QGridLayout(prompt_widget)
         self.gridLayout.setObjectName("gridLayout")
         self.horizontalLayout = QtWidgets.QHBoxLayout()
         self.horizontalLayout.setObjectName("horizontalLayout")
-        self.load_button = QtWidgets.QPushButton(parent=Form)
+        self.load_button = QtWidgets.QPushButton(parent=prompt_widget)
         font = QtGui.QFont()
         font.setPointSize(9)
         self.load_button.setFont(font)
         self.load_button.setObjectName("load_button")
         self.horizontalLayout.addWidget(self.load_button)
-        self.delete_button = QtWidgets.QPushButton(parent=Form)
+        self.delete_button = QtWidgets.QPushButton(parent=prompt_widget)
         font = QtGui.QFont()
         font.setPointSize(9)
         self.delete_button.setFont(font)
@@ -32,14 +32,14 @@ class Ui_Form(object):
         self.gridLayout.addLayout(self.horizontalLayout, 1, 0, 1, 2)
         self.verticalLayout = QtWidgets.QVBoxLayout()
         self.verticalLayout.setObjectName("verticalLayout")
-        self.label = QtWidgets.QLabel(parent=Form)
+        self.label = QtWidgets.QLabel(parent=prompt_widget)
         font = QtGui.QFont()
         font.setPointSize(9)
         font.setBold(True)
         self.label.setFont(font)
         self.label.setObjectName("label")
         self.verticalLayout.addWidget(self.label)
-        self.prompt = QtWidgets.QTextBrowser(parent=Form)
+        self.prompt = QtWidgets.QTextBrowser(parent=prompt_widget)
         font = QtGui.QFont()
         font.setPointSize(9)
         self.prompt.setFont(font)
@@ -48,14 +48,14 @@ class Ui_Form(object):
         self.verticalLayout.addWidget(self.prompt)
         self.verticalLayout_2 = QtWidgets.QVBoxLayout()
         self.verticalLayout_2.setObjectName("verticalLayout_2")
-        self.label_3 = QtWidgets.QLabel(parent=Form)
+        self.label_3 = QtWidgets.QLabel(parent=prompt_widget)
         font = QtGui.QFont()
         font.setPointSize(9)
         font.setBold(True)
         self.label_3.setFont(font)
         self.label_3.setObjectName("label_3")
         self.verticalLayout_2.addWidget(self.label_3)
-        self.negative_prompt = QtWidgets.QTextBrowser(parent=Form)
+        self.negative_prompt = QtWidgets.QTextBrowser(parent=prompt_widget)
         font = QtGui.QFont()
         font.setPointSize(9)
         self.negative_prompt.setFont(font)
@@ -65,13 +65,17 @@ class Ui_Form(object):
         self.verticalLayout.addLayout(self.verticalLayout_2)
         self.gridLayout.addLayout(self.verticalLayout, 0, 0, 1, 2)
 
-        self.retranslateUi(Form)
-        QtCore.QMetaObject.connectSlotsByName(Form)
+        self.retranslateUi(prompt_widget)
+        self.load_button.clicked.connect(prompt_widget.action_clicked_button_load) # type: ignore
+        self.delete_button.clicked.connect(prompt_widget.action_clicked_button_delete) # type: ignore
+        self.prompt.textChanged.connect(prompt_widget.action_text_changed_prompt) # type: ignore
+        self.negative_prompt.textChanged.connect(prompt_widget.action_text_changed_negative_prompt) # type: ignore
+        QtCore.QMetaObject.connectSlotsByName(prompt_widget)
 
-    def retranslateUi(self, Form):
+    def retranslateUi(self, prompt_widget):
         _translate = QtCore.QCoreApplication.translate
-        Form.setWindowTitle(_translate("Form", "Form"))
-        self.load_button.setText(_translate("Form", "Load"))
-        self.delete_button.setText(_translate("Form", "Delete"))
-        self.label.setText(_translate("Form", "Prompt"))
-        self.label_3.setText(_translate("Form", "Negative Prompt"))
+        prompt_widget.setWindowTitle(_translate("prompt_widget", "Form"))
+        self.load_button.setText(_translate("prompt_widget", "Load"))
+        self.delete_button.setText(_translate("prompt_widget", "Delete"))
+        self.label.setText(_translate("prompt_widget", "Prompt"))
+        self.label_3.setText(_translate("prompt_widget", "Negative Prompt"))

@@ -1,15 +1,10 @@
 import re
-from functools import partial
 
-from PyQt6.QtWidgets import QWidget, QGridLayout, QHBoxLayout, \
-    QPushButton, QProgressBar, QFormLayout, QCheckBox, QTabWidget
+from PyQt6.QtWidgets import QWidget, QGridLayout, QProgressBar, QTabWidget
 
 from airunner.widgets.base_widget import BaseWidget
 from airunner.aihandler.settings import MAX_SEED
-from airunner.aihandler.enums import MessageCode
-from airunner.widgets.controlnet_settings.controlnet_settings_widget import ControlNetSettingsWidget
 from airunner.widgets.generator_form.templates.generator_tab_ui import Ui_generator_tab
-from airunner.widgets.slider.slider_widget import SliderWidget
 
 
 class GeneratorTabWidget(BaseWidget):
@@ -159,15 +154,6 @@ class GeneratorTabWidget(BaseWidget):
         tab_index = tab_widget.indexOf(tab_widget.findChild(QWidget, f"tab_{current_tab}_{current_section}"))
         tab_widget.setCurrentIndex(tab_index)
 
-    def update_image_input_thumbnail(self):
-        if self.current_generator_widget.ui.input_image_widget:
-            self.current_generator_widget.ui.input_image_widget.set_thumbnail()
-
-    def update_controlnet_thumbnail(self):
-        # if self.controlnet_settings_widget:
-        #     self.controlnet_settings_widget.set_thumbnail()
-        pass
-
     def generate_form(self, tab_section, tab):
         self.tab_section = tab_section
         self.tab = tab
@@ -178,14 +164,6 @@ class GeneratorTabWidget(BaseWidget):
         widget = QWidget(self)
         widget.setStyleSheet("font-size: 8pt;")
         self.layout = QGridLayout(widget)
-        self.add_prompt_widgets()
-        # self.add_steps_widget()
-        # self.add_scale_widgets()
-        # self.add_upscale_widgets()
-        # self.add_samples_widgets()
-        # self.add_frames_widgets()
-        # self.add_generate_widgets()
-        # self.release_tab_overrides()
         return widget
 
     def toggle_all_prompt_builder_checkboxes(self, state):
@@ -204,153 +182,12 @@ class GeneratorTabWidget(BaseWidget):
                 self.data[section][tab]["model"].clear()
                 self.load_model_by_section(section, tab)
 
-    def add_steps_widget(self):
-        steps_slider = SliderWidget(
-            app=self.app,
-            label_text="Steps",
-            slider_callback=partial(self.handle_value_change, "generator.steps"),
-            current_value=int(self.settings_manager.generator.steps),
-            slider_maximum=200,
-            spinbox_maximum=200.0,
-            display_as_float=False,
-            spinbox_single_step=1,
-            spinbox_page_step=1,
-            spinbox_minimum=1,
-            slider_minimum=1
-        )
-        self.current_generator_widget["steps_slider_widget"] = steps_slider
-        self.add_widget_to_grid(steps_slider)
-
-    def get_scale_slider(self, label_text="Scale"):
-        return SliderWidget(
-            app=self.app,
-            label_text=label_text,
-            slider_callback=partial(self.handle_value_change, "generator.scale"),
-            current_value=int(self.settings_manager.generator.scale),
-            slider_maximum=10000,
-            spinbox_maximum=100.0,
-            display_as_float=True,
-            spinbox_single_step=0.01,
-            spinbox_page_step=0.01
-        )
-
-    def add_scale_widgets(self):
-        if self.tab_section == "stablediffusion" and self.tab == "upscale":
-            return
-        scale_slider = self.get_scale_slider()
-        self.current_generator_widget["scale_slider_widget"] = scale_slider
-        self.add_widget_to_grid(scale_slider)
-
-    def update_seed(self):
-        self.current_generator_widget["seed_widget"].update_seed()
-        self.current_generator_widget["seed_widget_latents"].update_seed()
-
     def update_thumbnails(self):
-        self.update_image_input_thumbnail()
-        self.update_controlnet_thumbnail()
+        self.current_generator_widget.update_image_input_thumbnail()
+        self.current_generator_widget.update_controlnet_settings_thumbnail()
 
-    def load_clip_skip_slider(self):
-        """
-        The following block will load the clip skip slider for any tab
-        that is not kandinsky or shapegif (essentially just stablediffusion tab)
-        """
-        clip_skip_widget = SliderWidget(
-            app=self.app,
-            label_text="Clip Skip",
-            slider_callback=partial(self.handle_value_change, "generator.clip_skip"),
-            current_value=self.settings_manager.generator.clip_skip,
-            slider_maximum=11,
-            spinbox_maximum=12.0,
-            display_as_float=False,
-            spinbox_single_step=1,
-            spinbox_page_step=1,
-            spinbox_minimum=0,
-            slider_minimum=0
-        )
-        self.current_generator_widget["clip_skip_slider_widget"] = clip_skip_widget
-        self.add_widget_to_grid(clip_skip_widget)
-
-    def add_samples_widgets(self):
-        if self.tab == "txt2vid":
-            return
-        samples_widget = SliderWidget(
-            app=self.app,
-            label_text="Samples",
-            slider_callback=partial(self.handle_value_change, "generator.n_samples"),
-            current_value=self.settings_manager.generator.n_samples,
-            slider_maximum=500,
-            spinbox_maximum=500.0,
-            display_as_float=False,
-            spinbox_single_step=1,
-            spinbox_page_step=1,
-            spinbox_minimum=1,
-            slider_minimum=1
-        )
-        self.current_generator_widget["samples_slider_widget"] = samples_widget
-
-        if self.tab_section not in self.clip_skip_disabled_tabs and self.tab not in self.clip_skip_disabled_sections:
-            self.load_clip_skip_slider()
-
-        self.add_widget_to_grid(samples_widget)
-
-        if self.tab_section == "kandinsky":
-            # show a checkbox for self.app.variation
-            variation_checkbox = QCheckBox("Variation")
-            variation_checkbox.setObjectName("variation_checkbox")
-            variation_checkbox.setChecked(self.settings_manager.generator.variation)
-            variation_checkbox.toggled.connect(
-                partial(self.handle_value_change, "variation", widget=variation_checkbox))
-            self.add_widget_to_grid(variation_checkbox)
-
-    def add_frames_widgets(self):
-        if self.tab != "txt2vid":
-            return
-        samples_widget = SliderWidget(
-            app=self.app,
-            label_text="Frames",
-            slider_callback=partial(self.handle_value_change, "generator.n_samples"),
-            current_value=self.settings_manager.generator.n_samples,
-            slider_maximum=200,
-            spinbox_maximum=200.0,
-            display_as_float=False,
-            spinbox_single_step=1,
-            spinbox_page_step=1,
-            spinbox_minimum=1,
-            slider_minimum=1
-        )
-        self.current_generator_widget["samples_slider_widget"] = samples_widget
-        widget = QWidget()
-        horizontal_layout = QHBoxLayout(widget)
-        horizontal_layout.setContentsMargins(0, 0, 0, 0)
-        horizontal_layout.setSpacing(10)
-        horizontal_layout.addWidget(samples_widget)
-        self.add_widget_to_grid(widget)
-
-    def add_upscale_widgets(self):
-        if self.tab_section != "stablediffusion" or self.tab != "upscale":
-            return
-        scale_slider = self.get_scale_slider(label_text="Input Image Scale")
-        self.current_generator_widget.ui.input_image_widget.add_slider_to_scale_frame(scale_slider)
-
-    def add_generate_widgets(self):
-        widget_a = QWidget()
-        widget_b = QWidget()
-        horizontal_layout_a = QFormLayout(widget_a)
-        horizontal_layout_b = QHBoxLayout(widget_b)
-        horizontal_layout_a.setContentsMargins(0, 0, 0, 0)
-        horizontal_layout_a.setSpacing(10)
-        horizontal_layout_b.setContentsMargins(0, 0, 0, 0)
-        horizontal_layout_b.setSpacing(5)
-
-        interrupt_button = QPushButton("Interrupt")
-        interrupt_button.setObjectName("interrupt_button")
-        interrupt_button.clicked.connect(self.app.interrupt)
-        self.interrupt_button = interrupt_button
-
-        # horizontal_layout_a.addRow(to_canvas_radio, deterministic_radio)
-        horizontal_layout_b.addWidget(interrupt_button)
-        self.add_widget_to_grid(widget_a)
-        self.add_widget_to_grid(widget_b)
+    def toggle_variation(self, val):
+        self.settings_manager.set_value("generator.variation", val)
 
     def set_progress_bar_value(self, tab_section, section, value):
         progressbar = self.find_widget("progress_bar", tab_section, section)
@@ -366,22 +203,6 @@ class GeneratorTabWidget(BaseWidget):
             return
         progressbar.setRange(0, 100)
         progressbar.setValue(100)
-
-    def start_progress_bar(self, tab_section, section):
-        progressbar = self.find_widget("progress_bar", tab_section, section)
-        if not progressbar:
-            return
-        progressbar.setRange(0, 0)
-        self.app.message_var.emit({
-            "message": {
-                "step": 0,
-                "total": 0,
-                "action": section,
-                "image": None,
-                "data": None
-            },
-            "code": MessageCode.PROGRESS
-        })
 
     def add_widget_to_grid(self, widget, row=None, col=0):
         if row is None:
