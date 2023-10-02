@@ -10,6 +10,7 @@ class BaseWidget(QWidget):
     widget_class_ = None
     icons = {}
     ui = None
+    qss_filename = None
 
     @property
     def is_dark(self):
@@ -28,6 +29,12 @@ class BaseWidget(QWidget):
         self.settings_manager = SettingsManager()
         self.ui = self.widget_class_()
         self.ui.setupUi(self)
+        if self.qss_filename:
+            theme_name = "dark_theme"
+            here = os.path.dirname(os.path.realpath(__file__))
+            with open(os.path.join(here, "..", "styles", theme_name, self.qss_filename), "r") as f:
+                stylesheet = f.read()
+            self.setStyleSheet(stylesheet)
 
     def set_stylesheet(self, is_dark=None, button_name=None, icon=None):
         is_dark = self.is_dark if is_dark is None else is_dark

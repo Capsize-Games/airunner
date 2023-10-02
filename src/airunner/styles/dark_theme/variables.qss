@@ -1,0 +1,12 @@
+/* VARIABLES */
+@primary-color: #0055FF;
+@secondary-color: #8B8B8B;
+@success-color: #00A800;
+@danger-color: #FF5555;
+@warning-color: #FFAA00;
+@info-color: #00A8D8;
+@light-color: #C8C8C8;
+@dim-color: #666666;
+@dark-color: #101010;
+@line-color: #333333;
+/* END_VARIABLES */
