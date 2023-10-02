@@ -486,7 +486,7 @@
         <enum>Qt::Horizontal</enum>
        </property>
        <property name="childrenCollapsible">
-        <bool>false</bool>
+        <bool>true</bool>
        </property>
        <widget class="GeneratorTabWidget" name="generator_widget" native="true"/>
        <widget class="QSplitter" name="center_splitter">
@@ -992,8 +992,26 @@
     <property name="title">
      <string>View</string>
     </property>
+    <widget class="QMenu" name="menuBrowse_Models_Path">
+     <property name="title">
+      <string>Browse Models Paths</string>
+     </property>
+     <addaction name="actionTxt2img_Img2img_Models"/>
+     <addaction name="actionInpaint_Outpaint_Models"/>
+     <addaction name="actionDepth2img_Models"/>
+     <addaction name="actionPix2pix"/>
+     <addaction name="actionUpscale"/>
+     <addaction name="actionSuperresolution"/>
+     <addaction name="actionTxt2vid"/>
+    </widget>
     <addaction name="actionHuggingface_Cache_manager"/>
     <addaction name="actionBrowse_AI_Runner_Path"/>
+    <addaction name="menuBrowse_Models_Path"/>
+    <addaction name="separator"/>
+    <addaction name="actionBrowser_Images_Path"/>
+    <addaction name="actionBrowse_Videos_Path"/>
+    <addaction name="actionBrowse_Models_Path"/>
+    <addaction name="separator"/>
    </widget>
    <addaction name="menuFile"/>
    <addaction name="menuEdit"/>
@@ -1538,6 +1556,56 @@
   <action name="actionBrowse_Images_Path">
    <property name="text">
     <string>Browse Images Path</string>
+   </property>
+  </action>
+  <action name="actionBrowser_Images_Path">
+   <property name="text">
+    <string>Browser Images</string>
+   </property>
+  </action>
+  <action name="actionBrowse_Videos_Path">
+   <property name="text">
+    <string>Browse Videos</string>
+   </property>
+  </action>
+  <action name="actionBrowse_Models_Path">
+   <property name="text">
+    <string>Browse GIFs</string>
+   </property>
+  </action>
+  <action name="actionTxt2img_Img2img_Models">
+   <property name="text">
+    <string>Txt2img / Img2img</string>
+   </property>
+  </action>
+  <action name="actionInpaint_Outpaint_Models">
+   <property name="text">
+    <string>Inpaint / Outpaint</string>
+   </property>
+  </action>
+  <action name="actionDepth2img_Models">
+   <property name="text">
+    <string>Depth2img</string>
+   </property>
+  </action>
+  <action name="actionPix2pix">
+   <property name="text">
+    <string>Pix2pix</string>
+   </property>
+  </action>
+  <action name="actionUpscale">
+   <property name="text">
+    <string>Upscale</string>
+   </property>
+  </action>
+  <action name="actionSuperresolution">
+   <property name="text">
+    <string>Superresolution</string>
+   </property>
+  </action>
+  <action name="actionTxt2vid">
+   <property name="text">
+    <string>Txt2vid</string>
    </property>
   </action>
  </widget>
