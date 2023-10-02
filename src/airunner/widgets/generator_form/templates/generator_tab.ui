@@ -54,6 +54,18 @@
        <string>Stable Diffusion</string>
       </attribute>
       <layout class="QGridLayout" name="gridLayout">
+       <property name="leftMargin">
+        <number>0</number>
+       </property>
+       <property name="topMargin">
+        <number>0</number>
+       </property>
+       <property name="rightMargin">
+        <number>0</number>
+       </property>
+       <property name="bottomMargin">
+        <number>0</number>
+       </property>
        <item row="0" column="0">
         <widget class="QTabWidget" name="tab_widget_stablediffusion">
          <property name="tabPosition">
@@ -76,7 +88,7 @@
            <string>stablediffusion</string>
           </property>
           <attribute name="title">
-           <string>txt2img/img2img</string>
+           <string>txt2img / img2img</string>
           </attribute>
           <layout class="QGridLayout" name="gridLayout_7">
            <property name="leftMargin">
@@ -364,6 +376,18 @@
        <string>Kandinsky</string>
       </attribute>
       <layout class="QGridLayout" name="gridLayout_3">
+       <property name="leftMargin">
+        <number>0</number>
+       </property>
+       <property name="topMargin">
+        <number>0</number>
+       </property>
+       <property name="rightMargin">
+        <number>0</number>
+       </property>
+       <property name="bottomMargin">
+        <number>0</number>
+       </property>
        <item row="0" column="0">
         <widget class="QTabWidget" name="tab_widget_kandinsky">
          <property name="tabPosition">
@@ -469,6 +493,18 @@
        <string>Shap-e</string>
       </attribute>
       <layout class="QGridLayout" name="gridLayout_4">
+       <property name="leftMargin">
+        <number>0</number>
+       </property>
+       <property name="topMargin">
+        <number>0</number>
+       </property>
+       <property name="rightMargin">
+        <number>0</number>
+       </property>
+       <property name="bottomMargin">
+        <number>0</number>
+       </property>
        <item row="0" column="0">
         <widget class="QTabWidget" name="tab_widget_shape">
          <property name="tabPosition">

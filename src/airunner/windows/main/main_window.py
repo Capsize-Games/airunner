@@ -40,8 +40,6 @@ from airunner.utils import get_version, get_latest_version, auto_export_image, g
     create_airunner_paths
 from airunner.aihandler.settings_manager import SettingsManager
 
-import qdarktheme
-
 from airunner.windows.video import VideoPopup
 
 
@@ -398,7 +396,7 @@ class MainWindow(
 
     def __init__(self, *args, **kwargs):
         logger.info("Starting AI Runnner")
-        qdarktheme.enable_hi_dpi()
+        # qdarktheme.enable_hi_dpi()
 
         # set the api
         self.api = AIRunnerAPI(window=self)
@@ -413,9 +411,7 @@ class MainWindow(
 
         super().__init__(*args, **kwargs)
 
-
         self.initialize()
-
 
         # on window resize:
         # self.applicationStateChanged.connect(self.on_state_changed)
@@ -439,7 +435,7 @@ class MainWindow(
         self.is_started = True
 
         # change the color of tooltips
-        self.setStyleSheet("QToolTip { color: #000000; background-color: #ffffff; border: 1px solid black; }")
+        #self.setStyleSheet("QToolTip { color: #000000; background-color: #ffffff; border: 1px solid black; }")
 
         self.status_widget = StatusWidget()
         self.statusBar().addPermanentWidget(self.status_widget)
@@ -565,10 +561,45 @@ class MainWindow(
             path = default_hf_cache_dir()
         self.show_path(path)
 
+    def action_show_images_path(self):
+        self.show_path(self.settings_manager.path_settings.image_path)
+    
+    def action_show_videos_path(self):
+        self.show_path(self.settings_manager.path_settings.video_path)
+    
+    def action_show_gifs_path(self):
+        self.show_path(self.settings_manager.path_settings.gif_path)
+    
+    def action_show_model_path_txt2img(self):
+        self.show_path(self.settings_manager.path_settings.txt2img_model_path)
+    
+    def action_show_model_path_depth2img(self):
+        self.show_path(self.settings_manager.path_settings.depth2img_model_path)
+    
+    def action_show_model_path_pix2pix(self):
+        self.show_path(self.settings_manager.path_settings.pix2pix_model_path)
+    
+    def action_show_model_path_inpaint(self):
+        self.show_path(self.settings_manager.path_settings.inpaint_model_path)
+    
+    def action_show_model_path_upscale(self):
+        self.show_path(self.settings_manager.path_settings.upscale_model_path)
+    
+    def action_show_model_path_txt2vid(self):
+        self.show_path(self.settings_manager.path_settings.txt2vid_model_path)
+    
+    def action_show_model_path_embeddings(self):
+        self.show_path(self.settings_manager.path_settings.embeddings_model_path)
+    
+    def action_show_model_path_lora(self):
+        self.show_path(self.settings_manager.path_settings.lora_model_path)
+
     def show_path(self, path):
         import subprocess
         import platform
         import os
+        if not os.path.isdir(path):
+            return
         if platform.system() == "Windows":
             subprocess.Popen(["explorer", os.path.realpath(path)])
         elif platform.system() == "Darwin":
@@ -772,17 +803,15 @@ class MainWindow(
             self.canvas.update()
 
     def set_stylesheet(self):
+        """
+        Sets the stylesheet for the application based on the current theme
+        """
         logger.info("Setting stylesheets")
-        try:
-            qdarktheme.setup_theme("dark" if self.settings_manager.dark_mode_enabled else "light")
-        except PermissionError:
-            pass
-        self.generator_tab_widget.set_stylesheet()
-        # self.header_widget.set_stylesheet()
-        self.canvas_widget.set_stylesheet()
-        # self.tool_menu_widget.set_stylesheet()
-        self.toolbar_widget.set_stylesheet()
-        self.footer_widget.set_stylesheet()
+        theme_name = "dark_theme"
+        here = os.path.dirname(os.path.realpath(__file__))
+        with open(os.path.join(here, "..", "..", "styles", theme_name, "styles.qss"), "r") as f:
+            stylesheet = f.read()
+        self.setStyleSheet(stylesheet)
 
     def initialize(self):
         # self.automatic_filter_manager = AutomaticFilterManager(app=self)
@@ -1074,7 +1103,7 @@ class MainWindow(
 
     def display(self):
         logger.info("Displaying window")
-        # self.set_stylesheet()
+        self.set_stylesheet()
         if not self.testing:
             self.show()
         else:
@@ -1117,12 +1146,12 @@ class MainWindow(
             increment = grid_size if delta > 0 else -grid_size
             self.working_height = int(self.working_height + increment)
 
-    def toggle_stylesheet(self, path):
-        # use fopen to open the file
-        # read the file
-        # set the stylesheet
-        with open(path, "r") as stream:
-            self.setStyleSheet(stream.read())
+    # def toggle_stylesheet(self, path):
+    #     # use fopen to open the file
+    #     # read the file
+    #     # set the stylesheet
+    #     with open(path, "r") as stream:
+    #         self.setStyleSheet(stream.read())
 
     def set_window_title(self):
         """
