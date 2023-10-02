@@ -170,10 +170,14 @@ class GeneratorForm(BaseWidget):
     signals in the corresponding ui file.
     """
     def handle_prompt_changed(self):
-        self.handle_textbox_change("generator.prompt", "prompt")
+        if not self.initialized:
+            return
+        self.settings_manager.set_value("generator.prompt", self.ui.prompt.toPlainText())
 
     def handle_negative_prompt_changed(self):
-        self.handle_textbox_change("generator.negative_prompt", "negative_prompt")
+        if not self.initialized:
+            return
+        self.settings_manager.set_value("generator.negative_prompt", self.ui.negative_prompt.toPlainText())
 
     def toggle_prompt_builder_checkbox(self, toggled):
         pass
@@ -481,20 +485,12 @@ class GeneratorForm(BaseWidget):
         self.save_db_session()
         self.changed_signal.emit(key, value)
 
-    def handle_textbox_change(self, key, widget_name):
-        widget = getattr(self.ui, widget_name)
-        value = widget.toPlainText()
-        setattr(self.settings_manager, key, value)
-        self.save_db_session()
-        self.changed_signal.emit(key, value)
-
     def initialize(self):
         self.settings_manager.generator_section = self.generator_section
         self.settings_manager.generator_name = self.generator_name
-        self.clear_prompts()
+        self.set_form_values()
         self.load_models()
         self.load_schedulers()
-        self.set_form_values()
         self.set_controlnet_settings_properties()
         self.set_input_image_widget_properties()
 
@@ -543,10 +539,8 @@ class GeneratorForm(BaseWidget):
         )
 
     def clear_prompts(self):
-        self.ui.prompt.clear()
-        self.ui.negative_prompt.clear()
-        # self.ui.prompt.setPlainText("")
-        # self.ui.negative_prompt.setPlainText("")
+        self.ui.prompt.setPlainText("")
+        self.ui.negative_prompt.setPlainText("")
 
     def load_models(self):
         self.clear_models()
@@ -567,15 +561,9 @@ class GeneratorForm(BaseWidget):
         self.ui.scheduler.addItems(scheduler_names)
 
     def set_form_values(self):
-        self.ui.prompt.setPlainText(
-            self.generator_settings.prompt
-        )
-        self.ui.negative_prompt.setPlainText(
-            self.generator_settings.negative_prompt
-        )
-        self.ui.use_prompt_builder_checkbox.setChecked(
-            self.settings_manager.generator.use_prompt_builder
-        )
+        self.ui.prompt.setPlainText(self.settings_manager.generator.prompt)
+        self.ui.negative_prompt.setPlainText(self.settings_manager.generator.negative_prompt)
+        self.ui.use_prompt_builder_checkbox.setChecked(self.settings_manager.generator.use_prompt_builder)
 
     def clear_models(self):
         self.ui.model.clear()

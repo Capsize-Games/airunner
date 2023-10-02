@@ -4,7 +4,7 @@ from airunner.windows.prompt_browser.templates.prompt_browser_prompt_widget_ui i
 
 
 class PromptWidget(BaseWidget):
-    template_class_ = Ui_prompt_widget
+    widget_class_ = Ui_prompt_widget
 
     def __init__(self, *args, **kwargs):
         self.prompt_data = kwargs.pop("prompt_data")
@@ -23,7 +23,7 @@ class PromptWidget(BaseWidget):
 
     def action_clicked_button_delete(self):
         session = get_session()
-        session.prompts.remove(self.prompt_data)
+        session.delete(self.prompt_data)
         save_session()
         self.deleteLater()
 
