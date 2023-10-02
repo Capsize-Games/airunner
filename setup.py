@@ -31,7 +31,6 @@ setup(
         "PyQt6-Qt6==6.4.2",
         "PyQt6-sip==13.4.1",
         "PySide6==6.4.2",
-        "pyqtdarktheme==2.1.0",
         "pyre-extensions==0.0.29",
         "lightning==2.0.2",
         "requests==2.31.0",
