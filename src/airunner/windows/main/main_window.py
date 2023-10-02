@@ -1461,7 +1461,10 @@ class MainWindow(
         PromptBrowser(settings_manager=self.settings_manager, app=self)
 
     def save_prompt(self):
-        self.settings_manager.create_saved_prompt(self.prompt, self.negative_prompt)
+        self.settings_manager.create_saved_prompt(
+            self.settings_manager.generator.prompt,
+            self.settings_manager.generator.negative_prompt
+        )
 
     def import_image(self):
         file_path, _ = self.display_import_image_dialog(
