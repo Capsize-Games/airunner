@@ -7,15 +7,9 @@
    <rect>
     <x>0</x>
     <y>0</y>
-    <width>1238</width>
-    <height>866</height>
+    <width>1092</width>
+    <height>817</height>
    </rect>
-  </property>
-  <property name="sizePolicy">
-   <sizepolicy hsizetype="MinimumExpanding" vsizetype="Preferred">
-    <horstretch>0</horstretch>
-    <verstretch>0</verstretch>
-   </sizepolicy>
   </property>
   <property name="minimumSize">
    <size>
@@ -34,6 +28,9 @@
   <property name="windowIcon">
    <iconset resource="../../../resources.qrc">
     <normaloff>:/icons/icon_256.png</normaloff>:/icons/icon_256.png</iconset>
+  </property>
+  <property name="styleSheet">
+   <string notr="true"/>
   </property>
   <widget class="QWidget" name="centralwidget">
    <property name="enabled">
@@ -232,6 +229,13 @@
         </widget>
        </item>
        <item>
+        <widget class="Line" name="line_2">
+         <property name="orientation">
+          <enum>Qt::Vertical</enum>
+         </property>
+        </widget>
+       </item>
+       <item>
         <widget class="QPushButton" name="undo_button">
          <property name="sizePolicy">
           <sizepolicy hsizetype="Expanding" vsizetype="Expanding">
@@ -316,6 +320,13 @@
          </property>
          <property name="flat">
           <bool>true</bool>
+         </property>
+        </widget>
+       </item>
+       <item>
+        <widget class="Line" name="line_3">
+         <property name="orientation">
+          <enum>Qt::Vertical</enum>
          </property>
         </widget>
        </item>
@@ -482,6 +493,9 @@
        <enum>Qt::Vertical</enum>
       </property>
       <widget class="QSplitter" name="content_splitter">
+       <property name="styleSheet">
+        <string notr="true"/>
+       </property>
        <property name="orientation">
         <enum>Qt::Horizontal</enum>
        </property>
@@ -617,6 +631,9 @@
              <height>35</height>
             </size>
            </property>
+           <property name="cursor">
+            <cursorShape>PointingHandCursor</cursorShape>
+           </property>
            <property name="text">
             <string/>
            </property>
@@ -651,6 +668,9 @@
              <width>35</width>
              <height>35</height>
             </size>
+           </property>
+           <property name="cursor">
+            <cursorShape>PointingHandCursor</cursorShape>
            </property>
            <property name="text">
             <string/>
@@ -687,6 +707,9 @@
              <height>35</height>
             </size>
            </property>
+           <property name="cursor">
+            <cursorShape>PointingHandCursor</cursorShape>
+           </property>
            <property name="text">
             <string/>
            </property>
@@ -709,6 +732,13 @@
           </widget>
          </item>
          <item>
+          <widget class="Line" name="line">
+           <property name="orientation">
+            <enum>Qt::Horizontal</enum>
+           </property>
+          </widget>
+         </item>
+         <item>
           <widget class="QPushButton" name="toggle_grid_button">
            <property name="sizePolicy">
             <sizepolicy hsizetype="Fixed" vsizetype="Fixed">
@@ -721,6 +751,9 @@
              <width>35</width>
              <height>35</height>
             </size>
+           </property>
+           <property name="cursor">
+            <cursorShape>PointingHandCursor</cursorShape>
            </property>
            <property name="text">
             <string/>
@@ -757,6 +790,9 @@
              <height>35</height>
             </size>
            </property>
+           <property name="cursor">
+            <cursorShape>PointingHandCursor</cursorShape>
+           </property>
            <property name="text">
             <string/>
            </property>
@@ -788,6 +824,9 @@
              <width>35</width>
              <height>35</height>
             </size>
+           </property>
+           <property name="cursor">
+            <cursorShape>PointingHandCursor</cursorShape>
            </property>
            <property name="text">
             <string/>
@@ -823,6 +862,9 @@
              <width>35</width>
              <height>35</height>
             </size>
+           </property>
+           <property name="cursor">
+            <cursorShape>PointingHandCursor</cursorShape>
            </property>
            <property name="text">
             <string/>
@@ -865,7 +907,7 @@
        <property name="currentIndex">
         <number>0</number>
        </property>
-       <widget class="QWidget" name="tab_3">
+       <widget class="QWidget" name="bottom_panel_tab_1">
         <attribute name="title">
          <string>Model Manager</string>
         </attribute>
@@ -875,7 +917,7 @@
          </item>
         </layout>
        </widget>
-       <widget class="QWidget" name="tab_4">
+       <widget class="QWidget" name="bottom_panel_tab_2">
         <attribute name="title">
          <string>Prompt Builder</string>
         </attribute>
@@ -895,7 +937,7 @@
     <rect>
      <x>0</x>
      <y>0</y>
-     <width>1238</width>
+     <width>1092</width>
      <height>22</height>
     </rect>
    </property>
@@ -1001,16 +1043,15 @@
      <addaction name="actionDepth2img_Models"/>
      <addaction name="actionPix2pix"/>
      <addaction name="actionUpscale"/>
-     <addaction name="actionSuperresolution"/>
      <addaction name="actionTxt2vid"/>
     </widget>
     <addaction name="actionHuggingface_Cache_manager"/>
     <addaction name="actionBrowse_AI_Runner_Path"/>
     <addaction name="menuBrowse_Models_Path"/>
     <addaction name="separator"/>
-    <addaction name="actionBrowser_Images_Path"/>
+    <addaction name="actionBrowse_Images_Path_2"/>
     <addaction name="actionBrowse_Videos_Path"/>
-    <addaction name="actionBrowse_Models_Path"/>
+    <addaction name="actionBrowse_Gifs_Path"/>
     <addaction name="separator"/>
    </widget>
    <addaction name="menuFile"/>
@@ -1023,17 +1064,6 @@
    <addaction name="menuAbout"/>
   </widget>
   <widget class="QStatusBar" name="statusbar"/>
-  <widget class="QToolBar" name="messages">
-   <property name="windowTitle">
-    <string>toolBar</string>
-   </property>
-   <attribute name="toolBarArea">
-    <enum>BottomToolBarArea</enum>
-   </attribute>
-   <attribute name="toolBarBreak">
-    <bool>false</bool>
-   </attribute>
-  </widget>
   <action name="actionNew">
    <property name="text">
     <string>New</string>
@@ -1558,9 +1588,9 @@
     <string>Browse Images Path</string>
    </property>
   </action>
-  <action name="actionBrowser_Images_Path">
+  <action name="actionBrowse_Images_Path_2">
    <property name="text">
-    <string>Browser Images</string>
+    <string>Browse Images</string>
    </property>
   </action>
   <action name="actionBrowse_Videos_Path">
@@ -1568,7 +1598,7 @@
     <string>Browse Videos</string>
    </property>
   </action>
-  <action name="actionBrowse_Models_Path">
+  <action name="actionBrowse_Gifs_Path">
    <property name="text">
     <string>Browse GIFs</string>
    </property>
@@ -1880,8 +1910,8 @@
    <slot>action_toggle_grid(bool)</slot>
    <hints>
     <hint type="sourcelabel">
-     <x>1167</x>
-     <y>243</y>
+     <x>1044</x>
+     <y>252</y>
     </hint>
     <hint type="destinationlabel">
      <x>775</x>
@@ -1896,7 +1926,7 @@
    <slot>action_toggle_brush(bool)</slot>
    <hints>
     <hint type="sourcelabel">
-     <x>1167</x>
+     <x>1044</x>
      <y>161</y>
     </hint>
     <hint type="destinationlabel">
@@ -1912,7 +1942,7 @@
    <slot>action_toggle_active_grid_area(bool)</slot>
    <hints>
     <hint type="sourcelabel">
-     <x>1167</x>
+     <x>1044</x>
      <y>120</y>
     </hint>
     <hint type="destinationlabel">
@@ -1928,7 +1958,7 @@
    <slot>action_toggle_eraser(bool)</slot>
    <hints>
     <hint type="sourcelabel">
-     <x>1167</x>
+     <x>1044</x>
      <y>202</y>
     </hint>
     <hint type="destinationlabel">
@@ -1944,8 +1974,8 @@
    <slot>action_focus_button_triggered()</slot>
    <hints>
     <hint type="sourcelabel">
-     <x>1167</x>
-     <y>284</y>
+     <x>1044</x>
+     <y>293</y>
     </hint>
     <hint type="destinationlabel">
      <x>775</x>
@@ -1960,8 +1990,8 @@
    <slot>action_show_settings()</slot>
    <hints>
     <hint type="sourcelabel">
-     <x>1167</x>
-     <y>366</y>
+     <x>1044</x>
+     <y>375</y>
     </hint>
     <hint type="destinationlabel">
      <x>775</x>
@@ -2073,7 +2103,7 @@
    <hints>
     <hint type="sourcelabel">
      <x>292</x>
-     <y>798</y>
+     <y>794</y>
     </hint>
     <hint type="destinationlabel">
      <x>658</x>
@@ -2200,8 +2230,8 @@
    <slot>action_toggle_nsfw_filter_triggered(bool)</slot>
    <hints>
     <hint type="sourcelabel">
-     <x>1167</x>
-     <y>325</y>
+     <x>1044</x>
+     <y>334</y>
     </hint>
     <hint type="destinationlabel">
      <x>1105</x>
@@ -2449,6 +2479,150 @@
     </hint>
    </hints>
   </connection>
+  <connection>
+   <sender>actionBrowse_Images_Path_2</sender>
+   <signal>triggered()</signal>
+   <receiver>MainWindow</receiver>
+   <slot>action_show_images_path()</slot>
+   <hints>
+    <hint type="sourcelabel">
+     <x>-1</x>
+     <y>-1</y>
+    </hint>
+    <hint type="destinationlabel">
+     <x>545</x>
+     <y>408</y>
+    </hint>
+   </hints>
+  </connection>
+  <connection>
+   <sender>actionBrowse_Videos_Path</sender>
+   <signal>triggered()</signal>
+   <receiver>MainWindow</receiver>
+   <slot>action_show_videos_path()</slot>
+   <hints>
+    <hint type="sourcelabel">
+     <x>-1</x>
+     <y>-1</y>
+    </hint>
+    <hint type="destinationlabel">
+     <x>545</x>
+     <y>408</y>
+    </hint>
+   </hints>
+  </connection>
+  <connection>
+   <sender>actionBrowse_Gifs_Path</sender>
+   <signal>triggered()</signal>
+   <receiver>MainWindow</receiver>
+   <slot>action_show_gifs_path()</slot>
+   <hints>
+    <hint type="sourcelabel">
+     <x>-1</x>
+     <y>-1</y>
+    </hint>
+    <hint type="destinationlabel">
+     <x>545</x>
+     <y>408</y>
+    </hint>
+   </hints>
+  </connection>
+  <connection>
+   <sender>actionTxt2img_Img2img_Models</sender>
+   <signal>triggered()</signal>
+   <receiver>MainWindow</receiver>
+   <slot>action_show_model_path_txt2img()</slot>
+   <hints>
+    <hint type="sourcelabel">
+     <x>-1</x>
+     <y>-1</y>
+    </hint>
+    <hint type="destinationlabel">
+     <x>545</x>
+     <y>408</y>
+    </hint>
+   </hints>
+  </connection>
+  <connection>
+   <sender>actionDepth2img_Models</sender>
+   <signal>triggered()</signal>
+   <receiver>MainWindow</receiver>
+   <slot>action_show_model_path_depth2img()</slot>
+   <hints>
+    <hint type="sourcelabel">
+     <x>-1</x>
+     <y>-1</y>
+    </hint>
+    <hint type="destinationlabel">
+     <x>545</x>
+     <y>408</y>
+    </hint>
+   </hints>
+  </connection>
+  <connection>
+   <sender>actionInpaint_Outpaint_Models</sender>
+   <signal>triggered()</signal>
+   <receiver>MainWindow</receiver>
+   <slot>action_show_model_path_inpaint()</slot>
+   <hints>
+    <hint type="sourcelabel">
+     <x>-1</x>
+     <y>-1</y>
+    </hint>
+    <hint type="destinationlabel">
+     <x>545</x>
+     <y>408</y>
+    </hint>
+   </hints>
+  </connection>
+  <connection>
+   <sender>actionPix2pix</sender>
+   <signal>triggered()</signal>
+   <receiver>MainWindow</receiver>
+   <slot>action_show_model_path_pix2pix()</slot>
+   <hints>
+    <hint type="sourcelabel">
+     <x>-1</x>
+     <y>-1</y>
+    </hint>
+    <hint type="destinationlabel">
+     <x>545</x>
+     <y>408</y>
+    </hint>
+   </hints>
+  </connection>
+  <connection>
+   <sender>actionUpscale</sender>
+   <signal>triggered()</signal>
+   <receiver>MainWindow</receiver>
+   <slot>action_show_model_path_upscale()</slot>
+   <hints>
+    <hint type="sourcelabel">
+     <x>-1</x>
+     <y>-1</y>
+    </hint>
+    <hint type="destinationlabel">
+     <x>545</x>
+     <y>408</y>
+    </hint>
+   </hints>
+  </connection>
+  <connection>
+   <sender>actionTxt2vid</sender>
+   <signal>triggered()</signal>
+   <receiver>MainWindow</receiver>
+   <slot>action_show_model_path_txt2vid()</slot>
+   <hints>
+    <hint type="sourcelabel">
+     <x>-1</x>
+     <y>-1</y>
+    </hint>
+    <hint type="destinationlabel">
+     <x>545</x>
+     <y>408</y>
+    </hint>
+   </hints>
+  </connection>
  </connections>
  <designerdata>
   <property name="gridDeltaX">
@@ -2514,5 +2688,15 @@
   <slot>action_show_image_interpolation_triggered()</slot>
   <slot>action_clear_all_prompts_triggered()</slot>
   <slot>action_triggered_browse_ai_runner_path()</slot>
+  <slot>action_show_images_path()</slot>
+  <slot>action_show_gifs_path()</slot>
+  <slot>action_show_videos_path()</slot>
+  <slot>action_show_model_path_txt2img()</slot>
+  <slot>action_show_model_path_inpaint()</slot>
+  <slot>action_show_model_path_depth2img()</slot>
+  <slot>action_show_model_path_pix2pix()</slot>
+  <slot>action_show_model_path_upscale()</slot>
+  <slot>action_show_model_path_supersample()</slot>
+  <slot>action_show_model_path_txt2vid()</slot>
  </slots>
 </ui>
