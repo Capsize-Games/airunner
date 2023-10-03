@@ -28,9 +28,8 @@ from airunner.input_event_manager import InputEventManager
 from airunner.mixins.history_mixin import HistoryMixin
 from airunner.settings import BASE_PATH
 from airunner.widgets.status.status_widget import StatusWidget
-from airunner.windows.main.templates.main_window_new_ui import Ui_MainWindow
+from airunner.windows.main.templates.main_window_ui import Ui_MainWindow
 from airunner.widgets.embeddings.embedding_widget import EmbeddingWidget
-from airunner.themes import Themes
 from airunner.windows.about.about import AboutWindow
 from airunner.windows.settings.airunner_settings import SettingsWindow
 from airunner.windows.deterministic_generation.deterministic_generation_window import DeterministicGenerationWindow
@@ -331,7 +330,7 @@ class MainWindow(
         # create paths if they do not exist
         create_airunner_paths()
 
-        self.ui.layer_widget.initialize()
+        #self.ui.layer_widget.initialize()
 
         self.ui.toggle_grid_button.setChecked(self.settings_manager.grid_settings.show_grid)
         self.ui.safety_checker_button.setChecked(self.settings_manager.nsfw_filter)
@@ -339,6 +338,8 @@ class MainWindow(
         self.ui.width_slider_widget.initialize()
         self.ui.height_slider_widget.initialize()
         self.ui.brush_size_slider.initialize()
+
+        self.ui.layer_widget.initialize()
 
     def quick_export(self):
         if os.path.isdir(self.image_path) is False:
@@ -396,9 +397,6 @@ class MainWindow(
 
     def action_rotate_90_counterclockwise_triggered(self):
         self.canvas.rotate_90_counterclockwise()
-
-    def action_save_prompt_triggered(self):
-        self.save_prompt()
 
     def action_show_prompt_browser_triggered(self):
         self.show_prompt_browser()
@@ -724,7 +722,10 @@ class MainWindow(
         # )
         self.initialize_default_buttons()
         self.generator_tab_widget.initialize()
-        self.prompt_builder.process_prompt()
+        try:
+            self.prompt_builder.process_prompt()
+        except AttributeError:
+            pass
         self.connect_signals()
         self.initialize_filter_actions()
 
@@ -1377,12 +1378,6 @@ class MainWindow(
 
     def show_prompt_browser(self):
         PromptBrowser(settings_manager=self.settings_manager, app=self)
-
-    def save_prompt(self):
-        self.settings_manager.create_saved_prompt(
-            self.settings_manager.generator.prompt,
-            self.settings_manager.generator.negative_prompt
-        )
 
     def import_image(self):
         file_path, _ = self.display_import_image_dialog(

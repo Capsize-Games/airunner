@@ -7,15 +7,9 @@
    <rect>
     <x>0</x>
     <y>0</y>
-    <width>1221</width>
-    <height>723</height>
+    <width>960</width>
+    <height>729</height>
    </rect>
-  </property>
-  <property name="sizePolicy">
-   <sizepolicy hsizetype="MinimumExpanding" vsizetype="Preferred">
-    <horstretch>0</horstretch>
-    <verstretch>0</verstretch>
-   </sizepolicy>
   </property>
   <property name="minimumSize">
    <size>
@@ -31,7 +25,17 @@
   <property name="windowTitle">
    <string>AI Runner</string>
   </property>
+  <property name="windowIcon">
+   <iconset resource="../../../resources.qrc">
+    <normaloff>:/icons/icon_256.png</normaloff>:/icons/icon_256.png</iconset>
+  </property>
+  <property name="styleSheet">
+   <string notr="true"/>
+  </property>
   <widget class="QWidget" name="centralwidget">
+   <property name="enabled">
+    <bool>true</bool>
+   </property>
    <property name="sizePolicy">
     <sizepolicy hsizetype="MinimumExpanding" vsizetype="MinimumExpanding">
      <horstretch>0</horstretch>
@@ -47,14 +51,972 @@
    <property name="layoutDirection">
     <enum>Qt::LeftToRight</enum>
    </property>
-   <layout class="QGridLayout" name="gridLayout_2"/>
+   <layout class="QGridLayout" name="gridLayout_6">
+    <item row="0" column="0">
+     <widget class="QFrame" name="header_widget">
+      <property name="enabled">
+       <bool>true</bool>
+      </property>
+      <property name="maximumSize">
+       <size>
+        <width>16777215</width>
+        <height>48</height>
+       </size>
+      </property>
+      <property name="frameShape">
+       <enum>QFrame::NoFrame</enum>
+      </property>
+      <property name="frameShadow">
+       <enum>QFrame::Sunken</enum>
+      </property>
+      <layout class="QHBoxLayout" name="horizontalLayout">
+       <property name="spacing">
+        <number>0</number>
+       </property>
+       <property name="leftMargin">
+        <number>0</number>
+       </property>
+       <property name="topMargin">
+        <number>0</number>
+       </property>
+       <property name="rightMargin">
+        <number>0</number>
+       </property>
+       <property name="bottomMargin">
+        <number>0</number>
+       </property>
+       <item>
+        <widget class="QScrollArea" name="scrollArea_3">
+         <property name="verticalScrollBarPolicy">
+          <enum>Qt::ScrollBarAlwaysOff</enum>
+         </property>
+         <property name="horizontalScrollBarPolicy">
+          <enum>Qt::ScrollBarAsNeeded</enum>
+         </property>
+         <property name="widgetResizable">
+          <bool>true</bool>
+         </property>
+         <widget class="QWidget" name="scrollAreaWidgetContents_3">
+          <property name="geometry">
+           <rect>
+            <x>0</x>
+            <y>0</y>
+            <width>940</width>
+            <height>46</height>
+           </rect>
+          </property>
+          <layout class="QHBoxLayout" name="horizontalLayout_2">
+           <property name="leftMargin">
+            <number>0</number>
+           </property>
+           <property name="topMargin">
+            <number>0</number>
+           </property>
+           <property name="rightMargin">
+            <number>0</number>
+           </property>
+           <property name="bottomMargin">
+            <number>0</number>
+           </property>
+           <item>
+            <widget class="QPushButton" name="file_new_button">
+             <property name="minimumSize">
+              <size>
+               <width>36</width>
+               <height>36</height>
+              </size>
+             </property>
+             <property name="maximumSize">
+              <size>
+               <width>24</width>
+               <height>36</height>
+              </size>
+             </property>
+             <property name="text">
+              <string/>
+             </property>
+             <property name="icon">
+              <iconset theme="document-new">
+               <normaloff>.</normaloff>.</iconset>
+             </property>
+             <property name="iconSize">
+              <size>
+               <width>24</width>
+               <height>24</height>
+              </size>
+             </property>
+             <property name="flat">
+              <bool>true</bool>
+             </property>
+            </widget>
+           </item>
+           <item>
+            <widget class="QPushButton" name="open_button">
+             <property name="minimumSize">
+              <size>
+               <width>36</width>
+               <height>36</height>
+              </size>
+             </property>
+             <property name="maximumSize">
+              <size>
+               <width>24</width>
+               <height>36</height>
+              </size>
+             </property>
+             <property name="text">
+              <string/>
+             </property>
+             <property name="icon">
+              <iconset theme="document-open">
+               <normaloff>../../src/icons/034-folder.png</normaloff>../../src/icons/034-folder.png</iconset>
+             </property>
+             <property name="iconSize">
+              <size>
+               <width>24</width>
+               <height>24</height>
+              </size>
+             </property>
+             <property name="flat">
+              <bool>true</bool>
+             </property>
+            </widget>
+           </item>
+           <item>
+            <widget class="QPushButton" name="save_button">
+             <property name="minimumSize">
+              <size>
+               <width>36</width>
+               <height>36</height>
+              </size>
+             </property>
+             <property name="maximumSize">
+              <size>
+               <width>24</width>
+               <height>36</height>
+              </size>
+             </property>
+             <property name="text">
+              <string/>
+             </property>
+             <property name="icon">
+              <iconset theme="document-save">
+               <normaloff>../../src/icons/033-diskette.png</normaloff>../../src/icons/033-diskette.png</iconset>
+             </property>
+             <property name="iconSize">
+              <size>
+               <width>24</width>
+               <height>24</height>
+              </size>
+             </property>
+             <property name="flat">
+              <bool>true</bool>
+             </property>
+            </widget>
+           </item>
+           <item>
+            <widget class="QPushButton" name="export_button">
+             <property name="minimumSize">
+              <size>
+               <width>36</width>
+               <height>36</height>
+              </size>
+             </property>
+             <property name="maximumSize">
+              <size>
+               <width>24</width>
+               <height>36</height>
+              </size>
+             </property>
+             <property name="toolTip">
+              <string>Fast Export Image</string>
+             </property>
+             <property name="text">
+              <string/>
+             </property>
+             <property name="icon">
+              <iconset theme="document-send">
+               <normaloff>../../src/icons/export.png</normaloff>../../src/icons/export.png</iconset>
+             </property>
+             <property name="iconSize">
+              <size>
+               <width>24</width>
+               <height>24</height>
+              </size>
+             </property>
+             <property name="flat">
+              <bool>true</bool>
+             </property>
+            </widget>
+           </item>
+           <item>
+            <widget class="Line" name="line_2">
+             <property name="orientation">
+              <enum>Qt::Vertical</enum>
+             </property>
+            </widget>
+           </item>
+           <item>
+            <widget class="QPushButton" name="undo_button">
+             <property name="sizePolicy">
+              <sizepolicy hsizetype="Expanding" vsizetype="Expanding">
+               <horstretch>0</horstretch>
+               <verstretch>0</verstretch>
+              </sizepolicy>
+             </property>
+             <property name="minimumSize">
+              <size>
+               <width>36</width>
+               <height>36</height>
+              </size>
+             </property>
+             <property name="maximumSize">
+              <size>
+               <width>24</width>
+               <height>36</height>
+              </size>
+             </property>
+             <property name="toolTip">
+              <string>Undo</string>
+             </property>
+             <property name="styleSheet">
+              <string notr="true">border-color: rgb(61, 56, 70);</string>
+             </property>
+             <property name="text">
+              <string/>
+             </property>
+             <property name="icon">
+              <iconset theme="edit-undo">
+               <normaloff>.</normaloff>.</iconset>
+             </property>
+             <property name="iconSize">
+              <size>
+               <width>24</width>
+               <height>24</height>
+              </size>
+             </property>
+             <property name="flat">
+              <bool>true</bool>
+             </property>
+            </widget>
+           </item>
+           <item>
+            <widget class="QPushButton" name="redo_button">
+             <property name="sizePolicy">
+              <sizepolicy hsizetype="Expanding" vsizetype="Expanding">
+               <horstretch>0</horstretch>
+               <verstretch>0</verstretch>
+              </sizepolicy>
+             </property>
+             <property name="minimumSize">
+              <size>
+               <width>36</width>
+               <height>36</height>
+              </size>
+             </property>
+             <property name="maximumSize">
+              <size>
+               <width>24</width>
+               <height>36</height>
+              </size>
+             </property>
+             <property name="toolTip">
+              <string>Redo</string>
+             </property>
+             <property name="styleSheet">
+              <string notr="true">border-color: rgb(61, 56, 70);</string>
+             </property>
+             <property name="text">
+              <string/>
+             </property>
+             <property name="icon">
+              <iconset theme="edit-redo">
+               <normaloff>../../src/icons/008-redo.png</normaloff>../../src/icons/008-redo.png</iconset>
+             </property>
+             <property name="iconSize">
+              <size>
+               <width>24</width>
+               <height>24</height>
+              </size>
+             </property>
+             <property name="flat">
+              <bool>true</bool>
+             </property>
+            </widget>
+           </item>
+           <item>
+            <widget class="Line" name="line_3">
+             <property name="orientation">
+              <enum>Qt::Vertical</enum>
+             </property>
+            </widget>
+           </item>
+           <item>
+            <spacer name="horizontalSpacer_2">
+             <property name="minimumSize">
+              <size>
+               <width>0</width>
+               <height>36</height>
+              </size>
+             </property>
+             <property name="maximumSize">
+              <size>
+               <width>16777215</width>
+               <height>36</height>
+              </size>
+             </property>
+             <property name="orientation">
+              <enum>Qt::Horizontal</enum>
+             </property>
+             <property name="sizeHint" stdset="0">
+              <size>
+               <width>40</width>
+               <height>20</height>
+              </size>
+             </property>
+            </spacer>
+           </item>
+           <item>
+            <widget class="SliderWidget" name="width_slider_widget" native="true">
+             <property name="label_text" stdset="0">
+              <string>Active Grid Width</string>
+             </property>
+             <property name="slider_minimum" stdset="0">
+              <number>64</number>
+             </property>
+             <property name="slider_maximum" stdset="0">
+              <number>4096</number>
+             </property>
+             <property name="spinbox_minimum" stdset="0">
+              <number>64</number>
+             </property>
+             <property name="spinbox_maximum" stdset="0">
+              <number>4096</number>
+             </property>
+             <property name="slider_tick_interval" stdset="0">
+              <number>64</number>
+             </property>
+             <property name="slider_single_step" stdset="0">
+              <number>64</number>
+             </property>
+             <property name="slider_page_step" stdset="0">
+              <number>64</number>
+             </property>
+             <property name="spinbox_single_step" stdset="0">
+              <number>64</number>
+             </property>
+             <property name="spinbox_page_step" stdset="0">
+              <number>64</number>
+             </property>
+             <property name="slider_callback" stdset="0">
+              <string notr="true">size_slider_changed_callback</string>
+             </property>
+             <property name="settings_property" stdset="0">
+              <string notr="true">working_width</string>
+             </property>
+             <property name="display_as_float" stdset="0">
+              <bool>false</bool>
+             </property>
+            </widget>
+           </item>
+           <item>
+            <widget class="SliderWidget" name="height_slider_widget" native="true">
+             <property name="slider_minimum" stdset="0">
+              <number>64</number>
+             </property>
+             <property name="slider_maximum" stdset="0">
+              <number>4096</number>
+             </property>
+             <property name="spinbox_minimum" stdset="0">
+              <number>64</number>
+             </property>
+             <property name="spinbox_maximum" stdset="0">
+              <number>4096</number>
+             </property>
+             <property name="slider_tick_interval" stdset="0">
+              <number>64</number>
+             </property>
+             <property name="slider_single_step" stdset="0">
+              <number>64</number>
+             </property>
+             <property name="slider_page_step" stdset="0">
+              <number>64</number>
+             </property>
+             <property name="spinbox_single_step" stdset="0">
+              <number>64</number>
+             </property>
+             <property name="spinbox_page_step" stdset="0">
+              <number>64</number>
+             </property>
+             <property name="label_text" stdset="0">
+              <string>Active Grid Height</string>
+             </property>
+             <property name="slider_callback" stdset="0">
+              <string notr="true">size_slider_changed_callback</string>
+             </property>
+             <property name="settings_property" stdset="0">
+              <string>working_height</string>
+             </property>
+             <property name="display_as_float" stdset="0">
+              <bool>false</bool>
+             </property>
+            </widget>
+           </item>
+           <item>
+            <widget class="SliderWidget" name="brush_size_slider" native="true">
+             <property name="slider_minimum" stdset="0">
+              <number>1</number>
+             </property>
+             <property name="slider_maximum" stdset="0">
+              <number>100</number>
+             </property>
+             <property name="spinbox_minimum" stdset="0">
+              <number>1</number>
+             </property>
+             <property name="spinbox_maximum" stdset="0">
+              <number>100</number>
+             </property>
+             <property name="slider_tick_interval" stdset="0">
+              <number>1</number>
+             </property>
+             <property name="slider_single_step" stdset="0">
+              <number>1</number>
+             </property>
+             <property name="slider_page_step" stdset="0">
+              <number>10</number>
+             </property>
+             <property name="spinbox_single_step" stdset="0">
+              <number>1</number>
+             </property>
+             <property name="spinbox_page_step" stdset="0">
+              <number>10</number>
+             </property>
+             <property name="label_text" stdset="0">
+              <string>Brush Size</string>
+             </property>
+             <property name="slider_callback" stdset="0">
+              <string notr="true">size_slider_changed_callback</string>
+             </property>
+             <property name="settings_property" stdset="0">
+              <string notr="true">mask_brush_size</string>
+             </property>
+             <property name="display_as_float" stdset="0">
+              <bool>false</bool>
+             </property>
+            </widget>
+           </item>
+          </layout>
+         </widget>
+        </widget>
+       </item>
+      </layout>
+     </widget>
+    </item>
+    <item row="1" column="0">
+     <widget class="QSplitter" name="main_splitter">
+      <property name="orientation">
+       <enum>Qt::Vertical</enum>
+      </property>
+      <widget class="QSplitter" name="content_splitter">
+       <property name="orientation">
+        <enum>Qt::Horizontal</enum>
+       </property>
+       <widget class="GeneratorTabWidget" name="generator_widget" native="true"/>
+       <widget class="QSplitter" name="center_splitter">
+        <property name="minimumSize">
+         <size>
+          <width>0</width>
+          <height>0</height>
+         </size>
+        </property>
+        <property name="orientation">
+         <enum>Qt::Vertical</enum>
+        </property>
+        <widget class="QFrame" name="canvas_frame">
+         <property name="minimumSize">
+          <size>
+           <width>0</width>
+           <height>0</height>
+          </size>
+         </property>
+         <property name="frameShape">
+          <enum>QFrame::StyledPanel</enum>
+         </property>
+         <property name="frameShadow">
+          <enum>QFrame::Raised</enum>
+         </property>
+         <layout class="QGridLayout" name="gridLayout_5">
+          <property name="leftMargin">
+           <number>0</number>
+          </property>
+          <property name="topMargin">
+           <number>0</number>
+          </property>
+          <property name="rightMargin">
+           <number>0</number>
+          </property>
+          <property name="bottomMargin">
+           <number>0</number>
+          </property>
+          <item row="0" column="0">
+           <widget class="CanvasWidget" name="canvas_widget" native="true"/>
+          </item>
+         </layout>
+        </widget>
+       </widget>
+       <widget class="QScrollArea" name="scrollArea">
+        <property name="widgetResizable">
+         <bool>true</bool>
+        </property>
+        <widget class="QWidget" name="scrollAreaWidgetContents">
+         <property name="geometry">
+          <rect>
+           <x>0</x>
+           <y>0</y>
+           <width>564</width>
+           <height>508</height>
+          </rect>
+         </property>
+         <layout class="QGridLayout" name="gridLayout">
+          <item row="0" column="0">
+           <widget class="QSplitter" name="splitter">
+            <property name="orientation">
+             <enum>Qt::Vertical</enum>
+            </property>
+            <widget class="QTabWidget" name="tool_tab_widget">
+             <property name="currentIndex">
+              <number>0</number>
+             </property>
+             <widget class="QWidget" name="tab_embeddings">
+              <attribute name="title">
+               <string>Embeddings</string>
+              </attribute>
+              <layout class="QGridLayout" name="gridLayout_9">
+               <item row="0" column="0">
+                <widget class="EmbeddingsContainerWidget" name="embeddings_container_widget" native="true"/>
+               </item>
+              </layout>
+             </widget>
+             <widget class="QWidget" name="tab_lora">
+              <attribute name="title">
+               <string>LoRA</string>
+              </attribute>
+              <layout class="QGridLayout" name="gridLayout_7">
+               <item row="0" column="0">
+                <widget class="LoraContainerWidget" name="lora_container_widget" native="true"/>
+               </item>
+              </layout>
+             </widget>
+             <widget class="QWidget" name="tab_pen_color">
+              <attribute name="title">
+               <string>Pen</string>
+              </attribute>
+              <layout class="QGridLayout" name="gridLayout_8">
+               <item row="0" column="0">
+                <widget class="BrushContainerWidget" name="brush_container_widget" native="true"/>
+               </item>
+              </layout>
+             </widget>
+            </widget>
+            <widget class="DeterministicWidget" name="deterministic_panel_widget" native="true"/>
+            <widget class="BatchWidget" name="batch_container_widget" native="true"/>
+            <widget class="QFrame" name="layer_frame">
+             <property name="frameShape">
+              <enum>QFrame::StyledPanel</enum>
+             </property>
+             <property name="frameShadow">
+              <enum>QFrame::Raised</enum>
+             </property>
+             <layout class="QGridLayout" name="gridLayout_2">
+              <item row="0" column="0">
+               <widget class="LayerContainerWidget" name="layer_widget" native="true"/>
+              </item>
+             </layout>
+            </widget>
+           </widget>
+          </item>
+         </layout>
+        </widget>
+       </widget>
+       <widget class="QFrame" name="button_menu">
+        <property name="minimumSize">
+         <size>
+          <width>55</width>
+          <height>0</height>
+         </size>
+        </property>
+        <property name="maximumSize">
+         <size>
+          <width>55</width>
+          <height>16777215</height>
+         </size>
+        </property>
+        <property name="frameShape">
+         <enum>QFrame::NoFrame</enum>
+        </property>
+        <property name="frameShadow">
+         <enum>QFrame::Raised</enum>
+        </property>
+        <layout class="QVBoxLayout" name="verticalLayout">
+         <property name="leftMargin">
+          <number>0</number>
+         </property>
+         <property name="topMargin">
+          <number>0</number>
+         </property>
+         <property name="rightMargin">
+          <number>0</number>
+         </property>
+         <property name="bottomMargin">
+          <number>0</number>
+         </property>
+         <item>
+          <widget class="QScrollArea" name="scrollArea_2">
+           <property name="widgetResizable">
+            <bool>true</bool>
+           </property>
+           <widget class="QWidget" name="scrollAreaWidgetContents_2">
+            <property name="geometry">
+             <rect>
+              <x>0</x>
+              <y>0</y>
+              <width>53</width>
+              <height>508</height>
+             </rect>
+            </property>
+            <layout class="QVBoxLayout" name="verticalLayout_2">
+             <item>
+              <widget class="QPushButton" name="toggle_active_grid_area_button">
+               <property name="sizePolicy">
+                <sizepolicy hsizetype="Fixed" vsizetype="Fixed">
+                 <horstretch>0</horstretch>
+                 <verstretch>0</verstretch>
+                </sizepolicy>
+               </property>
+               <property name="minimumSize">
+                <size>
+                 <width>35</width>
+                 <height>35</height>
+                </size>
+               </property>
+               <property name="cursor">
+                <cursorShape>PointingHandCursor</cursorShape>
+               </property>
+               <property name="text">
+                <string/>
+               </property>
+               <property name="icon">
+                <iconset resource="../../../resources.qrc">
+                 <normaloff>:/icons/038-drag-light.png</normaloff>:/icons/038-drag-light.png</iconset>
+               </property>
+               <property name="iconSize">
+                <size>
+                 <width>18</width>
+                 <height>18</height>
+                </size>
+               </property>
+               <property name="checkable">
+                <bool>true</bool>
+               </property>
+               <property name="flat">
+                <bool>true</bool>
+               </property>
+              </widget>
+             </item>
+             <item>
+              <widget class="QPushButton" name="toggle_brush_button">
+               <property name="sizePolicy">
+                <sizepolicy hsizetype="Fixed" vsizetype="Fixed">
+                 <horstretch>0</horstretch>
+                 <verstretch>0</verstretch>
+                </sizepolicy>
+               </property>
+               <property name="minimumSize">
+                <size>
+                 <width>35</width>
+                 <height>35</height>
+                </size>
+               </property>
+               <property name="cursor">
+                <cursorShape>PointingHandCursor</cursorShape>
+               </property>
+               <property name="text">
+                <string/>
+               </property>
+               <property name="icon">
+                <iconset resource="../../../resources.qrc">
+                 <normaloff>:/icons/011-pencil-light.png</normaloff>:/icons/011-pencil-light.png</iconset>
+               </property>
+               <property name="iconSize">
+                <size>
+                 <width>18</width>
+                 <height>18</height>
+                </size>
+               </property>
+               <property name="checkable">
+                <bool>true</bool>
+               </property>
+               <property name="flat">
+                <bool>true</bool>
+               </property>
+              </widget>
+             </item>
+             <item>
+              <widget class="QPushButton" name="toggle_eraser_button">
+               <property name="sizePolicy">
+                <sizepolicy hsizetype="Fixed" vsizetype="Fixed">
+                 <horstretch>0</horstretch>
+                 <verstretch>0</verstretch>
+                </sizepolicy>
+               </property>
+               <property name="minimumSize">
+                <size>
+                 <width>35</width>
+                 <height>35</height>
+                </size>
+               </property>
+               <property name="cursor">
+                <cursorShape>PointingHandCursor</cursorShape>
+               </property>
+               <property name="text">
+                <string/>
+               </property>
+               <property name="icon">
+                <iconset resource="../../../resources.qrc">
+                 <normaloff>:/icons/014-eraser-light.png</normaloff>:/icons/014-eraser-light.png</iconset>
+               </property>
+               <property name="iconSize">
+                <size>
+                 <width>18</width>
+                 <height>18</height>
+                </size>
+               </property>
+               <property name="checkable">
+                <bool>true</bool>
+               </property>
+               <property name="flat">
+                <bool>true</bool>
+               </property>
+              </widget>
+             </item>
+             <item>
+              <widget class="Line" name="line">
+               <property name="orientation">
+                <enum>Qt::Horizontal</enum>
+               </property>
+              </widget>
+             </item>
+             <item>
+              <widget class="QPushButton" name="toggle_grid_button">
+               <property name="sizePolicy">
+                <sizepolicy hsizetype="Fixed" vsizetype="Fixed">
+                 <horstretch>0</horstretch>
+                 <verstretch>0</verstretch>
+                </sizepolicy>
+               </property>
+               <property name="minimumSize">
+                <size>
+                 <width>35</width>
+                 <height>35</height>
+                </size>
+               </property>
+               <property name="cursor">
+                <cursorShape>PointingHandCursor</cursorShape>
+               </property>
+               <property name="text">
+                <string/>
+               </property>
+               <property name="icon">
+                <iconset resource="../../../resources.qrc">
+                 <normaloff>:/icons/032-pixels-light.png</normaloff>:/icons/032-pixels-light.png</iconset>
+               </property>
+               <property name="iconSize">
+                <size>
+                 <width>18</width>
+                 <height>18</height>
+                </size>
+               </property>
+               <property name="checkable">
+                <bool>true</bool>
+               </property>
+               <property name="flat">
+                <bool>true</bool>
+               </property>
+              </widget>
+             </item>
+             <item>
+              <widget class="QPushButton" name="focus_button">
+               <property name="sizePolicy">
+                <sizepolicy hsizetype="Fixed" vsizetype="Fixed">
+                 <horstretch>0</horstretch>
+                 <verstretch>0</verstretch>
+                </sizepolicy>
+               </property>
+               <property name="minimumSize">
+                <size>
+                 <width>35</width>
+                 <height>35</height>
+                </size>
+               </property>
+               <property name="cursor">
+                <cursorShape>PointingHandCursor</cursorShape>
+               </property>
+               <property name="text">
+                <string/>
+               </property>
+               <property name="icon">
+                <iconset resource="../../../resources.qrc">
+                 <normaloff>:/icons/037-focus-light.png</normaloff>:/icons/037-focus-light.png</iconset>
+               </property>
+               <property name="iconSize">
+                <size>
+                 <width>18</width>
+                 <height>18</height>
+                </size>
+               </property>
+               <property name="flat">
+                <bool>true</bool>
+               </property>
+              </widget>
+             </item>
+             <item>
+              <widget class="QPushButton" name="safety_checker_button">
+               <property name="sizePolicy">
+                <sizepolicy hsizetype="Fixed" vsizetype="Fixed">
+                 <horstretch>0</horstretch>
+                 <verstretch>0</verstretch>
+                </sizepolicy>
+               </property>
+               <property name="minimumSize">
+                <size>
+                 <width>35</width>
+                 <height>35</height>
+                </size>
+               </property>
+               <property name="cursor">
+                <cursorShape>PointingHandCursor</cursorShape>
+               </property>
+               <property name="text">
+                <string/>
+               </property>
+               <property name="icon">
+                <iconset resource="../../../resources.qrc">
+                 <normaloff>:/icons/039-18-light.png</normaloff>:/icons/039-18-light.png</iconset>
+               </property>
+               <property name="iconSize">
+                <size>
+                 <width>18</width>
+                 <height>18</height>
+                </size>
+               </property>
+               <property name="checkable">
+                <bool>true</bool>
+               </property>
+               <property name="flat">
+                <bool>true</bool>
+               </property>
+              </widget>
+             </item>
+             <item>
+              <widget class="Line" name="line_4">
+               <property name="orientation">
+                <enum>Qt::Horizontal</enum>
+               </property>
+              </widget>
+             </item>
+             <item>
+              <widget class="QPushButton" name="settings_button">
+               <property name="sizePolicy">
+                <sizepolicy hsizetype="Fixed" vsizetype="Fixed">
+                 <horstretch>0</horstretch>
+                 <verstretch>0</verstretch>
+                </sizepolicy>
+               </property>
+               <property name="minimumSize">
+                <size>
+                 <width>35</width>
+                 <height>35</height>
+                </size>
+               </property>
+               <property name="cursor">
+                <cursorShape>PointingHandCursor</cursorShape>
+               </property>
+               <property name="text">
+                <string/>
+               </property>
+               <property name="icon">
+                <iconset resource="../../../resources.qrc">
+                 <normaloff>:/icons/settings-light.png</normaloff>:/icons/settings-light.png</iconset>
+               </property>
+               <property name="iconSize">
+                <size>
+                 <width>18</width>
+                 <height>18</height>
+                </size>
+               </property>
+               <property name="flat">
+                <bool>true</bool>
+               </property>
+              </widget>
+             </item>
+             <item>
+              <spacer name="verticalSpacer">
+               <property name="orientation">
+                <enum>Qt::Vertical</enum>
+               </property>
+               <property name="sizeHint" stdset="0">
+                <size>
+                 <width>20</width>
+                 <height>40</height>
+                </size>
+               </property>
+              </spacer>
+             </item>
+            </layout>
+           </widget>
+          </widget>
+         </item>
+        </layout>
+       </widget>
+      </widget>
+      <widget class="QTabWidget" name="bottom_panel_tab_widget">
+       <property name="tabPosition">
+        <enum>QTabWidget::South</enum>
+       </property>
+       <property name="currentIndex">
+        <number>0</number>
+       </property>
+       <widget class="QWidget" name="bottom_panel_tab_1">
+        <attribute name="title">
+         <string>Model Manager</string>
+        </attribute>
+        <layout class="QGridLayout" name="gridLayout_4">
+         <item row="0" column="0">
+          <widget class="ModelManagerWidget" name="model_manager" native="true"/>
+         </item>
+        </layout>
+       </widget>
+       <widget class="QWidget" name="bottom_panel_tab_2">
+        <attribute name="title">
+         <string>Prompt Builder</string>
+        </attribute>
+        <layout class="QGridLayout" name="gridLayout_3">
+         <item row="0" column="0">
+          <widget class="PromptBuilderWidget" name="prompt_builder" native="true"/>
+         </item>
+        </layout>
+       </widget>
+      </widget>
+     </widget>
+    </item>
+   </layout>
   </widget>
   <widget class="QMenuBar" name="menubar">
    <property name="geometry">
     <rect>
      <x>0</x>
      <y>0</y>
-     <width>1221</width>
+     <width>960</width>
      <height>22</height>
     </rect>
    </property>
@@ -91,7 +1053,6 @@
     <addaction name="actionClear_all_prompts"/>
     <addaction name="separator"/>
     <addaction name="actionSettings"/>
-    <addaction name="actionRun_setup_wizard"/>
    </widget>
    <widget class="QMenu" name="menuFilters">
     <property name="title">
@@ -117,7 +1078,7 @@
     <property name="title">
      <string>Tools</string>
     </property>
-    <addaction name="image_interpolation"/>
+    <addaction name="actionImage_interpolation"/>
     <addaction name="actionModel_Merger"/>
     <addaction name="separator"/>
     <addaction name="actionStableDiffusion"/>
@@ -141,24 +1102,35 @@
     <addaction name="separator"/>
     <addaction name="actionQuick_Export"/>
    </widget>
-   <widget class="QMenu" name="menuPrompts">
-    <property name="title">
-     <string>Prompts</string>
-    </property>
-    <addaction name="actionSave_prompt"/>
-    <addaction name="actionPrompt_Browser"/>
-   </widget>
    <widget class="QMenu" name="menuView">
     <property name="title">
      <string>View</string>
     </property>
+    <widget class="QMenu" name="menuBrowse_Models_Path">
+     <property name="title">
+      <string>Browse Models Paths</string>
+     </property>
+     <addaction name="actionTxt2img_Img2img_Models"/>
+     <addaction name="actionInpaint_Outpaint_Models"/>
+     <addaction name="actionDepth2img_Models"/>
+     <addaction name="actionPix2pix"/>
+     <addaction name="actionUpscale"/>
+     <addaction name="actionTxt2vid"/>
+    </widget>
+    <addaction name="actionPrompt_Browser"/>
     <addaction name="actionHuggingface_Cache_manager"/>
+    <addaction name="actionBrowse_AI_Runner_Path"/>
+    <addaction name="menuBrowse_Models_Path"/>
+    <addaction name="separator"/>
+    <addaction name="actionBrowse_Images_Path_2"/>
+    <addaction name="actionBrowse_Videos_Path"/>
+    <addaction name="actionBrowse_Gifs_Path"/>
+    <addaction name="separator"/>
    </widget>
    <addaction name="menuFile"/>
    <addaction name="menuEdit"/>
    <addaction name="menuView"/>
    <addaction name="menuImage"/>
-   <addaction name="menuPrompts"/>
    <addaction name="menuModel_merge"/>
    <addaction name="menuFilters"/>
    <addaction name="menuAbout"/>
@@ -522,7 +1494,7 @@
     <string>Image Interpolation</string>
    </property>
   </action>
-  <action name="image_interpolation">
+  <action name="actionImage_interpolation">
    <property name="text">
     <string>Image Interpolation</string>
    </property>
@@ -678,11 +1650,972 @@
     <string>Run setup wizard</string>
    </property>
   </action>
+  <action name="actionBrowse_AI_Runner_Path">
+   <property name="text">
+    <string>Browse AI Runner Path</string>
+   </property>
+  </action>
+  <action name="actionBrowse_Images_Path">
+   <property name="text">
+    <string>Browse Images Path</string>
+   </property>
+  </action>
+  <action name="actionBrowse_Images_Path_2">
+   <property name="text">
+    <string>Browse Images</string>
+   </property>
+  </action>
+  <action name="actionBrowse_Videos_Path">
+   <property name="text">
+    <string>Browse Videos</string>
+   </property>
+  </action>
+  <action name="actionBrowse_Gifs_Path">
+   <property name="text">
+    <string>Browse GIFs</string>
+   </property>
+  </action>
+  <action name="actionTxt2img_Img2img_Models">
+   <property name="text">
+    <string>Txt2img / Img2img</string>
+   </property>
+  </action>
+  <action name="actionInpaint_Outpaint_Models">
+   <property name="text">
+    <string>Inpaint / Outpaint</string>
+   </property>
+  </action>
+  <action name="actionDepth2img_Models">
+   <property name="text">
+    <string>Depth2img</string>
+   </property>
+  </action>
+  <action name="actionPix2pix">
+   <property name="text">
+    <string>Pix2pix</string>
+   </property>
+  </action>
+  <action name="actionUpscale">
+   <property name="text">
+    <string>Upscale</string>
+   </property>
+  </action>
+  <action name="actionSuperresolution">
+   <property name="text">
+    <string>Superresolution</string>
+   </property>
+  </action>
+  <action name="actionTxt2vid">
+   <property name="text">
+    <string>Txt2vid</string>
+   </property>
+  </action>
  </widget>
+ <customwidgets>
+  <customwidget>
+   <class>SliderWidget</class>
+   <extends>QWidget</extends>
+   <header>airunner/widgets/slider/slider_widget</header>
+   <container>1</container>
+  </customwidget>
+  <customwidget>
+   <class>CanvasWidget</class>
+   <extends>QWidget</extends>
+   <header>airunner/widgets/canvas/canvas_widget</header>
+   <container>1</container>
+  </customwidget>
+  <customwidget>
+   <class>GeneratorTabWidget</class>
+   <extends>QWidget</extends>
+   <header>airunner/widgets/generator_form/generator_tab_widget</header>
+   <container>1</container>
+  </customwidget>
+  <customwidget>
+   <class>PromptBuilderWidget</class>
+   <extends>QWidget</extends>
+   <header>airunner/widgets/prompt_builder/prompt_builder_widget</header>
+   <container>1</container>
+  </customwidget>
+  <customwidget>
+   <class>ModelManagerWidget</class>
+   <extends>QWidget</extends>
+   <header>airunner/widgets/model_manager/model_manager_widget</header>
+   <container>1</container>
+  </customwidget>
+  <customwidget>
+   <class>EmbeddingsContainerWidget</class>
+   <extends>QWidget</extends>
+   <header>airunner/widgets/embeddings/embeddings_container_widget</header>
+   <container>1</container>
+  </customwidget>
+  <customwidget>
+   <class>LoraContainerWidget</class>
+   <extends>QWidget</extends>
+   <header>airunner/widgets/lora/lora_container_widget</header>
+   <container>1</container>
+  </customwidget>
+  <customwidget>
+   <class>BrushContainerWidget</class>
+   <extends>QWidget</extends>
+   <header>airunner/widgets/brush/brush_container_widget</header>
+   <container>1</container>
+  </customwidget>
+  <customwidget>
+   <class>LayerContainerWidget</class>
+   <extends>QWidget</extends>
+   <header>airunner/widgets/layers/layer_container_widget</header>
+   <container>1</container>
+  </customwidget>
+  <customwidget>
+   <class>DeterministicWidget</class>
+   <extends>QWidget</extends>
+   <header>airunner/widgets/deterministic/deterministic_widget</header>
+   <container>1</container>
+  </customwidget>
+  <customwidget>
+   <class>BatchWidget</class>
+   <extends>QWidget</extends>
+   <header>airunner/widgets/batch/batch_widget</header>
+   <container>1</container>
+  </customwidget>
+ </customwidgets>
  <resources>
-  <include location="../../resources.qrc"/>
+  <include location="../../../resources.qrc"/>
  </resources>
- <connections/>
+ <connections>
+  <connection>
+   <sender>actionHuggingface_Cache_manager</sender>
+   <signal>triggered()</signal>
+   <receiver>MainWindow</receiver>
+   <slot>action_show_hf_cache_manager()</slot>
+   <hints>
+    <hint type="sourcelabel">
+     <x>-1</x>
+     <y>-1</y>
+    </hint>
+    <hint type="destinationlabel">
+     <x>602</x>
+     <y>432</y>
+    </hint>
+   </hints>
+  </connection>
+  <connection>
+   <sender>actionModel_Merger</sender>
+   <signal>triggered()</signal>
+   <receiver>MainWindow</receiver>
+   <slot>action_show_model_merger_window()</slot>
+   <hints>
+    <hint type="sourcelabel">
+     <x>-1</x>
+     <y>-1</y>
+    </hint>
+    <hint type="destinationlabel">
+     <x>602</x>
+     <y>432</y>
+    </hint>
+   </hints>
+  </connection>
+  <connection>
+   <sender>actionAbout</sender>
+   <signal>triggered()</signal>
+   <receiver>MainWindow</receiver>
+   <slot>action_show_about_window()</slot>
+   <hints>
+    <hint type="sourcelabel">
+     <x>-1</x>
+     <y>-1</y>
+    </hint>
+    <hint type="destinationlabel">
+     <x>602</x>
+     <y>432</y>
+    </hint>
+   </hints>
+  </connection>
+  <connection>
+   <sender>actionKandinsky</sender>
+   <signal>triggered()</signal>
+   <receiver>MainWindow</receiver>
+   <slot>action_show_kandinsky()</slot>
+   <hints>
+    <hint type="sourcelabel">
+     <x>-1</x>
+     <y>-1</y>
+    </hint>
+    <hint type="destinationlabel">
+     <x>602</x>
+     <y>432</y>
+    </hint>
+   </hints>
+  </connection>
+  <connection>
+   <sender>actionStableDiffusion</sender>
+   <signal>triggered()</signal>
+   <receiver>MainWindow</receiver>
+   <slot>action_show_stablediffusion()</slot>
+   <hints>
+    <hint type="sourcelabel">
+     <x>-1</x>
+     <y>-1</y>
+    </hint>
+    <hint type="destinationlabel">
+     <x>602</x>
+     <y>432</y>
+    </hint>
+   </hints>
+  </connection>
+  <connection>
+   <sender>actionShap_E</sender>
+   <signal>triggered()</signal>
+   <receiver>MainWindow</receiver>
+   <slot>action_show_shape()</slot>
+   <hints>
+    <hint type="sourcelabel">
+     <x>-1</x>
+     <y>-1</y>
+    </hint>
+    <hint type="destinationlabel">
+     <x>602</x>
+     <y>432</y>
+    </hint>
+   </hints>
+  </connection>
+  <connection>
+   <sender>actionModel_Manager</sender>
+   <signal>triggered()</signal>
+   <receiver>MainWindow</receiver>
+   <slot>action_show_model_manager()</slot>
+   <hints>
+    <hint type="sourcelabel">
+     <x>-1</x>
+     <y>-1</y>
+    </hint>
+    <hint type="destinationlabel">
+     <x>602</x>
+     <y>432</y>
+    </hint>
+   </hints>
+  </connection>
+  <connection>
+   <sender>actionPrompt_Builder</sender>
+   <signal>triggered()</signal>
+   <receiver>MainWindow</receiver>
+   <slot>action_show_prompt_builder()</slot>
+   <hints>
+    <hint type="sourcelabel">
+     <x>-1</x>
+     <y>-1</y>
+    </hint>
+    <hint type="destinationlabel">
+     <x>602</x>
+     <y>432</y>
+    </hint>
+   </hints>
+  </connection>
+  <connection>
+   <sender>actionControlNet</sender>
+   <signal>triggered()</signal>
+   <receiver>MainWindow</receiver>
+   <slot>action_show_controlnet()</slot>
+   <hints>
+    <hint type="sourcelabel">
+     <x>-1</x>
+     <y>-1</y>
+    </hint>
+    <hint type="destinationlabel">
+     <x>602</x>
+     <y>432</y>
+    </hint>
+   </hints>
+  </connection>
+  <connection>
+   <sender>actionEmbeddings</sender>
+   <signal>triggered()</signal>
+   <receiver>MainWindow</receiver>
+   <slot>action_show_embeddings()</slot>
+   <hints>
+    <hint type="sourcelabel">
+     <x>-1</x>
+     <y>-1</y>
+    </hint>
+    <hint type="destinationlabel">
+     <x>602</x>
+     <y>432</y>
+    </hint>
+   </hints>
+  </connection>
+  <connection>
+   <sender>actionLoRA</sender>
+   <signal>triggered()</signal>
+   <receiver>MainWindow</receiver>
+   <slot>action_show_lora()</slot>
+   <hints>
+    <hint type="sourcelabel">
+     <x>-1</x>
+     <y>-1</y>
+    </hint>
+    <hint type="destinationlabel">
+     <x>602</x>
+     <y>432</y>
+    </hint>
+   </hints>
+  </connection>
+  <connection>
+   <sender>actionPen</sender>
+   <signal>triggered()</signal>
+   <receiver>MainWindow</receiver>
+   <slot>action_show_pen()</slot>
+   <hints>
+    <hint type="sourcelabel">
+     <x>-1</x>
+     <y>-1</y>
+    </hint>
+    <hint type="destinationlabel">
+     <x>602</x>
+     <y>432</y>
+    </hint>
+   </hints>
+  </connection>
+  <connection>
+   <sender>toggle_grid_button</sender>
+   <signal>toggled(bool)</signal>
+   <receiver>MainWindow</receiver>
+   <slot>action_toggle_grid(bool)</slot>
+   <hints>
+    <hint type="sourcelabel">
+     <x>940</x>
+     <y>261</y>
+    </hint>
+    <hint type="destinationlabel">
+     <x>775</x>
+     <y>0</y>
+    </hint>
+   </hints>
+  </connection>
+  <connection>
+   <sender>toggle_brush_button</sender>
+   <signal>toggled(bool)</signal>
+   <receiver>MainWindow</receiver>
+   <slot>action_toggle_brush(bool)</slot>
+   <hints>
+    <hint type="sourcelabel">
+     <x>940</x>
+     <y>170</y>
+    </hint>
+    <hint type="destinationlabel">
+     <x>775</x>
+     <y>0</y>
+    </hint>
+   </hints>
+  </connection>
+  <connection>
+   <sender>toggle_active_grid_area_button</sender>
+   <signal>toggled(bool)</signal>
+   <receiver>MainWindow</receiver>
+   <slot>action_toggle_active_grid_area(bool)</slot>
+   <hints>
+    <hint type="sourcelabel">
+     <x>940</x>
+     <y>129</y>
+    </hint>
+    <hint type="destinationlabel">
+     <x>775</x>
+     <y>0</y>
+    </hint>
+   </hints>
+  </connection>
+  <connection>
+   <sender>toggle_eraser_button</sender>
+   <signal>toggled(bool)</signal>
+   <receiver>MainWindow</receiver>
+   <slot>action_toggle_eraser(bool)</slot>
+   <hints>
+    <hint type="sourcelabel">
+     <x>940</x>
+     <y>211</y>
+    </hint>
+    <hint type="destinationlabel">
+     <x>775</x>
+     <y>0</y>
+    </hint>
+   </hints>
+  </connection>
+  <connection>
+   <sender>focus_button</sender>
+   <signal>clicked()</signal>
+   <receiver>MainWindow</receiver>
+   <slot>action_focus_button_triggered()</slot>
+   <hints>
+    <hint type="sourcelabel">
+     <x>940</x>
+     <y>302</y>
+    </hint>
+    <hint type="destinationlabel">
+     <x>775</x>
+     <y>0</y>
+    </hint>
+   </hints>
+  </connection>
+  <connection>
+   <sender>settings_button</sender>
+   <signal>clicked()</signal>
+   <receiver>MainWindow</receiver>
+   <slot>action_show_settings()</slot>
+   <hints>
+    <hint type="sourcelabel">
+     <x>940</x>
+     <y>393</y>
+    </hint>
+    <hint type="destinationlabel">
+     <x>775</x>
+     <y>0</y>
+    </hint>
+   </hints>
+  </connection>
+  <connection>
+   <sender>undo_button</sender>
+   <signal>clicked()</signal>
+   <receiver>MainWindow</receiver>
+   <slot>action_undo_triggered()</slot>
+   <hints>
+    <hint type="sourcelabel">
+     <x>187</x>
+     <y>72</y>
+    </hint>
+    <hint type="destinationlabel">
+     <x>302</x>
+     <y>0</y>
+    </hint>
+   </hints>
+  </connection>
+  <connection>
+   <sender>redo_button</sender>
+   <signal>clicked()</signal>
+   <receiver>MainWindow</receiver>
+   <slot>action_redo_triggered()</slot>
+   <hints>
+    <hint type="sourcelabel">
+     <x>229</x>
+     <y>72</y>
+    </hint>
+    <hint type="destinationlabel">
+     <x>241</x>
+     <y>0</y>
+    </hint>
+   </hints>
+  </connection>
+  <connection>
+   <sender>open_button</sender>
+   <signal>clicked()</signal>
+   <receiver>MainWindow</receiver>
+   <slot>action_load_document_triggered()</slot>
+   <hints>
+    <hint type="sourcelabel">
+     <x>52</x>
+     <y>72</y>
+    </hint>
+    <hint type="destinationlabel">
+     <x>90</x>
+     <y>0</y>
+    </hint>
+   </hints>
+  </connection>
+  <connection>
+   <sender>save_button</sender>
+   <signal>clicked()</signal>
+   <receiver>MainWindow</receiver>
+   <slot>action_save_document_triggered()</slot>
+   <hints>
+    <hint type="sourcelabel">
+     <x>104</x>
+     <y>46</y>
+    </hint>
+    <hint type="destinationlabel">
+     <x>159</x>
+     <y>0</y>
+    </hint>
+   </hints>
+  </connection>
+  <connection>
+   <sender>export_button</sender>
+   <signal>clicked()</signal>
+   <receiver>MainWindow</receiver>
+   <slot>action_quick_export_image_triggered()</slot>
+   <hints>
+    <hint type="sourcelabel">
+     <x>136</x>
+     <y>72</y>
+    </hint>
+    <hint type="destinationlabel">
+     <x>775</x>
+     <y>0</y>
+    </hint>
+   </hints>
+  </connection>
+  <connection>
+   <sender>actionLoad</sender>
+   <signal>triggered()</signal>
+   <receiver>MainWindow</receiver>
+   <slot>action_load_document_triggered()</slot>
+   <hints>
+    <hint type="sourcelabel">
+     <x>-1</x>
+     <y>-1</y>
+    </hint>
+    <hint type="destinationlabel">
+     <x>681</x>
+     <y>432</y>
+    </hint>
+   </hints>
+  </connection>
+  <connection>
+   <sender>actionExport</sender>
+   <signal>triggered()</signal>
+   <receiver>MainWindow</receiver>
+   <slot>action_export_image_triggered()</slot>
+   <hints>
+    <hint type="sourcelabel">
+     <x>-1</x>
+     <y>-1</y>
+    </hint>
+    <hint type="destinationlabel">
+     <x>681</x>
+     <y>432</y>
+    </hint>
+   </hints>
+  </connection>
+  <connection>
+   <sender>file_new_button</sender>
+   <signal>clicked()</signal>
+   <receiver>MainWindow</receiver>
+   <slot>action_new_document_triggered()</slot>
+   <hints>
+    <hint type="sourcelabel">
+     <x>14</x>
+     <y>72</y>
+    </hint>
+    <hint type="destinationlabel">
+     <x>56</x>
+     <y>0</y>
+    </hint>
+   </hints>
+  </connection>
+  <connection>
+   <sender>actionNew</sender>
+   <signal>triggered()</signal>
+   <receiver>MainWindow</receiver>
+   <slot>action_new_document_triggered()</slot>
+   <hints>
+    <hint type="sourcelabel">
+     <x>-1</x>
+     <y>-1</y>
+    </hint>
+    <hint type="destinationlabel">
+     <x>681</x>
+     <y>432</y>
+    </hint>
+   </hints>
+  </connection>
+  <connection>
+   <sender>safety_checker_button</sender>
+   <signal>toggled(bool)</signal>
+   <receiver>MainWindow</receiver>
+   <slot>action_toggle_nsfw_filter_triggered(bool)</slot>
+   <hints>
+    <hint type="sourcelabel">
+     <x>940</x>
+     <y>343</y>
+    </hint>
+    <hint type="destinationlabel">
+     <x>959</x>
+     <y>0</y>
+    </hint>
+   </hints>
+  </connection>
+  <connection>
+   <sender>actionSave</sender>
+   <signal>triggered()</signal>
+   <receiver>MainWindow</receiver>
+   <slot>action_save_document_triggered()</slot>
+   <hints>
+    <hint type="sourcelabel">
+     <x>-1</x>
+     <y>-1</y>
+    </hint>
+    <hint type="destinationlabel">
+     <x>681</x>
+     <y>432</y>
+    </hint>
+   </hints>
+  </connection>
+  <connection>
+   <sender>actionImport</sender>
+   <signal>triggered()</signal>
+   <receiver>MainWindow</receiver>
+   <slot>action_import_image_triggered()</slot>
+   <hints>
+    <hint type="sourcelabel">
+     <x>-1</x>
+     <y>-1</y>
+    </hint>
+    <hint type="destinationlabel">
+     <x>681</x>
+     <y>432</y>
+    </hint>
+   </hints>
+  </connection>
+  <connection>
+   <sender>actionQuick_Export</sender>
+   <signal>triggered()</signal>
+   <receiver>MainWindow</receiver>
+   <slot>action_quick_export_image_triggered()</slot>
+   <hints>
+    <hint type="sourcelabel">
+     <x>-1</x>
+     <y>-1</y>
+    </hint>
+    <hint type="destinationlabel">
+     <x>681</x>
+     <y>432</y>
+    </hint>
+   </hints>
+  </connection>
+  <connection>
+   <sender>actionQuit</sender>
+   <signal>triggered()</signal>
+   <receiver>MainWindow</receiver>
+   <slot>action_quit_triggered()</slot>
+   <hints>
+    <hint type="sourcelabel">
+     <x>-1</x>
+     <y>-1</y>
+    </hint>
+    <hint type="destinationlabel">
+     <x>681</x>
+     <y>432</y>
+    </hint>
+   </hints>
+  </connection>
+  <connection>
+   <sender>actionPaste</sender>
+   <signal>triggered()</signal>
+   <receiver>MainWindow</receiver>
+   <slot>action_paste_image_triggered()</slot>
+   <hints>
+    <hint type="sourcelabel">
+     <x>-1</x>
+     <y>-1</y>
+    </hint>
+    <hint type="destinationlabel">
+     <x>681</x>
+     <y>432</y>
+    </hint>
+   </hints>
+  </connection>
+  <connection>
+   <sender>actionCopy</sender>
+   <signal>triggered()</signal>
+   <receiver>MainWindow</receiver>
+   <slot>action_copy_image_triggered()</slot>
+   <hints>
+    <hint type="sourcelabel">
+     <x>-1</x>
+     <y>-1</y>
+    </hint>
+    <hint type="destinationlabel">
+     <x>681</x>
+     <y>432</y>
+    </hint>
+   </hints>
+  </connection>
+  <connection>
+   <sender>actionCut</sender>
+   <signal>triggered()</signal>
+   <receiver>MainWindow</receiver>
+   <slot>action_cut_image_triggered()</slot>
+   <hints>
+    <hint type="sourcelabel">
+     <x>-1</x>
+     <y>-1</y>
+    </hint>
+    <hint type="destinationlabel">
+     <x>681</x>
+     <y>432</y>
+    </hint>
+   </hints>
+  </connection>
+  <connection>
+   <sender>actionRotate_90_clockwise</sender>
+   <signal>triggered()</signal>
+   <receiver>MainWindow</receiver>
+   <slot>action_rotate_90_clockwise_triggered()</slot>
+   <hints>
+    <hint type="sourcelabel">
+     <x>-1</x>
+     <y>-1</y>
+    </hint>
+    <hint type="destinationlabel">
+     <x>681</x>
+     <y>432</y>
+    </hint>
+   </hints>
+  </connection>
+  <connection>
+   <sender>actionRotate_90_counter_clockwise</sender>
+   <signal>triggered()</signal>
+   <receiver>MainWindow</receiver>
+   <slot>action_rotate_90_counterclockwise_triggered()</slot>
+   <hints>
+    <hint type="sourcelabel">
+     <x>-1</x>
+     <y>-1</y>
+    </hint>
+    <hint type="destinationlabel">
+     <x>681</x>
+     <y>432</y>
+    </hint>
+   </hints>
+  </connection>
+  <connection>
+   <sender>actionPrompt_Browser</sender>
+   <signal>triggered()</signal>
+   <receiver>MainWindow</receiver>
+   <slot>action_show_prompt_browser_triggered()</slot>
+   <hints>
+    <hint type="sourcelabel">
+     <x>-1</x>
+     <y>-1</y>
+    </hint>
+    <hint type="destinationlabel">
+     <x>681</x>
+     <y>432</y>
+    </hint>
+   </hints>
+  </connection>
+  <connection>
+   <sender>actionImage_Interpolation</sender>
+   <signal>triggered()</signal>
+   <receiver>MainWindow</receiver>
+   <slot>action_show_image_interpolation_triggered()</slot>
+   <hints>
+    <hint type="sourcelabel">
+     <x>-1</x>
+     <y>-1</y>
+    </hint>
+    <hint type="destinationlabel">
+     <x>681</x>
+     <y>432</y>
+    </hint>
+   </hints>
+  </connection>
+  <connection>
+   <sender>actionClear_all_prompts</sender>
+   <signal>triggered()</signal>
+   <receiver>MainWindow</receiver>
+   <slot>action_clear_all_prompts_triggered()</slot>
+   <hints>
+    <hint type="sourcelabel">
+     <x>-1</x>
+     <y>-1</y>
+    </hint>
+    <hint type="destinationlabel">
+     <x>681</x>
+     <y>432</y>
+    </hint>
+   </hints>
+  </connection>
+  <connection>
+   <sender>actionSettings</sender>
+   <signal>triggered()</signal>
+   <receiver>MainWindow</receiver>
+   <slot>action_show_settings()</slot>
+   <hints>
+    <hint type="sourcelabel">
+     <x>-1</x>
+     <y>-1</y>
+    </hint>
+    <hint type="destinationlabel">
+     <x>681</x>
+     <y>432</y>
+    </hint>
+   </hints>
+  </connection>
+  <connection>
+   <sender>actionBrowse_AI_Runner_Path</sender>
+   <signal>triggered()</signal>
+   <receiver>MainWindow</receiver>
+   <slot>action_triggered_browse_ai_runner_path()</slot>
+   <hints>
+    <hint type="sourcelabel">
+     <x>-1</x>
+     <y>-1</y>
+    </hint>
+    <hint type="destinationlabel">
+     <x>681</x>
+     <y>432</y>
+    </hint>
+   </hints>
+  </connection>
+  <connection>
+   <sender>actionBrowse_Images_Path_2</sender>
+   <signal>triggered()</signal>
+   <receiver>MainWindow</receiver>
+   <slot>action_show_images_path()</slot>
+   <hints>
+    <hint type="sourcelabel">
+     <x>-1</x>
+     <y>-1</y>
+    </hint>
+    <hint type="destinationlabel">
+     <x>545</x>
+     <y>408</y>
+    </hint>
+   </hints>
+  </connection>
+  <connection>
+   <sender>actionBrowse_Videos_Path</sender>
+   <signal>triggered()</signal>
+   <receiver>MainWindow</receiver>
+   <slot>action_show_videos_path()</slot>
+   <hints>
+    <hint type="sourcelabel">
+     <x>-1</x>
+     <y>-1</y>
+    </hint>
+    <hint type="destinationlabel">
+     <x>545</x>
+     <y>408</y>
+    </hint>
+   </hints>
+  </connection>
+  <connection>
+   <sender>actionBrowse_Gifs_Path</sender>
+   <signal>triggered()</signal>
+   <receiver>MainWindow</receiver>
+   <slot>action_show_gifs_path()</slot>
+   <hints>
+    <hint type="sourcelabel">
+     <x>-1</x>
+     <y>-1</y>
+    </hint>
+    <hint type="destinationlabel">
+     <x>545</x>
+     <y>408</y>
+    </hint>
+   </hints>
+  </connection>
+  <connection>
+   <sender>actionTxt2img_Img2img_Models</sender>
+   <signal>triggered()</signal>
+   <receiver>MainWindow</receiver>
+   <slot>action_show_model_path_txt2img()</slot>
+   <hints>
+    <hint type="sourcelabel">
+     <x>-1</x>
+     <y>-1</y>
+    </hint>
+    <hint type="destinationlabel">
+     <x>545</x>
+     <y>408</y>
+    </hint>
+   </hints>
+  </connection>
+  <connection>
+   <sender>actionDepth2img_Models</sender>
+   <signal>triggered()</signal>
+   <receiver>MainWindow</receiver>
+   <slot>action_show_model_path_depth2img()</slot>
+   <hints>
+    <hint type="sourcelabel">
+     <x>-1</x>
+     <y>-1</y>
+    </hint>
+    <hint type="destinationlabel">
+     <x>545</x>
+     <y>408</y>
+    </hint>
+   </hints>
+  </connection>
+  <connection>
+   <sender>actionInpaint_Outpaint_Models</sender>
+   <signal>triggered()</signal>
+   <receiver>MainWindow</receiver>
+   <slot>action_show_model_path_inpaint()</slot>
+   <hints>
+    <hint type="sourcelabel">
+     <x>-1</x>
+     <y>-1</y>
+    </hint>
+    <hint type="destinationlabel">
+     <x>545</x>
+     <y>408</y>
+    </hint>
+   </hints>
+  </connection>
+  <connection>
+   <sender>actionPix2pix</sender>
+   <signal>triggered()</signal>
+   <receiver>MainWindow</receiver>
+   <slot>action_show_model_path_pix2pix()</slot>
+   <hints>
+    <hint type="sourcelabel">
+     <x>-1</x>
+     <y>-1</y>
+    </hint>
+    <hint type="destinationlabel">
+     <x>545</x>
+     <y>408</y>
+    </hint>
+   </hints>
+  </connection>
+  <connection>
+   <sender>actionUpscale</sender>
+   <signal>triggered()</signal>
+   <receiver>MainWindow</receiver>
+   <slot>action_show_model_path_upscale()</slot>
+   <hints>
+    <hint type="sourcelabel">
+     <x>-1</x>
+     <y>-1</y>
+    </hint>
+    <hint type="destinationlabel">
+     <x>545</x>
+     <y>408</y>
+    </hint>
+   </hints>
+  </connection>
+  <connection>
+   <sender>actionTxt2vid</sender>
+   <signal>triggered()</signal>
+   <receiver>MainWindow</receiver>
+   <slot>action_show_model_path_txt2vid()</slot>
+   <hints>
+    <hint type="sourcelabel">
+     <x>-1</x>
+     <y>-1</y>
+    </hint>
+    <hint type="destinationlabel">
+     <x>545</x>
+     <y>408</y>
+    </hint>
+   </hints>
+  </connection>
+  <connection>
+   <sender>tool_tab_widget</sender>
+   <signal>currentChanged(int)</signal>
+   <receiver>MainWindow</receiver>
+   <slot>tool_tab_index_changed(int)</slot>
+   <hints>
+    <hint type="sourcelabel">
+     <x>881</x>
+     <y>175</y>
+    </hint>
+    <hint type="destinationlabel">
+     <x>775</x>
+     <y>0</y>
+    </hint>
+   </hints>
+  </connection>
+ </connections>
  <designerdata>
   <property name="gridDeltaX">
    <number>10</number>
@@ -700,4 +2633,62 @@
    <bool>true</bool>
   </property>
  </designerdata>
+ <slots>
+  <slot>action_show_hf_cache_manager()</slot>
+  <slot>action_show_about_window()</slot>
+  <slot>action_show_model_merger_window()</slot>
+  <slot>action_show_kandinsky()</slot>
+  <slot>action_show_stablediffusion()</slot>
+  <slot>action_show_shape()</slot>
+  <slot>action_show_model_manager()</slot>
+  <slot>action_show_prompt_builder()</slot>
+  <slot>action_show_controlnet()</slot>
+  <slot>action_show_embeddings()</slot>
+  <slot>action_show_lora()</slot>
+  <slot>action_show_pen()</slot>
+  <slot>action_toggle_grid(bool)</slot>
+  <slot>action_focus_button_triggered()</slot>
+  <slot>action_toggle_darkmode()</slot>
+  <slot>action_show_settings()</slot>
+  <slot>action_open_bug_report()</slot>
+  <slot>action_open_discord()</slot>
+  <slot>action_toggle_brush(bool)</slot>
+  <slot>action_toggle_eraser(bool)</slot>
+  <slot>action_toggle_active_grid_area(bool)</slot>
+  <slot>action_undo_triggered()</slot>
+  <slot>action_redo_triggered()</slot>
+  <slot>action_new_document_triggered()</slot>
+  <slot>action_save_document_triggered()</slot>
+  <slot>action_quick_export_image_triggered()</slot>
+  <slot>tool_tab_index_changed(int)</slot>
+  <slot>bottom_panel_tab_index_changed(int)</slot>
+  <slot>right_splitter_moved(int,int)</slot>
+  <slot>main_splitter_moved(int,int)</slot>
+  <slot>content_splitter_moved(int,int)</slot>
+  <slot>action_load_document_triggered()</slot>
+  <slot>action_quit_triggered()</slot>
+  <slot>action_export_image_triggered()</slot>
+  <slot>action_toggle_nsfw_filter_triggered(bool)</slot>
+  <slot>action_import_image_triggered()</slot>
+  <slot>action_paste_image_triggered()</slot>
+  <slot>action_copy_image_triggered()</slot>
+  <slot>action_cut_image_triggered()</slot>
+  <slot>action_rotate_90_clockwise_triggered()</slot>
+  <slot>action_rotate_90_counterclockwise_triggered()</slot>
+  <slot>action_save_prompt_triggered()</slot>
+  <slot>action_show_prompt_browser_triggered()</slot>
+  <slot>action_show_image_interpolation_triggered()</slot>
+  <slot>action_clear_all_prompts_triggered()</slot>
+  <slot>action_triggered_browse_ai_runner_path()</slot>
+  <slot>action_show_images_path()</slot>
+  <slot>action_show_gifs_path()</slot>
+  <slot>action_show_videos_path()</slot>
+  <slot>action_show_model_path_txt2img()</slot>
+  <slot>action_show_model_path_inpaint()</slot>
+  <slot>action_show_model_path_depth2img()</slot>
+  <slot>action_show_model_path_pix2pix()</slot>
+  <slot>action_show_model_path_upscale()</slot>
+  <slot>action_show_model_path_supersample()</slot>
+  <slot>action_show_model_path_txt2vid()</slot>
+ </slots>
 </ui>
