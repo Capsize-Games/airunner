@@ -9,8 +9,8 @@ class PromptWidget(BaseWidget):
     def __init__(self, *args, **kwargs):
         self.prompt_data = kwargs.pop("prompt_data")
         super().__init__(*args, **kwargs)
-        self.ui.prompt.setText(self.prompt_data.prompt)
-        self.ui.negative_prompt.setText(self.prompt_data.negative_prompt)
+        self.ui.prompt.setPlainText(self.prompt_data.prompt)
+        self.ui.negative_prompt.setPlainText(self.prompt_data.negative_prompt)
 
     def action_text_changed_prompt(self):
         self.save_prompt()
