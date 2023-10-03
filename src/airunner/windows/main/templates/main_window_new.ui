@@ -606,8 +606,14 @@
        <widget class="QFrame" name="button_menu">
         <property name="minimumSize">
          <size>
-          <width>60</width>
+          <width>55</width>
           <height>0</height>
+         </size>
+        </property>
+        <property name="maximumSize">
+         <size>
+          <width>55</width>
+          <height>16777215</height>
          </size>
         </property>
         <property name="frameShape">
@@ -846,6 +852,13 @@
            </property>
            <property name="flat">
             <bool>true</bool>
+           </property>
+          </widget>
+         </item>
+         <item>
+          <widget class="Line" name="line_4">
+           <property name="orientation">
+            <enum>Qt::Horizontal</enum>
            </property>
           </widget>
          </item>
@@ -1641,6 +1654,12 @@
  </widget>
  <customwidgets>
   <customwidget>
+   <class>CanvasWidget</class>
+   <extends>QWidget</extends>
+   <header>airunner/widgets/canvas/canvas_widget</header>
+   <container>1</container>
+  </customwidget>
+  <customwidget>
    <class>SliderWidget</class>
    <extends>QWidget</extends>
    <header>airunner/widgets/slider/slider_widget</header>
@@ -1650,12 +1669,6 @@
    <class>GeneratorTabWidget</class>
    <extends>QWidget</extends>
    <header>airunner/widgets/generator_form/generator_tab_widget</header>
-   <container>1</container>
-  </customwidget>
-  <customwidget>
-   <class>CanvasWidget</class>
-   <extends>QWidget</extends>
-   <header>airunner/widgets/canvas/canvas_widget</header>
    <container>1</container>
   </customwidget>
   <customwidget>
