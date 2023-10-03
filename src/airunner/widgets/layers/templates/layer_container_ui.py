@@ -107,6 +107,7 @@ class Ui_layer_container(object):
         self.layer_down_button.setObjectName("layer_down_button")
         self.horizontalLayout_8.addWidget(self.layer_down_button)
         self.merge_layer_button = QtWidgets.QPushButton(parent=self.horizontalWidget)
+        self.merge_layer_button.setMinimumSize(QtCore.QSize(40, 40))
         self.merge_layer_button.setText("")
         icon = QtGui.QIcon.fromTheme("go-jump")
         self.merge_layer_button.setIcon(icon)
