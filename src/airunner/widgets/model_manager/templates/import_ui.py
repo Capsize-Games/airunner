@@ -12,7 +12,7 @@ from PyQt6 import QtCore, QtGui, QtWidgets
 class Ui_import_model_widget(object):
     def setupUi(self, import_model_widget):
         import_model_widget.setObjectName("import_model_widget")
-        import_model_widget.resize(521, 275)
+        import_model_widget.resize(230, 275)
         self.gridLayout_4 = QtWidgets.QGridLayout(import_model_widget)
         self.gridLayout_4.setObjectName("gridLayout_4")
         self.import_form = QtWidgets.QFrame(parent=import_model_widget)
@@ -105,6 +105,8 @@ class Ui_import_model_widget(object):
         self.download_progress_bar.setObjectName("download_progress_bar")
         self.gridLayout.addWidget(self.download_progress_bar, 2, 0, 1, 1)
         self.gridLayout_4.addWidget(self.download_form, 2, 0, 1, 1)
+        spacerItem = QtWidgets.QSpacerItem(20, 40, QtWidgets.QSizePolicy.Policy.Minimum, QtWidgets.QSizePolicy.Policy.Expanding)
+        self.gridLayout_4.addItem(spacerItem, 3, 0, 1, 1)
 
         self.retranslateUi(import_model_widget)
         self.download_button.clicked.connect(import_model_widget.action_clicked_button_download) # type: ignore
