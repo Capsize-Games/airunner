@@ -39,11 +39,10 @@ class Ui_prompt_widget(object):
         self.label.setFont(font)
         self.label.setObjectName("label")
         self.verticalLayout.addWidget(self.label)
-        self.prompt = QtWidgets.QTextBrowser(parent=prompt_widget)
+        self.prompt = QtWidgets.QPlainTextEdit(parent=prompt_widget)
         font = QtGui.QFont()
         font.setPointSize(9)
         self.prompt.setFont(font)
-        self.prompt.setReadOnly(False)
         self.prompt.setObjectName("prompt")
         self.verticalLayout.addWidget(self.prompt)
         self.verticalLayout_2 = QtWidgets.QVBoxLayout()
@@ -55,11 +54,10 @@ class Ui_prompt_widget(object):
         self.label_3.setFont(font)
         self.label_3.setObjectName("label_3")
         self.verticalLayout_2.addWidget(self.label_3)
-        self.negative_prompt = QtWidgets.QTextBrowser(parent=prompt_widget)
+        self.negative_prompt = QtWidgets.QPlainTextEdit(parent=prompt_widget)
         font = QtGui.QFont()
         font.setPointSize(9)
         self.negative_prompt.setFont(font)
-        self.negative_prompt.setReadOnly(False)
         self.negative_prompt.setObjectName("negative_prompt")
         self.verticalLayout_2.addWidget(self.negative_prompt)
         self.verticalLayout.addLayout(self.verticalLayout_2)
@@ -68,8 +66,6 @@ class Ui_prompt_widget(object):
         self.retranslateUi(prompt_widget)
         self.load_button.clicked.connect(prompt_widget.action_clicked_button_load) # type: ignore
         self.delete_button.clicked.connect(prompt_widget.action_clicked_button_delete) # type: ignore
-        self.prompt.textChanged.connect(prompt_widget.action_text_changed_prompt) # type: ignore
-        self.negative_prompt.textChanged.connect(prompt_widget.action_text_changed_negative_prompt) # type: ignore
         QtCore.QMetaObject.connectSlotsByName(prompt_widget)
 
     def retranslateUi(self, prompt_widget):
