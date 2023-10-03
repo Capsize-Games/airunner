@@ -1,6 +1,6 @@
 import os
 
-from sqlalchemy import Column, Integer, String, Boolean, ForeignKey, Float, JSON
+from sqlalchemy import Column, Integer, String, Boolean, ForeignKey, Float, JSON, UniqueConstraint
 from sqlalchemy.ext.declarative import declarative_base
 from sqlalchemy.orm import relationship
 from PyQt6.QtCore import Qt, QAbstractTableModel, QModelIndex
@@ -37,6 +37,20 @@ class ModelBase(QAbstractTableModel):
 
 
 Base = declarative_base()
+
+
+class Embedding(Base):
+    __tablename__ = 'embeddings'
+
+    id = Column(Integer, primary_key=True)
+    name = Column(String)
+    path = Column(String)
+    tags = Column(String)
+    active = Column(Boolean, default=True)
+
+    __table_args__ = (
+        UniqueConstraint('name', 'path', name='name_path_unique'),
+    )
 
 
 class Scheduler(Base):
@@ -165,6 +179,10 @@ class SavedPrompt(Base):
     prompt = Column(String)
     negative_prompt = Column(String)
 
+    __table_args__ = (
+        UniqueConstraint('prompt', 'negative_prompt', name='prompt_negative_prompt_unique'),
+    )
+
 
 class ControlnetModel(Base):
     __tablename__ = 'controlnet_models'
@@ -176,7 +194,7 @@ class ControlnetModel(Base):
     enabled = Column(Boolean, default=True)
 
     def __repr__(self):
-        return f"<ControlnetModel(name='{self.name}', path='{self.path}', default='{self.default}')>"
+        return f"<ControlnetModel(name='{self.name}', path='{self.path}', default='{self.is_default}')>"
 
 
 class AIModel(Base):
@@ -190,7 +208,7 @@ class AIModel(Base):
     category = Column(String)
     pipeline_action = Column(String)
     enabled = Column(Boolean, default=True)
-    default = Column(Boolean, default=True)
+    is_default = Column(Boolean, default=True)
 
 
 class Pipeline(Base):
