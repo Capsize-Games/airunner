@@ -594,6 +594,9 @@ class MainWindow(
     def action_show_model_path_lora(self):
         self.show_path(self.settings_manager.path_settings.lora_model_path)
 
+    def refresh_available_models(self):
+        self.generator_tab_widget.refresh_models()
+
     def show_path(self, path):
         import subprocess
         import platform

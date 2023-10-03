@@ -184,7 +184,7 @@ class Ui_MainWindow(object):
         self.generator_widget = GeneratorTabWidget(parent=self.content_splitter)
         self.generator_widget.setObjectName("generator_widget")
         self.center_splitter = QtWidgets.QSplitter(parent=self.content_splitter)
-        self.center_splitter.setMinimumSize(QtCore.QSize(512, 512))
+        self.center_splitter.setMinimumSize(QtCore.QSize(0, 0))
         self.center_splitter.setOrientation(QtCore.Qt.Orientation.Vertical)
         self.center_splitter.setObjectName("center_splitter")
         self.canvas_frame = QtWidgets.QFrame(parent=self.center_splitter)

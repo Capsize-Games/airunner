@@ -45,33 +45,6 @@ class ModelManagerWidget(BaseWidget):
             self._current_model_object = ModelData()
         return self._current_model_object
 
-    # def __init__(self, *args, **kwargs):
-    #     super().__init__(*args, **kwargs)
-    #
-    #     # load tabs
-    #     self.default_tab = uic.loadUi("widgets/model_manager/templates/default.ui")
-    #     self.custom_tab = uic.loadUi("widgets/model_manager/templates/custom.ui")
-    #     self.import_tab = uic.loadUi("widgets/model_manager/templates/import.ui")
-    #     self.ui.tabs.addTab(self.default_tab, "Default")
-    #     self.ui.tabs.addTab(self.custom_tab, "Custom")
-    #     self.ui.tabs.addTab(self.import_tab, "Import")
-    #     self.default_tab.toggle_all.clicked.connect(partial(self.toggle_all_models, "default"))
-    #     self.custom_tab.toggle_all.clicked.connect(partial(self.toggle_all_models, "custom"))
-    #
-    #     self.show_items_in_scrollarea()
-    #     self.custom_tab.scan_for_models_button.clicked.connect(self.scan_for_models)
-    #
-    #     self.import_tab.import_button.clicked.connect(self.import_models)
-    #     self.import_tab.download_button.clicked.connect(self.download_model)
-    #
-    #     self.import_tab.cancel_download_button.clicked.connect(self.cancel_download)
-    #     self.import_tab.cancel_download_save_button.clicked.connect(self.reset_form)
-    #     self.toggle_model_download_form_elements_stage_1(show=True)
-    #     self.toggle_model_download_form_elements_stage_2()
-    #     self.toggle_model_download_form_elements_stage_3()
-    #
-    #     self.set_stylesheet()
-
     def toggle_all_models(self, key, value):
         for model in self.model_widgets[key]:
             model.name.setChecked(value)
