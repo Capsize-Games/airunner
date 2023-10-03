@@ -63,7 +63,7 @@
      <property name="widgetResizable">
       <bool>true</bool>
      </property>
-     <widget class="QWidget" name="scrollAreaWidgetContents_2">
+     <widget class="QWidget" name="scrollAreaWidgetContents">
       <property name="geometry">
        <rect>
         <x>0</x>
@@ -72,11 +72,32 @@
         <height>755</height>
        </rect>
       </property>
+      <layout class="QGridLayout" name="gridLayout_2"/>
      </widget>
     </widget>
    </item>
   </layout>
  </widget>
  <resources/>
- <connections/>
+ <connections>
+  <connection>
+   <sender>toggleAllLora</sender>
+   <signal>toggled(bool)</signal>
+   <receiver>lora_container</receiver>
+   <slot>toggle_all(bool)</slot>
+   <hints>
+    <hint type="sourcelabel">
+     <x>52</x>
+     <y>5</y>
+    </hint>
+    <hint type="destinationlabel">
+     <x>52</x>
+     <y>-11</y>
+    </hint>
+   </hints>
+  </connection>
+ </connections>
+ <slots>
+  <slot>toggle_all(bool)</slot>
+ </slots>
 </ui>
