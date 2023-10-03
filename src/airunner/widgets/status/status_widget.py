@@ -26,3 +26,6 @@ class StatusWidget(BaseWidget):
 
         self.ui.nsfw_status.setStyleSheet(enabled_css if self.settings_manager.nsfw_filter else disabled_css)
         self.ui.cuda_status.setStyleSheet(enabled_css if has_cuda else disabled_css)
+
+    def set_system_status(self, txt, error):
+        self.ui.system_message.setText(txt)

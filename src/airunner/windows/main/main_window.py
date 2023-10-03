@@ -310,9 +310,6 @@ class MainWindow(
         # check for self.current_layer.lines every 100ms
         self.timer = self.startTimer(100)
 
-        # self.header_widget.set_size_increment_levels()
-        self.clear_status_message()
-
         self.register_keypress()
 
         if not self.testing:
@@ -326,6 +323,7 @@ class MainWindow(
 
         self.status_widget = StatusWidget()
         self.statusBar().addPermanentWidget(self.status_widget)
+        self.clear_status_message()
 
         # create paths if they do not exist
         create_airunner_paths()
@@ -1067,7 +1065,8 @@ class MainWindow(
         # self.footer_widget.ui.status_label.setStyleSheet(
         #     f"color: {self.status_error_color if error else color};"
         # )
-        print(txt)
+        if self.status_widget:
+            self.status_widget.set_system_status(txt, error)
 
     @pyqtSlot(dict)
     def message_handler(self, response: dict):
