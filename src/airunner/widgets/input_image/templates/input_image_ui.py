@@ -12,7 +12,7 @@ from PyQt6 import QtCore, QtGui, QtWidgets
 class Ui_input_image(object):
     def setupUi(self, input_image):
         input_image.setObjectName("input_image")
-        input_image.resize(296, 175)
+        input_image.resize(266, 175)
         input_image.setMaximumSize(QtCore.QSize(16777215, 16777215))
         input_image.setAcceptDrops(False)
         self.gridLayout_2 = QtWidgets.QGridLayout(input_image)
@@ -141,7 +141,7 @@ class Ui_input_image(object):
         sizePolicy.setVerticalStretch(0)
         sizePolicy.setHeightForWidth(self.import_image_button.sizePolicy().hasHeightForWidth())
         self.import_image_button.setSizePolicy(sizePolicy)
-        self.import_image_button.setMinimumSize(QtCore.QSize(0, 35))
+        self.import_image_button.setMinimumSize(QtCore.QSize(10, 35))
         self.import_image_button.setMaximumSize(QtCore.QSize(16777215, 35))
         font = QtGui.QFont()
         font.setPointSize(8)
@@ -171,7 +171,6 @@ class Ui_input_image(object):
         self.retranslateUi(input_image)
         self.input_image_tab_widget.setCurrentIndex(0)
         self.groupBox.toggled['bool'].connect(input_image.action_toggled_use_input_image) # type: ignore
-        self.import_image_button.clicked.connect(input_image.action_clicked_button_import_image) # type: ignore
         self.refresh_input_image_button.clicked.connect(input_image.action_clicked_button_refresh_grid_image) # type: ignore
         self.clear_image_button.clicked.connect(input_image.action_clicked_button_clear_input_image) # type: ignore
         self.recycle_grid_image_button.toggled['bool'].connect(input_image.action_toggled_button_refresh_input_image) # type: ignore
@@ -179,6 +178,7 @@ class Ui_input_image(object):
         self.use_grid_image_button.toggled['bool'].connect(input_image.action_toggled_button_use_grid_image) # type: ignore
         self.use_imported_image_button.toggled['bool'].connect(input_image.action_toggled_button_use_imported_image) # type: ignore
         self.image_thumbnail.clicked.connect(input_image.action_clicked_button_thumbnail) # type: ignore
+        self.import_image_button.clicked.connect(input_image.action_clicked_button_import_image) # type: ignore
         QtCore.QMetaObject.connectSlotsByName(input_image)
 
     def retranslateUi(self, input_image):
