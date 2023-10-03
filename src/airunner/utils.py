@@ -391,9 +391,14 @@ def get_session():
     return SESSION
 
 
-def save_session():
-    session = get_session()
-    session.commit()
+def save_session(session=None):
+    session = get_session() if not session else session
+    try:
+        session.commit()
+        return True
+    except Exception as e:
+        session.rollback()
+        return False
 
 
 def create_airunner_paths():
