@@ -124,7 +124,7 @@
       </font>
      </property>
      <property name="text">
-      <string>Generate Batch</string>
+      <string>Generate Deterministic Batch</string>
      </property>
     </widget>
    </item>
@@ -142,5 +142,59 @@
   </customwidget>
  </customwidgets>
  <resources/>
- <connections/>
+ <connections>
+  <connection>
+   <sender>category</sender>
+   <signal>currentTextChanged(QString)</signal>
+   <receiver>deterministic_widget</receiver>
+   <slot>action_text_changed_category(QString)</slot>
+   <hints>
+    <hint type="sourcelabel">
+     <x>59</x>
+     <y>92</y>
+    </hint>
+    <hint type="destinationlabel">
+     <x>15</x>
+     <y>-12</y>
+    </hint>
+   </hints>
+  </connection>
+  <connection>
+   <sender>images_per_batch</sender>
+   <signal>valueChanged(int)</signal>
+   <receiver>deterministic_widget</receiver>
+   <slot>action_value_changed_images_per_batch(int)</slot>
+   <hints>
+    <hint type="sourcelabel">
+     <x>155</x>
+     <y>166</y>
+    </hint>
+    <hint type="destinationlabel">
+     <x>93</x>
+     <y>-13</y>
+    </hint>
+   </hints>
+  </connection>
+  <connection>
+   <sender>generate_batches_button</sender>
+   <signal>clicked()</signal>
+   <receiver>deterministic_widget</receiver>
+   <slot>action_clicked_button_generate_batch()</slot>
+   <hints>
+    <hint type="sourcelabel">
+     <x>96</x>
+     <y>239</y>
+    </hint>
+    <hint type="destinationlabel">
+     <x>115</x>
+     <y>-5</y>
+    </hint>
+   </hints>
+  </connection>
+ </connections>
+ <slots>
+  <slot>action_text_changed_category(QString)</slot>
+  <slot>action_value_changed_images_per_batch(int)</slot>
+  <slot>action_clicked_button_generate_batch()</slot>
+ </slots>
 </ui>

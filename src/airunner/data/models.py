@@ -255,7 +255,6 @@ class GeneratorSetting(Base):
     strength = Column(Integer, default=50)
     image_guidance_scale = Column(Integer, default=150)
     n_samples = Column(Integer, default=1)
-    deterministic = Column(Boolean, default=False)
     controlnet = Column(String, default="")
     enable_controlnet = Column(Boolean, default=False)
     enable_input_image = Column(Boolean, default=False)
@@ -307,6 +306,16 @@ class GridSettings(Base):
     line_width = Column(Integer, default=1)
     line_color = Column(String, default="#121212")
     settings = relationship("Settings", back_populates="grid_settings")
+
+
+class DeterministicSettings(Base):
+    __tablename__ = 'deterministic_settings'
+
+    id = Column(Integer, primary_key=True)
+    batch_size = Column(Integer, default=1)
+    style = Column(String, default="")
+    seed = Column(Integer, default=42)
+    settings = relationship("Settings", back_populates="deterministic_settings")
 
 
 class MetadataSettings(Base):
@@ -512,6 +521,9 @@ class Settings(Base):
     memory_settings_id = Column(Integer, ForeignKey('memory_settings.id'))
     memory_settings = relationship("MemorySettings", back_populates="settings")
 
+    deterministic_settings_id = Column(Integer, ForeignKey('deterministic_settings.id'))
+    deterministic_settings = relationship("DeterministicSettings", back_populates="settings", uselist=False)
+
     force_reset = Column(Boolean, default=False)
     auto_export_images = Column(Boolean, default=False)
     image_export_type = Column(String, default="png")
@@ -539,3 +551,4 @@ class Document(Base):
     name = Column(String)
     settings_id = Column(Integer, ForeignKey('settings.id'))
     settings = relationship("Settings", backref="document")
+    active = Column(Boolean, default=False)

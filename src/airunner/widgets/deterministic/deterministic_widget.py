@@ -12,3 +12,12 @@ class DeterministicWidget(BaseWidget):
     @property
     def category(self):
         return self.ui.category.text()
+
+    def action_value_changed_images_per_batch(self, val):
+        self.settings_manager.set_value("determinisitic_settings.images_per_batch", val)
+
+    def action_text_changed_category(self, val):
+        self.settings_manager.set_value("determinisitic_settings.category", val)
+
+    def action_clicked_button_generate_batch(self):
+        print("generate batch clicked")
