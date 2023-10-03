@@ -137,6 +137,13 @@ class GeneratorForm(BaseWidget):
     The following functions are defined in and connected to the appropriate
     signals in the corresponding ui file.
     """
+    def action_clicked_button_save_prompts(self):
+        print("save prompts", self.settings_manager.generator.prompt, self.settings_manager.generator.negative_prompt)
+        self.settings_manager.create_saved_prompt(
+            self.settings_manager.generator.prompt,
+            self.settings_manager.generator.negative_prompt
+        )
+
     def handle_prompt_changed(self):
         if not self.initialized:
             return
@@ -281,7 +288,7 @@ class GeneratorForm(BaseWidget):
             "category": model.category,
             "pipeline_action": model.pipeline_action,
             "enabled": model.enabled,
-            "default": model.default
+            "default": model.is_default
         }
 
         # get controlnet_dropdown from active tab
