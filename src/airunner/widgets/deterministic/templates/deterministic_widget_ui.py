@@ -78,6 +78,9 @@ class Ui_deterministic_widget(object):
         self.gridLayout_2.addWidget(self.deterministic_seed, 4, 0, 1, 2)
 
         self.retranslateUi(deterministic_widget)
+        self.category.currentTextChanged['QString'].connect(deterministic_widget.action_text_changed_category) # type: ignore
+        self.images_per_batch.valueChanged['int'].connect(deterministic_widget.action_value_changed_images_per_batch) # type: ignore
+        self.generate_batches_button.clicked.connect(deterministic_widget.action_clicked_button_generate_batch) # type: ignore
         QtCore.QMetaObject.connectSlotsByName(deterministic_widget)
 
     def retranslateUi(self, deterministic_widget):
@@ -86,5 +89,5 @@ class Ui_deterministic_widget(object):
         self.groupBox_2.setTitle(_translate("deterministic_widget", "Cateogry"))
         self.groupBox.setTitle(_translate("deterministic_widget", "Images per-batch"))
         self.label.setText(_translate("deterministic_widget", "Deterministic generation"))
-        self.generate_batches_button.setText(_translate("deterministic_widget", "Generate Batch"))
+        self.generate_batches_button.setText(_translate("deterministic_widget", "Generate Deterministic Batch"))
 from airunner.widgets.seed.seed_widget import SeedWidget

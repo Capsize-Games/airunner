@@ -228,18 +228,6 @@ class MainWindow(
         return self._generator_type
 
     @property
-    def deterministic_batch_size(self):
-        return self.ui.deterministic_panel_widget.batch_size
-
-    @property
-    def deterministic_seed(self):
-        return self.ui.deterministic_panel_widget.ui.deterministic_seed.seed
-
-    @property
-    def deterministic_category(self):
-        return self.ui.deterministic_panel_widget.category
-
-    @property
     def version(self):
         if self._version is None:
             self._version = get_version()
@@ -1259,7 +1247,8 @@ class MainWindow(
         self.image_generated.emit(True)
 
     def post_process_images(self, images):
-        return self.automatic_filter_manager.apply_filters(images)
+        #return self.automatic_filter_manager.apply_filters(images)
+        return images
 
     def handle_status(self, message):
         self.set_status_label(message)

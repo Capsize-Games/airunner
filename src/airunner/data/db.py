@@ -8,7 +8,8 @@ from airunner.data.bootstrap.prompt_bootstrap_data import prompt_bootstrap_data,
 from airunner.data.models import ControlnetModel, Pipeline, Document, Settings, PromptGeneratorSetting, \
     GeneratorSetting, SplitterSection, GridSettings, MetadataSettings, PathSettings, MemorySettings, AIModel, \
     ImageFilter, ImageFilterValue, BrushSettings, Prompt, PromptVariable, PromptCategory, PromptOption, \
-    PromptVariableCategory, PromptVariableCategoryWeight, PromptStyleCategory, PromptStyle, Scheduler, ActionScheduler
+    PromptVariableCategory, PromptVariableCategoryWeight, PromptStyleCategory, PromptStyle, Scheduler, ActionScheduler, \
+    DeterministicSettings
 from airunner.utils import get_session
 
 session = get_session()
@@ -156,6 +157,9 @@ if not session.query(Prompt).first():
     session.add(GridSettings())
     session.commit()
 
+    session.add(DeterministicSettings())
+    session.commit()
+
 
     # Add MetadataSettings objects
     session.add(MetadataSettings())
@@ -241,6 +245,7 @@ if not session.query(Prompt).first():
     settings.brush_settings = session.query(BrushSettings).first()
     settings.path_settings = session.query(PathSettings).first()
     settings.grid_settings = session.query(GridSettings).first()
+    settings.deterministic_settings = session.query(DeterministicSettings).first()
     settings.metadata_settings = session.query(MetadataSettings).first()
     settings.memory_settings = session.query(MemorySettings).first()
 
@@ -253,7 +258,8 @@ if not session.query(Prompt).first():
 
     session.add(Document(
         name="Untitled",
-        settings=settings
+        settings=settings,
+        active=True
     ))
     session.commit()
 
