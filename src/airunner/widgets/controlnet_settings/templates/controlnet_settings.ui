@@ -65,6 +65,9 @@
      <property name="checkable">
       <bool>true</bool>
      </property>
+     <property name="checked">
+      <bool>false</bool>
+     </property>
      <layout class="QGridLayout" name="gridLayout_5">
       <property name="leftMargin">
        <number>9</number>
@@ -763,8 +766,8 @@
    <slot>action_clicked_button_import_image()</slot>
    <hints>
     <hint type="sourcelabel">
-     <x>197</x>
-     <y>113</y>
+     <x>245</x>
+     <y>112</y>
     </hint>
     <hint type="destinationlabel">
      <x>84</x>
@@ -779,8 +782,8 @@
    <slot>action_toggled_button_link_input_image(bool)</slot>
    <hints>
     <hint type="sourcelabel">
-     <x>283</x>
-     <y>151</y>
+     <x>127</x>
+     <y>150</y>
     </hint>
     <hint type="destinationlabel">
      <x>247</x>
@@ -795,8 +798,8 @@
    <slot>action_toggled_use_input_image(bool)</slot>
    <hints>
     <hint type="sourcelabel">
-     <x>315</x>
-     <y>151</y>
+     <x>155</x>
+     <y>150</y>
     </hint>
     <hint type="destinationlabel">
      <x>263</x>
@@ -811,8 +814,8 @@
    <slot>action_toggled_button_use_grid_image(bool)</slot>
    <hints>
     <hint type="sourcelabel">
-     <x>347</x>
-     <y>151</y>
+     <x>183</x>
+     <y>150</y>
     </hint>
     <hint type="destinationlabel">
      <x>263</x>
@@ -827,8 +830,8 @@
    <slot>action_toggled_button_lock_grid_image(bool)</slot>
    <hints>
     <hint type="sourcelabel">
-     <x>379</x>
-     <y>151</y>
+     <x>211</x>
+     <y>150</y>
     </hint>
     <hint type="destinationlabel">
      <x>263</x>
@@ -843,8 +846,8 @@
    <slot>action_clicked_button_refresh_grid_image()</slot>
    <hints>
     <hint type="sourcelabel">
-     <x>411</x>
-     <y>151</y>
+     <x>239</x>
+     <y>150</y>
     </hint>
     <hint type="destinationlabel">
      <x>263</x>
@@ -859,8 +862,8 @@
    <slot>action_clicked_button_clear_input_image()</slot>
    <hints>
     <hint type="sourcelabel">
-     <x>443</x>
-     <y>151</y>
+     <x>267</x>
+     <y>150</y>
     </hint>
     <hint type="destinationlabel">
      <x>263</x>
@@ -891,8 +894,8 @@
    <slot>action_toggled_button_link_input_image_mask(bool)</slot>
    <hints>
     <hint type="sourcelabel">
-     <x>347</x>
-     <y>151</y>
+     <x>127</x>
+     <y>148</y>
     </hint>
     <hint type="destinationlabel">
      <x>263</x>
@@ -907,8 +910,8 @@
    <slot>action_toggled_use_input_image(bool)</slot>
    <hints>
     <hint type="sourcelabel">
-     <x>379</x>
-     <y>151</y>
+     <x>155</x>
+     <y>148</y>
     </hint>
     <hint type="destinationlabel">
      <x>263</x>
@@ -923,8 +926,8 @@
    <slot>action_clicked_button_export_mask()</slot>
    <hints>
     <hint type="sourcelabel">
-     <x>411</x>
-     <y>151</y>
+     <x>183</x>
+     <y>148</y>
     </hint>
     <hint type="destinationlabel">
      <x>263</x>
@@ -939,8 +942,8 @@
    <slot>action_clicked_button_clear_input_image_mask()</slot>
    <hints>
     <hint type="sourcelabel">
-     <x>443</x>
-     <y>151</y>
+     <x>211</x>
+     <y>148</y>
     </hint>
     <hint type="destinationlabel">
      <x>263</x>

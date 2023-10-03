@@ -35,7 +35,7 @@ class GeneratorTabWidget(BaseWidget):
 
     @property
     def current_input_image(self):
-        if self.app.enable_input_image:
+        if self.settings_manager.settings.enable_input_image:
             return self.current_input_image_widget.current_input_image
         return None
 

@@ -85,6 +85,9 @@
         <property name="checkable">
          <bool>true</bool>
         </property>
+        <property name="checked">
+         <bool>false</bool>
+        </property>
         <layout class="QGridLayout" name="gridLayout_5">
          <property name="leftMargin">
           <number>9</number>
@@ -476,8 +479,8 @@
    <slot>action_clicked_button_import_image()</slot>
    <hints>
     <hint type="sourcelabel">
-     <x>121</x>
-     <y>113</y>
+     <x>169</x>
+     <y>112</y>
     </hint>
     <hint type="destinationlabel">
      <x>34</x>
@@ -492,8 +495,8 @@
    <slot>action_clicked_button_refresh_grid_image()</slot>
    <hints>
     <hint type="sourcelabel">
-     <x>270</x>
-     <y>170</y>
+     <x>211</x>
+     <y>147</y>
     </hint>
     <hint type="destinationlabel">
      <x>245</x>
@@ -508,8 +511,8 @@
    <slot>action_clicked_button_clear_input_image()</slot>
    <hints>
     <hint type="sourcelabel">
-     <x>298</x>
-     <y>170</y>
+     <x>239</x>
+     <y>147</y>
     </hint>
     <hint type="destinationlabel">
      <x>295</x>
@@ -524,8 +527,8 @@
    <slot>action_toggled_button_refresh_input_image(bool)</slot>
    <hints>
     <hint type="sourcelabel">
-     <x>242</x>
-     <y>170</y>
+     <x>183</x>
+     <y>147</y>
     </hint>
     <hint type="destinationlabel">
      <x>252</x>
@@ -540,8 +543,8 @@
    <slot>action_toggled_button_lock_grid_image(bool)</slot>
    <hints>
     <hint type="sourcelabel">
-     <x>242</x>
-     <y>170</y>
+     <x>183</x>
+     <y>147</y>
     </hint>
     <hint type="destinationlabel">
      <x>243</x>
@@ -556,8 +559,8 @@
    <slot>action_toggled_button_use_grid_image(bool)</slot>
    <hints>
     <hint type="sourcelabel">
-     <x>214</x>
-     <y>170</y>
+     <x>155</x>
+     <y>147</y>
     </hint>
     <hint type="destinationlabel">
      <x>295</x>
@@ -572,8 +575,8 @@
    <slot>action_toggled_button_use_imported_image(bool)</slot>
    <hints>
     <hint type="sourcelabel">
-     <x>175</x>
-     <y>158</y>
+     <x>127</x>
+     <y>147</y>
     </hint>
     <hint type="destinationlabel">
      <x>186</x>

@@ -29,6 +29,7 @@ class Ui_controlnet_settings(object):
         self.groupBox.setStyleSheet("")
         self.groupBox.setFlat(False)
         self.groupBox.setCheckable(True)
+        self.groupBox.setChecked(False)
         self.groupBox.setObjectName("groupBox")
         self.gridLayout_5 = QtWidgets.QGridLayout(self.groupBox)
         self.gridLayout_5.setContentsMargins(9, -1, 9, 9)
