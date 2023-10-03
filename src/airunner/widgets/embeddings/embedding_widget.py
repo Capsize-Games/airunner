@@ -1,29 +1,25 @@
-from functools import partial
 from airunner.widgets.base_widget import BaseWidget
+from airunner.widgets.embeddings.templates.embedding_ui import Ui_embedding
 
 
 class EmbeddingWidget(BaseWidget):
-    name = "widgets/embedding"
+    widget_class_ = Ui_embedding
 
     def __init__(self, *args, **kwargs):
-        name = kwargs.pop("name", None)
+        self.name = kwargs.pop("name", None)
+        self.tags = kwargs.pop("tags", [])
+        self.active = kwargs.pop("active", True)
         super().__init__(*args, **kwargs)
-        self.label.setText(name)
-        self.to_prompt_button.clicked.connect(partial(self.app.insert_into_prompt, f"{name}"))
-        self.to_negative_prompt_button.clicked.connect(partial(self.app.insert_into_prompt, f"{name}", True))
-        button_styles = """
-        QPushButton {
-        font-size: 8pt;
-        border: 1px solid #222222;
-        }
-        QPushButton:hover {
-        background-color: #2e3440;
-        }
-        QPushButton:pressed {
-        background-color: #3b4252;
-        }
-        """
-        self.to_prompt_button.setStyleSheet(button_styles)
-        self.to_negative_prompt_button.setStyleSheet(button_styles)
-        self.layout().setVerticalSpacing(3)
-        self.layout().setHorizontalSpacing(6)
+        self.ui.name.checked = self.active
+        self.ui.name.setTitle(self.name)
+        if len(self.tags):
+            self.ui.tags.show()
+            self.ui.tags.setText(", ".join(self.tags))
+        else:
+            self.ui.tags.hide()
+
+    def action_clicked_button_to_prompt(self):
+        self.app.insert_into_prompt(f"{self.name}")
+
+    def action_clicked_button_to_negative_prompt(self):
+        self.app.insert_into_prompt(f"{self.name}", True)
