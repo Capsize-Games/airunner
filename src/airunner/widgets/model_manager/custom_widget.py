@@ -173,7 +173,7 @@ class CustomModelWidget(BaseWidget):
         self.update_generator_model_dropdown()
 
     def update_generator_model_dropdown(self):
-        self.app.generator_tab_widget.update_available_models()
+        self.app.refresh_available_models()
 
     def hide_details(self, model_widget):
         model_widget.details_are_shown = False
