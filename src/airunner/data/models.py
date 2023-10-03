@@ -239,6 +239,7 @@ class Lora(Base):
     id = Column(Integer, primary_key=True)
     settings_id = Column(Integer, ForeignKey('settings.id'))
     name = Column(String)
+    path = Column(String)
     scale = Column(Float)
     enabled = Column(Boolean, default=True)
     loaded = Column(Boolean, default=False)
@@ -247,6 +248,10 @@ class Lora(Base):
     @classmethod
     def get_all(cls, session):
         return session.query(cls).all()
+
+    __table_args__ = (
+        UniqueConstraint('name', 'path', name='name_path_unique'),
+    )
 
 
 class GeneratorSetting(Base):
