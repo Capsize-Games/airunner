@@ -506,8 +506,8 @@
        <widget class="QSplitter" name="center_splitter">
         <property name="minimumSize">
          <size>
-          <width>512</width>
-          <height>512</height>
+          <width>0</width>
+          <height>0</height>
          </size>
         </property>
         <property name="orientation">
