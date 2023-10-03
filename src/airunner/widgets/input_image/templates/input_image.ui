@@ -6,7 +6,7 @@
    <rect>
     <x>0</x>
     <y>0</y>
-    <width>296</width>
+    <width>266</width>
     <height>175</height>
    </rect>
   </property>
@@ -371,7 +371,7 @@
                </property>
                <property name="minimumSize">
                 <size>
-                 <width>0</width>
+                 <width>10</width>
                  <height>35</height>
                 </size>
                </property>
@@ -468,22 +468,6 @@
     </hint>
     <hint type="destinationlabel">
      <x>17</x>
-     <y>0</y>
-    </hint>
-   </hints>
-  </connection>
-  <connection>
-   <sender>import_image_button</sender>
-   <signal>clicked()</signal>
-   <receiver>input_image</receiver>
-   <slot>action_clicked_button_import_image()</slot>
-   <hints>
-    <hint type="sourcelabel">
-     <x>169</x>
-     <y>112</y>
-    </hint>
-    <hint type="destinationlabel">
-     <x>34</x>
      <y>0</y>
     </hint>
    </hints>
@@ -596,6 +580,22 @@
     </hint>
     <hint type="destinationlabel">
      <x>84</x>
+     <y>0</y>
+    </hint>
+   </hints>
+  </connection>
+  <connection>
+   <sender>import_image_button</sender>
+   <signal>clicked()</signal>
+   <receiver>input_image</receiver>
+   <slot>action_clicked_button_import_image()</slot>
+   <hints>
+    <hint type="sourcelabel">
+     <x>169</x>
+     <y>112</y>
+    </hint>
+    <hint type="destinationlabel">
+     <x>34</x>
      <y>0</y>
     </hint>
    </hints>

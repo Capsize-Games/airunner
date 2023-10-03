@@ -12,7 +12,7 @@ from PyQt6 import QtCore, QtGui, QtWidgets
 class Ui_controlnet_settings(object):
     def setupUi(self, controlnet_settings):
         controlnet_settings.setObjectName("controlnet_settings")
-        controlnet_settings.resize(342, 181)
+        controlnet_settings.resize(294, 181)
         controlnet_settings.setMaximumSize(QtCore.QSize(16777215, 16777215))
         font = QtGui.QFont()
         font.setPointSize(8)
@@ -156,7 +156,7 @@ class Ui_controlnet_settings(object):
         sizePolicy.setVerticalStretch(0)
         sizePolicy.setHeightForWidth(self.import_image_button.sizePolicy().hasHeightForWidth())
         self.import_image_button.setSizePolicy(sizePolicy)
-        self.import_image_button.setMinimumSize(QtCore.QSize(0, 35))
+        self.import_image_button.setMinimumSize(QtCore.QSize(10, 35))
         self.import_image_button.setMaximumSize(QtCore.QSize(16777215, 35))
         font = QtGui.QFont()
         font.setPointSize(8)
@@ -236,6 +236,7 @@ class Ui_controlnet_settings(object):
         sizePolicy.setVerticalStretch(0)
         sizePolicy.setHeightForWidth(self.mask_import_button.sizePolicy().hasHeightForWidth())
         self.mask_import_button.setSizePolicy(sizePolicy)
+        self.mask_import_button.setMinimumSize(QtCore.QSize(10, 0))
         self.mask_import_button.setMaximumSize(QtCore.QSize(16777215, 16777215))
         font = QtGui.QFont()
         font.setPointSize(8)
