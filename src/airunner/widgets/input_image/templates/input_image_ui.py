@@ -37,6 +37,7 @@ class Ui_input_image(object):
         self.groupBox.setFont(font)
         self.groupBox.setCursor(QtGui.QCursor(QtCore.Qt.CursorShape.ArrowCursor))
         self.groupBox.setCheckable(True)
+        self.groupBox.setChecked(False)
         self.groupBox.setObjectName("groupBox")
         self.gridLayout_5 = QtWidgets.QGridLayout(self.groupBox)
         self.gridLayout_5.setContentsMargins(9, -1, 9, -1)
