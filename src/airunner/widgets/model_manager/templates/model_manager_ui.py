@@ -12,8 +12,8 @@ from PyQt6 import QtCore, QtGui, QtWidgets
 class Ui_model_manager(object):
     def setupUi(self, model_manager):
         model_manager.setObjectName("model_manager")
-        model_manager.resize(300, 373)
-        sizePolicy = QtWidgets.QSizePolicy(QtWidgets.QSizePolicy.Policy.Preferred, QtWidgets.QSizePolicy.Policy.Minimum)
+        model_manager.resize(472, 380)
+        sizePolicy = QtWidgets.QSizePolicy(QtWidgets.QSizePolicy.Policy.Preferred, QtWidgets.QSizePolicy.Policy.Preferred)
         sizePolicy.setHorizontalStretch(0)
         sizePolicy.setVerticalStretch(0)
         sizePolicy.setHeightForWidth(model_manager.sizePolicy().hasHeightForWidth())
@@ -26,7 +26,7 @@ class Ui_model_manager(object):
         self.gridLayout.setContentsMargins(0, 0, 0, 0)
         self.gridLayout.setObjectName("gridLayout")
         self.tabs = QtWidgets.QTabWidget(parent=model_manager)
-        sizePolicy = QtWidgets.QSizePolicy(QtWidgets.QSizePolicy.Policy.Minimum, QtWidgets.QSizePolicy.Policy.Expanding)
+        sizePolicy = QtWidgets.QSizePolicy(QtWidgets.QSizePolicy.Policy.Preferred, QtWidgets.QSizePolicy.Policy.Preferred)
         sizePolicy.setHorizontalStretch(0)
         sizePolicy.setVerticalStretch(0)
         sizePolicy.setHeightForWidth(self.tabs.sizePolicy().hasHeightForWidth())
@@ -46,7 +46,7 @@ class Ui_model_manager(object):
         self.scrollArea.setWidgetResizable(True)
         self.scrollArea.setObjectName("scrollArea")
         self.scrollAreaWidgetContents = QtWidgets.QWidget()
-        self.scrollAreaWidgetContents.setGeometry(QtCore.QRect(0, 0, 276, 326))
+        self.scrollAreaWidgetContents.setGeometry(QtCore.QRect(0, 0, 223, 138))
         self.scrollAreaWidgetContents.setObjectName("scrollAreaWidgetContents")
         self.gridLayout_5 = QtWidgets.QGridLayout(self.scrollAreaWidgetContents)
         self.gridLayout_5.setObjectName("gridLayout_5")
@@ -64,7 +64,7 @@ class Ui_model_manager(object):
         self.scrollArea_2.setWidgetResizable(True)
         self.scrollArea_2.setObjectName("scrollArea_2")
         self.scrollAreaWidgetContents_2 = QtWidgets.QWidget()
-        self.scrollAreaWidgetContents_2.setGeometry(QtCore.QRect(0, 0, 276, 326))
+        self.scrollAreaWidgetContents_2.setGeometry(QtCore.QRect(0, 0, 223, 138))
         self.scrollAreaWidgetContents_2.setObjectName("scrollAreaWidgetContents_2")
         self.gridLayout_6 = QtWidgets.QGridLayout(self.scrollAreaWidgetContents_2)
         self.gridLayout_6.setObjectName("gridLayout_6")
@@ -82,7 +82,7 @@ class Ui_model_manager(object):
         self.scrollArea_3.setWidgetResizable(True)
         self.scrollArea_3.setObjectName("scrollArea_3")
         self.scrollAreaWidgetContents_3 = QtWidgets.QWidget()
-        self.scrollAreaWidgetContents_3.setGeometry(QtCore.QRect(0, 0, 276, 326))
+        self.scrollAreaWidgetContents_3.setGeometry(QtCore.QRect(0, 0, 448, 333))
         self.scrollAreaWidgetContents_3.setObjectName("scrollAreaWidgetContents_3")
         self.gridLayout_7 = QtWidgets.QGridLayout(self.scrollAreaWidgetContents_3)
         self.gridLayout_7.setObjectName("gridLayout_7")
@@ -95,7 +95,7 @@ class Ui_model_manager(object):
         self.gridLayout.addWidget(self.tabs, 0, 0, 1, 1)
 
         self.retranslateUi(model_manager)
-        self.tabs.setCurrentIndex(0)
+        self.tabs.setCurrentIndex(2)
         QtCore.QMetaObject.connectSlotsByName(model_manager)
 
     def retranslateUi(self, model_manager):

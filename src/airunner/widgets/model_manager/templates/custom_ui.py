@@ -12,14 +12,14 @@ from PyQt6 import QtCore, QtGui, QtWidgets
 class Ui_custom_model_widget(object):
     def setupUi(self, custom_model_widget):
         custom_model_widget.setObjectName("custom_model_widget")
-        custom_model_widget.resize(400, 300)
+        custom_model_widget.resize(106, 140)
         self.gridLayout = QtWidgets.QGridLayout(custom_model_widget)
         self.gridLayout.setObjectName("gridLayout")
         self.custom_scroll_area = QtWidgets.QScrollArea(parent=custom_model_widget)
         self.custom_scroll_area.setWidgetResizable(True)
         self.custom_scroll_area.setObjectName("custom_scroll_area")
         self.scrollAreaWidgetContents = QtWidgets.QWidget()
-        self.scrollAreaWidgetContents.setGeometry(QtCore.QRect(0, 0, 380, 228))
+        self.scrollAreaWidgetContents.setGeometry(QtCore.QRect(0, 0, 86, 68))
         self.scrollAreaWidgetContents.setObjectName("scrollAreaWidgetContents")
         self.verticalLayout_2 = QtWidgets.QVBoxLayout(self.scrollAreaWidgetContents)
         self.verticalLayout_2.setObjectName("verticalLayout_2")
