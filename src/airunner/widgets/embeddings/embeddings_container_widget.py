@@ -1,9 +1,7 @@
 import os
 
-from transformers.models.distilbert.modeling_distilbert import Embeddings
-
 from airunner.data.models import Embedding
-from airunner.utils import get_session
+from airunner.utils import get_session, save_session
 from airunner.widgets.base_widget import BaseWidget
 from airunner.widgets.embeddings.embedding_widget import EmbeddingWidget
 from airunner.widgets.embeddings.templates.embeddings_container_ui import Ui_embeddings_container
@@ -32,14 +30,12 @@ class EmbeddingsContainerWidget(BaseWidget):
         self.scan_for_embeddings()
 
     def scan_for_embeddings(self):
-        print("scan_for_embeddings")
         # recursively scan for embedding model files in the embeddings path
         # for each embedding model file, create an Embedding model
         # add the Embedding model to the database
         # add the Embedding model to the UI
         session = get_session()
         embeddings_path = self.settings_manager.path_settings.embeddings_path
-        print("embeddings_path", embeddings_path)
         with os.scandir(embeddings_path) as dir_object:
             for entry in dir_object:
                 if entry.is_file():  # ckpt or safetensors file
@@ -48,7 +44,4 @@ class EmbeddingsContainerWidget(BaseWidget):
                         name = entry.name.replace(".ckpt", "").replace(".safetensors", "").replace(".pt", "")
                         embedding = Embedding(name=name, path=entry.path)
                         session.add(embedding)
-        try:
-            session.commit()
-        except Exception as e:
-            session.rollback()
+        save_session(session)
