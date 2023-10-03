@@ -1,5 +1,5 @@
 from airunner.widgets.base_widget import BaseWidget
-from airunner.widgets.canvas.canvas_ui import Ui_canvas
+from airunner.widgets.canvas.templates.canvas_ui import Ui_canvas
 
 
 class CanvasWidget(BaseWidget):
