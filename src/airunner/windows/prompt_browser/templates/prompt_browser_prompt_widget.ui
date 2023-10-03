@@ -58,14 +58,11 @@
       </widget>
      </item>
      <item>
-      <widget class="QTextBrowser" name="prompt">
+      <widget class="QPlainTextEdit" name="prompt">
        <property name="font">
         <font>
          <pointsize>9</pointsize>
         </font>
-       </property>
-       <property name="readOnly">
-        <bool>false</bool>
        </property>
       </widget>
      </item>
@@ -85,14 +82,11 @@
         </widget>
        </item>
        <item>
-        <widget class="QTextBrowser" name="negative_prompt">
+        <widget class="QPlainTextEdit" name="negative_prompt">
          <property name="font">
           <font>
            <pointsize>9</pointsize>
           </font>
-         </property>
-         <property name="readOnly">
-          <bool>false</bool>
          </property>
         </widget>
        </item>
@@ -133,38 +127,6 @@
     <hint type="destinationlabel">
      <x>200</x>
      <y>-13</y>
-    </hint>
-   </hints>
-  </connection>
-  <connection>
-   <sender>prompt</sender>
-   <signal>textChanged()</signal>
-   <receiver>prompt_widget</receiver>
-   <slot>action_text_changed_prompt()</slot>
-   <hints>
-    <hint type="sourcelabel">
-     <x>68</x>
-     <y>54</y>
-    </hint>
-    <hint type="destinationlabel">
-     <x>252</x>
-     <y>-8</y>
-    </hint>
-   </hints>
-  </connection>
-  <connection>
-   <sender>negative_prompt</sender>
-   <signal>textChanged()</signal>
-   <receiver>prompt_widget</receiver>
-   <slot>action_text_changed_negative_prompt()</slot>
-   <hints>
-    <hint type="sourcelabel">
-     <x>284</x>
-     <y>193</y>
-    </hint>
-    <hint type="destinationlabel">
-     <x>502</x>
-     <y>-17</y>
     </hint>
    </hints>
   </connection>
