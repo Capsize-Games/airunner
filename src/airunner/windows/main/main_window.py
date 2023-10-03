@@ -1,5 +1,7 @@
 import os
 import pickle
+import platform
+import subprocess
 import sys
 import webbrowser
 from functools import partial
@@ -37,7 +39,7 @@ from airunner.windows.model_merger import ModelMerger
 from airunner.windows.prompt_browser.prompt_browser import PromptBrowser
 from airunner.windows.update.update_window import UpdateWindow
 from airunner.utils import get_version, get_latest_version, auto_export_image, get_session, save_session, \
-    create_airunner_paths
+    create_airunner_paths, default_hf_cache_dir
 from airunner.aihandler.settings_manager import SettingsManager
 
 from airunner.windows.video import VideoPopup
@@ -251,118 +253,16 @@ class MainWindow(
         return sys.platform.startswith("win") or sys.platform.startswith("cygwin") or sys.platform.startswith("msys")
 
     @property
-    def is_maximized(self):
-        return self.settings_manager.is_maximized
-
-    @property
-    def css(self):
-        if self._themes is None:
-            self._themes = Themes()
-        return self._themes.css
-
-    @property
     def image_path(self):
         return self.settings_manager.path_settings.image_path
+
+    @property
+    def is_maximized(self):
+        return self.settings_manager.is_maximized
 
     @is_maximized.setter
     def is_maximized(self, val):
         self.settings_manager.set_value("is_maximized", val)
-
-    @property
-    def enable_input_image(self):
-        return self.settings_manager.generator.enable_input_image
-
-    @enable_input_image.setter
-    def enable_input_image(self, val):
-        self.settings_manager.set_value("generator.enable_input_image", val)
-
-    @property
-    def input_image_use_imported_image(self):
-        return self.settings_manager.generator.input_image_use_imported_image
-
-    @input_image_use_imported_image.setter
-    def input_image_use_imported_image(self, val):
-        self.settings_manager.set_value("generator.input_image_use_imported_image", val)
-
-    @property
-    def input_image_use_grid_image(self):
-        return self.settings_manager.generator.input_image_use_grid_image
-
-    @input_image_use_grid_image.setter
-    def input_image_use_grid_image(self, val):
-        self.settings_manager.set_value("generator.input_image_use_grid_image", val)
-
-    @property
-    def input_image_recycle_grid_image(self):
-        return self.settings_manager.generator.input_image_recycle_grid_image
-
-    @input_image_recycle_grid_image.setter
-    def input_image_recycle_grid_image(self, val):
-        self.settings_manager.set_value("generator.input_image_recycle_grid_image", val)
-
-    @property
-    def input_image_mask_use_input_image(self):
-        return self.settings_manager.generator.input_image_mask_use_input_image
-
-    @input_image_mask_use_input_image.setter
-    def input_image_mask_use_input_image(self, val):
-        self.settings_manager.set_value("generator.input_image_mask_use_input_image", val)
-
-    @property
-    def input_image_mask_use_imported_image(self):
-        return self.settings_manager.generator.input_image_mask_use_imported_image
-
-    @input_image_mask_use_imported_image.setter
-    def input_image_mask_use_imported_image(self, val):
-        self.settings_manager.set_value("generator.input_image_mask_use_imported_image", val)
-
-    @property
-    def controlnet_input_image_link_to_input_image(self):
-        return self.settings_manager.generator.controlnet_input_image_link_to_input_image
-
-    @controlnet_input_image_link_to_input_image.setter
-    def controlnet_input_image_link_to_input_image(self, val):
-        self.settings_manager.set_value("generator.controlnet_input_image_link_to_input_image", val)
-
-    @property
-    def controlnet_input_image_use_imported_image(self):
-        return self.settings_manager.generator.controlnet_input_image_use_imported_image
-
-    @controlnet_input_image_use_imported_image.setter
-    def controlnet_input_image_use_imported_image(self, val):
-        self.settings_manager.set_value("generator.controlnet_input_image_use_imported_image", val)
-
-    @property
-    def controlnet_use_grid_image(self):
-        return self.settings_manager.generator.controlnet_use_grid_image
-
-    @controlnet_use_grid_image.setter
-    def controlnet_use_grid_image(self, val):
-        self.settings_manager.set_value("generator.controlnet_use_grid_image", val)
-
-    @property
-    def controlnet_recycle_grid_image(self):
-        return self.settings_manager.generator.controlnet_recycle_grid_image
-
-    @controlnet_recycle_grid_image.setter
-    def controlnet_recycle_grid_image(self, val):
-        self.settings_manager.set_value("generator.controlnet_recycle_grid_image", val)
-
-    @property
-    def controlnet_mask_link_input_image(self):
-        return self.settings_manager.generator.controlnet_mask_link_input_image
-
-    @controlnet_mask_link_input_image.setter
-    def controlnet_mask_link_input_image(self, val):
-        self.settings_manager.set_value("generator.controlnet_mask_link_input_image", val)
-
-    @property
-    def controlnet_mask_use_imported_image(self):
-        return self.settings_manager.generator.controlnet_mask_use_imported_image
-
-    @controlnet_mask_use_imported_image.setter
-    def controlnet_mask_use_imported_image(self, val):
-        self.settings_manager.set_value("generator.controlnet_mask_use_imported_image", val)
 
     @property
     def current_layer(self):
@@ -543,52 +443,49 @@ class MainWindow(
         self.show_path(path)
 
     def action_show_hf_cache_manager(self):
-        path = self.settings_manager.path_settings.hf_cache_path
-        if path == "":
-            from airunner.utils import default_hf_cache_dir
-            path = default_hf_cache_dir()
-        self.show_path(path)
+        self.show_settings_path("hf_cache_path", default_hf_cache_dir())
 
     def action_show_images_path(self):
-        self.show_path(self.settings_manager.path_settings.image_path)
+        self.show_settings_path("image_path")
     
     def action_show_videos_path(self):
-        self.show_path(self.settings_manager.path_settings.video_path)
+        self.show_settings_path("video_path")
     
     def action_show_gifs_path(self):
-        self.show_path(self.settings_manager.path_settings.gif_path)
+        self.show_settings_path("gif_path")
     
     def action_show_model_path_txt2img(self):
-        self.show_path(self.settings_manager.path_settings.txt2img_model_path)
+        self.show_settings_path("txt2img_model_path")
     
     def action_show_model_path_depth2img(self):
-        self.show_path(self.settings_manager.path_settings.depth2img_model_path)
+        self.show_settings_path("depth2img_model_path")
     
     def action_show_model_path_pix2pix(self):
-        self.show_path(self.settings_manager.path_settings.pix2pix_model_path)
+        self.show_settings_path("pix2pix_model_path")
     
     def action_show_model_path_inpaint(self):
-        self.show_path(self.settings_manager.path_settings.inpaint_model_path)
+        self.show_settings_path("inpaint_model_path")
     
     def action_show_model_path_upscale(self):
-        self.show_path(self.settings_manager.path_settings.upscale_model_path)
+        self.show_settings_path("upscale_model_path")
     
     def action_show_model_path_txt2vid(self):
-        self.show_path(self.settings_manager.path_settings.txt2vid_model_path)
+        self.show_settings_path("txt2vid_model_path")
     
     def action_show_model_path_embeddings(self):
-        self.show_path(self.settings_manager.path_settings.embeddings_model_path)
+        self.show_settings_path("embeddings_model_path")
     
     def action_show_model_path_lora(self):
-        self.show_path(self.settings_manager.path_settings.lora_model_path)
+        self.show_settings_path("lora_model_path")
 
     def refresh_available_models(self):
         self.generator_tab_widget.refresh_models()
 
+    def show_settings_path(self, name, default_path=None):
+        path = getattr(self.settings_manager.path_settings, name)
+        self.show_path(default_path if default_path and path == "" else path)
+
     def show_path(self, path):
-        import subprocess
-        import platform
-        import os
         if not os.path.isdir(path):
             return
         if platform.system() == "Windows":

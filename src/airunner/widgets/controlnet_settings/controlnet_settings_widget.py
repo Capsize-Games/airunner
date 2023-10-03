@@ -80,6 +80,10 @@ class ControlNetSettingsWidget(InputImageSettingsWidget):
         elif self.settings_manager.generator.controlnet_use_grid_image:
             self._current_active_grid_area_image = value
 
+    def initialize_groupbox(self):
+        if self.settings_manager.generator:
+            self.ui.groupBox.setChecked(self.settings_manager.generator.enable_controlnet)
+
     def handle_toggle_controlnet(self, value):
         if self.settings_manager.current_tab != "stablediffusion":
             value = False
