@@ -246,6 +246,12 @@
       </item>
       <item>
        <widget class="QPushButton" name="merge_layer_button">
+        <property name="minimumSize">
+         <size>
+          <width>40</width>
+          <height>40</height>
+         </size>
+        </property>
         <property name="toolTip">
          <string>Merge selected layers</string>
         </property>
