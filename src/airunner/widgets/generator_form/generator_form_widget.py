@@ -293,7 +293,7 @@ class GeneratorForm(BaseWidget):
             extra_options = {}
 
         if self.enable_controlnet:
-            extra_options["input_image"] = self.ui.controlnet_settings.current_controlnet_input_image
+            extra_options["input_image"] = self.ui.controlnet_settings.current_controlnet_image
 
         self.set_seed(seed=seed, latents_seed=latents_seed)
         seed = self.seed
@@ -551,6 +551,8 @@ class GeneratorForm(BaseWidget):
             category=self.generator_name)
         self.ui.model.addItems(models)
 
+        self.ui.model.setCurrentText(self.settings_manager.generator.model)
+
     def load_schedulers(self):
         session = get_session()
         schedulers = session.query(ActionScheduler).filter(
@@ -559,6 +561,8 @@ class GeneratorForm(BaseWidget):
         ).all()
         scheduler_names = [s.scheduler.display_name for s in schedulers]
         self.ui.scheduler.addItems(scheduler_names)
+
+        self.ui.scheduler.setCurrentText(self.settings_manager.generator.scheduler)
 
     def set_form_values(self):
         self.ui.prompt.setPlainText(self.settings_manager.generator.prompt)

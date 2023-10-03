@@ -12,7 +12,7 @@ from PyQt6 import QtCore, QtGui, QtWidgets
 class Ui_generator_form(object):
     def setupUi(self, generator_form):
         generator_form.setObjectName("generator_form")
-        generator_form.resize(663, 1139)
+        generator_form.resize(606, 1139)
         font = QtGui.QFont()
         font.setPointSize(8)
         generator_form.setFont(font)
@@ -25,7 +25,7 @@ class Ui_generator_form(object):
         self.scrollArea.setWidgetResizable(True)
         self.scrollArea.setObjectName("scrollArea")
         self.scrollAreaWidgetContents = QtWidgets.QWidget()
-        self.scrollAreaWidgetContents.setGeometry(QtCore.QRect(0, 0, 663, 1139))
+        self.scrollAreaWidgetContents.setGeometry(QtCore.QRect(0, 0, 606, 1139))
         self.scrollAreaWidgetContents.setObjectName("scrollAreaWidgetContents")
         self.gridLayout_2 = QtWidgets.QGridLayout(self.scrollAreaWidgetContents)
         self.gridLayout_2.setObjectName("gridLayout_2")
@@ -98,7 +98,7 @@ class Ui_generator_form(object):
         self.scrollArea_2.setWidgetResizable(True)
         self.scrollArea_2.setObjectName("scrollArea_2")
         self.scrollAreaWidgetContents_5 = QtWidgets.QWidget()
-        self.scrollAreaWidgetContents_5.setGeometry(QtCore.QRect(0, 0, 645, 296))
+        self.scrollAreaWidgetContents_5.setGeometry(QtCore.QRect(0, 0, 588, 296))
         self.scrollAreaWidgetContents_5.setObjectName("scrollAreaWidgetContents_5")
         self.gridLayout = QtWidgets.QGridLayout(self.scrollAreaWidgetContents_5)
         self.gridLayout.setContentsMargins(0, 0, 0, 0)
@@ -261,6 +261,11 @@ class Ui_generator_form(object):
         self.prompt.textChanged.connect(generator_form.handle_prompt_changed) # type: ignore
         self.negative_prompt.textChanged.connect(generator_form.handle_negative_prompt_changed) # type: ignore
         self.use_prompt_builder_checkbox.toggled['bool'].connect(generator_form.toggle_prompt_builder_checkbox) # type: ignore
+        self.generate_button.clicked.connect(generator_form.handle_generate_button_clicked) # type: ignore
+        self.interrupt_button.clicked.connect(generator_form.handle_interrupt_button_clicked) # type: ignore
+        self.model.currentTextChanged['QString'].connect(generator_form.handle_model_changed) # type: ignore
+        self.scheduler.currentTextChanged['QString'].connect(generator_form.handle_scheduler_changed) # type: ignore
+        self.variation_checkbox.toggled['bool'].connect(generator_form.toggle_variation) # type: ignore
         QtCore.QMetaObject.connectSlotsByName(generator_form)
 
     def retranslateUi(self, generator_form):
