@@ -78,34 +78,6 @@ class GeneratorForm(BaseWidget):
         )
 
     @property
-    def steps(self):
-        return self.ui.steps_widget.current_value
-
-    @property
-    def ddim_eta(self):
-        return self.ui.ddim_eta_widget.current_value
-
-    @property
-    def samples(self):
-        return self.ui.samples_widget.current_value
-
-    @property
-    def model(self):
-        return self.ui.model.currentText()
-
-    @property
-    def scheduler(self):
-        return self.ui.scheduler.currentText()
-
-    @property
-    def scale(self):
-        return self.ui.scale_widget.current_value
-
-    @property
-    def strength(self):
-        return self.ui.strength_widget.current_value
-
-    @property
     def random_seed(self):
         return self.settings_manager.generator.random_seed
 
@@ -150,12 +122,8 @@ class GeneratorForm(BaseWidget):
         return self.settings_manager.generator.enable_controlnet
 
     @property
-    def controlnet(self):
-        return self.settings_manager.generator.controlnet
-
-    @property
     def controlnet_image(self):
-        return self.ui.controlnet_settings.current_controlnet_input_image
+        return self.ui.controlnet_settings.current_controlnet_image
 
     def update_image_input_thumbnail(self):
         self.ui.input_image_widget.set_thumbnail()
@@ -220,23 +188,23 @@ class GeneratorForm(BaseWidget):
         self.app.client.do_process_queue = True
 
     def call_generate(self, image=None, seed=None):
-        if self.generator_section == "txt2img" and self.enable_controlnet and self.controlnet is not None:
-            use_pixels = True
-        else:
-            use_pixels = self.generator_section in (
-                "txt2img",
-                "pix2pix",
-                "depth2img",
-                "outpaint",
-                "controlnet",
-                "superresolution",
-                "upscale"
-            )
+        use_pixels = self.generator_section in (
+            "txt2img",
+            "pix2pix",
+            "depth2img",
+            "outpaint",
+            "controlnet",
+            "superresolution",
+            "upscale"
+        )
 
         if use_pixels:
             self.requested_image = image
             self.start_progress_bar()
-            image = self.ui.input_image_widget.current_input_image
+            enable_input_image = self.settings_manager.generator.enable_input_image
+            image = None
+            if enable_input_image:
+                image = self.ui.input_image_widget.current_input_image
 
             if image is None and self.is_txt2img:
                 return self.do_generate(seed=seed)
@@ -245,7 +213,6 @@ class GeneratorForm(BaseWidget):
                 width = self.settings_manager.working_width
                 height = self.settings_manager.working_height
                 image = Image.new("RGBA", (int(width), int(height)), (0, 0, 0, 0))
-
             img = image.copy().convert("RGBA")
             new_image = Image.new(
                 "RGBA",
@@ -288,7 +255,7 @@ class GeneratorForm(BaseWidget):
     def prep_video(self):
         return []
 
-    def do_generate(self, extra_options=None, seed=None, latents_seed=None):
+    def do_generate(self, extra_options=None, seed=None, latents_seed=None, do_deterministic=False):
         if not extra_options:
             extra_options = {}
 
@@ -296,20 +263,14 @@ class GeneratorForm(BaseWidget):
             extra_options["input_image"] = self.ui.controlnet_settings.current_controlnet_image
 
         self.set_seed(seed=seed, latents_seed=latents_seed)
-        seed = self.seed
-        latents_seed = self.latents_seed
 
-        deterministic = self.settings_manager.generator.deterministic
-        if self.deterministic_data and deterministic:
+        if self.deterministic_data and do_deterministic:
             return self.do_deterministic_generation(extra_options)
 
         action = self.generator_section
 
-        prompt = self.ui.prompt
-        negative_prompt = self.ui.negative_prompt
-
         # set the model data
-        model = self.settings_manager.models.filter_by(name=self.ui.model).first()
+        model = self.settings_manager.models.filter_by(name=self.settings_manager.generator.model).first()
         model_path = model.path
         model_branch = model.branch
         model_data = {
@@ -325,18 +286,18 @@ class GeneratorForm(BaseWidget):
 
         # get controlnet_dropdown from active tab
         options = {
-            "prompt": prompt,
-            "negative_prompt": negative_prompt,
-            "steps": self.steps,
-            "ddim_eta": self.ddim_eta,  # only applies to ddim scheduler
+            "prompt": self.settings_manager.generator.prompt,
+            "negative_prompt": self.settings_manager.generator.negative_prompt,
+            "steps": self.settings_manager.generator.steps,
+            "ddim_eta": self.settings_manager.generator.ddim_eta,  # only applies to ddim scheduler
             "n_iter": 1,
-            "n_samples": self.samples,
-            "scale": self.scale / 100,
-            "seed": seed,
-            "latents_seed": latents_seed,
-            "model": self.model,
+            "n_samples": self.settings_manager.generator.n_samples,
+            "scale": self.settings_manager.generator.scale / 100,
+            "seed": self.settings_manager.generator.seed,
+            "latents_seed": self.settings_manager.generator.latents_seed,
+            "model": self.settings_manager.generator.model,
             "model_data": model_data,
-            "scheduler": self.scheduler,
+            "scheduler": self.settings_manager.generator.scheduler,
             "model_path": model_path,
             "model_branch": model_branch,
             # "lora": self.available_lora(action),
@@ -349,10 +310,6 @@ class GeneratorForm(BaseWidget):
             "pos_y": 0,
             "outpaint_box_rect": self.active_rect,
             "hf_token": self.settings_manager.hf_api_key,
-            "batch_size": self.ui.deterministic_panel_widget.deterministic_batch_size if self.deterministic else 1,
-            "deterministic_generation": self.deterministic,
-            "deterministic_style": self.ui.deterministic_panel_widget.deterministic_style,
-            "deterministic_seed": None,
             "model_base_path": self.settings_manager.path_settings.model_base_path,
             "outpaint_model_path": self.settings_manager.path_settings.outpaint_model_path,
             "pix2pix_model_path": self.settings_manager.path_settings.pix2pix_model_path,
@@ -363,12 +320,13 @@ class GeneratorForm(BaseWidget):
             "lora_path": self.settings_manager.lora_path,
             "embeddings_path": self.settings_manager.path_settings.embeddings_path,
             "video_path": self.settings_manager.path_settings.video_path,
-            "clip_skip": self.ui.clip_skip_widget.current_value,
-            "variation": self.ui.variation_widget.current_value,
+            "clip_skip": self.settings_manager.generator.clip_skip,
+            "variation": self.settings_manager.generator.variation,
+            "deterministic_generation": False,
         }
 
-        options["enable_controlnet"] = self.enable_controlnet
-        options["controlnet"] = self.controlnet
+        options["enable_controlnet"] = self.settings_manager.generator.enable_controlnet
+        options["controlnet"] = self.settings_manager.generator.controlnet
 
         if self.controlnet_image:
             options["controlnet_image"] = self.controlnet_image
@@ -378,9 +336,9 @@ class GeneratorForm(BaseWidget):
             options["original_image_height"] = self.canvas.current_active_image_data.image.height
 
         if action in ["txt2img", "img2img", "outpaint", "depth2img"]:
-            options[f"strength"] = self.strength / 10000.0
+            options[f"strength"] = self.settings_manager.generator.strength / 10000.0
         elif action in ["pix2pix"]:
-            options[f"image_guidance_scale"] = self.image_scale / 10000.0 * 100.0
+            options[f"image_guidance_scale"] = self.settings_manager.generator.image_scale / 10000.0 * 100.0
 
         """
         Emitting generate_signal with options allows us to pass more options to the dict from
@@ -398,6 +356,7 @@ class GeneratorForm(BaseWidget):
                 **memory_options
             }
         }
+        print(data)
         self.app.client.message = data
 
     def do_deterministic_generation(self, extra_options):
@@ -411,10 +370,10 @@ class GeneratorForm(BaseWidget):
                 **options,
                 **extra_options,
                 **memory_options,
-                "batch_size": self.app.deterministic_batch_size,
+                "batch_size": self.settings_manager.deterministic_settings.batch_size,
                 "deterministic_generation": True,
-                "deterministic_seed": self.app.deterministic_seed,
-                "deterministic_style": self.app.deterministic_category
+                "deterministic_seed": self.settings_manager.deterministic_settings.seed,
+                "deterministic_style": self.settings_manager.deterministic_settings.style,
             }
         }
         self.app.client.message = data
@@ -469,7 +428,8 @@ class GeneratorForm(BaseWidget):
                 "total": 0,
                 "action": self.generator_section,
                 "image": None,
-                "data": None
+                "data": None,
+                "tab_section": self.generator_name,
             },
             "code": MessageCode.PROGRESS
         })
@@ -550,8 +510,11 @@ class GeneratorForm(BaseWidget):
             pipeline_action=requested_section,
             category=self.generator_name)
         self.ui.model.addItems(models)
-
-        self.ui.model.setCurrentText(self.settings_manager.generator.model)
+        current_model = self.settings_manager.generator.model
+        if current_model != "":
+            self.ui.model.setCurrentText(current_model)
+        else:
+            self.settings_manager.set_value("generator.model", self.ui.model.currentText())
 
     def load_schedulers(self):
         session = get_session()
@@ -562,7 +525,11 @@ class GeneratorForm(BaseWidget):
         scheduler_names = [s.scheduler.display_name for s in schedulers]
         self.ui.scheduler.addItems(scheduler_names)
 
-        self.ui.scheduler.setCurrentText(self.settings_manager.generator.scheduler)
+        current_scheduler = self.settings_manager.generator.scheduler
+        if current_scheduler != "":
+            self.ui.scheduler.setCurrentText(current_scheduler)
+        else:
+            self.settings_manager.set_value("generator.scheduler", self.ui.scheduler.currentText())
 
     def set_form_values(self):
         self.ui.prompt.setPlainText(self.settings_manager.generator.prompt)
