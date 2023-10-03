@@ -6,29 +6,14 @@
    <rect>
     <x>0</x>
     <y>0</y>
-    <width>583</width>
-    <height>771</height>
+    <width>272</width>
+    <height>117</height>
    </rect>
   </property>
   <property name="windowTitle">
    <string>Form</string>
   </property>
   <layout class="QGridLayout" name="gridLayout">
-   <property name="leftMargin">
-    <number>0</number>
-   </property>
-   <property name="topMargin">
-    <number>0</number>
-   </property>
-   <property name="rightMargin">
-    <number>0</number>
-   </property>
-   <property name="bottomMargin">
-    <number>0</number>
-   </property>
-   <property name="spacing">
-    <number>0</number>
-   </property>
    <item row="0" column="0">
     <widget class="QScrollArea" name="embeddings">
      <property name="font">
@@ -45,20 +30,48 @@
      <property name="widgetResizable">
       <bool>true</bool>
      </property>
-     <widget class="QWidget" name="scrollAreaWidgetContents_2">
+     <widget class="QWidget" name="scrollAreaWidgetContents">
       <property name="geometry">
        <rect>
         <x>0</x>
         <y>0</y>
-        <width>583</width>
-        <height>771</height>
+        <width>254</width>
+        <height>68</height>
        </rect>
       </property>
+      <layout class="QGridLayout" name="gridLayout_2"/>
      </widget>
+    </widget>
+   </item>
+   <item row="1" column="0">
+    <widget class="QPushButton" name="pushButton">
+     <property name="text">
+      <string>Scan for embeddings</string>
+     </property>
     </widget>
    </item>
   </layout>
  </widget>
  <resources/>
- <connections/>
+ <connections>
+  <connection>
+   <sender>pushButton</sender>
+   <signal>clicked()</signal>
+   <receiver>embeddings_container</receiver>
+   <slot>action_clicked_button_scan_for_embeddings()</slot>
+   <hints>
+    <hint type="sourcelabel">
+     <x>141</x>
+     <y>309</y>
+    </hint>
+    <hint type="destinationlabel">
+     <x>100</x>
+     <y>-16</y>
+    </hint>
+   </hints>
+  </connection>
+ </connections>
+ <slots>
+  <slot>action_clicked_button_scan_for_embeddings()</slot>
+ </slots>
 </ui>

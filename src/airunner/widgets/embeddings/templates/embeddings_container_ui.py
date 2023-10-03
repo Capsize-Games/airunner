@@ -1,4 +1,4 @@
-# Form implementation generated from reading ui file '/home/joe/Projects/imagetopixel/airunner/src/airunner/../../src/airunner/widgets/embeddings/embeddings_container.ui'
+# Form implementation generated from reading ui file '/home/joe/Projects/imagetopixel/airunner/src/airunner/../../src/airunner/widgets/embeddings/templates/embeddings_container.ui'
 #
 # Created by: PyQt6 UI code generator 6.4.2
 #
@@ -12,10 +12,8 @@ from PyQt6 import QtCore, QtGui, QtWidgets
 class Ui_embeddings_container(object):
     def setupUi(self, embeddings_container):
         embeddings_container.setObjectName("embeddings_container")
-        embeddings_container.resize(583, 771)
+        embeddings_container.resize(272, 117)
         self.gridLayout = QtWidgets.QGridLayout(embeddings_container)
-        self.gridLayout.setContentsMargins(0, 0, 0, 0)
-        self.gridLayout.setSpacing(0)
         self.gridLayout.setObjectName("gridLayout")
         self.embeddings = QtWidgets.QScrollArea(parent=embeddings_container)
         font = QtGui.QFont()
@@ -25,15 +23,22 @@ class Ui_embeddings_container(object):
         self.embeddings.setFrameShadow(QtWidgets.QFrame.Shadow.Plain)
         self.embeddings.setWidgetResizable(True)
         self.embeddings.setObjectName("embeddings")
-        self.scrollAreaWidgetContents_2 = QtWidgets.QWidget()
-        self.scrollAreaWidgetContents_2.setGeometry(QtCore.QRect(0, 0, 583, 771))
-        self.scrollAreaWidgetContents_2.setObjectName("scrollAreaWidgetContents_2")
-        self.embeddings.setWidget(self.scrollAreaWidgetContents_2)
+        self.scrollAreaWidgetContents = QtWidgets.QWidget()
+        self.scrollAreaWidgetContents.setGeometry(QtCore.QRect(0, 0, 254, 68))
+        self.scrollAreaWidgetContents.setObjectName("scrollAreaWidgetContents")
+        self.gridLayout_2 = QtWidgets.QGridLayout(self.scrollAreaWidgetContents)
+        self.gridLayout_2.setObjectName("gridLayout_2")
+        self.embeddings.setWidget(self.scrollAreaWidgetContents)
         self.gridLayout.addWidget(self.embeddings, 0, 0, 1, 1)
+        self.pushButton = QtWidgets.QPushButton(parent=embeddings_container)
+        self.pushButton.setObjectName("pushButton")
+        self.gridLayout.addWidget(self.pushButton, 1, 0, 1, 1)
 
         self.retranslateUi(embeddings_container)
+        self.pushButton.clicked.connect(embeddings_container.action_clicked_button_scan_for_embeddings) # type: ignore
         QtCore.QMetaObject.connectSlotsByName(embeddings_container)
 
     def retranslateUi(self, embeddings_container):
         _translate = QtCore.QCoreApplication.translate
         embeddings_container.setWindowTitle(_translate("embeddings_container", "Form"))
+        self.pushButton.setText(_translate("embeddings_container", "Scan for embeddings"))
