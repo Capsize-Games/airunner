@@ -12,13 +12,13 @@ from PyQt6 import QtCore, QtGui, QtWidgets
 class Ui_prompt_builder(object):
     def setupUi(self, prompt_builder):
         prompt_builder.setObjectName("prompt_builder")
-        prompt_builder.resize(300, 405)
-        sizePolicy = QtWidgets.QSizePolicy(QtWidgets.QSizePolicy.Policy.Preferred, QtWidgets.QSizePolicy.Policy.Minimum)
+        prompt_builder.resize(300, 317)
+        sizePolicy = QtWidgets.QSizePolicy(QtWidgets.QSizePolicy.Policy.Preferred, QtWidgets.QSizePolicy.Policy.Preferred)
         sizePolicy.setHorizontalStretch(0)
         sizePolicy.setVerticalStretch(0)
         sizePolicy.setHeightForWidth(prompt_builder.sizePolicy().hasHeightForWidth())
         prompt_builder.setSizePolicy(sizePolicy)
-        prompt_builder.setMinimumSize(QtCore.QSize(0, 405))
+        prompt_builder.setMinimumSize(QtCore.QSize(0, 0))
         font = QtGui.QFont()
         font.setPointSize(9)
         prompt_builder.setFont(font)
