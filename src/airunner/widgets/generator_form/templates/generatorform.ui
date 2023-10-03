@@ -6,7 +6,7 @@
    <rect>
     <x>0</x>
     <y>0</y>
-    <width>663</width>
+    <width>606</width>
     <height>1139</height>
    </rect>
   </property>
@@ -47,7 +47,7 @@
        <rect>
         <x>0</x>
         <y>0</y>
-        <width>663</width>
+        <width>606</width>
         <height>1139</height>
        </rect>
       </property>
@@ -186,7 +186,7 @@
             <rect>
              <x>0</x>
              <y>0</y>
-             <width>645</width>
+             <width>588</width>
              <height>296</height>
             </rect>
            </property>
@@ -616,7 +616,7 @@
      <y>175</y>
     </hint>
     <hint type="destinationlabel">
-     <x>401</x>
+     <x>366</x>
      <y>0</y>
     </hint>
    </hints>
@@ -644,12 +644,92 @@
    <slot>toggle_prompt_builder_checkbox(bool)</slot>
    <hints>
     <hint type="sourcelabel">
-     <x>621</x>
+     <x>445</x>
      <y>16</y>
     </hint>
     <hint type="destinationlabel">
      <x>350</x>
      <y>0</y>
+    </hint>
+   </hints>
+  </connection>
+  <connection>
+   <sender>generate_button</sender>
+   <signal>clicked()</signal>
+   <receiver>generator_form</receiver>
+   <slot>handle_generate_button_clicked()</slot>
+   <hints>
+    <hint type="sourcelabel">
+     <x>39</x>
+     <y>1113</y>
+    </hint>
+    <hint type="destinationlabel">
+     <x>366</x>
+     <y>0</y>
+    </hint>
+   </hints>
+  </connection>
+  <connection>
+   <sender>interrupt_button</sender>
+   <signal>clicked()</signal>
+   <receiver>generator_form</receiver>
+   <slot>handle_interrupt_button_clicked()</slot>
+   <hints>
+    <hint type="sourcelabel">
+     <x>516</x>
+     <y>1118</y>
+    </hint>
+    <hint type="destinationlabel">
+     <x>364</x>
+     <y>0</y>
+    </hint>
+   </hints>
+  </connection>
+  <connection>
+   <sender>model</sender>
+   <signal>currentTextChanged(QString)</signal>
+   <receiver>generator_form</receiver>
+   <slot>handle_model_changed(QString)</slot>
+   <hints>
+    <hint type="sourcelabel">
+     <x>186</x>
+     <y>884</y>
+    </hint>
+    <hint type="destinationlabel">
+     <x>546</x>
+     <y>-13</y>
+    </hint>
+   </hints>
+  </connection>
+  <connection>
+   <sender>scheduler</sender>
+   <signal>currentTextChanged(QString)</signal>
+   <receiver>generator_form</receiver>
+   <slot>handle_scheduler_changed(QString)</slot>
+   <hints>
+    <hint type="sourcelabel">
+     <x>579</x>
+     <y>871</y>
+    </hint>
+    <hint type="destinationlabel">
+     <x>54</x>
+     <y>-12</y>
+    </hint>
+   </hints>
+  </connection>
+  <connection>
+   <sender>variation_checkbox</sender>
+   <signal>toggled(bool)</signal>
+   <receiver>generator_form</receiver>
+   <slot>toggle_variation(bool)</slot>
+   <hints>
+    <hint type="sourcelabel">
+     <x>65</x>
+     <y>1077</y>
+    </hint>
+    <hint type="destinationlabel">
+     <x>18</x>
+     <y>-2</y>
     </hint>
    </hints>
   </connection>
