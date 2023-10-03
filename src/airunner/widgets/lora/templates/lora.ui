@@ -7,7 +7,7 @@
     <x>0</x>
     <y>0</y>
     <width>200</width>
-    <height>70</height>
+    <height>59</height>
    </rect>
   </property>
   <property name="sizePolicy">
@@ -73,5 +73,42 @@
   </layout>
  </widget>
  <resources/>
- <connections/>
+ <connections>
+  <connection>
+   <sender>enabledCheckbox</sender>
+   <signal>toggled(bool)</signal>
+   <receiver>lora</receiver>
+   <slot>action_toggled_lora_enabled(bool)</slot>
+   <hints>
+    <hint type="sourcelabel">
+     <x>60</x>
+     <y>20</y>
+    </hint>
+    <hint type="destinationlabel">
+     <x>55</x>
+     <y>0</y>
+    </hint>
+   </hints>
+  </connection>
+  <connection>
+   <sender>trigger_word</sender>
+   <signal>textChanged(QString)</signal>
+   <receiver>lora</receiver>
+   <slot>action_changed_trigger_words(QString)</slot>
+   <hints>
+    <hint type="sourcelabel">
+     <x>127</x>
+     <y>48</y>
+    </hint>
+    <hint type="destinationlabel">
+     <x>127</x>
+     <y>0</y>
+    </hint>
+   </hints>
+  </connection>
+ </connections>
+ <slots>
+  <slot>action_toggled_lora_enabled(bool)</slot>
+  <slot>action_changed_trigger_words(QString)</slot>
+ </slots>
 </ui>

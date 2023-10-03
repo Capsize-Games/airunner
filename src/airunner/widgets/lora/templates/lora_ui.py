@@ -1,4 +1,4 @@
-# Form implementation generated from reading ui file '/home/joe/Projects/imagetopixel/airunner/src/airunner/../../src/airunner/widgets/lora/lora.ui'
+# Form implementation generated from reading ui file '/home/joe/Projects/imagetopixel/airunner/src/airunner/../../src/airunner/widgets/lora/templates/lora.ui'
 #
 # Created by: PyQt6 UI code generator 6.4.2
 #
@@ -12,7 +12,7 @@ from PyQt6 import QtCore, QtGui, QtWidgets
 class Ui_lora(object):
     def setupUi(self, lora):
         lora.setObjectName("lora")
-        lora.resize(200, 70)
+        lora.resize(200, 59)
         sizePolicy = QtWidgets.QSizePolicy(QtWidgets.QSizePolicy.Policy.Preferred, QtWidgets.QSizePolicy.Policy.Preferred)
         sizePolicy.setHorizontalStretch(0)
         sizePolicy.setVerticalStretch(0)
@@ -42,6 +42,8 @@ class Ui_lora(object):
         self.gridLayout_2.addLayout(self.gridLayout, 0, 0, 1, 1)
 
         self.retranslateUi(lora)
+        self.enabledCheckbox.toggled['bool'].connect(lora.action_toggled_lora_enabled) # type: ignore
+        self.trigger_word.textChanged['QString'].connect(lora.action_changed_trigger_words) # type: ignore
         QtCore.QMetaObject.connectSlotsByName(lora)
 
     def retranslateUi(self, lora):

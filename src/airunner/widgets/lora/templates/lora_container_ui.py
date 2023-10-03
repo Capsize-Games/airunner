@@ -1,4 +1,4 @@
-# Form implementation generated from reading ui file '/home/joe/Projects/imagetopixel/airunner/src/airunner/../../src/airunner/widgets/lora/lora_container.ui'
+# Form implementation generated from reading ui file '/home/joe/Projects/imagetopixel/airunner/src/airunner/../../src/airunner/widgets/lora/templates/lora_container.ui'
 #
 # Created by: PyQt6 UI code generator 6.4.2
 #
@@ -33,13 +33,16 @@ class Ui_lora_container(object):
         self.lora_scroll_area.setFrameShadow(QtWidgets.QFrame.Shadow.Plain)
         self.lora_scroll_area.setWidgetResizable(True)
         self.lora_scroll_area.setObjectName("lora_scroll_area")
-        self.scrollAreaWidgetContents_2 = QtWidgets.QWidget()
-        self.scrollAreaWidgetContents_2.setGeometry(QtCore.QRect(0, 0, 583, 755))
-        self.scrollAreaWidgetContents_2.setObjectName("scrollAreaWidgetContents_2")
-        self.lora_scroll_area.setWidget(self.scrollAreaWidgetContents_2)
+        self.scrollAreaWidgetContents = QtWidgets.QWidget()
+        self.scrollAreaWidgetContents.setGeometry(QtCore.QRect(0, 0, 583, 755))
+        self.scrollAreaWidgetContents.setObjectName("scrollAreaWidgetContents")
+        self.gridLayout_2 = QtWidgets.QGridLayout(self.scrollAreaWidgetContents)
+        self.gridLayout_2.setObjectName("gridLayout_2")
+        self.lora_scroll_area.setWidget(self.scrollAreaWidgetContents)
         self.gridLayout.addWidget(self.lora_scroll_area, 1, 0, 1, 1)
 
         self.retranslateUi(lora_container)
+        self.toggleAllLora.toggled['bool'].connect(lora_container.toggle_all) # type: ignore
         QtCore.QMetaObject.connectSlotsByName(lora_container)
 
     def retranslateUi(self, lora_container):
