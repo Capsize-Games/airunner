@@ -18,9 +18,19 @@ variable_types = {
 }
 
 
+class SettingsSignal(QObject):
+    _instances = {}
+    changed_signal = pyqtSignal(str, object, object)
+
+    def __new__(cls):
+        if cls not in cls._instances:
+            cls._instances[cls] = super(SettingsSignal, cls).__new__(cls)
+        return cls._instances[cls]
+
+
 class SettingsManager(QObject):
     saved_signal = pyqtSignal()
-    changed_signal = pyqtSignal(str, object)
+    changed_signal = SettingsSignal().changed_signal
 
     @property
     def prompts(self):
@@ -40,17 +50,17 @@ class SettingsManager(QObject):
         )
         session.add(saved_prompt)
         if save_session(session):
-            self.changed_signal.emit("saved_prompt", saved_prompt)
+            self.changed_signal.emit("saved_prompt", saved_prompt, self)
 
     def delete_prompt(self, saved_prompt):
         session.delete(saved_prompt)
         session.commit()
         self.save_and_emit("saved_prompt", saved_prompt)
-        self.changed_signal.emit("saved_prompt", saved_prompt)
+        self.changed_signal.emit("saved_prompt", saved_prompt, self)
 
     def save_and_emit(self, key, value):
         self.save()
-        self.changed_signal.emit(key, value)
+        self.changed_signal.emit(key, value, self)
 
     def available_models_by_category(self, category):
         categories = [category]
@@ -204,21 +214,28 @@ class SettingsManager(QObject):
 
         super().__init__(*args, **kwargs)
 
+    _generator_section = None
+    _generator_name = None
+
     @property
     def generator_section(self):
+        if self._generator_section:
+            return self._generator_section
         return getattr(self, f"current_section_{self.current_tab}")
 
     @property
     def generator_name(self):
+        if self._generator_name:
+            return self._generator_name
         return self.current_tab
 
     @generator_section.setter
     def generator_section(self, value):
-        pass
+        self._generator_section = value
 
     @generator_name.setter
     def generator_name(self, value):
-        pass
+        self._generator_name = value
 
     def create_variable(self, name):
         var_type = str(getattr(Settings, name).property.columns[0].type)
@@ -233,12 +250,12 @@ class SettingsManager(QObject):
         return None
 
     def __setattr__(self, name, value):
-        if name in ["can_save", "generator_section", "generator_name"]:
+        if name in ["can_save", "generator_section", "generator_name", "_generator_section", "_generator_name"]:
             super().__setattr__(name, value)
             return
         if document and hasattr(document.settings, name):
             setattr(document.settings, name, value)
-            self.changed_signal.emit(name, value)
+            self.changed_signal.emit(name, value, self)
 
     def set_value(self, key, value):
         keys = key.split('.')
@@ -247,7 +264,7 @@ class SettingsManager(QObject):
             obj = getattr(self, k)
         setattr(obj, keys[-1], value)
         self.save()
-        self.changed_signal.emit(key, value)
+        self.changed_signal.emit(key, value, self)
 
     def get_value(self, key):
         keys = key.split('.')
