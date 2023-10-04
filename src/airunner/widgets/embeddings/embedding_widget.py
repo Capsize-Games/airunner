@@ -1,25 +1,31 @@
+from airunner.utils import save_session
 from airunner.widgets.base_widget import BaseWidget
 from airunner.widgets.embeddings.templates.embedding_ui import Ui_embedding
 
 
 class EmbeddingWidget(BaseWidget):
     widget_class_ = Ui_embedding
+    embedding = None
 
     def __init__(self, *args, **kwargs):
-        self.name = kwargs.pop("name", None)
-        self.tags = kwargs.pop("tags", [])
-        self.active = kwargs.pop("active", True)
+        self.embedding = kwargs.pop("embedding")
         super().__init__(*args, **kwargs)
-        self.ui.name.checked = self.active
-        self.ui.name.setTitle(self.name)
-        if len(self.tags):
+        self.ui.name.setChecked(self.embedding.active)
+        self.ui.name.setTitle(self.embedding.name)
+        if self.embedding.tags:
             self.ui.tags.show()
-            self.ui.tags.setText(", ".join(self.tags))
+            self.ui.tags.setText(", ".join(self.embedding.tags))
         else:
             self.ui.tags.hide()
 
     def action_clicked_button_to_prompt(self):
-        self.app.insert_into_prompt(f"{self.name}")
+        val = f"{self.settings_manager.generator.prompt} {self.embedding.name}"
+        self.settings_manager.set_value("generator.prompt", val)
 
     def action_clicked_button_to_negative_prompt(self):
-        self.app.insert_into_prompt(f"{self.name}", True)
+        val = f"{self.settings_manager.generator.prompt} {self.embedding.name}"
+        self.settings_manager.set_value("generator.negative_prompt", val)
+
+    def action_toggled_embedding(self, val):
+        self.embedding.active = val
+        save_session()
