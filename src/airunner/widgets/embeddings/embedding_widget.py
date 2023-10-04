@@ -23,7 +23,7 @@ class EmbeddingWidget(BaseWidget):
         self.settings_manager.set_value("generator.prompt", val)
 
     def action_clicked_button_to_negative_prompt(self):
-        val = f"{self.settings_manager.generator.prompt} {self.embedding.name}"
+        val = f"{self.settings_manager.generator.negative_prompt} {self.embedding.name}"
         self.settings_manager.set_value("generator.negative_prompt", val)
 
     def action_toggled_embedding(self, val):
