@@ -138,7 +138,6 @@ class GeneratorForm(BaseWidget):
     signals in the corresponding ui file.
     """
     def action_clicked_button_save_prompts(self):
-        print("save prompts", self.settings_manager.generator.prompt, self.settings_manager.generator.negative_prompt)
         self.settings_manager.create_saved_prompt(
             self.settings_manager.generator.prompt,
             self.settings_manager.generator.negative_prompt
