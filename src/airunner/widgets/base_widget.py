@@ -53,3 +53,77 @@ class BaseWidget(QWidget):
             )
         except AttributeError as e:
             pass
+
+    def get_form_element(self, element):
+        return getattr(self.ui, element)
+
+    def get_plain_text(self, element):
+        try:
+            return self.get_form_element(element).toPlainText()
+        except AttributeError:
+            return None
+
+    def get_text(self, element):
+        try:
+            return self.get_form_element(element).text()
+        except AttributeError:
+            return None
+
+    def get_value(self, element):
+        try:
+            return self.get_form_element(element).value()
+        except AttributeError:
+            return None
+
+    def get_is_checked(self, element):
+        try:
+            return self.get_form_element(element).isChecked()
+        except AttributeError:
+            return None
+
+    def set_plain_text(self, element, val):
+        try:
+            self.get_form_element(element).setPlainText(val)
+            return True
+        except AttributeError:
+            return False
+
+    def set_text(self, element, val):
+        try:
+            self.get_form_element(element).setText(val)
+            return True
+        except AttributeError:
+            return False
+        except TypeError:
+            return False
+
+    def set_value(self, element, val):
+        try:
+            self.get_form_element(element).setValue(val)
+            return True
+        except AttributeError:
+            return False
+
+    def set_is_checked(self, element, val):
+        try:
+            self.get_form_element(element).setChecked(val)
+            return True
+        except AttributeError:
+            return False
+
+    def set_form_value(self, element, settings_key_name):
+        val = self.get_plain_text(element)
+        if val is None:
+            val = self.get_text(element)
+        if val is None:
+            val = self.get_value(element)
+        if val is None:
+            val = self.get_is_checked(element)
+        target_val = self.settings_manager.get_value(settings_key_name)
+
+        if val != target_val:
+            if not self.set_plain_text(element, target_val):
+                if not self.set_text(element, target_val):
+                    if not self.set_value(element, target_val):
+                        if not self.set_is_checked(element, target_val):
+                            raise Exception(f"Could not set value for {element} to {target_val}")
