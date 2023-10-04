@@ -193,8 +193,6 @@ class SettingsManager(QObject):
     def __init__(self, app=None, *args, **kwargs):
         global _app, document
         self.can_save = True
-        self.generator_section = "stablediffusion"
-        self.generator_name = "txt2img"
 
         if app:
             _app = app
@@ -205,6 +203,22 @@ class SettingsManager(QObject):
             document = session.query(Document).first()
 
         super().__init__(*args, **kwargs)
+
+    @property
+    def generator_section(self):
+        return getattr(self, f"current_section_{self.current_tab}")
+
+    @property
+    def generator_name(self):
+        return self.current_tab
+
+    @generator_section.setter
+    def generator_section(self, value):
+        pass
+
+    @generator_name.setter
+    def generator_name(self, value):
+        pass
 
     def create_variable(self, name):
         var_type = str(getattr(Settings, name).property.columns[0].type)
