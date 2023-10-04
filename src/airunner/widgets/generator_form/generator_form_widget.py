@@ -460,6 +460,9 @@ class GeneratorForm(BaseWidget):
         self.set_controlnet_settings_properties()
         self.set_input_image_widget_properties()
 
+        # listen to emitted signal from self.settings_manager.changed_signal
+        self.settings_manager.changed_signal.connect(self.handle_settings_manager_changed)
+
         # find all SliderWidget widgets in the template and call initialize
         for widget in self.findChildren(SliderWidget):
             try:
@@ -487,6 +490,10 @@ class GeneratorForm(BaseWidget):
             self.generator_name
         )
         self.initialized = True
+
+    def handle_settings_manager_changed(self, key, val, settings_manager):
+        if settings_manager.generator_section == self.settings_manager.generator_section and settings_manager.generator_name == self.settings_manager.generator_name:
+            self.set_form_values()
 
     def set_controlnet_settings_properties(self):
         self.ui.controlnet_settings.initialize(
@@ -538,9 +545,9 @@ class GeneratorForm(BaseWidget):
             self.settings_manager.set_value("generator.scheduler", self.ui.scheduler.currentText())
 
     def set_form_values(self):
-        self.ui.prompt.setPlainText(self.settings_manager.generator.prompt)
-        self.ui.negative_prompt.setPlainText(self.settings_manager.generator.negative_prompt)
-        self.ui.use_prompt_builder_checkbox.setChecked(self.settings_manager.generator.use_prompt_builder)
+        self.set_form_value("prompt", "generator.prompt")
+        self.set_form_value("negative_prompt", "generator.negative_prompt")
+        self.set_form_value("use_prompt_builder_checkbox", "generator.use_prompt_builder")
 
     def clear_models(self):
         self.ui.model.clear()
