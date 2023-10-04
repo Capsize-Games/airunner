@@ -4,6 +4,7 @@ from airunner.aihandler.qtvar import Var, StringVar, IntVar, BooleanVar, FloatVa
 from airunner.data.db import session
 from airunner.data.models import Settings, GeneratorSetting, AIModel, Pipeline, ControlnetModel, ImageFilter, Prompt, \
     SavedPrompt, PromptCategory, PromptVariable, PromptVariableCategory, PromptVariableCategoryWeight
+from airunner.utils import save_session
 
 document = None
 _app = None
@@ -30,14 +31,16 @@ class SettingsManager(QObject):
         return session.query(SavedPrompt).all()
 
     def create_saved_prompt(self, prompt, negative_prompt):
+        if prompt == "" and negative_prompt == "":
+            return
+
         saved_prompt = SavedPrompt(
             prompt=prompt,
             negative_prompt=negative_prompt
         )
         session.add(saved_prompt)
-        session.commit()
-        self.save_and_emit("saved_prompt", saved_prompt)
-        self.changed_signal.emit("saved_prompt", saved_prompt)
+        if save_session(session):
+            self.changed_signal.emit("saved_prompt", saved_prompt)
 
     def delete_prompt(self, saved_prompt):
         session.delete(saved_prompt)
