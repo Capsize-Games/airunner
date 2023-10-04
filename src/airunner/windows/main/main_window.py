@@ -810,22 +810,34 @@ class MainWindow(
                 self.center_splitter.setSizes([self.center_splitter.sizes()[0], 520])
             self.center_panel.setCurrentIndex(self.tab_sections["center"][section]["index"])
 
+    def plain_text_widget_value(self, widget):
+        try:
+            return widget.toPlainText()
+        except AttributeError:
+            return None
+
+    def current_text_widget_value(self, widget):
+        try:
+            return widget.currentText()
+        except AttributeError:
+            return None
+
+    def value_widget_value(self, widget):
+        try:
+            return widget.value()
+        except AttributeError:
+            return None
+
     def handle_value_change(self, attr_name, value=None, widget=None):
-        if attr_name == "generator.controlnet":
-            value = value.lower()
-
-        if value is None:
-            try:
-                value = widget.toPlainText()
-            except AttributeError:
-                try:
-                    value = widget.currentText()
-                except AttributeError:
-                    try:
-                        value = widget.value()
-                    except AttributeError:
-                        print("something went wrong while setting the value 123")
-
+        """
+        Slider widget callback - this is connected via dynamic properties in the
+        qt widget. This function is then called when the value of a SliderWidget
+        is changed.
+        :param attr_name: the name of the attribute to change
+        :param value: the value to set the attribute to
+        :param widget: the widget that triggered the callback
+        :return:
+        """
         self.settings_manager.set_value(attr_name, value)
 
     def set_splitter_sizes(self):
