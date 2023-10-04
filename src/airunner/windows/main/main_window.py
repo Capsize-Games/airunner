@@ -382,13 +382,13 @@ class MainWindow(
         self.redo()
 
     def action_paste_image_triggered(self):
-        self.paste_image()
+        self.canvas.paste_image_from_clipboard()
 
     def action_copy_image_triggered(self):
-        self.copy_image()
+        self.canvas.copy_image()
 
     def action_cut_image_triggered(self):
-        self.cut_image()
+        self.canvas.cut_image()
 
     def action_rotate_90_clockwise_triggered(self):
         self.canvas.rotate_90_clockwise()
@@ -1414,16 +1414,6 @@ class MainWindow(
             directory,
             "Image Files (*.png *.jpg *.jpeg)"
         )
-
-    def paste_image(self):
-        self.canvas.paste_image_from_clipboard()
-        self.ui.layer_widget.current_layer.layer_widget.set_thumbnail()
-
-    def copy_image(self):
-        self.canvas.copy_image()
-
-    def cut_image(self):
-        self.canvas.cut_image()
 
     def show_image_interpolation(self):
         self.image_interpolation_window = ImageInterpolation(app=self, exec=False)
