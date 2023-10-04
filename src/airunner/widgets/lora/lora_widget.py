@@ -23,7 +23,9 @@ class LoraWidget(BaseWidget):
 
     def create_trigger_word_widgets(self):
         for i in reversed(range(self.ui.enabledCheckbox.layout().count())):
-            self.ui.enabledCheckbox.layout().itemAt(i).widget().deleteLater()
+            widget = self.ui.enabledCheckbox.layout().itemAt(i).widget()
+            if isinstance(widget, LoraTriggerWordWidget):
+                widget.deleteLater()
         for word in self.lora.trigger_word.split(","):
             if word.strip() == "":
                 continue

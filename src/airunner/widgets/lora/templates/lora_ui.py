@@ -33,10 +33,10 @@ class Ui_lora(object):
         self.enabledCheckbox.setObjectName("enabledCheckbox")
         self.gridLayout_3 = QtWidgets.QGridLayout(self.enabledCheckbox)
         self.gridLayout_3.setObjectName("gridLayout_3")
-        self.gridLayout.addWidget(self.enabledCheckbox, 0, 0, 2, 1)
-        self.trigger_word_edit = QtWidgets.QLineEdit(parent=lora)
+        self.trigger_word_edit = QtWidgets.QLineEdit(parent=self.enabledCheckbox)
         self.trigger_word_edit.setObjectName("trigger_word_edit")
-        self.gridLayout.addWidget(self.trigger_word_edit, 2, 0, 1, 1)
+        self.gridLayout_3.addWidget(self.trigger_word_edit, 0, 0, 1, 1)
+        self.gridLayout.addWidget(self.enabledCheckbox, 0, 0, 2, 1)
         self.gridLayout_2.addLayout(self.gridLayout, 0, 0, 1, 1)
 
         self.retranslateUi(lora)
