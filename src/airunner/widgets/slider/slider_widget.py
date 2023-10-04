@@ -129,7 +129,6 @@ class SliderWidget(BaseWidget):
         self.label.setAlignment(Qt.AlignmentFlag.AlignCenter)
         self.label.setAttribute(Qt.WidgetAttribute.WA_TransparentForMouseEvents)
         self.label.setObjectName("slider_label")
-        self.ui.slider.valueChanged.connect(self.handle_slider_change)
         #self.ui.slider.valueChanged.connect(lambda value: self.ui.slider_spinbox.setValue(value / self.slider_maximum))
         # add the label to the ui
         self.layout().addWidget(self.label, 0, 0, 1, 1)
@@ -137,6 +136,13 @@ class SliderWidget(BaseWidget):
         self.ui.slider_spinbox.setFixedWidth(50)
         self.ui.slider_spinbox.valueChanged.connect(self.handle_spinbox_change)
         self.ui.slider.setValue(int(current_value))
+        single_step = self.ui.slider.singleStep()
+        adjusted_value = round(current_value / single_step) * single_step
+        normalized = adjusted_value / self.slider_maximum
+        spinbox_val = normalized * self.spinbox_maximum
+        spinbox_val = round(spinbox_val, 2)
+        self.ui.slider_spinbox.setValue(spinbox_val)
+        self.ui.slider.valueChanged.connect(self.handle_slider_change)
 
         if not self.display_as_float:
             self.ui.slider_spinbox.setDecimals(0)
