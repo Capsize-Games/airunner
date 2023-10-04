@@ -190,7 +190,6 @@ class CanvasImageMixin:
             image.thumbnail((self.settings_manager.working_width,
                              self.settings_manager.working_height), Image.ANTIALIAS)
         self.create_image(QPoint(0, 0), image)
-        self.update()
 
     def create_image(self, location, image):
         """
@@ -203,7 +202,9 @@ class CanvasImageMixin:
             image=image,
             opacity=self.current_layer.opacity
         )
+        self.current_layer.layer_widget.set_thumbnail()
         # self.set_image_opacity(self.get_layer_opacity(self.current_layer_index))
+        self.update()
 
     def invert_image(self):
         # convert image mode to RGBA
@@ -246,7 +247,6 @@ class CanvasImageMixin:
                              self.settings_manager.working_height), Image.ANTIALIAS)
 
         self.create_image(QPoint(0, 0), image)
-        self.update()
 
     def save_image(self, image_path, image=None):
         if self.current_layer.image_data.image is None:
