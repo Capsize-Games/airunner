@@ -548,6 +548,9 @@ class GeneratorForm(BaseWidget):
         self.set_form_value("prompt", "generator.prompt")
         self.set_form_value("negative_prompt", "generator.negative_prompt")
         self.set_form_value("use_prompt_builder_checkbox", "generator.use_prompt_builder")
+        self.set_form_value("use_prompt_builder_checkbox", "generator.use_prompt_builder")
+        self.set_form_property("steps_widget", "current_value", "generator.steps")
+        self.set_form_property("scale_widget", "current_value", "generator.scale")
 
     def clear_models(self):
         self.ui.model.clear()
