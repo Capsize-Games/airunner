@@ -12,7 +12,7 @@ from PyQt6 import QtCore, QtGui, QtWidgets
 class Ui_embedding(object):
     def setupUi(self, embedding):
         embedding.setObjectName("embedding")
-        embedding.resize(210, 90)
+        embedding.resize(371, 90)
         self.gridLayout_2 = QtWidgets.QGridLayout(embedding)
         self.gridLayout_2.setContentsMargins(0, 0, 0, 0)
         self.gridLayout_2.setSpacing(0)
@@ -47,6 +47,7 @@ class Ui_embedding(object):
         self.retranslateUi(embedding)
         self.to_prompt_button.clicked.connect(embedding.action_clicked_button_to_prompt) # type: ignore
         self.to_negative_prompt_button.clicked.connect(embedding.action_clicked_button_to_negative_prompt) # type: ignore
+        self.name.toggled['bool'].connect(embedding.action_toggled_embedding) # type: ignore
         QtCore.QMetaObject.connectSlotsByName(embedding)
 
     def retranslateUi(self, embedding):
