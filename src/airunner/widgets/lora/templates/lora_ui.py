@@ -12,7 +12,7 @@ from PyQt6 import QtCore, QtGui, QtWidgets
 class Ui_lora(object):
     def setupUi(self, lora):
         lora.setObjectName("lora")
-        lora.resize(200, 59)
+        lora.resize(437, 121)
         sizePolicy = QtWidgets.QSizePolicy(QtWidgets.QSizePolicy.Policy.Preferred, QtWidgets.QSizePolicy.Policy.Preferred)
         sizePolicy.setHorizontalStretch(0)
         sizePolicy.setVerticalStretch(0)
@@ -23,32 +23,31 @@ class Ui_lora(object):
         font.setPointSize(9)
         lora.setFont(font)
         self.gridLayout_2 = QtWidgets.QGridLayout(lora)
-        self.gridLayout_2.setContentsMargins(0, 0, 0, -1)
+        self.gridLayout_2.setContentsMargins(0, 0, 0, 0)
         self.gridLayout_2.setObjectName("gridLayout_2")
         self.gridLayout = QtWidgets.QGridLayout()
         self.gridLayout.setHorizontalSpacing(0)
         self.gridLayout.setObjectName("gridLayout")
-        self.trigger_word = QtWidgets.QLineEdit(parent=lora)
-        self.trigger_word.setObjectName("trigger_word")
-        self.gridLayout.addWidget(self.trigger_word, 3, 0, 1, 1)
-        self.enabledCheckbox = QtWidgets.QCheckBox(parent=lora)
-        sizePolicy = QtWidgets.QSizePolicy(QtWidgets.QSizePolicy.Policy.Expanding, QtWidgets.QSizePolicy.Policy.Fixed)
-        sizePolicy.setHorizontalStretch(0)
-        sizePolicy.setVerticalStretch(0)
-        sizePolicy.setHeightForWidth(self.enabledCheckbox.sizePolicy().hasHeightForWidth())
-        self.enabledCheckbox.setSizePolicy(sizePolicy)
+        self.enabledCheckbox = QtWidgets.QGroupBox(parent=lora)
+        self.enabledCheckbox.setCheckable(True)
         self.enabledCheckbox.setObjectName("enabledCheckbox")
-        self.gridLayout.addWidget(self.enabledCheckbox, 0, 0, 1, 1)
+        self.gridLayout_3 = QtWidgets.QGridLayout(self.enabledCheckbox)
+        self.gridLayout_3.setObjectName("gridLayout_3")
+        self.gridLayout.addWidget(self.enabledCheckbox, 0, 0, 2, 1)
+        self.trigger_word_edit = QtWidgets.QLineEdit(parent=lora)
+        self.trigger_word_edit.setObjectName("trigger_word_edit")
+        self.gridLayout.addWidget(self.trigger_word_edit, 2, 0, 1, 1)
         self.gridLayout_2.addLayout(self.gridLayout, 0, 0, 1, 1)
 
         self.retranslateUi(lora)
+        self.trigger_word_edit.textChanged['QString'].connect(lora.action_changed_trigger_words) # type: ignore
         self.enabledCheckbox.toggled['bool'].connect(lora.action_toggled_lora_enabled) # type: ignore
-        self.trigger_word.textChanged['QString'].connect(lora.action_changed_trigger_words) # type: ignore
+        self.trigger_word_edit.textEdited['QString'].connect(lora.action_text_changed_trigger_word) # type: ignore
         QtCore.QMetaObject.connectSlotsByName(lora)
 
     def retranslateUi(self, lora):
         _translate = QtCore.QCoreApplication.translate
         lora.setWindowTitle(_translate("lora", "Form"))
-        self.trigger_word.setToolTip(_translate("lora", "<html><head/><body><p>Some LoRA require a trigger word to activate.</p><p>Make a note here for your records.</p></body></html>"))
-        self.trigger_word.setPlaceholderText(_translate("lora", "Trigger words (comma separated)"))
-        self.enabledCheckbox.setText(_translate("lora", "Some specific lora"))
+        self.enabledCheckbox.setTitle(_translate("lora", "LoRA name here"))
+        self.trigger_word_edit.setToolTip(_translate("lora", "<html><head/><body><p>Some LoRA require a trigger word to activate.</p><p>Make a note here for your records.</p></body></html>"))
+        self.trigger_word_edit.setPlaceholderText(_translate("lora", "Trigger words (comma separated)"))
