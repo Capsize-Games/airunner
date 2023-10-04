@@ -100,7 +100,7 @@ class SliderWidget(BaseWidget):
         slider_name = self.property("slider_name") or None
         spinbox_name = self.property("spinbox_name") or None
         settings_property = self.property("settings_property") or None
-        self.display_as_float = self.property("display_as_float") or True
+        self.display_as_float = self.property("display_as_float") or False
         self.divide_by = self.property("divide_by") or 1.0
 
         if slider_callback != "":
