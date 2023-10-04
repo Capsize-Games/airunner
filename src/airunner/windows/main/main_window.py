@@ -554,8 +554,8 @@ class MainWindow(
         print("content_splitter_moved")
 
     def size_slider_changed_callback(self, value_name, value):
-        print(value_name, value)
         self.settings_manager.set_value(value_name, value)
+        self.canvas.update()
     """
     End slot functions
     """
