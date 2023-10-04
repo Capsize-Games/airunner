@@ -23,7 +23,7 @@ class EmbeddingsContainerWidget(BaseWidget):
             self.add_embedding(embedding)
 
     def add_embedding(self, embedding):
-        embedding_widget = EmbeddingWidget(name=embedding.name)
+        embedding_widget = EmbeddingWidget(embedding=embedding)
         self.ui.scrollAreaWidgetContents.layout().addWidget(embedding_widget)
 
     def action_clicked_button_scan_for_embeddings(self):

@@ -6,7 +6,7 @@
    <rect>
     <x>0</x>
     <y>0</y>
-    <width>210</width>
+    <width>371</width>
     <height>90</height>
    </rect>
   </property>
@@ -104,12 +104,12 @@
    <slot>action_clicked_button_to_prompt()</slot>
    <hints>
     <hint type="sourcelabel">
-     <x>73</x>
-     <y>47</y>
+     <x>85</x>
+     <y>129</y>
     </hint>
     <hint type="destinationlabel">
      <x>43</x>
-     <y>-7</y>
+     <y>0</y>
     </hint>
    </hints>
   </connection>
@@ -120,12 +120,28 @@
    <slot>action_clicked_button_to_negative_prompt()</slot>
    <hints>
     <hint type="sourcelabel">
-     <x>212</x>
-     <y>45</y>
+     <x>255</x>
+     <y>129</y>
     </hint>
     <hint type="destinationlabel">
      <x>199</x>
-     <y>-11</y>
+     <y>0</y>
+    </hint>
+   </hints>
+  </connection>
+  <connection>
+   <sender>name</sender>
+   <signal>toggled(bool)</signal>
+   <receiver>embedding</receiver>
+   <slot>action_toggled_embedding(bool)</slot>
+   <hints>
+    <hint type="sourcelabel">
+     <x>185</x>
+     <y>70</y>
+    </hint>
+    <hint type="destinationlabel">
+     <x>185</x>
+     <y>70</y>
     </hint>
    </hints>
   </connection>
@@ -133,5 +149,6 @@
  <slots>
   <slot>action_clicked_button_to_prompt()</slot>
   <slot>action_clicked_button_to_negative_prompt()</slot>
+  <slot>action_toggled_embedding(bool)</slot>
  </slots>
 </ui>
