@@ -56,17 +56,18 @@
        <property name="checkable">
         <bool>true</bool>
        </property>
-       <layout class="QGridLayout" name="gridLayout_3"/>
-      </widget>
-     </item>
-     <item row="2" column="0">
-      <widget class="QLineEdit" name="trigger_word_edit">
-       <property name="toolTip">
-        <string>&lt;html&gt;&lt;head/&gt;&lt;body&gt;&lt;p&gt;Some LoRA require a trigger word to activate.&lt;/p&gt;&lt;p&gt;Make a note here for your records.&lt;/p&gt;&lt;/body&gt;&lt;/html&gt;</string>
-       </property>
-       <property name="placeholderText">
-        <string>Trigger words (comma separated)</string>
-       </property>
+       <layout class="QGridLayout" name="gridLayout_3">
+        <item row="0" column="0">
+         <widget class="QLineEdit" name="trigger_word_edit">
+          <property name="toolTip">
+           <string>&lt;html&gt;&lt;head/&gt;&lt;body&gt;&lt;p&gt;Some LoRA require a trigger word to activate.&lt;/p&gt;&lt;p&gt;Make a note here for your records.&lt;/p&gt;&lt;/body&gt;&lt;/html&gt;</string>
+          </property>
+          <property name="placeholderText">
+           <string>Trigger words (comma separated)</string>
+          </property>
+         </widget>
+        </item>
+       </layout>
       </widget>
      </item>
     </layout>
@@ -99,7 +100,7 @@
    <hints>
     <hint type="sourcelabel">
      <x>47</x>
-     <y>7</y>
+     <y>33</y>
     </hint>
     <hint type="destinationlabel">
      <x>45</x>
