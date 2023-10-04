@@ -51,7 +51,6 @@ class LayerContainerWidget(BaseWidget):
         self.create_layer()
 
     def create_layer(self):
-        print("create_layer")
         layer_name = f"Layer {len(self.layers) + 1}"
         layer = LayerData(len(self.layers), layer_name)
         index = 1
