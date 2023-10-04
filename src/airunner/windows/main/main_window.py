@@ -333,6 +333,9 @@ class MainWindow(
         self.ui.toggle_grid_button.setChecked(self.settings_manager.grid_settings.show_grid)
         self.ui.safety_checker_button.setChecked(self.settings_manager.nsfw_filter)
 
+        self.ui.width_slider_widget.setProperty("current_value", self.settings_manager.working_width)
+        self.ui.height_slider_widget.setProperty("current_value", self.settings_manager.working_height)
+        self.ui.brush_size_slider.setProperty("current_value", self.settings_manager.brush_settings.brush_size)
         self.ui.width_slider_widget.initialize()
         self.ui.height_slider_widget.initialize()
         self.ui.brush_size_slider.initialize()
@@ -857,7 +860,7 @@ class MainWindow(
         content_splitter divides the left, center and right sections
             Horizontal
             Generator tab widgets are in the left panel.
-            Canvas is in the center panel.
+            Canvas is in the center panel..
             Tool menus are in the right panel.
         center_splitter
             Vertical
@@ -956,9 +959,10 @@ class MainWindow(
         elif key == "model_base_path":
             self.generator_tab_widget.refresh_model_list()
         elif key == "working_width":
-            pass
+            self.canvas.update()
+            self.ui.width_slider_widget.update_value(value)
         elif key == "working_height":
-            pass
+            self.ui.height_slider_widget.update_value(value)
         elif key == "embeddings_path":
             self.update_embedding_names()
         elif key == "generator.seed":
@@ -972,7 +976,7 @@ class MainWindow(
 
     def initialize_shortcuts(self):
         event_callbacks = {
-            "wheelEvent": self.change_width,
+            "wheelEvent": self.handle_wheel_event,
         }
 
         for event, callback in event_callbacks.items():
@@ -1030,20 +1034,22 @@ class MainWindow(
         frameGeometry.moveCenter(availableGeometry.center())
         self.move(frameGeometry.topLeft())
 
-    def change_width(self, event):
+    def handle_wheel_event(self, event):
         grid_size = self.grid_size
 
         # if the shift key is pressed
         if QtCore.Qt.KeyboardModifier.ShiftModifier in event.modifiers():
             delta = event.angleDelta().y()
             increment = grid_size if delta > 0 else -grid_size
-            self.working_width = int(self.working_width + increment)
+            val = self.settings_manager.working_width + increment
+            self.settings_manager.set_value("working_width", val)
 
         # if the control key is pressed
         if QtCore.Qt.KeyboardModifier.ControlModifier in event.modifiers():
             delta = event.angleDelta().y()
             increment = grid_size if delta > 0 else -grid_size
-            self.working_height = int(self.working_height + increment)
+            val = self.settings_manager.working_height + increment
+            self.settings_manager.set_value("working_height", val)
 
     # def toggle_stylesheet(self, path):
     #     # use fopen to open the file
