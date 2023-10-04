@@ -32,6 +32,20 @@
     </widget>
    </item>
    <item>
+    <widget class="QLabel" name="queue_stats">
+     <property name="text">
+      <string>queue</string>
+     </property>
+    </widget>
+   </item>
+   <item>
+    <widget class="Line" name="line_2">
+     <property name="orientation">
+      <enum>Qt::Vertical</enum>
+     </property>
+    </widget>
+   </item>
+   <item>
     <widget class="QLabel" name="nsfw_status">
      <property name="text">
       <string>nsfw</string>
@@ -54,20 +68,6 @@
    </item>
    <item>
     <widget class="Line" name="line">
-     <property name="orientation">
-      <enum>Qt::Vertical</enum>
-     </property>
-    </widget>
-   </item>
-   <item>
-    <widget class="QLabel" name="queue_stats">
-     <property name="text">
-      <string>queue</string>
-     </property>
-    </widget>
-   </item>
-   <item>
-    <widget class="Line" name="line_2">
      <property name="orientation">
       <enum>Qt::Vertical</enum>
      </property>
