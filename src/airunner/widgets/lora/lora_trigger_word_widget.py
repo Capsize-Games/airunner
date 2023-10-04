@@ -16,7 +16,6 @@ class LoraTriggerWordWidget(BaseWidget):
             "generator.prompt",
             f"{self.settings_manager.generator.prompt} {self.trigger_word}"
         )
-        print(self.settings_manager.generator.prompt)
 
     def action_click_button_to_negative_prompt(self):
         self.settings_manager.set_value(
