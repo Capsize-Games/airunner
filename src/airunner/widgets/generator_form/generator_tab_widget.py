@@ -222,39 +222,6 @@ class GeneratorTabWidget(BaseWidget):
         self.app.override_current_generator = tab_section
         self.app.override_section = tab
 
-    def handle_value_change(self, attr_name, value=None, widget=None, val=None):
-        if attr_name in ["prompt", "negative_prompt"]:
-            self.app.prompt_builder.process_prompt()
-
-        if attr_name == "random_seed":
-            value = not value
-        elif attr_name == "seed":
-            value = re.sub("[^0-9]", "", value)
-            try:
-                value = int(value)
-            except ValueError:
-                value = 0
-            if value > MAX_SEED:
-                value = MAX_SEED
-            if widget:
-                widget.setText(str(value))
-        elif attr_name == "controlnet":
-            value = value.lower()
-
-        if widget:
-            try:
-                value = widget.toPlainText()
-            except AttributeError:
-                try:
-                    value = widget.currentText()
-                except AttributeError:
-                    try:
-                        value = widget.value()
-                    except AttributeError:
-                        print(f"something went wrong while setting the value for {attr_name}", widget)
-
-        self.settings_manager.set_value(attr_name, value)
-
     def set_prompt(self, prompt):
         self.current_generator_widget.ui.prompt.setPlainText(prompt)
 
