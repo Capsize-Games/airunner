@@ -49,7 +49,9 @@ class LayerWidget(BaseWidget):
         pass
 
     def set_thumbnail(self):
-        image = self.layer_data.image
+        if len(self.layer_data.layer_images) == 0:
+            return
+        image = self.layer_data.layer_images[0].image
         if image:
             thumbnail = image.copy()
             pixmap = image_to_pixmap(thumbnail, 32)

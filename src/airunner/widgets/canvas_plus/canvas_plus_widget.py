@@ -7,7 +7,7 @@ from PyQt6.QtGui import QBrush, QColor, QPen, QPixmap, QPainter
 from PyQt6.QtWidgets import QGraphicsScene, QGraphicsView, QGraphicsItem, QGraphicsPixmapItem
 
 from airunner.aihandler.settings_manager import SettingsManager
-from airunner.data.models import Layer
+from airunner.data.models import Layer, LayerImage
 from airunner.utils import get_session, save_session
 from airunner.widgets.base_widget import BaseWidget
 from airunner.widgets.canvas_plus.templates.canvas_plus_ui import Ui_canvas
@@ -41,17 +41,17 @@ class DraggablePixmap(QGraphicsPixmapItem):
         painter.drawPixmap(self.pixmap.rect(), self.pixmap)
 
 
-class LayerImage(DraggablePixmap):
-    def __init__(self, parent, pixmap, layer):
-        self.layer = layer
+class LayerImageItem(DraggablePixmap):
+    def __init__(self, parent, pixmap, layer_image_data):
+        self.layer_image_data = layer_image_data
         super().__init__(parent, pixmap)
         self.setFlag(QGraphicsItem.GraphicsItemFlag.ItemIsMovable, True)
 
     def mouseReleaseEvent(self, event):
         super().mouseReleaseEvent(event)
         pos = self.pos()
-        self.layer.position_x = pos.x()
-        self.layer.position_y = pos.y()
+        self.layer_image_data.pos_x = pos.x()
+        self.layer_image_data.pos_y = pos.y()
         save_session()
 
 
@@ -282,18 +282,26 @@ class CanvasPlusWidget(BaseWidget):
         ).all()
         for layer in layers:
             if layer.id in self.layers:
-                image = self.layers[layer.id]
-                self.scene.removeItem(image)
+                for image in self.layers[layer.id]:
+                    self.scene.removeItem(image)
             else:
-                pixmap = QPixmap.fromImage(ImageQt(layer.image))
-                image = LayerImage(self, pixmap, layer)
-                self.layers[layer.id] = image
-            self.scene.addItem(image)
-            pos = QPoint(layer.position_x, layer.position_y)
-            image.setPos(QPointF(
-                self.last_pos.x() + pos.x(),
-                self.last_pos.y() + pos.y()
-            ))
+                self.layers[layer.id] = []
+            images = session.query(LayerImage).filter(
+                LayerImage.layer_id == layer.id
+            ).order_by(
+                LayerImage.order.asc()
+            ).all()
+            for layer_image in images:
+                image = layer_image.image
+                pixmap = QPixmap.fromImage(ImageQt(image))
+                image = LayerImageItem(self, pixmap, layer_image)
+                self.layers[layer.id].append(image)
+                self.scene.addItem(image)
+                pos = QPoint(layer_image.pos_x, layer_image.pos_y)
+                image.setPos(QPointF(
+                    self.last_pos.x() + pos.x(),
+                    self.last_pos.y() + pos.y()
+                ))
 
     def handle_changed_signal(self, key, value):
         if key == "current_tab":
