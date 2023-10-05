@@ -180,14 +180,6 @@ class MainWindow(
         return self.ui.footer_widget
 
     @property
-    def canvas_position(self):
-        return self.canvas_widget.canvas_position
-
-    @canvas_position.setter
-    def canvas_position(self, val):
-        self.canvas_widget.canvas_position.setText(val)
-
-    @property
     def current_generator(self):
         """
         Returns the current generator (stablediffusion, kandinksy, etc) as
@@ -333,14 +325,17 @@ class MainWindow(
         self.ui.toggle_grid_button.setChecked(self.settings_manager.grid_settings.show_grid)
         self.ui.safety_checker_button.setChecked(self.settings_manager.nsfw_filter)
 
-        self.ui.width_slider_widget.setProperty("current_value", self.settings_manager.working_width)
-        self.ui.height_slider_widget.setProperty("current_value", self.settings_manager.working_height)
-        self.ui.brush_size_slider.setProperty("current_value", self.settings_manager.brush_settings.brush_size)
-        self.ui.width_slider_widget.initialize()
-        self.ui.height_slider_widget.initialize()
-        self.ui.brush_size_slider.initialize()
-
         self.ui.layer_widget.initialize()
+
+        # call a function after the window has finished loading:
+        QTimer.singleShot(0, self.on_show)
+
+    def on_show(self):
+        print("on_show")
+        self.ui.canvas_plus_widget.initialize()
+
+    def action_slider_changed(self, value_name, value):
+        self.settings_manager.set_value(value_name, value)
 
     def quick_export(self):
         if os.path.isdir(self.image_path) is False:
@@ -494,9 +489,6 @@ class MainWindow(
         else:
             subprocess.Popen(["xdg-open", os.path.realpath(path)])
 
-    def action_focus_button_triggered(self):
-        self.canvas.recenter()
-
     def action_toggle_brush(self, active):
         if active:
             self.toggle_tool("brush")
@@ -556,9 +548,6 @@ class MainWindow(
     def content_splitter_moved(self, size, index):
         print("content_splitter_moved")
 
-    def size_slider_changed_callback(self, value_name, value):
-        self.settings_manager.set_value(value_name, value)
-        self.canvas.update()
     """
     End slot functions
     """
@@ -958,11 +947,6 @@ class MainWindow(
             self.refresh_lora()
         elif key == "model_base_path":
             self.generator_tab_widget.refresh_model_list()
-        elif key == "working_width":
-            self.canvas.update()
-            self.ui.width_slider_widget.update_value(value)
-        elif key == "working_height":
-            self.ui.height_slider_widget.update_value(value)
         elif key == "embeddings_path":
             self.update_embedding_names()
         elif key == "generator.seed":

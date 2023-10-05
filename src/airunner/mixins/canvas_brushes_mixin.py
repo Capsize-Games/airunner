@@ -207,7 +207,7 @@ class CanvasBrushesMixin:
         self.is_erasing = True
         if len(self.current_layer.lines) > 0:
             self.rasterize_lines(final=True)
-        brush_size = int(self.settings_manager.brush_settings.brush_size / 2)
+        brush_size = int(self.settings_manager.brush_settings.size / 2)
         image = self.current_layer.image_data.image if self.current_layer.image_data.image is not None else None
         image_pos = self.current_layer.image_data.position if self.current_layer.image_data.image is not None else None
         if image is None:
@@ -249,7 +249,7 @@ class CanvasBrushesMixin:
         # )
         pen = QPen(
             brush_color,
-            self.settings_manager.brush_settings.brush_size
+            self.settings_manager.brush_settings.size
         )
         return pen
 
@@ -272,7 +272,7 @@ class CanvasBrushesMixin:
             end_x = line.end_point.x()
             end_y = line.end_point.y()
 
-            brush_size = int(self.settings_manager.brush_settings.brush_size / 2)
+            brush_size = int(self.settings_manager.brush_settings.size / 2)
             min_x = min(start_x, end_x) - brush_size
             min_y = min(start_y, end_y) - brush_size
             max_x = max(start_x, end_x) + brush_size
@@ -302,7 +302,7 @@ class CanvasBrushesMixin:
 
         lines = self.current_layer.lines[:max_lines]
         top, left, bottom, right = self.get_line_extremities(lines)
-        brush_size = self.settings_manager.brush_settings.brush_size
+        brush_size = self.settings_manager.brush_settings.size
         if brush_size > 1:
             brush_size = int(brush_size / 2)
 

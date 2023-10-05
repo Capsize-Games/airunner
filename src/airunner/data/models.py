@@ -1,5 +1,8 @@
+import base64
+import io
 import os
 
+from PIL import Image
 from sqlalchemy import Column, Integer, String, Boolean, ForeignKey, Float, JSON, UniqueConstraint
 from sqlalchemy.ext.declarative import declarative_base
 from sqlalchemy.orm import relationship
@@ -296,6 +299,8 @@ class GeneratorSetting(Base):
     controlnet_mask_link_input_image = Column(Boolean, default=False)
     controlnet_mask_use_imported_image = Column(Boolean, default=False)
     use_prompt_builder = Column(Boolean, default=False)
+    active_grid_border_color = Column(String, default="#00FF00")
+    active_grid_fill_color = Column(String, default="#FF0000")
 
 
 class PromptGeneratorSetting(Base):
@@ -327,6 +332,7 @@ class GridSettings(Base):
     snap_to_grid = Column(Boolean, default=True)
     size = Column(Integer, default=64)
     line_width = Column(Integer, default=1)
+    canvas_color = Column(String, default="#000000")
     line_color = Column(String, default="#121212")
     settings = relationship("Settings", back_populates="grid_settings")
 
@@ -476,9 +482,8 @@ class BrushSettings(Base):
     __tablename__ = 'brush_settings'
 
     id = Column(Integer, primary_key=True)
-    brush_size = Column(Integer, default=10)
-    mask_brush_size = Column(Integer, default=10)
-    primary_color = Column(String, default="#000000")
+    size = Column(Integer, default=10)
+    primary_color = Column(String, default="#FF0000")
     secondary_color = Column(String, default="#000000")
     settings = relationship("Settings", back_populates="brush_settings")
 
@@ -507,13 +512,28 @@ class ImageFilterValue(Base):
     max_value = Column(Integer, default=100)
 
 
+class ActiveGridSettings(Base):
+    __tablename__ = 'active_grid_settings'
+
+    id = Column(Integer, primary_key=True)
+    enabled = Column(Boolean, default=True)
+    render_border = Column(Boolean, default=True)
+    render_fill = Column(Boolean, default=True)
+    border_opacity = Column(Integer, default=50)
+    fill_opacity = Column(Integer, default=50)
+    pos_x = Column(Integer, default=0)
+    pos_y = Column(Integer, default=0)
+    width = Column(Integer, default=512)
+    height = Column(Integer, default=512)
+    settings = relationship("Settings", back_populates="active_grid_settings")
+
+
 class Settings(Base):
     __tablename__ = 'settings'
 
     id = Column(Integer, primary_key=True)
     nsfw_filter = Column(Boolean, default=True)
     allow_hf_downloads = Column(Boolean, default=True)
-    canvas_color = Column(String, default="#000000")
     dark_mode_enabled = Column(Boolean, default=False)
     resize_on_paste = Column(Boolean, default=False)
     allow_online_mode = Column(Boolean, default=True)
@@ -547,6 +567,9 @@ class Settings(Base):
     deterministic_settings_id = Column(Integer, ForeignKey('deterministic_settings.id'))
     deterministic_settings = relationship("DeterministicSettings", back_populates="settings", uselist=False)
 
+    active_grid_settings_id = Column(Integer, ForeignKey('active_grid_settings.id'))
+    active_grid_settings = relationship("ActiveGridSettings", back_populates="settings", uselist=False)
+
     force_reset = Column(Boolean, default=False)
     auto_export_images = Column(Boolean, default=False)
     image_export_type = Column(String, default="png")
@@ -565,6 +588,48 @@ class Settings(Base):
     current_section_kandinsky = Column(String, default="txt2img")
     current_section_shapegif = Column(String, default="txt2img")
     generator_settings = relationship("GeneratorSetting", backref="settings")
+
+
+class Layer(Base):
+    __tablename__ = 'layers'
+
+    @property
+    def image(self):
+        # convert base64 image to pil image
+        if self.base_64_image:
+            decoded_image = base64.b64decode(self.base_64_image)
+            bytes_image = io.BytesIO(decoded_image)
+            # convert bytes to PIL iamge:
+            image = Image.open(bytes_image)
+            return image
+        return None
+
+    @image.setter
+    def image(self, value):
+        # convert to base 64
+        if value:
+            buffered = io.BytesIO()
+            value.save(buffered, format="PNG")
+            self.base_64_image = base64.b64encode(buffered.getvalue())
+        else:
+            self.base_64_image = ""
+
+
+    id = Column(Integer, primary_key=True)
+    document_id = Column(Integer, ForeignKey('documents.id'))
+    document = relationship("Document", backref="layers")
+    name = Column(String)
+    active = Column(Boolean, default=False)
+    hidden = Column(Boolean, default=False)
+    opacity = Column(Float, default=1.0)
+    position = Column(Integer, default=0)
+    base_64_image = Column(String, default="")
+    position_x = Column(Integer, default=0)
+    position_y = Column(Integer, default=0)
+    image_pivot_point_x = Column(Integer, default=0)
+    image_pivot_point_y = Column(Integer, default=0)
+    image_root_point_x = Column(Integer, default=0)
+    image_root_point_y = Column(Integer, default=0)
 
 
 class Document(Base):
