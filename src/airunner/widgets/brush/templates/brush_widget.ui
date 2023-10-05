@@ -7,26 +7,57 @@
     <x>0</x>
     <y>0</y>
     <width>400</width>
-    <height>161</height>
+    <height>109</height>
    </rect>
   </property>
   <property name="windowTitle">
    <string>Form</string>
   </property>
   <layout class="QGridLayout" name="gridLayout">
-   <property name="leftMargin">
-    <number>0</number>
-   </property>
-   <property name="topMargin">
-    <number>0</number>
-   </property>
-   <property name="rightMargin">
-    <number>0</number>
-   </property>
-   <property name="bottomMargin">
-    <number>0</number>
-   </property>
    <item row="0" column="0">
+    <widget class="SliderWidget" name="brush_size_slider" native="true">
+     <property name="slider_minimum" stdset="0">
+      <number>1</number>
+     </property>
+     <property name="slider_maximum" stdset="0">
+      <number>100</number>
+     </property>
+     <property name="spinbox_minimum" stdset="0">
+      <number>1</number>
+     </property>
+     <property name="spinbox_maximum" stdset="0">
+      <number>100</number>
+     </property>
+     <property name="slider_tick_interval" stdset="0">
+      <number>1</number>
+     </property>
+     <property name="slider_single_step" stdset="0">
+      <number>1</number>
+     </property>
+     <property name="slider_page_step" stdset="0">
+      <number>10</number>
+     </property>
+     <property name="spinbox_single_step" stdset="0">
+      <number>1</number>
+     </property>
+     <property name="spinbox_page_step" stdset="0">
+      <number>10</number>
+     </property>
+     <property name="label_text" stdset="0">
+      <string>Brush Size</string>
+     </property>
+     <property name="slider_callback" stdset="0">
+      <string notr="true">action_slider_changed</string>
+     </property>
+     <property name="settings_property" stdset="0">
+      <string notr="true">brush_settings.size</string>
+     </property>
+     <property name="display_as_float" stdset="0">
+      <bool>false</bool>
+     </property>
+    </widget>
+   </item>
+   <item row="1" column="0">
     <widget class="QGroupBox" name="groupBox_4">
      <property name="minimumSize">
       <size>
@@ -80,6 +111,14 @@
    </item>
   </layout>
  </widget>
+ <customwidgets>
+  <customwidget>
+   <class>SliderWidget</class>
+   <extends>QWidget</extends>
+   <header>airunner/widgets/slider/slider_widget</header>
+   <container>1</container>
+  </customwidget>
+ </customwidgets>
  <resources/>
  <connections/>
 </ui>

@@ -1,4 +1,4 @@
-# Form implementation generated from reading ui file '/home/joe/Projects/imagetopixel/airunner/src/airunner/../../src/airunner/widgets/brush/brush_widget.ui'
+# Form implementation generated from reading ui file '/home/joe/Projects/imagetopixel/airunner/src/airunner/../../src/airunner/widgets/brush/templates/brush_widget.ui'
 #
 # Created by: PyQt6 UI code generator 6.4.2
 #
@@ -12,10 +12,24 @@ from PyQt6 import QtCore, QtGui, QtWidgets
 class Ui_brush_widget(object):
     def setupUi(self, brush_widget):
         brush_widget.setObjectName("brush_widget")
-        brush_widget.resize(400, 161)
+        brush_widget.resize(400, 109)
         self.gridLayout = QtWidgets.QGridLayout(brush_widget)
-        self.gridLayout.setContentsMargins(0, 0, 0, 0)
         self.gridLayout.setObjectName("gridLayout")
+        self.brush_size_slider = SliderWidget(parent=brush_widget)
+        self.brush_size_slider.setProperty("slider_minimum", 1)
+        self.brush_size_slider.setProperty("slider_maximum", 100)
+        self.brush_size_slider.setProperty("spinbox_minimum", 1)
+        self.brush_size_slider.setProperty("spinbox_maximum", 100)
+        self.brush_size_slider.setProperty("slider_tick_interval", 1)
+        self.brush_size_slider.setProperty("slider_single_step", 1)
+        self.brush_size_slider.setProperty("slider_page_step", 10)
+        self.brush_size_slider.setProperty("spinbox_single_step", 1)
+        self.brush_size_slider.setProperty("spinbox_page_step", 10)
+        self.brush_size_slider.setProperty("slider_callback", "action_slider_changed")
+        self.brush_size_slider.setProperty("settings_property", "brush_settings.size")
+        self.brush_size_slider.setProperty("display_as_float", False)
+        self.brush_size_slider.setObjectName("brush_size_slider")
+        self.gridLayout.addWidget(self.brush_size_slider, 0, 0, 1, 1)
         self.groupBox_4 = QtWidgets.QGroupBox(parent=brush_widget)
         self.groupBox_4.setMinimumSize(QtCore.QSize(0, 25))
         font = QtGui.QFont()
@@ -39,7 +53,7 @@ class Ui_brush_widget(object):
         self.primary_color_button.setText("")
         self.primary_color_button.setObjectName("primary_color_button")
         self.gridLayout_3.addWidget(self.primary_color_button, 0, 0, 1, 1)
-        self.gridLayout.addWidget(self.groupBox_4, 0, 0, 1, 1)
+        self.gridLayout.addWidget(self.groupBox_4, 1, 0, 1, 1)
 
         self.retranslateUi(brush_widget)
         QtCore.QMetaObject.connectSlotsByName(brush_widget)
@@ -47,4 +61,6 @@ class Ui_brush_widget(object):
     def retranslateUi(self, brush_widget):
         _translate = QtCore.QCoreApplication.translate
         brush_widget.setWindowTitle(_translate("brush_widget", "Form"))
+        self.brush_size_slider.setProperty("label_text", _translate("brush_widget", "Brush Size"))
         self.groupBox_4.setTitle(_translate("brush_widget", "Brush color"))
+from airunner.widgets.slider.slider_widget import SliderWidget

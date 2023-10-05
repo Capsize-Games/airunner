@@ -1,4 +1,4 @@
-# Form implementation generated from reading ui file '/home/joe/Projects/imagetopixel/airunner/src/airunner/../../src/airunner/widgets/canvas/templates/canvas.ui'
+# Form implementation generated from reading ui file '/home/joe/Projects/imagetopixel/airunner/src/airunner/../../src/airunner/widgets/canvas_plus/templates/canvas_plus.ui'
 #
 # Created by: PyQt6 UI code generator 6.4.2
 #
@@ -38,11 +38,6 @@ class Ui_canvas(object):
         self.gridLayout_2.setHorizontalSpacing(0)
         self.gridLayout_2.setVerticalSpacing(3)
         self.gridLayout_2.setObjectName("gridLayout_2")
-        self.canvas_container = QtWidgets.QFrame(parent=self.central_widget)
-        self.canvas_container.setFrameShape(QtWidgets.QFrame.Shape.NoFrame)
-        self.canvas_container.setFrameShadow(QtWidgets.QFrame.Shadow.Plain)
-        self.canvas_container.setObjectName("canvas_container")
-        self.gridLayout_2.addWidget(self.canvas_container, 0, 0, 1, 1)
         self.canvas_position = QtWidgets.QLabel(parent=self.central_widget)
         sizePolicy = QtWidgets.QSizePolicy(QtWidgets.QSizePolicy.Policy.Preferred, QtWidgets.QSizePolicy.Policy.Maximum)
         sizePolicy.setHorizontalStretch(0)
@@ -52,9 +47,24 @@ class Ui_canvas(object):
         font = QtGui.QFont()
         font.setPointSize(8)
         self.canvas_position.setFont(font)
+        self.canvas_position.setStyleSheet("padding-right: 10px")
         self.canvas_position.setAlignment(QtCore.Qt.AlignmentFlag.AlignRight|QtCore.Qt.AlignmentFlag.AlignTrailing|QtCore.Qt.AlignmentFlag.AlignVCenter)
         self.canvas_position.setObjectName("canvas_position")
         self.gridLayout_2.addWidget(self.canvas_position, 1, 0, 1, 1)
+        self.canvas_container = QtWidgets.QFrame(parent=self.central_widget)
+        sizePolicy = QtWidgets.QSizePolicy(QtWidgets.QSizePolicy.Policy.Preferred, QtWidgets.QSizePolicy.Policy.Preferred)
+        sizePolicy.setHorizontalStretch(0)
+        sizePolicy.setVerticalStretch(0)
+        sizePolicy.setHeightForWidth(self.canvas_container.sizePolicy().hasHeightForWidth())
+        self.canvas_container.setSizePolicy(sizePolicy)
+        self.canvas_container.setStyleSheet("")
+        self.canvas_container.setFrameShape(QtWidgets.QFrame.Shape.NoFrame)
+        self.canvas_container.setFrameShadow(QtWidgets.QFrame.Shadow.Plain)
+        self.canvas_container.setObjectName("canvas_container")
+        self.gridLayout_3 = QtWidgets.QGridLayout(self.canvas_container)
+        self.gridLayout_3.setContentsMargins(0, 0, 0, 0)
+        self.gridLayout_3.setObjectName("gridLayout_3")
+        self.gridLayout_2.addWidget(self.canvas_container, 0, 0, 1, 1)
         self.gridLayout.addWidget(self.central_widget, 0, 0, 1, 1)
 
         self.retranslateUi(canvas)

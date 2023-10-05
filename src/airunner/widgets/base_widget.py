@@ -127,3 +127,9 @@ class BaseWidget(QWidget):
                     if not self.set_value(element, target_val):
                         if not self.set_is_checked(element, target_val):
                             raise Exception(f"Could not set value for {element} to {target_val}")
+
+    def set_form_property(self, element, property_name, settings_key_name):
+        val = self.get_form_element(element).property(property_name)
+        target_val = self.settings_manager.get_value(settings_key_name)
+        if val != target_val:
+            self.get_form_element(element).setProperty(property_name, target_val)

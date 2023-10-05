@@ -10,7 +10,7 @@ from PIL.ImageFilter import GaussianBlur
 
 from airunner.models.imagedata import ImageData
 from airunner.models.layerdata import LayerData
-from airunner.utils import apply_opacity_to_image
+from airunner.utils import apply_opacity_to_image, save_session
 
 
 class CanvasImageMixin:
@@ -189,22 +189,36 @@ class CanvasImageMixin:
         if self.app.settings_manager.resize_on_paste:
             image.thumbnail((self.settings_manager.working_width,
                              self.settings_manager.working_height), Image.ANTIALIAS)
-        self.create_image(QPoint(0, 0), image)
+        self.create_image(image)
 
-    def create_image(self, location, image):
+    def create_image(self, image):
         """
         Create a new image object and add it to the current layer
         """
+        location = QPoint(
+            self.settings_manager.active_grid_settings.pos_x,
+            self.settings_manager.active_grid_settings.pos_y
+        )
         # convert image to RGBA
         image = image.convert("RGBA")
-        self.current_layer.image_data = ImageData(
-            position=location,
-            image=image,
-            opacity=self.current_layer.opacity
-        )
+        # self.current_layer.image_data = ImageData(
+        #     position=location,
+        #     image=image,
+        #     opacity=self.current_layer.opacity
+        # )
+        self.current_layer.position_x = location.x()
+        self.current_layer.position_y = location.y()
+        self.current_layer.image = image
+        save_session()
         self.current_layer.layer_widget.set_thumbnail()
         # self.set_image_opacity(self.get_layer_opacity(self.current_layer_index))
         self.update()
+        self.app.add_image_to_canvas_signal.emit({
+            "processed_image": image,
+            "image_root_point": location,
+            "image_pivot_point": location,
+            "add_image_to_canvas": True
+        })
 
     def invert_image(self):
         # convert image mode to RGBA
@@ -246,7 +260,7 @@ class CanvasImageMixin:
             image.thumbnail((self.settings_manager.working_width,
                              self.settings_manager.working_height), Image.ANTIALIAS)
 
-        self.create_image(QPoint(0, 0), image)
+        self.create_image(image)
 
     def save_image(self, image_path, image=None):
         if self.current_layer.image_data.image is None:
