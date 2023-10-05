@@ -590,8 +590,9 @@ class Settings(Base):
     generator_settings = relationship("GeneratorSetting", backref="settings")
 
 
-class Layer(Base):
-    __tablename__ = 'layers'
+
+class LayerImage(Base):
+    __tablename__ = "layer_images"
 
     @property
     def image(self):
@@ -614,6 +615,21 @@ class Layer(Base):
         else:
             self.base_64_image = ""
 
+    id = Column(Integer, primary_key=True)
+    layer_id = Column(Integer, ForeignKey('layers.id'))
+    layer = relationship("Layer", backref="layer_images")
+    base_64_image = Column(String, default="")
+    pos_x = Column(Integer, default=0)
+    pos_y = Column(Integer, default=0)
+    pivot_point_x = Column(Integer, default=0)
+    pivot_point_y = Column(Integer, default=0)
+    root_point_x = Column(Integer, default=0)
+    root_point_y = Column(Integer, default=0)
+    order = Column(Integer, default=0)
+
+
+class Layer(Base):
+    __tablename__ = 'layers'
 
     id = Column(Integer, primary_key=True)
     document_id = Column(Integer, ForeignKey('documents.id'))
@@ -623,13 +639,6 @@ class Layer(Base):
     hidden = Column(Boolean, default=False)
     opacity = Column(Float, default=1.0)
     position = Column(Integer, default=0)
-    base_64_image = Column(String, default="")
-    position_x = Column(Integer, default=0)
-    position_y = Column(Integer, default=0)
-    image_pivot_point_x = Column(Integer, default=0)
-    image_pivot_point_y = Column(Integer, default=0)
-    image_root_point_x = Column(Integer, default=0)
-    image_root_point_y = Column(Integer, default=0)
 
 
 class Document(Base):
