@@ -99,7 +99,7 @@ class Canvas(
 
     @property
     def brush_size(self):
-        return self.settings_manager.brush_settings.brush_size
+        return self.settings_manager.brush_settings.size
 
     @property
     def canvas_container(self):
@@ -271,18 +271,12 @@ class Canvas(
         self.canvas_container.setCursor(QCursor(Qt.CursorShape.ArrowCursor))
 
     def update(self):
-        self.app.canvas_position = f"X {-self.pos_x: 05d} Y {self.pos_y: 05d}"
         self.canvas_container.update(self.viewport_rect)
         self.app.update()
 
     def clear(self):
         self.current_layer.lines = []
         self.current_layer.image_data = None
-        self.update()
-
-    def recenter(self):
-        self.pos_x = 0
-        self.pos_y = 0
         self.update()
 
     def handle_move_canvas(self, event):
@@ -411,7 +405,7 @@ class Canvas(
         self.app.header_widget.height_slider_widget.slider.setValue(self.settings_manager.working_height)
 
     def set_canvas_color(self):
-        self.update_canvas_color(self.settings_manager.canvas_color)
+        self.update_canvas_color(self.settings_manager.grid_settings.canvas_color)
 
     def update_canvas_color(self, color):
         self.canvas_container.setStyleSheet(f"""
