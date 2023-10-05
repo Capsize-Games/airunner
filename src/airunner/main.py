@@ -6,6 +6,9 @@ This is due to the way huggingface diffusion models are imported.
 *******************************************************************************
 """
 import os
+import re
+from io import StringIO
+
 from airunner.aihandler.settings_manager import SettingsManager
 settings_manager = SettingsManager()
 hf_cache_path = settings_manager.path_settings.hf_cache_path

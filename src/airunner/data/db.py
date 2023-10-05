@@ -9,7 +9,7 @@ from airunner.data.models import ControlnetModel, Pipeline, Document, Settings, 
     GeneratorSetting, SplitterSection, GridSettings, MetadataSettings, PathSettings, MemorySettings, AIModel, \
     ImageFilter, ImageFilterValue, BrushSettings, Prompt, PromptVariable, PromptCategory, PromptOption, \
     PromptVariableCategory, PromptVariableCategoryWeight, PromptStyleCategory, PromptStyle, Scheduler, ActionScheduler, \
-    DeterministicSettings
+    DeterministicSettings, ActiveGridSettings
 from airunner.utils import get_session
 
 session = get_session()
@@ -170,6 +170,10 @@ if not session.query(Prompt).first():
     session.add(MemorySettings())
     session.commit()
 
+    # Add ActiveGridSettings object
+    session.add(ActiveGridSettings())
+    session.commit()
+
 
     # Add ImageFilter objects
     for filter in imagefilter_bootstrap_data:
@@ -193,7 +197,6 @@ if not session.query(Prompt).first():
 
     # Access its image_filter_values
     filter_values = image_filter.image_filter_values
-
 
     # Add Document object
     settings = Settings(nsfw_filter=True)
@@ -248,12 +251,58 @@ if not session.query(Prompt).first():
     settings.deterministic_settings = session.query(DeterministicSettings).first()
     settings.metadata_settings = session.query(MetadataSettings).first()
     settings.memory_settings = session.query(MemorySettings).first()
+    settings.active_grid_settings = session.query(ActiveGridSettings).first()
+
+    active_grid_colors = {
+        "stablediffusion": {
+            "border": {
+                "txt2img": "#00FF00",
+                "outpaint": "#00FFFF",
+                "depth2img": "#0000FF",
+                "pix2pix": "#FFFF00",
+                "upscale": "#00FFFF",
+                "superresolution": "#FF00FF",
+                "txt2vid": "#999999",
+            },
+            # choose complimentary colors for the fill
+            "fill": {
+                "txt2img": "#FF0000",
+                "outpaint": "#FF00FF",
+                "depth2img": "#FF8000",
+                "pix2pix": "#8000FF",
+                "upscale": "#00FF80",
+                "superresolution": "#00FF00",
+                "txt2vid": "#000000",
+
+            }
+        },
+        "kandinsky": {
+            "border": {
+                "txt2img": "#FF0000",
+                "outpaint": "#FF0000",
+            },
+            "fill": {
+                "txt2img": "#FF0000",
+                "outpaint": "#FF00FF",
+            }
+        },
+        "shapegif": {
+            "border": {
+                "txt2img": "#FF0000",
+            },
+            "fill": {
+                "txt2img": "#FF0000",
+            }
+        },
+    }
 
     for generator_name, generator_sections in sections_bootstrap_data.items():
         for generator_section in generator_sections:
             settings.generator_settings.append(GeneratorSetting(
                 section=generator_section,
-                generator_name=generator_name
+                generator_name=generator_name,
+                active_grid_border_color=active_grid_colors[generator_name]["border"][generator_section],
+                active_grid_fill_color=active_grid_colors[generator_name]["fill"][generator_section]
             ))
 
     session.add(Document(
