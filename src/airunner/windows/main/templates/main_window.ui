@@ -376,135 +376,6 @@
              </property>
             </spacer>
            </item>
-           <item>
-            <widget class="SliderWidget" name="width_slider_widget" native="true">
-             <property name="label_text" stdset="0">
-              <string>Active Grid Width</string>
-             </property>
-             <property name="slider_minimum" stdset="0">
-              <number>64</number>
-             </property>
-             <property name="slider_maximum" stdset="0">
-              <number>4096</number>
-             </property>
-             <property name="spinbox_minimum" stdset="0">
-              <number>64</number>
-             </property>
-             <property name="spinbox_maximum" stdset="0">
-              <number>4096</number>
-             </property>
-             <property name="slider_tick_interval" stdset="0">
-              <number>64</number>
-             </property>
-             <property name="slider_single_step" stdset="0">
-              <number>64</number>
-             </property>
-             <property name="slider_page_step" stdset="0">
-              <number>64</number>
-             </property>
-             <property name="spinbox_single_step" stdset="0">
-              <number>64</number>
-             </property>
-             <property name="spinbox_page_step" stdset="0">
-              <number>64</number>
-             </property>
-             <property name="slider_callback" stdset="0">
-              <string notr="true">size_slider_changed_callback</string>
-             </property>
-             <property name="settings_property" stdset="0">
-              <string notr="true">working_width</string>
-             </property>
-             <property name="display_as_float" stdset="0">
-              <bool>false</bool>
-             </property>
-            </widget>
-           </item>
-           <item>
-            <widget class="SliderWidget" name="height_slider_widget" native="true">
-             <property name="slider_minimum" stdset="0">
-              <number>64</number>
-             </property>
-             <property name="slider_maximum" stdset="0">
-              <number>4096</number>
-             </property>
-             <property name="spinbox_minimum" stdset="0">
-              <number>64</number>
-             </property>
-             <property name="spinbox_maximum" stdset="0">
-              <number>4096</number>
-             </property>
-             <property name="slider_tick_interval" stdset="0">
-              <number>64</number>
-             </property>
-             <property name="slider_single_step" stdset="0">
-              <number>64</number>
-             </property>
-             <property name="slider_page_step" stdset="0">
-              <number>64</number>
-             </property>
-             <property name="spinbox_single_step" stdset="0">
-              <number>64</number>
-             </property>
-             <property name="spinbox_page_step" stdset="0">
-              <number>64</number>
-             </property>
-             <property name="label_text" stdset="0">
-              <string>Active Grid Height</string>
-             </property>
-             <property name="slider_callback" stdset="0">
-              <string notr="true">size_slider_changed_callback</string>
-             </property>
-             <property name="settings_property" stdset="0">
-              <string>working_height</string>
-             </property>
-             <property name="display_as_float" stdset="0">
-              <bool>false</bool>
-             </property>
-            </widget>
-           </item>
-           <item>
-            <widget class="SliderWidget" name="brush_size_slider" native="true">
-             <property name="slider_minimum" stdset="0">
-              <number>1</number>
-             </property>
-             <property name="slider_maximum" stdset="0">
-              <number>100</number>
-             </property>
-             <property name="spinbox_minimum" stdset="0">
-              <number>1</number>
-             </property>
-             <property name="spinbox_maximum" stdset="0">
-              <number>100</number>
-             </property>
-             <property name="slider_tick_interval" stdset="0">
-              <number>1</number>
-             </property>
-             <property name="slider_single_step" stdset="0">
-              <number>1</number>
-             </property>
-             <property name="slider_page_step" stdset="0">
-              <number>10</number>
-             </property>
-             <property name="spinbox_single_step" stdset="0">
-              <number>1</number>
-             </property>
-             <property name="spinbox_page_step" stdset="0">
-              <number>10</number>
-             </property>
-             <property name="label_text" stdset="0">
-              <string>Brush Size</string>
-             </property>
-             <property name="slider_callback" stdset="0">
-              <string notr="true">size_slider_changed_callback</string>
-             </property>
-             <property name="settings_property" stdset="0">
-              <string notr="true">mask_brush_size</string>
-             </property>
-             <property name="display_as_float" stdset="0">
-              <bool>false</bool>
-             </property>
-            </widget>
-           </item>
           </layout>
          </widget>
         </widget>
@@ -559,7 +430,59 @@
            <number>0</number>
           </property>
           <item row="0" column="0">
-           <widget class="CanvasWidget" name="canvas_widget" native="true"/>
+           <widget class="QTabWidget" name="tabWidget">
+            <property name="currentIndex">
+             <number>1</number>
+            </property>
+            <widget class="QWidget" name="tab">
+             <attribute name="title">
+              <string>Canvas</string>
+             </attribute>
+             <layout class="QGridLayout" name="gridLayout_10">
+              <property name="leftMargin">
+               <number>0</number>
+              </property>
+              <property name="topMargin">
+               <number>0</number>
+              </property>
+              <property name="rightMargin">
+               <number>0</number>
+              </property>
+              <property name="bottomMargin">
+               <number>0</number>
+              </property>
+              <item row="0" column="0">
+               <widget class="CanvasWidget" name="canvas_widget" native="true"/>
+              </item>
+             </layout>
+            </widget>
+            <widget class="QWidget" name="tab_2">
+             <attribute name="title">
+              <string>Canvas+</string>
+             </attribute>
+             <layout class="QGridLayout" name="gridLayout_11">
+              <property name="leftMargin">
+               <number>0</number>
+              </property>
+              <property name="topMargin">
+               <number>0</number>
+              </property>
+              <property name="rightMargin">
+               <number>0</number>
+              </property>
+              <property name="bottomMargin">
+               <number>0</number>
+              </property>
+              <item row="0" column="0">
+               <widget class="CanvasPlusWidget" name="canvas_plus_widget" native="true">
+                <property name="styleSheet">
+                 <string notr="true"/>
+                </property>
+               </widget>
+              </item>
+             </layout>
+            </widget>
+           </widget>
           </item>
          </layout>
         </widget>
@@ -573,7 +496,7 @@
           <rect>
            <x>0</x>
            <y>0</y>
-           <width>564</width>
+           <width>429</width>
            <height>508</height>
           </rect>
          </property>
@@ -585,13 +508,25 @@
             </property>
             <widget class="QTabWidget" name="tool_tab_widget">
              <property name="currentIndex">
-              <number>0</number>
+              <number>3</number>
              </property>
              <widget class="QWidget" name="tab_embeddings">
               <attribute name="title">
                <string>Embeddings</string>
               </attribute>
               <layout class="QGridLayout" name="gridLayout_9">
+               <property name="leftMargin">
+                <number>0</number>
+               </property>
+               <property name="topMargin">
+                <number>0</number>
+               </property>
+               <property name="rightMargin">
+                <number>0</number>
+               </property>
+               <property name="bottomMargin">
+                <number>0</number>
+               </property>
                <item row="0" column="0">
                 <widget class="EmbeddingsContainerWidget" name="embeddings_container_widget" native="true"/>
                </item>
@@ -602,6 +537,18 @@
                <string>LoRA</string>
               </attribute>
               <layout class="QGridLayout" name="gridLayout_7">
+               <property name="leftMargin">
+                <number>0</number>
+               </property>
+               <property name="topMargin">
+                <number>0</number>
+               </property>
+               <property name="rightMargin">
+                <number>0</number>
+               </property>
+               <property name="bottomMargin">
+                <number>0</number>
+               </property>
                <item row="0" column="0">
                 <widget class="LoraContainerWidget" name="lora_container_widget" native="true"/>
                </item>
@@ -612,14 +559,71 @@
                <string>Pen</string>
               </attribute>
               <layout class="QGridLayout" name="gridLayout_8">
+               <property name="leftMargin">
+                <number>0</number>
+               </property>
+               <property name="topMargin">
+                <number>0</number>
+               </property>
+               <property name="rightMargin">
+                <number>0</number>
+               </property>
+               <property name="bottomMargin">
+                <number>0</number>
+               </property>
                <item row="0" column="0">
                 <widget class="BrushContainerWidget" name="brush_container_widget" native="true"/>
                </item>
               </layout>
              </widget>
+             <widget class="QWidget" name="tab_3">
+              <attribute name="title">
+               <string>Active Grid</string>
+              </attribute>
+              <layout class="QGridLayout" name="gridLayout_12">
+               <property name="leftMargin">
+                <number>0</number>
+               </property>
+               <property name="topMargin">
+                <number>0</number>
+               </property>
+               <property name="rightMargin">
+                <number>0</number>
+               </property>
+               <property name="bottomMargin">
+                <number>0</number>
+               </property>
+               <item row="0" column="0">
+                <widget class="ActiveGridSettingsWidget" name="active_grid_settings_widget" native="true"/>
+               </item>
+              </layout>
+             </widget>
             </widget>
-            <widget class="DeterministicWidget" name="deterministic_panel_widget" native="true"/>
-            <widget class="BatchWidget" name="batch_container_widget" native="true"/>
+            <widget class="QTabWidget" name="deterministic_panel_widget">
+             <property name="currentIndex">
+              <number>0</number>
+             </property>
+             <widget class="QWidget" name="deterministic_panel_widgetPage1">
+              <attribute name="title">
+               <string>Deterministic Batches</string>
+              </attribute>
+              <layout class="QGridLayout" name="gridLayout_13">
+               <item row="0" column="0">
+                <widget class="DeterministicWidget" name="deterministic_widget" native="true"/>
+               </item>
+              </layout>
+             </widget>
+             <widget class="QWidget" name="tab_4">
+              <attribute name="title">
+               <string>Standard Batches</string>
+              </attribute>
+              <layout class="QGridLayout" name="gridLayout_14">
+               <item row="0" column="0">
+                <widget class="BatchWidget" name="batch_container_widget" native="true"/>
+               </item>
+              </layout>
+             </widget>
+            </widget>
             <widget class="QFrame" name="layer_frame">
              <property name="frameShape">
               <enum>QFrame::StyledPanel</enum>
@@ -1713,12 +1717,6 @@
  </widget>
  <customwidgets>
   <customwidget>
-   <class>SliderWidget</class>
-   <extends>QWidget</extends>
-   <header>airunner/widgets/slider/slider_widget</header>
-   <container>1</container>
-  </customwidget>
-  <customwidget>
    <class>CanvasWidget</class>
    <extends>QWidget</extends>
    <header>airunner/widgets/canvas/canvas_widget</header>
@@ -1776,6 +1774,21 @@
    <class>BatchWidget</class>
    <extends>QWidget</extends>
    <header>airunner/widgets/batch/batch_widget</header>
+   <container>1</container>
+  </customwidget>
+  <customwidget>
+   <class>CanvasPlusWidget</class>
+   <extends>QWidget</extends>
+   <header>airunner/widgets/canvas_plus/canvas_plus_widget</header>
+   <container>1</container>
+   <slots>
+    <slot>action_button_clicked_focus()</slot>
+   </slots>
+  </customwidget>
+  <customwidget>
+   <class>ActiveGridSettingsWidget</class>
+   <extends>QWidget</extends>
+   <header>airunner/widgets/active_grid_settings/active_grid_settings_widget</header>
    <container>1</container>
   </customwidget>
  </customwidgets>
@@ -2032,22 +2045,6 @@
     <hint type="sourcelabel">
      <x>940</x>
      <y>211</y>
-    </hint>
-    <hint type="destinationlabel">
-     <x>775</x>
-     <y>0</y>
-    </hint>
-   </hints>
-  </connection>
-  <connection>
-   <sender>focus_button</sender>
-   <signal>clicked()</signal>
-   <receiver>MainWindow</receiver>
-   <slot>action_focus_button_triggered()</slot>
-   <hints>
-    <hint type="sourcelabel">
-     <x>940</x>
-     <y>302</y>
     </hint>
     <hint type="destinationlabel">
      <x>775</x>
@@ -2615,6 +2612,22 @@
     </hint>
    </hints>
   </connection>
+  <connection>
+   <sender>focus_button</sender>
+   <signal>clicked()</signal>
+   <receiver>canvas_plus_widget</receiver>
+   <slot>action_button_clicked_focus()</slot>
+   <hints>
+    <hint type="sourcelabel">
+     <x>920</x>
+     <y>289</y>
+    </hint>
+    <hint type="destinationlabel">
+     <x>414</x>
+     <y>290</y>
+    </hint>
+   </hints>
+  </connection>
  </connections>
  <designerdata>
   <property name="gridDeltaX">
@@ -2647,7 +2660,6 @@
   <slot>action_show_lora()</slot>
   <slot>action_show_pen()</slot>
   <slot>action_toggle_grid(bool)</slot>
-  <slot>action_focus_button_triggered()</slot>
   <slot>action_toggle_darkmode()</slot>
   <slot>action_show_settings()</slot>
   <slot>action_open_bug_report()</slot>

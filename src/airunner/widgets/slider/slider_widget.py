@@ -18,7 +18,7 @@ class SliderWidget(BaseWidget):
 
     @slider_single_step.setter
     def slider_single_step(self, val):
-        self.ui.slider.setSingleStep(val)
+        self.ui.slider.setSingleStep(int(val))
 
     @property
     def slider_page_step(self):
@@ -26,7 +26,7 @@ class SliderWidget(BaseWidget):
 
     @slider_page_step.setter
     def slider_page_step(self, val):
-        self.ui.slider.setPageStep(val)
+        self.ui.slider.setPageStep(int(val))
 
     @property
     def spinbox_single_step(self):
@@ -58,7 +58,7 @@ class SliderWidget(BaseWidget):
 
     @slider_minimum.setter
     def slider_minimum(self, val):
-        self.ui.slider.minimum = val
+        self.ui.slider.minimum = int(val)
 
     @property
     def slider_maximum(self):
@@ -66,7 +66,7 @@ class SliderWidget(BaseWidget):
 
     @slider_maximum.setter
     def slider_maximum(self, val):
-        self.ui.slider.setMaximum(val)
+        self.ui.slider.setMaximum(int(val))
 
     @property
     def spinbox_maximum(self):
@@ -137,7 +137,9 @@ class SliderWidget(BaseWidget):
         self.ui.slider_spinbox.valueChanged.connect(self.handle_spinbox_change)
         self.ui.slider.setValue(int(current_value))
         single_step = self.ui.slider.singleStep()
-        adjusted_value = round(current_value / single_step) * single_step
+        adjusted_value = current_value
+        if single_step > 0:
+            adjusted_value = round(current_value / single_step) * single_step
         normalized = adjusted_value / self.slider_maximum
         spinbox_val = normalized * self.spinbox_maximum
         spinbox_val = round(spinbox_val, 2)

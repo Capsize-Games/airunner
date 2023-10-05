@@ -2,8 +2,9 @@ from PIL import Image
 from PyQt6.QtCore import QRect, QPoint, Qt
 from PyQt6.QtWidgets import QSpacerItem, QSizePolicy
 
+from airunner.data.models import Layer
 from airunner.models.layerdata import LayerData
-from airunner.utils import apply_opacity_to_image
+from airunner.utils import apply_opacity_to_image, get_session, save_session
 from airunner.widgets.base_widget import BaseWidget
 from airunner.widgets.layers.layer_widget import LayerWidget
 from airunner.widgets.layers.templates.layer_container_ui import Ui_layer_container
@@ -24,7 +25,12 @@ class LayerContainerWidget(BaseWidget):
     def initialize(self):
         self.ui.scrollAreaWidgetContents.layout().addSpacerItem(
             QSpacerItem(0, 0, QSizePolicy.Policy.Minimum, QSizePolicy.Policy.Expanding))
-        self.create_layer()
+        session = get_session()
+        self.layers = session.query(Layer).filter_by(document=self.app.document).all()
+        if len(self.layers) == 0:
+            self.create_layer()
+        else:
+            self.add_layers()
         self.ui.opacity_slider_widget.initialize()
 
     def action_clicked_button_add_new_layer(self):
@@ -42,6 +48,10 @@ class LayerContainerWidget(BaseWidget):
     def action_clicked_button_delete_selected_layers(self):
         self.delete_selected_layers()
 
+    def add_layers(self):
+        for layer in self.layers:
+            self.add_layer_widget(layer, layer.position)
+
     def add_layer(self):
         self.app.history.add_event({
             "event": "new_layer",
@@ -51,12 +61,21 @@ class LayerContainerWidget(BaseWidget):
         self.create_layer()
 
     def create_layer(self):
+        session = get_session()
+        layer_data = Layer(
+            name=f"Layer {len(self.layers) + 1}",
+            document=self.app.document,
+            position=len(self.layers) + 1,
+            active=True
+        )
+        session.add(layer_data)
+        save_session(session)
+
         layer_name = f"Layer {len(self.layers) + 1}"
-        layer = LayerData(len(self.layers), layer_name)
         index = 1
-        self.layers.insert(index, layer)
+        self.layers.insert(index, layer_data)
         self.set_current_layer(index)
-        self.add_layer_widget(layer, index)
+        self.add_layer_widget(layer_data, index)
 
     def add_layer_widget(self, layer_data, index):
         layer_widget = LayerWidget(self, layer_data=layer_data, layer_index=index)
