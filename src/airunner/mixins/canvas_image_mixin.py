@@ -8,9 +8,10 @@ from PyQt6.QtCore import QPoint, QRect
 from PyQt6.QtGui import QPainter, QPixmap
 from PIL.ImageFilter import GaussianBlur
 
+from airunner.data.models import LayerImage
 from airunner.models.imagedata import ImageData
 from airunner.models.layerdata import LayerData
-from airunner.utils import apply_opacity_to_image, save_session
+from airunner.utils import apply_opacity_to_image, save_session, get_session
 
 
 class CanvasImageMixin:

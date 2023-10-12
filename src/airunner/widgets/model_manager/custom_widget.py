@@ -1,12 +1,11 @@
 import os
-from functools import partial
 
 from airunner.data.models import AIModel
 from airunner.models.modeldata import ModelData
+from airunner.utils import get_session
 from airunner.widgets.base_widget import BaseWidget
 from airunner.widgets.model_manager.model_widget import ModelWidget
 from airunner.widgets.model_manager.templates.custom_ui import Ui_custom_model_widget
-from airunner.utils import get_session
 
 
 class CustomModelWidget(BaseWidget):
