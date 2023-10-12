@@ -1,5 +1,3 @@
-from functools import partial
-
 from airunner.data.models import AIModel
 from airunner.utils import get_session
 from airunner.widgets.base_widget import BaseWidget
