@@ -1,6 +1,8 @@
-from PIL import ImageDraw, ImageFilter, UnidentifiedImageError
-from PyQt6.QtCore import Qt, QPointF, QPoint, QSize, QRect, QThread, QObject, pyqtSignal, QTimer, QRunnable, QThreadPool
+from PIL import Image
+from PIL import ImageDraw, UnidentifiedImageError
+from PyQt6.QtCore import Qt, QPointF, QPoint, QSize, QRect, QObject, pyqtSignal, QRunnable, QThreadPool
 from PyQt6.QtGui import QPainter, QPainterPath, QColor, QPen, QImage
+
 from airunner.models.layerdata import LayerData
 from airunner.models.linedata import LineData
 from PIL import Image

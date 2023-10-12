@@ -1,5 +1,5 @@
-from PyQt6.QtCore import Qt, QObject, QEvent
-from PyQt6.QtWidgets import QColorDialog, QGridLayout, QLineEdit
+from PyQt6.QtCore import Qt, QObject
+from PyQt6.QtWidgets import QColorDialog
 
 
 class ColorPicker(QColorDialog):
