@@ -1,10 +1,8 @@
 import random
 import time
 
-import numpy as np
-
-from airunner.prompt_builder.prompt_variable import PromptVariable
 from airunner.aihandler.prompt_weight_bridge import PromptWeightBridge
+from airunner.prompt_builder.prompt_variable import PromptVariable
 
 
 class PromptParser:

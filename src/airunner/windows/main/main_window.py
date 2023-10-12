@@ -6,41 +6,36 @@ import sys
 import webbrowser
 from functools import partial
 
-from airunner.canvas import Canvas
-from airunner.resources_rc import *
-
 from PyQt6 import uic, QtCore
-from PyQt6.QtWidgets import QApplication, QFileDialog, QMainWindow, QTabWidget, QWidget, \
-    QVBoxLayout
 from PyQt6.QtCore import pyqtSlot, Qt, QThread, pyqtSignal, QObject, QTimer
 from PyQt6.QtGui import QGuiApplication
+from PyQt6.QtWidgets import QApplication, QFileDialog, QMainWindow, QTabWidget, QWidget
 
-from airunner.aihandler.qtvar import MessageHandlerVar
+from airunner.aihandler.enums import MessageCode
 from airunner.aihandler.logger import Logger as logger
 from airunner.aihandler.pyqt_client import OfflineClient
+from airunner.aihandler.qtvar import MessageHandlerVar
 from airunner.aihandler.settings import LOG_LEVEL
-from airunner.aihandler.enums import MessageCode
+from airunner.aihandler.settings_manager import SettingsManager
 from airunner.airunner_api import AIRunnerAPI
+from airunner.canvas import Canvas
 from airunner.data.db import session
 from airunner.data.models import SplitterSection, Prompt
 from airunner.filters.windows.filter_base import FilterBase
 from airunner.input_event_manager import InputEventManager
 from airunner.mixins.history_mixin import HistoryMixin
+from airunner.resources_rc import *
 from airunner.settings import BASE_PATH
+from airunner.utils import get_version, get_latest_version, auto_export_image, get_session, save_session, \
+    create_airunner_paths, default_hf_cache_dir
 from airunner.widgets.status.status_widget import StatusWidget
-from airunner.windows.main.templates.main_window_ui import Ui_MainWindow
-from airunner.widgets.embeddings.embedding_widget import EmbeddingWidget
 from airunner.windows.about.about import AboutWindow
-from airunner.windows.settings.airunner_settings import SettingsWindow
 from airunner.windows.deterministic_generation.deterministic_generation_window import DeterministicGenerationWindow
 from airunner.windows.interpolation.image_interpolation import ImageInterpolation
 from airunner.windows.model_merger import ModelMerger
 from airunner.windows.prompt_browser.prompt_browser import PromptBrowser
+from airunner.windows.settings.airunner_settings import SettingsWindow
 from airunner.windows.update.update_window import UpdateWindow
-from airunner.utils import get_version, get_latest_version, auto_export_image, get_session, save_session, \
-    create_airunner_paths, default_hf_cache_dir
-from airunner.aihandler.settings_manager import SettingsManager
-
 from airunner.windows.video import VideoPopup
 
 
