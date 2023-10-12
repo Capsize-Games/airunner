@@ -55,7 +55,7 @@ class MainWindow(
     _document_name = "Untitled"
     is_saved = False
     action = "txt2img"
-    message_var = None
+    message_var = MessageHandlerVar()
     progress_bar_started = False
     window = None
     history = None
@@ -80,9 +80,6 @@ class MainWindow(
     image_interpolation_window = None
     deterministic_window = None
 
-    _embedding_names = None
-    embedding_widgets = {}
-    bad_model_embedding_map = {}
     _tabs = {
         "stablediffusion": {
             "txt2img": None,
@@ -122,6 +119,8 @@ class MainWindow(
     }
     image_generated = pyqtSignal(bool)
     controlnet_image_generated = pyqtSignal(bool)
+    generator_tab_changed_signal = pyqtSignal()
+    tab_section_changed_signal = pyqtSignal()
 
     @property
     def generate_signal(self):
@@ -133,23 +132,13 @@ class MainWindow(
             self._settings_manager = SettingsManager(app=self)
         return self._settings_manager
 
-    @settings_manager.setter
-    def settings_manager(self, val):
-        self._settings_manager = val
-
-    @property
-    def current_prompt_generator_settings(self):
-        """
-        Convenience property to get the current prompt generator settings
-        :return:
-        """
-        return self.settings_manager.prompt_generator_settings
-
-    @property
-    def embedding_names(self):
-        if self._embedding_names is None:
-            self._embedding_names = self.get_list_of_available_embedding_names()
-        return self._embedding_names
+    # @property
+    # def current_prompt_generator_settings(self):
+    #     """
+    #     Convenience property to get the current prompt generator settings
+    #     :return:
+    #     """
+    #     return self.settings_manager.prompt_generator_settings
 
     @property
     def is_dark(self):
@@ -328,11 +317,12 @@ class MainWindow(
         self.ui.layer_widget.initialize()
 
         # call a function after the window has finished loading:
-        QTimer.singleShot(0, self.on_show)
+        self.ui.canvas_plus_widget.initialize()
+        QTimer.singleShot(500, self.on_show)
 
     def on_show(self):
         print("on_show")
-        self.ui.canvas_plus_widget.initialize()
+        self.ui.canvas_plus_widget.do_draw()
 
     def action_slider_changed(self, value_name, value):
         self.settings_manager.set_value(value_name, value)
@@ -947,14 +937,10 @@ class MainWindow(
             self.refresh_lora()
         elif key == "model_base_path":
             self.generator_tab_widget.refresh_model_list()
-        elif key == "embeddings_path":
-            self.update_embedding_names()
         elif key == "generator.seed":
             self.prompt_builder.process_prompt()
         elif key == "use_prompt_builder_checkbox":
             self.generator_tab_widget.toggle_all_prompt_builder_checkboxes(value)
-        elif key == "generator.model":
-            self.enable_embeddings()
         elif key == "models":
             self.model_manager.models_changed(key, value)
 
@@ -967,7 +953,6 @@ class MainWindow(
             self.input_event_manager.register_event(event, callback)
 
     def initialize_handlers(self):
-        self.message_var = MessageHandlerVar()
         self.message_var.my_signal.connect(self.message_handler)
 
     def initialize_window(self):
@@ -1085,7 +1070,6 @@ class MainWindow(
             MessageCode.PROGRESS: self.handle_progress,
             MessageCode.IMAGE_GENERATED: self.handle_image_generated,
             MessageCode.CONTROLNET_IMAGE_GENERATED: self.handle_controlnet_image_generated,
-            MessageCode.EMBEDDING_LOAD_FAILED: self.handle_embedding_load_failed,
         }.get(code, self.handle_unknown)(message)
 
     def handle_controlnet_image_generated(self, message):
@@ -1169,13 +1153,6 @@ class MainWindow(
             except ZeroDivisionError:
                 current = 0
         self.generator_tab_widget.set_progress_bar_value(tab_section, action, int(current * 100))
-
-    def handle_embedding_load_failed(self, message):
-        # TODO:
-        #  on model change, re-enable the buttons
-        embedding_name = message["embedding_name"]
-        model_name = message["model_name"]
-        self.disable_embedding(embedding_name, model_name)
 
     def handle_unknown(self, message):
         logger.error(f"Unknown message code: {message}")
@@ -1274,73 +1251,8 @@ class MainWindow(
         self.set_window_title()
         self.ui.layer_widget.show_layers()
 
-    def update_embedding_names(self):
-        self._embedding_names = None
-        for tab_name in self.tabs.keys():
-            tab = self.tabs[tab_name]
-            # clear embeddings
-            try:
-                tab.embeddings.widget().deleteLater()
-            except AttributeError:
-                pass
-            self.load_embeddings(tab)
-
     def update(self):
         self.generator_tab_widget.update_thumbnails()
-
-    def register_embedding_widget(self, name, widget):
-        self.embedding_widgets[name] = widget
-
-    def disable_embedding(self, name, model_name):
-        self.embedding_widgets[name].setEnabled(False)
-        if name not in self.bad_model_embedding_map:
-            self.bad_model_embedding_map[name] = []
-        if model_name not in self.bad_model_embedding_map[name]:
-            self.bad_model_embedding_map[name].append(model_name)
-
-    def enable_embeddings(self):
-        for name in self.embedding_widgets.keys():
-            enable = True
-            if name in self.bad_model_embedding_map:
-                if self.model in self.bad_model_embedding_map[name]:
-                    enable = False
-            self.embedding_widgets[name].setEnabled(enable)
-
-    def load_embeddings(self, tab):
-        container = QWidget()
-        container.setLayout(QVBoxLayout())
-        for embedding_name in self.embedding_names:
-            embedding_widget = EmbeddingWidget(
-                app=self,
-                name=embedding_name
-            )
-            self.register_embedding_widget(embedding_name, embedding_widget)
-            container.layout().addWidget(embedding_widget)
-        container.layout().addStretch()
-        # self.tool_menu_widget.embeddings_container_widget.embeddings.setWidget(container)
-
-    def get_list_of_available_embedding_names(self):
-        embeddings_path = self.settings_manager.path_settings.embeddings_path or "embeddings"
-        if embeddings_path == "embeddings":
-            embeddings_path = os.path.join(self.settings_manager.path_settings.model_base_path, embeddings_path)
-        return self.find_embeddings_in_path(embeddings_path)
-
-    def find_embeddings_in_path(self, embeddings_path, tokens=None):
-        if tokens is None:
-            tokens = []
-        if not os.path.exists(embeddings_path):
-            return tokens
-        if os.path.exists(embeddings_path):
-            for f in os.listdir(embeddings_path):
-                # check if f is directory
-                if os.path.isdir(os.path.join(embeddings_path, f)):
-                    return self.find_embeddings_in_path(os.path.join(embeddings_path, f), tokens)
-                words = f.split(".")
-                if words[-1] in ["pt", "ckpt", "pth", "safetensors"]:
-                    words = words[:-1]
-                words = ".".join(words).lower()
-                tokens.append(words)
-        return tokens
 
     def insert_into_prompt(self, text, negative_prompt=False):
         prompt_widget = self.generator_tab_widget.data[self.current_generator][self.current_section]["prompt_widget"]
@@ -1355,12 +1267,12 @@ class MainWindow(
             prompt_widget.setPlainText(text)
 
     def handle_generator_tab_changed(self):
-        self.enable_embeddings()
         self.update()
+        self.generator_tab_changed_signal.emit()
 
     def handle_tab_section_changed(self):
-        self.enable_embeddings()
         self.update()
+        self.tab_section_changed_signal.emit()
 
     def release_tab_overrides(self):
         self.override_current_generator = None
