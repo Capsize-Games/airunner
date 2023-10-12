@@ -1,5 +1,8 @@
 import os
 
+from PyQt6.QtCore import pyqtSlot
+
+from airunner.aihandler.enums import MessageCode
 from airunner.data.models import Embedding
 from airunner.utils import get_session, save_session
 from airunner.widgets.base_widget import BaseWidget
@@ -9,12 +12,74 @@ from airunner.widgets.embeddings.templates.embeddings_container_ui import Ui_emb
 
 class EmbeddingsContainerWidget(BaseWidget):
     widget_class_ = Ui_embeddings_container
+    _embedding_names = None
+    embedding_widgets = {}
+    bad_model_embedding_map = {}
 
     def __init__(self, *args, **kwargs):
         super().__init__(*args, **kwargs)
+        self.app.generator_tab_changed_signal.connect(self.handle_generator_tab_changed)
+        self.app.tab_section_changed_signal.connect(self.handle_tab_section_changed)
+        self.settings_manager.changed_signal.connect(self.handle_changed_signal)
+        self.app.message_var.my_signal.connect(self.message_handler)
 
         self.load_embeddings()
         self.scan_for_embeddings()
+
+    def disable_embedding(self, name, model_name):
+        self.embedding_widgets[name].setEnabled(False)
+        if name not in self.bad_model_embedding_map:
+            self.bad_model_embedding_map[name] = []
+        if model_name not in self.bad_model_embedding_map[name]:
+            self.bad_model_embedding_map[name].append(model_name)
+
+    def register_embedding_widget(self, name, widget):
+        self.embedding_widgets[name] = widget
+
+    def enable_embeddings(self):
+        for name in self.embedding_widgets.keys():
+            enable = True
+            if name in self.bad_model_embedding_map:
+                if self.app.model in self.bad_model_embedding_map[name]:
+                    enable = False
+            self.embedding_widgets[name].setEnabled(enable)
+
+    def handle_embedding_load_failed(self, message):
+        # TODO:
+        #  on model change, re-enable the buttons
+        embedding_name = message["embedding_name"]
+        model_name = message["model_name"]
+        self.disable_embedding(embedding_name, model_name)
+
+    def update_embedding_names(self):
+        self._embedding_names = None
+        for tab_name in self.app.tabs.keys():
+            tab = self.app.tabs[tab_name]
+            # clear embeddings
+            try:
+                tab.embeddings.widget().deleteLater()
+            except AttributeError:
+                pass
+            self.load_embeddings(tab)
+
+    def handle_generator_tab_changed(self):
+        self.enable_embeddings()
+
+    def handle_tab_section_changed(self):
+        self.enable_embeddings()
+
+    def handle_changed_signal(self, key):
+        if key == "embeddings_path":
+            self.update_embedding_names()
+        elif key == "generator.model":
+            self.enable_embeddings()
+
+    @pyqtSlot(dict)
+    def message_handler(self, response: dict):
+        code = response["code"]
+        message = response["message"]
+        if code == MessageCode.EMBEDDING_LOAD_FAILED:
+            self.handle_embedding_load_failed(message)
 
     def load_embeddings(self):
         session = get_session()
@@ -24,6 +89,7 @@ class EmbeddingsContainerWidget(BaseWidget):
 
     def add_embedding(self, embedding):
         embedding_widget = EmbeddingWidget(embedding=embedding)
+        self.register_embedding_widget(embedding.name, embedding_widget)
         self.ui.scrollAreaWidgetContents.layout().addWidget(embedding_widget)
 
     def action_clicked_button_scan_for_embeddings(self):
