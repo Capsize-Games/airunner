@@ -1,6 +1,6 @@
 from PyQt6.QtCore import QObject, pyqtSignal
 
-from airunner.aihandler.qtvar import Var, StringVar, IntVar, BooleanVar, FloatVar, DictVar
+from airunner.aihandler.qtvar import StringVar, IntVar, BooleanVar, FloatVar, DictVar
 from airunner.data.db import session
 from airunner.data.models import Settings, GeneratorSetting, AIModel, Pipeline, ControlnetModel, ImageFilter, Prompt, \
     SavedPrompt, PromptCategory, PromptVariable, PromptVariableCategory, PromptVariableCategoryWeight

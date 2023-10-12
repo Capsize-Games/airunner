@@ -1,10 +1,7 @@
-import re
-
 from PyQt6.QtCore import pyqtSignal
 from PyQt6.QtWidgets import QWidget, QGridLayout, QProgressBar, QTabWidget
 
 from airunner.widgets.base_widget import BaseWidget
-from airunner.aihandler.settings import MAX_SEED
 from airunner.widgets.generator_form.templates.generator_tab_ui import Ui_generator_tab
 
 
