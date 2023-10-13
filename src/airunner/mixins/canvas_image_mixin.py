@@ -209,8 +209,16 @@ class CanvasImageMixin:
         # )
         self.current_layer.position_x = location.x()
         self.current_layer.position_y = location.y()
-        self.current_layer.image = image
+
+        session = get_session()
+        layer_image = LayerImage(
+            layer_id=self.current_layer.id,
+            order=len(self.current_layer.layer_images),
+        )
+        layer_image.image = image
+        session.add(layer_image)
         save_session()
+
         self.current_layer.layer_widget.set_thumbnail()
         # self.set_image_opacity(self.get_layer_opacity(self.current_layer_index))
         self.update()

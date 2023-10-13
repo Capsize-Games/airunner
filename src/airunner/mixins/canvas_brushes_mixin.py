@@ -5,7 +5,6 @@ from PyQt6.QtGui import QPainter, QPainterPath, QColor, QPen, QImage
 
 from airunner.models.layerdata import LayerData
 from airunner.models.linedata import LineData
-from PIL import Image
 
 
 class RasterizationWorker(QObject):
