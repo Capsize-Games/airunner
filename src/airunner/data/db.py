@@ -9,7 +9,7 @@ from airunner.data.models import ControlnetModel, Pipeline, Document, Settings, 
     GeneratorSetting, SplitterSection, GridSettings, MetadataSettings, PathSettings, MemorySettings, AIModel, \
     ImageFilter, ImageFilterValue, BrushSettings, Prompt, PromptVariable, PromptCategory, PromptOption, \
     PromptVariableCategory, PromptVariableCategoryWeight, PromptStyleCategory, PromptStyle, Scheduler, ActionScheduler, \
-    DeterministicSettings, ActiveGridSettings
+    DeterministicSettings, ActiveGridSettings, TabSection, PromptBuilder
 from airunner.utils import get_session
 
 session = get_session()
@@ -395,4 +395,33 @@ if not session.query(Prompt).first():
                 scheduler_id=v.id
             )
             session.add(obj)
+    session.commit()
+
+    # create tab sections
+    session.add(TabSection(
+        panel="center_tab",
+        active_tab="Canvas"
+    ))
+    session.add(TabSection(
+        panel="tool_tab_widget",
+        active_tab="Embeddings"
+    ))
+    session.add(TabSection(
+        panel="batches_tab",
+        active_tab="Deterministic Batches"
+    ))
+    session.add(TabSection(
+        panel="bottom_panel_tab_widget",
+        active_tab="Model Manager"
+    ))
+    session.commit()
+
+    session.add(PromptBuilder(
+        name="Prompt A",
+        active=True
+    ))
+    session.add(PromptBuilder(
+        name="Prompt B",
+        active=True
+    ))
     session.commit()

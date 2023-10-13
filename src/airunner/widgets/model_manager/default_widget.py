@@ -16,7 +16,6 @@ class DefaultModelWidget(BaseWidget):
     def show_items_in_scrollarea(self):
         session = get_session()
         models = session.query(AIModel).filter_by(is_default=True).all()
-        print(models)
         for model_widget in self.model_widgets:
             model_widget.deleteLater()
         self.model_widgets = []

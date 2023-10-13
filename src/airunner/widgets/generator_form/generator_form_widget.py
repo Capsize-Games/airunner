@@ -1,11 +1,12 @@
 import random
 
 from PIL import Image
-from PyQt6.QtCore import pyqtSignal, QRect
+from PyQt6.QtCore import pyqtSignal, QRect, QTimer
 
 from airunner.aihandler.enums import MessageCode
 from airunner.aihandler.settings import MAX_SEED
-from airunner.data.models import ActionScheduler
+from airunner.data.db import session
+from airunner.data.models import ActionScheduler, AIModel
 from airunner.utils import get_session
 from airunner.widgets.base_widget import BaseWidget
 from airunner.widgets.generator_form.templates.generatorform_ui import Ui_generator_form
@@ -124,6 +125,14 @@ class GeneratorForm(BaseWidget):
     @property
     def controlnet_image(self):
         return self.ui.controlnet_settings.current_controlnet_image
+
+    def __init__(self, *args, **kwargs):
+        super().__init__(*args, **kwargs)
+        timer = QTimer(self)
+        # one shot timer
+        timer.setSingleShot(True)
+        timer.timeout.connect(self.initialize)
+        timer.start(1000)
 
     def update_image_input_thumbnail(self):
         self.ui.input_image_widget.set_thumbnail()
@@ -478,17 +487,17 @@ class GeneratorForm(BaseWidget):
 
         self.ui.seed_widget.setProperty("generator_section", self.generator_section)
         self.ui.seed_widget.setProperty("generator_name", self.generator_name)
-        self.ui.seed_widget.initialize(
-            self.generator_section,
-            self.generator_name
-        )
+        # self.ui.seed_widget.initialize(
+        #     self.generator_section,
+        #     self.generator_name
+        # )
 
         self.ui.seed_widget_latents.setProperty("generator_section", self.generator_section)
         self.ui.seed_widget_latents.setProperty("generator_name", self.generator_name)
-        self.ui.seed_widget_latents.initialize(
-            self.generator_section,
-            self.generator_name
-        )
+        # self.ui.seed_widget_latents.initialize(
+        #     self.generator_section,
+        #     self.generator_name
+        # )
         self.initialized = True
 
     def handle_settings_manager_changed(self, key, val, settings_manager):
@@ -517,12 +526,14 @@ class GeneratorForm(BaseWidget):
 
     def load_models(self):
         self.clear_models()
-        requested_section = "txt2img" if self.generator_section == "txt2vid" \
-            else self.generator_section
-        models = self.settings_manager.available_model_names(
-            pipeline_action=requested_section,
-            category=self.generator_name)
-        self.ui.model.addItems(models)
+
+        models = session.query(AIModel).filter(
+            AIModel.category == self.generator_name,
+            AIModel.pipeline_action == self.generator_section
+        ).all()
+        model_names = [model.name for model in models]
+
+        self.ui.model.addItems(model_names)
         current_model = self.settings_manager.generator.model
         if current_model != "":
             self.ui.model.setCurrentText(current_model)

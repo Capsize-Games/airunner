@@ -1,13 +1,13 @@
 <?xml version="1.0" encoding="UTF-8"?>
 <ui version="4.0">
- <class>Form</class>
- <widget class="QWidget" name="Form">
+ <class>api_token</class>
+ <widget class="QWidget" name="api_token">
   <property name="geometry">
    <rect>
     <x>0</x>
     <y>0</y>
     <width>400</width>
-    <height>412</height>
+    <height>409</height>
    </rect>
   </property>
   <property name="windowTitle">
@@ -62,5 +62,25 @@
   </layout>
  </widget>
  <resources/>
- <connections/>
+ <connections>
+  <connection>
+   <sender>hf_api_key</sender>
+   <signal>textEdited(QString)</signal>
+   <receiver>api_token</receiver>
+   <slot>action_text_edited_api_key(QString)</slot>
+   <hints>
+    <hint type="sourcelabel">
+     <x>55</x>
+     <y>58</y>
+    </hint>
+    <hint type="destinationlabel">
+     <x>21</x>
+     <y>-15</y>
+    </hint>
+   </hints>
+  </connection>
+ </connections>
+ <slots>
+  <slot>action_text_edited_api_key(QString)</slot>
+ </slots>
 </ui>

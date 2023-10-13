@@ -20,6 +20,7 @@ class LayerWidget(BaseWidget):
         self.layer_index = kwargs.pop("layer_index", None)
         self.layer_data.layer_widget = self
         super().__init__(*args, **kwargs)
+        self.ui.layer_images.hide()
         self.set_thumbnail()
 
         # listen for click on entire widget
@@ -46,13 +47,28 @@ class LayerWidget(BaseWidget):
     def action_clicked(self):
         print("select layer")
 
-    def action_clicked_button_toggle_layer_visibility(self):
-        pass
+    def action_clicked_button_toggle_layer_visibility(self, val):
+        self.layer_data.hidden = not val
+        self.settings_manager.save_and_emit(
+            "layer_data.hidden",
+            self.layer_data.hidden
+        )
+
+    def action_toggled_button_layer_images(self, val):
+        self.ui.layer_images.setVisible(val)
+        if val:
+            # empty the scrollArea
+            for i in reversed(range(self.ui.layer_images.layout().count())):
+                self.ui.layer_images.layout().itemAt(i).widget().setParent(None)
+            # add the layer images
+            for layer_image in self.layer_data.layer_images:
+                layer_image_widget = LayerImageWidget(layer_image)
+                self.ui.layer_images.layout().addWidget(layer_image_widget)
 
     def set_thumbnail(self):
-        if len(self.layer_data.layer_images) == 0:
+        if len(self.layer_data.image_data) == 0:
             return
-        image = self.layer_data.layer_images[0].image
+        image = self.layer_data.image_data[0].image
         if image:
             thumbnail = image.copy()
             pixmap = image_to_pixmap(thumbnail, 32)

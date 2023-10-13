@@ -228,11 +228,11 @@ class Canvas(
         right = None
         bottom = None
         for layer in self.layers:
-            image_data = layer.image_data
-            if image_data.image is None:
+            if not len(layer.image_data):
                 continue
-            left = min(left, image_data.position.x()) if left is not None else image_data.position.x()
-            top = min(top, image_data.position.y()) if top is not None else image_data.position.y()
+            image_data = layer.image_data[0]
+            left = min(left, image_data.pos_x) if left is not None else image_data.pos_x
+            top = min(top, image_data.pos_y) if top is not None else image_data.pos_y
             right = max(right, image_data.image.width) if right is not None else image_data.image.width
             bottom = max(bottom, image_data.image.height) if bottom is not None else image_data.image.height
         if left is None or top is None or right is None or bottom is None:
@@ -432,8 +432,8 @@ class Canvas(
             new_image.alpha_composite(
                 image,
                 (
-                    self.current_active_image_data.position.x() - point.x(),
-                    self.current_active_image_data.position.y() - point.y()
+                    self.current_active_image_data.pos_x - point.x(),
+                    self.current_active_image_data.pos_y - point.y()
                 )
             )
 
