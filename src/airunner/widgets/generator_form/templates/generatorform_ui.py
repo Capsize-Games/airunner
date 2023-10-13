@@ -101,7 +101,7 @@ class Ui_generator_form(object):
         self.scrollArea_2.setWidgetResizable(True)
         self.scrollArea_2.setObjectName("scrollArea_2")
         self.scrollAreaWidgetContents_5 = QtWidgets.QWidget()
-        self.scrollAreaWidgetContents_5.setGeometry(QtCore.QRect(0, 0, 665, 230))
+        self.scrollAreaWidgetContents_5.setGeometry(QtCore.QRect(0, 0, 665, 219))
         self.scrollAreaWidgetContents_5.setObjectName("scrollAreaWidgetContents_5")
         self.gridLayout = QtWidgets.QGridLayout(self.scrollAreaWidgetContents_5)
         self.gridLayout.setContentsMargins(0, 0, 0, 0)

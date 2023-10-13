@@ -229,3 +229,6 @@ class ModelManagerWidget(BaseWidget):
 
     def add_new_model(self):
         self.save_model(self.current_model_object)
+
+    def tab_changed(self, val):
+        print(val)
