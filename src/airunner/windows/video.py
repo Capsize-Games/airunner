@@ -1,6 +1,4 @@
-from PyQt6.QtWidgets import QVBoxLayout
-
-from airunner.windows.base_window import BaseWindow
+from PyQt6.QtCore import QUrl
 from PyQt6.QtMultimedia import QMediaPlayer
 from PyQt6.QtMultimediaWidgets import QVideoWidget
 

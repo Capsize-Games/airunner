@@ -42,6 +42,7 @@ class Ui_prompt_builder(object):
 
         self.retranslateUi(prompt_builder)
         self.tabs.setCurrentIndex(-1)
+        self.tabs.currentChanged['int'].connect(prompt_builder.tab_changed) # type: ignore
         QtCore.QMetaObject.connectSlotsByName(prompt_builder)
 
     def retranslateUi(self, prompt_builder):

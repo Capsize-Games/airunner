@@ -9,23 +9,23 @@
 from PyQt6 import QtCore, QtGui, QtWidgets
 
 
-class Ui_Form(object):
-    def setupUi(self, Form):
-        Form.setObjectName("Form")
-        Form.resize(400, 412)
-        self.gridLayout = QtWidgets.QGridLayout(Form)
+class Ui_api_token(object):
+    def setupUi(self, api_token):
+        api_token.setObjectName("api_token")
+        api_token.resize(400, 409)
+        self.gridLayout = QtWidgets.QGridLayout(api_token)
         self.gridLayout.setObjectName("gridLayout")
-        self.label = QtWidgets.QLabel(parent=Form)
+        self.label = QtWidgets.QLabel(parent=api_token)
         self.label.setWordWrap(True)
         self.label.setObjectName("label")
         self.gridLayout.addWidget(self.label, 1, 0, 1, 1)
-        self.label_2 = QtWidgets.QLabel(parent=Form)
+        self.label_2 = QtWidgets.QLabel(parent=api_token)
         self.label_2.setWordWrap(True)
         self.label_2.setObjectName("label_2")
         self.gridLayout.addWidget(self.label_2, 2, 0, 1, 1)
         spacerItem = QtWidgets.QSpacerItem(20, 0, QtWidgets.QSizePolicy.Policy.Minimum, QtWidgets.QSizePolicy.Policy.Expanding)
         self.gridLayout.addItem(spacerItem, 3, 0, 1, 1)
-        self.groupBox = QtWidgets.QGroupBox(parent=Form)
+        self.groupBox = QtWidgets.QGroupBox(parent=api_token)
         self.groupBox.setObjectName("groupBox")
         self.gridLayout_2 = QtWidgets.QGridLayout(self.groupBox)
         self.gridLayout_2.setObjectName("gridLayout_2")
@@ -34,12 +34,13 @@ class Ui_Form(object):
         self.gridLayout_2.addWidget(self.hf_api_key, 0, 0, 1, 1)
         self.gridLayout.addWidget(self.groupBox, 0, 0, 1, 1)
 
-        self.retranslateUi(Form)
-        QtCore.QMetaObject.connectSlotsByName(Form)
+        self.retranslateUi(api_token)
+        self.hf_api_key.textEdited['QString'].connect(api_token.action_text_edited_api_key) # type: ignore
+        QtCore.QMetaObject.connectSlotsByName(api_token)
 
-    def retranslateUi(self, Form):
+    def retranslateUi(self, api_token):
         _translate = QtCore.QCoreApplication.translate
-        Form.setWindowTitle(_translate("Form", "Form"))
-        self.label.setText(_translate("Form", "Get your Huggingface read API token by creating an account on huggingface.co then navigating to"))
-        self.label_2.setText(_translate("Form", "https://huggingface.co/settings/tokens"))
-        self.groupBox.setTitle(_translate("Form", "Huggingface API Token"))
+        api_token.setWindowTitle(_translate("api_token", "Form"))
+        self.label.setText(_translate("api_token", "Get your Huggingface read API token by creating an account on huggingface.co then navigating to"))
+        self.label_2.setText(_translate("api_token", "https://huggingface.co/settings/tokens"))
+        self.groupBox.setTitle(_translate("api_token", "Huggingface API Token"))

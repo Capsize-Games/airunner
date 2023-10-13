@@ -7,12 +7,12 @@ class SeedWidget(BaseWidget):
     widget_class_ = Ui_seed_widget
     name = "seed_widget"
 
-    def initialize(self, generator_section, generator_name):
-        self.ui.lineEdit.setText(str(self.seed))
-        self.settings_manager.generator_section = generator_section
-        self.settings_manager.generator_name = generator_name
-        self.ui.random_button.setChecked(self.settings_manager.generator.random_seed)
-        self.ui.lineEdit.setEnabled(not self.settings_manager.generator.random_seed)
+    # def initialize(self, generator_section, generator_name):
+    #     self.ui.lineEdit.setText(str(self.seed))
+    #     self.settings_manager.generator_section = generator_section
+    #     self.settings_manager.generator_name = generator_name
+    #     self.ui.random_button.setChecked(self.settings_manager.generator.random_seed)
+    #     self.ui.lineEdit.setEnabled(not self.settings_manager.generator.random_seed)
 
     def update_seed(self):
         self.ui.lineEdit.setText(str(self.seed))

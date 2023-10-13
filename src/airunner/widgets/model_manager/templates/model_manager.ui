@@ -60,7 +60,7 @@
       <string notr="true"/>
      </property>
      <property name="currentIndex">
-      <number>2</number>
+      <number>0</number>
      </property>
      <property name="tabsClosable">
       <bool>false</bool>
@@ -83,8 +83,8 @@
            <rect>
             <x>0</x>
             <y>0</y>
-            <width>223</width>
-            <height>138</height>
+            <width>448</width>
+            <height>333</height>
            </rect>
           </property>
           <layout class="QGridLayout" name="gridLayout_5">
@@ -112,8 +112,8 @@
            <rect>
             <x>0</x>
             <y>0</y>
-            <width>223</width>
-            <height>138</height>
+            <width>448</width>
+            <height>333</height>
            </rect>
           </property>
           <layout class="QGridLayout" name="gridLayout_6">
@@ -180,5 +180,25 @@
   </customwidget>
  </customwidgets>
  <resources/>
- <connections/>
+ <connections>
+  <connection>
+   <sender>tabs</sender>
+   <signal>currentChanged(int)</signal>
+   <receiver>model_manager</receiver>
+   <slot>tab_changed(int)</slot>
+   <hints>
+    <hint type="sourcelabel">
+     <x>55</x>
+     <y>9</y>
+    </hint>
+    <hint type="destinationlabel">
+     <x>77</x>
+     <y>-18</y>
+    </hint>
+   </hints>
+  </connection>
+ </connections>
+ <slots>
+  <slot>tab_changed(int)</slot>
+ </slots>
 </ui>

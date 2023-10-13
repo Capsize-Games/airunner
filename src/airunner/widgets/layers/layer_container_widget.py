@@ -66,7 +66,7 @@ class LayerContainerWidget(BaseWidget):
             name=f"Layer {len(self.layers) + 1}",
             document=self.app.document,
             position=len(self.layers) + 1,
-            active=True
+            visible=True
         )
         session.add(layer_data)
         save_session(session)
