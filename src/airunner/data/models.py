@@ -578,17 +578,18 @@ class Settings(Base):
     use_interpolation = Column(Boolean, default=False)
     is_maximized = Column(Boolean, default=False)
     splitter_sizes = relationship("SplitterSection", backref="settings")
-    auto_prompt_weight = Column(Float, default=0.0)
-    auto_negative_prompt_weight = Column(Float, default=0.5)
-    negative_auto_prompt_weight = Column(Float, default=0.5)
     prompt_generator_settings = relationship("PromptGeneratorSetting", backref="settings")
 
+    # generator tab sections
     current_tab = Column(String, default="stablediffusion")
     current_section_stablediffusion = Column(String, default="txt2img")
     current_section_kandinsky = Column(String, default="txt2img")
     current_section_shapegif = Column(String, default="txt2img")
     generator_settings = relationship("GeneratorSetting", backref="settings")
 
+    # tool and bottom panel tab sections
+    current_tool_tab = Column(String, default="brush")
+    current_bottom_panel_tab = Column(String, default="model_manager")
 
 
 class LayerImage(Base):
@@ -617,7 +618,7 @@ class LayerImage(Base):
 
     id = Column(Integer, primary_key=True)
     layer_id = Column(Integer, ForeignKey('layers.id'))
-    layer = relationship("Layer", backref="layer_images")
+    layer = relationship("Layer", backref="image_data")
     base_64_image = Column(String, default="")
     pos_x = Column(Integer, default=0)
     pos_y = Column(Integer, default=0)
@@ -626,6 +627,8 @@ class LayerImage(Base):
     root_point_x = Column(Integer, default=0)
     root_point_y = Column(Integer, default=0)
     order = Column(Integer, default=0)
+    opacity = Column(Float, default=100)
+    visible = Column(Boolean, default=True)
 
 
 class Layer(Base):
@@ -635,9 +638,8 @@ class Layer(Base):
     document_id = Column(Integer, ForeignKey('documents.id'))
     document = relationship("Document", backref="layers")
     name = Column(String)
-    active = Column(Boolean, default=False)
-    hidden = Column(Boolean, default=False)
-    opacity = Column(Float, default=1.0)
+    visible = Column(Boolean, default=True)
+    opacity = Column(Float, default=100)
     position = Column(Integer, default=0)
 
 
@@ -649,3 +651,25 @@ class Document(Base):
     settings_id = Column(Integer, ForeignKey('settings.id'))
     settings = relationship("Settings", backref="document")
     active = Column(Boolean, default=False)
+
+
+class TabSection(Base):
+    __tablename__ = 'active_tab'
+
+    id = Column(Integer, primary_key=True)
+    panel = Column(String)
+    active_tab = Column(String)
+
+
+class PromptBuilder(Base):
+    __tablename__ = 'prompt_builder'
+
+    id = Column(Integer, primary_key=True)
+    # document_id = Column(Integer, ForeignKey('documents.id'))
+    # document = relationship("Document", backref="prompt_builder")
+    name = Column(String, default="")
+    active = Column(Boolean, default=False)
+    auto_prompt_weight = Column(Float, default=0.5)
+    text_prompt_weight = Column(Float, default=0.5)
+    negative_auto_prompt_weight = Column(Float, default=0.5)
+    negative_text_prompt_weight = Column(Float, default=0.5)

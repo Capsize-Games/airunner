@@ -9,7 +9,6 @@ from airunner.windows.base_window import BaseWindow
 # open the version file from the root of the project and get the VERSION variable string from it
 from airunner.windows.export_preferences_widget import ExportPreferencesWidget
 from airunner.windows.grid_widget import GridWidget
-from airunner.windows.hf_api_key_widget import HFAPIKeyWidget
 from airunner.windows.memory_widget import MemoryWidget
 
 
@@ -238,7 +237,7 @@ class SettingsWindow(BaseWindow):
             "export_preferences": ExportPreferencesWidget,
             "grid": GridWidget,
             "memory": MemoryWidget,
-            "hf_api_key": HFAPIKeyWidget,
+            # "hf_api_key": HFAPIKeyWidget,
         }
         if name in widgets:
             if name == "paths":

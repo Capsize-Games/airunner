@@ -73,5 +73,25 @@
   </layout>
  </widget>
  <resources/>
- <connections/>
+ <connections>
+  <connection>
+   <sender>tabs</sender>
+   <signal>currentChanged(int)</signal>
+   <receiver>prompt_builder</receiver>
+   <slot>tab_changed(int)</slot>
+   <hints>
+    <hint type="sourcelabel">
+     <x>216</x>
+     <y>96</y>
+    </hint>
+    <hint type="destinationlabel">
+     <x>232</x>
+     <y>-20</y>
+    </hint>
+   </hints>
+  </connection>
+ </connections>
+ <slots>
+  <slot>tab_changed(int)</slot>
+ </slots>
 </ui>

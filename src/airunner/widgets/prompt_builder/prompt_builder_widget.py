@@ -1,6 +1,9 @@
 import random
 
 from airunner.aihandler.settings import MAX_SEED
+from airunner.data.db import session
+from airunner.data.models import TabSection, PromptBuilder
+from airunner.utils import save_session
 from airunner.widgets.base_widget import BaseWidget
 from airunner.widgets.prompt_builder.prompt_builder_form_widget import PromptBuilderForm
 from airunner.widgets.prompt_builder.templates.prompt_builder_ui import Ui_prompt_builder
@@ -10,13 +13,52 @@ from airunner.themes import Themes
 class PromptBuilderWidget(BaseWidget):
     widget_class_ = Ui_prompt_builder
     prompt_data = None
-    auto_prompt_weight = 0.5
-    text_prompt_weight = 0.5
-    negative_auto_prompt_weight = 0.5
-    negative_text_prompt_weight = 0.5
     prompt_types = None
     unprocessed_prompts = {}
     current_tab = "a"
+    current_tab_index = 0
+
+    prompt_generator_settings = []
+
+    @property
+    def prompt_generator_setting(self):
+        return self.prompt_generator_settings[self.current_tab_index]
+
+    @property
+    def auto_prompt_weight(self):
+        return self.prompt_generator_setting.auto_prompt_weight
+
+    @auto_prompt_weight.setter
+    def auto_prompt_weight(self, val):
+        self.prompt_generator_setting.auto_prompt_weight = val
+        save_session()
+
+    @property
+    def text_prompt_weight(self):
+        return self.prompt_generator_setting.text_prompt_weight
+
+    @text_prompt_weight.setter
+    def text_prompt_weight(self, val):
+        self.prompt_generator_setting.text_prompt_weight = val
+        save_session()
+
+    @property
+    def negative_auto_prompt_weight(self):
+        return self.prompt_generator_setting.negative_auto_prompt_weight
+
+    @negative_auto_prompt_weight.setter
+    def negative_auto_prompt_weight(self, val):
+        self.prompt_generator_setting.negative_auto_prompt_weight = val
+        save_session()
+
+    @property
+    def negative_text_prompt_weight(self):
+        return self.prompt_generator_setting.negative_text_prompt_weight
+
+    @negative_text_prompt_weight.setter
+    def negative_text_prompt_weight(self, val):
+        self.prompt_generator_setting.negative_text_prompt_weight = val
+        save_session()
 
     @property
     def prompt_generator_category(self):
@@ -100,6 +142,7 @@ class PromptBuilderWidget(BaseWidget):
 
     def __init__(self, *args, **kwargs):
         super().__init__(*args, **kwargs)
+        self.prompt_generator_settings = session.query(PromptBuilder).all()
         self.set_stylesheet()
         self.prompt_data = self.settings_manager.prompt_builder_prompts
         self.initialize_tab_forms()
@@ -147,7 +190,7 @@ class PromptBuilderWidget(BaseWidget):
             form.ui.negative_prompt_weight_distribution_slider.setEnabled(self.settings_manager.prompt_blend_type != 0)
 
     def initialize_weights(self):
-        auto_prompt_weight = self.settings_manager.auto_prompt_weight
+        auto_prompt_weight = self.auto_prompt_weight
         auto_negative_prompt_weight = self.settings_manager.negative_auto_prompt_weight
         auto_prompt_weight = 0.0 if auto_prompt_weight is None else auto_prompt_weight
         auto_negative_prompt_weight = 0.0 if auto_negative_prompt_weight is None else auto_negative_prompt_weight
@@ -277,3 +320,10 @@ class PromptBuilderWidget(BaseWidget):
     def set_stylesheet(self):
         super().set_stylesheet()
         self.ui.tabs.setStyleSheet(Themes().css("prompt_builder_widget"))
+
+    def tab_changed(self, val):
+        print(val)
+        ts = session.filter(
+            TabSection.panel == "button_panel_tab_widget"
+        ).first()
+        ts.active_tab = self.ui.bottom_panel_tab_widget

@@ -7,8 +7,8 @@
    <rect>
     <x>0</x>
     <y>0</y>
-    <width>960</width>
-    <height>729</height>
+    <width>1257</width>
+    <height>874</height>
    </rect>
   </property>
   <property name="minimumSize">
@@ -101,7 +101,7 @@
            <rect>
             <x>0</x>
             <y>0</y>
-            <width>940</width>
+            <width>1237</width>
             <height>46</height>
            </rect>
           </property>
@@ -430,7 +430,7 @@
            <number>0</number>
           </property>
           <item row="0" column="0">
-           <widget class="QTabWidget" name="tabWidget">
+           <widget class="QTabWidget" name="center_tab">
             <property name="currentIndex">
              <number>1</number>
             </property>
@@ -496,8 +496,8 @@
           <rect>
            <x>0</x>
            <y>0</y>
-           <width>429</width>
-           <height>508</height>
+           <width>575</width>
+           <height>629</height>
           </rect>
          </property>
          <layout class="QGridLayout" name="gridLayout">
@@ -508,7 +508,7 @@
             </property>
             <widget class="QTabWidget" name="tool_tab_widget">
              <property name="currentIndex">
-              <number>3</number>
+              <number>0</number>
              </property>
              <widget class="QWidget" name="tab_embeddings">
               <attribute name="title">
@@ -554,7 +554,7 @@
                </item>
               </layout>
              </widget>
-             <widget class="QWidget" name="tab_pen_color">
+             <widget class="QWidget" name="tab_pen">
               <attribute name="title">
                <string>Pen</string>
               </attribute>
@@ -576,7 +576,7 @@
                </item>
               </layout>
              </widget>
-             <widget class="QWidget" name="tab_3">
+             <widget class="QWidget" name="tab_active_grid">
               <attribute name="title">
                <string>Active Grid</string>
               </attribute>
@@ -599,11 +599,11 @@
               </layout>
              </widget>
             </widget>
-            <widget class="QTabWidget" name="deterministic_panel_widget">
+            <widget class="QTabWidget" name="batches_tab">
              <property name="currentIndex">
               <number>0</number>
              </property>
-             <widget class="QWidget" name="deterministic_panel_widgetPage1">
+             <widget class="QWidget" name="tab_deterministic">
               <attribute name="title">
                <string>Deterministic Batches</string>
               </attribute>
@@ -613,7 +613,7 @@
                </item>
               </layout>
              </widget>
-             <widget class="QWidget" name="tab_4">
+             <widget class="QWidget" name="tab_standard">
               <attribute name="title">
                <string>Standard Batches</string>
               </attribute>
@@ -685,7 +685,7 @@
               <x>0</x>
               <y>0</y>
               <width>53</width>
-              <height>508</height>
+              <height>629</height>
              </rect>
             </property>
             <layout class="QVBoxLayout" name="verticalLayout_2">
@@ -990,7 +990,7 @@
        <property name="currentIndex">
         <number>0</number>
        </property>
-       <widget class="QWidget" name="bottom_panel_tab_1">
+       <widget class="QWidget" name="tab_model_manager">
         <attribute name="title">
          <string>Model Manager</string>
         </attribute>
@@ -1000,7 +1000,7 @@
          </item>
         </layout>
        </widget>
-       <widget class="QWidget" name="bottom_panel_tab_2">
+       <widget class="QWidget" name="tab_prompt_builder">
         <attribute name="title">
          <string>Prompt Builder</string>
         </attribute>
@@ -1020,7 +1020,7 @@
     <rect>
      <x>0</x>
      <y>0</y>
-     <width>960</width>
+     <width>1257</width>
      <height>22</height>
     </rect>
    </property>
@@ -1807,7 +1807,7 @@
      <y>-1</y>
     </hint>
     <hint type="destinationlabel">
-     <x>602</x>
+     <x>442</x>
      <y>432</y>
     </hint>
    </hints>
@@ -1823,7 +1823,7 @@
      <y>-1</y>
     </hint>
     <hint type="destinationlabel">
-     <x>602</x>
+     <x>442</x>
      <y>432</y>
     </hint>
    </hints>
@@ -1839,7 +1839,7 @@
      <y>-1</y>
     </hint>
     <hint type="destinationlabel">
-     <x>602</x>
+     <x>442</x>
      <y>432</y>
     </hint>
    </hints>
@@ -1855,7 +1855,7 @@
      <y>-1</y>
     </hint>
     <hint type="destinationlabel">
-     <x>602</x>
+     <x>442</x>
      <y>432</y>
     </hint>
    </hints>
@@ -1871,7 +1871,7 @@
      <y>-1</y>
     </hint>
     <hint type="destinationlabel">
-     <x>602</x>
+     <x>442</x>
      <y>432</y>
     </hint>
    </hints>
@@ -1887,7 +1887,7 @@
      <y>-1</y>
     </hint>
     <hint type="destinationlabel">
-     <x>602</x>
+     <x>442</x>
      <y>432</y>
     </hint>
    </hints>
@@ -1903,7 +1903,7 @@
      <y>-1</y>
     </hint>
     <hint type="destinationlabel">
-     <x>602</x>
+     <x>442</x>
      <y>432</y>
     </hint>
    </hints>
@@ -1919,7 +1919,7 @@
      <y>-1</y>
     </hint>
     <hint type="destinationlabel">
-     <x>602</x>
+     <x>442</x>
      <y>432</y>
     </hint>
    </hints>
@@ -1935,7 +1935,7 @@
      <y>-1</y>
     </hint>
     <hint type="destinationlabel">
-     <x>602</x>
+     <x>442</x>
      <y>432</y>
     </hint>
    </hints>
@@ -1951,7 +1951,7 @@
      <y>-1</y>
     </hint>
     <hint type="destinationlabel">
-     <x>602</x>
+     <x>442</x>
      <y>432</y>
     </hint>
    </hints>
@@ -1967,7 +1967,7 @@
      <y>-1</y>
     </hint>
     <hint type="destinationlabel">
-     <x>602</x>
+     <x>442</x>
      <y>432</y>
     </hint>
    </hints>
@@ -1983,7 +1983,7 @@
      <y>-1</y>
     </hint>
     <hint type="destinationlabel">
-     <x>602</x>
+     <x>442</x>
      <y>432</y>
     </hint>
    </hints>
@@ -1995,11 +1995,11 @@
    <slot>action_toggle_grid(bool)</slot>
    <hints>
     <hint type="sourcelabel">
-     <x>940</x>
+     <x>1205</x>
      <y>261</y>
     </hint>
     <hint type="destinationlabel">
-     <x>775</x>
+     <x>442</x>
      <y>0</y>
     </hint>
    </hints>
@@ -2011,11 +2011,11 @@
    <slot>action_toggle_brush(bool)</slot>
    <hints>
     <hint type="sourcelabel">
-     <x>940</x>
+     <x>1205</x>
      <y>170</y>
     </hint>
     <hint type="destinationlabel">
-     <x>775</x>
+     <x>442</x>
      <y>0</y>
     </hint>
    </hints>
@@ -2027,11 +2027,11 @@
    <slot>action_toggle_active_grid_area(bool)</slot>
    <hints>
     <hint type="sourcelabel">
-     <x>940</x>
+     <x>1205</x>
      <y>129</y>
     </hint>
     <hint type="destinationlabel">
-     <x>775</x>
+     <x>442</x>
      <y>0</y>
     </hint>
    </hints>
@@ -2043,11 +2043,11 @@
    <slot>action_toggle_eraser(bool)</slot>
    <hints>
     <hint type="sourcelabel">
-     <x>940</x>
+     <x>1205</x>
      <y>211</y>
     </hint>
     <hint type="destinationlabel">
-     <x>775</x>
+     <x>442</x>
      <y>0</y>
     </hint>
    </hints>
@@ -2059,11 +2059,11 @@
    <slot>action_show_settings()</slot>
    <hints>
     <hint type="sourcelabel">
-     <x>940</x>
+     <x>1205</x>
      <y>393</y>
     </hint>
     <hint type="destinationlabel">
-     <x>775</x>
+     <x>442</x>
      <y>0</y>
     </hint>
    </hints>
@@ -2143,7 +2143,7 @@
      <y>72</y>
     </hint>
     <hint type="destinationlabel">
-     <x>775</x>
+     <x>442</x>
      <y>0</y>
     </hint>
    </hints>
@@ -2159,7 +2159,7 @@
      <y>-1</y>
     </hint>
     <hint type="destinationlabel">
-     <x>681</x>
+     <x>442</x>
      <y>432</y>
     </hint>
    </hints>
@@ -2175,7 +2175,7 @@
      <y>-1</y>
     </hint>
     <hint type="destinationlabel">
-     <x>681</x>
+     <x>442</x>
      <y>432</y>
     </hint>
    </hints>
@@ -2207,7 +2207,7 @@
      <y>-1</y>
     </hint>
     <hint type="destinationlabel">
-     <x>681</x>
+     <x>442</x>
      <y>432</y>
     </hint>
    </hints>
@@ -2219,11 +2219,11 @@
    <slot>action_toggle_nsfw_filter_triggered(bool)</slot>
    <hints>
     <hint type="sourcelabel">
-     <x>940</x>
+     <x>1205</x>
      <y>343</y>
     </hint>
     <hint type="destinationlabel">
-     <x>959</x>
+     <x>442</x>
      <y>0</y>
     </hint>
    </hints>
@@ -2239,7 +2239,7 @@
      <y>-1</y>
     </hint>
     <hint type="destinationlabel">
-     <x>681</x>
+     <x>442</x>
      <y>432</y>
     </hint>
    </hints>
@@ -2255,7 +2255,7 @@
      <y>-1</y>
     </hint>
     <hint type="destinationlabel">
-     <x>681</x>
+     <x>442</x>
      <y>432</y>
     </hint>
    </hints>
@@ -2271,7 +2271,7 @@
      <y>-1</y>
     </hint>
     <hint type="destinationlabel">
-     <x>681</x>
+     <x>442</x>
      <y>432</y>
     </hint>
    </hints>
@@ -2287,7 +2287,7 @@
      <y>-1</y>
     </hint>
     <hint type="destinationlabel">
-     <x>681</x>
+     <x>442</x>
      <y>432</y>
     </hint>
    </hints>
@@ -2303,7 +2303,7 @@
      <y>-1</y>
     </hint>
     <hint type="destinationlabel">
-     <x>681</x>
+     <x>442</x>
      <y>432</y>
     </hint>
    </hints>
@@ -2319,7 +2319,7 @@
      <y>-1</y>
     </hint>
     <hint type="destinationlabel">
-     <x>681</x>
+     <x>442</x>
      <y>432</y>
     </hint>
    </hints>
@@ -2335,7 +2335,7 @@
      <y>-1</y>
     </hint>
     <hint type="destinationlabel">
-     <x>681</x>
+     <x>442</x>
      <y>432</y>
     </hint>
    </hints>
@@ -2351,7 +2351,7 @@
      <y>-1</y>
     </hint>
     <hint type="destinationlabel">
-     <x>681</x>
+     <x>442</x>
      <y>432</y>
     </hint>
    </hints>
@@ -2367,7 +2367,7 @@
      <y>-1</y>
     </hint>
     <hint type="destinationlabel">
-     <x>681</x>
+     <x>442</x>
      <y>432</y>
     </hint>
    </hints>
@@ -2383,7 +2383,7 @@
      <y>-1</y>
     </hint>
     <hint type="destinationlabel">
-     <x>681</x>
+     <x>442</x>
      <y>432</y>
     </hint>
    </hints>
@@ -2399,7 +2399,7 @@
      <y>-1</y>
     </hint>
     <hint type="destinationlabel">
-     <x>681</x>
+     <x>442</x>
      <y>432</y>
     </hint>
    </hints>
@@ -2415,7 +2415,7 @@
      <y>-1</y>
     </hint>
     <hint type="destinationlabel">
-     <x>681</x>
+     <x>442</x>
      <y>432</y>
     </hint>
    </hints>
@@ -2431,7 +2431,7 @@
      <y>-1</y>
     </hint>
     <hint type="destinationlabel">
-     <x>681</x>
+     <x>442</x>
      <y>432</y>
     </hint>
    </hints>
@@ -2447,7 +2447,7 @@
      <y>-1</y>
     </hint>
     <hint type="destinationlabel">
-     <x>681</x>
+     <x>442</x>
      <y>432</y>
     </hint>
    </hints>
@@ -2463,7 +2463,7 @@
      <y>-1</y>
     </hint>
     <hint type="destinationlabel">
-     <x>545</x>
+     <x>442</x>
      <y>408</y>
     </hint>
    </hints>
@@ -2479,7 +2479,7 @@
      <y>-1</y>
     </hint>
     <hint type="destinationlabel">
-     <x>545</x>
+     <x>442</x>
      <y>408</y>
     </hint>
    </hints>
@@ -2495,7 +2495,7 @@
      <y>-1</y>
     </hint>
     <hint type="destinationlabel">
-     <x>545</x>
+     <x>442</x>
      <y>408</y>
     </hint>
    </hints>
@@ -2511,7 +2511,7 @@
      <y>-1</y>
     </hint>
     <hint type="destinationlabel">
-     <x>545</x>
+     <x>442</x>
      <y>408</y>
     </hint>
    </hints>
@@ -2527,7 +2527,7 @@
      <y>-1</y>
     </hint>
     <hint type="destinationlabel">
-     <x>545</x>
+     <x>442</x>
      <y>408</y>
     </hint>
    </hints>
@@ -2543,7 +2543,7 @@
      <y>-1</y>
     </hint>
     <hint type="destinationlabel">
-     <x>545</x>
+     <x>442</x>
      <y>408</y>
     </hint>
    </hints>
@@ -2559,7 +2559,7 @@
      <y>-1</y>
     </hint>
     <hint type="destinationlabel">
-     <x>545</x>
+     <x>442</x>
      <y>408</y>
     </hint>
    </hints>
@@ -2575,7 +2575,7 @@
      <y>-1</y>
     </hint>
     <hint type="destinationlabel">
-     <x>545</x>
+     <x>442</x>
      <y>408</y>
     </hint>
    </hints>
@@ -2591,7 +2591,7 @@
      <y>-1</y>
     </hint>
     <hint type="destinationlabel">
-     <x>545</x>
+     <x>442</x>
      <y>408</y>
     </hint>
    </hints>
@@ -2603,11 +2603,11 @@
    <slot>tool_tab_index_changed(int)</slot>
    <hints>
     <hint type="sourcelabel">
-     <x>881</x>
+     <x>625</x>
      <y>175</y>
     </hint>
     <hint type="destinationlabel">
-     <x>775</x>
+     <x>442</x>
      <y>0</y>
     </hint>
    </hints>
@@ -2619,12 +2619,60 @@
    <slot>action_button_clicked_focus()</slot>
    <hints>
     <hint type="sourcelabel">
-     <x>920</x>
+     <x>1205</x>
      <y>289</y>
     </hint>
     <hint type="destinationlabel">
-     <x>414</x>
+     <x>275</x>
      <y>290</y>
+    </hint>
+   </hints>
+  </connection>
+  <connection>
+   <sender>bottom_panel_tab_widget</sender>
+   <signal>currentChanged(int)</signal>
+   <receiver>MainWindow</receiver>
+   <slot>bottom_panel_tab_index_changed(int)</slot>
+   <hints>
+    <hint type="sourcelabel">
+     <x>78</x>
+     <y>729</y>
+    </hint>
+    <hint type="destinationlabel">
+     <x>29</x>
+     <y>0</y>
+    </hint>
+   </hints>
+  </connection>
+  <connection>
+   <sender>batches_tab</sender>
+   <signal>currentChanged(int)</signal>
+   <receiver>MainWindow</receiver>
+   <slot>batches_panel_tab_index_changed(int)</slot>
+   <hints>
+    <hint type="sourcelabel">
+     <x>625</x>
+     <y>332</y>
+    </hint>
+    <hint type="destinationlabel">
+     <x>49</x>
+     <y>0</y>
+    </hint>
+   </hints>
+  </connection>
+  <connection>
+   <sender>center_tab</sender>
+   <signal>currentChanged(int)</signal>
+   <receiver>MainWindow</receiver>
+   <slot>center_panel_tab_index_changed(int)</slot>
+   <hints>
+    <hint type="sourcelabel">
+     <x>368</x>
+     <y>98</y>
+    </hint>
+    <hint type="destinationlabel">
+     <x>807</x>
+     <y>-13</y>
     </hint>
    </hints>
   </connection>
@@ -2702,5 +2750,7 @@
   <slot>action_show_model_path_upscale()</slot>
   <slot>action_show_model_path_supersample()</slot>
   <slot>action_show_model_path_txt2vid()</slot>
+  <slot>batches_panel_tab_index_changed(int)</slot>
+  <slot>center_panel_tab_index_changed(int)</slot>
  </slots>
 </ui>

@@ -288,3 +288,6 @@ class PromptBuilderForm(BaseWidget):
             "current_prompt_generator_settings.prompt_genre",
             self.ui.prompt_genre.currentText())
         self.process_prompt()
+
+    def tab_changed(self, val):
+        print(val)

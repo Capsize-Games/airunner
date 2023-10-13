@@ -20,18 +20,19 @@ from airunner.aihandler.settings_manager import SettingsManager
 from airunner.airunner_api import AIRunnerAPI
 from airunner.canvas import Canvas
 from airunner.data.db import session
-from airunner.data.models import SplitterSection, Prompt
+from airunner.data.models import SplitterSection, Prompt, TabSection
 from airunner.filters.windows.filter_base import FilterBase
 from airunner.input_event_manager import InputEventManager
 from airunner.mixins.history_mixin import HistoryMixin
 from airunner.resources_rc import *
 from airunner.settings import BASE_PATH
-from airunner.utils import get_version, get_latest_version, auto_export_image, get_session, save_session, \
+from airunner.utils import get_version, get_latest_version, auto_export_image, save_session, \
     create_airunner_paths, default_hf_cache_dir
 from airunner.widgets.status.status_widget import StatusWidget
 from airunner.windows.about.about import AboutWindow
 from airunner.windows.deterministic_generation.deterministic_generation_window import DeterministicGenerationWindow
 from airunner.windows.interpolation.image_interpolation import ImageInterpolation
+from airunner.windows.main.templates.main_window_ui import Ui_MainWindow
 from airunner.windows.model_merger import ModelMerger
 from airunner.windows.prompt_browser.prompt_browser import PromptBrowser
 from airunner.windows.settings.airunner_settings import SettingsWindow
@@ -315,8 +316,25 @@ class MainWindow(
         self.ui.canvas_plus_widget.initialize()
         QTimer.singleShot(500, self.on_show)
 
+        self.initialize_panel_tabs()
+
+    def initialize_panel_tabs(self):
+        """
+        Iterate over each TabSection entry from database and set the active tab
+        for each panel section.
+        :return:
+        """
+        tabsections = session.query(TabSection).filter(
+            TabSection.panel != "generator_tabs"
+        ).all()
+        for ts in tabsections:
+            widget = getattr(self.ui, ts.panel)
+            for i in range(widget.count()):
+                if widget.tabText(i) == ts.active_tab:
+                    widget.setCurrentIndex(i)
+                    break
+
     def on_show(self):
-        print("on_show")
         self.ui.canvas_plus_widget.do_draw()
 
     def action_slider_changed(self, value_name, value):
@@ -519,10 +537,32 @@ class MainWindow(
         webbrowser.open("https://github.com/Capsize-Games/airunner/security/advisories/new")
 
     def tool_tab_index_changed(self, index):
-        print(index)
+        tab_section = session.query(TabSection).filter_by(
+            panel="tool_tab_widget"
+        ).first()
+        tab_section.active_tab = self.ui.tool_tab_widget.tabText(index)
+        session.commit()
+
+    def center_panel_tab_index_changed(self, int):
+        tab_section = session.query(TabSection).filter_by(
+            panel="center_tab"
+        ).first()
+        tab_section.active_tab = self.ui.center_tab.tabText(int)
+        session.commit()
+
+    def batches_panel_tab_index_changed(self, index):
+        tab_section = session.query(TabSection).filter_by(
+            panel="batches_tab"
+        ).first()
+        tab_section.active_tab = self.ui.batches_tab.tabText(index)
+        session.commit()
 
     def bottom_panel_tab_index_changed(self, index):
-        print(index)
+        tab_section = session.query(TabSection).filter_by(
+            panel="bottom_panel_tab_widget"
+        ).first()
+        tab_section.active_tab = self.ui.bottom_panel_tab_widget.tabText(index)
+        session.commit()
 
     def right_splitter_moved(self, size, index):
         print("right_splitter_moved")
@@ -696,7 +736,6 @@ class MainWindow(
         #     self.settings_manager.show_active_image_area == True
         # )
         self.initialize_default_buttons()
-        self.generator_tab_widget.initialize()
         try:
             self.prompt_builder.process_prompt()
         except AttributeError:
@@ -844,8 +883,6 @@ class MainWindow(
             Currently used for tool menus (embeddings, layers etc.).
         :return:
         """
-        session = get_session()
-
         main_splitter_sections = session.query(SplitterSection.size).filter(
             SplitterSection.name == "main_splitter"
         ).order_by(
