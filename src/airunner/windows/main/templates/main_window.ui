@@ -1096,6 +1096,10 @@
     <addaction name="actionEmbeddings"/>
     <addaction name="actionLoRA"/>
     <addaction name="actionPen"/>
+    <addaction name="actionActive_Grid"/>
+    <addaction name="separator"/>
+    <addaction name="actionDeterministic_Batches"/>
+    <addaction name="actionStandard_Batches"/>
    </widget>
    <widget class="QMenu" name="menuImage">
     <property name="title">
@@ -1714,6 +1718,21 @@
     <string>Txt2vid</string>
    </property>
   </action>
+  <action name="actionActive_Grid">
+   <property name="text">
+    <string>Active Grid</string>
+   </property>
+  </action>
+  <action name="actionDeterministic_Batches">
+   <property name="text">
+    <string>Deterministic Batches</string>
+   </property>
+  </action>
+  <action name="actionStandard_Batches">
+   <property name="text">
+    <string>Standard Batches</string>
+   </property>
+  </action>
  </widget>
  <customwidgets>
   <customwidget>
@@ -1881,22 +1900,6 @@
    <signal>triggered()</signal>
    <receiver>MainWindow</receiver>
    <slot>action_show_shape()</slot>
-   <hints>
-    <hint type="sourcelabel">
-     <x>-1</x>
-     <y>-1</y>
-    </hint>
-    <hint type="destinationlabel">
-     <x>442</x>
-     <y>432</y>
-    </hint>
-   </hints>
-  </connection>
-  <connection>
-   <sender>actionModel_Manager</sender>
-   <signal>triggered()</signal>
-   <receiver>MainWindow</receiver>
-   <slot>action_show_model_manager()</slot>
    <hints>
     <hint type="sourcelabel">
      <x>-1</x>
@@ -2676,6 +2679,70 @@
     </hint>
    </hints>
   </connection>
+  <connection>
+   <sender>actionActive_Grid</sender>
+   <signal>triggered()</signal>
+   <receiver>MainWindow</receiver>
+   <slot>action_show_active_grid()</slot>
+   <hints>
+    <hint type="sourcelabel">
+     <x>-1</x>
+     <y>-1</y>
+    </hint>
+    <hint type="destinationlabel">
+     <x>628</x>
+     <y>436</y>
+    </hint>
+   </hints>
+  </connection>
+  <connection>
+   <sender>actionModel_Manager_2</sender>
+   <signal>triggered()</signal>
+   <receiver>MainWindow</receiver>
+   <slot>action_show_model_manager()</slot>
+   <hints>
+    <hint type="sourcelabel">
+     <x>-1</x>
+     <y>-1</y>
+    </hint>
+    <hint type="destinationlabel">
+     <x>628</x>
+     <y>436</y>
+    </hint>
+   </hints>
+  </connection>
+  <connection>
+   <sender>actionDeterministic_Batches</sender>
+   <signal>triggered()</signal>
+   <receiver>MainWindow</receiver>
+   <slot>action_show_deterministic_batches()</slot>
+   <hints>
+    <hint type="sourcelabel">
+     <x>-1</x>
+     <y>-1</y>
+    </hint>
+    <hint type="destinationlabel">
+     <x>628</x>
+     <y>436</y>
+    </hint>
+   </hints>
+  </connection>
+  <connection>
+   <sender>actionStandard_Batches</sender>
+   <signal>triggered()</signal>
+   <receiver>MainWindow</receiver>
+   <slot>action_show_standard_batches()</slot>
+   <hints>
+    <hint type="sourcelabel">
+     <x>-1</x>
+     <y>-1</y>
+    </hint>
+    <hint type="destinationlabel">
+     <x>628</x>
+     <y>436</y>
+    </hint>
+   </hints>
+  </connection>
  </connections>
  <designerdata>
   <property name="gridDeltaX">
@@ -2752,5 +2819,8 @@
   <slot>action_show_model_path_txt2vid()</slot>
   <slot>batches_panel_tab_index_changed(int)</slot>
   <slot>center_panel_tab_index_changed(int)</slot>
+  <slot>action_show_active_grid()</slot>
+  <slot>action_show_deterministic_batches()</slot>
+  <slot>action_show_standard_batches()</slot>
  </slots>
 </ui>

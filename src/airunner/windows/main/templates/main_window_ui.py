@@ -653,6 +653,12 @@ class Ui_MainWindow(object):
         self.actionSuperresolution.setObjectName("actionSuperresolution")
         self.actionTxt2vid = QtGui.QAction(parent=MainWindow)
         self.actionTxt2vid.setObjectName("actionTxt2vid")
+        self.actionActive_Grid = QtGui.QAction(parent=MainWindow)
+        self.actionActive_Grid.setObjectName("actionActive_Grid")
+        self.actionDeterministic_Batches = QtGui.QAction(parent=MainWindow)
+        self.actionDeterministic_Batches.setObjectName("actionDeterministic_Batches")
+        self.actionStandard_Batches = QtGui.QAction(parent=MainWindow)
+        self.actionStandard_Batches.setObjectName("actionStandard_Batches")
         self.menuFile.addAction(self.actionNew)
         self.menuFile.addAction(self.actionLoad)
         self.menuFile.addAction(self.actionSave)
@@ -693,6 +699,10 @@ class Ui_MainWindow(object):
         self.menuModel_merge.addAction(self.actionEmbeddings)
         self.menuModel_merge.addAction(self.actionLoRA)
         self.menuModel_merge.addAction(self.actionPen)
+        self.menuModel_merge.addAction(self.actionActive_Grid)
+        self.menuModel_merge.addSeparator()
+        self.menuModel_merge.addAction(self.actionDeterministic_Batches)
+        self.menuModel_merge.addAction(self.actionStandard_Batches)
         self.menuImage.addAction(self.actionImport)
         self.menuImage.addAction(self.actionExport)
         self.menuImage.addSeparator()
@@ -731,7 +741,6 @@ class Ui_MainWindow(object):
         self.actionKandinsky.triggered.connect(MainWindow.action_show_kandinsky) # type: ignore
         self.actionStableDiffusion.triggered.connect(MainWindow.action_show_stablediffusion) # type: ignore
         self.actionShap_E.triggered.connect(MainWindow.action_show_shape) # type: ignore
-        self.actionModel_Manager.triggered.connect(MainWindow.action_show_model_manager) # type: ignore
         self.actionPrompt_Builder.triggered.connect(MainWindow.action_show_prompt_builder) # type: ignore
         self.actionControlNet.triggered.connect(MainWindow.action_show_controlnet) # type: ignore
         self.actionEmbeddings.triggered.connect(MainWindow.action_show_embeddings) # type: ignore
@@ -780,6 +789,10 @@ class Ui_MainWindow(object):
         self.bottom_panel_tab_widget.currentChanged['int'].connect(MainWindow.bottom_panel_tab_index_changed) # type: ignore
         self.batches_tab.currentChanged['int'].connect(MainWindow.batches_panel_tab_index_changed) # type: ignore
         self.center_tab.currentChanged['int'].connect(MainWindow.center_panel_tab_index_changed) # type: ignore
+        self.actionActive_Grid.triggered.connect(MainWindow.action_show_active_grid) # type: ignore
+        self.actionModel_Manager_2.triggered.connect(MainWindow.action_show_model_manager) # type: ignore
+        self.actionDeterministic_Batches.triggered.connect(MainWindow.action_show_deterministic_batches) # type: ignore
+        self.actionStandard_Batches.triggered.connect(MainWindow.action_show_standard_batches) # type: ignore
         QtCore.QMetaObject.connectSlotsByName(MainWindow)
 
     def retranslateUi(self, MainWindow):
@@ -920,6 +933,9 @@ class Ui_MainWindow(object):
         self.actionUpscale.setText(_translate("MainWindow", "Upscale"))
         self.actionSuperresolution.setText(_translate("MainWindow", "Superresolution"))
         self.actionTxt2vid.setText(_translate("MainWindow", "Txt2vid"))
+        self.actionActive_Grid.setText(_translate("MainWindow", "Active Grid"))
+        self.actionDeterministic_Batches.setText(_translate("MainWindow", "Deterministic Batches"))
+        self.actionStandard_Batches.setText(_translate("MainWindow", "Standard Batches"))
 from airunner.widgets.active_grid_settings.active_grid_settings_widget import ActiveGridSettingsWidget
 from airunner.widgets.batch.batch_widget import BatchWidget
 from airunner.widgets.brush.brush_container_widget import BrushContainerWidget

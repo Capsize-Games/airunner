@@ -95,24 +95,6 @@ class MainWindow(
         }
     }
     registered_settings_handlers = []
-    tab_sections = {
-        "left": {
-            "stable_diffusion": {
-                "widget": None,
-                "index": 0
-            },
-            "kandinsky": {
-                "widget": None,
-                "index": 1
-            },
-            "shapegif": {
-                "widget": None,
-                "index": 2
-            },
-        },
-        "center": {},
-        "right": {}
-    }
     image_generated = pyqtSignal(bool)
     controlnet_image_generated = pyqtSignal(bool)
     generator_tab_changed_signal = pyqtSignal()
@@ -406,32 +388,41 @@ class MainWindow(
     def action_clear_all_prompts_triggered(self):
         self.clear_all_prompts()
 
+    def action_show_deterministic_batches(self):
+        self.show_section("Deterministic Batches")
+
+    def action_show_standard_batches(self):
+        self.show_section("Standard Batches")
+
     def action_show_model_manager(self):
-        self.show_section("model_manager")
+        self.show_section("Model Manager")
 
     def action_show_prompt_builder(self):
-        self.show_section("prompt_builder")
+        self.show_section("Prompt Builder")
 
     def action_show_controlnet(self):
         self.show_section("controlnet")
 
     def action_show_embeddings(self):
-        self.show_section("embeddings")
+        self.show_section("Embeddings")
 
     def action_show_lora(self):
-        self.show_section("lora")
+        self.show_section("LoRA")
 
     def action_show_pen(self):
-        self.show_section("pen")
+        self.show_section("Pen")
+
+    def action_show_active_grid(self):
+        self.show_section("Active Grid")
 
     def action_show_stablediffusion(self):
-        self.show_section("stable_diffusion")
+        self.show_section("Stable Diffusion")
 
     def action_show_kandinsky(self):
-        self.show_section("kandinsky")
+        self.show_section("Kandinsky")
 
     def action_show_shape(self):
-        self.show_section("shapegif")
+        self.show_section("Shap-e")
 
     def action_triggered_browse_ai_runner_path(self):
         path = self.settings_manager.path_settings.base_path
@@ -516,7 +507,7 @@ class MainWindow(
 
     def action_toggle_grid(self, active):
         self.settings_manager.set_value("grid_settings.show_grid", active)
-        self.canvas.update()
+        # self.canvas.update()
 
     def action_toggle_darkmode(self):
         self.set_stylesheet()
@@ -588,7 +579,7 @@ class MainWindow(
         self.canvas.update()
 
     def toggle_nsfw_filter(self):
-        self.canvas.update()
+        # self.canvas.update()
         self.set_nsfw_filter_tooltip()
 
     def set_nsfw_filter_tooltip(self):
@@ -614,22 +605,26 @@ class MainWindow(
         self.is_maximized = state == Qt.WindowState.WindowMaximized
 
     def dragmode_pressed(self):
-        self.canvas.is_canvas_drag_mode = True
+        # self.canvas.is_canvas_drag_mode = True
+        pass
 
     def dragmode_released(self):
-        self.canvas.is_canvas_drag_mode = False
+        # self.canvas.is_canvas_drag_mode = False
+        pass
 
     def shift_pressed(self):
-        self.canvas.shift_is_pressed = True
+        # self.canvas.shift_is_pressed = True
+        pass
 
     def shift_released(self):
-        self.canvas.shift_is_pressed = False
+        # self.canvas.shift_is_pressed = False
+        pass
 
     def register_keypress(self):
         self.input_event_manager.register_keypress("fullscreen", self.toggle_fullscreen)
         self.input_event_manager.register_keypress("control_pressed", self.dragmode_pressed, self.dragmode_released)
         self.input_event_manager.register_keypress("shift_pressed", self.shift_pressed, self.shift_released)
-        self.input_event_manager.register_keypress("delete_outside_active_grid_area", self.canvas.delete_outside_active_grid_area)
+        #self.input_event_manager.register_keypress("delete_outside_active_grid_area", self.canvas.delete_outside_active_grid_area)
 
     def toggle_fullscreen(self):
         if self.isFullScreen():
@@ -645,7 +640,7 @@ class MainWindow(
         QApplication.quit()
 
     def timerEvent(self, event):
-        self.canvas.timerEvent(event)
+        # self.canvas.timerEvent(event)
         self.status_widget.update_system_stats(queue_size=self.client.queue.qsize())
 
     def check_for_latest_version(self):
@@ -770,11 +765,11 @@ class MainWindow(
 
     def initialize_mixins(self):
         HistoryMixin.initialize(self)
-        self.canvas = Canvas()
+        #self.canvas = Canvas()
 
     def connect_signals(self):
         logger.info("Connecting signals")
-        self.canvas._is_dirty.connect(self.set_window_title)
+        #self.canvas._is_dirty.connect(self.set_window_title)
 
         for signal, handler in self.registered_settings_handlers:
             getattr(self.settings_manager, signal).connect(handler)
@@ -785,46 +780,25 @@ class MainWindow(
         self.ui.content_splitter.splitterMoved.connect(self.handle_main_splitter_moved)
         self.ui.main_splitter.splitterMoved.connect(self.handle_bottom_splitter_moved)
 
-    def track_tab_section(
-        self,
-        location: str,
-        section: str,
-        display_name: str,
-        widget: QWidget,
-        tab_widget: QTabWidget
-    ):
-        index = tab_widget.addTab(widget, display_name)
-        self.tab_sections[location][section] = {
-            "widget": widget,
-            "index": index
-        }
-
     def show_section(self, section):
-        left_sections = self.tab_sections["left"].keys()
-        center_sections = self.tab_sections["center"].keys()
-        right_sections = self.tab_sections["right"].keys()
-
-        if section in left_sections:
-            if self.splitter.widget(0).width() <= self.default_splitter_sizes[0]:
-                main_sizes = self.settings_manager.main_splitter_sizes
-                main_sizes[0] = self.default_splitter_sizes[0] + 1
-                self.splitter.setSizes(main_sizes)
-            self.generator_tab_widget.sectionTabWidget.setCurrentIndex(self.tab_sections["left"][section]["index"])
-
-        if section in right_sections:
-            # right splitter is self.splitter.widget(2)
-            if self.splitter.widget(2).width() <= self.default_splitter_sizes[2]:
-                # set the width to 500
-                main_sizes = self.settings_manager.main_splitter_sizes
-                main_sizes[2] = self.default_splitter_sizes[2] + 1
-                self.splitter.setSizes(main_sizes)
-            self.tab_widget.setCurrentIndex(self.tab_sections["right"][section]["index"])
-
-        if section in center_sections:
-            # check if self.center_panel is collapsed and expand it if so
-            if self.center_splitter.sizes()[1] == 0:
-                self.center_splitter.setSizes([self.center_splitter.sizes()[0], 520])
-            self.center_panel.setCurrentIndex(self.tab_sections["center"][section]["index"])
+        section_lists = {
+            "left": [self.ui.generator_widget.ui.generator_tabs.tabText(i) for i in range(self.ui.generator_widget.ui.generator_tabs.count())],
+            "center": [self.ui.center_tab.tabText(i) for i in range(self.ui.center_tab.count())],
+            "right": [self.ui.tool_tab_widget.tabText(i) for i in range(self.ui.tool_tab_widget.count())],
+            "right_center": [self.ui.batches_tab.tabText(i) for i in range(self.ui.batches_tab.count())],
+            "bottom": [self.ui.bottom_panel_tab_widget.tabText(i) for i in range(self.ui.bottom_panel_tab_widget.count())]
+        }
+        for k, v in section_lists.items():
+            if section in v:
+                if k == "left":
+                    self.ui.generator_widget.ui.generator_tabs.setCurrentIndex(v.index(section))
+                elif k == "right":
+                    self.ui.tool_tab_widget.setCurrentIndex(v.index(section))
+                elif k == "right_center":
+                    self.ui.batches_tab.setCurrentIndex(v.index(section))
+                elif k == "bottom":
+                    self.ui.bottom_panel_tab_widget.setCurrentIndex(v.index(section))
+                break
 
     def plain_text_widget_value(self, widget):
         try:
