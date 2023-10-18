@@ -1,6 +1,7 @@
 from airunner.data.bootstrap.controlnet_bootstrap_data import controlnet_bootstrap_data
 from airunner.data.bootstrap.generator_bootstrap_data import sections_bootstrap_data
 from airunner.data.bootstrap.imagefilter_bootstrap_data import imagefilter_bootstrap_data
+from airunner.data.bootstrap.llm import seed_data
 from airunner.data.bootstrap.model_bootstrap_data import model_bootstrap_data
 from airunner.data.bootstrap.pipeline_bootstrap_data import pipeline_bootstrap_data
 from airunner.data.bootstrap.prompt_bootstrap_data import prompt_bootstrap_data, style_bootstrap_data, \
@@ -9,7 +10,8 @@ from airunner.data.models import ControlnetModel, Pipeline, Document, Settings, 
     GeneratorSetting, SplitterSection, GridSettings, MetadataSettings, PathSettings, MemorySettings, AIModel, \
     ImageFilter, ImageFilterValue, BrushSettings, Prompt, PromptVariable, PromptCategory, PromptOption, \
     PromptVariableCategory, PromptVariableCategoryWeight, PromptStyleCategory, PromptStyle, Scheduler, ActionScheduler, \
-    DeterministicSettings, ActiveGridSettings, TabSection, PromptBuilder
+    DeterministicSettings, ActiveGridSettings, TabSection, PromptBuilder, CanvasSettings, \
+    LLMGeneratorSetting, LLMGenerator, LLMModelVersion
 from airunner.utils import get_session
 
 session = get_session()
@@ -424,4 +426,24 @@ if not session.query(Prompt).first():
         name="Prompt B",
         active=True
     ))
+    session.commit()
+
+    session.add(CanvasSettings())
+    session.commit()
+
+
+    for generator_name, generator_data in seed_data.items():
+        generator = LLMGenerator(name=generator_name)
+        session.add(generator)
+
+        # create GeneratorSetting with property, value and property_type based on value type
+        setting = LLMGeneratorSetting()
+        setting.generator = generator
+
+        model_versions = [LLMModelVersion(name=name) for name in generator_data['model_versions']]
+
+        for version in model_versions:
+            generator.model_versions.append(version)
+
+        session.add(generator)
     session.commit()

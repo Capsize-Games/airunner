@@ -322,8 +322,8 @@ class PromptBuilderWidget(BaseWidget):
         self.ui.tabs.setStyleSheet(Themes().css("prompt_builder_widget"))
 
     def tab_changed(self, val):
-        print(val)
-        ts = session.filter(
-            TabSection.panel == "button_panel_tab_widget"
-        ).first()
-        ts.active_tab = self.ui.bottom_panel_tab_widget
+        print("tab_changed", val)
+        # ts = session.query(TabSection).filter(
+        #     TabSection.panel == "button_panel_tab_widget"
+        # ).first()
+        # ts.active_tab = self.ui.bottom_panel_tab_widget
