@@ -18,7 +18,6 @@ from airunner.aihandler.qtvar import MessageHandlerVar
 from airunner.aihandler.settings import LOG_LEVEL
 from airunner.aihandler.settings_manager import SettingsManager
 from airunner.airunner_api import AIRunnerAPI
-from airunner.canvas import Canvas
 from airunner.data.db import session
 from airunner.data.models import SplitterSection, Prompt, TabSection
 from airunner.filters.windows.filter_base import FilterBase
