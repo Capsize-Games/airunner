@@ -9,13 +9,13 @@
 from PyQt6 import QtCore, QtGui, QtWidgets
 
 
-class Ui_Form(object):
-    def setupUi(self, Form):
-        Form.setObjectName("Form")
-        Form.resize(400, 300)
-        self.gridLayout = QtWidgets.QGridLayout(Form)
+class Ui_keyboard_shortcuts(object):
+    def setupUi(self, keyboard_shortcuts):
+        keyboard_shortcuts.setObjectName("keyboard_shortcuts")
+        keyboard_shortcuts.resize(400, 300)
+        self.gridLayout = QtWidgets.QGridLayout(keyboard_shortcuts)
         self.gridLayout.setObjectName("gridLayout")
-        self.scrollArea = QtWidgets.QScrollArea(parent=Form)
+        self.scrollArea = QtWidgets.QScrollArea(parent=keyboard_shortcuts)
         self.scrollArea.setWidgetResizable(True)
         self.scrollArea.setObjectName("scrollArea")
         self.scrollAreaWidgetContents = QtWidgets.QWidget()
@@ -26,9 +26,9 @@ class Ui_Form(object):
         self.scrollArea.setWidget(self.scrollAreaWidgetContents)
         self.gridLayout.addWidget(self.scrollArea, 0, 0, 1, 1)
 
-        self.retranslateUi(Form)
-        QtCore.QMetaObject.connectSlotsByName(Form)
+        self.retranslateUi(keyboard_shortcuts)
+        QtCore.QMetaObject.connectSlotsByName(keyboard_shortcuts)
 
-    def retranslateUi(self, Form):
+    def retranslateUi(self, keyboard_shortcuts):
         _translate = QtCore.QCoreApplication.translate
-        Form.setWindowTitle(_translate("Form", "Form"))
+        keyboard_shortcuts.setWindowTitle(_translate("keyboard_shortcuts", "Form"))
