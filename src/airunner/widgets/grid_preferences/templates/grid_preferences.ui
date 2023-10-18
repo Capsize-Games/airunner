@@ -104,20 +104,108 @@
  <resources/>
  <connections>
   <connection>
-   <sender>snap_to_grid_checkbox</sender>
-   <signal>toggled(bool)</signal>
-   <receiver>snap_to_grid_checkbox</receiver>
-   <slot>click()</slot>
+   <sender>grid_size_spinbox</sender>
+   <signal>valueChanged(int)</signal>
+   <receiver>grid_preferences</receiver>
+   <slot>grid_size_changed(int)</slot>
    <hints>
     <hint type="sourcelabel">
-     <x>165</x>
+     <x>37</x>
+     <y>41</y>
+    </hint>
+    <hint type="destinationlabel">
+     <x>20</x>
+     <y>-13</y>
+    </hint>
+   </hints>
+  </connection>
+  <connection>
+   <sender>grid_line_width_spinbox</sender>
+   <signal>valueChanged(int)</signal>
+   <receiver>grid_preferences</receiver>
+   <slot>line_width_changed(int)</slot>
+   <hints>
+    <hint type="sourcelabel">
+     <x>98</x>
+     <y>104</y>
+    </hint>
+    <hint type="destinationlabel">
+     <x>94</x>
+     <y>-11</y>
+    </hint>
+   </hints>
+  </connection>
+  <connection>
+   <sender>gridLineColorButton</sender>
+   <signal>clicked()</signal>
+   <receiver>grid_preferences</receiver>
+   <slot>action_button_clicked_grid_line_color()</slot>
+   <hints>
+    <hint type="sourcelabel">
+     <x>236</x>
+     <y>137</y>
+    </hint>
+    <hint type="destinationlabel">
+     <x>227</x>
+     <y>-11</y>
+    </hint>
+   </hints>
+  </connection>
+  <connection>
+   <sender>canvas_color</sender>
+   <signal>clicked()</signal>
+   <receiver>grid_preferences</receiver>
+   <slot>action_button_clicked_canvas_color()</slot>
+   <hints>
+    <hint type="sourcelabel">
+     <x>262</x>
+     <y>165</y>
+    </hint>
+    <hint type="destinationlabel">
+     <x>294</x>
+     <y>5</y>
+    </hint>
+   </hints>
+  </connection>
+  <connection>
+   <sender>show_grid_checkbox</sender>
+   <signal>toggled(bool)</signal>
+   <receiver>grid_preferences</receiver>
+   <slot>action_toggled_show_grid(bool)</slot>
+   <hints>
+    <hint type="sourcelabel">
+     <x>45</x>
+     <y>190</y>
+    </hint>
+    <hint type="destinationlabel">
+     <x>175</x>
+     <y>4</y>
+    </hint>
+   </hints>
+  </connection>
+  <connection>
+   <sender>snap_to_grid_checkbox</sender>
+   <signal>toggled(bool)</signal>
+   <receiver>grid_preferences</receiver>
+   <slot>action_toggled_snap_to_grid(bool)</slot>
+   <hints>
+    <hint type="sourcelabel">
+     <x>87</x>
      <y>221</y>
     </hint>
     <hint type="destinationlabel">
-     <x>165</x>
-     <y>221</y>
+     <x>140</x>
+     <y>0</y>
     </hint>
    </hints>
   </connection>
  </connections>
+ <slots>
+  <slot>size_changed(int)</slot>
+  <slot>line_width_changed(int)</slot>
+  <slot>action_button_clicked_grid_line_color()</slot>
+  <slot>action_button_clicked_canvas_color()</slot>
+  <slot>action_toggled_show_grid(bool)</slot>
+  <slot>action_toggled_snap_to_grid(bool)</slot>
+ </slots>
 </ui>
