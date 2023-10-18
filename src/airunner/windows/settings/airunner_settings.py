@@ -2,13 +2,13 @@ from PyQt6.QtCore import Qt, QSize
 from PyQt6.QtGui import QStandardItemModel, QStandardItem, QBrush, QColor, QPainter
 from PyQt6.QtWidgets import QStyledItemDelegate, QStyleOptionViewItem, QLabel, QWidget, QVBoxLayout, QPlainTextEdit
 from airunner.widgets.export_preferences.export_preferences_widget import ExportPreferencesWidget
+from airunner.widgets.grid_preferences.grid_preferences_widget import GridPreferencesWidget
 
 from airunner.widgets.keyboard_shortcuts.keyboard_shortcuts_widget import KeyboardShortcutsWidget
 from airunner.widgets.paths.paths_widget import PathsWidget
 from airunner.windows.settings.templates.airunner_settings_ui import Ui_airunner_settings
 from airunner.windows.base_window import BaseWindow
 # open the version file from the root of the project and get the VERSION variable string from it
-from airunner.windows.grid_widget import GridWidget
 from airunner.windows.memory_widget import MemoryWidget
 
 
@@ -235,12 +235,12 @@ class SettingsWindow(BaseWindow):
             "paths": PathsWidget,
             "keyboard_shortcuts": KeyboardShortcutsWidget,
             "export_preferences": ExportPreferencesWidget,
-            "grid": GridWidget,
+            "grid": GridPreferencesWidget,
             "memory": MemoryWidget,
             # "hf_api_key": HFAPIKeyWidget,
         }
         if name in widgets:
-            if name in ["paths", "export_preferences"]:
+            if name in ["paths", "export_preferences", "grid"]:
                 widget_object = widgets[name]()
             else:
                 widget_object = widgets[name](
