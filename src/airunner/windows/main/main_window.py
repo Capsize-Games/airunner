@@ -507,6 +507,7 @@ class MainWindow(
 
     def action_toggle_grid(self, active):
         self.settings_manager.set_value("grid_settings.show_grid", active)
+        self.ui.canvas_plus_widget.update()
         # self.canvas.update()
 
     def action_toggle_darkmode(self):
@@ -761,7 +762,7 @@ class MainWindow(
 
     def toggle_tool(self, tool):
         self.settings_manager.set_value("current_tool", tool)
-        self.canvas.update_cursor()
+        self.ui.canvas_plus_widget.update_cursor()
 
     def initialize_mixins(self):
         HistoryMixin.initialize(self)
@@ -1044,11 +1045,10 @@ class MainWindow(
         self.ui.layer_widget.clear_layers()
         self.clear_history()
         self.is_saved = False
-        self.canvas.is_dirty = False
         self._document_name = "Untitled"
         self.set_window_title()
         self.current_filter = None
-        self.canvas.update()
+        #self.canvas.update()
         self.ui.layer_widget.show_layers()
 
     def set_status_label(self, txt, error=False):
@@ -1129,7 +1129,11 @@ class MainWindow(
                 "action"] != "outpaint" and self.settings_manager.image_to_new_layer and self.ui.layer_widget.current_layer.image_data.image is not None:
                 self.ui.layer_widget.add_layer()
             # print width and height of image
-            self.canvas.image_handler(images[0], data)
+            # self.canvas.image_handler(images[0], data)
+            self.image_data.emit({
+                "image": images[0],
+                "data": data
+            })
             self.message_handler("")
             self.ui.layer_widget.show_layers()
 
@@ -1303,14 +1307,13 @@ class MainWindow(
             directory=self.settings_manager.path_settings.image_path)
         if file_path == "":
             return
-        self.canvas.load_image(file_path)
-        self.canvas.update()
+        self.ui.canvas_plus_widget.load_image(file_path)
 
     def export_image(self):
         file_path, _ = self.display_file_export_dialog()
         if file_path == "":
             return
-        self.canvas.save_image(file_path)
+        self.ui.canvas_plus_widget.save_image(file_path)
 
     def choose_image_export_path(self):
         # display a dialog to choose the export path
