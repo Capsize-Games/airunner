@@ -250,18 +250,6 @@ class CanvasPlusWidget(BaseWidget):
         self.app.add_image_to_canvas_signal.connect(self.handle_add_image_to_canvas)
         self.app.image_data.connect(self.handle_image_data)
 
-    def handle_image_data(self, data):
-        image = data["image"]
-        image_data = data["data"]
-        # add image to the canvas
-        pixmap = QPixmap.fromImage(ImageQt(image))
-        image = DraggablePixmap(self, pixmap)
-        self.scene.addItem(image)
-        # image.setPos(QPointF(
-        #     self.canvas_settings.pos_x + data.pos_x,
-        #     self.canvas_settings.pos_y + data.pos_y
-        # ))
-
     def handle_mouse_event(self, original_mouse_event, event):
         if event.buttons() == Qt.MouseButton.MiddleButton:
             if self.last_pos:
@@ -435,6 +423,18 @@ class CanvasPlusWidget(BaseWidget):
             )
         else:
             self.ui.canvas_container.setCursor(QCursor(Qt.CursorShape.ArrowCursor))
+
+    def handle_image_data(self, data):
+        image = data["image"]
+        image_data = data["data"]
+        # add image to the canvas
+        pixmap = QPixmap.fromImage(ImageQt(image))
+        image = DraggablePixmap(self, pixmap)
+        self.scene.addItem(image)
+        # image.setPos(QPointF(
+        #     self.canvas_settings.pos_x + data.pos_x,
+        #     self.canvas_settings.pos_y + data.pos_y
+        # ))
 
     def load_image(self, image_path):
         image = Image.open(image_path)

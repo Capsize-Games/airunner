@@ -194,7 +194,6 @@ class LayerContainerWidget(BaseWidget):
         else:
             try:
                 layer = self.layers.pop(current_index)
-                self.app.canvas.container.layout().removeWidget(layer.layer_widget)
                 layer.layer_widget.deleteLater()
             except IndexError:
                 pass
@@ -204,7 +203,8 @@ class LayerContainerWidget(BaseWidget):
     def clear_layers(self):
         # delete all widgets from self.container.layout()
         for index, layer in enumerate(self.layers):
-            self.app.canvas.container.layout().removeWidget(layer.layer_widget)
+            if not layer.layer_widget:
+                continue
             layer.layer_widget.deleteLater()
         self.layers = [LayerData(0, "Layer 1")]
         self.current_layer_index = 0

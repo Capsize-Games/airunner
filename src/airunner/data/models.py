@@ -1,9 +1,10 @@
 import base64
+import datetime
 import io
 import os
 
 from PIL import Image
-from sqlalchemy import Column, Integer, String, Boolean, ForeignKey, Float, JSON, UniqueConstraint
+from sqlalchemy import Column, Integer, String, Boolean, ForeignKey, Float, JSON, UniqueConstraint, DateTime
 from sqlalchemy.ext.declarative import declarative_base
 from sqlalchemy.orm import relationship
 from PyQt6.QtCore import Qt, QAbstractTableModel, QModelIndex
@@ -673,3 +674,57 @@ class PromptBuilder(Base):
     text_prompt_weight = Column(Float, default=0.5)
     negative_auto_prompt_weight = Column(Float, default=0.5)
     negative_text_prompt_weight = Column(Float, default=0.5)
+
+
+class CanvasSettings(Base):
+    __tablename__ = "canvas_settings"
+
+    id = Column(Integer, primary_key=True)
+    pos_x = Column(Integer, default=0)
+    pos_y = Column(Integer, default=0)
+
+
+class LLMGenerator(Base):
+    __tablename__ = 'generator'
+    id = Column(Integer, primary_key=True)
+    created_at = Column(DateTime, default=datetime.datetime.utcnow)
+    name = Column(String)
+    username = Column(String)
+    botname = Column(String)
+    model_versions = relationship('LLMModelVersion', back_populates='generator')
+    generator_settings = relationship('LLMGeneratorSetting', back_populates='generator')
+    prefix = Column(String, default="")
+    suffix = Column(String, default="")
+
+
+class LLMGeneratorSetting(Base):
+    __tablename__ = 'generator_setting'
+    id = Column(Integer, primary_key=True)
+    created_at = Column(DateTime, default=datetime.datetime.utcnow)
+    top_p = Column(Integer, default=90)
+    max_length = Column(Integer, default=50)
+    repetition_penalty = Column(Integer, default=100)
+    min_length = Column(Integer, default=10)
+    k = Column(Integer, default=0)
+    length_penalty = Column(Integer, default=100)
+    num_beams = Column(Integer, default=1)
+    ngram_size = Column(Integer, default=0)
+    temperature = Column(Integer, default=100)
+    sequences = Column(Integer, default=1)
+    top_k = Column(Integer, default=0)
+    seed = Column(Integer, default=0)
+    do_sample = Column(Boolean, default=False)
+    early_stopping = Column(Boolean, default=False)
+    random_seed = Column(Boolean, default=False)
+    model_version = Column(String, default="google/flan-t5-xl")
+    generator_id = Column(Integer, ForeignKey('generator.id'))
+    generator = relationship('LLMGenerator', back_populates='generator_settings')
+
+
+class LLMModelVersion(Base):
+    __tablename__ = 'model_version'
+    id = Column(Integer, primary_key=True)
+    created_at = Column(DateTime, default=datetime.datetime.utcnow)
+    name = Column(String)
+    generator_id = Column(Integer, ForeignKey('generator.id'))
+    generator = relationship('LLMGenerator', back_populates='model_versions')

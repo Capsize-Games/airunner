@@ -98,6 +98,7 @@ class MainWindow(
     controlnet_image_generated = pyqtSignal(bool)
     generator_tab_changed_signal = pyqtSignal()
     tab_section_changed_signal = pyqtSignal()
+    image_data = pyqtSignal(dict)
 
     @property
     def generate_signal(self):
@@ -464,6 +465,9 @@ class MainWindow(
     
     def action_show_model_path_lora(self):
         self.show_settings_path("lora_model_path")
+
+    def action_show_llm(self):
+        pass
 
     def refresh_available_models(self):
         self.generator_tab_widget.refresh_models()
@@ -1075,8 +1079,8 @@ class MainWindow(
             MessageCode.PROGRESS: self.handle_progress,
             MessageCode.IMAGE_GENERATED: self.handle_image_generated,
             MessageCode.CONTROLNET_IMAGE_GENERATED: self.handle_controlnet_image_generated,
-        }.get(code, self.handle_unknown)(message)
-
+        }.get(code, lambda *args: None)(message)
+    
     def handle_controlnet_image_generated(self, message):
         self.controlnet_image = message["image"]
         self.controlnet_image_generated.emit(True)

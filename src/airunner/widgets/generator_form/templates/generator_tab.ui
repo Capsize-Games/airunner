@@ -394,7 +394,7 @@
           <enum>QTabWidget::West</enum>
          </property>
          <property name="currentIndex">
-          <number>1</number>
+          <number>0</number>
          </property>
          <widget class="QWidget" name="tab_kandinsky_txt2img">
           <property name="sizePolicy">
@@ -410,7 +410,7 @@
            <string>kandinsky</string>
           </property>
           <attribute name="title">
-           <string>txt2img/img2img</string>
+           <string>txt2img / img2img</string>
           </attribute>
           <layout class="QGridLayout" name="gridLayout_8">
            <property name="leftMargin">
@@ -527,7 +527,7 @@
            <string>shape</string>
           </property>
           <attribute name="title">
-           <string>txt2img/img2img</string>
+           <string>txt2img / img2img</string>
           </attribute>
           <layout class="QGridLayout" name="gridLayout_9">
            <property name="leftMargin">

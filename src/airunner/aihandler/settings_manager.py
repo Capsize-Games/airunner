@@ -306,16 +306,5 @@ class SettingsManager(QObject):
             variable_category_id=variable.variable_category_id
         ).first()
 
-    def optimize_memory_settings(self):
-        self.set_value("memory_settings.use_last_channels", True)
-        self.set_value("memory_settings.use_attention_slicing", False)
-        self.set_value("memory_settings.use_tf32", False)
-        self.set_value("memory_settings.use_enable_vae_slicing", True)
-        self.set_value("memory_settings.use_accelerated_transformers", True)
-        self.set_value("memory_settings.use_tiled_vae", True)
-        self.set_value("memory_settings.enable_model_cpu_offload", False)
-        self.set_value("memory_settings.use_enable_sequential_cpu_offload", False)
-        self.set_value("memory_settings.use_cudnn_benchmark", True)
-
     def save(self):
         session.commit()
