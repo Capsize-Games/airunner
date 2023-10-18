@@ -1,13 +1,16 @@
 import math
 from functools import partial
 
+from PIL import Image
 from PIL.ImageQt import ImageQt, QImage
-from PyQt6.QtCore import Qt, QPoint, QPointF, QThread, QRect, QRectF
-from PyQt6.QtGui import QBrush, QColor, QPen, QPixmap, QPainter
-from PyQt6.QtWidgets import QGraphicsScene, QGraphicsView, QGraphicsItem, QGraphicsPixmapItem
+from PyQt6.QtCore import Qt, QPoint, QPointF, QRect
+from PyQt6.QtGui import QBrush, QColor, QPen, QPixmap, QPainter, QCursor
+from PyQt6.QtWidgets import QGraphicsScene, QGraphicsItem, QGraphicsPixmapItem, QGraphicsLineItem
 
 from airunner.aihandler.settings_manager import SettingsManager
-from airunner.data.models import Layer, LayerImage
+from airunner.cursors.circle_brush import CircleCursor
+from airunner.data.db import session
+from airunner.data.models import Layer, LayerImage, CanvasSettings, ActiveGridSettings, GridSettings
 from airunner.utils import get_session, save_session
 from airunner.widgets.base_widget import BaseWidget
 from airunner.widgets.canvas_plus.templates.canvas_plus_ui import Ui_canvas
@@ -185,14 +188,6 @@ class ActiveGridArea(DraggablePixmap):
         self.settings_manager.set_value("active_grid_settings.pos_y", pos.y())
 
 
-class CanvasView(QGraphicsView):
-    def enable_select_tool(self):
-        self.setDragMode(QGraphicsView.DragMode.RubberBandDrag)
-
-    def disable_select_tool(self):
-        self.setDragMode(QGraphicsView.DragMode.NoDrag)
-
-
 class CanvasPlusWidget(BaseWidget):
     widget_class_ = Ui_canvas
     scene = None
@@ -203,27 +198,69 @@ class CanvasPlusWidget(BaseWidget):
     line_color = None
     canvas_color = None
     layers = {}
+    images = {}
+    active_grid_area = None
     active_grid_area_pivot_point = QPoint(0, 0)
+    active_grid_area_position = QPoint(0, 0)
     last_pos = QPoint(0, 0)
+
+    @property
+    def active_grid_area_selected(self):
+        return self.settings_manager.current_tool == "active_grid_area"
+
+    @property
+    def select_selected(self):
+        return self.settings_manager.current_tool == "select"
+
+    @property
+    def eraser_selected(self):
+        return self.settings_manager.current_tool == "eraser"
+
+    @property
+    def brush_selected(self):
+        return self.settings_manager.current_tool == "brush"
+
+    @property
+    def move_selected(self):
+        return self.settings_manager.current_tool == "move"
+
+    @property
+    def brush_size(self):
+        return self.settings_manager.brush_settings.size
 
     @property
     def active_grid_area_rect(self):
         rect = QRect(
-            self.settings_manager.active_grid_settings.pos_x,
-            self.settings_manager.active_grid_settings.pos_y,
-            self.settings_manager.working_width,
-            self.settings_manager.working_height
+            self.active_grid_settings.pos_x,
+            self.active_grid_settings.pos_y,
+            self.active_grid_settings.width,
+            self.active_grid_settings.height
         )
 
         # apply self.pos_x and self.pox_y to the rect
-        rect.translate(self.last_pos.x(), self.last_pos.y())
+        rect.translate(self.canvas_settings.pos_x, self.canvas_settings.pos_y)
 
         return rect
 
     def __init__(self, *args, **kwargs):
         super().__init__(*args, **kwargs)
+        self.canvas_settings = session.query(CanvasSettings).first()
+        self.active_grid_settings = session.query(ActiveGridSettings).first()
         self.ui.central_widget.resizeEvent = self.resizeEvent
         self.app.add_image_to_canvas_signal.connect(self.handle_add_image_to_canvas)
+        self.app.image_data.connect(self.handle_image_data)
+
+    def handle_image_data(self, data):
+        image = data["image"]
+        image_data = data["data"]
+        # add image to the canvas
+        pixmap = QPixmap.fromImage(ImageQt(image))
+        image = DraggablePixmap(self, pixmap)
+        self.scene.addItem(image)
+        # image.setPos(QPointF(
+        #     self.canvas_settings.pos_x + data.pos_x,
+        #     self.canvas_settings.pos_y + data.pos_y
+        # ))
 
     def handle_mouse_event(self, original_mouse_event, event):
         if event.buttons() == Qt.MouseButton.MiddleButton:
@@ -243,7 +280,7 @@ class CanvasPlusWidget(BaseWidget):
         # Create a QGraphicsScene object
         self.scene = QGraphicsScene(self)
 
-        self.view = CanvasView(self.ui.central_widget)
+        self.view = self.ui.canvas_container
         original_mouse_event = self.view.mouseMoveEvent
         self.view.mouseMoveEvent = partial(self.handle_mouse_event, original_mouse_event)
         #self.view.setDragMode(QGraphicsView.DragMode.RubberBandDrag)
@@ -262,9 +299,6 @@ class CanvasPlusWidget(BaseWidget):
 
         self.scene.setBackgroundBrush(QBrush(self.canvas_color))
         self.view.setScene(self.scene)
-
-        # Add the QGraphicsView object
-        self.ui.canvas_container.layout().addWidget(self.view)
 
         # Set the size of the QGraphicsScene object to match the size of the QGraphicsView object
         self.set_scene_rect()
@@ -296,11 +330,12 @@ class CanvasPlusWidget(BaseWidget):
                 pixmap = QPixmap.fromImage(ImageQt(image))
                 image = LayerImageItem(self, pixmap, layer_image)
                 self.layers[layer.id].append(image)
-                self.scene.addItem(image)
+                if layer_image.visible and not layer.hidden:
+                    self.scene.addItem(image)
                 pos = QPoint(layer_image.pos_x, layer_image.pos_y)
                 image.setPos(QPointF(
-                    self.last_pos.x() + pos.x(),
-                    self.last_pos.y() + pos.y()
+                    self.canvas_settings.pos_x + pos.x(),
+                    self.canvas_settings.pos_y + pos.y()
                 ))
 
     def handle_changed_signal(self, key, value):
@@ -312,13 +347,19 @@ class CanvasPlusWidget(BaseWidget):
             self.do_draw()
         elif key == "current_section_shapegif":
             self.do_draw()
+        elif key == "layer_image_data.visible":
+            self.do_draw()
+        elif key == "layer_data.hidden":
+            self.do_draw()
+        elif key == "grid_settings.show_grid":
+            # remove lines from scene
+            for item in self.scene.items():
+                if isinstance(item, QGraphicsLineItem):
+                    self.scene.removeItem(item)
+            self.do_draw()
 
     def set_scene_rect(self):
         self.scene.setSceneRect(0, 0, self.view_size.width(), self.view_size.height())
-
-
-    images = {}
-
 
     def draw_lines(self):
         width_cells = math.ceil(self.view_size.width() / self.cell_size)
@@ -330,21 +371,20 @@ class CanvasPlusWidget(BaseWidget):
             Qt.PenStyle.SolidLine
         )
 
-        # vertical lines
-        h = self.view_size.height() + abs(self.last_pos.y()) % self.cell_size
-        y = 0
-        for i in range(width_cells):
-            x = i * self.cell_size + self.last_pos.x() % self.cell_size
-            self.scene.addLine(x, y, x, h, pen)
+        if self.settings_manager.grid_settings.show_grid:
+            # vertical lines
+            h = self.view_size.height() + abs(self.canvas_settings.pos_y) % self.cell_size
+            y = 0
+            for i in range(width_cells):
+                x = i * self.cell_size + self.canvas_settings.pos_x % self.cell_size
+                self.scene.addLine(x, y, x, h, pen)
 
-        # # horizontal lines
-        w = self.view_size.width() + abs(self.last_pos.x()) % self.cell_size
-        x = 0
-        for i in range(height_cells):
-            y = i * self.cell_size + self.last_pos.y() % self.cell_size
-            self.scene.addLine(x, y, w, y, pen)
-
-    active_grid_area = None
+            # # horizontal lines
+            w = self.view_size.width() + abs(self.canvas_settings.pos_x) % self.cell_size
+            x = 0
+            for i in range(height_cells):
+                y = i * self.cell_size + self.canvas_settings.pos_y % self.cell_size
+                self.scene.addLine(x, y, w, y, pen)
 
     def draw_active_grid_area_container(self):
         """
@@ -367,8 +407,6 @@ class CanvasPlusWidget(BaseWidget):
         self.last_pos = QPoint(0, 0)
         self.do_draw()
 
-    active_grid_area_position = QPoint(0, 0)
-
     def do_draw(self):
         self.view_size = self.view.viewport().size()
         self.set_scene_rect()
@@ -376,5 +414,36 @@ class CanvasPlusWidget(BaseWidget):
         self.draw_layers()
         self.draw_active_grid_area_container()
         self.ui.canvas_position.setText(
-            f"X {-self.last_pos.x(): 05d} Y {self.last_pos.y(): 05d}"
+            f"X {-self.canvas_settings.pos_x: 05d} Y {self.canvas_settings.pos_y: 05d}"
         )
+
+    def update_cursor(self):
+        # if self.is_canvas_drag_mode:
+        #     # show as grab cursor
+        #     self.canvas_container.setCursor(Qt.CursorShape.ClosedHandCursor)
+        if self.move_selected:
+            self.ui.canvas_container.setCursor(Qt.CursorShape.OpenHandCursor)
+        elif self.active_grid_area_selected:
+            self.ui.canvas_container.setCursor(Qt.CursorShape.DragMoveCursor)
+        elif self.brush_selected or self.eraser_selected:
+            self.ui.canvas_container.setCursor(
+                CircleCursor(
+                    Qt.GlobalColor.white,
+                    Qt.GlobalColor.transparent,
+                    self.brush_size
+                )
+            )
+        else:
+            self.ui.canvas_container.setCursor(QCursor(Qt.CursorShape.ArrowCursor))
+
+
+    def load_image(self, image_path):
+        image = Image.open(image_path)
+
+        if self.app.settings_manager.resize_on_paste:
+            image.thumbnail((self.settings_manager.working_width,
+                             self.settings_manager.working_height), Image.ANTIALIAS)
+
+        pixmap = QPixmap.fromImage(ImageQt(image))
+        image = DraggablePixmap(self, pixmap)
+        self.scene.addItem(image)
