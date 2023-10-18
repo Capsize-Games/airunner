@@ -1,6 +1,8 @@
 from PyQt6.QtCore import Qt, QSize
 from PyQt6.QtGui import QStandardItemModel, QStandardItem, QBrush, QColor, QPainter
 from PyQt6.QtWidgets import QStyledItemDelegate, QStyleOptionViewItem, QLabel, QWidget, QVBoxLayout, QPlainTextEdit
+
+from airunner.widgets.api_token.api_token_widget import APITokenWidget
 from airunner.widgets.export_preferences.export_preferences_widget import ExportPreferencesWidget
 from airunner.widgets.grid_preferences.grid_preferences_widget import GridPreferencesWidget
 
@@ -236,7 +238,7 @@ class SettingsWindow(BaseWindow):
             "export_preferences": ExportPreferencesWidget,
             "grid": GridPreferencesWidget,
             "memory": MemoryPreferencesWidget,
-            # "hf_api_key": HFAPIKeyWidget,
+            "hf_api_key": APITokenWidget,
         }
         if name in widgets:
             widget_object = widgets[name]()
