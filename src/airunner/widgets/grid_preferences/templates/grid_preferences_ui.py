@@ -56,7 +56,12 @@ class Ui_grid_preferences(object):
         self.gridLayout.addWidget(self.canvas_color, 5, 0, 1, 1)
 
         self.retranslateUi(grid_preferences)
-        self.snap_to_grid_checkbox.toggled['bool'].connect(self.snap_to_grid_checkbox.click) # type: ignore
+        self.grid_size_spinbox.valueChanged['int'].connect(grid_preferences.grid_size_changed) # type: ignore
+        self.grid_line_width_spinbox.valueChanged['int'].connect(grid_preferences.line_width_changed) # type: ignore
+        self.gridLineColorButton.clicked.connect(grid_preferences.action_button_clicked_grid_line_color) # type: ignore
+        self.canvas_color.clicked.connect(grid_preferences.action_button_clicked_canvas_color) # type: ignore
+        self.show_grid_checkbox.toggled['bool'].connect(grid_preferences.action_toggled_show_grid) # type: ignore
+        self.snap_to_grid_checkbox.toggled['bool'].connect(grid_preferences.action_toggled_snap_to_grid) # type: ignore
         QtCore.QMetaObject.connectSlotsByName(grid_preferences)
 
     def retranslateUi(self, grid_preferences):
