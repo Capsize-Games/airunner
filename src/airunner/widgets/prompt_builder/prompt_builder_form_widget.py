@@ -290,4 +290,4 @@ class PromptBuilderForm(BaseWidget):
         self.process_prompt()
 
     def tab_changed(self, val):
-        print(val)
+        print("tab_changed", val)

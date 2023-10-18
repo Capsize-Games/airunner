@@ -6,7 +6,7 @@ from PyQt6.QtCore import pyqtSignal, QRect, QTimer
 from airunner.aihandler.enums import MessageCode
 from airunner.aihandler.settings import MAX_SEED
 from airunner.data.db import session
-from airunner.data.models import ActionScheduler, AIModel
+from airunner.data.models import ActionScheduler, AIModel, ActiveGridSettings, CanvasSettings
 from airunner.utils import get_session
 from airunner.widgets.base_widget import BaseWidget
 from airunner.widgets.generator_form.templates.generatorform_ui import Ui_generator_form
@@ -109,12 +109,12 @@ class GeneratorForm(BaseWidget):
     @property
     def active_rect(self):
         rect = QRect(
-            self.canvas.active_grid_area_rect.x(),
-            self.canvas.active_grid_area_rect.y(),
-            self.canvas.active_grid_area_rect.width(),
-            self.canvas.active_grid_area_rect.height(),
+            self.active_grid_settings.pos_x,
+            self.active_grid_settings.pos_y,
+            self.active_grid_settings.width,
+            self.active_grid_settings.height
         )
-        rect.translate(-self.canvas.pos_x, -self.canvas.pos_y)
+        rect.translate(-self.canvas_settings.pos_x, -self.canvas_settings.pos_y)
 
         return rect
 
@@ -128,8 +128,10 @@ class GeneratorForm(BaseWidget):
 
     def __init__(self, *args, **kwargs):
         super().__init__(*args, **kwargs)
-        timer = QTimer(self)
+        self.active_grid_settings = session.query(ActiveGridSettings).first()
+        self.canvas_settings = session.query(CanvasSettings).first()
         # one shot timer
+        timer = QTimer(self)
         timer.setSingleShot(True)
         timer.timeout.connect(self.initialize)
         timer.start(1000)

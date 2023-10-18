@@ -51,7 +51,6 @@ class LoraContainerWidget(BaseWidget):
                 if entry.is_file():  # ckpt or safetensors file
                     if entry.name.endswith(".ckpt") or entry.name.endswith(".safetensors") or entry.name.endswith(
                             ".pt"):
-                        print(entry.name)
                         name = entry.name.replace(".ckpt", "").replace(".safetensors", "").replace(".pt", "")
                         lora = Lora(name=name, path=entry.path, enabled=True, scale=100.0)
                         session.add(lora)
