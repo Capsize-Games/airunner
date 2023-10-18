@@ -9,8 +9,6 @@ from airunner.widgets.memory_preferences.memory_preferences_widget import Memory
 from airunner.widgets.paths.paths_widget import PathsWidget
 from airunner.windows.settings.templates.airunner_settings_ui import Ui_airunner_settings
 from airunner.windows.base_window import BaseWindow
-# open the version file from the root of the project and get the VERSION variable string from it
-from airunner.windows.memory_widget import MemoryWidget
 
 
 class HighlightDelegate(QStyledItemDelegate):
@@ -241,13 +239,7 @@ class SettingsWindow(BaseWindow):
             # "hf_api_key": HFAPIKeyWidget,
         }
         if name in widgets:
-            if name in ["paths", "export_preferences", "grid", "memory"]:
-                widget_object = widgets[name]()
-            else:
-                widget_object = widgets[name](
-                    app=self.app,
-                    settings_manager=self.settings_manager
-                )
+            widget_object = widgets[name]()
 
         self.clear_scroll_area()
         self.scroll_layout.addWidget(label)
