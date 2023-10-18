@@ -436,7 +436,6 @@ class CanvasPlusWidget(BaseWidget):
         else:
             self.ui.canvas_container.setCursor(QCursor(Qt.CursorShape.ArrowCursor))
 
-
     def load_image(self, image_path):
         image = Image.open(image_path)
 
@@ -447,3 +446,10 @@ class CanvasPlusWidget(BaseWidget):
         pixmap = QPixmap.fromImage(ImageQt(image))
         image = DraggablePixmap(self, pixmap)
         self.scene.addItem(image)
+
+    def save_image(self, image_path):
+        # 1. iterate over all images in self.sce
+        for item in self.scene.items():
+            if isinstance(item, QGraphicsPixmapItem):
+                image = item.pixmap.toImage()
+                image.save(image_path)
