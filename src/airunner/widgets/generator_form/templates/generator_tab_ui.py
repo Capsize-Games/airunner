@@ -218,7 +218,7 @@ class Ui_generator_tab(object):
         self.retranslateUi(generator_tab)
         self.generator_tabs.setCurrentIndex(0)
         self.tab_widget_stablediffusion.setCurrentIndex(0)
-        self.tab_widget_kandinsky.setCurrentIndex(1)
+        self.tab_widget_kandinsky.setCurrentIndex(0)
         self.tab_widget_shape.setCurrentIndex(0)
         QtCore.QMetaObject.connectSlotsByName(generator_tab)
 
@@ -265,7 +265,7 @@ class Ui_generator_tab(object):
         self.tab_kandinsky_txt2img.setProperty("generator_name", _translate("generator_tab", "kandinsky"))
         self.generator_form_kandinsky_txt2img.setProperty("generator_section", _translate("generator_tab", "txt2img"))
         self.generator_form_kandinsky_txt2img.setProperty("generator_name", _translate("generator_tab", "kandinsky"))
-        self.tab_widget_kandinsky.setTabText(self.tab_widget_kandinsky.indexOf(self.tab_kandinsky_txt2img), _translate("generator_tab", "txt2img/img2img"))
+        self.tab_widget_kandinsky.setTabText(self.tab_widget_kandinsky.indexOf(self.tab_kandinsky_txt2img), _translate("generator_tab", "txt2img / img2img"))
         self.tab_kandinsky_outpaint.setProperty("generator_section", _translate("generator_tab", "outpaint"))
         self.tab_kandinsky_outpaint.setProperty("generator_name", _translate("generator_tab", "kandinsky"))
         self.generator_form_kandinsky_outpaint.setProperty("generator_section", _translate("generator_tab", "outpaint"))
@@ -276,6 +276,6 @@ class Ui_generator_tab(object):
         self.tab_shape_txt2img.setProperty("generator_name", _translate("generator_tab", "shape"))
         self.generator_form_shape_txt2img.setProperty("generator_section", _translate("generator_tab", "txt2img"))
         self.generator_form_shape_txt2img.setProperty("generator_name", _translate("generator_tab", "shape"))
-        self.tab_widget_shape.setTabText(self.tab_widget_shape.indexOf(self.tab_shape_txt2img), _translate("generator_tab", "txt2img/img2img"))
+        self.tab_widget_shape.setTabText(self.tab_widget_shape.indexOf(self.tab_shape_txt2img), _translate("generator_tab", "txt2img / img2img"))
         self.generator_tabs.setTabText(self.generator_tabs.indexOf(self.tab_shape), _translate("generator_tab", "Shap-e"))
 from airunner.widgets.generator_form.generator_form_widget import GeneratorForm
