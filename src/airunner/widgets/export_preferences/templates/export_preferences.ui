@@ -1,7 +1,7 @@
 <?xml version="1.0" encoding="UTF-8"?>
 <ui version="4.0">
- <class>Form</class>
- <widget class="QWidget" name="Form">
+ <class>export_preferences</class>
+ <widget class="QWidget" name="export_preferences">
   <property name="geometry">
    <rect>
     <x>0</x>
@@ -233,16 +233,6 @@
        </property>
       </spacer>
      </item>
-     <item row="7" column="1">
-      <widget class="QCheckBox" name="import_metadata">
-       <property name="toolTip">
-        <string>&lt;html&gt;&lt;head/&gt;&lt;body&gt;&lt;p&gt;Automatically load metadata into generator options. &lt;/p&gt;&lt;p&gt;Only works with PNG files.&lt;/p&gt;&lt;/body&gt;&lt;/html&gt;</string>
-       </property>
-       <property name="text">
-        <string>Import metadata</string>
-       </property>
-      </widget>
-     </item>
     </layout>
    </item>
    <item row="7" column="0" colspan="2">
@@ -251,5 +241,280 @@
   </layout>
  </widget>
  <resources/>
- <connections/>
+ <connections>
+  <connection>
+   <sender>actionAuto_export_images</sender>
+   <signal>toggled(bool)</signal>
+   <receiver>export_preferences</receiver>
+   <slot>action_toggle_automatically_export_images(bool)</slot>
+   <hints>
+    <hint type="sourcelabel">
+     <x>70</x>
+     <y>24</y>
+    </hint>
+    <hint type="destinationlabel">
+     <x>80</x>
+     <y>-14</y>
+    </hint>
+   </hints>
+  </connection>
+  <connection>
+   <sender>image_path</sender>
+   <signal>textEdited(QString)</signal>
+   <receiver>export_preferences</receiver>
+   <slot>image_export_path_text_edited(QString)</slot>
+   <hints>
+    <hint type="sourcelabel">
+     <x>203</x>
+     <y>106</y>
+    </hint>
+    <hint type="destinationlabel">
+     <x>13</x>
+     <y>-15</y>
+    </hint>
+   </hints>
+  </connection>
+  <connection>
+   <sender>image_path_browse_button</sender>
+   <signal>clicked()</signal>
+   <receiver>export_preferences</receiver>
+   <slot>action_clicked_button_browse()</slot>
+   <hints>
+    <hint type="sourcelabel">
+     <x>427</x>
+     <y>111</y>
+    </hint>
+    <hint type="destinationlabel">
+     <x>343</x>
+     <y>3</y>
+    </hint>
+   </hints>
+  </connection>
+  <connection>
+   <sender>image_type_dropdown</sender>
+   <signal>currentTextChanged(QString)</signal>
+   <receiver>export_preferences</receiver>
+   <slot>action_image_type_text_changed(QString)</slot>
+   <hints>
+    <hint type="sourcelabel">
+     <x>102</x>
+     <y>170</y>
+    </hint>
+    <hint type="destinationlabel">
+     <x>71</x>
+     <y>-23</y>
+    </hint>
+   </hints>
+  </connection>
+  <connection>
+   <sender>export_metadata</sender>
+   <signal>toggled(bool)</signal>
+   <receiver>export_preferences</receiver>
+   <slot>action_toggled_export_metadata(bool)</slot>
+   <hints>
+    <hint type="sourcelabel">
+     <x>320</x>
+     <y>208</y>
+    </hint>
+    <hint type="destinationlabel">
+     <x>396</x>
+     <y>-2</y>
+    </hint>
+   </hints>
+  </connection>
+  <connection>
+   <sender>metadata_prompt</sender>
+   <signal>toggled(bool)</signal>
+   <receiver>export_preferences</receiver>
+   <slot>action_toggled_prompt(bool)</slot>
+   <hints>
+    <hint type="sourcelabel">
+     <x>53</x>
+     <y>255</y>
+    </hint>
+    <hint type="destinationlabel">
+     <x>54</x>
+     <y>-11</y>
+    </hint>
+   </hints>
+  </connection>
+  <connection>
+   <sender>metadata_negative_prompt</sender>
+   <signal>toggled(bool)</signal>
+   <receiver>export_preferences</receiver>
+   <slot>action_toggled_negative_prompt(bool)</slot>
+   <hints>
+    <hint type="sourcelabel">
+     <x>148</x>
+     <y>288</y>
+    </hint>
+    <hint type="destinationlabel">
+     <x>112</x>
+     <y>5</y>
+    </hint>
+   </hints>
+  </connection>
+  <connection>
+   <sender>metadata_scale</sender>
+   <signal>toggled(bool)</signal>
+   <receiver>export_preferences</receiver>
+   <slot>action_toggled_scale(bool)</slot>
+   <hints>
+    <hint type="sourcelabel">
+     <x>29</x>
+     <y>317</y>
+    </hint>
+    <hint type="destinationlabel">
+     <x>1</x>
+     <y>33</y>
+    </hint>
+   </hints>
+  </connection>
+  <connection>
+   <sender>metadata_seed</sender>
+   <signal>toggled(bool)</signal>
+   <receiver>export_preferences</receiver>
+   <slot>action_toggled_seed(bool)</slot>
+   <hints>
+    <hint type="sourcelabel">
+     <x>51</x>
+     <y>345</y>
+    </hint>
+    <hint type="destinationlabel">
+     <x>0</x>
+     <y>209</y>
+    </hint>
+   </hints>
+  </connection>
+  <connection>
+   <sender>metadata_steps</sender>
+   <signal>toggled(bool)</signal>
+   <receiver>export_preferences</receiver>
+   <slot>action_toggled_steps(bool)</slot>
+   <hints>
+    <hint type="sourcelabel">
+     <x>86</x>
+     <y>371</y>
+    </hint>
+    <hint type="destinationlabel">
+     <x>-1</x>
+     <y>114</y>
+    </hint>
+   </hints>
+  </connection>
+  <connection>
+   <sender>metadata_iterations</sender>
+   <signal>toggled(bool)</signal>
+   <receiver>export_preferences</receiver>
+   <slot>action_toggled_iterations(bool)</slot>
+   <hints>
+    <hint type="sourcelabel">
+     <x>75</x>
+     <y>398</y>
+    </hint>
+    <hint type="destinationlabel">
+     <x>-6</x>
+     <y>146</y>
+    </hint>
+   </hints>
+  </connection>
+  <connection>
+   <sender>metadata_samples</sender>
+   <signal>toggled(bool)</signal>
+   <receiver>export_preferences</receiver>
+   <slot>action_toggled_samples(bool)</slot>
+   <hints>
+    <hint type="sourcelabel">
+     <x>255</x>
+     <y>258</y>
+    </hint>
+    <hint type="destinationlabel">
+     <x>446</x>
+     <y>24</y>
+    </hint>
+   </hints>
+  </connection>
+  <connection>
+   <sender>metadata_model</sender>
+   <signal>toggled(bool)</signal>
+   <receiver>export_preferences</receiver>
+   <slot>action_toggled_model(bool)</slot>
+   <hints>
+    <hint type="sourcelabel">
+     <x>231</x>
+     <y>286</y>
+    </hint>
+    <hint type="destinationlabel">
+     <x>373</x>
+     <y>15</y>
+    </hint>
+   </hints>
+  </connection>
+  <connection>
+   <sender>metadata_model_branch</sender>
+   <signal>toggled(bool)</signal>
+   <receiver>export_preferences</receiver>
+   <slot>action_toggled_model_branch(bool)</slot>
+   <hints>
+    <hint type="sourcelabel">
+     <x>295</x>
+     <y>317</y>
+    </hint>
+    <hint type="destinationlabel">
+     <x>450</x>
+     <y>190</y>
+    </hint>
+   </hints>
+  </connection>
+  <connection>
+   <sender>metadata_scheduler</sender>
+   <signal>toggled(bool)</signal>
+   <receiver>export_preferences</receiver>
+   <slot>action_toggled_scheduler(bool)</slot>
+   <hints>
+    <hint type="sourcelabel">
+     <x>264</x>
+     <y>349</y>
+    </hint>
+    <hint type="destinationlabel">
+     <x>449</x>
+     <y>240</y>
+    </hint>
+   </hints>
+  </connection>
+  <connection>
+   <sender>metadata_ddim_eta</sender>
+   <signal>toggled(bool)</signal>
+   <receiver>export_preferences</receiver>
+   <slot>action_toggled_ddim(bool)</slot>
+   <hints>
+    <hint type="sourcelabel">
+     <x>220</x>
+     <y>369</y>
+    </hint>
+    <hint type="destinationlabel">
+     <x>454</x>
+     <y>275</y>
+    </hint>
+   </hints>
+  </connection>
+ </connections>
+ <slots>
+  <slot>action_toggle_automatically_export_images(bool)</slot>
+  <slot>image_export_path_text_edited(QString)</slot>
+  <slot>action_clicked_button_browse()</slot>
+  <slot>action_image_type_text_changed(QString)</slot>
+  <slot>action_toggled_export_metadata(bool)</slot>
+  <slot>action_toggled_prompt(bool)</slot>
+  <slot>action_toggled_negative_prompt(bool)</slot>
+  <slot>action_toggled_scale(bool)</slot>
+  <slot>action_toggled_seed(bool)</slot>
+  <slot>action_toggled_steps(bool)</slot>
+  <slot>action_toggled_iterations(bool)</slot>
+  <slot>action_toggled_model(bool)</slot>
+  <slot>action_toggled_model_branch(bool)</slot>
+  <slot>action_toggled_scheduler(bool)</slot>
+  <slot>action_toggled_samples(bool)</slot>
+  <slot>action_toggled_ddim(bool)</slot>
+ </slots>
 </ui>
