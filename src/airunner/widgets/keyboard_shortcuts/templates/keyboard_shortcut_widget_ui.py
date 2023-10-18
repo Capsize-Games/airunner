@@ -9,19 +9,19 @@
 from PyQt6 import QtCore, QtGui, QtWidgets
 
 
-class Ui_Form(object):
-    def setupUi(self, Form):
-        Form.setObjectName("Form")
-        Form.resize(400, 43)
-        self.horizontalLayout = QtWidgets.QHBoxLayout(Form)
+class Ui_keyboard_shortcut_widget(object):
+    def setupUi(self, keyboard_shortcut_widget):
+        keyboard_shortcut_widget.setObjectName("keyboard_shortcut_widget")
+        keyboard_shortcut_widget.resize(400, 43)
+        self.horizontalLayout = QtWidgets.QHBoxLayout(keyboard_shortcut_widget)
         self.horizontalLayout.setObjectName("horizontalLayout")
-        self.label = QtWidgets.QLabel(parent=Form)
+        self.label = QtWidgets.QLabel(parent=keyboard_shortcut_widget)
         font = QtGui.QFont()
         font.setPointSize(8)
         self.label.setFont(font)
         self.label.setObjectName("label")
         self.horizontalLayout.addWidget(self.label)
-        self.line_edit = QtWidgets.QLineEdit(parent=Form)
+        self.line_edit = QtWidgets.QLineEdit(parent=keyboard_shortcut_widget)
         font = QtGui.QFont()
         font.setPointSize(8)
         self.line_edit.setFont(font)
@@ -29,10 +29,10 @@ class Ui_Form(object):
         self.line_edit.setObjectName("line_edit")
         self.horizontalLayout.addWidget(self.line_edit)
 
-        self.retranslateUi(Form)
-        QtCore.QMetaObject.connectSlotsByName(Form)
+        self.retranslateUi(keyboard_shortcut_widget)
+        QtCore.QMetaObject.connectSlotsByName(keyboard_shortcut_widget)
 
-    def retranslateUi(self, Form):
+    def retranslateUi(self, keyboard_shortcut_widget):
         _translate = QtCore.QCoreApplication.translate
-        Form.setWindowTitle(_translate("Form", "Form"))
-        self.label.setText(_translate("Form", "TextLabel"))
+        keyboard_shortcut_widget.setWindowTitle(_translate("keyboard_shortcut_widget", "Form"))
+        self.label.setText(_translate("keyboard_shortcut_widget", "TextLabel"))

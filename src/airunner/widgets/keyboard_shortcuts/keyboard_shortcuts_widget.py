@@ -2,10 +2,13 @@ import os
 
 from PyQt6 import uic, QtCore
 
-from airunner.windows.custom_widget import CustomWidget
+from airunner.widgets.base_widget import BaseWidget
+from airunner.widgets.keyboard_shortcuts.templates.keyboard_shortcuts_ui import Ui_keyboard_shortcuts
 
 
-class KeyboardShortcutsWidget(CustomWidget):
+class KeyboardShortcutsWidget(BaseWidget):
+    widget_class_ = Ui_keyboard_shortcuts
+
     shortcuts = {
         "Generate": {
             "display_name": "F5",
@@ -22,7 +25,7 @@ class KeyboardShortcutsWidget(CustomWidget):
     }
 
     def __init__(self, **kwargs):
-        super().__init__(**kwargs, filename="keyboard_shortcuts")
+        super().__init__(**kwargs)
 
         self.initialize_ui()
 
@@ -32,11 +35,11 @@ class KeyboardShortcutsWidget(CustomWidget):
             self.shortcuts[key]["widget"] = widget
 
     def add_widget(self, key, value):
-        widget = uic.loadUi(os.path.join(f"widgets/keyboard_shortcut_widget.ui"))
+        widget = uic.loadUi(os.path.join(f"widgets/keyboard_shortcuts/templates/keyboard_shortcut_widget.ui"))
         widget.label.setText(key)
         widget.line_edit.setText(value["display_name"])
         widget.line_edit.mousePressEvent = lambda event: self.set_shortcut(key, widget.line_edit)
-        self.scrollAreaWidgetContents.layout().addWidget(widget)
+        self.ui.scrollAreaWidgetContents.layout().addWidget(widget)
         return widget
 
     def set_shortcut(self, key, line_edit):
