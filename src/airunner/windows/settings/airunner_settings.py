@@ -5,6 +5,7 @@ from airunner.widgets.export_preferences.export_preferences_widget import Export
 from airunner.widgets.grid_preferences.grid_preferences_widget import GridPreferencesWidget
 
 from airunner.widgets.keyboard_shortcuts.keyboard_shortcuts_widget import KeyboardShortcutsWidget
+from airunner.widgets.memory_preferences.memory_preferences_widget import MemoryPreferencesWidget
 from airunner.widgets.paths.paths_widget import PathsWidget
 from airunner.windows.settings.templates.airunner_settings_ui import Ui_airunner_settings
 from airunner.windows.base_window import BaseWindow
@@ -236,11 +237,11 @@ class SettingsWindow(BaseWindow):
             "keyboard_shortcuts": KeyboardShortcutsWidget,
             "export_preferences": ExportPreferencesWidget,
             "grid": GridPreferencesWidget,
-            "memory": MemoryWidget,
+            "memory": MemoryPreferencesWidget,
             # "hf_api_key": HFAPIKeyWidget,
         }
         if name in widgets:
-            if name in ["paths", "export_preferences", "grid"]:
+            if name in ["paths", "export_preferences", "grid", "memory"]:
                 widget_object = widgets[name]()
             else:
                 widget_object = widgets[name](

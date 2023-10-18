@@ -1,13 +1,13 @@
 <?xml version="1.0" encoding="UTF-8"?>
 <ui version="4.0">
- <class>Form</class>
- <widget class="QWidget" name="Form">
+ <class>memory_preferences</class>
+ <widget class="QWidget" name="memory_preferences">
   <property name="geometry">
    <rect>
     <x>0</x>
     <y>0</y>
     <width>352</width>
-    <height>504</height>
+    <height>544</height>
    </rect>
   </property>
   <property name="windowTitle">
@@ -365,5 +365,161 @@
   </layout>
  </widget>
  <resources/>
- <connections/>
+ <connections>
+  <connection>
+   <sender>use_accelerated_transformers</sender>
+   <signal>toggled(bool)</signal>
+   <receiver>memory_preferences</receiver>
+   <slot>action_toggled_accelerated_transformers(bool)</slot>
+   <hints>
+    <hint type="sourcelabel">
+     <x>145</x>
+     <y>62</y>
+    </hint>
+    <hint type="destinationlabel">
+     <x>5</x>
+     <y>5</y>
+    </hint>
+   </hints>
+  </connection>
+  <connection>
+   <sender>use_attention_slicing</sender>
+   <signal>toggled(bool)</signal>
+   <receiver>memory_preferences</receiver>
+   <slot>action_toggled_attention_slicing(bool)</slot>
+   <hints>
+    <hint type="sourcelabel">
+     <x>86</x>
+     <y>142</y>
+    </hint>
+    <hint type="destinationlabel">
+     <x>2</x>
+     <y>39</y>
+    </hint>
+   </hints>
+  </connection>
+  <connection>
+   <sender>use_lastchannels</sender>
+   <signal>toggled(bool)</signal>
+   <receiver>memory_preferences</receiver>
+   <slot>action_toggled_last_memory(bool)</slot>
+   <hints>
+    <hint type="sourcelabel">
+     <x>163</x>
+     <y>198</y>
+    </hint>
+    <hint type="destinationlabel">
+     <x>271</x>
+     <y>6</y>
+    </hint>
+   </hints>
+  </connection>
+  <connection>
+   <sender>use_enable_sequential_cpu_offload</sender>
+   <signal>toggled(bool)</signal>
+   <receiver>memory_preferences</receiver>
+   <slot>action_toggled_sequential_cpu_offload(bool)</slot>
+   <hints>
+    <hint type="sourcelabel">
+     <x>124</x>
+     <y>255</y>
+    </hint>
+    <hint type="destinationlabel">
+     <x>258</x>
+     <y>0</y>
+    </hint>
+   </hints>
+  </connection>
+  <connection>
+   <sender>enable_model_cpu_offload</sender>
+   <signal>toggled(bool)</signal>
+   <receiver>memory_preferences</receiver>
+   <slot>action_toggled_sequential_cpu_offload(bool)</slot>
+   <hints>
+    <hint type="sourcelabel">
+     <x>75</x>
+     <y>321</y>
+    </hint>
+    <hint type="destinationlabel">
+     <x>2</x>
+     <y>268</y>
+    </hint>
+   </hints>
+  </connection>
+  <connection>
+   <sender>use_tf32</sender>
+   <signal>toggled(bool)</signal>
+   <receiver>memory_preferences</receiver>
+   <slot>action_toggled_tf32(bool)</slot>
+   <hints>
+    <hint type="sourcelabel">
+     <x>37</x>
+     <y>382</y>
+    </hint>
+    <hint type="destinationlabel">
+     <x>-3</x>
+     <y>318</y>
+    </hint>
+   </hints>
+  </connection>
+  <connection>
+   <sender>use_enable_vae_slicing</sender>
+   <signal>toggled(bool)</signal>
+   <receiver>memory_preferences</receiver>
+   <slot>action_toggled_vae_slicing(bool)</slot>
+   <hints>
+    <hint type="sourcelabel">
+     <x>93</x>
+     <y>438</y>
+    </hint>
+    <hint type="destinationlabel">
+     <x>0</x>
+     <y>388</y>
+    </hint>
+   </hints>
+  </connection>
+  <connection>
+   <sender>use_tiled_vae</sender>
+   <signal>toggled(bool)</signal>
+   <receiver>memory_preferences</receiver>
+   <slot>action_toggled_tile_vae(bool)</slot>
+   <hints>
+    <hint type="sourcelabel">
+     <x>40</x>
+     <y>495</y>
+    </hint>
+    <hint type="destinationlabel">
+     <x>-1</x>
+     <y>440</y>
+    </hint>
+   </hints>
+  </connection>
+  <connection>
+   <sender>optimize_memory_button</sender>
+   <signal>clicked()</signal>
+   <receiver>memory_preferences</receiver>
+   <slot>action_button_clicked_optimize_memory_settings()</slot>
+   <hints>
+    <hint type="sourcelabel">
+     <x>155</x>
+     <y>28</y>
+    </hint>
+    <hint type="destinationlabel">
+     <x>176</x>
+     <y>-14</y>
+    </hint>
+   </hints>
+  </connection>
+ </connections>
+ <slots>
+  <slot>action_button_clicked_optimize_memory_settings()</slot>
+  <slot>action_toggled_accelerated_transformers(bool)</slot>
+  <slot>action_toggled_attention_slicing(bool)</slot>
+  <slot>action_toggled_last_memory(bool)</slot>
+  <slot>action_toggled_sequential_cpu_offload(bool)</slot>
+  <slot>action_toggled_model_cpu_offload(bool)</slot>
+  <slot>action_toggled_tf32(bool)</slot>
+  <slot>action_toggled_vae_slicing(bool)</slot>
+  <slot>action_toggled_tile_vae(bool)</slot>
+ </slots>
 </ui>
