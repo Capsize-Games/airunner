@@ -231,4 +231,4 @@ class ModelManagerWidget(BaseWidget):
         self.save_model(self.current_model_object)
 
     def tab_changed(self, val):
-        print(val)
+        print("tab_changed", val)
