@@ -5,30 +5,37 @@ from PyQt6.QtCore import pyqtSlot
 
 from airunner.aihandler.enums import MessageCode
 from airunner.data.db import session
-from airunner.data.models import LLMGenerator
+from airunner.data.models import LLMGenerator, Conversation, Message
 from airunner.utils import save_session
 from airunner.widgets.base_widget import BaseWidget
+from airunner.widgets.llm.message_widget import MessageWidget
 from airunner.widgets.llm.templates.llm_widget_ui import Ui_llm_widget
 
 
 class LLMWidget(BaseWidget):
     widget_class_ = Ui_llm_widget
     generator = None
+    conversation = None
     is_modal = True
     prefix = ""
     prompt = ""
     suffix = ""
     current_generator = "Flan"
+    conversation_history = []
 
     def load_data(self):
         self.generator = session.query(LLMGenerator).filter(
             LLMGenerator.name == self.current_generator
         ).first()
+        self.conversation = session.query(Conversation).first()
+        if self.conversation is None:
+            self.conversation = Conversation()
+            session.add(self.conversation)
+            session.commit()
 
     def __init__(self, *args, **kwargs):
         super().__init__(*args, **kwargs)
         self.load_data()
-        self.ui.response.blockSignals(True)
         self.ui.prompt.blockSignals(True)
         self.ui.botname.blockSignals(True)
         self.ui.username.blockSignals(True)
@@ -42,7 +49,6 @@ class LLMWidget(BaseWidget):
         self.ui.model_version.addItems(model_versions)
         self.ui.model_version.setCurrentText(self.generator.generator_settings[0].model_version)
 
-        self.ui.response.blockSignals(False)
         self.ui.prompt.blockSignals(False)
         self.ui.botname.blockSignals(False)
         self.ui.username.blockSignals(False)
@@ -51,6 +57,9 @@ class LLMWidget(BaseWidget):
         self.ui.model_version.blockSignals(False)
 
         self.app.message_var.my_signal.connect(self.message_handler)
+
+        # if self.ui.prompt is selected and enter is pressed, send the message
+        self.ui.prompt.returnPressed.connect(self.action_button_clicked_send)
 
     @pyqtSlot(dict)
     def message_handler(self, response: dict):
@@ -65,9 +74,19 @@ class LLMWidget(BaseWidget):
         }.get(code, lambda *args: None)(message)
 
     def handle_text_generated(self, message):
-        current_text = self.ui.response.toPlainText()
-        current_text += "\n" + message
-        self.ui.response.setPlainText(message)
+        # strip quotes from start and end of message
+        if message.startswith("\""):
+            message = message[1:]
+        if message.endswith("\""):
+            message = message[:-1]
+        message_object = Message(
+            name=self.generator.botname,
+            message=message,
+            conversation=self.conversation
+        )
+        session.add(message_object)
+        session.commit()
+        self.add_message_to_conversation(message_object)
     
     def prefix_text_changed(self, val):
         self.generator.prefix = val
@@ -79,20 +98,6 @@ class LLMWidget(BaseWidget):
     def suffix_text_changed(self, val):
         self.generator.suffix = val
         save_session()
-
-    def action_button_clicked_generated(self):
-        prompt = "\n\n".join([self.prefix, self.prompt, self.suffix])
-        data = {
-            "llm_request": True,
-            "request_data": (
-                "Flan",
-                "google/flan-t5-xl",
-                prompt
-            )
-        }
-        self.app.client.message = data
-        self.clear_prompt()
-        self.start_progress_bar()
 
     def clear_prompt(self):
         self.ui.prompt.setText("")
@@ -130,4 +135,46 @@ class LLMWidget(BaseWidget):
 
     def botname_text_changed(self, val):
         self.generator.botname = val
+        save_session()
+
+    def action_button_clicked_send(self):
+        conversation = "\n".join(self.conversation_history)
+
+        input = f"{self.generator.username} Says: \"{self.prompt}\""
+        suffix = "\n".join([self.suffix, f'{self.generator.botname} Says: '])
+        prompt = "\n\n".join([self.prefix, conversation, input, suffix])
+        data = {
+            "llm_request": True,
+            "request_data": (
+                "Flan",
+                "google/flan-t5-xl",
+                prompt
+            )
+        }
+        message_object = Message(
+            name=self.generator.username,
+            message=self.prompt,
+            conversation=self.conversation
+        )
+        session.add(message_object)
+        session.commit()
+        self.app.client.message = data
+        self.add_message_to_conversation(message_object)
+        self.clear_prompt()
+        self.start_progress_bar()
+
+    def add_message_to_conversation(self, message_object):
+        message = f"{message_object.name} Says: \"{message_object.message}\""
+        self.conversation_history.append(message)
+        widget = MessageWidget(message=message_object)
+        self.ui.scrollAreaWidgetContents.layout().addWidget(widget)
+
+    def action_button_clicked_generate_characters(self):
+        pass
+
+    def action_button_clicked_clear_conversation(self):
+        self.conversation_history = []
+
+    def message_type_text_changed(self, val):
+        self.generator.message_type = val
         save_session()

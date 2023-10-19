@@ -306,6 +306,7 @@ class MainWindow(
         for each panel section.
         :return:
         """
+        self.ui.mode_tab_widget.currentChanged.connect(self.mode_tab_index_changed)
         tabsections = session.query(TabSection).filter(
             TabSection.panel != "generator_tabs"
         ).all()
@@ -315,6 +316,14 @@ class MainWindow(
                 if widget.tabText(i) == ts.active_tab:
                     widget.setCurrentIndex(i)
                     break
+
+        for i in range(self.ui.mode_tab_widget.count()):
+            if self.ui.mode_tab_widget.tabText(i) == self.settings_manager.mode:
+                self.ui.mode_tab_widget.setCurrentIndex(i)
+                break
+
+    def mode_tab_index_changed(self, index):
+        self.settings_manager.set_value("mode", self.ui.mode_tab_widget.tabText(index))
 
     def on_show(self):
         self.ui.canvas_plus_widget.do_draw()
