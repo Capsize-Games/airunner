@@ -2,6 +2,7 @@
 This class should be used to create a window widget for the LLM.
 """
 from PyQt6.QtCore import pyqtSlot
+from PyQt6.QtWidgets import QSpacerItem, QSizePolicy
 
 from airunner.aihandler.enums import MessageCode
 from airunner.data.db import session
@@ -61,6 +62,9 @@ class LLMWidget(BaseWidget):
         # if self.ui.prompt is selected and enter is pressed, send the message
         self.ui.prompt.returnPressed.connect(self.action_button_clicked_send)
 
+        self.spacer = QSpacerItem(20, 40, QSizePolicy.Policy.Minimum, QSizePolicy.Policy.Expanding)
+        self.ui.scrollAreaWidgetContents.layout().addSpacerItem(self.spacer)
+
     @pyqtSlot(dict)
     def message_handler(self, response: dict):
         print("message_handler", response)
@@ -74,6 +78,8 @@ class LLMWidget(BaseWidget):
         }.get(code, lambda *args: None)(message)
 
     def handle_text_generated(self, message):
+        self.stop_progress_bar()
+
         # strip quotes from start and end of message
         if message.startswith("\""):
             message = message[1:]
@@ -86,7 +92,7 @@ class LLMWidget(BaseWidget):
         )
         session.add(message_object)
         session.commit()
-        self.add_message_to_conversation(message_object)
+        self.add_message_to_conversation(message_object, is_bot=True)
     
     def prefix_text_changed(self, val):
         self.generator.prefix = val
@@ -105,6 +111,11 @@ class LLMWidget(BaseWidget):
     def start_progress_bar(self):
         self.ui.progressBar.setRange(0, 0)
         self.ui.progressBar.setValue(0)
+
+    def stop_progress_bar(self):
+        self.ui.progressBar.setRange(0, 1)
+        self.ui.progressBar.setValue(1)
+        self.ui.progressBar.reset()
 
     def seed_changed(self, val):
         self.generator.generator_settings[0].seed = val
@@ -146,8 +157,8 @@ class LLMWidget(BaseWidget):
         data = {
             "llm_request": True,
             "request_data": (
-                "Flan",
-                "google/flan-t5-xl",
+                self.generator.name,
+                self.generator.generator_settings[0].model_version,
                 prompt
             )
         }
@@ -159,15 +170,19 @@ class LLMWidget(BaseWidget):
         session.add(message_object)
         session.commit()
         self.app.client.message = data
-        self.add_message_to_conversation(message_object)
+        self.add_message_to_conversation(message_object=message_object, is_bot=False)
         self.clear_prompt()
         self.start_progress_bar()
 
-    def add_message_to_conversation(self, message_object):
+    def add_message_to_conversation(self, message_object, is_bot):
         message = f"{message_object.name} Says: \"{message_object.message}\""
         self.conversation_history.append(message)
-        widget = MessageWidget(message=message_object)
+        widget = MessageWidget(message=message_object, is_bot=is_bot)
+        # add the widget to the scroll area but above the spacer
+        self.ui.scrollAreaWidgetContents.layout().removeItem(self.spacer)
         self.ui.scrollAreaWidgetContents.layout().addWidget(widget)
+        self.ui.scrollAreaWidgetContents.layout().addSpacerItem(self.spacer)
+        self.ui.conversation.ensureWidgetVisible(widget)
 
     def action_button_clicked_generate_characters(self):
         pass
