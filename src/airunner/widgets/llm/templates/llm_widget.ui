@@ -113,6 +113,9 @@
             <property name="text">
              <string>ChatAI</string>
             </property>
+            <property name="cursorPosition">
+             <number>6</number>
+            </property>
            </widget>
           </item>
          </layout>
@@ -120,6 +123,9 @@
        </item>
        <item row="0" column="0">
         <widget class="QScrollArea" name="conversation">
+         <property name="styleSheet">
+          <string notr="true">background: #fff;</string>
+         </property>
          <property name="widgetResizable">
           <bool>true</bool>
          </property>
@@ -172,6 +178,13 @@
            </item>
           </layout>
          </widget>
+        </widget>
+       </item>
+       <item row="1" column="0">
+        <widget class="QCheckBox" name="checkBox">
+         <property name="text">
+          <string>Enable typing delay (slower responses, more realisitic experience)</string>
+         </property>
         </widget>
        </item>
       </layout>
@@ -702,6 +715,24 @@
    <container>1</container>
   </customwidget>
  </customwidgets>
+ <tabstops>
+  <tabstop>botname</tabstop>
+  <tabstop>username</tabstop>
+  <tabstop>prompt</tabstop>
+  <tabstop>comboBox</tabstop>
+  <tabstop>send_button</tabstop>
+  <tabstop>generate_characters_button</tabstop>
+  <tabstop>clear_conversatiion_button</tabstop>
+  <tabstop>tabWidget</tabstop>
+  <tabstop>prefix</tabstop>
+  <tabstop>suffix</tabstop>
+  <tabstop>model_version</tabstop>
+  <tabstop>do_sample</tabstop>
+  <tabstop>early_stopping</tabstop>
+  <tabstop>seed_2</tabstop>
+  <tabstop>random_seed</tabstop>
+  <tabstop>conversation</tabstop>
+ </tabstops>
  <resources/>
  <connections>
   <connection>
