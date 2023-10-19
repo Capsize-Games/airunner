@@ -550,6 +550,8 @@ class Settings(Base):
     working_height = Column(Integer, default=512)
     hf_api_key = Column(String, default="")
 
+    mode = Column(String, default="art")
+
     brush_settings_id = Column(Integer, ForeignKey('brush_settings.id'))
     brush_settings = relationship("BrushSettings", back_populates="settings")
 
@@ -695,6 +697,7 @@ class LLMGenerator(Base):
     generator_settings = relationship('LLMGeneratorSetting', back_populates='generator')
     prefix = Column(String, default="")
     suffix = Column(String, default="")
+    message_type = Column(String, default="chat")
 
 
 class LLMGeneratorSetting(Base):
@@ -728,3 +731,19 @@ class LLMModelVersion(Base):
     name = Column(String)
     generator_id = Column(Integer, ForeignKey('generator.id'))
     generator = relationship('LLMGenerator', back_populates='model_versions')
+
+
+class Conversation(Base):
+    __tablename__ = 'conversation'
+    id = Column(Integer, primary_key=True)
+    created_at = Column(DateTime, default=datetime.datetime.utcnow)
+    messages = relationship('Message', back_populates='conversation')
+
+class Message(Base):
+    __tablename__ = 'messages'
+    id = Column(Integer, primary_key=True)
+    created_at = Column(DateTime, default=datetime.datetime.utcnow)
+    name = Column(String)
+    message = Column(String)
+    conversation_id = Column(Integer, ForeignKey('conversation.id'))
+    conversation = relationship('Conversation', back_populates='messages')
