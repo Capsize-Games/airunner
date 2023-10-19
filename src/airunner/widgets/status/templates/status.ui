@@ -74,9 +74,9 @@
     </widget>
    </item>
    <item>
-    <widget class="QLabel" name="vram_stats">
+    <widget class="QLabel" name="ram_stats">
      <property name="text">
-      <string>vram</string>
+      <string>ram</string>
      </property>
     </widget>
    </item>
@@ -88,9 +88,9 @@
     </widget>
    </item>
    <item>
-    <widget class="QLabel" name="ram_stats">
+    <widget class="QLabel" name="vram_stats">
      <property name="text">
-      <string>ram</string>
+      <string>vram</string>
      </property>
     </widget>
    </item>
