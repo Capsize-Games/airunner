@@ -2,6 +2,7 @@ from functools import partial
 
 from PyQt6.QtCore import Qt
 from PyQt6.QtWidgets import QLabel
+from PyQt6.QtCore import QTimer
 
 from airunner.widgets.base_widget import BaseWidget
 from airunner.widgets.slider.templates.slider_ui import Ui_slider_widget
@@ -85,6 +86,18 @@ class SliderWidget(BaseWidget):
         self.ui.slider_spinbox.setMinimum(val)
 
     def initialize(self):
+        # import traceback
+        # traceback.print_stack()
+        # print("initialize")
+        pass
+
+    def __init__(self, *args, **kwargs):
+        super().__init__(*args, **kwargs)
+        self.app.loaded.connect(self.initialize_properties)
+    
+    def initialize_properties(self):
+        if self.property("settings_property") is None:
+            return
         slider_minimum = self.property("slider_minimum") or 0
         slider_maximum = self.property("slider_maximum") or 100
         slider_tick_interval = self.property("slider_tick_interval") or 8
@@ -102,6 +115,8 @@ class SliderWidget(BaseWidget):
         settings_property = self.property("settings_property") or None
         self.display_as_float = self.property("display_as_float") or False
         self.divide_by = self.property("divide_by") or 1.0
+
+        current_value = self.settings_manager.get_value(settings_property) or 0
 
         if slider_callback != "":
             slider_callback = partial(getattr(self.app, slider_callback), settings_property)
@@ -135,19 +150,29 @@ class SliderWidget(BaseWidget):
         # self.ui.slider_spinbox.lineEdit().hide()
         self.ui.slider_spinbox.setFixedWidth(50)
         self.ui.slider_spinbox.valueChanged.connect(self.handle_spinbox_change)
-        self.ui.slider.setValue(int(current_value))
+        self.ui.slider.valueChanged.connect(self.handle_slider_change)
+        self.set_slider_and_spinbox_values(current_value)
+        if not self.display_as_float:
+            self.ui.slider_spinbox.setDecimals(0)
+    
+    def set_slider_and_spinbox_values(self, val):
+        self.ui.slider.blockSignals(True)
+        self.ui.slider_spinbox.blockSignals(True)
+
         single_step = self.ui.slider.singleStep()
-        adjusted_value = current_value
+        adjusted_value = val
         if single_step > 0:
-            adjusted_value = round(current_value / single_step) * single_step
+            adjusted_value = round(val / single_step) * single_step
         normalized = adjusted_value / self.slider_maximum
         spinbox_val = normalized * self.spinbox_maximum
         spinbox_val = round(spinbox_val, 2)
         self.ui.slider_spinbox.setValue(spinbox_val)
-        self.ui.slider.valueChanged.connect(self.handle_slider_change)
 
-        if not self.display_as_float:
-            self.ui.slider_spinbox.setDecimals(0)
+        self.ui.slider.setValue(int(val))
+        self.ui.slider_spinbox.setValue(spinbox_val)
+
+        self.ui.slider.blockSignals(False)
+        self.ui.slider_spinbox.blockSignals(False)
 
     @property
     def current_value(self):
