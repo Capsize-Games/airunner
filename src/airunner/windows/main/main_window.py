@@ -295,8 +295,23 @@ class MainWindow(
         self.ui.layer_widget.initialize()
 
         # call a function after the window has finished loading:
-        self.ui.canvas_plus_widget.initialize()
         QTimer.singleShot(500, self.on_show)
+
+        self.ui.mode_tab_widget.tabBar().hide()
+
+        self.ui.image_generation_button.blockSignals(True)
+        self.ui.language_processing_button.blockSignals(True)
+
+        print(self.settings_manager.mode)
+        self.ui.image_generation_button.setChecked(
+            self.settings_manager.mode == "Image Generation"
+        )
+        self.ui.language_processing_button.setChecked(
+            self.settings_manager.mode == "Language Processing"
+        )
+        
+        self.ui.image_generation_button.blockSignals(False)
+        self.ui.language_processing_button.blockSignals(False)
 
         self.initialize_panel_tabs()
         self.loaded.emit()
@@ -1393,3 +1408,11 @@ class MainWindow(
 
     def new_batch(self, index, image, data):
         self.generator_tab_widget.current_generator.new_batch(index, image, data)
+
+    def image_generation_toggled(self, val):
+        self.ui.mode_tab_widget.setCurrentIndex(0 if val else 1)
+        self.ui.language_processing_button.setChecked(not val)
+
+    def language_processing_toggled(self, val):
+        self.ui.mode_tab_widget.setCurrentIndex(1 if val else 0)
+        self.ui.image_generation_button.setChecked(not val)
