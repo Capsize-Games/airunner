@@ -12,7 +12,7 @@ from PyQt6 import QtCore, QtGui, QtWidgets
 class Ui_LayerWidget(object):
     def setupUi(self, LayerWidget):
         LayerWidget.setObjectName("LayerWidget")
-        LayerWidget.resize(669, 155)
+        LayerWidget.resize(669, 128)
         sizePolicy = QtWidgets.QSizePolicy(QtWidgets.QSizePolicy.Policy.Preferred, QtWidgets.QSizePolicy.Policy.Maximum)
         sizePolicy.setHorizontalStretch(0)
         sizePolicy.setVerticalStretch(0)
