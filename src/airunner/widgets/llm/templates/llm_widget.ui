@@ -6,8 +6,8 @@
    <rect>
     <x>0</x>
     <y>0</y>
-    <width>511</width>
-    <height>872</height>
+    <width>652</width>
+    <height>945</height>
    </rect>
   </property>
   <property name="windowTitle">
@@ -40,32 +40,7 @@
        <string>Chat</string>
       </attribute>
       <layout class="QGridLayout" name="gridLayout_8">
-       <item row="4" column="0">
-        <layout class="QHBoxLayout" name="horizontalLayout_2">
-         <item>
-          <widget class="QPushButton" name="send_button">
-           <property name="text">
-            <string>Send</string>
-           </property>
-          </widget>
-         </item>
-         <item>
-          <widget class="QPushButton" name="generate_characters_button">
-           <property name="text">
-            <string>Generate Characters</string>
-           </property>
-          </widget>
-         </item>
-         <item>
-          <widget class="QPushButton" name="clear_conversatiion_button">
-           <property name="text">
-            <string>Clear Conversation</string>
-           </property>
-          </widget>
-         </item>
-        </layout>
-       </item>
-       <item row="3" column="0">
+       <item row="1" column="0">
         <widget class="QGroupBox" name="groupBox_5">
          <property name="title">
           <string>Message</string>
@@ -91,7 +66,28 @@
          </layout>
         </widget>
        </item>
-       <item row="5" column="0">
+       <item row="0" column="0">
+        <widget class="QScrollArea" name="conversation">
+         <property name="styleSheet">
+          <string notr="true"/>
+         </property>
+         <property name="widgetResizable">
+          <bool>true</bool>
+         </property>
+         <widget class="QWidget" name="scrollAreaWidgetContents">
+          <property name="geometry">
+           <rect>
+            <x>0</x>
+            <y>0</y>
+            <width>628</width>
+            <height>755</height>
+           </rect>
+          </property>
+          <layout class="QVBoxLayout" name="verticalLayout"/>
+         </widget>
+        </widget>
+       </item>
+       <item row="3" column="0">
         <widget class="QProgressBar" name="progressBar">
          <property name="value">
           <number>0</number>
@@ -99,19 +95,59 @@
         </widget>
        </item>
        <item row="2" column="0">
-        <widget class="QGroupBox" name="groupBox_4">
-         <property name="title">
-          <string>User name</string>
+        <layout class="QHBoxLayout" name="horizontalLayout_2">
+         <item>
+          <widget class="QPushButton" name="send_button">
+           <property name="text">
+            <string>Send</string>
+           </property>
+          </widget>
+         </item>
+         <item>
+          <widget class="QPushButton" name="clear_conversatiion_button">
+           <property name="text">
+            <string>Clear Conversation</string>
+           </property>
+          </widget>
+         </item>
+        </layout>
+       </item>
+      </layout>
+     </widget>
+     <widget class="QWidget" name="tab_2">
+      <attribute name="icon">
+       <iconset theme="preferences-desktop">
+        <normaloff>../../../</normaloff>../../../</iconset>
+      </attribute>
+      <attribute name="title">
+       <string>Preferences</string>
+      </attribute>
+      <layout class="QGridLayout" name="gridLayout_2">
+       <item row="0" column="0">
+        <widget class="QSplitter" name="splitter">
+         <property name="orientation">
+          <enum>Qt::Vertical</enum>
          </property>
-         <layout class="QGridLayout" name="gridLayout_7">
-          <item row="0" column="0">
-           <widget class="QLineEdit" name="username">
-            <property name="text">
-             <string>User</string>
-            </property>
-           </widget>
-          </item>
-         </layout>
+         <widget class="QGroupBox" name="groupBox">
+          <property name="title">
+           <string>Prefix</string>
+          </property>
+          <layout class="QGridLayout" name="gridLayout_3">
+           <item row="0" column="0">
+            <widget class="QPlainTextEdit" name="prefix"/>
+           </item>
+          </layout>
+         </widget>
+         <widget class="QGroupBox" name="groupBox_2">
+          <property name="title">
+           <string>Suffix</string>
+          </property>
+          <layout class="QGridLayout" name="gridLayout_4">
+           <item row="0" column="0">
+            <widget class="QPlainTextEdit" name="suffix"/>
+           </item>
+          </layout>
+         </widget>
         </widget>
        </item>
        <item row="1" column="0">
@@ -119,7 +155,7 @@
          <property name="title">
           <string>Bot name</string>
          </property>
-         <layout class="QGridLayout" name="gridLayout_6">
+         <layout class="QGridLayout" name="gridLayout_14">
           <item row="0" column="0">
            <widget class="QLineEdit" name="botname">
             <property name="text">
@@ -162,63 +198,27 @@
          </layout>
         </widget>
        </item>
-       <item row="0" column="0">
-        <widget class="QScrollArea" name="conversation">
-         <property name="styleSheet">
-          <string notr="true"/>
+       <item row="2" column="0">
+        <widget class="QGroupBox" name="groupBox_4">
+         <property name="title">
+          <string>User name</string>
          </property>
-         <property name="widgetResizable">
-          <bool>true</bool>
-         </property>
-         <widget class="QWidget" name="scrollAreaWidgetContents">
-          <property name="geometry">
-           <rect>
-            <x>0</x>
-            <y>0</y>
-            <width>487</width>
-            <height>532</height>
-           </rect>
-          </property>
-          <layout class="QVBoxLayout" name="verticalLayout"/>
-         </widget>
+         <layout class="QGridLayout" name="gridLayout_13">
+          <item row="0" column="0">
+           <widget class="QLineEdit" name="username">
+            <property name="text">
+             <string>User</string>
+            </property>
+           </widget>
+          </item>
+         </layout>
         </widget>
        </item>
-      </layout>
-     </widget>
-     <widget class="QWidget" name="tab_2">
-      <attribute name="icon">
-       <iconset theme="preferences-desktop">
-        <normaloff>../../../</normaloff>../../../</iconset>
-      </attribute>
-      <attribute name="title">
-       <string>Preferences</string>
-      </attribute>
-      <layout class="QGridLayout" name="gridLayout_2">
-       <item row="0" column="0">
-        <widget class="QSplitter" name="splitter">
-         <property name="orientation">
-          <enum>Qt::Vertical</enum>
+       <item row="3" column="0">
+        <widget class="QPushButton" name="generate_characters_button">
+         <property name="text">
+          <string>Generate Characters</string>
          </property>
-         <widget class="QGroupBox" name="groupBox">
-          <property name="title">
-           <string>Prefix</string>
-          </property>
-          <layout class="QGridLayout" name="gridLayout_3">
-           <item row="0" column="0">
-            <widget class="QPlainTextEdit" name="prefix"/>
-           </item>
-          </layout>
-         </widget>
-         <widget class="QGroupBox" name="groupBox_2">
-          <property name="title">
-           <string>Suffix</string>
-          </property>
-          <layout class="QGridLayout" name="gridLayout_4">
-           <item row="0" column="0">
-            <widget class="QPlainTextEdit" name="suffix"/>
-           </item>
-          </layout>
-         </widget>
         </widget>
        </item>
       </layout>
@@ -232,13 +232,6 @@
        <string>Settings</string>
       </attribute>
       <layout class="QGridLayout" name="gridLayout_5">
-       <item row="13" column="0">
-        <widget class="QCheckBox" name="do_sample">
-         <property name="text">
-          <string>Do sample</string>
-         </property>
-        </widget>
-       </item>
        <item row="0" column="0">
         <widget class="QGroupBox" name="groupBox_7">
          <property name="title">
@@ -320,18 +313,6 @@
              <string>Use GPU</string>
             </property>
            </widget>
-          </item>
-         </layout>
-        </widget>
-       </item>
-       <item row="11" column="0">
-        <widget class="QGroupBox" name="groupBox_19">
-         <property name="title">
-          <string>Seed</string>
-         </property>
-         <layout class="QGridLayout" name="gridLayout_23">
-          <item row="0" column="0">
-           <widget class="QLineEdit" name="seed_2"/>
           </item>
          </layout>
         </widget>
@@ -444,45 +425,52 @@
             </item>
            </layout>
           </item>
-          <item row="0" column="0">
-           <layout class="QHBoxLayout" name="horizontalLayout_9">
+          <item row="7" column="0">
+           <widget class="QCheckBox" name="do_sample">
+            <property name="text">
+             <string>Do sample</string>
+            </property>
+           </widget>
+          </item>
+          <item row="1" column="0">
+           <layout class="QHBoxLayout" name="horizontalLayout_7">
             <item>
-             <widget class="QGroupBox" name="groupBox_20">
+             <widget class="QGroupBox" name="groupBox_11">
               <property name="title">
-               <string>Top P</string>
+               <string>Repetition penalty</string>
               </property>
-              <layout class="QGridLayout" name="gridLayout_24">
+              <layout class="QGridLayout" name="gridLayout_19">
                <item row="0" column="0">
-                <widget class="SliderWidget" name="top_p_2" native="true">
+                <widget class="SliderWidget" name="repetition_penalty_2" native="true">
                  <property name="slider_minimum" stdset="0">
-                  <number>1</number>
+                  <number>0</number>
                  </property>
                  <property name="slider_maximum" stdset="0">
-                  <number>100</number>
+                  <number>10000</number>
                  </property>
                  <property name="spinbox_minimum" stdset="0">
                   <double>0.000000000000000</double>
                  </property>
                  <property name="spinbox_maximum" stdset="0">
-                  <double>1.000000000000000</double>
+                  <double>100.000000000000000</double>
                  </property>
                  <property name="display_as_float" stdset="0">
                   <bool>true</bool>
                  </property>
                  <property name="settings_property" stdset="0">
-                  <string>llm_generator_setting.top_p</string>
+                  <string>llm_generator_setting.repetition_penalty</string>
                  </property>
                  <property name="slider_single_step" stdset="0">
-                  <number>1</number>
+                  <number>0</number>
                  </property>
                  <property name="slider_page_step" stdset="0">
-                  <number>10</number>
+                  <number>1</number>
                  </property>
                  <property name="spinbox_single_step" stdset="0">
-                  <double>0.010000000000000</double>
+                  <double>1.000000000000000</double>
                  </property>
                  <property name="spinbox_page_step" stdset="0">
-                  <double>0.100000000000000</double>
+                  <double>10.000000000000000</double>
                  </property>
                  <property name="slider_callback" stdset="0">
                   <string>handle_value_change</string>
@@ -493,13 +481,13 @@
              </widget>
             </item>
             <item>
-             <widget class="QGroupBox" name="groupBox_21">
+             <widget class="QGroupBox" name="groupBox_16">
               <property name="title">
-               <string>Max length</string>
+               <string>Min length</string>
               </property>
-              <layout class="QGridLayout" name="gridLayout_25">
+              <layout class="QGridLayout" name="gridLayout_20">
                <item row="0" column="0">
-                <widget class="SliderWidget" name="max_length_2" native="true">
+                <widget class="SliderWidget" name="min_length_2" native="true">
                  <property name="slider_minimum" stdset="0">
                   <number>1</number>
                  </property>
@@ -516,7 +504,7 @@
                   <bool>false</bool>
                  </property>
                  <property name="settings_property" stdset="0">
-                  <string>llm_generator_setting.max_length</string>
+                  <string>llm_generator_setting.min_length</string>
                  </property>
                  <property name="slider_single_step" stdset="0">
                   <number>1</number>
@@ -539,6 +527,32 @@
              </widget>
             </item>
            </layout>
+          </item>
+          <item row="5" column="0">
+           <widget class="QGroupBox" name="groupBox_19">
+            <property name="title">
+             <string>Seed</string>
+            </property>
+            <layout class="QHBoxLayout" name="horizontalLayout_4">
+             <item>
+              <widget class="QLineEdit" name="seed_2"/>
+             </item>
+             <item>
+              <widget class="QCheckBox" name="random_seed">
+               <property name="text">
+                <string>Random seed</string>
+               </property>
+              </widget>
+             </item>
+            </layout>
+           </widget>
+          </item>
+          <item row="8" column="0">
+           <widget class="QCheckBox" name="early_stopping">
+            <property name="text">
+             <string>Early stopping</string>
+            </property>
+           </widget>
           </item>
           <item row="3" column="0">
            <layout class="QHBoxLayout" name="horizontalLayout_8">
@@ -636,45 +650,45 @@
             </item>
            </layout>
           </item>
-          <item row="1" column="0">
-           <layout class="QHBoxLayout" name="horizontalLayout_7">
+          <item row="0" column="0">
+           <layout class="QHBoxLayout" name="horizontalLayout_9">
             <item>
-             <widget class="QGroupBox" name="groupBox_11">
+             <widget class="QGroupBox" name="groupBox_20">
               <property name="title">
-               <string>Repetition penalty</string>
+               <string>Top P</string>
               </property>
-              <layout class="QGridLayout" name="gridLayout_19">
+              <layout class="QGridLayout" name="gridLayout_24">
                <item row="0" column="0">
-                <widget class="SliderWidget" name="repetition_penalty_2" native="true">
+                <widget class="SliderWidget" name="top_p_2" native="true">
                  <property name="slider_minimum" stdset="0">
-                  <number>0</number>
+                  <number>1</number>
                  </property>
                  <property name="slider_maximum" stdset="0">
-                  <number>10000</number>
+                  <number>100</number>
                  </property>
                  <property name="spinbox_minimum" stdset="0">
                   <double>0.000000000000000</double>
                  </property>
                  <property name="spinbox_maximum" stdset="0">
-                  <double>100.000000000000000</double>
+                  <double>1.000000000000000</double>
                  </property>
                  <property name="display_as_float" stdset="0">
                   <bool>true</bool>
                  </property>
                  <property name="settings_property" stdset="0">
-                  <string>llm_generator_setting.repetition_penalty</string>
+                  <string>llm_generator_setting.top_p</string>
                  </property>
                  <property name="slider_single_step" stdset="0">
-                  <number>0</number>
-                 </property>
-                 <property name="slider_page_step" stdset="0">
                   <number>1</number>
                  </property>
+                 <property name="slider_page_step" stdset="0">
+                  <number>10</number>
+                 </property>
                  <property name="spinbox_single_step" stdset="0">
-                  <double>1.000000000000000</double>
+                  <double>0.010000000000000</double>
                  </property>
                  <property name="spinbox_page_step" stdset="0">
-                  <double>10.000000000000000</double>
+                  <double>0.100000000000000</double>
                  </property>
                  <property name="slider_callback" stdset="0">
                   <string>handle_value_change</string>
@@ -685,13 +699,13 @@
              </widget>
             </item>
             <item>
-             <widget class="QGroupBox" name="groupBox_16">
+             <widget class="QGroupBox" name="groupBox_21">
               <property name="title">
-               <string>Min length</string>
+               <string>Max length</string>
               </property>
-              <layout class="QGridLayout" name="gridLayout_20">
+              <layout class="QGridLayout" name="gridLayout_25">
                <item row="0" column="0">
-                <widget class="SliderWidget" name="min_length_2" native="true">
+                <widget class="SliderWidget" name="max_length_2" native="true">
                  <property name="slider_minimum" stdset="0">
                   <number>1</number>
                  </property>
@@ -708,7 +722,7 @@
                   <bool>false</bool>
                  </property>
                  <property name="settings_property" stdset="0">
-                  <string>llm_generator_setting.min_length</string>
+                  <string>llm_generator_setting.max_length</string>
                  </property>
                  <property name="slider_single_step" stdset="0">
                   <number>1</number>
@@ -831,13 +845,6 @@
          </layout>
         </widget>
        </item>
-       <item row="14" column="0">
-        <widget class="QCheckBox" name="early_stopping">
-         <property name="text">
-          <string>Early stopping</string>
-         </property>
-        </widget>
-       </item>
        <item row="1" column="0">
         <widget class="QGroupBox" name="groupBox_8">
          <property name="title">
@@ -867,13 +874,6 @@
          </property>
         </spacer>
        </item>
-       <item row="12" column="0">
-        <widget class="QCheckBox" name="random_seed">
-         <property name="text">
-          <string>Random seed</string>
-         </property>
-        </widget>
-       </item>
        <item row="15" column="0">
         <widget class="QPushButton" name="pushButton">
          <property name="text">
@@ -896,24 +896,33 @@
   </customwidget>
  </customwidgets>
  <tabstops>
-  <tabstop>botname</tabstop>
-  <tabstop>personality_type</tabstop>
-  <tabstop>username</tabstop>
   <tabstop>prompt</tabstop>
   <tabstop>comboBox</tabstop>
   <tabstop>send_button</tabstop>
-  <tabstop>generate_characters_button</tabstop>
   <tabstop>clear_conversatiion_button</tabstop>
   <tabstop>conversation</tabstop>
   <tabstop>prefix</tabstop>
   <tabstop>suffix</tabstop>
+  <tabstop>botname</tabstop>
+  <tabstop>personality_type</tabstop>
+  <tabstop>username</tabstop>
+  <tabstop>generate_characters_button</tabstop>
+  <tabstop>model</tabstop>
+  <tabstop>model_version</tabstop>
+  <tabstop>use_gpu_checkbox</tabstop>
   <tabstop>radio_button_4bit</tabstop>
   <tabstop>radio_button_8bit</tabstop>
   <tabstop>radio_button_16bit</tabstop>
   <tabstop>radio_button_32bit</tabstop>
+  <tabstop>override_parameters</tabstop>
   <tabstop>seed_2</tabstop>
   <tabstop>random_seed</tabstop>
+  <tabstop>do_sample</tabstop>
+  <tabstop>early_stopping</tabstop>
+  <tabstop>pushButton</tabstop>
   <tabstop>tabWidget</tabstop>
+  <tabstop>comboBox</tabstop>
+  <tabstop>prompt</tabstop>
  </tabstops>
  <resources/>
  <connections>
@@ -940,8 +949,8 @@
    <slot>suffix_text_changed()</slot>
    <hints>
     <hint type="sourcelabel">
-     <x>154</x>
-     <y>755</y>
+     <x>168</x>
+     <y>740</y>
     </hint>
     <hint type="destinationlabel">
      <x>206</x>
@@ -956,27 +965,11 @@
    <slot>action_button_clicked_send()</slot>
    <hints>
     <hint type="sourcelabel">
-     <x>163</x>
-     <y>828</y>
+     <x>166</x>
+     <y>901</y>
     </hint>
     <hint type="destinationlabel">
      <x>257</x>
-     <y>0</y>
-    </hint>
-   </hints>
-  </connection>
-  <connection>
-   <sender>generate_characters_button</sender>
-   <signal>clicked()</signal>
-   <receiver>llm_widget</receiver>
-   <slot>action_button_clicked_generate_characters()</slot>
-   <hints>
-    <hint type="sourcelabel">
-     <x>328</x>
-     <y>828</y>
-    </hint>
-    <hint type="destinationlabel">
-     <x>510</x>
      <y>0</y>
     </hint>
    </hints>
@@ -988,92 +981,12 @@
    <slot>action_button_clicked_clear_conversation()</slot>
    <hints>
     <hint type="sourcelabel">
-     <x>492</x>
-     <y>828</y>
+     <x>639</x>
+     <y>901</y>
     </hint>
     <hint type="destinationlabel">
      <x>510</x>
      <y>4</y>
-    </hint>
-   </hints>
-  </connection>
-  <connection>
-   <sender>comboBox</sender>
-   <signal>currentTextChanged(QString)</signal>
-   <receiver>llm_widget</receiver>
-   <slot>message_type_text_changed(QString)</slot>
-   <hints>
-    <hint type="sourcelabel">
-     <x>487</x>
-     <y>784</y>
-    </hint>
-    <hint type="destinationlabel">
-     <x>510</x>
-     <y>0</y>
-    </hint>
-   </hints>
-  </connection>
-  <connection>
-   <sender>botname</sender>
-   <signal>textEdited(QString)</signal>
-   <receiver>llm_widget</receiver>
-   <slot>botname_text_changed(QString)</slot>
-   <hints>
-    <hint type="sourcelabel">
-     <x>378</x>
-     <y>634</y>
-    </hint>
-    <hint type="destinationlabel">
-     <x>510</x>
-     <y>7</y>
-    </hint>
-   </hints>
-  </connection>
-  <connection>
-   <sender>username</sender>
-   <signal>textEdited(QString)</signal>
-   <receiver>llm_widget</receiver>
-   <slot>username_text_changed(QString)</slot>
-   <hints>
-    <hint type="sourcelabel">
-     <x>287</x>
-     <y>709</y>
-    </hint>
-    <hint type="destinationlabel">
-     <x>482</x>
-     <y>0</y>
-    </hint>
-   </hints>
-  </connection>
-  <connection>
-   <sender>prompt</sender>
-   <signal>textEdited(QString)</signal>
-   <receiver>llm_widget</receiver>
-   <slot>prompt_text_changed(QString)</slot>
-   <hints>
-    <hint type="sourcelabel">
-     <x>167</x>
-     <y>784</y>
-    </hint>
-    <hint type="destinationlabel">
-     <x>7</x>
-     <y>0</y>
-    </hint>
-   </hints>
-  </connection>
-  <connection>
-   <sender>personality_type</sender>
-   <signal>currentTextChanged(QString)</signal>
-   <receiver>llm_widget</receiver>
-   <slot>personality_type_changed(QString)</slot>
-   <hints>
-    <hint type="sourcelabel">
-     <x>487</x>
-     <y>634</y>
-    </hint>
-    <hint type="destinationlabel">
-     <x>510</x>
-     <y>0</y>
     </hint>
    </hints>
   </connection>
@@ -1164,8 +1077,8 @@
    <slot>seed_changed(QString)</slot>
    <hints>
     <hint type="sourcelabel">
-     <x>216</x>
-     <y>722</y>
+     <x>242</x>
+     <y>710</y>
     </hint>
     <hint type="destinationlabel">
      <x>2</x>
@@ -1180,8 +1093,8 @@
    <slot>random_seed_toggled(bool)</slot>
    <hints>
     <hint type="sourcelabel">
-     <x>99</x>
-     <y>763</y>
+     <x>589</x>
+     <y>709</y>
     </hint>
     <hint type="destinationlabel">
      <x>3</x>
@@ -1196,8 +1109,8 @@
    <slot>do_sample_toggled(bool)</slot>
    <hints>
     <hint type="sourcelabel">
-     <x>91</x>
-     <y>792</y>
+     <x>105</x>
+     <y>751</y>
     </hint>
     <hint type="destinationlabel">
      <x>1</x>
@@ -1212,8 +1125,8 @@
    <slot>early_stopping_toggled(bool)</slot>
    <hints>
     <hint type="sourcelabel">
-     <x>59</x>
-     <y>821</y>
+     <x>73</x>
+     <y>780</y>
     </hint>
     <hint type="destinationlabel">
      <x>1</x>
@@ -1244,8 +1157,8 @@
    <slot>reset_settings_to_default_clicked()</slot>
    <hints>
     <hint type="sourcelabel">
-     <x>248</x>
-     <y>842</y>
+     <x>250</x>
+     <y>823</y>
     </hint>
     <hint type="destinationlabel">
      <x>437</x>
@@ -1281,7 +1194,103 @@
     </hint>
     <hint type="destinationlabel">
      <x>120</x>
+     <y>0</y>
+    </hint>
+   </hints>
+  </connection>
+  <connection>
+   <sender>prompt</sender>
+   <signal>textEdited(QString)</signal>
+   <receiver>llm_widget</receiver>
+   <slot>prompt_text_changed(QString)</slot>
+   <hints>
+    <hint type="sourcelabel">
+     <x>181</x>
+     <y>857</y>
+    </hint>
+    <hint type="destinationlabel">
+     <x>7</x>
+     <y>0</y>
+    </hint>
+   </hints>
+  </connection>
+  <connection>
+   <sender>comboBox</sender>
+   <signal>currentTextChanged(QString)</signal>
+   <receiver>llm_widget</receiver>
+   <slot>message_type_text_changed(QString)</slot>
+   <hints>
+    <hint type="sourcelabel">
+     <x>628</x>
+     <y>857</y>
+    </hint>
+    <hint type="destinationlabel">
+     <x>510</x>
+     <y>0</y>
+    </hint>
+   </hints>
+  </connection>
+  <connection>
+   <sender>botname</sender>
+   <signal>textEdited(QString)</signal>
+   <receiver>llm_widget</receiver>
+   <slot>botname_text_changed(QString)</slot>
+   <hints>
+    <hint type="sourcelabel">
+     <x>268</x>
+     <y>801</y>
+    </hint>
+    <hint type="destinationlabel">
+     <x>80</x>
      <y>-11</y>
+    </hint>
+   </hints>
+  </connection>
+  <connection>
+   <sender>username</sender>
+   <signal>textEdited(QString)</signal>
+   <receiver>llm_widget</receiver>
+   <slot>username_text_changed(QString)</slot>
+   <hints>
+    <hint type="sourcelabel">
+     <x>198</x>
+     <y>882</y>
+    </hint>
+    <hint type="destinationlabel">
+     <x>118</x>
+     <y>-19</y>
+    </hint>
+   </hints>
+  </connection>
+  <connection>
+   <sender>personality_type</sender>
+   <signal>textHighlighted(QString)</signal>
+   <receiver>llm_widget</receiver>
+   <slot>personality_type_changed(QString)</slot>
+   <hints>
+    <hint type="sourcelabel">
+     <x>599</x>
+     <y>804</y>
+    </hint>
+    <hint type="destinationlabel">
+     <x>412</x>
+     <y>-11</y>
+    </hint>
+   </hints>
+  </connection>
+  <connection>
+   <sender>generate_characters_button</sender>
+   <signal>clicked()</signal>
+   <receiver>llm_widget</receiver>
+   <slot>action_button_clicked_generate_characters()</slot>
+   <hints>
+    <hint type="sourcelabel">
+     <x>358</x>
+     <y>920</y>
+    </hint>
+    <hint type="destinationlabel">
+     <x>477</x>
+     <y>-17</y>
     </hint>
    </hints>
   </connection>
