@@ -689,7 +689,7 @@ class CanvasSettings(Base):
 
 
 class LLMGenerator(Base):
-    __tablename__ = 'generator'
+    __tablename__ = 'llm_generator'
     id = Column(Integer, primary_key=True)
     created_at = Column(DateTime, default=datetime.datetime.utcnow)
     name = Column(String)
@@ -700,10 +700,11 @@ class LLMGenerator(Base):
     prefix = Column(String, default="")
     suffix = Column(String, default="")
     message_type = Column(String, default="chat")
+    bot_personality = Column(String, default="Nice")
 
 
 class LLMGeneratorSetting(Base):
-    __tablename__ = 'generator_setting'
+    __tablename__ = 'llm_generator_setting'
     id = Column(Integer, primary_key=True)
     created_at = Column(DateTime, default=datetime.datetime.utcnow)
     top_p = Column(Integer, default=90)
