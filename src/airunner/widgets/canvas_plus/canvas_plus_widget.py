@@ -10,7 +10,7 @@ from PyQt6.QtWidgets import QGraphicsScene, QGraphicsItem, QGraphicsPixmapItem, 
 from airunner.aihandler.settings_manager import SettingsManager
 from airunner.cursors.circle_brush import CircleCursor
 from airunner.data.db import session
-from airunner.data.models import Layer, LayerImage, CanvasSettings, ActiveGridSettings, GridSettings
+from airunner.data.models import Layer, LayerImage, CanvasSettings, ActiveGridSettings
 from airunner.utils import get_session, save_session
 from airunner.widgets.base_widget import BaseWidget
 from airunner.widgets.canvas_plus.templates.canvas_plus_ui import Ui_canvas
@@ -249,6 +249,7 @@ class CanvasPlusWidget(BaseWidget):
         self.ui.central_widget.resizeEvent = self.resizeEvent
         self.app.add_image_to_canvas_signal.connect(self.handle_add_image_to_canvas)
         self.app.image_data.connect(self.handle_image_data)
+        self.initialize()
 
     def handle_mouse_event(self, original_mouse_event, event):
         if event.buttons() == Qt.MouseButton.MiddleButton:
@@ -266,31 +267,29 @@ class CanvasPlusWidget(BaseWidget):
 
     def initialize(self):
         # Create a QGraphicsScene object
-        self.scene = QGraphicsScene(self)
+        self.scene = QGraphicsScene()
 
         self.view = self.ui.canvas_container
         original_mouse_event = self.view.mouseMoveEvent
         self.view.mouseMoveEvent = partial(self.handle_mouse_event, original_mouse_event)
         #self.view.setDragMode(QGraphicsView.DragMode.RubberBandDrag)
 
-        # get size from self.app.ui.content_splitter which is a QSplitter
+        # # get size from self.app.ui.content_splitter which is a QSplitter
         self.view_size = self.view.viewport().size()
 
-        # initialize variables
+        # # initialize variables
         self.cell_size = self.settings_manager.grid_settings.size
         self.line_width = self.settings_manager.grid_settings.line_width
         self.line_color = QColor(self.settings_manager.grid_settings.line_color)
         self.canvas_color = QColor(self.settings_manager.grid_settings.canvas_color)
 
-        # Set the margins of the QGraphicsView object to 0
+        # # Set the margins of the QGraphicsView object to 0
         self.view.setContentsMargins(0, 0, 0, 0)
 
-        self.scene.setBackgroundBrush(QBrush(self.canvas_color))
+        # self.scene.setBackgroundBrush(QBrush(self.canvas_color))
         self.view.setScene(self.scene)
 
-        # Set the size of the QGraphicsScene object to match the size of the QGraphicsView object
-        self.set_scene_rect()
-
+        # # Set the size of the QGraphicsScene object to match the size of the QGraphicsView object
         self.settings_manager.changed_signal.connect(self.handle_changed_signal)
 
         self.do_draw()
