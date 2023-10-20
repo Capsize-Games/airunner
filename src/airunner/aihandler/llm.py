@@ -43,10 +43,13 @@ class LLM(QObject):
     use_cache = False
     local_files_only = False
     llm_int8_enable_fp32_cpu_offload = True
-    device_map = "auto"
     use_gpu = True
     dtype = ""
     do_push_to_hub = False
+
+    @property
+    def device_map(self):
+        return "cpu" if not self.has_gpu else "auto"
 
     @property
     def current_model_path(self):
@@ -54,6 +57,8 @@ class LLM(QObject):
 
     @property
     def has_gpu(self):
+        if self.dtype == "32bit" or not self.use_gpu:
+            return False
         return torch.cuda.is_available()
 
     def __init__(self, *args, **kwargs):
@@ -101,7 +106,7 @@ class LLM(QObject):
         if device:
             self.model.to(device)
             return
-        if self.dtype in ["4bit", "8bit", "16bit"] and torch.cuda.is_available():
+        if self.dtype in ["4bit", "8bit", "16bit"] and self.has_gpu:
             self.model.to("cuda")
         else:
             self.model.to("cpu")
@@ -130,7 +135,7 @@ class LLM(QObject):
 
     def process_input(self, prompt):
         logger.info("Process input")
-        inputs = self.tokenizer(prompt, return_tensors="pt").to("cuda" if torch.cuda.is_available() else "cpu")
+        inputs = self.tokenizer(prompt, return_tensors="pt").to("cuda" if self.has_gpu else "cpu")
         return inputs
 
     def load_model(self, local_files_only = None):
@@ -168,8 +173,10 @@ class LLM(QObject):
         if quantization_config:
             params["quantization_config"] = quantization_config
 
-        if self.dtype:
+        if self.dtype == "16bit":
             params["torch_dtype"] = torch.float16
+        elif self.dtype == "32bit":
+            params["torch_dtype"] = torch.float32
 
         #path = f"/home/joe/.airunner/llm/models/{self.current_model_path}"
         # if not os.path.exists(path):
@@ -179,7 +186,8 @@ class LLM(QObject):
         try:
             if self.generator.name == "Flan":
                 self.model = AutoModelForSeq2SeqLM.from_pretrained(
-                    path, **params
+                    path,
+                    **params
                 )
         except OSError as e:
             if self.local_files_only:
@@ -213,6 +221,7 @@ class LLM(QObject):
     def do_generate(self, data):
         logger.info("Do generate")
         self.dtype = data["request_data"]["dtype"]
+        self.use_gpu = data["request_data"]["use_gpu"]
         generator_name = data["request_data"]["generator_name"]
         model_path = data["request_data"]["model_path"]
 
