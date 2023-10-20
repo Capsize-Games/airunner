@@ -286,7 +286,7 @@ class CanvasPlusWidget(BaseWidget):
         # # Set the margins of the QGraphicsView object to 0
         self.view.setContentsMargins(0, 0, 0, 0)
 
-        # self.scene.setBackgroundBrush(QBrush(self.canvas_color))
+        self.scene.setBackgroundBrush(QBrush(self.canvas_color))
         self.view.setScene(self.scene)
 
         # # Set the size of the QGraphicsScene object to match the size of the QGraphicsView object
