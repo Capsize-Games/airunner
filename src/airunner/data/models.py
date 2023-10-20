@@ -711,7 +711,6 @@ class LLMGeneratorSetting(Base):
     max_length = Column(Integer, default=50)
     repetition_penalty = Column(Integer, default=100)
     min_length = Column(Integer, default=10)
-    k = Column(Integer, default=0)
     length_penalty = Column(Integer, default=100)
     num_beams = Column(Integer, default=1)
     ngram_size = Column(Integer, default=0)
