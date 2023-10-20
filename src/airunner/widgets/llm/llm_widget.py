@@ -10,7 +10,6 @@ from airunner.data.db import session
 from airunner.data.models import LLMGenerator, Conversation, LLMGeneratorSetting, Message
 from airunner.utils import save_session
 from airunner.widgets.base_widget import BaseWidget
-from airunner.widgets.llm.message_widget import MessageWidget
 from airunner.widgets.llm.templates.llm_widget_ui import Ui_llm_widget
 
 
@@ -53,9 +52,6 @@ class LLMWidget(BaseWidget):
         self.app.message_var.my_signal.connect(self.message_handler)
 
         self.ui.prompt.returnPressed.connect(self.action_button_clicked_send)
-
-        self.spacer = QSpacerItem(20, 40, QSizePolicy.Policy.Minimum, QSizePolicy.Policy.Expanding)
-        self.ui.scrollAreaWidgetContents.layout().addSpacerItem(self.spacer)
 
         self.ui.prompt.textChanged.connect(self.prompt_text_changed)
 
@@ -251,27 +247,14 @@ class LLMWidget(BaseWidget):
     def add_message_to_conversation(self, message_object, is_bot):
         message = f"{message_object.name} Says: \"{message_object.message}\""
         self.conversation_history.append(message)
-        widget = MessageWidget(message=message_object, is_bot=is_bot)
-        # add the widget to the scroll area but above the spacer
-        self.remove_spacer()
-        self.ui.scrollAreaWidgetContents.layout().addWidget(widget)
-        self.add_spacer()
-        self.ui.conversation.ensureWidgetVisible(widget)
-
-    def remove_spacer(self):
-        self.ui.scrollAreaWidgetContents.layout().removeItem(self.spacer)
-
-    def add_spacer(self):
-        self.ui.scrollAreaWidgetContents.layout().addSpacerItem(self.spacer)
+        self.ui.conversation.append(message)
 
     def action_button_clicked_generate_characters(self):
         pass
 
     def action_button_clicked_clear_conversation(self):
         self.conversation_history = []
-        for widget in self.ui.scrollAreaWidgetContents.children():
-            if isinstance(widget, MessageWidget):
-                widget.deleteLater()
+        self.ui.conversation.setText("")
 
     def message_type_text_changed(self, val):
         self.generator.message_type = val
