@@ -10,8 +10,10 @@ class MessageWidget(BaseWidget):
         self.message = kwargs.pop("message")
         super().__init__(*args, **kwargs)
         self.ui.name.setText(f"{self.message.name}:")
-        self.ui.message.setText(self.message.message)
+        self.ui.message.setPlainText(self.message.message)
         if self.is_bot:
-            self.ui.name.setStyleSheet("color: #0000ff;")
+            self.ui.name.setStyleSheet("font-weight: normal;")
         else:
-            self.ui.name.setStyleSheet("color: #ff0000;")
+            self.ui.name.setStyleSheet("font-weight: bold;")
+
+        self.ui.message.setStyleSheet("color: #f2f2f2;")
