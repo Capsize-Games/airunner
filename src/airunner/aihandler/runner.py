@@ -1445,6 +1445,12 @@ class SDRunner(
     def is_llm_request(self, data):
         return "llm_request" in data
 
+    def move_to_cpu(self):
+        try:
+            self.pipe.to("cpu")
+        except ValueError:
+            pass
+
     def generator_sample(self, data: dict):
         logger.info("generator_sample called")
 
