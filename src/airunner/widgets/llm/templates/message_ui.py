@@ -12,19 +12,21 @@ from PyQt6 import QtCore, QtGui, QtWidgets
 class Ui_message_widget(object):
     def setupUi(self, message_widget):
         message_widget.setObjectName("message_widget")
-        message_widget.resize(334, 35)
-        self.formLayout = QtWidgets.QFormLayout(message_widget)
-        self.formLayout.setObjectName("formLayout")
+        message_widget.resize(334, 109)
+        self.verticalLayout = QtWidgets.QVBoxLayout(message_widget)
+        self.verticalLayout.setObjectName("verticalLayout")
         self.name = QtWidgets.QLabel(parent=message_widget)
         font = QtGui.QFont()
         font.setBold(True)
         self.name.setFont(font)
+        self.name.setAlignment(QtCore.Qt.AlignmentFlag.AlignLeading|QtCore.Qt.AlignmentFlag.AlignLeft|QtCore.Qt.AlignmentFlag.AlignTop)
         self.name.setObjectName("name")
-        self.formLayout.setWidget(0, QtWidgets.QFormLayout.ItemRole.LabelRole, self.name)
-        self.message = QtWidgets.QLabel(parent=message_widget)
-        self.message.setStyleSheet("color: #000;")
+        self.verticalLayout.addWidget(self.name)
+        self.message = QtWidgets.QPlainTextEdit(parent=message_widget)
+        self.message.setFrameShape(QtWidgets.QFrame.Shape.NoFrame)
+        self.message.setFrameShadow(QtWidgets.QFrame.Shadow.Plain)
         self.message.setObjectName("message")
-        self.formLayout.setWidget(0, QtWidgets.QFormLayout.ItemRole.FieldRole, self.message)
+        self.verticalLayout.addWidget(self.message)
 
         self.retranslateUi(message_widget)
         QtCore.QMetaObject.connectSlotsByName(message_widget)
@@ -32,5 +34,5 @@ class Ui_message_widget(object):
     def retranslateUi(self, message_widget):
         _translate = QtCore.QCoreApplication.translate
         message_widget.setWindowTitle(_translate("message_widget", "Form"))
-        self.name.setText(_translate("message_widget", "Name:"))
-        self.message.setText(_translate("message_widget", "Message"))
+        self.name.setText(_translate("message_widget", "Name"))
+        self.message.setPlainText(_translate("message_widget", "Message"))
