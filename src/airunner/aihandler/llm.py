@@ -100,9 +100,13 @@ class LLM(QObject):
         return self._generator
 
     def move_to_cpu(self):
-        self.model.to("cpu")
+        if self.model:
+            self.model.to("cpu")
+        self._tokenizer = None
 
     def move_to_device(self, device=None):
+        if not self.model:
+            return
         if device:
             self.model.to(device)
             return
