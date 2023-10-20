@@ -320,6 +320,7 @@ class LLMWidget(BaseWidget):
         self.ui.model_version.clear()
         model_versions = [version.name for version in self.generator.model_versions]
         self.ui.model_version.addItems(model_versions)
+        self.ui.model_version.blockSignals(False)
 
     def load_generator(self):
         self.generator = session.query(LLMGenerator).filter(
