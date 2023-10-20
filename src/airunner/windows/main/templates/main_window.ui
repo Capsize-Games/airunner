@@ -139,7 +139,8 @@
               <string/>
              </property>
              <property name="icon">
-              <iconset theme="applications-graphics"/>
+              <iconset theme="applications-graphics">
+               <normaloff>.</normaloff>.</iconset>
              </property>
              <property name="iconSize">
               <size>
@@ -176,7 +177,8 @@
               <string/>
              </property>
              <property name="icon">
-              <iconset theme="applications-development"/>
+              <iconset theme="applications-development">
+               <normaloff>.</normaloff>.</iconset>
              </property>
              <property name="iconSize">
               <size>
@@ -590,7 +592,7 @@
                <x>0</x>
                <y>0</y>
                <width>531</width>
-               <height>665</height>
+               <height>669</height>
               </rect>
              </property>
              <layout class="QGridLayout" name="gridLayout">
@@ -778,7 +780,7 @@
                   <x>0</x>
                   <y>0</y>
                   <width>53</width>
-                  <height>665</height>
+                  <height>669</height>
                  </rect>
                 </property>
                 <layout class="QVBoxLayout" name="verticalLayout_2">
