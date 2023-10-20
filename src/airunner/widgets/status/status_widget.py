@@ -10,6 +10,12 @@ class StatusWidget(BaseWidget):
 
     def update_system_stats(self, queue_size):
         has_cuda = torch.cuda.is_available()
+        if self.settings_manager.mode == "Image Generation":
+            self.ui.nsfw_status.show()
+            self.ui.nsfw_line.show()
+        else:
+            self.ui.nsfw_status.hide()
+            self.ui.nsfw_line.hide()
         nsfw_status = f"NSFW Filter {'On' if self.settings_manager.nsfw_filter else 'Off'}"
         queue_stats = f"Queued items: {queue_size}"
         cuda_status = f"Using {'GPU' if has_cuda else 'CPU'}"

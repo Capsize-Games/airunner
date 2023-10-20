@@ -39,7 +39,7 @@
     </widget>
    </item>
    <item>
-    <widget class="Line" name="line_2">
+    <widget class="Line" name="nsfw_line">
      <property name="orientation">
       <enum>Qt::Vertical</enum>
      </property>
