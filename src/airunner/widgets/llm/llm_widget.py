@@ -86,11 +86,15 @@ class LLMWidget(BaseWidget):
         self.ui.random_seed.blockSignals(True)
         self.ui.do_sample.blockSignals(True)
         self.ui.early_stopping.blockSignals(True)
+        self.ui.use_gpu_checkbox.blockSignals(True)
+        self.ui.override_parameters.blockSignals(True)
 
         self.ui.radio_button_4bit.setChecked(self.generator.generator_settings[0].dtype == "4bit")
         self.ui.radio_button_8bit.setChecked(self.generator.generator_settings[0].dtype == "8bit")
         self.ui.radio_button_16bit.setChecked(self.generator.generator_settings[0].dtype == "16bit")
         self.ui.radio_button_32bit.setChecked(self.generator.generator_settings[0].dtype == "32bit")
+        self.set_dtype_by_gpu(self.generator.generator_settings[0].use_gpu)
+        self.set_dtype(self.generator.generator_settings[0].dtype)
 
         model_names = [model.name for model in session.query(LLMGenerator).all()]
         self.ui.model.clear()
@@ -103,6 +107,8 @@ class LLMWidget(BaseWidget):
         self.ui.random_seed.setChecked(self.generator.generator_settings[0].random_seed)
         self.ui.do_sample.setChecked(self.generator.generator_settings[0].do_sample)
         self.ui.early_stopping.setChecked(self.generator.generator_settings[0].early_stopping)
+        self.ui.use_gpu_checkbox.setChecked(self.generator.generator_settings[0].use_gpu)
+        self.ui.override_parameters.setChecked(self.generator.override_parameters)
 
         self.ui.model.blockSignals(False)
         self.ui.prompt.blockSignals(False)
@@ -118,6 +124,8 @@ class LLMWidget(BaseWidget):
         self.ui.random_seed.blockSignals(False)
         self.ui.do_sample.blockSignals(False)
         self.ui.early_stopping.blockSignals(False)
+        self.ui.use_gpu_checkbox.blockSignals(False)
+        self.ui.override_parameters.blockSignals(False)
 
     def handle_text_generated(self, message):
         self.stop_progress_bar()
@@ -225,6 +233,7 @@ class LLMWidget(BaseWidget):
                 "prefix": self.prefix,
                 "suffix": self.suffix,
                 "dtype": self.generator.generator_settings[0].dtype,
+                "use_gpu": self.generator.generator_settings[0].use_gpu,
             }
         }
         message_object = Message(
@@ -267,30 +276,37 @@ class LLMWidget(BaseWidget):
     def message_type_text_changed(self, val):
         self.generator.message_type = val
         save_session()
+    
+    dtype_descriptions = {
+        "4bit": "Fastest, least amount of VRAM, GPU only, least accurate results.",
+        "8bit": "Fast, less VRAM, GPU only, less accurate results.",
+        "16bit": "Normal speed, some VRAM, uses GPU, slightly less accurate results.",
+        "32bit": "Slow, no VRAM, uses CPU, most accurate results.",
+    }
 
     def toggled_4bit(self, val):
         if val:
-            self.ui.dtype_description.setText("Runs on the GPU only.")
-            self.generator.generator_settings[0].dtype = "4bit"
-            save_session()
+            self.set_dtype("4bit")
 
     def toggled_8bit(self, val):
         if val:
-            self.ui.dtype_description.setText("Runs on the GPU only.")
-            self.generator.generator_settings[0].dtype = "8bit"
-            save_session()
+            self.set_dtype("8bit")
 
     def toggled_16bit(self, val):
         if val:
-            self.ui.dtype_description.setText("Runs on the GPU only.")
-            self.generator.generator_settings[0].dtype = "16bit"
-            save_session()
+            self.set_dtype("16bit")
 
     def toggled_32bit(self, val):
         if val:
-            self.ui.dtype_description.setText("Runs on the CPU only.")
-            self.generator.generator_settings[0].dtype = "32bit"
-            save_session()
+            self.set_dtype("32bit")
+    
+    def set_dtype(self, dtype):
+        self.generator.generator_settings[0].dtype = dtype
+        save_session()
+        self.set_dtype_description(dtype)
+    
+    def set_dtype_description(self, dtype):
+        self.ui.dtype_description.setText(self.dtype_descriptions[dtype])
 
     def model_text_changed(self, val):
         self.generator.generator_settings[0].model = val
@@ -327,6 +343,7 @@ class LLMWidget(BaseWidget):
         self.generator.generator_settings[0].random_seed = LLMGeneratorSetting.random_seed.default.arg
         self.generator.generator_settings[0].model_version = LLMGeneratorSetting.model_version.default.arg
         self.generator.generator_settings[0].dtype = LLMGeneratorSetting.dtype.default.arg
+        self.generator.generator_settings[0].use_gpu = LLMGeneratorSetting.use_gpu.default.arg
         save_session()
         self.initialize_form()
         self.ui.top_p_2.set_slider_and_spinbox_values(self.generator.generator_settings[0].top_p)
@@ -339,3 +356,29 @@ class LLMWidget(BaseWidget):
         self.ui.temperature_2.set_slider_and_spinbox_values(self.generator.generator_settings[0].temperature)
         self.ui.sequences_2.set_slider_and_spinbox_values(self.generator.generator_settings[0].sequences)
         self.ui.top_k_2.set_slider_and_spinbox_values(self.generator.generator_settings[0].top_k)
+        self.ui.random_seed.setChecked(self.generator.generator_settings[0].random_seed)
+
+    def use_gpu_toggled(self, val):
+        self.generator.generator_settings[0].use_gpu = val
+        # toggle the 16bit radio button and disable 4bit and 8bit radio buttons
+        self.set_dtype_by_gpu(val)
+        save_session()
+    
+    def set_dtype_by_gpu(self, use_gpu):
+        if not use_gpu:
+            self.ui.radio_button_4bit.setEnabled(False)
+            self.ui.radio_button_8bit.setEnabled(False)
+            self.ui.radio_button_32bit.setEnabled(True)
+
+            if self.generator.generator_settings[0].dtype in ["4bit", "8bit"]:
+                self.ui.radio_button_16bit.setChecked(True)
+        else:
+            self.ui.radio_button_4bit.setEnabled(True)
+            self.ui.radio_button_8bit.setEnabled(True)
+            self.ui.radio_button_32bit.setEnabled(False)
+            if self.generator.generator_settings[0].dtype == "32bit":
+                self.ui.radio_button_16bit.setChecked(True)
+    
+    def override_parameters_toggled(self, val):
+        self.generator.override_parameters = val
+        save_session()
