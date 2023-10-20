@@ -16,7 +16,7 @@ seed_data = {
             "do_sample": False,
             "early_stopping": False,
             "random_seed": False,
-            "model_version": "google/flan-t5-small"
+            "model_version": "google/flan-t5-large"
         },
         "model_versions": [
             "google/flan-t5-xxl",

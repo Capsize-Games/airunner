@@ -7,14 +7,14 @@
     <x>0</x>
     <y>0</y>
     <width>334</width>
-    <height>35</height>
+    <height>109</height>
    </rect>
   </property>
   <property name="windowTitle">
    <string>Form</string>
   </property>
-  <layout class="QFormLayout" name="formLayout">
-   <item row="0" column="0">
+  <layout class="QVBoxLayout" name="verticalLayout">
+   <item>
     <widget class="QLabel" name="name">
      <property name="font">
       <font>
@@ -22,16 +22,22 @@
       </font>
      </property>
      <property name="text">
-      <string>Name:</string>
+      <string>Name</string>
+     </property>
+     <property name="alignment">
+      <set>Qt::AlignLeading|Qt::AlignLeft|Qt::AlignTop</set>
      </property>
     </widget>
    </item>
-   <item row="0" column="1">
-    <widget class="QLabel" name="message">
-     <property name="styleSheet">
-      <string notr="true">color: #000;</string>
+   <item>
+    <widget class="QPlainTextEdit" name="message">
+     <property name="frameShape">
+      <enum>QFrame::NoFrame</enum>
      </property>
-     <property name="text">
+     <property name="frameShadow">
+      <enum>QFrame::Plain</enum>
+     </property>
+     <property name="plainText">
       <string>Message</string>
      </property>
     </widget>
