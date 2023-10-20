@@ -692,6 +692,18 @@ class SDRunner(
     def latents(self, value):
         self._latents = value
 
+    @property
+    def hf_api_key_read_key(self):
+        return self.settings_manager.hf_api_key_read_key
+
+    @property
+    def hf_api_key_write_key(self):
+        return self.settings_manager.hf_api_key_write_key
+
+    @property
+    def hf_username(self):
+        return self.settings_manager.hf_username
+
     def  __init__(self, **kwargs):
         logger.set_level(LOG_LEVEL)
         self.settings_manager = SettingsManager()
