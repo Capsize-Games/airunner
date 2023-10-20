@@ -9,7 +9,7 @@ from functools import partial
 from PyQt6 import uic, QtCore
 from PyQt6.QtCore import pyqtSlot, Qt, QThread, pyqtSignal, QObject, QTimer
 from PyQt6.QtGui import QGuiApplication
-from PyQt6.QtWidgets import QApplication, QFileDialog, QMainWindow, QTabWidget, QWidget
+from PyQt6.QtWidgets import QApplication, QFileDialog, QMainWindow
 
 from airunner.aihandler.enums import MessageCode
 from airunner.aihandler.logger import Logger as logger
@@ -239,7 +239,7 @@ class MainWindow(
     def available_model_names_by_section(self, section):
         for model in self.settings_manager.available_models_by_category(section):
             yield model["name"]
-
+    loaded = pyqtSignal()
     def __init__(self, *args, **kwargs):
         logger.info("Starting AI Runnner")
         # qdarktheme.enable_hi_dpi()
@@ -299,6 +299,7 @@ class MainWindow(
         QTimer.singleShot(500, self.on_show)
 
         self.initialize_panel_tabs()
+        self.loaded.emit()
 
     def initialize_panel_tabs(self):
         """
@@ -761,7 +762,8 @@ class MainWindow(
         FilterBase(self, filter.name).show()
 
     def handle_generate(self):
-        self.prompt_builder.inject_prompt()
+        #self.prompt_builder.inject_prompt()
+        pass
 
     def initialize_default_buttons(self):
         pass
@@ -1026,18 +1028,24 @@ class MainWindow(
         grid_size = self.grid_size
 
         # if the shift key is pressed
-        if QtCore.Qt.KeyboardModifier.ShiftModifier in event.modifiers():
-            delta = event.angleDelta().y()
-            increment = grid_size if delta > 0 else -grid_size
-            val = self.settings_manager.working_width + increment
-            self.settings_manager.set_value("working_width", val)
+        try:
+            if QtCore.Qt.KeyboardModifier.ShiftModifier in event.modifiers():
+                delta = event.angleDelta().y()
+                increment = grid_size if delta > 0 else -grid_size
+                val = self.settings_manager.working_width + increment
+                self.settings_manager.set_value("working_width", val)
+        except TypeError:
+            pass
 
         # if the control key is pressed
-        if QtCore.Qt.KeyboardModifier.ControlModifier in event.modifiers():
-            delta = event.angleDelta().y()
-            increment = grid_size if delta > 0 else -grid_size
-            val = self.settings_manager.working_height + increment
-            self.settings_manager.set_value("working_height", val)
+        try:
+            if QtCore.Qt.KeyboardModifier.ControlModifier in event.modifiers():
+                delta = event.angleDelta().y()
+                increment = grid_size if delta > 0 else -grid_size
+                val = self.settings_manager.working_height + increment
+                self.settings_manager.set_value("working_height", val)
+        except TypeError:
+            pass
 
     # def toggle_stylesheet(self, path):
     #     # use fopen to open the file
