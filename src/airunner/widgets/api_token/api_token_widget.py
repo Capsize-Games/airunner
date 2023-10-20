@@ -9,10 +9,19 @@ class APITokenWidget(BaseWidget):
 
     def __init__(self, *args, **kwargs):
         super().__init__(*args, **kwargs)
-        self.ui.hf_api_key.blockSignals(True)
-        self.ui.hf_api_key.setEchoMode(QLineEdit.EchoMode.Password)
-        self.ui.hf_api_key.setText(self.settings_manager.hf_api_key)
-        self.ui.hf_api_key.blockSignals(False)
+        self.ui.hf_api_key_text_generation.blockSignals(True)
+        self.ui.hf_api_key_text_generation.setEchoMode(QLineEdit.EchoMode.Password)
+        self.ui.hf_api_key_text_generation.setText(self.settings_manager.hf_api_key_read_key)
+
+        self.ui.hf_api_key_writetoken.blockSignals(True)
+        self.ui.hf_api_key_writetoken.setEchoMode(QLineEdit.EchoMode.Password)
+        self.ui.hf_api_key_writetoken.setText(self.settings_manager.hf_api_key_write_key)
+
+        self.ui.hf_api_key_text_generation.blockSignals(False)
+        self.ui.hf_api_key_writetoken.blockSignals(False)
 
     def action_text_edited_api_key(self, value):
-        self.settings_manager.set_value("hf_api_key", value)
+        self.settings_manager.set_value("hf_api_key_read_key", value)
+
+    def action_text_edited_writekey(self, value):
+        self.settings_manager.set_value("hf_api_key_write_key", value)

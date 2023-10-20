@@ -548,7 +548,9 @@ class Settings(Base):
 
     working_width = Column(Integer, default=512)
     working_height = Column(Integer, default=512)
-    hf_api_key = Column(String, default="")
+    hf_api_key_read_key = Column(String, default="")
+    hf_api_key_write_key = Column(String, default="")
+    hf_username = Column(String, default="")
 
     mode = Column(String, default="art")
 
