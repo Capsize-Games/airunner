@@ -59,7 +59,7 @@
       </property>
       <widget class="QWidget" name="art">
        <attribute name="title">
-        <string>Art</string>
+        <string>Image Generation</string>
        </attribute>
        <layout class="QGridLayout" name="gridLayout_15">
         <item row="0" column="0">
@@ -674,7 +674,7 @@
       </widget>
       <widget class="QWidget" name="text">
        <attribute name="title">
-        <string>Text</string>
+        <string>Language Processing</string>
        </attribute>
        <layout class="QGridLayout" name="gridLayout_10">
         <item row="0" column="0">
