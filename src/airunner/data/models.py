@@ -552,7 +552,7 @@ class Settings(Base):
     hf_api_key_write_key = Column(String, default="")
     hf_username = Column(String, default="")
 
-    mode = Column(String, default="art")
+    mode = Column(String, default="Image Generation")
 
     brush_settings_id = Column(Integer, ForeignKey('brush_settings.id'))
     brush_settings = relationship("BrushSettings", back_populates="settings")
@@ -701,6 +701,7 @@ class LLMGenerator(Base):
     suffix = Column(String, default="")
     message_type = Column(String, default="chat")
     bot_personality = Column(String, default="Nice")
+    override_parameters = Column(Boolean, default=False)
 
 
 class LLMGeneratorSetting(Base):
@@ -725,6 +726,7 @@ class LLMGeneratorSetting(Base):
     generator_id = Column(Integer, ForeignKey('llm_generator.id'))
     generator = relationship('LLMGenerator', back_populates='generator_settings')
     dtype = Column(String, default="4bit")
+    use_gpu = Column(Boolean, default=True)
 
 
 class LLMModelVersion(Base):
