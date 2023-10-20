@@ -722,16 +722,17 @@ class LLMGeneratorSetting(Base):
     early_stopping = Column(Boolean, default=False)
     random_seed = Column(Boolean, default=False)
     model_version = Column(String, default="google/flan-t5-xl")
-    generator_id = Column(Integer, ForeignKey('generator.id'))
+    generator_id = Column(Integer, ForeignKey('llm_generator.id'))
     generator = relationship('LLMGenerator', back_populates='generator_settings')
+    dtype = Column(String, default="4bit")
 
 
 class LLMModelVersion(Base):
-    __tablename__ = 'model_version'
+    __tablename__ = 'llm_model_version'
     id = Column(Integer, primary_key=True)
     created_at = Column(DateTime, default=datetime.datetime.utcnow)
     name = Column(String)
-    generator_id = Column(Integer, ForeignKey('generator.id'))
+    generator_id = Column(Integer, ForeignKey('llm_generator.id'))
     generator = relationship('LLMGenerator', back_populates='model_versions')
 
 

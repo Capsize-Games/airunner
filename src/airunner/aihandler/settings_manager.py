@@ -2,7 +2,7 @@ from PyQt6.QtCore import QObject, pyqtSignal
 
 from airunner.aihandler.qtvar import StringVar, IntVar, BooleanVar, FloatVar, DictVar
 from airunner.data.db import session
-from airunner.data.models import Settings, GeneratorSetting, AIModel, Pipeline, ControlnetModel, ImageFilter, Prompt, \
+from airunner.data.models import LLMGenerator, Settings, GeneratorSetting, AIModel, Pipeline, ControlnetModel, ImageFilter, Prompt, \
     SavedPrompt, PromptCategory, PromptVariable, PromptVariableCategory, PromptVariableCategoryWeight
 from airunner.utils import save_session
 
@@ -179,6 +179,12 @@ class SettingsManager(QObject):
     @property
     def generator(self):
         return self.find_generator(self.generator_section, self.generator_name)
+    
+    @property
+    def llm_generator_setting(self):
+        llm_generator = session.query(LLMGenerator).first()
+        return llm_generator.generator_settings[0]
+
 
     def find_generator(self, generator_section, generator_name):
         # using sqlalchemy, query the document.settings.generator_settings column
