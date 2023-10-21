@@ -596,6 +596,9 @@ class Settings(Base):
     current_tool_tab = Column(String, default="brush")
     current_bottom_panel_tab = Column(String, default="model_manager")
 
+    move_unused_model_to_cpu = Column(Boolean, default=True)
+    unload_unused_model = Column(Boolean, default=False)
+
 
 class LayerImage(Base):
     __tablename__ = "layer_images"
