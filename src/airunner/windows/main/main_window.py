@@ -393,7 +393,8 @@ class MainWindow(
         self.canvas.paste_image_from_clipboard()
 
     def action_copy_image_triggered(self):
-        self.canvas.copy_image()
+        if self.settings_manager.mode == "Image Generation":
+            self.canvas.copy_image()
 
     def action_cut_image_triggered(self):
         self.canvas.cut_image()
