@@ -75,6 +75,7 @@ class LLMWidget(BaseWidget):
         self.ui.prefix.blockSignals(True)
         self.ui.suffix.blockSignals(True)
         self.ui.personality_type.blockSignals(True)
+        self.ui.radio_button_2bit.blockSignals(True)
         self.ui.radio_button_4bit.blockSignals(True)
         self.ui.radio_button_8bit.blockSignals(True)
         self.ui.radio_button_16bit.blockSignals(True)
@@ -85,6 +86,7 @@ class LLMWidget(BaseWidget):
         self.ui.use_gpu_checkbox.blockSignals(True)
         self.ui.override_parameters.blockSignals(True)
 
+        self.ui.radio_button_2bit.setChecked(self.generator.generator_settings[0].dtype == "2bit")
         self.ui.radio_button_4bit.setChecked(self.generator.generator_settings[0].dtype == "4bit")
         self.ui.radio_button_8bit.setChecked(self.generator.generator_settings[0].dtype == "8bit")
         self.ui.radio_button_16bit.setChecked(self.generator.generator_settings[0].dtype == "16bit")
@@ -113,6 +115,7 @@ class LLMWidget(BaseWidget):
         self.ui.prefix.blockSignals(False)
         self.ui.suffix.blockSignals(False)
         self.ui.personality_type.blockSignals(False)
+        self.ui.radio_button_2bit.blockSignals(False)
         self.ui.radio_button_4bit.blockSignals(False)
         self.ui.radio_button_8bit.blockSignals(False)
         self.ui.radio_button_16bit.blockSignals(False)
@@ -129,6 +132,8 @@ class LLMWidget(BaseWidget):
         self.enable_send_button()
 
         # strip quotes from start and end of message
+        if not message:
+            return
         if message.startswith("\""):
             message = message[1:]
         if message.endswith("\""):
@@ -261,11 +266,16 @@ class LLMWidget(BaseWidget):
         save_session()
     
     dtype_descriptions = {
-        "4bit": "Fastest, least amount of VRAM, GPU only, least accurate results.",
+        "2bit": "Fastest, least amount of VRAM, GPU only, least accurate results.",
+        "4bit": "Faster, much less VRAM, GPU only, much less accurate results.",
         "8bit": "Fast, less VRAM, GPU only, less accurate results.",
         "16bit": "Normal speed, some VRAM, uses GPU, slightly less accurate results.",
         "32bit": "Slow, no VRAM, uses CPU, most accurate results.",
     }
+
+    def toggled_2bit(self, val):
+        if val:
+            self.set_dtype("2bit")
 
     def toggled_4bit(self, val):
         if val:
@@ -350,6 +360,7 @@ class LLMWidget(BaseWidget):
     
     def set_dtype_by_gpu(self, use_gpu):
         if not use_gpu:
+            self.ui.radio_button_2bit.setEnabled(False)
             self.ui.radio_button_4bit.setEnabled(False)
             self.ui.radio_button_8bit.setEnabled(False)
             self.ui.radio_button_32bit.setEnabled(True)
@@ -357,6 +368,7 @@ class LLMWidget(BaseWidget):
             if self.generator.generator_settings[0].dtype in ["4bit", "8bit"]:
                 self.ui.radio_button_16bit.setChecked(True)
         else:
+            self.ui.radio_button_2bit.setEnabled(True)
             self.ui.radio_button_4bit.setEnabled(True)
             self.ui.radio_button_8bit.setEnabled(True)
             self.ui.radio_button_32bit.setEnabled(False)
