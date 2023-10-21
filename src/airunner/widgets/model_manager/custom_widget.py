@@ -168,3 +168,12 @@ class CustomModelWidget(BaseWidget):
         self.ui.model_form.versions.clear()
         self.ui.model_form.versions.addItems(versions)
         self.ui.model_form.versions.setCurrentText(model.version)
+
+    def mode_type_changed(self, val):
+        print("mode_type_changed", val)
+    
+    def toggle_all_toggled(self, val):
+        print("toggle_all_toggled", val)
+    
+    def search_text_edited(self, val):
+        print("search text changed", val)
