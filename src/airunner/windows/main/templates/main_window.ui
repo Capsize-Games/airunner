@@ -577,6 +577,16 @@
                   </item>
                  </layout>
                 </widget>
+                <widget class="QWidget" name="tab">
+                 <attribute name="title">
+                  <string>Video</string>
+                 </attribute>
+                </widget>
+                <widget class="QWidget" name="tab_3">
+                 <attribute name="title">
+                  <string>GIF</string>
+                 </attribute>
+                </widget>
                </widget>
               </item>
              </layout>
