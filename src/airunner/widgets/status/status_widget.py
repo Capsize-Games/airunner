@@ -1,6 +1,7 @@
 import psutil
 import torch
 
+from airunner.aihandler.enums import Mode
 from airunner.widgets.base_widget import BaseWidget
 from airunner.widgets.status.templates.status_ui import Ui_status_widget
 
@@ -10,7 +11,7 @@ class StatusWidget(BaseWidget):
 
     def update_system_stats(self, queue_size):
         has_cuda = torch.cuda.is_available()
-        if self.settings_manager.mode == "Image Generation":
+        if self.settings_manager.mode == Mode.IMAGE.value:
             self.ui.nsfw_status.show()
             self.ui.nsfw_line.show()
         else:
