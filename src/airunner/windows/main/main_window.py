@@ -11,7 +11,7 @@ from PyQt6.QtCore import pyqtSlot, Qt, QThread, pyqtSignal, QObject, QTimer
 from PyQt6.QtGui import QGuiApplication
 from PyQt6.QtWidgets import QApplication, QFileDialog, QMainWindow
 
-from airunner.aihandler.enums import MessageCode
+from airunner.aihandler.enums import MessageCode, Mode
 from airunner.aihandler.logger import Logger as logger
 from airunner.aihandler.pyqt_client import OfflineClient
 from airunner.aihandler.qtvar import MessageHandlerVar
@@ -304,10 +304,10 @@ class MainWindow(
 
         print(self.settings_manager.mode)
         self.ui.image_generation_button.setChecked(
-            self.settings_manager.mode == "Image Generation"
+            self.settings_manager.mode == Mode.IMAGE.value
         )
         self.ui.language_processing_button.setChecked(
-            self.settings_manager.mode == "Language Processing"
+            self.settings_manager.mode == Mode.TEXT.value
         )
         
         self.ui.image_generation_button.blockSignals(False)
@@ -390,20 +390,24 @@ class MainWindow(
         self.redo()
 
     def action_paste_image_triggered(self):
-        self.canvas.paste_image_from_clipboard()
+        if self.settings_manager.mode == Mode.IMAGE.value:
+            self.canvas.paste_image_from_clipboard()
 
     def action_copy_image_triggered(self):
-        if self.settings_manager.mode == "Image Generation":
+        if self.settings_manager.mode == Mode.IMAGE.value:
             self.canvas.copy_image()
 
     def action_cut_image_triggered(self):
-        self.canvas.cut_image()
+        if self.settings_manager.mode == Mode.IMAGE.value:
+            self.canvas.cut_image()
 
     def action_rotate_90_clockwise_triggered(self):
-        self.canvas.rotate_90_clockwise()
+        if self.settings_manager.mode == Mode.IMAGE.value:
+            self.canvas.rotate_90_clockwise()
 
     def action_rotate_90_counterclockwise_triggered(self):
-        self.canvas.rotate_90_counterclockwise()
+        if self.settings_manager.mode == Mode.IMAGE.value:
+            self.canvas.rotate_90_counterclockwise()
 
     def action_show_prompt_browser_triggered(self):
         self.show_prompt_browser()
