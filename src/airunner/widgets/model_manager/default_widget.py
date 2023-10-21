@@ -13,9 +13,16 @@ class DefaultModelWidget(BaseWidget):
         super().__init__(*args, **kwargs)
         self.show_items_in_scrollarea()
 
-    def show_items_in_scrollarea(self):
+    def show_items_in_scrollarea(self, search=None):
         session = get_session()
-        models = session.query(AIModel).filter_by(is_default=True).all()
+        for child in self.ui.scrollAreaWidgetContents.children():
+            if isinstance(child, ModelWidget):
+                child.deleteLater()
+        if search:
+            # search by name
+            models = session.query(AIModel).filter_by(is_default=True).filter(AIModel.name.like(f"%{search}%")).all()
+        else:
+            models = session.query(AIModel).filter_by(is_default=True).all()
         for model_widget in self.model_widgets:
             model_widget.deleteLater()
         self.model_widgets = []
@@ -45,4 +52,7 @@ class DefaultModelWidget(BaseWidget):
         print("toggle_all_toggled", val)
     
     def search_text_changed(self, val):
-        print("search text changed", val)
+        val = val.strip()
+        if val == "":
+            val = None
+        self.show_items_in_scrollarea(val)
