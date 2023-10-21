@@ -41,3 +41,8 @@ class Scheduler(Enum):
     # VESDE = "VE-SDE"
     # VPSDE = "VP-SDE"
     # VQDIFFUSION = "VQ Diffusion"
+
+
+class Mode(Enum):
+    IMAGE = "Image Generation"
+    TEXT = "Language Processing"
