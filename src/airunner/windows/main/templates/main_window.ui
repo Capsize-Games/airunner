@@ -52,424 +52,13 @@
     <enum>Qt::LeftToRight</enum>
    </property>
    <layout class="QGridLayout" name="gridLayout_6">
-    <item row="0" column="0">
-     <widget class="QFrame" name="header_widget">
-      <property name="enabled">
-       <bool>true</bool>
-      </property>
-      <property name="maximumSize">
-       <size>
-        <width>16777215</width>
-        <height>48</height>
-       </size>
-      </property>
-      <property name="frameShape">
-       <enum>QFrame::NoFrame</enum>
-      </property>
-      <property name="frameShadow">
-       <enum>QFrame::Sunken</enum>
-      </property>
-      <layout class="QHBoxLayout" name="horizontalLayout">
-       <property name="spacing">
-        <number>0</number>
-       </property>
-       <property name="leftMargin">
-        <number>0</number>
-       </property>
-       <property name="topMargin">
-        <number>0</number>
-       </property>
-       <property name="rightMargin">
-        <number>0</number>
-       </property>
-       <property name="bottomMargin">
-        <number>0</number>
-       </property>
-       <item>
-        <widget class="QScrollArea" name="scrollArea_3">
-         <property name="verticalScrollBarPolicy">
-          <enum>Qt::ScrollBarAlwaysOff</enum>
-         </property>
-         <property name="horizontalScrollBarPolicy">
-          <enum>Qt::ScrollBarAsNeeded</enum>
-         </property>
-         <property name="widgetResizable">
-          <bool>true</bool>
-         </property>
-         <widget class="QWidget" name="scrollAreaWidgetContents_3">
-          <property name="geometry">
-           <rect>
-            <x>0</x>
-            <y>0</y>
-            <width>1147</width>
-            <height>46</height>
-           </rect>
-          </property>
-          <layout class="QHBoxLayout" name="horizontalLayout_2">
-           <property name="leftMargin">
-            <number>0</number>
-           </property>
-           <property name="topMargin">
-            <number>0</number>
-           </property>
-           <property name="rightMargin">
-            <number>0</number>
-           </property>
-           <property name="bottomMargin">
-            <number>0</number>
-           </property>
-           <item>
-            <widget class="QPushButton" name="image_generation_button">
-             <property name="sizePolicy">
-              <sizepolicy hsizetype="Preferred" vsizetype="Preferred">
-               <horstretch>0</horstretch>
-               <verstretch>0</verstretch>
-              </sizepolicy>
-             </property>
-             <property name="minimumSize">
-              <size>
-               <width>32</width>
-               <height>32</height>
-              </size>
-             </property>
-             <property name="toolTip">
-              <string>Image Generation</string>
-             </property>
-             <property name="text">
-              <string/>
-             </property>
-             <property name="icon">
-              <iconset theme="applications-graphics">
-               <normaloff>.</normaloff>.</iconset>
-             </property>
-             <property name="iconSize">
-              <size>
-               <width>32</width>
-               <height>32</height>
-              </size>
-             </property>
-             <property name="checkable">
-              <bool>true</bool>
-             </property>
-             <property name="flat">
-              <bool>true</bool>
-             </property>
-            </widget>
-           </item>
-           <item>
-            <widget class="QPushButton" name="language_processing_button">
-             <property name="sizePolicy">
-              <sizepolicy hsizetype="Preferred" vsizetype="Preferred">
-               <horstretch>0</horstretch>
-               <verstretch>0</verstretch>
-              </sizepolicy>
-             </property>
-             <property name="minimumSize">
-              <size>
-               <width>32</width>
-               <height>32</height>
-              </size>
-             </property>
-             <property name="toolTip">
-              <string>Language Processing</string>
-             </property>
-             <property name="text">
-              <string/>
-             </property>
-             <property name="icon">
-              <iconset theme="applications-development">
-               <normaloff>.</normaloff>.</iconset>
-             </property>
-             <property name="iconSize">
-              <size>
-               <width>32</width>
-               <height>32</height>
-              </size>
-             </property>
-             <property name="checkable">
-              <bool>true</bool>
-             </property>
-             <property name="flat">
-              <bool>true</bool>
-             </property>
-            </widget>
-           </item>
-           <item>
-            <widget class="Line" name="line_5">
-             <property name="orientation">
-              <enum>Qt::Vertical</enum>
-             </property>
-            </widget>
-           </item>
-           <item>
-            <widget class="QPushButton" name="file_new_button">
-             <property name="minimumSize">
-              <size>
-               <width>36</width>
-               <height>36</height>
-              </size>
-             </property>
-             <property name="maximumSize">
-              <size>
-               <width>24</width>
-               <height>36</height>
-              </size>
-             </property>
-             <property name="text">
-              <string/>
-             </property>
-             <property name="icon">
-              <iconset theme="document-new">
-               <normaloff>.</normaloff>.</iconset>
-             </property>
-             <property name="iconSize">
-              <size>
-               <width>24</width>
-               <height>24</height>
-              </size>
-             </property>
-             <property name="flat">
-              <bool>true</bool>
-             </property>
-            </widget>
-           </item>
-           <item>
-            <widget class="QPushButton" name="open_button">
-             <property name="minimumSize">
-              <size>
-               <width>36</width>
-               <height>36</height>
-              </size>
-             </property>
-             <property name="maximumSize">
-              <size>
-               <width>24</width>
-               <height>36</height>
-              </size>
-             </property>
-             <property name="text">
-              <string/>
-             </property>
-             <property name="icon">
-              <iconset theme="document-open">
-               <normaloff>../../src/icons/034-folder.png</normaloff>../../src/icons/034-folder.png</iconset>
-             </property>
-             <property name="iconSize">
-              <size>
-               <width>24</width>
-               <height>24</height>
-              </size>
-             </property>
-             <property name="flat">
-              <bool>true</bool>
-             </property>
-            </widget>
-           </item>
-           <item>
-            <widget class="QPushButton" name="save_button">
-             <property name="minimumSize">
-              <size>
-               <width>36</width>
-               <height>36</height>
-              </size>
-             </property>
-             <property name="maximumSize">
-              <size>
-               <width>24</width>
-               <height>36</height>
-              </size>
-             </property>
-             <property name="text">
-              <string/>
-             </property>
-             <property name="icon">
-              <iconset theme="document-save">
-               <normaloff>../../src/icons/033-diskette.png</normaloff>../../src/icons/033-diskette.png</iconset>
-             </property>
-             <property name="iconSize">
-              <size>
-               <width>24</width>
-               <height>24</height>
-              </size>
-             </property>
-             <property name="flat">
-              <bool>true</bool>
-             </property>
-            </widget>
-           </item>
-           <item>
-            <widget class="QPushButton" name="export_button">
-             <property name="minimumSize">
-              <size>
-               <width>36</width>
-               <height>36</height>
-              </size>
-             </property>
-             <property name="maximumSize">
-              <size>
-               <width>24</width>
-               <height>36</height>
-              </size>
-             </property>
-             <property name="toolTip">
-              <string>Fast Export Image</string>
-             </property>
-             <property name="text">
-              <string/>
-             </property>
-             <property name="icon">
-              <iconset theme="document-send">
-               <normaloff>../../src/icons/export.png</normaloff>../../src/icons/export.png</iconset>
-             </property>
-             <property name="iconSize">
-              <size>
-               <width>24</width>
-               <height>24</height>
-              </size>
-             </property>
-             <property name="flat">
-              <bool>true</bool>
-             </property>
-            </widget>
-           </item>
-           <item>
-            <widget class="Line" name="line_2">
-             <property name="orientation">
-              <enum>Qt::Vertical</enum>
-             </property>
-            </widget>
-           </item>
-           <item>
-            <widget class="QPushButton" name="undo_button">
-             <property name="sizePolicy">
-              <sizepolicy hsizetype="Expanding" vsizetype="Expanding">
-               <horstretch>0</horstretch>
-               <verstretch>0</verstretch>
-              </sizepolicy>
-             </property>
-             <property name="minimumSize">
-              <size>
-               <width>36</width>
-               <height>36</height>
-              </size>
-             </property>
-             <property name="maximumSize">
-              <size>
-               <width>24</width>
-               <height>36</height>
-              </size>
-             </property>
-             <property name="toolTip">
-              <string>Undo</string>
-             </property>
-             <property name="styleSheet">
-              <string notr="true">border-color: rgb(61, 56, 70);</string>
-             </property>
-             <property name="text">
-              <string/>
-             </property>
-             <property name="icon">
-              <iconset theme="edit-undo">
-               <normaloff>.</normaloff>.</iconset>
-             </property>
-             <property name="iconSize">
-              <size>
-               <width>24</width>
-               <height>24</height>
-              </size>
-             </property>
-             <property name="flat">
-              <bool>true</bool>
-             </property>
-            </widget>
-           </item>
-           <item>
-            <widget class="QPushButton" name="redo_button">
-             <property name="sizePolicy">
-              <sizepolicy hsizetype="Expanding" vsizetype="Expanding">
-               <horstretch>0</horstretch>
-               <verstretch>0</verstretch>
-              </sizepolicy>
-             </property>
-             <property name="minimumSize">
-              <size>
-               <width>36</width>
-               <height>36</height>
-              </size>
-             </property>
-             <property name="maximumSize">
-              <size>
-               <width>24</width>
-               <height>36</height>
-              </size>
-             </property>
-             <property name="toolTip">
-              <string>Redo</string>
-             </property>
-             <property name="styleSheet">
-              <string notr="true">border-color: rgb(61, 56, 70);</string>
-             </property>
-             <property name="text">
-              <string/>
-             </property>
-             <property name="icon">
-              <iconset theme="edit-redo">
-               <normaloff>../../src/icons/008-redo.png</normaloff>../../src/icons/008-redo.png</iconset>
-             </property>
-             <property name="iconSize">
-              <size>
-               <width>24</width>
-               <height>24</height>
-              </size>
-             </property>
-             <property name="flat">
-              <bool>true</bool>
-             </property>
-            </widget>
-           </item>
-           <item>
-            <widget class="Line" name="line_3">
-             <property name="orientation">
-              <enum>Qt::Vertical</enum>
-             </property>
-            </widget>
-           </item>
-           <item>
-            <spacer name="horizontalSpacer_2">
-             <property name="minimumSize">
-              <size>
-               <width>0</width>
-               <height>36</height>
-              </size>
-             </property>
-             <property name="maximumSize">
-              <size>
-               <width>16777215</width>
-               <height>36</height>
-              </size>
-             </property>
-             <property name="orientation">
-              <enum>Qt::Horizontal</enum>
-             </property>
-             <property name="sizeHint" stdset="0">
-              <size>
-               <width>40</width>
-               <height>20</height>
-              </size>
-             </property>
-            </spacer>
-           </item>
-          </layout>
-         </widget>
-        </widget>
-       </item>
-      </layout>
-     </widget>
-    </item>
     <item row="1" column="0">
      <widget class="QTabWidget" name="mode_tab_widget">
       <property name="autoFillBackground">
        <bool>false</bool>
+      </property>
+      <property name="styleSheet">
+       <string notr="true">QTabWidget#mode_tab_widget::pane { border: 0; background: transparent; }</string>
       </property>
       <property name="tabShape">
        <enum>QTabWidget::Rounded</enum>
@@ -517,21 +106,21 @@
               <height>0</height>
              </size>
             </property>
+            <property name="styleSheet">
+             <string notr="true"/>
+            </property>
+            <property name="frameShape">
+             <enum>QFrame::NoFrame</enum>
+            </property>
             <property name="orientation">
              <enum>Qt::Vertical</enum>
             </property>
-            <widget class="QFrame" name="canvas_frame">
+            <widget class="QWidget" name="canvas_widget" native="true">
              <property name="minimumSize">
               <size>
                <width>0</width>
                <height>0</height>
               </size>
-             </property>
-             <property name="frameShape">
-              <enum>QFrame::StyledPanel</enum>
-             </property>
-             <property name="frameShadow">
-              <enum>QFrame::Raised</enum>
              </property>
              <layout class="QGridLayout" name="gridLayout_5">
               <property name="leftMargin">
@@ -548,6 +137,9 @@
               </property>
               <item row="0" column="0">
                <widget class="QTabWidget" name="center_tab">
+                <property name="styleSheet">
+                 <string notr="true"/>
+                </property>
                 <property name="currentIndex">
                  <number>0</number>
                 </property>
@@ -601,8 +193,8 @@
               <rect>
                <x>0</x>
                <y>0</y>
-               <width>531</width>
-               <height>669</height>
+               <width>472</width>
+               <height>683</height>
               </rect>
              </property>
              <layout class="QGridLayout" name="gridLayout">
@@ -790,7 +382,7 @@
                   <x>0</x>
                   <y>0</y>
                   <width>53</width>
-                  <height>669</height>
+                  <height>683</height>
                  </rect>
                 </property>
                 <layout class="QVBoxLayout" name="verticalLayout_2">
@@ -1095,16 +687,6 @@
            <property name="currentIndex">
             <number>0</number>
            </property>
-           <widget class="QWidget" name="tab_model_manager">
-            <attribute name="title">
-             <string>Model Manager</string>
-            </attribute>
-            <layout class="QGridLayout" name="gridLayout_4">
-             <item row="0" column="0">
-              <widget class="ModelManagerWidget" name="model_manager" native="true"/>
-             </item>
-            </layout>
-           </widget>
            <widget class="QWidget" name="tab_prompt_builder">
             <attribute name="title">
              <string>Prompt Builder</string>
@@ -1142,6 +724,467 @@
         </item>
        </layout>
       </widget>
+      <widget class="QWidget" name="tab_5">
+       <attribute name="title">
+        <string>Model Manager</string>
+       </attribute>
+       <layout class="QGridLayout" name="gridLayout_4">
+        <property name="leftMargin">
+         <number>0</number>
+        </property>
+        <property name="topMargin">
+         <number>0</number>
+        </property>
+        <property name="rightMargin">
+         <number>0</number>
+        </property>
+        <property name="bottomMargin">
+         <number>0</number>
+        </property>
+        <item row="0" column="0">
+         <widget class="ModelManagerWidget" name="model_manager" native="true"/>
+        </item>
+       </layout>
+      </widget>
+     </widget>
+    </item>
+    <item row="0" column="0">
+     <widget class="QFrame" name="header_widget">
+      <property name="enabled">
+       <bool>true</bool>
+      </property>
+      <property name="maximumSize">
+       <size>
+        <width>16777215</width>
+        <height>48</height>
+       </size>
+      </property>
+      <property name="frameShape">
+       <enum>QFrame::NoFrame</enum>
+      </property>
+      <property name="frameShadow">
+       <enum>QFrame::Sunken</enum>
+      </property>
+      <layout class="QHBoxLayout" name="horizontalLayout">
+       <property name="spacing">
+        <number>0</number>
+       </property>
+       <property name="leftMargin">
+        <number>0</number>
+       </property>
+       <property name="topMargin">
+        <number>0</number>
+       </property>
+       <property name="rightMargin">
+        <number>0</number>
+       </property>
+       <property name="bottomMargin">
+        <number>0</number>
+       </property>
+       <item>
+        <widget class="QScrollArea" name="scrollArea_3">
+         <property name="verticalScrollBarPolicy">
+          <enum>Qt::ScrollBarAlwaysOff</enum>
+         </property>
+         <property name="horizontalScrollBarPolicy">
+          <enum>Qt::ScrollBarAsNeeded</enum>
+         </property>
+         <property name="widgetResizable">
+          <bool>true</bool>
+         </property>
+         <widget class="QWidget" name="scrollAreaWidgetContents_3">
+          <property name="geometry">
+           <rect>
+            <x>0</x>
+            <y>0</y>
+            <width>1147</width>
+            <height>46</height>
+           </rect>
+          </property>
+          <layout class="QHBoxLayout" name="horizontalLayout_2">
+           <property name="leftMargin">
+            <number>0</number>
+           </property>
+           <property name="topMargin">
+            <number>0</number>
+           </property>
+           <property name="rightMargin">
+            <number>0</number>
+           </property>
+           <property name="bottomMargin">
+            <number>0</number>
+           </property>
+           <item>
+            <widget class="QPushButton" name="image_generation_button">
+             <property name="sizePolicy">
+              <sizepolicy hsizetype="Preferred" vsizetype="Preferred">
+               <horstretch>0</horstretch>
+               <verstretch>0</verstretch>
+              </sizepolicy>
+             </property>
+             <property name="minimumSize">
+              <size>
+               <width>32</width>
+               <height>32</height>
+              </size>
+             </property>
+             <property name="toolTip">
+              <string>Image Generation</string>
+             </property>
+             <property name="text">
+              <string/>
+             </property>
+             <property name="icon">
+              <iconset theme="applications-graphics">
+               <normaloff>.</normaloff>.</iconset>
+             </property>
+             <property name="iconSize">
+              <size>
+               <width>32</width>
+               <height>32</height>
+              </size>
+             </property>
+             <property name="checkable">
+              <bool>true</bool>
+             </property>
+             <property name="flat">
+              <bool>true</bool>
+             </property>
+            </widget>
+           </item>
+           <item>
+            <widget class="QPushButton" name="language_processing_button">
+             <property name="sizePolicy">
+              <sizepolicy hsizetype="Preferred" vsizetype="Preferred">
+               <horstretch>0</horstretch>
+               <verstretch>0</verstretch>
+              </sizepolicy>
+             </property>
+             <property name="minimumSize">
+              <size>
+               <width>32</width>
+               <height>32</height>
+              </size>
+             </property>
+             <property name="toolTip">
+              <string>Language Processing</string>
+             </property>
+             <property name="text">
+              <string/>
+             </property>
+             <property name="icon">
+              <iconset theme="applications-development">
+               <normaloff>.</normaloff>.</iconset>
+             </property>
+             <property name="iconSize">
+              <size>
+               <width>32</width>
+               <height>32</height>
+              </size>
+             </property>
+             <property name="checkable">
+              <bool>true</bool>
+             </property>
+             <property name="flat">
+              <bool>true</bool>
+             </property>
+            </widget>
+           </item>
+           <item>
+            <widget class="QPushButton" name="model_manager_button">
+             <property name="toolTip">
+              <string>Model manager</string>
+             </property>
+             <property name="text">
+              <string/>
+             </property>
+             <property name="icon">
+              <iconset theme="user-bookmarks"/>
+             </property>
+             <property name="iconSize">
+              <size>
+               <width>32</width>
+               <height>32</height>
+              </size>
+             </property>
+             <property name="checkable">
+              <bool>true</bool>
+             </property>
+             <property name="flat">
+              <bool>true</bool>
+             </property>
+            </widget>
+           </item>
+           <item>
+            <widget class="Line" name="line_5">
+             <property name="orientation">
+              <enum>Qt::Vertical</enum>
+             </property>
+            </widget>
+           </item>
+           <item>
+            <widget class="QPushButton" name="file_new_button">
+             <property name="minimumSize">
+              <size>
+               <width>36</width>
+               <height>36</height>
+              </size>
+             </property>
+             <property name="maximumSize">
+              <size>
+               <width>24</width>
+               <height>36</height>
+              </size>
+             </property>
+             <property name="text">
+              <string/>
+             </property>
+             <property name="icon">
+              <iconset theme="document-new">
+               <normaloff>.</normaloff>.</iconset>
+             </property>
+             <property name="iconSize">
+              <size>
+               <width>24</width>
+               <height>24</height>
+              </size>
+             </property>
+             <property name="flat">
+              <bool>true</bool>
+             </property>
+            </widget>
+           </item>
+           <item>
+            <widget class="QPushButton" name="open_button">
+             <property name="minimumSize">
+              <size>
+               <width>36</width>
+               <height>36</height>
+              </size>
+             </property>
+             <property name="maximumSize">
+              <size>
+               <width>24</width>
+               <height>36</height>
+              </size>
+             </property>
+             <property name="text">
+              <string/>
+             </property>
+             <property name="icon">
+              <iconset theme="document-open">
+               <normaloff>../../src/icons/034-folder.png</normaloff>../../src/icons/034-folder.png</iconset>
+             </property>
+             <property name="iconSize">
+              <size>
+               <width>24</width>
+               <height>24</height>
+              </size>
+             </property>
+             <property name="flat">
+              <bool>true</bool>
+             </property>
+            </widget>
+           </item>
+           <item>
+            <widget class="QPushButton" name="save_button">
+             <property name="minimumSize">
+              <size>
+               <width>36</width>
+               <height>36</height>
+              </size>
+             </property>
+             <property name="maximumSize">
+              <size>
+               <width>24</width>
+               <height>36</height>
+              </size>
+             </property>
+             <property name="text">
+              <string/>
+             </property>
+             <property name="icon">
+              <iconset theme="document-save">
+               <normaloff>../../src/icons/033-diskette.png</normaloff>../../src/icons/033-diskette.png</iconset>
+             </property>
+             <property name="iconSize">
+              <size>
+               <width>24</width>
+               <height>24</height>
+              </size>
+             </property>
+             <property name="flat">
+              <bool>true</bool>
+             </property>
+            </widget>
+           </item>
+           <item>
+            <widget class="QPushButton" name="export_button">
+             <property name="minimumSize">
+              <size>
+               <width>36</width>
+               <height>36</height>
+              </size>
+             </property>
+             <property name="maximumSize">
+              <size>
+               <width>24</width>
+               <height>36</height>
+              </size>
+             </property>
+             <property name="toolTip">
+              <string>Fast Export Image</string>
+             </property>
+             <property name="text">
+              <string/>
+             </property>
+             <property name="icon">
+              <iconset theme="document-send">
+               <normaloff>../../src/icons/export.png</normaloff>../../src/icons/export.png</iconset>
+             </property>
+             <property name="iconSize">
+              <size>
+               <width>24</width>
+               <height>24</height>
+              </size>
+             </property>
+             <property name="flat">
+              <bool>true</bool>
+             </property>
+            </widget>
+           </item>
+           <item>
+            <widget class="Line" name="line_2">
+             <property name="orientation">
+              <enum>Qt::Vertical</enum>
+             </property>
+            </widget>
+           </item>
+           <item>
+            <widget class="QPushButton" name="undo_button">
+             <property name="sizePolicy">
+              <sizepolicy hsizetype="Expanding" vsizetype="Expanding">
+               <horstretch>0</horstretch>
+               <verstretch>0</verstretch>
+              </sizepolicy>
+             </property>
+             <property name="minimumSize">
+              <size>
+               <width>36</width>
+               <height>36</height>
+              </size>
+             </property>
+             <property name="maximumSize">
+              <size>
+               <width>24</width>
+               <height>36</height>
+              </size>
+             </property>
+             <property name="toolTip">
+              <string>Undo</string>
+             </property>
+             <property name="styleSheet">
+              <string notr="true">border-color: rgb(61, 56, 70);</string>
+             </property>
+             <property name="text">
+              <string/>
+             </property>
+             <property name="icon">
+              <iconset theme="edit-undo">
+               <normaloff>.</normaloff>.</iconset>
+             </property>
+             <property name="iconSize">
+              <size>
+               <width>24</width>
+               <height>24</height>
+              </size>
+             </property>
+             <property name="flat">
+              <bool>true</bool>
+             </property>
+            </widget>
+           </item>
+           <item>
+            <widget class="QPushButton" name="redo_button">
+             <property name="sizePolicy">
+              <sizepolicy hsizetype="Expanding" vsizetype="Expanding">
+               <horstretch>0</horstretch>
+               <verstretch>0</verstretch>
+              </sizepolicy>
+             </property>
+             <property name="minimumSize">
+              <size>
+               <width>36</width>
+               <height>36</height>
+              </size>
+             </property>
+             <property name="maximumSize">
+              <size>
+               <width>24</width>
+               <height>36</height>
+              </size>
+             </property>
+             <property name="toolTip">
+              <string>Redo</string>
+             </property>
+             <property name="styleSheet">
+              <string notr="true">border-color: rgb(61, 56, 70);</string>
+             </property>
+             <property name="text">
+              <string/>
+             </property>
+             <property name="icon">
+              <iconset theme="edit-redo">
+               <normaloff>../../src/icons/008-redo.png</normaloff>../../src/icons/008-redo.png</iconset>
+             </property>
+             <property name="iconSize">
+              <size>
+               <width>24</width>
+               <height>24</height>
+              </size>
+             </property>
+             <property name="flat">
+              <bool>true</bool>
+             </property>
+            </widget>
+           </item>
+           <item>
+            <widget class="Line" name="line_3">
+             <property name="orientation">
+              <enum>Qt::Vertical</enum>
+             </property>
+            </widget>
+           </item>
+           <item>
+            <spacer name="horizontalSpacer_2">
+             <property name="minimumSize">
+              <size>
+               <width>0</width>
+               <height>36</height>
+              </size>
+             </property>
+             <property name="maximumSize">
+              <size>
+               <width>16777215</width>
+               <height>36</height>
+              </size>
+             </property>
+             <property name="orientation">
+              <enum>Qt::Horizontal</enum>
+             </property>
+             <property name="sizeHint" stdset="0">
+              <size>
+               <width>40</width>
+               <height>20</height>
+              </size>
+             </property>
+            </spacer>
+           </item>
+          </layout>
+         </widget>
+        </widget>
+       </item>
+      </layout>
      </widget>
     </item>
    </layout>
@@ -2136,8 +2179,8 @@
    <slot>action_toggle_grid(bool)</slot>
    <hints>
     <hint type="sourcelabel">
-     <x>1126</x>
-     <y>294</y>
+     <x>1147</x>
+     <y>290</y>
     </hint>
     <hint type="destinationlabel">
      <x>442</x>
@@ -2152,8 +2195,8 @@
    <slot>action_toggle_brush(bool)</slot>
    <hints>
     <hint type="sourcelabel">
-     <x>1126</x>
-     <y>203</y>
+     <x>1147</x>
+     <y>199</y>
     </hint>
     <hint type="destinationlabel">
      <x>442</x>
@@ -2168,8 +2211,8 @@
    <slot>action_toggle_active_grid_area(bool)</slot>
    <hints>
     <hint type="sourcelabel">
-     <x>1126</x>
-     <y>162</y>
+     <x>1147</x>
+     <y>158</y>
     </hint>
     <hint type="destinationlabel">
      <x>442</x>
@@ -2184,8 +2227,8 @@
    <slot>action_toggle_eraser(bool)</slot>
    <hints>
     <hint type="sourcelabel">
-     <x>1126</x>
-     <y>244</y>
+     <x>1147</x>
+     <y>240</y>
     </hint>
     <hint type="destinationlabel">
      <x>442</x>
@@ -2200,88 +2243,8 @@
    <slot>action_show_settings()</slot>
    <hints>
     <hint type="sourcelabel">
-     <x>1126</x>
-     <y>426</y>
-    </hint>
-    <hint type="destinationlabel">
-     <x>442</x>
-     <y>0</y>
-    </hint>
-   </hints>
-  </connection>
-  <connection>
-   <sender>undo_button</sender>
-   <signal>clicked()</signal>
-   <receiver>MainWindow</receiver>
-   <slot>action_undo_triggered()</slot>
-   <hints>
-    <hint type="sourcelabel">
-     <x>296</x>
-     <y>72</y>
-    </hint>
-    <hint type="destinationlabel">
-     <x>302</x>
-     <y>0</y>
-    </hint>
-   </hints>
-  </connection>
-  <connection>
-   <sender>redo_button</sender>
-   <signal>clicked()</signal>
-   <receiver>MainWindow</receiver>
-   <slot>action_redo_triggered()</slot>
-   <hints>
-    <hint type="sourcelabel">
-     <x>338</x>
-     <y>72</y>
-    </hint>
-    <hint type="destinationlabel">
-     <x>241</x>
-     <y>0</y>
-    </hint>
-   </hints>
-  </connection>
-  <connection>
-   <sender>open_button</sender>
-   <signal>clicked()</signal>
-   <receiver>MainWindow</receiver>
-   <slot>action_load_document_triggered()</slot>
-   <hints>
-    <hint type="sourcelabel">
-     <x>161</x>
-     <y>72</y>
-    </hint>
-    <hint type="destinationlabel">
-     <x>90</x>
-     <y>0</y>
-    </hint>
-   </hints>
-  </connection>
-  <connection>
-   <sender>save_button</sender>
-   <signal>clicked()</signal>
-   <receiver>MainWindow</receiver>
-   <slot>action_save_document_triggered()</slot>
-   <hints>
-    <hint type="sourcelabel">
-     <x>213</x>
-     <y>46</y>
-    </hint>
-    <hint type="destinationlabel">
-     <x>159</x>
-     <y>0</y>
-    </hint>
-   </hints>
-  </connection>
-  <connection>
-   <sender>export_button</sender>
-   <signal>clicked()</signal>
-   <receiver>MainWindow</receiver>
-   <slot>action_quick_export_image_triggered()</slot>
-   <hints>
-    <hint type="sourcelabel">
-     <x>245</x>
-     <y>72</y>
+     <x>1147</x>
+     <y>422</y>
     </hint>
     <hint type="destinationlabel">
      <x>442</x>
@@ -2322,22 +2285,6 @@
    </hints>
   </connection>
   <connection>
-   <sender>file_new_button</sender>
-   <signal>clicked()</signal>
-   <receiver>MainWindow</receiver>
-   <slot>action_new_document_triggered()</slot>
-   <hints>
-    <hint type="sourcelabel">
-     <x>123</x>
-     <y>72</y>
-    </hint>
-    <hint type="destinationlabel">
-     <x>56</x>
-     <y>0</y>
-    </hint>
-   </hints>
-  </connection>
-  <connection>
    <sender>actionNew</sender>
    <signal>triggered()</signal>
    <receiver>MainWindow</receiver>
@@ -2360,8 +2307,8 @@
    <slot>action_toggle_nsfw_filter_triggered(bool)</slot>
    <hints>
     <hint type="sourcelabel">
-     <x>1126</x>
-     <y>376</y>
+     <x>1147</x>
+     <y>372</y>
     </hint>
     <hint type="destinationlabel">
      <x>442</x>
@@ -2744,8 +2691,8 @@
    <slot>tool_tab_index_changed(int)</slot>
    <hints>
     <hint type="sourcelabel">
-     <x>625</x>
-     <y>175</y>
+     <x>1088</x>
+     <y>289</y>
     </hint>
     <hint type="destinationlabel">
      <x>442</x>
@@ -2776,27 +2723,11 @@
    <slot>batches_panel_tab_index_changed(int)</slot>
    <hints>
     <hint type="sourcelabel">
-     <x>625</x>
-     <y>332</y>
+     <x>1088</x>
+     <y>637</y>
     </hint>
     <hint type="destinationlabel">
      <x>49</x>
-     <y>0</y>
-    </hint>
-   </hints>
-  </connection>
-  <connection>
-   <sender>center_tab</sender>
-   <signal>currentChanged(int)</signal>
-   <receiver>MainWindow</receiver>
-   <slot>center_panel_tab_index_changed(int)</slot>
-   <hints>
-    <hint type="sourcelabel">
-     <x>541</x>
-     <y>208</y>
-    </hint>
-    <hint type="destinationlabel">
-     <x>807</x>
      <y>0</y>
     </hint>
    </hints>
@@ -2914,18 +2845,114 @@
    </hints>
   </connection>
   <connection>
-   <sender>focus_button</sender>
+   <sender>open_button</sender>
    <signal>clicked()</signal>
-   <receiver>canvas_plus_widget</receiver>
-   <slot>action_button_clicked_focus()</slot>
+   <receiver>MainWindow</receiver>
+   <slot>action_load_document_triggered()</slot>
    <hints>
     <hint type="sourcelabel">
-     <x>1126</x>
-     <y>335</y>
+     <x>244</x>
+     <y>72</y>
     </hint>
     <hint type="destinationlabel">
-     <x>527</x>
-     <y>424</y>
+     <x>90</x>
+     <y>0</y>
+    </hint>
+   </hints>
+  </connection>
+  <connection>
+   <sender>undo_button</sender>
+   <signal>clicked()</signal>
+   <receiver>MainWindow</receiver>
+   <slot>action_undo_triggered()</slot>
+   <hints>
+    <hint type="sourcelabel">
+     <x>379</x>
+     <y>72</y>
+    </hint>
+    <hint type="destinationlabel">
+     <x>302</x>
+     <y>0</y>
+    </hint>
+   </hints>
+  </connection>
+  <connection>
+   <sender>file_new_button</sender>
+   <signal>clicked()</signal>
+   <receiver>MainWindow</receiver>
+   <slot>action_new_document_triggered()</slot>
+   <hints>
+    <hint type="sourcelabel">
+     <x>204</x>
+     <y>72</y>
+    </hint>
+    <hint type="destinationlabel">
+     <x>56</x>
+     <y>0</y>
+    </hint>
+   </hints>
+  </connection>
+  <connection>
+   <sender>redo_button</sender>
+   <signal>clicked()</signal>
+   <receiver>MainWindow</receiver>
+   <slot>action_redo_triggered()</slot>
+   <hints>
+    <hint type="sourcelabel">
+     <x>421</x>
+     <y>72</y>
+    </hint>
+    <hint type="destinationlabel">
+     <x>241</x>
+     <y>0</y>
+    </hint>
+   </hints>
+  </connection>
+  <connection>
+   <sender>save_button</sender>
+   <signal>clicked()</signal>
+   <receiver>MainWindow</receiver>
+   <slot>action_save_document_triggered()</slot>
+   <hints>
+    <hint type="sourcelabel">
+     <x>288</x>
+     <y>72</y>
+    </hint>
+    <hint type="destinationlabel">
+     <x>159</x>
+     <y>0</y>
+    </hint>
+   </hints>
+  </connection>
+  <connection>
+   <sender>export_button</sender>
+   <signal>clicked()</signal>
+   <receiver>MainWindow</receiver>
+   <slot>action_quick_export_image_triggered()</slot>
+   <hints>
+    <hint type="sourcelabel">
+     <x>328</x>
+     <y>72</y>
+    </hint>
+    <hint type="destinationlabel">
+     <x>442</x>
+     <y>0</y>
+    </hint>
+   </hints>
+  </connection>
+  <connection>
+   <sender>model_manager_button</sender>
+   <signal>toggled(bool)</signal>
+   <receiver>MainWindow</receiver>
+   <slot>model_manager_toggled(bool)</slot>
+   <hints>
+    <hint type="sourcelabel">
+     <x>124</x>
+     <y>48</y>
+    </hint>
+    <hint type="destinationlabel">
+     <x>770</x>
+     <y>-8</y>
     </hint>
    </hints>
   </connection>
@@ -3011,5 +3038,6 @@
   <slot>action_show_llm()</slot>
   <slot>image_generation_toggled(bool)</slot>
   <slot>language_processing_toggled(bool)</slot>
+  <slot>model_manager_toggled(bool)</slot>
  </slots>
 </ui>
