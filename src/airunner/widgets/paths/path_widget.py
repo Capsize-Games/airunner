@@ -25,7 +25,7 @@ class PathWidget(BaseWidget):
     @property
     def path(self):
         return getattr(
-            self.settings_manager.path_settings, f"{self.path_name}_path")
+            self.settings_manager.path_settings, f"{self.path_name}")
 
     def initialize(self):
         self.ui.title_label.setText(self.title)
@@ -51,7 +51,7 @@ class PathWidget(BaseWidget):
             self.set_path(path)
 
     def auto_discover(self):
-        if self.path_name == "hf_cache":
+        if self.path_name == "hf_cache_path":
             return
 
         home = os.path.expanduser("~")
@@ -68,4 +68,4 @@ class PathWidget(BaseWidget):
     def set_path(self, path):
         self.ui.path.setText(path)
         self.settings_manager.set_value(
-            f"path_settings.{self.path_name}_path", path)
+            f"path_settings.{self.path_name}", path)
