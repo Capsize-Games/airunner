@@ -6,15 +6,15 @@
    <rect>
     <x>0</x>
     <y>0</y>
-    <width>537</width>
-    <height>231</height>
+    <width>496</width>
+    <height>268</height>
    </rect>
   </property>
   <property name="windowTitle">
    <string>Form</string>
   </property>
   <layout class="QGridLayout" name="gridLayout">
-   <item row="1" column="0">
+   <item row="3" column="0">
     <widget class="QScrollArea" name="default_scroll_area">
      <property name="widgetResizable">
       <bool>true</bool>
@@ -24,28 +24,96 @@
        <rect>
         <x>0</x>
         <y>0</y>
-        <width>517</width>
-        <height>186</height>
+        <width>476</width>
+        <height>184</height>
        </rect>
       </property>
       <layout class="QVBoxLayout" name="verticalLayout"/>
      </widget>
     </widget>
    </item>
-   <item row="0" column="0">
-    <widget class="QCheckBox" name="toggle_all">
-     <property name="font">
-      <font>
-       <pointsize>8</pointsize>
-      </font>
-     </property>
-     <property name="text">
-      <string>Toggle all</string>
+   <item row="1" column="0">
+    <layout class="QHBoxLayout" name="horizontalLayout">
+     <item>
+      <widget class="QComboBox" name="comboBox"/>
+     </item>
+     <item>
+      <widget class="QCheckBox" name="toggle_all">
+       <property name="font">
+        <font>
+         <pointsize>8</pointsize>
+        </font>
+       </property>
+       <property name="text">
+        <string>Toggle all</string>
+       </property>
+      </widget>
+     </item>
+    </layout>
+   </item>
+   <item row="2" column="0">
+    <widget class="QLineEdit" name="lineEdit">
+     <property name="placeholderText">
+      <string>Search models</string>
      </property>
     </widget>
    </item>
   </layout>
  </widget>
  <resources/>
- <connections/>
+ <connections>
+  <connection>
+   <sender>comboBox</sender>
+   <signal>currentTextChanged(QString)</signal>
+   <receiver>default_model_widget</receiver>
+   <slot>mode_type_changed(QString)</slot>
+   <hints>
+    <hint type="sourcelabel">
+     <x>169</x>
+     <y>19</y>
+    </hint>
+    <hint type="destinationlabel">
+     <x>162</x>
+     <y>-8</y>
+    </hint>
+   </hints>
+  </connection>
+  <connection>
+   <sender>toggle_all</sender>
+   <signal>toggled(bool)</signal>
+   <receiver>default_model_widget</receiver>
+   <slot>toggle_all_toggled(bool)</slot>
+   <hints>
+    <hint type="sourcelabel">
+     <x>298</x>
+     <y>22</y>
+    </hint>
+    <hint type="destinationlabel">
+     <x>306</x>
+     <y>-18</y>
+    </hint>
+   </hints>
+  </connection>
+  <connection>
+   <sender>lineEdit</sender>
+   <signal>textEdited(QString)</signal>
+   <receiver>default_model_widget</receiver>
+   <slot>search_text_changed(QString)</slot>
+   <hints>
+    <hint type="sourcelabel">
+     <x>133</x>
+     <y>47</y>
+    </hint>
+    <hint type="destinationlabel">
+     <x>102</x>
+     <y>5</y>
+    </hint>
+   </hints>
+  </connection>
+ </connections>
+ <slots>
+  <slot>mode_type_changed(QString)</slot>
+  <slot>toggle_all_toggled(bool)</slot>
+  <slot>search_text_changed(QString)</slot>
+ </slots>
 </ui>

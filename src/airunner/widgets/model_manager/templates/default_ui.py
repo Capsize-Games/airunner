@@ -12,30 +12,43 @@ from PyQt6 import QtCore, QtGui, QtWidgets
 class Ui_default_model_widget(object):
     def setupUi(self, default_model_widget):
         default_model_widget.setObjectName("default_model_widget")
-        default_model_widget.resize(537, 231)
+        default_model_widget.resize(496, 268)
         self.gridLayout = QtWidgets.QGridLayout(default_model_widget)
         self.gridLayout.setObjectName("gridLayout")
         self.default_scroll_area = QtWidgets.QScrollArea(parent=default_model_widget)
         self.default_scroll_area.setWidgetResizable(True)
         self.default_scroll_area.setObjectName("default_scroll_area")
         self.scrollAreaWidgetContents = QtWidgets.QWidget()
-        self.scrollAreaWidgetContents.setGeometry(QtCore.QRect(0, 0, 517, 186))
+        self.scrollAreaWidgetContents.setGeometry(QtCore.QRect(0, 0, 476, 184))
         self.scrollAreaWidgetContents.setObjectName("scrollAreaWidgetContents")
         self.verticalLayout = QtWidgets.QVBoxLayout(self.scrollAreaWidgetContents)
         self.verticalLayout.setObjectName("verticalLayout")
         self.default_scroll_area.setWidget(self.scrollAreaWidgetContents)
-        self.gridLayout.addWidget(self.default_scroll_area, 1, 0, 1, 1)
+        self.gridLayout.addWidget(self.default_scroll_area, 3, 0, 1, 1)
+        self.horizontalLayout = QtWidgets.QHBoxLayout()
+        self.horizontalLayout.setObjectName("horizontalLayout")
+        self.comboBox = QtWidgets.QComboBox(parent=default_model_widget)
+        self.comboBox.setObjectName("comboBox")
+        self.horizontalLayout.addWidget(self.comboBox)
         self.toggle_all = QtWidgets.QCheckBox(parent=default_model_widget)
         font = QtGui.QFont()
         font.setPointSize(8)
         self.toggle_all.setFont(font)
         self.toggle_all.setObjectName("toggle_all")
-        self.gridLayout.addWidget(self.toggle_all, 0, 0, 1, 1)
+        self.horizontalLayout.addWidget(self.toggle_all)
+        self.gridLayout.addLayout(self.horizontalLayout, 1, 0, 1, 1)
+        self.lineEdit = QtWidgets.QLineEdit(parent=default_model_widget)
+        self.lineEdit.setObjectName("lineEdit")
+        self.gridLayout.addWidget(self.lineEdit, 2, 0, 1, 1)
 
         self.retranslateUi(default_model_widget)
+        self.comboBox.currentTextChanged['QString'].connect(default_model_widget.mode_type_changed) # type: ignore
+        self.toggle_all.toggled['bool'].connect(default_model_widget.toggle_all_toggled) # type: ignore
+        self.lineEdit.textEdited['QString'].connect(default_model_widget.search_text_changed) # type: ignore
         QtCore.QMetaObject.connectSlotsByName(default_model_widget)
 
     def retranslateUi(self, default_model_widget):
         _translate = QtCore.QCoreApplication.translate
         default_model_widget.setWindowTitle(_translate("default_model_widget", "Form"))
         self.toggle_all.setText(_translate("default_model_widget", "Toggle all"))
+        self.lineEdit.setPlaceholderText(_translate("default_model_widget", "Search models"))
