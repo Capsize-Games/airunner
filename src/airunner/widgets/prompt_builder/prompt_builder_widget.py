@@ -7,7 +7,6 @@ from airunner.utils import save_session
 from airunner.widgets.base_widget import BaseWidget
 from airunner.widgets.prompt_builder.prompt_builder_form_widget import PromptBuilderForm
 from airunner.widgets.prompt_builder.templates.prompt_builder_ui import Ui_prompt_builder
-from airunner.themes import Themes
 
 
 class PromptBuilderWidget(BaseWidget):
@@ -316,10 +315,6 @@ class PromptBuilderWidget(BaseWidget):
             options[f"prompt"] = current_tab.prompt_text.toPlainText()
             options[f"negative_prompt"] = current_tab.negative_prompt_text.toPlainText()
             options[f"prompt_data"] = self.prompt_data
-
-    def set_stylesheet(self):
-        super().set_stylesheet()
-        self.ui.tabs.setStyleSheet(Themes().css("prompt_builder_widget"))
 
     def tab_changed(self, val):
         print("tab_changed", val)
