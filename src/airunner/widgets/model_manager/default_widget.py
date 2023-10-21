@@ -37,3 +37,12 @@ class DefaultModelWidget(BaseWidget):
             model_widget.ui.name.setChecked(model.enabled)
             self.ui.scrollAreaWidgetContents.layout().addWidget(model_widget)
             self.model_widgets.append(model_widget)
+
+    def mode_type_changed(self, val):
+        print("mode_type_changed", val)
+    
+    def toggle_all_toggled(self, val):
+        print("toggle_all_toggled", val)
+    
+    def search_text_changed(self, val):
+        print("search text changed", val)

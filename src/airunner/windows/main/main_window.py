@@ -1422,10 +1422,13 @@ class MainWindow(
             self.ui.image_generation_button.setChecked(True)
             self.ui.image_generation_button.blockSignals(False)
             return
-        self.ui.mode_tab_widget.setCurrentIndex(0 if val else 1)
+        self.ui.mode_tab_widget.setCurrentIndex(0)
         self.ui.language_processing_button.blockSignals(True)
-        self.ui.language_processing_button.setChecked(not val)
+        self.ui.language_processing_button.setChecked(False)
         self.ui.language_processing_button.blockSignals(False)
+        self.ui.model_manager_button.blockSignals(True)
+        self.ui.model_manager_button.setChecked(False)
+        self.ui.model_manager_button.blockSignals(False)
 
     def language_processing_toggled(self, val):
         if not val: 
@@ -1433,8 +1436,26 @@ class MainWindow(
             self.ui.language_processing_button.setChecked(True)
             self.ui.language_processing_button.blockSignals(False)
             return
-        self.ui.mode_tab_widget.setCurrentIndex(1 if val else 0)
+        self.ui.mode_tab_widget.setCurrentIndex(1)
 
         self.ui.image_generation_button.blockSignals(True)
-        self.ui.image_generation_button.setChecked(not val)
+        self.ui.image_generation_button.setChecked(False)
+        self.ui.image_generation_button.blockSignals(False)
+        self.ui.model_manager_button.blockSignals(True)
+        self.ui.model_manager_button.setChecked(False)
+        self.ui.model_manager_button.blockSignals(False)
+    
+    def model_manager_toggled(self, val):
+        if not val: 
+            self.ui.model_manager_button.blockSignals(True)
+            self.ui.model_manager_button.setChecked(True)
+            self.ui.model_manager_button.blockSignals(False)
+            return
+        self.ui.mode_tab_widget.setCurrentIndex(2)
+
+        self.ui.language_processing_button.blockSignals(True)
+        self.ui.language_processing_button.setChecked(False)
+        self.ui.language_processing_button.blockSignals(False)
+        self.ui.image_generation_button.blockSignals(True)
+        self.ui.image_generation_button.setChecked(False)
         self.ui.image_generation_button.blockSignals(False)

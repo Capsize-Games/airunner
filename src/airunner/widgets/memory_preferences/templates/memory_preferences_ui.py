@@ -12,7 +12,7 @@ from PyQt6 import QtCore, QtGui, QtWidgets
 class Ui_memory_preferences(object):
     def setupUi(self, memory_preferences):
         memory_preferences.setObjectName("memory_preferences")
-        memory_preferences.resize(352, 544)
+        memory_preferences.resize(455, 563)
         self.gridLayout = QtWidgets.QGridLayout(memory_preferences)
         self.gridLayout.setObjectName("gridLayout")
         self.verticalLayout_3 = QtWidgets.QVBoxLayout()
@@ -191,15 +191,15 @@ class Ui_memory_preferences(object):
         self.gridLayout.addLayout(self.verticalLayout_3, 0, 0, 1, 1)
 
         self.retranslateUi(memory_preferences)
-        self.use_accelerated_transformers.toggled['bool'].connect(memory_preferences.action_toggled_accelerated_transformers) # type: ignore
-        self.use_attention_slicing.toggled['bool'].connect(memory_preferences.action_toggled_attention_slicing) # type: ignore
-        self.use_lastchannels.toggled['bool'].connect(memory_preferences.action_toggled_last_memory) # type: ignore
-        self.use_enable_sequential_cpu_offload.toggled['bool'].connect(memory_preferences.action_toggled_sequential_cpu_offload) # type: ignore
-        self.enable_model_cpu_offload.toggled['bool'].connect(memory_preferences.action_toggled_sequential_cpu_offload) # type: ignore
-        self.use_tf32.toggled['bool'].connect(memory_preferences.action_toggled_tf32) # type: ignore
         self.use_enable_vae_slicing.toggled['bool'].connect(memory_preferences.action_toggled_vae_slicing) # type: ignore
         self.use_tiled_vae.toggled['bool'].connect(memory_preferences.action_toggled_tile_vae) # type: ignore
+        self.use_tf32.toggled['bool'].connect(memory_preferences.action_toggled_tf32) # type: ignore
+        self.use_enable_sequential_cpu_offload.toggled['bool'].connect(memory_preferences.action_toggled_sequential_cpu_offload) # type: ignore
+        self.use_accelerated_transformers.toggled['bool'].connect(memory_preferences.action_toggled_accelerated_transformers) # type: ignore
         self.optimize_memory_button.clicked.connect(memory_preferences.action_button_clicked_optimize_memory_settings) # type: ignore
+        self.use_lastchannels.toggled['bool'].connect(memory_preferences.action_toggled_last_memory) # type: ignore
+        self.enable_model_cpu_offload.toggled['bool'].connect(memory_preferences.action_toggled_sequential_cpu_offload) # type: ignore
+        self.use_attention_slicing.toggled['bool'].connect(memory_preferences.action_toggled_attention_slicing) # type: ignore
         QtCore.QMetaObject.connectSlotsByName(memory_preferences)
 
     def retranslateUi(self, memory_preferences):
