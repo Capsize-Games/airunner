@@ -239,7 +239,9 @@ class MainWindow(
     def available_model_names_by_section(self, section):
         for model in self.settings_manager.available_models_by_category(section):
             yield model["name"]
+    
     loaded = pyqtSignal()
+
     def __init__(self, *args, **kwargs):
         logger.info("Starting AI Runnner")
         # qdarktheme.enable_hi_dpi()
@@ -1415,9 +1417,24 @@ class MainWindow(
         self.generator_tab_widget.current_generator.new_batch(index, image, data)
 
     def image_generation_toggled(self, val):
+        if not val:
+            self.ui.image_generation_button.blockSignals(True)
+            self.ui.image_generation_button.setChecked(True)
+            self.ui.image_generation_button.blockSignals(False)
+            return
         self.ui.mode_tab_widget.setCurrentIndex(0 if val else 1)
+        self.ui.language_processing_button.blockSignals(True)
         self.ui.language_processing_button.setChecked(not val)
+        self.ui.language_processing_button.blockSignals(False)
 
     def language_processing_toggled(self, val):
+        if not val: 
+            self.ui.language_processing_button.blockSignals(True)
+            self.ui.language_processing_button.setChecked(True)
+            self.ui.language_processing_button.blockSignals(False)
+            return
         self.ui.mode_tab_widget.setCurrentIndex(1 if val else 0)
+
+        self.ui.image_generation_button.blockSignals(True)
         self.ui.image_generation_button.setChecked(not val)
+        self.ui.image_generation_button.blockSignals(False)
