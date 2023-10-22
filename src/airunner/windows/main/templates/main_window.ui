@@ -141,9 +141,9 @@
                  <string notr="true"/>
                 </property>
                 <property name="currentIndex">
-                 <number>0</number>
+                 <number>3</number>
                 </property>
-                <widget class="QWidget" name="tab_2">
+                <widget class="QWidget" name="tab_canvas">
                  <attribute name="title">
                   <string>Canvas</string>
                  </attribute>
@@ -169,15 +169,37 @@
                   </item>
                  </layout>
                 </widget>
-                <widget class="QWidget" name="tab">
+                <widget class="QWidget" name="tab_txt2vid">
                  <attribute name="title">
                   <string>Video</string>
                  </attribute>
                 </widget>
-                <widget class="QWidget" name="tab_3">
+                <widget class="QWidget" name="tab_shapegif">
                  <attribute name="title">
                   <string>GIF</string>
                  </attribute>
+                </widget>
+                <widget class="QWidget" name="tab_prompt_builder">
+                 <attribute name="title">
+                  <string>Prompt Builder</string>
+                 </attribute>
+                 <layout class="QGridLayout" name="gridLayout_16">
+                  <property name="leftMargin">
+                   <number>0</number>
+                  </property>
+                  <property name="topMargin">
+                   <number>0</number>
+                  </property>
+                  <property name="rightMargin">
+                   <number>0</number>
+                  </property>
+                  <property name="bottomMargin">
+                   <number>0</number>
+                  </property>
+                  <item row="0" column="0">
+                   <widget class="PromptBuilderWidget" name="prompt_builder" native="true"/>
+                  </item>
+                 </layout>
                 </widget>
                </widget>
               </item>
@@ -193,8 +215,8 @@
               <rect>
                <x>0</x>
                <y>0</y>
-               <width>472</width>
-               <height>683</height>
+               <width>457</width>
+               <height>699</height>
               </rect>
              </property>
              <layout class="QGridLayout" name="gridLayout">
@@ -382,7 +404,7 @@
                   <x>0</x>
                   <y>0</y>
                   <width>53</width>
-                  <height>683</height>
+                  <height>699</height>
                  </rect>
                 </property>
                 <layout class="QVBoxLayout" name="verticalLayout_2">
@@ -402,6 +424,9 @@
                    </property>
                    <property name="cursor">
                     <cursorShape>PointingHandCursor</cursorShape>
+                   </property>
+                   <property name="toolTip">
+                    <string>Active grid area selection tool</string>
                    </property>
                    <property name="text">
                     <string/>
@@ -441,6 +466,9 @@
                    <property name="cursor">
                     <cursorShape>PointingHandCursor</cursorShape>
                    </property>
+                   <property name="toolTip">
+                    <string>Pen tool</string>
+                   </property>
                    <property name="text">
                     <string/>
                    </property>
@@ -478,6 +506,9 @@
                    </property>
                    <property name="cursor">
                     <cursorShape>PointingHandCursor</cursorShape>
+                   </property>
+                   <property name="toolTip">
+                    <string>Eraser tool</string>
                    </property>
                    <property name="text">
                     <string/>
@@ -524,6 +555,9 @@
                    <property name="cursor">
                     <cursorShape>PointingHandCursor</cursorShape>
                    </property>
+                   <property name="toolTip">
+                    <string>Toggle Grid</string>
+                   </property>
                    <property name="text">
                     <string/>
                    </property>
@@ -562,6 +596,9 @@
                    <property name="cursor">
                     <cursorShape>PointingHandCursor</cursorShape>
                    </property>
+                   <property name="toolTip">
+                    <string>Recenter canvas</string>
+                   </property>
                    <property name="text">
                     <string/>
                    </property>
@@ -596,6 +633,9 @@
                    </property>
                    <property name="cursor">
                     <cursorShape>PointingHandCursor</cursorShape>
+                   </property>
+                   <property name="toolTip">
+                    <string>Toggle NSFW</string>
                    </property>
                    <property name="text">
                     <string/>
@@ -641,6 +681,9 @@
                    </property>
                    <property name="cursor">
                     <cursorShape>PointingHandCursor</cursorShape>
+                   </property>
+                   <property name="toolTip">
+                    <string>AI Runner Settings</string>
                    </property>
                    <property name="text">
                     <string/>
@@ -689,13 +732,9 @@
            </property>
            <widget class="QWidget" name="tab_prompt_builder">
             <attribute name="title">
-             <string>Prompt Builder</string>
+             <string>Terminal</string>
             </attribute>
-            <layout class="QGridLayout" name="gridLayout_3">
-             <item row="0" column="0">
-              <widget class="PromptBuilderWidget" name="prompt_builder" native="true"/>
-             </item>
-            </layout>
+            <layout class="QGridLayout" name="gridLayout_3"/>
            </widget>
           </widget>
          </widget>
@@ -899,7 +938,8 @@
               <string/>
              </property>
              <property name="icon">
-              <iconset theme="user-bookmarks"/>
+              <iconset theme="user-bookmarks">
+               <normaloff>.</normaloff>.</iconset>
              </property>
              <property name="iconSize">
               <size>
@@ -923,6 +963,107 @@
             </widget>
            </item>
            <item>
+            <widget class="QPushButton" name="image_generators_button">
+             <property name="toolTip">
+              <string>Image generators</string>
+             </property>
+             <property name="text">
+              <string/>
+             </property>
+             <property name="icon">
+              <iconset theme="image-x-generic">
+               <normaloff>.</normaloff>.</iconset>
+             </property>
+             <property name="iconSize">
+              <size>
+               <width>24</width>
+               <height>24</height>
+              </size>
+             </property>
+             <property name="flat">
+              <bool>true</bool>
+             </property>
+            </widget>
+           </item>
+           <item>
+            <widget class="QPushButton" name="txt2vid_button">
+             <property name="toolTip">
+              <string>Text to Video</string>
+             </property>
+             <property name="text">
+              <string/>
+             </property>
+             <property name="icon">
+              <iconset theme="video-x-generic">
+               <normaloff>.</normaloff>.</iconset>
+             </property>
+             <property name="iconSize">
+              <size>
+               <width>24</width>
+               <height>24</height>
+              </size>
+             </property>
+             <property name="flat">
+              <bool>true</bool>
+             </property>
+            </widget>
+           </item>
+           <item>
+            <widget class="QPushButton" name="txt2gif_button">
+             <property name="toolTip">
+              <string>Text to Gif generator (Shap-E)</string>
+             </property>
+             <property name="text">
+              <string/>
+             </property>
+             <property name="icon">
+              <iconset theme="emblem-photos"/>
+             </property>
+             <property name="iconSize">
+              <size>
+               <width>24</width>
+               <height>24</height>
+              </size>
+             </property>
+             <property name="flat">
+              <bool>true</bool>
+             </property>
+            </widget>
+           </item>
+           <item>
+            <widget class="Line" name="line_7">
+             <property name="orientation">
+              <enum>Qt::Vertical</enum>
+             </property>
+            </widget>
+           </item>
+           <item>
+            <widget class="QPushButton" name="prompt_builder_button">
+             <property name="text">
+              <string/>
+             </property>
+             <property name="icon">
+              <iconset theme="document-page-setup"/>
+             </property>
+             <property name="iconSize">
+              <size>
+               <width>24</width>
+               <height>24</height>
+              </size>
+             </property>
+             <property name="flat">
+              <bool>true</bool>
+             </property>
+            </widget>
+           </item>
+           <item>
+            <widget class="Line" name="line_6">
+             <property name="orientation">
+              <enum>Qt::Vertical</enum>
+             </property>
+            </widget>
+           </item>
+           <item>
             <widget class="QPushButton" name="file_new_button">
              <property name="minimumSize">
               <size>
@@ -935,6 +1076,9 @@
                <width>24</width>
                <height>36</height>
               </size>
+             </property>
+             <property name="toolTip">
+              <string>New document</string>
              </property>
              <property name="text">
               <string/>
@@ -968,6 +1112,9 @@
                <height>36</height>
               </size>
              </property>
+             <property name="toolTip">
+              <string>Open document</string>
+             </property>
              <property name="text">
               <string/>
              </property>
@@ -999,6 +1146,9 @@
                <width>24</width>
                <height>36</height>
               </size>
+             </property>
+             <property name="toolTip">
+              <string>Save document</string>
              </property>
              <property name="text">
               <string/>
@@ -2851,7 +3001,7 @@
    <slot>action_load_document_triggered()</slot>
    <hints>
     <hint type="sourcelabel">
-     <x>244</x>
+     <x>397</x>
      <y>72</y>
     </hint>
     <hint type="destinationlabel">
@@ -2867,7 +3017,7 @@
    <slot>action_undo_triggered()</slot>
    <hints>
     <hint type="sourcelabel">
-     <x>379</x>
+     <x>532</x>
      <y>72</y>
     </hint>
     <hint type="destinationlabel">
@@ -2883,7 +3033,7 @@
    <slot>action_new_document_triggered()</slot>
    <hints>
     <hint type="sourcelabel">
-     <x>204</x>
+     <x>355</x>
      <y>72</y>
     </hint>
     <hint type="destinationlabel">
@@ -2899,7 +3049,7 @@
    <slot>action_redo_triggered()</slot>
    <hints>
     <hint type="sourcelabel">
-     <x>421</x>
+     <x>574</x>
      <y>72</y>
     </hint>
     <hint type="destinationlabel">
@@ -2915,7 +3065,7 @@
    <slot>action_save_document_triggered()</slot>
    <hints>
     <hint type="sourcelabel">
-     <x>288</x>
+     <x>439</x>
      <y>72</y>
     </hint>
     <hint type="destinationlabel">
@@ -2931,7 +3081,7 @@
    <slot>action_quick_export_image_triggered()</slot>
    <hints>
     <hint type="sourcelabel">
-     <x>328</x>
+     <x>481</x>
      <y>72</y>
     </hint>
     <hint type="destinationlabel">
@@ -2953,6 +3103,86 @@
     <hint type="destinationlabel">
      <x>770</x>
      <y>-8</y>
+    </hint>
+   </hints>
+  </connection>
+  <connection>
+   <sender>image_generators_button</sender>
+   <signal>clicked()</signal>
+   <receiver>MainWindow</receiver>
+   <slot>image_generators_clicked()</slot>
+   <hints>
+    <hint type="sourcelabel">
+     <x>188</x>
+     <y>66</y>
+    </hint>
+    <hint type="destinationlabel">
+     <x>1081</x>
+     <y>-16</y>
+    </hint>
+   </hints>
+  </connection>
+  <connection>
+   <sender>txt2vid_button</sender>
+   <signal>clicked()</signal>
+   <receiver>MainWindow</receiver>
+   <slot>text_to_video_clicked()</slot>
+   <hints>
+    <hint type="sourcelabel">
+     <x>234</x>
+     <y>52</y>
+    </hint>
+    <hint type="destinationlabel">
+     <x>1163</x>
+     <y>-3</y>
+    </hint>
+   </hints>
+  </connection>
+  <connection>
+   <sender>txt2gif_button</sender>
+   <signal>clicked()</signal>
+   <receiver>MainWindow</receiver>
+   <slot>text_to_gif_clicked()</slot>
+   <hints>
+    <hint type="sourcelabel">
+     <x>281</x>
+     <y>55</y>
+    </hint>
+    <hint type="destinationlabel">
+     <x>858</x>
+     <y>27</y>
+    </hint>
+   </hints>
+  </connection>
+  <connection>
+   <sender>prompt_builder_button</sender>
+   <signal>clicked()</signal>
+   <receiver>MainWindow</receiver>
+   <slot>prompt_builder_toggled_clicked()</slot>
+   <hints>
+    <hint type="sourcelabel">
+     <x>328</x>
+     <y>53</y>
+    </hint>
+    <hint type="destinationlabel">
+     <x>747</x>
+     <y>-12</y>
+    </hint>
+   </hints>
+  </connection>
+  <connection>
+   <sender>center_tab</sender>
+   <signal>currentChanged(int)</signal>
+   <receiver>MainWindow</receiver>
+   <slot>center_panel_tab_index_changed(int)</slot>
+   <hints>
+    <hint type="sourcelabel">
+     <x>279</x>
+     <y>132</y>
+    </hint>
+    <hint type="destinationlabel">
+     <x>1063</x>
+     <y>-7</y>
     </hint>
    </hints>
   </connection>
@@ -3039,5 +3269,9 @@
   <slot>image_generation_toggled(bool)</slot>
   <slot>language_processing_toggled(bool)</slot>
   <slot>model_manager_toggled(bool)</slot>
+  <slot>image_generators_clicked()</slot>
+  <slot>text_to_video_clicked()</slot>
+  <slot>text_to_gif_clicked()</slot>
+  <slot>prompt_builder_toggled_clicked()</slot>
  </slots>
 </ui>

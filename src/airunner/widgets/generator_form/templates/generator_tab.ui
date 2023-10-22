@@ -571,5 +571,42 @@
   </customwidget>
  </customwidgets>
  <resources/>
- <connections/>
+ <connections>
+  <connection>
+   <sender>generator_tabs</sender>
+   <signal>currentChanged(int)</signal>
+   <receiver>generator_tab</receiver>
+   <slot>handle_generator_tab_changed(int)</slot>
+   <hints>
+    <hint type="sourcelabel">
+     <x>68</x>
+     <y>19</y>
+    </hint>
+    <hint type="destinationlabel">
+     <x>62</x>
+     <y>-9</y>
+    </hint>
+   </hints>
+  </connection>
+  <connection>
+   <sender>tab_widget_stablediffusion</sender>
+   <signal>currentChanged(int)</signal>
+   <receiver>generator_tab</receiver>
+   <slot>handle_tab_section_changed(int)</slot>
+   <hints>
+    <hint type="sourcelabel">
+     <x>14</x>
+     <y>91</y>
+    </hint>
+    <hint type="destinationlabel">
+     <x>45</x>
+     <y>-22</y>
+    </hint>
+   </hints>
+  </connection>
+ </connections>
+ <slots>
+  <slot>handle_generator_tab_changed(int)</slot>
+  <slot>handle_tab_section_changed(int)</slot>
+ </slots>
 </ui>

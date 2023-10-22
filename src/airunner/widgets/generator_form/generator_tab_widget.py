@@ -16,6 +16,10 @@ class GeneratorTabWidget(BaseWidget):
     col = 0
     layout = None
 
+    def __init__(self, *args, **kwargs):
+        super().__init__(*args, **kwargs)
+        self.app.loaded.connect(self.initialize)
+
     @property
     def current_generator_widget(self):
         #return self.data[self.tab_section][self.tab]
@@ -95,7 +99,6 @@ class GeneratorTabWidget(BaseWidget):
     def initialize(self):
         from airunner.widgets.generator_form.generator_form_widget import GeneratorForm
         self.app.release_tab_overrides()
-        self.set_tab_handlers()
         self.set_current_section_tab()
         for tab in self.ui.tab_widget_stablediffusion.findChildren(GeneratorForm):
             tab.initialize()
@@ -124,28 +127,26 @@ class GeneratorTabWidget(BaseWidget):
         if generator_form:
             generator_form.clear_prompts()
 
-    def handle_generator_tab_changed(self):
+    def handle_generator_tab_changed(self, val):
         """
         This method is called when the generator tab is changed.
         Generator tabs are stablediffusion, kandinsky etc.
         :return: 
         """
+        print("handle_generator_tab_changed")
         self.settings_manager.set_value("current_tab", self.current_generator)
         self.set_current_section_tab()
         self.app.handle_generator_tab_changed()
 
-    def handle_tab_section_changed(self):
+    def handle_tab_section_changed(self, val):
         """
         This method is called when the tab section is changed.
         Tab sections are txt2img, depth2img etc.
         :return:
         """
+        print("handle_tab_section_changed")
         self.settings_manager.set_value(f"current_section_{self.current_generator}", self.current_section)
         self.app.handle_tab_section_changed()
-
-    def set_tab_handlers(self):
-        self.ui.generator_tabs.currentChanged.connect(self.handle_generator_tab_changed)
-        self.ui.tab_widget_stablediffusion.currentChanged.connect(self.handle_tab_section_changed)
 
     def set_current_section_tab(self):
         current_tab = self.settings_manager.current_tab

@@ -9,7 +9,7 @@ from functools import partial
 from PyQt6 import uic, QtCore
 from PyQt6.QtCore import pyqtSlot, Qt, QThread, pyqtSignal, QObject, QTimer
 from PyQt6.QtGui import QGuiApplication
-from PyQt6.QtWidgets import QApplication, QFileDialog, QMainWindow
+from PyQt6.QtWidgets import QApplication, QFileDialog, QMainWindow, QWidget
 
 from airunner.aihandler.enums import MessageCode, Mode
 from airunner.aihandler.logger import Logger as logger
@@ -37,7 +37,7 @@ from airunner.windows.prompt_browser.prompt_browser import PromptBrowser
 from airunner.windows.settings.airunner_settings import SettingsWindow
 from airunner.windows.update.update_window import UpdateWindow
 from airunner.windows.video import VideoPopup
-
+from airunner.data.models import TabSection
 
 class MainWindow(
     QMainWindow,
@@ -570,11 +570,12 @@ class MainWindow(
         tab_section.active_tab = self.ui.tool_tab_widget.tabText(index)
         session.commit()
 
-    def center_panel_tab_index_changed(self, int):
+    def center_panel_tab_index_changed(self, val):
         tab_section = session.query(TabSection).filter_by(
             panel="center_tab"
         ).first()
-        tab_section.active_tab = self.ui.center_tab.tabText(int)
+        tab_section.active_tab = self.ui.center_tab.tabText(val)
+        
         session.commit()
 
     def batches_panel_tab_index_changed(self, index):
@@ -1020,6 +1021,7 @@ class MainWindow(
         logger.info("Displaying window")
         self.set_stylesheet()
         if not self.testing:
+            self.setWindowFlags(self.windowFlags() | QtCore.Qt.WindowType.Window)
             self.show()
         else:
             # do not show the window when testing, otherwise it will block the tests
@@ -1318,13 +1320,36 @@ class MainWindow(
             text = f"{current_text}, {text}" if current_text != "" else text
             prompt_widget.setPlainText(text)
 
+    def change_content_widget(self):
+        active_tab_obj = session.query(TabSection).filter(
+            TabSection.panel == "center_tab"
+        ).first()
+        active_tab = active_tab_obj.active_tab
+        self.ui.center_tab.blockSignals(True)
+        if active_tab == "Prompt Builder":
+            tab_index = self.ui.center_tab.indexOf(self.ui.center_tab.findChild(QWidget, f"tab_prompt_builder"))
+            print("switching to tab_index", tab_index)
+            self.ui.center_tab.setCurrentIndex(tab_index)
+        elif self.settings_manager.generator_section == "txt2vid":
+            # get tab by name Video
+            tab_index = self.ui.center_tab.indexOf(self.ui.center_tab.findChild(QWidget, "tab_txt2vid"))
+            self.ui.center_tab.setCurrentIndex(tab_index)
+        elif self.settings_manager.current_tab == "shape":
+            # get tab by name Video
+            tab_index = self.ui.center_tab.indexOf(self.ui.center_tab.findChild(QWidget, "tab_shapegif"))
+            self.ui.center_tab.setCurrentIndex(tab_index)
+        else:
+            tab_index = self.ui.center_tab.indexOf(self.ui.center_tab.findChild(QWidget, f"tab_canvas"))
+            self.ui.center_tab.setCurrentIndex(tab_index)
+        self.ui.center_tab.blockSignals(False)
+
     def handle_generator_tab_changed(self):
-        self.update()
         self.generator_tab_changed_signal.emit()
+        self.change_content_widget()
 
     def handle_tab_section_changed(self):
-        self.update()
         self.tab_section_changed_signal.emit()
+        self.change_content_widget()
 
     def release_tab_overrides(self):
         self.override_current_generator = None
@@ -1459,3 +1484,69 @@ class MainWindow(
         self.ui.image_generation_button.blockSignals(True)
         self.ui.image_generation_button.setChecked(False)
         self.ui.image_generation_button.blockSignals(False)
+    
+    def image_generators_clicked(self):
+        self.image_generation_toggled(True)
+        # if self.settings_manager.generator_section == "txt2vid":
+        #     self.settings_manager.set_value("generator_section", "txt2img")
+        current_tab = self.settings_manager.current_tab
+        if current_tab == "shape":
+            current_tab = "stablediffusion"
+            self.settings_manager.set_value("current_tab", current_tab)
+        self.settings_manager.set_value("mode", "Image Generator")
+        self.settings_manager.set_value(f"current_section_{current_tab}", "txt2img")
+        self.generator_tab_widget.set_current_section_tab()
+        self.settings_manager.set_value("generator_section", "txt2img")
+
+        active_tab_obj = session.query(TabSection).filter(TabSection.panel == "center_tab").first()
+        active_tab_obj.active_tab = "Canvas"
+        save_session()
+
+        self.change_content_widget()
+            
+
+    def text_to_video_clicked(self):
+        self.image_generation_toggled(True)
+        current_tab = self.settings_manager.current_tab
+        if current_tab == "shape":
+            current_tab = "stablediffusion"
+            self.settings_manager.set_value("current_tab", current_tab)
+        self.settings_manager.set_value("mode", "Image Generator")
+        self.settings_manager.set_value(f"current_section_{current_tab}", "txt2vid")
+        self.generator_tab_widget.set_current_section_tab()
+        self.settings_manager.set_value("generator_section", "txt2vid")
+        
+        active_tab_obj = session.query(TabSection).filter(TabSection.panel == "center_tab").first()
+        active_tab_obj.active_tab = "Video"
+        save_session()
+
+        self.change_content_widget()
+
+    def text_to_gif_clicked(self):
+        self.image_generation_toggled(True)
+        current_tab = self.settings_manager.current_tab
+        if current_tab != "shape":
+            current_tab = "shape"
+            self.settings_manager.set_value("current_tab", current_tab)
+        self.settings_manager.set_value("mode", "Image Generator")
+        self.settings_manager.set_value(f"current_section_{current_tab}", "shape")
+        self.generator_tab_widget.set_current_section_tab()
+        self.settings_manager.set_value("generator_section", "shape")
+
+        active_tab_obj = session.query(TabSection).filter(TabSection.panel == "center_tab").first()
+        active_tab_obj.active_tab = "GIF"
+        save_session()
+
+        self.change_content_widget()
+
+    def prompt_builder_toggled_clicked(self):
+        print("prompt_builder_toggled_clicked")
+        self.image_generation_toggled(True)
+        # self.settings_manager.set_value("current_tab", "prompt_builder")
+        self.generator_tab_widget.set_current_section_tab()
+
+        active_tab_obj = session.query(TabSection).filter(TabSection.panel == "center_tab").first()
+        active_tab_obj.active_tab = "Prompt Builder"
+        save_session()
+
+        self.change_content_widget()

@@ -47,6 +47,9 @@
        <property name="text">
         <string>Toggle all</string>
        </property>
+       <property name="tristate">
+        <bool>true</bool>
+       </property>
       </widget>
      </item>
     </layout>
@@ -79,22 +82,6 @@
    </hints>
   </connection>
   <connection>
-   <sender>toggle_all</sender>
-   <signal>toggled(bool)</signal>
-   <receiver>default_model_widget</receiver>
-   <slot>toggle_all_toggled(bool)</slot>
-   <hints>
-    <hint type="sourcelabel">
-     <x>298</x>
-     <y>22</y>
-    </hint>
-    <hint type="destinationlabel">
-     <x>306</x>
-     <y>-18</y>
-    </hint>
-   </hints>
-  </connection>
-  <connection>
    <sender>lineEdit</sender>
    <signal>textEdited(QString)</signal>
    <receiver>default_model_widget</receiver>
@@ -110,10 +97,27 @@
     </hint>
    </hints>
   </connection>
+  <connection>
+   <sender>toggle_all</sender>
+   <signal>stateChanged(int)</signal>
+   <receiver>default_model_widget</receiver>
+   <slot>toggle_all_state_change(int)</slot>
+   <hints>
+    <hint type="sourcelabel">
+     <x>280</x>
+     <y>15</y>
+    </hint>
+    <hint type="destinationlabel">
+     <x>278</x>
+     <y>-13</y>
+    </hint>
+   </hints>
+  </connection>
  </connections>
  <slots>
   <slot>mode_type_changed(QString)</slot>
   <slot>toggle_all_toggled(bool)</slot>
   <slot>search_text_changed(QString)</slot>
+  <slot>toggle_all_state_change(int)</slot>
  </slots>
 </ui>
