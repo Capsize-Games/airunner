@@ -187,5 +187,68 @@ model_bootstrap_data = [
         "category": "stablediffusion",
         "pipeline_action": "inpaint_vae",
         "enabled": True
+    },
+    {
+        "name": "Flan T5 Small",
+        "path": "google/flan-t5-small",
+        "branch": "fp16",
+        "version": "1",
+        "category": "llm",
+        "pipeline_action": "seq2seq",
+        "enabled": True
+    },
+    {
+        "name": "Flan T5 Large",
+        "path": "google/flan-t5-large",
+        "branch": "fp16",
+        "version": "1",
+        "category": "llm",
+        "pipeline_action": "seq2seq",
+        "enabled": True
+    },
+    {
+        "name": "Flan T5 XL",
+        "path": "google/flan-t5-xl",
+        "branch": "fp16",
+        "version": "1",
+        "category": "llm",
+        "pipeline_action": "seq2seq",
+        "enabled": True
+    },
+    {
+        "name": "Flan T5 XXL",
+        "path": "google/flan-t5-xxl",
+        "branch": "fp16",
+        "version": "1",
+        "category": "llm",
+        "pipeline_action": "seq2seq",
+        "enabled": True
+    },
+    {
+        "name": "Flan T5 UL",
+        "path": "google/flan-t5-ul",
+        "branch": "fp16",
+        "version": "1",
+        "category": "llm",
+        "pipeline_action": "seq2seq",
+        "enabled": True
+    },
+    {
+        "name": "Llama 2 7b",
+        "path": "~/.airunner/text/models/txt2txt/llama-2-7b",
+        "branch": "fp16",
+        "version": "2",
+        "category": "llm",
+        "pipeline_action": "casuallm",
+        "enabled": True
+    },
+    {
+        "name": "Llama 2 7b Chat",
+        "path": "~/.airunner/text/models/txt2txt/llama-2-7b-chat",
+        "branch": "fp16",
+        "version": "2",
+        "category": "llm",
+        "pipeline_action": "casuallm",
+        "enabled": True
     }
 ]
