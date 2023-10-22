@@ -30,7 +30,6 @@ class PromptBuilderForm(BaseWidget):
         self.prompt_builder_widget = kwargs.pop("prompt_builder_widget")
         super().__init__(*args, **kwargs)
         self.parent = kwargs.get("parent")
-        self.set_stylesheet()
         self.scroll_layout = QGridLayout(self.ui.scrollArea.widget())
         self.initialize_category_dropdowns()
         self.initialize_genre_dropdowns()
@@ -198,7 +197,7 @@ class PromptBuilderForm(BaseWidget):
         self.scroll_layout.layout().addItem(spacer, total_rows+1, 0)
 
     def create_prompt_widget(self, category, variable, weighted_value, index):
-        widget = uic.loadUi(f"widgets/prompt_builder/prompt_builder_variable_widget.ui")
+        widget = uic.loadUi(f"widgets/prompt_builder/templates/prompt_builder_variable_widget.ui")
         widget.label.setText(variable.capitalize())
 
         # set default weights

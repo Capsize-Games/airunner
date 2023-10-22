@@ -209,5 +209,17 @@ pipeline_bootstrap_data = pipelines = [
         "version": "SD 2.1",
         "category": "stablediffusion",
         "classname": "transformers.AutoFeatureExtractor",
+    },
+    {
+        "pipeline_action": "seq2seq",
+        "version": "1",
+        "category": "llm",
+        "classname": "transformers.AutoModelForSeq2SeqLM",
+    },
+    {
+        "pipeline_action": "casuallm",
+        "version": "2",
+        "category": "llm",
+        "classname": "transformers.AutoModelForCausalLM",
     }
 ]

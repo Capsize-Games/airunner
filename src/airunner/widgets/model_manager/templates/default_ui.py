@@ -34,6 +34,7 @@ class Ui_default_model_widget(object):
         font = QtGui.QFont()
         font.setPointSize(8)
         self.toggle_all.setFont(font)
+        self.toggle_all.setTristate(True)
         self.toggle_all.setObjectName("toggle_all")
         self.horizontalLayout.addWidget(self.toggle_all)
         self.gridLayout.addLayout(self.horizontalLayout, 1, 0, 1, 1)
@@ -43,8 +44,8 @@ class Ui_default_model_widget(object):
 
         self.retranslateUi(default_model_widget)
         self.comboBox.currentTextChanged['QString'].connect(default_model_widget.mode_type_changed) # type: ignore
-        self.toggle_all.toggled['bool'].connect(default_model_widget.toggle_all_toggled) # type: ignore
         self.lineEdit.textEdited['QString'].connect(default_model_widget.search_text_changed) # type: ignore
+        self.toggle_all.stateChanged['int'].connect(default_model_widget.toggle_all_state_change) # type: ignore
         QtCore.QMetaObject.connectSlotsByName(default_model_widget)
 
     def retranslateUi(self, default_model_widget):

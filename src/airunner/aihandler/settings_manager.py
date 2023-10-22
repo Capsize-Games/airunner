@@ -5,6 +5,7 @@ from airunner.data.db import session
 from airunner.data.models import LLMGenerator, Settings, GeneratorSetting, AIModel, Pipeline, ControlnetModel, ImageFilter, Prompt, \
     SavedPrompt, PromptCategory, PromptVariable, PromptVariableCategory, PromptVariableCategoryWeight
 from airunner.utils import save_session
+from airunner.aihandler.logger import Logger as logger
 
 document = None
 _app = None
@@ -157,11 +158,15 @@ class SettingsManager(QObject):
         return cateogires
 
     def get_pipeline_classname(self, pipeline_action, version, category):
-        return session.query(Pipeline).filter_by(
-            category=category,
-            pipeline_action=pipeline_action,
-            version=version
-        ).first().classname
+        try:
+            return session.query(Pipeline).filter_by(
+                category=category,
+                pipeline_action=pipeline_action,
+                version=version
+            ).first().classname
+        except AttributeError:
+            logger.error(f"Unable to find pipeline classname for {pipeline_action} {version} {category}")
+            return None
 
     @property
     def model_versions(self):
@@ -178,7 +183,10 @@ class SettingsManager(QObject):
 
     @property
     def generator(self):
-        return self.find_generator(self.generator_section, self.generator_name)
+        generator = self.find_generator(self.generator_section, self.generator_name)
+        if not generator:
+            logger.error(f"Unable to find generator {self.generator_section} {self.generator_name}")
+        return generator
     
     @property
     def llm_generator_setting(self):
