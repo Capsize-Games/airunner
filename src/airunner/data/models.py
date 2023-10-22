@@ -42,11 +42,13 @@ class ModelBase(QAbstractTableModel):
 
 Base = declarative_base()
 
+class BaseModel(Base):
+    __abstract__ = True
+    id = Column(Integer, primary_key=True)
 
-class Embedding(Base):
+class Embedding(BaseModel):
     __tablename__ = 'embeddings'
 
-    id = Column(Integer, primary_key=True)
     name = Column(String)
     path = Column(String)
     tags = Column(String)
@@ -57,7 +59,7 @@ class Embedding(Base):
     )
 
 
-class Scheduler(Base):
+class Scheduler(BaseModel):
     __tablename__ = "schedulers"
 
     id = Column(Integer, primary_key=True)
@@ -65,7 +67,7 @@ class Scheduler(Base):
     display_name = Column(String)
 
 
-class ActionScheduler(Base):
+class ActionScheduler(BaseModel):
     __tablename__ = "action_schedulers"
 
     id = Column(Integer, primary_key=True)
@@ -92,7 +94,7 @@ class PromptStyleCategoryModel(ModelBase):
     ]
 
 
-class PromptStyleCategory(Base):
+class PromptStyleCategory(BaseModel):
     __tablename__ = 'prompt_style_category'
 
     id = Column(Integer, primary_key=True)
@@ -100,7 +102,7 @@ class PromptStyleCategory(Base):
     negative_prompt = Column(String)
 
 
-class PromptStyle(Base):
+class PromptStyle(BaseModel):
     __tablename__ = 'prompt_style'
 
     id = Column(Integer, primary_key=True)
@@ -109,21 +111,21 @@ class PromptStyle(Base):
     style_category = relationship("PromptStyleCategory", backref="styles")
 
 
-class PromptCategory(Base):
+class PromptCategory(BaseModel):
     __tablename__ = 'prompt_category'
 
     id = Column(Integer, primary_key=True)
     name = Column(String)
 
 
-class PromptVariableCategory(Base):
+class PromptVariableCategory(BaseModel):
     __tablename__ = 'prompt_variable_category'
 
     id = Column(Integer, primary_key=True)
     name = Column(String)
 
 
-class PromptVariableCategoryWeight(Base):
+class PromptVariableCategoryWeight(BaseModel):
     __tablename__ = 'prompt_variable_category_weight'
 
     id = Column(Integer, primary_key=True)
@@ -134,7 +136,7 @@ class PromptVariableCategoryWeight(Base):
     variable_category = relationship("PromptVariableCategory", backref="weights")
 
 
-class PromptVariable(Base):
+class PromptVariable(BaseModel):
     __tablename__ = 'prompt_variables'
 
     id = Column(Integer, primary_key=True)
@@ -145,7 +147,7 @@ class PromptVariable(Base):
     variable_category = relationship("PromptVariableCategory", backref="variables")
 
 
-class PromptOption(Base):
+class PromptOption(BaseModel):
     __tablename__ = 'prompt_option'
 
     id = Column(Integer, primary_key=True)
@@ -166,7 +168,7 @@ class PromptOption(Base):
     )
 
 
-class Prompt(Base):
+class Prompt(BaseModel):
     __tablename__ = 'prompts'
 
     id = Column(Integer, primary_key=True)
@@ -176,7 +178,7 @@ class Prompt(Base):
     options = relationship("PromptOption", backref="prompts")
 
 
-class SavedPrompt(Base):
+class SavedPrompt(BaseModel):
     __tablename__ = 'saved_prompts'
 
     id = Column(Integer, primary_key=True)
@@ -188,7 +190,7 @@ class SavedPrompt(Base):
     )
 
 
-class ControlnetModel(Base):
+class ControlnetModel(BaseModel):
     __tablename__ = 'controlnet_models'
 
     id = Column(Integer, primary_key=True)
@@ -201,7 +203,7 @@ class ControlnetModel(Base):
         return f"<ControlnetModel(name='{self.name}', path='{self.path}', default='{self.is_default}')>"
 
 
-class AIModel(Base):
+class AIModel(BaseModel):
     __tablename__ = 'ai_models'
 
     id = Column(Integer, primary_key=True)
@@ -213,9 +215,10 @@ class AIModel(Base):
     pipeline_action = Column(String)
     enabled = Column(Boolean, default=True)
     is_default = Column(Boolean, default=True)
+    model_type = Column(String, default="image")
 
 
-class Pipeline(Base):
+class Pipeline(BaseModel):
     __tablename__ = 'pipelines'
 
     id = Column(Integer, primary_key=True)
@@ -227,7 +230,7 @@ class Pipeline(Base):
     default = Column(Boolean, default=True)
 
 
-class SplitterSection(Base):
+class SplitterSection(BaseModel):
     __tablename__ = 'splitter_section'
 
     id = Column(Integer, primary_key=True)
@@ -237,7 +240,7 @@ class SplitterSection(Base):
     size = Column(Integer)
 
 
-class Lora(Base):
+class Lora(BaseModel):
     __tablename__ = 'loras'
 
     id = Column(Integer, primary_key=True)
@@ -258,7 +261,7 @@ class Lora(Base):
     )
 
 
-class GeneratorSetting(Base):
+class GeneratorSetting(BaseModel):
     __tablename__ = 'generator_settings'
 
     id = Column(Integer, primary_key=True)
@@ -304,7 +307,7 @@ class GeneratorSetting(Base):
     active_grid_fill_color = Column(String, default="#FF0000")
 
 
-class PromptGeneratorSetting(Base):
+class PromptGeneratorSetting(BaseModel):
     __tablename__ = 'prompt_generator_settings'
 
     id = Column(Integer, primary_key=True)
@@ -325,7 +328,7 @@ class PromptGeneratorSetting(Base):
     active = Column(Boolean, default=False)
 
 
-class GridSettings(Base):
+class GridSettings(BaseModel):
     __tablename__ = 'grid_settings'
 
     id = Column(Integer, primary_key=True)
@@ -338,7 +341,7 @@ class GridSettings(Base):
     settings = relationship("Settings", back_populates="grid_settings")
 
 
-class DeterministicSettings(Base):
+class DeterministicSettings(BaseModel):
     __tablename__ = 'deterministic_settings'
 
     id = Column(Integer, primary_key=True)
@@ -348,7 +351,7 @@ class DeterministicSettings(Base):
     settings = relationship("Settings", back_populates="deterministic_settings")
 
 
-class MetadataSettings(Base):
+class MetadataSettings(BaseModel):
     __tablename__ = 'metadata_settings'
 
     id = Column(Integer, primary_key=True)
@@ -368,7 +371,7 @@ class MetadataSettings(Base):
     settings = relationship("Settings", back_populates="metadata_settings")
 
 
-class MemorySettings(Base):
+class MemorySettings(BaseModel):
     __tablename__ = "memory_settings"
 
     id = Column(Integer, primary_key=True)
@@ -385,47 +388,70 @@ class MemorySettings(Base):
     settings = relationship("Settings", back_populates="memory_settings")
 
 
-MODELS_PATH = os.path.join(BASE_PATH, "models")
 DEFAULT_PATHS = {
-    "base": BASE_PATH,
-    "models": {
-        "txt2img": "",
-        "depth2img": "",
-        "pix2pix": "",
-        "inpaint": "",
-        "upscale": "",
-        "txt2vid": "",
-        "embeddings": "",
-        "lora": "",
+    "art": {
+        "models": {
+            "txt2img": "",
+            "depth2img": "",
+            "pix2pix": "",
+            "inpaint": "",
+            "upscale": "",
+            "txt2vid": "",
+            "embeddings": "",
+            "lora": "",
+        },
+        "other": {
+            "images": "",
+            "gifs": "",
+            "videos": "",
+        },
     },
-    "other": {
-        "images": "",
-        "gifs": "",
-        "videos": "",
-    },
+    "text": {
+        "models": {
+            "casuallm": "",
+            "seq2seq": "",
+        }
+    }
 }
-for k,v in DEFAULT_PATHS["models"].items():
-    DEFAULT_PATHS["models"][k] = os.path.join(MODELS_PATH, k)
-for k,v in DEFAULT_PATHS["other"].items():
-    DEFAULT_PATHS["other"][k] = os.path.join(BASE_PATH, k)
 
-class PathSettings(Base):
+for k, v in DEFAULT_PATHS.items():
+    for k2, v2 in v.items():
+        if isinstance(v2, dict):
+            for k3, v3 in v2.items():
+                path = os.path.join(BASE_PATH, k, k2, k3)
+                DEFAULT_PATHS[k][k2][k3] = path
+                #check if path exists, if not, create it:
+                if not os.path.exists(path):
+                    print("creating path: ", path)
+                    os.makedirs(path)
+        else:
+            path = os.path.join(BASE_PATH, k, k2)
+            DEFAULT_PATHS[k][k2] = path
+            #check if path exists, if not, create it:
+            if not os.path.exists(path):
+                print("creating path: ", path)
+                os.makedirs(path)
+
+class PathSettings(BaseModel):
     __tablename__ = 'path_settings'
 
     id = Column(Integer, primary_key=True)
     hf_cache_path = Column(String, default="")
-    base_path = Column(String, default=DEFAULT_PATHS["base"])
-    txt2img_model_path = Column(String, default=DEFAULT_PATHS["models"]["txt2img"])
-    depth2img_model_path = Column(String, default=DEFAULT_PATHS["models"]["depth2img"])
-    pix2pix_model_path = Column(String, default=DEFAULT_PATHS["models"]["pix2pix"])
-    inpaint_model_path = Column(String, default=DEFAULT_PATHS["models"]["inpaint"])
-    upscale_model_path = Column(String, default=DEFAULT_PATHS["models"]["upscale"])
-    txt2vid_model_path = Column(String, default=DEFAULT_PATHS["models"]["txt2vid"])
-    embeddings_model_path = Column(String, default=os.path.join(MODELS_PATH, "embeddings"))
-    lora_model_path = Column(String, default=os.path.join(MODELS_PATH, "lora"))
-    image_path = Column(String, default=os.path.join(BASE_PATH, "images"))
-    gif_path = Column(String, default=os.path.join(BASE_PATH, "gifs"))
-    video_path = Column(String, default=os.path.join(BASE_PATH, "videos"))
+    base_path = Column(String, default=BASE_PATH)
+    txt2img_model_path = Column(String, default=DEFAULT_PATHS["art"]["models"]["txt2img"])
+    depth2img_model_path = Column(String, default=DEFAULT_PATHS["art"]["models"]["depth2img"])
+    pix2pix_model_path = Column(String, default=DEFAULT_PATHS["art"]["models"]["pix2pix"])
+    inpaint_model_path = Column(String, default=DEFAULT_PATHS["art"]["models"]["inpaint"])
+    upscale_model_path = Column(String, default=DEFAULT_PATHS["art"]["models"]["upscale"])
+    txt2vid_model_path = Column(String, default=DEFAULT_PATHS["art"]["models"]["txt2vid"])
+    embeddings_model_path = Column(String, default=DEFAULT_PATHS["art"]["models"]["embeddings"])
+    lora_model_path = Column(String, default=DEFAULT_PATHS["art"]["models"]["lora"])
+    image_path = Column(String, default=DEFAULT_PATHS["art"]["other"]["images"])
+    gif_path = Column(String, default=DEFAULT_PATHS["art"]["other"]["gifs"])
+    video_path = Column(String, default=DEFAULT_PATHS["art"]["other"]["videos"])
+    llm_casuallm_model_path = Column(String, default=DEFAULT_PATHS["text"]["models"]["casuallm"])
+    llm_seq2seq_model_path = Column(String, default=DEFAULT_PATHS["text"]["models"]["seq2seq"])
+
     settings = relationship("Settings", back_populates="path_settings")
 
     @property
@@ -479,7 +505,7 @@ class PathSettings(Base):
         save_session()
 
 
-class BrushSettings(Base):
+class BrushSettings(BaseModel):
     __tablename__ = 'brush_settings'
 
     id = Column(Integer, primary_key=True)
@@ -489,7 +515,7 @@ class BrushSettings(Base):
     settings = relationship("Settings", back_populates="brush_settings")
 
 
-class ImageFilter(Base):
+class ImageFilter(BaseModel):
     __tablename__ = 'image_filter'
 
     id = Column(Integer, primary_key=True)
@@ -500,7 +526,7 @@ class ImageFilter(Base):
     filter_class = Column(String, default="")
 
 
-class ImageFilterValue(Base):
+class ImageFilterValue(BaseModel):
     __tablename__ = 'image_filter_value'
 
     id = Column(Integer, primary_key=True)
@@ -513,7 +539,7 @@ class ImageFilterValue(Base):
     max_value = Column(Integer, default=100)
 
 
-class ActiveGridSettings(Base):
+class ActiveGridSettings(BaseModel):
     __tablename__ = 'active_grid_settings'
 
     id = Column(Integer, primary_key=True)
@@ -529,7 +555,7 @@ class ActiveGridSettings(Base):
     settings = relationship("Settings", back_populates="active_grid_settings")
 
 
-class Settings(Base):
+class Settings(BaseModel):
     __tablename__ = 'settings'
 
     id = Column(Integer, primary_key=True)
@@ -589,7 +615,7 @@ class Settings(Base):
     current_tab = Column(String, default="stablediffusion")
     current_section_stablediffusion = Column(String, default="txt2img")
     current_section_kandinsky = Column(String, default="txt2img")
-    current_section_shapegif = Column(String, default="txt2img")
+    current_section_shape = Column(String, default="txt2img")
     generator_settings = relationship("GeneratorSetting", backref="settings")
 
     # tool and bottom panel tab sections
@@ -600,7 +626,7 @@ class Settings(Base):
     unload_unused_model = Column(Boolean, default=False)
 
 
-class LayerImage(Base):
+class LayerImage(BaseModel):
     __tablename__ = "layer_images"
 
     @property
@@ -639,7 +665,7 @@ class LayerImage(Base):
     visible = Column(Boolean, default=True)
 
 
-class Layer(Base):
+class Layer(BaseModel):
     __tablename__ = 'layers'
 
     id = Column(Integer, primary_key=True)
@@ -651,7 +677,7 @@ class Layer(Base):
     position = Column(Integer, default=0)
 
 
-class Document(Base):
+class Document(BaseModel):
     __tablename__ = 'documents'
 
     id = Column(Integer, primary_key=True)
@@ -661,7 +687,7 @@ class Document(Base):
     active = Column(Boolean, default=False)
 
 
-class TabSection(Base):
+class TabSection(BaseModel):
     __tablename__ = 'active_tab'
 
     id = Column(Integer, primary_key=True)
@@ -669,7 +695,7 @@ class TabSection(Base):
     active_tab = Column(String)
 
 
-class PromptBuilder(Base):
+class PromptBuilder(BaseModel):
     __tablename__ = 'prompt_builder'
 
     id = Column(Integer, primary_key=True)
@@ -683,7 +709,7 @@ class PromptBuilder(Base):
     negative_text_prompt_weight = Column(Float, default=0.5)
 
 
-class CanvasSettings(Base):
+class CanvasSettings(BaseModel):
     __tablename__ = "canvas_settings"
 
     id = Column(Integer, primary_key=True)
@@ -691,7 +717,7 @@ class CanvasSettings(Base):
     pos_y = Column(Integer, default=0)
 
 
-class LLMGenerator(Base):
+class LLMGenerator(BaseModel):
     __tablename__ = 'llm_generator'
     id = Column(Integer, primary_key=True)
     created_at = Column(DateTime, default=datetime.datetime.utcnow)
@@ -707,7 +733,7 @@ class LLMGenerator(Base):
     override_parameters = Column(Boolean, default=False)
 
 
-class LLMGeneratorSetting(Base):
+class LLMGeneratorSetting(BaseModel):
     __tablename__ = 'llm_generator_setting'
     id = Column(Integer, primary_key=True)
     created_at = Column(DateTime, default=datetime.datetime.utcnow)
@@ -732,7 +758,7 @@ class LLMGeneratorSetting(Base):
     use_gpu = Column(Boolean, default=True)
 
 
-class LLMModelVersion(Base):
+class LLMModelVersion(BaseModel):
     __tablename__ = 'llm_model_version'
     id = Column(Integer, primary_key=True)
     created_at = Column(DateTime, default=datetime.datetime.utcnow)
@@ -741,13 +767,13 @@ class LLMModelVersion(Base):
     generator = relationship('LLMGenerator', back_populates='model_versions')
 
 
-class Conversation(Base):
+class Conversation(BaseModel):
     __tablename__ = 'conversation'
     id = Column(Integer, primary_key=True)
     created_at = Column(DateTime, default=datetime.datetime.utcnow)
     messages = relationship('Message', back_populates='conversation')
 
-class Message(Base):
+class Message(BaseModel):
     __tablename__ = 'messages'
     id = Column(Integer, primary_key=True)
     created_at = Column(DateTime, default=datetime.datetime.utcnow)
