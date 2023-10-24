@@ -5,6 +5,7 @@ from PyQt6.QtWidgets import QStyledItemDelegate, QStyleOptionViewItem, QLabel, Q
 from airunner.widgets.api_token.api_token_widget import APITokenWidget
 from airunner.widgets.export_preferences.export_preferences_widget import ExportPreferencesWidget
 from airunner.widgets.grid_preferences.grid_preferences_widget import GridPreferencesWidget
+from airunner.widgets.image_generator_preferences.image_generator_preferences_widget import ImageGeneratorPreferencesWidget
 
 from airunner.widgets.keyboard_shortcuts.keyboard_shortcuts_widget import KeyboardShortcutsWidget
 from airunner.widgets.memory_preferences.memory_preferences_widget import MemoryPreferencesWidget
@@ -46,6 +47,16 @@ class SettingsWindow(BaseWindow):
         self.ui.directory.setIndentation(20)
 
         directory = [
+            {
+                "section": "Image Generator Preferences",
+                "files": [
+                    {
+                        "name": "image_generator_preferences",
+                        "display_name": "Image Generator",
+                        "checkable": False
+                    }
+                ]
+            },
             {
                 "section": "Import / Export Preferences",
                 "files": [
@@ -233,6 +244,7 @@ class SettingsWindow(BaseWindow):
 
         widget_object = None
         widgets = {
+            "image_generator_preferences": ImageGeneratorPreferencesWidget,
             "paths": PathsWidget,
             "keyboard_shortcuts": KeyboardShortcutsWidget,
             "export_preferences": ExportPreferencesWidget,
