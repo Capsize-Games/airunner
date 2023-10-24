@@ -7,7 +7,7 @@ from sqlalchemy import inspect
 
 from airunner.aihandler.enums import MessageCode
 from airunner.data.db import session
-from airunner.data.models import LLMGenerator, Conversation, LLMGeneratorSetting, Message
+from airunner.data.models import AIModel, LLMGenerator, Conversation, LLMGeneratorSetting, Message
 from airunner.utils import save_session
 from airunner.widgets.base_widget import BaseWidget
 from airunner.widgets.llm.templates.llm_widget_ui import Ui_llm_widget
@@ -22,8 +22,11 @@ class LLMWidget(BaseWidget):
     prefix = ""
     prompt = ""
     suffix = ""
-    current_generator = "Flan"
     conversation_history = []
+
+    @property
+    def current_generator(self):
+        return self.settings_manager.current_llm_generator
 
     @property
     def instructions(self):
@@ -57,7 +60,6 @@ class LLMWidget(BaseWidget):
 
     @pyqtSlot(dict)
     def message_handler(self, response: dict):
-        print("message_handler", response)
         try:
             code = response["code"]
         except TypeError:
@@ -69,6 +71,7 @@ class LLMWidget(BaseWidget):
 
     def initialize_form(self):
         self.ui.model.blockSignals(True)
+        self.ui.model_version.blockSignals(True)
         self.ui.prompt.blockSignals(True)
         self.ui.botname.blockSignals(True)
         self.ui.username.blockSignals(True)
@@ -94,9 +97,12 @@ class LLMWidget(BaseWidget):
         self.set_dtype_by_gpu(self.generator.generator_settings[0].use_gpu)
         self.set_dtype(self.generator.generator_settings[0].dtype)
 
+        # get unique model names
         model_names = [model.name for model in session.query(LLMGenerator).all()]
+        model_names = list(set(model_names))
         self.ui.model.clear()
         self.ui.model.addItems(model_names)
+        self.ui.model.setCurrentText(self.current_generator)
         self.ui.username.setText(self.generator.username)
         self.ui.botname.setText(self.generator.botname)
         self.update_model_version_combobox()
@@ -109,6 +115,7 @@ class LLMWidget(BaseWidget):
         self.ui.override_parameters.setChecked(self.generator.override_parameters)
 
         self.ui.model.blockSignals(False)
+        self.ui.model_version.blockSignals(False)
         self.ui.prompt.blockSignals(False)
         self.ui.botname.blockSignals(False)
         self.ui.username.blockSignals(False)
@@ -214,9 +221,11 @@ class LLMWidget(BaseWidget):
     def action_button_clicked_send(self):
         if self.generating:
             return
+            
+        self.load_generator()
         self.generating = True
         self.disable_send_button()
-        user_input = f"{self.generator.username} Says: \"{self.prompt}\""
+        #user_input = f"{self.generator.username} Says: \"{self.prompt}\""
         # conversation = "\n".join(self.conversation_history)
         # suffix = "\n".join([self.suffix, f'{self.generator.botname} Says: '])
         # prompt = "\n".join([self.instructions, self.prefix, conversation, input, suffix])
@@ -225,8 +234,7 @@ class LLMWidget(BaseWidget):
             "request_data": {
                 "generator_name": self.generator.name,
                 "model_path": self.generator.generator_settings[0].model_version,
-                "request_type": "bot_response",
-                "input": user_input,
+                "prompt": self.prompt,
                 "do_summary": False,
                 "is_bot_alive": True,
                 "conversation_history": self.conversation_history,
@@ -235,6 +243,22 @@ class LLMWidget(BaseWidget):
                 "suffix": self.suffix,
                 "dtype": self.generator.generator_settings[0].dtype,
                 "use_gpu": self.generator.generator_settings[0].use_gpu,
+                "request_type": "image_caption_generator",
+                "parameters": {
+                    "override_parameters": self.generator.override_parameters,
+                    "top_p": self.generator.generator_settings[0].top_p,
+                    "max_length": self.generator.generator_settings[0].max_length,
+                    "repetition_penalty": self.generator.generator_settings[0].repetition_penalty,
+                    "min_length": self.generator.generator_settings[0].min_length,
+                    "length_penalty": self.generator.generator_settings[0].length_penalty,
+                    "num_beams": self.generator.generator_settings[0].num_beams,
+                    "ngram_size": self.generator.generator_settings[0].ngram_size,
+                    "temperature": self.generator.generator_settings[0].temperature,
+                    "sequences": self.generator.generator_settings[0].sequences,
+                    "top_k": self.generator.generator_settings[0].top_k,
+                    "seed": self.generator.generator_settings[0].do_sample,
+                    "early_stopping": self.generator.generator_settings[0].early_stopping,
+                }
             }
         }
         message_object = Message(
@@ -251,7 +275,7 @@ class LLMWidget(BaseWidget):
 
     def add_message_to_conversation(self, message_object, is_bot):
         message = f"{message_object.name} Says: \"{message_object.message}\""
-        self.conversation_history.append(message)
+        self.conversation_history.append(message_object.message)
         self.ui.conversation.append(message)
 
     def action_button_clicked_generate_characters(self):
@@ -302,17 +326,18 @@ class LLMWidget(BaseWidget):
         self.ui.dtype_description.setText(self.dtype_descriptions[dtype])
 
     def model_text_changed(self, val):
-        self.generator.generator_settings[0].model = val
-        self.current_generator = val
-        save_session()
+        self.settings_manager.set_value("current_llm_generator", val)
         self.load_generator()
+        self.generator.generator_settings[0].model = val
         self.update_model_version_combobox()
 
     def update_model_version_combobox(self):
         self.ui.model_version.blockSignals(True)
         self.ui.model_version.clear()
-        model_versions = [version.name for version in self.generator.model_versions]
-        self.ui.model_version.addItems(model_versions)
+        ai_model_paths = [model.path for model in session.query(AIModel).filter(
+            AIModel.pipeline_action == self.current_generator
+        )]
+        self.ui.model_version.addItems(ai_model_paths)
         self.ui.model_version.blockSignals(False)
 
     def load_generator(self):
