@@ -280,7 +280,7 @@ class GeneratorSetting(BaseModel):
     random_seed = Column(Boolean, default=True)
     random_latents_seed = Column(Boolean, default=True)
     model = Column(String, default="")
-    scheduler = Column(String, default="")
+    scheduler = Column(String, default="DPM++ 2M Karras")
     prompt_triggers = Column(String, default="")
     strength = Column(Integer, default=50)
     image_guidance_scale = Column(Integer, default=150)
@@ -625,6 +625,9 @@ class Settings(BaseModel):
     move_unused_model_to_cpu = Column(Boolean, default=True)
     unload_unused_model = Column(Boolean, default=False)
 
+    current_image_generator = Column(String, default="stablediffusion")
+    current_llm_generator = Column(String, default="casuallm")
+
 
 class LayerImage(BaseModel):
     __tablename__ = "layer_images"
@@ -721,7 +724,7 @@ class LLMGenerator(BaseModel):
     __tablename__ = 'llm_generator'
     id = Column(Integer, primary_key=True)
     created_at = Column(DateTime, default=datetime.datetime.utcnow)
-    name = Column(String)
+    name = Column(String, default="casuallm")
     username = Column(String)
     botname = Column(String)
     model_versions = relationship('LLMModelVersion', back_populates='generator')
@@ -734,7 +737,7 @@ class LLMGenerator(BaseModel):
 
 
 class LLMGeneratorSetting(BaseModel):
-    __tablename__ = 'llm_generator_setting'
+    __tablename__ = 'llm_generator_settings'
     id = Column(Integer, primary_key=True)
     created_at = Column(DateTime, default=datetime.datetime.utcnow)
     top_p = Column(Integer, default=90)
