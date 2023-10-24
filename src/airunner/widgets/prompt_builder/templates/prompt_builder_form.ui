@@ -986,24 +986,7 @@
   </layout>
  </widget>
  <resources/>
- <connections>
-  <connection>
-   <sender>tabWidget</sender>
-   <signal>currentChanged(int)</signal>
-   <receiver>prompt_builder_form</receiver>
-   <slot>tab_changed(int)</slot>
-   <hints>
-    <hint type="sourcelabel">
-     <x>83</x>
-     <y>13</y>
-    </hint>
-    <hint type="destinationlabel">
-     <x>626</x>
-     <y>-16</y>
-    </hint>
-   </hints>
-  </connection>
- </connections>
+ <connections/>
  <slots>
   <slot>tab_changed(int)</slot>
  </slots>
