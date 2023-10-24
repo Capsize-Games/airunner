@@ -10,8 +10,8 @@ class EmbeddingWidget(BaseWidget):
     def __init__(self, *args, **kwargs):
         self.embedding = kwargs.pop("embedding")
         super().__init__(*args, **kwargs)
-        self.ui.name.setChecked(self.embedding.active)
-        self.ui.name.setTitle(self.embedding.name)
+        self.ui.enabledCheckbox.setChecked(self.embedding.active)
+        self.ui.enabledCheckbox.setTitle(self.embedding.name)
         if self.embedding.tags:
             self.ui.tags.show()
             self.ui.tags.setText(", ".join(self.embedding.tags))
