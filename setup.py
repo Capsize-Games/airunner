@@ -54,6 +54,8 @@ setup(
         "torchaudio==2.1.0",
         "alembic==1.12.0",
         "auto-gptq==0.4.2",
+        "optimum==1.13.2",
+        "bitsandbytes==0.41.1",
     ],
     dependency_links=[]
 )
