@@ -1,6 +1,6 @@
 import os
 
-from PyQt6.QtWidgets import QWidget, QVBoxLayout
+from PyQt6.QtWidgets import QWidget, QVBoxLayout, QSizePolicy
 
 from airunner.data.models import Lora
 from airunner.utils import get_session, save_session
@@ -13,6 +13,8 @@ class LoraContainerWidget(BaseWidget):
     widget_class_ = Ui_lora_container
     lora_loaded = False
     total_lora_by_section = {}
+    search_filter = ""
+    spacer = None
 
     def toggle_all(self, val):
         for widget in self.ui.scrollAreaWidgetContents.children():
@@ -22,7 +24,8 @@ class LoraContainerWidget(BaseWidget):
     @property
     def loras(self):
         session = get_session()
-        available_loras = Lora.get_all(session)
+        available_loras = session.query(Lora).filter(
+            Lora.name.like(f"%{self.search_filter}%") if self.search_filter != "" else True).all()
         if not available_loras or isinstance(available_loras, dict):
             return []
         return available_loras
@@ -35,9 +38,17 @@ class LoraContainerWidget(BaseWidget):
 
     def load_lora(self):
         session = get_session()
-        loras = session.query(Lora).all()
+        loras = session.query(Lora).filter(
+            Lora.name.like(f"%{self.search_filter}%") if self.search_filter != "" else True).all()
+        
         for lora in loras:
             self.add_lora(lora)
+        
+        # add spacer to end of self.ui.scrollAreaWidgetContents.layout()
+        if not self.spacer:
+            self.spacer = QWidget()
+            self.spacer.setSizePolicy(QSizePolicy.Policy.Expanding, QSizePolicy.Policy.Expanding)
+        self.ui.scrollAreaWidgetContents.layout().addWidget(self.spacer)
 
     def add_lora(self, lora):
         lora_widget = LoraWidget(lora=lora)
@@ -144,40 +155,7 @@ class LoraContainerWidget(BaseWidget):
         lora_names.extend(merge_lora)
         return lora_names
 
-    def load_lora_tab(self, tab, tab_name=None):
-        container = QWidget()
-        container.setLayout(QVBoxLayout())
-        available_loras = self.get_available_loras(tab_name)
-        for lora in available_loras:
-            lora_widget = LoraWidget(app=self, lora=lora)
-
-            # lora_widget.label.setText(lora["name"])
-
-            container.layout().addWidget(lora_widget)
-            # prevent lora.enabledCheckbox from overflowing
-            # scale = lora["scale"]
-            # lora_widget.scaleSlider.setValue(int(scale))
-            # lora_widget.scaleSpinBox.setValue(scale / 100)
-            # lora_widget.scaleSlider.valueChanged.connect(
-            #     lambda value, _lora_widget=lora_widget, _lora=lora, _tab_name=tab_name: self.handle_lora_slider(
-            #         _lora, _lora_widget, value, _tab_name))
-            # lora_widget.scaleSpinBox.valueChanged.connect(
-            #     lambda value, _lora_widget=lora_widget, _lora=lora, _tab_name=tab_name: self.handle_lora_spinbox(
-            #         _lora, _lora_widget, value, _tab_name))
-            lora_widget.enabledCheckbox.stateChanged.connect(
-                lambda value, _lora=lora, _tab_name=tab_name: self.toggle_lora(_lora, value, _tab_name))
-        # add a vertical spacer to the end of the container
-        container.layout().addStretch()
-        # display tabs of tab.PromptTabsSection which is a QTabWidget
-        self.tool_menu_widget.lora_container_widget.lora_scroll_area.setWidget(container)
-
-        # if all lora are checked set toggleAllLora
-        # if tab_name in self.total_lora_by_section:
-        #     if self.total_lora_by_section[tab_name]["total"] == self.total_lora_by_section[tab_name]["enabled"]:
-        #         tab.toggleAllLora.setChecked(True)
-
-        # set the tab name
-        self.update_lora_tab_name(tab_name)
+    lora_tab_container = None
 
     def initialize_lora_trigger_words(self):
         for lora in self.loras:
@@ -247,3 +225,17 @@ class LoraContainerWidget(BaseWidget):
         lora_widget.scaleSlider.setValue(int(value * 100))
         self.loars = available_loras
         self.settings_manager.save_settings()
+
+    def search_text_changed(self, val):
+        print("search text changed", val)
+        self.search_filter = val
+        self.clear_lora_widgets()
+        self.load_lora()
+    
+    def clear_lora_widgets(self):
+        if self.spacer:
+            self.ui.scrollAreaWidgetContents.layout().removeWidget(self.spacer)
+        for i in reversed(range(self.ui.scrollAreaWidgetContents.layout().count())):
+            widget = self.ui.scrollAreaWidgetContents.layout().itemAt(i).widget()
+            if isinstance(widget, LoraWidget):
+                widget.deleteLater()
