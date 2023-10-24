@@ -95,30 +95,42 @@ class SliderWidget(BaseWidget):
         super().__init__(*args, **kwargs)
         self.app.loaded.connect(self.initialize_properties)
     
-    def initialize_properties(self):
-        if self.property("settings_property") is None:
+    def initialize_properties(self, **kwargs):
+        slider_callback = kwargs.pop("slider_callback", None)
+        slider_minimum = kwargs.pop("slider_minimum", 0)
+        slider_maximum = kwargs.pop("slider_maximum", 100)
+        spinbox_minimum = kwargs.pop("spinbox_minimum", 0.0)
+        spinbox_maximum = kwargs.pop("spinbox_maximum", 100.0)
+        current_value = kwargs.pop("current_value", 0)
+        settings_property = kwargs.pop("settings_property", None)
+
+        # check if properties are set
+        properties_set = self.property("settings_property") is not None
+        if settings_property is None and not properties_set:
             return
-        slider_minimum = self.property("slider_minimum") or 0
-        slider_maximum = self.property("slider_maximum") or 100
+        
+        slider_minimum = self.property("slider_minimum") or slider_minimum
+        slider_maximum = self.property("slider_maximum") or slider_maximum
         slider_tick_interval = self.property("slider_tick_interval") or 8
-        slider_callback = self.property("slider_callback") or ""
+        slider_callback = self.property("slider_callback") or slider_callback
         slider_single_step = self.property("slider_single_step") or 1
         slider_page_step = self.property("slider_page_step") or 1
-        spinbox_minimum = self.property("spinbox_minimum") or 0
-        spinbox_maximum = self.property("spinbox_maximum") or 100.0
+        spinbox_minimum = self.property("spinbox_minimum") or spinbox_minimum
+        spinbox_maximum = self.property("spinbox_maximum") or spinbox_maximum
         spinbox_single_step = self.property("spinbox_single_step") or 0.01
         spinbox_page_step = self.property("spinbox_page_step") or 0.01
         label_text = self.property("label_text") or ""
-        current_value = self.property("current_value") or 0
+        current_value = self.property("current_value") or current_value
         slider_name = self.property("slider_name") or None
         spinbox_name = self.property("spinbox_name") or None
-        settings_property = self.property("settings_property") or None
+        settings_property = self.property("settings_property") or settings_property
         self.display_as_float = self.property("display_as_float") or False
         self.divide_by = self.property("divide_by") or 1.0
 
         current_value = self.settings_manager.get_value(settings_property) or 0
 
-        if slider_callback != "":
+        # check if slider_callback is str
+        if isinstance(slider_callback, str):
             slider_callback = partial(getattr(self.app, slider_callback), settings_property)
 
         # set slider and spinbox names
