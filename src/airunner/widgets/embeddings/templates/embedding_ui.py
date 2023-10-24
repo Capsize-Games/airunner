@@ -17,13 +17,13 @@ class Ui_embedding(object):
         self.gridLayout_2.setContentsMargins(0, 0, 0, 0)
         self.gridLayout_2.setSpacing(0)
         self.gridLayout_2.setObjectName("gridLayout_2")
-        self.name = QtWidgets.QGroupBox(parent=embedding)
-        self.name.setCheckable(True)
-        self.name.setChecked(False)
-        self.name.setObjectName("name")
-        self.gridLayout = QtWidgets.QGridLayout(self.name)
+        self.enabledCheckbox = QtWidgets.QGroupBox(parent=embedding)
+        self.enabledCheckbox.setCheckable(True)
+        self.enabledCheckbox.setChecked(False)
+        self.enabledCheckbox.setObjectName("enabledCheckbox")
+        self.gridLayout = QtWidgets.QGridLayout(self.enabledCheckbox)
         self.gridLayout.setObjectName("gridLayout")
-        self.to_negative_prompt_button = QtWidgets.QPushButton(parent=self.name)
+        self.to_negative_prompt_button = QtWidgets.QPushButton(parent=self.enabledCheckbox)
         self.to_negative_prompt_button.setMinimumSize(QtCore.QSize(90, 0))
         font = QtGui.QFont()
         font.setPointSize(10)
@@ -31,10 +31,10 @@ class Ui_embedding(object):
         self.to_negative_prompt_button.setFlat(False)
         self.to_negative_prompt_button.setObjectName("to_negative_prompt_button")
         self.gridLayout.addWidget(self.to_negative_prompt_button, 1, 1, 1, 1)
-        self.tags = QtWidgets.QLabel(parent=self.name)
+        self.tags = QtWidgets.QLabel(parent=self.enabledCheckbox)
         self.tags.setObjectName("tags")
         self.gridLayout.addWidget(self.tags, 0, 0, 1, 2)
-        self.to_prompt_button = QtWidgets.QPushButton(parent=self.name)
+        self.to_prompt_button = QtWidgets.QPushButton(parent=self.enabledCheckbox)
         self.to_prompt_button.setMinimumSize(QtCore.QSize(90, 0))
         font = QtGui.QFont()
         font.setPointSize(10)
@@ -42,18 +42,18 @@ class Ui_embedding(object):
         self.to_prompt_button.setFlat(False)
         self.to_prompt_button.setObjectName("to_prompt_button")
         self.gridLayout.addWidget(self.to_prompt_button, 1, 0, 1, 1)
-        self.gridLayout_2.addWidget(self.name, 0, 0, 1, 2)
+        self.gridLayout_2.addWidget(self.enabledCheckbox, 0, 0, 1, 2)
 
         self.retranslateUi(embedding)
         self.to_prompt_button.clicked.connect(embedding.action_clicked_button_to_prompt) # type: ignore
         self.to_negative_prompt_button.clicked.connect(embedding.action_clicked_button_to_negative_prompt) # type: ignore
-        self.name.toggled['bool'].connect(embedding.action_toggled_embedding) # type: ignore
+        self.enabledCheckbox.toggled['bool'].connect(embedding.action_toggled_embedding) # type: ignore
         QtCore.QMetaObject.connectSlotsByName(embedding)
 
     def retranslateUi(self, embedding):
         _translate = QtCore.QCoreApplication.translate
         embedding.setWindowTitle(_translate("embedding", "Form"))
-        self.name.setTitle(_translate("embedding", "Embedding name here"))
+        self.enabledCheckbox.setTitle(_translate("embedding", "Embedding name here"))
         self.to_negative_prompt_button.setText(_translate("embedding", "Neg Prompt"))
         self.tags.setText(_translate("embedding", "Tags"))
         self.to_prompt_button.setText(_translate("embedding", "Prompt"))

@@ -12,9 +12,21 @@ from PyQt6 import QtCore, QtGui, QtWidgets
 class Ui_embeddings_container(object):
     def setupUi(self, embeddings_container):
         embeddings_container.setObjectName("embeddings_container")
-        embeddings_container.resize(272, 117)
+        embeddings_container.resize(479, 257)
         self.gridLayout = QtWidgets.QGridLayout(embeddings_container)
         self.gridLayout.setObjectName("gridLayout")
+        self.horizontalLayout = QtWidgets.QHBoxLayout()
+        self.horizontalLayout.setObjectName("horizontalLayout")
+        self.lineEdit = QtWidgets.QLineEdit(parent=embeddings_container)
+        self.lineEdit.setObjectName("lineEdit")
+        self.horizontalLayout.addWidget(self.lineEdit)
+        self.checkBox = QtWidgets.QCheckBox(parent=embeddings_container)
+        font = QtGui.QFont()
+        font.setPointSize(9)
+        self.checkBox.setFont(font)
+        self.checkBox.setObjectName("checkBox")
+        self.horizontalLayout.addWidget(self.checkBox)
+        self.gridLayout.addLayout(self.horizontalLayout, 0, 0, 1, 1)
         self.embeddings = QtWidgets.QScrollArea(parent=embeddings_container)
         font = QtGui.QFont()
         font.setPointSize(9)
@@ -24,21 +36,25 @@ class Ui_embeddings_container(object):
         self.embeddings.setWidgetResizable(True)
         self.embeddings.setObjectName("embeddings")
         self.scrollAreaWidgetContents = QtWidgets.QWidget()
-        self.scrollAreaWidgetContents.setGeometry(QtCore.QRect(0, 0, 254, 68))
+        self.scrollAreaWidgetContents.setGeometry(QtCore.QRect(0, 0, 461, 175))
         self.scrollAreaWidgetContents.setObjectName("scrollAreaWidgetContents")
         self.gridLayout_2 = QtWidgets.QGridLayout(self.scrollAreaWidgetContents)
         self.gridLayout_2.setObjectName("gridLayout_2")
         self.embeddings.setWidget(self.scrollAreaWidgetContents)
-        self.gridLayout.addWidget(self.embeddings, 0, 0, 1, 1)
+        self.gridLayout.addWidget(self.embeddings, 1, 0, 1, 1)
         self.pushButton = QtWidgets.QPushButton(parent=embeddings_container)
         self.pushButton.setObjectName("pushButton")
-        self.gridLayout.addWidget(self.pushButton, 1, 0, 1, 1)
+        self.gridLayout.addWidget(self.pushButton, 2, 0, 1, 1)
 
         self.retranslateUi(embeddings_container)
         self.pushButton.clicked.connect(embeddings_container.action_clicked_button_scan_for_embeddings) # type: ignore
+        self.lineEdit.textChanged['QString'].connect(embeddings_container.search_text_changed) # type: ignore
+        self.checkBox.toggled['bool'].connect(embeddings_container.toggle_all_toggled) # type: ignore
         QtCore.QMetaObject.connectSlotsByName(embeddings_container)
 
     def retranslateUi(self, embeddings_container):
         _translate = QtCore.QCoreApplication.translate
         embeddings_container.setWindowTitle(_translate("embeddings_container", "Form"))
+        self.lineEdit.setPlaceholderText(_translate("embeddings_container", "Search"))
+        self.checkBox.setText(_translate("embeddings_container", "Tooggle all"))
         self.pushButton.setText(_translate("embeddings_container", "Scan for embeddings"))

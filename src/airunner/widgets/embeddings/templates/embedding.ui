@@ -30,7 +30,7 @@
     <number>0</number>
    </property>
    <item row="0" column="0" colspan="2">
-    <widget class="QGroupBox" name="name">
+    <widget class="QGroupBox" name="enabledCheckbox">
      <property name="title">
       <string>Embedding name here</string>
      </property>
@@ -130,7 +130,7 @@
    </hints>
   </connection>
   <connection>
-   <sender>name</sender>
+   <sender>enabledCheckbox</sender>
    <signal>toggled(bool)</signal>
    <receiver>embedding</receiver>
    <slot>action_toggled_embedding(bool)</slot>
