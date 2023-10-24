@@ -171,6 +171,15 @@ model_bootstrap_data = [
         "enabled": True
     },
     {
+        "name": "CompVis Safety Checker",
+        "path": "CompVis/stable-diffusion-safety-checker",
+        "branch": "fp16",
+        "version": "SDXL 1.0",
+        "category": "stablediffusion",
+        "pipeline_action": "safety_checker",
+        "enabled": True
+    },
+    {
         "name": "OpenAI Text Encoder",
         "path": "openai/clip-vit-large-patch14",
         "branch": "fp16",
@@ -235,8 +244,8 @@ model_bootstrap_data = [
     },
     {
         "name": "Llama 2 7b",
-        "path": "~/.airunner/text/models/txt2txt/llama-2-7b",
-        "branch": "fp16",
+        "path": "meta-llama/Llama-2-7b-hf",
+        "branch": "main",
         "version": "2",
         "category": "llm",
         "pipeline_action": "casuallm",
@@ -244,11 +253,47 @@ model_bootstrap_data = [
     },
     {
         "name": "Llama 2 7b Chat",
-        "path": "~/.airunner/text/models/txt2txt/llama-2-7b-chat",
-        "branch": "fp16",
+        "path": "meta-llama/Llama-2-7b-chat-hf",
+        "branch": "main",
         "version": "2",
         "category": "llm",
         "pipeline_action": "casuallm",
         "enabled": True
-    }
+    },
+    {
+        "name": "Mistral 7B",
+        "path": "mistralai/Mistral-7B-v0.1",
+        "branch": "main",
+        "version": "0.1",
+        "category": "llm",
+        "pipeline_action": "casuallm",
+        "enabled": True
+    },
+    {
+        "name": "Mistral 7B Instruct",
+        "path": "mistralai/Mistral-7B-Instruct-v0.1",
+        "branch": "main",
+        "version": "0.1",
+        "category": "llm",
+        "pipeline_action": "casuallm",
+        "enabled": True
+    },
+    {
+        "name": "GPT 2 XL",
+        "path": "gpt2-xl",
+        "branch": "main",
+        "version": "1",
+        "category": "llm",
+        "pipeline_action": "casuallm",
+        "enabled": True
+    },
+    {
+        "name": "GPT 2 Large",
+        "path": "gpt2-large",
+        "branch": "main",
+        "version": "1",
+        "category": "llm",
+        "pipeline_action": "casuallm",
+        "enabled": True
+    },
 ]
