@@ -242,6 +242,14 @@ class CanvasPlusWidget(BaseWidget):
 
         return rect
 
+    @property
+    def current_layer(self):
+        return self.app.ui.layer_widget.current_layer
+
+    @property
+    def current_layer_index(self):
+        return self.app.ui.layer_widget.current_layer_index
+
     def __init__(self, *args, **kwargs):
         super().__init__(*args, **kwargs)
         self.canvas_settings = session.query(CanvasSettings).first()
@@ -452,3 +460,45 @@ class CanvasPlusWidget(BaseWidget):
             if isinstance(item, QGraphicsPixmapItem):
                 image = item.pixmap.toImage()
                 image.save(image_path)
+
+    def filter_with_filter(self, filter):
+        return type(filter).__name__ in [
+            "SaturationFilter", 
+            "ColorBalanceFilter", 
+            "RGBNoiseFilter", 
+            "PixelFilter", 
+            "HalftoneFilter", 
+            "RegistrationErrorFilter"]
+
+    def preview_filter(self, filter):
+        if len(self.current_layer.image_data) == 0:
+            return
+        for image_data in self.current_layer.image_data:
+            image = image_data.image
+            if self.filter_with_filter:
+                filtered_image = filter.filter(image)
+            else:
+                filtered_image = image.filter(filter)
+            image_data.image = filtered_image
+    
+    def cancel_filter(self):
+        for index in range(len(self.current_layer.image_data)):
+            self.current_layer.image_data[index] = self.image_data[index]
+        self.image_data = []
+    
+    def apply_filter(self, filter):
+        for image_data, index in iter(self.current_layer):
+            if image_data.image is None:
+                continue
+            self.app.history.add_event({
+                "event": "apply_filter",
+                "layer_index": self.current_layer_index,
+                "images": image_data,
+            })
+
+            if self.filter_with_filter:
+                filtered_image = filter.filter(self.image_data[index].image)
+            else:
+                filtered_image = self.image_data[index].image.filter(filter)
+            self.current_layer.image_data[index].image = filtered_image
+            self.image_data = []
