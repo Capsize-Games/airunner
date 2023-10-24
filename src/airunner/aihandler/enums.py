@@ -46,3 +46,19 @@ class Scheduler(Enum):
 class Mode(Enum):
     IMAGE = "Image Generation"
     TEXT = "Language Processing"
+    MODEL_MANAGER = "Model Manager"
+
+
+class GeneratorSection(Enum):
+    TXT2IMG = "txt2img"
+    IMG2IMG = "img2img"
+    INPAINT = "inpaint"
+    OUTPAINT = "outpaint"
+    DEPTH2IMG = "depth2img"
+    PIX2PIX = "pix2pix"
+    SUPERRESOLUTION = "superresolution"
+    UPSCALE = "upscale"
+    VID2VID = "vid2vid"
+    TXT2GIF = "txt2gif"
+    TXT2VID = "txt2vid"
+    PROMPT_BUILDER = "prompt_builder"
