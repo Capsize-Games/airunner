@@ -1,6 +1,7 @@
 import os
 
 from PyQt6.QtCore import pyqtSlot
+from PyQt6.QtWidgets import QWidget, QSizePolicy
 
 from airunner.aihandler.enums import MessageCode
 from airunner.data.models import Embedding
@@ -15,6 +16,8 @@ class EmbeddingsContainerWidget(BaseWidget):
     _embedding_names = None
     embedding_widgets = {}
     bad_model_embedding_map = {}
+    search_filter = ""
+    spacer = None
 
     def __init__(self, *args, **kwargs):
         super().__init__(*args, **kwargs)
@@ -83,9 +86,15 @@ class EmbeddingsContainerWidget(BaseWidget):
 
     def load_embeddings(self):
         session = get_session()
-        embeddings = session.query(Embedding).all()
+        embeddings = session.query(Embedding).filter(
+            Embedding.name.like(f"%{self.search_filter}%") if self.search_filter != "" else True).all()
         for embedding in embeddings:
             self.add_embedding(embedding)
+        
+        if not self.spacer:
+            self.spacer = QWidget()
+            self.spacer.setSizePolicy(QSizePolicy.Policy.Expanding, QSizePolicy.Policy.Expanding)
+        self.ui.scrollAreaWidgetContents.layout().addWidget(self.spacer)
 
     def add_embedding(self, embedding):
         embedding_widget = EmbeddingWidget(embedding=embedding)
@@ -111,3 +120,26 @@ class EmbeddingsContainerWidget(BaseWidget):
                         embedding = Embedding(name=name, path=entry.path)
                         session.add(embedding)
         save_session(session)
+
+
+    def toggle_all_toggled(self, checked):
+        for i in range(self.ui.embeddings.widget().layout().count()):
+            widget = self.ui.embeddings.widget().layout().itemAt(i).widget()
+            if widget:
+                try:
+                    widget.ui.enabledCheckbox.setChecked(checked)
+                except AttributeError:
+                    continue
+
+    def search_text_changed(self, val):
+        self.search_filter = val
+        self.clear_embedding_widgets()
+        self.load_embeddings()
+    
+    def clear_embedding_widgets(self):
+        if self.spacer:
+            self.ui.scrollAreaWidgetContents.layout().removeWidget(self.spacer)
+        for i in reversed(range(self.ui.scrollAreaWidgetContents.layout().count())):
+            widget = self.ui.scrollAreaWidgetContents.layout().itemAt(i).widget()
+            if isinstance(widget, EmbeddingWidget):
+                widget.deleteLater()
