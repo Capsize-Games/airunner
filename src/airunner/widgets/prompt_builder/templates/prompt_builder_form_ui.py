@@ -464,7 +464,6 @@ class Ui_prompt_builder_form(object):
 
         self.retranslateUi(prompt_builder_form)
         self.tabWidget.setCurrentIndex(0)
-        self.tabWidget.currentChanged['int'].connect(prompt_builder_form.tab_changed) # type: ignore
         QtCore.QMetaObject.connectSlotsByName(prompt_builder_form)
 
     def retranslateUi(self, prompt_builder_form):

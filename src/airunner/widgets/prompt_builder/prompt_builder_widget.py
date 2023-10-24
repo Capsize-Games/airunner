@@ -142,9 +142,12 @@ class PromptBuilderWidget(BaseWidget):
     def __init__(self, *args, **kwargs):
         super().__init__(*args, **kwargs)
         self.prompt_generator_settings = session.query(PromptBuilder).all()
-        self.set_stylesheet()
+        ts = session.query(TabSection).filter(TabSection.panel == "prompt_builder.ui.tabs").first()
+        self.ui.tabs.blockSignals(True)
         self.prompt_data = self.settings_manager.prompt_builder_prompts
         self.initialize_tab_forms()
+        self.ui.tabs.setCurrentIndex(int(ts.active_tab))
+        self.ui.tabs.blockSignals(False)
 
     prompt_builder_forms = []
 
@@ -318,7 +321,6 @@ class PromptBuilderWidget(BaseWidget):
 
     def tab_changed(self, val):
         print("tab_changed", val)
-        # ts = session.query(TabSection).filter(
-        #     TabSection.panel == "button_panel_tab_widget"
-        # ).first()
-        # ts.active_tab = self.ui.bottom_panel_tab_widget
+        ts = session.query(TabSection).filter(TabSection.panel == "prompt_builder.ui.tabs").first()
+        ts.active_tab = str(val)
+        save_session()
