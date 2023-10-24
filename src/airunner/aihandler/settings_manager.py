@@ -82,10 +82,10 @@ class SettingsManager(QObject):
         ).update({"enabled": enabled == 2})
         self.save_settings()
 
-    def available_pipeline_by_section(self, pipeline, version, category):
+    def available_pipeline_by_section(self, pipeline_action, version, category):
         return session.query(Pipeline).filter_by(
             category=category,
-            pipeline_action=pipeline,
+            pipeline_action=pipeline_action,
             version=version
         ).first()
 
