@@ -413,8 +413,8 @@ if not session.query(Prompt).first():
         active_tab="Deterministic Batches"
     ))
     session.add(TabSection(
-        panel="bottom_panel_tab_widget",
-        active_tab="Model Manager"
+        panel="prompt_builder.ui.tabs",
+        active_tab="0"
     ))
     session.commit()
 
@@ -440,7 +440,8 @@ if not session.query(Prompt).first():
         setting = LLMGeneratorSetting()
         setting.generator = generator
 
-        model_versions = [LLMModelVersion(name=name) for name in generator_data['model_versions']]
+        if "model_versions" in generator_data:
+            model_versions = [LLMModelVersion(name=name) for name in generator_data['model_versions']]
 
         for version in model_versions:
             generator.model_versions.append(version)
