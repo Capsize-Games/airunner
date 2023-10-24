@@ -1,6 +1,6 @@
 import os
 
-from PyQt6.QtWidgets import QWidget, QVBoxLayout, QSizePolicy
+from PyQt6.QtWidgets import QWidget, QSizePolicy
 
 from airunner.data.models import Lora
 from airunner.utils import get_session, save_session
