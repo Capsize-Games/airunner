@@ -91,39 +91,21 @@ class FilterBase:
                 if not max_value:
                     max_value = 100
                 if filter_value.value_type == "float":
-                #     path = "widgets/slider_spinbox_double.ui"
                     spinbox_value = float(filter_value.value)
                     slider_value = int(spinbox_value * max_value)
                 else:
-                #     path = "widgets/slider_spinbox.ui"
                     slider_value = int(filter_value.value)
-                #     spinbox_value = int(filter_value.value)
 
-                slider_spinbox_widget = SliderWidget(
+                slider_spinbox_widget = SliderWidget()
+                slider_spinbox_widget.initialize_properties(
+                    slider_callback=self.handle_slider_change,
                     slider_minimum=min_value,
                     slider_maximum=max_value,
                     spinbox_minimum=min_value / max_value,
                     spinbox_maximum=max_value / max_value,
-                    current_value=slider_value
+                    current_value=slider_value,
+                    settings_property=filter_value.name
                 )
-
-                # slider_spinbox_widget = uic.loadUi(os.path.join(path))
-                # slider_spinbox_widget.label.setText(filter_value.name.replace("_", " ").title())
-                # slider_spinbox_widget.slider.setMinimum(min_value)
-                # slider_spinbox_widget.slider.setMaximum(max_value)
-                # slider_spinbox_widget.slider.setValue(slider_value)
-                # spinbox_min_value = min_value / max_value
-                # spinbox_max_value = max_value / max_value
-                # if filter_value.value_type == "int":
-                #     spinbox_min_value = int(spinbox_min_value)
-                #     spinbox_max_value = int(spinbox_max_value)
-                # slider_spinbox_widget.spinbox.setMinimum(spinbox_min_value)
-                # slider_spinbox_widget.spinbox.setMaximum(spinbox_max_value)
-                # slider_spinbox_widget.spinbox.setValue(spinbox_value)
-                # slider_spinbox_widget.slider.valueChanged.connect(
-                #     partial(self.handle_slider_change, slider_spinbox_widget, filter_value))
-                # slider_spinbox_widget.spinbox.valueChanged.connect(
-                #     partial(self.handle_spinbox_change, slider_spinbox_widget, filter_value))
                 self.filter_window.content.layout().addWidget(slider_spinbox_widget)
 
         self.filter_window.auto_apply.setChecked(self.image_filter_data.auto_apply)
@@ -141,21 +123,8 @@ class FilterBase:
         self.image_filter_data.auto_apply = self.filter_window.auto_apply.isChecked()
         self.parent.settings_manager.save()
 
-    def handle_slider_change(self, slider_spinbox_widget, filter_value, val):
-        if filter_value.value_type == "float":
-            self.update_value(filter_value.name, val / filter_value.max_value)
-        else:
-            self.update_value(filter_value.name, val)
-        slider_spinbox_widget.spinbox.setValue(float(val / filter_value.max_value))
-        self.preview_filter()
-        self.canvas.update()
-
-    def handle_spinbox_change(self, slider_spinbox_widget, filter_value, val):
-        if filter_value.value_type == "float":
-            self.update_value(filter_value.name, val)
-        else:
-            self.update_value(filter_value.name, val * filter_value.max_value)
-        slider_spinbox_widget.slider.setValue(int(val * filter_value.max_value))
+    def handle_slider_change(self, val):
+        print("handle_slider_change", val)
         self.preview_filter()
         self.canvas.update()
 
