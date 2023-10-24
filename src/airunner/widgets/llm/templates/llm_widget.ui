@@ -90,7 +90,17 @@
             </item>
             <item>
              <property name="text">
-              <string>Action</string>
+              <string>Generate Image</string>
+             </property>
+            </item>
+            <item>
+             <property name="text">
+              <string>Summarize</string>
+             </property>
+            </item>
+            <item>
+             <property name="text">
+              <string>Translate</string>
              </property>
             </item>
            </widget>
@@ -243,7 +253,7 @@
        <item row="0" column="0">
         <widget class="QGroupBox" name="groupBox_7">
          <property name="title">
-          <string>Model</string>
+          <string>Model Type</string>
          </property>
          <layout class="QGridLayout" name="gridLayout_10">
           <item row="0" column="0">
