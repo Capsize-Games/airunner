@@ -31,6 +31,8 @@ class CustomModelWidget(BaseWidget):
         outpaint_model_path = self.settings_manager.path_settings.outpaint_model_path
         upscale_model_path = self.settings_manager.path_settings.upscale_model_path
         txt2vid_model_path = self.settings_manager.path_settings.txt2vid_model_path
+        llm_casuallm_model_path = self.settings_manager.path_settings.llm_casuallm_model_path
+        llm_seq2seq_model_path = self.settings_manager.path_settings.llm_seq2seq_model_path
         diffusers_folders = ["scheduler", "text_encoder", "tokenizer", "unet", "vae"]
         for key, model_path in {
             "txt2img": base_model_path,
@@ -38,7 +40,9 @@ class CustomModelWidget(BaseWidget):
             "pix2pix": pix2pix_model_path,
             "outpaint": outpaint_model_path,
             "upscale": upscale_model_path,
-            "txt2vid": txt2vid_model_path
+            "txt2vid": txt2vid_model_path,
+            "casuallm": llm_casuallm_model_path,
+            "seq2seq": llm_seq2seq_model_path,
         }.items():
             if not model_path or not os.path.exists(model_path):
                 continue
