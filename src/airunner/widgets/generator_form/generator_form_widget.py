@@ -183,6 +183,7 @@ class GeneratorForm(BaseWidget):
         pass
 
     def handle_generate_button_clicked(self):
+        self.start_progress_bar()
         self.generate()
 
     def handle_interrupt_button_clicked(self):
@@ -439,17 +440,18 @@ class GeneratorForm(BaseWidget):
 
     def start_progress_bar(self):
         self.ui.progress_bar.setRange(0, 0)
-        self.app.message_var.emit({
-            "message": {
-                "step": 0,
-                "total": 0,
-                "action": self.generator_section,
-                "image": None,
-                "data": None,
-                "tab_section": self.generator_name,
-            },
-            "code": MessageCode.PROGRESS
-        })
+        self.ui.progress_bar.show()
+        # self.app.message_var.emit({
+        #     "message": {
+        #         "step": 0,
+        #         "total": 0,
+        #         "action": self.generator_section,
+        #         "image": None,
+        #         "data": None,
+        #         "tab_section": self.generator_name,
+        #     },
+        #     "code": MessageCode.PROGRESS
+        # })
 
     def save_db_session(self):
         from airunner.utils import save_session
@@ -527,6 +529,7 @@ class GeneratorForm(BaseWidget):
         self.ui.negative_prompt.setPlainText("")
 
     def load_models(self):
+        self.ui.model.blockSignals(True)
         self.clear_models()
 
         models = session.query(AIModel).filter(
@@ -541,8 +544,10 @@ class GeneratorForm(BaseWidget):
             self.ui.model.setCurrentText(current_model)
         else:
             self.settings_manager.set_value("generator.model", self.ui.model.currentText())
+        self.ui.model.blockSignals(False)
 
     def load_schedulers(self):
+        self.ui.scheduler.blockSignals(True)
         session = get_session()
         schedulers = session.query(ActionScheduler).filter(
             ActionScheduler.section == self.generator_section,
@@ -556,6 +561,7 @@ class GeneratorForm(BaseWidget):
             self.ui.scheduler.setCurrentText(current_scheduler)
         else:
             self.settings_manager.set_value("generator.scheduler", self.ui.scheduler.currentText())
+        self.ui.scheduler.blockSignals(False)
 
     def set_form_values(self):
         self.set_form_value("prompt", "generator.prompt")

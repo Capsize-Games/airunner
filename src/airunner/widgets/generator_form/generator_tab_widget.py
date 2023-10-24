@@ -19,6 +19,7 @@ class GeneratorTabWidget(BaseWidget):
     def __init__(self, *args, **kwargs):
         super().__init__(*args, **kwargs)
         self.app.loaded.connect(self.initialize)
+        self.ui.generator_tabs.tabBar().hide()
 
     @property
     def current_generator_widget(self):
