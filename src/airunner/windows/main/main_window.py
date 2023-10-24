@@ -11,7 +11,7 @@ from PyQt6.QtCore import pyqtSlot, Qt, QThread, pyqtSignal, QObject, QTimer
 from PyQt6.QtGui import QGuiApplication
 from PyQt6.QtWidgets import QApplication, QFileDialog, QMainWindow, QWidget
 
-from airunner.aihandler.enums import MessageCode, Mode
+from airunner.aihandler.enums import GeneratorSection, MessageCode, Mode
 from airunner.aihandler.logger import Logger as logger
 from airunner.aihandler.pyqt_client import OfflineClient
 from airunner.aihandler.qtvar import MessageHandlerVar
@@ -291,8 +291,8 @@ class MainWindow(
 
         #self.ui.layer_widget.initialize()
 
-        self.ui.toggle_grid_button.setChecked(self.settings_manager.grid_settings.show_grid)
-        self.ui.safety_checker_button.setChecked(self.settings_manager.nsfw_filter)
+        self.set_button_checked("toggle_grid", self.settings_manager.grid_settings.show_grid, False)
+        self.set_button_checked("safety_checker", self.settings_manager.nsfw_filter, False)
 
         self.ui.layer_widget.initialize()
 
@@ -300,22 +300,15 @@ class MainWindow(
         QTimer.singleShot(500, self.on_show)
 
         self.ui.mode_tab_widget.tabBar().hide()
+        self.ui.center_tab.tabBar().hide()
 
-        self.ui.image_generation_button.blockSignals(True)
-        self.ui.language_processing_button.blockSignals(True)
-
-        print(self.settings_manager.mode)
-        self.ui.image_generation_button.setChecked(
-            self.settings_manager.mode == Mode.IMAGE.value
-        )
-        self.ui.language_processing_button.setChecked(
-            self.settings_manager.mode == Mode.TEXT.value
-        )
-        
-        self.ui.image_generation_button.blockSignals(False)
-        self.ui.language_processing_button.blockSignals(False)
+        self.set_button_checked("image_generation", self.settings_manager.mode == Mode.IMAGE.value)
+        self.set_button_checked("language_processing", self.settings_manager.mode == Mode.TEXT.value)
+        self.set_button_checked("model_manager", self.settings_manager.mode == Mode.MODEL_MANAGER.value)
 
         self.initialize_panel_tabs()
+        self.initialize_tool_section_buttons()
+
         self.loaded.emit()
 
     def initialize_panel_tabs(self):
@@ -329,7 +322,10 @@ class MainWindow(
             TabSection.panel != "generator_tabs"
         ).all()
         for ts in tabsections:
-            widget = getattr(self.ui, ts.panel)
+            if ts.panel == "prompt_builder.ui.tabs":
+                widget = self.ui.prompt_builder.ui.tabs
+            else:
+                widget = getattr(self.ui, ts.panel)
             for i in range(widget.count()):
                 if widget.tabText(i) == ts.active_tab:
                     widget.setCurrentIndex(i)
@@ -427,7 +423,7 @@ class MainWindow(
         self.show_section("Standard Batches")
 
     def action_show_model_manager(self):
-        self.show_section("Model Manager")
+        self.activate_model_manager_section()
 
     def action_show_prompt_builder(self):
         self.show_section("Prompt Builder")
@@ -448,7 +444,7 @@ class MainWindow(
         self.show_section("Active Grid")
 
     def action_show_stablediffusion(self):
-        self.show_section("Stable Diffusion")
+        self.activate_image_generation_section()
 
     def action_show_kandinsky(self):
         self.show_section("Kandinsky")
@@ -1443,60 +1439,86 @@ class MainWindow(
 
     def image_generation_toggled(self, val):
         if not val:
-            self.ui.image_generation_button.blockSignals(True)
-            self.ui.image_generation_button.setChecked(True)
-            self.ui.image_generation_button.blockSignals(False)
+            self.set_button_checked("image_generation", True)
             return
-        self.ui.mode_tab_widget.setCurrentIndex(0)
-        self.ui.language_processing_button.blockSignals(True)
-        self.ui.language_processing_button.setChecked(False)
-        self.ui.language_processing_button.blockSignals(False)
-        self.ui.model_manager_button.blockSignals(True)
-        self.ui.model_manager_button.setChecked(False)
-        self.ui.model_manager_button.blockSignals(False)
+        self.activate_image_generation_section()
 
     def language_processing_toggled(self, val):
         if not val: 
-            self.ui.language_processing_button.blockSignals(True)
-            self.ui.language_processing_button.setChecked(True)
-            self.ui.language_processing_button.blockSignals(False)
+            self.set_button_checked("language_processing", True)
             return
-        self.ui.mode_tab_widget.setCurrentIndex(1)
-
-        self.ui.image_generation_button.blockSignals(True)
-        self.ui.image_generation_button.setChecked(False)
-        self.ui.image_generation_button.blockSignals(False)
-        self.ui.model_manager_button.blockSignals(True)
-        self.ui.model_manager_button.setChecked(False)
-        self.ui.model_manager_button.blockSignals(False)
+        self.activate_language_processing_section()
     
     def model_manager_toggled(self, val):
         if not val: 
-            self.ui.model_manager_button.blockSignals(True)
-            self.ui.model_manager_button.setChecked(True)
-            self.ui.model_manager_button.blockSignals(False)
+            self.set_button_checked("model_manager", True)
             return
-        self.ui.mode_tab_widget.setCurrentIndex(2)
-
-        self.ui.language_processing_button.blockSignals(True)
-        self.ui.language_processing_button.setChecked(False)
-        self.ui.language_processing_button.blockSignals(False)
-        self.ui.image_generation_button.blockSignals(True)
-        self.ui.image_generation_button.setChecked(False)
-        self.ui.image_generation_button.blockSignals(False)
+        self.activate_model_manager_section()
     
-    def image_generators_clicked(self):
+    def set_button_checked(self, name, val, block_signals=True):
+        widget = getattr(self.ui, f"{name}_button")
+        if block_signals:
+            widget.blockSignals(True)
+        widget.setChecked(val)
+        if block_signals:
+            widget.blockSignals(False)
+    
+    def activate_image_generation_section(self):
+        self.ui.mode_tab_widget.setCurrentIndex(0)
+        self.set_button_checked("image_generation", True)
+        self.set_button_checked("language_processing", False)
+        self.set_button_checked("model_manager", False)
+        self.toggle_tool_section_buttons_visibility()
+
+    def activate_language_processing_section(self):
+        self.ui.mode_tab_widget.setCurrentIndex(1)
+        self.set_button_checked("language_processing", True)
+        self.set_button_checked("image_generation", False)
+        self.set_button_checked("model_manager", False)
+        self.toggle_tool_section_buttons_visibility()
+    
+    def activate_model_manager_section(self):
+        self.ui.mode_tab_widget.setCurrentIndex(2)
+        self.set_button_checked("model_manager", True)
+        self.set_button_checked("language_processing", False)
+        self.set_button_checked("image_generation", False)
+        self.toggle_tool_section_buttons_visibility()
+
+    def initialize_tool_section_buttons(self):
+        self.toggle_tool_section_buttons_visibility()
+        self.set_button_checked("image_generators", False)
+        self.set_button_checked("txt2gif", False)
+        self.set_button_checked("txt2vid", False)
+        self.set_button_checked("prompt_builder", False)
+        if self.settings_manager.mode == Mode.IMAGE.value:
+            if self.settings_manager.generator_section == GeneratorSection.TXT2VID.value:
+                self.set_button_checked("txt2vid", True)
+            elif self.settings_manager.generator_section == GeneratorSection.TXT2GIF.value:
+                self.set_button_checked("txt2gif", True)
+            elif self.settings_manager.generator_section == GeneratorSection.PROMPT_BUILDER.value:
+                self.set_button_checked("prompt_builder", True)
+            else:
+                self.set_button_checked("image_generators", True)
+    
+    def toggle_tool_section_buttons_visibility(self):
+        self.ui.image_generator_header_tools.setVisible(
+            self.settings_manager.mode == Mode.IMAGE.value)
+    
+    def image_generators_toggled(self, val):
+        self.set_button_checked("image_generators", True)
+        self.set_button_checked("txt2gif", False)
+        self.set_button_checked("txt2vid", False)
+        self.set_button_checked("prompt_builder", False)
         self.image_generation_toggled(True)
         # if self.settings_manager.generator_section == "txt2vid":
         #     self.settings_manager.set_value("generator_section", "txt2img")
         current_tab = self.settings_manager.current_tab
-        if current_tab == "shape":
-            current_tab = "stablediffusion"
-            self.settings_manager.set_value("current_tab", current_tab)
-        self.settings_manager.set_value("mode", "Image Generator")
-        self.settings_manager.set_value(f"current_section_{current_tab}", "txt2img")
+        current_tab = self.settings_manager.current_image_generator
+        self.settings_manager.set_value("current_tab", current_tab)
+        self.settings_manager.set_value("mode", Mode.IMAGE.value)
+        self.settings_manager.set_value(f"current_section_{current_tab}", GeneratorSection.TXT2IMG.value)
         self.generator_tab_widget.set_current_section_tab()
-        self.settings_manager.set_value("generator_section", "txt2img")
+        self.settings_manager.set_value("generator_section", GeneratorSection.TXT2IMG.value)
 
         active_tab_obj = session.query(TabSection).filter(TabSection.panel == "center_tab").first()
         active_tab_obj.active_tab = "Canvas"
@@ -1505,16 +1527,18 @@ class MainWindow(
         self.change_content_widget()
             
 
-    def text_to_video_clicked(self):
+    def text_to_video_toggled(self, val):
+        self.set_button_checked("image_generators", False)
+        self.set_button_checked("txt2gif", False)
+        self.set_button_checked("txt2vid", True)
+        self.set_button_checked("prompt_builder", False)
         self.image_generation_toggled(True)
-        current_tab = self.settings_manager.current_tab
-        if current_tab == "shape":
-            current_tab = "stablediffusion"
-            self.settings_manager.set_value("current_tab", current_tab)
-        self.settings_manager.set_value("mode", "Image Generator")
-        self.settings_manager.set_value(f"current_section_{current_tab}", "txt2vid")
+        current_tab = "stablediffusion"
+        self.settings_manager.set_value("current_tab", current_tab)
+        self.settings_manager.set_value("mode", Mode.IMAGE.value)
+        self.settings_manager.set_value(f"current_section_{current_tab}", GeneratorSection.TXT2VID.value)
         self.generator_tab_widget.set_current_section_tab()
-        self.settings_manager.set_value("generator_section", "txt2vid")
+        self.settings_manager.set_value("generator_section", GeneratorSection.TXT2VID.value)
         
         active_tab_obj = session.query(TabSection).filter(TabSection.panel == "center_tab").first()
         active_tab_obj.active_tab = "Video"
@@ -1522,16 +1546,20 @@ class MainWindow(
 
         self.change_content_widget()
 
-    def text_to_gif_clicked(self):
+    def text_to_gif_toggled(self, val):
+        self.set_button_checked("image_generators", False)
+        self.set_button_checked("txt2gif", True)
+        self.set_button_checked("txt2vid", False)
+        self.set_button_checked("prompt_builder", False)
         self.image_generation_toggled(True)
         current_tab = self.settings_manager.current_tab
         if current_tab != "shape":
             current_tab = "shape"
             self.settings_manager.set_value("current_tab", current_tab)
-        self.settings_manager.set_value("mode", "Image Generator")
-        self.settings_manager.set_value(f"current_section_{current_tab}", "shape")
+        self.settings_manager.set_value("mode", Mode.IMAGE.value)
+        self.settings_manager.set_value(f"current_section_{current_tab}", GeneratorSection.TXT2GIF.value)
         self.generator_tab_widget.set_current_section_tab()
-        self.settings_manager.set_value("generator_section", "shape")
+        self.settings_manager.set_value("generator_section", GeneratorSection.TXT2GIF.value)
 
         active_tab_obj = session.query(TabSection).filter(TabSection.panel == "center_tab").first()
         active_tab_obj.active_tab = "GIF"
@@ -1539,11 +1567,16 @@ class MainWindow(
 
         self.change_content_widget()
 
-    def prompt_builder_toggled_clicked(self):
-        print("prompt_builder_toggled_clicked")
+    def prompt_builder_toggled(self, val):
+        self.set_button_checked("image_generators", False)
+        self.set_button_checked("txt2gif", False)
+        self.set_button_checked("txt2vid", False)
+        self.set_button_checked("prompt_builder", True)
         self.image_generation_toggled(True)
-        # self.settings_manager.set_value("current_tab", "prompt_builder")
+        current_tab = self.settings_manager.current_tab
+        self.settings_manager.set_value(f"current_section_{current_tab}", GeneratorSection.PROMPT_BUILDER.value)
         self.generator_tab_widget.set_current_section_tab()
+        self.settings_manager.set_value(f"generator_section", GeneratorSection.PROMPT_BUILDER.value)
 
         active_tab_obj = session.query(TabSection).filter(TabSection.panel == "center_tab").first()
         active_tab_obj.active_tab = "Prompt Builder"
