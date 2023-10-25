@@ -6,13 +6,6 @@ QWidget {
     margin: 0px;
     padding: 0px;
 }
-#generator_form {
-    border: 1px solid #ff0000;
-}
-
-GeneratorTabWidget QTabWidget QTabWidget QTabWidget QTabBar {
-    border-right: 1px solid #ff0000;
-}
 
 GeneratorTabWidget QTabWidget QTabWidget QTabWidget QTabBar::tab {
     /* hide the tab bar */
@@ -60,13 +53,17 @@ QLineEdit {
 QPushButton {
     border-radius: none;
     padding: 4px 4px 3px 4px;
-    border: 1px solid rgba(0, 132, 185, 255);
+    border: 1px solid #000;
     color: rgba(0, 132, 185, 255);
 }
 
 QPushButton:hover {
     border: 1px solid rgba(0, 132, 185, 100);
     background-color: rgba(0, 132, 185, 50);
+}
+
+QPushButton:checked {
+    border: 1px solid rgba(0, 132, 185, 255);
 }
 
 QProgressBar {
@@ -108,33 +105,41 @@ QPushButton#image_thumbnail {
     border: 1px solid #222;
 }
 
+QSlider {
+    border: 1px solid rgba(0, 132, 185, 255);
+}
+
+QGroupBox QTabWidget QWidget {
+    padding: 5px;
+    border: 1px solid rgba(0, 132, 185, 50);
+}
+
 QSlider::handle:horizontal {
     height: 20px;
     width: 25px;
     border: 1px solid #00A8D8;
     border-radius: 0px;
+    background-color: rgba(100, 100, 100, 0.15)
 }
 QSlider::handle:horizontal:hover {
-    background-color: #00A8D8;
+    background-color: rgba(255, 255, 255, 0.25)
 }
 QSlider::groove:horizontal {
     height: 25px;
-    background-color: transparent;
+    background-color: rgba(0, 132, 185, 50);
     border: transparent;
-    border: 1px solid #C8C8C8;
     border-right: 0px;
     border-radius: 0px;
 }
-
 QLabel#slider_label {
     font-size: 8pt;
     color: #C8C8C8;
     font-weight: bold;
 }
 QDoubleSpinBox {
-	background-color: #666666;
+	background-color: #000;
+    border: 1px solid rgba(0, 132, 185, 255);
 	border-left: none;
-	border-color: #666666;
 	border-radius: 0px;
 	font-size: 8pt;
 }
@@ -210,6 +215,11 @@ QWidget#scrollAreaWidgetContents {
     border-left: 1px solid rgba(0, 132, 185, 255);
 }
 
+QFrame#line,
+QFrame#line_4 {
+    border-bottom: 1px solid rgba(0, 132, 185, 255);
+}
+
 #header_widget QPushButton {
     border-radius: 0px;
     border: 0px;
@@ -248,7 +258,10 @@ QWidget#scrollAreaWidgetContents {
 
 #basic_prompt,
 #prompt,
-#negative_prompt {
+#negative_prompt,
+#prefix,
+#suffix,
+#conversation {
     border: 1px solid rgba(0, 132, 185, 100);
     background-color: #000;
     color: #C8C8C8;
@@ -258,32 +271,12 @@ QWidget#scrollAreaWidgetContents {
     border-left: 1px solid rgba(0, 132, 185, 100);
 }
 
+#button_menu QPushButton {
+    margin-left: 9px;
+}
+
 #bottom_panel_tab_widget QWidget {
     border-top: 1px solid rgba(0, 132, 185, 255);
-}
-
-QSplitter::handle {
-    background: #000;
-}
-
-QSplitter::handle:horizontal {
-    border-top: none;
-    border-bottom: none;
-    width: 4px;
-    margin: 0 8px;
-}
-
-QSplitter::handle:vertical {
-    border-top: 1px solid rgba(0, 132, 185, 255);
-    border-bottom: 1px solid rgba(0, 132, 185, 255);
-    border-left: none;
-    border-right: none;
-    height: 1px;
-    margin: 2px 0;
-}
-
-QSplitter::handle:hover {
-    background: rgba(0, 132, 185, 100);
 }
 
 QStatusBar {
@@ -294,4 +287,12 @@ QStatusBar {
 QMenuBar {
     border: 1px solid rgba(0, 132, 185, 255);
     border-bottom: none;
+}
+
+#mode_tab_widget QWidget#art {
+    border-bottom: 1px solid rgba(0, 132, 185, 255);
+}
+
+#generator_container QPushButton {
+    border: 1px solid rgba(0, 132, 185, 255);
 }

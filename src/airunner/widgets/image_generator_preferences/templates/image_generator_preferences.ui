@@ -1,0 +1,94 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<ui version="4.0">
+ <class>image_generator_preferences</class>
+ <widget class="QWidget" name="image_generator_preferences">
+  <property name="geometry">
+   <rect>
+    <x>0</x>
+    <y>0</y>
+    <width>400</width>
+    <height>177</height>
+   </rect>
+  </property>
+  <property name="windowTitle">
+   <string>Form</string>
+  </property>
+  <layout class="QGridLayout" name="gridLayout">
+   <item row="0" column="0">
+    <widget class="QGroupBox" name="groupBox">
+     <property name="title">
+      <string>Current Image Generator</string>
+     </property>
+     <layout class="QGridLayout" name="gridLayout_2">
+      <item row="0" column="0">
+       <widget class="QRadioButton" name="stablediffusion">
+        <property name="text">
+         <string>StableDiffusion</string>
+        </property>
+       </widget>
+      </item>
+      <item row="1" column="0">
+       <widget class="QRadioButton" name="kandinsky">
+        <property name="text">
+         <string>Kandinsky</string>
+        </property>
+       </widget>
+      </item>
+     </layout>
+    </widget>
+   </item>
+   <item row="1" column="0">
+    <spacer name="verticalSpacer">
+     <property name="orientation">
+      <enum>Qt::Vertical</enum>
+     </property>
+     <property name="sizeHint" stdset="0">
+      <size>
+       <width>20</width>
+       <height>40</height>
+      </size>
+     </property>
+    </spacer>
+   </item>
+  </layout>
+ </widget>
+ <resources/>
+ <connections>
+  <connection>
+   <sender>stablediffusion</sender>
+   <signal>toggled(bool)</signal>
+   <receiver>image_generator_preferences</receiver>
+   <slot>stablediffusion_toggled(bool)</slot>
+   <hints>
+    <hint type="sourcelabel">
+     <x>79</x>
+     <y>61</y>
+    </hint>
+    <hint type="destinationlabel">
+     <x>16</x>
+     <y>-11</y>
+    </hint>
+   </hints>
+  </connection>
+  <connection>
+   <sender>kandinsky</sender>
+   <signal>toggled(bool)</signal>
+   <receiver>image_generator_preferences</receiver>
+   <slot>kandinsky_toggled(bool)</slot>
+   <hints>
+    <hint type="sourcelabel">
+     <x>66</x>
+     <y>78</y>
+    </hint>
+    <hint type="destinationlabel">
+     <x>110</x>
+     <y>-2</y>
+    </hint>
+   </hints>
+  </connection>
+ </connections>
+ <slots>
+  <slot>stablediffusion_toggled(bool)</slot>
+  <slot>kandinsky_toggled(bool)</slot>
+ </slots>
+</ui>
