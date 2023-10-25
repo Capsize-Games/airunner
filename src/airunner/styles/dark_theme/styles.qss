@@ -299,6 +299,22 @@ QMenuBar {
     border-bottom: none;
 }
 
+QMenu::item:selected {
+    background-color: rgba(0, 132, 185, 255);
+}
+
+QMenu::item:hover {
+    background-color: rgba(0, 132, 185, 255);
+}
+
+QMenu QMenu::item:selected {
+    background-color: rgba(0, 132, 185, 255);
+}
+
+QMenu QMenu::item:hover {
+    background-color: rgba(0, 132, 185, 255);
+}
+
 #mode_tab_widget QWidget#art {
     border-bottom: 1px solid rgba(0, 132, 185, 255);
 }
@@ -306,3 +322,4 @@ QMenuBar {
 #generator_container QPushButton {
     border: 1px solid rgba(0, 132, 185, 255);
 }
+
