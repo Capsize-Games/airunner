@@ -9,7 +9,7 @@ from functools import partial
 from PyQt6 import uic, QtCore
 from PyQt6.QtCore import pyqtSlot, Qt, QThread, pyqtSignal, QObject, QTimer
 from PyQt6.QtGui import QGuiApplication
-from PyQt6.QtWidgets import QApplication, QFileDialog, QMainWindow, QWidget
+from PyQt6.QtWidgets import QApplication, QFileDialog, QMainWindow, QWidget, QSpacerItem, QSizePolicy
 
 from airunner.aihandler.enums import GeneratorSection, MessageCode, Mode
 from airunner.aihandler.logger import Logger as logger
@@ -128,7 +128,11 @@ class MainWindow(
 
     @property
     def canvas_widget(self):
-        return self.ui.canvas_widget.ui
+        return self.ui.canvas_plus_widget.ui
+    
+    @property
+    def canvas(self):
+        return self.ui.canvas_plus_widget
 
     @property
     def generator_tab_widget(self):
@@ -203,8 +207,9 @@ class MainWindow(
 
     @property
     def document_name(self):
-        name = f"{self._document_name}{'*' if self.canvas and self.canvas.is_dirty else ''}"
-        return f"{name} - {self.version}"
+        # name = f"{self._document_name}{'*' if self.canvas and self.canvas.is_dirty else ''}"
+        # return f"{name} - {self.version}"
+        return "Untitled"
 
     @property
     def is_windows(self):
@@ -302,9 +307,7 @@ class MainWindow(
         self.ui.mode_tab_widget.tabBar().hide()
         self.ui.center_tab.tabBar().hide()
 
-        self.set_button_checked("image_generation", self.settings_manager.mode == Mode.IMAGE.value)
-        self.set_button_checked("language_processing", self.settings_manager.mode == Mode.TEXT.value)
-        self.set_button_checked("model_manager", self.settings_manager.mode == Mode.MODEL_MANAGER.value)
+        self.set_all_section_buttons()
 
         self.initialize_panel_tabs()
         self.initialize_tool_section_buttons()
@@ -730,6 +733,9 @@ class MainWindow(
             self.canvas.pos_x = int(self.x() / 4)
             self.canvas.pos_y = int(self.y() / 2)
             self.canvas.update()
+
+    def refresh_styles(self):
+        self.set_stylesheet()
 
     def set_stylesheet(self):
         """
@@ -1437,25 +1443,22 @@ class MainWindow(
     def new_batch(self, index, image, data):
         self.generator_tab_widget.current_generator.new_batch(index, image, data)
 
-    def image_generation_toggled(self, val):
-        if not val:
-            self.set_button_checked("image_generation", True)
-            return
+    def image_generation_toggled(self):
+        self.settings_manager.set_value("mode", Mode.IMAGE.value)
         self.activate_image_generation_section()
+        self.set_all_section_buttons()
 
-    def language_processing_toggled(self, val):
-        if not val: 
-            self.set_button_checked("language_processing", True)
-            return
+    def language_processing_toggled(self):
+        self.settings_manager.set_value("mode", Mode.LANGUAGE_PROCESSOR.value)
         self.activate_language_processing_section()
+        self.set_all_section_buttons()
     
-    def model_manager_toggled(self, val):
-        if not val: 
-            self.set_button_checked("model_manager", True)
-            return
+    def model_manager_toggled(self):
+        self.settings_manager.set_value("mode", Mode.MODEL_MANAGER.value)
         self.activate_model_manager_section()
+        self.set_all_section_buttons()
     
-    def set_button_checked(self, name, val, block_signals=True):
+    def set_button_checked(self, name, val=True, block_signals=True):
         widget = getattr(self.ui, f"{name}_button")
         if block_signals:
             widget.blockSignals(True)
@@ -1463,25 +1466,22 @@ class MainWindow(
         if block_signals:
             widget.blockSignals(False)
     
+    def set_all_section_buttons(self):
+        print("set all section buttons", self.settings_manager.mode)
+        self.set_button_checked("image_generation", self.settings_manager.mode == Mode.IMAGE.value)
+        self.set_button_checked("language_processing", self.settings_manager.mode == Mode.LANGUAGE_PROCESSOR.value)
+        self.set_button_checked("model_manager", self.settings_manager.mode == Mode.MODEL_MANAGER.value)
+    
     def activate_image_generation_section(self):
         self.ui.mode_tab_widget.setCurrentIndex(0)
-        self.set_button_checked("image_generation", True)
-        self.set_button_checked("language_processing", False)
-        self.set_button_checked("model_manager", False)
         self.toggle_tool_section_buttons_visibility()
 
     def activate_language_processing_section(self):
         self.ui.mode_tab_widget.setCurrentIndex(1)
-        self.set_button_checked("language_processing", True)
-        self.set_button_checked("image_generation", False)
-        self.set_button_checked("model_manager", False)
         self.toggle_tool_section_buttons_visibility()
     
     def activate_model_manager_section(self):
         self.ui.mode_tab_widget.setCurrentIndex(2)
-        self.set_button_checked("model_manager", True)
-        self.set_button_checked("language_processing", False)
-        self.set_button_checked("image_generation", False)
         self.toggle_tool_section_buttons_visibility()
 
     def initialize_tool_section_buttons(self):
@@ -1492,26 +1492,40 @@ class MainWindow(
         self.set_button_checked("prompt_builder", False)
         if self.settings_manager.mode == Mode.IMAGE.value:
             if self.settings_manager.generator_section == GeneratorSection.TXT2VID.value:
-                self.set_button_checked("txt2vid", True)
+                self.set_button_checked("txt2vid")
             elif self.settings_manager.generator_section == GeneratorSection.TXT2GIF.value:
-                self.set_button_checked("txt2gif", True)
+                self.set_button_checked("txt2gif")
             elif self.settings_manager.generator_section == GeneratorSection.PROMPT_BUILDER.value:
-                self.set_button_checked("prompt_builder", True)
+                self.set_button_checked("prompt_builder")
             else:
-                self.set_button_checked("image_generators", True)
+                self.set_button_checked("image_generators")
     
+    header_widget_spacer = None
     def toggle_tool_section_buttons_visibility(self):
-        self.ui.image_generator_header_tools.setVisible(
-            self.settings_manager.mode == Mode.IMAGE.value)
+        visible = self.settings_manager.mode == Mode.IMAGE.value
+        self.ui.image_generator_header_tools.setVisible(visible)
+
+        # add a horizontal spacer to the right of the self.ui.header_widget
+        if not visible:
+            if not self.header_widget_spacer:
+                self.header_widget_spacer = QSpacerItem(40, 20, QSizePolicy.Policy.Expanding, QSizePolicy.Policy.Minimum)
+            self.ui.scrollAreaWidgetContents_3.layout().addItem(self.header_widget_spacer)
+        elif visible and self.header_widget_spacer:
+            self.ui.scrollAreaWidgetContents_3.layout().removeItem(self.header_widget_spacer)
+
     
-    def image_generators_toggled(self, val):
-        self.set_button_checked("image_generators", True)
-        self.set_button_checked("txt2gif", False)
-        self.set_button_checked("txt2vid", False)
-        self.set_button_checked("prompt_builder", False)
-        self.image_generation_toggled(True)
-        # if self.settings_manager.generator_section == "txt2vid":
-        #     self.settings_manager.set_value("generator_section", "txt2img")
+    def set_all_image_generator_buttons(self):
+        is_txt2vid = self.settings_manager.generator_section == GeneratorSection.TXT2VID.value
+        is_txt2gif = self.settings_manager.generator_section == GeneratorSection.TXT2GIF.value
+        is_prompt_builder = self.settings_manager.generator_section == GeneratorSection.PROMPT_BUILDER.value
+        is_image_generators = not is_txt2vid and not is_txt2gif and not is_prompt_builder
+        self.set_button_checked("image_generators", is_image_generators)
+        self.set_button_checked("txt2gif", is_txt2gif)
+        self.set_button_checked("txt2vid", is_txt2vid)
+        self.set_button_checked("prompt_builder", is_prompt_builder)
+    
+    def image_generators_toggled(self):
+        self.image_generation_toggled()
         current_tab = self.settings_manager.current_tab
         current_tab = self.settings_manager.current_image_generator
         self.settings_manager.set_value("current_tab", current_tab)
@@ -1519,39 +1533,29 @@ class MainWindow(
         self.settings_manager.set_value(f"current_section_{current_tab}", GeneratorSection.TXT2IMG.value)
         self.generator_tab_widget.set_current_section_tab()
         self.settings_manager.set_value("generator_section", GeneratorSection.TXT2IMG.value)
-
         active_tab_obj = session.query(TabSection).filter(TabSection.panel == "center_tab").first()
         active_tab_obj.active_tab = "Canvas"
         save_session()
-
+        self.set_all_image_generator_buttons()
         self.change_content_widget()
             
 
-    def text_to_video_toggled(self, val):
-        self.set_button_checked("image_generators", False)
-        self.set_button_checked("txt2gif", False)
-        self.set_button_checked("txt2vid", True)
-        self.set_button_checked("prompt_builder", False)
-        self.image_generation_toggled(True)
+    def text_to_video_toggled(self):
+        self.image_generation_toggled()
         current_tab = "stablediffusion"
         self.settings_manager.set_value("current_tab", current_tab)
         self.settings_manager.set_value("mode", Mode.IMAGE.value)
         self.settings_manager.set_value(f"current_section_{current_tab}", GeneratorSection.TXT2VID.value)
         self.generator_tab_widget.set_current_section_tab()
         self.settings_manager.set_value("generator_section", GeneratorSection.TXT2VID.value)
-        
         active_tab_obj = session.query(TabSection).filter(TabSection.panel == "center_tab").first()
         active_tab_obj.active_tab = "Video"
         save_session()
-
+        self.set_all_image_generator_buttons()
         self.change_content_widget()
 
-    def text_to_gif_toggled(self, val):
-        self.set_button_checked("image_generators", False)
-        self.set_button_checked("txt2gif", True)
-        self.set_button_checked("txt2vid", False)
-        self.set_button_checked("prompt_builder", False)
-        self.image_generation_toggled(True)
+    def text_to_gif_toggled(self):
+        self.image_generation_toggled()
         current_tab = self.settings_manager.current_tab
         if current_tab != "shape":
             current_tab = "shape"
@@ -1560,26 +1564,26 @@ class MainWindow(
         self.settings_manager.set_value(f"current_section_{current_tab}", GeneratorSection.TXT2GIF.value)
         self.generator_tab_widget.set_current_section_tab()
         self.settings_manager.set_value("generator_section", GeneratorSection.TXT2GIF.value)
-
         active_tab_obj = session.query(TabSection).filter(TabSection.panel == "center_tab").first()
         active_tab_obj.active_tab = "GIF"
         save_session()
-
+        self.set_all_image_generator_buttons()
         self.change_content_widget()
 
-    def prompt_builder_toggled(self, val):
-        self.set_button_checked("image_generators", False)
-        self.set_button_checked("txt2gif", False)
-        self.set_button_checked("txt2vid", False)
-        self.set_button_checked("prompt_builder", True)
-        self.image_generation_toggled(True)
+    def prompt_builder_toggled(self):
+        self.image_generation_toggled()
         current_tab = self.settings_manager.current_tab
         self.settings_manager.set_value(f"current_section_{current_tab}", GeneratorSection.PROMPT_BUILDER.value)
         self.generator_tab_widget.set_current_section_tab()
         self.settings_manager.set_value(f"generator_section", GeneratorSection.PROMPT_BUILDER.value)
-
         active_tab_obj = session.query(TabSection).filter(TabSection.panel == "center_tab").first()
         active_tab_obj.active_tab = "Prompt Builder"
         save_session()
-
+        self.set_all_image_generator_buttons()
         self.change_content_widget()
+
+    def redraw(self):
+        self.set_stylesheet()
+
+        # Update the window
+        self.update()
