@@ -46,8 +46,9 @@ QLabel {
 }
 
 QLineEdit {
-    border-radius: 5px;
+    border-radius: 0;
     padding: 5px;
+    border: 1px solid rgba(0, 132, 185, 100);
 }
 
 QPushButton {
@@ -322,4 +323,56 @@ QMenu QMenu::item:hover {
 #generator_container QPushButton {
     border: 1px solid rgba(0, 132, 185, 255);
 }
+
+QScrollBar:vertical {
+    background: #000;
+}
+
+QScrollBar::handle:vertical {
+    background: rgba(0, 132, 185, 255);
+}
+
+QScrollBar::add-line:vertical {
+    border: 1px solid rgba(0, 132, 185, 255);
+}
+
+QScrollBar::sub-line:vertical {
+    border: 1px solid rgba(0, 132, 185, 255);
+}
+
+QScrollBar:horizontal {
+    background: #000;
+}
+
+QScrollBar::handle:horizontal {
+    background: rgba(0, 132, 185, 255);
+}
+
+QScrollBar::add-line:horizontal {
+    border: 1px solid rgba(0, 132, 185, 255);
+}
+
+QScrollBar::sub-line:horizontal {
+    border: 1px solid rgba(0, 132, 185, 255);
+}
+
+QScrollBar::add-page:vertical, QScrollBar::sub-page:vertical {
+    border: 1px solid rgba(0, 132, 185, 255);
+}
+
+QScrollBar::add-page:horizontal, QScrollBar::sub-page:horizontal {
+    border: 1px solid rgba(0, 132, 185, 255);
+}
+
+QScrollBar::up-arrow:vertical, QScrollBar::down-arrow:vertical {
+    border: 1px solid rgba(0, 132, 185, 255);
+    color: rgba(0, 132, 185, 255);
+}
+
+QScrollBar::left-arrow:horizontal, QScrollBar::right-arrow:horizontal {
+    border: 1px solid rgba(0, 132, 185, 255);
+    color: rgba(0, 132, 185, 255);
+}
+
+
 

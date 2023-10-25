@@ -1,0 +1,51 @@
+<?xml version="1.0" encoding="UTF-8" standalone="no"?>
+<svg
+   id="Layer_1"
+   data-name="Layer 1"
+   viewBox="0 0 122.88 122.88"
+   version="1.1"
+   sodipodi:docname="round-black-top-arrow-icon.svg"
+   inkscape:version="1.1.2 (0a00cf5339, 2022-02-04)"
+   xmlns:inkscape="http://www.inkscape.org/namespaces/inkscape"
+   xmlns:sodipodi="http://sodipodi.sourceforge.net/DTD/sodipodi-0.dtd"
+   xmlns="http://www.w3.org/2000/svg"
+   xmlns:svg="http://www.w3.org/2000/svg"
+   xmlns:rdf="http://www.w3.org/1999/02/22-rdf-syntax-ns#"
+   xmlns:cc="http://creativecommons.org/ns#"
+   xmlns:dc="http://purl.org/dc/elements/1.1/">
+  <defs
+     id="defs9" />
+  <sodipodi:namedview
+     id="namedview7"
+     pagecolor="#ffffff"
+     bordercolor="#666666"
+     borderopacity="1.0"
+     inkscape:pageshadow="2"
+     inkscape:pageopacity="0.0"
+     inkscape:pagecheckerboard="0"
+     showgrid="false"
+     inkscape:zoom="7.1044923"
+     inkscape:cx="61.369621"
+     inkscape:cy="61.439999"
+     inkscape:window-width="2490"
+     inkscape:window-height="1376"
+     inkscape:window-x="2630"
+     inkscape:window-y="27"
+     inkscape:window-maximized="1"
+     inkscape:current-layer="Layer_1" />
+  <title
+     id="title2">round-black-top-arrow</title>
+  <path
+     d="M122.85,61.43h0a61.39,61.39,0,0,1-61.43,61.41v0h0v0A61.38,61.38,0,0,1,0,61.45H0v0H0A61.35,61.35,0,0,1,61.43,0V0h0V0a61.34,61.34,0,0,1,61.38,61.4ZM61.44,28.67,30.48,63H50.25V86.92H72.62V63H92.4l-31-34.32Z"
+     id="path4"
+     style="fill:#fffffe;fill-opacity:1" />
+  <metadata
+     id="metadata1004">
+    <rdf:RDF>
+      <cc:Work
+         rdf:about="">
+        <dc:title>round-black-top-arrow</dc:title>
+      </cc:Work>
+    </rdf:RDF>
+  </metadata>
+</svg>

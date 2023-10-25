@@ -1,7 +1,7 @@
 QWidget {
-    background-color: @dark-color;
-    color: @light-color;
-    border-color: @light-color;
+    background-color: @light-color;
+    color: @dark-color;
+    border-color: @dark-color;
     border: none;
     margin: 0px;
     padding: 0px;
@@ -24,7 +24,7 @@ QComboBox {
     border-radius: None;
     padding: 5px;
     border: 1px solid @darkprimary-color;
-    color: @light-color;
+    color: @dark-color;
 }
 
 #mode_tab_widget QWidget {
@@ -37,12 +37,12 @@ QFrame {
 }
 
 QMainWindow {
-    background-color: @dark-color;
-    color: @light-color;
+    background-color: @light-color;
+    color: @dark-color;
 }
 
 QLabel {
-    color: @light-color;
+    color: @dark-color;
 }
 
 QLineEdit {
@@ -81,13 +81,13 @@ QPushButton:pressed {
 }
 
 QPushButton:disabled {
-    background-color: @dark-color;
+    background-color: @light-color;
     color: @dim-color;
 }
 
 QWidget#qt_scrollarea_viewport {
-    background-color: @light-color;
-    color: @light-color;
+    background-color: @dark-color;
+    color: @dark-color;
 }
 
 QFrame[frameShape="4"] {
@@ -134,11 +134,11 @@ QSlider::groove:horizontal {
 }
 QLabel#slider_label {
     font-size: 8pt;
-    color: @light-color;
+    color: @dark-color;
     font-weight: bold;
 }
 QDoubleSpinBox {
-	background-color: @dark-color;
+	background-color: @light-color;
     border: 1px solid @primary-color;
 	border-left: none;
 	border-radius: 0px;
@@ -195,7 +195,7 @@ GeneratorTabWidget#generator_widget QTabWidget QTabWidget QTabBar::tab::first {
 
 QWidget#scrollAreaWidgetContents {
     background-color: @dark-color;
-    color: @light-color;
+    color: @dark-color;
 }
 
 #centralwidget {
@@ -234,7 +234,7 @@ QFrame#line_4 {
 #header_widget QPushButton {
     border-radius: 0px;
     border: 0px;
-    background-color: @dark-color;
+    background-color: @light-color;
 }
 
 #header_widget QPushButton:hover,
@@ -274,8 +274,8 @@ QFrame#line_4 {
 #suffix,
 #conversation {
     border: 1px solid @darkprimary-color;
-    background-color: @dark-color;
-    color: @light-color;
+    background-color: @light-color;
+    color: @dark-color;
 }
 
 #button_menu {
@@ -325,7 +325,7 @@ QMenu QMenu::item:hover {
 }
 
 QScrollBar:vertical {
-    background: @dark-color;
+    background: @light-color;
 }
 
 QScrollBar::handle:vertical {
@@ -341,7 +341,7 @@ QScrollBar::sub-line:vertical {
 }
 
 QScrollBar:horizontal {
-    background: @dark-color;
+    background: @light-color;
 }
 
 QScrollBar::handle:horizontal {

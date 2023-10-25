@@ -7,8 +7,8 @@
    <rect>
     <x>0</x>
     <y>0</y>
-    <width>1167</width>
-    <height>948</height>
+    <width>1136</width>
+    <height>992</height>
    </rect>
   </property>
   <property name="minimumSize">
@@ -26,7 +26,7 @@
    <string>AI Runner</string>
   </property>
   <property name="windowIcon">
-   <iconset resource="../../../resources.qrc">
+   <iconset>
     <normaloff>:/icons/icon_256.png</normaloff>:/icons/icon_256.png</iconset>
   </property>
   <property name="styleSheet">
@@ -257,8 +257,8 @@
               <rect>
                <x>0</x>
                <y>0</y>
-               <width>466</width>
-               <height>719</height>
+               <width>453</width>
+               <height>755</height>
               </rect>
              </property>
              <layout class="QGridLayout" name="gridLayout">
@@ -428,381 +428,326 @@
             <property name="frameShadow">
              <enum>QFrame::Raised</enum>
             </property>
-            <layout class="QVBoxLayout" name="verticalLayout">
-             <property name="leftMargin">
-              <number>0</number>
-             </property>
-             <property name="topMargin">
-              <number>0</number>
-             </property>
-             <property name="rightMargin">
-              <number>0</number>
-             </property>
-             <property name="bottomMargin">
-              <number>0</number>
-             </property>
-             <item>
-              <widget class="QScrollArea" name="scrollArea_2">
-               <property name="widgetResizable">
+            <layout class="QGridLayout" name="gridLayout_17">
+             <item row="0" column="0">
+              <widget class="QPushButton" name="toggle_active_grid_area_button">
+               <property name="sizePolicy">
+                <sizepolicy hsizetype="Fixed" vsizetype="Fixed">
+                 <horstretch>0</horstretch>
+                 <verstretch>0</verstretch>
+                </sizepolicy>
+               </property>
+               <property name="minimumSize">
+                <size>
+                 <width>35</width>
+                 <height>35</height>
+                </size>
+               </property>
+               <property name="cursor">
+                <cursorShape>PointingHandCursor</cursorShape>
+               </property>
+               <property name="toolTip">
+                <string>Active grid area selection tool</string>
+               </property>
+               <property name="text">
+                <string/>
+               </property>
+               <property name="icon">
+                <iconset resource="../../../resources_light.qrc">
+                 <normaloff>:/icons/light/object-selected-icon.svg</normaloff>:/icons/light/object-selected-icon.svg</iconset>
+               </property>
+               <property name="iconSize">
+                <size>
+                 <width>18</width>
+                 <height>18</height>
+                </size>
+               </property>
+               <property name="checkable">
                 <bool>true</bool>
                </property>
-               <widget class="QWidget" name="scrollAreaWidgetContents_2">
-                <property name="geometry">
-                 <rect>
-                  <x>0</x>
-                  <y>0</y>
-                  <width>48</width>
-                  <height>719</height>
-                 </rect>
-                </property>
-                <property name="sizePolicy">
-                 <sizepolicy hsizetype="MinimumExpanding" vsizetype="Preferred">
-                  <horstretch>0</horstretch>
-                  <verstretch>0</verstretch>
-                 </sizepolicy>
-                </property>
-                <property name="maximumSize">
-                 <size>
-                  <width>50</width>
-                  <height>16777215</height>
-                 </size>
-                </property>
-                <layout class="QGridLayout" name="gridLayout_17">
-                 <property name="leftMargin">
-                  <number>0</number>
-                 </property>
-                 <property name="topMargin">
-                  <number>9</number>
-                 </property>
-                 <property name="rightMargin">
-                  <number>0</number>
-                 </property>
-                 <property name="bottomMargin">
-                  <number>0</number>
-                 </property>
-                 <item row="3" column="0">
-                  <widget class="Line" name="line">
-                   <property name="sizePolicy">
-                    <sizepolicy hsizetype="MinimumExpanding" vsizetype="Fixed">
-                     <horstretch>0</horstretch>
-                     <verstretch>0</verstretch>
-                    </sizepolicy>
-                   </property>
-                   <property name="orientation">
-                    <enum>Qt::Horizontal</enum>
-                   </property>
-                  </widget>
-                 </item>
-                 <item row="6" column="0">
-                  <widget class="QPushButton" name="safety_checker_button">
-                   <property name="sizePolicy">
-                    <sizepolicy hsizetype="Fixed" vsizetype="Fixed">
-                     <horstretch>0</horstretch>
-                     <verstretch>0</verstretch>
-                    </sizepolicy>
-                   </property>
-                   <property name="minimumSize">
-                    <size>
-                     <width>35</width>
-                     <height>35</height>
-                    </size>
-                   </property>
-                   <property name="cursor">
-                    <cursorShape>PointingHandCursor</cursorShape>
-                   </property>
-                   <property name="toolTip">
-                    <string>Toggle NSFW</string>
-                   </property>
-                   <property name="text">
-                    <string/>
-                   </property>
-                   <property name="icon">
-                    <iconset resource="../../../resources.qrc">
-                     <normaloff>:/icons/039-18-light.png</normaloff>:/icons/039-18-light.png</iconset>
-                   </property>
-                   <property name="iconSize">
-                    <size>
-                     <width>18</width>
-                     <height>18</height>
-                    </size>
-                   </property>
-                   <property name="checkable">
-                    <bool>true</bool>
-                   </property>
-                   <property name="flat">
-                    <bool>true</bool>
-                   </property>
-                  </widget>
-                 </item>
-                 <item row="9" column="0">
-                  <spacer name="verticalSpacer">
-                   <property name="orientation">
-                    <enum>Qt::Vertical</enum>
-                   </property>
-                   <property name="sizeHint" stdset="0">
-                    <size>
-                     <width>20</width>
-                     <height>40</height>
-                    </size>
-                   </property>
-                  </spacer>
-                 </item>
-                 <item row="4" column="0">
-                  <widget class="QPushButton" name="toggle_grid_button">
-                   <property name="sizePolicy">
-                    <sizepolicy hsizetype="Fixed" vsizetype="Fixed">
-                     <horstretch>0</horstretch>
-                     <verstretch>0</verstretch>
-                    </sizepolicy>
-                   </property>
-                   <property name="minimumSize">
-                    <size>
-                     <width>35</width>
-                     <height>35</height>
-                    </size>
-                   </property>
-                   <property name="cursor">
-                    <cursorShape>PointingHandCursor</cursorShape>
-                   </property>
-                   <property name="toolTip">
-                    <string>Toggle Grid</string>
-                   </property>
-                   <property name="text">
-                    <string/>
-                   </property>
-                   <property name="icon">
-                    <iconset resource="../../../resources.qrc">
-                     <normaloff>:/icons/032-pixels-light.png</normaloff>:/icons/032-pixels-light.png</iconset>
-                   </property>
-                   <property name="iconSize">
-                    <size>
-                     <width>18</width>
-                     <height>18</height>
-                    </size>
-                   </property>
-                   <property name="checkable">
-                    <bool>true</bool>
-                   </property>
-                   <property name="flat">
-                    <bool>true</bool>
-                   </property>
-                  </widget>
-                 </item>
-                 <item row="0" column="0">
-                  <widget class="QPushButton" name="toggle_active_grid_area_button">
-                   <property name="sizePolicy">
-                    <sizepolicy hsizetype="Fixed" vsizetype="Fixed">
-                     <horstretch>0</horstretch>
-                     <verstretch>0</verstretch>
-                    </sizepolicy>
-                   </property>
-                   <property name="minimumSize">
-                    <size>
-                     <width>35</width>
-                     <height>35</height>
-                    </size>
-                   </property>
-                   <property name="cursor">
-                    <cursorShape>PointingHandCursor</cursorShape>
-                   </property>
-                   <property name="toolTip">
-                    <string>Active grid area selection tool</string>
-                   </property>
-                   <property name="text">
-                    <string/>
-                   </property>
-                   <property name="icon">
-                    <iconset resource="../../../resources.qrc">
-                     <normaloff>:/icons/038-drag-light.png</normaloff>:/icons/038-drag-light.png</iconset>
-                   </property>
-                   <property name="iconSize">
-                    <size>
-                     <width>18</width>
-                     <height>18</height>
-                    </size>
-                   </property>
-                   <property name="checkable">
-                    <bool>true</bool>
-                   </property>
-                   <property name="flat">
-                    <bool>true</bool>
-                   </property>
-                  </widget>
-                 </item>
-                 <item row="5" column="0">
-                  <widget class="QPushButton" name="focus_button">
-                   <property name="sizePolicy">
-                    <sizepolicy hsizetype="Fixed" vsizetype="Fixed">
-                     <horstretch>0</horstretch>
-                     <verstretch>0</verstretch>
-                    </sizepolicy>
-                   </property>
-                   <property name="minimumSize">
-                    <size>
-                     <width>35</width>
-                     <height>35</height>
-                    </size>
-                   </property>
-                   <property name="cursor">
-                    <cursorShape>PointingHandCursor</cursorShape>
-                   </property>
-                   <property name="toolTip">
-                    <string>Recenter canvas</string>
-                   </property>
-                   <property name="text">
-                    <string/>
-                   </property>
-                   <property name="icon">
-                    <iconset resource="../../../resources.qrc">
-                     <normaloff>:/icons/037-focus-light.png</normaloff>:/icons/037-focus-light.png</iconset>
-                   </property>
-                   <property name="iconSize">
-                    <size>
-                     <width>18</width>
-                     <height>18</height>
-                    </size>
-                   </property>
-                   <property name="flat">
-                    <bool>true</bool>
-                   </property>
-                  </widget>
-                 </item>
-                 <item row="1" column="0">
-                  <widget class="QPushButton" name="toggle_brush_button">
-                   <property name="sizePolicy">
-                    <sizepolicy hsizetype="Fixed" vsizetype="Fixed">
-                     <horstretch>0</horstretch>
-                     <verstretch>0</verstretch>
-                    </sizepolicy>
-                   </property>
-                   <property name="minimumSize">
-                    <size>
-                     <width>35</width>
-                     <height>35</height>
-                    </size>
-                   </property>
-                   <property name="cursor">
-                    <cursorShape>PointingHandCursor</cursorShape>
-                   </property>
-                   <property name="toolTip">
-                    <string>Pen tool</string>
-                   </property>
-                   <property name="text">
-                    <string/>
-                   </property>
-                   <property name="icon">
-                    <iconset resource="../../../resources.qrc">
-                     <normaloff>:/icons/011-pencil-light.png</normaloff>:/icons/011-pencil-light.png</iconset>
-                   </property>
-                   <property name="iconSize">
-                    <size>
-                     <width>18</width>
-                     <height>18</height>
-                    </size>
-                   </property>
-                   <property name="checkable">
-                    <bool>true</bool>
-                   </property>
-                   <property name="flat">
-                    <bool>true</bool>
-                   </property>
-                  </widget>
-                 </item>
-                 <item row="2" column="0">
-                  <widget class="QPushButton" name="toggle_eraser_button">
-                   <property name="sizePolicy">
-                    <sizepolicy hsizetype="Fixed" vsizetype="Fixed">
-                     <horstretch>0</horstretch>
-                     <verstretch>0</verstretch>
-                    </sizepolicy>
-                   </property>
-                   <property name="minimumSize">
-                    <size>
-                     <width>35</width>
-                     <height>35</height>
-                    </size>
-                   </property>
-                   <property name="cursor">
-                    <cursorShape>PointingHandCursor</cursorShape>
-                   </property>
-                   <property name="toolTip">
-                    <string>Eraser tool</string>
-                   </property>
-                   <property name="text">
-                    <string/>
-                   </property>
-                   <property name="icon">
-                    <iconset resource="../../../resources.qrc">
-                     <normaloff>:/icons/014-eraser-light.png</normaloff>:/icons/014-eraser-light.png</iconset>
-                   </property>
-                   <property name="iconSize">
-                    <size>
-                     <width>18</width>
-                     <height>18</height>
-                    </size>
-                   </property>
-                   <property name="checkable">
-                    <bool>true</bool>
-                   </property>
-                   <property name="flat">
-                    <bool>true</bool>
-                   </property>
-                  </widget>
-                 </item>
-                 <item row="7" column="0">
-                  <widget class="Line" name="line_4">
-                   <property name="sizePolicy">
-                    <sizepolicy hsizetype="MinimumExpanding" vsizetype="Fixed">
-                     <horstretch>0</horstretch>
-                     <verstretch>0</verstretch>
-                    </sizepolicy>
-                   </property>
-                   <property name="orientation">
-                    <enum>Qt::Horizontal</enum>
-                   </property>
-                  </widget>
-                 </item>
-                 <item row="8" column="0">
-                  <widget class="QPushButton" name="settings_button">
-                   <property name="sizePolicy">
-                    <sizepolicy hsizetype="Fixed" vsizetype="Fixed">
-                     <horstretch>0</horstretch>
-                     <verstretch>0</verstretch>
-                    </sizepolicy>
-                   </property>
-                   <property name="minimumSize">
-                    <size>
-                     <width>35</width>
-                     <height>35</height>
-                    </size>
-                   </property>
-                   <property name="cursor">
-                    <cursorShape>PointingHandCursor</cursorShape>
-                   </property>
-                   <property name="toolTip">
-                    <string>AI Runner Settings</string>
-                   </property>
-                   <property name="text">
-                    <string/>
-                   </property>
-                   <property name="icon">
-                    <iconset resource="../../../resources.qrc">
-                     <normaloff>:/icons/settings-light.png</normaloff>:/icons/settings-light.png</iconset>
-                   </property>
-                   <property name="iconSize">
-                    <size>
-                     <width>18</width>
-                     <height>18</height>
-                    </size>
-                   </property>
-                   <property name="flat">
-                    <bool>true</bool>
-                   </property>
-                  </widget>
-                 </item>
-                </layout>
-               </widget>
+               <property name="flat">
+                <bool>true</bool>
+               </property>
               </widget>
+             </item>
+             <item row="1" column="0">
+              <widget class="QPushButton" name="toggle_brush_button">
+               <property name="sizePolicy">
+                <sizepolicy hsizetype="Fixed" vsizetype="Fixed">
+                 <horstretch>0</horstretch>
+                 <verstretch>0</verstretch>
+                </sizepolicy>
+               </property>
+               <property name="minimumSize">
+                <size>
+                 <width>35</width>
+                 <height>35</height>
+                </size>
+               </property>
+               <property name="cursor">
+                <cursorShape>PointingHandCursor</cursorShape>
+               </property>
+               <property name="toolTip">
+                <string>Pen tool</string>
+               </property>
+               <property name="text">
+                <string/>
+               </property>
+               <property name="icon">
+                <iconset resource="../../../resources_light.qrc">
+                 <normaloff>:/icons/light/pencil-icon.svg</normaloff>:/icons/light/pencil-icon.svg</iconset>
+               </property>
+               <property name="iconSize">
+                <size>
+                 <width>18</width>
+                 <height>18</height>
+                </size>
+               </property>
+               <property name="checkable">
+                <bool>true</bool>
+               </property>
+               <property name="flat">
+                <bool>true</bool>
+               </property>
+              </widget>
+             </item>
+             <item row="2" column="0">
+              <widget class="QPushButton" name="toggle_eraser_button">
+               <property name="sizePolicy">
+                <sizepolicy hsizetype="Fixed" vsizetype="Fixed">
+                 <horstretch>0</horstretch>
+                 <verstretch>0</verstretch>
+                </sizepolicy>
+               </property>
+               <property name="minimumSize">
+                <size>
+                 <width>35</width>
+                 <height>35</height>
+                </size>
+               </property>
+               <property name="cursor">
+                <cursorShape>PointingHandCursor</cursorShape>
+               </property>
+               <property name="toolTip">
+                <string>Eraser tool</string>
+               </property>
+               <property name="text">
+                <string/>
+               </property>
+               <property name="icon">
+                <iconset resource="../../../resources_light.qrc">
+                 <normaloff>:/icons/light/eraser-icon.svg</normaloff>:/icons/light/eraser-icon.svg</iconset>
+               </property>
+               <property name="iconSize">
+                <size>
+                 <width>18</width>
+                 <height>18</height>
+                </size>
+               </property>
+               <property name="checkable">
+                <bool>true</bool>
+               </property>
+               <property name="flat">
+                <bool>true</bool>
+               </property>
+              </widget>
+             </item>
+             <item row="3" column="0">
+              <widget class="Line" name="line">
+               <property name="sizePolicy">
+                <sizepolicy hsizetype="MinimumExpanding" vsizetype="Fixed">
+                 <horstretch>0</horstretch>
+                 <verstretch>0</verstretch>
+                </sizepolicy>
+               </property>
+               <property name="orientation">
+                <enum>Qt::Horizontal</enum>
+               </property>
+              </widget>
+             </item>
+             <item row="4" column="0">
+              <widget class="QPushButton" name="toggle_grid_button">
+               <property name="sizePolicy">
+                <sizepolicy hsizetype="Fixed" vsizetype="Fixed">
+                 <horstretch>0</horstretch>
+                 <verstretch>0</verstretch>
+                </sizepolicy>
+               </property>
+               <property name="minimumSize">
+                <size>
+                 <width>35</width>
+                 <height>35</height>
+                </size>
+               </property>
+               <property name="cursor">
+                <cursorShape>PointingHandCursor</cursorShape>
+               </property>
+               <property name="toolTip">
+                <string>Toggle Grid</string>
+               </property>
+               <property name="text">
+                <string/>
+               </property>
+               <property name="icon">
+                <iconset resource="../../../resources_light.qrc">
+                 <normaloff>:/icons/light/frame-grid-icon.svg</normaloff>:/icons/light/frame-grid-icon.svg</iconset>
+               </property>
+               <property name="iconSize">
+                <size>
+                 <width>18</width>
+                 <height>18</height>
+                </size>
+               </property>
+               <property name="checkable">
+                <bool>true</bool>
+               </property>
+               <property name="flat">
+                <bool>true</bool>
+               </property>
+              </widget>
+             </item>
+             <item row="5" column="0">
+              <widget class="QPushButton" name="focus_button">
+               <property name="sizePolicy">
+                <sizepolicy hsizetype="Fixed" vsizetype="Fixed">
+                 <horstretch>0</horstretch>
+                 <verstretch>0</verstretch>
+                </sizepolicy>
+               </property>
+               <property name="minimumSize">
+                <size>
+                 <width>35</width>
+                 <height>35</height>
+                </size>
+               </property>
+               <property name="cursor">
+                <cursorShape>PointingHandCursor</cursorShape>
+               </property>
+               <property name="toolTip">
+                <string>Recenter canvas</string>
+               </property>
+               <property name="text">
+                <string/>
+               </property>
+               <property name="icon">
+                <iconset resource="../../../resources_light.qrc">
+                 <normaloff>:/icons/light/circle-center-icon.svg</normaloff>:/icons/light/circle-center-icon.svg</iconset>
+               </property>
+               <property name="iconSize">
+                <size>
+                 <width>18</width>
+                 <height>18</height>
+                </size>
+               </property>
+               <property name="flat">
+                <bool>true</bool>
+               </property>
+              </widget>
+             </item>
+             <item row="6" column="0">
+              <widget class="QPushButton" name="safety_checker_button">
+               <property name="sizePolicy">
+                <sizepolicy hsizetype="Fixed" vsizetype="Fixed">
+                 <horstretch>0</horstretch>
+                 <verstretch>0</verstretch>
+                </sizepolicy>
+               </property>
+               <property name="minimumSize">
+                <size>
+                 <width>35</width>
+                 <height>35</height>
+                </size>
+               </property>
+               <property name="cursor">
+                <cursorShape>PointingHandCursor</cursorShape>
+               </property>
+               <property name="toolTip">
+                <string>Toggle NSFW</string>
+               </property>
+               <property name="text">
+                <string/>
+               </property>
+               <property name="icon">
+                <iconset resource="../../../resources_light.qrc">
+                 <normaloff>:/icons/light/adult-sign-icon.svg</normaloff>:/icons/light/adult-sign-icon.svg</iconset>
+               </property>
+               <property name="iconSize">
+                <size>
+                 <width>18</width>
+                 <height>18</height>
+                </size>
+               </property>
+               <property name="checkable">
+                <bool>true</bool>
+               </property>
+               <property name="flat">
+                <bool>true</bool>
+               </property>
+              </widget>
+             </item>
+             <item row="7" column="0">
+              <widget class="Line" name="line_4">
+               <property name="sizePolicy">
+                <sizepolicy hsizetype="MinimumExpanding" vsizetype="Fixed">
+                 <horstretch>0</horstretch>
+                 <verstretch>0</verstretch>
+                </sizepolicy>
+               </property>
+               <property name="orientation">
+                <enum>Qt::Horizontal</enum>
+               </property>
+              </widget>
+             </item>
+             <item row="8" column="0">
+              <widget class="QPushButton" name="settings_button">
+               <property name="sizePolicy">
+                <sizepolicy hsizetype="Fixed" vsizetype="Fixed">
+                 <horstretch>0</horstretch>
+                 <verstretch>0</verstretch>
+                </sizepolicy>
+               </property>
+               <property name="minimumSize">
+                <size>
+                 <width>35</width>
+                 <height>35</height>
+                </size>
+               </property>
+               <property name="cursor">
+                <cursorShape>PointingHandCursor</cursorShape>
+               </property>
+               <property name="toolTip">
+                <string>AI Runner Settings</string>
+               </property>
+               <property name="text">
+                <string/>
+               </property>
+               <property name="icon">
+                <iconset resource="../../../resources_light.qrc">
+                 <normaloff>:/icons/light/setting-line-icon.svg</normaloff>:/icons/light/setting-line-icon.svg</iconset>
+               </property>
+               <property name="iconSize">
+                <size>
+                 <width>18</width>
+                 <height>18</height>
+                </size>
+               </property>
+               <property name="flat">
+                <bool>true</bool>
+               </property>
+              </widget>
+             </item>
+             <item row="9" column="0">
+              <spacer name="verticalSpacer">
+               <property name="orientation">
+                <enum>Qt::Vertical</enum>
+               </property>
+               <property name="sizeHint" stdset="0">
+                <size>
+                 <width>20</width>
+                 <height>431</height>
+                </size>
+               </property>
+              </spacer>
              </item>
             </layout>
            </widget>
@@ -929,8 +874,8 @@
            <rect>
             <x>0</x>
             <y>0</y>
-            <width>1163</width>
-            <height>48</height>
+            <width>1132</width>
+            <height>50</height>
            </rect>
           </property>
           <layout class="QHBoxLayout" name="horizontalLayout_2">
@@ -979,8 +924,8 @@
               <string/>
              </property>
              <property name="icon">
-              <iconset theme="applications-graphics">
-               <normaloff>.</normaloff>.</iconset>
+              <iconset resource="../../../resources_light.qrc">
+               <normaloff>:/icons/light/image-file-icon.svg</normaloff>:/icons/light/image-file-icon.svg</iconset>
              </property>
              <property name="iconSize">
               <size>
@@ -1026,8 +971,8 @@
               <string/>
              </property>
              <property name="icon">
-              <iconset theme="applications-development">
-               <normaloff>.</normaloff>.</iconset>
+              <iconset resource="../../../resources_light.qrc">
+               <normaloff>:/icons/light/edit-document-icon.svg</normaloff>:/icons/light/edit-document-icon.svg</iconset>
              </property>
              <property name="iconSize">
               <size>
@@ -1067,8 +1012,8 @@
               <string/>
              </property>
              <property name="icon">
-              <iconset theme="user-bookmarks">
-               <normaloff>.</normaloff>.</iconset>
+              <iconset resource="../../../resources_light.qrc">
+               <normaloff>:/icons/light/tech-icon.svg</normaloff>:/icons/light/tech-icon.svg</iconset>
              </property>
              <property name="iconSize">
               <size>
@@ -1082,6 +1027,171 @@
              <property name="flat">
               <bool>true</bool>
              </property>
+            </widget>
+           </item>
+           <item>
+            <widget class="QFrame" name="text_generator_header_tools">
+             <property name="frameShape">
+              <enum>QFrame::StyledPanel</enum>
+             </property>
+             <property name="frameShadow">
+              <enum>QFrame::Raised</enum>
+             </property>
+             <layout class="QHBoxLayout" name="horizontalLayout_5">
+              <property name="leftMargin">
+               <number>0</number>
+              </property>
+              <property name="topMargin">
+               <number>0</number>
+              </property>
+              <property name="rightMargin">
+               <number>0</number>
+              </property>
+              <property name="bottomMargin">
+               <number>0</number>
+              </property>
+              <item>
+               <widget class="QPushButton" name="chat_button">
+                <property name="minimumSize">
+                 <size>
+                  <width>48</width>
+                  <height>48</height>
+                 </size>
+                </property>
+                <property name="maximumSize">
+                 <size>
+                  <width>48</width>
+                  <height>48</height>
+                 </size>
+                </property>
+                <property name="text">
+                 <string/>
+                </property>
+                <property name="icon">
+                 <iconset resource="../../../resources_light.qrc">
+                  <normaloff>:/icons/light/chat-box-icon.svg</normaloff>:/icons/light/chat-box-icon.svg</iconset>
+                </property>
+                <property name="iconSize">
+                 <size>
+                  <width>24</width>
+                  <height>24</height>
+                 </size>
+                </property>
+                <property name="flat">
+                 <bool>true</bool>
+                </property>
+               </widget>
+              </item>
+              <item>
+               <widget class="QPushButton" name="llm_preferences_button">
+                <property name="minimumSize">
+                 <size>
+                  <width>48</width>
+                  <height>48</height>
+                 </size>
+                </property>
+                <property name="maximumSize">
+                 <size>
+                  <width>48</width>
+                  <height>48</height>
+                 </size>
+                </property>
+                <property name="text">
+                 <string/>
+                </property>
+                <property name="icon">
+                 <iconset resource="../../../resources_light.qrc">
+                  <normaloff>:/icons/light/setting-line-icon.svg</normaloff>:/icons/light/setting-line-icon.svg</iconset>
+                </property>
+                <property name="iconSize">
+                 <size>
+                  <width>24</width>
+                  <height>24</height>
+                 </size>
+                </property>
+                <property name="flat">
+                 <bool>true</bool>
+                </property>
+               </widget>
+              </item>
+              <item>
+               <widget class="QPushButton" name="llm_settings_button">
+                <property name="minimumSize">
+                 <size>
+                  <width>48</width>
+                  <height>48</height>
+                 </size>
+                </property>
+                <property name="maximumSize">
+                 <size>
+                  <width>48</width>
+                  <height>48</height>
+                 </size>
+                </property>
+                <property name="text">
+                 <string/>
+                </property>
+                <property name="icon">
+                 <iconset resource="../../../resources_light.qrc">
+                  <normaloff>:/icons/light/sliders-icon.svg</normaloff>:/icons/light/sliders-icon.svg</iconset>
+                </property>
+                <property name="iconSize">
+                 <size>
+                  <width>24</width>
+                  <height>24</height>
+                 </size>
+                </property>
+                <property name="flat">
+                 <bool>true</bool>
+                </property>
+               </widget>
+              </item>
+              <item>
+               <widget class="QPushButton" name="llm_quantization_button">
+                <property name="minimumSize">
+                 <size>
+                  <width>48</width>
+                  <height>48</height>
+                 </size>
+                </property>
+                <property name="maximumSize">
+                 <size>
+                  <width>48</width>
+                  <height>48</height>
+                 </size>
+                </property>
+                <property name="text">
+                 <string/>
+                </property>
+                <property name="icon">
+                 <iconset resource="../../../resources_light.qrc">
+                  <normaloff>:/icons/light/clamp-as-indicated-symbol-icon.svg</normaloff>:/icons/light/clamp-as-indicated-symbol-icon.svg</iconset>
+                </property>
+                <property name="iconSize">
+                 <size>
+                  <width>24</width>
+                  <height>24</height>
+                 </size>
+                </property>
+                <property name="flat">
+                 <bool>true</bool>
+                </property>
+               </widget>
+              </item>
+              <item>
+               <spacer name="horizontalSpacer_2">
+                <property name="orientation">
+                 <enum>Qt::Horizontal</enum>
+                </property>
+                <property name="sizeHint" stdset="0">
+                 <size>
+                  <width>40</width>
+                  <height>20</height>
+                 </size>
+                </property>
+               </spacer>
+              </item>
+             </layout>
             </widget>
            </item>
            <item>
@@ -1109,13 +1219,6 @@
                <number>0</number>
               </property>
               <item>
-               <widget class="Line" name="line_3">
-                <property name="orientation">
-                 <enum>Qt::Vertical</enum>
-                </property>
-               </widget>
-              </item>
-              <item>
                <widget class="QPushButton" name="image_generators_button">
                 <property name="minimumSize">
                  <size>
@@ -1126,7 +1229,7 @@
                 <property name="maximumSize">
                  <size>
                   <width>48</width>
-                  <height>16777215</height>
+                  <height>48</height>
                  </size>
                 </property>
                 <property name="cursor">
@@ -1139,8 +1242,8 @@
                  <string/>
                 </property>
                 <property name="icon">
-                 <iconset theme="image-x-generic">
-                  <normaloff>.</normaloff>.</iconset>
+                 <iconset resource="../../../resources_light.qrc">
+                  <normaloff>:/icons/light/photo-editor-icon.svg</normaloff>:/icons/light/photo-editor-icon.svg</iconset>
                 </property>
                 <property name="iconSize">
                  <size>
@@ -1169,8 +1272,8 @@
                 </property>
                 <property name="maximumSize">
                  <size>
-                  <width>36</width>
-                  <height>16777215</height>
+                  <width>48</width>
+                  <height>48</height>
                  </size>
                 </property>
                 <property name="cursor">
@@ -1183,8 +1286,8 @@
                  <string/>
                 </property>
                 <property name="icon">
-                 <iconset theme="emblem-photos">
-                  <normaloff>.</normaloff>.</iconset>
+                 <iconset resource="../../../resources_light.qrc">
+                  <normaloff>:/icons/light/gif-editor-icon.svg</normaloff>:/icons/light/gif-editor-icon.svg</iconset>
                 </property>
                 <property name="iconSize">
                  <size>
@@ -1210,8 +1313,8 @@
                 </property>
                 <property name="maximumSize">
                  <size>
-                  <width>36</width>
-                  <height>16777215</height>
+                  <width>48</width>
+                  <height>48</height>
                  </size>
                 </property>
                 <property name="cursor">
@@ -1224,8 +1327,8 @@
                  <string/>
                 </property>
                 <property name="icon">
-                 <iconset theme="video-x-generic">
-                  <normaloff>.</normaloff>.</iconset>
+                 <iconset resource="../../../resources_light.qrc">
+                  <normaloff>:/icons/light/video-editor-icon.svg</normaloff>:/icons/light/video-editor-icon.svg</iconset>
                 </property>
                 <property name="iconSize">
                  <size>
@@ -1251,8 +1354,8 @@
                 </property>
                 <property name="maximumSize">
                  <size>
-                  <width>36</width>
-                  <height>16777215</height>
+                  <width>48</width>
+                  <height>48</height>
                  </size>
                 </property>
                 <property name="cursor">
@@ -1265,8 +1368,8 @@
                  <string/>
                 </property>
                 <property name="icon">
-                 <iconset theme="document-page-setup">
-                  <normaloff>.</normaloff>.</iconset>
+                 <iconset resource="../../../resources_light.qrc">
+                  <normaloff>:/icons/light/prompt-editor-icon.svg</normaloff>:/icons/light/prompt-editor-icon.svg</iconset>
                 </property>
                 <property name="iconSize">
                  <size>
@@ -1279,13 +1382,6 @@
                 </property>
                 <property name="flat">
                  <bool>true</bool>
-                </property>
-               </widget>
-              </item>
-              <item>
-               <widget class="Line" name="line_5">
-                <property name="orientation">
-                 <enum>Qt::Vertical</enum>
                 </property>
                </widget>
               </item>
@@ -1593,7 +1689,7 @@
     <rect>
      <x>0</x>
      <y>0</y>
-     <width>1167</width>
+     <width>1136</width>
      <height>22</height>
     </rect>
    </property>
@@ -2392,7 +2488,8 @@
   </customwidget>
  </customwidgets>
  <resources>
-  <include location="../../../resources.qrc"/>
+  <include location="../../../resources_light.qrc"/>
+  <include location="../../../resources_dark.qrc"/>
  </resources>
  <connections>
   <connection>
@@ -2572,86 +2669,6 @@
    </hints>
   </connection>
   <connection>
-   <sender>toggle_grid_button</sender>
-   <signal>toggled(bool)</signal>
-   <receiver>MainWindow</receiver>
-   <slot>action_toggle_grid(bool)</slot>
-   <hints>
-    <hint type="sourcelabel">
-     <x>1155</x>
-     <y>276</y>
-    </hint>
-    <hint type="destinationlabel">
-     <x>442</x>
-     <y>0</y>
-    </hint>
-   </hints>
-  </connection>
-  <connection>
-   <sender>toggle_brush_button</sender>
-   <signal>toggled(bool)</signal>
-   <receiver>MainWindow</receiver>
-   <slot>action_toggle_brush(bool)</slot>
-   <hints>
-    <hint type="sourcelabel">
-     <x>1155</x>
-     <y>185</y>
-    </hint>
-    <hint type="destinationlabel">
-     <x>442</x>
-     <y>0</y>
-    </hint>
-   </hints>
-  </connection>
-  <connection>
-   <sender>toggle_active_grid_area_button</sender>
-   <signal>toggled(bool)</signal>
-   <receiver>MainWindow</receiver>
-   <slot>action_toggle_active_grid_area(bool)</slot>
-   <hints>
-    <hint type="sourcelabel">
-     <x>1155</x>
-     <y>144</y>
-    </hint>
-    <hint type="destinationlabel">
-     <x>442</x>
-     <y>0</y>
-    </hint>
-   </hints>
-  </connection>
-  <connection>
-   <sender>toggle_eraser_button</sender>
-   <signal>toggled(bool)</signal>
-   <receiver>MainWindow</receiver>
-   <slot>action_toggle_eraser(bool)</slot>
-   <hints>
-    <hint type="sourcelabel">
-     <x>1155</x>
-     <y>226</y>
-    </hint>
-    <hint type="destinationlabel">
-     <x>442</x>
-     <y>0</y>
-    </hint>
-   </hints>
-  </connection>
-  <connection>
-   <sender>settings_button</sender>
-   <signal>clicked()</signal>
-   <receiver>MainWindow</receiver>
-   <slot>action_show_settings()</slot>
-   <hints>
-    <hint type="sourcelabel">
-     <x>1155</x>
-     <y>408</y>
-    </hint>
-    <hint type="destinationlabel">
-     <x>442</x>
-     <y>0</y>
-    </hint>
-   </hints>
-  </connection>
-  <connection>
    <sender>actionLoad</sender>
    <signal>triggered()</signal>
    <receiver>MainWindow</receiver>
@@ -2696,22 +2713,6 @@
     <hint type="destinationlabel">
      <x>442</x>
      <y>432</y>
-    </hint>
-   </hints>
-  </connection>
-  <connection>
-   <sender>safety_checker_button</sender>
-   <signal>toggled(bool)</signal>
-   <receiver>MainWindow</receiver>
-   <slot>action_toggle_nsfw_filter_triggered(bool)</slot>
-   <hints>
-    <hint type="sourcelabel">
-     <x>1155</x>
-     <y>358</y>
-    </hint>
-    <hint type="destinationlabel">
-     <x>442</x>
-     <y>0</y>
     </hint>
    </hints>
   </connection>

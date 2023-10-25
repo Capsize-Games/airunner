@@ -1,0 +1,51 @@
+<?xml version="1.0" encoding="UTF-8" standalone="no"?>
+<svg
+   id="Layer_1"
+   data-name="Layer 1"
+   viewBox="0 0 122.88 118.96"
+   version="1.1"
+   sodipodi:docname="frame-grid-icon.svg"
+   inkscape:version="1.1.2 (0a00cf5339, 2022-02-04)"
+   xmlns:inkscape="http://www.inkscape.org/namespaces/inkscape"
+   xmlns:sodipodi="http://sodipodi.sourceforge.net/DTD/sodipodi-0.dtd"
+   xmlns="http://www.w3.org/2000/svg"
+   xmlns:svg="http://www.w3.org/2000/svg"
+   xmlns:rdf="http://www.w3.org/1999/02/22-rdf-syntax-ns#"
+   xmlns:cc="http://creativecommons.org/ns#"
+   xmlns:dc="http://purl.org/dc/elements/1.1/">
+  <defs
+     id="defs9" />
+  <sodipodi:namedview
+     id="namedview7"
+     pagecolor="#ffffff"
+     bordercolor="#666666"
+     borderopacity="1.0"
+     inkscape:pageshadow="2"
+     inkscape:pageopacity="0.0"
+     inkscape:pagecheckerboard="0"
+     showgrid="false"
+     inkscape:zoom="7.3386013"
+     inkscape:cx="61.455853"
+     inkscape:cy="59.48"
+     inkscape:window-width="2490"
+     inkscape:window-height="1376"
+     inkscape:window-x="2630"
+     inkscape:window-y="27"
+     inkscape:window-maximized="1"
+     inkscape:current-layer="Layer_1" />
+  <title
+     id="title2">frame-grid</title>
+  <path
+     d="M3.27,0H119.61a3.26,3.26,0,0,1,3.27,3.27V115.69a3.26,3.26,0,0,1-3.27,3.27H3.27A3.26,3.26,0,0,1,0,115.69V3.27A3.26,3.26,0,0,1,3.27,0ZM116.34,81.49H84.1v30.93h32.24V81.49Zm0-37.48H84.1V75h32.24V44ZM84.1,6.54V37.47h32.24V6.54ZM77.56,81.49H45.32v30.93H77.56V81.49Zm0-37.48H45.32V75H77.56V44ZM45.32,6.54V37.47H77.56V6.54ZM38.78,81.49H6.54v30.93H38.78V81.49Zm0-37.48H6.54V75H38.78V44Zm0-37.47H6.54V37.47H38.78V6.54Z"
+     id="path4"
+     style="fill:#ffffff;fill-opacity:1" />
+  <metadata
+     id="metadata1040">
+    <rdf:RDF>
+      <cc:Work
+         rdf:about="">
+        <dc:title>frame-grid</dc:title>
+      </cc:Work>
+    </rdf:RDF>
+  </metadata>
+</svg>

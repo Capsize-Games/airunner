@@ -6,6 +6,8 @@ from pathlib import Path
 from watchdog.observers import Observer
 from watchdog.events import FileSystemEventHandler
 
+from PyQt6.QtCore import QObject, pyqtSignal
+
 from airunner.utils import get_venv_python_executable
 
 
@@ -81,6 +83,7 @@ def process_qss(_path=None):
 
         # Process each QSS file listed in the manifest
         output_path = os.path.join(output_dir, 'styles.qss')
+        print(output_path)
         variables = {}
         with open(output_path, 'w') as output_file:
             for filename in contents.splitlines():
@@ -96,7 +99,6 @@ def process_qss(_path=None):
                             if var_name not in variables:
                                 variables[var_name] = get_variable_value(var_name, var_block_contents)
                     process_file(file_path, output_file, variables)
-
         # Remove variable blocks from the output file
         with open(output_path, 'r') as f:
             contents = f.read()
@@ -127,8 +129,6 @@ def process_qss(_path=None):
     # Process all manifest files in the styles directory and its subdirectories
     process_directory(os.path.join(os.getcwd(), 'styles'))
 
-
-from PyQt6.QtCore import QObject, pyqtSignal
 
 class SignalEmitter(QObject):
     file_changed = pyqtSignal()
