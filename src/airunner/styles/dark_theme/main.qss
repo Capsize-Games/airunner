@@ -1,14 +1,46 @@
-QWidget#bottom_panel_tab_1 {
-    background-color: @dark-color;
-}
-QWidget#bottom_panel_tab_2 {
-    background-color: @dark-color;
-}
-
-/* All QWidget objects inside of #model_manager */
-QWidget#model_manager QWidget {
+QWidget {
     background-color: @dark-color;
     color: @light-color;
+    border-color: @light-color;
+    border: none;
+    margin: 0px;
+    padding: 0px;
+}
+#generator_form {
+    border: 1px solid #ff0000;
+}
+
+GeneratorTabWidget QTabWidget QTabWidget QTabWidget QTabBar {
+    border-right: 1px solid #ff0000;
+}
+
+GeneratorTabWidget QTabWidget QTabWidget QTabWidget QTabBar::tab {
+    /* hide the tab bar */
+    min-width: 0px;
+    max-width: 0px;
+    border: none;
+}
+
+#generator_container,
+#generator_form_tab_widget #scrollAreaWidgetContents,
+#basic_widget_contents {
+    border-left: 1px solid @primary-color;
+}
+
+QComboBox {
+    border-radius: None;
+    padding: 5px;
+    border: 1px solid @darkprimary-color;
+    color: @light-color;
+}
+
+#mode_tab_widget QWidget {
+    font-size: 10pt;
+}
+
+QFrame {
+    border: none;
+    background-color: none;
 }
 
 QMainWindow {
@@ -26,23 +58,28 @@ QLineEdit {
 }
 
 QPushButton {
-    background-color: @dark-color;
-    border: none;
-    color: @light-color;
-    border-radius: 5px;
-    padding: 5px;
+    border-radius: none;
+    padding: 4px 4px 3px 4px;
+    border: 1px solid @primary-color;
+    color: @primary-color;
 }
 
 QPushButton:hover {
-    border: 1px solid @info-color;
+    border: 1px solid @darkprimary-color;
+    background-color: @darkerprimary-color;
+}
+
+QProgressBar {
+    border: 1px solid @primary-color;
+    text-align: center;
 }
 
 QPushButton:checked {
-    background-color: @info-color;
+    background-color: @darkprimary-color;
 }
 
 QPushButton:pressed {
-    background-color: @info-color;
+    background-color: @darkprimary-color;
 }
 
 QPushButton:disabled {
@@ -50,32 +87,28 @@ QPushButton:disabled {
     color: @dim-color;
 }
 
-/* QWidget inside of QScrollArea */
 QWidget#qt_scrollarea_viewport {
     background-color: @light-color;
     color: @light-color;
 }
 
-/* QFrame.HLine color */
 QFrame[frameShape="4"] {
     border: 0;
-    border-top: 1px solid @line-color;
+    border-top: 1px solid @line-color-dark;
+    height: 1px;
 }
-/* QFrame.VLine color */
+
 QFrame[frameShape="5"] {
     border: 0;
-    border-left: 1px solid @line-color;
+    border-left: 1px solid @line-color-dark;
+    width: 1px;
 }
 
 QPushButton#image_thumbnail {
-    background-color: @dark-color;
-    border-color: @secondary-color;
+    border: 1px solid @line-color-dark;
 }
 
-/* 
-Slider styles
-*/
-QSlider::handle:horizontal { 
+QSlider::handle:horizontal {
     height: 20px;
     width: 25px;
     border: 1px solid @info-color;
@@ -92,6 +125,7 @@ QSlider::groove:horizontal {
     border-right: 0px;
     border-radius: 0px;
 }
+
 QLabel#slider_label {
     font-size: 8pt;
     color: @light-color;
@@ -105,13 +139,19 @@ QDoubleSpinBox {
 	font-size: 8pt;
 }
 
-/*
-Generator section tabs
-*/
-GeneratorTabWidget#generator_widget QTabWidget::pane { 
+GeneratorTabWidget#generator_widget QTabWidget::pane {
     border: 0;
-    border-radius: 0px;
-    border-top: 1px solid #121212;
+}
+
+GeneratorTabWidget#generator_widget QTabWidget QWidget#tab_stablediffusion {
+}
+GeneratorTabWidget#generator_widget QTabWidget QWidget#tab_kandinsky {
+}
+GeneratorTabWidget#generator_widget QTabWidget QWidget#tab_shape {
+}
+GeneratorTabWidget#generator_widget GeneratorForm QWidget#scrollAreaWidgetContents {
+}
+QFrame#button_menu {
 }
 GeneratorTabWidget#generator_widget QTabWidget QTabBar::tab {
     border-radius: 0px; 
@@ -119,27 +159,28 @@ GeneratorTabWidget#generator_widget QTabWidget QTabBar::tab {
     padding: 5px 10px;
     border: 0px;
     font-size: 8pt;
+    font-weight: bold;
 }
 GeneratorTabWidget#generator_widget QTabWidget QTabBar::tab::first {
     margin-left: 24px;
 }
-GeneratorTabWidget#generator_widget QTabBar::tab:selected { 
-    background-color: #5483d0;
-    color: white;
-    border: 0px;
+
+GeneratorTabWidget#generator_widget QTabBar::tab:hover {
+    background-color: @primary-color;
+}
+
+GeneratorTabWidget#generator_widget QTabBar::tab:selected {
+    background-color: @primary-color;
 }
 
 GeneratorTabWidget#generator_widget QTabWidget QTabWidget QTabWidget::pane { 
     border: 0;
     border-left: 0;
     border-radius: 0px;
-    background: #222222;
+    background: @dark-color;
 }
 
-/* 
-Generator action tabs within generator section tabs
-*/
-GeneratorTabWidget#generator_widget QTabWidget QTabWidget QTabBar::tab { 
+GeneratorTabWidget#generator_widget QTabWidget QTabWidget QTabBar::tab {
     padding: 10px 5px;
 }
 GeneratorTabWidget#generator_widget QTabWidget QTabWidget QTabBar::tab::first {
@@ -149,4 +190,108 @@ GeneratorTabWidget#generator_widget QTabWidget QTabWidget QTabBar::tab::first {
 QWidget#scrollAreaWidgetContents {
     background-color: @dark-color;
     color: @light-color;
+}
+
+#centralwidget {
+    border: 1px solid @primary-color;
+    border-top: none;
+    border-bottom: none;
+}
+
+#header_widget {
+    border: 1px solid @primary-color;
+    border-left: 0;
+    border-right: 0;
+}
+
+#header_widget QFrame#line_2,
+#header_widget QFrame#line_3,
+#header_widget QFrame#line_5 {
+    border-left: 1px solid @primary-color;
+}
+
+#header_widget QPushButton {
+    border-radius: 0px;
+    border: 0px;
+    background-color: @dark-color;
+}
+
+#header_widget QPushButton:hover,
+#header_widget QPushButton:checked {
+    background-color: @darkprimary-color;
+}
+
+#image_generator_header_tools QPushButton:hover,
+#image_generator_header_tools QPushButton:checked {
+    background-color: @darkerprimary-color;
+}
+
+#image_generator_header_tool_buttons QPushButton:hover {
+    background-color: @darkerprimary-color;
+    border-radius: 5px;
+}
+
+#center_tab QScrollArea,
+#center_tab QWidget#central_widget {
+    border: 1px solid @darkprimary-color;
+    border-bottom: none;
+    border-top: none;
+}
+
+#canvas_container {
+    border: 1px solid @darkerprimary-color;
+}
+
+#mode_tab_widget {
+    border: 1px solid @darkprimary-color;
+}
+
+#basic_prompt,
+#prompt,
+#negative_prompt {
+    border: 1px solid @darkprimary-color;
+    background-color: @dark-color;
+    color: @light-color;
+}
+
+#button_menu {
+    border-left: 1px solid @darkprimary-color;
+}
+
+#bottom_panel_tab_widget QWidget {
+    border-top: 1px solid @primary-color;
+}
+
+QSplitter::handle {
+    background: @dark-color;
+}
+
+QSplitter::handle:horizontal {
+    border-top: none;
+    border-bottom: none;
+    width: 4px;
+    margin: 0 8px;
+}
+
+QSplitter::handle:vertical {
+    border-top: 1px solid @primary-color;
+    border-bottom: 1px solid @primary-color;
+    border-left: none;
+    border-right: none;
+    height: 1px;
+    margin: 2px 0;
+}
+
+QSplitter::handle:hover {
+    background: @darkprimary-color;
+}
+
+QStatusBar {
+    border: 1px solid @primary-color;
+    border-top: none;
+}
+
+QMenuBar {
+    border: 1px solid @primary-color;
+    border-bottom: none;
 }
