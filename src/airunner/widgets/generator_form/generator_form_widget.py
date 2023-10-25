@@ -130,6 +130,7 @@ class GeneratorForm(BaseWidget):
         super().__init__(*args, **kwargs)
         self.active_grid_settings = session.query(ActiveGridSettings).first()
         self.canvas_settings = session.query(CanvasSettings).first()
+        self.ui.generator_form_tab_widget.tabBar().hide()
         # one shot timer
         timer = QTimer(self)
         timer.setSingleShot(True)
