@@ -6,8 +6,6 @@ This is due to the way huggingface diffusion models are imported.
 *******************************************************************************
 """
 import os
-import re
-from io import StringIO
 
 from airunner.aihandler.settings_manager import SettingsManager
 settings_manager = SettingsManager()
@@ -24,6 +22,7 @@ All remaining imports must be below this block.
 *******************************************************************************
 """
 
+import threading
 import argparse
 import signal
 import sys
@@ -34,10 +33,28 @@ from PyQt6.QtWidgets import QApplication, QSplashScreen
 from PyQt6.QtCore import Qt, QTimer
 from PyQt6.QtGui import QGuiApplication, QPixmap
 
+from airunner.process_qss import Watcher, process_qss, build_ui
 from airunner.windows.main.main_window import MainWindow
 from airunner.aihandler.settings import SERVER
 from airunner.aihandler.socket_server import SocketServer
 from airunner.utils import get_version
+
+def watch_frontend_files():
+    # get absolute path to this file
+    here = os.path.abspath(os.path.dirname(__file__))
+    directories_to_watch = [
+        os.path.join(here, "styles/dark_theme"), 
+        # os.path.join(here, "styles/light_theme"),
+        os.path.join(here, "widgets"),  # Add the widgets directory
+        os.path.join(here, "windows")  # Add the windows directory
+    ]  # Add more directories as needed
+    scripts_to_run = {".qss": process_qss, ".ui": build_ui}  # Change this to your desired script paths
+    ignore_files = ["styles.qss"]          # List of filenames to ignore
+    
+    watcher = Watcher(directories_to_watch, scripts_to_run, ignore_files)
+    watcher_thread = threading.Thread(target=watcher.run)
+    watcher_thread.start()
+    return watcher
 
 
 if __name__ == "__main__":
@@ -59,9 +76,13 @@ if __name__ == "__main__":
         app.processEvents()
         return splash
 
-    def show_main_application(app, splash):
+    def show_main_application(app, splash, watch_files=False):
         try:
             window = MainWindow()
+            if watch_files:
+                # get existing app
+                watcher = watch_frontend_files()
+                watcher.emitter.file_changed.connect(window.redraw)
         except Exception as e:
             traceback.print_exc()
             print(e)
@@ -81,6 +102,7 @@ if __name__ == "__main__":
         parser.add_argument("--port", default=SERVER["port"])
         parser.add_argument("--keep-alive", action="store_true", default=False)
         parser.add_argument("--packet-size", default=SERVER["port"])
+        parser.add_argument("--watch-files", action="store_true", default=False)
         return parser.parse_args()
 
     args = prepare_argparser()
@@ -109,6 +131,6 @@ if __name__ == "__main__":
 
         splash = display_splash_screen(app)
 
-        QTimer.singleShot(50, partial(show_main_application, app, splash))
+        QTimer.singleShot(50, partial(show_main_application, app, splash, args.watch_files))
 
         sys.exit(app.exec())
