@@ -217,8 +217,8 @@ class Ui_generator_tab(object):
 
         self.retranslateUi(generator_tab)
         self.generator_tabs.setCurrentIndex(0)
-        self.tab_widget_stablediffusion.setCurrentIndex(0)
-        self.tab_widget_kandinsky.setCurrentIndex(0)
+        self.tab_widget_stablediffusion.setCurrentIndex(2)
+        self.tab_widget_kandinsky.setCurrentIndex(1)
         self.tab_widget_shape.setCurrentIndex(0)
         self.generator_tabs.currentChanged['int'].connect(generator_tab.handle_generator_tab_changed) # type: ignore
         self.tab_widget_stablediffusion.currentChanged['int'].connect(generator_tab.handle_tab_section_changed) # type: ignore
