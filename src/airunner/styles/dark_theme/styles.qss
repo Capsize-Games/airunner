@@ -211,14 +211,24 @@ QWidget#scrollAreaWidgetContents {
 
 #header_widget QFrame#line_2,
 #header_widget QFrame#line_3,
-#header_widget QFrame#line_5 {
+#header_widget QFrame#line_5,
+#status_widget #line,
+#status_widget #nsfw_line,
+#status_widget #line_3,
+#status_widget #line_4,
+#status_widget #line_5
+{
     border-left: 1px solid rgba(0, 132, 185, 255);
 }
 
-QFrame#line,
+#statusbar {
+    border-top: 1px solid rgba(0, 132, 185, 255);
+}
+
+/* QFrame#line,
 QFrame#line_4 {
     border-bottom: 1px solid rgba(0, 132, 185, 255);
-}
+} */
 
 #header_widget QPushButton {
     border-radius: 0px;

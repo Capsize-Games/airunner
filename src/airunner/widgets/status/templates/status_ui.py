@@ -12,9 +12,10 @@ from PyQt6 import QtCore, QtGui, QtWidgets
 class Ui_status_widget(object):
     def setupUi(self, status_widget):
         status_widget.setObjectName("status_widget")
-        status_widget.resize(700, 66)
+        status_widget.resize(700, 44)
         status_widget.setStyleSheet("font-size: 12px")
         self.horizontalLayout = QtWidgets.QHBoxLayout(status_widget)
+        self.horizontalLayout.setContentsMargins(0, 0, 9, 0)
         self.horizontalLayout.setObjectName("horizontalLayout")
         self.system_message = QtWidgets.QLabel(parent=status_widget)
         self.system_message.setObjectName("system_message")
