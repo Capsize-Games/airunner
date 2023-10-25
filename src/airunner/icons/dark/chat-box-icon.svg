@@ -1,0 +1,51 @@
+<?xml version="1.0" encoding="UTF-8" standalone="no"?>
+<svg
+   id="Layer_1"
+   data-name="Layer 1"
+   viewBox="0 0 122.88 119.39"
+   version="1.1"
+   sodipodi:docname="chat-box-icon.svg"
+   inkscape:version="1.1.2 (0a00cf5339, 2022-02-04)"
+   xmlns:inkscape="http://www.inkscape.org/namespaces/inkscape"
+   xmlns:sodipodi="http://sodipodi.sourceforge.net/DTD/sodipodi-0.dtd"
+   xmlns="http://www.w3.org/2000/svg"
+   xmlns:svg="http://www.w3.org/2000/svg"
+   xmlns:rdf="http://www.w3.org/1999/02/22-rdf-syntax-ns#"
+   xmlns:cc="http://creativecommons.org/ns#"
+   xmlns:dc="http://purl.org/dc/elements/1.1/">
+  <defs
+     id="defs9" />
+  <sodipodi:namedview
+     id="namedview7"
+     pagecolor="#ffffff"
+     bordercolor="#666666"
+     borderopacity="1.0"
+     inkscape:pageshadow="2"
+     inkscape:pageopacity="0.0"
+     inkscape:pagecheckerboard="0"
+     showgrid="false"
+     inkscape:zoom="7.3121702"
+     inkscape:cx="61.472858"
+     inkscape:cy="59.695"
+     inkscape:window-width="2490"
+     inkscape:window-height="1376"
+     inkscape:window-x="2630"
+     inkscape:window-y="27"
+     inkscape:window-maximized="1"
+     inkscape:current-layer="Layer_1" />
+  <title
+     id="title2">chat-box</title>
+  <path
+     d="M15.33,0H87.84a15.36,15.36,0,0,1,15.33,15.33V59.38A15.36,15.36,0,0,1,87.84,74.71h-46l-23.28,20a2.58,2.58,0,0,1-3.64-.29,2.54,2.54,0,0,1-.61-1.84L15.53,74.7h-.2A15.36,15.36,0,0,1,0,59.38V15.33A15.36,15.36,0,0,1,15.33,0Zm95.36,32.33a15.09,15.09,0,0,1,12.19,14.75V83.74a15.07,15.07,0,0,1-15,15h-.54L108.59,117h0a2.27,2.27,0,0,1-3.73,1.87L81.49,98.17H31.2L46.36,82.75H98A12.78,12.78,0,0,0,110.73,70V33.34c0-.34,0-.68,0-1ZM30.42,47.58a2.59,2.59,0,1,1,0-5.17h34a2.59,2.59,0,1,1,0,5.17Zm0-17.73a2.59,2.59,0,1,1,0-5.17H75.71a2.59,2.59,0,1,1,0,5.17ZM87.83,5.17H15.33A10.17,10.17,0,0,0,5.17,15.33V59.38A10.19,10.19,0,0,0,15.33,69.54h3.15a2.58,2.58,0,0,1,2.39,2.74l-1,14.49,19.19-16.5a2.6,2.6,0,0,1,1.82-.75H87.83A10.21,10.21,0,0,0,98,59.38V15.33A10.19,10.19,0,0,0,87.83,5.17Z"
+     id="path4"
+     style="fill:#fffffe;fill-opacity:1" />
+  <metadata
+     id="metadata826">
+    <rdf:RDF>
+      <cc:Work
+         rdf:about="">
+        <dc:title>chat-box</dc:title>
+      </cc:Work>
+    </rdf:RDF>
+  </metadata>
+</svg>

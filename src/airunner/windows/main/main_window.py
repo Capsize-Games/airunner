@@ -5,12 +5,19 @@ import subprocess
 import sys
 import webbrowser
 from functools import partial
+import importlib
 
 from PyQt6 import uic, QtCore
 from PyQt6.QtCore import pyqtSlot, Qt, QThread, pyqtSignal, QObject, QTimer
 from PyQt6.QtGui import QGuiApplication
 from PyQt6.QtWidgets import QApplication, QFileDialog, QMainWindow, QWidget, QSpacerItem, QSizePolicy
+from PyQt6.QtWidgets import QPushButton
+from PyQt6.QtGui import QImage, QIcon, QPixmap
+from PyQt6.QtCore import Qt
+from PyQt6 import QtGui
 
+from airunner.resources_light_rc import *
+from airunner.resources_dark_rc import *
 from airunner.aihandler.enums import GeneratorSection, MessageCode, Mode
 from airunner.aihandler.logger import Logger as logger
 from airunner.aihandler.pyqt_client import OfflineClient
@@ -23,7 +30,6 @@ from airunner.data.models import SplitterSection, Prompt, TabSection
 from airunner.filters.windows.filter_base import FilterBase
 from airunner.input_event_manager import InputEventManager
 from airunner.mixins.history_mixin import HistoryMixin
-from airunner.resources_rc import *
 from airunner.settings import BASE_PATH
 from airunner.utils import get_version, get_latest_version, auto_export_image, save_session, \
     create_airunner_paths, default_hf_cache_dir
@@ -547,6 +553,17 @@ class MainWindow(
     def action_toggle_darkmode(self):
         self.set_stylesheet()
 
+    def set_icons(self, icon_name, widget_name, theme):
+        print(icon_name, widget_name, theme)
+        icon = QtGui.QIcon()
+        print(f":/icons/{theme}/{icon_name}.svg")
+        icon.addPixmap(
+            QtGui.QPixmap(f":/icons/{theme}/{icon_name}.svg"), 
+            QtGui.QIcon.Mode.Normal, 
+            QtGui.QIcon.State.Off)
+        getattr(self.ui, widget_name).setIcon(icon)
+        self.update()
+
     def action_show_about_window(self):
         AboutWindow(app=self)
 
@@ -742,11 +759,32 @@ class MainWindow(
         Sets the stylesheet for the application based on the current theme
         """
         logger.info("Setting stylesheets")
-        theme_name = "dark_theme"
+        theme_name = "dark_theme" if self.is_dark else "light_theme"
         here = os.path.dirname(os.path.realpath(__file__))
         with open(os.path.join(here, "..", "..", "styles", theme_name, "styles.qss"), "r") as f:
             stylesheet = f.read()
         self.setStyleSheet(stylesheet)
+        for icon_data in [
+            ("image-file-icon", "image_generation_button"),
+            ("edit-document-icon", "language_processing_button"),
+            ("tech-icon", "model_manager_button"),
+            ("photo-editor-icon", "image_generators_button"),
+            ("gif-editor-icon", "txt2gif_button"),
+            ("video-editor-icon", "txt2vid_button"),
+            ("prompt-editor-icon", "prompt_builder_button"),
+            ("pencil-icon", "toggle_brush_button"),
+            ("eraser-icon", "toggle_eraser_button"),
+            ("frame-grid-icon", "toggle_grid_button"),
+            ("circle-center-icon", "focus_button"),
+            ("adult-sign-icon", "safety_checker_button"),
+            ("setting-line-icon", "settings_button"),
+            ("chat-box-icon", "chat_button"),
+            ("setting-line-icon", "llm_preferences_button"),
+            ("clamp-as-indicated-symbol-icon", "llm_quantization_button"),
+            ("sliders-icon", "llm_settings_button"),
+            ("object-selected-icon", "toggle_active_grid_area_button"),
+        ]:
+            self.set_icons(icon_data[0], icon_data[1], "dark" if self.is_dark else "light")
 
     def initialize(self):
         # self.automatic_filter_manager = AutomaticFilterManager(app=self)
@@ -1502,8 +1540,11 @@ class MainWindow(
     
     header_widget_spacer = None
     def toggle_tool_section_buttons_visibility(self):
-        visible = self.settings_manager.mode == Mode.IMAGE.value
-        self.ui.image_generator_header_tools.setVisible(visible)
+        image_mode = self.settings_manager.mode == Mode.IMAGE.value
+        lang_mode = self.settings_manager.mode == Mode.LANGUAGE_PROCESSOR.value
+        self.ui.image_generator_header_tools.setVisible(image_mode)
+        self.ui.text_generator_header_tools.setVisible(lang_mode)
+        visible = image_mode or lang_mode
 
         # add a horizontal spacer to the right of the self.ui.header_widget
         if not visible:
