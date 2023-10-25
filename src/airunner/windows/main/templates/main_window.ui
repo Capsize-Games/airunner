@@ -125,6 +125,9 @@
         <property name="bottomMargin">
          <number>0</number>
         </property>
+        <property name="spacing">
+         <number>0</number>
+        </property>
         <item row="0" column="0">
          <widget class="QSplitter" name="main_splitter">
           <property name="frameShape">
@@ -254,7 +257,7 @@
               <rect>
                <x>0</x>
                <y>0</y>
-               <width>464</width>
+               <width>466</width>
                <height>719</height>
               </rect>
              </property>
@@ -401,15 +404,21 @@
             </widget>
            </widget>
            <widget class="QFrame" name="button_menu">
+            <property name="sizePolicy">
+             <sizepolicy hsizetype="Preferred" vsizetype="Preferred">
+              <horstretch>0</horstretch>
+              <verstretch>0</verstretch>
+             </sizepolicy>
+            </property>
             <property name="minimumSize">
              <size>
-              <width>55</width>
+              <width>0</width>
               <height>0</height>
              </size>
             </property>
             <property name="maximumSize">
              <size>
-              <width>55</width>
+              <width>50</width>
               <height>16777215</height>
              </size>
             </property>
@@ -442,9 +451,21 @@
                  <rect>
                   <x>0</x>
                   <y>0</y>
-                  <width>53</width>
+                  <width>48</width>
                   <height>719</height>
                  </rect>
+                </property>
+                <property name="sizePolicy">
+                 <sizepolicy hsizetype="MinimumExpanding" vsizetype="Preferred">
+                  <horstretch>0</horstretch>
+                  <verstretch>0</verstretch>
+                 </sizepolicy>
+                </property>
+                <property name="maximumSize">
+                 <size>
+                  <width>50</width>
+                  <height>16777215</height>
+                 </size>
                 </property>
                 <layout class="QGridLayout" name="gridLayout_17">
                  <property name="leftMargin">
@@ -459,6 +480,114 @@
                  <property name="bottomMargin">
                   <number>0</number>
                  </property>
+                 <item row="3" column="0">
+                  <widget class="Line" name="line">
+                   <property name="sizePolicy">
+                    <sizepolicy hsizetype="MinimumExpanding" vsizetype="Fixed">
+                     <horstretch>0</horstretch>
+                     <verstretch>0</verstretch>
+                    </sizepolicy>
+                   </property>
+                   <property name="orientation">
+                    <enum>Qt::Horizontal</enum>
+                   </property>
+                  </widget>
+                 </item>
+                 <item row="6" column="0">
+                  <widget class="QPushButton" name="safety_checker_button">
+                   <property name="sizePolicy">
+                    <sizepolicy hsizetype="Fixed" vsizetype="Fixed">
+                     <horstretch>0</horstretch>
+                     <verstretch>0</verstretch>
+                    </sizepolicy>
+                   </property>
+                   <property name="minimumSize">
+                    <size>
+                     <width>35</width>
+                     <height>35</height>
+                    </size>
+                   </property>
+                   <property name="cursor">
+                    <cursorShape>PointingHandCursor</cursorShape>
+                   </property>
+                   <property name="toolTip">
+                    <string>Toggle NSFW</string>
+                   </property>
+                   <property name="text">
+                    <string/>
+                   </property>
+                   <property name="icon">
+                    <iconset resource="../../../resources.qrc">
+                     <normaloff>:/icons/039-18-light.png</normaloff>:/icons/039-18-light.png</iconset>
+                   </property>
+                   <property name="iconSize">
+                    <size>
+                     <width>18</width>
+                     <height>18</height>
+                    </size>
+                   </property>
+                   <property name="checkable">
+                    <bool>true</bool>
+                   </property>
+                   <property name="flat">
+                    <bool>true</bool>
+                   </property>
+                  </widget>
+                 </item>
+                 <item row="9" column="0">
+                  <spacer name="verticalSpacer">
+                   <property name="orientation">
+                    <enum>Qt::Vertical</enum>
+                   </property>
+                   <property name="sizeHint" stdset="0">
+                    <size>
+                     <width>20</width>
+                     <height>40</height>
+                    </size>
+                   </property>
+                  </spacer>
+                 </item>
+                 <item row="4" column="0">
+                  <widget class="QPushButton" name="toggle_grid_button">
+                   <property name="sizePolicy">
+                    <sizepolicy hsizetype="Fixed" vsizetype="Fixed">
+                     <horstretch>0</horstretch>
+                     <verstretch>0</verstretch>
+                    </sizepolicy>
+                   </property>
+                   <property name="minimumSize">
+                    <size>
+                     <width>35</width>
+                     <height>35</height>
+                    </size>
+                   </property>
+                   <property name="cursor">
+                    <cursorShape>PointingHandCursor</cursorShape>
+                   </property>
+                   <property name="toolTip">
+                    <string>Toggle Grid</string>
+                   </property>
+                   <property name="text">
+                    <string/>
+                   </property>
+                   <property name="icon">
+                    <iconset resource="../../../resources.qrc">
+                     <normaloff>:/icons/032-pixels-light.png</normaloff>:/icons/032-pixels-light.png</iconset>
+                   </property>
+                   <property name="iconSize">
+                    <size>
+                     <width>18</width>
+                     <height>18</height>
+                    </size>
+                   </property>
+                   <property name="checkable">
+                    <bool>true</bool>
+                   </property>
+                   <property name="flat">
+                    <bool>true</bool>
+                   </property>
+                  </widget>
+                 </item>
                  <item row="0" column="0">
                   <widget class="QPushButton" name="toggle_active_grid_area_button">
                    <property name="sizePolicy">
@@ -494,6 +623,44 @@
                    </property>
                    <property name="checkable">
                     <bool>true</bool>
+                   </property>
+                   <property name="flat">
+                    <bool>true</bool>
+                   </property>
+                  </widget>
+                 </item>
+                 <item row="5" column="0">
+                  <widget class="QPushButton" name="focus_button">
+                   <property name="sizePolicy">
+                    <sizepolicy hsizetype="Fixed" vsizetype="Fixed">
+                     <horstretch>0</horstretch>
+                     <verstretch>0</verstretch>
+                    </sizepolicy>
+                   </property>
+                   <property name="minimumSize">
+                    <size>
+                     <width>35</width>
+                     <height>35</height>
+                    </size>
+                   </property>
+                   <property name="cursor">
+                    <cursorShape>PointingHandCursor</cursorShape>
+                   </property>
+                   <property name="toolTip">
+                    <string>Recenter canvas</string>
+                   </property>
+                   <property name="text">
+                    <string/>
+                   </property>
+                   <property name="icon">
+                    <iconset resource="../../../resources.qrc">
+                     <normaloff>:/icons/037-focus-light.png</normaloff>:/icons/037-focus-light.png</iconset>
+                   </property>
+                   <property name="iconSize">
+                    <size>
+                     <width>18</width>
+                     <height>18</height>
+                    </size>
                    </property>
                    <property name="flat">
                     <bool>true</bool>
@@ -582,135 +749,14 @@
                    </property>
                   </widget>
                  </item>
-                 <item row="3" column="0">
-                  <widget class="Line" name="line">
-                   <property name="orientation">
-                    <enum>Qt::Horizontal</enum>
-                   </property>
-                  </widget>
-                 </item>
-                 <item row="4" column="0">
-                  <widget class="QPushButton" name="toggle_grid_button">
-                   <property name="sizePolicy">
-                    <sizepolicy hsizetype="Fixed" vsizetype="Fixed">
-                     <horstretch>0</horstretch>
-                     <verstretch>0</verstretch>
-                    </sizepolicy>
-                   </property>
-                   <property name="minimumSize">
-                    <size>
-                     <width>35</width>
-                     <height>35</height>
-                    </size>
-                   </property>
-                   <property name="cursor">
-                    <cursorShape>PointingHandCursor</cursorShape>
-                   </property>
-                   <property name="toolTip">
-                    <string>Toggle Grid</string>
-                   </property>
-                   <property name="text">
-                    <string/>
-                   </property>
-                   <property name="icon">
-                    <iconset resource="../../../resources.qrc">
-                     <normaloff>:/icons/032-pixels-light.png</normaloff>:/icons/032-pixels-light.png</iconset>
-                   </property>
-                   <property name="iconSize">
-                    <size>
-                     <width>18</width>
-                     <height>18</height>
-                    </size>
-                   </property>
-                   <property name="checkable">
-                    <bool>true</bool>
-                   </property>
-                   <property name="flat">
-                    <bool>true</bool>
-                   </property>
-                  </widget>
-                 </item>
-                 <item row="5" column="0">
-                  <widget class="QPushButton" name="focus_button">
-                   <property name="sizePolicy">
-                    <sizepolicy hsizetype="Fixed" vsizetype="Fixed">
-                     <horstretch>0</horstretch>
-                     <verstretch>0</verstretch>
-                    </sizepolicy>
-                   </property>
-                   <property name="minimumSize">
-                    <size>
-                     <width>35</width>
-                     <height>35</height>
-                    </size>
-                   </property>
-                   <property name="cursor">
-                    <cursorShape>PointingHandCursor</cursorShape>
-                   </property>
-                   <property name="toolTip">
-                    <string>Recenter canvas</string>
-                   </property>
-                   <property name="text">
-                    <string/>
-                   </property>
-                   <property name="icon">
-                    <iconset resource="../../../resources.qrc">
-                     <normaloff>:/icons/037-focus-light.png</normaloff>:/icons/037-focus-light.png</iconset>
-                   </property>
-                   <property name="iconSize">
-                    <size>
-                     <width>18</width>
-                     <height>18</height>
-                    </size>
-                   </property>
-                   <property name="flat">
-                    <bool>true</bool>
-                   </property>
-                  </widget>
-                 </item>
-                 <item row="6" column="0">
-                  <widget class="QPushButton" name="safety_checker_button">
-                   <property name="sizePolicy">
-                    <sizepolicy hsizetype="Fixed" vsizetype="Fixed">
-                     <horstretch>0</horstretch>
-                     <verstretch>0</verstretch>
-                    </sizepolicy>
-                   </property>
-                   <property name="minimumSize">
-                    <size>
-                     <width>35</width>
-                     <height>35</height>
-                    </size>
-                   </property>
-                   <property name="cursor">
-                    <cursorShape>PointingHandCursor</cursorShape>
-                   </property>
-                   <property name="toolTip">
-                    <string>Toggle NSFW</string>
-                   </property>
-                   <property name="text">
-                    <string/>
-                   </property>
-                   <property name="icon">
-                    <iconset resource="../../../resources.qrc">
-                     <normaloff>:/icons/039-18-light.png</normaloff>:/icons/039-18-light.png</iconset>
-                   </property>
-                   <property name="iconSize">
-                    <size>
-                     <width>18</width>
-                     <height>18</height>
-                    </size>
-                   </property>
-                   <property name="checkable">
-                    <bool>true</bool>
-                   </property>
-                   <property name="flat">
-                    <bool>true</bool>
-                   </property>
-                  </widget>
-                 </item>
                  <item row="7" column="0">
                   <widget class="Line" name="line_4">
+                   <property name="sizePolicy">
+                    <sizepolicy hsizetype="MinimumExpanding" vsizetype="Fixed">
+                     <horstretch>0</horstretch>
+                     <verstretch>0</verstretch>
+                    </sizepolicy>
+                   </property>
                    <property name="orientation">
                     <enum>Qt::Horizontal</enum>
                    </property>
@@ -753,19 +799,6 @@
                     <bool>true</bool>
                    </property>
                   </widget>
-                 </item>
-                 <item row="9" column="0">
-                  <spacer name="verticalSpacer">
-                   <property name="orientation">
-                    <enum>Qt::Vertical</enum>
-                   </property>
-                   <property name="sizeHint" stdset="0">
-                    <size>
-                     <width>20</width>
-                     <height>40</height>
-                    </size>
-                   </property>
-                  </spacer>
                  </item>
                 </layout>
                </widget>
@@ -2545,8 +2578,8 @@
    <slot>action_toggle_grid(bool)</slot>
    <hints>
     <hint type="sourcelabel">
-     <x>1156</x>
-     <y>282</y>
+     <x>1155</x>
+     <y>276</y>
     </hint>
     <hint type="destinationlabel">
      <x>442</x>
@@ -2561,8 +2594,8 @@
    <slot>action_toggle_brush(bool)</slot>
    <hints>
     <hint type="sourcelabel">
-     <x>1156</x>
-     <y>191</y>
+     <x>1155</x>
+     <y>185</y>
     </hint>
     <hint type="destinationlabel">
      <x>442</x>
@@ -2577,8 +2610,8 @@
    <slot>action_toggle_active_grid_area(bool)</slot>
    <hints>
     <hint type="sourcelabel">
-     <x>1156</x>
-     <y>150</y>
+     <x>1155</x>
+     <y>144</y>
     </hint>
     <hint type="destinationlabel">
      <x>442</x>
@@ -2593,8 +2626,8 @@
    <slot>action_toggle_eraser(bool)</slot>
    <hints>
     <hint type="sourcelabel">
-     <x>1156</x>
-     <y>232</y>
+     <x>1155</x>
+     <y>226</y>
     </hint>
     <hint type="destinationlabel">
      <x>442</x>
@@ -2609,8 +2642,8 @@
    <slot>action_show_settings()</slot>
    <hints>
     <hint type="sourcelabel">
-     <x>1156</x>
-     <y>414</y>
+     <x>1155</x>
+     <y>408</y>
     </hint>
     <hint type="destinationlabel">
      <x>442</x>
@@ -2673,8 +2706,8 @@
    <slot>action_toggle_nsfw_filter_triggered(bool)</slot>
    <hints>
     <hint type="sourcelabel">
-     <x>1156</x>
-     <y>364</y>
+     <x>1155</x>
+     <y>358</y>
     </hint>
     <hint type="destinationlabel">
      <x>442</x>
@@ -3249,8 +3282,8 @@
    <slot>action_save_document_triggered()</slot>
    <hints>
     <hint type="sourcelabel">
-     <x>1041</x>
-     <y>57</y>
+     <x>1023</x>
+     <y>65</y>
     </hint>
     <hint type="destinationlabel">
      <x>1028</x>
@@ -3265,8 +3298,8 @@
    <slot>action_load_document_triggered()</slot>
    <hints>
     <hint type="sourcelabel">
-     <x>1002</x>
-     <y>53</y>
+     <x>981</x>
+     <y>65</y>
     </hint>
     <hint type="destinationlabel">
      <x>716</x>
@@ -3281,8 +3314,8 @@
    <slot>action_new_document_triggered()</slot>
    <hints>
     <hint type="sourcelabel">
-     <x>964</x>
-     <y>44</y>
+     <x>939</x>
+     <y>65</y>
     </hint>
     <hint type="destinationlabel">
      <x>1039</x>
@@ -3329,8 +3362,8 @@
    <slot>action_export_image_triggered()</slot>
    <hints>
     <hint type="sourcelabel">
-     <x>1075</x>
-     <y>42</y>
+     <x>1065</x>
+     <y>65</y>
     </hint>
     <hint type="destinationlabel">
      <x>1039</x>
@@ -3345,8 +3378,8 @@
    <slot>image_generators_toggled()</slot>
    <hints>
     <hint type="sourcelabel">
-     <x>809</x>
-     <y>35</y>
+     <x>196</x>
+     <y>58</y>
     </hint>
     <hint type="destinationlabel">
      <x>-3</x>
@@ -3361,8 +3394,8 @@
    <slot>text_to_gif_toggled()</slot>
    <hints>
     <hint type="sourcelabel">
-     <x>842</x>
-     <y>46</y>
+     <x>244</x>
+     <y>69</y>
     </hint>
     <hint type="destinationlabel">
      <x>-5</x>
@@ -3377,8 +3410,8 @@
    <slot>text_to_video_toggled()</slot>
    <hints>
     <hint type="sourcelabel">
-     <x>883</x>
-     <y>39</y>
+     <x>292</x>
+     <y>62</y>
     </hint>
     <hint type="destinationlabel">
      <x>-3</x>
@@ -3393,8 +3426,8 @@
    <slot>prompt_builder_toggled()</slot>
    <hints>
     <hint type="sourcelabel">
-     <x>922</x>
-     <y>43</y>
+     <x>340</x>
+     <y>66</y>
     </hint>
     <hint type="destinationlabel">
      <x>-6</x>
@@ -3457,8 +3490,8 @@
    <slot>image_generators_toggled()</slot>
    <hints>
     <hint type="sourcelabel">
-     <x>830</x>
-     <y>44</y>
+     <x>196</x>
+     <y>67</y>
     </hint>
     <hint type="destinationlabel">
      <x>754</x>
@@ -3473,8 +3506,8 @@
    <slot>text_to_gif_toggled()</slot>
    <hints>
     <hint type="sourcelabel">
-     <x>858</x>
-     <y>39</y>
+     <x>244</x>
+     <y>62</y>
     </hint>
     <hint type="destinationlabel">
      <x>-2</x>
@@ -3489,8 +3522,8 @@
    <slot>text_to_video_toggled()</slot>
    <hints>
     <hint type="sourcelabel">
-     <x>890</x>
-     <y>44</y>
+     <x>292</x>
+     <y>67</y>
     </hint>
     <hint type="destinationlabel">
      <x>1170</x>
@@ -3505,8 +3538,8 @@
    <slot>prompt_builder_toggled()</slot>
    <hints>
     <hint type="sourcelabel">
-     <x>935</x>
-     <y>45</y>
+     <x>340</x>
+     <y>68</y>
     </hint>
     <hint type="destinationlabel">
      <x>1174</x>

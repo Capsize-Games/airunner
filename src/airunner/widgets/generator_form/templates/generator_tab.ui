@@ -72,7 +72,7 @@
           <enum>QTabWidget::West</enum>
          </property>
          <property name="currentIndex">
-          <number>0</number>
+          <number>2</number>
          </property>
          <widget class="QWidget" name="tab_stablediffusion_txt2img">
           <property name="sizePolicy">
@@ -394,7 +394,7 @@
           <enum>QTabWidget::West</enum>
          </property>
          <property name="currentIndex">
-          <number>0</number>
+          <number>1</number>
          </property>
          <widget class="QWidget" name="tab_kandinsky_txt2img">
           <property name="sizePolicy">
