@@ -12,7 +12,7 @@ from PyQt6 import QtCore, QtGui, QtWidgets
 class Ui_seed_widget(object):
     def setupUi(self, seed_widget):
         seed_widget.setObjectName("seed_widget")
-        seed_widget.resize(386, 48)
+        seed_widget.resize(558, 43)
         self.gridLayout = QtWidgets.QGridLayout(seed_widget)
         self.gridLayout.setContentsMargins(0, 0, 0, 0)
         self.gridLayout.setObjectName("gridLayout")
@@ -21,7 +21,7 @@ class Ui_seed_widget(object):
         self.random_button.setMaximumSize(QtCore.QSize(24, 24))
         self.random_button.setText("")
         icon = QtGui.QIcon()
-        icon.addPixmap(QtGui.QPixmap(":/icons/049-dice-light.png"), QtGui.QIcon.Mode.Normal, QtGui.QIcon.State.Off)
+        icon.addPixmap(QtGui.QPixmap(":/icons/dark/dice-game-icon.svg"), QtGui.QIcon.Mode.Normal, QtGui.QIcon.State.Off)
         self.random_button.setIcon(icon)
         self.random_button.setCheckable(True)
         self.random_button.setFlat(True)
@@ -42,8 +42,8 @@ class Ui_seed_widget(object):
         self.gridLayout.addWidget(self.label, 0, 0, 1, 1)
 
         self.retranslateUi(seed_widget)
-        self.random_button.clicked.connect(seed_widget.action_clicked_button_random_seed) # type: ignore
         self.lineEdit.textChanged['QString'].connect(seed_widget.action_value_changed_seed) # type: ignore
+        self.random_button.toggled['bool'].connect(seed_widget.action_clicked_button_random_seed) # type: ignore
         QtCore.QMetaObject.connectSlotsByName(seed_widget)
 
     def retranslateUi(self, seed_widget):
