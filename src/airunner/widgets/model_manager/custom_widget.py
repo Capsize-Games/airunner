@@ -6,6 +6,7 @@ from airunner.utils import get_session
 from airunner.widgets.base_widget import BaseWidget
 from airunner.widgets.model_manager.model_widget import ModelWidget
 from airunner.widgets.model_manager.templates.custom_ui import Ui_custom_model_widget
+from PyQt6 import QtWidgets
 
 
 class CustomModelWidget(BaseWidget):
@@ -102,8 +103,12 @@ class CustomModelWidget(BaseWidget):
             )
             session.add(new_model)
             session.commit()
+    
+    spacer = None
 
     def show_items_in_scrollarea(self, search=None):
+        if self.spacer:
+            self.ui.scrollAreaWidgetContents.layout().removeItem(self.spacer)
         session = get_session()
         for child in self.ui.scrollAreaWidgetContents.children():
             if isinstance(child, ModelWidget):
@@ -138,6 +143,10 @@ class CustomModelWidget(BaseWidget):
                 model_widget)
 
             self.model_widgets.append(model_widget)
+        
+        if not self.spacer:
+            self.spacer = QtWidgets.QSpacerItem(20, 40, QtWidgets.QSizePolicy.Policy.Minimum, QtWidgets.QSizePolicy.Policy.Expanding)
+        self.ui.scrollAreaWidgetContents.layout().addItem(self.spacer)
 
     def models_changed(self, key, model, value):
         model.enabled = True
