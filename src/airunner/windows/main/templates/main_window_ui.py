@@ -108,7 +108,7 @@ class Ui_MainWindow(object):
         self.scrollArea.setWidgetResizable(True)
         self.scrollArea.setObjectName("scrollArea")
         self.scrollAreaWidgetContents = QtWidgets.QWidget()
-        self.scrollAreaWidgetContents.setGeometry(QtCore.QRect(0, 0, 453, 755))
+        self.scrollAreaWidgetContents.setGeometry(QtCore.QRect(0, 0, 453, 814))
         self.scrollAreaWidgetContents.setObjectName("scrollAreaWidgetContents")
         self.gridLayout = QtWidgets.QGridLayout(self.scrollAreaWidgetContents)
         self.gridLayout.setObjectName("gridLayout")
@@ -1023,6 +1023,9 @@ class Ui_MainWindow(object):
         self.txt2gif_button.released.connect(MainWindow.text_to_gif_toggled) # type: ignore
         self.txt2vid_button.released.connect(MainWindow.text_to_video_toggled) # type: ignore
         self.prompt_builder_button.released.connect(MainWindow.prompt_builder_toggled) # type: ignore
+        self.safety_checker_button.toggled['bool'].connect(MainWindow.action_toggle_nsfw_filter_triggered) # type: ignore
+        self.settings_button.clicked.connect(MainWindow.action_show_settings) # type: ignore
+        self.toggle_grid_button.toggled['bool'].connect(MainWindow.action_toggle_grid) # type: ignore
         QtCore.QMetaObject.connectSlotsByName(MainWindow)
 
     def retranslateUi(self, MainWindow):
