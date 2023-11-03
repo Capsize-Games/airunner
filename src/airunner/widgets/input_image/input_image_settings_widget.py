@@ -33,12 +33,15 @@ class InputImageSettingsWidget(BaseWidget):
 
     @property
     def current_input_image(self):
-        if not self.settings_manager.generator:
+        try:
+            if not self.settings_manager.generator:
+                return None
+            if self.settings_manager.generator.input_image_use_imported_image:
+                return self.input_image
+            elif self.settings_manager.generator.input_image_use_grid_image:
+                return self.active_grid_area_image
+        except AttributeError:
             return None
-        if self.settings_manager.generator.input_image_use_imported_image:
-            return self.input_image
-        elif self.settings_manager.generator.input_image_use_grid_image:
-            return self.active_grid_area_image
 
     def initialize(
         self,
