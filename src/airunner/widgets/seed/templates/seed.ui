@@ -6,8 +6,8 @@
    <rect>
     <x>0</x>
     <y>0</y>
-    <width>386</width>
-    <height>48</height>
+    <width>558</width>
+    <height>43</height>
    </rect>
   </property>
   <property name="windowTitle">
@@ -47,8 +47,8 @@
       <string/>
      </property>
      <property name="icon">
-      <iconset resource="../../../resources.qrc">
-       <normaloff>:/icons/049-dice-light.png</normaloff>:/icons/049-dice-light.png</iconset>
+      <iconset resource="../../../resources_dark.qrc">
+       <normaloff>:/icons/dark/dice-game-icon.svg</normaloff>:/icons/dark/dice-game-icon.svg</iconset>
      </property>
      <property name="checkable">
       <bool>true</bool>
@@ -86,25 +86,10 @@
   </layout>
  </widget>
  <resources>
-  <include location="../../../resources.qrc"/>
+  <include location="../../../resources_light.qrc"/>
+  <include location="../../../resources_dark.qrc"/>
  </resources>
  <connections>
-  <connection>
-   <sender>random_button</sender>
-   <signal>clicked()</signal>
-   <receiver>seed_widget</receiver>
-   <slot>action_clicked_button_random_seed()</slot>
-   <hints>
-    <hint type="sourcelabel">
-     <x>385</x>
-     <y>41</y>
-    </hint>
-    <hint type="destinationlabel">
-     <x>345</x>
-     <y>0</y>
-    </hint>
-   </hints>
-  </connection>
   <connection>
    <sender>lineEdit</sender>
    <signal>textChanged(QString)</signal>
@@ -113,17 +98,33 @@
    <hints>
     <hint type="sourcelabel">
      <x>209</x>
-     <y>29</y>
+     <y>173</y>
     </hint>
     <hint type="destinationlabel">
      <x>324</x>
-     <y>-10</y>
+     <y>0</y>
+    </hint>
+   </hints>
+  </connection>
+  <connection>
+   <sender>random_button</sender>
+   <signal>toggled(bool)</signal>
+   <receiver>seed_widget</receiver>
+   <slot>action_clicked_button_random_seed(bool)</slot>
+   <hints>
+    <hint type="sourcelabel">
+     <x>556</x>
+     <y>177</y>
+    </hint>
+    <hint type="destinationlabel">
+     <x>551</x>
+     <y>67</y>
     </hint>
    </hints>
   </connection>
  </connections>
  <slots>
-  <slot>action_clicked_button_random_seed()</slot>
+  <slot>action_clicked_button_random_seed(bool)</slot>
   <slot>action_value_changed_seed(QString)</slot>
  </slots>
 </ui>
