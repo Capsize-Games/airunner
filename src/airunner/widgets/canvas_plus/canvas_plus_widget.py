@@ -1,11 +1,14 @@
+import io
 import math
+import subprocess
 from functools import partial
 
-from PIL import Image
+from PIL import Image, ImageGrab
 from PIL.ImageQt import ImageQt, QImage
 from PyQt6.QtCore import Qt, QPoint, QPointF, QRect
 from PyQt6.QtGui import QBrush, QColor, QPen, QPixmap, QPainter, QCursor
 from PyQt6.QtWidgets import QGraphicsScene, QGraphicsItem, QGraphicsPixmapItem, QGraphicsLineItem
+from airunner.aihandler.logger import Logger
 
 from airunner.aihandler.settings_manager import SettingsManager
 from airunner.cursors.circle_brush import CircleCursor
@@ -203,6 +206,7 @@ class CanvasPlusWidget(BaseWidget):
     active_grid_area_pivot_point = QPoint(0, 0)
     active_grid_area_position = QPoint(0, 0)
     last_pos = QPoint(0, 0)
+    current_image_index = 0
 
     @property
     def active_grid_area_selected(self):
@@ -244,11 +248,19 @@ class CanvasPlusWidget(BaseWidget):
 
     @property
     def current_layer(self):
-        return self.app.ui.layer_widget.current_layer
+        return self.layer_widget.current_layer
 
     @property
     def current_layer_index(self):
-        return self.app.ui.layer_widget.current_layer_index
+        return self.layer_widget.current_layer_index
+    
+    @current_layer_index.setter
+    def current_layer_index(self, value):
+        self.layer_widget.current_layer_index = value
+
+    @property
+    def layer_widget(self):
+        return self.app.ui.layer_widget
 
     def __init__(self, *args, **kwargs):
         super().__init__(*args, **kwargs)
@@ -432,27 +444,194 @@ class CanvasPlusWidget(BaseWidget):
             self.ui.canvas_container.setCursor(QCursor(Qt.CursorShape.ArrowCursor))
 
     def handle_image_data(self, data):
-        image = data["image"]
-        image_data = data["data"]
-        # add image to the canvas
-        pixmap = QPixmap.fromImage(ImageQt(image))
-        image = DraggablePixmap(self, pixmap)
-        self.scene.addItem(image)
-        # image.setPos(QPointF(
-        #     self.canvas_settings.pos_x + data.pos_x,
-        #     self.canvas_settings.pos_y + data.pos_y
-        # ))
+        self.add_image_to_scene(data["image"])
 
     def load_image(self, image_path):
         image = Image.open(image_path)
-
         if self.app.settings_manager.resize_on_paste:
             image.thumbnail((self.settings_manager.working_width,
                              self.settings_manager.working_height), Image.ANTIALIAS)
+        self.add_image_to_scene(image)
+    
+    def current_draggable_pixmap(self):
+        if self.current_layer_index in self.draggable_pixmaps_in_scene:
+            return self.draggable_pixmaps_in_scene[self.current_layer_index]
 
+    def current_pixmap(self):
+        draggable_pixmap = self.current_draggable_pixmap()
+        if draggable_pixmap:
+            return draggable_pixmap.pixmap
+
+    def copy_image(self) -> DraggablePixmap:
+        return self.move_pixmap_to_clipboard(self.current_pixmap())
+
+    def cut_image(self):
+        self.copy_image()
+        draggable_pixmap = self.current_draggable_pixmap()
+        if not draggable_pixmap:
+            return
+        self.scene.removeItem(draggable_pixmap)
+        #self.layer_widget.clear_current_layer()
+        self.update()
+    
+    def paste_image_from_clipboard(self):
+        image = self.get_image_from_clipboard()
+
+        if not image:
+            Logger.info("No image in clipboard")
+            return
+
+        if self.app.settings_manager.resize_on_paste:
+            Logger.info("Resizing image")
+            image.thumbnail(
+                (self.settings_manager.working_width, self.settings_manager.working_height), 
+                Image.ANTIALIAS)
+        self.create_image(image)
+    
+    def get_image_from_clipboard(self):
+        if self.app.is_windows:
+            return self.image_from_system_clipboard_windows()
+        return self.image_from_system_clipboard_linux()
+
+    def move_pixmap_to_clipboard(self, pixmap):
+        if self.app.is_windows:
+            return self.image_to_system_clipboard_windows(pixmap)
+        return self.image_to_system_clipboard_linux(pixmap)
+    
+    def image_to_system_clipboard_linux(self, pixmap):
+        if not pixmap:
+            return None
+        data = io.BytesIO()
+        
+        # Convert QImage to PIL Image
+        image = Image.fromqpixmap(pixmap)
+        
+        # Save PIL Image to BytesIO
+        image.save(data, format="png")
+        
+        data = data.getvalue()
+        try:
+            subprocess.Popen(["xclip", "-selection", "clipboard", "-t", "image/png"],
+                            stdin=subprocess.PIPE).communicate(data)
+        except FileNotFoundError:
+            pass
+    
+    # def create_image(self, image):
+    #     """
+    #     Create a new image object and add it to the current layer
+    #     """
+    #     location = QPoint(
+    #         self.settings_manager.active_grid_settings.pos_x,
+    #         self.settings_manager.active_grid_settings.pos_y
+    #     )
+    #     # convert image to RGBA
+    #     image = image.convert("RGBA")
+    #     # self.current_layer.image_data = ImageData(
+    #     #     position=location,
+    #     #     image=image,
+    #     #     opacity=self.current_layer.opacity
+    #     # )
+    #     self.current_layer.position_x = location.x()
+    #     self.current_layer.position_y = location.y()
+
+    #     session = get_session()
+    #     layer_image = LayerImage(
+    #         layer_id=self.current_layer.id,
+    #         order=len(self.current_layer.layer_images),
+    #     )
+    #     layer_image.image = image
+    #     session.add(layer_image)
+    #     save_session()
+
+    #     self.app.ui.layer_widget.set_thumbnail()
+    #     #self.current_layer.layer_widget
+    #     # self.set_image_opacity(self.get_layer_opacity(self.current_layer_index))
+    #     self.update()
+    #     self.app.add_image_to_canvas_signal.emit({
+    #         "processed_image": image,
+    #         "image_root_point": location,
+    #         "image_pivot_point": location,
+    #         "add_image_to_canvas": True
+    #     })
+
+    draggable_pixmaps_in_scene = {}
+
+    def create_image(self, image):
+        if self.app.settings_manager.resize_on_paste:
+            image.thumbnail(
+                (
+                    self.settings_manager.working_width,
+                    self.settings_manager.working_height
+                ),
+                Image.ANTIALIAS
+            )
+        self.add_image_to_scene(image)
+    
+    def remove_current_draggable_pixmap_from_scene(self):
+        current_draggable_pixmap = self.current_draggable_pixmap()
+        if current_draggable_pixmap:
+            self.scene.removeItem(current_draggable_pixmap)
+    
+    def add_layer(self):
+        return self.app.ui.layer_widget.add_layer()
+
+    def switch_to_layer(self, layer_index):
+        self.current_layer_index = layer_index
+
+    def add_image_to_scene(self, image):
+        if self.current_draggable_pixmap():
+            layer_index = self.add_layer()
+            self.switch_to_layer(layer_index)
         pixmap = QPixmap.fromImage(ImageQt(image))
-        image = DraggablePixmap(self, pixmap)
-        self.scene.addItem(image)
+        draggable_pixmap = DraggablePixmap(self, pixmap)
+        self.scene.addItem(draggable_pixmap)
+        self.draggable_pixmaps_in_scene[self.current_layer_index] = draggable_pixmap
+        self.update()
+    
+    def image_to_system_clipboard_windows(self, pixmap):
+        if not pixmap:
+            return None
+        Logger.info("image_to_system_clipboard_windows")
+        import win32clipboard
+        data = io.BytesIO()
+        # Convert QImage to PIL Image
+        image = Image.fromqpixmap(pixmap)
+        # Save PIL Image to BytesIO
+        image.save(data, format="png")
+        data = data.getvalue()
+        win32clipboard.OpenClipboard()
+        win32clipboard.EmptyClipboard()
+        win32clipboard.SetClipboardData(win32clipboard.CF_DIB, data)
+        win32clipboard.CloseClipboard()
+
+    def image_from_system_clipboard_windows(self):
+        Logger.info("image_from_system_clipboard_windows")
+        import win32clipboard
+        try:
+            win32clipboard.OpenClipboard()
+            data = win32clipboard.GetClipboardData(win32clipboard.CF_DIB)
+            win32clipboard.CloseClipboard()
+            # convert bytes to image
+            image = Image.open(io.BytesIO(data))
+            return image
+        except Exception as e:
+            # self.app.error_handler(str(e))
+            print(e)
+            return None
+    
+    def image_from_system_clipboard_linux(self):
+        Logger.info("image_from_system_clipboard_linux")
+        try:
+            image = ImageGrab.grabclipboard()
+            if not image:
+                Logger.info("No image in clipboard")
+                return None
+            # with transparency
+            image = image.convert("RGBA")
+            return image
+        except Exception as e:
+            print(e)
+            return None
 
     def save_image(self, image_path):
         # 1. iterate over all images in self.sce
