@@ -52,11 +52,14 @@
        <height>38</height>
       </size>
      </property>
+     <property name="cursor">
+      <cursorShape>PointingHandCursor</cursorShape>
+     </property>
      <property name="text">
       <string/>
      </property>
      <property name="icon">
-      <iconset resource="../../../resources.qrc">
+      <iconset>
        <normaloff>:/icons/034-folder-light.png</normaloff>:/icons/034-folder-light.png</iconset>
      </property>
      <property name="checkable">
@@ -87,12 +90,15 @@
        <height>38</height>
       </size>
      </property>
+     <property name="cursor">
+      <cursorShape>PointingHandCursor</cursorShape>
+     </property>
      <property name="text">
       <string/>
      </property>
      <property name="icon">
-      <iconset resource="../../../resources.qrc">
-       <normaloff>:/icons/010-view-light.png</normaloff>:/icons/010-view-light.png</iconset>
+      <iconset resource="../../../resources_dark.qrc">
+       <normaloff>:/icons/dark/eye-look-icon.svg</normaloff>:/icons/dark/eye-look-icon.svg</iconset>
      </property>
      <property name="checkable">
       <bool>true</bool>
@@ -200,7 +206,8 @@
   </layout>
  </widget>
  <resources>
-  <include location="../../../resources.qrc"/>
+  <include location="../../../resources_light.qrc"/>
+  <include location="../../../resources_dark.qrc"/>
  </resources>
  <connections>
   <connection>
