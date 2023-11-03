@@ -2,7 +2,9 @@
 @primary-color: rgba(0, 132, 185, 255);
 @darkprimary-color: rgba(0, 132, 185, 100);
 @darkerprimary-color: rgba(0, 132, 185, 50);
-@secondary-color: #001b4d;
+@secondary-color: rgba(71, 0, 129, 255);
+@darksecondary-color: #c5008a;
+@darkersecondary-color: #640046;
 @success-color: #00A800;
 @danger-color: #FF5555;
 @warning-color: #FFAA00;
@@ -12,4 +14,4 @@
 @dark-color: #000;
 @line-color-light: #333;
 @line-color-dark: #222;
-/* END_VARIABLES */
+/* END_VARIABLES */ 

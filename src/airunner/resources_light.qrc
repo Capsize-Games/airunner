@@ -1,5 +1,17 @@
 <RCC>
   <qresource>
+    <file>icons/light/check-mark-icon.svg</file>
+    <file>icons/light/eye-look-icon.svg</file>
+    <file>icons/light/recycle-bin-line-icon.svg</file>
+    <file>icons/light/hide-private-hidden-icon.svg</file>
+    <file>icons/light/cross-symbol-icon.svg</file>
+    <file>icons/light/dice-game-icon.svg</file>
+    <file>icons/light/upload-icon.svg</file>
+    <file>icons/light/close-icon.svg</file>
+    <file>icons/light/exchange-refresh-icon.svg</file>
+    <file>icons/light/recycle-sign-icon.svg</file>
+    <file>icons/light/download-icon.svg</file>
+    <file>icons/light/link-icon.svg</file>
     <file>icons/light/object-selected-icon.svg</file>
     <file>icons/light/clamp-as-indicated-symbol-icon.svg</file>
     <file>icons/light/sliders-icon.svg</file>
@@ -11,7 +23,6 @@
     <file>icons/light/chat-box-icon.svg</file>
     <file>icons/light/circle-center-icon.svg</file>
     <file>icons/light/compress-vertical-icon.svg</file>
-    <file>icons/light/cross-symbol-icon.svg</file>
     <file>icons/light/download-image-icon.svg</file>
     <file>icons/light/edit-document-icon.svg</file>
     <file>icons/light/eraser-icon.svg</file>
