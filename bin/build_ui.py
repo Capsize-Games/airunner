@@ -46,8 +46,17 @@ def generate_resources():
         [
             "pyside6-rcc",
             "-o",
-            "src/airunner/resources_rc.py",
-            "src/airunner/resources.qrc",
+            "src/airunner/resources_light_rc.py",
+            "src/airunner/resources_light.qrc",
+        ],
+        cwd=str(Path(__file__).parent.parent),
+    )
+    subprocess.run(
+        [
+            "pyside6-rcc",
+            "-o",
+            "src/airunner/resources_dark_rc.py",
+            "src/airunner/resources_dark.qrc",
         ],
         cwd=str(Path(__file__).parent.parent),
     )
