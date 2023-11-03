@@ -40,6 +40,10 @@ class LatentsSeedWidget(SeedWidget):
         self.ui.lineEdit.setText(str(self.latents_seed))
 
     def handle_seed_random_clicked(self, value):
+        self.settings_manager.set_value("generator.random_seed", value)
+        self.ui.lineEdit.setEnabled(not value)
+    
+    def handle_seed_random_latents_clicked(self, value):
         self.settings_manager.set_value("generator.random_latents_seed", value)
         self.ui.lineEdit.setEnabled(not value)
 
