@@ -89,8 +89,8 @@
           <string/>
          </property>
          <property name="icon">
-          <iconset resource="../../../resources.qrc">
-           <normaloff>:/icons/010-view-light.png</normaloff>:/icons/010-view-light.png</iconset>
+          <iconset resource="../../../resources_light.qrc">
+           <normaloff>:/icons/light/eye-look-icon.svg</normaloff>:/icons/light/eye-look-icon.svg</iconset>
          </property>
          <property name="checkable">
           <bool>true</bool>
@@ -121,8 +121,8 @@
           <string/>
          </property>
          <property name="icon">
-          <iconset resource="../../../resources.qrc">
-           <normaloff>:/icons/settings-light.png</normaloff>:/icons/settings-light.png</iconset>
+          <iconset resource="../../../resources_light.qrc">
+           <normaloff>:/icons/light/setting-line-icon.svg</normaloff>:/icons/light/setting-line-icon.svg</iconset>
          </property>
         </widget>
        </item>
@@ -147,8 +147,8 @@
           <string/>
          </property>
          <property name="icon">
-          <iconset resource="../../../resources.qrc">
-           <normaloff>:/icons/006-trash-light.png</normaloff>:/icons/006-trash-light.png</iconset>
+          <iconset resource="../../../resources_light.qrc">
+           <normaloff>:/icons/light/recycle-bin-line-icon.svg</normaloff>:/icons/light/recycle-bin-line-icon.svg</iconset>
          </property>
         </widget>
        </item>
@@ -285,7 +285,8 @@
   </layout>
  </widget>
  <resources>
-  <include location="../../../resources.qrc"/>
+  <include location="../../../resources_light.qrc"/>
+  <include location="../../../resources_dark.qrc"/>
  </resources>
  <connections>
   <connection>
