@@ -2,6 +2,7 @@ import json
 import queue
 import time
 import threading
+from airunner.aihandler.engine import Engine
 
 from airunner.aihandler.logger import Logger as logger
 from airunner.aihandler.runner import SDRunner
@@ -80,7 +81,7 @@ class OfflineClient:
 
     def init_sd_runner(self):
         logger.info("Initializing AI Runner")
-        self.sd_runner = SDRunner(
+        self.sd_runner = Engine(
             app=self.app,
             message_var=self.message_var,
             message_handler=self.message_handler
@@ -113,12 +114,12 @@ class OfflineClient:
                     do_reload = True
                 self.current_inpaint_model = model
             if do_reload:
-                self.sd_runner.initialized = False
-                self.sd_runner.reload_model = True
+                self.sd_runner.sd.initialized = False
+                self.sd_runner.sd.reload_model = True
 
-        if (action in ("txt2img", "img2img") and self.sd_runner.action in ("inpaint", "outpaint")) or \
-            (action in ("inpaint", "outpaint") and self.sd_runner.action in ("txt2img", "img2img")):
-            self.sd_runner.initialized = False
+        if (action in ("txt2img", "img2img") and self.sd_runner.sd.action in ("inpaint", "outpaint")) or \
+            (action in ("inpaint", "outpaint") and self.sd_runner.sd.action in ("txt2img", "img2img")):
+            self.sd_runner.sd.initialized = False
 
         self.sd_runner.generator_sample(data)
 
