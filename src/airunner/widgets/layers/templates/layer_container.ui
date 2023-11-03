@@ -14,6 +14,18 @@
    <string>Form</string>
   </property>
   <layout class="QGridLayout" name="gridLayout">
+   <property name="leftMargin">
+    <number>0</number>
+   </property>
+   <property name="topMargin">
+    <number>0</number>
+   </property>
+   <property name="rightMargin">
+    <number>0</number>
+   </property>
+   <property name="bottomMargin">
+    <number>0</number>
+   </property>
    <item row="3" column="0">
     <widget class="Line" name="line">
      <property name="orientation">
@@ -22,7 +34,7 @@
     </widget>
    </item>
    <item row="4" column="0">
-    <widget class="QWidget" name="horizontalWidget" native="true">
+    <widget class="QWidget" name="layer_widget_button_container" native="true">
      <property name="sizePolicy">
       <sizepolicy hsizetype="Expanding" vsizetype="Preferred">
        <horstretch>0</horstretch>
@@ -62,6 +74,9 @@
           <height>40</height>
          </size>
         </property>
+        <property name="cursor">
+         <cursorShape>PointingHandCursor</cursorShape>
+        </property>
         <property name="toolTip">
          <string>Create a new layer</string>
         </property>
@@ -72,8 +87,8 @@
          <string/>
         </property>
         <property name="icon">
-         <iconset theme="document-new">
-          <normaloff>.</normaloff>.</iconset>
+         <iconset resource="../../../resources_dark.qrc">
+          <normaloff>:/icons/dark/add-plus-icon.svg</normaloff>:/icons/dark/add-plus-icon.svg</iconset>
         </property>
         <property name="iconSize">
          <size>
@@ -100,6 +115,9 @@
           <height>40</height>
          </size>
         </property>
+        <property name="cursor">
+         <cursorShape>PointingHandCursor</cursorShape>
+        </property>
         <property name="toolTip">
          <string>Move layer up</string>
         </property>
@@ -110,8 +128,8 @@
          <string/>
         </property>
         <property name="icon">
-         <iconset theme="go-up" resource="../../../resources.qrc">
-          <normaloff>:/icons/041-up-arrow.png</normaloff>:/icons/041-up-arrow.png</iconset>
+         <iconset resource="../../../resources_dark.qrc">
+          <normaloff>:/icons/dark/round-black-top-arrow-icon.svg</normaloff>:/icons/dark/round-black-top-arrow-icon.svg</iconset>
         </property>
         <property name="iconSize">
          <size>
@@ -138,6 +156,9 @@
           <height>40</height>
          </size>
         </property>
+        <property name="cursor">
+         <cursorShape>PointingHandCursor</cursorShape>
+        </property>
         <property name="toolTip">
          <string>Move layer down</string>
         </property>
@@ -148,8 +169,8 @@
          <string/>
         </property>
         <property name="icon">
-         <iconset theme="go-down" resource="../../../resources.qrc">
-          <normaloff>:/icons/042-down-arrow.png</normaloff>:/icons/042-down-arrow.png</iconset>
+         <iconset resource="../../../resources_dark.qrc">
+          <normaloff>:/icons/dark/round-black-bottom-arrow-icon.svg</normaloff>:/icons/dark/round-black-bottom-arrow-icon.svg</iconset>
         </property>
         <property name="iconSize">
          <size>
@@ -170,6 +191,9 @@
           <height>40</height>
          </size>
         </property>
+        <property name="cursor">
+         <cursorShape>PointingHandCursor</cursorShape>
+        </property>
         <property name="toolTip">
          <string>Merge selected layers</string>
         </property>
@@ -177,8 +201,8 @@
          <string/>
         </property>
         <property name="icon">
-         <iconset theme="go-jump" resource="../../../resources.qrc">
-          <normaloff>:/icons/002-merge.png</normaloff>:/icons/002-merge.png</iconset>
+         <iconset resource="../../../resources_dark.qrc">
+          <normaloff>:/icons/dark/compress-vertical-icon.svg</normaloff>:/icons/dark/compress-vertical-icon.svg</iconset>
         </property>
         <property name="iconSize">
          <size>
@@ -218,6 +242,9 @@
           <height>40</height>
          </size>
         </property>
+        <property name="cursor">
+         <cursorShape>PointingHandCursor</cursorShape>
+        </property>
         <property name="toolTip">
          <string>Delete layer</string>
         </property>
@@ -228,8 +255,8 @@
          <string/>
         </property>
         <property name="icon">
-         <iconset theme="edit-clear">
-          <normaloff>.</normaloff>.</iconset>
+         <iconset resource="../../../resources_dark.qrc">
+          <normaloff>:/icons/dark/red-x-icon.svg</normaloff>:/icons/dark/red-x-icon.svg</iconset>
         </property>
         <property name="iconSize">
          <size>
@@ -277,8 +304,8 @@
        <rect>
         <x>0</x>
         <y>0</y>
-        <width>417</width>
-        <height>225</height>
+        <width>435</width>
+        <height>243</height>
        </rect>
       </property>
       <property name="sizePolicy">
@@ -352,7 +379,8 @@
   </customwidget>
  </customwidgets>
  <resources>
-  <include location="../../../resources.qrc"/>
+  <include location="../../../resources_light.qrc"/>
+  <include location="../../../resources_dark.qrc"/>
  </resources>
  <connections>
   <connection>

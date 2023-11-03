@@ -20,7 +20,7 @@ class LayerContainerWidget(BaseWidget):
     def current_layer(self):
         if len(self.layers) == 0:
             return None
-        return self.app.ui.layer_widget.layers[self.current_layer_index]
+        return self.layers[self.current_layer_index]
 
     def initialize(self):
         self.ui.scrollAreaWidgetContents.layout().addSpacerItem(
@@ -58,7 +58,7 @@ class LayerContainerWidget(BaseWidget):
             "layers": self.get_layers_copy(),
             "layer_index": self.current_layer_index
         })
-        self.create_layer()
+        return self.create_layer()
 
     def create_layer(self):
         session = get_session()
@@ -76,6 +76,7 @@ class LayerContainerWidget(BaseWidget):
         self.layers.insert(index, layer_data)
         self.set_current_layer(index)
         self.add_layer_widget(layer_data, index)
+        return index
 
     def add_layer_widget(self, layer_data, index):
         layer_widget = LayerWidget(self, layer_data=layer_data, layer_index=index)
@@ -208,6 +209,11 @@ class LayerContainerWidget(BaseWidget):
             layer.layer_widget.deleteLater()
         self.layers = [LayerData(0, "Layer 1")]
         self.current_layer_index = 0
+    
+    def clear_current_layer(self):
+        self.layers[self.current_layer_index] = LayerData(
+            self.current_layer_index, 
+            f"Layer {self.current_layer_index}")
 
     def handle_layer_click(self, layer, index, event):
         # check if the control key is pressed
