@@ -14,7 +14,11 @@ class AutoImport:
         pipeline_action = kwargs.pop("pipeline_action", None)
         category = kwargs.pop("category", None)
         if class_object is None:
-            class_object = AutoImport.class_object(requested_action, model_data, pipeline_action)
+            class_object = AutoImport.class_object(
+                requested_action, 
+                model_data, 
+                pipeline_action,
+            )
         if class_object is None:
             return None
         return class_object.from_pretrained(model, **kwargs)
