@@ -195,8 +195,8 @@
                   <string/>
                  </property>
                  <property name="icon">
-                  <iconset resource="../../../resources.qrc">
-                   <normaloff>:/icons/046-import-light.png</normaloff>:/icons/046-import-light.png</iconset>
+                  <iconset resource="../../../resources_dark.qrc">
+                   <normaloff>:/icons/dark/download-icon.svg</normaloff>:/icons/dark/download-icon.svg</iconset>
                  </property>
                  <property name="checkable">
                   <bool>true</bool>
@@ -230,14 +230,14 @@
                   <string/>
                  </property>
                  <property name="icon">
-                  <iconset resource="../../../resources.qrc">
-                   <normaloff>:/icons/025-gallery-light.png</normaloff>:/icons/025-gallery-light.png</iconset>
+                  <iconset resource="../../../resources_dark.qrc">
+                   <normaloff>:/icons/dark/image-line-icon.svg</normaloff>:/icons/dark/image-line-icon.svg</iconset>
                  </property>
                  <property name="checkable">
                   <bool>true</bool>
                  </property>
                  <property name="checked">
-                  <bool>true</bool>
+                  <bool>false</bool>
                  </property>
                  <property name="flat">
                   <bool>true</bool>
@@ -268,8 +268,8 @@
                   <string/>
                  </property>
                  <property name="icon">
-                  <iconset resource="../../../resources.qrc">
-                   <normaloff>:/icons/047-recycle-light.png</normaloff>:/icons/047-recycle-light.png</iconset>
+                  <iconset resource="../../../resources_dark.qrc">
+                   <normaloff>:/icons/dark/recycle-sign-icon.svg</normaloff>:/icons/dark/recycle-sign-icon.svg</iconset>
                  </property>
                  <property name="checkable">
                   <bool>true</bool>
@@ -303,8 +303,8 @@
                   <string/>
                  </property>
                  <property name="icon">
-                  <iconset resource="../../../resources.qrc">
-                   <normaloff>:/icons/050-refresh-light.png</normaloff>:/icons/050-refresh-light.png</iconset>
+                  <iconset resource="../../../resources_dark.qrc">
+                   <normaloff>:/icons/dark/exchange-refresh-icon.svg</normaloff>:/icons/dark/exchange-refresh-icon.svg</iconset>
                  </property>
                  <property name="flat">
                   <bool>true</bool>
@@ -335,8 +335,8 @@
                   <string/>
                  </property>
                  <property name="icon">
-                  <iconset resource="../../../resources.qrc">
-                   <normaloff>:/icons/006-trash-light.png</normaloff>:/icons/006-trash-light.png</iconset>
+                  <iconset resource="../../../resources_dark.qrc">
+                   <normaloff>:/icons/dark/close-icon.svg</normaloff>:/icons/dark/close-icon.svg</iconset>
                  </property>
                  <property name="flat">
                   <bool>true</bool>
@@ -453,7 +453,8 @@
   </customwidget>
  </customwidgets>
  <resources>
-  <include location="../../../resources.qrc"/>
+  <include location="../../../resources_light.qrc"/>
+  <include location="../../../resources_dark.qrc"/>
  </resources>
  <connections>
   <connection>
