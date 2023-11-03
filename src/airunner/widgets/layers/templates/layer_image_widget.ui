@@ -38,7 +38,7 @@
       <string/>
      </property>
      <property name="icon">
-      <iconset resource="../../../resources.qrc">
+      <iconset>
        <normaloff>:/icons/010-view-light.png</normaloff>:/icons/010-view-light.png</iconset>
      </property>
      <property name="checkable">
@@ -82,7 +82,7 @@
   </customwidget>
  </customwidgets>
  <resources>
-  <include location="../../../resources.qrc"/>
+  <include location="../../../resources_light.qrc"/>
  </resources>
  <connections>
   <connection>
