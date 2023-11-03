@@ -7,7 +7,7 @@
     <x>0</x>
     <y>0</y>
     <width>495</width>
-    <height>641</height>
+    <height>926</height>
    </rect>
   </property>
   <property name="font">
@@ -90,7 +90,7 @@
             <property name="childrenCollapsible">
              <bool>false</bool>
             </property>
-            <widget class="QWidget" name="">
+            <widget class="QWidget" name="layoutWidget">
              <layout class="QGridLayout" name="gridLayout_5">
               <property name="bottomMargin">
                <number>9</number>
@@ -260,415 +260,16 @@
             <x>0</x>
             <y>0</y>
             <width>491</width>
-            <height>592</height>
+            <height>861</height>
            </rect>
           </property>
           <layout class="QGridLayout" name="gridLayout_8">
-           <item row="2" column="0">
-            <widget class="QScrollArea" name="scrollArea_2">
-             <property name="frameShape">
-              <enum>QFrame::NoFrame</enum>
-             </property>
-             <property name="widgetResizable">
-              <bool>true</bool>
-             </property>
-             <widget class="QWidget" name="scrollAreaWidgetContents_5">
-              <property name="geometry">
-               <rect>
-                <x>0</x>
-                <y>0</y>
-                <width>459</width>
-                <height>118</height>
-               </rect>
-              </property>
-              <layout class="QGridLayout" name="gridLayout">
-               <property name="leftMargin">
-                <number>0</number>
-               </property>
-               <property name="topMargin">
-                <number>0</number>
-               </property>
-               <property name="rightMargin">
-                <number>0</number>
-               </property>
-               <property name="bottomMargin">
-                <number>0</number>
-               </property>
-               <item row="2" column="0">
-                <layout class="QHBoxLayout" name="horizontalLayout_5">
-                 <item>
-                  <layout class="QVBoxLayout" name="verticalLayout">
-                   <item>
-                    <widget class="QLabel" name="label_3">
-                     <property name="font">
-                      <font>
-                       <pointsize>8</pointsize>
-                       <bold>true</bold>
-                      </font>
-                     </property>
-                     <property name="text">
-                      <string>Model</string>
-                     </property>
-                    </widget>
-                   </item>
-                   <item>
-                    <widget class="QComboBox" name="model"/>
-                   </item>
-                  </layout>
-                 </item>
-                 <item>
-                  <layout class="QVBoxLayout" name="verticalLayout_2">
-                   <item>
-                    <widget class="QLabel" name="label_4">
-                     <property name="font">
-                      <font>
-                       <pointsize>8</pointsize>
-                       <bold>true</bold>
-                      </font>
-                     </property>
-                     <property name="text">
-                      <string>Scheduler</string>
-                     </property>
-                    </widget>
-                   </item>
-                   <item>
-                    <widget class="QComboBox" name="scheduler">
-                     <property name="cursor">
-                      <cursorShape>ArrowCursor</cursorShape>
-                     </property>
-                    </widget>
-                   </item>
-                  </layout>
-                 </item>
-                </layout>
-               </item>
-               <item row="7" column="0">
-                <layout class="QVBoxLayout" name="verticalLayout_5">
-                 <item>
-                  <widget class="QCheckBox" name="variation_checkbox">
-                   <property name="cursor">
-                    <cursorShape>PointingHandCursor</cursorShape>
-                   </property>
-                   <property name="text">
-                    <string>Variation</string>
-                   </property>
-                  </widget>
-                 </item>
-                </layout>
-               </item>
-               <item row="4" column="0">
-                <layout class="QHBoxLayout" name="horizontalLayout_2">
-                 <item>
-                  <widget class="SliderWidget" name="steps_widget" native="true">
-                   <property name="label_text" stdset="0">
-                    <string>Steps</string>
-                   </property>
-                   <property name="slider_callback" stdset="0">
-                    <string notr="true">handle_value_change</string>
-                   </property>
-                   <property name="current_value" stdset="0">
-                    <number>0</number>
-                   </property>
-                   <property name="slider_maximum" stdset="0">
-                    <number>200</number>
-                   </property>
-                   <property name="spinbox_maximum" stdset="0">
-                    <double>200.000000000000000</double>
-                   </property>
-                   <property name="display_as_float" stdset="0">
-                    <bool>false</bool>
-                   </property>
-                   <property name="spinbox_single_step" stdset="0">
-                    <number>1</number>
-                   </property>
-                   <property name="spinbox_page_step" stdset="0">
-                    <number>1</number>
-                   </property>
-                   <property name="spinbox_minimum" stdset="0">
-                    <number>1</number>
-                   </property>
-                   <property name="slider_minimum" stdset="0">
-                    <number>1</number>
-                   </property>
-                   <property name="settings_property" stdset="0">
-                    <string notr="true">generator.steps</string>
-                   </property>
-                  </widget>
-                 </item>
-                 <item>
-                  <widget class="SliderWidget" name="scale_widget" native="true">
-                   <property name="label_text" stdset="0">
-                    <string>Scale</string>
-                   </property>
-                   <property name="current_value" stdset="0">
-                    <number>0</number>
-                   </property>
-                   <property name="slider_maximum" stdset="0">
-                    <number>10000</number>
-                   </property>
-                   <property name="spinbox_maximum" stdset="0">
-                    <double>100.000000000000000</double>
-                   </property>
-                   <property name="display_as_float" stdset="0">
-                    <bool>true</bool>
-                   </property>
-                   <property name="spinbox_single_step" stdset="0">
-                    <double>0.010000000000000</double>
-                   </property>
-                   <property name="spinbox_page_step" stdset="0">
-                    <double>0.010000000000000</double>
-                   </property>
-                   <property name="slider_callback" stdset="0">
-                    <string notr="true">handle_value_change</string>
-                   </property>
-                   <property name="settings_property" stdset="0">
-                    <string notr="true">generator.scale</string>
-                   </property>
-                  </widget>
-                 </item>
-                </layout>
-               </item>
-               <item row="5" column="0">
-                <layout class="QHBoxLayout" name="horizontalLayout_4">
-                 <item>
-                  <widget class="SliderWidget" name="samples_widget" native="true">
-                   <property name="label_text" stdset="0">
-                    <string>Samples</string>
-                   </property>
-                   <property name="slider_callback" stdset="0">
-                    <string notr="true">handle_value_change</string>
-                   </property>
-                   <property name="current_value" stdset="0">
-                    <number>0</number>
-                   </property>
-                   <property name="slider_maximum" stdset="0">
-                    <number>500</number>
-                   </property>
-                   <property name="spinbox_maximum" stdset="0">
-                    <double>500.000000000000000</double>
-                   </property>
-                   <property name="display_as_float" stdset="0">
-                    <bool>false</bool>
-                   </property>
-                   <property name="spinbox_single_step" stdset="0">
-                    <number>1</number>
-                   </property>
-                   <property name="spinbox_page_step" stdset="0">
-                    <number>1</number>
-                   </property>
-                   <property name="spinbox_minimum" stdset="0">
-                    <number>1</number>
-                   </property>
-                   <property name="slider_minimum" stdset="0">
-                    <number>1</number>
-                   </property>
-                   <property name="settings_property" stdset="0">
-                    <string>generator.n_samples</string>
-                   </property>
-                  </widget>
-                 </item>
-                 <item>
-                  <widget class="SliderWidget" name="clip_skip_slider_widget" native="true">
-                   <property name="label_text" stdset="0">
-                    <string>Clip Skip</string>
-                   </property>
-                   <property name="current_value" stdset="0">
-                    <number>0</number>
-                   </property>
-                   <property name="slider_maximum" stdset="0">
-                    <number>11</number>
-                   </property>
-                   <property name="spinbox_maximum" stdset="0">
-                    <double>12.000000000000000</double>
-                   </property>
-                   <property name="display_as_float" stdset="0">
-                    <bool>false</bool>
-                   </property>
-                   <property name="spinbox_single_step" stdset="0">
-                    <number>1</number>
-                   </property>
-                   <property name="spinbox_page_step" stdset="0">
-                    <number>1</number>
-                   </property>
-                   <property name="spinbox_minimum" stdset="0">
-                    <number>0</number>
-                   </property>
-                   <property name="slider_minimum" stdset="0">
-                    <number>0</number>
-                   </property>
-                   <property name="slider_callback" stdset="0">
-                    <string notr="true">handle_value_change</string>
-                   </property>
-                   <property name="settings_property" stdset="0">
-                    <string notr="true">generator.clip_skip</string>
-                   </property>
-                  </widget>
-                 </item>
-                </layout>
-               </item>
-               <item row="6" column="0">
-                <layout class="QHBoxLayout" name="horizontalLayout_7">
-                 <item>
-                  <widget class="SliderWidget" name="ddim_eta_slider_widget" native="true">
-                   <property name="label_text" stdset="0">
-                    <string>DDIM ETA</string>
-                   </property>
-                   <property name="slider_callback" stdset="0">
-                    <string notr="true">handle_value_change</string>
-                   </property>
-                   <property name="current_value" stdset="0">
-                    <number>1</number>
-                   </property>
-                   <property name="slider_maximum" stdset="0">
-                    <number>10</number>
-                   </property>
-                   <property name="spinbox_maximum" stdset="0">
-                    <number>10</number>
-                   </property>
-                   <property name="display_as_float" stdset="0">
-                    <bool>false</bool>
-                   </property>
-                   <property name="spinbox_single_step" stdset="0">
-                    <number>1</number>
-                   </property>
-                   <property name="spinbox_page_step" stdset="0">
-                    <number>1</number>
-                   </property>
-                   <property name="spinbox_minimum" stdset="0">
-                    <number>1</number>
-                   </property>
-                   <property name="slider_minimum" stdset="0">
-                    <number>1</number>
-                   </property>
-                   <property name="settings_property" stdset="0">
-                    <string notr="true">generator.ddim_eta</string>
-                   </property>
-                  </widget>
-                 </item>
-                 <item>
-                  <widget class="SliderWidget" name="frames_slider_widget" native="true">
-                   <property name="label_text" stdset="0">
-                    <string>Frames</string>
-                   </property>
-                   <property name="slider_callback" stdset="0">
-                    <string notr="true">handle_value_change</string>
-                   </property>
-                   <property name="current_value" stdset="0">
-                    <number>0</number>
-                   </property>
-                   <property name="slider_maximum" stdset="0">
-                    <number>200</number>
-                   </property>
-                   <property name="spinbox_maximum" stdset="0">
-                    <double>200.000000000000000</double>
-                   </property>
-                   <property name="display_as_float" stdset="0">
-                    <bool>false</bool>
-                   </property>
-                   <property name="spinbox_single_step" stdset="0">
-                    <number>1</number>
-                   </property>
-                   <property name="spinbox_page_step" stdset="0">
-                    <number>1</number>
-                   </property>
-                   <property name="spinbox_minimum" stdset="0">
-                    <number>1</number>
-                   </property>
-                   <property name="slider_minimum" stdset="0">
-                    <number>1</number>
-                   </property>
-                   <property name="settings_property" stdset="0">
-                    <string notr="true">generator.n_samples</string>
-                   </property>
-                  </widget>
-                 </item>
-                </layout>
-               </item>
-               <item row="3" column="0">
-                <layout class="QHBoxLayout" name="horizontalLayout">
-                 <item>
-                  <widget class="SeedWidget" name="seed_widget" native="true">
-                   <property name="generator_section" stdset="0">
-                    <string/>
-                   </property>
-                   <property name="generator_name" stdset="0">
-                    <string/>
-                   </property>
-                  </widget>
-                 </item>
-                 <item>
-                  <widget class="LatentsSeedWidget" name="seed_widget_latents" native="true">
-                   <property name="generator_section" stdset="0">
-                    <string/>
-                   </property>
-                   <property name="generator_name" stdset="0">
-                    <string/>
-                   </property>
-                  </widget>
-                 </item>
-                </layout>
-               </item>
-               <item row="1" column="0">
-                <layout class="QVBoxLayout" name="verticalLayout_3">
-                 <item>
-                  <widget class="InputImageSettingsWidget" name="input_image_widget" native="true">
-                   <property name="minimumSize">
-                    <size>
-                     <width>0</width>
-                     <height>0</height>
-                    </size>
-                   </property>
-                   <property name="acceptDrops">
-                    <bool>false</bool>
-                   </property>
-                   <property name="generator_section" stdset="0">
-                    <string/>
-                   </property>
-                   <property name="generator_name" stdset="0">
-                    <string/>
-                   </property>
-                   <property name="checkbox_label" stdset="0">
-                    <string>Use Input Image</string>
-                   </property>
-                  </widget>
-                 </item>
-                 <item>
-                  <widget class="ControlNetSettingsWidget" name="controlnet_settings" native="true">
-                   <property name="minimumSize">
-                    <size>
-                     <width>0</width>
-                     <height>0</height>
-                    </size>
-                   </property>
-                   <property name="acceptDrops">
-                    <bool>false</bool>
-                   </property>
-                   <property name="generator_section" stdset="0">
-                    <string/>
-                   </property>
-                   <property name="generator_name" stdset="0">
-                    <string/>
-                   </property>
-                   <property name="checkbox_label" stdset="0">
-                    <string>Controlnet</string>
-                   </property>
-                  </widget>
-                 </item>
-                </layout>
-               </item>
-              </layout>
-             </widget>
-            </widget>
-           </item>
            <item row="0" column="0">
             <widget class="QSplitter" name="splitter_2">
              <property name="orientation">
               <enum>Qt::Vertical</enum>
              </property>
-             <property name="childrenCollapsible">
-              <bool>false</bool>
-             </property>
-             <widget class="QWidget" name="">
+             <widget class="QWidget" name="layoutWidget">
               <layout class="QGridLayout" name="gridLayout_2">
                <property name="bottomMargin">
                 <number>9</number>
@@ -752,6 +353,13 @@
                    </property>
                   </widget>
                  </item>
+                 <item>
+                  <widget class="QPushButton" name="pushButton">
+                   <property name="text">
+                    <string>Save Prompts</string>
+                   </property>
+                  </widget>
+                 </item>
                 </layout>
                </item>
                <item row="1" column="0" colspan="2">
@@ -790,13 +398,400 @@
                </item>
               </layout>
              </widget>
-            </widget>
-           </item>
-           <item row="1" column="0">
-            <widget class="QPushButton" name="pushButton">
-             <property name="text">
-              <string>Save Prompts</string>
-             </property>
+             <widget class="QScrollArea" name="scrollArea_2">
+              <property name="frameShape">
+               <enum>QFrame::NoFrame</enum>
+              </property>
+              <property name="widgetResizable">
+               <bool>true</bool>
+              </property>
+              <widget class="QWidget" name="scrollAreaWidgetContents_5">
+               <property name="geometry">
+                <rect>
+                 <x>0</x>
+                 <y>0</y>
+                 <width>473</width>
+                 <height>172</height>
+                </rect>
+               </property>
+               <layout class="QGridLayout" name="gridLayout">
+                <property name="leftMargin">
+                 <number>0</number>
+                </property>
+                <property name="topMargin">
+                 <number>0</number>
+                </property>
+                <property name="rightMargin">
+                 <number>0</number>
+                </property>
+                <property name="bottomMargin">
+                 <number>0</number>
+                </property>
+                <item row="2" column="0">
+                 <layout class="QHBoxLayout" name="horizontalLayout_5">
+                  <item>
+                   <layout class="QVBoxLayout" name="verticalLayout">
+                    <item>
+                     <widget class="QLabel" name="label_3">
+                      <property name="font">
+                       <font>
+                        <pointsize>8</pointsize>
+                        <bold>true</bold>
+                       </font>
+                      </property>
+                      <property name="text">
+                       <string>Model</string>
+                      </property>
+                     </widget>
+                    </item>
+                    <item>
+                     <widget class="QComboBox" name="model"/>
+                    </item>
+                   </layout>
+                  </item>
+                  <item>
+                   <layout class="QVBoxLayout" name="verticalLayout_2">
+                    <item>
+                     <widget class="QLabel" name="label_4">
+                      <property name="font">
+                       <font>
+                        <pointsize>8</pointsize>
+                        <bold>true</bold>
+                       </font>
+                      </property>
+                      <property name="text">
+                       <string>Scheduler</string>
+                      </property>
+                     </widget>
+                    </item>
+                    <item>
+                     <widget class="QComboBox" name="scheduler">
+                      <property name="cursor">
+                       <cursorShape>ArrowCursor</cursorShape>
+                      </property>
+                     </widget>
+                    </item>
+                   </layout>
+                  </item>
+                 </layout>
+                </item>
+                <item row="7" column="0">
+                 <layout class="QVBoxLayout" name="verticalLayout_5">
+                  <item>
+                   <widget class="QCheckBox" name="variation_checkbox">
+                    <property name="cursor">
+                     <cursorShape>PointingHandCursor</cursorShape>
+                    </property>
+                    <property name="text">
+                     <string>Variation</string>
+                    </property>
+                   </widget>
+                  </item>
+                 </layout>
+                </item>
+                <item row="4" column="0">
+                 <layout class="QHBoxLayout" name="horizontalLayout_2">
+                  <item>
+                   <widget class="SliderWidget" name="steps_widget" native="true">
+                    <property name="label_text" stdset="0">
+                     <string>Steps</string>
+                    </property>
+                    <property name="slider_callback" stdset="0">
+                     <string notr="true">handle_value_change</string>
+                    </property>
+                    <property name="current_value" stdset="0">
+                     <number>0</number>
+                    </property>
+                    <property name="slider_maximum" stdset="0">
+                     <number>200</number>
+                    </property>
+                    <property name="spinbox_maximum" stdset="0">
+                     <double>200.000000000000000</double>
+                    </property>
+                    <property name="display_as_float" stdset="0">
+                     <bool>false</bool>
+                    </property>
+                    <property name="spinbox_single_step" stdset="0">
+                     <number>1</number>
+                    </property>
+                    <property name="spinbox_page_step" stdset="0">
+                     <number>1</number>
+                    </property>
+                    <property name="spinbox_minimum" stdset="0">
+                     <number>1</number>
+                    </property>
+                    <property name="slider_minimum" stdset="0">
+                     <number>1</number>
+                    </property>
+                    <property name="settings_property" stdset="0">
+                     <string notr="true">generator.steps</string>
+                    </property>
+                   </widget>
+                  </item>
+                  <item>
+                   <widget class="SliderWidget" name="scale_widget" native="true">
+                    <property name="label_text" stdset="0">
+                     <string>Scale</string>
+                    </property>
+                    <property name="current_value" stdset="0">
+                     <number>0</number>
+                    </property>
+                    <property name="slider_maximum" stdset="0">
+                     <number>10000</number>
+                    </property>
+                    <property name="spinbox_maximum" stdset="0">
+                     <double>100.000000000000000</double>
+                    </property>
+                    <property name="display_as_float" stdset="0">
+                     <bool>true</bool>
+                    </property>
+                    <property name="spinbox_single_step" stdset="0">
+                     <double>0.010000000000000</double>
+                    </property>
+                    <property name="spinbox_page_step" stdset="0">
+                     <double>0.010000000000000</double>
+                    </property>
+                    <property name="slider_callback" stdset="0">
+                     <string notr="true">handle_value_change</string>
+                    </property>
+                    <property name="settings_property" stdset="0">
+                     <string notr="true">generator.scale</string>
+                    </property>
+                   </widget>
+                  </item>
+                 </layout>
+                </item>
+                <item row="5" column="0">
+                 <layout class="QHBoxLayout" name="horizontalLayout_4">
+                  <item>
+                   <widget class="SliderWidget" name="samples_widget" native="true">
+                    <property name="label_text" stdset="0">
+                     <string>Samples</string>
+                    </property>
+                    <property name="slider_callback" stdset="0">
+                     <string notr="true">handle_value_change</string>
+                    </property>
+                    <property name="current_value" stdset="0">
+                     <number>0</number>
+                    </property>
+                    <property name="slider_maximum" stdset="0">
+                     <number>500</number>
+                    </property>
+                    <property name="spinbox_maximum" stdset="0">
+                     <double>500.000000000000000</double>
+                    </property>
+                    <property name="display_as_float" stdset="0">
+                     <bool>false</bool>
+                    </property>
+                    <property name="spinbox_single_step" stdset="0">
+                     <number>1</number>
+                    </property>
+                    <property name="spinbox_page_step" stdset="0">
+                     <number>1</number>
+                    </property>
+                    <property name="spinbox_minimum" stdset="0">
+                     <number>1</number>
+                    </property>
+                    <property name="slider_minimum" stdset="0">
+                     <number>1</number>
+                    </property>
+                    <property name="settings_property" stdset="0">
+                     <string>generator.n_samples</string>
+                    </property>
+                   </widget>
+                  </item>
+                  <item>
+                   <widget class="SliderWidget" name="clip_skip_slider_widget" native="true">
+                    <property name="label_text" stdset="0">
+                     <string>Clip Skip</string>
+                    </property>
+                    <property name="current_value" stdset="0">
+                     <number>0</number>
+                    </property>
+                    <property name="slider_maximum" stdset="0">
+                     <number>11</number>
+                    </property>
+                    <property name="spinbox_maximum" stdset="0">
+                     <double>12.000000000000000</double>
+                    </property>
+                    <property name="display_as_float" stdset="0">
+                     <bool>false</bool>
+                    </property>
+                    <property name="spinbox_single_step" stdset="0">
+                     <number>1</number>
+                    </property>
+                    <property name="spinbox_page_step" stdset="0">
+                     <number>1</number>
+                    </property>
+                    <property name="spinbox_minimum" stdset="0">
+                     <number>0</number>
+                    </property>
+                    <property name="slider_minimum" stdset="0">
+                     <number>0</number>
+                    </property>
+                    <property name="slider_callback" stdset="0">
+                     <string notr="true">handle_value_change</string>
+                    </property>
+                    <property name="settings_property" stdset="0">
+                     <string notr="true">generator.clip_skip</string>
+                    </property>
+                   </widget>
+                  </item>
+                 </layout>
+                </item>
+                <item row="6" column="0">
+                 <layout class="QHBoxLayout" name="horizontalLayout_7">
+                  <item>
+                   <widget class="SliderWidget" name="ddim_eta_slider_widget" native="true">
+                    <property name="label_text" stdset="0">
+                     <string>DDIM ETA</string>
+                    </property>
+                    <property name="slider_callback" stdset="0">
+                     <string notr="true">handle_value_change</string>
+                    </property>
+                    <property name="current_value" stdset="0">
+                     <number>1</number>
+                    </property>
+                    <property name="slider_maximum" stdset="0">
+                     <number>10</number>
+                    </property>
+                    <property name="spinbox_maximum" stdset="0">
+                     <number>10</number>
+                    </property>
+                    <property name="display_as_float" stdset="0">
+                     <bool>false</bool>
+                    </property>
+                    <property name="spinbox_single_step" stdset="0">
+                     <number>1</number>
+                    </property>
+                    <property name="spinbox_page_step" stdset="0">
+                     <number>1</number>
+                    </property>
+                    <property name="spinbox_minimum" stdset="0">
+                     <number>1</number>
+                    </property>
+                    <property name="slider_minimum" stdset="0">
+                     <number>1</number>
+                    </property>
+                    <property name="settings_property" stdset="0">
+                     <string notr="true">generator.ddim_eta</string>
+                    </property>
+                   </widget>
+                  </item>
+                  <item>
+                   <widget class="SliderWidget" name="frames_slider_widget" native="true">
+                    <property name="label_text" stdset="0">
+                     <string>Frames</string>
+                    </property>
+                    <property name="slider_callback" stdset="0">
+                     <string notr="true">handle_value_change</string>
+                    </property>
+                    <property name="current_value" stdset="0">
+                     <number>0</number>
+                    </property>
+                    <property name="slider_maximum" stdset="0">
+                     <number>200</number>
+                    </property>
+                    <property name="spinbox_maximum" stdset="0">
+                     <double>200.000000000000000</double>
+                    </property>
+                    <property name="display_as_float" stdset="0">
+                     <bool>false</bool>
+                    </property>
+                    <property name="spinbox_single_step" stdset="0">
+                     <number>1</number>
+                    </property>
+                    <property name="spinbox_page_step" stdset="0">
+                     <number>1</number>
+                    </property>
+                    <property name="spinbox_minimum" stdset="0">
+                     <number>1</number>
+                    </property>
+                    <property name="slider_minimum" stdset="0">
+                     <number>1</number>
+                    </property>
+                    <property name="settings_property" stdset="0">
+                     <string notr="true">generator.n_samples</string>
+                    </property>
+                   </widget>
+                  </item>
+                 </layout>
+                </item>
+                <item row="3" column="0">
+                 <layout class="QHBoxLayout" name="horizontalLayout">
+                  <item>
+                   <widget class="SeedWidget" name="seed_widget" native="true">
+                    <property name="generator_section" stdset="0">
+                     <string/>
+                    </property>
+                    <property name="generator_name" stdset="0">
+                     <string/>
+                    </property>
+                   </widget>
+                  </item>
+                  <item>
+                   <widget class="LatentsSeedWidget" name="seed_widget_latents" native="true">
+                    <property name="generator_section" stdset="0">
+                     <string/>
+                    </property>
+                    <property name="generator_name" stdset="0">
+                     <string/>
+                    </property>
+                   </widget>
+                  </item>
+                 </layout>
+                </item>
+                <item row="1" column="0">
+                 <layout class="QVBoxLayout" name="verticalLayout_3">
+                  <item>
+                   <widget class="InputImageSettingsWidget" name="input_image_widget" native="true">
+                    <property name="minimumSize">
+                     <size>
+                      <width>0</width>
+                      <height>0</height>
+                     </size>
+                    </property>
+                    <property name="acceptDrops">
+                     <bool>false</bool>
+                    </property>
+                    <property name="generator_section" stdset="0">
+                     <string/>
+                    </property>
+                    <property name="generator_name" stdset="0">
+                     <string/>
+                    </property>
+                    <property name="checkbox_label" stdset="0">
+                     <string>Use Input Image</string>
+                    </property>
+                   </widget>
+                  </item>
+                  <item>
+                   <widget class="ControlNetSettingsWidget" name="controlnet_settings" native="true">
+                    <property name="minimumSize">
+                     <size>
+                      <width>0</width>
+                      <height>0</height>
+                     </size>
+                    </property>
+                    <property name="acceptDrops">
+                     <bool>false</bool>
+                    </property>
+                    <property name="generator_section" stdset="0">
+                     <string/>
+                    </property>
+                    <property name="generator_name" stdset="0">
+                     <string/>
+                    </property>
+                    <property name="checkbox_label" stdset="0">
+                     <string>Controlnet</string>
+                    </property>
+                   </widget>
+                  </item>
+                 </layout>
+                </item>
+               </layout>
+              </widget>
+             </widget>
             </widget>
            </item>
           </layout>
@@ -872,7 +867,8 @@
   </customwidget>
  </customwidgets>
  <resources>
-  <include location="../../../resources.qrc"/>
+  <include location="../../../resources_light.qrc"/>
+  <include location="../../../resources_dark.qrc"/>
  </resources>
  <connections>
   <connection>
@@ -914,7 +910,7 @@
    <slot>toggle_prompt_builder_checkbox(bool)</slot>
    <hints>
     <hint type="sourcelabel">
-     <x>451</x>
+     <x>365</x>
      <y>55</y>
     </hint>
     <hint type="destinationlabel">
@@ -930,8 +926,8 @@
    <slot>handle_model_changed(QString)</slot>
    <hints>
     <hint type="sourcelabel">
-     <x>137</x>
-     <y>570</y>
+     <x>139</x>
+     <y>766</y>
     </hint>
     <hint type="destinationlabel">
      <x>93</x>
@@ -946,8 +942,8 @@
    <slot>handle_scheduler_changed(QString)</slot>
    <hints>
     <hint type="sourcelabel">
-     <x>467</x>
-     <y>570</y>
+     <x>481</x>
+     <y>766</y>
     </hint>
     <hint type="destinationlabel">
      <x>54</x>
@@ -962,8 +958,8 @@
    <slot>toggle_variation(bool)</slot>
    <hints>
     <hint type="sourcelabel">
-     <x>65</x>
-     <y>630</y>
+     <x>66</x>
+     <y>874</y>
     </hint>
     <hint type="destinationlabel">
      <x>18</x>
@@ -978,8 +974,8 @@
    <slot>action_clicked_button_save_prompts()</slot>
    <hints>
     <hint type="sourcelabel">
-     <x>425</x>
-     <y>507</y>
+     <x>481</x>
+     <y>56</y>
     </hint>
     <hint type="destinationlabel">
      <x>662</x>
@@ -1010,8 +1006,8 @@
    <slot>handle_negative_prompt_changed()</slot>
    <hints>
     <hint type="sourcelabel">
-     <x>265</x>
-     <y>397</y>
+     <x>277</x>
+     <y>798</y>
     </hint>
     <hint type="destinationlabel">
      <x>204</x>
@@ -1026,8 +1022,8 @@
    <slot>action_clicked_button_save_prompts()</slot>
    <hints>
     <hint type="sourcelabel">
-     <x>226</x>
-     <y>554</y>
+     <x>237</x>
+     <y>826</y>
     </hint>
     <hint type="destinationlabel">
      <x>-2</x>
@@ -1042,8 +1038,8 @@
    <slot>handle_model_changed(QString)</slot>
    <hints>
     <hint type="sourcelabel">
-     <x>100</x>
-     <y>598</y>
+     <x>112</x>
+     <y>874</y>
     </hint>
     <hint type="destinationlabel">
      <x>435</x>
@@ -1064,6 +1060,38 @@
     <hint type="destinationlabel">
      <x>370</x>
      <y>-13</y>
+    </hint>
+   </hints>
+  </connection>
+  <connection>
+   <sender>generate_button</sender>
+   <signal>clicked()</signal>
+   <receiver>generator_form</receiver>
+   <slot>handle_generate_button_clicked()</slot>
+   <hints>
+    <hint type="sourcelabel">
+     <x>36</x>
+     <y>899</y>
+    </hint>
+    <hint type="destinationlabel">
+     <x>-2</x>
+     <y>902</y>
+    </hint>
+   </hints>
+  </connection>
+  <connection>
+   <sender>interrupt_button</sender>
+   <signal>clicked()</signal>
+   <receiver>generator_form</receiver>
+   <slot>handle_interrupt_button_clicked()</slot>
+   <hints>
+    <hint type="sourcelabel">
+     <x>448</x>
+     <y>906</y>
+    </hint>
+    <hint type="destinationlabel">
+     <x>-2</x>
+     <y>778</y>
     </hint>
    </hints>
   </connection>
