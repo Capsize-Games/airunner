@@ -5,6 +5,7 @@ from airunner.utils import get_session, save_session
 from airunner.widgets.base_widget import BaseWidget
 from airunner.widgets.model_manager.model_widget import ModelWidget
 from airunner.widgets.model_manager.templates.default_ui import Ui_default_model_widget
+from PyQt6 import QtWidgets
 
 
 session = get_session()
@@ -28,7 +29,11 @@ class DefaultModelWidget(BaseWidget):
             self.ui.toggle_all.setCheckState(QtCore.Qt.CheckState.Unchecked)
         self.ui.toggle_all.blockSignals(False)
 
+    spacer = None
+
     def show_items_in_scrollarea(self, search=None):
+        if self.spacer:
+            self.ui.scrollAreaWidgetContents.layout().removeItem(self.spacer)
         for child in self.ui.scrollAreaWidgetContents.children():
             if isinstance(child, ModelWidget):
                 child.deleteLater()
@@ -58,6 +63,9 @@ class DefaultModelWidget(BaseWidget):
             model_widget.ui.name.setChecked(model.enabled)
             self.ui.scrollAreaWidgetContents.layout().addWidget(model_widget)
             self.model_widgets.append(model_widget)
+        if not self.spacer:
+            self.spacer = QtWidgets.QSpacerItem(20, 40, QtWidgets.QSizePolicy.Policy.Minimum, QtWidgets.QSizePolicy.Policy.Expanding)
+        self.ui.scrollAreaWidgetContents.layout().addItem(self.spacer)
 
     def mode_type_changed(self, val):
         print("mode_type_changed", val)
