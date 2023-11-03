@@ -21,7 +21,6 @@ from torchvision import transforms
 from airunner.aihandler.auto_pipeline import AutoImport
 from airunner.aihandler.enums import FilterType
 from airunner.aihandler.enums import MessageCode
-from airunner.aihandler.llm import LLM, MessageType
 from airunner.aihandler.logger import Logger as logger
 from airunner.aihandler.mixins.compel_mixin import CompelMixin
 from airunner.aihandler.mixins.embedding_mixin import EmbeddingMixin
@@ -89,6 +88,7 @@ class SDRunner(
     # latents attributes
     _current_latents_seed = None
     _latents = None
+    model_type = None
 
     def controlnet(self):
         if self._controlnet is None \
@@ -1017,7 +1017,8 @@ class SDRunner(
             args["latents"] = self.latents
 
         try:
-            return self.pipe(**args)
+            with torch.inference_mode():
+                return self.pipe(**args)
         except AssertionError as e:
             self.log_error("unknown Assertion error", e)
             return None
@@ -1300,6 +1301,8 @@ class SDRunner(
         return data
 
     def process_data(self, data: dict):
+        import traceback
+        logger.info("Runner: process_data called")
         self.requested_data = data
         self.prepare_options(data)
         self.prepare_scheduler()
@@ -1430,38 +1433,24 @@ class SDRunner(
             })
         self.send_message(res, code=MessageCode.PROGRESS)
 
-    _llm = None
-
-    @property
-    def llm(self):
-        if self._llm is None:
-            self._llm = LLM(engine=self)
-        return self._llm
-
-    @llm.setter
-    def llm(self, val):
-        self._llm = val
-
-    def is_llm_request(self, data):
-        return "llm_request" in data
-
     def move_to_cpu(self):
         try:
             self.pipe.to("cpu")
         except ValueError:
             pass
+    
+    def unload(self):
+        self.unload_model()
+        self.unload_tokenizer()
+        self.clear_memory()
+
+    def unload_model(self):
+        self.pipe = None
+    
+    def unload_tokenizer(self):
+        self.tokenizer = None
 
     def generator_sample(self, data: dict):
-        logger.info("generator_sample called")
-
-        if self.is_llm_request(data):
-            self.llm.do_generate(data)
-            return
-        elif self._llm is not None:
-            self.llm.unload_tokenizer()
-            self.llm.unload_model()
-            self.llm = None
-
         self.process_data(data)
 
         if not self.pipe and not self.use_kandinsky:
@@ -1838,8 +1827,8 @@ class SDRunner(
             self.unload_controlnet()
 
     def unload_controlnet(self):
-        logger.info("Unloading controlnet")
         if self.pipe:
+            logger.info("Unloading controlnet")
             self.pipe.controlnet = None
         self.controlnet_loaded = False
 

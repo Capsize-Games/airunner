@@ -3,6 +3,7 @@ import queue
 import time
 from PyQt6 import QtCore
 from PyQt6.QtCore import QThread
+from airunner.aihandler.engine import Engine
 
 from airunner.aihandler.logger import Logger as logger
 from airunner.aihandler.qtvar import BooleanVar
@@ -95,7 +96,7 @@ class OfflineClient(QtCore.QObject):
         # this is to avoid the overhead of creating a new sd_runner
         # every time we start the client
         logger.info("Initialzing SDRunner")
-        self.sd_runner = SDRunner(
+        self.sd_runner = Engine(
             app=self.app,
             message_var=self.message_var,
             message_handler=self.message_handler
