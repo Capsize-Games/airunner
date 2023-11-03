@@ -45,7 +45,7 @@ class Scheduler(Enum):
 
 class Mode(Enum):
     IMAGE = "Image Generation"
-    TEXT = "Language Processing"
+    LANGUAGE_PROCESSOR = "Language Processing"
     MODEL_MANAGER = "Model Manager"
 
 
