@@ -1,11 +1,23 @@
 <RCC>
   <qresource>
+    <file>icons/dark/check-mark-icon.svg</file>
+    <file>icons/dark/eye-look-icon.svg</file>
+    <file>icons/dark/recycle-bin-line-icon.svg</file>
+    <file>icons/dark/hide-private-hidden-icon.svg</file>
+    <file>icons/dark/red-x-icon.svg</file>
+    <file>icons/dark/dice-game-icon.svg</file>
+    <file>icons/dark/upload-icon.svg</file>
+    <file>icons/dark/close-icon.svg</file>
+    <file>icons/dark/exchange-refresh-icon.svg</file>
+    <file>icons/dark/recycle-sign-icon.svg</file>
+    <file>icons/dark/download-icon.svg</file>
+    <file>icons/dark/link-icon.svg</file>
     <file>icons/dark/object-selected-icon.svg</file>
     <file>icons/dark/clamp-as-indicated-symbol-icon.svg</file>
     <file>icons/dark/sliders-icon.svg</file>
     <file>icons/dark/chat-box-icon.svg</file>
-    <file>icons/dark/add-plus-icon.svg</file>
     <file>icons/dark/adult-sign-icon.svg</file>
+    <file>icons/dark/add-plus-icon.svg</file>
     <file>icons/dark/ai-file-icon.svg</file>
     <file>icons/dark/articles-icon.svg</file>
     <file>icons/dark/artificial-intelligence-ai-chip-icon.svg</file>

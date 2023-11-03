@@ -51,10 +51,31 @@ QLineEdit {
     border: 1px solid @darkprimary-color;
 }
 
+QCheckBox {
+    color: @light-color;
+}
+
+QCheckBox:indicator {
+    border-radius: 0;
+    border: 1px solid @primary-color;
+}
+
+QPushButton#prompt_builder_settings_button {
+    border: none;
+}
+
+QCheckBox:indicator:checked {
+    background-color: @success-color;
+    border-color: @success-color;
+    image: url(:/icons/light/check-mark-icon.svg);
+    width: 12px;
+    height: 12px;
+}
+
 QPushButton {
     border-radius: none;
     padding: 4px 4px 3px 4px;
-    border: 1px solid @dark-color;
+    border: 1px solid @primary-color;
     color: @primary-color;
 }
 
@@ -106,8 +127,8 @@ QPushButton#image_thumbnail {
     border: 1px solid @line-color-dark;
 }
 
-QSlider {
-    border: 1px solid @primary-color;
+QGroupBox {
+    padding: 10px;
 }
 
 QGroupBox QTabWidget QWidget {
@@ -115,21 +136,26 @@ QGroupBox QTabWidget QWidget {
     border: 1px solid @darkerprimary-color;
 }
 
+QSlider {
+    border: 1px solid @primary-color;
+    padding-right: 0px;
+    background-color: @darkerprimary-color;
+}
+
 QSlider::handle:horizontal {
     height: 20px;
     width: 25px;
-    border: 1px solid @info-color;
+    border: 1px solid @darkerprimary-color;
     border-radius: 0px;
-    background-color: rgba(100, 100, 100, 0.15)
+    background-color: @darkerprimary-color;
 }
 QSlider::handle:horizontal:hover {
-    background-color: rgba(255, 255, 255, 0.25)
+    background-color: @primary-color;
 }
 QSlider::groove:horizontal {
     height: 25px;
-    background-color: @darkerprimary-color;
+    background-color: transparent;
     border: transparent;
-    border-right: 0px;
     border-radius: 0px;
 }
 QLabel#slider_label {
@@ -138,11 +164,9 @@ QLabel#slider_label {
     font-weight: bold;
 }
 QDoubleSpinBox {
-	background-color: @dark-color;
+    background-color: @darkerprimary-color;
     border: 1px solid @primary-color;
-	border-left: none;
-	border-radius: 0px;
-	font-size: 8pt;
+    border-left: none;
 }
 
 GeneratorTabWidget#generator_widget QTabWidget::pane {
@@ -374,5 +398,10 @@ QScrollBar::left-arrow:horizontal, QScrollBar::right-arrow:horizontal {
     color: @primary-color;
 }
 
+#layer_widget_button_container QPushButton {
+    border: none;
+}
 
-
+#layer_frame #line {
+    border-top: 1px solid @primary-color;
+}
