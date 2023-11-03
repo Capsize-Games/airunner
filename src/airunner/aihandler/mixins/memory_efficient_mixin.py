@@ -1,10 +1,32 @@
+import functools
 import os
 import torch
 from airunner.aihandler.settings import LOG_LEVEL
 from airunner.aihandler.logger import Logger as logger
 import logging
+from dataclasses import dataclass
 logging.disable(LOG_LEVEL)
 logger.set_level(logger.DEBUG)
+
+
+
+@dataclass
+class UNet2DConditionOutput:
+    sample: torch.FloatTensor
+
+
+class TracedUNet(torch.nn.Module):
+    def __init__(self, pipe):
+        super().__init__()
+        self.config = pipe.unet.config
+        self.in_channels = pipe.unet.in_channels
+        self.device = pipe.unet.device
+
+    def forward(self, latent_model_input, t, encoder_hidden_states, **kwargs):
+        unet_traced = torch.jit.load("unet_traced.pt")
+        sample = unet_traced(latent_model_input, t, encoder_hidden_states)[0]
+        return UNet2DConditionOutput(sample=sample)
+            
 
 
 class MemoryEfficientMixin:
@@ -140,13 +162,44 @@ class MemoryEfficientMixin:
         self.pipe(prompt=self.prompt)
         # self.save_unet(file_path, file_name)
         self.torch_compile_applied = True
+    
+    def apply_torch_trace(self):
+        self.pipe.unet = TracedUNet(self.pipe)
+
+    
+    def save_torch_trace(self):
+        torch.set_grad_enabled(False)
+        unet = self.pipe.unet
+        unet.eval()
+        unet.to(memory_format=torch.channels_last)  # use channels_last memory format
+        unet.forward = functools.partial(unet.forward, return_dict=False)
+
+        def generate_inputs():
+            sample = torch.randn(2, 4, 64, 64).half().cuda()
+            timestep = torch.rand(1).half().cuda() * 999
+            encoder_hidden_states = torch.randn(2, 77, 768).half().cuda()
+            return sample, timestep, encoder_hidden_states
+
+        # warmup
+        for _ in range(3):
+            with torch.inference_mode():
+                inputs = generate_inputs()
+                orig_output = unet(*inputs)
+        
+        # trace
+        print("tracing..")
+        unet_traced = torch.jit.trace(unet, inputs)
+        unet_traced.eval()
+        print("done tracing")
+        unet_traced.save("unet_traced.pt")
 
     def enable_memory_chunking(self):
-        if self.is_txt2vid:
-            self.pipe.unet.enable_forward_chunking(chunk_size=1, dim=1)
+        # if self.is_txt2vid:
+        #     self.pipe.unet.enable_forward_chunking(chunk_size=1, dim=1)
+        return
 
     def move_pipe_to_cuda(self, pipe):
-        if not self.use_enable_sequential_cpu_offload and not self.enable_model_cpu_offload:
+        if not self.use_enable_sequential_cpu_offload and not self.enable_model_cpu_offload and pipe.device != "cuda":
             logger.info("Moving to cuda")
             pipe.to("cuda") if self.cuda_is_available else None
         return pipe
@@ -196,4 +249,5 @@ class MemoryEfficientMixin:
         self.apply_attention_slicing()
         self.apply_tiled_vae()
         self.apply_accelerated_transformers()
-        self.apply_torch_compile()
+        #self.apply_torch_compile()
+        #self.apply_torch_trace()
