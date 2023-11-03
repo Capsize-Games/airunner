@@ -12,7 +12,7 @@ from PyQt6 import QtCore, QtGui, QtWidgets
 class Ui_brush_widget(object):
     def setupUi(self, brush_widget):
         brush_widget.setObjectName("brush_widget")
-        brush_widget.resize(400, 109)
+        brush_widget.resize(400, 364)
         self.gridLayout = QtWidgets.QGridLayout(brush_widget)
         self.gridLayout.setObjectName("gridLayout")
         self.brush_size_slider = SliderWidget(parent=brush_widget)
@@ -54,6 +54,8 @@ class Ui_brush_widget(object):
         self.primary_color_button.setObjectName("primary_color_button")
         self.gridLayout_3.addWidget(self.primary_color_button, 0, 0, 1, 1)
         self.gridLayout.addWidget(self.groupBox_4, 1, 0, 1, 1)
+        spacerItem = QtWidgets.QSpacerItem(20, 40, QtWidgets.QSizePolicy.Policy.Minimum, QtWidgets.QSizePolicy.Policy.Expanding)
+        self.gridLayout.addItem(spacerItem, 2, 0, 1, 1)
 
         self.retranslateUi(brush_widget)
         QtCore.QMetaObject.connectSlotsByName(brush_widget)
