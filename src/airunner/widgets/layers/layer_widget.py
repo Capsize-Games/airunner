@@ -16,11 +16,11 @@ class LayerWidget(BaseWidget):
     _previous_pos = None
 
     def __init__(self, *args, **kwargs):
+        self.layer_container = kwargs.pop("layer_container", None)
         self.layer_data = kwargs.pop("layer_data", None)
         self.layer_index = kwargs.pop("layer_index", None)
         self.layer_data.layer_widget = self
         super().__init__(*args, **kwargs)
-        self.ui.layer_images.hide()
         self.set_thumbnail()
 
         # listen for click on entire widget
@@ -36,13 +36,14 @@ class LayerWidget(BaseWidget):
 
     def mouseMoveEvent(self, event):
         if not self._previous_pos:
-            print("setting previous pos")
             self._previous_pos = self.pos()
         if event.buttons() == Qt.MouseButton.LeftButton:
+            self.layer_container.handle_layer_click(self, self.layer_index, event)
             self.move(self.pos() + event.pos() - self.offset)
 
     def mouseReleaseEvent(self, event):
-        self.move(self._previous_pos)
+        if self._previous_pos:
+            self.move(self._previous_pos)
 
     def action_clicked(self):
         print("select layer")
@@ -53,17 +54,6 @@ class LayerWidget(BaseWidget):
             "layer_data.hidden",
             self.layer_data.hidden
         )
-
-    def action_toggled_button_layer_images(self, val):
-        self.ui.layer_images.setVisible(val)
-        if val:
-            # empty the scrollArea
-            for i in reversed(range(self.ui.layer_images.layout().count())):
-                self.ui.layer_images.layout().itemAt(i).widget().setParent(None)
-            # add the layer images
-            for layer_image in self.layer_data.layer_images:
-                layer_image_widget = LayerImageWidget(layer_image)
-                self.ui.layer_images.layout().addWidget(layer_image_widget)
 
     def set_thumbnail(self):
         if len(self.layer_data.image_data) == 0:
