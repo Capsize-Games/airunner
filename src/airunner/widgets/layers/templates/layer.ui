@@ -7,7 +7,7 @@
     <x>0</x>
     <y>0</y>
     <width>669</width>
-    <height>128</height>
+    <height>54</height>
    </rect>
   </property>
   <property name="sizePolicy">
@@ -33,44 +33,6 @@
   </property>
   <layout class="QGridLayout" name="gridLayout">
    <item row="0" column="0">
-    <widget class="QPushButton" name="pushButton">
-     <property name="sizePolicy">
-      <sizepolicy hsizetype="Preferred" vsizetype="Fixed">
-       <horstretch>0</horstretch>
-       <verstretch>0</verstretch>
-      </sizepolicy>
-     </property>
-     <property name="minimumSize">
-      <size>
-       <width>38</width>
-       <height>38</height>
-      </size>
-     </property>
-     <property name="maximumSize">
-      <size>
-       <width>38</width>
-       <height>38</height>
-      </size>
-     </property>
-     <property name="cursor">
-      <cursorShape>PointingHandCursor</cursorShape>
-     </property>
-     <property name="text">
-      <string/>
-     </property>
-     <property name="icon">
-      <iconset>
-       <normaloff>:/icons/034-folder-light.png</normaloff>:/icons/034-folder-light.png</iconset>
-     </property>
-     <property name="checkable">
-      <bool>true</bool>
-     </property>
-     <property name="flat">
-      <bool>false</bool>
-     </property>
-    </widget>
-   </item>
-   <item row="0" column="1">
     <widget class="QPushButton" name="visible_button">
      <property name="sizePolicy">
       <sizepolicy hsizetype="Preferred" vsizetype="Fixed">
@@ -108,7 +70,7 @@
      </property>
     </widget>
    </item>
-   <item row="0" column="2">
+   <item row="0" column="1">
     <widget class="QFrame" name="frame">
      <property name="sizePolicy">
       <sizepolicy hsizetype="Preferred" vsizetype="Minimum">
@@ -192,17 +154,6 @@
      </layout>
     </widget>
    </item>
-   <item row="1" column="2">
-    <widget class="QFrame" name="layer_images">
-     <property name="frameShape">
-      <enum>QFrame::StyledPanel</enum>
-     </property>
-     <property name="frameShadow">
-      <enum>QFrame::Raised</enum>
-     </property>
-     <layout class="QGridLayout" name="gridLayout_2"/>
-    </widget>
-   </item>
   </layout>
  </widget>
  <resources>
@@ -222,23 +173,7 @@
     </hint>
     <hint type="destinationlabel">
      <x>33</x>
-     <y>-13</y>
-    </hint>
-   </hints>
-  </connection>
-  <connection>
-   <sender>pushButton</sender>
-   <signal>toggled(bool)</signal>
-   <receiver>LayerWidget</receiver>
-   <slot>action_toggled_button_layer_images(bool)</slot>
-   <hints>
-    <hint type="sourcelabel">
-     <x>12</x>
-     <y>21</y>
-    </hint>
-    <hint type="destinationlabel">
-     <x>467</x>
-     <y>-14</y>
+     <y>0</y>
     </hint>
    </hints>
   </connection>
