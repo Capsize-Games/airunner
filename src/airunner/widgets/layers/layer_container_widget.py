@@ -1,6 +1,7 @@
 from PIL import Image
 from PyQt6.QtCore import QRect, QPoint, Qt
 from PyQt6.QtWidgets import QSpacerItem, QSizePolicy
+from airunner.aihandler.logger import Logger
 
 from airunner.data.models import Layer
 from airunner.models.layerdata import LayerData
@@ -47,6 +48,7 @@ class LayerContainerWidget(BaseWidget):
 
     def action_clicked_button_delete_selected_layers(self):
         self.delete_selected_layers()
+        self.delete_layer()
 
     def add_layers(self):
         for layer in self.layers:
@@ -79,7 +81,7 @@ class LayerContainerWidget(BaseWidget):
         return index
 
     def add_layer_widget(self, layer_data, index):
-        layer_widget = LayerWidget(self, layer_data=layer_data, layer_index=index)
+        layer_widget = LayerWidget(layer_container=self, layer_data=layer_data, layer_index=index-1)
 
         self.ui.scrollAreaWidgetContents.layout().insertWidget(0, layer_widget)
         layer_widget.show()
@@ -112,15 +114,15 @@ class LayerContainerWidget(BaseWidget):
         self.app.canvas.update()
 
     def merge_selected_layers(self):
-        if self.current_layer_index not in self.app.canvas.selected_layers:
-            self.app.canvas.selected_layers[self.current_layer_index] = self.current_layer
+        if self.current_layer_index not in self.selected_layers:
+            self.selected_layers[self.current_layer_index] = self.current_layer
 
         selected_layer = self.current_layer
 
         # get the rect of the new image based on the existing images extremities
         # (left, top, width and height)
         rect = QRect()
-        for layer in self.app.canvas.selected_layers.values():
+        for layer in self.selected_layers.values():
             image = layer.image_data.image
             if image:
                 if (image.width+layer.image_data.position.x()) > rect.width():
@@ -134,7 +136,7 @@ class LayerContainerWidget(BaseWidget):
 
         new_image = Image.new("RGBA", (rect.width(), rect.height()), (0, 0, 0, 0))
 
-        for index, layer in self.app.canvas.selected_layers.items():
+        for index, layer in self.selected_layers.items():
             # get an image object and merge it into the new image if it exists
             image = layer.image_data.image
             if image:
@@ -161,19 +163,25 @@ class LayerContainerWidget(BaseWidget):
             self.layers[self.current_layer_index].image_data.position = QPoint(rect.x(), rect.y())
 
         # reset the selected layers dictionary and refresh the canvas
-        self.app.canvas.selected_layers = {}
+        self.selected_layers = {}
         self.show_layers()
         self.app.canvas.update()
 
+    def get_layers_copy(self):
+        return [layer for layer in self.layers]
+    
+    selected_layers = {}
+
     def delete_selected_layers(self):
+        Logger.info("Deleting selected layers")
         self.app.history.add_event({
             "event": "delete_layer",
-            "layers": self.app.canvas.get_layers_copy(),
+            "layers": self.get_layers_copy(),
             "layer_index": self.current_layer_index
         })
-        for index, layer in self.app.canvas.selected_layers.items():
-            self.app.canvas.delete_layer(index=index, layer=layer)
-        self.app.canvas.selected_layers = {}
+        for index, layer in self.selected_layers.items():
+            self.delete_layer(index=index, layer=layer)
+        self.selected_layers = {}
         self.show_layers()
         self.app.canvas.update()
 
@@ -185,15 +193,19 @@ class LayerContainerWidget(BaseWidget):
                     current_index = layer_index
         if current_index is None:
             current_index = self.current_layer_index
+        Logger.info(f"Deleting layer {current_index}")
         self.app.history.add_event({
             "event": "delete_layer",
-            "layers": self.app.canvas.get_layers_copy(),
+            "layers": self.get_layers_copy(),
             "layer_index": current_index
         })
         if len(self.layers) == 1:
             self.layers = [LayerData(0, "Layer 1")]
         else:
             try:
+                session = get_session()
+                session.delete(self.layers[current_index])
+                session.commit()
                 layer = self.layers.pop(current_index)
                 layer.layer_widget.deleteLater()
             except IndexError:
@@ -219,25 +231,26 @@ class LayerContainerWidget(BaseWidget):
         # check if the control key is pressed
         if event.modifiers() == Qt.KeyboardModifier.ControlModifier:
             if self.app.canvas.container:
-                if index in self.app.canvas.selected_layers:
-                    widget = self.app.canvas.selected_layers[index].layer_widget
+                if index in self.selected_layers:
+                    widget = self.selected_layers[index].layer_widget
                     if widget and index != self.current_layer_index:
                         widget.frame.setStyleSheet(self.app.css("layer_normal_style"))
-                        del self.app.canvas.selected_layers[index]
+                        del self.selected_layers[index]
                 else:
                     item = self.app.canvas.container.layout().itemAt(index)
                     if item and index != self.current_layer_index:
-                        self.app.canvas.selected_layers[index] = layer
-                        self.app.canvas.selected_layers[index].layer_widget.frame.setStyleSheet(
+                        self.selected_layers[index] = layer
+                        self.selected_layers[index].layer_widget.frame.setStyleSheet(
                             self.app.css("secondary_layer_highlight_style")
                         )
         else:
-            for data in self.app.canvas.selected_layers.values():
+            for data in self.selected_layers.values():
                 data.layer_widget.frame.setStyleSheet(self.app.css("layer_normal_style"))
             self.set_current_layer(index)
-            self.app.canvas.selected_layers = {}
+            self.selected_layers = {}
 
     def set_current_layer(self, index):
+        self.current_layer_index = index
         if not hasattr(self, "container"):
             return
         if self.app.canvas.container:
