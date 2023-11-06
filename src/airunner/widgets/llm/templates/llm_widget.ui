@@ -7,7 +7,7 @@
     <x>0</x>
     <y>0</y>
     <width>499</width>
-    <height>843</height>
+    <height>899</height>
    </rect>
   </property>
   <property name="windowTitle">
@@ -29,7 +29,7 @@
    <item row="0" column="0">
     <widget class="QTabWidget" name="tabWidget">
      <property name="currentIndex">
-      <number>0</number>
+      <number>2</number>
      </property>
      <widget class="QWidget" name="tab">
       <attribute name="icon">
@@ -354,98 +354,46 @@
           <bool>true</bool>
          </property>
          <layout class="QGridLayout" name="gridLayout_12">
-          <item row="3" column="0">
-           <layout class="QHBoxLayout" name="horizontalLayout_8">
+          <item row="14" column="0">
+           <widget class="QPushButton" name="pushButton">
+            <property name="text">
+             <string>Reset Settings to Default</string>
+            </property>
+           </widget>
+          </item>
+          <item row="5" column="0">
+           <widget class="QGroupBox" name="groupBox_19">
+            <property name="title">
+             <string>Seed</string>
+            </property>
+            <layout class="QHBoxLayout" name="horizontalLayout_4">
+             <item>
+              <widget class="QLineEdit" name="seed_2"/>
+             </item>
+             <item>
+              <widget class="QCheckBox" name="random_seed">
+               <property name="text">
+                <string>Random seed</string>
+               </property>
+              </widget>
+             </item>
+            </layout>
+           </widget>
+          </item>
+          <item row="8" column="0">
+           <layout class="QHBoxLayout" name="horizontalLayout_6">
             <item>
-             <widget class="QGroupBox" name="groupBox_17">
-              <property name="title">
-               <string>No repeat ngram size</string>
+             <widget class="QCheckBox" name="early_stopping">
+              <property name="text">
+               <string>Early stopping</string>
               </property>
-              <layout class="QGridLayout" name="gridLayout_21">
-               <item row="0" column="0">
-                <widget class="SliderWidget" name="ngram_size_2" native="true">
-                 <property name="slider_minimum" stdset="0">
-                  <number>1</number>
-                 </property>
-                 <property name="slider_maximum" stdset="0">
-                  <number>100</number>
-                 </property>
-                 <property name="spinbox_minimum" stdset="0">
-                  <double>0.000000000000000</double>
-                 </property>
-                 <property name="spinbox_maximum" stdset="0">
-                  <double>1.000000000000000</double>
-                 </property>
-                 <property name="display_as_float" stdset="0">
-                  <bool>true</bool>
-                 </property>
-                 <property name="settings_property" stdset="0">
-                  <string>llm_generator_setting.ngram_size</string>
-                 </property>
-                 <property name="slider_single_step" stdset="0">
-                  <number>1</number>
-                 </property>
-                 <property name="slider_page_step" stdset="0">
-                  <number>10</number>
-                 </property>
-                 <property name="spinbox_single_step" stdset="0">
-                  <double>0.010000000000000</double>
-                 </property>
-                 <property name="spinbox_page_step" stdset="0">
-                  <double>0.100000000000000</double>
-                 </property>
-                 <property name="slider_callback" stdset="0">
-                  <string>handle_value_change</string>
-                 </property>
-                </widget>
-               </item>
-              </layout>
              </widget>
             </item>
             <item>
-             <widget class="QGroupBox" name="groupBox_18">
-              <property name="title">
-               <string>Temperature</string>
+             <widget class="QCheckBox" name="do_sample">
+              <property name="text">
+               <string>Do sample</string>
               </property>
-              <layout class="QGridLayout" name="gridLayout_22">
-               <item row="0" column="0">
-                <widget class="SliderWidget" name="temperature_2" native="true">
-                 <property name="slider_minimum" stdset="0">
-                  <number>1</number>
-                 </property>
-                 <property name="slider_maximum" stdset="0">
-                  <number>200</number>
-                 </property>
-                 <property name="spinbox_minimum" stdset="0">
-                  <double>0.000000000000000</double>
-                 </property>
-                 <property name="spinbox_maximum" stdset="0">
-                  <double>2.000000000000000</double>
-                 </property>
-                 <property name="display_as_float" stdset="0">
-                  <bool>true</bool>
-                 </property>
-                 <property name="settings_property" stdset="0">
-                  <string>llm_generator_setting.temperature</string>
-                 </property>
-                 <property name="slider_single_step" stdset="0">
-                  <number>1</number>
-                 </property>
-                 <property name="slider_page_step" stdset="0">
-                  <number>10</number>
-                 </property>
-                 <property name="spinbox_single_step" stdset="0">
-                  <double>0.010000000000000</double>
-                 </property>
-                 <property name="spinbox_page_step" stdset="0">
-                  <double>0.100000000000000</double>
-                 </property>
-                 <property name="slider_callback" stdset="0">
-                  <string>handle_value_change</string>
-                 </property>
-                </widget>
-               </item>
-              </layout>
              </widget>
             </item>
            </layout>
@@ -546,109 +494,6 @@
             </item>
            </layout>
           </item>
-          <item row="4" column="0">
-           <layout class="QHBoxLayout" name="horizontalLayout_10">
-            <item>
-             <widget class="QGroupBox" name="groupBox_22">
-              <property name="title">
-               <string>Sequences to generate</string>
-              </property>
-              <layout class="QGridLayout" name="gridLayout_26">
-               <item row="0" column="0">
-                <widget class="SliderWidget" name="sequences_2" native="true">
-                 <property name="slider_minimum" stdset="0">
-                  <number>1</number>
-                 </property>
-                 <property name="slider_maximum" stdset="0">
-                  <number>100</number>
-                 </property>
-                 <property name="spinbox_minimum" stdset="0">
-                  <double>0.000000000000000</double>
-                 </property>
-                 <property name="spinbox_maximum" stdset="0">
-                  <double>100.000000000000000</double>
-                 </property>
-                 <property name="display_as_float" stdset="0">
-                  <bool>false</bool>
-                 </property>
-                 <property name="settings_property" stdset="0">
-                  <string>llm_generator_setting.sequences</string>
-                 </property>
-                 <property name="slider_single_step" stdset="0">
-                  <number>1</number>
-                 </property>
-                 <property name="slider_page_step" stdset="0">
-                  <number>10</number>
-                 </property>
-                 <property name="spinbox_single_step" stdset="0">
-                  <double>0.010000000000000</double>
-                 </property>
-                 <property name="spinbox_page_step" stdset="0">
-                  <double>0.100000000000000</double>
-                 </property>
-                 <property name="slider_callback" stdset="0">
-                  <string>handle_value_change</string>
-                 </property>
-                </widget>
-               </item>
-              </layout>
-             </widget>
-            </item>
-            <item>
-             <widget class="QGroupBox" name="groupBox_23">
-              <property name="title">
-               <string>Top k</string>
-              </property>
-              <layout class="QGridLayout" name="gridLayout_27">
-               <item row="0" column="0">
-                <widget class="SliderWidget" name="top_k_2" native="true">
-                 <property name="slider_minimum" stdset="0">
-                  <number>1</number>
-                 </property>
-                 <property name="slider_maximum" stdset="0">
-                  <number>256</number>
-                 </property>
-                 <property name="spinbox_minimum" stdset="0">
-                  <double>0.000000000000000</double>
-                 </property>
-                 <property name="spinbox_maximum" stdset="0">
-                  <double>256.000000000000000</double>
-                 </property>
-                 <property name="display_as_float" stdset="0">
-                  <bool>false</bool>
-                 </property>
-                 <property name="settings_property" stdset="0">
-                  <string>llm_generator_setting.top_k</string>
-                 </property>
-                 <property name="slider_single_step" stdset="0">
-                  <number>1</number>
-                 </property>
-                 <property name="slider_page_step" stdset="0">
-                  <number>10</number>
-                 </property>
-                 <property name="spinbox_single_step" stdset="0">
-                  <number>1</number>
-                 </property>
-                 <property name="spinbox_page_step" stdset="0">
-                  <number>10</number>
-                 </property>
-                 <property name="slider_callback" stdset="0">
-                  <string>handle_value_change</string>
-                 </property>
-                </widget>
-               </item>
-              </layout>
-             </widget>
-            </item>
-           </layout>
-          </item>
-          <item row="8" column="0">
-           <widget class="QCheckBox" name="early_stopping">
-            <property name="text">
-             <string>Early stopping</string>
-            </property>
-           </widget>
-          </item>
           <item row="0" column="0">
            <layout class="QHBoxLayout" name="horizontalLayout_9">
             <item>
@@ -734,6 +579,139 @@
                  </property>
                  <property name="spinbox_page_step" stdset="0">
                   <number>2556</number>
+                 </property>
+                 <property name="slider_callback" stdset="0">
+                  <string>handle_value_change</string>
+                 </property>
+                </widget>
+               </item>
+              </layout>
+             </widget>
+            </item>
+           </layout>
+          </item>
+          <item row="12" column="0">
+           <layout class="QHBoxLayout" name="horizontalLayout_12">
+            <item>
+             <widget class="QRadioButton" name="leave_in_vram">
+              <property name="text">
+               <string>Leave in VRAM</string>
+              </property>
+             </widget>
+            </item>
+            <item>
+             <widget class="QRadioButton" name="move_to_cpu">
+              <property name="text">
+               <string>Move to CPU</string>
+              </property>
+             </widget>
+            </item>
+            <item>
+             <widget class="QRadioButton" name="unload_model">
+              <property name="text">
+               <string>Unload model</string>
+              </property>
+             </widget>
+            </item>
+           </layout>
+          </item>
+          <item row="10" column="0">
+           <widget class="QLabel" name="label_3">
+            <property name="font">
+             <font>
+              <bold>true</bold>
+             </font>
+            </property>
+            <property name="text">
+             <string>Model management</string>
+            </property>
+           </widget>
+          </item>
+          <item row="3" column="0">
+           <layout class="QHBoxLayout" name="horizontalLayout_8">
+            <item>
+             <widget class="QGroupBox" name="groupBox_17">
+              <property name="title">
+               <string>No repeat ngram size</string>
+              </property>
+              <layout class="QGridLayout" name="gridLayout_21">
+               <item row="0" column="0">
+                <widget class="SliderWidget" name="ngram_size_2" native="true">
+                 <property name="slider_minimum" stdset="0">
+                  <number>1</number>
+                 </property>
+                 <property name="slider_maximum" stdset="0">
+                  <number>100</number>
+                 </property>
+                 <property name="spinbox_minimum" stdset="0">
+                  <double>0.000000000000000</double>
+                 </property>
+                 <property name="spinbox_maximum" stdset="0">
+                  <double>1.000000000000000</double>
+                 </property>
+                 <property name="display_as_float" stdset="0">
+                  <bool>true</bool>
+                 </property>
+                 <property name="settings_property" stdset="0">
+                  <string>llm_generator_setting.ngram_size</string>
+                 </property>
+                 <property name="slider_single_step" stdset="0">
+                  <number>1</number>
+                 </property>
+                 <property name="slider_page_step" stdset="0">
+                  <number>10</number>
+                 </property>
+                 <property name="spinbox_single_step" stdset="0">
+                  <double>0.010000000000000</double>
+                 </property>
+                 <property name="spinbox_page_step" stdset="0">
+                  <double>0.100000000000000</double>
+                 </property>
+                 <property name="slider_callback" stdset="0">
+                  <string>handle_value_change</string>
+                 </property>
+                </widget>
+               </item>
+              </layout>
+             </widget>
+            </item>
+            <item>
+             <widget class="QGroupBox" name="groupBox_18">
+              <property name="title">
+               <string>Temperature</string>
+              </property>
+              <layout class="QGridLayout" name="gridLayout_22">
+               <item row="0" column="0">
+                <widget class="SliderWidget" name="temperature_2" native="true">
+                 <property name="slider_minimum" stdset="0">
+                  <number>1</number>
+                 </property>
+                 <property name="slider_maximum" stdset="0">
+                  <number>200</number>
+                 </property>
+                 <property name="spinbox_minimum" stdset="0">
+                  <double>0.000000000000000</double>
+                 </property>
+                 <property name="spinbox_maximum" stdset="0">
+                  <double>2.000000000000000</double>
+                 </property>
+                 <property name="display_as_float" stdset="0">
+                  <bool>true</bool>
+                 </property>
+                 <property name="settings_property" stdset="0">
+                  <string>llm_generator_setting.temperature</string>
+                 </property>
+                 <property name="slider_single_step" stdset="0">
+                  <number>1</number>
+                 </property>
+                 <property name="slider_page_step" stdset="0">
+                  <number>10</number>
+                 </property>
+                 <property name="spinbox_single_step" stdset="0">
+                  <double>0.010000000000000</double>
+                 </property>
+                 <property name="spinbox_page_step" stdset="0">
+                  <double>0.100000000000000</double>
                  </property>
                  <property name="slider_callback" stdset="0">
                   <string>handle_value_change</string>
@@ -841,36 +819,118 @@
             </item>
            </layout>
           </item>
-          <item row="7" column="0">
-           <widget class="QCheckBox" name="do_sample">
-            <property name="text">
-             <string>Do sample</string>
-            </property>
-           </widget>
-          </item>
-          <item row="5" column="0">
-           <widget class="QGroupBox" name="groupBox_19">
-            <property name="title">
-             <string>Seed</string>
-            </property>
-            <layout class="QHBoxLayout" name="horizontalLayout_4">
-             <item>
-              <widget class="QLineEdit" name="seed_2"/>
-             </item>
-             <item>
-              <widget class="QCheckBox" name="random_seed">
-               <property name="text">
-                <string>Random seed</string>
-               </property>
-              </widget>
-             </item>
-            </layout>
-           </widget>
-          </item>
           <item row="9" column="0">
-           <widget class="QPushButton" name="pushButton">
+           <widget class="Line" name="line">
+            <property name="orientation">
+             <enum>Qt::Horizontal</enum>
+            </property>
+           </widget>
+          </item>
+          <item row="4" column="0">
+           <layout class="QHBoxLayout" name="horizontalLayout_10">
+            <item>
+             <widget class="QGroupBox" name="groupBox_22">
+              <property name="title">
+               <string>Sequences to generate</string>
+              </property>
+              <layout class="QGridLayout" name="gridLayout_26">
+               <item row="0" column="0">
+                <widget class="SliderWidget" name="sequences_2" native="true">
+                 <property name="slider_minimum" stdset="0">
+                  <number>1</number>
+                 </property>
+                 <property name="slider_maximum" stdset="0">
+                  <number>100</number>
+                 </property>
+                 <property name="spinbox_minimum" stdset="0">
+                  <double>0.000000000000000</double>
+                 </property>
+                 <property name="spinbox_maximum" stdset="0">
+                  <double>100.000000000000000</double>
+                 </property>
+                 <property name="display_as_float" stdset="0">
+                  <bool>false</bool>
+                 </property>
+                 <property name="settings_property" stdset="0">
+                  <string>llm_generator_setting.sequences</string>
+                 </property>
+                 <property name="slider_single_step" stdset="0">
+                  <number>1</number>
+                 </property>
+                 <property name="slider_page_step" stdset="0">
+                  <number>10</number>
+                 </property>
+                 <property name="spinbox_single_step" stdset="0">
+                  <double>0.010000000000000</double>
+                 </property>
+                 <property name="spinbox_page_step" stdset="0">
+                  <double>0.100000000000000</double>
+                 </property>
+                 <property name="slider_callback" stdset="0">
+                  <string>handle_value_change</string>
+                 </property>
+                </widget>
+               </item>
+              </layout>
+             </widget>
+            </item>
+            <item>
+             <widget class="QGroupBox" name="groupBox_23">
+              <property name="title">
+               <string>Top k</string>
+              </property>
+              <layout class="QGridLayout" name="gridLayout_27">
+               <item row="0" column="0">
+                <widget class="SliderWidget" name="top_k_2" native="true">
+                 <property name="slider_minimum" stdset="0">
+                  <number>1</number>
+                 </property>
+                 <property name="slider_maximum" stdset="0">
+                  <number>256</number>
+                 </property>
+                 <property name="spinbox_minimum" stdset="0">
+                  <double>0.000000000000000</double>
+                 </property>
+                 <property name="spinbox_maximum" stdset="0">
+                  <double>256.000000000000000</double>
+                 </property>
+                 <property name="display_as_float" stdset="0">
+                  <bool>false</bool>
+                 </property>
+                 <property name="settings_property" stdset="0">
+                  <string>llm_generator_setting.top_k</string>
+                 </property>
+                 <property name="slider_single_step" stdset="0">
+                  <number>1</number>
+                 </property>
+                 <property name="slider_page_step" stdset="0">
+                  <number>10</number>
+                 </property>
+                 <property name="spinbox_single_step" stdset="0">
+                  <number>1</number>
+                 </property>
+                 <property name="spinbox_page_step" stdset="0">
+                  <number>10</number>
+                 </property>
+                 <property name="slider_callback" stdset="0">
+                  <string>handle_value_change</string>
+                 </property>
+                </widget>
+               </item>
+              </layout>
+             </widget>
+            </item>
+           </layout>
+          </item>
+          <item row="11" column="0">
+           <widget class="QLabel" name="label_4">
+            <property name="font">
+             <font>
+              <pointsize>9</pointsize>
+             </font>
+            </property>
             <property name="text">
-             <string>Reset Settings to Default</string>
+             <string>How to treat model when not in use</string>
             </property>
            </widget>
           </item>
@@ -1019,8 +1079,6 @@
   <tabstop>override_parameters</tabstop>
   <tabstop>seed_2</tabstop>
   <tabstop>random_seed</tabstop>
-  <tabstop>do_sample</tabstop>
-  <tabstop>early_stopping</tabstop>
   <tabstop>tabWidget</tabstop>
   <tabstop>comboBox</tabstop>
   <tabstop>prompt</tabstop>
@@ -1050,8 +1108,8 @@
    <slot>suffix_text_changed()</slot>
    <hints>
     <hint type="sourcelabel">
-     <x>168</x>
-     <y>715</y>
+     <x>182</x>
+     <y>669</y>
     </hint>
     <hint type="destinationlabel">
      <x>206</x>
@@ -1066,8 +1124,8 @@
    <slot>action_button_clicked_send()</slot>
    <hints>
     <hint type="sourcelabel">
-     <x>166</x>
-     <y>901</y>
+     <x>91</x>
+     <y>886</y>
     </hint>
     <hint type="destinationlabel">
      <x>257</x>
@@ -1082,11 +1140,11 @@
    <slot>action_button_clicked_clear_conversation()</slot>
    <hints>
     <hint type="sourcelabel">
-     <x>639</x>
-     <y>901</y>
+     <x>486</x>
+     <y>886</y>
     </hint>
     <hint type="destinationlabel">
-     <x>510</x>
+     <x>498</x>
      <y>4</y>
     </hint>
    </hints>
@@ -1194,7 +1252,7 @@
    <slot>random_seed_toggled(bool)</slot>
    <hints>
     <hint type="sourcelabel">
-     <x>589</x>
+     <x>463</x>
      <y>709</y>
     </hint>
     <hint type="destinationlabel">
@@ -1210,8 +1268,8 @@
    <slot>do_sample_toggled(bool)</slot>
    <hints>
     <hint type="sourcelabel">
-     <x>105</x>
-     <y>751</y>
+     <x>349</x>
+     <y>752</y>
     </hint>
     <hint type="destinationlabel">
      <x>1</x>
@@ -1226,8 +1284,8 @@
    <slot>early_stopping_toggled(bool)</slot>
    <hints>
     <hint type="sourcelabel">
-     <x>73</x>
-     <y>780</y>
+     <x>88</x>
+     <y>752</y>
     </hint>
     <hint type="destinationlabel">
      <x>1</x>
@@ -1258,8 +1316,8 @@
    <slot>reset_settings_to_default_clicked()</slot>
    <hints>
     <hint type="sourcelabel">
-     <x>262</x>
-     <y>811</y>
+     <x>276</x>
+     <y>867</y>
     </hint>
     <hint type="destinationlabel">
      <x>437</x>
@@ -1306,8 +1364,8 @@
    <slot>prompt_text_changed(QString)</slot>
    <hints>
     <hint type="sourcelabel">
-     <x>181</x>
-     <y>857</y>
+     <x>195</x>
+     <y>842</y>
     </hint>
     <hint type="destinationlabel">
      <x>7</x>
@@ -1322,11 +1380,11 @@
    <slot>message_type_text_changed(QString)</slot>
    <hints>
     <hint type="sourcelabel">
-     <x>628</x>
-     <y>857</y>
+     <x>475</x>
+     <y>842</y>
     </hint>
     <hint type="destinationlabel">
-     <x>510</x>
+     <x>498</x>
      <y>0</y>
     </hint>
    </hints>
@@ -1338,12 +1396,12 @@
    <slot>botname_text_changed(QString)</slot>
    <hints>
     <hint type="sourcelabel">
-     <x>268</x>
-     <y>801</y>
+     <x>283</x>
+     <y>768</y>
     </hint>
     <hint type="destinationlabel">
      <x>80</x>
-     <y>-11</y>
+     <y>0</y>
     </hint>
    </hints>
   </connection>
@@ -1354,12 +1412,12 @@
    <slot>username_text_changed(QString)</slot>
    <hints>
     <hint type="sourcelabel">
-     <x>198</x>
-     <y>882</y>
+     <x>212</x>
+     <y>844</y>
     </hint>
     <hint type="destinationlabel">
      <x>118</x>
-     <y>-19</y>
+     <y>0</y>
     </hint>
    </hints>
   </connection>
@@ -1370,12 +1428,12 @@
    <slot>personality_type_changed(QString)</slot>
    <hints>
     <hint type="sourcelabel">
-     <x>599</x>
-     <y>804</y>
+     <x>474</x>
+     <y>768</y>
     </hint>
     <hint type="destinationlabel">
      <x>412</x>
-     <y>-11</y>
+     <y>0</y>
     </hint>
    </hints>
   </connection>
@@ -1386,12 +1444,12 @@
    <slot>action_button_clicked_generate_characters()</slot>
    <hints>
     <hint type="sourcelabel">
-     <x>358</x>
-     <y>920</y>
+     <x>360</x>
+     <y>887</y>
     </hint>
     <hint type="destinationlabel">
      <x>477</x>
-     <y>-17</y>
+     <y>0</y>
     </hint>
    </hints>
   </connection>
@@ -1406,8 +1464,56 @@
      <y>258</y>
     </hint>
     <hint type="destinationlabel">
-     <x>-4</x>
+     <x>0</x>
      <y>324</y>
+    </hint>
+   </hints>
+  </connection>
+  <connection>
+   <sender>leave_in_vram</sender>
+   <signal>toggled(bool)</signal>
+   <receiver>llm_widget</receiver>
+   <slot>toggle_leave_model_in_vram(bool)</slot>
+   <hints>
+    <hint type="sourcelabel">
+     <x>105</x>
+     <y>825</y>
+    </hint>
+    <hint type="destinationlabel">
+     <x>-1</x>
+     <y>716</y>
+    </hint>
+   </hints>
+  </connection>
+  <connection>
+   <sender>move_to_cpu</sender>
+   <signal>toggled(bool)</signal>
+   <receiver>llm_widget</receiver>
+   <slot>toggle_move_model_to_cpu(bool)</slot>
+   <hints>
+    <hint type="sourcelabel">
+     <x>212</x>
+     <y>827</y>
+    </hint>
+    <hint type="destinationlabel">
+     <x>-1</x>
+     <y>704</y>
+    </hint>
+   </hints>
+  </connection>
+  <connection>
+   <sender>unload_model</sender>
+   <signal>toggled(bool)</signal>
+   <receiver>llm_widget</receiver>
+   <slot>toggle_unload_model(bool)</slot>
+   <hints>
+    <hint type="sourcelabel">
+     <x>397</x>
+     <y>831</y>
+    </hint>
+    <hint type="destinationlabel">
+     <x>-2</x>
+     <y>685</y>
     </hint>
    </hints>
   </connection>
@@ -1438,5 +1544,8 @@
   <slot>use_gpu_toggled(bool)</slot>
   <slot>override_parameters_toggled(bool)</slot>
   <slot>toggled_2bit(bool)</slot>
+  <slot>toggle_leave_model_in_vram(bool)</slot>
+  <slot>toggle_unload_model(bool)</slot>
+  <slot>toggle_move_model_to_cpu(bool)</slot>
  </slots>
 </ui>
