@@ -258,7 +258,7 @@
                <x>0</x>
                <y>0</y>
                <width>453</width>
-               <height>814</height>
+               <height>809</height>
               </rect>
              </property>
              <layout class="QGridLayout" name="gridLayout">
@@ -1441,7 +1441,7 @@
                    </property>
                    <property name="icon">
                     <iconset theme="document-new">
-                     <normaloff>.</normaloff>.</iconset>
+                     <normaloff>../../../../../../../../../../../../../../.designer/backup</normaloff>../../../../../../../../../../../../../../.designer/backup</iconset>
                    </property>
                    <property name="iconSize">
                     <size>
@@ -1479,7 +1479,7 @@
                    </property>
                    <property name="icon">
                     <iconset theme="document-open">
-                     <normaloff>../../src/icons/034-folder.png</normaloff>../../src/icons/034-folder.png</iconset>
+                     <normaloff>../../../../../../../../../../../../../../src/icons/034-folder.png</normaloff>../../../../../../../../../../../../../../src/icons/034-folder.png</iconset>
                    </property>
                    <property name="iconSize">
                     <size>
@@ -1517,7 +1517,7 @@
                    </property>
                    <property name="icon">
                     <iconset theme="document-save">
-                     <normaloff>../../src/icons/033-diskette.png</normaloff>../../src/icons/033-diskette.png</iconset>
+                     <normaloff>../../../../../../../../../../../../../../src/icons/033-diskette.png</normaloff>../../../../../../../../../../../../../../src/icons/033-diskette.png</iconset>
                    </property>
                    <property name="iconSize">
                     <size>
@@ -1555,7 +1555,7 @@
                    </property>
                    <property name="icon">
                     <iconset theme="document-send">
-                     <normaloff>../../src/icons/export.png</normaloff>../../src/icons/export.png</iconset>
+                     <normaloff>../../../../../../../../../../../../../../src/icons/export.png</normaloff>../../../../../../../../../../../../../../src/icons/export.png</iconset>
                    </property>
                    <property name="iconSize">
                     <size>
@@ -1609,7 +1609,7 @@
                    </property>
                    <property name="icon">
                     <iconset theme="edit-undo">
-                     <normaloff>.</normaloff>.</iconset>
+                     <normaloff>../../../../../../../../../../../../../../.designer/backup</normaloff>../../../../../../../../../../../../../../.designer/backup</iconset>
                    </property>
                    <property name="iconSize">
                     <size>
@@ -1656,7 +1656,7 @@
                    </property>
                    <property name="icon">
                     <iconset theme="edit-redo">
-                     <normaloff>../../src/icons/008-redo.png</normaloff>../../src/icons/008-redo.png</iconset>
+                     <normaloff>../../../../../../../../../../../../../../src/icons/008-redo.png</normaloff>../../../../../../../../../../../../../../src/icons/008-redo.png</iconset>
                    </property>
                    <property name="iconSize">
                     <size>
@@ -1704,7 +1704,6 @@
     </property>
     <addaction name="actionNew"/>
     <addaction name="actionLoad"/>
-    <addaction name="actionSave"/>
     <addaction name="separator"/>
     <addaction name="actionQuit"/>
    </widget>
@@ -1858,7 +1857,7 @@
   <action name="actionUndo">
    <property name="icon">
     <iconset>
-     <normaloff>../src/icons/007-undo.png</normaloff>../src/icons/007-undo.png</iconset>
+     <normaloff>../../../../../../../../../../../../../../.designer/src/icons/007-undo.png</normaloff>../../../../../../../../../../../../../../.designer/src/icons/007-undo.png</iconset>
    </property>
    <property name="text">
     <string>Undo</string>
@@ -1876,7 +1875,7 @@
   <action name="actionRedo">
    <property name="icon">
     <iconset>
-     <normaloff>../src/icons/008-redo.png</normaloff>../src/icons/008-redo.png</iconset>
+     <normaloff>../../../../../../../../../../../../../../.designer/src/icons/008-redo.png</normaloff>../../../../../../../../../../../../../../.designer/src/icons/008-redo.png</iconset>
    </property>
    <property name="text">
     <string>Redo</string>
@@ -2222,7 +2221,7 @@
   <action name="actionUndo_2">
    <property name="icon">
     <iconset>
-     <normaloff>../src/icons/007-undo.png</normaloff>../src/icons/007-undo.png</iconset>
+     <normaloff>../../../../../../../../../../../../../../.designer/src/icons/007-undo.png</normaloff>../../../../../../../../../../../../../../.designer/src/icons/007-undo.png</iconset>
    </property>
    <property name="text">
     <string>Undo</string>
@@ -2234,7 +2233,7 @@
   <action name="actionRedo_2">
    <property name="icon">
     <iconset>
-     <normaloff>../src/icons/008-redo.png</normaloff>../src/icons/008-redo.png</iconset>
+     <normaloff>../../../../../../../../../../../../../../.designer/src/icons/008-redo.png</normaloff>../../../../../../../../../../../../../../.designer/src/icons/008-redo.png</iconset>
    </property>
    <property name="text">
     <string>Redo</string>
