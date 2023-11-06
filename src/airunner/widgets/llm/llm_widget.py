@@ -53,10 +53,12 @@ class LLMWidget(BaseWidget):
         self.ui.suffix.blockSignals(False)
 
         self.app.message_var.my_signal.connect(self.message_handler)
-
         self.ui.prompt.returnPressed.connect(self.action_button_clicked_send)
-
         self.ui.prompt.textChanged.connect(self.prompt_text_changed)
+        leave_in_vram = not self.settings_manager.move_unused_model_to_cpu and not self.settings_manager.unload_unused_model
+        self.ui.leave_in_vram.setChecked(leave_in_vram)
+        self.ui.move_to_cpu.setChecked(self.settings_manager.move_unused_model_to_cpu)
+        self.ui.unload_model.setChecked(self.settings_manager.unload_unused_model)
 
     @pyqtSlot(dict)
     def message_handler(self, response: dict):
@@ -403,3 +405,19 @@ class LLMWidget(BaseWidget):
     def override_parameters_toggled(self, val):
         self.generator.override_parameters = val
         save_session()
+    
+    def toggle_leave_model_in_vram(self, val):
+        print(val)
+        if val:
+            self.settings_manager.set_value("unload_unused_model", False)
+            self.settings_manager.set_value("move_unused_model_to_cpu", False)
+    
+    def toggle_move_model_to_cpu(self, val):
+        self.settings_manager.set_value("move_unused_model_to_cpu", val)
+        if val:
+            self.settings_manager.set_value("unload_unused_model", False)
+    
+    def toggle_unload_model(self, val):
+        self.settings_manager.set_value("unload_unused_model", val)
+        if val:
+            self.settings_manager.set_value("move_unused_model_to_cpu", False)
