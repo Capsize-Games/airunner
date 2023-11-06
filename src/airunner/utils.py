@@ -3,6 +3,7 @@ import torch
 from PIL import Image
 from PyQt6.QtGui import QPixmap, QImage
 from PyQt6.QtWidgets import QFileDialog, QApplication, QMainWindow
+from airunner.aihandler.logger import Logger
 
 from airunner.settings import SQLITE_DB_PATH
 
@@ -397,6 +398,7 @@ def save_session(session=None):
         session.commit()
         return True
     except Exception as e:
+        Logger.error("Failed to save session")
         session.rollback()
         return False
 
