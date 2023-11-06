@@ -554,9 +554,7 @@ class MainWindow(
         self.set_stylesheet()
 
     def set_icons(self, icon_name, widget_name, theme):
-        print(icon_name, widget_name, theme)
         icon = QtGui.QIcon()
-        print(f":/icons/{theme}/{icon_name}.svg")
         icon.addPixmap(
             QtGui.QPixmap(f":/icons/{theme}/{icon_name}.svg"), 
             QtGui.QIcon.Mode.Normal, 
