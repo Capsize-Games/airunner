@@ -8,7 +8,7 @@
     <x>0</x>
     <y>0</y>
     <width>1136</width>
-    <height>992</height>
+    <height>1036</height>
    </rect>
   </property>
   <property name="minimumSize">
@@ -258,7 +258,7 @@
                <x>0</x>
                <y>0</y>
                <width>465</width>
-               <height>809</height>
+               <height>850</height>
               </rect>
              </property>
              <layout class="QGridLayout" name="gridLayout">
@@ -452,13 +452,13 @@
                <property name="minimumSize">
                 <size>
                  <width>50</width>
-                 <height>50</height>
+                 <height>45</height>
                 </size>
                </property>
                <property name="maximumSize">
                 <size>
                  <width>50</width>
-                 <height>50</height>
+                 <height>45</height>
                 </size>
                </property>
                <property name="cursor">
@@ -499,13 +499,13 @@
                <property name="minimumSize">
                 <size>
                  <width>50</width>
-                 <height>50</height>
+                 <height>45</height>
                 </size>
                </property>
                <property name="maximumSize">
                 <size>
                  <width>50</width>
-                 <height>50</height>
+                 <height>45</height>
                 </size>
                </property>
                <property name="cursor">
@@ -546,13 +546,13 @@
                <property name="minimumSize">
                 <size>
                  <width>50</width>
-                 <height>50</height>
+                 <height>45</height>
                 </size>
                </property>
                <property name="maximumSize">
                 <size>
                  <width>50</width>
-                 <height>50</height>
+                 <height>45</height>
                 </size>
                </property>
                <property name="cursor">
@@ -606,13 +606,13 @@
                <property name="minimumSize">
                 <size>
                  <width>50</width>
-                 <height>50</height>
+                 <height>45</height>
                 </size>
                </property>
                <property name="maximumSize">
                 <size>
                  <width>50</width>
-                 <height>50</height>
+                 <height>45</height>
                 </size>
                </property>
                <property name="cursor">
@@ -653,13 +653,13 @@
                <property name="minimumSize">
                 <size>
                  <width>50</width>
-                 <height>50</height>
+                 <height>45</height>
                 </size>
                </property>
                <property name="maximumSize">
                 <size>
                  <width>50</width>
-                 <height>50</height>
+                 <height>45</height>
                 </size>
                </property>
                <property name="cursor">
@@ -697,13 +697,13 @@
                <property name="minimumSize">
                 <size>
                  <width>50</width>
-                 <height>50</height>
+                 <height>45</height>
                 </size>
                </property>
                <property name="maximumSize">
                 <size>
                  <width>50</width>
-                 <height>50</height>
+                 <height>45</height>
                 </size>
                </property>
                <property name="cursor">
@@ -757,13 +757,13 @@
                <property name="minimumSize">
                 <size>
                  <width>50</width>
-                 <height>50</height>
+                 <height>45</height>
                 </size>
                </property>
                <property name="maximumSize">
                 <size>
                  <width>50</width>
-                 <height>50</height>
+                 <height>45</height>
                 </size>
                </property>
                <property name="cursor">
@@ -3155,7 +3155,7 @@
    <slot>tool_tab_index_changed(int)</slot>
    <hints>
     <hint type="sourcelabel">
-     <x>1070</x>
+     <x>1043</x>
      <y>357</y>
     </hint>
     <hint type="destinationlabel">
@@ -3187,8 +3187,8 @@
    <slot>batches_panel_tab_index_changed(int)</slot>
    <hints>
     <hint type="sourcelabel">
-     <x>1070</x>
-     <y>720</y>
+     <x>1043</x>
+     <y>733</y>
     </hint>
     <hint type="destinationlabel">
      <x>49</x>
@@ -3287,7 +3287,7 @@
      <y>61</y>
     </hint>
     <hint type="destinationlabel">
-     <x>-2</x>
+     <x>0</x>
      <y>16</y>
     </hint>
    </hints>
@@ -3320,7 +3320,7 @@
     </hint>
     <hint type="destinationlabel">
      <x>770</x>
-     <y>-8</y>
+     <y>0</y>
     </hint>
    </hints>
   </connection>
@@ -3336,7 +3336,7 @@
     </hint>
     <hint type="destinationlabel">
      <x>1063</x>
-     <y>-7</y>
+     <y>0</y>
     </hint>
    </hints>
   </connection>
@@ -3352,7 +3352,7 @@
     </hint>
     <hint type="destinationlabel">
      <x>1028</x>
-     <y>-23</y>
+     <y>0</y>
     </hint>
    </hints>
   </connection>
@@ -3368,7 +3368,7 @@
     </hint>
     <hint type="destinationlabel">
      <x>716</x>
-     <y>-19</y>
+     <y>0</y>
     </hint>
    </hints>
   </connection>
@@ -3384,7 +3384,7 @@
     </hint>
     <hint type="destinationlabel">
      <x>1039</x>
-     <y>-16</y>
+     <y>0</y>
     </hint>
    </hints>
   </connection>
@@ -3399,7 +3399,7 @@
      <y>66</y>
     </hint>
     <hint type="destinationlabel">
-     <x>1170</x>
+     <x>1135</x>
      <y>105</y>
     </hint>
    </hints>
@@ -3415,7 +3415,7 @@
      <y>66</y>
     </hint>
     <hint type="destinationlabel">
-     <x>1168</x>
+     <x>1135</x>
      <y>86</y>
     </hint>
    </hints>
@@ -3447,7 +3447,7 @@
      <y>72</y>
     </hint>
     <hint type="destinationlabel">
-     <x>-3</x>
+     <x>0</x>
      <y>297</y>
     </hint>
    </hints>
@@ -3463,7 +3463,7 @@
      <y>72</y>
     </hint>
     <hint type="destinationlabel">
-     <x>-5</x>
+     <x>0</x>
      <y>380</y>
     </hint>
    </hints>
@@ -3479,7 +3479,7 @@
      <y>72</y>
     </hint>
     <hint type="destinationlabel">
-     <x>-3</x>
+     <x>0</x>
      <y>415</y>
     </hint>
    </hints>
@@ -3495,7 +3495,7 @@
      <y>72</y>
     </hint>
     <hint type="destinationlabel">
-     <x>-6</x>
+     <x>0</x>
      <y>482</y>
     </hint>
    </hints>
@@ -3528,7 +3528,7 @@
     </hint>
     <hint type="destinationlabel">
      <x>82</x>
-     <y>-10</y>
+     <y>0</y>
     </hint>
    </hints>
   </connection>
@@ -3543,7 +3543,7 @@
      <y>47</y>
     </hint>
     <hint type="destinationlabel">
-     <x>-1</x>
+     <x>0</x>
      <y>222</y>
     </hint>
    </hints>
@@ -3560,7 +3560,7 @@
     </hint>
     <hint type="destinationlabel">
      <x>754</x>
-     <y>-14</y>
+     <y>0</y>
     </hint>
    </hints>
   </connection>
@@ -3575,7 +3575,7 @@
      <y>72</y>
     </hint>
     <hint type="destinationlabel">
-     <x>-2</x>
+     <x>0</x>
      <y>99</y>
     </hint>
    </hints>
@@ -3591,7 +3591,7 @@
      <y>72</y>
     </hint>
     <hint type="destinationlabel">
-     <x>1170</x>
+     <x>1135</x>
      <y>57</y>
     </hint>
    </hints>
@@ -3607,7 +3607,7 @@
      <y>72</y>
     </hint>
     <hint type="destinationlabel">
-     <x>1174</x>
+     <x>1135</x>
      <y>651</y>
     </hint>
    </hints>
@@ -3619,11 +3619,11 @@
    <slot>action_toggle_nsfw_filter_triggered(bool)</slot>
    <hints>
     <hint type="sourcelabel">
-     <x>1119</x>
-     <y>334</y>
+     <x>1099</x>
+     <y>409</y>
     </hint>
     <hint type="destinationlabel">
-     <x>1137</x>
+     <x>1135</x>
      <y>624</y>
     </hint>
    </hints>
@@ -3635,11 +3635,11 @@
    <slot>action_show_settings()</slot>
    <hints>
     <hint type="sourcelabel">
-     <x>1115</x>
-     <y>390</y>
+     <x>1095</x>
+     <y>480</y>
     </hint>
     <hint type="destinationlabel">
-     <x>1143</x>
+     <x>1135</x>
      <y>582</y>
     </hint>
    </hints>
@@ -3651,12 +3651,60 @@
    <slot>action_toggle_grid(bool)</slot>
    <hints>
     <hint type="sourcelabel">
-     <x>1104</x>
-     <y>252</y>
+     <x>1084</x>
+     <y>297</y>
     </hint>
     <hint type="destinationlabel">
-     <x>1138</x>
+     <x>1135</x>
      <y>683</y>
+    </hint>
+   </hints>
+  </connection>
+  <connection>
+   <sender>toggle_active_grid_area_button</sender>
+   <signal>toggled(bool)</signal>
+   <receiver>MainWindow</receiver>
+   <slot>action_toggle_active_grid_area(bool)</slot>
+   <hints>
+    <hint type="sourcelabel">
+     <x>1104</x>
+     <y>131</y>
+    </hint>
+    <hint type="destinationlabel">
+     <x>1016</x>
+     <y>-12</y>
+    </hint>
+   </hints>
+  </connection>
+  <connection>
+   <sender>toggle_eraser_button</sender>
+   <signal>toggled(bool)</signal>
+   <receiver>MainWindow</receiver>
+   <slot>action_toggle_eraser(bool)</slot>
+   <hints>
+    <hint type="sourcelabel">
+     <x>1100</x>
+     <y>244</y>
+    </hint>
+    <hint type="destinationlabel">
+     <x>-4</x>
+     <y>58</y>
+    </hint>
+   </hints>
+  </connection>
+  <connection>
+   <sender>toggle_brush_button</sender>
+   <signal>toggled(bool)</signal>
+   <receiver>MainWindow</receiver>
+   <slot>action_toggle_brush(bool)</slot>
+   <hints>
+    <hint type="sourcelabel">
+     <x>1082</x>
+     <y>193</y>
+    </hint>
+    <hint type="destinationlabel">
+     <x>-7</x>
+     <y>164</y>
     </hint>
    </hints>
   </connection>
