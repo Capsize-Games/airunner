@@ -1,3 +1,4 @@
+import os
 from PyQt6.QtCore import Qt
 from PyQt6.QtWidgets import QDialog
 from airunner.aihandler.settings_manager import SettingsManager
@@ -16,6 +17,8 @@ class BaseWindow(QDialog):
         self.do_exec = kwargs.get("exec", True)
         self.settings_manager = SettingsManager()
 
+        self.set_stylesheet()
+
         self.ui = self.template_class_()
         self.ui.setupUi(self)
         if self.is_modal:
@@ -27,3 +30,13 @@ class BaseWindow(QDialog):
 
     def initialize_window(self):
         pass
+
+    def set_stylesheet(self):
+        """
+        Sets the stylesheet for the application based on the current theme
+        """
+        theme_name = "dark_theme" if self.settings_manager.dark_mode_enabled else "light_theme"
+        here = os.path.dirname(os.path.realpath(__file__))
+        with open(os.path.join(here, "..", "styles", theme_name, "styles.qss"), "r") as f:
+            stylesheet = f.read()
+        self.setStyleSheet(stylesheet)
