@@ -430,6 +430,12 @@ QRadioButton::indicator:checked {
 #button_menu QPushButton {
 }
 
+QGroupBox {
+    margin-top: 14px;
+    margin-left: 1px;
+    border: 1px solid @darkerprimary-color;
+}
+
 QGroupBox:disabled {
     color: @line-color-light;
 }
@@ -440,6 +446,16 @@ QGroupBox:disabled QRadioButton {
 
 QGroupBox:disabled QRadioButton::indicator {
     border-color: @line-color-light;
+}
+
+QGroupBox::indicator {
+    border: 1px solid @darkerprimary-color;
+}
+
+QGroupBox::indicator:checked {
+    background-color: @primary-color;
+    border-color: @primary-color;
+    image: url(:/icons/light/check-mark-icon.svg);
 }
 
 QWidget:disabled {
@@ -463,4 +479,8 @@ QSlider::handle:disabled {
 QDoubleSpinBox:disabled {
     background-color: @line-color-dark;
     border-color: @dim-color;
+}
+
+QTabWidget {
+    border: 1px solid @darkerprimary-color;
 }
