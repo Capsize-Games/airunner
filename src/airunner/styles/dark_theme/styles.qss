@@ -60,16 +60,16 @@ QCheckBox:indicator {
     border: 1px solid rgba(0, 132, 185, 255);
 }
 
-QPushButton#prompt_builder_settings_button {
-    border: none;
-}
-
 QCheckBox:indicator:checked {
-    background-color: #00A800;
-    border-color: #00A800;
+    background-color: rgba(0, 132, 185, 255);
+    border-color: rgba(0, 132, 185, 255);
     image: url(:/icons/light/check-mark-icon.svg);
     width: 12px;
     height: 12px;
+}
+
+QPushButton#prompt_builder_settings_button {
+    border: none;
 }
 
 QPushButton {
@@ -86,6 +86,10 @@ QPushButton:hover {
 
 QPushButton:checked {
     border: 1px solid rgba(0, 132, 185, 255);
+}
+
+QPushButton#prompt_builder_settings_button {
+    border: none;
 }
 
 QProgressBar {
@@ -404,4 +408,59 @@ QScrollBar::left-arrow:horizontal, QScrollBar::right-arrow:horizontal {
 
 #layer_frame #line {
     border-top: 1px solid rgba(0, 132, 185, 255);
+}
+
+QRadioButton {
+    color: #C8C8C8;
+}
+
+QRadioButton::indicator {
+    border-radius: 0;
+    border: 1px solid rgba(0, 132, 185, 255);
+}
+
+QRadioButton::indicator:checked {
+    background-color: rgba(0, 132, 185, 255);
+    border-color: rgba(0, 132, 185, 255);
+    image: url(:/icons/light/check-mark-icon.svg);
+    width: 12px;
+    height: 12px;
+}
+
+#button_menu QPushButton {
+}
+
+QGroupBox:disabled {
+    color: #333;
+}
+
+QGroupBox:disabled QRadioButton {
+    color: #333;
+}
+
+QGroupBox:disabled QRadioButton::indicator {
+    border-color: #333;
+}
+
+QWidget:disabled {
+    border-color: #222;
+}
+
+QWidget:disabled {
+    border-color: #222;
+}
+
+QSlider:disabled {
+    border-color: @line-dark-color;
+    background-color: #000;
+}
+
+QSlider::handle:disabled {
+    border-color: #666666;
+    background-color: #666666;
+}
+
+QDoubleSpinBox:disabled {
+    background-color: #222;
+    border-color: #666666;
 }
