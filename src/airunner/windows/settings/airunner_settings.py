@@ -40,7 +40,6 @@ class SettingsWindow(BaseWindow):
     # template_name = "airunner_settings"
 
     def initialize_window(self):
-        print("initializing window")
         self.model = QStandardItemModel()
         self.ui.directory.setModel(self.model)
         self.ui.directory.setHeaderHidden(True)
