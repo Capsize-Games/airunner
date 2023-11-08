@@ -9,6 +9,8 @@ class Engine:
     The engine is responsible for processing requests and offloading
     them to the appropriate AI model controller.
     """
+    model_type = None
+
     @property
     def hf_username(self):
         return self.sd.hf_username
@@ -37,9 +39,9 @@ class Engine:
         """
         logger.info("generator_sample called")
         is_llm = self.is_llm_request(data)
-        if is_llm and self.sd.model_type != "llm":
+        if is_llm and self.model_type != "llm":
             logger.info("Switching to LLM model")
-            self.sd.model_type = "llm"
+            self.model_type = "llm"
             do_unload_model = self.settings_manager.unload_unused_model
             do_move_to_cpu = not do_unload_model and self.settings_manager.move_unused_model_to_cpu
             if do_move_to_cpu:
@@ -50,9 +52,9 @@ class Engine:
                 self.sd.unload_tokenizer()
                 self.sd.clear_memory()
             self.llm.move_to_device()
-        elif not is_llm and self.sd.model_type != "art":
+        elif not is_llm and self.model_type != "art":
             logger.info("Switching to art model")
-            self.sd.model_type = "art"
+            self.model_type = "art"
             self.unload_llm()
 
         if is_llm:
@@ -75,10 +77,10 @@ class Engine:
         VRAM to keep the LLM loaded while
         using other models.
         """
-        do_unload_model =self.settings_manager.unload_unused_model
+        do_unload_model = self.settings_manager.unload_unused_model
         do_move_to_cpu = not do_unload_model and self.settings_manager.move_unused_model_to_cpu
         dtype = self.settings_manager.llm_generator_setting.dtype
-        if dtype in ["4bit", "8bit"]:
+        if dtype in ["2bit", "4bit", "8bit"]:
             do_unload_model = True
             do_move_to_cpu = False
 

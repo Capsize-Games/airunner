@@ -56,6 +56,7 @@ setup(
         "auto-gptq==0.4.2",
         "optimum==1.13.2",
         "bitsandbytes==0.41.1",
+        "langchain==0.0.331",
     ],
     dependency_links=[]
 )

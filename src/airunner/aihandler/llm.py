@@ -1,32 +1,33 @@
 import os
 import random
 from enum import Enum
+import re
 
-from airunner.aihandler.conversation_handler import ConversationManager
 from airunner.aihandler.enums import MessageCode
 
 import torch
 
 from PyQt6.QtCore import pyqtSignal, QObject
-from transformers import AutoModelForSeq2SeqLM, AutoTokenizer, BitsAndBytesConfig, AutoModelForCausalLM
+from transformers import AutoModelForSeq2SeqLM, AutoTokenizer, AutoModelForCausalLM
+from optimum.gptq import GPTQQuantizer
+from transformers import BitsAndBytesConfig
+from airunner.aihandler.settings_manager import SettingsManager
+from airunner.chat.models import BaseConversationController
 
-from airunner.aihandler.logger import Logger
+
 from airunner.data.models import LLMGenerator
 from airunner.data.db import session
 from airunner.aihandler.logger import Logger as logger
 
+import random
 
-class MessageType(Enum):
-    INFO = 0
-    WARNING = 1
-    ERROR = 2
-    SUCCESS = 3
-    PROGRESS = 4
+from langchain.chains import ConversationChain
+from langchain.prompts import PromptTemplate
+from langchain.memory import ConversationBufferWindowMemory
+from langchain.llms import HuggingFacePipeline
 
 
-class RequestType(Enum):
-    STANDARD = 0
-    FUNCTION = 1
+import transformers
 
 
 class LLM(QObject):
@@ -46,6 +47,40 @@ class LLM(QObject):
     use_gpu = True
     dtype = ""
     do_push_to_hub = False
+    set_attention_mask = False
+    seed = 42
+    default_properties = {
+        "max_length": 20,
+        "min_length": 0,
+        "num_beams": 1,
+        "temperature": 1.0,
+        "top_k": 1,
+        "top_p": 0.9,
+        "repetition_penalty": 1.0,
+        "length_penalty": 1.0,
+        "no_repeat_ngram_size": 1,
+        "num_return_sequences": 1,
+    }
+    properties: dict = default_properties.copy()
+    _conversation_controller = None
+    
+    @property
+    def conversation_controller(self):
+        if not self._conversation_controller:
+            self._conversation_controller = BaseConversationController()
+        return self._conversation_controller
+
+    @property
+    def do_load_model(self):
+        if self.model is None:
+            return True
+        return False
+    
+    @property
+    def do_load_tokenizer(self):
+        if self.tokenizer is None:
+            return True
+        return False
 
     @property
     def device_map(self):
@@ -61,21 +96,8 @@ class LLM(QObject):
             return False
         return torch.cuda.is_available()
 
-    def __init__(self, *args, **kwargs):
-        self.engine = kwargs.pop("engine", None)
-        super().__init__(*args, **kwargs)
-        self.prompt_generator = ConversationManager(llm=self)
-
     @property
     def model(self):
-        if not self._model:
-            try:
-                self.load_model()
-            except torch.cuda.OutOfMemoryError:
-                print("Out of memory")
-                self.load_model()
-            except Exception as e:
-                print(e)
         return self._model
 
     @model.setter
@@ -84,13 +106,11 @@ class LLM(QObject):
 
     @property
     def tokenizer(self):
-        if not self._tokenizer:
-            try:
-                self.load_tokenizer()
-            except torch.cuda.OutOfMemoryError:
-                print("Out of memory")
-                self.load_tokenizer()
         return self._tokenizer
+    
+    @tokenizer.setter
+    def tokenizer(self, value):
+        self._tokenizer = value
 
     @property
     def generator(self):
@@ -99,8 +119,15 @@ class LLM(QObject):
             self._generator = session.query(LLMGenerator).filter_by(name=self._current_generator_name).first()
         return self._generator
 
+    def __init__(self, *args, **kwargs):
+        self.engine = kwargs.pop("engine", None)
+        super().__init__(*args, **kwargs)
+        self.settings_manager = SettingsManager()
+        self.prompt_template_path = "aihandler/chat_templates/conversation.j2"
+
     def move_to_cpu(self):
         if self.model:
+            logger.info("Moving model to CPU")
             self.model.to("cpu")
         self._tokenizer = None
 
@@ -108,19 +135,20 @@ class LLM(QObject):
         if not self.model:
             return
         if device:
-            self.model.to(device)
-            return
-        if self.dtype in ["4bit", "8bit", "16bit"] and self.has_gpu:
-            self.model.to("cuda")
+            device_name = device
+        elif self.dtype in ["2bit", "4bit", "8bit", "16bit"] and self.has_gpu:
+            device_name = "cuda"
         else:
-            self.model.to("cpu")
+            device_name = "cpu"
+        logger.info("Moving model to device {device_name}")
+        self.model.to(device_name)
 
     def unload_model(self):
-        logger.info("Unload model")
+        logger.info("Unloading model")
         self._model = None
 
     def unload_tokenizer(self):
-        logger.info("Unload tokenizer")
+        logger.info("Unloading tokenizer")
         self._tokenizer = None
 
     def initialize_model(self, generator_name, model_path):
@@ -137,84 +165,178 @@ class LLM(QObject):
     def is_float_property(self, property):
         return isinstance(self.model.config.to_dict()[property], float)
 
-    def process_input(self, prompt):
+    def do_build_as_chat(self, request_type):
+        # if request_type in ["image_subject_generator", "image_caption_generator"]:
+        #     return True
+        return False
+
+    def process_input(self, user_input, request_type=""):
         logger.info("Process input")
-        inputs = self.tokenizer(prompt, return_tensors="pt").to("cuda" if self.has_gpu else "cpu")
+        prompt = user_input
+        messages = prompt
+
+        encodes = self.tokenizer(messages, return_tensors="pt")
+        self.set_attention_mask = False
+        
+        device_name = "cuda" if self.has_gpu else "cpu"
+        logger.info(f"Moving inputs to {device_name}")
+        inputs = encodes.to(device_name)
         return inputs
 
     def load_model(self, local_files_only = None):
+        if not self.do_load_model:
+            return
+
         local_files_only = self.local_files_only if local_files_only is None else local_files_only
 
-        quantization_config = None
+        config = None
 
         if self.dtype == "8bit":
             logger.info("Loading 8bit model")
-            quantization_config = BitsAndBytesConfig(
+            config = BitsAndBytesConfig(
+                load_in_4bit=False,
                 load_in_8bit=True,
-                bnb_8bit_use_double_quant=True,
-                llm_int8_enable_fp32_cpu_offload=True,
-                llm_int8_threshold=6.0,
+                llm_int8_threshold=200.0,
+                llm_int8_has_fp16_weight=False,
+                bnb_4bit_compute_dtype=torch.float16,
+                bnb_4bit_use_double_quant=True,
+                bnb_4bit_quant_type='nf4',
             )
         elif self.dtype == "4bit":
             logger.info("Loading 4bit model")
-            quantization_config = BitsAndBytesConfig(
+            config = BitsAndBytesConfig(
                 load_in_4bit=True,
+                load_in_8bit=False,
+                llm_int8_threshold=200.0,
+                llm_int8_has_fp16_weight=False,
+                bnb_4bit_compute_dtype=torch.float16,
                 bnb_4bit_use_double_quant=True,
-                llm_int8_enable_fp32_cpu_offload=True,
-                llm_int8_threshold=6.0,
+                bnb_4bit_quant_type='nf4',
             )
         elif self.dtype == "16bit":
             logger.info("Loading 16bit model")
         else:
             logger.info("Loading 32bit model")
+        
 
         params = {
             "local_files_only": self.local_files_only,
             "device_map": self.device_map,
             "use_cache": self.use_cache,
+            "torch_dtype": torch.float16 if self.dtype != "32bit" else torch.float32,
+            "token": self.settings_manager.hf_api_key_read_key,
         }
+        
+        if config:
+            params["quantization_config"] = config
+        path = self.current_model_path
+        logger.info(f"Loading {self.generator.name} model from {path}")
+        if self.generator.name == "seq2seq":
+            self.model = AutoModelForSeq2SeqLM.from_pretrained(
+                path,
+                **params
+            )
+        elif self.generator.name == "casuallm":
+            self.model = AutoModelForCausalLM.from_pretrained(
+                path,
+                **params
+            )
+        
+        self.pipeline=transformers.pipeline(
+            "text-generation",
+            model=self.model,
+            tokenizer=self.tokenizer,
+            torch_dtype=torch.float16 if self.dtype != "32bit" else torch.float32,
+            trust_remote_code=True,
+            device_map="auto",
+            max_length=1000,
+            do_sample=True,
+            top_k=10,
+            num_return_sequences=1,
+            eos_token_id=self.tokenizer.eos_token_id
+            )
+        self.llm=HuggingFacePipeline(pipeline=self.pipeline, model_kwargs={'temperature':0.7})
+        self.memory = ConversationBufferWindowMemory(k=5)
+        path = os.path.join(self.prompt_template_path)
+        with open(path, "r") as f:
+            prompt_template = f.read()
+        self.prompt = PromptTemplate.from_template(
+            prompt_template, 
+            template_format="jinja2", 
+            partial_variables={
+                "username": self.username,
+                "botname": self.botname,
+            })
+        self.chain = ConversationChain(llm=self.llm, prompt=self.prompt, memory=self.memory)
+            
+        if self.model:
+            if self.do_push_to_hub:
+                self.push_to_hub()
 
-        if quantization_config:
-            params["quantization_config"] = quantization_config
+    def quantize_model(self, local_files_only = None):
+        local_files_only = self.local_files_only if local_files_only is None else local_files_only
 
-        if self.dtype == "16bit":
-            params["torch_dtype"] = torch.float16
-        elif self.dtype == "32bit":
-            params["torch_dtype"] = torch.float32
-
-        #path = f"/home/joe/.airunner/llm/models/{self.current_model_path}"
-        # if not os.path.exists(path):
-        #     path = self.current_model_path
+        params = {
+            "local_files_only": self.local_files_only,
+            "device_map": self.device_map,
+            "use_cache": self.use_cache,
+            "torch_dtype": torch.float16 if self.dtype != "32bit" else torch.float32,
+        }
         path = self.current_model_path
         logger.info(f"Loading {self.generator.name} model from {path}")
         try:
-            if self.generator.name == "Flan":
+            try:
+                bits = {
+                    "2bit": 2,
+                    "4bit": 4,
+                    "8bit": 8,
+                    "16bit": 16,
+                    "32bit": 32,
+                }
                 self.model = AutoModelForSeq2SeqLM.from_pretrained(
                     path,
                     **params
                 )
+                quantizer = GPTQQuantizer(bits=bits[self.dtype], dataset=f"c4", block_name_to_quantize = "model.decoder.layers", model_seqlen = 2048)
+                self.model = quantizer.quantize_model(self.model, self.tokenizer)
+            except torch.cuda.OutOfMemoryError:
+                logger.warning("Cuda out of memory, trying to clear cache and loading again")
+                self.engine.unload_stablediffusion()
+                self.model = AutoModelForSeq2SeqLM.from_pretrained(
+                    path,
+                    **params
+                )
+                quantizer = GPTQQuantizer(bits=bits[self.dtype], dataset=f"c4", block_name_to_quantize = "model.decoder.layers", model_seqlen = 2048)
+                self.model = quantizer.quantize_model(self.model, self.tokenizer)
+            except Exception as e:
+                logger.error(e)
         except OSError as e:
             if self.local_files_only:
                 self.load_model(local_files_only=local_files_only)
             else:
                 raise e
-
-        if self.do_push_to_hub:
-            self.push_to_hub()
-
-        self._model.eval()
+            
+        if self.model:
+            if self.do_push_to_hub:
+                self.push_to_hub()
+            self.model.eval()
 
     def push_to_hub(self):
         path = f"{self.engine.hf_username}/{self.current_model_path.split('/')[1]}"
-        self.model.push_to_hub(path, token=self.engine.hf_api_key_write_key)
-        self.tokenizer.push_to_hub(path, token=self.engine.hf_api_key_write_key)
+        self.model.push_to_hub(path, token=self.settings_manager.hf_api_key_write_key)
+        self.tokenizer.push_to_hub(path, token=self.settings_manager.hf_api_key_write_key)
 
     def load_tokenizer(self):
+        if not self.do_load_tokenizer:
+            return
         logger.info("Load tokenizer")
-        self._tokenizer = AutoTokenizer.from_pretrained(
+        self.tokenizer = AutoTokenizer.from_pretrained(
             self.current_model_path,
             local_files_only=self.local_files_only,
+            token=self.settings_manager.hf_api_key_read_key,
+            device_map=self.device_map,
         )
+        self.tokenizer.use_default_system_prompt = False
 
     def disable_request_processing(self):
         self._processing_request = True
@@ -230,19 +352,45 @@ class LLM(QObject):
         model_path = data["request_data"]["model_path"]
 
 
-        Logger.info(f"Generating with {generator_name} at {model_path}")
+        logger.info(f"Generating with {generator_name} at {model_path}")
         self.disable_request_processing()
 
         # initialize the model
         self.initialize_model(generator_name, model_path)
 
         # get the prompt based on request_type and input
-        value = self.prompt_generator.generate(data)
+        kwargs = {
+            **self.properties.copy(),
+            "top_k": 20,
+            "top_p": 1.0,
+            "num_beams": 1,
+            "repetition_penalty": 100.0,
+            "early_stopping": True,
+            "max_length": 200,
+            "min_length": 0,
+            "temperature": 1.0,
+            "return_result": True,
+            "skip_special_tokens": True
+        }
+        parameters = data["request_data"]["parameters"]
+        if parameters["override_parameters"]:
+            kwargs["top_p"] = parameters["top_p"] / 100.0
+            kwargs["max_length"] = parameters["max_length"]
+            kwargs["repetition_penalty"] = parameters["repetition_penalty"] / 100.0
+            kwargs["min_length"] = parameters["min_length"]
+            kwargs["length_penalty"] = parameters["length_penalty"]
+            kwargs["num_beams"] = parameters["num_beams"]
+            kwargs["ngram_size"] = parameters["ngram_size"]
+            kwargs["temperature"] = parameters["temperature"] / 100.0
+            kwargs["sequences"] = parameters["sequences"]
+            kwargs["top_k"] = parameters["top_k"]
+        value = self.generate(
+            request_data=data["request_data"],
+            **kwargs
+        )
 
         self.engine.send_message(value, code=MessageCode.TEXT_GENERATED)
         self.enable_request_processing()
-
-    seed = 42
 
     def do_set_seed(self, seed=None):
         from transformers import set_seed as _set_seed
@@ -258,38 +406,91 @@ class LLM(QObject):
         torch.backends.cudnn.benchmark = False
         if self.tokenizer:
             self.tokenizer.seed = self.seed
-        if self.model:
-            self.model.seed = self.seed
+        # if self.model:
+        #     self.model.seed = self.seed
 
-    def generate(self, **kwargs):
+    def generate(self, request_data, **kwargs):
+        prompt = request_data["prompt"]
+        request_type = request_data["request_type"]
+        self.username = request_data["username"]
+        self.botname = request_data["botname"]
+        
         # parse properties
         properties = self.parse_properties(kwargs)
-
+        
         self.do_set_seed(properties.get("seed"))
+        self.load_tokenizer()
+        self.load_model()
+
+        if self.model is None:
+            logger.error("Failed to load model")
+            return
 
         # process the input
-        prompt = kwargs.pop("prompt")
-        inputs = self.process_input(prompt)
 
         # generate the output
         logger.info("Generating text...")
-        for k, v in properties.items():
-            if k == "top_k" and "do_sample" in properties and not properties["do_sample"]:
-                continue
-            inputs[k] = v
-        outputs = self.model.generate(**inputs)
+        if "top_k" in properties and "do_sample" in properties and not properties["do_sample"]:
+            del properties["top_k"]
+        
+        logger.info("Generating output")
+        with torch.backends.cuda.sdp_kernel(
+            enable_flash=True, 
+            enable_math=False, 
+            enable_mem_efficient=False
+        ):
+            with torch.no_grad():
+                if self.set_attention_mask:
+                    #inputs = self.process_input(input, request_type)
+                    attention_mask = torch.ones(inputs.shape)
+                    pad_token_id = self.tokenizer.eos_token_id
+                    properties["attention_mask"] = attention_mask
+                    properties["pad_token_id"] = pad_token_id
+                    outputs = self.model.generate(inputs, **properties)
+                else:
+                    return self.chain.run(prompt)
+
 
         # decode the output
-        value = self.tokenizer.batch_decode(
-            outputs,
-            skip_special_tokens=kwargs.get("skip_special_tokens", True)
-        )[0]
+        logger.info("decoding output")
+
+        if self.generator.name == "seq2seq":
+            value = self.tokenizer.batch_decode(
+                outputs,
+                skip_special_tokens=kwargs.get("skip_special_tokens", True)
+            )[0]
+        elif self.generator.name == "casuallm":
+            value = self.tokenizer.batch_decode(
+                outputs,
+                skip_special_tokens=True#kwargs.get("skip_special_tokens", True)
+            )[0]
+        #tokenizer.batch_decode(gen_tokens[:, input_ids.shape[1]:])[0]
+
+        if request_type == "image_subject_generator":
+            return self.generate(value, "image_caption_generator", **kwargs)
+        # if request_type == "image_caption_generator":
+        #     return self.generate(value, "complete_image_description_generator", **kwargs)
+        
+        if self.generator.name == "casuallm":
+            # strip <<SYS>> tags and anything inside them
+            value = re.sub(r'<<SYS>>.*?<<\/SYS>>', '', value, flags=re.DOTALL).strip()
+
+            # strip [INST] tags and anything inside them
+            value = re.sub(r'\[INST\].*?\[\/INST\]', '', value, flags=re.DOTALL).strip()
+
+            # strip leading and trailing whitespaces
+            value = value.strip()
+            value = value.replace('\\n', '')
+            value = value.replace('\n', '')
+            value = re.sub(r'^\s+', '', value)
 
         return value
 
     def parse_properties(self, properties: dict):
-        return {
-            "max_length": properties.get("max_length", 20),
+        properties["num_beams"] = 1
+        properties["temperature"] = 1.0
+        data = {
+            "max_length": properties.get("max_length", 512),
             "min_length": properties.get("min_length", 0),
             "do_sample": properties.get("do_sample", True),
             "early_stopping": properties.get("early_stopping", True),
@@ -305,10 +506,12 @@ class LLM(QObject):
             "length_penalty": properties.get("length_penalty", 1.0),
             "no_repeat_ngram_size": properties.get("no_repeat_ngram_size", 1),
             "num_return_sequences": properties.get("num_return_sequences", 1),
-            "attention_mask": properties.get("attention_mask", None),
             "decoder_start_token_id": properties.get("decoder_start_token_id", None),
             "use_cache": properties.get("use_cache", None),
         }
+        # data = {k: v for k, v in data.items() if v is not None}
+        return data
+
 
     def process_setting(self, name, val):
         if type(val) == int:
