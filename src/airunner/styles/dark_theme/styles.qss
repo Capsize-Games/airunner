@@ -7,13 +7,6 @@
     padding: 0px;
 }
 
-GeneratorTabWidget QTabWidget QTabWidget QTabWidget QTabBar::tab {
-    /* hide the tab bar */
-    min-width: 0px;
-    max-width: 0px;
-    border: none;
-}
-
 #generator_container,
 #generator_form_tab_widget #scrollAreaWidgetContents,
 #basic_widget_contents {
@@ -436,8 +429,8 @@ QGroupBox {
     border: 1px solid rgba(0, 132, 185, 50);
 }
 
-QGroupBox:disabled {
-    color: #333;
+QGroupBox QWidget:disabled {
+    color: #222;
 }
 
 QGroupBox:disabled QRadioButton {
@@ -483,4 +476,58 @@ QDoubleSpinBox:disabled {
 
 QTabWidget {
     border: 1px solid rgba(0, 132, 185, 50);
+}
+
+QPlainTextEdit {
+    border: 1px solid rgba(0, 132, 185, 50);
+    background-color: #000;
+}
+
+QTextEdit {
+    border: 1px solid rgba(0, 132, 185, 50);
+    background-color: #000;
+}
+
+/* styles for QStandardItemModel */
+QTreeView {
+    border: 1px solid rgba(0, 132, 185, 50);
+    background-color: #000;
+}
+
+QTreeView::item {
+    background-color: #000;
+}
+
+QTreeView::item:hover {
+    background-color: rgba(0, 132, 185, 50);
+}
+
+QTreeView::item:selected {
+    background-color: rgba(0, 132, 185, 50);
+}
+
+/* item checkbox */
+QTreeView::indicator {
+    border-radius: 0;
+    border: 1px solid rgba(0, 132, 185, 255);
+}
+
+QTreeView::indicator:checked {
+    background-color: rgba(0, 132, 185, 255);
+    border-color: rgba(0, 132, 185, 255);
+    image: url(:/icons/light/check-mark-icon.svg);
+    width: 12px;
+    height: 12px;
+}
+
+GeneratorTabWidget#generator_widget QTabWidget QTabWidget QTabWidget QTabBar::tab:hover {
+    background-color: rgba(0, 132, 185, 255);
+}
+
+GeneratorTabWidget#generator_widget QTabWidget QTabWidget QTabWidget QTabBar::tab:selected {
+    background-color: rgba(0, 132, 185, 255);
+}
+
+GeneratorTabWidget#generator_widget QTabWidget QTabWidget QTabWidget QTabBar::tab:disabled:selected {
+    background-color: #333;
 }
