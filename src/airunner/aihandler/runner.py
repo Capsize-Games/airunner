@@ -88,7 +88,6 @@ class SDRunner(
     # latents attributes
     _current_latents_seed = None
     _latents = None
-    model_type = None
 
     def controlnet(self):
         if self._controlnet is None \
@@ -539,7 +538,7 @@ class SDRunner(
         elif self.is_upscale:
             return self.upscale
         else:
-            raise ValueError(f"Invalid action {self.action} unable to get pipe")
+            logger.warning(f"Invalid action {self.action} unable to get pipe")
 
     @pipe.setter
     def pipe(self, value):
@@ -560,7 +559,7 @@ class SDRunner(
         elif self.is_upscale:
             self.upscale = value
         else:
-            raise ValueError(f"Invalid action {self.action} unable to set pipe")
+            logger.warning(f"Invalid action {self.action} unable to set pipe")
 
     @property
     def cuda_is_available(self):
@@ -1434,6 +1433,8 @@ class SDRunner(
         self.send_message(res, code=MessageCode.PROGRESS)
 
     def move_to_cpu(self):
+        if not self.pipe:
+            return
         try:
             self.pipe.to("cpu")
         except ValueError:
