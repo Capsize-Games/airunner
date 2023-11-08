@@ -246,6 +246,8 @@ class LLMWidget(BaseWidget):
                 "dtype": self.generator.generator_settings[0].dtype,
                 "use_gpu": self.generator.generator_settings[0].use_gpu,
                 "request_type": "image_caption_generator",
+                "username": self.generator.username,
+                "botname": self.generator.botname,
                 "parameters": {
                     "override_parameters": self.generator.override_parameters,
                     "top_p": self.generator.generator_settings[0].top_p,

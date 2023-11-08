@@ -467,7 +467,7 @@ class Ui_llm_widget(object):
         self.gridLayout.addWidget(self.tabWidget, 0, 0, 1, 1)
 
         self.retranslateUi(llm_widget)
-        self.tabWidget.setCurrentIndex(2)
+        self.tabWidget.setCurrentIndex(0)
         self.model_version.setCurrentIndex(-1)
         self.quantization_model_version.setCurrentIndex(-1)
         self.prefix.textChanged.connect(llm_widget.prefix_text_changed) # type: ignore
