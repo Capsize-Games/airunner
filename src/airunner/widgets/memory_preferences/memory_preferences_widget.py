@@ -53,6 +53,9 @@ class MemoryPreferencesWidget(BaseWidget):
     def action_toggled_sequential_cpu_offload(self, val):
         self.settings_manager.set_value("memory_settings.use_enable_sequential_cpu_offload", val)
 
+    def action_toggled_model_cpu_offload(self, val):
+        self.settings_manager.set_value("memory_settings.enable_model_cpu_offload", val)
+
     def action_toggled_attention_slicing(self, val):
         self.settings_manager.set_value("memory_settings.use_attention_slicing", val)
 
