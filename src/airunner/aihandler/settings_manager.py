@@ -284,7 +284,10 @@ class SettingsManager(QObject):
         keys = key.split('.')
         obj = self
         for k in keys:
-            obj = getattr(obj, k)
+            try:
+                obj = getattr(obj, k)
+            except AttributeError:
+                logger.error(f"Unable to find key {key}")
         return obj
 
     @property
