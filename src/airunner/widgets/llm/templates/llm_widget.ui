@@ -6,8 +6,8 @@
    <rect>
     <x>0</x>
     <y>0</y>
-    <width>499</width>
-    <height>899</height>
+    <width>622</width>
+    <height>974</height>
    </rect>
   </property>
   <property name="windowTitle">
@@ -59,7 +59,7 @@
          <item>
           <widget class="QPushButton" name="clear_conversatiion_button">
            <property name="text">
-            <string>Clear Conversation</string>
+            <string>New Conversation</string>
            </property>
           </widget>
          </item>
@@ -86,6 +86,11 @@
             <item>
              <property name="text">
               <string>Chat</string>
+             </property>
+            </item>
+            <item>
+             <property name="text">
+              <string>Narrate</string>
              </property>
             </item>
             <item>
@@ -966,6 +971,18 @@
          </property>
         </spacer>
        </item>
+       <item row="2" column="0">
+        <widget class="QGroupBox" name="groupBox_14">
+         <property name="title">
+          <string>Prompt Template</string>
+         </property>
+         <layout class="QGridLayout" name="gridLayout_17">
+          <item row="0" column="0">
+           <widget class="QComboBox" name="prompt_template"/>
+          </item>
+         </layout>
+        </widget>
+       </item>
       </layout>
      </widget>
      <widget class="QWidget" name="tab_4">
@@ -1157,7 +1174,7 @@
    <hints>
     <hint type="sourcelabel">
      <x>126</x>
-     <y>272</y>
+     <y>347</y>
     </hint>
     <hint type="destinationlabel">
      <x>3</x>
@@ -1173,7 +1190,7 @@
    <hints>
     <hint type="sourcelabel">
      <x>206</x>
-     <y>272</y>
+     <y>347</y>
     </hint>
     <hint type="destinationlabel">
      <x>2</x>
@@ -1189,7 +1206,7 @@
    <hints>
     <hint type="sourcelabel">
      <x>215</x>
-     <y>272</y>
+     <y>347</y>
     </hint>
     <hint type="destinationlabel">
      <x>3</x>
@@ -1205,7 +1222,7 @@
    <hints>
     <hint type="sourcelabel">
      <x>287</x>
-     <y>272</y>
+     <y>347</y>
     </hint>
     <hint type="destinationlabel">
      <x>0</x>
@@ -1237,7 +1254,7 @@
    <hints>
     <hint type="sourcelabel">
      <x>242</x>
-     <y>710</y>
+     <y>712</y>
     </hint>
     <hint type="destinationlabel">
      <x>2</x>
@@ -1252,8 +1269,8 @@
    <slot>random_seed_toggled(bool)</slot>
    <hints>
     <hint type="sourcelabel">
-     <x>463</x>
-     <y>709</y>
+     <x>586</x>
+     <y>712</y>
     </hint>
     <hint type="destinationlabel">
      <x>3</x>
@@ -1333,7 +1350,7 @@
    <hints>
     <hint type="sourcelabel">
      <x>441</x>
-     <y>240</y>
+     <y>315</y>
     </hint>
     <hint type="destinationlabel">
      <x>34</x>
@@ -1349,7 +1366,7 @@
    <hints>
     <hint type="sourcelabel">
      <x>128</x>
-     <y>323</y>
+     <y>398</y>
     </hint>
     <hint type="destinationlabel">
      <x>120</x>
@@ -1428,7 +1445,7 @@
    <slot>personality_type_changed(QString)</slot>
    <hints>
     <hint type="sourcelabel">
-     <x>474</x>
+     <x>597</x>
      <y>768</y>
     </hint>
     <hint type="destinationlabel">
@@ -1461,7 +1478,7 @@
    <hints>
     <hint type="sourcelabel">
      <x>63</x>
-     <y>258</y>
+     <y>333</y>
     </hint>
     <hint type="destinationlabel">
      <x>0</x>
@@ -1480,7 +1497,7 @@
      <y>825</y>
     </hint>
     <hint type="destinationlabel">
-     <x>-1</x>
+     <x>0</x>
      <y>716</y>
     </hint>
    </hints>
@@ -1492,11 +1509,11 @@
    <slot>toggle_move_model_to_cpu(bool)</slot>
    <hints>
     <hint type="sourcelabel">
-     <x>212</x>
-     <y>827</y>
+     <x>404</x>
+     <y>835</y>
     </hint>
     <hint type="destinationlabel">
-     <x>-1</x>
+     <x>0</x>
      <y>704</y>
     </hint>
    </hints>
@@ -1508,12 +1525,28 @@
    <slot>toggle_unload_model(bool)</slot>
    <hints>
     <hint type="sourcelabel">
-     <x>397</x>
-     <y>831</y>
+     <x>597</x>
+     <y>835</y>
     </hint>
     <hint type="destinationlabel">
-     <x>-2</x>
+     <x>0</x>
      <y>685</y>
+    </hint>
+   </hints>
+  </connection>
+  <connection>
+   <sender>prompt_template</sender>
+   <signal>currentTextChanged(QString)</signal>
+   <receiver>llm_widget</receiver>
+   <slot>prompt_template_text_changed(QString)</slot>
+   <hints>
+    <hint type="sourcelabel">
+     <x>69</x>
+     <y>226</y>
+    </hint>
+    <hint type="destinationlabel">
+     <x>79</x>
+     <y>-16</y>
     </hint>
    </hints>
   </connection>
@@ -1547,5 +1580,6 @@
   <slot>toggle_leave_model_in_vram(bool)</slot>
   <slot>toggle_unload_model(bool)</slot>
   <slot>toggle_move_model_to_cpu(bool)</slot>
+  <slot>prompt_template_text_changed(QString)</slot>
  </slots>
 </ui>

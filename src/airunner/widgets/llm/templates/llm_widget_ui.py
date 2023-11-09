@@ -12,7 +12,7 @@ from PyQt6 import QtCore, QtGui, QtWidgets
 class Ui_llm_widget(object):
     def setupUi(self, llm_widget):
         llm_widget.setObjectName("llm_widget")
-        llm_widget.resize(499, 899)
+        llm_widget.resize(622, 974)
         self.gridLayout = QtWidgets.QGridLayout(llm_widget)
         self.gridLayout.setContentsMargins(0, 0, 0, 0)
         self.gridLayout.setObjectName("gridLayout")
@@ -48,6 +48,7 @@ class Ui_llm_widget(object):
         self.horizontalLayout.addWidget(self.prompt)
         self.comboBox = QtWidgets.QComboBox(parent=self.groupBox_5)
         self.comboBox.setObjectName("comboBox")
+        self.comboBox.addItem("")
         self.comboBox.addItem("")
         self.comboBox.addItem("")
         self.comboBox.addItem("")
@@ -420,6 +421,14 @@ class Ui_llm_widget(object):
         self.gridLayout_5.addWidget(self.groupBox_8, 1, 0, 1, 1)
         spacerItem1 = QtWidgets.QSpacerItem(20, 40, QtWidgets.QSizePolicy.Policy.Minimum, QtWidgets.QSizePolicy.Policy.Expanding)
         self.gridLayout_5.addItem(spacerItem1, 16, 0, 1, 1)
+        self.groupBox_14 = QtWidgets.QGroupBox(parent=self.tab_3)
+        self.groupBox_14.setObjectName("groupBox_14")
+        self.gridLayout_17 = QtWidgets.QGridLayout(self.groupBox_14)
+        self.gridLayout_17.setObjectName("gridLayout_17")
+        self.prompt_template = QtWidgets.QComboBox(parent=self.groupBox_14)
+        self.prompt_template.setObjectName("prompt_template")
+        self.gridLayout_17.addWidget(self.prompt_template, 0, 0, 1, 1)
+        self.gridLayout_5.addWidget(self.groupBox_14, 2, 0, 1, 1)
         icon = QtGui.QIcon.fromTheme("preferences-other")
         self.tabWidget.addTab(self.tab_3, icon, "")
         self.tab_4 = QtWidgets.QWidget()
@@ -497,6 +506,7 @@ class Ui_llm_widget(object):
         self.leave_in_vram.toggled['bool'].connect(llm_widget.toggle_leave_model_in_vram) # type: ignore
         self.move_to_cpu.toggled['bool'].connect(llm_widget.toggle_move_model_to_cpu) # type: ignore
         self.unload_model.toggled['bool'].connect(llm_widget.toggle_unload_model) # type: ignore
+        self.prompt_template.currentTextChanged['QString'].connect(llm_widget.prompt_template_text_changed) # type: ignore
         QtCore.QMetaObject.connectSlotsByName(llm_widget)
         llm_widget.setTabOrder(self.prompt, self.comboBox)
         llm_widget.setTabOrder(self.comboBox, self.send_button)
@@ -524,12 +534,13 @@ class Ui_llm_widget(object):
         _translate = QtCore.QCoreApplication.translate
         llm_widget.setWindowTitle(_translate("llm_widget", "Form"))
         self.send_button.setText(_translate("llm_widget", "Send"))
-        self.clear_conversatiion_button.setText(_translate("llm_widget", "Clear Conversation"))
+        self.clear_conversatiion_button.setText(_translate("llm_widget", "New Conversation"))
         self.groupBox_5.setTitle(_translate("llm_widget", "Message"))
         self.comboBox.setItemText(0, _translate("llm_widget", "Chat"))
-        self.comboBox.setItemText(1, _translate("llm_widget", "Generate Image"))
-        self.comboBox.setItemText(2, _translate("llm_widget", "Summarize"))
-        self.comboBox.setItemText(3, _translate("llm_widget", "Translate"))
+        self.comboBox.setItemText(1, _translate("llm_widget", "Narrate"))
+        self.comboBox.setItemText(2, _translate("llm_widget", "Generate Image"))
+        self.comboBox.setItemText(3, _translate("llm_widget", "Summarize"))
+        self.comboBox.setItemText(4, _translate("llm_widget", "Translate"))
         self.tabWidget.setTabText(self.tabWidget.indexOf(self.tab), _translate("llm_widget", "Chat"))
         self.groupBox.setTitle(_translate("llm_widget", "Prefix"))
         self.groupBox_2.setTitle(_translate("llm_widget", "Suffix"))
@@ -597,6 +608,7 @@ class Ui_llm_widget(object):
         self.top_k_2.setProperty("slider_callback", _translate("llm_widget", "handle_value_change"))
         self.label_4.setText(_translate("llm_widget", "How to treat model when not in use"))
         self.groupBox_8.setTitle(_translate("llm_widget", "Model Version"))
+        self.groupBox_14.setTitle(_translate("llm_widget", "Prompt Template"))
         self.tabWidget.setTabText(self.tabWidget.indexOf(self.tab_3), _translate("llm_widget", "Settings"))
         self.groupBox_9.setTitle(_translate("llm_widget", "Model"))
         self.groupBox_13.setTitle(_translate("llm_widget", "Model Version"))
