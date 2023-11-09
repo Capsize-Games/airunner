@@ -212,6 +212,18 @@
                       <string>Canvas</string>
                      </attribute>
                      <layout class="QGridLayout" name="gridLayout_18">
+                      <property name="leftMargin">
+                       <number>0</number>
+                      </property>
+                      <property name="topMargin">
+                       <number>0</number>
+                      </property>
+                      <property name="rightMargin">
+                       <number>0</number>
+                      </property>
+                      <property name="bottomMargin">
+                       <number>0</number>
+                      </property>
                       <item row="0" column="0">
                        <widget class="CanvasPlusWidget" name="canvas_plus_widget" native="true"/>
                       </item>
@@ -222,6 +234,18 @@
                       <string>Standard</string>
                      </attribute>
                      <layout class="QGridLayout" name="gridLayout_19">
+                      <property name="leftMargin">
+                       <number>0</number>
+                      </property>
+                      <property name="topMargin">
+                       <number>0</number>
+                      </property>
+                      <property name="rightMargin">
+                       <number>0</number>
+                      </property>
+                      <property name="bottomMargin">
+                       <number>0</number>
+                      </property>
                       <item row="0" column="0">
                        <widget class="ImagePanelWidget" name="standard_image_widget" native="true"/>
                       </item>
