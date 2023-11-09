@@ -6,7 +6,7 @@ from airunner.data.bootstrap.model_bootstrap_data import model_bootstrap_data
 from airunner.data.bootstrap.pipeline_bootstrap_data import pipeline_bootstrap_data
 from airunner.data.bootstrap.prompt_bootstrap_data import prompt_bootstrap_data, style_bootstrap_data, \
     variable_bootstrap_data
-from airunner.data.models import ControlnetModel, Pipeline, Document, Settings, PromptGeneratorSetting, \
+from airunner.data.models import ControlnetModel, LLMPromptTemplate, Pipeline, Document, Settings, PromptGeneratorSetting, \
     GeneratorSetting, SplitterSection, GridSettings, MetadataSettings, PathSettings, MemorySettings, AIModel, \
     ImageFilter, ImageFilterValue, BrushSettings, Prompt, PromptVariable, PromptCategory, PromptOption, \
     PromptVariableCategory, PromptVariableCategoryWeight, PromptStyleCategory, PromptStyle, Scheduler, ActionScheduler, \
@@ -448,3 +448,12 @@ if not session.query(Prompt).first():
 
         session.add(generator)
     session.commit()
+
+    from airunner.data.bootstrap.prompt_templates import prompt_template_seed_data
+    for data in prompt_template_seed_data:
+        prompt_template = LLMPromptTemplate(
+            name=data["name"],
+            template=data["template"]
+        )
+        session.add(prompt_template)
+        session.commit()
