@@ -46,6 +46,9 @@ class AutoImport:
         except KeyError:
             logger.error(f"Failed to find classname for pipeline_action {pipeline_action} {version} {category}")
             return
+        except AttributeError as e:
+            logger.error(f"Failed to find classname for pipeline_action {pipeline_action} {version} {category}")
+            return
         pipeline_classname = classname.split(".")
         module = None
         for index, module_name in enumerate(pipeline_classname):
