@@ -108,7 +108,7 @@ class Ui_MainWindow(object):
         self.scrollArea.setWidgetResizable(True)
         self.scrollArea.setObjectName("scrollArea")
         self.scrollAreaWidgetContents = QtWidgets.QWidget()
-        self.scrollAreaWidgetContents.setGeometry(QtCore.QRect(0, 0, 465, 850))
+        self.scrollAreaWidgetContents.setGeometry(QtCore.QRect(0, 0, 446, 855))
         self.scrollAreaWidgetContents.setObjectName("scrollAreaWidgetContents")
         self.gridLayout = QtWidgets.QGridLayout(self.scrollAreaWidgetContents)
         self.gridLayout.setObjectName("gridLayout")
@@ -1043,6 +1043,9 @@ class Ui_MainWindow(object):
         self.toggle_active_grid_area_button.toggled['bool'].connect(MainWindow.action_toggle_active_grid_area) # type: ignore
         self.toggle_eraser_button.toggled['bool'].connect(MainWindow.action_toggle_eraser) # type: ignore
         self.toggle_brush_button.toggled['bool'].connect(MainWindow.action_toggle_brush) # type: ignore
+        self.actionBug_report.triggered.connect(MainWindow.action_open_bug_report) # type: ignore
+        self.actionDiscord.triggered.connect(MainWindow.action_open_discord) # type: ignore
+        self.actionReport_vulnerability.triggered.connect(MainWindow.action_open_vulnerability_report) # type: ignore
         QtCore.QMetaObject.connectSlotsByName(MainWindow)
 
     def retranslateUi(self, MainWindow):
