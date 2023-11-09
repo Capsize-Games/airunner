@@ -25,6 +25,7 @@ class Ui_gif_widget(object):
         spacerItem = QtWidgets.QSpacerItem(20, 40, QtWidgets.QSizePolicy.Policy.Minimum, QtWidgets.QSizePolicy.Policy.Expanding)
         self.gridLayout.addItem(spacerItem, 2, 0, 1, 1)
         self.pushButton = QtWidgets.QPushButton(parent=gif_widget)
+        self.pushButton.setCursor(QtGui.QCursor(QtCore.Qt.CursorShape.PointingHandCursor))
         self.pushButton.setObjectName("pushButton")
         self.gridLayout.addWidget(self.pushButton, 1, 0, 1, 1)
 
