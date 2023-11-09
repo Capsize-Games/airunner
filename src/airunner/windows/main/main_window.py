@@ -571,11 +571,14 @@ class MainWindow(
     def action_show_settings(self):
         SettingsWindow(app=self)
 
+    def action_open_vulnerability_report(self):
+        webbrowser.open("https://github.com/Capsize-Games/airunner/security/advisories/new")
+
     def action_open_bug_report(self):
         webbrowser.open("https://github.com/Capsize-Games/airunner/issues/new?assignees=&labels=&template=bug_report.md&title=")
 
     def action_open_discord(self):
-        webbrowser.open("https://github.com/Capsize-Games/airunner/security/advisories/new")
+        webbrowser.open("https://discord.gg/ukcgjEpc5f")
 
     def tool_tab_index_changed(self, index):
         tab_section = session.query(TabSection).filter_by(

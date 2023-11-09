@@ -257,8 +257,8 @@
               <rect>
                <x>0</x>
                <y>0</y>
-               <width>465</width>
-               <height>850</height>
+               <width>446</width>
+               <height>855</height>
               </rect>
              </property>
              <layout class="QGridLayout" name="gridLayout">
@@ -3635,8 +3635,8 @@
    <slot>action_show_settings()</slot>
    <hints>
     <hint type="sourcelabel">
-     <x>1095</x>
-     <y>480</y>
+     <x>1123</x>
+     <y>477</y>
     </hint>
     <hint type="destinationlabel">
      <x>1135</x>
@@ -3705,6 +3705,54 @@
     <hint type="destinationlabel">
      <x>-7</x>
      <y>164</y>
+    </hint>
+   </hints>
+  </connection>
+  <connection>
+   <sender>actionBug_report</sender>
+   <signal>triggered()</signal>
+   <receiver>MainWindow</receiver>
+   <slot>action_open_bug_report()</slot>
+   <hints>
+    <hint type="sourcelabel">
+     <x>-1</x>
+     <y>-1</y>
+    </hint>
+    <hint type="destinationlabel">
+     <x>567</x>
+     <y>517</y>
+    </hint>
+   </hints>
+  </connection>
+  <connection>
+   <sender>actionDiscord</sender>
+   <signal>triggered()</signal>
+   <receiver>MainWindow</receiver>
+   <slot>action_open_discord()</slot>
+   <hints>
+    <hint type="sourcelabel">
+     <x>-1</x>
+     <y>-1</y>
+    </hint>
+    <hint type="destinationlabel">
+     <x>567</x>
+     <y>517</y>
+    </hint>
+   </hints>
+  </connection>
+  <connection>
+   <sender>actionReport_vulnerability</sender>
+   <signal>triggered()</signal>
+   <receiver>MainWindow</receiver>
+   <slot>action_open_vulnerability_report()</slot>
+   <hints>
+    <hint type="sourcelabel">
+     <x>-1</x>
+     <y>-1</y>
+    </hint>
+    <hint type="destinationlabel">
+     <x>567</x>
+     <y>517</y>
     </hint>
    </hints>
   </connection>
@@ -3796,5 +3844,6 @@
   <slot>text_to_gif_toggled()</slot>
   <slot>prompt_builder_toggled()</slot>
   <slot>refresh_styles()</slot>
+  <slot>action_open_vulnerability_report()</slot>
  </slots>
 </ui>
