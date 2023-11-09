@@ -198,8 +198,8 @@ class Ui_memory_preferences(object):
         self.use_accelerated_transformers.toggled['bool'].connect(memory_preferences.action_toggled_accelerated_transformers) # type: ignore
         self.optimize_memory_button.clicked.connect(memory_preferences.action_button_clicked_optimize_memory_settings) # type: ignore
         self.use_lastchannels.toggled['bool'].connect(memory_preferences.action_toggled_last_memory) # type: ignore
-        self.enable_model_cpu_offload.toggled['bool'].connect(memory_preferences.action_toggled_sequential_cpu_offload) # type: ignore
         self.use_attention_slicing.toggled['bool'].connect(memory_preferences.action_toggled_attention_slicing) # type: ignore
+        self.enable_model_cpu_offload.toggled['bool'].connect(memory_preferences.action_toggled_model_cpu_offload) # type: ignore
         QtCore.QMetaObject.connectSlotsByName(memory_preferences)
 
     def retranslateUi(self, memory_preferences):
