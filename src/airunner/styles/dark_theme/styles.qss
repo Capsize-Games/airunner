@@ -554,3 +554,29 @@ GeneratorTabWidget#generator_widget QTabWidget QTabWidget QTabWidget QTabBar::ta
 GeneratorTabWidget#generator_widget QTabWidget QTabWidget QTabWidget QTabBar::tab:disabled:selected {
     background-color: #333;
 }
+
+GeneratorTabWidget#generator_widget QTabWidget QTabWidget QTabWidget QTabBar::tab:disabled:hover {
+    background-color: #333;
+}
+
+#tab_image QTabBar::tab {
+    border-radius: none;
+    padding: 5px 10px;
+    border-bottom: 1px solid #222;
+}
+
+#tab_image QTabBar::tab:selected {
+    background-color: rgba(0, 132, 185, 255);
+}
+
+#tab_image QPushButton {
+    border: none;
+}
+
+#breadcrumbs {
+    border: 1px solid #222;
+    border-top: none;
+    border-left: none;
+    border-right: none;
+    background: #000;
+}
