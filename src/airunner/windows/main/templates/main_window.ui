@@ -183,7 +183,7 @@
                  <string notr="true"/>
                 </property>
                 <property name="currentIndex">
-                 <number>0</number>
+                 <number>1</number>
                 </property>
                 <widget class="QWidget" name="tab_canvas">
                  <attribute name="title">
@@ -208,6 +208,16 @@
                      <string notr="true"/>
                     </property>
                    </widget>
+                  </item>
+                 </layout>
+                </widget>
+                <widget class="QWidget" name="tab_image">
+                 <attribute name="title">
+                  <string>Image</string>
+                 </attribute>
+                 <layout class="QGridLayout" name="gridLayout_18">
+                  <item row="0" column="0">
+                   <widget class="ImagePanelWidget" name="widget_3" native="true"/>
                   </item>
                  </layout>
                 </widget>
@@ -2559,6 +2569,12 @@
    <class>GifPanelWidget</class>
    <extends>QWidget</extends>
    <header>airunner/widgets/gif/gif_panel_widget</header>
+   <container>1</container>
+  </customwidget>
+  <customwidget>
+   <class>ImagePanelWidget</class>
+   <extends>QWidget</extends>
+   <header>airunner/widgets/image/image_panel_widget</header>
    <container>1</container>
   </customwidget>
  </customwidgets>

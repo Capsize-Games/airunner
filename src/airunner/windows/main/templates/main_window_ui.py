@@ -88,6 +88,14 @@ class Ui_MainWindow(object):
         self.canvas_plus_widget.setObjectName("canvas_plus_widget")
         self.gridLayout_11.addWidget(self.canvas_plus_widget, 0, 0, 1, 1)
         self.center_tab.addTab(self.tab_canvas, "")
+        self.tab_image = QtWidgets.QWidget()
+        self.tab_image.setObjectName("tab_image")
+        self.gridLayout_18 = QtWidgets.QGridLayout(self.tab_image)
+        self.gridLayout_18.setObjectName("gridLayout_18")
+        self.widget_3 = ImagePanelWidget(parent=self.tab_image)
+        self.widget_3.setObjectName("widget_3")
+        self.gridLayout_18.addWidget(self.widget_3, 0, 0, 1, 1)
+        self.center_tab.addTab(self.tab_image, "")
         self.tab_txt2vid = QtWidgets.QWidget()
         self.tab_txt2vid.setObjectName("tab_txt2vid")
         self.center_tab.addTab(self.tab_txt2vid, "")
@@ -972,7 +980,7 @@ class Ui_MainWindow(object):
 
         self.retranslateUi(MainWindow)
         self.mode_tab_widget.setCurrentIndex(0)
-        self.center_tab.setCurrentIndex(0)
+        self.center_tab.setCurrentIndex(1)
         self.tool_tab_widget.setCurrentIndex(1)
         self.batches_tab.setCurrentIndex(0)
         self.bottom_panel_tab_widget.setCurrentIndex(0)
@@ -1057,6 +1065,7 @@ class Ui_MainWindow(object):
         _translate = QtCore.QCoreApplication.translate
         MainWindow.setWindowTitle(_translate("MainWindow", "AI Runner"))
         self.center_tab.setTabText(self.center_tab.indexOf(self.tab_canvas), _translate("MainWindow", "Canvas"))
+        self.center_tab.setTabText(self.center_tab.indexOf(self.tab_image), _translate("MainWindow", "Image"))
         self.center_tab.setTabText(self.center_tab.indexOf(self.tab_txt2vid), _translate("MainWindow", "Video"))
         self.center_tab.setTabText(self.center_tab.indexOf(self.tab_shapegif), _translate("MainWindow", "GIF"))
         self.center_tab.setTabText(self.center_tab.indexOf(self.tab_prompt_builder), _translate("MainWindow", "Prompt Builder"))
@@ -1224,6 +1233,7 @@ from airunner.widgets.deterministic.deterministic_widget import DeterministicWid
 from airunner.widgets.embeddings.embeddings_container_widget import EmbeddingsContainerWidget
 from airunner.widgets.generator_form.generator_tab_widget import GeneratorTabWidget
 from airunner.widgets.gif.gif_panel_widget import GifPanelWidget
+from airunner.widgets.image.image_panel_widget import ImagePanelWidget
 from airunner.widgets.layers.layer_container_widget import LayerContainerWidget
 from airunner.widgets.llm.llm_widget import LLMWidget
 from airunner.widgets.lora.lora_container_widget import LoraContainerWidget
