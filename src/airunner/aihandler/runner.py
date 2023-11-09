@@ -310,6 +310,10 @@ class SDRunner(
         return self.options.get("do_nsfw_filter", True) is True
 
     @property
+    def model_version(self):
+        return self.model_data["version"]
+
+    @property
     def use_compel(self):
         return not self.use_enable_sequential_cpu_offload and \
                not self.is_txt2vid and \
@@ -335,7 +339,7 @@ class SDRunner(
 
     @property
     def is_sd_xl(self):
-        return self.model == "Stable Diffusion XL 0.9"
+        return self.model_version == "SDXL 1.0"
 
     @property
     def model(self):
@@ -567,6 +571,8 @@ class SDRunner(
 
     @property
     def cuda_is_available(self):
+        if self.enable_model_cpu_offload:
+            return False
         return torch.cuda.is_available()
 
     @property
@@ -587,6 +593,10 @@ class SDRunner(
 
     @property
     def data_type(self):
+        if self.use_enable_sequential_cpu_offload:
+            return torch.float
+        elif self.enable_model_cpu_offload:
+            return torch.float16
         data_type = torch.float16 if self.cuda_is_available else torch.float
         return data_type
 
@@ -841,6 +851,14 @@ class SDRunner(
 
     def send_message(self, message, code=None):
         code = code or MessageCode.STATUS
+
+        if code == MessageCode.ERROR:
+            logger.error(message)
+        elif code == MessageCode.WARNING:
+            logger.warning(message)
+        elif code == MessageCode.STATUS:
+            logger.info(message)
+
         formatted_message = {
             "code": code,
             "message": message
@@ -949,6 +967,7 @@ class SDRunner(
             "guidance_scale": self.guidance_scale,
             "callback": self.callback,
         }
+        
         if self.do_add_lora_to_pipe:
             try:
                 self.add_lora_to_pipe()
@@ -956,6 +975,7 @@ class SDRunner(
                 self.error_handler("Selected LoRA are not supported with this model")
                 self.reload_model = True
                 return
+        
         if self.is_upscale:
             args.update({
                 "prompt": self.prompt,
@@ -986,10 +1006,13 @@ class SDRunner(
                     "prompt": self.prompt,
                     "negative_prompt": self.negative_prompt,
                 })
+        
         if not self.is_upscale:
             args.update(kwargs)
+        
         if self.use_kandinsky:
             return self.kandinsky_call_pipe(**kwargs)
+        
         if not self.is_pix2pix and len(self.available_lora) > 0 and len(self.loaded_lora) > 0:
             args["cross_attention_kwargs"] = {"scale": 1.0}
 
