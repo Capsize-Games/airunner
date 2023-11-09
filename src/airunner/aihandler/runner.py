@@ -1006,6 +1006,7 @@ class SDRunner(
                     "prompt": self.prompt,
                     "negative_prompt": self.negative_prompt,
                 })
+            args["callback_steps"] = 1
         
         if not self.is_upscale:
             args.update(kwargs)
