@@ -93,6 +93,11 @@ class Ui_MainWindow(object):
         self.center_tab.addTab(self.tab_txt2vid, "")
         self.tab_shapegif = QtWidgets.QWidget()
         self.tab_shapegif.setObjectName("tab_shapegif")
+        self.gridLayout_17 = QtWidgets.QGridLayout(self.tab_shapegif)
+        self.gridLayout_17.setObjectName("gridLayout_17")
+        self.widget_2 = GifPanelWidget(parent=self.tab_shapegif)
+        self.widget_2.setObjectName("widget_2")
+        self.gridLayout_17.addWidget(self.widget_2, 0, 0, 1, 1)
         self.center_tab.addTab(self.tab_shapegif, "")
         self.tab_prompt_builder = QtWidgets.QWidget()
         self.tab_prompt_builder.setObjectName("tab_prompt_builder")
@@ -968,7 +973,7 @@ class Ui_MainWindow(object):
         self.retranslateUi(MainWindow)
         self.mode_tab_widget.setCurrentIndex(0)
         self.center_tab.setCurrentIndex(0)
-        self.tool_tab_widget.setCurrentIndex(0)
+        self.tool_tab_widget.setCurrentIndex(1)
         self.batches_tab.setCurrentIndex(0)
         self.bottom_panel_tab_widget.setCurrentIndex(0)
         self.actionHuggingface_Cache_manager.triggered.connect(MainWindow.action_show_hf_cache_manager) # type: ignore
@@ -1218,6 +1223,7 @@ from airunner.widgets.canvas_plus.canvas_plus_widget import CanvasPlusWidget
 from airunner.widgets.deterministic.deterministic_widget import DeterministicWidget
 from airunner.widgets.embeddings.embeddings_container_widget import EmbeddingsContainerWidget
 from airunner.widgets.generator_form.generator_tab_widget import GeneratorTabWidget
+from airunner.widgets.gif.gif_panel_widget import GifPanelWidget
 from airunner.widgets.layers.layer_container_widget import LayerContainerWidget
 from airunner.widgets.llm.llm_widget import LLMWidget
 from airunner.widgets.lora.lora_container_widget import LoraContainerWidget
