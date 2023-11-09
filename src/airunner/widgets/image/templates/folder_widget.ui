@@ -6,20 +6,38 @@
    <rect>
     <x>0</x>
     <y>0</y>
-    <width>274</width>
-    <height>303</height>
+    <width>94</width>
+    <height>93</height>
    </rect>
   </property>
   <property name="sizePolicy">
-   <sizepolicy hsizetype="MinimumExpanding" vsizetype="MinimumExpanding">
+   <sizepolicy hsizetype="Maximum" vsizetype="Maximum">
     <horstretch>0</horstretch>
     <verstretch>0</verstretch>
    </sizepolicy>
+  </property>
+  <property name="maximumSize">
+   <size>
+    <width>94</width>
+    <height>93</height>
+   </size>
   </property>
   <property name="windowTitle">
    <string>Form</string>
   </property>
   <layout class="QGridLayout" name="gridLayout">
+   <property name="leftMargin">
+    <number>0</number>
+   </property>
+   <property name="topMargin">
+    <number>0</number>
+   </property>
+   <property name="rightMargin">
+    <number>0</number>
+   </property>
+   <property name="bottomMargin">
+    <number>0</number>
+   </property>
    <item row="2" column="0">
     <spacer name="verticalSpacer">
      <property name="orientation">
@@ -37,14 +55,14 @@
     <widget class="QPushButton" name="pushButton">
      <property name="minimumSize">
       <size>
-       <width>256</width>
-       <height>256</height>
+       <width>64</width>
+       <height>64</height>
       </size>
      </property>
      <property name="maximumSize">
       <size>
-       <width>256</width>
-       <height>256</height>
+       <width>64</width>
+       <height>64</height>
       </size>
      </property>
      <property name="cursor">
@@ -57,12 +75,13 @@
       <string/>
      </property>
      <property name="icon">
-      <iconset theme="folder"/>
+      <iconset theme="folder">
+       <normaloff>.</normaloff>.</iconset>
      </property>
      <property name="iconSize">
       <size>
-       <width>256</width>
-       <height>256</height>
+       <width>64</width>
+       <height>64</height>
       </size>
      </property>
      <property name="flat">
