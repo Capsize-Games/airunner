@@ -337,7 +337,7 @@ class CanvasPlusWidget(BaseWidget):
                 pixmap = QPixmap.fromImage(ImageQt(image))
                 image = LayerImageItem(self, pixmap, layer_image)
                 self.layers[layer.id].append(image)
-                if layer_image.visible and not layer.hidden:
+                if layer_image.visible:
                     self.scene.addItem(image)
                 pos = QPoint(layer_image.pos_x, layer_image.pos_y)
                 image.setPos(QPointF(
@@ -523,43 +523,43 @@ class CanvasPlusWidget(BaseWidget):
         except FileNotFoundError:
             pass
     
-    # def create_image(self, image):
-    #     """
-    #     Create a new image object and add it to the current layer
-    #     """
-    #     location = QPoint(
-    #         self.settings_manager.active_grid_settings.pos_x,
-    #         self.settings_manager.active_grid_settings.pos_y
-    #     )
-    #     # convert image to RGBA
-    #     image = image.convert("RGBA")
-    #     # self.current_layer.image_data = ImageData(
-    #     #     position=location,
-    #     #     image=image,
-    #     #     opacity=self.current_layer.opacity
-    #     # )
-    #     self.current_layer.position_x = location.x()
-    #     self.current_layer.position_y = location.y()
+    def create_image_old(self, image):
+        """
+        Create a new image object and add it to the current layer
+        """
+        location = QPoint(
+            self.settings_manager.active_grid_settings.pos_x,
+            self.settings_manager.active_grid_settings.pos_y
+        )
+        # convert image to RGBA
+        image = image.convert("RGBA")
+        # self.current_layer.image_data = ImageData(
+        #     position=location,
+        #     image=image,
+        #     opacity=self.current_layer.opacity
+        # )
+        self.current_layer.position_x = location.x()
+        self.current_layer.position_y = location.y()
 
-    #     session = get_session()
-    #     layer_image = LayerImage(
-    #         layer_id=self.current_layer.id,
-    #         order=len(self.current_layer.layer_images),
-    #     )
-    #     layer_image.image = image
-    #     session.add(layer_image)
-    #     save_session()
+        session = get_session()
+        layer_image = LayerImage(
+            layer_id=self.current_layer.id,
+            order=len(self.current_layer.layer_images),
+        )
+        layer_image.image = image
+        session.add(layer_image)
+        save_session()
 
-    #     self.app.ui.layer_widget.set_thumbnail()
-    #     #self.current_layer.layer_widget
-    #     # self.set_image_opacity(self.get_layer_opacity(self.current_layer_index))
-    #     self.update()
-    #     self.app.add_image_to_canvas_signal.emit({
-    #         "processed_image": image,
-    #         "image_root_point": location,
-    #         "image_pivot_point": location,
-    #         "add_image_to_canvas": True
-    #     })
+        self.app.ui.layer_widget.set_thumbnail()
+        #self.current_layer.layer_widget
+        # self.set_image_opacity(self.get_layer_opacity(self.current_layer_index))
+        self.update()
+        self.app.add_image_to_canvas_signal.emit({
+            "processed_image": image,
+            "image_root_point": location,
+            "image_pivot_point": location,
+            "add_image_to_canvas": True
+        })
 
     draggable_pixmaps_in_scene = {}
 
@@ -573,6 +573,16 @@ class CanvasPlusWidget(BaseWidget):
                 Image.ANTIALIAS
             )
         self.add_image_to_scene(image)
+        
+    
+    def save_image_to_database(self, image):
+        layer_image = LayerImage(
+            layer_id=self.current_layer.id,
+            order=1
+        )
+        layer_image.image = image
+        session.add(layer_image)
+        save_session()
     
     def remove_current_draggable_pixmap_from_scene(self):
         current_draggable_pixmap = self.current_draggable_pixmap()
@@ -586,6 +596,7 @@ class CanvasPlusWidget(BaseWidget):
         self.current_layer_index = layer_index
 
     def add_image_to_scene(self, image):
+        self.save_image_to_database(image)
         if self.current_draggable_pixmap():
             layer_index = self.add_layer()
             self.switch_to_layer(layer_index)
