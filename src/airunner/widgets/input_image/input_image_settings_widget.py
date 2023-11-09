@@ -3,8 +3,9 @@ from functools import partial
 from PIL import Image
 from PyQt6.QtGui import QIcon
 from PyQt6.QtWidgets import QHBoxLayout, QWidget
+from airunner.data.models import LayerImage
 
-from airunner.utils import image_to_pixmap
+from airunner.utils import get_session, image_to_pixmap
 from airunner.widgets.input_image.templates.input_image_ui import Ui_input_image
 from airunner.widgets.slider.slider_widget import SliderWidget
 from airunner.widgets.base_widget import BaseWidget
@@ -24,11 +25,13 @@ class InputImageSettingsWidget(BaseWidget):
     def generator_name(self):
         return self.property("generator_name")
 
-    @property
     def active_grid_area_image(self):
         if not self.settings_manager.generator.input_image_recycle_grid_image or not self._active_grid_area_image:
-            if self.app.canvas.current_layer.image_data.image:
-                self._active_grid_area_image = self.app.canvas.current_layer.image_data.image.copy()
+            layer_image = get_session().query(LayerImage).filter_by(
+                layer_id=self.app.canvas.current_layer.id
+            ).first()
+            if layer_image.image:
+                self._active_grid_area_image = layer_image.image.copy()
         return self._active_grid_area_image
 
     @property
@@ -39,7 +42,7 @@ class InputImageSettingsWidget(BaseWidget):
             if self.settings_manager.generator.input_image_use_imported_image:
                 return self.input_image
             elif self.settings_manager.generator.input_image_use_grid_image:
-                return self.active_grid_area_image
+                return self.active_grid_area_image()
         except AttributeError:
             return None
 
@@ -90,7 +93,7 @@ class InputImageSettingsWidget(BaseWidget):
         self.set_thumbnail()
 
     def action_clicked_button_refresh_grid_image(self):
-        self.set_thumbnail(self.active_grid_area_image)
+        self.set_thumbnail(self.active_grid_area_image())
 
     def action_clicked_button_import_image(self):
         self.import_input_image()
