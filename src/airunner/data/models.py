@@ -658,9 +658,12 @@ class Layer(BaseModel):
         else:
             self.base_64_image = ""
 
-    id = Column(Integer, primary_key=True)
-    layer_id = Column(Integer, ForeignKey('layers.id'))
-    layer = relationship("Layer", backref="image_data")
+    document_id = Column(Integer, ForeignKey('documents.id'))
+    document = relationship("Document", backref="layers")
+    name = Column(String)
+    visible = Column(Boolean, default=True)
+    opacity = Column(Float, default=100)
+    position = Column(Integer, default=0)
     base_64_image = Column(String, default="")
     pos_x = Column(Integer, default=0)
     pos_y = Column(Integer, default=0)
@@ -668,21 +671,6 @@ class Layer(BaseModel):
     pivot_point_y = Column(Integer, default=0)
     root_point_x = Column(Integer, default=0)
     root_point_y = Column(Integer, default=0)
-    order = Column(Integer, default=0)
-    opacity = Column(Float, default=100)
-    visible = Column(Boolean, default=True)
-
-
-class Layer(BaseModel):
-    __tablename__ = 'layers'
-
-    id = Column(Integer, primary_key=True)
-    document_id = Column(Integer, ForeignKey('documents.id'))
-    document = relationship("Document", backref="layers")
-    name = Column(String)
-    visible = Column(Boolean, default=True)
-    opacity = Column(Float, default=100)
-    position = Column(Integer, default=0)
 
 
 class Document(BaseModel):
