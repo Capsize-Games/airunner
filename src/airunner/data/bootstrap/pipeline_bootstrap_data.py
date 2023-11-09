@@ -218,6 +218,18 @@ pipeline_bootstrap_data = pipelines = [
     },
     {
         "pipeline_action": "casuallm",
+        "version": "1",
+        "category": "llm",
+        "classname": "transformers.AutoModelForCausalLM",
+    },
+    {
+        "pipeline_action": "casuallm",
+        "version": "0.1",
+        "category": "llm",
+        "classname": "transformers.AutoModelForCausalLM",
+    },
+    {
+        "pipeline_action": "casuallm",
         "version": "2",
         "category": "llm",
         "classname": "transformers.AutoModelForCausalLM",

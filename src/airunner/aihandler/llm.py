@@ -15,7 +15,7 @@ from airunner.aihandler.settings_manager import SettingsManager
 from airunner.chat.models import BaseConversationController
 
 
-from airunner.data.models import LLMGenerator
+from airunner.data.models import LLMGenerator, LLMPromptTemplate
 from airunner.data.db import session
 from airunner.aihandler.logger import Logger as logger
 
@@ -42,7 +42,7 @@ class LLM(QObject):
     _model = None
     _tokenizer = None
     use_cache = False
-    local_files_only = False
+    local_files_only = True
     llm_int8_enable_fp32_cpu_offload = True
     use_gpu = True
     dtype = ""
@@ -62,13 +62,6 @@ class LLM(QObject):
         "num_return_sequences": 1,
     }
     properties: dict = default_properties.copy()
-    _conversation_controller = None
-    
-    @property
-    def conversation_controller(self):
-        if not self._conversation_controller:
-            self._conversation_controller = BaseConversationController()
-        return self._conversation_controller
 
     @property
     def do_load_model(self):
@@ -123,7 +116,7 @@ class LLM(QObject):
         self.engine = kwargs.pop("engine", None)
         super().__init__(*args, **kwargs)
         self.settings_manager = SettingsManager()
-        self.prompt_template_path = "aihandler/chat_templates/conversation.j2"
+        self.do_quantize_model = True
 
     def move_to_cpu(self):
         if self.model:
@@ -220,17 +213,18 @@ class LLM(QObject):
         
 
         params = {
-            "local_files_only": self.local_files_only,
+            "local_files_only": local_files_only,
             "device_map": self.device_map,
             "use_cache": self.use_cache,
             "torch_dtype": torch.float16 if self.dtype != "32bit" else torch.float32,
             "token": self.settings_manager.hf_api_key_read_key,
         }
         
-        if config:
+        if config and self.do_quantize_model:
             params["quantization_config"] = config
+
         path = self.current_model_path
-        logger.info(f"Loading {self.generator.name} model from {path}")
+        self.engine.send_message(f"Loading {self.generator.name} model from {path}")
         if self.generator.name == "seq2seq":
             self.model = AutoModelForSeq2SeqLM.from_pretrained(
                 path,
@@ -242,26 +236,29 @@ class LLM(QObject):
                 **params
             )
         
-        self.pipeline=transformers.pipeline(
+        self.pipeline = transformers.pipeline(
             "text-generation",
             model=self.model,
             tokenizer=self.tokenizer,
             torch_dtype=torch.float16 if self.dtype != "32bit" else torch.float32,
-            trust_remote_code=True,
+            trust_remote_code=False,
             device_map="auto",
+            min_length=0,
             max_length=1000,
+            num_beams=1,
             do_sample=True,
-            top_k=10,
+            top_k=20,
+            top_p=1.0,
             num_return_sequences=1,
-            eos_token_id=self.tokenizer.eos_token_id
-            )
-        self.llm=HuggingFacePipeline(pipeline=self.pipeline, model_kwargs={'temperature':0.7})
+            eos_token_id=self.tokenizer.eos_token_id,
+            early_stopping=True,
+            repetition_penalty=1.15,
+            temperature=0.7,
+        )
+        self.llm=HuggingFacePipeline(pipeline=self.pipeline)
         self.memory = ConversationBufferWindowMemory(k=5)
-        path = os.path.join(self.prompt_template_path)
-        with open(path, "r") as f:
-            prompt_template = f.read()
         self.prompt = PromptTemplate.from_template(
-            prompt_template, 
+            self.prompt_template,
             template_format="jinja2", 
             partial_variables={
                 "username": self.username,
@@ -277,13 +274,13 @@ class LLM(QObject):
         local_files_only = self.local_files_only if local_files_only is None else local_files_only
 
         params = {
-            "local_files_only": self.local_files_only,
+            "local_files_only": local_files_only,
             "device_map": self.device_map,
             "use_cache": self.use_cache,
             "torch_dtype": torch.float16 if self.dtype != "32bit" else torch.float32,
         }
         path = self.current_model_path
-        logger.info(f"Loading {self.generator.name} model from {path}")
+        self.engine.send_message(f"Loading {self.generator.name} model from {path}")
         try:
             try:
                 bits = {
@@ -311,7 +308,7 @@ class LLM(QObject):
             except Exception as e:
                 logger.error(e)
         except OSError as e:
-            if self.local_files_only:
+            if local_files_only:
                 self.load_model(local_files_only=local_files_only)
             else:
                 raise e
@@ -345,6 +342,10 @@ class LLM(QObject):
         self._processing_request = True
 
     def do_generate(self, data):
+        request_type = data["request_data"]["request_type"]
+        if request_type == "clear_conversation":
+            self.chain.clear()
+
         logger.info("Do generate")
         self.dtype = data["request_data"]["dtype"]
         self.use_gpu = data["request_data"]["use_gpu"]
@@ -414,6 +415,7 @@ class LLM(QObject):
         request_type = request_data["request_type"]
         self.username = request_data["username"]
         self.botname = request_data["botname"]
+        self.prompt_template = request_data["prompt_template"]
         
         # parse properties
         properties = self.parse_properties(kwargs)
@@ -434,6 +436,7 @@ class LLM(QObject):
             del properties["top_k"]
         
         logger.info("Generating output")
+        self.engine.send_message("Generating output")
         with torch.backends.cuda.sdp_kernel(
             enable_flash=True, 
             enable_math=False, 
@@ -448,7 +451,12 @@ class LLM(QObject):
                     properties["pad_token_id"] = pad_token_id
                     outputs = self.model.generate(inputs, **properties)
                 else:
-                    return self.chain.run(prompt)
+                    #inputs = self.process_input(input, request_type)
+                    #outputs = self.model.generate(inputs, **properties)
+                    # print the chain:
+                    # get the template from the chain to see what it currently looks like
+                    value = self.chain.run(prompt)
+                    return value
 
 
         # decode the output
@@ -471,18 +479,18 @@ class LLM(QObject):
         # if request_type == "image_caption_generator":
         #     return self.generate(value, "complete_image_description_generator", **kwargs)
         
-        if self.generator.name == "casuallm":
-            # strip <<SYS>> tags and anything inside them
-            value = re.sub(r'<<SYS>>.*?<<\/SYS>>', '', value, flags=re.DOTALL).strip()
+        # if self.generator.name == "casuallm":
+        #     # strip <<SYS>> tags and anything inside them
+        #     value = re.sub(r'<<SYS>>.*?<<\/SYS>>', '', value, flags=re.DOTALL).strip()
 
-            # strip [INST] tags and anything inside them
-            value = re.sub(r'\[INST\].*?\[\/INST\]', '', value, flags=re.DOTALL).strip()
+        #     # strip [INST] tags and anything inside them
+        #     value = re.sub(r'\[INST\].*?\[\/INST\]', '', value, flags=re.DOTALL).strip()
 
-            # strip leading and trailing whitespaces
-            value = value.strip()
-            value = value.replace('\\n', '')
-            value = value.replace('\n', '')
-            value = re.sub(r'^\s+', '', value)
+        #     # strip leading and trailing whitespaces
+        #     value = value.strip()
+        #     value = value.replace('\\n', '')
+        #     value = value.replace('\n', '')
+        #     value = re.sub(r'^\s+', '', value)
 
         return value
 

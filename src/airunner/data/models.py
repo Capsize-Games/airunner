@@ -12,6 +12,51 @@ from PyQt6.QtCore import Qt, QAbstractTableModel, QModelIndex
 from airunner.settings import BASE_PATH
 
 
+DEFAULT_PATHS = {
+    "art": {
+        "models": {
+            "txt2img": "",
+            "depth2img": "",
+            "pix2pix": "",
+            "inpaint": "",
+            "upscale": "",
+            "txt2vid": "",
+            "embeddings": "",
+            "lora": "",
+        },
+        "other": {
+            "images": "",
+            "gifs": "",
+            "videos": "",
+        },
+    },
+    "text": {
+        "models": {
+            "casuallm": "",
+            "seq2seq": "",
+        }
+    }
+}
+
+for k, v in DEFAULT_PATHS.items():
+    for k2, v2 in v.items():
+        if isinstance(v2, dict):
+            for k3, v3 in v2.items():
+                path = os.path.join(BASE_PATH, k, k2, k3)
+                DEFAULT_PATHS[k][k2][k3] = path
+                #check if path exists, if not, create it:
+                if not os.path.exists(path):
+                    print("creating path: ", path)
+                    os.makedirs(path)
+        else:
+            path = os.path.join(BASE_PATH, k, k2)
+            DEFAULT_PATHS[k][k2] = path
+            #check if path exists, if not, create it:
+            if not os.path.exists(path):
+                print("creating path: ", path)
+                os.makedirs(path)
+
+
 class ModelBase(QAbstractTableModel):
     _headers = []
 
@@ -42,9 +87,12 @@ class ModelBase(QAbstractTableModel):
 
 Base = declarative_base()
 
+
 class BaseModel(Base):
     __abstract__ = True
     id = Column(Integer, primary_key=True)
+    created_at = Column(DateTime, default=datetime.datetime.utcnow)
+
 
 class Embedding(BaseModel):
     __tablename__ = 'embeddings'
@@ -388,50 +436,6 @@ class MemorySettings(BaseModel):
     settings = relationship("Settings", back_populates="memory_settings")
 
 
-DEFAULT_PATHS = {
-    "art": {
-        "models": {
-            "txt2img": "",
-            "depth2img": "",
-            "pix2pix": "",
-            "inpaint": "",
-            "upscale": "",
-            "txt2vid": "",
-            "embeddings": "",
-            "lora": "",
-        },
-        "other": {
-            "images": "",
-            "gifs": "",
-            "videos": "",
-        },
-    },
-    "text": {
-        "models": {
-            "casuallm": "",
-            "seq2seq": "",
-        }
-    }
-}
-
-for k, v in DEFAULT_PATHS.items():
-    for k2, v2 in v.items():
-        if isinstance(v2, dict):
-            for k3, v3 in v2.items():
-                path = os.path.join(BASE_PATH, k, k2, k3)
-                DEFAULT_PATHS[k][k2][k3] = path
-                #check if path exists, if not, create it:
-                if not os.path.exists(path):
-                    print("creating path: ", path)
-                    os.makedirs(path)
-        else:
-            path = os.path.join(BASE_PATH, k, k2)
-            DEFAULT_PATHS[k][k2] = path
-            #check if path exists, if not, create it:
-            if not os.path.exists(path):
-                print("creating path: ", path)
-                os.makedirs(path)
-
 class PathSettings(BaseModel):
     __tablename__ = 'path_settings'
 
@@ -770,11 +774,18 @@ class LLMModelVersion(BaseModel):
     generator = relationship('LLMGenerator', back_populates='model_versions')
 
 
+class LLMPromptTemplate(BaseModel):
+    __tablename__ = 'llm_prompt_templates'
+    name = Column(String, default="")
+    template = Column(String, default="")
+
+
 class Conversation(BaseModel):
     __tablename__ = 'conversation'
     id = Column(Integer, primary_key=True)
     created_at = Column(DateTime, default=datetime.datetime.utcnow)
     messages = relationship('Message', back_populates='conversation')
+
 
 class Message(BaseModel):
     __tablename__ = 'messages'
