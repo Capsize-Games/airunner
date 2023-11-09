@@ -323,27 +323,20 @@ class CanvasPlusWidget(BaseWidget):
         ).all()
         for layer in layers:
             if layer.id in self.layers:
-                for image in self.layers[layer.id]:
-                    self.scene.removeItem(image)
-            else:
-                self.layers[layer.id] = []
-            images = session.query(LayerImage).filter(
-                LayerImage.layer_id == layer.id
-            ).order_by(
-                LayerImage.order.asc()
-            ).all()
-            for layer_image in images:
-                image = layer_image.image
-                pixmap = QPixmap.fromImage(ImageQt(image))
-                image = LayerImageItem(self, pixmap, layer_image)
-                self.layers[layer.id].append(image)
-                if layer_image.visible:
-                    self.scene.addItem(image)
-                pos = QPoint(layer_image.pos_x, layer_image.pos_y)
-                image.setPos(QPointF(
-                    self.canvas_settings.pos_x + pos.x(),
-                    self.canvas_settings.pos_y + pos.y()
-                ))
+                self.scene.removeItem(self.layers[layer.id])
+            image = self.layers[layer.id] if layer.id in self.layers else None
+            if image is None:
+                continue
+            pixmap = QPixmap.fromImage(ImageQt(image))
+            image = LayerImageItem(self, pixmap, layer)
+            self.layers[layer.id] = image
+            if layer.visible:
+                self.scene.addItem(image)
+            pos = QPoint(layer.pos_x, layer.pos_y)
+            image.setPos(QPointF(
+                self.canvas_settings.pos_x + pos.x(),
+                self.canvas_settings.pos_y + pos.y()
+            ))
 
     def handle_changed_signal(self, key, value):
         if key == "current_tab":
@@ -522,44 +515,6 @@ class CanvasPlusWidget(BaseWidget):
                             stdin=subprocess.PIPE).communicate(data)
         except FileNotFoundError:
             pass
-    
-    def create_image_old(self, image):
-        """
-        Create a new image object and add it to the current layer
-        """
-        location = QPoint(
-            self.settings_manager.active_grid_settings.pos_x,
-            self.settings_manager.active_grid_settings.pos_y
-        )
-        # convert image to RGBA
-        image = image.convert("RGBA")
-        # self.current_layer.image_data = ImageData(
-        #     position=location,
-        #     image=image,
-        #     opacity=self.current_layer.opacity
-        # )
-        self.current_layer.position_x = location.x()
-        self.current_layer.position_y = location.y()
-
-        session = get_session()
-        layer_image = LayerImage(
-            layer_id=self.current_layer.id,
-            order=len(self.current_layer.layer_images),
-        )
-        layer_image.image = image
-        session.add(layer_image)
-        save_session()
-
-        self.app.ui.layer_widget.set_thumbnail()
-        #self.current_layer.layer_widget
-        # self.set_image_opacity(self.get_layer_opacity(self.current_layer_index))
-        self.update()
-        self.app.add_image_to_canvas_signal.emit({
-            "processed_image": image,
-            "image_root_point": location,
-            "image_pivot_point": location,
-            "add_image_to_canvas": True
-        })
 
     draggable_pixmaps_in_scene = {}
 
@@ -576,12 +531,8 @@ class CanvasPlusWidget(BaseWidget):
         
     
     def save_image_to_database(self, image):
-        layer_image = LayerImage(
-            layer_id=self.current_layer.id,
-            order=1
-        )
-        layer_image.image = image
-        session.add(layer_image)
+        self.current_layer.image = image
+        session.add(self.current_layer)
         save_session()
     
     def remove_current_draggable_pixmap_from_scene(self):
@@ -699,3 +650,6 @@ class CanvasPlusWidget(BaseWidget):
                 filtered_image = self.image_data[index].image.filter(filter)
             self.current_layer.image_data[index].image = filtered_image
             self.image_data = []
+    
+    def update_image_canvas(self):
+        print("TODO")
