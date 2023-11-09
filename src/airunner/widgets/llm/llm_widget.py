@@ -7,7 +7,7 @@ from sqlalchemy import inspect
 
 from airunner.aihandler.enums import MessageCode
 from airunner.data.db import session
-from airunner.data.models import AIModel, LLMGenerator, Conversation, LLMGeneratorSetting, Message
+from airunner.data.models import AIModel, LLMGenerator, Conversation, LLMGeneratorSetting, LLMPromptTemplate, Message
 from airunner.utils import save_session
 from airunner.widgets.base_widget import BaseWidget
 from airunner.widgets.llm.templates.llm_widget_ui import Ui_llm_widget
@@ -46,8 +46,9 @@ class LLMWidget(BaseWidget):
 
         self.ui.prefix.blockSignals(True)
         self.ui.suffix.blockSignals(True)
-        self.ui.prefix.setPlainText(self.generator.prefix)
-        self.ui.suffix.setPlainText(self.generator.suffix)
+        if self.generator:
+            self.ui.prefix.setPlainText(self.generator.prefix)
+            self.ui.suffix.setPlainText(self.generator.suffix)
         self.initialize_form()
         self.ui.prefix.blockSignals(False)
         self.ui.suffix.blockSignals(False)
@@ -59,6 +60,15 @@ class LLMWidget(BaseWidget):
         self.ui.leave_in_vram.setChecked(leave_in_vram)
         self.ui.move_to_cpu.setChecked(self.settings_manager.move_unused_model_to_cpu)
         self.ui.unload_model.setChecked(self.settings_manager.unload_unused_model)
+
+        prompt_templates = session.query(LLMPromptTemplate).all()
+        self.ui.prompt_template.blockSignals(True)
+        for prompt_template in prompt_templates:
+            self.ui.prompt_template.addItem(prompt_template.name)
+        self.ui.prompt_template.blockSignals(False)
+    
+    def prompt_template_text_changed(self, value):
+        print(value)
 
     @pyqtSlot(dict)
     def message_handler(self, response: dict):
@@ -91,13 +101,14 @@ class LLMWidget(BaseWidget):
         self.ui.use_gpu_checkbox.blockSignals(True)
         self.ui.override_parameters.blockSignals(True)
 
-        self.ui.radio_button_2bit.setChecked(self.generator.generator_settings[0].dtype == "2bit")
-        self.ui.radio_button_4bit.setChecked(self.generator.generator_settings[0].dtype == "4bit")
-        self.ui.radio_button_8bit.setChecked(self.generator.generator_settings[0].dtype == "8bit")
-        self.ui.radio_button_16bit.setChecked(self.generator.generator_settings[0].dtype == "16bit")
-        self.ui.radio_button_32bit.setChecked(self.generator.generator_settings[0].dtype == "32bit")
-        self.set_dtype_by_gpu(self.generator.generator_settings[0].use_gpu)
-        self.set_dtype(self.generator.generator_settings[0].dtype)
+        if self.generator:
+            self.ui.radio_button_2bit.setChecked(self.generator.generator_settings[0].dtype == "2bit")
+            self.ui.radio_button_4bit.setChecked(self.generator.generator_settings[0].dtype == "4bit")
+            self.ui.radio_button_8bit.setChecked(self.generator.generator_settings[0].dtype == "8bit")
+            self.ui.radio_button_16bit.setChecked(self.generator.generator_settings[0].dtype == "16bit")
+            self.ui.radio_button_32bit.setChecked(self.generator.generator_settings[0].dtype == "32bit")
+            self.set_dtype_by_gpu( self.generator.generator_settings[0].use_gpu)
+            self.set_dtype(self.generator.generator_settings[0].dtype)
 
         # get unique model names
         model_names = [model.name for model in session.query(LLMGenerator).all()]
@@ -105,16 +116,18 @@ class LLMWidget(BaseWidget):
         self.ui.model.clear()
         self.ui.model.addItems(model_names)
         self.ui.model.setCurrentText(self.current_generator)
-        self.ui.username.setText(self.generator.username)
-        self.ui.botname.setText(self.generator.botname)
+        if self.generator:
+            self.ui.username.setText(self.generator.username)
+            self.ui.botname.setText(self.generator.botname)
         self.update_model_version_combobox()
-        self.ui.model_version.setCurrentText(self.generator.generator_settings[0].model_version)
-        self.ui.personality_type.setCurrentText(self.generator.bot_personality)
-        self.ui.random_seed.setChecked(self.generator.generator_settings[0].random_seed)
-        self.ui.do_sample.setChecked(self.generator.generator_settings[0].do_sample)
-        self.ui.early_stopping.setChecked(self.generator.generator_settings[0].early_stopping)
-        self.ui.use_gpu_checkbox.setChecked(self.generator.generator_settings[0].use_gpu)
-        self.ui.override_parameters.setChecked(self.generator.override_parameters)
+        if self.generator:
+            self.ui.model_version.setCurrentText(self.generator.generator_settings[0].model_version)
+            self.ui.personality_type.setCurrentText(self.generator.bot_personality)
+            self.ui.random_seed.setChecked(self.generator.generator_settings[0].random_seed)
+            self.ui.do_sample.setChecked(self.generator.generator_settings[0].do_sample)
+            self.ui.early_stopping.setChecked(self.generator.generator_settings[0].early_stopping)
+            self.ui.use_gpu_checkbox.setChecked(self.generator.generator_settings[0].use_gpu)
+            self.ui.override_parameters.setChecked(self.generator.override_parameters)
 
         self.ui.model.blockSignals(False)
         self.ui.model_version.blockSignals(False)
@@ -231,6 +244,9 @@ class LLMWidget(BaseWidget):
         # conversation = "\n".join(self.conversation_history)
         # suffix = "\n".join([self.suffix, f'{self.generator.botname} Says: '])
         # prompt = "\n".join([self.instructions, self.prefix, conversation, input, suffix])
+        prompt_template = session.query(LLMPromptTemplate).filter(
+            LLMPromptTemplate.name == self.ui.prompt_template.currentText()
+        ).first()
         data = {
             "llm_request": True,
             "request_data": {
@@ -248,6 +264,7 @@ class LLMWidget(BaseWidget):
                 "request_type": "image_caption_generator",
                 "username": self.generator.username,
                 "botname": self.generator.botname,
+                "prompt_template": prompt_template.template,
                 "parameters": {
                     "override_parameters": self.generator.override_parameters,
                     "top_p": self.generator.generator_settings[0].top_p,
@@ -288,6 +305,12 @@ class LLMWidget(BaseWidget):
     def action_button_clicked_clear_conversation(self):
         self.conversation_history = []
         self.ui.conversation.setText("")
+        self.app.client.message = {
+            "llm_request": True,
+            "request_data": {
+                "request_type": "clear_conversation",
+            }
+        }
 
     def message_type_text_changed(self, val):
         self.generator.message_type = val
