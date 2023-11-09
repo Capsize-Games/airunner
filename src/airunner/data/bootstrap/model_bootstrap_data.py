@@ -198,44 +198,8 @@ model_bootstrap_data = [
         "enabled": True
     },
     {
-        "name": "Flan T5 Small",
-        "path": "google/flan-t5-small",
-        "branch": "fp16",
-        "version": "1",
-        "category": "llm",
-        "pipeline_action": "seq2seq",
-        "enabled": True
-    },
-    {
-        "name": "Flan T5 Large",
-        "path": "google/flan-t5-large",
-        "branch": "fp16",
-        "version": "1",
-        "category": "llm",
-        "pipeline_action": "seq2seq",
-        "enabled": True
-    },
-    {
         "name": "Flan T5 XL",
         "path": "google/flan-t5-xl",
-        "branch": "fp16",
-        "version": "1",
-        "category": "llm",
-        "pipeline_action": "seq2seq",
-        "enabled": True
-    },
-    {
-        "name": "Flan T5 XXL",
-        "path": "google/flan-t5-xxl",
-        "branch": "fp16",
-        "version": "1",
-        "category": "llm",
-        "pipeline_action": "seq2seq",
-        "enabled": True
-    },
-    {
-        "name": "Flan T5 UL",
-        "path": "google/flan-t5-ul",
         "branch": "fp16",
         "version": "1",
         "category": "llm",

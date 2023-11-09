@@ -44,6 +44,12 @@ seed_data = {
             "early_stopping": False,
             "random_seed": False,
             "model_version": [
+                "meta-llama/Llama-2-7b-hf",
+                "meta-llama/Llama-2-7b-chat-hf",
+                "mistralai/Mistral-7B-v0.1",
+                "mistralai/Mistral-7B-Instruct-v0.1",
+                "gpt2-xl",
+                "gpt2-large",
             ]
         }
     }
