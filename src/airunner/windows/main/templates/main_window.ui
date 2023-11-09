@@ -183,9 +183,9 @@
                  <string notr="true"/>
                 </property>
                 <property name="currentIndex">
-                 <number>1</number>
+                 <number>0</number>
                 </property>
-                <widget class="QWidget" name="tab_canvas">
+                <widget class="QWidget" name="tab_image">
                  <attribute name="title">
                   <string>Canvas</string>
                  </attribute>
@@ -203,21 +203,31 @@
                    <number>0</number>
                   </property>
                   <item row="0" column="0">
-                   <widget class="CanvasPlusWidget" name="canvas_plus_widget" native="true">
-                    <property name="styleSheet">
-                     <string notr="true"/>
+                   <widget class="QTabWidget" name="tabWidget">
+                    <property name="currentIndex">
+                     <number>0</number>
                     </property>
+                    <widget class="QWidget" name="canvas">
+                     <attribute name="title">
+                      <string>Canvas</string>
+                     </attribute>
+                     <layout class="QGridLayout" name="gridLayout_18">
+                      <item row="0" column="0">
+                       <widget class="CanvasPlusWidget" name="canvas_plus_widget" native="true"/>
+                      </item>
+                     </layout>
+                    </widget>
+                    <widget class="QWidget" name="standard">
+                     <attribute name="title">
+                      <string>Standard</string>
+                     </attribute>
+                     <layout class="QGridLayout" name="gridLayout_19">
+                      <item row="0" column="0">
+                       <widget class="ImagePanelWidget" name="standard_image_widget" native="true"/>
+                      </item>
+                     </layout>
+                    </widget>
                    </widget>
-                  </item>
-                 </layout>
-                </widget>
-                <widget class="QWidget" name="tab_image">
-                 <attribute name="title">
-                  <string>Image</string>
-                 </attribute>
-                 <layout class="QGridLayout" name="gridLayout_18">
-                  <item row="0" column="0">
-                   <widget class="ImagePanelWidget" name="widget_3" native="true"/>
                   </item>
                  </layout>
                 </widget>
