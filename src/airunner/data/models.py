@@ -10,6 +10,7 @@ from sqlalchemy.orm import relationship
 from PyQt6.QtCore import Qt, QAbstractTableModel, QModelIndex
 
 from airunner.settings import BASE_PATH
+from airunner.utils import default_hf_cache_dir
 
 
 DEFAULT_PATHS = {
@@ -23,6 +24,7 @@ DEFAULT_PATHS = {
             "txt2vid": "",
             "embeddings": "",
             "lora": "",
+            "vae": "",
         },
         "other": {
             "images": "",
@@ -455,6 +457,7 @@ class PathSettings(BaseModel):
     video_path = Column(String, default=DEFAULT_PATHS["art"]["other"]["videos"])
     llm_casuallm_model_path = Column(String, default=DEFAULT_PATHS["text"]["models"]["casuallm"])
     llm_seq2seq_model_path = Column(String, default=DEFAULT_PATHS["text"]["models"]["seq2seq"])
+    vae_model_path = Column(String, default=DEFAULT_PATHS["art"]["models"]["vae"])
 
     settings = relationship("Settings", back_populates="path_settings")
 
@@ -492,19 +495,22 @@ class PathSettings(BaseModel):
 
 
     def reset_paths(self):
-        self.hf_cache_path = ""
-        self.base_path = DEFAULT_PATHS["base"]
-        self.txt2img_model_path = DEFAULT_PATHS["models"]["txt2img"]
-        self.depth2img_model_path = DEFAULT_PATHS["models"]["depth2img"]
-        self.pix2pix_model_path = DEFAULT_PATHS["models"]["pix2pix"]
-        self.inpaint_model_path = DEFAULT_PATHS["models"]["inpaint"]
-        self.upscale_model_path = DEFAULT_PATHS["models"]["upscale"]
-        self.txt2vid_model_path = DEFAULT_PATHS["models"]["txt2vid"]
-        self.embeddings_model_path = DEFAULT_PATHS["models"]["embeddings"]
-        self.lora_model_path = DEFAULT_PATHS["models"]["lora"]
-        self.image_path = DEFAULT_PATHS["other"]["image"]
-        self.gif_path = DEFAULT_PATHS["other"]["gif"]
-        self.video_path = DEFAULT_PATHS["other"]["video"]
+        self.hf_cache_path = default_hf_cache_dir()
+        self.base_path = BASE_PATH
+        self.txt2img_model_path = DEFAULT_PATHS["art"]["models"]["txt2img"]
+        self.depth2img_model_path = DEFAULT_PATHS["art"]["models"]["depth2img"]
+        self.pix2pix_model_path = DEFAULT_PATHS["art"]["models"]["pix2pix"]
+        self.inpaint_model_path = DEFAULT_PATHS["art"]["models"]["inpaint"]
+        self.upscale_model_path = DEFAULT_PATHS["art"]["models"]["upscale"]
+        self.txt2vid_model_path = DEFAULT_PATHS["art"]["models"]["txt2vid"]
+        self.vae_model_path = DEFAULT_PATHS["art"]["models"]["vae"]
+        self.embeddings_model_path = DEFAULT_PATHS["art"]["models"]["embeddings"]
+        self.lora_model_path = DEFAULT_PATHS["art"]["models"]["lora"]
+        self.image_path = DEFAULT_PATHS["art"]["other"]["images"]
+        self.gif_path = DEFAULT_PATHS["art"]["other"]["gifs"]
+        self.video_path = DEFAULT_PATHS["art"]["other"]["videos"]
+        self.llm_casuallm_model_path = DEFAULT_PATHS["text"]["models"]["casuallm"]
+        self.llm_seq2seq_model_path = DEFAULT_PATHS["text"]["models"]["seq2seq"]
         from airunner.utils import save_session
         save_session()
 
