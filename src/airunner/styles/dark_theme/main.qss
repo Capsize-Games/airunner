@@ -18,6 +18,29 @@ QComboBox {
     padding: 5px;
     border: 1px solid @darkprimary-color;
     color: @light-color;
+    background-color: @dark-color;
+}
+
+QComboBox::drop-down {
+    border: none;
+    background-color: @dark-color;
+}
+
+/* the items in the QComboBox are not dark-color */
+QComboBox QAbstractItemView {
+    background-color: @dark-color;
+    color: @light-color;
+    border: 1px solid @darkprimary-color;
+    selection-background-color: @primary-color;
+    selection-color: @light-color;
+}
+/* hovering over items in the QComboBox should change the background color of those items */
+QComboBox QAbstractItemView::item:hover {
+    background-color: @darkerprimary-color;
+}
+
+/* arrow */
+QComboBox::down-arrow {
 }
 
 #mode_tab_widget QWidget {
