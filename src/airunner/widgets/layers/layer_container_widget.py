@@ -77,14 +77,15 @@ class LayerContainerWidget(BaseWidget):
         save_session(session)
 
         layer_name = f"Layer {len(self.layers) + 1}"
-        index = 1
+        index = 0
         self.layers.insert(index, layer_data)
         self.set_current_layer(index)
         self.add_layer_widget(layer_data, index)
         return index
 
     def add_layer_widget(self, layer_data, index):
-        layer_widget = LayerWidget(layer_container=self, layer_data=layer_data, layer_index=index-1)
+        Logger.info(f"add_layer_widget index={index}")
+        layer_widget = LayerWidget(layer_container=self, layer_data=layer_data, layer_index=index)
 
         self.ui.scrollAreaWidgetContents.layout().insertWidget(0, layer_widget)
         layer_widget.show()
@@ -160,6 +161,7 @@ class LayerContainerWidget(BaseWidget):
 
         # if we have a new image object, set it as the current layer image
         layer_index = self.app.canvas.get_index_by_layer(selected_layer)
+        Logger.info("Setting current_layer_index={layer_index}")
         self.current_layer_index = layer_index
         if new_image:
             self.layers[self.current_layer_index].image_data.image = new_image
@@ -189,30 +191,32 @@ class LayerContainerWidget(BaseWidget):
         self.app.canvas.update()
 
     def delete_layer(self, _value=False, index=None, layer=None):
+        Logger.info(f"delete_layer requested index {index}")
         current_index = index
         if layer and current_index is None:
             for layer_index, layer_object in enumerate(self.layers):
                 if layer_object is layer:
                     current_index = layer_index
+        Logger.info(f"current_index={current_index}")
         if current_index is None:
             current_index = self.current_layer_index
         Logger.info(f"Deleting layer {current_index}")
+        self.app.canvas.delete_image()
         self.app.history.add_event({
             "event": "delete_layer",
             "layers": self.get_layers_copy(),
             "layer_index": current_index
         })
-        if len(self.layers) == 1:
+        try:
+            session = get_session()
+            session.delete(self.layers[current_index])
+            save_session(session)
+            layer = self.layers.pop(current_index)
+            layer.layer_widget.deleteLater()
+        except IndexError as e:
+            Logger.error(f"Could not delete layer {current_index}. Error: {e}")
+        if len(self.layers) == 0:
             self.layers = [LayerData(0, "Layer 1")]
-        else:
-            try:
-                session = get_session()
-                session.delete(self.layers[current_index])
-                session.commit()
-                layer = self.layers.pop(current_index)
-                layer.layer_widget.deleteLater()
-            except IndexError:
-                pass
         self.show_layers()
         self.update()
 
@@ -224,13 +228,9 @@ class LayerContainerWidget(BaseWidget):
             layer.layer_widget.deleteLater()
         self.layers = [LayerData(0, "Layer 1")]
         self.current_layer_index = 0
-    
-    def clear_current_layer(self):
-        self.layers[self.current_layer_index] = LayerData(
-            self.current_layer_index, 
-            f"Layer {self.current_layer_index}")
 
     def handle_layer_click(self, layer, index, event):
+        Logger.info(f"handle_layer_click index={index}")
         # check if the control key is pressed
         if event.modifiers() == Qt.KeyboardModifier.ControlModifier:
             if self.app.canvas.container:
@@ -253,6 +253,7 @@ class LayerContainerWidget(BaseWidget):
             self.selected_layers = {}
 
     def set_current_layer(self, index):
+        Logger.info(f"set_current_layer current_layer_index={index}")
         self.current_layer_index = index
         if not hasattr(self, "container"):
             return
