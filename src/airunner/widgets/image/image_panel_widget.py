@@ -8,6 +8,10 @@ from airunner.widgets.image.templates.image_panel_widget_ui import Ui_image_pane
 
 class ImagePanelWidget(BaseWidget):
     widget_class_ = Ui_image_panel_widget
+    page = 0
+    total_per_page = 10
+    page_step = 512
+    last_page = False
     
     @property
     def image_path(self):
@@ -15,6 +19,7 @@ class ImagePanelWidget(BaseWidget):
 
     def __init__(self, *args, **kwargs):
         super().__init__(*args, **kwargs)
+        self.ui.scrollArea.verticalScrollBar().valueChanged.connect(self.handle_scroll)
         self.ui.breadcrumbs.callback = self.handle_breadcrumb_clicked
         if self.settings_manager.path_settings.image_path != "":
             base = ""
@@ -29,26 +34,35 @@ class ImagePanelWidget(BaseWidget):
     def handle_breadcrumb_clicked(self):
         self.show_files()
 
+
     def clear_files(self):
+        self.page = 0
         # remove all images from the container
         while self.ui.scrollAreaWidgetContents.layout().count() > 0:
             item = self.ui.scrollAreaWidgetContents.layout().takeAt(0)
             widget = item.widget()
             widget.deleteLater()
 
-    def show_files(self):
-        self.clear_files()
+    def show_files(self, clear_images=True, reset_scroll_bar=True, show_folders=True):
+        if clear_images:
+            self.clear_files()
 
-        # first list all folders
-        for file in os.listdir(self.image_path):
-            if os.path.isdir(os.path.join(self.image_path, file)):
-                folder_widget = FolderWidget()
-                folder_widget.callback = self.handle_folder_clicked
-                folder_widget.set_path(file)
-                self.ui.scrollAreaWidgetContents.layout().addWidget(folder_widget)
+        if reset_scroll_bar:
+            self.ui.scrollArea.verticalScrollBar().setValue(0)
 
-        # list the first 10 files in the folder
-        for file in os.listdir(self.image_path)[0:10]:
+        if show_folders:
+            for file in os.listdir(self.image_path):
+                if os.path.isdir(os.path.join(self.image_path, file)):
+                    folder_widget = FolderWidget()
+                    folder_widget.callback = self.handle_folder_clicked
+                    folder_widget.set_path(file)
+                    self.ui.scrollAreaWidgetContents.layout().addWidget(folder_widget)
+
+        start = self.page * self.total_per_page
+        end = start + self.total_per_page
+        files = os.listdir(self.image_path)
+        self.last_page = end >= len(files)
+        for file in files[start:end]:
             if file.endswith(".png"):
                 image_widget = ImageWidget(self)
                 image_widget.set_image(os.path.join(self.image_path, file))
@@ -57,3 +71,10 @@ class ImagePanelWidget(BaseWidget):
     def handle_folder_clicked(self, path):
         self.ui.breadcrumbs.navigate(path)
         self.show_files()
+    
+    def handle_scroll(self, value):
+        if self.last_page:
+            return
+        if value >= self.ui.scrollArea.verticalScrollBar().maximum() - self.page_step + 1:
+            self.page += 1
+            self.show_files(clear_images=False, reset_scroll_bar=False, show_folders=False)
