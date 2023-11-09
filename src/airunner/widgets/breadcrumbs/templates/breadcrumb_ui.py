@@ -36,10 +36,13 @@ class Ui_breadcrumb_widget(object):
         self.button.setObjectName("button")
         self.horizontalLayout.addWidget(self.button)
         self.slash = QtWidgets.QLabel(parent=breadcrumb_widget)
+        sizePolicy = QtWidgets.QSizePolicy(QtWidgets.QSizePolicy.Policy.Fixed, QtWidgets.QSizePolicy.Policy.Preferred)
+        sizePolicy.setHorizontalStretch(0)
+        sizePolicy.setVerticalStretch(0)
+        sizePolicy.setHeightForWidth(self.slash.sizePolicy().hasHeightForWidth())
+        self.slash.setSizePolicy(sizePolicy)
         self.slash.setObjectName("slash")
         self.horizontalLayout.addWidget(self.slash)
-        spacerItem = QtWidgets.QSpacerItem(40, 20, QtWidgets.QSizePolicy.Policy.Expanding, QtWidgets.QSizePolicy.Policy.Minimum)
-        self.horizontalLayout.addItem(spacerItem)
 
         self.retranslateUi(breadcrumb_widget)
         self.home_button.clicked.connect(breadcrumb_widget.breadcrumb_clicked) # type: ignore

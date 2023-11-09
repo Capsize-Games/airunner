@@ -1,5 +1,7 @@
 import os
 
+from PyQt6 import QtWidgets
+
 from airunner.widgets.base_widget import BaseWidget
 from airunner.widgets.breadcrumbs.templates.breadcrumb_container_widget_ui import Ui_breadcrumb_container_widget
 from airunner.widgets.breadcrumbs.breadcrumb_widget import BreadcrumbWidget
@@ -9,6 +11,7 @@ class BreadcrumbContainerWidget(BaseWidget):
     current_path = ""
     path_base = ""
     root_path = ""
+    spacer = None
 
     @property
     def absolute_path(self):
@@ -16,9 +19,12 @@ class BreadcrumbContainerWidget(BaseWidget):
 
     def clear_breadcrumbs(self):
         # remove all breadcrumbs from the container
+        if self.spacer:
+            self.ui.breadcrumb_container.removeItem(self.spacer)
         while self.ui.breadcrumb_container.count() > 0:
             item = self.ui.breadcrumb_container.takeAt(0)
             widget = item.widget()
+            # check if widget is spacer, if so do not delete just remove it
             widget.deleteLater()
 
     def navigate(self, path):
@@ -36,6 +42,11 @@ class BreadcrumbContainerWidget(BaseWidget):
             is_home = index == 0
             is_final = index == len(path_parts) - 1
             self.add_breadcrumb(path, is_final, is_home)
+        
+        if not self.spacer:
+            # vertical spacer
+            self.spacer = QtWidgets.QSpacerItem(20, 40, QtWidgets.QSizePolicy.Policy.Expanding, QtWidgets.QSizePolicy.Policy.Minimum)
+        self.ui.breadcrumb_container.addSpacerItem(self.spacer)
         
     def handle_breadcrumb_clicked(self, folder):
         path_parts = self.current_path.split(os.sep)
