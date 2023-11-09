@@ -15,7 +15,8 @@ from controlnet_aux.processor import Processor
 from diffusers.pipelines.stable_diffusion.convert_from_ckpt import \
     download_from_original_stable_diffusion_ckpt
 from diffusers.pipelines.text_to_video_synthesis.pipeline_text_to_video_zero import CrossFrameAttnProcessor
-from diffusers.utils import export_to_gif, randn_tensor
+from diffusers.utils import export_to_gif
+from diffusers.utils.torch_utils import randn_tensor
 from torchvision import transforms
 
 from airunner.aihandler.auto_pipeline import AutoImport
@@ -33,6 +34,9 @@ from airunner.aihandler.mixins.txttovideo_mixin import TexttovideoMixin
 from airunner.aihandler.settings import LOG_LEVEL, AIRUNNER_ENVIRONMENT
 from airunner.aihandler.settings_manager import SettingsManager
 from airunner.prompt_builder.prompt_data import PromptData
+
+
+torch.backends.cuda.matmul.allow_tf32 = True
 
 
 class SDRunner(
