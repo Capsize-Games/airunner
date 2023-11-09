@@ -13,7 +13,7 @@ from airunner.aihandler.logger import Logger
 from airunner.aihandler.settings_manager import SettingsManager
 from airunner.cursors.circle_brush import CircleCursor
 from airunner.data.db import session
-from airunner.data.models import Layer, LayerImage, CanvasSettings, ActiveGridSettings
+from airunner.data.models import Layer, CanvasSettings, ActiveGridSettings
 from airunner.utils import get_session, save_session
 from airunner.widgets.base_widget import BaseWidget
 from airunner.widgets.canvas_plus.templates.canvas_plus_ui import Ui_canvas
