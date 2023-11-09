@@ -1380,7 +1380,7 @@ class MainWindow(
             tab_index = self.ui.center_tab.indexOf(self.ui.center_tab.findChild(QWidget, "tab_shapegif"))
             self.ui.center_tab.setCurrentIndex(tab_index)
         else:
-            tab_index = self.ui.center_tab.indexOf(self.ui.center_tab.findChild(QWidget, f"tab_canvas"))
+            tab_index = self.ui.center_tab.indexOf(self.ui.center_tab.findChild(QWidget, f"tab_image"))
             self.ui.center_tab.setCurrentIndex(tab_index)
         self.ui.center_tab.blockSignals(False)
 
