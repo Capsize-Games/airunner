@@ -30,6 +30,8 @@ class EmbeddingsContainerWidget(BaseWidget):
         self.scan_for_embeddings()
 
     def disable_embedding(self, name, model_name):
+        if name not in self.embedding_widgets:
+            return
         self.embedding_widgets[name].setEnabled(False)
         if name not in self.bad_model_embedding_map:
             self.bad_model_embedding_map[name] = []
