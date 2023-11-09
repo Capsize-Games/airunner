@@ -18,6 +18,29 @@ QComboBox {
     padding: 5px;
     border: 1px solid rgba(0, 132, 185, 100);
     color: #C8C8C8;
+    background-color: #000;
+}
+
+QComboBox::drop-down {
+    border: none;
+    background-color: #000;
+}
+
+/* the items in the QComboBox are not dark-color */
+QComboBox QAbstractItemView {
+    background-color: #000;
+    color: #C8C8C8;
+    border: 1px solid rgba(0, 132, 185, 100);
+    selection-background-color: rgba(0, 132, 185, 255);
+    selection-color: #C8C8C8;
+}
+/* hovering over items in the QComboBox should change the background color of those items */
+QComboBox QAbstractItemView::item:hover {
+    background-color: rgba(0, 132, 185, 50);
+}
+
+/* arrow */
+QComboBox::down-arrow {
 }
 
 #mode_tab_widget QWidget {
