@@ -207,7 +207,7 @@ class MemoryEfficientMixin:
     def move_pipe_to_cpu(self, pipe):
         logger.info("Moving to cpu")
         try:
-            pipe.to("cpu", torch.float32)
+            pipe.to("cpu", self.data_type)
         except NotImplementedError:
             logger.warning("Not implemented error when moving to cpu")
         return pipe
