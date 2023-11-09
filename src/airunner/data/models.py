@@ -631,10 +631,11 @@ class Settings(BaseModel):
 
     current_image_generator = Column(String, default="stablediffusion")
     current_llm_generator = Column(String, default="casuallm")
+    
 
 
-class LayerImage(BaseModel):
-    __tablename__ = "layer_images"
+class Layer(BaseModel):
+    __tablename__ = 'layers'
 
     @property
     def image(self):
