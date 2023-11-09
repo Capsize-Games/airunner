@@ -471,7 +471,14 @@ class CanvasPlusWidget(BaseWidget):
         if not draggable_pixmap:
             return
         self.scene.removeItem(draggable_pixmap)
-        #self.layer_widget.clear_current_layer()
+        self.update()
+    
+    def delete_image(self):
+        Logger.info("Deleting image from canvas")
+        draggable_pixmap = self.current_draggable_pixmap()
+        if not draggable_pixmap:
+            return
+        self.scene.removeItem(draggable_pixmap)
         self.update()
     
     def paste_image_from_clipboard(self):
