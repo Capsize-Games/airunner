@@ -21,7 +21,10 @@ class LayerContainerWidget(BaseWidget):
     def current_layer(self):
         if len(self.layers) == 0:
             return None
-        return self.layers[self.current_layer_index]
+        try:
+            return self.layers[self.current_layer_index]
+        except IndexError:
+            Logger.error(f"No current layer for index {self.current_layer_index}")
 
     def initialize(self):
         self.ui.scrollAreaWidgetContents.layout().addSpacerItem(
