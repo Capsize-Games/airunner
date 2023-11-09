@@ -1,5 +1,7 @@
 import os
 
+from PyQt6.QtWidgets import QWidget, QHBoxLayout
+
 from airunner.widgets.base_widget import BaseWidget
 from airunner.widgets.image.folder_widget import FolderWidget
 from airunner.widgets.image.image_widget import ImageWidget
@@ -49,14 +51,17 @@ class ImagePanelWidget(BaseWidget):
 
         if reset_scroll_bar:
             self.ui.scrollArea.verticalScrollBar().setValue(0)
-
+        
         if show_folders:
+            container = QWidget()
+            container.setLayout(QHBoxLayout())
             for file in os.listdir(self.image_path):
                 if os.path.isdir(os.path.join(self.image_path, file)):
                     folder_widget = FolderWidget()
                     folder_widget.callback = self.handle_folder_clicked
                     folder_widget.set_path(file)
-                    self.ui.scrollAreaWidgetContents.layout().addWidget(folder_widget)
+                    container.layout().addWidget(folder_widget)
+            self.ui.scrollAreaWidgetContents.layout().addWidget(container)
 
         start = self.page * self.total_per_page
         end = start + self.total_per_page
