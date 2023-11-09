@@ -220,6 +220,11 @@
                  <attribute name="title">
                   <string>GIF</string>
                  </attribute>
+                 <layout class="QGridLayout" name="gridLayout_17">
+                  <item row="0" column="0">
+                   <widget class="GifPanelWidget" name="widget_2" native="true"/>
+                  </item>
+                 </layout>
                 </widget>
                 <widget class="QWidget" name="tab_prompt_builder">
                  <attribute name="title">
@@ -269,7 +274,7 @@
                 </property>
                 <widget class="QTabWidget" name="tool_tab_widget">
                  <property name="currentIndex">
-                  <number>0</number>
+                  <number>1</number>
                  </property>
                  <widget class="QWidget" name="tab_embeddings">
                   <attribute name="title">
@@ -2548,6 +2553,12 @@
    <class>LLMWidget</class>
    <extends>QWidget</extends>
    <header>airunner/widgets/llm/llm_widget</header>
+   <container>1</container>
+  </customwidget>
+  <customwidget>
+   <class>GifPanelWidget</class>
+   <extends>QWidget</extends>
+   <header>airunner/widgets/gif/gif_panel_widget</header>
    <container>1</container>
   </customwidget>
  </customwidgets>
