@@ -3,7 +3,6 @@ from functools import partial
 from PIL import Image
 from PyQt6.QtGui import QIcon
 from PyQt6.QtWidgets import QHBoxLayout, QWidget
-from airunner.data.models import LayerImage
 
 from airunner.utils import get_session, image_to_pixmap
 from airunner.widgets.input_image.templates.input_image_ui import Ui_input_image
@@ -27,9 +26,7 @@ class InputImageSettingsWidget(BaseWidget):
 
     def active_grid_area_image(self):
         if not self.settings_manager.generator.input_image_recycle_grid_image or not self._active_grid_area_image:
-            layer_image = get_session().query(LayerImage).filter_by(
-                layer_id=self.app.canvas.current_layer.id
-            ).first()
+            layer_image = self.app.canvas.current_layer.image
             if layer_image.image:
                 self._active_grid_area_image = layer_image.image.copy()
         return self._active_grid_area_image
