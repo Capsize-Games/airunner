@@ -22,7 +22,6 @@ class GeneratorForm(BaseWidget):
     deterministic = False
     seed_override = None
     deterministic_index = 0
-    requested_image = None
     deterministic_seed = None
     initialized = False
     parent = None
@@ -206,7 +205,7 @@ class GeneratorForm(BaseWidget):
         self.seed_override = None
         self.app.client.do_process_queue = True
 
-    def call_generate(self, image=None, seed=None):
+    def call_generate(self, image=None, seed=None, override_data=None):
         use_pixels = self.generator_section in (
             "txt2img",
             "pix2pix",
@@ -216,70 +215,80 @@ class GeneratorForm(BaseWidget):
             "superresolution",
             "upscale"
         )
+        override_data = {} if override_data is None else override_data
 
         if use_pixels:
-            self.requested_image = image
             self.start_progress_bar()
-            enable_input_image = self.settings_manager.generator.enable_input_image
-            image = None
+
+            # get input image from input image
+            enable_input_image = override_data.get(
+                "enable_input_image",
+                self.settings_manager.generator.enable_input_image
+            )
             if enable_input_image:
-                image = self.ui.input_image_widget.current_input_image
+                input_image = self.ui.input_image_widget.current_input_image
+                image = input_image if not image else image
+                override_data["input_image"] = image
 
             if image is None and self.is_txt2img:
-                return self.do_generate(seed=seed)
+                return self.do_generate(seed=seed, override_data=override_data)
             elif image is None:
                 # create a transparent image the size of self.canvas.active_grid_area_rect
                 width = self.settings_manager.working_width
                 height = self.settings_manager.working_height
                 image = Image.new("RGBA", (int(width), int(height)), (0, 0, 0, 0))
-            img = image.copy().convert("RGBA")
-            new_image = Image.new(
-                "RGBA",
-                (self.settings_manager.working_width, self.settings_manager.working_height),
-                (0, 0, 0))
+            
+            use_cropped_image = override_data.get("use_cropped_image", True)
+            if use_cropped_image:
+                img = image.copy().convert("RGBA")
+                new_image = Image.new(
+                    "RGBA",
+                    (self.settings_manager.working_width, self.settings_manager.working_height),
+                    (0, 0, 0))
 
-            cropped_outpaint_box_rect = self.active_rect
-            crop_location = (
-                cropped_outpaint_box_rect.x() - self.canvas.image_pivot_point.x(),
-                cropped_outpaint_box_rect.y() - self.canvas.image_pivot_point.y(),
-                cropped_outpaint_box_rect.width() - self.canvas.image_pivot_point.x(),
-                cropped_outpaint_box_rect.height() - self.canvas.image_pivot_point.y()
-            )
-            new_image.paste(img.crop(crop_location), (0, 0))
-            # save new_image to disc
-            mask = Image.new("RGB", (new_image.width, new_image.height), (255, 255, 255))
-            for x in range(new_image.width):
-                for y in range(new_image.height):
+                cropped_outpaint_box_rect = self.active_rect
+                crop_location = (
+                    cropped_outpaint_box_rect.x() - self.canvas.image_pivot_point.x(),
+                    cropped_outpaint_box_rect.y() - self.canvas.image_pivot_point.y(),
+                    cropped_outpaint_box_rect.width() - self.canvas.image_pivot_point.x(),
+                    cropped_outpaint_box_rect.height() - self.canvas.image_pivot_point.y()
+                )
+                new_image.paste(img.crop(crop_location), (0, 0))
+
+                image = new_image.convert("RGB")
+            
+            # create the mask
+            mask = Image.new("RGB", (image.width, image.height), (255, 255, 255))
+            for x in range(image.width):
+                for y in range(image.height):
                     try:
-                        if new_image.getpixel((x, y))[3] != 0:
+                        if image.getpixel((x, y))[3] != 0:
                             mask.putpixel((x, y), (0, 0, 0))
                     except IndexError:
                         pass
 
-            # convert image to rgb
-            image = new_image.convert("RGB")
             self.do_generate({
                 "mask": mask,
                 "image": image,
                 "location": self.canvas.active_grid_area_rect
-            }, seed=seed)
+            }, seed=seed, override_data=override_data)
         elif self.generator_section == "vid2vid":
             images = self.prep_video()
             self.do_generate({
                 "images": images
             }, seed=seed)
         else:
-            self.do_generate(seed=seed)
+            self.do_generate(seed=seed, override_data=override_data)
 
     def prep_video(self):
         return []
 
-    def do_generate(self, extra_options=None, seed=None, latents_seed=None, do_deterministic=False):
+    def do_generate(self, extra_options=None, seed=None, latents_seed=None, do_deterministic=False, override_data=False):
         if not extra_options:
             extra_options = {}
 
         if self.enable_controlnet:
-            extra_options["input_image"] = self.ui.controlnet_settings.current_controlnet_image
+            extra_options["controlnet_image"] = self.ui.controlnet_settings.current_controlnet_image
 
         self.set_seed(seed=seed, latents_seed=latents_seed)
 
@@ -288,42 +297,75 @@ class GeneratorForm(BaseWidget):
 
         action = self.generator_section
 
-        # set the model data
-        model = self.settings_manager.models.filter_by(name=self.settings_manager.generator.model).first()
-        model_path = model.path
-        model_branch = model.branch
+        if not override_data:
+            override_data = {}
+        
+        print("strength", override_data.get("strength"), self.settings_manager.generator.strength)
+        
+        action = override_data.get("action", action)
+        prompt = override_data.get("prompt", self.settings_manager.generator.prompt)
+        negative_prompt = override_data.get("negative_prompt", self.settings_manager.generator.negative_prompt)
+        steps = int(override_data.get("steps", self.settings_manager.generator.steps))
+        strength = float(override_data.get("strength", self.settings_manager.generator.strength / 100.0))
+        image_guidance_scale = float(override_data.get("image_guidance_scale", self.settings_manager.generator.image_guidance_scale / 10000.0 * 100.0))
+        scale = float(override_data.get("scale", self.settings_manager.generator.scale / 100))
+        seed = int(override_data.get("seed", self.settings_manager.generator.seed))
+        latents_seed = int(override_data.get("latents_seed", self.settings_manager.generator.latents_seed))
+        ddim_eta = float(override_data.get("ddim_eta", self.settings_manager.generator.ddim_eta))
+        n_iter = int(override_data.get("n_iter", 1))
+        n_samples = int(override_data.get("n_samples", self.settings_manager.generator.n_samples))
+        # iterate over all keys in model_data
+        model_data = {}
+        for k,v in override_data.items():
+            if k.startswith("model_data_"):
+                model_data[k.replace("model_data_", "")] = v
+        scheduler = override_data.get("scheduler", self.settings_manager.generator.scheduler)
+        enable_controlnet = bool(override_data.get("enable_controlnet", self.settings_manager.generator.enable_controlnet))
+        controlnet = override_data.get("controlnet", self.settings_manager.generator.controlnet)
+        controlnet_conditioning_scale = float(override_data.get("controlnet_conditioning_scale", self.settings_manager.generator.controlnet_guidance_scale))
+        width = int(override_data.get("width", self.settings_manager.working_width))
+        height = int(override_data.get("height", self.settings_manager.working_height))
+        clip_skip = int(override_data.get("clip_skip", self.settings_manager.generator.clip_skip))
+
+        # get the model from the database
+        model = self.settings_manager.models.filter_by(
+            name=model_data["name"] if "name" in model_data \
+                else self.settings_manager.generator.model
+        ).first()
+
+        # set the model data, first using model_data pulled from the override_data
         model_data = {
-            "name": model.name,
-            "path": model.path,
-            "branch": model.branch,
-            "version": model.version,
-            "category": model.category,
-            "pipeline_action": model.pipeline_action,
-            "enabled": model.enabled,
-            "default": model.is_default
+            "name": model_data.get("name", model.name),
+            "path": model_data.get("path", model.path),
+            "branch": model_data.get("branch", model.branch),
+            "version": model_data.get("version", model.version),
+            "category": model_data.get("category", model.category),
+            "pipeline_action": model_data.get("pipeline_action", model.pipeline_action),
+            "enabled": model_data.get("enabled", model.enabled),
+            "default": model_data.get("default", model.is_default)
         }
 
         # get controlnet_dropdown from active tab
         options = {
-            "prompt": self.settings_manager.generator.prompt,
-            "negative_prompt": self.settings_manager.generator.negative_prompt,
-            "steps": self.settings_manager.generator.steps,
-            "ddim_eta": self.settings_manager.generator.ddim_eta,  # only applies to ddim scheduler
-            "n_iter": 1,
-            "n_samples": self.settings_manager.generator.n_samples,
-            "scale": self.settings_manager.generator.scale / 100,
-            "seed": self.settings_manager.generator.seed,
-            "latents_seed": self.settings_manager.generator.latents_seed,
-            "model": self.settings_manager.generator.model,
+            "prompt": prompt,
+            "negative_prompt": negative_prompt,
+            "steps": steps,
+            "ddim_eta": ddim_eta,  # only applies to ddim scheduler
+            "n_iter": n_iter,
+            "n_samples": n_samples,
+            "scale": scale,
+            "seed": seed,
+            "latents_seed": latents_seed,
+            "model": model,
             "model_data": model_data,
-            "scheduler": self.settings_manager.generator.scheduler,
-            "model_path": model_path,
-            "model_branch": model_branch,
+            "scheduler": scheduler,
+            "model_path": model.path,
+            "model_branch": model.branch,
             # "lora": self.available_lora(action),
-            "controlnet_conditioning_scale": self.settings_manager.generator.controlnet_guidance_scale,
+            "controlnet_conditioning_scale": controlnet_conditioning_scale,
             "generator_section": self.generator_section,
-            "width": self.settings_manager.working_width,
-            "height": self.settings_manager.working_height,
+            "width": width,
+            "height": height,
             "do_nsfw_filter": self.settings_manager.nsfw_filter,
             "pos_x": 0,
             "pos_y": 0,
@@ -339,13 +381,15 @@ class GeneratorForm(BaseWidget):
             "lora_path": self.settings_manager.lora_path,
             "embeddings_path": self.settings_manager.path_settings.embeddings_path,
             "video_path": self.settings_manager.path_settings.video_path,
-            "clip_skip": self.settings_manager.generator.clip_skip,
+            "clip_skip": clip_skip,
             "variation": self.settings_manager.generator.variation,
             "deterministic_generation": False,
         }
 
-        options["enable_controlnet"] = self.settings_manager.generator.enable_controlnet
-        options["controlnet"] = self.settings_manager.generator.controlnet
+        options["input_image"] = override_data.get("input_image", None)
+        
+        options["enable_controlnet"] = enable_controlnet
+        options["controlnet"] = controlnet
 
         if self.controlnet_image:
             options["controlnet_image"] = self.controlnet_image
@@ -355,9 +399,9 @@ class GeneratorForm(BaseWidget):
             options["original_image_height"] = self.canvas.current_active_image_data.image.height
 
         if action in ["txt2img", "img2img", "outpaint", "depth2img"]:
-            options[f"strength"] = self.settings_manager.generator.strength / 10000.0
+            options[f"strength"] = strength
         elif action in ["pix2pix"]:
-            options[f"image_guidance_scale"] = self.settings_manager.generator.image_scale / 10000.0 * 100.0
+            options[f"image_guidance_scale"] = image_guidance_scale
 
         """
         Emitting generate_signal with options allows us to pass more options to the dict from

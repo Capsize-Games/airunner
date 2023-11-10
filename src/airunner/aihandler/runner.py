@@ -853,6 +853,7 @@ class SDRunner(
         code = code or MessageCode.STATUS
 
         if code == MessageCode.ERROR:
+            traceback.print_stack()
             logger.error(message)
         elif code == MessageCode.WARNING:
             logger.warning(message)
@@ -1739,7 +1740,7 @@ class SDRunner(
     def download_from_original_stable_diffusion_ckpt(self, path):
         pipeline_action = self.get_pipeline_action()
         pipe = download_from_original_stable_diffusion_ckpt(
-            checkpoint_path=path,
+            checkpoint_path_or_dict=path,
             device=self.device,
             scheduler_type="ddim",
             from_safetensors=self.is_safetensors,

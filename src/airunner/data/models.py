@@ -409,6 +409,7 @@ class MetadataSettings(BaseModel):
     image_export_metadata_negative_prompt = Column(Boolean, default=False)
     image_export_metadata_scale = Column(Boolean, default=False)
     image_export_metadata_seed = Column(Boolean, default=False)
+    image_export_metadata_latents_seed = Column(Boolean, default=False)
     image_export_metadata_steps = Column(Boolean, default=False)
     image_export_metadata_ddim_eta = Column(Boolean, default=False)
     image_export_metadata_iterations = Column(Boolean, default=False)
