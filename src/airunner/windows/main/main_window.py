@@ -1166,7 +1166,7 @@ class MainWindow(
     def handle_controlnet_image_generated(self, message):
         self.controlnet_image = message["image"]
         self.controlnet_image_generated.emit(True)
-        self.generator_tab_widget.controlnet_settings_widget.handle_controlnet_image_generated()
+        #self.generator_tab_widget.controlnet_settings_widget.handle_controlnet_image_generated()
 
     def video_handler(self, data):
         filename = data["video_filename"]
@@ -1184,9 +1184,13 @@ class MainWindow(
         self.generator_tab_widget.stop_progress_bar(
             data["tab_section"], data["action"]
         )
-
         if self.settings_manager.auto_export_images:
-            path = auto_export_image(images[0], data, self.seed)
+            path = auto_export_image(
+                image=images[0], 
+                data=data, 
+                seed=data["options"]["seed"], 
+                latents_seed=data["options"]["latents_seed"]
+            )
             if path is not None:
                 self.set_status_label(f"Image exported to {path}")
 

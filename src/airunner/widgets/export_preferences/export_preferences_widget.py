@@ -69,10 +69,13 @@ class ExportPreferencesWidget(BaseWidget):
         self.ui.image_path.blockSignals(False)
 
     def action_toggled_steps(self, val):
-        self.settings_manager.set_value(f"metadata_settings.image_export_metadata_steps", val == 2)
+        self.settings_manager.set_value(f"metadata_settings.image_export_metadata_steps", val)
 
     def action_toggled_seed(self, val):
         self.settings_manager.set_value(f"metadata_settings.image_export_metadata_seed", val)
+    
+    def action_toggled_latents_seed(self, val):
+        self.settings_manager.set_value(f"metadata_settings.image_export_metadata_latents_seed", val)
 
     def action_toggled_scheduler(self, val):
         self.settings_manager.set_value(f"metadata_settings.image_export_metadata_scheduler", val)

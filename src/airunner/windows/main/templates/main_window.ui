@@ -190,67 +190,51 @@
                   <string>Canvas</string>
                  </attribute>
                  <layout class="QGridLayout" name="gridLayout_11">
-                  <property name="leftMargin">
-                   <number>0</number>
-                  </property>
-                  <property name="topMargin">
-                   <number>0</number>
-                  </property>
-                  <property name="rightMargin">
-                   <number>0</number>
-                  </property>
-                  <property name="bottomMargin">
-                   <number>0</number>
-                  </property>
                   <item row="0" column="0">
-                   <widget class="QTabWidget" name="tabWidget">
-                    <property name="currentIndex">
-                     <number>0</number>
+                   <widget class="QSplitter" name="splitter_2">
+                    <property name="orientation">
+                     <enum>Qt::Horizontal</enum>
                     </property>
-                    <widget class="QWidget" name="canvas">
-                     <attribute name="title">
-                      <string>Canvas</string>
-                     </attribute>
-                     <layout class="QGridLayout" name="gridLayout_18">
-                      <property name="leftMargin">
-                       <number>0</number>
-                      </property>
-                      <property name="topMargin">
-                       <number>0</number>
-                      </property>
-                      <property name="rightMargin">
-                       <number>0</number>
-                      </property>
-                      <property name="bottomMargin">
-                       <number>0</number>
-                      </property>
-                      <item row="0" column="0">
-                       <widget class="CanvasPlusWidget" name="canvas_plus_widget" native="true"/>
-                      </item>
-                     </layout>
+                    <widget class="QTabWidget" name="tabWidget">
+                     <property name="currentIndex">
+                      <number>0</number>
+                     </property>
+                     <widget class="QWidget" name="canvas">
+                      <attribute name="title">
+                       <string>Canvas</string>
+                      </attribute>
+                      <widget class="CanvasPlusWidget" name="canvas_plus_widget" native="true">
+                       <property name="geometry">
+                        <rect>
+                         <x>0</x>
+                         <y>0</y>
+                         <width>401</width>
+                         <height>795</height>
+                        </rect>
+                       </property>
+                      </widget>
+                     </widget>
+                     <widget class="QWidget" name="standard">
+                      <attribute name="title">
+                       <string>Standard</string>
+                      </attribute>
+                      <layout class="QGridLayout" name="gridLayout_19">
+                       <property name="leftMargin">
+                        <number>0</number>
+                       </property>
+                       <property name="topMargin">
+                        <number>0</number>
+                       </property>
+                       <property name="rightMargin">
+                        <number>0</number>
+                       </property>
+                       <property name="bottomMargin">
+                        <number>0</number>
+                       </property>
+                      </layout>
+                     </widget>
                     </widget>
-                    <widget class="QWidget" name="standard">
-                     <attribute name="title">
-                      <string>Standard</string>
-                     </attribute>
-                     <layout class="QGridLayout" name="gridLayout_19">
-                      <property name="leftMargin">
-                       <number>0</number>
-                      </property>
-                      <property name="topMargin">
-                       <number>0</number>
-                      </property>
-                      <property name="rightMargin">
-                       <number>0</number>
-                      </property>
-                      <property name="bottomMargin">
-                       <number>0</number>
-                      </property>
-                      <item row="0" column="0">
-                       <widget class="ImagePanelWidget" name="standard_image_widget" native="true"/>
-                      </item>
-                     </layout>
-                    </widget>
+                    <widget class="ImagePanelWidget" name="standard_image_widget" native="true"/>
                    </widget>
                   </item>
                  </layout>
