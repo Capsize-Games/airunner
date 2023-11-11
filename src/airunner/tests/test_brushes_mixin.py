@@ -1,5 +1,5 @@
 import unittest
-from airunner.main_window import MainWindow
+from airunner.windows.main.main_window import MainWindow
 WINDOW = None
 
 

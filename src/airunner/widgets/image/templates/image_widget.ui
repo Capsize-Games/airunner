@@ -1,0 +1,278 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<ui version="4.0">
+ <class>image_widget</class>
+ <widget class="QWidget" name="image_widget">
+  <property name="geometry">
+   <rect>
+    <x>0</x>
+    <y>0</y>
+    <width>326</width>
+    <height>204</height>
+   </rect>
+  </property>
+  <property name="sizePolicy">
+   <sizepolicy hsizetype="Maximum" vsizetype="Expanding">
+    <horstretch>0</horstretch>
+    <verstretch>0</verstretch>
+   </sizepolicy>
+  </property>
+  <property name="minimumSize">
+   <size>
+    <width>0</width>
+    <height>0</height>
+   </size>
+  </property>
+  <property name="maximumSize">
+   <size>
+    <width>326</width>
+    <height>16777215</height>
+   </size>
+  </property>
+  <property name="windowTitle">
+   <string>Form</string>
+  </property>
+  <layout class="QGridLayout" name="gridLayout">
+   <item row="0" column="0">
+    <layout class="QHBoxLayout" name="horizontalLayout">
+     <item>
+      <layout class="QVBoxLayout" name="verticalLayout_3">
+       <item>
+        <widget class="QFrame" name="image_frame">
+         <property name="minimumSize">
+          <size>
+           <width>128</width>
+           <height>128</height>
+          </size>
+         </property>
+         <property name="maximumSize">
+          <size>
+           <width>128</width>
+           <height>128</height>
+          </size>
+         </property>
+         <property name="frameShape">
+          <enum>QFrame::StyledPanel</enum>
+         </property>
+         <property name="frameShadow">
+          <enum>QFrame::Raised</enum>
+         </property>
+        </widget>
+       </item>
+       <item>
+        <spacer name="verticalSpacer_2">
+         <property name="orientation">
+          <enum>Qt::Vertical</enum>
+         </property>
+         <property name="sizeHint" stdset="0">
+          <size>
+           <width>20</width>
+           <height>40</height>
+          </size>
+         </property>
+        </spacer>
+       </item>
+      </layout>
+     </item>
+     <item>
+      <layout class="QVBoxLayout" name="verticalLayout_2">
+       <item>
+        <layout class="QVBoxLayout" name="verticalLayout">
+         <item>
+          <widget class="QPushButton" name="pushButton_2">
+           <property name="cursor">
+            <cursorShape>PointingHandCursor</cursorShape>
+           </property>
+           <property name="text">
+            <string>Load Image</string>
+           </property>
+          </widget>
+         </item>
+         <item>
+          <widget class="QPushButton" name="pushButton_3">
+           <property name="cursor">
+            <cursorShape>PointingHandCursor</cursorShape>
+           </property>
+           <property name="text">
+            <string>Generate Similar</string>
+           </property>
+          </widget>
+         </item>
+         <item>
+          <widget class="QPushButton" name="pushButton_4">
+           <property name="cursor">
+            <cursorShape>PointingHandCursor</cursorShape>
+           </property>
+           <property name="text">
+            <string>Generate Variant</string>
+           </property>
+          </widget>
+         </item>
+         <item>
+          <widget class="QPushButton" name="pushButton">
+           <property name="cursor">
+            <cursorShape>PointingHandCursor</cursorShape>
+           </property>
+           <property name="toolTip">
+            <string>Delete image</string>
+           </property>
+           <property name="text">
+            <string>Delete</string>
+           </property>
+          </widget>
+         </item>
+        </layout>
+       </item>
+       <item>
+        <spacer name="verticalSpacer">
+         <property name="orientation">
+          <enum>Qt::Vertical</enum>
+         </property>
+         <property name="sizeHint" stdset="0">
+          <size>
+           <width>20</width>
+           <height>40</height>
+          </size>
+         </property>
+        </spacer>
+       </item>
+       <item>
+        <widget class="QWidget" name="permanently_delete_2" native="true">
+         <layout class="QGridLayout" name="permanently_delete">
+          <item row="1" column="0">
+           <widget class="QPushButton" name="pushButton_5">
+            <property name="text">
+             <string>Yes</string>
+            </property>
+           </widget>
+          </item>
+          <item row="0" column="0" colspan="2">
+           <widget class="QLabel" name="label">
+            <property name="text">
+             <string>Permanently delete?</string>
+            </property>
+           </widget>
+          </item>
+          <item row="1" column="1">
+           <widget class="QPushButton" name="pushButton_6">
+            <property name="text">
+             <string>No</string>
+            </property>
+           </widget>
+          </item>
+         </layout>
+        </widget>
+       </item>
+      </layout>
+     </item>
+    </layout>
+   </item>
+  </layout>
+ </widget>
+ <resources/>
+ <connections>
+  <connection>
+   <sender>pushButton</sender>
+   <signal>clicked()</signal>
+   <receiver>image_widget</receiver>
+   <slot>confirm_delete()</slot>
+   <hints>
+    <hint type="sourcelabel">
+     <x>653</x>
+     <y>36</y>
+    </hint>
+    <hint type="destinationlabel">
+     <x>145</x>
+     <y>0</y>
+    </hint>
+   </hints>
+  </connection>
+  <connection>
+   <sender>pushButton_2</sender>
+   <signal>clicked()</signal>
+   <receiver>image_widget</receiver>
+   <slot>send_image_to_grid()</slot>
+   <hints>
+    <hint type="sourcelabel">
+     <x>234</x>
+     <y>36</y>
+    </hint>
+    <hint type="destinationlabel">
+     <x>50</x>
+     <y>0</y>
+    </hint>
+   </hints>
+  </connection>
+  <connection>
+   <sender>pushButton_3</sender>
+   <signal>clicked()</signal>
+   <receiver>image_widget</receiver>
+   <slot>generate_similar()</slot>
+   <hints>
+    <hint type="sourcelabel">
+     <x>361</x>
+     <y>36</y>
+    </hint>
+    <hint type="destinationlabel">
+     <x>74</x>
+     <y>0</y>
+    </hint>
+   </hints>
+  </connection>
+  <connection>
+   <sender>pushButton_4</sender>
+   <signal>clicked()</signal>
+   <receiver>image_widget</receiver>
+   <slot>generate_variant()</slot>
+   <hints>
+    <hint type="sourcelabel">
+     <x>492</x>
+     <y>36</y>
+    </hint>
+    <hint type="destinationlabel">
+     <x>31</x>
+     <y>-10</y>
+    </hint>
+   </hints>
+  </connection>
+  <connection>
+   <sender>pushButton_5</sender>
+   <signal>clicked()</signal>
+   <receiver>image_widget</receiver>
+   <slot>delete_image()</slot>
+   <hints>
+    <hint type="sourcelabel">
+     <x>310</x>
+     <y>241</y>
+    </hint>
+    <hint type="destinationlabel">
+     <x>230</x>
+     <y>-19</y>
+    </hint>
+   </hints>
+  </connection>
+  <connection>
+   <sender>pushButton_6</sender>
+   <signal>clicked()</signal>
+   <receiver>image_widget</receiver>
+   <slot>cancel_delete()</slot>
+   <hints>
+    <hint type="sourcelabel">
+     <x>619</x>
+     <y>244</y>
+    </hint>
+    <hint type="destinationlabel">
+     <x>517</x>
+     <y>-15</y>
+    </hint>
+   </hints>
+  </connection>
+ </connections>
+ <slots>
+  <slot>delete_image()</slot>
+  <slot>send_image_to_grid()</slot>
+  <slot>generate_similar()</slot>
+  <slot>generate_variant()</slot>
+  <slot>confirm_delete()</slot>
+  <slot>cancel_delete()</slot>
+ </slots>
+</ui>

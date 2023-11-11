@@ -1,0 +1,616 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<ui version="4.0">
+ <class>input_image</class>
+ <widget class="QWidget" name="input_image">
+  <property name="geometry">
+   <rect>
+    <x>0</x>
+    <y>0</y>
+    <width>266</width>
+    <height>175</height>
+   </rect>
+  </property>
+  <property name="maximumSize">
+   <size>
+    <width>16777215</width>
+    <height>16777215</height>
+   </size>
+  </property>
+  <property name="acceptDrops">
+   <bool>false</bool>
+  </property>
+  <property name="windowTitle">
+   <string>Form</string>
+  </property>
+  <layout class="QGridLayout" name="gridLayout_2">
+   <property name="leftMargin">
+    <number>0</number>
+   </property>
+   <property name="topMargin">
+    <number>0</number>
+   </property>
+   <property name="rightMargin">
+    <number>0</number>
+   </property>
+   <property name="bottomMargin">
+    <number>0</number>
+   </property>
+   <property name="spacing">
+    <number>0</number>
+   </property>
+   <item row="0" column="0">
+    <widget class="QWidget" name="widget" native="true">
+     <property name="maximumSize">
+      <size>
+       <width>16777215</width>
+       <height>16777215</height>
+      </size>
+     </property>
+     <property name="font">
+      <font>
+       <pointsize>9</pointsize>
+       <bold>false</bold>
+      </font>
+     </property>
+     <layout class="QGridLayout" name="gridLayout_3">
+      <property name="leftMargin">
+       <number>0</number>
+      </property>
+      <property name="topMargin">
+       <number>0</number>
+      </property>
+      <property name="rightMargin">
+       <number>0</number>
+      </property>
+      <property name="bottomMargin">
+       <number>0</number>
+      </property>
+      <property name="spacing">
+       <number>0</number>
+      </property>
+      <item row="0" column="0">
+       <widget class="QGroupBox" name="groupBox">
+        <property name="font">
+         <font>
+          <pointsize>8</pointsize>
+          <bold>false</bold>
+         </font>
+        </property>
+        <property name="cursor">
+         <cursorShape>ArrowCursor</cursorShape>
+        </property>
+        <property name="title">
+         <string>Use Input Image</string>
+        </property>
+        <property name="checkable">
+         <bool>true</bool>
+        </property>
+        <property name="checked">
+         <bool>false</bool>
+        </property>
+        <layout class="QGridLayout" name="gridLayout_5">
+         <property name="leftMargin">
+          <number>9</number>
+         </property>
+         <property name="rightMargin">
+          <number>9</number>
+         </property>
+         <item row="1" column="0">
+          <widget class="QTabWidget" name="input_image_tab_widget">
+           <property name="minimumSize">
+            <size>
+             <width>0</width>
+             <height>0</height>
+            </size>
+           </property>
+           <property name="maximumSize">
+            <size>
+             <width>16777215</width>
+             <height>118</height>
+            </size>
+           </property>
+           <property name="font">
+            <font>
+             <pointsize>8</pointsize>
+             <bold>false</bold>
+            </font>
+           </property>
+           <property name="currentIndex">
+            <number>0</number>
+           </property>
+           <widget class="QWidget" name="tab_7">
+            <attribute name="title">
+             <string>Input Image</string>
+            </attribute>
+            <layout class="QGridLayout" name="gridLayout">
+             <item row="0" column="0" rowspan="2">
+              <widget class="QPushButton" name="image_thumbnail">
+               <property name="minimumSize">
+                <size>
+                 <width>72</width>
+                 <height>72</height>
+                </size>
+               </property>
+               <property name="maximumSize">
+                <size>
+                 <width>72</width>
+                 <height>72</height>
+                </size>
+               </property>
+               <property name="cursor">
+                <cursorShape>PointingHandCursor</cursorShape>
+               </property>
+               <property name="acceptDrops">
+                <bool>false</bool>
+               </property>
+               <property name="styleSheet">
+                <string notr="true"/>
+               </property>
+               <property name="text">
+                <string/>
+               </property>
+               <property name="iconSize">
+                <size>
+                 <width>92</width>
+                 <height>92</height>
+                </size>
+               </property>
+               <property name="flat">
+                <bool>false</bool>
+               </property>
+              </widget>
+             </item>
+             <item row="1" column="1">
+              <layout class="QHBoxLayout" name="horizontalLayout_2">
+               <property name="spacing">
+                <number>2</number>
+               </property>
+               <item>
+                <widget class="QPushButton" name="use_imported_image_button">
+                 <property name="minimumSize">
+                  <size>
+                   <width>26</width>
+                   <height>26</height>
+                  </size>
+                 </property>
+                 <property name="maximumSize">
+                  <size>
+                   <width>26</width>
+                   <height>26</height>
+                  </size>
+                 </property>
+                 <property name="font">
+                  <font>
+                   <pointsize>8</pointsize>
+                   <bold>false</bold>
+                  </font>
+                 </property>
+                 <property name="cursor">
+                  <cursorShape>PointingHandCursor</cursorShape>
+                 </property>
+                 <property name="toolTip">
+                  <string>Imported input image</string>
+                 </property>
+                 <property name="text">
+                  <string/>
+                 </property>
+                 <property name="icon">
+                  <iconset resource="../../../resources_dark.qrc">
+                   <normaloff>:/icons/dark/download-icon.svg</normaloff>:/icons/dark/download-icon.svg</iconset>
+                 </property>
+                 <property name="checkable">
+                  <bool>true</bool>
+                 </property>
+                 <property name="flat">
+                  <bool>true</bool>
+                 </property>
+                </widget>
+               </item>
+               <item>
+                <widget class="QPushButton" name="use_grid_image_button">
+                 <property name="minimumSize">
+                  <size>
+                   <width>26</width>
+                   <height>26</height>
+                  </size>
+                 </property>
+                 <property name="maximumSize">
+                  <size>
+                   <width>26</width>
+                   <height>26</height>
+                  </size>
+                 </property>
+                 <property name="cursor">
+                  <cursorShape>PointingHandCursor</cursorShape>
+                 </property>
+                 <property name="toolTip">
+                  <string>Active grid input image</string>
+                 </property>
+                 <property name="text">
+                  <string/>
+                 </property>
+                 <property name="icon">
+                  <iconset resource="../../../resources_dark.qrc">
+                   <normaloff>:/icons/dark/image-line-icon.svg</normaloff>:/icons/dark/image-line-icon.svg</iconset>
+                 </property>
+                 <property name="checkable">
+                  <bool>true</bool>
+                 </property>
+                 <property name="checked">
+                  <bool>false</bool>
+                 </property>
+                 <property name="flat">
+                  <bool>true</bool>
+                 </property>
+                </widget>
+               </item>
+               <item>
+                <widget class="QPushButton" name="recycle_grid_image_button">
+                 <property name="minimumSize">
+                  <size>
+                   <width>26</width>
+                   <height>26</height>
+                  </size>
+                 </property>
+                 <property name="maximumSize">
+                  <size>
+                   <width>26</width>
+                   <height>26</height>
+                  </size>
+                 </property>
+                 <property name="cursor">
+                  <cursorShape>PointingHandCursor</cursorShape>
+                 </property>
+                 <property name="toolTip">
+                  <string>Lock current input image</string>
+                 </property>
+                 <property name="text">
+                  <string/>
+                 </property>
+                 <property name="icon">
+                  <iconset resource="../../../resources_dark.qrc">
+                   <normaloff>:/icons/dark/recycle-sign-icon.svg</normaloff>:/icons/dark/recycle-sign-icon.svg</iconset>
+                 </property>
+                 <property name="checkable">
+                  <bool>true</bool>
+                 </property>
+                 <property name="flat">
+                  <bool>true</bool>
+                 </property>
+                </widget>
+               </item>
+               <item>
+                <widget class="QPushButton" name="refresh_input_image_button">
+                 <property name="minimumSize">
+                  <size>
+                   <width>26</width>
+                   <height>26</height>
+                  </size>
+                 </property>
+                 <property name="maximumSize">
+                  <size>
+                   <width>26</width>
+                   <height>26</height>
+                  </size>
+                 </property>
+                 <property name="cursor">
+                  <cursorShape>PointingHandCursor</cursorShape>
+                 </property>
+                 <property name="toolTip">
+                  <string>Refresh current input image</string>
+                 </property>
+                 <property name="text">
+                  <string/>
+                 </property>
+                 <property name="icon">
+                  <iconset resource="../../../resources_dark.qrc">
+                   <normaloff>:/icons/dark/exchange-refresh-icon.svg</normaloff>:/icons/dark/exchange-refresh-icon.svg</iconset>
+                 </property>
+                 <property name="flat">
+                  <bool>true</bool>
+                 </property>
+                </widget>
+               </item>
+               <item>
+                <widget class="QPushButton" name="clear_image_button">
+                 <property name="minimumSize">
+                  <size>
+                   <width>26</width>
+                   <height>26</height>
+                  </size>
+                 </property>
+                 <property name="maximumSize">
+                  <size>
+                   <width>26</width>
+                   <height>26</height>
+                  </size>
+                 </property>
+                 <property name="cursor">
+                  <cursorShape>PointingHandCursor</cursorShape>
+                 </property>
+                 <property name="toolTip">
+                  <string>Clear imported input imagea</string>
+                 </property>
+                 <property name="text">
+                  <string/>
+                 </property>
+                 <property name="icon">
+                  <iconset resource="../../../resources_dark.qrc">
+                   <normaloff>:/icons/dark/close-icon.svg</normaloff>:/icons/dark/close-icon.svg</iconset>
+                 </property>
+                 <property name="flat">
+                  <bool>true</bool>
+                 </property>
+                </widget>
+               </item>
+               <item>
+                <spacer name="horizontalSpacer">
+                 <property name="orientation">
+                  <enum>Qt::Horizontal</enum>
+                 </property>
+                 <property name="sizeHint" stdset="0">
+                  <size>
+                   <width>40</width>
+                   <height>20</height>
+                  </size>
+                 </property>
+                </spacer>
+               </item>
+              </layout>
+             </item>
+             <item row="0" column="1">
+              <widget class="QCommandLinkButton" name="import_image_button">
+               <property name="enabled">
+                <bool>false</bool>
+               </property>
+               <property name="sizePolicy">
+                <sizepolicy hsizetype="MinimumExpanding" vsizetype="Preferred">
+                 <horstretch>0</horstretch>
+                 <verstretch>0</verstretch>
+                </sizepolicy>
+               </property>
+               <property name="minimumSize">
+                <size>
+                 <width>10</width>
+                 <height>35</height>
+                </size>
+               </property>
+               <property name="maximumSize">
+                <size>
+                 <width>16777215</width>
+                 <height>35</height>
+                </size>
+               </property>
+               <property name="font">
+                <font>
+                 <pointsize>8</pointsize>
+                 <bold>false</bold>
+                </font>
+               </property>
+               <property name="cursor">
+                <cursorShape>PointingHandCursor</cursorShape>
+               </property>
+               <property name="text">
+                <string>Import image</string>
+               </property>
+              </widget>
+             </item>
+            </layout>
+           </widget>
+          </widget>
+         </item>
+         <item row="0" column="0">
+          <widget class="SliderWidget" name="scale_slider_widget" native="true">
+           <property name="label_text" stdset="0">
+            <string>Scale</string>
+           </property>
+           <property name="slider_callback" stdset="0">
+            <string notr="true">handle_value_change</string>
+           </property>
+           <property name="current_value" stdset="0">
+            <number>0</number>
+           </property>
+           <property name="slider_maximum" stdset="0">
+            <number>100</number>
+           </property>
+           <property name="spinbox_maximum" stdset="0">
+            <double>1.000000000000000</double>
+           </property>
+           <property name="display_as_float" stdset="0">
+            <bool>true</bool>
+           </property>
+           <property name="spinbox_single_step" stdset="0">
+            <double>0.010000000000000</double>
+           </property>
+           <property name="spinbox_page_step" stdset="0">
+            <double>0.100000000000000</double>
+           </property>
+           <property name="spinbox_minimum" stdset="0">
+            <double>0.000000000000000</double>
+           </property>
+           <property name="slider_minimum" stdset="0">
+            <number>0</number>
+           </property>
+           <property name="settings_property" stdset="0">
+            <string notr="true">generator.image_guidance_scale</string>
+           </property>
+          </widget>
+         </item>
+        </layout>
+       </widget>
+      </item>
+     </layout>
+    </widget>
+   </item>
+  </layout>
+ </widget>
+ <customwidgets>
+  <customwidget>
+   <class>SliderWidget</class>
+   <extends>QWidget</extends>
+   <header>airunner/widgets/slider/slider_widget</header>
+   <container>1</container>
+  </customwidget>
+ </customwidgets>
+ <resources>
+  <include location="../../../resources_light.qrc"/>
+  <include location="../../../resources_dark.qrc"/>
+ </resources>
+ <connections>
+  <connection>
+   <sender>groupBox</sender>
+   <signal>toggled(bool)</signal>
+   <receiver>input_image</receiver>
+   <slot>action_toggled_use_input_image(bool)</slot>
+   <hints>
+    <hint type="sourcelabel">
+     <x>44</x>
+     <y>7</y>
+    </hint>
+    <hint type="destinationlabel">
+     <x>17</x>
+     <y>0</y>
+    </hint>
+   </hints>
+  </connection>
+  <connection>
+   <sender>refresh_input_image_button</sender>
+   <signal>clicked()</signal>
+   <receiver>input_image</receiver>
+   <slot>action_clicked_button_refresh_grid_image()</slot>
+   <hints>
+    <hint type="sourcelabel">
+     <x>211</x>
+     <y>147</y>
+    </hint>
+    <hint type="destinationlabel">
+     <x>245</x>
+     <y>0</y>
+    </hint>
+   </hints>
+  </connection>
+  <connection>
+   <sender>clear_image_button</sender>
+   <signal>clicked()</signal>
+   <receiver>input_image</receiver>
+   <slot>action_clicked_button_clear_input_image()</slot>
+   <hints>
+    <hint type="sourcelabel">
+     <x>239</x>
+     <y>147</y>
+    </hint>
+    <hint type="destinationlabel">
+     <x>295</x>
+     <y>0</y>
+    </hint>
+   </hints>
+  </connection>
+  <connection>
+   <sender>recycle_grid_image_button</sender>
+   <signal>toggled(bool)</signal>
+   <receiver>input_image</receiver>
+   <slot>action_toggled_button_refresh_input_image(bool)</slot>
+   <hints>
+    <hint type="sourcelabel">
+     <x>183</x>
+     <y>147</y>
+    </hint>
+    <hint type="destinationlabel">
+     <x>252</x>
+     <y>0</y>
+    </hint>
+   </hints>
+  </connection>
+  <connection>
+   <sender>recycle_grid_image_button</sender>
+   <signal>toggled(bool)</signal>
+   <receiver>input_image</receiver>
+   <slot>action_toggled_button_lock_grid_image(bool)</slot>
+   <hints>
+    <hint type="sourcelabel">
+     <x>183</x>
+     <y>147</y>
+    </hint>
+    <hint type="destinationlabel">
+     <x>243</x>
+     <y>0</y>
+    </hint>
+   </hints>
+  </connection>
+  <connection>
+   <sender>use_grid_image_button</sender>
+   <signal>toggled(bool)</signal>
+   <receiver>input_image</receiver>
+   <slot>action_toggled_button_use_grid_image(bool)</slot>
+   <hints>
+    <hint type="sourcelabel">
+     <x>155</x>
+     <y>147</y>
+    </hint>
+    <hint type="destinationlabel">
+     <x>295</x>
+     <y>0</y>
+    </hint>
+   </hints>
+  </connection>
+  <connection>
+   <sender>use_imported_image_button</sender>
+   <signal>toggled(bool)</signal>
+   <receiver>input_image</receiver>
+   <slot>action_toggled_button_use_imported_image(bool)</slot>
+   <hints>
+    <hint type="sourcelabel">
+     <x>127</x>
+     <y>147</y>
+    </hint>
+    <hint type="destinationlabel">
+     <x>186</x>
+     <y>0</y>
+    </hint>
+   </hints>
+  </connection>
+  <connection>
+   <sender>image_thumbnail</sender>
+   <signal>clicked()</signal>
+   <receiver>input_image</receiver>
+   <slot>action_clicked_button_thumbnail()</slot>
+   <hints>
+    <hint type="sourcelabel">
+     <x>67</x>
+     <y>107</y>
+    </hint>
+    <hint type="destinationlabel">
+     <x>84</x>
+     <y>0</y>
+    </hint>
+   </hints>
+  </connection>
+  <connection>
+   <sender>import_image_button</sender>
+   <signal>clicked()</signal>
+   <receiver>input_image</receiver>
+   <slot>action_clicked_button_import_image()</slot>
+   <hints>
+    <hint type="sourcelabel">
+     <x>169</x>
+     <y>112</y>
+    </hint>
+    <hint type="destinationlabel">
+     <x>34</x>
+     <y>0</y>
+    </hint>
+   </hints>
+  </connection>
+ </connections>
+ <slots>
+  <slot>action_toggled_use_input_image(bool)</slot>
+  <slot>action_clicked_button_thumbnail()</slot>
+  <slot>action_clicked_button_import_image()</slot>
+  <slot>action_toggled_button_use_imported_image(bool)</slot>
+  <slot>action_toggled_button_use_grid_image(bool)</slot>
+  <slot>action_toggled_button_lock_grid_image(bool)</slot>
+  <slot>action_clicked_button_refresh_grid_image()</slot>
+  <slot>action_clicked_button_clear_input_image()</slot>
+  <slot>action_toggled_button_refresh_input_image(bool)</slot>
+ </slots>
+</ui>

@@ -1,0 +1,140 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<ui version="4.0">
+ <class>prompt_widget</class>
+ <widget class="QWidget" name="prompt_widget">
+  <property name="geometry">
+   <rect>
+    <x>0</x>
+    <y>0</y>
+    <width>616</width>
+    <height>257</height>
+   </rect>
+  </property>
+  <property name="windowTitle">
+   <string>Form</string>
+  </property>
+  <layout class="QGridLayout" name="gridLayout">
+   <item row="1" column="0" colspan="2">
+    <layout class="QHBoxLayout" name="horizontalLayout">
+     <item>
+      <widget class="QPushButton" name="load_button">
+       <property name="font">
+        <font>
+         <pointsize>9</pointsize>
+        </font>
+       </property>
+       <property name="text">
+        <string>Load</string>
+       </property>
+      </widget>
+     </item>
+     <item>
+      <widget class="QPushButton" name="delete_button">
+       <property name="font">
+        <font>
+         <pointsize>9</pointsize>
+        </font>
+       </property>
+       <property name="text">
+        <string>Delete</string>
+       </property>
+      </widget>
+     </item>
+    </layout>
+   </item>
+   <item row="0" column="0" colspan="2">
+    <layout class="QVBoxLayout" name="verticalLayout">
+     <item>
+      <widget class="QLabel" name="label">
+       <property name="font">
+        <font>
+         <pointsize>9</pointsize>
+         <bold>true</bold>
+        </font>
+       </property>
+       <property name="text">
+        <string>Prompt</string>
+       </property>
+      </widget>
+     </item>
+     <item>
+      <widget class="QPlainTextEdit" name="prompt">
+       <property name="font">
+        <font>
+         <pointsize>9</pointsize>
+        </font>
+       </property>
+      </widget>
+     </item>
+     <item>
+      <layout class="QVBoxLayout" name="verticalLayout_2">
+       <item>
+        <widget class="QLabel" name="label_3">
+         <property name="font">
+          <font>
+           <pointsize>9</pointsize>
+           <bold>true</bold>
+          </font>
+         </property>
+         <property name="text">
+          <string>Negative Prompt</string>
+         </property>
+        </widget>
+       </item>
+       <item>
+        <widget class="QPlainTextEdit" name="negative_prompt">
+         <property name="font">
+          <font>
+           <pointsize>9</pointsize>
+          </font>
+         </property>
+        </widget>
+       </item>
+      </layout>
+     </item>
+    </layout>
+   </item>
+  </layout>
+ </widget>
+ <resources/>
+ <connections>
+  <connection>
+   <sender>load_button</sender>
+   <signal>clicked()</signal>
+   <receiver>prompt_widget</receiver>
+   <slot>action_clicked_button_load()</slot>
+   <hints>
+    <hint type="sourcelabel">
+     <x>122</x>
+     <y>243</y>
+    </hint>
+    <hint type="destinationlabel">
+     <x>105</x>
+     <y>-11</y>
+    </hint>
+   </hints>
+  </connection>
+  <connection>
+   <sender>delete_button</sender>
+   <signal>clicked()</signal>
+   <receiver>prompt_widget</receiver>
+   <slot>action_clicked_button_delete()</slot>
+   <hints>
+    <hint type="sourcelabel">
+     <x>399</x>
+     <y>239</y>
+    </hint>
+    <hint type="destinationlabel">
+     <x>200</x>
+     <y>-13</y>
+    </hint>
+   </hints>
+  </connection>
+ </connections>
+ <slots>
+  <slot>action_clicked_button_load()</slot>
+  <slot>action_clicked_button_delete()</slot>
+  <slot>action_text_changed_prompt()</slot>
+  <slot>action_text_changed_negative_prompt()</slot>
+ </slots>
+</ui>

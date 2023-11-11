@@ -1,0 +1,133 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<ui version="4.0">
+ <class>lora</class>
+ <widget class="QWidget" name="lora">
+  <property name="geometry">
+   <rect>
+    <x>0</x>
+    <y>0</y>
+    <width>437</width>
+    <height>121</height>
+   </rect>
+  </property>
+  <property name="sizePolicy">
+   <sizepolicy hsizetype="Preferred" vsizetype="Preferred">
+    <horstretch>0</horstretch>
+    <verstretch>0</verstretch>
+   </sizepolicy>
+  </property>
+  <property name="maximumSize">
+   <size>
+    <width>16777215</width>
+    <height>16777215</height>
+   </size>
+  </property>
+  <property name="font">
+   <font>
+    <pointsize>9</pointsize>
+   </font>
+  </property>
+  <property name="windowTitle">
+   <string>Form</string>
+  </property>
+  <layout class="QGridLayout" name="gridLayout_2">
+   <property name="leftMargin">
+    <number>0</number>
+   </property>
+   <property name="topMargin">
+    <number>0</number>
+   </property>
+   <property name="rightMargin">
+    <number>0</number>
+   </property>
+   <property name="bottomMargin">
+    <number>0</number>
+   </property>
+   <item row="0" column="0">
+    <layout class="QGridLayout" name="gridLayout">
+     <property name="horizontalSpacing">
+      <number>0</number>
+     </property>
+     <item row="0" column="0" rowspan="2">
+      <widget class="QGroupBox" name="enabledCheckbox">
+       <property name="title">
+        <string>LoRA name here</string>
+       </property>
+       <property name="checkable">
+        <bool>true</bool>
+       </property>
+       <layout class="QGridLayout" name="gridLayout_3">
+        <item row="0" column="0">
+         <widget class="QLineEdit" name="trigger_word_edit">
+          <property name="toolTip">
+           <string>&lt;html&gt;&lt;head/&gt;&lt;body&gt;&lt;p&gt;Some LoRA require a trigger word to activate.&lt;/p&gt;&lt;p&gt;Make a note here for your records.&lt;/p&gt;&lt;/body&gt;&lt;/html&gt;</string>
+          </property>
+          <property name="placeholderText">
+           <string>Trigger words (comma separated)</string>
+          </property>
+         </widget>
+        </item>
+       </layout>
+      </widget>
+     </item>
+    </layout>
+   </item>
+  </layout>
+ </widget>
+ <resources/>
+ <connections>
+  <connection>
+   <sender>trigger_word_edit</sender>
+   <signal>textChanged(QString)</signal>
+   <receiver>lora</receiver>
+   <slot>action_changed_trigger_words(QString)</slot>
+   <hints>
+    <hint type="sourcelabel">
+     <x>115</x>
+     <y>116</y>
+    </hint>
+    <hint type="destinationlabel">
+     <x>127</x>
+     <y>0</y>
+    </hint>
+   </hints>
+  </connection>
+  <connection>
+   <sender>enabledCheckbox</sender>
+   <signal>toggled(bool)</signal>
+   <receiver>lora</receiver>
+   <slot>action_toggled_lora_enabled(bool)</slot>
+   <hints>
+    <hint type="sourcelabel">
+     <x>47</x>
+     <y>33</y>
+    </hint>
+    <hint type="destinationlabel">
+     <x>45</x>
+     <y>0</y>
+    </hint>
+   </hints>
+  </connection>
+  <connection>
+   <sender>trigger_word_edit</sender>
+   <signal>textEdited(QString)</signal>
+   <receiver>lora</receiver>
+   <slot>action_text_changed_trigger_word(QString)</slot>
+   <hints>
+    <hint type="sourcelabel">
+     <x>312</x>
+     <y>109</y>
+    </hint>
+    <hint type="destinationlabel">
+     <x>412</x>
+     <y>-9</y>
+    </hint>
+   </hints>
+  </connection>
+ </connections>
+ <slots>
+  <slot>action_toggled_lora_enabled(bool)</slot>
+  <slot>action_changed_trigger_words(QString)</slot>
+  <slot>action_text_changed_trigger_word(QString)</slot>
+ </slots>
+</ui>
