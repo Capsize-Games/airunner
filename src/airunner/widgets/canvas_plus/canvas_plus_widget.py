@@ -548,12 +548,17 @@ class CanvasPlusWidget(BaseWidget):
 
     def add_image_to_scene(self, image):
         self.save_image_to_database(image)
-        if self.current_draggable_pixmap():
+        if self.current_draggable_pixmap() and self.settings_manager.image_to_new_layer:
             layer_index = self.add_layer()
             self.switch_to_layer(layer_index)
         pixmap = QPixmap.fromImage(ImageQt(image))
         draggable_pixmap = DraggablePixmap(self, pixmap)
-        self.scene.addItem(draggable_pixmap)
+        if self.settings_manager.image_to_new_layer:
+            self.scene.addItem(draggable_pixmap)
+        else:
+            # overrite the current scene image
+            self.remove_current_draggable_pixmap_from_scene()
+            self.scene.addItem(draggable_pixmap)
         self.draggable_pixmaps_in_scene[self.current_layer_index] = draggable_pixmap
         self.update()
     
