@@ -7,8 +7,8 @@
    <rect>
     <x>0</x>
     <y>0</y>
-    <width>1136</width>
-    <height>1036</height>
+    <width>1272</width>
+    <height>1010</height>
    </rect>
   </property>
   <property name="minimumSize">
@@ -197,7 +197,7 @@
                     </property>
                     <widget class="QTabWidget" name="tabWidget">
                      <property name="currentIndex">
-                      <number>0</number>
+                      <number>1</number>
                      </property>
                      <widget class="QWidget" name="canvas">
                       <attribute name="title">
@@ -231,10 +231,13 @@
                        <property name="bottomMargin">
                         <number>0</number>
                        </property>
+                       <item row="0" column="0">
+                        <widget class="StandardImageWidget" name="standard_image_widget" native="true"/>
+                       </item>
                       </layout>
                      </widget>
                     </widget>
-                    <widget class="ImagePanelWidget" name="standard_image_widget" native="true"/>
+                    <widget class="ImagePanelWidget" name="image_browser" native="true"/>
                    </widget>
                   </item>
                  </layout>
@@ -290,8 +293,8 @@
               <rect>
                <x>0</x>
                <y>0</y>
-               <width>446</width>
-               <height>855</height>
+               <width>504</width>
+               <height>830</height>
               </rect>
              </property>
              <layout class="QGridLayout" name="gridLayout">
@@ -961,7 +964,7 @@
            <rect>
             <x>0</x>
             <y>0</y>
-            <width>1132</width>
+            <width>1268</width>
             <height>50</height>
            </rect>
           </property>
@@ -1787,7 +1790,7 @@
     <rect>
      <x>0</x>
      <y>0</y>
-     <width>1136</width>
+     <width>1272</width>
      <height>22</height>
     </rect>
    </property>
@@ -2593,6 +2596,12 @@
    <class>ImagePanelWidget</class>
    <extends>QWidget</extends>
    <header>airunner/widgets/image/image_panel_widget</header>
+   <container>1</container>
+  </customwidget>
+  <customwidget>
+   <class>StandardImageWidget</class>
+   <extends>QWidget</extends>
+   <header>airunner/widgets/standard_image/standard_image_widget</header>
    <container>1</container>
   </customwidget>
  </customwidgets>
