@@ -3,6 +3,8 @@ import os
 from PyQt6.QtGui import QPixmap
 from PyQt6.QtWidgets import QLabel
 from PyQt6.QtCore import Qt
+from PyQt6.QtWidgets import QVBoxLayout
+from PyQt6.QtWidgets import QDialog
 
 from PIL import Image
 from airunner.utils import load_metadata_from_image
@@ -43,10 +45,24 @@ class ImageWidget(BaseWidget):
         # set width and height of label to size
         label.setFixedWidth(size)
         label.setFixedHeight(size)
+        label.mousePressEvent = self.handle_label_clicked
+        label.setCursor(Qt.CursorShape.PointingHandCursor)
 
         # Set the pixmap to the label
         label.setPixmap(pixmap)
         label.setAlignment(Qt.AlignmentFlag.AlignCenter)
+    
+    def handle_label_clicked(self, event):
+        # create a popup window and show the full size image in it
+        self.dialog = QDialog()
+        self.dialog.setWindowTitle("Image preview")
+        layout = QVBoxLayout(self.dialog)
+        self.dialog.setLayout(layout)
+        pixmap = QPixmap(self.image_path)
+        label = QLabel()
+        label.setPixmap(pixmap)
+        layout.addWidget(label)
+        self.dialog.show()
     
     def load_meta_data(self, image_path):
         # load the png metadata from image_path

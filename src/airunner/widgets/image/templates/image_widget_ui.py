@@ -54,8 +54,6 @@ class Ui_image_widget(object):
         self.verticalLayout.addWidget(self.pushButton_4)
         self.pushButton = QtWidgets.QPushButton(parent=image_widget)
         self.pushButton.setCursor(QtGui.QCursor(QtCore.Qt.CursorShape.PointingHandCursor))
-        icon = QtGui.QIcon.fromTheme("user-trash")
-        self.pushButton.setIcon(icon)
         self.pushButton.setObjectName("pushButton")
         self.verticalLayout.addWidget(self.pushButton)
         self.verticalLayout_2.addLayout(self.verticalLayout)
