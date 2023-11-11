@@ -1,0 +1,346 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<ui version="4.0">
+ <class>model_widget</class>
+ <widget class="QWidget" name="model_widget">
+  <property name="geometry">
+   <rect>
+    <x>0</x>
+    <y>0</y>
+    <width>395</width>
+    <height>293</height>
+   </rect>
+  </property>
+  <property name="sizePolicy">
+   <sizepolicy hsizetype="Preferred" vsizetype="Preferred">
+    <horstretch>0</horstretch>
+    <verstretch>0</verstretch>
+   </sizepolicy>
+  </property>
+  <property name="minimumSize">
+   <size>
+    <width>0</width>
+    <height>0</height>
+   </size>
+  </property>
+  <property name="windowTitle">
+   <string>Form</string>
+  </property>
+  <property name="branch" stdset="0">
+   <string/>
+  </property>
+  <property name="path" stdset="0">
+   <string/>
+  </property>
+  <property name="version" stdset="0">
+   <string/>
+  </property>
+  <property name="category" stdset="0">
+   <string/>
+  </property>
+  <property name="pipeline_action" stdset="0">
+   <string/>
+  </property>
+  <property name="pipeline_class" stdset="0">
+   <string/>
+  </property>
+  <property name="prompts" stdset="0">
+   <string/>
+  </property>
+  <layout class="QGridLayout" name="gridLayout">
+   <item row="0" column="0">
+    <layout class="QVBoxLayout" name="verticalLayout">
+     <item>
+      <layout class="QHBoxLayout" name="horizontalLayout_2">
+       <item>
+        <widget class="QCheckBox" name="name">
+         <property name="font">
+          <font>
+           <pointsize>8</pointsize>
+           <bold>true</bold>
+          </font>
+         </property>
+         <property name="text">
+          <string>UPC</string>
+         </property>
+        </widget>
+       </item>
+      </layout>
+     </item>
+     <item>
+      <layout class="QHBoxLayout" name="horizontalLayout">
+       <item>
+        <widget class="QPushButton" name="toolButton">
+         <property name="minimumSize">
+          <size>
+           <width>24</width>
+           <height>24</height>
+          </size>
+         </property>
+         <property name="maximumSize">
+          <size>
+           <width>24</width>
+           <height>24</height>
+          </size>
+         </property>
+         <property name="toolTip">
+          <string>View details</string>
+         </property>
+         <property name="text">
+          <string/>
+         </property>
+         <property name="icon">
+          <iconset resource="../../../resources_light.qrc">
+           <normaloff>:/icons/light/eye-look-icon.svg</normaloff>:/icons/light/eye-look-icon.svg</iconset>
+         </property>
+         <property name="checkable">
+          <bool>true</bool>
+         </property>
+         <property name="checked">
+          <bool>false</bool>
+         </property>
+        </widget>
+       </item>
+       <item>
+        <widget class="QPushButton" name="edit_button">
+         <property name="minimumSize">
+          <size>
+           <width>24</width>
+           <height>24</height>
+          </size>
+         </property>
+         <property name="maximumSize">
+          <size>
+           <width>24</width>
+           <height>24</height>
+          </size>
+         </property>
+         <property name="toolTip">
+          <string>Edit model</string>
+         </property>
+         <property name="text">
+          <string/>
+         </property>
+         <property name="icon">
+          <iconset resource="../../../resources_light.qrc">
+           <normaloff>:/icons/light/setting-line-icon.svg</normaloff>:/icons/light/setting-line-icon.svg</iconset>
+         </property>
+        </widget>
+       </item>
+       <item>
+        <widget class="QPushButton" name="delete_button">
+         <property name="minimumSize">
+          <size>
+           <width>24</width>
+           <height>24</height>
+          </size>
+         </property>
+         <property name="maximumSize">
+          <size>
+           <width>24</width>
+           <height>24</height>
+          </size>
+         </property>
+         <property name="toolTip">
+          <string>Delete model</string>
+         </property>
+         <property name="text">
+          <string/>
+         </property>
+         <property name="icon">
+          <iconset resource="../../../resources_light.qrc">
+           <normaloff>:/icons/light/recycle-bin-line-icon.svg</normaloff>:/icons/light/recycle-bin-line-icon.svg</iconset>
+         </property>
+        </widget>
+       </item>
+       <item>
+        <spacer name="horizontalSpacer">
+         <property name="orientation">
+          <enum>Qt::Horizontal</enum>
+         </property>
+         <property name="sizeHint" stdset="0">
+          <size>
+           <width>40</width>
+           <height>20</height>
+          </size>
+         </property>
+        </spacer>
+       </item>
+      </layout>
+     </item>
+    </layout>
+   </item>
+   <item row="1" column="0">
+    <widget class="QTableWidget" name="details">
+     <property name="sizePolicy">
+      <sizepolicy hsizetype="Expanding" vsizetype="MinimumExpanding">
+       <horstretch>0</horstretch>
+       <verstretch>0</verstretch>
+      </sizepolicy>
+     </property>
+     <property name="minimumSize">
+      <size>
+       <width>0</width>
+       <height>214</height>
+      </size>
+     </property>
+     <property name="rowCount">
+      <number>7</number>
+     </property>
+     <property name="columnCount">
+      <number>2</number>
+     </property>
+     <attribute name="horizontalHeaderVisible">
+      <bool>false</bool>
+     </attribute>
+     <attribute name="horizontalHeaderStretchLastSection">
+      <bool>true</bool>
+     </attribute>
+     <attribute name="verticalHeaderVisible">
+      <bool>false</bool>
+     </attribute>
+     <attribute name="verticalHeaderStretchLastSection">
+      <bool>false</bool>
+     </attribute>
+     <row/>
+     <row/>
+     <row/>
+     <row/>
+     <row/>
+     <row/>
+     <row/>
+     <column/>
+     <column/>
+     <item row="0" column="0">
+      <property name="text">
+       <string>path</string>
+      </property>
+     </item>
+     <item row="0" column="1">
+      <property name="text">
+       <string>~/.airunner/models/model_type</string>
+      </property>
+     </item>
+     <item row="1" column="0">
+      <property name="text">
+       <string>branch</string>
+      </property>
+     </item>
+     <item row="1" column="1">
+      <property name="text">
+       <string>main</string>
+      </property>
+     </item>
+     <item row="2" column="0">
+      <property name="text">
+       <string>version</string>
+      </property>
+     </item>
+     <item row="2" column="1">
+      <property name="text">
+       <string>v1</string>
+      </property>
+     </item>
+     <item row="3" column="0">
+      <property name="text">
+       <string>category</string>
+      </property>
+     </item>
+     <item row="3" column="1">
+      <property name="text">
+       <string>stablediffusion</string>
+      </property>
+     </item>
+     <item row="4" column="0">
+      <property name="text">
+       <string>pipeline action</string>
+      </property>
+     </item>
+     <item row="4" column="1">
+      <property name="text">
+       <string>txt2img</string>
+      </property>
+     </item>
+     <item row="5" column="0">
+      <property name="text">
+       <string>pipeline class</string>
+      </property>
+     </item>
+     <item row="5" column="1">
+      <property name="text">
+       <string>diffusers.StableDiffusion</string>
+      </property>
+     </item>
+     <item row="6" column="0">
+      <property name="text">
+       <string>prompts</string>
+      </property>
+     </item>
+     <item row="6" column="1">
+      <property name="text">
+       <string>prompt</string>
+      </property>
+     </item>
+    </widget>
+   </item>
+  </layout>
+ </widget>
+ <resources>
+  <include location="../../../resources_light.qrc"/>
+  <include location="../../../resources_dark.qrc"/>
+ </resources>
+ <connections>
+  <connection>
+   <sender>toolButton</sender>
+   <signal>toggled(bool)</signal>
+   <receiver>model_widget</receiver>
+   <slot>action_toggled_button_details(bool)</slot>
+   <hints>
+    <hint type="sourcelabel">
+     <x>22</x>
+     <y>47</y>
+    </hint>
+    <hint type="destinationlabel">
+     <x>47</x>
+     <y>0</y>
+    </hint>
+   </hints>
+  </connection>
+  <connection>
+   <sender>edit_button</sender>
+   <signal>clicked()</signal>
+   <receiver>model_widget</receiver>
+   <slot>action_clicked_button_settings()</slot>
+   <hints>
+    <hint type="sourcelabel">
+     <x>56</x>
+     <y>49</y>
+    </hint>
+    <hint type="destinationlabel">
+     <x>13</x>
+     <y>0</y>
+    </hint>
+   </hints>
+  </connection>
+  <connection>
+   <sender>delete_button</sender>
+   <signal>clicked()</signal>
+   <receiver>model_widget</receiver>
+   <slot>action_clicked_button_delete()</slot>
+   <hints>
+    <hint type="sourcelabel">
+     <x>81</x>
+     <y>42</y>
+    </hint>
+    <hint type="destinationlabel">
+     <x>80</x>
+     <y>3</y>
+    </hint>
+   </hints>
+  </connection>
+ </connections>
+ <slots>
+  <slot>action_toggled_button_details(bool)</slot>
+  <slot>action_clicked_button_settings()</slot>
+  <slot>action_clicked_button_delete()</slot>
+ </slots>
+</ui>

@@ -8,44 +8,37 @@ class HistoryMixin:
     canvas = None
 
     def initialize(self):
-        self.header_widget.undo_button.clicked.connect(self.undo)
-        self.header_widget.redo_button.clicked.connect(self.redo)
         self.history = History()
-        self.initialize_history_buttons()
-
-    def initialize_history_buttons(self):
-        self.actionUndo.triggered.connect(self.undo)
-        self.actionRedo.triggered.connect(self.redo)
 
     def undo_new_layer(self, previous_event):
-        layers = self.canvas.get_layers_copy()
-        self.canvas.layers = previous_event["layers"]
-        self.canvas.current_layer_index = previous_event["layer_index"]
+        layers = self.ui.layer_widget.get_layers_copy()
+        self.ui.layer_widget.layers = previous_event["layers"]
+        self.ui.layer_widget.current_layer_index = previous_event["layer_index"]
         previous_event["layers"] = layers
         return previous_event
 
     def undo_move_layer(self, previous_event):
         layer_order = []
-        for layer in self.canvas.layers:
+        for layer in self.ui.layer_widget.layers:
             layer_order.append(layer.uuid)
         self.resort_layers(previous_event)
         previous_event["layer_order"] = layer_order
         self.history.undone_history.append(previous_event)
-        self.canvas.current_layer_index = previous_event["layer_index"]
+        self.ui.layer_widget.current_layer_index = previous_event["layer_index"]
         return previous_event
 
     def undo_delete_layer(self, previous_event):
-        layers = self.canvas.get_layers_copy()
-        self.canvas.layers = previous_event["layers"]
-        self.canvas.current_layer_index = previous_event["layer_index"]
+        layers = self.ui.layer_widget.get_layers_copy()
+        self.ui.layer_widget.layers = previous_event["layers"]
+        self.ui.layer_widget.current_layer_index = previous_event["layer_index"]
         previous_event["layers"] = layers
         return previous_event
 
     def undo_draw(self, previous_event):
         index = previous_event["layer_index"]
         lines = previous_event["lines"]
-        previous_event["lines"] = self.canvas.layers[index].lines.copy()
-        self.canvas.layers[index].lines = lines
+        previous_event["lines"] = self.ui.layer_widget.layers[index].lines.copy()
+        self.ui.layer_widget.layers[index].lines = lines
         return previous_event
 
     def undo_erase(self, previous_event):
@@ -53,37 +46,37 @@ class HistoryMixin:
         lines = previous_event["lines"]
         images = previous_event["images"]
         index = previous_event["layer_index"]
-        previous_event["lines"] = self.canvas.layers[index].lines
+        previous_event["lines"] = self.ui.layer_widget.layers[index].lines
         previous_event["images"] = self.canvas.image_data_copy(index)
-        self.canvas.layers[index].lines = lines
-        self.canvas.layers[index].image_data = images
+        self.ui.layer_widget.layers[index].lines = lines
+        self.ui.layer_widget.layers[index].image_data = images
         return previous_event
 
     def undo_set_image(self, previous_event):
         images = previous_event["images"]
         layer_index = previous_event["layer_index"]
         previous_event["images"] = self.canvas.image_data_copy(layer_index)
-        self.canvas.layers[previous_event["layer_index"]].image_data = images
+        self.ui.layer_widget.layers[previous_event["layer_index"]].image_data = images
         return previous_event
 
     def undo_apply_filter(self, previous_event):
         images = previous_event["images"]
         index = previous_event["layer_index"]
         previous_event["images"] = self.canvas.image_data_copy(index)
-        self.canvas.layers[index].image_data = images
+        self.ui.layer_widget.layers[index].image_data = images
         return previous_event
 
     def undo_add_widget(self, previous_event):
         widets = previous_event["widgets"]
-        previous_event["widgets"] = self.canvas.layers[previous_event["layer_index"]].widgets
-        self.canvas.layers[previous_event["layer_index"]].widgets = widets
+        previous_event["widgets"] = self.ui.layer_widget.layers[previous_event["layer_index"]].widgets
+        self.ui.layer_widget.layers[previous_event["layer_index"]].widgets = widets
         return previous_event
 
     def undo_rotate(self, previous_event):
         images = previous_event["images"]
         index = previous_event["layer_index"]
         previous_event["images"] = self.canvas.image_data_copy(index)
-        self.canvas.layers[index].image_data = images
+        self.ui.layer_widget.layers[index].image_data = images
         return previous_event
 
     def undo(self):
@@ -96,7 +89,7 @@ class HistoryMixin:
         elif event_name == "erase":
             previous_event = self.undo_erase(previous_event)
         elif event_name == "new_layer":
-            if len(self.canvas.layers) == 1:
+            if len(self.ui.layer_widget.layers) == 1:
                 self.history.event_history.append(previous_event)
                 return
             previous_event = self.undo_new_layer(previous_event)
@@ -113,23 +106,23 @@ class HistoryMixin:
         elif event_name == "rotate":
             self.undo_rotate(previous_event)
         self.history.undone_history.append(previous_event)
-        self.canvas.show_layers()
+        self.ui.layer_widget.show_layers()
         self.canvas.update()
 
     def redo_draw(self, undone_event):
         lines = undone_event["lines"]
-        undone_event["lines"] = self.canvas.layers[undone_event["layer_index"]].lines
-        self.canvas.layers[undone_event["layer_index"]].lines = lines
+        undone_event["lines"] = self.ui.layer_widget.layers[undone_event["layer_index"]].lines
+        self.ui.layer_widget.layers[undone_event["layer_index"]].lines = lines
         return undone_event
 
     def redo_erase(self, undone_event):
         lines = undone_event["lines"]
         images = undone_event["images"]
         layer_index = undone_event["layer_index"]
-        undone_event["lines"] = self.canvas.layers[layer_index].lines.copy()
+        undone_event["lines"] = self.ui.layer_widget.layers[layer_index].lines.copy()
         undone_event["images"] = self.canvas.image_data_copy(layer_index)
-        self.canvas.layers[undone_event["layer_index"]].lines = lines
-        self.canvas.layers[undone_event["layer_index"]].image_data = images
+        self.ui.layer_widget.layers[undone_event["layer_index"]].lines = lines
+        self.ui.layer_widget.layers[undone_event["layer_index"]].image_data = images
         return undone_event
 
     def redo_set_image(self, undone_event):
@@ -140,36 +133,36 @@ class HistoryMixin:
         undone_event["images"] = self.canvas.image_data_copy(layer_index)
         undone_event["previous_image_root_point"] = current_image_root_point
         undone_event["previous_image_pivot_point"] = current_image_pivot_point
-        self.canvas.layers[undone_event["layer_index"]].image_data = images
+        self.ui.layer_widget.layers[undone_event["layer_index"]].image_data = images
         return undone_event
 
     def redo_add_widget(self, undone_event):
         # add widget
         widgets = undone_event["widgets"]
-        undone_event["widgets"] = self.canvas.layers[undone_event["layer_index"]].widgets
-        self.canvas.layers[undone_event["layer_index"]].widgets = widgets
+        undone_event["widgets"] = self.ui.layer_widget.layers[undone_event["layer_index"]].widgets
+        self.ui.layer_widget.layers[undone_event["layer_index"]].widgets = widgets
         return undone_event
 
     def redo_new_layer(self, undone_event):
-        layers = self.canvas.get_layers_copy()
-        self.canvas.layers = undone_event["layers"]
-        self.canvas.current_layer_index = undone_event["layer_index"]
+        layers = self.ui.layer_widget.get_layers_copy()
+        self.ui.layer_widget.layers = undone_event["layers"]
+        self.ui.layer_widget.current_layer_index = undone_event["layer_index"]
         undone_event["layers"] = layers
         return undone_event
 
     def redo_move_layer(self, undone_event):
         layer_order = []
-        for layer in self.canvas.layers:
+        for layer in self.ui.layer_widget.layers:
             layer_order.append(layer.uuid)
         self.resort_layers(undone_event)
         undone_event["layer_order"] = layer_order
-        self.canvas.current_layer_index = undone_event["layer_index"]
+        self.ui.layer_widget.current_layer_index = undone_event["layer_index"]
         return undone_event
 
     def redo_delete_layer(self, undone_event):
-        layers = self.canvas.get_layers_copy()
-        self.canvas.layers = undone_event["layers"]
-        self.canvas.current_layer_index = undone_event["layer_index"]
+        layers = self.ui.layer_widget.get_layers_copy()
+        self.ui.layer_widget.layers = undone_event["layers"]
+        self.ui.layer_widget.current_layer_index = undone_event["layer_index"]
         undone_event["layers"] = layers
         return undone_event
 
@@ -177,14 +170,14 @@ class HistoryMixin:
         images = previous_event["images"]
         index = previous_event["layer_index"]
         previous_event["images"] = self.canvas.image_data_copy(index)
-        self.canvas.layers[index].image_data = images
+        self.ui.layer_widget.layers[index].image_data = images
         return previous_event
 
     def redo_rotate(self, undone_event):
         images = undone_event["images"]
         layer_index = undone_event["layer_index"]
         undone_event["images"] = self.canvas.image_data_copy(layer_index)
-        self.canvas.layers[undone_event["layer_index"]].image_data = images
+        self.ui.layer_widget.layers[undone_event["layer_index"]].image_data = images
         return undone_event
 
     def redo(self):
@@ -211,7 +204,7 @@ class HistoryMixin:
         elif event_name == "rotate":
             undone_event = self.redo_rotate(undone_event)
         self.history.event_history.append(undone_event)
-        self.canvas.show_layers()
+        self.ui.layer_widget.show_layers()
         self.canvas.update()
 
     def resort_layers(self, event):
@@ -219,11 +212,11 @@ class HistoryMixin:
         # rearrange the current layers to match the layer order before the move
         sorted_layers = []
         for uuid in layer_order:
-            for layer in self.canvas.layers:
+            for layer in self.ui.layer_widget.layers:
                 if layer.uuid == uuid:
                     sorted_layers.append(layer)
                     break
-        self.canvas.layers = sorted_layers
+        self.ui.layer_widget.layers = sorted_layers
 
     def clear_history(self):
         self.history.clear()
