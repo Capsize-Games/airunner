@@ -1214,11 +1214,6 @@ class MainWindow(
                 images=images,
                 data=data)
         else:
-            if data[
-                "action"] != "outpaint" and self.settings_manager.image_to_new_layer and self.ui.layer_widget.current_layer.image_data.image is not None:
-                self.ui.layer_widget.add_layer()
-            # print width and height of image
-            # self.canvas.image_handler(images[0], data)
             self.image_data.emit({
                 "image": images[0],
                 "data": data
