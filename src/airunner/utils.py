@@ -367,7 +367,15 @@ def auto_export_image(
 
     if image:
         filename = filename + extension
-        file_path = os.path.join(path, filename)
+
+        action = data["action"] if data and "action" in data else ""
+
+        file_path = os.path.join(path, action, filename)
+
+        # if path doesn't exist, create it
+        if not os.path.exists(os.path.dirname(file_path)):
+            os.makedirs(os.path.dirname(file_path))
+
         if metadata:
             image.save(file_path, pnginfo=metadata)
         else:

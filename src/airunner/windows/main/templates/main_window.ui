@@ -195,7 +195,7 @@
                     <property name="orientation">
                      <enum>Qt::Horizontal</enum>
                     </property>
-                    <widget class="QTabWidget" name="tabWidget">
+                    <widget class="QTabWidget" name="image_editor_tab_widget">
                      <property name="currentIndex">
                       <number>0</number>
                      </property>

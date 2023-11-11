@@ -5,6 +5,7 @@ from PyQt6.QtWidgets import QVBoxLayout
 from PyQt6.QtWidgets import QTableWidgetItem
 from PyQt6.QtWidgets import QApplication
 from PyQt6.QtWidgets import QDialog
+from PyQt6.QtGui import QImage
 
 from PIL import Image
 
@@ -18,17 +19,45 @@ class StandardImageWidget(BaseWidget):
     _label = None
     _layout = None
     image_path = None
+
+    def __init__(self, *args, **kwargs):
+        super().__init__(*args, **kwargs)
+        self.app.image_data.connect(self.handle_image_data)
+        self.app.load_image.connect(self.load_image_from_path)
     
-    def set_pixmap(self, image_path):
+    def handle_image_data(self, data):
+        self.load_image_from_object(data["image"])
+    
+    def load_image_from_path(self, image):
+        image = Image.open(image)
+        self.load_image_from_object(image)
+    
+    def load_image_from_object(self, image):
+        if self.app.image_editor_tab_name == "Standard":
+            self.set_pixmap(image=image)
+    
+    def set_pixmap(self, image_path=None, image=None):
         self.image_path = image_path
+        self.image = image
+        
         size = self.ui.image_frame.width()
 
         pixmap = self._pixmap
         if not pixmap:
-            pixmap = QPixmap(image_path)
+            pixmap = QPixmap()
             self._pixmap = pixmap
-        else:
+
+        if image_path:
             pixmap.load(image_path)
+        else:
+            raw_data = image.tobytes("raw", "RGBA")
+            qimage = QImage(
+                raw_data, 
+                image.size[0], 
+                image.size[1], 
+                QImage.Format.Format_RGBA8888
+            )
+            pixmap = QPixmap.fromImage(qimage)
         
         width = pixmap.width()
         height = pixmap.height()
@@ -61,14 +90,15 @@ class StandardImageWidget(BaseWidget):
         
         # get the metadata from this image, load it as a png first
         # then load the metadata from the png
-        image = Image.open(image_path)
-        meta_data = image.info
-
-        meta_data["width"] = width
-        meta_data["height"] = height
-
         self.clear_table_data()
-        self.set_table_data(meta_data)
+        if image_path:
+            image = Image.open(image_path)
+            meta_data = image.info
+
+            meta_data["width"] = width
+            meta_data["height"] = height
+
+            self.set_table_data(meta_data)
     
     def handle_label_clicked(self, event):
         # create a popup window and show the full size image in it
@@ -76,7 +106,18 @@ class StandardImageWidget(BaseWidget):
         self.dialog.setWindowTitle("Image preview")
         layout = QVBoxLayout(self.dialog)
         self.dialog.setLayout(layout)
-        pixmap = QPixmap(self.image_path)
+
+        if self.image_path:
+            pixmap = QPixmap(self.image_path)
+        elif self.image:
+            raw_data = self.image.tobytes("raw", "RGBA")
+            qimage = QImage(
+                raw_data, 
+                self.image.size[0], 
+                self.image.size[1], 
+                QImage.Format.Format_RGBA8888
+            )
+            pixmap = QPixmap.fromImage(qimage)
         label = QLabel()
         label.setPixmap(pixmap)
         layout.addWidget(label)

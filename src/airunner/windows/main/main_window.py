@@ -105,6 +105,7 @@ class MainWindow(
     generator_tab_changed_signal = pyqtSignal()
     tab_section_changed_signal = pyqtSignal()
     image_data = pyqtSignal(dict)
+    load_image = pyqtSignal(str)
 
     @property
     def generate_signal(self):
@@ -272,6 +273,8 @@ class MainWindow(
 
         self.initialize()
 
+        self.ui.image_editor_tab_widget.currentChanged.connect(self.image_editor_tab_index_changed)
+
         # on window resize:
         # self.applicationStateChanged.connect(self.on_state_changed)
 
@@ -319,6 +322,13 @@ class MainWindow(
         self.initialize_tool_section_buttons()
 
         self.loaded.emit()
+    
+    @property
+    def image_editor_tab_name(self):
+        return self.ui.image_editor_tab_widget.tabText(self.ui.image_editor_tab_widget.currentIndex())
+
+    def image_editor_tab_index_changed(self):
+        self.settings_manager.set_value("active_image_editor_section", self.image_editor_tab_name)
 
     def initialize_panel_tabs(self):
         """

@@ -269,6 +269,8 @@ class CanvasPlusWidget(BaseWidget):
         self.ui.central_widget.resizeEvent = self.resizeEvent
         self.app.add_image_to_canvas_signal.connect(self.handle_add_image_to_canvas)
         self.app.image_data.connect(self.handle_image_data)
+        self.app.load_image.connect(self.load_image_from_path)
+        self.settings_manager.changed_signal.connect(self.handle_changed_signal)
         self.initialize()
 
     def handle_mouse_event(self, original_mouse_event, event):
@@ -437,7 +439,15 @@ class CanvasPlusWidget(BaseWidget):
             self.ui.canvas_container.setCursor(QCursor(Qt.CursorShape.ArrowCursor))
 
     def handle_image_data(self, data):
-        self.add_image_to_scene(data["image"])
+        self.load_image_from_object(data["image"])
+    
+    def load_image_from_path(self, image):
+        image = Image.open(image)
+        self.load_image_from_object(image)
+    
+    def load_image_from_object(self, image):
+        if self.app.image_editor_tab_name == "Canvas":
+            self.add_image_to_scene(image)
 
     def load_image(self, image_path):
         image = Image.open(image_path)
