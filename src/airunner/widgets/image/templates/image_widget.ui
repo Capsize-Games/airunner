@@ -118,10 +118,6 @@
            <property name="text">
             <string>Delete</string>
            </property>
-           <property name="icon">
-            <iconset theme="user-trash">
-             <normaloff>.</normaloff>.</iconset>
-           </property>
           </widget>
          </item>
         </layout>

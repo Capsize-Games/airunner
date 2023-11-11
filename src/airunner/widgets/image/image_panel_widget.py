@@ -1,6 +1,7 @@
 import os
 
 from PyQt6.QtWidgets import QWidget, QHBoxLayout
+from PyQt6 import QtWidgets
 
 from airunner.widgets.base_widget import BaseWidget
 from airunner.widgets.image.folder_widget import FolderWidget
@@ -55,6 +56,9 @@ class ImagePanelWidget(BaseWidget):
         if show_folders:
             container = QWidget()
             container.setLayout(QHBoxLayout())
+            container.setObjectName("folder_container")
+            # set the width to stretch
+            container.setSizePolicy(QtWidgets.QSizePolicy.Policy.Expanding, QtWidgets.QSizePolicy.Policy.Fixed)
             for file in os.listdir(self.image_path):
                 if os.path.isdir(os.path.join(self.image_path, file)):
                     folder_widget = FolderWidget()
