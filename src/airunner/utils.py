@@ -220,6 +220,7 @@ def get_version():
 
 
 def get_latest_version():
+    return
     # get latest release from https://github.com/Capsize-Games/airunner/releases/latest
     # follow the redirect to get the version number
     import requests
@@ -278,28 +279,21 @@ def prepare_metadata(data):
     options = data["options"]
     action = data["action"]
     metadata.add_text("action", action)
-    if settings_manager.metadata_settings.image_export_metadata_prompt is True:
-        metadata.add_text("prompt", options[f'prompt'])
-    if settings_manager.metadata_settings.image_export_metadata_negative_prompt is True:
-        metadata.add_text("negative_prompt", options[f'negative_prompt'])
-    if settings_manager.metadata_settings.image_export_metadata_scale is True:
-        metadata.add_text("scale", str(options[f"scale"]))
-    if settings_manager.metadata_settings.image_export_metadata_seed is True:
-        metadata.add_text("seed", str(options[f"seed"]))
-    if settings_manager.metadata_settings.image_export_metadata_steps is True:
-        metadata.add_text("steps", str(options[f"steps"]))
-    if settings_manager.metadata_settings.image_export_metadata_ddim_eta is True:
-        metadata.add_text("ddim_eta", str(options[f"ddim_eta"]))
-    if settings_manager.metadata_settings.image_export_metadata_iterations is True:
-        metadata.add_text("n_iter", str(options[f"n_iter"]))
-    if settings_manager.metadata_settings.image_export_metadata_samples is True:
-        metadata.add_text("n_samples", str(options[f"n_samples"]))
-    if settings_manager.metadata_settings.image_export_metadata_model is True:
-        metadata.add_text("model", str(options[f"model"]))
-    if settings_manager.metadata_settings.image_export_metadata_model_branch is True:
-        metadata.add_text("model_branch", str(options[f"model_branch"]))
-    if settings_manager.metadata_settings.image_export_metadata_scheduler is True:
-        metadata.add_text("scheduler", str(options[f"scheduler"]))
+    metadata.add_text("prompt", options[f'prompt'])
+    metadata.add_text("negative_prompt", options[f'negative_prompt'])
+    metadata.add_text("strength", str(options.get("strength", 100)))
+    metadata.add_text("image_guidance_scale", str(options.get("image_guidance_scale", 100)))
+    metadata.add_text("scale", str(options[f"scale"]))
+    metadata.add_text("seed", str(options[f"seed"]))
+    metadata.add_text("latents_seed", str(options[f"latents_seed"]))
+    metadata.add_text("steps", str(options[f"steps"]))
+    metadata.add_text("ddim_eta", str(options[f"ddim_eta"]))
+    metadata.add_text("n_iter", str(options[f"n_iter"]))
+    metadata.add_text("n_samples", str(options[f"n_samples"]))
+    metadata.add_text("clip_skip", str(options[f"clip_skip"]))
+    for k, v in options[f"model_data"].items():
+        metadata.add_text(f"model_data_{k}", str(v))
+    metadata.add_text("scheduler", str(options[f"scheduler"]))
     return metadata
 
 def prepare_controlnet_metadata(data):
@@ -313,40 +307,56 @@ def auto_export_image(
     image,
     data=None,
     seed=None,
+    latents_seed=None,
     type="image",
 ):
     from airunner.aihandler.settings_manager import SettingsManager
+
     if seed is None:
         raise Exception("Seed must be set when auto exporting an image")
+    
+    if latents_seed is None:
+        raise Exception("Latents seed must be set when auto exporting an image")
+
+    data["options"]["seed"] = seed
+    data["options"]["latents_seed"] = latents_seed
+    
     settings_manager = SettingsManager()
+    
     if data and "action" in data and data["action"] == "txt2vid":
         return
+    
     base_path = settings_manager.path_settings.model_base_path
+    
     if type == "image":
         image_path = settings_manager.path_settings.image_path
         image_path = "images" if image_path == "" else image_path
     elif type == "controlnet":
         image_path = os.path.join(settings_manager.path_settings.image_path, "controlnet_masks")
+    
     path = os.path.join(base_path, image_path) if image_path == "images" else image_path
     if not os.path.exists(path):
         os.makedirs(path)
+    
     extension = settings_manager.image_export_type
     if extension == "":
         extension = "png"
     extension = f".{extension}"
+    
     filename = "image"
     if data:
         if type == "image":
             filename = data["action"]
         elif type == "controlnet":
             filename = f"mask_{data['controlnet']}"
-    if seed:
-        filename = f"{filename}_{str(seed)}"
+    
+    filename = f"{filename}_{str(seed)}_{str(latents_seed)}"
     if os.path.exists(os.path.join(path, filename + extension)):
         i = 1
         while os.path.exists(os.path.join(path, filename + "_" + str(i) + extension)):
             i += 1
         filename = filename + "_" + str(i)
+    
     if data:
         if type == "image":
             metadata = prepare_metadata(data)
@@ -357,13 +367,18 @@ def auto_export_image(
 
     if image:
         filename = filename + extension
+        file_path = os.path.join(path, filename)
         if metadata:
-            image.save(os.path.join(path, filename), pnginfo=metadata)
+            image.save(file_path, pnginfo=metadata)
         else:
-            image.save(os.path.join(path, filename))
-        return os.path.join(path, filename)
+            image.save(file_path)
+        return file_path
     return None
 
+def load_metadata_from_image(image):
+    if image:
+        return image.info
+    return {}
 
 def open_file_path(label="Import Image", directory="", file_type="Image Files (*.png *.jpg *.jpeg)"):
     return QFileDialog.getOpenFileName(

@@ -12,7 +12,7 @@ from PyQt6 import QtCore, QtGui, QtWidgets
 class Ui_MainWindow(object):
     def setupUi(self, MainWindow):
         MainWindow.setObjectName("MainWindow")
-        MainWindow.resize(1136, 1036)
+        MainWindow.resize(1272, 1010)
         MainWindow.setMinimumSize(QtCore.QSize(0, 0))
         font = QtGui.QFont()
         font.setPointSize(8)
@@ -98,9 +98,12 @@ class Ui_MainWindow(object):
         self.gridLayout_19 = QtWidgets.QGridLayout(self.standard)
         self.gridLayout_19.setContentsMargins(0, 0, 0, 0)
         self.gridLayout_19.setObjectName("gridLayout_19")
-        self.tabWidget.addTab(self.standard, "")
-        self.standard_image_widget = ImagePanelWidget(parent=self.splitter_2)
+        self.standard_image_widget = StandardImageWidget(parent=self.standard)
         self.standard_image_widget.setObjectName("standard_image_widget")
+        self.gridLayout_19.addWidget(self.standard_image_widget, 0, 0, 1, 1)
+        self.tabWidget.addTab(self.standard, "")
+        self.image_browser = ImagePanelWidget(parent=self.splitter_2)
+        self.image_browser.setObjectName("image_browser")
         self.gridLayout_11.addWidget(self.splitter_2, 0, 0, 1, 1)
         self.center_tab.addTab(self.tab_image, "")
         self.tab_txt2vid = QtWidgets.QWidget()
@@ -128,7 +131,7 @@ class Ui_MainWindow(object):
         self.scrollArea.setWidgetResizable(True)
         self.scrollArea.setObjectName("scrollArea")
         self.scrollAreaWidgetContents = QtWidgets.QWidget()
-        self.scrollAreaWidgetContents.setGeometry(QtCore.QRect(0, 0, 446, 855))
+        self.scrollAreaWidgetContents.setGeometry(QtCore.QRect(0, 0, 504, 830))
         self.scrollAreaWidgetContents.setObjectName("scrollAreaWidgetContents")
         self.gridLayout = QtWidgets.QGridLayout(self.scrollAreaWidgetContents)
         self.gridLayout.setObjectName("gridLayout")
@@ -410,7 +413,7 @@ class Ui_MainWindow(object):
         self.scrollArea_3.setWidgetResizable(True)
         self.scrollArea_3.setObjectName("scrollArea_3")
         self.scrollAreaWidgetContents_3 = QtWidgets.QWidget()
-        self.scrollAreaWidgetContents_3.setGeometry(QtCore.QRect(0, 0, 1132, 50))
+        self.scrollAreaWidgetContents_3.setGeometry(QtCore.QRect(0, 0, 1268, 50))
         self.scrollAreaWidgetContents_3.setObjectName("scrollAreaWidgetContents_3")
         self.horizontalLayout_2 = QtWidgets.QHBoxLayout(self.scrollAreaWidgetContents_3)
         self.horizontalLayout_2.setContentsMargins(0, 0, 0, 0)
@@ -683,7 +686,7 @@ class Ui_MainWindow(object):
         self.gridLayout_6.addWidget(self.header_widget, 0, 0, 1, 1)
         MainWindow.setCentralWidget(self.centralwidget)
         self.menubar = QtWidgets.QMenuBar(parent=MainWindow)
-        self.menubar.setGeometry(QtCore.QRect(0, 0, 1136, 22))
+        self.menubar.setGeometry(QtCore.QRect(0, 0, 1272, 22))
         font = QtGui.QFont()
         font.setPointSize(11)
         self.menubar.setFont(font)
@@ -988,7 +991,7 @@ class Ui_MainWindow(object):
         self.retranslateUi(MainWindow)
         self.mode_tab_widget.setCurrentIndex(0)
         self.center_tab.setCurrentIndex(0)
-        self.tabWidget.setCurrentIndex(0)
+        self.tabWidget.setCurrentIndex(1)
         self.tool_tab_widget.setCurrentIndex(1)
         self.batches_tab.setCurrentIndex(0)
         self.bottom_panel_tab_widget.setCurrentIndex(0)
@@ -1248,3 +1251,4 @@ from airunner.widgets.llm.llm_widget import LLMWidget
 from airunner.widgets.lora.lora_container_widget import LoraContainerWidget
 from airunner.widgets.model_manager.model_manager_widget import ModelManagerWidget
 from airunner.widgets.prompt_builder.prompt_builder_widget import PromptBuilderWidget
+from airunner.widgets.standard_image.standard_image_widget import StandardImageWidget
