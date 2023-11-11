@@ -2,6 +2,8 @@ import os
 
 from PyQt6.QtWidgets import QWidget, QHBoxLayout
 from PyQt6 import QtWidgets
+from PyQt6.QtCore import QFileSystemWatcher
+
 
 from airunner.widgets.base_widget import BaseWidget
 from airunner.widgets.image.folder_widget import FolderWidget
@@ -33,10 +35,21 @@ class ImagePanelWidget(BaseWidget):
             self.ui.breadcrumbs.root_path = os.sep.join(path_parts)
             self.ui.breadcrumbs.update_breadcrumbs(base)
             self.show_files()
+        
+        # watch the image directory for new files or delete files. if anything changes in the directory call show_files
+        self.watcher = QFileSystemWatcher()
+        self.watcher.addPath(self.image_path)
+        self.watcher.directoryChanged.connect(self.handle_directory_changed)
+        self.watcher.fileChanged.connect(self.handle_files_changed)
     
     def handle_breadcrumb_clicked(self):
         self.show_files()
-
+    
+    def handle_directory_changed(self, event):
+        self.show_files()
+    
+    def handle_files_changed(self, event):
+        self.show_files()
 
     def clear_files(self):
         self.page = 0
@@ -70,6 +83,8 @@ class ImagePanelWidget(BaseWidget):
         start = self.page * self.total_per_page
         end = start + self.total_per_page
         files = os.listdir(self.image_path)
+        # order by most recent first
+        files.sort(key=lambda x: os.path.getmtime(os.path.join(self.image_path, x)), reverse=True)
         self.last_page = end >= len(files)
         for file in files[start:end]:
             if file.endswith(".png"):
