@@ -1,18 +1,16 @@
-import base64
 import socket
 import json
 import threading
 import queue
 import time
-from PIL import Image
-from collections import namedtuple
-from typing import List
+
 
 class Response:
     def __init__(self):
         self.images = []
         self.request_type = ""
         self.tile_type = ""
+
 
 class Options:
     def __init__(self):
@@ -47,12 +45,14 @@ class Options:
         self.use_torch_compile = False
         self.use_tiled_vae = True
 
+
 class ClientData:
     def __init__(self):
         self.action = "txt2img"
         self.options = Options()
         self.request_type = ""
         self.tile_type = ""
+
 
 class SocketClient:
     def __init__(self):
@@ -116,13 +116,13 @@ class SocketClient:
                 pass
 
     def response_handler(self, response):
-        print(response)
         # res = json.loads(response, object_hook=lambda d: namedtuple('X', d.keys())(*d.values()))
         # print(res.request_type)
         # # convert res.images[0] base64 to PIL image and save
         # base64image = res.images[0]
         # image = Image.open(base64image)
         # image.save("test.png")
+        pass
 
     def connect(self):
         self.socket = socket.socket(socket.AF_INET, socket.SOCK_STREAM)

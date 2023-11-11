@@ -47,13 +47,16 @@ class SchedulerMixin:
         return self.action
 
     def clear_scheduler(self):
-        # self.scheduler_name = ""
-        # self.do_change_scheduler = True
-        # self._scheduler = None
-        # self.current_scheduler_name = None
-        pass
+        logger.info("Clearing scheduler")
+        self.scheduler_name = ""
+        self.do_change_scheduler = True
+        self._scheduler = None
+        self.current_scheduler_name = None
 
     def load_scheduler(self, force_scheduler_name=None, config=None):
+        if self.use_kandinsky:
+            return None
+
         import diffusers
         if (
             not force_scheduler_name and
@@ -102,10 +105,9 @@ class SchedulerMixin:
                 else:
                     kwargs["algorithm_type"] = "dpmsolver"
             try:
-                self._scheduler = scheduler_class.from_pretrained(
-                    self.model_path,
-                    local_files_only=self.local_files_only,
-                    use_auth_token=self.data["options"]["hf_token"],
+                self._scheduler = self.from_pretrained(
+                    class_object=scheduler_class,
+                    model=self.model_path,
                     **kwargs
                 )
             except NotImplementedError as e:
