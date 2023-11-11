@@ -82,9 +82,23 @@ class ImagePanelWidget(BaseWidget):
 
         start = self.page * self.total_per_page
         end = start + self.total_per_page
-        files = os.listdir(self.image_path)
-        # order by most recent first
-        files.sort(key=lambda x: os.path.getmtime(os.path.join(self.image_path, x)), reverse=True)
+        
+
+        # recursively crawl self.image_path and build a directory of the files sorted by the first folder name within self.image_path
+        # for example, self.image_path will have several folders, those should be the key in a dictionary, and the value should be a list of files which is sorted by the most recent first
+        files_in_image_path = os.listdir(self.image_path)
+        sorted_files = {}
+        # recursively crawl the image path and build a dictionary of the files
+        for file in files_in_image_path:
+            if os.path.isdir(os.path.join(self.image_path, file)):
+                sorted_files[file] = []
+                for root, dirs, files_in_dir in os.walk(os.path.join(self.image_path, file)):
+                    sorted_files[file].extend([os.path.join(root, f) for f in files_in_dir])
+        
+        section = "txt2img"
+        files = sorted_files[section]
+        # sort the files by the most recent first
+        files.sort(key=os.path.getmtime, reverse=True)
         self.last_page = end >= len(files)
         for file in files[start:end]:
             if file.endswith(".png"):
