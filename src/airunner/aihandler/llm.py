@@ -1,7 +1,4 @@
-import os
 import random
-from enum import Enum
-import re
 
 from airunner.aihandler.enums import MessageCode
 
@@ -12,10 +9,9 @@ from transformers import AutoModelForSeq2SeqLM, AutoTokenizer, AutoModelForCausa
 from optimum.gptq import GPTQQuantizer
 from transformers import BitsAndBytesConfig
 from airunner.aihandler.settings_manager import SettingsManager
-from airunner.chat.models import BaseConversationController
 
 
-from airunner.data.models import LLMGenerator, LLMPromptTemplate
+from airunner.data.models import LLMGenerator
 from airunner.data.db import session
 from airunner.aihandler.logger import Logger as logger
 
