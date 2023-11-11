@@ -608,14 +608,10 @@ QTableWidget::item:selected {
     background-color: @darkerprimary-color;
 }
 
-/* headers and side bars of table */
-QHeaderView {
-    background-color: @dark-color;
-    color: @light-color;
+#image_widget QPushButton {
+    border: 1px solid @darkerprimary-color;
 }
 
-QHeaderView::section {
-    background-color: @darkprimary-color;
-    color: @light-color;
+#folder_container {
     border: 1px solid @darkerprimary-color;
 }
