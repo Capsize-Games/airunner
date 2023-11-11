@@ -608,14 +608,10 @@ QTableWidget::item:selected {
     background-color: rgba(0, 132, 185, 50);
 }
 
-/* headers and side bars of table */
-QHeaderView {
-    background-color: #000;
-    color: #C8C8C8;
+#image_widget QPushButton {
+    border: 1px solid rgba(0, 132, 185, 50);
 }
 
-QHeaderView::section {
-    background-color: rgba(0, 132, 185, 100);
-    color: #C8C8C8;
+#folder_container {
     border: 1px solid rgba(0, 132, 185, 50);
 }
