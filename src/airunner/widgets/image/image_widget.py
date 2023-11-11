@@ -19,6 +19,10 @@ class ImageWidget(BaseWidget):
     image_width = 0
     image_height = 0
 
+    def __init__(self, *args, **kwargs):
+        super().__init__(*args, **kwargs)
+        self.ui.permanently_delete_2.hide()
+
     def set_image(self, image_path):
         size = self.ui.image_frame.width()
         self.image_path = image_path
@@ -51,7 +55,14 @@ class ImageWidget(BaseWidget):
             self.meta_data = load_metadata_from_image(image)
 
     def send_image_to_grid(self):
-        self.app.ui.canvas_plus_widget.load_image(self.image_path)
+        #self.app.ui.canvas_plus_widget.load_image(self.image_path)
+        self.app.ui.standard_image_widget.set_pixmap(self.image_path)
+
+    def confirm_delete(self):
+        self.ui.permanently_delete_2.show()
+    
+    def cancel_delete(self):
+        self.ui.permanently_delete_2.hide()
 
     def delete_image(self):
         if not self.image_path:
