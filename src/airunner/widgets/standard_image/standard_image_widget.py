@@ -4,6 +4,7 @@ from PyQt6.QtGui import QPixmap
 from PyQt6.QtWidgets import QVBoxLayout
 from PyQt6.QtWidgets import QTableWidgetItem
 from PyQt6.QtWidgets import QApplication
+from PyQt6.QtWidgets import QDialog
 
 from PIL import Image
 
@@ -16,8 +17,10 @@ class StandardImageWidget(BaseWidget):
     _pixmap = None
     _label = None
     _layout = None
+    image_path = None
     
     def set_pixmap(self, image_path):
+        self.image_path = image_path
         size = self.ui.image_frame.width()
 
         pixmap = self._pixmap
@@ -26,6 +29,9 @@ class StandardImageWidget(BaseWidget):
             self._pixmap = pixmap
         else:
             pixmap.load(image_path)
+        
+        width = pixmap.width()
+        height = pixmap.height()
         
         label = self._label
         if not label:
@@ -42,6 +48,10 @@ class StandardImageWidget(BaseWidget):
         label.setPixmap(pixmap)
         label.setFixedWidth(size)
         label.setFixedHeight(size)
+
+        # on label click:
+        label.mousePressEvent = self.handle_label_clicked
+        label.setCursor(Qt.CursorShape.PointingHandCursor)
         
         layout = self._layout
         if not layout:
@@ -54,8 +64,23 @@ class StandardImageWidget(BaseWidget):
         image = Image.open(image_path)
         meta_data = image.info
 
+        meta_data["width"] = width
+        meta_data["height"] = height
+
         self.clear_table_data()
         self.set_table_data(meta_data)
+    
+    def handle_label_clicked(self, event):
+        # create a popup window and show the full size image in it
+        self.dialog = QDialog()
+        self.dialog.setWindowTitle("Image preview")
+        layout = QVBoxLayout(self.dialog)
+        self.dialog.setLayout(layout)
+        pixmap = QPixmap(self.image_path)
+        label = QLabel()
+        label.setPixmap(pixmap)
+        layout.addWidget(label)
+        self.dialog.show()
     
     def set_table_data(self, data):
         for k, v in data.items():
