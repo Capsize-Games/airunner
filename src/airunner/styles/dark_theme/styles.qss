@@ -580,3 +580,42 @@ GeneratorTabWidget#generator_widget QTabWidget QTabWidget QTabWidget QTabBar::ta
     border-right: none;
     background: #000;
 }
+
+#image_frame {
+    border: 1px solid rgba(0, 132, 185, 50);
+}
+
+#tableWidget {
+    background-color: #000;
+    color: #C8C8C8;
+}
+
+/* table styles */
+QTableWidget {
+    border: none;
+    background-color: #000;
+}
+
+QTableWidget::item {
+    background-color: #000;
+}
+
+QTableWidget::item:hover {
+    background-color: rgba(0, 132, 185, 50);
+}
+
+QTableWidget::item:selected {
+    background-color: rgba(0, 132, 185, 50);
+}
+
+/* headers and side bars of table */
+QHeaderView {
+    background-color: #000;
+    color: #C8C8C8;
+}
+
+QHeaderView::section {
+    background-color: rgba(0, 132, 185, 100);
+    color: #C8C8C8;
+    border: 1px solid rgba(0, 132, 185, 50);
+}
