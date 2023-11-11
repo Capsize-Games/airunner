@@ -1,9 +1,10 @@
-from PIL import ImageDraw, ImageFilter, UnidentifiedImageError
-from PyQt6.QtCore import Qt, QPointF, QPoint, QSize, QRect, QThread, QObject, pyqtSignal, QTimer, QRunnable, QThreadPool
+from PIL import Image
+from PIL import ImageDraw, UnidentifiedImageError
+from PyQt6.QtCore import Qt, QPointF, QPoint, QSize, QRect, QObject, pyqtSignal, QRunnable, QThreadPool
 from PyQt6.QtGui import QPainter, QPainterPath, QColor, QPen, QImage
+
 from airunner.models.layerdata import LayerData
 from airunner.models.linedata import LineData
-from PIL import Image
 
 
 class RasterizationWorker(QObject):
@@ -145,15 +146,29 @@ class CanvasBrushesMixin:
         painter = None
         for line in layer.lines:
             pen = line.pen
+            # set alpha
             pen.setCapStyle(Qt.PenCapStyle.RoundCap)
             pen.setJoinStyle(Qt.PenJoinStyle.RoundJoin)
+            # pen.setColor(QColor(
+            #     pen.color().red(),
+            #     pen.color().green(),
+            #     pen.color().blue(),
+            #     255
+            # ))
             # set opacity based on current_layer opacity
             if self.line_width is None or self.line_width != line.width:
                 self.line_width = line.width
                 self.draw_path(path, painter)
                 painter = None
             if self.color is None or self.color != line.color:
-                self.color = line.color
+                color = line.color
+                # color = QColor(
+                #     color.red(),
+                #     color.green(),
+                #     color.blue(),
+                #     255
+                # )
+                self.color = color
                 self.draw_path(path, painter)
                 painter = None
             if not painter:
@@ -193,7 +208,7 @@ class CanvasBrushesMixin:
         self.is_erasing = True
         if len(self.current_layer.lines) > 0:
             self.rasterize_lines(final=True)
-        brush_size = int(self.settings_manager.settings.mask_brush_size.get() / 2)
+        brush_size = int(self.settings_manager.brush_settings.size / 2)
         image = self.current_layer.image_data.image if self.current_layer.image_data.image is not None else None
         image_pos = self.current_layer.image_data.position if self.current_layer.image_data.image is not None else None
         if image is None:
@@ -225,11 +240,17 @@ class CanvasBrushesMixin:
     def pen(self, event):
         brush_color = "#ffffff"
         if event.button() == Qt.MouseButton.LeftButton or Qt.MouseButton.LeftButton in event.buttons():
-            brush_color = self.settings_manager.settings.primary_color.get()
+            brush_color = self.settings_manager.brush_settings.primary_color
         brush_color = QColor(brush_color)
+        # brush_color = QColor(
+        #     brush_color.red(),
+        #     brush_color.green(),
+        #     brush_color.blue(),
+        #     100
+        # )
         pen = QPen(
             brush_color,
-            self.settings_manager.settings.mask_brush_size.get()
+            self.settings_manager.brush_settings.size
         )
         return pen
 
@@ -252,7 +273,7 @@ class CanvasBrushesMixin:
             end_x = line.end_point.x()
             end_y = line.end_point.y()
 
-            brush_size = int(self.settings_manager.settings.mask_brush_size.get() / 2)
+            brush_size = int(self.settings_manager.brush_settings.size / 2)
             min_x = min(start_x, end_x) - brush_size
             min_y = min(start_y, end_y) - brush_size
             max_x = max(start_x, end_x) + brush_size
@@ -282,7 +303,7 @@ class CanvasBrushesMixin:
 
         lines = self.current_layer.lines[:max_lines]
         top, left, bottom, right = self.get_line_extremities(lines)
-        brush_size = self.settings_manager.settings.mask_brush_size.get()
+        brush_size = self.settings_manager.brush_settings.size
         if brush_size > 1:
             brush_size = int(brush_size / 2)
 

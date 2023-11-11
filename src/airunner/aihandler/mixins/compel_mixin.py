@@ -52,6 +52,7 @@ class CompelMixin:
         self._negative_prompt_embeds = value
 
     def clear_prompt_embeds(self):
+        logger.info("Clearing prompt embeds")
         self._prompt_embeds = None
         self._negative_prompt_embeds = None
 

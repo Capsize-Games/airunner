@@ -7,23 +7,31 @@ class CanvasActiveGridAreaMixin:
 
     @property
     def active_grid_area_color(self):
-        if self.parent.current_section == "txt2img":
+        current_tab = self.settings_manager.current_tab
+        if current_tab == "stablediffusion":
+            current_section = self.settings_manager.current_section_stablediffusion
+        elif current_tab == "kandinsky":
+            current_section = self.settings_manager.current_section_kandinsky
+        else:
+            current_section = self.settings_manager.current_section_shapegif
+
+        if current_section == "txt2img":
             brush_color = QColor(0, 255, 0)
-        elif self.parent.current_section == "img2img":
+        elif current_section == "img2img":
             brush_color = QColor(255, 0, 0)
-        elif self.parent.current_section == "depth2img":
+        elif current_section == "depth2img":
             brush_color = QColor(0, 0, 255)
-        elif self.parent.current_section == "pix2pix":
+        elif current_section == "pix2pix":
             brush_color = QColor(255, 255, 0)
-        elif self.parent.current_section == "outpaint":
+        elif current_section == "outpaint":
             brush_color = QColor(0, 255, 255)
-        elif self.parent.current_section == "upscale":
+        elif current_section == "upscale":
             brush_color = QColor(255, 0, 155)
-        elif self.parent.current_section == "superresolution":
+        elif current_section == "superresolution":
             brush_color = QColor(255, 0, 255)
-        elif self.parent.current_section == "controlnet":
+        elif current_section == "controlnet":
             brush_color = QColor(255, 255, 255)
-        elif self.parent.current_section == "txt2vid":
+        elif current_section == "txt2vid":
             brush_color = QColor(144, 144, 144)
         else:
             brush_color = QColor(0, 0, 0)
@@ -31,8 +39,8 @@ class CanvasActiveGridAreaMixin:
 
     @property
     def active_grid_area_rect(self):
-        width = self.settings_manager.settings.working_width.get()
-        height = self.settings_manager.settings.working_height.get()
+        width = self.settings_manager.working_width
+        height = self.settings_manager.working_height
 
         rect = QRect(
             self.active_grid_area_pivot_point.x(),
@@ -63,14 +71,14 @@ class CanvasActiveGridAreaMixin:
         painter.setBrush(QBrush(QColor(0, 0, 0, 0)))
         pen = QPen(
             self.active_grid_area_color,
-            self.settings_manager.settings.line_width.get()
+            self.settings_manager.grid_settings.line_width
         )
         painter.setPen(pen)
         rect = QRect(
             self.active_grid_area_rect.x(),
             self.active_grid_area_rect.y(),
-            self.settings_manager.settings.working_width.get(),
-            self.settings_manager.settings.working_height.get()
+            self.settings_manager.working_width,
+            self.settings_manager.working_height
         )
         painter.drawRect(rect)
 
@@ -78,33 +86,33 @@ class CanvasActiveGridAreaMixin:
         # to make it more visible
         pen = QPen(
             self.active_grid_area_color,
-            self.settings_manager.settings.line_width.get() + 1
+            self.settings_manager.grid_settings.line_width + 1
         )
         painter.setPen(pen)
         size = 4
         rect = QRect(
             self.active_grid_area_rect.x() + size,
             self.active_grid_area_rect.y() + size,
-            self.settings_manager.settings.working_width.get() - (size * 2),
-            self.settings_manager.settings.working_height.get() - (size * 2)
+            self.settings_manager.working_width - (size * 2),
+            self.settings_manager.working_height - (size * 2)
         )
         painter.drawRect(rect)
 
         # draw a third black border in the center of the two rectangles
         pen = QPen(
             QColor(0, 0, 0),
-            self.settings_manager.settings.line_width.get() + 1
+            self.settings_manager.grid_settings.line_width + 1
         )
         painter.setPen(pen)
         size = 2
         rect = QRect(
             self.active_grid_area_rect.x() + size,
             self.active_grid_area_rect.y() + size,
-            self.settings_manager.settings.working_width.get() - (size * 2),
-            self.settings_manager.settings.working_height.get() - (size * 2)
+            self.settings_manager.working_width - (size * 2),
+            self.settings_manager.working_height - (size * 2)
         )
         painter.drawRect(rect)
 
     def reset_settings(self):
-        self.width_slider.setValue(self.settings_manager.settings.working_width.get())
-        self.height_slider.setValue(self.settings_manager.settings.working_height.get())
+        self.width_slider.setValue(self.settings_manager.working_width)
+        self.height_slider.setValue(self.settings_manager.working_height)

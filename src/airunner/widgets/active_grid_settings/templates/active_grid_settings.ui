@@ -1,0 +1,336 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<ui version="4.0">
+ <class>active_grid_settings_widget</class>
+ <widget class="QWidget" name="active_grid_settings_widget">
+  <property name="geometry">
+   <rect>
+    <x>0</x>
+    <y>0</y>
+    <width>445</width>
+    <height>326</height>
+   </rect>
+  </property>
+  <property name="windowTitle">
+   <string>Form</string>
+  </property>
+  <layout class="QGridLayout" name="gridLayout_3">
+   <item row="0" column="0">
+    <widget class="QGroupBox" name="active_grid_area_groupbox">
+     <property name="title">
+      <string>Active Grid Area</string>
+     </property>
+     <property name="checkable">
+      <bool>true</bool>
+     </property>
+     <property name="checked">
+      <bool>false</bool>
+     </property>
+     <layout class="QGridLayout" name="gridLayout_4">
+      <item row="1" column="0">
+       <widget class="QGroupBox" name="active_grid_border_groupbox">
+        <property name="title">
+         <string>Border</string>
+        </property>
+        <property name="checkable">
+         <bool>true</bool>
+        </property>
+        <property name="checked">
+         <bool>false</bool>
+        </property>
+        <layout class="QGridLayout" name="gridLayout">
+         <item row="0" column="0">
+          <widget class="QPushButton" name="pushButton">
+           <property name="text">
+            <string>Choose Color</string>
+           </property>
+          </widget>
+         </item>
+         <item row="1" column="0">
+          <widget class="SliderWidget" name="border_opacity_slider_widget" native="true">
+           <property name="spinbox_single_step" stdset="0">
+            <double>0.010000000000000</double>
+           </property>
+           <property name="slider_page_step" stdset="0">
+            <number>1</number>
+           </property>
+           <property name="spinbox_page_step" stdset="0">
+            <double>0.100000000000000</double>
+           </property>
+           <property name="label_text" stdset="0">
+            <string>Border Opacity</string>
+           </property>
+           <property name="slider_callback" stdset="0">
+            <string>action_slider_changed</string>
+           </property>
+           <property name="settings_property" stdset="0">
+            <string>active_grid_settings.border_opacity</string>
+           </property>
+           <property name="display_as_float" stdset="0">
+            <bool>true</bool>
+           </property>
+           <property name="slider_minimum" stdset="0">
+            <number>0</number>
+           </property>
+           <property name="slider_maximum" stdset="0">
+            <number>255</number>
+           </property>
+           <property name="spinbox_minimum" stdset="0">
+            <double>0.000000000000000</double>
+           </property>
+           <property name="spinbox_maximum" stdset="0">
+            <double>1.000000000000000</double>
+           </property>
+           <property name="slider_tick_interval" stdset="0">
+            <double>1.000000000000000</double>
+           </property>
+           <property name="slider_singlestep" stdset="0">
+            <number>1</number>
+           </property>
+          </widget>
+         </item>
+        </layout>
+       </widget>
+      </item>
+      <item row="2" column="0">
+       <widget class="QGroupBox" name="active_grid_fill_groupbox">
+        <property name="title">
+         <string>Fill</string>
+        </property>
+        <property name="checkable">
+         <bool>true</bool>
+        </property>
+        <property name="checked">
+         <bool>false</bool>
+        </property>
+        <layout class="QGridLayout" name="gridLayout_2">
+         <item row="1" column="0" colspan="2">
+          <widget class="SliderWidget" name="fill_opacity_slider_widget" native="true">
+           <property name="spinbox_single_step" stdset="0">
+            <double>0.010000000000000</double>
+           </property>
+           <property name="slider_page_step" stdset="0">
+            <number>1</number>
+           </property>
+           <property name="spinbox_page_step" stdset="0">
+            <double>0.100000000000000</double>
+           </property>
+           <property name="label_text" stdset="0">
+            <string>Fill Opacity</string>
+           </property>
+           <property name="slider_callback" stdset="0">
+            <string>action_slider_changed</string>
+           </property>
+           <property name="settings_property" stdset="0">
+            <string>active_grid_settings.fill_opacity</string>
+           </property>
+           <property name="display_as_float" stdset="0">
+            <bool>true</bool>
+           </property>
+           <property name="slider_minimum" stdset="0">
+            <number>0</number>
+           </property>
+           <property name="slider_maximum" stdset="0">
+            <number>255</number>
+           </property>
+           <property name="spinbox_minimum" stdset="0">
+            <double>0.000000000000000</double>
+           </property>
+           <property name="spinbox_maximum" stdset="0">
+            <double>1.000000000000000</double>
+           </property>
+           <property name="slider_tick_interval" stdset="0">
+            <double>1.000000000000000</double>
+           </property>
+           <property name="slider_singlestep" stdset="0">
+            <number>1</number>
+           </property>
+          </widget>
+         </item>
+         <item row="0" column="0" colspan="2">
+          <widget class="QPushButton" name="pushButton_2">
+           <property name="text">
+            <string>Choose Color</string>
+           </property>
+          </widget>
+         </item>
+        </layout>
+       </widget>
+      </item>
+      <item row="0" column="0">
+       <widget class="QGroupBox" name="groupBox_3">
+        <property name="title">
+         <string>Size</string>
+        </property>
+        <layout class="QVBoxLayout" name="verticalLayout">
+         <item>
+          <widget class="SliderWidget" name="width_slider_widget" native="true">
+           <property name="label_text" stdset="0">
+            <string>Active Grid Width</string>
+           </property>
+           <property name="slider_minimum" stdset="0">
+            <number>64</number>
+           </property>
+           <property name="slider_maximum" stdset="0">
+            <number>4096</number>
+           </property>
+           <property name="spinbox_minimum" stdset="0">
+            <number>64</number>
+           </property>
+           <property name="spinbox_maximum" stdset="0">
+            <number>4096</number>
+           </property>
+           <property name="slider_tick_interval" stdset="0">
+            <number>64</number>
+           </property>
+           <property name="slider_single_step" stdset="0">
+            <number>64</number>
+           </property>
+           <property name="slider_page_step" stdset="0">
+            <number>64</number>
+           </property>
+           <property name="spinbox_single_step" stdset="0">
+            <number>64</number>
+           </property>
+           <property name="spinbox_page_step" stdset="0">
+            <number>64</number>
+           </property>
+           <property name="slider_callback" stdset="0">
+            <string notr="true">action_slider_changed</string>
+           </property>
+           <property name="settings_property" stdset="0">
+            <string notr="true">working_width</string>
+           </property>
+           <property name="display_as_float" stdset="0">
+            <bool>false</bool>
+           </property>
+          </widget>
+         </item>
+         <item>
+          <widget class="SliderWidget" name="height_slider_widget" native="true">
+           <property name="slider_minimum" stdset="0">
+            <number>64</number>
+           </property>
+           <property name="slider_maximum" stdset="0">
+            <number>4096</number>
+           </property>
+           <property name="spinbox_minimum" stdset="0">
+            <number>64</number>
+           </property>
+           <property name="spinbox_maximum" stdset="0">
+            <number>4096</number>
+           </property>
+           <property name="slider_tick_interval" stdset="0">
+            <number>64</number>
+           </property>
+           <property name="slider_single_step" stdset="0">
+            <number>64</number>
+           </property>
+           <property name="slider_page_step" stdset="0">
+            <number>64</number>
+           </property>
+           <property name="spinbox_single_step" stdset="0">
+            <number>64</number>
+           </property>
+           <property name="spinbox_page_step" stdset="0">
+            <number>64</number>
+           </property>
+           <property name="label_text" stdset="0">
+            <string>Active Grid Height</string>
+           </property>
+           <property name="slider_callback" stdset="0">
+            <string notr="true">action_slider_changed</string>
+           </property>
+           <property name="settings_property" stdset="0">
+            <string>working_height</string>
+           </property>
+           <property name="display_as_float" stdset="0">
+            <bool>false</bool>
+           </property>
+          </widget>
+         </item>
+        </layout>
+       </widget>
+      </item>
+      <item row="3" column="0">
+       <spacer name="verticalSpacer">
+        <property name="orientation">
+         <enum>Qt::Vertical</enum>
+        </property>
+        <property name="sizeHint" stdset="0">
+         <size>
+          <width>20</width>
+          <height>40</height>
+         </size>
+        </property>
+       </spacer>
+      </item>
+     </layout>
+    </widget>
+   </item>
+  </layout>
+ </widget>
+ <customwidgets>
+  <customwidget>
+   <class>SliderWidget</class>
+   <extends>QWidget</extends>
+   <header>airunner/widgets/slider/slider_widget</header>
+   <container>1</container>
+  </customwidget>
+ </customwidgets>
+ <resources/>
+ <connections>
+  <connection>
+   <sender>active_grid_border_groupbox</sender>
+   <signal>toggled(bool)</signal>
+   <receiver>active_grid_settings_widget</receiver>
+   <slot>action_clicked_checkbox_toggle_active_grid_border(bool)</slot>
+   <hints>
+    <hint type="sourcelabel">
+     <x>90</x>
+     <y>199</y>
+    </hint>
+    <hint type="destinationlabel">
+     <x>52</x>
+     <y>0</y>
+    </hint>
+   </hints>
+  </connection>
+  <connection>
+   <sender>active_grid_fill_groupbox</sender>
+   <signal>toggled(bool)</signal>
+   <receiver>active_grid_settings_widget</receiver>
+   <slot>action_clicked_checkbox_toggle_active_grid_fill(bool)</slot>
+   <hints>
+    <hint type="sourcelabel">
+     <x>112</x>
+     <y>342</y>
+    </hint>
+    <hint type="destinationlabel">
+     <x>141</x>
+     <y>0</y>
+    </hint>
+   </hints>
+  </connection>
+  <connection>
+   <sender>active_grid_area_groupbox</sender>
+   <signal>toggled(bool)</signal>
+   <receiver>active_grid_settings_widget</receiver>
+   <slot>action_clicked_checkbox_toggle_active_grid_area(bool)</slot>
+   <hints>
+    <hint type="sourcelabel">
+     <x>75</x>
+     <y>14</y>
+    </hint>
+    <hint type="destinationlabel">
+     <x>82</x>
+     <y>-15</y>
+    </hint>
+   </hints>
+  </connection>
+ </connections>
+ <slots>
+  <slot>action_clicked_checkbox_toggle_active_grid_border(bool)</slot>
+  <slot>action_clicked_checkbox_toggle_active_grid_fill(bool)</slot>
+  <slot>action_clicked_checkbox_toggle_active_grid_area(bool)</slot>
+ </slots>
+</ui>

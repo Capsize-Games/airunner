@@ -46,9 +46,9 @@ class MergeMixin:
                 scheduler_name="Euler a"
             )
         else:
-            pipe = PipeCLS.from_pretrained(
-                base_model_path,
-                local_files_only=self.local_files_only
+            pipe = self.from_pretrained(
+                class_object=PipeCLS,
+                model=base_model_path
             )
         for index in range(len(models_to_merge_path)):
             weight = weights[index]
@@ -60,9 +60,9 @@ class MergeMixin:
                     scheduler_name="Euler a"
                 )
             else:
-                model = type(pipe).from_pretrained(
-                    model_path,
-                    local_files_only=self.local_files_only
+                model = self.from_pretrained(
+                    class_object=type(pipe),
+                    model=model_path
                 )
 
             pipe.vae = self.merge_vae(pipe.vae, model.vae, weight["vae"])

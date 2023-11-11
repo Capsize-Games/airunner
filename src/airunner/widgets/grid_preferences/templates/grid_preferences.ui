@@ -1,0 +1,211 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<ui version="4.0">
+ <class>grid_preferences</class>
+ <widget class="QWidget" name="grid_preferences">
+  <property name="geometry">
+   <rect>
+    <x>0</x>
+    <y>0</y>
+    <width>332</width>
+    <height>323</height>
+   </rect>
+  </property>
+  <property name="windowTitle">
+   <string>Form</string>
+  </property>
+  <layout class="QGridLayout" name="gridLayout">
+   <item row="4" column="0">
+    <widget class="QPushButton" name="gridLineColorButton">
+     <property name="text">
+      <string>Grid Line Color</string>
+     </property>
+    </widget>
+   </item>
+   <item row="7" column="0">
+    <widget class="QCheckBox" name="snap_to_grid_checkbox">
+     <property name="font">
+      <font>
+       <bold>false</bold>
+      </font>
+     </property>
+     <property name="text">
+      <string>Snap to Grid</string>
+     </property>
+    </widget>
+   </item>
+   <item row="3" column="0">
+    <widget class="QSpinBox" name="grid_line_width_spinbox"/>
+   </item>
+   <item row="6" column="0">
+    <widget class="QCheckBox" name="show_grid_checkbox">
+     <property name="font">
+      <font>
+       <bold>false</bold>
+      </font>
+     </property>
+     <property name="text">
+      <string>Show Grid</string>
+     </property>
+    </widget>
+   </item>
+   <item row="1" column="0">
+    <widget class="QSpinBox" name="grid_size_spinbox">
+     <property name="maximum">
+      <number>512</number>
+     </property>
+    </widget>
+   </item>
+   <item row="8" column="0">
+    <spacer name="verticalSpacer">
+     <property name="orientation">
+      <enum>Qt::Vertical</enum>
+     </property>
+     <property name="sizeHint" stdset="0">
+      <size>
+       <width>20</width>
+       <height>72</height>
+      </size>
+     </property>
+    </spacer>
+   </item>
+   <item row="0" column="0">
+    <widget class="QLabel" name="label">
+     <property name="font">
+      <font>
+       <bold>false</bold>
+      </font>
+     </property>
+     <property name="text">
+      <string>Grid Size</string>
+     </property>
+    </widget>
+   </item>
+   <item row="2" column="0">
+    <widget class="QLabel" name="label_2">
+     <property name="font">
+      <font>
+       <bold>false</bold>
+      </font>
+     </property>
+     <property name="text">
+      <string>Grid Line Width</string>
+     </property>
+    </widget>
+   </item>
+   <item row="5" column="0">
+    <widget class="QPushButton" name="canvas_color">
+     <property name="text">
+      <string>Canvas Color</string>
+     </property>
+    </widget>
+   </item>
+  </layout>
+ </widget>
+ <resources/>
+ <connections>
+  <connection>
+   <sender>grid_size_spinbox</sender>
+   <signal>valueChanged(int)</signal>
+   <receiver>grid_preferences</receiver>
+   <slot>grid_size_changed(int)</slot>
+   <hints>
+    <hint type="sourcelabel">
+     <x>37</x>
+     <y>41</y>
+    </hint>
+    <hint type="destinationlabel">
+     <x>20</x>
+     <y>-13</y>
+    </hint>
+   </hints>
+  </connection>
+  <connection>
+   <sender>grid_line_width_spinbox</sender>
+   <signal>valueChanged(int)</signal>
+   <receiver>grid_preferences</receiver>
+   <slot>line_width_changed(int)</slot>
+   <hints>
+    <hint type="sourcelabel">
+     <x>98</x>
+     <y>104</y>
+    </hint>
+    <hint type="destinationlabel">
+     <x>94</x>
+     <y>-11</y>
+    </hint>
+   </hints>
+  </connection>
+  <connection>
+   <sender>gridLineColorButton</sender>
+   <signal>clicked()</signal>
+   <receiver>grid_preferences</receiver>
+   <slot>action_button_clicked_grid_line_color()</slot>
+   <hints>
+    <hint type="sourcelabel">
+     <x>236</x>
+     <y>137</y>
+    </hint>
+    <hint type="destinationlabel">
+     <x>227</x>
+     <y>-11</y>
+    </hint>
+   </hints>
+  </connection>
+  <connection>
+   <sender>canvas_color</sender>
+   <signal>clicked()</signal>
+   <receiver>grid_preferences</receiver>
+   <slot>action_button_clicked_canvas_color()</slot>
+   <hints>
+    <hint type="sourcelabel">
+     <x>262</x>
+     <y>165</y>
+    </hint>
+    <hint type="destinationlabel">
+     <x>294</x>
+     <y>5</y>
+    </hint>
+   </hints>
+  </connection>
+  <connection>
+   <sender>show_grid_checkbox</sender>
+   <signal>toggled(bool)</signal>
+   <receiver>grid_preferences</receiver>
+   <slot>action_toggled_show_grid(bool)</slot>
+   <hints>
+    <hint type="sourcelabel">
+     <x>45</x>
+     <y>190</y>
+    </hint>
+    <hint type="destinationlabel">
+     <x>175</x>
+     <y>4</y>
+    </hint>
+   </hints>
+  </connection>
+  <connection>
+   <sender>snap_to_grid_checkbox</sender>
+   <signal>toggled(bool)</signal>
+   <receiver>grid_preferences</receiver>
+   <slot>action_toggled_snap_to_grid(bool)</slot>
+   <hints>
+    <hint type="sourcelabel">
+     <x>87</x>
+     <y>221</y>
+    </hint>
+    <hint type="destinationlabel">
+     <x>140</x>
+     <y>0</y>
+    </hint>
+   </hints>
+  </connection>
+ </connections>
+ <slots>
+  <slot>size_changed(int)</slot>
+  <slot>line_width_changed(int)</slot>
+  <slot>action_button_clicked_grid_line_color()</slot>
+  <slot>action_button_clicked_canvas_color()</slot>
+  <slot>action_toggled_show_grid(bool)</slot>
+  <slot>action_toggled_snap_to_grid(bool)</slot>
+ </slots>
+</ui>

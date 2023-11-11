@@ -13,7 +13,7 @@ class EmbeddingMixin:
         embeddings_not_supported = False
         self.embeds_loaded = True
         if os.path.exists(learned_embeds_path):
-            logger.info("Loading embeddings...")
+            logger.info("Loading embeddings")
             try:
                 for f in os.listdir(learned_embeds_path):
                     path = os.path.join(learned_embeds_path, f)
@@ -24,11 +24,12 @@ class EmbeddingMixin:
                     try:
                         self.pipe.load_textual_inversion(path, token=token, weight_name=f)
                     except Exception as e:
-                        self.send_message({
-                            "embedding_name": token,
-                            "model_name": self.model,
-                        }, MessageCode.EMBEDDING_LOAD_FAILED)
-                        logger.warning(e)
+                        if "already in tokenizer vocabulary" not in str(e):
+                            self.send_message({
+                                "embedding_name": token,
+                                "model_name": self.model,
+                            }, MessageCode.EMBEDDING_LOAD_FAILED)
+                            logger.warning(e)
             except AttributeError as e:
                 if "load_textual_inversion" in str(e):
                     embeddings_not_supported = True
