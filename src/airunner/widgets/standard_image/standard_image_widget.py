@@ -25,6 +25,7 @@ class StandardImageWidget(BaseWidget):
     _layout = None
     image_path = None
     image_label = None
+    image_batch = None
 
     def __init__(self, *args, **kwargs):
         super().__init__(*args, **kwargs)
@@ -33,11 +34,37 @@ class StandardImageWidget(BaseWidget):
         self.ui.controls_container.hide()
         self.ui.batch_container.hide()
         self.ui.delete_confirmation.hide()
+        self.ui.tableWidget.hide()
     
     def handle_image_data(self, data):
+        print(data)
         self.image_path = data["path"]
-        self.image = data["image"]
-        self.load_image_from_object(self.image, self.image_path)
+        images = data["images"]
+        if len(images) == 1:
+            self.image = images[0]
+            self.load_image_from_object(self.image, self.image_path)
+        else:
+            self.load_batch_images(images)
+    
+    def clear_batch_images(self):
+        for widget in self.ui.batch_container.layout().children():
+            widget.deleteLater()
+
+    def load_batch_images(self, images):
+        self.clear_batch_images()
+        images = images[:4]
+        for image in images:
+            raw_data = image.tobytes("raw", "RGBA")
+            qimage = QImage(
+                raw_data, 
+                image.size[0], 
+                image.size[1], 
+                QImage.Format.Format_RGBA8888
+            )
+            pixmap = QPixmap.fromImage(qimage)
+            label = QLabel()
+            label.setPixmap(pixmap)
+            self.ui.batch_container.layout().addWidget(label)
     
     def load_image_from_path(self, image_path):
         self.image_path = image_path
@@ -188,9 +215,12 @@ class StandardImageWidget(BaseWidget):
         self.image = image
         print("saving meta_data", meta_data)
         self.meta_data = load_metadata_from_image(self.image)
-        self.similar_image()
+        self.generate_similar_image()
 
     def similar_image(self):
+        self.generate_similar_image()
+    
+    def generate_similar_image(self, batch_size=1):
         meta_data = self.meta_data
         print("meta_data", meta_data)
         if "prompt" not in meta_data or meta_data["prompt"] == "" or meta_data["prompt"] is None:
@@ -208,6 +238,7 @@ class StandardImageWidget(BaseWidget):
         meta_data["strength"] = 1.0
         meta_data["enable_input_image"] = True
         meta_data["use_cropped_image"] = False
+        meta_data["batch_size"] = batch_size
 
         meta_data.pop("seed", None)
         meta_data.pop("latents_seed", None)
@@ -221,7 +252,7 @@ class StandardImageWidget(BaseWidget):
         self.similarity = value
 
     def similar_batch(self):
-        pass
+        self.generate_similar_image(batch_size=4)
 
     def export_image(self):
         pass

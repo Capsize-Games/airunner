@@ -364,6 +364,7 @@ class GeneratorForm(BaseWidget):
         width = int(override_data.get("width", self.settings_manager.working_width))
         height = int(override_data.get("height", self.settings_manager.working_height))
         clip_skip = int(override_data.get("clip_skip", self.settings_manager.generator.clip_skip))
+        batch_size = int(override_data.get("batch_size", 1))
 
 
         # get the model from the database
@@ -421,6 +422,7 @@ class GeneratorForm(BaseWidget):
             "embeddings_path": self.settings_manager.path_settings.embeddings_path,
             "video_path": self.settings_manager.path_settings.video_path,
             "clip_skip": clip_skip,
+            "batch_size": batch_size,
             "variation": self.settings_manager.generator.variation,
             "deterministic_generation": False,
         }
@@ -458,7 +460,6 @@ class GeneratorForm(BaseWidget):
                 **memory_options
             }
         }
-        print(data)
         self.app.client.message = data
 
     def do_deterministic_generation(self, extra_options):

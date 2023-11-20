@@ -489,12 +489,11 @@ class CanvasPlusWidget(BaseWidget):
             self.ui.canvas_container.setCursor(QCursor(Qt.CursorShape.ArrowCursor))
 
     def handle_image_data(self, data):
-        self.load_image_from_object(data["image"])
+        self.load_image_from_object(data["images"][0])
     
     def load_image_from_path(self, image_path):
         if image_path is None or image_path == "":
             return
-        print("LOAD IMAGE FROM ", image_path)
         image = Image.open(image_path)
         self.load_image_from_object(image)
     
