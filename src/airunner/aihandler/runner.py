@@ -728,6 +728,7 @@ class SDRunner(
         self.text_encoder_model = self.settings_manager.models_by_pipeline_action("text_encoder")
         self.inpaint_vae_model = self.settings_manager.models_by_pipeline_action("inpaint_vae")
 
+        self.engine = kwargs.pop("engine", None)
         self.app = kwargs.get("app", None)
         self._message_var = kwargs.get("message_var", None)
         self._message_handler = kwargs.get("message_handler", None)
