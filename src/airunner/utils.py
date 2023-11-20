@@ -270,7 +270,7 @@ def get_latest_version():
 #     models.sort()
 #     return models
 
-def prepare_metadata(data):
+def prepare_metadata(data, index=0):
     from airunner.aihandler.settings_manager import SettingsManager
     settings_manager = SettingsManager()
     if not settings_manager.metadata_settings.export_metadata or \
@@ -280,8 +280,17 @@ def prepare_metadata(data):
     options = data.get("options", {})
     action = data.get("action", "txt2img")
     metadata.add_text("action", action)
-    metadata.add_text("prompt", options.get("prompt", ""))
-    metadata.add_text("negative_prompt", options.get("negative_prompt", ""))
+
+    prompt = options.get("prompt", "")
+    if type(prompt) == list:
+        prompt = prompt[index]
+    metadata.add_text("prompt", prompt)
+
+    negative_prompt = options.get("negative_prompt", "")
+    if type(negative_prompt) == list:
+        negative_prompt = negative_prompt[index]
+    metadata.add_text("negative_prompt", negative_prompt)
+    
     metadata.add_text("strength", str(options.get("strength", 100)))
     metadata.add_text("image_guidance_scale", str(options.get("image_guidance_scale", 100)))
     metadata.add_text("scale", str(options.get("scale", 7)))
@@ -367,18 +376,23 @@ def auto_export_image(
         metadata = None
 
     if image:
-        filename = filename + extension
-
         action = data["action"] if data and "action" in data else ""
 
         # date is year-month-day
         date = datetime.datetime.now().strftime("%Y-%m-%d")
 
-        file_path = os.path.join(path, action, date, filename)
+        file_path = os.path.join(path, action, date)
 
         # if path doesn't exist, create it
         if not os.path.exists(os.path.dirname(file_path)):
             os.makedirs(os.path.dirname(file_path))
+        
+        # if image already exists, add a number to the end of the filename
+        i = 1
+        while os.path.exists(os.path.join(path, action, date, filename + "_" + str(i) + extension)):
+            i += 1
+        filename = filename + "_" + str(i) + extension
+        file_path = os.path.join(path, action, date, filename)
 
         if metadata:
             image.save(file_path, pnginfo=metadata)
