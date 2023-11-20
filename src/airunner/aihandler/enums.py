@@ -15,6 +15,7 @@ class MessageCode(Enum):
     MASK_IMAGE_GENERATED = 502
     EMBEDDING_LOAD_FAILED = 600
     TEXT_GENERATED = 700
+    CAPTION_GENERATED = 800
 
 
 class Scheduler(Enum):
