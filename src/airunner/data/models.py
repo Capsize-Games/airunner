@@ -266,7 +266,7 @@ class AIModel(BaseModel):
     pipeline_action = Column(String)
     enabled = Column(Boolean, default=True)
     is_default = Column(Boolean, default=True)
-    model_type = Column(String, default="image")
+    model_type = Column(String, default="art")
 
 
 class Pipeline(BaseModel):
