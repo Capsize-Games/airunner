@@ -306,6 +306,10 @@ class SDRunner(
         return self.options.get("use_enable_vae_slicing", False) is True
 
     @property
+    def use_tome_sd(self):
+        return self.options.get("use_tome_sd", False) is True
+
+    @property
     def do_nsfw_filter(self):
         return self.options.get("do_nsfw_filter", True) is True
 
@@ -1605,7 +1609,7 @@ class SDRunner(
                 val.to("cpu")
                 setattr(self, action, None)
                 del val
-        self.clear_memory()
+        self.engine.clear_memory()
         self.reset_applied_memory_settings()
 
     def load_model(self):
