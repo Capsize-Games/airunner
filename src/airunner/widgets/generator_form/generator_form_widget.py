@@ -2,11 +2,12 @@ import random
 
 from PIL import Image
 from PyQt6.QtCore import pyqtSignal, QRect, QTimer
+from PyQt6.QtWidgets import QWidget
 
 from airunner.aihandler.enums import MessageCode
 from airunner.aihandler.settings import MAX_SEED
 from airunner.data.db import session
-from airunner.data.models import ActionScheduler, AIModel, ActiveGridSettings, CanvasSettings
+from airunner.data.models import ActionScheduler, AIModel, ActiveGridSettings, CanvasSettings, LLMGeneratorSetting
 from airunner.utils import get_session
 from airunner.widgets.base_widget import BaseWidget
 from airunner.widgets.generator_form.templates.generatorform_ui import Ui_generator_form
@@ -92,6 +93,7 @@ class GeneratorForm(BaseWidget):
     @latents_seed.setter
     def latents_seed(self, val):
         self.settings_manager.set_value("generator.latents_seed", val)
+        self.ui.seed_widget_latents.ui.lineEdit.setText(str(val))
 
     @property
     def seed(self):
@@ -100,6 +102,7 @@ class GeneratorForm(BaseWidget):
     @seed.setter
     def seed(self, val):
         self.settings_manager.set_value("generator.seed", val)
+        self.ui.seed_widget.ui.lineEdit.setText(str(val))
 
     @property
     def image_scale(self):
@@ -130,11 +133,24 @@ class GeneratorForm(BaseWidget):
         self.active_grid_settings = session.query(ActiveGridSettings).first()
         self.canvas_settings = session.query(CanvasSettings).first()
         self.ui.generator_form_tab_widget.tabBar().hide()
+
+        self.settings_manager.changed_signal.connect(self.handle_changed_signal)
+
         # one shot timer
         timer = QTimer(self)
         timer.setSingleShot(True)
         timer.timeout.connect(self.initialize)
         timer.start(1000)
+    
+    def handle_changed_signal(self, key, value):
+        if key == "generator.random_seed":
+            self.set_primary_seed()
+            self.ui.seed_widget.seed = self.seed
+            self.ui.seed_widget.update_seed()
+        elif key == "generator.random_latents_seed":
+            self.set_latents_seed()
+            self.ui.seed_widget_latents.latents_seed = self.latents_seed
+            self.ui.seed_widget_latents.update_seed()
 
     def update_image_input_thumbnail(self):
         self.ui.input_image_widget.set_thumbnail()
@@ -184,7 +200,7 @@ class GeneratorForm(BaseWidget):
 
     def handle_generate_button_clicked(self):
         self.start_progress_bar()
-        self.generate()
+        self.generate(image=self.app.current_active_image)
 
     def handle_interrupt_button_clicked(self):
         self.app.client.cancel()
@@ -206,7 +222,9 @@ class GeneratorForm(BaseWidget):
         self.app.client.do_process_queue = True
 
     def call_generate(self, image=None, seed=None, override_data=None):
-        use_pixels = self.generator_section in (
+        override_data = {} if override_data is None else override_data
+
+        if self.generator_section in (
             "txt2img",
             "pix2pix",
             "depth2img",
@@ -214,38 +232,49 @@ class GeneratorForm(BaseWidget):
             "controlnet",
             "superresolution",
             "upscale"
-        )
-        override_data = {} if override_data is None else override_data
-
-        if use_pixels:
+        ):
             self.start_progress_bar()
 
-            # get input image from input image
+            # Get input image from input image
             enable_input_image = override_data.get(
                 "enable_input_image",
                 self.settings_manager.generator.enable_input_image
             )
             if enable_input_image:
                 input_image = self.ui.input_image_widget.current_input_image
-                image = input_image if not image else image
-                override_data["input_image"] = image
+            elif self.generator_section == "txt2img":
+                input_image = override_data.get("input_image", None)
+                image = input_image
+            image = input_image if not image else image
+            override_data["input_image"] = image
 
-            if image is None and self.is_txt2img:
-                return self.do_generate(seed=seed, override_data=override_data)
-            elif image is None:
-                # create a transparent image the size of self.canvas.active_grid_area_rect
+            if image is None:
+                if self.is_txt2img:
+                    return self.do_generate(seed=seed, override_data=override_data)
+                # Create a transparent image the size of self.canvas.active_grid_area_rect
                 width = self.settings_manager.working_width
                 height = self.settings_manager.working_height
                 image = Image.new("RGBA", (int(width), int(height)), (0, 0, 0, 0))
             
             use_cropped_image = override_data.get("use_cropped_image", True)
+            original_image = image.copy()
             if use_cropped_image:
+                # Create a copy of the image and paste the cropped image into it
+
+                # Copy the image and convert to RGBA
                 img = image.copy().convert("RGBA")
+
+                # Create a new image
                 new_image = Image.new(
                     "RGBA",
-                    (self.settings_manager.working_width, self.settings_manager.working_height),
-                    (0, 0, 0))
+                    (
+                        self.settings_manager.working_width, 
+                        self.settings_manager.working_height
+                    ),
+                    (255, 255, 255, 0)
+                )
 
+                # Get the cropped image
                 cropped_outpaint_box_rect = self.active_rect
                 crop_location = (
                     cropped_outpaint_box_rect.x() - self.canvas.image_pivot_point.x(),
@@ -253,23 +282,34 @@ class GeneratorForm(BaseWidget):
                     cropped_outpaint_box_rect.width() - self.canvas.image_pivot_point.x(),
                     cropped_outpaint_box_rect.height() - self.canvas.image_pivot_point.y()
                 )
+
+                # Paste the cropped image into the new image
                 new_image.paste(img.crop(crop_location), (0, 0))
 
+                # Convert the new image to RGB and assign it to image variable
                 image = new_image.convert("RGB")
+            else:
+                new_image = image
             
-            # create the mask
-            mask = Image.new("RGB", (image.width, image.height), (255, 255, 255))
-            for x in range(image.width):
-                for y in range(image.height):
+            # Create the mask image
+            mask = Image.new("RGB", (new_image.width, new_image.height), (255, 255, 255))
+            for x in range(new_image.width):
+                for y in range(new_image.height):
                     try:
-                        if image.getpixel((x, y))[3] != 0:
+                        if new_image.getpixel((x, y))[3] != 0:
                             mask.putpixel((x, y), (0, 0, 0))
                     except IndexError:
                         pass
+            
+            # Save the mask and input image for debugging
+            # mask.save("mask.png")
+            # image.save("image.png")
 
+            # Generate a new image using the mask and input image
             self.do_generate({
                 "mask": mask,
                 "image": image,
+                "original_image": original_image,
                 "location": self.canvas.active_grid_area_rect
             }, seed=seed, override_data=override_data)
         elif self.generator_section == "vid2vid":
@@ -300,8 +340,6 @@ class GeneratorForm(BaseWidget):
         if not override_data:
             override_data = {}
         
-        print("strength", override_data.get("strength"), self.settings_manager.generator.strength)
-        
         action = override_data.get("action", action)
         prompt = override_data.get("prompt", self.settings_manager.generator.prompt)
         negative_prompt = override_data.get("negative_prompt", self.settings_manager.generator.negative_prompt)
@@ -326,6 +364,7 @@ class GeneratorForm(BaseWidget):
         width = int(override_data.get("width", self.settings_manager.working_width))
         height = int(override_data.get("height", self.settings_manager.working_height))
         clip_skip = int(override_data.get("clip_skip", self.settings_manager.generator.clip_skip))
+
 
         # get the model from the database
         model = self.settings_manager.models.filter_by(
@@ -453,6 +492,8 @@ class GeneratorForm(BaseWidget):
             "use_accelerated_transformers": self.settings_manager.memory_settings.use_accelerated_transformers,
             "use_torch_compile": self.settings_manager.memory_settings.use_torch_compile,
             "use_tiled_vae": self.settings_manager.memory_settings.use_tiled_vae,
+            "use_tome_sd": self.settings_manager.memory_settings.use_tome_sd,
+            "tome_sd_ratio": self.settings_manager.memory_settings.tome_sd_ratio,
         }
 
     def set_seed(self, seed=None, latents_seed=None):
@@ -550,8 +591,9 @@ class GeneratorForm(BaseWidget):
         self.initialized = True
 
     def handle_settings_manager_changed(self, key, val, settings_manager):
-        if settings_manager.generator_section == self.settings_manager.generator_section and settings_manager.generator_name == self.settings_manager.generator_name:
-            self.set_form_values()
+        # if settings_manager.generator_section == self.settings_manager.generator_section and settings_manager.generator_name == self.settings_manager.generator_name:
+        #     self.set_form_values()
+        pass
 
     def set_controlnet_settings_properties(self):
         self.ui.controlnet_settings.initialize(
@@ -599,6 +641,7 @@ class GeneratorForm(BaseWidget):
             ActionScheduler.generator_name == self.generator_name
         ).all()
         scheduler_names = [s.scheduler.display_name for s in schedulers]
+        self.ui.scheduler.clear()
         self.ui.scheduler.addItems(scheduler_names)
 
         current_scheduler = self.settings_manager.generator.scheduler
@@ -611,8 +654,8 @@ class GeneratorForm(BaseWidget):
     def set_form_values(self):
         self.set_form_value("prompt", "generator.prompt")
         self.set_form_value("negative_prompt", "generator.negative_prompt")
-        self.set_form_value("use_prompt_builder_checkbox", "generator.use_prompt_builder")
-        self.set_form_value("use_prompt_builder_checkbox", "generator.use_prompt_builder")
+        # self.set_form_value("use_prompt_builder_checkbox", "generator.use_prompt_builder")
+        # self.set_form_value("use_prompt_builder_checkbox", "generator.use_prompt_builder")
         self.set_form_property("steps_widget", "current_value", "generator.steps")
         self.set_form_property("scale_widget", "current_value", "generator.scale")
 
