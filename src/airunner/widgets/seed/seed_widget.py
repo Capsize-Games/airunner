@@ -18,7 +18,8 @@ class SeedWidget(BaseWidget):
         self.ui.lineEdit.setText(str(self.seed))
 
     def action_clicked_button_random_seed(self, value):
-        self.settings_manager.set_value("generator.random_seed", value)
+        property_name = self.property("property_name")
+        self.settings_manager.set_value(property_name, value)
         self.ui.lineEdit.setEnabled(not value)
 
     def action_value_changed_seed(self, value):
@@ -26,26 +27,12 @@ class SeedWidget(BaseWidget):
 
 
 class LatentsSeedWidget(SeedWidget):
-    latents_seed = 42
+    setting_name = "generator.random_latents_seed"
 
-    def initialize(self, generator_section, generator_name):
-        self.settings_manager.generator_section = generator_section
-        self.settings_manager.generator_name = generator_name
-        self.ui.label.setText("Image Seed")
-        self.update_seed()
-        self.ui.random_button.setChecked(self.settings_manager.generator.random_latents_seed)
-        self.ui.lineEdit.setEnabled(not self.settings_manager.generator.random_latents_seed)
-
-    def update_seed(self):
-        self.ui.lineEdit.setText(str(self.latents_seed))
-
-    def handle_seed_random_clicked(self, value):
-        self.settings_manager.set_value("generator.random_seed", value)
-        self.ui.lineEdit.setEnabled(not value)
-    
-    def handle_seed_random_latents_clicked(self, value):
-        self.settings_manager.set_value("generator.random_latents_seed", value)
-        self.ui.lineEdit.setEnabled(not value)
-
-    def handle_seed_value_changed(self, value):
-        self.latents_seed = value
+    # def initialize(self, generator_section, generator_name):
+    #     self.settings_manager.generator_section = generator_section
+    #     self.settings_manager.generator_name = generator_name
+    #     self.ui.label.setText("Image Seed")
+    #     self.update_seed()
+    #     self.ui.random_button.setChecked(self.settings_manager.generator.random_latents_seed)
+    #     self.ui.lineEdit.setEnabled(not self.settings_manager.generator.random_latents_seed)
