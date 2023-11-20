@@ -127,7 +127,7 @@ class SchedulerMixin:
     def prepare_scheduler(self):
         scheduler_name = self.options.get(f"scheduler", "euler_a")
         if self.scheduler_name != scheduler_name:
-            logger.info("Prepare scheduler")
+            logger.info(f"Prepare scheduler {scheduler_name}")
             self.send_message("Preparing scheduler...")
             self.scheduler_name = scheduler_name
             self.do_change_scheduler = True
