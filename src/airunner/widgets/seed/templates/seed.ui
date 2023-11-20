@@ -98,7 +98,7 @@
    <hints>
     <hint type="sourcelabel">
      <x>209</x>
-     <y>173</y>
+     <y>41</y>
     </hint>
     <hint type="destinationlabel">
      <x>324</x>
@@ -113,8 +113,8 @@
    <slot>action_clicked_button_random_seed(bool)</slot>
    <hints>
     <hint type="sourcelabel">
-     <x>556</x>
-     <y>177</y>
+     <x>557</x>
+     <y>42</y>
     </hint>
     <hint type="destinationlabel">
      <x>551</x>
