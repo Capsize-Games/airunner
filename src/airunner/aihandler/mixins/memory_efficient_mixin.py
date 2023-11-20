@@ -216,19 +216,17 @@ class MemoryEfficientMixin:
         #     self.pipe.unet.enable_forward_chunking(chunk_size=1, dim=1)
         return
 
-    def move_pipe_to_cuda(self, pipe):
-        if not self.use_enable_sequential_cpu_offload and not self.enable_model_cpu_offload and pipe.device != "cuda":
+    def move_pipe_to_cuda(self):
+        if not self.use_enable_sequential_cpu_offload and not self.enable_model_cpu_offload and self.pipe.device != "cuda":
             logger.info("Moving to cuda")
-            pipe.to("cuda") if self.cuda_is_available else None
-        return pipe
+            self.pipe.to("cuda") if self.cuda_is_available else None
 
-    def move_pipe_to_cpu(self, pipe):
+    def move_pipe_to_cpu(self):
         logger.info("Moving to cpu")
         try:
-            pipe.to("cpu", self.data_type)
+            self.pipe.to("cpu", self.data_type)
         except NotImplementedError:
             logger.warning("Not implemented error when moving to cpu")
-        return pipe
 
     def apply_cpu_offload(self):
         if self.cpu_offload_applied == self.enable_model_cpu_offload:
@@ -237,12 +235,12 @@ class MemoryEfficientMixin:
 
         if self.use_enable_sequential_cpu_offload and not self.enable_model_cpu_offload:
             logger.info("Enabling sequential cpu offload")
-            self.pipe = self.move_pipe_to_cpu(self.pipe)
+            self.move_pipe_to_cpu()
             try:
                 self.pipe.enable_sequential_cpu_offload()
             except NotImplementedError:
                 logger.warning("Not implemented error when applying sequential cpu offload")
-                self.pipe = self.move_pipe_to_cuda(self.pipe)
+                self.move_pipe_to_cuda()
 
     def apply_model_offload(self):
         if self.model_cpu_offload_applied == self.enable_model_cpu_offload:
@@ -253,8 +251,9 @@ class MemoryEfficientMixin:
            and not self.use_enable_sequential_cpu_offload \
            and hasattr(self.pipe, "enable_model_cpu_offload"):
             logger.info("Enabling model cpu offload")
-            self.pipe = self.move_pipe_to_cpu(self.pipe)
+            self.move_pipe_to_cpu()
             self.pipe.enable_model_cpu_offload()
+    
     def apply_tome(self):
         if self.do_apply_tome_sd:
             if self.tome_sd_applied:
@@ -282,7 +281,7 @@ class MemoryEfficientMixin:
         self.apply_vae_slicing()
         self.apply_cpu_offload()
         self.apply_model_offload()
-        self.pipe = self.move_pipe_to_cuda(self.pipe)
+        self.move_pipe_to_cuda()
         self.apply_attention_slicing()
         self.apply_tiled_vae()
         self.apply_accelerated_transformers()
