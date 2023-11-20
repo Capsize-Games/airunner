@@ -577,7 +577,7 @@ class Settings(BaseModel):
     id = Column(Integer, primary_key=True)
     nsfw_filter = Column(Boolean, default=True)
     allow_hf_downloads = Column(Boolean, default=True)
-    dark_mode_enabled = Column(Boolean, default=False)
+    dark_mode_enabled = Column(Boolean, default=True)
     resize_on_paste = Column(Boolean, default=False)
     allow_online_mode = Column(Boolean, default=True)
 
@@ -618,7 +618,7 @@ class Settings(BaseModel):
     active_grid_settings = relationship("ActiveGridSettings", back_populates="settings", uselist=False)
 
     force_reset = Column(Boolean, default=False)
-    auto_export_images = Column(Boolean, default=False)
+    auto_export_images = Column(Boolean, default=True)
     image_export_type = Column(String, default="png")
 
     show_active_image_area = Column(Boolean, default=True)
@@ -645,7 +645,9 @@ class Settings(BaseModel):
     current_llm_generator = Column(String, default="casuallm")
 
     active_image_editor_section = Column(String, default="canvas")
-    
+    enable_advanced_mode = Column(Boolean, default=False)
+
+    image_similarity = Column(Integer, default=1000)
 
 
 class Layer(BaseModel):
