@@ -94,6 +94,7 @@ class SliderWidget(BaseWidget):
     def __init__(self, *args, **kwargs):
         super().__init__(*args, **kwargs)
         self.app.loaded.connect(self.initialize_properties)
+        self.app.window_opened.connect(self.initialize_properties)
     
     def initialize_properties(self, **kwargs):
         slider_callback = kwargs.pop("slider_callback", None)
@@ -127,7 +128,8 @@ class SliderWidget(BaseWidget):
         self.display_as_float = self.property("display_as_float") or False
         self.divide_by = self.property("divide_by") or 1.0
 
-        current_value = self.settings_manager.get_value(settings_property) or 0
+        if settings_property is not None:
+            current_value = self.settings_manager.get_value(settings_property) or 0
 
         # check if slider_callback is str
         if isinstance(slider_callback, str):
@@ -151,6 +153,7 @@ class SliderWidget(BaseWidget):
         self.spinbox_minimum = spinbox_minimum
         self.spinbox_maximum = spinbox_maximum
         self.label_text = label_text
+        self.settings_property = settings_property
 
         self.label = QLabel(f"{label_text}")
         self.label.setAlignment(Qt.AlignmentFlag.AlignCenter)
@@ -166,6 +169,9 @@ class SliderWidget(BaseWidget):
         self.set_slider_and_spinbox_values(current_value)
         if not self.display_as_float:
             self.ui.slider_spinbox.setDecimals(0)
+        else:
+            decimals = len(str(spinbox_minimum).split(".")[1])
+            self.ui.slider_spinbox.setDecimals(decimals)
     
     def set_slider_and_spinbox_values(self, val):
         self.ui.slider.blockSignals(True)
