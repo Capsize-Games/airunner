@@ -23,7 +23,6 @@ class ImageWidget(BaseWidget):
 
     def __init__(self, *args, **kwargs):
         super().__init__(*args, **kwargs)
-        self.ui.permanently_delete_2.hide()
 
     def set_image(self, image_path):
         size = self.ui.image_frame.width()
@@ -33,7 +32,7 @@ class ImageWidget(BaseWidget):
 
         # Create a QPixmap object
         pixmap = QPixmap(self.image_path)
-        pixmap = pixmap.scaled(size, size, Qt.AspectRatioMode.KeepAspectRatio, Qt.TransformationMode.SmoothTransformation)
+        pixmap = pixmap.scaled(size - 20, size - 20, Qt.AspectRatioMode.KeepAspectRatio, Qt.TransformationMode.SmoothTransformation)
 
         # set width and height
         self.image_width = pixmap.width()
@@ -53,16 +52,7 @@ class ImageWidget(BaseWidget):
         label.setAlignment(Qt.AlignmentFlag.AlignCenter)
     
     def handle_label_clicked(self, event):
-        # create a popup window and show the full size image in it
-        self.dialog = QDialog()
-        self.dialog.setWindowTitle("Image preview")
-        layout = QVBoxLayout(self.dialog)
-        self.dialog.setLayout(layout)
-        pixmap = QPixmap(self.image_path)
-        label = QLabel()
-        label.setPixmap(pixmap)
-        layout.addWidget(label)
-        self.dialog.show()
+        self.send_image_to_grid()
     
     def load_meta_data(self, image_path):
         # load the png metadata from image_path
@@ -75,10 +65,10 @@ class ImageWidget(BaseWidget):
         self.app.load_image.emit(self.image_path)
 
     def confirm_delete(self):
-        self.ui.permanently_delete_2.show()
+        pass
     
     def cancel_delete(self):
-        self.ui.permanently_delete_2.hide()
+        pass
 
     def delete_image(self):
         if not self.image_path:
@@ -102,7 +92,7 @@ class ImageWidget(BaseWidget):
         meta_data["height"] = image.height
         meta_data["enable_controlnet"] = True
         meta_data["controlnet"] = "canny"
-        meta_data["controlnet_conditioning_scale"] = 150
+        meta_data["controlnet_conditioning_scale"] = 1000
         meta_data["image_guidance_scale"] = 100.0
         meta_data["strength"] = 1.0
         meta_data["enable_input_image"] = True
@@ -111,7 +101,7 @@ class ImageWidget(BaseWidget):
             image=image,
             override_data=meta_data
         )
-    
+        
     def generate_variant(self):
         image = Image.open(self.image_path)
         meta_data = self.meta_data.copy()
@@ -122,7 +112,7 @@ class ImageWidget(BaseWidget):
         meta_data["height"] = image.height
         meta_data["enable_controlnet"] = True
         meta_data["controlnet"] = "canny"
-        meta_data["controlnet_conditioning_scale"] = 1000
+        meta_data["controlnet_conditioning_scale"] = 250
         meta_data["image_guidance_scale"] = 100.0
         meta_data["strength"] = 1.0
         meta_data["enable_input_image"] = True

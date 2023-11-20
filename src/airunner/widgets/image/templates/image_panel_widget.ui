@@ -27,9 +27,6 @@
     <number>0</number>
    </property>
    <item row="0" column="0">
-    <widget class="BreadcrumbContainerWidget" name="breadcrumbs" native="true"/>
-   </item>
-   <item row="1" column="0">
     <widget class="QScrollArea" name="scrollArea">
      <property name="widgetResizable">
       <bool>true</bool>
@@ -40,23 +37,14 @@
         <x>0</x>
         <y>0</y>
         <width>556</width>
-        <height>268</height>
+        <height>284</height>
        </rect>
       </property>
-      <layout class="QGridLayout" name="gridLayout_2"/>
      </widget>
     </widget>
    </item>
   </layout>
  </widget>
- <customwidgets>
-  <customwidget>
-   <class>BreadcrumbContainerWidget</class>
-   <extends>QWidget</extends>
-   <header>airunner/widgets/breadcrumbs/breadcrumb_container_widget</header>
-   <container>1</container>
-  </customwidget>
- </customwidgets>
  <resources/>
  <connections/>
 </ui>
