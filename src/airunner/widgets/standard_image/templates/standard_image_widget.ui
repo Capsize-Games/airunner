@@ -6,8 +6,8 @@
    <rect>
     <x>0</x>
     <y>0</y>
-    <width>552</width>
-    <height>1027</height>
+    <width>1182</width>
+    <height>1115</height>
    </rect>
   </property>
   <property name="windowTitle">
@@ -16,20 +16,33 @@
   <layout class="QGridLayout" name="gridLayout_3">
    <item row="0" column="0">
     <layout class="QGridLayout" name="gridLayout_4">
-     <item row="3" column="0">
-      <widget class="QPushButton" name="pushButton_2">
-       <property name="cursor">
-        <cursorShape>PointingHandCursor</cursorShape>
+     <item row="1" column="0">
+      <widget class="QTableWidget" name="tableWidget">
+       <property name="styleSheet">
+        <string notr="true"/>
        </property>
-       <property name="toolTip">
-        <string>Generate a batch of four variations</string>
+       <property name="autoScroll">
+        <bool>false</bool>
        </property>
-       <property name="text">
-        <string>Batch</string>
-       </property>
+       <attribute name="horizontalHeaderVisible">
+        <bool>false</bool>
+       </attribute>
+       <attribute name="verticalHeaderVisible">
+        <bool>false</bool>
+       </attribute>
+       <column>
+        <property name="text">
+         <string>New Column</string>
+        </property>
+       </column>
+       <column>
+        <property name="text">
+         <string>New Column</string>
+        </property>
+       </column>
       </widget>
      </item>
-     <item row="6" column="0">
+     <item row="7" column="0">
       <widget class="QPushButton" name="pushButton">
        <property name="cursor">
         <cursorShape>PointingHandCursor</cursorShape>
@@ -42,10 +55,34 @@
        </property>
       </widget>
      </item>
-     <item row="5" column="0">
-      <widget class="QPushButton" name="pushButton_7">
-       <property name="text">
-        <string>Export</string>
+     <item row="0" column="0">
+      <widget class="QFrame" name="image_frame">
+       <property name="sizePolicy">
+        <sizepolicy hsizetype="Preferred" vsizetype="Preferred">
+         <horstretch>0</horstretch>
+         <verstretch>0</verstretch>
+        </sizepolicy>
+       </property>
+       <property name="minimumSize">
+        <size>
+         <width>532</width>
+         <height>532</height>
+        </size>
+       </property>
+       <property name="maximumSize">
+        <size>
+         <width>532</width>
+         <height>532</height>
+        </size>
+       </property>
+       <property name="acceptDrops">
+        <bool>true</bool>
+       </property>
+       <property name="frameShape">
+        <enum>QFrame::StyledPanel</enum>
+       </property>
+       <property name="frameShadow">
+        <enum>QFrame::Raised</enum>
        </property>
       </widget>
      </item>
@@ -67,9 +104,6 @@
         <item>
          <widget class="QWidget" name="delete_confirmation" native="true">
           <layout class="QGridLayout" name="gridLayout">
-           <item row="5" column="0" colspan="2">
-            <widget class="QTableWidget" name="tableWidget"/>
-           </item>
            <item row="6" column="0">
             <spacer name="verticalSpacer_2">
              <property name="orientation">
@@ -134,38 +168,7 @@
        </layout>
       </widget>
      </item>
-     <item row="0" column="0">
-      <widget class="QFrame" name="image_frame">
-       <property name="sizePolicy">
-        <sizepolicy hsizetype="Preferred" vsizetype="Preferred">
-         <horstretch>0</horstretch>
-         <verstretch>0</verstretch>
-        </sizepolicy>
-       </property>
-       <property name="minimumSize">
-        <size>
-         <width>532</width>
-         <height>532</height>
-        </size>
-       </property>
-       <property name="maximumSize">
-        <size>
-         <width>532</width>
-         <height>532</height>
-        </size>
-       </property>
-       <property name="acceptDrops">
-        <bool>true</bool>
-       </property>
-       <property name="frameShape">
-        <enum>QFrame::StyledPanel</enum>
-       </property>
-       <property name="frameShadow">
-        <enum>QFrame::Raised</enum>
-       </property>
-      </widget>
-     </item>
-     <item row="4" column="0">
+     <item row="5" column="0">
       <widget class="QPushButton" name="pushButton_4">
        <property name="cursor">
         <cursorShape>PointingHandCursor</cursorShape>
@@ -175,62 +178,6 @@
        </property>
        <property name="text">
         <string>To Canvas</string>
-       </property>
-      </widget>
-     </item>
-     <item row="2" column="0">
-      <widget class="QPushButton" name="pushButton_3">
-       <property name="cursor">
-        <cursorShape>PointingHandCursor</cursorShape>
-       </property>
-       <property name="toolTip">
-        <string>Generate one variation</string>
-       </property>
-       <property name="text">
-        <string>Single</string>
-       </property>
-      </widget>
-     </item>
-     <item row="1" column="0">
-      <widget class="SliderWidget" name="samples_widget" native="true">
-       <property name="minimumSize">
-        <size>
-         <width>0</width>
-         <height>20</height>
-        </size>
-       </property>
-       <property name="label_text" stdset="0">
-        <string>Similarity</string>
-       </property>
-       <property name="slider_callback" stdset="0">
-        <string notr="true">handle_value_change</string>
-       </property>
-       <property name="current_value" stdset="0">
-        <number>1000</number>
-       </property>
-       <property name="slider_maximum" stdset="0">
-        <number>1000</number>
-       </property>
-       <property name="spinbox_maximum" stdset="0">
-        <double>1.000000000000000</double>
-       </property>
-       <property name="display_as_float" stdset="0">
-        <bool>true</bool>
-       </property>
-       <property name="spinbox_single_step" stdset="0">
-        <double>0.010000000000000</double>
-       </property>
-       <property name="spinbox_page_step" stdset="0">
-        <double>0.100000000000000</double>
-       </property>
-       <property name="spinbox_minimum" stdset="0">
-        <double>0.000000000000000</double>
-       </property>
-       <property name="slider_minimum" stdset="0">
-        <number>0</number>
-       </property>
-       <property name="settings_property" stdset="0">
-        <string>image_similarity</string>
        </property>
       </widget>
      </item>
@@ -353,6 +300,82 @@
          </widget>
         </item>
        </layout>
+      </widget>
+     </item>
+     <item row="4" column="0">
+      <widget class="QPushButton" name="pushButton_2">
+       <property name="cursor">
+        <cursorShape>PointingHandCursor</cursorShape>
+       </property>
+       <property name="toolTip">
+        <string>Generate a batch of four variations</string>
+       </property>
+       <property name="text">
+        <string>Batch</string>
+       </property>
+      </widget>
+     </item>
+     <item row="2" column="0">
+      <widget class="SliderWidget" name="samples_widget" native="true">
+       <property name="minimumSize">
+        <size>
+         <width>0</width>
+         <height>20</height>
+        </size>
+       </property>
+       <property name="label_text" stdset="0">
+        <string>Similarity</string>
+       </property>
+       <property name="slider_callback" stdset="0">
+        <string notr="true">handle_value_change</string>
+       </property>
+       <property name="current_value" stdset="0">
+        <number>1000</number>
+       </property>
+       <property name="slider_maximum" stdset="0">
+        <number>1000</number>
+       </property>
+       <property name="spinbox_maximum" stdset="0">
+        <double>1.000000000000000</double>
+       </property>
+       <property name="display_as_float" stdset="0">
+        <bool>true</bool>
+       </property>
+       <property name="spinbox_single_step" stdset="0">
+        <double>0.010000000000000</double>
+       </property>
+       <property name="spinbox_page_step" stdset="0">
+        <double>0.100000000000000</double>
+       </property>
+       <property name="spinbox_minimum" stdset="0">
+        <double>0.000000000000000</double>
+       </property>
+       <property name="slider_minimum" stdset="0">
+        <number>0</number>
+       </property>
+       <property name="settings_property" stdset="0">
+        <string>image_similarity</string>
+       </property>
+      </widget>
+     </item>
+     <item row="6" column="0">
+      <widget class="QPushButton" name="pushButton_7">
+       <property name="text">
+        <string>Export</string>
+       </property>
+      </widget>
+     </item>
+     <item row="3" column="0">
+      <widget class="QPushButton" name="pushButton_3">
+       <property name="cursor">
+        <cursorShape>PointingHandCursor</cursorShape>
+       </property>
+       <property name="toolTip">
+        <string>Generate one variation</string>
+       </property>
+       <property name="text">
+        <string>Single</string>
+       </property>
       </widget>
      </item>
     </layout>
