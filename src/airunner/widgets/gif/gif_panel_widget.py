@@ -12,6 +12,7 @@ class GifPanelWidget(BaseWidget):
     def __init__(self, *args, **kwargs):
         super().__init__(*args, **kwargs)
 
+    def load_gifs(self):
         gif_path = self.settings_manager.path_settings.gif_path
         for root, dirs, files in os.walk(gif_path):
             for file in files:
