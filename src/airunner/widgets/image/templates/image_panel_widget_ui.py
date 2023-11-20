@@ -16,19 +16,14 @@ class Ui_image_panel_widget(object):
         self.gridLayout = QtWidgets.QGridLayout(image_panel_widget)
         self.gridLayout.setContentsMargins(0, 0, 0, 0)
         self.gridLayout.setObjectName("gridLayout")
-        self.breadcrumbs = BreadcrumbContainerWidget(parent=image_panel_widget)
-        self.breadcrumbs.setObjectName("breadcrumbs")
-        self.gridLayout.addWidget(self.breadcrumbs, 0, 0, 1, 1)
         self.scrollArea = QtWidgets.QScrollArea(parent=image_panel_widget)
         self.scrollArea.setWidgetResizable(True)
         self.scrollArea.setObjectName("scrollArea")
         self.scrollAreaWidgetContents = QtWidgets.QWidget()
-        self.scrollAreaWidgetContents.setGeometry(QtCore.QRect(0, 0, 556, 268))
+        self.scrollAreaWidgetContents.setGeometry(QtCore.QRect(0, 0, 556, 284))
         self.scrollAreaWidgetContents.setObjectName("scrollAreaWidgetContents")
-        self.gridLayout_2 = QtWidgets.QGridLayout(self.scrollAreaWidgetContents)
-        self.gridLayout_2.setObjectName("gridLayout_2")
         self.scrollArea.setWidget(self.scrollAreaWidgetContents)
-        self.gridLayout.addWidget(self.scrollArea, 1, 0, 1, 1)
+        self.gridLayout.addWidget(self.scrollArea, 0, 0, 1, 1)
 
         self.retranslateUi(image_panel_widget)
         QtCore.QMetaObject.connectSlotsByName(image_panel_widget)
@@ -36,4 +31,3 @@ class Ui_image_panel_widget(object):
     def retranslateUi(self, image_panel_widget):
         _translate = QtCore.QCoreApplication.translate
         image_panel_widget.setWindowTitle(_translate("image_panel_widget", "Form"))
-from airunner.widgets.breadcrumbs.breadcrumb_container_widget import BreadcrumbContainerWidget
