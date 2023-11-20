@@ -759,6 +759,7 @@ class LLMGeneratorSetting(BaseModel):
     top_k = Column(Integer, default=0)
     seed = Column(Integer, default=0)
     do_sample = Column(Boolean, default=False)
+    eta_cutoff = Column(Integer, default=10)
     early_stopping = Column(Boolean, default=False)
     random_seed = Column(Boolean, default=False)
     model_version = Column(String, default="google/flan-t5-xl")
