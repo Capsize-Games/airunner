@@ -5,14 +5,11 @@ import subprocess
 import sys
 import webbrowser
 from functools import partial
-import importlib
 
 from PyQt6 import uic, QtCore
 from PyQt6.QtCore import pyqtSlot, Qt, QThread, pyqtSignal, QObject, QTimer
 from PyQt6.QtGui import QGuiApplication
 from PyQt6.QtWidgets import QApplication, QFileDialog, QMainWindow, QWidget, QSpacerItem, QSizePolicy
-from PyQt6.QtWidgets import QPushButton
-from PyQt6.QtGui import QImage, QIcon, QPixmap
 from PyQt6.QtCore import Qt
 from PyQt6 import QtGui
 
@@ -77,6 +74,7 @@ class MainWindow(
     is_started = False
     _themes = None
     button_clicked_signal = pyqtSignal(dict)
+    status_widget = None
 
     image_interpolation_window = None
     deterministic_window = None
@@ -237,10 +235,18 @@ class MainWindow(
     @property
     def current_layer(self):
         return self.ui.layer_widget.current_layer
-
-    @property
-    def current_layer_image_data(self):
-        return self.ui.layer_widget.current_layer.image_data
+    
+    def describe_image(self, image, callback):
+        self.ui.generator_widget.current_generator_widget.ui.ai_tab_widget.describe_image(
+            image=image, 
+            callback=callback
+        )
+    
+    def current_active_image(self):
+        if self.image_editor_tab_name == "Canvas":
+            return self.canvas.current_active_image.copy() if self.canvas.current_active_image else None
+        else:
+            return self.ui.standard_image_widget.image.copy() if self.ui.standard_image_widget.image else None
 
     def send_message(self, code, message):
         self.message_var.emit({
@@ -253,6 +259,7 @@ class MainWindow(
             yield model["name"]
     
     loaded = pyqtSignal()
+    window_opened = pyqtSignal()
 
     def __init__(self, *args, **kwargs):
         logger.info("Starting AI Runnner")
@@ -273,6 +280,9 @@ class MainWindow(
 
         self.initialize()
 
+        # get tab index by name value which is stored in self.settings_manager.active_image_editor_section
+        index = self.ui.image_editor_tab_widget.indexOf(self.ui.image_editor_tab_widget.findChild(QWidget, self.settings_manager.active_image_editor_section))
+        self.ui.image_editor_tab_widget.setCurrentIndex(index)
         self.ui.image_editor_tab_widget.currentChanged.connect(self.image_editor_tab_index_changed)
 
         # on window resize:
@@ -320,6 +330,14 @@ class MainWindow(
 
         self.initialize_panel_tabs()
         self.initialize_tool_section_buttons()
+        self.toggle_header_buttons()
+        
+        if self.settings_manager.mode == Mode.IMAGE.value:
+            self.image_generation_toggled()
+        elif self.settings_manager.mode == Mode.LANGUAGE_PROCESSOR.value:
+            self.language_processing_toggled()
+        else:
+            self.model_manager_toggled()
 
         self.loaded.emit()
     
@@ -359,7 +377,8 @@ class MainWindow(
         self.settings_manager.set_value("mode", self.ui.mode_tab_widget.tabText(index))
 
     def on_show(self):
-        self.ui.canvas_plus_widget.do_draw()
+        #self.ui.canvas_plus_widget.do_draw()
+        pass
 
     def action_slider_changed(self, value_name, value):
         self.settings_manager.set_value(value_name, value)
@@ -705,7 +724,8 @@ class MainWindow(
 
     def timerEvent(self, event):
         # self.canvas.timerEvent(event)
-        self.status_widget.update_system_stats(queue_size=self.client.queue.qsize())
+        if self.status_widget:
+            self.status_widget.update_system_stats(queue_size=self.client.queue.qsize())
 
     def check_for_latest_version(self):
         self.version_thread = QThread()
@@ -917,7 +937,12 @@ class MainWindow(
         :param widget: the widget that triggered the callback
         :return:
         """
+        if attr_name is None:
+            return
         self.settings_manager.set_value(attr_name, value)
+    
+    def handle_similar_slider_change(self, attr_name, value=None, widget=None):
+        self.ui.standard_image_widget.handle_similar_slider_change(value)
 
     def set_splitter_sizes(self):
         """
@@ -978,7 +1003,6 @@ class MainWindow(
         col_a_width = self.ui.content_splitter.widget(0).width()
         col_b_width = self.ui.content_splitter.widget(1).width()
         col_c_width = self.ui.content_splitter.widget(2).width()
-        col_d_width = self.ui.content_splitter.widget(3).width()
         window_width = self.width()
 
         if index == 2 and window_width - pos == 60:
@@ -990,7 +1014,7 @@ class MainWindow(
         if index == 2:
             col_a_width = sizes["left"].size
 
-        updated_sizes = [col_a_width, col_b_width, col_c_width, col_d_width]
+        updated_sizes = [col_a_width, col_b_width, col_c_width]
         for n, size in enumerate(updated_sizes):
             obj = session.query(SplitterSection).filter_by(
                 name="content_splitter",
@@ -1034,10 +1058,12 @@ class MainWindow(
             self.generator_tab_widget.refresh_model_list()
         elif key == "generator.seed":
             self.prompt_builder.process_prompt()
-        elif key == "use_prompt_builder_checkbox":
-            self.generator_tab_widget.toggle_all_prompt_builder_checkboxes(value)
+        # elif key == "use_prompt_builder_checkbox":
+        #     self.generator_tab_widget.toggle_all_prompt_builder_checkboxes(value)
         elif key == "models":
             self.model_manager.models_changed(key, value)
+        elif key == "enable_advanced_mode":
+            self.toggle_advanced_generation()
 
     def initialize_shortcuts(self):
         event_callbacks = {
@@ -1195,14 +1221,15 @@ class MainWindow(
             data["tab_section"], data["action"]
         )
         if self.settings_manager.auto_export_images:
-            path = auto_export_image(
-                image=images[0], 
-                data=data, 
-                seed=data["options"]["seed"], 
-                latents_seed=data["options"]["latents_seed"]
-            )
-            if path is not None:
-                self.set_status_label(f"Image exported to {path}")
+            for image in images:
+                path = auto_export_image(
+                    image=image, 
+                    data=data, 
+                    seed=data["options"]["seed"], 
+                    latents_seed=data["options"]["latents_seed"]
+                )
+                if path is not None:
+                    self.set_status_label(f"Image exported to {path}")
 
         self.generator_tab_widget.stop_progress_bar(
             data["tab_section"], data["action"]
@@ -1225,7 +1252,8 @@ class MainWindow(
                 data=data)
         else:
             self.image_data.emit({
-                "image": images[0],
+                "images": images,
+                "path": path,
                 "data": data
             })
             self.message_handler("")
@@ -1515,21 +1543,71 @@ class MainWindow(
             widget.blockSignals(False)
     
     def set_all_section_buttons(self):
-        print("set all section buttons", self.settings_manager.mode)
         self.set_button_checked("image_generation", self.settings_manager.mode == Mode.IMAGE.value)
         self.set_button_checked("language_processing", self.settings_manager.mode == Mode.LANGUAGE_PROCESSOR.value)
         self.set_button_checked("model_manager", self.settings_manager.mode == Mode.MODEL_MANAGER.value)
+        self.toggle_header_buttons()
     
+    def toggle_header_buttons(self):
+        if self.settings_manager.mode == Mode.IMAGE.value:
+            self.ui.image_generator_header_tools.show()
+            self.ui.text_generator_header_tools.hide()
+        elif self.settings_manager.mode == Mode.LANGUAGE_PROCESSOR.value:
+            self.ui.image_generator_header_tools.hide()
+            self.ui.text_generator_header_tools.show()
+        else:
+            self.ui.image_generator_header_tools.hide()
+            self.ui.text_generator_header_tools.hide()
+    
+    def toggle_advanced_generation(self):
+        if self.ui.generator_widget.current_generator_widget:
+            if self.settings_manager.mode != Mode.IMAGE.value:
+                return
+            index = 1 if self.settings_manager.enable_advanced_mode else 0
+            self.ui.generator_widget.current_generator_widget.ui.generator_form_tab_widget.setCurrentIndex(index)
+    
+    def chat_clicked(self, val):
+        self.set_llm_widget_tab("chat", val)
+
+    def chat_preferences_clicked(self, val):
+        self.set_llm_widget_tab("preferences", val)
+
+    def chat_settings_clicked(self, val):
+        self.set_llm_widget_tab("settings", val)
+     
+    def quantization_clicked(self, val):
+        self.set_llm_widget_tab("quantization", val)
+    
+    def set_llm_widget_tab(self, name, val):
+        self.ui.generator_widget.current_generator_widget.ui.ai_tab_widget.set_tab(name)
+        self.toggle_llm_button_signals(blocked=True)
+        self.ui.chat_button.setChecked(name == "chat")
+        self.ui.llm_preferences_button.setChecked(name == "preferences")
+        self.ui.llm_settings_button.setChecked(name == "settings")
+        self.ui.llm_quantization_button.setChecked(name == "quantization")
+        self.toggle_llm_button_signals(blocked=False)
+    
+    def toggle_llm_button_signals(self, blocked):
+        self.ui.chat_button.blockSignals(blocked)
+        self.ui.llm_preferences_button.blockSignals(blocked)
+        self.ui.llm_settings_button.blockSignals(blocked)
+        self.ui.llm_quantization_button.blockSignals(blocked)
+
     def activate_image_generation_section(self):
         self.ui.mode_tab_widget.setCurrentIndex(0)
+        self.toggle_advanced_generation()
         self.toggle_tool_section_buttons_visibility()
 
     def activate_language_processing_section(self):
-        self.ui.mode_tab_widget.setCurrentIndex(1)
+        self.ui.mode_tab_widget.setCurrentIndex(0)
+        try:
+            self.ui.generator_widget.current_generator_widget.ui.generator_form_tab_widget.setCurrentIndex(2)
+        except AttributeError as e:
+            pass
         self.toggle_tool_section_buttons_visibility()
     
     def activate_model_manager_section(self):
-        self.ui.mode_tab_widget.setCurrentIndex(2)
+        self.ui.mode_tab_widget.setCurrentIndex(1)
         self.toggle_tool_section_buttons_visibility()
 
     def initialize_tool_section_buttons(self):
@@ -1552,8 +1630,8 @@ class MainWindow(
     def toggle_tool_section_buttons_visibility(self):
         image_mode = self.settings_manager.mode == Mode.IMAGE.value
         lang_mode = self.settings_manager.mode == Mode.LANGUAGE_PROCESSOR.value
-        self.ui.image_generator_header_tools.setVisible(image_mode)
-        self.ui.text_generator_header_tools.setVisible(lang_mode)
+        self.ui.image_generator_header_tools.setVisible(image_mode or lang_mode)
+        self.ui.text_generator_header_tools.setVisible(image_mode or lang_mode)
         visible = image_mode or lang_mode
 
         # add a horizontal spacer to the right of the self.ui.header_widget
