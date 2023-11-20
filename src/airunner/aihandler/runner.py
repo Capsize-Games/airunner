@@ -755,12 +755,6 @@ class SDRunner(
         return image
 
     @staticmethod
-    def clear_memory():
-        logger.info("Clearing memory")
-        torch.cuda.empty_cache()
-        gc.collect()
-
-    @staticmethod
     def apply_filters(image, filters):
         for image_filter in filters:
             filter_type = FilterType(image_filter["filter_name"])
@@ -1472,7 +1466,7 @@ class SDRunner(
     def unload(self):
         self.unload_model()
         self.unload_tokenizer()
-        self.clear_memory()
+        self.engine.clear_memory()
 
     def unload_model(self):
         self.pipe = None
@@ -1770,7 +1764,7 @@ class SDRunner(
     def clear_controlnet(self):
         logger.info("Clearing controlnet")
         self._controlnet = None
-        self.clear_memory()
+        self.engine.clear_memory()
         self.reset_applied_memory_settings()
         self.controlnet_loaded = False
 
