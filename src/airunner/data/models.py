@@ -436,6 +436,8 @@ class MemorySettings(BaseModel):
     use_enable_sequential_cpu_offload = Column(Boolean, default=False)
     use_cudnn_benchmark = Column(Boolean, default=True)
     use_torch_compile = Column(Boolean, default=False)
+    use_tome_sd = Column(Boolean, default=True)
+    tome_sd_ratio = Column(Integer, default=600)
     settings = relationship("Settings", back_populates="memory_settings")
 
 
