@@ -609,6 +609,10 @@ GeneratorTabWidget#generator_widget QTabWidget QTabWidget QTabWidget QTabBar::ta
 }
 
 /* table styles */
+#standard_image_widget QTableWidget {
+    border: 1px solid @darkerprimary-color;
+}
+
 QTableWidget {
     border: none;
     background-color: @dark-color;
