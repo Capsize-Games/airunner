@@ -20,6 +20,7 @@ class GeneratorTabWidget(BaseWidget):
         super().__init__(*args, **kwargs)
         self.app.loaded.connect(self.initialize)
         self.ui.generator_tabs.tabBar().hide()
+        self.ui.tab_widget_stablediffusion.tabBar().hide()
 
     @property
     def current_generator_widget(self):
