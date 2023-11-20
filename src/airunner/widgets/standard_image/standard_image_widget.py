@@ -30,7 +30,7 @@ class StandardImageWidget(BaseWidget):
         super().__init__(*args, **kwargs)
         self.app.image_data.connect(self.handle_image_data)
         self.app.load_image.connect(self.load_image_from_path)
-        # self.ui.controls_container.hide()
+        self.ui.controls_container.hide()
         self.ui.batch_container.hide()
         self.ui.delete_confirmation.hide()
     
@@ -40,7 +40,6 @@ class StandardImageWidget(BaseWidget):
         self.load_image_from_object(self.image, self.image_path)
     
     def load_image_from_path(self, image_path):
-        print("load_image_from_path", image_path)
         self.image_path = image_path
         image = Image.open(image_path)
         self.load_image_from_object(image=image, image_path=image_path)
@@ -53,8 +52,6 @@ class StandardImageWidget(BaseWidget):
         self.image_path = image_path
         self.image = image
         self.meta_data = load_metadata_from_image(image)
-        print("SELF.META_DATA", self.meta_data)
-        
         size = self.ui.image_frame.width() - 20
 
         pixmap = self._pixmap
@@ -113,11 +110,9 @@ class StandardImageWidget(BaseWidget):
             meta_data["width"] = width
             meta_data["height"] = height
 
-            #self.set_table_data(meta_data)
+            self.set_table_data(meta_data)
         
-        print("show container")
-        # self.ui.controls_container.show()
-        print("show container2")
+        self.ui.controls_container.show()
     
     def handle_label_clicked(self, event):
         # create a popup window and show the full size image in it
@@ -149,15 +144,13 @@ class StandardImageWidget(BaseWidget):
             data = data["options"]
 
         for k, v in data.items():
-            print(f"setting {k} {v}")
             self.ui.tableWidget.insertRow(self.ui.tableWidget.rowCount())
             self.ui.tableWidget.setItem(self.ui.tableWidget.rowCount()-1, 0, QTableWidgetItem(str(k)))
             self.ui.tableWidget.setItem(self.ui.tableWidget.rowCount()-1, 1, QTableWidgetItem(str(v)))
-        self.ui.tableWidget.update()
-        QApplication.processEvents()
-        
         self.ui.tableWidget.resizeColumnsToContents()
         self.ui.tableWidget.resizeRowsToContents()
+        self.ui.tableWidget.update()
+        QApplication.processEvents()
 
     def clear_table_data(self):
         self.ui.tableWidget.clearContents()
@@ -216,9 +209,9 @@ class StandardImageWidget(BaseWidget):
         meta_data["enable_input_image"] = True
         meta_data["use_cropped_image"] = False
 
-        print("GENERATING WITH IMAGE", self.image)
-        print("META_DATA", meta_data)
-        print("*"*80)
+        meta_data.pop("seed", None)
+        meta_data.pop("latents_seed", None)
+
         self.app.generator_tab_widget.current_generator_widget.call_generate(
             image=self.image,
             override_data=meta_data
