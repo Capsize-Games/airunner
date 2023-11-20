@@ -6,7 +6,8 @@ model_bootstrap_data = [
         "version": "SD 1.5",
         "category": "shapegif",
         "pipeline_action": "img2img",
-        "enabled": True
+        "enabled": True,
+        "model_type": "art"
     },
     {
         "name": "Stable Diffusion 2.1 512",
@@ -15,7 +16,8 @@ model_bootstrap_data = [
         "version": "SD 2.1",
         "category": "stablediffusion",
         "pipeline_action": "txt2img",
-        "enabled": True
+        "enabled": True,
+        "model_type": "art"
     },
     {
         "name": "Stable Diffusion 2.1 768",
@@ -24,7 +26,8 @@ model_bootstrap_data = [
         "version": "SD 2.1",
         "category": "stablediffusion",
         "pipeline_action": "txt2img",
-        "enabled": True
+        "enabled": True,
+        "model_type": "art"
     },
     {
         "name": "Stable Diffusion 1.5",
@@ -33,7 +36,8 @@ model_bootstrap_data = [
         "version": "SD 1.5",
         "category": "stablediffusion",
         "pipeline_action": "txt2img",
-        "enabled": True
+        "enabled": True,
+        "model_type": "art"
     },
     {
         "name": "Stable Diffusion XL Base 1.0",
@@ -42,7 +46,8 @@ model_bootstrap_data = [
         "version": "SDXL 1.0",
         "category": "stablediffusion",
         "pipeline_action": "txt2img",
-        "enabled": True
+        "enabled": True,
+        "model_type": "art"
     },
     {
         "name": "Kandinsky 2.1",
@@ -51,7 +56,8 @@ model_bootstrap_data = [
         "version": "K 2.1",
         "category": "kandinsky",
         "pipeline_action": "txt2img",
-        "enabled": True
+        "enabled": True,
+        "model_type": "art"
     },
     {
         "name": "Shap-e",
@@ -60,7 +66,8 @@ model_bootstrap_data = [
         "version": "SD 1.5",
         "category": "shapegif",
         "pipeline_action": "txt2img",
-        "enabled": True
+        "enabled": True,
+        "model_type": "art"
     },
     {
         "name": "Stable Diffusion Inpaint 2",
@@ -69,7 +76,8 @@ model_bootstrap_data = [
         "version": "SD 2.1",
         "category": "stablediffusion",
         "pipeline_action": "outpaint",
-        "enabled": True
+        "enabled": True,
+        "model_type": "art"
     },
     {
         "name": "Stable Diffusion Inpaint 1.5",
@@ -78,7 +86,8 @@ model_bootstrap_data = [
         "version": "SD 1.5",
         "category": "stablediffusion",
         "pipeline_action": "outpaint",
-        "enabled": True
+        "enabled": True,
+        "model_type": "art"
     },
     {
         "name": "Kandinsky Inpaint 2.1",
@@ -87,7 +96,8 @@ model_bootstrap_data = [
         "version": "K 2.1",
         "category": "kandinsky",
         "pipeline_action": "outpaint",
-        "enabled": True
+        "enabled": True,
+        "model_type": "art"
     },
     {
         "name": "Stable Diffusion Depth2Img",
@@ -96,7 +106,8 @@ model_bootstrap_data = [
         "version": "SD 2.1",
         "category": "stablediffusion",
         "pipeline_action": "depth2img",
-        "enabled": True
+        "enabled": True,
+        "model_type": "art"
     },
     {
         "name": "Stable Diffusion 1.5",
@@ -105,7 +116,8 @@ model_bootstrap_data = [
         "version": "SD 1.5",
         "category": "stablediffusion",
         "pipeline_action": "controlnet",
-        "enabled": True
+        "enabled": True,
+        "model_type": "art"
     },
     {
         "name": "Stability AI 4x resolution",
@@ -114,7 +126,8 @@ model_bootstrap_data = [
         "version": "SD 1.5",
         "category": "stablediffusion",
         "pipeline_action": "superresolution",
-        "enabled": True
+        "enabled": True,
+        "model_type": "art"
     },
     {
         "name": "Instruct pix2pix",
@@ -123,7 +136,8 @@ model_bootstrap_data = [
         "version": "SD 1.5",
         "category": "stablediffusion",
         "pipeline_action": "pix2pix",
-        "enabled": True
+        "enabled": True,
+        "model_type": "art"
     },
     {
         "name": "SD Image Variations",
@@ -132,7 +146,8 @@ model_bootstrap_data = [
         "version": "SD 1.5",
         "category": "stablediffusion",
         "pipeline_action": "vid2vid",
-        "enabled": True
+        "enabled": True,
+        "model_type": "art"
     },
     {
         "name": "sd-x2-latent-upscaler",
@@ -141,7 +156,8 @@ model_bootstrap_data = [
         "version": "SD 1.5",
         "category": "stablediffusion",
         "pipeline_action": "upscale",
-        "enabled": True
+        "enabled": True,
+        "model_type": "art"
     },
     {
         "name": "CompVis Safety Checker",
@@ -150,7 +166,8 @@ model_bootstrap_data = [
         "version": "SD 1.5",
         "category": "stablediffusion",
         "pipeline_action": "safety_checker",
-        "enabled": True
+        "enabled": True,
+        "model_type": "art"
     },
     {
         "name": "CompVis Safety Checker",
@@ -159,7 +176,8 @@ model_bootstrap_data = [
         "version": "SD 1.5",
         "category": "stablediffusion",
         "pipeline_action": "safety_checker",
-        "enabled": True
+        "enabled": True,
+        "model_type": "art"
     },
     {
         "name": "CompVis Safety Checker",
@@ -168,7 +186,8 @@ model_bootstrap_data = [
         "version": "SD 2.1",
         "category": "stablediffusion",
         "pipeline_action": "safety_checker",
-        "enabled": True
+        "enabled": True,
+        "model_type": "art"
     },
     {
         "name": "CompVis Safety Checker",
@@ -177,7 +196,8 @@ model_bootstrap_data = [
         "version": "SDXL 1.0",
         "category": "stablediffusion",
         "pipeline_action": "safety_checker",
-        "enabled": True
+        "enabled": True,
+        "model_type": "art"
     },
     {
         "name": "OpenAI Text Encoder",
@@ -186,7 +206,8 @@ model_bootstrap_data = [
         "version": "SD 1.5",
         "category": "stablediffusion",
         "pipeline_action": "text_encoder",
-        "enabled": True
+        "enabled": True,
+        "model_type": "art"
     },
     {
         "name": "Inpaint vae",
@@ -195,7 +216,8 @@ model_bootstrap_data = [
         "version": "SD 1.5",
         "category": "stablediffusion",
         "pipeline_action": "inpaint_vae",
-        "enabled": True
+        "enabled": True,
+        "model_type": "art"
     },
     {
         "name": "Flan T5 XL",
@@ -204,7 +226,8 @@ model_bootstrap_data = [
         "version": "1",
         "category": "llm",
         "pipeline_action": "seq2seq",
-        "enabled": True
+        "enabled": True,
+        "model_type": "llm"
     },
     {
         "name": "Llama 2 7b",
@@ -213,7 +236,8 @@ model_bootstrap_data = [
         "version": "2",
         "category": "llm",
         "pipeline_action": "casuallm",
-        "enabled": True
+        "enabled": True,
+        "model_type": "llm"
     },
     {
         "name": "Llama 2 7b Chat",
@@ -222,7 +246,8 @@ model_bootstrap_data = [
         "version": "2",
         "category": "llm",
         "pipeline_action": "casuallm",
-        "enabled": True
+        "enabled": True,
+        "model_type": "llm"
     },
     {
         "name": "Mistral 7B",
@@ -231,7 +256,8 @@ model_bootstrap_data = [
         "version": "0.1",
         "category": "llm",
         "pipeline_action": "casuallm",
-        "enabled": True
+        "enabled": True,
+        "model_type": "llm"
     },
     {
         "name": "Mistral 7B Instruct",
@@ -240,7 +266,8 @@ model_bootstrap_data = [
         "version": "0.1",
         "category": "llm",
         "pipeline_action": "casuallm",
-        "enabled": True
+        "enabled": True,
+        "model_type": "llm"
     },
     {
         "name": "GPT 2 XL",
@@ -249,7 +276,8 @@ model_bootstrap_data = [
         "version": "1",
         "category": "llm",
         "pipeline_action": "casuallm",
-        "enabled": True
+        "enabled": True,
+        "model_type": "llm"
     },
     {
         "name": "GPT 2 Large",
@@ -258,6 +286,27 @@ model_bootstrap_data = [
         "version": "1",
         "category": "llm",
         "pipeline_action": "casuallm",
-        "enabled": True
+        "enabled": True,
+        "model_type": "llm"
+    },
+    {
+        "name": "Salesforce InstructBlip Flan T5 XL",
+        "path": "Salesforce/instructblip-flan-t5-xl",
+        "branch": "main",
+        "version": "1",
+        "category": "llm",
+        "pipeline_action": "visualqa",
+        "enabled": True,
+        "model_type": "llm"
+    },
+    {
+        "name": "Salesforce Blip2 Opt 2.7b",
+        "path": "Salesforce/blip2-opt-2.7b",
+        "branch": "main",
+        "version": "1",
+        "category": "llm",
+        "pipeline_action": "visualqa",
+        "enabled": True,
+        "model_type": "llm"
     },
 ]
