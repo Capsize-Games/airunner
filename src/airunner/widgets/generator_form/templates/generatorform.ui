@@ -6,8 +6,8 @@
    <rect>
     <x>0</x>
     <y>0</y>
-    <width>495</width>
-    <height>926</height>
+    <width>382</width>
+    <height>925</height>
    </rect>
   </property>
   <property name="font">
@@ -62,7 +62,7 @@
        <item row="0" column="0">
         <widget class="QWidget" name="basic_widget_contents" native="true">
          <layout class="QGridLayout" name="gridLayout_7">
-          <item row="2" column="0">
+          <item row="1" column="0">
            <layout class="QVBoxLayout" name="verticalLayout_7">
             <item>
              <widget class="QLabel" name="label_5">
@@ -124,53 +124,9 @@
                  </spacer>
                 </item>
                 <item>
-                 <widget class="QCheckBox" name="use_prompt_builder_checkbox_2">
-                  <property name="maximumSize">
-                   <size>
-                    <width>120</width>
-                    <height>16777215</height>
-                   </size>
-                  </property>
-                  <property name="layoutDirection">
-                   <enum>Qt::LeftToRight</enum>
-                  </property>
+                 <widget class="QPushButton" name="pushButton_3">
                   <property name="text">
-                   <string>Use Prompt Builder</string>
-                  </property>
-                 </widget>
-                </item>
-                <item>
-                 <widget class="QPushButton" name="prompt_builder_settings_button_2">
-                  <property name="minimumSize">
-                   <size>
-                    <width>24</width>
-                    <height>24</height>
-                   </size>
-                  </property>
-                  <property name="maximumSize">
-                   <size>
-                    <width>24</width>
-                    <height>24</height>
-                   </size>
-                  </property>
-                  <property name="baseSize">
-                   <size>
-                    <width>0</width>
-                    <height>0</height>
-                   </size>
-                  </property>
-                  <property name="cursor">
-                   <cursorShape>PointingHandCursor</cursorShape>
-                  </property>
-                  <property name="text">
-                   <string/>
-                  </property>
-                  <property name="icon">
-                   <iconset theme="preferences-desktop">
-                    <normaloff>.</normaloff>.</iconset>
-                  </property>
-                  <property name="flat">
-                   <bool>true</bool>
+                   <string>Save Prompts</string>
                   </property>
                  </widget>
                 </item>
@@ -214,13 +170,6 @@
             </widget>
            </widget>
           </item>
-          <item row="1" column="0">
-           <widget class="QPushButton" name="pushButton_2">
-            <property name="text">
-             <string>Save Prompts</string>
-            </property>
-           </widget>
-          </item>
          </layout>
         </widget>
        </item>
@@ -259,8 +208,8 @@
            <rect>
             <x>0</x>
             <y>0</y>
-            <width>491</width>
-            <height>861</height>
+            <width>378</width>
+            <height>899</height>
            </rect>
           </property>
           <layout class="QGridLayout" name="gridLayout_8">
@@ -301,57 +250,6 @@
                     </size>
                    </property>
                   </spacer>
-                 </item>
-                 <item>
-                  <widget class="QCheckBox" name="use_prompt_builder_checkbox">
-                   <property name="maximumSize">
-                    <size>
-                     <width>120</width>
-                     <height>16777215</height>
-                    </size>
-                   </property>
-                   <property name="layoutDirection">
-                    <enum>Qt::LeftToRight</enum>
-                   </property>
-                   <property name="text">
-                    <string>Use Prompt Builder</string>
-                   </property>
-                  </widget>
-                 </item>
-                 <item>
-                  <widget class="QPushButton" name="prompt_builder_settings_button">
-                   <property name="minimumSize">
-                    <size>
-                     <width>24</width>
-                     <height>24</height>
-                    </size>
-                   </property>
-                   <property name="maximumSize">
-                    <size>
-                     <width>24</width>
-                     <height>24</height>
-                    </size>
-                   </property>
-                   <property name="baseSize">
-                    <size>
-                     <width>0</width>
-                     <height>0</height>
-                    </size>
-                   </property>
-                   <property name="cursor">
-                    <cursorShape>PointingHandCursor</cursorShape>
-                   </property>
-                   <property name="text">
-                    <string/>
-                   </property>
-                   <property name="icon">
-                    <iconset theme="preferences-desktop">
-                     <normaloff>.</normaloff>.</iconset>
-                   </property>
-                   <property name="flat">
-                    <bool>true</bool>
-                   </property>
-                  </widget>
                  </item>
                  <item>
                   <widget class="QPushButton" name="pushButton">
@@ -410,8 +308,8 @@
                 <rect>
                  <x>0</x>
                  <y>0</y>
-                 <width>473</width>
-                 <height>172</height>
+                 <width>360</width>
+                 <height>175</height>
                 </rect>
                </property>
                <layout class="QGridLayout" name="gridLayout">
@@ -727,15 +625,21 @@
                     <property name="generator_name" stdset="0">
                      <string/>
                     </property>
+                    <property name="property_name" stdset="0">
+                     <string>generator.random_seed</string>
+                    </property>
                    </widget>
                   </item>
                   <item>
-                   <widget class="LatentsSeedWidget" name="seed_widget_latents" native="true">
+                   <widget class="SeedWidget" name="seed_widget_latents" native="true">
                     <property name="generator_section" stdset="0">
                      <string/>
                     </property>
                     <property name="generator_name" stdset="0">
                      <string/>
+                    </property>
+                    <property name="property_name" stdset="0">
+                     <string>generator.random_latents_seed</string>
                     </property>
                    </widget>
                   </item>
@@ -794,42 +698,62 @@
              </widget>
             </widget>
            </item>
+           <item row="1" column="0">
+            <layout class="QHBoxLayout" name="horizontalLayout_9">
+             <item>
+              <widget class="QPushButton" name="generate_button">
+               <property name="text">
+                <string>Generate</string>
+               </property>
+              </widget>
+             </item>
+             <item>
+              <widget class="QProgressBar" name="progress_bar">
+               <property name="value">
+                <number>0</number>
+               </property>
+              </widget>
+             </item>
+             <item>
+              <widget class="QPushButton" name="interrupt_button">
+               <property name="cursor">
+                <cursorShape>PointingHandCursor</cursorShape>
+               </property>
+               <property name="text">
+                <string>Interrupt</string>
+               </property>
+              </widget>
+             </item>
+            </layout>
+           </item>
           </layout>
          </widget>
         </widget>
        </item>
       </layout>
      </widget>
-    </widget>
-   </item>
-   <item row="1" column="0">
-    <widget class="QWidget" name="generator_container" native="true">
-     <layout class="QHBoxLayout" name="horizontalLayout_3">
-      <item>
-       <widget class="QPushButton" name="generate_button">
-        <property name="text">
-         <string>Generate</string>
-        </property>
-       </widget>
-      </item>
-      <item>
-       <widget class="QProgressBar" name="progress_bar">
-        <property name="value">
-         <number>0</number>
-        </property>
-       </widget>
-      </item>
-      <item>
-       <widget class="QPushButton" name="interrupt_button">
-        <property name="cursor">
-         <cursorShape>PointingHandCursor</cursorShape>
-        </property>
-        <property name="text">
-         <string>Interrupt</string>
-        </property>
-       </widget>
-      </item>
-     </layout>
+     <widget class="QWidget" name="ai_tab">
+      <attribute name="title">
+       <string>AI</string>
+      </attribute>
+      <layout class="QGridLayout" name="gridLayout_9">
+       <property name="leftMargin">
+        <number>0</number>
+       </property>
+       <property name="topMargin">
+        <number>0</number>
+       </property>
+       <property name="rightMargin">
+        <number>0</number>
+       </property>
+       <property name="bottomMargin">
+        <number>0</number>
+       </property>
+       <item row="0" column="0">
+        <widget class="LLMWidget" name="ai_tab_widget" native="true"/>
+       </item>
+      </layout>
+     </widget>
     </widget>
    </item>
   </layout>
@@ -839,6 +763,12 @@
    <class>SliderWidget</class>
    <extends>QWidget</extends>
    <header>airunner/widgets/slider/slider_widget</header>
+   <container>1</container>
+  </customwidget>
+  <customwidget>
+   <class>LLMWidget</class>
+   <extends>QWidget</extends>
+   <header>airunner/widgets/llm/llm_widget</header>
    <container>1</container>
   </customwidget>
   <customwidget>
@@ -855,12 +785,6 @@
   </customwidget>
   <customwidget>
    <class>SeedWidget</class>
-   <extends>QWidget</extends>
-   <header>airunner/widgets/seed/seed_widget</header>
-   <container>1</container>
-  </customwidget>
-  <customwidget>
-   <class>LatentsSeedWidget</class>
    <extends>QWidget</extends>
    <header>airunner/widgets/seed/seed_widget</header>
    <container>1</container>
@@ -904,30 +828,14 @@
    </hints>
   </connection>
   <connection>
-   <sender>use_prompt_builder_checkbox</sender>
-   <signal>toggled(bool)</signal>
-   <receiver>generator_form</receiver>
-   <slot>toggle_prompt_builder_checkbox(bool)</slot>
-   <hints>
-    <hint type="sourcelabel">
-     <x>365</x>
-     <y>55</y>
-    </hint>
-    <hint type="destinationlabel">
-     <x>93</x>
-     <y>0</y>
-    </hint>
-   </hints>
-  </connection>
-  <connection>
    <sender>model</sender>
    <signal>currentTextChanged(QString)</signal>
    <receiver>generator_form</receiver>
    <slot>handle_model_changed(QString)</slot>
    <hints>
     <hint type="sourcelabel">
-     <x>139</x>
-     <y>766</y>
+     <x>141</x>
+     <y>769</y>
     </hint>
     <hint type="destinationlabel">
      <x>93</x>
@@ -942,8 +850,8 @@
    <slot>handle_scheduler_changed(QString)</slot>
    <hints>
     <hint type="sourcelabel">
-     <x>481</x>
-     <y>766</y>
+     <x>368</x>
+     <y>773</y>
     </hint>
     <hint type="destinationlabel">
      <x>54</x>
@@ -958,8 +866,8 @@
    <slot>toggle_variation(bool)</slot>
    <hints>
     <hint type="sourcelabel">
-     <x>66</x>
-     <y>874</y>
+     <x>69</x>
+     <y>883</y>
     </hint>
     <hint type="destinationlabel">
      <x>18</x>
@@ -974,8 +882,8 @@
    <slot>action_clicked_button_save_prompts()</slot>
    <hints>
     <hint type="sourcelabel">
-     <x>481</x>
-     <y>56</y>
+     <x>368</x>
+     <y>55</y>
     </hint>
     <hint type="destinationlabel">
      <x>662</x>
@@ -1016,50 +924,18 @@
    </hints>
   </connection>
   <connection>
-   <sender>pushButton_2</sender>
-   <signal>clicked()</signal>
-   <receiver>generator_form</receiver>
-   <slot>action_clicked_button_save_prompts()</slot>
-   <hints>
-    <hint type="sourcelabel">
-     <x>237</x>
-     <y>826</y>
-    </hint>
-    <hint type="destinationlabel">
-     <x>-2</x>
-     <y>30</y>
-    </hint>
-   </hints>
-  </connection>
-  <connection>
    <sender>model_2</sender>
    <signal>currentTextChanged(QString)</signal>
    <receiver>generator_form</receiver>
    <slot>handle_model_changed(QString)</slot>
    <hints>
     <hint type="sourcelabel">
-     <x>112</x>
-     <y>874</y>
+     <x>124</x>
+     <y>912</y>
     </hint>
     <hint type="destinationlabel">
      <x>435</x>
      <y>-6</y>
-    </hint>
-   </hints>
-  </connection>
-  <connection>
-   <sender>use_prompt_builder_checkbox_2</sender>
-   <signal>toggled(bool)</signal>
-   <receiver>generator_form</receiver>
-   <slot>toggle_prompt_builder_checkbox(bool)</slot>
-   <hints>
-    <hint type="sourcelabel">
-     <x>374</x>
-     <y>47</y>
-    </hint>
-    <hint type="destinationlabel">
-     <x>370</x>
-     <y>-13</y>
     </hint>
    </hints>
   </connection>
@@ -1070,8 +946,8 @@
    <slot>handle_generate_button_clicked()</slot>
    <hints>
     <hint type="sourcelabel">
-     <x>36</x>
-     <y>899</y>
+     <x>39</x>
+     <y>896</y>
     </hint>
     <hint type="destinationlabel">
      <x>-2</x>
@@ -1086,12 +962,28 @@
    <slot>handle_interrupt_button_clicked()</slot>
    <hints>
     <hint type="sourcelabel">
-     <x>448</x>
-     <y>906</y>
+     <x>369</x>
+     <y>912</y>
     </hint>
     <hint type="destinationlabel">
      <x>-2</x>
      <y>778</y>
+    </hint>
+   </hints>
+  </connection>
+  <connection>
+   <sender>pushButton_3</sender>
+   <signal>clicked()</signal>
+   <receiver>generator_form</receiver>
+   <slot>action_clicked_button_save_prompts()</slot>
+   <hints>
+    <hint type="sourcelabel">
+     <x>368</x>
+     <y>55</y>
+    </hint>
+    <hint type="destinationlabel">
+     <x>383</x>
+     <y>-10</y>
     </hint>
    </hints>
   </connection>
@@ -1106,5 +998,6 @@
   <slot>handle_generate_button_clicked()</slot>
   <slot>handle_interrupt_button_clicked()</slot>
   <slot>action_clicked_button_save_prompts()</slot>
+  <slot>save_settings()</slot>
  </slots>
 </ui>
