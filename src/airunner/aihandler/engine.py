@@ -1,3 +1,6 @@
+import torch
+import gc
+
 from airunner.aihandler.llm import LLM
 from airunner.aihandler.logger import Logger as logger
 from airunner.aihandler.runner import SDRunner
@@ -27,7 +30,8 @@ class Engine:
         self.sd = SDRunner(
             app=self.app,
             message_var=self.message_var,
-            message_handler=self.message_handler
+            message_handler=self.message_handler,
+            engine=self
         )
         self.settings_manager = SettingsManager()
 
@@ -46,11 +50,11 @@ class Engine:
             do_move_to_cpu = not do_unload_model and self.settings_manager.move_unused_model_to_cpu
             if do_move_to_cpu:
                 self.sd.move_to_cpu()
-                self.sd.clear_memory()
+                self.clear_memory()
             elif do_unload_model:
                 self.sd.unload_model()
                 self.sd.unload_tokenizer()
-                self.sd.clear_memory()
+                self.clear_memory()
             self.llm.move_to_device()
         elif not is_llm and self.model_type != "art":
             logger.info("Switching to art model")
@@ -87,12 +91,12 @@ class Engine:
         if do_move_to_cpu:
             logger.info("Moving LLM to CPU")
             self.llm.move_to_cpu()
-            self.sd.clear_memory()
+            self.clear_memory()
         elif do_unload_model:
             logger.info("Unloading LLM")
             self.llm.unload_model()
             self.llm.unload_tokenizer()
-            self.sd.clear_memory()
+            self.clear_memory()
 
     def cancel(self):
         self.sd.cancel()
@@ -102,3 +106,8 @@ class Engine:
 
     def send_message(self, message, code=None):
         self.sd.send_message(message, code)
+    
+    def clear_memory(self):
+        logger.info("Clearing memory")
+        torch.cuda.empty_cache()
+        gc.collect()
