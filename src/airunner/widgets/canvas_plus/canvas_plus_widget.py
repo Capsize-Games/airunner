@@ -2,6 +2,7 @@ import io
 import math
 import subprocess
 from functools import partial
+import pdb
 
 from PIL import Image, ImageGrab
 from PIL.ImageQt import ImageQt, QImage
@@ -207,6 +208,21 @@ class CanvasPlusWidget(BaseWidget):
     active_grid_area_position = QPoint(0, 0)
     last_pos = QPoint(0, 0)
     current_image_index = 0
+    draggable_pixmaps_in_scene = {}
+
+    @property
+    def image_pivot_point(self):
+        try:
+            return QPoint(self.current_layer.pivot_x, self.current_layer.pivot_y)
+        except Exception as e:
+            print(e)
+        return QPoint(0, 0)
+
+    @image_pivot_point.setter
+    def image_pivot_point(self, value):
+        self.current_layer.pivot_x = value.x()
+        self.current_layer.pivot_y = value.y()
+        save_session()
 
     @property
     def active_grid_area_selected(self):
@@ -247,20 +263,30 @@ class CanvasPlusWidget(BaseWidget):
         return rect
 
     @property
+    def current_active_image(self):
+        return self.current_layer.image
+    
+    @current_active_image.setter
+    def current_active_image(self, value):
+        self.current_layer.image = value
+
+    @property
     def current_layer(self):
-        return self.layer_widget.current_layer
+        return self.layer_container_widget.current_layer
 
     @property
     def current_layer_index(self):
-        return self.layer_widget.current_layer_index
+        return self.layer_container_widget.current_layer_index
     
     @current_layer_index.setter
     def current_layer_index(self, value):
-        self.layer_widget.current_layer_index = value
+        self.layer_container_widget.current_layer_index = value
 
     @property
-    def layer_widget(self):
+    def layer_container_widget(self):
         return self.app.ui.layer_widget
+    
+    initialized = False
 
     def __init__(self, *args, **kwargs):
         super().__init__(*args, **kwargs)
@@ -270,8 +296,19 @@ class CanvasPlusWidget(BaseWidget):
         self.app.add_image_to_canvas_signal.connect(self.handle_add_image_to_canvas)
         self.app.image_data.connect(self.handle_image_data)
         self.app.load_image.connect(self.load_image_from_path)
-        self.settings_manager.changed_signal.connect(self.handle_changed_signal)
+        self.layer_data = session.query(
+            Layer
+        ).filter(
+            Layer.document_id == self.app.document.id,
+        ).order_by(
+            Layer.position.asc()
+        ).all()
         self.initialize()
+        #self.settings_manager.changed_signal.connect(self.handle_changed_signal)
+        self.app.loaded.connect(self.handle_loaded)
+    
+    def handle_loaded(self):
+        self.initialized = True
 
     def handle_mouse_event(self, original_mouse_event, event):
         if event.buttons() == Qt.MouseButton.MiddleButton:
@@ -311,38 +348,39 @@ class CanvasPlusWidget(BaseWidget):
         self.scene.setBackgroundBrush(QBrush(self.canvas_color))
         self.view.setScene(self.scene)
 
-        # # Set the size of the QGraphicsScene object to match the size of the QGraphicsView object
-        self.settings_manager.changed_signal.connect(self.handle_changed_signal)
-
         self.do_draw()
 
     def draw_layers(self):
-        session = get_session()
-        layers = session.query(Layer).filter(
-            Layer.document_id == self.app.document.id,
-        ).order_by(
-            Layer.position.asc()
-        ).all()
-        for layer in layers:
-            if layer.id in self.layers:
-                self.scene.removeItem(self.layers[layer.id])
-            image = self.layers[layer.id] if layer.id in self.layers else None
+        for layer in self.layer_data:
+            image = layer.image
             if image is None:
                 continue
-            pixmap = QPixmap.fromImage(ImageQt(image))
-            image = LayerImageItem(self, pixmap, layer)
-            self.layers[layer.id] = image
+
+            draggable_pixmap = None
+            if layer.id in self.layers:
+                self.layers[layer.id].pixmap.convertFromImage(ImageQt(image))
+                draggable_pixmap = self.layers[layer.id]
+                self.scene.removeItem(draggable_pixmap)
+            
+            if not draggable_pixmap:
+                draggable_pixmap = DraggablePixmap(self, QPixmap.fromImage(ImageQt(image)))
+                self.layers[layer.id] = draggable_pixmap
+
+            print("ADDING ITEM TO SCENE")
             if layer.visible:
-                self.scene.addItem(image)
+                print("adding")
+                self.scene.addItem(draggable_pixmap)
+            print("creating point")
             pos = QPoint(layer.pos_x, layer.pos_y)
-            image.setPos(QPointF(
+            print("setting pos")
+            draggable_pixmap.setPos(QPointF(
                 self.canvas_settings.pos_x + pos.x(),
                 self.canvas_settings.pos_y + pos.y()
             ))
 
     def handle_changed_signal(self, key, value):
         if key == "current_tab":
-            self.draw_layers()
+            self.do_draw()
         elif key == "current_section_stablediffusion":
             self.do_draw()
         elif key == "current_section_kandinsky":
@@ -352,6 +390,8 @@ class CanvasPlusWidget(BaseWidget):
         elif key == "layer_image_data.visible":
             self.do_draw()
         elif key == "layer_data.hidden":
+            self.do_draw()
+        elif key == "active_image_editor_section":
             self.do_draw()
         elif key == "grid_settings.show_grid":
             # remove lines from scene
@@ -392,15 +432,16 @@ class CanvasPlusWidget(BaseWidget):
         """
         Draw a rectangle around the active grid area of
         """
-        if not self.active_grid_area:
-            self.active_grid_area = ActiveGridArea(
-                parent=self,
-                rect=self.active_grid_area_rect
-            )
-            self.active_grid_area.setZValue(1)
-            self.scene.addItem(self.active_grid_area)
-        else:
-            self.active_grid_area.redraw()
+        # if not self.active_grid_area:
+        #     self.active_grid_area = ActiveGridArea(
+        #         parent=self,
+        #         rect=self.active_grid_area_rect
+        #     )
+        #     self.active_grid_area.setZValue(1)
+        #     self.scene.addItem(self.active_grid_area)
+        # else:
+        #     self.active_grid_area.redraw()
+        pass
 
     def handle_add_image_to_canvas(self):
         self.draw_layers()
@@ -410,14 +451,23 @@ class CanvasPlusWidget(BaseWidget):
         self.do_draw()
 
     def do_draw(self):
+        if self.drawing or not self.initialized:
+            return
+        self.drawing = True
         self.view_size = self.view.viewport().size()
         self.set_scene_rect()
         self.draw_lines()
         self.draw_layers()
-        self.draw_active_grid_area_container()
+        #self.draw_active_grid_area_container()
+        print("setting canvas position text")
         self.ui.canvas_position.setText(
             f"X {-self.canvas_settings.pos_x: 05d} Y {self.canvas_settings.pos_y: 05d}"
         )
+        self.scene.update()
+        self.drawing = False
+    
+    drawing = False
+
 
     def update_cursor(self):
         # if self.is_canvas_drag_mode:
@@ -441,8 +491,11 @@ class CanvasPlusWidget(BaseWidget):
     def handle_image_data(self, data):
         self.load_image_from_object(data["image"])
     
-    def load_image_from_path(self, image):
-        image = Image.open(image)
+    def load_image_from_path(self, image_path):
+        if image_path is None or image_path == "":
+            return
+        print("LOAD IMAGE FROM ", image_path)
+        image = Image.open(image_path)
         self.load_image_from_object(image)
     
     def load_image_from_object(self, image):
@@ -526,8 +579,6 @@ class CanvasPlusWidget(BaseWidget):
         except FileNotFoundError:
             pass
 
-    draggable_pixmaps_in_scene = {}
-
     def create_image(self, image):
         if self.app.settings_manager.resize_on_paste:
             image.thumbnail(
@@ -538,10 +589,9 @@ class CanvasPlusWidget(BaseWidget):
                 Image.ANTIALIAS
             )
         self.add_image_to_scene(image)
-        
     
     def save_image_to_database(self, image):
-        self.current_layer.image = image
+        self.current_active_image = image
         session.add(self.current_layer)
         save_session()
     
@@ -557,20 +607,11 @@ class CanvasPlusWidget(BaseWidget):
         self.current_layer_index = layer_index
 
     def add_image_to_scene(self, image):
+        print("saving image to database")
         self.save_image_to_database(image)
-        if self.current_draggable_pixmap() and self.settings_manager.image_to_new_layer:
-            layer_index = self.add_layer()
-            self.switch_to_layer(layer_index)
-        pixmap = QPixmap.fromImage(ImageQt(image))
-        draggable_pixmap = DraggablePixmap(self, pixmap)
-        if self.settings_manager.image_to_new_layer:
-            self.scene.addItem(draggable_pixmap)
-        else:
-            # overrite the current scene image
-            self.remove_current_draggable_pixmap_from_scene()
-            self.scene.addItem(draggable_pixmap)
-        self.draggable_pixmaps_in_scene[self.current_layer_index] = draggable_pixmap
-        self.update()
+        print("calling do_draw")
+        self.do_draw()
+        print("image added to scene")
     
     def image_to_system_clipboard_windows(self, pixmap):
         if not pixmap:
@@ -633,10 +674,19 @@ class CanvasPlusWidget(BaseWidget):
             "HalftoneFilter", 
             "RegistrationErrorFilter"]
 
+
+    @property
+    def current_active_image_data(self):
+        return self.current_layer.image_data
+    
+    @current_active_image_data.setter
+    def current_active_image_data(self, value):
+        self.current_layer.image_data = value
+
     def preview_filter(self, filter):
-        if len(self.current_layer.image_data) == 0:
+        if len(self.current_active_image_data) == 0:
             return
-        for image_data in self.current_layer.image_data:
+        for image_data in self.current_active_image_data:
             image = image_data.image
             if self.filter_with_filter:
                 filtered_image = filter.filter(image)
@@ -645,8 +695,8 @@ class CanvasPlusWidget(BaseWidget):
             image_data.image = filtered_image
     
     def cancel_filter(self):
-        for index in range(len(self.current_layer.image_data)):
-            self.current_layer.image_data[index] = self.image_data[index]
+        for index in range(len(self.current_active_image_data)):
+            self.current_active_image_data[index] = self.image_data[index]
         self.image_data = []
     
     def apply_filter(self, filter):
@@ -663,7 +713,7 @@ class CanvasPlusWidget(BaseWidget):
                 filtered_image = filter.filter(self.image_data[index].image)
             else:
                 filtered_image = self.image_data[index].image.filter(filter)
-            self.current_layer.image_data[index].image = filtered_image
+            self.current_active_image = filtered_image
             self.image_data = []
     
     def update_image_canvas(self):
