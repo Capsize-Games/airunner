@@ -5,6 +5,9 @@ from airunner.aihandler.settings import LOG_LEVEL
 from airunner.aihandler.logger import Logger as logger
 import logging
 from dataclasses import dataclass
+import tomesd
+
+
 logging.disable(LOG_LEVEL)
 logger.set_level(logger.DEBUG)
 
@@ -39,6 +42,21 @@ class MemoryEfficientMixin:
     accelerated_transformers_applied: bool = None
     cpu_offload_applied: bool = None
     model_cpu_offload_applied: bool = None
+    tome_sd_applied: bool = False
+    tome_ratio = None
+
+    @property
+    def do_apply_tome_sd(self):
+        return (self.use_tome_sd and not self.tome_sd_applied) or \
+            (self.tome_ratio is None or self.tome_ratio != self.tome_sd_ratio)
+
+    @property
+    def do_remove_tome_sd(self):
+        return not self.use_tome_sd and self.tome_sd_applied
+    
+    @property
+    def tome_sd_ratio(self):
+        return self.options.get("tome_sd_ratio", 600) / 1000
 
     def reset_applied_memory_settings(self):
         self.last_channels_applied = None
@@ -237,6 +255,25 @@ class MemoryEfficientMixin:
             logger.info("Enabling model cpu offload")
             self.pipe = self.move_pipe_to_cpu(self.pipe)
             self.pipe.enable_model_cpu_offload()
+    def apply_tome(self):
+        if self.do_apply_tome_sd:
+            if self.tome_sd_applied:
+                self.remove_tome_sd()
+            self.apply_tome_sd()
+        elif self.do_remove_tome_sd:
+            self.remove_tome_sd()
+    
+    def apply_tome_sd(self):
+        logger.info("Applying ToMe SD weight merging with ratio {self.tome_sd_ratio}")
+        tomesd.apply_patch(self.pipe, ratio=self.tome_sd_ratio)
+        self.tome_sd_applied = True
+        self.tome_ratio = self.tome_sd_ratio
+    
+    def remove_tome_sd(self):
+        logger.info("Removing ToMe SD weight merging")
+        tomesd.remove_patch(self.pipe)
+        self.tome_ratio = None
+        self.tome_sd_applied = False
 
     def apply_memory_efficient_settings(self):
         logger.info("Applying memory efficient settings")
@@ -249,5 +286,6 @@ class MemoryEfficientMixin:
         self.apply_attention_slicing()
         self.apply_tiled_vae()
         self.apply_accelerated_transformers()
+        self.apply_tome()
         #self.apply_torch_compile()
         #self.apply_torch_trace()
