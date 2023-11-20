@@ -36,6 +36,7 @@ DEFAULT_PATHS = {
         "models": {
             "casuallm": "",
             "seq2seq": "",
+            "visualqa": "",
         }
     }
 }
@@ -460,6 +461,7 @@ class PathSettings(BaseModel):
     video_path = Column(String, default=DEFAULT_PATHS["art"]["other"]["videos"])
     llm_casuallm_model_path = Column(String, default=DEFAULT_PATHS["text"]["models"]["casuallm"])
     llm_seq2seq_model_path = Column(String, default=DEFAULT_PATHS["text"]["models"]["seq2seq"])
+    llm_visualqa_model_path = Column(String, default=DEFAULT_PATHS["text"]["models"]["visualqa"])
     vae_model_path = Column(String, default=DEFAULT_PATHS["art"]["models"]["vae"])
 
     settings = relationship("Settings", back_populates="path_settings")
@@ -514,6 +516,7 @@ class PathSettings(BaseModel):
         self.video_path = DEFAULT_PATHS["art"]["other"]["videos"]
         self.llm_casuallm_model_path = DEFAULT_PATHS["text"]["models"]["casuallm"]
         self.llm_seq2seq_model_path = DEFAULT_PATHS["text"]["models"]["seq2seq"]
+        self.llm_visualqa_model_path = DEFAULT_PATHS["text"]["models"]["visualqa"]
         from airunner.utils import save_session
         save_session()
 
