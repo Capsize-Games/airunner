@@ -16,7 +16,7 @@ class BaseFilter(ImageFilter.Filter):
             do_reset = True
         return self.apply_filter(image, do_reset)
 
-    def apply_filter(self, image, do_reset):
+    def apply_filter(self, image, do_reset=False):
         """
         Override this function
         :param image:
