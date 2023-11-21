@@ -140,6 +140,10 @@ class MainWindow(
         return self.ui.canvas_plus_widget
 
     @property
+    def standard_image_panel(self):
+        return self.ui.standard_image_widget
+
+    @property
     def generator_tab_widget(self):
         return self.ui.generator_widget
 

@@ -51,6 +51,12 @@ class FilterBase:
             self._filter = class_(**kwargs)
         return self._filter
 
+    @property
+    def current_canvas(self):
+        if self.parent.image_editor_tab_name == "Canvas":
+            return self.canvas
+        return self.standard_image_panel
+
     def __init__(self, parent, model_name):
         """
         :param parent: the parent window (MainWindow instance)
@@ -64,6 +70,7 @@ class FilterBase:
         self.parent = parent
         self.image_filter_model_name = model_name
         self.canvas = parent.canvas
+        self.standard_image_panel = parent.standard_image_panel
         self.load_image_filter_data()
 
     def update_value(self, name, value):
@@ -71,7 +78,8 @@ class FilterBase:
         self.parent.settings_manager.save()
 
     def update_canvas(self):
-        self.canvas.update()
+        if self.parent.image_editor_tab_name == "Canvas":
+            self.canvas.update()
 
     def load_image_filter_data(self):
         self.image_filter_data = self.parent.settings_manager.get_image_filter(self.image_filter_model_name)
@@ -130,20 +138,20 @@ class FilterBase:
     def handle_slider_change(self, val):
         print("handle_slider_change", val)
         self.preview_filter()
-        self.canvas.update()
+        self.update_canvas()
 
     def cancel_filter(self):
         self.reject()
         #self.filter_window.close()
-        self.parent.canvas.cancel_filter()
+        self.current_canvas.cancel_filter()
         self.update_canvas()
 
     def apply_filter(self):
         self.accept()
-        self.parent.canvas.apply_filter(self.filter)
+        self.current_canvas.apply_filter(self.filter)
         self.filter_window.close()
         self.update_canvas()
 
     def preview_filter(self):
-        self.parent.canvas.preview_filter(self.filter)
+        self.current_canvas.preview_filter(self.filter)
         self.update_canvas()
