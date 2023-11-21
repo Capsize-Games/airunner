@@ -75,10 +75,10 @@
          <string notr="true">handle_value_change</string>
         </property>
         <property name="current_value" stdset="0">
-         <number>1000</number>
+         <number>100</number>
         </property>
         <property name="slider_maximum" stdset="0">
-         <number>1000</number>
+         <number>100</number>
         </property>
         <property name="spinbox_maximum" stdset="0">
          <double>1.000000000000000</double>
@@ -90,7 +90,7 @@
          <double>0.010000000000000</double>
         </property>
         <property name="spinbox_page_step" stdset="0">
-         <double>0.100000000000000</double>
+         <double>0.010000000000000</double>
         </property>
         <property name="spinbox_minimum" stdset="0">
          <double>0.000000000000000</double>
