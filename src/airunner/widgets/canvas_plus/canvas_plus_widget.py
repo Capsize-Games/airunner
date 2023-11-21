@@ -509,8 +509,9 @@ class CanvasPlusWidget(BaseWidget):
         self.add_image_to_scene(image)
     
     def current_draggable_pixmap(self):
-        if self.current_layer_index in self.draggable_pixmaps_in_scene:
-            return self.draggable_pixmaps_in_scene[self.current_layer_index]
+        index = self.current_layer_index + 1
+        if index in self.layers:
+            return self.layers[index]
 
     def current_pixmap(self):
         draggable_pixmap = self.current_draggable_pixmap()
@@ -683,15 +684,19 @@ class CanvasPlusWidget(BaseWidget):
         self.current_layer.image_data = value
 
     def preview_filter(self, filter):
-        if len(self.current_active_image_data) == 0:
+        draggable = self.current_draggable_pixmap()
+        if not draggable:
             return
-        for image_data in self.current_active_image_data:
-            image = image_data.image
-            if self.filter_with_filter:
-                filtered_image = filter.filter(image)
-            else:
-                filtered_image = image.filter(filter)
-            image_data.image = filtered_image
+        pixmap = draggable.pixmap
+        if not pixmap:
+            Logger.info("No pixmap")
+            return
+        image = Image.fromqpixmap(pixmap)
+        if self.filter_with_filter:
+            filtered_image = filter.filter(image)
+        else:
+            filtered_image = image.filter(filter)
+        self.load_image_from_object(filtered_image)
     
     def cancel_filter(self):
         for index in range(len(self.current_active_image_data)):
