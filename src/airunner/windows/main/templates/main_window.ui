@@ -1153,8 +1153,8 @@
               <rect>
                <x>0</x>
                <y>0</y>
-               <width>408</width>
-               <height>400</height>
+               <width>391</width>
+               <height>805</height>
               </rect>
              </property>
              <layout class="QGridLayout" name="gridLayout">
@@ -1746,9 +1746,8 @@
      </widget>
     </item>
    </layout>
+   <zorder>main_splitter</zorder>
    <zorder>header_widget</zorder>
-   <zorder>mode_tab_widget</zorder>
-   <zorder>bottom_panel_tab_widget</zorder>
   </widget>
   <widget class="QMenuBar" name="menubar">
    <property name="geometry">
@@ -2560,7 +2559,7 @@
   <customwidget>
    <class>StandardImageWidget</class>
    <extends>QWidget</extends>
-   <header>airunner/widgets/standard_image/standard_image_widget</header>
+   <header>airunner/widgets/canvas_plus/standard_image_widget</header>
    <container>1</container>
   </customwidget>
  </customwidgets>
