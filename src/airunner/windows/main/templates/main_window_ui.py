@@ -428,7 +428,7 @@ class Ui_MainWindow(object):
         self.scrollArea.setWidgetResizable(True)
         self.scrollArea.setObjectName("scrollArea")
         self.scrollAreaWidgetContents = QtWidgets.QWidget()
-        self.scrollAreaWidgetContents.setGeometry(QtCore.QRect(0, 0, 408, 400))
+        self.scrollAreaWidgetContents.setGeometry(QtCore.QRect(0, 0, 391, 805))
         self.scrollAreaWidgetContents.setObjectName("scrollAreaWidgetContents")
         self.gridLayout = QtWidgets.QGridLayout(self.scrollAreaWidgetContents)
         self.gridLayout.setObjectName("gridLayout")
@@ -679,9 +679,8 @@ class Ui_MainWindow(object):
         self.tab_prompt_builder_2.setObjectName("tab_prompt_builder_2")
         self.bottom_panel_tab_widget.addTab(self.tab_prompt_builder_2, "")
         self.gridLayout_3.addWidget(self.main_splitter, 1, 0, 1, 1)
+        self.main_splitter.raise_()
         self.header_widget.raise_()
-        self.mode_tab_widget.raise_()
-        self.bottom_panel_tab_widget.raise_()
         MainWindow.setCentralWidget(self.centralwidget)
         self.menubar = QtWidgets.QMenuBar(parent=MainWindow)
         self.menubar.setGeometry(QtCore.QRect(0, 0, 1035, 22))
@@ -1241,6 +1240,7 @@ from airunner.widgets.active_grid_settings.active_grid_settings_widget import Ac
 from airunner.widgets.batch.batch_widget import BatchWidget
 from airunner.widgets.brush.brush_container_widget import BrushContainerWidget
 from airunner.widgets.canvas_plus.canvas_plus_widget import CanvasPlusWidget
+from airunner.widgets.canvas_plus.standard_image_widget import StandardImageWidget
 from airunner.widgets.deterministic.deterministic_widget import DeterministicWidget
 from airunner.widgets.embeddings.embeddings_container_widget import EmbeddingsContainerWidget
 from airunner.widgets.generator_form.generator_tab_widget import GeneratorTabWidget
@@ -1250,4 +1250,3 @@ from airunner.widgets.layers.layer_container_widget import LayerContainerWidget
 from airunner.widgets.lora.lora_container_widget import LoraContainerWidget
 from airunner.widgets.model_manager.model_manager_widget import ModelManagerWidget
 from airunner.widgets.prompt_builder.prompt_builder_widget import PromptBuilderWidget
-from airunner.widgets.standard_image.standard_image_widget import StandardImageWidget

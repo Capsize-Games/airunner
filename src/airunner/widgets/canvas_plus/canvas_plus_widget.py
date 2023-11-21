@@ -209,6 +209,31 @@ class CanvasPlusWidget(BaseWidget):
     last_pos = QPoint(0, 0)
     current_image_index = 0
     draggable_pixmaps_in_scene = {}
+    image_backup = None
+    initialized = False
+    drawing = False
+
+    @property
+    def current_active_image_data(self):
+        return self.current_layer.image_data
+
+    @property
+    def current_pixmap(self):
+        draggable = self.current_draggable_pixmap()
+        if not draggable:
+            return None
+        return draggable.pixmap
+    
+    @property
+    def current_image(self):
+        pixmap = self.current_pixmap
+        if not pixmap:
+            return None
+        return Image.fromqpixmap(pixmap)
+    
+    @current_active_image_data.setter
+    def current_active_image_data(self, value):
+        self.current_layer.image_data = value
 
     @property
     def image_pivot_point(self):
@@ -285,8 +310,6 @@ class CanvasPlusWidget(BaseWidget):
     @property
     def layer_container_widget(self):
         return self.app.ui.layer_widget
-    
-    initialized = False
 
     def __init__(self, *args, **kwargs):
         super().__init__(*args, **kwargs)
@@ -466,9 +489,6 @@ class CanvasPlusWidget(BaseWidget):
         self.scene.update()
         self.drawing = False
     
-    drawing = False
-
-
     def update_cursor(self):
         # if self.is_canvas_drag_mode:
         #     # show as grab cursor
@@ -673,31 +693,6 @@ class CanvasPlusWidget(BaseWidget):
             "PixelFilter", 
             "HalftoneFilter", 
             "RegistrationErrorFilter"]
-
-
-    @property
-    def current_active_image_data(self):
-        return self.current_layer.image_data
-
-    @property
-    def current_pixmap(self):
-        draggable = self.current_draggable_pixmap()
-        if not draggable:
-            return None
-        return draggable.pixmap
-    
-    @property
-    def current_image(self):
-        pixmap = self.current_pixmap
-        if not pixmap:
-            return None
-        return Image.fromqpixmap(pixmap)
-    
-    @current_active_image_data.setter
-    def current_active_image_data(self, value):
-        self.current_layer.image_data = value
-
-    image_backup = None
 
     def preview_filter(self, filter):
         image = self.current_image
