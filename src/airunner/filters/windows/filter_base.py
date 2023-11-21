@@ -81,6 +81,10 @@ class FilterBase:
     def show(self):
         self.filter_window = uic.loadUi(os.path.join(f"widgets/base_filter/templates/base_filter.ui"))
         self.filter_window.label.setText(self.image_filter_data.display_name)
+        self.reject = self.filter_window.reject
+        self.accept = self.filter_window.accept
+        self.filter_window.reject = self.cancel_filter
+        self.filter_window.accept = self.apply_filter
 
         for key, filter_value in self._filter_values.items():
             if filter_value.value_type in ["float", "int"]:
@@ -129,11 +133,13 @@ class FilterBase:
         self.canvas.update()
 
     def cancel_filter(self):
-        self.filter_window.close()
+        self.reject()
+        #self.filter_window.close()
         self.parent.canvas.cancel_filter()
         self.update_canvas()
 
     def apply_filter(self):
+        self.accept()
         self.parent.canvas.apply_filter(self.filter)
         self.filter_window.close()
         self.update_canvas()
