@@ -661,6 +661,7 @@ class Layer(BaseModel):
             bytes_image = io.BytesIO(decoded_image)
             # convert bytes to PIL iamge:
             image = Image.open(bytes_image)
+            image = image.convert("RGBA")
             return image
         return None
 
@@ -678,7 +679,7 @@ class Layer(BaseModel):
     document = relationship("Document", backref="layers")
     name = Column(String)
     visible = Column(Boolean, default=True)
-    opacity = Column(Float, default=100)
+    opacity = Column(Integer, default=10000)
     position = Column(Integer, default=0)
     base_64_image = Column(String, default="")
     pos_x = Column(Integer, default=0)

@@ -81,8 +81,8 @@ class ActiveGridArea(DraggablePixmap):
         return QRect(
             self.settings_manager.active_grid_settings.pos_x,
             self.settings_manager.active_grid_settings.pos_y,
-            self.settings_manager.active_grid_settings.pos_x + self.settings_manager.working_width,
-            self.settings_manager.active_grid_settings.pos_y + self.settings_manager.working_height
+            self.settings_manager.working_width,
+            self.settings_manager.working_height
         )
 
     def update_settings(self):
@@ -376,7 +376,6 @@ class CanvasPlusWidget(CanvasBaseWidget):
             if image is None:
                 continue
 
-            print("APPLYING OPACITY TO IMAGE", layer.opacity / 100.0)
             image = apply_opacity_to_image(
                 image,
                 layer.opacity / 100.0
@@ -605,11 +604,6 @@ class CanvasPlusWidget(CanvasBaseWidget):
             )
         self.add_image_to_scene(image)
     
-    def save_image_to_database(self, image):
-        self.current_active_image = image
-        session.add(self.current_layer)
-        save_session()
-    
     def remove_current_draggable_pixmap_from_scene(self):
         current_draggable_pixmap = self.current_draggable_pixmap()
         if current_draggable_pixmap:
@@ -622,11 +616,13 @@ class CanvasPlusWidget(CanvasBaseWidget):
         self.current_layer_index = layer_index
 
     def add_image_to_scene(self, image):
-        print("saving image to database")
-        self.save_image_to_database(image)
-        print("calling do_draw")
+        self.current_active_image = image
+        print(self.current_layer, self.active_grid_area_rect.x(), self.active_grid_area_rect.y())
+        self.current_layer.pos_x = self.active_grid_area_rect.x()
+        self.current_layer.pos_y = self.active_grid_area_rect.y()
+        session.add(self.current_layer)
+        save_session()
         self.do_draw()
-        print("image added to scene")
     
     def image_to_system_clipboard_windows(self, pixmap):
         if not pixmap:
