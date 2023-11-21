@@ -4,6 +4,7 @@ from airunner.widgets.base_widget import BaseWidget
 class CanvasBaseWidget(BaseWidget):
     image = None
     image_backup = None
+    previewing_filter = False
 
     def current_image(self):
         return self.image
@@ -21,7 +22,9 @@ class CanvasBaseWidget(BaseWidget):
         image = self.current_image()
         if not image:
             return
-        self.image_backup = image.copy()
+        if not self.previewing_filter:
+            self.image_backup = image.copy()
+            self.previewing_filter = True
         if self.filter_with_filter:
             filtered_image = filter.filter(image)
         else:
@@ -29,13 +32,14 @@ class CanvasBaseWidget(BaseWidget):
         self.load_image_from_object(image=filtered_image)
     
     def cancel_filter(self):
-        print("CANCEL")
         if self.image_backup:
             self.load_image_from_object(image=self.image_backup)
             self.image_backup = None
+        self.previewing_filter = False
     
     def apply_filter(self, filter):
-        pass
+        self.previewing_filter = False
+        self.image_backup = None
 
     def load_image_from_object(self, image):
         pass
