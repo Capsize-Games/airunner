@@ -135,7 +135,7 @@ class SliderWidget(BaseWidget):
 
         # check if slider_callback is str
         if isinstance(slider_callback, str):
-            slider_callback = partial(getattr(self.app, slider_callback), settings_property)
+            slider_callback = getattr(self.app, slider_callback)
 
         # set slider and spinbox names
         if slider_name:

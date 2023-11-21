@@ -394,8 +394,8 @@ class MainWindow(
         #self.ui.canvas_plus_widget.do_draw()
         pass
 
-    def action_slider_changed(self, value_name, value):
-        self.settings_manager.set_value(value_name, value)
+    def action_slider_changed(self, value, settings_property):
+        self.settings_manager.set_value(settings_property, value)
 
     def quick_export(self):
         if os.path.isdir(self.image_path) is False:
