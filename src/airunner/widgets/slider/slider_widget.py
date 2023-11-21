@@ -171,7 +171,7 @@ class SliderWidget(BaseWidget):
             self.ui.slider_spinbox.setDecimals(0)
         else:
             decimals = len(str(spinbox_minimum).split(".")[1])
-            self.ui.slider_spinbox.setDecimals(decimals)
+            self.ui.slider_spinbox.setDecimals(2 if decimals < 2 else decimals)
     
     def set_slider_and_spinbox_values(self, val):
         self.ui.slider.blockSignals(True)
