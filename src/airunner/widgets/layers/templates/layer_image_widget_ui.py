@@ -25,7 +25,7 @@ class Ui_layer_image_widget(object):
         self.visible_button.setMaximumSize(QtCore.QSize(38, 38))
         self.visible_button.setText("")
         icon = QtGui.QIcon()
-        icon.addPixmap(QtGui.QPixmap(":/icons/010-view-light.png"), QtGui.QIcon.Mode.Normal, QtGui.QIcon.State.Off)
+        icon.addPixmap(QtGui.QPixmap(":/icons/dark/eye-look-icon.svg"), QtGui.QIcon.Mode.Normal, QtGui.QIcon.State.Off)
         self.visible_button.setIcon(icon)
         self.visible_button.setCheckable(True)
         self.visible_button.setFlat(True)
