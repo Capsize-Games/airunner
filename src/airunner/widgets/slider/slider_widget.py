@@ -172,7 +172,7 @@ class SliderWidget(BaseWidget):
         if not self.display_as_float:
             self.ui.slider_spinbox.setDecimals(0)
         else:
-            decimals = len(str(spinbox_minimum).split(".")[1])
+            decimals = len(str(spinbox_single_step).split(".")[1])
             self.ui.slider_spinbox.setDecimals(2 if decimals < 2 else decimals)
     
     def set_slider_and_spinbox_values(self, val):
@@ -219,7 +219,7 @@ class SliderWidget(BaseWidget):
 
         # self.update_label()
         if self.slider_callback:
-            self.slider_callback(adjusted_value, self.settings_property)
+            self.slider_callback(self.settings_property, adjusted_value)
 
     def update_value(self, val):
         self.ui.slider.setValue(int(val))
