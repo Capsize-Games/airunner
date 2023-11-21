@@ -36,6 +36,7 @@ class Ui_LayerWidget(object):
         icon.addPixmap(QtGui.QPixmap(":/icons/dark/eye-look-icon.svg"), QtGui.QIcon.Mode.Normal, QtGui.QIcon.State.Off)
         self.visible_button.setIcon(icon)
         self.visible_button.setCheckable(True)
+        self.visible_button.setChecked(True)
         self.visible_button.setFlat(False)
         self.visible_button.setObjectName("visible_button")
         self.gridLayout.addWidget(self.visible_button, 0, 0, 1, 1)
