@@ -80,8 +80,8 @@ class ActiveGridArea(DraggablePixmap):
         return QRect(
             self.settings_manager.active_grid_settings.pos_x,
             self.settings_manager.active_grid_settings.pos_y,
-            self.settings_manager.working_width,
-            self.settings_manager.working_height
+            self.settings_manager.active_grid_settings.pos_x + self.settings_manager.working_width,
+            self.settings_manager.active_grid_settings.pos_y + self.settings_manager.working_height
         )
 
     def update_settings(self):
@@ -149,7 +149,6 @@ class ActiveGridArea(DraggablePixmap):
     def paint(self, painter: QPainter, option, widget=None):
         if not self.settings_manager.active_grid_settings.render_fill:
             self.pixmap.fill(QColor(0, 0, 0, 1))
-        super().paint(painter, option, widget)
 
         if self.settings_manager.active_grid_settings.render_border:
             size = 4
@@ -164,11 +163,12 @@ class ActiveGridArea(DraggablePixmap):
                 self.settings_manager.grid_settings.line_width + 1
             ))
             painter.drawRect(QRect(
-                self.active_grid_area_rect.x() + size,
-                self.active_grid_area_rect.y() + size,
-                self.active_grid_area_rect.width() - (size * 2),
-                self.active_grid_area_rect.height() - (size * 2)
+                self.active_grid_area_rect.x(),
+                self.active_grid_area_rect.y(),
+                self.active_grid_area_rect.width(),
+                self.active_grid_area_rect.height()
             ))
+        super().paint(painter, option, widget)
 
     def toggle_render_fill(self, render_fill):
         if not render_fill:
@@ -451,16 +451,16 @@ class CanvasPlusWidget(CanvasBaseWidget):
         """
         Draw a rectangle around the active grid area of
         """
-        # if not self.active_grid_area:
-        #     self.active_grid_area = ActiveGridArea(
-        #         parent=self,
-        #         rect=self.active_grid_area_rect
-        #     )
-        #     self.active_grid_area.setZValue(1)
-        #     self.scene.addItem(self.active_grid_area)
-        # else:
-        #     self.active_grid_area.redraw()
-        pass
+        if not self.active_grid_area:
+            self.active_grid_area = ActiveGridArea(
+                parent=self,
+                rect=self.active_grid_area_rect
+            )
+            self.active_grid_area.setZValue(1)
+            self.scene.addItem(self.active_grid_area)
+        else:
+            print("draw_active_grid_area_container", self.active_grid_area_rect, self.active_grid_area.active_grid_area_rect)
+            self.active_grid_area.redraw()
 
     def handle_add_image_to_canvas(self):
         self.draw_layers()
@@ -477,7 +477,7 @@ class CanvasPlusWidget(CanvasBaseWidget):
         self.set_scene_rect()
         self.draw_lines()
         self.draw_layers()
-        #self.draw_active_grid_area_container()
+        self.draw_active_grid_area_container()
         print("setting canvas position text")
         self.ui.canvas_position.setText(
             f"X {-self.canvas_settings.pos_x: 05d} Y {self.canvas_settings.pos_y: 05d}"
