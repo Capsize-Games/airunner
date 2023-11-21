@@ -42,13 +42,12 @@ class FilterBase:
 
     @property
     def filter(self):
-        if self._filter is None:
-            module = importlib.import_module(f"airunner.filters.{self.image_filter_data.name}")
-            class_ = getattr(module, self.image_filter_data.filter_class)
-            kwargs = {}
-            for k, v in self._filter_values.items():
-                kwargs[k] = getattr(self, k)
-            self._filter = class_(**kwargs)
+        module = importlib.import_module(f"airunner.filters.{self.image_filter_data.name}")
+        class_ = getattr(module, self.image_filter_data.filter_class)
+        kwargs = {}
+        for k, v in self._filter_values.items():
+            kwargs[k] = getattr(self, k)
+        self._filter = class_(**kwargs)
         return self._filter
 
     @property
@@ -93,7 +92,7 @@ class FilterBase:
         self.accept = self.filter_window.accept
         self.filter_window.reject = self.cancel_filter
         self.filter_window.accept = self.apply_filter
-
+        
         for key, filter_value in self._filter_values.items():
             if filter_value.value_type in ["float", "int"]:
                 min_value = filter_value.min_value
@@ -102,21 +101,31 @@ class FilterBase:
                     min_value = 0
                 if not max_value:
                     max_value = 100
+
                 if filter_value.value_type == "float":
                     spinbox_value = float(filter_value.value)
                     slider_value = int(spinbox_value * max_value)
                 else:
                     slider_value = int(filter_value.value)
+                
+                spinbox_minimum = min_value
+                spinbox_maximum = max_value
+
+                if filter_value.value_type == "float":
+                    spinbox_minimum = float(min_value) / max_value
+                    spinbox_maximum = float(max_value) / max_value
 
                 slider_spinbox_widget = SliderWidget()
                 slider_spinbox_widget.initialize_properties(
                     slider_callback=self.handle_slider_change,
                     slider_minimum=min_value,
                     slider_maximum=max_value,
-                    spinbox_minimum=min_value / max_value,
-                    spinbox_maximum=max_value / max_value,
+                    spinbox_minimum=spinbox_minimum,
+                    spinbox_maximum=spinbox_maximum,
                     current_value=slider_value,
-                    settings_property=filter_value.name
+                    settings_property=filter_value.name,
+                    label_text=key.replace("_", " ").title(),
+                    display_as_float=filter_value.value_type == "float",
                 )
                 self.filter_window.content.layout().addWidget(slider_spinbox_widget)
 
@@ -127,7 +136,6 @@ class FilterBase:
         # on escape, call the "cancel" button on the QDialogButtonBox
         self.filter_window.keyPressEvent = lambda event: self.cancel_filter() if event.key() == 16777216 else None
 
-        self.parent.current_filter = self.filter
         self.preview_filter()
         self.filter_window.exec()
 
@@ -135,8 +143,8 @@ class FilterBase:
         self.image_filter_data.auto_apply = self.filter_window.auto_apply.isChecked()
         self.parent.settings_manager.save()
 
-    def handle_slider_change(self, val):
-        print("handle_slider_change", val)
+    def handle_slider_change(self, val, settings_property):
+        self.update_value(settings_property, val)
         self.preview_filter()
         self.update_canvas()
 

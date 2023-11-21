@@ -7,6 +7,8 @@ class CanvasBaseWidget(BaseWidget):
     previewing_filter = False
 
     def current_image(self):
+        if self.previewing_filter:
+            return self.image_backup.copy()
         return self.image
     
     def filter_with_filter(self, filter):
