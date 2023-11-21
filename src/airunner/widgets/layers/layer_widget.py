@@ -6,7 +6,7 @@ from PyQt6.QtCore import Qt, QPoint
 from airunner.widgets.base_widget import BaseWidget
 from airunner.widgets.layers.layer_image_widget import LayerImageWidget
 from airunner.widgets.layers.templates.layer_ui import Ui_LayerWidget
-from airunner.utils import image_to_pixmap
+from airunner.utils import get_session, image_to_pixmap
 
 
 class LayerWidget(BaseWidget):
@@ -26,6 +26,10 @@ class LayerWidget(BaseWidget):
         # listen for click on entire widget
         self.ui.mousePressEvent = partial(self.action_clicked, self.layer_data, self.layer_index)
         self.ui.layer_name.setText(self.layer_data.name)
+        self.ui.visible_button.blockSignals(True)
+        self.ui.visible_button.setChecked(self.layer_data.visible)
+        self.set_visible_button_icon(self.layer_data.visible)
+        self.ui.visible_button.blockSignals(False)
 
     def reset_position(self):
         self._previous_pos = None
@@ -47,13 +51,20 @@ class LayerWidget(BaseWidget):
 
     def action_clicked(self):
         print("select layer")
+    
+    def set_visible_button_icon(self, val):
+        if not val:
+            icon_path = ":/icons/dark/hide-private-hidden-icon.svg"
+        else:
+            icon_path = ":/icons/dark/eye-look-icon.svg"
+        self.ui.visible_button.setIcon(QtGui.QIcon(icon_path))
 
     def action_clicked_button_toggle_layer_visibility(self, val):
-        self.layer_data.hidden = not val
-        self.settings_manager.save_and_emit(
-            "layer_data.hidden",
-            self.layer_data.hidden
-        )
+        self.set_visible_button_icon(val)
+        self.layer_data.visible = val
+        session = get_session()
+        session.commit()
+        self.app.canvas.do_draw()
 
     def set_thumbnail(self):
         image = self.layer_data.image
