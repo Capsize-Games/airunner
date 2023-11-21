@@ -678,20 +678,32 @@ class CanvasPlusWidget(BaseWidget):
     @property
     def current_active_image_data(self):
         return self.current_layer.image_data
+
+    @property
+    def current_pixmap(self):
+        draggable = self.current_draggable_pixmap()
+        if not draggable:
+            return None
+        return draggable.pixmap
+    
+    @property
+    def current_image(self):
+        pixmap = self.current_pixmap
+        if not pixmap:
+            return None
+        return Image.fromqpixmap(pixmap)
     
     @current_active_image_data.setter
     def current_active_image_data(self, value):
         self.current_layer.image_data = value
 
+    image_backup = None
+
     def preview_filter(self, filter):
-        draggable = self.current_draggable_pixmap()
-        if not draggable:
+        image = self.current_image
+        if not image:
             return
-        pixmap = draggable.pixmap
-        if not pixmap:
-            Logger.info("No pixmap")
-            return
-        image = Image.fromqpixmap(pixmap)
+        self.image_backup = image.copy()
         if self.filter_with_filter:
             filtered_image = filter.filter(image)
         else:
@@ -699,26 +711,13 @@ class CanvasPlusWidget(BaseWidget):
         self.load_image_from_object(filtered_image)
     
     def cancel_filter(self):
-        for index in range(len(self.current_active_image_data)):
-            self.current_active_image_data[index] = self.image_data[index]
-        self.image_data = []
+        print("CANCEL")
+        if self.image_backup:
+            self.load_image_from_object(self.image_backup)
+            self.image_backup = None
     
     def apply_filter(self, filter):
-        for image_data, index in iter(self.current_layer):
-            if image_data.image is None:
-                continue
-            self.app.history.add_event({
-                "event": "apply_filter",
-                "layer_index": self.current_layer_index,
-                "images": image_data,
-            })
-
-            if self.filter_with_filter:
-                filtered_image = filter.filter(self.image_data[index].image)
-            else:
-                filtered_image = self.image_data[index].image.filter(filter)
-            self.current_active_image = filtered_image
-            self.image_data = []
+        pass
     
     def update_image_canvas(self):
         print("TODO")
