@@ -514,7 +514,7 @@ class CanvasPlusWidget(CanvasBaseWidget):
         self.load_image_from_object(image)
     
     def load_image_from_object(self, image):
-        if self.app.image_editor_tab_name == "Canvas":
+        if self.app.canvas_is_active:
             self.add_image_to_scene(image)
 
     def load_image(self, image_path):
