@@ -240,6 +240,16 @@ class MainWindow(
     def current_layer(self):
         return self.ui.layer_widget.current_layer
     
+    @property
+    def canvas_is_active(self):
+        return self.image_editor_tab_name == "Canvas"
+
+    @property
+    def current_canvas(self):
+        if self.canvas_is_active:
+            return self.canvas
+        return self.standard_image_panel
+    
     def describe_image(self, image, callback):
         self.ui.generator_widget.current_generator_widget.ui.ai_tab_widget.describe_image(
             image=image, 
@@ -247,7 +257,7 @@ class MainWindow(
         )
     
     def current_active_image(self):
-        if self.image_editor_tab_name == "Canvas":
+        if self.canvas_is_active:
             return self.canvas.current_active_image.copy() if self.canvas.current_active_image else None
         else:
             return self.ui.standard_image_widget.image.copy() if self.ui.standard_image_widget.image else None
