@@ -16,7 +16,7 @@ from airunner.cursors.circle_brush import CircleCursor
 from airunner.data.db import session
 from airunner.data.models import Layer, CanvasSettings, ActiveGridSettings
 from airunner.utils import get_session, save_session
-from airunner.widgets.base_widget import BaseWidget
+from airunner.widgets.canvas_plus.canvas_base_widget import CanvasBaseWidget
 from airunner.widgets.canvas_plus.templates.canvas_plus_ui import Ui_canvas
 
 
@@ -192,7 +192,7 @@ class ActiveGridArea(DraggablePixmap):
         self.settings_manager.set_value("active_grid_settings.pos_y", pos.y())
 
 
-class CanvasPlusWidget(BaseWidget):
+class CanvasPlusWidget(CanvasBaseWidget):
     widget_class_ = Ui_canvas
     scene = None
     view = None
@@ -209,7 +209,6 @@ class CanvasPlusWidget(BaseWidget):
     last_pos = QPoint(0, 0)
     current_image_index = 0
     draggable_pixmaps_in_scene = {}
-    image_backup = None
     initialized = False
     drawing = False
 
@@ -217,16 +216,13 @@ class CanvasPlusWidget(BaseWidget):
     def current_active_image_data(self):
         return self.current_layer.image_data
 
-    @property
     def current_pixmap(self):
-        draggable = self.current_draggable_pixmap()
-        if not draggable:
-            return None
-        return draggable.pixmap
+        draggable_pixmap = self.current_draggable_pixmap()
+        if draggable_pixmap:
+            return draggable_pixmap.pixmap
     
-    @property
     def current_image(self):
-        pixmap = self.current_pixmap
+        pixmap = self.current_pixmap()
         if not pixmap:
             return None
         return Image.fromqpixmap(pixmap)
@@ -533,11 +529,6 @@ class CanvasPlusWidget(BaseWidget):
         if index in self.layers:
             return self.layers[index]
 
-    def current_pixmap(self):
-        draggable_pixmap = self.current_draggable_pixmap()
-        if draggable_pixmap:
-            return draggable_pixmap.pixmap
-
     def copy_image(self) -> DraggablePixmap:
         return self.move_pixmap_to_clipboard(self.current_pixmap())
 
@@ -684,35 +675,6 @@ class CanvasPlusWidget(BaseWidget):
             if isinstance(item, QGraphicsPixmapItem):
                 image = item.pixmap.toImage()
                 image.save(image_path)
-
-    def filter_with_filter(self, filter):
-        return type(filter).__name__ in [
-            "SaturationFilter", 
-            "ColorBalanceFilter", 
-            "RGBNoiseFilter", 
-            "PixelFilter", 
-            "HalftoneFilter", 
-            "RegistrationErrorFilter"]
-
-    def preview_filter(self, filter):
-        image = self.current_image
-        if not image:
-            return
-        self.image_backup = image.copy()
-        if self.filter_with_filter:
-            filtered_image = filter.filter(image)
-        else:
-            filtered_image = image.filter(filter)
-        self.load_image_from_object(filtered_image)
-    
-    def cancel_filter(self):
-        print("CANCEL")
-        if self.image_backup:
-            self.load_image_from_object(self.image_backup)
-            self.image_backup = None
-    
-    def apply_filter(self, filter):
-        pass
     
     def update_image_canvas(self):
         print("TODO")
