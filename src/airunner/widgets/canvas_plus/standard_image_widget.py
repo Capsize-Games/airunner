@@ -14,7 +14,7 @@ from PIL import Image
 from PIL import PngImagePlugin
 
 from airunner.widgets.base_widget import BaseWidget
-from airunner.widgets.standard_image.templates.standard_image_widget_ui import Ui_standard_image_widget
+from airunner.widgets.canvas_plus.templates.standard_image_widget_ui import Ui_standard_image_widget
 from airunner.utils import delete_image, load_metadata_from_image, prepare_metadata
 
 
@@ -23,9 +23,11 @@ class StandardImageWidget(BaseWidget):
     _pixmap = None
     _label = None
     _layout = None
+    image = None
     image_path = None
     image_label = None
     image_batch = None
+    image_backup = None
 
     def __init__(self, *args, **kwargs):
         super().__init__(*args, **kwargs)
@@ -190,13 +192,11 @@ class StandardImageWidget(BaseWidget):
         self.ui.delete_confirmation.show()
 
     def confirm_delete(self):
-        # clear the image from the canvas
         self._label.setPixmap(QPixmap())
-        # delete the image from image_path
-        os.remove(self.image_path)
+        delete_image(self.image_path)
+        self.ui.delete_confirmation.hide()
 
     def cancel_delete(self):
-        delete_image(self.image_path)
         self.ui.delete_confirmation.hide()
 
     def similar_image_with_prompt(self):
@@ -255,4 +255,33 @@ class StandardImageWidget(BaseWidget):
         self.generate_similar_image(batch_size=4)
 
     def export_image(self):
+        pass
+
+    def filter_with_filter(self, filter):
+        return type(filter).__name__ in [
+            "SaturationFilter", 
+            "ColorBalanceFilter", 
+            "RGBNoiseFilter", 
+            "PixelFilter", 
+            "HalftoneFilter", 
+            "RegistrationErrorFilter"]
+
+    def preview_filter(self, filter):
+        image = self.current_image
+        if not image:
+            return
+        self.image_backup = image.copy()
+        if self.filter_with_filter:
+            filtered_image = filter.filter(image)
+        else:
+            filtered_image = image.filter(filter)
+        self.load_image_from_object(filtered_image)
+    
+    def cancel_filter(self):
+        print("CANCEL")
+        if self.image_backup:
+            self.load_image_from_object(self.image_backup)
+            self.image_backup = None
+    
+    def apply_filter(self, filter):
         pass
