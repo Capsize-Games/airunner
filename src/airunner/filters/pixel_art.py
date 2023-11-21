@@ -9,9 +9,12 @@ class PixelFilter(BaseFilter):
     def apply_filter(self, image, do_reset):
         # Reduce number of colors
         if self.current_number_of_colors != self.number_of_colors or do_reset:
-            self.current_number_of_colors = self.number_of_colors
-            quantized = image.quantize(self.number_of_colors)
-            self.image = quantized.convert("RGBA")
+            try:
+                self.current_number_of_colors = self.number_of_colors
+                quantized = image.quantize(self.number_of_colors)
+                self.image = quantized.convert("RGBA")
+            except ValueError:
+                print("Bad number of colors")
 
         image = self.image
         # Downsize while maintaining aspect ratio
