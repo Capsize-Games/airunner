@@ -5,7 +5,7 @@ from airunner.aihandler.logger import Logger
 
 from airunner.data.models import Layer
 from airunner.models.layerdata import LayerData
-from airunner.utils import apply_opacity_to_image, get_session, save_session
+from airunner.utils import get_session, save_session
 from airunner.widgets.base_widget import BaseWidget
 from airunner.widgets.layers.layer_widget import LayerWidget
 from airunner.widgets.layers.templates.layer_container_ui import Ui_layer_container
@@ -26,7 +26,12 @@ class LayerContainerWidget(BaseWidget):
         except IndexError:
             Logger.error(f"No current layer for index {self.current_layer_index}")
 
+    def __init__(self, *args, **kwargs):
+        super().__init__(*args, **kwargs)
+        self.app.loaded.connect(self.initialize)
+
     def initialize(self):
+        print("INITIALIZE LAYER CONTAINER WIDGET")
         self.ui.scrollAreaWidgetContents.layout().addSpacerItem(
             QSpacerItem(0, 0, QSizePolicy.Policy.Minimum, QSizePolicy.Policy.Expanding))
         session = get_session()
@@ -35,7 +40,11 @@ class LayerContainerWidget(BaseWidget):
             self.create_layer()
         else:
             self.add_layers()
-        self.ui.opacity_slider_widget.initialize()
+        # set the current_value property of the slider
+        print("INITIALIZE OPACITY WIDGET")
+        self.ui.opacity_slider_widget.set_slider_and_spinbox_values(self.current_layer.opacity)
+        self.ui.opacity_slider_widget.initialize_properties()
+        self.set_layer_opacity(self.current_layer.opacity)
 
     def action_clicked_button_add_new_layer(self):
         self.add_layer()
@@ -337,13 +346,12 @@ class LayerContainerWidget(BaseWidget):
         return self.layers[index].opacity
 
     def set_layer_opacity(self, opacity: int):
-        opacity = opacity / 100
+        print("SET_LAYER_OPACITY", opacity)
         self.current_layer.opacity = opacity
-        self.update()
-        self.current_layer.image_data.image = apply_opacity_to_image(
-            self.current_layer.image_data.image,
-            opacity
-        )
+        session = get_session()
+        session.add(self.current_layer)
+        save_session(session)    
+        self.app.canvas.do_draw()
 
     def show_layers(self):
         pass

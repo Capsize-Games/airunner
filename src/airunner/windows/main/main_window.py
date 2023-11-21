@@ -332,8 +332,6 @@ class MainWindow(
         self.set_button_checked("toggle_grid", self.settings_manager.grid_settings.show_grid, False)
         self.set_button_checked("safety_checker", self.settings_manager.nsfw_filter, False)
 
-        self.ui.layer_widget.initialize()
-
         # call a function after the window has finished loading:
         QTimer.singleShot(500, self.on_show)
 
@@ -394,8 +392,13 @@ class MainWindow(
         #self.ui.canvas_plus_widget.do_draw()
         pass
 
-    def action_slider_changed(self, value, settings_property):
+    def action_slider_changed(self, settings_property, value):
+        print("action_slider_changed")
         self.settings_manager.set_value(settings_property, value)
+
+    def layer_opacity_changed(self, attr_name, value=None, widget=None):
+        print("layer_opacity_changed", attr_name, value)
+        self.ui.layer_widget.set_layer_opacity(value)
 
     def quick_export(self):
         if os.path.isdir(self.image_path) is False:

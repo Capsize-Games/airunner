@@ -340,22 +340,22 @@
       <string>Layer Opacity</string>
      </property>
      <property name="slider_callback" stdset="0">
-      <string/>
+      <string>layer_opacity_changed</string>
      </property>
      <property name="slider_maximum" stdset="0">
       <number>100</number>
      </property>
      <property name="spinbox_maximum" stdset="0">
-      <double>100.000000000000000</double>
+      <double>1.000000000000000</double>
      </property>
      <property name="current_value" stdset="0">
-      <number>0</number>
+      <number>100</number>
      </property>
      <property name="display_as_float" stdset="0">
       <bool>true</bool>
      </property>
      <property name="spinbox_single_step" stdset="0">
-      <double>0.100000000000000</double>
+      <double>0.010000000000000</double>
      </property>
      <property name="spinbox_page_step" stdset="0">
       <double>1.000000000000000</double>

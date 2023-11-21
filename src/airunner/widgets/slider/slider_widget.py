@@ -106,11 +106,6 @@ class SliderWidget(BaseWidget):
         settings_property = kwargs.pop("settings_property", None)
         label_text = kwargs.pop("label_text", "")
         display_as_float = kwargs.pop("display_as_float", False)
-
-        # check if properties are set
-        properties_set = self.property("settings_property") is not None
-        if settings_property is None and not properties_set:
-            return
         
         slider_minimum = self.property("slider_minimum") or slider_minimum
         slider_maximum = self.property("slider_maximum") or slider_maximum
@@ -135,6 +130,7 @@ class SliderWidget(BaseWidget):
 
         # check if slider_callback is str
         if isinstance(slider_callback, str):
+            print("GETTING SLIDER CALLBACK", slider_callback)
             slider_callback = getattr(self.app, slider_callback)
 
         # set slider and spinbox names
@@ -205,6 +201,7 @@ class SliderWidget(BaseWidget):
         # self.update_label()
 
     def handle_slider_change(self, val):
+        print("SLIDER CHANGED", val)
         position = val#self.ui.slider.sliderPosition()
         single_step = self.ui.slider.singleStep()
         adjusted_value = round(position / single_step) * single_step

@@ -18,6 +18,7 @@ from airunner.data.models import Layer, CanvasSettings, ActiveGridSettings
 from airunner.utils import get_session, save_session
 from airunner.widgets.canvas_plus.canvas_base_widget import CanvasBaseWidget
 from airunner.widgets.canvas_plus.templates.canvas_plus_ui import Ui_canvas
+from airunner.utils import apply_opacity_to_image
 
 
 class DraggablePixmap(QGraphicsPixmapItem):
@@ -375,6 +376,12 @@ class CanvasPlusWidget(CanvasBaseWidget):
             if image is None:
                 continue
 
+            print("APPLYING OPACITY TO IMAGE", layer.opacity / 100.0)
+            image = apply_opacity_to_image(
+                image,
+                layer.opacity / 100.0
+            )
+
             draggable_pixmap = None
             if layer.id in self.layers:
                 self.layers[layer.id].pixmap.convertFromImage(ImageQt(image))
@@ -385,13 +392,10 @@ class CanvasPlusWidget(CanvasBaseWidget):
                 draggable_pixmap = DraggablePixmap(self, QPixmap.fromImage(ImageQt(image)))
                 self.layers[layer.id] = draggable_pixmap
 
-            print("ADDING ITEM TO SCENE")
             if layer.visible:
-                print("adding")
                 self.scene.addItem(draggable_pixmap)
-            print("creating point")
+
             pos = QPoint(layer.pos_x, layer.pos_y)
-            print("setting pos")
             draggable_pixmap.setPos(QPointF(
                 self.canvas_settings.pos_x + pos.x(),
                 self.canvas_settings.pos_y + pos.y()
