@@ -51,13 +51,6 @@ class FilterBase:
             self._filter = class_(**kwargs)
         return self._filter
 
-    def update_value(self, name, value):
-        self._filter_values[name].value = str(value)
-        self.parent.settings_manager.save()
-
-    def update_canvas(self):
-        self.canvas.update()
-
     def __init__(self, parent, model_name):
         """
         :param parent: the parent window (MainWindow instance)
@@ -72,6 +65,13 @@ class FilterBase:
         self.image_filter_model_name = model_name
         self.canvas = parent.canvas
         self.load_image_filter_data()
+
+    def update_value(self, name, value):
+        self._filter_values[name].value = str(value)
+        self.parent.settings_manager.save()
+
+    def update_canvas(self):
+        self.canvas.update()
 
     def load_image_filter_data(self):
         self.image_filter_data = self.parent.settings_manager.get_image_filter(self.image_filter_model_name)
