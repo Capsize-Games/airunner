@@ -35,6 +35,7 @@ class StandardImageWidget(CanvasBaseWidget):
         self.ui.batch_container.hide()
         self.ui.delete_confirmation.hide()
         self.ui.tableWidget.hide()
+        self.ui.image_frame.hide()
     
     def handle_image_data(self, data):
         print(data)
@@ -140,6 +141,7 @@ class StandardImageWidget(CanvasBaseWidget):
             self.set_table_data(meta_data)
         
         self.ui.controls_container.show()
+        self.ui.image_frame.show()
     
     def handle_label_clicked(self, event):
         # create a popup window and show the full size image in it
