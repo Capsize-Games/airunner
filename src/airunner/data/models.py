@@ -36,6 +36,7 @@ DEFAULT_PATHS = {
         "models": {
             "casuallm": "",
             "seq2seq": "",
+            "visualqa": "",
         }
     }
 }
@@ -265,7 +266,7 @@ class AIModel(BaseModel):
     pipeline_action = Column(String)
     enabled = Column(Boolean, default=True)
     is_default = Column(Boolean, default=True)
-    model_type = Column(String, default="image")
+    model_type = Column(String, default="art")
 
 
 class Pipeline(BaseModel):
@@ -405,20 +406,20 @@ class MetadataSettings(BaseModel):
     __tablename__ = 'metadata_settings'
 
     id = Column(Integer, primary_key=True)
-    image_export_metadata_prompt = Column(Boolean, default=False)
-    image_export_metadata_negative_prompt = Column(Boolean, default=False)
-    image_export_metadata_scale = Column(Boolean, default=False)
-    image_export_metadata_seed = Column(Boolean, default=False)
-    image_export_metadata_latents_seed = Column(Boolean, default=False)
-    image_export_metadata_steps = Column(Boolean, default=False)
-    image_export_metadata_ddim_eta = Column(Boolean, default=False)
-    image_export_metadata_iterations = Column(Boolean, default=False)
-    image_export_metadata_samples = Column(Boolean, default=False)
-    image_export_metadata_model = Column(Boolean, default=False)
-    image_export_metadata_model_branch = Column(Boolean, default=False)
-    image_export_metadata_scheduler = Column(Boolean, default=False)
-    export_metadata = Column(Boolean, default=False)
-    import_metadata = Column(Boolean, default=False)
+    image_export_metadata_prompt = Column(Boolean, default=True)
+    image_export_metadata_negative_prompt = Column(Boolean, default=True)
+    image_export_metadata_scale = Column(Boolean, default=True)
+    image_export_metadata_seed = Column(Boolean, default=True)
+    image_export_metadata_latents_seed = Column(Boolean, default=True)
+    image_export_metadata_steps = Column(Boolean, default=True)
+    image_export_metadata_ddim_eta = Column(Boolean, default=True)
+    image_export_metadata_iterations = Column(Boolean, default=True)
+    image_export_metadata_samples = Column(Boolean, default=True)
+    image_export_metadata_model = Column(Boolean, default=True)
+    image_export_metadata_model_branch = Column(Boolean, default=True)
+    image_export_metadata_scheduler = Column(Boolean, default=True)
+    export_metadata = Column(Boolean, default=True)
+    import_metadata = Column(Boolean, default=True)
     settings = relationship("Settings", back_populates="metadata_settings")
 
 
@@ -436,6 +437,8 @@ class MemorySettings(BaseModel):
     use_enable_sequential_cpu_offload = Column(Boolean, default=False)
     use_cudnn_benchmark = Column(Boolean, default=True)
     use_torch_compile = Column(Boolean, default=False)
+    use_tome_sd = Column(Boolean, default=True)
+    tome_sd_ratio = Column(Integer, default=600)
     settings = relationship("Settings", back_populates="memory_settings")
 
 
@@ -458,6 +461,7 @@ class PathSettings(BaseModel):
     video_path = Column(String, default=DEFAULT_PATHS["art"]["other"]["videos"])
     llm_casuallm_model_path = Column(String, default=DEFAULT_PATHS["text"]["models"]["casuallm"])
     llm_seq2seq_model_path = Column(String, default=DEFAULT_PATHS["text"]["models"]["seq2seq"])
+    llm_visualqa_model_path = Column(String, default=DEFAULT_PATHS["text"]["models"]["visualqa"])
     vae_model_path = Column(String, default=DEFAULT_PATHS["art"]["models"]["vae"])
 
     settings = relationship("Settings", back_populates="path_settings")
@@ -512,6 +516,7 @@ class PathSettings(BaseModel):
         self.video_path = DEFAULT_PATHS["art"]["other"]["videos"]
         self.llm_casuallm_model_path = DEFAULT_PATHS["text"]["models"]["casuallm"]
         self.llm_seq2seq_model_path = DEFAULT_PATHS["text"]["models"]["seq2seq"]
+        self.llm_visualqa_model_path = DEFAULT_PATHS["text"]["models"]["visualqa"]
         from airunner.utils import save_session
         save_session()
 
@@ -572,7 +577,7 @@ class Settings(BaseModel):
     id = Column(Integer, primary_key=True)
     nsfw_filter = Column(Boolean, default=True)
     allow_hf_downloads = Column(Boolean, default=True)
-    dark_mode_enabled = Column(Boolean, default=False)
+    dark_mode_enabled = Column(Boolean, default=True)
     resize_on_paste = Column(Boolean, default=False)
     allow_online_mode = Column(Boolean, default=True)
 
@@ -613,7 +618,7 @@ class Settings(BaseModel):
     active_grid_settings = relationship("ActiveGridSettings", back_populates="settings", uselist=False)
 
     force_reset = Column(Boolean, default=False)
-    auto_export_images = Column(Boolean, default=False)
+    auto_export_images = Column(Boolean, default=True)
     image_export_type = Column(String, default="png")
 
     show_active_image_area = Column(Boolean, default=True)
@@ -638,7 +643,11 @@ class Settings(BaseModel):
 
     current_image_generator = Column(String, default="stablediffusion")
     current_llm_generator = Column(String, default="casuallm")
-    
+
+    active_image_editor_section = Column(String, default="canvas")
+    enable_advanced_mode = Column(Boolean, default=False)
+
+    image_similarity = Column(Integer, default=1000)
 
 
 class Layer(BaseModel):
@@ -652,6 +661,7 @@ class Layer(BaseModel):
             bytes_image = io.BytesIO(decoded_image)
             # convert bytes to PIL iamge:
             image = Image.open(bytes_image)
+            image = image.convert("RGBA")
             return image
         return None
 
@@ -669,7 +679,7 @@ class Layer(BaseModel):
     document = relationship("Document", backref="layers")
     name = Column(String)
     visible = Column(Boolean, default=True)
-    opacity = Column(Float, default=100)
+    opacity = Column(Integer, default=10000)
     position = Column(Integer, default=0)
     base_64_image = Column(String, default="")
     pos_x = Column(Integer, default=0)
@@ -725,8 +735,8 @@ class LLMGenerator(BaseModel):
     id = Column(Integer, primary_key=True)
     created_at = Column(DateTime, default=datetime.datetime.utcnow)
     name = Column(String, default="casuallm")
-    username = Column(String)
-    botname = Column(String)
+    username = Column(String, default="User")
+    botname = Column(String, default="Bot")
     model_versions = relationship('LLMModelVersion', back_populates='generator')
     generator_settings = relationship('LLMGeneratorSetting', back_populates='generator')
     prefix = Column(String, default="")
@@ -752,6 +762,7 @@ class LLMGeneratorSetting(BaseModel):
     top_k = Column(Integer, default=0)
     seed = Column(Integer, default=0)
     do_sample = Column(Boolean, default=False)
+    eta_cutoff = Column(Integer, default=10)
     early_stopping = Column(Boolean, default=False)
     random_seed = Column(Boolean, default=False)
     model_version = Column(String, default="google/flan-t5-xl")

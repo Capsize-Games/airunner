@@ -22,7 +22,7 @@ setup(
         "omegaconf==2.3.0",
         "accelerate==0.23.0",
         "controlnet_aux==0.0.7",
-        "diffusers==0.22.3",
+        "diffusers==0.23.1",
         "huggingface-hub==0.17.3",
         "numpy==1.23.5",
         "Pillow==9.5.0",
@@ -44,7 +44,7 @@ setup(
         "setuptools==67.7.2",
         "typing_extensions==4.5.0",
         "urllib3==1.26.15",
-        "transformers==4.34.1",
+        "transformers==4.35.2",
         "compel==2.0.2",
         "sympy==1.12.0",
         "regex",
@@ -57,6 +57,7 @@ setup(
         "optimum==1.13.2",
         "bitsandbytes==0.41.1",
         "langchain==0.0.331",
+        "tomesd==0.1.3"
     ],
     dependency_links=[]
 )
