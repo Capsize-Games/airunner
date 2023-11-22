@@ -410,11 +410,16 @@ class Ui_MainWindow(object):
         self.center_tab.addTab(self.tab_txt2vid, "")
         self.tab_shapegif = QtWidgets.QWidget()
         self.tab_shapegif.setObjectName("tab_shapegif")
-        self.gridLayout_17 = QtWidgets.QGridLayout(self.tab_shapegif)
-        self.gridLayout_17.setObjectName("gridLayout_17")
-        self.widget_2 = GifPanelWidget(parent=self.tab_shapegif)
+        self.gridLayout_11 = QtWidgets.QGridLayout(self.tab_shapegif)
+        self.gridLayout_11.setObjectName("gridLayout_11")
+        self.splitter_3 = QtWidgets.QSplitter(parent=self.tab_shapegif)
+        self.splitter_3.setOrientation(QtCore.Qt.Orientation.Horizontal)
+        self.splitter_3.setObjectName("splitter_3")
+        self.widget_2 = StandardGifWidget(parent=self.splitter_3)
         self.widget_2.setObjectName("widget_2")
-        self.gridLayout_17.addWidget(self.widget_2, 0, 0, 1, 1)
+        self.widget = GifPanelWidget(parent=self.splitter_3)
+        self.widget.setObjectName("widget")
+        self.gridLayout_11.addWidget(self.splitter_3, 0, 0, 1, 1)
         self.center_tab.addTab(self.tab_shapegif, "")
         self.tab_prompt_builder = QtWidgets.QWidget()
         self.tab_prompt_builder.setObjectName("tab_prompt_builder")
@@ -988,7 +993,7 @@ class Ui_MainWindow(object):
 
         self.retranslateUi(MainWindow)
         self.mode_tab_widget.setCurrentIndex(0)
-        self.center_tab.setCurrentIndex(0)
+        self.center_tab.setCurrentIndex(2)
         self.image_editor_tab_widget.setCurrentIndex(0)
         self.tool_tab_widget.setCurrentIndex(0)
         self.batches_tab.setCurrentIndex(0)
@@ -1237,6 +1242,7 @@ from airunner.widgets.active_grid_settings.active_grid_settings_widget import Ac
 from airunner.widgets.batch.batch_widget import BatchWidget
 from airunner.widgets.brush.brush_container_widget import BrushContainerWidget
 from airunner.widgets.canvas_plus.canvas_plus_widget import CanvasPlusWidget
+from airunner.widgets.canvas_plus.standard_gif_widget import StandardGifWidget
 from airunner.widgets.canvas_plus.standard_image_widget import StandardImageWidget
 from airunner.widgets.deterministic.deterministic_widget import DeterministicWidget
 from airunner.widgets.embeddings.embeddings_container_widget import EmbeddingsContainerWidget

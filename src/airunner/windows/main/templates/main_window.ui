@@ -1060,7 +1060,7 @@
                  <string notr="true"/>
                 </property>
                 <property name="currentIndex">
-                 <number>0</number>
+                 <number>2</number>
                 </property>
                 <widget class="QWidget" name="tab_image">
                  <attribute name="title">
@@ -1135,9 +1135,15 @@
                  <attribute name="title">
                   <string>GIF</string>
                  </attribute>
-                 <layout class="QGridLayout" name="gridLayout_17">
+                 <layout class="QGridLayout" name="gridLayout_11">
                   <item row="0" column="0">
-                   <widget class="GifPanelWidget" name="widget_2" native="true"/>
+                   <widget class="QSplitter" name="splitter_3">
+                    <property name="orientation">
+                     <enum>Qt::Horizontal</enum>
+                    </property>
+                    <widget class="StandardGifWidget" name="widget_2" native="true"/>
+                    <widget class="GifPanelWidget" name="widget" native="true"/>
+                   </widget>
                   </item>
                  </layout>
                 </widget>
@@ -2583,6 +2589,12 @@
    <class>StandardImageWidget</class>
    <extends>QWidget</extends>
    <header>airunner/widgets/canvas_plus/standard_image_widget</header>
+   <container>1</container>
+  </customwidget>
+  <customwidget>
+   <class>StandardGifWidget</class>
+   <extends>QWidget</extends>
+   <header>airunner/widgets/canvas_plus/standard_gif_widget</header>
    <container>1</container>
   </customwidget>
  </customwidgets>
