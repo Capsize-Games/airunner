@@ -65,6 +65,7 @@ class FilterBase:
         self.load_image_filter_data()
 
     def update_value(self, name, value):
+        print(name, value)
         self._filter_values[name].value = str(value)
         self.parent.settings_manager.save()
 
@@ -135,7 +136,7 @@ class FilterBase:
         self.image_filter_data.auto_apply = self.filter_window.auto_apply.isChecked()
         self.parent.settings_manager.save()
 
-    def handle_slider_change(self, val, settings_property):
+    def handle_slider_change(self, settings_property, val):
         self.update_value(settings_property, val)
         self.preview_filter()
         self.update_canvas()

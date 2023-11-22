@@ -201,7 +201,6 @@ class SliderWidget(BaseWidget):
         # self.update_label()
 
     def handle_slider_change(self, val):
-        print("SLIDER CHANGED", val)
         position = val#self.ui.slider.sliderPosition()
         single_step = self.ui.slider.singleStep()
         adjusted_value = round(position / single_step) * single_step
