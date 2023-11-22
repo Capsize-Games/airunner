@@ -358,6 +358,8 @@ class MainWindow(
         return self.ui.image_editor_tab_widget.tabText(self.ui.image_editor_tab_widget.currentIndex())
 
     def image_editor_tab_index_changed(self):
+        if self.image_editor_tab_name == "Canvas":
+            self.canvas.do_draw()
         self.settings_manager.set_value("active_image_editor_section", self.image_editor_tab_name)
 
     def initialize_panel_tabs(self):
