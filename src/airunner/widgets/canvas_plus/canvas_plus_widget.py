@@ -572,7 +572,6 @@ class CanvasPlusWidget(CanvasBaseWidget):
             new_image = Image.alpha_composite(new_image, new_image_b)
             new_image = Image.alpha_composite(new_image, new_image_a)
 
-        new_image.save("test.png")
         return new_image, image_root_point, image_pivot_point
     
     def load_image_from_path(self, image_path):

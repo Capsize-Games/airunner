@@ -630,6 +630,7 @@ QTableWidget::item:selected {
     background-color: @darkerprimary-color;
 }
 
+#standard_image_widget QPushButton,
 #image_widget QPushButton {
     border: 1px solid @darkerprimary-color;
 }
