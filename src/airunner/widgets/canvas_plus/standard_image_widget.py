@@ -12,6 +12,7 @@ from PyQt6.QtGui import QImage
 
 from PIL import Image
 from PIL import PngImagePlugin
+from PIL.ImageQt import ImageQt
 
 from airunner.widgets.canvas_plus.canvas_base_widget import CanvasBaseWidget
 from airunner.widgets.canvas_plus.templates.standard_image_widget_ui import Ui_standard_image_widget
@@ -35,9 +36,10 @@ class StandardImageWidget(CanvasBaseWidget):
         self.ui.batch_container.hide()
         self.ui.delete_confirmation.hide()
         self.ui.tableWidget.hide()
+        self.ui.image_frame.hide()
+        self.ui.similar_groupbox.hide()
     
     def handle_image_data(self, data):
-        print(data)
         self.image_path = data["path"]
         images = data["images"]
         if len(images) == 1:
@@ -47,20 +49,17 @@ class StandardImageWidget(CanvasBaseWidget):
             self.load_batch_images(images)
     
     def clear_batch_images(self):
-        for widget in self.ui.batch_container.layout().children():
+        for widget in self.ui.batch_container.findChildren(QLabel):
             widget.deleteLater()
 
     def load_batch_images(self, images):
+        self.ui.batch_container.show()
         self.clear_batch_images()
         images = images[:4]
         for image in images:
-            raw_data = image.tobytes("raw", "RGBA")
-            qimage = QImage(
-                raw_data, 
-                image.size[0], 
-                image.size[1], 
-                QImage.Format.Format_RGBA8888
-            )
+            # resize the image to 128x128
+            image = image.resize((128, 128))
+            qimage = ImageQt(image)
             pixmap = QPixmap.fromImage(qimage)
             label = QLabel()
             label.setPixmap(pixmap)
@@ -140,6 +139,8 @@ class StandardImageWidget(CanvasBaseWidget):
             self.set_table_data(meta_data)
         
         self.ui.controls_container.show()
+        self.ui.image_frame.show()
+        self.ui.similar_groupbox.show()
     
     def handle_label_clicked(self, event):
         # create a popup window and show the full size image in it
