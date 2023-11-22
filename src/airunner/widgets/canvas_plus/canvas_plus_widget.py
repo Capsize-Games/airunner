@@ -462,7 +462,6 @@ class CanvasPlusWidget(CanvasBaseWidget):
             self.active_grid_area.setZValue(1)
             self.scene.addItem(self.active_grid_area)
         else:
-            print("draw_active_grid_area_container", self.active_grid_area_rect, self.active_grid_area.active_grid_area_rect)
             self.active_grid_area.redraw()
 
     def handle_add_image_to_canvas(self):
@@ -481,7 +480,6 @@ class CanvasPlusWidget(CanvasBaseWidget):
         self.draw_lines()
         self.draw_layers()
         self.draw_active_grid_area_container()
-        print("setting canvas position text")
         self.ui.canvas_position.setText(
             f"X {-self.canvas_settings.pos_x: 05d} Y {self.canvas_settings.pos_y: 05d}"
         )
@@ -508,7 +506,74 @@ class CanvasPlusWidget(CanvasBaseWidget):
             self.ui.canvas_container.setCursor(QCursor(Qt.CursorShape.ArrowCursor))
 
     def handle_image_data(self, data):
-        self.load_image_from_object(data["images"][0])
+        options = data["data"]["options"]
+        images = data["images"]
+        outpaint_box_rect = options["outpaint_box_rect"]
+        section = options["generator_section"]
+        processed_image, image_root_point, image_pivot_point = self.handle_outpaint(
+            outpaint_box_rect,
+            images[0],
+            section,
+            is_kandinsky=options.get("generator_section", "") == "kandinsky"
+        )
+        self.load_image_from_object(
+            processed_image, 
+            is_outpaint=section == "outpaint",
+            image_root_point=image_root_point
+        )
+    
+    def handle_outpaint(self, outpaint_box_rect, outpainted_image, action=None, is_kandinsky=False):
+        if self.current_active_image is None:
+            point = QPoint(outpaint_box_rect.x(), outpaint_box_rect.y())
+            return outpainted_image, QPoint(0, 0), point
+
+        # make a copy of the current canvas image
+        existing_image_copy = self.current_active_image.copy()
+        width = existing_image_copy.width
+        height = existing_image_copy.height
+
+        pivot_point = self.image_pivot_point
+        root_point = QPoint(0, 0)
+        current_image_position = QPoint(self.current_layer.pos_x, self.current_layer.pos_y)
+
+        is_drawing_left = outpaint_box_rect.x() < current_image_position.x()
+        is_drawing_right = outpaint_box_rect.x() > current_image_position.x()
+        is_drawing_up = outpaint_box_rect.y() < current_image_position.y()
+        is_drawing_down = outpaint_box_rect.y() > current_image_position.y()
+
+        if is_drawing_down:
+            height += outpaint_box_rect.y()
+        if is_drawing_right:
+            width += outpaint_box_rect.x()
+        if is_drawing_up:
+            height += current_image_position.y()
+            root_point.setY(outpaint_box_rect.y())
+        if is_drawing_left:
+            width += current_image_position.x()
+            root_point.setX(outpaint_box_rect.x())
+
+        new_dimensions = (width, height)
+
+        new_image = Image.new("RGBA", new_dimensions, (0, 0, 0, 0))
+        new_image_a = Image.new("RGBA", new_dimensions, (0, 0, 0, 0))
+        new_image_b = Image.new("RGBA", new_dimensions, (0, 0, 0, 0))
+
+        existing_image_pos = [0, 0]
+        image_root_point = QPoint(root_point.x(), root_point.y())
+        image_pivot_point = QPoint(pivot_point.x(), pivot_point.y())
+
+        new_image_a.paste(outpainted_image, (int(outpaint_box_rect.x()), int(outpaint_box_rect.y())))
+        new_image_b.paste(existing_image_copy, (current_image_position.x(), current_image_position.y()))
+
+        if action == "outpaint" and not is_kandinsky:
+            new_image = Image.alpha_composite(new_image, new_image_a)
+            new_image = Image.alpha_composite(new_image, new_image_b)
+        else:
+            new_image = Image.alpha_composite(new_image, new_image_b)
+            new_image = Image.alpha_composite(new_image, new_image_a)
+
+        new_image.save("test.png")
+        return new_image, image_root_point, image_pivot_point
     
     def load_image_from_path(self, image_path):
         if image_path is None or image_path == "":
@@ -516,9 +581,9 @@ class CanvasPlusWidget(CanvasBaseWidget):
         image = Image.open(image_path)
         self.load_image_from_object(image)
     
-    def load_image_from_object(self, image):
+    def load_image_from_object(self, image, is_outpaint=False, image_root_point=None):
         if self.app.canvas_is_active:
-            self.add_image_to_scene(image)
+            self.add_image_to_scene(image, is_outpaint=is_outpaint, image_root_point=image_root_point)
 
     def load_image(self, image_path):
         image = Image.open(image_path)
@@ -615,11 +680,19 @@ class CanvasPlusWidget(CanvasBaseWidget):
     def switch_to_layer(self, layer_index):
         self.current_layer_index = layer_index
 
-    def add_image_to_scene(self, image):
+    def add_image_to_scene(self, image, is_outpaint=False, image_root_point=None):
+        # change size of self.current_active_image to match size of image
+        if self.current_active_image is None:
+            self.current_active_image = image
+        else:
+            self.current_active_image = self.current_active_image.resize(image.size)
         self.current_active_image = image
-        print(self.current_layer, self.active_grid_area_rect.x(), self.active_grid_area_rect.y())
-        self.current_layer.pos_x = self.active_grid_area_rect.x()
-        self.current_layer.pos_y = self.active_grid_area_rect.y()
+        if image_root_point is not None:
+            self.current_layer.pos_x = image_root_point.x()
+            self.current_layer.pos_y = image_root_point.y()
+        elif not is_outpaint:
+            self.current_layer.pos_x = self.active_grid_area_rect.x()
+            self.current_layer.pos_y = self.active_grid_area_rect.y()
         session.add(self.current_layer)
         save_session()
         self.do_draw()

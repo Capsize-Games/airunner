@@ -213,6 +213,15 @@
            </rect>
           </property>
           <layout class="QGridLayout" name="gridLayout_8">
+           <property name="leftMargin">
+            <number>0</number>
+           </property>
+           <property name="topMargin">
+            <number>0</number>
+           </property>
+           <property name="bottomMargin">
+            <number>0</number>
+           </property>
            <item row="0" column="0">
             <widget class="QSplitter" name="splitter_2">
              <property name="orientation">
@@ -308,8 +317,8 @@
                 <rect>
                  <x>0</x>
                  <y>0</y>
-                 <width>360</width>
-                 <height>175</height>
+                 <width>369</width>
+                 <height>178</height>
                 </rect>
                </property>
                <layout class="QGridLayout" name="gridLayout">

@@ -37,6 +37,7 @@ class Ui_MainWindow(object):
         self.centralwidget.setLayoutDirection(QtCore.Qt.LayoutDirection.LeftToRight)
         self.centralwidget.setObjectName("centralwidget")
         self.gridLayout_3 = QtWidgets.QGridLayout(self.centralwidget)
+        self.gridLayout_3.setContentsMargins(1, 0, 1, 0)
         self.gridLayout_3.setObjectName("gridLayout_3")
         self.header_widget = QtWidgets.QFrame(parent=self.centralwidget)
         self.header_widget.setEnabled(True)
@@ -57,7 +58,7 @@ class Ui_MainWindow(object):
         self.scrollArea_3.setWidgetResizable(True)
         self.scrollArea_3.setObjectName("scrollArea_3")
         self.scrollAreaWidgetContents_3 = QtWidgets.QWidget()
-        self.scrollAreaWidgetContents_3.setGeometry(QtCore.QRect(0, 0, 1015, 50))
+        self.scrollAreaWidgetContents_3.setGeometry(QtCore.QRect(0, 0, 1031, 50))
         self.scrollAreaWidgetContents_3.setObjectName("scrollAreaWidgetContents_3")
         self.horizontalLayout_2 = QtWidgets.QHBoxLayout(self.scrollAreaWidgetContents_3)
         self.horizontalLayout_2.setContentsMargins(0, 0, 0, 0)
@@ -351,6 +352,7 @@ class Ui_MainWindow(object):
         self.art = QtWidgets.QWidget()
         self.art.setObjectName("art")
         self.gridLayout_4 = QtWidgets.QGridLayout(self.art)
+        self.gridLayout_4.setContentsMargins(0, 0, 0, 0)
         self.gridLayout_4.setObjectName("gridLayout_4")
         self.content_splitter = QtWidgets.QSplitter(parent=self.art)
         self.content_splitter.setOrientation(QtCore.Qt.Orientation.Horizontal)
@@ -428,7 +430,7 @@ class Ui_MainWindow(object):
         self.scrollArea.setWidgetResizable(True)
         self.scrollArea.setObjectName("scrollArea")
         self.scrollAreaWidgetContents = QtWidgets.QWidget()
-        self.scrollAreaWidgetContents.setGeometry(QtCore.QRect(0, 0, 391, 805))
+        self.scrollAreaWidgetContents.setGeometry(QtCore.QRect(0, 0, 406, 846))
         self.scrollAreaWidgetContents.setObjectName("scrollAreaWidgetContents")
         self.gridLayout = QtWidgets.QGridLayout(self.scrollAreaWidgetContents)
         self.gridLayout.setObjectName("gridLayout")
@@ -914,7 +916,6 @@ class Ui_MainWindow(object):
         self.actionLLM_beta = QtGui.QAction(parent=MainWindow)
         self.actionLLM_beta.setObjectName("actionLLM_beta")
         self.menuFile.addAction(self.actionNew)
-        self.menuFile.addAction(self.actionLoad)
         self.menuFile.addSeparator()
         self.menuFile.addAction(self.actionQuit)
         self.menuEdit.addSeparator()
@@ -1003,10 +1004,8 @@ class Ui_MainWindow(object):
         self.actionEmbeddings.triggered.connect(MainWindow.action_show_embeddings) # type: ignore
         self.actionLoRA.triggered.connect(MainWindow.action_show_lora) # type: ignore
         self.actionPen.triggered.connect(MainWindow.action_show_pen) # type: ignore
-        self.actionLoad.triggered.connect(MainWindow.action_load_document_triggered) # type: ignore
         self.actionExport.triggered.connect(MainWindow.action_export_image_triggered) # type: ignore
         self.actionNew.triggered.connect(MainWindow.action_new_document_triggered) # type: ignore
-        self.actionSave.triggered.connect(MainWindow.action_save_document_triggered) # type: ignore
         self.actionImport.triggered.connect(MainWindow.action_import_image_triggered) # type: ignore
         self.actionQuick_Export.triggered.connect(MainWindow.action_quick_export_image_triggered) # type: ignore
         self.actionQuit.triggered.connect(MainWindow.action_quit_triggered) # type: ignore
@@ -1040,8 +1039,6 @@ class Ui_MainWindow(object):
         self.language_processing_button.pressed.connect(MainWindow.language_processing_toggled) # type: ignore
         self.model_manager_button.pressed.connect(MainWindow.model_manager_toggled) # type: ignore
         self.center_tab.currentChanged['int'].connect(MainWindow.center_panel_tab_index_changed) # type: ignore
-        self.save_button.clicked.connect(MainWindow.action_save_document_triggered) # type: ignore
-        self.open_button.clicked.connect(MainWindow.action_load_document_triggered) # type: ignore
         self.file_new_button.clicked.connect(MainWindow.action_new_document_triggered) # type: ignore
         self.undo_button.clicked.connect(MainWindow.action_undo_triggered) # type: ignore
         self.redo_button.clicked.connect(MainWindow.action_redo_triggered) # type: ignore

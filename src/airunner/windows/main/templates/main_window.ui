@@ -58,6 +58,18 @@
     <enum>Qt::LeftToRight</enum>
    </property>
    <layout class="QGridLayout" name="gridLayout_3">
+    <property name="leftMargin">
+     <number>1</number>
+    </property>
+    <property name="topMargin">
+     <number>0</number>
+    </property>
+    <property name="rightMargin">
+     <number>1</number>
+    </property>
+    <property name="bottomMargin">
+     <number>0</number>
+    </property>
     <item row="0" column="0">
      <widget class="QFrame" name="header_widget">
       <property name="enabled">
@@ -116,7 +128,7 @@
            <rect>
             <x>0</x>
             <y>0</y>
-            <width>1015</width>
+            <width>1031</width>
             <height>50</height>
            </rect>
           </property>
@@ -988,6 +1000,18 @@
          <string>Image Generation</string>
         </attribute>
         <layout class="QGridLayout" name="gridLayout_4">
+         <property name="leftMargin">
+          <number>0</number>
+         </property>
+         <property name="topMargin">
+          <number>0</number>
+         </property>
+         <property name="rightMargin">
+          <number>0</number>
+         </property>
+         <property name="bottomMargin">
+          <number>0</number>
+         </property>
          <item row="0" column="0">
           <widget class="QSplitter" name="content_splitter">
            <property name="orientation">
@@ -1153,8 +1177,8 @@
               <rect>
                <x>0</x>
                <y>0</y>
-               <width>391</width>
-               <height>805</height>
+               <width>406</width>
+               <height>846</height>
               </rect>
              </property>
              <layout class="QGridLayout" name="gridLayout">
@@ -1768,7 +1792,6 @@
      <string>File</string>
     </property>
     <addaction name="actionNew"/>
-    <addaction name="actionLoad"/>
     <addaction name="separator"/>
     <addaction name="actionQuit"/>
    </widget>
@@ -2745,22 +2768,6 @@
    </hints>
   </connection>
   <connection>
-   <sender>actionLoad</sender>
-   <signal>triggered()</signal>
-   <receiver>MainWindow</receiver>
-   <slot>action_load_document_triggered()</slot>
-   <hints>
-    <hint type="sourcelabel">
-     <x>-1</x>
-     <y>-1</y>
-    </hint>
-    <hint type="destinationlabel">
-     <x>442</x>
-     <y>432</y>
-    </hint>
-   </hints>
-  </connection>
-  <connection>
    <sender>actionExport</sender>
    <signal>triggered()</signal>
    <receiver>MainWindow</receiver>
@@ -2781,22 +2788,6 @@
    <signal>triggered()</signal>
    <receiver>MainWindow</receiver>
    <slot>action_new_document_triggered()</slot>
-   <hints>
-    <hint type="sourcelabel">
-     <x>-1</x>
-     <y>-1</y>
-    </hint>
-    <hint type="destinationlabel">
-     <x>442</x>
-     <y>432</y>
-    </hint>
-   </hints>
-  </connection>
-  <connection>
-   <sender>actionSave</sender>
-   <signal>triggered()</signal>
-   <receiver>MainWindow</receiver>
-   <slot>action_save_document_triggered()</slot>
    <hints>
     <hint type="sourcelabel">
      <x>-1</x>
@@ -3337,38 +3328,6 @@
    </hints>
   </connection>
   <connection>
-   <sender>save_button</sender>
-   <signal>clicked()</signal>
-   <receiver>MainWindow</receiver>
-   <slot>action_save_document_triggered()</slot>
-   <hints>
-    <hint type="sourcelabel">
-     <x>859</x>
-     <y>66</y>
-    </hint>
-    <hint type="destinationlabel">
-     <x>1002</x>
-     <y>0</y>
-    </hint>
-   </hints>
-  </connection>
-  <connection>
-   <sender>open_button</sender>
-   <signal>clicked()</signal>
-   <receiver>MainWindow</receiver>
-   <slot>action_load_document_triggered()</slot>
-   <hints>
-    <hint type="sourcelabel">
-     <x>817</x>
-     <y>66</y>
-    </hint>
-    <hint type="destinationlabel">
-     <x>716</x>
-     <y>0</y>
-    </hint>
-   </hints>
-  </connection>
-  <connection>
    <sender>file_new_button</sender>
    <signal>clicked()</signal>
    <receiver>MainWindow</receiver>
@@ -3858,14 +3817,12 @@
   <slot>action_undo_triggered()</slot>
   <slot>action_redo_triggered()</slot>
   <slot>action_new_document_triggered()</slot>
-  <slot>action_save_document_triggered()</slot>
   <slot>action_quick_export_image_triggered()</slot>
   <slot>tool_tab_index_changed(int)</slot>
   <slot>bottom_panel_tab_index_changed(int)</slot>
   <slot>right_splitter_moved(int,int)</slot>
   <slot>main_splitter_moved(int,int)</slot>
   <slot>content_splitter_moved(int,int)</slot>
-  <slot>action_load_document_triggered()</slot>
   <slot>action_quit_triggered()</slot>
   <slot>action_export_image_triggered()</slot>
   <slot>action_toggle_nsfw_filter_triggered(bool)</slot>

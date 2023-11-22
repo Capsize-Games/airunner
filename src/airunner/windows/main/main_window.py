@@ -418,17 +418,11 @@ class MainWindow(
     def action_new_document_triggered(self):
         self.new_document()
 
-    def action_save_document_triggered(self):
-        self.save_document()
-
     def action_quick_export_image_triggered(self):
         self.quick_export()
 
     def action_export_image_triggered(self):
         self.export_image()
-
-    def action_load_document_triggered(self):
-        self.load_document()
 
     def action_import_image_triggered(self):
         self.import_image()
@@ -1358,47 +1352,6 @@ class MainWindow(
         self.set_window_title()
         self.is_saved = True
         self.canvas.is_dirty = False
-
-    def save_document(self):
-        if not self.is_saved:
-            return self.saveas_document()
-        self.do_save(self._document_path)
-
-    def load_document(self):
-        self.new_document()
-        # load all settings and layer data from a file called "<document_name>.airunner"
-
-        # get file path
-        file_path, _ = QFileDialog.getOpenFileName(
-            self.window, "Load Document", "", "AI Runner Document (*.airunner)"
-        )
-        if file_path == "":
-            return
-
-        # get document data
-        image_pivot_point = self.canvas.image_pivot_point
-        image_root_point = self.canvas.image_root_point
-        with open(file_path, "rb") as f:
-            try:
-                data = pickle.load(f)
-                layers = data["layers"]
-                image_pivot_point = data["image_pivot_point"]
-                image_root_point = data["image_root_point"]
-            except Exception as e:
-                layers = data
-
-        # get the document name stripping .airunner from the end
-        self._document_path = file_path
-        self._document_name = file_path.split("/")[-1].split(".")[0]
-
-        # load document data
-        self.ui.layer_widget.layers = layers
-        self.canvas.image_pivot_point = image_pivot_point
-        self.canvas.image_root_point = image_root_point
-        self.canvas.update()
-        self.is_saved = True
-        self.set_window_title()
-        self.ui.layer_widget.show_layers()
 
     def update(self):
         self.generator_tab_widget.update_thumbnails()
