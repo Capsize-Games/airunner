@@ -27,6 +27,8 @@ class CanvasBaseWidget(BaseWidget):
         if not self.previewing_filter:
             self.image_backup = image.copy()
             self.previewing_filter = True
+        else:
+            image = self.image_backup.copy()
         if self.filter_with_filter:
             filtered_image = filter.filter(image)
         else:
