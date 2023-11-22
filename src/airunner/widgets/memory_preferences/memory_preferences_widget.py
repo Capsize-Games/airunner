@@ -16,6 +16,7 @@ class MemoryPreferencesWidget(BaseWidget):
         self.ui.use_tf32.blockSignals(True)
         self.ui.use_tiled_vae.blockSignals(True)
         self.ui.use_enable_vae_slicing.blockSignals(True)
+        self.ui.use_tome.blockSignals(True)
 
         self.ui.use_accelerated_transformers.setChecked(self.settings_manager.memory_settings.use_accelerated_transformers is True)
         self.ui.use_attention_slicing.setChecked(self.settings_manager.memory_settings.use_attention_slicing is True)
@@ -28,6 +29,7 @@ class MemoryPreferencesWidget(BaseWidget):
         self.ui.use_tf32.setChecked(self.settings_manager.memory_settings.use_tf32 is True)
         self.ui.use_tiled_vae.setChecked(self.settings_manager.memory_settings.use_tiled_vae is True)
         self.ui.use_enable_vae_slicing.setChecked(self.settings_manager.memory_settings.use_enable_vae_slicing is True)
+        self.ui.use_tome.setChecked(self.settings_manager.memory_settings.use_tome_sd is True)
 
         self.ui.use_accelerated_transformers.blockSignals(False)
         self.ui.use_attention_slicing.blockSignals(False)
@@ -37,6 +39,13 @@ class MemoryPreferencesWidget(BaseWidget):
         self.ui.use_tf32.blockSignals(False)
         self.ui.use_tiled_vae.blockSignals(False)
         self.ui.use_enable_vae_slicing.blockSignals(False)
+        self.ui.use_tome.blockSignals(False)
+        #self.app.window_opened.emit()
+        self.ui.tome_sd_ratio.initialize_properties()
+
+
+    def action_toggled_tome(self, val):
+        self.settings_manager.set_value("memory_settings.use_tome_sd", val)
 
     def action_toggled_tile_vae(self, val):
         self.settings_manager.set_value("memory_settings.use_tiled_vae", val)
@@ -71,3 +80,5 @@ class MemoryPreferencesWidget(BaseWidget):
         self.ui.use_tf32.setChecked(False)
         self.ui.use_tiled_vae.setChecked(True)
         self.ui.use_enable_vae_slicing.setChecked(True)
+        self.ui.use_tome.setChecked(True)
+        self.ui.tome_sd_ratio.slider.setValue(600)

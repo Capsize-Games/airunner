@@ -306,6 +306,10 @@ class SDRunner(
         return self.options.get("use_enable_vae_slicing", False) is True
 
     @property
+    def use_tome_sd(self):
+        return self.options.get("use_tome_sd", False) is True
+
+    @property
     def do_nsfw_filter(self):
         return self.options.get("do_nsfw_filter", True) is True
 
@@ -724,6 +728,7 @@ class SDRunner(
         self.text_encoder_model = self.settings_manager.models_by_pipeline_action("text_encoder")
         self.inpaint_vae_model = self.settings_manager.models_by_pipeline_action("inpaint_vae")
 
+        self.engine = kwargs.pop("engine", None)
         self.app = kwargs.get("app", None)
         self._message_var = kwargs.get("message_var", None)
         self._message_handler = kwargs.get("message_handler", None)
@@ -753,12 +758,6 @@ class SDRunner(
         image = transforms.ToTensor()(image)
         image = image.unsqueeze(0)
         return image
-
-    @staticmethod
-    def clear_memory():
-        logger.info("Clearing memory")
-        torch.cuda.empty_cache()
-        gc.collect()
 
     @staticmethod
     def apply_filters(image, filters):
@@ -1472,7 +1471,7 @@ class SDRunner(
     def unload(self):
         self.unload_model()
         self.unload_tokenizer()
-        self.clear_memory()
+        self.engine.clear_memory()
 
     def unload_model(self):
         self.pipe = None
@@ -1611,7 +1610,7 @@ class SDRunner(
                 val.to("cpu")
                 setattr(self, action, None)
                 del val
-        self.clear_memory()
+        self.engine.clear_memory()
         self.reset_applied_memory_settings()
 
     def load_model(self):
@@ -1770,7 +1769,7 @@ class SDRunner(
     def clear_controlnet(self):
         logger.info("Clearing controlnet")
         self._controlnet = None
-        self.clear_memory()
+        self.engine.clear_memory()
         self.reset_applied_memory_settings()
         self.controlnet_loaded = False
 
