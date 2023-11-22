@@ -7,8 +7,8 @@
    <rect>
     <x>0</x>
     <y>0</y>
-    <width>1035</width>
-    <height>1018</height>
+    <width>1085</width>
+    <height>1141</height>
    </rect>
   </property>
   <property name="sizePolicy">
@@ -128,7 +128,7 @@
            <rect>
             <x>0</x>
             <y>0</y>
-            <width>1031</width>
+            <width>1081</width>
             <height>50</height>
            </rect>
           </property>
@@ -1177,8 +1177,8 @@
               <rect>
                <x>0</x>
                <y>0</y>
-               <width>406</width>
-               <height>846</height>
+               <width>427</width>
+               <height>964</height>
               </rect>
              </property>
              <layout class="QGridLayout" name="gridLayout">
@@ -1778,7 +1778,7 @@
     <rect>
      <x>0</x>
      <y>0</y>
-     <width>1035</width>
+     <width>1085</width>
      <height>22</height>
     </rect>
    </property>
@@ -3334,8 +3334,8 @@
    <slot>action_new_document_triggered()</slot>
    <hints>
     <hint type="sourcelabel">
-     <x>775</x>
-     <y>66</y>
+     <x>1198</x>
+     <y>65</y>
     </hint>
     <hint type="destinationlabel">
      <x>1002</x>
@@ -3350,8 +3350,8 @@
    <slot>action_undo_triggered()</slot>
    <hints>
     <hint type="sourcelabel">
-     <x>952</x>
-     <y>66</y>
+     <x>1375</x>
+     <y>65</y>
     </hint>
     <hint type="destinationlabel">
      <x>1002</x>
@@ -3366,8 +3366,8 @@
    <slot>action_redo_triggered()</slot>
    <hints>
     <hint type="sourcelabel">
-     <x>994</x>
-     <y>66</y>
+     <x>1417</x>
+     <y>65</y>
     </hint>
     <hint type="destinationlabel">
      <x>1002</x>
@@ -3382,8 +3382,8 @@
    <slot>action_export_image_triggered()</slot>
    <hints>
     <hint type="sourcelabel">
-     <x>901</x>
-     <y>66</y>
+     <x>1324</x>
+     <y>65</y>
     </hint>
     <hint type="destinationlabel">
      <x>1002</x>
@@ -3398,8 +3398,8 @@
    <slot>image_generators_toggled()</slot>
    <hints>
     <hint type="sourcelabel">
-     <x>528</x>
-     <y>72</y>
+     <x>832</x>
+     <y>71</y>
     </hint>
     <hint type="destinationlabel">
      <x>0</x>
@@ -3414,8 +3414,8 @@
    <slot>text_to_gif_toggled()</slot>
    <hints>
     <hint type="sourcelabel">
-     <x>576</x>
-     <y>72</y>
+     <x>880</x>
+     <y>71</y>
     </hint>
     <hint type="destinationlabel">
      <x>0</x>
@@ -3430,8 +3430,8 @@
    <slot>text_to_video_toggled()</slot>
    <hints>
     <hint type="sourcelabel">
-     <x>624</x>
-     <y>72</y>
+     <x>928</x>
+     <y>71</y>
     </hint>
     <hint type="destinationlabel">
      <x>0</x>
@@ -3446,8 +3446,8 @@
    <slot>prompt_builder_toggled()</slot>
    <hints>
     <hint type="sourcelabel">
-     <x>672</x>
-     <y>72</y>
+     <x>976</x>
+     <y>71</y>
     </hint>
     <hint type="destinationlabel">
      <x>0</x>
@@ -3510,8 +3510,8 @@
    <slot>image_generators_toggled()</slot>
    <hints>
     <hint type="sourcelabel">
-     <x>528</x>
-     <y>72</y>
+     <x>832</x>
+     <y>71</y>
     </hint>
     <hint type="destinationlabel">
      <x>754</x>
@@ -3526,8 +3526,8 @@
    <slot>text_to_gif_toggled()</slot>
    <hints>
     <hint type="sourcelabel">
-     <x>576</x>
-     <y>72</y>
+     <x>880</x>
+     <y>71</y>
     </hint>
     <hint type="destinationlabel">
      <x>0</x>
@@ -3542,8 +3542,8 @@
    <slot>text_to_video_toggled()</slot>
    <hints>
     <hint type="sourcelabel">
-     <x>624</x>
-     <y>72</y>
+     <x>928</x>
+     <y>71</y>
     </hint>
     <hint type="destinationlabel">
      <x>1002</x>
@@ -3558,8 +3558,8 @@
    <slot>prompt_builder_toggled()</slot>
    <hints>
     <hint type="sourcelabel">
-     <x>672</x>
-     <y>72</y>
+     <x>976</x>
+     <y>71</y>
     </hint>
     <hint type="destinationlabel">
      <x>1002</x>
@@ -3574,7 +3574,7 @@
    <slot>action_toggle_nsfw_filter_triggered(bool)</slot>
    <hints>
     <hint type="sourcelabel">
-     <x>990</x>
+     <x>1381</x>
      <y>417</y>
     </hint>
     <hint type="destinationlabel">
@@ -3590,7 +3590,7 @@
    <slot>action_show_settings()</slot>
    <hints>
     <hint type="sourcelabel">
-     <x>990</x>
+     <x>1381</x>
      <y>477</y>
     </hint>
     <hint type="destinationlabel">
@@ -3606,7 +3606,7 @@
    <slot>action_toggle_grid(bool)</slot>
    <hints>
     <hint type="sourcelabel">
-     <x>990</x>
+     <x>1381</x>
      <y>315</y>
     </hint>
     <hint type="destinationlabel">
@@ -3622,7 +3622,7 @@
    <slot>action_toggle_active_grid_area(bool)</slot>
    <hints>
     <hint type="sourcelabel">
-     <x>990</x>
+     <x>1381</x>
      <y>153</y>
     </hint>
     <hint type="destinationlabel">
@@ -3638,7 +3638,7 @@
    <slot>action_toggle_eraser(bool)</slot>
    <hints>
     <hint type="sourcelabel">
-     <x>990</x>
+     <x>1381</x>
      <y>255</y>
     </hint>
     <hint type="destinationlabel">
@@ -3654,7 +3654,7 @@
    <slot>action_toggle_brush(bool)</slot>
    <hints>
     <hint type="sourcelabel">
-     <x>990</x>
+     <x>1381</x>
      <y>204</y>
     </hint>
     <hint type="destinationlabel">
@@ -3723,7 +3723,7 @@
     </hint>
     <hint type="destinationlabel">
      <x>452</x>
-     <y>-13</y>
+     <y>0</y>
     </hint>
    </hints>
   </connection>
@@ -3739,7 +3739,7 @@
     </hint>
     <hint type="destinationlabel">
      <x>444</x>
-     <y>-18</y>
+     <y>0</y>
     </hint>
    </hints>
   </connection>
@@ -3755,7 +3755,7 @@
     </hint>
     <hint type="destinationlabel">
      <x>728</x>
-     <y>-6</y>
+     <y>0</y>
     </hint>
    </hints>
   </connection>
@@ -3771,7 +3771,7 @@
     </hint>
     <hint type="destinationlabel">
      <x>731</x>
-     <y>-19</y>
+     <y>0</y>
     </hint>
    </hints>
   </connection>
