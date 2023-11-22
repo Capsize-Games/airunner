@@ -40,7 +40,6 @@
         <height>428</height>
        </rect>
       </property>
-      <layout class="QGridLayout" name="gridLayout_2"/>
      </widget>
     </widget>
    </item>
