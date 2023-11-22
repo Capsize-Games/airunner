@@ -42,21 +42,13 @@ class FilterBase:
 
     @property
     def filter(self):
-        if self._filter is None:
-            module = importlib.import_module(f"airunner.filters.{self.image_filter_data.name}")
-            class_ = getattr(module, self.image_filter_data.filter_class)
-            kwargs = {}
-            for k, v in self._filter_values.items():
-                kwargs[k] = getattr(self, k)
-            self._filter = class_(**kwargs)
+        module = importlib.import_module(f"airunner.filters.{self.image_filter_data.name}")
+        class_ = getattr(module, self.image_filter_data.filter_class)
+        kwargs = {}
+        for k, v in self._filter_values.items():
+            kwargs[k] = getattr(self, k)
+        self._filter = class_(**kwargs)
         return self._filter
-
-    def update_value(self, name, value):
-        self._filter_values[name].value = str(value)
-        self.parent.settings_manager.save()
-
-    def update_canvas(self):
-        self.canvas.update()
 
     def __init__(self, parent, model_name):
         """
@@ -70,8 +62,15 @@ class FilterBase:
         self.filter_window = None
         self.parent = parent
         self.image_filter_model_name = model_name
-        self.canvas = parent.canvas
         self.load_image_filter_data()
+
+    def update_value(self, name, value):
+        self._filter_values[name].value = str(value)
+        self.parent.settings_manager.save()
+
+    def update_canvas(self):
+        if self.parent.canvas_is_active:
+            self.parent.current_canvas.update()
 
     def load_image_filter_data(self):
         self.image_filter_data = self.parent.settings_manager.get_image_filter(self.image_filter_model_name)
@@ -81,7 +80,11 @@ class FilterBase:
     def show(self):
         self.filter_window = uic.loadUi(os.path.join(f"widgets/base_filter/templates/base_filter.ui"))
         self.filter_window.label.setText(self.image_filter_data.display_name)
-
+        self.reject = self.filter_window.reject
+        self.accept = self.filter_window.accept
+        self.filter_window.reject = self.cancel_filter
+        self.filter_window.accept = self.apply_filter
+        
         for key, filter_value in self._filter_values.items():
             if filter_value.value_type in ["float", "int"]:
                 min_value = filter_value.min_value
@@ -90,21 +93,31 @@ class FilterBase:
                     min_value = 0
                 if not max_value:
                     max_value = 100
+
                 if filter_value.value_type == "float":
                     spinbox_value = float(filter_value.value)
                     slider_value = int(spinbox_value * max_value)
                 else:
                     slider_value = int(filter_value.value)
+                
+                spinbox_minimum = min_value
+                spinbox_maximum = max_value
+
+                if filter_value.value_type == "float":
+                    spinbox_minimum = float(min_value) / max_value
+                    spinbox_maximum = float(max_value) / max_value
 
                 slider_spinbox_widget = SliderWidget()
                 slider_spinbox_widget.initialize_properties(
                     slider_callback=self.handle_slider_change,
                     slider_minimum=min_value,
                     slider_maximum=max_value,
-                    spinbox_minimum=min_value / max_value,
-                    spinbox_maximum=max_value / max_value,
+                    spinbox_minimum=spinbox_minimum,
+                    spinbox_maximum=spinbox_maximum,
                     current_value=slider_value,
-                    settings_property=filter_value.name
+                    settings_property=filter_value.name,
+                    label_text=key.replace("_", " ").title(),
+                    display_as_float=filter_value.value_type == "float",
                 )
                 self.filter_window.content.layout().addWidget(slider_spinbox_widget)
 
@@ -115,7 +128,6 @@ class FilterBase:
         # on escape, call the "cancel" button on the QDialogButtonBox
         self.filter_window.keyPressEvent = lambda event: self.cancel_filter() if event.key() == 16777216 else None
 
-        self.parent.current_filter = self.filter
         self.preview_filter()
         self.filter_window.exec()
 
@@ -123,21 +135,22 @@ class FilterBase:
         self.image_filter_data.auto_apply = self.filter_window.auto_apply.isChecked()
         self.parent.settings_manager.save()
 
-    def handle_slider_change(self, val):
-        print("handle_slider_change", val)
+    def handle_slider_change(self, val, settings_property):
+        self.update_value(settings_property, val)
         self.preview_filter()
-        self.canvas.update()
+        self.update_canvas()
 
     def cancel_filter(self):
-        self.filter_window.close()
-        self.parent.canvas.cancel_filter()
+        self.reject()
+        self.parent.current_canvas.cancel_filter()
         self.update_canvas()
 
     def apply_filter(self):
-        self.parent.canvas.apply_filter(self.filter)
+        self.accept()
+        self.parent.current_canvas.apply_filter(self.filter)
         self.filter_window.close()
         self.update_canvas()
 
     def preview_filter(self):
-        self.parent.canvas.preview_filter(self.filter)
+        self.parent.current_canvas.preview_filter(self.filter)
         self.update_canvas()

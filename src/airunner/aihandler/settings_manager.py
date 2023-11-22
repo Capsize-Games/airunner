@@ -190,9 +190,8 @@ class SettingsManager(QObject):
     
     @property
     def llm_generator_setting(self):
-        llm_generator = session.query(LLMGenerator).first()
+        llm_generator = session.query(LLMGenerator).filter(LLMGenerator.name == self.current_llm_generator).first()
         return llm_generator.generator_settings[0]
-
 
     def find_generator(self, generator_section, generator_name):
         # using sqlalchemy, query the document.settings.generator_settings column

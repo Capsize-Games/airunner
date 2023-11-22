@@ -26,16 +26,26 @@ QComboBox::drop-down {
     background-color: @dark-color;
 }
 
+/* hover combobox */
+QComboBox:hover {
+    background-color: @darkerprimary-color;
+}
+
 /* the items in the QComboBox are not dark-color */
-QComboBox QAbstractItemView {
+/* QComboBox QAbstractItemView {
     background-color: @dark-color;
     color: @light-color;
     border: 1px solid @darkprimary-color;
     selection-background-color: @primary-color;
-    selection-color: @light-color;
-}
+    selection-color: @darkerprimary-color;
+} */
 /* hovering over items in the QComboBox should change the background color of those items */
-QComboBox QAbstractItemView::item:hover {
+QComboBox::item:hover QAbstractItemView {
+    background-color: @darkerprimary-color;
+}
+
+/* hover over individual combobox items */
+QComboBox::item:hover {
     background-color: @darkerprimary-color;
 }
 
@@ -65,6 +75,10 @@ QLineEdit {
     border-radius: 0;
     padding: 5px;
     border: 1px solid @darkprimary-color;
+}
+
+QLineEdit:disabled {
+    color: @line-color-dark;
 }
 
 QCheckBox {
@@ -585,12 +599,20 @@ GeneratorTabWidget#generator_widget QTabWidget QTabWidget QTabWidget QTabBar::ta
     border: 1px solid @darkerprimary-color;
 }
 
+#image_frame:hover {
+    border: 1px solid @primary-color;
+}
+
 #tableWidget {
     background-color: @dark-color;
     color: @light-color;
 }
 
 /* table styles */
+#standard_image_widget QTableWidget {
+    border: 1px solid @darkerprimary-color;
+}
+
 QTableWidget {
     border: none;
     background-color: @dark-color;
@@ -613,5 +635,17 @@ QTableWidget::item:selected {
 }
 
 #folder_container {
+    border: 1px solid @darkerprimary-color;
+}
+
+#button_container {
+    padding: 0;
+}
+
+#controls_container QPushButton {
+    border: 1px solid @darkerprimary-color;
+}
+
+#delete_confirmation QPushButton {
     border: 1px solid @darkerprimary-color;
 }

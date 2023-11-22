@@ -439,15 +439,21 @@ if not session.query(Prompt).first():
         # create GeneratorSetting with property, value and property_type based on value type
         setting = LLMGeneratorSetting()
         setting.generator = generator
+        for k, v in generator_data["generator_settings"].items():
+            setting.__setattr__(k, v)
+        session.add(setting)
 
         if "model_versions" in generator_data:
-            model_versions = [LLMModelVersion(name=name) for name in generator_data['model_versions']]
+            model_versions = []
+            for name in generator_data["model_versions"]:
+                print("Name", name)
+                model_versions.append(LLMModelVersion(name=name))
 
         for version in model_versions:
             generator.model_versions.append(version)
 
         session.add(generator)
-    session.commit()
+        session.commit()
 
     from airunner.data.bootstrap.prompt_templates import prompt_template_seed_data
     for data in prompt_template_seed_data:

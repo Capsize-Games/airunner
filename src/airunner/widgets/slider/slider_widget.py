@@ -94,6 +94,7 @@ class SliderWidget(BaseWidget):
     def __init__(self, *args, **kwargs):
         super().__init__(*args, **kwargs)
         self.app.loaded.connect(self.initialize_properties)
+        self.app.window_opened.connect(self.initialize_properties)
     
     def initialize_properties(self, **kwargs):
         slider_callback = kwargs.pop("slider_callback", None)
@@ -103,11 +104,8 @@ class SliderWidget(BaseWidget):
         spinbox_maximum = kwargs.pop("spinbox_maximum", 100.0)
         current_value = kwargs.pop("current_value", 0)
         settings_property = kwargs.pop("settings_property", None)
-
-        # check if properties are set
-        properties_set = self.property("settings_property") is not None
-        if settings_property is None and not properties_set:
-            return
+        label_text = kwargs.pop("label_text", "")
+        display_as_float = kwargs.pop("display_as_float", False)
         
         slider_minimum = self.property("slider_minimum") or slider_minimum
         slider_maximum = self.property("slider_maximum") or slider_maximum
@@ -119,19 +117,21 @@ class SliderWidget(BaseWidget):
         spinbox_maximum = self.property("spinbox_maximum") or spinbox_maximum
         spinbox_single_step = self.property("spinbox_single_step") or 0.01
         spinbox_page_step = self.property("spinbox_page_step") or 0.01
-        label_text = self.property("label_text") or ""
+        label_text = self.property("label_text") or label_text
         current_value = self.property("current_value") or current_value
         slider_name = self.property("slider_name") or None
         spinbox_name = self.property("spinbox_name") or None
         settings_property = self.property("settings_property") or settings_property
-        self.display_as_float = self.property("display_as_float") or False
+        self.display_as_float = self.property("display_as_float") or display_as_float
         self.divide_by = self.property("divide_by") or 1.0
 
-        current_value = self.settings_manager.get_value(settings_property) or 0
+        if settings_property is not None:
+            current_value = self.settings_manager.get_value(settings_property) or 0
 
         # check if slider_callback is str
         if isinstance(slider_callback, str):
-            slider_callback = partial(getattr(self.app, slider_callback), settings_property)
+            print("GETTING SLIDER CALLBACK", slider_callback)
+            slider_callback = getattr(self.app, slider_callback)
 
         # set slider and spinbox names
         if slider_name:
@@ -151,6 +151,7 @@ class SliderWidget(BaseWidget):
         self.spinbox_minimum = spinbox_minimum
         self.spinbox_maximum = spinbox_maximum
         self.label_text = label_text
+        self.settings_property = settings_property
 
         self.label = QLabel(f"{label_text}")
         self.label.setAlignment(Qt.AlignmentFlag.AlignCenter)
@@ -166,6 +167,9 @@ class SliderWidget(BaseWidget):
         self.set_slider_and_spinbox_values(current_value)
         if not self.display_as_float:
             self.ui.slider_spinbox.setDecimals(0)
+        else:
+            decimals = len(str(spinbox_single_step).split(".")[1])
+            self.ui.slider_spinbox.setDecimals(2 if decimals < 2 else decimals)
     
     def set_slider_and_spinbox_values(self, val):
         self.ui.slider.blockSignals(True)
@@ -197,6 +201,7 @@ class SliderWidget(BaseWidget):
         # self.update_label()
 
     def handle_slider_change(self, val):
+        print("SLIDER CHANGED", val)
         position = val#self.ui.slider.sliderPosition()
         single_step = self.ui.slider.singleStep()
         adjusted_value = round(position / single_step) * single_step
@@ -211,7 +216,7 @@ class SliderWidget(BaseWidget):
 
         # self.update_label()
         if self.slider_callback:
-            self.slider_callback(adjusted_value)
+            self.slider_callback(self.settings_property, adjusted_value)
 
     def update_value(self, val):
         self.ui.slider.setValue(int(val))
