@@ -3,6 +3,7 @@ This class should be used to create a window widget for the LLM.
 """
 from PyQt6.QtCore import pyqtSlot
 from PyQt6.QtWidgets import QSpacerItem, QSizePolicy
+from PyQt6.QtWidgets import QWidget
 from sqlalchemy import inspect
 
 from airunner.aihandler.enums import MessageCode
@@ -42,6 +43,8 @@ class LLMWidget(BaseWidget):
 
     def __init__(self, *args, **kwargs):
         super().__init__(*args, **kwargs)
+        # hide tab bar
+        self.ui.tabWidget.tabBar().hide()
         self.load_data()
 
         self.ui.prefix.blockSignals(True)
@@ -101,6 +104,18 @@ class LLMWidget(BaseWidget):
         self.ui.use_gpu_checkbox.blockSignals(True)
         self.ui.override_parameters.blockSignals(True)
 
+        self.ui.top_p.initialize_properties()
+        self.ui.max_length.initialize_properties()
+        self.ui.max_length.initialize_properties()
+        self.ui.repetition_penalty.initialize_properties()
+        self.ui.min_length.initialize_properties()
+        self.ui.length_penalty.initialize_properties()
+        self.ui.num_beams.initialize_properties()
+        self.ui.ngram_size.initialize_properties()
+        self.ui.temperature.initialize_properties()
+        self.ui.sequences.initialize_properties()
+        self.ui.top_k.initialize_properties()
+
         if self.generator:
             self.ui.radio_button_2bit.setChecked(self.generator.generator_settings[0].dtype == "2bit")
             self.ui.radio_button_4bit.setChecked(self.generator.generator_settings[0].dtype == "4bit")
@@ -148,26 +163,33 @@ class LLMWidget(BaseWidget):
         self.ui.use_gpu_checkbox.blockSignals(False)
         self.ui.override_parameters.blockSignals(False)
 
-    def handle_text_generated(self, message):
+    def handle_text_generated(self, messages):
         self.stop_progress_bar()
+
+        # check if messages is string or list
+        if isinstance(messages, str):
+            messages = [messages]
+        
+        for message in messages:
+
+            # strip quotes from start and end of message
+            if not message:
+                return
+            if message.startswith("\""):
+                message = message[1:]
+            if message.endswith("\""):
+                message = message[:-1]
+            message_object = Message(
+                name=self.generator.botname,
+                message=message,
+                conversation=self.conversation
+            )
+            session.add(message_object)
+            session.commit()
+            self.add_message_to_conversation(message_object, is_bot=True)
+
         self.generating = False
         self.enable_send_button()
-
-        # strip quotes from start and end of message
-        if not message:
-            return
-        if message.startswith("\""):
-            message = message[1:]
-        if message.endswith("\""):
-            message = message[:-1]
-        message_object = Message(
-            name=self.generator.botname,
-            message=message,
-            conversation=self.conversation
-        )
-        session.add(message_object)
-        session.commit()
-        self.add_message_to_conversation(message_object, is_bot=True)
 
     def personality_type_changed(self, val):
         self.generator.bot_personality = val
@@ -233,7 +255,7 @@ class LLMWidget(BaseWidget):
         self.generator.botname = val
         save_session()
 
-    def action_button_clicked_send(self):
+    def action_button_clicked_send(self, image_override=None, prompt_override=None, callback=None):
         if self.generating:
             return
             
@@ -247,39 +269,48 @@ class LLMWidget(BaseWidget):
         prompt_template = session.query(LLMPromptTemplate).filter(
             LLMPromptTemplate.name == self.ui.prompt_template.currentText()
         ).first()
+
+        image = self.app.current_active_image() if (image_override is None or image_override is False) else image_override
+
+        prompt = self.prompt if prompt_override is None else prompt_override
+
+        settings = self.generator.generator_settings[0]
         data = {
             "llm_request": True,
             "request_data": {
                 "generator_name": self.generator.name,
-                "model_path": self.generator.generator_settings[0].model_version,
-                "prompt": self.prompt,
+                "model_path": settings.model_version,
+                "prompt": prompt,
                 "do_summary": False,
                 "is_bot_alive": True,
                 "conversation_history": self.conversation_history,
                 "generator": self.generator,
                 "prefix": self.prefix,
                 "suffix": self.suffix,
-                "dtype": self.generator.generator_settings[0].dtype,
-                "use_gpu": self.generator.generator_settings[0].use_gpu,
+                "dtype": settings.dtype,
+                "use_gpu": settings.use_gpu,
                 "request_type": "image_caption_generator",
                 "username": self.generator.username,
                 "botname": self.generator.botname,
                 "prompt_template": prompt_template.template,
                 "parameters": {
                     "override_parameters": self.generator.override_parameters,
-                    "top_p": self.generator.generator_settings[0].top_p,
-                    "max_length": self.generator.generator_settings[0].max_length,
-                    "repetition_penalty": self.generator.generator_settings[0].repetition_penalty,
-                    "min_length": self.generator.generator_settings[0].min_length,
-                    "length_penalty": self.generator.generator_settings[0].length_penalty,
-                    "num_beams": self.generator.generator_settings[0].num_beams,
-                    "ngram_size": self.generator.generator_settings[0].ngram_size,
-                    "temperature": self.generator.generator_settings[0].temperature,
-                    "sequences": self.generator.generator_settings[0].sequences,
-                    "top_k": self.generator.generator_settings[0].top_k,
-                    "seed": self.generator.generator_settings[0].do_sample,
-                    "early_stopping": self.generator.generator_settings[0].early_stopping,
-                }
+                    "top_p": settings.top_p / 100.0,
+                    "max_length": settings.max_length,
+                    "repetition_penalty": settings.repetition_penalty / 100.0,
+                    "min_length": settings.min_length,
+                    "length_penalty": settings.length_penalty / 100,
+                    "num_beams": settings.num_beams,
+                    "ngram_size": settings.ngram_size,
+                    "temperature": settings.temperature / 10000.0,
+                    "sequences": settings.sequences,
+                    "top_k": settings.top_k,
+                    "eta_cutoff": settings.eta_cutoff / 100.0,
+                    "seed": settings.do_sample,
+                    "early_stopping": settings.early_stopping,
+                },
+                "image": image,
+                "callback": callback
             }
         }
         message_object = Message(
@@ -293,6 +324,14 @@ class LLMWidget(BaseWidget):
         self.add_message_to_conversation(message_object=message_object, is_bot=False)
         self.clear_prompt()
         self.start_progress_bar()
+    
+    def describe_image(self, image, callback):
+        print("DESCRIBE IMAGE", callback)
+        self.action_button_clicked_send(
+            image_override=image, 
+            prompt_override="Caption this image",
+            callback=callback
+        )
 
     def add_message_to_conversation(self, message_object, is_bot):
         message = f"{message_object.name} Says: \"{message_object.message}\""
@@ -357,6 +396,9 @@ class LLMWidget(BaseWidget):
         self.load_generator()
         self.generator.generator_settings[0].model = val
         self.update_model_version_combobox()
+        self.model_version_changed(self.ui.model_version.currentText())
+        print("MODEL TEXT CHANGED")
+        self.initialize_form()
 
     def update_model_version_combobox(self):
         self.ui.model_version.blockSignals(True)
@@ -383,6 +425,7 @@ class LLMWidget(BaseWidget):
         self.generator.generator_settings[0].temperature = LLMGeneratorSetting.temperature.default.arg
         self.generator.generator_settings[0].sequences = LLMGeneratorSetting.sequences.default.arg
         self.generator.generator_settings[0].top_k = LLMGeneratorSetting.top_k.default.arg
+        self.generator.generator_settings[0].eta_cutoff = LLMGeneratorSetting.eta_cutoff.default.arg
         self.generator.generator_settings[0].seed = LLMGeneratorSetting.seed.default.arg
         self.generator.generator_settings[0].do_sample = LLMGeneratorSetting.do_sample.default.arg
         self.generator.generator_settings[0].early_stopping = LLMGeneratorSetting.early_stopping.default.arg
@@ -392,16 +435,17 @@ class LLMWidget(BaseWidget):
         self.generator.generator_settings[0].use_gpu = LLMGeneratorSetting.use_gpu.default.arg
         save_session()
         self.initialize_form()
-        self.ui.top_p_2.set_slider_and_spinbox_values(self.generator.generator_settings[0].top_p)
-        self.ui.max_length_2.set_slider_and_spinbox_values(self.generator.generator_settings[0].max_length)
-        self.ui.repetition_penalty_2.set_slider_and_spinbox_values(self.generator.generator_settings[0].repetition_penalty)
-        self.ui.min_length_2.set_slider_and_spinbox_values(self.generator.generator_settings[0].min_length)
-        self.ui.length_penalty_2.set_slider_and_spinbox_values(self.generator.generator_settings[0].length_penalty)
-        self.ui.num_beams_2.set_slider_and_spinbox_values(self.generator.generator_settings[0].num_beams)
-        self.ui.ngram_size_2.set_slider_and_spinbox_values(self.generator.generator_settings[0].ngram_size)
-        self.ui.temperature_2.set_slider_and_spinbox_values(self.generator.generator_settings[0].temperature)
-        self.ui.sequences_2.set_slider_and_spinbox_values(self.generator.generator_settings[0].sequences)
-        self.ui.top_k_2.set_slider_and_spinbox_values(self.generator.generator_settings[0].top_k)
+        self.ui.top_p.set_slider_and_spinbox_values(self.generator.generator_settings[0].top_p)
+        self.ui.max_length.set_slider_and_spinbox_values(self.generator.generator_settings[0].max_length)
+        self.ui.repetition_penalty.set_slider_and_spinbox_values(self.generator.generator_settings[0].repetition_penalty)
+        self.ui.min_length.set_slider_and_spinbox_values(self.generator.generator_settings[0].min_length)
+        self.ui.length_penalty.set_slider_and_spinbox_values(self.generator.generator_settings[0].length_penalty)
+        self.ui.num_beams.set_slider_and_spinbox_values(self.generator.generator_settings[0].num_beams)
+        self.ui.ngram_size.set_slider_and_spinbox_values(self.generator.generator_settings[0].ngram_size)
+        self.ui.temperature.set_slider_and_spinbox_values(self.generator.generator_settings[0].temperature)
+        self.ui.sequences.set_slider_and_spinbox_values(self.generator.generator_settings[0].sequences)
+        self.ui.top_k.set_slider_and_spinbox_values(self.generator.generator_settings[0].top_k)
+        self.ui.eta_cutoff.set_slider_and_spinbox_values(self.generator.generator_settings[0].eta_cutoff)
         self.ui.random_seed.setChecked(self.generator.generator_settings[0].random_seed)
 
     def use_gpu_toggled(self, val):
@@ -446,3 +490,7 @@ class LLMWidget(BaseWidget):
         self.settings_manager.set_value("unload_unused_model", val)
         if val:
             self.settings_manager.set_value("move_unused_model_to_cpu", False)
+    
+    def set_tab(self, tab_name):
+        index = self.ui.tabWidget.indexOf(self.ui.tabWidget.findChild(QWidget, tab_name))
+        self.ui.tabWidget.setCurrentIndex(index)
