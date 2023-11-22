@@ -200,7 +200,7 @@ class GeneratorForm(BaseWidget):
 
     def handle_generate_button_clicked(self):
         self.start_progress_bar()
-        self.generate(image=self.app.current_active_image)
+        self.generate(image=self.app.current_active_image())
 
     def handle_interrupt_button_clicked(self):
         self.app.client.cancel()
@@ -276,18 +276,23 @@ class GeneratorForm(BaseWidget):
 
                 # Get the cropped image
                 cropped_outpaint_box_rect = self.active_rect
+                # crop_location = (
+                #     cropped_outpaint_box_rect.x() - self.canvas.image_pivot_point.x(),
+                #     cropped_outpaint_box_rect.y() - self.canvas.image_pivot_point.y(),
+                #     cropped_outpaint_box_rect.width() - self.canvas.image_pivot_point.x(),
+                #     cropped_outpaint_box_rect.height() - self.canvas.image_pivot_point.y()
+                # )
                 crop_location = (
-                    cropped_outpaint_box_rect.x() - self.canvas.image_pivot_point.x(),
-                    cropped_outpaint_box_rect.y() - self.canvas.image_pivot_point.y(),
-                    cropped_outpaint_box_rect.width() - self.canvas.image_pivot_point.x(),
-                    cropped_outpaint_box_rect.height() - self.canvas.image_pivot_point.y()
+                    cropped_outpaint_box_rect.x() - self.canvas.current_layer.pos_x,
+                    cropped_outpaint_box_rect.y() - self.canvas.current_layer.pos_y,
+                    cropped_outpaint_box_rect.width(),
+                    cropped_outpaint_box_rect.height()
                 )
 
                 # Paste the cropped image into the new image
                 new_image.paste(img.crop(crop_location), (0, 0))
 
                 # Convert the new image to RGB and assign it to image variable
-                image = new_image.convert("RGB")
             else:
                 new_image = image
             
@@ -302,8 +307,9 @@ class GeneratorForm(BaseWidget):
                         pass
             
             # Save the mask and input image for debugging
-            # mask.save("mask.png")
-            # image.save("image.png")
+            image = new_image.convert("RGB")
+            mask.save("mask.png")
+            image.save("image.png")
 
             # Generate a new image using the mask and input image
             self.do_generate({
