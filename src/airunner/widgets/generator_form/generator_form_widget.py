@@ -308,8 +308,6 @@ class GeneratorForm(BaseWidget):
             
             # Save the mask and input image for debugging
             image = new_image.convert("RGB")
-            mask.save("mask.png")
-            image.save("image.png")
 
             # Generate a new image using the mask and input image
             self.do_generate({
