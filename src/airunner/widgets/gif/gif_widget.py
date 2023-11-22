@@ -1,7 +1,9 @@
 import os
 
+from PyQt6.QtCore import Qt
 from PyQt6.QtGui import QMovie
 from PyQt6.QtWidgets import QLabel
+from PyQt6.QtCore import QSize
 
 from airunner.widgets.base_widget import BaseWidget
 from airunner.widgets.gif.templates.gif_widget_ui import Ui_gif_widget
@@ -22,6 +24,13 @@ class GifWidget(BaseWidget):
 
         # Set the movie to the label
         label.setMovie(movie)
+        size = self.ui.gif_frame.width()
+        # scale the gif to fit the frame
+        movie.setScaledSize(QSize(size, size))
+        label.setFixedWidth(size)
+        label.setFixedHeight(size)
+        label.mousePressEvent = self.handle_label_clicked
+        label.setCursor(Qt.CursorShape.PointingHandCursor)
 
         # Start the movie
         movie.start()
@@ -32,3 +41,6 @@ class GifWidget(BaseWidget):
         os.remove(self.gif_path)
         # delete this widget
         self.deleteLater()
+    
+    def handle_label_clicked(self, event):
+        print("label clicked")
