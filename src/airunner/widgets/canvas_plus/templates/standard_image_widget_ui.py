@@ -1,4 +1,4 @@
-# Form implementation generated from reading ui file '/home/joe/Projects/imagetopixel/airunner/src/airunner/../../src/airunner/widgets/canvas_plus/templates/standard_image_widget.ui'
+# Form implementation generated from reading ui file '/home/joe/Projects/imagetopixel/airunner/src/airunner/widgets/canvas_plus/templates/standard_image_widget.ui'
 #
 # Created by: PyQt6 UI code generator 6.4.2
 #
@@ -36,18 +36,18 @@ class Ui_standard_image_widget(object):
         self.horizontalLayout = QtWidgets.QHBoxLayout(self.controls_container)
         self.horizontalLayout.setContentsMargins(0, 0, 0, 0)
         self.horizontalLayout.setObjectName("horizontalLayout")
-        self.pushButton_7 = QtWidgets.QPushButton(parent=self.controls_container)
-        self.pushButton_7.setCursor(QtGui.QCursor(QtCore.Qt.CursorShape.PointingHandCursor))
-        self.pushButton_7.setObjectName("pushButton_7")
-        self.horizontalLayout.addWidget(self.pushButton_7)
-        self.pushButton = QtWidgets.QPushButton(parent=self.controls_container)
-        self.pushButton.setCursor(QtGui.QCursor(QtCore.Qt.CursorShape.PointingHandCursor))
-        self.pushButton.setObjectName("pushButton")
-        self.horizontalLayout.addWidget(self.pushButton)
-        self.pushButton_4 = QtWidgets.QPushButton(parent=self.controls_container)
-        self.pushButton_4.setCursor(QtGui.QCursor(QtCore.Qt.CursorShape.PointingHandCursor))
-        self.pushButton_4.setObjectName("pushButton_4")
-        self.horizontalLayout.addWidget(self.pushButton_4)
+        self.export_button = QtWidgets.QPushButton(parent=self.controls_container)
+        self.export_button.setCursor(QtGui.QCursor(QtCore.Qt.CursorShape.PointingHandCursor))
+        self.export_button.setObjectName("export_button")
+        self.horizontalLayout.addWidget(self.export_button)
+        self.delete_button = QtWidgets.QPushButton(parent=self.controls_container)
+        self.delete_button.setCursor(QtGui.QCursor(QtCore.Qt.CursorShape.PointingHandCursor))
+        self.delete_button.setObjectName("delete_button")
+        self.horizontalLayout.addWidget(self.delete_button)
+        self.to_canvas_button = QtWidgets.QPushButton(parent=self.controls_container)
+        self.to_canvas_button.setCursor(QtGui.QCursor(QtCore.Qt.CursorShape.PointingHandCursor))
+        self.to_canvas_button.setObjectName("to_canvas_button")
+        self.horizontalLayout.addWidget(self.to_canvas_button)
         self.verticalLayout.addWidget(self.controls_container)
         self.delete_confirmation = QtWidgets.QWidget(parent=standard_image_widget)
         self.delete_confirmation.setObjectName("delete_confirmation")
@@ -62,14 +62,14 @@ class Ui_standard_image_widget(object):
         self.buttons.setContentsMargins(0, 0, 0, 0)
         self.buttons.setObjectName("buttons")
         self.gridLayout.addWidget(self.button_container, 0, 0, 1, 2)
-        self.pushButton_5 = QtWidgets.QPushButton(parent=self.delete_confirmation)
-        self.pushButton_5.setCursor(QtGui.QCursor(QtCore.Qt.CursorShape.PointingHandCursor))
-        self.pushButton_5.setObjectName("pushButton_5")
-        self.gridLayout.addWidget(self.pushButton_5, 4, 0, 1, 1)
-        self.pushButton_6 = QtWidgets.QPushButton(parent=self.delete_confirmation)
-        self.pushButton_6.setCursor(QtGui.QCursor(QtCore.Qt.CursorShape.PointingHandCursor))
-        self.pushButton_6.setObjectName("pushButton_6")
-        self.gridLayout.addWidget(self.pushButton_6, 4, 1, 1, 1)
+        self.confirm_delete_button = QtWidgets.QPushButton(parent=self.delete_confirmation)
+        self.confirm_delete_button.setCursor(QtGui.QCursor(QtCore.Qt.CursorShape.PointingHandCursor))
+        self.confirm_delete_button.setObjectName("confirm_delete_button")
+        self.gridLayout.addWidget(self.confirm_delete_button, 4, 0, 1, 1)
+        self.cancel_delete_button = QtWidgets.QPushButton(parent=self.delete_confirmation)
+        self.cancel_delete_button.setCursor(QtGui.QCursor(QtCore.Qt.CursorShape.PointingHandCursor))
+        self.cancel_delete_button.setObjectName("cancel_delete_button")
+        self.gridLayout.addWidget(self.cancel_delete_button, 4, 1, 1, 1)
         self.verticalLayout.addWidget(self.delete_confirmation)
         self.similar_groupbox = QtWidgets.QGroupBox(parent=standard_image_widget)
         self.similar_groupbox.setObjectName("similar_groupbox")
@@ -89,14 +89,14 @@ class Ui_standard_image_widget(object):
         self.samples_widget.setProperty("slider_minimum", 0)
         self.samples_widget.setObjectName("samples_widget")
         self.horizontalLayout_3.addWidget(self.samples_widget)
-        self.pushButton_3 = QtWidgets.QPushButton(parent=self.similar_groupbox)
-        self.pushButton_3.setCursor(QtGui.QCursor(QtCore.Qt.CursorShape.PointingHandCursor))
-        self.pushButton_3.setObjectName("pushButton_3")
-        self.horizontalLayout_3.addWidget(self.pushButton_3)
-        self.pushButton_2 = QtWidgets.QPushButton(parent=self.similar_groupbox)
-        self.pushButton_2.setCursor(QtGui.QCursor(QtCore.Qt.CursorShape.PointingHandCursor))
-        self.pushButton_2.setObjectName("pushButton_2")
-        self.horizontalLayout_3.addWidget(self.pushButton_2)
+        self.generate_single_simillar_button = QtWidgets.QPushButton(parent=self.similar_groupbox)
+        self.generate_single_simillar_button.setCursor(QtGui.QCursor(QtCore.Qt.CursorShape.PointingHandCursor))
+        self.generate_single_simillar_button.setObjectName("generate_single_simillar_button")
+        self.horizontalLayout_3.addWidget(self.generate_single_simillar_button)
+        self.generate_batch_similar_button = QtWidgets.QPushButton(parent=self.similar_groupbox)
+        self.generate_batch_similar_button.setCursor(QtGui.QCursor(QtCore.Qt.CursorShape.PointingHandCursor))
+        self.generate_batch_similar_button.setObjectName("generate_batch_similar_button")
+        self.horizontalLayout_3.addWidget(self.generate_batch_similar_button)
         self.verticalLayout.addWidget(self.similar_groupbox)
         self.gridLayout_2.addLayout(self.verticalLayout, 0, 0, 1, 1)
         spacerItem = QtWidgets.QSpacerItem(20, 40, QtWidgets.QSizePolicy.Policy.Minimum, QtWidgets.QSizePolicy.Policy.Expanding)
@@ -123,33 +123,33 @@ class Ui_standard_image_widget(object):
         self.gridLayout_2.addWidget(self.batch_container, 5, 0, 1, 1)
 
         self.retranslateUi(standard_image_widget)
-        self.pushButton_5.clicked.connect(standard_image_widget.confirm_delete) # type: ignore
-        self.pushButton_6.clicked.connect(standard_image_widget.cancel_delete) # type: ignore
-        self.pushButton_4.clicked.connect(standard_image_widget.image_to_canvas) # type: ignore
-        self.pushButton.clicked.connect(standard_image_widget.delete_image) # type: ignore
-        self.pushButton_3.clicked.connect(standard_image_widget.similar_image) # type: ignore
-        self.pushButton_2.clicked.connect(standard_image_widget.similar_batch) # type: ignore
-        self.pushButton_7.clicked.connect(standard_image_widget.export_image) # type: ignore
+        self.confirm_delete_button.clicked.connect(standard_image_widget.confirm_delete) # type: ignore
+        self.cancel_delete_button.clicked.connect(standard_image_widget.cancel_delete) # type: ignore
+        self.to_canvas_button.clicked.connect(standard_image_widget.image_to_canvas) # type: ignore
+        self.delete_button.clicked.connect(standard_image_widget.delete_image) # type: ignore
+        self.generate_single_simillar_button.clicked.connect(standard_image_widget.similar_image) # type: ignore
+        self.generate_batch_similar_button.clicked.connect(standard_image_widget.similar_batch) # type: ignore
+        self.export_button.clicked.connect(standard_image_widget.export_image) # type: ignore
         QtCore.QMetaObject.connectSlotsByName(standard_image_widget)
 
     def retranslateUi(self, standard_image_widget):
         _translate = QtCore.QCoreApplication.translate
         standard_image_widget.setWindowTitle(_translate("standard_image_widget", "Form"))
-        self.pushButton_7.setText(_translate("standard_image_widget", "Export"))
-        self.pushButton.setToolTip(_translate("standard_image_widget", "Permanently delete this image"))
-        self.pushButton.setText(_translate("standard_image_widget", "Delete"))
-        self.pushButton_4.setToolTip(_translate("standard_image_widget", "Send this image to the canvas"))
-        self.pushButton_4.setText(_translate("standard_image_widget", "To Canvas"))
+        self.export_button.setText(_translate("standard_image_widget", "Export"))
+        self.delete_button.setToolTip(_translate("standard_image_widget", "Permanently delete this image"))
+        self.delete_button.setText(_translate("standard_image_widget", "Delete"))
+        self.to_canvas_button.setToolTip(_translate("standard_image_widget", "Send this image to the canvas"))
+        self.to_canvas_button.setText(_translate("standard_image_widget", "To Canvas"))
         self.label.setText(_translate("standard_image_widget", "Permanently delete?"))
-        self.pushButton_5.setText(_translate("standard_image_widget", "Yes"))
-        self.pushButton_6.setText(_translate("standard_image_widget", "No"))
+        self.confirm_delete_button.setText(_translate("standard_image_widget", "Yes"))
+        self.cancel_delete_button.setText(_translate("standard_image_widget", "No"))
         self.similar_groupbox.setTitle(_translate("standard_image_widget", "Generate similar images"))
         self.samples_widget.setProperty("label_text", _translate("standard_image_widget", "Similarity"))
         self.samples_widget.setProperty("settings_property", _translate("standard_image_widget", "image_similarity"))
-        self.pushButton_3.setToolTip(_translate("standard_image_widget", "Generate one variation"))
-        self.pushButton_3.setText(_translate("standard_image_widget", "Single"))
-        self.pushButton_2.setToolTip(_translate("standard_image_widget", "Generate a batch of four variations"))
-        self.pushButton_2.setText(_translate("standard_image_widget", "Batch"))
+        self.generate_single_simillar_button.setToolTip(_translate("standard_image_widget", "Generate one variation"))
+        self.generate_single_simillar_button.setText(_translate("standard_image_widget", "Single"))
+        self.generate_batch_similar_button.setToolTip(_translate("standard_image_widget", "Generate a batch of four variations"))
+        self.generate_batch_similar_button.setText(_translate("standard_image_widget", "Batch"))
         item = self.tableWidget.horizontalHeaderItem(0)
         item.setText(_translate("standard_image_widget", "New Column"))
         item = self.tableWidget.horizontalHeaderItem(1)
