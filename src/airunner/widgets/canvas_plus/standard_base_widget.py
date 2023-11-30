@@ -31,7 +31,7 @@ class StandardBaseWidget(CanvasBaseWidget):
         pass
 
     def load_image_from_path(self, image_path):
-        pass
+        pass         
 
     def export_image(self):
         pass

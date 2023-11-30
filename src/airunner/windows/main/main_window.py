@@ -813,7 +813,6 @@ class MainWindow(
             ("edit-document-icon", "language_processing_button"),
             ("tech-icon", "model_manager_button"),
             ("photo-editor-icon", "image_generators_button"),
-            ("gif-editor-icon", "txt2gif_button"),
             ("video-editor-icon", "txt2vid_button"),
             ("prompt-editor-icon", "prompt_builder_button"),
             ("pencil-icon", "toggle_brush_button"),
@@ -1585,14 +1584,11 @@ class MainWindow(
     def initialize_tool_section_buttons(self):
         self.toggle_tool_section_buttons_visibility()
         self.set_button_checked("image_generators", False)
-        self.set_button_checked("txt2gif", False)
         self.set_button_checked("txt2vid", False)
         self.set_button_checked("prompt_builder", False)
         if self.settings_manager.mode == Mode.IMAGE.value:
             if self.settings_manager.generator_section == GeneratorSection.TXT2VID.value:
                 self.set_button_checked("txt2vid")
-            elif self.settings_manager.generator_section == GeneratorSection.TXT2GIF.value:
-                self.set_button_checked("txt2gif")
             elif self.settings_manager.generator_section == GeneratorSection.PROMPT_BUILDER.value:
                 self.set_button_checked("prompt_builder")
             else:
@@ -1616,12 +1612,10 @@ class MainWindow(
 
     
     def set_all_image_generator_buttons(self):
+        is_image_generators = self.settings_manager.generator_section == GeneratorSection.TXT2IMG.value
         is_txt2vid = self.settings_manager.generator_section == GeneratorSection.TXT2VID.value
-        is_txt2gif = self.settings_manager.generator_section == GeneratorSection.TXT2GIF.value
         is_prompt_builder = self.settings_manager.generator_section == GeneratorSection.PROMPT_BUILDER.value
-        is_image_generators = not is_txt2vid and not is_txt2gif and not is_prompt_builder
         self.set_button_checked("image_generators", is_image_generators)
-        self.set_button_checked("txt2gif", is_txt2gif)
         self.set_button_checked("txt2vid", is_txt2vid)
         self.set_button_checked("prompt_builder", is_prompt_builder)
     
@@ -1662,9 +1656,7 @@ class MainWindow(
             current_tab = "shape"
             self.settings_manager.set_value("current_tab", current_tab)
         self.settings_manager.set_value("mode", Mode.IMAGE.value)
-        self.settings_manager.set_value(f"current_section_{current_tab}", GeneratorSection.TXT2GIF.value)
         self.generator_tab_widget.set_current_section_tab()
-        self.settings_manager.set_value("generator_section", GeneratorSection.TXT2GIF.value)
         active_tab_obj = session.query(TabSection).filter(TabSection.panel == "center_tab").first()
         active_tab_obj.active_tab = "GIF"
         save_session()
