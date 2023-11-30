@@ -1,4 +1,4 @@
-# Form implementation generated from reading ui file '/home/joe/Projects/imagetopixel/airunner/src/airunner/../../src/airunner/windows/main/templates/main_window.ui'
+# Form implementation generated from reading ui file '/home/joe/Projects/imagetopixel/airunner/src/airunner/windows/main/templates/main_window.ui'
 #
 # Created by: PyQt6 UI code generator 6.4.2
 #
@@ -198,27 +198,14 @@ class Ui_MainWindow(object):
         self.image_generators_button.setFlat(True)
         self.image_generators_button.setObjectName("image_generators_button")
         self.horizontalLayout_4.addWidget(self.image_generators_button)
-        self.txt2gif_button = QtWidgets.QPushButton(parent=self.image_generator_header_tools)
-        self.txt2gif_button.setMinimumSize(QtCore.QSize(48, 48))
-        self.txt2gif_button.setMaximumSize(QtCore.QSize(48, 48))
-        self.txt2gif_button.setCursor(QtGui.QCursor(QtCore.Qt.CursorShape.PointingHandCursor))
-        self.txt2gif_button.setText("")
-        icon9 = QtGui.QIcon()
-        icon9.addPixmap(QtGui.QPixmap(":/icons/light/gif-editor-icon.svg"), QtGui.QIcon.Mode.Normal, QtGui.QIcon.State.Off)
-        self.txt2gif_button.setIcon(icon9)
-        self.txt2gif_button.setIconSize(QtCore.QSize(24, 24))
-        self.txt2gif_button.setCheckable(True)
-        self.txt2gif_button.setFlat(True)
-        self.txt2gif_button.setObjectName("txt2gif_button")
-        self.horizontalLayout_4.addWidget(self.txt2gif_button)
         self.txt2vid_button = QtWidgets.QPushButton(parent=self.image_generator_header_tools)
         self.txt2vid_button.setMinimumSize(QtCore.QSize(48, 48))
         self.txt2vid_button.setMaximumSize(QtCore.QSize(48, 48))
         self.txt2vid_button.setCursor(QtGui.QCursor(QtCore.Qt.CursorShape.PointingHandCursor))
         self.txt2vid_button.setText("")
-        icon10 = QtGui.QIcon()
-        icon10.addPixmap(QtGui.QPixmap(":/icons/light/video-editor-icon.svg"), QtGui.QIcon.Mode.Normal, QtGui.QIcon.State.Off)
-        self.txt2vid_button.setIcon(icon10)
+        icon9 = QtGui.QIcon()
+        icon9.addPixmap(QtGui.QPixmap(":/icons/light/video-editor-icon.svg"), QtGui.QIcon.Mode.Normal, QtGui.QIcon.State.Off)
+        self.txt2vid_button.setIcon(icon9)
         self.txt2vid_button.setIconSize(QtCore.QSize(24, 24))
         self.txt2vid_button.setCheckable(True)
         self.txt2vid_button.setFlat(True)
@@ -229,9 +216,9 @@ class Ui_MainWindow(object):
         self.prompt_builder_button.setMaximumSize(QtCore.QSize(48, 48))
         self.prompt_builder_button.setCursor(QtGui.QCursor(QtCore.Qt.CursorShape.PointingHandCursor))
         self.prompt_builder_button.setText("")
-        icon11 = QtGui.QIcon()
-        icon11.addPixmap(QtGui.QPixmap(":/icons/light/prompt-editor-icon.svg"), QtGui.QIcon.Mode.Normal, QtGui.QIcon.State.Off)
-        self.prompt_builder_button.setIcon(icon11)
+        icon10 = QtGui.QIcon()
+        icon10.addPixmap(QtGui.QPixmap(":/icons/light/prompt-editor-icon.svg"), QtGui.QIcon.Mode.Normal, QtGui.QIcon.State.Off)
+        self.prompt_builder_button.setIcon(icon10)
         self.prompt_builder_button.setIconSize(QtCore.QSize(24, 24))
         self.prompt_builder_button.setCheckable(True)
         self.prompt_builder_button.setFlat(True)
@@ -408,19 +395,6 @@ class Ui_MainWindow(object):
         self.tab_txt2vid = QtWidgets.QWidget()
         self.tab_txt2vid.setObjectName("tab_txt2vid")
         self.center_tab.addTab(self.tab_txt2vid, "")
-        self.tab_shapegif = QtWidgets.QWidget()
-        self.tab_shapegif.setObjectName("tab_shapegif")
-        self.gridLayout_11 = QtWidgets.QGridLayout(self.tab_shapegif)
-        self.gridLayout_11.setObjectName("gridLayout_11")
-        self.splitter_3 = QtWidgets.QSplitter(parent=self.tab_shapegif)
-        self.splitter_3.setOrientation(QtCore.Qt.Orientation.Horizontal)
-        self.splitter_3.setObjectName("splitter_3")
-        self.widget_2 = StandardGifWidget(parent=self.splitter_3)
-        self.widget_2.setObjectName("widget_2")
-        self.widget = GifPanelWidget(parent=self.splitter_3)
-        self.widget.setObjectName("widget")
-        self.gridLayout_11.addWidget(self.splitter_3, 0, 0, 1, 1)
-        self.center_tab.addTab(self.tab_shapegif, "")
         self.tab_prompt_builder = QtWidgets.QWidget()
         self.tab_prompt_builder.setObjectName("tab_prompt_builder")
         self.gridLayout_16 = QtWidgets.QGridLayout(self.tab_prompt_builder)
@@ -534,9 +508,9 @@ class Ui_MainWindow(object):
         self.toggle_active_grid_area_button.setMaximumSize(QtCore.QSize(50, 45))
         self.toggle_active_grid_area_button.setCursor(QtGui.QCursor(QtCore.Qt.CursorShape.PointingHandCursor))
         self.toggle_active_grid_area_button.setText("")
-        icon12 = QtGui.QIcon()
-        icon12.addPixmap(QtGui.QPixmap(":/icons/light/object-selected-icon.svg"), QtGui.QIcon.Mode.Normal, QtGui.QIcon.State.Off)
-        self.toggle_active_grid_area_button.setIcon(icon12)
+        icon11 = QtGui.QIcon()
+        icon11.addPixmap(QtGui.QPixmap(":/icons/light/object-selected-icon.svg"), QtGui.QIcon.Mode.Normal, QtGui.QIcon.State.Off)
+        self.toggle_active_grid_area_button.setIcon(icon11)
         self.toggle_active_grid_area_button.setIconSize(QtCore.QSize(18, 18))
         self.toggle_active_grid_area_button.setCheckable(True)
         self.toggle_active_grid_area_button.setFlat(True)
@@ -552,9 +526,9 @@ class Ui_MainWindow(object):
         self.toggle_brush_button.setMaximumSize(QtCore.QSize(50, 45))
         self.toggle_brush_button.setCursor(QtGui.QCursor(QtCore.Qt.CursorShape.PointingHandCursor))
         self.toggle_brush_button.setText("")
-        icon13 = QtGui.QIcon()
-        icon13.addPixmap(QtGui.QPixmap(":/icons/light/pencil-icon.svg"), QtGui.QIcon.Mode.Normal, QtGui.QIcon.State.Off)
-        self.toggle_brush_button.setIcon(icon13)
+        icon12 = QtGui.QIcon()
+        icon12.addPixmap(QtGui.QPixmap(":/icons/light/pencil-icon.svg"), QtGui.QIcon.Mode.Normal, QtGui.QIcon.State.Off)
+        self.toggle_brush_button.setIcon(icon12)
         self.toggle_brush_button.setIconSize(QtCore.QSize(18, 18))
         self.toggle_brush_button.setCheckable(True)
         self.toggle_brush_button.setFlat(True)
@@ -570,9 +544,9 @@ class Ui_MainWindow(object):
         self.toggle_eraser_button.setMaximumSize(QtCore.QSize(50, 45))
         self.toggle_eraser_button.setCursor(QtGui.QCursor(QtCore.Qt.CursorShape.PointingHandCursor))
         self.toggle_eraser_button.setText("")
-        icon14 = QtGui.QIcon()
-        icon14.addPixmap(QtGui.QPixmap(":/icons/light/eraser-icon.svg"), QtGui.QIcon.Mode.Normal, QtGui.QIcon.State.Off)
-        self.toggle_eraser_button.setIcon(icon14)
+        icon13 = QtGui.QIcon()
+        icon13.addPixmap(QtGui.QPixmap(":/icons/light/eraser-icon.svg"), QtGui.QIcon.Mode.Normal, QtGui.QIcon.State.Off)
+        self.toggle_eraser_button.setIcon(icon13)
         self.toggle_eraser_button.setIconSize(QtCore.QSize(18, 18))
         self.toggle_eraser_button.setCheckable(True)
         self.toggle_eraser_button.setFlat(True)
@@ -598,9 +572,9 @@ class Ui_MainWindow(object):
         self.toggle_grid_button.setMaximumSize(QtCore.QSize(50, 45))
         self.toggle_grid_button.setCursor(QtGui.QCursor(QtCore.Qt.CursorShape.PointingHandCursor))
         self.toggle_grid_button.setText("")
-        icon15 = QtGui.QIcon()
-        icon15.addPixmap(QtGui.QPixmap(":/icons/light/frame-grid-icon.svg"), QtGui.QIcon.Mode.Normal, QtGui.QIcon.State.Off)
-        self.toggle_grid_button.setIcon(icon15)
+        icon14 = QtGui.QIcon()
+        icon14.addPixmap(QtGui.QPixmap(":/icons/light/frame-grid-icon.svg"), QtGui.QIcon.Mode.Normal, QtGui.QIcon.State.Off)
+        self.toggle_grid_button.setIcon(icon14)
         self.toggle_grid_button.setIconSize(QtCore.QSize(18, 18))
         self.toggle_grid_button.setCheckable(True)
         self.toggle_grid_button.setFlat(True)
@@ -616,9 +590,9 @@ class Ui_MainWindow(object):
         self.focus_button.setMaximumSize(QtCore.QSize(50, 45))
         self.focus_button.setCursor(QtGui.QCursor(QtCore.Qt.CursorShape.PointingHandCursor))
         self.focus_button.setText("")
-        icon16 = QtGui.QIcon()
-        icon16.addPixmap(QtGui.QPixmap(":/icons/light/circle-center-icon.svg"), QtGui.QIcon.Mode.Normal, QtGui.QIcon.State.Off)
-        self.focus_button.setIcon(icon16)
+        icon15 = QtGui.QIcon()
+        icon15.addPixmap(QtGui.QPixmap(":/icons/light/circle-center-icon.svg"), QtGui.QIcon.Mode.Normal, QtGui.QIcon.State.Off)
+        self.focus_button.setIcon(icon15)
         self.focus_button.setIconSize(QtCore.QSize(18, 18))
         self.focus_button.setFlat(True)
         self.focus_button.setObjectName("focus_button")
@@ -633,9 +607,9 @@ class Ui_MainWindow(object):
         self.safety_checker_button.setMaximumSize(QtCore.QSize(50, 45))
         self.safety_checker_button.setCursor(QtGui.QCursor(QtCore.Qt.CursorShape.PointingHandCursor))
         self.safety_checker_button.setText("")
-        icon17 = QtGui.QIcon()
-        icon17.addPixmap(QtGui.QPixmap(":/icons/light/adult-sign-icon.svg"), QtGui.QIcon.Mode.Normal, QtGui.QIcon.State.Off)
-        self.safety_checker_button.setIcon(icon17)
+        icon16 = QtGui.QIcon()
+        icon16.addPixmap(QtGui.QPixmap(":/icons/light/adult-sign-icon.svg"), QtGui.QIcon.Mode.Normal, QtGui.QIcon.State.Off)
+        self.safety_checker_button.setIcon(icon16)
         self.safety_checker_button.setIconSize(QtCore.QSize(18, 18))
         self.safety_checker_button.setCheckable(True)
         self.safety_checker_button.setFlat(True)
@@ -727,15 +701,15 @@ class Ui_MainWindow(object):
         self.actionPaste = QtGui.QAction(parent=MainWindow)
         self.actionPaste.setObjectName("actionPaste")
         self.actionUndo = QtGui.QAction(parent=MainWindow)
-        icon18 = QtGui.QIcon()
-        icon18.addPixmap(QtGui.QPixmap("/home/joe/Projects/imagetopixel/airunner/src/airunner/../../src/airunner/windows/main/templates/../../../../../../../../../../../../../../.designer/src/icons/007-undo.png"), QtGui.QIcon.Mode.Normal, QtGui.QIcon.State.Off)
-        self.actionUndo.setIcon(icon18)
+        icon17 = QtGui.QIcon()
+        icon17.addPixmap(QtGui.QPixmap("/home/joe/Projects/imagetopixel/airunner/src/airunner/windows/main/templates/../../../../../../../../../../../../../../.designer/src/icons/007-undo.png"), QtGui.QIcon.Mode.Normal, QtGui.QIcon.State.Off)
+        self.actionUndo.setIcon(icon17)
         self.actionUndo.setWhatsThis("")
         self.actionUndo.setObjectName("actionUndo")
         self.actionRedo = QtGui.QAction(parent=MainWindow)
-        icon19 = QtGui.QIcon()
-        icon19.addPixmap(QtGui.QPixmap("/home/joe/Projects/imagetopixel/airunner/src/airunner/../../src/airunner/windows/main/templates/../../../../../../../../../../../../../../.designer/src/icons/008-redo.png"), QtGui.QIcon.Mode.Normal, QtGui.QIcon.State.Off)
-        self.actionRedo.setIcon(icon19)
+        icon18 = QtGui.QIcon()
+        icon18.addPixmap(QtGui.QPixmap("/home/joe/Projects/imagetopixel/airunner/src/airunner/windows/main/templates/../../../../../../../../../../../../../../.designer/src/icons/008-redo.png"), QtGui.QIcon.Mode.Normal, QtGui.QIcon.State.Off)
+        self.actionRedo.setIcon(icon18)
         self.actionRedo.setObjectName("actionRedo")
         self.actionGrid = QtGui.QAction(parent=MainWindow)
         self.actionGrid.setObjectName("actionGrid")
@@ -851,10 +825,10 @@ class Ui_MainWindow(object):
         self.actionClear_all_prompts = QtGui.QAction(parent=MainWindow)
         self.actionClear_all_prompts.setObjectName("actionClear_all_prompts")
         self.actionUndo_2 = QtGui.QAction(parent=MainWindow)
-        self.actionUndo_2.setIcon(icon18)
+        self.actionUndo_2.setIcon(icon17)
         self.actionUndo_2.setObjectName("actionUndo_2")
         self.actionRedo_2 = QtGui.QAction(parent=MainWindow)
-        self.actionRedo_2.setIcon(icon19)
+        self.actionRedo_2.setIcon(icon18)
         self.actionRedo_2.setObjectName("actionRedo_2")
         self.actionCut = QtGui.QAction(parent=MainWindow)
         self.actionCut.setObjectName("actionCut")
@@ -1049,14 +1023,12 @@ class Ui_MainWindow(object):
         self.redo_button.clicked.connect(MainWindow.action_redo_triggered) # type: ignore
         self.export_button.clicked.connect(MainWindow.action_export_image_triggered) # type: ignore
         self.image_generators_button.pressed.connect(MainWindow.image_generators_toggled) # type: ignore
-        self.txt2gif_button.pressed.connect(MainWindow.text_to_gif_toggled) # type: ignore
         self.txt2vid_button.pressed.connect(MainWindow.text_to_video_toggled) # type: ignore
         self.prompt_builder_button.pressed.connect(MainWindow.prompt_builder_toggled) # type: ignore
         self.image_generation_button.released.connect(MainWindow.image_generation_toggled) # type: ignore
         self.language_processing_button.released.connect(MainWindow.language_processing_toggled) # type: ignore
         self.model_manager_button.released.connect(MainWindow.model_manager_toggled) # type: ignore
         self.image_generators_button.released.connect(MainWindow.image_generators_toggled) # type: ignore
-        self.txt2gif_button.released.connect(MainWindow.text_to_gif_toggled) # type: ignore
         self.txt2vid_button.released.connect(MainWindow.text_to_video_toggled) # type: ignore
         self.prompt_builder_button.released.connect(MainWindow.prompt_builder_toggled) # type: ignore
         self.safety_checker_button.toggled['bool'].connect(MainWindow.action_toggle_nsfw_filter_triggered) # type: ignore
@@ -1081,7 +1053,6 @@ class Ui_MainWindow(object):
         self.language_processing_button.setToolTip(_translate("MainWindow", "Language Processing"))
         self.model_manager_button.setToolTip(_translate("MainWindow", "Model manager"))
         self.image_generators_button.setToolTip(_translate("MainWindow", "Image generators"))
-        self.txt2gif_button.setToolTip(_translate("MainWindow", "Text to Gif generator (Shap-E)"))
         self.txt2vid_button.setToolTip(_translate("MainWindow", "Text to Video"))
         self.prompt_builder_button.setToolTip(_translate("MainWindow", "Prompt Builder"))
         self.file_new_button.setToolTip(_translate("MainWindow", "New"))
@@ -1094,7 +1065,6 @@ class Ui_MainWindow(object):
         self.image_editor_tab_widget.setTabText(self.image_editor_tab_widget.indexOf(self.Standard), _translate("MainWindow", "Standard"))
         self.center_tab.setTabText(self.center_tab.indexOf(self.tab_image), _translate("MainWindow", "Canvas"))
         self.center_tab.setTabText(self.center_tab.indexOf(self.tab_txt2vid), _translate("MainWindow", "Video"))
-        self.center_tab.setTabText(self.center_tab.indexOf(self.tab_shapegif), _translate("MainWindow", "GIF"))
         self.center_tab.setTabText(self.center_tab.indexOf(self.tab_prompt_builder), _translate("MainWindow", "Prompt Builder"))
         self.tool_tab_widget.setTabText(self.tool_tab_widget.indexOf(self.tab_embeddings), _translate("MainWindow", "Embeddings"))
         self.tool_tab_widget.setTabText(self.tool_tab_widget.indexOf(self.tab_lora), _translate("MainWindow", "LoRA"))
@@ -1242,12 +1212,10 @@ from airunner.widgets.active_grid_settings.active_grid_settings_widget import Ac
 from airunner.widgets.batch.batch_widget import BatchWidget
 from airunner.widgets.brush.brush_container_widget import BrushContainerWidget
 from airunner.widgets.canvas_plus.canvas_plus_widget import CanvasPlusWidget
-from airunner.widgets.canvas_plus.standard_gif_widget import StandardGifWidget
 from airunner.widgets.canvas_plus.standard_image_widget import StandardImageWidget
 from airunner.widgets.deterministic.deterministic_widget import DeterministicWidget
 from airunner.widgets.embeddings.embeddings_container_widget import EmbeddingsContainerWidget
 from airunner.widgets.generator_form.generator_tab_widget import GeneratorTabWidget
-from airunner.widgets.gif.gif_panel_widget import GifPanelWidget
 from airunner.widgets.image.image_panel_widget import ImagePanelWidget
 from airunner.widgets.layers.layer_container_widget import LayerContainerWidget
 from airunner.widgets.lora.lora_container_widget import LoraContainerWidget
