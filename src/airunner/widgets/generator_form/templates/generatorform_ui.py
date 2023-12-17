@@ -327,19 +327,10 @@ class Ui_generator_form(object):
         self.scrollArea.setWidget(self.scrollAreaWidgetContents)
         self.gridLayout_3.addWidget(self.scrollArea, 0, 0, 1, 1)
         self.generator_form_tab_widget.addTab(self.advanced_tab, "")
-        self.ai_tab = QtWidgets.QWidget()
-        self.ai_tab.setObjectName("ai_tab")
-        self.gridLayout_9 = QtWidgets.QGridLayout(self.ai_tab)
-        self.gridLayout_9.setContentsMargins(0, 0, 0, 0)
-        self.gridLayout_9.setObjectName("gridLayout_9")
-        self.ai_tab_widget = LLMWidget(parent=self.ai_tab)
-        self.ai_tab_widget.setObjectName("ai_tab_widget")
-        self.gridLayout_9.addWidget(self.ai_tab_widget, 0, 0, 1, 1)
-        self.generator_form_tab_widget.addTab(self.ai_tab, "")
         self.gridLayout_4.addWidget(self.generator_form_tab_widget, 0, 0, 1, 1)
 
         self.retranslateUi(generator_form)
-        self.generator_form_tab_widget.setCurrentIndex(1)
+        self.generator_form_tab_widget.setCurrentIndex(0)
         self.prompt.textChanged.connect(generator_form.handle_prompt_changed) # type: ignore
         self.negative_prompt.textChanged.connect(generator_form.handle_negative_prompt_changed) # type: ignore
         self.model.currentTextChanged['QString'].connect(generator_form.handle_model_changed) # type: ignore
@@ -386,9 +377,7 @@ class Ui_generator_form(object):
         self.generate_button.setText(_translate("generator_form", "Generate"))
         self.interrupt_button.setText(_translate("generator_form", "Interrupt"))
         self.generator_form_tab_widget.setTabText(self.generator_form_tab_widget.indexOf(self.advanced_tab), _translate("generator_form", "Advanced"))
-        self.generator_form_tab_widget.setTabText(self.generator_form_tab_widget.indexOf(self.ai_tab), _translate("generator_form", "AI"))
 from airunner.widgets.controlnet_settings.controlnet_settings_widget import ControlNetSettingsWidget
 from airunner.widgets.input_image.input_image_settings_widget import InputImageSettingsWidget
-from airunner.widgets.llm.llm_widget import LLMWidget
 from airunner.widgets.seed.seed_widget import SeedWidget
 from airunner.widgets.slider.slider_widget import SliderWidget

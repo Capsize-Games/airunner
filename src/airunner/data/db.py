@@ -463,3 +463,67 @@ if not session.query(Prompt).first():
         )
         session.add(prompt_template)
         session.commit()
+
+
+    default_models = [
+        {
+            "name": "Stable Diffusion 2.1 512",
+            "pipeline": "txt2img",
+            "toolname": "txt2img"
+        },
+        {
+            "name": "Stable Diffusion Inpaint 2",
+            "pipeline": "outpaint",
+            "toolname": "outpaint"
+        },
+        {
+            "name": "Stable Diffusion Depth2Img",
+            "pipeline": "depth2img",
+            "toolname": "depth2img"
+        },
+        {
+            "name": "Stable Diffusion 1.5",
+            "pipeline": "controlnet",
+            "toolname": "controlnet"
+        },
+        {
+            "name": "Stability AI 4x resolution",
+            "pipeline": "superresolution",
+            "toolname": "superresolution"
+        },
+        {
+            "name": "Instruct pix2pix",
+            "pipeline": "pix2pix",
+            "toolname": "pix2pix"
+        },
+        {
+            "name": "SD Image Variations",
+            "pipeline": "vid2vid",
+            "toolname": "vid2vid"
+        },
+        {
+            "name": "sd-x2-latent-upscaler",
+            "pipeline": "upscale",
+            "toolname": "upscale"
+        },
+        {
+            "name": "Inpaint vae",
+            "pipeline": "inpaint_vae",
+            "toolname": "inpaint_vae"
+        },
+        {
+            "name": "Salesforce InstructBlip Flan T5 XL",
+            "pipeline": "visualqa",
+            "toolname": "visualqa"
+        },
+        {
+            "name": "Llama 2 7b Chat",
+            "pipeline": "casuallm",
+            "toolname": "casuallm"
+        },
+        {
+            "name": "Flan T5 XL",
+            "pipeline": "seq2seq",
+            "toolname": "prompt_generation"
+        },
+    ]
