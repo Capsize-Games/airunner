@@ -4,7 +4,6 @@ import os
 import re
 import traceback
 from io import BytesIO
-
 import PIL
 import imageio
 import numpy as np
@@ -17,7 +16,9 @@ from diffusers.pipelines.stable_diffusion.convert_from_ckpt import \
 from diffusers.pipelines.text_to_video_synthesis.pipeline_text_to_video_zero import CrossFrameAttnProcessor
 from diffusers.utils import export_to_gif
 from diffusers.utils.torch_utils import randn_tensor
+#from diffusers import ConsistencyDecoderVAE
 from torchvision import transforms
+from diffusers import StableDiffusionPipeline
 
 from airunner.aihandler.auto_pipeline import AutoImport
 from airunner.aihandler.enums import FilterType
@@ -98,6 +99,10 @@ class SDRunner(
             or self.current_controlnet_type != self.controlnet_type:
             self._controlnet = self.load_controlnet()
         return self._controlnet
+
+    @property
+    def vae_path(self):
+        return self.options.get("vae_path", "openai/consistency-decoder")
 
     @property
     def controlnet_model(self):
@@ -323,6 +328,8 @@ class SDRunner(
                not self.is_txt2vid and \
                not self.is_vid2vid and \
                not self.is_sd_xl and \
+               not self.is_sd_xl_turbo and \
+               not self.is_turbo and \
                not self.is_shapegif
 
     @property
@@ -877,16 +884,27 @@ class SDRunner(
         logger.error(error)
         self.send_message(message, MessageCode.ERROR)
 
-    def initialize_safety_checker(self):
+    def initialize_safety_checker(self, local_files_only=None):
+        local_files_only = self.local_files_only if local_files_only is None else local_files_only
+
         if not hasattr(self.pipe, "safety_checker") or not self.pipe.safety_checker:
-            self.pipe.safety_checker = self.from_pretrained(
-                pipeline_action="safety_checker",
-                model=self.safety_checker_model
-            )
-            self.pipe.feature_extractor = self.from_pretrained(
-                pipeline_action="feature_extractor",
-                model=self.safety_checker_model
-            )
+            try:
+                self.pipe.safety_checker = self.from_pretrained(
+                    pipeline_action="safety_checker",
+                    model=self.safety_checker_model,
+                    local_files_only=local_files_only
+                )
+            except OSError:
+                self.initialize_safety_checker(local_files_only=False)
+            
+            try:
+                self.pipe.feature_extractor = self.from_pretrained(
+                    pipeline_action="feature_extractor",
+                    model=self.safety_checker_model,
+                    local_files_only=local_files_only
+                )
+            except OSError:
+                self.initialize_safety_checker(local_files_only=False)
 
     def load_safety_checker(self):
         if not self.pipe:
