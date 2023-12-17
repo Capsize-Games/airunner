@@ -46,6 +46,7 @@ class MainWindow(
     QMainWindow,
     HistoryMixin
 ):
+    token_signal = pyqtSignal(str)
     api = None
     input_event_manager = None
     current_filter = None
@@ -292,6 +293,7 @@ class MainWindow(
 
         super().__init__(*args, **kwargs)
 
+        print("INITIALIZING MAIN WINDOW")
         self.initialize()
 
         # get tab index by name value which is stored in self.settings_manager.active_image_editor_section
@@ -350,7 +352,7 @@ class MainWindow(
             self.language_processing_toggled()
         else:
             self.model_manager_toggled()
-
+        
         self.loaded.emit()
     
     @property
@@ -823,7 +825,7 @@ class MainWindow(
             ("setting-line-icon", "settings_button"),
             ("chat-box-icon", "chat_button"),
             ("setting-line-icon", "llm_preferences_button"),
-            ("clamp-as-indicated-symbol-icon", "llm_quantization_button"),
+            #("clamp-as-indicated-symbol-icon", "llm_quantization_button"),
             ("sliders-icon", "llm_settings_button"),
             ("object-selected-icon", "toggle_active_grid_area_button"),
         ]:
@@ -1090,6 +1092,7 @@ class MainWindow(
 
     def initialize_window(self):
         self.window = Ui_MainWindow()
+        print("SETTING UP MAIN WINDOW UI")
         self.window.setupUi(self)
         self.ui = self.window
         self.center()
@@ -1232,6 +1235,7 @@ class MainWindow(
         self.generator_tab_widget.stop_progress_bar(
             data["tab_section"], data["action"]
         )
+        path = ""
         if self.settings_manager.auto_export_images:
             for image in images:
                 path = auto_export_image(
@@ -1550,19 +1554,19 @@ class MainWindow(
         self.set_llm_widget_tab("quantization", val)
     
     def set_llm_widget_tab(self, name, val):
-        self.ui.generator_widget.current_generator_widget.ui.ai_tab_widget.set_tab(name)
         self.toggle_llm_button_signals(blocked=True)
         self.ui.chat_button.setChecked(name == "chat")
         self.ui.llm_preferences_button.setChecked(name == "preferences")
         self.ui.llm_settings_button.setChecked(name == "settings")
-        self.ui.llm_quantization_button.setChecked(name == "quantization")
+        index = self.ui.llm_widget.ui.tabWidget.indexOf(self.ui.llm_widget.ui.tabWidget.findChild(QWidget, name))
+        self.ui.llm_widget.ui.tabWidget.setCurrentIndex(index)
         self.toggle_llm_button_signals(blocked=False)
     
     def toggle_llm_button_signals(self, blocked):
         self.ui.chat_button.blockSignals(blocked)
         self.ui.llm_preferences_button.blockSignals(blocked)
         self.ui.llm_settings_button.blockSignals(blocked)
-        self.ui.llm_quantization_button.blockSignals(blocked)
+        #self.ui.llm_quantization_button.blockSignals(blocked)
 
     def activate_image_generation_section(self):
         self.ui.mode_tab_widget.setCurrentIndex(0)
@@ -1570,11 +1574,11 @@ class MainWindow(
         self.toggle_tool_section_buttons_visibility()
 
     def activate_language_processing_section(self):
-        self.ui.mode_tab_widget.setCurrentIndex(0)
-        try:
-            self.ui.generator_widget.current_generator_widget.ui.generator_form_tab_widget.setCurrentIndex(2)
-        except AttributeError as e:
-            pass
+        self.ui.mode_tab_widget.setCurrentIndex(1)
+        # try:
+        #     self.ui.generator_widget.current_generator_widget.ui.generator_form_tab_widget.setCurrentIndex(2)
+        # except AttributeError as e:
+        #     pass
         self.toggle_tool_section_buttons_visibility()
     
     def activate_model_manager_section(self):

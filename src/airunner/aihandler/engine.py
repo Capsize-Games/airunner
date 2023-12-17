@@ -1,11 +1,13 @@
 import os
 import torch
 import gc
+import threading
 
 from airunner.aihandler.llm import LLM
 from airunner.aihandler.logger import Logger as logger
 from airunner.aihandler.runner import SDRunner
 from airunner.aihandler.settings_manager import SettingsManager
+from airunner.aihandler.tts import TTS
 
 
 class Engine:
@@ -34,7 +36,10 @@ class Engine:
             message_handler=self.message_handler,
             engine=self
         )
+        self.tts = TTS()
         self.settings_manager = SettingsManager()
+        self.tts_thread = threading.Thread(target=self.tts.run)
+        self.tts_thread.start()
 
     def generator_sample(self, data: dict):
         """
@@ -44,6 +49,7 @@ class Engine:
         """
         logger.info("generator_sample called")
         is_llm = self.is_llm_request(data)
+        is_tts = self.is_tts_request(data)
         if is_llm and self.model_type != "llm":
             logger.info("Switching to LLM model")
             self.model_type = "llm"
@@ -57,7 +63,24 @@ class Engine:
                 self.sd.unload_tokenizer()
                 self.clear_memory()
             # self.llm.move_to_device()
-        elif not is_llm and self.model_type != "art":
+        elif is_tts:
+            # split on sentence enders
+            sentence_enders = [".", "?", "!", "\n"]
+            text = data["request_data"]["text"]
+            sentences = []
+            # split text into sentences
+            current_sentence = ""
+            for char in text:
+                current_sentence += char
+                if char in sentence_enders:
+                    sentences.append(current_sentence)
+                    current_sentence = ""
+            if current_sentence != "":
+                sentences.append(current_sentence)
+
+            for sentence in sentences:
+                self.tts.add_sentence(sentence, "a")
+        elif not is_llm and not is_tts and self.model_type != "art":
             logger.info("Switching to art model")
             self.model_type = "art"
             self.unload_llm()
@@ -65,12 +88,15 @@ class Engine:
         if is_llm:
             logger.info("Engine calling llm.do_generate")
             self.llm.do_generate(data)
-        else:
+        elif not is_tts:
             logger.info("Engine calling sd.generator_sample")
             self.sd.generator_sample(data)
 
     def is_llm_request(self, data):
         return "llm_request" in data
+
+    def is_tts_request(self, data):
+        return "tts_request" in data
 
     def unload_llm(self):
         """
