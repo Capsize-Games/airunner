@@ -1,3 +1,4 @@
+import os
 import torch
 import gc
 
@@ -26,7 +27,7 @@ class Engine:
         self.app = kwargs.get("app", None)
         self.message_var = kwargs.get("message_var", None)
         self.message_handler = kwargs.get("message_handler", None)
-        self.llm = LLM(engine=self)
+        self.llm = LLM(app=self.app, engine=self)
         self.sd = SDRunner(
             app=self.app,
             message_var=self.message_var,
@@ -55,7 +56,7 @@ class Engine:
                 self.sd.unload_model()
                 self.sd.unload_tokenizer()
                 self.clear_memory()
-            self.llm.move_to_device()
+            # self.llm.move_to_device()
         elif not is_llm and self.model_type != "art":
             logger.info("Switching to art model")
             self.model_type = "art"
@@ -91,6 +92,7 @@ class Engine:
         if do_move_to_cpu:
             logger.info("Moving LLM to CPU")
             self.llm.move_to_cpu()
+
             self.clear_memory()
         elif do_unload_model:
             logger.info("Unloading LLM")

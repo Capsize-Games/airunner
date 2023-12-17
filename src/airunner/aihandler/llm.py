@@ -6,6 +6,21 @@ class LLM(TransformerRunner):
     def clear_conversation(self):
         if self.generator.name == "casuallm":
             self.chain.clear()
+    
+    def do_generate(self, data):
+        self.process_data(data)
+        self.handle_request()
+        self.requested_generator_name = data["request_data"]["generator_name"]
+        prompt = data["request_data"]["prompt"]
+        model_path = data["request_data"]["model_path"]
+        self.generate(
+            app=self.app,
+            endpoint=data["request_data"]["generator_name"],
+            prompt=prompt, 
+            model=model_path,
+            stream=data["request_data"]["stream"],
+            images=[data["request_data"]["image"]],
+        )
 
     def generate(self, **kwargs):
         if self.generator.name == "casuallm":
@@ -23,7 +38,6 @@ class LLM(TransformerRunner):
 
             answers = []
             for res in out:
-                print("DECODING RESULT")
                 answer = self.processor.decode(
                     res,
                     skip_special_tokens=True
@@ -32,3 +46,4 @@ class LLM(TransformerRunner):
             return answers
         else:
             logger.error(f"Failed to call generator for {self.generator.name}")
+        # self.llm_api.request(**kwargs)
