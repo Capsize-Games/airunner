@@ -40,7 +40,7 @@
    <item row="0" column="0">
     <widget class="QTabWidget" name="generator_form_tab_widget">
      <property name="currentIndex">
-      <number>1</number>
+      <number>0</number>
      </property>
      <widget class="QWidget" name="basic_tab">
       <attribute name="title">
@@ -741,28 +741,6 @@
        </item>
       </layout>
      </widget>
-     <widget class="QWidget" name="ai_tab">
-      <attribute name="title">
-       <string>AI</string>
-      </attribute>
-      <layout class="QGridLayout" name="gridLayout_9">
-       <property name="leftMargin">
-        <number>0</number>
-       </property>
-       <property name="topMargin">
-        <number>0</number>
-       </property>
-       <property name="rightMargin">
-        <number>0</number>
-       </property>
-       <property name="bottomMargin">
-        <number>0</number>
-       </property>
-       <item row="0" column="0">
-        <widget class="LLMWidget" name="ai_tab_widget" native="true"/>
-       </item>
-      </layout>
-     </widget>
     </widget>
    </item>
   </layout>
@@ -772,12 +750,6 @@
    <class>SliderWidget</class>
    <extends>QWidget</extends>
    <header>airunner/widgets/slider/slider_widget</header>
-   <container>1</container>
-  </customwidget>
-  <customwidget>
-   <class>LLMWidget</class>
-   <extends>QWidget</extends>
-   <header>airunner/widgets/llm/llm_widget</header>
    <container>1</container>
   </customwidget>
   <customwidget>
