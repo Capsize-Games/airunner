@@ -341,7 +341,6 @@ QFrame#line_4 {
 }
 
 #button_menu QPushButton {
-    margin-left: 9px;
 }
 
 #bottom_panel_tab_widget QWidget {
@@ -630,6 +629,7 @@ QTableWidget::item:selected {
     background-color: rgba(0, 132, 185, 50);
 }
 
+#standard_image_widget QPushButton,
 #image_widget QPushButton {
     border: 1px solid rgba(0, 132, 185, 50);
 }

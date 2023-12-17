@@ -47,35 +47,41 @@ class CustomModelWidget(BaseWidget):
         }.items():
             if not model_path or not os.path.exists(model_path):
                 continue
+            # find all folders inside of model_path, each of those folders is a model version
             with os.scandir(model_path) as dir_object:
+                # check if dir_object is a directory
                 for entry in dir_object:
-                    model = ModelData()
-                    model.path = entry.path
-                    model.branch = "main"
-                    model.version = "SD 1.5"
-                    model.category = "stablediffusion"
-                    model.enabled = True
-                    model.pipeline_action = key
-                    model.pipeline_class = self.settings_manager.get_pipeline_classname(
-                        model.pipeline_action, model.version, model.category)
+                    version = entry.name
+            
+                    with os.scandir(os.path.join(model_path, version)) as dir_object:
+                        for entry in dir_object:
+                            model = ModelData()
+                            model.path = entry.path
+                            model.branch = "main"
+                            model.version = version
+                            model.category = "stablediffusion"
+                            model.enabled = True
+                            model.pipeline_action = key
+                            model.pipeline_class = self.settings_manager.get_pipeline_classname(
+                                model.pipeline_action, model.version, model.category)
 
-                    if entry.is_file():  # ckpt or safetensors file
-                        if entry.name.endswith(".ckpt") or entry.name.endswith(".safetensors"):
-                            name = entry.name.replace(".ckpt", "").replace(".safetensors", "")
-                            model.name = name
-                        else:
-                            model = None
-                    elif entry.is_dir():  # diffusers folder
-                        is_diffusers_directory = True
-                        for diffuser_folder in diffusers_folders:
-                            if not os.path.exists(os.path.join(entry.path, diffuser_folder)):
-                                is_diffusers_directory = False
-                                model = None
-                        if is_diffusers_directory:
-                            model.name = entry.name
+                            if entry.is_file():  # ckpt or safetensors file
+                                if entry.name.endswith(".ckpt") or entry.name.endswith(".safetensors"):
+                                    name = entry.name.replace(".ckpt", "").replace(".safetensors", "")
+                                    model.name = name
+                                else:
+                                    model = None
+                            elif entry.is_dir():  # diffusers folder
+                                is_diffusers_directory = True
+                                for diffuser_folder in diffusers_folders:
+                                    if not os.path.exists(os.path.join(entry.path, diffuser_folder)):
+                                        is_diffusers_directory = False
+                                        model = None
+                                if is_diffusers_directory:
+                                    model.name = entry.name
 
-                    if model:
-                        self.save_model(model)
+                            if model:
+                                self.save_model(model)
 
         self.show_items_in_scrollarea()
         self.update_generator_model_dropdown()

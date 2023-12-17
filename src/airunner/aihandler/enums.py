@@ -60,6 +60,5 @@ class GeneratorSection(Enum):
     SUPERRESOLUTION = "superresolution"
     UPSCALE = "upscale"
     VID2VID = "vid2vid"
-    TXT2GIF = "txt2gif"
     TXT2VID = "txt2vid"
     PROMPT_BUILDER = "prompt_builder"
