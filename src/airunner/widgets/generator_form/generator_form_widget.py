@@ -4,10 +4,9 @@ from PIL import Image
 from PyQt6.QtCore import pyqtSignal, QRect, QTimer
 from PyQt6.QtWidgets import QWidget
 
-from airunner.aihandler.enums import MessageCode
 from airunner.aihandler.settings import MAX_SEED
 from airunner.data.db import session
-from airunner.data.models import ActionScheduler, AIModel, ActiveGridSettings, CanvasSettings, LLMGeneratorSetting
+from airunner.data.models import ActionScheduler, AIModel, ActiveGridSettings, CanvasSettings
 from airunner.utils import get_session
 from airunner.widgets.base_widget import BaseWidget
 from airunner.widgets.generator_form.templates.generatorform_ui import Ui_generator_form
@@ -222,6 +221,7 @@ class GeneratorForm(BaseWidget):
         self.app.client.do_process_queue = True
 
     def call_generate(self, image=None, seed=None, override_data=None):
+        print("CALL GENERATE")
         override_data = {} if override_data is None else override_data
 
         if self.generator_section in (
@@ -328,6 +328,7 @@ class GeneratorForm(BaseWidget):
         return []
 
     def do_generate(self, extra_options=None, seed=None, latents_seed=None, do_deterministic=False, override_data=False):
+        print("DO GENERATE")
         if not extra_options:
             extra_options = {}
 

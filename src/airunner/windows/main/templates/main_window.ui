@@ -422,44 +422,6 @@
                </widget>
               </item>
               <item>
-               <widget class="QPushButton" name="llm_quantization_button">
-                <property name="minimumSize">
-                 <size>
-                  <width>48</width>
-                  <height>48</height>
-                 </size>
-                </property>
-                <property name="maximumSize">
-                 <size>
-                  <width>48</width>
-                  <height>48</height>
-                 </size>
-                </property>
-                <property name="cursor">
-                 <cursorShape>PointingHandCursor</cursorShape>
-                </property>
-                <property name="text">
-                 <string/>
-                </property>
-                <property name="icon">
-                 <iconset resource="../../../resources_light.qrc">
-                  <normaloff>:/icons/light/clamp-as-indicated-symbol-icon.svg</normaloff>:/icons/light/clamp-as-indicated-symbol-icon.svg</iconset>
-                </property>
-                <property name="iconSize">
-                 <size>
-                  <width>24</width>
-                  <height>24</height>
-                 </size>
-                </property>
-                <property name="checkable">
-                 <bool>true</bool>
-                </property>
-                <property name="flat">
-                 <bool>true</bool>
-                </property>
-               </widget>
-              </item>
-              <item>
                <spacer name="horizontalSpacer_2">
                 <property name="orientation">
                  <enum>Qt::Horizontal</enum>
@@ -1680,6 +1642,28 @@
          </item>
         </layout>
        </widget>
+       <widget class="QWidget" name="chat">
+        <attribute name="title">
+         <string>Text Generation</string>
+        </attribute>
+        <layout class="QGridLayout" name="gridLayout_11">
+         <property name="leftMargin">
+          <number>0</number>
+         </property>
+         <property name="topMargin">
+          <number>0</number>
+         </property>
+         <property name="rightMargin">
+          <number>0</number>
+         </property>
+         <property name="bottomMargin">
+          <number>0</number>
+         </property>
+         <item row="0" column="0">
+          <widget class="LLMWidget" name="llm_widget" native="true"/>
+         </item>
+        </layout>
+       </widget>
        <widget class="QWidget" name="tab_5">
         <attribute name="title">
          <string>Model Manager</string>
@@ -2526,6 +2510,12 @@
    <class>StandardImageWidget</class>
    <extends>QWidget</extends>
    <header>airunner/widgets/canvas_plus/standard_image_widget</header>
+   <container>1</container>
+  </customwidget>
+  <customwidget>
+   <class>LLMWidget</class>
+   <extends>QWidget</extends>
+   <header>airunner/widgets/llm/llm_widget</header>
    <container>1</container>
   </customwidget>
  </customwidgets>
@@ -3666,22 +3656,6 @@
     </hint>
     <hint type="destinationlabel">
      <x>728</x>
-     <y>0</y>
-    </hint>
-   </hints>
-  </connection>
-  <connection>
-   <sender>llm_quantization_button</sender>
-   <signal>toggled(bool)</signal>
-   <receiver>MainWindow</receiver>
-   <slot>quantization_clicked(bool)</slot>
-   <hints>
-    <hint type="sourcelabel">
-     <x>339</x>
-     <y>44</y>
-    </hint>
-    <hint type="destinationlabel">
-     <x>731</x>
      <y>0</y>
     </hint>
    </hints>
