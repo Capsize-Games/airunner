@@ -350,7 +350,15 @@ class SDRunner(
 
     @property
     def is_sd_xl(self):
-        return self.model_version == "SDXL 1.0"
+        return self.model_version == "SDXL 1.0" or self.is_sd_xl_turbo
+
+    @property
+    def is_sd_xl_turbo(self):
+        return self.model_version == "SDXL Turbo"
+
+    @property
+    def is_turbo(self):
+        return self.model_version == "SD Turbo"
 
     @property
     def model(self):
@@ -926,7 +934,6 @@ class SDRunner(
         self.send_message(message)
 
         try:
-            logger.info(message)
             output = self.call_pipe(**kwargs)
         except Exception as e:
             error_message = str(e)
@@ -1058,9 +1065,8 @@ class SDRunner(
         if self.is_shapegif:
             return self.call_shapegif_pipe()
 
-        if not self.is_img2img and not self.is_vid_action:
+        if not self.is_outpaint and not self.is_vid_action:
             args["latents"] = self.latents
-
         try:
             with torch.inference_mode():
                 return self.pipe(**args)
@@ -1557,6 +1563,7 @@ class SDRunner(
         self.error_handler(message)
 
     def load_controlnet_from_ckpt(self, pipeline):
+        logger.info("Loading controlnet from ckpt")
         pipeline = self.controlnet_action_diffuser(
             vae=pipeline.vae,
             text_encoder=pipeline.text_encoder,
@@ -1573,6 +1580,7 @@ class SDRunner(
     def load_controlnet(self):
         logger.info(f"Loading controlnet {self.controlnet_type} self.controlnet_model {self.controlnet_model}")
         self._controlnet = None
+        self.current_controlnet_type = self.controlnet_type
         controlnet = self.from_pretrained(
             pipeline_action="controlnet",
             model=self.controlnet_model
@@ -1676,26 +1684,29 @@ class SDRunner(
                     except OSError as e:
                         return self.handle_missing_files(self.action)
                 else:
-                    self.pipe = self.from_pretrained(
-                        model=self.model_path,
-                        scheduler=self.load_scheduler(),
+                    logger.info("Loading model from PRETRAINED")
+                    scheduler = self.load_scheduler()
+                    if scheduler:
+                        kwargs["scheduler"] = scheduler
+                    self.pipe = StableDiffusionPipeline.from_pretrained(
+                        self.model_path,
                         **kwargs
                     )
 
                 if self.pipe is None:
                     logger.error("Failed to load pipeline")
                     return
-
-                self.pipe = self.load_text_encoder(self.pipe)
-
+            
                 """
                 Initialize pipe for video to video zero
                 """
                 if self.pipe and self.is_vid2vid:
+                    logger.info("Initializing pipe for vid2vid")
                     self.pipe.unet.set_attn_processor(CrossFrameAttnProcessor(batch_size=2))
                     self.pipe.controlnet.set_attn_processor(CrossFrameAttnProcessor(batch_size=2))
 
                 if self.is_outpaint:
+                    logger.info("Initializing vae for inpaint / outpaint")
                     self.pipe.vae = self.from_pretrained(
                         pipeline_action="inpaint_vae",
                         model=self.inpaint_vae_model
@@ -1712,10 +1723,16 @@ class SDRunner(
             if not self.is_depth2img:
                 self.safety_checker = self.pipe.safety_checker
 
-        # store the model_path
-        self.pipe.model_path = self.model_path
+            # store the model_path
+            self.pipe.model_path = self.model_path
 
-        self.load_learned_embed_in_clip()
+            # move pipe components to device and initialize text encoder for clip skip
+            self.pipe.vae.to(self.data_type)
+            self.pipe = self.load_text_encoder(self.pipe)
+            self.pipe.text_encoder.to(self.data_type)
+            self.pipe.unet.to(self.data_type)
+
+            #self.load_learned_embed_in_clip()
 
     def load_text_encoder(self, pipeline):
         if not pipeline or (pipeline.text_encoder and pipeline.text_encoder.config.num_hidden_layers > 12):
@@ -1740,12 +1757,6 @@ class SDRunner(
     def load_ckpt_model(self):
         logger.info(f"Loading ckpt file {self.model_path}")
         pipeline = self.download_from_original_stable_diffusion_ckpt(path=self.model_path)
-        if pipeline:
-            pipeline.vae.to(self.data_type)
-            pipeline = self.load_text_encoder(pipeline)
-            self.current_clip_skip = self.clip_skip
-            pipeline.text_encoder.to(self.data_type)
-            pipeline.unet.to(self.data_type)
         return pipeline
 
     def get_pipeline_action(self, action=None):
@@ -1754,34 +1765,44 @@ class SDRunner(
             action = "img2img"
         return action
 
-    def download_from_original_stable_diffusion_ckpt(self, path):
+    def download_from_original_stable_diffusion_ckpt(self, path, local_files_only=None):
+        local_files_only = self.local_files_only if local_files_only is None else local_files_only
         pipeline_action = self.get_pipeline_action()
-        pipe = download_from_original_stable_diffusion_ckpt(
-            checkpoint_path_or_dict=path,
-            device=self.device,
-            scheduler_type="ddim",
-            from_safetensors=self.is_safetensors,
-            local_files_only=self.local_files_only,
-            extract_ema=False,
-            pipeline_class=AutoImport.class_object(
-                "vid2vid" if self.is_vid2vid else self.action,
-                self.model_data,
-                pipeline_action="vid2vid" if self.is_vid2vid else pipeline_action,
-                single_file=True
-            ),
-            config_files={
-                "v1": "v1.yaml",
-                "v2": "v2.yaml",
-                "xl": "sd_xl_base.yaml",
-                "xl_refiner": "sd_xl_refiner.yaml"
-            }
-        )
-        if self.enable_controlnet:
-            pipe = self.load_controlnet_from_ckpt(pipe)
-        old_model_path = self.current_model
-        self.current_model = path
-        pipe.scheduler = self.load_scheduler(config=pipe.scheduler.config)
-        self.current_model = old_model_path
+        try:
+            pipe = download_from_original_stable_diffusion_ckpt(
+                checkpoint_path_or_dict=path,
+                device=self.device,
+                scheduler_type="ddim",
+                from_safetensors=self.is_safetensors,
+                local_files_only=local_files_only,
+                extract_ema=False,
+                #vae=self.load_vae(),
+                pipeline_class=AutoImport.class_object(
+                    "vid2vid" if self.is_vid2vid else self.action,
+                    self.model_data,
+                    pipeline_action="vid2vid" if self.is_vid2vid else pipeline_action,
+                    single_file=True
+                ),
+                config_files={
+                    "v1": "v1.yaml",
+                    "v2": "v2.yaml",
+                    "xl": "sd_xl_base.yaml",
+                    "xl_refiner": "sd_xl_refiner.yaml"
+                }
+            )
+            if self.enable_controlnet:
+                pipe = self.load_controlnet_from_ckpt(pipe)
+            old_model_path = self.current_model
+            self.current_model = path
+            pipe.scheduler = self.load_scheduler(config=pipe.scheduler.config)
+            self.current_model = old_model_path
+        except ValueError:
+            if local_files_only:
+                # missing required files, attempt again with online access
+                return self.download_from_original_stable_diffusion_ckpt(
+                    path, 
+                    local_files_only=False
+                )
         return pipe
 
     def clear_controlnet(self):
@@ -1790,20 +1811,20 @@ class SDRunner(
         self.engine.clear_memory()
         self.reset_applied_memory_settings()
         self.controlnet_loaded = False
+    
+    def load_vae(self):
+        return ConsistencyDecoderVAE.from_pretrained(
+            self.vae_path, 
+            torch_dtype=self.data_type
+        )
 
     def reuse_pipeline(self, do_load_controlnet):
         logger.info("Reusing pipeline")
         pipe = None
         if self.is_txt2img:
-            if self.txt2img is None:
-                pipe = self.img2img
-            else:
-                pipe = self.txt2img
+            pipe = self.img2img if self.txt2img is None else self.txt2img
         elif self.is_img2img:
-            if self.img2img is None:
-                pipe = self.txt2img
-            else:
-                pipe = self.img2img
+            pipe = self.txt2img if self.img2img is None else self.img2img
         if pipe is None:
             logger.warning("Failed to reuse pipeline")
             self.clear_controlnet()
@@ -1835,7 +1856,12 @@ class SDRunner(
                     del components["controlnet"]
                 if self.is_vid2vid:
                     components["controlnet"] = self.controlnet()
-                pipe = pretrained_object.from_pretrained(self.model_path, **components)
+                
+                pipe = pretrained_object.from_pretrained(
+                    self.model_path,
+                    #vae=self.load_vae(),
+                    **components
+                )
 
         if self.is_txt2img:
             self.txt2img = pipe
@@ -1893,13 +1919,16 @@ class SDRunner(
                 action = "vid2vid"
                 kwargs["controlnet"] = self.controlnet()
                 kwargs["pipeline_action"] = "vid2vid"
+            # if pipeline_action in ["txt2img"]:
+            #     kwargs["vae"] = self.load_vae()
+            if "local_files_only" not in kwargs:
+                kwargs["local_files_only"] = self.local_files_only
             return AutoImport.from_pretrained(
                 action,
                 model_data=self.model_data,
                 category=kwargs.pop("category", self.model_data["category"]),
                 model=model,
                 torch_dtype=self.data_type,
-                local_files_only=self.local_files_only,
                 use_auth_token=self.data["options"]["hf_token"],
                 **kwargs
             )

@@ -18,10 +18,34 @@ class AutoImport:
                 requested_action, 
                 model_data, 
                 pipeline_action,
+                category
             )
         if class_object is None:
             return None
-        return class_object.from_pretrained(model, **kwargs)
+        if "torch_dtype" in kwargs:
+            del kwargs["torch_dtype"]
+        try:
+            return class_object.from_pretrained(model, **kwargs)
+        except Exception as e:
+            try_again = False
+            if "Checkout your internet connection" in str(e):
+                try_again = True
+            elif "To enable repo look-ups" in str(e):
+                try_again = True
+            elif "No such file or directory" in str(e):
+                try_again = True
+            elif "does not appear to have a file named config.json" in str(e):
+                try_again = True
+            elif "Entry Not Found" in str(e):
+                try_again = True
+            if try_again:
+                kwargs["local_files_only"] = False
+                kwargs["class_object"] = class_object
+                kwargs["model_data"] = model_data
+                kwargs["model"] = model
+                kwargs["pipeline_action"] = pipeline_action
+                kwargs["category"] = category
+                return AutoImport.from_pretrained(requested_action, **kwargs)
 
     @staticmethod
     def class_object(
