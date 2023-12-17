@@ -237,14 +237,17 @@ class CanvasPlusWidget(CanvasBaseWidget):
         try:
             return QPoint(self.current_layer.pivot_x, self.current_layer.pivot_y)
         except Exception as e:
-            print(e)
+            pass
         return QPoint(0, 0)
 
     @image_pivot_point.setter
     def image_pivot_point(self, value):
-        self.current_layer.pivot_x = value.x()
-        self.current_layer.pivot_y = value.y()
-        save_session()
+        try:
+            self.current_layer.pivot_x = value.x()
+            self.current_layer.pivot_y = value.y()
+            save_session()
+        except Exception as e:
+            pass
 
     @property
     def active_grid_area_selected(self):

@@ -1,4 +1,4 @@
-# Form implementation generated from reading ui file '/home/joe/Projects/imagetopixel/airunner/src/airunner/widgets/generated_image/templates/generated_image.ui'
+# Form implementation generated from reading ui file '/home/joe/Projects/imagetopixel/airunner/src/airunner/../../src/airunner/widgets/generated_image/templates/generated_image.ui'
 #
 # Created by: PyQt6 UI code generator 6.4.2
 #

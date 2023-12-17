@@ -341,7 +341,6 @@ QFrame#line_4 {
 }
 
 #button_menu QPushButton {
-    margin-left: 9px;
 }
 
 #bottom_panel_tab_widget QWidget {

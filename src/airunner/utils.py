@@ -8,9 +8,6 @@ from PyQt6.QtWidgets import QFileDialog, QApplication, QMainWindow
 from airunner.aihandler.logger import Logger
 from airunner.settings import SQLITE_DB_PATH
 from PIL import PngImagePlugin
-from sqlalchemy import create_engine
-from sqlalchemy.orm import sessionmaker
-from airunner.data.models import Base
 
 SESSION = None
 
@@ -429,6 +426,10 @@ def get_main_window():
 def get_session():
     global SESSION
     if not SESSION:
+        from sqlalchemy import create_engine
+        from sqlalchemy.orm import sessionmaker
+        from airunner.data.models import Base
+
         engine = create_engine(f"sqlite:///{SQLITE_DB_PATH}")
         Base.metadata.create_all(engine)
         Session = sessionmaker(bind=engine)
