@@ -59,7 +59,7 @@ class CompelMixin:
     def load_prompt_embeds(self):
         logger.info("Loading prompt embeds")
         self.compel_proc = None
-        self.clear_memory()
+        self.engine.clear_memory()
         prompt = self.prompt
         negative_prompt = self.negative_prompt if self.negative_prompt else ""
 

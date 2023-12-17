@@ -40,10 +40,30 @@ model_bootstrap_data = [
         "model_type": "art"
     },
     {
+        "name": "Stable Diffusion Turbo",
+        "path": "stabilityai/sd-turbo",
+        "branch": "fp16",
+        "version": "SD Turbo",
+        "category": "stablediffusion",
+        "pipeline_action": "txt2img",
+        "enabled": True,
+        "model_type": "art"
+    },
+    {
         "name": "Stable Diffusion XL Base 1.0",
         "path": "stabilityai/stable-diffusion-xl-base-1.0",
         "branch": "fp16",
         "version": "SDXL 1.0",
+        "category": "stablediffusion",
+        "pipeline_action": "txt2img",
+        "enabled": True,
+        "model_type": "art"
+    },
+    {
+        "name": "Stable Diffusion XL Turbo",
+        "path": "stabilityai/sdxl-turbo",
+        "branch": "fp16",
+        "version": "SDXL Turbo",
         "category": "stablediffusion",
         "pipeline_action": "txt2img",
         "enabled": True,
@@ -200,6 +220,16 @@ model_bootstrap_data = [
         "model_type": "art"
     },
     {
+        "name": "CompVis Safety Checker",
+        "path": "CompVis/stable-diffusion-safety-checker",
+        "branch": "fp16",
+        "version": "SDXL Turbo",
+        "category": "stablediffusion",
+        "pipeline_action": "safety_checker",
+        "enabled": True,
+        "model_type": "art"
+    },
+    {
         "name": "OpenAI Text Encoder",
         "path": "openai/clip-vit-large-patch14",
         "branch": "fp16",
@@ -306,6 +336,16 @@ model_bootstrap_data = [
         "version": "1",
         "category": "llm",
         "pipeline_action": "visualqa",
+        "enabled": True,
+        "model_type": "llm"
+    },
+    {
+        "name": "stablelm-zephyr-3b",
+        "path": "/home/joe/Desktop/LLM/stablelm-zephyr-3b",
+        "branch": "main",
+        "version": "1",
+        "category": "llm",
+        "pipeline_action": "casuallm",
         "enabled": True,
         "model_type": "llm"
     },
