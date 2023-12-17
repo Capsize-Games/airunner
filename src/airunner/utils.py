@@ -8,6 +8,9 @@ from PyQt6.QtWidgets import QFileDialog, QApplication, QMainWindow
 from airunner.aihandler.logger import Logger
 from airunner.settings import SQLITE_DB_PATH
 from PIL import PngImagePlugin
+from sqlalchemy import create_engine
+from sqlalchemy.orm import sessionmaker
+from airunner.data.models import Base
 
 SESSION = None
 
@@ -394,6 +397,10 @@ def auto_export_image(
         filename = filename + "_" + str(i) + extension
         file_path = os.path.join(path, action, date, filename)
 
+        # ensure file_path exists:
+        if not os.path.exists(os.path.dirname(file_path)):
+            os.makedirs(os.path.dirname(file_path))
+
         if metadata:
             image.save(file_path, pnginfo=metadata)
         else:
@@ -422,10 +429,6 @@ def get_main_window():
 def get_session():
     global SESSION
     if not SESSION:
-        from sqlalchemy import create_engine
-        from sqlalchemy.orm import sessionmaker
-        from airunner.data.models import Base
-
         engine = create_engine(f"sqlite:///{SQLITE_DB_PATH}")
         Base.metadata.create_all(engine)
         Session = sessionmaker(bind=engine)

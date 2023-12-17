@@ -1,35 +1,28 @@
 import torch
 import random
 
-from PIL import Image
-
 from PyQt6.QtCore import QObject
 
-import transformers
-from transformers import BitsAndBytesConfig
-from transformers import set_seed as _set_seed
-
-from airunner.aihandler.enums import MessageCode
-from airunner.aihandler.logger import Logger
-from airunner.aihandler.settings_manager import SettingsManager
-
+# import AutoTokenizer
 from transformers import AutoTokenizer
-from transformers import AutoModelForSeq2SeqLM, AutoModelForCausalLM
+# import BitsAndBytesConfig
 from transformers import BitsAndBytesConfig
-
-# import the following as auto model classes
-from transformers import InstructBlipProcessor, InstructBlipForConditionalGeneration
-from transformers import AutoModelForVisualQuestionAnswering
-from transformers import Blip2ForConditionalGeneration, Blip2Processor
-
-
-from langchain.chains import ConversationChain
-from langchain.prompts import PromptTemplate
+import transformers
+from transformers import AutoModelForCausalLM
+from transformers import InstructBlipForConditionalGeneration
+from transformers import InstructBlipProcessor
+from langchain.llms.huggingface_pipeline import HuggingFacePipeline
 from langchain.memory import ConversationBufferWindowMemory
-from langchain.llms import HuggingFacePipeline
+from langchain.prompts import PromptTemplate
+from langchain.chains import ConversationChain
+from airunner.aihandler.enums import MessageCode
 
+from airunner.aihandler.llm_api import LLMAPI
+from airunner.aihandler.settings_manager import SettingsManager
 from airunner.data.models import LLMGenerator
 from airunner.data.db import session
+from airunner.aihandler.logger import Logger
+
 
 class TransformerRunner(QObject):
     dtype = ""
@@ -100,8 +93,11 @@ class TransformerRunner(QObject):
 
     def __init__(self, *args, **kwargs):
         self.engine = kwargs.pop("engine", None)
+        app = kwargs.pop("app", None)
+        self.app = app
         super().__init__(*args, **kwargs)
         self.settings_manager = SettingsManager()
+        # self.llm_api = LLMAPI(app=app)
 
     def move_to_cpu(self):
         if self.model:
@@ -184,8 +180,6 @@ class TransformerRunner(QObject):
         Logger.info("Loading model")
         if not self.do_load_model:
             return
-        
-        self.current_model_path = self.model_path
 
         local_files_only = self.local_files_only if local_files_only is None else local_files_only
 
@@ -195,6 +189,7 @@ class TransformerRunner(QObject):
             "use_cache": self.use_cache,
             "torch_dtype": torch.float16 if self.dtype != "32bit" else torch.float32,
             "token": self.settings_manager.hf_api_key_read_key,
+            "trust_remote_code": True
         }
         
         if self.do_quantize_model:
@@ -203,7 +198,7 @@ class TransformerRunner(QObject):
                 params["quantization_config"] = config
 
         path = self.current_model_path
-        self.engine.send_message(f"Loading {self.generator.name} model from {path}")
+        #self.engine.send_message(f"Loading {self.generator.name} model from {path}")
         
         auto_class_ = None
         if self.generator.name == "seq2seq":
@@ -272,9 +267,7 @@ class TransformerRunner(QObject):
         self.image = self.request_data.get("image", None)
         if self.image:
             self.image = self.image.convert("RGB")
-        print("DATA PROCESSED, callback:", self.callback)
-        print(data)
-    
+        
     def do_generate(self, data):
         self.process_data(data)
         self.handle_request()
@@ -342,9 +335,6 @@ class TransformerRunner(QObject):
             for key in ["return_result", "skip_special_tokens", "seed"]:
                 kwargs.pop(key)
         
-        
-        print("KWARGS", kwargs)
-        print("x"*100)
 
         return kwargs
     
@@ -374,7 +364,7 @@ class TransformerRunner(QObject):
     def do_set_seed(self, seed=None):
         seed = self.seed if seed is None else seed
         self.seed = seed
-        _set_seed(self.seed)
+        # _set_seed(self.seed)
         # set model and token seed
         torch.manual_seed(self.seed)
         torch.cuda.manual_seed(self.seed)
@@ -389,12 +379,13 @@ class TransformerRunner(QObject):
         self.disable_request_processing()
         kwargs = self.prepare_input_args()
         self.do_set_seed(kwargs.get("seed"))
-        Logger.info("Generating output")
+        # Logger.info("Generating output")
 
+        self.current_model_path = self.model_path
+        self.load_tokenizer()
         self.load_model()
         if self.generator.name == "visualqa":
             self.load_processor()
-        self.load_tokenizer()
 
         self.engine.send_message("Generating output")
         with torch.backends.cuda.sdp_kernel(
@@ -405,10 +396,8 @@ class TransformerRunner(QObject):
             with torch.no_grad():                
                 value = self.generate(**kwargs)
                 if self.callback:
-                    print("HAS CALLBACK")
                     self.callback(value)
                 else:
-                    print("HAS NO CALLBACK")
                     self.engine.send_message(value, code=MessageCode.TEXT_GENERATED)
         self.enable_request_processing()
     
