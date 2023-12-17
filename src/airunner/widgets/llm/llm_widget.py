@@ -44,7 +44,7 @@ class LLMWidget(BaseWidget):
     def __init__(self, *args, **kwargs):
         super().__init__(*args, **kwargs)
         # hide tab bar
-        self.ui.tabWidget.tabBar().hide()
+        #self.ui.tabWidget.tabBar().hide()
         self.load_data()
 
         self.ui.prefix.blockSignals(True)
@@ -56,6 +56,10 @@ class LLMWidget(BaseWidget):
         self.ui.prefix.blockSignals(False)
         self.ui.suffix.blockSignals(False)
 
+        self.app.token_signal.connect(self.handle_token_signal)
+        print("INITIALIZE LLM")
+        import traceback
+        traceback.print_stack()
         self.app.message_var.my_signal.connect(self.message_handler)
         self.ui.prompt.returnPressed.connect(self.action_button_clicked_send)
         self.ui.prompt.textChanged.connect(self.prompt_text_changed)
@@ -72,6 +76,16 @@ class LLMWidget(BaseWidget):
     
     def prompt_template_text_changed(self, value):
         print(value)
+    
+    def handle_token_signal(self, val):
+        if val != "[END]":
+            text = self.ui.conversation.toPlainText()
+            text += val
+            self.ui.conversation.setText(text)
+        else:
+            self.stop_progress_bar()
+            self.generating = False
+            self.enable_send_button()
 
     @pyqtSlot(dict)
     def message_handler(self, response: dict):
@@ -80,9 +94,10 @@ class LLMWidget(BaseWidget):
         except TypeError:
             return
         message = response["message"]
-        {
-            MessageCode.TEXT_GENERATED: self.handle_text_generated,
-        }.get(code, lambda *args: None)(message)
+
+        if code == MessageCode.TEXT_GENERATED:
+            print("MESSAGE HANDLER", response)
+            self.handle_text_generated(message)
 
     def initialize_form(self):
         self.ui.model.blockSignals(True)
@@ -170,6 +185,8 @@ class LLMWidget(BaseWidget):
         if isinstance(messages, str):
             messages = [messages]
         
+        print("MESSAGES", messages)
+
         for message in messages:
 
             # strip quotes from start and end of message
@@ -186,6 +203,12 @@ class LLMWidget(BaseWidget):
             )
             session.add(message_object)
             session.commit()
+            self.app.client.message = dict(
+                tts_request=True,
+                request_data=dict(
+                    text=message
+                )
+            )
             self.add_message_to_conversation(message_object, is_bot=True)
 
         self.generating = False
@@ -255,7 +278,7 @@ class LLMWidget(BaseWidget):
         self.generator.botname = val
         save_session()
 
-    def action_button_clicked_send(self, image_override=None, prompt_override=None, callback=None):
+    def action_button_clicked_send(self, image_override=None, prompt_override=None, callback=None, generator_name="casuallm"):
         if self.generating:
             return
             
@@ -278,8 +301,9 @@ class LLMWidget(BaseWidget):
         data = {
             "llm_request": True,
             "request_data": {
-                "generator_name": self.generator.name,
+                "generator_name": generator_name,
                 "model_path": settings.model_version,
+                "stream": True,
                 "prompt": prompt,
                 "do_summary": False,
                 "is_bot_alive": True,
@@ -329,8 +353,9 @@ class LLMWidget(BaseWidget):
         print("DESCRIBE IMAGE", callback)
         self.action_button_clicked_send(
             image_override=image, 
-            prompt_override="Caption this image",
-            callback=callback
+            prompt_override="What is in this picture?",
+            callback=callback,
+            generator_name="visualqa"
         )
 
     def add_message_to_conversation(self, message_object, is_bot):

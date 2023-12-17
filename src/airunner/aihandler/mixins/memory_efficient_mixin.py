@@ -263,7 +263,7 @@ class MemoryEfficientMixin:
             self.remove_tome_sd()
     
     def apply_tome_sd(self):
-        logger.info("Applying ToMe SD weight merging with ratio {self.tome_sd_ratio}")
+        logger.info(f"Applying ToMe SD weight merging with ratio {self.tome_sd_ratio}")
         tomesd.apply_patch(self.pipe, ratio=self.tome_sd_ratio)
         self.tome_sd_applied = True
         self.tome_ratio = self.tome_sd_ratio

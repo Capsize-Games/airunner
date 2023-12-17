@@ -1,6 +1,3 @@
-import os
-
-
 from PyQt6.QtCore import Qt
 from PyQt6.QtWidgets import QLabel
 from PyQt6.QtGui import QPixmap
@@ -11,15 +8,14 @@ from PyQt6.QtWidgets import QDialog
 from PyQt6.QtGui import QImage
 
 from PIL import Image
-from PIL import PngImagePlugin
 from PIL.ImageQt import ImageQt
 
-from airunner.widgets.canvas_plus.canvas_base_widget import CanvasBaseWidget
+from airunner.widgets.canvas_plus.standard_base_widget import StandardBaseWidget
 from airunner.widgets.canvas_plus.templates.standard_image_widget_ui import Ui_standard_image_widget
 from airunner.utils import delete_image, load_metadata_from_image, prepare_metadata
 
 
-class StandardImageWidget(CanvasBaseWidget):
+class StandardImageWidget(StandardBaseWidget):
     widget_class_ = Ui_standard_image_widget
     _pixmap = None
     _label = None
@@ -30,13 +26,8 @@ class StandardImageWidget(CanvasBaseWidget):
 
     def __init__(self, *args, **kwargs):
         super().__init__(*args, **kwargs)
-        self.app.image_data.connect(self.handle_image_data)
-        self.app.load_image.connect(self.load_image_from_path)
-        self.ui.controls_container.hide()
         self.ui.batch_container.hide()
-        self.ui.delete_confirmation.hide()
         self.ui.tableWidget.hide()
-        self.ui.image_frame.hide()
         self.ui.similar_groupbox.hide()
     
     def handle_image_data(self, data):
@@ -184,20 +175,6 @@ class StandardImageWidget(CanvasBaseWidget):
         self.ui.tableWidget.clearContents()
         self.ui.tableWidget.setRowCount(0)
     
-    def image_to_canvas(self):
-        self.app.load_image.emit(self.image_path)
-
-    def delete_image(self):
-        self.ui.delete_confirmation.show()
-
-    def confirm_delete(self):
-        self._label.setPixmap(QPixmap())
-        delete_image(self.image_path)
-        self.ui.delete_confirmation.hide()
-
-    def cancel_delete(self):
-        self.ui.delete_confirmation.hide()
-
     def similar_image_with_prompt(self):
         """
         Using the LLM, generate a description of the image
@@ -252,6 +229,3 @@ class StandardImageWidget(CanvasBaseWidget):
 
     def similar_batch(self):
         self.generate_similar_image(batch_size=4)
-
-    def export_image(self):
-        pass
