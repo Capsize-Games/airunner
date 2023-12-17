@@ -54,7 +54,7 @@ class SchedulerMixin:
         self.current_scheduler_name = None
 
     def load_scheduler(self, force_scheduler_name=None, config=None):
-        if self.use_kandinsky:
+        if self.use_kandinsky or self.is_sd_xl_turbo:
             return None
 
         import diffusers
