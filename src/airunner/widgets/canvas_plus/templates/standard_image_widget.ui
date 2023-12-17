@@ -69,7 +69,7 @@
          <number>0</number>
         </property>
         <item>
-         <widget class="QPushButton" name="pushButton_7">
+         <widget class="QPushButton" name="export_button">
           <property name="cursor">
            <cursorShape>PointingHandCursor</cursorShape>
           </property>
@@ -79,7 +79,7 @@
          </widget>
         </item>
         <item>
-         <widget class="QPushButton" name="pushButton">
+         <widget class="QPushButton" name="delete_button">
           <property name="cursor">
            <cursorShape>PointingHandCursor</cursorShape>
           </property>
@@ -92,7 +92,7 @@
          </widget>
         </item>
         <item>
-         <widget class="QPushButton" name="pushButton_4">
+         <widget class="QPushButton" name="to_canvas_button">
           <property name="cursor">
            <cursorShape>PointingHandCursor</cursorShape>
           </property>
@@ -136,7 +136,7 @@
          </widget>
         </item>
         <item row="4" column="0">
-         <widget class="QPushButton" name="pushButton_5">
+         <widget class="QPushButton" name="confirm_delete_button">
           <property name="cursor">
            <cursorShape>PointingHandCursor</cursorShape>
           </property>
@@ -146,7 +146,7 @@
          </widget>
         </item>
         <item row="4" column="1">
-         <widget class="QPushButton" name="pushButton_6">
+         <widget class="QPushButton" name="cancel_delete_button">
           <property name="cursor">
            <cursorShape>PointingHandCursor</cursorShape>
           </property>
@@ -220,7 +220,7 @@
          </widget>
         </item>
         <item>
-         <widget class="QPushButton" name="pushButton_3">
+         <widget class="QPushButton" name="generate_single_simillar_button">
           <property name="cursor">
            <cursorShape>PointingHandCursor</cursorShape>
           </property>
@@ -233,7 +233,7 @@
          </widget>
         </item>
         <item>
-         <widget class="QPushButton" name="pushButton_2">
+         <widget class="QPushButton" name="generate_batch_similar_button">
           <property name="cursor">
            <cursorShape>PointingHandCursor</cursorShape>
           </property>
@@ -316,7 +316,7 @@
  <resources/>
  <connections>
   <connection>
-   <sender>pushButton_5</sender>
+   <sender>confirm_delete_button</sender>
    <signal>clicked()</signal>
    <receiver>standard_image_widget</receiver>
    <slot>confirm_delete()</slot>
@@ -332,7 +332,7 @@
    </hints>
   </connection>
   <connection>
-   <sender>pushButton_6</sender>
+   <sender>cancel_delete_button</sender>
    <signal>clicked()</signal>
    <receiver>standard_image_widget</receiver>
    <slot>cancel_delete()</slot>
@@ -348,7 +348,7 @@
    </hints>
   </connection>
   <connection>
-   <sender>pushButton_4</sender>
+   <sender>to_canvas_button</sender>
    <signal>clicked()</signal>
    <receiver>standard_image_widget</receiver>
    <slot>image_to_canvas()</slot>
@@ -364,7 +364,7 @@
    </hints>
   </connection>
   <connection>
-   <sender>pushButton</sender>
+   <sender>delete_button</sender>
    <signal>clicked()</signal>
    <receiver>standard_image_widget</receiver>
    <slot>delete_image()</slot>
@@ -380,7 +380,7 @@
    </hints>
   </connection>
   <connection>
-   <sender>pushButton_3</sender>
+   <sender>generate_single_simillar_button</sender>
    <signal>clicked()</signal>
    <receiver>standard_image_widget</receiver>
    <slot>similar_image()</slot>
@@ -396,7 +396,7 @@
    </hints>
   </connection>
   <connection>
-   <sender>pushButton_2</sender>
+   <sender>generate_batch_similar_button</sender>
    <signal>clicked()</signal>
    <receiver>standard_image_widget</receiver>
    <slot>similar_batch()</slot>
@@ -412,7 +412,7 @@
    </hints>
   </connection>
   <connection>
-   <sender>pushButton_7</sender>
+   <sender>export_button</sender>
    <signal>clicked()</signal>
    <receiver>standard_image_widget</receiver>
    <slot>export_image()</slot>

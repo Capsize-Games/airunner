@@ -422,44 +422,6 @@
                </widget>
               </item>
               <item>
-               <widget class="QPushButton" name="llm_quantization_button">
-                <property name="minimumSize">
-                 <size>
-                  <width>48</width>
-                  <height>48</height>
-                 </size>
-                </property>
-                <property name="maximumSize">
-                 <size>
-                  <width>48</width>
-                  <height>48</height>
-                 </size>
-                </property>
-                <property name="cursor">
-                 <cursorShape>PointingHandCursor</cursorShape>
-                </property>
-                <property name="text">
-                 <string/>
-                </property>
-                <property name="icon">
-                 <iconset resource="../../../resources_light.qrc">
-                  <normaloff>:/icons/light/clamp-as-indicated-symbol-icon.svg</normaloff>:/icons/light/clamp-as-indicated-symbol-icon.svg</iconset>
-                </property>
-                <property name="iconSize">
-                 <size>
-                  <width>24</width>
-                  <height>24</height>
-                 </size>
-                </property>
-                <property name="checkable">
-                 <bool>true</bool>
-                </property>
-                <property name="flat">
-                 <bool>true</bool>
-                </property>
-               </widget>
-              </item>
-              <item>
                <spacer name="horizontalSpacer_2">
                 <property name="orientation">
                  <enum>Qt::Horizontal</enum>
@@ -537,47 +499,6 @@
                 </property>
                 <property name="checked">
                  <bool>false</bool>
-                </property>
-                <property name="flat">
-                 <bool>true</bool>
-                </property>
-               </widget>
-              </item>
-              <item>
-               <widget class="QPushButton" name="txt2gif_button">
-                <property name="minimumSize">
-                 <size>
-                  <width>48</width>
-                  <height>48</height>
-                 </size>
-                </property>
-                <property name="maximumSize">
-                 <size>
-                  <width>48</width>
-                  <height>48</height>
-                 </size>
-                </property>
-                <property name="cursor">
-                 <cursorShape>PointingHandCursor</cursorShape>
-                </property>
-                <property name="toolTip">
-                 <string>Text to Gif generator (Shap-E)</string>
-                </property>
-                <property name="text">
-                 <string/>
-                </property>
-                <property name="icon">
-                 <iconset resource="../../../resources_light.qrc">
-                  <normaloff>:/icons/light/gif-editor-icon.svg</normaloff>:/icons/light/gif-editor-icon.svg</iconset>
-                </property>
-                <property name="iconSize">
-                 <size>
-                  <width>24</width>
-                  <height>24</height>
-                 </size>
-                </property>
-                <property name="checkable">
-                 <bool>true</bool>
                 </property>
                 <property name="flat">
                  <bool>true</bool>
@@ -1060,7 +981,7 @@
                  <string notr="true"/>
                 </property>
                 <property name="currentIndex">
-                 <number>0</number>
+                 <number>2</number>
                 </property>
                 <widget class="QWidget" name="tab_image">
                  <attribute name="title">
@@ -1130,16 +1051,6 @@
                  <attribute name="title">
                   <string>Video</string>
                  </attribute>
-                </widget>
-                <widget class="QWidget" name="tab_shapegif">
-                 <attribute name="title">
-                  <string>GIF</string>
-                 </attribute>
-                 <layout class="QGridLayout" name="gridLayout_17">
-                  <item row="0" column="0">
-                   <widget class="GifPanelWidget" name="widget_2" native="true"/>
-                  </item>
-                 </layout>
                 </widget>
                 <widget class="QWidget" name="tab_prompt_builder">
                  <attribute name="title">
@@ -1728,6 +1639,28 @@
             </item>
            </layout>
           </widget>
+         </item>
+        </layout>
+       </widget>
+       <widget class="QWidget" name="chat">
+        <attribute name="title">
+         <string>Text Generation</string>
+        </attribute>
+        <layout class="QGridLayout" name="gridLayout_11">
+         <property name="leftMargin">
+          <number>0</number>
+         </property>
+         <property name="topMargin">
+          <number>0</number>
+         </property>
+         <property name="rightMargin">
+          <number>0</number>
+         </property>
+         <property name="bottomMargin">
+          <number>0</number>
+         </property>
+         <item row="0" column="0">
+          <widget class="LLMWidget" name="llm_widget" native="true"/>
          </item>
         </layout>
        </widget>
@@ -2568,12 +2501,6 @@
    <container>1</container>
   </customwidget>
   <customwidget>
-   <class>GifPanelWidget</class>
-   <extends>QWidget</extends>
-   <header>airunner/widgets/gif/gif_panel_widget</header>
-   <container>1</container>
-  </customwidget>
-  <customwidget>
    <class>ImagePanelWidget</class>
    <extends>QWidget</extends>
    <header>airunner/widgets/image/image_panel_widget</header>
@@ -2583,6 +2510,12 @@
    <class>StandardImageWidget</class>
    <extends>QWidget</extends>
    <header>airunner/widgets/canvas_plus/standard_image_widget</header>
+   <container>1</container>
+  </customwidget>
+  <customwidget>
+   <class>LLMWidget</class>
+   <extends>QWidget</extends>
+   <header>airunner/widgets/llm/llm_widget</header>
    <container>1</container>
   </customwidget>
  </customwidgets>
@@ -3334,7 +3267,7 @@
    <slot>action_new_document_triggered()</slot>
    <hints>
     <hint type="sourcelabel">
-     <x>1198</x>
+     <x>857</x>
      <y>65</y>
     </hint>
     <hint type="destinationlabel">
@@ -3350,7 +3283,7 @@
    <slot>action_undo_triggered()</slot>
    <hints>
     <hint type="sourcelabel">
-     <x>1375</x>
+     <x>1034</x>
      <y>65</y>
     </hint>
     <hint type="destinationlabel">
@@ -3366,7 +3299,7 @@
    <slot>action_redo_triggered()</slot>
    <hints>
     <hint type="sourcelabel">
-     <x>1417</x>
+     <x>1076</x>
      <y>65</y>
     </hint>
     <hint type="destinationlabel">
@@ -3382,7 +3315,7 @@
    <slot>action_export_image_triggered()</slot>
    <hints>
     <hint type="sourcelabel">
-     <x>1324</x>
+     <x>983</x>
      <y>65</y>
     </hint>
     <hint type="destinationlabel">
@@ -3398,28 +3331,12 @@
    <slot>image_generators_toggled()</slot>
    <hints>
     <hint type="sourcelabel">
-     <x>832</x>
+     <x>658</x>
      <y>71</y>
     </hint>
     <hint type="destinationlabel">
      <x>0</x>
      <y>297</y>
-    </hint>
-   </hints>
-  </connection>
-  <connection>
-   <sender>txt2gif_button</sender>
-   <signal>pressed()</signal>
-   <receiver>MainWindow</receiver>
-   <slot>text_to_gif_toggled()</slot>
-   <hints>
-    <hint type="sourcelabel">
-     <x>880</x>
-     <y>71</y>
-    </hint>
-    <hint type="destinationlabel">
-     <x>0</x>
-     <y>380</y>
     </hint>
    </hints>
   </connection>
@@ -3430,7 +3347,7 @@
    <slot>text_to_video_toggled()</slot>
    <hints>
     <hint type="sourcelabel">
-     <x>928</x>
+     <x>706</x>
      <y>71</y>
     </hint>
     <hint type="destinationlabel">
@@ -3446,7 +3363,7 @@
    <slot>prompt_builder_toggled()</slot>
    <hints>
     <hint type="sourcelabel">
-     <x>976</x>
+     <x>754</x>
      <y>71</y>
     </hint>
     <hint type="destinationlabel">
@@ -3510,28 +3427,12 @@
    <slot>image_generators_toggled()</slot>
    <hints>
     <hint type="sourcelabel">
-     <x>832</x>
+     <x>658</x>
      <y>71</y>
     </hint>
     <hint type="destinationlabel">
      <x>754</x>
      <y>0</y>
-    </hint>
-   </hints>
-  </connection>
-  <connection>
-   <sender>txt2gif_button</sender>
-   <signal>released()</signal>
-   <receiver>MainWindow</receiver>
-   <slot>text_to_gif_toggled()</slot>
-   <hints>
-    <hint type="sourcelabel">
-     <x>880</x>
-     <y>71</y>
-    </hint>
-    <hint type="destinationlabel">
-     <x>0</x>
-     <y>99</y>
     </hint>
    </hints>
   </connection>
@@ -3542,7 +3443,7 @@
    <slot>text_to_video_toggled()</slot>
    <hints>
     <hint type="sourcelabel">
-     <x>928</x>
+     <x>706</x>
      <y>71</y>
     </hint>
     <hint type="destinationlabel">
@@ -3558,7 +3459,7 @@
    <slot>prompt_builder_toggled()</slot>
    <hints>
     <hint type="sourcelabel">
-     <x>976</x>
+     <x>754</x>
      <y>71</y>
     </hint>
     <hint type="destinationlabel">
@@ -3574,8 +3475,8 @@
    <slot>action_toggle_nsfw_filter_triggered(bool)</slot>
    <hints>
     <hint type="sourcelabel">
-     <x>1381</x>
-     <y>417</y>
+     <x>1079</x>
+     <y>422</y>
     </hint>
     <hint type="destinationlabel">
      <x>1002</x>
@@ -3590,8 +3491,8 @@
    <slot>action_show_settings()</slot>
    <hints>
     <hint type="sourcelabel">
-     <x>1381</x>
-     <y>477</y>
+     <x>1079</x>
+     <y>482</y>
     </hint>
     <hint type="destinationlabel">
      <x>1002</x>
@@ -3606,8 +3507,8 @@
    <slot>action_toggle_grid(bool)</slot>
    <hints>
     <hint type="sourcelabel">
-     <x>1381</x>
-     <y>315</y>
+     <x>1079</x>
+     <y>320</y>
     </hint>
     <hint type="destinationlabel">
      <x>1002</x>
@@ -3622,8 +3523,8 @@
    <slot>action_toggle_active_grid_area(bool)</slot>
    <hints>
     <hint type="sourcelabel">
-     <x>1381</x>
-     <y>153</y>
+     <x>1079</x>
+     <y>158</y>
     </hint>
     <hint type="destinationlabel">
      <x>1002</x>
@@ -3638,8 +3539,8 @@
    <slot>action_toggle_eraser(bool)</slot>
    <hints>
     <hint type="sourcelabel">
-     <x>1381</x>
-     <y>255</y>
+     <x>1079</x>
+     <y>260</y>
     </hint>
     <hint type="destinationlabel">
      <x>0</x>
@@ -3654,8 +3555,8 @@
    <slot>action_toggle_brush(bool)</slot>
    <hints>
     <hint type="sourcelabel">
-     <x>1381</x>
-     <y>204</y>
+     <x>1079</x>
+     <y>209</y>
     </hint>
     <hint type="destinationlabel">
      <x>0</x>
@@ -3759,22 +3660,6 @@
     </hint>
    </hints>
   </connection>
-  <connection>
-   <sender>llm_quantization_button</sender>
-   <signal>toggled(bool)</signal>
-   <receiver>MainWindow</receiver>
-   <slot>quantization_clicked(bool)</slot>
-   <hints>
-    <hint type="sourcelabel">
-     <x>339</x>
-     <y>44</y>
-    </hint>
-    <hint type="destinationlabel">
-     <x>731</x>
-     <y>0</y>
-    </hint>
-   </hints>
-  </connection>
  </connections>
  <designerdata>
   <property name="gridDeltaX">
@@ -3858,7 +3743,6 @@
   <slot>model_manager_toggled()</slot>
   <slot>image_generators_toggled()</slot>
   <slot>text_to_video_toggled()</slot>
-  <slot>text_to_gif_toggled()</slot>
   <slot>prompt_builder_toggled()</slot>
   <slot>refresh_styles()</slot>
   <slot>action_open_vulnerability_report()</slot>

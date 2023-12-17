@@ -46,6 +46,7 @@ class MainWindow(
     QMainWindow,
     HistoryMixin
 ):
+    token_signal = pyqtSignal(str)
     api = None
     input_event_manager = None
     current_filter = None
@@ -292,6 +293,7 @@ class MainWindow(
 
         super().__init__(*args, **kwargs)
 
+        print("INITIALIZING MAIN WINDOW")
         self.initialize()
 
         # get tab index by name value which is stored in self.settings_manager.active_image_editor_section
@@ -350,7 +352,7 @@ class MainWindow(
             self.language_processing_toggled()
         else:
             self.model_manager_toggled()
-
+        
         self.loaded.emit()
     
     @property
@@ -813,7 +815,6 @@ class MainWindow(
             ("edit-document-icon", "language_processing_button"),
             ("tech-icon", "model_manager_button"),
             ("photo-editor-icon", "image_generators_button"),
-            ("gif-editor-icon", "txt2gif_button"),
             ("video-editor-icon", "txt2vid_button"),
             ("prompt-editor-icon", "prompt_builder_button"),
             ("pencil-icon", "toggle_brush_button"),
@@ -824,7 +825,7 @@ class MainWindow(
             ("setting-line-icon", "settings_button"),
             ("chat-box-icon", "chat_button"),
             ("setting-line-icon", "llm_preferences_button"),
-            ("clamp-as-indicated-symbol-icon", "llm_quantization_button"),
+            #("clamp-as-indicated-symbol-icon", "llm_quantization_button"),
             ("sliders-icon", "llm_settings_button"),
             ("object-selected-icon", "toggle_active_grid_area_button"),
         ]:
@@ -1091,6 +1092,7 @@ class MainWindow(
 
     def initialize_window(self):
         self.window = Ui_MainWindow()
+        print("SETTING UP MAIN WINDOW UI")
         self.window.setupUi(self)
         self.ui = self.window
         self.center()
@@ -1233,6 +1235,7 @@ class MainWindow(
         self.generator_tab_widget.stop_progress_bar(
             data["tab_section"], data["action"]
         )
+        path = ""
         if self.settings_manager.auto_export_images:
             for image in images:
                 path = auto_export_image(
@@ -1551,19 +1554,19 @@ class MainWindow(
         self.set_llm_widget_tab("quantization", val)
     
     def set_llm_widget_tab(self, name, val):
-        self.ui.generator_widget.current_generator_widget.ui.ai_tab_widget.set_tab(name)
         self.toggle_llm_button_signals(blocked=True)
         self.ui.chat_button.setChecked(name == "chat")
         self.ui.llm_preferences_button.setChecked(name == "preferences")
         self.ui.llm_settings_button.setChecked(name == "settings")
-        self.ui.llm_quantization_button.setChecked(name == "quantization")
+        index = self.ui.llm_widget.ui.tabWidget.indexOf(self.ui.llm_widget.ui.tabWidget.findChild(QWidget, name))
+        self.ui.llm_widget.ui.tabWidget.setCurrentIndex(index)
         self.toggle_llm_button_signals(blocked=False)
     
     def toggle_llm_button_signals(self, blocked):
         self.ui.chat_button.blockSignals(blocked)
         self.ui.llm_preferences_button.blockSignals(blocked)
         self.ui.llm_settings_button.blockSignals(blocked)
-        self.ui.llm_quantization_button.blockSignals(blocked)
+        #self.ui.llm_quantization_button.blockSignals(blocked)
 
     def activate_image_generation_section(self):
         self.ui.mode_tab_widget.setCurrentIndex(0)
@@ -1571,11 +1574,11 @@ class MainWindow(
         self.toggle_tool_section_buttons_visibility()
 
     def activate_language_processing_section(self):
-        self.ui.mode_tab_widget.setCurrentIndex(0)
-        try:
-            self.ui.generator_widget.current_generator_widget.ui.generator_form_tab_widget.setCurrentIndex(2)
-        except AttributeError as e:
-            pass
+        self.ui.mode_tab_widget.setCurrentIndex(1)
+        # try:
+        #     self.ui.generator_widget.current_generator_widget.ui.generator_form_tab_widget.setCurrentIndex(2)
+        # except AttributeError as e:
+        #     pass
         self.toggle_tool_section_buttons_visibility()
     
     def activate_model_manager_section(self):
@@ -1585,14 +1588,11 @@ class MainWindow(
     def initialize_tool_section_buttons(self):
         self.toggle_tool_section_buttons_visibility()
         self.set_button_checked("image_generators", False)
-        self.set_button_checked("txt2gif", False)
         self.set_button_checked("txt2vid", False)
         self.set_button_checked("prompt_builder", False)
         if self.settings_manager.mode == Mode.IMAGE.value:
             if self.settings_manager.generator_section == GeneratorSection.TXT2VID.value:
                 self.set_button_checked("txt2vid")
-            elif self.settings_manager.generator_section == GeneratorSection.TXT2GIF.value:
-                self.set_button_checked("txt2gif")
             elif self.settings_manager.generator_section == GeneratorSection.PROMPT_BUILDER.value:
                 self.set_button_checked("prompt_builder")
             else:
@@ -1616,12 +1616,10 @@ class MainWindow(
 
     
     def set_all_image_generator_buttons(self):
+        is_image_generators = self.settings_manager.generator_section == GeneratorSection.TXT2IMG.value
         is_txt2vid = self.settings_manager.generator_section == GeneratorSection.TXT2VID.value
-        is_txt2gif = self.settings_manager.generator_section == GeneratorSection.TXT2GIF.value
         is_prompt_builder = self.settings_manager.generator_section == GeneratorSection.PROMPT_BUILDER.value
-        is_image_generators = not is_txt2vid and not is_txt2gif and not is_prompt_builder
         self.set_button_checked("image_generators", is_image_generators)
-        self.set_button_checked("txt2gif", is_txt2gif)
         self.set_button_checked("txt2vid", is_txt2vid)
         self.set_button_checked("prompt_builder", is_prompt_builder)
     
@@ -1662,9 +1660,7 @@ class MainWindow(
             current_tab = "shape"
             self.settings_manager.set_value("current_tab", current_tab)
         self.settings_manager.set_value("mode", Mode.IMAGE.value)
-        self.settings_manager.set_value(f"current_section_{current_tab}", GeneratorSection.TXT2GIF.value)
         self.generator_tab_widget.set_current_section_tab()
-        self.settings_manager.set_value("generator_section", GeneratorSection.TXT2GIF.value)
         active_tab_obj = session.query(TabSection).filter(TabSection.panel == "center_tab").first()
         active_tab_obj.active_tab = "GIF"
         save_session()
