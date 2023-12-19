@@ -159,7 +159,7 @@ class ControlNetSettingsWidget(InputImageSettingsWidget):
         self.set_thumbnail()
 
     def export_generated_controlnet_image(self):
-        path = auto_export_image(
+        path, image = auto_export_image(
             image=self.current_controlnet_image,
             type="controlnet",
             data={
