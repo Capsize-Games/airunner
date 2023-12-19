@@ -1067,15 +1067,8 @@ class SDRunner(
 
         if not self.is_outpaint and not self.is_vid_action:
             args["latents"] = self.latents
-        try:
-            with torch.inference_mode():
-                return self.pipe(**args)
-        except AssertionError as e:
-            self.log_error("unknown Assertion error", e)
-            return None
-        except Exception as e:
-            self.log_error("unknown error", e)
-            return None
+        with torch.inference_mode():
+            return self.pipe(**args)
 
     def call_shapegif_pipe(self):
         kwargs = {
