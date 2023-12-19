@@ -509,6 +509,8 @@ class CanvasPlusWidget(CanvasBaseWidget):
             self.ui.canvas_container.setCursor(QCursor(Qt.CursorShape.ArrowCursor))
 
     def handle_image_data(self, data):
+        if self.app.canvas_is_active:
+            pass
         options = data["data"]["options"]
         images = data["images"]
         outpaint_box_rect = options["outpaint_box_rect"]
