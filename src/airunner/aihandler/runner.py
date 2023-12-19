@@ -18,7 +18,7 @@ from diffusers.utils import export_to_gif
 from diffusers.utils.torch_utils import randn_tensor
 #from diffusers import ConsistencyDecoderVAE
 from torchvision import transforms
-from diffusers import StableDiffusionPipeline
+from diffusers import StableDiffusionPipeline, StableDiffusionXLPipeline, DiffusionPipeline, StableDiffusionLatentUpscalePipeline
 
 from airunner.aihandler.auto_pipeline import AutoImport
 from airunner.aihandler.enums import FilterType
@@ -1065,17 +1065,11 @@ class SDRunner(
         if self.is_shapegif:
             return self.call_shapegif_pipe()
 
-        if not self.is_outpaint and not self.is_vid_action:
+        if not self.is_outpaint and not self.is_vid_action and not self.is_upscale:
             args["latents"] = self.latents
-        try:
-            with torch.inference_mode():
-                return self.pipe(**args)
-        except AssertionError as e:
-            self.log_error("unknown Assertion error", e)
-            return None
-        except Exception as e:
-            self.log_error("unknown error", e)
-            return None
+
+        with torch.inference_mode():
+            return self.pipe(**args)
 
     def call_shapegif_pipe(self):
         kwargs = {
@@ -1241,6 +1235,7 @@ class SDRunner(
         extra_args = self.prepare_extra_args(data, image, mask)
 
         # do the sample
+        print(extra_args)
         try:
             if self.do_mega_scale:
                 return self.do_mega_scale_sample(data, image, extra_args)
@@ -1307,6 +1302,10 @@ class SDRunner(
         Process the prompts - called before generate (and during in the case of multiple samples)
         :return:
         """
+        prompt = data["options"][f"prompt"]
+        negative_prompt = data["options"][f"negative_prompt"]
+        data["options"][f"prompt"] = [prompt for _ in range(self.batch_size)]
+        data["options"][f"negative_prompt"] = [negative_prompt for _ in range(self.batch_size)]
         return data
         prompt_data = self.prompt_data
         logger.info(f"Process prompt")
@@ -1356,7 +1355,7 @@ class SDRunner(
         logger.info("Runner: process_data called")
         self.requested_data = data
         self.prepare_options(data)
-        self.prepare_scheduler()
+        #self.prepare_scheduler()
         self.prepare_model()
         self.initialize()
         if self.pipe:
@@ -1376,6 +1375,7 @@ class SDRunner(
         seed = self.latents_seed
         data = self.process_prompts(data, seed)
         self.current_sample = 1
+        print(data)
         images, nsfw_content_detected = self.sample_diffusers_model(data)
         if self.is_vid_action and "video_filename" not in self.requested_data:
             self.requested_data["video_filename"] = self.txt2vid_file
@@ -1484,14 +1484,6 @@ class SDRunner(
             })
         self.send_message(res, code=MessageCode.PROGRESS)
 
-    def move_to_cpu(self):
-        if not self.pipe:
-            return
-        try:
-            self.pipe.to("cpu")
-        except ValueError:
-            pass
-    
     def unload(self):
         self.unload_model()
         self.unload_tokenizer()
@@ -1526,20 +1518,21 @@ class SDRunner(
 
         error = None
         error_message = ""
-        try:
-            self.generate(data)
-        except TypeError as e:
-            error_message = f"TypeError during generation {self.action}"
-            error = e
-        except Exception as e:
-            error = e
-            if "PYTORCH_CUDA_ALLOC_CONF" in str(e):
-                error = self.cuda_error_message
-                self.clear_memory()
-                self.reset_applied_memory_settings()
-            else:
-                error_message = f"Error during generation"
-                traceback.print_exc()
+        # try:
+        print("GENERATE HERE")
+        self.generate(data)
+        # except TypeError as e:
+        #     error_message = f"TypeError during generation {self.action}"
+        #     error = e
+        # except Exception as e:
+        #     error = e
+        #     if "PYTORCH_CUDA_ALLOC_CONF" in str(e):
+        #         error = self.cuda_error_message
+        #         self.clear_memory()
+        #         self.reset_applied_memory_settings()
+        #     else:
+        #         error_message = f"Error during generation"
+        #         traceback.print_exc()
 
         if error:
             self.initialized = False
@@ -1647,10 +1640,10 @@ class SDRunner(
 
         kwargs = {}
 
-        if self.current_model_branch:
-            kwargs["variant"] = self.current_model_branch
-        elif self.data_type == torch.float16:
-            kwargs["variant"] = "fp16"
+        # if self.current_model_branch:
+        #     kwargs["variant"] = self.current_model_branch
+        # elif self.data_type == torch.float16:
+        #     kwargs["variant"] = "fp16"
 
         if self.do_reuse_pipeline and not self.reload_model:
             self.initialized = True
@@ -1664,6 +1657,7 @@ class SDRunner(
         self.current_load_controlnet = self.do_load_controlnet
 
         if self.pipe is None or self.reload_model:
+            kwargs["from_safetensors"] = self.is_safetensors
             logger.info(f"Loading model from scratch {self.reload_model}")
             self.reset_applied_memory_settings()
             if self.use_kandinsky:
@@ -1681,20 +1675,43 @@ class SDRunner(
                 if self.is_single_file:
                     try:
                         self.pipe = self.load_ckpt_model()
+                        # pipeline_action = self.get_pipeline_action()
+
+                        # pipeline_class_ = None
+                        # if self.model_version == "SDXL 1.0":
+                        #     pipeline_class_ = StableDiffusionXLPipeline
+                        # elif self.model_version == "SD 2.1":
+                        #     pipeline_class_ = DiffusionPipeline
+                        # else:
+                        #     pipeline_class_ = StableDiffusionPipeline
+                        # print(self.model_version)
+
+                        # self.pipe = pipeline_class_.from_single_file(
+                        #     self.model_path,
+                        #     **kwargs
+                        # )
                     except OSError as e:
                         return self.handle_missing_files(self.action)
                 else:
-                    logger.info("Loading model from PRETRAINED")
+                    logger.info(f"Loading model {self.model_path} from PRETRAINED")
                     scheduler = self.load_scheduler()
                     if scheduler:
                         kwargs["scheduler"] = scheduler
-                    self.pipe = StableDiffusionPipeline.from_pretrained(
-                        self.model_path,
-                        **kwargs
-                    )
+                    
+                    if self.is_upscale:
+                        self.pipe = StableDiffusionLatentUpscalePipeline.from_pretrained(
+                            self.model_path,
+                            **kwargs
+                        )
+                    else:
+                        self.pipe = StableDiffusionPipeline.from_pretrained(
+                            self.model_path,
+                            **kwargs
+                        )
 
                 if self.pipe is None:
                     logger.error("Failed to load pipeline")
+                    self.send_message("Failed to load model", MessageCode.ERROR)
                     return
             
                 """
@@ -1768,6 +1785,7 @@ class SDRunner(
     def download_from_original_stable_diffusion_ckpt(self, path, local_files_only=None):
         local_files_only = self.local_files_only if local_files_only is None else local_files_only
         pipeline_action = self.get_pipeline_action()
+        pipe = None
         try:
             pipe = download_from_original_stable_diffusion_ckpt(
                 checkpoint_path_or_dict=path,
@@ -1803,6 +1821,8 @@ class SDRunner(
                     path, 
                     local_files_only=False
                 )
+        except Exception as e:
+            logger.error(f"Failed to load model from ckpt: {e}")
         return pipe
 
     def clear_controlnet(self):
@@ -1833,16 +1853,30 @@ class SDRunner(
 
         # either load from a pretrained model or from a pipe
         if do_load_controlnet and not self.is_vid2vid:
-            kwargs["controlnet"] = self.controlnet()
             self.controlnet_loaded = True
             pipe = self.load_controlnet_from_ckpt(pipe)
+            kwargs["controlnet"] = self.controlnet()
         else:
             if "controlnet" in kwargs:
                 del kwargs["controlnet"]
             self.clear_controlnet()
 
             if self.is_single_file:
-                pipe = self.download_from_original_stable_diffusion_ckpt(self.model_path)
+                #pipe = self.download_from_original_stable_diffusion_ckpt(self.model_path)
+                pipeline_action = self.get_pipeline_action()
+
+                pipeline_class_ = None
+                if self.model_version == "SDXL 1.0":
+                    pipeline_class_ = StableDiffusionXLPipeline
+                else:
+                    pipeline_class_ = StableDiffusionPipeline
+                print(self.model_version)
+
+                pipe = pipeline_class_.from_single_file(
+                    self.model_path,
+                    device=self.device,
+                )
+                return pipe
             else:
                 pipeline_action = self.get_pipeline_action()
                 pretrained_object = AutoImport.class_object(
