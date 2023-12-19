@@ -221,7 +221,7 @@ class MemoryEfficientMixin:
             if not str(self.pipe.device).startswith("cuda"):
                 logger.info(f"Moving pipe to cuda (currently {self.pipe.device})")
                 self.pipe.to("cuda") if self.cuda_is_available else None
-            if hasattr(self.pipe, "controlnet"):
+            if hasattr(self.pipe, "controlnet") and self.pipe.controlnet is not None:
                 if not self.pipe.controlnet.device or not str(self.pipe.controlnet.device).startswith("cuda"):
                     logger.info(f"Moving controlnet to cuda (currently {self.pipe.controlnet.device})")
                     self.pipe.controlnet.half().to("cuda")
