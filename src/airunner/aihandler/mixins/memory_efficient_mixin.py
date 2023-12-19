@@ -217,16 +217,32 @@ class MemoryEfficientMixin:
         return
 
     def move_pipe_to_cuda(self):
-        if not self.use_enable_sequential_cpu_offload and not self.enable_model_cpu_offload and self.pipe.device != "cuda":
-            logger.info("Moving to cuda")
-            self.pipe.to("cuda") if self.cuda_is_available else None
+        if self.cuda_is_available and not self.use_enable_sequential_cpu_offload and not self.enable_model_cpu_offload:
+            if not str(self.pipe.device).startswith("cuda"):
+                logger.info(f"Moving pipe to cuda (currently {self.pipe.device})")
+                self.pipe.to("cuda") if self.cuda_is_available else None
+            if hasattr(self.pipe, "controlnet") and self.pipe.controlnet is not None:
+                if not self.pipe.controlnet.device or not str(self.pipe.controlnet.device).startswith("cuda"):
+                    logger.info(f"Moving controlnet to cuda (currently {self.pipe.controlnet.device})")
+                    self.pipe.controlnet.half().to("cuda")
+                if not self.pipe.controlnet.dtype == torch.float16:
+                    logger.info("Changing controlnet dtype to float16")
+                    self.pipe.controlnet.half()
 
     def move_pipe_to_cpu(self):
         logger.info("Moving to cpu")
+        if not self.pipe:
+            return
         try:
-            self.pipe.to("cpu", self.data_type)
+            self.pipe.to("cpu", self.data_type).float()
         except NotImplementedError:
             logger.warning("Not implemented error when moving to cpu")
+        
+        if hasattr(self.pipe, "controlnet"):
+            try:
+                self.pipe.controlnet.to("cpu", self.data_type).float()
+            except NotImplementedError:
+                logger.warning("Not implemented error when moving to cpu")
 
     def apply_cpu_offload(self):
         if self.cpu_offload_applied == self.enable_model_cpu_offload:

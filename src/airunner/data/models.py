@@ -649,6 +649,8 @@ class Settings(BaseModel):
 
     image_similarity = Column(Integer, default=1000)
 
+    enable_tts = Column(Boolean, default=True)
+
 
 class Layer(BaseModel):
     __tablename__ = 'layers'

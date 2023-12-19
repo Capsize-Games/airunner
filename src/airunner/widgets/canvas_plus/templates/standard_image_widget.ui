@@ -248,6 +248,22 @@
        </layout>
       </widget>
      </item>
+     <item>
+      <widget class="QGroupBox" name="groupBox">
+       <property name="title">
+        <string>Upscale</string>
+       </property>
+       <layout class="QGridLayout" name="gridLayout_3">
+        <item row="0" column="0">
+         <widget class="QPushButton" name="upscale_2x">
+          <property name="text">
+           <string>2x Upscale</string>
+          </property>
+         </widget>
+        </item>
+       </layout>
+      </widget>
+     </item>
     </layout>
    </item>
    <item row="7" column="0">
@@ -322,8 +338,8 @@
    <slot>confirm_delete()</slot>
    <hints>
     <hint type="sourcelabel">
-     <x>240</x>
-     <y>919</y>
+     <x>259</x>
+     <y>641</y>
     </hint>
     <hint type="destinationlabel">
      <x>237</x>
@@ -338,8 +354,8 @@
    <slot>cancel_delete()</slot>
    <hints>
     <hint type="sourcelabel">
-     <x>533</x>
-     <y>919</y>
+     <x>532</x>
+     <y>641</y>
     </hint>
     <hint type="destinationlabel">
      <x>368</x>
@@ -386,8 +402,8 @@
    <slot>similar_image()</slot>
    <hints>
     <hint type="sourcelabel">
-     <x>111</x>
-     <y>572</y>
+     <x>303</x>
+     <y>708</y>
     </hint>
     <hint type="destinationlabel">
      <x>38</x>
@@ -402,8 +418,8 @@
    <slot>similar_batch()</slot>
    <hints>
     <hint type="sourcelabel">
-     <x>433</x>
-     <y>572</y>
+     <x>534</x>
+     <y>708</y>
     </hint>
     <hint type="destinationlabel">
      <x>154</x>
@@ -418,12 +434,28 @@
    <slot>export_image()</slot>
    <hints>
     <hint type="sourcelabel">
-     <x>218</x>
+     <x>182</x>
      <y>572</y>
     </hint>
     <hint type="destinationlabel">
      <x>467</x>
      <y>0</y>
+    </hint>
+   </hints>
+  </connection>
+  <connection>
+   <sender>upscale_2x</sender>
+   <signal>clicked()</signal>
+   <receiver>standard_image_widget</receiver>
+   <slot>upscale_2x_clicked()</slot>
+   <hints>
+    <hint type="sourcelabel">
+     <x>409</x>
+     <y>761</y>
+    </hint>
+    <hint type="destinationlabel">
+     <x>391</x>
+     <y>-7</y>
     </hint>
    </hints>
   </connection>
@@ -437,5 +469,6 @@
   <slot>confirm_delete()</slot>
   <slot>cancel_delete()</slot>
   <slot>export_image()</slot>
+  <slot>upscale_2x_clicked()</slot>
  </slots>
 </ui>
