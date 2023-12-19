@@ -98,6 +98,14 @@ class Ui_standard_image_widget(object):
         self.generate_batch_similar_button.setObjectName("generate_batch_similar_button")
         self.horizontalLayout_3.addWidget(self.generate_batch_similar_button)
         self.verticalLayout.addWidget(self.similar_groupbox)
+        self.groupBox = QtWidgets.QGroupBox(parent=standard_image_widget)
+        self.groupBox.setObjectName("groupBox")
+        self.gridLayout_3 = QtWidgets.QGridLayout(self.groupBox)
+        self.gridLayout_3.setObjectName("gridLayout_3")
+        self.upscale_2x = QtWidgets.QPushButton(parent=self.groupBox)
+        self.upscale_2x.setObjectName("upscale_2x")
+        self.gridLayout_3.addWidget(self.upscale_2x, 0, 0, 1, 1)
+        self.verticalLayout.addWidget(self.groupBox)
         self.gridLayout_2.addLayout(self.verticalLayout, 0, 0, 1, 1)
         spacerItem = QtWidgets.QSpacerItem(20, 40, QtWidgets.QSizePolicy.Policy.Minimum, QtWidgets.QSizePolicy.Policy.Expanding)
         self.gridLayout_2.addItem(spacerItem, 7, 0, 1, 1)
@@ -130,6 +138,7 @@ class Ui_standard_image_widget(object):
         self.generate_single_simillar_button.clicked.connect(standard_image_widget.similar_image) # type: ignore
         self.generate_batch_similar_button.clicked.connect(standard_image_widget.similar_batch) # type: ignore
         self.export_button.clicked.connect(standard_image_widget.export_image) # type: ignore
+        self.upscale_2x.clicked.connect(standard_image_widget.upscale_2x_clicked) # type: ignore
         QtCore.QMetaObject.connectSlotsByName(standard_image_widget)
 
     def retranslateUi(self, standard_image_widget):
@@ -150,6 +159,8 @@ class Ui_standard_image_widget(object):
         self.generate_single_simillar_button.setText(_translate("standard_image_widget", "Single"))
         self.generate_batch_similar_button.setToolTip(_translate("standard_image_widget", "Generate a batch of four variations"))
         self.generate_batch_similar_button.setText(_translate("standard_image_widget", "Batch"))
+        self.groupBox.setTitle(_translate("standard_image_widget", "Upscale"))
+        self.upscale_2x.setText(_translate("standard_image_widget", "2x Upscale"))
         item = self.tableWidget.horizontalHeaderItem(0)
         item.setText(_translate("standard_image_widget", "New Column"))
         item = self.tableWidget.horizontalHeaderItem(1)
