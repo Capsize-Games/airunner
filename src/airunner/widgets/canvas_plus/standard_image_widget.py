@@ -11,6 +11,8 @@ from PIL import Image
 from PIL.ImageQt import ImageQt
 from PIL.PngImagePlugin import PngInfo
 
+from airunner.utils import get_session
+from airunner.data.models import AIModel
 from airunner.widgets.canvas_plus.standard_base_widget import StandardBaseWidget
 from airunner.widgets.canvas_plus.templates.standard_image_widget_ui import Ui_standard_image_widget
 from airunner.utils import delete_image, load_metadata_from_image, prepare_metadata
@@ -230,3 +232,38 @@ class StandardImageWidget(StandardBaseWidget):
 
     def similar_batch(self):
         self.generate_similar_image(batch_size=4)
+
+    def upscale_2x_clicked(self):
+        meta_data = self.meta_data
+        
+        prompt = meta_data.get("prompt", None)
+        negative_prompt = meta_data.get("negative_prompt", None)
+        prompt = None if prompt == "" else prompt
+        negative_prompt = None if negative_prompt == "" else negative_prompt
+
+        if prompt is None:
+            return self.similar_image_with_prompt()
+        if negative_prompt is None:
+            meta_data["negative_prompt"] = "verybadimagenegative_v1.3, EasyNegative"
+        
+        meta_data.pop("seed", None)
+        meta_data.pop("latents_seed", None)
+
+        meta_data["model_data_name"] = "sd-x2-latent-upscaler"
+        meta_data["model_data_path"] = "stabilityai/sd-x2-latent-upscaler"
+        meta_data["action"] = "upscale"
+        meta_data["width"] = self.image.width
+        meta_data["height"] = self.image.height
+        meta_data["enable_controlnet"] = True
+        meta_data["controlnet"] = "canny"
+        meta_data["controlnet_conditioning_scale"] = self.settings_manager.image_similarity
+        meta_data["image_guidance_scale"] = 100 * (1000 - self.settings_manager.image_similarity) / 100.0
+        meta_data["strength"] = 1.0
+        meta_data["enable_input_image"] = True
+        meta_data["use_cropped_image"] = False
+        meta_data["batch_size"] = 1
+
+        self.app.generator_tab_widget.current_generator_widget.call_generate(
+            image=self.image,
+            override_data=meta_data
+        )
