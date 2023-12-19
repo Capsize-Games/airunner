@@ -1477,14 +1477,6 @@ class SDRunner(
             })
         self.send_message(res, code=MessageCode.PROGRESS)
 
-    def move_to_cpu(self):
-        if not self.pipe:
-            return
-        try:
-            self.pipe.to("cpu")
-        except ValueError:
-            pass
-    
     def unload(self):
         self.unload_model()
         self.unload_tokenizer()
@@ -1657,6 +1649,7 @@ class SDRunner(
         self.current_load_controlnet = self.do_load_controlnet
 
         if self.pipe is None or self.reload_model:
+            kwargs["from_safetensors"] = self.is_safetensors
             logger.info(f"Loading model from scratch {self.reload_model}")
             self.reset_applied_memory_settings()
             if self.use_kandinsky:
@@ -1826,9 +1819,9 @@ class SDRunner(
 
         # either load from a pretrained model or from a pipe
         if do_load_controlnet and not self.is_vid2vid:
-            kwargs["controlnet"] = self.controlnet()
             self.controlnet_loaded = True
             pipe = self.load_controlnet_from_ckpt(pipe)
+            kwargs["controlnet"] = self.controlnet()
         else:
             if "controlnet" in kwargs:
                 del kwargs["controlnet"]
