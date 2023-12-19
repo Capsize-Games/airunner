@@ -218,12 +218,16 @@ class MemoryEfficientMixin:
 
     def move_pipe_to_cuda(self):
         if self.cuda_is_available and not self.use_enable_sequential_cpu_offload and not self.enable_model_cpu_offload:
-            if "cuda" not in self.pipe.device:
-                logger.info(f"Moving to cuda (currently {self.pipe.device})")
+            if not str(self.pipe.device).startswith("cuda"):
+                logger.info(f"Moving pipe to cuda (currently {self.pipe.device})")
                 self.pipe.to("cuda") if self.cuda_is_available else None
-            if hasattr(self.pipe, "controlnet") and "cuda" not in self.pipe.device:
-                logger.info(f"Moving controlnet to cuda (currently {self.pipe.controlnet.device})")
-                self.pipe.controlnet.half().to("cuda")
+            if hasattr(self.pipe, "controlnet"):
+                if not str(self.pipe.controlnet.device).startswith("cuda"):
+                    logger.info(f"Moving controlnet to cuda (currently {self.pipe.controlnet.device})")
+                    self.pipe.controlnet.half().to("cuda")
+                if not self.pipe.controlnet.dtype == torch.float16:
+                    logger.info("Changing controlnet dtype to float16")
+                    self.pipe.controlnet.half()
 
     def move_pipe_to_cpu(self):
         logger.info("Moving to cpu")
