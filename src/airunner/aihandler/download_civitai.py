@@ -36,8 +36,8 @@ if __name__ == "__main__":
         print(f"Downloaded {n} of {total} bytes")
     DownloadCivitAI.get_json(4384)
     DownloadCivitAI.download_model(
-        "https://civitai.com/api/download/models/128713",
-        "dreamshaper_8.safetensors",
+        "URL HERE",
+        "MODEL HERE",
         2082642.474609375,
         callback=callback
     )
