@@ -231,6 +231,8 @@ class MemoryEfficientMixin:
 
     def move_pipe_to_cpu(self):
         logger.info("Moving to cpu")
+        if not self.pipe:
+            return
         try:
             self.pipe.to("cpu", self.data_type).float()
         except NotImplementedError:
