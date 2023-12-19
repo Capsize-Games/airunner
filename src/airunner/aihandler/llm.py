@@ -24,7 +24,9 @@ class LLM(TransformerRunner):
 
     def generate(self, **kwargs):
         if self.generator.name == "casuallm":
-            return self.chain.run(kwargs.get("prompt", ""))
+            prompt = kwargs.get("prompt", "")
+            logger.info(f"LLM requested with prompt {prompt}")
+            return self.chain.run(prompt)
         elif self.generator.name == "visualqa":
             inputs = self.processor(
                 self.image, 

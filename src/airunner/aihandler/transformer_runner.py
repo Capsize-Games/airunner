@@ -240,6 +240,7 @@ class TransformerRunner(QObject):
                 repetition_penalty=1.15,
                 temperature=0.7,
             )
+            Logger.info(f"Loading prompt template {self.prompt_template}")
             self.llm=HuggingFacePipeline(pipeline=self.pipeline)
             self.memory = ConversationBufferWindowMemory(k=5)
             self.prompt = PromptTemplate.from_template(
