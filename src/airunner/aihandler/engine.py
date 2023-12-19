@@ -64,22 +64,14 @@ class Engine:
                 self.clear_memory()
             # self.llm.move_to_device()
         elif is_tts:
-            # split on sentence enders
-            sentence_enders = [".", "?", "!", "\n"]
-            text = data["request_data"]["text"]
-            sentences = []
-            # split text into sentences
-            current_sentence = ""
-            for char in text:
-                current_sentence += char
-                if char in sentence_enders:
-                    sentences.append(current_sentence)
-                    current_sentence = ""
-            if current_sentence != "":
-                sentences.append(current_sentence)
-
-            for sentence in sentences:
-                self.tts.add_sentence(sentence, "a")
+            callback = data["request_data"].get("callback", None)
+            message_object = data["request_data"].get("message_object", None)
+            is_bot = data["request_data"].get("is_bot", False)
+            first_message = data["request_data"].get("first_message", None)
+            last_message = data["request_data"].get("last_message", None)
+            if callback:
+                callback(message_object, is_bot, first_message, last_message)
+            self.tts.add_sentence(data["request_data"]["text"], "a")
         elif not is_llm and not is_tts and self.model_type != "art":
             logger.info("Switching to art model")
             self.model_type = "art"

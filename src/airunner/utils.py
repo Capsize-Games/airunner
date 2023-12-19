@@ -334,7 +334,7 @@ def auto_export_image(
     settings_manager = SettingsManager()
     
     if data and "action" in data and data["action"] == "txt2vid":
-        return
+        return None, None
     
     base_path = settings_manager.path_settings.model_base_path
     
@@ -402,8 +402,8 @@ def auto_export_image(
             image.save(file_path, pnginfo=metadata)
         else:
             image.save(file_path)
-        return file_path
-    return None
+        return file_path, image
+    return None, None
 
 def load_metadata_from_image(image):
     if image:
