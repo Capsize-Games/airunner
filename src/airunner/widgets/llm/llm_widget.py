@@ -5,6 +5,7 @@ from PyQt6.QtCore import pyqtSlot
 from PyQt6.QtWidgets import QSpacerItem, QSizePolicy
 from PyQt6.QtWidgets import QWidget
 from sqlalchemy import inspect
+from functools import partial
 
 from airunner.aihandler.enums import MessageCode
 from airunner.data.db import session
@@ -57,9 +58,6 @@ class LLMWidget(BaseWidget):
         self.ui.suffix.blockSignals(False)
 
         self.app.token_signal.connect(self.handle_token_signal)
-        print("INITIALIZE LLM")
-        import traceback
-        traceback.print_stack()
         self.app.message_var.my_signal.connect(self.message_handler)
         self.ui.prompt.returnPressed.connect(self.action_button_clicked_send)
         self.ui.prompt.textChanged.connect(self.prompt_text_changed)
@@ -203,13 +201,41 @@ class LLMWidget(BaseWidget):
             )
             session.add(message_object)
             session.commit()
-            self.app.client.message = dict(
-                tts_request=True,
-                request_data=dict(
-                    text=message
-                )
-            )
-            self.add_message_to_conversation(message_object, is_bot=True)
+
+            if self.settings_manager.enable_tts:
+                # split on sentence enders
+                sentence_enders = [".", "?", "!", "\n"]
+                text = message_object.message
+                sentences = []
+                # split text into sentences
+                current_sentence = ""
+                for char in text:
+                    current_sentence += char
+                    if char in sentence_enders:
+                        sentences.append(current_sentence)
+                        current_sentence = ""
+                if current_sentence != "":
+                    sentences.append(current_sentence)
+
+                for index, sentence in enumerate(sentences):
+                    sentence = sentence.strip()
+                    self.app.client.message = dict(
+                        tts_request=True,
+                        request_data=dict(
+                            text=sentence,
+                            message_object=Message(
+                                name=message_object.name,
+                                message=sentence,
+                            ),
+                            is_bot=True,
+                            callback=self.add_message_to_conversation,
+                            first_message=index == 0,
+                            last_message=index == len(sentences) - 1,
+                        )
+                    )
+
+            if not self.settings_manager.enable_tts:
+                self.add_message_to_conversation(message_object, is_bot=True)
 
         self.generating = False
         self.enable_send_button()
@@ -358,10 +384,21 @@ class LLMWidget(BaseWidget):
             generator_name="visualqa"
         )
 
-    def add_message_to_conversation(self, message_object, is_bot):
-        message = f"{message_object.name} Says: \"{message_object.message}\""
-        self.conversation_history.append(message_object.message)
-        self.ui.conversation.append(message)
+    def add_message_to_conversation(self, message_object, is_bot, first_message=True, last_message=True):
+        message = ""
+        if first_message:
+            message = f"{message_object.name} Says: \""
+        message += message_object.message
+        if last_message:
+            message += "\""
+
+        if first_message:
+            self.conversation_history.append(message)
+        if not first_message:
+            self.conversation_history[-1] += message
+            self.ui.conversation.undo()
+        self.ui.conversation.append(self.conversation_history[-1])
+
 
     def action_button_clicked_generate_characters(self):
         pass
