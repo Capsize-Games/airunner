@@ -248,6 +248,12 @@ class GeneratorForm(BaseWidget):
             image = input_image if not image else image
             override_data["input_image"] = image
 
+            if self.is_upscale and image is None:
+                image = self.app.current_active_image()
+            
+            if self.is_upscale and image is None:
+                return
+
             if image is None:
                 if self.is_txt2img:
                     return self.do_generate(seed=seed, override_data=override_data)
