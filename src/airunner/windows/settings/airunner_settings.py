@@ -139,6 +139,12 @@ class SettingsWindow(BaseWindow):
                         "checkable": True,
                         "description": "If enabled, AI Runner will check for updates on startup."
                     },
+                    {
+                        "name": "enable_tts",
+                        "display_name": "Enable LLM Text to Speech",
+                        "checkable": True,
+                        "description": "If enabled, text to speech will be used for LLMs."
+                    },
                 ]
             },
             {
@@ -209,6 +215,8 @@ class SettingsWindow(BaseWindow):
                 checked = self.app.settings_manager.dark_mode_enabled
             elif name == "check_for_updates":
                 checked = self.app.settings_manager.latest_version_check
+            elif name == "enable_tts":
+                checked = self.app.settings_manager.enable_tts
             elif name == "allow_online_mode":
                 checked = self.app.settings_manager.allow_online_mode
 
@@ -246,6 +254,9 @@ class SettingsWindow(BaseWindow):
         elif name == "check_for_updates":
             checked = item.checkState() == Qt.CheckState.Checked
             self.app.settings_manager.set_value("latest_version_check", checked)
+        elif name == "enable_tts":
+            checked = item.checkState() == Qt.CheckState.Checked
+            self.app.settings_manager.set_value("enable_tts", checked)
         elif name == "allow_online_mode":
             checked = item.checkState() == Qt.CheckState.Checked
             self.settings_manager.set_value("allow_online_mode", checked)

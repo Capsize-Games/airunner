@@ -9,7 +9,10 @@ from PyQt6.QtGui import QImage
 
 from PIL import Image
 from PIL.ImageQt import ImageQt
+from PIL.PngImagePlugin import PngInfo
 
+from airunner.utils import get_session
+from airunner.data.models import AIModel
 from airunner.widgets.canvas_plus.standard_base_widget import StandardBaseWidget
 from airunner.widgets.canvas_plus.templates.standard_image_widget_ui import Ui_standard_image_widget
 from airunner.utils import delete_image, load_metadata_from_image, prepare_metadata
@@ -31,11 +34,9 @@ class StandardImageWidget(StandardBaseWidget):
         self.ui.similar_groupbox.hide()
     
     def handle_image_data(self, data):
-        self.image_path = data["path"]
         images = data["images"]
         if len(images) == 1:
-            self.image = images[0]
-            self.load_image_from_object(self.image, self.image_path)
+            self.load_image_from_path(data["path"])
         else:
             self.load_batch_images(images)
     
@@ -57,18 +58,18 @@ class StandardImageWidget(StandardBaseWidget):
             self.ui.batch_container.layout().addWidget(label)
     
     def load_image_from_path(self, image_path):
-        self.image_path = image_path
         image = Image.open(image_path)
         self.load_image_from_object(image=image, image_path=image_path)
     
-    def load_image_from_object(self, image, image_path=None):
+    def load_image_from_object(self, image, image_path=NotImplemented):
         if self.app.image_editor_tab_name == "Standard":
             self.set_pixmap(image=image, image_path=image_path)
     
     def set_pixmap(self, image_path=None, image=None):
         self.image_path = image_path
         self.image = image
-        self.meta_data = load_metadata_from_image(image)
+        meta_data = image.info
+        self.meta_data = meta_data if meta_data is not None else load_metadata_from_image(image)
         size = self.ui.image_frame.width() - 20
 
         pixmap = self._pixmap
@@ -182,14 +183,12 @@ class StandardImageWidget(StandardBaseWidget):
         self.app.describe_image(image=self.image, callback=self.handle_prompt_generated)
     
     def handle_prompt_generated(self, prompt):
-        print("handle_prompt_generated", prompt)
         meta_data = load_metadata_from_image(self.image)
         meta_data["prompt"] = prompt[0]
         meta_data = prepare_metadata({ "options": meta_data })
         image = Image.open(self.image_path)
         image.save(self.image_path, pnginfo=meta_data)
         self.image = image
-        print("saving meta_data", meta_data)
         self.meta_data = load_metadata_from_image(self.image)
         self.generate_similar_image()
 
@@ -198,12 +197,19 @@ class StandardImageWidget(StandardBaseWidget):
     
     def generate_similar_image(self, batch_size=1):
         meta_data = self.meta_data
-        print("meta_data", meta_data)
-        if "prompt" not in meta_data or meta_data["prompt"] == "" or meta_data["prompt"] is None:
-            return self.similar_image_with_prompt()
-        if "negative_prompt" not in meta_data or meta_data["negative_prompt"] == "" or meta_data["negative_prompt"] is None:
-            meta_data["negative_prompt"] = "verybadimagenegative_v1.3, EasyNegative"
+        
+        prompt = meta_data.get("prompt", None)
+        negative_prompt = meta_data.get("negative_prompt", None)
+        prompt = None if prompt == "" else prompt
+        negative_prompt = None if negative_prompt == "" else negative_prompt
 
+        if prompt is None:
+            return self.similar_image_with_prompt()
+        if negative_prompt is None:
+            meta_data["negative_prompt"] = "verybadimagenegative_v1.3, EasyNegative"
+        
+        meta_data.pop("seed", None)
+        meta_data.pop("latents_seed", None)
         meta_data["action"] = "txt2img"
         meta_data["width"] = self.image.width
         meta_data["height"] = self.image.height
@@ -216,9 +222,6 @@ class StandardImageWidget(StandardBaseWidget):
         meta_data["use_cropped_image"] = False
         meta_data["batch_size"] = batch_size
 
-        meta_data.pop("seed", None)
-        meta_data.pop("latents_seed", None)
-
         self.app.generator_tab_widget.current_generator_widget.call_generate(
             image=self.image,
             override_data=meta_data
@@ -229,3 +232,38 @@ class StandardImageWidget(StandardBaseWidget):
 
     def similar_batch(self):
         self.generate_similar_image(batch_size=4)
+
+    def upscale_2x_clicked(self):
+        meta_data = self.meta_data
+        
+        prompt = meta_data.get("prompt", None)
+        negative_prompt = meta_data.get("negative_prompt", None)
+        prompt = None if prompt == "" else prompt
+        negative_prompt = None if negative_prompt == "" else negative_prompt
+
+        if prompt is None:
+            return self.similar_image_with_prompt()
+        if negative_prompt is None:
+            meta_data["negative_prompt"] = "verybadimagenegative_v1.3, EasyNegative"
+        
+        meta_data.pop("seed", None)
+        meta_data.pop("latents_seed", None)
+
+        meta_data["model_data_name"] = "sd-x2-latent-upscaler"
+        meta_data["model_data_path"] = "stabilityai/sd-x2-latent-upscaler"
+        meta_data["action"] = "upscale"
+        meta_data["width"] = self.image.width
+        meta_data["height"] = self.image.height
+        meta_data["enable_controlnet"] = True
+        meta_data["controlnet"] = "canny"
+        meta_data["controlnet_conditioning_scale"] = self.settings_manager.image_similarity
+        meta_data["image_guidance_scale"] = 100 * (1000 - self.settings_manager.image_similarity) / 100.0
+        meta_data["strength"] = 1.0
+        meta_data["enable_input_image"] = True
+        meta_data["use_cropped_image"] = False
+        meta_data["batch_size"] = 1
+
+        self.app.generator_tab_widget.current_generator_widget.call_generate(
+            image=self.image,
+            override_data=meta_data
+        )
