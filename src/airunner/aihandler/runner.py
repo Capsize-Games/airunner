@@ -1681,6 +1681,7 @@ class SDRunner(
 
                 if self.pipe is None:
                     logger.error("Failed to load pipeline")
+                    self.send_message("Failed to load model", MessageCode.ERROR)
                     return
             
                 """
@@ -1789,6 +1790,8 @@ class SDRunner(
                     path, 
                     local_files_only=False
                 )
+        except Exception as e:
+            logger.error(f"Failed to load model from ckpt: {e}")
         return pipe
 
     def clear_controlnet(self):
