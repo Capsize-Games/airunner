@@ -409,7 +409,7 @@ class MainWindow(
             self.choose_image_export_path()
         if os.path.isdir(self.image_path) is False:
             return
-        path = auto_export_image(self.ui.layer_widget.current_layer.image_data.image, seed=self.seed)
+        path, image = auto_export_image(self.ui.layer_widget.current_layer.image_data.image, seed=self.seed)
         if path is not None:
             self.set_status_label(f"Image exported to {path}")
 
@@ -1237,8 +1237,9 @@ class MainWindow(
         )
         path = ""
         if self.settings_manager.auto_export_images:
+            procesed_images = []
             for image in images:
-                path = auto_export_image(
+                path, image = auto_export_image(
                     image=image, 
                     data=data, 
                     seed=data["options"]["seed"], 
@@ -1246,6 +1247,8 @@ class MainWindow(
                 )
                 if path is not None:
                     self.set_status_label(f"Image exported to {path}")
+                procesed_images.append(image)
+            images = procesed_images
 
         self.generator_tab_widget.stop_progress_bar(
             data["tab_section"], data["action"]
@@ -1582,7 +1585,7 @@ class MainWindow(
         self.toggle_tool_section_buttons_visibility()
     
     def activate_model_manager_section(self):
-        self.ui.mode_tab_widget.setCurrentIndex(1)
+        self.ui.mode_tab_widget.setCurrentIndex(2)
         self.toggle_tool_section_buttons_visibility()
 
     def initialize_tool_section_buttons(self):

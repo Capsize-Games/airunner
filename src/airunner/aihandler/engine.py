@@ -56,7 +56,7 @@ class Engine:
             do_unload_model = self.settings_manager.unload_unused_model
             do_move_to_cpu = not do_unload_model and self.settings_manager.move_unused_model_to_cpu
             if do_move_to_cpu:
-                self.sd.move_to_cpu()
+                self.sd.move_pipe_to_cpu()
                 self.clear_memory()
             elif do_unload_model:
                 self.sd.unload_model()
