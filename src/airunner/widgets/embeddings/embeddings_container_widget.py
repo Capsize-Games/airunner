@@ -26,7 +26,6 @@ class EmbeddingsContainerWidget(BaseWidget):
         self.settings_manager.changed_signal.connect(self.handle_changed_signal)
         self.app.message_var.my_signal.connect(self.message_handler)
 
-        self.load_embeddings()
         self.scan_for_embeddings()
 
     def disable_embedding(self, name, model_name):
@@ -87,6 +86,8 @@ class EmbeddingsContainerWidget(BaseWidget):
             self.handle_embedding_load_failed(message)
 
     def load_embeddings(self):
+        self.clear_embedding_widgets()
+        
         session = get_session()
         embeddings = session.query(Embedding).filter(
             Embedding.name.like(f"%{self.search_filter}%") if self.search_filter != "" else True).all()
@@ -105,24 +106,37 @@ class EmbeddingsContainerWidget(BaseWidget):
 
     def action_clicked_button_scan_for_embeddings(self):
         self.scan_for_embeddings()
+    
+    def check_saved_embeddings(self):
+        session = get_session()
+        embeddings = session.query(Embedding).all()
+        for embedding in embeddings:
+            if not os.path.exists(embedding.path):
+                session.delete(embedding)
 
     def scan_for_embeddings(self):
         # recursively scan for embedding model files in the embeddings path
         # for each embedding model file, create an Embedding model
         # add the Embedding model to the database
         # add the Embedding model to the UI
+        self.check_saved_embeddings()
+
         session = get_session()
         embeddings_path = self.settings_manager.path_settings.embeddings_path
-        with os.scandir(embeddings_path) as dir_object:
-            for entry in dir_object:
-                if entry.is_file():  # ckpt or safetensors file
-                    # check if entry.name is in ckpt, safetensors or pt files:
-                    if entry.name.endswith(".ckpt") or entry.name.endswith(".safetensors") or entry.name.endswith(".pt"):
-                        name = entry.name.replace(".ckpt", "").replace(".safetensors", "").replace(".pt", "")
-                        embedding = Embedding(name=name, path=entry.path)
-                        session.add(embedding)
-        save_session(session)
 
+        if os.path.exists(embeddings_path):
+            for root, dirs, _ in os.walk(embeddings_path):
+                for dir in dirs:
+                    path = os.path.join(root, dir)
+                    for entry in os.scandir(path):
+                        if entry.is_file() and entry.name.endswith((".ckpt", ".safetensors", ".pt")):
+                            name = os.path.splitext(entry.name)[0]
+                            embedding = session.query(Embedding).filter_by(name=name).first()
+                            if not embedding:
+                                embedding = Embedding(name=name, path=entry.path)
+                                session.add(embedding)
+            session.commit()
+        self.load_embeddings()
 
     def toggle_all_toggled(self, checked):
         for i in range(self.ui.embeddings.widget().layout().count()):
