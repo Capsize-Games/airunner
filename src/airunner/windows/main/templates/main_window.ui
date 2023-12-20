@@ -981,7 +981,7 @@
                  <string notr="true"/>
                 </property>
                 <property name="currentIndex">
-                 <number>2</number>
+                 <number>0</number>
                 </property>
                 <widget class="QWidget" name="tab_image">
                  <attribute name="title">
@@ -1001,7 +1001,7 @@
                    <number>0</number>
                   </property>
                   <item row="0" column="0">
-                   <widget class="QSplitter" name="splitter_2">
+                   <widget class="QSplitter" name="canvas_splitter">
                     <property name="orientation">
                      <enum>Qt::Horizontal</enum>
                     </property>
@@ -1009,6 +1009,16 @@
                      <property name="currentIndex">
                       <number>0</number>
                      </property>
+                     <widget class="QWidget" name="Standard">
+                      <attribute name="title">
+                       <string>Standard</string>
+                      </attribute>
+                      <layout class="QGridLayout" name="gridLayout_19">
+                       <item row="0" column="0">
+                        <widget class="StandardImageWidget" name="standard_image_widget" native="true"/>
+                       </item>
+                      </layout>
+                     </widget>
                      <widget class="QWidget" name="Canvas">
                       <attribute name="title">
                        <string>Canvas</string>
@@ -1028,16 +1038,6 @@
                        </property>
                        <item row="0" column="0">
                         <widget class="CanvasPlusWidget" name="canvas_plus_widget" native="true"/>
-                       </item>
-                      </layout>
-                     </widget>
-                     <widget class="QWidget" name="Standard">
-                      <attribute name="title">
-                       <string>Standard</string>
-                      </attribute>
-                      <layout class="QGridLayout" name="gridLayout_19">
-                       <item row="0" column="0">
-                        <widget class="StandardImageWidget" name="standard_image_widget" native="true"/>
                        </item>
                       </layout>
                      </widget>
