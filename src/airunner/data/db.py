@@ -245,6 +245,16 @@ if not session.query(Prompt).first():
         order=1,
         size=-1
     ))
+    settings.splitter_sizes.append(SplitterSection(
+        name="canvas_splitter",
+        order=0,
+        size=520
+    ))
+    settings.splitter_sizes.append(SplitterSection(
+        name="canvas_splitter",
+        order=1,
+        size=-1
+    ))
     session.add(settings)
 
     settings.brush_settings = session.query(BrushSettings).first()
