@@ -1,5 +1,7 @@
 import tqdm
 import requests
+from json.decoder import JSONDecodeError
+from airunner.aihandler.logger import Logger
 
 
 class DownloadCivitAI:
@@ -9,7 +11,12 @@ class DownloadCivitAI:
     def get_json(model_id):
         url = f"https://civitai.com/api/v1/models/{model_id}"
         response = requests.get(url)
-        json = response.json()
+
+        try:
+            json = response.json()
+        except JSONDecodeError:
+            Logger.error(f"Failed to decode JSON from {url}")
+            print(response)
         return json
 
     def download_model(self, url, file_name, size_kb, callback):
