@@ -5,6 +5,7 @@ from airunner.utils import get_session
 from airunner.widgets.base_widget import BaseWidget
 from airunner.widgets.model_manager.templates.import_ui import Ui_import_model_widget
 from airunner.aihandler.download_civitai import DownloadCivitAI
+from airunner.aihandler.logger import Logger
 
 class ImportWidget(BaseWidget):
     widget_class_ = Ui_import_model_widget
@@ -71,7 +72,9 @@ class ImportWidget(BaseWidget):
         print("Version", diffuser_model_version)
         print("Category", category)
         print("Pipeline Action", pipeline_action)
-        trained_words = model_version.get("trained_words", [])
+        trained_words = model_version.get("trainedWords", [])
+        if isinstance(trained_words, str):
+            trained_words = [trained_words]
         trained_words = ",".join(trained_words)
 
         session = get_session()
@@ -114,17 +117,17 @@ class ImportWidget(BaseWidget):
                 session.add(new_lora)
                 session.commit()
         elif model_type == "TextualInversion":
+            name = file_path.split("/")[-1].split(".")[0]
             embedding_exists = session.query(Embedding).filter_by(
                 name=name,
                 path=file_path,
             ).first()
-            if not embedding_exists:
+            if not embedding_exists:                
                 new_embedding = Embedding(
                     name=name,
                     path=file_path,
-                    enabled=True,
-                    loaded=False,
-                    trigger_word=trained_words,
+                    active=True,
+                    tags=trained_words,
                 )
                 session.add(new_embedding)
                 session.commit()
@@ -158,11 +161,14 @@ class ImportWidget(BaseWidget):
         url = self.ui.import_url.text()
         print("IMPORT MODELS")
         try:
-            model_id = url.split("/")[4]
+            model_id = url.split("models/")[1]
         except IndexError:
             return
 
         data = DownloadCivitAI.get_json(model_id)
+        if data is None:
+            Logger.error("Failed to get JSON from CivitAI")
+            return
         self.current_model_data = data
         self.is_civitai = "civitai.com" in url
         model_name = data["name"]
