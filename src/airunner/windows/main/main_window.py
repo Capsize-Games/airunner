@@ -12,6 +12,8 @@ from PyQt6.QtGui import QGuiApplication
 from PyQt6.QtWidgets import QApplication, QFileDialog, QMainWindow, QWidget, QSpacerItem, QSizePolicy
 from PyQt6.QtCore import Qt
 from PyQt6 import QtGui
+from PyQt6.QtCore import QEvent
+from PyQt6.QtCore import QTimer
 
 from airunner.resources_light_rc import *
 from airunner.resources_dark_rc import *
@@ -41,6 +43,8 @@ from airunner.windows.settings.airunner_settings import SettingsWindow
 from airunner.windows.update.update_window import UpdateWindow
 from airunner.windows.video import VideoPopup
 from airunner.data.models import TabSection
+
+from airunner.utils import get_session
 
 class MainWindow(
     QMainWindow,
@@ -76,6 +80,7 @@ class MainWindow(
     _themes = None
     button_clicked_signal = pyqtSignal(dict)
     status_widget = None
+    splitters = None
 
     image_interpolation_window = None
     deterministic_window = None
@@ -293,7 +298,6 @@ class MainWindow(
 
         super().__init__(*args, **kwargs)
 
-        print("INITIALIZING MAIN WINDOW")
         self.initialize()
 
         # get tab index by name value which is stored in self.settings_manager.active_image_editor_section
@@ -352,6 +356,8 @@ class MainWindow(
             self.language_processing_toggled()
         else:
             self.model_manager_toggled()
+        
+        self.start_splitter_timer()
         
         self.loaded.emit()
     
@@ -836,6 +842,7 @@ class MainWindow(
         # self.automatic_filter_manager.register_filter(PixelFilter, base_size=256)
 
         self.input_event_manager = InputEventManager(app=self)
+        self.initialize_splitter_sizes()
         self.initialize_settings_manager()
         self.initialize_window()
         self.initialize_handlers()
@@ -899,9 +906,98 @@ class MainWindow(
 
         self.button_clicked_signal.connect(self.handle_button_clicked)
 
+    def initialize_splitter_sizes(self):
+        self.splitters = dict(
+            main=dict(
+                moved=False,
+                sizes=None,
+            ),
+            content=dict(
+                moved=False,
+                sizes=None,
+            ),
+            canvas=dict(
+                moved=False,
+                sizes=None
+            )
+        )
+        splitter_names = ["main", "content", "canvas"]
+        for name in splitter_names:
+            self.splitters[name]["sizes"] = session.query(SplitterSection).filter(
+                SplitterSection.name == f"{name}_splitter"
+            ).order_by(
+                SplitterSection.order
+            ).all()
+    
+    def start_splitter_timer(self):
+        self.timer = QTimer()
+        self.timer.timeout.connect(self.save_splitters_sizes)
+        self.timer.start(1000)
+
     def connect_splitter_handlers(self):
-        self.ui.content_splitter.splitterMoved.connect(self.handle_main_splitter_moved)
-        self.ui.main_splitter.splitterMoved.connect(self.handle_bottom_splitter_moved)
+        splitter_names = ["content", "main", "canvas"]
+        for name in splitter_names:
+            getattr(self.ui, f"{name}_splitter").splitterMoved.connect(partial(self.splitter_moved, name))
+    
+    def splitter_moved(self, key, pos, index):
+        self.splitters[key]["moved"] = True
+        sizes = self.splitters[key]["sizes"]
+        updated_sizes = []
+        if key == "content":
+            col_a_width = self.ui.content_splitter.widget(0).width()
+            col_b_width = self.ui.content_splitter.widget(1).width()
+            col_c_width = self.ui.content_splitter.widget(2).width()
+            window_width = self.width()
+
+            if index == 2 and window_width - pos == 60:
+                col_c_width = 0
+            if index == 1 and pos == 1:
+                col_a_width = 0
+            if index == 1:
+                col_c_width = sizes[2].size
+            if index == 2:
+                col_a_width = sizes[0].size
+            updated_sizes = [col_a_width, col_b_width, col_c_width]
+        elif key == "main":
+            updated_sizes = [
+                self.ui.main_splitter.widget(0).height(),
+                self.ui.main_splitter.widget(1).height()
+            ]
+        elif key == "canvas":
+            updated_sizes = [
+                self.ui.canvas_splitter.widget(0).width(),
+                self.ui.canvas_splitter.widget(1).width()
+            ]
+        for i, size in enumerate(updated_sizes):
+            self.splitters[key]["sizes"][i].size = size
+
+    def save_splitters_sizes(self):
+        do_save = False
+        session = get_session()
+        for key, val in self.splitters.items():
+            if val["moved"] is True:
+                val["moved"] = False
+                do_save = True
+                for size in val["sizes"]:
+                    session.add(size)
+        if do_save:
+            save_session()
+    
+    def set_splitter_sizes(self):
+        """
+        Splitters are used to divide the window into sections. This function
+        intializes the sizes of each splitter section. The sizes are stored
+        in the database and are loaded when the application starts.
+
+        The SplitterSection model is used to store the sizes.
+        The name field for each SplitterSection is set to the name of its
+        corresponding widget.
+        """
+        splitter_names = ["main", "content", "canvas"]
+        for name in splitter_names:
+            splitter_sections = self.splitters[name]["sizes"]
+            splitter_sizes = [obj.size for obj in splitter_sections]
+            getattr(self.ui, f"{name}_splitter").setSizes(splitter_sizes)
 
     def show_section(self, section):
         section_lists = {
@@ -957,100 +1053,6 @@ class MainWindow(
     
     def handle_similar_slider_change(self, attr_name, value=None, widget=None):
         self.ui.standard_image_widget.handle_similar_slider_change(value)
-
-    def set_splitter_sizes(self):
-        """
-        Splitters are used to divide the window into sections. This function
-        intializes the sizes of each splitter section. The sizes are stored
-        in the database and are loaded when the application starts.
-
-        The SplitterSection model is used to store the sizes.
-        The name field for each SplitterSection is set to the name of its
-        corresponding widget.
-
-        main_splitter divides the top and bottom sections
-            Horizontal
-            Top section is the generator tab widget, canvas and tool menus.
-            Bottom section is a tool tab menu (model manager, prompt builder, etc).
-        content_splitter divides the left, center and right sections
-            Horizontal
-            Generator tab widgets are in the left panel.
-            Canvas is in the center panel..
-            Tool menus are in the right panel.
-        center_splitter
-            Vertical
-            Allows multiple grids or additional panels in the center area.
-        right_panel_splitter divides the right panel into sections
-            Vertical
-            Currently used for tool menus (embeddings, layers etc.).
-        :return:
-        """
-        main_splitter_sections = session.query(SplitterSection.size).filter(
-            SplitterSection.name == "main_splitter"
-        ).order_by(
-            SplitterSection.order
-        ).all()
-
-        content_splitter_sections = session.query(SplitterSection.size).filter(
-            SplitterSection.name == "content_splitter"
-        ).order_by(
-            SplitterSection.order
-        ).all()
-
-        main_splitter_sizes = [size[0] for size in main_splitter_sections]
-        content_splitter_sizes = [size[0] for size in content_splitter_sections]
-
-        self.ui.main_splitter.setSizes(main_splitter_sizes)
-        self.ui.content_splitter.setSizes(content_splitter_sizes)
-
-    def handle_main_splitter_moved(self, pos, index):
-        sizes = {
-            "left": session.query(SplitterSection).filter_by(
-                name="content_splitter",
-                order=0
-            ).first(),
-            "right": session.query(SplitterSection).filter_by(
-                name="content_splitter",
-                order=2
-            ).first()
-        }
-        col_a_width = self.ui.content_splitter.widget(0).width()
-        col_b_width = self.ui.content_splitter.widget(1).width()
-        col_c_width = self.ui.content_splitter.widget(2).width()
-        window_width = self.width()
-
-        if index == 2 and window_width - pos == 60:
-            col_c_width = 0
-        if index == 1 and pos == 1:
-            col_a_width = 0
-        if index == 1:
-            col_c_width = sizes["right"].size
-        if index == 2:
-            col_a_width = sizes["left"].size
-
-        updated_sizes = [col_a_width, col_b_width, col_c_width]
-        for n, size in enumerate(updated_sizes):
-            obj = session.query(SplitterSection).filter_by(
-                name="content_splitter",
-                order=n
-            ).first()
-            obj.size = size
-            save_session()
-
-    def handle_bottom_splitter_moved(self, pos, index):
-        top_height = self.ui.main_splitter.widget(0).height()
-        bottom_height = self.ui.main_splitter.widget(1).height()
-        obj = session.query(SplitterSection).filter_by(
-            name="main_splitter",
-            order=0
-        ).first()
-        obj.size = top_height
-        obj_b = session.query(SplitterSection).filter_by(
-            name="main_splitter",
-            order=1
-        ).first()
-        obj_b.size = bottom_height
-        save_session()
 
     def initialize_settings_manager(self):
         self.settings_manager.changed_signal.connect(self.handle_changed_signal)
