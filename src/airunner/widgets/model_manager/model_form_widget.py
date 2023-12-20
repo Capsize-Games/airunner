@@ -18,7 +18,8 @@ class ModelFormWidget(BaseWidget):
         diffuser_model_version, 
         path, 
         model_name,
-        model_data
+        model_data,
+        model_type
     ):
         self.ui.category.clear()
         self.ui.category.addItems(categories)
@@ -30,9 +31,14 @@ class ModelFormWidget(BaseWidget):
         self.ui.diffuser_model_version.clear()
         self.ui.diffuser_model_version.addItems(diffuser_model_versions)
         self.ui.diffuser_model_version.setCurrentText(diffuser_model_version)
+        self.ui.model_type.clear()
+        self.ui.model_type.addItems(["Checkpoint", "LORA", "Embedding", "VAE", "Controlnet", "Pose"])
         self.ui.pipeline_class_line_edit.setText(pipeline_class)
         self.ui.enabled.setChecked(True)
         self.ui.path_line_edit.setText(path)
+
+        # set current model type
+        self.ui.model_type.setCurrentText(model_type)
 
         # clear the table
         self.ui.model_data_table.clearContents()
