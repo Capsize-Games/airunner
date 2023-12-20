@@ -38,6 +38,8 @@ class ModelFormWidget(BaseWidget):
         self.ui.path_line_edit.setText(path)
 
         # set current model type
+        if model_type == "TextualInversion":
+            model_type = "Embedding"
         self.ui.model_type.setCurrentText(model_type)
 
         # clear the table
