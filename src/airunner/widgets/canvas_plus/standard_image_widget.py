@@ -215,9 +215,10 @@ class StandardImageWidget(StandardBaseWidget):
         meta_data["height"] = self.image.height
         meta_data["enable_controlnet"] = True
         meta_data["controlnet"] = "canny"
-        meta_data["controlnet_conditioning_scale"] = self.settings_manager.image_similarity
-        meta_data["image_guidance_scale"] = 100 * (1000 - self.settings_manager.image_similarity) / 100.0
-        meta_data["strength"] = 1.0
+        meta_data["controlnet_conditioning_scale"] = self.settings_manager.image_similarity / 100.0
+        #meta_data["image_guidance_scale"] = 100 * (100 - self.settings_manager.image_similarity) / 100.0
+        meta_data["strength"] = 1.1 - (self.settings_manager.image_similarity / 100.0)
+        print(meta_data["controlnet_conditioning_scale"], meta_data["strength"])
         meta_data["enable_input_image"] = True
         meta_data["use_cropped_image"] = False
         meta_data["batch_size"] = batch_size
@@ -251,6 +252,7 @@ class StandardImageWidget(StandardBaseWidget):
 
         meta_data["model_data_name"] = "sd-x2-latent-upscaler"
         meta_data["model_data_path"] = "stabilityai/sd-x2-latent-upscaler"
+        meta_data["steps"] = "40"
         meta_data["action"] = "upscale"
         meta_data["width"] = self.image.width
         meta_data["height"] = self.image.height
