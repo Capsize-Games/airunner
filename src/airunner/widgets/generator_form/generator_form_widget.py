@@ -603,9 +603,8 @@ class GeneratorForm(BaseWidget):
         self.initialized = True
 
     def handle_settings_manager_changed(self, key, val, settings_manager):
-        # if settings_manager.generator_section == self.settings_manager.generator_section and settings_manager.generator_name == self.settings_manager.generator_name:
-        #     self.set_form_values()
-        pass
+        if settings_manager.generator_section == self.settings_manager.generator_section and settings_manager.generator_name == self.settings_manager.generator_name:
+            self.set_form_values()
 
     def set_controlnet_settings_properties(self):
         self.ui.controlnet_settings.initialize(
