@@ -598,7 +598,7 @@ class MainWindow(
 
     def action_toggle_grid(self, active):
         self.settings_manager.set_value("grid_settings.show_grid", active)
-        self.ui.canvas_plus_widget.update()
+        self.ui.canvas_plus_widget.do_draw()
         # self.canvas.update()
 
     def action_toggle_darkmode(self):

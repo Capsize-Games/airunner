@@ -122,13 +122,12 @@ class ActiveGridArea(DraggablePixmap):
         elif key == "active_grid_settings.render_fill":
             self.toggle_render_fill(value)
             self.redraw()
-        elif key == "active_grid_settings.enabled":
-            self.redraw()
-        elif key == "current_tab":
-            self.redraw()
-        elif key == "working_width":
-            self.redraw()
-        elif key == "working_height":
+        elif key in [
+            "active_grid_settings.enabled",
+            "current_tab",
+            "working_width",
+            "working_height",
+        ]:
             self.redraw()
 
     def redraw(self):
@@ -328,8 +327,30 @@ class CanvasPlusWidget(CanvasBaseWidget):
             Layer.position.asc()
         ).all()
         self.initialize()
-        #self.settings_manager.changed_signal.connect(self.handle_changed_signal)
+        self.settings_manager.changed_signal.connect(self.handle_changed_signal)
         self.app.loaded.connect(self.handle_loaded)
+    
+    def handle_changed_signal(self, key, value):
+        if key == "current_tab":
+            self.do_draw()
+        elif key == "current_section_stablediffusion":
+            self.do_draw()
+        elif key == "current_section_kandinsky":
+            self.do_draw()
+        elif key == "current_section_shapegif":
+            self.do_draw()
+        elif key == "layer_image_data.visible":
+            self.do_draw()
+        elif key == "layer_data.hidden":
+            self.do_draw()
+        elif key == "active_image_editor_section":
+            self.do_draw()
+        elif key == "grid_settings.show_grid":
+            # remove lines from scene
+            for item in self.scene.items():
+                if isinstance(item, QGraphicsLineItem):
+                    self.scene.removeItem(item)
+            self.do_draw()
     
     def handle_loaded(self):
         self.initialized = True
@@ -403,28 +424,6 @@ class CanvasPlusWidget(CanvasBaseWidget):
                 self.canvas_settings.pos_x + pos.x(),
                 self.canvas_settings.pos_y + pos.y()
             ))
-
-    def handle_changed_signal(self, key, value):
-        if key == "current_tab":
-            self.do_draw()
-        elif key == "current_section_stablediffusion":
-            self.do_draw()
-        elif key == "current_section_kandinsky":
-            self.do_draw()
-        elif key == "current_section_shapegif":
-            self.do_draw()
-        elif key == "layer_image_data.visible":
-            self.do_draw()
-        elif key == "layer_data.hidden":
-            self.do_draw()
-        elif key == "active_image_editor_section":
-            self.do_draw()
-        elif key == "grid_settings.show_grid":
-            # remove lines from scene
-            for item in self.scene.items():
-                if isinstance(item, QGraphicsLineItem):
-                    self.scene.removeItem(item)
-            self.do_draw()
 
     def set_scene_rect(self):
         self.scene.setSceneRect(0, 0, self.view_size.width(), self.view_size.height())
