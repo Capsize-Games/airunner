@@ -319,6 +319,7 @@ class CanvasPlusWidget(CanvasBaseWidget):
         self.app.add_image_to_canvas_signal.connect(self.handle_add_image_to_canvas)
         self.app.image_data.connect(self.handle_image_data)
         self.app.load_image.connect(self.load_image_from_path)
+        self.app.load_image_object.connect(self.add_image_to_scene)
         self.layer_data = session.query(
             Layer
         ).filter(
