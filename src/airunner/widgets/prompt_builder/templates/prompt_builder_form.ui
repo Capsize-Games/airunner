@@ -69,7 +69,7 @@
          <property name="currentIndex">
           <number>0</number>
          </property>
-         <widget class="QWidget" name="tab_3">
+         <widget class="QWidget" name="prompt_settings">
           <attribute name="title">
            <string>Prompt Settings</string>
           </attribute>
@@ -89,8 +89,14 @@
            <property name="verticalSpacing">
             <number>6</number>
            </property>
-           <item row="2" column="0" colspan="2">
-            <widget class="QLabel" name="label_8">
+           <item row="2" column="2">
+            <widget class="QLabel" name="label_11">
+             <property name="sizePolicy">
+              <sizepolicy hsizetype="Maximum" vsizetype="Preferred">
+               <horstretch>0</horstretch>
+               <verstretch>0</verstretch>
+              </sizepolicy>
+             </property>
              <property name="font">
               <font>
                <pointsize>8</pointsize>
@@ -98,43 +104,7 @@
               </font>
              </property>
              <property name="text">
-              <string>Color</string>
-             </property>
-            </widget>
-           </item>
-           <item row="3" column="2">
-            <widget class="QComboBox" name="prompt_style">
-             <property name="sizePolicy">
-              <sizepolicy hsizetype="MinimumExpanding" vsizetype="Fixed">
-               <horstretch>0</horstretch>
-               <verstretch>0</verstretch>
-              </sizepolicy>
-             </property>
-             <property name="minimumSize">
-              <size>
-               <width>80</width>
-               <height>22</height>
-              </size>
-             </property>
-             <property name="maximumSize">
-              <size>
-               <width>16777215</width>
-               <height>16777215</height>
-              </size>
-             </property>
-             <property name="font">
-              <font>
-               <pointsize>8</pointsize>
-              </font>
-             </property>
-             <property name="editable">
-              <bool>true</bool>
-             </property>
-             <property name="insertPolicy">
-              <enum>QComboBox::InsertAlphabetically</enum>
-             </property>
-             <property name="sizeAdjustPolicy">
-              <enum>QComboBox::AdjustToContentsOnFirstShow</enum>
+              <string>Style</string>
              </property>
             </widget>
            </item>
@@ -168,49 +138,6 @@
              </property>
             </widget>
            </item>
-           <item row="4" column="0">
-            <widget class="QRadioButton" name="basic_radio">
-             <property name="font">
-              <font>
-               <pointsize>8</pointsize>
-              </font>
-             </property>
-             <property name="text">
-              <string>Basic</string>
-             </property>
-            </widget>
-           </item>
-           <item row="4" column="2">
-            <widget class="QRadioButton" name="advanced_radio">
-             <property name="font">
-              <font>
-               <pointsize>8</pointsize>
-              </font>
-             </property>
-             <property name="text">
-              <string>Advanced</string>
-             </property>
-            </widget>
-           </item>
-           <item row="2" column="2">
-            <widget class="QLabel" name="label_11">
-             <property name="sizePolicy">
-              <sizepolicy hsizetype="Maximum" vsizetype="Preferred">
-               <horstretch>0</horstretch>
-               <verstretch>0</verstretch>
-              </sizepolicy>
-             </property>
-             <property name="font">
-              <font>
-               <pointsize>8</pointsize>
-               <bold>true</bold>
-              </font>
-             </property>
-             <property name="text">
-              <string>Style</string>
-             </property>
-            </widget>
-           </item>
            <item row="0" column="2">
             <widget class="QLabel" name="label">
              <property name="font">
@@ -224,14 +151,21 @@
              </property>
             </widget>
            </item>
-           <item row="0" column="0">
-            <widget class="QLabel" name="label_2">
-             <property name="sizePolicy">
-              <sizepolicy hsizetype="Maximum" vsizetype="Maximum">
-               <horstretch>0</horstretch>
-               <verstretch>0</verstretch>
-              </sizepolicy>
+           <item row="6" column="0">
+            <spacer name="verticalSpacer">
+             <property name="orientation">
+              <enum>Qt::Vertical</enum>
              </property>
+             <property name="sizeHint" stdset="0">
+              <size>
+               <width>20</width>
+               <height>40</height>
+              </size>
+             </property>
+            </spacer>
+           </item>
+           <item row="2" column="0" colspan="2">
+            <widget class="QLabel" name="label_8">
              <property name="font">
               <font>
                <pointsize>8</pointsize>
@@ -239,37 +173,7 @@
               </font>
              </property>
              <property name="text">
-              <string>Category</string>
-             </property>
-            </widget>
-           </item>
-           <item row="1" column="2">
-            <widget class="QComboBox" name="prompt_genre">
-             <property name="sizePolicy">
-              <sizepolicy hsizetype="MinimumExpanding" vsizetype="Fixed">
-               <horstretch>0</horstretch>
-               <verstretch>0</verstretch>
-              </sizepolicy>
-             </property>
-             <property name="minimumSize">
-              <size>
-               <width>80</width>
-               <height>22</height>
-              </size>
-             </property>
-             <property name="font">
-              <font>
-               <pointsize>8</pointsize>
-              </font>
-             </property>
-             <property name="editable">
-              <bool>true</bool>
-             </property>
-             <property name="insertPolicy">
-              <enum>QComboBox::InsertAlphabetically</enum>
-             </property>
-             <property name="sizeAdjustPolicy">
-              <enum>QComboBox::AdjustToContentsOnFirstShow</enum>
+              <string>Color</string>
              </property>
             </widget>
            </item>
@@ -309,22 +213,94 @@
              </property>
             </widget>
            </item>
-           <item row="5" column="0">
-            <spacer name="verticalSpacer">
-             <property name="orientation">
-              <enum>Qt::Vertical</enum>
+           <item row="3" column="2">
+            <widget class="QComboBox" name="prompt_style">
+             <property name="sizePolicy">
+              <sizepolicy hsizetype="MinimumExpanding" vsizetype="Fixed">
+               <horstretch>0</horstretch>
+               <verstretch>0</verstretch>
+              </sizepolicy>
              </property>
-             <property name="sizeHint" stdset="0">
+             <property name="minimumSize">
               <size>
-               <width>20</width>
-               <height>40</height>
+               <width>80</width>
+               <height>22</height>
               </size>
              </property>
-            </spacer>
+             <property name="maximumSize">
+              <size>
+               <width>16777215</width>
+               <height>16777215</height>
+              </size>
+             </property>
+             <property name="font">
+              <font>
+               <pointsize>8</pointsize>
+              </font>
+             </property>
+             <property name="editable">
+              <bool>true</bool>
+             </property>
+             <property name="insertPolicy">
+              <enum>QComboBox::InsertAlphabetically</enum>
+             </property>
+             <property name="sizeAdjustPolicy">
+              <enum>QComboBox::AdjustToContentsOnFirstShow</enum>
+             </property>
+            </widget>
+           </item>
+           <item row="1" column="2">
+            <widget class="QComboBox" name="prompt_genre">
+             <property name="sizePolicy">
+              <sizepolicy hsizetype="MinimumExpanding" vsizetype="Fixed">
+               <horstretch>0</horstretch>
+               <verstretch>0</verstretch>
+              </sizepolicy>
+             </property>
+             <property name="minimumSize">
+              <size>
+               <width>80</width>
+               <height>22</height>
+              </size>
+             </property>
+             <property name="font">
+              <font>
+               <pointsize>8</pointsize>
+              </font>
+             </property>
+             <property name="editable">
+              <bool>true</bool>
+             </property>
+             <property name="insertPolicy">
+              <enum>QComboBox::InsertAlphabetically</enum>
+             </property>
+             <property name="sizeAdjustPolicy">
+              <enum>QComboBox::AdjustToContentsOnFirstShow</enum>
+             </property>
+            </widget>
+           </item>
+           <item row="0" column="0">
+            <widget class="QLabel" name="label_2">
+             <property name="sizePolicy">
+              <sizepolicy hsizetype="Maximum" vsizetype="Maximum">
+               <horstretch>0</horstretch>
+               <verstretch>0</verstretch>
+              </sizepolicy>
+             </property>
+             <property name="font">
+              <font>
+               <pointsize>8</pointsize>
+               <bold>true</bold>
+              </font>
+             </property>
+             <property name="text">
+              <string>Category</string>
+             </property>
+            </widget>
            </item>
           </layout>
          </widget>
-         <widget class="QWidget" name="tab">
+         <widget class="QWidget" name="variables">
           <attribute name="title">
            <string>Variables</string>
           </attribute>
@@ -512,7 +488,7 @@
            </item>
           </layout>
          </widget>
-         <widget class="QWidget" name="tab_2">
+         <widget class="QWidget" name="generated_prompts">
           <attribute name="title">
            <string>Generated Prompts</string>
           </attribute>
@@ -986,8 +962,77 @@
   </layout>
  </widget>
  <resources/>
- <connections/>
+ <connections>
+  <connection>
+   <sender>prompt_category</sender>
+   <signal>currentTextChanged(QString)</signal>
+   <receiver>prompt_builder_form</receiver>
+   <slot>category_text_changed(QString)</slot>
+   <hints>
+    <hint type="sourcelabel">
+     <x>154</x>
+     <y>72</y>
+    </hint>
+    <hint type="destinationlabel">
+     <x>329</x>
+     <y>-12</y>
+    </hint>
+   </hints>
+  </connection>
+  <connection>
+   <sender>prompt_style</sender>
+   <signal>currentTextChanged(QString)</signal>
+   <receiver>prompt_builder_form</receiver>
+   <slot>style_text_changed(QString)</slot>
+   <hints>
+    <hint type="sourcelabel">
+     <x>533</x>
+     <y>116</y>
+    </hint>
+    <hint type="destinationlabel">
+     <x>576</x>
+     <y>-6</y>
+    </hint>
+   </hints>
+  </connection>
+  <connection>
+   <sender>prompt_genre</sender>
+   <signal>currentTextChanged(QString)</signal>
+   <receiver>prompt_builder_form</receiver>
+   <slot>genre_text_changed(QString)</slot>
+   <hints>
+    <hint type="sourcelabel">
+     <x>622</x>
+     <y>76</y>
+    </hint>
+    <hint type="destinationlabel">
+     <x>8</x>
+     <y>-15</y>
+    </hint>
+   </hints>
+  </connection>
+  <connection>
+   <sender>prompt_color</sender>
+   <signal>currentTextChanged(QString)</signal>
+   <receiver>prompt_builder_form</receiver>
+   <slot>color_text_changed(QString)</slot>
+   <hints>
+    <hint type="sourcelabel">
+     <x>201</x>
+     <y>124</y>
+    </hint>
+    <hint type="destinationlabel">
+     <x>39</x>
+     <y>-8</y>
+    </hint>
+   </hints>
+  </connection>
+ </connections>
  <slots>
   <slot>tab_changed(int)</slot>
+  <slot>category_text_changed(QString)</slot>
+  <slot>style_text_changed(QString)</slot>
+  <slot>genre_text_changed(QString)</slot>
+  <slot>color_text_changed(QString)</slot>
  </slots>
 </ui>

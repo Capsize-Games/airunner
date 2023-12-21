@@ -1,5 +1,6 @@
 prompt_bootstrap_data = {
     "animal": {
+        "negative_prompt": "(Unattractive fur/scales/feathers), (Deformed body), (Unappealing coloration)",
         "weights": {
             "animal": 1.0,
             "habitat": 1.0,
@@ -187,6 +188,7 @@ prompt_bootstrap_data = {
         }
     },
     "architecture": {
+        "negative_prompt": "(Poorly designed structure), (Dilapidated building), (Unattractive facade)",
         "weights": {
             "architecture": 1.0,
             "material": 1.0,
@@ -365,6 +367,7 @@ prompt_bootstrap_data = {
         },
     },
     "food": {
+        "negative_prompt": "(Unappetizing appearance), (Bland coloration), (Spoiled or rotten)",
         "weights": {
             "food": 1.0,
             "color": 1.0,
@@ -882,6 +885,7 @@ prompt_bootstrap_data = {
         },
     },
     "person": {
+        "negative_prompt": "(bad facial features), (indistinct facial features), (mangled hands)",
         "weights": {
             "age": 1.4,
             "gender": 1.2,
@@ -1185,6 +1189,7 @@ prompt_bootstrap_data = {
         },
     },
     "vehicle": {
+        "negative_prompt": "(Poorly maintained exterior), (Uncomfortable interior), (Unreliable performance)",
         "weights": {
             "shape": 1.0,
             "vehicle": 1.0,
