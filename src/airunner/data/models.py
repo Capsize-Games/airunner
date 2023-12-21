@@ -167,6 +167,7 @@ class PromptCategory(BaseModel):
 
     id = Column(Integer, primary_key=True)
     name = Column(String)
+    negative_prompt = Column(String)
 
 
 class PromptVariableCategory(BaseModel):

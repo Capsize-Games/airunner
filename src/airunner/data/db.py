@@ -21,7 +21,7 @@ if not session.query(Prompt).first():
 
     # Add Prompt objects
     for prompt_option, data in prompt_bootstrap_data.items():
-        category = PromptCategory(name=prompt_option)
+        category = PromptCategory(name=prompt_option, negative_prompt=data["negative_prompt"])
         prompt = Prompt(
             name=f"Standard {prompt_option} prompt",
             category=category
