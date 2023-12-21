@@ -110,6 +110,7 @@ class MainWindow(
     tab_section_changed_signal = pyqtSignal()
     image_data = pyqtSignal(dict)
     load_image = pyqtSignal(str)
+    load_image_object = pyqtSignal(object)
 
     @property
     def generate_signal(self):
@@ -1434,11 +1435,11 @@ class MainWindow(
             return
         self.ui.canvas_plus_widget.load_image(file_path)
 
-    def export_image(self):
+    def export_image(self, image=None):
         file_path, _ = self.display_file_export_dialog()
         if file_path == "":
             return
-        self.ui.canvas_plus_widget.save_image(file_path)
+        self.ui.canvas_plus_widget.save_image(file_path, image=image)
 
     def choose_image_export_path(self):
         # display a dialog to choose the export path

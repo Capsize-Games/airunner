@@ -34,4 +34,4 @@ class StandardBaseWidget(CanvasBaseWidget):
         pass         
 
     def export_image(self):
-        pass
+        self.app.export_image(self.image)

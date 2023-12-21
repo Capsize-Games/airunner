@@ -268,7 +268,7 @@ class SDRunner(
 
     @property
     def strength(self):
-        return self.options.get(f"strength", 1)
+        return self.options.get(f"strength", 1.0)
 
     @property
     def depth_map(self):
@@ -532,7 +532,7 @@ class SDRunner(
 
     @property
     def controlnet_conditioning_scale(self):
-        return self.options.get(f"controlnet_conditioning_scale", 1000) / 1000.0
+        return self.options.get(f"controlnet_conditioning_scale", 1.0)
 
     @property
     def controlnet_guess_mode(self):
@@ -1698,16 +1698,18 @@ class SDRunner(
                     if scheduler:
                         kwargs["scheduler"] = scheduler
                     
-                    if self.is_upscale:
-                        self.pipe = StableDiffusionLatentUpscalePipeline.from_pretrained(
-                            self.model_path,
-                            **kwargs
-                        )
-                    else:
-                        self.pipe = StableDiffusionPipeline.from_pretrained(
-                            self.model_path,
-                            **kwargs
-                        )
+                    # self.pipe = AutoImport.class_object(
+                    #     "vid2vid" if self.is_vid2vid else self.action,
+                    #     self.model_data,
+                    #     pipeline_action="vid2vid" if self.is_vid2vid else self.action,
+                    #     single_file=False,
+                    #     **kwargs
+                    # )
+                    self.pipe = self.from_pretrained(
+                        pipeline_action=self.action,
+                        model=self.model_path,
+                        **kwargs
+                    )
 
                 if self.pipe is None:
                     logger.error("Failed to load pipeline")
