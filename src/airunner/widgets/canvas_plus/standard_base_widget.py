@@ -14,7 +14,7 @@ class StandardBaseWidget(CanvasBaseWidget):
         self.ui.image_frame.hide()
 
     def image_to_canvas(self):
-        self.app.load_image.emit(self.image_path)
+        self.app.load_image_object.emit(self.image)
 
     def delete_image(self):
         self.ui.delete_confirmation.show()

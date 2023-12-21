@@ -146,7 +146,6 @@ class GeneratorTabWidget(BaseWidget):
         Tab sections are txt2img, depth2img etc.
         :return:
         """
-        print("handle_tab_section_changed")
         self.settings_manager.set_value(f"current_section_{self.current_generator}", self.current_section)
         self.app.handle_tab_section_changed()
 

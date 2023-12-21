@@ -103,6 +103,7 @@ class Ui_standard_image_widget(object):
         self.gridLayout_3 = QtWidgets.QGridLayout(self.groupBox)
         self.gridLayout_3.setObjectName("gridLayout_3")
         self.upscale_2x = QtWidgets.QPushButton(parent=self.groupBox)
+        self.upscale_2x.setCursor(QtGui.QCursor(QtCore.Qt.CursorShape.PointingHandCursor))
         self.upscale_2x.setObjectName("upscale_2x")
         self.gridLayout_3.addWidget(self.upscale_2x, 0, 0, 1, 1)
         self.verticalLayout.addWidget(self.groupBox)
