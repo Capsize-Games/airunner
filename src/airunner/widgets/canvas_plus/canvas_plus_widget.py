@@ -747,12 +747,15 @@ class CanvasPlusWidget(CanvasBaseWidget):
             print(e)
             return None
 
-    def save_image(self, image_path):
+    def save_image(self, image_path, image=None):
         # 1. iterate over all images in self.sce
-        for item in self.scene.items():
-            if isinstance(item, QGraphicsPixmapItem):
-                image = item.pixmap.toImage()
-                image.save(image_path)
+        if image is None:
+            for item in self.scene.items():
+                if isinstance(item, QGraphicsPixmapItem):
+                    image = item.pixmap.toImage()
+                    image.save(image_path)
+        else:
+            image.save(image_path)
     
     def update_image_canvas(self):
         print("TODO")

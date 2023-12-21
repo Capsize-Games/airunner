@@ -63,7 +63,7 @@ class AutoImport:
         pipeline = settings_manager.available_pipeline_by_section(pipeline_action, version, category)
 
         try:
-            if single_file and pipeline.singlefile_classname != "":
+            if single_file and pipeline.singlefile_classname != "" and pipeline.singlefile_classname is not None:
                 classname = pipeline.singlefile_classname
             else:
                 classname = pipeline.classname
