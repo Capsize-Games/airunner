@@ -2,11 +2,12 @@ import random
 
 from airunner.aihandler.settings import MAX_SEED
 from airunner.data.db import session
-from airunner.data.models import TabSection, PromptBuilder
+from airunner.data.models import TabSection, PromptBuilder, PromptCategory, PromptStyle, Prompt
 from airunner.utils import save_session
 from airunner.widgets.base_widget import BaseWidget
 from airunner.widgets.prompt_builder.prompt_builder_form_widget import PromptBuilderForm
 from airunner.widgets.prompt_builder.templates.prompt_builder_ui import Ui_prompt_builder
+from airunner.prompt_builder.prompt_data import PromptData
 
 
 class PromptBuilderWidget(BaseWidget):
@@ -144,13 +145,14 @@ class PromptBuilderWidget(BaseWidget):
         self.prompt_generator_settings = session.query(PromptBuilder).all()
         ts = session.query(TabSection).filter(TabSection.panel == "prompt_builder.ui.tabs").first()
         self.ui.tabs.blockSignals(True)
-        self.prompt_data = self.settings_manager.prompt_builder_prompts
+        self.prompt_data = PromptData(prompt_id=1, use_prompt_builder=True)#session.query(Prompt).all()
+        # print self.prompt_data as a dict
         self.initialize_tab_forms()
         self.ui.tabs.setCurrentIndex(int(ts.active_tab))
         self.ui.tabs.blockSignals(False)
 
     prompt_builder_forms = []
-
+    
     def initialize_tab_forms(self):
         """
         Prompt blender allows multiple generated prompts to be blended together.
@@ -237,10 +239,11 @@ class PromptBuilderWidget(BaseWidget):
         self.process_prompt()
 
     def process_prompt(self):
-        if not self.settings_manager.generator.use_prompt_builder:
-            # self.prompt_text.setPlainText("")
-            # self.negative_prompt_text.setPlainText("")
-            return
+        print("PROCESS PROMPT")
+        # if not self.settings_manager.generator.use_prompt_builder:
+        #     # self.prompt_text.setPlainText("")
+        #     # self.negative_prompt_text.setPlainText("")
+        #     return
 
         # get composition values from dropdowns in current tab
         # get widget from current tab
@@ -248,31 +251,36 @@ class PromptBuilderWidget(BaseWidget):
         if current_tab is None:
             return
 
-        prompt_a = ""
-        negative_prompt_a = ""
         #seed = self.app.seed if not self.app.seed_override else self.app.seed_override
-        seed = self.app.seed
-        if self.settings_manager.prompt_blend_type == 1:
-            prompt_a = self.app.prompt
-            negative_prompt_a = self.app.negative_prompt
-        elif self.settings_manager.prompt_blend_type == 2:
-            prev_tab = self.current_tab
-            self.current_tab = "b" if prev_tab == "a" else "a"
-            prompt_a, negative_prompt_a = self.build_prompts("", "", seed)
-            self.current_tab = prev_tab
-            random.seed(seed)
-            seed = random.randint(0, MAX_SEED)
+        seed = random.randint(0, MAX_SEED)
+        # if self.settings_manager.prompt_blend_type == 1:
+        #     prompt_a = self.app.prompt
+        #     negative_prompt_a = self.app.negative_prompt
+        # elif self.settings_manager.prompt_blend_type == 2:
+        #     prev_tab = self.current_tab
+        #     self.current_tab = "b" if prev_tab == "a" else "a"
+        #     prompt_a, negative_prompt_a = self.build_prompts("", "", seed)
+        #     self.current_tab = prev_tab
+        prev_tab = self.current_tab
+        self.current_tab = "b" if prev_tab == "a" else "a"
+        self.current_tab = prev_tab
 
-        prompt, negative_prompt = self.build_prompts(prompt_a, negative_prompt_a, seed)
+        print("BUILDING PROMPTS")
+        print(self.settings_manager.generator_section, self.settings_manager.generator_name)
+        print(self.settings_manager.find_generator(self.settings_manager.generator_section, self.settings_manager.generator_name))
+        print(self.settings_manager.generator.prompt, self.settings_manager.generator.negative_prompt)
+
+        prompt, negative_prompt = self.build_prompts(self.settings_manager.generator.prompt, self.settings_manager.generator.negative_prompt, seed)
+
+        print("processed prompt", prompt)
 
         # save processed prompts
-        current_tab.prompt_text.setPlainText(prompt)
-        current_tab.negative_prompt_text.setPlainText(negative_prompt)
+        current_tab.ui.prompt_text.setPlainText(prompt)
+        current_tab.ui.negative_prompt_text.setPlainText(negative_prompt)
 
     def build_prompts(self, prompt_a="", negative_prompt_a="", seed=None):
         # if seed is None:
         #     seed = self.app.seed if not self.app.seed_override else self.app.seed_override
-        seed = self.app.seed
         category = self.prompt_generator_category
         image_genre = self.prompt_generator_prompt_genre
         image_color = self.prompt_generator_prompt_color
@@ -284,6 +292,8 @@ class PromptBuilderWidget(BaseWidget):
         negative_prompt_prefix = self.negative_prompt_generator_prefix
         negative_prompt_suffix = self.negative_prompt_generator_suffix
         weighted_variables = self.prompt_generator_weighted_values
+
+        print("calling build prompts")
 
         return self.prompt_data.build_prompts(
             prompt=prompt_a,
@@ -302,7 +312,7 @@ class PromptBuilderWidget(BaseWidget):
             image_genre=image_genre,
             image_color=image_color,
             image_style=image_style,
-            advanced=self.settings_manager.prompt_generator_advanced
+            advanced=True#self.settings_manager.prompt_generator_advanced
         )
 
     def inject_prompt(self, options):
