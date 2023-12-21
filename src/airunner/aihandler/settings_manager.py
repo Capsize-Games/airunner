@@ -299,28 +299,5 @@ class SettingsManager(QObject):
         else:
             return self.current_section_shapegif
 
-    @property
-    def prompt_builder_prompts(self):
-        return session.query(Prompt).all()
-
-    @property
-    def prompt_categories(self):
-        return session.query(PromptCategory).all()
-
-    def variables_by_category(self, category_name):
-        variable_category = session.query(PromptVariableCategory).filter_by(name=category_name).first()
-        return session.query(PromptVariable).filter_by(variable_category=variable_category).all()
-
-    def prompts_by_category(self, category_name):
-        category = session.query(PromptCategory).filter_by(name=category_name).first()
-        return session.query(Prompt).filter_by(category=category).all()
-
-    def variable_weights_by_category(self, category, variable_name):
-        variable = session.query(PromptVariable).filter_by(value=variable_name).first()
-        return session.query(PromptVariableCategoryWeight).filter_by(
-            prompt_category_id=variable.prompt_category_id,
-            variable_category_id=variable.variable_category_id
-        ).first()
-
     def save(self):
         session.commit()
