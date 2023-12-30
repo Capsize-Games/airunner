@@ -9,6 +9,7 @@ from airunner.utils import image_to_pixmap, auto_export_image, open_file_path
 from airunner.widgets.controlnet_settings.templates.controlnet_settings_ui import Ui_controlnet_settings
 from airunner.widgets.input_image.input_image_settings_widget import InputImageSettingsWidget
 from airunner.widgets.slider.slider_widget import SliderWidget
+from airunner.settings import CONTROLNET_OPTIONS
 
 
 class ControlNetSettingsWidget(InputImageSettingsWidget):
@@ -178,7 +179,6 @@ class ControlNetSettingsWidget(InputImageSettingsWidget):
     def toggle_buttons(self):
         self.toggle_import_image_button()
         self.toggle_link_input_image_button()
-        self.toggle_import_image_button()
         self.toggle_use_grid_image()
         self.toggle_mask_buttons()
         use_grid = self.settings_manager.generator.controlnet_use_grid_image
@@ -244,74 +244,30 @@ class ControlNetSettingsWidget(InputImageSettingsWidget):
         else:
             # clear the image
             self.ui.mask_thumbnail.clear()
-
-    # model_frame
-    def add_controlnet_widgets(self):
-        # if self.tab not in ["txt2img", "img2img", "outpaint", "txt2vid"] \
-        #         or self.tab_section == "kandinsky" or self.tab_section == "shapegif":
-        #     return
-        controlnet_options = [
-            "Canny",
-            "MLSD",
-            "Depth Leres",
-            "Depth Leres++",
-            "Depth Midas",
-            # "Depth Zoe",
-            "Normal Bae",
-            # "Normal Midas",
-            # "Segmentation",
-            "Lineart Anime",
-            "Lineart Coarse",
-            "Lineart Realistic",
-            "Openpose",
-            "Openpose Face",
-            "Openpose Faceonly",
-            "Openpose Full",
-            "Openpose Hand",
-            "Scribble Hed",
-            "Scribble Pidinet",
-            "Softedge Hed",
-            "Softedge Hedsafe",
-            "Softedge Pidinet",
-            "Softedge Pidsafe",
-            # "Pixel2Pixel",
-            # "Inpaint",
-            "Shuffle",
-        ]
-        controlnet_widget = QComboBox(self)
-        controlnet_widget.setObjectName("controlnet_dropdown")
-        controlnet_widget.addItems(controlnet_options)
+    
+    def initialize(
+        self,
+        generator_name,
+        generator_section
+    ):
+        super().initialize(
+            generator_name,
+            generator_section
+        )
+        self.initialize_combobox()
+    
+    def initialize_combobox(self):
+        controlnet_options = CONTROLNET_OPTIONS
+        self.ui.controlnet_dropdown.blockSignals(True)
+        self.ui.controlnet_dropdown.clear()
+        self.ui.controlnet_dropdown.addItems(controlnet_options)
         current_index = 0
         for index, controlnet_name in enumerate(controlnet_options):
             if controlnet_name.lower() == self.settings_manager.generator.controlnet:
                 current_index = index
                 break
-        controlnet_widget.setCurrentIndex(current_index)
-        # set fontsize of controlnet_widget to 9
-        font = controlnet_widget.font()
-        font.setPointSize(9)
-        controlnet_widget.setFont(font)
-        controlnet_widget.currentTextChanged.connect(
-            partial(self.handle_controlnet_change, "controlnet", widget=controlnet_widget))
-        controlnet_widget.setMaximumWidth(100)
-        controlnet_scale_slider = SliderWidget(
-            label_text="Scale",
-            slider_callback=self.handle_controlnet_scale_slider_change,
-            current_value=self.settings_manager.generator.controlnet_guidance_scale,
-            slider_minimum=0,
-            slider_maximum=1000,
-            spinbox_minimum=0.0,
-            spinbox_maximum=1.0
-        )
-        self.controlnet_scale_slider = controlnet_scale_slider
-        grid_layout = QHBoxLayout(self.ui.model_frame)
-        # remove spacing from grid layout
-        grid_layout.setSpacing(5)
-        grid_layout.setContentsMargins(0, 0, 0, 0)
-        widget = QWidget()
-        grid_layout.addWidget(widget)
-        grid_layout.addWidget(controlnet_widget)
-        grid_layout.addWidget(controlnet_scale_slider)
+        self.ui.controlnet_dropdown.setCurrentIndex(current_index)
+        self.ui.controlnet_dropdown.blockSignals(False)
 
     def handle_controlnet_scale_slider_change(self, value):
         self.settings_manager.set_value(
@@ -321,3 +277,6 @@ class ControlNetSettingsWidget(InputImageSettingsWidget):
 
     def handle_controlnet_change(self, attr_name, value=None, widget=None):
         self.settings_manager.set_value(attr_name, value)
+
+    def action_controlnet_model_text_changed(self, model_value):
+        self.settings_manager.set_value("generator.controlnet_model", model_value)

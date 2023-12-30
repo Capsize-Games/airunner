@@ -9,6 +9,9 @@ class DownloadCivitAI:
 
     @staticmethod
     def get_json(model_id):
+        # if model_id == id/name split and get the id
+        if "/" in model_id:
+            model_id = model_id.split("/")[0]
         url = f"https://civitai.com/api/v1/models/{model_id}"
         response = requests.get(url)
         json = None

@@ -26,7 +26,6 @@ class PromptBuilderForm(BaseWidget):
         A pass-through function for the prompt builder widget to call
         :return:
         """
-        print("PROCESS PROMPT", self.parent)
         self.parent.process_prompt()
 
     def __init__(self, *args, **kwargs):

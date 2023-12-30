@@ -601,8 +601,9 @@ class CanvasPlusWidget(CanvasBaseWidget):
         if index in self.layers:
             return self.layers[index]
 
-    def copy_image(self) -> DraggablePixmap:
-        return self.move_pixmap_to_clipboard(self.current_pixmap())
+    def copy_image(self, image:Image=None) -> DraggablePixmap:
+        pixmap = self.current_pixmap() if image is None else QPixmap.fromImage(ImageQt(image))
+        return self.move_pixmap_to_clipboard(pixmap)
 
     def cut_image(self):
         self.copy_image()
