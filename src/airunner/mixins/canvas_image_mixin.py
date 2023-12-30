@@ -113,8 +113,8 @@ class CanvasImageMixin:
             painter.drawPixmap(QPoint(0, 0), pixmap)
             # painter.drawPixmap(offset, pixmap)
 
-    def copy_image(self):
-        im = self.current_active_image_data
+    def copy_image(self, image = None):
+        im = self.current_active_image_data if image is None else image
         if not im:
             return
         try:

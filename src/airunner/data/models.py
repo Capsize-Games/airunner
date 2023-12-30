@@ -652,9 +652,18 @@ class Settings(BaseModel):
     active_image_editor_section = Column(String, default="canvas")
     enable_advanced_mode = Column(Boolean, default=False)
 
-    image_similarity = Column(Integer, default=1000)
-
     enable_tts = Column(Boolean, default=True)
+
+
+class StandardImageWidgetSettings(BaseModel):
+    __tablename__ = 'standard_image_widget_settings'
+
+    image_similarity = Column(Integer, default=1000)
+    controlnet = Column(String, default="Canny")
+    prompt = Column(String, default="")
+    negative_prompt = Column(String, default="")
+    upscale_model = Column(String, default="RealESRGAN_x4plus")
+    face_enhance = Column(Boolean, default=False)
 
 
 class Layer(BaseModel):
