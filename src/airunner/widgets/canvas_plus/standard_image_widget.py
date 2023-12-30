@@ -16,6 +16,7 @@ from airunner.data.models import AIModel
 from airunner.widgets.canvas_plus.standard_base_widget import StandardBaseWidget
 from airunner.widgets.canvas_plus.templates.standard_image_widget_ui import Ui_standard_image_widget
 from airunner.utils import delete_image, load_metadata_from_image, prepare_metadata
+from airunner.settings import CONTROLNET_OPTIONS
 
 
 class StandardImageWidget(StandardBaseWidget):
@@ -32,6 +33,60 @@ class StandardImageWidget(StandardBaseWidget):
         self.ui.batch_container.hide()
         self.ui.tableWidget.hide()
         self.ui.similar_groupbox.hide()
+        self.load_controlnet_options()
+        self.load_upscale_options()
+    
+    def load_controlnet_options(self):
+        self.ui.controlnet.blockSignals(True)
+        self.ui.controlnet.clear()
+        self.ui.controlnet.addItems(CONTROLNET_OPTIONS)
+        self.ui.controlnet.blockSignals(False)
+    
+    def load_upscale_options(self):
+        self.ui.upscale_model.blockSignals(True)
+        model = self.settings_manager.standard_image_widget_settings.upscale_model
+        index = self.ui.upscale_model.findText(model)
+        if index == -1:
+            index = 0
+        self.ui.upscale_model.setCurrentIndex(index)
+        self.ui.upscale_model.blockSignals(False)
+
+        self.ui.face_enhance.blockSignals(True)
+        self.ui.face_enhance.setChecked(self.settings_manager.standard_image_widget_settings.face_enhance)
+        self.ui.face_enhance.blockSignals(False)
+    
+    def upscale_model_changed(self, model):
+        self.settings_manager.set_value("standard_image_widget_settings.upscale_model", model)
+
+    def face_enhance_toggled(self, val):
+        self.settings_manager.set_value("standard_image_widget_settings.face_enhance", val)
+    
+    def handle_controlnet_changed(self, val):
+        self.settings_manager.set_value("standard_image_widget_settings.controlnet", val)
+    
+    def reset_prompt_clicked(self):
+        self.settings_manager.set_value("standard_image_widget_settings.prompt", "")
+        self.set_prompt_text()
+
+    def reset_negative_prompt_clicked(self):
+        self.settings_manager.set_value("standard_image_widget_settings.negative_prompt", "")
+        self.set_negative_prompt_text()
+
+    def toggle_prompt_reset_button(self, enabled):
+        self.ui.reset_prompt.setEnabled(enabled)
+
+    def toggle_negative_prompt_reset_button(self, enabled):
+        self.ui.reset_negative_prompt.setEnabled(enabled)
+
+    def prompt_changed(self):
+        val = self.ui.prompt.toPlainText()
+        self.settings_manager.set_value("standard_image_widget_settings.prompt", val)
+        self.toggle_prompt_reset_button(val != "")
+
+    def negative_prompt_changed(self):
+        val = self.ui.negative_prompt.toPlainText()
+        self.settings_manager.set_value("standard_image_widget_settings.negative_prompt", val)
+        self.toggle_negative_prompt_reset_button(val != "")
     
     def handle_image_data(self, data):
         images = data["images"]
@@ -65,12 +120,33 @@ class StandardImageWidget(StandardBaseWidget):
         if self.app.image_editor_tab_name == "Standard":
             self.set_pixmap(image=image, image_path=image_path)
     
+    def set_prompt_text(self):
+        self.ui.prompt.blockSignals(True)
+        prompt = self.settings_manager.standard_image_widget_settings.prompt
+        self.toggle_prompt_reset_button(prompt != "")
+        if not prompt:
+            prompt = self.meta_data.get("prompt", None)
+        self.ui.prompt.setPlainText(prompt)
+        self.ui.prompt.blockSignals(False)
+
+    def set_negative_prompt_text(self):
+        self.ui.negative_prompt.blockSignals(True)
+        negative_prompt = self.settings_manager.standard_image_widget_settings.negative_prompt
+        self.toggle_negative_prompt_reset_button(negative_prompt != "")
+        if not negative_prompt:
+            negative_prompt = self.meta_data.get("negative_prompt", None)
+        self.ui.negative_prompt.setPlainText(negative_prompt)
+        self.ui.negative_prompt.blockSignals(False)
+
     def set_pixmap(self, image_path=None, image=None):
         self.image_path = image_path
         self.image = image
         meta_data = image.info
         self.meta_data = meta_data if meta_data is not None else load_metadata_from_image(image)
         size = self.ui.image_frame.width() - 20
+
+        self.set_prompt_text()
+        self.set_negative_prompt_text()
 
         pixmap = self._pixmap
         if not pixmap:
@@ -180,11 +256,15 @@ class StandardImageWidget(StandardBaseWidget):
         """
         Using the LLM, generate a description of the image
         """
-        self.app.describe_image(image=self.image, callback=self.handle_prompt_generated)
+        #self.app.describe_image(image=self.image, callback=self.handle_prompt_generated)
+        prompt = self.app.generator_tab_widget.ui.generator_form_stablediffusion.ui.prompt.toPlainText()
+        negative_prompt = self.app.generator_tab_widget.ui.generator_form_stablediffusion.ui.negative_prompt.toPlainText()
+        self.handle_prompt_generated([prompt], [negative_prompt])
     
-    def handle_prompt_generated(self, prompt):
+    def handle_prompt_generated(self, prompt, negative_prompt):
         meta_data = load_metadata_from_image(self.image)
         meta_data["prompt"] = prompt[0]
+        meta_data["negative_prompt"] = negative_prompt[0]
         meta_data = prepare_metadata({ "options": meta_data })
         image = Image.open(self.image_path)
         image.save(self.image_path, pnginfo=meta_data)
@@ -214,10 +294,10 @@ class StandardImageWidget(StandardBaseWidget):
         meta_data["width"] = self.image.width
         meta_data["height"] = self.image.height
         meta_data["enable_controlnet"] = True
-        meta_data["controlnet"] = "canny"
-        meta_data["controlnet_conditioning_scale"] = self.settings_manager.image_similarity / 100.0
+        meta_data["controlnet"] = self.settings_manager.standard_image_widget_settings.controlnet.lower()
+        meta_data["controlnet_conditioning_scale"] = self.settings_manager.standard_image_widget_settings.image_similarity / 100.0
         #meta_data["image_guidance_scale"] = 100 * (100 - self.settings_manager.image_similarity) / 100.0
-        meta_data["strength"] = 1.1 - (self.settings_manager.image_similarity / 100.0)
+        meta_data["strength"] = 1.1 - (self.settings_manager.standard_image_widget_settings.image_similarity / 100.0)
         print(meta_data["controlnet_conditioning_scale"], meta_data["strength"])
         meta_data["enable_input_image"] = True
         meta_data["use_cropped_image"] = False
@@ -249,21 +329,15 @@ class StandardImageWidget(StandardBaseWidget):
         
         meta_data.pop("seed", None)
         meta_data.pop("latents_seed", None)
-
-        meta_data["model_data_name"] = "sd-x2-latent-upscaler"
-        meta_data["model_data_path"] = "stabilityai/sd-x2-latent-upscaler"
-        meta_data["steps"] = "40"
+        meta_data["model_data_path"] = self.settings_manager.standard_image_widget_settings.upscale_model
+        meta_data["face_enhance"] = self.settings_manager.standard_image_widget_settings.face_enhance
+        meta_data["denoise_strength"] = 0.5
         meta_data["action"] = "upscale"
         meta_data["width"] = self.image.width
         meta_data["height"] = self.image.height
-        meta_data["enable_controlnet"] = True
-        meta_data["controlnet"] = "canny"
-        meta_data["controlnet_conditioning_scale"] = self.settings_manager.image_similarity
-        meta_data["image_guidance_scale"] = 100 * (1000 - self.settings_manager.image_similarity) / 100.0
-        meta_data["strength"] = 1.0
         meta_data["enable_input_image"] = True
         meta_data["use_cropped_image"] = False
-        meta_data["batch_size"] = 1
+
 
         self.app.generator_tab_widget.current_generator_widget.call_generate(
             image=self.image,

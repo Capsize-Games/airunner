@@ -159,11 +159,77 @@
       </widget>
      </item>
      <item>
+      <layout class="QHBoxLayout" name="horizontalLayout_3">
+       <item>
+        <layout class="QVBoxLayout" name="verticalLayout_2">
+         <item>
+          <widget class="QLabel" name="label_2">
+           <property name="font">
+            <font>
+             <pointsize>11</pointsize>
+             <bold>false</bold>
+            </font>
+           </property>
+           <property name="text">
+            <string>Prompt</string>
+           </property>
+          </widget>
+         </item>
+         <item>
+          <widget class="QPlainTextEdit" name="prompt">
+           <property name="placeholderText">
+            <string/>
+           </property>
+          </widget>
+         </item>
+         <item>
+          <widget class="QPushButton" name="reset_prompt">
+           <property name="text">
+            <string>Reset</string>
+           </property>
+          </widget>
+         </item>
+        </layout>
+       </item>
+       <item>
+        <layout class="QVBoxLayout" name="verticalLayout_3">
+         <item>
+          <widget class="QLabel" name="label_3">
+           <property name="font">
+            <font>
+             <pointsize>11</pointsize>
+             <bold>false</bold>
+            </font>
+           </property>
+           <property name="text">
+            <string>Negative Prompt</string>
+           </property>
+          </widget>
+         </item>
+         <item>
+          <widget class="QPlainTextEdit" name="negative_prompt">
+           <property name="placeholderText">
+            <string/>
+           </property>
+          </widget>
+         </item>
+         <item>
+          <widget class="QPushButton" name="reset_negative_prompt">
+           <property name="text">
+            <string>Reset</string>
+           </property>
+          </widget>
+         </item>
+        </layout>
+       </item>
+      </layout>
+     </item>
+     <item>
       <widget class="QGroupBox" name="similar_groupbox">
        <property name="title">
         <string>Generate similar images</string>
        </property>
-       <layout class="QHBoxLayout" name="horizontalLayout_3">
+       <layout class="QGridLayout" name="gridLayout_4">
         <property name="leftMargin">
          <number>4</number>
         </property>
@@ -176,73 +242,95 @@
         <property name="bottomMargin">
          <number>4</number>
         </property>
-        <item>
-         <widget class="SliderWidget" name="samples_widget" native="true">
-          <property name="minimumSize">
-           <size>
-            <width>0</width>
-            <height>20</height>
-           </size>
-          </property>
-          <property name="label_text" stdset="0">
-           <string>Similarity</string>
-          </property>
-          <property name="slider_callback" stdset="0">
-           <string notr="true">handle_value_change</string>
-          </property>
-          <property name="current_value" stdset="0">
-           <number>100</number>
-          </property>
-          <property name="slider_maximum" stdset="0">
-           <number>100</number>
-          </property>
-          <property name="spinbox_maximum" stdset="0">
-           <double>1.000000000000000</double>
-          </property>
-          <property name="display_as_float" stdset="0">
-           <bool>true</bool>
-          </property>
-          <property name="spinbox_single_step" stdset="0">
-           <double>0.010000000000000</double>
-          </property>
-          <property name="spinbox_page_step" stdset="0">
-           <double>0.010000000000000</double>
-          </property>
-          <property name="spinbox_minimum" stdset="0">
-           <double>0.000000000000000</double>
-          </property>
-          <property name="slider_minimum" stdset="0">
-           <number>0</number>
-          </property>
-          <property name="settings_property" stdset="0">
-           <string>image_similarity</string>
-          </property>
-         </widget>
+        <item row="1" column="0" colspan="2">
+         <layout class="QHBoxLayout" name="horizontalLayout_4">
+          <item>
+           <widget class="SliderWidget" name="samples_widget" native="true">
+            <property name="minimumSize">
+             <size>
+              <width>0</width>
+              <height>20</height>
+             </size>
+            </property>
+            <property name="label_text" stdset="0">
+             <string>Similarity</string>
+            </property>
+            <property name="slider_callback" stdset="0">
+             <string notr="true">handle_value_change</string>
+            </property>
+            <property name="current_value" stdset="0">
+             <number>100</number>
+            </property>
+            <property name="slider_maximum" stdset="0">
+             <number>100</number>
+            </property>
+            <property name="spinbox_maximum" stdset="0">
+             <double>1.000000000000000</double>
+            </property>
+            <property name="display_as_float" stdset="0">
+             <bool>true</bool>
+            </property>
+            <property name="spinbox_single_step" stdset="0">
+             <double>0.010000000000000</double>
+            </property>
+            <property name="spinbox_page_step" stdset="0">
+             <double>0.010000000000000</double>
+            </property>
+            <property name="spinbox_minimum" stdset="0">
+             <double>0.000000000000000</double>
+            </property>
+            <property name="slider_minimum" stdset="0">
+             <number>0</number>
+            </property>
+            <property name="settings_property" stdset="0">
+             <string>standard_image_widget_settings.image_similarity</string>
+            </property>
+           </widget>
+          </item>
+          <item>
+           <widget class="QPushButton" name="generate_single_simillar_button">
+            <property name="cursor">
+             <cursorShape>PointingHandCursor</cursorShape>
+            </property>
+            <property name="toolTip">
+             <string>Generate one variation</string>
+            </property>
+            <property name="text">
+             <string>Single</string>
+            </property>
+           </widget>
+          </item>
+          <item>
+           <widget class="QPushButton" name="generate_batch_similar_button">
+            <property name="cursor">
+             <cursorShape>PointingHandCursor</cursorShape>
+            </property>
+            <property name="toolTip">
+             <string>Generate a batch of four variations</string>
+            </property>
+            <property name="text">
+             <string>Batch</string>
+            </property>
+           </widget>
+          </item>
+         </layout>
         </item>
-        <item>
-         <widget class="QPushButton" name="generate_single_simillar_button">
-          <property name="cursor">
-           <cursorShape>PointingHandCursor</cursorShape>
+        <item row="0" column="0" colspan="2">
+         <widget class="QGroupBox" name="groupBox_2">
+          <property name="font">
+           <font>
+            <pointsize>8</pointsize>
+            <bold>false</bold>
+           </font>
           </property>
-          <property name="toolTip">
-           <string>Generate one variation</string>
+          <property name="title">
+           <string>Controlnet</string>
           </property>
-          <property name="text">
-           <string>Single</string>
-          </property>
-         </widget>
-        </item>
-        <item>
-         <widget class="QPushButton" name="generate_batch_similar_button">
-          <property name="cursor">
-           <cursorShape>PointingHandCursor</cursorShape>
-          </property>
-          <property name="toolTip">
-           <string>Generate a batch of four variations</string>
-          </property>
-          <property name="text">
-           <string>Batch</string>
-          </property>
+          <layout class="QHBoxLayout" name="horizontalLayout_5">
+           <item>
+            <widget class="QComboBox" name="controlnet"/>
+           </item>
+          </layout>
          </widget>
         </item>
        </layout>
@@ -255,12 +343,53 @@
        </property>
        <layout class="QGridLayout" name="gridLayout_3">
         <item row="0" column="0">
+         <widget class="QComboBox" name="upscale_model">
+          <item>
+           <property name="text">
+            <string>RealESRGAN_x4plus</string>
+           </property>
+          </item>
+          <item>
+           <property name="text">
+            <string>RealESRNet_x4plus</string>
+           </property>
+          </item>
+          <item>
+           <property name="text">
+            <string>RealESRGAN_x4plus_anime_6B</string>
+           </property>
+          </item>
+          <item>
+           <property name="text">
+            <string>RealESRGAN_x2plus</string>
+           </property>
+          </item>
+          <item>
+           <property name="text">
+            <string>realesr-animevideov3</string>
+           </property>
+          </item>
+          <item>
+           <property name="text">
+            <string>realesr-general-x4v3</string>
+           </property>
+          </item>
+         </widget>
+        </item>
+        <item row="3" column="0">
          <widget class="QPushButton" name="upscale_2x">
           <property name="cursor">
            <cursorShape>PointingHandCursor</cursorShape>
           </property>
           <property name="text">
            <string>2x Upscale</string>
+          </property>
+         </widget>
+        </item>
+        <item row="1" column="0">
+         <widget class="QCheckBox" name="face_enhance">
+          <property name="text">
+           <string>Face enhance</string>
           </property>
          </widget>
         </item>
@@ -342,7 +471,7 @@
    <hints>
     <hint type="sourcelabel">
      <x>259</x>
-     <y>641</y>
+     <y>552</y>
     </hint>
     <hint type="destinationlabel">
      <x>237</x>
@@ -358,7 +487,7 @@
    <hints>
     <hint type="sourcelabel">
      <x>532</x>
-     <y>641</y>
+     <y>552</y>
     </hint>
     <hint type="destinationlabel">
      <x>368</x>
@@ -374,7 +503,7 @@
    <hints>
     <hint type="sourcelabel">
      <x>541</x>
-     <y>572</y>
+     <y>483</y>
     </hint>
     <hint type="destinationlabel">
      <x>85</x>
@@ -390,7 +519,7 @@
    <hints>
     <hint type="sourcelabel">
      <x>326</x>
-     <y>572</y>
+     <y>483</y>
     </hint>
     <hint type="destinationlabel">
      <x>310</x>
@@ -405,8 +534,8 @@
    <slot>similar_image()</slot>
    <hints>
     <hint type="sourcelabel">
-     <x>303</x>
-     <y>708</y>
+     <x>316</x>
+     <y>824</y>
     </hint>
     <hint type="destinationlabel">
      <x>38</x>
@@ -421,8 +550,8 @@
    <slot>similar_batch()</slot>
    <hints>
     <hint type="sourcelabel">
-     <x>534</x>
-     <y>708</y>
+     <x>489</x>
+     <y>824</y>
     </hint>
     <hint type="destinationlabel">
      <x>154</x>
@@ -438,7 +567,7 @@
    <hints>
     <hint type="sourcelabel">
      <x>182</x>
-     <y>572</y>
+     <y>483</y>
     </hint>
     <hint type="destinationlabel">
      <x>467</x>
@@ -453,12 +582,124 @@
    <slot>upscale_2x_clicked()</slot>
    <hints>
     <hint type="sourcelabel">
-     <x>409</x>
-     <y>761</y>
+     <x>431</x>
+     <y>934</y>
     </hint>
     <hint type="destinationlabel">
      <x>391</x>
      <y>-7</y>
+    </hint>
+   </hints>
+  </connection>
+  <connection>
+   <sender>reset_prompt</sender>
+   <signal>clicked()</signal>
+   <receiver>standard_image_widget</receiver>
+   <slot>reset_prompt_clicked()</slot>
+   <hints>
+    <hint type="sourcelabel">
+     <x>140</x>
+     <y>684</y>
+    </hint>
+    <hint type="destinationlabel">
+     <x>95</x>
+     <y>-10</y>
+    </hint>
+   </hints>
+  </connection>
+  <connection>
+   <sender>reset_negative_prompt</sender>
+   <signal>clicked()</signal>
+   <receiver>standard_image_widget</receiver>
+   <slot>reset_negative_prompt_clicked()</slot>
+   <hints>
+    <hint type="sourcelabel">
+     <x>359</x>
+     <y>681</y>
+    </hint>
+    <hint type="destinationlabel">
+     <x>211</x>
+     <y>-12</y>
+    </hint>
+   </hints>
+  </connection>
+  <connection>
+   <sender>controlnet</sender>
+   <signal>currentTextChanged(QString)</signal>
+   <receiver>standard_image_widget</receiver>
+   <slot>handle_controlnet_changed(QString)</slot>
+   <hints>
+    <hint type="sourcelabel">
+     <x>136</x>
+     <y>771</y>
+    </hint>
+    <hint type="destinationlabel">
+     <x>0</x>
+     <y>25</y>
+    </hint>
+   </hints>
+  </connection>
+  <connection>
+   <sender>prompt</sender>
+   <signal>textChanged()</signal>
+   <receiver>standard_image_widget</receiver>
+   <slot>prompt_changed()</slot>
+   <hints>
+    <hint type="sourcelabel">
+     <x>84</x>
+     <y>624</y>
+    </hint>
+    <hint type="destinationlabel">
+     <x>-1</x>
+     <y>12</y>
+    </hint>
+   </hints>
+  </connection>
+  <connection>
+   <sender>negative_prompt</sender>
+   <signal>textChanged()</signal>
+   <receiver>standard_image_widget</receiver>
+   <slot>negative_prompt_changed()</slot>
+   <hints>
+    <hint type="sourcelabel">
+     <x>362</x>
+     <y>631</y>
+    </hint>
+    <hint type="destinationlabel">
+     <x>-3</x>
+     <y>595</y>
+    </hint>
+   </hints>
+  </connection>
+  <connection>
+   <sender>upscale_model</sender>
+   <signal>currentTextChanged(QString)</signal>
+   <receiver>standard_image_widget</receiver>
+   <slot>upscale_model_changed(QString)</slot>
+   <hints>
+    <hint type="sourcelabel">
+     <x>114</x>
+     <y>881</y>
+    </hint>
+    <hint type="destinationlabel">
+     <x>1</x>
+     <y>108</y>
+    </hint>
+   </hints>
+  </connection>
+  <connection>
+   <sender>face_enhance</sender>
+   <signal>toggled(bool)</signal>
+   <receiver>standard_image_widget</receiver>
+   <slot>face_enhance_toggled(bool)</slot>
+   <hints>
+    <hint type="sourcelabel">
+     <x>60</x>
+     <y>910</y>
+    </hint>
+    <hint type="destinationlabel">
+     <x>1</x>
+     <y>381</y>
     </hint>
    </hints>
   </connection>
@@ -473,5 +714,12 @@
   <slot>cancel_delete()</slot>
   <slot>export_image()</slot>
   <slot>upscale_2x_clicked()</slot>
+  <slot>reset_prompt_clicked()</slot>
+  <slot>reset_negative_prompt_clicked()</slot>
+  <slot>handle_controlnet_changed(QString)</slot>
+  <slot>prompt_changed()</slot>
+  <slot>negative_prompt_changed()</slot>
+  <slot>upscale_model_changed(QString)</slot>
+  <slot>face_enhance_toggled(bool)</slot>
  </slots>
 </ui>
