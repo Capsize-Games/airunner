@@ -19,3 +19,6 @@ settings.pickle
 venv
 src/airunner/extensions/
 alembic.ini
+src/airunner/scripts/realesrgan
+src/airunner/scripts/weights
+gfpgan
