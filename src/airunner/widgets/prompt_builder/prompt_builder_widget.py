@@ -239,7 +239,6 @@ class PromptBuilderWidget(BaseWidget):
         self.process_prompt()
 
     def process_prompt(self):
-        print("PROCESS PROMPT")
         # if not self.settings_manager.generator.use_prompt_builder:
         #     # self.prompt_text.setPlainText("")
         #     # self.negative_prompt_text.setPlainText("")
@@ -265,14 +264,7 @@ class PromptBuilderWidget(BaseWidget):
         self.current_tab = "b" if prev_tab == "a" else "a"
         self.current_tab = prev_tab
 
-        print("BUILDING PROMPTS")
-        print(self.settings_manager.generator_section, self.settings_manager.generator_name)
-        print(self.settings_manager.find_generator(self.settings_manager.generator_section, self.settings_manager.generator_name))
-        print(self.settings_manager.generator.prompt, self.settings_manager.generator.negative_prompt)
-
         prompt, negative_prompt = self.build_prompts(self.settings_manager.generator.prompt, self.settings_manager.generator.negative_prompt, seed)
-
-        print("processed prompt", prompt)
 
         # save processed prompts
         current_tab.ui.prompt_text.setPlainText(prompt)
@@ -292,8 +284,6 @@ class PromptBuilderWidget(BaseWidget):
         negative_prompt_prefix = self.negative_prompt_generator_prefix
         negative_prompt_suffix = self.negative_prompt_generator_suffix
         weighted_variables = self.prompt_generator_weighted_values
-
-        print("calling build prompts")
 
         return self.prompt_data.build_prompts(
             prompt=prompt_a,

@@ -301,9 +301,17 @@ def prepare_metadata(data, index=0):
     metadata.add_text("n_iter", str(options.get("n_iter", 1)))
     metadata.add_text("n_samples", str(options.get("n_samples", 1)))
     metadata.add_text("clip_skip", str(options.get("clip_skip", 0)))
-    for k, v in options.get("model_data", {}).items():
-        metadata.add_text(f"model_data_{k}", str(v))
+    if action == "txt2img":
+        for k, v in options.get("model_data", {}).items():
+            metadata.add_text(f"model_data_{k}", str(v))
+    else:
+        for k, v in options.get("model_data", {}).items():
+            metadata.add_text(f"{action}_model_data_{k}", str(v))
+        for k, v in options.get("original_model_data", {}).items():
+            metadata.add_text(f"model_data_{k}", str(v))
+    metadata.add_text("action", "txt2img")
     metadata.add_text("scheduler", str(options.get("scheduler", "DPM++ 2M Karras")))
+
     return metadata
 
 def prepare_controlnet_metadata(data):

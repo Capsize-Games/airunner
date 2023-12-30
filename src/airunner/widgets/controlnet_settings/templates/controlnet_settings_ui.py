@@ -12,7 +12,7 @@ from PyQt6 import QtCore, QtGui, QtWidgets
 class Ui_controlnet_settings(object):
     def setupUi(self, controlnet_settings):
         controlnet_settings.setObjectName("controlnet_settings")
-        controlnet_settings.resize(296, 175)
+        controlnet_settings.resize(296, 222)
         controlnet_settings.setMaximumSize(QtCore.QSize(16777215, 16777215))
         font = QtGui.QFont()
         font.setPointSize(8)
@@ -35,6 +35,17 @@ class Ui_controlnet_settings(object):
         self.gridLayout_5.setContentsMargins(9, -1, 9, 9)
         self.gridLayout_5.setHorizontalSpacing(0)
         self.gridLayout_5.setObjectName("gridLayout_5")
+        self.scale_slider_widget = SliderWidget(parent=self.groupBox)
+        self.scale_slider_widget.setProperty("current_value", 0)
+        self.scale_slider_widget.setProperty("slider_maximum", 100)
+        self.scale_slider_widget.setProperty("spinbox_maximum", 1.0)
+        self.scale_slider_widget.setProperty("display_as_float", True)
+        self.scale_slider_widget.setProperty("spinbox_single_step", 0.01)
+        self.scale_slider_widget.setProperty("spinbox_page_step", 0.1)
+        self.scale_slider_widget.setProperty("spinbox_minimum", 0.0)
+        self.scale_slider_widget.setProperty("slider_minimum", 0)
+        self.scale_slider_widget.setObjectName("scale_slider_widget")
+        self.gridLayout_5.addWidget(self.scale_slider_widget, 2, 0, 1, 1)
         self.widget = QtWidgets.QWidget(parent=self.groupBox)
         self.widget.setMaximumSize(QtCore.QSize(16777215, 16777215))
         font = QtGui.QFont()
@@ -253,18 +264,17 @@ class Ui_controlnet_settings(object):
         self.gridLayout_4.addLayout(self.verticalLayout_2, 0, 1, 1, 1)
         self.tabWidget.addTab(self.tab_8, "")
         self.gridLayout_3.addWidget(self.tabWidget, 0, 0, 1, 1)
-        self.gridLayout_5.addWidget(self.widget, 2, 0, 1, 1)
-        self.scale_slider_widget = SliderWidget(parent=self.groupBox)
-        self.scale_slider_widget.setProperty("current_value", 0)
-        self.scale_slider_widget.setProperty("slider_maximum", 100)
-        self.scale_slider_widget.setProperty("spinbox_maximum", 1.0)
-        self.scale_slider_widget.setProperty("display_as_float", True)
-        self.scale_slider_widget.setProperty("spinbox_single_step", 0.01)
-        self.scale_slider_widget.setProperty("spinbox_page_step", 0.1)
-        self.scale_slider_widget.setProperty("spinbox_minimum", 0.0)
-        self.scale_slider_widget.setProperty("slider_minimum", 0)
-        self.scale_slider_widget.setObjectName("scale_slider_widget")
-        self.gridLayout_5.addWidget(self.scale_slider_widget, 0, 0, 1, 1)
+        self.gridLayout_5.addWidget(self.widget, 4, 0, 1, 1)
+        self.controlnet_dropdown = QtWidgets.QComboBox(parent=self.groupBox)
+        self.controlnet_dropdown.setObjectName("controlnet_dropdown")
+        self.gridLayout_5.addWidget(self.controlnet_dropdown, 1, 0, 1, 1)
+        self.label = QtWidgets.QLabel(parent=self.groupBox)
+        font = QtGui.QFont()
+        font.setPointSize(8)
+        font.setBold(True)
+        self.label.setFont(font)
+        self.label.setObjectName("label")
+        self.gridLayout_5.addWidget(self.label, 0, 0, 1, 1)
         self.gridLayout.addWidget(self.groupBox, 0, 0, 1, 1)
 
         self.retranslateUi(controlnet_settings)
@@ -283,12 +293,16 @@ class Ui_controlnet_settings(object):
         self.mask_clear_image_button.clicked.connect(controlnet_settings.action_clicked_button_clear_input_image_mask) # type: ignore
         self.mask_thumbnail.clicked.connect(controlnet_settings.action_clicked_button_thumbnail_mask) # type: ignore
         self.mask_import_button.clicked.connect(controlnet_settings.action_clicked_button_import_image_mask) # type: ignore
+        self.controlnet_dropdown.currentTextChanged['QString'].connect(controlnet_settings.action_controlnet_model_text_changed) # type: ignore
         QtCore.QMetaObject.connectSlotsByName(controlnet_settings)
 
     def retranslateUi(self, controlnet_settings):
         _translate = QtCore.QCoreApplication.translate
         controlnet_settings.setWindowTitle(_translate("controlnet_settings", "Form"))
         self.groupBox.setTitle(_translate("controlnet_settings", "Use ControlNet"))
+        self.scale_slider_widget.setProperty("label_text", _translate("controlnet_settings", "Scale"))
+        self.scale_slider_widget.setProperty("slider_callback", _translate("controlnet_settings", "handle_value_change"))
+        self.scale_slider_widget.setProperty("settings_property", _translate("controlnet_settings", "generator.controlnet_guidance_scale"))
         self.import_image_button.setText(_translate("controlnet_settings", "Import image"))
         self.link_settings_button.setToolTip(_translate("controlnet_settings", "Use the main Input Image for the ControlNet input image"))
         self.use_imported_image_button.setToolTip(_translate("controlnet_settings", "Toggle imported input image"))
@@ -303,7 +317,5 @@ class Ui_controlnet_settings(object):
         self.mask_export_image_button.setToolTip(_translate("controlnet_settings", "Export a generated mask image to disk"))
         self.mask_clear_image_button.setToolTip(_translate("controlnet_settings", "Clear the mask image"))
         self.tabWidget.setTabText(self.tabWidget.indexOf(self.tab_8), _translate("controlnet_settings", "Mask"))
-        self.scale_slider_widget.setProperty("label_text", _translate("controlnet_settings", "Scale"))
-        self.scale_slider_widget.setProperty("slider_callback", _translate("controlnet_settings", "handle_value_change"))
-        self.scale_slider_widget.setProperty("settings_property", _translate("controlnet_settings", "generator.controlnet_guidance_scale"))
+        self.label.setText(_translate("controlnet_settings", "Controlnet Model"))
 from airunner.widgets.slider.slider_widget import SliderWidget

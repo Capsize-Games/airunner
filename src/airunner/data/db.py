@@ -546,7 +546,7 @@ HERE = os.path.abspath(os.path.dirname(__file__))
 alembic_ini_path = os.path.join(HERE, "../alembic.ini")
 
 config = configparser.ConfigParser()
-config.read(alembic_ini_path)
+config.read(f"{alembic_ini_path}.config")
 
 home_dir = os.path.expanduser("~")
 db_path = f'sqlite:///{home_dir}/.airunner/airunner.db'

@@ -1,0 +1,612 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<ui version="4.0">
+ <class>generator_tab</class>
+ <widget class="QWidget" name="generator_tab">
+  <property name="geometry">
+   <rect>
+    <x>0</x>
+    <y>0</y>
+    <width>330</width>
+    <height>972</height>
+   </rect>
+  </property>
+  <property name="sizePolicy">
+   <sizepolicy hsizetype="Preferred" vsizetype="Preferred">
+    <horstretch>0</horstretch>
+    <verstretch>0</verstretch>
+   </sizepolicy>
+  </property>
+  <property name="windowTitle">
+   <string>Form</string>
+  </property>
+  <layout class="QGridLayout" name="gridLayout_2">
+   <property name="leftMargin">
+    <number>0</number>
+   </property>
+   <property name="topMargin">
+    <number>0</number>
+   </property>
+   <property name="rightMargin">
+    <number>0</number>
+   </property>
+   <property name="bottomMargin">
+    <number>0</number>
+   </property>
+   <item row="0" column="0">
+    <widget class="QTabWidget" name="generator_tabs">
+     <property name="sizePolicy">
+      <sizepolicy hsizetype="Expanding" vsizetype="Expanding">
+       <horstretch>0</horstretch>
+       <verstretch>0</verstretch>
+      </sizepolicy>
+     </property>
+     <property name="currentIndex">
+      <number>0</number>
+     </property>
+     <widget class="QWidget" name="tab_stablediffusion">
+      <property name="sizePolicy">
+       <sizepolicy hsizetype="Expanding" vsizetype="Preferred">
+        <horstretch>0</horstretch>
+        <verstretch>0</verstretch>
+       </sizepolicy>
+      </property>
+      <attribute name="title">
+       <string>Stable Diffusion</string>
+      </attribute>
+      <layout class="QGridLayout" name="gridLayout">
+       <property name="leftMargin">
+        <number>0</number>
+       </property>
+       <property name="topMargin">
+        <number>0</number>
+       </property>
+       <property name="rightMargin">
+        <number>0</number>
+       </property>
+       <property name="bottomMargin">
+        <number>0</number>
+       </property>
+       <item row="0" column="0">
+        <widget class="QTabWidget" name="tab_widget_stablediffusion">
+         <property name="tabPosition">
+          <enum>QTabWidget::West</enum>
+         </property>
+         <property name="currentIndex">
+          <number>0</number>
+         </property>
+         <widget class="QWidget" name="tab_stablediffusion_txt2img">
+          <property name="sizePolicy">
+           <sizepolicy hsizetype="Expanding" vsizetype="Preferred">
+            <horstretch>0</horstretch>
+            <verstretch>0</verstretch>
+           </sizepolicy>
+          </property>
+          <property name="generator_section" stdset="0">
+           <string>txt2img</string>
+          </property>
+          <property name="generator_name" stdset="0">
+           <string>stablediffusion</string>
+          </property>
+          <attribute name="title">
+           <string>txt2img / img2img</string>
+          </attribute>
+          <layout class="QGridLayout" name="gridLayout_7">
+           <property name="leftMargin">
+            <number>0</number>
+           </property>
+           <property name="topMargin">
+            <number>0</number>
+           </property>
+           <property name="rightMargin">
+            <number>0</number>
+           </property>
+           <property name="bottomMargin">
+            <number>0</number>
+           </property>
+           <item row="0" column="0">
+            <widget class="GeneratorForm" name="generator_form_stablediffusion_txt2img" native="true">
+             <property name="generator_section" stdset="0">
+              <string>txt2img</string>
+             </property>
+             <property name="generator_name" stdset="0">
+              <string>stablediffusion</string>
+             </property>
+            </widget>
+           </item>
+          </layout>
+         </widget>
+         <widget class="QWidget" name="tab_stablediffusion_outpaint">
+          <property name="sizePolicy">
+           <sizepolicy hsizetype="Expanding" vsizetype="Preferred">
+            <horstretch>0</horstretch>
+            <verstretch>0</verstretch>
+           </sizepolicy>
+          </property>
+          <property name="generator_section" stdset="0">
+           <string>outpaint</string>
+          </property>
+          <property name="generator_name" stdset="0">
+           <string>stablediffusion</string>
+          </property>
+          <attribute name="title">
+           <string>inpaint / outapint</string>
+          </attribute>
+          <layout class="QGridLayout" name="gridLayout_10">
+           <property name="leftMargin">
+            <number>0</number>
+           </property>
+           <property name="topMargin">
+            <number>0</number>
+           </property>
+           <property name="rightMargin">
+            <number>0</number>
+           </property>
+           <property name="bottomMargin">
+            <number>0</number>
+           </property>
+           <item row="0" column="0">
+            <widget class="GeneratorForm" name="generator_form_stablediffusion_outpaint" native="true">
+             <property name="generator_section" stdset="0">
+              <string>outpaint</string>
+             </property>
+             <property name="generator_name" stdset="0">
+              <string>stablediffusion</string>
+             </property>
+            </widget>
+           </item>
+          </layout>
+         </widget>
+         <widget class="QWidget" name="tab_stablediffusion_depth2img">
+          <property name="sizePolicy">
+           <sizepolicy hsizetype="Expanding" vsizetype="Preferred">
+            <horstretch>0</horstretch>
+            <verstretch>0</verstretch>
+           </sizepolicy>
+          </property>
+          <property name="generator_section" stdset="0">
+           <string>depth2img</string>
+          </property>
+          <property name="generator_name" stdset="0">
+           <string>stablediffusion</string>
+          </property>
+          <attribute name="title">
+           <string>depth2img</string>
+          </attribute>
+          <layout class="QGridLayout" name="gridLayout_11">
+           <property name="leftMargin">
+            <number>0</number>
+           </property>
+           <property name="topMargin">
+            <number>0</number>
+           </property>
+           <property name="rightMargin">
+            <number>0</number>
+           </property>
+           <property name="bottomMargin">
+            <number>0</number>
+           </property>
+           <item row="0" column="0">
+            <widget class="GeneratorForm" name="generator_form_stablediffusion_depth2img" native="true">
+             <property name="generator_section" stdset="0">
+              <string>depth2img</string>
+             </property>
+             <property name="generator_name" stdset="0">
+              <string>stablediffusion</string>
+             </property>
+            </widget>
+           </item>
+          </layout>
+         </widget>
+         <widget class="QWidget" name="tab_stablediffusion_pix2pix">
+          <property name="sizePolicy">
+           <sizepolicy hsizetype="Expanding" vsizetype="Preferred">
+            <horstretch>0</horstretch>
+            <verstretch>0</verstretch>
+           </sizepolicy>
+          </property>
+          <property name="generator_section" stdset="0">
+           <string>pix2pix</string>
+          </property>
+          <property name="generator_name" stdset="0">
+           <string>stablediffusion</string>
+          </property>
+          <attribute name="title">
+           <string>pix2pix</string>
+          </attribute>
+          <layout class="QGridLayout" name="gridLayout_12">
+           <property name="leftMargin">
+            <number>0</number>
+           </property>
+           <property name="topMargin">
+            <number>0</number>
+           </property>
+           <property name="rightMargin">
+            <number>0</number>
+           </property>
+           <property name="bottomMargin">
+            <number>0</number>
+           </property>
+           <item row="0" column="0">
+            <widget class="GeneratorForm" name="generator_form_stablediffusion_pix2pix" native="true">
+             <property name="generator_section" stdset="0">
+              <string>pix2pix</string>
+             </property>
+             <property name="generator_name" stdset="0">
+              <string>stablediffusion</string>
+             </property>
+            </widget>
+           </item>
+          </layout>
+         </widget>
+         <widget class="QWidget" name="tab_stablediffusion_upscale">
+          <property name="sizePolicy">
+           <sizepolicy hsizetype="Expanding" vsizetype="Preferred">
+            <horstretch>0</horstretch>
+            <verstretch>0</verstretch>
+           </sizepolicy>
+          </property>
+          <property name="generator_section" stdset="0">
+           <string>upscale</string>
+          </property>
+          <property name="generator_name" stdset="0">
+           <string>stablediffusion</string>
+          </property>
+          <attribute name="title">
+           <string>upscale</string>
+          </attribute>
+          <layout class="QGridLayout" name="gridLayout_5">
+           <property name="leftMargin">
+            <number>0</number>
+           </property>
+           <property name="topMargin">
+            <number>0</number>
+           </property>
+           <property name="rightMargin">
+            <number>0</number>
+           </property>
+           <property name="bottomMargin">
+            <number>0</number>
+           </property>
+           <item row="0" column="0">
+            <widget class="GeneratorForm" name="generator_form_stablediffusion_upscale" native="true">
+             <property name="generator_section" stdset="0">
+              <string>upscale</string>
+             </property>
+             <property name="generator_name" stdset="0">
+              <string>stablediffusion</string>
+             </property>
+            </widget>
+           </item>
+          </layout>
+         </widget>
+         <widget class="QWidget" name="tab_stablediffusion_superresolution">
+          <property name="sizePolicy">
+           <sizepolicy hsizetype="Expanding" vsizetype="Preferred">
+            <horstretch>0</horstretch>
+            <verstretch>0</verstretch>
+           </sizepolicy>
+          </property>
+          <property name="generator_section" stdset="0">
+           <string>superresolution</string>
+          </property>
+          <property name="generator_name" stdset="0">
+           <string>stablediffusion</string>
+          </property>
+          <attribute name="title">
+           <string>superresolution</string>
+          </attribute>
+          <layout class="QGridLayout" name="gridLayout_6">
+           <property name="leftMargin">
+            <number>0</number>
+           </property>
+           <property name="topMargin">
+            <number>0</number>
+           </property>
+           <property name="rightMargin">
+            <number>0</number>
+           </property>
+           <property name="bottomMargin">
+            <number>0</number>
+           </property>
+           <item row="0" column="0">
+            <widget class="GeneratorForm" name="generator_form_stablediffusion_superresolution" native="true">
+             <property name="generator_section" stdset="0">
+              <string>superresolution</string>
+             </property>
+             <property name="generator_name" stdset="0">
+              <string>stablediffusion</string>
+             </property>
+            </widget>
+           </item>
+          </layout>
+         </widget>
+         <widget class="QWidget" name="tab_stablediffusion_txt2vid">
+          <property name="sizePolicy">
+           <sizepolicy hsizetype="Expanding" vsizetype="Preferred">
+            <horstretch>0</horstretch>
+            <verstretch>0</verstretch>
+           </sizepolicy>
+          </property>
+          <property name="generator_section" stdset="0">
+           <string>txt2vid</string>
+          </property>
+          <property name="generator_name" stdset="0">
+           <string>stablediffusion</string>
+          </property>
+          <attribute name="title">
+           <string>txt2vid</string>
+          </attribute>
+          <layout class="QGridLayout" name="gridLayout_13">
+           <property name="leftMargin">
+            <number>0</number>
+           </property>
+           <property name="topMargin">
+            <number>0</number>
+           </property>
+           <property name="rightMargin">
+            <number>0</number>
+           </property>
+           <property name="bottomMargin">
+            <number>0</number>
+           </property>
+           <item row="0" column="0">
+            <widget class="GeneratorForm" name="generator_form_txt2vid" native="true">
+             <property name="generator_section" stdset="0">
+              <string>txt2vid</string>
+             </property>
+             <property name="generator_name" stdset="0">
+              <string>stablediffusion</string>
+             </property>
+            </widget>
+           </item>
+          </layout>
+         </widget>
+        </widget>
+       </item>
+      </layout>
+     </widget>
+     <widget class="QWidget" name="tab_kandinsky">
+      <property name="sizePolicy">
+       <sizepolicy hsizetype="Expanding" vsizetype="Preferred">
+        <horstretch>0</horstretch>
+        <verstretch>0</verstretch>
+       </sizepolicy>
+      </property>
+      <attribute name="title">
+       <string>Kandinsky</string>
+      </attribute>
+      <layout class="QGridLayout" name="gridLayout_3">
+       <property name="leftMargin">
+        <number>0</number>
+       </property>
+       <property name="topMargin">
+        <number>0</number>
+       </property>
+       <property name="rightMargin">
+        <number>0</number>
+       </property>
+       <property name="bottomMargin">
+        <number>0</number>
+       </property>
+       <item row="0" column="0">
+        <widget class="QTabWidget" name="tab_widget_kandinsky">
+         <property name="tabPosition">
+          <enum>QTabWidget::West</enum>
+         </property>
+         <property name="currentIndex">
+          <number>1</number>
+         </property>
+         <widget class="QWidget" name="tab_kandinsky_txt2img">
+          <property name="sizePolicy">
+           <sizepolicy hsizetype="Expanding" vsizetype="Preferred">
+            <horstretch>0</horstretch>
+            <verstretch>0</verstretch>
+           </sizepolicy>
+          </property>
+          <property name="generator_section" stdset="0">
+           <string>txt2img</string>
+          </property>
+          <property name="generator_name" stdset="0">
+           <string>kandinsky</string>
+          </property>
+          <attribute name="title">
+           <string>txt2img / img2img</string>
+          </attribute>
+          <layout class="QGridLayout" name="gridLayout_8">
+           <property name="leftMargin">
+            <number>0</number>
+           </property>
+           <property name="topMargin">
+            <number>0</number>
+           </property>
+           <property name="rightMargin">
+            <number>0</number>
+           </property>
+           <property name="bottomMargin">
+            <number>0</number>
+           </property>
+           <item row="0" column="0">
+            <widget class="GeneratorForm" name="generator_form_kandinsky_txt2img" native="true">
+             <property name="generator_section" stdset="0">
+              <string>txt2img</string>
+             </property>
+             <property name="generator_name" stdset="0">
+              <string>kandinsky</string>
+             </property>
+            </widget>
+           </item>
+          </layout>
+         </widget>
+         <widget class="QWidget" name="tab_kandinsky_outpaint">
+          <property name="sizePolicy">
+           <sizepolicy hsizetype="Expanding" vsizetype="Preferred">
+            <horstretch>0</horstretch>
+            <verstretch>0</verstretch>
+           </sizepolicy>
+          </property>
+          <property name="generator_section" stdset="0">
+           <string>outpaint</string>
+          </property>
+          <property name="generator_name" stdset="0">
+           <string>kandinsky</string>
+          </property>
+          <attribute name="title">
+           <string>inpaint / outapint</string>
+          </attribute>
+          <layout class="QGridLayout" name="gridLayout_14">
+           <property name="leftMargin">
+            <number>0</number>
+           </property>
+           <property name="topMargin">
+            <number>0</number>
+           </property>
+           <property name="rightMargin">
+            <number>0</number>
+           </property>
+           <property name="bottomMargin">
+            <number>0</number>
+           </property>
+           <item row="0" column="0">
+            <widget class="GeneratorForm" name="generator_form_kandinsky_outpaint" native="true">
+             <property name="generator_section" stdset="0">
+              <string>outpaint</string>
+             </property>
+             <property name="generator_name" stdset="0">
+              <string>kandinsky</string>
+             </property>
+            </widget>
+           </item>
+          </layout>
+         </widget>
+        </widget>
+       </item>
+      </layout>
+     </widget>
+     <widget class="QWidget" name="tab_shape">
+      <property name="sizePolicy">
+       <sizepolicy hsizetype="Expanding" vsizetype="Preferred">
+        <horstretch>0</horstretch>
+        <verstretch>0</verstretch>
+       </sizepolicy>
+      </property>
+      <attribute name="title">
+       <string>Shap-e</string>
+      </attribute>
+      <layout class="QGridLayout" name="gridLayout_4">
+       <property name="leftMargin">
+        <number>0</number>
+       </property>
+       <property name="topMargin">
+        <number>0</number>
+       </property>
+       <property name="rightMargin">
+        <number>0</number>
+       </property>
+       <property name="bottomMargin">
+        <number>0</number>
+       </property>
+       <item row="0" column="0">
+        <widget class="QTabWidget" name="tab_widget_shape">
+         <property name="tabPosition">
+          <enum>QTabWidget::West</enum>
+         </property>
+         <property name="currentIndex">
+          <number>0</number>
+         </property>
+         <widget class="QWidget" name="tab_shape_txt2img">
+          <property name="sizePolicy">
+           <sizepolicy hsizetype="Expanding" vsizetype="Preferred">
+            <horstretch>0</horstretch>
+            <verstretch>0</verstretch>
+           </sizepolicy>
+          </property>
+          <property name="generator_section" stdset="0">
+           <string>txt2img</string>
+          </property>
+          <property name="generator_name" stdset="0">
+           <string>shape</string>
+          </property>
+          <attribute name="title">
+           <string>txt2img / img2img</string>
+          </attribute>
+          <layout class="QGridLayout" name="gridLayout_9">
+           <property name="leftMargin">
+            <number>0</number>
+           </property>
+           <property name="topMargin">
+            <number>0</number>
+           </property>
+           <property name="rightMargin">
+            <number>0</number>
+           </property>
+           <property name="bottomMargin">
+            <number>0</number>
+           </property>
+           <item row="0" column="0">
+            <widget class="GeneratorForm" name="generator_form_shape_txt2img" native="true">
+             <property name="generator_section" stdset="0">
+              <string>txt2img</string>
+             </property>
+             <property name="generator_name" stdset="0">
+              <string>shape</string>
+             </property>
+            </widget>
+           </item>
+          </layout>
+         </widget>
+        </widget>
+       </item>
+      </layout>
+     </widget>
+    </widget>
+   </item>
+  </layout>
+ </widget>
+ <customwidgets>
+  <customwidget>
+   <class>GeneratorForm</class>
+   <extends>QWidget</extends>
+   <header>airunner/widgets/generator_form/generator_form_widget</header>
+   <container>1</container>
+  </customwidget>
+ </customwidgets>
+ <resources/>
+ <connections>
+  <connection>
+   <sender>generator_tabs</sender>
+   <signal>currentChanged(int)</signal>
+   <receiver>generator_tab</receiver>
+   <slot>handle_generator_tab_changed(int)</slot>
+   <hints>
+    <hint type="sourcelabel">
+     <x>68</x>
+     <y>19</y>
+    </hint>
+    <hint type="destinationlabel">
+     <x>62</x>
+     <y>-9</y>
+    </hint>
+   </hints>
+  </connection>
+  <connection>
+   <sender>tab_widget_stablediffusion</sender>
+   <signal>currentChanged(int)</signal>
+   <receiver>generator_tab</receiver>
+   <slot>handle_tab_section_changed(int)</slot>
+   <hints>
+    <hint type="sourcelabel">
+     <x>14</x>
+     <y>91</y>
+    </hint>
+    <hint type="destinationlabel">
+     <x>45</x>
+     <y>-22</y>
+    </hint>
+   </hints>
+  </connection>
+ </connections>
+ <slots>
+  <slot>handle_generator_tab_changed(int)</slot>
+  <slot>handle_tab_section_changed(int)</slot>
+ </slots>
+</ui>
