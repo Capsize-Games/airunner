@@ -90,24 +90,6 @@ class StandardImageWidget(StandardBaseWidget):
         images = data["images"]
         if len(images) == 1:
             self.load_image_from_path(data["path"])
-        else:
-            self.load_batch_images(images)
-    
-    def clear_batch_images(self):
-        for widget in self.ui.batch_container.findChildren(QLabel):
-            widget.deleteLater()
-
-    def load_batch_images(self, images):
-        self.clear_batch_images()
-        images = images[:4]
-        for image in images:
-            # resize the image to 128x128
-            image = image.resize((128, 128))
-            qimage = ImageQt(image)
-            pixmap = QPixmap.fromImage(qimage)
-            label = QLabel()
-            label.setPixmap(pixmap)
-            self.ui.batch_container.layout().addWidget(label)
     
     def load_image_from_path(self, image_path):
         image = Image.open(image_path)
