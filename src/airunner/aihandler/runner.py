@@ -14,7 +14,6 @@ from controlnet_aux.processor import Processor
 from diffusers.pipelines.stable_diffusion.convert_from_ckpt import \
     download_from_original_stable_diffusion_ckpt
 from diffusers.pipelines.text_to_video_synthesis.pipeline_text_to_video_zero import CrossFrameAttnProcessor
-from diffusers.utils import export_to_gif
 from diffusers.utils.torch_utils import randn_tensor
 #from diffusers import ConsistencyDecoderVAE
 from torchvision import transforms
@@ -35,7 +34,7 @@ from airunner.aihandler.mixins.txttovideo_mixin import TexttovideoMixin
 from airunner.aihandler.settings import LOG_LEVEL, AIRUNNER_ENVIRONMENT
 from airunner.aihandler.settings_manager import SettingsManager
 from airunner.prompt_builder.prompt_data import PromptData
-from airunner.scripts.upscale import RealESRGAN
+from airunner.scripts.realesrgan.main import RealESRGAN
 
 
 torch.backends.cuda.matmul.allow_tf32 = True
@@ -97,11 +96,8 @@ class SDRunner(
     def controlnet(self):
         if self._controlnet is None \
             or self.current_controlnet_type != self.controlnet_type:
-            print("*"*80)
-            print("do load controlnet")
             self._controlnet = self.load_controlnet()
         else:
-            print("*"*80)
             print("controlnet already loaded")
         return self._controlnet
 
@@ -381,10 +377,6 @@ class SDRunner(
     @property
     def is_txt2img(self):
         return self.action == "txt2img" and self.image is None
-
-    @property
-    def is_shapegif(self):
-        return self.options.get(f"generator_section") == "shapegif"
 
     @property
     def is_vid_action(self):
@@ -1363,6 +1355,7 @@ class SDRunner(
         image = self.input_image
         results = []
         if image:
+            self.engine.move_pipe_to_cpu()
             results = RealESRGAN(
                 input=image,
                 output=None,
@@ -1370,6 +1363,7 @@ class SDRunner(
                 denoise_strength=self.options.get("denoise_strength", 0.5), 
                 face_enhance=self.options.get("face_enhance", True),
             ).run()
+            self.engine.clear_memory()
         else:
             self.log_error("No image found, unable to upscale")
         # check if results is a list
@@ -1729,7 +1723,6 @@ class SDRunner(
                     pipeline_class_ = StableDiffusionXLPipeline
                 else:
                     pipeline_class_ = StableDiffusionPipeline
-                print(self.model_version)
 
                 pipe = pipeline_class_.from_single_file(
                     self.model_path,
