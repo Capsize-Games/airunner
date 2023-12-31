@@ -9,9 +9,7 @@ class StandardBaseWidget(CanvasBaseWidget):
         super().__init__(*args, **kwargs)
         self.app.image_data.connect(self.handle_image_data)
         self.app.load_image.connect(self.load_image_from_path)
-        self.ui.controls_container.hide()
         self.ui.delete_confirmation.hide()
-        self.ui.image_frame.hide()
 
     def image_to_canvas(self):
         self.app.load_image_object.emit(self.image)
