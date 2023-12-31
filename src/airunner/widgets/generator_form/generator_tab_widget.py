@@ -24,13 +24,7 @@ class GeneratorTabWidget(BaseWidget):
 
     @property
     def current_generator_widget(self):
-        #return self.data[self.tab_section][self.tab]
-        try:
-            obj = getattr(self.ui, f"tab_{self.current_generator}_{self.current_section}")
-            return obj.findChild(QWidget, f"generator_form_{self.current_generator}_{self.current_section}")
-        except Exception as e:
-            print(e)
-            return None
+        return self.ui.generator_form_stablediffusion
 
     @property
     def current_input_image_widget(self):
@@ -87,37 +81,23 @@ class GeneratorTabWidget(BaseWidget):
             traceback.print_stack()
             print(e)
 
-    @property
-    def current_section(self):
-        try:
-            tab_widget_name = f"tab_widget_{self.current_generator}"
-            tab_widget = self.ui.generator_tabs.findChild(QWidget, tab_widget_name)
-            return tab_widget.currentWidget().objectName().replace(f"tab_{self.current_generator}_", "")
-        except Exception as e:
-            import traceback
-            traceback.print_stack()
-            print(e)
-
     def initialize(self):
         from airunner.widgets.generator_form.generator_form_widget import GeneratorForm
         self.app.release_tab_overrides()
         self.set_current_section_tab()
-        for tab in self.ui.tab_widget_stablediffusion.findChildren(GeneratorForm):
+        for tab in self.ui.generator_form_stablediffusion.findChildren(GeneratorForm):
             tab.initialize()
         for tab in self.ui.tab_widget_kandinsky.findChildren(GeneratorForm):
-            tab.initialize()
-        for tab in self.ui.tab_widget_shape.findChildren(GeneratorForm):
             tab.initialize()
 
     def refresh_models(self):
         # iterate over all generator tabs and call load_models on the generatorform widget
         from airunner.widgets.generator_form.generator_form_widget import GeneratorForm
-        for tab in self.ui.tab_widget_stablediffusion.findChildren(GeneratorForm):
+        for tab in self.ui.generator_form_stablediffusion.findChildren(GeneratorForm):
             tab.load_models()
 
     def find_generator_form(self, tab_section, tab):
-        obj = getattr(self.ui, f"tab_{tab_section}_{tab}")
-        return obj.findChild(QWidget, f"generator_form_{tab_section}_{tab}")
+        return getattr(self.ui, f"generator_form_{tab_section}", None)
 
     def find_widget(self, name, tab_section, tab):
         generator_form = self.find_generator_form(tab_section, tab)
@@ -146,8 +126,7 @@ class GeneratorTabWidget(BaseWidget):
         Tab sections are txt2img, depth2img etc.
         :return:
         """
-        print("handle_tab_section_changed")
-        self.settings_manager.set_value(f"current_section_{self.current_generator}", self.current_section)
+        self.settings_manager.set_value(f"current_section_{self.current_generator}", "txt2img")
         self.app.handle_tab_section_changed()
 
     def set_current_section_tab(self):
@@ -157,10 +136,6 @@ class GeneratorTabWidget(BaseWidget):
         tab_object = self.ui.generator_tabs.findChild(QWidget, f"tab_{current_tab}")
         tab_index = self.ui.generator_tabs.indexOf(tab_object)
         self.ui.generator_tabs.setCurrentIndex(tab_index)
-
-        tab_widget = tab_object.findChild(QTabWidget, f"tab_widget_{current_tab}")
-        tab_index = tab_widget.indexOf(tab_widget.findChild(QWidget, f"tab_{current_tab}_{current_section}"))
-        tab_widget.setCurrentIndex(tab_index)
 
     def generate_form(self, tab_section, tab):
         self.tab_section = tab_section

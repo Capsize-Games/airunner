@@ -14,7 +14,7 @@ class EmbeddingWidget(BaseWidget):
         self.ui.enabledCheckbox.setTitle(self.embedding.name)
         if self.embedding.tags:
             self.ui.tags.show()
-            self.ui.tags.setText(", ".join(self.embedding.tags))
+            self.ui.tags.setText(self.embedding.tags)
         else:
             self.ui.tags.hide()
 

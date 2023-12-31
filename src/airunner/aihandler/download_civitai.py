@@ -9,9 +9,12 @@ class DownloadCivitAI:
 
     @staticmethod
     def get_json(model_id):
+        # if model_id == id/name split and get the id
+        if "/" in model_id:
+            model_id = model_id.split("/")[0]
         url = f"https://civitai.com/api/v1/models/{model_id}"
         response = requests.get(url)
-
+        json = None
         try:
             json = response.json()
         except JSONDecodeError:
@@ -38,13 +41,3 @@ class DownloadCivitAI:
                             self.cancel_download = False
                             break
 
-if __name__ == "__main__":
-    def callback(n, total):
-        print(f"Downloaded {n} of {total} bytes")
-    DownloadCivitAI.get_json(4384)
-    DownloadCivitAI.download_model(
-        "URL HERE",
-        "MODEL HERE",
-        2082642.474609375,
-        callback=callback
-    )
