@@ -230,7 +230,6 @@ class GeneratorForm(BaseWidget):
         self.app.client.do_process_queue = True
 
     def call_generate(self, image=None, seed=None, override_data=None):
-        print("CALL GENERATE")
         override_data = {} if override_data is None else override_data
 
         if self.generator_section in (
@@ -343,7 +342,6 @@ class GeneratorForm(BaseWidget):
         return []
 
     def do_generate(self, extra_options=None, seed=None, latents_seed=None, do_deterministic=False, override_data=False):
-        print("DO GENERATE")
         if not extra_options:
             extra_options = {}
 
@@ -507,8 +505,6 @@ class GeneratorForm(BaseWidget):
                 **memory_options
             }
         }
-        print("*"*80)
-        print(override_data)
         self.app.client.message = data
 
     def do_deterministic_generation(self, extra_options):
@@ -719,7 +715,6 @@ class GeneratorForm(BaseWidget):
             AIModel.version == version,
             AIModel.enabled == True
         ).all()
-        print("MODELS", models, image_generator, pipeline, version)
         model_names = [model.name for model in models]
         self.ui.model.addItems(model_names)
         current_model = self.settings_manager.generator.model
