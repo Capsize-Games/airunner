@@ -110,6 +110,7 @@ class MainWindow(
     tab_section_changed_signal = pyqtSignal()
     image_data = pyqtSignal(dict)
     load_image = pyqtSignal(str)
+    load_image_object = pyqtSignal(object)
 
     @property
     def generate_signal(self):
@@ -452,7 +453,7 @@ class MainWindow(
 
     def action_copy_image_triggered(self):
         if self.settings_manager.mode == Mode.IMAGE.value:
-            self.canvas.copy_image()
+            self.canvas.copy_image(self.current_active_image())
 
     def action_cut_image_triggered(self):
         if self.settings_manager.mode == Mode.IMAGE.value:
@@ -597,7 +598,7 @@ class MainWindow(
 
     def action_toggle_grid(self, active):
         self.settings_manager.set_value("grid_settings.show_grid", active)
-        self.ui.canvas_plus_widget.update()
+        self.ui.canvas_plus_widget.do_draw()
         # self.canvas.update()
 
     def action_toggle_darkmode(self):
@@ -1078,8 +1079,6 @@ class MainWindow(
         #     self.generator_tab_widget.toggle_all_prompt_builder_checkboxes(value)
         elif key == "models":
             self.model_manager.models_changed(key, value)
-        elif key == "enable_advanced_mode":
-            self.toggle_advanced_generation()
 
     def initialize_shortcuts(self):
         event_callbacks = {
@@ -1094,7 +1093,6 @@ class MainWindow(
 
     def initialize_window(self):
         self.window = Ui_MainWindow()
-        print("SETTING UP MAIN WINDOW UI")
         self.window.setupUi(self)
         self.ui = self.window
         self.center()
@@ -1434,11 +1432,11 @@ class MainWindow(
             return
         self.ui.canvas_plus_widget.load_image(file_path)
 
-    def export_image(self):
+    def export_image(self, image=None):
         file_path, _ = self.display_file_export_dialog()
         if file_path == "":
             return
-        self.ui.canvas_plus_widget.save_image(file_path)
+        self.ui.canvas_plus_widget.save_image(file_path, image=image)
 
     def choose_image_export_path(self):
         # display a dialog to choose the export path
@@ -1539,13 +1537,6 @@ class MainWindow(
             self.ui.image_generator_header_tools.hide()
             self.ui.text_generator_header_tools.hide()
     
-    def toggle_advanced_generation(self):
-        if self.ui.generator_widget.current_generator_widget:
-            if self.settings_manager.mode != Mode.IMAGE.value:
-                return
-            index = 1 if self.settings_manager.enable_advanced_mode else 0
-            self.ui.generator_widget.current_generator_widget.ui.generator_form_tab_widget.setCurrentIndex(index)
-    
     def chat_clicked(self, val):
         self.set_llm_widget_tab("chat", val)
 
@@ -1575,7 +1566,6 @@ class MainWindow(
 
     def activate_image_generation_section(self):
         self.ui.mode_tab_widget.setCurrentIndex(0)
-        self.toggle_advanced_generation()
         self.toggle_tool_section_buttons_visibility()
 
     def activate_language_processing_section(self):

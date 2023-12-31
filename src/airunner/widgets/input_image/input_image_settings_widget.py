@@ -56,10 +56,14 @@ class InputImageSettingsWidget(BaseWidget):
         self.ui.groupBox.setTitle(self.property("checkbox_label"))
         self.ui.scale_slider_widget.initialize()
         self.initialize_groupbox()
+    
+    def initialize_combobox(self):
+        pass
 
     def initialize_groupbox(self):
-        if self.settings_manager.generator:
-            self.ui.groupBox.setChecked(self.settings_manager.generator.enable_input_image)
+        self.ui.groupBox.blockSignals(True)
+        self.ui.groupBox.setChecked(self.settings_manager.generator.enable_input_image)
+        self.ui.groupBox.blockSignals(False)
 
     def action_toggled_use_input_image(self, val):
         self.settings_manager.set_value("generator.enable_input_image", val)
@@ -100,45 +104,6 @@ class InputImageSettingsWidget(BaseWidget):
 
     def action_clicked_button_clear_input_image(self):
         self.clear_input_image()
-
-    def add_input_image_strength_scale_widget(self):
-        slider = None
-        if self.app.current_section in ["txt2img", "img2img", "depth2img"]:
-            slider = SliderWidget(
-                app=self.app,
-                label_text="Input Image Scale",
-                slider_callback=partial(self.handle_image_strength_changed),
-                current_value=self.app.settings_manager.generator.strength,
-                slider_maximum=10000,
-                spinbox_maximum=100.0,
-                display_as_float=True,
-                spinbox_single_step=0.01,
-                spinbox_page_step=0.01
-            )
-        else:
-            if self.app.current_section not in ["pix2pix"]:
-                value = 10000
-            else:
-                value = int(self.settings_manager.generator.image_guidance_scale)
-
-            if self.app.current_section != "upscale":
-                slider = SliderWidget(
-                    app=self.app,
-                    label_text="Input Image Scale",
-                    slider_callback=partial(self.handle_image_scale_changed),
-                    current_value=value,
-                    slider_maximum=500,
-                    spinbox_maximum=5.0,
-                    display_as_float=True,
-                    spinbox_single_step=0.01,
-                    spinbox_page_step=0.01
-                )
-            if self.app.current_section not in ["pix2pix", "upscale"]:
-                slider.setEnabled(False)
-        if slider:
-            self.add_slider_to_scale_frame(slider)
-
-    def add_slider_to_scale_frame(self, slider):
         grid_layout = QHBoxLayout(self.ui.scale_frame)
         grid_layout.setSpacing(0)
         grid_layout.setContentsMargins(0, 0, 0, 0)
@@ -177,6 +142,10 @@ class InputImageSettingsWidget(BaseWidget):
     def update_buttons(self):
         if not self.settings_manager.generator:
             return
+    
+        self.ui.use_imported_image_button.blockSignals(True)
+        self.ui.use_grid_image_button.blockSignals(True)
+        self.ui.recycle_grid_image_button.blockSignals(True)
 
         if self.settings_manager.generator.input_image_use_grid_image:
             self.ui.import_image_button.setEnabled(False)
@@ -195,6 +164,10 @@ class InputImageSettingsWidget(BaseWidget):
             self.ui.use_imported_image_button.setChecked(True)
             self.ui.use_grid_image_button.setChecked(False)
             self.ui.recycle_grid_image_button.setChecked(False)
+        
+        self.ui.use_imported_image_button.blockSignals(False)
+        self.ui.use_grid_image_button.blockSignals(False)
+        self.ui.recycle_grid_image_button.blockSignals(False)
 
     def export_input_image_mask(self):
         print("export input image mask")

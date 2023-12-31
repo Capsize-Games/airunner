@@ -31,7 +31,6 @@ class LayerContainerWidget(BaseWidget):
         self.app.loaded.connect(self.initialize)
 
     def initialize(self):
-        print("INITIALIZE LAYER CONTAINER WIDGET")
         self.ui.scrollAreaWidgetContents.layout().addSpacerItem(
             QSpacerItem(0, 0, QSizePolicy.Policy.Minimum, QSizePolicy.Policy.Expanding))
         session = get_session()
@@ -41,7 +40,6 @@ class LayerContainerWidget(BaseWidget):
         else:
             self.add_layers()
         # set the current_value property of the slider
-        print("INITIALIZE OPACITY WIDGET")
         self.ui.opacity_slider_widget.set_slider_and_spinbox_values(self.current_layer.opacity)
         self.ui.opacity_slider_widget.initialize_properties()
         self.set_layer_opacity(self.current_layer.opacity)
@@ -346,7 +344,6 @@ class LayerContainerWidget(BaseWidget):
         return self.layers[index].opacity
 
     def set_layer_opacity(self, opacity: int):
-        print("SET_LAYER_OPACITY", opacity)
         self.current_layer.opacity = opacity
         session = get_session()
         session.add(self.current_layer)

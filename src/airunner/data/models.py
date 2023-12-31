@@ -167,6 +167,7 @@ class PromptCategory(BaseModel):
 
     id = Column(Integer, primary_key=True)
     name = Column(String)
+    negative_prompt = Column(String)
 
 
 class PromptVariableCategory(BaseModel):
@@ -634,6 +635,10 @@ class Settings(BaseModel):
     current_section_shape = Column(String, default="txt2img")
     generator_settings = relationship("GeneratorSetting", backref="settings")
 
+    # generator version
+    current_version_stablediffusion = Column(String, default="SD 1.5")
+    current_version_kandinsky = Column(String, default="K 2.1")
+
     # tool and bottom panel tab sections
     current_tool_tab = Column(String, default="brush")
     current_bottom_panel_tab = Column(String, default="model_manager")
@@ -647,9 +652,18 @@ class Settings(BaseModel):
     active_image_editor_section = Column(String, default="canvas")
     enable_advanced_mode = Column(Boolean, default=False)
 
-    image_similarity = Column(Integer, default=1000)
-
     enable_tts = Column(Boolean, default=True)
+
+
+class StandardImageWidgetSettings(BaseModel):
+    __tablename__ = 'standard_image_widget_settings'
+
+    image_similarity = Column(Integer, default=1000)
+    controlnet = Column(String, default="Canny")
+    prompt = Column(String, default="")
+    negative_prompt = Column(String, default="")
+    upscale_model = Column(String, default="RealESRGAN_x4plus")
+    face_enhance = Column(Boolean, default=False)
 
 
 class Layer(BaseModel):

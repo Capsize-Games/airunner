@@ -3,7 +3,7 @@ from PyQt6.QtCore import QObject, pyqtSignal
 from airunner.aihandler.qtvar import StringVar, IntVar, BooleanVar, FloatVar, DictVar
 from airunner.data.db import session
 from airunner.data.models import LLMGenerator, Settings, GeneratorSetting, AIModel, Pipeline, ControlnetModel, ImageFilter, Prompt, \
-    SavedPrompt, PromptCategory, PromptVariable, PromptVariableCategory, PromptVariableCategoryWeight
+    SavedPrompt, PromptCategory, PromptVariable, PromptVariableCategory, PromptVariableCategoryWeight, StandardImageWidgetSettings
 from airunner.utils import save_session
 from airunner.aihandler.logger import Logger as logger
 
@@ -121,6 +121,15 @@ class SettingsManager(QObject):
 
     def get_image_filters(self):
         return session.query(ImageFilter).all()
+
+    @property
+    def standard_image_widget_settings(self):
+        standard_image_widget_settings = session.query(StandardImageWidgetSettings).first()
+        if standard_image_widget_settings is None:
+            standard_image_widget_settings = StandardImageWidgetSettings()
+            session.add(standard_image_widget_settings)
+            session.commit()
+        return standard_image_widget_settings
 
     @property
     def pipelines(self):
@@ -298,29 +307,6 @@ class SettingsManager(QObject):
             return self.current_section_kandinsky
         else:
             return self.current_section_shapegif
-
-    @property
-    def prompt_builder_prompts(self):
-        return session.query(Prompt).all()
-
-    @property
-    def prompt_categories(self):
-        return session.query(PromptCategory).all()
-
-    def variables_by_category(self, category_name):
-        variable_category = session.query(PromptVariableCategory).filter_by(name=category_name).first()
-        return session.query(PromptVariable).filter_by(variable_category=variable_category).all()
-
-    def prompts_by_category(self, category_name):
-        category = session.query(PromptCategory).filter_by(name=category_name).first()
-        return session.query(Prompt).filter_by(category=category).all()
-
-    def variable_weights_by_category(self, category, variable_name):
-        variable = session.query(PromptVariable).filter_by(value=variable_name).first()
-        return session.query(PromptVariableCategoryWeight).filter_by(
-            prompt_category_id=variable.prompt_category_id,
-            variable_category_id=variable.variable_category_id
-        ).first()
 
     def save(self):
         session.commit()

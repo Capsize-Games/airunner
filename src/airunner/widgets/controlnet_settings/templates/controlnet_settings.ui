@@ -7,7 +7,7 @@
     <x>0</x>
     <y>0</y>
     <width>296</width>
-    <height>175</height>
+    <height>222</height>
    </rect>
   </property>
   <property name="maximumSize">
@@ -82,6 +82,43 @@
        <number>0</number>
       </property>
       <item row="2" column="0">
+       <widget class="SliderWidget" name="scale_slider_widget" native="true">
+        <property name="label_text" stdset="0">
+         <string>Scale</string>
+        </property>
+        <property name="slider_callback" stdset="0">
+         <string>handle_value_change</string>
+        </property>
+        <property name="current_value" stdset="0">
+         <number>0</number>
+        </property>
+        <property name="slider_maximum" stdset="0">
+         <number>100</number>
+        </property>
+        <property name="spinbox_maximum" stdset="0">
+         <double>1.000000000000000</double>
+        </property>
+        <property name="display_as_float" stdset="0">
+         <bool>true</bool>
+        </property>
+        <property name="spinbox_single_step" stdset="0">
+         <double>0.010000000000000</double>
+        </property>
+        <property name="spinbox_page_step" stdset="0">
+         <double>0.100000000000000</double>
+        </property>
+        <property name="spinbox_minimum" stdset="0">
+         <double>0.000000000000000</double>
+        </property>
+        <property name="slider_minimum" stdset="0">
+         <number>0</number>
+        </property>
+        <property name="settings_property" stdset="0">
+         <string>generator.controlnet_guidance_scale</string>
+        </property>
+       </widget>
+      </item>
+      <item row="4" column="0">
        <widget class="QWidget" name="widget" native="true">
         <property name="maximumSize">
          <size>
@@ -690,40 +727,19 @@
         </layout>
        </widget>
       </item>
+      <item row="1" column="0">
+       <widget class="QComboBox" name="controlnet_dropdown"/>
+      </item>
       <item row="0" column="0">
-       <widget class="SliderWidget" name="scale_slider_widget" native="true">
-        <property name="label_text" stdset="0">
-         <string>Scale</string>
+       <widget class="QLabel" name="label">
+        <property name="font">
+         <font>
+          <pointsize>8</pointsize>
+          <bold>true</bold>
+         </font>
         </property>
-        <property name="slider_callback" stdset="0">
-         <string>handle_value_change</string>
-        </property>
-        <property name="current_value" stdset="0">
-         <number>0</number>
-        </property>
-        <property name="slider_maximum" stdset="0">
-         <number>100</number>
-        </property>
-        <property name="spinbox_maximum" stdset="0">
-         <double>1.000000000000000</double>
-        </property>
-        <property name="display_as_float" stdset="0">
-         <bool>true</bool>
-        </property>
-        <property name="spinbox_single_step" stdset="0">
-         <double>0.010000000000000</double>
-        </property>
-        <property name="spinbox_page_step" stdset="0">
-         <double>0.100000000000000</double>
-        </property>
-        <property name="spinbox_minimum" stdset="0">
-         <double>0.000000000000000</double>
-        </property>
-        <property name="slider_minimum" stdset="0">
-         <number>0</number>
-        </property>
-        <property name="settings_property" stdset="0">
-         <string>generator.controlnet_guidance_scale</string>
+        <property name="text">
+         <string>Controlnet Model</string>
         </property>
        </widget>
       </item>
@@ -768,8 +784,8 @@
    <slot>action_clicked_button_import_image()</slot>
    <hints>
     <hint type="sourcelabel">
-     <x>245</x>
-     <y>112</y>
+     <x>271</x>
+     <y>160</y>
     </hint>
     <hint type="destinationlabel">
      <x>84</x>
@@ -944,8 +960,8 @@
    <slot>action_clicked_button_thumbnail_mask()</slot>
    <hints>
     <hint type="sourcelabel">
-     <x>46</x>
-     <y>104</y>
+     <x>60</x>
+     <y>196</y>
     </hint>
     <hint type="destinationlabel">
      <x>80</x>
@@ -960,12 +976,28 @@
    <slot>action_clicked_button_import_image_mask()</slot>
    <hints>
     <hint type="sourcelabel">
-     <x>214</x>
-     <y>104</y>
+     <x>263</x>
+     <y>135</y>
     </hint>
     <hint type="destinationlabel">
      <x>9</x>
      <y>0</y>
+    </hint>
+   </hints>
+  </connection>
+  <connection>
+   <sender>controlnet_dropdown</sender>
+   <signal>currentTextChanged(QString)</signal>
+   <receiver>controlnet_settings</receiver>
+   <slot>action_controlnet_model_text_changed(QString)</slot>
+   <hints>
+    <hint type="sourcelabel">
+     <x>69</x>
+     <y>64</y>
+    </hint>
+    <hint type="destinationlabel">
+     <x>35</x>
+     <y>-11</y>
     </hint>
    </hints>
   </connection>
@@ -987,5 +1019,6 @@
   <slot>action_toggled_use_controlnet(bool)</slot>
   <slot>action_clicked_button_thumbnail()</slot>
   <slot>action_clicked_button_thumbnail_mask()</slot>
+  <slot>action_controlnet_model_text_changed(QString)</slot>
  </slots>
 </ui>

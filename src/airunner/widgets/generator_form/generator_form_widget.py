@@ -6,7 +6,7 @@ from PyQt6.QtWidgets import QWidget
 
 from airunner.aihandler.settings import MAX_SEED
 from airunner.data.db import session
-from airunner.data.models import ActionScheduler, AIModel, ActiveGridSettings, CanvasSettings
+from airunner.data.models import ActionScheduler, AIModel, ActiveGridSettings, CanvasSettings, Pipeline
 from airunner.utils import get_session
 from airunner.widgets.base_widget import BaseWidget
 from airunner.widgets.generator_form.templates.generatorform_ui import Ui_generator_form
@@ -131,7 +131,6 @@ class GeneratorForm(BaseWidget):
         super().__init__(*args, **kwargs)
         self.active_grid_settings = session.query(ActiveGridSettings).first()
         self.canvas_settings = session.query(CanvasSettings).first()
-        self.ui.generator_form_tab_widget.tabBar().hide()
 
         self.settings_manager.changed_signal.connect(self.handle_changed_signal)
 
@@ -140,6 +139,14 @@ class GeneratorForm(BaseWidget):
         timer.setSingleShot(True)
         timer.timeout.connect(self.initialize)
         timer.start(1000)
+    
+    def toggle_advanced_generation(self):
+        advanced_mode = self.settings_manager.enable_advanced_mode
+
+        # set the splitter sizes
+        splitter_sizes = [1, 1, 0 if advanced_mode else 1]
+        
+        self.ui.advanced_splitter.setSizes(splitter_sizes)
     
     def handle_changed_signal(self, key, value):
         if key == "generator.random_seed":
@@ -150,6 +157,8 @@ class GeneratorForm(BaseWidget):
             self.set_latents_seed()
             self.ui.seed_widget_latents.latents_seed = self.latents_seed
             self.ui.seed_widget_latents.update_seed()
+        elif key == "enable_advanced_mode":
+            self.toggle_advanced_generation()
 
     def update_image_input_thumbnail(self):
         self.ui.input_image_widget.set_thumbnail()
@@ -383,65 +392,93 @@ class GeneratorForm(BaseWidget):
             name=model_data["name"] if "name" in model_data \
                 else self.settings_manager.generator.model
         ).first()
+        if model:
+            # set the model data, first using model_data pulled from the override_data
+            model_data = dict(
+                name=model_data.get("name", model.name),
+                path=model_data.get("path", model.path),
+                branch=model_data.get("branch", model.branch),
+                version=model_data.get("version", model.version),
+                category=model_data.get("category", model.category),
+                pipeline_action=model_data.get("pipeline_action", model.pipeline_action),
+                enabled=model_data.get("enabled", model.enabled),
+                default=model_data.get("default", model.is_default)
+            )
 
-        # set the model data, first using model_data pulled from the override_data
-        model_data = {
-            "name": model_data.get("name", model.name),
-            "path": model_data.get("path", model.path),
-            "branch": model_data.get("branch", model.branch),
-            "version": model_data.get("version", model.version),
-            "category": model_data.get("category", model.category),
-            "pipeline_action": model_data.get("pipeline_action", model.pipeline_action),
-            "enabled": model_data.get("enabled", model.enabled),
-            "default": model_data.get("default", model.is_default)
-        }
+        input_image = override_data.get("input_image", None),
+        if input_image:
+            # check if input image is a tupil
+            if isinstance(input_image, tuple):
+                input_image = input_image[0]
+
+        original_model_data = {}
+        if input_image is not None:
+            if isinstance(input_image, tuple):
+                input_image_info = input_image[0].info
+            else:
+                input_image_info = input_image.info
+
+            keys = [
+                "name", 
+                "path", 
+                "branch", 
+                "version", 
+                "category", 
+                "pipeline_action", 
+                "enabled", 
+                "default",
+            ]
+            print(input_image_info)
+            original_model_data = {
+                key: model_data.get(
+                    key, input_image_info.get(key, "")) for key in keys
+            }
 
         # get controlnet_dropdown from active tab
-        options = {
-            "prompt": prompt,
-            "negative_prompt": negative_prompt,
-            "steps": steps,
-            "ddim_eta": ddim_eta,  # only applies to ddim scheduler
-            "n_iter": n_iter,
-            "n_samples": n_samples,
-            "scale": scale,
-            "seed": seed,
-            "latents_seed": latents_seed,
-            "model": model,
-            "model_data": model_data,
-            "scheduler": scheduler,
-            "model_path": model.path,
-            "model_branch": model.branch,
-            # "lora": self.available_lora(action),
-            "controlnet_conditioning_scale": controlnet_conditioning_scale,
-            "generator_section": self.generator_section,
-            "width": width,
-            "height": height,
-            "do_nsfw_filter": self.settings_manager.nsfw_filter,
-            "pos_x": 0,
-            "pos_y": 0,
-            "outpaint_box_rect": self.active_rect,
-            "hf_token": self.settings_manager.hf_api_key,
-            "model_base_path": self.settings_manager.path_settings.model_base_path,
-            "outpaint_model_path": self.settings_manager.path_settings.outpaint_model_path,
-            "pix2pix_model_path": self.settings_manager.path_settings.pix2pix_model_path,
-            "depth2img_model_path": self.settings_manager.path_settings.depth2img_model_path,
-            "upscale_model_path": self.settings_manager.path_settings.upscale_model_path,
-            "gif_path": self.settings_manager.path_settings.gif_path,
-            "image_path": self.settings_manager.path_settings.image_path,
-            "lora_path": self.settings_manager.lora_path,
-            "embeddings_path": self.settings_manager.path_settings.embeddings_path,
-            "video_path": self.settings_manager.path_settings.video_path,
-            "clip_skip": clip_skip,
-            "batch_size": batch_size,
-            "variation": self.settings_manager.generator.variation,
-            "deterministic_generation": False,
-        }
-
-        options["input_image"] = override_data.get("input_image", None)
-        
-        options["enable_controlnet"] = enable_controlnet
-        options["controlnet"] = controlnet
+        options = dict(
+            prompt=prompt,
+            negative_prompt=negative_prompt,
+            steps=steps,
+            ddim_eta=ddim_eta,  # only applies to ddim scheduler
+            n_iter=n_iter,
+            n_samples=n_samples,
+            scale=scale,
+            seed=seed,
+            latents_seed=latents_seed,
+            model=model,
+            model_data=model_data,
+            original_model_data=original_model_data,
+            scheduler=scheduler,
+            model_path=model.path,
+            model_branch=model.branch,
+            # lora=self.available_lora(action),
+            generator_section=self.generator_section,
+            width=width,
+            height=height,
+            do_nsfw_filter=self.settings_manager.nsfw_filter,
+            pos_x=0,
+            pos_y=0,
+            outpaint_box_rect=self.active_rect,
+            hf_token=self.settings_manager.hf_api_key,
+            model_base_path=self.settings_manager.path_settings.model_base_path,
+            outpaint_model_path=self.settings_manager.path_settings.outpaint_model_path,
+            pix2pix_model_path=self.settings_manager.path_settings.pix2pix_model_path,
+            depth2img_model_path=self.settings_manager.path_settings.depth2img_model_path,
+            upscale_model_path=self.settings_manager.path_settings.upscale_model_path,
+            gif_path=self.settings_manager.path_settings.gif_path,
+            image_path=self.settings_manager.path_settings.image_path,
+            lora_path=self.settings_manager.lora_path,
+            embeddings_path=self.settings_manager.path_settings.embeddings_path,
+            video_path=self.settings_manager.path_settings.video_path,
+            clip_skip=clip_skip,
+            batch_size=batch_size,
+            variation=self.settings_manager.generator.variation,
+            deterministic_generation=False,
+            input_image=input_image,
+            enable_controlnet=enable_controlnet,
+            controlnet_conditioning_scale=controlnet_conditioning_scale,
+            controlnet=controlnet,
+        )
 
         if self.controlnet_image:
             options["controlnet_image"] = self.controlnet_image
@@ -471,6 +508,8 @@ class GeneratorForm(BaseWidget):
                 **memory_options
             }
         }
+        print("*"*80)
+        print(override_data)
         self.app.client.message = data
 
     def do_deterministic_generation(self, extra_options):
@@ -566,6 +605,8 @@ class GeneratorForm(BaseWidget):
         self.settings_manager.generator_section = self.generator_section
         self.settings_manager.generator_name = self.generator_name
         self.set_form_values()
+        self.load_pipelines()
+        self.load_versions()
         self.load_models()
         self.load_schedulers()
         self.set_controlnet_settings_properties()
@@ -603,9 +644,8 @@ class GeneratorForm(BaseWidget):
         self.initialized = True
 
     def handle_settings_manager_changed(self, key, val, settings_manager):
-        # if settings_manager.generator_section == self.settings_manager.generator_section and settings_manager.generator_name == self.settings_manager.generator_name:
-        #     self.set_form_values()
-        pass
+        if settings_manager.generator_section == self.settings_manager.generator_section and settings_manager.generator_name == self.settings_manager.generator_name:
+            self.set_form_values()
 
     def set_controlnet_settings_properties(self):
         self.ui.controlnet_settings.initialize(
@@ -627,16 +667,61 @@ class GeneratorForm(BaseWidget):
         self.ui.prompt.setPlainText("")
         self.ui.negative_prompt.setPlainText("")
 
+    def load_pipelines(self):
+        self.ui.pipeline.blockSignals(True)
+        self.ui.pipeline.clear()
+        pipeline_names = ["txt2img / img2img", "inpaint / outpaint", "depth2img", "pix2pix", "upscale", "superresolution", "txt2vid"]
+        self.ui.pipeline.addItems(pipeline_names)
+        current_pipeline = getattr(self.settings_manager, f"current_section_{self.settings_manager.current_image_generator}")
+        if current_pipeline != "":
+            if current_pipeline == "txt2img":
+                current_pipeline = "txt2img / img2img"
+            elif current_pipeline == "outpaint":
+                current_pipeline = "inpaint / outpaint"
+            self.ui.pipeline.setCurrentText(current_pipeline)
+        self.ui.pipeline.blockSignals(False)
+    
+    def load_versions(self):
+        self.ui.version.blockSignals(True)
+        self.ui.version.clear()
+        pipelines = session.query(Pipeline).filter(Pipeline.category == self.settings_manager.current_image_generator).all()
+        version_names = set([pipeline.version for pipeline in pipelines])
+        self.ui.version.addItems(version_names)
+        current_version = getattr(self.settings_manager, f"current_version_{self.settings_manager.current_image_generator}")
+        if current_version != "":
+            self.ui.version.setCurrentText(current_version)
+        self.ui.version.blockSignals(False)
+
+    def handle_pipeline_changed(self, val):
+        if val == "txt2img / img2img":
+            val = "txt2img"
+        elif val == "inpaint / outpaint":
+            val = "outpaint"
+        self.settings_manager.set_value(f"current_section_{self.settings_manager.current_image_generator}", val)
+        self.load_versions()
+        self.load_models()
+
+    def handle_version_changed(self, val):
+        print("VERSION CHANGED", val)
+        self.settings_manager.set_value(f"current_version_{self.settings_manager.current_image_generator}", val)
+        self.load_models()
+
     def load_models(self):
         self.ui.model.blockSignals(True)
         self.clear_models()
 
-        models = session.query(AIModel).filter(
-            AIModel.category == self.generator_name,
-            AIModel.pipeline_action == self.generator_section
-        ).all()
-        model_names = [model.name for model in models]
+        image_generator = self.settings_manager.current_image_generator
+        pipeline = getattr(self.settings_manager, f"current_section_{image_generator}")
+        version = getattr(self.settings_manager, f"current_version_{image_generator}")
 
+        models = session.query(AIModel).filter(
+            AIModel.category == image_generator,
+            AIModel.pipeline_action == pipeline,
+            AIModel.version == version,
+            AIModel.enabled == True
+        ).all()
+        print("MODELS", models, image_generator, pipeline, version)
+        model_names = [model.name for model in models]
         self.ui.model.addItems(model_names)
         current_model = self.settings_manager.generator.model
         if current_model != "":

@@ -18,3 +18,7 @@ settings.pickle
 *egg-info*
 venv
 src/airunner/extensions/
+alembic.ini
+src/airunner/scripts/realesrgan
+src/airunner/scripts/weights
+gfpgan
