@@ -13,6 +13,10 @@ from airunner.data.models import ControlnetModel, LLMPromptTemplate, Pipeline, D
     DeterministicSettings, ActiveGridSettings, TabSection, PromptBuilder, CanvasSettings, \
     LLMGeneratorSetting, LLMGenerator, LLMModelVersion
 from airunner.utils import get_session
+from alembic.config import Config
+from alembic import command
+import os
+import configparser
 
 session = get_session()
 
@@ -21,7 +25,7 @@ if not session.query(Prompt).first():
 
     # Add Prompt objects
     for prompt_option, data in prompt_bootstrap_data.items():
-        category = PromptCategory(name=prompt_option)
+        category = PromptCategory(name=prompt_option, negative_prompt=data["negative_prompt"])
         prompt = Prompt(
             name=f"Standard {prompt_option} prompt",
             category=category
@@ -242,6 +246,16 @@ if not session.query(Prompt).first():
     ))
     settings.splitter_sizes.append(SplitterSection(
         name="main_splitter",
+        order=1,
+        size=-1
+    ))
+    settings.splitter_sizes.append(SplitterSection(
+        name="canvas_splitter",
+        order=0,
+        size=520
+    ))
+    settings.splitter_sizes.append(SplitterSection(
+        name="canvas_splitter",
         order=1,
         size=-1
     ))
@@ -527,3 +541,20 @@ if not session.query(Prompt).first():
             "toolname": "prompt_generation"
         },
     ]
+
+HERE = os.path.abspath(os.path.dirname(__file__))
+alembic_ini_path = os.path.join(HERE, "../alembic.ini")
+
+config = configparser.ConfigParser()
+config.read(f"{alembic_ini_path}.config")
+
+home_dir = os.path.expanduser("~")
+db_path = f'sqlite:///{home_dir}/.airunner/airunner.db'
+
+config.set('alembic', 'sqlalchemy.url', db_path)
+
+with open(alembic_ini_path, 'w') as configfile:
+    config.write(configfile)
+
+alembic_cfg = Config(alembic_ini_path)
+command.upgrade(alembic_cfg, "head")
