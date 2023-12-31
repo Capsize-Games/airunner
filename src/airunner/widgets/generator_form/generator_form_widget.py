@@ -144,7 +144,7 @@ class GeneratorForm(BaseWidget):
         advanced_mode = self.settings_manager.enable_advanced_mode
 
         # set the splitter sizes
-        splitter_sizes = [1, 1, 0 if advanced_mode else 1]
+        splitter_sizes = [1, 1, 0 if not advanced_mode else 1]
         
         self.ui.advanced_splitter.setSizes(splitter_sizes)
     
