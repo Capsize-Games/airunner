@@ -18,7 +18,7 @@ from diffusers.utils import export_to_gif
 from diffusers.utils.torch_utils import randn_tensor
 #from diffusers import ConsistencyDecoderVAE
 from torchvision import transforms
-from diffusers import StableDiffusionPipeline, StableDiffusionXLPipeline, DiffusionPipeline, StableDiffusionLatentUpscalePipeline
+from diffusers import StableDiffusionPipeline, StableDiffusionXLPipeline, DiffusionPipeline
 
 from airunner.aihandler.auto_pipeline import AutoImport
 from airunner.aihandler.enums import FilterType
@@ -35,6 +35,7 @@ from airunner.aihandler.mixins.txttovideo_mixin import TexttovideoMixin
 from airunner.aihandler.settings import LOG_LEVEL, AIRUNNER_ENVIRONMENT
 from airunner.aihandler.settings_manager import SettingsManager
 from airunner.prompt_builder.prompt_data import PromptData
+from airunner.scripts.upscale import RealESRGAN
 
 
 torch.backends.cuda.matmul.allow_tf32 = True
@@ -74,7 +75,6 @@ class SDRunner(
     current_negative_prompt = None
     _model = None
     requested_data = None
-    current_clip_skip = 0
     _allow_online_mode = None
     current_load_controlnet = False
 
@@ -97,7 +97,12 @@ class SDRunner(
     def controlnet(self):
         if self._controlnet is None \
             or self.current_controlnet_type != self.controlnet_type:
+            print("*"*80)
+            print("do load controlnet")
             self._controlnet = self.load_controlnet()
+        else:
+            print("*"*80)
+            print("controlnet already loaded")
         return self._controlnet
 
     @property
@@ -119,7 +124,7 @@ class SDRunner(
         if self.is_vid2vid:
             return "openpose"
 
-        controlnet_type = self.options.get("controlnet", None)
+        controlnet_type = self.options.get("controlnet", None).lower()
         if not controlnet_type:
             controlnet_type = "canny"
         return controlnet_type.replace(" ", "_")
@@ -246,8 +251,6 @@ class SDRunner(
 
     @property
     def n_samples(self):
-        if self.is_upscale:
-            return 1
         return self.options.get(f"n_samples", 1)
 
     @property
@@ -268,7 +271,7 @@ class SDRunner(
 
     @property
     def strength(self):
-        return self.options.get(f"strength", 1)
+        return self.options.get(f"strength", 1.0)
 
     @property
     def depth_map(self):
@@ -365,17 +368,12 @@ class SDRunner(
         return self.options.get(f"model", None)
 
     @property
-    def do_mega_scale(self):
-        # return self.is_superresolution
-        return False
-
-    @property
     def action(self):
         return self.data.get("action", None)
 
     @property
     def action_has_safety_checker(self):
-        return self.action not in ["depth2img", "superresolution"]
+        return self.action not in ["depth2img"]
 
     @property
     def is_outpaint(self):
@@ -423,10 +421,6 @@ class SDRunner(
     @property
     def is_pix2pix(self):
         return self.action == "pix2pix"
-
-    @property
-    def is_superresolution(self):
-        return self.action == "superresolution"
 
     @property
     def use_interpolation(self):
@@ -486,17 +480,11 @@ class SDRunner(
         return self.options.get("depth2img_model_path", None)
 
     @property
-    def upscale_model_path(self):
-        return self.options.get("upscale_model_path", None)
-
-    @property
     def model_path(self):
         return self.model_data["path"]
 
     @property
     def cuda_error_message(self):
-        if self.is_superresolution and self.scheduler_name == "DDIM":
-            return f"Unable to run the model at {self.width}x{self.height} resolution using the DDIM scheduler. Try changing the scheduler to LMS or PNDM and try again."
         return f"VRAM too low for {self.width}x{self.height} resolution. Potential solutions: try again, use a different model, restart the application, use a smaller size, upgrade your GPU."
 
     @property
@@ -511,18 +499,12 @@ class SDRunner(
             return self.outpaint is not None
         elif self.is_depth2img:
             return self.depth2img is not None
-        elif self.is_superresolution:
-            return self.superresolution is not None
         elif self.is_vid_action:
             return self.txt2vid is not None
-        elif self.is_upscale:
-            return self.upscale is not None
 
     @property
     def enable_controlnet(self):
         if self.use_kandinsky or self.is_shapegif:
-            return False
-        if not self.is_txt2img and not self.is_img2img and not self.is_outpaint:
             return False
         if self.input_image is None and self.controlnet_image is None:
             return False
@@ -532,7 +514,7 @@ class SDRunner(
 
     @property
     def controlnet_conditioning_scale(self):
-        return self.options.get(f"controlnet_conditioning_scale", 1000) / 1000.0
+        return self.options.get(f"controlnet_conditioning_scale", 1.0)
 
     @property
     def controlnet_guess_mode(self):
@@ -558,12 +540,8 @@ class SDRunner(
             return self.depth2img
         elif self.is_pix2pix:
             return self.pix2pix
-        elif self.is_superresolution:
-            return self.superresolution
         elif self.is_vid_action:
             return self.txt2vid
-        elif self.is_upscale:
-            return self.upscale
         else:
             logger.warning(f"Invalid action {self.action} unable to get pipe")
 
@@ -579,12 +557,8 @@ class SDRunner(
             self.depth2img = value
         elif self.is_pix2pix:
             self.pix2pix = value
-        elif self.is_superresolution:
-            self.superresolution = value
         elif self.is_vid_action:
             self.txt2vid = value
-        elif self.is_upscale:
-            self.upscale = value
         else:
             logger.warning(f"Invalid action {self.action} unable to set pipe")
 
@@ -656,9 +630,7 @@ class SDRunner(
     @property
     def do_add_lora_to_pipe(self):
         return not self.use_kandinsky \
-               and not self.is_vid_action \
-               and not self.is_upscale \
-               and not self.is_superresolution
+               and not self.is_vid_action
 
     @property
     def controlnet_action_diffuser(self):
@@ -736,6 +708,10 @@ class SDRunner(
     def hf_username(self):
         return self.settings_manager.hf_username
 
+    @property
+    def original_model_data(self):
+        return self.options.get("original_model_data", {})
+
     def  __init__(self, **kwargs):
         logger.set_level(LOG_LEVEL)
         self.settings_manager = SettingsManager()
@@ -754,9 +730,7 @@ class SDRunner(
         self.pix2pix = None
         self.outpaint = None
         self.depth2img = None
-        self.superresolution = None
         self.txt2vid = None
-        self.upscale = None
 
     @staticmethod
     def latents_to_image(latents: torch.Tensor):
@@ -814,6 +788,7 @@ class SDRunner(
         return model.endswith(".safetensors")
 
     def initialize(self):
+        logger.info("trying to initialize")
         if not self.initialized or self.reload_model or self.pipe is None:
             logger.info("Initializing")
             self.compel_proc = None
@@ -821,7 +796,8 @@ class SDRunner(
             self.negative_prompt_embeds = None
             if self.reload_model:
                 self.reset_applied_memory_settings()
-            self.load_model()
+            if not self.is_upscale:
+                self.load_model()
             self.reload_model = False
             self.initialized = True
 
@@ -1050,9 +1026,6 @@ class SDRunner(
                     generator = [self.generator(seed=self.latents_seed + i) for i in range(self.batch_size)]
                 args["generator"] = generator
 
-            if not self.is_upscale and not self.is_superresolution and not self.is_vid_action:
-                args["num_images_per_prompt"] = 1
-
         if self.enable_controlnet:
             logger.info(f"Setting up controlnet")
             args = self.load_controlnet_arguments(**args)
@@ -1067,6 +1040,8 @@ class SDRunner(
 
         if not self.is_outpaint and not self.is_vid_action and not self.is_upscale:
             args["latents"] = self.latents
+
+        args["clip_skip"] = self.clip_skip
 
         with torch.inference_mode():
             return self.pipe(**args)
@@ -1212,10 +1187,6 @@ class SDRunner(
             extra_args = {**extra_args, **{
                 "image": image
             }}
-        elif self.is_superresolution:
-            extra_args = {**extra_args, **{
-                "image": image,
-            }}
         elif self.is_outpaint:
             extra_args = {**extra_args, **{
                 "image": image,
@@ -1235,12 +1206,8 @@ class SDRunner(
         extra_args = self.prepare_extra_args(data, image, mask)
 
         # do the sample
-        print(extra_args)
         try:
-            if self.do_mega_scale:
-                return self.do_mega_scale_sample(data, image, extra_args)
-            else:
-                images, nsfw_content_detected = self.do_sample(**extra_args)
+            images, nsfw_content_detected = self.do_sample(**extra_args)
         except Exception as e:
             images = None
             if "PYTORCH_CUDA_ALLOC_CONF" in str(e):
@@ -1251,51 +1218,6 @@ class SDRunner(
         self.final_callback()
 
         return images, nsfw_content_detected
-
-    def do_mega_scale_sample(self, data, image, extra_args):
-        # first we will downscale the original image using the PIL algorithm
-        # called "bicubic" which is a high quality algorithm
-        # then we will upscale the image using the super resolution model
-        # then we will upscale the image using the PIL algorithm called "bicubic"
-        # to the desired size
-        # the new dimensions of scaled_w and scaled_h should be the width and height
-        # of the image that current image but aspect ratio scaled to 128
-        # so if the image is 256x256 then the scaled_w and scaled_h should be 128x128 but
-        # if the image is 512x256 then the scaled_w and scaled_h should be 128x64
-
-        max_in_width = 512
-        scale_size = 256
-        in_width = self.width
-        in_height = self.height
-        original_image_width = data["options"]["original_image_width"]
-        original_image_height = data["options"]["original_image_height"]
-
-        if original_image_width > max_in_width:
-            scale_factor = max_in_width / original_image_width
-            in_width = int(original_image_width * scale_factor)
-            in_height = int(original_image_height * scale_factor)
-            scale_size = int(scale_size * scale_factor)
-
-        if in_width > max_in_width:
-            # scale down in_width and in_height by scale_size
-            # but keep the aspect ratio
-            in_width = scale_size
-            in_height = int((scale_size / original_image_width) * original_image_height)
-
-        # now we will scale the image to the new dimensions
-        # and then upscale it using the super resolution model
-        # and then downscale it using the PIL bicubic algorithm
-        # to the original dimensions
-        # this will give us a high quality image
-        scaled_w = int(in_width * (scale_size / in_height))
-        scaled_h = scale_size
-        downscaled_image = image.resize((scaled_w, scaled_h), Image.BILINEAR)
-        extra_args["image"] = downscaled_image
-        upscaled_image = self.do_sample(**extra_args)
-        # upscale back to self.width and self.height
-        image = upscaled_image  # .resize((original_image_width, original_image_height), Image.BILINEAR)
-
-        return [image]
 
     def process_prompts(self, data, seed):
         """
@@ -1375,7 +1297,6 @@ class SDRunner(
         seed = self.latents_seed
         data = self.process_prompts(data, seed)
         self.current_sample = 1
-        print(data)
         images, nsfw_content_detected = self.sample_diffusers_model(data)
         if self.is_vid_action and "video_filename" not in self.requested_data:
             self.requested_data["video_filename"] = self.txt2vid_file
@@ -1386,6 +1307,7 @@ class SDRunner(
         self.current_sample = 0
 
     def image_handler(self, images, data, nsfw_content_detected):
+        data["original_model_data"] = self.original_model_data or {}
         if images:
             tab_section = "stablediffusion"
             if self.use_kandinsky:
@@ -1494,17 +1416,39 @@ class SDRunner(
     
     def unload_tokenizer(self):
         self.tokenizer = None
+    
+    def process_upscale(self, data: dict):
+        logger.info("Processing upscale")
+        image = self.input_image
+        results = []
+        if image:
+            results = RealESRGAN(
+                input=image,
+                output=None,
+                model_name='RealESRGAN_x4plus', 
+                denoise_strength=self.options.get("denoise_strength", 0.5), 
+                face_enhance=self.options.get("face_enhance", True),
+            ).run()
+        else:
+            self.log_error("No image found, unable to upscale")
+        # check if results is a list
+        if not isinstance(results, list):
+            return [results]
+        return results
 
     def generator_sample(self, data: dict):
         self.process_data(data)
 
+        if self.is_upscale:
+            images = self.process_upscale(data)
+            self.image_handler(images, self.requested_data, None)
+            self.current_sample = 0
+            self.do_cancel = False
+            return
+
         if not self.pipe and not self.use_kandinsky:
             logger.info("pipe is None")
             return
-
-        if self.current_clip_skip != self.clip_skip and self.pipe is not None:
-            if self.pipe.text_encoder.config.num_hidden_layers <= 12:
-                self.reload_model = True
 
         self.send_message(f"Generating {'video' if self.is_vid_action else 'image'}")
 
@@ -1518,21 +1462,20 @@ class SDRunner(
 
         error = None
         error_message = ""
-        # try:
-        print("GENERATE HERE")
-        self.generate(data)
-        # except TypeError as e:
-        #     error_message = f"TypeError during generation {self.action}"
-        #     error = e
-        # except Exception as e:
-        #     error = e
-        #     if "PYTORCH_CUDA_ALLOC_CONF" in str(e):
-        #         error = self.cuda_error_message
-        #         self.clear_memory()
-        #         self.reset_applied_memory_settings()
-        #     else:
-        #         error_message = f"Error during generation"
-        #         traceback.print_exc()
+        try:
+            self.generate(data)
+        except TypeError as e:
+            error_message = f"TypeError during generation {self.action}"
+            error = e
+        except Exception as e:
+            error = e
+            if "PYTORCH_CUDA_ALLOC_CONF" in str(e):
+                error = self.cuda_error_message
+                self.clear_memory()
+                self.reset_applied_memory_settings()
+            else:
+                error_message = f"Error during generation"
+                traceback.print_exc()
 
         if error:
             self.initialized = False
@@ -1618,9 +1561,7 @@ class SDRunner(
             "pix2pix",
             "outpaint",
             "depth2img",
-            "superresolution",
             "txt2vid",
-            "upscale",
             "_controlnet",
             "safety_checker",
         ]:
@@ -1666,11 +1607,10 @@ class SDRunner(
             else:
                 self.send_model_loading_message(self.model_path)
 
-                if self.is_upscale:
-                    kwargs["low_res_scheduler"] = self.load_scheduler(force_scheduler_name="DDPM")
-
                 if self.enable_controlnet and not self.is_vid2vid:
                     kwargs["controlnet"] = self.controlnet()
+                else:
+                    print("DO NOT USE CONTROLNET", self.enable_controlnet, self.is_vid2vid)
 
                 if self.is_single_file:
                     try:
@@ -1698,16 +1638,18 @@ class SDRunner(
                     if scheduler:
                         kwargs["scheduler"] = scheduler
                     
-                    if self.is_upscale:
-                        self.pipe = StableDiffusionLatentUpscalePipeline.from_pretrained(
-                            self.model_path,
-                            **kwargs
-                        )
-                    else:
-                        self.pipe = StableDiffusionPipeline.from_pretrained(
-                            self.model_path,
-                            **kwargs
-                        )
+                    # self.pipe = AutoImport.class_object(
+                    #     "vid2vid" if self.is_vid2vid else self.action,
+                    #     self.model_data,
+                    #     pipeline_action="vid2vid" if self.is_vid2vid else self.action,
+                    #     single_file=False,
+                    #     **kwargs
+                    # )
+                    self.pipe = self.from_pretrained(
+                        pipeline_action=self.action,
+                        model=self.model_path,
+                        **kwargs
+                    )
 
                 if self.pipe is None:
                     logger.error("Failed to load pipeline")
@@ -1734,9 +1676,6 @@ class SDRunner(
 
                 self.controlnet_loaded = self.enable_controlnet
 
-                if self.is_upscale:
-                    self.pipe.scheduler = self.load_scheduler(force_scheduler_name="Euler")
-
             if not self.is_depth2img:
                 self.safety_checker = self.pipe.safety_checker
 
@@ -1745,31 +1684,10 @@ class SDRunner(
 
             # move pipe components to device and initialize text encoder for clip skip
             self.pipe.vae.to(self.data_type)
-            self.pipe = self.load_text_encoder(self.pipe)
             self.pipe.text_encoder.to(self.data_type)
             self.pipe.unet.to(self.data_type)
 
             #self.load_learned_embed_in_clip()
-
-    def load_text_encoder(self, pipeline):
-        if not pipeline or (pipeline.text_encoder and pipeline.text_encoder.config.num_hidden_layers > 12):
-            return pipeline
-
-        if self.clip_skip == self.current_clip_skip:
-            return pipeline
-        self.current_clip_skip = self.clip_skip
-
-        text_encoder = self.from_pretrained(
-            pipeline_action="text_encoder",
-            model=self.text_encoder_model,
-            num_hidden_layers=12 - self.clip_skip,
-        )
-        if text_encoder.__class__.__name__ not in [
-            "StableDiffusionControlNetPipeline",
-            "StableDiffusionControlNetImg2ImgPipeline",
-            "StableDiffusionControlNetInpaintPipeline"]:
-            pipeline.text_encoder = text_encoder
-        return pipeline
 
     def load_ckpt_model(self):
         logger.info(f"Loading ckpt file {self.model_path}")

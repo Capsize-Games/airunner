@@ -74,7 +74,6 @@ class Logger:
 Logger.set_level(logging.DEBUG)
 Logger.stream_handler.setFormatter(Logger.formatter)
 Logger.logger.addHandler(Logger.stream_handler)
-logging.disable(LOG_LEVEL)
 logging.getLogger("lightning").setLevel(logging.WARNING)
 logging.getLogger("lightning_fabric.utilities.seed").setLevel(logging.WARNING)
-Logger.set_level(logging.DEBUG)
+Logger.set_level(LOG_LEVEL)
