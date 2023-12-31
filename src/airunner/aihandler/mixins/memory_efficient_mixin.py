@@ -234,13 +234,13 @@ class MemoryEfficientMixin:
         if not self.pipe:
             return
         try:
-            self.pipe.to("cpu", self.data_type).float()
+            self.pipe.to("cpu", self.data_type).float32()
         except NotImplementedError:
             logger.warning("Not implemented error when moving to cpu")
         
         if hasattr(self.pipe, "controlnet"):
             try:
-                self.pipe.controlnet.to("cpu", self.data_type).float()
+                self.pipe.controlnet.to("cpu", self.data_type).float32()
             except NotImplementedError:
                 logger.warning("Not implemented error when moving to cpu")
 
