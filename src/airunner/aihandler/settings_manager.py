@@ -305,8 +305,6 @@ class SettingsManager(QObject):
             return self.current_section_stablediffusion
         elif current_tab == "kandinsky":
             return self.current_section_kandinsky
-        else:
-            return self.current_section_shapegif
 
     def save(self):
         session.commit()

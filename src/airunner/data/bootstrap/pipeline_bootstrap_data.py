@@ -36,12 +36,6 @@ pipeline_bootstrap_data = pipelines = [
     },
     {
         "pipeline_action": "txt2img",
-        "version": "SD 1.5",
-        "category": "shapegif",
-        "classname": "diffusers.DiffusionPipeline"
-    },
-    {
-        "pipeline_action": "txt2img",
         "version": "SDXL 1.0",
         "category": "stablediffusion",
         "classname": "diffusers.AutoPipelineForText2Image"
@@ -82,12 +76,6 @@ pipeline_bootstrap_data = pipelines = [
         "version": "SD 1.5",
         "category": "controlnet",
         "classname": "diffusers.StableDiffusionControlNetImg2ImgPipeline",
-    },
-    {
-        "pipeline_action": "img2img",
-        "version": "SD 1.5",
-        "category": "shapegif",
-        "classname": "diffusers.DiffusionPipeline",
     },
     {
         "pipeline_action": "img2img",

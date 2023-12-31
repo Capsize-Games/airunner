@@ -332,8 +332,7 @@ class SDRunner(
                not self.is_vid2vid and \
                not self.is_sd_xl and \
                not self.is_sd_xl_turbo and \
-               not self.is_turbo and \
-               not self.is_shapegif
+               not self.is_turbo
 
     @property
     def use_tiled_vae(self):
@@ -504,7 +503,7 @@ class SDRunner(
 
     @property
     def enable_controlnet(self):
-        if self.use_kandinsky or self.is_shapegif:
+        if self.use_kandinsky:
             return False
         if self.input_image is None and self.controlnet_image is None:
             return False
@@ -1035,9 +1034,6 @@ class SDRunner(
         if self.is_vid_action:
             return self.call_pipe_txt2vid(**args)
 
-        if self.is_shapegif:
-            return self.call_shapegif_pipe()
-
         if not self.is_outpaint and not self.is_vid_action and not self.is_upscale:
             args["latents"] = self.latents
 
@@ -1045,55 +1041,6 @@ class SDRunner(
 
         with torch.inference_mode():
             return self.pipe(**args)
-
-    def call_shapegif_pipe(self):
-        kwargs = {
-            "num_images_per_prompt": 1,
-            "num_inference_steps": self.steps,
-            "generator": self.generator(),
-            "guidance_scale": self.guidance_scale,
-            "frame_size": self.width,
-        }
-
-        if self.is_txt2img:
-            kwargs["prompt"] = self.prompt
-
-        if self.is_img2img:
-            kwargs["image"] = self.image
-
-        images = self.pipe(**kwargs).images
-
-        try:
-            path = self.gif_path
-        except AttributeError:
-            path = None
-
-        if not path or path == "":
-            try:
-                path = self.image_path
-            except AttributeError:
-                path = None
-
-        if not path or path == "":
-            try:
-                path = self.model_base_path
-            except AttributeError:
-                path = None
-
-        if not path or path == "":
-            raise Exception("No path to save images found")
-
-        for image in images:
-            export_to_gif(
-                image,
-                os.path.join(
-                    path,
-                    f"{self.prompt}_{self.latents_seed}.gif")
-            )
-        return {
-            "images": None,
-            "nsfw_content_detected": None,
-        }
 
     def read_video(self):
         reader = imageio.get_reader(self.input_video, "ffmpeg")
@@ -1312,8 +1259,6 @@ class SDRunner(
             tab_section = "stablediffusion"
             if self.use_kandinsky:
                 tab_section = "kandinsky"
-            elif self.is_shapegif:
-                tab_section = "shapegif"
             data["tab_section"] = tab_section
 
             # apply filters and convert to base64 if requested
@@ -1356,8 +1301,6 @@ class SDRunner(
         tab_section = "stablediffusion"
         if self.use_kandinsky:
             tab_section = "kandinsky"
-        elif self.is_shapegif:
-            tab_section = "shapegif"
         self.send_message({
             "step": total,
             "total": total,
@@ -1371,8 +1314,6 @@ class SDRunner(
         tab_section = "stablediffusion"
         if self.use_kandinsky:
             tab_section = "kandinsky"
-        elif self.is_shapegif:
-            tab_section = "shapegif"
         if self.is_vid_action:
             data["video_filename"] = self.txt2vid_file
         steps = int(self.steps * self.strength) if (

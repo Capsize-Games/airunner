@@ -1089,7 +1089,7 @@
                <x>0</x>
                <y>0</y>
                <width>427</width>
-               <height>964</height>
+               <height>1012</height>
               </rect>
              </property>
              <layout class="QGridLayout" name="gridLayout">
@@ -1687,19 +1687,6 @@
         </layout>
        </widget>
       </widget>
-      <widget class="QTabWidget" name="bottom_panel_tab_widget">
-       <property name="tabPosition">
-        <enum>QTabWidget::South</enum>
-       </property>
-       <property name="currentIndex">
-        <number>0</number>
-       </property>
-       <widget class="QWidget" name="tab_prompt_builder_2">
-        <attribute name="title">
-         <string>Terminal</string>
-        </attribute>
-       </widget>
-      </widget>
      </widget>
     </item>
    </layout>
@@ -1776,7 +1763,6 @@
     <addaction name="separator"/>
     <addaction name="actionStableDiffusion"/>
     <addaction name="actionKandinsky"/>
-    <addaction name="actionShap_E"/>
     <addaction name="separator"/>
     <addaction name="actionPrompt_Builder"/>
     <addaction name="actionControlNet"/>
@@ -1823,7 +1809,6 @@
     <addaction name="separator"/>
     <addaction name="actionBrowse_Images_Path_2"/>
     <addaction name="actionBrowse_Videos_Path"/>
-    <addaction name="actionBrowse_Gifs_Path"/>
     <addaction name="separator"/>
    </widget>
    <addaction name="menuFile"/>
@@ -2961,22 +2946,6 @@
    <signal>triggered()</signal>
    <receiver>MainWindow</receiver>
    <slot>action_show_videos_path()</slot>
-   <hints>
-    <hint type="sourcelabel">
-     <x>-1</x>
-     <y>-1</y>
-    </hint>
-    <hint type="destinationlabel">
-     <x>442</x>
-     <y>408</y>
-    </hint>
-   </hints>
-  </connection>
-  <connection>
-   <sender>actionBrowse_Gifs_Path</sender>
-   <signal>triggered()</signal>
-   <receiver>MainWindow</receiver>
-   <slot>action_show_gifs_path()</slot>
    <hints>
     <hint type="sourcelabel">
      <x>-1</x>
