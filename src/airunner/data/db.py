@@ -302,14 +302,6 @@ if not session.query(Prompt).first():
                 "outpaint": "#FF00FF",
             }
         },
-        "shapegif": {
-            "border": {
-                "txt2img": "#FF0000",
-            },
-            "fill": {
-                "txt2img": "#FF0000",
-            }
-        },
     }
 
     for generator_name, generator_sections in sections_bootstrap_data.items():
@@ -382,9 +374,6 @@ if not session.query(Prompt).first():
                 "DPM_PP_2M_SDE_K",
                 "DDIM",
             ]
-        },
-        "shapegif": {
-            "txt2img": ["HEUN"],
         }
     }
 

@@ -99,9 +99,6 @@ class MainWindow(
             "txt2img": None,
             "outpaint": None,
         },
-        "shapegif": {
-            "txt2img": None
-        }
     }
     registered_settings_handlers = []
     image_generated = pyqtSignal(bool)
@@ -202,7 +199,7 @@ class MainWindow(
     @property
     def generator_type(self):
         """
-        Returns either stablediffusion, shapegif, kandinsky
+        Returns either stablediffusion or kandinsky
         :return: string
         """
         return self._generator_type
@@ -526,9 +523,6 @@ class MainWindow(
     
     def action_show_videos_path(self):
         self.show_settings_path("video_path")
-    
-    def action_show_gifs_path(self):
-        self.show_settings_path("gif_path")
     
     def action_show_model_path_txt2img(self):
         self.show_settings_path("txt2img_model_path")
@@ -1390,10 +1384,6 @@ class MainWindow(
             # get tab by name Video
             tab_index = self.ui.center_tab.indexOf(self.ui.center_tab.findChild(QWidget, "tab_txt2vid"))
             self.ui.center_tab.setCurrentIndex(tab_index)
-        elif self.settings_manager.current_tab == "shape":
-            # get tab by name Video
-            tab_index = self.ui.center_tab.indexOf(self.ui.center_tab.findChild(QWidget, "tab_shapegif"))
-            self.ui.center_tab.setCurrentIndex(tab_index)
         else:
             tab_index = self.ui.center_tab.indexOf(self.ui.center_tab.findChild(QWidget, f"tab_image"))
             self.ui.center_tab.setCurrentIndex(tab_index)
@@ -1450,7 +1440,7 @@ class MainWindow(
             self,
             "Export Image",
             "",
-            "Image Files (*.png *.jpg *.jpeg *.gif)"
+            "Image Files (*.png *.jpg *.jpeg)"
         )
 
     def display_import_image_dialog(self, label="Import Image", directory=""):
@@ -1644,20 +1634,6 @@ class MainWindow(
         self.settings_manager.set_value("generator_section", GeneratorSection.TXT2VID.value)
         active_tab_obj = session.query(TabSection).filter(TabSection.panel == "center_tab").first()
         active_tab_obj.active_tab = "Video"
-        save_session()
-        self.set_all_image_generator_buttons()
-        self.change_content_widget()
-
-    def text_to_gif_toggled(self):
-        self.image_generation_toggled()
-        current_tab = self.settings_manager.current_tab
-        if current_tab != "shape":
-            current_tab = "shape"
-            self.settings_manager.set_value("current_tab", current_tab)
-        self.settings_manager.set_value("mode", Mode.IMAGE.value)
-        self.generator_tab_widget.set_current_section_tab()
-        active_tab_obj = session.query(TabSection).filter(TabSection.panel == "center_tab").first()
-        active_tab_obj.active_tab = "GIF"
         save_session()
         self.set_all_image_generator_buttons()
         self.change_content_widget()

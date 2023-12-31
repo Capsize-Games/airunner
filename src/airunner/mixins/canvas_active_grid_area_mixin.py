@@ -12,8 +12,6 @@ class CanvasActiveGridAreaMixin:
             current_section = self.settings_manager.current_section_stablediffusion
         elif current_tab == "kandinsky":
             current_section = self.settings_manager.current_section_kandinsky
-        else:
-            current_section = self.settings_manager.current_section_shapegif
 
         if current_section == "txt2img":
             brush_color = QColor(0, 255, 0)

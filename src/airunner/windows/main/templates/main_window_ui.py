@@ -396,7 +396,7 @@ class Ui_MainWindow(object):
         self.scrollArea.setWidgetResizable(True)
         self.scrollArea.setObjectName("scrollArea")
         self.scrollAreaWidgetContents = QtWidgets.QWidget()
-        self.scrollAreaWidgetContents.setGeometry(QtCore.QRect(0, 0, 427, 964))
+        self.scrollAreaWidgetContents.setGeometry(QtCore.QRect(0, 0, 427, 1012))
         self.scrollAreaWidgetContents.setObjectName("scrollAreaWidgetContents")
         self.gridLayout = QtWidgets.QGridLayout(self.scrollAreaWidgetContents)
         self.gridLayout.setObjectName("gridLayout")
@@ -649,12 +649,6 @@ class Ui_MainWindow(object):
         self.model_manager.setObjectName("model_manager")
         self.gridLayout_6.addWidget(self.model_manager, 0, 0, 1, 1)
         self.mode_tab_widget.addTab(self.tab_5, "")
-        self.bottom_panel_tab_widget = QtWidgets.QTabWidget(parent=self.main_splitter)
-        self.bottom_panel_tab_widget.setTabPosition(QtWidgets.QTabWidget.TabPosition.South)
-        self.bottom_panel_tab_widget.setObjectName("bottom_panel_tab_widget")
-        self.tab_prompt_builder_2 = QtWidgets.QWidget()
-        self.tab_prompt_builder_2.setObjectName("tab_prompt_builder_2")
-        self.bottom_panel_tab_widget.addTab(self.tab_prompt_builder_2, "")
         self.gridLayout_3.addWidget(self.main_splitter, 1, 0, 1, 1)
         self.main_splitter.raise_()
         self.header_widget.raise_()
@@ -919,7 +913,6 @@ class Ui_MainWindow(object):
         self.menuModel_merge.addSeparator()
         self.menuModel_merge.addAction(self.actionStableDiffusion)
         self.menuModel_merge.addAction(self.actionKandinsky)
-        self.menuModel_merge.addAction(self.actionShap_E)
         self.menuModel_merge.addSeparator()
         self.menuModel_merge.addAction(self.actionPrompt_Builder)
         self.menuModel_merge.addAction(self.actionControlNet)
@@ -951,7 +944,6 @@ class Ui_MainWindow(object):
         self.menuView.addSeparator()
         self.menuView.addAction(self.actionBrowse_Images_Path_2)
         self.menuView.addAction(self.actionBrowse_Videos_Path)
-        self.menuView.addAction(self.actionBrowse_Gifs_Path)
         self.menuView.addSeparator()
         self.menubar.addAction(self.menuFile.menuAction())
         self.menubar.addAction(self.menuEdit.menuAction())
@@ -967,7 +959,6 @@ class Ui_MainWindow(object):
         self.image_editor_tab_widget.setCurrentIndex(0)
         self.tool_tab_widget.setCurrentIndex(0)
         self.batches_tab.setCurrentIndex(0)
-        self.bottom_panel_tab_widget.setCurrentIndex(0)
         self.actionHuggingface_Cache_manager.triggered.connect(MainWindow.action_show_hf_cache_manager) # type: ignore
         self.actionModel_Merger.triggered.connect(MainWindow.action_show_model_merger_window) # type: ignore
         self.actionAbout.triggered.connect(MainWindow.action_show_about_window) # type: ignore
@@ -996,7 +987,6 @@ class Ui_MainWindow(object):
         self.actionBrowse_AI_Runner_Path.triggered.connect(MainWindow.action_triggered_browse_ai_runner_path) # type: ignore
         self.actionBrowse_Images_Path_2.triggered.connect(MainWindow.action_show_images_path) # type: ignore
         self.actionBrowse_Videos_Path.triggered.connect(MainWindow.action_show_videos_path) # type: ignore
-        self.actionBrowse_Gifs_Path.triggered.connect(MainWindow.action_show_gifs_path) # type: ignore
         self.actionTxt2img_Img2img_Models.triggered.connect(MainWindow.action_show_model_path_txt2img) # type: ignore
         self.actionDepth2img_Models.triggered.connect(MainWindow.action_show_model_path_depth2img) # type: ignore
         self.actionInpaint_Outpaint_Models.triggered.connect(MainWindow.action_show_model_path_inpaint) # type: ignore
@@ -1077,7 +1067,6 @@ class Ui_MainWindow(object):
         self.mode_tab_widget.setTabText(self.mode_tab_widget.indexOf(self.art), _translate("MainWindow", "Image Generation"))
         self.mode_tab_widget.setTabText(self.mode_tab_widget.indexOf(self.chat), _translate("MainWindow", "Text Generation"))
         self.mode_tab_widget.setTabText(self.mode_tab_widget.indexOf(self.tab_5), _translate("MainWindow", "Model Manager"))
-        self.bottom_panel_tab_widget.setTabText(self.bottom_panel_tab_widget.indexOf(self.tab_prompt_builder_2), _translate("MainWindow", "Terminal"))
         self.menuFile.setTitle(_translate("MainWindow", "File"))
         self.menuEdit.setTitle(_translate("MainWindow", "Edit"))
         self.menuFilters.setTitle(_translate("MainWindow", "Filters"))

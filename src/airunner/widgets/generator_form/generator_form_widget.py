@@ -465,7 +465,6 @@ class GeneratorForm(BaseWidget):
             pix2pix_model_path=self.settings_manager.path_settings.pix2pix_model_path,
             depth2img_model_path=self.settings_manager.path_settings.depth2img_model_path,
             upscale_model_path=self.settings_manager.path_settings.upscale_model_path,
-            gif_path=self.settings_manager.path_settings.gif_path,
             image_path=self.settings_manager.path_settings.image_path,
             lora_path=self.settings_manager.lora_path,
             embeddings_path=self.settings_manager.path_settings.embeddings_path,

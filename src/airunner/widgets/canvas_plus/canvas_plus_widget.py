@@ -337,8 +337,6 @@ class CanvasPlusWidget(CanvasBaseWidget):
             self.do_draw()
         elif key == "current_section_kandinsky":
             self.do_draw()
-        elif key == "current_section_shapegif":
-            self.do_draw()
         elif key == "layer_image_data.visible":
             self.do_draw()
         elif key == "layer_data.hidden":

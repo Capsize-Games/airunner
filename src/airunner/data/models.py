@@ -28,7 +28,6 @@ DEFAULT_PATHS = {
         },
         "other": {
             "images": "",
-            "gifs": "",
             "videos": "",
         },
     },
@@ -458,7 +457,6 @@ class PathSettings(BaseModel):
     embeddings_model_path = Column(String, default=DEFAULT_PATHS["art"]["models"]["embeddings"])
     lora_model_path = Column(String, default=DEFAULT_PATHS["art"]["models"]["lora"])
     image_path = Column(String, default=DEFAULT_PATHS["art"]["other"]["images"])
-    gif_path = Column(String, default=DEFAULT_PATHS["art"]["other"]["gifs"])
     video_path = Column(String, default=DEFAULT_PATHS["art"]["other"]["videos"])
     llm_casuallm_model_path = Column(String, default=DEFAULT_PATHS["text"]["models"]["casuallm"])
     llm_seq2seq_model_path = Column(String, default=DEFAULT_PATHS["text"]["models"]["seq2seq"])
@@ -513,7 +511,6 @@ class PathSettings(BaseModel):
         self.embeddings_model_path = DEFAULT_PATHS["art"]["models"]["embeddings"]
         self.lora_model_path = DEFAULT_PATHS["art"]["models"]["lora"]
         self.image_path = DEFAULT_PATHS["art"]["other"]["images"]
-        self.gif_path = DEFAULT_PATHS["art"]["other"]["gifs"]
         self.video_path = DEFAULT_PATHS["art"]["other"]["videos"]
         self.llm_casuallm_model_path = DEFAULT_PATHS["text"]["models"]["casuallm"]
         self.llm_seq2seq_model_path = DEFAULT_PATHS["text"]["models"]["seq2seq"]

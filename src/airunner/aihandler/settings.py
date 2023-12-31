@@ -60,8 +60,6 @@ AVAILABLE_SCHEDULERS_BY_ACTION.update({
         Scheduler.DPM_PP_2M_SDE_K.value,
         Scheduler.DDIM.value,
     ],
-    "shapegif_txt2img": [Scheduler.HEUN.value, ],
-    "shapegif_img2img": [Scheduler.HEUN.value, ]
 })
 DEFAULT_SCHEDULER = SCHEDULERS[0]
 DEFAULT_MODEL = "Stable Diffusion V2"
