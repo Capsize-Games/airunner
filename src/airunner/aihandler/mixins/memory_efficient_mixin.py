@@ -68,7 +68,7 @@ class MemoryEfficientMixin:
         self.model_cpu_offload_applied = None
 
     def apply_last_channels(self):
-        if self.use_kandinsky or self.is_txt2vid or self.is_shapegif:
+        if self.use_kandinsky or self.is_txt2vid:
             return
 
         if self.last_channels_applied == self.use_last_channels:

@@ -9,7 +9,7 @@ class GeneratorTabWidget(BaseWidget):
     widget_class_ = Ui_generator_tab
     generate_signal = pyqtSignal(dict)
     data = {}
-    clip_skip_disabled_tabs = ["kandinsky", "shapegif"]
+    clip_skip_disabled_tabs = ["kandinsky"]
     clip_skip_disabled_sections = ["upscale", "superresolution", "txt2vid"]
     random_image_embed_seed = False
     row = 0

@@ -47,7 +47,6 @@ class ExportPreferencesWidget(BaseWidget):
             "jpeg",
             "bmp",
             "tiff",
-            "gif",
         ]
         self.ui.image_type_dropdown.addItems(image_types)
         self.ui.image_type_dropdown.setCurrentText(self.settings_manager.image_export_type)
