@@ -27,12 +27,10 @@ class StandardImageWidget(StandardBaseWidget):
     image_path = None
     image_label = None
     image_batch = None
+    meta_data = None
 
     def __init__(self, *args, **kwargs):
         super().__init__(*args, **kwargs)
-        self.ui.batch_container.hide()
-        self.ui.tableWidget.hide()
-        self.ui.similar_groupbox.hide()
         self.load_controlnet_options()
         self.load_upscale_options()
     
@@ -100,7 +98,6 @@ class StandardImageWidget(StandardBaseWidget):
             widget.deleteLater()
 
     def load_batch_images(self, images):
-        self.ui.batch_container.show()
         self.clear_batch_images()
         images = images[:4]
         for image in images:
@@ -125,7 +122,7 @@ class StandardImageWidget(StandardBaseWidget):
         prompt = self.settings_manager.standard_image_widget_settings.prompt
         self.toggle_prompt_reset_button(prompt != "")
         if not prompt:
-            prompt = self.meta_data.get("prompt", None)
+            prompt = self.meta_data.get("prompt", None) if self.meta_data else ""
         self.ui.prompt.setPlainText(prompt)
         self.ui.prompt.blockSignals(False)
 
@@ -134,7 +131,7 @@ class StandardImageWidget(StandardBaseWidget):
         negative_prompt = self.settings_manager.standard_image_widget_settings.negative_prompt
         self.toggle_negative_prompt_reset_button(negative_prompt != "")
         if not negative_prompt:
-            negative_prompt = self.meta_data.get("negative_prompt", None)
+            negative_prompt = self.meta_data.get("negative_prompt", None) if self.meta_data else ""
         self.ui.negative_prompt.setPlainText(negative_prompt)
         self.ui.negative_prompt.blockSignals(False)
 
@@ -196,7 +193,6 @@ class StandardImageWidget(StandardBaseWidget):
         
         # get the metadata from this image, load it as a png first
         # then load the metadata from the png
-        self.clear_table_data()
         if image_path:
             image = Image.open(image_path)
             meta_data = image.info
@@ -204,11 +200,7 @@ class StandardImageWidget(StandardBaseWidget):
             meta_data["width"] = width
             meta_data["height"] = height
 
-            self.set_table_data(meta_data)
-        
-        self.ui.controls_container.show()
-        self.ui.image_frame.show()
-        self.ui.similar_groupbox.show()
+            #self.set_table_data(meta_data)
     
     def handle_label_clicked(self, event):
         # create a popup window and show the full size image in it
@@ -247,10 +239,6 @@ class StandardImageWidget(StandardBaseWidget):
         self.ui.tableWidget.resizeRowsToContents()
         self.ui.tableWidget.update()
         QApplication.processEvents()
-
-    def clear_table_data(self):
-        self.ui.tableWidget.clearContents()
-        self.ui.tableWidget.setRowCount(0)
     
     def similar_image_with_prompt(self):
         """
