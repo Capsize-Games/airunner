@@ -3,6 +3,8 @@ import random
 
 from airunner.prompt_builder.prompt_parser import PromptParser
 from airunner.build_prompt import BuildPrompt
+from airunner.utils import get_session
+from airunner.data.models import PromptVariableCategory, PromptCategory, PromptVariableCategoryWeight, PromptVariable, PromptOption, PromptStyleCategory, PromptStyle
 
 
 class PromptData:
@@ -30,10 +32,20 @@ class PromptData:
     prompt_suffix = ""
     negative_prompt_prefix = ""
     negative_prompt_suffix = ""
+    current_prompt_category_id = None
 
-    def __init__(self, file_name="", use_prompt_builder=False):
-        self.prepare_data(file_name=file_name)
+    def __init__(self, prompt_id, use_prompt_builder=False):
+        self.current_prompt_category_id = prompt_id
+        self.refresh_data()
         self.use_prompt_builder = use_prompt_builder
+    
+    def change_prompt(self, prompt_id):
+        if prompt_id != self.current_prompt_category_id:
+            self.current_prompt_category_id = prompt_id
+            self.refresh_data()
+    
+    def refresh_data(self):
+        self.prepare_data(self.current_prompt_category_id)
 
     def build_prompts(self, **kwargs):
         self.current_prompt = kwargs.get("prompt", self.current_prompt)
@@ -78,8 +90,9 @@ class PromptData:
             while image_style == "Random":
                 image_style = random.choice(self.styles)
 
-            if category in self.weighted_variables:
-                weighted_variables = self.weighted_variables[category]
+            weighted_variables = json.loads(self.weighted_variables) if not isinstance(self.weighted_variables, dict) else self.weighted_variables
+            if category in weighted_variables:
+                weighted_variables = weighted_variables[category]
             else:
                 weighted_variables = {}
 
@@ -191,6 +204,7 @@ class PromptData:
         return self.data["categories"][category]["variables"].keys()
 
     def variable_weights_by_category(self, category, variable):
+        print("variable weights by category", category, variable)
         return self.data["categories"][category]["weights"][variable]
 
     def variable_values_by_category(self, category, variable):
@@ -205,7 +219,7 @@ class PromptData:
         return variables
 
     def get_basic_prompt_by_category(self, category, prompt_type):
-        return self.data["categories"][category]["prompts"][prompt_type]
+        return ""
 
     def get_builder_by_category(self, category):
         return self.data["categories"][category]["builder"]
@@ -235,7 +249,7 @@ class PromptData:
     def filter_variables(self, category, genre, color, style):
         variables = self.prepare_variables(category, genre, color, style)
 
-        weighted_variables = self.weighted_variables
+        weighted_variables = json.loads(self.weighted_variables) if not isinstance(self.weighted_variables, dict) else self.weighted_variables
 
         filtered_variables = {}
 
@@ -273,8 +287,8 @@ class PromptData:
                     else:
                         filtered_variables[variable] = [value]
                     if variable == "gender":
-                        filtered_variables["male_name"] = variables["male_name"]
-                        filtered_variables["female_name"] = variables["female_name"]
+                        filtered_variables["male_name"] = variables["male_name"] if "male_name" in variables else ""
+                        filtered_variables["female_name"] = variables["female_name"] if "female_name" in variables else ""
         return filtered_variables
 
     def load_variables(self, category):
@@ -296,43 +310,102 @@ class PromptData:
             variables["composition_style"] = [style]
         return variables
 
-    def prepare_genres(self):
-        self.genres = self.prompt_variables["composition_genre"]
-        self.genres.sort()
-        self.genres = ["Random"] + self.prompt_variables["composition_genre"]
+    def build_prompt_options(self, prompt_id, builder=None, prompt_options=None, next_id=None):
+        if builder is None:
+            builder = []
+        if prompt_options is None:
+            session = get_session()
+            prompt_options = session.query(PromptOption).filter_by(
+                prompt_id=prompt_id
+            ).all()
+        for prompt_option in prompt_options:
+            if next_id and next_id != prompt_option.id:
+                continue
 
-    def prepare_colors(self):
-        self.colors = self.prompt_variables["composition_color"]
-        self.colors.sort()
-        self.colors = ["Random"] + self.prompt_variables["composition_color"]
+            options = dict(
+                text=prompt_option.text,
+            )
+            if prompt_option.cond != "":
+                options["cond"] = prompt_option.cond.split(",")
+            if prompt_option.else_cond != "":
+                options["else"] = prompt_option.else_cond
+            if prompt_option.next_cond_id is not None and prompt_option.next_cond is not None:
+                print("NEXT:", prompt_option.next_cond_id)
+                options["next"] = self.build_prompt_options(
+                    prompt_id=prompt_id,
+                    builder=[],
+                    prompt_options=prompt_options,
+                    next_id=prompt_option.next_cond_id
+                )
+            builder.append(options)
+        return builder
 
-    def prepare_styles(self):
-        self.styles = self.prompt_variables["composition_style"]
-        self.styles.sort()
-        self.styles = ["Random"] + self.prompt_variables["composition_style"]
+    def prepare_data(self, prompt_id):
+        session = get_session()
 
-    def prepare_categories(self):
-        self.categories = self.prompt_variables["composition_category"]
-        self.categories.sort()
-        self.categories = ["Random"] + self.prompt_variables["composition_category"]
+        data = dict(
+            categories=dict(),
+            styles=dict(),
+            extra_variables=dict(),
+        )
+        style_categories = session.query(PromptStyleCategory).all()
+        for cat in style_categories:
+            styles = session.query(PromptStyle).filter_by(
+                style_category_id=cat.id
+            ).all()
+            data["styles"][cat.name] = dict(
+                styles=[style.name for style in styles],
+                negative_prompt=cat.negative_prompt
+            )
 
-    def prepare_data(self, file_name):
-        self.load_data(file_name)
+        prompt_categories = session.query(PromptCategory).all()
+        variable_categories = session.query(PromptVariableCategory).all()
+        prompt_options = self.build_prompt_options(prompt_id)
+        for prompt_category in prompt_categories:
+            data["categories"][prompt_category.name] = dict(
+                weights=dict(),
+                variables=dict(),
+                builder=prompt_options,
+                negative_prompt=prompt_category.negative_prompt
+            )
+            for variable_category in variable_categories:
+                variables = session.query(PromptVariable).filter_by(
+                    prompt_category_id=prompt_category.id
+                ).all()
+                weights = session.query(PromptVariableCategoryWeight).filter_by(
+                    prompt_category_id=prompt_category.id
+                ).all()
+                for variable in variables:
+                    if variable.variable_category_id == variable_category.id:
+                        if variable_category.name not in data["categories"][prompt_category.name]["variables"]:
+                            data["categories"][prompt_category.name]["variables"][variable_category.name] = []
+                        data["categories"][prompt_category.name]["variables"][variable_category.name].append(variable.value)
+                for variable_weight in weights:
+                    if variable_weight.variable_category_id == variable_category.id:
+                        data["categories"][prompt_category.name]["weights"][variable_category.name] = variable_weight.weight
+
+        self.data = data
+
         self.prompt_variables = self.data["extra_variables"]
         self.prompt_variables["age"] = [str(n) for n in range(18, 100)]
-        styles = []
-        for style_category in self.data["styles"].keys():
-            styles += self.data["styles"][style_category]["styles"]
-        categories = list(self.data["categories"].keys())
-        self.prompt_variables["composition_style"] = styles
-        self.prompt_variables["composition_category"] = categories
-        self.prepare_genres()
-        self.prepare_styles()
-        self.prepare_colors()
-        self.prepare_categories()
 
-    def load_data(self, file_name):
-        file = f"data/{file_name}.json"
-        with open(file, "r") as f:
-            data = json.load(f)
-            self.data = data
+        self.set_variables_by_name("composition_color")
+        self.set_variables_by_name("composition_style")
+        self.set_variables_by_name("composition_category")
+        self.set_variables_by_name("composition_genre")
+
+        self.genres = self.prompt_variables["composition_genre"]
+        self.styles = self.prompt_variables["composition_style"]
+        self.colors = self.prompt_variables["composition_color"]
+        self.categories = self.prompt_variables["composition_category"]
+
+        with open("test.json", "w") as f:
+            json.dump(self.data, f)
+    
+    def set_variables_by_name(self, name):
+        session = get_session()
+        composition_genre = session.query(PromptVariableCategory).filter_by(name=name).first()
+        variables = session.query(PromptVariable).filter_by(variable_category_id=composition_genre.id).all()
+        values = [variable.value for variable in variables]
+        values.sort()
+        self.prompt_variables[name] = ["Random"] + values
