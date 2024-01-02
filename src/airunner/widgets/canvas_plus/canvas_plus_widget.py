@@ -335,10 +335,6 @@ class CanvasPlusWidget(CanvasBaseWidget):
             self.do_draw()
         elif key == "current_section_stablediffusion":
             self.do_draw()
-        elif key == "current_section_kandinsky":
-            self.do_draw()
-        elif key == "current_section_shapegif":
-            self.do_draw()
         elif key == "layer_image_data.visible":
             self.do_draw()
         elif key == "layer_data.hidden":
@@ -509,8 +505,6 @@ class CanvasPlusWidget(CanvasBaseWidget):
             self.ui.canvas_container.setCursor(QCursor(Qt.CursorShape.ArrowCursor))
 
     def handle_image_data(self, data):
-        if self.app.canvas_is_active:
-            pass
         options = data["data"]["options"]
         images = data["images"]
         outpaint_box_rect = options["outpaint_box_rect"]
@@ -518,8 +512,7 @@ class CanvasPlusWidget(CanvasBaseWidget):
         processed_image, image_root_point, image_pivot_point = self.handle_outpaint(
             outpaint_box_rect,
             images[0],
-            section,
-            is_kandinsky=options.get("generator_section", "") == "kandinsky"
+            section
         )
         self.load_image_from_object(
             processed_image, 
@@ -527,7 +520,7 @@ class CanvasPlusWidget(CanvasBaseWidget):
             image_root_point=image_root_point
         )
     
-    def handle_outpaint(self, outpaint_box_rect, outpainted_image, action=None, is_kandinsky=False):
+    def handle_outpaint(self, outpaint_box_rect, outpainted_image, action=None):
         if self.current_active_image is None:
             point = QPoint(outpaint_box_rect.x(), outpaint_box_rect.y())
             return outpainted_image, QPoint(0, 0), point
@@ -570,7 +563,7 @@ class CanvasPlusWidget(CanvasBaseWidget):
         new_image_a.paste(outpainted_image, (int(outpaint_box_rect.x()), int(outpaint_box_rect.y())))
         new_image_b.paste(existing_image_copy, (current_image_position.x(), current_image_position.y()))
 
-        if action == "outpaint" and not is_kandinsky:
+        if action == "outpaint":
             new_image = Image.alpha_composite(new_image, new_image_a)
             new_image = Image.alpha_composite(new_image, new_image_b)
         else:
@@ -586,8 +579,7 @@ class CanvasPlusWidget(CanvasBaseWidget):
         self.load_image_from_object(image)
     
     def load_image_from_object(self, image, is_outpaint=False, image_root_point=None):
-        if self.app.canvas_is_active:
-            self.add_image_to_scene(image, is_outpaint=is_outpaint, image_root_point=image_root_point)
+        self.add_image_to_scene(image, is_outpaint=is_outpaint, image_root_point=image_root_point)
 
     def load_image(self, image_path):
         image = Image.open(image_path)

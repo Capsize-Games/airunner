@@ -34,8 +34,6 @@ from airunner.utils import get_version, get_latest_version, auto_export_image, s
     create_airunner_paths, default_hf_cache_dir
 from airunner.widgets.status.status_widget import StatusWidget
 from airunner.windows.about.about import AboutWindow
-from airunner.windows.deterministic_generation.deterministic_generation_window import DeterministicGenerationWindow
-from airunner.windows.interpolation.image_interpolation import ImageInterpolation
 from airunner.windows.main.templates.main_window_ui import Ui_MainWindow
 from airunner.windows.model_merger import ModelMerger
 from airunner.windows.prompt_browser.prompt_browser import PromptBrowser
@@ -43,6 +41,7 @@ from airunner.windows.settings.airunner_settings import SettingsWindow
 from airunner.windows.update.update_window import UpdateWindow
 from airunner.windows.video import VideoPopup
 from airunner.data.models import TabSection
+from airunner.widgets.brushes.brushes_container import BrushesContainer
 
 from airunner.utils import get_session
 
@@ -70,7 +69,6 @@ class MainWindow(
     override_section = None
     _version = None
     _latest_version = None
-    use_interpolation = None
     add_image_to_canvas_signal = pyqtSignal(dict)
     data = None  # this is set in the generator_mixin image_handler function and used for deterministic generation
     status_error_color = "#ff0000"
@@ -82,7 +80,6 @@ class MainWindow(
     status_widget = None
     splitters = None
 
-    image_interpolation_window = None
     deterministic_window = None
 
     _tabs = {
@@ -95,13 +92,6 @@ class MainWindow(
             "superresolution": None,
             "txt2vid": None
         },
-        "kandinsky": {
-            "txt2img": None,
-            "outpaint": None,
-        },
-        "shapegif": {
-            "txt2img": None
-        }
     }
     registered_settings_handlers = []
     image_generated = pyqtSignal(bool)
@@ -137,14 +127,6 @@ class MainWindow(
     @property
     def grid_size(self):
         return self.settings_manager.grid_settings.size
-
-    @property
-    def canvas_widget(self):
-        return self.ui.canvas_plus_widget.ui
-    
-    @property
-    def canvas(self):
-        return self.ui.canvas_plus_widget
 
     @property
     def standard_image_panel(self):
@@ -202,7 +184,7 @@ class MainWindow(
     @property
     def generator_type(self):
         """
-        Returns either stablediffusion, shapegif, kandinsky
+        Returns stablediffusion
         :return: string
         """
         return self._generator_type
@@ -246,15 +228,9 @@ class MainWindow(
     @property
     def current_layer(self):
         return self.ui.layer_widget.current_layer
-    
-    @property
-    def canvas_is_active(self):
-        return self.image_editor_tab_name == "Canvas"
 
     @property
     def current_canvas(self):
-        if self.canvas_is_active:
-            return self.canvas
         return self.standard_image_panel
     
     def describe_image(self, image, callback):
@@ -264,10 +240,7 @@ class MainWindow(
         )
     
     def current_active_image(self):
-        if self.canvas_is_active:
-            return self.canvas.current_active_image.copy() if self.canvas.current_active_image else None
-        else:
-            return self.ui.standard_image_widget.image.copy() if self.ui.standard_image_widget.image else None
+        return self.ui.standard_image_widget.image.copy() if self.ui.standard_image_widget.image else None
 
     def send_message(self, code, message):
         self.message_var.emit({
@@ -300,11 +273,6 @@ class MainWindow(
         super().__init__(*args, **kwargs)
 
         self.initialize()
-
-        # get tab index by name value which is stored in self.settings_manager.active_image_editor_section
-        index = self.ui.image_editor_tab_widget.indexOf(self.ui.image_editor_tab_widget.findChild(QWidget, self.settings_manager.active_image_editor_section))
-        self.ui.image_editor_tab_widget.setCurrentIndex(index)
-        self.ui.image_editor_tab_widget.currentChanged.connect(self.image_editor_tab_index_changed)
 
         # on window resize:
         # self.applicationStateChanged.connect(self.on_state_changed)
@@ -345,6 +313,9 @@ class MainWindow(
         self.ui.mode_tab_widget.tabBar().hide()
         self.ui.center_tab.tabBar().hide()
 
+        # initialize the brushes container
+        self.ui.brushes_container = BrushesContainer(self)
+
         self.set_all_section_buttons()
 
         self.initialize_panel_tabs()
@@ -358,18 +329,10 @@ class MainWindow(
         else:
             self.model_manager_toggled()
         
+        # This is used to check the state of the window and save splitter sizes if they have changed
         self.start_splitter_timer()
         
         self.loaded.emit()
-    
-    @property
-    def image_editor_tab_name(self):
-        return self.ui.image_editor_tab_widget.tabText(self.ui.image_editor_tab_widget.currentIndex())
-
-    def image_editor_tab_index_changed(self):
-        if self.image_editor_tab_name == "Canvas":
-            self.canvas.do_draw()
-        self.settings_manager.set_value("active_image_editor_section", self.image_editor_tab_name)
 
     def initialize_panel_tabs(self):
         """
@@ -470,9 +433,6 @@ class MainWindow(
     def action_show_prompt_browser_triggered(self):
         self.show_prompt_browser()
 
-    def action_show_image_interpolation_triggered(self):
-        self.show_image_interpolation()
-
     def action_clear_all_prompts_triggered(self):
         self.clear_all_prompts()
 
@@ -506,12 +466,6 @@ class MainWindow(
     def action_show_stablediffusion(self):
         self.activate_image_generation_section()
 
-    def action_show_kandinsky(self):
-        self.show_section("Kandinsky")
-
-    def action_show_shape(self):
-        self.show_section("Shap-e")
-
     def action_triggered_browse_ai_runner_path(self):
         path = self.settings_manager.path_settings.base_path
         if path == "":
@@ -526,9 +480,6 @@ class MainWindow(
     
     def action_show_videos_path(self):
         self.show_settings_path("video_path")
-    
-    def action_show_gifs_path(self):
-        self.show_settings_path("gif_path")
     
     def action_show_model_path_txt2img(self):
         self.show_settings_path("txt2img_model_path")
@@ -598,7 +549,6 @@ class MainWindow(
 
     def action_toggle_grid(self, active):
         self.settings_manager.set_value("grid_settings.show_grid", active)
-        self.ui.canvas_plus_widget.do_draw()
         # self.canvas.update()
 
     def action_toggle_darkmode(self):
@@ -644,13 +594,6 @@ class MainWindow(
         ).first()
         tab_section.active_tab = self.ui.center_tab.tabText(val)
         
-        session.commit()
-
-    def batches_panel_tab_index_changed(self, index):
-        tab_section = session.query(TabSection).filter_by(
-            panel="batches_tab"
-        ).first()
-        tab_section.active_tab = self.ui.batches_tab.tabText(index)
         session.commit()
 
     def bottom_panel_tab_index_changed(self, index):
@@ -892,7 +835,6 @@ class MainWindow(
 
     def toggle_tool(self, tool):
         self.settings_manager.set_value("current_tool", tool)
-        self.ui.canvas_plus_widget.update_cursor()
 
     def initialize_mixins(self):
         HistoryMixin.initialize(self)
@@ -1005,7 +947,6 @@ class MainWindow(
             "left": [self.ui.generator_widget.ui.generator_tabs.tabText(i) for i in range(self.ui.generator_widget.ui.generator_tabs.count())],
             "center": [self.ui.center_tab.tabText(i) for i in range(self.ui.center_tab.count())],
             "right": [self.ui.tool_tab_widget.tabText(i) for i in range(self.ui.tool_tab_widget.count())],
-            "right_center": [self.ui.batches_tab.tabText(i) for i in range(self.ui.batches_tab.count())],
             "bottom": [self.ui.bottom_panel_tab_widget.tabText(i) for i in range(self.ui.bottom_panel_tab_widget.count())]
         }
         for k, v in section_lists.items():
@@ -1014,8 +955,6 @@ class MainWindow(
                     self.ui.generator_widget.ui.generator_tabs.setCurrentIndex(v.index(section))
                 elif k == "right":
                     self.ui.tool_tab_widget.setCurrentIndex(v.index(section))
-                elif k == "right_center":
-                    self.ui.batches_tab.setCurrentIndex(v.index(section))
                 elif k == "bottom":
                     self.ui.bottom_panel_tab_widget.setCurrentIndex(v.index(section))
                 break
@@ -1362,7 +1301,7 @@ class MainWindow(
         self.canvas.is_dirty = False
 
     def update(self):
-        self.generator_tab_widget.update_thumbnails()
+        self.ui.standard_image_widget.update_thumbnails()
 
     def insert_into_prompt(self, text, negative_prompt=False):
         prompt_widget = self.generator_tab_widget.data[self.current_generator][self.current_section]["prompt_widget"]
@@ -1389,10 +1328,6 @@ class MainWindow(
         elif self.settings_manager.generator_section == "txt2vid":
             # get tab by name Video
             tab_index = self.ui.center_tab.indexOf(self.ui.center_tab.findChild(QWidget, "tab_txt2vid"))
-            self.ui.center_tab.setCurrentIndex(tab_index)
-        elif self.settings_manager.current_tab == "shape":
-            # get tab by name Video
-            tab_index = self.ui.center_tab.indexOf(self.ui.center_tab.findChild(QWidget, "tab_shapegif"))
             self.ui.center_tab.setCurrentIndex(tab_index)
         else:
             tab_index = self.ui.center_tab.indexOf(self.ui.center_tab.findChild(QWidget, f"tab_image"))
@@ -1430,13 +1365,11 @@ class MainWindow(
             directory=self.settings_manager.path_settings.image_path)
         if file_path == "":
             return
-        self.ui.canvas_plus_widget.load_image(file_path)
 
     def export_image(self, image=None):
         file_path, _ = self.display_file_export_dialog()
         if file_path == "":
             return
-        self.ui.canvas_plus_widget.save_image(file_path, image=image)
 
     def choose_image_export_path(self):
         # display a dialog to choose the export path
@@ -1450,7 +1383,7 @@ class MainWindow(
             self,
             "Export Image",
             "",
-            "Image Files (*.png *.jpg *.jpeg *.gif)"
+            "Image Files (*.png *.jpg *.jpeg)"
         )
 
     def display_import_image_dialog(self, label="Import Image", directory=""):
@@ -1460,24 +1393,6 @@ class MainWindow(
             directory,
             "Image Files (*.png *.jpg *.jpeg)"
         )
-
-    def show_image_interpolation(self):
-        self.image_interpolation_window = ImageInterpolation(app=self, exec=False)
-        self.image_interpolation_window.show()
-        self.image_interpolation_window = None
-
-    def show_deterministic_generation(self):
-        if not self.deterministic_window:
-            self.deterministic_window = DeterministicGenerationWindow(app=self, exec=False, images=self.deterministic_images, data=self.data)
-            self.deterministic_window.show()
-            self.deterministic_window = None
-        else:
-            self.deterministic_window.update_images(self.deterministic_images)
-
-    def close_deterministic_generation_window(self):
-        self.deterministic_window = None
-        self.deterministic_data = None
-        self.deterministic_images = None
 
     def load_prompt(self, prompt: Prompt):
         """
@@ -1609,7 +1524,6 @@ class MainWindow(
         elif visible and self.header_widget_spacer:
             self.ui.scrollAreaWidgetContents_3.layout().removeItem(self.header_widget_spacer)
 
-    
     def set_all_image_generator_buttons(self):
         is_image_generators = self.settings_manager.generator_section == GeneratorSection.TXT2IMG.value
         is_txt2vid = self.settings_manager.generator_section == GeneratorSection.TXT2VID.value
@@ -1632,7 +1546,6 @@ class MainWindow(
         save_session()
         self.set_all_image_generator_buttons()
         self.change_content_widget()
-            
 
     def text_to_video_toggled(self):
         self.image_generation_toggled()
@@ -1644,20 +1557,6 @@ class MainWindow(
         self.settings_manager.set_value("generator_section", GeneratorSection.TXT2VID.value)
         active_tab_obj = session.query(TabSection).filter(TabSection.panel == "center_tab").first()
         active_tab_obj.active_tab = "Video"
-        save_session()
-        self.set_all_image_generator_buttons()
-        self.change_content_widget()
-
-    def text_to_gif_toggled(self):
-        self.image_generation_toggled()
-        current_tab = self.settings_manager.current_tab
-        if current_tab != "shape":
-            current_tab = "shape"
-            self.settings_manager.set_value("current_tab", current_tab)
-        self.settings_manager.set_value("mode", Mode.IMAGE.value)
-        self.generator_tab_widget.set_current_section_tab()
-        active_tab_obj = session.query(TabSection).filter(TabSection.panel == "center_tab").first()
-        active_tab_obj.active_tab = "GIF"
         save_session()
         self.set_all_image_generator_buttons()
         self.change_content_widget()

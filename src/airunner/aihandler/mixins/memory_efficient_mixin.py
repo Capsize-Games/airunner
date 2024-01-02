@@ -68,7 +68,7 @@ class MemoryEfficientMixin:
         self.model_cpu_offload_applied = None
 
     def apply_last_channels(self):
-        if self.use_kandinsky or self.is_txt2vid or self.is_shapegif:
+        if self.is_txt2vid:
             return
 
         if self.last_channels_applied == self.use_last_channels:
@@ -89,7 +89,7 @@ class MemoryEfficientMixin:
 
         if self.action not in [
             "img2img", "depth2img", "pix2pix", "outpaint", "superresolution", "controlnet", "upscale"
-        ] and not self.use_kandinsky:
+        ]:
             if self.use_enable_vae_slicing or self.is_txt2vid:
                 logger.info("Enabling vae slicing")
                 try:
@@ -135,8 +135,6 @@ class MemoryEfficientMixin:
         self.accelerated_transformers_applied = self.use_accelerated_transformers
 
         from diffusers.models.attention_processor import AttnProcessor, AttnProcessor2_0
-        if self.use_kandinsky:
-            return
         if not self.cuda_is_available or not self.use_accelerated_transformers:
             logger.info("Disabling accelerated transformers")
             self.pipe.unet.set_attn_processor(AttnProcessor())
@@ -234,13 +232,13 @@ class MemoryEfficientMixin:
         if not self.pipe:
             return
         try:
-            self.pipe.to("cpu", self.data_type).float()
+            self.pipe.to("cpu", self.data_type).float32()
         except NotImplementedError:
             logger.warning("Not implemented error when moving to cpu")
         
         if hasattr(self.pipe, "controlnet"):
             try:
-                self.pipe.controlnet.to("cpu", self.data_type).float()
+                self.pipe.controlnet.to("cpu", self.data_type).float32()
             except NotImplementedError:
                 logger.warning("Not implemented error when moving to cpu")
 
