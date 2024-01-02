@@ -1,5 +1,6 @@
 from airunner.widgets.base_widget import BaseWidget
 from airunner.widgets.lora.templates.lora_trigger_word_ui import Ui_lora_trigger_word
+from PyQt6.QtWidgets import QApplication
 
 
 class LoraTriggerWordWidget(BaseWidget):
@@ -22,3 +23,8 @@ class LoraTriggerWordWidget(BaseWidget):
             "generator.negative_prompt",
             f"{self.settings_manager.generator.negative_prompt} {self.trigger_word}"
         )
+    
+    def action_click_button_copy(self):
+        # copy trigger word to clipboard
+        clipboard = QApplication.clipboard()
+        clipboard.setText(self.trigger_word)
