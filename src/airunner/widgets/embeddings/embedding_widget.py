@@ -1,6 +1,7 @@
 from airunner.utils import save_session
 from airunner.widgets.base_widget import BaseWidget
 from airunner.widgets.embeddings.templates.embedding_ui import Ui_embedding
+from PyQt6.QtWidgets import QApplication
 
 
 class EmbeddingWidget(BaseWidget):
@@ -29,3 +30,8 @@ class EmbeddingWidget(BaseWidget):
     def action_toggled_embedding(self, val):
         self.embedding.active = val
         save_session()
+
+    def action_clicked_copy(self):
+        # copy embedding name to clipboard
+        clipboard = QApplication.clipboard()
+        clipboard.setText(self.embedding.name)
