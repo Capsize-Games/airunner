@@ -938,7 +938,7 @@
            <property name="orientation">
             <enum>Qt::Horizontal</enum>
            </property>
-           <widget class="GeneratorTabWidget" name="generator_widget" native="true"/>
+           <widget class="GeneratorForm" name="generator_widget" native="true"/>
            <widget class="QSplitter" name="center_splitter">
             <property name="minimumSize">
              <size>
@@ -1005,42 +1005,12 @@
                     <property name="orientation">
                      <enum>Qt::Horizontal</enum>
                     </property>
-                    <widget class="QTabWidget" name="image_editor_tab_widget">
-                     <property name="currentIndex">
-                      <number>0</number>
-                     </property>
-                     <widget class="QWidget" name="Standard">
-                      <attribute name="title">
-                       <string>Standard</string>
-                      </attribute>
-                      <layout class="QGridLayout" name="gridLayout_19">
-                       <item row="0" column="0">
-                        <widget class="StandardImageWidget" name="standard_image_widget" native="true"/>
-                       </item>
-                      </layout>
-                     </widget>
-                     <widget class="QWidget" name="Canvas">
-                      <attribute name="title">
-                       <string>Canvas</string>
-                      </attribute>
-                      <layout class="QGridLayout" name="gridLayout_18">
-                       <property name="leftMargin">
-                        <number>0</number>
-                       </property>
-                       <property name="topMargin">
-                        <number>0</number>
-                       </property>
-                       <property name="rightMargin">
-                        <number>0</number>
-                       </property>
-                       <property name="bottomMargin">
-                        <number>0</number>
-                       </property>
-                       <item row="0" column="0">
-                        <widget class="CanvasPlusWidget" name="canvas_plus_widget" native="true"/>
-                       </item>
-                      </layout>
-                     </widget>
+                    <widget class="QWidget" name="image_editor_tab_widget" native="true">
+                     <layout class="QGridLayout" name="gridLayout_19">
+                      <item row="0" column="0">
+                       <widget class="StandardImageWidget" name="standard_image_widget" native="true"/>
+                      </item>
+                     </layout>
                     </widget>
                     <widget class="ImagePanelWidget" name="image_browser" native="true"/>
                    </widget>
@@ -1088,8 +1058,8 @@
               <rect>
                <x>0</x>
                <y>0</y>
-               <width>427</width>
-               <height>1012</height>
+               <width>365</width>
+               <height>1017</height>
               </rect>
              </property>
              <layout class="QGridLayout" name="gridLayout">
@@ -1099,53 +1069,12 @@
                  <enum>Qt::Vertical</enum>
                 </property>
                 <widget class="QTabWidget" name="tool_tab_widget">
+                 <property name="acceptDrops">
+                  <bool>false</bool>
+                 </property>
                  <property name="currentIndex">
                   <number>0</number>
                  </property>
-                 <widget class="QWidget" name="tab_embeddings">
-                  <attribute name="title">
-                   <string>Embeddings</string>
-                  </attribute>
-                  <layout class="QGridLayout" name="gridLayout_9">
-                   <property name="leftMargin">
-                    <number>0</number>
-                   </property>
-                   <property name="topMargin">
-                    <number>0</number>
-                   </property>
-                   <property name="rightMargin">
-                    <number>0</number>
-                   </property>
-                   <property name="bottomMargin">
-                    <number>0</number>
-                   </property>
-                   <item row="0" column="0">
-                    <widget class="EmbeddingsContainerWidget" name="embeddings_container_widget" native="true"/>
-                   </item>
-                  </layout>
-                 </widget>
-                 <widget class="QWidget" name="tab_lora">
-                  <attribute name="title">
-                   <string>LoRA</string>
-                  </attribute>
-                  <layout class="QGridLayout" name="gridLayout_7">
-                   <property name="leftMargin">
-                    <number>0</number>
-                   </property>
-                   <property name="topMargin">
-                    <number>0</number>
-                   </property>
-                   <property name="rightMargin">
-                    <number>0</number>
-                   </property>
-                   <property name="bottomMargin">
-                    <number>0</number>
-                   </property>
-                   <item row="0" column="0">
-                    <widget class="LoraContainerWidget" name="lora_container_widget" native="true"/>
-                   </item>
-                  </layout>
-                 </widget>
                  <widget class="QWidget" name="tab_pen">
                   <attribute name="title">
                    <string>Pen</string>
@@ -1187,31 +1116,6 @@
                    </property>
                    <item row="0" column="0">
                     <widget class="ActiveGridSettingsWidget" name="active_grid_settings_widget" native="true"/>
-                   </item>
-                  </layout>
-                 </widget>
-                </widget>
-                <widget class="QTabWidget" name="batches_tab">
-                 <property name="currentIndex">
-                  <number>0</number>
-                 </property>
-                 <widget class="QWidget" name="tab_deterministic">
-                  <attribute name="title">
-                   <string>Deterministic Batches</string>
-                  </attribute>
-                  <layout class="QGridLayout" name="gridLayout_13">
-                   <item row="0" column="0">
-                    <widget class="DeterministicWidget" name="deterministic_widget" native="true"/>
-                   </item>
-                  </layout>
-                 </widget>
-                 <widget class="QWidget" name="tab_standard">
-                  <attribute name="title">
-                   <string>Standard Batches</string>
-                  </attribute>
-                  <layout class="QGridLayout" name="gridLayout_14">
-                   <item row="0" column="0">
-                    <widget class="BatchWidget" name="batch_container_widget" native="true"/>
                    </item>
                   </layout>
                  </widget>
@@ -1758,14 +1662,11 @@
     <property name="title">
      <string>Tools</string>
     </property>
-    <addaction name="actionImage_interpolation"/>
     <addaction name="actionModel_Merger"/>
     <addaction name="separator"/>
     <addaction name="actionStableDiffusion"/>
-    <addaction name="actionKandinsky"/>
     <addaction name="separator"/>
     <addaction name="actionPrompt_Builder"/>
-    <addaction name="actionControlNet"/>
     <addaction name="actionModel_Manager_2"/>
     <addaction name="separator"/>
     <addaction name="actionEmbeddings"/>
@@ -1773,7 +1674,6 @@
     <addaction name="actionPen"/>
     <addaction name="actionActive_Grid"/>
     <addaction name="separator"/>
-    <addaction name="actionDeterministic_Batches"/>
     <addaction name="actionStandard_Batches"/>
     <addaction name="separator"/>
     <addaction name="actionLLM_beta"/>
@@ -2417,9 +2317,9 @@
  </widget>
  <customwidgets>
   <customwidget>
-   <class>GeneratorTabWidget</class>
+   <class>GeneratorForm</class>
    <extends>QWidget</extends>
-   <header>airunner/widgets/generator_form/generator_tab_widget</header>
+   <header>airunner/widgets/generator_form/generator_form_widget</header>
    <container>1</container>
   </customwidget>
   <customwidget>
@@ -2435,18 +2335,6 @@
    <container>1</container>
   </customwidget>
   <customwidget>
-   <class>EmbeddingsContainerWidget</class>
-   <extends>QWidget</extends>
-   <header>airunner/widgets/embeddings/embeddings_container_widget</header>
-   <container>1</container>
-  </customwidget>
-  <customwidget>
-   <class>LoraContainerWidget</class>
-   <extends>QWidget</extends>
-   <header>airunner/widgets/lora/lora_container_widget</header>
-   <container>1</container>
-  </customwidget>
-  <customwidget>
    <class>BrushContainerWidget</class>
    <extends>QWidget</extends>
    <header>airunner/widgets/brush/brush_container_widget</header>
@@ -2457,27 +2345,6 @@
    <extends>QWidget</extends>
    <header>airunner/widgets/layers/layer_container_widget</header>
    <container>1</container>
-  </customwidget>
-  <customwidget>
-   <class>DeterministicWidget</class>
-   <extends>QWidget</extends>
-   <header>airunner/widgets/deterministic/deterministic_widget</header>
-   <container>1</container>
-  </customwidget>
-  <customwidget>
-   <class>BatchWidget</class>
-   <extends>QWidget</extends>
-   <header>airunner/widgets/batch/batch_widget</header>
-   <container>1</container>
-  </customwidget>
-  <customwidget>
-   <class>CanvasPlusWidget</class>
-   <extends>QWidget</extends>
-   <header>airunner/widgets/canvas_plus/canvas_plus_widget</header>
-   <container>1</container>
-   <slots>
-    <slot>action_button_clicked_focus()</slot>
-   </slots>
   </customwidget>
   <customwidget>
    <class>ActiveGridSettingsWidget</class>
@@ -2558,42 +2425,10 @@
    </hints>
   </connection>
   <connection>
-   <sender>actionKandinsky</sender>
-   <signal>triggered()</signal>
-   <receiver>MainWindow</receiver>
-   <slot>action_show_kandinsky()</slot>
-   <hints>
-    <hint type="sourcelabel">
-     <x>-1</x>
-     <y>-1</y>
-    </hint>
-    <hint type="destinationlabel">
-     <x>442</x>
-     <y>432</y>
-    </hint>
-   </hints>
-  </connection>
-  <connection>
    <sender>actionStableDiffusion</sender>
    <signal>triggered()</signal>
    <receiver>MainWindow</receiver>
    <slot>action_show_stablediffusion()</slot>
-   <hints>
-    <hint type="sourcelabel">
-     <x>-1</x>
-     <y>-1</y>
-    </hint>
-    <hint type="destinationlabel">
-     <x>442</x>
-     <y>432</y>
-    </hint>
-   </hints>
-  </connection>
-  <connection>
-   <sender>actionShap_E</sender>
-   <signal>triggered()</signal>
-   <receiver>MainWindow</receiver>
-   <slot>action_show_shape()</slot>
    <hints>
     <hint type="sourcelabel">
      <x>-1</x>
@@ -2862,22 +2697,6 @@
    </hints>
   </connection>
   <connection>
-   <sender>actionImage_Interpolation</sender>
-   <signal>triggered()</signal>
-   <receiver>MainWindow</receiver>
-   <slot>action_show_image_interpolation_triggered()</slot>
-   <hints>
-    <hint type="sourcelabel">
-     <x>-1</x>
-     <y>-1</y>
-    </hint>
-    <hint type="destinationlabel">
-     <x>442</x>
-     <y>432</y>
-    </hint>
-   </hints>
-  </connection>
-  <connection>
    <sender>actionClear_all_prompts</sender>
    <signal>triggered()</signal>
    <receiver>MainWindow</receiver>
@@ -3065,22 +2884,6 @@
     </hint>
     <hint type="destinationlabel">
      <x>442</x>
-     <y>0</y>
-    </hint>
-   </hints>
-  </connection>
-  <connection>
-   <sender>batches_tab</sender>
-   <signal>currentChanged(int)</signal>
-   <receiver>MainWindow</receiver>
-   <slot>batches_panel_tab_index_changed(int)</slot>
-   <hints>
-    <hint type="sourcelabel">
-     <x>922</x>
-     <y>731</y>
-    </hint>
-    <hint type="destinationlabel">
-     <x>49</x>
      <y>0</y>
     </hint>
    </hints>
@@ -3653,7 +3456,6 @@
   <slot>action_show_model_merger_window()</slot>
   <slot>action_show_kandinsky()</slot>
   <slot>action_show_stablediffusion()</slot>
-  <slot>action_show_shape()</slot>
   <slot>action_show_model_manager()</slot>
   <slot>action_show_prompt_builder()</slot>
   <slot>action_show_controlnet()</slot>

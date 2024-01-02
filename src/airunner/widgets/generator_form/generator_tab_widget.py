@@ -9,7 +9,7 @@ class GeneratorTabWidget(BaseWidget):
     widget_class_ = Ui_generator_tab
     generate_signal = pyqtSignal(dict)
     data = {}
-    clip_skip_disabled_tabs = ["kandinsky"]
+    clip_skip_disabled_tabs = []
     clip_skip_disabled_sections = ["upscale", "superresolution", "txt2vid"]
     random_image_embed_seed = False
     row = 0
@@ -82,13 +82,7 @@ class GeneratorTabWidget(BaseWidget):
             print(e)
 
     def initialize(self):
-        from airunner.widgets.generator_form.generator_form_widget import GeneratorForm
-        self.app.release_tab_overrides()
-        self.set_current_section_tab()
-        for tab in self.ui.generator_form_stablediffusion.findChildren(GeneratorForm):
-            tab.initialize()
-        for tab in self.ui.tab_widget_kandinsky.findChildren(GeneratorForm):
-            tab.initialize()
+        pass
 
     def refresh_models(self):
         # iterate over all generator tabs and call load_models on the generatorform widget
@@ -112,7 +106,7 @@ class GeneratorTabWidget(BaseWidget):
     def handle_generator_tab_changed(self, val):
         """
         This method is called when the generator tab is changed.
-        Generator tabs are stablediffusion, kandinsky etc.
+        Generator tabs are stablediffusion etc.
         :return: 
         """
         print("handle_generator_tab_changed")
@@ -164,10 +158,6 @@ class GeneratorTabWidget(BaseWidget):
             for tab in self.data[section].keys():
                 self.data[section][tab]["model"].clear()
                 self.load_model_by_section(section, tab)
-
-    def update_thumbnails(self):
-        self.current_generator_widget.update_image_input_thumbnail()
-        self.current_generator_widget.update_controlnet_settings_thumbnail()
 
     def toggle_variation(self, val):
         self.settings_manager.set_value("generator.variation", val)
