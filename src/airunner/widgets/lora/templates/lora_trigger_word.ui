@@ -23,21 +23,51 @@
    </item>
    <item>
     <widget class="QPushButton" name="button_to_prompt">
+     <property name="cursor">
+      <cursorShape>PointingHandCursor</cursorShape>
+     </property>
+     <property name="toolTip">
+      <string>Send trigger word to prompt</string>
+     </property>
      <property name="text">
       <string>Prompt</string>
      </property>
      <property name="icon">
-      <iconset theme="edit-paste"/>
+      <iconset theme="edit-paste">
+       <normaloff>.</normaloff>.</iconset>
      </property>
     </widget>
    </item>
    <item>
     <widget class="QPushButton" name="button_to_negative_prompt">
+     <property name="cursor">
+      <cursorShape>PointingHandCursor</cursorShape>
+     </property>
+     <property name="toolTip">
+      <string>Send trigger word to negative prompt</string>
+     </property>
      <property name="text">
-      <string>Negative Prompt</string>
+      <string>Negative</string>
      </property>
      <property name="icon">
-      <iconset theme="edit-paste"/>
+      <iconset theme="edit-paste">
+       <normaloff>.</normaloff>.</iconset>
+     </property>
+    </widget>
+   </item>
+   <item>
+    <widget class="QPushButton" name="button_copy">
+     <property name="cursor">
+      <cursorShape>PointingHandCursor</cursorShape>
+     </property>
+     <property name="toolTip">
+      <string>Copy trigger word to clipboard</string>
+     </property>
+     <property name="text">
+      <string/>
+     </property>
+     <property name="icon">
+      <iconset theme="edit-copy"/>
      </property>
     </widget>
    </item>
@@ -52,8 +82,8 @@
    <slot>action_click_button_to_prompt()</slot>
    <hints>
     <hint type="sourcelabel">
-     <x>378</x>
-     <y>174</y>
+     <x>184</x>
+     <y>33</y>
     </hint>
     <hint type="destinationlabel">
      <x>319</x>
@@ -68,8 +98,8 @@
    <slot>action_click_button_to_negative_prompt()</slot>
    <hints>
     <hint type="sourcelabel">
-     <x>576</x>
-     <y>176</y>
+     <x>280</x>
+     <y>33</y>
     </hint>
     <hint type="destinationlabel">
      <x>518</x>
@@ -77,9 +107,26 @@
     </hint>
    </hints>
   </connection>
+  <connection>
+   <sender>button_copy</sender>
+   <signal>clicked()</signal>
+   <receiver>lora_trigger_word</receiver>
+   <slot>action_click_button_copy()</slot>
+   <hints>
+    <hint type="sourcelabel">
+     <x>307</x>
+     <y>25</y>
+    </hint>
+    <hint type="destinationlabel">
+     <x>279</x>
+     <y>-14</y>
+    </hint>
+   </hints>
+  </connection>
  </connections>
  <slots>
   <slot>action_click_button_to_prompt()</slot>
   <slot>action_click_button_to_negative_prompt()</slot>
+  <slot>action_click_button_copy()</slot>
  </slots>
 </ui>
