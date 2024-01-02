@@ -27,13 +27,6 @@
         </property>
        </widget>
       </item>
-      <item row="1" column="0">
-       <widget class="QRadioButton" name="kandinsky">
-        <property name="text">
-         <string>Kandinsky</string>
-        </property>
-       </widget>
-      </item>
      </layout>
     </widget>
    </item>
@@ -67,22 +60,6 @@
     <hint type="destinationlabel">
      <x>16</x>
      <y>-11</y>
-    </hint>
-   </hints>
-  </connection>
-  <connection>
-   <sender>kandinsky</sender>
-   <signal>toggled(bool)</signal>
-   <receiver>image_generator_preferences</receiver>
-   <slot>kandinsky_toggled(bool)</slot>
-   <hints>
-    <hint type="sourcelabel">
-     <x>66</x>
-     <y>78</y>
-    </hint>
-    <hint type="destinationlabel">
-     <x>110</x>
-     <y>-2</y>
     </hint>
    </hints>
   </connection>

@@ -29,7 +29,7 @@
    <item row="0" column="0">
     <widget class="QTabWidget" name="tabWidget">
      <property name="currentIndex">
-      <number>2</number>
+      <number>0</number>
      </property>
      <widget class="QWidget" name="chat">
       <attribute name="icon">
@@ -1007,85 +1007,6 @@
           </item>
          </layout>
         </widget>
-       </item>
-      </layout>
-     </widget>
-     <widget class="QWidget" name="quantization">
-      <attribute name="title">
-       <string>Quantization</string>
-      </attribute>
-      <layout class="QGridLayout" name="gridLayout_7">
-       <item row="0" column="0">
-        <widget class="QGroupBox" name="groupBox_9">
-         <property name="title">
-          <string>Model</string>
-         </property>
-         <layout class="QGridLayout" name="gridLayout_14">
-          <item row="0" column="0">
-           <widget class="QComboBox" name="quantization_model"/>
-          </item>
-         </layout>
-        </widget>
-       </item>
-       <item row="1" column="0">
-        <widget class="QGroupBox" name="groupBox_13">
-         <property name="title">
-          <string>Model Version</string>
-         </property>
-         <layout class="QGridLayout" name="gridLayout_16">
-          <item row="0" column="0">
-           <widget class="QComboBox" name="quantization_model_version">
-            <property name="currentIndex">
-             <number>-1</number>
-            </property>
-           </widget>
-          </item>
-         </layout>
-        </widget>
-       </item>
-       <item row="2" column="0">
-        <widget class="QGroupBox" name="groupBox_10">
-         <property name="title">
-          <string>DType</string>
-         </property>
-         <layout class="QGridLayout" name="gridLayout_6">
-          <item row="0" column="0">
-           <widget class="QComboBox" name="comboBox_2"/>
-          </item>
-         </layout>
-        </widget>
-       </item>
-       <item row="3" column="0">
-        <widget class="QGroupBox" name="groupBox_12">
-         <property name="title">
-          <string>Quantized model name</string>
-         </property>
-         <layout class="QGridLayout" name="gridLayout_15">
-          <item row="0" column="0">
-           <widget class="QLineEdit" name="lineEdit"/>
-          </item>
-         </layout>
-        </widget>
-       </item>
-       <item row="4" column="0">
-        <widget class="QPushButton" name="pushButton_2">
-         <property name="text">
-          <string>Run Quantization</string>
-         </property>
-        </widget>
-       </item>
-       <item row="5" column="0">
-        <spacer name="verticalSpacer_2">
-         <property name="orientation">
-          <enum>Qt::Vertical</enum>
-         </property>
-         <property name="sizeHint" stdset="0">
-          <size>
-           <width>20</width>
-           <height>40</height>
-          </size>
-         </property>
-        </spacer>
        </item>
       </layout>
      </widget>

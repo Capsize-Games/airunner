@@ -28,7 +28,6 @@ DEFAULT_PATHS = {
         },
         "other": {
             "images": "",
-            "gifs": "",
             "videos": "",
         },
     },
@@ -319,7 +318,6 @@ class GeneratorSetting(BaseModel):
     id = Column(Integer, primary_key=True)
     section = Column(String)
     generator_name = Column(String)
-    settings_id = Column(Integer, ForeignKey('settings.id'))
     prompt = Column(String, default="")
     negative_prompt = Column(String, default="")
     steps = Column(Integer, default=20)
@@ -357,6 +355,18 @@ class GeneratorSetting(BaseModel):
     use_prompt_builder = Column(Boolean, default=False)
     active_grid_border_color = Column(String, default="#00FF00")
     active_grid_fill_color = Column(String, default="#FF0000")
+    brushes = relationship("Brush", back_populates='generator_setting')  # modified line
+
+
+class Brush(BaseModel):
+    __tablename__ = 'brushes'
+
+    id = Column(Integer, primary_key=True)
+    name = Column(String, nullable=False)
+    thumbnail = Column(String, nullable=False)
+    generator_setting_id = Column(Integer, ForeignKey('generator_settings.id'))  # new line
+    generator_setting = relationship('GeneratorSetting', back_populates='brushes')  # modified line
+
 
 
 class PromptGeneratorSetting(BaseModel):
@@ -458,7 +468,6 @@ class PathSettings(BaseModel):
     embeddings_model_path = Column(String, default=DEFAULT_PATHS["art"]["models"]["embeddings"])
     lora_model_path = Column(String, default=DEFAULT_PATHS["art"]["models"]["lora"])
     image_path = Column(String, default=DEFAULT_PATHS["art"]["other"]["images"])
-    gif_path = Column(String, default=DEFAULT_PATHS["art"]["other"]["gifs"])
     video_path = Column(String, default=DEFAULT_PATHS["art"]["other"]["videos"])
     llm_casuallm_model_path = Column(String, default=DEFAULT_PATHS["text"]["models"]["casuallm"])
     llm_seq2seq_model_path = Column(String, default=DEFAULT_PATHS["text"]["models"]["seq2seq"])
@@ -513,7 +522,6 @@ class PathSettings(BaseModel):
         self.embeddings_model_path = DEFAULT_PATHS["art"]["models"]["embeddings"]
         self.lora_model_path = DEFAULT_PATHS["art"]["models"]["lora"]
         self.image_path = DEFAULT_PATHS["art"]["other"]["images"]
-        self.gif_path = DEFAULT_PATHS["art"]["other"]["gifs"]
         self.video_path = DEFAULT_PATHS["art"]["other"]["videos"]
         self.llm_casuallm_model_path = DEFAULT_PATHS["text"]["models"]["casuallm"]
         self.llm_seq2seq_model_path = DEFAULT_PATHS["text"]["models"]["seq2seq"]
@@ -631,13 +639,10 @@ class Settings(BaseModel):
     # generator tab sections
     current_tab = Column(String, default="stablediffusion")
     current_section_stablediffusion = Column(String, default="txt2img")
-    current_section_kandinsky = Column(String, default="txt2img")
-    current_section_shape = Column(String, default="txt2img")
     generator_settings = relationship("GeneratorSetting", backref="settings")
 
     # generator version
     current_version_stablediffusion = Column(String, default="SD 1.5")
-    current_version_kandinsky = Column(String, default="K 2.1")
 
     # tool and bottom panel tab sections
     current_tool_tab = Column(String, default="brush")
@@ -653,6 +658,8 @@ class Settings(BaseModel):
     enable_advanced_mode = Column(Boolean, default=False)
 
     enable_tts = Column(Boolean, default=True)
+
+    generator_settings_override_id = Column(Integer, ForeignKey('generator_settings.id'))
 
 
 class StandardImageWidgetSettings(BaseModel):
@@ -818,3 +825,5 @@ class Message(BaseModel):
     message = Column(String)
     conversation_id = Column(Integer, ForeignKey('conversation.id'))
     conversation = relationship('Conversation', back_populates='messages')
+
+
