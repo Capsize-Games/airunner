@@ -331,7 +331,7 @@ class Ui_MainWindow(object):
         self.content_splitter = QtWidgets.QSplitter(parent=self.art)
         self.content_splitter.setOrientation(QtCore.Qt.Orientation.Horizontal)
         self.content_splitter.setObjectName("content_splitter")
-        self.generator_widget = GeneratorTabWidget(parent=self.content_splitter)
+        self.generator_widget = GeneratorForm(parent=self.content_splitter)
         self.generator_widget.setObjectName("generator_widget")
         self.center_splitter = QtWidgets.QSplitter(parent=self.content_splitter)
         self.center_splitter.setMinimumSize(QtCore.QSize(0, 0))
@@ -356,25 +356,14 @@ class Ui_MainWindow(object):
         self.canvas_splitter = QtWidgets.QSplitter(parent=self.tab_image)
         self.canvas_splitter.setOrientation(QtCore.Qt.Orientation.Horizontal)
         self.canvas_splitter.setObjectName("canvas_splitter")
-        self.image_editor_tab_widget = QtWidgets.QTabWidget(parent=self.canvas_splitter)
+        self.image_editor_tab_widget = QtWidgets.QWidget(parent=self.canvas_splitter)
         self.image_editor_tab_widget.setObjectName("image_editor_tab_widget")
-        self.Standard = QtWidgets.QWidget()
-        self.Standard.setObjectName("Standard")
-        self.gridLayout_19 = QtWidgets.QGridLayout(self.Standard)
+        self.gridLayout_19 = QtWidgets.QGridLayout(self.image_editor_tab_widget)
+        self.gridLayout_19.setContentsMargins(0, 0, 0, 0)
         self.gridLayout_19.setObjectName("gridLayout_19")
-        self.standard_image_widget = StandardImageWidget(parent=self.Standard)
+        self.standard_image_widget = StandardImageWidget(parent=self.image_editor_tab_widget)
         self.standard_image_widget.setObjectName("standard_image_widget")
         self.gridLayout_19.addWidget(self.standard_image_widget, 0, 0, 1, 1)
-        self.image_editor_tab_widget.addTab(self.Standard, "")
-        self.Canvas = QtWidgets.QWidget()
-        self.Canvas.setObjectName("Canvas")
-        self.gridLayout_18 = QtWidgets.QGridLayout(self.Canvas)
-        self.gridLayout_18.setContentsMargins(0, 0, 0, 0)
-        self.gridLayout_18.setObjectName("gridLayout_18")
-        self.canvas_plus_widget = CanvasPlusWidget(parent=self.Canvas)
-        self.canvas_plus_widget.setObjectName("canvas_plus_widget")
-        self.gridLayout_18.addWidget(self.canvas_plus_widget, 0, 0, 1, 1)
-        self.image_editor_tab_widget.addTab(self.Canvas, "")
         self.image_browser = ImagePanelWidget(parent=self.canvas_splitter)
         self.image_browser.setObjectName("image_browser")
         self.gridLayout_10.addWidget(self.canvas_splitter, 0, 0, 1, 1)
@@ -396,7 +385,7 @@ class Ui_MainWindow(object):
         self.scrollArea.setWidgetResizable(True)
         self.scrollArea.setObjectName("scrollArea")
         self.scrollAreaWidgetContents = QtWidgets.QWidget()
-        self.scrollAreaWidgetContents.setGeometry(QtCore.QRect(0, 0, 427, 1012))
+        self.scrollAreaWidgetContents.setGeometry(QtCore.QRect(0, 0, 365, 1017))
         self.scrollAreaWidgetContents.setObjectName("scrollAreaWidgetContents")
         self.gridLayout = QtWidgets.QGridLayout(self.scrollAreaWidgetContents)
         self.gridLayout.setObjectName("gridLayout")
@@ -404,25 +393,8 @@ class Ui_MainWindow(object):
         self.splitter.setOrientation(QtCore.Qt.Orientation.Vertical)
         self.splitter.setObjectName("splitter")
         self.tool_tab_widget = QtWidgets.QTabWidget(parent=self.splitter)
+        self.tool_tab_widget.setAcceptDrops(False)
         self.tool_tab_widget.setObjectName("tool_tab_widget")
-        self.tab_embeddings = QtWidgets.QWidget()
-        self.tab_embeddings.setObjectName("tab_embeddings")
-        self.gridLayout_9 = QtWidgets.QGridLayout(self.tab_embeddings)
-        self.gridLayout_9.setContentsMargins(0, 0, 0, 0)
-        self.gridLayout_9.setObjectName("gridLayout_9")
-        self.embeddings_container_widget = EmbeddingsContainerWidget(parent=self.tab_embeddings)
-        self.embeddings_container_widget.setObjectName("embeddings_container_widget")
-        self.gridLayout_9.addWidget(self.embeddings_container_widget, 0, 0, 1, 1)
-        self.tool_tab_widget.addTab(self.tab_embeddings, "")
-        self.tab_lora = QtWidgets.QWidget()
-        self.tab_lora.setObjectName("tab_lora")
-        self.gridLayout_7 = QtWidgets.QGridLayout(self.tab_lora)
-        self.gridLayout_7.setContentsMargins(0, 0, 0, 0)
-        self.gridLayout_7.setObjectName("gridLayout_7")
-        self.lora_container_widget = LoraContainerWidget(parent=self.tab_lora)
-        self.lora_container_widget.setObjectName("lora_container_widget")
-        self.gridLayout_7.addWidget(self.lora_container_widget, 0, 0, 1, 1)
-        self.tool_tab_widget.addTab(self.tab_lora, "")
         self.tab_pen = QtWidgets.QWidget()
         self.tab_pen.setObjectName("tab_pen")
         self.gridLayout_8 = QtWidgets.QGridLayout(self.tab_pen)
@@ -441,24 +413,6 @@ class Ui_MainWindow(object):
         self.active_grid_settings_widget.setObjectName("active_grid_settings_widget")
         self.gridLayout_12.addWidget(self.active_grid_settings_widget, 0, 0, 1, 1)
         self.tool_tab_widget.addTab(self.tab_active_grid, "")
-        self.batches_tab = QtWidgets.QTabWidget(parent=self.splitter)
-        self.batches_tab.setObjectName("batches_tab")
-        self.tab_deterministic = QtWidgets.QWidget()
-        self.tab_deterministic.setObjectName("tab_deterministic")
-        self.gridLayout_13 = QtWidgets.QGridLayout(self.tab_deterministic)
-        self.gridLayout_13.setObjectName("gridLayout_13")
-        self.deterministic_widget = DeterministicWidget(parent=self.tab_deterministic)
-        self.deterministic_widget.setObjectName("deterministic_widget")
-        self.gridLayout_13.addWidget(self.deterministic_widget, 0, 0, 1, 1)
-        self.batches_tab.addTab(self.tab_deterministic, "")
-        self.tab_standard = QtWidgets.QWidget()
-        self.tab_standard.setObjectName("tab_standard")
-        self.gridLayout_14 = QtWidgets.QGridLayout(self.tab_standard)
-        self.gridLayout_14.setObjectName("gridLayout_14")
-        self.batch_container_widget = BatchWidget(parent=self.tab_standard)
-        self.batch_container_widget.setObjectName("batch_container_widget")
-        self.gridLayout_14.addWidget(self.batch_container_widget, 0, 0, 1, 1)
-        self.batches_tab.addTab(self.tab_standard, "")
         self.layer_frame = QtWidgets.QFrame(parent=self.splitter)
         self.layer_frame.setFrameShape(QtWidgets.QFrame.Shape.StyledPanel)
         self.layer_frame.setFrameShadow(QtWidgets.QFrame.Shadow.Raised)
@@ -908,14 +862,11 @@ class Ui_MainWindow(object):
         self.menuAbout.addAction(self.actionBug_report)
         self.menuAbout.addAction(self.actionReport_vulnerability)
         self.menuAbout.addAction(self.actionDiscord)
-        self.menuModel_merge.addAction(self.actionImage_interpolation)
         self.menuModel_merge.addAction(self.actionModel_Merger)
         self.menuModel_merge.addSeparator()
         self.menuModel_merge.addAction(self.actionStableDiffusion)
-        self.menuModel_merge.addAction(self.actionKandinsky)
         self.menuModel_merge.addSeparator()
         self.menuModel_merge.addAction(self.actionPrompt_Builder)
-        self.menuModel_merge.addAction(self.actionControlNet)
         self.menuModel_merge.addAction(self.actionModel_Manager_2)
         self.menuModel_merge.addSeparator()
         self.menuModel_merge.addAction(self.actionEmbeddings)
@@ -923,7 +874,6 @@ class Ui_MainWindow(object):
         self.menuModel_merge.addAction(self.actionPen)
         self.menuModel_merge.addAction(self.actionActive_Grid)
         self.menuModel_merge.addSeparator()
-        self.menuModel_merge.addAction(self.actionDeterministic_Batches)
         self.menuModel_merge.addAction(self.actionStandard_Batches)
         self.menuModel_merge.addSeparator()
         self.menuModel_merge.addAction(self.actionLLM_beta)
@@ -956,15 +906,11 @@ class Ui_MainWindow(object):
         self.retranslateUi(MainWindow)
         self.mode_tab_widget.setCurrentIndex(0)
         self.center_tab.setCurrentIndex(0)
-        self.image_editor_tab_widget.setCurrentIndex(0)
         self.tool_tab_widget.setCurrentIndex(0)
-        self.batches_tab.setCurrentIndex(0)
         self.actionHuggingface_Cache_manager.triggered.connect(MainWindow.action_show_hf_cache_manager) # type: ignore
         self.actionModel_Merger.triggered.connect(MainWindow.action_show_model_merger_window) # type: ignore
         self.actionAbout.triggered.connect(MainWindow.action_show_about_window) # type: ignore
-        self.actionKandinsky.triggered.connect(MainWindow.action_show_kandinsky) # type: ignore
         self.actionStableDiffusion.triggered.connect(MainWindow.action_show_stablediffusion) # type: ignore
-        self.actionShap_E.triggered.connect(MainWindow.action_show_shape) # type: ignore
         self.actionPrompt_Builder.triggered.connect(MainWindow.action_show_prompt_builder) # type: ignore
         self.actionControlNet.triggered.connect(MainWindow.action_show_controlnet) # type: ignore
         self.actionEmbeddings.triggered.connect(MainWindow.action_show_embeddings) # type: ignore
@@ -981,7 +927,6 @@ class Ui_MainWindow(object):
         self.actionRotate_90_clockwise.triggered.connect(MainWindow.action_rotate_90_clockwise_triggered) # type: ignore
         self.actionRotate_90_counter_clockwise.triggered.connect(MainWindow.action_rotate_90_counterclockwise_triggered) # type: ignore
         self.actionPrompt_Browser.triggered.connect(MainWindow.action_show_prompt_browser_triggered) # type: ignore
-        self.actionImage_Interpolation.triggered.connect(MainWindow.action_show_image_interpolation_triggered) # type: ignore
         self.actionClear_all_prompts.triggered.connect(MainWindow.action_clear_all_prompts_triggered) # type: ignore
         self.actionSettings.triggered.connect(MainWindow.action_show_settings) # type: ignore
         self.actionBrowse_AI_Runner_Path.triggered.connect(MainWindow.action_triggered_browse_ai_runner_path) # type: ignore
@@ -994,7 +939,6 @@ class Ui_MainWindow(object):
         self.actionUpscale.triggered.connect(MainWindow.action_show_model_path_upscale) # type: ignore
         self.actionTxt2vid.triggered.connect(MainWindow.action_show_model_path_txt2vid) # type: ignore
         self.tool_tab_widget.currentChanged['int'].connect(MainWindow.tool_tab_index_changed) # type: ignore
-        self.batches_tab.currentChanged['int'].connect(MainWindow.batches_panel_tab_index_changed) # type: ignore
         self.actionActive_Grid.triggered.connect(MainWindow.action_show_active_grid) # type: ignore
         self.actionModel_Manager_2.triggered.connect(MainWindow.action_show_model_manager) # type: ignore
         self.actionDeterministic_Batches.triggered.connect(MainWindow.action_show_deterministic_batches) # type: ignore
@@ -1046,17 +990,11 @@ class Ui_MainWindow(object):
         self.export_button.setToolTip(_translate("MainWindow", "Export Image"))
         self.undo_button.setToolTip(_translate("MainWindow", "Undo"))
         self.redo_button.setToolTip(_translate("MainWindow", "Redo"))
-        self.image_editor_tab_widget.setTabText(self.image_editor_tab_widget.indexOf(self.Standard), _translate("MainWindow", "Standard"))
-        self.image_editor_tab_widget.setTabText(self.image_editor_tab_widget.indexOf(self.Canvas), _translate("MainWindow", "Canvas"))
         self.center_tab.setTabText(self.center_tab.indexOf(self.tab_image), _translate("MainWindow", "Canvas"))
         self.center_tab.setTabText(self.center_tab.indexOf(self.tab_txt2vid), _translate("MainWindow", "Video"))
         self.center_tab.setTabText(self.center_tab.indexOf(self.tab_prompt_builder), _translate("MainWindow", "Prompt Builder"))
-        self.tool_tab_widget.setTabText(self.tool_tab_widget.indexOf(self.tab_embeddings), _translate("MainWindow", "Embeddings"))
-        self.tool_tab_widget.setTabText(self.tool_tab_widget.indexOf(self.tab_lora), _translate("MainWindow", "LoRA"))
         self.tool_tab_widget.setTabText(self.tool_tab_widget.indexOf(self.tab_pen), _translate("MainWindow", "Pen"))
         self.tool_tab_widget.setTabText(self.tool_tab_widget.indexOf(self.tab_active_grid), _translate("MainWindow", "Active Grid"))
-        self.batches_tab.setTabText(self.batches_tab.indexOf(self.tab_deterministic), _translate("MainWindow", "Deterministic Batches"))
-        self.batches_tab.setTabText(self.batches_tab.indexOf(self.tab_standard), _translate("MainWindow", "Standard Batches"))
         self.toggle_active_grid_area_button.setToolTip(_translate("MainWindow", "Active grid area selection tool"))
         self.toggle_brush_button.setToolTip(_translate("MainWindow", "Pen tool"))
         self.toggle_eraser_button.setToolTip(_translate("MainWindow", "Eraser tool"))
@@ -1194,16 +1132,11 @@ class Ui_MainWindow(object):
         self.actionStandard_Batches.setText(_translate("MainWindow", "Standard Batches"))
         self.actionLLM_beta.setText(_translate("MainWindow", "LLM (beta)"))
 from airunner.widgets.active_grid_settings.active_grid_settings_widget import ActiveGridSettingsWidget
-from airunner.widgets.batch.batch_widget import BatchWidget
 from airunner.widgets.brush.brush_container_widget import BrushContainerWidget
-from airunner.widgets.canvas_plus.canvas_plus_widget import CanvasPlusWidget
 from airunner.widgets.canvas_plus.standard_image_widget import StandardImageWidget
-from airunner.widgets.deterministic.deterministic_widget import DeterministicWidget
-from airunner.widgets.embeddings.embeddings_container_widget import EmbeddingsContainerWidget
-from airunner.widgets.generator_form.generator_tab_widget import GeneratorTabWidget
+from airunner.widgets.generator_form.generator_form_widget import GeneratorForm
 from airunner.widgets.image.image_panel_widget import ImagePanelWidget
 from airunner.widgets.layers.layer_container_widget import LayerContainerWidget
 from airunner.widgets.llm.llm_widget import LLMWidget
-from airunner.widgets.lora.lora_container_widget import LoraContainerWidget
 from airunner.widgets.model_manager.model_manager_widget import ModelManagerWidget
 from airunner.widgets.prompt_builder.prompt_builder_widget import PromptBuilderWidget

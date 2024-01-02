@@ -318,7 +318,6 @@ class GeneratorSetting(BaseModel):
     id = Column(Integer, primary_key=True)
     section = Column(String)
     generator_name = Column(String)
-    settings_id = Column(Integer, ForeignKey('settings.id'))
     prompt = Column(String, default="")
     negative_prompt = Column(String, default="")
     steps = Column(Integer, default=20)
@@ -356,6 +355,18 @@ class GeneratorSetting(BaseModel):
     use_prompt_builder = Column(Boolean, default=False)
     active_grid_border_color = Column(String, default="#00FF00")
     active_grid_fill_color = Column(String, default="#FF0000")
+    brushes = relationship("Brush", back_populates='generator_setting')  # modified line
+
+
+class Brush(BaseModel):
+    __tablename__ = 'brushes'
+
+    id = Column(Integer, primary_key=True)
+    name = Column(String, nullable=False)
+    thumbnail = Column(String, nullable=False)
+    generator_setting_id = Column(Integer, ForeignKey('generator_settings.id'))  # new line
+    generator_setting = relationship('GeneratorSetting', back_populates='brushes')  # modified line
+
 
 
 class PromptGeneratorSetting(BaseModel):
@@ -648,6 +659,8 @@ class Settings(BaseModel):
 
     enable_tts = Column(Boolean, default=True)
 
+    generator_settings_override_id = Column(Integer, ForeignKey('generator_settings.id'))
+
 
 class StandardImageWidgetSettings(BaseModel):
     __tablename__ = 'standard_image_widget_settings'
@@ -812,3 +825,5 @@ class Message(BaseModel):
     message = Column(String)
     conversation_id = Column(Integer, ForeignKey('conversation.id'))
     conversation = relationship('Conversation', back_populates='messages')
+
+
