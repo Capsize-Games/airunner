@@ -25,7 +25,6 @@ from airunner.aihandler.enums import MessageCode
 from airunner.aihandler.logger import Logger as logger
 from airunner.aihandler.mixins.compel_mixin import CompelMixin
 from airunner.aihandler.mixins.embedding_mixin import EmbeddingMixin
-from airunner.aihandler.mixins.kandinsky_mixin import KandinskyMixin
 from airunner.aihandler.mixins.lora_mixin import LoraMixin
 from airunner.aihandler.mixins.memory_efficient_mixin import MemoryEfficientMixin
 from airunner.aihandler.mixins.merge_mixin import MergeMixin
@@ -47,8 +46,7 @@ class SDRunner(
     EmbeddingMixin,
     TexttovideoMixin,
     CompelMixin,
-    SchedulerMixin,
-    KandinskyMixin
+    SchedulerMixin
 ):
     _current_model: str = ""
     _previous_model: str = ""
@@ -332,14 +330,10 @@ class SDRunner(
 
     @property
     def use_tiled_vae(self):
-        if self.use_kandinsky:
-            return False
         return self.options.get("use_tiled_vae", False) is True
 
     @property
     def use_accelerated_transformers(self):
-        if self.use_kandinsky:
-            return False
         return self.options.get("use_accelerated_transformers", False) is True
 
     @property
@@ -495,8 +489,6 @@ class SDRunner(
 
     @property
     def enable_controlnet(self):
-        if self.use_kandinsky:
-            return False
         if self.input_image is None and self.controlnet_image is None:
             return False
         if self.is_vid2vid:
@@ -620,8 +612,7 @@ class SDRunner(
 
     @property
     def do_add_lora_to_pipe(self):
-        return not self.use_kandinsky \
-               and not self.is_vid_action
+        return not self.is_vid_action
 
     @property
     def controlnet_action_diffuser(self):
@@ -824,8 +815,7 @@ class SDRunner(
             self._negative_prompt_embeds = None
 
         self.data = data
-        if not self.use_kandinsky:
-            torch.backends.cuda.matmul.allow_tf32 = self.use_tf32
+        torch.backends.cuda.matmul.allow_tf32 = self.use_tf32
 
     def send_error(self, message):
         self.send_message(message, MessageCode.ERROR)
@@ -980,31 +970,27 @@ class SDRunner(
                 "prompt": self.prompt,
                 "negative_prompt": self.negative_prompt,
             })
-        elif not self.use_kandinsky:
-            if self.use_compel:
-                try:
-                    args.update({
-                        "prompt_embeds": self.prompt_embeds,
-                        "negative_prompt_embeds": self.negative_prompt_embeds,
-                    })
-                except Exception as _e:
-                    logger.warning("Compel failed: " + str(_e))
-                    args.update({
-                        "prompt": self.prompt,
-                        "negative_prompt": self.negative_prompt,
-                    })
-            else:
+        if self.use_compel:
+            try:
+                args.update({
+                    "prompt_embeds": self.prompt_embeds,
+                    "negative_prompt_embeds": self.negative_prompt_embeds,
+                })
+            except Exception as _e:
+                logger.warning("Compel failed: " + str(_e))
                 args.update({
                     "prompt": self.prompt,
                     "negative_prompt": self.negative_prompt,
                 })
-            args["callback_steps"] = 1
+        else:
+            args.update({
+                "prompt": self.prompt,
+                "negative_prompt": self.negative_prompt,
+            })
+        args["callback_steps"] = 1
         
         if not self.is_upscale:
             args.update(kwargs)
-        
-        if self.use_kandinsky:
-            return self.kandinsky_call_pipe(**kwargs)
         
         if not self.is_pix2pix and len(self.available_lora) > 0 and len(self.loaded_lora) > 0:
             args["cross_attention_kwargs"] = {"scale": 1.0}
@@ -1223,15 +1209,14 @@ class SDRunner(
             self.change_scheduler()
 
     def generate(self, data: dict):
-        if not self.pipe and not self.use_kandinsky:
+        if not self.pipe:
             return
         logger.info("generate called")
         self.do_cancel = False
         self.process_data(data)
 
-        if not self.use_kandinsky:
-            self.send_message(f"Applying memory settings")
-            self.apply_memory_efficient_settings()
+        self.send_message(f"Applying memory settings")
+        self.apply_memory_efficient_settings()
 
         seed = self.latents_seed
         data = self.process_prompts(data, seed)
@@ -1249,8 +1234,6 @@ class SDRunner(
         data["original_model_data"] = self.original_model_data or {}
         if images:
             tab_section = "stablediffusion"
-            if self.use_kandinsky:
-                tab_section = "kandinsky"
             data["tab_section"] = tab_section
 
             # apply filters and convert to base64 if requested
@@ -1291,8 +1274,6 @@ class SDRunner(
     def final_callback(self):
         total = int(self.steps * self.strength)
         tab_section = "stablediffusion"
-        if self.use_kandinsky:
-            tab_section = "kandinsky"
         self.send_message({
             "step": total,
             "total": total,
@@ -1304,8 +1285,6 @@ class SDRunner(
         image = None
         data = self.data
         tab_section = "stablediffusion"
-        if self.use_kandinsky:
-            tab_section = "kandinsky"
         if self.is_vid_action:
             data["video_filename"] = self.txt2vid_file
         steps = int(self.steps * self.strength) if (
@@ -1321,22 +1300,6 @@ class SDRunner(
             "tab_section": tab_section,
             "latents": latents
         }
-        if self.use_kandinsky:
-            """
-            When a Kandinsky response is returned, also return the image embeds
-            and negative image embeds - these can be generated independently
-            with a separate seed and used to generate a new Kandinsky image.
-            Returning the generated embeds here as PIL images allows us to
-            """
-            image_embed = self.image_embeds.view(32, 24)
-            negative_image_embed = self.negative_image_embeds.view(32, 24)
-            transform = transforms.ToPILImage()
-            image_embed = transform(image_embed)
-            negative_image_embed = transform(negative_image_embed)
-            res.update({
-                "image_embed": image_embed,
-                "negative_image_embed": negative_image_embed
-            })
         self.send_message(res, code=MessageCode.PROGRESS)
 
     def unload(self):
@@ -1381,7 +1344,7 @@ class SDRunner(
             self.do_cancel = False
             return
 
-        if not self.pipe and not self.use_kandinsky:
+        if not self.pipe:
             logger.info("pipe is None")
             return
 
@@ -1536,80 +1499,76 @@ class SDRunner(
             kwargs["from_safetensors"] = self.is_safetensors
             logger.info(f"Loading model from scratch {self.reload_model}")
             self.reset_applied_memory_settings()
-            if self.use_kandinsky:
-                logger.info("Using kandinsky model, circumventing model loading")
-                return
+            self.send_model_loading_message(self.model_path)
+
+            if self.enable_controlnet and not self.is_vid2vid:
+                kwargs["controlnet"] = self.controlnet()
             else:
-                self.send_model_loading_message(self.model_path)
+                print("DO NOT USE CONTROLNET", self.enable_controlnet, self.is_vid2vid)
 
-                if self.enable_controlnet and not self.is_vid2vid:
-                    kwargs["controlnet"] = self.controlnet()
-                else:
-                    print("DO NOT USE CONTROLNET", self.enable_controlnet, self.is_vid2vid)
+            if self.is_single_file:
+                try:
+                    self.pipe = self.load_ckpt_model()
+                    # pipeline_action = self.get_pipeline_action()
 
-                if self.is_single_file:
-                    try:
-                        self.pipe = self.load_ckpt_model()
-                        # pipeline_action = self.get_pipeline_action()
+                    # pipeline_class_ = None
+                    # if self.model_version == "SDXL 1.0":
+                    #     pipeline_class_ = StableDiffusionXLPipeline
+                    # elif self.model_version == "SD 2.1":
+                    #     pipeline_class_ = DiffusionPipeline
+                    # else:
+                    #     pipeline_class_ = StableDiffusionPipeline
+                    # print(self.model_version)
 
-                        # pipeline_class_ = None
-                        # if self.model_version == "SDXL 1.0":
-                        #     pipeline_class_ = StableDiffusionXLPipeline
-                        # elif self.model_version == "SD 2.1":
-                        #     pipeline_class_ = DiffusionPipeline
-                        # else:
-                        #     pipeline_class_ = StableDiffusionPipeline
-                        # print(self.model_version)
-
-                        # self.pipe = pipeline_class_.from_single_file(
-                        #     self.model_path,
-                        #     **kwargs
-                        # )
-                    except OSError as e:
-                        return self.handle_missing_files(self.action)
-                else:
-                    logger.info(f"Loading model {self.model_path} from PRETRAINED")
-                    scheduler = self.load_scheduler()
-                    if scheduler:
-                        kwargs["scheduler"] = scheduler
-                    
-                    # self.pipe = AutoImport.class_object(
-                    #     "vid2vid" if self.is_vid2vid else self.action,
-                    #     self.model_data,
-                    #     pipeline_action="vid2vid" if self.is_vid2vid else self.action,
-                    #     single_file=False,
+                    # self.pipe = pipeline_class_.from_single_file(
+                    #     self.model_path,
                     #     **kwargs
                     # )
-                    self.pipe = self.from_pretrained(
-                        pipeline_action=self.action,
-                        model=self.model_path,
-                        **kwargs
-                    )
+                except OSError as e:
+                    return self.handle_missing_files(self.action)
+            else:
+                logger.info(f"Loading model {self.model_path} from PRETRAINED")
+                scheduler = self.load_scheduler()
+                if scheduler:
+                    kwargs["scheduler"] = scheduler
+                
+                # self.pipe = AutoImport.class_object(
+                #     "vid2vid" if self.is_vid2vid else self.action,
+                #     self.model_data,
+                #     pipeline_action="vid2vid" if self.is_vid2vid else self.action,
+                #     single_file=False,
+                #     **kwargs
+                # )
+                self.pipe = self.from_pretrained(
+                    pipeline_action=self.action,
+                    model=self.model_path,
+                    **kwargs
+                )
 
-                if self.pipe is None:
-                    logger.error("Failed to load pipeline")
-                    self.send_message("Failed to load model", MessageCode.ERROR)
-                    return
-            
-                """
-                Initialize pipe for video to video zero
-                """
-                if self.pipe and self.is_vid2vid:
-                    logger.info("Initializing pipe for vid2vid")
-                    self.pipe.unet.set_attn_processor(CrossFrameAttnProcessor(batch_size=2))
-                    self.pipe.controlnet.set_attn_processor(CrossFrameAttnProcessor(batch_size=2))
+            if self.pipe is None:
+                logger.error("Failed to load pipeline")
+                self.send_message("Failed to load model", MessageCode.ERROR)
+                return
+        
+            """
+            Initialize pipe for video to video zero
+            """
+            if self.pipe and self.is_vid2vid:
+                logger.info("Initializing pipe for vid2vid")
+                self.pipe.unet.set_attn_processor(CrossFrameAttnProcessor(batch_size=2))
+                self.pipe.controlnet.set_attn_processor(CrossFrameAttnProcessor(batch_size=2))
 
-                if self.is_outpaint:
-                    logger.info("Initializing vae for inpaint / outpaint")
-                    self.pipe.vae = self.from_pretrained(
-                        pipeline_action="inpaint_vae",
-                        model=self.inpaint_vae_model
-                    )
+            if self.is_outpaint:
+                logger.info("Initializing vae for inpaint / outpaint")
+                self.pipe.vae = self.from_pretrained(
+                    pipeline_action="inpaint_vae",
+                    model=self.inpaint_vae_model
+                )
 
-                if not self.is_depth2img:
-                    self.initialize_safety_checker()
+            if not self.is_depth2img:
+                self.initialize_safety_checker()
 
-                self.controlnet_loaded = self.enable_controlnet
+            self.controlnet_loaded = self.enable_controlnet
 
             if not self.is_depth2img:
                 self.safety_checker = self.pipe.safety_checker

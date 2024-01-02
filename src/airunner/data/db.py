@@ -292,16 +292,6 @@ if not session.query(Prompt).first():
 
             }
         },
-        "kandinsky": {
-            "border": {
-                "txt2img": "#FF0000",
-                "outpaint": "#FF0000",
-            },
-            "fill": {
-                "txt2img": "#FF0000",
-                "outpaint": "#FF00FF",
-            }
-        },
     }
 
     for generator_name, generator_sections in sections_bootstrap_data.items():
@@ -353,28 +343,6 @@ if not session.query(Prompt).first():
             "upscale": ["EULER"],
             "superresolution": ["DDIM", "LMS", "PLMS"],
         },
-        "kandinsky": {
-            "txt2img": [
-                "EULER_ANCESTRAL",
-                "DPM2_A_K",
-                "DDPM",
-                "DPM_PP_2M",
-                "DPM_PP_2M_K",
-                "DPM_2M_SDE_K",
-                "DPM_PP_2M_SDE_K",
-                "DDIM",
-            ],
-            "outpaint": [
-                "EULER_ANCESTRAL",
-                "DPM2_A_K",
-                "DDPM",
-                "DPM_PP_2M",
-                "DPM_PP_2M_K",
-                "DPM_2M_SDE_K",
-                "DPM_PP_2M_SDE_K",
-                "DDIM",
-            ]
-        }
     }
 
     # add all of the schedulers for the defined generator sections
@@ -410,10 +378,6 @@ if not session.query(Prompt).first():
     session.add(TabSection(
         panel="tool_tab_widget",
         active_tab="Embeddings"
-    ))
-    session.add(TabSection(
-        panel="batches_tab",
-        active_tab="Deterministic Batches"
     ))
     session.add(TabSection(
         panel="prompt_builder.ui.tabs",

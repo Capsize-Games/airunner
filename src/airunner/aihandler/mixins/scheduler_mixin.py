@@ -40,8 +40,6 @@ class SchedulerMixin:
 
     @property
     def scheduler_section(self):
-        if self.use_kandinsky:
-            return f"kandinsky_{self.action}"
         return self.action
 
     def clear_scheduler(self):
@@ -52,7 +50,7 @@ class SchedulerMixin:
         self.current_scheduler_name = None
 
     def load_scheduler(self, force_scheduler_name=None, config=None):
-        if self.use_kandinsky or self.is_sd_xl_turbo:
+        if self.is_sd_xl_turbo:
             return None
 
         import diffusers
