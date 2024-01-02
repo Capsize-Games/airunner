@@ -201,22 +201,28 @@ class SettingsManager(QObject):
     def llm_generator_setting(self):
         llm_generator = session.query(LLMGenerator).filter(LLMGenerator.name == self.current_llm_generator).first()
         return llm_generator.generator_settings[0]
+    
+    _generator = None
 
     def find_generator(self, generator_section, generator_name):
         # using sqlalchemy, query the document.settings.generator_settings column
         # and find any with GeneratorSettings.section == self.generator_section and GeneratorSettings.generator_name == self.generator_name
         # return the first result
-        generator_settings = session.query(GeneratorSetting).filter_by(
-            section=generator_section,
-            generator_name=generator_name
-        ).join(Settings).first()
+        if self.generator_settings_override_id:
+            generator_settings = session.query(GeneratorSetting).filter_by(
+                id=self.generator_settings_override_id
+            ).join(Settings).first()
+        else:
+            generator_settings = session.query(GeneratorSetting).filter_by(
+                section=generator_section,
+                generator_name=generator_name
+            ).join(Settings).first()
         if generator_settings is None:
             if not generator_section or generator_section == "" or not generator_name or generator_name == "":
                 return None
             generator_settings = GeneratorSetting(
                 section=generator_section,
-                generator_name=generator_name,
-                settings_id=document.settings.id,
+                generator_name=generator_name
             )
             session.add(generator_settings)
             session.commit()

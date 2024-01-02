@@ -54,29 +54,6 @@
        <string>Stable Diffusion</string>
       </attribute>
       <layout class="QGridLayout" name="gridLayout">
-       <item row="0" column="0">
-        <widget class="GeneratorForm" name="generator_form_stablediffusion" native="true">
-         <property name="generator_section" stdset="0">
-          <string>txt2img</string>
-         </property>
-         <property name="generator_name" stdset="0">
-          <string>stablediffusion</string>
-         </property>
-        </widget>
-       </item>
-      </layout>
-     </widget>
-     <widget class="QWidget" name="tab_kandinsky">
-      <property name="sizePolicy">
-       <sizepolicy hsizetype="Expanding" vsizetype="Preferred">
-        <horstretch>0</horstretch>
-        <verstretch>0</verstretch>
-       </sizepolicy>
-      </property>
-      <attribute name="title">
-       <string>Kandinsky</string>
-      </attribute>
-      <layout class="QGridLayout" name="gridLayout_3">
        <property name="leftMargin">
         <number>0</number>
        </property>
@@ -90,95 +67,13 @@
         <number>0</number>
        </property>
        <item row="0" column="0">
-        <widget class="QTabWidget" name="tab_widget_kandinsky">
-         <property name="tabPosition">
-          <enum>QTabWidget::West</enum>
+        <widget class="GeneratorForm" name="generator_form_stablediffusion" native="true">
+         <property name="generator_section" stdset="0">
+          <string>txt2img</string>
          </property>
-         <property name="currentIndex">
-          <number>1</number>
+         <property name="generator_name" stdset="0">
+          <string>stablediffusion</string>
          </property>
-         <widget class="QWidget" name="tab_kandinsky_txt2img">
-          <property name="sizePolicy">
-           <sizepolicy hsizetype="Expanding" vsizetype="Preferred">
-            <horstretch>0</horstretch>
-            <verstretch>0</verstretch>
-           </sizepolicy>
-          </property>
-          <property name="generator_section" stdset="0">
-           <string>txt2img</string>
-          </property>
-          <property name="generator_name" stdset="0">
-           <string>kandinsky</string>
-          </property>
-          <attribute name="title">
-           <string>txt2img / img2img</string>
-          </attribute>
-          <layout class="QGridLayout" name="gridLayout_8">
-           <property name="leftMargin">
-            <number>0</number>
-           </property>
-           <property name="topMargin">
-            <number>0</number>
-           </property>
-           <property name="rightMargin">
-            <number>0</number>
-           </property>
-           <property name="bottomMargin">
-            <number>0</number>
-           </property>
-           <item row="0" column="0">
-            <widget class="GeneratorForm" name="generator_form_kandinsky_txt2img" native="true">
-             <property name="generator_section" stdset="0">
-              <string>txt2img</string>
-             </property>
-             <property name="generator_name" stdset="0">
-              <string>kandinsky</string>
-             </property>
-            </widget>
-           </item>
-          </layout>
-         </widget>
-         <widget class="QWidget" name="tab_kandinsky_outpaint">
-          <property name="sizePolicy">
-           <sizepolicy hsizetype="Expanding" vsizetype="Preferred">
-            <horstretch>0</horstretch>
-            <verstretch>0</verstretch>
-           </sizepolicy>
-          </property>
-          <property name="generator_section" stdset="0">
-           <string>outpaint</string>
-          </property>
-          <property name="generator_name" stdset="0">
-           <string>kandinsky</string>
-          </property>
-          <attribute name="title">
-           <string>inpaint / outapint</string>
-          </attribute>
-          <layout class="QGridLayout" name="gridLayout_14">
-           <property name="leftMargin">
-            <number>0</number>
-           </property>
-           <property name="topMargin">
-            <number>0</number>
-           </property>
-           <property name="rightMargin">
-            <number>0</number>
-           </property>
-           <property name="bottomMargin">
-            <number>0</number>
-           </property>
-           <item row="0" column="0">
-            <widget class="GeneratorForm" name="generator_form_kandinsky_outpaint" native="true">
-             <property name="generator_section" stdset="0">
-              <string>outpaint</string>
-             </property>
-             <property name="generator_name" stdset="0">
-              <string>kandinsky</string>
-             </property>
-            </widget>
-           </item>
-          </layout>
-         </widget>
         </widget>
        </item>
       </layout>

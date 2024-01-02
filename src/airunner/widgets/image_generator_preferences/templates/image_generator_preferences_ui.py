@@ -22,16 +22,12 @@ class Ui_image_generator_preferences(object):
         self.stablediffusion = QtWidgets.QRadioButton(parent=self.groupBox)
         self.stablediffusion.setObjectName("stablediffusion")
         self.gridLayout_2.addWidget(self.stablediffusion, 0, 0, 1, 1)
-        self.kandinsky = QtWidgets.QRadioButton(parent=self.groupBox)
-        self.kandinsky.setObjectName("kandinsky")
-        self.gridLayout_2.addWidget(self.kandinsky, 1, 0, 1, 1)
         self.gridLayout.addWidget(self.groupBox, 0, 0, 1, 1)
         spacerItem = QtWidgets.QSpacerItem(20, 40, QtWidgets.QSizePolicy.Policy.Minimum, QtWidgets.QSizePolicy.Policy.Expanding)
         self.gridLayout.addItem(spacerItem, 1, 0, 1, 1)
 
         self.retranslateUi(image_generator_preferences)
         self.stablediffusion.toggled['bool'].connect(image_generator_preferences.stablediffusion_toggled) # type: ignore
-        self.kandinsky.toggled['bool'].connect(image_generator_preferences.kandinsky_toggled) # type: ignore
         QtCore.QMetaObject.connectSlotsByName(image_generator_preferences)
 
     def retranslateUi(self, image_generator_preferences):
@@ -39,4 +35,3 @@ class Ui_image_generator_preferences(object):
         image_generator_preferences.setWindowTitle(_translate("image_generator_preferences", "Form"))
         self.groupBox.setTitle(_translate("image_generator_preferences", "Current Image Generator"))
         self.stablediffusion.setText(_translate("image_generator_preferences", "StableDiffusion"))
-        self.kandinsky.setText(_translate("image_generator_preferences", "Kandinsky"))

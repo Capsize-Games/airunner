@@ -6,11 +6,10 @@ from PyQt6.QtWidgets import QWidget
 
 from airunner.aihandler.settings import MAX_SEED
 from airunner.data.db import session
-from airunner.data.models import ActionScheduler, AIModel, ActiveGridSettings, CanvasSettings, Pipeline
+from airunner.data.models import AIModel, ActiveGridSettings, CanvasSettings, Pipeline, GeneratorSetting
 from airunner.utils import get_session
 from airunner.widgets.base_widget import BaseWidget
 from airunner.widgets.generator_form.templates.generatorform_ui import Ui_generator_form
-from airunner.widgets.slider.slider_widget import SliderWidget
 
 
 class GeneratorForm(BaseWidget):
@@ -25,6 +24,7 @@ class GeneratorForm(BaseWidget):
     deterministic_seed = None
     initialized = False
     parent = None
+    generate_signal = pyqtSignal(dict)
 
     @property
     def is_txt2img(self):
@@ -92,7 +92,7 @@ class GeneratorForm(BaseWidget):
     @latents_seed.setter
     def latents_seed(self, val):
         self.settings_manager.set_value("generator.latents_seed", val)
-        self.ui.seed_widget_latents.ui.lineEdit.setText(str(val))
+        self.app.ui.standard_image_widget.ui.seed_widget_latents.ui.lineEdit.setText(str(val))
 
     @property
     def seed(self):
@@ -101,7 +101,7 @@ class GeneratorForm(BaseWidget):
     @seed.setter
     def seed(self, val):
         self.settings_manager.set_value("generator.seed", val)
-        self.ui.seed_widget.ui.lineEdit.setText(str(val))
+        self.app.ui.standard_image_widget.ui.seed_widget.ui.lineEdit.setText(str(val))
 
     @property
     def image_scale(self):
@@ -125,7 +125,7 @@ class GeneratorForm(BaseWidget):
 
     @property
     def controlnet_image(self):
-        return self.ui.controlnet_settings.current_controlnet_image
+        return self.app.ui.standard_image_widget.ui.controlnet_settings.current_controlnet_image
 
     def __init__(self, *args, **kwargs):
         super().__init__(*args, **kwargs)
@@ -133,12 +133,11 @@ class GeneratorForm(BaseWidget):
         self.canvas_settings = session.query(CanvasSettings).first()
 
         self.settings_manager.changed_signal.connect(self.handle_changed_signal)
-
-        # one shot timer
-        timer = QTimer(self)
-        timer.setSingleShot(True)
-        timer.timeout.connect(self.initialize)
-        timer.start(1000)
+        self.initialize()
+    
+    def enable_preset(self, id):
+        self.settings_manager.set_value("generator_settings_override_id", id)
+        self.initialize()
     
     def toggle_advanced_generation(self):
         advanced_mode = self.settings_manager.enable_advanced_mode
@@ -159,12 +158,6 @@ class GeneratorForm(BaseWidget):
             self.ui.seed_widget_latents.update_seed()
         elif key == "enable_advanced_mode":
             self.toggle_advanced_generation()
-
-    def update_image_input_thumbnail(self):
-        self.ui.input_image_widget.set_thumbnail()
-
-    def update_controlnet_settings_thumbnail(self):
-        self.ui.controlnet_settings.set_thumbnail()
 
     """
     Slot functions
@@ -218,10 +211,10 @@ class GeneratorForm(BaseWidget):
 
     def generate(self, image=None, seed=None):
         if seed is None:
-            seed = self.ui.seed_widget.seed
-        if self.ui.samples_widget.current_value > 1:
+            seed = self.app.ui.standard_image_widget.ui.seed_widget.seed
+        if self.app.ui.standard_image_widget.ui.samples_widget.current_value > 1:
             self.app.client.do_process_queue = False
-        total_samples = self.ui.samples_widget.current_value if not self.is_txt2vid else 1
+        total_samples = self.app.ui.standard_image_widget.ui.samples_widget.current_value if not self.is_txt2vid else 1
         for n in range(total_samples):
             if self.settings_manager.generator.use_prompt_builder and n > 0:
                 seed = int(seed) + n
@@ -249,7 +242,7 @@ class GeneratorForm(BaseWidget):
                 self.settings_manager.generator.enable_input_image
             )
             if enable_input_image:
-                input_image = self.ui.input_image_widget.current_input_image
+                input_image = self.app.ui.standard_image_widget.ui.input_image_widget.current_input_image
             elif self.generator_section == "txt2img":
                 input_image = override_data.get("input_image", None)
                 image = input_image
@@ -328,7 +321,7 @@ class GeneratorForm(BaseWidget):
                 "mask": mask,
                 "image": image,
                 "original_image": original_image,
-                "location": self.canvas.active_grid_area_rect
+                "location": QRect(0, 0, self.settings_manager.working_width, self.settings_manager.working_height)
             }, seed=seed, override_data=override_data)
         elif self.generator_section == "vid2vid":
             images = self.prep_video()
@@ -386,6 +379,7 @@ class GeneratorForm(BaseWidget):
 
 
         # get the model from the database
+        print(model_data)
         model = self.settings_manager.models.filter_by(
             name=model_data["name"] if "name" in model_data \
                 else self.settings_manager.generator.model
@@ -426,7 +420,6 @@ class GeneratorForm(BaseWidget):
                 "enabled", 
                 "default",
             ]
-            print(input_image_info)
             original_model_data = {
                 key: model_data.get(
                     key, input_image_info.get(key, "")) for key in keys
@@ -552,8 +545,8 @@ class GeneratorForm(BaseWidget):
         self.update_seed()
 
     def update_seed(self):
-        self.ui.seed_widget.update_seed()
-        self.ui.seed_widget_latents.update_seed()
+        self.app.ui.standard_image_widget.ui.seed_widget.update_seed()
+        self.app.ui.standard_image_widget.ui.seed_widget_latents.update_seed()
 
     def set_primary_seed(self, seed=None):
         if self.deterministic_data:
@@ -600,158 +593,20 @@ class GeneratorForm(BaseWidget):
         self.settings_manager.generator_section = self.generator_section
         self.settings_manager.generator_name = self.generator_name
         self.set_form_values()
-        self.load_pipelines()
-        self.load_versions()
-        self.load_models()
-        self.load_schedulers()
-        self.set_controlnet_settings_properties()
-        self.set_input_image_widget_properties()
-
-        # listen to emitted signal from self.settings_manager.changed_signal
         self.settings_manager.changed_signal.connect(self.handle_settings_manager_changed)
-
-        # find all SliderWidget widgets in the template and call initialize
-        for widget in self.findChildren(SliderWidget):
-            try:
-                current_value = getattr(
-                    self.generator_settings,
-                    widget.property("settings_property").split(".")[1]
-                )
-            except Exception as e:
-                current_value = None
-            if current_value is not None:
-                widget.setProperty("current_value", current_value)
-            widget.initialize()
-
-        self.ui.seed_widget.setProperty("generator_section", self.generator_section)
-        self.ui.seed_widget.setProperty("generator_name", self.generator_name)
-        # self.ui.seed_widget.initialize(
-        #     self.generator_section,
-        #     self.generator_name
-        # )
-
-        self.ui.seed_widget_latents.setProperty("generator_section", self.generator_section)
-        self.ui.seed_widget_latents.setProperty("generator_name", self.generator_name)
-        # self.ui.seed_widget_latents.initialize(
-        #     self.generator_section,
-        #     self.generator_name
-        # )
         self.initialized = True
 
     def handle_settings_manager_changed(self, key, val, settings_manager):
         if settings_manager.generator_section == self.settings_manager.generator_section and settings_manager.generator_name == self.settings_manager.generator_name:
             self.set_form_values()
 
-    def set_controlnet_settings_properties(self):
-        self.ui.controlnet_settings.initialize(
-            self.generator_name,
-            self.generator_section
-        )
-
-    def set_input_image_widget_properties(self):
-        self.ui.input_image_widget.initialize(
-            self.generator_name,
-            self.generator_section
-        )
-        self.ui.controlnet_settings.initialize(
-            self.generator_name,
-            self.generator_section
-        )
-
     def clear_prompts(self):
         self.ui.prompt.setPlainText("")
         self.ui.negative_prompt.setPlainText("")
 
-    def load_pipelines(self):
-        self.ui.pipeline.blockSignals(True)
-        self.ui.pipeline.clear()
-        pipeline_names = ["txt2img / img2img", "inpaint / outpaint", "depth2img", "pix2pix", "upscale", "superresolution", "txt2vid"]
-        self.ui.pipeline.addItems(pipeline_names)
-        current_pipeline = getattr(self.settings_manager, f"current_section_{self.settings_manager.current_image_generator}")
-        if current_pipeline != "":
-            if current_pipeline == "txt2img":
-                current_pipeline = "txt2img / img2img"
-            elif current_pipeline == "outpaint":
-                current_pipeline = "inpaint / outpaint"
-            self.ui.pipeline.setCurrentText(current_pipeline)
-        self.ui.pipeline.blockSignals(False)
-    
-    def load_versions(self):
-        self.ui.version.blockSignals(True)
-        self.ui.version.clear()
-        pipelines = session.query(Pipeline).filter(Pipeline.category == self.settings_manager.current_image_generator).all()
-        version_names = set([pipeline.version for pipeline in pipelines])
-        self.ui.version.addItems(version_names)
-        current_version = getattr(self.settings_manager, f"current_version_{self.settings_manager.current_image_generator}")
-        if current_version != "":
-            self.ui.version.setCurrentText(current_version)
-        self.ui.version.blockSignals(False)
-
-    def handle_pipeline_changed(self, val):
-        if val == "txt2img / img2img":
-            val = "txt2img"
-        elif val == "inpaint / outpaint":
-            val = "outpaint"
-        self.settings_manager.set_value(f"current_section_{self.settings_manager.current_image_generator}", val)
-        self.load_versions()
-        self.load_models()
-
-    def handle_version_changed(self, val):
-        print("VERSION CHANGED", val)
-        self.settings_manager.set_value(f"current_version_{self.settings_manager.current_image_generator}", val)
-        self.load_models()
-
-    def load_models(self):
-        self.ui.model.blockSignals(True)
-        self.clear_models()
-
-        image_generator = self.settings_manager.current_image_generator
-        pipeline = getattr(self.settings_manager, f"current_section_{image_generator}")
-        version = getattr(self.settings_manager, f"current_version_{image_generator}")
-
-        models = session.query(AIModel).filter(
-            AIModel.category == image_generator,
-            AIModel.pipeline_action == pipeline,
-            AIModel.version == version,
-            AIModel.enabled == True
-        ).all()
-        model_names = [model.name for model in models]
-        self.ui.model.addItems(model_names)
-        current_model = self.settings_manager.generator.model
-        if current_model != "":
-            self.ui.model.setCurrentText(current_model)
-        else:
-            self.settings_manager.set_value("generator.model", self.ui.model.currentText())
-        self.ui.model.blockSignals(False)
-
-    def load_schedulers(self):
-        self.ui.scheduler.blockSignals(True)
-        session = get_session()
-        schedulers = session.query(ActionScheduler).filter(
-            ActionScheduler.section == self.generator_section,
-            ActionScheduler.generator_name == self.generator_name
-        ).all()
-        scheduler_names = [s.scheduler.display_name for s in schedulers]
-        self.ui.scheduler.clear()
-        self.ui.scheduler.addItems(scheduler_names)
-
-        current_scheduler = self.settings_manager.generator.scheduler
-        if current_scheduler != "":
-            self.ui.scheduler.setCurrentText(current_scheduler)
-        else:
-            self.settings_manager.set_value("generator.scheduler", self.ui.scheduler.currentText())
-        self.ui.scheduler.blockSignals(False)
-
     def set_form_values(self):
         self.set_form_value("prompt", "generator.prompt")
         self.set_form_value("negative_prompt", "generator.negative_prompt")
-        # self.set_form_value("use_prompt_builder_checkbox", "generator.use_prompt_builder")
-        # self.set_form_value("use_prompt_builder_checkbox", "generator.use_prompt_builder")
-        self.set_form_property("steps_widget", "current_value", "generator.steps")
-        self.set_form_property("scale_widget", "current_value", "generator.scale")
-
-    def clear_models(self):
-        self.ui.model.clear()
 
     def new_batch(self, index, image, data):
         self.new_batch(index, image, data)
