@@ -303,8 +303,6 @@ class SettingsManager(QObject):
         current_tab = self.current_tab
         if current_tab == "stablediffusion":
             return self.current_section_stablediffusion
-        elif current_tab == "kandinsky":
-            return self.current_section_kandinsky
 
     def save(self):
         session.commit()
