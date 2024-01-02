@@ -628,13 +628,10 @@ class Settings(BaseModel):
     # generator tab sections
     current_tab = Column(String, default="stablediffusion")
     current_section_stablediffusion = Column(String, default="txt2img")
-    current_section_kandinsky = Column(String, default="txt2img")
-    current_section_shape = Column(String, default="txt2img")
     generator_settings = relationship("GeneratorSetting", backref="settings")
 
     # generator version
     current_version_stablediffusion = Column(String, default="SD 1.5")
-    current_version_kandinsky = Column(String, default="K 2.1")
 
     # tool and bottom panel tab sections
     current_tool_tab = Column(String, default="brush")
