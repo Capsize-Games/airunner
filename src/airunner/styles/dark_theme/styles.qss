@@ -209,10 +209,6 @@ GeneratorTabWidget#generator_widget QTabWidget::pane {
 
 GeneratorTabWidget#generator_widget QTabWidget QWidget#tab_stablediffusion {
 }
-GeneratorTabWidget#generator_widget QTabWidget QWidget#tab_kandinsky {
-}
-GeneratorTabWidget#generator_widget QTabWidget QWidget#tab_shape {
-}
 GeneratorTabWidget#generator_widget GeneratorForm QWidget#scrollAreaWidgetContents {
 }
 QFrame#button_menu {

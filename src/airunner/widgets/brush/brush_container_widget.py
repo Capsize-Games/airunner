@@ -7,6 +7,5 @@ class BrushContainerWidget(BaseWidget):
 
     def __init__(self, *args, **kwargs):
         super().__init__(*args, **kwargs)
-        print(self.settings_manager.brush_settings.size)
         self.ui.brush_size_slider.setProperty("current_value", self.settings_manager.brush_settings.size)
         self.ui.brush_size_slider.initialize()

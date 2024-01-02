@@ -348,7 +348,6 @@ class LayerContainerWidget(BaseWidget):
         session = get_session()
         session.add(self.current_layer)
         save_session(session)    
-        self.app.canvas.do_draw()
 
     def show_layers(self):
         pass

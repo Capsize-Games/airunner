@@ -473,7 +473,6 @@ def create_airunner_paths():
             path_settings.embeddings_path,
             path_settings.lora_path,
             path_settings.image_path,
-            path_settings.gif_path,
             path_settings.video_path
         ]
         for index, path in enumerate(paths):
@@ -501,3 +500,34 @@ def delete_image(path):
     with lock:
         if os.path.exists(path):
             os.remove(path)
+
+
+import os
+import sys
+import subprocess
+import tempfile
+import urllib.request
+
+def install_library_from_url(url, install_dir):
+    # Download the wheel file
+    wheel_file = urllib.request.urlretrieve(url)[0]
+    # Install the library
+    subprocess.check_call([sys.executable, "-m", "pip", "install", "--target", install_dir, wheel_file])
+
+def load_extension(extension_dir):
+    # Create a subdirectory for the installed libraries
+    install_dir = os.path.join(extension_dir, "libs")
+    os.makedirs(install_dir, exist_ok=True)
+
+    # Read the dependencies file
+    with open(os.path.join(extension_dir, "dependencies.txt")) as f:
+        dependencies = f.read().splitlines()
+
+    # Install the dependencies
+    for url in dependencies:
+        install_library_from_url(url, install_dir)
+
+    # Add the directory to sys.path
+    sys.path.append(install_dir)
+
+    # Now you can import any library that was in the extension's dependencies
