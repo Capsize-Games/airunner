@@ -1,15 +1,5 @@
 model_bootstrap_data = [
     {
-        "name": "Shap-e",
-        "path": "openai/shap-e-img2img",
-        "branch": "fp16",
-        "version": "SD 1.5",
-        "category": "shapegif",
-        "pipeline_action": "img2img",
-        "enabled": True,
-        "model_type": "art"
-    },
-    {
         "name": "Stable Diffusion 2.1 512",
         "path": "stabilityai/stable-diffusion-2",
         "branch": "fp16",
@@ -70,26 +60,6 @@ model_bootstrap_data = [
         "model_type": "art"
     },
     {
-        "name": "Kandinsky 2.1",
-        "path": "kandinsky-community/kandinsky-2-1",
-        "branch": "fp16",
-        "version": "K 2.1",
-        "category": "kandinsky",
-        "pipeline_action": "txt2img",
-        "enabled": True,
-        "model_type": "art"
-    },
-    {
-        "name": "Shap-e",
-        "path": "openai/shap-e",
-        "branch": "fp16",
-        "version": "SD 1.5",
-        "category": "shapegif",
-        "pipeline_action": "txt2img",
-        "enabled": True,
-        "model_type": "art"
-    },
-    {
         "name": "Stable Diffusion Inpaint 2",
         "path": "stabilityai/stable-diffusion-2-inpainting",
         "branch": "fp16",
@@ -105,16 +75,6 @@ model_bootstrap_data = [
         "branch": "fp16",
         "version": "SD 1.5",
         "category": "stablediffusion",
-        "pipeline_action": "outpaint",
-        "enabled": True,
-        "model_type": "art"
-    },
-    {
-        "name": "Kandinsky Inpaint 2.1",
-        "path": "kandinsky-community/kandinsky-2-1-inpaint",
-        "branch": "fp16",
-        "version": "K 2.1",
-        "category": "kandinsky",
         "pipeline_action": "outpaint",
         "enabled": True,
         "model_type": "art"

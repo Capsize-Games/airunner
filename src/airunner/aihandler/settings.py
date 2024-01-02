@@ -32,36 +32,6 @@ AVAILABLE_SCHEDULERS_BY_ACTION = {
 AVAILABLE_SCHEDULERS_BY_ACTION.update({
     "upscale": [Scheduler.EULER.value],
     "superresolution": [Scheduler.DDIM.value, Scheduler.LMS.value, Scheduler.PLMS.value],
-    "kandinsky_txt2img": [
-        Scheduler.EULER_ANCESTRAL.value,
-        Scheduler.DPM2_A_K.value,
-        Scheduler.DDPM.value,
-        Scheduler.DPM_PP_2M.value,
-        Scheduler.DPM_PP_2M_K.value,
-        Scheduler.DPM_2M_SDE_K.value,
-        Scheduler.DPM_PP_2M_SDE_K.value,
-        Scheduler.DDIM.value,
-    ],
-    "kandinsky_img2img": [
-        Scheduler.DDPM.value,
-        Scheduler.DPM_PP_2M.value,
-        Scheduler.DPM_PP_2M_K.value,
-        Scheduler.DPM_2M_SDE_K.value,
-        Scheduler.DPM_PP_2M_SDE_K.value,
-        Scheduler.DDIM.value,
-    ],
-    "kandinsky_outpaint": [
-        Scheduler.EULER_ANCESTRAL.value,
-        Scheduler.DPM2_A_K.value,
-        Scheduler.DDPM.value,
-        Scheduler.DPM_PP_2M.value,
-        Scheduler.DPM_PP_2M_K.value,
-        Scheduler.DPM_2M_SDE_K.value,
-        Scheduler.DPM_PP_2M_SDE_K.value,
-        Scheduler.DDIM.value,
-    ],
-    "shapegif_txt2img": [Scheduler.HEUN.value, ],
-    "shapegif_img2img": [Scheduler.HEUN.value, ]
 })
 DEFAULT_SCHEDULER = SCHEDULERS[0]
 DEFAULT_MODEL = "Stable Diffusion V2"
