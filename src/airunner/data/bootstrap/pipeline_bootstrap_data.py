@@ -36,12 +36,6 @@ pipeline_bootstrap_data = pipelines = [
     },
     {
         "pipeline_action": "txt2img",
-        "version": "SD 1.5",
-        "category": "shapegif",
-        "classname": "diffusers.DiffusionPipeline"
-    },
-    {
-        "pipeline_action": "txt2img",
         "version": "SDXL 1.0",
         "category": "stablediffusion",
         "classname": "diffusers.AutoPipelineForText2Image"
@@ -57,12 +51,6 @@ pipeline_bootstrap_data = pipelines = [
         "version": "SDXL Turbo",
         "category": "stablediffusion",
         "classname": "diffusers.AutoPipelineForText2Image"
-    },
-    {
-        "pipeline_action": "txt2img",
-        "version": "K 2.1",
-        "category": "kandinsky",
-        "classname": "diffusers.KandinskyPipeline"
     },
     {
         "pipeline_action": "txt2img",
@@ -85,21 +73,9 @@ pipeline_bootstrap_data = pipelines = [
     },
     {
         "pipeline_action": "img2img",
-        "version": "SD 1.5",
-        "category": "shapegif",
-        "classname": "diffusers.DiffusionPipeline",
-    },
-    {
-        "pipeline_action": "img2img",
         "version": "SD 2.1",
         "category": "stablediffusion",
         "classname": "diffusers.AutoPipelineForImage2Image",
-    },
-    {
-        "pipeline_action": "img2img",
-        "version": "K 2.1",
-        "category": "kandinsky",
-        "classname": "diffusers.KandinskyImg2ImgPipeline",
     },
     {
         "pipeline_action": "img2img",
@@ -125,12 +101,6 @@ pipeline_bootstrap_data = pipelines = [
         "version": "SD 1.5",
         "category": "conrolnet",
         "classname": "diffusers.StableDiffusionControlNetInpaintPipeline",
-    },
-    {
-        "pipeline_action": "outpaint",
-        "version": "K 2.1",
-        "category": "kandinsky",
-        "classname": "diffusers.KandinskyInpaintPipeline",
     },
     {
         "pipeline_action": "outpaint",

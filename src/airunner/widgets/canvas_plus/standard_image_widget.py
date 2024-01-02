@@ -17,7 +17,8 @@ from airunner.widgets.canvas_plus.standard_base_widget import StandardBaseWidget
 from airunner.widgets.canvas_plus.templates.standard_image_widget_ui import Ui_standard_image_widget
 from airunner.utils import delete_image, load_metadata_from_image, prepare_metadata
 from airunner.settings import CONTROLNET_OPTIONS
-
+from airunner.widgets.slider.slider_widget import SliderWidget
+from airunner.data.models import ActionScheduler, Pipeline
 
 class StandardImageWidget(StandardBaseWidget):
     widget_class_ = Ui_standard_image_widget
@@ -27,20 +28,52 @@ class StandardImageWidget(StandardBaseWidget):
     image_path = None
     image_label = None
     image_batch = None
+    meta_data = None
 
     def __init__(self, *args, **kwargs):
         super().__init__(*args, **kwargs)
-        self.ui.batch_container.hide()
-        self.ui.tableWidget.hide()
-        self.ui.similar_groupbox.hide()
-        self.load_controlnet_options()
+        self.ui.advanced_settings.hide()
         self.load_upscale_options()
+        self.set_controlnet_settings_properties()
+        self.set_input_image_widget_properties()
+        self.ui.ddim_eta_slider_widget.hide()
+        self.ui.frames_slider_widget.hide()
+        self.initialize()
     
-    def load_controlnet_options(self):
-        self.ui.controlnet.blockSignals(True)
-        self.ui.controlnet.clear()
-        self.ui.controlnet.addItems(CONTROLNET_OPTIONS)
-        self.ui.controlnet.blockSignals(False)
+    def set_controlnet_settings_properties(self):
+        self.ui.controlnet_settings.initialize(
+            self.settings_manager.generator_name,
+            self.settings_manager.generator_section
+        )
+
+    def set_input_image_widget_properties(self):
+        self.ui.input_image_widget.initialize(
+            self.settings_manager.generator_name,
+            self.settings_manager.generator_section
+        )
+        self.ui.controlnet_settings.initialize(
+            self.settings_manager.generator_name,
+            self.settings_manager.generator_section
+        )
+    
+    def update_image_input_thumbnail(self):
+        self.ui.input_image_widget.set_thumbnail()
+
+    def update_controlnet_settings_thumbnail(self):
+        self.ui.controlnet_settings.set_thumbnail()
+    
+    def update_thumbnails(self):
+        self.update_image_input_thumbnail()
+        self.update_controlnet_settings_thumbnail()
+    
+    def upscale_number_changed(self, val):
+        print("upscale int", val)
+    
+    def handle_advanced_settings_checkbox(self, val):
+        if val:
+            self.ui.advanced_settings.show()
+        else:
+            self.ui.advanced_settings.hide()
     
     def load_upscale_options(self):
         self.ui.upscale_model.blockSignals(True)
@@ -63,90 +96,27 @@ class StandardImageWidget(StandardBaseWidget):
     
     def handle_controlnet_changed(self, val):
         self.settings_manager.set_value("standard_image_widget_settings.controlnet", val)
-    
-    def reset_prompt_clicked(self):
-        self.settings_manager.set_value("standard_image_widget_settings.prompt", "")
-        self.set_prompt_text()
 
-    def reset_negative_prompt_clicked(self):
-        self.settings_manager.set_value("standard_image_widget_settings.negative_prompt", "")
-        self.set_negative_prompt_text()
-
-    def toggle_prompt_reset_button(self, enabled):
-        self.ui.reset_prompt.setEnabled(enabled)
-
-    def toggle_negative_prompt_reset_button(self, enabled):
-        self.ui.reset_negative_prompt.setEnabled(enabled)
-
-    def prompt_changed(self):
-        val = self.ui.prompt.toPlainText()
-        self.settings_manager.set_value("standard_image_widget_settings.prompt", val)
-        self.toggle_prompt_reset_button(val != "")
-
-    def negative_prompt_changed(self):
-        val = self.ui.negative_prompt.toPlainText()
-        self.settings_manager.set_value("standard_image_widget_settings.negative_prompt", val)
-        self.toggle_negative_prompt_reset_button(val != "")
-    
     def handle_image_data(self, data):
         images = data["images"]
         if len(images) == 1:
             self.load_image_from_path(data["path"])
-        else:
-            self.load_batch_images(images)
-    
-    def clear_batch_images(self):
-        for widget in self.ui.batch_container.findChildren(QLabel):
-            widget.deleteLater()
-
-    def load_batch_images(self, images):
-        self.ui.batch_container.show()
-        self.clear_batch_images()
-        images = images[:4]
-        for image in images:
-            # resize the image to 128x128
-            image = image.resize((128, 128))
-            qimage = ImageQt(image)
-            pixmap = QPixmap.fromImage(qimage)
-            label = QLabel()
-            label.setPixmap(pixmap)
-            self.ui.batch_container.layout().addWidget(label)
     
     def load_image_from_path(self, image_path):
         image = Image.open(image_path)
         self.load_image_from_object(image=image, image_path=image_path)
     
     def load_image_from_object(self, image, image_path=NotImplemented):
-        if self.app.image_editor_tab_name == "Standard":
-            self.set_pixmap(image=image, image_path=image_path)
-    
-    def set_prompt_text(self):
-        self.ui.prompt.blockSignals(True)
-        prompt = self.settings_manager.standard_image_widget_settings.prompt
-        self.toggle_prompt_reset_button(prompt != "")
-        if not prompt:
-            prompt = self.meta_data.get("prompt", None)
-        self.ui.prompt.setPlainText(prompt)
-        self.ui.prompt.blockSignals(False)
-
-    def set_negative_prompt_text(self):
-        self.ui.negative_prompt.blockSignals(True)
-        negative_prompt = self.settings_manager.standard_image_widget_settings.negative_prompt
-        self.toggle_negative_prompt_reset_button(negative_prompt != "")
-        if not negative_prompt:
-            negative_prompt = self.meta_data.get("negative_prompt", None)
-        self.ui.negative_prompt.setPlainText(negative_prompt)
-        self.ui.negative_prompt.blockSignals(False)
+        self.set_pixmap(image=image, image_path=image_path)
 
     def set_pixmap(self, image_path=None, image=None):
         self.image_path = image_path
         self.image = image
         meta_data = image.info
+        print("META DATA", meta_data)
         self.meta_data = meta_data if meta_data is not None else load_metadata_from_image(image)
-        size = self.ui.image_frame.width() - 20
-
-        self.set_prompt_text()
-        self.set_negative_prompt_text()
+        return
+        #size = self.ui.image_frame.width() - 20
 
         pixmap = self._pixmap
         if not pixmap:
@@ -196,7 +166,6 @@ class StandardImageWidget(StandardBaseWidget):
         
         # get the metadata from this image, load it as a png first
         # then load the metadata from the png
-        self.clear_table_data()
         if image_path:
             image = Image.open(image_path)
             meta_data = image.info
@@ -204,11 +173,7 @@ class StandardImageWidget(StandardBaseWidget):
             meta_data["width"] = width
             meta_data["height"] = height
 
-            self.set_table_data(meta_data)
-        
-        self.ui.controls_container.show()
-        self.ui.image_frame.show()
-        self.ui.similar_groupbox.show()
+            #self.set_table_data(meta_data)
     
     def handle_label_clicked(self, event):
         # create a popup window and show the full size image in it
@@ -234,23 +199,6 @@ class StandardImageWidget(StandardBaseWidget):
         layout.addWidget(label)
         
         self.dialog.show()
-    
-    def set_table_data(self, data):
-        if "options" in data:
-            data = data["options"]
-
-        for k, v in data.items():
-            self.ui.tableWidget.insertRow(self.ui.tableWidget.rowCount())
-            self.ui.tableWidget.setItem(self.ui.tableWidget.rowCount()-1, 0, QTableWidgetItem(str(k)))
-            self.ui.tableWidget.setItem(self.ui.tableWidget.rowCount()-1, 1, QTableWidgetItem(str(v)))
-        self.ui.tableWidget.resizeColumnsToContents()
-        self.ui.tableWidget.resizeRowsToContents()
-        self.ui.tableWidget.update()
-        QApplication.processEvents()
-
-    def clear_table_data(self):
-        self.ui.tableWidget.clearContents()
-        self.ui.tableWidget.setRowCount(0)
     
     def similar_image_with_prompt(self):
         """
@@ -343,3 +291,139 @@ class StandardImageWidget(StandardBaseWidget):
             image=self.image,
             override_data=meta_data
         )
+    
+    def set_form_values(self):
+        self.set_form_property("steps_widget", "current_value", "generator.steps")
+        self.set_form_property("scale_widget", "current_value", "generator.scale")
+    
+    def load_pipelines(self):
+        self.ui.pipeline.blockSignals(True)
+        self.ui.pipeline.clear()
+        pipeline_names = ["txt2img / img2img", "inpaint / outpaint", "depth2img", "pix2pix", "upscale", "superresolution", "txt2vid"]
+        self.ui.pipeline.addItems(pipeline_names)
+        current_pipeline = getattr(self.settings_manager, f"current_section_{self.settings_manager.current_image_generator}")
+        if current_pipeline != "":
+            if current_pipeline == "txt2img":
+                current_pipeline = "txt2img / img2img"
+            elif current_pipeline == "outpaint":
+                current_pipeline = "inpaint / outpaint"
+            self.ui.pipeline.setCurrentText(current_pipeline)
+        self.ui.pipeline.blockSignals(False)
+    
+    def load_versions(self):
+        session = get_session()
+        self.ui.version.blockSignals(True)
+        self.ui.version.clear()
+        pipelines = session.query(Pipeline).filter(Pipeline.category == self.settings_manager.current_image_generator).all()
+        version_names = set([pipeline.version for pipeline in pipelines])
+        self.ui.version.addItems(version_names)
+        current_version = getattr(self.settings_manager, f"current_version_{self.settings_manager.current_image_generator}")
+        if current_version != "":
+            self.ui.version.setCurrentText(current_version)
+        self.ui.version.blockSignals(False)
+
+    def handle_pipeline_changed(self, val):
+        if val == "txt2img / img2img":
+            val = "txt2img"
+        elif val == "inpaint / outpaint":
+            val = "outpaint"
+        self.settings_manager.set_value(f"current_section_{self.settings_manager.current_image_generator}", val)
+        self.load_versions()
+        self.load_models()
+
+    def handle_version_changed(self, val):
+        print("VERSION CHANGED", val)
+        self.settings_manager.set_value(f"current_version_{self.settings_manager.current_image_generator}", val)
+        self.load_models()
+
+    def load_models(self):
+        session = get_session()
+        self.ui.model.blockSignals(True)
+        self.clear_models()
+
+        image_generator = self.settings_manager.current_image_generator
+        pipeline = getattr(self.settings_manager, f"current_section_{image_generator}")
+        version = getattr(self.settings_manager, f"current_version_{image_generator}")
+
+        models = session.query(AIModel).filter(
+            AIModel.category == image_generator,
+            AIModel.pipeline_action == pipeline,
+            AIModel.version == version,
+            AIModel.enabled == True
+        ).all()
+        model_names = [model.name for model in models]
+        self.ui.model.addItems(model_names)
+        current_model = self.settings_manager.generator.model
+        if current_model != "":
+            self.ui.model.setCurrentText(current_model)
+        else:
+            self.settings_manager.set_value("generator.model", self.ui.model.currentText())
+        self.ui.model.blockSignals(False)
+
+    def load_schedulers(self):
+        self.ui.scheduler.blockSignals(True)
+        session = get_session()
+        schedulers = session.query(ActionScheduler).filter(
+            ActionScheduler.section == getattr(self.settings_manager, f"current_section_{self.settings_manager.current_image_generator}"),
+            ActionScheduler.generator_name == self.settings_manager.current_image_generator
+        ).all()
+        scheduler_names = [s.scheduler.display_name for s in schedulers]
+        self.ui.scheduler.clear()
+        self.ui.scheduler.addItems(scheduler_names)
+
+        current_scheduler = self.settings_manager.generator.scheduler
+        if current_scheduler != "":
+            self.ui.scheduler.setCurrentText(current_scheduler)
+        else:
+            self.settings_manager.set_value("generator.scheduler", self.ui.scheduler.currentText())
+        self.ui.scheduler.blockSignals(False)
+    
+    def clear_models(self):
+        self.ui.model.clear()
+    
+    def handle_settings_manager_changed(self, key, val, settings_manager):
+        print("handle_settings_manager_changed", key, val)
+        if settings_manager.generator_section == self.settings_manager.generator_section and settings_manager.generator_name == self.settings_manager.generator_name:
+            self.set_form_values()
+            self.load_pipelines()
+            self.load_versions()
+            self.load_models()
+            self.load_schedulers()
+
+    def initialize(self):
+        self.set_form_values()
+        self.load_pipelines()
+        self.load_versions()
+        self.load_models()
+        self.load_schedulers()
+
+        # listen to emitted signal from self.settings_manager.changed_signal
+        self.settings_manager.changed_signal.connect(self.handle_settings_manager_changed)
+
+        # find all SliderWidget widgets in the template and call initialize
+        for widget in self.findChildren(SliderWidget):
+            try:
+                current_value = getattr(
+                    self.generator_settings,
+                    widget.property("settings_property").split(".")[1]
+                )
+            except Exception as e:
+                current_value = None
+            if current_value is not None:
+                widget.setProperty("current_value", current_value)
+            widget.initialize()
+
+        self.ui.seed_widget.setProperty("generator_section", getattr(self.settings_manager, f"current_section_{self.settings_manager.current_image_generator}"))
+        self.ui.seed_widget.setProperty("generator_name", self.settings_manager.current_image_generator)
+        # self.ui.seed_widget.initialize(
+        #     self.generator_section,
+        #     self.generator_name
+        # )
+
+        self.ui.seed_widget_latents.setProperty("generator_section", getattr(self.settings_manager, f"current_section_{self.settings_manager.current_image_generator}"))
+        self.ui.seed_widget_latents.setProperty("generator_name", self.settings_manager.current_image_generator)
+        # self.ui.seed_widget_latents.initialize(
+        #     self.generator_section,
+        #     self.generator_name
+        # )
+        self.initialized = True
