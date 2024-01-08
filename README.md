@@ -12,7 +12,7 @@
 
 ---
 
-### Stable Diffusion and Kandinsky on your own hardware 
+### Stable Diffusion on your own hardware 
 
 No web server to run, additional requirements to install or technical knowledge required. 
 

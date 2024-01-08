@@ -8,7 +8,7 @@ from airunner.utils import get_main_window
 
 class BaseWidget(QWidget):
     widget_class_ = None
-    icons = {}
+    icons = ()
     ui = None
     qss_filename = None
 
@@ -26,25 +26,42 @@ class BaseWidget(QWidget):
     def __init__(self, *args, **kwargs):
         super().__init__(*args, **kwargs)
         self.app = get_main_window()
+        self.app.loaded.connect(self.initialize)
         self.settings_manager = SettingsManager()
         if self.widget_class_:
             self.ui = self.widget_class_()
         if self.ui:
             self.ui.setupUi(self)
-            if self.qss_filename:
-                theme_name = "dark_theme"
-                here = os.path.dirname(os.path.realpath(__file__))
-                with open(os.path.join(here, "..", "styles", theme_name, self.qss_filename), "r") as f:
-                    stylesheet = f.read()
-                self.setStyleSheet(stylesheet)
-
-    def set_stylesheet(self, is_dark=None, button_name=None, icon=None):
-        is_dark = self.is_dark if is_dark is None else is_dark
-        if button_name is None or icon is None:
-            for button_name, icon in self.icons.items():
-                self.set_button_icon(is_dark, button_name, icon)
-        else:
-            self.set_button_icon(is_dark, button_name, icon)
+            # if self.qss_filename:
+            #     theme_name = "dark_theme"
+            #     here = os.path.dirname(os.path.realpath(__file__))
+            #     with open(os.path.join(here, "..", "styles", theme_name, self.qss_filename), "r") as f:
+            #         stylesheet = f.read()
+            #     self.setStyleSheet(stylesheet)
+            self.set_icons()
+    
+    def initialize(self):
+        """
+        Triggered when the app is loaded.
+        Override this function in order to initialize the widget rather than
+        using __init__.
+        """
+        pass
+    
+    def set_icons(self):
+        theme = "dark" if self.is_dark else "light"
+        for icon_data in self.icons:
+            icon_name = icon_data[0]
+            widget_name = icon_data[1]
+            print(icon_name, widget_name)
+            print(self.icons)
+            icon = QtGui.QIcon()
+            icon.addPixmap(
+                QtGui.QPixmap(f":/icons/{theme}/{icon_name}.svg"),
+                QtGui.QIcon.Mode.Normal,
+                QtGui.QIcon.State.Off)
+            getattr(self.ui, widget_name).setIcon(icon)
+        self.update()
 
     def set_button_icon(self, is_dark, button_name, icon):
         try:
@@ -130,8 +147,12 @@ class BaseWidget(QWidget):
                         if not self.set_is_checked(element, target_val):
                             raise Exception(f"Could not set value for {element} to {target_val}")
 
-    def set_form_property(self, element, property_name, settings_key_name):
+    def set_form_property(self, element, property_name, settings_key_name=None, settings=None):
         val = self.get_form_element(element).property(property_name)
-        target_val = self.settings_manager.get_value(settings_key_name)
+        if settings_key_name:
+            target_val = self.settings_manager.get_value(settings_key_name)
+        elif settings:
+            target_val = getattr(settings, property_name)
+
         if val != target_val:
             self.get_form_element(element).setProperty(property_name, target_val)

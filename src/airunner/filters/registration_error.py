@@ -5,6 +5,7 @@ from airunner.filters.base_filter import BaseFilter
 
 class RegistrationErrorFilter(BaseFilter):
     def apply_filter(self, image, do_reset):
+        image = image.convert("RGBA")
         # first, split the image into its R G B channels
         r, g, b, a = image.split()
 

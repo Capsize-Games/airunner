@@ -133,6 +133,7 @@ class BrushesContainer(BaseWidget):
                     else:
                         self.selected_brushes.remove(widget)
                         widget.setStyleSheet("")
+            self.settings_manager.set_value("generator_settings_override_id", None)
             return
 
         for widget in self.selected_brushes:
@@ -153,7 +154,7 @@ class BrushesContainer(BaseWidget):
             widget.setStyleSheet(f"""
                 border: 2px solid #ff0000;
             """)
-            self.app.ui.generator_widget.enable_preset(widget.brush.generator_setting_id)
+            self.settings_manager.set_value("generator_settings_override_id", widget.brush.generator_setting_id)
     
     def display_brush_menu(self, event, widget, brush):
         context_menu = QMenu(self)
