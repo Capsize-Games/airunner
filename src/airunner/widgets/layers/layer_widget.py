@@ -64,7 +64,7 @@ class LayerWidget(BaseWidget):
         self.layer_data.visible = val
         session = get_session()
         session.commit()
-        self.app.canvas.do_draw()
+        self.app.canvas_widget.do_draw()
 
     def set_thumbnail(self):
         image = self.layer_data.image

@@ -23,21 +23,6 @@ class ModelManagerWidget(BaseWidget):
     current_model_data = None
     _current_model_object = None
     model_form = None
-    icons = {
-        "toolButton": "010-view",
-        "edit_button": "settings",
-        "delete_button": "006-trash",
-    }
-
-    def set_stylesheet(self):
-        for key in self.model_widgets.keys():
-            for model_widget in self.model_widgets[key]:
-                for button, icon in self.icons.items():
-                    getattr(model_widget, button).setIcon(
-                        QtGui.QIcon(
-                            os.path.join(f"src/icons/{icon}{'-light' if self.is_dark else ''}.png")
-                        )
-                    )
 
     @property
     def current_model_object(self):

@@ -221,24 +221,6 @@ def get_version():
     return ""
 
 
-def get_latest_version():
-    return
-    # get latest release from https://github.com/Capsize-Games/airunner/releases/latest
-    # follow the redirect to get the version number
-    import requests
-    import re
-    url = "https://github.com/Capsize-Games/airunner/releases/latest"
-    try:
-        r = requests.get(url)
-        if r.status_code == 200:
-            m = re.search(r"\/Capsize-Games\/airunner\/releases\/tag\/v([0-9\.]+)", r.text)
-            if m:
-                return m.group(1)
-    except ConnectionError:
-        return None
-    return None
-
-
 # def load_default_models(tab_section, section_name):
 #     if section_name == "txt2img":
 #         section_name = "generate"

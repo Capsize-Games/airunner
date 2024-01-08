@@ -26,10 +26,6 @@ class LayerContainerWidget(BaseWidget):
         except IndexError:
             Logger.error(f"No current layer for index {self.current_layer_index}")
 
-    def __init__(self, *args, **kwargs):
-        super().__init__(*args, **kwargs)
-        self.app.loaded.connect(self.initialize)
-
     def initialize(self):
         self.ui.scrollAreaWidgetContents.layout().addSpacerItem(
             QSpacerItem(0, 0, QSizePolicy.Policy.Minimum, QSizePolicy.Policy.Expanding))
@@ -195,7 +191,7 @@ class LayerContainerWidget(BaseWidget):
             self.delete_layer(index=index, layer=layer)
         self.selected_layers = {}
         self.show_layers()
-        self.app.canvas.update()
+        self.app.standard_image_panel.canvas_widget.do_draw()
 
     def delete_layer(self, _value=False, index=None, layer=None):
         Logger.info(f"delete_layer requested index {index}")
@@ -208,7 +204,7 @@ class LayerContainerWidget(BaseWidget):
         if current_index is None:
             current_index = self.current_layer_index
         Logger.info(f"Deleting layer {current_index}")
-        self.app.canvas.delete_image()
+        self.app.standard_image_panel.canvas_widget.delete_image()
         self.app.history.add_event({
             "event": "delete_layer",
             "layers": self.get_layers_copy(),
@@ -302,6 +298,7 @@ class LayerContainerWidget(BaseWidget):
         layer.visible = not layer.visible
         self.update()
         layer_obj.set_icon()
+        self.app.canvas_widget.do_draw()
 
     def handle_move_layer(self, event):
         point = QPoint(
