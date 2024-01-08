@@ -5,6 +5,7 @@ from functools import partial
 from PyQt6 import uic
 
 from airunner.widgets.slider.slider_widget import SliderWidget
+from airunner.aihandler.settings_manager import SettingsManager
 
 
 class FilterBase:
@@ -36,7 +37,7 @@ class FilterBase:
     def __setattr__(self, key, value):
         if key in self._filter_values:
             self._filter_values[key].value = str(value)
-            self.parent.settings_manager.save()
+            self.settings_manager.save()
         else:
             super().__setattr__(key, value)
 
@@ -57,6 +58,8 @@ class FilterBase:
         # filter_values are the names of the ImageFilterValue objects in the database.
         # when the filter is shown, the values are loaded from the database
         # and stored in this dictionary.
+        self.settings_manager = SettingsManager(app=parent)
+        
         self._filter_values = {}
 
         self.filter_window = None
@@ -65,16 +68,14 @@ class FilterBase:
         self.load_image_filter_data()
 
     def update_value(self, name, value):
-        print(name, value)
         self._filter_values[name].value = str(value)
-        self.parent.settings_manager.save()
+        self.settings_manager.save()
 
     def update_canvas(self):
-        if self.parent.canvas_is_active:
-            self.parent.current_canvas.update()
+        pass
 
     def load_image_filter_data(self):
-        self.image_filter_data = self.parent.settings_manager.get_image_filter(self.image_filter_model_name)
+        self.image_filter_data = self.settings_manager.get_image_filter(self.image_filter_model_name)
         for filter_value in self.image_filter_data.image_filter_values:
             self._filter_values[filter_value.name] = filter_value
 
@@ -134,7 +135,7 @@ class FilterBase:
 
     def handle_auto_apply_toggle(self):
         self.image_filter_data.auto_apply = self.filter_window.auto_apply.isChecked()
-        self.parent.settings_manager.save()
+        self.settings_manager.save()
 
     def handle_slider_change(self, settings_property, val):
         self.update_value(settings_property, val)
@@ -143,15 +144,15 @@ class FilterBase:
 
     def cancel_filter(self):
         self.reject()
-        self.parent.current_canvas.cancel_filter()
+        self.parent.canvas_widget.cancel_filter()
         self.update_canvas()
 
     def apply_filter(self):
         self.accept()
-        self.parent.current_canvas.apply_filter(self.filter)
+        self.parent.canvas_widget.apply_filter(self.filter)
         self.filter_window.close()
         self.update_canvas()
 
     def preview_filter(self):
-        self.parent.current_canvas.preview_filter(self.filter)
+        self.parent.canvas_widget.preview_filter(self.filter)
         self.update_canvas()
