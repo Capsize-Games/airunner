@@ -4,20 +4,12 @@ import random
 from PyQt6.QtCore import QObject
 
 # import AutoTokenizer
-from transformers import AutoTokenizer
 # import BitsAndBytesConfig
 from transformers import BitsAndBytesConfig
-import transformers
-from transformers import AutoModelForCausalLM
+from transformers import AutoModelForCausalLM, AutoModelForSeq2SeqLM, AutoTokenizer
 from transformers import InstructBlipForConditionalGeneration
 from transformers import InstructBlipProcessor
-from langchain.llms.huggingface_pipeline import HuggingFacePipeline
-from langchain.memory import ConversationBufferWindowMemory
-from langchain.prompts import PromptTemplate
-from langchain.chains import ConversationChain
-from airunner.aihandler.enums import MessageCode
 
-from airunner.aihandler.llm_api import LLMAPI
 from airunner.aihandler.settings_manager import SettingsManager
 from airunner.data.models import LLMGenerator
 from airunner.data.db import session
@@ -67,13 +59,19 @@ class TransformerRunner(QObject):
     current_generator_name = ""
     do_quantize_model = True
     callback = None
+    template = None
+    #system_instructions = ""
+    system_instructions = ""
 
     @property
     def generator(self):
-        if not self._generator or self.current_generator_name != self.requested_generator_name:
-            self.current_generator_name = self.requested_generator_name
-            self._generator = session.query(LLMGenerator).filter_by(name=self.current_generator_name).first()
-        return self._generator
+        try:
+            if not self._generator or self.current_generator_name != self.requested_generator_name:
+                self.current_generator_name = self.requested_generator_name
+                self._generator = session.query(LLMGenerator).filter_by(name=self.current_generator_name).first()
+            return self._generator
+        except Exception as e:
+            Logger.error(e)
     
     @property
     def do_load_model(self):
@@ -202,7 +200,7 @@ class TransformerRunner(QObject):
         
         auto_class_ = None
         if self.generator.name == "seq2seq":
-            auto_class_ = AutoModelForSeq2SeqLM 
+            auto_class_ = AutoModelForSeq2SeqLM
         elif self.generator.name == "casuallm":
             auto_class_ = AutoModelForCausalLM
         elif self.generator.name == "visualqa":
@@ -219,38 +217,14 @@ class TransformerRunner(QObject):
                 else:
                     Logger.error(e)
         
-        if self.generator.name == "casuallm":
-            self.pipeline = transformers.pipeline(
-                "text-generation",
-                model=self.model,
-                tokenizer=self.tokenizer,
-                torch_dtype=torch.float16 if self.dtype != "32bit" else torch.float32,
-                trust_remote_code=False,
-                device_map="auto",
-                min_length=0,
-                max_length=1000,
-                num_beams=1,
-                do_sample=True,
-                top_k=20,
-                eta_cutoff=10,
-                top_p=1.0,
-                num_return_sequences=self.sequences,
-                eos_token_id=self.tokenizer.eos_token_id,
-                early_stopping=True,
-                repetition_penalty=1.15,
-                temperature=0.7,
-            )
-            Logger.info(f"Loading prompt template {self.prompt_template}")
-            self.llm=HuggingFacePipeline(pipeline=self.pipeline)
-            self.memory = ConversationBufferWindowMemory(k=5)
-            self.prompt = PromptTemplate.from_template(
-                self.prompt_template,
-                template_format="jinja2", 
-                partial_variables={
-                    "username": self.username,
-                    "botname": self.botname,
-                })
-            self.chain = ConversationChain(llm=self.llm, prompt=self.prompt, memory=self.memory)
+        # if self.generator.name == "casuallm":
+        #     self.pipeline = AutoModelForCausalLM.from_pretrained(
+        #         self.model,
+        #         torch_dtype=torch.float16 if self.dtype != "32bit" else torch.float32,
+        #         trust_remote_code=False,
+        #         device_map="auto"
+        #     )
+
             
     def process_data(self, data):
         self.request_data = data.get("request_data", {})
@@ -266,6 +240,7 @@ class TransformerRunner(QObject):
         self.prompt = self.request_data.get("prompt", "")
         self.prompt_template = self.request_data.get("prompt_template", "")
         self.image = self.request_data.get("image", None)
+        self.system_instructions = f"Your name is {self.botname}. You are talking to {self.username}. You will always respond in character. You will always respond to the user. You will not give ethical or moral advice to the user unless it is something appropriate for {self.botname} to say."
         if self.image:
             self.image = self.image.convert("RGB")
         
@@ -284,6 +259,7 @@ class TransformerRunner(QObject):
         pass
 
     def prepare_input_args(self):
+        self.system_instructions = self.request_data.get("system_instructions", "")
         top_k = self.parameters.get("top_k", self.top_k)
         eta_cutoff = self.parameters.get("eta_cutoff", self.eta_cutoff)
         top_p = self.parameters.get("top_p", self.top_p)
@@ -388,18 +364,20 @@ class TransformerRunner(QObject):
         if self.generator.name == "visualqa":
             self.load_processor()
 
-        self.engine.send_message("Generating output")
-        with torch.backends.cuda.sdp_kernel(
-            enable_flash=True, 
-            enable_math=False, 
-            enable_mem_efficient=False
-        ):
-            with torch.no_grad():                
-                value = self.generate(**kwargs)
-                if self.callback:
-                    self.callback(value)
-                else:
-                    self.engine.send_message(value, code=MessageCode.TEXT_GENERATED)
+        # self.engine.send_message("Generating output")
+        # with torch.backends.cuda.sdp_kernel(
+        #     enable_flash=True, 
+        #     enable_math=False, 
+        #     enable_mem_efficient=False
+        # ):
+        #     with torch.no_grad():
+        #         print("************** CALLING GENERATE")
+        #         value = self.generate()
+        #         print("VALUE", value)
+        #         # if self.callback:
+        #         #     self.callback(value)
+        #         # else:
+        #         #     self.engine.send_message(value, code=MessageCode.TEXT_GENERATED)
         self.enable_request_processing()
     
     def disable_request_processing(self):
@@ -408,7 +386,7 @@ class TransformerRunner(QObject):
     def enable_request_processing(self):
         self._processing_request = True
     
-    def generate(self, **kwargs):
+    def generate(self):
         pass
 
 
