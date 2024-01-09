@@ -211,21 +211,21 @@ class SettingsManager(QObject):
         if self.generator_settings_override_id:
             generator_settings = session.query(GeneratorSetting).filter_by(
                 id=self.generator_settings_override_id
-            ).join(Settings).first()
+            ).first()
         else:
             generator_settings = session.query(GeneratorSetting).filter_by(
-                section=generator_section,
-                generator_name=generator_name
-            ).join(Settings).first()
+                is_preset=0
+            ).first()
         if generator_settings is None:
             if not generator_section or generator_section == "" or not generator_name or generator_name == "":
                 return None
-            generator_settings = GeneratorSetting(
-                section=generator_section,
-                generator_name=generator_name
-            )
-            session.add(generator_settings)
-            session.commit()
+            # generator_settings = GeneratorSetting(
+            #     section=generator_section,
+            #     generator_name=generator_name,
+            #     is_preset=False
+            # )
+            # session.add(generator_settings)
+            # session.commit()
         return generator_settings
 
     def __init__(self, app=None, *args, **kwargs):

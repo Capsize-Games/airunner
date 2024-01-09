@@ -1,0 +1,275 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<ui version="4.0">
+ <class>llm_preferences_widget</class>
+ <widget class="QWidget" name="llm_preferences_widget">
+  <property name="geometry">
+   <rect>
+    <x>0</x>
+    <y>0</y>
+    <width>1371</width>
+    <height>957</height>
+   </rect>
+  </property>
+  <property name="windowTitle">
+   <string>Form</string>
+  </property>
+  <layout class="QGridLayout" name="gridLayout">
+   <item row="0" column="0">
+    <widget class="QSplitter" name="splitter">
+     <property name="orientation">
+      <enum>Qt::Vertical</enum>
+     </property>
+     <widget class="QGroupBox" name="groupBox">
+      <property name="title">
+       <string>Prefix</string>
+      </property>
+      <layout class="QGridLayout" name="gridLayout_3">
+       <item row="0" column="0">
+        <widget class="QPlainTextEdit" name="prefix"/>
+       </item>
+      </layout>
+     </widget>
+     <widget class="QGroupBox" name="groupBox_2">
+      <property name="title">
+       <string>Suffix</string>
+      </property>
+      <layout class="QGridLayout" name="gridLayout_4">
+       <item row="0" column="0">
+        <widget class="QPlainTextEdit" name="suffix"/>
+       </item>
+      </layout>
+     </widget>
+    </widget>
+   </item>
+   <item row="1" column="0">
+    <widget class="QGroupBox" name="groupBox_3">
+     <property name="title">
+      <string>Bot details</string>
+     </property>
+     <layout class="QHBoxLayout" name="horizontalLayout_5">
+      <item>
+       <layout class="QVBoxLayout" name="verticalLayout_2">
+        <item>
+         <widget class="QLabel" name="label">
+          <property name="text">
+           <string>Name</string>
+          </property>
+         </widget>
+        </item>
+        <item>
+         <widget class="QLineEdit" name="botname">
+          <property name="text">
+           <string>ChatAI</string>
+          </property>
+          <property name="cursorPosition">
+           <number>6</number>
+          </property>
+         </widget>
+        </item>
+       </layout>
+      </item>
+      <item>
+       <layout class="QVBoxLayout" name="verticalLayout_3">
+        <item>
+         <widget class="QLabel" name="label_2">
+          <property name="text">
+           <string>Personality</string>
+          </property>
+         </widget>
+        </item>
+        <item>
+         <widget class="QComboBox" name="personality_type">
+          <item>
+           <property name="text">
+            <string>Nice</string>
+           </property>
+          </item>
+          <item>
+           <property name="text">
+            <string>Mean</string>
+           </property>
+          </item>
+          <item>
+           <property name="text">
+            <string>Weird</string>
+           </property>
+          </item>
+          <item>
+           <property name="text">
+            <string>Insane</string>
+           </property>
+          </item>
+          <item>
+           <property name="text">
+            <string>Random</string>
+           </property>
+          </item>
+         </widget>
+        </item>
+       </layout>
+      </item>
+     </layout>
+    </widget>
+   </item>
+   <item row="2" column="0">
+    <widget class="QGroupBox" name="groupBox_4">
+     <property name="title">
+      <string>User name</string>
+     </property>
+     <layout class="QGridLayout" name="gridLayout_13">
+      <item row="0" column="0">
+       <widget class="QLineEdit" name="username">
+        <property name="text">
+         <string>User</string>
+        </property>
+       </widget>
+      </item>
+     </layout>
+    </widget>
+   </item>
+   <item row="3" column="0">
+    <widget class="QPushButton" name="generate_characters_button">
+     <property name="text">
+      <string>Generate Characters</string>
+     </property>
+    </widget>
+   </item>
+  </layout>
+ </widget>
+ <tabstops>
+  <tabstop>prefix</tabstop>
+  <tabstop>suffix</tabstop>
+  <tabstop>botname</tabstop>
+  <tabstop>username</tabstop>
+ </tabstops>
+ <resources/>
+ <connections>
+  <connection>
+   <sender>generate_characters_button</sender>
+   <signal>clicked()</signal>
+   <receiver>llm_preferences_widget</receiver>
+   <slot>action_button_clicked_generate_characters()</slot>
+   <hints>
+    <hint type="sourcelabel">
+     <x>362</x>
+     <y>962</y>
+    </hint>
+    <hint type="destinationlabel">
+     <x>477</x>
+     <y>0</y>
+    </hint>
+   </hints>
+  </connection>
+  <connection>
+   <sender>username</sender>
+   <signal>textEdited(QString)</signal>
+   <receiver>llm_preferences_widget</receiver>
+   <slot>username_text_changed(QString)</slot>
+   <hints>
+    <hint type="sourcelabel">
+     <x>226</x>
+     <y>919</y>
+    </hint>
+    <hint type="destinationlabel">
+     <x>118</x>
+     <y>0</y>
+    </hint>
+   </hints>
+  </connection>
+  <connection>
+   <sender>botname</sender>
+   <signal>textEdited(QString)</signal>
+   <receiver>llm_preferences_widget</receiver>
+   <slot>botname_text_changed(QString)</slot>
+   <hints>
+    <hint type="sourcelabel">
+     <x>298</x>
+     <y>843</y>
+    </hint>
+    <hint type="destinationlabel">
+     <x>80</x>
+     <y>0</y>
+    </hint>
+   </hints>
+  </connection>
+  <connection>
+   <sender>personality_type</sender>
+   <signal>textHighlighted(QString)</signal>
+   <receiver>llm_preferences_widget</receiver>
+   <slot>personality_type_changed(QString)</slot>
+   <hints>
+    <hint type="sourcelabel">
+     <x>597</x>
+     <y>843</y>
+    </hint>
+    <hint type="destinationlabel">
+     <x>412</x>
+     <y>0</y>
+    </hint>
+   </hints>
+  </connection>
+  <connection>
+   <sender>suffix</sender>
+   <signal>textChanged()</signal>
+   <receiver>llm_preferences_widget</receiver>
+   <slot>suffix_text_changed()</slot>
+   <hints>
+    <hint type="sourcelabel">
+     <x>182</x>
+     <y>669</y>
+    </hint>
+    <hint type="destinationlabel">
+     <x>206</x>
+     <y>5</y>
+    </hint>
+   </hints>
+  </connection>
+  <connection>
+   <sender>prefix</sender>
+   <signal>textChanged()</signal>
+   <receiver>llm_preferences_widget</receiver>
+   <slot>prefix_text_changed()</slot>
+   <hints>
+    <hint type="sourcelabel">
+     <x>131</x>
+     <y>108</y>
+    </hint>
+    <hint type="destinationlabel">
+     <x>48</x>
+     <y>6</y>
+    </hint>
+   </hints>
+  </connection>
+ </connections>
+ <slots>
+  <slot>prompt_text_changed(QString)</slot>
+  <slot>botname_text_changed(QString)</slot>
+  <slot>username_text_changed(QString)</slot>
+  <slot>model_version_changed(QString)</slot>
+  <slot>random_seed_toggled(bool)</slot>
+  <slot>response_text_changed(QString)</slot>
+  <slot>seed_changed(QString)</slot>
+  <slot>suffix_text_changed()</slot>
+  <slot>prefix_text_changed()</slot>
+  <slot>action_button_clicked_send()</slot>
+  <slot>action_button_clicked_generate_characters()</slot>
+  <slot>action_button_clicked_clear_conversation()</slot>
+  <slot>message_type_text_changed(QString)</slot>
+  <slot>personality_type_changed(QString)</slot>
+  <slot>toggled_4bit(bool)</slot>
+  <slot>toggled_8bit(bool)</slot>
+  <slot>toggled_16bit(bool)</slot>
+  <slot>toggled_32bit(bool)</slot>
+  <slot>do_sample_toggled(bool)</slot>
+  <slot>early_stopping_toggled(bool)</slot>
+  <slot>model_text_changed(QString)</slot>
+  <slot>reset_settings_to_default_clicked()</slot>
+  <slot>use_gpu_toggled(bool)</slot>
+  <slot>override_parameters_toggled(bool)</slot>
+  <slot>toggled_2bit(bool)</slot>
+  <slot>toggle_leave_model_in_vram(bool)</slot>
+  <slot>toggle_unload_model(bool)</slot>
+  <slot>toggle_move_model_to_cpu(bool)</slot>
+  <slot>prompt_template_text_changed(QString)</slot>
+ </slots>
+</ui>
