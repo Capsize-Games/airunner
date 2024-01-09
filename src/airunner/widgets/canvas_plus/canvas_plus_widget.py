@@ -8,8 +8,8 @@ from PIL.ImageQt import ImageQt, QImage
 from PyQt6.QtCore import Qt, QPoint, QPointF, QRect
 from PyQt6.QtGui import QBrush, QColor, QPen, QPixmap, QPainter, QCursor
 from PyQt6.QtWidgets import QGraphicsScene, QGraphicsItem, QGraphicsPixmapItem, QGraphicsLineItem
-from airunner.aihandler.logger import Logger
 
+from airunner.aihandler.logger import Logger
 from airunner.aihandler.settings_manager import SettingsManager
 from airunner.cursors.circle_brush import CircleCursor
 from airunner.data.db import session

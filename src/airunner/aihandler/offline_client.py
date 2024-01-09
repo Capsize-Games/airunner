@@ -2,10 +2,9 @@ import json
 import queue
 import time
 import threading
-from airunner.aihandler.engine import Engine
 
+from airunner.aihandler.engine import Engine
 from airunner.aihandler.logger import Logger as logger
-from airunner.aihandler.runner import SDRunner
 
 
 class OfflineClient:

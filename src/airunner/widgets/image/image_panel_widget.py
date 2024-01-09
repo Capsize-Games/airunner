@@ -1,4 +1,5 @@
 import os
+import threading
 
 from PyQt6.QtCore import QFileSystemWatcher
 
@@ -14,8 +15,22 @@ class ImagePanelWidget(BaseWidget):
     total_per_page = 50
     page_step = 512
     last_page = False
+    sorted_files = []
+    start = 0
+    end = 0
+
 
     def __init__(self, *args, **kwargs):
+        """
+        Initializes the ImagePanelWidget.
+
+        Args:
+            *args: Variable length argument list.
+            **kwargs: Arbitrary keyword arguments.
+
+        Returns:
+            None
+        """
         super().__init__(*args, **kwargs)
         self.ui.scrollArea.verticalScrollBar().valueChanged.connect(self.handle_scroll)
         flowLayout = QFlowLayout()
@@ -23,20 +38,31 @@ class ImagePanelWidget(BaseWidget):
         if self.settings_manager.path_settings.image_path != "":
             self.show_files()
         
-        # watch the image directory for new files or delete files. if anything changes in the directory call show_files
+        self.initialize_watcher()
+        self.load_files()
+        self.show_files()
+        self.display_thread = threading.Thread(target=self.display_thumbnails)
+    
+    def initialize_watcher(self):
+        """
+        Initializes the file system watcher to monitor changes in the image directory.
+
+        This method adds the image directory and its subdirectories to the file system watcher,
+        and connects the directoryChanged and fileChanged signals to their respective handler methods.
+        """
         self.watcher = QFileSystemWatcher()
-        # recursively watch the image path
         for root, dirs, files in os.walk(self.settings_manager.path_settings.image_path):
             self.watcher.addPath(root)
-        
         self.watcher.directoryChanged.connect(self.handle_directory_changed)
         self.watcher.fileChanged.connect(self.handle_files_changed)
     
     def handle_directory_changed(self, event):
-        self.show_files()
+        #self.show_files()
+        pass
     
     def handle_files_changed(self, event):
-        self.show_files()
+        #self.show_files()
+        pass
 
     def clear_files(self):
         self.page = 0
@@ -47,21 +73,31 @@ class ImagePanelWidget(BaseWidget):
             widget.deleteLater()
 
     def show_files(self, clear_images=True, reset_scroll_bar=True, show_folders=True):
-        if clear_images:
-            self.clear_files()
+        """
+        Displays the files in the image panel widget.
 
+        Args:
+            clear_images (bool, optional): Whether to clear the existing images. Defaults to True.
+            reset_scroll_bar (bool, optional): Whether to reset the scroll bar position. Defaults to True.
+            show_folders (bool, optional): Whether to show folders in the file list. Defaults to True.
+        """
         if reset_scroll_bar:
             self.ui.scrollArea.verticalScrollBar().setValue(0)
 
-        start = self.page * self.total_per_page
-        end = start + self.total_per_page
-        
+        self.start = self.page * self.total_per_page
+        self.end = self.start + self.total_per_page
 
-        # recursively crawl self.settings_manager.path_settings.image_path and build a directory of the files sorted by the first folder name within self.settings_manager.path_settings.image_path
-        # for example, self.settings_manager.path_settings.image_path will have several folders, those should be the key in a dictionary, and the value should be a list of files which is sorted by the most recent first
+        self.display_thumbnails()
+
+    def load_files(self):
+        """
+        Load files from the specified image path and sort them based on modification time.
+
+        Returns:
+            None
+        """
         files_in_image_path = os.listdir(self.settings_manager.path_settings.image_path)
         sorted_files = {}
-        # recursively crawl the image path and build a dictionary of the files
         for file in files_in_image_path:
             if os.path.isdir(os.path.join(self.settings_manager.path_settings.image_path, file)):
                 sorted_files[file] = []
@@ -70,21 +106,42 @@ class ImagePanelWidget(BaseWidget):
         
         section = "txt2img"
         files = sorted_files[section]
-        # sort the files by the most recent first
         files.sort(key=os.path.getmtime, reverse=True)
-        self.last_page = end >= len(files)
-        for file in files[start:end]:
+        self.sorted_files = files
+
+    def display_thumbnails(self):
+        """
+        Display thumbnails of images from the sorted_files list within the specified range.
+
+        Args:
+            start (int): The starting index of the range.
+            end (int): The ending index of the range.
+        """
+        for file in self.sorted_files[self.start:self.end]:
             if file.endswith(".png"):
-                image_widget = ImageWidget(self)
+                image_widget = ImageWidget(self, is_thumbnail=True)
                 image_widget.set_image(os.path.join(self.settings_manager.path_settings.image_path, file))
                 self.ui.scrollAreaWidgetContents.layout().addWidget(image_widget)
     
     def handle_folder_clicked(self, path):
+        """
+        Handles the event when a folder is clicked.
+
+        Args:
+            path (str): The path of the clicked folder.
+        """
         self.show_files()
     
     def handle_scroll(self, value):
-        if self.last_page:
-            return
+        """
+        Handles the scroll event of the image panel widget.
+
+        Args:
+            value (int): The value of the scroll event.
+
+        Returns:
+            None
+        """
         if value >= self.ui.scrollArea.verticalScrollBar().maximum() - self.page_step + 1:
             self.page += 1
             self.show_files(clear_images=False, reset_scroll_bar=False, show_folders=False)

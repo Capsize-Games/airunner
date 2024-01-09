@@ -37,7 +37,7 @@
    <item row="0" column="0">
     <widget class="QTabWidget" name="generator_form_tabs">
      <property name="currentIndex">
-      <number>0</number>
+      <number>1</number>
      </property>
      <widget class="QWidget" name="tab">
       <attribute name="title">
@@ -122,6 +122,20 @@
                     </size>
                    </property>
                   </spacer>
+                 </item>
+                 <item>
+                  <widget class="QPushButton" name="prompt_builder_button">
+                   <property name="text">
+                    <string/>
+                   </property>
+                   <property name="icon">
+                    <iconset resource="../../../resources_light.qrc">
+                     <normaloff>:/icons/light/prompt-editor-icon.svg</normaloff>:/icons/light/prompt-editor-icon.svg</iconset>
+                   </property>
+                   <property name="checkable">
+                    <bool>true</bool>
+                   </property>
+                  </widget>
                  </item>
                  <item>
                   <widget class="QPushButton" name="pushButton">
@@ -232,16 +246,16 @@
       </attribute>
       <layout class="QGridLayout" name="gridLayout_5">
        <property name="leftMargin">
-        <number>8</number>
+        <number>0</number>
        </property>
        <property name="topMargin">
-        <number>8</number>
+        <number>0</number>
        </property>
        <property name="rightMargin">
-        <number>8</number>
+        <number>0</number>
        </property>
        <property name="bottomMargin">
-        <number>8</number>
+        <number>0</number>
        </property>
        <item row="0" column="0">
         <widget class="ChatPromptWidget" name="widget" native="true"/>
@@ -288,8 +302,8 @@
    <slot>handle_interrupt_button_clicked()</slot>
    <hints>
     <hint type="sourcelabel">
-     <x>350</x>
-     <y>1053</y>
+     <x>349</x>
+     <y>1052</y>
     </hint>
     <hint type="destinationlabel">
      <x>0</x>
@@ -304,8 +318,8 @@
    <slot>handle_generate_button_clicked()</slot>
    <hints>
     <hint type="sourcelabel">
-     <x>39</x>
-     <y>1053</y>
+     <x>41</x>
+     <y>1052</y>
     </hint>
     <hint type="destinationlabel">
      <x>0</x>
@@ -336,12 +350,28 @@
    <slot>handle_negative_prompt_changed()</slot>
    <hints>
     <hint type="sourcelabel">
-     <x>270</x>
-     <y>1024</y>
+     <x>272</x>
+     <y>1023</y>
     </hint>
     <hint type="destinationlabel">
      <x>93</x>
      <y>0</y>
+    </hint>
+   </hints>
+  </connection>
+  <connection>
+   <sender>prompt_builder_button</sender>
+   <signal>toggled(bool)</signal>
+   <receiver>generator_form</receiver>
+   <slot>handle_prompt_builder_button_toggled(bool)</slot>
+   <hints>
+    <hint type="sourcelabel">
+     <x>251</x>
+     <y>49</y>
+    </hint>
+    <hint type="destinationlabel">
+     <x>212</x>
+     <y>-12</y>
     </hint>
    </hints>
   </connection>
@@ -359,5 +389,6 @@
   <slot>save_settings()</slot>
   <slot>handle_pipeline_changed(QString)</slot>
   <slot>handle_version_changed(QString)</slot>
+  <slot>handle_prompt_builder_button_toggled(bool)</slot>
  </slots>
 </ui>
