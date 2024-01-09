@@ -232,15 +232,17 @@ class MemoryEfficientMixin:
         if not self.pipe:
             return
         try:
-            self.pipe.to("cpu", self.data_type).float32()
+            self.pipe.to("cpu", self.data_type)
         except NotImplementedError:
             logger.warning("Not implemented error when moving to cpu")
         
         if hasattr(self.pipe, "controlnet"):
             try:
-                self.pipe.controlnet.to("cpu", self.data_type).float32()
+                self.pipe.controlnet.to("cpu", self.data_type)
             except NotImplementedError:
                 logger.warning("Not implemented error when moving to cpu")
+            except AttributeError:
+                pass
 
     def apply_cpu_offload(self):
         if self.cpu_offload_applied == self.enable_model_cpu_offload:
