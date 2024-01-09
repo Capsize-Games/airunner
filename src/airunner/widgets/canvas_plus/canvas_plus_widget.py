@@ -8,6 +8,7 @@ from PIL.ImageQt import ImageQt, QImage
 from PyQt6.QtCore import Qt, QPoint, QPointF, QRect
 from PyQt6.QtGui import QBrush, QColor, QPen, QPixmap, QPainter, QCursor
 from PyQt6.QtWidgets import QGraphicsScene, QGraphicsItem, QGraphicsPixmapItem, QGraphicsLineItem
+from PyQt6 import QtWidgets, QtCore
 
 from airunner.aihandler.logger import Logger
 from airunner.aihandler.settings_manager import SettingsManager
@@ -27,6 +28,8 @@ class DraggablePixmap(QGraphicsPixmapItem):
         super().__init__(pixmap)
         self.pixmap = pixmap
         self.setFlag(QGraphicsItem.GraphicsItemFlag.ItemIsMovable, True)
+
+
 
     def snap_to_grid(self):
         grid_size = self.settings_manager.grid_settings.size
@@ -300,10 +303,13 @@ class CanvasPlusWidget(CanvasBaseWidget):
     def layer_container_widget(self):
         return self.app.ui.layer_widget
 
+    @property
+    def active_grid_settings(self):
+        return self.settings_manager.active_grid_settings
+
     def __init__(self, *args, **kwargs):
         super().__init__(*args, **kwargs)
         self.canvas_settings = session.query(CanvasSettings).first()
-        self.active_grid_settings = session.query(ActiveGridSettings).first()
         self.ui.central_widget.resizeEvent = self.resizeEvent
         self.app.add_image_to_canvas_signal.connect(self.handle_add_image_to_canvas)
         self.app.image_data.connect(self.handle_image_data)
@@ -320,6 +326,56 @@ class CanvasPlusWidget(CanvasBaseWidget):
         self.settings_manager.changed_signal.connect(self.handle_changed_signal)
         self.app.loaded.connect(self.handle_loaded)
     
+    def increase_active_grid_height(self, amount):
+        height = self.settings_manager.working_height + self.settings_manager.grid_settings.size * amount
+        if height > 4096:
+            height = 4096
+        self.settings_manager.set_value("working_height", height)
+        self.do_draw()
+        
+    def decrease_active_grid_height(self, amount):
+        height = self.settings_manager.working_height - self.settings_manager.grid_settings.size * amount
+        if height < 512:
+            height = 512
+        self.settings_manager.set_value("working_height", height)
+        self.do_draw()
+
+    def increase_active_grid_width(self, amount):
+        width = self.settings_manager.working_width + self.settings_manager.grid_settings.size * amount
+        if width > 4096:
+            width = 4096
+        self.settings_manager.set_value("working_width", width)
+        self.do_draw()
+
+    def decrease_active_grid_width(self, amount):
+        width = self.settings_manager.working_width - self.settings_manager.grid_settings.size * amount
+        if width < 512:
+            width = 512
+        self.settings_manager.set_value("working_width", width)
+        self.do_draw()
+
+    def wheelEvent(self, event):
+        modifiers = QtWidgets.QApplication.keyboardModifiers()
+        if modifiers == QtCore.Qt.KeyboardModifier.ControlModifier:
+            if event.angleDelta().y() > 0:
+                self.increase_active_grid_height(int(abs(event.angleDelta().y()) / 120))
+            else:
+                self.decrease_active_grid_height(int(abs(event.angleDelta().y()) / 120))
+        elif modifiers == QtCore.Qt.KeyboardModifier.ShiftModifier:
+            if event.angleDelta().y() > 0:
+                self.increase_active_grid_width(int(abs(event.angleDelta().y()) / 120))
+            else:
+                self.decrease_active_grid_width(int(abs(event.angleDelta().y()) / 120))
+        elif modifiers == QtCore.Qt.KeyboardModifier.ControlModifier | QtCore.Qt.KeyboardModifier.ShiftModifier:
+            if event.angleDelta().y() > 0:
+                self.increase_active_grid_height(int(abs(event.angleDelta().y()) / 120))
+                self.increase_active_grid_width(int(abs(event.angleDelta().y()) / 120))
+            else:
+                self.decrease_active_grid_height(int(abs(event.angleDelta().y()) / 120))
+                self.decrease_active_grid_width(int(abs(event.angleDelta().y()) / 120))
+        else:
+            super().wheelEvent(event)  # Propagate the event to the base class if no modifier keys are pressed
+
     def handle_changed_signal(self, key, value):
         if key == "current_tab":
             self.do_draw()
@@ -453,7 +509,6 @@ class CanvasPlusWidget(CanvasBaseWidget):
         """
         Draw a rectangle around the active grid area of
         """
-        print(self.active_grid_area_rect)
         if not self.active_grid_area:
             self.active_grid_area = ActiveGridArea(
                 parent=self,
