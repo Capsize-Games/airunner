@@ -94,17 +94,6 @@ class SettingsWindow(BaseWindow):
                 ]
             },
             {
-                "section": "Enable Advanced Mode",
-                "files": [
-                    {
-                        "name": "enable_advanced_mode",
-                        "display_name": "Advanced mode",
-                        "checkable": True,
-                        "description": "If enabled, advanced generator options will be shown."
-                    }
-                ]
-            },
-            {
                 "section": "Memory Preferences",
                 "files": [
                     {
@@ -209,8 +198,6 @@ class SettingsWindow(BaseWindow):
                 checked = self.app.settings_manager.resize_on_paste
             elif name == "image_to_new_layer":
                 checked = self.app.settings_manager.image_to_new_layer
-            elif name == "enable_advanced_mode":
-                checked = self.app.settings_manager.enable_advanced_mode
             elif name == "dark_mode":
                 checked = self.app.settings_manager.dark_mode_enabled
             elif name == "check_for_updates":
@@ -245,9 +232,6 @@ class SettingsWindow(BaseWindow):
         elif name == "image_to_new_layer":
             checked = item.checkState() == Qt.CheckState.Checked
             self.app.settings_manager.set_value("image_to_new_layer", checked)
-        elif name == "enable_advanced_mode":
-            checked = item.checkState() == Qt.CheckState.Checked
-            self.app.settings_manager.set_value("enable_advanced_mode", checked)
         elif name == "dark_mode":
             checked = item.checkState() == Qt.CheckState.Checked
             self.app.settings_manager.set_value("dark_mode_enabled", checked)
