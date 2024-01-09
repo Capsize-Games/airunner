@@ -127,13 +127,14 @@ class EmbeddingsContainerWidget(BaseWidget):
         if os.path.exists(embeddings_path):
             for root, dirs, _ in os.walk(embeddings_path):
                 for dir in dirs:
+                    version = dir.split("/")[-1]
                     path = os.path.join(root, dir)
                     for entry in os.scandir(path):
                         if entry.is_file() and entry.name.endswith((".ckpt", ".safetensors", ".pt")):
                             name = os.path.splitext(entry.name)[0]
                             embedding = session.query(Embedding).filter_by(name=name).first()
                             if not embedding:
-                                embedding = Embedding(name=name, path=entry.path)
+                                embedding = Embedding(name=name, path=entry.path, version=version)
                                 session.add(embedding)
             session.commit()
         self.load_embeddings()
