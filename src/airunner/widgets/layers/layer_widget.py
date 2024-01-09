@@ -4,7 +4,6 @@ from PyQt6 import QtGui
 from PyQt6.QtCore import Qt, QPoint
 
 from airunner.widgets.base_widget import BaseWidget
-from airunner.widgets.layers.layer_image_widget import LayerImageWidget
 from airunner.widgets.layers.templates.layer_ui import Ui_LayerWidget
 from airunner.utils import get_session, image_to_pixmap
 
