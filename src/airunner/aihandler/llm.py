@@ -2,7 +2,7 @@ import torch
 import traceback
 
 from airunner.aihandler.transformer_runner import TransformerRunner
-from airunner.aihandler.logger import Logger as logger
+from airunner.aihandler.logger import Logger
 from airunner.aihandler.enums import MessageCode
 import os
 from jinja2 import Environment, FileSystemLoader
@@ -143,5 +143,5 @@ class LLM(TransformerRunner):
                 answers.append(answer.strip().lower())
             return answers
         else:
-            logger.error(f"Failed to call generator for {self.generator.name}")
+            Logger.error(f"Failed to call generator for {self.generator.name}")
         # self.llm_api.request(**kwargs)
