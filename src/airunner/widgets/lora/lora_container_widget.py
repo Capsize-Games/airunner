@@ -59,7 +59,6 @@ class LoraContainerWidget(BaseWidget):
         lora_path = self.settings_manager.path_settings.lora_path
         for dirpath, dirnames, filenames in os.walk(lora_path):
             for file in filenames:
-                print("LORA", file)
                 if file.endswith(".ckpt") or file.endswith(".safetensors") or file.endswith(".pt"):
                     print("adding lora to session")
                     name = file.replace(".ckpt", "").replace(".safetensors", "").replace(".pt", "")
