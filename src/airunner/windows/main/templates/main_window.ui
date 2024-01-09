@@ -8,7 +8,7 @@
     <x>0</x>
     <y>0</y>
     <width>1201</width>
-    <height>970</height>
+    <height>1024</height>
    </rect>
   </property>
   <property name="sizePolicy">
@@ -674,7 +674,7 @@
                <x>0</x>
                <y>0</y>
                <width>407</width>
-               <height>841</height>
+               <height>895</height>
               </rect>
              </property>
              <layout class="QGridLayout" name="gridLayout">
@@ -1278,26 +1278,6 @@
     <addaction name="actionReport_vulnerability"/>
     <addaction name="actionDiscord"/>
    </widget>
-   <widget class="QMenu" name="menuModel_merge">
-    <property name="title">
-     <string>Tools</string>
-    </property>
-    <addaction name="actionModel_Merger"/>
-    <addaction name="separator"/>
-    <addaction name="actionStableDiffusion"/>
-    <addaction name="separator"/>
-    <addaction name="actionPrompt_Builder"/>
-    <addaction name="actionModel_Manager_2"/>
-    <addaction name="separator"/>
-    <addaction name="actionEmbeddings"/>
-    <addaction name="actionLoRA"/>
-    <addaction name="actionPen"/>
-    <addaction name="actionActive_Grid"/>
-    <addaction name="separator"/>
-    <addaction name="actionStandard_Batches"/>
-    <addaction name="separator"/>
-    <addaction name="actionLLM_beta"/>
-   </widget>
    <widget class="QMenu" name="menuImage">
     <property name="title">
      <string>Image</string>
@@ -1336,7 +1316,6 @@
    <addaction name="menuEdit"/>
    <addaction name="menuView"/>
    <addaction name="menuImage"/>
-   <addaction name="menuModel_merge"/>
    <addaction name="menuFilters"/>
    <addaction name="menuAbout"/>
   </widget>
