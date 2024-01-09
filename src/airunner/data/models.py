@@ -103,6 +103,7 @@ class Embedding(BaseModel):
     path = Column(String)
     tags = Column(String)
     active = Column(Boolean, default=True)
+    version = Column(String, default="SD 1.5")
 
     __table_args__ = (
         UniqueConstraint('name', 'path', name='name_path_unique'),
@@ -302,6 +303,7 @@ class Lora(BaseModel):
     enabled = Column(Boolean, default=True)
     loaded = Column(Boolean, default=False)
     trigger_word = Column(String, default="")
+    version = Column(String, default="SD 1.5")
 
     @classmethod
     def get_all(cls, session):
