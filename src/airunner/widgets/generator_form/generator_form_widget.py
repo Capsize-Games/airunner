@@ -604,3 +604,6 @@ class GeneratorForm(BaseWidget):
 
     def update_negative_prompt(self, prompt):
         self.ui.negative_prompt.setPlainText(prompt)
+    
+    def handle_prompt_builder_button_toggled(self, val):
+        self.app.toggle_prompt_builder(val)
