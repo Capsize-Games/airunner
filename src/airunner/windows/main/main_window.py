@@ -428,7 +428,7 @@ class MainWindow(
         self.activate_model_manager_section()
 
     def action_show_prompt_builder(self):
-        self.show_section("Prompt Builder")
+        self.toggle_prompt_builder(True)
 
     def action_show_controlnet(self):
         self.show_section("controlnet")
@@ -893,8 +893,7 @@ class MainWindow(
     def show_section(self, section):
         section_lists = {
             "center": [self.ui.center_tab.tabText(i) for i in range(self.ui.center_tab.count())],
-            "right": [self.ui.tool_tab_widget.tabText(i) for i in range(self.ui.tool_tab_widget.count())],
-            "bottom": [self.ui.bottom_panel_tab_widget.tabText(i) for i in range(self.ui.bottom_panel_tab_widget.count())]
+            "right": [self.ui.tool_tab_widget.tabText(i) for i in range(self.ui.tool_tab_widget.count())]
         }
         for k, v in section_lists.items():
             if section in v:
