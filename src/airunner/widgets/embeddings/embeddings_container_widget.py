@@ -5,7 +5,7 @@ from PyQt6.QtWidgets import QWidget, QSizePolicy
 
 from airunner.aihandler.enums import MessageCode
 from airunner.data.models import Embedding
-from airunner.utils import get_session, save_session
+from airunner.utils import get_session
 from airunner.widgets.base_widget import BaseWidget
 from airunner.widgets.embeddings.embedding_widget import EmbeddingWidget
 from airunner.widgets.embeddings.templates.embeddings_container_ui import Ui_embeddings_container

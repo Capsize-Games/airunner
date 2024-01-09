@@ -1,8 +1,5 @@
-from functools import partial
-
 from PyQt6.QtCore import Qt
 from PyQt6.QtWidgets import QLabel
-from PyQt6.QtCore import QTimer
 
 from airunner.widgets.base_widget import BaseWidget
 from airunner.widgets.slider.templates.slider_ui import Ui_slider_widget

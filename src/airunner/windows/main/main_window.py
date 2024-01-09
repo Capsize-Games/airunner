@@ -7,12 +7,11 @@ import webbrowser
 from functools import partial
 
 from PyQt6 import uic, QtCore
-from PyQt6.QtCore import pyqtSlot, Qt, QThread, pyqtSignal, QObject, QTimer
+from PyQt6.QtCore import pyqtSlot, Qt, pyqtSignal, QTimer
 from PyQt6.QtGui import QGuiApplication
 from PyQt6.QtWidgets import QApplication, QFileDialog, QMainWindow, QWidget, QSpacerItem, QSizePolicy
 from PyQt6.QtCore import Qt
 from PyQt6 import QtGui
-from PyQt6.QtCore import QEvent
 from PyQt6.QtCore import QTimer
 
 from airunner.resources_light_rc import *

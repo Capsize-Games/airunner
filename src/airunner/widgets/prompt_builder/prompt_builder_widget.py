@@ -2,7 +2,7 @@ import random
 
 from airunner.aihandler.settings import MAX_SEED
 from airunner.data.db import session
-from airunner.data.models import TabSection, PromptBuilder, PromptCategory, PromptStyle, Prompt
+from airunner.data.models import TabSection, PromptBuilder
 from airunner.utils import save_session
 from airunner.widgets.base_widget import BaseWidget
 from airunner.widgets.prompt_builder.prompt_builder_form_widget import PromptBuilderForm

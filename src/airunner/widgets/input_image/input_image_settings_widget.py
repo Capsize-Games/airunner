@@ -1,12 +1,9 @@
-from functools import partial
-
 from PIL import Image
 from PyQt6.QtGui import QIcon
 from PyQt6.QtWidgets import QHBoxLayout, QWidget
 
-from airunner.utils import get_session, image_to_pixmap
+from airunner.utils import image_to_pixmap
 from airunner.widgets.input_image.templates.input_image_ui import Ui_input_image
-from airunner.widgets.slider.slider_widget import SliderWidget
 from airunner.widgets.base_widget import BaseWidget
 
 
