@@ -2,23 +2,18 @@ from PyQt6.QtCore import Qt
 from PyQt6.QtWidgets import QLabel
 from PyQt6.QtGui import QPixmap
 from PyQt6.QtWidgets import QVBoxLayout
-from PyQt6.QtWidgets import QTableWidgetItem
-from PyQt6.QtWidgets import QApplication
 from PyQt6.QtWidgets import QDialog
 from PyQt6.QtGui import QImage
 
 from PIL import Image
-from PIL.ImageQt import ImageQt
-from PIL.PngImagePlugin import PngInfo
 
 from airunner.utils import get_session
 from airunner.data.models import AIModel
 from airunner.widgets.canvas_plus.standard_base_widget import StandardBaseWidget
 from airunner.widgets.canvas_plus.templates.standard_image_widget_ui import Ui_standard_image_widget
-from airunner.utils import delete_image, load_metadata_from_image, prepare_metadata
-from airunner.settings import CONTROLNET_OPTIONS
+from airunner.utils import load_metadata_from_image, prepare_metadata
 from airunner.widgets.slider.slider_widget import SliderWidget
-from airunner.data.models import ActionScheduler, Pipeline, GeneratorSetting
+from airunner.data.models import ActionScheduler, Pipeline
 
 
 class StandardImageWidget(StandardBaseWidget):
