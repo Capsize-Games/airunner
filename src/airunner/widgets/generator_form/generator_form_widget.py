@@ -147,6 +147,8 @@ class GeneratorForm(BaseWidget):
             self.ui.seed_widget_latents.update_seed()
         elif key == "enable_advanced_mode":
             self.toggle_advanced_generation()
+        elif key == "ai_mode":
+            self.activate_ai_mode()
 
     """
     Slot functions
