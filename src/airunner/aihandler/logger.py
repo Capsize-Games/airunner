@@ -71,7 +71,7 @@ class Logger:
         cls.logger.error(msg)
 
 
-Logger.set_level(logging.DEBUG)
+Logger.set_level(LOG_LEVEL)
 Logger.stream_handler.setFormatter(Logger.formatter)
 Logger.logger.addHandler(Logger.stream_handler)
 logging.getLogger("lightning").setLevel(logging.WARNING)
