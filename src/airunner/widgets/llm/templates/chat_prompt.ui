@@ -6,94 +6,100 @@
    <rect>
     <x>0</x>
     <y>0</y>
-    <width>734</width>
-    <height>1077</height>
+    <width>679</width>
+    <height>1044</height>
    </rect>
   </property>
   <property name="windowTitle">
    <string>Form</string>
   </property>
   <layout class="QGridLayout" name="gridLayout">
-   <item row="0" column="0">
-    <widget class="QTextEdit" name="conversation">
-     <property name="readOnly">
-      <bool>true</bool>
-     </property>
-    </widget>
-   </item>
-   <item row="1" column="0">
-    <widget class="QScrollArea" name="chat_container">
-     <property name="widgetResizable">
-      <bool>true</bool>
-     </property>
-     <widget class="QWidget" name="scrollAreaWidgetContents">
-      <property name="geometry">
-       <rect>
-        <x>0</x>
-        <y>0</y>
-        <width>714</width>
-        <height>492</height>
-       </rect>
-      </property>
-      <layout class="QVBoxLayout" name="verticalLayout"/>
-     </widget>
-    </widget>
-   </item>
    <item row="2" column="0">
-    <widget class="QWidget" name="widget_5" native="true">
-     <layout class="QHBoxLayout" name="horizontalLayout">
-      <property name="leftMargin">
-       <number>0</number>
-      </property>
-      <property name="topMargin">
-       <number>0</number>
-      </property>
-      <property name="rightMargin">
-       <number>0</number>
-      </property>
-      <property name="bottomMargin">
-       <number>0</number>
-      </property>
-      <item>
-       <widget class="QLineEdit" name="prompt">
-        <property name="placeholderText">
-         <string>Chat input</string>
-        </property>
-       </widget>
-      </item>
-      <item>
-       <widget class="QComboBox" name="comboBox">
-        <item>
-         <property name="text">
-          <string>Chat</string>
-         </property>
-        </item>
-        <item>
-         <property name="text">
-          <string>Narrate</string>
-         </property>
-        </item>
-        <item>
-         <property name="text">
-          <string>Generate Image</string>
-         </property>
-        </item>
-        <item>
-         <property name="text">
-          <string>Summarize</string>
-         </property>
-        </item>
-        <item>
-         <property name="text">
-          <string>Translate</string>
-         </property>
-        </item>
-       </widget>
-      </item>
-     </layout>
-    </widget>
+    <layout class="QVBoxLayout" name="verticalLayout_5">
+     <item>
+      <widget class="QLabel" name="label_3">
+       <property name="text">
+        <string>User</string>
+       </property>
+      </widget>
+     </item>
+     <item>
+      <widget class="QLineEdit" name="username">
+       <property name="text">
+        <string>User</string>
+       </property>
+       <property name="placeholderText">
+        <string>User name</string>
+       </property>
+      </widget>
+     </item>
+    </layout>
    </item>
-   <item row="3" column="0">
+   <item row="2" column="1">
+    <layout class="QVBoxLayout" name="verticalLayout_6">
+     <item>
+      <widget class="QLabel" name="label">
+       <property name="text">
+        <string>Bot</string>
+       </property>
+      </widget>
+     </item>
+     <item>
+      <widget class="QLineEdit" name="botname">
+       <property name="text">
+        <string>ChatAI</string>
+       </property>
+       <property name="cursorPosition">
+        <number>6</number>
+       </property>
+       <property name="placeholderText">
+        <string>Bot name</string>
+       </property>
+      </widget>
+     </item>
+    </layout>
+   </item>
+   <item row="3" column="0" colspan="2">
+    <layout class="QHBoxLayout" name="horizontalLayout">
+     <item>
+      <widget class="QLineEdit" name="prompt">
+       <property name="placeholderText">
+        <string>Chat input</string>
+       </property>
+      </widget>
+     </item>
+     <item>
+      <widget class="QComboBox" name="comboBox">
+       <item>
+        <property name="text">
+         <string>Chat</string>
+        </property>
+       </item>
+       <item>
+        <property name="text">
+         <string>Narrate</string>
+        </property>
+       </item>
+       <item>
+        <property name="text">
+         <string>Generate Image</string>
+        </property>
+       </item>
+       <item>
+        <property name="text">
+         <string>Summarize</string>
+        </property>
+       </item>
+       <item>
+        <property name="text">
+         <string>Translate</string>
+        </property>
+       </item>
+      </widget>
+     </item>
+    </layout>
+   </item>
+   <item row="4" column="0" colspan="2">
     <layout class="QHBoxLayout" name="horizontalLayout_2">
      <item>
       <widget class="QPushButton" name="send_button">
@@ -118,6 +124,47 @@
      </item>
     </layout>
    </item>
+   <item row="1" column="0" colspan="2">
+    <widget class="QScrollArea" name="chat_container">
+     <property name="frameShape">
+      <enum>QFrame::NoFrame</enum>
+     </property>
+     <property name="widgetResizable">
+      <bool>true</bool>
+     </property>
+     <widget class="QWidget" name="scrollAreaWidgetContents">
+      <property name="geometry">
+       <rect>
+        <x>0</x>
+        <y>0</y>
+        <width>661</width>
+        <height>904</height>
+       </rect>
+      </property>
+      <layout class="QGridLayout" name="gridLayout_2">
+       <property name="leftMargin">
+        <number>0</number>
+       </property>
+       <property name="topMargin">
+        <number>0</number>
+       </property>
+       <property name="rightMargin">
+        <number>0</number>
+       </property>
+       <property name="bottomMargin">
+        <number>0</number>
+       </property>
+       <item row="0" column="0">
+        <widget class="QTextEdit" name="conversation">
+         <property name="readOnly">
+          <bool>true</bool>
+         </property>
+        </widget>
+       </item>
+      </layout>
+     </widget>
+    </widget>
+   </item>
   </layout>
  </widget>
  <resources/>
@@ -129,12 +176,12 @@
    <slot>action_button_clicked_send()</slot>
    <hints>
     <hint type="sourcelabel">
-     <x>75</x>
-     <y>1057</y>
+     <x>89</x>
+     <y>1033</y>
     </hint>
     <hint type="destinationlabel">
      <x>211</x>
-     <y>-12</y>
+     <y>0</y>
     </hint>
    </hints>
   </connection>
@@ -145,12 +192,12 @@
    <slot>action_button_clicked_clear_conversation()</slot>
    <hints>
     <hint type="sourcelabel">
-     <x>657</x>
-     <y>1052</y>
+     <x>668</x>
+     <y>1009</y>
     </hint>
     <hint type="destinationlabel">
      <x>565</x>
-     <y>-13</y>
+     <y>0</y>
     </hint>
    </hints>
   </connection>
@@ -161,12 +208,44 @@
    <slot>message_type_text_changed(QString)</slot>
    <hints>
     <hint type="sourcelabel">
-     <x>634</x>
-     <y>1018</y>
+     <x>668</x>
+     <y>976</y>
     </hint>
     <hint type="destinationlabel">
      <x>465</x>
-     <y>-3</y>
+     <y>0</y>
+    </hint>
+   </hints>
+  </connection>
+  <connection>
+   <sender>username</sender>
+   <signal>textChanged(QString)</signal>
+   <receiver>chat_prompt</receiver>
+   <slot>username_text_changed(QString)</slot>
+   <hints>
+    <hint type="sourcelabel">
+     <x>163</x>
+     <y>967</y>
+    </hint>
+    <hint type="destinationlabel">
+     <x>107</x>
+     <y>0</y>
+    </hint>
+   </hints>
+  </connection>
+  <connection>
+   <sender>botname</sender>
+   <signal>textChanged(QString)</signal>
+   <receiver>chat_prompt</receiver>
+   <slot>botname_text_changed(QString)</slot>
+   <hints>
+    <hint type="sourcelabel">
+     <x>668</x>
+     <y>967</y>
+    </hint>
+    <hint type="destinationlabel">
+     <x>170</x>
+     <y>0</y>
     </hint>
    </hints>
   </connection>
@@ -175,5 +254,8 @@
   <slot>action_button_clicked_send()</slot>
   <slot>action_button_clicked_clear_conversation()</slot>
   <slot>message_type_text_changed(QString)</slot>
+  <slot>username_text_changed(QString)</slot>
+  <slot>botname_text_changed(QString)</slot>
+  <slot>personality_type_changed(QString)</slot>
  </slots>
 </ui>

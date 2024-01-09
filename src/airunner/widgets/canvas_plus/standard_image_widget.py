@@ -20,6 +20,7 @@ from airunner.settings import CONTROLNET_OPTIONS
 from airunner.widgets.slider.slider_widget import SliderWidget
 from airunner.data.models import ActionScheduler, Pipeline, GeneratorSetting
 
+
 class StandardImageWidget(StandardBaseWidget):
     widget_class_ = Ui_standard_image_widget
     _pixmap = None
