@@ -1,7 +1,6 @@
 import psutil
 import torch
 
-from airunner.aihandler.enums import Mode
 from airunner.widgets.base_widget import BaseWidget
 from airunner.widgets.status.templates.status_ui import Ui_status_widget
 
