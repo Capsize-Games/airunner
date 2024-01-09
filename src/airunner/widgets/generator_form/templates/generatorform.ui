@@ -35,7 +35,7 @@
     <number>0</number>
    </property>
    <item row="0" column="0">
-    <widget class="QTabWidget" name="tabWidget">
+    <widget class="QTabWidget" name="generator_form_tabs">
      <property name="currentIndex">
       <number>0</number>
      </property>
@@ -45,16 +45,16 @@
       </attribute>
       <layout class="QGridLayout" name="gridLayout_3">
        <property name="leftMargin">
-        <number>0</number>
+        <number>8</number>
        </property>
        <property name="topMargin">
-        <number>0</number>
+        <number>8</number>
        </property>
        <property name="rightMargin">
-        <number>0</number>
+        <number>8</number>
        </property>
        <property name="bottomMargin">
-        <number>0</number>
+        <number>8</number>
        </property>
        <item row="0" column="0">
         <widget class="QScrollArea" name="scrollArea">
@@ -72,8 +72,8 @@
            <rect>
             <x>0</x>
             <y>0</y>
-            <width>357</width>
-            <height>1038</height>
+            <width>341</width>
+            <height>1022</height>
            </rect>
           </property>
           <layout class="QGridLayout" name="gridLayout">
@@ -96,8 +96,17 @@
              </property>
              <widget class="QWidget" name="layoutWidget">
               <layout class="QGridLayout" name="gridLayout_2">
+               <property name="leftMargin">
+                <number>0</number>
+               </property>
+               <property name="topMargin">
+                <number>0</number>
+               </property>
+               <property name="rightMargin">
+                <number>0</number>
+               </property>
                <property name="bottomMargin">
-                <number>9</number>
+                <number>0</number>
                </property>
                <item row="0" column="1">
                 <layout class="QHBoxLayout" name="horizontalLayout_6">
@@ -118,20 +127,6 @@
                   <widget class="QPushButton" name="pushButton">
                    <property name="text">
                     <string>Save Prompts</string>
-                   </property>
-                  </widget>
-                 </item>
-                 <item>
-                  <widget class="QPushButton" name="ai_button">
-                   <property name="text">
-                    <string/>
-                   </property>
-                   <property name="icon">
-                    <iconset resource="../../../resources_light.qrc">
-                     <normaloff>:/icons/light/artificial-intelligence-ai-chip-icon.svg</normaloff>:/icons/light/artificial-intelligence-ai-chip-icon.svg</iconset>
-                   </property>
-                   <property name="checkable">
-                    <bool>true</bool>
                    </property>
                   </widget>
                  </item>
@@ -161,8 +156,17 @@
              </widget>
              <widget class="QWidget" name="layoutWidget">
               <layout class="QVBoxLayout" name="verticalLayout_6">
+               <property name="leftMargin">
+                <number>0</number>
+               </property>
                <property name="topMargin">
-                <number>9</number>
+                <number>0</number>
+               </property>
+               <property name="rightMargin">
+                <number>0</number>
+               </property>
+               <property name="bottomMargin">
+                <number>0</number>
                </property>
                <item>
                 <widget class="QLabel" name="label_2">
@@ -227,6 +231,18 @@
        <string>Tab 2</string>
       </attribute>
       <layout class="QGridLayout" name="gridLayout_5">
+       <property name="leftMargin">
+        <number>8</number>
+       </property>
+       <property name="topMargin">
+        <number>8</number>
+       </property>
+       <property name="rightMargin">
+        <number>8</number>
+       </property>
+       <property name="bottomMargin">
+        <number>8</number>
+       </property>
        <item row="0" column="0">
         <widget class="ChatPromptWidget" name="widget" native="true"/>
        </item>
