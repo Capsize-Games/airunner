@@ -8,7 +8,7 @@
     <x>0</x>
     <y>0</y>
     <width>1144</width>
-    <height>955</height>
+    <height>964</height>
    </rect>
   </property>
   <property name="sizePolicy">
@@ -129,7 +129,7 @@
             <x>0</x>
             <y>0</y>
             <width>1140</width>
-            <height>50</height>
+            <height>48</height>
            </rect>
           </property>
           <layout class="QHBoxLayout" name="horizontalLayout_2">
@@ -180,53 +180,6 @@
              <property name="icon">
               <iconset resource="../../../resources_light.qrc">
                <normaloff>:/icons/light/image-file-icon.svg</normaloff>:/icons/light/image-file-icon.svg</iconset>
-             </property>
-             <property name="iconSize">
-              <size>
-               <width>32</width>
-               <height>32</height>
-              </size>
-             </property>
-             <property name="checkable">
-              <bool>true</bool>
-             </property>
-             <property name="flat">
-              <bool>true</bool>
-             </property>
-            </widget>
-           </item>
-           <item>
-            <widget class="QPushButton" name="language_processing_button">
-             <property name="sizePolicy">
-              <sizepolicy hsizetype="Preferred" vsizetype="Preferred">
-               <horstretch>0</horstretch>
-               <verstretch>0</verstretch>
-              </sizepolicy>
-             </property>
-             <property name="minimumSize">
-              <size>
-               <width>48</width>
-               <height>48</height>
-              </size>
-             </property>
-             <property name="maximumSize">
-              <size>
-               <width>48</width>
-               <height>48</height>
-              </size>
-             </property>
-             <property name="cursor">
-              <cursorShape>PointingHandCursor</cursorShape>
-             </property>
-             <property name="toolTip">
-              <string>Language Processing</string>
-             </property>
-             <property name="text">
-              <string/>
-             </property>
-             <property name="icon">
-              <iconset resource="../../../resources_light.qrc">
-               <normaloff>:/icons/light/edit-document-icon.svg</normaloff>:/icons/light/edit-document-icon.svg</iconset>
              </property>
              <property name="iconSize">
               <size>
@@ -304,123 +257,6 @@
               <property name="bottomMargin">
                <number>0</number>
               </property>
-              <item>
-               <widget class="QPushButton" name="chat_button">
-                <property name="minimumSize">
-                 <size>
-                  <width>48</width>
-                  <height>48</height>
-                 </size>
-                </property>
-                <property name="maximumSize">
-                 <size>
-                  <width>48</width>
-                  <height>48</height>
-                 </size>
-                </property>
-                <property name="cursor">
-                 <cursorShape>PointingHandCursor</cursorShape>
-                </property>
-                <property name="text">
-                 <string/>
-                </property>
-                <property name="icon">
-                 <iconset resource="../../../resources_light.qrc">
-                  <normaloff>:/icons/light/chat-box-icon.svg</normaloff>:/icons/light/chat-box-icon.svg</iconset>
-                </property>
-                <property name="iconSize">
-                 <size>
-                  <width>24</width>
-                  <height>24</height>
-                 </size>
-                </property>
-                <property name="checkable">
-                 <bool>true</bool>
-                </property>
-                <property name="checked">
-                 <bool>false</bool>
-                </property>
-                <property name="flat">
-                 <bool>true</bool>
-                </property>
-               </widget>
-              </item>
-              <item>
-               <widget class="QPushButton" name="llm_preferences_button">
-                <property name="minimumSize">
-                 <size>
-                  <width>48</width>
-                  <height>48</height>
-                 </size>
-                </property>
-                <property name="maximumSize">
-                 <size>
-                  <width>48</width>
-                  <height>48</height>
-                 </size>
-                </property>
-                <property name="cursor">
-                 <cursorShape>PointingHandCursor</cursorShape>
-                </property>
-                <property name="text">
-                 <string/>
-                </property>
-                <property name="icon">
-                 <iconset resource="../../../resources_light.qrc">
-                  <normaloff>:/icons/light/setting-line-icon.svg</normaloff>:/icons/light/setting-line-icon.svg</iconset>
-                </property>
-                <property name="iconSize">
-                 <size>
-                  <width>24</width>
-                  <height>24</height>
-                 </size>
-                </property>
-                <property name="checkable">
-                 <bool>true</bool>
-                </property>
-                <property name="flat">
-                 <bool>true</bool>
-                </property>
-               </widget>
-              </item>
-              <item>
-               <widget class="QPushButton" name="llm_settings_button">
-                <property name="minimumSize">
-                 <size>
-                  <width>48</width>
-                  <height>48</height>
-                 </size>
-                </property>
-                <property name="maximumSize">
-                 <size>
-                  <width>48</width>
-                  <height>48</height>
-                 </size>
-                </property>
-                <property name="cursor">
-                 <cursorShape>PointingHandCursor</cursorShape>
-                </property>
-                <property name="text">
-                 <string/>
-                </property>
-                <property name="icon">
-                 <iconset resource="../../../resources_light.qrc">
-                  <normaloff>:/icons/light/sliders-icon.svg</normaloff>:/icons/light/sliders-icon.svg</iconset>
-                </property>
-                <property name="iconSize">
-                 <size>
-                  <width>24</width>
-                  <height>24</height>
-                 </size>
-                </property>
-                <property name="checkable">
-                 <bool>true</bool>
-                </property>
-                <property name="flat">
-                 <bool>true</bool>
-                </property>
-               </widget>
-              </item>
               <item>
                <spacer name="horizontalSpacer_2">
                 <property name="orientation">
@@ -1059,7 +895,7 @@
                <x>0</x>
                <y>0</y>
                <width>386</width>
-               <height>831</height>
+               <height>835</height>
               </rect>
              </property>
              <layout class="QGridLayout" name="gridLayout">
@@ -1461,6 +1297,9 @@
                 <height>20</height>
                </size>
               </property>
+              <property name="checkable">
+               <bool>true</bool>
+              </property>
               <property name="flat">
                <bool>true</bool>
               </property>
@@ -1532,28 +1371,6 @@
             </item>
            </layout>
           </widget>
-         </item>
-        </layout>
-       </widget>
-       <widget class="QWidget" name="chat">
-        <attribute name="title">
-         <string>Text Generation</string>
-        </attribute>
-        <layout class="QGridLayout" name="gridLayout_11">
-         <property name="leftMargin">
-          <number>0</number>
-         </property>
-         <property name="topMargin">
-          <number>0</number>
-         </property>
-         <property name="rightMargin">
-          <number>0</number>
-         </property>
-         <property name="bottomMargin">
-          <number>0</number>
-         </property>
-         <item row="0" column="0">
-          <widget class="LLMWidget" name="llm_widget" native="true"/>
          </item>
         </layout>
        </widget>
@@ -2353,12 +2170,6 @@
    <header>airunner/widgets/canvas_plus/standard_image_widget</header>
    <container>1</container>
   </customwidget>
-  <customwidget>
-   <class>LLMWidget</class>
-   <extends>QWidget</extends>
-   <header>airunner/widgets/llm/llm_widget</header>
-   <container>1</container>
-  </customwidget>
  </customwidgets>
  <resources>
   <include location="../../../resources_light.qrc"/>
@@ -2974,30 +2785,14 @@
    </hints>
   </connection>
   <connection>
-   <sender>language_processing_button</sender>
-   <signal>pressed()</signal>
-   <receiver>MainWindow</receiver>
-   <slot>language_processing_toggled()</slot>
-   <hints>
-    <hint type="sourcelabel">
-     <x>80</x>
-     <y>67</y>
-    </hint>
-    <hint type="destinationlabel">
-     <x>0</x>
-     <y>137</y>
-    </hint>
-   </hints>
-  </connection>
-  <connection>
    <sender>model_manager_button</sender>
    <signal>pressed()</signal>
    <receiver>MainWindow</receiver>
    <slot>model_manager_toggled()</slot>
    <hints>
     <hint type="sourcelabel">
-     <x>124</x>
-     <y>48</y>
+     <x>97</x>
+     <y>70</y>
     </hint>
     <hint type="destinationlabel">
      <x>770</x>
@@ -3029,7 +2824,7 @@
    <hints>
     <hint type="sourcelabel">
      <x>916</x>
-     <y>65</y>
+     <y>64</y>
     </hint>
     <hint type="destinationlabel">
      <x>1002</x>
@@ -3045,7 +2840,7 @@
    <hints>
     <hint type="sourcelabel">
      <x>1093</x>
-     <y>65</y>
+     <y>64</y>
     </hint>
     <hint type="destinationlabel">
      <x>1002</x>
@@ -3061,7 +2856,7 @@
    <hints>
     <hint type="sourcelabel">
      <x>1135</x>
-     <y>65</y>
+     <y>64</y>
     </hint>
     <hint type="destinationlabel">
      <x>1002</x>
@@ -3077,7 +2872,7 @@
    <hints>
     <hint type="sourcelabel">
      <x>1042</x>
-     <y>65</y>
+     <y>64</y>
     </hint>
     <hint type="destinationlabel">
      <x>1002</x>
@@ -3092,8 +2887,8 @@
    <slot>image_generators_toggled()</slot>
    <hints>
     <hint type="sourcelabel">
-     <x>658</x>
-     <y>71</y>
+     <x>667</x>
+     <y>70</y>
     </hint>
     <hint type="destinationlabel">
      <x>0</x>
@@ -3108,8 +2903,8 @@
    <slot>text_to_video_toggled()</slot>
    <hints>
     <hint type="sourcelabel">
-     <x>706</x>
-     <y>71</y>
+     <x>715</x>
+     <y>70</y>
     </hint>
     <hint type="destinationlabel">
      <x>0</x>
@@ -3124,8 +2919,8 @@
    <slot>prompt_builder_toggled()</slot>
    <hints>
     <hint type="sourcelabel">
-     <x>754</x>
-     <y>71</y>
+     <x>763</x>
+     <y>70</y>
     </hint>
     <hint type="destinationlabel">
      <x>0</x>
@@ -3150,30 +2945,14 @@
    </hints>
   </connection>
   <connection>
-   <sender>language_processing_button</sender>
-   <signal>released()</signal>
-   <receiver>MainWindow</receiver>
-   <slot>language_processing_toggled()</slot>
-   <hints>
-    <hint type="sourcelabel">
-     <x>59</x>
-     <y>44</y>
-    </hint>
-    <hint type="destinationlabel">
-     <x>82</x>
-     <y>0</y>
-    </hint>
-   </hints>
-  </connection>
-  <connection>
    <sender>model_manager_button</sender>
    <signal>released()</signal>
    <receiver>MainWindow</receiver>
    <slot>model_manager_toggled()</slot>
    <hints>
     <hint type="sourcelabel">
-     <x>111</x>
-     <y>47</y>
+     <x>97</x>
+     <y>69</y>
     </hint>
     <hint type="destinationlabel">
      <x>0</x>
@@ -3188,8 +2967,8 @@
    <slot>image_generators_toggled()</slot>
    <hints>
     <hint type="sourcelabel">
-     <x>658</x>
-     <y>71</y>
+     <x>667</x>
+     <y>70</y>
     </hint>
     <hint type="destinationlabel">
      <x>754</x>
@@ -3204,8 +2983,8 @@
    <slot>text_to_video_toggled()</slot>
    <hints>
     <hint type="sourcelabel">
-     <x>706</x>
-     <y>71</y>
+     <x>715</x>
+     <y>70</y>
     </hint>
     <hint type="destinationlabel">
      <x>1002</x>
@@ -3220,8 +2999,8 @@
    <slot>prompt_builder_toggled()</slot>
    <hints>
     <hint type="sourcelabel">
-     <x>754</x>
-     <y>71</y>
+     <x>763</x>
+     <y>70</y>
     </hint>
     <hint type="destinationlabel">
      <x>1002</x>
@@ -3237,7 +3016,7 @@
    <hints>
     <hint type="sourcelabel">
      <x>1138</x>
-     <y>426</y>
+     <y>491</y>
     </hint>
     <hint type="destinationlabel">
      <x>1002</x>
@@ -3358,50 +3137,34 @@
    </hints>
   </connection>
   <connection>
-   <sender>chat_button</sender>
-   <signal>toggled(bool)</signal>
+   <sender>focus_button</sender>
+   <signal>clicked()</signal>
    <receiver>MainWindow</receiver>
-   <slot>chat_clicked(bool)</slot>
+   <slot>action_center_clicked()</slot>
    <hints>
     <hint type="sourcelabel">
-     <x>170</x>
-     <y>54</y>
+     <x>1120</x>
+     <y>350</y>
     </hint>
     <hint type="destinationlabel">
-     <x>452</x>
-     <y>0</y>
+     <x>806</x>
+     <y>-15</y>
     </hint>
    </hints>
   </connection>
   <connection>
-   <sender>llm_preferences_button</sender>
+   <sender>ai_button</sender>
    <signal>toggled(bool)</signal>
    <receiver>MainWindow</receiver>
-   <slot>chat_preferences_clicked(bool)</slot>
+   <slot>action_ai_toggled(bool)</slot>
    <hints>
     <hint type="sourcelabel">
-     <x>217</x>
-     <y>43</y>
+     <x>1110</x>
+     <y>412</y>
     </hint>
     <hint type="destinationlabel">
-     <x>444</x>
-     <y>0</y>
-    </hint>
-   </hints>
-  </connection>
-  <connection>
-   <sender>llm_settings_button</sender>
-   <signal>toggled(bool)</signal>
-   <receiver>MainWindow</receiver>
-   <slot>chat_settings_clicked(bool)</slot>
-   <hints>
-    <hint type="sourcelabel">
-     <x>279</x>
-     <y>43</y>
-    </hint>
-    <hint type="destinationlabel">
-     <x>728</x>
-     <y>0</y>
+     <x>917</x>
+     <y>-11</y>
     </hint>
    </hints>
   </connection>
@@ -3494,5 +3257,7 @@
   <slot>chat_preferences_clicked(bool)</slot>
   <slot>chat_settings_clicked(bool)</slot>
   <slot>quantization_clicked(bool)</slot>
+  <slot>action_center_clicked()</slot>
+  <slot>action_ai_toggled(bool)</slot>
  </slots>
 </ui>
