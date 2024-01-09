@@ -25,7 +25,7 @@ class ChatPromptWidget(BaseWidget):
     @property
     def generator(self):
         try:
-            return self.app.ui.llm_widget.generator
+            return self.app.generator
         except Exception as e:
             Logger.error(e)
             import traceback
@@ -34,7 +34,7 @@ class ChatPromptWidget(BaseWidget):
     @property
     def generator_settings(self):
         try:
-            return self.app.ui.llm_widget.generator_settings
+            return self.app.generator_settings
         except Exception as e:
             Logger.error(e)
 
@@ -66,6 +66,13 @@ class ChatPromptWidget(BaseWidget):
         self.ui.prompt.textChanged.connect(self.prompt_text_changed)
         self.ui.conversation.hide()
         self.ui.chat_container.show()
+
+        self.ui.username.blockSignals(True)
+        self.ui.botname.blockSignals(True)
+        self.ui.username.setText(self.generator.username)
+        self.ui.botname.setText(self.generator.botname)
+        self.ui.username.blockSignals(False)
+        self.ui.botname.blockSignals(False)
     
     def handle_token_signal(self, val):
         if val != "[END]":
@@ -304,4 +311,23 @@ class ChatPromptWidget(BaseWidget):
     
     def message_type_text_changed(self, val):
         self.generator.message_type = val
+        save_session()
+
+    def action_button_clicked_generate_characters(self):
+        pass
+    
+    def prefix_text_changed(self):
+        self.generator.prefix = self.ui.prefix.toPlainText()
+        save_session()
+
+    def suffix_text_changed(self):
+        self.generator.suffix = self.ui.suffix.toPlainText()
+        save_session()
+
+    def username_text_changed(self, val):
+        self.generator.username = val
+        save_session()
+
+    def botname_text_changed(self, val):
+        self.generator.botname = val
         save_session()

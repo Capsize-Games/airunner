@@ -23,9 +23,6 @@ class GeneratorForm(BaseWidget):
     initialized = False
     parent = None
     generate_signal = pyqtSignal(dict)
-    icons = (
-        ("artificial-intelligence-ai-chip-icon", "ai_button"),
-    )
 
     @property
     def is_txt2img(self):
@@ -122,10 +119,14 @@ class GeneratorForm(BaseWidget):
 
     def __init__(self, *args, **kwargs):
         super().__init__(*args, **kwargs)
+        self.ui.generator_form_tabs.tabBar().hide()
         self.active_grid_settings = session.query(ActiveGridSettings).first()
         self.canvas_settings = session.query(CanvasSettings).first()
-
         self.settings_manager.changed_signal.connect(self.handle_changed_signal)
+        self.activate_ai_mode()
+    
+    def activate_ai_mode(self):
+        self.ui.generator_form_tabs.setCurrentIndex(1 if self.settings_manager.ai_mode is True else 0)
     
     def toggle_advanced_generation(self):
         advanced_mode = self.settings_manager.enable_advanced_mode
