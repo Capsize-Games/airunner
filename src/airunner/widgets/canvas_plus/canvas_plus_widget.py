@@ -150,6 +150,7 @@ class ActiveGridArea(DraggablePixmap):
             self.pixmap.fill(QColor(0, 0, 0, 1))
 
         if self.settings_manager.active_grid_settings.render_border:
+            print(self.active_grid_area_rect)
             size = 4
             painter.setPen(QPen(
                 self.active_grid_area_color,
@@ -187,8 +188,6 @@ class ActiveGridArea(DraggablePixmap):
     def mouseReleaseEvent(self, event):
         super().mouseReleaseEvent(event)
         pos = self.pos()
-        self.settings_manager.set_value("active_grid_settings.pos_x", pos.x())
-        self.settings_manager.set_value("active_grid_settings.pos_y", pos.y())
 
 
 class CanvasPlusWidget(CanvasBaseWidget):
