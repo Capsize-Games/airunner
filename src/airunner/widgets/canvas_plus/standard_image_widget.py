@@ -18,7 +18,7 @@ from airunner.widgets.canvas_plus.templates.standard_image_widget_ui import Ui_s
 from airunner.utils import delete_image, load_metadata_from_image, prepare_metadata
 from airunner.settings import CONTROLNET_OPTIONS
 from airunner.widgets.slider.slider_widget import SliderWidget
-from airunner.data.models import ActionScheduler, Pipeline
+from airunner.data.models import ActionScheduler, Pipeline, GeneratorSetting
 
 class StandardImageWidget(StandardBaseWidget):
     widget_class_ = Ui_standard_image_widget
@@ -29,6 +29,21 @@ class StandardImageWidget(StandardBaseWidget):
     image_label = None
     image_batch = None
     meta_data = None
+    _image = None
+
+    @property
+    def image(self):
+        if self._image is None:
+            self.image = self.app.canvas_widget.current_layer.image
+        return self._image
+    
+    @image.setter
+    def image(self, image):
+        self._image = image
+
+    @property
+    def canvas_widget(self):
+        return self.ui.canvas_widget
 
     def __init__(self, *args, **kwargs):
         super().__init__(*args, **kwargs)
@@ -41,20 +56,11 @@ class StandardImageWidget(StandardBaseWidget):
         self.initialize()
     
     def set_controlnet_settings_properties(self):
-        self.ui.controlnet_settings.initialize(
-            self.settings_manager.generator_name,
-            self.settings_manager.generator_section
-        )
+        self.ui.controlnet_settings.initialize()
 
     def set_input_image_widget_properties(self):
-        self.ui.input_image_widget.initialize(
-            self.settings_manager.generator_name,
-            self.settings_manager.generator_section
-        )
-        self.ui.controlnet_settings.initialize(
-            self.settings_manager.generator_name,
-            self.settings_manager.generator_section
-        )
+        self.ui.input_image_widget.initialize()
+        self.ui.controlnet_settings.initialize()
     
     def update_image_input_thumbnail(self):
         self.ui.input_image_widget.set_thumbnail()
@@ -113,7 +119,6 @@ class StandardImageWidget(StandardBaseWidget):
         self.image_path = image_path
         self.image = image
         meta_data = image.info
-        print("META DATA", meta_data)
         self.meta_data = meta_data if meta_data is not None else load_metadata_from_image(image)
         return
         #size = self.ui.image_frame.width() - 20
@@ -204,18 +209,21 @@ class StandardImageWidget(StandardBaseWidget):
         """
         Using the LLM, generate a description of the image
         """
-        #self.app.describe_image(image=self.image, callback=self.handle_prompt_generated)
-        prompt = self.app.generator_tab_widget.ui.generator_form_stablediffusion.ui.prompt.toPlainText()
-        negative_prompt = self.app.generator_tab_widget.ui.generator_form_stablediffusion.ui.negative_prompt.toPlainText()
-        self.handle_prompt_generated([prompt], [negative_prompt])
+        self.app.describe_image(image=self.image, callback=self.handle_prompt_generated)
+        # prompt = self.app.generator_tab_widget.ui.prompt.toPlainText()
+        # negative_prompt = self.app.generator_tab_widget.ui.negative_prompt.toPlainText()
+        # self.handle_prompt_generated([prompt], [negative_prompt])
     
     def handle_prompt_generated(self, prompt, negative_prompt):
         meta_data = load_metadata_from_image(self.image)
         meta_data["prompt"] = prompt[0]
         meta_data["negative_prompt"] = negative_prompt[0]
         meta_data = prepare_metadata({ "options": meta_data })
-        image = Image.open(self.image_path)
-        image.save(self.image_path, pnginfo=meta_data)
+        if self.image_path:
+            image = Image.open(self.image_path)
+            image.save(self.image_path, pnginfo=meta_data)
+        else:
+            image = self.app.canvas_widget.current_layer.image
         self.image = image
         self.meta_data = load_metadata_from_image(self.image)
         self.generate_similar_image()
@@ -224,7 +232,7 @@ class StandardImageWidget(StandardBaseWidget):
         self.generate_similar_image()
     
     def generate_similar_image(self, batch_size=1):
-        meta_data = self.meta_data
+        meta_data = self.meta_data or {}
         
         prompt = meta_data.get("prompt", None)
         negative_prompt = meta_data.get("negative_prompt", None)
@@ -232,7 +240,8 @@ class StandardImageWidget(StandardBaseWidget):
         negative_prompt = None if negative_prompt == "" else negative_prompt
 
         if prompt is None:
-            return self.similar_image_with_prompt()
+            #return self.similar_image_with_prompt()
+            prompt = ""
         if negative_prompt is None:
             meta_data["negative_prompt"] = "verybadimagenegative_v1.3, EasyNegative"
         
@@ -251,7 +260,7 @@ class StandardImageWidget(StandardBaseWidget):
         meta_data["use_cropped_image"] = False
         meta_data["batch_size"] = batch_size
 
-        self.app.generator_tab_widget.current_generator_widget.call_generate(
+        self.app.generator_tab_widget.call_generate(
             image=self.image,
             override_data=meta_data
         )
@@ -263,7 +272,7 @@ class StandardImageWidget(StandardBaseWidget):
         self.generate_similar_image(batch_size=4)
 
     def upscale_2x_clicked(self):
-        meta_data = self.meta_data
+        meta_data = self.meta_data or {}
         
         prompt = meta_data.get("prompt", None)
         negative_prompt = meta_data.get("negative_prompt", None)
@@ -271,7 +280,7 @@ class StandardImageWidget(StandardBaseWidget):
         negative_prompt = None if negative_prompt == "" else negative_prompt
 
         if prompt is None:
-            return self.similar_image_with_prompt()
+            prompt = ""
         if negative_prompt is None:
             meta_data["negative_prompt"] = "verybadimagenegative_v1.3, EasyNegative"
         
@@ -281,14 +290,13 @@ class StandardImageWidget(StandardBaseWidget):
         meta_data["face_enhance"] = self.settings_manager.standard_image_widget_settings.face_enhance
         meta_data["denoise_strength"] = 0.5
         meta_data["action"] = "upscale"
-        meta_data["width"] = self.image.width
-        meta_data["height"] = self.image.height
+        meta_data["width"] = self.ui.canvas_widget.current_layer.image.width
+        meta_data["height"] = self.ui.canvas_widget.current_layer.image.height
         meta_data["enable_input_image"] = True
         meta_data["use_cropped_image"] = False
 
-
-        self.app.generator_tab_widget.current_generator_widget.call_generate(
-            image=self.image,
+        self.app.generator_tab_widget.call_generate(
+            image=self.ui.canvas_widget.current_layer.image,
             override_data=meta_data
         )
     
@@ -321,20 +329,6 @@ class StandardImageWidget(StandardBaseWidget):
         if current_version != "":
             self.ui.version.setCurrentText(current_version)
         self.ui.version.blockSignals(False)
-
-    def handle_pipeline_changed(self, val):
-        if val == "txt2img / img2img":
-            val = "txt2img"
-        elif val == "inpaint / outpaint":
-            val = "outpaint"
-        self.settings_manager.set_value(f"current_section_{self.settings_manager.current_image_generator}", val)
-        self.load_versions()
-        self.load_models()
-
-    def handle_version_changed(self, val):
-        print("VERSION CHANGED", val)
-        self.settings_manager.set_value(f"current_version_{self.settings_manager.current_image_generator}", val)
-        self.load_models()
 
     def load_models(self):
         session = get_session()
@@ -381,15 +375,37 @@ class StandardImageWidget(StandardBaseWidget):
     def clear_models(self):
         self.ui.model.clear()
     
-    def handle_settings_manager_changed(self, key, val, settings_manager):
-        print("handle_settings_manager_changed", key, val)
-        if settings_manager.generator_section == self.settings_manager.generator_section and settings_manager.generator_name == self.settings_manager.generator_name:
+    def initialize_generator_form(self, override_id=None):
+        if override_id:
+            self.ui.steps_widget.set_slider_and_spinbox_values(self.settings_manager.generator.steps)
+            self.ui.scale_widget.set_slider_and_spinbox_values(self.settings_manager.generator.scale * 100)
+            self.ui.clip_skip_slider_widget.set_slider_and_spinbox_values(self.settings_manager.generator.clip_skip)
+            
+            self.ui.pipeline.blockSignals(True)
+            self.ui.version.blockSignals(True)
+            self.ui.model.blockSignals(True)
+            self.ui.scheduler.blockSignals(True)
+            
+            self.ui.pipeline.setCurrentText(self.settings_manager.generator.section)
+            self.ui.version.setCurrentText(self.settings_manager.generator.version)
+            self.ui.model.setCurrentText(self.settings_manager.generator.model)
+            self.ui.scheduler.setCurrentText(self.settings_manager.generator.scheduler)
+
+            self.ui.pipeline.blockSignals(False)
+            self.ui.version.blockSignals(False)
+            self.ui.model.blockSignals(False)
+            self.ui.scheduler.blockSignals(False)
+        else:
             self.set_form_values()
             self.load_pipelines()
             self.load_versions()
             self.load_models()
             self.load_schedulers()
-
+    
+    def handle_settings_manager_changed(self, key, val, settings_manager):
+        if key == "generator_settings_override_id":
+            self.initialize_generator_form(val)
+        
     def initialize(self):
         self.set_form_values()
         self.load_pipelines()
@@ -427,3 +443,27 @@ class StandardImageWidget(StandardBaseWidget):
         #     self.generator_name
         # )
         self.initialized = True
+    
+    def handle_model_changed(self, name):
+        if not self.initialized:
+            return
+        self.settings_manager.set_value("generator.model", name)
+
+    def handle_scheduler_changed(self, name):
+        if not self.initialized:
+            return
+        self.settings_manager.set_value("generator.scheduler", name)
+    
+    def handle_pipeline_changed(self, val):
+        if val == "txt2img / img2img":
+            val = "txt2img"
+        elif val == "inpaint / outpaint":
+            val = "outpaint"
+        self.settings_manager.set_value(f"current_section_{self.settings_manager.current_image_generator}", val)
+        self.load_versions()
+        self.load_models()
+
+    def handle_version_changed(self, val):
+        print("VERSION CHANGED", val)
+        self.settings_manager.set_value(f"current_version_{self.settings_manager.current_image_generator}", val)
+        self.load_models()
