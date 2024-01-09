@@ -1,11 +1,8 @@
-import os
 import json
 
 from PyQt6.QtGui import QPixmap
 from PyQt6.QtWidgets import QLabel
 from PyQt6.QtCore import Qt
-from PyQt6.QtWidgets import QVBoxLayout
-from PyQt6.QtWidgets import QDialog
 from PyQt6.QtCore import pyqtSignal
 from PyQt6.QtWidgets import QMenu
 from PyQt6.QtWidgets import QMessageBox
@@ -18,7 +15,6 @@ from airunner.utils import load_metadata_from_image
 from airunner.utils import delete_image
 from airunner.widgets.base_widget import BaseWidget
 from airunner.widgets.image.templates.image_widget_ui import Ui_image_widget
-from airunner.aihandler.logger import Logger
 from PyQt6.QtGui import QDrag
 from PyQt6.QtCore import QMimeData
 from PyQt6.QtCore import QByteArray

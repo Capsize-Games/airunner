@@ -1,14 +1,11 @@
 import os
-from functools import partial
 
 from PIL import Image
 from PyQt6.QtCore import pyqtSlot
-from PyQt6.QtWidgets import QComboBox, QWidget, QHBoxLayout
 
 from airunner.utils import image_to_pixmap, auto_export_image, open_file_path
 from airunner.widgets.controlnet_settings.templates.controlnet_settings_ui import Ui_controlnet_settings
 from airunner.widgets.input_image.input_image_settings_widget import InputImageSettingsWidget
-from airunner.widgets.slider.slider_widget import SliderWidget
 from airunner.settings import CONTROLNET_OPTIONS
 
 
