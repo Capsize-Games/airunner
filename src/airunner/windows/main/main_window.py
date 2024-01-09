@@ -25,7 +25,7 @@ from airunner.aihandler.settings import LOG_LEVEL
 from airunner.aihandler.settings_manager import SettingsManager
 from airunner.airunner_api import AIRunnerAPI
 from airunner.data.db import session
-from airunner.data.models import SplitterSection, Prompt, TabSection
+from airunner.data.models import SplitterSection, Prompt, TabSection, LLMGenerator
 from airunner.filters.windows.filter_base import FilterBase
 from airunner.input_event_manager import InputEventManager
 from airunner.mixins.history_mixin import HistoryMixin
@@ -100,6 +100,32 @@ class MainWindow(
     image_data = pyqtSignal(dict)
     load_image = pyqtSignal(str)
     load_image_object = pyqtSignal(object)
+
+    generator = None
+    _generator = None
+    _generator_settings = None
+
+    @property
+    def generator(self):
+        if self._generator is None:
+            session = get_session()
+            try:
+                self._generator = session.query(LLMGenerator).filter(
+                    LLMGenerator.name == self.ui.standard_image_widget.ui.llm_settings_widget.current_generator
+                ).first()
+                if self._generator is None:
+                    logger.error("Unable to locate generator by name " + self.ui.standard_image_widget.ui.llm_settings_widget.current_generator if self.ui.llm_settings_widget.current_generator else "None")
+            except Exception as e:
+                logger.error(e)
+        return self._generator
+    
+    @property
+    def generator_settings(self):
+        try:
+            return self.generator.generator_settings[0]
+        except Exception as e:
+            logger.error(e)
+            return None
 
     @property
     def generate_signal(self):
@@ -681,7 +707,6 @@ class MainWindow(
         self.setStyleSheet(stylesheet)
         for icon_data in [
             ("image-file-icon", "image_generation_button"),
-            ("edit-document-icon", "language_processing_button"),
             ("tech-icon", "model_manager_button"),
             ("photo-editor-icon", "image_generators_button"),
             ("video-editor-icon", "txt2vid_button"),
@@ -692,10 +717,6 @@ class MainWindow(
             ("circle-center-icon", "focus_button"),
             ("artificial-intelligence-ai-chip-icon", "ai_button"),
             ("setting-line-icon", "settings_button"),
-            ("chat-box-icon", "chat_button"),
-            ("setting-line-icon", "llm_preferences_button"),
-            #("clamp-as-indicated-symbol-icon", "llm_quantization_button"),
-            ("sliders-icon", "llm_settings_button"),
             ("object-selected-icon", "toggle_active_grid_area_button"),
         ]:
             self.set_icons(icon_data[0], icon_data[1], "dark" if self.is_dark else "light")
@@ -744,7 +765,21 @@ class MainWindow(
         pass
 
     def initialize_default_buttons(self):
-        pass
+        self.ui.toggle_active_grid_area_button.blockSignals(True)
+        self.ui.toggle_brush_button.blockSignals(True)
+        self.ui.toggle_eraser_button.blockSignals(True)
+        self.ui.toggle_grid_button.blockSignals(True)
+        self.ui.ai_button.blockSignals(True)
+        self.ui.toggle_active_grid_area_button.setChecked(self.settings_manager.current_tool == "active_grid_area")
+        self.ui.toggle_brush_button.setChecked(self.settings_manager.current_tool == "brush")
+        self.ui.toggle_eraser_button.setChecked(self.settings_manager.current_tool == "eraser")
+        self.ui.toggle_grid_button.setChecked(self.settings_manager.grid_settings.show_grid is True)
+        self.ui.ai_button.setChecked(self.settings_manager.ai_mode is True)
+        self.ui.toggle_active_grid_area_button.blockSignals(False)
+        self.ui.toggle_brush_button.blockSignals(False)
+        self.ui.toggle_eraser_button.blockSignals(False)
+        self.ui.toggle_grid_button.blockSignals(False)
+        self.ui.ai_button.blockSignals(False)
 
     @pyqtSlot(dict)
     def handle_button_clicked(self, kwargs):
@@ -1332,7 +1367,6 @@ class MainWindow(
     
     def set_all_section_buttons(self):
         self.set_button_checked("image_generation", self.settings_manager.mode == Mode.IMAGE.value)
-        self.set_button_checked("language_processing", self.settings_manager.mode == Mode.LANGUAGE_PROCESSOR.value)
         self.set_button_checked("model_manager", self.settings_manager.mode == Mode.MODEL_MANAGER.value)
         self.toggle_header_buttons()
     
@@ -1346,27 +1380,6 @@ class MainWindow(
         else:
             self.ui.image_generator_header_tools.hide()
             self.ui.text_generator_header_tools.hide()
-    
-    def chat_clicked(self, val):
-        self.set_llm_widget_tab("chat", val)
-
-    def chat_preferences_clicked(self, val):
-        self.set_llm_widget_tab("preferences", val)
-
-    def chat_settings_clicked(self, val):
-        self.set_llm_widget_tab("settings", val)
-     
-    def quantization_clicked(self, val):
-        self.set_llm_widget_tab("quantization", val)
-    
-    def set_llm_widget_tab(self, name, val):
-        self.toggle_llm_button_signals(blocked=True)
-        self.ui.chat_button.setChecked(name == "chat")
-        self.ui.llm_preferences_button.setChecked(name == "preferences")
-        self.ui.llm_settings_button.setChecked(name == "settings")
-        index = self.ui.llm_widget.ui.tabWidget.indexOf(self.ui.llm_widget.ui.tabWidget.findChild(QWidget, name))
-        self.ui.llm_widget.ui.tabWidget.setCurrentIndex(index)
-        self.toggle_llm_button_signals(blocked=False)
     
     def toggle_llm_button_signals(self, blocked):
         self.ui.chat_button.blockSignals(blocked)
@@ -1457,3 +1470,10 @@ class MainWindow(
 
         # Update the window
         self.update()
+
+    def action_center_clicked(self):
+        print("center clicked")
+    
+    def action_ai_toggled(self, val):
+        self.settings_manager.set_value("ai_mode", val)
+        self.generator_tab_widget.activate_ai_mode()
