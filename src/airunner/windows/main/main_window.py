@@ -77,7 +77,7 @@ class MainWindow(
     button_clicked_signal = pyqtSignal(dict)
     status_widget = None
     splitters = None
-
+    header_widget_spacer = None
     deterministic_window = None
 
     _tabs = {
@@ -304,14 +304,13 @@ class MainWindow(
 
         self.initialize_panel_tabs()
         self.initialize_tool_section_buttons()
-        self.toggle_header_buttons()
         
         if self.settings_manager.mode == Mode.IMAGE.value:
             self.image_generation_toggled()
         elif self.settings_manager.mode == Mode.LANGUAGE_PROCESSOR.value:
             self.language_processing_toggled()
         else:
-            self.model_manager_toggled()
+            self.model_manager_toggled(True)
         
         # This is used to check the state of the window and save splitter sizes if they have changed
         self.start_splitter_timer()
@@ -705,11 +704,7 @@ class MainWindow(
             stylesheet = f.read()
         self.setStyleSheet(stylesheet)
         for icon_data in [
-            ("image-file-icon", "image_generation_button"),
             ("tech-icon", "model_manager_button"),
-            ("photo-editor-icon", "image_generators_button"),
-            ("video-editor-icon", "txt2vid_button"),
-            ("prompt-editor-icon", "prompt_builder_button"),
             ("pencil-icon", "toggle_brush_button"),
             ("eraser-icon", "toggle_eraser_button"),
             ("frame-grid-icon", "toggle_grid_button"),
@@ -1351,10 +1346,13 @@ class MainWindow(
         self.activate_language_processing_section()
         self.set_all_section_buttons()
     
-    def model_manager_toggled(self):
-        self.settings_manager.set_value("mode", Mode.MODEL_MANAGER.value)
-        self.activate_model_manager_section()
-        self.set_all_section_buttons()
+    def model_manager_toggled(self, val):
+        if not val:
+            self.image_generators_toggled()
+        else:
+            self.settings_manager.set_value("mode", Mode.MODEL_MANAGER.value)
+            self.activate_model_manager_section()
+            self.set_all_section_buttons()
     
     def set_button_checked(self, name, val=True, block_signals=True):
         widget = getattr(self.ui, f"{name}_button")
@@ -1365,75 +1363,24 @@ class MainWindow(
             widget.blockSignals(False)
     
     def set_all_section_buttons(self):
-        self.set_button_checked("image_generation", self.settings_manager.mode == Mode.IMAGE.value)
         self.set_button_checked("model_manager", self.settings_manager.mode == Mode.MODEL_MANAGER.value)
-        self.toggle_header_buttons()
     
-    def toggle_header_buttons(self):
-        if self.settings_manager.mode == Mode.IMAGE.value:
-            self.ui.image_generator_header_tools.show()
-            self.ui.text_generator_header_tools.hide()
-        elif self.settings_manager.mode == Mode.LANGUAGE_PROCESSOR.value:
-            self.ui.image_generator_header_tools.hide()
-            self.ui.text_generator_header_tools.show()
-        else:
-            self.ui.image_generator_header_tools.hide()
-            self.ui.text_generator_header_tools.hide()
-    
-    def toggle_llm_button_signals(self, blocked):
-        self.ui.chat_button.blockSignals(blocked)
-        self.ui.llm_preferences_button.blockSignals(blocked)
-        self.ui.llm_settings_button.blockSignals(blocked)
-        #self.ui.llm_quantization_button.blockSignals(blocked)
-
     def activate_image_generation_section(self):
         self.ui.mode_tab_widget.setCurrentIndex(0)
-        self.toggle_tool_section_buttons_visibility()
 
     def activate_language_processing_section(self):
         self.ui.mode_tab_widget.setCurrentIndex(1)
-        self.toggle_tool_section_buttons_visibility()
     
     def activate_model_manager_section(self):
-        self.ui.mode_tab_widget.setCurrentIndex(2)
-        self.toggle_tool_section_buttons_visibility()
+        self.ui.center_tab.setCurrentIndex(2)
 
     def initialize_tool_section_buttons(self):
-        self.toggle_tool_section_buttons_visibility()
-        self.set_button_checked("image_generators", False)
-        self.set_button_checked("txt2vid", False)
-        self.set_button_checked("prompt_builder", False)
-        if self.settings_manager.mode == Mode.IMAGE.value:
-            if self.settings_manager.generator_section == GeneratorSection.TXT2VID.value:
-                self.set_button_checked("txt2vid")
-            elif self.settings_manager.generator_section == GeneratorSection.PROMPT_BUILDER.value:
-                self.set_button_checked("prompt_builder")
-            else:
-                self.set_button_checked("image_generators")
+        pass
     
-    header_widget_spacer = None
-    def toggle_tool_section_buttons_visibility(self):
-        image_mode = self.settings_manager.mode == Mode.IMAGE.value
-        lang_mode = self.settings_manager.mode == Mode.LANGUAGE_PROCESSOR.value
-        self.ui.image_generator_header_tools.setVisible(image_mode or lang_mode)
-        self.ui.text_generator_header_tools.setVisible(image_mode or lang_mode)
-        visible = image_mode or lang_mode
-
-        # add a horizontal spacer to the right of the self.ui.header_widget
-        if not visible:
-            if not self.header_widget_spacer:
-                self.header_widget_spacer = QSpacerItem(40, 20, QSizePolicy.Policy.Expanding, QSizePolicy.Policy.Minimum)
-            self.ui.scrollAreaWidgetContents_3.layout().addItem(self.header_widget_spacer)
-        elif visible and self.header_widget_spacer:
-            self.ui.scrollAreaWidgetContents_3.layout().removeItem(self.header_widget_spacer)
-
     def set_all_image_generator_buttons(self):
         is_image_generators = self.settings_manager.generator_section == GeneratorSection.TXT2IMG.value
         is_txt2vid = self.settings_manager.generator_section == GeneratorSection.TXT2VID.value
         is_prompt_builder = self.settings_manager.generator_section == GeneratorSection.PROMPT_BUILDER.value
-        self.set_button_checked("image_generators", is_image_generators)
-        self.set_button_checked("txt2vid", is_txt2vid)
-        self.set_button_checked("prompt_builder", is_prompt_builder)
     
     def image_generators_toggled(self):
         self.image_generation_toggled()
@@ -1455,14 +1402,17 @@ class MainWindow(
         self.set_all_image_generator_buttons()
         self.change_content_widget()
 
-    def prompt_builder_toggled(self):
-        self.image_generation_toggled()
-        self.settings_manager.set_value(f"generator_section", GeneratorSection.PROMPT_BUILDER.value)
-        active_tab_obj = session.query(TabSection).filter(TabSection.panel == "center_tab").first()
-        active_tab_obj.active_tab = "Prompt Builder"
-        save_session()
-        self.set_all_image_generator_buttons()
-        self.change_content_widget()
+    def toggle_prompt_builder(self, val):
+        if not val:
+            self.image_generators_toggled()
+        else:
+            self.image_generation_toggled()
+            self.settings_manager.set_value(f"generator_section", GeneratorSection.PROMPT_BUILDER.value)
+            active_tab_obj = session.query(TabSection).filter(TabSection.panel == "center_tab").first()
+            active_tab_obj.active_tab = "Prompt Builder"
+            save_session()
+            self.set_all_image_generator_buttons()
+            self.change_content_widget()
 
     def redraw(self):
         self.set_stylesheet()
