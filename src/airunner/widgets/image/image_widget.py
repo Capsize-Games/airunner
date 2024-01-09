@@ -244,7 +244,6 @@ class BrushImageWidget(ImageWidget):
     def handle_label_clicked(self, event):
         # get the clicked object
         if event.button() == Qt.MouseButton.LeftButton:
-            # check if shift is down
             shift_pressed = event.modifiers() == Qt.KeyboardModifier.ShiftModifier
             self.container.activate_brush(self, self.brush, shift_pressed)
         elif event.button() == Qt.MouseButton.RightButton:

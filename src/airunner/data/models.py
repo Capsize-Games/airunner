@@ -356,6 +356,8 @@ class GeneratorSetting(BaseModel):
     active_grid_border_color = Column(String, default="#00FF00")
     active_grid_fill_color = Column(String, default="#FF0000")
     brushes = relationship("Brush", back_populates='generator_setting')  # modified line
+    version = Column(String, default="SD 1.5")
+    is_preset = Column(Boolean, default=False)
 
 
 class Brush(BaseModel):
@@ -767,6 +769,7 @@ class LLMGenerator(BaseModel):
     message_type = Column(String, default="chat")
     bot_personality = Column(String, default="Nice")
     override_parameters = Column(Boolean, default=False)
+    prompt_template = Column(String, default="")
 
 
 class LLMGeneratorSetting(BaseModel):

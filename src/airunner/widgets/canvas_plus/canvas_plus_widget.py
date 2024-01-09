@@ -2,7 +2,6 @@ import io
 import math
 import subprocess
 from functools import partial
-import pdb
 
 from PIL import Image, ImageGrab
 from PIL.ImageQt import ImageQt, QImage
@@ -15,7 +14,7 @@ from airunner.aihandler.settings_manager import SettingsManager
 from airunner.cursors.circle_brush import CircleCursor
 from airunner.data.db import session
 from airunner.data.models import Layer, CanvasSettings, ActiveGridSettings
-from airunner.utils import get_session, save_session
+from airunner.utils import save_session
 from airunner.widgets.canvas_plus.canvas_base_widget import CanvasBaseWidget
 from airunner.widgets.canvas_plus.templates.canvas_plus_ui import Ui_canvas
 from airunner.utils import apply_opacity_to_image
@@ -212,10 +211,6 @@ class CanvasPlusWidget(CanvasBaseWidget):
     initialized = False
     drawing = False
 
-    @property
-    def current_active_image_data(self):
-        return self.current_layer.image_data
-
     def current_pixmap(self):
         draggable_pixmap = self.current_draggable_pixmap()
         if draggable_pixmap:
@@ -227,10 +222,6 @@ class CanvasPlusWidget(CanvasBaseWidget):
             return None
         return Image.fromqpixmap(pixmap)
     
-    @current_active_image_data.setter
-    def current_active_image_data(self, value):
-        self.current_layer.image_data = value
-
     @property
     def image_pivot_point(self):
         try:
@@ -402,6 +393,16 @@ class CanvasPlusWidget(CanvasBaseWidget):
                 layer.opacity / 100.0
             )
 
+            if layer.id in self.layers:
+                if not layer.visible:
+                    if self.layers[layer.id] in self.scene.items():
+                        self.scene.removeItem(self.layers[layer.id])
+                elif layer.visible:
+                    if not self.layers[layer.id] in self.scene.items():
+                        self.scene.addItem(self.layers[layer.id])
+                    self.layers[layer.id].pixmap.convertFromImage(ImageQt(image))
+                continue
+
             draggable_pixmap = None
             if layer.id in self.layers:
                 self.layers[layer.id].pixmap.convertFromImage(ImageQt(image))
@@ -453,6 +454,7 @@ class CanvasPlusWidget(CanvasBaseWidget):
         """
         Draw a rectangle around the active grid area of
         """
+        print(self.active_grid_area_rect)
         if not self.active_grid_area:
             self.active_grid_area = ActiveGridArea(
                 parent=self,
@@ -583,7 +585,7 @@ class CanvasPlusWidget(CanvasBaseWidget):
 
     def load_image(self, image_path):
         image = Image.open(image_path)
-        if self.app.settings_manager.resize_on_paste:
+        if self.settings_manager.resize_on_paste:
             image.thumbnail((self.settings_manager.working_width,
                              self.settings_manager.working_height), Image.ANTIALIAS)
         self.add_image_to_scene(image)
@@ -603,6 +605,8 @@ class CanvasPlusWidget(CanvasBaseWidget):
         if not draggable_pixmap:
             return
         self.scene.removeItem(draggable_pixmap)
+        if self.current_layer.id in self.layers:
+            del self.layers[self.current_layer.id]
         self.update()
     
     def delete_image(self):
@@ -614,17 +618,13 @@ class CanvasPlusWidget(CanvasBaseWidget):
         self.update()
     
     def paste_image_from_clipboard(self):
+        Logger.info("paste image from clipboard")
         image = self.get_image_from_clipboard()
 
         if not image:
             Logger.info("No image in clipboard")
             return
 
-        if self.app.settings_manager.resize_on_paste:
-            Logger.info("Resizing image")
-            image.thumbnail(
-                (self.settings_manager.working_width, self.settings_manager.working_height), 
-                Image.ANTIALIAS)
         self.create_image(image)
     
     def get_image_from_clipboard(self):
@@ -653,19 +653,23 @@ class CanvasPlusWidget(CanvasBaseWidget):
             subprocess.Popen(["xclip", "-selection", "clipboard", "-t", "image/png"],
                             stdin=subprocess.PIPE).communicate(data)
         except FileNotFoundError:
-            pass
+            Logger.error("xclip not found. Please install xclip to copy image to clipboard.")
 
     def create_image(self, image):
-        if self.app.settings_manager.resize_on_paste:
-            image.thumbnail(
-                (
-                    self.settings_manager.working_width,
-                    self.settings_manager.working_height
-                ),
-                Image.ANTIALIAS
-            )
+        if self.settings_manager.resize_on_paste:
+            image = self.resize_image(image)
         self.add_image_to_scene(image)
     
+    def resize_image(self, image):
+        image.thumbnail(
+            (
+                self.settings_manager.working_width,
+                self.settings_manager.working_height
+            ),
+            Image.ANTIALIAS
+        )
+        return image
+
     def remove_current_draggable_pixmap_from_scene(self):
         current_draggable_pixmap = self.current_draggable_pixmap()
         if current_draggable_pixmap:
@@ -678,11 +682,6 @@ class CanvasPlusWidget(CanvasBaseWidget):
         self.current_layer_index = layer_index
 
     def add_image_to_scene(self, image, is_outpaint=False, image_root_point=None):
-        # change size of self.current_active_image to match size of image
-        if self.current_active_image is None:
-            self.current_active_image = image
-        else:
-            self.current_active_image = self.current_active_image.resize(image.size)
         self.current_active_image = image
         if image_root_point is not None:
             self.current_layer.pos_x = image_root_point.x()
@@ -751,3 +750,13 @@ class CanvasPlusWidget(CanvasBaseWidget):
     
     def update_image_canvas(self):
         print("TODO")
+
+    def rotate_90_clockwise(self):
+        if self.current_active_image:
+            self.current_active_image = self.current_active_image.transpose(Image.ROTATE_270)
+            self.do_draw()
+
+    def rotate_90_counterclockwise(self):
+        if self.current_active_image:
+            self.current_active_image = self.current_active_image.transpose(Image.ROTATE_90)
+            self.do_draw()

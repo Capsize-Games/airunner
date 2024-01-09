@@ -14,6 +14,7 @@ from airunner.data.models import ControlnetModel, LLMPromptTemplate, Pipeline, D
     LLMGeneratorSetting, LLMGenerator, LLMModelVersion
 from airunner.utils import get_session
 from alembic.config import Config
+from airunner.aihandler.logger import Logger
 from alembic import command
 import os
 import configparser
@@ -495,7 +496,7 @@ if not session.query(Prompt).first():
         },
     ]
 
-HERE = os.path.abspath(os.path.dirname(__file__))
+HERE = os.path.abspath(os.path.dirname(__file__)) 
 alembic_ini_path = os.path.join(HERE, "../alembic.ini")
 
 config = configparser.ConfigParser()
@@ -505,9 +506,7 @@ home_dir = os.path.expanduser("~")
 db_path = f'sqlite:///{home_dir}/.airunner/airunner.db'
 
 config.set('alembic', 'sqlalchemy.url', db_path)
-
 with open(alembic_ini_path, 'w') as configfile:
     config.write(configfile)
-
 alembic_cfg = Config(alembic_ini_path)
 command.upgrade(alembic_cfg, "head")

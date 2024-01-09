@@ -1,13 +1,11 @@
 import random
 
 from PIL import Image
-from PyQt6.QtCore import pyqtSignal, QRect, QTimer
-from PyQt6.QtWidgets import QWidget
+from PyQt6.QtCore import pyqtSignal, QRect
 
 from airunner.aihandler.settings import MAX_SEED
 from airunner.data.db import session
-from airunner.data.models import AIModel, ActiveGridSettings, CanvasSettings, Pipeline, GeneratorSetting
-from airunner.utils import get_session
+from airunner.data.models import ActiveGridSettings, CanvasSettings
 from airunner.widgets.base_widget import BaseWidget
 from airunner.widgets.generator_form.templates.generatorform_ui import Ui_generator_form
 
@@ -25,6 +23,9 @@ class GeneratorForm(BaseWidget):
     initialized = False
     parent = None
     generate_signal = pyqtSignal(dict)
+    icons = (
+        ("artificial-intelligence-ai-chip-icon", "ai_button"),
+    )
 
     @property
     def is_txt2img(self):
@@ -56,19 +57,11 @@ class GeneratorForm(BaseWidget):
 
     @property
     def generator_section(self):
-        try:
-            return self.property("generator_section")
-        except Exception as e:
-            print(e)
-            return None
+        return getattr(self.settings_manager, f"current_section_{self.settings_manager.current_image_generator}")
 
     @property
     def generator_name(self):
-        try:
-            return self.property("generator_name")
-        except Exception as e:
-            print(e)
-            return None
+        return self.settings_manager.current_image_generator
 
     @property
     def generator_settings(self):
@@ -92,7 +85,7 @@ class GeneratorForm(BaseWidget):
     @latents_seed.setter
     def latents_seed(self, val):
         self.settings_manager.set_value("generator.latents_seed", val)
-        self.app.ui.standard_image_widget.ui.seed_widget_latents.ui.lineEdit.setText(str(val))
+        self.app.standard_image_panel.ui.seed_widget_latents.ui.lineEdit.setText(str(val))
 
     @property
     def seed(self):
@@ -101,7 +94,7 @@ class GeneratorForm(BaseWidget):
     @seed.setter
     def seed(self, val):
         self.settings_manager.set_value("generator.seed", val)
-        self.app.ui.standard_image_widget.ui.seed_widget.ui.lineEdit.setText(str(val))
+        self.app.standard_image_panel.ui.seed_widget.ui.lineEdit.setText(str(val))
 
     @property
     def image_scale(self):
@@ -125,7 +118,7 @@ class GeneratorForm(BaseWidget):
 
     @property
     def controlnet_image(self):
-        return self.app.ui.standard_image_widget.ui.controlnet_settings.current_controlnet_image
+        return self.app.standard_image_panel.ui.controlnet_settings.current_controlnet_image
 
     def __init__(self, *args, **kwargs):
         super().__init__(*args, **kwargs)
@@ -133,11 +126,6 @@ class GeneratorForm(BaseWidget):
         self.canvas_settings = session.query(CanvasSettings).first()
 
         self.settings_manager.changed_signal.connect(self.handle_changed_signal)
-        self.initialize()
-    
-    def enable_preset(self, id):
-        self.settings_manager.set_value("generator_settings_override_id", id)
-        self.initialize()
     
     def toggle_advanced_generation(self):
         advanced_mode = self.settings_manager.enable_advanced_mode
@@ -184,21 +172,6 @@ class GeneratorForm(BaseWidget):
     def toggle_prompt_builder_checkbox(self, toggled):
         pass
 
-    def handle_model_changed(self, name):
-        if not self.initialized:
-            return
-        self.settings_manager.set_value("generator.model", name)
-        self.changed_signal.emit("generator.model", name)
-
-    def handle_scheduler_changed(self, name):
-        if not self.initialized:
-            return
-        self.settings_manager.set_value("generator.scheduler", name)
-        self.changed_signal.emit("generator.scheduler", name)
-
-    def toggle_variation(self, toggled):
-        pass
-
     def handle_generate_button_clicked(self):
         self.start_progress_bar()
         self.generate(image=self.app.current_active_image())
@@ -211,10 +184,10 @@ class GeneratorForm(BaseWidget):
 
     def generate(self, image=None, seed=None):
         if seed is None:
-            seed = self.app.ui.standard_image_widget.ui.seed_widget.seed
-        if self.app.ui.standard_image_widget.ui.samples_widget.current_value > 1:
+            seed = self.app.standard_image_panel.ui.seed_widget.seed
+        if self.app.standard_image_panel.ui.samples_widget.current_value > 1:
             self.app.client.do_process_queue = False
-        total_samples = self.app.ui.standard_image_widget.ui.samples_widget.current_value if not self.is_txt2vid else 1
+        total_samples = self.settings_manager.generator.n_samples
         for n in range(total_samples):
             if self.settings_manager.generator.use_prompt_builder and n > 0:
                 seed = int(seed) + n
@@ -242,7 +215,7 @@ class GeneratorForm(BaseWidget):
                 self.settings_manager.generator.enable_input_image
             )
             if enable_input_image:
-                input_image = self.app.ui.standard_image_widget.ui.input_image_widget.current_input_image
+                input_image = self.app.standard_image_panel.ui.input_image_widget.current_input_image
             elif self.generator_section == "txt2img":
                 input_image = override_data.get("input_image", None)
                 image = input_image
@@ -258,7 +231,7 @@ class GeneratorForm(BaseWidget):
             if image is None:
                 if self.is_txt2img:
                     return self.do_generate(seed=seed, override_data=override_data)
-                # Create a transparent image the size of self.canvas.active_grid_area_rect
+                # Create a transparent image the size of self.app.canvas_widget.active_grid_area_rect
                 width = self.settings_manager.working_width
                 height = self.settings_manager.working_height
                 image = Image.new("RGBA", (int(width), int(height)), (0, 0, 0, 0))
@@ -284,14 +257,14 @@ class GeneratorForm(BaseWidget):
                 # Get the cropped image
                 cropped_outpaint_box_rect = self.active_rect
                 # crop_location = (
-                #     cropped_outpaint_box_rect.x() - self.canvas.image_pivot_point.x(),
-                #     cropped_outpaint_box_rect.y() - self.canvas.image_pivot_point.y(),
-                #     cropped_outpaint_box_rect.width() - self.canvas.image_pivot_point.x(),
-                #     cropped_outpaint_box_rect.height() - self.canvas.image_pivot_point.y()
+                #     cropped_outpaint_box_rect.x() - self.app.canvas_widget.image_pivot_point.x(),
+                #     cropped_outpaint_box_rect.y() - self.app.canvas_widget.image_pivot_point.y(),
+                #     cropped_outpaint_box_rect.width() - self.app.canvas_widget.image_pivot_point.x(),
+                #     cropped_outpaint_box_rect.height() - self.app.canvas_widget.image_pivot_point.y()
                 # )
                 crop_location = (
-                    cropped_outpaint_box_rect.x() - self.canvas.current_layer.pos_x,
-                    cropped_outpaint_box_rect.y() - self.canvas.current_layer.pos_y,
+                    cropped_outpaint_box_rect.x() - self.app.canvas_widget.current_layer.pos_x,
+                    cropped_outpaint_box_rect.y() - self.app.canvas_widget.current_layer.pos_y,
                     cropped_outpaint_box_rect.width(),
                     cropped_outpaint_box_rect.height()
                 )
@@ -379,7 +352,6 @@ class GeneratorForm(BaseWidget):
 
 
         # get the model from the database
-        print(model_data)
         model = self.settings_manager.models.filter_by(
             name=model_data["name"] if "name" in model_data \
                 else self.settings_manager.generator.model
@@ -474,8 +446,8 @@ class GeneratorForm(BaseWidget):
             options["controlnet_image"] = self.controlnet_image
 
         if action == "superresolution":
-            options["original_image_width"] = self.canvas.current_active_image_data.image.width
-            options["original_image_height"] = self.canvas.current_active_image_data.image.height
+            options["original_image_width"] = self.app.canvas_widget.current_active_image_data.image.width
+            options["original_image_height"] = self.app.canvas_widget.current_active_image_data.image.height
 
         if action in ["txt2img", "img2img", "outpaint", "depth2img"]:
             options[f"strength"] = strength
@@ -496,25 +468,6 @@ class GeneratorForm(BaseWidget):
                 **options,
                 **extra_options,
                 **memory_options
-            }
-        }
-        self.app.client.message = data
-
-    def do_deterministic_generation(self, extra_options):
-        action = self.deterministic_data["action"]
-        options = self.deterministic_data["options"]
-        options[f"prompt"] = self.deterministic_data[f"prompt"][self.deterministic_index]
-        memory_options = self.get_memory_options()
-        data = {
-            "action": action,
-            "options": {
-                **options,
-                **extra_options,
-                **memory_options,
-                "batch_size": self.settings_manager.deterministic_settings.batch_size,
-                "deterministic_generation": True,
-                "deterministic_seed": self.settings_manager.deterministic_settings.seed,
-                "deterministic_style": self.settings_manager.deterministic_settings.style,
             }
         }
         self.app.client.message = data
@@ -545,8 +498,8 @@ class GeneratorForm(BaseWidget):
         self.update_seed()
 
     def update_seed(self):
-        self.app.ui.standard_image_widget.ui.seed_widget.update_seed()
-        self.app.ui.standard_image_widget.ui.seed_widget_latents.update_seed()
+        self.app.standard_image_panel.ui.seed_widget.update_seed()
+        self.app.standard_image_panel.ui.seed_widget_latents.update_seed()
 
     def set_primary_seed(self, seed=None):
         if self.deterministic_data:
@@ -629,3 +582,24 @@ class GeneratorForm(BaseWidget):
         self.deterministic = False
         self.deterministic_data = None
         self.deterministic_images = None
+    
+    def set_progress_bar_value(self, tab_section, section, value):
+        progressbar = self.ui.progress_bar
+        if not progressbar:
+            return
+        if progressbar.maximum() == 0:
+            progressbar.setRange(0, 100)
+        progressbar.setValue(value)
+    
+    def stop_progress_bar(self, tab_section, section):
+        progressbar = self.ui.progress_bar
+        if not progressbar:
+            return
+        progressbar.setRange(0, 100)
+        progressbar.setValue(100)
+
+    def update_prompt(self, prompt):
+        self.ui.prompt.setPlainText(prompt)
+
+    def update_negative_prompt(self, prompt):
+        self.ui.negative_prompt.setPlainText(prompt)

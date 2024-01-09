@@ -1,19 +1,25 @@
 from airunner.widgets.base_widget import BaseWidget
-from airunner.widgets.llm.templates.message_ui import Ui_message_widget
+from airunner.widgets.llm.templates.message_ui import Ui_message
 
 
 class MessageWidget(BaseWidget):
-    widget_class_ = Ui_message_widget
+    widget_class_ = Ui_message
 
     def __init__(self, *args, **kwargs):
         self.is_bot = kwargs.pop("is_bot")
         self.message = kwargs.pop("message")
         super().__init__(*args, **kwargs)
-        self.ui.name.setText(f"{self.message.name}:")
-        self.ui.message.setPlainText(self.message.message)
+        self.ui.content.setPlainText(self.message.message)
+        name = self.message.name
         if self.is_bot:
-            self.ui.name.setStyleSheet("font-weight: normal;")
+            self.ui.bot_name.show()
+            self.ui.bot_name.setText(f"{name}")
+            self.ui.bot_name.setStyleSheet("font-weight: normal;")
+            self.ui.user_name.hide()
         else:
-            self.ui.name.setStyleSheet("font-weight: bold;")
+            self.ui.user_name.show()
+            self.ui.user_name.setText(f"{name}")
+            self.ui.user_name.setStyleSheet("font-weight: normal;")
+            self.ui.bot_name.hide()
 
-        self.ui.message.setStyleSheet("color: #f2f2f2;")
+        self.ui.content.setStyleSheet("color: #f2f2f2;")
