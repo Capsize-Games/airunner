@@ -80,7 +80,7 @@
           <enum>Qt::LeftToRight</enum>
          </property>
          <property name="currentIndex">
-          <number>0</number>
+          <number>5</number>
          </property>
          <widget class="QWidget" name="tab_5">
           <attribute name="title">
@@ -353,16 +353,17 @@
             <number>0</number>
            </property>
            <item row="0" column="0">
-            <widget class="QTabWidget" name="tabWidget_2">
+            <widget class="QTabWidget" name="settings_tab_widget">
              <property name="tabPosition">
               <enum>QTabWidget::East</enum>
              </property>
              <property name="currentIndex">
-              <number>1</number>
+              <number>0</number>
              </property>
              <widget class="QWidget" name="tab_7">
               <attribute name="icon">
-               <iconset theme="applications-graphics"/>
+               <iconset theme="applications-graphics">
+                <normaloff>.</normaloff>.</iconset>
               </attribute>
               <attribute name="title">
                <string>Image</string>
@@ -762,7 +763,8 @@
              </widget>
              <widget class="QWidget" name="tab_8">
               <attribute name="icon">
-               <iconset theme="emblem-documents"/>
+               <iconset theme="emblem-documents">
+                <normaloff>.</normaloff>.</iconset>
               </attribute>
               <attribute name="title">
                <string>Text</string>
@@ -831,15 +833,15 @@
  </widget>
  <customwidgets>
   <customwidget>
-   <class>LLMSettingsWidget</class>
-   <extends>QWidget</extends>
-   <header>airunner/widgets/llm/llm_settings_widget</header>
-   <container>1</container>
-  </customwidget>
-  <customwidget>
    <class>SliderWidget</class>
    <extends>QWidget</extends>
    <header>airunner/widgets/slider/slider_widget</header>
+   <container>1</container>
+  </customwidget>
+  <customwidget>
+   <class>LLMSettingsWidget</class>
+   <extends>QWidget</extends>
+   <header>airunner/widgets/llm/llm_settings_widget</header>
    <container>1</container>
   </customwidget>
   <customwidget>

@@ -40,7 +40,7 @@ class LLMSettingsWidget(BaseWidget):
     @property
     def current_generator(self):
         return self.settings_manager.get_value("current_llm_generator")
-    
+
     def initialize(self):
         self.initialize_form()
 
@@ -72,6 +72,9 @@ class LLMSettingsWidget(BaseWidget):
         self.ui.early_stopping.blockSignals(True)
         self.ui.use_gpu_checkbox.blockSignals(True)
         self.ui.override_parameters.blockSignals(True)
+        self.ui.leave_in_vram.blockSignals(True)
+        self.ui.move_to_cpu.blockSignals(True)
+        self.ui.unload_model.blockSignals(True)
         self.ui.top_p.initialize_properties()
         self.ui.max_length.initialize_properties()
         self.ui.max_length.initialize_properties()
@@ -87,6 +90,10 @@ class LLMSettingsWidget(BaseWidget):
         prompt_templates = [template.name for template in session.query(LLMPromptTemplate).all()]
         self.ui.prompt_template.clear()
         self.ui.prompt_template.addItems(prompt_templates)
+
+        self.ui.leave_in_vram.setChecked(not self.settings_manager.unload_unused_model and not self.settings_manager.move_unused_model_to_cpu)
+        self.ui.move_to_cpu.setChecked(self.settings_manager.move_unused_model_to_cpu)
+        self.ui.unload_model.setChecked(self.settings_manager.unload_unused_model)
 
         if self.generator:
             self.ui.radio_button_2bit.setChecked(self.generator.generator_settings[0].dtype == "2bit")
@@ -125,6 +132,9 @@ class LLMSettingsWidget(BaseWidget):
         self.ui.use_gpu_checkbox.blockSignals(False)
         self.ui.override_parameters.blockSignals(False)
         self.ui.prompt_template.blockSignals(False)
+        self.ui.leave_in_vram.blockSignals(False)
+        self.ui.move_to_cpu.blockSignals(False)
+        self.ui.unload_model.blockSignals(False)
 
     def model_text_changed(self, val):
         print("model_text_changed", val)
@@ -191,13 +201,12 @@ class LLMSettingsWidget(BaseWidget):
     
     def set_dtype_by_gpu(self, use_gpu):
         if not use_gpu:
+            if self.generator.generator_settings[0].dtype in ["2bit","4bit", "8bit"]:
+                self.ui.radio_button_16bit.setChecked(True)
             self.ui.radio_button_2bit.setEnabled(False)
             self.ui.radio_button_4bit.setEnabled(False)
             self.ui.radio_button_8bit.setEnabled(False)
             self.ui.radio_button_32bit.setEnabled(True)
-
-            if self.generator.generator_settings[0].dtype in ["4bit", "8bit"]:
-                self.ui.radio_button_16bit.setChecked(True)
         else:
             self.ui.radio_button_2bit.setEnabled(True)
             self.ui.radio_button_4bit.setEnabled(True)
