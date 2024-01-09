@@ -50,6 +50,14 @@ class Ui_generator_form(object):
         self.horizontalLayout_6.setObjectName("horizontalLayout_6")
         spacerItem = QtWidgets.QSpacerItem(40, 20, QtWidgets.QSizePolicy.Policy.Expanding, QtWidgets.QSizePolicy.Policy.Minimum)
         self.horizontalLayout_6.addItem(spacerItem)
+        self.prompt_builder_button = QtWidgets.QPushButton(parent=self.layoutWidget)
+        self.prompt_builder_button.setText("")
+        icon = QtGui.QIcon()
+        icon.addPixmap(QtGui.QPixmap(":/icons/light/prompt-editor-icon.svg"), QtGui.QIcon.Mode.Normal, QtGui.QIcon.State.Off)
+        self.prompt_builder_button.setIcon(icon)
+        self.prompt_builder_button.setCheckable(True)
+        self.prompt_builder_button.setObjectName("prompt_builder_button")
+        self.horizontalLayout_6.addWidget(self.prompt_builder_button)
         self.pushButton = QtWidgets.QPushButton(parent=self.layoutWidget)
         self.pushButton.setObjectName("pushButton")
         self.horizontalLayout_6.addWidget(self.pushButton)
@@ -100,7 +108,7 @@ class Ui_generator_form(object):
         self.tab_2 = QtWidgets.QWidget()
         self.tab_2.setObjectName("tab_2")
         self.gridLayout_5 = QtWidgets.QGridLayout(self.tab_2)
-        self.gridLayout_5.setContentsMargins(8, 8, 8, 8)
+        self.gridLayout_5.setContentsMargins(0, 0, 0, 0)
         self.gridLayout_5.setObjectName("gridLayout_5")
         self.widget = ChatPromptWidget(parent=self.tab_2)
         self.widget.setObjectName("widget")
@@ -109,12 +117,13 @@ class Ui_generator_form(object):
         self.gridLayout_4.addWidget(self.generator_form_tabs, 0, 0, 1, 1)
 
         self.retranslateUi(generator_form)
-        self.generator_form_tabs.setCurrentIndex(0)
+        self.generator_form_tabs.setCurrentIndex(1)
         self.pushButton.clicked.connect(generator_form.action_clicked_button_save_prompts) # type: ignore
         self.interrupt_button.clicked.connect(generator_form.handle_interrupt_button_clicked) # type: ignore
         self.generate_button.clicked.connect(generator_form.handle_generate_button_clicked) # type: ignore
         self.prompt.textChanged.connect(generator_form.handle_prompt_changed) # type: ignore
         self.negative_prompt.textChanged.connect(generator_form.handle_negative_prompt_changed) # type: ignore
+        self.prompt_builder_button.toggled['bool'].connect(generator_form.handle_prompt_builder_button_toggled) # type: ignore
         QtCore.QMetaObject.connectSlotsByName(generator_form)
 
     def retranslateUi(self, generator_form):
