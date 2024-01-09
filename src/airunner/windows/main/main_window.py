@@ -1425,4 +1425,3 @@ class MainWindow(
     
     def action_ai_toggled(self, val):
         self.settings_manager.set_value("ai_mode", val)
-        self.generator_tab_widget.activate_ai_mode()

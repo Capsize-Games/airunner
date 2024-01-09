@@ -43,6 +43,7 @@ class StandardImageWidget(StandardBaseWidget):
 
     def __init__(self, *args, **kwargs):
         super().__init__(*args, **kwargs)
+        self.ui.settings_tab_widget.tabBar().hide()        
         self.ui.advanced_settings.hide()
         self.load_upscale_options()
         self.set_controlnet_settings_properties()
@@ -107,6 +108,7 @@ class StandardImageWidget(StandardBaseWidget):
     def load_image_from_path(self, image_path):
         image = Image.open(image_path)
         self.load_image_from_object(image=image, image_path=image_path)
+        self.app.ui.image_browser.add_image(image_path)
     
     def load_image_from_object(self, image, image_path=NotImplemented):
         self.set_pixmap(image=image, image_path=image_path)
@@ -401,6 +403,8 @@ class StandardImageWidget(StandardBaseWidget):
     def handle_settings_manager_changed(self, key, val, settings_manager):
         if key == "generator_settings_override_id":
             self.initialize_generator_form(val)
+        elif key == "ai_mode":
+            self.ui.settings_tab_widget.setCurrentIndex(1 if self.settings_manager.ai_mode else 0)
         
     def initialize(self):
         self.set_form_values()

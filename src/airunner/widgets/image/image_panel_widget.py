@@ -38,31 +38,24 @@ class ImagePanelWidget(BaseWidget):
         if self.settings_manager.path_settings.image_path != "":
             self.show_files()
         
-        self.initialize_watcher()
         self.load_files()
         self.show_files()
         self.display_thread = threading.Thread(target=self.display_thumbnails)
     
-    def initialize_watcher(self):
+    def add_image(self, image_path):
         """
-        Initializes the file system watcher to monitor changes in the image directory.
+        Adds an image to the image panel widget.
 
-        This method adds the image directory and its subdirectories to the file system watcher,
-        and connects the directoryChanged and fileChanged signals to their respective handler methods.
+        Args:
+            image_path (str): The path of the image to be added.
+
+        Returns:
+            None
         """
-        self.watcher = QFileSystemWatcher()
-        for root, dirs, files in os.walk(self.settings_manager.path_settings.image_path):
-            self.watcher.addPath(root)
-        self.watcher.directoryChanged.connect(self.handle_directory_changed)
-        self.watcher.fileChanged.connect(self.handle_files_changed)
-    
-    def handle_directory_changed(self, event):
-        #self.show_files()
-        pass
-    
-    def handle_files_changed(self, event):
-        #self.show_files()
-        pass
+        image_widget = ImageWidget(self, is_thumbnail=True)
+        image_widget.set_image(image_path)
+
+        self.ui.scrollAreaWidgetContents.layout().addWidget(image_widget)
 
     def clear_files(self):
         self.page = 0
@@ -102,7 +95,11 @@ class ImagePanelWidget(BaseWidget):
             if os.path.isdir(os.path.join(self.settings_manager.path_settings.image_path, file)):
                 sorted_files[file] = []
                 for root, dirs, files_in_dir in os.walk(os.path.join(self.settings_manager.path_settings.image_path, file)):
-                    sorted_files[file].extend([os.path.join(root, f) for f in files_in_dir])
+                    files = []
+                    for f in files_in_dir:
+                        if ".png.thumbnail.png" not in f:
+                            files.append(os.path.join(root, f))
+                    sorted_files[file].extend(files)
         
         section = "txt2img"
         files = sorted_files[section]
