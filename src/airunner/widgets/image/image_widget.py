@@ -1,3 +1,4 @@
+import os
 import json
 
 from PyQt6.QtGui import QPixmap
@@ -27,12 +28,12 @@ class ImageWidget(BaseWidget):
     image_width = 0
     image_height = 0
     clicked = pyqtSignal()
-    
-    def thumbnail(self, width=128, height=128):
-        if not self.pixmap:
-            return None
-        return self.pixmap.scaled(width, height, Qt.AspectRatioMode.KeepAspectRatio, Qt.TransformationMode.SmoothTransformation)
+    pixmap = None
 
+    def __init__(self, *args, **kwargs):
+        self.is_thumbnail = kwargs.pop("is_thumbnail", False)
+        super().__init__(*args, **kwargs)
+    
     def set_image(self, image_path):
         size = self.ui.image_frame.width()
         self.image_path = image_path
@@ -40,13 +41,22 @@ class ImageWidget(BaseWidget):
         self.load_meta_data(image_path)
 
         # Create a QPixmap object
-        
+
         if isinstance(self.image_path, Image.Image):
             qimage = ImageQt(self.image_path)  # Convert the PngImageFile to a QImage
             pixmap = QPixmap.fromImage(qimage)  # Create a QPixmap from the QImage
         else:
-            pixmap = QPixmap(self.image_path)
-        pixmap = pixmap.scaled(size - 20, size - 20, Qt.AspectRatioMode.KeepAspectRatio, Qt.TransformationMode.SmoothTransformation)
+            # check if thumbnail exists at path
+            # if not, create it
+            path = self.image_path + ".thumbnail.png"
+            if not os.path.exists(path):
+                image = Image.open(self.image_path)
+                image.thumbnail((size, size))
+                image.save(path)
+            if self.is_thumbnail:
+                pixmap = QPixmap(path)
+            else:
+                pixmap = QPixmap(self.image_path)
         self.pixmap = pixmap
 
         # set width and height
@@ -131,6 +141,7 @@ class ImageWidget(BaseWidget):
 
     def send_image_to_grid(self):
         #self.app.ui.canvas_plus_widget.load_image(self.image_path)
+        print(self.image_path)
         self.app.load_image.emit(self.image_path)
 
     def view_image(self):
@@ -186,6 +197,8 @@ class ImageWidget(BaseWidget):
 
     def confirm_delete(self):
         delete_image(self.image_path)
+        delete_image(self.image_path + ".thumbnail.png")
+        self.deleteLater()
     
     def cancel_delete(self):
         pass
