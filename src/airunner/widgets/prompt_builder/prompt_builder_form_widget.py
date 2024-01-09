@@ -6,7 +6,7 @@ from PyQt6.QtWidgets import QGridLayout, QSpacerItem, QSizePolicy
 
 from airunner.widgets.base_widget import BaseWidget
 from airunner.widgets.prompt_builder.templates.prompt_builder_form_ui import Ui_prompt_builder_form
-from airunner.data.models import PromptVariableCategory, PromptCategory, PromptVariableCategoryWeight, PromptVariable, Prompt
+from airunner.data.models import PromptVariableCategory, PromptCategory, PromptVariable, Prompt
 from airunner.utils import get_session
 
 class PromptBuilderForm(BaseWidget):
