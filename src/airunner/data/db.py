@@ -20,10 +20,10 @@ import os
 import configparser
 
 session = get_session()
-
+do_stamp_alembic = False
 # check if database is blank:
 if not session.query(Prompt).first():
-
+    do_stamp_alembic = True
     # Add Prompt objects
     for prompt_option, data in prompt_bootstrap_data.items():
         category = PromptCategory(name=prompt_option, negative_prompt=data["negative_prompt"])
@@ -295,14 +295,14 @@ if not session.query(Prompt).first():
         },
     }
 
-    for generator_name, generator_sections in sections_bootstrap_data.items():
-        for generator_section in generator_sections:
-            settings.generator_settings.append(GeneratorSetting(
-                section=generator_section,
-                generator_name=generator_name,
-                active_grid_border_color=active_grid_colors[generator_name]["border"][generator_section],
-                active_grid_fill_color=active_grid_colors[generator_name]["fill"][generator_section]
-            ))
+    generator_section = "txt2img"
+    generator_name = "stablediffusion"
+    session.add(GeneratorSetting(
+        section=generator_section,
+        generator_name=generator_name,
+        active_grid_border_color=active_grid_colors[generator_name]["border"][generator_section],
+        active_grid_fill_color=active_grid_colors[generator_name]["fill"][generator_section]
+    ))
 
     session.add(Document(
         name="Untitled",
@@ -509,4 +509,7 @@ config.set('alembic', 'sqlalchemy.url', db_path)
 with open(alembic_ini_path, 'w') as configfile:
     config.write(configfile)
 alembic_cfg = Config(alembic_ini_path)
-command.upgrade(alembic_cfg, "head")
+if not do_stamp_alembic:
+    command.upgrade(alembic_cfg, "head")
+else:
+    command.stamp(alembic_cfg, "head")
