@@ -30,7 +30,7 @@ from airunner.filters.windows.filter_base import FilterBase
 from airunner.input_event_manager import InputEventManager
 from airunner.mixins.history_mixin import HistoryMixin
 from airunner.settings import BASE_PATH
-from airunner.utils import get_version, get_latest_version, auto_export_image, save_session, \
+from airunner.utils import get_version, auto_export_image, save_session, \
     create_airunner_paths, default_hf_cache_dir
 from airunner.widgets.status.status_widget import StatusWidget
 from airunner.windows.about.about import AboutWindow
@@ -42,8 +42,9 @@ from airunner.windows.update.update_window import UpdateWindow
 from airunner.windows.video import VideoPopup
 from airunner.data.models import TabSection
 from airunner.widgets.brushes.brushes_container import BrushesContainer
-
+from airunner.data.models import Document
 from airunner.utils import get_session
+
 
 class MainWindow(
     QMainWindow,
@@ -65,8 +66,6 @@ class MainWindow(
     _settings_manager = None
     models = None
     client = None
-    override_current_generator = None
-    override_section = None
     _version = None
     _latest_version = None
     add_image_to_canvas_signal = pyqtSignal(dict)
@@ -112,14 +111,6 @@ class MainWindow(
             self._settings_manager = SettingsManager(app=self)
         return self._settings_manager
 
-    # @property
-    # def current_prompt_generator_settings(self):
-    #     """
-    #     Convenience property to get the current prompt generator settings
-    #     :return:
-    #     """
-    #     return self.settings_manager.prompt_generator_settings
-
     @property
     def is_dark(self):
         return self.settings_manager.dark_mode_enabled
@@ -135,6 +126,10 @@ class MainWindow(
     @property
     def generator_tab_widget(self):
         return self.ui.generator_widget
+    
+    @property
+    def canvas_widget(self):
+        return self.standard_image_panel.canvas_widget
 
     @property
     def toolbar_widget(self):
@@ -147,39 +142,6 @@ class MainWindow(
     @property
     def footer_widget(self):
         return self.ui.footer_widget
-
-    @property
-    def current_generator(self):
-        """
-        Returns the current generator (stablediffusion, kandinksy, etc) as
-        determined by the selected generator tab in the
-        generator_tab_widget. This value can be override by setting
-        the override_current_generator property.
-        :return: string
-        """
-        if self.override_current_generator:
-            return self.override_current_generator
-        return self.generator_tab_widget.current_generator
-
-    @property
-    def current_section(self):
-        """
-        Returns the current section (txt2img, outpaint, etc) as
-        determined by the selected sub-tab in the generator tab widget.
-        This value can be override by setting the override_section property.
-        :return: string
-        """
-        if self.override_section:
-            return self.override_section
-        return self.generator_tab_widget.current_section
-
-    @property
-    def tabs(self):
-        return self._tabs[self.current_generator]
-
-    @tabs.setter
-    def tabs(self, val):
-        self._tabs[self.current_generator] = val
 
     @property
     def generator_type(self):
@@ -205,7 +167,7 @@ class MainWindow(
 
     @property
     def document_name(self):
-        # name = f"{self._document_name}{'*' if self.canvas and self.canvas.is_dirty else ''}"
+        # name = f"{self._document_name}{'*' if self.canvas and self.canvas_widget.is_dirty else ''}"
         # return f"{name} - {self.version}"
         return "Untitled"
 
@@ -234,13 +196,13 @@ class MainWindow(
         return self.standard_image_panel
     
     def describe_image(self, image, callback):
-        self.ui.generator_widget.current_generator_widget.ui.ai_tab_widget.describe_image(
+        self.generator_tab_widget.ui.ai_tab_widget.describe_image(
             image=image, 
             callback=callback
         )
     
     def current_active_image(self):
-        return self.ui.standard_image_widget.image.copy() if self.ui.standard_image_widget.image else None
+        return self.standard_image_panel.image.copy() if self.standard_image_panel.image else None
 
     def send_message(self, code, message):
         self.message_var.emit({
@@ -257,6 +219,7 @@ class MainWindow(
 
     def __init__(self, *args, **kwargs):
         logger.info("Starting AI Runnner")
+        self.ui = Ui_MainWindow()
         # qdarktheme.enable_hi_dpi()
 
         # set the api
@@ -266,20 +229,17 @@ class MainWindow(
         self.testing = kwargs.pop("testing", False)
 
         # initialize the document
-        from airunner.data.db import session
-        from airunner.data.models import Document
+        session = get_session()
         self.document = session.query(Document).first()
 
         super().__init__(*args, **kwargs)
 
+        self.ui.setupUi(self)
+
         self.initialize()
 
         # on window resize:
-        # self.applicationStateChanged.connect(self.on_state_changed)
-
-        if self.settings_manager.latest_version_check:
-            logger.info("Checking for latest version")
-            self.check_for_latest_version()
+        # self.windowStateChanged.connect(self.on_state_changed)
 
         # check for self.current_layer.lines every 100ms
         self.timer = self.startTimer(100)
@@ -305,7 +265,6 @@ class MainWindow(
         #self.ui.layer_widget.initialize()
 
         self.set_button_checked("toggle_grid", self.settings_manager.grid_settings.show_grid, False)
-        self.set_button_checked("safety_checker", self.settings_manager.nsfw_filter, False)
 
         # call a function after the window has finished loading:
         QTimer.singleShot(500, self.on_show)
@@ -363,7 +322,6 @@ class MainWindow(
         self.settings_manager.set_value("mode", self.ui.mode_tab_widget.tabText(index))
 
     def on_show(self):
-        #self.ui.canvas_plus_widget.do_draw()
         pass
 
     def action_slider_changed(self, settings_property, value):
@@ -412,23 +370,23 @@ class MainWindow(
 
     def action_paste_image_triggered(self):
         if self.settings_manager.mode == Mode.IMAGE.value:
-            self.canvas.paste_image_from_clipboard()
+            self.canvas_widget.paste_image_from_clipboard()
 
     def action_copy_image_triggered(self):
         if self.settings_manager.mode == Mode.IMAGE.value:
-            self.canvas.copy_image(self.current_active_image())
+            self.canvas_widget.copy_image(self.current_active_image())
 
     def action_cut_image_triggered(self):
         if self.settings_manager.mode == Mode.IMAGE.value:
-            self.canvas.cut_image()
+            self.canvas_widget.cut_image()
 
     def action_rotate_90_clockwise_triggered(self):
         if self.settings_manager.mode == Mode.IMAGE.value:
-            self.canvas.rotate_90_clockwise()
+            self.canvas_widget.rotate_90_clockwise()
 
     def action_rotate_90_counterclockwise_triggered(self):
         if self.settings_manager.mode == Mode.IMAGE.value:
-            self.canvas.rotate_90_counterclockwise()
+            self.canvas_widget.rotate_90_counterclockwise()
 
     def action_show_prompt_browser_triggered(self):
         self.show_prompt_browser()
@@ -549,7 +507,7 @@ class MainWindow(
 
     def action_toggle_grid(self, active):
         self.settings_manager.set_value("grid_settings.show_grid", active)
-        # self.canvas.update()
+        # self.canvas_widget.update()
 
     def action_toggle_darkmode(self):
         self.set_stylesheet()
@@ -624,10 +582,10 @@ class MainWindow(
         self.ui.height_slider_widget.slider_single_step = size
         self.ui.height_slider_widget.slider_tick_interval = size
 
-        self.canvas.update()
+        self.canvas_widget.update()
 
     def toggle_nsfw_filter(self):
-        # self.canvas.update()
+        # self.canvas_widget.update()
         self.set_nsfw_filter_tooltip()
 
     def set_nsfw_filter_tooltip(self):
@@ -636,43 +594,43 @@ class MainWindow(
             f"Click to {'enable' if not nsfw_filter else 'disable'} NSFW filter"
         )
 
-    def resizeEvent(self, event):
-        if not self.is_started:
-            return
-        state = self.windowState()
-        if state == Qt.WindowState.WindowMaximized:
-            timer = QTimer(self)
-            timer.setSingleShot(True)
-            timer.timeout.connect(self.checkWindowState)
-            timer.start(100)
-        else:
-            self.checkWindowState()
+    # def resizeEvent(self, event):
+    #     if not self.is_started:
+    #         return
+    #     state = self.windowState()
+    #     if state == Qt.WindowState.WindowMaximized:
+    #         timer = QTimer(self)
+    #         timer.setSingleShot(True)
+    #         timer.timeout.connect(self.checkWindowState)
+    #         timer.start(100)
+    #     else:
+    #         self.checkWindowState()
 
-    def checkWindowState(self):
-        state = self.windowState()
-        self.is_maximized = state == Qt.WindowState.WindowMaximized
+    # def checkWindowState(self):
+    #     state = self.windowState()
+    #     self.is_maximized = state == Qt.WindowState.WindowMaximized
 
     def dragmode_pressed(self):
-        # self.canvas.is_canvas_drag_mode = True
+        # self.canvas_widget.is_canvas_drag_mode = True
         pass
 
     def dragmode_released(self):
-        # self.canvas.is_canvas_drag_mode = False
+        # self.canvas_widget.is_canvas_drag_mode = False
         pass
 
     def shift_pressed(self):
-        # self.canvas.shift_is_pressed = True
+        # self.canvas_widget.shift_is_pressed = True
         pass
 
     def shift_released(self):
-        # self.canvas.shift_is_pressed = False
+        # self.canvas_widget.shift_is_pressed = False
         pass
 
     def register_keypress(self):
         self.input_event_manager.register_keypress("fullscreen", self.toggle_fullscreen)
         self.input_event_manager.register_keypress("control_pressed", self.dragmode_pressed, self.dragmode_released)
         self.input_event_manager.register_keypress("shift_pressed", self.shift_pressed, self.shift_released)
-        #self.input_event_manager.register_keypress("delete_outside_active_grid_area", self.canvas.delete_outside_active_grid_area)
+        #self.input_event_manager.register_keypress("delete_outside_active_grid_area", self.canvas_widget.delete_outside_active_grid_area)
 
     def toggle_fullscreen(self):
         if self.isFullScreen():
@@ -688,48 +646,9 @@ class MainWindow(
         QApplication.quit()
 
     def timerEvent(self, event):
-        # self.canvas.timerEvent(event)
+        # self.canvas_widget.timerEvent(event)
         if self.status_widget:
             self.status_widget.update_system_stats(queue_size=self.client.queue.qsize())
-
-    def check_for_latest_version(self):
-        self.version_thread = QThread()
-        class VersionCheckWorker(QObject):
-            version = None
-            finished = pyqtSignal()
-            def get_latest_version(self):
-                self.version = f"v{get_latest_version()}"
-                self.finished.emit()
-        self.version_worker = VersionCheckWorker()
-        self.version_worker.moveToThread(self.version_thread)
-        self.version_thread.started.connect(self.version_worker.get_latest_version)
-        self.version_worker.finished.connect(self.handle_latest_version)
-        self.version_thread.start()
-
-    def handle_latest_version(self):
-        self.latest_version = self.version_worker.version
-        # call get_latest_version() in a separate thread
-        # to avoid blocking the UI, show a popup if version doesn't match self.version
-        # check if latest_version is greater than version using major, minor, patch
-        current_major, current_minor, current_patch = self.version[1:].split(".")
-        try:
-            latest_major, latest_minor, latest_patch = self.latest_version[1:].split(".")
-        except ValueError:
-            latest_major, latest_minor, latest_patch = 0, 0, 0
-
-        latest_major = int(latest_major)
-        latest_minor = int(latest_minor)
-        latest_patch = int(latest_patch)
-        current_major = int(current_major)
-        current_minor = int(current_minor)
-        current_patch = int(current_patch)
-
-        if current_major == latest_major and current_minor == latest_minor and current_patch < latest_patch:
-            self.show_update_message()
-        elif current_major == latest_major and current_minor < latest_minor:
-            self.show_update_message()
-        elif current_major < latest_major:
-            self.show_update_message()
 
     def show_update_message(self):
         self.set_status_label(f"New version available: {self.latest_version}")
@@ -739,13 +658,13 @@ class MainWindow(
 
     def reset_settings(self):
         logger.info("Resetting settings")
-        self.canvas.reset_settings()
+        self.canvas_widget.reset_settings()
 
     def on_state_changed(self, state):
         if state == Qt.ApplicationState.ApplicationActive:
-            self.canvas.pos_x = int(self.x() / 4)
-            self.canvas.pos_y = int(self.y() / 2)
-            self.canvas.update()
+            self.canvas_widget.pos_x = int(self.x() / 4)
+            self.canvas_widget.pos_y = int(self.y() / 2)
+            self.canvas_widget.update()
 
     def refresh_styles(self):
         self.set_stylesheet()
@@ -771,7 +690,7 @@ class MainWindow(
             ("eraser-icon", "toggle_eraser_button"),
             ("frame-grid-icon", "toggle_grid_button"),
             ("circle-center-icon", "focus_button"),
-            ("adult-sign-icon", "safety_checker_button"),
+            ("artificial-intelligence-ai-chip-icon", "ai_button"),
             ("setting-line-icon", "settings_button"),
             ("chat-box-icon", "chat_button"),
             ("setting-line-icon", "llm_preferences_button"),
@@ -842,7 +761,7 @@ class MainWindow(
 
     def connect_signals(self):
         logger.info("Connecting signals")
-        #self.canvas._is_dirty.connect(self.set_window_title)
+        #self.canvas_widget._is_dirty.connect(self.set_window_title)
 
         for signal, handler in self.registered_settings_handlers:
             getattr(self.settings_manager, signal).connect(handler)
@@ -944,16 +863,13 @@ class MainWindow(
 
     def show_section(self, section):
         section_lists = {
-            "left": [self.ui.generator_widget.ui.generator_tabs.tabText(i) for i in range(self.ui.generator_widget.ui.generator_tabs.count())],
             "center": [self.ui.center_tab.tabText(i) for i in range(self.ui.center_tab.count())],
             "right": [self.ui.tool_tab_widget.tabText(i) for i in range(self.ui.tool_tab_widget.count())],
             "bottom": [self.ui.bottom_panel_tab_widget.tabText(i) for i in range(self.ui.bottom_panel_tab_widget.count())]
         }
         for k, v in section_lists.items():
             if section in v:
-                if k == "left":
-                    self.ui.generator_widget.ui.generator_tabs.setCurrentIndex(v.index(section))
-                elif k == "right":
+                if k == "right":
                     self.ui.tool_tab_widget.setCurrentIndex(v.index(section))
                 elif k == "bottom":
                     self.ui.bottom_panel_tab_widget.setCurrentIndex(v.index(section))
@@ -992,7 +908,7 @@ class MainWindow(
         self.settings_manager.set_value(attr_name, value)
     
     def handle_similar_slider_change(self, attr_name, value=None, widget=None):
-        self.ui.standard_image_widget.handle_similar_slider_change(value)
+        self.standard_image_panel.handle_similar_slider_change(value)
 
     def initialize_settings_manager(self):
         self.settings_manager.changed_signal.connect(self.handle_changed_signal)
@@ -1003,11 +919,11 @@ class MainWindow(
         elif key == "line_width":
             self.set_size_form_element_step_values()
         elif key == "show_grid":
-            self.canvas.update()
+            self.canvas_widget.update()
         elif key == "snap_to_grid":
-            self.canvas.update()
+            self.canvas_widget.update()
         elif key == "line_color":
-            self.canvas.update_grid_pen()
+            self.canvas_widget.update_grid_pen()
         elif key == "lora_path":
             self.refresh_lora()
         elif key == "model_base_path":
@@ -1031,9 +947,6 @@ class MainWindow(
         self.message_var.my_signal.connect(self.message_handler)
 
     def initialize_window(self):
-        self.window = Ui_MainWindow()
-        self.window.setupUi(self)
-        self.ui = self.window
         self.center()
         self.set_window_title()
 
@@ -1123,7 +1036,7 @@ class MainWindow(
         self._document_name = "Untitled"
         self.set_window_title()
         self.current_filter = None
-        #self.canvas.update()
+        #self.canvas_widget.update()
         self.ui.layer_widget.show_layers()
 
     def set_status_label(self, txt, error=False):
@@ -1195,7 +1108,7 @@ class MainWindow(
         # get max progressbar value
         if nsfw_content_detected and self.settings_manager.nsfw_filter:
             self.message_handler({
-                "message": "NSFW content detected, try again.",
+                "message": "Explicit content detected, try again.",
                 "code": MessageCode.ERROR
             })
 
@@ -1261,7 +1174,7 @@ class MainWindow(
     def saveas_document(self):
         # get file path
         file_path, _ = QFileDialog.getSaveFileName(
-            self.window, "Save Document", "", "AI Runner Document (*.airunner)"
+            self.ui, "Save Document", "", "AI Runner Document (*.airunner)"
         )
         if file_path == "":
             return
@@ -1285,8 +1198,8 @@ class MainWindow(
             layers.append(layer)
         data = {
             "layers": layers,
-            "image_pivot_point": self.canvas.image_pivot_point,
-            "image_root_point": self.canvas.image_root_point,
+            "image_pivot_point": self.canvas_widget.image_pivot_point,
+            "image_root_point": self.canvas_widget.image_root_point,
         }
         with open(document_name, "wb") as f:
             pickle.dump(data, f)
@@ -1298,10 +1211,10 @@ class MainWindow(
         self._document_name = document_name.split("/")[-1].split(".")[0]
         self.set_window_title()
         self.is_saved = True
-        self.canvas.is_dirty = False
+        self.canvas_widget.is_dirty = False
 
     def update(self):
-        self.ui.standard_image_widget.update_thumbnails()
+        self.standard_image_panel.update_thumbnails()
 
     def insert_into_prompt(self, text, negative_prompt=False):
         prompt_widget = self.generator_tab_widget.data[self.current_generator][self.current_section]["prompt_widget"]
@@ -1334,28 +1247,10 @@ class MainWindow(
             self.ui.center_tab.setCurrentIndex(tab_index)
         self.ui.center_tab.blockSignals(False)
 
-    def handle_generator_tab_changed(self):
-        self.generator_tab_changed_signal.emit()
-        self.change_content_widget()
-
-    def handle_tab_section_changed(self):
-        self.tab_section_changed_signal.emit()
-        self.change_content_widget()
-
-    def release_tab_overrides(self):
-        self.override_current_generator = None
-        self.override_section = None
-
     def clear_all_prompts(self):
-        for tab_section in self._tabs.keys():
-            self.override_current_generator = tab_section
-            for tab in self.tabs.keys():
-                self.override_section = tab
-                self.prompt = ""
-                self.negative_prompt = ""
-                self.generator_tab_widget.clear_prompts(tab_section, tab)
-        self.override_current_generator = None
-        self.override_section = None
+        self.prompt = ""
+        self.negative_prompt = ""
+        self.generator_tab_widget.clear_prompts()
 
     def show_prompt_browser(self):
         PromptBrowser(settings_manager=self.settings_manager, app=self)
@@ -1410,7 +1305,7 @@ class MainWindow(
         self.generator_tab_widget.update_negative_prompt(prompt_value)
 
     def new_batch(self, index, image, data):
-        self.generator_tab_widget.current_generator.new_batch(index, image, data)
+        self.generator_tab_widget.new_batch(index, image, data)
 
     def image_generation_toggled(self):
         self.settings_manager.set_value("mode", Mode.IMAGE.value)
@@ -1485,10 +1380,6 @@ class MainWindow(
 
     def activate_language_processing_section(self):
         self.ui.mode_tab_widget.setCurrentIndex(1)
-        # try:
-        #     self.ui.generator_widget.current_generator_widget.ui.generator_form_tab_widget.setCurrentIndex(2)
-        # except AttributeError as e:
-        #     pass
         self.toggle_tool_section_buttons_visibility()
     
     def activate_model_manager_section(self):
@@ -1534,12 +1425,7 @@ class MainWindow(
     
     def image_generators_toggled(self):
         self.image_generation_toggled()
-        current_tab = self.settings_manager.current_tab
-        current_tab = self.settings_manager.current_image_generator
-        self.settings_manager.set_value("current_tab", current_tab)
         self.settings_manager.set_value("mode", Mode.IMAGE.value)
-        self.settings_manager.set_value(f"current_section_{current_tab}", GeneratorSection.TXT2IMG.value)
-        self.generator_tab_widget.set_current_section_tab()
         self.settings_manager.set_value("generator_section", GeneratorSection.TXT2IMG.value)
         active_tab_obj = session.query(TabSection).filter(TabSection.panel == "center_tab").first()
         active_tab_obj.active_tab = "Canvas"
@@ -1549,11 +1435,7 @@ class MainWindow(
 
     def text_to_video_toggled(self):
         self.image_generation_toggled()
-        current_tab = "stablediffusion"
-        self.settings_manager.set_value("current_tab", current_tab)
         self.settings_manager.set_value("mode", Mode.IMAGE.value)
-        self.settings_manager.set_value(f"current_section_{current_tab}", GeneratorSection.TXT2VID.value)
-        self.generator_tab_widget.set_current_section_tab()
         self.settings_manager.set_value("generator_section", GeneratorSection.TXT2VID.value)
         active_tab_obj = session.query(TabSection).filter(TabSection.panel == "center_tab").first()
         active_tab_obj.active_tab = "Video"
@@ -1563,9 +1445,6 @@ class MainWindow(
 
     def prompt_builder_toggled(self):
         self.image_generation_toggled()
-        current_tab = self.settings_manager.current_tab
-        self.settings_manager.set_value(f"current_section_{current_tab}", GeneratorSection.PROMPT_BUILDER.value)
-        self.generator_tab_widget.set_current_section_tab()
         self.settings_manager.set_value(f"generator_section", GeneratorSection.PROMPT_BUILDER.value)
         active_tab_obj = session.query(TabSection).filter(TabSection.panel == "center_tab").first()
         active_tab_obj.active_tab = "Prompt Builder"
