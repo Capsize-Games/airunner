@@ -33,8 +33,8 @@ class LoraContainerWidget(BaseWidget):
     def __init__(self, *args, **kwargs):
         super().__init__(*args, **kwargs)
 
-        self.load_lora()
         self.scan_for_lora()
+        self.load_lora()
 
     def load_lora(self):
         session = get_session()
@@ -57,15 +57,15 @@ class LoraContainerWidget(BaseWidget):
     def scan_for_lora(self):
         session = get_session()
         lora_path = self.settings_manager.path_settings.lora_path
-        with os.scandir(lora_path) as dir_object:
-            for entry in dir_object:
-                if entry.is_file():  # ckpt or safetensors file
-                    if entry.name.endswith(".ckpt") or entry.name.endswith(".safetensors") or entry.name.endswith(
-                            ".pt"):
-                        name = entry.name.replace(".ckpt", "").replace(".safetensors", "").replace(".pt", "")
-                        lora = Lora(name=name, path=entry.path, enabled=True, scale=100.0)
-                        session.add(lora)
-        save_session(session)
+        for dirpath, dirnames, filenames in os.walk(lora_path):
+            for file in filenames:
+                print("LORA", file)
+                if file.endswith(".ckpt") or file.endswith(".safetensors") or file.endswith(".pt"):
+                    print("adding lora to session")
+                    name = file.replace(".ckpt", "").replace(".safetensors", "").replace(".pt", "")
+                    lora = Lora(name=name, path=os.path.join(dirpath, file), enabled=True, scale=100.0)
+                    session.add(lora)
+                    save_session(session)
 
     def toggle_all_lora(self, checked):
         for i in range(self.ui.lora_scroll_area.widget().layout().count()):
