@@ -1,5 +1,4 @@
 from airunner.data.bootstrap.controlnet_bootstrap_data import controlnet_bootstrap_data
-from airunner.data.bootstrap.generator_bootstrap_data import sections_bootstrap_data
 from airunner.data.bootstrap.imagefilter_bootstrap_data import imagefilter_bootstrap_data
 from airunner.data.bootstrap.llm import seed_data
 from airunner.data.bootstrap.model_bootstrap_data import model_bootstrap_data
@@ -14,502 +13,440 @@ from airunner.data.models import ControlnetModel, LLMPromptTemplate, Pipeline, D
     LLMGeneratorSetting, LLMGenerator, LLMModelVersion
 from airunner.utils import get_session
 from alembic.config import Config
-from airunner.aihandler.logger import Logger
 from alembic import command
 import os
 import configparser
 
-session = get_session()
-do_stamp_alembic = False
-# check if database is blank:
-if not session.query(Prompt).first():
-    do_stamp_alembic = True
-    # Add Prompt objects
-    for prompt_option, data in prompt_bootstrap_data.items():
-        category = PromptCategory(name=prompt_option, negative_prompt=data["negative_prompt"])
-        prompt = Prompt(
-            name=f"Standard {prompt_option} prompt",
-            category=category
-        )
-        session.add(prompt)
-        session.commit()
-        prompt_id = prompt.id
 
-        prompt_variables = []
-        for category_name, variable_values in data["variables"].items():
-            # add prompt category
-            cat = session.query(PromptVariableCategory).filter_by(name=category_name).first()
-            if not cat:
-                cat = PromptVariableCategory(name=category_name)
-                session.add(cat)
-                session.commit()
+def prepare_database():
+    my_session = get_session()
+    do_stamp_alembic = False
 
-            # add prompt variable category weight
-            weight = session.query(PromptVariableCategoryWeight).filter_by(
-                prompt_category=category,
-                variable_category=cat
-            ).first()
-            if not weight:
-                try:
-                    weight_value = data["weights"][category_name]
-                except KeyError:
-                    weight_value = 1.0
-                weight = PromptVariableCategoryWeight(
-                    prompt_category=category,
-                    variable_category=cat,
-                    weight=weight_value
-                )
-                session.add(weight)
-                session.commit()
+    # check if database is blank:
+    if not my_session.query(Prompt).first():
+        do_stamp_alembic = True
 
-            # add prompt variables
-            for var in variable_values:
-                session.add(PromptVariable(
-                    value=var,
+        # Add Prompt objects
+        for prompt_option, data in prompt_bootstrap_data.items():
+            category = PromptCategory(name=prompt_option, negative_prompt=data["negative_prompt"])
+            prompt = Prompt(
+                name=f"Standard {prompt_option} prompt",
+                category=category
+            )
+            my_session.add(prompt)
+            my_session.commit()
+            prompt_id = prompt.id
+
+            prompt_variables = []
+            for category_name, variable_values in data["variables"].items():
+                # add prompt category
+                cat = my_session.query(PromptVariableCategory).filter_by(name=category_name).first()
+                if not cat:
+                    cat = PromptVariableCategory(name=category_name)
+                    my_session.add(cat)
+                    my_session.commit()
+
+                # add prompt variable category weight
+                weight = my_session.query(PromptVariableCategoryWeight).filter_by(
                     prompt_category=category,
                     variable_category=cat
-                ))
-            session.commit()
-
-        def insert_variables(variables, prev_object=None):
-            for option in variables:
-                text = option.get("text", None)
-                cond = option.get("cond", "")
-                else_cond = option.get("else", "")
-                next_cond = option.get("next", None)
-                or_cond = option.get("or_cond", None)
-                prompt_option = PromptOption(
-                    text=text,
-                    cond=cond,
-                    else_cond=else_cond,
-                    or_cond=or_cond,
-                    prompt_id=prompt_id
-                )
-                if prev_object:
-                    session.add(prompt_option)
-                    session.commit()
-                    prev_object.next_cond_id = prompt_option.id
-                    session.add(prev_object)
-                    session.commit()
-                    prev_object = prompt_option
-                else:
-                    session.add(prompt_option)
-                    session.commit()
-                    prev_object = prompt_option
-                if next_cond:
-                    prev_object = insert_variables(
-                        variables=next_cond,
-                        prev_object=prev_object,
+                ).first()
+                if not weight:
+                    try:
+                        weight_value = data["weights"][category_name]
+                    except KeyError:
+                        weight_value = 1.0
+                    weight = PromptVariableCategoryWeight(
+                        prompt_category=category,
+                        variable_category=cat,
+                        weight=weight_value
                     )
-            return prev_object
+                    my_session.add(weight)
+                    my_session.commit()
 
-        insert_variables(data["builder"])
+                # add prompt variables
+                for var in variable_values:
+                    my_session.add(PromptVariable(
+                        value=var,
+                        prompt_category=category,
+                        variable_category=cat
+                    ))
+                my_session.commit()
 
-        session.commit()
+            def insert_variables(variables, prev_object=None):
+                for option in variables:
+                    text = option.get("text", None)
+                    cond = option.get("cond", "")
+                    else_cond = option.get("else", "")
+                    next_cond = option.get("next", None)
+                    or_cond = option.get("or_cond", None)
+                    prompt_option = PromptOption(
+                        text=text,
+                        cond=cond,
+                        else_cond=else_cond,
+                        or_cond=or_cond,
+                        prompt_id=prompt_id
+                    )
+                    if prev_object:
+                        my_session.add(prompt_option)
+                        my_session.commit()
+                        prev_object.next_cond_id = prompt_option.id
+                        my_session.add(prev_object)
+                        my_session.commit()
+                        prev_object = prompt_option
+                    else:
+                        my_session.add(prompt_option)
+                        my_session.commit()
+                        prev_object = prompt_option
+                    if next_cond:
+                        prev_object = insert_variables(
+                            variables=next_cond,
+                            prev_object=prev_object,
+                        )
+                return prev_object
 
-    for variable_category, data in variable_bootstrap_data.items():
-        category = session.query(PromptVariableCategory).filter_by(name=variable_category).first()
-        if not category:
-            category = PromptVariableCategory(name=variable_category)
-            session.add(category)
-            session.commit()
-        for variable in data:
-            session.add(PromptVariable(
-                value=variable,
-                variable_category=category
-            ))
-        session.commit()
+            insert_variables(data["builder"])
 
-    # Add PromptStyle objects
-    for style_category, data in style_bootstrap_data.items():
-        category = PromptStyleCategory(name=style_category, negative_prompt=data["negative_prompt"])
-        session.add(category)
-        session.commit()
-        for style in data["styles"]:
-            session.add(PromptStyle(
-                name=style,
-                style_category=category
-            ))
-        session.commit()
+            my_session.commit()
 
-    # Add ControlnetModel objects
-    for name, path in controlnet_bootstrap_data.items():
-        session.add(ControlnetModel(name=name, path=path))
-    session.commit()
-
-
-    # Add AIModel objects
-    for model_data in model_bootstrap_data:
-        session.add(AIModel(**model_data))
-    session.commit()
-
-
-    # Add Pipeline objects
-    for pipeline_data in pipeline_bootstrap_data:
-        session.add(Pipeline(**pipeline_data))
-    session.commit()
-
-
-    # Add PathSettings objects
-    session.add(PathSettings())
-    session.commit()
-
-
-    # Add BrushSettings objects
-    session.add(BrushSettings())
-    session.commit()
-
-
-    # Add GridSettings objects
-    session.add(GridSettings())
-    session.commit()
-
-    session.add(DeterministicSettings())
-    session.commit()
-
-
-    # Add MetadataSettings objects
-    session.add(MetadataSettings())
-    session.commit()
-
-
-    # Add MemorySettings objects
-    session.add(MemorySettings())
-    session.commit()
-
-    # Add ActiveGridSettings object
-    session.add(ActiveGridSettings())
-    session.commit()
-
-
-    # Add ImageFilter objects
-    for filter in imagefilter_bootstrap_data:
-        image_filter = ImageFilter(
-            display_name=filter[0],
-            name=filter[1],
-            filter_class=filter[2]
-        )
-        for filter_value in filter[3]:
-            image_filter.image_filter_values.append(ImageFilterValue(
-                name=filter_value[0],
-                value=filter_value[1],
-                value_type=filter_value[2],
-                min_value=filter_value[3] if len(filter_value) > 3 else None,
-                max_value=filter_value[4] if len(filter_value) > 4 else None
-            ))
-        session.add(image_filter)
-        session.commit()
-
-    image_filter = session.query(ImageFilter).filter_by(name='color_balance').first()
-
-    # Access its image_filter_values
-    filter_values = image_filter.image_filter_values
-
-    # Add Document object
-    settings = Settings(nsfw_filter=True)
-    settings.prompt_generator_settings.append(
-        PromptGeneratorSetting(
-            name="Prompt A",
-            active=True,
-            settings_id=settings.id
-        )
-    )
-    settings.prompt_generator_settings.append(
-        PromptGeneratorSetting(
-            name="Prompt B",
-            settings_id=settings.id
-        )
-    )
-    settings.splitter_sizes.append(SplitterSection(
-        name="content_splitter",
-        order=0,
-        size=390
-    ))
-    settings.splitter_sizes.append(SplitterSection(
-        name="content_splitter",
-        order=1,
-        size=512
-    ))
-    settings.splitter_sizes.append(SplitterSection(
-        name="content_splitter",
-        order=2,
-        size=200
-    ))
-    settings.splitter_sizes.append(SplitterSection(
-        name="content_splitter",
-        order=3,
-        size=64
-    ))
-    settings.splitter_sizes.append(SplitterSection(
-        name="main_splitter",
-        order=0,
-        size=520
-    ))
-    settings.splitter_sizes.append(SplitterSection(
-        name="main_splitter",
-        order=1,
-        size=-1
-    ))
-    settings.splitter_sizes.append(SplitterSection(
-        name="canvas_splitter",
-        order=0,
-        size=520
-    ))
-    settings.splitter_sizes.append(SplitterSection(
-        name="canvas_splitter",
-        order=1,
-        size=-1
-    ))
-    session.add(settings)
-
-    settings.brush_settings = session.query(BrushSettings).first()
-    settings.path_settings = session.query(PathSettings).first()
-    settings.grid_settings = session.query(GridSettings).first()
-    settings.deterministic_settings = session.query(DeterministicSettings).first()
-    settings.metadata_settings = session.query(MetadataSettings).first()
-    settings.memory_settings = session.query(MemorySettings).first()
-    settings.active_grid_settings = session.query(ActiveGridSettings).first()
-
-    active_grid_colors = {
-        "stablediffusion": {
-            "border": {
-                "txt2img": "#00FF00",
-                "outpaint": "#00FFFF",
-                "depth2img": "#0000FF",
-                "pix2pix": "#FFFF00",
-                "upscale": "#00FFFF",
-                "superresolution": "#FF00FF",
-                "txt2vid": "#999999",
-            },
-            # choose complimentary colors for the fill
-            "fill": {
-                "txt2img": "#FF0000",
-                "outpaint": "#FF00FF",
-                "depth2img": "#FF8000",
-                "pix2pix": "#8000FF",
-                "upscale": "#00FF80",
-                "superresolution": "#00FF00",
-                "txt2vid": "#000000",
-
-            }
-        },
-    }
-
-    generator_section = "txt2img"
-    generator_name = "stablediffusion"
-    session.add(GeneratorSetting(
-        section=generator_section,
-        generator_name=generator_name,
-        active_grid_border_color=active_grid_colors[generator_name]["border"][generator_section],
-        active_grid_fill_color=active_grid_colors[generator_name]["fill"][generator_section]
-    ))
-
-    session.add(Document(
-        name="Untitled",
-        settings=settings,
-        active=True
-    ))
-    session.commit()
-
-
-    available_schedulers = {}
-    for scheduler_data in [
-        ("Euler a", "EULER_ANCESTRAL"),
-        ("Euler", "EULER"),
-        ("LMS", "LMS"),
-        ("Heun", "HEUN"),
-        ("DPM2", "DPM2"),
-        ("DPM++ 2M", "DPM_PP_2M"),
-        ("DPM2 Karras", "DPM2_K"),
-        ("DPM2 a Karras", "DPM2_A_K"),
-        ("DPM++ 2M Karras", "DPM_PP_2M_K"),
-        ("DPM++ 2M SDE Karras", "DPM_PP_2M_SDE_K"),
-        ("DDIM", "DDIM"),
-        ("UniPC", "UNIPC"),
-        ("DDPM", "DDPM"),
-        ("DEIS", "DEIS"),
-        ("DPM 2M SDE Karras", "DPM_2M_SDE_K"),
-        ("PLMS", "PLMS"),
-    ]:
-        obj = Scheduler(
-            name=scheduler_data[1],
-            display_name=scheduler_data[0]
-        )
-        session.add(obj)
-        available_schedulers[scheduler_data[1]] = obj
-    session.commit()
-
-    generator_sections = {
-        "stablediffusion": {
-            "upscale": ["EULER"],
-            "superresolution": ["DDIM", "LMS", "PLMS"],
-        },
-    }
-
-    # add all of the schedulers for the defined generator sections
-    for generator, sections in generator_sections.items():
-        for section, schedulers in sections.items():
-            for scheduler in schedulers:
-                session.add(ActionScheduler(
-                    section=section,
-                    generator_name=generator,
-                    scheduler_id=session.query(Scheduler).filter_by(name=scheduler).first().id
+        for variable_category, data in variable_bootstrap_data.items():
+            category = my_session.query(PromptVariableCategory).filter_by(name=variable_category).first()
+            if not category:
+                category = PromptVariableCategory(name=variable_category)
+                my_session.add(category)
+                my_session.commit()
+            for variable in data:
+                my_session.add(PromptVariable(
+                    value=variable,
+                    variable_category=category
                 ))
-    session.commit()
+            my_session.commit()
 
-    # add the rest of the stable diffusion schedulers
-    for k, v in available_schedulers.items():
-        for section in [
-            "txt2img", "depth2img", "pix2pix", "vid2vid",
-            "outpaint", "controlnet", "txt2vid"
-        ]:
-            obj = ActionScheduler(
-                section=section,
-                generator_name="stablediffusion",
-                scheduler_id=v.id
+        # Add PromptStyle objects
+        for style_category, data in style_bootstrap_data.items():
+            category = PromptStyleCategory(name=style_category, negative_prompt=data["negative_prompt"])
+            my_session.add(category)
+            my_session.commit()
+            for style in data["styles"]:
+                my_session.add(PromptStyle(
+                    name=style,
+                    style_category=category
+                ))
+            my_session.commit()
+
+        # Add ControlnetModel objects
+        for name, path in controlnet_bootstrap_data.items():
+            my_session.add(ControlnetModel(name=name, path=path))
+        my_session.commit()
+
+
+        # Add AIModel objects
+        for model_data in model_bootstrap_data:
+            my_session.add(AIModel(**model_data))
+        my_session.commit()
+
+
+        # Add Pipeline objects
+        for pipeline_data in pipeline_bootstrap_data:
+            my_session.add(Pipeline(**pipeline_data))
+        my_session.commit()
+
+
+        # Add PathSettings objects
+        my_session.add(PathSettings())
+        my_session.commit()
+
+
+        # Add BrushSettings objects
+        my_session.add(BrushSettings())
+        my_session.commit()
+
+
+        # Add GridSettings objects
+        my_session.add(GridSettings())
+        my_session.commit()
+
+        my_session.add(DeterministicSettings())
+        my_session.commit()
+
+
+        # Add MetadataSettings objects
+        my_session.add(MetadataSettings())
+        my_session.commit()
+
+
+        # Add MemorySettings objects
+        my_session.add(MemorySettings())
+        my_session.commit()
+
+        # Add ActiveGridSettings object
+        my_session.add(ActiveGridSettings())
+        my_session.commit()
+
+        # Add ImageFilter objects
+        for filter in imagefilter_bootstrap_data:
+            image_filter = ImageFilter(
+                display_name=filter[0],
+                name=filter[1],
+                filter_class=filter[2]
             )
-            session.add(obj)
-    session.commit()
+            for filter_value in filter[3]:
+                image_filter.image_filter_values.append(ImageFilterValue(
+                    name=filter_value[0],
+                    value=filter_value[1],
+                    value_type=filter_value[2],
+                    min_value=filter_value[3] if len(filter_value) > 3 else None,
+                    max_value=filter_value[4] if len(filter_value) > 4 else None
+                ))
+            my_session.add(image_filter)
+            my_session.commit()
 
-    # create tab sections
-    session.add(TabSection(
-        panel="center_tab",
-        active_tab="Canvas"
-    ))
-    session.add(TabSection(
-        panel="tool_tab_widget",
-        active_tab="Embeddings"
-    ))
-    session.add(TabSection(
-        panel="prompt_builder.ui.tabs",
-        active_tab="0"
-    ))
-    session.commit()
+        image_filter = my_session.query(ImageFilter).filter_by(name='color_balance').first()
 
-    session.add(PromptBuilder(
-        name="Prompt A",
-        active=True
-    ))
-    session.add(PromptBuilder(
-        name="Prompt B",
-        active=True
-    ))
-    session.commit()
+        # Access its image_filter_values
+        filter_values = image_filter.image_filter_values
 
-    session.add(CanvasSettings())
-    session.commit()
-
-
-    for generator_name, generator_data in seed_data.items():
-        generator = LLMGenerator(name=generator_name)
-        session.add(generator)
-
-        # create GeneratorSetting with property, value and property_type based on value type
-        setting = LLMGeneratorSetting()
-        setting.generator = generator
-        for k, v in generator_data["generator_settings"].items():
-            setting.__setattr__(k, v)
-        session.add(setting)
-
-        if "model_versions" in generator_data:
-            model_versions = []
-            for name in generator_data["model_versions"]:
-                print("Name", name)
-                model_versions.append(LLMModelVersion(name=name))
-
-        for version in model_versions:
-            generator.model_versions.append(version)
-
-        session.add(generator)
-        session.commit()
-
-    from airunner.data.bootstrap.prompt_templates import prompt_template_seed_data
-    for data in prompt_template_seed_data:
-        prompt_template = LLMPromptTemplate(
-            name=data["name"],
-            template=data["template"]
+        # Add Document object
+        settings = Settings(nsfw_filter=True)
+        settings.prompt_generator_settings.append(
+            PromptGeneratorSetting(
+                name="Prompt A",
+                active=True,
+                settings_id=settings.id
+            )
         )
-        session.add(prompt_template)
-        session.commit()
+        settings.prompt_generator_settings.append(
+            PromptGeneratorSetting(
+                name="Prompt B",
+                settings_id=settings.id
+            )
+        )
+        settings.splitter_sizes.append(SplitterSection(
+            name="content_splitter",
+            order=0,
+            size=390
+        ))
+        settings.splitter_sizes.append(SplitterSection(
+            name="content_splitter",
+            order=1,
+            size=512
+        ))
+        settings.splitter_sizes.append(SplitterSection(
+            name="content_splitter",
+            order=2,
+            size=200
+        ))
+        settings.splitter_sizes.append(SplitterSection(
+            name="content_splitter",
+            order=3,
+            size=64
+        ))
+        settings.splitter_sizes.append(SplitterSection(
+            name="main_splitter",
+            order=0,
+            size=520
+        ))
+        settings.splitter_sizes.append(SplitterSection(
+            name="main_splitter",
+            order=1,
+            size=-1
+        ))
+        settings.splitter_sizes.append(SplitterSection(
+            name="canvas_splitter",
+            order=0,
+            size=520
+        ))
+        settings.splitter_sizes.append(SplitterSection(
+            name="canvas_splitter",
+            order=1,
+            size=-1
+        ))
+        my_session.add(settings)
+
+        settings.brush_settings = my_session.query(BrushSettings).first()
+        settings.path_settings = my_session.query(PathSettings).first()
+        settings.grid_settings = my_session.query(GridSettings).first()
+        settings.deterministic_settings = my_session.query(DeterministicSettings).first()
+        settings.metadata_settings = my_session.query(MetadataSettings).first()
+        settings.memory_settings = my_session.query(MemorySettings).first()
+        settings.active_grid_settings = my_session.query(ActiveGridSettings).first()
+
+        active_grid_colors = {
+            "stablediffusion": {
+                "border": {
+                    "txt2img": "#00FF00",
+                    "outpaint": "#00FFFF",
+                    "depth2img": "#0000FF",
+                    "pix2pix": "#FFFF00",
+                    "upscale": "#00FFFF",
+                    "superresolution": "#FF00FF",
+                    "txt2vid": "#999999",
+                },
+                # choose complimentary colors for the fill
+                "fill": {
+                    "txt2img": "#FF0000",
+                    "outpaint": "#FF00FF",
+                    "depth2img": "#FF8000",
+                    "pix2pix": "#8000FF",
+                    "upscale": "#00FF80",
+                    "superresolution": "#00FF00",
+                    "txt2vid": "#000000",
+
+                }
+            },
+        }
+
+        generator_section = "txt2img"
+        generator_name = "stablediffusion"
+        my_session.add(GeneratorSetting(
+            section=generator_section,
+            generator_name=generator_name,
+            active_grid_border_color=active_grid_colors[generator_name]["border"][generator_section],
+            active_grid_fill_color=active_grid_colors[generator_name]["fill"][generator_section]
+        ))
+
+        my_session.add(Document(
+            name="Untitled",
+            settings=settings,
+            active=True
+        ))
+        my_session.commit()
 
 
-    default_models = [
-        {
-            "name": "Stable Diffusion 2.1 512",
-            "pipeline": "txt2img",
-            "toolname": "txt2img"
-        },
-        {
-            "name": "Stable Diffusion Inpaint 2",
-            "pipeline": "outpaint",
-            "toolname": "outpaint"
-        },
-        {
-            "name": "Stable Diffusion Depth2Img",
-            "pipeline": "depth2img",
-            "toolname": "depth2img"
-        },
-        {
-            "name": "Stable Diffusion 1.5",
-            "pipeline": "controlnet",
-            "toolname": "controlnet"
-        },
-        {
-            "name": "Stability AI 4x resolution",
-            "pipeline": "superresolution",
-            "toolname": "superresolution"
-        },
-        {
-            "name": "Instruct pix2pix",
-            "pipeline": "pix2pix",
-            "toolname": "pix2pix"
-        },
-        {
-            "name": "SD Image Variations",
-            "pipeline": "vid2vid",
-            "toolname": "vid2vid"
-        },
-        {
-            "name": "sd-x2-latent-upscaler",
-            "pipeline": "upscale",
-            "toolname": "upscale"
-        },
-        {
-            "name": "Inpaint vae",
-            "pipeline": "inpaint_vae",
-            "toolname": "inpaint_vae"
-        },
-        {
-            "name": "Salesforce InstructBlip Flan T5 XL",
-            "pipeline": "visualqa",
-            "toolname": "visualqa"
-        },
-        {
-            "name": "Llama 2 7b Chat",
-            "pipeline": "casuallm",
-            "toolname": "casuallm"
-        },
-        {
-            "name": "Flan T5 XL",
-            "pipeline": "seq2seq",
-            "toolname": "prompt_generation"
-        },
-    ]
+        available_schedulers = {}
+        for scheduler_data in [
+            ("Euler a", "EULER_ANCESTRAL"),
+            ("Euler", "EULER"),
+            ("LMS", "LMS"),
+            ("Heun", "HEUN"),
+            ("DPM2", "DPM2"),
+            ("DPM++ 2M", "DPM_PP_2M"),
+            ("DPM2 Karras", "DPM2_K"),
+            ("DPM2 a Karras", "DPM2_A_K"),
+            ("DPM++ 2M Karras", "DPM_PP_2M_K"),
+            ("DPM++ 2M SDE Karras", "DPM_PP_2M_SDE_K"),
+            ("DDIM", "DDIM"),
+            ("UniPC", "UNIPC"),
+            ("DDPM", "DDPM"),
+            ("DEIS", "DEIS"),
+            ("DPM 2M SDE Karras", "DPM_2M_SDE_K"),
+            ("PLMS", "PLMS"),
+        ]:
+            obj = Scheduler(
+                name=scheduler_data[1],
+                display_name=scheduler_data[0]
+            )
+            my_session.add(obj)
+            available_schedulers[scheduler_data[1]] = obj
+        my_session.commit()
 
-HERE = os.path.abspath(os.path.dirname(__file__)) 
-alembic_ini_path = os.path.join(HERE, "../alembic.ini")
+        generator_sections = {
+            "stablediffusion": {
+                "upscale": ["EULER"],
+                "superresolution": ["DDIM", "LMS", "PLMS"],
+            },
+        }
 
-config = configparser.ConfigParser()
-config.read(f"{alembic_ini_path}.config")
+        # add all of the schedulers for the defined generator sections
+        for generator, sections in generator_sections.items():
+            for section, schedulers in sections.items():
+                for scheduler in schedulers:
+                    my_session.add(ActionScheduler(
+                        section=section,
+                        generator_name=generator,
+                        scheduler_id=my_session.query(Scheduler).filter_by(name=scheduler).first().id
+                    ))
+        my_session.commit()
 
-home_dir = os.path.expanduser("~")
-db_path = f'sqlite:///{home_dir}/.airunner/airunner.db'
+        # add the rest of the stable diffusion schedulers
+        for k, v in available_schedulers.items():
+            for section in [
+                "txt2img", "depth2img", "pix2pix", "vid2vid",
+                "outpaint", "controlnet", "txt2vid"
+            ]:
+                obj = ActionScheduler(
+                    section=section,
+                    generator_name="stablediffusion",
+                    scheduler_id=v.id
+                )
+                my_session.add(obj)
+        my_session.commit()
 
-config.set('alembic', 'sqlalchemy.url', db_path)
-with open(alembic_ini_path, 'w') as configfile:
-    config.write(configfile)
-alembic_cfg = Config(alembic_ini_path)
-if not do_stamp_alembic:
-    command.upgrade(alembic_cfg, "head")
-else:
-    command.stamp(alembic_cfg, "head")
+        # create tab sections
+        my_session.add(TabSection(
+            panel="center_tab",
+            active_tab="Canvas"
+        ))
+        my_session.add(TabSection(
+            panel="tool_tab_widget",
+            active_tab="Embeddings"
+        ))
+        my_session.add(TabSection(
+            panel="prompt_builder.ui.tabs",
+            active_tab="0"
+        ))
+        my_session.commit()
+
+        my_session.add(PromptBuilder(
+            name="Prompt A",
+            active=True
+        ))
+        my_session.add(PromptBuilder(
+            name="Prompt B",
+            active=True
+        ))
+        my_session.commit()
+
+        my_session.add(CanvasSettings())
+        my_session.commit()
+
+
+        for generator_name, generator_data in seed_data.items():
+            generator = LLMGenerator(name=generator_name)
+            my_session.add(generator)
+
+            # create GeneratorSetting with property, value and property_type based on value type
+            setting = LLMGeneratorSetting()
+            setting.generator = generator
+            for k, v in generator_data["generator_settings"].items():
+                setting.__setattr__(k, v)
+            my_session.add(setting)
+
+            if "model_versions" in generator_data:
+                model_versions = []
+                for name in generator_data["model_versions"]:
+                    print("Name", name)
+                    model_versions.append(LLMModelVersion(name=name))
+
+            for version in model_versions:
+                generator.model_versions.append(version)
+
+            my_session.add(generator)
+            my_session.commit()
+
+        from airunner.data.bootstrap.prompt_templates import prompt_template_seed_data
+        for data in prompt_template_seed_data:
+            prompt_template = LLMPromptTemplate(
+                name=data["name"],
+                template=data["template"]
+            )
+            my_session.add(prompt_template)
+            my_session.commit()
+
+    HERE = os.path.abspath(os.path.dirname(__file__)) 
+    alembic_ini_path = os.path.join(HERE, "../alembic.ini")
+
+    config = configparser.ConfigParser()
+    config.read(f"{alembic_ini_path}.config")
+
+    home_dir = os.path.expanduser("~")
+    db_path = f'sqlite:///{home_dir}/.airunner/airunner.db'
+
+    config.set('alembic', 'sqlalchemy.url', db_path)
+    with open(alembic_ini_path, 'w') as configfile:
+        config.write(configfile)
+    alembic_cfg = Config(alembic_ini_path)
+    if not do_stamp_alembic:
+        command.upgrade(alembic_cfg, "head")
+    else:
+        command.stamp(alembic_cfg, "head")

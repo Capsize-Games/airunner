@@ -6,7 +6,8 @@ This is due to the way huggingface diffusion models are imported.
 *******************************************************************************
 """
 import os
-
+from airunner.data.db import prepare_database
+prepare_database()
 from airunner.aihandler.settings_manager import SettingsManager
 settings_manager = SettingsManager()
 hf_cache_path = settings_manager.path_settings.hf_cache_path
@@ -80,6 +81,7 @@ if __name__ == "__main__":
         try:
             window = MainWindow()
             if watch_files:
+                print("Watching style files for changes...")
                 # get existing app
                 watcher = watch_frontend_files()
                 watcher.emitter.file_changed.connect(window.redraw)
