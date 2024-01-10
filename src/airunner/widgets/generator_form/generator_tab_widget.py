@@ -168,12 +168,9 @@ class GeneratorTabWidget(BaseWidget):
             progressbar.setRange(0, 100)
         progressbar.setValue(value)
 
-    def stop_progress_bar(self, tab_section, section):
-        progressbar = self.find_widget("progress_bar", tab_section, section)
-        if not progressbar:
-            return
-        progressbar.setRange(0, 100)
-        progressbar.setValue(100)
+    def stop_progress_bar(self):
+        self.generate_form.progress_bar.setRange(0, 100)
+        self.generate_form.progress_bar.setValue(100)
 
     def add_widget_to_grid(self, widget, row=None, col=0):
         if row is None:

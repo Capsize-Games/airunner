@@ -2,12 +2,11 @@ from PyQt6.QtCore import pyqtSlot
 from PyQt6.QtWidgets import QSpacerItem, QSizePolicy
 
 from airunner.aihandler.enums import MessageCode
-from airunner.data.db import session
 from airunner.data.models import Conversation, LLMPromptTemplate, Message
 from airunner.widgets.base_widget import BaseWidget
 from airunner.widgets.llm.templates.chat_prompt_ui import Ui_chat_prompt
 from airunner.widgets.llm.message_widget import MessageWidget
-from airunner.utils import save_session
+from airunner.utils import save_session, get_session
 from airunner.aihandler.logger import Logger
 
 
@@ -51,6 +50,7 @@ class ChatPromptWidget(BaseWidget):
         return f"{self.generator.botname} loves {self.generator.username}. {self.generator.botname} is very nice. {self.generator.botname} uses compliments, kind responses, and nice words. Everything {self.generator.botname} says is nice. {self.generator.botname} is kind."
 
     def load_data(self):
+        session = get_session()
         self.conversation = session.query(Conversation).first()
         if self.conversation is None:
             self.conversation = Conversation()
@@ -122,6 +122,7 @@ class ChatPromptWidget(BaseWidget):
             message=message,
             conversation=self.conversation
         )
+        session = get_session()
         session.add(message_object)
         session.commit()
 
@@ -208,7 +209,7 @@ class ChatPromptWidget(BaseWidget):
             Logger.warning("Prompt is empty")
             return
 
-        print(self.generator.prompt_template)
+        session = get_session()
         prompt_template = session.query(LLMPromptTemplate).filter(
             LLMPromptTemplate.name == self.generator.prompt_template
         ).first()

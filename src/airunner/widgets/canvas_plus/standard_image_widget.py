@@ -348,8 +348,7 @@ class StandardImageWidget(StandardBaseWidget):
         current_model = self.settings_manager.generator.model
         if current_model != "":
             self.ui.model.setCurrentText(current_model)
-        else:
-            self.settings_manager.set_value("generator.model", self.ui.model.currentText())
+        self.settings_manager.set_value("generator.model", self.ui.model.currentText())
         self.ui.model.blockSignals(False)
 
     def load_schedulers(self):
