@@ -1,11 +1,11 @@
 from PyQt6.QtCore import QObject, pyqtSignal
 
 from airunner.aihandler.qtvar import StringVar, IntVar, BooleanVar, FloatVar, DictVar
-from airunner.data.db import session
-from airunner.data.models import LLMGenerator, Settings, GeneratorSetting, AIModel, Pipeline, ControlnetModel, ImageFilter, Prompt, \
-    SavedPrompt, PromptCategory, PromptVariable, PromptVariableCategory, PromptVariableCategoryWeight, StandardImageWidgetSettings
-from airunner.utils import save_session
+from airunner.data.models import LLMGenerator, Settings, GeneratorSetting, AIModel, Pipeline, ControlnetModel, ImageFilter, \
+    SavedPrompt, StandardImageWidgetSettings
+from airunner.utils import save_session, get_session
 from airunner.aihandler.logger import Logger as logger
+from airunner.data.models import Document
 
 document = None
 _app = None
@@ -17,6 +17,7 @@ variable_types = {
     "FLOAT": FloatVar,
     "JSON": DictVar,
 }
+session = get_session()
 
 
 class SettingsSignal(QObject):
@@ -236,8 +237,7 @@ class SettingsManager(QObject):
             _app = app
             document = _app.document
         else:
-            from airunner.data.db import session
-            from airunner.data.models import Document
+            session = get_session()
             document = session.query(Document).first()
 
         super().__init__(*args, **kwargs)

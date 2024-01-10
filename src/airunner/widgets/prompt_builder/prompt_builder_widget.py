@@ -1,9 +1,8 @@
 import random
 
 from airunner.aihandler.settings import MAX_SEED
-from airunner.data.db import session
 from airunner.data.models import TabSection, PromptBuilder
-from airunner.utils import save_session
+from airunner.utils import save_session, get_session
 from airunner.widgets.base_widget import BaseWidget
 from airunner.widgets.prompt_builder.prompt_builder_form_widget import PromptBuilderForm
 from airunner.widgets.prompt_builder.templates.prompt_builder_ui import Ui_prompt_builder
@@ -142,6 +141,7 @@ class PromptBuilderWidget(BaseWidget):
 
     def __init__(self, *args, **kwargs):
         super().__init__(*args, **kwargs)
+        session = get_session()
         self.prompt_generator_settings = session.query(PromptBuilder).all()
         ts = session.query(TabSection).filter(TabSection.panel == "prompt_builder.ui.tabs").first()
         self.ui.tabs.blockSignals(True)
@@ -321,6 +321,7 @@ class PromptBuilderWidget(BaseWidget):
 
     def tab_changed(self, val):
         print("tab_changed", val)
+        session = get_session()
         ts = session.query(TabSection).filter(TabSection.panel == "prompt_builder.ui.tabs").first()
         ts.active_tab = str(val)
         save_session()
