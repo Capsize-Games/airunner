@@ -12,7 +12,7 @@ from transformers import InstructBlipProcessor
 
 from airunner.aihandler.settings_manager import SettingsManager
 from airunner.data.models import LLMGenerator
-from airunner.data.db import session
+from airunner.utils import get_session
 from airunner.aihandler.logger import Logger
 
 
@@ -66,6 +66,7 @@ class TransformerRunner(QObject):
     @property
     def generator(self):
         try:
+            session = get_session()
             if not self._generator or self.current_generator_name != self.requested_generator_name:
                 self.current_generator_name = self.requested_generator_name
                 self._generator = session.query(LLMGenerator).filter_by(name=self.current_generator_name).first()

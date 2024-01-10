@@ -970,17 +970,28 @@ class SDRunner(
             try:
                 args.update({
                     "prompt_embeds": self.prompt_embeds,
-                    "negative_prompt_embeds": self.negative_prompt_embeds,
                 })
             except Exception as _e:
                 Logger.warning("Compel failed: " + str(_e))
                 args.update({
                     "prompt": self.prompt,
-                    "negative_prompt": self.negative_prompt,
                 })
         else:
             args.update({
                 "prompt": self.prompt,
+            })
+        if self.use_compel:
+            try:
+                args.update({
+                    "negative_prompt_embeds": self.negative_prompt_embeds,
+                })
+            except Exception as _e:
+                Logger.warning("Compel failed: " + str(_e))
+                args.update({
+                    "negative_prompt": self.negative_prompt,
+                })
+        else:
+            args.update({
                 "negative_prompt": self.negative_prompt,
             })
         args["callback_steps"] = 1
