@@ -10,6 +10,7 @@ from PyQt6.QtGui import QBrush, QColor, QPen, QPixmap, QPainter, QCursor
 from PyQt6.QtWidgets import QGraphicsScene, QGraphicsItem, QGraphicsPixmapItem, QGraphicsLineItem
 from PyQt6 import QtWidgets, QtCore
 from PyQt6.QtCore import QThread, pyqtSignal
+from PyQt6.QtCore import QLineF
 
 from airunner.aihandler.logger import Logger
 from airunner.aihandler.settings_manager import SettingsManager
@@ -218,6 +219,28 @@ class ActiveGridArea(DraggablePixmap):
         pos = self.pos()
 
 
+class CustomScene(QGraphicsScene):
+    def __init__(self, parent=None):
+        super().__init__(parent)
+        self.drawing = False
+        self.last_point = QPointF()
+
+    def mousePressEvent(self, event):
+        if event.button() == Qt.MouseButton.LeftButton:
+            self.drawing = True
+            self.last_point = event.scenePos()
+
+    def mouseMoveEvent(self, event):
+        if self.drawing:
+            new_point = event.scenePos()
+            self.addLine(QLineF(self.last_point, new_point), QPen(Qt.GlobalColor.red, 5))
+            self.last_point = new_point
+
+    def mouseReleaseEvent(self, event):
+        if event.button() == Qt.MouseButton.LeftButton:
+            self.drawing = False
+
+
 class CanvasPlusWidget(CanvasBaseWidget):
     widget_class_ = Ui_canvas
     scene = None
@@ -331,6 +354,10 @@ class CanvasPlusWidget(CanvasBaseWidget):
     @property
     def active_grid_settings(self):
         return self.settings_manager.active_grid_settings
+    
+    @property
+    def canvas_container(self):
+        return self.ui.canvas_container
 
     def __init__(self, *args, **kwargs):
         super().__init__(*args, **kwargs)
@@ -351,6 +378,8 @@ class CanvasPlusWidget(CanvasBaseWidget):
         self.initialize()
         self.settings_manager.changed_signal.connect(self.handle_changed_signal)
         self.app.loaded.connect(self.handle_loaded)
+
+
     
     def increase_active_grid_height(self, amount):
         height = self.settings_manager.working_height + self.settings_manager.grid_settings.size * amount
@@ -439,9 +468,9 @@ class CanvasPlusWidget(CanvasBaseWidget):
 
     def initialize(self):
         # Create a QGraphicsScene object
-        self.scene = QGraphicsScene()
+        self.scene = CustomScene()
 
-        self.view = self.ui.canvas_container
+        self.view = self.canvas_container
         original_mouse_event = self.view.mouseMoveEvent
         self.view.mouseMoveEvent = partial(self.handle_mouse_event, original_mouse_event)
         #self.view.setDragMode(QGraphicsView.DragMode.RubberBandDrag)
@@ -572,11 +601,11 @@ class CanvasPlusWidget(CanvasBaseWidget):
         #     # show as grab cursor
         #     self.canvas_container.setCursor(Qt.CursorShape.ClosedHandCursor)
         if self.move_selected:
-            self.ui.canvas_container.setCursor(Qt.CursorShape.OpenHandCursor)
+            self.canvas_container.setCursor(Qt.CursorShape.OpenHandCursor)
         elif self.active_grid_area_selected:
-            self.ui.canvas_container.setCursor(Qt.CursorShape.DragMoveCursor)
+            self.canvas_container.setCursor(Qt.CursorShape.DragMoveCursor)
         elif self.brush_selected or self.eraser_selected:
-            self.ui.canvas_container.setCursor(
+            self.canvas_container.setCursor(
                 CircleCursor(
                     Qt.GlobalColor.white,
                     Qt.GlobalColor.transparent,
@@ -584,7 +613,7 @@ class CanvasPlusWidget(CanvasBaseWidget):
                 )
             )
         else:
-            self.ui.canvas_container.setCursor(QCursor(Qt.CursorShape.ArrowCursor))
+            self.canvas_container.setCursor(QCursor(Qt.CursorShape.ArrowCursor))
 
     def handle_image_data(self, data):
         options = data["data"]["options"]
