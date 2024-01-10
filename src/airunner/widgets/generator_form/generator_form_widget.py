@@ -4,10 +4,10 @@ from PIL import Image
 from PyQt6.QtCore import pyqtSignal, QRect
 
 from airunner.aihandler.settings import MAX_SEED
-from airunner.data.db import session
 from airunner.data.models import ActiveGridSettings, CanvasSettings
 from airunner.widgets.base_widget import BaseWidget
 from airunner.widgets.generator_form.templates.generatorform_ui import Ui_generator_form
+from airunner.utils import get_session
 
 
 class GeneratorForm(BaseWidget):
@@ -118,6 +118,7 @@ class GeneratorForm(BaseWidget):
         return self.app.standard_image_panel.ui.controlnet_settings.current_controlnet_image
 
     def __init__(self, *args, **kwargs):
+        session = get_session()
         super().__init__(*args, **kwargs)
         self.ui.generator_form_tabs.tabBar().hide()
         self.active_grid_settings = session.query(ActiveGridSettings).first()
@@ -594,7 +595,7 @@ class GeneratorForm(BaseWidget):
             progressbar.setRange(0, 100)
         progressbar.setValue(value)
     
-    def stop_progress_bar(self, tab_section, section):
+    def stop_progress_bar(self):
         progressbar = self.ui.progress_bar
         if not progressbar:
             return
