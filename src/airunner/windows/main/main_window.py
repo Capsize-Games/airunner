@@ -1,4 +1,5 @@
 import os
+import queue
 import pickle
 import platform
 import subprocess
@@ -7,12 +8,10 @@ import webbrowser
 from functools import partial
 
 from PyQt6 import uic, QtCore
-from PyQt6.QtCore import pyqtSlot, Qt, pyqtSignal, QTimer
+from PyQt6.QtCore import pyqtSlot, Qt, pyqtSignal, QTimer, QObject, QThread
 from PyQt6.QtGui import QGuiApplication
-from PyQt6.QtWidgets import QApplication, QFileDialog, QMainWindow, QWidget, QSpacerItem, QSizePolicy
-from PyQt6.QtCore import Qt
+from PyQt6.QtWidgets import QApplication, QFileDialog, QMainWindow, QWidget
 from PyQt6 import QtGui
-from PyQt6.QtCore import QTimer
 
 from airunner.resources_light_rc import *
 from airunner.resources_dark_rc import *
@@ -23,13 +22,12 @@ from airunner.aihandler.qtvar import MessageHandlerVar
 from airunner.aihandler.settings import LOG_LEVEL
 from airunner.aihandler.settings_manager import SettingsManager
 from airunner.airunner_api import AIRunnerAPI
-from airunner.data.db import session
 from airunner.data.models import SplitterSection, Prompt, TabSection, LLMGenerator
 from airunner.filters.windows.filter_base import FilterBase
 from airunner.input_event_manager import InputEventManager
 from airunner.mixins.history_mixin import HistoryMixin
 from airunner.settings import BASE_PATH
-from airunner.utils import get_version, auto_export_image, save_session, \
+from airunner.utils import get_version, auto_export_image, save_session, get_session, \
     create_airunner_paths, default_hf_cache_dir
 from airunner.widgets.status.status_widget import StatusWidget
 from airunner.windows.about.about import AboutWindow
@@ -42,7 +40,63 @@ from airunner.windows.video import VideoPopup
 from airunner.data.models import TabSection
 from airunner.widgets.brushes.brushes_container import BrushesContainer
 from airunner.data.models import Document
-from airunner.utils import get_session
+
+
+class ImageDataWorker(QObject):
+    finished = pyqtSignal()
+    stop_progress_bar = pyqtSignal()
+
+    def __init__(self, parent):
+        super().__init__()
+        self.parent = parent
+
+    @pyqtSlot()
+    def process(self):
+        while True:
+            item = self.parent.image_data_queue.get()
+            self.process_image_data(item)
+        self.finished.emit()
+    
+    def process_image_data(self, message):
+        images = message["images"]
+        data = message["data"]
+        nsfw_content_detected = message["nsfw_content_detected"]
+        self.parent.clear_status_message()
+        self.parent.data = data
+        print("process_image_data 3")
+        if data["action"] == "txt2vid":
+            return self.parent.video_handler(data)
+        self.stop_progress_bar.emit()
+        print("process_image_data 4")
+        path = ""
+        if self.parent.settings_manager.auto_export_images:
+            procesed_images = []
+            for image in images:
+                path, image = auto_export_image(
+                    image=image, 
+                    data=data, 
+                    seed=data["options"]["seed"], 
+                    latents_seed=data["options"]["latents_seed"]
+                )
+                if path is not None:
+                    self.parent.set_status_label(f"Image exported to {path}")
+                procesed_images.append(image)
+            images = procesed_images
+        if nsfw_content_detected and self.parent.settings_manager.nsfw_filter:
+            self.parent.message_handler({
+                "message": "Explicit content detected, try again.",
+                "code": MessageCode.ERROR
+            })
+
+        images = self.parent.post_process_images(images)
+        self.parent.image_data.emit({
+            "images": images,
+            "path": path,
+            "data": data
+        })
+        self.parent.message_handler("")
+        self.parent.ui.layer_widget.show_layers()
+        self.parent.image_generated.emit(True)
 
 
 class MainWindow(
@@ -219,6 +273,9 @@ class MainWindow(
     @property
     def current_canvas(self):
         return self.standard_image_panel
+
+    def stop_progress_bar(self):
+        self.generator_tab_widget.stop_progress_bar()
     
     def describe_image(self, image, callback):
         self.generator_tab_widget.ui.ai_tab_widget.describe_image(
@@ -314,8 +371,29 @@ class MainWindow(
         
         # This is used to check the state of the window and save splitter sizes if they have changed
         self.start_splitter_timer()
+
+        self.initialize_image_worker()
         
         self.loaded.emit()
+
+    def initialize_image_worker(self):
+        self.image_data_queue = queue.Queue()
+        
+        self.worker_thread = QThread()
+        self.worker = ImageDataWorker(self)
+        self.worker.stop_progress_bar.connect(self.stop_progress_bar)
+
+        self.worker.moveToThread(self.worker_thread)
+
+        self.worker.finished.connect(self.worker_thread.quit)
+        self.worker.finished.connect(self.worker.deleteLater)
+        self.worker_thread.finished.connect(self.worker_thread.deleteLater)
+
+        self.worker_thread.started.connect(self.worker.process)
+        self.worker_thread.start()
+    
+    def handle_image_generated(self, message):
+        self.image_data_queue.put(message)
 
     def initialize_panel_tabs(self):
         """
@@ -324,6 +402,7 @@ class MainWindow(
         :return:
         """
         self.ui.mode_tab_widget.currentChanged.connect(self.mode_tab_index_changed)
+        session = get_session()
         tabsections = session.query(TabSection).filter(
             TabSection.panel != "generator_tabs"
         ).all()
@@ -564,6 +643,7 @@ class MainWindow(
         webbrowser.open("https://discord.gg/ukcgjEpc5f")
 
     def tool_tab_index_changed(self, index):
+        session = get_session()
         tab_section = session.query(TabSection).filter_by(
             panel="tool_tab_widget"
         ).first()
@@ -571,6 +651,7 @@ class MainWindow(
         session.commit()
 
     def center_panel_tab_index_changed(self, val):
+        session = get_session()
         tab_section = session.query(TabSection).filter_by(
             panel="center_tab"
         ).first()
@@ -579,6 +660,7 @@ class MainWindow(
         session.commit()
 
     def bottom_panel_tab_index_changed(self, index):
+        session = get_session()
         tab_section = session.query(TabSection).filter_by(
             panel="bottom_panel_tab_widget"
         ).first()
@@ -813,6 +895,7 @@ class MainWindow(
             )
         )
         splitter_names = ["main", "content", "canvas"]
+        session = get_session()
         for name in splitter_names:
             self.splitters[name]["sizes"] = session.query(SplitterSection).filter(
                 SplitterSection.name == f"{name}_splitter"
@@ -1103,63 +1186,6 @@ class MainWindow(
         filename = data["video_filename"]
         VideoPopup(settings_manager=self.settings_manager, file_path=filename)
 
-    def handle_image_generated(self, message):
-        images = message["images"]
-        data = message["data"]
-        nsfw_content_detected = message["nsfw_content_detected"]
-        self.clear_status_message()
-        self.data = data
-        if data["action"] == "txt2vid":
-            return self.video_handler(data)
-
-        self.generator_tab_widget.stop_progress_bar(
-            data["tab_section"], data["action"]
-        )
-        path = ""
-        if self.settings_manager.auto_export_images:
-            procesed_images = []
-            for image in images:
-                path, image = auto_export_image(
-                    image=image, 
-                    data=data, 
-                    seed=data["options"]["seed"], 
-                    latents_seed=data["options"]["latents_seed"]
-                )
-                if path is not None:
-                    self.set_status_label(f"Image exported to {path}")
-                procesed_images.append(image)
-            images = procesed_images
-
-        self.generator_tab_widget.stop_progress_bar(
-            data["tab_section"], data["action"]
-        )
-        # get max progressbar value
-        if nsfw_content_detected and self.settings_manager.nsfw_filter:
-            self.message_handler({
-                "message": "Explicit content detected, try again.",
-                "code": MessageCode.ERROR
-            })
-
-        images = self.post_process_images(images)
-
-        if data["options"][f"deterministic_generation"]:
-            self.deterministic_images = images
-            DeterministicGenerationWindow(
-                self.settings_manager,
-                app=self,
-                images=images,
-                data=data)
-        else:
-            self.image_data.emit({
-                "images": images,
-                "path": path,
-                "data": data
-            })
-            self.message_handler("")
-            self.ui.layer_widget.show_layers()
-
-        self.image_generated.emit(True)
-
     def post_process_images(self, images):
         #return self.automatic_filter_manager.apply_filters(images)
         return images
@@ -1257,6 +1283,7 @@ class MainWindow(
             prompt_widget.setPlainText(text)
 
     def change_content_widget(self):
+        session = get_session()
         active_tab_obj = session.query(TabSection).filter(
             TabSection.panel == "center_tab"
         ).first()
@@ -1382,6 +1409,7 @@ class MainWindow(
         is_prompt_builder = self.settings_manager.generator_section == GeneratorSection.PROMPT_BUILDER.value
     
     def image_generators_toggled(self):
+        session = get_session()
         self.image_generation_toggled()
         self.settings_manager.set_value("mode", Mode.IMAGE.value)
         self.settings_manager.set_value("generator_section", GeneratorSection.TXT2IMG.value)
@@ -1392,6 +1420,7 @@ class MainWindow(
         self.change_content_widget()
 
     def text_to_video_toggled(self):
+        session = get_session()
         self.image_generation_toggled()
         self.settings_manager.set_value("mode", Mode.IMAGE.value)
         self.settings_manager.set_value("generator_section", GeneratorSection.TXT2VID.value)
@@ -1402,6 +1431,7 @@ class MainWindow(
         self.change_content_widget()
 
     def toggle_prompt_builder(self, val):
+        session = get_session()
         if not val:
             self.image_generators_toggled()
         else:

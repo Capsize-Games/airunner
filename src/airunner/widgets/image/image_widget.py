@@ -51,8 +51,14 @@ class ImageWidget(BaseWidget):
             path = self.image_path + ".thumbnail.png"
             if not os.path.exists(path):
                 image = Image.open(self.image_path)
-                image.thumbnail((size, size))
-                image.save(path)
+                try:
+                    image.thumbnail((size, size))
+                except OSError:
+                    pass
+                try:
+                    image.save(path)
+                except OSError:
+                    pass
             if self.is_thumbnail:
                 pixmap = QPixmap(path)
             else:
