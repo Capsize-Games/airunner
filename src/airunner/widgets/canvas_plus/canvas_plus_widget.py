@@ -9,16 +9,41 @@ from PyQt6.QtCore import Qt, QPoint, QPointF, QRect
 from PyQt6.QtGui import QBrush, QColor, QPen, QPixmap, QPainter, QCursor
 from PyQt6.QtWidgets import QGraphicsScene, QGraphicsItem, QGraphicsPixmapItem, QGraphicsLineItem
 from PyQt6 import QtWidgets, QtCore
+from PyQt6.QtCore import QThread, pyqtSignal
 
 from airunner.aihandler.logger import Logger
 from airunner.aihandler.settings_manager import SettingsManager
 from airunner.cursors.circle_brush import CircleCursor
-from airunner.data.db import session
 from airunner.data.models import Layer, CanvasSettings, ActiveGridSettings
-from airunner.utils import save_session
+from airunner.utils import save_session, get_session
 from airunner.widgets.canvas_plus.canvas_base_widget import CanvasBaseWidget
 from airunner.widgets.canvas_plus.templates.canvas_plus_ui import Ui_canvas
 from airunner.utils import apply_opacity_to_image
+
+
+class ImageAdder(QThread):
+    finished = pyqtSignal()
+
+    def __init__(self, widget, image, is_outpaint, image_root_point):
+        super().__init__()
+        self.widget = widget
+        self.image = image
+        self.is_outpaint = is_outpaint
+        self.image_root_point = image_root_point
+
+    def run(self):
+        session = get_session()
+        self.widget.current_active_image = self.image
+        if self.image_root_point is not None:
+            self.widget.current_layer.pos_x = self.image_root_point.x()
+            self.widget.current_layer.pos_y = self.image_root_point.y()
+        elif not self.is_outpaint:
+            self.widget.current_layer.pos_x = self.widget.active_grid_area_rect.x()
+            self.widget.current_layer.pos_y = self.widget.active_grid_area_rect.y()
+        session.add(self.widget.current_layer)
+        save_session()
+        self.widget.do_draw()
+        self.finished.emit()
 
 
 class DraggablePixmap(QGraphicsPixmapItem):
@@ -309,6 +334,7 @@ class CanvasPlusWidget(CanvasBaseWidget):
 
     def __init__(self, *args, **kwargs):
         super().__init__(*args, **kwargs)
+        session = get_session()
         self.canvas_settings = session.query(CanvasSettings).first()
         self.ui.central_widget.resizeEvent = self.resizeEvent
         self.app.add_image_to_canvas_signal.connect(self.handle_add_image_to_canvas)
@@ -736,16 +762,22 @@ class CanvasPlusWidget(CanvasBaseWidget):
         self.current_layer_index = layer_index
 
     def add_image_to_scene(self, image, is_outpaint=False, image_root_point=None):
-        self.current_active_image = image
-        if image_root_point is not None:
-            self.current_layer.pos_x = image_root_point.x()
-            self.current_layer.pos_y = image_root_point.y()
-        elif not is_outpaint:
-            self.current_layer.pos_x = self.active_grid_area_rect.x()
-            self.current_layer.pos_y = self.active_grid_area_rect.y()
-        session.add(self.current_layer)
-        save_session()
-        self.do_draw()
+        # self.current_active_image = image
+        # if image_root_point is not None:
+        #     self.current_layer.pos_x = image_root_point.x()
+        #     self.current_layer.pos_y = image_root_point.y()
+        # elif not is_outpaint:
+        #     self.current_layer.pos_x = self.active_grid_area_rect.x()
+        #     self.current_layer.pos_y = self.active_grid_area_rect.y()
+        # session.add(self.current_layer)
+        # save_session()
+        # self.do_draw()
+        self.image_adder = ImageAdder(self, image, is_outpaint, image_root_point)
+        self.image_adder.finished.connect(self.on_image_adder_finished)
+        self.image_adder.start()
+    
+    def on_image_adder_finished(self):
+        pass
     
     def image_to_system_clipboard_windows(self, pixmap):
         if not pixmap:
