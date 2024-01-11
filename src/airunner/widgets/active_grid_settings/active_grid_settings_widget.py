@@ -7,8 +7,8 @@ class ActiveGridSettingsWidget(BaseWidget):
 
     def __init__(self, *args, **kwargs):
         super().__init__(*args, **kwargs)
-        self.ui.width_slider_widget.setProperty("current_value", self.app.settings_manager.settings.working_width)
-        self.ui.height_slider_widget.setProperty("current_value", self.app.settings_manager.settings.working_height)
+        self.ui.width_slider_widget.setProperty("current_value", self.app.working_width)
+        self.ui.height_slider_widget.setProperty("current_value", self.app.working_height)
         self.ui.width_slider_widget.initialize()
         self.ui.height_slider_widget.initialize()
         self.ui.border_opacity_slider_widget.setProperty("current_value", self.app.settings_manager.active_grid_settings.border_opacity)

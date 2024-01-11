@@ -110,8 +110,8 @@ class ActiveGridArea(DraggablePixmap):
         return QRect(
             self.app.settings_manager.active_grid_settings.pos_x,
             self.app.settings_manager.active_grid_settings.pos_y,
-            self.app.settings_manager.settings.working_width,
-            self.app.settings_manager.settings.working_height
+            self.app.working_width,
+            self.app.working_height
         )
 
     def update_settings(self):
@@ -154,8 +154,6 @@ class ActiveGridArea(DraggablePixmap):
             self.redraw()
         elif key in [
             "active_grid_settings.enabled",
-            "settings.working_width",
-            "settings.working_height",
         ]:
             self.redraw()
 
@@ -404,31 +402,31 @@ class CanvasPlusWidget(CanvasBaseWidget):
         return self.app.cell_size
     
     def increase_active_grid_height(self, amount):
-        height = self.app.settings_manager.settings.working_height + self.cell_size * amount
+        height = self.app.working_height + self.cell_size * amount
         if height > 4096:
             height = 4096
-        self.app.settings_manager.settings.set_value("working_height", height)
+        self.app.working_height = height
         self.do_draw()
         
     def decrease_active_grid_height(self, amount):
-        height = self.app.settings_manager.settings.working_height - self.cell_size * amount
+        height = self.app.working_height - self.cell_size * amount
         if height < 512:
             height = 512
-        self.app.settings_manager.settings.set_value("working_height", height)
+        self.app.working_height = height
         self.do_draw()
 
     def increase_active_grid_width(self, amount):
-        width = self.app.settings_manager.settings.working_width + self.cell_size * amount
+        width = self.app.working_width + self.cell_size * amount
         if width > 4096:
             width = 4096
-        self.app.settings_manager.settings.set_value("working_width", width)
+        self.app.working_width = width
         self.do_draw()
 
     def decrease_active_grid_width(self, amount):
-        width = self.app.settings_manager.settings.working_width - self.cell_size * amount
+        width = self.app.working_width - self.cell_size * amount
         if width < 512:
             width = 512
-        self.app.settings_manager.settings.set_value("working_width", width)
+        self.app.working_width = width
         self.do_draw()
 
     def wheelEvent(self, event):
@@ -739,8 +737,8 @@ class CanvasPlusWidget(CanvasBaseWidget):
     def load_image(self, image_path):
         image = Image.open(image_path)
         if self.app.resize_on_paste:
-            image.thumbnail((self.app.settings_manager.settings.working_width,
-                             self.app.settings_manager.settings.working_height), Image.ANTIALIAS)
+            image.thumbnail((self.app.working_width,
+                             self.app.working_height), Image.ANTIALIAS)
         self.add_image_to_scene(image)
     
     def current_draggable_pixmap(self):
@@ -818,8 +816,8 @@ class CanvasPlusWidget(CanvasBaseWidget):
     def resize_image(self, image):
         image.thumbnail(
             (
-                self.app.settings_manager.settings.working_width,
-                self.app.settings_manager.settings.working_height
+                self.app.working_width,
+                self.app.working_height
             ),
             Image.ANTIALIAS
         )
