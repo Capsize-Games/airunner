@@ -12,7 +12,7 @@ from transformers.pipelines.conversational import Conversation
 
 class LLM(TransformerRunner):
     def clear_conversation(self):
-        if self.generator.name == "casuallm":
+        if self.requested_generator_name == "casuallm":
             self.chain.clear()
     
     def do_generate(self, data):
@@ -50,7 +50,7 @@ class LLM(TransformerRunner):
             traceback.print_stack()
             return
         
-        if self.generator.name == "casuallm":
+        if self.requested_generator_name == "casuallm":
             history = []
             for message in self.history:
                 if message["role"] == "user":
@@ -124,7 +124,7 @@ class LLM(TransformerRunner):
 
             #return decoded
             self.engine.send_message(decoded, code=MessageCode.TEXT_GENERATED)
-        elif self.generator.name == "visualqa":
+        elif self.requested_generator_name == "visualqa":
             inputs = self.processor(
                 self.image, 
                 prompt, 
@@ -143,5 +143,5 @@ class LLM(TransformerRunner):
                 answers.append(answer.strip().lower())
             return answers
         else:
-            Logger.error(f"Failed to call generator for {self.generator.name}")
+            Logger.error(f"Failed to call generator for {self.requested_generator_name}")
         # self.llm_api.request(**kwargs)

@@ -4,10 +4,8 @@ from PIL import Image
 from PyQt6.QtCore import pyqtSignal, QRect
 
 from airunner.aihandler.settings import MAX_SEED
-from airunner.data.models import ActiveGridSettings, CanvasSettings
 from airunner.widgets.base_widget import BaseWidget
 from airunner.widgets.generator_form.templates.generatorform_ui import Ui_generator_form
-from airunner.data.session_scope import session_scope
 
 
 class GeneratorForm(BaseWidget):
@@ -54,61 +52,65 @@ class GeneratorForm(BaseWidget):
 
     @property
     def generator_section(self):
-        return self.app.settings_manager.settings.current_section_stablediffusion
+        return self.app.pipeline
 
     @property
     def generator_name(self):
-        return self.app.settings_manager.settings.current_image_generator
+        return self.app.current_image_generator
 
     @property
     def generator_settings(self):
-        return self.app.settings_manager.generator_settings
+        return self.app.generator_settings
 
     @property
     def random_seed(self):
-        return self.app.settings_manager.generator.random_seed
+        return self.app.generator_settings["random_seed"]
 
     @property
     def random_latents_seed(self):
-        return self.app.settings_manager.generator.random_latents_seed
+        return self.app.generator_settings["random_latents_seed"]
 
     @property
     def latents_seed(self):
-        return self.app.settings_manager.generator.latents_seed
+        return self.app.generator_settings["latents_seed"]
 
     @latents_seed.setter
     def latents_seed(self, val):
-        self.app.settings_manager.set_value("generator.latents_seed", val)
+        generator_settings = self.app.settings_manager.generator
+        generator_settings["latents_seed"] = val
+        self.app.settings_manager.generator = generator_settings
         self.app.standard_image_panel.ui.seed_widget_latents.ui.lineEdit.setText(str(val))
 
     @property
     def seed(self):
-        return self.app.settings_manager.generator.seed
+        return self.app.generator_settings["seed"]
 
     @seed.setter
     def seed(self, val):
-        self.app.settings_manager.set_value("generator.seed", val)
+        generator_settings = self.app.settings_manager.generator
+        generator_settings["seed"] = val
+        self.app.settings_manager.generator = generator_settings
         self.app.standard_image_panel.ui.seed_widget.ui.lineEdit.setText(str(val))
 
     @property
     def image_scale(self):
-        return self.app.settings_manager.generator.image_guidance_scale
+        return self.app.generator_settings["image_guidance_scale"]
 
     @property
     def active_rect(self):
         rect = QRect(
-            self.app.settings_manager.active_grid_settings.pos_x,
-            self.app.settings_manager.active_grid_settings.pos_y,
-            self.app.settings_manager.active_grid_settings.width,
-            self.app.settings_manager.active_grid_settings.height
+            self.app.active_grid_settings["pos_x"],
+            self.app.active_grid_settings["pos_y"],
+            self.app.active_grid_settings["width"],
+            self.app.active_grid_settings["height"]
         )
-        rect.translate(-self.app.settings_manager.canvas_settings.pos_x, -self.app.settings_manager.canvas_settings.pos_y)
+        rect.translate(-self.app.canvas_settings["pos_x"], -self.app.canvas_settings["pos_y"])
 
         return rect
 
     @property
     def enable_controlnet(self):
-        return self.app.settings_manager.generator.enable_controlnet
+        return self.app.generator_settings["enable_controlnet"]
 
     @property
     def controlnet_image(self):
@@ -117,34 +119,11 @@ class GeneratorForm(BaseWidget):
     def __init__(self, *args, **kwargs):
         super().__init__(*args, **kwargs)
         self.ui.generator_form_tabs.tabBar().hide()
-        self.activate_ai_mode()
+        self.app.ai_mode_toggled.connect(self.activate_ai_mode)
     
-    def activate_ai_mode(self):
-        self.ui.generator_form_tabs.setCurrentIndex(1 if self.app.settings_manager.settings.ai_mode is True else 0)
+    def activate_ai_mode(self, active):
+        self.ui.generator_form_tabs.setCurrentIndex(1 if active is True else 0)
     
-    def toggle_advanced_generation(self):
-        advanced_mode = self.app.settings_manager.settings.enable_advanced_mode
-
-        # set the splitter sizes
-        splitter_sizes = [1, 1, 0 if not advanced_mode else 1]
-        
-        self.ui.advanced_splitter.setSizes(splitter_sizes)
-    
-    def handle_changed_signal(self, key, value):
-        print("generator_form: handle_changed_signal", key, value)
-        if key == "generator.random_seed":
-            self.set_primary_seed()
-            self.ui.seed_widget.seed = self.seed
-            self.ui.seed_widget.update_seed()
-        elif key == "generator.random_latents_seed":
-            self.set_latents_seed()
-            self.ui.seed_widget_latents.latents_seed = self.latents_seed
-            self.ui.seed_widget_latents.update_seed()
-        elif key == "settings.enable_advanced_mode":
-            self.toggle_advanced_generation()
-        elif key == "settings.ai_mode":
-            self.activate_ai_mode()
-
     """
     Slot functions
 
@@ -153,19 +132,23 @@ class GeneratorForm(BaseWidget):
     """
     def action_clicked_button_save_prompts(self):
         self.app.settings_manager.create_saved_prompt(
-            self.app.settings_manager.generator.prompt,
-            self.app.settings_manager.generator.negative_prompt
+            self.app.generator_settings["prompt"],
+            self.app.generator_settings["negative_prompt"]
         )
 
     def handle_prompt_changed(self):
         if not self.initialized:
             return
-        self.app.settings_manager.set_value("generator.prompt", self.ui.prompt.toPlainText())
+        generator_settings = self.app.generator_settings
+        generator_settings["prompt"] = self.ui.prompt.toPlainText()
+        self.app.generator_settings = generator_settings
 
     def handle_negative_prompt_changed(self):
         if not self.initialized:
             return
-        self.app.settings_manager.set_value("generator.negative_prompt", self.ui.negative_prompt.toPlainText())
+        generator_settings = self.app.generator_settings
+        generator_settings["negative_prompt"] = self.ui.negative_prompt.toPlainText()
+        self.app.generator_settings = generator_settings
 
     def toggle_prompt_builder_checkbox(self, toggled):
         pass
@@ -185,11 +168,7 @@ class GeneratorForm(BaseWidget):
             seed = self.app.standard_image_panel.ui.seed_widget.seed
         if self.app.standard_image_panel.ui.samples_widget.current_value > 1:
             self.app.client.do_process_queue = False
-        total_samples = self.app.settings_manager.generator.n_samples
-        for n in range(total_samples):
-            if self.app.settings_manager.generator.use_prompt_builder and n > 0:
-                seed = int(seed) + n
-            self.call_generate(image, seed=seed)
+        self.call_generate(image, seed=seed)
         self.seed_override = None
         self.app.client.do_process_queue = True
 
@@ -210,7 +189,7 @@ class GeneratorForm(BaseWidget):
             # Get input image from input image
             enable_input_image = override_data.get(
                 "enable_input_image",
-                self.app.settings_manager.generator.enable_input_image
+                self.app.generator_settings["enable_input_image"]
             )
             if enable_input_image:
                 input_image = self.app.standard_image_panel.ui.input_image_widget.current_input_image
@@ -323,34 +302,34 @@ class GeneratorForm(BaseWidget):
             override_data = {}
         
         action = override_data.get("action", action)
-        prompt = override_data.get("prompt", self.app.settings_manager.generator.prompt)
-        negative_prompt = override_data.get("negative_prompt", self.app.settings_manager.generator.negative_prompt)
-        steps = int(override_data.get("steps", self.app.settings_manager.generator.steps))
-        strength = float(override_data.get("strength", self.app.settings_manager.generator.strength / 100.0))
-        image_guidance_scale = float(override_data.get("image_guidance_scale", self.app.settings_manager.generator.image_guidance_scale / 10000.0 * 100.0))
-        scale = float(override_data.get("scale", self.app.settings_manager.generator.scale / 100))
-        seed = int(override_data.get("seed", self.app.settings_manager.generator.seed))
-        latents_seed = int(override_data.get("latents_seed", self.app.settings_manager.generator.latents_seed))
-        ddim_eta = float(override_data.get("ddim_eta", self.app.settings_manager.generator.ddim_eta))
+        prompt = override_data.get("prompt", self.app.generator_settings["prompt"])
+        negative_prompt = override_data.get("negative_prompt", self.app.generator_settings["negative_prompt"])
+        steps = int(override_data.get("steps", self.app.generator_settings["steps"]))
+        strength = float(override_data.get("strength", self.app.generator_settings["strength"] / 100.0))
+        image_guidance_scale = float(override_data.get("image_guidance_scale", self.app.generator_settings["image_guidance_scale"] / 10000.0 * 100.0))
+        scale = float(override_data.get("scale", self.app.generator_settings["scale"] / 100))
+        seed = int(override_data.get("seed", self.app.generator_settings["seed"]))
+        latents_seed = int(override_data.get("latents_seed", self.app.generator_settings["latents_seed"]))
+        ddim_eta = float(override_data.get("ddim_eta", self.app.generator_settings["ddim_eta"]))
         n_iter = int(override_data.get("n_iter", 1))
-        n_samples = int(override_data.get("n_samples", self.app.settings_manager.generator.n_samples))
+        n_samples = int(override_data.get("n_samples", self.app.generator_settings["n_samples"]))
         # iterate over all keys in model_data
         model_data = {}
         for k,v in override_data.items():
             if k.startswith("model_data_"):
                 model_data[k.replace("model_data_", "")] = v
-        scheduler = override_data.get("scheduler", self.app.settings_manager.generator.scheduler)
-        enable_controlnet = bool(override_data.get("enable_controlnet", self.app.settings_manager.generator.enable_controlnet))
-        controlnet = override_data.get("controlnet", self.app.settings_manager.generator.controlnet)
-        controlnet_conditioning_scale = float(override_data.get("controlnet_conditioning_scale", self.app.settings_manager.generator.controlnet_guidance_scale))
-        width = int(override_data.get("width", self.app.settings_manager.settings.working_width))
-        height = int(override_data.get("height", self.app.settings_manager.settings.working_height))
-        clip_skip = int(override_data.get("clip_skip", self.app.settings_manager.generator.clip_skip))
+        scheduler = override_data.get("scheduler", self.app.generator_settings["scheduler"])
+        enable_controlnet = bool(override_data.get("enable_controlnet", self.app.generator_settings["enable_controlnet"]))
+        controlnet = override_data.get("controlnet", self.app.generator_settings["controlnet"])
+        controlnet_conditioning_scale = float(override_data.get("controlnet_conditioning_scale", self.app.generator_settings["controlnet_guidance_scale"]))
+        width = int(override_data.get("width", self.app.working_width))
+        height = int(override_data.get("height", self.app.working_height))
+        clip_skip = int(override_data.get("clip_skip", self.app.generator_settings["clip_skip"]))
         batch_size = int(override_data.get("batch_size", 1))
 
 
         # get the model from the database
-        name = model_data["name"] if "name" in model_data else self.app.settings_manager.generator.model
+        name = model_data["name"] if "name" in model_data else self.app.generator_settings["model"]
         with self.app.settings_manager.model_by_name(name) as model:
             if model:
                 # set the model data, first using model_data pulled from the override_data
@@ -394,6 +373,7 @@ class GeneratorForm(BaseWidget):
                     }
 
                 # get controlnet_dropdown from active tab
+                nsfw_filter = self.app.nsfw_filter
                 options = dict(
                     prompt=prompt,
                     negative_prompt=negative_prompt,
@@ -414,28 +394,31 @@ class GeneratorForm(BaseWidget):
                     generator_section=self.generator_section,
                     width=width,
                     height=height,
-                    do_nsfw_filter=self.app.settings_manager.settings.nsfw_filter,
+                    do_nsfw_filter=nsfw_filter,
                     pos_x=0,
                     pos_y=0,
                     outpaint_box_rect=self.active_rect,
-                    hf_token=self.app.settings_manager.settings.hf_api_key,
-                    model_base_path=self.app.settings_manager.path_settings.model_base_path,
-                    outpaint_model_path=self.app.settings_manager.path_settings.outpaint_model_path,
-                    pix2pix_model_path=self.app.settings_manager.path_settings.pix2pix_model_path,
-                    depth2img_model_path=self.app.settings_manager.path_settings.depth2img_model_path,
-                    upscale_model_path=self.app.settings_manager.path_settings.upscale_model_path,
-                    image_path=self.app.settings_manager.path_settings.image_path,
-                    lora_path=self.app.settings_manager.path_settings.lora_path,
-                    embeddings_path=self.app.settings_manager.path_settings.embeddings_path,
-                    video_path=self.app.settings_manager.path_settings.video_path,
+                    hf_token=self.app.hf_api_key,
+                    model_base_path=self.app.model_base_path,
+                    outpaint_model_path=self.app.inpaint_model_path,
+                    pix2pix_model_path=self.app.pix2pix_model_path,
+                    depth2img_model_path=self.app.depth2img_model_path,
+                    upscale_model_path=self.app.upscale_model_path,
+                    image_path=self.app.image_path,
+                    lora_path=self.app.lora_path,
+                    embeddings_path=self.app.embeddings_path,
+                    video_path=self.app.video_path,
                     clip_skip=clip_skip,
                     batch_size=batch_size,
-                    variation=self.app.settings_manager.generator.variation,
+                    variation=self.app.generator_settings["variation"],
                     deterministic_generation=False,
                     input_image=input_image,
                     enable_controlnet=enable_controlnet,
                     controlnet_conditioning_scale=controlnet_conditioning_scale,
                     controlnet=controlnet,
+                    allow_online_mode=self.app.allow_online_mode,
+                    hf_api_key_read_key=self.app.hf_api_key_read_key,
+                    hf_api_key_write_key=self.app.hf_api_key_write_key,
                 )
 
                 if self.controlnet_image:
@@ -470,18 +453,18 @@ class GeneratorForm(BaseWidget):
 
     def get_memory_options(self):
         return {
-            "use_last_channels": self.app.settings_manager.memory_settings.use_last_channels,
-            "use_enable_sequential_cpu_offload": self.app.settings_manager.memory_settings.use_enable_sequential_cpu_offload,
-            "enable_model_cpu_offload": self.app.settings_manager.memory_settings.enable_model_cpu_offload,
-            "use_attention_slicing": self.app.settings_manager.memory_settings.use_attention_slicing,
-            "use_tf32": self.app.settings_manager.memory_settings.use_tf32,
-            "use_cudnn_benchmark": self.app.settings_manager.memory_settings.use_cudnn_benchmark,
-            "use_enable_vae_slicing": self.app.settings_manager.memory_settings.use_enable_vae_slicing,
-            "use_accelerated_transformers": self.app.settings_manager.memory_settings.use_accelerated_transformers,
-            "use_torch_compile": self.app.settings_manager.memory_settings.use_torch_compile,
-            "use_tiled_vae": self.app.settings_manager.memory_settings.use_tiled_vae,
-            "use_tome_sd": self.app.settings_manager.memory_settings.use_tome_sd,
-            "tome_sd_ratio": self.app.settings_manager.memory_settings.tome_sd_ratio,
+            "use_last_channels": self.app.use_last_channels,
+            "use_enable_sequential_cpu_offload": self.app.use_enable_sequential_cpu_offload,
+            "enable_model_cpu_offload": self.app.enable_model_cpu_offload,
+            "use_attention_slicing": self.app.use_attention_slicing,
+            "use_tf32": self.app.use_tf32,
+            "use_cudnn_benchmark": self.app.use_cudnn_benchmark,
+            "use_enable_vae_slicing": self.app.use_enable_vae_slicing,
+            "use_accelerated_transformers": self.app.use_accelerated_transformers,
+            "use_torch_compile": self.app.use_torch_compile,
+            "use_tiled_vae": self.app.use_tiled_vae,
+            "use_tome_sd": self.app.use_tome_sd,
+            "tome_sd_ratio": self.app.tome_sd_ratio,
         }
 
     def set_seed(self, seed=None, latents_seed=None):
@@ -537,7 +520,6 @@ class GeneratorForm(BaseWidget):
     def initialize(self):
         self.set_form_values()
         self.initialized = True
-        self.app.settings_manager.changed_signal.connect(self.handle_changed_signal)
 
     def handle_settings_manager_changed(self, key, val, settings_manager):
         print("generator_form_widget handle_settings_manager_changed")
@@ -548,8 +530,9 @@ class GeneratorForm(BaseWidget):
         self.ui.negative_prompt.setPlainText("")
 
     def set_form_values(self):
-        self.set_form_value("prompt", "generator.prompt")
-        self.set_form_value("negative_prompt", "generator.negative_prompt")
+        generator_settings = self.app.generator_settings
+        self.set_form_value("prompt", generator_settings["prompt"])
+        self.set_form_value("negative_prompt", generator_settings["negative_prompt"])
 
     def new_batch(self, index, image, data):
         self.new_batch(index, image, data)

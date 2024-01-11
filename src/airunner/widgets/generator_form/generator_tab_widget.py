@@ -30,7 +30,7 @@ class GeneratorTabWidget(BaseWidget):
 
     @property
     def current_input_image(self):
-        if self.app.settings_manager.settings.enable_input_image:
+        if self.app.enable_input_image:
             return self.current_input_image_widget.current_input_image
         return None
 
@@ -101,26 +101,6 @@ class GeneratorTabWidget(BaseWidget):
         if generator_form:
             generator_form.clear_prompts()
 
-    def handle_generator_tab_changed(self, val):
-        """
-        This method is called when the generator tab is changed.
-        Generator tabs are stablediffusion etc.
-        :return: 
-        """
-        print("handle_generator_tab_changed")
-        self.app.settings_manager.set_value("settings.current_tab", self.current_generator)
-        self.set_current_section_tab()
-        self.app.handle_generator_tab_changed()
-
-    def handle_tab_section_changed(self, val):
-        """
-        This method is called when the tab section is changed.
-        Tab sections are txt2img, depth2img etc.
-        :return:
-        """
-        self.app.settings_manager.set_value(f"settings.current_section_{self.current_generator}", "txt2img")
-        self.app.handle_tab_section_changed()
-
     def set_current_section_tab(self):
         current_tab = self.app.settings_manager.current_tab
         current_section = getattr(self.app.settings_manager, f"current_section_{current_tab}")
@@ -158,7 +138,9 @@ class GeneratorTabWidget(BaseWidget):
                 self.load_model_by_section(section, tab)
 
     def toggle_variation(self, val):
-        self.app.settings_manager.set_value("generator.variation", val)
+        generator_settings = self.app.generator_settings
+        generator_settings["variation"] = val
+        self.app.generator_settings = generator_settings
 
     def set_progress_bar_value(self, tab_section, section, value):
         progressbar = self.find_widget("progress_bar", tab_section, section)

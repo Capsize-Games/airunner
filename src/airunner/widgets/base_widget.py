@@ -14,7 +14,7 @@ class BaseWidget(QWidget):
 
     @property
     def is_dark(self):
-        return self.app.settings_manager.settings.dark_mode_enabled
+        return self.app.dark_mode_enabled
 
     @property
     def canvas(self):
@@ -27,6 +27,7 @@ class BaseWidget(QWidget):
         super().__init__(*args, **kwargs)
         self.app = get_main_window()
         self.app.loaded.connect(self.initialize)
+        
         if self.widget_class_:
             self.ui = self.widget_class_()
         if self.ui:
@@ -161,12 +162,3 @@ class BaseWidget(QWidget):
                         if not self.set_is_checked(element, target_val):
                             raise Exception(f"Could not set value for {element} to {target_val}")
 
-    def set_form_property(self, element, property_name, settings_key_name=None, settings=None):
-        val = self.get_form_element(element).property(property_name)
-        if settings_key_name:
-            target_val = self.app.settings_manager.get_value(settings_key_name)
-        elif settings:
-            target_val = getattr(settings, property_name)
-
-        if val != target_val:
-            self.get_form_element(element).setProperty(property_name, target_val)

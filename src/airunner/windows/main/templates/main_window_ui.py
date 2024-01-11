@@ -758,7 +758,6 @@ class Ui_MainWindow(object):
         self.actionHuggingface_Cache_manager.triggered.connect(MainWindow.action_show_hf_cache_manager) # type: ignore
         self.actionModel_Merger.triggered.connect(MainWindow.action_show_model_merger_window) # type: ignore
         self.actionAbout.triggered.connect(MainWindow.action_show_about_window) # type: ignore
-        self.actionStableDiffusion.triggered.connect(MainWindow.action_show_stablediffusion) # type: ignore
         self.actionPrompt_Builder.triggered.connect(MainWindow.action_show_prompt_builder) # type: ignore
         self.actionControlNet.triggered.connect(MainWindow.action_show_controlnet) # type: ignore
         self.actionEmbeddings.triggered.connect(MainWindow.action_show_embeddings) # type: ignore
@@ -786,7 +785,6 @@ class Ui_MainWindow(object):
         self.actionPix2pix.triggered.connect(MainWindow.action_show_model_path_pix2pix) # type: ignore
         self.actionUpscale.triggered.connect(MainWindow.action_show_model_path_upscale) # type: ignore
         self.actionTxt2vid.triggered.connect(MainWindow.action_show_model_path_txt2vid) # type: ignore
-        self.tool_tab_widget.currentChanged['int'].connect(MainWindow.tool_tab_index_changed) # type: ignore
         self.actionActive_Grid.triggered.connect(MainWindow.action_show_active_grid) # type: ignore
         self.actionModel_Manager_2.triggered.connect(MainWindow.action_show_model_manager) # type: ignore
         self.actionDeterministic_Batches.triggered.connect(MainWindow.action_show_deterministic_batches) # type: ignore
@@ -807,7 +805,7 @@ class Ui_MainWindow(object):
         self.undo_button.clicked.connect(MainWindow.action_undo_triggered) # type: ignore
         self.redo_button.clicked.connect(MainWindow.action_redo_triggered) # type: ignore
         self.model_manager_button.toggled['bool'].connect(MainWindow.model_manager_toggled) # type: ignore
-        self.center_tab.currentChanged['int'].connect(MainWindow.center_panel_tab_index_changed) # type: ignore
+        self.actionStableDiffusion.triggered.connect(MainWindow.action_show_stablediffusion) # type: ignore
         QtCore.QMetaObject.connectSlotsByName(MainWindow)
 
     def retranslateUi(self, MainWindow):

@@ -80,7 +80,7 @@
           <enum>Qt::LeftToRight</enum>
          </property>
          <property name="currentIndex">
-          <number>3</number>
+          <number>5</number>
          </property>
          <widget class="QWidget" name="tab_5">
           <attribute name="title">
@@ -431,7 +431,7 @@
                         <number>1</number>
                        </property>
                        <property name="settings_property" stdset="0">
-                        <string>generator.n_samples</string>
+                        <string>generator_settings.n_samples</string>
                        </property>
                       </widget>
                      </item>
@@ -468,7 +468,7 @@
                         <string notr="true">handle_value_change</string>
                        </property>
                        <property name="settings_property" stdset="0">
-                        <string notr="true">generator.clip_skip</string>
+                        <string notr="true">generator_settings.clip_skip</string>
                        </property>
                       </widget>
                      </item>
@@ -485,7 +485,7 @@
                         <string/>
                        </property>
                        <property name="property_name" stdset="0">
-                        <string>generator.random_seed</string>
+                        <string>generator_settings.random_seed</string>
                        </property>
                       </widget>
                      </item>
@@ -498,7 +498,7 @@
                         <string/>
                        </property>
                        <property name="property_name" stdset="0">
-                        <string>generator.random_latents_seed</string>
+                        <string>generator_settings.random_latents_seed</string>
                        </property>
                       </widget>
                      </item>
@@ -539,7 +539,7 @@
                         <number>1</number>
                        </property>
                        <property name="settings_property" stdset="0">
-                        <string notr="true">generator.steps</string>
+                        <string notr="true">generator_settings.steps</string>
                        </property>
                       </widget>
                      </item>
@@ -570,7 +570,7 @@
                         <string notr="true">handle_value_change</string>
                        </property>
                        <property name="settings_property" stdset="0">
-                        <string notr="true">generator.scale</string>
+                        <string notr="true">generator_settings.scale</string>
                        </property>
                       </widget>
                      </item>
@@ -611,7 +611,7 @@
                         <number>1</number>
                        </property>
                        <property name="settings_property" stdset="0">
-                        <string notr="true">generator.ddim_eta</string>
+                        <string notr="true">generator_settings.ddim_eta</string>
                        </property>
                       </widget>
                      </item>
@@ -648,7 +648,7 @@
                         <number>1</number>
                        </property>
                        <property name="settings_property" stdset="0">
-                        <string notr="true">generator.n_samples</string>
+                        <string notr="true">generator_settings.n_samples</string>
                        </property>
                       </widget>
                      </item>

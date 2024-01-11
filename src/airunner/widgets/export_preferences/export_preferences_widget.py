@@ -38,8 +38,8 @@ class ExportPreferencesWidget(BaseWidget):
         self.ui.metadata_model_branch.setChecked(self.app.settings_manager.metadata_settings.image_export_metadata_model_branch is True)
         self.ui.metadata_scheduler.setChecked(self.app.settings_manager.metadata_settings.image_export_metadata_scheduler is True)
         self.ui.export_metadata.setChecked(self.app.settings_manager.metadata_settings.export_metadata is True)
-        self.ui.actionAuto_export_images.setChecked(self.app.settings_manager.auto_export_images is True)
-        self.ui.image_type_dropdown.setCurrentText(self.app.settings_manager.image_export_type)
+        self.ui.actionAuto_export_images.setChecked(self.app.auto_export_images is True)
+        self.ui.image_type_dropdown.setCurrentText(self.app.image_export_type)
         self.ui.image_path.setText(self.app.settings_manager.image_path)
         image_types = [
             "png",
@@ -49,7 +49,7 @@ class ExportPreferencesWidget(BaseWidget):
             "tiff",
         ]
         self.ui.image_type_dropdown.addItems(image_types)
-        self.ui.image_type_dropdown.setCurrentText(self.app.settings_manager.image_export_type)
+        self.ui.image_type_dropdown.setCurrentText(self.app.image_export_type)
 
         self.ui.metadata_prompt.blockSignals(False)
         self.ui.metadata_negative_prompt.blockSignals(False)
@@ -107,17 +107,17 @@ class ExportPreferencesWidget(BaseWidget):
         self.app.settings_manager.set_value(f"metadata_settings.export_metadata", val)
 
     def action_toggle_automatically_export_images(self, val):
-        self.app.settings_manager.set_value(f"auto_export_images", val)
+        self.app.auto_export_images = val
     
     def action_image_type_text_changed(self, val):
-        self.app.settings_manager.set_value(f"image_export_type", val)
+        self.app.image_export_type = val
     
     def image_export_path_text_edited(self, val):
-        self.app.settings_manager.set_value(f"image_path", val)
+        self.app.image_path = val
     
     def action_clicked_button_browse(self):
         path = QFileDialog.getExistingDirectory(None, "Select Directory")
         if path:
             self.ui.image_path.setText(path)
-            self.app.settings_manager.set_value("path_settings.image_path", path)
+            self.app.embeddings_model_path = path
 

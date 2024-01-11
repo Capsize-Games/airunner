@@ -3,13 +3,9 @@ from airunner.data.bootstrap.imagefilter_bootstrap_data import imagefilter_boots
 from airunner.data.bootstrap.llm import seed_data
 from airunner.data.bootstrap.model_bootstrap_data import model_bootstrap_data
 from airunner.data.bootstrap.pipeline_bootstrap_data import pipeline_bootstrap_data
-from airunner.data.bootstrap.prompt_bootstrap_data import prompt_bootstrap_data, style_bootstrap_data, \
-    variable_bootstrap_data
-from airunner.data.models import ControlnetModel, LLMPromptTemplate, Pipeline, Document, Settings, \
-    GeneratorSetting, SplitterSection, GridSettings, MetadataSettings, PathSettings, MemorySettings, AIModel, \
-    ImageFilter, ImageFilterValue, BrushSettings, Prompt, PromptVariable, PromptCategory, PromptOption, \
-    PromptVariableCategory, PromptVariableCategoryWeight, PromptStyleCategory, PromptStyle, Scheduler, ActionScheduler, \
-    DeterministicSettings, ActiveGridSettings, TabSection, CanvasSettings, \
+from airunner.data.models import ControlnetModel, LLMPromptTemplate, Pipeline, Document, \
+    MetadataSettings, AIModel, \
+    ImageFilter, ImageFilterValue, Scheduler, ActionScheduler, \
     LLMGeneratorSetting, LLMGenerator, LLMModelVersion, StandardImageWidgetSettings
 from airunner.data.session_scope import session_scope, engine
 from alembic.config import Config
@@ -26,119 +22,12 @@ def prepare_database():
         do_stamp_alembic = False
 
         # check if database is blank:
-        if not my_session.query(Prompt).first():
+        if not my_session.query(Document).first():
             do_stamp_alembic = True
 
             standard_image_widget = StandardImageWidgetSettings()
             my_session.add(standard_image_widget)
 
-            # Add Prompt objects
-            for prompt_option, data in prompt_bootstrap_data.items():
-                category = PromptCategory(name=prompt_option, negative_prompt=data["negative_prompt"])
-                prompt = Prompt(
-                    name=f"Standard {prompt_option} prompt",
-                    category=category
-                )
-                my_session.add(prompt)
-                
-                prompt_id = prompt.id
-
-                prompt_variables = []
-                for category_name, variable_values in data["variables"].items():
-                    # add prompt category
-                    cat = my_session.query(PromptVariableCategory).filter_by(name=category_name).first()
-                    if not cat:
-                        cat = PromptVariableCategory(name=category_name)
-                        my_session.add(cat)
-                        
-
-                    # add prompt variable category weight
-                    weight = my_session.query(PromptVariableCategoryWeight).filter_by(
-                        prompt_category=category,
-                        variable_category=cat
-                    ).first()
-                    if not weight:
-                        try:
-                            weight_value = data["weights"][category_name]
-                        except KeyError:
-                            weight_value = 1.0
-                        weight = PromptVariableCategoryWeight(
-                            prompt_category=category,
-                            variable_category=cat,
-                            weight=weight_value
-                        )
-                        my_session.add(weight)
-                        
-
-                    # add prompt variables
-                    for var in variable_values:
-                        my_session.add(PromptVariable(
-                            value=var,
-                            prompt_category=category,
-                            variable_category=cat
-                        ))
-                    
-
-                def insert_variables(variables, prev_object=None):
-                    for option in variables:
-                        text = option.get("text", None)
-                        cond = option.get("cond", "")
-                        else_cond = option.get("else", "")
-                        next_cond = option.get("next", None)
-                        or_cond = option.get("or_cond", None)
-                        prompt_option = PromptOption(
-                            text=text,
-                            cond=cond,
-                            else_cond=else_cond,
-                            or_cond=or_cond,
-                            prompt_id=prompt_id
-                        )
-                        if prev_object:
-                            my_session.add(prompt_option)
-                            
-                            prev_object.next_cond_id = prompt_option.id
-                            my_session.add(prev_object)
-                            
-                            prev_object = prompt_option
-                        else:
-                            my_session.add(prompt_option)
-                            
-                            prev_object = prompt_option
-                        if next_cond:
-                            prev_object = insert_variables(
-                                variables=next_cond,
-                                prev_object=prev_object,
-                            )
-                    return prev_object
-
-                insert_variables(data["builder"])
-
-                
-
-            for variable_category, data in variable_bootstrap_data.items():
-                category = my_session.query(PromptVariableCategory).filter_by(name=variable_category).first()
-                if not category:
-                    category = PromptVariableCategory(name=variable_category)
-                    my_session.add(category)
-                    
-                for variable in data:
-                    my_session.add(PromptVariable(
-                        value=variable,
-                        variable_category=category
-                    ))
-                
-
-            # Add PromptStyle objects
-            for style_category, data in style_bootstrap_data.items():
-                category = PromptStyleCategory(name=style_category, negative_prompt=data["negative_prompt"])
-                my_session.add(category)
-                
-                for style in data["styles"]:
-                    my_session.add(PromptStyle(
-                        name=style,
-                        style_category=category
-                    ))
-                
 
             # Add ControlnetModel objects
             for name, path in controlnet_bootstrap_data.items():
@@ -155,38 +44,12 @@ def prepare_database():
             # Add Pipeline objects
             for pipeline_data in pipeline_bootstrap_data:
                 my_session.add(Pipeline(**pipeline_data))
-            
-
-
-            # Add PathSettings objects
-            my_session.add(PathSettings())
-            
-
-
-            # Add BrushSettings objects
-            my_session.add(BrushSettings())
-            
-
-
-            # Add GridSettings objects
-            my_session.add(GridSettings())
-            
-
-            my_session.add(DeterministicSettings())
-            
+                        
 
 
             # Add MetadataSettings objects
             my_session.add(MetadataSettings())
             
-
-
-            # Add MemorySettings objects
-            my_session.add(MemorySettings())
-            
-
-            # Add ActiveGridSettings object
-            my_session.add(ActiveGridSettings())
             
 
             # Add ImageFilter objects
@@ -213,57 +76,6 @@ def prepare_database():
             filter_values = image_filter.image_filter_values
 
             # Add Document object
-            settings = Settings(nsfw_filter=True)
-            settings.splitter_sizes.append(SplitterSection(
-                name="content_splitter",
-                order=0,
-                size=390
-            ))
-            settings.splitter_sizes.append(SplitterSection(
-                name="content_splitter",
-                order=1,
-                size=512
-            ))
-            settings.splitter_sizes.append(SplitterSection(
-                name="content_splitter",
-                order=2,
-                size=200
-            ))
-            settings.splitter_sizes.append(SplitterSection(
-                name="content_splitter",
-                order=3,
-                size=64
-            ))
-            settings.splitter_sizes.append(SplitterSection(
-                name="main_splitter",
-                order=0,
-                size=520
-            ))
-            settings.splitter_sizes.append(SplitterSection(
-                name="main_splitter",
-                order=1,
-                size=-1
-            ))
-            settings.splitter_sizes.append(SplitterSection(
-                name="canvas_splitter",
-                order=0,
-                size=520
-            ))
-            settings.splitter_sizes.append(SplitterSection(
-                name="canvas_splitter",
-                order=1,
-                size=-1
-            ))
-            my_session.add(settings)
-
-            settings.brush_settings = my_session.query(BrushSettings).first()
-            settings.path_settings = my_session.query(PathSettings).first()
-            settings.grid_settings = my_session.query(GridSettings).first()
-            settings.deterministic_settings = my_session.query(DeterministicSettings).first()
-            settings.metadata_settings = my_session.query(MetadataSettings).first()
-            settings.memory_settings = my_session.query(MemorySettings).first()
-            settings.active_grid_settings = my_session.query(ActiveGridSettings).first()
-
             active_grid_colors = {
                 "stablediffusion": {
                     "border": {
@@ -289,18 +101,8 @@ def prepare_database():
                 },
             }
 
-            generator_section = "txt2img"
-            generator_name = "stablediffusion"
-            my_session.add(GeneratorSetting(
-                section=generator_section,
-                generator_name=generator_name,
-                active_grid_border_color=active_grid_colors[generator_name]["border"][generator_section],
-                active_grid_fill_color=active_grid_colors[generator_name]["fill"][generator_section]
-            ))
-
             my_session.add(Document(
                 name="Untitled",
-                settings=settings,
                 active=True
             ))
             
@@ -364,25 +166,7 @@ def prepare_database():
                     )
                     my_session.add(obj)
             
-
-            # create tab sections
-            my_session.add(TabSection(
-                panel="center_tab",
-                active_tab="Canvas"
-            ))
-            my_session.add(TabSection(
-                panel="tool_tab_widget",
-                active_tab="Embeddings"
-            ))
-            my_session.add(TabSection(
-                panel="prompt_builder.ui.tabs",
-                active_tab="0"
-            ))
                         
-
-            my_session.add(CanvasSettings())
-            
-
 
             for generator_name, generator_data in seed_data.items():
                 generator = LLMGenerator(name=generator_name)

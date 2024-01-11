@@ -1991,22 +1991,6 @@
    </hints>
   </connection>
   <connection>
-   <sender>actionStableDiffusion</sender>
-   <signal>triggered()</signal>
-   <receiver>MainWindow</receiver>
-   <slot>action_show_stablediffusion()</slot>
-   <hints>
-    <hint type="sourcelabel">
-     <x>-1</x>
-     <y>-1</y>
-    </hint>
-    <hint type="destinationlabel">
-     <x>442</x>
-     <y>432</y>
-    </hint>
-   </hints>
-  </connection>
-  <connection>
    <sender>actionPrompt_Builder</sender>
    <signal>triggered()</signal>
    <receiver>MainWindow</receiver>
@@ -2439,22 +2423,6 @@
    </hints>
   </connection>
   <connection>
-   <sender>tool_tab_widget</sender>
-   <signal>currentChanged(int)</signal>
-   <receiver>MainWindow</receiver>
-   <slot>tool_tab_index_changed(int)</slot>
-   <hints>
-    <hint type="sourcelabel">
-     <x>922</x>
-     <y>364</y>
-    </hint>
-    <hint type="destinationlabel">
-     <x>442</x>
-     <y>0</y>
-    </hint>
-   </hints>
-  </connection>
-  <connection>
    <sender>actionActive_Grid</sender>
    <signal>triggered()</signal>
    <receiver>MainWindow</receiver>
@@ -2775,18 +2743,18 @@
    </hints>
   </connection>
   <connection>
-   <sender>center_tab</sender>
-   <signal>currentChanged(int)</signal>
+   <sender>actionStableDiffusion</sender>
+   <signal>triggered()</signal>
    <receiver>MainWindow</receiver>
-   <slot>center_panel_tab_index_changed(int)</slot>
+   <slot>action_show_stablediffusion()</slot>
    <hints>
     <hint type="sourcelabel">
-     <x>536</x>
-     <y>392</y>
+     <x>-1</x>
+     <y>-1</y>
     </hint>
     <hint type="destinationlabel">
-     <x>1002</x>
-     <y>0</y>
+     <x>442</x>
+     <y>432</y>
     </hint>
    </hints>
   </connection>
