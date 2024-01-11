@@ -280,7 +280,6 @@ class MainWindow(
 
     @brush_settings.setter
     def brush_settings(self, val):
-        print("SET BRUSH_SETTINGS", val)
         self.application_settings.setValue("brush_settings", val)
 
     @property
@@ -1281,7 +1280,8 @@ class MainWindow(
         self.application_settings.setValue("tool_tab_widget_index", self.ui.tool_tab_widget.currentIndex())
         self.application_settings.setValue("center_tab_index", self.ui.center_tab.currentIndex())
         self.application_settings.setValue("generator_tab_index", self.ui.standard_image_widget.ui.tabWidget.currentIndex())
-        pass
+        self.application_settings.setValue("is_maximized", self.isMaximized())
+        self.application_settings.setValue("is_fullscreen", self.isFullScreen())
     
     def restore_state(self):
         main_splitter = self.application_settings.value("main_splitter")
@@ -1315,6 +1315,14 @@ class MainWindow(
 
         generator_tab_index = self.application_settings.value("generator_tab_index", 0, type=int)
         self.ui.standard_image_widget.ui.tabWidget.setCurrentIndex(generator_tab_index)
+
+        maximized = self.application_settings.value("is_maximized", False, type=bool)
+        if maximized:
+            self.showMaximized()
+        
+        is_fullscreen = self.application_settings.value("is_fullscreen", False, type=bool)
+        if is_fullscreen:
+            self.showFullScreen()
 
         self.ui.ai_button.setChecked(self.ai_mode)
         self.set_button_checked("toggle_grid", self.show_grid, False)
