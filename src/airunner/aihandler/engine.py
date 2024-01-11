@@ -16,10 +16,6 @@ class Engine:
     them to the appropriate AI model controller.
     """
     model_type = None
-
-    @property
-    def hf_username(self):
-        return self.sd.hf_username
     
     @property
     def hf_api_key_write_key(self):
