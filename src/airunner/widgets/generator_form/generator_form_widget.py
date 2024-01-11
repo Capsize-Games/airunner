@@ -58,7 +58,7 @@ class GeneratorForm(BaseWidget):
 
     @property
     def generator_name(self):
-        return self.app.settings_manager.settings.current_image_generator
+        return self.app.current_image_generator
 
     @property
     def generator_settings(self):
