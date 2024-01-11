@@ -432,7 +432,7 @@
             <number>0</number>
            </property>
            <property name="settings_property" stdset="0">
-            <string notr="true">generator.image_guidance_scale</string>
+            <string notr="true">generator_settings.image_guidance_scale</string>
            </property>
           </widget>
          </item>
