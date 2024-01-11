@@ -265,5 +265,5 @@ class Ui_memory_preferences(object):
         self.use_tome.setTitle(_translate("memory_preferences", "ToMe Token Merging"))
         self.label_10.setText(_translate("memory_preferences", "Faster inference, slight image impact"))
         self.tome_sd_ratio.setProperty("label_text", _translate("memory_preferences", "Ratio"))
-        self.tome_sd_ratio.setProperty("settings_property", _translate("memory_preferences", "memory_settings.tome_sd_ratio"))
+        self.tome_sd_ratio.setProperty("settings_property", _translate("memory_preferences", "tome_sd_ratio"))
 from airunner.widgets.slider.slider_widget import SliderWidget
