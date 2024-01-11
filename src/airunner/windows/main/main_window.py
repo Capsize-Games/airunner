@@ -174,6 +174,30 @@ class MainWindow(
     _generator_settings = None
 
     @property
+    def brush_size(self):
+        return self.application_settings.value("brush_size", 1, type=int)
+    
+    @brush_size.setter
+    def brush_size(self, val):
+        self.application_settings.setValue("brush_size", val)
+    
+    @property
+    def brush_primary_color(self):
+        return self.application_settings.value("brush_primary_color", "#000000")
+    
+    @brush_primary_color.setter
+    def brush_primary_color(self, val):
+        self.application_settings.setValue("brush_primary_color", val)
+
+    @property
+    def brush_secondary_color(self):
+        return self.application_settings.value("brush_secondary_color", "#ffffff")
+    
+    @brush_secondary_color.setter
+    def brush_secondary_color(self, val):
+        self.application_settings.setValue("brush_secondary_color", val)
+
+    @property
     def ai_mode(self):
         return self.application_settings.value("ai_mode", False, type=bool)
     

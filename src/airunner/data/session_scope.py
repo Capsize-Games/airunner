@@ -74,13 +74,6 @@ def models_scope():
         models = session.query(AIModel).all()
         yield models
 
-@contextmanager
-def brush_settings_scope():
-    from airunner.data.models import BrushSettings
-    with session_scope() as session:
-        brush_settings = session.query(BrushSettings).options(joinedload('*')).first()
-        yield brush_settings
-
 
 @contextmanager
 def llm_generator_scope():

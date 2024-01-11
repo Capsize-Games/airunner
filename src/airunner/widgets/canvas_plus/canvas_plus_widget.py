@@ -304,7 +304,7 @@ class CanvasPlusWidget(CanvasBaseWidget):
 
     @property
     def brush_size(self):
-        return self.app.settings_manager.brush_settings.size
+        return self.app.brush_size
 
     @property
     def active_grid_area_rect(self):
