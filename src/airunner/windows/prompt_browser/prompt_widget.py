@@ -1,6 +1,6 @@
-from airunner.utils import save_session, get_session
 from airunner.widgets.base_widget import BaseWidget
 from airunner.windows.prompt_browser.templates.prompt_browser_prompt_widget_ui import Ui_prompt_widget
+from airunner.data.session_scope import session_scope
 
 
 class PromptWidget(BaseWidget):
@@ -22,12 +22,12 @@ class PromptWidget(BaseWidget):
         self.app.load_prompt(self.prompt_data)
 
     def action_clicked_button_delete(self):
-        session = get_session()
-        session.delete(self.prompt_data)
-        save_session()
+        with session_scope() as session:
+            session.delete(self.prompt_data)
         self.deleteLater()
 
     def save_prompt(self):
-        self.prompt_data.prompt = self.ui.prompt.toPlainText()
-        self.prompt_data.negative_prompt = self.ui.negative_prompt.toPlainText()
-        save_session()
+        with session_scope() as session:
+            session.add(self.prompt_data)
+            self.prompt_data.prompt = self.ui.prompt.toPlainText()
+            self.prompt_data.negative_prompt = self.ui.negative_prompt.toPlainText()

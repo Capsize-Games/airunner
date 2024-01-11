@@ -372,35 +372,13 @@ class Brush(BaseModel):
     generator_setting = relationship('GeneratorSetting', back_populates='brushes')  # modified line
 
 
-
-class PromptGeneratorSetting(BaseModel):
-    __tablename__ = 'prompt_generator_settings'
-
-    id = Column(Integer, primary_key=True)
-    settings_id = Column(Integer, ForeignKey('settings.id'))
-    name = Column(String, default="")
-    advanced_mode = Column(Boolean, default=False)
-    category = Column(String, default="")
-    prompt_blend_type = Column(Integer, default=0)
-    prompt = Column(String, default="")
-    weighted_values = Column(JSON, default={})
-    prompt_genre = Column(String, default="")
-    prompt_color = Column(String, default="")
-    prompt_style = Column(String, default="")
-    prefix = Column(String, default="")
-    suffix = Column(String, default="")
-    negative_prefix = Column(String, default="")
-    negative_suffix = Column(String, default="")
-    active = Column(Boolean, default=False)
-
-
 class GridSettings(BaseModel):
     __tablename__ = 'grid_settings'
 
     id = Column(Integer, primary_key=True)
     show_grid = Column(Boolean, default=True)
     snap_to_grid = Column(Boolean, default=True)
-    size = Column(Integer, default=64)
+    cell_size = Column(Integer, default=64)
     line_width = Column(Integer, default=1)
     canvas_color = Column(String, default="#000000")
     line_color = Column(String, default="#121212")
@@ -530,8 +508,6 @@ class PathSettings(BaseModel):
         self.llm_casuallm_model_path = DEFAULT_PATHS["text"]["models"]["casuallm"]
         self.llm_seq2seq_model_path = DEFAULT_PATHS["text"]["models"]["seq2seq"]
         self.llm_visualqa_model_path = DEFAULT_PATHS["text"]["models"]["visualqa"]
-        from airunner.utils import save_session
-        save_session()
 
 
 class BrushSettings(BaseModel):
@@ -638,8 +614,7 @@ class Settings(BaseModel):
     use_interpolation = Column(Boolean, default=False)
     is_maximized = Column(Boolean, default=False)
     splitter_sizes = relationship("SplitterSection", backref="settings")
-    prompt_generator_settings = relationship("PromptGeneratorSetting", backref="settings")
-
+    
     # generator tab sections
     current_tab = Column(String, default="stablediffusion")
     current_section_stablediffusion = Column(String, default="txt2img")
@@ -735,20 +710,6 @@ class TabSection(BaseModel):
     active_tab = Column(String)
 
 
-class PromptBuilder(BaseModel):
-    __tablename__ = 'prompt_builder'
-
-    id = Column(Integer, primary_key=True)
-    # document_id = Column(Integer, ForeignKey('documents.id'))
-    # document = relationship("Document", backref="prompt_builder")
-    name = Column(String, default="")
-    active = Column(Boolean, default=False)
-    auto_prompt_weight = Column(Float, default=0.5)
-    text_prompt_weight = Column(Float, default=0.5)
-    negative_auto_prompt_weight = Column(Float, default=0.5)
-    negative_text_prompt_weight = Column(Float, default=0.5)
-
-
 class CanvasSettings(BaseModel):
     __tablename__ = "canvas_settings"
 
@@ -830,5 +791,4 @@ class Message(BaseModel):
     message = Column(String)
     conversation_id = Column(Integer, ForeignKey('conversation.id'))
     conversation = relationship('Conversation', back_populates='messages')
-
 
