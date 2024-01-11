@@ -22,7 +22,7 @@ from airunner.aihandler.pyqt_client import OfflineClient
 from airunner.aihandler.qtvar import MessageHandlerVar
 from airunner.aihandler.settings import LOG_LEVEL
 from airunner.airunner_api import AIRunnerAPI
-from airunner.data.models import Prompt, TabSection, LLMGenerator
+from airunner.data.models import Prompt, LLMGenerator
 from airunner.filters.windows.filter_base import FilterBase
 from airunner.input_event_manager import InputEventManager
 from airunner.mixins.history_mixin import HistoryMixin
@@ -37,7 +37,6 @@ from airunner.windows.prompt_browser.prompt_browser import PromptBrowser
 from airunner.windows.settings.airunner_settings import SettingsWindow
 from airunner.windows.update.update_window import UpdateWindow
 from airunner.windows.video import VideoPopup
-from airunner.data.models import TabSection
 from airunner.widgets.brushes.brushes_container import BrushesContainer
 from airunner.data.models import Document
 from airunner.data.session_scope import session_scope
@@ -106,6 +105,15 @@ class MainWindow(
     QMainWindow,
     HistoryMixin
 ):
+    # signals
+    ai_mode_toggled = pyqtSignal(bool)
+    show_grid_toggled = pyqtSignal(bool)
+    cell_size_changed_signal = pyqtSignal(int)
+    line_width_changed_signal = pyqtSignal(int)
+    line_color_changed_signal = pyqtSignal(str)
+    canvas_color_changed_signal = pyqtSignal(str)
+    snap_to_grid_changed_signal = pyqtSignal(bool)
+
     token_signal = pyqtSignal(str)
     api = None
     input_event_manager = None
@@ -297,17 +305,8 @@ class MainWindow(
 
     def handle_changed_signal(self, key, value):
         print("main_window: handle_changed_signal", key, value)
-        if key == "settings.ai_mode":
-            # Handle the settings.ai_mode key here
-            print(f"settings.ai_mode changed to {value}")
-        elif key == "grid_settings.cell_size":
+        if key == "grid_settings.cell_size":
             self.set_size_form_element_step_values()
-        elif key == "grid_settings.line_width":
-            self.set_size_form_element_step_values()
-        elif key == "grid_settings.show_grid":
-            self.canvas_widget.update()
-        elif key == "grid_settings.snap_to_grid":
-            self.canvas_widget.update()
         elif key == "settings.line_color":
             self.canvas_widget.update_grid_pen()
         elif key == "path_settings.lora_path":
@@ -322,6 +321,8 @@ class MainWindow(
     def __init__(self, settings_manager, *args, **kwargs):
         logger.info("Starting AI Runnner")
         self.ui = Ui_MainWindow()
+        self.application_settings = QSettings("Capsize Games", "AI Runner")
+
         # qdarktheme.enable_hi_dpi()
 
         self.settings_manager = settings_manager
@@ -368,8 +369,6 @@ class MainWindow(
 
         #self.ui.layer_widget.initialize()
 
-        self.set_button_checked("toggle_grid", self.settings_manager.grid_settings.show_grid, False)
-
         # call a function after the window has finished loading:
         QTimer.singleShot(500, self.on_show)
 
@@ -381,7 +380,6 @@ class MainWindow(
 
         self.set_all_section_buttons()
 
-        self.initialize_panel_tabs()
         self.initialize_tool_section_buttons()
         
         if self.settings_manager.settings.mode == Mode.IMAGE.value:
@@ -393,7 +391,6 @@ class MainWindow(
 
         self.initialize_image_worker()
 
-        self.application_settings = QSettings("Capsize Games", "AI Runner")
         self.restore_state()
 
         self.settings_manager.changed_signal.connect(self.handle_changed_signal)
@@ -418,32 +415,6 @@ class MainWindow(
     
     def handle_image_generated(self, message):
         self.image_data_queue.put(message)
-
-    def initialize_panel_tabs(self):
-        """
-        Iterate over each TabSection entry from database and set the active tab
-        for each panel section.
-        :return:
-        """
-        self.ui.mode_tab_widget.currentChanged.connect(self.mode_tab_index_changed)
-        with session_scope() as session:
-            tabsections = session.query(TabSection).filter(
-                TabSection.panel != "generator_tabs"
-            ).all()
-            for ts in tabsections:
-                if ts.panel == "prompt_builder.ui.tabs":
-                    print(f"Setting prompt builder tab to {ts.active_tab}")
-                else:
-                    widget = getattr(self.ui, ts.panel)
-                for i in range(widget.count()):
-                    if widget.tabText(i) == ts.active_tab:
-                        widget.setCurrentIndex(i)
-                        break
-
-            for i in range(self.ui.mode_tab_widget.count()):
-                if self.ui.mode_tab_widget.tabText(i) == self.settings_manager.settings.mode:
-                    self.ui.mode_tab_widget.setCurrentIndex(i)
-                    break
 
     def mode_tab_index_changed(self, index):
         self.settings_manager.set_value("settings.mode", self.ui.mode_tab_widget.tabText(index))
@@ -610,35 +581,6 @@ class MainWindow(
         else:
             subprocess.Popen(["xdg-open", os.path.realpath(path)])
 
-    def action_toggle_brush(self, active):
-        if active:
-            self.toggle_tool("brush")
-            self.ui.toggle_active_grid_area_button.setChecked(False)
-            self.ui.toggle_eraser_button.setChecked(False)
-
-    def action_toggle_eraser(self, active):
-        if active:
-            self.toggle_tool("eraser")
-            self.ui.toggle_active_grid_area_button.setChecked(False)
-            self.ui.toggle_brush_button.setChecked(False)
-
-    def action_toggle_active_grid_area(self, active):
-        if active:
-            self.toggle_tool("active_grid_area")
-            self.ui.toggle_brush_button.setChecked(False)
-            self.ui.toggle_eraser_button.setChecked(False)
-
-    def action_toggle_nsfw_filter_triggered(self, bool):
-        self.settings_manager.set_value("settings.nsfw_filter", bool)
-        self.toggle_nsfw_filter()
-
-    def action_toggle_grid(self, active):
-        self.settings_manager.set_value("grid_settings.show_grid", active)
-        # self.canvas_widget.update()
-
-    def action_toggle_darkmode(self):
-        self.set_stylesheet()
-
     def set_icons(self, icon_name, widget_name, theme):
         icon = QtGui.QIcon()
         icon.addPixmap(
@@ -665,27 +607,6 @@ class MainWindow(
 
     def action_open_discord(self):
         webbrowser.open("https://discord.gg/ukcgjEpc5f")
-
-    def tool_tab_index_changed(self, index):
-        with session_scope() as session:
-            tab_section = session.query(TabSection).filter_by(
-                panel="tool_tab_widget"
-            ).first()
-            tab_section.active_tab = self.ui.tool_tab_widget.tabText(index)
-
-    def center_panel_tab_index_changed(self, val):
-        with session_scope() as session:
-            tab_section = session.query(TabSection).filter_by(
-                panel="center_tab"
-            ).first()
-            tab_section.active_tab = self.ui.center_tab.tabText(val)
-
-    def bottom_panel_tab_index_changed(self, index):
-        with session_scope() as session:
-            tab_section = session.query(TabSection).filter_by(
-                panel="bottom_panel_tab_widget"
-            ).first()
-            tab_section.active_tab = self.ui.bottom_panel_tab_widget.tabText(index)
 
     """
     End slot functions
@@ -760,6 +681,7 @@ class MainWindow(
         self.application_settings.setValue("mode_tab_widget_index", self.ui.mode_tab_widget.currentIndex())
         self.application_settings.setValue("tool_tab_widget_index", self.ui.tool_tab_widget.currentIndex())
         self.application_settings.setValue("center_tab_index", self.ui.center_tab.currentIndex())
+        self.application_settings.setValue("generator_tab_index", self.ui.standard_image_widget.ui.tabWidget.currentIndex())
         pass
     
     def restore_state(self):
@@ -791,8 +713,93 @@ class MainWindow(
 
         center_tab_index = self.application_settings.value("center_tab_index", 0, type=int)
         self.ui.center_tab.setCurrentIndex(center_tab_index)
+
+        generator_tab_index = self.application_settings.value("generator_tab_index", 0, type=int)
+        self.ui.standard_image_widget.ui.tabWidget.setCurrentIndex(generator_tab_index)
+
+        ai_mode = self.application_settings.value('ai_mode', False, type=bool)
+        self.ui.ai_button.setChecked(ai_mode)
+        self.ai_mode_toggled.emit(ai_mode)
+
+        show_grid = self.application_settings.value('show_grid', False, type=bool)
+        self.set_button_checked("toggle_grid", show_grid, False)
+        self.show_grid_toggled.emit(show_grid)
     ##### End window properties #####
     #################################
+        
+    ###### Window handlers ######
+    def grid_size_changed(self, val):
+        self.application_settings.setValue("grid_size", val)
+        self.cell_size_changed_signal.emit(val)
+
+    def line_width_changed(self, val):
+        self.application_settings.setValue("line_width", val)
+        self.line_width_changed_signal.emit(val)
+    
+    def line_color_changed(self, val):
+        self.application_settings.setValue("line_color", val)
+        self.line_color_changed_signal.emit(val)
+    
+    def snap_to_grid_changed(self, val):
+        self.application_settings.setValue("snap_to_grid", val)
+        self.snap_to_grid_changed_signal.emit(val)
+    
+    def canvas_color_changed(self, val):
+        self.application_settings.setValue("canvas_color", val)
+        self.canvas_color_changed_signal.emit(val)
+
+    def action_ai_toggled(self, val):
+        self.application_settings.setValue("ai_mode", val)
+        self.ai_mode_toggled.emit(val)
+    
+    def action_toggle_grid(self, val):
+        self.application_settings.setValue("show_grid", val)
+        self.show_grid_toggled.emit(val)
+        #self.settings_manager.set_value("grid_settings.show_grid", active)
+    
+    def action_toggle_brush(self, active):
+        if active:
+            self.toggle_tool("brush")
+            self.ui.toggle_active_grid_area_button.setChecked(False)
+            self.ui.toggle_eraser_button.setChecked(False)
+
+    def action_toggle_eraser(self, active):
+        if active:
+            self.toggle_tool("eraser")
+            self.ui.toggle_active_grid_area_button.setChecked(False)
+            self.ui.toggle_brush_button.setChecked(False)
+
+    def action_toggle_active_grid_area(self, active):
+        if active:
+            self.toggle_tool("active_grid_area")
+            self.ui.toggle_brush_button.setChecked(False)
+            self.ui.toggle_eraser_button.setChecked(False)
+
+    def action_toggle_nsfw_filter_triggered(self, bool):
+        self.settings_manager.set_value("settings.nsfw_filter", bool)
+        self.toggle_nsfw_filter()
+
+    def action_toggle_darkmode(self):
+        self.set_stylesheet()
+    
+    def image_generation_toggled(self):
+        self.settings_manager.set_value("settings.mode", Mode.IMAGE.value)
+        self.activate_image_generation_section()
+        self.set_all_section_buttons()
+
+    def language_processing_toggled(self):
+        self.settings_manager.set_value("settings.mode", Mode.LANGUAGE_PROCESSOR.value)
+        self.activate_language_processing_section()
+        self.set_all_section_buttons()
+    
+    def model_manager_toggled(self, val):
+        if not val:
+            self.image_generators_toggled()
+        else:
+            self.settings_manager.set_value("settings.mode", Mode.MODEL_MANAGER.value)
+            self.activate_model_manager_section()
+            self.set_all_section_buttons()
+    ###### End window handlers ######
 
     def timerEvent(self, event):
         # self.canvas_widget.timerEvent(event)
@@ -869,18 +876,20 @@ class MainWindow(
 
     def initialize_filter_actions(self):
         # add more filters:
-        for filter in self.settings_manager.image_filters.get_properties():
-            action = self.ui.menuFilters.addAction(filter.display_name)
-            action.triggered.connect(partial(self.display_filter_window, filter))
+        with self.settings_manager.image_filters_scope() as image_filters:
+            for filter in image_filters:
+                action = self.ui.menuFilters.addAction(filter.display_name)
+                action.triggered.connect(partial(self.display_filter_window, filter.name))
 
-    def display_filter_window(self, filter):
-        FilterBase(self, filter.name).show()
+    def display_filter_window(self, filter_name):
+        FilterBase(self, filter_name).show()
 
     def handle_generate(self):
         #self.prompt_builder.inject_prompt()
         pass
 
     def initialize_default_buttons(self):
+        show_grid = self.application_settings.value("show_grid", False, type=bool)
         self.ui.toggle_active_grid_area_button.blockSignals(True)
         self.ui.toggle_brush_button.blockSignals(True)
         self.ui.toggle_eraser_button.blockSignals(True)
@@ -889,8 +898,7 @@ class MainWindow(
         self.ui.toggle_active_grid_area_button.setChecked(self.settings_manager.settings.current_tool == "active_grid_area")
         self.ui.toggle_brush_button.setChecked(self.settings_manager.settings.current_tool == "brush")
         self.ui.toggle_eraser_button.setChecked(self.settings_manager.settings.current_tool == "eraser")
-        self.ui.toggle_grid_button.setChecked(self.settings_manager.grid_settings.show_grid is True)
-        self.ui.ai_button.setChecked(self.settings_manager.settings.ai_mode is True)
+        self.ui.toggle_grid_button.setChecked(show_grid is True)
         self.ui.toggle_active_grid_area_button.blockSignals(False)
         self.ui.toggle_brush_button.blockSignals(False)
         self.ui.toggle_eraser_button.blockSignals(False)
@@ -1071,12 +1079,6 @@ class MainWindow(
         self.ui.layer_widget.show_layers()
 
     def set_status_label(self, txt, error=False):
-        # color = self.status_normal_color_dark if self.is_dark else \
-        #     self.status_normal_color_light
-        # self.footer_widget.ui.status_label.setText(txt)
-        # self.footer_widget.ui.status_label.setStyleSheet(
-        #     f"color: {self.status_error_color if error else color};"
-        # )
         if self.status_widget:
             self.status_widget.set_system_status(txt, error)
 
@@ -1202,26 +1204,6 @@ class MainWindow(
             text = f"{current_text}, {text}" if current_text != "" else text
             prompt_widget.setPlainText(text)
 
-    def change_content_widget(self):
-        with session_scope() as session:
-            active_tab_obj = session.query(TabSection).filter(
-                TabSection.panel == "center_tab"
-            ).first()
-            active_tab = active_tab_obj.active_tab
-            self.ui.center_tab.blockSignals(True)
-            if active_tab == "Prompt Builder":
-                tab_index = self.ui.center_tab.indexOf(self.ui.center_tab.findChild(QWidget, f"tab_prompt_builder"))
-                print("switching to tab_index", tab_index)
-                self.ui.center_tab.setCurrentIndex(tab_index)
-            elif self.settings_manager.settings.generator_section == "txt2vid":
-                # get tab by name Video
-                tab_index = self.ui.center_tab.indexOf(self.ui.center_tab.findChild(QWidget, "tab_txt2vid"))
-                self.ui.center_tab.setCurrentIndex(tab_index)
-            else:
-                tab_index = self.ui.center_tab.indexOf(self.ui.center_tab.findChild(QWidget, f"tab_image"))
-                self.ui.center_tab.setCurrentIndex(tab_index)
-            self.ui.center_tab.blockSignals(False)
-
     def clear_all_prompts(self):
         self.prompt = ""
         self.negative_prompt = ""
@@ -1282,24 +1264,6 @@ class MainWindow(
     def new_batch(self, index, image, data):
         self.generator_tab_widget.new_batch(index, image, data)
 
-    def image_generation_toggled(self):
-        self.settings_manager.set_value("settings.mode", Mode.IMAGE.value)
-        self.activate_image_generation_section()
-        self.set_all_section_buttons()
-
-    def language_processing_toggled(self):
-        self.settings_manager.set_value("settings.mode", Mode.LANGUAGE_PROCESSOR.value)
-        self.activate_language_processing_section()
-        self.set_all_section_buttons()
-    
-    def model_manager_toggled(self, val):
-        if not val:
-            self.image_generators_toggled()
-        else:
-            self.settings_manager.set_value("settings.mode", Mode.MODEL_MANAGER.value)
-            self.activate_model_manager_section()
-            self.set_all_section_buttons()
-    
     def set_button_checked(self, name, val=True, block_signals=True):
         widget = getattr(self.ui, f"{name}_button")
         if block_signals:
@@ -1323,43 +1287,6 @@ class MainWindow(
     def initialize_tool_section_buttons(self):
         pass
     
-    def set_all_image_generator_buttons(self):
-        is_image_generators = self.settings_manager.settings.generator_section == GeneratorSection.TXT2IMG.value
-        is_txt2vid = self.settings_manager.settings.generator_section == GeneratorSection.TXT2VID.value
-        is_prompt_builder = self.settings_manager.settings.generator_section == GeneratorSection.PROMPT_BUILDER.value
-    
-    def image_generators_toggled(self):
-        with session_scope() as session:
-            self.image_generation_toggled()
-            self.settings_manager.set_value("settings.mode", Mode.IMAGE.value)
-            self.settings_manager.set_value("settings.generator_section", GeneratorSection.TXT2IMG.value)
-            active_tab_obj = session.query(TabSection).filter(TabSection.panel == "center_tab").first()
-            active_tab_obj.active_tab = "Canvas"
-            self.set_all_image_generator_buttons()
-            self.change_content_widget()
-
-    def text_to_video_toggled(self):
-        with session_scope() as session:
-            self.image_generation_toggled()
-            self.settings_manager.set_value("settings.mode", Mode.IMAGE.value)
-            self.settings_manager.set_value("settings.generator_section", GeneratorSection.TXT2VID.value)
-            active_tab_obj = session.query(TabSection).filter(TabSection.panel == "center_tab").first()
-            active_tab_obj.active_tab = "Video"
-            self.set_all_image_generator_buttons()
-            self.change_content_widget()
-
-    def toggle_prompt_builder(self, val):
-        with session_scope() as session:
-            if not val:
-                self.image_generators_toggled()
-            else:
-                self.image_generation_toggled()
-                self.settings_manager.set_value(f"generator_section", GeneratorSection.PROMPT_BUILDER.value)
-                active_tab_obj = session.query(TabSection).filter(TabSection.panel == "center_tab").first()
-                active_tab_obj.active_tab = "Prompt Builder"
-                self.set_all_image_generator_buttons()
-                self.change_content_widget()
-
     def redraw(self):
         self.set_stylesheet()
 
@@ -1368,7 +1295,3 @@ class MainWindow(
 
     def action_center_clicked(self):
         print("center clicked")
-    
-    def action_ai_toggled(self, val):
-        print("ACTION AI TOGGLED")
-        self.settings_manager.set_value("settings.ai_mode", val)

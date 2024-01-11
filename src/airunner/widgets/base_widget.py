@@ -27,6 +27,7 @@ class BaseWidget(QWidget):
         super().__init__(*args, **kwargs)
         self.app = get_main_window()
         self.app.loaded.connect(self.initialize)
+        
         if self.widget_class_:
             self.ui = self.widget_class_()
         if self.ui:

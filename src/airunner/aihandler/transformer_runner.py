@@ -56,23 +56,11 @@ class TransformerRunner(QObject):
     tokenizer = None
     _generator = None
     requested_generator_name = ""
-    current_generator_name = ""
     do_quantize_model = True
     callback = None
     template = None
     #system_instructions = ""
     system_instructions = ""
-
-    @property
-    def generator(self):
-        try:
-            if not self._generator or self.current_generator_name != self.requested_generator_name:
-                self.current_generator_name = self.requested_generator_name
-                with session_scope() as session:
-                    self._generator = session.query(LLMGenerator).filter_by(name=self.current_generator_name).first()
-            return self._generator
-        except Exception as e:
-            Logger.error(e)
     
     @property
     def do_load_model(self):
@@ -187,7 +175,7 @@ class TransformerRunner(QObject):
             "device_map": self.device_map,
             "use_cache": self.use_cache,
             "torch_dtype": torch.float16 if self.dtype != "32bit" else torch.float32,
-            "token": self.settings_manager.hf_api_key_read_key,
+            "token": self.settings_manager.settings.hf_api_key_read_key,
             "trust_remote_code": True
         }
         
@@ -197,14 +185,14 @@ class TransformerRunner(QObject):
                 params["quantization_config"] = config
 
         path = self.current_model_path
-        #self.engine.send_message(f"Loading {self.generator.name} model from {path}")
+        self.engine.send_message(f"Loading {self.requested_generator_name} model from {path}")
         
         auto_class_ = None
-        if self.generator.name == "seq2seq":
+        if self.requested_generator_name == "seq2seq":
             auto_class_ = AutoModelForSeq2SeqLM
-        elif self.generator.name == "casuallm":
+        elif self.requested_generator_name == "casuallm":
             auto_class_ = AutoModelForCausalLM
-        elif self.generator.name == "visualqa":
+        elif self.requested_generator_name == "visualqa":
             auto_class_ = InstructBlipForConditionalGeneration
             params.pop("use_cache", None)
         
@@ -218,7 +206,7 @@ class TransformerRunner(QObject):
                 else:
                     Logger.error(e)
         
-        # if self.generator.name == "casuallm":
+        # if self.requested_generator_name == "casuallm":
         #     self.pipeline = AutoModelForCausalLM.from_pretrained(
         #         self.model,
         #         torch_dtype=torch.float16 if self.dtype != "32bit" else torch.float32,
@@ -233,7 +221,7 @@ class TransformerRunner(QObject):
         self.parameters = self.request_data.get("parameters", {})
         self.dtype = self.request_data.get("dtype", self.dtype)
         self.use_gpu = self.request_data.get("use_gpu", self.use_gpu)
-        self.requested_generator_name = self.request_data.get("generator_name", self.generator_name)
+        self.requested_generator_name = self.request_data.get("generator_name", self.requested_generator_name)
         self.model_path = self.request_data.get("model_path", self.model_path)
         self.override_parameters = self.parameters.get("override_parameters", self.override_parameters)
         self.username = self.request_data.get("username", "")
@@ -309,7 +297,7 @@ class TransformerRunner(QObject):
         if "top_k" in kwargs and "do_sample" in kwargs and not kwargs["do_sample"]:
             del kwargs["top_k"]
 
-        if self.generator.name == "visualqa":
+        if self.requested_generator_name == "visualqa":
             for key in ["return_result", "skip_special_tokens", "seed"]:
                 kwargs.pop(key)
         
@@ -317,7 +305,7 @@ class TransformerRunner(QObject):
         return kwargs
     
     def load_tokenizer(self, local_files_only = None):
-        if self.generator.name == "casuallm":
+        if self.requested_generator_name == "casuallm":
             local_files_only = self.local_files_only if local_files_only is None else local_files_only
             if not self.tokenizer is None:
                 return
@@ -326,7 +314,7 @@ class TransformerRunner(QObject):
                 self.tokenizer = AutoTokenizer.from_pretrained(
                     self.current_model_path,
                     local_files_only=local_files_only,
-                    token=self.settings_manager.hf_api_key_read_key,
+                    token=self.settings_manager.settings.hf_api_key_read_key,
                     device_map=self.device_map,
                 )
             except OSError as e:
@@ -357,12 +345,11 @@ class TransformerRunner(QObject):
         self.disable_request_processing()
         kwargs = self.prepare_input_args()
         self.do_set_seed(kwargs.get("seed"))
-        # Logger.info("Generating output")
 
         self.current_model_path = self.model_path
         self.load_tokenizer()
         self.load_model()
-        if self.generator.name == "visualqa":
+        if self.requested_generator_name == "visualqa":
             self.load_processor()
 
         # self.engine.send_message("Generating output")
