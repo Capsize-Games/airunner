@@ -15,6 +15,8 @@ from PyQt6.QtWidgets import QGraphicsItemGroup
 from PyQt6.QtCore import QRectF, QSizeF
 from PyQt6.QtGui import QPainterPath
 from PyQt6.QtGui import QEnterEvent
+from PyQt6.QtGui import QTransform
+from PyQt6.QtWidgets import QGraphicsView
 
 from airunner.aihandler.logger import Logger
 from airunner.cursors.circle_brush import CircleCursor
@@ -57,7 +59,6 @@ class DraggablePixmap(QGraphicsPixmapItem):
         super().__init__(pixmap)
         self.pixmap = pixmap
         self.setFlag(QGraphicsItem.GraphicsItemFlag.ItemIsMovable, True)
-
 
     def snap_to_grid(self):
         cell_size = self.parent.cell_size
@@ -212,6 +213,9 @@ class CustomScene(QGraphicsScene):
         self.item = QGraphicsPixmapItem(QPixmap.fromImage(self.image))
         self.addItem(self.item)
 
+        # self.setVerticalScrollBarPolicy(Qt.ScrollBarPolicy.ScrollBarAlwaysOff)
+        # self.setHorizontalScrollBarPolicy(Qt.ScrollBarPolicy.ScrollBarAlwaysOff)
+
         # Add a variable to store the last mouse position
         self.last_pos = None
     
@@ -238,6 +242,34 @@ class CustomScene(QGraphicsScene):
         
         painter.end()
         self.item.setPixmap(QPixmap.fromImage(self.image))
+    
+    def wheelEvent(self, event):
+        # Calculate the zoom factor
+        zoom_in_factor = self.parent().zoom_in_step
+        zoom_out_factor = -self.parent().zoom_out_step
+
+        # Use delta instead of angleDelta
+        if event.delta() > 0:
+            zoom_factor = zoom_in_factor
+        else:
+            zoom_factor = zoom_out_factor
+
+        # Update zoom level
+        zoom_level = self.parent().zoom_level
+        zoom_level += zoom_factor
+        if zoom_level < 0.1:
+            zoom_level = 0.1
+        self.parent().zoom_level = zoom_level
+
+        # Create a QTransform object and scale it
+        transform = QTransform()
+        transform.scale(self.parent().zoom_level, self.parent().zoom_level)
+
+        # Set the transform
+        self.parent().view.setTransform(transform)
+
+        # Redraw lines
+        self.parent().draw_lines()
 
     def eraseAt(self, position):
         painter = QPainter(self.image)
@@ -449,7 +481,37 @@ class CanvasPlusWidget(CanvasBaseWidget):
         self.app.line_color_changed_signal.connect(self.line_color_changed)
         self.app.canvas_color_changed_signal.connect(self.canvas_color_changed)
         self.app.window_resized_signal.connect(self.window_resized)
+        self._zoom_level = 1
         self.canvas_container.resizeEvent = self.window_resized
+    
+    @property
+    def zoom_in_step(self):
+        if self.zoom_level > 6:
+            return 2
+        elif self.zoom_level > 4:
+            return 1
+        return 0.1
+
+    @property
+    def zoom_out_step(self):
+        if self.zoom_level > 6:
+            return 2
+        elif self.zoom_level > 4:
+            return 1
+        if self.zoom_level <= 1.0:
+            return 0.05
+        return 0.1
+    
+    @property
+    def zoom_level(self):
+        zoom = self._zoom_level
+        if zoom <= 0:
+            zoom = 0.1
+        return zoom
+
+    @zoom_level.setter
+    def zoom_level(self, value):
+        self._zoom_level = value
     
     def window_resized(self, event):
         self.redraw_lines = True
