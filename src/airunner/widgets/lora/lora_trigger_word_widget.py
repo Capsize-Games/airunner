@@ -13,15 +13,15 @@ class LoraTriggerWordWidget(BaseWidget):
         self.ui.trigger_word.setText(self.trigger_word)
 
     def action_click_button_to_prompt(self):
-        self.settings_manager.set_value(
+        self.app.settings_manager.set_value(
             "generator.prompt",
-            f"{self.settings_manager.generator.prompt} {self.trigger_word}"
+            f"{self.app.settings_manager.generator.prompt} {self.trigger_word}"
         )
 
     def action_click_button_to_negative_prompt(self):
-        self.settings_manager.set_value(
+        self.app.settings_manager.set_value(
             "generator.negative_prompt",
-            f"{self.settings_manager.generator.negative_prompt} {self.trigger_word}"
+            f"{self.app.settings_manager.generator.negative_prompt} {self.trigger_word}"
         )
     
     def action_click_button_copy(self):

@@ -4,7 +4,7 @@ from PyQt6.QtCore import QPoint
 from PyQt6.QtGui import QPen
 
 from airunner.mixins.canvas_brushes_mixin import CanvasBrushesMixin
-from airunner.aihandler.settings_manager import SettingsManager
+from airunner.data.managers import SettingsManager
 from airunner.models.layerdata import LayerData
 from airunner.models.linedata import LineData
 
@@ -15,7 +15,7 @@ class TestCanvasBrushesMixin(unittest.TestCase):
         self.cbm.pos_x = 0
         self.cbm.pos_y = 0
         self.cbm.settings_manager = SettingsManager()
-        self.cbm.settings_manager.set_value("mask_brush_size", 10)
+        self.cbm.settings_manager.set_value("settings.mask_brush_size", 10)
         self.cbm.current_layer = LayerData(0, "Untitled", True, 1.0, QPoint(0, 0))
 
     def test_get_line_extremities(self):
