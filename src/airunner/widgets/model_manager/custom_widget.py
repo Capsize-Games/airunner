@@ -2,7 +2,7 @@ import os
 
 from airunner.data.models import AIModel
 from airunner.models.modeldata import ModelData
-from airunner.utils import get_session
+from airunner.data.session_scope import session_scope
 from airunner.widgets.base_widget import BaseWidget
 from airunner.widgets.model_manager.model_widget import ModelWidget
 from airunner.widgets.model_manager.templates.custom_ui import Ui_custom_model_widget
@@ -26,14 +26,14 @@ class CustomModelWidget(BaseWidget):
     def scan_for_models(self):
         # look at model path and determine if we can import existing local models
         # first look at all files and folders inside of the model paths
-        base_model_path = self.settings_manager.path_settings.model_base_path
-        depth2img_model_path = self.settings_manager.path_settings.depth2img_model_path
-        pix2pix_model_path = self.settings_manager.path_settings.pix2pix_model_path
-        outpaint_model_path = self.settings_manager.path_settings.outpaint_model_path
-        upscale_model_path = self.settings_manager.path_settings.upscale_model_path
-        txt2vid_model_path = self.settings_manager.path_settings.txt2vid_model_path
-        llm_casuallm_model_path = self.settings_manager.path_settings.llm_casuallm_model_path
-        llm_seq2seq_model_path = self.settings_manager.path_settings.llm_seq2seq_model_path
+        base_model_path = self.app.settings_manager.path_settings.model_base_path
+        depth2img_model_path = self.app.settings_manager.path_settings.depth2img_model_path
+        pix2pix_model_path = self.app.settings_manager.path_settings.pix2pix_model_path
+        outpaint_model_path = self.app.settings_manager.path_settings.outpaint_model_path
+        upscale_model_path = self.app.settings_manager.path_settings.upscale_model_path
+        txt2vid_model_path = self.app.settings_manager.path_settings.txt2vid_model_path
+        llm_casuallm_model_path = self.app.settings_manager.path_settings.llm_casuallm_model_path
+        llm_seq2seq_model_path = self.app.settings_manager.path_settings.llm_seq2seq_model_path
         diffusers_folders = ["scheduler", "text_encoder", "tokenizer", "unet", "vae"]
         for key, model_path in {
             "txt2img": base_model_path,
@@ -62,7 +62,7 @@ class CustomModelWidget(BaseWidget):
                             model.category = "stablediffusion"
                             model.enabled = True
                             model.pipeline_action = key
-                            model.pipeline_class = self.settings_manager.get_pipeline_classname(
+                            model.pipeline_class = self.app.settings_manager.get_pipeline_classname(
                                 model.pipeline_action, model.version, model.category)
 
                             if entry.is_file():  # ckpt or safetensors file
@@ -87,68 +87,67 @@ class CustomModelWidget(BaseWidget):
         self.update_generator_model_dropdown()
 
     def save_model(self, model):
-        session = get_session()
-        model_exists = session.query(AIModel).filter_by(
-            name=model.name,
-            path=model.path,
-            branch=model.branch,
-            version=model.version,
-            category=model.category,
-            pipeline_action=model.pipeline_action
-        ).first()
-        if not model_exists:
-            new_model = AIModel(
+        with session_scope() as session:
+            model_exists = session.query(AIModel).filter_by(
                 name=model.name,
                 path=model.path,
                 branch=model.branch,
                 version=model.version,
                 category=model.category,
-                pipeline_action=model.pipeline_action,
-                enabled=model.enabled,
-                is_default=False
-            )
-            session.add(new_model)
-            session.commit()
+                pipeline_action=model.pipeline_action
+            ).first()
+            if not model_exists:
+                new_model = AIModel(
+                    name=model.name,
+                    path=model.path,
+                    branch=model.branch,
+                    version=model.version,
+                    category=model.category,
+                    pipeline_action=model.pipeline_action,
+                    enabled=model.enabled,
+                    is_default=False
+                )
+                session.add(new_model)
     
     spacer = None
 
     def show_items_in_scrollarea(self, search=None):
         if self.spacer:
             self.ui.scrollAreaWidgetContents.layout().removeItem(self.spacer)
-        session = get_session()
         for child in self.ui.scrollAreaWidgetContents.children():
             if isinstance(child, ModelWidget):
                 child.deleteLater()
-        if search:
-            models = session.query(AIModel).filter_by(is_default=False).filter(AIModel.name.like(f"%{search}%")).all()
-        else:
-            models = session.query(AIModel).filter_by(is_default=False).all()
-        for model_widget in self.model_widgets:
-            model_widget.deleteLater()
-        self.model_widgets = []
-        for index, model in enumerate(models):
-            version = model.version
-            category = model.category
-            pipeline_action = model.pipeline_action
-            pipeline_class = self.settings_manager.get_pipeline_classname(
-                pipeline_action, version, category)
+        with session_scope() as session:
+            if search:
+                models = session.query(AIModel).filter_by(is_default=False).filter(AIModel.name.like(f"%{search}%")).all()
+            else:
+                models = session.query(AIModel).filter_by(is_default=False).all()
+            for model_widget in self.model_widgets:
+                model_widget.deleteLater()
+            self.model_widgets = []
+            for index, model in enumerate(models):
+                version = model.version
+                category = model.category
+                pipeline_action = model.pipeline_action
+                pipeline_class = self.app.settings_manager.get_pipeline_classname(
+                    pipeline_action, version, category)
 
-            model_widget = ModelWidget(
-                path=model.path,
-                branch=model.branch,
-                version=version,
-                category=category,
-                pipeline_action=pipeline_action,
-                pipeline_class=pipeline_class,
-                # prompts=model.prompts,
-            )
+                model_widget = ModelWidget(
+                    path=model.path,
+                    branch=model.branch,
+                    version=version,
+                    category=category,
+                    pipeline_action=pipeline_action,
+                    pipeline_class=pipeline_class,
+                    # prompts=model.prompts,
+                )
 
-            model_widget.ui.name.setChecked(model.enabled)
+                model_widget.ui.name.setChecked(model.enabled)
 
-            self.ui.scrollAreaWidgetContents.layout().addWidget(
-                model_widget)
+                self.ui.scrollAreaWidgetContents.layout().addWidget(
+                    model_widget)
 
-            self.model_widgets.append(model_widget)
+                self.model_widgets.append(model_widget)
         
         if not self.spacer:
             self.spacer = QtWidgets.QSpacerItem(20, 40, QtWidgets.QSizePolicy.Policy.Minimum, QtWidgets.QSizePolicy.Policy.Expanding)
@@ -156,11 +155,11 @@ class CustomModelWidget(BaseWidget):
 
     def models_changed(self, key, model, value):
         model.enabled = True
-        self.settings_manager.update_model(model)
+        self.app.settings_manager.update_model(model)
         self.update_generator_model_dropdown()
 
     def handle_delete_model(self, model):
-        self.settings_manager.delete_model(model)
+        self.app.settings_manager.delete_model(model)
         self.show_items_in_scrollarea()
         self.update_generator_model_dropdown()
 
@@ -177,19 +176,19 @@ class CustomModelWidget(BaseWidget):
         self.ui.model_form.category.addItems(categories)
         self.ui.model_form.category.setCurrentText(model.category)
 
-        actions = self.settings_manager.pipeline_actions
+        actions = self.app.settings_manager.pipeline_actions
         self.ui.model_form.pipeline_action.clear()
         self.ui.model_form.pipeline_action.addItems(actions)
         self.ui.model_form.pipeline_action.setCurrentText(model.pipeline_action)
 
         self.ui.model_form.model_name.setText(model.name)
-        pipeline_class = self.settings_manager.get_pipeline_classname(
+        pipeline_class = self.app.settings_manager.get_pipeline_classname(
             model.pipeline_action, model.version, model.category)
         self.ui.model_form.pipeline_class_line_edit.setText(pipeline_class)
         self.ui.model_form.enabled.setChecked(True)
         self.ui.model_form.path_line_edit.setText(model.path)
 
-        versions = self.settings_manager.versions
+        versions = self.app.settings_manager.versions
         self.ui.model_form.versions.clear()
         self.ui.model_form.versions.addItems(versions)
         self.ui.model_form.versions.setCurrentText(model.version)

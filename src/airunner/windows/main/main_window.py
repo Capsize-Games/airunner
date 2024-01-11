@@ -12,6 +12,7 @@ from PyQt6.QtCore import pyqtSlot, Qt, pyqtSignal, QTimer, QObject, QThread
 from PyQt6.QtGui import QGuiApplication
 from PyQt6.QtWidgets import QApplication, QFileDialog, QMainWindow, QWidget
 from PyQt6 import QtGui
+from airunner import settings
 
 from airunner.resources_light_rc import *
 from airunner.resources_dark_rc import *
@@ -20,14 +21,14 @@ from airunner.aihandler.logger import Logger as logger
 from airunner.aihandler.pyqt_client import OfflineClient
 from airunner.aihandler.qtvar import MessageHandlerVar
 from airunner.aihandler.settings import LOG_LEVEL
-from airunner.aihandler.settings_manager import SettingsManager
+from airunner.data.managers import SettingsManager
 from airunner.airunner_api import AIRunnerAPI
-from airunner.data.models import SplitterSection, Prompt, TabSection, LLMGenerator
+from airunner.data.models import Prompt, TabSection, LLMGenerator
 from airunner.filters.windows.filter_base import FilterBase
 from airunner.input_event_manager import InputEventManager
 from airunner.mixins.history_mixin import HistoryMixin
 from airunner.settings import BASE_PATH
-from airunner.utils import get_version, auto_export_image, save_session, get_session, \
+from airunner.utils import get_version, auto_export_image, \
     create_airunner_paths, default_hf_cache_dir
 from airunner.widgets.status.status_widget import StatusWidget
 from airunner.windows.about.about import AboutWindow
@@ -40,6 +41,7 @@ from airunner.windows.video import VideoPopup
 from airunner.data.models import TabSection
 from airunner.widgets.brushes.brushes_container import BrushesContainer
 from airunner.data.models import Document
+from airunner.data.session_scope import session_scope, path_settings_scope
 
 
 class ImageDataWorker(QObject):
@@ -58,6 +60,7 @@ class ImageDataWorker(QObject):
         self.finished.emit()
     
     def process_image_data(self, message):
+        print("process_image_data 1")
         images = message["images"]
         data = message["data"]
         nsfw_content_detected = message["nsfw_content_detected"]
@@ -69,7 +72,7 @@ class ImageDataWorker(QObject):
         self.stop_progress_bar.emit()
         print("process_image_data 4")
         path = ""
-        if self.parent.settings_manager.auto_export_images:
+        if self.parent.settings_manager.settings.auto_export_images:
             procesed_images = []
             for image in images:
                 path, image = auto_export_image(
@@ -82,7 +85,7 @@ class ImageDataWorker(QObject):
                     self.parent.set_status_label(f"Image exported to {path}")
                 procesed_images.append(image)
             images = procesed_images
-        if nsfw_content_detected and self.parent.settings_manager.nsfw_filter:
+        if nsfw_content_detected and self.parent.settings_manager.settings.nsfw_filter:
             self.parent.message_handler({
                 "message": "Explicit content detected, try again.",
                 "code": MessageCode.ERROR
@@ -97,6 +100,7 @@ class ImageDataWorker(QObject):
         self.parent.message_handler("")
         self.parent.ui.layer_widget.show_layers()
         self.parent.image_generated.emit(True)
+
 
 
 class MainWindow(
@@ -130,7 +134,6 @@ class MainWindow(
     _themes = None
     button_clicked_signal = pyqtSignal(dict)
     status_widget = None
-    splitters = None
     header_widget_spacer = None
     deterministic_window = None
 
@@ -160,17 +163,17 @@ class MainWindow(
 
     @property
     def generator(self):
-        if self._generator is None:
-            session = get_session()
-            try:
-                self._generator = session.query(LLMGenerator).filter(
-                    LLMGenerator.name == self.ui.standard_image_widget.ui.llm_settings_widget.current_generator
-                ).first()
-                if self._generator is None:
-                    logger.error("Unable to locate generator by name " + self.ui.standard_image_widget.ui.llm_settings_widget.current_generator if self.ui.llm_settings_widget.current_generator else "None")
-            except Exception as e:
-                logger.error(e)
-        return self._generator
+        with session_scope() as session:
+            if self._generator is None:
+                try:
+                    self._generator = session.query(LLMGenerator).filter(
+                        LLMGenerator.name == self.ui.standard_image_widget.ui.llm_settings_widget.current_generator
+                    ).first()
+                    if self._generator is None:
+                        logger.error("Unable to locate generator by name " + self.ui.standard_image_widget.ui.llm_settings_widget.current_generator if self.ui.llm_settings_widget.current_generator else "None")
+                except Exception as e:
+                    logger.error(e)
+            return self._generator
     
     @property
     def generator_settings(self):
@@ -185,18 +188,12 @@ class MainWindow(
         return self.generator_tab_widget.generate_signal
 
     @property
-    def settings_manager(self):
-        if self._settings_manager is None:
-            self._settings_manager = SettingsManager(app=self)
-        return self._settings_manager
-
-    @property
     def is_dark(self):
-        return self.settings_manager.dark_mode_enabled
+        return self.settings_manager.settings.dark_mode_enabled
 
     @property
     def grid_size(self):
-        return self.settings_manager.grid_settings.size
+        return self.settings_manager.grid_settings.cell_size
 
     @property
     def standard_image_panel(self):
@@ -260,11 +257,11 @@ class MainWindow(
 
     @property
     def is_maximized(self):
-        return self.settings_manager.is_maximized
+        return self.settings_manager.settings.is_maximized
 
     @is_maximized.setter
     def is_maximized(self, val):
-        self.settings_manager.set_value("is_maximized", val)
+        self.settings_manager.set_value("settings.is_maximized", val)
 
     @property
     def current_layer(self):
@@ -293,16 +290,42 @@ class MainWindow(
         })
 
     def available_model_names_by_section(self, section):
-        for model in self.settings_manager.available_models_by_category(section):
+        for model in self.settings_manager.settings.available_models_by_category(section):
             yield model["name"]
     
     loaded = pyqtSignal()
     window_opened = pyqtSignal()
 
-    def __init__(self, *args, **kwargs):
+    def handle_changed_signal(self, key, value):
+        print("main_window: handle_changed_signal", key, value)
+        if key == "settings.ai_mode":
+            # Handle the settings.ai_mode key here
+            print(f"settings.ai_mode changed to {value}")
+        elif key == "grid_settings.cell_size":
+            self.set_size_form_element_step_values()
+        elif key == "grid_settings.line_width":
+            self.set_size_form_element_step_values()
+        elif key == "grid_settings.show_grid":
+            self.canvas_widget.update()
+        elif key == "grid_settings.snap_to_grid":
+            self.canvas_widget.update()
+        elif key == "settings.line_color":
+            self.canvas_widget.update_grid_pen()
+        elif key == "path_settings.lora_path":
+            self.refresh_lora()
+        elif key == "path_settings.model_base_path":
+            self.generator_tab_widget.refresh_model_list()
+        # elif key == "use_prompt_builder_checkbox":
+        #     self.generator_tab_widget.toggle_all_prompt_builder_checkboxes(value)
+        elif key == "models":
+            self.model_manager.models_changed(key, value)
+
+    def __init__(self, settings_manager, *args, **kwargs):
         logger.info("Starting AI Runnner")
         self.ui = Ui_MainWindow()
         # qdarktheme.enable_hi_dpi()
+
+        self.settings_manager = settings_manager
 
         # set the api
         self.api = AIRunnerAPI(window=self)
@@ -311,8 +334,8 @@ class MainWindow(
         self.testing = kwargs.pop("testing", False)
 
         # initialize the document
-        session = get_session()
-        self.document = session.query(Document).first()
+        with session_scope() as session:
+            self.document = session.query(Document).first()
 
         super().__init__(*args, **kwargs)
 
@@ -362,17 +385,20 @@ class MainWindow(
         self.initialize_panel_tabs()
         self.initialize_tool_section_buttons()
         
-        if self.settings_manager.mode == Mode.IMAGE.value:
+        if self.settings_manager.settings.mode == Mode.IMAGE.value:
             self.image_generation_toggled()
-        elif self.settings_manager.mode == Mode.LANGUAGE_PROCESSOR.value:
+        elif self.settings_manager.settings.mode == Mode.LANGUAGE_PROCESSOR.value:
             self.language_processing_toggled()
         else:
             self.model_manager_toggled(True)
-        
-        # This is used to check the state of the window and save splitter sizes if they have changed
-        self.start_splitter_timer()
 
         self.initialize_image_worker()
+
+        # TODO
+        #self.settings = settings("Capsize Games", "AI Runner")
+        self.restore_state()
+
+        self.settings_manager.changed_signal.connect(self.handle_changed_signal)
         
         self.loaded.emit()
 
@@ -402,27 +428,27 @@ class MainWindow(
         :return:
         """
         self.ui.mode_tab_widget.currentChanged.connect(self.mode_tab_index_changed)
-        session = get_session()
-        tabsections = session.query(TabSection).filter(
-            TabSection.panel != "generator_tabs"
-        ).all()
-        for ts in tabsections:
-            if ts.panel == "prompt_builder.ui.tabs":
-                widget = self.ui.prompt_builder.ui.tabs
-            else:
-                widget = getattr(self.ui, ts.panel)
-            for i in range(widget.count()):
-                if widget.tabText(i) == ts.active_tab:
-                    widget.setCurrentIndex(i)
+        with session_scope() as session:
+            tabsections = session.query(TabSection).filter(
+                TabSection.panel != "generator_tabs"
+            ).all()
+            for ts in tabsections:
+                if ts.panel == "prompt_builder.ui.tabs":
+                    print(f"Setting prompt builder tab to {ts.active_tab}")
+                else:
+                    widget = getattr(self.ui, ts.panel)
+                for i in range(widget.count()):
+                    if widget.tabText(i) == ts.active_tab:
+                        widget.setCurrentIndex(i)
+                        break
+
+            for i in range(self.ui.mode_tab_widget.count()):
+                if self.ui.mode_tab_widget.tabText(i) == self.settings_manager.settings.mode:
+                    self.ui.mode_tab_widget.setCurrentIndex(i)
                     break
 
-        for i in range(self.ui.mode_tab_widget.count()):
-            if self.ui.mode_tab_widget.tabText(i) == self.settings_manager.mode:
-                self.ui.mode_tab_widget.setCurrentIndex(i)
-                break
-
     def mode_tab_index_changed(self, index):
-        self.settings_manager.set_value("mode", self.ui.mode_tab_widget.tabText(index))
+        self.settings_manager.set_value("settings.mode", self.ui.mode_tab_widget.tabText(index))
 
     def on_show(self):
         pass
@@ -472,23 +498,23 @@ class MainWindow(
         self.redo()
 
     def action_paste_image_triggered(self):
-        if self.settings_manager.mode == Mode.IMAGE.value:
+        if self.settings_manager.settings.mode == Mode.IMAGE.value:
             self.canvas_widget.paste_image_from_clipboard()
 
     def action_copy_image_triggered(self):
-        if self.settings_manager.mode == Mode.IMAGE.value:
+        if self.settings_manager.settings.mode == Mode.IMAGE.value:
             self.canvas_widget.copy_image(self.current_active_image())
 
     def action_cut_image_triggered(self):
-        if self.settings_manager.mode == Mode.IMAGE.value:
+        if self.settings_manager.settings.mode == Mode.IMAGE.value:
             self.canvas_widget.cut_image()
 
     def action_rotate_90_clockwise_triggered(self):
-        if self.settings_manager.mode == Mode.IMAGE.value:
+        if self.settings_manager.settings.mode == Mode.IMAGE.value:
             self.canvas_widget.rotate_90_clockwise()
 
     def action_rotate_90_counterclockwise_triggered(self):
-        if self.settings_manager.mode == Mode.IMAGE.value:
+        if self.settings_manager.settings.mode == Mode.IMAGE.value:
             self.canvas_widget.rotate_90_counterclockwise()
 
     def action_show_prompt_browser_triggered(self):
@@ -605,7 +631,7 @@ class MainWindow(
             self.ui.toggle_eraser_button.setChecked(False)
 
     def action_toggle_nsfw_filter_triggered(self, bool):
-        self.settings_manager.set_value("nsfw_filter", bool)
+        self.settings_manager.set_value("settings.nsfw_filter", bool)
         self.toggle_nsfw_filter()
 
     def action_toggle_grid(self, active):
@@ -643,38 +669,25 @@ class MainWindow(
         webbrowser.open("https://discord.gg/ukcgjEpc5f")
 
     def tool_tab_index_changed(self, index):
-        session = get_session()
-        tab_section = session.query(TabSection).filter_by(
-            panel="tool_tab_widget"
-        ).first()
-        tab_section.active_tab = self.ui.tool_tab_widget.tabText(index)
-        session.commit()
+        with session_scope() as session:
+            tab_section = session.query(TabSection).filter_by(
+                panel="tool_tab_widget"
+            ).first()
+            tab_section.active_tab = self.ui.tool_tab_widget.tabText(index)
 
     def center_panel_tab_index_changed(self, val):
-        session = get_session()
-        tab_section = session.query(TabSection).filter_by(
-            panel="center_tab"
-        ).first()
-        tab_section.active_tab = self.ui.center_tab.tabText(val)
-        
-        session.commit()
+        with session_scope() as session:
+            tab_section = session.query(TabSection).filter_by(
+                panel="center_tab"
+            ).first()
+            tab_section.active_tab = self.ui.center_tab.tabText(val)
 
     def bottom_panel_tab_index_changed(self, index):
-        session = get_session()
-        tab_section = session.query(TabSection).filter_by(
-            panel="bottom_panel_tab_widget"
-        ).first()
-        tab_section.active_tab = self.ui.bottom_panel_tab_widget.tabText(index)
-        session.commit()
-
-    def right_splitter_moved(self, size, index):
-        print("right_splitter_moved")
-
-    def main_splitter_moved(self, size, index):
-        print("main_splitter_moved")
-
-    def content_splitter_moved(self, size, index):
-        print("content_splitter_moved")
+        with session_scope() as session:
+            tab_section = session.query(TabSection).filter_by(
+                panel="bottom_panel_tab_widget"
+            ).first()
+            tab_section.active_tab = self.ui.bottom_panel_tab_widget.tabText(index)
 
     """
     End slot functions
@@ -695,26 +708,10 @@ class MainWindow(
         self.set_nsfw_filter_tooltip()
 
     def set_nsfw_filter_tooltip(self):
-        nsfw_filter = self.settings_manager.nsfw_filter
+        nsfw_filter = self.settings_manager.settings.nsfw_filter
         self.ui.safety_checker_button.setToolTip(
             f"Click to {'enable' if not nsfw_filter else 'disable'} NSFW filter"
         )
-
-    # def resizeEvent(self, event):
-    #     if not self.is_started:
-    #         return
-    #     state = self.windowState()
-    #     if state == Qt.WindowState.WindowMaximized:
-    #         timer = QTimer(self)
-    #         timer.setSingleShot(True)
-    #         timer.timeout.connect(self.checkWindowState)
-    #         timer.start(100)
-    #     else:
-    #         self.checkWindowState()
-
-    # def checkWindowState(self):
-    #     state = self.windowState()
-    #     self.is_maximized = state == Qt.WindowState.WindowMaximized
 
     def dragmode_pressed(self):
         # self.canvas_widget.is_canvas_drag_mode = True
@@ -747,9 +744,32 @@ class MainWindow(
     def quit(self):
         self.close()
 
+    ##### Window properties #####
+    # Use this to set and restore window properties
+    # Such as splitter positions, window size, etc
+    # TODO: complete this    
     def closeEvent(self, event):
         logger.info("Quitting")
+        self.save_state()
+        event.accept()
         QApplication.quit()
+    
+    def save_state(self):
+        # TODO:
+        # self.settings.setValue("splitterSizes", self.splitter.saveState())
+        # self.settings.setValue("currentTabIndex", self.tabWidget.currentIndex())
+        pass
+    
+    def restore_state(self):
+        # TODO:
+        # splitter_sizes = self.settings.value("splitterSizes")
+        # if splitter_sizes is not None:
+        #     self.splitter.restoreState(splitter_sizes)
+        # current_tab_index = self.settings.value("currentTabIndex", 0, type=int)
+        # self.tabWidget.setCurrentIndex(current_tab_index)
+        pass
+    ##### End window properties #####
+    #################################
 
     def timerEvent(self, event):
         # self.canvas_widget.timerEvent(event)
@@ -802,20 +822,17 @@ class MainWindow(
         # self.automatic_filter_manager.register_filter(PixelFilter, base_size=256)
 
         self.input_event_manager = InputEventManager(app=self)
-        self.initialize_splitter_sizes()
-        self.initialize_settings_manager()
         self.initialize_window()
         self.initialize_handlers()
-        self.connect_splitter_handlers()
         self.initialize_mixins()
         self.generate_signal.connect(self.handle_generate)
         # self.header_widget.initialize()
         # self.header_widget.set_size_increment_levels()
         self.initialize_shortcuts()
         self.initialize_stable_diffusion()
-        if self.settings_manager.force_reset:
+        if self.settings_manager.settings.force_reset:
             self.reset_settings()
-            self.settings_manager.set_value("force_reset", False)
+            self.settings_manager.set_value("settingsforce_reset", False)
         # self.actionShow_Active_Image_Area.setChecked(
         #     self.settings_manager.show_active_image_area == True
         # )
@@ -829,7 +846,7 @@ class MainWindow(
 
     def initialize_filter_actions(self):
         # add more filters:
-        for filter in self.settings_manager.get_image_filters():
+        for filter in self.settings_manager.image_filters.get_properties():
             action = self.ui.menuFilters.addAction(filter.display_name)
             action.triggered.connect(partial(self.display_filter_window, filter))
 
@@ -846,11 +863,11 @@ class MainWindow(
         self.ui.toggle_eraser_button.blockSignals(True)
         self.ui.toggle_grid_button.blockSignals(True)
         self.ui.ai_button.blockSignals(True)
-        self.ui.toggle_active_grid_area_button.setChecked(self.settings_manager.current_tool == "active_grid_area")
-        self.ui.toggle_brush_button.setChecked(self.settings_manager.current_tool == "brush")
-        self.ui.toggle_eraser_button.setChecked(self.settings_manager.current_tool == "eraser")
+        self.ui.toggle_active_grid_area_button.setChecked(self.settings_manager.settings.current_tool == "active_grid_area")
+        self.ui.toggle_brush_button.setChecked(self.settings_manager.settings.current_tool == "brush")
+        self.ui.toggle_eraser_button.setChecked(self.settings_manager.settings.current_tool == "eraser")
         self.ui.toggle_grid_button.setChecked(self.settings_manager.grid_settings.show_grid is True)
-        self.ui.ai_button.setChecked(self.settings_manager.ai_mode is True)
+        self.ui.ai_button.setChecked(self.settings_manager.settings.ai_mode is True)
         self.ui.toggle_active_grid_area_button.blockSignals(False)
         self.ui.toggle_brush_button.blockSignals(False)
         self.ui.toggle_eraser_button.blockSignals(False)
@@ -864,7 +881,7 @@ class MainWindow(
             self.toggle_tool(kwargs["tool"])
 
     def toggle_tool(self, tool):
-        self.settings_manager.set_value("current_tool", tool)
+        self.settings_manager.set_value("settings.current_tool", tool)
 
     def initialize_mixins(self):
         HistoryMixin.initialize(self)
@@ -878,100 +895,6 @@ class MainWindow(
             getattr(self.settings_manager, signal).connect(handler)
 
         self.button_clicked_signal.connect(self.handle_button_clicked)
-
-    def initialize_splitter_sizes(self):
-        self.splitters = dict(
-            main=dict(
-                moved=False,
-                sizes=None,
-            ),
-            content=dict(
-                moved=False,
-                sizes=None,
-            ),
-            canvas=dict(
-                moved=False,
-                sizes=None
-            )
-        )
-        splitter_names = ["main", "content", "canvas"]
-        session = get_session()
-        for name in splitter_names:
-            self.splitters[name]["sizes"] = session.query(SplitterSection).filter(
-                SplitterSection.name == f"{name}_splitter"
-            ).order_by(
-                SplitterSection.order
-            ).all()
-    
-    def start_splitter_timer(self):
-        self.timer = QTimer()
-        self.timer.timeout.connect(self.save_splitters_sizes)
-        self.timer.start(1000)
-
-    def connect_splitter_handlers(self):
-        splitter_names = ["content", "main", "canvas"]
-        for name in splitter_names:
-            getattr(self.ui, f"{name}_splitter").splitterMoved.connect(partial(self.splitter_moved, name))
-    
-    def splitter_moved(self, key, pos, index):
-        self.splitters[key]["moved"] = True
-        sizes = self.splitters[key]["sizes"]
-        updated_sizes = []
-        if key == "content":
-            col_a_width = self.ui.content_splitter.widget(0).width()
-            col_b_width = self.ui.content_splitter.widget(1).width()
-            col_c_width = self.ui.content_splitter.widget(2).width()
-            window_width = self.width()
-
-            if index == 2 and window_width - pos == 60:
-                col_c_width = 0
-            if index == 1 and pos == 1:
-                col_a_width = 0
-            if index == 1:
-                col_c_width = sizes[2].size
-            if index == 2:
-                col_a_width = sizes[0].size
-            updated_sizes = [col_a_width, col_b_width, col_c_width]
-        elif key == "main":
-            updated_sizes = [
-                self.ui.main_splitter.widget(0).height(),
-                self.ui.main_splitter.widget(1).height()
-            ]
-        elif key == "canvas":
-            updated_sizes = [
-                self.ui.canvas_splitter.widget(0).width(),
-                self.ui.canvas_splitter.widget(1).width()
-            ]
-        for i, size in enumerate(updated_sizes):
-            self.splitters[key]["sizes"][i].size = size
-
-    def save_splitters_sizes(self):
-        do_save = False
-        session = get_session()
-        for key, val in self.splitters.items():
-            if val["moved"] is True:
-                val["moved"] = False
-                do_save = True
-                for size in val["sizes"]:
-                    session.add(size)
-        if do_save:
-            save_session()
-    
-    def set_splitter_sizes(self):
-        """
-        Splitters are used to divide the window into sections. This function
-        intializes the sizes of each splitter section. The sizes are stored
-        in the database and are loaded when the application starts.
-
-        The SplitterSection model is used to store the sizes.
-        The name field for each SplitterSection is set to the name of its
-        corresponding widget.
-        """
-        splitter_names = ["main", "content", "canvas"]
-        for name in splitter_names:
-            splitter_sections = self.splitters[name]["sizes"]
-            splitter_sizes = [obj.size for obj in splitter_sections]
-            getattr(self.ui, f"{name}_splitter").setSizes(splitter_sizes)
 
     def show_section(self, section):
         section_lists = {
@@ -1021,31 +944,6 @@ class MainWindow(
     def handle_similar_slider_change(self, attr_name, value=None, widget=None):
         self.standard_image_panel.handle_similar_slider_change(value)
 
-    def initialize_settings_manager(self):
-        self.settings_manager.changed_signal.connect(self.handle_changed_signal)
-
-    def handle_changed_signal(self, key, value):
-        if key == "size":
-            self.set_size_form_element_step_values()
-        elif key == "line_width":
-            self.set_size_form_element_step_values()
-        elif key == "show_grid":
-            self.canvas_widget.update()
-        elif key == "snap_to_grid":
-            self.canvas_widget.update()
-        elif key == "line_color":
-            self.canvas_widget.update_grid_pen()
-        elif key == "lora_path":
-            self.refresh_lora()
-        elif key == "model_base_path":
-            self.generator_tab_widget.refresh_model_list()
-        elif key == "generator.seed":
-            self.prompt_builder.process_prompt()
-        # elif key == "use_prompt_builder_checkbox":
-        #     self.generator_tab_widget.toggle_all_prompt_builder_checkboxes(value)
-        elif key == "models":
-            self.model_manager.models_changed(key, value)
-
     def initialize_shortcuts(self):
         event_callbacks = {
             "wheelEvent": self.handle_wheel_event,
@@ -1091,7 +989,6 @@ class MainWindow(
             self.showMaximized()
         else:
             self.showNormal()
-        self.set_splitter_sizes()
 
     def set_log_levels(self):
         uic.properties.logger.setLevel(LOG_LEVEL)
@@ -1111,8 +1008,8 @@ class MainWindow(
             if QtCore.Qt.KeyboardModifier.ShiftModifier in event.modifiers():
                 delta = event.angleDelta().y()
                 increment = grid_size if delta > 0 else -grid_size
-                val = self.settings_manager.working_width + increment
-                self.settings_manager.set_value("working_width", val)
+                val = self.settings_manager.settings.working_width + increment
+                self.settings_manager.set_value("settings.working_width", val)
         except TypeError:
             pass
 
@@ -1121,8 +1018,8 @@ class MainWindow(
             if QtCore.Qt.KeyboardModifier.ControlModifier in event.modifiers():
                 delta = event.angleDelta().y()
                 increment = grid_size if delta > 0 else -grid_size
-                val = self.settings_manager.working_height + increment
-                self.settings_manager.set_value("working_height", val)
+                val = self.settings_manager.settings.working_height + increment
+                self.settings_manager.set_value("settings.working_height", val)
         except TypeError:
             pass
 
@@ -1283,24 +1180,24 @@ class MainWindow(
             prompt_widget.setPlainText(text)
 
     def change_content_widget(self):
-        session = get_session()
-        active_tab_obj = session.query(TabSection).filter(
-            TabSection.panel == "center_tab"
-        ).first()
-        active_tab = active_tab_obj.active_tab
-        self.ui.center_tab.blockSignals(True)
-        if active_tab == "Prompt Builder":
-            tab_index = self.ui.center_tab.indexOf(self.ui.center_tab.findChild(QWidget, f"tab_prompt_builder"))
-            print("switching to tab_index", tab_index)
-            self.ui.center_tab.setCurrentIndex(tab_index)
-        elif self.settings_manager.generator_section == "txt2vid":
-            # get tab by name Video
-            tab_index = self.ui.center_tab.indexOf(self.ui.center_tab.findChild(QWidget, "tab_txt2vid"))
-            self.ui.center_tab.setCurrentIndex(tab_index)
-        else:
-            tab_index = self.ui.center_tab.indexOf(self.ui.center_tab.findChild(QWidget, f"tab_image"))
-            self.ui.center_tab.setCurrentIndex(tab_index)
-        self.ui.center_tab.blockSignals(False)
+        with session_scope() as session:
+            active_tab_obj = session.query(TabSection).filter(
+                TabSection.panel == "center_tab"
+            ).first()
+            active_tab = active_tab_obj.active_tab
+            self.ui.center_tab.blockSignals(True)
+            if active_tab == "Prompt Builder":
+                tab_index = self.ui.center_tab.indexOf(self.ui.center_tab.findChild(QWidget, f"tab_prompt_builder"))
+                print("switching to tab_index", tab_index)
+                self.ui.center_tab.setCurrentIndex(tab_index)
+            elif self.settings_manager.settings.generator_section == "txt2vid":
+                # get tab by name Video
+                tab_index = self.ui.center_tab.indexOf(self.ui.center_tab.findChild(QWidget, "tab_txt2vid"))
+                self.ui.center_tab.setCurrentIndex(tab_index)
+            else:
+                tab_index = self.ui.center_tab.indexOf(self.ui.center_tab.findChild(QWidget, f"tab_image"))
+                self.ui.center_tab.setCurrentIndex(tab_index)
+            self.ui.center_tab.blockSignals(False)
 
     def clear_all_prompts(self):
         self.prompt = ""
@@ -1326,7 +1223,7 @@ class MainWindow(
         path = QFileDialog.getExistingDirectory(None, "Select Directory")
         if path == "":
             return
-        self.settings_manager.set_value("image_path", path)
+        self.settings_manager.set_value("path_settings.image_path", path)
 
     def display_file_export_dialog(self):
         return QFileDialog.getSaveFileName(
@@ -1363,12 +1260,12 @@ class MainWindow(
         self.generator_tab_widget.new_batch(index, image, data)
 
     def image_generation_toggled(self):
-        self.settings_manager.set_value("mode", Mode.IMAGE.value)
+        self.settings_manager.set_value("settings.mode", Mode.IMAGE.value)
         self.activate_image_generation_section()
         self.set_all_section_buttons()
 
     def language_processing_toggled(self):
-        self.settings_manager.set_value("mode", Mode.LANGUAGE_PROCESSOR.value)
+        self.settings_manager.set_value("settings.mode", Mode.LANGUAGE_PROCESSOR.value)
         self.activate_language_processing_section()
         self.set_all_section_buttons()
     
@@ -1376,7 +1273,7 @@ class MainWindow(
         if not val:
             self.image_generators_toggled()
         else:
-            self.settings_manager.set_value("mode", Mode.MODEL_MANAGER.value)
+            self.settings_manager.set_value("settings.mode", Mode.MODEL_MANAGER.value)
             self.activate_model_manager_section()
             self.set_all_section_buttons()
     
@@ -1389,7 +1286,7 @@ class MainWindow(
             widget.blockSignals(False)
     
     def set_all_section_buttons(self):
-        self.set_button_checked("model_manager", self.settings_manager.mode == Mode.MODEL_MANAGER.value)
+        self.set_button_checked("model_manager", self.settings_manager.settings.mode == Mode.MODEL_MANAGER.value)
     
     def activate_image_generation_section(self):
         self.ui.mode_tab_widget.setCurrentIndex(0)
@@ -1404,44 +1301,41 @@ class MainWindow(
         pass
     
     def set_all_image_generator_buttons(self):
-        is_image_generators = self.settings_manager.generator_section == GeneratorSection.TXT2IMG.value
-        is_txt2vid = self.settings_manager.generator_section == GeneratorSection.TXT2VID.value
-        is_prompt_builder = self.settings_manager.generator_section == GeneratorSection.PROMPT_BUILDER.value
+        is_image_generators = self.settings_manager.settings.generator_section == GeneratorSection.TXT2IMG.value
+        is_txt2vid = self.settings_manager.settings.generator_section == GeneratorSection.TXT2VID.value
+        is_prompt_builder = self.settings_manager.settings.generator_section == GeneratorSection.PROMPT_BUILDER.value
     
     def image_generators_toggled(self):
-        session = get_session()
-        self.image_generation_toggled()
-        self.settings_manager.set_value("mode", Mode.IMAGE.value)
-        self.settings_manager.set_value("generator_section", GeneratorSection.TXT2IMG.value)
-        active_tab_obj = session.query(TabSection).filter(TabSection.panel == "center_tab").first()
-        active_tab_obj.active_tab = "Canvas"
-        save_session()
-        self.set_all_image_generator_buttons()
-        self.change_content_widget()
-
-    def text_to_video_toggled(self):
-        session = get_session()
-        self.image_generation_toggled()
-        self.settings_manager.set_value("mode", Mode.IMAGE.value)
-        self.settings_manager.set_value("generator_section", GeneratorSection.TXT2VID.value)
-        active_tab_obj = session.query(TabSection).filter(TabSection.panel == "center_tab").first()
-        active_tab_obj.active_tab = "Video"
-        save_session()
-        self.set_all_image_generator_buttons()
-        self.change_content_widget()
-
-    def toggle_prompt_builder(self, val):
-        session = get_session()
-        if not val:
-            self.image_generators_toggled()
-        else:
+        with session_scope() as session:
             self.image_generation_toggled()
-            self.settings_manager.set_value(f"generator_section", GeneratorSection.PROMPT_BUILDER.value)
+            self.settings_manager.set_value("settings.mode", Mode.IMAGE.value)
+            self.settings_manager.set_value("settings.generator_section", GeneratorSection.TXT2IMG.value)
             active_tab_obj = session.query(TabSection).filter(TabSection.panel == "center_tab").first()
-            active_tab_obj.active_tab = "Prompt Builder"
-            save_session()
+            active_tab_obj.active_tab = "Canvas"
             self.set_all_image_generator_buttons()
             self.change_content_widget()
+
+    def text_to_video_toggled(self):
+        with session_scope() as session:
+            self.image_generation_toggled()
+            self.settings_manager.set_value("settings.mode", Mode.IMAGE.value)
+            self.settings_manager.set_value("settings.generator_section", GeneratorSection.TXT2VID.value)
+            active_tab_obj = session.query(TabSection).filter(TabSection.panel == "center_tab").first()
+            active_tab_obj.active_tab = "Video"
+            self.set_all_image_generator_buttons()
+            self.change_content_widget()
+
+    def toggle_prompt_builder(self, val):
+        with session_scope() as session:
+            if not val:
+                self.image_generators_toggled()
+            else:
+                self.image_generation_toggled()
+                self.settings_manager.set_value(f"generator_section", GeneratorSection.PROMPT_BUILDER.value)
+                active_tab_obj = session.query(TabSection).filter(TabSection.panel == "center_tab").first()
+                active_tab_obj.active_tab = "Prompt Builder"
+                self.set_all_image_generator_buttons()
+                self.change_content_widget()
 
     def redraw(self):
         self.set_stylesheet()
@@ -1453,4 +1347,5 @@ class MainWindow(
         print("center clicked")
     
     def action_ai_toggled(self, val):
-        self.settings_manager.set_value("ai_mode", val)
+        print("ACTION AI TOGGLED")
+        self.settings_manager.set_value("settings.ai_mode", val)
