@@ -66,8 +66,8 @@ class BrushesContainer(BaseWidget):
 
             # Create a new GeneratorSetting entry with the metadata
             generator_setting = GeneratorSetting(
-                section=meta_data.get("section", self.app.settings_manager.settings.current_section_stablediffusion),
-                generator_name=meta_data.get("generator_name", self.app.settings_manager.settings.current_image_generator),
+                section=self.app.pipeline,
+                generator_name="stablediffusion",
                 prompt=meta_data.get("prompt", ""),
                 negative_prompt=meta_data.get("negative_prompt", ""),
                 steps=meta_data.get("steps", 20),
