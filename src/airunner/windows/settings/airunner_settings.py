@@ -203,7 +203,7 @@ class SettingsWindow(BaseWindow):
             elif name == "check_for_updates":
                 checked = self.app.latest_version_check
             elif name == "enable_tts":
-                checked = self.app.settings_manager.settings.enable_tts
+                checked = self.app.enable_tts
             elif name == "allow_online_mode":
                 checked = self.app.allow_online_mode
 
@@ -240,7 +240,7 @@ class SettingsWindow(BaseWindow):
             self.app.latest_version_check = checked
         elif name == "enable_tts":
             checked = item.checkState() == Qt.CheckState.Checked
-            self.app.settings_manager.set_value("settings.enable_tts", checked)
+            self.app.enable_tts = checked
         elif name == "allow_online_mode":
             checked = item.checkState() == Qt.CheckState.Checked
             self.app.allow_online_mode = checked
