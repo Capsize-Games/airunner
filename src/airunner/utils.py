@@ -52,8 +52,7 @@ def get_venv_python_executable():
 
 def initialize_os_environment():
     from airunner.data.managers import SettingsManager
-    settings_manager = SettingsManager()
-    hf_cache_path = settings_manager.path_settings.hf_cache_path
+    hf_cache_path = ""
     if hf_cache_path != "":
         # check if hf_cache_path exists
         if os.path.exists(hf_cache_path):
@@ -298,21 +297,20 @@ def prepare_metadata(data, index=0):
     return metadata
 
 def prepare_controlnet_metadata(data):
-    from airunner.data.managers import SettingsManager
     from PIL import PngImagePlugin
-    settings_manager = SettingsManager()
     metadata = PngImagePlugin.PngInfo()
     metadata.add_text("controlnet", str(data["controlnet"]))
 
 def auto_export_image(
+    base_path,
+    image_path,
+    image_export_type,
     image,
     data=None,
     seed=None,
     latents_seed=None,
     type="image",
 ):
-    from airunner.data.managers import SettingsManager
-
     if seed is None:
         raise Exception("Seed must be set when auto exporting an image")
     
@@ -322,24 +320,19 @@ def auto_export_image(
     data["options"]["seed"] = seed
     data["options"]["latents_seed"] = latents_seed
     
-    settings_manager = SettingsManager()
-    
     if data and "action" in data and data["action"] == "txt2vid":
         return None, None
     
-    base_path = settings_manager.path_settings.model_base_path
-    
     if type == "image":
-        image_path = settings_manager.path_settings.image_path
         image_path = "images" if image_path == "" else image_path
     elif type == "controlnet":
-        image_path = os.path.join(settings_manager.path_settings.image_path, "controlnet_masks")
+        image_path = os.path.join(image_path, "controlnet_masks")
     
     path = os.path.join(base_path, image_path) if image_path == "images" else image_path
     if not os.path.exists(path):
         os.makedirs(path)
     
-    extension = settings_manager.settings.image_export_type
+    extension = image_export_type
     if extension == "":
         extension = "png"
     extension = f".{extension}"
@@ -412,31 +405,6 @@ def get_main_window():
     for widget in app.topLevelWidgets():
         if isinstance(widget, QMainWindow):
             return widget
-
-
-def create_airunner_paths():
-    from airunner.data.models import PathSettings
-    import os
-    with session_scope() as session:
-        path_settings = session.query(PathSettings).first()
-        if path_settings:
-            paths = [
-                path_settings.base_path,
-                path_settings.txt2img_model_path,
-                path_settings.depth2img_model_path,
-                path_settings.pix2pix_model_path,
-                path_settings.outpaint_model_path,
-                path_settings.upscale_model_path,
-                path_settings.txt2vid_model_path,
-                path_settings.embeddings_path,
-                path_settings.lora_path,
-                path_settings.image_path,
-                path_settings.video_path
-            ]
-            for index, path in enumerate(paths):
-                if not os.path.exists(path):
-                    print("cerating path", index, path)
-                    os.makedirs(path)
 
 
 def apply_opacity_to_image(image, target_opacity):

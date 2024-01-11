@@ -29,29 +29,6 @@ def session_scope():
     finally:
         session.close()
 
-
-@contextmanager
-def settings_scope():
-    from airunner.data.models import Settings
-    with session_scope() as session:
-        settings = session.query(Settings).options(joinedload('*')).first()
-        yield settings
-
-
-@contextmanager
-def generator_scope():
-    from airunner.data.models import GeneratorSetting
-    with session_scope() as session:
-        generator = session.query(GeneratorSetting).options(joinedload('*')).first()
-        yield generator
-
-@contextmanager
-def active_grid_settings_scope():
-    from airunner.data.models import ActiveGridSettings
-    with session_scope() as session:
-        active_grid_settings = session.query(ActiveGridSettings).options(joinedload('*')).first()
-        yield active_grid_settings
-
 @contextmanager
 def path_settings_scope():
     from airunner.data.models import PathSettings
@@ -61,26 +38,11 @@ def path_settings_scope():
 
 
 @contextmanager
-def grid_settings_scope():
-    from airunner.data.models import GridSettings
-    with session_scope() as session:
-        grid_settings = session.query(GridSettings).options(joinedload('*')).first()
-        yield grid_settings
-
-
-@contextmanager
 def standard_image_widget_settings_scope():
     from airunner.data.models import StandardImageWidgetSettings
     with session_scope() as session:
         standard_image_widget_settings = session.query(StandardImageWidgetSettings).options(joinedload('*')).first()
         yield standard_image_widget_settings
-
-@contextmanager
-def generator_settings_scope():
-    from airunner.data.models import GeneratorSetting
-    with session_scope() as session:
-        generator_settings = session.query(GeneratorSetting).options(joinedload('*')).first()
-        yield generator_settings
 
 
 @contextmanager
@@ -90,20 +52,6 @@ def models_scope():
         models = session.query(AIModel).all()
         yield models
 
-@contextmanager
-def brush_settings_scope():
-    from airunner.data.models import BrushSettings
-    with session_scope() as session:
-        brush_settings = session.query(BrushSettings).options(joinedload('*')).first()
-        yield brush_settings
-
-
-@contextmanager
-def image_filters_scope():
-    from airunner.data.models import ImageFilter
-    with session_scope() as session:
-        image_filters = session.query(ImageFilter).options(joinedload('*')).all()
-        yield image_filters
 
 @contextmanager
 def llm_generator_scope():
