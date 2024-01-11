@@ -18,15 +18,16 @@ class LayerWidget(BaseWidget):
     def layer_data(self):
         with session_scope() as session:
             session.add(self._layer_data)
-            return self._layer_data
+            yield self._layer_data
 
     def __init__(self, *args, **kwargs):
-        self.layer_container = kwargs.pop("layer_container", None)
-        self._layer_data = kwargs.pop("layer_data", None)
-        self.layer_index = kwargs.pop("layer_index", None)
-        self.layer_data.layer_widget = self
-        super().__init__(*args, **kwargs)
-        self.set_thumbnail()
+        with self.layer_data as layer_data:
+            self.layer_container = kwargs.pop("layer_container", None)
+            self._layer_data = kwargs.pop("layer_data", None)
+            self.layer_index = kwargs.pop("layer_index", None)
+            layer_data.layer_widget = self
+            super().__init__(*args, **kwargs)
+            self.set_thumbnail()
 
         # listen for click on entire widget
         self.ui.mousePressEvent = partial(self.action_clicked, self.layer_data, self.layer_index)
@@ -72,12 +73,13 @@ class LayerWidget(BaseWidget):
         self.app.canvas_widget.do_draw()
 
     def set_thumbnail(self):
-        image = self.layer_data.image
-        if image:
-            thumbnail = image.copy()
-            pixmap = image_to_pixmap(thumbnail, 32)
-            self.ui.thumbnail.setPixmap(pixmap)
-        else:
-            self.ui.thumbnail.width = 32
-            self.ui.thumbnail.height = 32
-            self.ui.thumbnail.setPixmap(QtGui.QPixmap())
+        with self.layer_data as layer_data:
+            image = layer_data.image
+            if image:
+                thumbnail = image.copy()
+                pixmap = image_to_pixmap(thumbnail, 32)
+                self.ui.thumbnail.setPixmap(pixmap)
+            else:
+                self.ui.thumbnail.width = 32
+                self.ui.thumbnail.height = 32
+                self.ui.thumbnail.setPixmap(QtGui.QPixmap())

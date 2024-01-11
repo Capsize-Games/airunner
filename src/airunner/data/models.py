@@ -555,7 +555,6 @@ class Settings(BaseModel):
     nsfw_filter = Column(Boolean, default=True)
     allow_hf_downloads = Column(Boolean, default=True)
     dark_mode_enabled = Column(Boolean, default=True)
-    resize_on_paste = Column(Boolean, default=False)
     allow_online_mode = Column(Boolean, default=True)
 
     current_tool = Column(String, default="")
