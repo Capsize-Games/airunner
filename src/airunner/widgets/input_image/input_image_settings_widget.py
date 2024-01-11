@@ -31,7 +31,7 @@ class InputImageSettingsWidget(BaseWidget):
     @property
     def current_input_image(self):
         try:
-            if not self.app.settings_manager.generator_settings:
+            if not self.app.generator_settings:
                 return None
             if self.app.generator_settings["input_image_use_imported_image"]:
                 return self.input_image
