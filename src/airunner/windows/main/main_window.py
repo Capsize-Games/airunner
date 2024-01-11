@@ -174,6 +174,103 @@ class MainWindow(
     _generator_settings = None
 
     @property
+    def use_last_channels(self):
+        return self.application_settings.value("use_last_channels", True, type=bool)
+    
+    @use_last_channels.setter
+    def use_last_channels(self, val):
+        self.application_settings.setValue("use_last_channels", val)
+
+    @property
+    def use_attention_slicing(self):
+        return self.application_settings.value("use_attention_slicing", False, type=bool)
+    
+    @use_attention_slicing.setter
+    def use_attention_slicing(self, val):
+        self.application_settings.setValue("use_attention_slicing", val)
+
+    @property
+    def use_tf32(self):
+        return self.application_settings.value("use_tf32", False, type=bool)
+    
+    @use_tf32.setter
+    def use_tf32(self, val):
+        self.application_settings.setValue("use_tf32", val)
+
+    @property
+    def use_enable_vae_slicing(self):
+        return self.application_settings.value("use_enable_vae_slicing", True, type=bool)
+    
+    @use_enable_vae_slicing.setter
+    def use_enable_vae_slicing(self, val):
+        self.application_settings.setValue("use_enable_vae_slicing", val)
+
+    @property
+    def use_accelerated_transformers(self):
+        return self.application_settings.value("use_accelerated_transformers", True, type=bool)
+    
+    @use_accelerated_transformers.setter
+    def use_accelerated_transformers(self, val):
+        self.application_settings.setValue("use_accelerated_transformers", val)
+
+    @property
+    def use_tiled_vae(self):
+        return self.application_settings.value("use_tiled_vae", True, type=bool)
+    
+    @use_tiled_vae.setter
+    def use_tiled_vae(self, val):
+        self.application_settings.setValue("use_tiled_vae", val)
+
+    @property
+    def enable_model_cpu_offload(self):
+        return self.application_settings.value("enable_model_cpu_offload", False, type=bool)
+    
+    @enable_model_cpu_offload.setter
+    def enable_model_cpu_offload(self, val):
+        self.application_settings.setValue("enable_model_cpu_offload", val)
+
+    @property
+    def use_enable_sequential_cpu_offload(self):
+        return self.application_settings.value("use_enable_sequential_cpu_offload", False, type=bool)
+    
+    @use_enable_sequential_cpu_offload.setter
+    def use_enable_sequential_cpu_offload(self, val):
+        self.application_settings.setValue("use_enable_sequential_cpu_offload", val)
+
+    @property
+    def use_cudnn_benchmark(self):
+        return self.application_settings.value("use_cudnn_benchmark", True, type=bool)
+    
+    @use_cudnn_benchmark.setter
+    def use_cudnn_benchmark(self, val):
+        self.application_settings.setValue("use_cudnn_benchmark", val)
+
+    @property
+    def use_torch_compile(self):
+        return self.application_settings.value("use_torch_compile", False, type=bool)
+    
+    @use_torch_compile.setter
+    def use_torch_compile(self, val):
+        self.application_settings.setValue("use_torch_compile", val)
+
+    @property
+    def use_tome_sd(self):
+        return self.application_settings.value("use_tome_sd", True, type=bool)
+    
+    @use_tome_sd.setter
+    def use_tome_sd(self, val):
+        self.application_settings.setValue("use_tome_sd", val)
+
+    @property
+    def tome_sd_ratio(self):
+        return self.application_settings.value("tome_sd_ratio", 600, type=int)
+    
+    @tome_sd_ratio.setter
+    def tome_sd_ratio(self, val):
+        self.application_settings.setValue("tome_sd_ratio", val)
+
+
+    @property
     def brush_size(self):
         return self.application_settings.value("brush_size", 1, type=int)
     

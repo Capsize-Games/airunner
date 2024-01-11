@@ -398,25 +398,7 @@ class MetadataSettings(BaseModel):
     image_export_metadata_scheduler = Column(Boolean, default=True)
     export_metadata = Column(Boolean, default=True)
     import_metadata = Column(Boolean, default=True)
-
-
-class MemorySettings(BaseModel):
-    __tablename__ = "memory_settings"
-
-    id = Column(Integer, primary_key=True)
-    use_last_channels = Column(Boolean, default=True)
-    use_attention_slicing = Column(Boolean, default=False)
-    use_tf32 = Column(Boolean, default=False)
-    use_enable_vae_slicing = Column(Boolean, default=True)
-    use_accelerated_transformers = Column(Boolean, default=True)
-    use_tiled_vae = Column(Boolean, default=True)
-    enable_model_cpu_offload = Column(Boolean, default=False)
-    use_enable_sequential_cpu_offload = Column(Boolean, default=False)
-    use_cudnn_benchmark = Column(Boolean, default=True)
-    use_torch_compile = Column(Boolean, default=False)
-    use_tome_sd = Column(Boolean, default=True)
-    tome_sd_ratio = Column(Integer, default=600)
-
+    
 
 class ImageFilter(BaseModel):
     __tablename__ = 'image_filter'
