@@ -577,9 +577,6 @@ class Settings(BaseModel):
     # generator version
     current_version_stablediffusion = Column(String, default="SD 1.5")
 
-    move_unused_model_to_cpu = Column(Boolean, default=True)
-    unload_unused_model = Column(Boolean, default=False)
-
     generator_settings_override_id = Column(Integer, ForeignKey('generator_settings.id'))
 
 
