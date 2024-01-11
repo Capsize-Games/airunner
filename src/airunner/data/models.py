@@ -552,7 +552,6 @@ class Settings(BaseModel):
     __tablename__ = 'settings'
 
     id = Column(Integer, primary_key=True)
-    nsfw_filter = Column(Boolean, default=True)
     allow_hf_downloads = Column(Boolean, default=True)
     dark_mode_enabled = Column(Boolean, default=True)
     allow_online_mode = Column(Boolean, default=True)
