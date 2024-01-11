@@ -284,23 +284,23 @@ class CanvasPlusWidget(CanvasBaseWidget):
 
     @property
     def active_grid_area_selected(self):
-        return self.app.settings_manager.settings.current_tool == "active_grid_area"
+        return self.app.current_tool == "active_grid_area"
 
     @property
     def select_selected(self):
-        return self.app.settings_manager.settings.current_tool == "select"
+        return self.app.current_tool == "select"
 
     @property
     def eraser_selected(self):
-        return self.app.settings_manager.settings.current_tool == "eraser"
+        return self.app.current_tool == "eraser"
 
     @property
     def brush_selected(self):
-        return self.app.settings_manager.settings.current_tool == "brush"
+        return self.app.current_tool == "brush"
 
     @property
     def move_selected(self):
-        return self.app.settings_manager.settings.current_tool == "move"
+        return self.app.current_tool == "move"
 
     @property
     def brush_size(self):
