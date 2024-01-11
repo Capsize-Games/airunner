@@ -264,6 +264,14 @@ class MainWindow(
         self.application_settings.setValue("current_llm_generator", val)
 
     @property
+    def current_image_generator(self):
+        return self.application_settings.value("current_image_generator", "stablediffusion")
+    
+    @current_image_generator.setter
+    def current_image_generator(self, val):
+        self.application_settings.setValue("current_image_generator", val)
+
+    @property
     def hf_api_key_read_key(self):
         return self.application_settings.value("hf_api_key_read_key", "")
     
