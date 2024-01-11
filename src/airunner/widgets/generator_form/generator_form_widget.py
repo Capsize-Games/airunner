@@ -54,18 +54,15 @@ class GeneratorForm(BaseWidget):
 
     @property
     def generator_section(self):
-        return getattr(self.app.settings_manager, f"current_section_{self.app.settings_manager.current_image_generator}")
+        return self.app.settings_manager.settings.current_section_stablediffusion
 
     @property
     def generator_name(self):
-        return self.app.settings_manager.current_image_generator
+        return self.app.settings_manager.settings.current_image_generator
 
     @property
     def generator_settings(self):
-        return self.app.settings_manager.find_generator(
-            self.generator_section,
-            self.generator_name
-        )
+        return self.app.settings_manager.generator_settings
 
     @property
     def random_seed(self):
@@ -100,12 +97,12 @@ class GeneratorForm(BaseWidget):
     @property
     def active_rect(self):
         rect = QRect(
-            self.active_grid_settings.pos_x,
-            self.active_grid_settings.pos_y,
-            self.active_grid_settings.width,
-            self.active_grid_settings.height
+            self.app.settings_manager.active_grid_settings.pos_x,
+            self.app.settings_manager.active_grid_settings.pos_y,
+            self.app.settings_manager.active_grid_settings.width,
+            self.app.settings_manager.active_grid_settings.height
         )
-        rect.translate(-self.canvas_settings.pos_x, -self.canvas_settings.pos_y)
+        rect.translate(-self.app.settings_manager.canvas_settings.pos_x, -self.app.settings_manager.canvas_settings.pos_y)
 
         return rect
 
@@ -120,9 +117,6 @@ class GeneratorForm(BaseWidget):
     def __init__(self, *args, **kwargs):
         super().__init__(*args, **kwargs)
         self.ui.generator_form_tabs.tabBar().hide()
-        with session_scope() as session:
-            self.active_grid_settings = session.query(ActiveGridSettings).first()
-            self.canvas_settings = session.query(CanvasSettings).first()
         self.activate_ai_mode()
     
     def activate_ai_mode(self):
@@ -164,7 +158,6 @@ class GeneratorForm(BaseWidget):
         )
 
     def handle_prompt_changed(self):
-        print("PROMPT CHANGED")
         if not self.initialized:
             return
         self.app.settings_manager.set_value("generator.prompt", self.ui.prompt.toPlainText())
@@ -350,132 +343,130 @@ class GeneratorForm(BaseWidget):
         enable_controlnet = bool(override_data.get("enable_controlnet", self.app.settings_manager.generator.enable_controlnet))
         controlnet = override_data.get("controlnet", self.app.settings_manager.generator.controlnet)
         controlnet_conditioning_scale = float(override_data.get("controlnet_conditioning_scale", self.app.settings_manager.generator.controlnet_guidance_scale))
-        width = int(override_data.get("width", self.app.settings_manager.working_width))
-        height = int(override_data.get("height", self.app.settings_manager.working_height))
+        width = int(override_data.get("width", self.app.settings_manager.settings.working_width))
+        height = int(override_data.get("height", self.app.settings_manager.settings.working_height))
         clip_skip = int(override_data.get("clip_skip", self.app.settings_manager.generator.clip_skip))
         batch_size = int(override_data.get("batch_size", 1))
 
 
         # get the model from the database
-        model = self.app.settings_manager.models.filter_by(
-            name=model_data["name"] if "name" in model_data \
-                else self.app.settings_manager.generator.model
-        ).first()
-        if model:
-            # set the model data, first using model_data pulled from the override_data
-            model_data = dict(
-                name=model_data.get("name", model.name),
-                path=model_data.get("path", model.path),
-                branch=model_data.get("branch", model.branch),
-                version=model_data.get("version", model.version),
-                category=model_data.get("category", model.category),
-                pipeline_action=model_data.get("pipeline_action", model.pipeline_action),
-                enabled=model_data.get("enabled", model.enabled),
-                default=model_data.get("default", model.is_default)
-            )
+        name = model_data["name"] if "name" in model_data else self.app.settings_manager.generator.model
+        with self.app.settings_manager.model_by_name(name) as model:
+            if model:
+                # set the model data, first using model_data pulled from the override_data
+                model_data = dict(
+                    name=model_data.get("name", model.name),
+                    path=model_data.get("path", model.path),
+                    branch=model_data.get("branch", model.branch),
+                    version=model_data.get("version", model.version),
+                    category=model_data.get("category", model.category),
+                    pipeline_action=model_data.get("pipeline_action", model.pipeline_action),
+                    enabled=model_data.get("enabled", model.enabled),
+                    default=model_data.get("default", model.is_default)
+                )
 
-        input_image = override_data.get("input_image", None),
-        if input_image:
-            # check if input image is a tupil
-            if isinstance(input_image, tuple):
-                input_image = input_image[0]
+                input_image = override_data.get("input_image", None),
+                if input_image:
+                    # check if input image is a tupil
+                    if isinstance(input_image, tuple):
+                        input_image = input_image[0]
 
-        original_model_data = {}
-        if input_image is not None:
-            if isinstance(input_image, tuple):
-                input_image_info = input_image[0].info
-            else:
-                input_image_info = input_image.info
+                original_model_data = {}
+                if input_image is not None:
+                    if isinstance(input_image, tuple):
+                        input_image_info = input_image[0].info
+                    else:
+                        input_image_info = input_image.info
 
-            keys = [
-                "name", 
-                "path", 
-                "branch", 
-                "version", 
-                "category", 
-                "pipeline_action", 
-                "enabled", 
-                "default",
-            ]
-            original_model_data = {
-                key: model_data.get(
-                    key, input_image_info.get(key, "")) for key in keys
-            }
+                    keys = [
+                        "name", 
+                        "path", 
+                        "branch", 
+                        "version", 
+                        "category", 
+                        "pipeline_action", 
+                        "enabled", 
+                        "default",
+                    ]
+                    original_model_data = {
+                        key: model_data.get(
+                            key, input_image_info.get(key, "")) for key in keys
+                    }
 
-        # get controlnet_dropdown from active tab
-        options = dict(
-            prompt=prompt,
-            negative_prompt=negative_prompt,
-            steps=steps,
-            ddim_eta=ddim_eta,  # only applies to ddim scheduler
-            n_iter=n_iter,
-            n_samples=n_samples,
-            scale=scale,
-            seed=seed,
-            latents_seed=latents_seed,
-            model=model,
-            model_data=model_data,
-            original_model_data=original_model_data,
-            scheduler=scheduler,
-            model_path=model.path,
-            model_branch=model.branch,
-            # lora=self.available_lora(action),
-            generator_section=self.generator_section,
-            width=width,
-            height=height,
-            do_nsfw_filter=self.app.settings_manager.settings.nsfw_filter,
-            pos_x=0,
-            pos_y=0,
-            outpaint_box_rect=self.active_rect,
-            hf_token=self.app.settings_manager.hf_api_key,
-            model_base_path=self.app.settings_manager.path_settings.model_base_path,
-            outpaint_model_path=self.app.settings_manager.path_settings.outpaint_model_path,
-            pix2pix_model_path=self.app.settings_manager.path_settings.pix2pix_model_path,
-            depth2img_model_path=self.app.settings_manager.path_settings.depth2img_model_path,
-            upscale_model_path=self.app.settings_manager.path_settings.upscale_model_path,
-            image_path=self.app.settings_manager.path_settings.image_path,
-            lora_path=self.app.settings_manager.lora_path,
-            embeddings_path=self.app.settings_manager.path_settings.embeddings_path,
-            video_path=self.app.settings_manager.path_settings.video_path,
-            clip_skip=clip_skip,
-            batch_size=batch_size,
-            variation=self.app.settings_manager.generator.variation,
-            deterministic_generation=False,
-            input_image=input_image,
-            enable_controlnet=enable_controlnet,
-            controlnet_conditioning_scale=controlnet_conditioning_scale,
-            controlnet=controlnet,
-        )
+                # get controlnet_dropdown from active tab
+                options = dict(
+                    prompt=prompt,
+                    negative_prompt=negative_prompt,
+                    steps=steps,
+                    ddim_eta=ddim_eta,  # only applies to ddim scheduler
+                    n_iter=n_iter,
+                    n_samples=n_samples,
+                    scale=scale,
+                    seed=seed,
+                    latents_seed=latents_seed,
+                    model=model,
+                    model_data=model_data,
+                    original_model_data=original_model_data,
+                    scheduler=scheduler,
+                    model_path=model.path,
+                    model_branch=model.branch,
+                    # lora=self.available_lora(action),
+                    generator_section=self.generator_section,
+                    width=width,
+                    height=height,
+                    do_nsfw_filter=self.app.settings_manager.settings.nsfw_filter,
+                    pos_x=0,
+                    pos_y=0,
+                    outpaint_box_rect=self.active_rect,
+                    hf_token=self.app.settings_manager.settings.hf_api_key,
+                    model_base_path=self.app.settings_manager.path_settings.model_base_path,
+                    outpaint_model_path=self.app.settings_manager.path_settings.outpaint_model_path,
+                    pix2pix_model_path=self.app.settings_manager.path_settings.pix2pix_model_path,
+                    depth2img_model_path=self.app.settings_manager.path_settings.depth2img_model_path,
+                    upscale_model_path=self.app.settings_manager.path_settings.upscale_model_path,
+                    image_path=self.app.settings_manager.path_settings.image_path,
+                    lora_path=self.app.settings_manager.path_settings.lora_path,
+                    embeddings_path=self.app.settings_manager.path_settings.embeddings_path,
+                    video_path=self.app.settings_manager.path_settings.video_path,
+                    clip_skip=clip_skip,
+                    batch_size=batch_size,
+                    variation=self.app.settings_manager.generator.variation,
+                    deterministic_generation=False,
+                    input_image=input_image,
+                    enable_controlnet=enable_controlnet,
+                    controlnet_conditioning_scale=controlnet_conditioning_scale,
+                    controlnet=controlnet,
+                )
 
-        if self.controlnet_image:
-            options["controlnet_image"] = self.controlnet_image
+                if self.controlnet_image:
+                    options["controlnet_image"] = self.controlnet_image
 
-        if action == "superresolution":
-            options["original_image_width"] = self.app.canvas_widget.current_active_image_data.image.width
-            options["original_image_height"] = self.app.canvas_widget.current_active_image_data.image.height
+                if action == "superresolution":
+                    options["original_image_width"] = self.app.canvas_widget.current_active_image_data.image.width
+                    options["original_image_height"] = self.app.canvas_widget.current_active_image_data.image.height
 
-        if action in ["txt2img", "img2img", "outpaint", "depth2img"]:
-            options[f"strength"] = strength
-        elif action in ["pix2pix"]:
-            options[f"image_guidance_scale"] = image_guidance_scale
+                if action in ["txt2img", "img2img", "outpaint", "depth2img"]:
+                    options[f"strength"] = strength
+                elif action in ["pix2pix"]:
+                    options[f"image_guidance_scale"] = image_guidance_scale
 
-        """
-        Emitting generate_signal with options allows us to pass more options to the dict from
-        modal windows such as the image interpolation window.
-        """
-        self.app.generate_signal.emit(options)
+                """
+                Emitting generate_signal with options allows us to pass more options to the dict from
+                modal windows such as the image interpolation window.
+                """
+                self.app.generate_signal.emit(options)
 
-        memory_options = self.get_memory_options()
+                memory_options = self.get_memory_options()
 
-        data = {
-            "action": action,
-            "options": {
-                **options,
-                **extra_options,
-                **memory_options
-            }
-        }
-        self.app.client.message = data
+                data = {
+                    "action": action,
+                    "options": {
+                        **options,
+                        **extra_options,
+                        **memory_options
+                    }
+                }
+                self.app.client.message = data
 
     def get_memory_options(self):
         return {

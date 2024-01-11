@@ -257,7 +257,7 @@ def prepare_metadata(data, index=0):
     from airunner.data.managers import SettingsManager
     settings_manager = SettingsManager()
     if not settings_manager.metadata_settings.export_metadata or \
-            settings_manager.image_export_type != "png":
+            settings_manager.settings.image_export_type != "png":
         return None
     metadata = PngImagePlugin.PngInfo()
     options = data.get("options", {})
@@ -339,7 +339,7 @@ def auto_export_image(
     if not os.path.exists(path):
         os.makedirs(path)
     
-    extension = settings_manager.image_export_type
+    extension = settings_manager.settings.image_export_type
     if extension == "":
         extension = "png"
     extension = f".{extension}"
