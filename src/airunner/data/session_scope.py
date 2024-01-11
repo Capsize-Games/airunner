@@ -31,13 +31,6 @@ def session_scope():
 
 
 @contextmanager
-def generator_scope():
-    from airunner.data.models import GeneratorSetting
-    with session_scope() as session:
-        generator = session.query(GeneratorSetting).options(joinedload('*')).first()
-        yield generator
-
-@contextmanager
 def active_grid_settings_scope():
     from airunner.data.models import ActiveGridSettings
     with session_scope() as session:
@@ -58,13 +51,6 @@ def standard_image_widget_settings_scope():
     with session_scope() as session:
         standard_image_widget_settings = session.query(StandardImageWidgetSettings).options(joinedload('*')).first()
         yield standard_image_widget_settings
-
-@contextmanager
-def generator_settings_scope():
-    from airunner.data.models import GeneratorSetting
-    with session_scope() as session:
-        generator_settings = session.query(GeneratorSetting).options(joinedload('*')).first()
-        yield generator_settings
 
 
 @contextmanager
