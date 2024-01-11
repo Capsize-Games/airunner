@@ -10,13 +10,13 @@ from functools import partial
 from PyQt6 import uic, QtCore
 from PyQt6.QtCore import pyqtSlot, Qt, pyqtSignal, QTimer, QObject, QThread
 from PyQt6.QtGui import QGuiApplication
-from PyQt6.QtWidgets import QApplication, QFileDialog, QMainWindow, QWidget
+from PyQt6.QtWidgets import QApplication, QFileDialog, QMainWindow
 from PyQt6 import QtGui
 from PyQt6.QtCore import QSettings
 
 from airunner.resources_light_rc import *
 from airunner.resources_dark_rc import *
-from airunner.aihandler.enums import GeneratorSection, MessageCode, Mode
+from airunner.aihandler.enums import MessageCode, Mode
 from airunner.aihandler.logger import Logger as logger
 from airunner.aihandler.pyqt_client import OfflineClient
 from airunner.aihandler.qtvar import MessageHandlerVar
@@ -25,7 +25,6 @@ from airunner.airunner_api import AIRunnerAPI
 from airunner.data.models import Prompt, LLMGenerator
 from airunner.filters.windows.filter_base import FilterBase
 from airunner.input_event_manager import InputEventManager
-from airunner.mixins.history_mixin import HistoryMixin
 from airunner.settings import BASE_PATH
 from airunner.utils import get_version, auto_export_image, \
     create_airunner_paths, default_hf_cache_dir
@@ -102,8 +101,7 @@ class ImageDataWorker(QObject):
 
 
 class MainWindow(
-    QMainWindow,
-    HistoryMixin
+    QMainWindow
 ):
     # signals
     ai_mode_toggled = pyqtSignal(bool)
@@ -254,6 +252,22 @@ class MainWindow(
     @nsfw_filter.setter
     def nsfw_filter(self, val):
         self.application_settings.setValue("nsfw_filter", val)
+
+    @property
+    def working_height(self):
+        return self.application_settings.value("working_height", 512, type=int)
+    
+    @working_height.setter
+    def working_height(self, val):
+        self.application_settings.setValue("working_height", val)
+
+    @property
+    def working_width(self):
+        return self.application_settings.value("working_width", 512, type=int)
+    
+    @working_width.setter
+    def working_width(self, val):
+        self.application_settings.setValue("working_width", val)
     
     @property
     def current_llm_generator(self):
@@ -361,7 +375,7 @@ class MainWindow(
     
     @property
     def dark_mode_enabled(self):
-        return self.application_settings.value("dark_mode_enabled", False, type=bool)
+        return self.application_settings.value("dark_mode_enabled", True, type=bool)
     
     @dark_mode_enabled.setter
     def dark_mode_enabled(self, val):
@@ -913,7 +927,7 @@ class MainWindow(
         self.ui.standard_image_widget.ui.tabWidget.setCurrentIndex(generator_tab_index)
 
         self.ui.ai_button.setChecked(self.ai_mode)
-        self.set_button_checked("toggle_grid", self.show_gird, False)
+        self.set_button_checked("toggle_grid", self.show_grid, False)
     ##### End window properties #####
     #################################
         
@@ -1091,8 +1105,8 @@ class MainWindow(
         self.settings_manager.set_value("settings.current_tool", tool)
 
     def initialize_mixins(self):
-        HistoryMixin.initialize(self)
         #self.canvas = Canvas()
+        pass
 
     def connect_signals(self):
         logger.info("Connecting signals")
@@ -1215,7 +1229,7 @@ class MainWindow(
             if QtCore.Qt.KeyboardModifier.ShiftModifier in event.modifiers():
                 delta = event.angleDelta().y()
                 increment = grid_size if delta > 0 else -grid_size
-                val = self.settings_manager.settings.working_width + increment
+                val = self.working_width + increment
                 self.settings_manager.set_value("settings.working_width", val)
         except TypeError:
             pass
@@ -1225,7 +1239,7 @@ class MainWindow(
             if QtCore.Qt.KeyboardModifier.ControlModifier in event.modifiers():
                 delta = event.angleDelta().y()
                 increment = grid_size if delta > 0 else -grid_size
-                val = self.settings_manager.settings.working_height + increment
+                val = self.working_height + increment
                 self.settings_manager.set_value("settings.working_height", val)
         except TypeError:
             pass
