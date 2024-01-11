@@ -71,13 +71,14 @@ class LayerWidget(BaseWidget):
         self.app.canvas_widget.do_draw()
 
     def set_thumbnail(self):
-        with self.layer_data as layer_data:
-            image = layer_data.image
-            if image:
-                thumbnail = image.copy()
-                pixmap = image_to_pixmap(thumbnail, 32)
-                self.ui.thumbnail.setPixmap(pixmap)
-            else:
-                self.ui.thumbnail.width = 32
-                self.ui.thumbnail.height = 32
-                self.ui.thumbnail.setPixmap(QtGui.QPixmap())
+        # with self.layer_data as layer_data:
+        #     image = layer_data.image
+        #     if image:
+        #         thumbnail = image.copy()
+        #         pixmap = image_to_pixmap(thumbnail, 32)
+        #         self.ui.thumbnail.setPixmap(pixmap)
+        #     else:
+        #         self.ui.thumbnail.width = 32
+        #         self.ui.thumbnail.height = 32
+        #         self.ui.thumbnail.setPixmap(QtGui.QPixmap())
+        pass
