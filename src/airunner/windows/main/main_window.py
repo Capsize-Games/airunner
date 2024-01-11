@@ -548,6 +548,58 @@ class MainWindow(
     def unload_unused_models(self, val):
         self.application_settings.setValue("unload_unused_models", val)
 
+    #### GENERATOR SETTINGS ####
+    @property
+    def generator_settings(self):
+        return self.application_settings.value("generator_settings", dict(
+            section="txt2img",
+            generator_name="stablediffusion",
+            prompt="",
+            negative_prompt="",
+            steps=20,
+            ddim_eta=0.5,
+            height=512,
+            width=512,
+            scale=750,
+            seed=42,
+            latents_seed=42,
+            random_seed=True,
+            random_latents_seed=True,
+            model="",
+            scheduler="DPM++ 2M Karras",
+            prompt_triggers="",
+            strength=50,
+            image_guidance_scale=150,
+            n_samples=1,
+            controlnet="",
+            enable_controlnet=False,
+            enable_input_image=False,
+            controlnet_guidance_scale=50,
+            clip_skip=0,
+            variation=False,
+            input_image_use_imported_image=True,
+            input_image_use_grid_image=True,
+            input_image_recycle_grid_image=True,
+            input_image_mask_use_input_image=True,
+            input_image_mask_use_imported_image=False,
+            controlnet_input_image_link_to_input_image=True,
+            controlnet_input_image_use_imported_image=False,
+            controlnet_use_grid_image=False,
+            controlnet_recycle_grid_image=False,
+            controlnet_mask_link_input_image=False,
+            controlnet_mask_use_imported_image=False,
+            use_prompt_builder=False,
+            active_grid_border_color="#00FF00",
+            active_grid_fill_color="#FF0000",
+            version="SD 1.5",
+            is_preset=False,
+        ))
+
+    @generator_settings.setter
+    def generator_settings(self, val):
+        self.application_settings.setValue("generator_settings", val)
+    #### END GENERATOR SETTINGS ####
+
     @property
     def nsfw_filter(self):
         return self.application_settings.value("nsfw_filter", True, type=bool)
@@ -715,14 +767,6 @@ class MainWindow(
                     logger.error(e)
             return self._generator
     
-    @property
-    def generator_settings(self):
-        try:
-            return self.generator.generator_settings[0]
-        except Exception as e:
-            logger.error(e)
-            return None
-
     @property
     def generate_signal(self):
         return self.generator_tab_widget.generate_signal

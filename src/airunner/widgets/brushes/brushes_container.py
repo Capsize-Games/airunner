@@ -13,7 +13,7 @@ from PyQt6.QtWidgets import QMenu
 from airunner.widgets.base_widget import BaseWidget
 from airunner.widgets.image.image_widget import BrushImageWidget
 from airunner.widgets.qflowlayout.q_flow_layout import QFlowLayout
-from airunner.data.models import Brush, GeneratorSetting
+from airunner.data.models import Brush
 from airunner.data.session_scope import session_scope
 
 
@@ -63,54 +63,9 @@ class BrushesContainer(BaseWidget):
             img_base64 = base64.b64encode(img_bytes).decode()
 
         with session_scope() as session:
-
-            # Create a new GeneratorSetting entry with the metadata
-            generator_setting = GeneratorSetting(
-                section=self.app.pipeline,
-                generator_name="stablediffusion",
-                prompt=meta_data.get("prompt", ""),
-                negative_prompt=meta_data.get("negative_prompt", ""),
-                steps=meta_data.get("steps", 20),
-                ddim_eta=meta_data.get("ddim_eta", 0.5),
-                height=meta_data.get("height", 512),
-                width=meta_data.get("width", 512),
-                scale=meta_data.get("scale", 750),
-                seed=meta_data.get("seed", 42),
-                latents_seed=meta_data.get("latents_seed", 84),
-                random_seed=meta_data.get("random_seed", True),
-                random_latents_seed=meta_data.get("random_latents_seed", True),
-                model=meta_data.get("model", ""),
-                scheduler=meta_data.get("scheduler", "DPM++ 2M Karras"),
-                prompt_triggers=meta_data.get("prompt_triggers", ""),
-                strength=meta_data.get("strength", 50),
-                image_guidance_scale=meta_data.get("image_guidance_scale", 150),
-                n_samples=meta_data.get("n_samples", 1),
-                controlnet=meta_data.get("controlnet", ""),
-                enable_controlnet=meta_data.get("enable_controlnet", False),
-                enable_input_image=meta_data.get("enable_input_image", False),
-                controlnet_guidance_scale=meta_data.get("controlnet_guidance_scale", 50),
-                clip_skip=meta_data.get("clip_skip", 0),
-                variation=meta_data.get("variation", False),
-                input_image_use_imported_image=meta_data.get("input_image_use_imported_image", False),
-                input_image_use_grid_image=meta_data.get("input_image_use_grid_image", True),
-                input_image_recycle_grid_image=meta_data.get("input_image_recycle_grid_image", True),
-                input_image_mask_use_input_image=meta_data.get("input_image_mask_use_input_image", True),
-                input_image_mask_use_imported_image=meta_data.get("input_image_mask_use_imported_image", False),
-                controlnet_input_image_link_to_input_image=meta_data.get("controlnet_input_image_link_to_input_image", True),
-                controlnet_input_image_use_imported_image=meta_data.get("controlnet_input_image_use_imported_image", False),
-                controlnet_use_grid_image=meta_data.get("controlnet_use_grid_image", False),
-                controlnet_recycle_grid_image=meta_data.get("controlnet_recycle_grid_image", False),
-                controlnet_mask_link_input_image=meta_data.get("controlnet_mask_link_input_image", False),
-                controlnet_mask_use_imported_image=meta_data.get("controlnet_mask_use_imported_image", False),
-                use_prompt_builder=meta_data.get("use_prompt_builder", False),
-                active_grid_border_color=meta_data.get("active_grid_border_color", "#00FF00"),
-                active_grid_fill_color=meta_data.get("active_grid_fill_color", "#FF0000")
-            )
-
-            session.add(generator_setting)
         
-            # Create a new Brush entry associated with the GeneratorSetting entry
-            brush = Brush(name=brush_name, thumbnail=img_base64, generator_setting_id=generator_setting.id)
+            # Create a new Brush entry
+            brush = Brush(name=brush_name, thumbnail=img_base64)
             session.add(brush)
         return brush
     
@@ -168,11 +123,7 @@ class BrushesContainer(BaseWidget):
         with widget.brush() as brush:
             with session_scope() as session:
                 brush = session.query(Brush).filter(Brush.id == brush.id).first()
-                generator_setting = session.query(GeneratorSetting).filter(GeneratorSetting.id == brush.generator_setting_id).first()
-            
-                if generator_setting is not None:
-                    session.delete(generator_setting)
-            
+                
                 if brush is not None:
                     session.delete(brush)
 

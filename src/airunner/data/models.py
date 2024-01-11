@@ -313,62 +313,12 @@ class Lora(BaseModel):
     )
 
 
-class GeneratorSetting(BaseModel):
-    __tablename__ = 'generator_settings'
-
-    id = Column(Integer, primary_key=True)
-    section = Column(String)
-    generator_name = Column(String)
-    prompt = Column(String, default="")
-    negative_prompt = Column(String, default="")
-    steps = Column(Integer, default=20)
-    ddim_eta = Column(Float, default=0.5)
-    height = Column(Integer, default=512)
-    width = Column(Integer, default=512)
-    scale = Column(Integer, default=750)
-    seed = Column(Integer, default=42)
-    latents_seed = Column(Integer, default=84)
-    random_seed = Column(Boolean, default=True)
-    random_latents_seed = Column(Boolean, default=True)
-    model = Column(String, default="")
-    scheduler = Column(String, default="DPM++ 2M Karras")
-    prompt_triggers = Column(String, default="")
-    strength = Column(Integer, default=50)
-    image_guidance_scale = Column(Integer, default=150)
-    n_samples = Column(Integer, default=1)
-    controlnet = Column(String, default="")
-    enable_controlnet = Column(Boolean, default=False)
-    enable_input_image = Column(Boolean, default=False)
-    controlnet_guidance_scale = Column(Integer, default=50)
-    clip_skip = Column(Integer, default=0)
-    variation = Column(Boolean, default=False)
-    input_image_use_imported_image = Column(Boolean, default=False)
-    input_image_use_grid_image = Column(Boolean, default=True)
-    input_image_recycle_grid_image = Column(Boolean, default=True)
-    input_image_mask_use_input_image = Column(Boolean, default=True)
-    input_image_mask_use_imported_image = Column(Boolean, default=False)
-    controlnet_input_image_link_to_input_image = Column(Boolean, default=True)
-    controlnet_input_image_use_imported_image = Column(Boolean, default=False)
-    controlnet_use_grid_image = Column(Boolean, default=False)
-    controlnet_recycle_grid_image = Column(Boolean, default=False)
-    controlnet_mask_link_input_image = Column(Boolean, default=False)
-    controlnet_mask_use_imported_image = Column(Boolean, default=False)
-    use_prompt_builder = Column(Boolean, default=False)
-    active_grid_border_color = Column(String, default="#00FF00")
-    active_grid_fill_color = Column(String, default="#FF0000")
-    brushes = relationship("Brush", back_populates='generator_setting')  # modified line
-    version = Column(String, default="SD 1.5")
-    is_preset = Column(Boolean, default=False)
-
-
 class Brush(BaseModel):
     __tablename__ = 'brushes'
 
     id = Column(Integer, primary_key=True)
     name = Column(String, nullable=False)
     thumbnail = Column(String, nullable=False)
-    generator_setting_id = Column(Integer, ForeignKey('generator_settings.id'))  # new line
-    generator_setting = relationship('GeneratorSetting', back_populates='brushes')  # modified line
 
 
 class DeterministicSettings(BaseModel):
@@ -514,7 +464,6 @@ class LLMGenerator(BaseModel):
     username = Column(String, default="User")
     botname = Column(String, default="Bot")
     model_versions = relationship('LLMModelVersion', back_populates='generator')
-    generator_settings = relationship('LLMGeneratorSetting', back_populates='generator')
     message_type = Column(String, default="chat")
     bot_personality = Column(String, default="Nice")
     override_parameters = Column(Boolean, default=False)
@@ -542,7 +491,6 @@ class LLMGeneratorSetting(BaseModel):
     random_seed = Column(Boolean, default=False)
     model_version = Column(String, default="google/flan-t5-xl")
     generator_id = Column(Integer, ForeignKey('llm_generator.id'))
-    generator = relationship('LLMGenerator', back_populates='generator_settings')
     dtype = Column(String, default="4bit")
     use_gpu = Column(Boolean, default=True)
 

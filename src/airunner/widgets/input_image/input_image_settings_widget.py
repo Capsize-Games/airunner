@@ -22,7 +22,7 @@ class InputImageSettingsWidget(BaseWidget):
         return self.property("generator_name")
 
     def active_grid_area_image(self):
-        if not self.app.settings_manager.generator_settings.input_image_recycle_grid_image or not self._active_grid_area_image:
+        if not self.app.generator_settings["input_image_recycle_grid_image"] or not self._active_grid_area_image:
             layer_image = self.app.canvas.current_layer.image
             if layer_image.image:
                 self._active_grid_area_image = layer_image.image.copy()
@@ -33,9 +33,9 @@ class InputImageSettingsWidget(BaseWidget):
         try:
             if not self.app.settings_manager.generator_settings:
                 return None
-            if self.app.settings_manager.generator_settings.input_image_use_imported_image:
+            if self.app.generator_settings["input_image_use_imported_image"]:
                 return self.input_image
-            elif self.app.settings_manager.generator_settings.input_image_use_grid_image:
+            elif self.app.generator_settings["input_image_use_grid_image"]:
                 return self.active_grid_area_image()
         except AttributeError:
             return None
@@ -51,11 +51,13 @@ class InputImageSettingsWidget(BaseWidget):
 
     def initialize_groupbox(self):
         self.ui.groupBox.blockSignals(True)
-        self.ui.groupBox.setChecked(self.app.settings_manager.generator_settings.enable_input_image)
+        self.ui.groupBox.setChecked(self.app.generator_settings["enable_input_image"])
         self.ui.groupBox.blockSignals(False)
 
     def action_toggled_use_input_image(self, val):
-        self.app.settings_manager.set_value("generator.enable_input_image", val)
+        generator_settings = self.app.generator_settings
+        generator_settings["enable_input_image"] = val
+        self.app.generator_settings = generator_settings
 
     def action_toggled_button_use_imported_image(self, val):
         self.toggle_use_imported_image(val)
@@ -68,7 +70,9 @@ class InputImageSettingsWidget(BaseWidget):
         self.update_buttons()
 
     def toggle_use_imported_image(self, value):
-        self.app.settings_manager.set_value("generator.input_image_use_imported_image", value)
+        generator_settings = self.app.generator_settings
+        generator_settings["input_image_use_imported_image"] = value
+        self.app.generator_settings = generator_settings
         self.set_thumbnail(self.input_image)
 
     def action_toggled_button_lock_grid_image(self, val):
@@ -78,8 +82,10 @@ class InputImageSettingsWidget(BaseWidget):
         self.toggle_keep_refreshed(val)
 
     def toggle_keep_refreshed(self, value):
-        if self.app.settings_manager.generator_settings.input_image_use_grid_image:
-            self.app.settings_manager.set_value("generator.input_image_recycle_grid_image", value)
+        if self.app.generator_settings["input_image_use_grid_image"]:
+            generator_settings = self.app.generator_settings
+            generator_settings["input_image_recycle_grid_image"] = value
+            self.app.generator_settings = generator_settings
         self.set_thumbnail()
 
     def action_clicked_button_refresh_grid_image(self):
@@ -101,10 +107,14 @@ class InputImageSettingsWidget(BaseWidget):
         grid_layout.addWidget(slider)
 
     def handle_image_strength_changed(self, val):
-        self.app.settings_manager.set_value("generator.strength", val)
+        generator_settings = self.app.generator_settings
+        generator_settings["strength"] = val
+        self.app.generator_settings = generator_settings
 
     def handle_image_scale_changed(self, val):
-        self.app.settings_manager.set_value("generator.image_scale", val)
+        generator_settings = self.app.generator_settings
+        generator_settings["image_scale"] = val
+        self.app.generator_settings = generator_settings
 
     def import_input_image(self):
         file_path, _ = self.app.display_import_image_dialog(
@@ -118,33 +128,32 @@ class InputImageSettingsWidget(BaseWidget):
         self.set_thumbnail(image)
 
     def clear_input_image(self):
-        if self.app.settings_manager.generator_settings.input_image_use_grid_image:
+        if self.app.generator_settings["input_image_use_grid_image"]:
             self._active_grid_area_image = None
-        elif self.app.settings_manager.generator_settings.input_image_use_imported_image:
+        elif self.app.generator_settings["input_image_use_imported_image"]:
             self.input_image = None
         self.set_thumbnail()
 
     def toggle_use_active_grid_area(self, value):
-        self.app.settings_manager.set_value("generator.input_image_use_grid_image", value)
+        generator_settings = self.app.generator_settings
+        generator_settings["input_image_use_grid_image"] = value
+        self.app.generator_settings = generator_settings
         self.set_thumbnail(self.current_input_image)
 
     def update_buttons(self):
-        if not self.app.settings_manager.generator_settings:
-            return
-    
         self.ui.use_imported_image_button.blockSignals(True)
         self.ui.use_grid_image_button.blockSignals(True)
         self.ui.recycle_grid_image_button.blockSignals(True)
 
-        if self.app.settings_manager.generator_settings.input_image_use_grid_image:
+        if self.app.generator_settings["input_image_use_grid_image"]:
             self.ui.import_image_button.setEnabled(False)
             self.ui.recycle_grid_image_button.setEnabled(True)
             # hide the self.ui.refresh_input_image_button button widget
             self.ui.clear_image_button.hide()
             self.ui.refresh_input_image_button.show()
             self.ui.use_imported_image_button.setChecked(False)
-            self.ui.use_grid_image_button.setChecked(self.app.settings_manager.generator_settings.input_image_use_grid_image)
-            self.ui.recycle_grid_image_button.setChecked(self.app.settings_manager.generator_settings.input_image_recycle_grid_image)
+            self.ui.use_grid_image_button.setChecked(self.app.generator_settings["input_image_use_grid_image"])
+            self.ui.recycle_grid_image_button.setChecked(self.app.generator_settings["input_image_recycle_grid_image"])
         else:
             self.ui.import_image_button.setEnabled(True)
             self.ui.recycle_grid_image_button.setEnabled(False)
@@ -165,7 +174,7 @@ class InputImageSettingsWidget(BaseWidget):
         print("clear input image mask")
 
     def handle_new_image(self, data):
-        if not self.app.settings_manager.generator_settings.input_image_recycle_grid_image or not self._active_grid_area_image:
+        if not self.app.generator_settings["input_image_recycle_grid_image"] or not self._active_grid_area_image:
             self._active_grid_area_image = data["processed_image"].copy()
         self.set_thumbnail()
 
