@@ -95,9 +95,9 @@ class LLMSettingsWidget(BaseWidget):
         self.ui.prompt_template.clear()
         self.ui.prompt_template.addItems(prompt_templates)
 
-        self.ui.leave_in_vram.setChecked(not self.app.settings_manager.settings.unload_unused_model and not self.app.move_unused_model_to_cpu)
+        self.ui.leave_in_vram.setChecked(not self.app.unload_unused_models and not self.app.move_unused_model_to_cpu)
         self.ui.move_to_cpu.setChecked(self.app.move_unused_model_to_cpu)
-        self.ui.unload_model.setChecked(self.app.unload_unused_model)
+        self.ui.unload_model.setChecked(self.app.unload_unused_models)
 
         if self.generator:
             self.ui.radio_button_2bit.setChecked(self.app.settings_manager.llm_generator_settings.dtype == "2bit")

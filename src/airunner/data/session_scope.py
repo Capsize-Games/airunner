@@ -31,14 +31,6 @@ def session_scope():
 
 
 @contextmanager
-def settings_scope():
-    from airunner.data.models import Settings
-    with session_scope() as session:
-        settings = session.query(Settings).options(joinedload('*')).first()
-        yield settings
-
-
-@contextmanager
 def generator_scope():
     from airunner.data.models import GeneratorSetting
     with session_scope() as session:
