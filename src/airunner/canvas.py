@@ -209,7 +209,7 @@ class Canvas(
             layer = layers[index]
             if not layer.visible:
                 continue
-            if self.settings_manager.show_active_image_area:
+            if self.app.show_active_image_area:
                 self.draw_active_image_area()
             CanvasImageMixin.draw(self, layer, index)
             CanvasBrushesMixin.draw(self, layer, index)

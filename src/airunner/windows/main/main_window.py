@@ -248,6 +248,14 @@ class MainWindow(
         self.application_settings.setValue("nsfw_filter", val)
 
     @property
+    def show_active_image_area(self):
+        return self.application_settings.value("show_active_image_area", True, type=bool)
+    
+    @show_active_image_area.setter
+    def show_active_image_area(self, val):
+        self.application_settings.setValue("show_active_image_area", val)
+
+    @property
     def auto_export_images(self):
         return self.application_settings.value("auto_export_images", True, type=bool)
     
