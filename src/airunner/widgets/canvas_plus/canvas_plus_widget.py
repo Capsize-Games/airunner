@@ -207,12 +207,23 @@ class CustomScene(QGraphicsScene):
 
         # Create the QImage with the size of the parent widget
         self.image = QImage(parent_size.width(), parent_size.height(), QImage.Format.Format_ARGB32)
-        self.image.fill(Qt.GlobalColor.white)
+        self.image.fill(Qt.GlobalColor.transparent)
         self.item = QGraphicsPixmapItem(QPixmap.fromImage(self.image))
         self.addItem(self.item)
 
         # Add a variable to store the last mouse position
         self.last_pos = None
+    
+    def resize(self):
+        # only resize if the new size is larger than the existing image size
+        if self.image.width() < self.parent().size().width() or self.image.height() < self.parent().size().height():
+            new_image = QImage(self.parent().size().width(), self.parent().size().height(), QImage.Format.Format_ARGB32)
+            new_image.fill(Qt.GlobalColor.transparent)
+            painter = QPainter(new_image)
+            painter.drawImage(0, 0, self.image)
+            painter.end()
+            self.image = new_image
+            self.item.setPixmap(QPixmap.fromImage(self.image))
 
     def drawAt(self, position):
         painter = QPainter(self.image)
@@ -255,7 +266,33 @@ class CustomScene(QGraphicsScene):
         elif self.app.current_tool == "eraser":
             self.eraseAt(self.last_pos)
 
+    def handle_cursor(self, event):
+        if self.app.current_tool in ['brush', 'eraser']:
+            # Create a QPixmap, draw a circle on it
+            pixmap = QPixmap(self.app.brush_settings["size"], self.app.brush_settings["size"])
+            pixmap.fill(Qt.GlobalColor.transparent)
+            painter = QPainter(pixmap)
+
+            # Draw outer white circle
+            painter.setPen(QPen(Qt.GlobalColor.white, 3))  # Set color to white and width to 3
+            painter.setBrush(Qt.GlobalColor.transparent)
+            painter.drawEllipse(0, 0, self.app.brush_settings["size"], self.app.brush_settings["size"])
+
+            # Draw inner black circle
+            painter.setPen(QPen(Qt.GlobalColor.black, 3))  # Set color to black and width to 3
+            painter.setBrush(Qt.GlobalColor.transparent)
+            painter.drawEllipse(3, 3, self.app.brush_settings["size"] - 6, self.app.brush_settings["size"] - 6)
+            
+            painter.end()
+
+            # Create a QCursor with the QPixmap
+            cursor = QCursor(pixmap)
+            self.parent().setCursor(cursor)
+        else:
+            self.parent().setCursor(Qt.CursorShape.ArrowCursor)
+
     def mouseMoveEvent(self, event):
+        self.handle_cursor(event)
         if self.app.current_tool == "brush":
             self.drawAt(event.scenePos())
         elif self.app.current_tool == "eraser":
@@ -263,6 +300,10 @@ class CustomScene(QGraphicsScene):
         
         # Update the last position
         self.last_pos = event.scenePos()
+    
+    def leaveEvent(self, event):
+        self.setCursor(Qt.ArrowCursor)
+        super(CustomScene, self).leaveEvent(event)
 
 
 class CanvasPlusWidget(CanvasBaseWidget):
@@ -486,7 +527,6 @@ class CanvasPlusWidget(CanvasBaseWidget):
             super().wheelEvent(event)  # Propagate the event to the base class if no modifier keys are pressed
 
     def handle_changed_signal(self, key, value):
-        print("canvas_plus_widget: handle_changed_signal", key, value)
         if key == "layer_image_data.visible":
             self.do_draw()
         elif key == "layer_data.hidden":
@@ -508,6 +548,8 @@ class CanvasPlusWidget(CanvasBaseWidget):
     def resizeEvent(self, event):
         if self.view:
             self.do_draw()
+        if self.scene:
+            self.scene.resize()
 
     def initialize(self):
         # Create a QGraphicsScene object
