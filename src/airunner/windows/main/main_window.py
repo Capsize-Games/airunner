@@ -254,6 +254,14 @@ class MainWindow(
         self.application_settings.setValue("nsfw_filter", val)
 
     @property
+    def current_tool(self):
+        return self.application_settings.value("current_tool", "brush")
+    
+    @current_tool.setter
+    def current_tool(self, val):
+        self.application_settings.setValue("current_tool", val)
+
+    @property
     def working_height(self):
         return self.application_settings.value("working_height", 512, type=int)
     
@@ -1085,9 +1093,9 @@ class MainWindow(
         self.ui.toggle_eraser_button.blockSignals(True)
         self.ui.toggle_grid_button.blockSignals(True)
         self.ui.ai_button.blockSignals(True)
-        self.ui.toggle_active_grid_area_button.setChecked(self.settings_manager.settings.current_tool == "active_grid_area")
-        self.ui.toggle_brush_button.setChecked(self.settings_manager.settings.current_tool == "brush")
-        self.ui.toggle_eraser_button.setChecked(self.settings_manager.settings.current_tool == "eraser")
+        self.ui.toggle_active_grid_area_button.setChecked(self.current_tool == "active_grid_area")
+        self.ui.toggle_brush_button.setChecked(self.current_tool == "brush")
+        self.ui.toggle_eraser_button.setChecked(self.current_tool == "eraser")
         self.ui.toggle_grid_button.setChecked(show_grid is True)
         self.ui.toggle_active_grid_area_button.blockSignals(False)
         self.ui.toggle_brush_button.blockSignals(False)
