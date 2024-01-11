@@ -181,15 +181,6 @@ class Pipeline(BaseModel):
     default = Column(Boolean, default=True)
 
 
-class SplitterSection(BaseModel):
-    __tablename__ = 'splitter_section'
-
-    id = Column(Integer, primary_key=True)
-    name = Column(String)
-    order = Column(Integer)
-    size = Column(Integer)
-
-
 class Lora(BaseModel):
     __tablename__ = 'loras'
 
