@@ -113,11 +113,11 @@ class ExportPreferencesWidget(BaseWidget):
         self.app.image_export_type = val
     
     def image_export_path_text_edited(self, val):
-        self.app.settings_manager.set_value(f"image_path", val)
+        self.app.image_path = val
     
     def action_clicked_button_browse(self):
         path = QFileDialog.getExistingDirectory(None, "Select Directory")
         if path:
             self.ui.image_path.setText(path)
-            self.app.settings_manager.set_value("path_settings.image_path", path)
+            self.app.embeddings_model_path = path
 
