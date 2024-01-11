@@ -114,7 +114,7 @@
          <number>0</number>
         </property>
         <property name="settings_property" stdset="0">
-         <string>generator.controlnet_guidance_scale</string>
+         <string>generator_settings.controlnet_guidance_scale</string>
         </property>
        </widget>
       </item>

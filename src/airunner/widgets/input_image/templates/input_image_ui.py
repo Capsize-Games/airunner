@@ -162,7 +162,7 @@ class Ui_input_image(object):
         self.scale_slider_widget.setProperty("spinbox_page_step", 0.1)
         self.scale_slider_widget.setProperty("spinbox_minimum", 0.0)
         self.scale_slider_widget.setProperty("slider_minimum", 0)
-        self.scale_slider_widget.setProperty("settings_property", "generator.image_guidance_scale")
+        self.scale_slider_widget.setProperty("settings_property", "generator_settings.image_guidance_scale")
         self.scale_slider_widget.setObjectName("scale_slider_widget")
         self.gridLayout_5.addWidget(self.scale_slider_widget, 0, 0, 1, 1)
         self.gridLayout_3.addWidget(self.groupBox, 0, 0, 1, 1)

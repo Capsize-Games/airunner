@@ -1528,7 +1528,18 @@ class MainWindow(
         """
         if attr_name is None:
             return
-        self.settings_manager.set_value(attr_name, value)
+        
+        keys = attr_name.split(".")
+        print(keys)
+        if len(keys) > 0:
+            if hasattr(self, keys[0]):
+                obj = getattr(self, keys[0])
+                if keys[1] in obj:
+                    obj[keys[1]] = value
+                    print("SETTING")
+                    setattr(self, keys[0], obj)
+            else:
+                self.settings_manager.set_value(attr_name, value)
     
     def handle_similar_slider_change(self, attr_name, value=None, widget=None):
         self.standard_image_panel.handle_similar_slider_change(value)
