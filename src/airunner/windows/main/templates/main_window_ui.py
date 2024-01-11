@@ -230,15 +230,6 @@ class Ui_MainWindow(object):
         self.image_browser.setObjectName("image_browser")
         self.gridLayout_10.addWidget(self.canvas_splitter, 0, 0, 1, 1)
         self.center_tab.addTab(self.tab_image, "")
-        self.tab_prompt_builder = QtWidgets.QWidget()
-        self.tab_prompt_builder.setObjectName("tab_prompt_builder")
-        self.gridLayout_16 = QtWidgets.QGridLayout(self.tab_prompt_builder)
-        self.gridLayout_16.setContentsMargins(0, 0, 0, 0)
-        self.gridLayout_16.setObjectName("gridLayout_16")
-        self.prompt_builder = PromptBuilderWidget(parent=self.tab_prompt_builder)
-        self.prompt_builder.setObjectName("prompt_builder")
-        self.gridLayout_16.addWidget(self.prompt_builder, 0, 0, 1, 1)
-        self.center_tab.addTab(self.tab_prompt_builder, "")
         self.tab = QtWidgets.QWidget()
         self.tab.setObjectName("tab")
         self.gridLayout_7 = QtWidgets.QGridLayout(self.tab)
@@ -801,7 +792,6 @@ class Ui_MainWindow(object):
         self.actionDeterministic_Batches.triggered.connect(MainWindow.action_show_deterministic_batches) # type: ignore
         self.actionStandard_Batches.triggered.connect(MainWindow.action_show_standard_batches) # type: ignore
         self.actionLLM_beta.triggered.connect(MainWindow.action_show_llm) # type: ignore
-        self.center_tab.currentChanged['int'].connect(MainWindow.center_panel_tab_index_changed) # type: ignore
         self.settings_button.clicked.connect(MainWindow.action_show_settings) # type: ignore
         self.toggle_grid_button.toggled['bool'].connect(MainWindow.action_toggle_grid) # type: ignore
         self.toggle_active_grid_area_button.toggled['bool'].connect(MainWindow.action_toggle_active_grid_area) # type: ignore
@@ -817,6 +807,7 @@ class Ui_MainWindow(object):
         self.undo_button.clicked.connect(MainWindow.action_undo_triggered) # type: ignore
         self.redo_button.clicked.connect(MainWindow.action_redo_triggered) # type: ignore
         self.model_manager_button.toggled['bool'].connect(MainWindow.model_manager_toggled) # type: ignore
+        self.center_tab.currentChanged['int'].connect(MainWindow.center_panel_tab_index_changed) # type: ignore
         QtCore.QMetaObject.connectSlotsByName(MainWindow)
 
     def retranslateUi(self, MainWindow):
@@ -829,7 +820,6 @@ class Ui_MainWindow(object):
         self.undo_button.setToolTip(_translate("MainWindow", "Undo"))
         self.redo_button.setToolTip(_translate("MainWindow", "Redo"))
         self.center_tab.setTabText(self.center_tab.indexOf(self.tab_image), _translate("MainWindow", "Canvas"))
-        self.center_tab.setTabText(self.center_tab.indexOf(self.tab_prompt_builder), _translate("MainWindow", "Prompt Builder"))
         self.center_tab.setTabText(self.center_tab.indexOf(self.tab), _translate("MainWindow", "Model Manager"))
         self.tool_tab_widget.setTabText(self.tool_tab_widget.indexOf(self.tab_pen), _translate("MainWindow", "Pen"))
         self.tool_tab_widget.setTabText(self.tool_tab_widget.indexOf(self.tab_active_grid), _translate("MainWindow", "Active Grid"))
@@ -974,4 +964,3 @@ from airunner.widgets.generator_form.generator_form_widget import GeneratorForm
 from airunner.widgets.image.image_panel_widget import ImagePanelWidget
 from airunner.widgets.layers.layer_container_widget import LayerContainerWidget
 from airunner.widgets.model_manager.model_manager_widget import ModelManagerWidget
-from airunner.widgets.prompt_builder.prompt_builder_widget import PromptBuilderWidget

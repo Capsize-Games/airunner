@@ -8,7 +8,7 @@ class CanvasGridMixin:
 
     @property
     def grid_size(self):
-        return self.settings_manager.grid_settings.size
+        return self.settings_manager.grid_settings.cell_size
 
     def initialize(self):
         # Set the grid line color and thickness

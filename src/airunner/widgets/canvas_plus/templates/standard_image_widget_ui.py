@@ -358,7 +358,7 @@ class Ui_standard_image_widget(object):
         self.gridLayout_2.addWidget(self.splitter, 0, 0, 1, 1)
 
         self.retranslateUi(standard_image_widget)
-        self.tabWidget.setCurrentIndex(5)
+        self.tabWidget.setCurrentIndex(3)
         self.settings_tab_widget.setCurrentIndex(0)
         self.upscale_model.currentTextChanged['QString'].connect(standard_image_widget.upscale_model_changed) # type: ignore
         self.face_enhance.clicked['bool'].connect(standard_image_widget.face_enhance_toggled) # type: ignore
@@ -381,7 +381,7 @@ class Ui_standard_image_widget(object):
         self.tabWidget.setTabText(self.tabWidget.indexOf(self.tab_4), _translate("standard_image_widget", "LoRA"))
         self.tabWidget.setTabText(self.tabWidget.indexOf(self.tab_3), _translate("standard_image_widget", "Embeddings"))
         self.samples_widget.setProperty("label_text", _translate("standard_image_widget", "Similarity"))
-        self.samples_widget.setProperty("settings_property", _translate("standard_image_widget", "standard_image_widget_settings.image_similarity"))
+        self.samples_widget.setProperty("settings_property", _translate("standard_image_widget", "standard_image_settings.image_similarity"))
         self.generate_single_simillar_button.setToolTip(_translate("standard_image_widget", "Generate one variation"))
         self.generate_single_simillar_button.setText(_translate("standard_image_widget", "Single"))
         self.generate_batch_similar_button.setToolTip(_translate("standard_image_widget", "Generate a batch of four variations"))

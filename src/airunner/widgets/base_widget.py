@@ -2,7 +2,7 @@ import os
 from PyQt6 import QtGui
 from PyQt6.QtWidgets import QWidget
 
-from airunner.aihandler.settings_manager import SettingsManager
+from airunner.data.managers import SettingsManager
 from airunner.utils import get_main_window
 
 
@@ -14,7 +14,7 @@ class BaseWidget(QWidget):
 
     @property
     def is_dark(self):
-        return self.settings_manager.dark_mode_enabled
+        return self.app.settings_manager.settings.dark_mode_enabled
 
     @property
     def canvas(self):
@@ -27,7 +27,6 @@ class BaseWidget(QWidget):
         super().__init__(*args, **kwargs)
         self.app = get_main_window()
         self.app.loaded.connect(self.initialize)
-        self.settings_manager = SettingsManager()
         if self.widget_class_:
             self.ui = self.widget_class_()
         if self.ui:
@@ -39,6 +38,21 @@ class BaseWidget(QWidget):
             #         stylesheet = f.read()
             #     self.setStyleSheet(stylesheet)
             self.set_icons()
+    
+    def handle_settings_manager_changed(self, key, val, settings_manager):
+        """
+        Handle the change in settings manager.
+
+        Args:
+            key (str): The key of the changed setting.
+            val: The new value of the changed setting.
+            settings_manager: The settings manager object.
+
+        Returns:
+            None
+        """
+        print("handle_settings_manager_changed")
+        pass
     
     def initialize(self):
         """
@@ -138,7 +152,7 @@ class BaseWidget(QWidget):
             val = self.get_value(element)
         if val is None:
             val = self.get_is_checked(element)
-        target_val = self.settings_manager.get_value(settings_key_name)
+        target_val = self.app.settings_manager.get_value(settings_key_name)
 
         if val != target_val:
             if not self.set_plain_text(element, target_val):
@@ -150,7 +164,7 @@ class BaseWidget(QWidget):
     def set_form_property(self, element, property_name, settings_key_name=None, settings=None):
         val = self.get_form_element(element).property(property_name)
         if settings_key_name:
-            target_val = self.settings_manager.get_value(settings_key_name)
+            target_val = self.app.settings_manager.get_value(settings_key_name)
         elif settings:
             target_val = getattr(settings, property_name)
 

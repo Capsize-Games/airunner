@@ -7,6 +7,6 @@ class PromptBrowser(BaseWindow):
     template_class_ = Ui_prompt_browser
 
     def initialize_window(self):
-        for index, prompt_data in enumerate(self.settings_manager.prompts):
+        for index, prompt_data in enumerate(self.app.settings_manager.prompts):
             widget = PromptWidget(prompt_data=prompt_data)
             self.ui.scrollAreaWidgetContents.layout().addWidget(widget)

@@ -8,6 +8,7 @@ from PyQt6.QtWidgets import QFileDialog, QApplication, QMainWindow
 from airunner.aihandler.logger import Logger
 from airunner.settings import SQLITE_DB_PATH
 from PIL import PngImagePlugin
+from airunner.data.session_scope import session_scope
 
 SESSION = None
 
@@ -50,7 +51,7 @@ def get_venv_python_executable():
 
 
 def initialize_os_environment():
-    from airunner.aihandler.settings_manager import SettingsManager
+    from airunner.data.managers import SettingsManager
     settings_manager = SettingsManager()
     hf_cache_path = settings_manager.path_settings.hf_cache_path
     if hf_cache_path != "":
@@ -253,10 +254,10 @@ def get_version():
 #     return models
 
 def prepare_metadata(data, index=0):
-    from airunner.aihandler.settings_manager import SettingsManager
+    from airunner.data.managers import SettingsManager
     settings_manager = SettingsManager()
     if not settings_manager.metadata_settings.export_metadata or \
-            settings_manager.image_export_type != "png":
+            settings_manager.settings.image_export_type != "png":
         return None
     metadata = PngImagePlugin.PngInfo()
     options = data.get("options", {})
@@ -297,7 +298,7 @@ def prepare_metadata(data, index=0):
     return metadata
 
 def prepare_controlnet_metadata(data):
-    from airunner.aihandler.settings_manager import SettingsManager
+    from airunner.data.managers import SettingsManager
     from PIL import PngImagePlugin
     settings_manager = SettingsManager()
     metadata = PngImagePlugin.PngInfo()
@@ -310,7 +311,7 @@ def auto_export_image(
     latents_seed=None,
     type="image",
 ):
-    from airunner.aihandler.settings_manager import SettingsManager
+    from airunner.data.managers import SettingsManager
 
     if seed is None:
         raise Exception("Seed must be set when auto exporting an image")
@@ -338,7 +339,7 @@ def auto_export_image(
     if not os.path.exists(path):
         os.makedirs(path)
     
-    extension = settings_manager.image_export_type
+    extension = settings_manager.settings.image_export_type
     if extension == "":
         extension = "png"
     extension = f".{extension}"
@@ -413,54 +414,29 @@ def get_main_window():
             return widget
 
 
-def get_session():
-    global SESSION
-    if not SESSION:
-        from sqlalchemy import create_engine
-        from sqlalchemy.orm import sessionmaker
-        from airunner.data.models import Base
-
-        engine = create_engine(f"sqlite:///{SQLITE_DB_PATH}")
-        Base.metadata.create_all(engine)
-        Session = sessionmaker(bind=engine)
-        SESSION = Session()
-    return SESSION
-
-
-def save_session(session=None):
-    session = get_session() if not session else session
-    try:
-        session.commit()
-        return True
-    except Exception as e:
-        Logger.error("Failed to save session")
-        session.rollback()
-        return False
-
-
 def create_airunner_paths():
     from airunner.data.models import PathSettings
     import os
-    session = get_session()
-    path_settings = session.query(PathSettings).first()
-    if path_settings:
-        paths = [
-            path_settings.base_path,
-            path_settings.txt2img_model_path,
-            path_settings.depth2img_model_path,
-            path_settings.pix2pix_model_path,
-            path_settings.outpaint_model_path,
-            path_settings.upscale_model_path,
-            path_settings.txt2vid_model_path,
-            path_settings.embeddings_path,
-            path_settings.lora_path,
-            path_settings.image_path,
-            path_settings.video_path
-        ]
-        for index, path in enumerate(paths):
-            if not os.path.exists(path):
-                print("cerating path", index, path)
-                os.makedirs(path)
+    with session_scope() as session:
+        path_settings = session.query(PathSettings).first()
+        if path_settings:
+            paths = [
+                path_settings.base_path,
+                path_settings.txt2img_model_path,
+                path_settings.depth2img_model_path,
+                path_settings.pix2pix_model_path,
+                path_settings.outpaint_model_path,
+                path_settings.upscale_model_path,
+                path_settings.txt2vid_model_path,
+                path_settings.embeddings_path,
+                path_settings.lora_path,
+                path_settings.image_path,
+                path_settings.video_path
+            ]
+            for index, path in enumerate(paths):
+                if not os.path.exists(path):
+                    print("cerating path", index, path)
+                    os.makedirs(path)
 
 
 def apply_opacity_to_image(image, target_opacity):
