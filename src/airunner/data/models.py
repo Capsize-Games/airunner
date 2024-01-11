@@ -321,15 +321,6 @@ class Brush(BaseModel):
     thumbnail = Column(String, nullable=False)
 
 
-class DeterministicSettings(BaseModel):
-    __tablename__ = 'deterministic_settings'
-
-    id = Column(Integer, primary_key=True)
-    batch_size = Column(Integer, default=1)
-    style = Column(String, default="")
-    seed = Column(Integer, default=42)
-
-
 class MetadataSettings(BaseModel):
     __tablename__ = 'metadata_settings'
 
