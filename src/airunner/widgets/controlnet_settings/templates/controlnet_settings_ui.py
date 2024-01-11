@@ -302,7 +302,7 @@ class Ui_controlnet_settings(object):
         self.groupBox.setTitle(_translate("controlnet_settings", "Use ControlNet"))
         self.scale_slider_widget.setProperty("label_text", _translate("controlnet_settings", "Scale"))
         self.scale_slider_widget.setProperty("slider_callback", _translate("controlnet_settings", "handle_value_change"))
-        self.scale_slider_widget.setProperty("settings_property", _translate("controlnet_settings", "generator.controlnet_guidance_scale"))
+        self.scale_slider_widget.setProperty("settings_property", _translate("controlnet_settings", "generator_settings.controlnet_guidance_scale"))
         self.import_image_button.setText(_translate("controlnet_settings", "Import image"))
         self.link_settings_button.setToolTip(_translate("controlnet_settings", "Use the main Input Image for the ControlNet input image"))
         self.use_imported_image_button.setToolTip(_translate("controlnet_settings", "Toggle imported input image"))
