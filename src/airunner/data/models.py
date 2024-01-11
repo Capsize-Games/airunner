@@ -552,7 +552,6 @@ class Settings(BaseModel):
     __tablename__ = 'settings'
 
     id = Column(Integer, primary_key=True)
-    allow_hf_downloads = Column(Boolean, default=True)
     
     current_tool = Column(String, default="")
 
