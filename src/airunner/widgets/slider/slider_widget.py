@@ -123,7 +123,6 @@ class SliderWidget(BaseWidget):
         self.divide_by = self.property("divide_by") or 1.0
 
         if settings_property is not None:
-            print("GET SETTINGS PROPERTY", settings_property)
             current_value = self.app.settings_manager.get_value(settings_property) or 0
 
         # check if slider_callback is str
@@ -169,7 +168,6 @@ class SliderWidget(BaseWidget):
             self.ui.slider_spinbox.setDecimals(2 if decimals < 2 else decimals)
     
     def set_slider_and_spinbox_values(self, val):
-        print("VAL", val)
         self.ui.slider.blockSignals(True)
         self.ui.slider_spinbox.blockSignals(True)
 

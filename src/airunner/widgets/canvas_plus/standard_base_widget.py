@@ -11,6 +11,7 @@ class StandardBaseWidget(CanvasBaseWidget):
         self.app.load_image.connect(self.load_image_from_path)
 
     def handle_image_data(self, data):
+        print("standard base widget handle image data")
         pass
 
     def load_image_from_path(self, image_path):

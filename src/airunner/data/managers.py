@@ -19,7 +19,8 @@ from airunner.data.session_scope import (
     llm_generator_scope,
     llm_generator_settings_scope,
     canvas_settings_scope,
-    memory_settings_scope
+    memory_settings_scope,
+    metadata_settings_scope
 )
 
 
@@ -40,16 +41,14 @@ class Modelmanager:
         except Exception as e:
             import traceback
             traceback.print_exc()
-            print(f"Error while getting property {name}: {e}")
+            Logger.error(f"Error while getting property {name}: {e}")
             value = None  # Return None if there's an error
         return value
 
     def get_properties(self, name: str = None) -> Iterator[str]:
         try:
-            print(f"Scope function: {self.scope_function}")
             with self.scope_function() as objects:
                 for object in objects:
-                    print(f"Object: {object}, attributes: {dir(object)}")
                     if name is None:
                         yield object
                     else:
@@ -61,7 +60,7 @@ class Modelmanager:
         except Exception as e:
             import traceback
             traceback.print_exc()
-            print(f"Error while getting property {name}: {e}")
+            Logger.error(f"Error while getting property {name}: {e}")
             yield None  # Yield None if there's an error
 
     def __getattr__(self, name):
@@ -111,7 +110,27 @@ class SettingsManager(QObject):
         self.llm_generator_settings = Modelmanager(llm_generator_settings_scope)
         self.canvas_settings = Modelmanager(canvas_settings_scope)
         self.memory_settings = Modelmanager(memory_settings_scope)
+        self.metadata_settings = Modelmanager(metadata_settings_scope)
     
+    @contextmanager
+    def available_pipeline_by_section(self, pipeline_action, version, category):
+        from airunner.data.models import Pipeline
+        with session_scope() as session:
+            pipelines = session.query(Pipeline).filter_by(
+                category=category,
+                pipeline_action=pipeline_action,
+                version=version
+            ).first()
+            yield pipelines
+    
+    @contextmanager
+    def model_by_name(self, name):
+        from airunner.data.models import AIModel
+        with session_scope() as session:
+            model = session.query(AIModel).options(joinedload('*')).filter(
+                AIModel.name.like(f"%{name}%") if name != "" else True).first()
+            yield model
+
     @contextmanager
     def brushes(self):
         from airunner.data.models import Brush
@@ -176,7 +195,6 @@ class SettingsManager(QObject):
         return obj
     
     def set_value(self, key, value):
-        print(f"Setting value {key} to {value}")
         keys = key.split('.')
         obj = self
         for k in keys[:-1]:  # Traverse till second last key
@@ -186,4 +204,3 @@ class SettingsManager(QObject):
                     setattr(obj, keys[-1], value)
 
         self.changed_signal.emit(key, value)
-        print(f"Emitted changed_signal with {key}, {value}")  # Debug print statement

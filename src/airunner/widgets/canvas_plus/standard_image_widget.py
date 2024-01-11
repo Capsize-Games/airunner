@@ -14,6 +14,7 @@ from airunner.utils import load_metadata_from_image, prepare_metadata
 from airunner.widgets.slider.slider_widget import SliderWidget
 from airunner.data.models import ActionScheduler, Pipeline
 from airunner.data.session_scope import session_scope
+from airunner.aihandler.logger import Logger
 
 
 class StandardImageWidget(StandardBaseWidget):
@@ -30,7 +31,10 @@ class StandardImageWidget(StandardBaseWidget):
     @property
     def image(self):
         if self._image is None:
-            self.image = self.app.canvas_widget.current_layer.image
+            try:
+                self.image = self.app.canvas_widget.current_layer.image
+            except Exception as e:
+                Logger.error(f"Error while getting image: {e}")
         return self._image
     
     @image.setter
