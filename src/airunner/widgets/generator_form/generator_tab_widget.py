@@ -30,7 +30,7 @@ class GeneratorTabWidget(BaseWidget):
 
     @property
     def current_input_image(self):
-        if self.settings_manager.settings.enable_input_image:
+        if self.app.settings_manager.settings.enable_input_image:
             return self.current_input_image_widget.current_input_image
         return None
 
@@ -108,7 +108,7 @@ class GeneratorTabWidget(BaseWidget):
         :return: 
         """
         print("handle_generator_tab_changed")
-        self.settings_manager.set_value("current_tab", self.current_generator)
+        self.app.settings_manager.set_value("settings.current_tab", self.current_generator)
         self.set_current_section_tab()
         self.app.handle_generator_tab_changed()
 
@@ -118,12 +118,12 @@ class GeneratorTabWidget(BaseWidget):
         Tab sections are txt2img, depth2img etc.
         :return:
         """
-        self.settings_manager.set_value(f"current_section_{self.current_generator}", "txt2img")
+        self.app.settings_manager.set_value(f"settings.current_section_{self.current_generator}", "txt2img")
         self.app.handle_tab_section_changed()
 
     def set_current_section_tab(self):
-        current_tab = self.settings_manager.current_tab
-        current_section = getattr(self.settings_manager, f"current_section_{current_tab}")
+        current_tab = self.app.settings_manager.current_tab
+        current_section = getattr(self.app.settings_manager, f"current_section_{current_tab}")
 
         tab_object = self.ui.generator_tabs.findChild(QWidget, f"tab_{current_tab}")
         tab_index = self.ui.generator_tabs.indexOf(tab_object)
@@ -158,7 +158,7 @@ class GeneratorTabWidget(BaseWidget):
                 self.load_model_by_section(section, tab)
 
     def toggle_variation(self, val):
-        self.settings_manager.set_value("generator.variation", val)
+        self.app.settings_manager.set_value("generator.variation", val)
 
     def set_progress_bar_value(self, tab_section, section, value):
         progressbar = self.find_widget("progress_bar", tab_section, section)

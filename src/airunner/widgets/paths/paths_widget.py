@@ -11,7 +11,7 @@ class PathsWidget(BaseWidget):
         self.initialize_widgets()
 
     def action_button_clicked_reset(self):
-        self.settings_manager.path_settings.reset_paths()
+        self.app.settings_manager.path_settings.reset_paths()
         self.initialize_widgets()
 
     def initialize_widgets(self):

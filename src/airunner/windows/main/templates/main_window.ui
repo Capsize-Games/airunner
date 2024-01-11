@@ -615,28 +615,6 @@
                   </item>
                  </layout>
                 </widget>
-                <widget class="QWidget" name="tab_prompt_builder">
-                 <attribute name="title">
-                  <string>Prompt Builder</string>
-                 </attribute>
-                 <layout class="QGridLayout" name="gridLayout_16">
-                  <property name="leftMargin">
-                   <number>0</number>
-                  </property>
-                  <property name="topMargin">
-                   <number>0</number>
-                  </property>
-                  <property name="rightMargin">
-                   <number>0</number>
-                  </property>
-                  <property name="bottomMargin">
-                   <number>0</number>
-                  </property>
-                  <item row="0" column="0">
-                   <widget class="PromptBuilderWidget" name="prompt_builder" native="true"/>
-                  </item>
-                 </layout>
-                </widget>
                 <widget class="QWidget" name="tab">
                  <attribute name="title">
                   <string>Model Manager</string>
@@ -1923,12 +1901,6 @@
    <container>1</container>
   </customwidget>
   <customwidget>
-   <class>PromptBuilderWidget</class>
-   <extends>QWidget</extends>
-   <header>airunner/widgets/prompt_builder/prompt_builder_widget</header>
-   <container>1</container>
-  </customwidget>
-  <customwidget>
    <class>ModelManagerWidget</class>
    <extends>QWidget</extends>
    <header>airunner/widgets/model_manager/model_manager_widget</header>
@@ -2563,22 +2535,6 @@
    </hints>
   </connection>
   <connection>
-   <sender>center_tab</sender>
-   <signal>currentChanged(int)</signal>
-   <receiver>MainWindow</receiver>
-   <slot>center_panel_tab_index_changed(int)</slot>
-   <hints>
-    <hint type="sourcelabel">
-     <x>536</x>
-     <y>392</y>
-    </hint>
-    <hint type="destinationlabel">
-     <x>1002</x>
-     <y>0</y>
-    </hint>
-   </hints>
-  </connection>
-  <connection>
    <sender>settings_button</sender>
    <signal>clicked()</signal>
    <receiver>MainWindow</receiver>
@@ -2815,6 +2771,22 @@
     <hint type="destinationlabel">
      <x>1021</x>
      <y>-11</y>
+    </hint>
+   </hints>
+  </connection>
+  <connection>
+   <sender>center_tab</sender>
+   <signal>currentChanged(int)</signal>
+   <receiver>MainWindow</receiver>
+   <slot>center_panel_tab_index_changed(int)</slot>
+   <hints>
+    <hint type="sourcelabel">
+     <x>536</x>
+     <y>392</y>
+    </hint>
+    <hint type="destinationlabel">
+     <x>1002</x>
+     <y>0</y>
     </hint>
    </hints>
   </connection>

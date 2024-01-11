@@ -6,7 +6,7 @@ import threading
 from airunner.aihandler.llm import LLM
 from airunner.aihandler.logger import Logger as logger
 from airunner.aihandler.runner import SDRunner
-from airunner.aihandler.settings_manager import SettingsManager
+from airunner.data.managers import SettingsManager
 from airunner.aihandler.tts import TTS
 
 

@@ -28,7 +28,7 @@ from airunner.aihandler.mixins.merge_mixin import MergeMixin
 from airunner.aihandler.mixins.scheduler_mixin import SchedulerMixin
 from airunner.aihandler.mixins.txttovideo_mixin import TexttovideoMixin
 from airunner.aihandler.settings import LOG_LEVEL, AIRUNNER_ENVIRONMENT
-from airunner.aihandler.settings_manager import SettingsManager
+from airunner.data.managers import SettingsManager
 from airunner.prompt_builder.prompt_data import PromptData
 from airunner.scripts.realesrgan.main import RealESRGAN
 from airunner.aihandler.logger import Logger

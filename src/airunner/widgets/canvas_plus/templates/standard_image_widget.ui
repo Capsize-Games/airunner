@@ -80,7 +80,7 @@
           <enum>Qt::LeftToRight</enum>
          </property>
          <property name="currentIndex">
-          <number>5</number>
+          <number>3</number>
          </property>
          <widget class="QWidget" name="tab_5">
           <attribute name="title">
@@ -166,7 +166,7 @@
                 <number>0</number>
                </property>
                <property name="settings_property" stdset="0">
-                <string>standard_image_widget_settings.image_similarity</string>
+                <string>standard_image_settings.image_similarity</string>
                </property>
               </widget>
              </item>

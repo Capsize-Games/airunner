@@ -7,12 +7,12 @@ class ImageGeneratorPreferencesWidget(BaseWidget):
 
     def __init__(self, *args, **kwargs):
         super().__init__(*args, **kwargs)
-        self.ui.stablediffusion.setChecked(self.settings_manager.current_image_generator == "stablediffusion")
+        self.ui.stablediffusion.setChecked(self.app.settings_manager.current_image_generator == "stablediffusion")
     
     def stablediffusion_toggled(self, val):
         if val:
-            self.settings_manager.set_value("current_image_generator", "stablediffusion")
-            self.settings_manager.set_value("current_tab", "stablediffusion")
-            self.settings_manager.set_value("current_section_stablediffusion", "txt2img")
+            self.app.settings_manager.set_value("settings.current_image_generator", "stablediffusion")
+            self.app.settings_manager.set_value("settings.current_tab", "stablediffusion")
+            self.app.settings_manager.set_value("settings.current_section_stablediffusion", "txt2img")
             self.app.generator_tab_widget.set_current_section_tab()
-            self.settings_manager.set_value("generator_section", "txt2img")
+            self.app.settings_manager.set_value("settings.generator_section", "txt2img")

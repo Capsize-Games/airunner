@@ -82,7 +82,7 @@ class Ui_active_grid_settings_widget(object):
         self.width_slider_widget.setProperty("spinbox_single_step", 64)
         self.width_slider_widget.setProperty("spinbox_page_step", 64)
         self.width_slider_widget.setProperty("slider_callback", "action_slider_changed")
-        self.width_slider_widget.setProperty("settings_property", "working_width")
+        self.width_slider_widget.setProperty("settings_property", "settings.working_width")
         self.width_slider_widget.setProperty("display_as_float", False)
         self.width_slider_widget.setObjectName("width_slider_widget")
         self.verticalLayout.addWidget(self.width_slider_widget)
@@ -128,5 +128,5 @@ class Ui_active_grid_settings_widget(object):
         self.groupBox_3.setTitle(_translate("active_grid_settings_widget", "Size"))
         self.width_slider_widget.setProperty("label_text", _translate("active_grid_settings_widget", "Active Grid Width"))
         self.height_slider_widget.setProperty("label_text", _translate("active_grid_settings_widget", "Active Grid Height"))
-        self.height_slider_widget.setProperty("settings_property", _translate("active_grid_settings_widget", "working_height"))
+        self.height_slider_widget.setProperty("settings_property", _translate("active_grid_settings_widget", "settings.working_height"))
 from airunner.widgets.slider.slider_widget import SliderWidget

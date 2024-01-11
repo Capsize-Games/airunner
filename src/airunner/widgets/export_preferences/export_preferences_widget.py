@@ -26,21 +26,21 @@ class ExportPreferencesWidget(BaseWidget):
         self.ui.image_type_dropdown.blockSignals(True)
         self.ui.image_path.blockSignals(True)
         # initialize values:
-        self.ui.metadata_prompt.setChecked(self.settings_manager.metadata_settings.image_export_metadata_prompt is True)
-        self.ui.metadata_negative_prompt.setChecked(self.settings_manager.metadata_settings.image_export_metadata_negative_prompt is True)
-        self.ui.metadata_scale.setChecked(self.settings_manager.metadata_settings.image_export_metadata_scale is True)
-        self.ui.metadata_seed.setChecked(self.settings_manager.metadata_settings.image_export_metadata_seed is True)
-        self.ui.metadata_steps.setChecked(self.settings_manager.metadata_settings.image_export_metadata_steps is True)
-        self.ui.metadata_ddim_eta.setChecked(self.settings_manager.metadata_settings.image_export_metadata_ddim_eta is True)
-        self.ui.metadata_iterations.setChecked(self.settings_manager.metadata_settings.image_export_metadata_iterations is True)
-        self.ui.metadata_samples.setChecked(self.settings_manager.metadata_settings.image_export_metadata_samples is True)
-        self.ui.metadata_model.setChecked(self.settings_manager.metadata_settings.image_export_metadata_model is True)
-        self.ui.metadata_model_branch.setChecked(self.settings_manager.metadata_settings.image_export_metadata_model_branch is True)
-        self.ui.metadata_scheduler.setChecked(self.settings_manager.metadata_settings.image_export_metadata_scheduler is True)
-        self.ui.export_metadata.setChecked(self.settings_manager.metadata_settings.export_metadata is True)
-        self.ui.actionAuto_export_images.setChecked(self.settings_manager.auto_export_images is True)
-        self.ui.image_type_dropdown.setCurrentText(self.settings_manager.image_export_type)
-        self.ui.image_path.setText(self.settings_manager.image_path)
+        self.ui.metadata_prompt.setChecked(self.app.settings_manager.metadata_settings.image_export_metadata_prompt is True)
+        self.ui.metadata_negative_prompt.setChecked(self.app.settings_manager.metadata_settings.image_export_metadata_negative_prompt is True)
+        self.ui.metadata_scale.setChecked(self.app.settings_manager.metadata_settings.image_export_metadata_scale is True)
+        self.ui.metadata_seed.setChecked(self.app.settings_manager.metadata_settings.image_export_metadata_seed is True)
+        self.ui.metadata_steps.setChecked(self.app.settings_manager.metadata_settings.image_export_metadata_steps is True)
+        self.ui.metadata_ddim_eta.setChecked(self.app.settings_manager.metadata_settings.image_export_metadata_ddim_eta is True)
+        self.ui.metadata_iterations.setChecked(self.app.settings_manager.metadata_settings.image_export_metadata_iterations is True)
+        self.ui.metadata_samples.setChecked(self.app.settings_manager.metadata_settings.image_export_metadata_samples is True)
+        self.ui.metadata_model.setChecked(self.app.settings_manager.metadata_settings.image_export_metadata_model is True)
+        self.ui.metadata_model_branch.setChecked(self.app.settings_manager.metadata_settings.image_export_metadata_model_branch is True)
+        self.ui.metadata_scheduler.setChecked(self.app.settings_manager.metadata_settings.image_export_metadata_scheduler is True)
+        self.ui.export_metadata.setChecked(self.app.settings_manager.metadata_settings.export_metadata is True)
+        self.ui.actionAuto_export_images.setChecked(self.app.settings_manager.auto_export_images is True)
+        self.ui.image_type_dropdown.setCurrentText(self.app.settings_manager.image_export_type)
+        self.ui.image_path.setText(self.app.settings_manager.image_path)
         image_types = [
             "png",
             "jpg",
@@ -49,7 +49,7 @@ class ExportPreferencesWidget(BaseWidget):
             "tiff",
         ]
         self.ui.image_type_dropdown.addItems(image_types)
-        self.ui.image_type_dropdown.setCurrentText(self.settings_manager.image_export_type)
+        self.ui.image_type_dropdown.setCurrentText(self.app.settings_manager.image_export_type)
 
         self.ui.metadata_prompt.blockSignals(False)
         self.ui.metadata_negative_prompt.blockSignals(False)
@@ -68,56 +68,56 @@ class ExportPreferencesWidget(BaseWidget):
         self.ui.image_path.blockSignals(False)
 
     def action_toggled_steps(self, val):
-        self.settings_manager.set_value(f"metadata_settings.image_export_metadata_steps", val)
+        self.app.settings_manager.set_value(f"metadata_settings.image_export_metadata_steps", val)
 
     def action_toggled_seed(self, val):
-        self.settings_manager.set_value(f"metadata_settings.image_export_metadata_seed", val)
+        self.app.settings_manager.set_value(f"metadata_settings.image_export_metadata_seed", val)
     
     def action_toggled_latents_seed(self, val):
-        self.settings_manager.set_value(f"metadata_settings.image_export_metadata_latents_seed", val)
+        self.app.settings_manager.set_value(f"metadata_settings.image_export_metadata_latents_seed", val)
 
     def action_toggled_scheduler(self, val):
-        self.settings_manager.set_value(f"metadata_settings.image_export_metadata_scheduler", val)
+        self.app.settings_manager.set_value(f"metadata_settings.image_export_metadata_scheduler", val)
 
     def action_toggled_scale(self, val):
-        self.settings_manager.set_value(f"metadata_settings.image_export_metadata_scale", val)
+        self.app.settings_manager.set_value(f"metadata_settings.image_export_metadata_scale", val)
 
     def action_toggled_samples(self, val):
-        self.settings_manager.set_value(f"metadata_settings.image_export_metadata_samples", val)
+        self.app.settings_manager.set_value(f"metadata_settings.image_export_metadata_samples", val)
 
     def action_toggled_prompt(self, val):
-        self.settings_manager.set_value(f"metadata_settings.image_export_metadata_prompt", val)
+        self.app.settings_manager.set_value(f"metadata_settings.image_export_metadata_prompt", val)
 
     def action_toggled_negative_prompt(self, val):
-        self.settings_manager.set_value(f"metadata_settings.image_export_metadata_negative_prompt", val)
+        self.app.settings_manager.set_value(f"metadata_settings.image_export_metadata_negative_prompt", val)
 
     def action_toggled_model_branch(self, val):
-        self.settings_manager.set_value(f"metadata_settings.image_export_metadata_model_branch", val)
+        self.app.settings_manager.set_value(f"metadata_settings.image_export_metadata_model_branch", val)
 
     def action_toggled_model(self, val):
-        self.settings_manager.set_value(f"metadata_settings.image_export_metadata_model", val)
+        self.app.settings_manager.set_value(f"metadata_settings.image_export_metadata_model", val)
 
     def action_toggled_iterations(self, val):
-        self.settings_manager.set_value(f"metadata_settings.image_export_metadata_iterations", val)
+        self.app.settings_manager.set_value(f"metadata_settings.image_export_metadata_iterations", val)
 
     def action_toggled_ddim(self, val):
-        self.settings_manager.set_value(f"metadata_settings.image_export_metadata_ddim_eta", val)
+        self.app.settings_manager.set_value(f"metadata_settings.image_export_metadata_ddim_eta", val)
 
     def action_toggled_export_metadata(self, val):
-        self.settings_manager.set_value(f"metadata_settings.export_metadata", val)
+        self.app.settings_manager.set_value(f"metadata_settings.export_metadata", val)
 
     def action_toggle_automatically_export_images(self, val):
-        self.settings_manager.set_value(f"auto_export_images", val)
+        self.app.settings_manager.set_value(f"auto_export_images", val)
     
     def action_image_type_text_changed(self, val):
-        self.settings_manager.set_value(f"image_export_type", val)
+        self.app.settings_manager.set_value(f"image_export_type", val)
     
     def image_export_path_text_edited(self, val):
-        self.settings_manager.set_value(f"image_path", val)
+        self.app.settings_manager.set_value(f"image_path", val)
     
     def action_clicked_button_browse(self):
         path = QFileDialog.getExistingDirectory(None, "Select Directory")
         if path:
             self.ui.image_path.setText(path)
-            self.settings_manager.set_value("image_path", path)
+            self.app.settings_manager.set_value("path_settings.image_path", path)
 
