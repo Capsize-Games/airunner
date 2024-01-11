@@ -610,7 +610,6 @@ class Settings(BaseModel):
     active_image_editor_section = Column(String, default="canvas")
     enable_advanced_mode = Column(Boolean, default=False)
 
-    enable_tts = Column(Boolean, default=True)
     generator_settings_override_id = Column(Integer, ForeignKey('generator_settings.id'))
 
 

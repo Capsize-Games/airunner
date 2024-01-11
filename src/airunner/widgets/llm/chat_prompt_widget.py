@@ -124,7 +124,7 @@ class ChatPromptWidget(BaseWidget):
         with session_scope() as session:
             session.add(message_object)
 
-        if self.app.settings_manager.enable_tts:
+        if self.app.enable_tts:
             # split on sentence enders
             sentence_enders = [".", "?", "!", "\n"]
             text = message_object.message
