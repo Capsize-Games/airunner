@@ -248,6 +248,14 @@ class MainWindow(
         self.application_settings.setValue("nsfw_filter", val)
 
     @property
+    def allow_online_mode(self):
+        return self.application_settings.value("allow_online_mode", True, type=bool)
+
+    @allow_online_mode.setter
+    def allow_online_mode(self, val):
+        self.application_settings.setValue("allow_online_mode", val)
+
+    @property
     def generator(self):
         with session_scope() as session:
             if self._generator is None:
