@@ -157,6 +157,9 @@ class ControlNetSettingsWidget(InputImageSettingsWidget):
 
     def export_generated_controlnet_image(self):
         path, image = auto_export_image(
+            base_path=self.app.base_path,
+            image_path=self.app.image_path,
+            image_export_type=self.app.image_export_type,
             image=self.current_controlnet_image,
             type="controlnet",
             data={
@@ -219,7 +222,7 @@ class ControlNetSettingsWidget(InputImageSettingsWidget):
         it into the application for use with controlnet during image generation.
         :return:
         """
-        controlnet_image_mask_path = os.path.join(self.app.settings_manager.path_settings.image_path, "controlnet_masks")
+        controlnet_image_mask_path = os.path.join(self.app.image_path, "controlnet_masks")
         file_path, _ = open_file_path(
             label="Import Mask",
             directory=controlnet_image_mask_path
