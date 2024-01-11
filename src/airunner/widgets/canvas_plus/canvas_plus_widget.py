@@ -483,7 +483,6 @@ class CanvasPlusWidget(CanvasBaseWidget):
         with self.app.settings_manager.layers() as layers:
             for layer in layers:
                 image = layer.image
-                print("layer image", image)
                 if image is None:
                     continue
 
@@ -521,10 +520,8 @@ class CanvasPlusWidget(CanvasBaseWidget):
                     canvas_settings["pos_x"] + pos.x(),
                     canvas_settings["pos_y"] + pos.y()
                 ))
-            print("draw layers 2")
 
     def set_scene_rect(self):
-        print("set_scene_rect")
         self.scene.setSceneRect(0, 0, self.view_size.width(), self.view_size.height())
 
     def clear_lines(self):
