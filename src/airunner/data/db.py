@@ -6,7 +6,7 @@ from airunner.data.bootstrap.pipeline_bootstrap_data import pipeline_bootstrap_d
 from airunner.data.models import ControlnetModel, LLMPromptTemplate, Pipeline, Document, \
     MetadataSettings, AIModel, \
     ImageFilter, ImageFilterValue, Scheduler, ActionScheduler, \
-    LLMGeneratorSetting, LLMGenerator, LLMModelVersion, StandardImageWidgetSettings
+    LLMGenerator, LLMModelVersion, StandardImageWidgetSettings
 from airunner.data.session_scope import session_scope, engine
 from alembic.config import Config
 from alembic import command
@@ -171,13 +171,6 @@ def prepare_database():
             for generator_name, generator_data in seed_data.items():
                 generator = LLMGenerator(name=generator_name)
                 my_session.add(generator)
-
-                # create GeneratorSetting with property, value and property_type based on value type
-                setting = LLMGeneratorSetting()
-                setting.generator = generator
-                for k, v in generator_data["generator_settings"].items():
-                    setting.__setattr__(k, v)
-                my_session.add(setting)
 
                 if "model_versions" in generator_data:
                     model_versions = []
