@@ -29,14 +29,6 @@ def session_scope():
     finally:
         session.close()
 
-
-@contextmanager
-def active_grid_settings_scope():
-    from airunner.data.models import ActiveGridSettings
-    with session_scope() as session:
-        active_grid_settings = session.query(ActiveGridSettings).options(joinedload('*')).first()
-        yield active_grid_settings
-
 @contextmanager
 def path_settings_scope():
     from airunner.data.models import PathSettings

@@ -60,7 +60,7 @@ class GeneratorForm(BaseWidget):
 
     @property
     def generator_settings(self):
-        return self.app.settings_manager.generator_settings
+        return self.app.generator_settings
 
     @property
     def random_seed(self):
@@ -99,10 +99,10 @@ class GeneratorForm(BaseWidget):
     @property
     def active_rect(self):
         rect = QRect(
-            self.app.settings_manager.active_grid_settings.pos_x,
-            self.app.settings_manager.active_grid_settings.pos_y,
-            self.app.settings_manager.active_grid_settings.width,
-            self.app.settings_manager.active_grid_settings.height
+            self.app.active_grid_settings["pos_x"],
+            self.app.active_grid_settings["pos_y"],
+            self.app.active_grid_settings["width"],
+            self.app.active_grid_settings["height"]
         )
         rect.translate(-self.app.canvas_settings["pos_x"], -self.app.canvas_settings["pos_y"])
 

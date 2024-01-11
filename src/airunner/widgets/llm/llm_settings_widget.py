@@ -33,7 +33,7 @@ class LLMSettingsWidget(BaseWidget):
     @property
     def generator_settings(self):
         try:
-            return self.app.settings_manager.generator_settings
+            return self.app.generator_settings
         except Exception as e:
             Logger.error(e)
 

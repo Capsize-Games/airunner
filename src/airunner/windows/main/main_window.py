@@ -22,7 +22,7 @@ from airunner.aihandler.pyqt_client import OfflineClient
 from airunner.aihandler.qtvar import MessageHandlerVar
 from airunner.aihandler.settings import LOG_LEVEL
 from airunner.airunner_api import AIRunnerAPI
-from airunner.data.models import DEFAULT_PATHS, Prompt, LLMGenerator
+from airunner.data.models import DEFAULT_PATHS, LLMGenerator
 from airunner.filters.windows.filter_base import FilterBase
 from airunner.input_event_manager import InputEventManager
 from airunner.settings import BASE_PATH
@@ -550,6 +550,24 @@ class MainWindow(
 
 
     #### SETTINGS ####
+    @property
+    def active_grid_settings(self):
+        return self.application_settings.value("active_grid_settings", dict(
+            enabled=False,
+            render_border=True,
+            render_fill=True,
+            border_opacity=50,
+            fill_opacity=50,
+            pos_x=0,
+            pos_y=0,
+            width=512,
+            height=512,
+        ))
+    
+    @active_grid_settings.setter
+    def active_grid_settings(self, val):
+        self.application_settings.setValue("active_grid_settings", val)
+
     @property
     def canvas_settings(self):
         return self.application_settings.value("grid_settings", dict(
@@ -1826,15 +1844,6 @@ class MainWindow(
             directory,
             "Image Files (*.png *.jpg *.jpeg)"
         )
-
-    def load_prompt(self, prompt: Prompt):
-        """
-        Loads prompt values from a Prompt model instance.
-        :param prompt: PromptModel
-        :return:
-        """
-        self.update_prompt(prompt.prompt)
-        self.update_negative_prompt(prompt.negative_prompt)
 
     def update_prompt(self, prompt_value):
         self.generator_tab_widget.update_prompt(prompt_value)

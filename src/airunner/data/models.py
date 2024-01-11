@@ -129,108 +129,6 @@ class ActionScheduler(BaseModel):
     scheduler = relationship("Scheduler", backref="action_schedulers")
 
 
-class PromptStyleCategoryModel(ModelBase):
-    _headers = [
-        {
-            "display_name": "ID",
-            "column_name": "id"
-        },
-        {
-            "display_name": "Name",
-            "column_name": "name"
-        },
-        {
-            "display_name": "Negative Prompt",
-            "column_name": "negative_prompt"
-        }
-    ]
-
-
-class PromptStyleCategory(BaseModel):
-    __tablename__ = 'prompt_style_category'
-
-    id = Column(Integer, primary_key=True)
-    name = Column(String)
-    negative_prompt = Column(String)
-
-
-class PromptStyle(BaseModel):
-    __tablename__ = 'prompt_style'
-
-    id = Column(Integer, primary_key=True)
-    name = Column(String)
-    style_category_id = Column(Integer, ForeignKey('prompt_style_category.id'))
-    style_category = relationship("PromptStyleCategory", backref="styles")
-
-
-class PromptCategory(BaseModel):
-    __tablename__ = 'prompt_category'
-
-    id = Column(Integer, primary_key=True)
-    name = Column(String)
-    negative_prompt = Column(String)
-
-
-class PromptVariableCategory(BaseModel):
-    __tablename__ = 'prompt_variable_category'
-
-    id = Column(Integer, primary_key=True)
-    name = Column(String)
-
-
-class PromptVariableCategoryWeight(BaseModel):
-    __tablename__ = 'prompt_variable_category_weight'
-
-    id = Column(Integer, primary_key=True)
-    weight = Column(Float)
-    prompt_category_id = Column(Integer, ForeignKey('prompt_category.id'))
-    prompt_category = relationship("PromptCategory", backref="weights")
-    variable_category_id = Column(Integer, ForeignKey('prompt_variable_category.id'))
-    variable_category = relationship("PromptVariableCategory", backref="weights")
-
-
-class PromptVariable(BaseModel):
-    __tablename__ = 'prompt_variables'
-
-    id = Column(Integer, primary_key=True)
-    value = Column(String)
-    prompt_category_id = Column(Integer, ForeignKey('prompt_category.id'))
-    prompt_category = relationship("PromptCategory", backref="variables")
-    variable_category_id = Column(Integer, ForeignKey('prompt_variable_category.id'))
-    variable_category = relationship("PromptVariableCategory", backref="variables")
-
-
-class PromptOption(BaseModel):
-    __tablename__ = 'prompt_option'
-
-    id = Column(Integer, primary_key=True)
-    prompt_id = Column(Integer, ForeignKey('prompts.id'))
-    text = Column(String, default="")
-    cond = Column(String, default="")
-    else_cond = Column(String, default="")
-    or_cond = Column(String, default="")
-
-    next_cond_id = Column(Integer, ForeignKey('prompt_option.id'), nullable=True)
-    next_cond = Column(Integer, ForeignKey('prompt_option.id'), nullable=True)
-
-    next = relationship(
-        "PromptOption",
-        backref="prev",
-        remote_side=[id],
-        foreign_keys=[next_cond_id]
-    )
-
-
-class Prompt(BaseModel):
-    __tablename__ = 'prompts'
-
-    id = Column(Integer, primary_key=True)
-    name = Column(String)
-    category_id = Column(Integer, ForeignKey('prompt_category.id'))
-    category = relationship("PromptCategory", backref="prompts")
-    options = relationship("PromptOption", backref="prompts")
-
-
 class SavedPrompt(BaseModel):
     __tablename__ = 'saved_prompts'
 
@@ -363,21 +261,6 @@ class ImageFilterValue(BaseModel):
     value_type = Column(String, default="int")
     min_value = Column(Integer, default=0)
     max_value = Column(Integer, default=100)
-
-
-class ActiveGridSettings(BaseModel):
-    __tablename__ = 'active_grid_settings'
-
-    id = Column(Integer, primary_key=True)
-    enabled = Column(Boolean, default=True)
-    render_border = Column(Boolean, default=True)
-    render_fill = Column(Boolean, default=True)
-    border_opacity = Column(Integer, default=50)
-    fill_opacity = Column(Integer, default=50)
-    pos_x = Column(Integer, default=0)
-    pos_y = Column(Integer, default=0)
-    width = Column(Integer, default=512)
-    height = Column(Integer, default=512)
 
 
 class StandardImageWidgetSettings(BaseModel):
