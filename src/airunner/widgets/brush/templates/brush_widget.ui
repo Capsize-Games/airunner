@@ -47,7 +47,7 @@
       <string>Brush Size</string>
      </property>
      <property name="slider_callback" stdset="0">
-      <string notr="true">action_slider_changed</string>
+      <string notr="true">handle_value_change</string>
      </property>
      <property name="settings_property" stdset="0">
       <string notr="true">brush_settings.size</string>
