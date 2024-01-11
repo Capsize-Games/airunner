@@ -197,11 +197,14 @@ class ActiveGridArea(DraggablePixmap):
 
 class CustomScene(QGraphicsScene):
     def __init__(self, parent=None):
+        self.parent = parent
         super().__init__(parent)
         self.drawing = False
         self.last_point = QPointF()
 
     def mousePressEvent(self, event):
+        if self.parent.app.current_tool != "brush":
+            return
         if event.button() == Qt.MouseButton.LeftButton:
             self.drawing = True
             self.last_point = event.scenePos()
@@ -463,7 +466,7 @@ class CanvasPlusWidget(CanvasBaseWidget):
 
     def initialize(self):
         # Create a QGraphicsScene object
-        self.scene = CustomScene()
+        self.scene = CustomScene(parent=self)
 
         self.view = self.canvas_container
         original_mouse_event = self.view.mouseMoveEvent
