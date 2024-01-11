@@ -36,6 +36,8 @@ class Ui_canvas(object):
         self.gridLayout_2 = QtWidgets.QGridLayout(self.central_widget)
         self.gridLayout_2.setObjectName("gridLayout_2")
         self.canvas_container = QtWidgets.QGraphicsView(parent=self.central_widget)
+        self.canvas_container.setVerticalScrollBarPolicy(QtCore.Qt.ScrollBarPolicy.ScrollBarAlwaysOff)
+        self.canvas_container.setHorizontalScrollBarPolicy(QtCore.Qt.ScrollBarPolicy.ScrollBarAlwaysOff)
         self.canvas_container.setObjectName("canvas_container")
         self.gridLayout_2.addWidget(self.canvas_container, 0, 0, 1, 1)
         self.canvas_position = QtWidgets.QLabel(parent=self.central_widget)
