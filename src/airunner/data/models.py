@@ -574,9 +574,6 @@ class Settings(BaseModel):
     # generator tab sections
     generator_settings = relationship("GeneratorSetting", backref="settings")
 
-    # generator version
-    current_version_stablediffusion = Column(String, default="SD 1.5")
-
     generator_settings_override_id = Column(Integer, ForeignKey('generator_settings.id'))
 
 
