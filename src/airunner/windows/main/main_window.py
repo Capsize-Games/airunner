@@ -12,7 +12,7 @@ from PyQt6.QtCore import pyqtSlot, Qt, pyqtSignal, QTimer, QObject, QThread
 from PyQt6.QtGui import QGuiApplication
 from PyQt6.QtWidgets import QApplication, QFileDialog, QMainWindow, QWidget
 from PyQt6 import QtGui
-from airunner import settings
+from PyQt6.QtCore import QSettings
 
 from airunner.resources_light_rc import *
 from airunner.resources_dark_rc import *
@@ -21,7 +21,6 @@ from airunner.aihandler.logger import Logger as logger
 from airunner.aihandler.pyqt_client import OfflineClient
 from airunner.aihandler.qtvar import MessageHandlerVar
 from airunner.aihandler.settings import LOG_LEVEL
-from airunner.data.managers import SettingsManager
 from airunner.airunner_api import AIRunnerAPI
 from airunner.data.models import Prompt, TabSection, LLMGenerator
 from airunner.filters.windows.filter_base import FilterBase
@@ -41,7 +40,7 @@ from airunner.windows.video import VideoPopup
 from airunner.data.models import TabSection
 from airunner.widgets.brushes.brushes_container import BrushesContainer
 from airunner.data.models import Document
-from airunner.data.session_scope import session_scope, path_settings_scope
+from airunner.data.session_scope import session_scope
 
 
 class ImageDataWorker(QObject):
@@ -394,8 +393,7 @@ class MainWindow(
 
         self.initialize_image_worker()
 
-        # TODO
-        #self.settings = settings("Capsize Games", "AI Runner")
+        self.application_settings = QSettings("Capsize Games", "AI Runner")
         self.restore_state()
 
         self.settings_manager.changed_signal.connect(self.handle_changed_signal)
@@ -747,7 +745,6 @@ class MainWindow(
     ##### Window properties #####
     # Use this to set and restore window properties
     # Such as splitter positions, window size, etc
-    # TODO: complete this    
     def closeEvent(self, event):
         logger.info("Quitting")
         self.save_state()
@@ -755,19 +752,45 @@ class MainWindow(
         QApplication.quit()
     
     def save_state(self):
-        # TODO:
-        # self.settings.setValue("splitterSizes", self.splitter.saveState())
-        # self.settings.setValue("currentTabIndex", self.tabWidget.currentIndex())
+        self.application_settings.setValue("main_splitter", self.ui.main_splitter.saveState())
+        self.application_settings.setValue("content_splitter", self.ui.content_splitter.saveState())
+        self.application_settings.setValue("center_splitter", self.ui.center_splitter.saveState())
+        self.application_settings.setValue("canvas_splitter", self.ui.canvas_splitter.saveState())
+        self.application_settings.setValue("splitter", self.ui.splitter.saveState())
+        self.application_settings.setValue("mode_tab_widget_index", self.ui.mode_tab_widget.currentIndex())
+        self.application_settings.setValue("tool_tab_widget_index", self.ui.tool_tab_widget.currentIndex())
+        self.application_settings.setValue("center_tab_index", self.ui.center_tab.currentIndex())
         pass
     
     def restore_state(self):
-        # TODO:
-        # splitter_sizes = self.settings.value("splitterSizes")
-        # if splitter_sizes is not None:
-        #     self.splitter.restoreState(splitter_sizes)
-        # current_tab_index = self.settings.value("currentTabIndex", 0, type=int)
-        # self.tabWidget.setCurrentIndex(current_tab_index)
-        pass
+        main_splitter = self.application_settings.value("main_splitter")
+        if main_splitter is not None:
+            self.ui.main_splitter.restoreState(main_splitter)
+        
+        content_splitter = self.application_settings.value("content_splitter")
+        if content_splitter is not None:
+            self.ui.content_splitter.restoreState(content_splitter)
+        
+        center_splitter = self.application_settings.value("center_splitter")
+        if center_splitter is not None:
+            self.ui.center_splitter.restoreState(center_splitter)
+        
+        canvas_splitter = self.application_settings.value("canvas_splitter")
+        if canvas_splitter is not None:
+            self.ui.canvas_splitter.restoreState(canvas_splitter)
+        
+        splitter = self.application_settings.value("splitter")
+        if splitter is not None:
+            self.ui.splitter.restoreState(splitter)
+
+        mode_tab_widget_index = self.application_settings.value("mode_tab_widget_index", 0, type=int)
+        self.ui.mode_tab_widget.setCurrentIndex(mode_tab_widget_index)
+
+        tool_tab_widget_index = self.application_settings.value("tool_tab_widget_index", 0, type=int)
+        self.ui.tool_tab_widget.setCurrentIndex(tool_tab_widget_index)
+
+        center_tab_index = self.application_settings.value("center_tab_index", 0, type=int)
+        self.ui.center_tab.setCurrentIndex(center_tab_index)
     ##### End window properties #####
     #################################
 
