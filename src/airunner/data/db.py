@@ -257,7 +257,6 @@ def prepare_database():
             settings.deterministic_settings = my_session.query(DeterministicSettings).first()
             settings.metadata_settings = my_session.query(MetadataSettings).first()
             settings.memory_settings = my_session.query(MemorySettings).first()
-            settings.active_grid_settings = my_session.query(ActiveGridSettings).first()
 
             active_grid_colors = {
                 "stablediffusion": {

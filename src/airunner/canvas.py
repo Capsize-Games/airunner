@@ -343,8 +343,8 @@ class Canvas(
                 self.select_end = event.pos()
 
         # snap to grid if enabled
-        if self.settings_manager.grid_settings.snap_to_grid:
-            grid_size = self.settings_manager.grid_settings.size
+        if self.app.snap_to_grid:
+            grid_size = self.app.cell_size
             self.select_start.setX(self.select_start.x() - (self.select_start.x() % grid_size))
             self.select_start.setY(self.select_start.y() - (self.select_start.y() % grid_size))
             self.select_end.setX(self.select_end.x() - (self.select_end.x() % grid_size))
@@ -389,7 +389,7 @@ class Canvas(
             int((height / 2) + self.pos_y)
         )
 
-        if self.settings_manager.grid_settings.snap_to_grid:
+        if self.app.snap_to_grid:
             point = QPoint(
                 point.x() - (point.x() % self.grid_size),
                 point.y() - (point.y() % self.grid_size)
@@ -405,7 +405,7 @@ class Canvas(
         self.app.header_widget.height_slider_widget.slider.setValue(self.settings_manager.working_height)
 
     def set_canvas_color(self):
-        self.update_canvas_color(self.settings_manager.grid_settings.canvas_color)
+        self.update_canvas_color(self.app.canvas_color)
 
     def update_canvas_color(self, color):
         self.canvas_container.setStyleSheet(f"""
