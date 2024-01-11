@@ -330,7 +330,7 @@ class StandardImageWidget(StandardBaseWidget):
             pipelines = session.query(Pipeline).filter(Pipeline.category == "stablediffusion").all()
             version_names = set([pipeline.version for pipeline in pipelines])
             self.ui.version.addItems(version_names)
-            current_version = self.app.settings_manager.settings.current_version_stablediffusion
+            current_version = self.app.current_version_stablediffusion
             if current_version != "":
                 self.ui.version.setCurrentText(current_version)
             self.ui.version.blockSignals(False)
@@ -342,7 +342,7 @@ class StandardImageWidget(StandardBaseWidget):
 
             image_generator = "stablediffusion"
             pipeline = self.app.pipeline
-            version = self.app.settings_manager.settings.current_version_stablediffusion
+            version = self.app.current_version_stablediffusion
 
             models = session.query(AIModel).filter(
                 AIModel.category == image_generator,
@@ -468,5 +468,5 @@ class StandardImageWidget(StandardBaseWidget):
 
     def handle_version_changed(self, val):
         print("VERSION CHANGED", val)
-        self.app.settings_manager.set_value(f"settings.current_version_stablediffusion", val)
+        self.app.current_version_stablediffusion = val
         self.load_models()
