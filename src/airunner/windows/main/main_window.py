@@ -248,6 +248,14 @@ class MainWindow(
         self.application_settings.setValue("nsfw_filter", val)
 
     @property
+    def is_maximized(self):
+        return self.application_settings.value("is_maximized", False, type=bool)
+    
+    @is_maximized.setter
+    def is_maximized(self, val):
+        self.application_settings.setValue("is_maximized", val)
+
+    @property
     def show_active_image_area(self):
         return self.application_settings.value("show_active_image_area", True, type=bool)
     
@@ -401,14 +409,6 @@ class MainWindow(
     @property
     def image_path(self):
         return self.settings_manager.path_settings.image_path
-
-    @property
-    def is_maximized(self):
-        return self.settings_manager.settings.is_maximized
-
-    @is_maximized.setter
-    def is_maximized(self, val):
-        self.settings_manager.set_value("settings.is_maximized", val)
 
     @property
     def current_layer(self):
