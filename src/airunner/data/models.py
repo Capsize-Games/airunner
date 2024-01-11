@@ -555,8 +555,6 @@ class Settings(BaseModel):
     
     current_tool = Column(String, default="")
 
-    image_to_new_layer = Column(Boolean, default=False)
-    latest_version_check = Column(Boolean, default=True)
     primary_color = Column(String, default="#000000")
     secondary_color = Column(String, default="#000000")
 

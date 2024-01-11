@@ -197,11 +197,11 @@ class SettingsWindow(BaseWindow):
             if name == "resize_on_import":
                 checked = self.app.resize_on_paste
             elif name == "image_to_new_layer":
-                checked = self.app.settings_manager.settings.image_to_new_layer
+                checked = self.app.image_to_new_layer is True
             elif name == "dark_mode":
                 checked = self.app.dark_mode_enabled
             elif name == "check_for_updates":
-                checked = self.app.settings_manager.settings.latest_version_check
+                checked = self.app.latest_version_check
             elif name == "enable_tts":
                 checked = self.app.settings_manager.settings.enable_tts
             elif name == "allow_online_mode":
@@ -231,13 +231,13 @@ class SettingsWindow(BaseWindow):
             self.app.resize_on_paste = checked
         elif name == "image_to_new_layer":
             checked = item.checkState() == Qt.CheckState.Checked
-            self.app.settings_manager.set_value("settings.image_to_new_layer", checked)
+            self.app.image_to_new_layer = checked
         elif name == "dark_mode":
             checked = item.checkState() == Qt.CheckState.Checked
             self.app.dark_mode_enabled = checked
         elif name == "check_for_updates":
             checked = item.checkState() == Qt.CheckState.Checked
-            self.app.settings_manager.set_value("settings.latest_version_check", checked)
+            self.app.latest_version_check = checked
         elif name == "enable_tts":
             checked = item.checkState() == Qt.CheckState.Checked
             self.app.settings_manager.set_value("settings.enable_tts", checked)
