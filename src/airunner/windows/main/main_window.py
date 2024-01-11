@@ -619,6 +619,33 @@ class MainWindow(
     @generator_settings.setter
     def generator_settings(self, val):
         self.application_settings.setValue("generator_settings", val)
+
+    @property
+    def llm_generator_settings(self):
+        return self.application_settings.value("llm_generator_settings", dict(
+            top_p=90,
+            max_length=50,
+            repetition_penalty=100,
+            min_length=10,
+            length_penalty=100,
+            num_beams=1,
+            ngram_size=0,
+            temperature=100,
+            sequences=1,
+            top_k=0,
+            seed=0,
+            do_sample=False,
+            eta_cutoff=10,
+            early_stopping=True,
+            random_seed=False,
+            model_version="google/flan-t5-xl",
+            dtype="32bit",
+            use_gpu=True,
+        ))
+    
+    @llm_generator_settings.setter
+    def llm_generator_settings(self, val):
+        self.application_settings.setValue("llm_generator_settings", val)
     #### END GENERATOR SETTINGS ####
 
     @property
