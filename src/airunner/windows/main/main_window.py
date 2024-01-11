@@ -1504,7 +1504,7 @@ class MainWindow(
             self.toggle_tool(kwargs["tool"])
 
     def toggle_tool(self, tool):
-        self.settings_manager.set_value("settings.current_tool", tool)
+        self.current_tool = tool
 
     def initialize_mixins(self):
         #self.canvas = Canvas()
