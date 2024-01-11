@@ -556,9 +556,6 @@ class Settings(BaseModel):
     current_tool = Column(String, default="")
 
     working_width = Column(Integer, default=512)
-    working_height = Column(Integer, default=512)
-    hf_api_key_read_key = Column(String, default="")
-    hf_api_key_write_key = Column(String, default="")
 
     brush_settings_id = Column(Integer, ForeignKey('brush_settings.id'))
     brush_settings = relationship("BrushSettings", back_populates="settings")
