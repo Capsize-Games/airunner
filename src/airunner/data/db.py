@@ -3,13 +3,9 @@ from airunner.data.bootstrap.imagefilter_bootstrap_data import imagefilter_boots
 from airunner.data.bootstrap.llm import seed_data
 from airunner.data.bootstrap.model_bootstrap_data import model_bootstrap_data
 from airunner.data.bootstrap.pipeline_bootstrap_data import pipeline_bootstrap_data
-from airunner.data.bootstrap.prompt_bootstrap_data import prompt_bootstrap_data, style_bootstrap_data, \
-    variable_bootstrap_data
 from airunner.data.models import ControlnetModel, LLMPromptTemplate, Pipeline, Document, \
     MetadataSettings, AIModel, \
-    ImageFilter, ImageFilterValue, Prompt, PromptVariable, PromptCategory, PromptOption, \
-    PromptVariableCategory, PromptVariableCategoryWeight, PromptStyleCategory, PromptStyle, Scheduler, ActionScheduler, \
-    ActiveGridSettings, \
+    ImageFilter, ImageFilterValue, Scheduler, ActionScheduler, \
     LLMGeneratorSetting, LLMGenerator, LLMModelVersion, StandardImageWidgetSettings
 from airunner.data.session_scope import session_scope, engine
 from alembic.config import Config
@@ -26,119 +22,12 @@ def prepare_database():
         do_stamp_alembic = False
 
         # check if database is blank:
-        if not my_session.query(Prompt).first():
+        if not my_session.query(Document).first():
             do_stamp_alembic = True
 
             standard_image_widget = StandardImageWidgetSettings()
             my_session.add(standard_image_widget)
 
-            # Add Prompt objects
-            for prompt_option, data in prompt_bootstrap_data.items():
-                category = PromptCategory(name=prompt_option, negative_prompt=data["negative_prompt"])
-                prompt = Prompt(
-                    name=f"Standard {prompt_option} prompt",
-                    category=category
-                )
-                my_session.add(prompt)
-                
-                prompt_id = prompt.id
-
-                prompt_variables = []
-                for category_name, variable_values in data["variables"].items():
-                    # add prompt category
-                    cat = my_session.query(PromptVariableCategory).filter_by(name=category_name).first()
-                    if not cat:
-                        cat = PromptVariableCategory(name=category_name)
-                        my_session.add(cat)
-                        
-
-                    # add prompt variable category weight
-                    weight = my_session.query(PromptVariableCategoryWeight).filter_by(
-                        prompt_category=category,
-                        variable_category=cat
-                    ).first()
-                    if not weight:
-                        try:
-                            weight_value = data["weights"][category_name]
-                        except KeyError:
-                            weight_value = 1.0
-                        weight = PromptVariableCategoryWeight(
-                            prompt_category=category,
-                            variable_category=cat,
-                            weight=weight_value
-                        )
-                        my_session.add(weight)
-                        
-
-                    # add prompt variables
-                    for var in variable_values:
-                        my_session.add(PromptVariable(
-                            value=var,
-                            prompt_category=category,
-                            variable_category=cat
-                        ))
-                    
-
-                def insert_variables(variables, prev_object=None):
-                    for option in variables:
-                        text = option.get("text", None)
-                        cond = option.get("cond", "")
-                        else_cond = option.get("else", "")
-                        next_cond = option.get("next", None)
-                        or_cond = option.get("or_cond", None)
-                        prompt_option = PromptOption(
-                            text=text,
-                            cond=cond,
-                            else_cond=else_cond,
-                            or_cond=or_cond,
-                            prompt_id=prompt_id
-                        )
-                        if prev_object:
-                            my_session.add(prompt_option)
-                            
-                            prev_object.next_cond_id = prompt_option.id
-                            my_session.add(prev_object)
-                            
-                            prev_object = prompt_option
-                        else:
-                            my_session.add(prompt_option)
-                            
-                            prev_object = prompt_option
-                        if next_cond:
-                            prev_object = insert_variables(
-                                variables=next_cond,
-                                prev_object=prev_object,
-                            )
-                    return prev_object
-
-                insert_variables(data["builder"])
-
-                
-
-            for variable_category, data in variable_bootstrap_data.items():
-                category = my_session.query(PromptVariableCategory).filter_by(name=variable_category).first()
-                if not category:
-                    category = PromptVariableCategory(name=variable_category)
-                    my_session.add(category)
-                    
-                for variable in data:
-                    my_session.add(PromptVariable(
-                        value=variable,
-                        variable_category=category
-                    ))
-                
-
-            # Add PromptStyle objects
-            for style_category, data in style_bootstrap_data.items():
-                category = PromptStyleCategory(name=style_category, negative_prompt=data["negative_prompt"])
-                my_session.add(category)
-                
-                for style in data["styles"]:
-                    my_session.add(PromptStyle(
-                        name=style,
-                        style_category=category
-                    ))
-                
 
             # Add ControlnetModel objects
             for name, path in controlnet_bootstrap_data.items():
@@ -161,10 +50,6 @@ def prepare_database():
             # Add MetadataSettings objects
             my_session.add(MetadataSettings())
             
-
-
-            # Add ActiveGridSettings object
-            my_session.add(ActiveGridSettings())
             
 
             # Add ImageFilter objects
@@ -281,7 +166,7 @@ def prepare_database():
                     )
                     my_session.add(obj)
             
-
+                        
 
             for generator_name, generator_data in seed_data.items():
                 generator = LLMGenerator(name=generator_name)
