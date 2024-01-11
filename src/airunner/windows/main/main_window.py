@@ -246,6 +246,22 @@ class MainWindow(
     @nsfw_filter.setter
     def nsfw_filter(self, val):
         self.application_settings.setValue("nsfw_filter", val)
+    
+    @property
+    def pipeline(self):
+        return self.application_settings.value("pipeline", "txt2img")
+    
+    @pipeline.setter
+    def pipeline(self, val):
+        self.application_settings.setValue("pipeline", val)
+
+    @property
+    def pipeline_versin(self):
+        return self.application_settings.value("pipeline_version", "SD 1.5")
+        
+    @pipeline_versin.setter
+    def pipeline_versin(self, val):
+        self.application_settings.setValue("pipeline_version", val)
 
     @property
     def is_maximized(self):

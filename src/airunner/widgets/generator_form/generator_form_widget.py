@@ -54,7 +54,7 @@ class GeneratorForm(BaseWidget):
 
     @property
     def generator_section(self):
-        return self.app.settings_manager.settings.current_section_stablediffusion
+        return self.app.pipeline
 
     @property
     def generator_name(self):

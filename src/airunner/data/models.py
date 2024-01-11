@@ -584,8 +584,6 @@ class Settings(BaseModel):
     splitter_sizes = relationship("SplitterSection", backref="settings")
     
     # generator tab sections
-    current_tab = Column(String, default="stablediffusion")
-    current_section_stablediffusion = Column(String, default="txt2img")
     generator_settings = relationship("GeneratorSetting", backref="settings")
 
     # generator version

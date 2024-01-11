@@ -314,7 +314,7 @@ class StandardImageWidget(StandardBaseWidget):
         self.ui.pipeline.clear()
         pipeline_names = ["txt2img / img2img", "inpaint / outpaint", "depth2img", "pix2pix", "upscale", "superresolution", "txt2vid"]
         self.ui.pipeline.addItems(pipeline_names)
-        current_pipeline = self.app.settings_manager.settings.current_section_stablediffusion
+        current_pipeline = self.app.pipeline
         if current_pipeline != "":
             if current_pipeline == "txt2img":
                 current_pipeline = "txt2img / img2img"
@@ -341,7 +341,7 @@ class StandardImageWidget(StandardBaseWidget):
             self.clear_models()
 
             image_generator = "stablediffusion"
-            pipeline = self.app.settings_manager.settings.current_section_stablediffusion
+            pipeline = self.app.pipeline
             version = self.app.settings_manager.settings.current_version_stablediffusion
 
             models = session.query(AIModel).filter(
@@ -362,7 +362,7 @@ class StandardImageWidget(StandardBaseWidget):
         with session_scope() as session:
             self.ui.scheduler.blockSignals(True)
             schedulers = session.query(ActionScheduler).filter(
-                ActionScheduler.section == self.app.settings_manager.settings.current_section_stablediffusion,
+                ActionScheduler.section == self.app.pipeline,
                 ActionScheduler.generator_name == "stablediffusion"
             ).all()
             scheduler_names = [s.scheduler.display_name for s in schedulers]
@@ -432,14 +432,14 @@ class StandardImageWidget(StandardBaseWidget):
                 widget.setProperty("current_value", current_value)
             widget.initialize()
 
-        self.ui.seed_widget.setProperty("generator_section", self.app.settings_manager.settings.current_section_stablediffusion)
+        self.ui.seed_widget.setProperty("generator_section", self.app.pipeline)
         self.ui.seed_widget.setProperty("generator_name", "stablediffusion")
         # self.ui.seed_widget.initialize(
         #     self.generator_section,
         #     self.generator_name
         # )
 
-        self.ui.seed_widget_latents.setProperty("generator_section", self.app.settings_manager.settings.current_section_stablediffusion)
+        self.ui.seed_widget_latents.setProperty("generator_section", self.app.pipeline)
         self.ui.seed_widget_latents.setProperty("generator_name", "stablediffusion")
         # self.ui.seed_widget_latents.initialize(
         #     self.generator_section,
@@ -462,7 +462,7 @@ class StandardImageWidget(StandardBaseWidget):
             val = "txt2img"
         elif val == "inpaint / outpaint":
             val = "outpaint"
-        self.app.settings_manager.set_value("settings.current_section_stablediffusion", val)
+        self.app.pipeline = val
         self.load_versions()
         self.load_models()
 
