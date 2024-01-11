@@ -6,7 +6,7 @@ import threading
 from airunner.aihandler.llm import LLM
 from airunner.aihandler.logger import Logger as logger
 from airunner.aihandler.runner import SDRunner
-from airunner.aihandler.settings_manager import SettingsManager
+from airunner.data.managers import SettingsManager
 from airunner.aihandler.tts import TTS
 
 
@@ -104,9 +104,9 @@ class Engine:
         VRAM to keep the LLM loaded while
         using other models.
         """
-        do_unload_model = self.settings_manager.unload_unused_model
-        do_move_to_cpu = not do_unload_model and self.settings_manager.move_unused_model_to_cpu
-        dtype = self.settings_manager.llm_generator_setting.dtype
+        do_unload_model = self.settings_manager.settings.unload_unused_model
+        do_move_to_cpu = not do_unload_model and self.settings_manager.settings.move_unused_model_to_cpu
+        dtype = self.settings_manager.llm_generator_settings.dtype
         if dtype in ["2bit", "4bit", "8bit"]:
             do_unload_model = True
             do_move_to_cpu = False

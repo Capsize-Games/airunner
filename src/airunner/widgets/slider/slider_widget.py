@@ -123,7 +123,7 @@ class SliderWidget(BaseWidget):
         self.divide_by = self.property("divide_by") or 1.0
 
         if settings_property is not None:
-            current_value = self.settings_manager.get_value(settings_property) or 0
+            current_value = self.app.settings_manager.get_value(settings_property) or 0
 
         # check if slider_callback is str
         if isinstance(slider_callback, str):
