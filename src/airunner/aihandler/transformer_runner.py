@@ -3,16 +3,10 @@ import random
 
 from PyQt6.QtCore import QObject
 
-# import AutoTokenizer
-# import BitsAndBytesConfig
 from transformers import BitsAndBytesConfig
 from transformers import AutoModelForCausalLM, AutoModelForSeq2SeqLM, AutoTokenizer
 from transformers import InstructBlipForConditionalGeneration
 from transformers import InstructBlipProcessor
-
-from airunner.data.managers import SettingsManager
-from airunner.data.models import LLMGenerator
-from airunner.data.session_scope import session_scope
 from airunner.aihandler.logger import Logger
 
 
@@ -83,7 +77,6 @@ class TransformerRunner(QObject):
         app = kwargs.pop("app", None)
         self.app = app
         super().__init__(*args, **kwargs)
-        self.settings_manager = SettingsManager()
         # self.llm_api = LLMAPI(app=app)
 
     def move_to_cpu(self):
@@ -175,7 +168,7 @@ class TransformerRunner(QObject):
             "device_map": self.device_map,
             "use_cache": self.use_cache,
             "torch_dtype": torch.float16 if self.dtype != "32bit" else torch.float32,
-            "token": self.settings_manager.settings.hf_api_key_read_key,
+            "token": self.request_data.get("hf_api_key_read_key", ""),
             "trust_remote_code": True
         }
         
@@ -205,14 +198,6 @@ class TransformerRunner(QObject):
                     return self.load_model(local_files_only=False)
                 else:
                     Logger.error(e)
-        
-        # if self.requested_generator_name == "casuallm":
-        #     self.pipeline = AutoModelForCausalLM.from_pretrained(
-        #         self.model,
-        #         torch_dtype=torch.float16 if self.dtype != "32bit" else torch.float32,
-        #         trust_remote_code=False,
-        #         device_map="auto"
-        #     )
 
             
     def process_data(self, data):
@@ -314,7 +299,7 @@ class TransformerRunner(QObject):
                 self.tokenizer = AutoTokenizer.from_pretrained(
                     self.current_model_path,
                     local_files_only=local_files_only,
-                    token=self.settings_manager.settings.hf_api_key_read_key,
+                    token=self.request_data.get("hf_api_key_read_key"),
                     device_map=self.device_map,
                 )
             except OSError as e:

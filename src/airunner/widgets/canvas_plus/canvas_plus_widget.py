@@ -212,6 +212,8 @@ class CustomScene(QGraphicsScene):
         self.image.fill(Qt.GlobalColor.transparent)
         self.item = QGraphicsPixmapItem(QPixmap.fromImage(self.image))
         self.addItem(self.item)
+        # self.item should always be on top
+        self.item.setZValue(1)
 
         # self.setVerticalScrollBarPolicy(Qt.ScrollBarPolicy.ScrollBarAlwaysOff)
         # self.setHorizontalScrollBarPolicy(Qt.ScrollBarPolicy.ScrollBarAlwaysOff)
@@ -274,7 +276,7 @@ class CustomScene(QGraphicsScene):
     def eraseAt(self, position):
         painter = QPainter(self.image)
         painter.setPen(QPen(Qt.GlobalColor.white, self.app.brush_settings["size"], Qt.PenStyle.SolidLine, Qt.PenCapStyle.RoundCap))
-        painter.setCompositionMode(QPainter.CompositionMode.CompositionMode_Source)
+        painter.setCompositionMode(QPainter.CompositionMode.CompositionMode_Clear)
         
         # Create a QPainterPath
         path = QPainterPath()

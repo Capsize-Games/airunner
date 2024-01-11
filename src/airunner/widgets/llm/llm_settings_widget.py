@@ -5,7 +5,7 @@ from PyQt6.QtWidgets import QWidget
 
 from airunner.widgets.base_widget import BaseWidget
 from airunner.widgets.llm.templates.llm_settings_ui import Ui_llm_settings_widget
-from airunner.data.models import LLMGeneratorSetting, LLMGenerator, AIModel, LLMPromptTemplate
+from airunner.data.models import LLMGenerator, AIModel, LLMPromptTemplate
 from airunner.aihandler.logger import Logger
 from airunner.data.session_scope import session_scope
 
@@ -45,14 +45,14 @@ class LLMSettingsWidget(BaseWidget):
         self.initialize_form()
 
     def early_stopping_toggled(self, val):
-        with session_scope() as session:
-            session.add(self.app.settings_manager.llm_generator_settings)
-            self.app.settings_manager.llm_generator_settings.early_stopping = val
+        llm_generator_settings = self.app.llm_generator_settings
+        llm_generator_settings["early_stopping"] = val
+        self.app.llm_generator_settings = llm_generator_settings
 
     def do_sample_toggled(self, val):
-        with session_scope() as session:
-            session.add(self.generator)
-            self.app.settings_manager.llm_generator_settings.do_sample = val
+        llm_generator_settings = self.app.llm_generator_settings
+        llm_generator_settings["do_sample"] = val
+        self.app.llm_generator_settings = llm_generator_settings
     
     def toggle_leave_model_in_vram(self, val):
         if val:
@@ -99,14 +99,17 @@ class LLMSettingsWidget(BaseWidget):
         self.ui.move_to_cpu.setChecked(self.app.move_unused_model_to_cpu)
         self.ui.unload_model.setChecked(self.app.unload_unused_models)
 
+        llm_generator_settings = self.app.llm_generator_settings
+
         if self.generator:
-            self.ui.radio_button_2bit.setChecked(self.app.settings_manager.llm_generator_settings.dtype == "2bit")
-            self.ui.radio_button_4bit.setChecked(self.app.settings_manager.llm_generator_settings.dtype == "4bit")
-            self.ui.radio_button_8bit.setChecked(self.app.settings_manager.llm_generator_settings.dtype == "8bit")
-            self.ui.radio_button_16bit.setChecked(self.app.settings_manager.llm_generator_settings.dtype == "16bit")
-            self.ui.radio_button_32bit.setChecked(self.app.settings_manager.llm_generator_settings.dtype == "32bit")
-            self.set_dtype_by_gpu( self.app.settings_manager.llm_generator_settings.use_gpu)
-            self.set_dtype(self.app.settings_manager.llm_generator_settings.dtype)
+            dtype = llm_generator_settings["dtype"]
+            self.ui.radio_button_2bit.setChecked(dtype == "2bit")
+            self.ui.radio_button_4bit.setChecked(dtype == "4bit")
+            self.ui.radio_button_8bit.setChecked(dtype == "8bit")
+            self.ui.radio_button_16bit.setChecked(dtype == "16bit")
+            self.ui.radio_button_32bit.setChecked(dtype == "32bit")
+            self.set_dtype_by_gpu(llm_generator_settings["use_gpu"])
+            self.set_dtype(dtype)
 
         # get unique model names
         model_names = list(set(model_names))
@@ -115,11 +118,11 @@ class LLMSettingsWidget(BaseWidget):
         self.ui.model.setCurrentText(self.current_generator)
         self.update_model_version_combobox()
         if self.generator:
-            self.ui.model_version.setCurrentText(self.app.settings_manager.llm_generator_settings.model_version)
-            self.ui.random_seed.setChecked(self.app.settings_manager.llm_generator_settings.random_seed)
-            self.ui.do_sample.setChecked(self.app.settings_manager.llm_generator_settings.do_sample)
-            self.ui.early_stopping.setChecked(self.app.settings_manager.llm_generator_settings.early_stopping)
-            self.ui.use_gpu_checkbox.setChecked(self.app.settings_manager.llm_generator_settings.use_gpu)
+            self.ui.model_version.setCurrentText(llm_generator_settings["model_version"])
+            self.ui.random_seed.setChecked(llm_generator_settings["random_seed"])
+            self.ui.do_sample.setChecked(llm_generator_settings["do_sample"])
+            self.ui.early_stopping.setChecked(llm_generator_settings["early_stopping"])
+            self.ui.use_gpu_checkbox.setChecked(llm_generator_settings["use_gpu"])
             self.ui.override_parameters.setChecked(self.generator.override_parameters)
 
         self.ui.model.blockSignals(False)
@@ -149,12 +152,14 @@ class LLMSettingsWidget(BaseWidget):
     def model_version_changed(self, val):
         with session_scope() as session:
             session.add(self.generator)
-            self.app.settings_manager.llm_generator_settings.model_version = val
+            llm_generator_settings = self.app.llm_generator_settings
+            llm_generator_settings["model_version"] = val
+            self.app.llm_generator_settings = llm_generator_settings
     
     def toggle_move_model_to_cpu(self, val):
         self.app.move_unused_model_to_cpu = val
         if val:
-            self.app.settings_manager.set_value("settings.unload_unused_model", False)
+            self.app.unload_unused_model = False
 
     def override_parameters_toggled(self, val):
         with session_scope() as session:
@@ -187,14 +192,14 @@ class LLMSettingsWidget(BaseWidget):
             self.set_dtype("32bit")
         
     def random_seed_toggled(self, val):
-        with session_scope() as session:
-            session.add(self.generator)
-            self.app.settings_manager.llm_generator_settings.random_seed = val
+        llm_generator_settings = self.app.llm_generator_settings
+        llm_generator_settings["random_seed"] = val
+        self.app.llm_generator_settings = llm_generator_settings
         
     def seed_changed(self, val):
-        with session_scope() as session:
-            session.add(self.generator)
-            self.app.settings_manager.llm_generator_settings.seed = val
+        llm_generator_settings = self.app.llm_generator_settings
+        llm_generator_settings["seed"] = val
+        self.app.llm_generator_settings = llm_generator_settings
         
     def toggle_unload_model(self, val):
         self.app.unload_unused_model = val
@@ -202,15 +207,16 @@ class LLMSettingsWidget(BaseWidget):
             self.app.move_unused_model_to_cpu = False
     
     def use_gpu_toggled(self, val):
-        with session_scope() as session:
-            session.add(self.generator)
-            self.app.settings_manager.llm_generator_settings.use_gpu = val
-            # toggle the 16bit radio button and disable 4bit and 8bit radio buttons
-            self.set_dtype_by_gpu(val)
+        llm_generator_settings = self.app.llm_generator_settings
+        llm_generator_settings["use_gpu"] = val
+        self.app.llm_generator_settings = llm_generator_settings
+        self.set_dtype_by_gpu(val)
     
     def set_dtype_by_gpu(self, use_gpu):
-        if not use_gpu:
-            if self.app.settings_manager.llm_generator_settings.dtype in ["2bit","4bit", "8bit"]:
+        llm_generator_settings = self.app.llm_generator_settings
+        dtype = llm_generator_settings["dtype"]
+        if not use_gpu:            
+            if dtype in ["2bit","4bit", "8bit"]:
                 self.ui.radio_button_16bit.setChecked(True)
             self.ui.radio_button_2bit.setEnabled(False)
             self.ui.radio_button_4bit.setEnabled(False)
@@ -221,51 +227,30 @@ class LLMSettingsWidget(BaseWidget):
             self.ui.radio_button_4bit.setEnabled(True)
             self.ui.radio_button_8bit.setEnabled(True)
             self.ui.radio_button_32bit.setEnabled(False)
-            if self.app.settings_manager.llm_generator_settings.dtype == "32bit":
+            if dtype == "32bit":
                 self.ui.radio_button_16bit.setChecked(True)
     
     def reset_settings_to_default_clicked(self):
-        with session_scope() as session:
-            session.add(self.app.settings_manager.llm_generator_settings)
-            session.add(self.generator)
-            
-            self.app.settings_manager.llm_generator_settings.top_p = LLMGeneratorSetting.top_p.default.arg
-            self.app.settings_manager.llm_generator_settings.max_length = LLMGeneratorSetting.max_length.default.arg
-            self.app.settings_manager.llm_generator_settings.repetition_penalty = LLMGeneratorSetting.repetition_penalty.default.arg
-            self.app.settings_manager.llm_generator_settings.min_length = LLMGeneratorSetting.min_length.default.arg
-            self.app.settings_manager.llm_generator_settings.length_penalty = LLMGeneratorSetting.length_penalty.default.arg
-            self.app.settings_manager.llm_generator_settings.num_beams = LLMGeneratorSetting.num_beams.default.arg
-            self.app.settings_manager.llm_generator_settings.ngram_size = LLMGeneratorSetting.ngram_size.default.arg
-            self.app.settings_manager.llm_generator_settings.temperature = LLMGeneratorSetting.temperature.default.arg
-            self.app.settings_manager.llm_generator_settings.sequences = LLMGeneratorSetting.sequences.default.arg
-            self.app.settings_manager.llm_generator_settings.top_k = LLMGeneratorSetting.top_k.default.arg
-            self.app.settings_manager.llm_generator_settings.eta_cutoff = LLMGeneratorSetting.eta_cutoff.default.arg
-            self.app.settings_manager.llm_generator_settings.seed = LLMGeneratorSetting.seed.default.arg
-            self.app.settings_manager.llm_generator_settings.do_sample = LLMGeneratorSetting.do_sample.default.arg
-            self.app.settings_manager.llm_generator_settings.early_stopping = LLMGeneratorSetting.early_stopping.default.arg
-            self.app.settings_manager.llm_generator_settings.random_seed = LLMGeneratorSetting.random_seed.default.arg
-            self.app.settings_manager.llm_generator_settings.model_version = LLMGeneratorSetting.model_version.default.arg
-            self.app.settings_manager.llm_generator_settings.dtype = LLMGeneratorSetting.dtype.default.arg
-            self.app.settings_manager.llm_generator_settings.use_gpu = LLMGeneratorSetting.use_gpu.default.arg
-
+        print("TODO")
+        llm_generator_settings = self.app.llm_generator_settings
         self.initialize_form()
-        self.ui.top_p.set_slider_and_spinbox_values(self.app.settings_manager.llm_generator_settings.top_p)
-        self.ui.max_length.set_slider_and_spinbox_values(self.app.settings_manager.llm_generator_settings.max_length)
-        self.ui.repetition_penalty.set_slider_and_spinbox_values(self.app.settings_manager.llm_generator_settings.repetition_penalty)
-        self.ui.min_length.set_slider_and_spinbox_values(self.app.settings_manager.llm_generator_settings.min_length)
-        self.ui.length_penalty.set_slider_and_spinbox_values(self.app.settings_manager.llm_generator_settings.length_penalty)
-        self.ui.num_beams.set_slider_and_spinbox_values(self.app.settings_manager.llm_generator_settings.num_beams)
-        self.ui.ngram_size.set_slider_and_spinbox_values(self.app.settings_manager.llm_generator_settings.ngram_size)
-        self.ui.temperature.set_slider_and_spinbox_values(self.app.settings_manager.llm_generator_settings.temperature)
-        self.ui.sequences.set_slider_and_spinbox_values(self.app.settings_manager.llm_generator_settings.sequences)
-        self.ui.top_k.set_slider_and_spinbox_values(self.app.settings_manager.llm_generator_settings.top_k)
-        self.ui.eta_cutoff.set_slider_and_spinbox_values(self.app.settings_manager.llm_generator_settings.eta_cutoff)
-        self.ui.random_seed.setChecked(self.app.settings_manager.llm_generator_settings.random_seed)
+        self.ui.top_p.set_slider_and_spinbox_values(llm_generator_settings["top_p"])
+        self.ui.max_length.set_slider_and_spinbox_values(llm_generator_settings["max_length"])
+        self.ui.repetition_penalty.set_slider_and_spinbox_values(llm_generator_settings["repetition_penalty"])
+        self.ui.min_length.set_slider_and_spinbox_values(llm_generator_settings["min_length"])
+        self.ui.length_penalty.set_slider_and_spinbox_values(llm_generator_settings["length_penalty"])
+        self.ui.num_beams.set_slider_and_spinbox_values(llm_generator_settings["num_beams"])
+        self.ui.ngram_size.set_slider_and_spinbox_values(llm_generator_settings["ngram_size"])
+        self.ui.temperature.set_slider_and_spinbox_values(llm_generator_settings["temperature"])
+        self.ui.sequences.set_slider_and_spinbox_values(llm_generator_settings["sequences"])
+        self.ui.top_k.set_slider_and_spinbox_values(llm_generator_settings["top_k"])
+        self.ui.eta_cutoff.set_slider_and_spinbox_values(llm_generator_settings["eta_cutoff"])
+        self.ui.random_seed.setChecked(llm_generator_settings["random_seed"])
 
     def set_dtype(self, dtype):
-        with session_scope() as session:
-            session.add(self.app.settings_manager.llm_generator_settings)
-            self.app.settings_manager.llm_generator_settings.dtype = dtype
+        llm_generator_settings = self.app.llm_generator_settings
+        llm_generator_settings["dtype"] = dtype
+        self.app.llm_generator_settings = llm_generator_settings
         self.set_dtype_description(dtype)
     
     def set_dtype_description(self, dtype):
