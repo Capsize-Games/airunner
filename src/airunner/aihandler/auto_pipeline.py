@@ -60,24 +60,23 @@ class AutoImport:
         if pipeline_action == "txt2img" and requested_action == "img2img":
             pipeline_action = "img2img"
         settings_manager = SettingsManager()
-        pipeline = settings_manager.available_pipeline_by_section(pipeline_action, version, category)
-
-        try:
-            if single_file and pipeline.singlefile_classname != "" and pipeline.singlefile_classname is not None:
-                classname = pipeline.singlefile_classname
-            else:
-                classname = pipeline.classname
-        except KeyError:
-            logger.error(f"Failed to find classname for pipeline_action {pipeline_action} {version} {category}")
-            return
-        except AttributeError as e:
-            logger.error(f"Failed to find classname for pipeline_action {pipeline_action} {version} {category}")
-            return
-        pipeline_classname = classname.split(".")
-        module = None
-        for index, module_name in enumerate(pipeline_classname):
-            if index == 0:
-                module = __import__(module_name)
-            else:
-                module = getattr(module, module_name)
-        return module
+        with settings_manager.available_pipeline_by_section(pipeline_action, version, category) as pipeline:
+            try:
+                if single_file and pipeline.singlefile_classname != "" and pipeline.singlefile_classname is not None:
+                    classname = pipeline.singlefile_classname
+                else:
+                    classname = pipeline.classname
+            except KeyError:
+                logger.error(f"Failed to find classname for pipeline_action {pipeline_action} {version} {category}")
+                return
+            except AttributeError as e:
+                logger.error(f"Failed to find classname for pipeline_action {pipeline_action} {version} {category}")
+                return
+            pipeline_classname = classname.split(".")
+            module = None
+            for index, module_name in enumerate(pipeline_classname):
+                if index == 0:
+                    module = __import__(module_name)
+                else:
+                    module = getattr(module, module_name)
+            return module
