@@ -169,6 +169,38 @@ class MainWindow(
     _generator_settings = None
 
     @property
+    def resize_on_paste(self):
+        return self.application_settings.value("resize_on_paste", True, type=bool)
+
+    @resize_on_paste.setter
+    def resize_on_paste(self, val):
+        self.application_settings.setValue("resize_on_paste", val)
+    
+    @property
+    def snap_to_grid(self):
+        return self.application_settings.value("snap_to_grid", True, type=bool)
+
+    @snap_to_grid.setter
+    def snap_to_grid(self, val):
+        self.application_settings.setValue("snap_to_grid", val)
+
+    @property
+    def cell_size(self):
+        return self.application_settings.value("cell_size", 64, type=int)
+
+    @cell_size.setter
+    def cell_size(self, val):
+        self.application_settings.setValue("cell_size", val)
+    
+    @property
+    def canvas_color(self):
+        return self.application_settings.value("canvas_color", "#ffffff")
+    
+    @canvas_color.setter
+    def canvas_color(self, val):
+        self.application_settings.setValue("canvas_color", val)
+
+    @property
     def generator(self):
         with session_scope() as session:
             if self._generator is None:
@@ -197,10 +229,6 @@ class MainWindow(
     @property
     def is_dark(self):
         return self.settings_manager.settings.dark_mode_enabled
-
-    @property
-    def grid_size(self):
-        return self.settings_manager.grid_settings.cell_size
 
     @property
     def standard_image_panel(self):
@@ -613,7 +641,7 @@ class MainWindow(
     """
 
     def set_size_increment_levels(self):
-        size = self.grid_size
+        size = self.cell_size
         self.ui.width_slider_widget.slider_single_step = size
         self.ui.width_slider_widget.slider_tick_interval = size
 
@@ -755,7 +783,6 @@ class MainWindow(
     def action_toggle_grid(self, val):
         self.application_settings.setValue("show_grid", val)
         self.show_grid_toggled.emit(val)
-        #self.settings_manager.set_value("grid_settings.show_grid", active)
     
     def action_toggle_brush(self, active):
         if active:
@@ -1032,7 +1059,7 @@ class MainWindow(
         self.move(frameGeometry.topLeft())
 
     def handle_wheel_event(self, event):
-        grid_size = self.grid_size
+        grid_size = self.cell_size
 
         # if the shift key is pressed
         try:
