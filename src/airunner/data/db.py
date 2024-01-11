@@ -5,8 +5,8 @@ from airunner.data.bootstrap.model_bootstrap_data import model_bootstrap_data
 from airunner.data.bootstrap.pipeline_bootstrap_data import pipeline_bootstrap_data
 from airunner.data.bootstrap.prompt_bootstrap_data import prompt_bootstrap_data, style_bootstrap_data, \
     variable_bootstrap_data
-from airunner.data.models import ControlnetModel, LLMPromptTemplate, Pipeline, Document, Settings, \
-    GeneratorSetting, SplitterSection, MetadataSettings, PathSettings, MemorySettings, AIModel, \
+from airunner.data.models import ControlnetModel, LLMPromptTemplate, Pipeline, Document, \
+    GeneratorSetting, MetadataSettings, PathSettings, MemorySettings, AIModel, \
     ImageFilter, ImageFilterValue, BrushSettings, Prompt, PromptVariable, PromptCategory, PromptOption, \
     PromptVariableCategory, PromptVariableCategoryWeight, PromptStyleCategory, PromptStyle, Scheduler, ActionScheduler, \
     DeterministicSettings, ActiveGridSettings, CanvasSettings, \
@@ -209,55 +209,6 @@ def prepare_database():
             filter_values = image_filter.image_filter_values
 
             # Add Document object
-            settings = Settings()
-            settings.splitter_sizes.append(SplitterSection(
-                name="content_splitter",
-                order=0,
-                size=390
-            ))
-            settings.splitter_sizes.append(SplitterSection(
-                name="content_splitter",
-                order=1,
-                size=512
-            ))
-            settings.splitter_sizes.append(SplitterSection(
-                name="content_splitter",
-                order=2,
-                size=200
-            ))
-            settings.splitter_sizes.append(SplitterSection(
-                name="content_splitter",
-                order=3,
-                size=64
-            ))
-            settings.splitter_sizes.append(SplitterSection(
-                name="main_splitter",
-                order=0,
-                size=520
-            ))
-            settings.splitter_sizes.append(SplitterSection(
-                name="main_splitter",
-                order=1,
-                size=-1
-            ))
-            settings.splitter_sizes.append(SplitterSection(
-                name="canvas_splitter",
-                order=0,
-                size=520
-            ))
-            settings.splitter_sizes.append(SplitterSection(
-                name="canvas_splitter",
-                order=1,
-                size=-1
-            ))
-            my_session.add(settings)
-
-            settings.brush_settings = my_session.query(BrushSettings).first()
-            settings.path_settings = my_session.query(PathSettings).first()
-            settings.deterministic_settings = my_session.query(DeterministicSettings).first()
-            settings.metadata_settings = my_session.query(MetadataSettings).first()
-            settings.memory_settings = my_session.query(MemorySettings).first()
-
             active_grid_colors = {
                 "stablediffusion": {
                     "border": {
@@ -294,7 +245,6 @@ def prepare_database():
 
             my_session.add(Document(
                 name="Untitled",
-                settings=settings,
                 active=True
             ))
             

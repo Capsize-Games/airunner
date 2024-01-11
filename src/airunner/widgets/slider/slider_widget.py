@@ -124,6 +124,13 @@ class SliderWidget(BaseWidget):
 
         if settings_property is not None:
             current_value = self.app.settings_manager.get_value(settings_property) or 0
+            if settings_property == "working_width":
+                print("CURRENT VAL", current_value)
+            if not current_value:
+                try:
+                    current_value = getattr(self.app, settings_property) or 0
+                except AttributeError:
+                    pass
 
         # check if slider_callback is str
         if isinstance(slider_callback, str):

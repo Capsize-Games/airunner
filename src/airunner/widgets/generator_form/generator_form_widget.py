@@ -403,7 +403,7 @@ class GeneratorForm(BaseWidget):
                     pos_x=0,
                     pos_y=0,
                     outpaint_box_rect=self.active_rect,
-                    hf_token=self.app.settings_manager.settings.hf_api_key,
+                    hf_token=self.app.hf_api_key,
                     model_base_path=self.app.settings_manager.path_settings.model_base_path,
                     outpaint_model_path=self.app.settings_manager.path_settings.outpaint_model_path,
                     pix2pix_model_path=self.app.settings_manager.path_settings.pix2pix_model_path,
