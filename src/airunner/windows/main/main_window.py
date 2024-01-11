@@ -248,6 +248,22 @@ class MainWindow(
         self.application_settings.setValue("nsfw_filter", val)
     
     @property
+    def image_to_new_layer(self):
+        return self.application_settings.value("image_to_new_layer", True, type=bool)
+    
+    @image_to_new_layer.setter
+    def image_to_new_layer(self, val):
+        self.application_settings.setValue("image_to_new_layer", val)
+    
+    @property
+    def latest_version_check(self):
+        return self.application_settings.value("latest_version_check", True, type=bool)
+    
+    @latest_version_check.setter
+    def latest_version_check(self, val):
+        self.application_settings.setValue("latest_version_check", val)
+    
+    @property
     def dark_mode_enabled(self):
         return self.application_settings.value("dark_mode_enabled", False, type=bool)
     
