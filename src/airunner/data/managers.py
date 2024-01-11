@@ -7,7 +7,6 @@ from airunner.utils import Logger
 from airunner.data.session_scope import (
     active_grid_settings_scope,
     generator_scope,
-    settings_scope,
     path_settings_scope, 
     standard_image_widget_settings_scope,
     generator_settings_scope,
@@ -72,7 +71,6 @@ class SettingsManager(QObject):
     scopes = {
         "active_grid_settings": active_grid_settings_scope,
         "generator": generator_scope,
-        "settings": settings_scope,
         "path_settings": path_settings_scope,
         "standard_image_settings": standard_image_widget_settings_scope,
         "generator_settings": generator_settings_scope,
@@ -94,7 +92,6 @@ class SettingsManager(QObject):
         super().__init__()
         self.active_grid_settings = Modelmanager(active_grid_settings_scope)
         self.generator = Modelmanager(generator_scope)
-        self.settings = Modelmanager(settings_scope)
         self.path_settings = Modelmanager(path_settings_scope)
         self.standard_image_settings = Modelmanager(standard_image_widget_settings_scope)
         self.generator_settings = Modelmanager(generator_settings_scope)
@@ -200,6 +197,7 @@ class SettingsManager(QObject):
                 obj = getattr(obj, k)
             except AttributeError:
                 Logger.error(f"Unable to find key {key}")
+                return None
         return obj
     
     def set_value(self, key, value):

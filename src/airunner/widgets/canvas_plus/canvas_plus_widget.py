@@ -304,7 +304,7 @@ class CanvasPlusWidget(CanvasBaseWidget):
 
     @property
     def brush_size(self):
-        return self.app.settings_manager.settings.brush_settings.size
+        return self.app.settings_manager.brush_settings.size
 
     @property
     def active_grid_area_rect(self):
@@ -809,7 +809,7 @@ class CanvasPlusWidget(CanvasBaseWidget):
             Logger.error("xclip not found. Please install xclip to copy image to clipboard.")
 
     def create_image(self, image):
-        if self.app.settings_manager.settings.resize_on_paste:
+        if self.app.resize_on_paste:
             image = self.resize_image(image)
         self.add_image_to_scene(image)
     
