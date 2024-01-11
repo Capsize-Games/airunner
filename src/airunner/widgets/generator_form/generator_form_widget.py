@@ -120,6 +120,7 @@ class GeneratorForm(BaseWidget):
         super().__init__(*args, **kwargs)
         self.ui.generator_form_tabs.tabBar().hide()
         self.app.ai_mode_toggled.connect(self.activate_ai_mode)
+        self.activate_ai_mode(self.app.ai_mode)
     
     def activate_ai_mode(self, active):
         self.ui.generator_form_tabs.setCurrentIndex(1 if active is True else 0)
