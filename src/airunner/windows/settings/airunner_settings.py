@@ -195,7 +195,7 @@ class SettingsWindow(BaseWindow):
         if checkable:
             checked = False
             if name == "resize_on_import":
-                checked = self.app.settings_manager.settings.resize_on_paste
+                checked = self.app.resize_on_paste
             elif name == "image_to_new_layer":
                 checked = self.app.settings_manager.settings.image_to_new_layer
             elif name == "dark_mode":
@@ -228,7 +228,7 @@ class SettingsWindow(BaseWindow):
 
         if name == "resize_on_import":
             checked = item.checkState() == Qt.CheckState.Checked
-            self.app.settings_manager.set_value("settings.resize_on_paste", checked)
+            self.app.resize_on_paste = checked
         elif name == "image_to_new_layer":
             checked = item.checkState() == Qt.CheckState.Checked
             self.app.settings_manager.set_value("settings.image_to_new_layer", checked)
