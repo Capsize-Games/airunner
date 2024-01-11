@@ -12,6 +12,8 @@ from PyQt6 import QtWidgets, QtCore
 from PyQt6.QtCore import QThread, pyqtSignal
 from PyQt6.QtCore import QLineF
 from PyQt6.QtWidgets import QGraphicsItemGroup
+from PyQt6.QtCore import QRectF, QSizeF
+from PyQt6.QtGui import QPainterPath
 
 from airunner.aihandler.logger import Logger
 from airunner.cursors.circle_brush import CircleCursor
@@ -197,24 +199,40 @@ class ActiveGridArea(DraggablePixmap):
 
 class CustomScene(QGraphicsScene):
     def __init__(self, parent=None):
+        self.app = parent.app
         super().__init__(parent)
-        self.drawing = False
-        self.last_point = QPointF()
+        self.image = QImage(800, 600, QImage.Format.Format_ARGB32)
+        self.image.fill(Qt.GlobalColor.white)
+        self.item = QGraphicsPixmapItem(QPixmap.fromImage(self.image))
+        self.addItem(self.item)
+
+    def drawAt(self, position):
+        painter = QPainter(self.image)
+        print(self.app.brush_settings["size"])
+        painter.setPen(QPen(Qt.GlobalColor.black, self.app.brush_settings["size"], Qt.PenStyle.SolidLine, Qt.PenCapStyle.RoundCap))
+        painter.drawPoint(position)
+        painter.end()
+        self.item.setPixmap(QPixmap.fromImage(self.image))
+
+    def eraseAt(self, position):
+        painter = QPainter(self.image)
+        painter.setPen(QPen(Qt.GlobalColor.transparent, self.app.brush_settings["size"], Qt.PenStyle.SolidLine, Qt.PenCapStyle.RoundCap))
+        painter.setCompositionMode(QPainter.CompositionMode.CompositionMode_Clear)
+        painter.drawPoint(position)
+        painter.end()
+        self.item.setPixmap(QPixmap.fromImage(self.image))
 
     def mousePressEvent(self, event):
-        if event.button() == Qt.MouseButton.LeftButton:
-            self.drawing = True
-            self.last_point = event.scenePos()
+        if self.app.current_tool == "brush":
+            self.drawAt(event.scenePos())
+        elif self.app.current_tool == "eraser":
+            self.eraseAt(event.scenePos())
 
     def mouseMoveEvent(self, event):
-        if self.drawing:
-            new_point = event.scenePos()
-            self.addLine(QLineF(self.last_point, new_point), QPen(Qt.GlobalColor.red, 5))
-            self.last_point = new_point
-
-    def mouseReleaseEvent(self, event):
-        if event.button() == Qt.MouseButton.LeftButton:
-            self.drawing = False
+        if self.app.current_tool == "brush":
+            self.drawAt(event.scenePos())
+        elif self.app.current_tool == "eraser":
+            self.eraseAt(event.scenePos())
 
 
 class CanvasPlusWidget(CanvasBaseWidget):
@@ -345,6 +363,12 @@ class CanvasPlusWidget(CanvasBaseWidget):
         self.app.line_width_changed_signal.connect(self.line_width_changed)
         self.app.line_color_changed_signal.connect(self.line_color_changed)
         self.app.canvas_color_changed_signal.connect(self.canvas_color_changed)
+        self.app.window_resized_signal.connect(self.window_resized)
+        self.canvas_container.resizeEvent = self.window_resized
+    
+    def window_resized(self, event):
+        self.redraw_lines = True
+        self.do_draw()
 
     def toggle_grid(self, val):
         self.do_draw()
@@ -457,7 +481,7 @@ class CanvasPlusWidget(CanvasBaseWidget):
 
     def initialize(self):
         # Create a QGraphicsScene object
-        self.scene = CustomScene()
+        self.scene = CustomScene(parent=self)
 
         self.view = self.canvas_container
         original_mouse_event = self.view.mouseMoveEvent
