@@ -246,6 +246,14 @@ class MainWindow(
     @nsfw_filter.setter
     def nsfw_filter(self, val):
         self.application_settings.setValue("nsfw_filter", val)
+
+    @property
+    def enable_tts(self):
+        return self.application_settings.value("enable_tts", True, type=bool)
+    
+    @enable_tts.setter
+    def enable_tts(self, val):
+        self.application_settings.setValue("enable_tts", val)
     
     @property
     def image_to_new_layer(self):
