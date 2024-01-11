@@ -97,6 +97,9 @@ class SDRunner(
         return self._controlnet
 
     @property
+    def self.options.get("allow_online_mode", False)
+
+    @property
     def vae_path(self):
         return self.options.get("vae_path", "openai/consistency-decoder")
 
@@ -127,7 +130,7 @@ class SDRunner(
         :return:
         """
         if self._allow_online_mode is None:
-            self._allow_online_mode = self.settings_manager.allow_online_mode
+            self._allow_online_mode = self.allow_online_mode
         return self._allow_online_mode
 
     @property

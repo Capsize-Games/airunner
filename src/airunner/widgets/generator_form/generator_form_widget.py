@@ -431,6 +431,7 @@ class GeneratorForm(BaseWidget):
                     enable_controlnet=enable_controlnet,
                     controlnet_conditioning_scale=controlnet_conditioning_scale,
                     controlnet=controlnet,
+                    allow_online_mode=self.app.allow_online_mode
                 )
 
                 if self.controlnet_image:

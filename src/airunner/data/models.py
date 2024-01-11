@@ -554,7 +554,6 @@ class Settings(BaseModel):
     id = Column(Integer, primary_key=True)
     allow_hf_downloads = Column(Boolean, default=True)
     dark_mode_enabled = Column(Boolean, default=True)
-    allow_online_mode = Column(Boolean, default=True)
 
     current_tool = Column(String, default="")
 
