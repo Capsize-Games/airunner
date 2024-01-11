@@ -58,8 +58,8 @@ class Engine:
         if is_llm and self.model_type != "llm":
             logger.info("Switching to LLM model")
             self.model_type = "llm"
-            do_unload_model = self.settings_manager.unload_unused_model
-            do_move_to_cpu = not do_unload_model and self.settings_manager.move_unused_model_to_cpu
+            do_unload_model = self.settings_manager.settings.unload_unused_model
+            do_move_to_cpu = not do_unload_model and self.settings_manager.settings.move_unused_model_to_cpu
             if do_move_to_cpu:
                 self.move_pipe_to_cpu()
             elif do_unload_model:

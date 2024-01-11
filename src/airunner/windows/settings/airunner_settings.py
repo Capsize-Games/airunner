@@ -195,17 +195,17 @@ class SettingsWindow(BaseWindow):
         if checkable:
             checked = False
             if name == "resize_on_import":
-                checked = self.app.settings_manager.resize_on_paste
+                checked = self.app.settings_manager.settings.resize_on_paste
             elif name == "image_to_new_layer":
-                checked = self.app.settings_manager.image_to_new_layer
+                checked = self.app.settings_manager.settings.image_to_new_layer
             elif name == "dark_mode":
-                checked = self.app.settings_manager.dark_mode_enabled
+                checked = self.app.settings_manager.settings.dark_mode_enabled
             elif name == "check_for_updates":
-                checked = self.app.settings_manager.latest_version_check
+                checked = self.app.settings_manager.settings.latest_version_check
             elif name == "enable_tts":
-                checked = self.app.settings_manager.enable_tts
+                checked = self.app.settings_manager.settings.enable_tts
             elif name == "allow_online_mode":
-                checked = self.app.settings_manager.allow_online_mode
+                checked = self.app.settings_manager.settings.allow_online_mode
 
             file_item.setCheckState(Qt.CheckState.Checked if checked else Qt.CheckState.Unchecked)
         # prevent file_item from being edited
@@ -243,7 +243,7 @@ class SettingsWindow(BaseWindow):
             self.app.settings_manager.set_value("settings.enable_tts", checked)
         elif name == "allow_online_mode":
             checked = item.checkState() == Qt.CheckState.Checked
-            self.settings_manager.set_value("settings.allow_online_mode", checked)
+            self.app.settings_manager.set_value("settings.allow_online_mode", checked)
         elif name == "reset_settings":
             self.app.reset_settings()
         self.show_content(section, display_name, name, description)

@@ -117,10 +117,10 @@ class GeneratorForm(BaseWidget):
     def __init__(self, *args, **kwargs):
         super().__init__(*args, **kwargs)
         self.ui.generator_form_tabs.tabBar().hide()
-        self.activate_ai_mode()
+        self.app.ai_mode_toggled.connect(self.activate_ai_mode)
     
-    def activate_ai_mode(self):
-        self.ui.generator_form_tabs.setCurrentIndex(1 if self.app.settings_manager.settings.ai_mode is True else 0)
+    def activate_ai_mode(self, active):
+        self.ui.generator_form_tabs.setCurrentIndex(1 if active is True else 0)
     
     def toggle_advanced_generation(self):
         advanced_mode = self.app.settings_manager.settings.enable_advanced_mode
@@ -142,8 +142,6 @@ class GeneratorForm(BaseWidget):
             self.ui.seed_widget_latents.update_seed()
         elif key == "settings.enable_advanced_mode":
             self.toggle_advanced_generation()
-        elif key == "settings.ai_mode":
-            self.activate_ai_mode()
 
     """
     Slot functions

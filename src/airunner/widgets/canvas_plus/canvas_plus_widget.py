@@ -7,19 +7,18 @@ from PIL import Image, ImageGrab
 from PIL.ImageQt import ImageQt, QImage
 from PyQt6.QtCore import Qt, QPoint, QPointF, QRect
 from PyQt6.QtGui import QBrush, QColor, QPen, QPixmap, QPainter, QCursor
-from PyQt6.QtWidgets import QGraphicsScene, QGraphicsItem, QGraphicsPixmapItem, QGraphicsLineItem
+from PyQt6.QtWidgets import QGraphicsScene, QGraphicsItem, QGraphicsPixmapItem
 from PyQt6 import QtWidgets, QtCore
 from PyQt6.QtCore import QThread, pyqtSignal
 from PyQt6.QtCore import QLineF
+from PyQt6.QtWidgets import QGraphicsItemGroup
 
 from airunner.aihandler.logger import Logger
 from airunner.cursors.circle_brush import CircleCursor
-from airunner.data.models import Layer, CanvasSettings
 from airunner.widgets.canvas_plus.canvas_base_widget import CanvasBaseWidget
 from airunner.widgets.canvas_plus.templates.canvas_plus_ui import Ui_canvas
 from airunner.utils import apply_opacity_to_image
 from airunner.data.session_scope import session_scope
-from airunner.data.managers import SettingsManager
 
 
 class ImageAdder(QThread):
@@ -31,6 +30,7 @@ class ImageAdder(QThread):
         self.image = image
         self.is_outpaint = is_outpaint
         self.image_root_point = image_root_point
+        
 
     def run(self):
         print("setting current_active_image")
@@ -57,7 +57,8 @@ class DraggablePixmap(QGraphicsPixmapItem):
 
 
     def snap_to_grid(self):
-        grid_size = self.parent.settings_manager.grid_settings.cell_size
+        cell_size = self.parent.cell_size
+        grid_size = cell_size
         x = round(self.x() / grid_size) * grid_size
         y = round(self.y() / grid_size) * grid_size
         x += self.parent.last_pos.x()
@@ -180,17 +181,15 @@ class ActiveGridArea(DraggablePixmap):
             self.pixmap.fill(QColor(0, 0, 0, 1))
 
         if self.app.settings_manager.active_grid_settings.render_border:
-            print(self.active_grid_area_rect)
-            size = 4
             painter.setPen(QPen(
                 self.active_grid_area_color,
-                self.app.settings_manager.grid_settings.line_width
+                self.parent.line_width
             ))
             painter.setBrush(QBrush(QColor(0, 0, 0, 0)))
             painter.drawRect(self.active_grid_area_rect)
             painter.setPen(QPen(
                 self.active_grid_area_color,
-                self.app.settings_manager.grid_settings.line_width + 1
+                self.parent.line_width + 1
             ))
             painter.drawRect(QRect(
                 self.active_grid_area_rect.x(),
@@ -247,10 +246,6 @@ class CanvasPlusWidget(CanvasBaseWidget):
     scene = None
     view = None
     view_size = None
-    cell_size = None
-    line_width = None
-    line_color = None
-    canvas_color = None
     layers = {}
     images = {}
     active_grid_area = None
@@ -261,6 +256,8 @@ class CanvasPlusWidget(CanvasBaseWidget):
     draggable_pixmaps_in_scene = {}
     initialized = False
     drawing = False
+    redraw_lines = False
+    line_group = QGraphicsItemGroup()
 
     def current_pixmap(self):
         draggable_pixmap = self.current_draggable_pixmap()
@@ -365,34 +362,71 @@ class CanvasPlusWidget(CanvasBaseWidget):
             self.app.image_data.connect(self.handle_image_data)
             self.app.load_image.connect(self.load_image_from_path)
             self.app.load_image_object.connect(self.add_image_to_scene)
-            self.initialize()
         self.app.loaded.connect(self.handle_loaded)
+        self.app.show_grid_toggled.connect(self.toggle_grid)
+        self.app.cell_size_changed_signal.connect(self.cell_size_changed)
+        self.app.line_width_changed_signal.connect(self.line_width_changed)
+        self.app.line_color_changed_signal.connect(self.line_color_changed)
+        self.app.canvas_color_changed_signal.connect(self.canvas_color_changed)
 
+    def toggle_grid(self, val):
+        self.do_draw()
+    
+    def cell_size_changed(self, val):
+        self.redraw_lines = True
+        self.do_draw()
+    
+    def line_width_changed(self, val):
+        self.redraw_lines = True
+        self.do_draw()
+    
+    def line_color_changed(self, val):
+        self.redraw_lines = True
+        self.do_draw()
 
+    def canvas_color_changed(self, val):
+        self.set_canvas_color()
+        self.do_draw()
+
+    @property
+    def canvas_color(self):
+        return self.app.application_settings.value("canvas_color", "#000000")
+
+    @property
+    def line_color(self):
+        return self.app.application_settings.value("line_color", "#ffffff")
+
+    @property
+    def line_width(self):
+        return self.app.application_settings.value("line_width", 1)
+
+    @property
+    def cell_size(self):
+        return self.app.application_settings.value("cell_size", 64)
     
     def increase_active_grid_height(self, amount):
-        height = self.app.settings_manager.settings.working_height + self.app.settings_manager.grid_settings.cell_size * amount
+        height = self.app.settings_manager.settings.working_height + self.cell_size * amount
         if height > 4096:
             height = 4096
         self.app.settings_manager.settings.set_value("working_height", height)
         self.do_draw()
         
     def decrease_active_grid_height(self, amount):
-        height = self.app.settings_manager.settings.working_height - self.app.settings_manager.grid_settings.cell_size * amount
+        height = self.app.settings_manager.settings.working_height - self.cell_size * amount
         if height < 512:
             height = 512
         self.app.settings_manager.settings.set_value("working_height", height)
         self.do_draw()
 
     def increase_active_grid_width(self, amount):
-        width = self.app.settings_manager.settings.working_width + self.app.settings_manager.grid_settings.cell_size * amount
+        width = self.app.settings_manager.settings.working_width + self.cell_size * amount
         if width > 4096:
             width = 4096
         self.app.settings_manager.settings.set_value("working_width", width)
         self.do_draw()
 
     def decrease_active_grid_width(self, amount):
-        width = self.app.settings_manager.settings.working_width - self.app.settings_manager.grid_settings.cell_size * amount
+        width = self.app.settings_manager.settings.working_width - self.cell_size * amount
         if width < 512:
             width = 512
         self.app.settings_manager.settings.set_value("working_width", width)
@@ -422,21 +456,11 @@ class CanvasPlusWidget(CanvasBaseWidget):
 
     def handle_changed_signal(self, key, value):
         print("canvas_plus_widget: handle_changed_signal", key, value)
-        if key == "settings.current_tab":
-            self.do_draw()
-        elif key == "settings.current_section_stablediffusion":
-            self.do_draw()
-        elif key == "layer_image_data.visible":
+        if key == "layer_image_data.visible":
             self.do_draw()
         elif key == "layer_data.hidden":
             self.do_draw()
         elif key == "settings.active_image_editor_section":
-            self.do_draw()
-        elif key == "grid_settings.show_grid":
-            # remove lines from scene
-            for item in self.scene.items():
-                if isinstance(item, QGraphicsLineItem):
-                    self.scene.removeItem(item)
             self.do_draw()
     
     def handle_loaded(self):
@@ -468,22 +492,19 @@ class CanvasPlusWidget(CanvasBaseWidget):
         # # get size from self.app.ui.content_splitter which is a QSplitter
         self.view_size = self.view.viewport().size()
 
-        # # initialize variables
-        self.cell_size = self.app.settings_manager.grid_settings.cell_size
-        self.line_width = self.app.settings_manager.grid_settings.line_width
-        self.line_color = QColor(self.app.settings_manager.grid_settings.line_color)
-        self.canvas_color = QColor(self.app.settings_manager.grid_settings.canvas_color)
-
         # # Set the margins of the QGraphicsView object to 0
         self.view.setContentsMargins(0, 0, 0, 0)
 
-        self.scene.setBackgroundBrush(QBrush(self.canvas_color))
+        self.set_canvas_color()
+
         self.view.setScene(self.scene)
 
         self.do_draw()
+    
+    def set_canvas_color(self):
+        self.scene.setBackgroundBrush(QBrush(QColor(self.canvas_color)))
 
     def draw_layers(self):
-        print("draw layers")
         with self.app.settings_manager.layers() as layers:
             for layer in layers:
                 image = layer.image
@@ -530,35 +551,38 @@ class CanvasPlusWidget(CanvasBaseWidget):
         print("set_scene_rect")
         self.scene.setSceneRect(0, 0, self.view_size.width(), self.view_size.height())
 
+    def clear_lines(self):
+        self.scene.removeItem(self.line_group)
+        self.line_group = QGraphicsItemGroup()
+
     def draw_lines(self):
-        print("draw_lines")
         width_cells = math.ceil(self.view_size.width() / self.cell_size)
         height_cells = math.ceil(self.view_size.height() / self.cell_size)
-        print("draw_lines2")
-
+        
         pen = QPen(
-            QBrush(self.line_color),
+            QBrush(QColor(self.line_color)),
             self.line_width,
             Qt.PenStyle.SolidLine
         )
-        print("draw_lines3")
+        
+        # vertical lines
+        h = self.view_size.height() + abs(self.app.settings_manager.canvas_settings.pos_y) % self.cell_size
+        y = 0
+        for i in range(width_cells):
+            x = i * self.cell_size + self.app.settings_manager.canvas_settings.pos_x % self.cell_size
+            line = self.scene.addLine(x, y, x, h, pen)
+            self.line_group.addToGroup(line)
 
-        if self.app.settings_manager.grid_settings.show_grid:
-            print("draw_lines4")
-            # vertical lines
-            h = self.view_size.height() + abs(self.app.settings_manager.canvas_settings.pos_y) % self.cell_size
-            y = 0
-            for i in range(width_cells):
-                x = i * self.cell_size + self.app.settings_manager.canvas_settings.pos_x % self.cell_size
-                self.scene.addLine(x, y, x, h, pen)
+        # # horizontal lines
+        w = self.view_size.width() + abs(self.app.settings_manager.canvas_settings.pos_x) % self.cell_size
+        x = 0
+        for i in range(height_cells):
+            y = i * self.cell_size + self.app.settings_manager.canvas_settings.pos_y % self.cell_size
+            line = self.scene.addLine(x, y, w, y, pen)
+            self.line_group.addToGroup(line)
 
-            # # horizontal lines
-            w = self.view_size.width() + abs(self.app.settings_manager.canvas_settings.pos_x) % self.cell_size
-            x = 0
-            for i in range(height_cells):
-                y = i * self.cell_size + self.app.settings_manager.canvas_settings.pos_y % self.cell_size
-                self.scene.addLine(x, y, w, y, pen)
-        print("draw_lines6")
+        # Add the group to the scene
+        self.scene.addItem(self.line_group)
 
     def draw_active_grid_area_container(self):
         """
@@ -581,16 +605,16 @@ class CanvasPlusWidget(CanvasBaseWidget):
     def action_button_clicked_focus(self):
         self.last_pos = QPoint(0, 0)
         self.do_draw()
+    
+    has_lines = False
 
     def do_draw(self):
-        print("DO DRAW")
         if self.drawing or not self.initialized:
-            print("returning")
             return
         self.drawing = True
         self.view_size = self.view.viewport().size()
         self.set_scene_rect()
-        self.draw_lines()
+        self.draw_grid()
         self.draw_layers()
         self.draw_active_grid_area_container()
         self.ui.canvas_position.setText(
@@ -598,6 +622,21 @@ class CanvasPlusWidget(CanvasBaseWidget):
         )
         self.scene.update()
         self.drawing = False
+    
+    def draw_grid(self):
+        draw_grid = self.app.application_settings.value('show_grid', False, type=bool)
+
+        if draw_grid and self.redraw_lines:
+            self.clear_lines()
+            self.has_lines = False
+        self.redraw_lines = False
+
+        if draw_grid and not self.has_lines:
+            self.draw_lines()
+            self.has_lines = True
+        elif not draw_grid and self.has_lines:
+            self.clear_lines()
+            self.has_lines = False
     
     def update_cursor(self):
         # if self.is_canvas_drag_mode:

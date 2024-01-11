@@ -61,14 +61,6 @@ def path_settings_scope():
 
 
 @contextmanager
-def grid_settings_scope():
-    from airunner.data.models import GridSettings
-    with session_scope() as session:
-        grid_settings = session.query(GridSettings).options(joinedload('*')).first()
-        yield grid_settings
-
-
-@contextmanager
 def standard_image_widget_settings_scope():
     from airunner.data.models import StandardImageWidgetSettings
     with session_scope() as session:
@@ -97,13 +89,6 @@ def brush_settings_scope():
         brush_settings = session.query(BrushSettings).options(joinedload('*')).first()
         yield brush_settings
 
-
-@contextmanager
-def image_filters_scope():
-    from airunner.data.models import ImageFilter
-    with session_scope() as session:
-        image_filters = session.query(ImageFilter).options(joinedload('*')).all()
-        yield image_filters
 
 @contextmanager
 def llm_generator_scope():
