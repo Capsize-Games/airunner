@@ -254,6 +254,14 @@ class MainWindow(
     @auto_export_images.setter
     def auto_export_images(self, val):
         self.application_settings.setValue("auto_export_images", val)
+    
+    @property
+    def image_export_type(self):
+        return self.application_settings.value("image_export_type", "png")
+    
+    @image_export_type.setter
+    def image_export_type(self, val):
+        self.application_settings.setValue("image_export_type", val)
 
     @property
     def enable_tts(self):
