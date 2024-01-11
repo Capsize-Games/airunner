@@ -280,7 +280,6 @@ class MainWindow(
 
     @brush_settings.setter
     def brush_settings(self, val):
-        print("SET BRUSH_SETTINGS", val)
         self.application_settings.setValue("brush_settings", val)
 
     @property
