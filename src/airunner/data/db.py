@@ -9,7 +9,7 @@ from airunner.data.models import ControlnetModel, LLMPromptTemplate, Pipeline, D
     MetadataSettings, AIModel, \
     ImageFilter, ImageFilterValue, Prompt, PromptVariable, PromptCategory, PromptOption, \
     PromptVariableCategory, PromptVariableCategoryWeight, PromptStyleCategory, PromptStyle, Scheduler, ActionScheduler, \
-    ActiveGridSettings, CanvasSettings, \
+    ActiveGridSettings, \
     LLMGeneratorSetting, LLMGenerator, LLMModelVersion, StandardImageWidgetSettings
 from airunner.data.session_scope import session_scope, engine
 from alembic.config import Config
@@ -280,10 +280,6 @@ def prepare_database():
                         scheduler_id=v.id
                     )
                     my_session.add(obj)
-            
-                        
-
-            my_session.add(CanvasSettings())
             
 
 
