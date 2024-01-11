@@ -552,8 +552,6 @@ class Settings(BaseModel):
     __tablename__ = 'settings'
 
     id = Column(Integer, primary_key=True)
-    
-    current_tool = Column(String, default="")
 
     brush_settings_id = Column(Integer, ForeignKey('brush_settings.id'))
     brush_settings = relationship("BrushSettings", back_populates="settings")
