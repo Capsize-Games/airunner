@@ -582,7 +582,6 @@ class Settings(BaseModel):
     active_grid_settings = relationship("ActiveGridSettings", back_populates="settings", uselist=False)
 
     force_reset = Column(Boolean, default=False)
-    image_export_type = Column(String, default="png")
 
     show_active_image_area = Column(Boolean, default=True)
     use_interpolation = Column(Boolean, default=False)
