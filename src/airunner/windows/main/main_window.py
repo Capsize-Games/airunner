@@ -83,7 +83,7 @@ class ImageDataWorker(QObject):
                     self.parent.set_status_label(f"Image exported to {path}")
                 procesed_images.append(image)
             images = procesed_images
-        if nsfw_content_detected and self.parent.settings_manager.settings.nsfw_filter:
+        if nsfw_content_detected and self.nsfw_filter:
             self.parent.message_handler({
                 "message": "Explicit content detected, try again.",
                 "code": MessageCode.ERROR
@@ -169,6 +169,24 @@ class MainWindow(
     _generator_settings = None
 
     @property
+    def ai_mode(self):
+        return self.application_settings.value("ai_mode", False, type=bool)
+    
+    @ai_mode.setter
+    def ai_mode(self, val):
+        self.application_settings.setValue("ai_mode", val)
+        self.ai_mode_toggled.emit(val)
+
+    @property
+    def show_grid(self):
+        return self.application_settings.value("show_grid", True, type=bool)
+    
+    @show_grid.setter
+    def show_grid(self, val):
+        self.application_settings.setValue("show_grid", val)
+        self.show_grid_toggled.emit(val)
+
+    @property
     def resize_on_paste(self):
         return self.application_settings.value("resize_on_paste", True, type=bool)
 
@@ -183,6 +201,7 @@ class MainWindow(
     @snap_to_grid.setter
     def snap_to_grid(self, val):
         self.application_settings.setValue("snap_to_grid", val)
+        self.snap_to_grid_changed_signal.emit(val)
 
     @property
     def cell_size(self):
@@ -191,6 +210,7 @@ class MainWindow(
     @cell_size.setter
     def cell_size(self, val):
         self.application_settings.setValue("cell_size", val)
+        self.cell_size_changed_signal.emit(val)
     
     @property
     def canvas_color(self):
@@ -199,6 +219,33 @@ class MainWindow(
     @canvas_color.setter
     def canvas_color(self, val):
         self.application_settings.setValue("canvas_color", val)
+        self.canvas_color_changed_signal.emit(val)
+    
+    @property
+    def line_color(self):
+        return self.application_settings.value("line_color", "#000000")
+    
+    @line_color.setter
+    def line_color(self, val):
+        self.application_settings.setValue("line_color", val)
+        self.line_color_changed_signal.emit(val)
+    
+    @property
+    def line_width(self):
+        return self.application_settings.value("line_width", 1, type=int)
+    
+    @line_width.setter
+    def line_width(self, val):
+        self.application_settings.setValue("line_width", val)
+        self.line_width_changed_signal.emit(val)
+
+    @property
+    def nsfw_filter(self):
+        return self.application_settings.value("nsfw_filter", True, type=bool)
+    
+    @nsfw_filter.setter
+    def nsfw_filter(self, val):
+        self.application_settings.setValue("nsfw_filter", val)
 
     @property
     def generator(self):
@@ -655,9 +702,8 @@ class MainWindow(
         self.set_nsfw_filter_tooltip()
 
     def set_nsfw_filter_tooltip(self):
-        nsfw_filter = self.settings_manager.settings.nsfw_filter
         self.ui.safety_checker_button.setToolTip(
-            f"Click to {'enable' if not nsfw_filter else 'disable'} NSFW filter"
+            f"Click to {'enable' if not self.nsfw_filter else 'disable'} NSFW filter"
         )
 
     def dragmode_pressed(self):
@@ -745,44 +791,32 @@ class MainWindow(
         generator_tab_index = self.application_settings.value("generator_tab_index", 0, type=int)
         self.ui.standard_image_widget.ui.tabWidget.setCurrentIndex(generator_tab_index)
 
-        ai_mode = self.application_settings.value('ai_mode', False, type=bool)
-        self.ui.ai_button.setChecked(ai_mode)
-        self.ai_mode_toggled.emit(ai_mode)
-
-        show_grid = self.application_settings.value('show_grid', False, type=bool)
-        self.set_button_checked("toggle_grid", show_grid, False)
-        self.show_grid_toggled.emit(show_grid)
+        self.ui.ai_button.setChecked(self.ai_mode)
+        self.set_button_checked("toggle_grid", self.show_gird, False)
     ##### End window properties #####
     #################################
         
     ###### Window handlers ######
-    def grid_size_changed(self, val):
-        self.application_settings.setValue("grid_size", val)
-        self.cell_size_changed_signal.emit(val)
+    def cell_size_changed(self, val):
+        self.cell_size = val
 
     def line_width_changed(self, val):
-        self.application_settings.setValue("line_width", val)
-        self.line_width_changed_signal.emit(val)
+        self.line_width = val
     
     def line_color_changed(self, val):
-        self.application_settings.setValue("line_color", val)
-        self.line_color_changed_signal.emit(val)
+        self.line_color = val
     
     def snap_to_grid_changed(self, val):
-        self.application_settings.setValue("snap_to_grid", val)
-        self.snap_to_grid_changed_signal.emit(val)
+        self.snap_to_grid = val
     
     def canvas_color_changed(self, val):
-        self.application_settings.setValue("canvas_color", val)
-        self.canvas_color_changed_signal.emit(val)
+        self.canvas_color = val
 
     def action_ai_toggled(self, val):
-        self.application_settings.setValue("ai_mode", val)
-        self.ai_mode_toggled.emit(val)
+        self.ai_mode = val
     
     def action_toggle_grid(self, val):
-        self.application_settings.setValue("show_grid", val)
-        self.show_grid_toggled.emit(val)
+        self.show_grid = val
     
     def action_toggle_brush(self, active):
         if active:
@@ -802,8 +836,8 @@ class MainWindow(
             self.ui.toggle_brush_button.setChecked(False)
             self.ui.toggle_eraser_button.setChecked(False)
 
-    def action_toggle_nsfw_filter_triggered(self, bool):
-        self.settings_manager.set_value("settings.nsfw_filter", bool)
+    def action_toggle_nsfw_filter_triggered(self, val):
+        self.application_settings.setValue("nsfw_filter", val)
         self.toggle_nsfw_filter()
 
     def action_toggle_darkmode(self):
@@ -916,7 +950,7 @@ class MainWindow(
         pass
 
     def initialize_default_buttons(self):
-        show_grid = self.application_settings.value("show_grid", False, type=bool)
+        show_grid = self.show_grid
         self.ui.toggle_active_grid_area_button.blockSignals(True)
         self.ui.toggle_brush_button.blockSignals(True)
         self.ui.toggle_eraser_button.blockSignals(True)

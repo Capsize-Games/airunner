@@ -390,19 +390,19 @@ class CanvasPlusWidget(CanvasBaseWidget):
 
     @property
     def canvas_color(self):
-        return self.app.application_settings.value("canvas_color", "#000000")
+        return self.app.canvas_color
 
     @property
     def line_color(self):
-        return self.app.application_settings.value("line_color", "#ffffff")
+        return self.app.line_color
 
     @property
     def line_width(self):
-        return self.app.application_settings.value("line_width", 1)
+        return self.app.line_width
 
     @property
     def cell_size(self):
-        return self.app.application_settings.value("cell_size", 64)
+        return self.app.cell_size
     
     def increase_active_grid_height(self, amount):
         height = self.app.settings_manager.settings.working_height + self.cell_size * amount
@@ -624,7 +624,7 @@ class CanvasPlusWidget(CanvasBaseWidget):
         self.drawing = False
     
     def draw_grid(self):
-        draw_grid = self.app.application_settings.value('show_grid', False, type=bool)
+        draw_grid = self.app.show_grid
 
         if draw_grid and self.redraw_lines:
             self.clear_lines()

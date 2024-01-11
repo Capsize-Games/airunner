@@ -209,7 +209,7 @@ def prepare_database():
             filter_values = image_filter.image_filter_values
 
             # Add Document object
-            settings = Settings(nsfw_filter=True)
+            settings = Settings()
             settings.splitter_sizes.append(SplitterSection(
                 name="content_splitter",
                 order=0,

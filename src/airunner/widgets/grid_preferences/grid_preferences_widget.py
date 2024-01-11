@@ -15,10 +15,10 @@ class GridPreferencesWidget(BaseWidget):
         self.ui.show_grid_checkbox.blockSignals(True)
         self.ui.snap_to_grid_checkbox.blockSignals(True)
 
-        line_width = self.app.application_settings.value('line_width', 1, type=int)
-        cell_size = self.app.application_settings.value('cell_size', 64, type=int)
-        show_grid = self.app.application_settings.value('show_grid', False, type=bool)
-        snap_to_grid = self.app.application_settings.value('snap_to_grid', False, type=bool)
+        line_width = self.app.line_width
+        cell_size = self.app.cell_size
+        show_grid = self.app.show_grid
+        snap_to_grid = self.app.snap_to_grid
 
         self.ui.grid_line_width_spinbox.setValue(line_width)
         self.ui.grid_size_spinbox.setValue(cell_size)
@@ -47,7 +47,7 @@ class GridPreferencesWidget(BaseWidget):
             self.app.canvas_color_changed(color.name())
 
     def grid_size_changed(self, val):
-        self.app.grid_size_changed(val)
+        self.app.cell_size_changed(val)
 
     def line_width_changed(self, val):
         self.app.line_width_changed(val)
