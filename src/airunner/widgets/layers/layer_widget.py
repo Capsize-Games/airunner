@@ -21,13 +21,11 @@ class LayerWidget(BaseWidget):
             yield self._layer_data
 
     def __init__(self, *args, **kwargs):
-        with self.layer_data as layer_data:
-            self.layer_container = kwargs.pop("layer_container", None)
-            self._layer_data = kwargs.pop("layer_data", None)
-            self.layer_index = kwargs.pop("layer_index", None)
-            layer_data.layer_widget = self
-            super().__init__(*args, **kwargs)
-            self.set_thumbnail()
+        self.layer_container = kwargs.pop("layer_container", None)
+        self._layer_data = kwargs.pop("layer_data", None)
+        self.layer_index = kwargs.pop("layer_index", None)
+        super().__init__(*args, **kwargs)
+        self.set_thumbnail()
 
         # listen for click on entire widget
         self.ui.mousePressEvent = partial(self.action_clicked, self.layer_data, self.layer_index)
