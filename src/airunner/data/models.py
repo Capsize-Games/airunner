@@ -571,8 +571,6 @@ class Settings(BaseModel):
     active_grid_settings_id = Column(Integer, ForeignKey('active_grid_settings.id'))
     active_grid_settings = relationship("ActiveGridSettings", back_populates="settings", uselist=False)
 
-    splitter_sizes = relationship("SplitterSection", backref="settings")
-    
     # generator tab sections
     generator_settings = relationship("GeneratorSetting", backref="settings")
 
