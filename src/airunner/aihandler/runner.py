@@ -680,15 +680,19 @@ class SDRunner(
 
     @property
     def hf_api_key_read_key(self):
-        return self.settings_manager.hf_api_key_read_key
+        return self.options.get("hf_api_key_read_key", "")
+    
+    @hf_api_key_read_key.setter
+    def hf_api_key_read_key(self, value):
+        self.options["hf_api_key_read_key"] = value
 
     @property
     def hf_api_key_write_key(self):
-        return self.settings_manager.hf_api_key_write_key
+        return self.options.get("hf_api_key_write_key", "")
 
-    @property
-    def hf_username(self):
-        return self.settings_manager.hf_username
+    @hf_api_key_write_key.setter
+    def hf_api_key_write_key(self, value):
+        self.options["hf_api_key_write_key"] = value
 
     @property
     def original_model_data(self):
