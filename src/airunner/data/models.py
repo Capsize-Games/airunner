@@ -4,13 +4,14 @@ import io
 import os
 
 from PIL import Image
-from sqlalchemy import Column, Integer, String, Boolean, ForeignKey, Float, JSON, UniqueConstraint, DateTime
+from sqlalchemy import Column, Integer, String, Boolean, ForeignKey, Float, UniqueConstraint, DateTime
 from sqlalchemy.ext.declarative import declarative_base
 from sqlalchemy.orm import relationship
 from PyQt6.QtCore import Qt, QAbstractTableModel, QModelIndex
 
 from airunner.settings import BASE_PATH
 from airunner.utils import default_hf_cache_dir
+from airunner.data.bootstrap.prompt_templates import prompt_template_seed_data
 
 
 DEFAULT_PATHS = {
@@ -128,108 +129,6 @@ class ActionScheduler(BaseModel):
     scheduler = relationship("Scheduler", backref="action_schedulers")
 
 
-class PromptStyleCategoryModel(ModelBase):
-    _headers = [
-        {
-            "display_name": "ID",
-            "column_name": "id"
-        },
-        {
-            "display_name": "Name",
-            "column_name": "name"
-        },
-        {
-            "display_name": "Negative Prompt",
-            "column_name": "negative_prompt"
-        }
-    ]
-
-
-class PromptStyleCategory(BaseModel):
-    __tablename__ = 'prompt_style_category'
-
-    id = Column(Integer, primary_key=True)
-    name = Column(String)
-    negative_prompt = Column(String)
-
-
-class PromptStyle(BaseModel):
-    __tablename__ = 'prompt_style'
-
-    id = Column(Integer, primary_key=True)
-    name = Column(String)
-    style_category_id = Column(Integer, ForeignKey('prompt_style_category.id'))
-    style_category = relationship("PromptStyleCategory", backref="styles")
-
-
-class PromptCategory(BaseModel):
-    __tablename__ = 'prompt_category'
-
-    id = Column(Integer, primary_key=True)
-    name = Column(String)
-    negative_prompt = Column(String)
-
-
-class PromptVariableCategory(BaseModel):
-    __tablename__ = 'prompt_variable_category'
-
-    id = Column(Integer, primary_key=True)
-    name = Column(String)
-
-
-class PromptVariableCategoryWeight(BaseModel):
-    __tablename__ = 'prompt_variable_category_weight'
-
-    id = Column(Integer, primary_key=True)
-    weight = Column(Float)
-    prompt_category_id = Column(Integer, ForeignKey('prompt_category.id'))
-    prompt_category = relationship("PromptCategory", backref="weights")
-    variable_category_id = Column(Integer, ForeignKey('prompt_variable_category.id'))
-    variable_category = relationship("PromptVariableCategory", backref="weights")
-
-
-class PromptVariable(BaseModel):
-    __tablename__ = 'prompt_variables'
-
-    id = Column(Integer, primary_key=True)
-    value = Column(String)
-    prompt_category_id = Column(Integer, ForeignKey('prompt_category.id'))
-    prompt_category = relationship("PromptCategory", backref="variables")
-    variable_category_id = Column(Integer, ForeignKey('prompt_variable_category.id'))
-    variable_category = relationship("PromptVariableCategory", backref="variables")
-
-
-class PromptOption(BaseModel):
-    __tablename__ = 'prompt_option'
-
-    id = Column(Integer, primary_key=True)
-    prompt_id = Column(Integer, ForeignKey('prompts.id'))
-    text = Column(String, default="")
-    cond = Column(String, default="")
-    else_cond = Column(String, default="")
-    or_cond = Column(String, default="")
-
-    next_cond_id = Column(Integer, ForeignKey('prompt_option.id'), nullable=True)
-    next_cond = Column(Integer, ForeignKey('prompt_option.id'), nullable=True)
-
-    next = relationship(
-        "PromptOption",
-        backref="prev",
-        remote_side=[id],
-        foreign_keys=[next_cond_id]
-    )
-
-
-class Prompt(BaseModel):
-    __tablename__ = 'prompts'
-
-    id = Column(Integer, primary_key=True)
-    name = Column(String)
-    category_id = Column(Integer, ForeignKey('prompt_category.id'))
-    category = relationship("PromptCategory", backref="prompts")
-    options = relationship("PromptOption", backref="prompts")
-
-
 class SavedPrompt(BaseModel):
     __tablename__ = 'saved_prompts'
 
@@ -282,21 +181,10 @@ class Pipeline(BaseModel):
     default = Column(Boolean, default=True)
 
 
-class SplitterSection(BaseModel):
-    __tablename__ = 'splitter_section'
-
-    id = Column(Integer, primary_key=True)
-    settings_id = Column(Integer, ForeignKey('settings.id'))
-    name = Column(String)
-    order = Column(Integer)
-    size = Column(Integer)
-
-
 class Lora(BaseModel):
     __tablename__ = 'loras'
 
     id = Column(Integer, primary_key=True)
-    settings_id = Column(Integer, ForeignKey('settings.id'))
     name = Column(String)
     path = Column(String)
     scale = Column(Float)
@@ -314,85 +202,12 @@ class Lora(BaseModel):
     )
 
 
-class GeneratorSetting(BaseModel):
-    __tablename__ = 'generator_settings'
-
-    id = Column(Integer, primary_key=True)
-    section = Column(String)
-    generator_name = Column(String)
-    prompt = Column(String, default="")
-    negative_prompt = Column(String, default="")
-    steps = Column(Integer, default=20)
-    ddim_eta = Column(Float, default=0.5)
-    height = Column(Integer, default=512)
-    width = Column(Integer, default=512)
-    scale = Column(Integer, default=750)
-    seed = Column(Integer, default=42)
-    latents_seed = Column(Integer, default=84)
-    random_seed = Column(Boolean, default=True)
-    random_latents_seed = Column(Boolean, default=True)
-    model = Column(String, default="")
-    scheduler = Column(String, default="DPM++ 2M Karras")
-    prompt_triggers = Column(String, default="")
-    strength = Column(Integer, default=50)
-    image_guidance_scale = Column(Integer, default=150)
-    n_samples = Column(Integer, default=1)
-    controlnet = Column(String, default="")
-    enable_controlnet = Column(Boolean, default=False)
-    enable_input_image = Column(Boolean, default=False)
-    controlnet_guidance_scale = Column(Integer, default=50)
-    clip_skip = Column(Integer, default=0)
-    variation = Column(Boolean, default=False)
-    input_image_use_imported_image = Column(Boolean, default=False)
-    input_image_use_grid_image = Column(Boolean, default=True)
-    input_image_recycle_grid_image = Column(Boolean, default=True)
-    input_image_mask_use_input_image = Column(Boolean, default=True)
-    input_image_mask_use_imported_image = Column(Boolean, default=False)
-    controlnet_input_image_link_to_input_image = Column(Boolean, default=True)
-    controlnet_input_image_use_imported_image = Column(Boolean, default=False)
-    controlnet_use_grid_image = Column(Boolean, default=False)
-    controlnet_recycle_grid_image = Column(Boolean, default=False)
-    controlnet_mask_link_input_image = Column(Boolean, default=False)
-    controlnet_mask_use_imported_image = Column(Boolean, default=False)
-    use_prompt_builder = Column(Boolean, default=False)
-    active_grid_border_color = Column(String, default="#00FF00")
-    active_grid_fill_color = Column(String, default="#FF0000")
-    brushes = relationship("Brush", back_populates='generator_setting')  # modified line
-    version = Column(String, default="SD 1.5")
-    is_preset = Column(Boolean, default=False)
-
-
 class Brush(BaseModel):
     __tablename__ = 'brushes'
 
     id = Column(Integer, primary_key=True)
     name = Column(String, nullable=False)
     thumbnail = Column(String, nullable=False)
-    generator_setting_id = Column(Integer, ForeignKey('generator_settings.id'))  # new line
-    generator_setting = relationship('GeneratorSetting', back_populates='brushes')  # modified line
-
-
-class GridSettings(BaseModel):
-    __tablename__ = 'grid_settings'
-
-    id = Column(Integer, primary_key=True)
-    show_grid = Column(Boolean, default=True)
-    snap_to_grid = Column(Boolean, default=True)
-    cell_size = Column(Integer, default=64)
-    line_width = Column(Integer, default=1)
-    canvas_color = Column(String, default="#000000")
-    line_color = Column(String, default="#121212")
-    settings = relationship("Settings", back_populates="grid_settings")
-
-
-class DeterministicSettings(BaseModel):
-    __tablename__ = 'deterministic_settings'
-
-    id = Column(Integer, primary_key=True)
-    batch_size = Column(Integer, default=1)
-    style = Column(String, default="")
-    seed = Column(Integer, default=42)
-    settings = relationship("Settings", back_populates="deterministic_settings")
 
 
 class MetadataSettings(BaseModel):
@@ -413,112 +228,7 @@ class MetadataSettings(BaseModel):
     image_export_metadata_scheduler = Column(Boolean, default=True)
     export_metadata = Column(Boolean, default=True)
     import_metadata = Column(Boolean, default=True)
-    settings = relationship("Settings", back_populates="metadata_settings")
-
-
-class MemorySettings(BaseModel):
-    __tablename__ = "memory_settings"
-
-    id = Column(Integer, primary_key=True)
-    use_last_channels = Column(Boolean, default=True)
-    use_attention_slicing = Column(Boolean, default=False)
-    use_tf32 = Column(Boolean, default=False)
-    use_enable_vae_slicing = Column(Boolean, default=True)
-    use_accelerated_transformers = Column(Boolean, default=True)
-    use_tiled_vae = Column(Boolean, default=True)
-    enable_model_cpu_offload = Column(Boolean, default=False)
-    use_enable_sequential_cpu_offload = Column(Boolean, default=False)
-    use_cudnn_benchmark = Column(Boolean, default=True)
-    use_torch_compile = Column(Boolean, default=False)
-    use_tome_sd = Column(Boolean, default=True)
-    tome_sd_ratio = Column(Integer, default=600)
-    settings = relationship("Settings", back_populates="memory_settings")
-
-
-class PathSettings(BaseModel):
-    __tablename__ = 'path_settings'
-
-    id = Column(Integer, primary_key=True)
-    hf_cache_path = Column(String, default="")
-    base_path = Column(String, default=BASE_PATH)
-    txt2img_model_path = Column(String, default=DEFAULT_PATHS["art"]["models"]["txt2img"])
-    depth2img_model_path = Column(String, default=DEFAULT_PATHS["art"]["models"]["depth2img"])
-    pix2pix_model_path = Column(String, default=DEFAULT_PATHS["art"]["models"]["pix2pix"])
-    inpaint_model_path = Column(String, default=DEFAULT_PATHS["art"]["models"]["inpaint"])
-    upscale_model_path = Column(String, default=DEFAULT_PATHS["art"]["models"]["upscale"])
-    txt2vid_model_path = Column(String, default=DEFAULT_PATHS["art"]["models"]["txt2vid"])
-    embeddings_model_path = Column(String, default=DEFAULT_PATHS["art"]["models"]["embeddings"])
-    lora_model_path = Column(String, default=DEFAULT_PATHS["art"]["models"]["lora"])
-    image_path = Column(String, default=DEFAULT_PATHS["art"]["other"]["images"])
-    video_path = Column(String, default=DEFAULT_PATHS["art"]["other"]["videos"])
-    llm_casuallm_model_path = Column(String, default=DEFAULT_PATHS["text"]["models"]["casuallm"])
-    llm_seq2seq_model_path = Column(String, default=DEFAULT_PATHS["text"]["models"]["seq2seq"])
-    llm_visualqa_model_path = Column(String, default=DEFAULT_PATHS["text"]["models"]["visualqa"])
-    vae_model_path = Column(String, default=DEFAULT_PATHS["art"]["models"]["vae"])
-
-    settings = relationship("Settings", back_populates="path_settings")
-
-    @property
-    def embeddings_path(self):
-        return self.embeddings_model_path
-
-    @embeddings_path.setter
-    def embeddings_path(self, value):
-        self.embeddings_model_path = value
-
-    @property
-    def lora_path(self):
-        return self.lora_model_path
-
-    @lora_path.setter
-    def lora_path(self, value):
-        self.lora_model_path = value
-
-    @property
-    def model_base_path(self):
-        return self.txt2img_model_path
-
-    @model_base_path.setter
-    def model_base_path(self, value):
-        self.base_path = value
-
-    @property
-    def outpaint_model_path(self):
-        return self.inpaint_model_path
-
-    @outpaint_model_path.setter
-    def outpaint_model_path(self, value):
-        self.inpaint_model_path = value
-
-
-    def reset_paths(self):
-        self.hf_cache_path = default_hf_cache_dir()
-        self.base_path = BASE_PATH
-        self.txt2img_model_path = DEFAULT_PATHS["art"]["models"]["txt2img"]
-        self.depth2img_model_path = DEFAULT_PATHS["art"]["models"]["depth2img"]
-        self.pix2pix_model_path = DEFAULT_PATHS["art"]["models"]["pix2pix"]
-        self.inpaint_model_path = DEFAULT_PATHS["art"]["models"]["inpaint"]
-        self.upscale_model_path = DEFAULT_PATHS["art"]["models"]["upscale"]
-        self.txt2vid_model_path = DEFAULT_PATHS["art"]["models"]["txt2vid"]
-        self.vae_model_path = DEFAULT_PATHS["art"]["models"]["vae"]
-        self.embeddings_model_path = DEFAULT_PATHS["art"]["models"]["embeddings"]
-        self.lora_model_path = DEFAULT_PATHS["art"]["models"]["lora"]
-        self.image_path = DEFAULT_PATHS["art"]["other"]["images"]
-        self.video_path = DEFAULT_PATHS["art"]["other"]["videos"]
-        self.llm_casuallm_model_path = DEFAULT_PATHS["text"]["models"]["casuallm"]
-        self.llm_seq2seq_model_path = DEFAULT_PATHS["text"]["models"]["seq2seq"]
-        self.llm_visualqa_model_path = DEFAULT_PATHS["text"]["models"]["visualqa"]
-
-
-class BrushSettings(BaseModel):
-    __tablename__ = 'brush_settings'
-
-    id = Column(Integer, primary_key=True)
-    size = Column(Integer, default=10)
-    primary_color = Column(String, default="#FF0000")
-    secondary_color = Column(String, default="#000000")
-    settings = relationship("Settings", back_populates="brush_settings")
-
+    
 
 class ImageFilter(BaseModel):
     __tablename__ = 'image_filter'
@@ -542,103 +252,6 @@ class ImageFilterValue(BaseModel):
     value_type = Column(String, default="int")
     min_value = Column(Integer, default=0)
     max_value = Column(Integer, default=100)
-
-
-class ActiveGridSettings(BaseModel):
-    __tablename__ = 'active_grid_settings'
-
-    id = Column(Integer, primary_key=True)
-    enabled = Column(Boolean, default=True)
-    render_border = Column(Boolean, default=True)
-    render_fill = Column(Boolean, default=True)
-    border_opacity = Column(Integer, default=50)
-    fill_opacity = Column(Integer, default=50)
-    pos_x = Column(Integer, default=0)
-    pos_y = Column(Integer, default=0)
-    width = Column(Integer, default=512)
-    height = Column(Integer, default=512)
-    settings = relationship("Settings", back_populates="active_grid_settings")
-
-
-class Settings(BaseModel):
-    __tablename__ = 'settings'
-
-    id = Column(Integer, primary_key=True)
-    nsfw_filter = Column(Boolean, default=True)
-    allow_hf_downloads = Column(Boolean, default=True)
-    dark_mode_enabled = Column(Boolean, default=True)
-    resize_on_paste = Column(Boolean, default=False)
-    allow_online_mode = Column(Boolean, default=True)
-
-    current_tool = Column(String, default="")
-
-    image_to_new_layer = Column(Boolean, default=False)
-    latest_version_check = Column(Boolean, default=True)
-    primary_color = Column(String, default="#000000")
-    secondary_color = Column(String, default="#000000")
-
-    working_width = Column(Integer, default=512)
-    working_height = Column(Integer, default=512)
-    hf_api_key_read_key = Column(String, default="")
-    hf_api_key_write_key = Column(String, default="")
-    hf_username = Column(String, default="")
-
-    mode = Column(String, default="Image Generation")
-
-    brush_settings_id = Column(Integer, ForeignKey('brush_settings.id'))
-    brush_settings = relationship("BrushSettings", back_populates="settings")
-
-    path_settings_id = Column(Integer, ForeignKey('path_settings.id'))
-    path_settings = relationship("PathSettings", back_populates="settings")
-
-    grid_settings_id = Column(Integer, ForeignKey('grid_settings.id'))
-    grid_settings = relationship("GridSettings", back_populates="settings")
-
-    metadata_settings_id = Column(Integer, ForeignKey('metadata_settings.id'))
-    metadata_settings = relationship("MetadataSettings", back_populates="settings")
-
-    memory_settings_id = Column(Integer, ForeignKey('memory_settings.id'))
-    memory_settings = relationship("MemorySettings", back_populates="settings")
-
-    deterministic_settings_id = Column(Integer, ForeignKey('deterministic_settings.id'))
-    deterministic_settings = relationship("DeterministicSettings", back_populates="settings", uselist=False)
-
-    active_grid_settings_id = Column(Integer, ForeignKey('active_grid_settings.id'))
-    active_grid_settings = relationship("ActiveGridSettings", back_populates="settings", uselist=False)
-
-    force_reset = Column(Boolean, default=False)
-    auto_export_images = Column(Boolean, default=True)
-    image_export_type = Column(String, default="png")
-
-    show_active_image_area = Column(Boolean, default=True)
-    use_interpolation = Column(Boolean, default=False)
-    is_maximized = Column(Boolean, default=False)
-    splitter_sizes = relationship("SplitterSection", backref="settings")
-    
-    # generator tab sections
-    current_tab = Column(String, default="stablediffusion")
-    current_section_stablediffusion = Column(String, default="txt2img")
-    generator_settings = relationship("GeneratorSetting", backref="settings")
-
-    # generator version
-    current_version_stablediffusion = Column(String, default="SD 1.5")
-
-    # tool and bottom panel tab sections
-    current_tool_tab = Column(String, default="brush")
-    current_bottom_panel_tab = Column(String, default="model_manager")
-
-    move_unused_model_to_cpu = Column(Boolean, default=True)
-    unload_unused_model = Column(Boolean, default=False)
-
-    current_image_generator = Column(String, default="stablediffusion")
-    current_llm_generator = Column(String, default="casuallm")
-
-    active_image_editor_section = Column(String, default="canvas")
-    enable_advanced_mode = Column(Boolean, default=False)
-
-    enable_tts = Column(Boolean, default=True)
-    generator_settings_override_id = Column(Integer, ForeignKey('generator_settings.id'))
-    ai_mode = Column(Boolean, default=True)
 
 
 class StandardImageWidgetSettings(BaseModel):
@@ -697,25 +310,7 @@ class Document(BaseModel):
 
     id = Column(Integer, primary_key=True)
     name = Column(String)
-    settings_id = Column(Integer, ForeignKey('settings.id'))
-    settings = relationship("Settings", backref="document")
     active = Column(Boolean, default=False)
-
-
-class TabSection(BaseModel):
-    __tablename__ = 'active_tab'
-
-    id = Column(Integer, primary_key=True)
-    panel = Column(String)
-    active_tab = Column(String)
-
-
-class CanvasSettings(BaseModel):
-    __tablename__ = "canvas_settings"
-
-    id = Column(Integer, primary_key=True)
-    pos_x = Column(Integer, default=0)
-    pos_y = Column(Integer, default=0)
 
 
 class LLMGenerator(BaseModel):
@@ -726,13 +321,10 @@ class LLMGenerator(BaseModel):
     username = Column(String, default="User")
     botname = Column(String, default="Bot")
     model_versions = relationship('LLMModelVersion', back_populates='generator')
-    generator_settings = relationship('LLMGeneratorSetting', back_populates='generator')
-    prefix = Column(String, default="")
-    suffix = Column(String, default="")
     message_type = Column(String, default="chat")
     bot_personality = Column(String, default="Nice")
     override_parameters = Column(Boolean, default=False)
-    prompt_template = Column(String, default="")
+    prompt_template = Column(String, default=prompt_template_seed_data[0]["name"])
 
 
 class LLMGeneratorSetting(BaseModel):
@@ -756,7 +348,6 @@ class LLMGeneratorSetting(BaseModel):
     random_seed = Column(Boolean, default=False)
     model_version = Column(String, default="google/flan-t5-xl")
     generator_id = Column(Integer, ForeignKey('llm_generator.id'))
-    generator = relationship('LLMGenerator', back_populates='generator_settings')
     dtype = Column(String, default="4bit")
     use_gpu = Column(Boolean, default=True)
 
