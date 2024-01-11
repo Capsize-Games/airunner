@@ -154,7 +154,6 @@ class ActiveGridArea(DraggablePixmap):
             self.redraw()
         elif key in [
             "active_grid_settings.enabled",
-            "settings.current_tab",
             "settings.working_width",
             "settings.working_height",
         ]:
