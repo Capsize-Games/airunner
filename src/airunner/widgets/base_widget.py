@@ -14,7 +14,7 @@ class BaseWidget(QWidget):
 
     @property
     def is_dark(self):
-        return self.app.settings_manager.settings.dark_mode_enabled
+        return self.app.dark_mode_enabled
 
     @property
     def canvas(self):

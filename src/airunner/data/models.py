@@ -553,8 +553,7 @@ class Settings(BaseModel):
 
     id = Column(Integer, primary_key=True)
     allow_hf_downloads = Column(Boolean, default=True)
-    dark_mode_enabled = Column(Boolean, default=True)
-
+    
     current_tool = Column(String, default="")
 
     image_to_new_layer = Column(Boolean, default=False)

@@ -246,6 +246,15 @@ class MainWindow(
     @nsfw_filter.setter
     def nsfw_filter(self, val):
         self.application_settings.setValue("nsfw_filter", val)
+    
+    @property
+    def dark_mode_enabled(self):
+        return self.application_settings.value("dark_mode_enabled", False, type=bool)
+    
+    @dark_mode_enabled.setter
+    def dark_mode_enabled(self, val):
+        self.application_settings.setValue("dark_mode_enabled", val)
+        self.set_stylesheet()
 
     @property
     def allow_online_mode(self):
@@ -283,7 +292,7 @@ class MainWindow(
 
     @property
     def is_dark(self):
-        return self.settings_manager.settings.dark_mode_enabled
+        return self.dark_mode_enabled
 
     @property
     def standard_image_panel(self):
