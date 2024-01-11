@@ -327,8 +327,8 @@ class GeneratorForm(BaseWidget):
         enable_controlnet = bool(override_data.get("enable_controlnet", self.app.settings_manager.generator.enable_controlnet))
         controlnet = override_data.get("controlnet", self.app.settings_manager.generator.controlnet)
         controlnet_conditioning_scale = float(override_data.get("controlnet_conditioning_scale", self.app.settings_manager.generator.controlnet_guidance_scale))
-        width = int(override_data.get("width", self.app.settings_manager.settings.working_width))
-        height = int(override_data.get("height", self.app.settings_manager.settings.working_height))
+        width = int(override_data.get("width", self.app.working_width))
+        height = int(override_data.get("height", self.app.working_height))
         clip_skip = int(override_data.get("clip_skip", self.app.settings_manager.generator.clip_skip))
         batch_size = int(override_data.get("batch_size", 1))
 
