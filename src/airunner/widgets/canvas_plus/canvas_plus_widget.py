@@ -316,7 +316,7 @@ class CanvasPlusWidget(CanvasBaseWidget):
         )
 
         # apply self.pos_x and self.pox_y to the rect
-        rect.translate(self.app.settings_manager.canvas_settings.pos_x, self.app.settings_manager.canvas_settings.pos_y)
+        rect.translate(self.app.canvas_settings["pos_x"], self.app.canvas_settings["pos_y"])
 
         return rect
 
@@ -536,9 +536,10 @@ class CanvasPlusWidget(CanvasBaseWidget):
                     self.scene.addItem(draggable_pixmap)
 
                 pos = QPoint(layer.pos_x, layer.pos_y)
+                canvas_settings = self.app.canvas_settings
                 draggable_pixmap.setPos(QPointF(
-                    self.app.settings_manager.canvas_settings.pos_x + pos.x(),
-                    self.app.settings_manager.canvas_settings.pos_y + pos.y()
+                    canvas_settings["pos_x"] + pos.x(),
+                    canvas_settings["pos_y"] + pos.y()
                 ))
             print("draw layers 2")
 
@@ -561,18 +562,18 @@ class CanvasPlusWidget(CanvasBaseWidget):
         )
         
         # vertical lines
-        h = self.view_size.height() + abs(self.app.settings_manager.canvas_settings.pos_y) % self.cell_size
+        h = self.view_size.height() + abs(self.app.canvas_settings["pos_y"]) % self.cell_size
         y = 0
         for i in range(width_cells):
-            x = i * self.cell_size + self.app.settings_manager.canvas_settings.pos_x % self.cell_size
+            x = i * self.cell_size + self.app.canvas_settings["pos_x"] % self.cell_size
             line = self.scene.addLine(x, y, x, h, pen)
             self.line_group.addToGroup(line)
 
         # # horizontal lines
-        w = self.view_size.width() + abs(self.app.settings_manager.canvas_settings.pos_x) % self.cell_size
+        w = self.view_size.width() + abs(self.app.canvas_settings["pos_x"]) % self.cell_size
         x = 0
         for i in range(height_cells):
-            y = i * self.cell_size + self.app.settings_manager.canvas_settings.pos_y % self.cell_size
+            y = i * self.cell_size + self.app.canvas_settings["pos_y"] % self.cell_size
             line = self.scene.addLine(x, y, w, y, pen)
             self.line_group.addToGroup(line)
 
@@ -613,7 +614,7 @@ class CanvasPlusWidget(CanvasBaseWidget):
         self.draw_layers()
         self.draw_active_grid_area_container()
         self.ui.canvas_position.setText(
-            f"X {-self.app.settings_manager.canvas_settings.pos_x: 05d} Y {self.app.settings_manager.canvas_settings.pos_y: 05d}"
+            f"X {-self.app.canvas_settings['pos_x']: 05d} Y {self.app.canvas_settings['pos_y']: 05d}"
         )
         self.scene.update()
         self.drawing = False

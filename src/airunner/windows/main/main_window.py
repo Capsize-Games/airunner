@@ -548,7 +548,19 @@ class MainWindow(
     def unload_unused_models(self, val):
         self.application_settings.setValue("unload_unused_models", val)
 
-    #### GENERATOR SETTINGS ####
+
+    #### SETTINGS ####
+    @property
+    def canvas_settings(self):
+        return self.application_settings.value("grid_settings", dict(
+            pos_x=0,
+            pos_y=0,
+        ))
+    
+    @canvas_settings.setter
+    def canvas_settings(self, val):
+        self.application_settings.setValue("grid_settings", val)
+        
     @property
     def generator_settings(self):
         return self.application_settings.value("generator_settings", dict(
