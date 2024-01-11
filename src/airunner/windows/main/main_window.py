@@ -246,6 +246,22 @@ class MainWindow(
         self.application_settings.setValue("mode", val)
 
     @property
+    def move_unused_model_to_cpu(self):
+        return self.application_settings.value("move_unused_model_to_cpu", True, type=bool)
+    
+    @move_unused_model_to_cpu.setter
+    def move_unused_model_to_cpu(self, val):
+        self.application_settings.setValue("move_unused_model_to_cpu", val)
+
+    @property
+    def unload_unused_models(self):
+        return self.application_settings.value("unload_unused_models", True, type=bool)
+    
+    @unload_unused_models.setter
+    def unload_unused_models(self, val):
+        self.application_settings.setValue("unload_unused_models", val)
+
+    @property
     def nsfw_filter(self):
         return self.application_settings.value("nsfw_filter", True, type=bool)
     
