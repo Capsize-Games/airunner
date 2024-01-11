@@ -3,9 +3,10 @@ from PyQt6.QtCore import QObject, pyqtSignal
 from airunner.aihandler.qtvar import StringVar, IntVar, BooleanVar, FloatVar, DictVar
 from airunner.data.models import LLMGenerator, Settings, GeneratorSetting, AIModel, Pipeline, ControlnetModel, ImageFilter, \
     SavedPrompt, StandardImageWidgetSettings
-from airunner.utils import save_session, get_session
 from airunner.aihandler.logger import Logger as logger
 from airunner.data.models import Document
+from airunner.data.session_scope import session_scope, path_settings_scope
+
 
 document = None
 _app = None
@@ -17,7 +18,6 @@ variable_types = {
     "FLOAT": FloatVar,
     "JSON": DictVar,
 }
-session = get_session()
 
 
 class SettingsSignal(QObject):
@@ -40,7 +40,8 @@ class SettingsManager(QObject):
         Return Prompt objects from the database
         :return:
         """
-        return session.query(SavedPrompt).all()
+        with session_scope() as session:
+            return session.query(SavedPrompt).all()
 
     def create_saved_prompt(self, prompt, negative_prompt):
         if prompt == "" and negative_prompt == "":
@@ -50,102 +51,110 @@ class SettingsManager(QObject):
             prompt=prompt,
             negative_prompt=negative_prompt
         )
-        session.add(saved_prompt)
-        if save_session(session):
+        with session_scope() as session:
+            session.add(saved_prompt)
             self.changed_signal.emit("saved_prompt", saved_prompt, self)
 
     def delete_prompt(self, saved_prompt):
-        session.delete(saved_prompt)
-        session.commit()
+        with session_scope() as session:
+            session.delete(saved_prompt)
         self.save_and_emit("saved_prompt", saved_prompt)
         self.changed_signal.emit("saved_prompt", saved_prompt, self)
 
     def save_and_emit(self, key, value):
-        self.save()
         self.changed_signal.emit(key, value, self)
 
     def available_models_by_category(self, category):
         categories = [category]
         if category in ["img2img", "txt2vid"]:
             categories.append("txt2img")
-        return session.query(AIModel).filter(
-            AIModel.category.in_(categories),
-            AIModel.enabled.is_(True)
-        ).all()
+        with session_scope() as session:
+            return session.query(AIModel).filter(
+                AIModel.category.in_(categories),
+                AIModel.enabled.is_(True)
+            ).all()
 
     def set_model_enabled(self, key, model, enabled):
-        session.query(AIModel).filter_by(
-            name=model["name"],
-            path=model["path"],
-            branch=model["branch"],
-            version=model["version"],
-            category=model["category"]
-        ).update({"enabled": enabled == 2})
+        with session_scope() as session:
+            session.query(AIModel).filter_by(
+                name=model["name"],
+                path=model["path"],
+                branch=model["branch"],
+                version=model["version"],
+                category=model["category"]
+            ).update({"enabled": enabled == 2})
         self.save_settings()
 
     def available_pipeline_by_section(self, pipeline_action, version, category):
-        return session.query(Pipeline).filter_by(
-            category=category,
-            pipeline_action=pipeline_action,
-            version=version
-        ).first()
+        with session_scope() as session:
+            return session.query(Pipeline).filter_by(
+                category=category,
+                pipeline_action=pipeline_action,
+                version=version
+            ).first()
 
     def available_model_names(self, pipeline_action, category):
         # returns a list of names of models
         # that match the pipeline_action and category
-        names = []
-        models = session.query(AIModel).filter_by(
-            pipeline_action=pipeline_action,
-            category=category,
-            enabled=True
-        ).all()
-        for model in models:
-            if model.name not in names:
-                names.append(model.name)
-        return names
+        with session_scope() as session:
+            names = []
+            models = session.query(AIModel).filter_by(
+                pipeline_action=pipeline_action,
+                category=category,
+                enabled=True
+            ).all()
+            for model in models:
+                if model.name not in names:
+                    names.append(model.name)
+            return names
 
     def add_model(self, model_data):
-        model = AIModel(**model_data)
-        session.add(model)
-        session.commit()
+        with session_scope() as session:
+            model = AIModel(**model_data)
+            session.add(model)
 
     def delete_model(self, model):
-        session.delete(model)
-        session.commit()
+        with session_scope() as session:
+            session.delete(model)
 
     def update_model(self, model):
-        session.add(model)
-        session.commit()
+        with session_scope() as session:
+            session.add(model)
 
     def get_image_filter(self, name):
-        return session.query(ImageFilter).filter_by(name=name).first()
+        with session_scope() as session:
+            return session.query(ImageFilter).filter_by(name=name).first()
 
     def get_image_filters(self):
-        return session.query(ImageFilter).all()
+        with session_scope() as session:
+            return session.query(ImageFilter).all()
 
     @property
     def standard_image_widget_settings(self):
-        standard_image_widget_settings = session.query(StandardImageWidgetSettings).first()
-        if standard_image_widget_settings is None:
-            standard_image_widget_settings = StandardImageWidgetSettings()
-            session.add(standard_image_widget_settings)
-            session.commit()
-        return standard_image_widget_settings
+        with session_scope() as session:
+            standard_image_widget_settings = session.query(StandardImageWidgetSettings).first()
+            if standard_image_widget_settings is None:
+                standard_image_widget_settings = StandardImageWidgetSettings()
+                session.add(standard_image_widget_settings)
+            return standard_image_widget_settings
 
     @property
     def pipelines(self):
-        return session.query(Settings).all()
+        with session_scope() as session:
+            return session.query(Settings).all()
 
     @property
     def models(self):
-        return session.query(AIModel).filter_by(enabled=True)
+        with session_scope() as session:
+            return session.query(AIModel).filter_by(enabled=True)
 
     def models_by_pipeline_action(self, pipeline_action):
         return self.models.filter_by(pipeline_action=pipeline_action).all()
 
     @property
     def controlnet_models(self):
-        return session.query(ControlnetModel).filter_by(enabled=True)
+        with session_scope() as session:
+            return session.query(ControlnetModel).filter_by(enabled=True)
 
     def controlnet_model_by_name(self, name):
         return self.controlnet_models.filter_by(name=name).first()
@@ -169,11 +178,12 @@ class SettingsManager(QObject):
 
     def get_pipeline_classname(self, pipeline_action, version, category):
         try:
-            return session.query(Pipeline).filter_by(
-                category=category,
-                pipeline_action=pipeline_action,
-                version=version
-            ).first().classname
+            with session_scope() as session:
+                return session.query(Pipeline).filter_by(
+                    category=category,
+                    pipeline_action=pipeline_action,
+                    version=version
+                ).first().classname
         except AttributeError:
             logger.error(f"Unable to find pipeline classname for {pipeline_action} {version} {category}")
             return None
@@ -200,8 +210,9 @@ class SettingsManager(QObject):
     
     @property
     def llm_generator_setting(self):
-        llm_generator = session.query(LLMGenerator).filter(LLMGenerator.name == self.current_llm_generator).first()
-        return llm_generator.generator_settings[0]
+        with session_scope() as session:
+            llm_generator = session.query(LLMGenerator).filter(LLMGenerator.name == self.current_llm_generator).first()
+            return llm_generator.generator_settings[0]
     
     _generator = None
 
@@ -209,25 +220,25 @@ class SettingsManager(QObject):
         # using sqlalchemy, query the document.settings.generator_settings column
         # and find any with GeneratorSettings.section == self.generator_section and GeneratorSettings.generator_name == self.generator_name
         # return the first result
-        if self.generator_settings_override_id:
-            generator_settings = session.query(GeneratorSetting).filter_by(
-                id=self.generator_settings_override_id
-            ).first()
-        else:
-            generator_settings = session.query(GeneratorSetting).filter_by(
-                is_preset=0
-            ).first()
-        if generator_settings is None:
-            if not generator_section or generator_section == "" or not generator_name or generator_name == "":
-                return None
-            # generator_settings = GeneratorSetting(
-            #     section=generator_section,
-            #     generator_name=generator_name,
-            #     is_preset=False
-            # )
-            # session.add(generator_settings)
-            # session.commit()
-        return generator_settings
+        with session_scope() as session:
+            if self.generator_settings_override_id:
+                generator_settings = session.query(GeneratorSetting).filter_by(
+                    id=self.generator_settings_override_id
+                ).first()
+            else:
+                generator_settings = session.query(GeneratorSetting).filter_by(
+                    is_preset=0
+                ).first()
+            if generator_settings is None:
+                if not generator_section or generator_section == "" or not generator_name or generator_name == "":
+                    return None
+                # generator_settings = GeneratorSetting(
+                #     section=generator_section,
+                #     generator_name=generator_name,
+                #     is_preset=False
+                # )
+                # session.add(generator_settings)
+            return generator_settings
 
     def __init__(self, app=None, *args, **kwargs):
         global _app, document
@@ -237,8 +248,8 @@ class SettingsManager(QObject):
             _app = app
             document = _app.document
         else:
-            session = get_session()
-            document = session.query(Document).first()
+            with session_scope() as session:
+                document = session.query(Document).first()
 
         super().__init__(*args, **kwargs)
 
@@ -273,8 +284,11 @@ class SettingsManager(QObject):
         return getattr(document.settings, name)
 
     def __getattr__(self, name):
-        if document and hasattr(document.settings, name):
-            return getattr(document.settings, name)
+        with session_scope() as session:
+            session.add(document)
+            session.add(document.settings)
+            if document and hasattr(document.settings, name):
+                return getattr(document.settings, name)
         return None
 
     def __setattr__(self, name, value):
@@ -311,4 +325,4 @@ class SettingsManager(QObject):
             return self.current_section_stablediffusion
 
     def save(self):
-        session.commit()
+        pass

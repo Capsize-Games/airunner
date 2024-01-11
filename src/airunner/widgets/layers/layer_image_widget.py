@@ -1,8 +1,9 @@
 from PyQt6.uic.properties import QtGui
 
-from airunner.utils import save_session, image_to_pixmap
+from airunner.utils import image_to_pixmap
 from airunner.widgets.base_widget import BaseWidget
 from airunner.widgets.layers.templates.layer_image_widget_ui import Ui_layer_image_widget
+from airunner.data.session_scope import session_scope
 
 
 class LayerImageWidget(BaseWidget):
@@ -15,12 +16,13 @@ class LayerImageWidget(BaseWidget):
         self.set_thumbnail()
 
     def action_clicked_button_toggle_image_visibility(self, value):
-        self.layer_image_data.visible = value
-        self.settings_manager.save_and_emit(
-            "layer_image_data.visible",
-            value
-        )
-        save_session()
+        with session_scope() as session:
+            session.add(self.layer_image_data)
+            self.layer_image_data.visible = value
+            self.app.settings_manager.save_and_emit(
+                "layer_image_data.visible",
+                value
+            )
 
     def set_thumbnail(self):
         image = self.layer_image_data.image
