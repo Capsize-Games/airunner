@@ -25,7 +25,7 @@ class Ui_brush_widget(object):
         self.brush_size_slider.setProperty("slider_page_step", 10)
         self.brush_size_slider.setProperty("spinbox_single_step", 1)
         self.brush_size_slider.setProperty("spinbox_page_step", 10)
-        self.brush_size_slider.setProperty("slider_callback", "action_slider_changed")
+        self.brush_size_slider.setProperty("slider_callback", "handle_value_change")
         self.brush_size_slider.setProperty("settings_property", "brush_settings.size")
         self.brush_size_slider.setProperty("display_as_float", False)
         self.brush_size_slider.setObjectName("brush_size_slider")
