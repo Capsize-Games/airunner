@@ -741,7 +741,7 @@ class CanvasPlusWidget(CanvasBaseWidget):
 
     def load_image(self, image_path):
         image = Image.open(image_path)
-        if self.app.settings_manager.settings.resize_on_paste:
+        if self.app.resize_on_paste:
             image.thumbnail((self.app.settings_manager.settings.working_width,
                              self.app.settings_manager.settings.working_height), Image.ANTIALIAS)
         self.add_image_to_scene(image)
