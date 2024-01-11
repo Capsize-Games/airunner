@@ -97,7 +97,8 @@ class SDRunner(
         return self._controlnet
 
     @property
-    def self.options.get("allow_online_mode", False)
+    def allow_online_mode(self):
+        return self.options.get("allow_online_mode", False)
 
     @property
     def vae_path(self):
