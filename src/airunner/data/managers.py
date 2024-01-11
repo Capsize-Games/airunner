@@ -12,7 +12,6 @@ from airunner.data.session_scope import (
     generator_settings_scope,
     models_scope,
     session_scope,
-    brush_settings_scope,
     llm_generator_scope,
     llm_generator_settings_scope,
     canvas_settings_scope,
@@ -75,7 +74,6 @@ class SettingsManager(QObject):
         "standard_image_settings": standard_image_widget_settings_scope,
         "generator_settings": generator_settings_scope,
         "models": models_scope,
-        "brush_settings": brush_settings_scope,
         "llm_generator": llm_generator_scope,
         "llm_generator_settings": llm_generator_settings_scope,
         "canvas_settings": canvas_settings_scope,
@@ -96,7 +94,6 @@ class SettingsManager(QObject):
         self.standard_image_settings = Modelmanager(standard_image_widget_settings_scope)
         self.generator_settings = Modelmanager(generator_settings_scope)
         self.models = Modelmanager(models_scope)
-        self.brush_settings = Modelmanager(brush_settings_scope)
         self.llm_generator = Modelmanager(llm_generator_scope)
         self.llm_generator_settings = Modelmanager(llm_generator_settings_scope)
         self.canvas_settings = Modelmanager(canvas_settings_scope)
