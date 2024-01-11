@@ -586,8 +586,6 @@ class Settings(BaseModel):
     move_unused_model_to_cpu = Column(Boolean, default=True)
     unload_unused_model = Column(Boolean, default=False)
 
-    current_image_generator = Column(String, default="stablediffusion")
-
     generator_settings_override_id = Column(Integer, ForeignKey('generator_settings.id'))
 
 
