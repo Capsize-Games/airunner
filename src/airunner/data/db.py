@@ -9,7 +9,7 @@ from airunner.data.models import ControlnetModel, LLMPromptTemplate, Pipeline, D
     MetadataSettings, AIModel, \
     ImageFilter, ImageFilterValue, Prompt, PromptVariable, PromptCategory, PromptOption, \
     PromptVariableCategory, PromptVariableCategoryWeight, PromptStyleCategory, PromptStyle, Scheduler, ActionScheduler, \
-    DeterministicSettings, ActiveGridSettings, CanvasSettings, \
+    ActiveGridSettings, CanvasSettings, \
     LLMGeneratorSetting, LLMGenerator, LLMModelVersion, StandardImageWidgetSettings
 from airunner.data.session_scope import session_scope, engine
 from alembic.config import Config
@@ -155,11 +155,7 @@ def prepare_database():
             # Add Pipeline objects
             for pipeline_data in pipeline_bootstrap_data:
                 my_session.add(Pipeline(**pipeline_data))
-            
-
-
-            my_session.add(DeterministicSettings())
-            
+                        
 
 
             # Add MetadataSettings objects
