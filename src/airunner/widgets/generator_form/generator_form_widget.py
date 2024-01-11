@@ -122,14 +122,6 @@ class GeneratorForm(BaseWidget):
     def activate_ai_mode(self, active):
         self.ui.generator_form_tabs.setCurrentIndex(1 if active is True else 0)
     
-    def toggle_advanced_generation(self):
-        advanced_mode = self.app.settings_manager.settings.enable_advanced_mode
-
-        # set the splitter sizes
-        splitter_sizes = [1, 1, 0 if not advanced_mode else 1]
-        
-        self.ui.advanced_splitter.setSizes(splitter_sizes)
-    
     def handle_changed_signal(self, key, value):
         print("generator_form: handle_changed_signal", key, value)
         if key == "generator.random_seed":
@@ -140,8 +132,6 @@ class GeneratorForm(BaseWidget):
             self.set_latents_seed()
             self.ui.seed_widget_latents.latents_seed = self.latents_seed
             self.ui.seed_widget_latents.update_seed()
-        elif key == "settings.enable_advanced_mode":
-            self.toggle_advanced_generation()
 
     """
     Slot functions
