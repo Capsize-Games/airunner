@@ -3,8 +3,8 @@ import random
 
 from airunner.prompt_builder.prompt_parser import PromptParser
 from airunner.build_prompt import BuildPrompt
-from airunner.utils import get_session
 from airunner.data.models import PromptVariableCategory, PromptCategory, PromptVariableCategoryWeight, PromptVariable, PromptOption, PromptStyleCategory, PromptStyle
+from airunner.data.session_scope import session_scope
 
 
 class PromptData:
@@ -314,10 +314,10 @@ class PromptData:
         if builder is None:
             builder = []
         if prompt_options is None:
-            session = get_session()
-            prompt_options = session.query(PromptOption).filter_by(
-                prompt_id=prompt_id
-            ).all()
+            with session_scope() as session:
+                prompt_options = session.query(PromptOption).filter_by(
+                    prompt_id=prompt_id
+                ).all()
         for prompt_option in prompt_options:
             if next_id and next_id != prompt_option.id:
                 continue
@@ -341,48 +341,51 @@ class PromptData:
         return builder
 
     def prepare_data(self, prompt_id):
-        session = get_session()
-
         data = dict(
             categories=dict(),
             styles=dict(),
             extra_variables=dict(),
         )
-        style_categories = session.query(PromptStyleCategory).all()
-        for cat in style_categories:
-            styles = session.query(PromptStyle).filter_by(
-                style_category_id=cat.id
-            ).all()
-            data["styles"][cat.name] = dict(
-                styles=[style.name for style in styles],
-                negative_prompt=cat.negative_prompt
-            )
 
-        prompt_categories = session.query(PromptCategory).all()
-        variable_categories = session.query(PromptVariableCategory).all()
-        prompt_options = self.build_prompt_options(prompt_id)
-        for prompt_category in prompt_categories:
-            data["categories"][prompt_category.name] = dict(
-                weights=dict(),
-                variables=dict(),
-                builder=prompt_options,
-                negative_prompt=prompt_category.negative_prompt
-            )
-            for variable_category in variable_categories:
-                variables = session.query(PromptVariable).filter_by(
-                    prompt_category_id=prompt_category.id
+        with session_scope() as session:
+            style_categories = session.query(PromptStyleCategory).all()
+        
+            for cat in style_categories:
+                styles = session.query(PromptStyle).filter_by(
+                    style_category_id=cat.id
                 ).all()
-                weights = session.query(PromptVariableCategoryWeight).filter_by(
-                    prompt_category_id=prompt_category.id
-                ).all()
-                for variable in variables:
-                    if variable.variable_category_id == variable_category.id:
-                        if variable_category.name not in data["categories"][prompt_category.name]["variables"]:
-                            data["categories"][prompt_category.name]["variables"][variable_category.name] = []
-                        data["categories"][prompt_category.name]["variables"][variable_category.name].append(variable.value)
-                for variable_weight in weights:
-                    if variable_weight.variable_category_id == variable_category.id:
-                        data["categories"][prompt_category.name]["weights"][variable_category.name] = variable_weight.weight
+                data["styles"][cat.name] = dict(
+                    styles=[style.name for style in styles],
+                    negative_prompt=cat.negative_prompt
+                )
+
+            prompt_categories = session.query(PromptCategory).all()
+        
+            variable_categories = session.query(PromptVariableCategory).all()
+            
+            prompt_options = self.build_prompt_options(prompt_id)
+            for prompt_category in prompt_categories:
+                data["categories"][prompt_category.name] = dict(
+                    weights=dict(),
+                    variables=dict(),
+                    builder=prompt_options,
+                    negative_prompt=prompt_category.negative_prompt
+                )
+                for variable_category in variable_categories:
+                    variables = session.query(PromptVariable).filter_by(
+                        prompt_category_id=prompt_category.id
+                    ).all()
+                    weights = session.query(PromptVariableCategoryWeight).filter_by(
+                        prompt_category_id=prompt_category.id
+                    ).all()
+                    for variable in variables:
+                        if variable.variable_category_id == variable_category.id:
+                            if variable_category.name not in data["categories"][prompt_category.name]["variables"]:
+                                data["categories"][prompt_category.name]["variables"][variable_category.name] = []
+                            data["categories"][prompt_category.name]["variables"][variable_category.name].append(variable.value)
+                    for variable_weight in weights:
+                        if variable_weight.variable_category_id == variable_category.id:
+                            data["categories"][prompt_category.name]["weights"][variable_category.name] = variable_weight.weight
 
         self.data = data
 
@@ -403,9 +406,10 @@ class PromptData:
             json.dump(self.data, f)
     
     def set_variables_by_name(self, name):
-        session = get_session()
-        composition_genre = session.query(PromptVariableCategory).filter_by(name=name).first()
-        variables = session.query(PromptVariable).filter_by(variable_category_id=composition_genre.id).all()
-        values = [variable.value for variable in variables]
-        values.sort()
-        self.prompt_variables[name] = ["Random"] + values
+        with session_scope() as session:
+            composition_genre = session.query(PromptVariableCategory).filter_by(name=name).first()
+            variables = session.query(PromptVariable).filter_by(variable_category_id=composition_genre.id).all()
+        
+            values = [variable.value for variable in variables]
+            values.sort()
+            self.prompt_variables[name] = ["Random"] + values

@@ -5,18 +5,24 @@ from PyQt6.QtCore import Qt, QPoint
 
 from airunner.widgets.base_widget import BaseWidget
 from airunner.widgets.layers.templates.layer_ui import Ui_LayerWidget
-from airunner.utils import get_session, image_to_pixmap
+from airunner.utils import image_to_pixmap
+from airunner.data.session_scope import session_scope
 
 
 class LayerWidget(BaseWidget):
     widget_class_ = Ui_LayerWidget
-    layer_data = None
     offset = QPoint(0, 0)
     _previous_pos = None
 
+    @property
+    def layer_data(self):
+        with session_scope() as session:
+            session.add(self._layer_data)
+            return self._layer_data
+
     def __init__(self, *args, **kwargs):
         self.layer_container = kwargs.pop("layer_container", None)
-        self.layer_data = kwargs.pop("layer_data", None)
+        self._layer_data = kwargs.pop("layer_data", None)
         self.layer_index = kwargs.pop("layer_index", None)
         self.layer_data.layer_widget = self
         super().__init__(*args, **kwargs)
@@ -60,9 +66,9 @@ class LayerWidget(BaseWidget):
 
     def action_clicked_button_toggle_layer_visibility(self, val):
         self.set_visible_button_icon(val)
-        self.layer_data.visible = val
-        session = get_session()
-        session.commit()
+        with session_scope() as session:
+            session.add(self.layer_data)
+            self.layer_data.visible = val
         self.app.canvas_widget.do_draw()
 
     def set_thumbnail(self):

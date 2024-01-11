@@ -6,7 +6,7 @@ from airunner.data.models import Conversation, LLMPromptTemplate, Message
 from airunner.widgets.base_widget import BaseWidget
 from airunner.widgets.llm.templates.chat_prompt_ui import Ui_chat_prompt
 from airunner.widgets.llm.message_widget import MessageWidget
-from airunner.utils import save_session, get_session
+from airunner.data.session_scope import session_scope
 from airunner.aihandler.logger import Logger
 
 
@@ -24,7 +24,7 @@ class ChatPromptWidget(BaseWidget):
     @property
     def generator(self):
         try:
-            return self.app.generator
+            return self.app.settings_manager.llm_generator
         except Exception as e:
             Logger.error(e)
             import traceback
@@ -43,19 +43,18 @@ class ChatPromptWidget(BaseWidget):
 
     @property
     def current_generator(self):
-        return self.settings_manager.current_llm_generator
+        return self.app.settings_manager.current_llm_generator
 
     @property
     def instructions(self):
         return f"{self.generator.botname} loves {self.generator.username}. {self.generator.botname} is very nice. {self.generator.botname} uses compliments, kind responses, and nice words. Everything {self.generator.botname} says is nice. {self.generator.botname} is kind."
 
     def load_data(self):
-        session = get_session()
-        self.conversation = session.query(Conversation).first()
-        if self.conversation is None:
-            self.conversation = Conversation()
-            session.add(self.conversation)
-            session.commit()
+        with session_scope() as session:
+            self.conversation = session.query(Conversation).first()
+            if self.conversation is None:
+                self.conversation = Conversation()
+                session.add(self.conversation)
 
     def initialize(self):
         self.load_data()
@@ -122,11 +121,10 @@ class ChatPromptWidget(BaseWidget):
             message=message,
             conversation=self.conversation
         )
-        session = get_session()
-        session.add(message_object)
-        session.commit()
+        with session_scope() as session:
+            session.add(message_object)
 
-        if self.settings_manager.enable_tts:
+        if self.app.settings_manager.enable_tts:
             # split on sentence enders
             sentence_enders = [".", "?", "!", "\n"]
             text = message_object.message
@@ -209,61 +207,60 @@ class ChatPromptWidget(BaseWidget):
             Logger.warning("Prompt is empty")
             return
 
-        session = get_session()
-        prompt_template = session.query(LLMPromptTemplate).filter(
-            LLMPromptTemplate.name == self.generator.prompt_template
-        ).first()
+        with session_scope() as session:
+            prompt_template = session.query(LLMPromptTemplate).filter(
+                LLMPromptTemplate.name == self.generator.prompt_template
+            ).first()
 
-        data = {
-            "llm_request": True,
-            "request_data": {
-                "generator_name": generator_name,
-                "model_path": self.generator_settings.model_version,
-                "stream": True,
-                "prompt": prompt,
-                "do_summary": False,
-                "is_bot_alive": True,
-                "conversation_history": self.conversation_history,
-                "generator": self.generator,
-                "prefix": self.prefix,
-                "suffix": self.suffix,
-                "dtype": self.generator_settings.dtype,
-                "use_gpu": self.generator_settings.use_gpu,
-                "request_type": "image_caption_generator",
-                "username": self.generator.username,
-                "botname": self.generator.botname,
-                "prompt_template": prompt_template.template,
-                "parameters": {
-                    "override_parameters": self.generator.override_parameters,
-                    "top_p": self.generator_settings.top_p / 100.0,
-                    "max_length": self.generator_settings.max_length,
-                    "repetition_penalty": self.generator_settings.repetition_penalty / 100.0,
-                    "min_length": self.generator_settings.min_length,
-                    "length_penalty": self.generator_settings.length_penalty / 100,
-                    "num_beams": self.generator_settings.num_beams,
-                    "ngram_size": self.generator_settings.ngram_size,
-                    "temperature": self.generator_settings.temperature / 10000.0,
-                    "sequences": self.generator_settings.sequences,
-                    "top_k": self.generator_settings.top_k,
-                    "eta_cutoff": self.generator_settings.eta_cutoff / 100.0,
-                    "seed": self.generator_settings.do_sample,
-                    "early_stopping": self.generator_settings.early_stopping,
-                },
-                "image": image,
-                "callback": callback
+            data = {
+                "llm_request": True,
+                "request_data": {
+                    "generator_name": generator_name,
+                    "model_path": self.generator_settings.model_version,
+                    "stream": True,
+                    "prompt": prompt,
+                    "do_summary": False,
+                    "is_bot_alive": True,
+                    "conversation_history": self.conversation_history,
+                    "generator": self.generator,
+                    "prefix": self.prefix,
+                    "suffix": self.suffix,
+                    "dtype": self.generator_settings.dtype,
+                    "use_gpu": self.generator_settings.use_gpu,
+                    "request_type": "image_caption_generator",
+                    "username": self.generator.username,
+                    "botname": self.generator.botname,
+                    "prompt_template": prompt_template.template,
+                    "parameters": {
+                        "override_parameters": self.generator.override_parameters,
+                        "top_p": self.generator_settings.top_p / 100.0,
+                        "max_length": self.generator_settings.max_length,
+                        "repetition_penalty": self.generator_settings.repetition_penalty / 100.0,
+                        "min_length": self.generator_settings.min_length,
+                        "length_penalty": self.generator_settings.length_penalty / 100,
+                        "num_beams": self.generator_settings.num_beams,
+                        "ngram_size": self.generator_settings.ngram_size,
+                        "temperature": self.generator_settings.temperature / 10000.0,
+                        "sequences": self.generator_settings.sequences,
+                        "top_k": self.generator_settings.top_k,
+                        "eta_cutoff": self.generator_settings.eta_cutoff / 100.0,
+                        "seed": self.generator_settings.do_sample,
+                        "early_stopping": self.generator_settings.early_stopping,
+                    },
+                    "image": image,
+                    "callback": callback
+                }
             }
-        }
-        message_object = Message(
-            name=self.generator.username,
-            message=self.prompt,
-            conversation=self.conversation
-        )
-        session.add(message_object)
-        session.commit()
-        self.app.client.message = data
-        self.add_message_to_conversation(message_object=message_object, is_bot=False)
-        self.clear_prompt()
-        self.start_progress_bar()
+            message_object = Message(
+                name=self.generator.username,
+                message=self.prompt,
+                conversation=self.conversation
+            )
+            session.add(message_object)
+            self.app.client.message = data
+            self.add_message_to_conversation(message_object=message_object, is_bot=False)
+            self.clear_prompt()
+            self.start_progress_bar()
     
     def describe_image(self, image, callback):
         self.action_button_clicked_send(
@@ -311,24 +308,29 @@ class ChatPromptWidget(BaseWidget):
         }
     
     def message_type_text_changed(self, val):
-        self.generator.message_type = val
-        save_session()
+        with session_scope() as session:
+            session.add(self.generator)
+            self.generator.message_type = val
 
     def action_button_clicked_generate_characters(self):
         pass
     
     def prefix_text_changed(self):
-        self.generator.prefix = self.ui.prefix.toPlainText()
-        save_session()
+        with session_scope() as session:
+            session.add(self.generator)
+            self.generator.prefix = self.ui.prefix.toPlainText()
 
     def suffix_text_changed(self):
-        self.generator.suffix = self.ui.suffix.toPlainText()
-        save_session()
+        with session_scope() as session:
+            session.add(self.generator)
+            self.generator.suffix = self.ui.suffix.toPlainText()
 
     def username_text_changed(self, val):
-        self.generator.username = val
-        save_session()
-
+        with session_scope() as session:
+            session.add(self.generator)
+            self.settings_manager.set_value("generator.username", val)
+        
     def botname_text_changed(self, val):
-        self.generator.botname = val
-        save_session()
+        with session_scope() as session:
+            session.add(self.generator)
+            self.settings_manager.set_value("generator.botname", val)
