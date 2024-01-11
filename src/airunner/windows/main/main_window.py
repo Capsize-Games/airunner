@@ -256,6 +256,14 @@ class MainWindow(
         self.application_settings.setValue("nsfw_filter", val)
     
     @property
+    def current_llm_generator(self):
+        return self.application_settings.value("current_llm_generator", "casuallm")
+    
+    @current_llm_generator.setter
+    def current_llm_generator(self, val):
+        self.application_settings.setValue("current_llm_generator", val)
+
+    @property
     def hf_api_key_read_key(self):
         return self.application_settings.value("hf_api_key_read_key", "")
     
