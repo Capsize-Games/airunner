@@ -6,7 +6,7 @@ from airunner.data.bootstrap.pipeline_bootstrap_data import pipeline_bootstrap_d
 from airunner.data.bootstrap.prompt_bootstrap_data import prompt_bootstrap_data, style_bootstrap_data, \
     variable_bootstrap_data
 from airunner.data.models import ControlnetModel, LLMPromptTemplate, Pipeline, Document, \
-    GeneratorSetting, MetadataSettings, AIModel, \
+    MetadataSettings, AIModel, \
     ImageFilter, ImageFilterValue, Prompt, PromptVariable, PromptCategory, PromptOption, \
     PromptVariableCategory, PromptVariableCategoryWeight, PromptStyleCategory, PromptStyle, Scheduler, ActionScheduler, \
     DeterministicSettings, ActiveGridSettings, CanvasSettings, \
@@ -219,15 +219,6 @@ def prepare_database():
                     }
                 },
             }
-
-            generator_section = "txt2img"
-            generator_name = "stablediffusion"
-            my_session.add(GeneratorSetting(
-                section=generator_section,
-                generator_name=generator_name,
-                active_grid_border_color=active_grid_colors[generator_name]["border"][generator_section],
-                active_grid_fill_color=active_grid_colors[generator_name]["fill"][generator_section]
-            ))
 
             my_session.add(Document(
                 name="Untitled",

@@ -72,11 +72,6 @@ class EmbeddingsContainerWidget(BaseWidget):
     def handle_tab_section_changed(self):
         self.enable_embeddings()
 
-    def handle_changed_signal(self, key):
-        print("embeddings_container_widget: handle_changed_signal", key, value)
-        if key == "generator.model":
-            self.enable_embeddings()
-
     @pyqtSlot(dict)
     def message_handler(self, response: dict):
         code = response["code"]

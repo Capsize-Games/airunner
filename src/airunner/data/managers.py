@@ -6,10 +6,8 @@ from airunner.utils import Logger
 
 from airunner.data.session_scope import (
     active_grid_settings_scope,
-    generator_scope,
     path_settings_scope, 
     standard_image_widget_settings_scope,
-    generator_settings_scope,
     models_scope,
     session_scope,
     llm_generator_scope,
@@ -69,10 +67,8 @@ class SettingsManager(QObject):
 
     scopes = {
         "active_grid_settings": active_grid_settings_scope,
-        "generator": generator_scope,
         "path_settings": path_settings_scope,
         "standard_image_settings": standard_image_widget_settings_scope,
-        "generator_settings": generator_settings_scope,
         "models": models_scope,
         "llm_generator": llm_generator_scope,
         "llm_generator_settings": llm_generator_settings_scope,
@@ -89,10 +85,8 @@ class SettingsManager(QObject):
     def __init__(self):
         super().__init__()
         self.active_grid_settings = Modelmanager(active_grid_settings_scope)
-        self.generator = Modelmanager(generator_scope)
         self.path_settings = Modelmanager(path_settings_scope)
         self.standard_image_settings = Modelmanager(standard_image_widget_settings_scope)
-        self.generator_settings = Modelmanager(generator_settings_scope)
         self.models = Modelmanager(models_scope)
         self.llm_generator = Modelmanager(llm_generator_scope)
         self.llm_generator_settings = Modelmanager(llm_generator_settings_scope)

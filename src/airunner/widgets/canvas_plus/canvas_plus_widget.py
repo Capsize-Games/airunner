@@ -115,7 +115,7 @@ class ActiveGridArea(DraggablePixmap):
         )
 
     def update_settings(self):
-        border_color = self.app.settings_manager.generator.active_grid_border_color
+        border_color = self.app.generator_settings["active_grid_border_color"]
         border_color = QColor(border_color)
         border_opacity = self.app.settings_manager.active_grid_settings.border_opacity
         border_color.setAlpha(border_opacity)
@@ -166,7 +166,7 @@ class ActiveGridArea(DraggablePixmap):
                 scene.addItem(self)
 
     def get_fill_color(self):
-        fill_color = self.app.settings_manager.generator.active_grid_fill_color
+        fill_color = self.app.generator_settings["active_grid_fill_color"]
         fill_color = QColor(fill_color)
         fill_opacity = self.app.settings_manager.active_grid_settings.fill_opacity
         fill_opacity = max(1, fill_opacity)

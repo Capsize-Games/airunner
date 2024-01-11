@@ -138,7 +138,9 @@ class GeneratorTabWidget(BaseWidget):
                 self.load_model_by_section(section, tab)
 
     def toggle_variation(self, val):
-        self.app.settings_manager.set_value("generator.variation", val)
+        generator_settings = self.app.generator_settings
+        generator_settings["variation"] = val
+        self.app.generator_settings = generator_settings
 
     def set_progress_bar_value(self, tab_section, section, value):
         progressbar = self.find_widget("progress_bar", tab_section, section)

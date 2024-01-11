@@ -306,8 +306,18 @@ class StandardImageWidget(StandardBaseWidget):
         )
     
     def set_form_values(self):
-        self.set_form_property("steps_widget", "current_value", "generator.steps")
-        self.set_form_property("scale_widget", "current_value", "generator.scale")
+        generator_settings = self.app.generator_settings
+        steps = target_val = generator_settings["steps"]
+        scale = target_val = generator_settings["scale"]
+
+        current_steps = self.get_form_element("steps_widget").property("current_value")
+        current_scale = self.get_form_element("scale_widget").property("current_value")
+
+        if steps != current_steps:
+            self.get_form_element("steps_widget").setProperty("current_value", target_val)
+
+        if scale != current_scale:
+            self.get_form_element("scale_widget").setProperty("current_value", target_val)
     
     def load_pipelines(self):
         self.ui.pipeline.blockSignals(True)
@@ -352,11 +362,13 @@ class StandardImageWidget(StandardBaseWidget):
             ).all()
             model_names = [model.name for model in models]
             self.ui.model.addItems(model_names)
-            current_model = self.app.settings_manager.generator.model
+            generator_settings = self.app.generator_settings
+            current_model = generator_settings["model"]
             if current_model != "":
                 self.ui.model.setCurrentText(current_model)
-            self.app.settings_manager.generator.model = self.ui.model.currentText()
+            generator_settings["model"] = self.ui.model.currentText()
             self.ui.model.blockSignals(False)
+            self.app.generator_settings = generator_settings
 
     def load_schedulers(self):
         with session_scope() as session:
@@ -369,11 +381,13 @@ class StandardImageWidget(StandardBaseWidget):
             self.ui.scheduler.clear()
             self.ui.scheduler.addItems(scheduler_names)
 
-            current_scheduler = self.app.settings_manager.generator.scheduler
+            generator_settings = self.app.generator_settings
+            current_scheduler = generator_settings["scheduler"]
             if current_scheduler != "":
                 self.ui.scheduler.setCurrentText(current_scheduler)
             else:
-                self.app.settings_manager.set_value("generator.scheduler", self.ui.scheduler.currentText())
+                generator_settings["scheduler"] = self.ui.scheduler.currentText() 
+                self.app.generator_settings = generator_settings
             self.ui.scheduler.blockSignals(False)
     
     def clear_models(self):
@@ -381,19 +395,19 @@ class StandardImageWidget(StandardBaseWidget):
     
     def initialize_generator_form(self, override_id=None):
         if override_id:
-            self.ui.steps_widget.set_slider_and_spinbox_values(self.app.settings_manager.generator.steps)
-            self.ui.scale_widget.set_slider_and_spinbox_values(self.app.settings_manager.generator.scale * 100)
-            self.ui.clip_skip_slider_widget.set_slider_and_spinbox_values(self.app.settings_manager.generator.clip_skip)
+            self.ui.steps_widget.set_slider_and_spinbox_values(self.app.generator_settings["steps"])
+            self.ui.scale_widget.set_slider_and_spinbox_values(self.app.generator_settings["scale"] * 100)
+            self.ui.clip_skip_slider_widget.set_slider_and_spinbox_values(self.app.generator_settings["clip_skip"])
             
             self.ui.pipeline.blockSignals(True)
             self.ui.version.blockSignals(True)
             self.ui.model.blockSignals(True)
             self.ui.scheduler.blockSignals(True)
             
-            self.ui.pipeline.setCurrentText(self.app.settings_manager.generator.section)
-            self.ui.version.setCurrentText(self.app.settings_manager.generator.version)
-            self.ui.model.setCurrentText(self.app.settings_manager.generator.model)
-            self.ui.scheduler.setCurrentText(self.app.settings_manager.generator.scheduler)
+            self.ui.pipeline.setCurrentText(self.app.generator_settings["section"])
+            self.ui.version.setCurrentText(self.app.generator_settings["version"])
+            self.ui.model.setCurrentText(self.app.generator_settings["model"])
+            self.ui.scheduler.setCurrentText(self.app.generator_settings["scheduler"])
 
             self.ui.pipeline.blockSignals(False)
             self.ui.version.blockSignals(False)
@@ -450,12 +464,16 @@ class StandardImageWidget(StandardBaseWidget):
     def handle_model_changed(self, name):
         if not self.initialized:
             return
-        self.app.settings_manager.set_value("generator.model", name)
+        generator_settings = self.app.generator_settings
+        generator_settings["model"] = name
+        self.app.generator_settings = generator_settings
 
     def handle_scheduler_changed(self, name):
         if not self.initialized:
             return
-        self.app.settings_manager.set_value("generator.scheduler", name)
+        generator_settings = self.app.generator_settings
+        generator_settings["scheduler"] = name
+        self.app.generator_settings = generator_settings
     
     def handle_pipeline_changed(self, val):
         if val == "txt2img / img2img":
