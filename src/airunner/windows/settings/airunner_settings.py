@@ -205,7 +205,7 @@ class SettingsWindow(BaseWindow):
             elif name == "enable_tts":
                 checked = self.app.settings_manager.settings.enable_tts
             elif name == "allow_online_mode":
-                checked = self.app.settings_manager.settings.allow_online_mode
+                checked = self.app.allow_online_mode
 
             file_item.setCheckState(Qt.CheckState.Checked if checked else Qt.CheckState.Unchecked)
         # prevent file_item from being edited
@@ -243,7 +243,7 @@ class SettingsWindow(BaseWindow):
             self.app.settings_manager.set_value("settings.enable_tts", checked)
         elif name == "allow_online_mode":
             checked = item.checkState() == Qt.CheckState.Checked
-            self.app.settings_manager.set_value("settings.allow_online_mode", checked)
+            self.app.allow_online_mode = checked
         elif name == "reset_settings":
             self.app.reset_settings()
         self.show_content(section, display_name, name, description)
