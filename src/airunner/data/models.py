@@ -587,7 +587,6 @@ class Settings(BaseModel):
     unload_unused_model = Column(Boolean, default=False)
 
     current_image_generator = Column(String, default="stablediffusion")
-    current_llm_generator = Column(String, default="casuallm")
 
     generator_settings_override_id = Column(Integer, ForeignKey('generator_settings.id'))
 

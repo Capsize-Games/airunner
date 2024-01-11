@@ -39,7 +39,7 @@ class LLMSettingsWidget(BaseWidget):
 
     @property
     def current_generator(self):
-        return self.app.settings_manager.settings.current_llm_generator
+        return self.app.current_llm_generator
 
     def initialize(self):
         self.initialize_form()
@@ -141,7 +141,7 @@ class LLMSettingsWidget(BaseWidget):
 
     def model_text_changed(self, val):
         print("model_text_changed", val)
-        self.app.settings_manager.set_value("settings.current_llm_generator", val)
+        self.app.current_llm_generator = val
         self.update_model_version_combobox()
         self.model_version_changed(self.ui.model_version.currentText())
         self.initialize_form()
