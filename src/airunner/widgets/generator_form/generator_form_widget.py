@@ -185,11 +185,7 @@ class GeneratorForm(BaseWidget):
             seed = self.app.standard_image_panel.ui.seed_widget.seed
         if self.app.standard_image_panel.ui.samples_widget.current_value > 1:
             self.app.client.do_process_queue = False
-        total_samples = self.app.settings_manager.generator.n_samples
-        for n in range(total_samples):
-            if self.app.settings_manager.generator.use_prompt_builder and n > 0:
-                seed = int(seed) + n
-            self.call_generate(image, seed=seed)
+        self.call_generate(image, seed=seed)
         self.seed_override = None
         self.app.client.do_process_queue = True
 

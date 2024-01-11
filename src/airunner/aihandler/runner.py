@@ -907,12 +907,12 @@ class SDRunner(
                 try:
                     images = output.images
                 except AttributeError:
-                    pass
+                    Logger.error("Unable to get images from output")
                 if self.action_has_safety_checker:
                     try:
                         nsfw_content_detected = output.nsfw_content_detected
                     except AttributeError:
-                        pass
+                        Logger.error("Unable to get nsfw_content_detected from output")
             return images, nsfw_content_detected
 
     def generate_latents(self):
@@ -1025,7 +1025,8 @@ class SDRunner(
         args["clip_skip"] = self.clip_skip
 
         with torch.inference_mode():
-            return self.pipe(**args)
+            for n in range(self.n_samples):
+                yield self.pipe(**args)
 
     def read_video(self):
         reader = imageio.get_reader(self.input_video, "ffmpeg")
