@@ -978,12 +978,6 @@ class MainWindow(
         # self.header_widget.set_size_increment_levels()
         self.initialize_shortcuts()
         self.initialize_stable_diffusion()
-        if self.settings_manager.settings.force_reset:
-            self.reset_settings()
-            self.settings_manager.set_value("settingsforce_reset", False)
-        # self.actionShow_Active_Image_Area.setChecked(
-        #     self.settings_manager.show_active_image_area == True
-        # )
         self.initialize_default_buttons()
         try:
             self.prompt_builder.process_prompt()
