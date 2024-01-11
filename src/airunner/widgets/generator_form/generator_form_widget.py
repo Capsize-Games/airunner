@@ -4,10 +4,8 @@ from PIL import Image
 from PyQt6.QtCore import pyqtSignal, QRect
 
 from airunner.aihandler.settings import MAX_SEED
-from airunner.data.models import ActiveGridSettings, CanvasSettings
 from airunner.widgets.base_widget import BaseWidget
 from airunner.widgets.generator_form.templates.generatorform_ui import Ui_generator_form
-from airunner.data.session_scope import session_scope
 
 
 class GeneratorForm(BaseWidget):
