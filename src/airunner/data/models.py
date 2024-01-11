@@ -439,14 +439,6 @@ class Document(BaseModel):
     active = Column(Boolean, default=False)
 
 
-class CanvasSettings(BaseModel):
-    __tablename__ = "canvas_settings"
-
-    id = Column(Integer, primary_key=True)
-    pos_x = Column(Integer, default=0)
-    pos_y = Column(Integer, default=0)
-
-
 class LLMGenerator(BaseModel):
     __tablename__ = 'llm_generator'
     id = Column(Integer, primary_key=True)
