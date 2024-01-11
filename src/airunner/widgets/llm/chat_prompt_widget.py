@@ -212,11 +212,15 @@ class ChatPromptWidget(BaseWidget):
                 LLMPromptTemplate.name == self.llm_generator.prompt_template
             ).first()
 
+            llm_generator_settings = self.app.llm_generator_settings
+
             data = {
                 "llm_request": True,
                 "request_data": {
+                    "unload_unused_model": self.app.unload_unused_models,
+                    "move_unused_model_to_cpu": self.app.move_unused_model_to_cpu,
                     "generator_name": generator_name,
-                    "model_path": self.llm_generator_settings.model_version,
+                    "model_path": llm_generator_settings["model_version"],
                     "stream": True,
                     "prompt": prompt,
                     "do_summary": False,
@@ -225,32 +229,34 @@ class ChatPromptWidget(BaseWidget):
                     "generator": self.llm_generator,
                     "prefix": self.prefix,
                     "suffix": self.suffix,
-                    "dtype": self.llm_generator_settings.dtype,
-                    "use_gpu": self.llm_generator_settings.use_gpu,
+                    "dtype": llm_generator_settings["dtype"],
+                    "use_gpu": llm_generator_settings["use_gpu"],
                     "request_type": "image_caption_generator",
                     "username": self.llm_generator.username,
                     "botname": self.llm_generator.botname,
                     "prompt_template": prompt_template.template,
+                    "hf_api_key_read_key": self.app.hf_api_key_read_key,
                     "parameters": {
                         "override_parameters": self.llm_generator.override_parameters,
-                        "top_p": self.llm_generator_settings.top_p / 100.0,
-                        "max_length": self.llm_generator_settings.max_length,
-                        "repetition_penalty": self.llm_generator_settings.repetition_penalty / 100.0,
-                        "min_length": self.llm_generator_settings.min_length,
-                        "length_penalty": self.llm_generator_settings.length_penalty / 100,
-                        "num_beams": self.llm_generator_settings.num_beams,
-                        "ngram_size": self.llm_generator_settings.ngram_size,
-                        "temperature": self.llm_generator_settings.temperature / 10000.0,
-                        "sequences": self.llm_generator_settings.sequences,
-                        "top_k": self.llm_generator_settings.top_k,
-                        "eta_cutoff": self.llm_generator_settings.eta_cutoff / 100.0,
-                        "seed": self.llm_generator_settings.do_sample,
-                        "early_stopping": self.llm_generator_settings.early_stopping,
+                        "top_p": llm_generator_settings["top_p"] / 100.0,
+                        "max_length": llm_generator_settings["max_length"],
+                        "repetition_penalty": llm_generator_settings["repetition_penalty"] / 100.0,
+                        "min_length": llm_generator_settings["min_length"],
+                        "length_penalty": llm_generator_settings["length_penalty"] / 100,
+                        "num_beams": llm_generator_settings["num_beams"],
+                        "ngram_size": llm_generator_settings["ngram_size"],
+                        "temperature": llm_generator_settings["temperature"] / 10000.0,
+                        "sequences": llm_generator_settings["sequences"],
+                        "top_k": llm_generator_settings["top_k"],
+                        "eta_cutoff": llm_generator_settings['eta_cutoff'] / 100.0,
+                        "seed": llm_generator_settings["do_sample"],
+                        "early_stopping": llm_generator_settings["early_stopping"],
                     },
                     "image": image,
                     "callback": callback
                 }
             }
+            print(data)
             message_object = Message(
                 name=self.llm_generator.username,
                 message=self.prompt,

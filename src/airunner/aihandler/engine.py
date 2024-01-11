@@ -6,7 +6,6 @@ import threading
 from airunner.aihandler.llm import LLM
 from airunner.aihandler.logger import Logger as logger
 from airunner.aihandler.runner import SDRunner
-from airunner.data.managers import SettingsManager
 from airunner.aihandler.tts import TTS
 
 
@@ -33,7 +32,6 @@ class Engine:
             engine=self
         )
         self.tts = TTS()
-        self.settings_manager = SettingsManager()
         self.tts_thread = threading.Thread(target=self.tts.run)
         self.tts_thread.start()
 
@@ -51,11 +49,12 @@ class Engine:
         logger.info("generator_sample called")
         is_llm = self.is_llm_request(data)
         is_tts = self.is_tts_request(data)
+        self.request_data = data["request_data"]
         if is_llm and self.model_type != "llm":
             logger.info("Switching to LLM model")
             self.model_type = "llm"
-            do_unload_model = self.settings_manager.settings.unload_unused_model
-            do_move_to_cpu = not do_unload_model and self.settings_manager.settings.move_unused_model_to_cpu
+            do_unload_model = self.request_data["unload_unused_model"]
+            do_move_to_cpu = not do_unload_model and self.request_data["move_unused_model_to_cpu"]
             if do_move_to_cpu:
                 self.move_pipe_to_cpu()
             elif do_unload_model:
@@ -100,9 +99,12 @@ class Engine:
         VRAM to keep the LLM loaded while
         using other models.
         """
-        do_unload_model = self.settings_manager.settings.unload_unused_model
-        do_move_to_cpu = not do_unload_model and self.settings_manager.settings.move_unused_model_to_cpu
-        dtype = self.settings_manager.llm_generator_settings.dtype
+        do_unload_model = self.request_data["unload_unused_model"]
+        move_unused_model_to_cpu = self.request_data["move_unused_model_to_cpu"]
+
+
+        do_move_to_cpu = not do_unload_model and move_unused_model_to_cpu
+        dtype = self.request_data["dtype"]
         if dtype in ["2bit", "4bit", "8bit"]:
             do_unload_model = True
             do_move_to_cpu = False
