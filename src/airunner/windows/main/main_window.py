@@ -22,12 +22,11 @@ from airunner.aihandler.pyqt_client import OfflineClient
 from airunner.aihandler.qtvar import MessageHandlerVar
 from airunner.aihandler.settings import LOG_LEVEL
 from airunner.airunner_api import AIRunnerAPI
-from airunner.data.models import Prompt, LLMGenerator
+from airunner.data.models import DEFAULT_PATHS, Prompt, LLMGenerator
 from airunner.filters.windows.filter_base import FilterBase
 from airunner.input_event_manager import InputEventManager
 from airunner.settings import BASE_PATH
-from airunner.utils import get_version, auto_export_image, \
-    create_airunner_paths, default_hf_cache_dir
+from airunner.utils import get_version, auto_export_image, default_hf_cache_dir
 from airunner.widgets.status.status_widget import StatusWidget
 from airunner.windows.about.about import AboutWindow
 from airunner.windows.main.templates.main_window_ui import Ui_MainWindow
@@ -73,6 +72,9 @@ class ImageDataWorker(QObject):
             procesed_images = []
             for image in images:
                 path, image = auto_export_image(
+                    base_path=self.base_path,
+                    image_path=self.app.image_path,
+                    image_export_type=self.app.image_export_type,
                     image=image, 
                     data=data, 
                     seed=data["options"]["seed"], 
@@ -188,6 +190,157 @@ class MainWindow(
     def show_grid(self, val):
         self.application_settings.setValue("show_grid", val)
         self.show_grid_toggled.emit(val)
+
+    @property
+    def hf_cache_path(self):
+        return self.application_settings.value("hf_cache_path", default_hf_cache_dir())
+    
+    @hf_cache_path.setter
+    def hf_cache_path(self, val):
+        self.application_settings.setValue("hf_cache_path", val)
+                
+    @property
+    def base_path(self):
+        return self.application_settings.value("base_path", BASE_PATH + "/models")
+    
+    @base_path.setter
+    def base_path(self, val):
+        self.application_settings.setValue("base_path", val)
+                
+    @property
+    def txt2img_model_path(self):
+        return self.application_settings.value("txt2img_model_path", DEFAULT_PATHS["art"]["models"]["txt2img"])
+    
+    @txt2img_model_path.setter
+    def txt2img_model_path(self, val):
+        self.application_settings.setValue("txt2img_model_path", val)
+                
+    @property
+    def depth2img_model_path(self):
+        return self.application_settings.value("depth2img_model_path", DEFAULT_PATHS["art"]["models"]["depth2img"])
+    
+    @depth2img_model_path.setter
+    def depth2img_model_path(self, val):
+        self.application_settings.setValue("depth2img_model_path", val)
+                
+    @property
+    def pix2pix_model_path(self):
+        return self.application_settings.value("pix2pix_model_path", DEFAULT_PATHS["art"]["models"]["pix2pix"])
+    
+    @pix2pix_model_path.setter
+    def pix2pix_model_path(self, val):
+        self.application_settings.setValue("pix2pix_model_path", val)
+                
+    @property
+    def inpaint_model_path(self):
+        return self.application_settings.value("inpaint_model_path", DEFAULT_PATHS["art"]["models"]["inpaint"])
+    
+    @inpaint_model_path.setter
+    def inpaint_model_path(self, val):
+        self.application_settings.setValue("inpaint_model_path", val)
+                
+    @property
+    def upscale_model_path(self):
+        return self.application_settings.value("upscale_model_path", DEFAULT_PATHS["art"]["models"]["upscale"])
+    
+    @upscale_model_path.setter
+    def upscale_model_path(self, val):
+        self.application_settings.setValue("upscale_model_path", val)
+                
+    @property
+    def txt2vid_model_path(self):
+        return self.application_settings.value("txt2vid_model_path", DEFAULT_PATHS["art"]["models"]["txt2vid"])
+    
+    @txt2vid_model_path.setter
+    def txt2vid_model_path(self, val):
+        self.application_settings.setValue("txt2vid_model_path", val)
+                
+    @property
+    def embeddings_model_path(self):
+        return self.application_settings.value("embeddings_model_path", DEFAULT_PATHS["art"]["models"]["embeddings"])
+    
+    @embeddings_model_path.setter
+    def embeddings_model_path(self, val):
+        self.application_settings.setValue("embeddings_model_path", val)
+                
+    @property
+    def lora_model_path(self):
+        return self.application_settings.value("lora_model_path", DEFAULT_PATHS["art"]["models"]["lora"])
+    
+    @lora_model_path.setter
+    def lora_model_path(self, val):
+        self.application_settings.setValue("lora_model_path", val)
+                
+    @property
+    def image_path(self):
+        return self.application_settings.value("image_path", DEFAULT_PATHS["art"]["other"]["images"])
+    
+    @image_path.setter
+    def image_path(self, val):
+        self.application_settings.setValue("image_path", val)
+                
+    @property
+    def video_path(self):
+        return self.application_settings.value("video_path", DEFAULT_PATHS["art"]["other"]["videos"])
+    
+    @video_path.setter
+    def video_path(self, val):
+        self.application_settings.setValue("video_path", val)
+                
+    @property
+    def llm_casuallm_model_path(self):
+        return self.application_settings.value("llm_casuallm_model_path", DEFAULT_PATHS["text"]["models"]["casuallm"])
+    
+    @llm_casuallm_model_path.setter
+    def llm_casuallm_model_path(self, val):
+        self.application_settings.setValue("llm_casuallm_model_path", val)
+                
+    @property
+    def llm_seq2seq_model_path(self):
+        return self.application_settings.value("llm_seq2seq_model_path", DEFAULT_PATHS["text"]["models"]["seq2seq"])
+    
+    @llm_seq2seq_model_path.setter
+    def llm_seq2seq_model_path(self, val):
+        self.application_settings.setValue("llm_seq2seq_model_path", val)
+                
+    @property
+    def llm_visualqa_model_path(self):
+        return self.application_settings.value("llm_visualqa_model_path", DEFAULT_PATHS["text"]["models"]["visualqa"])
+    
+    @llm_visualqa_model_path.setter
+    def llm_visualqa_model_path(self, val):
+        self.application_settings.setValue("llm_visualqa_model_path", val)
+                
+    @property
+    def vae_model_path(self):
+        return self.application_settings.value("vae_model_path", DEFAULT_PATHS["art"]["models"]["vae"])
+    
+    @vae_model_path.setter
+    def vae_model_path(self, val):
+        self.application_settings.setValue("vae_model_path", val)
+
+    def reset_paths(self):
+        self.hf_cache_path = default_hf_cache_dir()
+        self.base_path = BASE_PATH
+        self.txt2img_model_path = DEFAULT_PATHS["art"]["models"]["txt2img"]
+        self.depth2img_model_path = DEFAULT_PATHS["art"]["models"]["depth2img"]
+        self.pix2pix_model_path = DEFAULT_PATHS["art"]["models"]["pix2pix"]
+        self.inpaint_model_path = DEFAULT_PATHS["art"]["models"]["inpaint"]
+        self.upscale_model_path = DEFAULT_PATHS["art"]["models"]["upscale"]
+        self.txt2vid_model_path = DEFAULT_PATHS["art"]["models"]["txt2vid"]
+        self.vae_model_path = DEFAULT_PATHS["art"]["models"]["vae"]
+        self.embeddings_model_path = DEFAULT_PATHS["art"]["models"]["embeddings"]
+        self.lora_model_path = DEFAULT_PATHS["art"]["models"]["lora"]
+        self.image_path = DEFAULT_PATHS["art"]["other"]["images"]
+        self.video_path = DEFAULT_PATHS["art"]["other"]["videos"]
+        self.llm_casuallm_model_path = DEFAULT_PATHS["text"]["models"]["casuallm"]
+        self.llm_seq2seq_model_path = DEFAULT_PATHS["text"]["models"]["seq2seq"]
+        self.llm_visualqa_model_path = DEFAULT_PATHS["text"]["models"]["visualqa"]            
+    
+    def set_path_settings(self, key, val):
+        path_settings = self.path_settings
+        path_settings[key] = val
+        self.path_settings = path_settings
 
     @property
     def resize_on_paste(self):
@@ -514,14 +667,6 @@ class MainWindow(
         return sys.platform.startswith("win") or sys.platform.startswith("cygwin") or sys.platform.startswith("msys")
 
     @property
-    def image_path(self):
-        return self.settings_manager.path_settings.image_path
-
-    @property
-    def current_layer(self):
-        return self.ui.layer_widget.current_layer
-
-    @property
     def current_canvas(self):
         return self.standard_image_panel
 
@@ -556,10 +701,6 @@ class MainWindow(
             self.set_size_form_element_step_values()
         elif key == "settings.line_color":
             self.canvas_widget.update_grid_pen()
-        elif key == "path_settings.lora_path":
-            self.refresh_lora()
-        elif key == "path_settings.model_base_path":
-            self.generator_tab_widget.refresh_model_list()
         # elif key == "use_prompt_builder_checkbox":
         #     self.generator_tab_widget.toggle_all_prompt_builder_checkboxes(value)
         elif key == "models":
@@ -612,7 +753,7 @@ class MainWindow(
         self.clear_status_message()
 
         # create paths if they do not exist
-        create_airunner_paths()
+        self.create_airunner_paths()
 
         #self.ui.layer_widget.initialize()
 
@@ -643,6 +784,25 @@ class MainWindow(
         self.settings_manager.changed_signal.connect(self.handle_changed_signal)
         
         self.loaded.emit()
+    
+    def create_airunner_paths(self):
+        paths = [
+            self.base_path,
+            self.txt2img_model_path,
+            self.depth2img_model_path,
+            self.pix2pix_model_path,
+            self.inpaint_model_path,
+            self.upscale_model_path,
+            self.txt2vid_model_path,
+            self.embeddings_model_path,
+            self.lora_model_path,
+            self.image_path,
+            self.video_path
+        ]
+        for index, path in enumerate(paths):
+            if not os.path.exists(path):
+                print("cerating path", index, path)
+                os.makedirs(path)
 
     def initialize_image_worker(self):
         self.image_data_queue = queue.Queue()
@@ -682,7 +842,13 @@ class MainWindow(
             self.choose_image_export_path()
         if os.path.isdir(self.image_path) is False:
             return
-        path, image = auto_export_image(self.ui.layer_widget.current_layer.image_data.image, seed=self.seed)
+        path, image = auto_export_image(
+            self.base_path, 
+            self.app.image_path,
+            self.app.image_export_type,
+            self.ui.layer_widget.current_layer.image_data.image, 
+            seed=self.seed
+        )
         if path is not None:
             self.set_status_label(f"Image exported to {path}")
 
@@ -770,7 +936,7 @@ class MainWindow(
         self.activate_image_generation_section()
 
     def action_triggered_browse_ai_runner_path(self):
-        path = self.settings_manager.path_settings.base_path
+        path = self.base_path
         if path == "":
             path = BASE_PATH
         self.show_path(path)
@@ -1441,7 +1607,7 @@ class MainWindow(
 
     def import_image(self):
         file_path, _ = self.display_import_image_dialog(
-            directory=self.settings_manager.path_settings.image_path)
+            directory=self.image_path)
         if file_path == "":
             return
 
@@ -1455,7 +1621,7 @@ class MainWindow(
         path = QFileDialog.getExistingDirectory(None, "Select Directory")
         if path == "":
             return
-        self.settings_manager.set_value("path_settings.image_path", path)
+        self.image_path = path
 
     def display_file_export_dialog(self):
         return QFileDialog.getSaveFileName(
