@@ -589,8 +589,6 @@ class Settings(BaseModel):
     current_image_generator = Column(String, default="stablediffusion")
     current_llm_generator = Column(String, default="casuallm")
 
-    active_image_editor_section = Column(String, default="canvas")
-
     generator_settings_override_id = Column(Integer, ForeignKey('generator_settings.id'))
 
 

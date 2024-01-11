@@ -459,8 +459,6 @@ class CanvasPlusWidget(CanvasBaseWidget):
             self.do_draw()
         elif key == "layer_data.hidden":
             self.do_draw()
-        elif key == "settings.active_image_editor_section":
-            self.do_draw()
     
     def handle_loaded(self):
         self.initialized = True
