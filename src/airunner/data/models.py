@@ -418,15 +418,6 @@ class MemorySettings(BaseModel):
     tome_sd_ratio = Column(Integer, default=600)
 
 
-class BrushSettings(BaseModel):
-    __tablename__ = 'brush_settings'
-
-    id = Column(Integer, primary_key=True)
-    size = Column(Integer, default=10)
-    primary_color = Column(String, default="#FF0000")
-    secondary_color = Column(String, default="#000000")
-
-
 class ImageFilter(BaseModel):
     __tablename__ = 'image_filter'
 
