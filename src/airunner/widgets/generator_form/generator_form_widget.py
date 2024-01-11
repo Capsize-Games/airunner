@@ -106,7 +106,7 @@ class GeneratorForm(BaseWidget):
             self.app.settings_manager.active_grid_settings.width,
             self.app.settings_manager.active_grid_settings.height
         )
-        rect.translate(-self.app.settings_manager.canvas_settings.pos_x, -self.app.settings_manager.canvas_settings.pos_y)
+        rect.translate(-self.app.canvas_settings["pos_x"], -self.app.canvas_settings["pos_y"])
 
         return rect
 
