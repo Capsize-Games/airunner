@@ -76,9 +76,9 @@ class GeneratorForm(BaseWidget):
 
     @latents_seed.setter
     def latents_seed(self, val):
-        generator_settings = self.app.settings_manager.generator
+        generator_settings = self.app.generator_settings
         generator_settings["latents_seed"] = val
-        self.app.settings_manager.generator = generator_settings
+        self.app.generator_settings = generator_settings
         self.app.standard_image_panel.ui.seed_widget_latents.ui.lineEdit.setText(str(val))
 
     @property
@@ -87,9 +87,9 @@ class GeneratorForm(BaseWidget):
 
     @seed.setter
     def seed(self, val):
-        generator_settings = self.app.settings_manager.generator
+        generator_settings = self.app.generator_settings
         generator_settings["seed"] = val
-        self.app.settings_manager.generator = generator_settings
+        self.app.generator_settings = generator_settings
         self.app.standard_image_panel.ui.seed_widget.ui.lineEdit.setText(str(val))
 
     @property

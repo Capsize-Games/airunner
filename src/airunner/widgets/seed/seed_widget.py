@@ -7,13 +7,6 @@ class SeedWidget(BaseWidget):
     widget_class_ = Ui_seed_widget
     name = "seed_widget"
 
-    # def initialize(self, generator_section, generator_name):
-    #     self.ui.lineEdit.setText(str(self.seed))
-    #     self.app.settings_manager.generator_section = generator_section
-    #     self.app.settings_manager.generator_name = generator_name
-    #     self.ui.random_button.setChecked(self.app.generator_settings["random_seed"])
-    #     self.ui.lineEdit.setEnabled(not self.app.generator_settings["random_seed"])
-
     def update_seed(self):
         self.ui.lineEdit.setText(str(self.seed))
 
@@ -28,11 +21,3 @@ class SeedWidget(BaseWidget):
 
 class LatentsSeedWidget(SeedWidget):
     setting_name = "generator.random_latents_seed"
-
-    # def initialize(self, generator_section, generator_name):
-    #     self.app.settings_manager.generator_section = generator_section
-    #     self.app.settings_manager.generator_name = generator_name
-    #     self.ui.label.setText("Image Seed")
-    #     self.update_seed()
-    #     self.ui.random_button.setChecked(self.app.generator_settings["random_latents_seed"])
-    #     self.ui.lineEdit.setEnabled(not self.app.generator_settings["random_latents_seed"])
