@@ -14,6 +14,7 @@ from PyQt6.QtCore import QLineF
 from PyQt6.QtWidgets import QGraphicsItemGroup
 from PyQt6.QtCore import QRectF, QSizeF
 from PyQt6.QtGui import QPainterPath
+from PyQt6.QtGui import QEnterEvent
 
 from airunner.aihandler.logger import Logger
 from airunner.cursors.circle_brush import CircleCursor
@@ -260,6 +261,10 @@ class CustomScene(QGraphicsScene):
         self.item.setPixmap(QPixmap.fromImage(self.image))
 
     def mousePressEvent(self, event):
+        if self.app.current_tool not in ["brush", "eraser"]:
+            super(CustomScene, self).mousePressEvent(event)
+            return
+
         self.last_pos = event.scenePos()
         if self.app.current_tool == "brush":
             self.drawAt(self.last_pos)
@@ -290,9 +295,18 @@ class CustomScene(QGraphicsScene):
             self.parent().setCursor(cursor)
         else:
             self.parent().setCursor(Qt.CursorShape.ArrowCursor)
+        
+    def event(self, event):
+        if type(event) == QEnterEvent:
+            self.handle_cursor(event)
+        return super(CustomScene, self).event(event)
 
     def mouseMoveEvent(self, event):
         self.handle_cursor(event)
+        if self.app.current_tool not in ["brush", "eraser"]:
+            super(CustomScene, self).mouseMoveEvent(event)
+            return
+        
         if self.app.current_tool == "brush":
             self.drawAt(event.scenePos())
         elif self.app.current_tool == "eraser":
