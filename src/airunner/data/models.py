@@ -327,31 +327,6 @@ class LLMGenerator(BaseModel):
     prompt_template = Column(String, default=prompt_template_seed_data[0]["name"])
 
 
-class LLMGeneratorSetting(BaseModel):
-    __tablename__ = 'llm_generator_settings'
-    id = Column(Integer, primary_key=True)
-    created_at = Column(DateTime, default=datetime.datetime.utcnow)
-    top_p = Column(Integer, default=90)
-    max_length = Column(Integer, default=50)
-    repetition_penalty = Column(Integer, default=100)
-    min_length = Column(Integer, default=10)
-    length_penalty = Column(Integer, default=100)
-    num_beams = Column(Integer, default=1)
-    ngram_size = Column(Integer, default=0)
-    temperature = Column(Integer, default=100)
-    sequences = Column(Integer, default=1)
-    top_k = Column(Integer, default=0)
-    seed = Column(Integer, default=0)
-    do_sample = Column(Boolean, default=False)
-    eta_cutoff = Column(Integer, default=10)
-    early_stopping = Column(Boolean, default=False)
-    random_seed = Column(Boolean, default=False)
-    model_version = Column(String, default="google/flan-t5-xl")
-    generator_id = Column(Integer, ForeignKey('llm_generator.id'))
-    dtype = Column(String, default="4bit")
-    use_gpu = Column(Boolean, default=True)
-
-
 class LLMModelVersion(BaseModel):
     __tablename__ = 'llm_model_version'
     id = Column(Integer, primary_key=True)
