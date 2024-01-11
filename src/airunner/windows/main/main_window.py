@@ -256,6 +256,22 @@ class MainWindow(
         self.application_settings.setValue("nsfw_filter", val)
     
     @property
+    def hf_api_key_read_key(self):
+        return self.application_settings.value("hf_api_key_read_key", "")
+    
+    @hf_api_key_read_key.setter
+    def hf_api_key_read_key(self, val):
+        self.application_settings.setValue("hf_api_key_read_key", val)
+
+    @property
+    def hf_api_key_write_key(self):
+        return self.application_settings.value("hf_api_key_write_key", "")
+    
+    @hf_api_key_write_key.setter
+    def hf_api_key_write_key(self, val):
+        self.application_settings.setValue("hf_api_key_write_key", val)
+    
+    @property
     def pipeline(self):
         return self.application_settings.value("pipeline", "txt2img")
     
