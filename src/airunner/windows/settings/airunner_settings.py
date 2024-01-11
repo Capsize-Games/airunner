@@ -199,7 +199,7 @@ class SettingsWindow(BaseWindow):
             elif name == "image_to_new_layer":
                 checked = self.app.settings_manager.settings.image_to_new_layer
             elif name == "dark_mode":
-                checked = self.app.settings_manager.settings.dark_mode_enabled
+                checked = self.app.dark_mode_enabled
             elif name == "check_for_updates":
                 checked = self.app.settings_manager.settings.latest_version_check
             elif name == "enable_tts":
@@ -234,7 +234,7 @@ class SettingsWindow(BaseWindow):
             self.app.settings_manager.set_value("settings.image_to_new_layer", checked)
         elif name == "dark_mode":
             checked = item.checkState() == Qt.CheckState.Checked
-            self.app.settings_manager.set_value("settings.dark_mode_enabled", checked)
+            self.app.dark_mode_enabled = checked
         elif name == "check_for_updates":
             checked = item.checkState() == Qt.CheckState.Checked
             self.app.settings_manager.set_value("settings.latest_version_check", checked)
