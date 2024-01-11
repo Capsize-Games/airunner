@@ -70,7 +70,7 @@ class ImageDataWorker(QObject):
         self.stop_progress_bar.emit()
         print("process_image_data 4")
         path = ""
-        if self.parent.settings_manager.settings.auto_export_images:
+        if self.parent.auto_export_images:
             procesed_images = []
             for image in images:
                 path, image = auto_export_image(
@@ -246,6 +246,14 @@ class MainWindow(
     @nsfw_filter.setter
     def nsfw_filter(self, val):
         self.application_settings.setValue("nsfw_filter", val)
+
+    @property
+    def auto_export_images(self):
+        return self.application_settings.value("auto_export_images", True, type=bool)
+    
+    @auto_export_images.setter
+    def auto_export_images(self, val):
+        self.application_settings.setValue("auto_export_images", val)
 
     @property
     def enable_tts(self):

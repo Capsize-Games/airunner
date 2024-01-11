@@ -555,9 +555,6 @@ class Settings(BaseModel):
     
     current_tool = Column(String, default="")
 
-    primary_color = Column(String, default="#000000")
-    secondary_color = Column(String, default="#000000")
-
     working_width = Column(Integer, default=512)
     working_height = Column(Integer, default=512)
     hf_api_key_read_key = Column(String, default="")
@@ -585,7 +582,6 @@ class Settings(BaseModel):
     active_grid_settings = relationship("ActiveGridSettings", back_populates="settings", uselist=False)
 
     force_reset = Column(Boolean, default=False)
-    auto_export_images = Column(Boolean, default=True)
     image_export_type = Column(String, default="png")
 
     show_active_image_area = Column(Boolean, default=True)
