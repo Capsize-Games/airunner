@@ -56,8 +56,8 @@ class LLMSettingsWidget(BaseWidget):
     
     def toggle_leave_model_in_vram(self, val):
         if val:
-            self.app.settings_manager.set_value("settings.unload_unused_model", False)
-            self.app.settings_manager.set_value("settings.move_unused_model_to_cpu", False)
+            self.app.unload_unused_model = False
+            self.app.move_unused_model_to_cpu = False
     
     def initialize_form(self):
         self.ui.prompt_template.blockSignals(True)
@@ -95,9 +95,9 @@ class LLMSettingsWidget(BaseWidget):
         self.ui.prompt_template.clear()
         self.ui.prompt_template.addItems(prompt_templates)
 
-        self.ui.leave_in_vram.setChecked(not self.app.settings_manager.settings.unload_unused_model and not self.app.settings_manager.settings.move_unused_model_to_cpu)
-        self.ui.move_to_cpu.setChecked(self.app.settings_manager.settings.move_unused_model_to_cpu)
-        self.ui.unload_model.setChecked(self.app.settings_manager.settings.unload_unused_model)
+        self.ui.leave_in_vram.setChecked(not self.app.settings_manager.settings.unload_unused_model and not self.app.move_unused_model_to_cpu)
+        self.ui.move_to_cpu.setChecked(self.app.move_unused_model_to_cpu)
+        self.ui.unload_model.setChecked(self.app.unload_unused_model)
 
         if self.generator:
             self.ui.radio_button_2bit.setChecked(self.app.settings_manager.llm_generator_settings.dtype == "2bit")
@@ -152,7 +152,7 @@ class LLMSettingsWidget(BaseWidget):
             self.app.settings_manager.llm_generator_settings.model_version = val
     
     def toggle_move_model_to_cpu(self, val):
-        self.app.settings_manager.set_value("settings.move_unused_model_to_cpu", val)
+        self.app.move_unused_model_to_cpu = val
         if val:
             self.app.settings_manager.set_value("settings.unload_unused_model", False)
 
@@ -197,9 +197,9 @@ class LLMSettingsWidget(BaseWidget):
             self.app.settings_manager.llm_generator_settings.seed = val
         
     def toggle_unload_model(self, val):
-        self.app.settings_manager.set_value("settings.unload_unused_model", val)
+        self.app.unload_unused_model = val
         if val:
-            self.app.settings_manager.set_value("settings.move_unused_model_to_cpu", False)
+            self.app.move_unused_model_to_cpu = False
     
     def use_gpu_toggled(self, val):
         with session_scope() as session:
