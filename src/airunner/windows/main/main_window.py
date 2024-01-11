@@ -240,6 +240,14 @@ class MainWindow(
         self.line_width_changed_signal.emit(val)
 
     @property
+    def mode(self):
+        return self.application_settings.value("mode", "Image Generation")
+    
+    @mode.setter
+    def mode(self, val):
+        self.application_settings.setValue("mode", val)
+
+    @property
     def nsfw_filter(self):
         return self.application_settings.value("nsfw_filter", True, type=bool)
     
@@ -538,9 +546,9 @@ class MainWindow(
 
         self.initialize_tool_section_buttons()
         
-        if self.settings_manager.settings.mode == Mode.IMAGE.value:
+        if self.mode == Mode.IMAGE.value:
             self.image_generation_toggled()
-        elif self.settings_manager.settings.mode == Mode.LANGUAGE_PROCESSOR.value:
+        elif self.mode == Mode.LANGUAGE_PROCESSOR.value:
             self.language_processing_toggled()
         else:
             self.model_manager_toggled(True)
@@ -623,23 +631,23 @@ class MainWindow(
         self.redo()
 
     def action_paste_image_triggered(self):
-        if self.settings_manager.settings.mode == Mode.IMAGE.value:
+        if self.mode == Mode.IMAGE.value:
             self.canvas_widget.paste_image_from_clipboard()
 
     def action_copy_image_triggered(self):
-        if self.settings_manager.settings.mode == Mode.IMAGE.value:
+        if self.mode == Mode.IMAGE.value:
             self.canvas_widget.copy_image(self.current_active_image())
 
     def action_cut_image_triggered(self):
-        if self.settings_manager.settings.mode == Mode.IMAGE.value:
+        if self.mode == Mode.IMAGE.value:
             self.canvas_widget.cut_image()
 
     def action_rotate_90_clockwise_triggered(self):
-        if self.settings_manager.settings.mode == Mode.IMAGE.value:
+        if self.mode == Mode.IMAGE.value:
             self.canvas_widget.rotate_90_clockwise()
 
     def action_rotate_90_counterclockwise_triggered(self):
-        if self.settings_manager.settings.mode == Mode.IMAGE.value:
+        if self.mode == Mode.IMAGE.value:
             self.canvas_widget.rotate_90_counterclockwise()
 
     def action_show_prompt_browser_triggered(self):
@@ -1409,7 +1417,7 @@ class MainWindow(
             widget.blockSignals(False)
     
     def set_all_section_buttons(self):
-        self.set_button_checked("model_manager", self.settings_manager.settings.mode == Mode.MODEL_MANAGER.value)
+        self.set_button_checked("model_manager", self.mode == Mode.MODEL_MANAGER.value)
     
     def activate_image_generation_section(self):
         self.ui.mode_tab_widget.setCurrentIndex(0)

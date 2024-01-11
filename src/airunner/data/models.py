@@ -561,8 +561,6 @@ class Settings(BaseModel):
     hf_api_key_write_key = Column(String, default="")
     hf_username = Column(String, default="")
 
-    mode = Column(String, default="Image Generation")
-
     brush_settings_id = Column(Integer, ForeignKey('brush_settings.id'))
     brush_settings = relationship("BrushSettings", back_populates="settings")
 
