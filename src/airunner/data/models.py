@@ -4,13 +4,14 @@ import io
 import os
 
 from PIL import Image
-from sqlalchemy import Column, Integer, String, Boolean, ForeignKey, Float, JSON, UniqueConstraint, DateTime
+from sqlalchemy import Column, Integer, String, Boolean, ForeignKey, Float, UniqueConstraint, DateTime
 from sqlalchemy.ext.declarative import declarative_base
 from sqlalchemy.orm import relationship
 from PyQt6.QtCore import Qt, QAbstractTableModel, QModelIndex
 
 from airunner.settings import BASE_PATH
 from airunner.utils import default_hf_cache_dir
+from airunner.data.bootstrap.prompt_templates import prompt_template_seed_data
 
 
 DEFAULT_PATHS = {
@@ -372,19 +373,6 @@ class Brush(BaseModel):
     generator_setting = relationship('GeneratorSetting', back_populates='brushes')  # modified line
 
 
-class GridSettings(BaseModel):
-    __tablename__ = 'grid_settings'
-
-    id = Column(Integer, primary_key=True)
-    show_grid = Column(Boolean, default=True)
-    snap_to_grid = Column(Boolean, default=True)
-    cell_size = Column(Integer, default=64)
-    line_width = Column(Integer, default=1)
-    canvas_color = Column(String, default="#000000")
-    line_color = Column(String, default="#121212")
-    settings = relationship("Settings", back_populates="grid_settings")
-
-
 class DeterministicSettings(BaseModel):
     __tablename__ = 'deterministic_settings'
 
@@ -591,9 +579,6 @@ class Settings(BaseModel):
     path_settings_id = Column(Integer, ForeignKey('path_settings.id'))
     path_settings = relationship("PathSettings", back_populates="settings")
 
-    grid_settings_id = Column(Integer, ForeignKey('grid_settings.id'))
-    grid_settings = relationship("GridSettings", back_populates="settings")
-
     metadata_settings_id = Column(Integer, ForeignKey('metadata_settings.id'))
     metadata_settings = relationship("MetadataSettings", back_populates="settings")
 
@@ -623,10 +608,6 @@ class Settings(BaseModel):
     # generator version
     current_version_stablediffusion = Column(String, default="SD 1.5")
 
-    # tool and bottom panel tab sections
-    current_tool_tab = Column(String, default="brush")
-    current_bottom_panel_tab = Column(String, default="model_manager")
-
     move_unused_model_to_cpu = Column(Boolean, default=True)
     unload_unused_model = Column(Boolean, default=False)
 
@@ -638,7 +619,6 @@ class Settings(BaseModel):
 
     enable_tts = Column(Boolean, default=True)
     generator_settings_override_id = Column(Integer, ForeignKey('generator_settings.id'))
-    ai_mode = Column(Boolean, default=True)
 
 
 class StandardImageWidgetSettings(BaseModel):
@@ -702,14 +682,6 @@ class Document(BaseModel):
     active = Column(Boolean, default=False)
 
 
-class TabSection(BaseModel):
-    __tablename__ = 'active_tab'
-
-    id = Column(Integer, primary_key=True)
-    panel = Column(String)
-    active_tab = Column(String)
-
-
 class CanvasSettings(BaseModel):
     __tablename__ = "canvas_settings"
 
@@ -727,12 +699,10 @@ class LLMGenerator(BaseModel):
     botname = Column(String, default="Bot")
     model_versions = relationship('LLMModelVersion', back_populates='generator')
     generator_settings = relationship('LLMGeneratorSetting', back_populates='generator')
-    prefix = Column(String, default="")
-    suffix = Column(String, default="")
     message_type = Column(String, default="chat")
     bot_personality = Column(String, default="Nice")
     override_parameters = Column(Boolean, default=False)
-    prompt_template = Column(String, default="")
+    prompt_template = Column(String, default=prompt_template_seed_data[0]["name"])
 
 
 class LLMGeneratorSetting(BaseModel):

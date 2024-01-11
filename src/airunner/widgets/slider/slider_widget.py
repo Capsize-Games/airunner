@@ -173,6 +173,10 @@ class SliderWidget(BaseWidget):
 
         single_step = self.ui.slider.singleStep()
         adjusted_value = val
+        try:
+            print(self.settings_property)
+        except Exception as e:
+            pass
         if single_step > 0:
             adjusted_value = round(val / single_step) * single_step
         normalized = adjusted_value / self.slider_maximum

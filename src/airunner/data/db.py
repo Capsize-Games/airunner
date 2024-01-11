@@ -6,10 +6,10 @@ from airunner.data.bootstrap.pipeline_bootstrap_data import pipeline_bootstrap_d
 from airunner.data.bootstrap.prompt_bootstrap_data import prompt_bootstrap_data, style_bootstrap_data, \
     variable_bootstrap_data
 from airunner.data.models import ControlnetModel, LLMPromptTemplate, Pipeline, Document, Settings, \
-    GeneratorSetting, SplitterSection, GridSettings, MetadataSettings, PathSettings, MemorySettings, AIModel, \
+    GeneratorSetting, SplitterSection, MetadataSettings, PathSettings, MemorySettings, AIModel, \
     ImageFilter, ImageFilterValue, BrushSettings, Prompt, PromptVariable, PromptCategory, PromptOption, \
     PromptVariableCategory, PromptVariableCategoryWeight, PromptStyleCategory, PromptStyle, Scheduler, ActionScheduler, \
-    DeterministicSettings, ActiveGridSettings, TabSection, CanvasSettings, \
+    DeterministicSettings, ActiveGridSettings, CanvasSettings, \
     LLMGeneratorSetting, LLMGenerator, LLMModelVersion, StandardImageWidgetSettings
 from airunner.data.session_scope import session_scope, engine
 from alembic.config import Config
@@ -168,10 +168,6 @@ def prepare_database():
             
 
 
-            # Add GridSettings objects
-            my_session.add(GridSettings())
-            
-
             my_session.add(DeterministicSettings())
             
 
@@ -258,7 +254,6 @@ def prepare_database():
 
             settings.brush_settings = my_session.query(BrushSettings).first()
             settings.path_settings = my_session.query(PathSettings).first()
-            settings.grid_settings = my_session.query(GridSettings).first()
             settings.deterministic_settings = my_session.query(DeterministicSettings).first()
             settings.metadata_settings = my_session.query(MetadataSettings).first()
             settings.memory_settings = my_session.query(MemorySettings).first()
@@ -364,20 +359,6 @@ def prepare_database():
                     )
                     my_session.add(obj)
             
-
-            # create tab sections
-            my_session.add(TabSection(
-                panel="center_tab",
-                active_tab="Canvas"
-            ))
-            my_session.add(TabSection(
-                panel="tool_tab_widget",
-                active_tab="Embeddings"
-            ))
-            my_session.add(TabSection(
-                panel="prompt_builder.ui.tabs",
-                active_tab="0"
-            ))
                         
 
             my_session.add(CanvasSettings())

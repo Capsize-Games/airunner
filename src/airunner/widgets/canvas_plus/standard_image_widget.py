@@ -54,6 +54,10 @@ class StandardImageWidget(StandardBaseWidget):
         self.set_input_image_widget_properties()
         self.ui.ddim_eta_slider_widget.hide()
         self.ui.frames_slider_widget.hide()
+        self.app.ai_mode_toggled.connect(self.activate_ai_mode)
+    
+    def activate_ai_mode(self, val):
+        self.ui.settings_tab_widget.setCurrentIndex(1 if val is True else 0)
     
     def set_controlnet_settings_properties(self):
         self.ui.controlnet_settings.initialize()
@@ -406,9 +410,6 @@ class StandardImageWidget(StandardBaseWidget):
         print("standard_image_widget handle_settings_manager_changed handle_settings_manager_changed handle_settings_manager_changed handle_settings_manager_changed handle_settings_manager_changed")
         if key == "settings.generator_settings_override_id":
             self.initialize_generator_form(val)
-        elif key == "settings.ai_mode":
-            print("HANDLE SETTINGS MANAGER CHANGED")
-            self.ui.settings_tab_widget.setCurrentIndex(1 if self.app.settings_manager.settings.ai_mode else 0)
         
     def initialize(self):
         self.set_form_values()

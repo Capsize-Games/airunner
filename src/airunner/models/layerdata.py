@@ -37,7 +37,6 @@ class LayerData:
         self.min_y = 0
         self.last_pos = None
         self.color = None
-        self.line_width = None
 
     def clear(self):
         self.lines = []
