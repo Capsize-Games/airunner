@@ -168,6 +168,7 @@ class MainWindow(
     image_data = pyqtSignal(dict)
     load_image = pyqtSignal(str)
     load_image_object = pyqtSignal(object)
+    window_resized_signal = pyqtSignal(object)
 
     generator = None
     _generator = None
@@ -462,6 +463,9 @@ class MainWindow(
         path_settings = self.path_settings
         path_settings[key] = val
         self.path_settings = path_settings
+    
+    def resizeEvent(self, event):
+        self.window_resized_signal.emit(event)
 
     @property
     def resize_on_paste(self):

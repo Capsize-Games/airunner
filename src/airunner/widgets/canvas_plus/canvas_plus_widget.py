@@ -345,6 +345,12 @@ class CanvasPlusWidget(CanvasBaseWidget):
         self.app.line_width_changed_signal.connect(self.line_width_changed)
         self.app.line_color_changed_signal.connect(self.line_color_changed)
         self.app.canvas_color_changed_signal.connect(self.canvas_color_changed)
+        self.app.window_resized_signal.connect(self.window_resized)
+        self.canvas_container.resizeEvent = self.window_resized
+    
+    def window_resized(self, event):
+        self.redraw_lines = True
+        self.do_draw()
 
     def toggle_grid(self, val):
         self.do_draw()
