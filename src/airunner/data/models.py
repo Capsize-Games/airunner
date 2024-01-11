@@ -287,7 +287,6 @@ class SplitterSection(BaseModel):
     __tablename__ = 'splitter_section'
 
     id = Column(Integer, primary_key=True)
-    settings_id = Column(Integer, ForeignKey('settings.id'))
     name = Column(String)
     order = Column(Integer)
     size = Column(Integer)
@@ -297,7 +296,6 @@ class Lora(BaseModel):
     __tablename__ = 'loras'
 
     id = Column(Integer, primary_key=True)
-    settings_id = Column(Integer, ForeignKey('settings.id'))
     name = Column(String)
     path = Column(String)
     scale = Column(Float)
@@ -380,7 +378,6 @@ class DeterministicSettings(BaseModel):
     batch_size = Column(Integer, default=1)
     style = Column(String, default="")
     seed = Column(Integer, default=42)
-    settings = relationship("Settings", back_populates="deterministic_settings")
 
 
 class MetadataSettings(BaseModel):
@@ -401,7 +398,6 @@ class MetadataSettings(BaseModel):
     image_export_metadata_scheduler = Column(Boolean, default=True)
     export_metadata = Column(Boolean, default=True)
     import_metadata = Column(Boolean, default=True)
-    settings = relationship("Settings", back_populates="metadata_settings")
 
 
 class MemorySettings(BaseModel):
@@ -420,7 +416,6 @@ class MemorySettings(BaseModel):
     use_torch_compile = Column(Boolean, default=False)
     use_tome_sd = Column(Boolean, default=True)
     tome_sd_ratio = Column(Integer, default=600)
-    settings = relationship("Settings", back_populates="memory_settings")
 
 
 class PathSettings(BaseModel):
@@ -443,8 +438,6 @@ class PathSettings(BaseModel):
     llm_seq2seq_model_path = Column(String, default=DEFAULT_PATHS["text"]["models"]["seq2seq"])
     llm_visualqa_model_path = Column(String, default=DEFAULT_PATHS["text"]["models"]["visualqa"])
     vae_model_path = Column(String, default=DEFAULT_PATHS["art"]["models"]["vae"])
-
-    settings = relationship("Settings", back_populates="path_settings")
 
     @property
     def embeddings_path(self):
@@ -505,7 +498,6 @@ class BrushSettings(BaseModel):
     size = Column(Integer, default=10)
     primary_color = Column(String, default="#FF0000")
     secondary_color = Column(String, default="#000000")
-    settings = relationship("Settings", back_populates="brush_settings")
 
 
 class ImageFilter(BaseModel):
@@ -545,36 +537,6 @@ class ActiveGridSettings(BaseModel):
     pos_y = Column(Integer, default=0)
     width = Column(Integer, default=512)
     height = Column(Integer, default=512)
-    settings = relationship("Settings", back_populates="active_grid_settings")
-
-
-class Settings(BaseModel):
-    __tablename__ = 'settings'
-
-    id = Column(Integer, primary_key=True)
-
-    brush_settings_id = Column(Integer, ForeignKey('brush_settings.id'))
-    brush_settings = relationship("BrushSettings", back_populates="settings")
-
-    path_settings_id = Column(Integer, ForeignKey('path_settings.id'))
-    path_settings = relationship("PathSettings", back_populates="settings")
-
-    metadata_settings_id = Column(Integer, ForeignKey('metadata_settings.id'))
-    metadata_settings = relationship("MetadataSettings", back_populates="settings")
-
-    memory_settings_id = Column(Integer, ForeignKey('memory_settings.id'))
-    memory_settings = relationship("MemorySettings", back_populates="settings")
-
-    deterministic_settings_id = Column(Integer, ForeignKey('deterministic_settings.id'))
-    deterministic_settings = relationship("DeterministicSettings", back_populates="settings", uselist=False)
-
-    active_grid_settings_id = Column(Integer, ForeignKey('active_grid_settings.id'))
-    active_grid_settings = relationship("ActiveGridSettings", back_populates="settings", uselist=False)
-
-    # generator tab sections
-    generator_settings = relationship("GeneratorSetting", backref="settings")
-
-    generator_settings_override_id = Column(Integer, ForeignKey('generator_settings.id'))
 
 
 class StandardImageWidgetSettings(BaseModel):
@@ -633,8 +595,6 @@ class Document(BaseModel):
 
     id = Column(Integer, primary_key=True)
     name = Column(String)
-    settings_id = Column(Integer, ForeignKey('settings.id'))
-    settings = relationship("Settings", backref="document")
     active = Column(Boolean, default=False)
 
 

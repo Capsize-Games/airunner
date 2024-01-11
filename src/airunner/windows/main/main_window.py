@@ -142,6 +142,11 @@ class MainWindow(
     header_widget_spacer = None
     deterministic_window = None
 
+    class History:
+        def add_event(self, *args, **kwargs):
+            print("TODO")
+    history = History()
+
     _tabs = {
         "stablediffusion": {
             "txt2img": None,
