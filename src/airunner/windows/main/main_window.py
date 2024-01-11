@@ -244,6 +244,14 @@ class MainWindow(
     @mode.setter
     def mode(self, val):
         self.application_settings.setValue("mode", val)
+    
+    @property
+    def current_version_stablediffusion(self):
+        return self.application_settings.value("current_version_stablediffusion", "1.5")
+    
+    @current_version_stablediffusion.setter
+    def current_version_stablediffusion(self, val):
+        self.application_settings.setValue("current_version_stablediffusion", val)
 
     @property
     def move_unused_model_to_cpu(self):
