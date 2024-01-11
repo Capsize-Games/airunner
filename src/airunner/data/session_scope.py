@@ -132,3 +132,10 @@ def memory_settings_scope():
     with session_scope() as session:
         memory_settings = session.query(MemorySettings).options(joinedload('*')).first()
         yield memory_settings
+
+@contextmanager
+def metadata_settings_scope():
+    from airunner.data.models import MetadataSettings
+    with session_scope() as session:
+        metadata_settings = session.query(MetadataSettings).options(joinedload('*')).first()
+        yield metadata_settings

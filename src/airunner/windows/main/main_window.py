@@ -60,6 +60,7 @@ class ImageDataWorker(QObject):
         self.finished.emit()
     
     def process_image_data(self, message):
+        print("process_image_data 1")
         images = message["images"]
         data = message["data"]
         nsfw_content_detected = message["nsfw_content_detected"]
@@ -314,8 +315,6 @@ class MainWindow(
             self.refresh_lora()
         elif key == "path_settings.model_base_path":
             self.generator_tab_widget.refresh_model_list()
-        elif key == "generator.seed":
-            self.prompt_builder.process_prompt()
         # elif key == "use_prompt_builder_checkbox":
         #     self.generator_tab_widget.toggle_all_prompt_builder_checkboxes(value)
         elif key == "models":
