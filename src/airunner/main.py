@@ -9,8 +9,7 @@ import os
 from airunner.data.db import prepare_database
 prepare_database()
 from airunner.data.managers import SettingsManager
-settings_manager = SettingsManager()
-hf_cache_path = settings_manager.path_settings.hf_cache_path
+hf_cache_path = ""
 if hf_cache_path != "":
     # check if hf_cache_path exists
     if os.path.exists(hf_cache_path):
@@ -79,6 +78,7 @@ if __name__ == "__main__":
 
     def show_main_application(app, splash, watch_files=False):
         try:
+            settings_manager = SettingsManager()
             window = MainWindow(settings_manager=settings_manager)
             if watch_files:
                 print("Watching style files for changes...")

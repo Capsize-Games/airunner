@@ -108,7 +108,7 @@ class InputImageSettingsWidget(BaseWidget):
 
     def import_input_image(self):
         file_path, _ = self.app.display_import_image_dialog(
-            directory=self.app.settings_manager.path_settings.image_path,
+            directory=self.app.image_path,
         )
         if file_path == "":
             return

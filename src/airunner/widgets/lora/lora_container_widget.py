@@ -51,7 +51,7 @@ class LoraContainerWidget(BaseWidget):
 
     def scan_for_lora(self):
         with session_scope() as session:
-            lora_path = self.app.settings_manager.path_settings.lora_path
+            lora_path = self.app.lora_model_path
             for dirpath, dirnames, filenames in os.walk(lora_path):
                 # get version from dirpath
                 version = dirpath.split("/")[-1]
@@ -78,7 +78,7 @@ class LoraContainerWidget(BaseWidget):
         return available_lora
 
     def get_available_loras(self, tab_name):
-        base_path = self.app.settings_manager.path_settings.model_base_path
+        base_path = self.app.base_path
         lora_path = self.app.settings_manager.lora_path or "lora"
         if lora_path == "lora":
             lora_path = os.path.join(base_path, lora_path)

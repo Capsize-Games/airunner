@@ -74,9 +74,7 @@ class EmbeddingsContainerWidget(BaseWidget):
 
     def handle_changed_signal(self, key):
         print("embeddings_container_widget: handle_changed_signal", key, value)
-        if key == "path_settings.embeddings_path":
-            self.update_embedding_names()
-        elif key == "generator.model":
+        if key == "generator.model":
             self.enable_embeddings()
 
     @pyqtSlot(dict)
@@ -126,7 +124,7 @@ class EmbeddingsContainerWidget(BaseWidget):
         self.check_saved_embeddings()
 
         with session_scope() as session:
-            embeddings_path = self.app.settings_manager.path_settings.embeddings_path
+            embeddings_path = self.app.embeddings_model_path
 
             if os.path.exists(embeddings_path):
                 for root, dirs, _ in os.walk(embeddings_path):

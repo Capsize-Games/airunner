@@ -6,7 +6,7 @@ from airunner.data.bootstrap.pipeline_bootstrap_data import pipeline_bootstrap_d
 from airunner.data.bootstrap.prompt_bootstrap_data import prompt_bootstrap_data, style_bootstrap_data, \
     variable_bootstrap_data
 from airunner.data.models import ControlnetModel, LLMPromptTemplate, Pipeline, Document, \
-    GeneratorSetting, MetadataSettings, PathSettings, MemorySettings, AIModel, \
+    GeneratorSetting, MetadataSettings, MemorySettings, AIModel, \
     ImageFilter, ImageFilterValue, BrushSettings, Prompt, PromptVariable, PromptCategory, PromptOption, \
     PromptVariableCategory, PromptVariableCategoryWeight, PromptStyleCategory, PromptStyle, Scheduler, ActionScheduler, \
     DeterministicSettings, ActiveGridSettings, CanvasSettings, \
@@ -155,11 +155,6 @@ def prepare_database():
             # Add Pipeline objects
             for pipeline_data in pipeline_bootstrap_data:
                 my_session.add(Pipeline(**pipeline_data))
-            
-
-
-            # Add PathSettings objects
-            my_session.add(PathSettings())
             
 
 
