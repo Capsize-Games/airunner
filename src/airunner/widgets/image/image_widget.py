@@ -1,3 +1,4 @@
+from contextlib import contextmanager
 import os
 import json
 
@@ -19,6 +20,7 @@ from airunner.widgets.image.templates.image_widget_ui import Ui_image_widget
 from PyQt6.QtGui import QDrag
 from PyQt6.QtCore import QMimeData
 from PyQt6.QtCore import QByteArray
+from airunner.data.session_scope import session_scope
 
 
 class ImageWidget(BaseWidget):
@@ -251,9 +253,17 @@ class ImageWidget(BaseWidget):
 
 
 class BrushImageWidget(ImageWidget):
+    _brush = None
+
+    @contextmanager
+    def brush(self):
+        with session_scope() as session:
+            session.add(self._brush)
+            yield self._brush
+
     def __init__(self, *args, **kwargs):
         self.container = kwargs.pop("container", None)
-        self.brush = kwargs.pop("brush", None)
+        self._brush = kwargs.pop("brush", None)
         super().__init__(*args, **kwargs)
 
     def handle_label_clicked(self, event):

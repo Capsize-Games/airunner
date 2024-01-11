@@ -13,13 +13,13 @@ from PyQt6.QtCore import QThread, pyqtSignal
 from PyQt6.QtCore import QLineF
 
 from airunner.aihandler.logger import Logger
-from airunner.aihandler.settings_manager import SettingsManager
 from airunner.cursors.circle_brush import CircleCursor
-from airunner.data.models import Layer, CanvasSettings, ActiveGridSettings
-from airunner.utils import save_session, get_session
+from airunner.data.models import Layer, CanvasSettings
 from airunner.widgets.canvas_plus.canvas_base_widget import CanvasBaseWidget
 from airunner.widgets.canvas_plus.templates.canvas_plus_ui import Ui_canvas
 from airunner.utils import apply_opacity_to_image
+from airunner.data.session_scope import session_scope
+from airunner.data.managers import SettingsManager
 
 
 class ImageAdder(QThread):
@@ -33,32 +33,29 @@ class ImageAdder(QThread):
         self.image_root_point = image_root_point
 
     def run(self):
-        session = get_session()
-        self.widget.current_active_image = self.image
-        if self.image_root_point is not None:
-            self.widget.current_layer.pos_x = self.image_root_point.x()
-            self.widget.current_layer.pos_y = self.image_root_point.y()
-        elif not self.is_outpaint:
-            self.widget.current_layer.pos_x = self.widget.active_grid_area_rect.x()
-            self.widget.current_layer.pos_y = self.widget.active_grid_area_rect.y()
-        session.add(self.widget.current_layer)
-        save_session()
-        self.widget.do_draw()
-        self.finished.emit()
+        with session_scope() as session:
+            self.widget.current_active_image = self.image
+            if self.image_root_point is not None:
+                self.widget.current_layer.pos_x = self.image_root_point.x()
+                self.widget.current_layer.pos_y = self.image_root_point.y()
+            elif not self.is_outpaint:
+                self.widget.current_layer.pos_x = self.widget.active_grid_area_rect.x()
+                self.widget.current_layer.pos_y = self.widget.active_grid_area_rect.y()
+            session.add(self.widget.current_layer)
+            self.widget.do_draw()
+            self.finished.emit()
 
 
 class DraggablePixmap(QGraphicsPixmapItem):
     def __init__(self, parent, pixmap):
         self.parent = parent
-        self.settings_manager = SettingsManager()
         super().__init__(pixmap)
         self.pixmap = pixmap
         self.setFlag(QGraphicsItem.GraphicsItemFlag.ItemIsMovable, True)
 
 
-
     def snap_to_grid(self):
-        grid_size = self.settings_manager.grid_settings.size
+        grid_size = self.parent.settings_manager.grid_settings.cell_size
         x = round(self.x() / grid_size) * grid_size
         y = round(self.y() / grid_size) * grid_size
         x += self.parent.last_pos.x()
@@ -85,10 +82,11 @@ class LayerImageItem(DraggablePixmap):
 
     def mouseReleaseEvent(self, event):
         super().mouseReleaseEvent(event)
-        pos = self.pos()
-        self.layer_image_data.pos_x = pos.x()
-        self.layer_image_data.pos_y = pos.y()
-        save_session()
+        with session_scope() as session:
+            pos = self.pos()
+            self.layer_image_data.pos_x = pos.x()
+            self.layer_image_data.pos_y = pos.y()
+            session.add(self.layer_image_data)
 
 
 class ActiveGridArea(DraggablePixmap):
@@ -96,27 +94,27 @@ class ActiveGridArea(DraggablePixmap):
     image = None
 
     def __init__(self, parent, rect):
-        self.settings_manager = SettingsManager()
+        self.app = parent.app
         self.update_settings()
 
         super().__init__(parent, self.pixmap)
         self.setFlag(QGraphicsItem.GraphicsItemFlag.ItemIsMovable, True)
 
-        self.settings_manager.changed_signal.connect(self.handle_changed_signal)
+        self.app.settings_manager.changed_signal.connect(self.handle_changed_signal)
 
     @property
     def active_grid_area_rect(self):
         return QRect(
-            self.settings_manager.active_grid_settings.pos_x,
-            self.settings_manager.active_grid_settings.pos_y,
-            self.settings_manager.working_width,
-            self.settings_manager.working_height
+            self.app.settings_manager.active_grid_settings.pos_x,
+            self.app.settings_manager.active_grid_settings.pos_y,
+            self.app.settings_manager.settings.working_width,
+            self.app.settings_manager.settings.working_height
         )
 
     def update_settings(self):
-        border_color = self.settings_manager.generator.active_grid_border_color
+        border_color = self.app.settings_manager.generator.active_grid_border_color
         border_color = QColor(border_color)
-        border_opacity = self.settings_manager.active_grid_settings.border_opacity
+        border_opacity = self.app.settings_manager.active_grid_settings.border_opacity
         border_color.setAlpha(border_opacity)
         fill_color = self.get_fill_color()
 
@@ -138,6 +136,7 @@ class ActiveGridArea(DraggablePixmap):
         self.pixmap = QPixmap.fromImage(self.image)
 
     def handle_changed_signal(self, key, value):
+        print("active_grid_area: handle_changed_signal", key, value)
         if key == "active_grid_settings.fill_opacity":
             self.change_fill_opacity(value)
             self.redraw()
@@ -152,9 +151,9 @@ class ActiveGridArea(DraggablePixmap):
             self.redraw()
         elif key in [
             "active_grid_settings.enabled",
-            "current_tab",
-            "working_width",
-            "working_height",
+            "settings.current_tab",
+            "settings.working_width",
+            "settings.working_height",
         ]:
             self.redraw()
 
@@ -163,33 +162,33 @@ class ActiveGridArea(DraggablePixmap):
         scene = self.scene()
         if scene:
             scene.removeItem(self)
-            if self.settings_manager.active_grid_settings.enabled:
+            if self.app.settings_manager.active_grid_settings.enabled:
                 scene.addItem(self)
 
     def get_fill_color(self):
-        fill_color = self.settings_manager.generator.active_grid_fill_color
+        fill_color = self.app.settings_manager.generator.active_grid_fill_color
         fill_color = QColor(fill_color)
-        fill_opacity = self.settings_manager.active_grid_settings.fill_opacity
+        fill_opacity = self.app.settings_manager.active_grid_settings.fill_opacity
         fill_opacity = max(1, fill_opacity)
         fill_color.setAlpha(fill_opacity)
         return fill_color
 
     def paint(self, painter: QPainter, option, widget=None):
-        if not self.settings_manager.active_grid_settings.render_fill:
+        if not self.app.settings_manager.active_grid_settings.render_fill:
             self.pixmap.fill(QColor(0, 0, 0, 1))
 
-        if self.settings_manager.active_grid_settings.render_border:
+        if self.app.settings_manager.active_grid_settings.render_border:
             print(self.active_grid_area_rect)
             size = 4
             painter.setPen(QPen(
                 self.active_grid_area_color,
-                self.settings_manager.grid_settings.line_width
+                self.app.settings_manager.grid_settings.line_width
             ))
             painter.setBrush(QBrush(QColor(0, 0, 0, 0)))
             painter.drawRect(self.active_grid_area_rect)
             painter.setPen(QPen(
                 self.active_grid_area_color,
-                self.settings_manager.grid_settings.line_width + 1
+                self.app.settings_manager.grid_settings.line_width + 1
             ))
             painter.drawRect(QRect(
                 self.active_grid_area_rect.x(),
@@ -282,36 +281,34 @@ class CanvasPlusWidget(CanvasBaseWidget):
 
     @image_pivot_point.setter
     def image_pivot_point(self, value):
-        try:
+        with session_scope() as session:
+            session.add(self.current_layer)
             self.current_layer.pivot_x = value.x()
             self.current_layer.pivot_y = value.y()
-            save_session()
-        except Exception as e:
-            pass
 
     @property
     def active_grid_area_selected(self):
-        return self.settings_manager.current_tool == "active_grid_area"
+        return self.app.settings_manager.settings.current_tool == "active_grid_area"
 
     @property
     def select_selected(self):
-        return self.settings_manager.current_tool == "select"
+        return self.app.settings_manager.settings.current_tool == "select"
 
     @property
     def eraser_selected(self):
-        return self.settings_manager.current_tool == "eraser"
+        return self.app.settings_manager.settings.current_tool == "eraser"
 
     @property
     def brush_selected(self):
-        return self.settings_manager.current_tool == "brush"
+        return self.app.settings_manager.settings.current_tool == "brush"
 
     @property
     def move_selected(self):
-        return self.settings_manager.current_tool == "move"
+        return self.app.settings_manager.settings.current_tool == "move"
 
     @property
     def brush_size(self):
-        return self.settings_manager.brush_settings.size
+        return self.app.settings_manager.settings.brush_settings.size
 
     @property
     def active_grid_area_rect(self):
@@ -323,7 +320,7 @@ class CanvasPlusWidget(CanvasBaseWidget):
         )
 
         # apply self.pos_x and self.pox_y to the rect
-        rect.translate(self.canvas_settings.pos_x, self.canvas_settings.pos_y)
+        rect.translate(self.app.settings_manager.canvas_settings.pos_x, self.app.settings_manager.canvas_settings.pos_y)
 
         return rect
 
@@ -353,7 +350,7 @@ class CanvasPlusWidget(CanvasBaseWidget):
 
     @property
     def active_grid_settings(self):
-        return self.settings_manager.active_grid_settings
+        return self.app.settings_manager.active_grid_settings
     
     @property
     def canvas_container(self):
@@ -361,52 +358,44 @@ class CanvasPlusWidget(CanvasBaseWidget):
 
     def __init__(self, *args, **kwargs):
         super().__init__(*args, **kwargs)
-        session = get_session()
-        self.canvas_settings = session.query(CanvasSettings).first()
-        self.ui.central_widget.resizeEvent = self.resizeEvent
-        self.app.add_image_to_canvas_signal.connect(self.handle_add_image_to_canvas)
-        self.app.image_data.connect(self.handle_image_data)
-        self.app.load_image.connect(self.load_image_from_path)
-        self.app.load_image_object.connect(self.add_image_to_scene)
-        self.layer_data = session.query(
-            Layer
-        ).filter(
-            Layer.document_id == self.app.document.id,
-        ).order_by(
-            Layer.position.asc()
-        ).all()
-        self.initialize()
-        self.settings_manager.changed_signal.connect(self.handle_changed_signal)
+        self.app.settings_manager.changed_signal.connect(self.handle_changed_signal)
+        with session_scope() as session:
+            self.ui.central_widget.resizeEvent = self.resizeEvent
+            self.app.add_image_to_canvas_signal.connect(self.handle_add_image_to_canvas)
+            self.app.image_data.connect(self.handle_image_data)
+            self.app.load_image.connect(self.load_image_from_path)
+            self.app.load_image_object.connect(self.add_image_to_scene)
+            self.initialize()
         self.app.loaded.connect(self.handle_loaded)
 
 
     
     def increase_active_grid_height(self, amount):
-        height = self.settings_manager.working_height + self.settings_manager.grid_settings.size * amount
+        height = self.app.settings_manager.settings.working_height + self.app.settings_manager.grid_settings.cell_size * amount
         if height > 4096:
             height = 4096
-        self.settings_manager.set_value("working_height", height)
+        self.app.settings_manager.settings.set_value("working_height", height)
         self.do_draw()
         
     def decrease_active_grid_height(self, amount):
-        height = self.settings_manager.working_height - self.settings_manager.grid_settings.size * amount
+        height = self.app.settings_manager.settings.working_height - self.app.settings_manager.grid_settings.cell_size * amount
         if height < 512:
             height = 512
-        self.settings_manager.set_value("working_height", height)
+        self.app.settings_manager.settings.set_value("working_height", height)
         self.do_draw()
 
     def increase_active_grid_width(self, amount):
-        width = self.settings_manager.working_width + self.settings_manager.grid_settings.size * amount
+        width = self.app.settings_manager.settings.working_width + self.app.settings_manager.grid_settings.cell_size * amount
         if width > 4096:
             width = 4096
-        self.settings_manager.set_value("working_width", width)
+        self.app.settings_manager.settings.set_value("working_width", width)
         self.do_draw()
 
     def decrease_active_grid_width(self, amount):
-        width = self.settings_manager.working_width - self.settings_manager.grid_settings.size * amount
+        width = self.app.settings_manager.settings.working_width - self.app.settings_manager.grid_settings.cell_size * amount
         if width < 512:
             width = 512
-        self.settings_manager.set_value("working_width", width)
+        self.app.settings_manager.settings.set_value("working_width", width)
         self.do_draw()
 
     def wheelEvent(self, event):
@@ -432,15 +421,16 @@ class CanvasPlusWidget(CanvasBaseWidget):
             super().wheelEvent(event)  # Propagate the event to the base class if no modifier keys are pressed
 
     def handle_changed_signal(self, key, value):
-        if key == "current_tab":
+        print("canvas_plus_widget: handle_changed_signal", key, value)
+        if key == "settings.current_tab":
             self.do_draw()
-        elif key == "current_section_stablediffusion":
+        elif key == "settings.current_section_stablediffusion":
             self.do_draw()
         elif key == "layer_image_data.visible":
             self.do_draw()
         elif key == "layer_data.hidden":
             self.do_draw()
-        elif key == "active_image_editor_section":
+        elif key == "settings.active_image_editor_section":
             self.do_draw()
         elif key == "grid_settings.show_grid":
             # remove lines from scene
@@ -479,10 +469,10 @@ class CanvasPlusWidget(CanvasBaseWidget):
         self.view_size = self.view.viewport().size()
 
         # # initialize variables
-        self.cell_size = self.settings_manager.grid_settings.size
-        self.line_width = self.settings_manager.grid_settings.line_width
-        self.line_color = QColor(self.settings_manager.grid_settings.line_color)
-        self.canvas_color = QColor(self.settings_manager.grid_settings.canvas_color)
+        self.cell_size = self.app.settings_manager.grid_settings.cell_size
+        self.line_width = self.app.settings_manager.grid_settings.line_width
+        self.line_color = QColor(self.app.settings_manager.grid_settings.line_color)
+        self.canvas_color = QColor(self.app.settings_manager.grid_settings.canvas_color)
 
         # # Set the margins of the QGraphicsView object to 0
         self.view.setContentsMargins(0, 0, 0, 0)
@@ -493,7 +483,7 @@ class CanvasPlusWidget(CanvasBaseWidget):
         self.do_draw()
 
     def draw_layers(self):
-        for layer in self.layer_data:
+        for layer in self.layers:
             image = layer.image
             if image is None:
                 continue
@@ -528,8 +518,8 @@ class CanvasPlusWidget(CanvasBaseWidget):
 
             pos = QPoint(layer.pos_x, layer.pos_y)
             draggable_pixmap.setPos(QPointF(
-                self.canvas_settings.pos_x + pos.x(),
-                self.canvas_settings.pos_y + pos.y()
+                self.app.settings_manager.canvas_settings.pos_x + pos.x(),
+                self.app.settings_manager.canvas_settings.pos_y + pos.y()
             ))
 
     def set_scene_rect(self):
@@ -545,19 +535,19 @@ class CanvasPlusWidget(CanvasBaseWidget):
             Qt.PenStyle.SolidLine
         )
 
-        if self.settings_manager.grid_settings.show_grid:
+        if self.app.settings_manager.grid_settings.show_grid:
             # vertical lines
-            h = self.view_size.height() + abs(self.canvas_settings.pos_y) % self.cell_size
+            h = self.view_size.height() + abs(self.app.settings_manager.canvas_settings.pos_y) % self.cell_size
             y = 0
             for i in range(width_cells):
-                x = i * self.cell_size + self.canvas_settings.pos_x % self.cell_size
+                x = i * self.cell_size + self.app.settings_manager.canvas_settings.pos_x % self.cell_size
                 self.scene.addLine(x, y, x, h, pen)
 
             # # horizontal lines
-            w = self.view_size.width() + abs(self.canvas_settings.pos_x) % self.cell_size
+            w = self.view_size.width() + abs(self.app.settings_manager.canvas_settings.pos_x) % self.cell_size
             x = 0
             for i in range(height_cells):
-                y = i * self.cell_size + self.canvas_settings.pos_y % self.cell_size
+                y = i * self.cell_size + self.app.settings_manager.canvas_settings.pos_y % self.cell_size
                 self.scene.addLine(x, y, w, y, pen)
 
     def draw_active_grid_area_container(self):
@@ -591,7 +581,7 @@ class CanvasPlusWidget(CanvasBaseWidget):
         self.draw_layers()
         self.draw_active_grid_area_container()
         self.ui.canvas_position.setText(
-            f"X {-self.canvas_settings.pos_x: 05d} Y {self.canvas_settings.pos_y: 05d}"
+            f"X {-self.app.settings_manager.canvas_settings.pos_x: 05d} Y {self.app.settings_manager.canvas_settings.pos_y: 05d}"
         )
         self.scene.update()
         self.drawing = False
@@ -694,9 +684,9 @@ class CanvasPlusWidget(CanvasBaseWidget):
 
     def load_image(self, image_path):
         image = Image.open(image_path)
-        if self.settings_manager.resize_on_paste:
-            image.thumbnail((self.settings_manager.working_width,
-                             self.settings_manager.working_height), Image.ANTIALIAS)
+        if self.app.settings_manager.settings.resize_on_paste:
+            image.thumbnail((self.app.settings_manager.settings.working_width,
+                             self.app.settings_manager.settings.working_height), Image.ANTIALIAS)
         self.add_image_to_scene(image)
     
     def current_draggable_pixmap(self):
@@ -765,15 +755,15 @@ class CanvasPlusWidget(CanvasBaseWidget):
             Logger.error("xclip not found. Please install xclip to copy image to clipboard.")
 
     def create_image(self, image):
-        if self.settings_manager.resize_on_paste:
+        if self.app.settings_manager.settings.resize_on_paste:
             image = self.resize_image(image)
         self.add_image_to_scene(image)
     
     def resize_image(self, image):
         image.thumbnail(
             (
-                self.settings_manager.working_width,
-                self.settings_manager.working_height
+                self.app.settings_manager.settings.working_width,
+                self.app.settings_manager.settings.working_height
             ),
             Image.ANTIALIAS
         )
@@ -791,16 +781,6 @@ class CanvasPlusWidget(CanvasBaseWidget):
         self.current_layer_index = layer_index
 
     def add_image_to_scene(self, image, is_outpaint=False, image_root_point=None):
-        # self.current_active_image = image
-        # if image_root_point is not None:
-        #     self.current_layer.pos_x = image_root_point.x()
-        #     self.current_layer.pos_y = image_root_point.y()
-        # elif not is_outpaint:
-        #     self.current_layer.pos_x = self.active_grid_area_rect.x()
-        #     self.current_layer.pos_y = self.active_grid_area_rect.y()
-        # session.add(self.current_layer)
-        # save_session()
-        # self.do_draw()
         self.image_adder = ImageAdder(self, image, is_outpaint, image_root_point)
         self.image_adder.finished.connect(self.on_image_adder_finished)
         self.image_adder.start()

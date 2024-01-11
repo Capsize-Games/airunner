@@ -1,35 +1,47 @@
-from airunner.utils import save_session
+from airunner.data.session_scope import session_scope
 from airunner.widgets.base_widget import BaseWidget
 from airunner.widgets.embeddings.templates.embedding_ui import Ui_embedding
 from PyQt6.QtWidgets import QApplication
-
+from contextlib import contextmanager
+from sqlalchemy.exc import InvalidRequestError
 
 class EmbeddingWidget(BaseWidget):
     widget_class_ = Ui_embedding
-    embedding = None
+
+    @contextmanager
+    def embedding(self):
+        with session_scope() as session:
+            try:
+                session.add(self._embedding)
+            except InvalidRequestError:
+                pass
+            yield self._embedding
 
     def __init__(self, *args, **kwargs):
-        self.embedding = kwargs.pop("embedding")
+        self._embedding = kwargs.pop("embedding")
         super().__init__(*args, **kwargs)
-        self.ui.enabledCheckbox.setChecked(self.embedding.active)
-        self.ui.enabledCheckbox.setTitle(self.embedding.name)
-        if self.embedding.tags:
-            self.ui.tags.show()
-            self.ui.tags.setText(self.embedding.tags)
-        else:
-            self.ui.tags.hide()
+        with self.embedding() as embedding:
+            self.ui.enabledCheckbox.setChecked(embedding.active)
+            self.ui.enabledCheckbox.setTitle(embedding.name)
+            if embedding.tags:
+                self.ui.tags.show()
+                self.ui.tags.setText(embedding.tags)
+            else:
+                self.ui.tags.hide()
 
     def action_clicked_button_to_prompt(self):
-        val = f"{self.settings_manager.generator.prompt} {self.embedding.name}"
-        self.settings_manager.set_value("generator.prompt", val)
+        with self.embedding() as embedding:
+            val = f"{self.app.settings_manager.generator.prompt} {embedding.name}"
+            self.app.settings_manager.set_value("generator.prompt", val)
 
     def action_clicked_button_to_negative_prompt(self):
-        val = f"{self.settings_manager.generator.negative_prompt} {self.embedding.name}"
-        self.settings_manager.set_value("generator.negative_prompt", val)
+        with self.embedding() as embedding:
+            val = f"{self.app.settings_manager.generator.negative_prompt} {embedding.name}"
+            self.app.settings_manager.set_value("generator.negative_prompt", val)
 
     def action_toggled_embedding(self, val):
-        self.embedding.active = val
-        save_session()
+        with self.embedding() as embedding:
+            embedding.active = val
 
     def action_clicked_copy(self):
         # copy embedding name to clipboard

@@ -11,7 +11,8 @@ from PIL.ImageFilter import GaussianBlur
 from airunner.data.models import LayerImage
 from airunner.models.imagedata import ImageData
 from airunner.models.layerdata import LayerData
-from airunner.utils import apply_opacity_to_image, save_session, get_session
+from airunner.utils import apply_opacity_to_image
+from airunner.data.session_scope import session_scope
 
 
 class CanvasImageMixin:
@@ -188,8 +189,8 @@ class CanvasImageMixin:
             return
 
         if self.app.settings_manager.resize_on_paste:
-            image.thumbnail((self.settings_manager.working_width,
-                             self.settings_manager.working_height), Image.ANTIALIAS)
+            image.thumbnail((self.app.settings_manager.working_width,
+                             self.app.settings_manager.working_height), Image.ANTIALIAS)
         self.create_image(image)
 
     def create_image(self, image):
@@ -197,8 +198,8 @@ class CanvasImageMixin:
         Create a new image object and add it to the current layer
         """
         location = QPoint(
-            self.settings_manager.active_grid_settings.pos_x,
-            self.settings_manager.active_grid_settings.pos_y
+            self.app.settings_manager.active_grid_settings.pos_x,
+            self.app.settings_manager.active_grid_settings.pos_y
         )
         # convert image to RGBA
         image = image.convert("RGBA")
@@ -210,14 +211,13 @@ class CanvasImageMixin:
         self.current_layer.position_x = location.x()
         self.current_layer.position_y = location.y()
 
-        session = get_session()
-        layer_image = LayerImage(
-            layer_id=self.current_layer.id,
-            order=len(self.current_layer.layer_images),
-        )
-        layer_image.image = image
-        session.add(layer_image)
-        save_session()
+        with session_scope() as session:
+            layer_image = LayerImage(
+                layer_id=self.current_layer.id,
+                order=len(self.current_layer.layer_images),
+            )
+            layer_image.image = image
+            session.add(layer_image)
 
         self.current_layer.layer_widget.set_thumbnail()
         # self.set_image_opacity(self.get_layer_opacity(self.current_layer_index))
@@ -266,8 +266,8 @@ class CanvasImageMixin:
 
         # if settings_manager.resize_on_paste, resize the image to working width and height while mainting its aspect ratio
         if self.app.settings_manager.resize_on_paste:
-            image.thumbnail((self.settings_manager.working_width,
-                             self.settings_manager.working_height), Image.ANTIALIAS)
+            image.thumbnail((self.app.settings_manager.working_width,
+                             self.app.settings_manager.working_height), Image.ANTIALIAS)
 
         self.create_image(image)
 

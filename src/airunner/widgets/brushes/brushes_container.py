@@ -1,18 +1,20 @@
 import io
+from io import BytesIO
 import json
-from airunner.widgets.base_widget import BaseWidget
-from airunner.widgets.image.image_widget import BrushImageWidget
-from airunner.widgets.qflowlayout.q_flow_layout import QFlowLayout
+import base64
+from PIL import Image
+
 from PyQt6.QtWidgets import QInputDialog
 from PyQt6.QtGui import QPixmap
 from PyQt6.QtCore import Qt
-from airunner.utils import get_session
-from airunner.data.models import Brush, GeneratorSetting
-import base64
-from PIL import Image
-from io import BytesIO
 from PyQt6.QtCore import QBuffer
 from PyQt6.QtWidgets import QMenu
+
+from airunner.widgets.base_widget import BaseWidget
+from airunner.widgets.image.image_widget import BrushImageWidget
+from airunner.widgets.qflowlayout.q_flow_layout import QFlowLayout
+from airunner.data.models import Brush, GeneratorSetting
+from airunner.data.session_scope import session_scope
 
 
 class BrushesContainer(BaseWidget):
@@ -60,60 +62,56 @@ class BrushesContainer(BaseWidget):
             # Convert the bytes to base64
             img_base64 = base64.b64encode(img_bytes).decode()
 
-        session = get_session()
+        with session_scope() as session:
 
-        # Create a new GeneratorSetting entry with the metadata
-        generator_setting = GeneratorSetting(
-            section=meta_data.get("section", getattr(self.settings_manager, f"current_section_{self.settings_manager.current_image_generator}")),
-            generator_name=meta_data.get("generator_name", self.settings_manager.current_image_generator),
-            prompt=meta_data.get("prompt", ""),
-            negative_prompt=meta_data.get("negative_prompt", ""),
-            steps=meta_data.get("steps", 20),
-            ddim_eta=meta_data.get("ddim_eta", 0.5),
-            height=meta_data.get("height", 512),
-            width=meta_data.get("width", 512),
-            scale=meta_data.get("scale", 750),
-            seed=meta_data.get("seed", 42),
-            latents_seed=meta_data.get("latents_seed", 84),
-            random_seed=meta_data.get("random_seed", True),
-            random_latents_seed=meta_data.get("random_latents_seed", True),
-            model=meta_data.get("model", ""),
-            scheduler=meta_data.get("scheduler", "DPM++ 2M Karras"),
-            prompt_triggers=meta_data.get("prompt_triggers", ""),
-            strength=meta_data.get("strength", 50),
-            image_guidance_scale=meta_data.get("image_guidance_scale", 150),
-            n_samples=meta_data.get("n_samples", 1),
-            controlnet=meta_data.get("controlnet", ""),
-            enable_controlnet=meta_data.get("enable_controlnet", False),
-            enable_input_image=meta_data.get("enable_input_image", False),
-            controlnet_guidance_scale=meta_data.get("controlnet_guidance_scale", 50),
-            clip_skip=meta_data.get("clip_skip", 0),
-            variation=meta_data.get("variation", False),
-            input_image_use_imported_image=meta_data.get("input_image_use_imported_image", False),
-            input_image_use_grid_image=meta_data.get("input_image_use_grid_image", True),
-            input_image_recycle_grid_image=meta_data.get("input_image_recycle_grid_image", True),
-            input_image_mask_use_input_image=meta_data.get("input_image_mask_use_input_image", True),
-            input_image_mask_use_imported_image=meta_data.get("input_image_mask_use_imported_image", False),
-            controlnet_input_image_link_to_input_image=meta_data.get("controlnet_input_image_link_to_input_image", True),
-            controlnet_input_image_use_imported_image=meta_data.get("controlnet_input_image_use_imported_image", False),
-            controlnet_use_grid_image=meta_data.get("controlnet_use_grid_image", False),
-            controlnet_recycle_grid_image=meta_data.get("controlnet_recycle_grid_image", False),
-            controlnet_mask_link_input_image=meta_data.get("controlnet_mask_link_input_image", False),
-            controlnet_mask_use_imported_image=meta_data.get("controlnet_mask_use_imported_image", False),
-            use_prompt_builder=meta_data.get("use_prompt_builder", False),
-            active_grid_border_color=meta_data.get("active_grid_border_color", "#00FF00"),
-            active_grid_fill_color=meta_data.get("active_grid_fill_color", "#FF0000")
-        )
+            # Create a new GeneratorSetting entry with the metadata
+            generator_setting = GeneratorSetting(
+                section=meta_data.get("section", self.app.settings_manager.settings.current_section_stablediffusion),
+                generator_name=meta_data.get("generator_name", self.app.settings_manager.settings.current_image_generator),
+                prompt=meta_data.get("prompt", ""),
+                negative_prompt=meta_data.get("negative_prompt", ""),
+                steps=meta_data.get("steps", 20),
+                ddim_eta=meta_data.get("ddim_eta", 0.5),
+                height=meta_data.get("height", 512),
+                width=meta_data.get("width", 512),
+                scale=meta_data.get("scale", 750),
+                seed=meta_data.get("seed", 42),
+                latents_seed=meta_data.get("latents_seed", 84),
+                random_seed=meta_data.get("random_seed", True),
+                random_latents_seed=meta_data.get("random_latents_seed", True),
+                model=meta_data.get("model", ""),
+                scheduler=meta_data.get("scheduler", "DPM++ 2M Karras"),
+                prompt_triggers=meta_data.get("prompt_triggers", ""),
+                strength=meta_data.get("strength", 50),
+                image_guidance_scale=meta_data.get("image_guidance_scale", 150),
+                n_samples=meta_data.get("n_samples", 1),
+                controlnet=meta_data.get("controlnet", ""),
+                enable_controlnet=meta_data.get("enable_controlnet", False),
+                enable_input_image=meta_data.get("enable_input_image", False),
+                controlnet_guidance_scale=meta_data.get("controlnet_guidance_scale", 50),
+                clip_skip=meta_data.get("clip_skip", 0),
+                variation=meta_data.get("variation", False),
+                input_image_use_imported_image=meta_data.get("input_image_use_imported_image", False),
+                input_image_use_grid_image=meta_data.get("input_image_use_grid_image", True),
+                input_image_recycle_grid_image=meta_data.get("input_image_recycle_grid_image", True),
+                input_image_mask_use_input_image=meta_data.get("input_image_mask_use_input_image", True),
+                input_image_mask_use_imported_image=meta_data.get("input_image_mask_use_imported_image", False),
+                controlnet_input_image_link_to_input_image=meta_data.get("controlnet_input_image_link_to_input_image", True),
+                controlnet_input_image_use_imported_image=meta_data.get("controlnet_input_image_use_imported_image", False),
+                controlnet_use_grid_image=meta_data.get("controlnet_use_grid_image", False),
+                controlnet_recycle_grid_image=meta_data.get("controlnet_recycle_grid_image", False),
+                controlnet_mask_link_input_image=meta_data.get("controlnet_mask_link_input_image", False),
+                controlnet_mask_use_imported_image=meta_data.get("controlnet_mask_use_imported_image", False),
+                use_prompt_builder=meta_data.get("use_prompt_builder", False),
+                active_grid_border_color=meta_data.get("active_grid_border_color", "#00FF00"),
+                active_grid_fill_color=meta_data.get("active_grid_fill_color", "#FF0000")
+            )
 
-        session.add(generator_setting)
-        session.commit()
-
-        # Create a new Brush entry associated with the GeneratorSetting entry
-        brush = Brush(name=brush_name, thumbnail=img_base64, generator_setting_id=generator_setting.id)
-        session.add(brush)
-
-        session.commit()
-
+            session.add(generator_setting)
+        
+            # Create a new Brush entry associated with the GeneratorSetting entry
+            brush = Brush(name=brush_name, thumbnail=img_base64, generator_setting_id=generator_setting.id)
+            session.add(brush)
         return brush
     
     selected_brushes = []
@@ -133,7 +131,7 @@ class BrushesContainer(BaseWidget):
                     else:
                         self.selected_brushes.remove(widget)
                         widget.setStyleSheet("")
-            self.settings_manager.set_value("generator_settings_override_id", None)
+            self.app.settings_manager.set_value("settings.generator_settings_override_id", None)
             return
 
         for widget in self.selected_brushes:
@@ -154,7 +152,8 @@ class BrushesContainer(BaseWidget):
             widget.setStyleSheet(f"""
                 border: 2px solid #ff0000;
             """)
-            self.settings_manager.set_value("generator_settings_override_id", widget.brush.generator_setting_id)
+            with widget.brush() as brush:
+                self.app.settings_manager.set_value("settings.generator_settings_override_id", brush.generator_setting_id)
     
     def display_brush_menu(self, event, widget, brush):
         context_menu = QMenu(self)
@@ -165,18 +164,18 @@ class BrushesContainer(BaseWidget):
         global_position = self.mapToGlobal(event.pos())
         context_menu.exec(global_position)
 
-    def delete_brush(self, widget, brush):
-        session = get_session()
-        brush = session.query(Brush).filter(Brush.id == brush.id).first()
-        generator_setting = session.query(GeneratorSetting).filter(GeneratorSetting.id == brush.generator_setting_id).first()
-        
-        if generator_setting is not None:
-            session.delete(generator_setting)
-        
-        if brush is not None:
-            session.delete(brush)
-        
-        session.commit()
+    def delete_brush(self, widget, _brush):
+        with widget.brush() as brush:
+            with session_scope() as session:
+                brush = session.query(Brush).filter(Brush.id == brush.id).first()
+                generator_setting = session.query(GeneratorSetting).filter(GeneratorSetting.id == brush.generator_setting_id).first()
+            
+                if generator_setting is not None:
+                    session.delete(generator_setting)
+            
+                if brush is not None:
+                    session.delete(brush)
+
         widget.deleteLater()
     
     def create_and_add_widget(self, image_source, is_base64=False, brush=None):
@@ -224,14 +223,12 @@ class BrushesContainer(BaseWidget):
             widget.deleteLater()
         else:
             # Save the brush name, thumbnail, and metadata to the database
-            widget.brush = self.save_brush(brush_name, widget.thumbnail(), meta_data)
+            widget._brush = self.save_brush(brush_name, widget.pixmap, meta_data)
             
 
         event.acceptProposedAction()
 
     def load_brushes(self):
-        session = get_session()
-        brushes = session.query(Brush).all()
-
-        for brush in brushes:
-            self.create_and_add_widget(brush.thumbnail, is_base64=True, brush=brush)
+        with self.app.settings_manager.brushes() as brushes:
+            for brush in brushes:
+                self.create_and_add_widget(brush.thumbnail, is_base64=True, brush=brush)

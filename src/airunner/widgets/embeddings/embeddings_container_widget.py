@@ -4,8 +4,9 @@ from PyQt6.QtCore import pyqtSlot
 from PyQt6.QtWidgets import QWidget, QSizePolicy
 
 from airunner.aihandler.enums import MessageCode
+from airunner.data.managers import SettingsManager
 from airunner.data.models import Embedding
-from airunner.utils import get_session
+from airunner.data.session_scope import session_scope
 from airunner.widgets.base_widget import BaseWidget
 from airunner.widgets.embeddings.embedding_widget import EmbeddingWidget
 from airunner.widgets.embeddings.templates.embeddings_container_ui import Ui_embeddings_container
@@ -23,7 +24,6 @@ class EmbeddingsContainerWidget(BaseWidget):
         super().__init__(*args, **kwargs)
         self.app.generator_tab_changed_signal.connect(self.handle_generator_tab_changed)
         self.app.tab_section_changed_signal.connect(self.handle_tab_section_changed)
-        self.settings_manager.changed_signal.connect(self.handle_changed_signal)
         self.app.message_var.my_signal.connect(self.message_handler)
 
         self.scan_for_embeddings()
@@ -73,7 +73,8 @@ class EmbeddingsContainerWidget(BaseWidget):
         self.enable_embeddings()
 
     def handle_changed_signal(self, key):
-        if key == "embeddings_path":
+        print("embeddings_container_widget: handle_changed_signal", key, value)
+        if key == "path_settings.embeddings_path":
             self.update_embedding_names()
         elif key == "generator.model":
             self.enable_embeddings()
@@ -88,9 +89,10 @@ class EmbeddingsContainerWidget(BaseWidget):
     def load_embeddings(self):
         self.clear_embedding_widgets()
         
-        session = get_session()
-        embeddings = session.query(Embedding).filter(
-            Embedding.name.like(f"%{self.search_filter}%") if self.search_filter != "" else True).all()
+        with session_scope() as session:
+            embeddings = session.query(Embedding).filter(
+                Embedding.name.like(f"%{self.search_filter}%") if self.search_filter != "" else True).all()
+        
         for embedding in embeddings:
             self.add_embedding(embedding)
         
@@ -100,19 +102,21 @@ class EmbeddingsContainerWidget(BaseWidget):
         self.ui.scrollAreaWidgetContents.layout().addWidget(self.spacer)
 
     def add_embedding(self, embedding):
-        embedding_widget = EmbeddingWidget(embedding=embedding)
-        self.register_embedding_widget(embedding.name, embedding_widget)
+        with session_scope() as session:
+            embedding_widget = EmbeddingWidget(embedding=embedding)
+            session.add(embedding)
+            self.register_embedding_widget(embedding.name, embedding_widget)
         self.ui.scrollAreaWidgetContents.layout().addWidget(embedding_widget)
 
     def action_clicked_button_scan_for_embeddings(self):
         self.scan_for_embeddings()
     
     def check_saved_embeddings(self):
-        session = get_session()
-        embeddings = session.query(Embedding).all()
-        for embedding in embeddings:
-            if not os.path.exists(embedding.path):
-                session.delete(embedding)
+        with session_scope() as session:
+            embeddings = session.query(Embedding).all()
+            for embedding in embeddings:
+                if not os.path.exists(embedding.path):
+                    session.delete(embedding)
 
     def scan_for_embeddings(self):
         # recursively scan for embedding model files in the embeddings path
@@ -121,22 +125,21 @@ class EmbeddingsContainerWidget(BaseWidget):
         # add the Embedding model to the UI
         self.check_saved_embeddings()
 
-        session = get_session()
-        embeddings_path = self.settings_manager.path_settings.embeddings_path
+        with session_scope() as session:
+            embeddings_path = self.app.settings_manager.path_settings.embeddings_path
 
-        if os.path.exists(embeddings_path):
-            for root, dirs, _ in os.walk(embeddings_path):
-                for dir in dirs:
-                    version = dir.split("/")[-1]
-                    path = os.path.join(root, dir)
-                    for entry in os.scandir(path):
-                        if entry.is_file() and entry.name.endswith((".ckpt", ".safetensors", ".pt")):
-                            name = os.path.splitext(entry.name)[0]
-                            embedding = session.query(Embedding).filter_by(name=name).first()
-                            if not embedding:
-                                embedding = Embedding(name=name, path=entry.path, version=version)
-                                session.add(embedding)
-            session.commit()
+            if os.path.exists(embeddings_path):
+                for root, dirs, _ in os.walk(embeddings_path):
+                    for dir in dirs:
+                        version = dir.split("/")[-1]
+                        path = os.path.join(root, dir)
+                        for entry in os.scandir(path):
+                            if entry.is_file() and entry.name.endswith((".ckpt", ".safetensors", ".pt")):
+                                name = os.path.splitext(entry.name)[0]
+                                embedding = session.query(Embedding).filter_by(name=name).first()
+                                if not embedding:
+                                    embedding = Embedding(name=name, path=entry.path, version=version)
+                                    session.add(embedding)
         self.load_embeddings()
 
     def toggle_all_toggled(self, checked):
