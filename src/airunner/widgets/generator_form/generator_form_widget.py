@@ -458,18 +458,18 @@ class GeneratorForm(BaseWidget):
 
     def get_memory_options(self):
         return {
-            "use_last_channels": self.app.settings_manager.memory_settings.use_last_channels,
-            "use_enable_sequential_cpu_offload": self.app.settings_manager.memory_settings.use_enable_sequential_cpu_offload,
-            "enable_model_cpu_offload": self.app.settings_manager.memory_settings.enable_model_cpu_offload,
-            "use_attention_slicing": self.app.settings_manager.memory_settings.use_attention_slicing,
-            "use_tf32": self.app.settings_manager.memory_settings.use_tf32,
-            "use_cudnn_benchmark": self.app.settings_manager.memory_settings.use_cudnn_benchmark,
-            "use_enable_vae_slicing": self.app.settings_manager.memory_settings.use_enable_vae_slicing,
-            "use_accelerated_transformers": self.app.settings_manager.memory_settings.use_accelerated_transformers,
-            "use_torch_compile": self.app.settings_manager.memory_settings.use_torch_compile,
-            "use_tiled_vae": self.app.settings_manager.memory_settings.use_tiled_vae,
-            "use_tome_sd": self.app.settings_manager.memory_settings.use_tome_sd,
-            "tome_sd_ratio": self.app.settings_manager.memory_settings.tome_sd_ratio,
+            "use_last_channels": self.app.use_last_channels,
+            "use_enable_sequential_cpu_offload": self.app.use_enable_sequential_cpu_offload,
+            "enable_model_cpu_offload": self.app.enable_model_cpu_offload,
+            "use_attention_slicing": self.app.use_attention_slicing,
+            "use_tf32": self.app.use_tf32,
+            "use_cudnn_benchmark": self.app.use_cudnn_benchmark,
+            "use_enable_vae_slicing": self.app.use_enable_vae_slicing,
+            "use_accelerated_transformers": self.app.use_accelerated_transformers,
+            "use_torch_compile": self.app.use_torch_compile,
+            "use_tiled_vae": self.app.use_tiled_vae,
+            "use_tome_sd": self.app.use_tome_sd,
+            "tome_sd_ratio": self.app.tome_sd_ratio,
         }
 
     def set_seed(self, seed=None, latents_seed=None):
