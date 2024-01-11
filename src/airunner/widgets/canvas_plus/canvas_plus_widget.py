@@ -201,38 +201,68 @@ class CustomScene(QGraphicsScene):
     def __init__(self, parent=None):
         self.app = parent.app
         super().__init__(parent)
-        self.image = QImage(800, 600, QImage.Format.Format_ARGB32)
+        
+        # Get the size of the parent widget
+        parent_size = parent.size()
+
+        # Create the QImage with the size of the parent widget
+        self.image = QImage(parent_size.width(), parent_size.height(), QImage.Format.Format_ARGB32)
         self.image.fill(Qt.GlobalColor.white)
         self.item = QGraphicsPixmapItem(QPixmap.fromImage(self.image))
         self.addItem(self.item)
 
+        # Add a variable to store the last mouse position
+        self.last_pos = None
+
     def drawAt(self, position):
         painter = QPainter(self.image)
-        print(self.app.brush_settings["size"])
         painter.setPen(QPen(Qt.GlobalColor.black, self.app.brush_settings["size"], Qt.PenStyle.SolidLine, Qt.PenCapStyle.RoundCap))
-        painter.drawPoint(position)
+        
+        # Draw a line from the last position to the current one
+        if self.last_pos is not None:
+            painter.drawLine(self.last_pos, position)
+        else:
+            painter.drawPoint(position)
+        
         painter.end()
         self.item.setPixmap(QPixmap.fromImage(self.image))
 
     def eraseAt(self, position):
         painter = QPainter(self.image)
-        painter.setPen(QPen(Qt.GlobalColor.transparent, self.app.brush_settings["size"], Qt.PenStyle.SolidLine, Qt.PenCapStyle.RoundCap))
-        painter.setCompositionMode(QPainter.CompositionMode.CompositionMode_Clear)
-        painter.drawPoint(position)
+        painter.setPen(QPen(Qt.GlobalColor.white, self.app.brush_settings["size"], Qt.PenStyle.SolidLine, Qt.PenCapStyle.RoundCap))
+        painter.setCompositionMode(QPainter.CompositionMode.CompositionMode_Source)
+        
+        # Create a QPainterPath
+        path = QPainterPath()
+        
+        # Move to the last position and draw a line to the current one
+        if self.last_pos is not None:
+            path.moveTo(self.last_pos)
+            path.lineTo(position)
+        else:
+            path.addEllipse(position, self.app.brush_settings["size"]/2, self.app.brush_settings["size"]/2)
+        
+        # Draw the path
+        painter.drawPath(path)
+        
         painter.end()
         self.item.setPixmap(QPixmap.fromImage(self.image))
 
     def mousePressEvent(self, event):
+        self.last_pos = event.scenePos()
         if self.app.current_tool == "brush":
-            self.drawAt(event.scenePos())
+            self.drawAt(self.last_pos)
         elif self.app.current_tool == "eraser":
-            self.eraseAt(event.scenePos())
+            self.eraseAt(self.last_pos)
 
     def mouseMoveEvent(self, event):
         if self.app.current_tool == "brush":
             self.drawAt(event.scenePos())
         elif self.app.current_tool == "eraser":
             self.eraseAt(event.scenePos())
+        
+        # Update the last position
+        self.last_pos = event.scenePos()
 
 
 class CanvasPlusWidget(CanvasBaseWidget):
