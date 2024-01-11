@@ -559,7 +559,6 @@ class Settings(BaseModel):
     working_height = Column(Integer, default=512)
     hf_api_key_read_key = Column(String, default="")
     hf_api_key_write_key = Column(String, default="")
-    hf_username = Column(String, default="")
 
     brush_settings_id = Column(Integer, ForeignKey('brush_settings.id'))
     brush_settings = relationship("BrushSettings", back_populates="settings")
