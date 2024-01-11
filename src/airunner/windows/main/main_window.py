@@ -20,7 +20,7 @@ from airunner.aihandler.enums import MessageCode, Mode
 from airunner.aihandler.logger import Logger as logger
 from airunner.aihandler.pyqt_client import OfflineClient
 from airunner.aihandler.qtvar import MessageHandlerVar
-from airunner.aihandler.settings import LOG_LEVEL
+from airunner.aihandler.settings import DEFAULT_BRUSH_PRIMARY_COLOR, DEFAULT_BRUSH_SECONDARY_COLOR, LOG_LEVEL
 from airunner.airunner_api import AIRunnerAPI
 from airunner.data.models import DEFAULT_PATHS, LLMGenerator
 from airunner.filters.windows.filter_base import FilterBase
@@ -270,30 +270,18 @@ class MainWindow(
     def tome_sd_ratio(self, val):
         self.application_settings.setValue("tome_sd_ratio", val)
 
+    @property
+    def brush_settings(self):
+        return self.application_settings.value("brush_settings", dict(
+            size=1,
+            primary_color=DEFAULT_BRUSH_PRIMARY_COLOR,
+            secondary_color=DEFAULT_BRUSH_SECONDARY_COLOR,
+        ))
 
-    @property
-    def brush_size(self):
-        return self.application_settings.value("brush_size", 1, type=int)
-    
-    @brush_size.setter
-    def brush_size(self, val):
-        self.application_settings.setValue("brush_size", val)
-    
-    @property
-    def brush_primary_color(self):
-        return self.application_settings.value("brush_primary_color", "#000000")
-    
-    @brush_primary_color.setter
-    def brush_primary_color(self, val):
-        self.application_settings.setValue("brush_primary_color", val)
-
-    @property
-    def brush_secondary_color(self):
-        return self.application_settings.value("brush_secondary_color", "#ffffff")
-    
-    @brush_secondary_color.setter
-    def brush_secondary_color(self, val):
-        self.application_settings.setValue("brush_secondary_color", val)
+    @brush_settings.setter
+    def brush_settings(self, val):
+        print("SET BRUSH_SETTINGS", val)
+        self.application_settings.setValue("brush_settings", val)
 
     @property
     def ai_mode(self):
