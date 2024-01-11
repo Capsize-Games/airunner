@@ -195,17 +195,17 @@ class SettingsWindow(BaseWindow):
         if checkable:
             checked = False
             if name == "resize_on_import":
-                checked = self.app.settings_manager.resize_on_paste
+                checked = self.app.resize_on_paste
             elif name == "image_to_new_layer":
-                checked = self.app.settings_manager.image_to_new_layer
+                checked = self.app.image_to_new_layer is True
             elif name == "dark_mode":
-                checked = self.app.settings_manager.dark_mode_enabled
+                checked = self.app.dark_mode_enabled
             elif name == "check_for_updates":
-                checked = self.app.settings_manager.latest_version_check
+                checked = self.app.latest_version_check
             elif name == "enable_tts":
-                checked = self.app.settings_manager.enable_tts
+                checked = self.app.enable_tts
             elif name == "allow_online_mode":
-                checked = self.app.settings_manager.allow_online_mode
+                checked = self.app.allow_online_mode
 
             file_item.setCheckState(Qt.CheckState.Checked if checked else Qt.CheckState.Unchecked)
         # prevent file_item from being edited
@@ -228,22 +228,22 @@ class SettingsWindow(BaseWindow):
 
         if name == "resize_on_import":
             checked = item.checkState() == Qt.CheckState.Checked
-            self.app.settings_manager.set_value("settings.resize_on_paste", checked)
+            self.app.resize_on_paste = checked
         elif name == "image_to_new_layer":
             checked = item.checkState() == Qt.CheckState.Checked
-            self.app.settings_manager.set_value("settings.image_to_new_layer", checked)
+            self.app.image_to_new_layer = checked
         elif name == "dark_mode":
             checked = item.checkState() == Qt.CheckState.Checked
-            self.app.settings_manager.set_value("settings.dark_mode_enabled", checked)
+            self.app.dark_mode_enabled = checked
         elif name == "check_for_updates":
             checked = item.checkState() == Qt.CheckState.Checked
-            self.app.settings_manager.set_value("settings.latest_version_check", checked)
+            self.app.latest_version_check = checked
         elif name == "enable_tts":
             checked = item.checkState() == Qt.CheckState.Checked
-            self.app.settings_manager.set_value("settings.enable_tts", checked)
+            self.app.enable_tts = checked
         elif name == "allow_online_mode":
             checked = item.checkState() == Qt.CheckState.Checked
-            self.settings_manager.set_value("settings.allow_online_mode", checked)
+            self.app.allow_online_mode = checked
         elif name == "reset_settings":
             self.app.reset_settings()
         self.show_content(section, display_name, name, description)

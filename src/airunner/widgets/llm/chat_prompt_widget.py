@@ -22,7 +22,7 @@ class ChatPromptWidget(BaseWidget):
     spacer = None
 
     @property
-    def generator(self):
+    def llm_generator(self):
         try:
             return self.app.settings_manager.llm_generator
         except Exception as e:
@@ -31,23 +31,23 @@ class ChatPromptWidget(BaseWidget):
             traceback.print_exc()
     
     @property
-    def generator_settings(self):
+    def llm_generator_settings(self):
         try:
-            return self.app.generator_settings
+            return self.app.settings_manager.llm_generator_settings
         except Exception as e:
             Logger.error(e)
 
     @property
     def instructions(self):
-        return f"{self.generator.botname} loves {self.generator.username}. {self.generator.botname} is very nice. {self.generator.botname} uses compliments, kind responses, and nice words. Everything {self.generator.botname} says is nice. {self.generator.botname} is kind."
+        return f"{self.llm_generator.botname} loves {self.llm_generator.username}. {self.llm_generator.botname} is very nice. {self.llm_generator.botname} uses compliments, kind responses, and nice words. Everything {self.llm_generator.botname} says is nice. {self.llm_generator.botname} is kind."
 
     @property
     def current_generator(self):
-        return self.app.settings_manager.current_llm_generator
+        return self.app.current_llm_generator
 
     @property
     def instructions(self):
-        return f"{self.generator.botname} loves {self.generator.username}. {self.generator.botname} is very nice. {self.generator.botname} uses compliments, kind responses, and nice words. Everything {self.generator.botname} says is nice. {self.generator.botname} is kind."
+        return f"{self.llm_generator.botname} loves {self.llm_generator.username}. {self.llm_generator.botname} is very nice. {self.llm_generator.botname} uses compliments, kind responses, and nice words. Everything {self.llm_generator.botname} says is nice. {self.llm_generator.botname} is kind."
 
     def load_data(self):
         with session_scope() as session:
@@ -68,8 +68,8 @@ class ChatPromptWidget(BaseWidget):
 
         self.ui.username.blockSignals(True)
         self.ui.botname.blockSignals(True)
-        self.ui.username.setText(self.generator.username)
-        self.ui.botname.setText(self.generator.botname)
+        self.ui.username.setText(self.llm_generator.username)
+        self.ui.botname.setText(self.llm_generator.botname)
         self.ui.username.blockSignals(False)
         self.ui.botname.blockSignals(False)
     
@@ -117,14 +117,14 @@ class ChatPromptWidget(BaseWidget):
         if message.endswith("\""):
             message = message[:-1]
         message_object = Message(
-            name=self.generator.botname,
+            name=self.llm_generator.botname,
             message=message,
             conversation=self.conversation
         )
         with session_scope() as session:
             session.add(message_object)
 
-        if self.app.settings_manager.enable_tts:
+        if self.app.enable_tts:
             # split on sentence enders
             sentence_enders = [".", "?", "!", "\n"]
             text = message_object.message
@@ -195,9 +195,9 @@ class ChatPromptWidget(BaseWidget):
             
         self.generating = True
         self.disable_send_button()
-        #user_input = f"{self.generator.username} Says: \"{self.prompt}\""
+        #user_input = f"{self.llm_generator.username} Says: \"{self.prompt}\""
         # conversation = "\n".join(self.conversation_history)
-        # suffix = "\n".join([self.suffix, f'{self.generator.botname} Says: '])
+        # suffix = "\n".join([self.suffix, f'{self.llm_generator.botname} Says: '])
         # prompt = "\n".join([self.instructions, self.prefix, conversation, input, suffix])
 
         image = self.app.current_active_image() if (image_override is None or image_override is False) else image_override
@@ -209,50 +209,50 @@ class ChatPromptWidget(BaseWidget):
 
         with session_scope() as session:
             prompt_template = session.query(LLMPromptTemplate).filter(
-                LLMPromptTemplate.name == self.generator.prompt_template
+                LLMPromptTemplate.name == self.llm_generator.prompt_template
             ).first()
 
             data = {
                 "llm_request": True,
                 "request_data": {
                     "generator_name": generator_name,
-                    "model_path": self.generator_settings.model_version,
+                    "model_path": self.llm_generator_settings.model_version,
                     "stream": True,
                     "prompt": prompt,
                     "do_summary": False,
                     "is_bot_alive": True,
                     "conversation_history": self.conversation_history,
-                    "generator": self.generator,
+                    "generator": self.llm_generator,
                     "prefix": self.prefix,
                     "suffix": self.suffix,
-                    "dtype": self.generator_settings.dtype,
-                    "use_gpu": self.generator_settings.use_gpu,
+                    "dtype": self.llm_generator_settings.dtype,
+                    "use_gpu": self.llm_generator_settings.use_gpu,
                     "request_type": "image_caption_generator",
-                    "username": self.generator.username,
-                    "botname": self.generator.botname,
+                    "username": self.llm_generator.username,
+                    "botname": self.llm_generator.botname,
                     "prompt_template": prompt_template.template,
                     "parameters": {
-                        "override_parameters": self.generator.override_parameters,
-                        "top_p": self.generator_settings.top_p / 100.0,
-                        "max_length": self.generator_settings.max_length,
-                        "repetition_penalty": self.generator_settings.repetition_penalty / 100.0,
-                        "min_length": self.generator_settings.min_length,
-                        "length_penalty": self.generator_settings.length_penalty / 100,
-                        "num_beams": self.generator_settings.num_beams,
-                        "ngram_size": self.generator_settings.ngram_size,
-                        "temperature": self.generator_settings.temperature / 10000.0,
-                        "sequences": self.generator_settings.sequences,
-                        "top_k": self.generator_settings.top_k,
-                        "eta_cutoff": self.generator_settings.eta_cutoff / 100.0,
-                        "seed": self.generator_settings.do_sample,
-                        "early_stopping": self.generator_settings.early_stopping,
+                        "override_parameters": self.llm_generator.override_parameters,
+                        "top_p": self.llm_generator_settings.top_p / 100.0,
+                        "max_length": self.llm_generator_settings.max_length,
+                        "repetition_penalty": self.llm_generator_settings.repetition_penalty / 100.0,
+                        "min_length": self.llm_generator_settings.min_length,
+                        "length_penalty": self.llm_generator_settings.length_penalty / 100,
+                        "num_beams": self.llm_generator_settings.num_beams,
+                        "ngram_size": self.llm_generator_settings.ngram_size,
+                        "temperature": self.llm_generator_settings.temperature / 10000.0,
+                        "sequences": self.llm_generator_settings.sequences,
+                        "top_k": self.llm_generator_settings.top_k,
+                        "eta_cutoff": self.llm_generator_settings.eta_cutoff / 100.0,
+                        "seed": self.llm_generator_settings.do_sample,
+                        "early_stopping": self.llm_generator_settings.early_stopping,
                     },
                     "image": image,
                     "callback": callback
                 }
             }
             message_object = Message(
-                name=self.generator.username,
+                name=self.llm_generator.username,
                 message=self.prompt,
                 conversation=self.conversation
             )
@@ -309,28 +309,28 @@ class ChatPromptWidget(BaseWidget):
     
     def message_type_text_changed(self, val):
         with session_scope() as session:
-            session.add(self.generator)
-            self.generator.message_type = val
+            session.add(self.llm_generator)
+            self.llm_generator.message_type = val
 
     def action_button_clicked_generate_characters(self):
         pass
     
     def prefix_text_changed(self):
         with session_scope() as session:
-            session.add(self.generator)
-            self.generator.prefix = self.ui.prefix.toPlainText()
+            session.add(self.llm_generator)
+            self.llm_generator.prefix = self.ui.prefix.toPlainText()
 
     def suffix_text_changed(self):
         with session_scope() as session:
-            session.add(self.generator)
-            self.generator.suffix = self.ui.suffix.toPlainText()
+            session.add(self.llm_generator)
+            self.llm_generator.suffix = self.ui.suffix.toPlainText()
 
     def username_text_changed(self, val):
         with session_scope() as session:
-            session.add(self.generator)
-            self.settings_manager.set_value("generator.username", val)
+            session.add(self.llm_generator)
+            self.app.settings_manager.set_value("llm_generator.username", val)
         
     def botname_text_changed(self, val):
         with session_scope() as session:
-            session.add(self.generator)
-            self.settings_manager.set_value("generator.botname", val)
+            session.add(self.llm_generator)
+            self.app.settings_manager.set_value("llm_generator.botname", val)

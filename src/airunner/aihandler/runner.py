@@ -29,7 +29,6 @@ from airunner.aihandler.mixins.scheduler_mixin import SchedulerMixin
 from airunner.aihandler.mixins.txttovideo_mixin import TexttovideoMixin
 from airunner.aihandler.settings import LOG_LEVEL, AIRUNNER_ENVIRONMENT
 from airunner.data.managers import SettingsManager
-from airunner.prompt_builder.prompt_data import PromptData
 from airunner.scripts.realesrgan.main import RealESRGAN
 from airunner.aihandler.logger import Logger
 
@@ -97,6 +96,10 @@ class SDRunner(
         return self._controlnet
 
     @property
+    def allow_online_mode(self):
+        return self.options.get("allow_online_mode", False)
+
+    @property
     def vae_path(self):
         return self.options.get("vae_path", "openai/consistency-decoder")
 
@@ -127,7 +130,7 @@ class SDRunner(
         :return:
         """
         if self._allow_online_mode is None:
-            self._allow_online_mode = self.settings_manager.allow_online_mode
+            self._allow_online_mode = self.allow_online_mode
         return self._allow_online_mode
 
     @property
@@ -677,15 +680,19 @@ class SDRunner(
 
     @property
     def hf_api_key_read_key(self):
-        return self.settings_manager.hf_api_key_read_key
+        return self.options.get("hf_api_key_read_key", "")
+    
+    @hf_api_key_read_key.setter
+    def hf_api_key_read_key(self, value):
+        self.options["hf_api_key_read_key"] = value
 
     @property
     def hf_api_key_write_key(self):
-        return self.settings_manager.hf_api_key_write_key
+        return self.options.get("hf_api_key_write_key", "")
 
-    @property
-    def hf_username(self):
-        return self.settings_manager.hf_username
+    @hf_api_key_write_key.setter
+    def hf_api_key_write_key(self, value):
+        self.options["hf_api_key_write_key"] = value
 
     @property
     def original_model_data(self):
@@ -907,12 +914,12 @@ class SDRunner(
                 try:
                     images = output.images
                 except AttributeError:
-                    pass
+                    Logger.error("Unable to get images from output")
                 if self.action_has_safety_checker:
                     try:
                         nsfw_content_detected = output.nsfw_content_detected
                     except AttributeError:
-                        pass
+                        Logger.error("Unable to get nsfw_content_detected from output")
             return images, nsfw_content_detected
 
     def generate_latents(self):
@@ -1025,7 +1032,8 @@ class SDRunner(
         args["clip_skip"] = self.clip_skip
 
         with torch.inference_mode():
-            return self.pipe(**args)
+            for n in range(self.n_samples):
+                yield self.pipe(**args)
 
     def read_video(self):
         reader = imageio.get_reader(self.input_video, "ffmpeg")
