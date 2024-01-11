@@ -590,7 +590,6 @@ class Settings(BaseModel):
     current_llm_generator = Column(String, default="casuallm")
 
     active_image_editor_section = Column(String, default="canvas")
-    enable_advanced_mode = Column(Boolean, default=False)
 
     generator_settings_override_id = Column(Integer, ForeignKey('generator_settings.id'))
 
