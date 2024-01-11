@@ -216,7 +216,7 @@
               <bool>true</bool>
              </property>
              <property name="settings_property" stdset="0">
-              <string>llm_generator_setting.repetition_penalty</string>
+              <string>llm_generator_settings.repetition_penalty</string>
              </property>
              <property name="slider_single_step" stdset="0">
               <number>0</number>
@@ -262,7 +262,7 @@
               <bool>false</bool>
              </property>
              <property name="settings_property" stdset="0">
-              <string>llm_generator_setting.min_length</string>
+              <string>llm_generator_settings.min_length</string>
              </property>
              <property name="slider_single_step" stdset="0">
               <number>1</number>
@@ -312,7 +312,7 @@
               <bool>true</bool>
              </property>
              <property name="settings_property" stdset="0">
-              <string>llm_generator_setting.top_p</string>
+              <string>llm_generator_settings.top_p</string>
              </property>
              <property name="slider_single_step" stdset="0">
               <number>1</number>
@@ -358,7 +358,7 @@
               <bool>false</bool>
              </property>
              <property name="settings_property" stdset="0">
-              <string>llm_generator_setting.max_length</string>
+              <string>llm_generator_settings.max_length</string>
              </property>
              <property name="slider_single_step" stdset="0">
               <number>1</number>
@@ -445,7 +445,7 @@
               <bool>false</bool>
              </property>
              <property name="settings_property" stdset="0">
-              <string>llm_generator_setting.ngram_size</string>
+              <string>llm_generator_settings.ngram_size</string>
              </property>
              <property name="slider_single_step" stdset="0">
               <number>1</number>
@@ -491,7 +491,7 @@
               <bool>true</bool>
              </property>
              <property name="settings_property" stdset="0">
-              <string>llm_generator_setting.temperature</string>
+              <string>llm_generator_settings.temperature</string>
              </property>
              <property name="slider_single_step" stdset="0">
               <number>1</number>
@@ -541,7 +541,7 @@
               <bool>true</bool>
              </property>
              <property name="settings_property" stdset="0">
-              <string>llm_generator_setting.length_penalty</string>
+              <string>llm_generator_settings.length_penalty</string>
              </property>
              <property name="slider_single_step" stdset="0">
               <number>1</number>
@@ -587,7 +587,7 @@
               <bool>false</bool>
              </property>
              <property name="settings_property" stdset="0">
-              <string>llm_generator_setting.num_beams</string>
+              <string>llm_generator_settings.num_beams</string>
              </property>
              <property name="slider_single_step" stdset="0">
               <number>1</number>
@@ -644,7 +644,7 @@
               <bool>false</bool>
              </property>
              <property name="settings_property" stdset="0">
-              <string>llm_generator_setting.sequences</string>
+              <string>llm_generator_settings.sequences</string>
              </property>
              <property name="slider_single_step" stdset="0">
               <number>1</number>
@@ -690,7 +690,7 @@
               <bool>false</bool>
              </property>
              <property name="settings_property" stdset="0">
-              <string>llm_generator_setting.top_k</string>
+              <string>llm_generator_settings.top_k</string>
              </property>
              <property name="slider_single_step" stdset="0">
               <number>1</number>
