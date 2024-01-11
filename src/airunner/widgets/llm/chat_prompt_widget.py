@@ -43,7 +43,7 @@ class ChatPromptWidget(BaseWidget):
 
     @property
     def current_generator(self):
-        return self.app.settings_manager.current_llm_generator
+        return self.app.current_llm_generator
 
     @property
     def instructions(self):
