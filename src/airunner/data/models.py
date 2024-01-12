@@ -208,26 +208,6 @@ class Brush(BaseModel):
     id = Column(Integer, primary_key=True)
     name = Column(String, nullable=False)
     thumbnail = Column(String, nullable=False)
-
-
-class MetadataSettings(BaseModel):
-    __tablename__ = 'metadata_settings'
-
-    id = Column(Integer, primary_key=True)
-    image_export_metadata_prompt = Column(Boolean, default=True)
-    image_export_metadata_negative_prompt = Column(Boolean, default=True)
-    image_export_metadata_scale = Column(Boolean, default=True)
-    image_export_metadata_seed = Column(Boolean, default=True)
-    image_export_metadata_latents_seed = Column(Boolean, default=True)
-    image_export_metadata_steps = Column(Boolean, default=True)
-    image_export_metadata_ddim_eta = Column(Boolean, default=True)
-    image_export_metadata_iterations = Column(Boolean, default=True)
-    image_export_metadata_samples = Column(Boolean, default=True)
-    image_export_metadata_model = Column(Boolean, default=True)
-    image_export_metadata_model_branch = Column(Boolean, default=True)
-    image_export_metadata_scheduler = Column(Boolean, default=True)
-    export_metadata = Column(Boolean, default=True)
-    import_metadata = Column(Boolean, default=True)
     
 
 class ImageFilter(BaseModel):
