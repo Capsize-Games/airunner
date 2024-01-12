@@ -1,13 +1,10 @@
-import os
 import time
 from transformers import SpeechT5Processor, SpeechT5ForTextToSpeech, SpeechT5HifiGan
 import torch
 import sounddevice as sd
 from datasets import load_dataset
 import threading
-import soundfile as sf
 import time
-import numpy as np
 
 
 class TTS:
@@ -61,9 +58,6 @@ class TTS:
         self.vocoder = None
         self.speaker_embeddings = None
         self.sentences = []
-        # if not self.thread_started:
-        #     self.thread_started = True
-        #     threading.Thread(target=self.play_buffer).start()
         
         self.stream = sd.OutputStream(samplerate=24000, channels=1)
         self.stream_2 = sd.OutputStream(samplerate=20000, channels=1)
@@ -80,12 +74,10 @@ class TTS:
     def run(self):
         self.initialize()
         self.process_sentences()
-        #self.start_speech_processing()
 
     def load_model(self):
         self.processor = SpeechT5Processor.from_pretrained(
             self.processor_path,
-            # load_in_4bit=True,
         )
         self.model = SpeechT5ForTextToSpeech.from_pretrained(
             self.model_path
@@ -160,16 +152,6 @@ class TTS:
 
     def add_sentence(self, sentence, stream):
         self.process_sentence(sentence, stream)
-        # self.current_sentence += word
-        # # check if self.current_sentence ends with a period
-        # if self.current_sentence[-1] in self.single_character_sentence_enders or (
-        #     len(self.current_sentence) > 1 and self.current_sentence[-2:] \
-        #         in self.double_character_sentence_enders
-        # ):
-        #     # self.sentences.append(self.current_sentence)
-        #     # self.current_sentence = ""
-        #     self.process_sentence(self.current_sentence)
-        #     self.current_sentence = ""
 
     def process_speech(self):
         sd.default.blocksize = 4096
@@ -180,7 +162,6 @@ class TTS:
     tts_sentence = None
 
     def process_sentence(self, text, stream):
-        tts_sentence = None
         # add delay to inputs
         text = text.strip() + ". "
         inputs = self.processor(text=text, return_tensors="pt")
@@ -194,11 +175,6 @@ class TTS:
             vocoder=self.vocoder
         )
         tts = speech.cpu().float().numpy()
-        # if self.tts_sentence is None:
-        #     self.tts_sentence = tts
-        # else:
-        #     self.tts_sentence = np.concatenate((tts_sentence, tts))
-        #self.buffer.append(tts_sentence)
 
         if stream == "a":
             self.stream.write(tts)
@@ -227,13 +203,3 @@ class TTS:
                 )
                 time.sleep(self.sentence_delay_time / 1000)
 
-        # save to file
-        # check if file exists and append a number to the filename if it does
-        # if os.path.exists("sentence.wav"):
-        #     i = 1
-        #     while os.path.exists(f"sentence{i}.wav"):
-        #         i += 1
-        #     sf.write(f"sentence{i}.wav", sentence, self.sentence_sample_rate)
-        # else:
-        #     print("Saving sentence.wav")
-        #     sf.write("sentence.wav", sentence, self.sentence_sample_rate)
