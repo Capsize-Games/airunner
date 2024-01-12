@@ -569,6 +569,29 @@ class MainWindow(
     @canvas_settings.setter
     def canvas_settings(self, val):
         self.application_settings.setValue("grid_settings", val)
+
+    @property
+    def metadata_settings(self):
+        return self.application_settings.value("metadata_settings", dict(
+            image_export_metadata_prompt=True,
+            image_export_metadata_negative_prompt=True,
+            image_export_metadata_scale=True,
+            image_export_metadata_seed=True,
+            image_export_metadata_latents_seed=True,
+            image_export_metadata_steps=True,
+            image_export_metadata_ddim_eta=True,
+            image_export_metadata_iterations=True,
+            image_export_metadata_samples=True,
+            image_export_metadata_model=True,
+            image_export_metadata_model_branch=True,
+            image_export_metadata_scheduler=True,
+            export_metadata=True,
+            import_metadata=True,
+        ))
+    
+    @metadata_settings.setter
+    def metadata_settings(self, val):
+        self.application_settings.setValue("metadata_settings", val)            
         
     @property
     def generator_settings(self):
