@@ -49,12 +49,11 @@ class Engine:
         logger.info("generator_sample called")
         is_llm = self.is_llm_request(data)
         is_tts = self.is_tts_request(data)
-        self.request_data = data["request_data"]
         if is_llm and self.model_type != "llm":
             logger.info("Switching to LLM model")
             self.model_type = "llm"
-            do_unload_model = self.request_data["unload_unused_model"]
-            do_move_to_cpu = not do_unload_model and self.request_data["move_unused_model_to_cpu"]
+            do_unload_model = data["request_data"].get("unload_unused_model", False)
+            do_move_to_cpu = not do_unload_model and data["request_data"].get("move_unused_model_to_cpu", False)
             if do_move_to_cpu:
                 self.move_pipe_to_cpu()
             elif do_unload_model:
@@ -63,6 +62,7 @@ class Engine:
                 self.clear_memory()
             # self.llm.move_to_device()
         elif is_tts:
+            self.request_data = data["request_data"]
             callback = data["request_data"].get("callback", None)
             message_object = data["request_data"].get("message_object", None)
             is_bot = data["request_data"].get("is_bot", False)
@@ -73,8 +73,10 @@ class Engine:
             self.tts.add_sentence(data["request_data"]["text"], "a")
         elif not is_llm and not is_tts and self.model_type != "art":
             logger.info("Switching to art model")
+            do_unload_model = data["options"].get("unload_unused_model", False)
+            move_unused_model_to_cpu = data["options"].get("move_unused_model_to_cpu", False)
             self.model_type = "art"
-            self.unload_llm()
+            self.unload_llm(do_unload_model, move_unused_model_to_cpu)
 
         if is_llm:
             logger.info("Engine calling llm.do_generate")
@@ -82,6 +84,8 @@ class Engine:
         elif not is_tts:
             logger.info("Engine calling sd.generator_sample")
             self.sd.generator_sample(data)
+    
+    request_data = None
 
     def is_llm_request(self, data):
         return "llm_request" in data
@@ -89,7 +93,7 @@ class Engine:
     def is_tts_request(self, data):
         return "tts_request" in data
 
-    def unload_llm(self):
+    def unload_llm(self, do_unload_model, move_unused_model_to_cpu):
         """
         This function will either leave the LLM
         on the GPU, move it to the CPU or unload it.
@@ -99,15 +103,12 @@ class Engine:
         VRAM to keep the LLM loaded while
         using other models.
         """
-        do_unload_model = self.request_data["unload_unused_model"]
-        move_unused_model_to_cpu = self.request_data["move_unused_model_to_cpu"]
-
-
         do_move_to_cpu = not do_unload_model and move_unused_model_to_cpu
-        dtype = self.request_data["dtype"]
-        if dtype in ["2bit", "4bit", "8bit"]:
-            do_unload_model = True
-            do_move_to_cpu = False
+        if self.request_data:
+            dtype = self.request_data["dtype"]
+            if dtype in ["2bit", "4bit", "8bit"]:
+                do_unload_model = True
+                do_move_to_cpu = False
 
         if do_move_to_cpu:
             logger.info("Moving LLM to CPU")
