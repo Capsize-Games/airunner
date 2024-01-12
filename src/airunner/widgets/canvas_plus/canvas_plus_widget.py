@@ -12,7 +12,6 @@ from PyQt6 import QtWidgets, QtCore
 from PyQt6.QtWidgets import QGraphicsItemGroup
 
 from airunner.aihandler.logger import Logger
-from airunner.cursors.circle_brush import CircleCursor
 from airunner.widgets.canvas_plus.canvas_base_widget import CanvasBaseWidget
 from airunner.widgets.canvas_plus.templates.canvas_plus_ui import Ui_canvas
 from airunner.utils import apply_opacity_to_image
@@ -55,26 +54,6 @@ class CanvasPlusWidget(CanvasBaseWidget):
         with self.layer_container_widget.current_layer() as layer:
             layer.pivot_x = value.x()
             layer.pivot_y = value.y()
-
-    @property
-    def active_grid_area_selected(self):
-        return self.app.current_tool == "active_grid_area"
-
-    @property
-    def select_selected(self):
-        return self.app.current_tool == "select"
-
-    @property
-    def eraser_selected(self):
-        return self.app.current_tool == "eraser"
-
-    @property
-    def brush_selected(self):
-        return self.app.current_tool == "brush"
-
-    @property
-    def move_selected(self):
-        return self.app.current_tool == "move"
 
     @property
     def brush_size(self):
@@ -452,25 +431,6 @@ class CanvasPlusWidget(CanvasBaseWidget):
             self.clear_lines()
             self.has_lines = False
     
-    def update_cursor(self):
-        # if self.is_canvas_drag_mode:
-        #     # show as grab cursor
-        #     self.canvas_container.setCursor(Qt.CursorShape.ClosedHandCursor)
-        if self.move_selected:
-            self.canvas_container.setCursor(Qt.CursorShape.OpenHandCursor)
-        elif self.active_grid_area_selected:
-            self.canvas_container.setCursor(Qt.CursorShape.DragMoveCursor)
-        elif self.brush_selected or self.eraser_selected:
-            self.canvas_container.setCursor(
-                CircleCursor(
-                    Qt.GlobalColor.white,
-                    Qt.GlobalColor.transparent,
-                    self.brush_size
-                )
-            )
-        else:
-            self.canvas_container.setCursor(QCursor(Qt.CursorShape.ArrowCursor))
-
     def handle_image_data(self, data):
         print("canvas plus widget handle image data")
         print(data)

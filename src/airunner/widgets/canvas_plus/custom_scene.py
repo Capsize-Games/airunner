@@ -6,6 +6,8 @@ from PyQt6.QtGui import QPainterPath
 from PyQt6.QtGui import QEnterEvent
 from PyQt6.QtGui import QTransform
 
+from airunner.cursors.circle_brush import CircleCursor
+
 
 class CustomScene(QGraphicsScene):
     def __init__(self, parent=None):
@@ -112,26 +114,16 @@ class CustomScene(QGraphicsScene):
 
     def handle_cursor(self, event):
         if self.app.current_tool in ['brush', 'eraser']:
-            # Create a QPixmap, draw a circle on it
-            pixmap = QPixmap(self.app.brush_settings["size"], self.app.brush_settings["size"])
-            pixmap.fill(Qt.GlobalColor.transparent)
-            painter = QPainter(pixmap)
-
-            # Draw outer white circle
-            painter.setPen(QPen(Qt.GlobalColor.white, 3))  # Set color to white and width to 3
-            painter.setBrush(Qt.GlobalColor.transparent)
-            painter.drawEllipse(0, 0, self.app.brush_settings["size"], self.app.brush_settings["size"])
-
-            # Draw inner black circle
-            painter.setPen(QPen(Qt.GlobalColor.black, 3))  # Set color to black and width to 3
-            painter.setBrush(Qt.GlobalColor.transparent)
-            painter.drawEllipse(3, 3, self.app.brush_settings["size"] - 6, self.app.brush_settings["size"] - 6)
-            
-            painter.end()
-
-            # Create a QCursor with the QPixmap
-            cursor = QCursor(pixmap)
-            self.parent().setCursor(cursor)
+            self.parent().setCursor(CircleCursor(
+                Qt.GlobalColor.white,
+                Qt.GlobalColor.transparent,
+                self.app.brush_settings["size"],
+            ))
+        elif self.app.current_tool == "active_grid_area":
+            if event.buttons() == Qt.MouseButton.LeftButton:
+                self.parent().setCursor(Qt.CursorShape.ClosedHandCursor)
+            else:
+                self.parent().setCursor(Qt.CursorShape.OpenHandCursor)
         else:
             self.parent().setCursor(Qt.CursorShape.ArrowCursor)
         
@@ -139,6 +131,14 @@ class CustomScene(QGraphicsScene):
         if type(event) == QEnterEvent:
             self.handle_cursor(event)
         return super(CustomScene, self).event(event)
+
+    def mousePressEvent(self, event):
+        super(CustomScene, self).mousePressEvent(event)
+        self.handle_cursor(event)
+    
+    def mouseReleaseEvent(self, event):
+        super(CustomScene, self).mouseReleaseEvent(event)
+        self.handle_cursor(event)
 
     def mouseMoveEvent(self, event):
         self.handle_cursor(event)
