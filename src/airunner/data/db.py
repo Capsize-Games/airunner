@@ -6,7 +6,7 @@ from airunner.data.bootstrap.pipeline_bootstrap_data import pipeline_bootstrap_d
 from airunner.data.models import ControlnetModel, LLMPromptTemplate, Pipeline, Document, \
     AIModel, \
     ImageFilter, ImageFilterValue, Scheduler, ActionScheduler, \
-    LLMGenerator, LLMModelVersion, StandardImageWidgetSettings
+    LLMModelVersion, StandardImageWidgetSettings
 from airunner.data.session_scope import session_scope, engine
 from alembic.config import Config
 from alembic import command
@@ -164,9 +164,6 @@ def prepare_database():
                         
 
             for generator_name, generator_data in seed_data.items():
-                generator = LLMGenerator(name=generator_name)
-                my_session.add(generator)
-
                 if "model_versions" in generator_data:
                     model_versions = []
                     for name in generator_data["model_versions"]:
@@ -179,13 +176,8 @@ def prepare_database():
                 my_session.add(generator)
                 
 
-            from airunner.data.bootstrap.prompt_templates import prompt_template_seed_data
-            for data in prompt_template_seed_data:
-                prompt_template = LLMPromptTemplate(
-                    name=data["name"],
-                    template=data["template"]
-                )
-                my_session.add(prompt_template)
+            prompt_template = LLMPromptTemplate()
+            my_session.add(prompt_template)
                 
 
     HERE = os.path.abspath(os.path.dirname(__file__)) 

@@ -5,7 +5,7 @@ from PyQt6.QtWidgets import QWidget
 
 from airunner.widgets.base_widget import BaseWidget
 from airunner.widgets.llm.templates.llm_settings_ui import Ui_llm_settings_widget
-from airunner.data.models import LLMGenerator, AIModel, LLMPromptTemplate
+from airunner.data.models import AIModel, LLMModelVersion, LLMPromptTemplate
 from airunner.aihandler.logger import Logger
 from airunner.data.session_scope import session_scope
 
@@ -88,13 +88,6 @@ class LLMSettingsWidget(BaseWidget):
         self.ui.sequences.initialize_properties()
         self.ui.top_k.initialize_properties()
 
-        with session_scope() as session:
-            prompt_templates = [template.name for template in session.query(LLMPromptTemplate).all()]
-            model_names = [model.name for model in session.query(LLMGenerator).all()]
-
-        self.ui.prompt_template.clear()
-        self.ui.prompt_template.addItems(prompt_templates)
-
         self.ui.leave_in_vram.setChecked(not self.app.unload_unused_models and not self.app.move_unused_model_to_cpu)
         self.ui.move_to_cpu.setChecked(self.app.move_unused_model_to_cpu)
         self.ui.unload_model.setChecked(self.app.unload_unused_models)
@@ -112,18 +105,38 @@ class LLMSettingsWidget(BaseWidget):
             self.set_dtype(dtype)
 
         # get unique model names
-        model_names = list(set(model_names))
         self.ui.model.clear()
-        self.ui.model.addItems(model_names)
+        self.ui.model.addItems([
+            "seq2seq",
+            "casuallm",
+            "visualqa",
+        ])
         self.ui.model.setCurrentText(self.current_generator)
+
+        with session_scope() as session:
+            templates = session.query(LLMPromptTemplate).filter(
+                LLMPromptTemplate.llm_category == self.current_generator
+            ).all()
+            names = [template.name for template in templates]
+            self.ui.prompt_template.blockSignals(True)
+            self.ui.prompt_template.clear()
+            self.ui.prompt_template.addItems(names)
+            template_name = self.app.llm_generator["prompt_template"]
+            if template_name == "":
+                template_name = names[0]
+                llm_generator = self.app.llm_generator
+                llm_generator["prompt_template"] = template_name
+                self.app.llm_generator = llm_generator
+            self.ui.prompt_template.setCurrentText(template_name)
+            self.ui.prompt_template.blockSignals(False)
+
         self.update_model_version_combobox()
-        if self.generator:
-            self.ui.model_version.setCurrentText(llm_generator_settings["model_version"])
-            self.ui.random_seed.setChecked(llm_generator_settings["random_seed"])
-            self.ui.do_sample.setChecked(llm_generator_settings["do_sample"])
-            self.ui.early_stopping.setChecked(llm_generator_settings["early_stopping"])
-            self.ui.use_gpu_checkbox.setChecked(llm_generator_settings["use_gpu"])
-            self.ui.override_parameters.setChecked(self.generator.override_parameters)
+        self.ui.model_version.setCurrentText(llm_generator_settings["model_version"])
+        self.ui.random_seed.setChecked(llm_generator_settings["random_seed"])
+        self.ui.do_sample.setChecked(llm_generator_settings["do_sample"])
+        self.ui.early_stopping.setChecked(llm_generator_settings["early_stopping"])
+        self.ui.use_gpu_checkbox.setChecked(llm_generator_settings["use_gpu"])
+        self.ui.override_parameters.setChecked(self.app.llm_generator["override_parameters"])
 
         self.ui.model.blockSignals(False)
         self.ui.model_version.blockSignals(False)
@@ -150,11 +163,9 @@ class LLMSettingsWidget(BaseWidget):
         self.initialize_form()
 
     def model_version_changed(self, val):
-        with session_scope() as session:
-            session.add(self.generator)
-            llm_generator_settings = self.app.llm_generator_settings
-            llm_generator_settings["model_version"] = val
-            self.app.llm_generator_settings = llm_generator_settings
+        llm_generator_settings = self.app.llm_generator_settings
+        llm_generator_settings["model_version"] = val
+        self.app.llm_generator_settings = llm_generator_settings
     
     def toggle_move_model_to_cpu(self, val):
         self.app.move_unused_model_to_cpu = val
@@ -162,14 +173,14 @@ class LLMSettingsWidget(BaseWidget):
             self.app.unload_unused_model = False
 
     def override_parameters_toggled(self, val):
-        with session_scope() as session:
-            session.add(self.generator)
-            self.generator.override_parameters = val
+        llm_generator_settings = self.app.llm_generator_settings
+        llm_generator_settings["override_parameters"] = val
+        self.app.llm_generator_settings = llm_generator_settings
         
     def prompt_template_text_changed(self, value):
-        with session_scope() as session:
-            session.add(self.generator)
-            self.generator.prompt_template = value
+        llm_generator = self.app.llm_generator
+        llm_generator["prompt_template"] = value
+        self.app.llm_generator = llm_generator
         
     def toggled_2bit(self, val):
         if val:
@@ -269,3 +280,11 @@ class LLMSettingsWidget(BaseWidget):
     def set_tab(self, tab_name):
         index = self.ui.tabWidget.indexOf(self.ui.tabWidget.findChild(QWidget, tab_name))
         self.ui.tabWidget.setCurrentIndex(index)
+    
+    def bot_personality_changed(self):
+        value = self.ui.bot_personality.currentText()
+        self.app.bot_personality = value
+
+    def bot_mood_changed(self):
+        value = self.ui.bot_mood.currentText()
+        self.app.bot_mood = value
