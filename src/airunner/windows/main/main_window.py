@@ -22,7 +22,7 @@ from airunner.aihandler.pyqt_client import OfflineClient
 from airunner.aihandler.qtvar import MessageHandlerVar
 from airunner.aihandler.settings import DEFAULT_BRUSH_PRIMARY_COLOR, DEFAULT_BRUSH_SECONDARY_COLOR, LOG_LEVEL
 from airunner.airunner_api import AIRunnerAPI
-from airunner.data.models import DEFAULT_PATHS, LLMGenerator
+from airunner.data.models import DEFAULT_PATHS
 from airunner.filters.windows.filter_base import FilterBase
 from airunner.input_event_manager import InputEventManager
 from airunner.settings import BASE_PATH
@@ -661,7 +661,7 @@ class MainWindow(
             eta_cutoff=10,
             early_stopping=True,
             random_seed=False,
-            model_version="google/flan-t5-xl",
+            model_version="mistralai/Mistral-7B-Instruct-v0.1",
             dtype="32bit",
             use_gpu=True,
         ))
@@ -670,6 +670,36 @@ class MainWindow(
     def llm_generator_settings(self, val):
         self.application_settings.setValue("llm_generator_settings", val)
     #### END GENERATOR SETTINGS ####
+
+    @property
+    def tts_settings(self):
+        return self.application_settings.value("tts_settings", dict(
+            language="English",
+            voice="v2/en_speaker_6",
+            gender="Male",
+            use_bark=True,
+            enable_tts=True,
+        ))
+    
+    @tts_settings.setter
+    def tts_settings(self, val):
+        self.application_settings.setValue("tts_settings", val)
+
+    @property
+    def llm_generator(self):
+        return self.application_settings.value("llm_generator", dict(
+            username="User",
+            botname="Bot",
+            message_type="chat",
+            bot_personality="happy. He loves {{ username }}",
+            bot_mood="",
+            prompt_template="",
+            override_parameters=False
+        ))
+    
+    @llm_generator.setter
+    def llm_generator(self, val):
+        self.application_settings.setValue("llm_generator", val)
 
     @property
     def nsfw_filter(self):
@@ -784,14 +814,6 @@ class MainWindow(
         self.application_settings.setValue("image_export_type", val)
 
     @property
-    def enable_tts(self):
-        return self.application_settings.value("enable_tts", True, type=bool)
-    
-    @enable_tts.setter
-    def enable_tts(self, val):
-        self.application_settings.setValue("enable_tts", val)
-    
-    @property
     def image_to_new_layer(self):
         return self.application_settings.value("image_to_new_layer", True, type=bool)
     
@@ -823,20 +845,6 @@ class MainWindow(
     @allow_online_mode.setter
     def allow_online_mode(self, val):
         self.application_settings.setValue("allow_online_mode", val)
-
-    @property
-    def generator(self):
-        with session_scope() as session:
-            if self._generator is None:
-                try:
-                    self._generator = session.query(LLMGenerator).filter(
-                        LLMGenerator.name == self.ui.standard_image_widget.ui.llm_settings_widget.current_generator
-                    ).first()
-                    if self._generator is None:
-                        logger.error("Unable to locate generator by name " + self.ui.standard_image_widget.ui.llm_settings_widget.current_generator if self.ui.llm_settings_widget.current_generator else "None")
-                except Exception as e:
-                    logger.error(e)
-            return self._generator
     
     @property
     def generate_signal(self):

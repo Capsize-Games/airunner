@@ -542,8 +542,6 @@ class SDRunner(
             self.pix2pix = value
         elif self.is_vid_action:
             self.txt2vid = value
-        else:
-            Logger.warning(f"Invalid action {self.action} unable to set pipe")
 
     @property
     def cuda_is_available(self):
