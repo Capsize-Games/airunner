@@ -8,8 +8,10 @@ from airunner.widgets.grid_preferences.grid_preferences_widget import GridPrefer
 from airunner.widgets.image_generator_preferences.image_generator_preferences_widget import ImageGeneratorPreferencesWidget
 
 from airunner.widgets.keyboard_shortcuts.keyboard_shortcuts_widget import KeyboardShortcutsWidget
+from airunner.widgets.llm.bot_preferences import BotPreferencesWidget
 from airunner.widgets.memory_preferences.memory_preferences_widget import MemoryPreferencesWidget
 from airunner.widgets.paths.paths_widget import PathsWidget
+from airunner.widgets.tts.templates.tts_prefernces_widget import TTSPreferencesWidget
 from airunner.windows.settings.templates.airunner_settings_ui import Ui_airunner_settings
 from airunner.windows.base_window import BaseWindow
 
@@ -114,6 +116,21 @@ class SettingsWindow(BaseWindow):
                 ]
             },
             {
+                "section": "Text and Speech Preferences",
+                "files": [
+                    {
+                        "name": "tts_preferences",
+                        "display_name": "Text-to-Speech",
+                        "checkable": False
+                    },
+                    {
+                        "name": "bot_preferences",
+                        "display_name": "Chatbot Preferences",
+                        "checkable": False
+                    }
+                ]
+            },
+            {
                 "section": "Miscellaneous Preferences",
                 "files": [
                     {
@@ -127,13 +144,7 @@ class SettingsWindow(BaseWindow):
                         "display_name": "Check for updates",
                         "checkable": True,
                         "description": "If enabled, AI Runner will check for updates on startup."
-                    },
-                    {
-                        "name": "enable_tts",
-                        "display_name": "Enable LLM Text to Speech",
-                        "checkable": True,
-                        "description": "If enabled, text to speech will be used for LLMs."
-                    },
+                    }
                 ]
             },
             {
@@ -202,8 +213,6 @@ class SettingsWindow(BaseWindow):
                 checked = self.app.dark_mode_enabled
             elif name == "check_for_updates":
                 checked = self.app.latest_version_check
-            elif name == "enable_tts":
-                checked = self.app.enable_tts
             elif name == "allow_online_mode":
                 checked = self.app.allow_online_mode
 
@@ -238,9 +247,6 @@ class SettingsWindow(BaseWindow):
         elif name == "check_for_updates":
             checked = item.checkState() == Qt.CheckState.Checked
             self.app.latest_version_check = checked
-        elif name == "enable_tts":
-            checked = item.checkState() == Qt.CheckState.Checked
-            self.app.enable_tts = checked
         elif name == "allow_online_mode":
             checked = item.checkState() == Qt.CheckState.Checked
             self.app.allow_online_mode = checked
@@ -261,6 +267,8 @@ class SettingsWindow(BaseWindow):
             "grid": GridPreferencesWidget,
             "memory": MemoryPreferencesWidget,
             "hf_api_key": APITokenWidget,
+            "tts_preferences": TTSPreferencesWidget,
+            "bot_preferences": BotPreferencesWidget
         }
         if name in widgets:
             widget_object = widgets[name]()

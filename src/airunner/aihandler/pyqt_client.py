@@ -118,6 +118,9 @@ class OfflineClient(QtCore.QObject):
         logger.error(error)
 
     def callback(self, data):
+        print("PYQT_CLIENT CALLBACK")
+        print(data)
+        print("*"*80)
         data["do_base64"] = self.do_base64
         self.sd_runner.generator_sample(data)
 
