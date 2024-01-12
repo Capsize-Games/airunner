@@ -310,7 +310,7 @@ class MainWindow(
                 
     @property
     def base_path(self):
-        return self.application_settings.value("base_path", BASE_PATH + "/models")
+        return self.application_settings.value("base_path", os.path.join(BASE_PATH, "models"))
     
     @base_path.setter
     def base_path(self, val):

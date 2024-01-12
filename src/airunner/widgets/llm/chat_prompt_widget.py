@@ -124,39 +124,39 @@ class ChatPromptWidget(BaseWidget):
         with session_scope() as session:
             session.add(message_object)
 
-        if self.app.enable_tts:
-            # split on sentence enders
-            sentence_enders = [".", "?", "!", "\n"]
-            text = message_object.message
-            sentences = []
-            # split text into sentences
-            current_sentence = ""
-            for char in text:
-                current_sentence += char
-                if char in sentence_enders:
+            if self.app.enable_tts:
+                # split on sentence enders
+                sentence_enders = [".", "?", "!", "\n"]
+                text = message_object.message
+                sentences = []
+                # split text into sentences
+                current_sentence = ""
+                for char in text:
+                    current_sentence += char
+                    if char in sentence_enders:
+                        sentences.append(current_sentence)
+                        current_sentence = ""
+                if current_sentence != "":
                     sentences.append(current_sentence)
-                    current_sentence = ""
-            if current_sentence != "":
-                sentences.append(current_sentence)
 
-            for index, sentence in enumerate(sentences):
-                sentence = sentence.strip()
-                self.app.client.message = dict(
-                    tts_request=True,
-                    request_data=dict(
-                        text=sentence,
-                        message_object=Message(
-                            name=message_object.name,
-                            message=sentence,
-                        ),
-                        is_bot=True,
-                        callback=self.add_message_to_conversation,
-                        first_message=index == 0,
-                        last_message=index == len(sentences) - 1,
+                for index, sentence in enumerate(sentences):
+                    sentence = sentence.strip()
+                    self.app.client.message = dict(
+                        tts_request=True,
+                        request_data=dict(
+                            text=sentence,
+                            message_object=Message(
+                                name=message_object.name,
+                                message=sentence,
+                            ),
+                            is_bot=True,
+                            callback=self.add_message_to_conversation,
+                            first_message=index == 0,
+                            last_message=index == len(sentences) - 1,
+                        )
                     )
-                )
 
-        self.add_message_to_conversation(message_object, is_bot=True)
+            self.add_message_to_conversation(message_object, is_bot=True)
 
         self.generating = False
         self.enable_send_button()

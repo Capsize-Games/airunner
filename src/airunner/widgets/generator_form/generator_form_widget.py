@@ -399,15 +399,15 @@ class GeneratorForm(BaseWidget):
                     pos_x=0,
                     pos_y=0,
                     outpaint_box_rect=self.active_rect,
-                    hf_token=self.app.hf_api_key,
-                    model_base_path=self.app.model_base_path,
+                    hf_token=self.app.hf_api_key_read_key,
+                    model_base_path=self.app.base_path,
                     outpaint_model_path=self.app.inpaint_model_path,
                     pix2pix_model_path=self.app.pix2pix_model_path,
                     depth2img_model_path=self.app.depth2img_model_path,
                     upscale_model_path=self.app.upscale_model_path,
                     image_path=self.app.image_path,
-                    lora_path=self.app.lora_path,
-                    embeddings_path=self.app.embeddings_path,
+                    lora_path=self.app.lora_model_path,
+                    embeddings_path=self.app.embeddings_model_path,
                     video_path=self.app.video_path,
                     clip_skip=clip_skip,
                     batch_size=batch_size,
@@ -420,6 +420,8 @@ class GeneratorForm(BaseWidget):
                     allow_online_mode=self.app.allow_online_mode,
                     hf_api_key_read_key=self.app.hf_api_key_read_key,
                     hf_api_key_write_key=self.app.hf_api_key_write_key,
+                    unload_unused_model=self.app.unload_unused_models,
+                    move_unused_model_to_cpu=self.app.move_unused_model_to_cpu,
                 )
 
                 if self.controlnet_image:
