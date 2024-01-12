@@ -26,6 +26,10 @@ class TTS:
     speaker_embeddings_dataset_path = "Matthijs/cmu-arctic-xvectors"
     buffer = []
     current_sentence = ""
+    new_sentence = ""
+    tts_sentence = None
+    thread_started = False
+    is_playing = False
 
     @property
     def cuda_available(self):
@@ -63,7 +67,6 @@ class TTS:
         self.stream_2 = sd.OutputStream(samplerate=20000, channels=1)
         self.stream.start()
         self.stream_2.start()
-
 
     def initialize(self):
         self.load_model()
@@ -134,8 +137,6 @@ class TTS:
     def start_speech_processing(self):
         threading.Thread(target=self.process_speech).start()
 
-
-    new_sentence = ""
     def add_word(self, word, stream):
         self.new_sentence += word
         # check if sentence ends with a period, comma, question mark, exclamation point, or ellipsis
@@ -159,8 +160,6 @@ class TTS:
             if len(self.sentences) > 0:
                 self.process_sentence(self.sentences.pop(0))
     
-    tts_sentence = None
-
     def process_sentence(self, text, stream):
         # add delay to inputs
         text = text.strip() + ". "
@@ -180,11 +179,7 @@ class TTS:
             self.stream.write(tts)
         else:
             self.stream_2.write(tts)
-        
     
-    thread_started = False
-    is_playing = False
-
     def play_buffer(self):
         """
         now we iterate over each sentence and keep a buffer of 10 sentences. We'll
