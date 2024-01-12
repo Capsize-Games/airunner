@@ -4,19 +4,12 @@ import subprocess
 from functools import partial
 
 from PIL import Image, ImageGrab
-from PIL.ImageQt import ImageQt, QImage
+from PIL.ImageQt import ImageQt
 from PyQt6.QtCore import Qt, QPoint, QPointF, QRect
-from PyQt6.QtGui import QBrush, QColor, QPen, QPixmap, QPainter, QCursor
-from PyQt6.QtWidgets import QGraphicsScene, QGraphicsItem, QGraphicsPixmapItem
+from PyQt6.QtGui import QBrush, QColor, QPen, QPixmap, QCursor
+from PyQt6.QtWidgets import QGraphicsPixmapItem
 from PyQt6 import QtWidgets, QtCore
-from PyQt6.QtCore import QThread, pyqtSignal
-from PyQt6.QtCore import QLineF
 from PyQt6.QtWidgets import QGraphicsItemGroup
-from PyQt6.QtCore import QRectF, QSizeF
-from PyQt6.QtGui import QPainterPath
-from PyQt6.QtGui import QEnterEvent
-from PyQt6.QtGui import QTransform
-from PyQt6.QtWidgets import QGraphicsView
 
 from airunner.aihandler.logger import Logger
 from airunner.cursors.circle_brush import CircleCursor
@@ -24,334 +17,9 @@ from airunner.widgets.canvas_plus.canvas_base_widget import CanvasBaseWidget
 from airunner.widgets.canvas_plus.templates.canvas_plus_ui import Ui_canvas
 from airunner.utils import apply_opacity_to_image
 from airunner.data.session_scope import session_scope
-
-
-class ImageAdder(QThread):
-    finished = pyqtSignal()
-
-    def __init__(self, widget, image, is_outpaint, image_root_point):
-        super().__init__()
-        self.widget = widget
-        self.image = image
-        self.is_outpaint = is_outpaint
-        self.image_root_point = image_root_point
-        
-
-    def run(self):
-        print("setting current_active_image")
-        self.widget.current_active_image = self.image
-        print("setting current_active_image 2")
-        # with self.widget.current_layer() as layer:
-        #     if self.image_root_point is not None:
-        #         layer.pos_x = self.image_root_point.x()
-        #         layer.pos_y = self.image_root_point.y()
-        #     elif not self.is_outpaint:
-        #         layer.current_layer.pos_x = self.widget.active_grid_area_rect.x()
-        #         layer.current_layer.pos_y = self.widget.active_grid_area_rect.y()
-        self.widget.do_draw()
-        print("setting current_active_image 3")
-        self.finished.emit()
-
-
-class DraggablePixmap(QGraphicsPixmapItem):
-    def __init__(self, parent, pixmap):
-        self.parent = parent
-        super().__init__(pixmap)
-        self.pixmap = pixmap
-        self.setFlag(QGraphicsItem.GraphicsItemFlag.ItemIsMovable, True)
-
-    def snap_to_grid(self):
-        cell_size = self.parent.cell_size
-        grid_size = cell_size
-        x = round(self.x() / grid_size) * grid_size
-        y = round(self.y() / grid_size) * grid_size
-        x += self.parent.last_pos.x()
-        y += self.parent.last_pos.y()
-        self.setPos(x, y)
-
-    def mouseMoveEvent(self, event):
-        super().mouseMoveEvent(event)
-        self.snap_to_grid()
-
-    def mouseReleaseEvent(self, event):
-        self.snap_to_grid()
-        super().mouseReleaseEvent(event)
-
-    def paint(self, painter: QPainter, option, widget=None):
-        painter.drawPixmap(self.pixmap.rect(), self.pixmap)
-
-
-class LayerImageItem(DraggablePixmap):
-    def __init__(self, parent, pixmap, layer_image_data):
-        self.layer_image_data = layer_image_data
-        super().__init__(parent, pixmap)
-        self.setFlag(QGraphicsItem.GraphicsItemFlag.ItemIsMovable, True)
-
-    def mouseReleaseEvent(self, event):
-        super().mouseReleaseEvent(event)
-        with session_scope() as session:
-            pos = self.pos()
-            self.layer_image_data.pos_x = pos.x()
-            self.layer_image_data.pos_y = pos.y()
-            session.add(self.layer_image_data)
-
-
-class ActiveGridArea(DraggablePixmap):
-    active_grid_area_color = None
-    image = None
-
-    def __init__(self, parent, rect):
-        self.app = parent.app
-        self.update_settings()
-
-        super().__init__(parent, self.pixmap)
-        self.setFlag(QGraphicsItem.GraphicsItemFlag.ItemIsMovable, True)
-
-    @property
-    def active_grid_area_rect(self):
-        return QRect(
-            self.app.active_grid_settings["pos_x"],
-            self.app.active_grid_settings["pos_y"],
-            self.app.working_width,
-            self.app.working_height
-        )
-
-    def update_settings(self):
-        border_color = self.app.generator_settings["active_grid_border_color"]
-        border_color = QColor(border_color)
-        border_opacity = self.app.active_grid_settings["border_opacity"]
-        border_color.setAlpha(border_opacity)
-        fill_color = self.get_fill_color()
-
-        self.active_grid_area_color = border_color
-
-        if not self.image:
-            self.image = QImage(
-                self.active_grid_area_rect.width(),
-                self.active_grid_area_rect.height(),
-                QImage.Format.Format_ARGB32
-            )
-        else:
-            self.image = self.image.scaled(
-                self.active_grid_area_rect.width(),
-                self.active_grid_area_rect.height()
-            )
-
-        self.image.fill(fill_color)
-        self.pixmap = QPixmap.fromImage(self.image)
-
-    def redraw(self):
-        self.update_settings()
-        scene = self.scene()
-        if scene:
-            scene.removeItem(self)
-            if self.app.active_grid_settings["enabled"]:
-                scene.addItem(self)
-
-    def get_fill_color(self):
-        fill_color = self.app.generator_settings["active_grid_fill_color"]
-        fill_color = QColor(fill_color)
-        fill_opacity = self.app.active_grid_settings["fill_opacity"]
-        fill_opacity = max(1, fill_opacity)
-        fill_color.setAlpha(fill_opacity)
-        return fill_color
-
-    def paint(self, painter: QPainter, option, widget=None):
-        if not self.app.active_grid_settings["render_fill"]:
-            self.pixmap.fill(QColor(0, 0, 0, 1))
-
-        if self.app.active_grid_settings["render_border"]:
-            painter.setPen(QPen(
-                self.active_grid_area_color,
-                self.parent.line_width
-            ))
-            painter.setBrush(QBrush(QColor(0, 0, 0, 0)))
-            painter.drawRect(self.active_grid_area_rect)
-            painter.setPen(QPen(
-                self.active_grid_area_color,
-                self.parent.line_width + 1
-            ))
-            painter.drawRect(QRect(
-                self.active_grid_area_rect.x(),
-                self.active_grid_area_rect.y(),
-                self.active_grid_area_rect.width(),
-                self.active_grid_area_rect.height()
-            ))
-        super().paint(painter, option, widget)
-
-    def toggle_render_fill(self, render_fill):
-        if not render_fill:
-            self.pixmap.fill(QColor(0, 0, 0, 1))
-        else:
-            self.pixmap.fill(self.get_fill_color())
-
-    def toggle_render_border(self, value):
-        pass
-
-    def change_border_opacity(self, value):
-        pass
-
-    def change_fill_opacity(self, value):
-        self.pixmap.fill(self.get_fill_color())
-
-    def mouseReleaseEvent(self, event):
-        super().mouseReleaseEvent(event)
-        pos = self.pos()
-
-
-class CustomScene(QGraphicsScene):
-    def __init__(self, parent=None):
-        self.app = parent.app
-        super().__init__(parent)
-        
-        # Get the size of the parent widget
-        parent_size = parent.size()
-
-        # Create the QImage with the size of the parent widget
-        self.image = QImage(parent_size.width(), parent_size.height(), QImage.Format.Format_ARGB32)
-        self.image.fill(Qt.GlobalColor.transparent)
-        self.item = QGraphicsPixmapItem(QPixmap.fromImage(self.image))
-        self.addItem(self.item)
-        # self.item should always be on top
-        self.item.setZValue(1)
-
-        # self.setVerticalScrollBarPolicy(Qt.ScrollBarPolicy.ScrollBarAlwaysOff)
-        # self.setHorizontalScrollBarPolicy(Qt.ScrollBarPolicy.ScrollBarAlwaysOff)
-
-        # Add a variable to store the last mouse position
-        self.last_pos = None
-    
-    def resize(self):
-        # only resize if the new size is larger than the existing image size
-        if self.image.width() < self.parent().size().width() or self.image.height() < self.parent().size().height():
-            new_image = QImage(self.parent().size().width(), self.parent().size().height(), QImage.Format.Format_ARGB32)
-            new_image.fill(Qt.GlobalColor.transparent)
-            painter = QPainter(new_image)
-            painter.drawImage(0, 0, self.image)
-            painter.end()
-            self.image = new_image
-            self.item.setPixmap(QPixmap.fromImage(self.image))
-
-    def drawAt(self, position):
-        painter = QPainter(self.image)
-        painter.setPen(QPen(Qt.GlobalColor.black, self.app.brush_settings["size"], Qt.PenStyle.SolidLine, Qt.PenCapStyle.RoundCap))
-        
-        # Draw a line from the last position to the current one
-        if self.last_pos is not None:
-            painter.drawLine(self.last_pos, position)
-        else:
-            painter.drawPoint(position)
-        
-        painter.end()
-        self.item.setPixmap(QPixmap.fromImage(self.image))
-    
-    def wheelEvent(self, event):
-        # Calculate the zoom factor
-        zoom_in_factor = self.parent().zoom_in_step
-        zoom_out_factor = -self.parent().zoom_out_step
-
-        # Use delta instead of angleDelta
-        if event.delta() > 0:
-            zoom_factor = zoom_in_factor
-        else:
-            zoom_factor = zoom_out_factor
-
-        # Update zoom level
-        zoom_level = self.parent().zoom_level
-        zoom_level += zoom_factor
-        if zoom_level < 0.1:
-            zoom_level = 0.1
-        self.parent().zoom_level = zoom_level
-
-        # Create a QTransform object and scale it
-        transform = QTransform()
-        transform.scale(self.parent().zoom_level, self.parent().zoom_level)
-
-        # Set the transform
-        self.parent().view.setTransform(transform)
-
-        # Redraw lines
-        self.parent().draw_lines()
-
-    def eraseAt(self, position):
-        painter = QPainter(self.image)
-        painter.setPen(QPen(Qt.GlobalColor.white, self.app.brush_settings["size"], Qt.PenStyle.SolidLine, Qt.PenCapStyle.RoundCap))
-        painter.setCompositionMode(QPainter.CompositionMode.CompositionMode_Clear)
-        
-        # Create a QPainterPath
-        path = QPainterPath()
-        
-        # Move to the last position and draw a line to the current one
-        if self.last_pos is not None:
-            path.moveTo(self.last_pos)
-            path.lineTo(position)
-        else:
-            path.addEllipse(position, self.app.brush_settings["size"]/2, self.app.brush_settings["size"]/2)
-        
-        # Draw the path
-        painter.drawPath(path)
-        
-        painter.end()
-        self.item.setPixmap(QPixmap.fromImage(self.image))
-
-    def mousePressEvent(self, event):
-        if self.app.current_tool not in ["brush", "eraser"]:
-            super(CustomScene, self).mousePressEvent(event)
-            return
-
-        self.last_pos = event.scenePos()
-        if self.app.current_tool == "brush":
-            self.drawAt(self.last_pos)
-        elif self.app.current_tool == "eraser":
-            self.eraseAt(self.last_pos)
-
-    def handle_cursor(self, event):
-        if self.app.current_tool in ['brush', 'eraser']:
-            # Create a QPixmap, draw a circle on it
-            pixmap = QPixmap(self.app.brush_settings["size"], self.app.brush_settings["size"])
-            pixmap.fill(Qt.GlobalColor.transparent)
-            painter = QPainter(pixmap)
-
-            # Draw outer white circle
-            painter.setPen(QPen(Qt.GlobalColor.white, 3))  # Set color to white and width to 3
-            painter.setBrush(Qt.GlobalColor.transparent)
-            painter.drawEllipse(0, 0, self.app.brush_settings["size"], self.app.brush_settings["size"])
-
-            # Draw inner black circle
-            painter.setPen(QPen(Qt.GlobalColor.black, 3))  # Set color to black and width to 3
-            painter.setBrush(Qt.GlobalColor.transparent)
-            painter.drawEllipse(3, 3, self.app.brush_settings["size"] - 6, self.app.brush_settings["size"] - 6)
-            
-            painter.end()
-
-            # Create a QCursor with the QPixmap
-            cursor = QCursor(pixmap)
-            self.parent().setCursor(cursor)
-        else:
-            self.parent().setCursor(Qt.CursorShape.ArrowCursor)
-        
-    def event(self, event):
-        if type(event) == QEnterEvent:
-            self.handle_cursor(event)
-        return super(CustomScene, self).event(event)
-
-    def mouseMoveEvent(self, event):
-        self.handle_cursor(event)
-        if self.app.current_tool not in ["brush", "eraser"]:
-            super(CustomScene, self).mouseMoveEvent(event)
-            return
-        
-        if self.app.current_tool == "brush":
-            self.drawAt(event.scenePos())
-        elif self.app.current_tool == "eraser":
-            self.eraseAt(event.scenePos())
-        
-        # Update the last position
-        self.last_pos = event.scenePos()
-    
-    def leaveEvent(self, event):
-        self.setCursor(Qt.ArrowCursor)
-        super(CustomScene, self).leaveEvent(event)
+from airunner.widgets.canvas_plus.draggables import DraggablePixmap, ActiveGridArea
+from airunner.widgets.canvas_plus.custom_scene import CustomScene
+from airunner.widgets.canvas_plus.image_adder import ImageAdder
 
 
 class CanvasPlusWidget(CanvasBaseWidget):
@@ -370,19 +38,9 @@ class CanvasPlusWidget(CanvasBaseWidget):
     initialized = False
     drawing = False
     redraw_lines = False
+    has_lines = False
     line_group = QGraphicsItemGroup()
 
-    def current_pixmap(self):
-        draggable_pixmap = self.current_draggable_pixmap()
-        if draggable_pixmap:
-            return draggable_pixmap.pixmap
-    
-    def current_image(self):
-        pixmap = self.current_pixmap()
-        if not pixmap:
-            return None
-        return Image.fromqpixmap(pixmap)
-    
     @property
     def image_pivot_point(self):
         with self.layer_container_widget.current_layer() as layer:
@@ -515,6 +173,33 @@ class CanvasPlusWidget(CanvasBaseWidget):
     def zoom_level(self, value):
         self._zoom_level = value
     
+    @property
+    def canvas_color(self):
+        return self.app.canvas_color
+
+    @property
+    def line_color(self):
+        return self.app.line_color
+
+    @property
+    def line_width(self):
+        return self.app.line_width
+
+    @property
+    def cell_size(self):
+        return self.app.cell_size
+    
+    def current_pixmap(self):
+        draggable_pixmap = self.current_draggable_pixmap()
+        if draggable_pixmap:
+            return draggable_pixmap.pixmap
+    
+    def current_image(self):
+        pixmap = self.current_pixmap()
+        if not pixmap:
+            return None
+        return Image.fromqpixmap(pixmap)
+
     def window_resized(self, event):
         self.redraw_lines = True
         self.do_draw()
@@ -538,22 +223,6 @@ class CanvasPlusWidget(CanvasBaseWidget):
         self.set_canvas_color()
         self.do_draw()
 
-    @property
-    def canvas_color(self):
-        return self.app.canvas_color
-
-    @property
-    def line_color(self):
-        return self.app.line_color
-
-    @property
-    def line_width(self):
-        return self.app.line_width
-
-    @property
-    def cell_size(self):
-        return self.app.cell_size
-    
     def increase_active_grid_height(self, amount):
         height = self.app.working_height + self.cell_size * amount
         if height > 4096:
@@ -753,8 +422,6 @@ class CanvasPlusWidget(CanvasBaseWidget):
         self.last_pos = QPoint(0, 0)
         self.do_draw()
     
-    has_lines = False
-
     def do_draw(self):
         if self.drawing or not self.initialized:
             return
