@@ -253,11 +253,6 @@ def get_version():
 #     return models
 
 def prepare_metadata(data, index=0):
-    from airunner.data.managers import SettingsManager
-    settings_manager = SettingsManager()
-    if not settings_manager.metadata_settings.export_metadata or \
-            settings_manager.settings.image_export_type != "png":
-        return None
     metadata = PngImagePlugin.PngInfo()
     options = data.get("options", {})
     action = data.get("action", "txt2img")

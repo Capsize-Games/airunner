@@ -4,7 +4,7 @@ from airunner.data.bootstrap.llm import seed_data
 from airunner.data.bootstrap.model_bootstrap_data import model_bootstrap_data
 from airunner.data.bootstrap.pipeline_bootstrap_data import pipeline_bootstrap_data
 from airunner.data.models import ControlnetModel, LLMPromptTemplate, Pipeline, Document, \
-    MetadataSettings, AIModel, \
+    AIModel, \
     ImageFilter, ImageFilterValue, Scheduler, ActionScheduler, \
     LLMGenerator, LLMModelVersion, StandardImageWidgetSettings
 from airunner.data.session_scope import session_scope, engine
@@ -44,11 +44,6 @@ def prepare_database():
             # Add Pipeline objects
             for pipeline_data in pipeline_bootstrap_data:
                 my_session.add(Pipeline(**pipeline_data))
-                        
-
-
-            # Add MetadataSettings objects
-            my_session.add(MetadataSettings())
             
             
 
