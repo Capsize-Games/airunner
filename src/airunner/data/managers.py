@@ -12,7 +12,6 @@ from airunner.data.session_scope import (
     llm_generator_scope,
     canvas_settings_scope,
     memory_settings_scope,
-    metadata_settings_scope
 )
 
 
@@ -86,7 +85,6 @@ class SettingsManager(QObject):
         self.llm_generator = Modelmanager(llm_generator_scope)
         self.canvas_settings = Modelmanager(canvas_settings_scope)
         self.memory_settings = Modelmanager(memory_settings_scope)
-        self.metadata_settings = Modelmanager(metadata_settings_scope)
     
     @contextmanager
     def image_filters_scope(self):
