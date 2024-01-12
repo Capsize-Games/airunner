@@ -34,6 +34,7 @@ class LLM(TransformerRunner):
     history = []
 
     def generate(self):
+        Logger.info("Generating with LLM " + self.requested_generator_name)
         # Create a FileSystemLoader object with the directory of the template
         HERE = os.path.dirname(os.path.abspath(__file__))
         file_loader = FileSystemLoader(os.path.join(HERE, "chat_templates"))
@@ -43,7 +44,7 @@ class LLM(TransformerRunner):
 
         # Load the template
         # Load the template
-        chat_template = env.get_template('chat.j2')
+        chat_template = self.prompt_template#env.get_template('chat.j2')
 
         prompt = self.prompt
         if prompt is None or prompt == "":
@@ -65,10 +66,15 @@ class LLM(TransformerRunner):
             variables = {
                 "username": self.username,
                 "botname": self.botname,
-                "history": history,
+                "history": history or "",
                 "input": prompt,
                 "bos_token": self.tokenizer.bos_token,
-                "botmood": "angry. He hates " + self.username
+                "bot_mood": self.bot_mood,
+                "bot_personality": self.bot_personality,
+                #"botmood": "angry. He hates " + self.username
+                #"botmood": "happy. He loves " + self.username
+                #"botmood": "Sad. He is very depressed"
+                #"botmood": "Tired. He is very sleepy"
             }
 
             self.history.append({
@@ -77,15 +83,28 @@ class LLM(TransformerRunner):
             })
 
             # Render the template with the variables
-            rendered_template = chat_template.render(variables)
-            #print(rendered_template)
+            #rendered_template = chat_template.render(variables)
+
+            # iterate over variables and replace again, this allows us to use variables
+            # in custom template variables (for example variables inside of botmood and bot_personality)
+            rendered_template = chat_template
+            for n in range(2):
+                for key, value in variables.items():
+                    print("RENDERING", key, value)
+                    rendered_template = rendered_template.replace("{{ " + key + " }}", value)
+
+            print("x"*80)
+            print("RENDERED TEMPLATE:")
+            print(rendered_template)
 
             # Encode the rendered template
             encoded = self.tokenizer.encode(rendered_template, return_tensors="pt")
+            print("RENDERED TEMPLATE", rendered_template)
 
             model_inputs = encoded.to("cuda" if torch.cuda.is_available() else "cpu")
 
             # Generate the response
+            Logger.info("Generating...")
             generated_ids = self.model.generate(
                 model_inputs,
                 min_length=0,
@@ -101,6 +120,7 @@ class LLM(TransformerRunner):
                 repetition_penalty=1.15,
                 temperature=0.7,
             )
+            Logger.info("GENERATED")
 
             # Decode the new tokens
             decoded = self.tokenizer.batch_decode(generated_ids)[0]
@@ -111,6 +131,12 @@ class LLM(TransformerRunner):
             start_index = decoded.find('"') + 1
             end_index = decoded.rfind('"')
             decoded = decoded[start_index:end_index]
+
+            Logger.info("Decoded: " + decoded)
+            # remove white space
+            decoded = decoded.strip()
+            if decoded == "":
+                decoded = "ERROR"
 
             self.history.append({
                 "role": "assistant",

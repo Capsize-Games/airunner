@@ -52,14 +52,6 @@ def models_scope():
         models = session.query(AIModel).all()
         yield models
 
-
-@contextmanager
-def llm_generator_scope():
-    from airunner.data.models import LLMGenerator
-    with session_scope() as session:
-        llm_generator = session.query(LLMGenerator).options(joinedload('*')).first()
-        yield llm_generator
-
 @contextmanager
 def canvas_settings_scope():
     from airunner.data.models import CanvasSettings

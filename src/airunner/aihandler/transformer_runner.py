@@ -7,6 +7,7 @@ from transformers import BitsAndBytesConfig
 from transformers import AutoModelForCausalLM, AutoModelForSeq2SeqLM, AutoTokenizer
 from transformers import InstructBlipForConditionalGeneration
 from transformers import InstructBlipProcessor
+from airunner.aihandler.enums import MessageCode
 from airunner.aihandler.logger import Logger
 
 
@@ -211,6 +212,9 @@ class TransformerRunner(QObject):
         self.override_parameters = self.parameters.get("override_parameters", self.override_parameters)
         self.username = self.request_data.get("username", "")
         self.botname = self.request_data.get("botname", "")
+        self.prompt_template = self.request_data["prompt_template"]
+        self.bot_mood = self.request_data.get("bot_mood", "")
+        self.bot_personality = self.request_data.get("bot_personality", "")
         self.prompt = self.request_data.get("prompt", "")
         self.prompt_template = self.request_data.get("prompt_template", "")
         self.image = self.request_data.get("image", None)
@@ -233,6 +237,7 @@ class TransformerRunner(QObject):
         pass
 
     def prepare_input_args(self):
+        Logger.info("Preparing input args")
         self.system_instructions = self.request_data.get("system_instructions", "")
         top_k = self.parameters.get("top_k", self.top_k)
         eta_cutoff = self.parameters.get("eta_cutoff", self.eta_cutoff)
@@ -290,6 +295,7 @@ class TransformerRunner(QObject):
         return kwargs
     
     def load_tokenizer(self, local_files_only = None):
+        Logger.info(f"Loading tokenizer for {self.requested_generator_name}")
         if self.requested_generator_name == "casuallm":
             local_files_only = self.local_files_only if local_files_only is None else local_files_only
             if not self.tokenizer is None:
@@ -327,6 +333,7 @@ class TransformerRunner(QObject):
             self.tokenizer.seed = self.seed
 
     def handle_generate_request(self):
+        Logger.info("Handling generate request")
         self.disable_request_processing()
         kwargs = self.prepare_input_args()
         self.do_set_seed(kwargs.get("seed"))
@@ -347,10 +354,10 @@ class TransformerRunner(QObject):
         #         print("************** CALLING GENERATE")
         #         value = self.generate()
         #         print("VALUE", value)
-        #         # if self.callback:
-        #         #     self.callback(value)
-        #         # else:
-        #         #     self.engine.send_message(value, code=MessageCode.TEXT_GENERATED)
+        #         if self.callback:
+        #             self.callback(value)
+        #         else:
+        #             self.engine.send_message(value, code=MessageCode.TEXT_GENERATED)
         self.enable_request_processing()
     
     def disable_request_processing(self):

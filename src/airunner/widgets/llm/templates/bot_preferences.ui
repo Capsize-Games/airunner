@@ -1,0 +1,176 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<ui version="4.0">
+ <class>bot_preferences</class>
+ <widget class="QWidget" name="bot_preferences">
+  <property name="geometry">
+   <rect>
+    <x>0</x>
+    <y>0</y>
+    <width>826</width>
+    <height>387</height>
+   </rect>
+  </property>
+  <property name="windowTitle">
+   <string>Form</string>
+  </property>
+  <layout class="QGridLayout" name="gridLayout">
+   <item row="2" column="0">
+    <widget class="QGroupBox" name="groupBox_4">
+     <property name="title">
+      <string>Bot Personality</string>
+     </property>
+     <layout class="QGridLayout" name="gridLayout_5">
+      <item row="1" column="0">
+       <widget class="QPlainTextEdit" name="bot_personality">
+        <property name="placeholderText">
+         <string>EXAMPLE: {{ botname }} is very helpful and {{ gender }} loves {{ username }}.</string>
+        </property>
+       </widget>
+      </item>
+      <item row="0" column="0">
+       <widget class="QLabel" name="label_2">
+        <property name="text">
+         <string>A brief description of the bot's personality</string>
+        </property>
+       </widget>
+      </item>
+     </layout>
+    </widget>
+   </item>
+   <item row="1" column="0">
+    <layout class="QVBoxLayout" name="verticalLayout_6">
+     <item>
+      <widget class="QLabel" name="label">
+       <property name="text">
+        <string>Bot name</string>
+       </property>
+      </widget>
+     </item>
+     <item>
+      <widget class="QLineEdit" name="botname">
+       <property name="text">
+        <string>ChatAI</string>
+       </property>
+       <property name="cursorPosition">
+        <number>6</number>
+       </property>
+       <property name="placeholderText">
+        <string>Bot name</string>
+       </property>
+      </widget>
+     </item>
+    </layout>
+   </item>
+   <item row="3" column="0">
+    <widget class="QGroupBox" name="groupBox">
+     <property name="title">
+      <string>Bot Mood</string>
+     </property>
+     <layout class="QGridLayout" name="gridLayout_2">
+      <item row="0" column="0">
+       <widget class="QPlainTextEdit" name="bot_mood">
+        <property name="placeholderText">
+         <string>EXAMPLE: Excited</string>
+        </property>
+       </widget>
+      </item>
+     </layout>
+    </widget>
+   </item>
+   <item row="0" column="0">
+    <layout class="QVBoxLayout" name="verticalLayout_5">
+     <item>
+      <widget class="QLabel" name="label_3">
+       <property name="text">
+        <string>User name</string>
+       </property>
+      </widget>
+     </item>
+     <item>
+      <widget class="QLineEdit" name="username">
+       <property name="text">
+        <string>User</string>
+       </property>
+       <property name="placeholderText">
+        <string>User name</string>
+       </property>
+      </widget>
+     </item>
+    </layout>
+   </item>
+  </layout>
+ </widget>
+ <resources/>
+ <connections>
+  <connection>
+   <sender>username</sender>
+   <signal>textChanged(QString)</signal>
+   <receiver>bot_preferences</receiver>
+   <slot>username_changed(QString)</slot>
+   <hints>
+    <hint type="sourcelabel">
+     <x>91</x>
+     <y>39</y>
+    </hint>
+    <hint type="destinationlabel">
+     <x>55</x>
+     <y>-17</y>
+    </hint>
+   </hints>
+  </connection>
+  <connection>
+   <sender>botname</sender>
+   <signal>textChanged(QString)</signal>
+   <receiver>bot_preferences</receiver>
+   <slot>botname_changed(QString)</slot>
+   <hints>
+    <hint type="sourcelabel">
+     <x>191</x>
+     <y>105</y>
+    </hint>
+    <hint type="destinationlabel">
+     <x>127</x>
+     <y>-8</y>
+    </hint>
+   </hints>
+  </connection>
+  <connection>
+   <sender>bot_personality</sender>
+   <signal>textChanged()</signal>
+   <receiver>bot_preferences</receiver>
+   <slot>bot_personality_changed()</slot>
+   <hints>
+    <hint type="sourcelabel">
+     <x>338</x>
+     <y>221</y>
+    </hint>
+    <hint type="destinationlabel">
+     <x>292</x>
+     <y>-6</y>
+    </hint>
+   </hints>
+  </connection>
+  <connection>
+   <sender>bot_mood</sender>
+   <signal>textChanged()</signal>
+   <receiver>bot_preferences</receiver>
+   <slot>bot_mood_changed()</slot>
+   <hints>
+    <hint type="sourcelabel">
+     <x>507</x>
+     <y>322</y>
+    </hint>
+    <hint type="destinationlabel">
+     <x>451</x>
+     <y>-7</y>
+    </hint>
+   </hints>
+  </connection>
+ </connections>
+ <slots>
+  <slot>username_changed(QString)</slot>
+  <slot>botname_changed(QString)</slot>
+  <slot>bot_personality_changed()</slot>
+  <slot>bot_mood_changed()</slot>
+ </slots>
+</ui>

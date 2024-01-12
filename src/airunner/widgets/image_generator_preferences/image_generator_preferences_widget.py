@@ -7,7 +7,6 @@ class ImageGeneratorPreferencesWidget(BaseWidget):
 
     def __init__(self, *args, **kwargs):
         super().__init__(*args, **kwargs)
-        self.ui.stablediffusion.setChecked(self.app.settings_manager.current_image_generator == "stablediffusion")
     
     def stablediffusion_toggled(self, val):
         if val:

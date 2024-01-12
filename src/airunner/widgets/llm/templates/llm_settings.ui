@@ -7,132 +7,25 @@
     <x>0</x>
     <y>0</y>
     <width>1262</width>
-    <height>1059</height>
+    <height>1084</height>
    </rect>
   </property>
   <property name="windowTitle">
    <string>Form</string>
   </property>
   <layout class="QGridLayout" name="gridLayout">
-   <item row="0" column="0">
-    <widget class="QGroupBox" name="groupBox_7">
-     <property name="title">
-      <string>Model Type</string>
+   <item row="5" column="0">
+    <spacer name="verticalSpacer">
+     <property name="orientation">
+      <enum>Qt::Vertical</enum>
      </property>
-     <layout class="QGridLayout" name="gridLayout_10">
-      <item row="0" column="0">
-       <widget class="QComboBox" name="model"/>
-      </item>
-     </layout>
-    </widget>
-   </item>
-   <item row="1" column="0">
-    <widget class="QGroupBox" name="groupBox_8">
-     <property name="title">
-      <string>Model Version</string>
+     <property name="sizeHint" stdset="0">
+      <size>
+       <width>20</width>
+       <height>40</height>
+      </size>
      </property>
-     <layout class="QGridLayout" name="gridLayout_11">
-      <item row="0" column="0">
-       <widget class="QComboBox" name="model_version">
-        <property name="currentIndex">
-         <number>-1</number>
-        </property>
-       </widget>
-      </item>
-     </layout>
-    </widget>
-   </item>
-   <item row="2" column="0">
-    <widget class="QGroupBox" name="groupBox_14">
-     <property name="title">
-      <string>Prompt Template</string>
-     </property>
-     <layout class="QGridLayout" name="gridLayout_17">
-      <item row="0" column="0">
-       <widget class="QComboBox" name="prompt_template"/>
-      </item>
-     </layout>
-    </widget>
-   </item>
-   <item row="3" column="0">
-    <widget class="QGroupBox" name="groupBox_6">
-     <property name="title">
-      <string>DType</string>
-     </property>
-     <layout class="QGridLayout" name="gridLayout_9">
-      <item row="1" column="0">
-       <layout class="QHBoxLayout" name="horizontalLayout_3">
-        <item>
-         <widget class="QRadioButton" name="radio_button_2bit">
-          <property name="text">
-           <string>2-bit</string>
-          </property>
-         </widget>
-        </item>
-        <item>
-         <widget class="QRadioButton" name="radio_button_4bit">
-          <property name="text">
-           <string>4-bit</string>
-          </property>
-         </widget>
-        </item>
-        <item>
-         <widget class="QRadioButton" name="radio_button_8bit">
-          <property name="text">
-           <string>8-bit</string>
-          </property>
-         </widget>
-        </item>
-        <item>
-         <widget class="QRadioButton" name="radio_button_16bit">
-          <property name="text">
-           <string>16-bit</string>
-          </property>
-         </widget>
-        </item>
-        <item>
-         <widget class="QRadioButton" name="radio_button_32bit">
-          <property name="text">
-           <string>32-bit</string>
-          </property>
-         </widget>
-        </item>
-        <item>
-         <spacer name="horizontalSpacer">
-          <property name="orientation">
-           <enum>Qt::Horizontal</enum>
-          </property>
-          <property name="sizeHint" stdset="0">
-           <size>
-            <width>40</width>
-            <height>20</height>
-           </size>
-          </property>
-         </spacer>
-        </item>
-       </layout>
-      </item>
-      <item row="2" column="0">
-       <widget class="QLabel" name="dtype_description">
-        <property name="font">
-         <font>
-          <pointsize>9</pointsize>
-         </font>
-        </property>
-        <property name="text">
-         <string>Description</string>
-        </property>
-       </widget>
-      </item>
-      <item row="0" column="0">
-       <widget class="QCheckBox" name="use_gpu_checkbox">
-        <property name="text">
-         <string>Use GPU</string>
-        </property>
-       </widget>
-      </item>
-     </layout>
-    </widget>
+    </spacer>
    </item>
    <item row="4" column="0">
     <widget class="QGroupBox" name="override_parameters">
@@ -729,18 +622,125 @@
      </layout>
     </widget>
    </item>
-   <item row="5" column="0">
-    <spacer name="verticalSpacer">
-     <property name="orientation">
-      <enum>Qt::Vertical</enum>
+   <item row="1" column="0">
+    <widget class="QGroupBox" name="groupBox_8">
+     <property name="title">
+      <string>Model Version</string>
      </property>
-     <property name="sizeHint" stdset="0">
-      <size>
-       <width>20</width>
-       <height>40</height>
-      </size>
+     <layout class="QGridLayout" name="gridLayout_11">
+      <item row="0" column="0">
+       <widget class="QComboBox" name="model_version">
+        <property name="currentIndex">
+         <number>-1</number>
+        </property>
+       </widget>
+      </item>
+     </layout>
+    </widget>
+   </item>
+   <item row="3" column="0">
+    <widget class="QGroupBox" name="groupBox_6">
+     <property name="title">
+      <string>DType</string>
      </property>
-    </spacer>
+     <layout class="QGridLayout" name="gridLayout_9">
+      <item row="1" column="0">
+       <layout class="QHBoxLayout" name="horizontalLayout_3">
+        <item>
+         <widget class="QRadioButton" name="radio_button_2bit">
+          <property name="text">
+           <string>2-bit</string>
+          </property>
+         </widget>
+        </item>
+        <item>
+         <widget class="QRadioButton" name="radio_button_4bit">
+          <property name="text">
+           <string>4-bit</string>
+          </property>
+         </widget>
+        </item>
+        <item>
+         <widget class="QRadioButton" name="radio_button_8bit">
+          <property name="text">
+           <string>8-bit</string>
+          </property>
+         </widget>
+        </item>
+        <item>
+         <widget class="QRadioButton" name="radio_button_16bit">
+          <property name="text">
+           <string>16-bit</string>
+          </property>
+         </widget>
+        </item>
+        <item>
+         <widget class="QRadioButton" name="radio_button_32bit">
+          <property name="text">
+           <string>32-bit</string>
+          </property>
+         </widget>
+        </item>
+        <item>
+         <spacer name="horizontalSpacer">
+          <property name="orientation">
+           <enum>Qt::Horizontal</enum>
+          </property>
+          <property name="sizeHint" stdset="0">
+           <size>
+            <width>40</width>
+            <height>20</height>
+           </size>
+          </property>
+         </spacer>
+        </item>
+       </layout>
+      </item>
+      <item row="2" column="0">
+       <widget class="QLabel" name="dtype_description">
+        <property name="font">
+         <font>
+          <pointsize>9</pointsize>
+         </font>
+        </property>
+        <property name="text">
+         <string>Description</string>
+        </property>
+       </widget>
+      </item>
+      <item row="0" column="0">
+       <widget class="QCheckBox" name="use_gpu_checkbox">
+        <property name="text">
+         <string>Use GPU</string>
+        </property>
+       </widget>
+      </item>
+     </layout>
+    </widget>
+   </item>
+   <item row="2" column="0">
+    <widget class="QGroupBox" name="groupBox_14">
+     <property name="title">
+      <string>Prompt Template</string>
+     </property>
+     <layout class="QGridLayout" name="gridLayout_17">
+      <item row="0" column="0">
+       <widget class="QComboBox" name="prompt_template"/>
+      </item>
+     </layout>
+    </widget>
+   </item>
+   <item row="0" column="0">
+    <widget class="QGroupBox" name="groupBox_7">
+     <property name="title">
+      <string>Model Type</string>
+     </property>
+     <layout class="QGridLayout" name="gridLayout_10">
+      <item row="0" column="0">
+       <widget class="QComboBox" name="model"/>
+      </item>
+     </layout>
+    </widget>
    </item>
   </layout>
  </widget>
@@ -804,7 +804,7 @@
    <slot>use_gpu_toggled(bool)</slot>
    <hints>
     <hint type="sourcelabel">
-     <x>462</x>
+     <x>483</x>
      <y>288</y>
     </hint>
     <hint type="destinationlabel">
@@ -868,8 +868,8 @@
    <slot>override_parameters_toggled(bool)</slot>
    <hints>
     <hint type="sourcelabel">
-     <x>128</x>
-     <y>398</y>
+     <x>137</x>
+     <y>899</y>
     </hint>
     <hint type="destinationlabel">
      <x>120</x>
@@ -884,8 +884,8 @@
    <slot>seed_changed(QString)</slot>
    <hints>
     <hint type="sourcelabel">
-     <x>301</x>
-     <y>756</y>
+     <x>334</x>
+     <y>741</y>
     </hint>
     <hint type="destinationlabel">
      <x>2</x>
@@ -900,7 +900,7 @@
    <slot>early_stopping_toggled(bool)</slot>
    <hints>
     <hint type="sourcelabel">
-     <x>125</x>
+     <x>147</x>
      <y>798</y>
     </hint>
     <hint type="destinationlabel">
@@ -917,7 +917,7 @@
    <hints>
     <hint type="sourcelabel">
      <x>1228</x>
-     <y>755</y>
+     <y>742</y>
     </hint>
     <hint type="destinationlabel">
      <x>3</x>
@@ -932,7 +932,7 @@
    <slot>reset_settings_to_default_clicked()</slot>
    <hints>
     <hint type="sourcelabel">
-     <x>311</x>
+     <x>332</x>
      <y>913</y>
     </hint>
     <hint type="destinationlabel">
@@ -964,7 +964,7 @@
    <slot>do_sample_toggled(bool)</slot>
    <hints>
     <hint type="sourcelabel">
-     <x>1231</x>
+     <x>1239</x>
      <y>798</y>
     </hint>
     <hint type="destinationlabel">
@@ -980,7 +980,7 @@
    <slot>toggle_leave_model_in_vram(bool)</slot>
    <hints>
     <hint type="sourcelabel">
-     <x>142</x>
+     <x>164</x>
      <y>881</y>
     </hint>
     <hint type="destinationlabel">
@@ -1017,7 +1017,7 @@
     </hint>
     <hint type="destinationlabel">
      <x>79</x>
-     <y>-16</y>
+     <y>0</y>
     </hint>
    </hints>
   </connection>
@@ -1084,5 +1084,6 @@
   <slot>toggle_unload_model(bool)</slot>
   <slot>toggle_move_model_to_cpu(bool)</slot>
   <slot>prompt_template_text_changed(QString)</slot>
+  <slot>bot_personality_changed()</slot>
  </slots>
 </ui>

@@ -1,5 +1,6 @@
-from PyQt6.QtCore import pyqtSlot
+from PyQt6.QtCore import pyqtSlot, pyqtSignal
 from PyQt6.QtWidgets import QSpacerItem, QSizePolicy
+from PyQt6.QtCore import Qt
 
 from airunner.aihandler.enums import MessageCode
 from airunner.data.models import Conversation, LLMPromptTemplate, Message
@@ -20,15 +21,11 @@ class ChatPromptWidget(BaseWidget):
     suffix = ""
     conversation_history = []
     spacer = None
+    add_message_signal = pyqtSignal(Message, bool, bool, bool)
 
     @property
     def llm_generator(self):
-        try:
-            return self.app.settings_manager.llm_generator
-        except Exception as e:
-            Logger.error(e)
-            import traceback
-            traceback.print_exc()
+        return self.app.llm_generator
     
     @property
     def llm_generator_settings(self):
@@ -38,16 +35,12 @@ class ChatPromptWidget(BaseWidget):
             Logger.error(e)
 
     @property
-    def instructions(self):
-        return f"{self.llm_generator.botname} loves {self.llm_generator.username}. {self.llm_generator.botname} is very nice. {self.llm_generator.botname} uses compliments, kind responses, and nice words. Everything {self.llm_generator.botname} says is nice. {self.llm_generator.botname} is kind."
-
-    @property
     def current_generator(self):
         return self.app.current_llm_generator
-
-    @property
-    def instructions(self):
-        return f"{self.llm_generator.botname} loves {self.llm_generator.username}. {self.llm_generator.botname} is very nice. {self.llm_generator.botname} uses compliments, kind responses, and nice words. Everything {self.llm_generator.botname} says is nice. {self.llm_generator.botname} is kind."
+    
+    def __init__(self, *args, **kwargs):
+        super().__init__(*args, **kwargs)
+        self.add_message_signal.connect(self.add_bot_messasge_to_conversation)
 
     def load_data(self):
         with session_scope() as session:
@@ -61,17 +54,16 @@ class ChatPromptWidget(BaseWidget):
 
         self.app.token_signal.connect(self.handle_token_signal)
         self.app.message_var.my_signal.connect(self.message_handler)
-        self.ui.prompt.returnPressed.connect(self.action_button_clicked_send)
+
+        # handle return pressed on QPlainTextEdit
+        # there is no returnPressed signal for QPlainTextEdit
+        # so we have to use the keyPressEvent
+        self.promptKeyPressEvent = self.ui.prompt.keyPressEvent
+        self.ui.prompt.keyPressEvent = self.handle_key_press
+
         self.ui.prompt.textChanged.connect(self.prompt_text_changed)
         self.ui.conversation.hide()
         self.ui.chat_container.show()
-
-        self.ui.username.blockSignals(True)
-        self.ui.botname.blockSignals(True)
-        self.ui.username.setText(self.llm_generator.username)
-        self.ui.botname.setText(self.llm_generator.botname)
-        self.ui.username.blockSignals(False)
-        self.ui.botname.blockSignals(False)
     
     def handle_token_signal(self, val):
         if val != "[END]":
@@ -95,7 +87,6 @@ class ChatPromptWidget(BaseWidget):
             self.handle_text_generated(message)
 
     def handle_text_generated(self, message):
-        self.stop_progress_bar()
 
         # # check if messages is string or list
         # if isinstance(messages, str):
@@ -117,55 +108,60 @@ class ChatPromptWidget(BaseWidget):
         if message.endswith("\""):
             message = message[:-1]
         message_object = Message(
-            name=self.llm_generator.botname,
+            name=self.llm_generator["botname"],
             message=message,
             conversation=self.conversation
         )
         with session_scope() as session:
             session.add(message_object)
 
-            if self.app.enable_tts:
-                # split on sentence enders
-                sentence_enders = [".", "?", "!", "\n"]
-                text = message_object.message
-                sentences = []
-                # split text into sentences
-                current_sentence = ""
-                for char in text:
-                    current_sentence += char
-                    if char in sentence_enders:
+            if self.app.tts_settings["enable_tts"]:
+                if not self.app.tts_settings["use_bark"]:
+                    # split on sentence enders
+                    sentence_enders = [".", "?", "!", "\n"]
+                    text = message_object.message
+                    sentences = []
+                    # split text into sentences
+                    current_sentence = ""
+                    for char in text:
+                        current_sentence += char
+                        if char in sentence_enders:
+                            sentences.append(current_sentence)
+                            current_sentence = ""
+                    if current_sentence != "":
                         sentences.append(current_sentence)
-                        current_sentence = ""
-                if current_sentence != "":
-                    sentences.append(current_sentence)
+                    self.send_tts_request(message_object, sentences)
+                else:
+                    self.send_tts_request(message_object, [message_object.message])
 
-                for index, sentence in enumerate(sentences):
-                    sentence = sentence.strip()
-                    self.app.client.message = dict(
-                        tts_request=True,
-                        request_data=dict(
-                            text=sentence,
-                            message_object=Message(
-                                name=message_object.name,
-                                message=sentence,
-                            ),
-                            is_bot=True,
-                            callback=self.add_message_to_conversation,
-                            first_message=index == 0,
-                            last_message=index == len(sentences) - 1,
-                        )
-                    )
+            #self.add_message_to_conversation(message_object, is_bot=True)
+    
+    def send_tts_request(self, message_object, sentences):
+        Logger.info("SENDING TTS REQUEST")
+        for index, sentence in enumerate(sentences):
+            sentence = sentence.strip()
+            self.app.client.message = dict(
+                tts_request=True,
+                request_data=dict(
+                    text=sentence,
+                    message_object=Message(
+                        name=message_object.name,
+                        message=sentence,
+                    ),
+                    is_bot=True,
+                    signal=self.add_message_signal,
+                    gender=self.app.tts_settings["gender"],
+                    first_message=index == 0,
+                    last_message=index == len(sentences) - 1,
+                    tts_settings=self.app.tts_settings
+                )
+            )
 
-            self.add_message_to_conversation(message_object, is_bot=True)
-
-        self.generating = False
-        self.enable_send_button()
-
-    def prompt_text_changed(self, val):
-        self.prompt = val
+    def prompt_text_changed(self):
+        self.prompt = self.ui.prompt.toPlainText()
 
     def clear_prompt(self):
-        self.ui.prompt.setText("")
+        self.ui.prompt.setPlainText("")
 
     def start_progress_bar(self):
         self.ui.progressBar.setRange(0, 0)
@@ -188,6 +184,22 @@ class ChatPromptWidget(BaseWidget):
     def parent(self):
         return self.app.ui.llm_widget
 
+    promptKeyPressEvent = None
+
+    def handle_key_press(self, event):
+        # check if return pressed. if shift return pressed call insert_newline
+        # else call action_butjton_clicked_send()
+        if event.key() == Qt.Key.Key_Return:
+            if event.modifiers() != Qt.KeyboardModifier.ShiftModifier:
+                self.action_button_clicked_send()
+                return
+        # handle the keypress normally. There is no super() call because
+        # we are overriding the keyPressEvent
+        self.promptKeyPressEvent(event)
+
+    def insert_newline(self):
+        self.ui.prompt.insertPlainText("\n")
+
     def action_button_clicked_send(self, image_override=None, prompt_override=None, callback=None, generator_name="casuallm"):
         if self.generating:
             Logger.warning("Already generating")
@@ -195,10 +207,6 @@ class ChatPromptWidget(BaseWidget):
             
         self.generating = True
         self.disable_send_button()
-        #user_input = f"{self.llm_generator.username} Says: \"{self.prompt}\""
-        # conversation = "\n".join(self.conversation_history)
-        # suffix = "\n".join([self.suffix, f'{self.llm_generator.botname} Says: '])
-        # prompt = "\n".join([self.instructions, self.prefix, conversation, input, suffix])
 
         image = self.app.current_active_image() if (image_override is None or image_override is False) else image_override
 
@@ -209,10 +217,16 @@ class ChatPromptWidget(BaseWidget):
 
         with session_scope() as session:
             prompt_template = session.query(LLMPromptTemplate).filter(
-                LLMPromptTemplate.name == self.llm_generator.prompt_template
+                LLMPromptTemplate.name == self.app.llm_generator["prompt_template"]
             ).first()
+            if prompt_template is None:
+                raise Exception("Prompt template not found for "+self.app.llm_generator["prompt_template"])
 
             llm_generator_settings = self.app.llm_generator_settings
+
+            parsed_template = self.parse_template(prompt_template)
+
+            print("PARSED TEMPLATE", parsed_template)
 
             data = {
                 "llm_request": True,
@@ -232,12 +246,12 @@ class ChatPromptWidget(BaseWidget):
                     "dtype": llm_generator_settings["dtype"],
                     "use_gpu": llm_generator_settings["use_gpu"],
                     "request_type": "image_caption_generator",
-                    "username": self.llm_generator.username,
-                    "botname": self.llm_generator.botname,
-                    "prompt_template": prompt_template.template,
+                    "username": self.llm_generator["username"],
+                    "botname": self.llm_generator["botname"],
+                    "prompt_template": parsed_template,
                     "hf_api_key_read_key": self.app.hf_api_key_read_key,
                     "parameters": {
-                        "override_parameters": self.llm_generator.override_parameters,
+                        "override_parameters": self.llm_generator["override_parameters"],
                         "top_p": llm_generator_settings["top_p"] / 100.0,
                         "max_length": llm_generator_settings["max_length"],
                         "repetition_penalty": llm_generator_settings["repetition_penalty"] / 100.0,
@@ -253,20 +267,37 @@ class ChatPromptWidget(BaseWidget):
                         "early_stopping": llm_generator_settings["early_stopping"],
                     },
                     "image": image,
-                    "callback": callback
+                    "callback": callback,
+                    "tts_settings": self.app.tts_settings,
+                    "bot_mood": self.app.llm_generator["bot_mood"],
+                    "bot_personality": self.app.llm_generator["bot_personality"],
                 }
             }
-            print(data)
-            message_object = Message(
-                name=self.llm_generator.username,
-                message=self.prompt,
-                conversation=self.conversation
-            )
-            session.add(message_object)
-            self.app.client.message = data
-            self.add_message_to_conversation(message_object=message_object, is_bot=False)
-            self.clear_prompt()
-            self.start_progress_bar()
+        message_object = Message(
+            name=self.app.llm_generator["username"],
+            message=self.prompt,
+            conversation=self.conversation
+        )
+        self.app.client.message = data
+        self.add_message_to_conversation(message_object=message_object, is_bot=False)
+        self.clear_prompt()
+        self.start_progress_bar()
+    
+    def parse_template(self, template):
+        system_instructions = template.system_instructions
+        model = template.model
+        llm_category = template.llm_category
+        template = template.template
+        print("PARSE TEMPLATE", llm_category, model)
+        if llm_category == "casuallm":
+            if model == "mistralai/Mistral-7B-Instruct-v0.1":
+                return "\n".join((
+                    "<s>[INST] <<SYS>>",
+                    system_instructions,
+                    "<</SYS>>",
+                    template,
+                    "[/INST]"
+                ))
     
     def describe_image(self, image, callback):
         self.action_button_clicked_send(
@@ -275,33 +306,44 @@ class ChatPromptWidget(BaseWidget):
             callback=callback,
             generator_name="visualqa"
         )
-
+    
+    @pyqtSlot(Message, bool, bool, bool)
+    def add_bot_messasge_to_conversation(self, message_object, is_bot, first_message=True, last_message=True):
+        self.stop_progress_bar()
+        self.add_message_to_conversation(message_object, is_bot, first_message, last_message)
+        self.generating = False
+        self.enable_send_button()
+    
     def add_message_to_conversation(self, message_object, is_bot, first_message=True, last_message=True):
+        print("ADD MESSAGE TO CONVERSATION CALLBACK", is_bot, first_message, last_message)
         # remove spacer from self.ui.chat_container
-        widget = MessageWidget(message=message_object, is_bot=is_bot)
-        self.ui.scrollAreaWidgetContents.layout().addWidget(widget)
-        
-        if self.spacer is not None:
-            self.ui.scrollAreaWidgetContents.layout().removeItem(self.spacer)
+        with session_scope() as session:
+            session.add(message_object)
+            print(message_object.message)
+            widget = MessageWidget(message=message_object, is_bot=is_bot)
+            self.ui.scrollAreaWidgetContents.layout().addWidget(widget)
+            
+            if self.spacer is not None:
+                self.ui.scrollAreaWidgetContents.layout().removeItem(self.spacer)
 
-        message = ""
-        if first_message:
-            message = f"{message_object.name} Says: \""
-        message += message_object.message
-        if last_message:
-            message += "\""
+            message = ""
+            if first_message:
+                message = f"{message_object.name} Says: \""
+            message += message_object.message
+            if last_message:
+                message += "\""
 
-        if first_message:
-            self.conversation_history.append(message)
-        if not first_message:
-            self.conversation_history[-1] += message
-            self.ui.conversation.undo()
-        self.ui.conversation.append(self.conversation_history[-1])
+            if first_message:
+                self.conversation_history.append(message)
+            if not first_message:
+                self.conversation_history[-1] += message
+                self.ui.conversation.undo()
+            self.ui.conversation.append(self.conversation_history[-1])
 
-        # add a vertical spacer to self.ui.chat_container
-        if self.spacer is None:
-            self.spacer = QSpacerItem(20, 40, QSizePolicy.Policy.Minimum, QSizePolicy.Policy.Expanding)
-        self.ui.scrollAreaWidgetContents.layout().addItem(self.spacer)
+            # add a vertical spacer to self.ui.chat_container
+            if self.spacer is None:
+                self.spacer = QSpacerItem(20, 40, QSizePolicy.Policy.Minimum, QSizePolicy.Policy.Expanding)
+            self.ui.scrollAreaWidgetContents.layout().addItem(self.spacer)
 
     def action_button_clicked_clear_conversation(self):
         self.conversation_history = []
@@ -315,28 +357,8 @@ class ChatPromptWidget(BaseWidget):
     
     def message_type_text_changed(self, val):
         with session_scope() as session:
-            session.add(self.llm_generator)
-            self.llm_generator.message_type = val
+            session.add(self.app.llm_generator)
+            self.app.llm_generator["message_type"] = val
 
     def action_button_clicked_generate_characters(self):
         pass
-    
-    def prefix_text_changed(self):
-        with session_scope() as session:
-            session.add(self.llm_generator)
-            self.llm_generator.prefix = self.ui.prefix.toPlainText()
-
-    def suffix_text_changed(self):
-        with session_scope() as session:
-            session.add(self.llm_generator)
-            self.llm_generator.suffix = self.ui.suffix.toPlainText()
-
-    def username_text_changed(self, val):
-        with session_scope() as session:
-            session.add(self.llm_generator)
-            self.app.settings_manager.set_value("llm_generator.username", val)
-        
-    def botname_text_changed(self, val):
-        with session_scope() as session:
-            session.add(self.llm_generator)
-            self.app.settings_manager.set_value("llm_generator.botname", val)
