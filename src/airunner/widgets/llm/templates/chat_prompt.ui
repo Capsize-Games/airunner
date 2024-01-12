@@ -14,116 +14,6 @@
    <string>Form</string>
   </property>
   <layout class="QGridLayout" name="gridLayout">
-   <item row="2" column="0">
-    <layout class="QVBoxLayout" name="verticalLayout_5">
-     <item>
-      <widget class="QLabel" name="label_3">
-       <property name="text">
-        <string>User</string>
-       </property>
-      </widget>
-     </item>
-     <item>
-      <widget class="QLineEdit" name="username">
-       <property name="text">
-        <string>User</string>
-       </property>
-       <property name="placeholderText">
-        <string>User name</string>
-       </property>
-      </widget>
-     </item>
-    </layout>
-   </item>
-   <item row="2" column="1">
-    <layout class="QVBoxLayout" name="verticalLayout_6">
-     <item>
-      <widget class="QLabel" name="label">
-       <property name="text">
-        <string>Bot</string>
-       </property>
-      </widget>
-     </item>
-     <item>
-      <widget class="QLineEdit" name="botname">
-       <property name="text">
-        <string>ChatAI</string>
-       </property>
-       <property name="cursorPosition">
-        <number>6</number>
-       </property>
-       <property name="placeholderText">
-        <string>Bot name</string>
-       </property>
-      </widget>
-     </item>
-    </layout>
-   </item>
-   <item row="3" column="0" colspan="2">
-    <layout class="QHBoxLayout" name="horizontalLayout">
-     <item>
-      <widget class="QLineEdit" name="prompt">
-       <property name="placeholderText">
-        <string>Chat input</string>
-       </property>
-      </widget>
-     </item>
-     <item>
-      <widget class="QComboBox" name="comboBox">
-       <item>
-        <property name="text">
-         <string>Chat</string>
-        </property>
-       </item>
-       <item>
-        <property name="text">
-         <string>Narrate</string>
-        </property>
-       </item>
-       <item>
-        <property name="text">
-         <string>Generate Image</string>
-        </property>
-       </item>
-       <item>
-        <property name="text">
-         <string>Summarize</string>
-        </property>
-       </item>
-       <item>
-        <property name="text">
-         <string>Translate</string>
-        </property>
-       </item>
-      </widget>
-     </item>
-    </layout>
-   </item>
-   <item row="4" column="0" colspan="2">
-    <layout class="QHBoxLayout" name="horizontalLayout_2">
-     <item>
-      <widget class="QPushButton" name="send_button">
-       <property name="text">
-        <string>Send</string>
-       </property>
-      </widget>
-     </item>
-     <item>
-      <widget class="QProgressBar" name="progressBar">
-       <property name="value">
-        <number>0</number>
-       </property>
-      </widget>
-     </item>
-     <item>
-      <widget class="QPushButton" name="clear_conversatiion_button">
-       <property name="text">
-        <string>New Conversation</string>
-       </property>
-      </widget>
-     </item>
-    </layout>
-   </item>
    <item row="1" column="0" colspan="2">
     <widget class="QScrollArea" name="chat_container">
      <property name="frameShape">
@@ -138,7 +28,7 @@
         <x>0</x>
         <y>0</y>
         <width>661</width>
-        <height>904</height>
+        <height>837</height>
        </rect>
       </property>
       <layout class="QGridLayout" name="gridLayout_2">
@@ -163,6 +53,62 @@
        </item>
       </layout>
      </widget>
+    </widget>
+   </item>
+   <item row="4" column="0" colspan="2">
+    <layout class="QHBoxLayout" name="horizontalLayout_2">
+     <item>
+      <widget class="QPushButton" name="send_button">
+       <property name="toolTip">
+        <string>Send message</string>
+       </property>
+       <property name="text">
+        <string>Send</string>
+       </property>
+      </widget>
+     </item>
+     <item>
+      <widget class="QProgressBar" name="progressBar">
+       <property name="value">
+        <number>0</number>
+       </property>
+      </widget>
+     </item>
+     <item>
+      <widget class="QPushButton" name="clear_conversatiion_button">
+       <property name="toolTip">
+        <string>Clear conversation</string>
+       </property>
+       <property name="text">
+        <string/>
+       </property>
+       <property name="icon">
+        <iconset theme="user-trash"/>
+       </property>
+      </widget>
+     </item>
+    </layout>
+   </item>
+   <item row="2" column="0">
+    <widget class="QPlainTextEdit" name="prompt">
+     <property name="sizePolicy">
+      <sizepolicy hsizetype="Expanding" vsizetype="Maximum">
+       <horstretch>0</horstretch>
+       <verstretch>0</verstretch>
+      </sizepolicy>
+     </property>
+     <property name="minimumSize">
+      <size>
+       <width>0</width>
+       <height>150</height>
+      </size>
+     </property>
+     <property name="maximumSize">
+      <size>
+       <width>16777215</width>
+       <height>150</height>
+      </size>
+     </property>
     </widget>
    </item>
   </layout>
@@ -197,54 +143,6 @@
     </hint>
     <hint type="destinationlabel">
      <x>565</x>
-     <y>0</y>
-    </hint>
-   </hints>
-  </connection>
-  <connection>
-   <sender>comboBox</sender>
-   <signal>currentTextChanged(QString)</signal>
-   <receiver>chat_prompt</receiver>
-   <slot>message_type_text_changed(QString)</slot>
-   <hints>
-    <hint type="sourcelabel">
-     <x>668</x>
-     <y>976</y>
-    </hint>
-    <hint type="destinationlabel">
-     <x>465</x>
-     <y>0</y>
-    </hint>
-   </hints>
-  </connection>
-  <connection>
-   <sender>username</sender>
-   <signal>textChanged(QString)</signal>
-   <receiver>chat_prompt</receiver>
-   <slot>username_text_changed(QString)</slot>
-   <hints>
-    <hint type="sourcelabel">
-     <x>163</x>
-     <y>967</y>
-    </hint>
-    <hint type="destinationlabel">
-     <x>107</x>
-     <y>0</y>
-    </hint>
-   </hints>
-  </connection>
-  <connection>
-   <sender>botname</sender>
-   <signal>textChanged(QString)</signal>
-   <receiver>chat_prompt</receiver>
-   <slot>botname_text_changed(QString)</slot>
-   <hints>
-    <hint type="sourcelabel">
-     <x>668</x>
-     <y>967</y>
-    </hint>
-    <hint type="destinationlabel">
-     <x>170</x>
      <y>0</y>
     </hint>
    </hints>
