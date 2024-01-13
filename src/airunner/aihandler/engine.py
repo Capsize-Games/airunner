@@ -6,34 +6,56 @@ from airunner.aihandler.llm import LLM
 from airunner.aihandler.logger import Logger as logger
 from airunner.aihandler.runner import SDRunner
 from airunner.aihandler.tts import TTS
+from airunner.aihandler.speech_to_text import SpeechToText
+from PyQt6.QtCore import QObject, pyqtSignal, pyqtSlot
 
 
-class Engine:
+class Engine(QObject):
     """
     The engine is responsible for processing requests and offloading
     them to the appropriate AI model controller.
     """
     model_type = None
+    hear_signal = pyqtSignal(str)
     
     @property
     def hf_api_key_write_key(self):
         return self.sd.hf_api_key_write_key
 
     def __init__(self, **kwargs):
+        super().__init__()
         self.app = kwargs.get("app", None)
         self.message_var = kwargs.get("message_var", None)
         self.message_handler = kwargs.get("message_handler", None)
         self.clear_memory()
         self.llm = LLM(app=self.app, engine=self)
+        self.speech_to_text = SpeechToText(
+            hear_signal=self.hear_signal,
+            engine=self,
+            duration=10.0,
+            fs=16000
+        )
         self.sd = SDRunner(
             app=self.app,
             message_var=self.message_var,
             message_handler=self.message_handler,
             engine=self
         )
+        self.hear_signal.connect(self.hear)
         self.tts = TTS(engine=self, use_bark=self.app.tts_settings["use_bark"])
         self.tts_thread = threading.Thread(target=self.tts.run)
         self.tts_thread.start()
+        self.listen_thread = threading.Thread(target=self.speech_to_text.listen)
+        self.listen_thread.start()
+    
+    pyqtSlot(str)
+    def hear(self, message):
+        """
+        This is a slot function for the hear_signal.
+        The hear signal is triggered from the speech_to_text.listen function.
+        """
+        print("HEARD: ", message)
+        self.app.respond_to_voice(heard=message)
 
     def move_pipe_to_cpu(self):
         logger.info("Moving pipe to CPU")
@@ -54,6 +76,7 @@ class Engine:
         if is_llm and self.model_type != "llm":
             logger.info("Switching to LLM model")
             #self.tts.move_model(to_cpu=True)
+            self.clear_memory()
             self.model_type = "llm"
             do_unload_model = data["request_data"].get("unload_unused_model", False)
             do_move_to_cpu = not do_unload_model and data["request_data"].get("move_unused_model_to_cpu", False)
@@ -72,12 +95,11 @@ class Engine:
             is_bot = data["request_data"].get("is_bot", False)
             first_message = data["request_data"].get("first_message", None)
             last_message = data["request_data"].get("last_message", None)
-            print("adding sentence", data["request_data"]["text"], "to tts")
-            generator = self.tts.add_sentence(data["request_data"]["text"], "a", self.request_data["tts_settings"])
-            for success in generator:
-                print(success)
-                if signal and success:
-                    signal.emit(message_object, is_bot, first_message, last_message)
+            if self.request_data["tts_settings"]["enable_tts"]:
+                generator = self.tts.add_sentence(data["request_data"]["text"], "a", self.request_data["tts_settings"])
+                for success in generator:
+                    if signal and success:
+                        signal.emit(message_object, is_bot, first_message, last_message)
         elif not is_llm and not is_tts and self.model_type != "art":
             logger.info("Switching to art model")
             do_unload_model = data["options"].get("unload_unused_model", False)
@@ -93,6 +115,9 @@ class Engine:
             self.sd.generator_sample(data)
     
     request_data = None
+
+    def do_listen(self):
+        self.speech_to_text.do_listen()
 
     def is_llm_request(self, data):
         return "llm_request" in data
