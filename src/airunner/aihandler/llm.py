@@ -55,7 +55,8 @@ class LLM(TransformerRunner):
             history = []
             for message in self.history:
                 if message["role"] == "user":
-                    history.append("[INST]" + self.username + ': "'+ message["content"] +'"[/INST]')
+                    #history.append("[INST]" + self.username + ': "'+ message["content"] +'"[/INST]')
+                    history.append(self.username + ': "'+ message["content"])
                 else:
                     history.append(self.botname + ': "'+ message["content"] +'"')
             history = "\n".join(history)
@@ -131,6 +132,9 @@ class LLM(TransformerRunner):
             start_index = decoded.find('"') + 1
             end_index = decoded.rfind('"')
             decoded = decoded[start_index:end_index]
+
+            # strip BOTNAME: from decoded
+            decoded = decoded.replace(self.botname + ": ", "")
 
             Logger.info("Decoded: " + decoded)
             # remove white space

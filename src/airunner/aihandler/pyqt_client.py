@@ -25,6 +25,10 @@ class OfflineClient(QtCore.QObject):
     do_process_queue: bool = True
 
     @property
+    def engine(self):
+        return self.sd_runner
+
+    @property
     def message(self):
         """
         Does nothing. Only used for the setter.
