@@ -163,17 +163,17 @@ def prepare_database():
             
                         
 
-            for generator_name, generator_data in seed_data.items():
-                if "model_versions" in generator_data:
-                    model_versions = []
-                    for name in generator_data["model_versions"]:
-                        print("Name", name)
-                        model_versions.append(LLMModelVersion(name=name))
+            # for generator_name, generator_data in seed_data.items():
+            #     if "model_versions" in generator_data:
+            #         model_versions = []
+            #         for name in generator_data["model_versions"]:
+            #             print("Name", name)
+            #             model_versions.append(LLMModelVersion(name=name))
 
-                for version in model_versions:
-                    generator.model_versions.append(version)
+            #     for version in model_versions:
+            #         generator.model_versions.append(version)
 
-                my_session.add(generator)
+            #     my_session.add(generator)
                 
 
             prompt_template = LLMPromptTemplate()

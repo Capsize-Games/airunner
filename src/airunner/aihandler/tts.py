@@ -214,9 +214,9 @@ class TTS:
             self.add_sentence(self.new_sentence, stream)
             self.new_sentence = ""
 
-    def add_sentence(self, sentence, stream, ai_settings):
-        self.use_bark = ai_settings.tts_settings.use_bark
-        self.voice_preset = ai_settings.tts_settings.voice
+    def add_sentence(self, sentence, stream, tts_settings):
+        self.use_bark = tts_settings["use_bark"]
+        self.voice_preset = tts_settings["voice"]
         return self.process_sentence(sentence, stream)
 
     def process_speech(self):

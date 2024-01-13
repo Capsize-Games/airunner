@@ -94,15 +94,14 @@ class LLMSettingsWidget(BaseWidget):
 
         llm_generator_settings = self.app.llm_generator_settings
 
-        if self.generator:
-            dtype = llm_generator_settings["dtype"]
-            self.ui.radio_button_2bit.setChecked(dtype == "2bit")
-            self.ui.radio_button_4bit.setChecked(dtype == "4bit")
-            self.ui.radio_button_8bit.setChecked(dtype == "8bit")
-            self.ui.radio_button_16bit.setChecked(dtype == "16bit")
-            self.ui.radio_button_32bit.setChecked(dtype == "32bit")
-            self.set_dtype_by_gpu(llm_generator_settings["use_gpu"])
-            self.set_dtype(dtype)
+        dtype = llm_generator_settings["dtype"]
+        self.ui.radio_button_2bit.setChecked(dtype == "2bit")
+        self.ui.radio_button_4bit.setChecked(dtype == "4bit")
+        self.ui.radio_button_8bit.setChecked(dtype == "8bit")
+        self.ui.radio_button_16bit.setChecked(dtype == "16bit")
+        self.ui.radio_button_32bit.setChecked(dtype == "32bit")
+        self.set_dtype_by_gpu(llm_generator_settings["use_gpu"])
+        self.set_dtype(dtype)
 
         # get unique model names
         self.ui.model.clear()
@@ -121,12 +120,12 @@ class LLMSettingsWidget(BaseWidget):
             self.ui.prompt_template.blockSignals(True)
             self.ui.prompt_template.clear()
             self.ui.prompt_template.addItems(names)
-            template_name = self.app.llm_generator["prompt_template"]
+            template_name = self.app.llm_generator_settings["prompt_template"]
             if template_name == "":
                 template_name = names[0]
-                llm_generator = self.app.llm_generator
-                llm_generator["prompt_template"] = template_name
-                self.app.llm_generator = llm_generator
+                llm_generator_settings = self.app.llm_generator_settings
+                llm_generator_settings["prompt_template"] = template_name
+                self.app.llm_generator_settings = llm_generator_settings
             self.ui.prompt_template.setCurrentText(template_name)
             self.ui.prompt_template.blockSignals(False)
 
@@ -136,7 +135,7 @@ class LLMSettingsWidget(BaseWidget):
         self.ui.do_sample.setChecked(llm_generator_settings["do_sample"])
         self.ui.early_stopping.setChecked(llm_generator_settings["early_stopping"])
         self.ui.use_gpu_checkbox.setChecked(llm_generator_settings["use_gpu"])
-        self.ui.override_parameters.setChecked(self.app.llm_generator["override_parameters"])
+        self.ui.override_parameters.setChecked(self.app.llm_generator_settings["override_parameters"])
 
         self.ui.model.blockSignals(False)
         self.ui.model_version.blockSignals(False)
