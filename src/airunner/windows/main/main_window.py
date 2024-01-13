@@ -176,100 +176,38 @@ class MainWindow(
     listening = False
 
     @property
-    def use_last_channels(self):
-        return self.application_settings.value("use_last_channels", True, type=bool)
+    def settings(self):
+        return self.application_settings.value("settings", dict(
+            ocr_enabled=True,
+            tts_enabled=True,
+            v2t_enabled=True,
+        ), type=dict)
     
-    @use_last_channels.setter
-    def use_last_channels(self, val):
-        self.application_settings.setValue("use_last_channels", val)
-
+    @settings.setter
+    def settings(self, val):
+        self.application_settings.setValue("settings", val)
+        self.application_settings.sync()
+    
     @property
-    def use_attention_slicing(self):
-        return self.application_settings.value("use_attention_slicing", False, type=bool)
+    def memory_settings(self):
+        return self.application_settings.value("memory_settings", dict(
+            use_last_channels=True,
+            use_attention_slicing=False,
+            use_tf32=False,
+            use_enable_vae_slicing=True,
+            use_accelerated_transformers=True,
+            use_tiled_vae=True,
+            enable_model_cpu_offload=False,
+            use_enable_sequential_cpu_offload=False,
+            use_cudnn_benchmark=True,
+            use_torch_compile=False,
+            use_tome_sd=True,
+            tome_sd_ratio=600,
+        ), type=dict)
     
-    @use_attention_slicing.setter
-    def use_attention_slicing(self, val):
-        self.application_settings.setValue("use_attention_slicing", val)
-
-    @property
-    def use_tf32(self):
-        return self.application_settings.value("use_tf32", False, type=bool)
-    
-    @use_tf32.setter
-    def use_tf32(self, val):
-        self.application_settings.setValue("use_tf32", val)
-
-    @property
-    def use_enable_vae_slicing(self):
-        return self.application_settings.value("use_enable_vae_slicing", True, type=bool)
-    
-    @use_enable_vae_slicing.setter
-    def use_enable_vae_slicing(self, val):
-        self.application_settings.setValue("use_enable_vae_slicing", val)
-
-    @property
-    def use_accelerated_transformers(self):
-        return self.application_settings.value("use_accelerated_transformers", True, type=bool)
-    
-    @use_accelerated_transformers.setter
-    def use_accelerated_transformers(self, val):
-        self.application_settings.setValue("use_accelerated_transformers", val)
-
-    @property
-    def use_tiled_vae(self):
-        return self.application_settings.value("use_tiled_vae", True, type=bool)
-    
-    @use_tiled_vae.setter
-    def use_tiled_vae(self, val):
-        self.application_settings.setValue("use_tiled_vae", val)
-
-    @property
-    def enable_model_cpu_offload(self):
-        return self.application_settings.value("enable_model_cpu_offload", False, type=bool)
-    
-    @enable_model_cpu_offload.setter
-    def enable_model_cpu_offload(self, val):
-        self.application_settings.setValue("enable_model_cpu_offload", val)
-
-    @property
-    def use_enable_sequential_cpu_offload(self):
-        return self.application_settings.value("use_enable_sequential_cpu_offload", False, type=bool)
-    
-    @use_enable_sequential_cpu_offload.setter
-    def use_enable_sequential_cpu_offload(self, val):
-        self.application_settings.setValue("use_enable_sequential_cpu_offload", val)
-
-    @property
-    def use_cudnn_benchmark(self):
-        return self.application_settings.value("use_cudnn_benchmark", True, type=bool)
-    
-    @use_cudnn_benchmark.setter
-    def use_cudnn_benchmark(self, val):
-        self.application_settings.setValue("use_cudnn_benchmark", val)
-
-    @property
-    def use_torch_compile(self):
-        return self.application_settings.value("use_torch_compile", False, type=bool)
-    
-    @use_torch_compile.setter
-    def use_torch_compile(self, val):
-        self.application_settings.setValue("use_torch_compile", val)
-
-    @property
-    def use_tome_sd(self):
-        return self.application_settings.value("use_tome_sd", True, type=bool)
-    
-    @use_tome_sd.setter
-    def use_tome_sd(self, val):
-        self.application_settings.setValue("use_tome_sd", val)
-
-    @property
-    def tome_sd_ratio(self):
-        return self.application_settings.value("tome_sd_ratio", 600, type=int)
-    
-    @tome_sd_ratio.setter
-    def tome_sd_ratio(self, val):
-        self.application_settings.setValue("tome_sd_ratio", val)
+    @memory_settings.setter
+    def memory_settings(self, val):
+        self.application_settings.setValue("memory_settings", val)
 
     @property
     def brush_settings(self):
@@ -285,7 +223,7 @@ class MainWindow(
 
     @property
     def ai_mode(self):
-        return self.application_settings.value("ai_mode", False, type=bool)
+        return self.application_settings.value("ai_mode", True, type=bool)
     
     @ai_mode.setter
     def ai_mode(self, val):
@@ -654,7 +592,7 @@ class MainWindow(
             length_penalty=100,
             num_beams=1,
             ngram_size=0,
-            temperature=100,
+            temperature=1000,
             sequences=1,
             top_k=0,
             seed=0,
@@ -663,13 +601,21 @@ class MainWindow(
             early_stopping=True,
             random_seed=False,
             model_version="mistralai/Mistral-7B-Instruct-v0.1",
-            dtype="32bit",
+            dtype="4bit",
             use_gpu=True,
+            username="User",
+            botname="Bot",
+            message_type="chat",
+            bot_personality="happy. He loves {{ username }}",
+            bot_mood="",
+            prompt_template="",
+            override_parameters=False
         ))
     
     @llm_generator_settings.setter
     def llm_generator_settings(self, val):
         self.application_settings.setValue("llm_generator_settings", val)
+        self.application_settings.sync()
     #### END GENERATOR SETTINGS ####
 
     @property
@@ -685,22 +631,6 @@ class MainWindow(
     @tts_settings.setter
     def tts_settings(self, val):
         self.application_settings.setValue("tts_settings", val)
-
-    @property
-    def llm_generator(self):
-        return self.application_settings.value("llm_generator", dict(
-            username="User",
-            botname="Bot",
-            message_type="chat",
-            bot_personality="happy. He loves {{ username }}",
-            bot_mood="",
-            prompt_template="",
-            override_parameters=False
-        ))
-    
-    @llm_generator.setter
-    def llm_generator(self, val):
-        self.application_settings.setValue("llm_generator", val)
 
     @property
     def nsfw_filter(self):
@@ -1027,6 +957,16 @@ class MainWindow(
         self.restore_state()
 
         self.settings_manager.changed_signal.connect(self.handle_changed_signal)
+
+        self.ui.ocr_button.blockSignals(True)
+        self.ui.tts_button.blockSignals(True)
+        self.ui.v2t_button.blockSignals(True)
+        self.ui.ocr_button.setChecked(self.settings["ocr_enabled"])
+        self.ui.tts_button.setChecked(self.settings["tts_enabled"])
+        self.ui.v2t_button.setChecked(self.settings["v2t_enabled"])
+        self.ui.ocr_button.blockSignals(False)
+        self.ui.tts_button.blockSignals(False)
+        self.ui.v2t_button.blockSignals(False)
         
         self.loaded.emit()
     
@@ -1330,6 +1270,27 @@ class MainWindow(
 
     def quit(self):
         self.close()
+    
+    @pyqtSlot(bool)
+    def tts_button_toggled(self, val):
+        print("tts_button_toggled", val)
+        new_settings = self.settings
+        new_settings["tts_enabled"] = val
+        self.settings = new_settings
+
+    @pyqtSlot(bool)
+    def ocr_button_toggled(self, val):
+        print("ocr_button_toggled", val)
+        new_settings = self.settings
+        new_settings["ocr_enabled"] = val
+        self.settings = new_settings
+
+    @pyqtSlot(bool)
+    def v2t_button_toggled(self, val):
+        print("v2t_button_toggled", val)
+        new_settings = self.settings
+        new_settings["v2t_enabled"] = val
+        self.settings = new_settings
 
     ##### Window properties #####
     # Use this to set and restore window properties
@@ -1352,8 +1313,11 @@ class MainWindow(
         self.application_settings.setValue("generator_tab_index", self.ui.standard_image_widget.ui.tabWidget.currentIndex())
         self.application_settings.setValue("is_maximized", self.isMaximized())
         self.application_settings.setValue("is_fullscreen", self.isFullScreen())
+        self.application_settings.sync()
     
     def restore_state(self):
+        # self.application_settings.clear()
+        # self.application_settings.sync()
         main_splitter = self.application_settings.value("main_splitter")
         if main_splitter is not None:
             self.ui.main_splitter.restoreState(main_splitter)
