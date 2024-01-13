@@ -9,6 +9,7 @@ from transformers import InstructBlipForConditionalGeneration
 from transformers import InstructBlipProcessor
 from airunner.aihandler.enums import MessageCode
 from airunner.aihandler.logger import Logger
+from transformers import GPTQConfig
 
 
 class TransformerRunner(QObject):
@@ -132,6 +133,9 @@ class TransformerRunner(QObject):
                 bnb_4bit_use_double_quant=True,
                 bnb_4bit_quant_type='nf4',
             )
+        elif self.dtype == "2bit":
+            Logger.info("Loading 2bit model")
+            config = GPTQConfig(bits=2, dataset = "c4", tokenizer=self.tokenizer)
         return config
 
     def unload_processor(self):
