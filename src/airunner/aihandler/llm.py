@@ -55,8 +55,8 @@ class LLM(TransformerRunner):
             history = []
             for message in self.history:
                 if message["role"] == "user":
-                    #history.append("[INST]" + self.username + ': "'+ message["content"] +'"[/INST]')
-                    history.append(self.username + ': "'+ message["content"])
+                    history.append("[INST]" + self.username + ': "'+ message["content"] +'"[/INST]')
+                    #history.append(self.username + ': "'+ message["content"] +'"')
                 else:
                     history.append(self.botname + ': "'+ message["content"] +'"')
             history = "\n".join(history)
