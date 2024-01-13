@@ -43,11 +43,13 @@ class SpeechToText(QObject):
         self.feature_extractor = self.feature_extractor
 
     def run(self, inputs):
+        print("Running whisper model...")
         input_features = inputs.input_features
         generated_ids = self.model.generate(inputs=input_features)
         transcription = self.processor.batch_decode(generated_ids, skip_special_tokens=True)[0]
         # strip whitespace
         transcription = transcription.strip()
+        print("transcription: ", transcription)
         # check if transcription is empty or contains a single word
         if len(transcription) == 0 or len(transcription.split(" ")) == 1:
             return None
@@ -61,8 +63,8 @@ class SpeechToText(QObject):
             self.audio_queue.put(recording)
 
     def process_audio(self):
-        Logger.info("Processing audio...")
         while self.listening:
+            Logger.info("self.listening...")
             if not self.audio_queue.empty():
                 audio_data = self.audio_queue.get()
                 # convert audio_data into a numpy array
