@@ -697,7 +697,8 @@ class SDRunner(
         return self.options.get("original_model_data", {})
 
     def  __init__(self, **kwargs):
-        Logger.set_level(LOG_LEVEL)
+        #Logger.set_level(LOG_LEVEL)
+        Logger.info("Loading Stable Diffusion model runner...")
         self.settings_manager = SettingsManager()
         self.safety_checker_model = self.settings_manager.models_by_pipeline_action("safety_checker")
         self.text_encoder_model = self.settings_manager.models_by_pipeline_action("text_encoder")
