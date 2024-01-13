@@ -147,12 +147,6 @@ class LLM(TransformerRunner):
                 "content": decoded
             })
 
-            # print(self.history)
-
-            # print("*"*80)
-            # print(decoded)
-
-            #return decoded
             self.engine.send_message(decoded, code=MessageCode.TEXT_GENERATED)
         elif self.requested_generator_name == "visualqa":
             inputs = self.processor(
