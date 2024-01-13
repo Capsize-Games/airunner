@@ -7,7 +7,7 @@
     <x>0</x>
     <y>0</y>
     <width>361</width>
-    <height>1064</height>
+    <height>946</height>
    </rect>
   </property>
   <property name="font">
@@ -73,7 +73,7 @@
             <x>0</x>
             <y>0</y>
             <width>341</width>
-            <height>1022</height>
+            <height>904</height>
            </rect>
           </property>
           <layout class="QGridLayout" name="gridLayout">
@@ -258,7 +258,7 @@
         <number>0</number>
        </property>
        <item row="0" column="0">
-        <widget class="ChatPromptWidget" name="widget" native="true"/>
+        <widget class="ChatPromptWidget" name="chat_prompt_widget" native="true"/>
        </item>
       </layout>
      </widget>
