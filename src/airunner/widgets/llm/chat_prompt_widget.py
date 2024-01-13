@@ -2,13 +2,23 @@ from PyQt6.QtCore import pyqtSlot, pyqtSignal
 from PyQt6.QtWidgets import QSpacerItem, QSizePolicy
 from PyQt6.QtCore import Qt
 
+import sqlalchemy
+
 from airunner.aihandler.enums import MessageCode
-from airunner.data.models import Conversation, LLMPromptTemplate, Message
+from airunner.data.models import LLMPromptTemplate
 from airunner.widgets.base_widget import BaseWidget
+from airunner.widgets.llm.loading_widget import LoadingWidget
 from airunner.widgets.llm.templates.chat_prompt_ui import Ui_chat_prompt
 from airunner.widgets.llm.message_widget import MessageWidget
 from airunner.data.session_scope import session_scope
 from airunner.aihandler.logger import Logger
+
+
+class Message:
+    def __init__(self, *args, **kwargs):
+        self.name = kwargs.get("name")
+        self.message = kwargs.get("message")
+        self.conversation = kwargs.get("conversation")
 
 
 class ChatPromptWidget(BaseWidget):
@@ -40,18 +50,9 @@ class ChatPromptWidget(BaseWidget):
     
     def __init__(self, *args, **kwargs):
         super().__init__(*args, **kwargs)
-        self.add_message_signal.connect(self.add_bot_messasge_to_conversation)
-
-    def load_data(self):
-        with session_scope() as session:
-            self.conversation = session.query(Conversation).first()
-            if self.conversation is None:
-                self.conversation = Conversation()
-                session.add(self.conversation)
+        self.add_message_signal.connect(self.add_bot_message_to_conversation)
 
     def initialize(self):
-        self.load_data()
-
         self.app.token_signal.connect(self.handle_token_signal)
         self.app.message_var.my_signal.connect(self.message_handler)
 
@@ -87,7 +88,6 @@ class ChatPromptWidget(BaseWidget):
             self.handle_text_generated(message)
 
     def handle_text_generated(self, message):
-
         # # check if messages is string or list
         # if isinstance(messages, str):
         #     messages = [messages]
@@ -112,29 +112,28 @@ class ChatPromptWidget(BaseWidget):
             message=message,
             conversation=self.conversation
         )
-        with session_scope() as session:
-            session.add(message_object)
-
-            if self.app.tts_settings["enable_tts"]:
-                if not self.app.tts_settings["use_bark"]:
-                    # split on sentence enders
-                    sentence_enders = [".", "?", "!", "\n"]
-                    text = message_object.message
-                    sentences = []
-                    # split text into sentences
-                    current_sentence = ""
-                    for char in text:
-                        current_sentence += char
-                        if char in sentence_enders:
-                            sentences.append(current_sentence)
-                            current_sentence = ""
-                    if current_sentence != "":
+        if self.app.tts_settings["enable_tts"]:
+            if not self.app.tts_settings["use_bark"]:
+                # split on sentence enders
+                sentence_enders = [".", "?", "!", "\n"]
+                text = message_object.message
+                sentences = []
+                # split text into sentences
+                current_sentence = ""
+                for char in text:
+                    current_sentence += char
+                    if char in sentence_enders:
                         sentences.append(current_sentence)
-                    self.send_tts_request(message_object, sentences)
-                else:
-                    self.send_tts_request(message_object, [message_object.message])
+                        current_sentence = ""
+                if current_sentence != "":
+                    sentences.append(current_sentence)
+                self.send_tts_request(message_object, sentences)
+            else:
+                self.send_tts_request(message_object, [message_object.message])
+        else:
+            self.add_bot_message_to_conversation(message_object, is_bot=True)
 
-            #self.add_message_to_conversation(message_object, is_bot=True)
+        #self.add_message_to_conversation(message_object, is_bot=True)
     
     def send_tts_request(self, message_object, sentences):
         Logger.info("SENDING TTS REQUEST")
@@ -199,6 +198,9 @@ class ChatPromptWidget(BaseWidget):
 
     def insert_newline(self):
         self.ui.prompt.insertPlainText("\n")
+
+    def respond_to_voice(self, heard):
+        self.action_button_clicked_send(prompt_override=heard)
 
     def action_button_clicked_send(self, image_override=None, prompt_override=None, callback=None, generator_name="casuallm"):
         if self.generating:
@@ -308,42 +310,55 @@ class ChatPromptWidget(BaseWidget):
         )
     
     @pyqtSlot(Message, bool, bool, bool)
-    def add_bot_messasge_to_conversation(self, message_object, is_bot, first_message=True, last_message=True):
+    def add_bot_message_to_conversation(self, message_object, is_bot, first_message=True, last_message=True):
         self.stop_progress_bar()
         self.add_message_to_conversation(message_object, is_bot, first_message, last_message)
         self.generating = False
         self.enable_send_button()
     
     def add_message_to_conversation(self, message_object, is_bot, first_message=True, last_message=True):
-        print("ADD MESSAGE TO CONVERSATION CALLBACK", is_bot, first_message, last_message)
         # remove spacer from self.ui.chat_container
-        with session_scope() as session:
-            session.add(message_object)
-            print(message_object.message)
-            widget = MessageWidget(message=message_object, is_bot=is_bot)
-            self.ui.scrollAreaWidgetContents.layout().addWidget(widget)
-            
-            if self.spacer is not None:
-                self.ui.scrollAreaWidgetContents.layout().removeItem(self.spacer)
+        widget = MessageWidget(message=message_object, is_bot=is_bot)
 
-            message = ""
-            if first_message:
-                message = f"{message_object.name} Says: \""
-            message += message_object.message
-            if last_message:
-                message += "\""
+        if is_bot:
+            # remove the last LoadingWidget from scrollAreaWidgetContents.layout()
+            for i in range(self.ui.scrollAreaWidgetContents.layout().count()):
+                current_widget = self.ui.scrollAreaWidgetContents.layout().itemAt(i).widget()
+                if isinstance(current_widget, LoadingWidget):
+                    self.ui.scrollAreaWidgetContents.layout().removeWidget(current_widget)
+                    current_widget.deleteLater()
+                    break
 
-            if first_message:
-                self.conversation_history.append(message)
-            if not first_message:
-                self.conversation_history[-1] += message
-                self.ui.conversation.undo()
-            self.ui.conversation.append(self.conversation_history[-1])
+        self.ui.scrollAreaWidgetContents.layout().addWidget(widget)
+        
+        if self.spacer is not None:
+            self.ui.scrollAreaWidgetContents.layout().removeItem(self.spacer)
 
-            # add a vertical spacer to self.ui.chat_container
-            if self.spacer is None:
-                self.spacer = QSpacerItem(20, 40, QSizePolicy.Policy.Minimum, QSizePolicy.Policy.Expanding)
-            self.ui.scrollAreaWidgetContents.layout().addItem(self.spacer)
+        message = ""
+        if first_message:
+            message = f"{message_object.name} Says: \""
+        message += message_object.message
+        if last_message:
+            message += "\""
+
+        if first_message:
+            self.conversation_history.append(message)
+        if not first_message:
+            self.conversation_history[-1] += message
+            self.ui.conversation.undo()
+        self.ui.conversation.append(self.conversation_history[-1])
+
+        # if is not is_bot, then we want to add a widget that shows a
+        # text icon
+        if not is_bot:
+            self.ui.scrollAreaWidgetContents.layout().addWidget(
+                LoadingWidget()
+            )
+
+        # add a vertical spacer to self.ui.chat_container
+        if self.spacer is None:
+            self.spacer = QSpacerItem(20, 40, QSizePolicy.Policy.Minimum, QSizePolicy.Policy.Expanding)
+        self.ui.scrollAreaWidgetContents.layout().addItem(self.spacer)
 
     def action_button_clicked_clear_conversation(self):
         self.conversation_history = []

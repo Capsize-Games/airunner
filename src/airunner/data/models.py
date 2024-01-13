@@ -324,19 +324,19 @@ Previous Conversation:
 
 
 
-class Conversation(BaseModel):
-    __tablename__ = 'conversation'
-    id = Column(Integer, primary_key=True)
-    created_at = Column(DateTime, default=datetime.datetime.utcnow)
-    messages = relationship('Message', back_populates='conversation')
+# class Conversation(BaseModel):
+#     __tablename__ = 'conversation'
+#     id = Column(Integer, primary_key=True)
+#     created_at = Column(DateTime, default=datetime.datetime.utcnow)
+#     messages = relationship('Message', back_populates='conversation')
 
 
-class Message(BaseModel):
-    __tablename__ = 'messages'
-    id = Column(Integer, primary_key=True)
-    created_at = Column(DateTime, default=datetime.datetime.utcnow)
-    name = Column(String)
-    message = Column(String)
-    conversation_id = Column(Integer, ForeignKey('conversation.id'))
-    conversation = relationship('Conversation', back_populates='messages')
+# class Message(BaseModel):
+#     __tablename__ = 'messages'
+#     id = Column(Integer, primary_key=True)
+#     created_at = Column(DateTime, default=datetime.datetime.utcnow)
+#     name = Column(String)
+#     message = Column(String)
+#     conversation_id = Column(Integer, ForeignKey('conversation.id'))
+#     conversation = relationship('Conversation', back_populates='messages')
 

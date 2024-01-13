@@ -24,7 +24,7 @@ class LLMSettingsWidget(BaseWidget):
     @property
     def generator(self):
         try:
-            return self.app.settings_manager.llm_generator
+            return self.app.llm_generator
         except Exception as e:
             Logger.error(e)
             import traceback

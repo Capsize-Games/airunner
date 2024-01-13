@@ -173,6 +173,7 @@ class MainWindow(
     generator = None
     _generator = None
     _generator_settings = None
+    listening = False
 
     @property
     def use_last_channels(self):
@@ -1028,6 +1029,17 @@ class MainWindow(
         self.settings_manager.changed_signal.connect(self.handle_changed_signal)
         
         self.loaded.emit()
+    
+    def do_listen(self):
+        if not self.listening:
+            self.listening = True
+            self.client.engine.do_listen()
+
+    def respond_to_voice(self, heard):
+        heard = heard.strip()
+        if heard == "." or heard is None or heard == "":
+            return
+        self.ui.generator_widget.ui.chat_prompt_widget.respond_to_voice(heard)
     
     def create_airunner_paths(self):
         paths = [

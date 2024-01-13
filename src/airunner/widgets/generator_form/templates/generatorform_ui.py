@@ -12,7 +12,7 @@ from PyQt6 import QtCore, QtGui, QtWidgets
 class Ui_generator_form(object):
     def setupUi(self, generator_form):
         generator_form.setObjectName("generator_form")
-        generator_form.resize(361, 1064)
+        generator_form.resize(361, 946)
         font = QtGui.QFont()
         font.setPointSize(8)
         generator_form.setFont(font)
@@ -33,7 +33,7 @@ class Ui_generator_form(object):
         self.scrollArea.setWidgetResizable(True)
         self.scrollArea.setObjectName("scrollArea")
         self.scrollAreaWidgetContents = QtWidgets.QWidget()
-        self.scrollAreaWidgetContents.setGeometry(QtCore.QRect(0, 0, 341, 1022))
+        self.scrollAreaWidgetContents.setGeometry(QtCore.QRect(0, 0, 341, 904))
         self.scrollAreaWidgetContents.setObjectName("scrollAreaWidgetContents")
         self.gridLayout = QtWidgets.QGridLayout(self.scrollAreaWidgetContents)
         self.gridLayout.setContentsMargins(0, 0, 0, 0)
@@ -110,9 +110,9 @@ class Ui_generator_form(object):
         self.gridLayout_5 = QtWidgets.QGridLayout(self.tab_2)
         self.gridLayout_5.setContentsMargins(0, 0, 0, 0)
         self.gridLayout_5.setObjectName("gridLayout_5")
-        self.widget = ChatPromptWidget(parent=self.tab_2)
-        self.widget.setObjectName("widget")
-        self.gridLayout_5.addWidget(self.widget, 0, 0, 1, 1)
+        self.chat_prompt_widget = ChatPromptWidget(parent=self.tab_2)
+        self.chat_prompt_widget.setObjectName("chat_prompt_widget")
+        self.gridLayout_5.addWidget(self.chat_prompt_widget, 0, 0, 1, 1)
         self.generator_form_tabs.addTab(self.tab_2, "")
         self.gridLayout_4.addWidget(self.generator_form_tabs, 0, 0, 1, 1)
 
