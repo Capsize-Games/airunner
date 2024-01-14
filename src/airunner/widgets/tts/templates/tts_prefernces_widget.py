@@ -225,9 +225,9 @@ class TTSPreferencesWidget(BaseWidget):
         self.ui.use_bark.blockSignals(True)
         self.ui.enable_tts.blockSignals(True)
 
-        language = self.app.tts_settings["language"]
-        gender = self.app.tts_settings["gender"]
-        voice = self.app.tts_settings["voice"]
+        language = self.app.settings["tts_settings"]["language"]
+        gender = self.app.settings["tts_settings"]["gender"]
+        voice = self.app.settings["tts_settings"]["voice"]
 
         self.ui.voice_combobox.clear()
 
@@ -236,8 +236,8 @@ class TTSPreferencesWidget(BaseWidget):
         self.ui.gender_combobox.setCurrentText(gender)
         self.ui.voice_combobox.addItems(self.voices[language][gender])
         self.ui.voice_combobox.setCurrentText(voice)
-        self.ui.use_bark.setChecked(self.app.tts_settings["use_bark"])
-        self.ui.enable_tts.setChecked(self.app.tts_settings["enable_tts"])
+        self.ui.use_bark.setChecked(self.app.settings["tts_settings"]["use_bark"])
+        self.ui.enable_tts.setChecked(self.app.settings["tts_settings"]["enable_tts"])
 
         self.ui.language_combobox.blockSignals(False)
         self.ui.gender_combobox.blockSignals(False)
@@ -248,33 +248,33 @@ class TTSPreferencesWidget(BaseWidget):
 
     def language_changed(self, text):
         self.initialize_form()
-        tts_settings = self.app.tts_settings
-        tts_settings["language"] = text
-        tts_settings["gender"] = self.ui.gender_combobox.currentText()
-        tts_settings["voice"] = self.ui.voice_combobox.currentText()
-        self.app.tts_settings = tts_settings
+        settings = self.app.settings
+        settings["tts_settings"]["language"] = text
+        settings["tts_settings"]["gender"] = self.ui.gender_combobox.currentText()
+        settings["tts_settings"]["voice"] = self.ui.voice_combobox.currentText()
+        self.app.settings = settings
 
     def voice_changed(self, text):
         self.initialize_form()
-        tts_settings = self.app.tts_settings
-        tts_settings["voice"] = text
-        self.app.tts_settings = tts_settings
+        settings = self.app.settings
+        settings["tts_settings"]["voice"] = text
+        self.app.settings = settings
 
     def gender_changed(self, text):
         self.initialize_form()
-        tts_settings = self.app.tts_settings
-        tts_settings["gender"] = text
-        tts_settings["voice"] = self.ui.voice_combobox.currentText()
-        self.app.tts_settings = tts_settings
+        settings = self.app.settings
+        settings["tts_settings"]["gender"] = text
+        settings["tts_settings"]["voice"] = self.ui.voice_combobox.currentText()
+        self.app.settings = settings
 
     def use_bark_changed(self, val):
         self.initialize_form()
-        tts_settings = self.app.tts_settings
-        tts_settings["use_bark"] = val
-        self.app.tts_settings = tts_settings
+        settings = self.app.settings
+        settings["tts_settings"]["use_bark"] = val
+        self.app.settings = settings
 
     def enable_tts_changed(self, val):
         self.initialize_form()
-        tts_settings = self.app.tts_settings
-        tts_settings["enable_tts"] = val
-        self.app.tts_settings = tts_settings
+        settings = self.app.settings
+        settings["tts_settings"]["enable_tts"] = val
+        self.app.settings = settings
