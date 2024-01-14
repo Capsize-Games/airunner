@@ -2,7 +2,7 @@ from airunner.data.bootstrap.controlnet_bootstrap_data import controlnet_bootstr
 from airunner.data.bootstrap.imagefilter_bootstrap_data import imagefilter_bootstrap_data
 from airunner.data.bootstrap.model_bootstrap_data import model_bootstrap_data
 from airunner.data.bootstrap.pipeline_bootstrap_data import pipeline_bootstrap_data
-from airunner.data.models import ControlnetModel, LLMPromptTemplate, Pipeline, Document, \
+from airunner.data.models import ControlnetModel, LLMPromptTemplate, Pipeline, \
     AIModel, ImageFilter, ImageFilterValue, Scheduler, ActionScheduler
 from airunner.data.session_scope import session_scope, engine
 from alembic.config import Config
@@ -19,7 +19,7 @@ def prepare_database():
         do_stamp_alembic = False
 
         # check if database is blank:
-        if not my_session.query(Document).first():
+        if not my_session.query(ControlnetModel).first():
             do_stamp_alembic = True
 
             # Add ControlnetModel objects
