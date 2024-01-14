@@ -39,6 +39,7 @@ class CanvasPlusWidget(CanvasBaseWidget):
     redraw_lines = False
     has_lines = False
     line_group = QGraphicsItemGroup()
+    grid_settings: dict = {}
 
     @property
     def image_pivot_point(self):
@@ -102,7 +103,8 @@ class CanvasPlusWidget(CanvasBaseWidget):
 
     def __init__(self, *args, **kwargs):
         super().__init__(*args, **kwargs)
-        self.app.settings_manager.changed_signal.connect(self.handle_changed_signal)
+        #self.app.settings_manager.changed_signal.connect(self.handle_changed_signal)
+        self.app.application_settings_changed_signal.connect(self.handle_changed_signal)
         with session_scope() as session:
             self.ui.central_widget.resizeEvent = self.resizeEvent
             self.app.add_image_to_canvas_signal.connect(self.handle_add_image_to_canvas)
@@ -250,11 +252,20 @@ class CanvasPlusWidget(CanvasBaseWidget):
         else:
             super().wheelEvent(event)  # Propagate the event to the base class if no modifier keys are pressed
 
-    def handle_changed_signal(self, key, value):
-        if key == "layer_image_data.visible":
+    def handle_changed_signal(self):
+        print("handle_changed_signal")
+        grid_settings = self.app.settings["grid_settings"]
+        do_draw = False
+        for k,v in grid_settings.items():
+            if k not in self.grid_settings or self.grid_settings[k] != v:
+                if k == "canvas_color":
+                    self.set_canvas_color()
+                elif k in ["line_color", "cell_size", "line_width"]:
+                    self.redraw_lines = True
+                do_draw = True
+        if do_draw:
             self.do_draw()
-        elif key == "layer_data.hidden":
-            self.do_draw()
+        self.grid_settings = grid_settings
     
     def handle_loaded(self):
         self.initialized = True
@@ -297,6 +308,8 @@ class CanvasPlusWidget(CanvasBaseWidget):
         self.do_draw()
     
     def set_canvas_color(self):
+        if not self.scene:
+            return
         self.scene.setBackgroundBrush(QBrush(QColor(self.canvas_color)))
 
     def draw_layers(self):

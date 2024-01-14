@@ -36,7 +36,6 @@ from airunner.windows.settings.airunner_settings import SettingsWindow
 from airunner.windows.update.update_window import UpdateWindow
 from airunner.windows.video import VideoPopup
 from airunner.widgets.brushes.brushes_container import BrushesContainer
-from airunner.data.models import Document
 from airunner.data.session_scope import session_scope
 
 
@@ -169,6 +168,7 @@ class MainWindow(
     load_image = pyqtSignal(str)
     load_image_object = pyqtSignal(object)
     window_resized_signal = pyqtSignal(object)
+    application_settings_changed_signal = pyqtSignal()
 
     generator = None
     _generator = None
@@ -383,11 +383,12 @@ class MainWindow(
                 enable_tts=True,
             ),
         ), type=dict)
-    
+
     @settings.setter
     def settings(self, val):
         self.application_settings.setValue("settings", val)
         self.application_settings.sync()
+        self.application_settings_changed_signal.emit()
 
     def reset_paths(self):
         settings = self.settings
@@ -532,10 +533,6 @@ class MainWindow(
 
         self.set_log_levels()
         self.testing = kwargs.pop("testing", False)
-
-        # initialize the document
-        with session_scope() as session:
-            self.document = session.query(Document).first()
 
         super().__init__(*args, **kwargs)
 
@@ -1373,7 +1370,7 @@ class MainWindow(
         Overrides base method to set the window title
         :return:
         """
-        self.setWindowTitle(f"AI Runner {self.document_name}")
+        self.setWindowTitle(f"AI Runner")
 
     def new_document(self):
         self.ui.layer_widget.clear_layers()
