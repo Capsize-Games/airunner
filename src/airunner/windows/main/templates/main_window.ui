@@ -8,7 +8,7 @@
     <x>0</x>
     <y>0</y>
     <width>1201</width>
-    <height>1181</height>
+    <height>1186</height>
    </rect>
   </property>
   <property name="sizePolicy">
@@ -652,7 +652,7 @@
                <x>0</x>
                <y>0</y>
                <width>407</width>
-               <height>1052</height>
+               <height>1057</height>
               </rect>
              </property>
              <layout class="QGridLayout" name="gridLayout">
@@ -1185,6 +1185,9 @@
                 <height>45</height>
                </size>
               </property>
+              <property name="cursor">
+               <cursorShape>PointingHandCursor</cursorShape>
+              </property>
               <property name="toolTip">
                <string>Toggle Text to Speech</string>
               </property>
@@ -1217,6 +1220,9 @@
                 <height>45</height>
                </size>
               </property>
+              <property name="cursor">
+               <cursorShape>PointingHandCursor</cursorShape>
+              </property>
               <property name="toolTip">
                <string>Toggle Speech To Text</string>
               </property>
@@ -1248,6 +1254,9 @@
                 <width>50</width>
                 <height>45</height>
                </size>
+              </property>
+              <property name="cursor">
+               <cursorShape>PointingHandCursor</cursorShape>
               </property>
               <property name="toolTip">
                <string>Toggle Vision</string>

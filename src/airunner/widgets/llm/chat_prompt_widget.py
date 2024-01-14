@@ -35,7 +35,7 @@ class ChatPromptWidget(BaseWidget):
 
     @property
     def llm_generator(self):
-        return self.app.llm_generator
+        return self.app.settings["llm_generator_settings"]
     
     @property
     def llm_generator_settings(self):
@@ -88,18 +88,6 @@ class ChatPromptWidget(BaseWidget):
             self.handle_text_generated(message)
 
     def handle_text_generated(self, message):
-        # # check if messages is string or list
-        # if isinstance(messages, str):
-        #     messages = [messages]
-        
-        # #print("MESSAGES", messages)
-            
-        # if messages is None:
-        #     return
-
-        # # get last message
-        # message = messages[-1]["content"]
-
         # strip quotes from start and end of message
         if not message:
             return
@@ -131,9 +119,9 @@ class ChatPromptWidget(BaseWidget):
             else:
                 self.send_tts_request(message_object, [message_object.message])
         else:
-            self.add_bot_message_to_conversation(message_object, is_bot=True)
+            
 
-        #self.add_message_to_conversation(message_object, is_bot=True)
+            self.add_bot_message_to_conversation(message_object, is_bot=True)
     
     def send_tts_request(self, message_object, sentences):
         Logger.info("SENDING TTS REQUEST")
@@ -372,7 +360,7 @@ class ChatPromptWidget(BaseWidget):
     
     def message_type_text_changed(self, val):
         with session_scope() as session:
-            session.add(self.app.llm_generator)
+            session.add(self.app.settings["llm_generator_settings"])
             self.app.settings["llm_generator_settings"]["message_type"] = val
 
     def action_button_clicked_generate_characters(self):

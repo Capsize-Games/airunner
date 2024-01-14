@@ -40,6 +40,8 @@ class CanvasPlusWidget(CanvasBaseWidget):
     has_lines = False
     line_group = QGraphicsItemGroup()
     grid_settings: dict = {}
+    active_grid_settings: dict = {}
+    canvas_settings: dict = {}
 
     @property
     def image_pivot_point(self):
@@ -253,9 +255,9 @@ class CanvasPlusWidget(CanvasBaseWidget):
             super().wheelEvent(event)  # Propagate the event to the base class if no modifier keys are pressed
 
     def handle_changed_signal(self):
-        print("handle_changed_signal")
-        grid_settings = self.app.settings["grid_settings"]
         do_draw = False
+        
+        grid_settings = self.app.settings["grid_settings"]
         for k,v in grid_settings.items():
             if k not in self.grid_settings or self.grid_settings[k] != v:
                 if k == "canvas_color":
@@ -263,9 +265,25 @@ class CanvasPlusWidget(CanvasBaseWidget):
                 elif k in ["line_color", "cell_size", "line_width"]:
                     self.redraw_lines = True
                 do_draw = True
+        
+        active_grid_settings = self.app.settings["active_grid_settings"]
+        for k,v in active_grid_settings.items():
+            if k not in self.grid_settings or self.grid_settings[k] != v:
+                if k in ["pos_x", "pos_y", "width", "height"]:
+                    self.redraw_lines = True
+                do_draw = True
+        
+        canvas_settings = self.app.settings["canvas_settings"]
+        for k,v in canvas_settings.items():
+            if k not in self.grid_settings or self.grid_settings[k] != v:
+                do_draw = True
+        
         if do_draw:
             self.do_draw()
+
         self.grid_settings = grid_settings
+        self.active_grid_settings = active_grid_settings
+        self.canvas_settings = canvas_settings
     
     def handle_loaded(self):
         self.initialized = True
