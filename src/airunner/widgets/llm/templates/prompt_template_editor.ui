@@ -1,0 +1,219 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<ui version="4.0">
+ <class>Form</class>
+ <widget class="QWidget" name="Form">
+  <property name="geometry">
+   <rect>
+    <x>0</x>
+    <y>0</y>
+    <width>364</width>
+    <height>447</height>
+   </rect>
+  </property>
+  <property name="windowTitle">
+   <string>Form</string>
+  </property>
+  <layout class="QGridLayout" name="gridLayout">
+   <item row="2" column="0">
+    <widget class="QGroupBox" name="groupBox_3">
+     <property name="title">
+      <string>System Instructions</string>
+     </property>
+     <layout class="QGridLayout" name="gridLayout_4">
+      <item row="1" column="0">
+       <widget class="QPlainTextEdit" name="system_instructions">
+        <property name="placeholderText">
+         <string>EXAMPLE: You are {{ botname }}. You are having a conversation with {{ username }}. {{ username }} is the user and you are the assistant. You should stay in character and respond as {{ botname }}.</string>
+        </property>
+       </widget>
+      </item>
+      <item row="0" column="0">
+       <widget class="QLabel" name="label">
+        <property name="text">
+         <string>Keep the instructions brief, but be descriptive.</string>
+        </property>
+       </widget>
+      </item>
+     </layout>
+    </widget>
+   </item>
+   <item row="0" column="0">
+    <widget class="QGroupBox" name="groupBox">
+     <property name="title">
+      <string>LLM Category</string>
+     </property>
+     <layout class="QGridLayout" name="gridLayout_2">
+      <item row="0" column="0">
+       <widget class="QComboBox" name="llm_category"/>
+      </item>
+     </layout>
+    </widget>
+   </item>
+   <item row="4" column="0">
+    <layout class="QHBoxLayout" name="horizontalLayout">
+     <item>
+      <widget class="QComboBox" name="template_name"/>
+     </item>
+     <item>
+      <widget class="QPushButton" name="pushButton_2">
+       <property name="text">
+        <string>Save</string>
+       </property>
+      </widget>
+     </item>
+     <item>
+      <widget class="QPushButton" name="pushButton_3">
+       <property name="text">
+        <string>Delete</string>
+       </property>
+      </widget>
+     </item>
+     <item>
+      <widget class="QPushButton" name="pushButton">
+       <property name="text">
+        <string>New</string>
+       </property>
+      </widget>
+     </item>
+    </layout>
+   </item>
+   <item row="1" column="0">
+    <widget class="QGroupBox" name="groupBox_2">
+     <property name="title">
+      <string>Model</string>
+     </property>
+     <layout class="QGridLayout" name="gridLayout_3">
+      <item row="0" column="0">
+       <widget class="QComboBox" name="template_format"/>
+      </item>
+     </layout>
+    </widget>
+   </item>
+  </layout>
+ </widget>
+ <resources/>
+ <connections>
+  <connection>
+   <sender>llm_category</sender>
+   <signal>currentTextChanged(QString)</signal>
+   <receiver>Form</receiver>
+   <slot>llm_category_changed(QString)</slot>
+   <hints>
+    <hint type="sourcelabel">
+     <x>113</x>
+     <y>59</y>
+    </hint>
+    <hint type="destinationlabel">
+     <x>33</x>
+     <y>0</y>
+    </hint>
+   </hints>
+  </connection>
+  <connection>
+   <sender>template_format</sender>
+   <signal>currentTextChanged(QString)</signal>
+   <receiver>Form</receiver>
+   <slot>model_changed(QString)</slot>
+   <hints>
+    <hint type="sourcelabel">
+     <x>292</x>
+     <y>136</y>
+    </hint>
+    <hint type="destinationlabel">
+     <x>340</x>
+     <y>0</y>
+    </hint>
+   </hints>
+  </connection>
+  <connection>
+   <sender>system_instructions</sender>
+   <signal>textChanged()</signal>
+   <receiver>Form</receiver>
+   <slot>system_instructions_changed()</slot>
+   <hints>
+    <hint type="sourcelabel">
+     <x>239</x>
+     <y>261</y>
+    </hint>
+    <hint type="destinationlabel">
+     <x>171</x>
+     <y>0</y>
+    </hint>
+   </hints>
+  </connection>
+  <connection>
+   <sender>template_name</sender>
+   <signal>currentTextChanged(QString)</signal>
+   <receiver>Form</receiver>
+   <slot>template_name_changed(QString)</slot>
+   <hints>
+    <hint type="sourcelabel">
+     <x>128</x>
+     <y>464</y>
+    </hint>
+    <hint type="destinationlabel">
+     <x>135</x>
+     <y>0</y>
+    </hint>
+   </hints>
+  </connection>
+  <connection>
+   <sender>pushButton_2</sender>
+   <signal>clicked()</signal>
+   <receiver>Form</receiver>
+   <slot>save_clicked()</slot>
+   <hints>
+    <hint type="sourcelabel">
+     <x>238</x>
+     <y>459</y>
+    </hint>
+    <hint type="destinationlabel">
+     <x>204</x>
+     <y>0</y>
+    </hint>
+   </hints>
+  </connection>
+  <connection>
+   <sender>pushButton_3</sender>
+   <signal>clicked()</signal>
+   <receiver>Form</receiver>
+   <slot>delete_clicked()</slot>
+   <hints>
+    <hint type="sourcelabel">
+     <x>359</x>
+     <y>468</y>
+    </hint>
+    <hint type="destinationlabel">
+     <x>311</x>
+     <y>0</y>
+    </hint>
+   </hints>
+  </connection>
+  <connection>
+   <sender>pushButton</sender>
+   <signal>clicked()</signal>
+   <receiver>Form</receiver>
+   <slot>new_clicked()</slot>
+   <hints>
+    <hint type="sourcelabel">
+     <x>477</x>
+     <y>460</y>
+    </hint>
+    <hint type="destinationlabel">
+     <x>447</x>
+     <y>1</y>
+    </hint>
+   </hints>
+  </connection>
+ </connections>
+ <slots>
+  <slot>llm_category_changed(QString)</slot>
+  <slot>model_changed(QString)</slot>
+  <slot>system_instructions_changed()</slot>
+  <slot>bot_personality_changed()</slot>
+  <slot>template_name_changed(QString)</slot>
+  <slot>save_clicked()</slot>
+  <slot>delete_clicked()</slot>
+  <slot>new_clicked()</slot>
+ </slots>
+</ui>

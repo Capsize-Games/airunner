@@ -34,7 +34,7 @@ class BaseWindow(QDialog):
         """
         Sets the stylesheet for the application based on the current theme
         """
-        theme_name = "dark_theme" if self.app.dark_mode_enabled else "light_theme"
+        theme_name = "dark_theme" if self.app.settings["dark_mode_enabled"] else "light_theme"
         here = os.path.dirname(os.path.realpath(__file__))
         with open(os.path.join(here, "..", "styles", theme_name, "styles.qss"), "r") as f:
             stylesheet = f.read()
