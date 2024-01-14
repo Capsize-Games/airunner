@@ -98,7 +98,11 @@ class Engine(QObject):
             first_message = data["request_data"].get("first_message", None)
             last_message = data["request_data"].get("last_message", None)
             if self.request_data["tts_settings"]["enable_tts"]:
-                generator = self.tts.add_sentence(data["request_data"]["text"], "a", self.request_data["tts_settings"])
+                text = data["request_data"]["text"]
+                # check if ends with a proper sentence ender, if not, add a period
+                if not text.endswith((".", "?", "!", "...", "-", "—", )):
+                    text += "."
+                generator = self.tts.add_sentence(text, "a", self.request_data["tts_settings"])
                 for success in generator:
                     if signal and success:
                         signal.emit(message_object, is_bot, first_message, last_message)

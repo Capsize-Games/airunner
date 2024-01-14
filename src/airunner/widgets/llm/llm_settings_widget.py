@@ -24,7 +24,7 @@ class LLMSettingsWidget(BaseWidget):
     @property
     def generator(self):
         try:
-            return self.app.llm_generator
+            return self.app.settings["llm_generator_settings"]
         except Exception as e:
             Logger.error(e)
             import traceback
@@ -184,9 +184,9 @@ class LLMSettingsWidget(BaseWidget):
         self.app.settings = settings
         
     def prompt_template_text_changed(self, value):
-        llm_generator = self.app.llm_generator
-        llm_generator["prompt_template"] = value
-        self.app.llm_generator = llm_generator
+        settings = self.app.settings
+        settings["llm_generator_settings"]["prompt_template"] = value
+        self.app.settings = settings
         
     def toggled_2bit(self, val):
         if val:

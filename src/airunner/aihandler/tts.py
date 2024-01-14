@@ -1,21 +1,121 @@
 import time
 import torch
 import sounddevice as sd
-import threading
+import numpy as np
+
+from PyQt6.QtCore import QObject, pyqtSignal, pyqtSlot, QThread
 
 from transformers import SpeechT5Processor, SpeechT5ForTextToSpeech, SpeechT5HifiGan, BarkModel, BarkProcessor
-
 from datasets import load_dataset
 
 from airunner.aihandler.logger import Logger
 
 
-class TTS:
+from queue import Queue, Empty
+from PyQt6.QtCore import QObject, pyqtSignal, pyqtSlot, QThread
+
+class VocalizerWorker(QObject):
+    add_to_stream_signal = pyqtSignal(np.ndarray)
+
+    def __init__(self, *args, **kwargs):
+        super().__init__()
+        self.parent = kwargs.get("parent")
+        self.queue = Queue()
+
+    def process(self):
+        self.stream = sd.OutputStream(samplerate=24000, channels=1)
+        self.stream.start()
+        data = []
+        started = False
+        while True:
+            try:
+                item = self.queue.get(timeout=1)
+                if item is None:
+                    break
+                if started:
+                    self.stream.write(item)
+                else:
+                    data.append(item)
+
+                if not started and len(data) >= 6:
+                    for item in data:
+                        self.stream.write(item)
+                    started = True
+                    data = []
+            except Empty:
+                continue
+        
+    def handle_speech(self, generated_speech):
+        print("ADD TO QUEUE")
+        Logger.info("Adding speech to stream...")
+        try:
+            print("Writing speech to stream...")
+            self.queue.put(generated_speech)
+            print("Successfully added")
+        except Exception as e:
+            print(f"Error while adding speech to stream: {e}")
+
+
+class GeneratorWorker(QObject):
+    add_to_stream_signal = pyqtSignal(np.ndarray)
+
+    def __init__(self, *args, **kwargs):
+        super().__init__()
+        self.parent = kwargs.get("parent")
+    
+    @pyqtSlot()
+    def process(self):
+        # get item from self.parent.text.queue
+        while True:
+            if not self.parent.text_queue.empty():
+                text = self.parent.text_queue.get()
+                self.generate(text)
+            time.sleep(0.1)
+
+    def generate(self, text):
+        Logger.info("Generating TTS...")
+        if self.parent.use_bark:
+            Logger.info("Using voice preset " + self.parent.voice_preset)
+            inputs = self.parent.processor(text, voice_preset=self.parent.voice_preset).to(self.parent.device)
+        else:
+            Logger.info("We aren't using bark...")
+            inputs = self.parent.processor(text=text, return_tensors="pt")
+            inputs = {k: v.cuda() for k, v in inputs.items()}
+
+        input_ids = inputs["input_ids"]
+        # move to cpu
+        if not self.parent.use_bark:
+            Logger.info("We still are not using bark...")
+            speech = self.parent.model.generate_speech(
+                input_ids,
+                self.parent.speaker_embeddings,
+                vocoder=self.parent.vocoder
+            )
+            tts = speech.cpu().float().numpy()
+        else:
+            # track the time it takes to generate speech
+            Logger.info("Generating speech...")
+            start = time.time()
+            speech = self.parent.model.generate(
+                **inputs, 
+                do_sample=True, 
+                fine_temperature=0.4, 
+                coarse_temperature=0.8
+            )
+            Logger.info("Generated speech in " + str(time.time() - start) + " seconds")
+            start = time.time()
+            tts = speech[0].cpu().float().numpy()
+            Logger.info("Converted speech to numpy array in " + str(time.time() - start) + " seconds")
+        self.add_to_stream_signal.emit(tts)
+
+
+class TTS(QObject):
     character_replacement_map = {
         "\n": " ",
         "’": "'",
         "-": " "
     }
+    text_queue = Queue()
     single_character_sentence_enders = [".", "?", "!", "...", "…"]
     double_character_sentence_enders = [".”", "?”", "!”", "...”", "…”", ".'", "?'", "!'", "...'", "…'"]
     sentence_delay_time = 1500
@@ -31,7 +131,6 @@ class TTS:
     is_playing = False
     current_model = None
     do_offload_to_cpu = True
-
 
     @property
     def processor_path(self):
@@ -70,7 +169,11 @@ class TTS:
         return SpeechT5Processor
 
     def __init__(self, *args, **kwargs):
-        Logger.info("Loading Text To Speech stream...")
+        super().__init__()
+        Logger.info("Loading TTS...")
+        """
+        Initialize the TTS
+        """
         self.engine = kwargs.get("engine")
         self.use_bark = kwargs.get("use_bark")
         self.corpus = []
@@ -79,11 +182,38 @@ class TTS:
         self.vocoder = None
         self.speaker_embeddings = None
         self.sentences = []
+
+        """
+        The vocalizer takes generated speech in the form of numpy arrays and plays them
+        using sounddevice. It runs in a separate thread so that we can perform other operations
+        while playing speech.
+        """
+        self.vocalizer = VocalizerWorker(parent=self)
+        self.vocalizer_thread = QThread()
+        self.vocalizer.moveToThread(self.vocalizer_thread)
+        self.vocalizer_thread.started.connect(self.vocalizer.process)
+        self.vocalizer_thread.start()
         
-        self.stream = sd.OutputStream(samplerate=24000, channels=1)
-        self.stream_2 = sd.OutputStream(samplerate=20000, channels=1)
-        self.stream.start()
-        self.stream_2.start()
+        """
+        The generator worker takes text from the text queue and generates speech from it.
+        It runs in a separate thread so that we can perform other operations while generating
+        speech.
+        """
+        self.generator_worker_thread = QThread()
+        self.generator_worker = GeneratorWorker(parent=self)
+        self.generator_worker.add_to_stream_signal.connect(self.add_to_stream)
+        self.generator_worker.moveToThread(self.generator_worker_thread)
+        self.generator_worker_thread.started.connect(self.generator_worker.process)
+        self.generator_worker_thread.start()
+    
+    @pyqtSlot(np.ndarray)
+    def add_to_stream(self, generated_speech: np.ndarray):
+        """
+        This function is called from the generator worker when speech has been generated.
+        It adds the generated speech to the vocalizer's queue.
+        """
+        print("add_to_stream called")
+        self.vocalizer.handle_speech(generated_speech)
     
     def move_model(self, to_cpu: bool = False):
         if to_cpu and self.do_offload_to_cpu:
@@ -146,7 +276,7 @@ class TTS:
             torch_dtype=torch.float16
         ).to(self.device)
         self.model = model.to_bettertransformer()
-        #self.model.enable_cpu_offload()
+        # self.model.enable_cpu_offload()
     
     def load_vocoder(self):
         if not self.use_bark:
@@ -192,13 +322,16 @@ class TTS:
             if word[-1] in self.single_character_sentence_enders or (
                 len(word) > 1 and word[-2:] in self.double_character_sentence_enders
             ):
+                # remove all white space from sentence
+                sentence = sentence.strip()
+                sentence += "\n"
                 self.sentences.append(sentence)
                 sentence = ""
         if sentence != "":
             self.sentences.append(sentence)
 
-    def start_speech_processing(self):
-        threading.Thread(target=self.process_speech).start()
+    # def start_speech_processing(self):
+    #     threading.Thread(target=self.process_speech).start()
 
     def add_word(self, word, stream):
         self.new_sentence += word
@@ -206,11 +339,6 @@ class TTS:
         if len(self.new_sentence) > 1 and self.new_sentence[-1] in self.single_character_sentence_enders or (
             len(self.new_sentence) > 1 and self.new_sentence.strip()[-1:] in self.double_character_sentence_enders
         ):
-            # remove John: or Jane: from start of sentence of it exists
-            if self.new_sentence.startswith(" John: ") or self.new_sentence.startswith(" Jane: "):
-                self.new_sentence = self.new_sentence.split(": ")[1]
-            if self.new_sentence.startswith(" John: ") or self.new_sentence.startswith(" Jane: "):
-                self.new_sentence = self.new_sentence.split(": ")[1]
             self.add_sentence(self.new_sentence, stream)
             self.new_sentence = ""
 
@@ -219,67 +347,52 @@ class TTS:
         self.voice_preset = tts_settings["voice"]
         return self.process_sentence(sentence, stream)
 
-    def process_speech(self):
-        sd.default.blocksize = 4096
-        while True:
-            if len(self.sentences) > 0:
-                self.process_sentence(self.sentences.pop(0))
+    # def process_speech(self):
+    #     sd.default.blocksize = 4096
+    #     while True:
+    #         if len(self.sentences) > 0:
+    #             self.process_sentence(self.sentences.pop(0))
     
     def process_sentence(self, text, stream):
-        # add delay to inputs
-        text = text.strip()
-        if text.startswith("\n") or text.startswith(" "):
-            text = text[1:]
-        if text.endswith("\n") or text.endswith(" "):
-            text = text[:-1]
-        print("GENERATING TTS FOR ", text)
+        # split on sentence enders
+        sentence_enders = self.single_character_sentence_enders + self.double_character_sentence_enders
         
-        if self.use_bark:
-            Logger.info("Using voice preset " + self.voice_preset)
-            inputs = self.processor(text, voice_preset=self.voice_preset).to(self.device)
-        else:
-            inputs = self.processor(text=text, return_tensors="pt")
-            inputs = {k: v.cuda() for k, v in inputs.items()}
+        # split text into sentences
+        sentences = []
+        current_sentence = ""
+        for char in text:
+            current_sentence += char
+            if char in sentence_enders:
+                sentences.append(current_sentence)
+                current_sentence = ""
 
-        input_ids = inputs["input_ids"]
-        # move to cpu
-        if not self.use_bark:
-            speech = self.model.generate_speech(
-                input_ids,
-                self.speaker_embeddings,
-                vocoder=self.vocoder
-            )
-            tts = speech.cpu().float().numpy()
-        else:
-            speech = self.model.generate(
-                **inputs, 
-                do_sample=True, 
-                fine_temperature=0.4, 
-                coarse_temperature=0.8
-            )
-            tts = speech[0].cpu().float().numpy()
-        
-        yield True
+        if current_sentence != "":
+            sentences.append(current_sentence)
 
-        if stream == "a":
-            self.stream.write(tts)
-        else:
-            self.stream_2.write(tts)
+        for text in sentences:
+            # add delay to inputs
+            text = text.strip()
+            if text.startswith("\n") or text.startswith(" "):
+                text = text[1:]
+            if text.endswith("\n") or text.endswith(" "):
+                text = text[:-1]            
+            self.text_queue.put(text)
+            yield True
             
-    def play_buffer(self):
-        """
-        now we iterate over each sentence and keep a buffer of 10 sentences. We'll
-        generate speech for each sentence, and then play the oldest sentence in the
-        buffer when it fills up. This way we can generate speech for the next sentence
-        while the current one is playing.
-        :return:
-        """
-        while True:
-            if len(self.buffer) > 0:
-                tts = self.buffer.pop(0)
-                sd.play(
-                    tts,
-                    samplerate=self.sentence_sample_rate,
-                    blocking=self.sentence_blocking
-                )
-                time.sleep(self.sentence_delay_time / 1000)
+    # def play_buffer(self):
+    #     """
+    #     now we iterate over each sentence and keep a buffer of 10 sentences. We'll
+    #     generate speech for each sentence, and then play the oldest sentence in the
+    #     buffer when it fills up. This way we can generate speech for the next sentence
+    #     while the current one is playing.
+    #     :return:
+    #     """
+    #     while True:
+    #         if len(self.buffer) > 0:
+    #             tts = self.buffer.pop(0)
+    #             sd.play(
+    #                 tts,
+    #                 samplerate=self.sentence_sample_rate,
+    #                 blocking=self.sentence_blocking
+    #             )
+    #             time.sleep(self.sentence_delay_time / 1000)
