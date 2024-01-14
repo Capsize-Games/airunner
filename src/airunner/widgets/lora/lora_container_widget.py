@@ -3,7 +3,7 @@ import os
 from PyQt6.QtWidgets import QWidget, QSizePolicy
 
 from airunner.data.models import Lora
-from airunner.data.session_scope import session_scope, path_settings_scope
+from airunner.data.session_scope import session_scope
 from airunner.widgets.base_widget import BaseWidget
 from airunner.widgets.lora.lora_widget import LoraWidget
 from airunner.widgets.lora.templates.lora_container_ui import Ui_lora_container
@@ -51,7 +51,7 @@ class LoraContainerWidget(BaseWidget):
 
     def scan_for_lora(self):
         with session_scope() as session:
-            lora_path = self.app.lora_model_path
+            lora_path = self.app.settings["path_settings"]["lora_model_path"]
             for dirpath, dirnames, filenames in os.walk(lora_path):
                 # get version from dirpath
                 version = dirpath.split("/")[-1]
@@ -78,7 +78,7 @@ class LoraContainerWidget(BaseWidget):
         return available_lora
 
     def get_available_loras(self, tab_name):
-        base_path = self.app.base_path
+        base_path = self.app.settings["path_settings"]["base_path"]
         lora_path = self.app.settings_manager.lora_path or "lora"
         if lora_path == "lora":
             lora_path = os.path.join(base_path, lora_path)
