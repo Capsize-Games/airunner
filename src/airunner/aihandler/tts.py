@@ -16,6 +16,7 @@ from PyQt6.QtCore import QObject, pyqtSignal, pyqtSlot, QThread
 
 class VocalizerWorker(QObject):
     add_to_stream_signal = pyqtSignal(np.ndarray)
+    reader_mode_active = False
 
     def __init__(self, *args, **kwargs):
         super().__init__()
@@ -32,12 +33,12 @@ class VocalizerWorker(QObject):
                 item = self.queue.get(timeout=1)
                 if item is None:
                     break
-                if started:
+                if started or not self.reader_mode_active:
                     self.stream.write(item)
                 else:
                     data.append(item)
 
-                if not started and len(data) >= 6:
+                if not started and len(data) >= 6 and self.reader_mode_active:
                     for item in data:
                         self.stream.write(item)
                     started = True
@@ -116,8 +117,10 @@ class TTS(QObject):
         "-": " "
     }
     text_queue = Queue()
-    single_character_sentence_enders = [".", "?", "!", "...", "…"]
-    double_character_sentence_enders = [".”", "?”", "!”", "...”", "…”", ".'", "?'", "!'", "...'", "…'"]
+    # single_character_sentence_enders = [".", "?", "!", "...", "…"]
+    # double_character_sentence_enders = [".”", "?”", "!”", "...”", "…”", ".'", "?'", "!'", "...'", "…'"]
+    single_character_sentence_enders = [".", "?", "!", "…"]
+    double_character_sentence_enders = [".”", "?”", "!”", "…”", ".'", "?'", "!'", "…'"]
     sentence_delay_time = 1500
     sentence_sample_rate = 20000
     sentence_blocking = True
@@ -356,27 +359,25 @@ class TTS(QObject):
     def process_sentence(self, text, stream):
         # split on sentence enders
         sentence_enders = self.single_character_sentence_enders + self.double_character_sentence_enders
-        
-        # split text into sentences
-        sentences = []
-        current_sentence = ""
-        for char in text:
-            current_sentence += char
-            if char in sentence_enders:
-                sentences.append(current_sentence)
-                current_sentence = ""
 
-        if current_sentence != "":
-            sentences.append(current_sentence)
+        # split text into words
+        words = text.split()
 
-        for text in sentences:
+        # combine words into 30 word chunks
+        chunks = [' '.join(words[i:i+35]) for i in range(0, len(words), 35)]
+
+        for chunk in chunks:
+            # add "..." to chunk if it doesn't end with a sentence ender
+            if not any(chunk.endswith(ender) for ender in sentence_enders):
+                chunk += "..." 
+
             # add delay to inputs
-            text = text.strip()
-            if text.startswith("\n") or text.startswith(" "):
-                text = text[1:]
-            if text.endswith("\n") or text.endswith(" "):
-                text = text[:-1]            
-            self.text_queue.put(text)
+            chunk = chunk.strip()
+            if chunk.startswith("\n") or chunk.startswith(" "):
+                chunk = chunk[1:]
+            if chunk.endswith("\n") or chunk.endswith(" "):
+                chunk = chunk[:-1]
+            self.text_queue.put(chunk)
             yield True
             
     # def play_buffer(self):

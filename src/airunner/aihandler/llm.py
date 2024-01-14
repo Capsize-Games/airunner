@@ -55,10 +55,10 @@ class LLM(TransformerRunner):
             history = []
             for message in self.history:
                 if message["role"] == "user":
-                    history.append("[INST]" + self.username + ': "'+ message["content"] +'"[/INST]')
+                    history.append("<s>[INST]" + self.username + ': "'+ message["content"] +'"[/INST]')
                     #history.append(self.username + ': "'+ message["content"] +'"')
                 else:
-                    history.append(self.botname + ': "'+ message["content"] +'"')
+                    history.append(self.botname + ': "'+ message["content"] +'"</s>')
             history = "\n".join(history)
             if history == "":
                 history = None
@@ -91,16 +91,10 @@ class LLM(TransformerRunner):
             rendered_template = chat_template
             for n in range(2):
                 for key, value in variables.items():
-                    print("RENDERING", key, value)
                     rendered_template = rendered_template.replace("{{ " + key + " }}", value)
-
-            print("x"*80)
-            print("RENDERED TEMPLATE:")
-            print(rendered_template)
 
             # Encode the rendered template
             encoded = self.tokenizer.encode(rendered_template, return_tensors="pt")
-            print("RENDERED TEMPLATE", rendered_template)
 
             model_inputs = encoded.to("cuda" if torch.cuda.is_available() else "cpu")
 
@@ -136,7 +130,6 @@ class LLM(TransformerRunner):
             # strip BOTNAME: from decoded
             decoded = decoded.replace(self.botname + ": ", "")
 
-            Logger.info("Decoded: " + decoded)
             # remove white space
             decoded = decoded.strip()
             if decoded == "":
