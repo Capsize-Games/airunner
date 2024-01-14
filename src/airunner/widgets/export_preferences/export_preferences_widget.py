@@ -26,7 +26,7 @@ class ExportPreferencesWidget(BaseWidget):
         self.ui.image_type_dropdown.blockSignals(True)
         self.ui.image_path.blockSignals(True)
         # initialize values:
-        metadata_settings = self.app.metadata_settings
+        metadata_settings = self.app.settings["metadata_settings"]
         self.ui.metadata_prompt.setChecked(metadata_settings["image_export_metadata_prompt"] is True)
         self.ui.metadata_negative_prompt.setChecked(metadata_settings["image_export_metadata_negative_prompt"] is True)
         self.ui.metadata_scale.setChecked(metadata_settings["image_export_metadata_scale"] is True)
@@ -39,8 +39,8 @@ class ExportPreferencesWidget(BaseWidget):
         self.ui.metadata_model_branch.setChecked(metadata_settings["image_export_metadata_model_branch"] is True)
         self.ui.metadata_scheduler.setChecked(metadata_settings["image_export_metadata_scheduler"] is True)
         self.ui.export_metadata.setChecked(metadata_settings["export_metadata"] is True)
-        self.ui.actionAuto_export_images.setChecked(self.app.auto_export_images is True)
-        self.ui.image_type_dropdown.setCurrentText(self.app.image_export_type)
+        self.ui.actionAuto_export_images.setChecked(self.app.settings["auto_export_images"] is True)
+        self.ui.image_type_dropdown.setCurrentText(self.app.settings["image_export_type"])
         self.ui.image_path.setText(self.app.settings_manager.image_path)
         image_types = [
             "png",
@@ -50,7 +50,7 @@ class ExportPreferencesWidget(BaseWidget):
             "tiff",
         ]
         self.ui.image_type_dropdown.addItems(image_types)
-        self.ui.image_type_dropdown.setCurrentText(self.app.image_export_type)
+        self.ui.image_type_dropdown.setCurrentText(self.app.settings["image_export_type"])
 
         self.ui.metadata_prompt.blockSignals(False)
         self.ui.metadata_negative_prompt.blockSignals(False)
@@ -69,82 +69,86 @@ class ExportPreferencesWidget(BaseWidget):
         self.ui.image_path.blockSignals(False)
 
     def action_toggled_steps(self, val):
-        metadata_settings = self.app.metadata_settings
-        metadata_settings["image_export_metadata_steps"] = val
-        self.app.metadata_settings = metadata_settings
+        settings = self.app.settings
+        settings["metadata_settings"]["image_export_metadata_steps"] = val
+        self.app.settings = settings
 
     def action_toggled_seed(self, val):
-        metadata_settings = self.app.metadata_settings
-        metadata_settings["image_export_metadata_seed"] = val
-        self.app.metadata_settings = metadata_settings
+        settings = self.app.settings
+        settings["metadata_settings"]["image_export_metadata_seed"] = val
+        self.app.settings = settings
     
     def action_toggled_latents_seed(self, val):
-        metadata_settings = self.app.metadata_settings
-        metadata_settings["image_export_metadata_latents_seed"] = val
-        self.app.metadata_settings = metadata_settings
+        settings = self.app.settings
+        settings["metadata_settings"]["image_export_metadata_latents_seed"] = val
+        self.app.settings = settings
 
     def action_toggled_scheduler(self, val):
-        metadata_settings = self.app.metadata_settings
-        metadata_settings["image_export_metadata_scheduler"] = val
-        self.app.metadata_settings = metadata_settings
+        settings = self.app.settings
+        settings["metadata_settings"]["image_export_metadata_scheduler"] = val
+        self.app.settings = settings
 
     def action_toggled_scale(self, val):
-        metadata_settings = self.app.metadata_settings
-        metadata_settings["image_export_metadata_scale"] = val
-        self.app.metadata_settings = metadata_settings
+        settings = self.app.settings
+        settings["metadata_settings"]["image_export_metadata_scale"] = val
+        self.app.settings = settings
 
     def action_toggled_samples(self, val):
-        metadata_settings = self.app.metadata_settings
-        metadata_settings["image_export_metadata_samples"] = val
-        self.app.metadata_settings = metadata_settings
+        settings = self.app.settings
+        settings["metadata_settings"]["image_export_metadata_samples"] = val
+        self.app.settings = settings
 
     def action_toggled_prompt(self, val):
-        metadata_settings = self.app.metadata_settings
-        metadata_settings["image_export_metadata_prompt"] = val
-        self.app.metadata_settings = metadata_settings
+        settings = self.app.settings
+        settings["metadata_settings"]["image_export_metadata_prompt"] = val
+        self.app.settings = settings
 
     def action_toggled_negative_prompt(self, val):
-        metadata_settings = self.app.metadata_settings
-        metadata_settings["image_export_metadata_negative_prompt"] = val
-        self.app.metadata_settings = metadata_settings
+        settings = self.app.settings
+        settings["metadata_settings"]["image_export_metadata_negative_prompt"] = val
+        self.app.settings = settings
 
     def action_toggled_model_branch(self, val):
-        metadata_settings = self.app.metadata_settings
-        metadata_settings["image_export_metadata_model_branch"] = val
-        self.app.metadata_settings = metadata_settings
+        settings = self.app.settings
+        settings["metadata_settings"]["image_export_metadata_model_branch"] = val
+        self.app.settings = settings
 
     def action_toggled_model(self, val):
-        metadata_settings = self.app.metadata_settings
-        metadata_settings["image_export_metadata_model"] = val
-        self.app.metadata_settings = metadata_settings
+        settings = self.app.settings
+        settings["metadata_settings"]["image_export_metadata_model"] = val
+        self.app.settings = settings
 
     def action_toggled_iterations(self, val):
-        metadata_settings = self.app.metadata_settings
-        metadata_settings["image_export_metadata_iterations"] = val
-        self.app.metadata_settings = metadata_settings
+        settings = self.app.settings
+        settings["metadata_settings"]["image_export_metadata_iterations"] = val
+        self.app.settings = settings
 
     def action_toggled_ddim(self, val):
-        metadata_settings = self.app.metadata_settings
-        metadata_settings["image_export_metadata_ddim_eta"] = val
-        self.app.metadata_settings = metadata_settings
+        settings = self.app.settings
+        settings["metadata_settings"]["image_export_metadata_ddim_eta"] = val
+        self.app.settings = settings
 
     def action_toggled_export_metadata(self, val):
-        metadata_settings = self.app.metadata_settings
-        metadata_settings["export_metadata"] = val
-        self.app.metadata_settings = metadata_settings
+        settings = self.app.settings
+        settings["metadata_settings"]["export_metadata"] = val
+        self.app.settings = settings
 
     def action_toggle_automatically_export_images(self, val):
-        self.app.auto_export_images = val
+        settings = self.app.settings
+        settings["auto_export_images"] = val
+        self.app.settings = settings
     
     def action_image_type_text_changed(self, val):
-        self.app.image_export_type = val
+        settings = self.app.settings
+        settings["image_export_type"] = val
+        self.app.settings = settings
     
     def image_export_path_text_edited(self, val):
-        self.app.image_path = val
+        self.app.settings["path_settings"]["image_path"] = val
     
     def action_clicked_button_browse(self):
         path = QFileDialog.getExistingDirectory(None, "Select Directory")
         if path:
             self.ui.image_path.setText(path)
-            self.app.embeddings_model_path = path
+            self.app.settings["path_settings"]["embeddings_model_path"] = path
 

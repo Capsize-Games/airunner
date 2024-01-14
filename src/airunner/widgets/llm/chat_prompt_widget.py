@@ -46,7 +46,7 @@ class ChatPromptWidget(BaseWidget):
 
     @property
     def current_generator(self):
-        return self.app.current_llm_generator
+        return self.app.settings["current_llm_generator"]
     
     def __init__(self, *args, **kwargs):
         super().__init__(*args, **kwargs)
@@ -108,7 +108,7 @@ class ChatPromptWidget(BaseWidget):
         if message.endswith("\""):
             message = message[:-1]
         message_object = Message(
-            name=self.app.llm_generator_settings["botname"],
+            name=self.app.settings["llm_generator_settings"]["botname"],
             message=message,
             conversation=self.conversation
         )
@@ -219,12 +219,12 @@ class ChatPromptWidget(BaseWidget):
 
         with session_scope() as session:
             prompt_template = session.query(LLMPromptTemplate).filter(
-                LLMPromptTemplate.name == self.app.llm_generator_settings["prompt_template"]
+                LLMPromptTemplate.name == self.app.settings["llm_generator_settings"]["prompt_template"]
             ).first()
             if prompt_template is None:
-                raise Exception("Prompt template not found for "+self.app.llm_generator_settings["prompt_template"])
+                raise Exception("Prompt template not found for "+self.app.settings["llm_generator_settings"]["prompt_template"])
 
-            llm_generator_settings = self.app.llm_generator_settings
+            llm_generator_settings = self.app.settings["llm_generator_settings"]
 
             parsed_template = self.parse_template(prompt_template)
 
@@ -233,8 +233,8 @@ class ChatPromptWidget(BaseWidget):
             data = {
                 "llm_request": True,
                 "request_data": {
-                    "unload_unused_model": self.app.unload_unused_models,
-                    "move_unused_model_to_cpu": self.app.move_unused_model_to_cpu,
+                    "unload_unused_model": self.app.settings["memory_settings"]["unload_unused_models"],
+                    "move_unused_model_to_cpu": self.app.settings["memory_settings"]["move_unused_model_to_cpu"],
                     "generator_name": generator_name,
                     "model_path": llm_generator_settings["model_version"],
                     "stream": True,
@@ -242,18 +242,18 @@ class ChatPromptWidget(BaseWidget):
                     "do_summary": False,
                     "is_bot_alive": True,
                     "conversation_history": self.conversation_history,
-                    "generator": self.app.llm_generator_settings,
+                    "generator": self.app.settings["llm_generator_settings"],
                     "prefix": self.prefix,
                     "suffix": self.suffix,
                     "dtype": llm_generator_settings["dtype"],
                     "use_gpu": llm_generator_settings["use_gpu"],
                     "request_type": "image_caption_generator",
-                    "username": self.app.llm_generator_settings["username"],
-                    "botname": self.app.llm_generator_settings["botname"],
+                    "username": self.app.settings["llm_generator_settings"]["username"],
+                    "botname": self.app.settings["llm_generator_settings"]["botname"],
                     "prompt_template": parsed_template,
-                    "hf_api_key_read_key": self.app.hf_api_key_read_key,
+                    "hf_api_key_read_key": self.app.settings["hf_api_key_read_key"],
                     "parameters": {
-                        "override_parameters": self.app.llm_generator_settings["override_parameters"],
+                        "override_parameters": self.app.settings["llm_generator_settings"]["override_parameters"],
                         "top_p": llm_generator_settings["top_p"] / 100.0,
                         "max_length": llm_generator_settings["max_length"],
                         "repetition_penalty": llm_generator_settings["repetition_penalty"] / 100.0,
@@ -271,12 +271,12 @@ class ChatPromptWidget(BaseWidget):
                     "image": image,
                     "callback": callback,
                     "tts_settings": self.app.tts_settings,
-                    "bot_mood": self.app.llm_generator_settings["bot_mood"],
-                    "bot_personality": self.app.llm_generator_settings["bot_personality"],
+                    "bot_mood": self.app.settings["llm_generator_settings"]["bot_mood"],
+                    "bot_personality": self.app.settings["llm_generator_settings"]["bot_personality"],
                 }
             }
         message_object = Message(
-            name=self.app.llm_generator_settings["username"],
+            name=self.app.settings["llm_generator_settings"]["username"],
             message=self.prompt,
             conversation=self.conversation
         )
@@ -373,7 +373,7 @@ class ChatPromptWidget(BaseWidget):
     def message_type_text_changed(self, val):
         with session_scope() as session:
             session.add(self.app.llm_generator)
-            self.app.llm_generator_settings["message_type"] = val
+            self.app.settings["llm_generator_settings"]["message_type"] = val
 
     def action_button_clicked_generate_characters(self):
         pass

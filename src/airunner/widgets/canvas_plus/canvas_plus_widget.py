@@ -6,7 +6,7 @@ from functools import partial
 from PIL import Image, ImageGrab
 from PIL.ImageQt import ImageQt
 from PyQt6.QtCore import Qt, QPoint, QPointF, QRect
-from PyQt6.QtGui import QBrush, QColor, QPen, QPixmap, QCursor
+from PyQt6.QtGui import QBrush, QColor, QPen, QPixmap
 from PyQt6.QtWidgets import QGraphicsPixmapItem
 from PyQt6 import QtWidgets, QtCore
 from PyQt6.QtWidgets import QGraphicsItemGroup
@@ -61,16 +61,16 @@ class CanvasPlusWidget(CanvasBaseWidget):
 
     @property
     def active_grid_area_rect(self):
-        active_grid_settings = self.app.active_grid_settings
+        settings = self.app.settings
         rect = QRect(
-            active_grid_settings["pos_x"],
-            active_grid_settings["pos_y"],
-            active_grid_settings["width"],
-            active_grid_settings["height"]
+            settings["active_grid_settings"]["pos_x"],
+            settings["active_grid_settings"]["pos_y"],
+            settings["active_grid_settings"]["width"],
+            settings["active_grid_settings"]["height"]
         )
 
         # apply self.pos_x and self.pox_y to the rect
-        rect.translate(self.app.canvas_settings["pos_x"], self.app.canvas_settings["pos_y"])
+        rect.translate(self.app.settings["canvas_settings"]["pos_x"], self.app.settings["canvas_settings"]["pos_y"])
 
         return rect
 
@@ -95,10 +95,6 @@ class CanvasPlusWidget(CanvasBaseWidget):
     @property
     def layer_container_widget(self):
         return self.app.ui.layer_widget
-
-    @property
-    def active_grid_settings(self):
-        return self.app.settings_manager.active_grid_settings
     
     @property
     def canvas_container(self):
@@ -114,12 +110,6 @@ class CanvasPlusWidget(CanvasBaseWidget):
             self.app.load_image.connect(self.load_image_from_path)
             self.app.load_image_object.connect(self.add_image_to_scene)
         self.app.loaded.connect(self.handle_loaded)
-        self.app.show_grid_toggled.connect(self.toggle_grid)
-        self.app.cell_size_changed_signal.connect(self.cell_size_changed)
-        self.app.line_width_changed_signal.connect(self.line_width_changed)
-        self.app.line_color_changed_signal.connect(self.line_color_changed)
-        self.app.canvas_color_changed_signal.connect(self.canvas_color_changed)
-        self.app.window_resized_signal.connect(self.window_resized)
         self._zoom_level = 1
         self.canvas_container.resizeEvent = self.window_resized
     
@@ -154,19 +144,19 @@ class CanvasPlusWidget(CanvasBaseWidget):
     
     @property
     def canvas_color(self):
-        return self.app.canvas_color
+        return self.app.settings["grid_settings"]["canvas_color"]
 
     @property
     def line_color(self):
-        return self.app.line_color
+        return self.app.settings["grid_settings"]["line_color"]
 
     @property
     def line_width(self):
-        return self.app.line_width
+        return self.app.settings["grid_settings"]["line_width"]
 
     @property
     def cell_size(self):
-        return self.app.cell_size
+        return self.app.settings["grid_settings"]["cell_size"]
     
     def current_pixmap(self):
         draggable_pixmap = self.current_draggable_pixmap()
@@ -203,31 +193,39 @@ class CanvasPlusWidget(CanvasBaseWidget):
         self.do_draw()
 
     def increase_active_grid_height(self, amount):
-        height = self.app.working_height + self.cell_size * amount
+        height = self.app.settings["working_height"] + self.cell_size * amount
         if height > 4096:
             height = 4096
-        self.app.working_height = height
+        settings = self.app.settings
+        settings["working_height"] = height
+        self.app.settings = settings
         self.do_draw()
         
     def decrease_active_grid_height(self, amount):
-        height = self.app.working_height - self.cell_size * amount
+        height = self.app.settings["working_height"] - self.cell_size * amount
         if height < 512:
             height = 512
-        self.app.working_height = height
+        settings = self.app.settings
+        settings["working_height"] = height
+        self.app.settings = settings
         self.do_draw()
 
     def increase_active_grid_width(self, amount):
-        width = self.app.working_width + self.cell_size * amount
+        width = self.app.settings["is_maximized"] + self.cell_size * amount
         if width > 4096:
             width = 4096
-        self.app.working_width = width
+        settings = self.app.settings
+        settings["is_maximized"] = width
+        self.app.settings = settings
         self.do_draw()
 
     def decrease_active_grid_width(self, amount):
-        width = self.app.working_width - self.cell_size * amount
+        width = self.app.settings["is_maximized"] - self.cell_size * amount
         if width < 512:
             width = 512
-        self.app.working_width = width
+        settings = self.app.settings
+        settings["is_maximized"] = width
+        self.app.settings = settings
         self.do_draw()
 
     def wheelEvent(self, event):
@@ -337,7 +335,7 @@ class CanvasPlusWidget(CanvasBaseWidget):
                     self.scene.addItem(draggable_pixmap)
 
                 pos = QPoint(layer.pos_x, layer.pos_y)
-                canvas_settings = self.app.canvas_settings
+                canvas_settings = self.app.settings["canvas_settings"]
                 draggable_pixmap.setPos(QPointF(
                     canvas_settings["pos_x"] + pos.x(),
                     canvas_settings["pos_y"] + pos.y()
@@ -361,18 +359,18 @@ class CanvasPlusWidget(CanvasBaseWidget):
         )
         
         # vertical lines
-        h = self.view_size.height() + abs(self.app.canvas_settings["pos_y"]) % self.cell_size
+        h = self.view_size.height() + abs(self.app.settings["canvas_settings"]["pos_y"]) % self.cell_size
         y = 0
         for i in range(width_cells):
-            x = i * self.cell_size + self.app.canvas_settings["pos_x"] % self.cell_size
+            x = i * self.cell_size + self.app.settings["canvas_settings"]["pos_x"] % self.cell_size
             line = self.scene.addLine(x, y, x, h, pen)
             self.line_group.addToGroup(line)
 
         # # horizontal lines
-        w = self.view_size.width() + abs(self.app.canvas_settings["pos_x"]) % self.cell_size
+        w = self.view_size.width() + abs(self.app.settings["canvas_settings"]["pos_x"]) % self.cell_size
         x = 0
         for i in range(height_cells):
-            y = i * self.cell_size + self.app.canvas_settings["pos_y"] % self.cell_size
+            y = i * self.cell_size + self.app.settings["canvas_settings"]["pos_y"] % self.cell_size
             line = self.scene.addLine(x, y, w, y, pen)
             self.line_group.addToGroup(line)
 
@@ -411,13 +409,13 @@ class CanvasPlusWidget(CanvasBaseWidget):
         self.draw_layers()
         self.draw_active_grid_area_container()
         self.ui.canvas_position.setText(
-            f"X {-self.app.canvas_settings['pos_x']: 05d} Y {self.app.canvas_settings['pos_y']: 05d}"
+            f"X {-self.app.settings['canvas_settings']['pos_x']: 05d} Y {self.app.settings['canvas_settings']['pos_y']: 05d}"
         )
         self.scene.update()
         self.drawing = False
     
     def draw_grid(self):
-        draw_grid = self.app.show_grid
+        draw_grid = self.app.settings["grid_settings"]["show_grid"]
 
         if draw_grid and self.redraw_lines:
             self.clear_lines()
@@ -515,9 +513,9 @@ class CanvasPlusWidget(CanvasBaseWidget):
 
     def load_image(self, image_path):
         image = Image.open(image_path)
-        if self.app.resize_on_paste:
-            image.thumbnail((self.app.working_width,
-                             self.app.working_height), Image.ANTIALIAS)
+        if self.app.settings["resize_on_paste"]:
+            image.thumbnail((self.app.settings["is_maximized"],
+                             self.app.settings["working_height"]), Image.ANTIALIAS)
         self.add_image_to_scene(image)
     
     def current_draggable_pixmap(self):
@@ -588,15 +586,15 @@ class CanvasPlusWidget(CanvasBaseWidget):
             Logger.error("xclip not found. Please install xclip to copy image to clipboard.")
 
     def create_image(self, image):
-        if self.app.resize_on_paste:
+        if self.app.settings["resize_on_paste"]:
             image = self.resize_image(image)
         self.add_image_to_scene(image)
     
     def resize_image(self, image):
         image.thumbnail(
             (
-                self.app.working_width,
-                self.app.working_height
+                self.app.settings["is_maximized"],
+                self.app.settings["working_height"]
             ),
             Image.ANTIALIAS
         )

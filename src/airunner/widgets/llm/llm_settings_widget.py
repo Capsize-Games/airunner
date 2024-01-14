@@ -33,31 +33,34 @@ class LLMSettingsWidget(BaseWidget):
     @property
     def generator_settings(self):
         try:
-            return self.app.generator_settings
+            return self.app.settings["generator_settings"]
         except Exception as e:
             Logger.error(e)
 
     @property
     def current_generator(self):
-        return self.app.current_llm_generator
+        return self.app.settings["current_llm_generator"]
 
     def initialize(self):
         self.initialize_form()
 
     def early_stopping_toggled(self, val):
-        llm_generator_settings = self.app.llm_generator_settings
-        llm_generator_settings["early_stopping"] = val
-        self.app.llm_generator_settings = llm_generator_settings
+        settings = self.app.settings
+        settings["llm_generator_settings"]["early_stopping"] = val
+        self.app.settings = settings
 
     def do_sample_toggled(self, val):
-        llm_generator_settings = self.app.llm_generator_settings
-        llm_generator_settings["do_sample"] = val
-        self.app.llm_generator_settings = llm_generator_settings
+        settings = self.app.settings
+        settings["llm_generator_settings"]["do_sample"] = val
+        self.app.settings = settings
     
     def toggle_leave_model_in_vram(self, val):
         if val:
-            self.app.unload_unused_model = False
-            self.app.move_unused_model_to_cpu = False
+            settings = self.app.settings
+            settings["memory_settings"]["unload_unused_models"] = not val
+            settings["memory_settings"]["move_unused_model_to_cpu"] = False
+            self.app.settings = settings
+            
     
     def initialize_form(self):
         self.ui.prompt_template.blockSignals(True)
@@ -88,11 +91,11 @@ class LLMSettingsWidget(BaseWidget):
         self.ui.sequences.initialize_properties()
         self.ui.top_k.initialize_properties()
 
-        self.ui.leave_in_vram.setChecked(not self.app.unload_unused_models and not self.app.move_unused_model_to_cpu)
-        self.ui.move_to_cpu.setChecked(self.app.move_unused_model_to_cpu)
-        self.ui.unload_model.setChecked(self.app.unload_unused_models)
+        self.ui.leave_in_vram.setChecked(not self.app.settings["memory_settings"]["unload_unused_models"] and not self.app.settings["memory_settings"]["move_unused_model_to_cpu"])
+        self.ui.move_to_cpu.setChecked(self.app.settings["memory_settings"]["move_unused_model_to_cpu"])
+        self.ui.unload_model.setChecked(self.app.settings["memory_settings"]["unload_unused_models"])
 
-        llm_generator_settings = self.app.llm_generator_settings
+        llm_generator_settings = self.app.settings["llm_generator_settings"]
 
         dtype = llm_generator_settings["dtype"]
         self.ui.radio_button_2bit.setChecked(dtype == "2bit")
@@ -120,12 +123,12 @@ class LLMSettingsWidget(BaseWidget):
             self.ui.prompt_template.blockSignals(True)
             self.ui.prompt_template.clear()
             self.ui.prompt_template.addItems(names)
-            template_name = self.app.llm_generator_settings["prompt_template"]
+            template_name = self.app.settings["llm_generator_settings"]["prompt_template"]
             if template_name == "":
                 template_name = names[0]
-                llm_generator_settings = self.app.llm_generator_settings
-                llm_generator_settings["prompt_template"] = template_name
-                self.app.llm_generator_settings = llm_generator_settings
+                settings = self.app.settings
+                settings["llm_generator_settings"]["prompt_template"] = template_name
+                self.app.settings = settings
             self.ui.prompt_template.setCurrentText(template_name)
             self.ui.prompt_template.blockSignals(False)
 
@@ -135,7 +138,7 @@ class LLMSettingsWidget(BaseWidget):
         self.ui.do_sample.setChecked(llm_generator_settings["do_sample"])
         self.ui.early_stopping.setChecked(llm_generator_settings["early_stopping"])
         self.ui.use_gpu_checkbox.setChecked(llm_generator_settings["use_gpu"])
-        self.ui.override_parameters.setChecked(self.app.llm_generator_settings["override_parameters"])
+        self.ui.override_parameters.setChecked(self.app.settings["llm_generator_settings"]["override_parameters"])
 
         self.ui.model.blockSignals(False)
         self.ui.model_version.blockSignals(False)
@@ -156,25 +159,29 @@ class LLMSettingsWidget(BaseWidget):
 
     def model_text_changed(self, val):
         print("model_text_changed", val)
-        self.app.current_llm_generator = val
+        settings = self.app.settings
+        settings["current_llm_generator"] = val
+        self.app.settings = settings
         self.update_model_version_combobox()
         self.model_version_changed(self.ui.model_version.currentText())
         self.initialize_form()
 
     def model_version_changed(self, val):
-        llm_generator_settings = self.app.llm_generator_settings
-        llm_generator_settings["model_version"] = val
-        self.app.llm_generator_settings = llm_generator_settings
+        settings = self.app.settings
+        settings["llm_generator_settings"]["model_version"] = val
+        self.app.settings = settings
     
     def toggle_move_model_to_cpu(self, val):
-        self.app.move_unused_model_to_cpu = val
+        settings = self.app.settings
+        settings["memory_settings"]["move_unused_model_to_cpu"] = val
         if val:
-            self.app.unload_unused_model = False
+            settings["memory_settings"]["unload_unused_models"] = False
+        self.app.settings = settings
 
     def override_parameters_toggled(self, val):
-        llm_generator_settings = self.app.llm_generator_settings
-        llm_generator_settings["override_parameters"] = val
-        self.app.llm_generator_settings = llm_generator_settings
+        settings = self.app.settings
+        settings["llm_generator_settings"]["override_parameters"] = val
+        self.app.settings = settings
         
     def prompt_template_text_changed(self, value):
         llm_generator = self.app.llm_generator
@@ -202,29 +209,31 @@ class LLMSettingsWidget(BaseWidget):
             self.set_dtype("32bit")
         
     def random_seed_toggled(self, val):
-        llm_generator_settings = self.app.llm_generator_settings
-        llm_generator_settings["random_seed"] = val
-        self.app.llm_generator_settings = llm_generator_settings
+        settings = self.app.settings
+        settings["llm_generator_settings"]["random_seed"] = val
+        self.app.settings = settings
         
     def seed_changed(self, val):
-        llm_generator_settings = self.app.llm_generator_settings
-        llm_generator_settings["seed"] = val
-        self.app.llm_generator_settings = llm_generator_settings
+        settings = self.app.settings
+        settings["llm_generator_settings"]["seed"] = val
+        self.app.settings = settings
         
     def toggle_unload_model(self, val):
-        self.app.unload_unused_model = val
+        settings = self.app.settings
+        settings["memory_settings"]["unload_unused_models"] = val
         if val:
-            self.app.move_unused_model_to_cpu = False
+            settings["memory_settings"]["move_unused_model_to_cpu"] = False
+        self.app.settings = settings
     
     def use_gpu_toggled(self, val):
-        llm_generator_settings = self.app.llm_generator_settings
-        llm_generator_settings["use_gpu"] = val
-        self.app.llm_generator_settings = llm_generator_settings
+        settings = self.app.settings
+        settings["llm_generator_settings"]["use_gpu"] = val
+        self.app.settings = settings
         self.set_dtype_by_gpu(val)
     
     def set_dtype_by_gpu(self, use_gpu):
-        llm_generator_settings = self.app.llm_generator_settings
-        dtype = llm_generator_settings["dtype"]
+        settings = self.app.settings
+        dtype = settings["llm_generator_settings"]["dtype"]
         if not use_gpu:            
             if dtype in ["2bit","4bit", "8bit"]:
                 self.ui.radio_button_16bit.setChecked(True)
@@ -242,7 +251,7 @@ class LLMSettingsWidget(BaseWidget):
     
     def reset_settings_to_default_clicked(self):
         print("TODO")
-        llm_generator_settings = self.app.llm_generator_settings
+        llm_generator_settings = self.app.settings["llm_generator_settings"]
         self.initialize_form()
         self.ui.top_p.set_slider_and_spinbox_values(llm_generator_settings["top_p"])
         self.ui.max_length.set_slider_and_spinbox_values(llm_generator_settings["max_length"])
@@ -258,9 +267,9 @@ class LLMSettingsWidget(BaseWidget):
         self.ui.random_seed.setChecked(llm_generator_settings["random_seed"])
 
     def set_dtype(self, dtype):
-        llm_generator_settings = self.app.llm_generator_settings
-        llm_generator_settings["dtype"] = dtype
-        self.app.llm_generator_settings = llm_generator_settings
+        settings = self.app.settings
+        settings["llm_generator_settings"]["dtype"] = dtype
+        self.app.settings = settings
         self.set_dtype_description(dtype)
     
     def set_dtype_description(self, dtype):
