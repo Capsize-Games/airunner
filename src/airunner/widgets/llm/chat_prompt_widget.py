@@ -216,8 +216,6 @@ class ChatPromptWidget(BaseWidget):
 
             parsed_template = self.parse_template(prompt_template)
 
-            print("PARSED TEMPLATE", parsed_template)
-
             data = {
                 "llm_request": True,
                 "request_data": {
@@ -278,12 +276,11 @@ class ChatPromptWidget(BaseWidget):
         model = template.model
         llm_category = template.llm_category
         template = template.template
-        print("PARSE TEMPLATE", llm_category, model)
         if llm_category == "casuallm":
             if model == "mistralai/Mistral-7B-Instruct-v0.1":
                 return "\n".join((
                     "<s>[INST] <<SYS>>",
-                    system_instructions,
+                    system_instructions,# + "\nYou must say everything in Japanese with Japanese characters.",
                     "<</SYS>>",
                     template,
                     "[/INST]"
