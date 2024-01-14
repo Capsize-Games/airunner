@@ -2,7 +2,6 @@ import os
 from PyQt6 import QtGui
 from PyQt6.QtWidgets import QWidget
 
-from airunner.data.managers import SettingsManager
 from airunner.utils import get_main_window
 
 
@@ -14,7 +13,7 @@ class BaseWidget(QWidget):
 
     @property
     def is_dark(self):
-        return self.app.dark_mode_enabled
+        return self.app.settings["dark_mode_enabled"]
 
     @property
     def canvas(self):
