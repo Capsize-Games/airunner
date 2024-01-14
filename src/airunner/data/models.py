@@ -258,8 +258,6 @@ class Layer(BaseModel):
         else:
             self.base_64_image = ""
 
-    document_id = Column(Integer, ForeignKey('documents.id'))
-    document = relationship("Document", backref="layers")
     name = Column(String)
     visible = Column(Boolean, default=True)
     opacity = Column(Integer, default=10000)
@@ -271,14 +269,6 @@ class Layer(BaseModel):
     pivot_point_y = Column(Integer, default=0)
     root_point_x = Column(Integer, default=0)
     root_point_y = Column(Integer, default=0)
-
-
-class Document(BaseModel):
-    __tablename__ = 'documents'
-
-    id = Column(Integer, primary_key=True)
-    name = Column(String)
-    active = Column(Boolean, default=False)
 
 
 class LLMModelVersion(BaseModel):

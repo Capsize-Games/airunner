@@ -41,7 +41,7 @@ class ExportPreferencesWidget(BaseWidget):
         self.ui.export_metadata.setChecked(metadata_settings["export_metadata"] is True)
         self.ui.actionAuto_export_images.setChecked(self.app.settings["auto_export_images"] is True)
         self.ui.image_type_dropdown.setCurrentText(self.app.settings["image_export_type"])
-        self.ui.image_path.setText(self.app.settings_manager.image_path)
+        self.ui.image_path.setText(self.app.settings["path_settings"]["image_path"])
         image_types = [
             "png",
             "jpg",

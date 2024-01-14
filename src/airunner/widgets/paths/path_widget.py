@@ -24,8 +24,7 @@ class PathWidget(BaseWidget):
 
     @property
     def path(self):
-        return getattr(
-            self.app.settings_manager.path_settings, f"{self.path_name}")
+        return self.app.settings["path_settings"][self.path_name]
 
     def initialize(self):
         self.ui.title_label.setText(self.title)

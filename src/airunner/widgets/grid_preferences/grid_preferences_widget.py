@@ -15,7 +15,7 @@ class GridPreferencesWidget(BaseWidget):
         self.ui.show_grid_checkbox.blockSignals(True)
         self.ui.snap_to_grid_checkbox.blockSignals(True)
 
-        line_width = self.app.settings.settings["line_width"]
+        line_width = self.app.settings["grid_settings"]["line_width"]
         cell_size = self.app.settings["grid_settings"]["cell_size"]
         show_grid = self.app.settings["grid_settings"]["show_grid"]
         snap_to_grid = self.app.settings["grid_settings"]["snap_to_grid"]
@@ -31,35 +31,36 @@ class GridPreferencesWidget(BaseWidget):
         self.ui.snap_to_grid_checkbox.blockSignals(False)
 
     def action_toggled_snap_to_grid(self, val):
-         grid_settings = self.app.settings["grid_settings"]
-         grid_settings["snap_to_grid"] = val
-         self.app.settings["grid_settings"] = grid_settings
+        settings = self.app.settings
+        settings["grid_settings"]["snap_to_grid"] = val
+        self.app.settings = settings
 
     def action_toggled_show_grid(self, val):
-        grid_settings = self.app.settings["grid_settings"]
-        grid_settings["show_grid"] = val
-        self.app.settings["grid_settings"] = grid_settings
+        settings = self.app.settings
+        settings["grid_settings"]["show_grid"] = val
+        self.app.settings = settings
 
     def action_button_clicked_grid_line_color(self):
         color = QColorDialog.getColor()
         if color.isValid():
-            grid_settings = self.app.settings["grid_settings"]
-            grid_settings["line_color"] = color.name()
-            self.app.settings["grid_settings"] = grid_settings
+            settings = self.app.settings
+            settings["grid_settings"]["line_color"] = color.name()
+            self.app.settings = settings
 
     def action_button_clicked_canvas_color(self):
         color = QColorDialog.getColor()
         if color.isValid():
-            grid_settings = self.app.settings["grid_settings"]
-            grid_settings["canvas_color"] = color.name()
-            self.app.settings["grid_settings"] = grid_settings
+            settings = self.app.settings
+            print("SETTING CANVAS COLOR TO " + color.name())
+            settings["grid_settings"]["canvas_color"] = color.name()
+            self.app.settings = settings
 
     def grid_size_changed(self, val):
-        grid_settings = self.app.settings["grid_settings"]
-        grid_settings["cell_size"] = val
-        self.app.settings["grid_settings"] = grid_settings
+        settings = self.app.settings
+        settings["grid_settings"]["cell_size"] = val
+        self.app.settings = settings
 
     def line_width_changed(self, val):
-        grid_settings = self.app.settings["grid_settings"]
-        grid_settings["line_width"] = val
-        self.app.settings["grid_settings"] = grid_settings
+        settings = self.app.settings
+        settings["grid_settings"]["line_width"] = val
+        self.app.settings = settings
