@@ -655,7 +655,7 @@ class SDRunner(
 
     @property
     def do_unload_controlnet(self):
-        return not self.enable_controlnet and (self.pipe or self.controlnet_loaded)
+        return not self.enable_controlnet and (self.controlnet_loaded)
 
     @property
     def do_reuse_pipeline(self):
@@ -773,7 +773,6 @@ class SDRunner(
         return model.endswith(".safetensors")
 
     def initialize(self):
-        Logger.info("trying to initialize")
         if not self.initialized or self.reload_model or self.pipe is None:
             Logger.info("Initializing")
             self.compel_proc = None
@@ -799,9 +798,16 @@ class SDRunner(
         requested_model = options.get(f"model", None)
 
         # do model reload checks here
-        if (self.is_pipe_loaded and (  # memory options change
-            self.use_enable_sequential_cpu_offload != options.get("use_enable_sequential_cpu_offload", True))) or \
-           (self.model is not None and self.model != requested_model):  # model change
+
+    
+        sequential_cpu_offload_changed = self.use_enable_sequential_cpu_offload != (options.get("use_enable_sequential_cpu_offload", True) is True)
+        model_changed = (self.model is not None and self.model != requested_model)
+
+        if (self.is_pipe_loaded and (sequential_cpu_offload_changed)) or model_changed:  # model change
+            if model_changed:
+                Logger.info(f"Model changed, reloading model" + f" (from {self.model} to {requested_model})")
+            if sequential_cpu_offload_changed:
+                Logger.info(f"Sequential cpu offload changed, reloading model")
             self.reload_model = True
             self.clear_scheduler()
             self.clear_controlnet()
@@ -888,7 +894,10 @@ class SDRunner(
     def do_sample(self, **kwargs):
         Logger.info(f"Sampling {self.action}")
 
-        message = f"Generating {'video' if self.is_vid_action else 'image'}"
+        if self.is_vid_action:
+            message = "Generating video"
+        else:
+            message = "Genearting image"
 
         self.send_message(message)
 
@@ -1032,7 +1041,7 @@ class SDRunner(
 
         with torch.inference_mode():
             for n in range(self.n_samples):
-                yield self.pipe(**args)
+                return self.pipe(**args)
 
     def read_video(self):
         reader = imageio.get_reader(self.input_video, "ffmpeg")

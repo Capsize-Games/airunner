@@ -412,7 +412,6 @@ class CanvasPlusWidget(CanvasBaseWidget):
         """
         Draw a rectangle around the active grid area of
         """
-        print("draw_active_grid_area_container")
         if not self.active_grid_area:
             self.active_grid_area = ActiveGridArea(
                 parent=self,
@@ -461,8 +460,6 @@ class CanvasPlusWidget(CanvasBaseWidget):
             self.has_lines = False
     
     def handle_image_data(self, data):
-        print("canvas plus widget handle image data")
-        print(data)
         options = data["data"]["options"]
         images = data["images"]
         outpaint_box_rect = options["outpaint_box_rect"]
@@ -539,7 +536,6 @@ class CanvasPlusWidget(CanvasBaseWidget):
         self.load_image_from_object(image)
     
     def load_image_from_object(self, image, is_outpaint=False, image_root_point=None):
-        print("load image from object")
         self.add_image_to_scene(image, is_outpaint=is_outpaint, image_root_point=image_root_point)
 
     def load_image(self, image_path):
@@ -643,14 +639,11 @@ class CanvasPlusWidget(CanvasBaseWidget):
         self.current_layer_index = layer_index
 
     def add_image_to_scene(self, image, is_outpaint=False, image_root_point=None):
-        print("add_image_to_scene")
-        self.image_adder = ImageAdder(self, image, is_outpaint, image_root_point)
-        self.image_adder.finished.connect(self.on_image_adder_finished)
-        self.image_adder.start()
-    
-    def on_image_adder_finished(self):
-        print("on_image_adder_finished")
-        pass
+        #self.image_adder = ImageAdder(self, image, is_outpaint, image_root_point)
+        #self.image_adder.finished.connect(self.on_image_adder_finished)
+        self.current_active_image = image
+        self.do_draw()
+        #self.image_adder.start()
     
     def image_to_system_clipboard_windows(self, pixmap):
         if not pixmap:
