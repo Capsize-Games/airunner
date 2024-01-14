@@ -41,7 +41,7 @@ class CustomScene(QGraphicsScene):
 
     def drawAt(self, position):
         painter = QPainter(self.image)
-        painter.setPen(QPen(Qt.GlobalColor.black, self.app.brush_settings["size"], Qt.PenStyle.SolidLine, Qt.PenCapStyle.RoundCap))
+        painter.setPen(QPen(Qt.GlobalColor.black, self.app.settings["brush_settings"]["size"], Qt.PenStyle.SolidLine, Qt.PenCapStyle.RoundCap))
         
         # Draw a line from the last position to the current one
         if self.last_pos is not None:
@@ -82,7 +82,7 @@ class CustomScene(QGraphicsScene):
 
     def eraseAt(self, position):
         painter = QPainter(self.image)
-        painter.setPen(QPen(Qt.GlobalColor.white, self.app.brush_settings["size"], Qt.PenStyle.SolidLine, Qt.PenCapStyle.RoundCap))
+        painter.setPen(QPen(Qt.GlobalColor.white, self.app.settings["brush_settings"]["size"], Qt.PenStyle.SolidLine, Qt.PenCapStyle.RoundCap))
         painter.setCompositionMode(QPainter.CompositionMode.CompositionMode_Clear)
         
         # Create a QPainterPath
@@ -93,7 +93,7 @@ class CustomScene(QGraphicsScene):
             path.moveTo(self.last_pos)
             path.lineTo(position)
         else:
-            path.addEllipse(position, self.app.brush_settings["size"]/2, self.app.brush_settings["size"]/2)
+            path.addEllipse(position, self.app.settings["brush_settings"]["size"]/2, self.app.settings["brush_settings"]["size"]/2)
         
         # Draw the path
         painter.drawPath(path)
@@ -102,24 +102,24 @@ class CustomScene(QGraphicsScene):
         self.item.setPixmap(QPixmap.fromImage(self.image))
 
     def mousePressEvent(self, event):
-        if self.app.current_tool not in ["brush", "eraser"]:
+        if self.app.settings["current_tool"] not in ["brush", "eraser"]:
             super(CustomScene, self).mousePressEvent(event)
             return
 
         self.last_pos = event.scenePos()
-        if self.app.current_tool == "brush":
+        if self.app.settings["current_tool"] == "brush":
             self.drawAt(self.last_pos)
-        elif self.app.current_tool == "eraser":
+        elif self.app.settings["current_tool"] == "eraser":
             self.eraseAt(self.last_pos)
 
     def handle_cursor(self, event):
-        if self.app.current_tool in ['brush', 'eraser']:
+        if self.app.settings["current_tool"] in ['brush', 'eraser']:
             self.parent().setCursor(CircleCursor(
                 Qt.GlobalColor.white,
                 Qt.GlobalColor.transparent,
-                self.app.brush_settings["size"],
+                self.app.settings["brush_settings"]["size"],
             ))
-        elif self.app.current_tool == "active_grid_area":
+        elif self.app.settings["current_tool"] == "active_grid_area":
             if event.buttons() == Qt.MouseButton.LeftButton:
                 self.parent().setCursor(Qt.CursorShape.ClosedHandCursor)
             else:
@@ -142,13 +142,13 @@ class CustomScene(QGraphicsScene):
 
     def mouseMoveEvent(self, event):
         self.handle_cursor(event)
-        if self.app.current_tool not in ["brush", "eraser"]:
+        if self.app.settings["current_tool"] not in ["brush", "eraser"]:
             super(CustomScene, self).mouseMoveEvent(event)
             return
         
-        if self.app.current_tool == "brush":
+        if self.app.settings["current_tool"] == "brush":
             self.drawAt(event.scenePos())
-        elif self.app.current_tool == "eraser":
+        elif self.app.settings["current_tool"] == "eraser":
             self.eraseAt(event.scenePos())
         
         # Update the last position

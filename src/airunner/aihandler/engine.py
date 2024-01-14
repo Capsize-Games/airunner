@@ -1,6 +1,7 @@
 import torch
 import gc
 import threading
+from airunner.aihandler.image_processor import ImageProcessor
 
 from airunner.aihandler.llm import LLM
 from airunner.aihandler.logger import Logger as logger
@@ -29,12 +30,13 @@ class Engine(QObject):
         self.message_handler = kwargs.get("message_handler", None)
         self.clear_memory()
         self.llm = LLM(app=self.app, engine=self)
-        self.speech_to_text = SpeechToText(
-            hear_signal=self.hear_signal,
-            engine=self,
-            duration=10.0,
-            fs=16000
-        )
+        # self.speech_to_text = SpeechToText(
+        #     hear_signal=self.hear_signal,
+        #     engine=self,
+        #     duration=10.0,
+        #     fs=16000
+        # )
+        self.image_processor = ImageProcessor(engine=self)
         self.sd = SDRunner(
             app=self.app,
             message_var=self.message_var,
@@ -45,8 +47,8 @@ class Engine(QObject):
         self.tts = TTS(engine=self, use_bark=self.app.tts_settings["use_bark"])
         self.tts_thread = threading.Thread(target=self.tts.run)
         self.tts_thread.start()
-        self.listen_thread = threading.Thread(target=self.speech_to_text.listen)
-        self.listen_thread.start()
+        # self.listen_thread = threading.Thread(target=self.speech_to_text.listen)
+        # self.listen_thread.start()
     
     pyqtSlot(str)
     def hear(self, message):
@@ -117,7 +119,8 @@ class Engine(QObject):
     request_data = None
 
     def do_listen(self):
-        self.speech_to_text.do_listen()
+        # self.speech_to_text.do_listen()
+        pass
 
     def is_llm_request(self, data):
         return "llm_request" in data
@@ -137,7 +140,7 @@ class Engine(QObject):
         """
         do_move_to_cpu = not do_unload_model and move_unused_model_to_cpu
         if self.request_data:
-            dtype = self.app.llm_generator_settings["dtype"]
+            dtype = self.app.settings["llm_generator_settings"]["dtype"]
             if dtype in ["2bit", "4bit", "8bit"]:
                 do_unload_model = True
                 do_move_to_cpu = False

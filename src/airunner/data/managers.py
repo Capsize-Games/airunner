@@ -5,12 +5,8 @@ from PyQt6.QtCore import QObject, pyqtSignal
 from airunner.utils import Logger
 
 from airunner.data.session_scope import (
-    path_settings_scope, 
-    standard_image_widget_settings_scope,
     models_scope,
     session_scope,
-    canvas_settings_scope,
-    memory_settings_scope,
 )
 
 
@@ -62,11 +58,7 @@ class SettingsManager(QObject):
     changed_signal = pyqtSignal(str, object)
 
     scopes = {
-        "path_settings": path_settings_scope,
-        "standard_image_settings": standard_image_widget_settings_scope,
         "models": models_scope,
-        "canvas_settings": canvas_settings_scope,
-        "memory_settings": memory_settings_scope,
     }
 
     def __new__(cls, *args, **kwargs):
@@ -77,11 +69,7 @@ class SettingsManager(QObject):
     # todo: handle changed_signalgrid_settings
     def __init__(self):
         super().__init__()
-        self.path_settings = Modelmanager(path_settings_scope)
-        self.standard_image_settings = Modelmanager(standard_image_widget_settings_scope)
         self.models = Modelmanager(models_scope)
-        self.canvas_settings = Modelmanager(canvas_settings_scope)
-        self.memory_settings = Modelmanager(memory_settings_scope)
     
     @contextmanager
     def image_filters_scope(self):

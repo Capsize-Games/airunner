@@ -119,7 +119,7 @@ class EmbeddingsContainerWidget(BaseWidget):
         self.check_saved_embeddings()
 
         with session_scope() as session:
-            embeddings_path = self.app.embeddings_model_path
+            embeddings_path = self.app.settings["path_settings"]["embeddings_model_path"]
 
             if os.path.exists(embeddings_path):
                 for root, dirs, _ in os.walk(embeddings_path):

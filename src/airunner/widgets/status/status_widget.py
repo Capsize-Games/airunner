@@ -9,7 +9,7 @@ class StatusWidget(BaseWidget):
     widget_class_ = Ui_status_widget
 
     def update_system_stats(self, queue_size):
-        nsfw_filter = self.app.nsfw_filter
+        nsfw_filter = self.app.settings["nsfw_filter"]
         has_cuda = torch.cuda.is_available()
         nsfw_status = f"NSFW Filter {'On' if nsfw_filter else 'Off'}"
         queue_stats = f"Queued items: {queue_size}"

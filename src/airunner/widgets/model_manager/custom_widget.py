@@ -26,17 +26,18 @@ class CustomModelWidget(BaseWidget):
     def scan_for_models(self):
         # look at model path and determine if we can import existing local models
         # first look at all files and folders inside of the model paths
-        base_model_path = self.app.base_path
-        depth2img_model_path = self.app.depth2img_model_path
-        pix2pix_model_path = self.app.pix2pix_model_path
-        outpaint_model_path = self.app.inpaint_model_path
-        upscale_model_path = self.app.upscale_model_path
-        txt2vid_model_path = self.app.txt2vid_model_path
-        llm_casuallm_model_path = self.app.llm_casuallm_model_path
-        llm_seq2seq_model_path = self.app.llm_seq2seq_model_path
+        base_model_path = self.app.settings["path_settings"]["base_path"]
+        txt2img_model_path = self.app.settings["path_settings"]["txt2img_model_path"]
+        depth2img_model_path = self.app.settings["path_settings"]["depth2img_model_path"]
+        pix2pix_model_path = self.app.settings["path_settings"]["pix2pix_model_path"]
+        outpaint_model_path = self.app.settings["path_settings"]["inpaint_model_path"]
+        upscale_model_path = self.app.settings["path_settings"]["upscale_model_path"]
+        txt2vid_model_path = self.app.settings["path_settings"]["txt2vid_model_path"]
+        llm_casuallm_model_path = self.app.settings["path_settings"]["llm_casuallm_model_path"]
+        llm_seq2seq_model_path = self.app.settings["path_settings"]["llm_seq2seq_model_path"]
         diffusers_folders = ["scheduler", "text_encoder", "tokenizer", "unet", "vae"]
         for key, model_path in {
-            "txt2img": base_model_path,
+            "txt2img": txt2img_model_path,
             "depth2img": depth2img_model_path,
             "pix2pix": pix2pix_model_path,
             "outpaint": outpaint_model_path,

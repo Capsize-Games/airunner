@@ -31,17 +31,17 @@ class EmbeddingWidget(BaseWidget):
 
     def action_clicked_button_to_prompt(self):
         with self.embedding() as embedding:
-            val = f"{self.app.generator_settings['prompt']} {embedding.name}"
-            generator_settings = self.app.generator_settings
-            generator_settings["prompt"] = val
-            self.app.generator_settings = generator_settings
+            val = f"{self.app.settings['generator_settings']['prompt']} {embedding.name}"
+            settings = self.app.settings
+            settings["generator_settings"]["prompt"] = val
+            self.app.settings = settings
 
     def action_clicked_button_to_negative_prompt(self):
         with self.embedding() as embedding:
-            val = f"{self.app.generator_settings['negative_prompt']} {embedding.name}"
-            generator_settings = self.app.generator_settings
-            generator_settings["negative_prompt"] = val
-            self.app.generator_settings = generator_settings
+            val = f"{self.app.settings['generator_settings']['negative_prompt']} {embedding.name}"
+            settings = self.app.settings
+            settings["generator_settings"]["negative_prompt"] = val
+            self.app.settings = settings
 
     def action_toggled_embedding(self, val):
         with self.embedding() as embedding:
