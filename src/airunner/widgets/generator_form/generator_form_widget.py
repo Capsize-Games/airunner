@@ -119,8 +119,12 @@ class GeneratorForm(BaseWidget):
     def __init__(self, *args, **kwargs):
         super().__init__(*args, **kwargs)
         self.ui.generator_form_tabs.tabBar().hide()
-        self.app.ai_mode_toggled.connect(self.activate_ai_mode)
         self.activate_ai_mode(self.app.settings["ai_mode"])
+        self.app.application_settings_changed_signal.connect(self.handle_changed_signal)
+    
+    def handle_changed_signal(self):
+        self.activate_ai_mode(self.app.settings["ai_mode"])
+
     
     def activate_ai_mode(self, active):
         self.ui.generator_form_tabs.setCurrentIndex(1 if active is True else 0)
@@ -145,8 +149,6 @@ class GeneratorForm(BaseWidget):
         self.app.settings = settings
 
     def handle_negative_prompt_changed(self):
-        if not self.initialized:
-            return
         settings = self.app.settings
         settings["generator_settings"]["negative_prompt"] = self.ui.negative_prompt.toPlainText()
         self.app.settings = settings
@@ -210,8 +212,8 @@ class GeneratorForm(BaseWidget):
                 if self.is_txt2img:
                     return self.do_generate(seed=seed, override_data=override_data)
                 # Create a transparent image the size of self.app.canvas_widget.active_grid_area_rect
-                width = self.app.settings_manager.working_width
-                height = self.app.settings_manager.working_height
+                width = self.app.settings["working_width"]
+                height = self.app.settings["working_height"]
                 image = Image.new("RGBA", (int(width), int(height)), (0, 0, 0, 0))
             
             use_cropped_image = override_data.get("use_cropped_image", True)
@@ -226,8 +228,8 @@ class GeneratorForm(BaseWidget):
                 new_image = Image.new(
                     "RGBA",
                     (
-                        self.app.settings_manager.working_width, 
-                        self.app.settings_manager.working_height
+                        self.app.settings["working_width"], 
+                        self.app.settings["working_height"]
                     ),
                     (255, 255, 255, 0)
                 )
@@ -272,7 +274,7 @@ class GeneratorForm(BaseWidget):
                 "mask": mask,
                 "image": image,
                 "original_image": original_image,
-                "location": QRect(0, 0, self.app.settings_manager.working_width, self.app.settings_manager.working_height)
+                "location": QRect(0, 0, self.app.settings["working_width"], self.app.settings["working_height"])
             }, seed=seed, override_data=override_data)
         elif self.generator_section == "vid2vid":
             images = self.prep_video()
@@ -323,7 +325,7 @@ class GeneratorForm(BaseWidget):
         enable_controlnet = bool(override_data.get("enable_controlnet", self.app.settings["generator_settings"]["enable_controlnet"]))
         controlnet = override_data.get("controlnet", self.app.settings["generator_settings"]["controlnet"])
         controlnet_conditioning_scale = float(override_data.get("controlnet_conditioning_scale", self.app.settings["generator_settings"]["controlnet_guidance_scale"]))
-        width = int(override_data.get("width", self.app.settings["is_maximized"]))
+        width = int(override_data.get("width", self.app.settings["working_width"]))
         height = int(override_data.get("height", self.app.settings["working_height"]))
         clip_skip = int(override_data.get("clip_skip", self.app.settings["generator_settings"]["clip_skip"]))
         batch_size = int(override_data.get("batch_size", 1))
@@ -374,7 +376,7 @@ class GeneratorForm(BaseWidget):
                     }
 
                 # get controlnet_dropdown from active tab
-                nsfw_filter = self.self.app.settings["nsfw_filter"]
+                nsfw_filter = self.app.settings["nsfw_filter"]
                 options = dict(
                     prompt=prompt,
                     negative_prompt=negative_prompt,
@@ -385,7 +387,7 @@ class GeneratorForm(BaseWidget):
                     scale=scale,
                     seed=seed,
                     latents_seed=latents_seed,
-                    model=model,
+                    model=model.name,
                     model_data=model_data,
                     original_model_data=original_model_data,
                     scheduler=scheduler,
@@ -457,18 +459,18 @@ class GeneratorForm(BaseWidget):
 
     def get_memory_options(self):
         return {
-            "use_last_channels": self.app.settings["use_last_channels"],
-            "use_enable_sequential_cpu_offload": self.app.settings["use_enable_sequential_cpu_offload"],
-            "enable_model_cpu_offload": self.app.settings["enable_model_cpu_offload"],
-            "use_attention_slicing": self.app.settings["use_attention_slicing"],
-            "use_tf32": self.app.settings["use_tf32"],
-            "use_cudnn_benchmark": self.app.settings["use_cudnn_benchmark"],
-            "use_enable_vae_slicing": self.app.settings["use_enable_vae_slicing"],
-            "use_accelerated_transformers": self.app.settings["use_accelerated_transformers"],
-            "use_torch_compile": self.app.settings["use_torch_compile"],
-            "use_tiled_vae": self.app.settings["use_tiled_vae"],
-            "use_tome_sd": self.app.settings["use_tome_sd"],
-            "tome_sd_ratio": self.app.settings["tome_sd_ratio"],
+            "use_last_channels": self.app.settings["memory_settings"]["use_last_channels"],
+            "use_enable_sequential_cpu_offload": self.app.settings["memory_settings"]["use_enable_sequential_cpu_offload"],
+            "enable_model_cpu_offload": self.app.settings["memory_settings"]["enable_model_cpu_offload"],
+            "use_attention_slicing": self.app.settings["memory_settings"]["use_attention_slicing"],
+            "use_tf32": self.app.settings["memory_settings"]["use_tf32"],
+            "use_cudnn_benchmark": self.app.settings["memory_settings"]["use_cudnn_benchmark"],
+            "use_enable_vae_slicing": self.app.settings["memory_settings"]["use_enable_vae_slicing"],
+            "use_accelerated_transformers": self.app.settings["memory_settings"]["use_accelerated_transformers"],
+            "use_torch_compile": self.app.settings["memory_settings"]["use_torch_compile"],
+            "use_tiled_vae": self.app.settings["memory_settings"]["use_tiled_vae"],
+            "use_tome_sd": self.app.settings["memory_settings"]["use_tome_sd"],
+            "tome_sd_ratio": self.app.settings["memory_settings"]["tome_sd_ratio"],
         }
 
     def set_seed(self, seed=None, latents_seed=None):
@@ -524,9 +526,10 @@ class GeneratorForm(BaseWidget):
     def initialize(self):
         self.set_form_values()
         self.initialized = True
+        self.ui.prompt.setPlainText(self.app.settings["generator_settings"]["prompt"])
+        self.ui.negative_prompt.setPlainText(self.app.settings["generator_settings"]["negative_prompt"])
 
     def handle_settings_manager_changed(self, key, val, settings_manager):
-        print("generator_form_widget handle_settings_manager_changed")
         self.set_form_values()
 
     def clear_prompts(self):
@@ -575,11 +578,5 @@ class GeneratorForm(BaseWidget):
         progressbar.setRange(0, 100)
         progressbar.setValue(100)
 
-    def update_prompt(self, prompt):
-        self.ui.prompt.setPlainText(prompt)
-
-    def update_negative_prompt(self, prompt):
-        self.ui.negative_prompt.setPlainText(prompt)
-    
     def handle_prompt_builder_button_toggled(self, val):
         self.app.toggle_prompt_builder(val)

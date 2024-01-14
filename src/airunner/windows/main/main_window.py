@@ -55,25 +55,22 @@ class ImageDataWorker(QObject):
         self.finished.emit()
     
     def process_image_data(self, message):
-        print("process_image_data 1")
         images = message["images"]
         data = message["data"]
         nsfw_content_detected = message["nsfw_content_detected"]
         self.parent.clear_status_message()
         self.parent.data = data
-        print("process_image_data 3")
         if data["action"] == "txt2vid":
             return self.parent.video_handler(data)
         self.stop_progress_bar.emit()
-        print("process_image_data 4")
         path = ""
-        if self.parent.auto_export_images:
+        if self.parent.settings["auto_export_images"]:
             procesed_images = []
             for image in images:
                 path, image = auto_export_image(
-                    base_path=self.base_path,
-                    image_path=self.settings["path_settings"]["image_path"],
-                    image_export_type=self.settings["image_export_type"],
+                    base_path=self.parent.settings["path_settings"]["base_path"],
+                    image_path=self.parent.settings["path_settings"]["image_path"],
+                    image_export_type=self.parent.settings["image_export_type"],
                     image=image, 
                     data=data, 
                     seed=data["options"]["seed"], 
@@ -83,7 +80,7 @@ class ImageDataWorker(QObject):
                     self.parent.set_status_label(f"Image exported to {path}")
                 procesed_images.append(image)
             images = procesed_images
-        if nsfw_content_detected and self.settings["nsfw_filter"]:
+        if nsfw_content_detected and self.parent.settings["nsfw_filter"]:
             self.parent.message_handler({
                 "message": "Explicit content detected, try again.",
                 "code": MessageCode.ERROR
@@ -105,7 +102,6 @@ class MainWindow(
     QMainWindow
 ):
     # signals
-    ai_mode_toggled = pyqtSignal(bool)
     show_grid_toggled = pyqtSignal(bool)
     cell_size_changed_signal = pyqtSignal(int)
     line_width_changed_signal = pyqtSignal(int)
@@ -388,6 +384,7 @@ class MainWindow(
     def settings(self, val):
         self.application_settings.setValue("settings", val)
         self.application_settings.sync()
+        print("prompt:",self.settings["generator_settings"]["prompt"])
         self.application_settings_changed_signal.emit()
 
     def reset_paths(self):
@@ -1549,12 +1546,6 @@ class MainWindow(
             directory,
             "Image Files (*.png *.jpg *.jpeg)"
         )
-
-    def update_prompt(self, prompt_value):
-        self.generator_tab_widget.update_prompt(prompt_value)
-
-    def update_negative_prompt(self, prompt_value):
-        self.generator_tab_widget.update_negative_prompt(prompt_value)
 
     def new_batch(self, index, image, data):
         self.generator_tab_widget.new_batch(index, image, data)
