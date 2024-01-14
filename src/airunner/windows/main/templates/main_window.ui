@@ -8,7 +8,7 @@
     <x>0</x>
     <y>0</y>
     <width>1201</width>
-    <height>1024</height>
+    <height>1186</height>
    </rect>
   </property>
   <property name="sizePolicy">
@@ -652,7 +652,7 @@
                <x>0</x>
                <y>0</y>
                <width>407</width>
-               <height>895</height>
+               <height>1057</height>
               </rect>
              </property>
              <layout class="QGridLayout" name="gridLayout">
@@ -1164,6 +1164,118 @@
                 <width>18</width>
                 <height>18</height>
                </size>
+              </property>
+              <property name="flat">
+               <bool>true</bool>
+              </property>
+             </widget>
+            </item>
+            <item>
+             <widget class="Line" name="line_6">
+              <property name="orientation">
+               <enum>Qt::Horizontal</enum>
+              </property>
+             </widget>
+            </item>
+            <item>
+             <widget class="QPushButton" name="tts_button">
+              <property name="minimumSize">
+               <size>
+                <width>50</width>
+                <height>45</height>
+               </size>
+              </property>
+              <property name="cursor">
+               <cursorShape>PointingHandCursor</cursorShape>
+              </property>
+              <property name="toolTip">
+               <string>Toggle Text to Speech</string>
+              </property>
+              <property name="text">
+               <string/>
+              </property>
+              <property name="icon">
+               <iconset theme="audio-volume-high">
+                <normaloff>.</normaloff>.</iconset>
+              </property>
+              <property name="iconSize">
+               <size>
+                <width>32</width>
+                <height>32</height>
+               </size>
+              </property>
+              <property name="checkable">
+               <bool>true</bool>
+              </property>
+              <property name="flat">
+               <bool>true</bool>
+              </property>
+             </widget>
+            </item>
+            <item>
+             <widget class="QPushButton" name="v2t_button">
+              <property name="minimumSize">
+               <size>
+                <width>50</width>
+                <height>45</height>
+               </size>
+              </property>
+              <property name="cursor">
+               <cursorShape>PointingHandCursor</cursorShape>
+              </property>
+              <property name="toolTip">
+               <string>Toggle Speech To Text</string>
+              </property>
+              <property name="text">
+               <string/>
+              </property>
+              <property name="icon">
+               <iconset theme="audio-input-microphone">
+                <normaloff>.</normaloff>.</iconset>
+              </property>
+              <property name="iconSize">
+               <size>
+                <width>18</width>
+                <height>18</height>
+               </size>
+              </property>
+              <property name="checkable">
+               <bool>true</bool>
+              </property>
+              <property name="flat">
+               <bool>true</bool>
+              </property>
+             </widget>
+            </item>
+            <item>
+             <widget class="QPushButton" name="ocr_button">
+              <property name="minimumSize">
+               <size>
+                <width>50</width>
+                <height>45</height>
+               </size>
+              </property>
+              <property name="cursor">
+               <cursorShape>PointingHandCursor</cursorShape>
+              </property>
+              <property name="toolTip">
+               <string>Toggle Vision</string>
+              </property>
+              <property name="text">
+               <string/>
+              </property>
+              <property name="icon">
+               <iconset theme="camera-web">
+                <normaloff>.</normaloff>.</iconset>
+              </property>
+              <property name="iconSize">
+               <size>
+                <width>16</width>
+                <height>16</height>
+               </size>
+              </property>
+              <property name="checkable">
+               <bool>true</bool>
               </property>
               <property name="flat">
                <bool>true</bool>
@@ -2738,7 +2850,7 @@
     </hint>
     <hint type="destinationlabel">
      <x>1021</x>
-     <y>-11</y>
+     <y>0</y>
     </hint>
    </hints>
   </connection>
@@ -2755,6 +2867,54 @@
     <hint type="destinationlabel">
      <x>442</x>
      <y>432</y>
+    </hint>
+   </hints>
+  </connection>
+  <connection>
+   <sender>tts_button</sender>
+   <signal>toggled(bool)</signal>
+   <receiver>MainWindow</receiver>
+   <slot>tts_button_toggled(bool)</slot>
+   <hints>
+    <hint type="sourcelabel">
+     <x>1168</x>
+     <y>591</y>
+    </hint>
+    <hint type="destinationlabel">
+     <x>1204</x>
+     <y>788</y>
+    </hint>
+   </hints>
+  </connection>
+  <connection>
+   <sender>v2t_button</sender>
+   <signal>toggled(bool)</signal>
+   <receiver>MainWindow</receiver>
+   <slot>v2t_button_toggled(bool)</slot>
+   <hints>
+    <hint type="sourcelabel">
+     <x>1165</x>
+     <y>640</y>
+    </hint>
+    <hint type="destinationlabel">
+     <x>1203</x>
+     <y>859</y>
+    </hint>
+   </hints>
+  </connection>
+  <connection>
+   <sender>ocr_button</sender>
+   <signal>toggled(bool)</signal>
+   <receiver>MainWindow</receiver>
+   <slot>ocr_button_toggled(bool)</slot>
+   <hints>
+    <hint type="sourcelabel">
+     <x>1153</x>
+     <y>684</y>
+    </hint>
+    <hint type="destinationlabel">
+     <x>1204</x>
+     <y>941</y>
     </hint>
    </hints>
   </connection>
@@ -2849,5 +3009,8 @@
   <slot>quantization_clicked(bool)</slot>
   <slot>action_center_clicked()</slot>
   <slot>action_ai_toggled(bool)</slot>
+  <slot>tts_button_toggled(bool)</slot>
+  <slot>v2t_button_toggled(bool)</slot>
+  <slot>ocr_button_toggled(bool)</slot>
  </slots>
 </ui>

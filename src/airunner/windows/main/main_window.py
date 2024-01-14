@@ -22,7 +22,7 @@ from airunner.aihandler.pyqt_client import OfflineClient
 from airunner.aihandler.qtvar import MessageHandlerVar
 from airunner.aihandler.settings import DEFAULT_BRUSH_PRIMARY_COLOR, DEFAULT_BRUSH_SECONDARY_COLOR, LOG_LEVEL
 from airunner.airunner_api import AIRunnerAPI
-from airunner.data.models import DEFAULT_PATHS, LLMGenerator
+from airunner.data.models import DEFAULT_PATHS
 from airunner.filters.windows.filter_base import FilterBase
 from airunner.input_event_manager import InputEventManager
 from airunner.settings import BASE_PATH
@@ -36,7 +36,6 @@ from airunner.windows.settings.airunner_settings import SettingsWindow
 from airunner.windows.update.update_window import UpdateWindow
 from airunner.windows.video import VideoPopup
 from airunner.widgets.brushes.brushes_container import BrushesContainer
-from airunner.data.models import Document
 from airunner.data.session_scope import session_scope
 
 
@@ -56,25 +55,22 @@ class ImageDataWorker(QObject):
         self.finished.emit()
     
     def process_image_data(self, message):
-        print("process_image_data 1")
         images = message["images"]
         data = message["data"]
         nsfw_content_detected = message["nsfw_content_detected"]
         self.parent.clear_status_message()
         self.parent.data = data
-        print("process_image_data 3")
         if data["action"] == "txt2vid":
             return self.parent.video_handler(data)
         self.stop_progress_bar.emit()
-        print("process_image_data 4")
         path = ""
-        if self.parent.auto_export_images:
+        if self.parent.settings["auto_export_images"]:
             procesed_images = []
             for image in images:
                 path, image = auto_export_image(
-                    base_path=self.base_path,
-                    image_path=self.app.image_path,
-                    image_export_type=self.app.image_export_type,
+                    base_path=self.parent.settings["path_settings"]["base_path"],
+                    image_path=self.parent.settings["path_settings"]["image_path"],
+                    image_export_type=self.parent.settings["image_export_type"],
                     image=image, 
                     data=data, 
                     seed=data["options"]["seed"], 
@@ -84,7 +80,7 @@ class ImageDataWorker(QObject):
                     self.parent.set_status_label(f"Image exported to {path}")
                 procesed_images.append(image)
             images = procesed_images
-        if nsfw_content_detected and self.nsfw_filter:
+        if nsfw_content_detected and self.parent.settings["nsfw_filter"]:
             self.parent.message_handler({
                 "message": "Explicit content detected, try again.",
                 "code": MessageCode.ERROR
@@ -106,7 +102,6 @@ class MainWindow(
     QMainWindow
 ):
     # signals
-    ai_mode_toggled = pyqtSignal(bool)
     show_grid_toggled = pyqtSignal(bool)
     cell_size_changed_signal = pyqtSignal(int)
     line_width_changed_signal = pyqtSignal(int)
@@ -169,682 +164,261 @@ class MainWindow(
     load_image = pyqtSignal(str)
     load_image_object = pyqtSignal(object)
     window_resized_signal = pyqtSignal(object)
+    application_settings_changed_signal = pyqtSignal()
 
     generator = None
     _generator = None
     _generator_settings = None
+    listening = False
+    
+    @property
+    def settings(self):
+        # self.application_settings.clear()
+        # self.application_settings.sync()
+        return self.application_settings.value("settings", dict(
+            ocr_enabled=True,
+            tts_enabled=True,
+            v2t_enabled=True,
+            ai_mode=True,
+            nsfw_filter=True,
+            resize_on_paste=True,
+            image_to_new_layer=True,
+            dark_mode_enabled=True,
+            latest_version_check=True,
+            allow_online_mode=True,
+            current_version_stablediffusion="1.5",
+            current_tool="brush",
+            image_export_type="png",
+            auto_export_images=True,
+            show_active_image_area=True,
 
-    @property
-    def use_last_channels(self):
-        return self.application_settings.value("use_last_channels", True, type=bool)
-    
-    @use_last_channels.setter
-    def use_last_channels(self, val):
-        self.application_settings.setValue("use_last_channels", val)
+            working_width=512,
+            working_height=512,
+            current_llm_generator="casuallm",
+            current_image_generator="stablediffusion",
+            hf_api_key_read_key="",
+            hf_api_key_write_key="",
+            pipeline="txt2img",
+            pipeline_version="SD 1.5",
+            is_maximized=False,
+            mode=Mode.IMAGE.value,
+            window_settings=dict(
+                main_splitter=None,
+                content_splitter=None,
+                center_splitter=None,
+                canvas_splitter=None,
+                splitter=None,
+                mode_tab_widget_index=0,
+                tool_tab_widget_index=0,
+                center_tab_index=0,
+                generator_tab_index=0,
+                is_maximized=False,
+                is_fullscreen=False,
+            ),
+            memory_settings=dict(
+                use_last_channels=True,
+                use_attention_slicing=False,
+                use_tf32=False,
+                use_enable_vae_slicing=True,
+                use_accelerated_transformers=True,
+                use_tiled_vae=True,
+                enable_model_cpu_offload=False,
+                use_enable_sequential_cpu_offload=False,
+                use_cudnn_benchmark=True,
+                use_torch_compile=False,
+                use_tome_sd=True,
+                tome_sd_ratio=600,
+                move_unused_model_to_cpu=False,
+                unload_unused_models=True,
+            ),
+            grid_settings=dict(
+                cell_size=64,
+                line_width=1,
+                line_color="#000000",
+                snap_to_grid=True,
+                canvas_color="#ffffff",
+                show_grid=True,
+            ),
+            brush_settings=dict(
+                size=1,
+                primary_color=DEFAULT_BRUSH_PRIMARY_COLOR,
+                secondary_color=DEFAULT_BRUSH_SECONDARY_COLOR,
+            ),
+            path_settings=dict(
+                hf_cache_path=default_hf_cache_dir(),
+                base_path=BASE_PATH,
+                txt2img_model_path=DEFAULT_PATHS["art"]["models"]["txt2img"],
+                depth2img_model_path=DEFAULT_PATHS["art"]["models"]["depth2img"],
+                pix2pix_model_path=DEFAULT_PATHS["art"]["models"]["pix2pix"],
+                inpaint_model_path=DEFAULT_PATHS["art"]["models"]["inpaint"],
+                upscale_model_path=DEFAULT_PATHS["art"]["models"]["upscale"],
+                txt2vid_model_path=DEFAULT_PATHS["art"]["models"]["txt2vid"],
+                embeddings_model_path=DEFAULT_PATHS["art"]["models"]["embeddings"],
+                lora_model_path=DEFAULT_PATHS["art"]["models"]["lora"],
+                image_path=DEFAULT_PATHS["art"]["other"]["images"],
+                video_path=DEFAULT_PATHS["art"]["other"]["videos"],
+                llm_casuallm_model_path=DEFAULT_PATHS["text"]["models"]["casuallm"],
+                llm_seq2seq_model_path=DEFAULT_PATHS["text"]["models"]["seq2seq"],
+                llm_visualqa_model_path=DEFAULT_PATHS["text"]["models"]["visualqa"],
+                vae_model_path=DEFAULT_PATHS["art"]["models"]["vae"],
+            ),
+            standard_image_settings=dict(
+                image_similarity=1000,
+                controlnet="Canny",
+                prompt="",
+                negative_prompt="",
+                upscale_model="RealESRGAN_x4plus",
+                face_enhance=False,
+            ),
+            active_grid_settings=dict(
+                enabled=False,
+                render_border=True,
+                render_fill=True,
+                border_opacity=50,
+                fill_opacity=50,
+                pos_x=0,
+                pos_y=0,
+                width=512,
+                height=512,
+            ),
+            canvas_settings=dict(
+                pos_x=0,
+                pos_y=0,
+            ),
+            metadata_settings=dict(
+                image_export_metadata_prompt=True,
+                image_export_metadata_negative_prompt=True,
+                image_export_metadata_scale=True,
+                image_export_metadata_seed=True,
+                image_export_metadata_latents_seed=True,
+                image_export_metadata_steps=True,
+                image_export_metadata_ddim_eta=True,
+                image_export_metadata_iterations=True,
+                image_export_metadata_samples=True,
+                image_export_metadata_model=True,
+                image_export_metadata_model_branch=True,
+                image_export_metadata_scheduler=True,
+                export_metadata=True,
+                import_metadata=True,
+            ),
+            generator_settings=dict(
+                section="txt2img",
+                generator_name="stablediffusion",
+                prompt="",
+                negative_prompt="",
+                steps=20,
+                ddim_eta=0.5,
+                height=512,
+                width=512,
+                scale=750,
+                seed=42,
+                latents_seed=42,
+                random_seed=True,
+                random_latents_seed=True,
+                model="",
+                scheduler="DPM++ 2M Karras",
+                prompt_triggers="",
+                strength=50,
+                image_guidance_scale=150,
+                n_samples=1,
+                controlnet="",
+                enable_controlnet=False,
+                enable_input_image=False,
+                controlnet_guidance_scale=50,
+                clip_skip=0,
+                variation=False,
+                input_image_use_imported_image=True,
+                input_image_use_grid_image=True,
+                input_image_recycle_grid_image=True,
+                input_image_mask_use_input_image=True,
+                input_image_mask_use_imported_image=False,
+                controlnet_input_image_link_to_input_image=True,
+                controlnet_input_image_use_imported_image=False,
+                controlnet_use_grid_image=False,
+                controlnet_recycle_grid_image=False,
+                controlnet_mask_link_input_image=False,
+                controlnet_mask_use_imported_image=False,
+                use_prompt_builder=False,
+                active_grid_border_color="#00FF00",
+                active_grid_fill_color="#FF0000",
+                version="SD 1.5",
+                is_preset=False,
+            ),
+            llm_generator_settings=dict(
+                top_p=90,
+                max_length=50,
+                repetition_penalty=100,
+                min_length=10,
+                length_penalty=100,
+                num_beams=1,
+                ngram_size=0,
+                temperature=1000,
+                sequences=1,
+                top_k=0,
+                seed=0,
+                do_sample=False,
+                eta_cutoff=10,
+                early_stopping=True,
+                random_seed=False,
+                model_version="mistralai/Mistral-7B-Instruct-v0.1",
+                dtype="4bit",
+                use_gpu=True,
+                username="User",
+                botname="Bot",
+                message_type="chat",
+                bot_personality="happy. He loves {{ username }}",
+                bot_mood="",
+                prompt_template="",
+                override_parameters=False
+            ),
+            tts_settings=dict(
+                language="English",
+                voice="v2/en_speaker_6",
+                gender="Male",
+                use_bark=True,
+                enable_tts=True,
+            ),
+        ), type=dict)
 
-    @property
-    def use_attention_slicing(self):
-        return self.application_settings.value("use_attention_slicing", False, type=bool)
-    
-    @use_attention_slicing.setter
-    def use_attention_slicing(self, val):
-        self.application_settings.setValue("use_attention_slicing", val)
-
-    @property
-    def use_tf32(self):
-        return self.application_settings.value("use_tf32", False, type=bool)
-    
-    @use_tf32.setter
-    def use_tf32(self, val):
-        self.application_settings.setValue("use_tf32", val)
-
-    @property
-    def use_enable_vae_slicing(self):
-        return self.application_settings.value("use_enable_vae_slicing", True, type=bool)
-    
-    @use_enable_vae_slicing.setter
-    def use_enable_vae_slicing(self, val):
-        self.application_settings.setValue("use_enable_vae_slicing", val)
-
-    @property
-    def use_accelerated_transformers(self):
-        return self.application_settings.value("use_accelerated_transformers", True, type=bool)
-    
-    @use_accelerated_transformers.setter
-    def use_accelerated_transformers(self, val):
-        self.application_settings.setValue("use_accelerated_transformers", val)
-
-    @property
-    def use_tiled_vae(self):
-        return self.application_settings.value("use_tiled_vae", True, type=bool)
-    
-    @use_tiled_vae.setter
-    def use_tiled_vae(self, val):
-        self.application_settings.setValue("use_tiled_vae", val)
-
-    @property
-    def enable_model_cpu_offload(self):
-        return self.application_settings.value("enable_model_cpu_offload", False, type=bool)
-    
-    @enable_model_cpu_offload.setter
-    def enable_model_cpu_offload(self, val):
-        self.application_settings.setValue("enable_model_cpu_offload", val)
-
-    @property
-    def use_enable_sequential_cpu_offload(self):
-        return self.application_settings.value("use_enable_sequential_cpu_offload", False, type=bool)
-    
-    @use_enable_sequential_cpu_offload.setter
-    def use_enable_sequential_cpu_offload(self, val):
-        self.application_settings.setValue("use_enable_sequential_cpu_offload", val)
-
-    @property
-    def use_cudnn_benchmark(self):
-        return self.application_settings.value("use_cudnn_benchmark", True, type=bool)
-    
-    @use_cudnn_benchmark.setter
-    def use_cudnn_benchmark(self, val):
-        self.application_settings.setValue("use_cudnn_benchmark", val)
-
-    @property
-    def use_torch_compile(self):
-        return self.application_settings.value("use_torch_compile", False, type=bool)
-    
-    @use_torch_compile.setter
-    def use_torch_compile(self, val):
-        self.application_settings.setValue("use_torch_compile", val)
-
-    @property
-    def use_tome_sd(self):
-        return self.application_settings.value("use_tome_sd", True, type=bool)
-    
-    @use_tome_sd.setter
-    def use_tome_sd(self, val):
-        self.application_settings.setValue("use_tome_sd", val)
-
-    @property
-    def tome_sd_ratio(self):
-        return self.application_settings.value("tome_sd_ratio", 600, type=int)
-    
-    @tome_sd_ratio.setter
-    def tome_sd_ratio(self, val):
-        self.application_settings.setValue("tome_sd_ratio", val)
-
-    @property
-    def brush_settings(self):
-        return self.application_settings.value("brush_settings", dict(
-            size=1,
-            primary_color=DEFAULT_BRUSH_PRIMARY_COLOR,
-            secondary_color=DEFAULT_BRUSH_SECONDARY_COLOR,
-        ))
-
-    @brush_settings.setter
-    def brush_settings(self, val):
-        self.application_settings.setValue("brush_settings", val)
-
-    @property
-    def ai_mode(self):
-        return self.application_settings.value("ai_mode", False, type=bool)
-    
-    @ai_mode.setter
-    def ai_mode(self, val):
-        self.application_settings.setValue("ai_mode", val)
-        self.ai_mode_toggled.emit(val)
-
-    @property
-    def show_grid(self):
-        return self.application_settings.value("show_grid", True, type=bool)
-    
-    @show_grid.setter
-    def show_grid(self, val):
-        self.application_settings.setValue("show_grid", val)
-        self.show_grid_toggled.emit(val)
-
-    @property
-    def hf_cache_path(self):
-        return self.application_settings.value("hf_cache_path", default_hf_cache_dir())
-    
-    @hf_cache_path.setter
-    def hf_cache_path(self, val):
-        self.application_settings.setValue("hf_cache_path", val)
-                
-    @property
-    def base_path(self):
-        return self.application_settings.value("base_path", os.path.join(BASE_PATH, "models"))
-    
-    @base_path.setter
-    def base_path(self, val):
-        self.application_settings.setValue("base_path", val)
-                
-    @property
-    def txt2img_model_path(self):
-        return self.application_settings.value("txt2img_model_path", DEFAULT_PATHS["art"]["models"]["txt2img"])
-    
-    @txt2img_model_path.setter
-    def txt2img_model_path(self, val):
-        self.application_settings.setValue("txt2img_model_path", val)
-                
-    @property
-    def depth2img_model_path(self):
-        return self.application_settings.value("depth2img_model_path", DEFAULT_PATHS["art"]["models"]["depth2img"])
-    
-    @depth2img_model_path.setter
-    def depth2img_model_path(self, val):
-        self.application_settings.setValue("depth2img_model_path", val)
-                
-    @property
-    def pix2pix_model_path(self):
-        return self.application_settings.value("pix2pix_model_path", DEFAULT_PATHS["art"]["models"]["pix2pix"])
-    
-    @pix2pix_model_path.setter
-    def pix2pix_model_path(self, val):
-        self.application_settings.setValue("pix2pix_model_path", val)
-                
-    @property
-    def inpaint_model_path(self):
-        return self.application_settings.value("inpaint_model_path", DEFAULT_PATHS["art"]["models"]["inpaint"])
-    
-    @inpaint_model_path.setter
-    def inpaint_model_path(self, val):
-        self.application_settings.setValue("inpaint_model_path", val)
-                
-    @property
-    def upscale_model_path(self):
-        return self.application_settings.value("upscale_model_path", DEFAULT_PATHS["art"]["models"]["upscale"])
-    
-    @upscale_model_path.setter
-    def upscale_model_path(self, val):
-        self.application_settings.setValue("upscale_model_path", val)
-                
-    @property
-    def txt2vid_model_path(self):
-        return self.application_settings.value("txt2vid_model_path", DEFAULT_PATHS["art"]["models"]["txt2vid"])
-    
-    @txt2vid_model_path.setter
-    def txt2vid_model_path(self, val):
-        self.application_settings.setValue("txt2vid_model_path", val)
-                
-    @property
-    def embeddings_model_path(self):
-        return self.application_settings.value("embeddings_model_path", DEFAULT_PATHS["art"]["models"]["embeddings"])
-    
-    @embeddings_model_path.setter
-    def embeddings_model_path(self, val):
-        self.application_settings.setValue("embeddings_model_path", val)
-                
-    @property
-    def lora_model_path(self):
-        return self.application_settings.value("lora_model_path", DEFAULT_PATHS["art"]["models"]["lora"])
-    
-    @lora_model_path.setter
-    def lora_model_path(self, val):
-        self.application_settings.setValue("lora_model_path", val)
-                
-    @property
-    def image_path(self):
-        return self.application_settings.value("image_path", DEFAULT_PATHS["art"]["other"]["images"])
-    
-    @image_path.setter
-    def image_path(self, val):
-        self.application_settings.setValue("image_path", val)
-                
-    @property
-    def video_path(self):
-        return self.application_settings.value("video_path", DEFAULT_PATHS["art"]["other"]["videos"])
-    
-    @video_path.setter
-    def video_path(self, val):
-        self.application_settings.setValue("video_path", val)
-                
-    @property
-    def llm_casuallm_model_path(self):
-        return self.application_settings.value("llm_casuallm_model_path", DEFAULT_PATHS["text"]["models"]["casuallm"])
-    
-    @llm_casuallm_model_path.setter
-    def llm_casuallm_model_path(self, val):
-        self.application_settings.setValue("llm_casuallm_model_path", val)
-                
-    @property
-    def llm_seq2seq_model_path(self):
-        return self.application_settings.value("llm_seq2seq_model_path", DEFAULT_PATHS["text"]["models"]["seq2seq"])
-    
-    @llm_seq2seq_model_path.setter
-    def llm_seq2seq_model_path(self, val):
-        self.application_settings.setValue("llm_seq2seq_model_path", val)
-                
-    @property
-    def llm_visualqa_model_path(self):
-        return self.application_settings.value("llm_visualqa_model_path", DEFAULT_PATHS["text"]["models"]["visualqa"])
-    
-    @llm_visualqa_model_path.setter
-    def llm_visualqa_model_path(self, val):
-        self.application_settings.setValue("llm_visualqa_model_path", val)
-                
-    @property
-    def vae_model_path(self):
-        return self.application_settings.value("vae_model_path", DEFAULT_PATHS["art"]["models"]["vae"])
-    
-    @vae_model_path.setter
-    def vae_model_path(self, val):
-        self.application_settings.setValue("vae_model_path", val)
+    @settings.setter
+    def settings(self, val):
+        self.application_settings.setValue("settings", val)
+        self.application_settings.sync()
+        print("prompt:",self.settings["generator_settings"]["prompt"])
+        self.application_settings_changed_signal.emit()
 
     def reset_paths(self):
-        self.hf_cache_path = default_hf_cache_dir()
-        self.base_path = BASE_PATH
-        self.txt2img_model_path = DEFAULT_PATHS["art"]["models"]["txt2img"]
-        self.depth2img_model_path = DEFAULT_PATHS["art"]["models"]["depth2img"]
-        self.pix2pix_model_path = DEFAULT_PATHS["art"]["models"]["pix2pix"]
-        self.inpaint_model_path = DEFAULT_PATHS["art"]["models"]["inpaint"]
-        self.upscale_model_path = DEFAULT_PATHS["art"]["models"]["upscale"]
-        self.txt2vid_model_path = DEFAULT_PATHS["art"]["models"]["txt2vid"]
-        self.vae_model_path = DEFAULT_PATHS["art"]["models"]["vae"]
-        self.embeddings_model_path = DEFAULT_PATHS["art"]["models"]["embeddings"]
-        self.lora_model_path = DEFAULT_PATHS["art"]["models"]["lora"]
-        self.image_path = DEFAULT_PATHS["art"]["other"]["images"]
-        self.video_path = DEFAULT_PATHS["art"]["other"]["videos"]
-        self.llm_casuallm_model_path = DEFAULT_PATHS["text"]["models"]["casuallm"]
-        self.llm_seq2seq_model_path = DEFAULT_PATHS["text"]["models"]["seq2seq"]
-        self.llm_visualqa_model_path = DEFAULT_PATHS["text"]["models"]["visualqa"]            
+        settings = self.settings
+        settings["path_settings"]["hf_cache_path"] = default_hf_cache_dir()
+        settings["path_settings"]["base_path"] = BASE_PATH
+        settings["path_settings"]["txt2img_model_path"] = DEFAULT_PATHS["art"]["models"]["txt2img"]
+        settings["path_settings"]["depth2img_model_path"] = DEFAULT_PATHS["art"]["models"]["depth2img"]
+        settings["path_settings"]["pix2pix_model_path"] = DEFAULT_PATHS["art"]["models"]["pix2pix"]
+        settings["path_settings"]["inpaint_model_path"] = DEFAULT_PATHS["art"]["models"]["inpaint"]
+        settings["path_settings"]["upscale_model_path"] = DEFAULT_PATHS["art"]["models"]["upscale"]
+        settings["path_settings"]["txt2vid_model_path"] = DEFAULT_PATHS["art"]["models"]["txt2vid"]
+        settings["path_settings"]["vae_model_path"] = DEFAULT_PATHS["art"]["models"]["vae"]
+        settings["path_settings"]["embeddings_model_path"] = DEFAULT_PATHS["art"]["models"]["embeddings"]
+        settings["path_settings"]["lora_model_path"] = DEFAULT_PATHS["art"]["models"]["lora"]
+        settings["path_settings"]["image_path"] = DEFAULT_PATHS["art"]["other"]["images"]
+        settings["path_settings"]["video_path"] = DEFAULT_PATHS["art"]["other"]["videos"]
+        settings["path_settings"]["llm_casuallm_model_path"] = DEFAULT_PATHS["text"]["models"]["casuallm"]
+        settings["path_settings"]["llm_seq2seq_model_path"] = DEFAULT_PATHS["text"]["models"]["seq2seq"]
+        settings["path_settings"]["llm_visualqa_model_path"] = DEFAULT_PATHS["text"]["models"]["visualqa"]
+        self.settings = settings
     
     def set_path_settings(self, key, val):
-        path_settings = self.path_settings
-        path_settings[key] = val
-        self.path_settings = path_settings
+        settings = self.settings
+        settings["path_settings"][key] = val
+        self.settings = settings
     
     def resizeEvent(self, event):
         self.window_resized_signal.emit(event)
-
-    @property
-    def resize_on_paste(self):
-        return self.application_settings.value("resize_on_paste", True, type=bool)
-
-    @resize_on_paste.setter
-    def resize_on_paste(self, val):
-        self.application_settings.setValue("resize_on_paste", val)
-    
-    @property
-    def snap_to_grid(self):
-        return self.application_settings.value("snap_to_grid", True, type=bool)
-
-    @snap_to_grid.setter
-    def snap_to_grid(self, val):
-        self.application_settings.setValue("snap_to_grid", val)
-        self.snap_to_grid_changed_signal.emit(val)
-
-    @property
-    def cell_size(self):
-        return self.application_settings.value("cell_size", 64, type=int)
-
-    @cell_size.setter
-    def cell_size(self, val):
-        self.application_settings.setValue("cell_size", val)
-        self.cell_size_changed_signal.emit(val)
-    
-    @property
-    def canvas_color(self):
-        return self.application_settings.value("canvas_color", "#ffffff")
-    
-    @canvas_color.setter
-    def canvas_color(self, val):
-        self.application_settings.setValue("canvas_color", val)
-        self.canvas_color_changed_signal.emit(val)
-    
-    @property
-    def line_color(self):
-        return self.application_settings.value("line_color", "#000000")
-    
-    @line_color.setter
-    def line_color(self, val):
-        self.application_settings.setValue("line_color", val)
-        self.line_color_changed_signal.emit(val)
-    
-    @property
-    def line_width(self):
-        return self.application_settings.value("line_width", 1, type=int)
-    
-    @line_width.setter
-    def line_width(self, val):
-        self.application_settings.setValue("line_width", val)
-        self.line_width_changed_signal.emit(val)
-
-    @property
-    def mode(self):
-        return self.application_settings.value("mode", "Image Generation")
-    
-    @mode.setter
-    def mode(self, val):
-        self.application_settings.setValue("mode", val)
-    
-    @property
-    def current_version_stablediffusion(self):
-        return self.application_settings.value("current_version_stablediffusion", "1.5")
-    
-    @current_version_stablediffusion.setter
-    def current_version_stablediffusion(self, val):
-        self.application_settings.setValue("current_version_stablediffusion", val)
-
-    @property
-    def move_unused_model_to_cpu(self):
-        return self.application_settings.value("move_unused_model_to_cpu", True, type=bool)
-    
-    @move_unused_model_to_cpu.setter
-    def move_unused_model_to_cpu(self, val):
-        self.application_settings.setValue("move_unused_model_to_cpu", val)
-
-    @property
-    def unload_unused_models(self):
-        return self.application_settings.value("unload_unused_models", True, type=bool)
-    
-    @unload_unused_models.setter
-    def unload_unused_models(self, val):
-        self.application_settings.setValue("unload_unused_models", val)
-
-
-    #### SETTINGS ####
-    @property
-    def active_grid_settings(self):
-        return self.application_settings.value("active_grid_settings", dict(
-            enabled=False,
-            render_border=True,
-            render_fill=True,
-            border_opacity=50,
-            fill_opacity=50,
-            pos_x=0,
-            pos_y=0,
-            width=512,
-            height=512,
-        ))
-    
-    @active_grid_settings.setter
-    def active_grid_settings(self, val):
-        self.application_settings.setValue("active_grid_settings", val)
-
-    @property
-    def canvas_settings(self):
-        return self.application_settings.value("grid_settings", dict(
-            pos_x=0,
-            pos_y=0,
-        ))
-    
-    @canvas_settings.setter
-    def canvas_settings(self, val):
-        self.application_settings.setValue("grid_settings", val)
-
-    @property
-    def metadata_settings(self):
-        return self.application_settings.value("metadata_settings", dict(
-            image_export_metadata_prompt=True,
-            image_export_metadata_negative_prompt=True,
-            image_export_metadata_scale=True,
-            image_export_metadata_seed=True,
-            image_export_metadata_latents_seed=True,
-            image_export_metadata_steps=True,
-            image_export_metadata_ddim_eta=True,
-            image_export_metadata_iterations=True,
-            image_export_metadata_samples=True,
-            image_export_metadata_model=True,
-            image_export_metadata_model_branch=True,
-            image_export_metadata_scheduler=True,
-            export_metadata=True,
-            import_metadata=True,
-        ))
-    
-    @metadata_settings.setter
-    def metadata_settings(self, val):
-        self.application_settings.setValue("metadata_settings", val)            
-        
-    @property
-    def generator_settings(self):
-        return self.application_settings.value("generator_settings", dict(
-            section="txt2img",
-            generator_name="stablediffusion",
-            prompt="",
-            negative_prompt="",
-            steps=20,
-            ddim_eta=0.5,
-            height=512,
-            width=512,
-            scale=750,
-            seed=42,
-            latents_seed=42,
-            random_seed=True,
-            random_latents_seed=True,
-            model="",
-            scheduler="DPM++ 2M Karras",
-            prompt_triggers="",
-            strength=50,
-            image_guidance_scale=150,
-            n_samples=1,
-            controlnet="",
-            enable_controlnet=False,
-            enable_input_image=False,
-            controlnet_guidance_scale=50,
-            clip_skip=0,
-            variation=False,
-            input_image_use_imported_image=True,
-            input_image_use_grid_image=True,
-            input_image_recycle_grid_image=True,
-            input_image_mask_use_input_image=True,
-            input_image_mask_use_imported_image=False,
-            controlnet_input_image_link_to_input_image=True,
-            controlnet_input_image_use_imported_image=False,
-            controlnet_use_grid_image=False,
-            controlnet_recycle_grid_image=False,
-            controlnet_mask_link_input_image=False,
-            controlnet_mask_use_imported_image=False,
-            use_prompt_builder=False,
-            active_grid_border_color="#00FF00",
-            active_grid_fill_color="#FF0000",
-            version="SD 1.5",
-            is_preset=False,
-        ))
-
-    @generator_settings.setter
-    def generator_settings(self, val):
-        self.application_settings.setValue("generator_settings", val)
-
-    @property
-    def llm_generator_settings(self):
-        return self.application_settings.value("llm_generator_settings", dict(
-            top_p=90,
-            max_length=50,
-            repetition_penalty=100,
-            min_length=10,
-            length_penalty=100,
-            num_beams=1,
-            ngram_size=0,
-            temperature=100,
-            sequences=1,
-            top_k=0,
-            seed=0,
-            do_sample=False,
-            eta_cutoff=10,
-            early_stopping=True,
-            random_seed=False,
-            model_version="google/flan-t5-xl",
-            dtype="32bit",
-            use_gpu=True,
-        ))
-    
-    @llm_generator_settings.setter
-    def llm_generator_settings(self, val):
-        self.application_settings.setValue("llm_generator_settings", val)
     #### END GENERATOR SETTINGS ####
 
     @property
-    def nsfw_filter(self):
-        return self.application_settings.value("nsfw_filter", True, type=bool)
-    
-    @nsfw_filter.setter
-    def nsfw_filter(self, val):
-        self.application_settings.setValue("nsfw_filter", val)
-
-    @property
-    def current_tool(self):
-        return self.application_settings.value("current_tool", "brush")
-    
-    @current_tool.setter
-    def current_tool(self, val):
-        self.application_settings.setValue("current_tool", val)
-
-    @property
-    def working_height(self):
-        return self.application_settings.value("working_height", 512, type=int)
-    
-    @working_height.setter
-    def working_height(self, val):
-        self.application_settings.setValue("working_height", val)
-
-    @property
-    def working_width(self):
-        return self.application_settings.value("working_width", 512, type=int)
-    
-    @working_width.setter
-    def working_width(self, val):
-        self.application_settings.setValue("working_width", val)
-    
-    @property
-    def current_llm_generator(self):
-        return self.application_settings.value("current_llm_generator", "casuallm")
-    
-    @current_llm_generator.setter
-    def current_llm_generator(self, val):
-        self.application_settings.setValue("current_llm_generator", val)
-
-    @property
-    def current_image_generator(self):
-        return self.application_settings.value("current_image_generator", "stablediffusion")
-    
-    @current_image_generator.setter
-    def current_image_generator(self, val):
-        self.application_settings.setValue("current_image_generator", val)
-
-    @property
-    def hf_api_key_read_key(self):
-        return self.application_settings.value("hf_api_key_read_key", "")
-    
-    @hf_api_key_read_key.setter
-    def hf_api_key_read_key(self, val):
-        self.application_settings.setValue("hf_api_key_read_key", val)
-
-    @property
-    def hf_api_key_write_key(self):
-        return self.application_settings.value("hf_api_key_write_key", "")
-    
-    @hf_api_key_write_key.setter
-    def hf_api_key_write_key(self, val):
-        self.application_settings.setValue("hf_api_key_write_key", val)
-    
-    @property
-    def pipeline(self):
-        return self.application_settings.value("pipeline", "txt2img")
-    
-    @pipeline.setter
-    def pipeline(self, val):
-        self.application_settings.setValue("pipeline", val)
-
-    @property
-    def pipeline_versin(self):
-        return self.application_settings.value("pipeline_version", "SD 1.5")
-        
-    @pipeline_versin.setter
-    def pipeline_versin(self, val):
-        self.application_settings.setValue("pipeline_version", val)
-
-    @property
-    def is_maximized(self):
-        return self.application_settings.value("is_maximized", False, type=bool)
-    
-    @is_maximized.setter
-    def is_maximized(self, val):
-        self.application_settings.setValue("is_maximized", val)
-
-    @property
-    def show_active_image_area(self):
-        return self.application_settings.value("show_active_image_area", True, type=bool)
-    
-    @show_active_image_area.setter
-    def show_active_image_area(self, val):
-        self.application_settings.setValue("show_active_image_area", val)
-
-    @property
-    def auto_export_images(self):
-        return self.application_settings.value("auto_export_images", True, type=bool)
-    
-    @auto_export_images.setter
-    def auto_export_images(self, val):
-        self.application_settings.setValue("auto_export_images", val)
-    
-    @property
-    def image_export_type(self):
-        return self.application_settings.value("image_export_type", "png")
-    
-    @image_export_type.setter
-    def image_export_type(self, val):
-        self.application_settings.setValue("image_export_type", val)
-
-    @property
-    def enable_tts(self):
-        return self.application_settings.value("enable_tts", True, type=bool)
-    
-    @enable_tts.setter
-    def enable_tts(self, val):
-        self.application_settings.setValue("enable_tts", val)
-    
-    @property
-    def image_to_new_layer(self):
-        return self.application_settings.value("image_to_new_layer", True, type=bool)
-    
-    @image_to_new_layer.setter
-    def image_to_new_layer(self, val):
-        self.application_settings.setValue("image_to_new_layer", val)
-    
-    @property
-    def latest_version_check(self):
-        return self.application_settings.value("latest_version_check", True, type=bool)
-    
-    @latest_version_check.setter
-    def latest_version_check(self, val):
-        self.application_settings.setValue("latest_version_check", val)
-    
-    @property
-    def dark_mode_enabled(self):
-        return self.application_settings.value("dark_mode_enabled", True, type=bool)
-    
-    @dark_mode_enabled.setter
-    def dark_mode_enabled(self, val):
-        self.application_settings.setValue("dark_mode_enabled", val)
-        self.set_stylesheet()
-
-    @property
-    def allow_online_mode(self):
-        return self.application_settings.value("allow_online_mode", True, type=bool)
-
-    @allow_online_mode.setter
-    def allow_online_mode(self, val):
-        self.application_settings.setValue("allow_online_mode", val)
-
-    @property
-    def generator(self):
-        with session_scope() as session:
-            if self._generator is None:
-                try:
-                    self._generator = session.query(LLMGenerator).filter(
-                        LLMGenerator.name == self.ui.standard_image_widget.ui.llm_settings_widget.current_generator
-                    ).first()
-                    if self._generator is None:
-                        logger.error("Unable to locate generator by name " + self.ui.standard_image_widget.ui.llm_settings_widget.current_generator if self.ui.llm_settings_widget.current_generator else "None")
-                except Exception as e:
-                    logger.error(e)
-            return self._generator
-    
-    @property
     def generate_signal(self):
         return self.generator_tab_widget.generate_signal
-
-    @property
-    def is_dark(self):
-        return self.dark_mode_enabled
 
     @property
     def standard_image_panel(self):
@@ -957,10 +531,6 @@ class MainWindow(
         self.set_log_levels()
         self.testing = kwargs.pop("testing", False)
 
-        # initialize the document
-        with session_scope() as session:
-            self.document = session.query(Document).first()
-
         super().__init__(*args, **kwargs)
 
         self.ui.setupUi(self)
@@ -1006,9 +576,9 @@ class MainWindow(
 
         self.initialize_tool_section_buttons()
         
-        if self.mode == Mode.IMAGE.value:
+        if self.settings["mode"] == Mode.IMAGE.value:
             self.image_generation_toggled()
-        elif self.mode == Mode.LANGUAGE_PROCESSOR.value:
+        elif self.settings["mode"] == Mode.LANGUAGE_PROCESSOR.value:
             self.language_processing_toggled()
         else:
             self.model_manager_toggled(True)
@@ -1018,22 +588,43 @@ class MainWindow(
         self.restore_state()
 
         self.settings_manager.changed_signal.connect(self.handle_changed_signal)
+
+        self.ui.ocr_button.blockSignals(True)
+        self.ui.tts_button.blockSignals(True)
+        self.ui.v2t_button.blockSignals(True)
+        self.ui.ocr_button.setChecked(self.settings["ocr_enabled"])
+        self.ui.tts_button.setChecked(self.settings["tts_enabled"])
+        self.ui.v2t_button.setChecked(self.settings["v2t_enabled"])
+        self.ui.ocr_button.blockSignals(False)
+        self.ui.tts_button.blockSignals(False)
+        self.ui.v2t_button.blockSignals(False)
         
         self.loaded.emit()
     
+    def do_listen(self):
+        if not self.listening:
+            self.listening = True
+            self.client.engine.do_listen()
+
+    def respond_to_voice(self, heard):
+        heard = heard.strip()
+        if heard == "." or heard is None or heard == "":
+            return
+        self.ui.generator_widget.ui.chat_prompt_widget.respond_to_voice(heard)
+    
     def create_airunner_paths(self):
         paths = [
-            self.base_path,
-            self.txt2img_model_path,
-            self.depth2img_model_path,
-            self.pix2pix_model_path,
-            self.inpaint_model_path,
-            self.upscale_model_path,
-            self.txt2vid_model_path,
-            self.embeddings_model_path,
-            self.lora_model_path,
-            self.image_path,
-            self.video_path
+            self.settings["path_settings"]["base_path"],
+            self.settings["path_settings"]["txt2img_model_path"],
+            self.settings["path_settings"]["depth2img_model_path"],
+            self.settings["path_settings"]["pix2pix_model_path"],
+            self.settings["path_settings"]["inpaint_model_path"],
+            self.settings["path_settings"]["upscale_model_path"],
+            self.settings["path_settings"]["txt2vid_model_path"],
+            self.settings["path_settings"]["embeddings_model_path"],
+            self.settings["path_settings"]["lora_model_path"],
+            self.settings["path_settings"]["image_path"],
+            self.settings["path_settings"]["video_path"],
         ]
         for index, path in enumerate(paths):
             if not os.path.exists(path):
@@ -1080,8 +671,8 @@ class MainWindow(
             return
         path, image = auto_export_image(
             self.base_path, 
-            self.app.image_path,
-            self.app.image_export_type,
+            self.settings["path_settings"]["image_path"],
+            self.settings["image_export_type"],
             self.ui.layer_widget.current_layer.image_data.image, 
             seed=self.seed
         )
@@ -1116,23 +707,23 @@ class MainWindow(
         self.redo()
 
     def action_paste_image_triggered(self):
-        if self.mode == Mode.IMAGE.value:
+        if self.settings["mode"] == Mode.IMAGE.value:
             self.canvas_widget.paste_image_from_clipboard()
 
     def action_copy_image_triggered(self):
-        if self.mode == Mode.IMAGE.value:
+        if self.settings["mode"] == Mode.IMAGE.value:
             self.canvas_widget.copy_image(self.current_active_image())
 
     def action_cut_image_triggered(self):
-        if self.mode == Mode.IMAGE.value:
+        if self.settings["mode"] == Mode.IMAGE.value:
             self.canvas_widget.cut_image()
 
     def action_rotate_90_clockwise_triggered(self):
-        if self.mode == Mode.IMAGE.value:
+        if self.settings["mode"] == Mode.IMAGE.value:
             self.canvas_widget.rotate_90_clockwise()
 
     def action_rotate_90_counterclockwise_triggered(self):
-        if self.mode == Mode.IMAGE.value:
+        if self.settings["mode"] == Mode.IMAGE.value:
             self.canvas_widget.rotate_90_counterclockwise()
 
     def action_show_prompt_browser_triggered(self):
@@ -1262,7 +853,7 @@ class MainWindow(
     """
 
     def set_size_increment_levels(self):
-        size = self.cell_size
+        size = self.settings["grid_settings"]["cell_size"]
         self.ui.width_slider_widget.slider_single_step = size
         self.ui.width_slider_widget.slider_tick_interval = size
 
@@ -1277,7 +868,7 @@ class MainWindow(
 
     def set_nsfw_filter_tooltip(self):
         self.ui.safety_checker_button.setToolTip(
-            f"Click to {'enable' if not self.nsfw_filter else 'disable'} NSFW filter"
+            f"Click to {'enable' if not self.settings['nsfw_filter'] else 'disable'} NSFW filter"
         )
 
     def dragmode_pressed(self):
@@ -1310,6 +901,27 @@ class MainWindow(
 
     def quit(self):
         self.close()
+    
+    @pyqtSlot(bool)
+    def tts_button_toggled(self, val):
+        print("tts_button_toggled", val)
+        new_settings = self.settings
+        new_settings["tts_enabled"] = val
+        self.settings = new_settings
+
+    @pyqtSlot(bool)
+    def ocr_button_toggled(self, val):
+        print("ocr_button_toggled", val)
+        new_settings = self.settings
+        new_settings["ocr_enabled"] = val
+        self.settings = new_settings
+
+    @pyqtSlot(bool)
+    def v2t_button_toggled(self, val):
+        print("v2t_button_toggled", val)
+        new_settings = self.settings
+        new_settings["v2t_enabled"] = val
+        self.settings = new_settings
 
     ##### Window properties #####
     # Use this to set and restore window properties
@@ -1321,85 +933,90 @@ class MainWindow(
         QApplication.quit()
     
     def save_state(self):
-        self.application_settings.setValue("main_splitter", self.ui.main_splitter.saveState())
-        self.application_settings.setValue("content_splitter", self.ui.content_splitter.saveState())
-        self.application_settings.setValue("center_splitter", self.ui.center_splitter.saveState())
-        self.application_settings.setValue("canvas_splitter", self.ui.canvas_splitter.saveState())
-        self.application_settings.setValue("splitter", self.ui.splitter.saveState())
-        self.application_settings.setValue("mode_tab_widget_index", self.ui.mode_tab_widget.currentIndex())
-        self.application_settings.setValue("tool_tab_widget_index", self.ui.tool_tab_widget.currentIndex())
-        self.application_settings.setValue("center_tab_index", self.ui.center_tab.currentIndex())
-        self.application_settings.setValue("generator_tab_index", self.ui.standard_image_widget.ui.tabWidget.currentIndex())
-        self.application_settings.setValue("is_maximized", self.isMaximized())
-        self.application_settings.setValue("is_fullscreen", self.isFullScreen())
+        settings = self.settings
+        settings["window_settings"] = dict(
+            main_splitter=self.ui.main_splitter.saveState(),
+            content_splitter=self.ui.content_splitter.saveState(),
+            center_splitter=self.ui.center_splitter.saveState(),
+            canvas_splitter=self.ui.canvas_splitter.saveState(),
+            splitter=self.ui.splitter.saveState(),
+            mode_tab_widget_index=self.ui.mode_tab_widget.currentIndex(),
+            tool_tab_widget_index=self.ui.tool_tab_widget.currentIndex(),
+            center_tab_index=self.ui.center_tab.currentIndex(),
+            generator_tab_index=self.ui.standard_image_widget.ui.tabWidget.currentIndex(),
+            is_maximized=self.isMaximized(),
+            is_fullscreen=self.isFullScreen(),
+        )
+        self.settings = settings
     
     def restore_state(self):
-        main_splitter = self.application_settings.value("main_splitter")
-        if main_splitter is not None:
-            self.ui.main_splitter.restoreState(main_splitter)
-        
-        content_splitter = self.application_settings.value("content_splitter")
-        if content_splitter is not None:
-            self.ui.content_splitter.restoreState(content_splitter)
-        
-        center_splitter = self.application_settings.value("center_splitter")
-        if center_splitter is not None:
-            self.ui.center_splitter.restoreState(center_splitter)
-        
-        canvas_splitter = self.application_settings.value("canvas_splitter")
-        if canvas_splitter is not None:
-            self.ui.canvas_splitter.restoreState(canvas_splitter)
-        
-        splitter = self.application_settings.value("splitter")
-        if splitter is not None:
-            self.ui.splitter.restoreState(splitter)
+        window_settings = self.settings["window_settings"]
+        if window_settings is None:
+            return
+        if window_settings["main_splitter"]:
+            self.ui.main_splitter.restoreState(window_settings["main_splitter"])
 
-        mode_tab_widget_index = self.application_settings.value("mode_tab_widget_index", 0, type=int)
-        self.ui.mode_tab_widget.setCurrentIndex(mode_tab_widget_index)
+        if window_settings["content_splitter"]:
+            self.ui.content_splitter.restoreState(window_settings["content_splitter"])
 
-        tool_tab_widget_index = self.application_settings.value("tool_tab_widget_index", 0, type=int)
-        self.ui.tool_tab_widget.setCurrentIndex(tool_tab_widget_index)
+        if window_settings["center_splitter"]:
+            self.ui.center_splitter.restoreState(window_settings["center_splitter"])
 
-        center_tab_index = self.application_settings.value("center_tab_index", 0, type=int)
-        self.ui.center_tab.setCurrentIndex(center_tab_index)
+        if window_settings["canvas_splitter"]:
+            self.ui.canvas_splitter.restoreState(window_settings["canvas_splitter"])
 
-        generator_tab_index = self.application_settings.value("generator_tab_index", 0, type=int)
-        self.ui.standard_image_widget.ui.tabWidget.setCurrentIndex(generator_tab_index)
+        if window_settings["splitter"]:
+            self.ui.splitter.restoreState(window_settings["splitter"])
 
-        maximized = self.application_settings.value("is_maximized", False, type=bool)
-        if maximized:
+        self.ui.mode_tab_widget.setCurrentIndex(window_settings["mode_tab_widget_index"])
+        self.ui.tool_tab_widget.setCurrentIndex(window_settings["tool_tab_widget_index"])
+        self.ui.center_tab.setCurrentIndex(window_settings["center_tab_index"])
+        self.ui.standard_image_widget.ui.tabWidget.setCurrentIndex(window_settings["generator_tab_index"])
+        if window_settings["is_maximized"]:
             self.showMaximized()
-        
-        is_fullscreen = self.application_settings.value("is_fullscreen", False, type=bool)
-        if is_fullscreen:
+        if window_settings["is_fullscreen"]:
             self.showFullScreen()
+        self.ui.ai_button.setChecked(self.settings["ai_mode"])
+        self.set_button_checked("toggle_grid", self.settings["grid_settings"]["show_grid"], False)
 
-        self.ui.ai_button.setChecked(self.ai_mode)
-        self.set_button_checked("toggle_grid", self.show_grid, False)
     ##### End window properties #####
     #################################
         
     ###### Window handlers ######
     def cell_size_changed(self, val):
-        self.cell_size = val
+        settings = self.settings
+        settings["grid_settings"]["cell_size"] = val
+        self.settings = settings
 
     def line_width_changed(self, val):
-        self.line_width = val
+        settings = self.settings
+        settings["grid_settings"]["line_width"] = val
+        self.settings = settings
     
     def line_color_changed(self, val):
-        self.line_color = val
+        settings = self.settings
+        settings["grid_settings"]["line_color"] = val
+        self.settings = settings
     
     def snap_to_grid_changed(self, val):
-        self.snap_to_grid = val
+        settings = self.settings
+        settings["grid_settings"]["snap_to_grid"] = val
+        self.settings = settings
     
     def canvas_color_changed(self, val):
-        self.canvas_color = val
+        settings = self.settings
+        settings["grid_settings"]["canvas_color"] = val
+        self.settings = settings
 
     def action_ai_toggled(self, val):
-        self.ai_mode = val
+        settings = self.settings
+        settings["ai_mode"] = val
+        self.settings = settings
     
     def action_toggle_grid(self, val):
-        self.show_grid = val
+        settings = self.settings
+        settings["grid_settings"]["show_grid"] = val
+        self.settings = settings
     
     def action_toggle_brush(self, active):
         if active:
@@ -1420,7 +1037,9 @@ class MainWindow(
             self.ui.toggle_eraser_button.setChecked(False)
 
     def action_toggle_nsfw_filter_triggered(self, val):
-        self.application_settings.setValue("nsfw_filter", val)
+        settings = self.settings
+        settings["nsfw_filter"] = val
+        self.settings = settings
         self.toggle_nsfw_filter()
 
     def action_toggle_darkmode(self):
@@ -1474,7 +1093,7 @@ class MainWindow(
         Sets the stylesheet for the application based on the current theme
         """
         logger.info("Setting stylesheets")
-        theme_name = "dark_theme" if self.is_dark else "light_theme"
+        theme_name = "dark_theme" if self.settings["dark_mode_enabled"] else "light_theme"
         here = os.path.dirname(os.path.realpath(__file__))
         with open(os.path.join(here, "..", "..", "styles", theme_name, "styles.qss"), "r") as f:
             stylesheet = f.read()
@@ -1489,7 +1108,7 @@ class MainWindow(
             ("setting-line-icon", "settings_button"),
             ("object-selected-icon", "toggle_active_grid_area_button"),
         ]:
-            self.set_icons(icon_data[0], icon_data[1], "dark" if self.is_dark else "light")
+            self.set_icons(icon_data[0], icon_data[1], "dark" if self.settings["dark_mode_enabled"] else "light")
 
     def initialize(self):
         # self.automatic_filter_manager = AutomaticFilterManager(app=self)
@@ -1527,15 +1146,15 @@ class MainWindow(
         pass
 
     def initialize_default_buttons(self):
-        show_grid = self.show_grid
+        show_grid = self.settings["grid_settings"]["show_grid"]
         self.ui.toggle_active_grid_area_button.blockSignals(True)
         self.ui.toggle_brush_button.blockSignals(True)
         self.ui.toggle_eraser_button.blockSignals(True)
         self.ui.toggle_grid_button.blockSignals(True)
         self.ui.ai_button.blockSignals(True)
-        self.ui.toggle_active_grid_area_button.setChecked(self.current_tool == "active_grid_area")
-        self.ui.toggle_brush_button.setChecked(self.current_tool == "brush")
-        self.ui.toggle_eraser_button.setChecked(self.current_tool == "eraser")
+        self.ui.toggle_active_grid_area_button.setChecked(self.settings["current_tool"] == "active_grid_area")
+        self.ui.toggle_brush_button.setChecked(self.settings["current_tool"] == "brush")
+        self.ui.toggle_eraser_button.setChecked(self.settings["current_tool"] == "eraser")
         self.ui.toggle_grid_button.setChecked(show_grid is True)
         self.ui.toggle_active_grid_area_button.blockSignals(False)
         self.ui.toggle_brush_button.blockSignals(False)
@@ -1550,7 +1169,9 @@ class MainWindow(
             self.toggle_tool(kwargs["tool"])
 
     def toggle_tool(self, tool):
-        self.current_tool = tool
+        settings = self.settings
+        settings["current_tool"] = tool
+        self.settings = settings
 
     def initialize_mixins(self):
         #self.canvas = Canvas()
@@ -1596,6 +1217,27 @@ class MainWindow(
         except AttributeError:
             return None
 
+    def get_current_value(self, settings_property):
+        current_value = 0
+        try:
+            current_value = getattr(self, settings_property) or 0
+        except AttributeError:
+            keys = settings_property.split(".")
+            if keys[0] == "settings":
+                data = getattr(self, keys[0]) or None
+            else:
+                settings = self.settings
+                if len(keys) > 1:
+                    data = settings[keys[0]]
+                else:
+                    data = settings
+            if data:
+                if len(keys) > 1:
+                    current_value = data[keys[1]]
+                else:
+                    current_value = data[keys[0]]
+        return current_value
+
     def handle_value_change(self, attr_name, value=None, widget=None):
         """
         Slider widget callback - this is connected via dynamic properties in the
@@ -1610,16 +1252,22 @@ class MainWindow(
             return
         
         keys = attr_name.split(".")
-        print(keys)
         if len(keys) > 0:
-            if hasattr(self, keys[0]):
-                obj = getattr(self, keys[0])
-                if keys[1] in obj:
-                    obj[keys[1]] = value
-                    print("SETTING")
-                    setattr(self, keys[0], obj)
+            settings = self.settings
+            
+            object_key = "settings"
+            if len(keys) == 1:
+                property_key = keys[0]
+            if len(keys) == 2:
+                object_key = keys[0]
+                property_key = keys[1]
+
+            if object_key != "settings":
+                settings[object_key][property_key] = value
             else:
-                self.settings_manager.set_value(attr_name, value)
+                settings[property_key] = value
+            
+            self.settings = settings
     
     def handle_similar_slider_change(self, attr_name, value=None, widget=None):
         self.standard_image_panel.handle_similar_slider_change(value)
@@ -1665,7 +1313,7 @@ class MainWindow(
             self.showMinimized()
 
     def set_window_state(self):
-        if self.is_maximized:
+        if self.settings["is_maximized"]:
             self.showMaximized()
         else:
             self.showNormal()
@@ -1681,25 +1329,29 @@ class MainWindow(
         self.move(frameGeometry.topLeft())
 
     def handle_wheel_event(self, event):
-        grid_size = self.cell_size
+        grid_size = self.settings["grid_settings"]["cell_size"]
 
         # if the shift key is pressed
         try:
             if QtCore.Qt.KeyboardModifier.ShiftModifier in event.modifiers():
+                settings = self.settings
                 delta = event.angleDelta().y()
                 increment = grid_size if delta > 0 else -grid_size
-                val = self.working_width + increment
-                self.settings_manager.set_value("settings.working_width", val)
+                val = settings["working_width"] + increment
+                settings["working_width"] = val
+                self.settings = settings
         except TypeError:
             pass
 
         # if the control key is pressed
         try:
             if QtCore.Qt.KeyboardModifier.ControlModifier in event.modifiers():
+                settings = self.settings
                 delta = event.angleDelta().y()
                 increment = grid_size if delta > 0 else -grid_size
-                val = self.working_height + increment
-                self.settings_manager.set_value("settings.working_height", val)
+                val = settings["working_height"] + increment
+                settings["working_height"] = val
+                self.settings = settings
         except TypeError:
             pass
 
@@ -1715,7 +1367,7 @@ class MainWindow(
         Overrides base method to set the window title
         :return:
         """
-        self.setWindowTitle(f"AI Runner {self.document_name}")
+        self.setWindowTitle(f"AI Runner")
 
     def new_document(self):
         self.ui.layer_widget.clear_layers()
@@ -1895,12 +1547,6 @@ class MainWindow(
             "Image Files (*.png *.jpg *.jpeg)"
         )
 
-    def update_prompt(self, prompt_value):
-        self.generator_tab_widget.update_prompt(prompt_value)
-
-    def update_negative_prompt(self, prompt_value):
-        self.generator_tab_widget.update_negative_prompt(prompt_value)
-
     def new_batch(self, index, image, data):
         self.generator_tab_widget.new_batch(index, image, data)
 
@@ -1913,7 +1559,7 @@ class MainWindow(
             widget.blockSignals(False)
     
     def set_all_section_buttons(self):
-        self.set_button_checked("model_manager", self.mode == Mode.MODEL_MANAGER.value)
+        self.set_button_checked("model_manager", self.settings["mode"] == Mode.MODEL_MANAGER.value)
     
     def activate_image_generation_section(self):
         self.ui.mode_tab_widget.setCurrentIndex(0)
