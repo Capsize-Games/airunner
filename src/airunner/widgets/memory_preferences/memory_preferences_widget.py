@@ -99,4 +99,4 @@ class MemoryPreferencesWidget(BaseWidget):
         self.ui.use_tiled_vae.setChecked(True)
         self.ui.use_enable_vae_slicing.setChecked(True)
         self.ui.use_tome.setChecked(True)
-        self.ui.tome_sd_ratio.slider.setValue(600)
+        self.ui.tome_sd_ratio.ui.slider.setValue(600)

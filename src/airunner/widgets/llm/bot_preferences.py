@@ -21,21 +21,21 @@ class BotPreferencesWidget(BaseWidget):
         self.ui.bot_mood.blockSignals(False)
 
     def username_changed(self, val):
-        llm_generator = self.app.llm_generator
-        llm_generator["username"] = val
-        self.app.llm_generator = llm_generator
+        settings = self.app.settings
+        settings["llm_generator_settings"]["username"] = val
+        self.app.settings = settings
 
     def botname_changed(self, val):
-        llm_generator = self.app.llm_generator
-        llm_generator["botname"] = val
-        self.app.llm_generator = llm_generator
+        settings = self.app.settings
+        settings["llm_generator_settings"]["botname"] = val
+        self.app.settings = settings
     
     def bot_mood_changed(self):
-        llm_generator = self.app.llm_generator
-        llm_generator["bot_mood"] = self.ui.bot_mood.toPlainText()
-        self.app.llm_generator = llm_generator
+        settings = self.app.settings
+        settings["llm_generator_settings"]["bot_mood"] = self.ui.bot_mood.toPlainText()
+        self.app.settings = settings
 
     def bot_personality_changed(self):
-        llm_generator = self.app.llm_generator
-        llm_generator["bot_personality"] = self.ui.bot_personality.toPlainText()
-        self.app.llm_generator = llm_generator
+        settings = self.app.settings
+        settings["llm_generator_settings"]["bot_personality"] = self.ui.bot_personality.toPlainText()
+        self.app.settings = settings
