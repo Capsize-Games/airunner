@@ -205,20 +205,20 @@ class ImportWidget(BaseWidget):
     def download_path(self, file, version, pipeline_action, model_type):
 
         if model_type == "LORA":
-            path = self.app.lora_model_path
+            path = self.app.settings["path_settings"]["lora_model_path"]
         elif model_type == "Checkpoint":
             if pipeline_action == "txt2img":
-                path = self.app.txt2img_model_path
+                path = self.app.settings["path_settings"]["txt2img_model_path"]
             elif pipeline_action == "outpaint":
                 path = self.app.outpaint_model_path
             elif pipeline_action == "upscale":
-                path = self.app.upscale_model_path
+                path = self.app.settings["path_settings"]["upscale_model_path"]
             elif pipeline_action == "depth2img":
-                path = self.app.depth2img_model_path
+                path = self.app.settings["path_settings"]["depth2img_model_path"]
             elif pipeline_action == "pix2pix":
-                path = self.app.pix2pix_model_path
+                path = self.app.settings["path_settings"]["pix2pix_model_path"]
         elif model_type == "TextualInversion":
-            path = self.app.embeddings_model_path
+            path = self.app.settings["path_settings"]["embeddings_model_path"]
         elif model_type == "VAE":
             # todo save vae here
             pass
