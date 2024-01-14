@@ -375,6 +375,13 @@ class MainWindow(
                 prompt_template="",
                 override_parameters=False
             ),
+            tts_settings=dict(
+                language="English",
+                voice="v2/en_speaker_6",
+                gender="Male",
+                use_bark=True,
+                enable_tts=True,
+            ),
         ), type=dict)
     
     @settings.setter
@@ -410,20 +417,6 @@ class MainWindow(
     def resizeEvent(self, event):
         self.window_resized_signal.emit(event)
     #### END GENERATOR SETTINGS ####
-
-    @property
-    def tts_settings(self):
-        return self.application_settings.value("tts_settings", dict(
-            language="English",
-            voice="v2/en_speaker_6",
-            gender="Male",
-            use_bark=True,
-            enable_tts=True,
-        ))
-    
-    @tts_settings.setter
-    def tts_settings(self, val):
-        self.application_settings.setValue("tts_settings", val)
 
     @property
     def generate_signal(self):

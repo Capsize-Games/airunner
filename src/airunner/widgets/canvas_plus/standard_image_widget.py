@@ -55,6 +55,7 @@ class StandardImageWidget(StandardBaseWidget):
         self.ui.ddim_eta_slider_widget.hide()
         self.ui.frames_slider_widget.hide()
         self.app.ai_mode_toggled.connect(self.activate_ai_mode)
+        self.activate_ai_mode(self.app.settings["ai_mode"])
     
     def activate_ai_mode(self, val):
         self.ui.settings_tab_widget.setCurrentIndex(1 if val is True else 0)

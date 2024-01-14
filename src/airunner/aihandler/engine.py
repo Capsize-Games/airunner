@@ -44,7 +44,7 @@ class Engine(QObject):
             engine=self
         )
         self.hear_signal.connect(self.hear)
-        self.tts = TTS(engine=self, use_bark=self.app.tts_settings["use_bark"])
+        self.tts = TTS(engine=self, use_bark=self.app.settings["tts_settings"]["use_bark"])
         self.tts_thread = threading.Thread(target=self.tts.run)
         self.tts_thread.start()
         # self.listen_thread = threading.Thread(target=self.speech_to_text.listen)

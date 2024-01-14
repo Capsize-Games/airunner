@@ -112,8 +112,8 @@ class ChatPromptWidget(BaseWidget):
             message=message,
             conversation=self.conversation
         )
-        if self.app.tts_settings["enable_tts"]:
-            if not self.app.tts_settings["use_bark"]:
+        if self.app.settings["tts_settings"]["enable_tts"]:
+            if not self.app.settings["tts_settings"]["use_bark"]:
                 # split on sentence enders
                 sentence_enders = [".", "?", "!", "\n"]
                 text = message_object.message
@@ -149,10 +149,10 @@ class ChatPromptWidget(BaseWidget):
                     ),
                     is_bot=True,
                     signal=self.add_message_signal,
-                    gender=self.app.tts_settings["gender"],
+                    gender=self.app.settings["tts_settings"]["gender"],
                     first_message=index == 0,
                     last_message=index == len(sentences) - 1,
-                    tts_settings=self.app.tts_settings
+                    tts_settings=self.app.settings["tts_settings"]
                 )
             )
 
@@ -270,7 +270,7 @@ class ChatPromptWidget(BaseWidget):
                     },
                     "image": image,
                     "callback": callback,
-                    "tts_settings": self.app.tts_settings,
+                    "tts_settings": self.app.settings["tts_settings"],
                     "bot_mood": self.app.settings["llm_generator_settings"]["bot_mood"],
                     "bot_personality": self.app.settings["llm_generator_settings"]["bot_personality"],
                 }
