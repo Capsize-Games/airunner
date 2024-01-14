@@ -24,8 +24,7 @@ class PathWidget(BaseWidget):
 
     @property
     def path(self):
-        return getattr(
-            self.app.settings_manager.path_settings, f"{self.path_name}")
+        return self.app.settings["path_settings"][self.path_name]
 
     def initialize(self):
         self.ui.title_label.setText(self.title)
@@ -42,7 +41,7 @@ class PathWidget(BaseWidget):
     def action_button_clicked(self):
         path = self.path
         if not os.path.exists(path):
-            path = self.app.path_settings["model_base_path"]
+            path = self.app.settings["path_settings"]["model_base_path"]
         if not os.path.exists(path):
             path = os.path.expanduser("~")
         path = QFileDialog.getExistingDirectory(
@@ -56,7 +55,7 @@ class PathWidget(BaseWidget):
 
         home = os.path.expanduser("~")
 
-        base_path = self.app.path_settings["base_path"]
+        base_path = self.app.settings["path_settings"]["base_path"]
         if base_path == "":
             base_path = os.path.join(home, "airunner")
 

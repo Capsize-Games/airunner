@@ -138,9 +138,9 @@ class GeneratorTabWidget(BaseWidget):
                 self.load_model_by_section(section, tab)
 
     def toggle_variation(self, val):
-        generator_settings = self.app.generator_settings
-        generator_settings["variation"] = val
-        self.app.generator_settings = generator_settings
+        settings = self.app.settings
+        settings["generator_settings"]["variation"] = val
+        self.app.settings = settings
 
     def set_progress_bar_value(self, tab_section, section, value):
         progressbar = self.find_widget("progress_bar", tab_section, section)
@@ -168,10 +168,4 @@ class GeneratorTabWidget(BaseWidget):
         self.current_generator_widget.ui.prompt.setPlainText(prompt)
 
     def set_negative_prompt(self, prompt):
-        self.current_generator_widget.ui.negative_prompt.setPlainText(prompt)
-
-    def update_prompt(self, prompt):
-        self.current_generator_widget.ui.prompt.setPlainText(prompt)
-
-    def update_negative_prompt(self, prompt):
         self.current_generator_widget.ui.negative_prompt.setPlainText(prompt)

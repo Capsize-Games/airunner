@@ -18,18 +18,18 @@ class MemoryPreferencesWidget(BaseWidget):
         self.ui.use_enable_vae_slicing.blockSignals(True)
         self.ui.use_tome.blockSignals(True)
 
-        self.ui.use_accelerated_transformers.setChecked(self.app.use_accelerated_transformers is True)
-        self.ui.use_attention_slicing.setChecked(self.app.use_attention_slicing is True)
+        self.ui.use_accelerated_transformers.setChecked(self.app.settings["memory_settings"]["use_accelerated_transformers"] is True)
+        self.ui.use_attention_slicing.setChecked(self.app.settings["memory_settings"]["use_attention_slicing"] is True)
         self.ui.use_enable_sequential_cpu_offload.setChecked(
-            self.app.use_enable_sequential_cpu_offload is True)
+            self.app.settings["memory_settings"]["use_enable_sequential_cpu_offload"] is True)
         self.ui.enable_model_cpu_offload.setChecked(
-            self.app.enable_model_cpu_offload is True
+            self.app.settings["memory_settings"]["enable_model_cpu_offload"] is True
         )
-        self.ui.use_lastchannels.setChecked(self.app.use_last_channels is True)
-        self.ui.use_tf32.setChecked(self.app.use_tf32 is True)
-        self.ui.use_tiled_vae.setChecked(self.app.use_tiled_vae is True)
-        self.ui.use_enable_vae_slicing.setChecked(self.app.use_enable_vae_slicing is True)
-        self.ui.use_tome.setChecked(self.app.use_tome_sd is True)
+        self.ui.use_lastchannels.setChecked(self.app.settings["memory_settings"]["use_last_channels"] is True)
+        self.ui.use_tf32.setChecked(self.app.settings["memory_settings"]["use_tf32"] is True)
+        self.ui.use_tiled_vae.setChecked(self.app.settings["memory_settings"]["use_tiled_vae"] is True)
+        self.ui.use_enable_vae_slicing.setChecked(self.app.settings["memory_settings"]["use_enable_vae_slicing"] is True)
+        self.ui.use_tome.setChecked(self.app.settings["memory_settings"]["use_tome_sd"] is True)
 
         self.ui.use_accelerated_transformers.blockSignals(False)
         self.ui.use_attention_slicing.blockSignals(False)
@@ -45,31 +45,49 @@ class MemoryPreferencesWidget(BaseWidget):
 
 
     def action_toggled_tome(self, val):
-        self.app.use_tome_sd = val
+        settings = self.app.settings
+        settings["memory_settings"]["use_tome_sd"] = val
+        self.app.settings = settings
 
     def action_toggled_tile_vae(self, val):
-        self.app.use_tiled_vae = val
+        settings = self.app.settings
+        settings["memory_settings"]["use_tiled_vae"] = val
+        self.app.settings = settings
 
     def action_toggled_tf32(self, val):
-        self.app.use_tf32 = val
+        settings = self.app.settings
+        settings["memory_settings"]["use_tf32"] = val
+        self.app.settings = settings
 
     def action_toggled_last_memory(self, val):
-        self.app.use_last_channels = val
+        settings = self.app.settings
+        settings["memory_settings"]["use_last_channels"] = val
+        self.app.settings = settings
 
     def action_toggled_vae_slicing(self, val):
-        self.app.use_enable_vae_slicing = val
+        settings = self.app.settings
+        settings["memory_settings"]["use_enable_vae_slicing"] = val
+        self.app.settings = settings
 
     def action_toggled_sequential_cpu_offload(self, val):
-        self.app.use_enable_sequential_cpu_offload = val
+        settings = self.app.settings
+        settings["memory_settings"]["use_enable_sequential_cpu_offload"] = val
+        self.app.settings = settings
 
     def action_toggled_model_cpu_offload(self, val):
-        self.app.enable_model_cpu_offload = val
+        settings = self.app.settings
+        settings["memory_settings"]["enable_model_cpu_offload"] = val
+        self.app.settings = settings
 
     def action_toggled_attention_slicing(self, val):
-        self.app.use_attention_slicing = val
+        settings = self.app.settings
+        settings["memory_settings"]["use_attention_slicing"] = val
+        self.app.settings = settings
 
     def action_toggled_accelerated_transformers(self, val):
-        self.app.use_accelerated_transformers = val
+        settings = self.app.settings
+        settings["memory_settings"]["use_accelerated_transformers"] = val
+        self.app.settings = settings
 
     def action_button_clicked_optimize_memory_settings(self):
         self.ui.use_accelerated_transformers.setChecked(True)
@@ -81,4 +99,4 @@ class MemoryPreferencesWidget(BaseWidget):
         self.ui.use_tiled_vae.setChecked(True)
         self.ui.use_enable_vae_slicing.setChecked(True)
         self.ui.use_tome.setChecked(True)
-        self.ui.tome_sd_ratio.slider.setValue(600)
+        self.ui.tome_sd_ratio.ui.slider.setValue(600)

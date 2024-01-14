@@ -1,12 +1,9 @@
 from airunner.data.bootstrap.controlnet_bootstrap_data import controlnet_bootstrap_data
 from airunner.data.bootstrap.imagefilter_bootstrap_data import imagefilter_bootstrap_data
-from airunner.data.bootstrap.llm import seed_data
 from airunner.data.bootstrap.model_bootstrap_data import model_bootstrap_data
 from airunner.data.bootstrap.pipeline_bootstrap_data import pipeline_bootstrap_data
-from airunner.data.models import ControlnetModel, LLMPromptTemplate, Pipeline, Document, \
-    AIModel, \
-    ImageFilter, ImageFilterValue, Scheduler, ActionScheduler, \
-    LLMGenerator, LLMModelVersion, StandardImageWidgetSettings
+from airunner.data.models import ControlnetModel, LLMPromptTemplate, Pipeline, \
+    AIModel, ImageFilter, ImageFilterValue, Scheduler, ActionScheduler
 from airunner.data.session_scope import session_scope, engine
 from alembic.config import Config
 from alembic import command
@@ -22,12 +19,8 @@ def prepare_database():
         do_stamp_alembic = False
 
         # check if database is blank:
-        if not my_session.query(Document).first():
+        if not my_session.query(ControlnetModel).first():
             do_stamp_alembic = True
-
-            standard_image_widget = StandardImageWidgetSettings()
-            my_session.add(standard_image_widget)
-
 
             # Add ControlnetModel objects
             for name, path in controlnet_bootstrap_data.items():
@@ -163,29 +156,21 @@ def prepare_database():
             
                         
 
-            for generator_name, generator_data in seed_data.items():
-                generator = LLMGenerator(name=generator_name)
-                my_session.add(generator)
+            # for generator_name, generator_data in seed_data.items():
+            #     if "model_versions" in generator_data:
+            #         model_versions = []
+            #         for name in generator_data["model_versions"]:
+            #             print("Name", name)
+            #             model_versions.append(LLMModelVersion(name=name))
 
-                if "model_versions" in generator_data:
-                    model_versions = []
-                    for name in generator_data["model_versions"]:
-                        print("Name", name)
-                        model_versions.append(LLMModelVersion(name=name))
+            #     for version in model_versions:
+            #         generator.model_versions.append(version)
 
-                for version in model_versions:
-                    generator.model_versions.append(version)
-
-                my_session.add(generator)
+            #     my_session.add(generator)
                 
 
-            from airunner.data.bootstrap.prompt_templates import prompt_template_seed_data
-            for data in prompt_template_seed_data:
-                prompt_template = LLMPromptTemplate(
-                    name=data["name"],
-                    template=data["template"]
-                )
-                my_session.add(prompt_template)
+            prompt_template = LLMPromptTemplate()
+            my_session.add(prompt_template)
                 
 
     HERE = os.path.abspath(os.path.dirname(__file__)) 

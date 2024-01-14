@@ -10,7 +10,6 @@ from sqlalchemy.orm import relationship
 from PyQt6.QtCore import Qt, QAbstractTableModel, QModelIndex
 
 from airunner.settings import BASE_PATH
-from airunner.utils import default_hf_cache_dir
 from airunner.data.bootstrap.prompt_templates import prompt_template_seed_data
 
 
@@ -234,17 +233,6 @@ class ImageFilterValue(BaseModel):
     max_value = Column(Integer, default=100)
 
 
-class StandardImageWidgetSettings(BaseModel):
-    __tablename__ = 'standard_image_widget_settings'
-
-    image_similarity = Column(Integer, default=1000)
-    controlnet = Column(String, default="Canny")
-    prompt = Column(String, default="")
-    negative_prompt = Column(String, default="")
-    upscale_model = Column(String, default="RealESRGAN_x4plus")
-    face_enhance = Column(Boolean, default=False)
-
-
 class Layer(BaseModel):
     __tablename__ = 'layers'
 
@@ -270,8 +258,6 @@ class Layer(BaseModel):
         else:
             self.base_64_image = ""
 
-    document_id = Column(Integer, ForeignKey('documents.id'))
-    document = relationship("Document", backref="layers")
     name = Column(String)
     visible = Column(Boolean, default=True)
     opacity = Column(Integer, default=10000)
@@ -285,56 +271,51 @@ class Layer(BaseModel):
     root_point_y = Column(Integer, default=0)
 
 
-class Document(BaseModel):
-    __tablename__ = 'documents'
-
-    id = Column(Integer, primary_key=True)
-    name = Column(String)
-    active = Column(Boolean, default=False)
-
-
-class LLMGenerator(BaseModel):
-    __tablename__ = 'llm_generator'
-    id = Column(Integer, primary_key=True)
-    created_at = Column(DateTime, default=datetime.datetime.utcnow)
-    name = Column(String, default="casuallm")
-    username = Column(String, default="User")
-    botname = Column(String, default="Bot")
-    model_versions = relationship('LLMModelVersion', back_populates='generator')
-    message_type = Column(String, default="chat")
-    bot_personality = Column(String, default="Nice")
-    override_parameters = Column(Boolean, default=False)
-    prompt_template = Column(String, default=prompt_template_seed_data[0]["name"])
-
-
 class LLMModelVersion(BaseModel):
     __tablename__ = 'llm_model_version'
     id = Column(Integer, primary_key=True)
     created_at = Column(DateTime, default=datetime.datetime.utcnow)
     name = Column(String)
-    generator_id = Column(Integer, ForeignKey('llm_generator.id'))
-    generator = relationship('LLMGenerator', back_populates='model_versions')
 
 
 class LLMPromptTemplate(BaseModel):
     __tablename__ = 'llm_prompt_templates'
-    name = Column(String, default="")
-    template = Column(String, default="")
+    name = Column(String, default="Mistral 7B Instruct: Default Chatbot")
+    system_instructions = Column(String, default="""You are {{ botname }}. You are having a conversation with {{ username }}. {{ username }} is the user and you are the assistant. You should stay in character and respond as {{ botname }}.
+DO NOT use emojis.
+DO NOT use actions (e.g. *action here*).
+DO NOT talk like this is a chat room or instant messenger, talk like you are having a conversation in real life.
+Always respond in a way that is appropriate to the conversation and sounds like something {{ botname }} would really say.
+{{ botname }}'s mood is {{ bot_mood }}
+{{ botname }}'s personality is {{ bot_personality }}""")
+    model = Column(String, default="mistralai/Mistral-7B-Instruct-v0.1")
+    llm_category = Column(String, default="casuallm")
+    template = Column(String, default="""###
+
+Previous Conversation:
+'''
+{{ history }}
+'''
+
+{{ username }}: '{{ input }}'
+{{ botname }}: 
+""")
 
 
-class Conversation(BaseModel):
-    __tablename__ = 'conversation'
-    id = Column(Integer, primary_key=True)
-    created_at = Column(DateTime, default=datetime.datetime.utcnow)
-    messages = relationship('Message', back_populates='conversation')
+
+# class Conversation(BaseModel):
+#     __tablename__ = 'conversation'
+#     id = Column(Integer, primary_key=True)
+#     created_at = Column(DateTime, default=datetime.datetime.utcnow)
+#     messages = relationship('Message', back_populates='conversation')
 
 
-class Message(BaseModel):
-    __tablename__ = 'messages'
-    id = Column(Integer, primary_key=True)
-    created_at = Column(DateTime, default=datetime.datetime.utcnow)
-    name = Column(String)
-    message = Column(String)
-    conversation_id = Column(Integer, ForeignKey('conversation.id'))
-    conversation = relationship('Conversation', back_populates='messages')
+# class Message(BaseModel):
+#     __tablename__ = 'messages'
+#     id = Column(Integer, primary_key=True)
+#     created_at = Column(DateTime, default=datetime.datetime.utcnow)
+#     name = Column(String)
+#     message = Column(String)
+#     conversation_id = Column(Integer, ForeignKey('conversation.id'))
+#     conversation = relationship('Conversation', back_populates='messages')
 
