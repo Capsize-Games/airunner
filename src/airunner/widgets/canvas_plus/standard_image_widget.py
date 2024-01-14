@@ -54,7 +54,11 @@ class StandardImageWidget(StandardBaseWidget):
         self.set_input_image_widget_properties()
         self.ui.ddim_eta_slider_widget.hide()
         self.ui.frames_slider_widget.hide()
-        self.app.ai_mode_toggled.connect(self.activate_ai_mode)
+
+        self.app.application_settings_changed_signal.connect(self.handle_changed_signal)
+        self.activate_ai_mode(self.app.settings["ai_mode"])
+
+    def handle_changed_signal(self):
         self.activate_ai_mode(self.app.settings["ai_mode"])
     
     def activate_ai_mode(self, val):
@@ -425,11 +429,6 @@ class StandardImageWidget(StandardBaseWidget):
             self.load_versions()
             self.load_models()
             self.load_schedulers()
-    
-    def handle_changed_signal(self, key, val):
-        print("standard_image_widget handle_settings_manager_changed handle_settings_manager_changed handle_settings_manager_changed handle_settings_manager_changed handle_settings_manager_changed")
-        if key == "settings.generator_settings_override_id":
-            self.initialize_generator_form(val)
         
     def initialize(self):
         self.set_form_values()
