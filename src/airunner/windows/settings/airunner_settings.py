@@ -206,15 +206,15 @@ class SettingsWindow(BaseWindow):
         if checkable:
             checked = False
             if name == "resize_on_import":
-                checked = self.app.resize_on_paste
+                checked = self.app.settings["resize_on_paste"]
             elif name == "image_to_new_layer":
-                checked = self.app.image_to_new_layer is True
+                checked = self.app.settings["image_to_new_layer"] is True
             elif name == "dark_mode":
-                checked = self.app.dark_mode_enabled
+                checked = self.app.settings["dark_mode_enabled"]
             elif name == "check_for_updates":
-                checked = self.app.latest_version_check
+                checked = self.app.settings["latest_version_check"]
             elif name == "allow_online_mode":
-                checked = self.app.allow_online_mode
+                checked = self.app.settings["allow_online_mode"]
 
             file_item.setCheckState(Qt.CheckState.Checked if checked else Qt.CheckState.Unchecked)
         # prevent file_item from being edited
@@ -235,23 +235,27 @@ class SettingsWindow(BaseWindow):
         display_name = item.data(Qt.ItemDataRole.DisplayRole)
         description = item.data(Qt.ItemDataRole.ToolTipRole)
 
+        settings = self.app.settings
+
         if name == "resize_on_import":
             checked = item.checkState() == Qt.CheckState.Checked
-            self.app.resize_on_paste = checked
+            settings["resize_on_paste"] = checked
         elif name == "image_to_new_layer":
             checked = item.checkState() == Qt.CheckState.Checked
-            self.app.image_to_new_layer = checked
+            settings["image_to_new_layer"] = checked
         elif name == "dark_mode":
             checked = item.checkState() == Qt.CheckState.Checked
-            self.app.dark_mode_enabled = checked
+            settings["dark_mode_enabled"] = checked
         elif name == "check_for_updates":
             checked = item.checkState() == Qt.CheckState.Checked
-            self.app.latest_version_check = checked
+            settings["latest_version_check"] = checked
         elif name == "allow_online_mode":
             checked = item.checkState() == Qt.CheckState.Checked
-            self.app.allow_online_mode = checked
+            settings["allow_online_mode"] = checked
         elif name == "reset_settings":
             self.app.reset_settings()
+        
+        self.app.settings = settings
         self.show_content(section, display_name, name, description)
 
     def show_content(self, section, display_name, name, description):

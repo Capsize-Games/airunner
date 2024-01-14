@@ -29,21 +29,6 @@ def session_scope():
     finally:
         session.close()
 
-@contextmanager
-def path_settings_scope():
-    from airunner.data.models import PathSettings
-    with session_scope() as session:
-        path_settings = session.query(PathSettings).options(joinedload('*')).first()
-        yield path_settings
-
-
-@contextmanager
-def standard_image_widget_settings_scope():
-    from airunner.data.models import StandardImageWidgetSettings
-    with session_scope() as session:
-        standard_image_widget_settings = session.query(StandardImageWidgetSettings).options(joinedload('*')).first()
-        yield standard_image_widget_settings
-
 
 @contextmanager
 def models_scope():
