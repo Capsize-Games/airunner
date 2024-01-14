@@ -169,9 +169,3 @@ class GeneratorTabWidget(BaseWidget):
 
     def set_negative_prompt(self, prompt):
         self.current_generator_widget.ui.negative_prompt.setPlainText(prompt)
-
-    def update_prompt(self, prompt):
-        self.current_generator_widget.ui.prompt.setPlainText(prompt)
-
-    def update_negative_prompt(self, prompt):
-        self.current_generator_widget.ui.negative_prompt.setPlainText(prompt)
