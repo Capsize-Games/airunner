@@ -245,9 +245,7 @@ class TTSPreferencesWidget(BaseWidget):
         self.ui.use_bark.blockSignals(False)
         self.ui.enable_tts.blockSignals(False)
 
-
     def language_changed(self, text):
-        self.initialize_form()
         settings = self.app.settings
         settings["tts_settings"]["language"] = text
         settings["tts_settings"]["gender"] = self.ui.gender_combobox.currentText()
@@ -255,26 +253,22 @@ class TTSPreferencesWidget(BaseWidget):
         self.app.settings = settings
 
     def voice_changed(self, text):
-        self.initialize_form()
         settings = self.app.settings
         settings["tts_settings"]["voice"] = text
         self.app.settings = settings
 
     def gender_changed(self, text):
-        self.initialize_form()
         settings = self.app.settings
         settings["tts_settings"]["gender"] = text
         settings["tts_settings"]["voice"] = self.ui.voice_combobox.currentText()
         self.app.settings = settings
 
     def use_bark_changed(self, val):
-        self.initialize_form()
         settings = self.app.settings
         settings["tts_settings"]["use_bark"] = val
         self.app.settings = settings
 
     def enable_tts_changed(self, val):
-        self.initialize_form()
         settings = self.app.settings
         settings["tts_settings"]["enable_tts"] = val
         self.app.settings = settings
