@@ -86,11 +86,6 @@ class OfflineClient(QtCore.QObject):
 
     def do_start(self):
         # create a stable diffusion runner service
-        # sd_runner_thread = self.start_thread(
-        #     target=self.init_sd_runner,
-        #     name="init stable diffusion runner"
-        # )
-        # sd_runner_thread.join()
         logger.info("Starting offline client")
         self.init_sd_runner()
         self.force_request_worker_reset()

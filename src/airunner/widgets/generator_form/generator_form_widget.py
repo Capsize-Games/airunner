@@ -378,6 +378,7 @@ class GeneratorForm(BaseWidget):
                 # get controlnet_dropdown from active tab
                 nsfw_filter = self.app.settings["nsfw_filter"]
                 options = dict(
+                    sd_request=True,
                     prompt=prompt,
                     negative_prompt=negative_prompt,
                     steps=steps,
