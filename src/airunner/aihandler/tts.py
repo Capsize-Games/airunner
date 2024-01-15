@@ -70,6 +70,8 @@ class GeneratorWorker(QObject):
         while True:
             if not self.parent.text_queue.empty():
                 data = self.parent.text_queue.get()
+                if not self.parent.engine.app.settings["tts_enabled"]:
+                    continue
                 play_queue.append(data)
                 if data["is_end_of_message"] or len(play_queue) == self.parent.play_queue_buffer_length or play_queue_started:
                     for item in play_queue:
@@ -125,6 +127,7 @@ class GeneratorWorker(QObject):
         text = text.replace("\n", " ").strip()
         
         Logger.info("Processing inputs...")
+
         inputs = self.parent.processor(text=text, return_tensors="pt")
         inputs = self.move_inputs_to_device(inputs)
 
@@ -326,9 +329,13 @@ class TTS(QObject):
                 self.speaker_embeddings = self.speaker_embeddings.to(self.device)
 
     def initialize(self):
+        if not self.engine.app.settings["tts_enabled"]:
+            self.unload()
+            return
+
         target_model = "bark" if self.use_bark else "t5"
         if target_model != self.current_model:
-            self.unload_model()
+            self.unload()
         
         if not self.current_model:
             self.load_model()
@@ -338,20 +345,33 @@ class TTS(QObject):
             self.load_corpus()
             self.current_model = target_model
     
-    def unload_model(self):
+    def unload(self):
         Logger.info("Unloading TTS")
-        del self.model
-        del self.processor
+        do_clear_memory = False
+        try:
+            del self.model
+            do_clear_memory = True
+        except AttributeError:
+            pass
+        try:
+            del self.processor
+            do_clear_memory = True
+        except AttributeError:
+            pass
         try:
             del self.vocoder
+            do_clear_memory = True
         except AttributeError:
             pass
         try:
             del self.speaker_embeddings
+            do_clear_memory = True
         except AttributeError:
             pass
         self.current_model = None
-        self.engine.clear_memory()
+        
+        if do_clear_memory:
+            self.engine.clear_memory()
 
     def run(self):
         self.initialize()
