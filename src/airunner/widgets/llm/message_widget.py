@@ -23,3 +23,7 @@ class MessageWidget(BaseWidget):
             self.ui.bot_name.hide()
 
         self.ui.content.setStyleSheet("color: #f2f2f2;")
+
+    def update_message(self, text):
+        self.message.message += text
+        self.ui.content.setPlainText(self.message.message)

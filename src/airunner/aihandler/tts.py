@@ -5,6 +5,7 @@ import numpy as np
 
 from PyQt6.QtCore import QObject, pyqtSignal, pyqtSlot, QThread
 
+from transformers import BitsAndBytesConfig
 from transformers import SpeechT5Processor, SpeechT5ForTextToSpeech, SpeechT5HifiGan, BarkModel, BarkProcessor
 from datasets import load_dataset
 
@@ -47,12 +48,9 @@ class VocalizerWorker(QObject):
                 continue
         
     def handle_speech(self, generated_speech):
-        print("ADD TO QUEUE")
         Logger.info("Adding speech to stream...")
         try:
-            print("Writing speech to stream...")
             self.queue.put(generated_speech)
-            print("Successfully added")
         except Exception as e:
             print(f"Error while adding speech to stream: {e}")
 
@@ -67,47 +65,81 @@ class GeneratorWorker(QObject):
     @pyqtSlot()
     def process(self):
         # get item from self.parent.text.queue
+        play_queue = []
+        play_queue_started = False
         while True:
             if not self.parent.text_queue.empty():
-                text = self.parent.text_queue.get()
-                self.generate(text)
+                data = self.parent.text_queue.get()
+                play_queue.append(data)
+                if data["is_end_of_message"] or len(play_queue) == self.parent.play_queue_buffer_length or play_queue_started:
+                    for item in play_queue:
+                        self.generate(item["text"])
+                    play_queue_started = True
+                    play_queue = []
             time.sleep(0.1)
 
     def generate(self, text):
         Logger.info("Generating TTS...")
+        text = text.replace("\n", " ").strip()
+        
         if self.parent.use_bark:
-            Logger.info("Using voice preset " + self.parent.voice_preset)
-            inputs = self.parent.processor(text, voice_preset=self.parent.voice_preset).to(self.parent.device)
+            tts = self.generate_with_bark(text)
         else:
-            Logger.info("We aren't using bark...")
-            inputs = self.parent.processor(text=text, return_tensors="pt")
-            inputs = {k: v.cuda() for k, v in inputs.items()}
+            tts = self.generate_with_t5(text)
 
-        input_ids = inputs["input_ids"]
-        # move to cpu
-        if not self.parent.use_bark:
-            Logger.info("We still are not using bark...")
-            speech = self.parent.model.generate_speech(
-                input_ids,
-                self.parent.speaker_embeddings,
-                vocoder=self.parent.vocoder
-            )
-            tts = speech.cpu().float().numpy()
-        else:
-            # track the time it takes to generate speech
-            Logger.info("Generating speech...")
-            start = time.time()
-            speech = self.parent.model.generate(
-                **inputs, 
-                do_sample=True, 
-                fine_temperature=0.4, 
-                coarse_temperature=0.8
-            )
-            Logger.info("Generated speech in " + str(time.time() - start) + " seconds")
-            start = time.time()
-            tts = speech[0].cpu().float().numpy()
-            Logger.info("Converted speech to numpy array in " + str(time.time() - start) + " seconds")
         self.add_to_stream_signal.emit(tts)
+    
+    def move_inputs_to_device(self, inputs):
+        if self.parent.use_cuda:
+            Logger.info("Moving inputs to CUDA")
+            try:
+                inputs = {k: v.cuda() for k, v in inputs.items()}
+            except AttributeError:
+                pass
+        return inputs
+
+    def generate_with_bark(self, text):
+        Logger.info("Generating TTS...")
+        text = text.replace("\n", " ").strip()
+        
+        Logger.info("Processing inputs...")
+        inputs = self.parent.processor(text, voice_preset=self.parent.voice_preset).to(self.parent.device)
+        inputs = self.move_inputs_to_device(inputs)
+
+        Logger.info("Generating speech...")
+        start = time.time()
+        params = dict(
+            **inputs, 
+            fine_temperature=self.parent.fine_temperature,
+            coarse_temperature=self.parent.coarse_temperature,
+            semantic_temperature=self.parent.semantic_temperature,
+        )
+        speech = self.parent.model.generate(**params)
+        Logger.info("Generated speech in " + str(time.time() - start) + " seconds")
+
+        tts = speech[0].cpu().float().numpy()
+        return tts
+    
+    def generate_with_t5(self, text):
+        Logger.info("Generating TTS...")
+        text = text.replace("\n", " ").strip()
+        
+        Logger.info("Processing inputs...")
+        inputs = self.parent.processor(text=text, return_tensors="pt")
+        inputs = self.move_inputs_to_device(inputs)
+
+        Logger.info("Generating speech...")
+        start = time.time()
+        params = dict(
+            **inputs,
+            speaker_embeddings=self.parent.speaker_embeddings,
+            vocoder=self.parent.vocoder,
+            max_length=100,
+        )
+        speech = self.parent.model.generate(**params)
+        Logger.info("Generated speech in " + str(time.time() - start) + " seconds")
+        tts = speech.cpu().float().numpy()
+        return tts
 
 
 class TTS(QObject):
@@ -134,6 +166,8 @@ class TTS(QObject):
     is_playing = False
     current_model = None
     do_offload_to_cpu = True
+    message = ""
+    local_files_only = True
 
     @property
     def processor_path(self):
@@ -157,19 +191,63 @@ class TTS(QObject):
 
     @property
     def device(self):
-        return "cuda:0" if torch.cuda.is_available() else "cpu"
+        return f"cuda:{self.cuda_index}" if self.use_cuda else "cpu"
+
+    @property
+    def torch_dtype(self):
+        return torch.float16 if self.use_cuda else torch.float32
+
+    @property
+    def word_chunks(self):
+        return self.engine.app.settings["tts_settings"]["word_chunks"]
+
+    @property
+    def use_bark(self):
+        return self.engine.app.settings["tts_settings"]["use_bark"]
+
+    @property
+    def cuda_index(self):
+        return self.engine.app.settings["tts_settings"]["cuda_index"]
     
     @property
-    def model_class_(self):
-        if self.use_bark:
-            return BarkModel
-        return SpeechT5ForTextToSpeech
+    def voice_preset(self):
+        return self.engine.app.settings["tts_settings"]["voice"]
+
+    @property
+    def use_cuda(self):
+        return self.engine.app.settings["tts_settings"]["use_cuda"] and torch.cuda.is_available()
+
+    @property
+    def fine_temperature(self):
+        return self.engine.app.settings["tts_settings"]["fine_temperature"] / 100
     
     @property
-    def processor_class_(self):
-        if self.use_bark:
-            return BarkProcessor
-        return SpeechT5Processor
+    def coarse_temperature(self):
+        return self.engine.app.settings["tts_settings"]["coarse_temperature"] / 100
+    
+    @property
+    def semantic_temperature(self):
+        return self.engine.app.settings["tts_settings"]["semantic_temperature"] / 100
+    
+    @property
+    def enable_cpu_offload(self):
+        return self.engine.app.settings["tts_settings"]["enable_cpu_offload"]
+    
+    @property
+    def play_queue_buffer_length(self):
+        return self.engine.app.settings["tts_settings"]["play_queue_buffer_length"]
+    
+    @property
+    def use_word_chunks(self):
+        return self.engine.app.settings["tts_settings"]["use_word_chunks"]
+    
+    @property
+    def use_sentence_chunks(self):
+        return self.engine.app.settings["tts_settings"]["use_sentence_chunks"]
+
+    @property
+    def sentence_chunks(self):
+        return self.engine.app.settings["tts_settings"]["sentence_chunks"]
 
     def __init__(self, *args, **kwargs):
         super().__init__()
@@ -178,7 +256,6 @@ class TTS(QObject):
         Initialize the TTS
         """
         self.engine = kwargs.get("engine")
-        self.use_bark = kwargs.get("use_bark")
         self.corpus = []
         self.processor = None
         self.model = None
@@ -215,7 +292,6 @@ class TTS(QObject):
         This function is called from the generator worker when speech has been generated.
         It adds the generated speech to the vocalizer's queue.
         """
-        print("add_to_stream called")
         self.vocalizer.handle_speech(generated_speech)
     
     def move_model(self, to_cpu: bool = False):
@@ -250,7 +326,8 @@ class TTS(QObject):
                 self.speaker_embeddings = self.speaker_embeddings.to(self.device)
 
     def initialize(self):
-        if self.current_model and self.current_model == "bark" and not self.use_bark:
+        target_model = "bark" if self.use_bark else "t5"
+        if target_model != self.current_model:
             self.unload_model()
         
         if not self.current_model:
@@ -259,13 +336,20 @@ class TTS(QObject):
             self.load_processor()
             self.load_dataset()
             self.load_corpus()
-            self.current_model = "bark" if self.use_bark else "t5"
+            self.current_model = target_model
     
     def unload_model(self):
+        Logger.info("Unloading TTS")
         del self.model
         del self.processor
-        del self.vocoder
-        del self.speaker_embeddings
+        try:
+            del self.vocoder
+        except AttributeError:
+            pass
+        try:
+            del self.speaker_embeddings
+        except AttributeError:
+            pass
         self.current_model = None
         self.engine.clear_memory()
 
@@ -274,19 +358,33 @@ class TTS(QObject):
         self.process_sentences()
 
     def load_model(self):
-        model = self.model_class_.from_pretrained(
+        Logger.info("Loading TTS Model")
+        model_class_ = BarkModel if self.use_bark else SpeechT5ForTextToSpeech
+        self.model = model_class_.from_pretrained(
             self.model_path, 
-            torch_dtype=torch.float16
+            local_files_only=self.local_files_only,
+            torch_dtype=self.torch_dtype
         ).to(self.device)
-        self.model = model.to_bettertransformer()
-        # self.model.enable_cpu_offload()
+
+        if self.use_bark:
+            self.model = self.model.to_bettertransformer()
+            self.model.enable_cpu_offload()
     
     def load_vocoder(self):
         if not self.use_bark:
-            self.vocoder = SpeechT5HifiGan.from_pretrained(self.vocoder_path).half().to(self.device)
+            Logger.info("Loading TTS Vocoder")
+            self.vocoder = SpeechT5HifiGan.from_pretrained(
+                self.vocoder_path,
+                torch_dtype=self.torch_dtype
+            )
+
+            if self.use_cuda:
+                self.vocoder = self.vocoder.cuda()
     
     def load_processor(self):
-        self.processor = self.processor_class_.from_pretrained(self.processor_path)
+        Logger.info("Loading TTS Procesor")
+        processor_class_ = BarkProcessor if self.use_bark else SpeechT5Processor
+        self.processor = processor_class_.from_pretrained(self.processor_path)
 
     def load_dataset(self):
         """
@@ -294,9 +392,12 @@ class TTS(QObject):
         :return:
         """
         if not self.use_bark:
+            Logger.info("Loading TTS Dataset")
             embeddings_dataset = load_dataset(self.speaker_embeddings_dataset_path, split="validation")
             self.speaker_embeddings = torch.tensor(embeddings_dataset[7306]["xvector"]).unsqueeze(0)
-            self.speaker_embeddings = self.speaker_embeddings.half().cuda()
+            
+            if self.use_cuda:
+                self.speaker_embeddings = self.speaker_embeddings.half().cuda()
 
     def load_corpus(self):
         if self.input_text:
@@ -316,6 +417,7 @@ class TTS(QObject):
         words.
         :return:
         """
+        Logger.info("TTS: Processing sentences")
         self.sentences = []
         sentence = ""
         for word in self.corpus:
@@ -333,52 +435,74 @@ class TTS(QObject):
         if sentence != "":
             self.sentences.append(sentence)
 
-    # def start_speech_processing(self):
-    #     threading.Thread(target=self.process_speech).start()
-
-    def add_word(self, word, stream):
-        self.new_sentence += word
-        # check if sentence ends with a period, comma, question mark, exclamation point, or ellipsis
-        if len(self.new_sentence) > 1 and self.new_sentence[-1] in self.single_character_sentence_enders or (
-            len(self.new_sentence) > 1 and self.new_sentence.strip()[-1:] in self.double_character_sentence_enders
-        ):
-            self.add_sentence(self.new_sentence, stream)
-            self.new_sentence = ""
-
-    def add_sentence(self, sentence, stream, tts_settings):
-        self.use_bark = tts_settings["use_bark"]
-        self.voice_preset = tts_settings["voice"]
-        return self.process_sentence(sentence, stream)
-
-    # def process_speech(self):
-    #     sd.default.blocksize = 4096
-    #     while True:
-    #         if len(self.sentences) > 0:
-    #             self.process_sentence(self.sentences.pop(0))
+    def add_text(self, text: str, is_end_of_message: bool):
+        self.initialize()
+        self.message += text
+        #if is_end_of_message:
+        return self.process_message(is_end_of_message=is_end_of_message)
     
-    def process_sentence(self, text, stream):
+    def process_message(self, is_end_of_message: bool):
         # split on sentence enders
+        Logger.info("TTS: Processing message")
         sentence_enders = self.single_character_sentence_enders + self.double_character_sentence_enders
-
+        
         # split text into words
-        words = text.split()
+        words = self.message.split()
+        # if not is_end_of_message and len(words) < self.word_chunks:
+        #     return False
+        
+        if self.use_word_chunks:
+            # combine words into 30 word chunks
+            chunks = [' '.join(words[i:i+self.word_chunks]) for i in range(0, len(words), self.word_chunks)]
+            if len(chunks) < 30 and not is_end_of_message:
+                return False
 
-        # combine words into 30 word chunks
-        chunks = [' '.join(words[i:i+35]) for i in range(0, len(words), 35)]
+            Logger.info("Adding text to TTS queue...")
+        
+            for chunk in chunks:
+                # add "..." to chunk if it doesn't end with a sentence ender
+                # if not any(chunk.endswith(ender) for ender in sentence_enders):
+                #     chunk += "..." 
 
-        for chunk in chunks:
-            # add "..." to chunk if it doesn't end with a sentence ender
-            if not any(chunk.endswith(ender) for ender in sentence_enders):
-                chunk += "..." 
+                # add delay to inputs
+                chunk = chunk.strip()
+                if chunk.startswith("\n") or chunk.startswith(" "):
+                    chunk = chunk[1:]
+                if chunk.endswith("\n") or chunk.endswith(" "):
+                    chunk = chunk[:-1]
+                self.text_queue.put(dict(
+                    text=chunk,
+                    is_end_of_message=is_end_of_message
+                ))
+                self.message = ""
+        elif self.use_sentence_chunks:
+            chunks = []
+            sentence_enders = self.single_character_sentence_enders + self.double_character_sentence_enders
+            txt = ""
+            for index, char in enumerate(self.message):
+                txt += char
+                if char in sentence_enders:
+                    chunks.append(txt)
+                    txt = ""
+            if txt != "" and is_end_of_message:
+                chunks.append(txt)
+                                
+            if len(chunks) < self.sentence_chunks and not is_end_of_message:
+                return False
 
-            # add delay to inputs
-            chunk = chunk.strip()
-            if chunk.startswith("\n") or chunk.startswith(" "):
-                chunk = chunk[1:]
-            if chunk.endswith("\n") or chunk.endswith(" "):
-                chunk = chunk[:-1]
-            self.text_queue.put(chunk)
-            yield True
+            for chunk in chunks:
+                if chunk.strip() != "":
+                    self.text_queue.put(dict(
+                        text=chunk,
+                        is_end_of_message=is_end_of_message
+                    ))
+            self.message = ""
+        else:            
+            self.text_queue.put(dict(
+                text=self.message,
+                is_end_of_message=is_end_of_message
+            ))
+            self.message = ""
             
     # def play_buffer(self):
     #     """
