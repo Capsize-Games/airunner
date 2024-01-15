@@ -191,7 +191,6 @@ class MainWindow(
             image_export_type="png",
             auto_export_images=True,
             show_active_image_area=True,
-
             working_width=512,
             working_height=512,
             current_llm_generator="casuallm",
@@ -368,15 +367,26 @@ class MainWindow(
                 message_type="chat",
                 bot_personality="happy. He loves {{ username }}",
                 bot_mood="",
-                prompt_template="",
+                prompt_template="Mistral 7B Instruct: Default Chatbot",
                 override_parameters=False
             ),
             tts_settings=dict(
                 language="English",
                 voice="v2/en_speaker_6",
                 gender="Male",
-                use_bark=True,
+                fine_temperature=80,
+                coarse_temperature=40,
+                semantic_temperature=80,
+                use_bark=False,
                 enable_tts=True,
+                use_cuda=True,
+                use_sentence_chunks=True,
+                use_word_chunks=False,
+                cuda_index=0,
+                word_chunks=1,
+                sentence_chunks=1,
+                play_queue_buffer_length=1,
+                enable_cpu_offload=True,
             ),
         ), type=dict)
 
@@ -384,7 +394,6 @@ class MainWindow(
     def settings(self, val):
         self.application_settings.setValue("settings", val)
         self.application_settings.sync()
-        print("prompt:",self.settings["generator_settings"]["prompt"])
         self.application_settings_changed_signal.emit()
 
     def reset_paths(self):
@@ -480,9 +489,6 @@ class MainWindow(
     def current_canvas(self):
         return self.standard_image_panel
 
-    def stop_progress_bar(self):
-        self.generator_tab_widget.stop_progress_bar()
-    
     def describe_image(self, image, callback):
         self.generator_tab_widget.ui.ai_tab_widget.describe_image(
             image=image, 
@@ -505,6 +511,22 @@ class MainWindow(
     loaded = pyqtSignal()
     window_opened = pyqtSignal()
 
+    @pyqtSlot()
+    def handle_generate(self):
+        #self.prompt_builder.inject_prompt()
+        pass
+
+    @pyqtSlot(dict)
+    def handle_button_clicked(self, kwargs):
+        action = kwargs.get("action", "")
+        if action == "toggle_tool":
+            self.toggle_tool(kwargs["tool"])
+
+    @pyqtSlot()
+    def stop_progress_bar(self):
+        self.generator_tab_widget.stop_progress_bar()
+
+    @pyqtSlot(str, object)
     def handle_changed_signal(self, key, value):
         print("main_window: handle_changed_signal", key, value)
         if key == "grid_settings.cell_size":
@@ -515,6 +537,23 @@ class MainWindow(
         #     self.generator_tab_widget.toggle_all_prompt_builder_checkboxes(value)
         elif key == "models":
             self.model_manager.models_changed(key, value)
+
+    @pyqtSlot(dict)
+    def message_handler(self, response: dict):
+        try:
+            code = response["code"]
+        except TypeError:
+            # logger.error(f"Invalid response message: {response}")
+            # traceback.print_exc()
+            return
+        message = response["message"]
+        {
+            MessageCode.STATUS: self.handle_status,
+            MessageCode.ERROR: self.handle_error,
+            MessageCode.PROGRESS: self.handle_progress,
+            MessageCode.IMAGE_GENERATED: self.handle_image_generated,
+            MessageCode.CONTROLNET_IMAGE_GENERATED: self.handle_controlnet_image_generated,
+        }.get(code, lambda *args: None)(message)
 
     def __init__(self, settings_manager, *args, **kwargs):
         logger.info("Starting AI Runnner")
@@ -643,7 +682,6 @@ class MainWindow(
         self.worker.finished.connect(self.worker_thread.quit)
         self.worker.finished.connect(self.worker.deleteLater)
         self.worker_thread.finished.connect(self.worker_thread.deleteLater)
-
         self.worker_thread.started.connect(self.worker.process)
         self.worker_thread.start()
     
@@ -1141,10 +1179,6 @@ class MainWindow(
     def display_filter_window(self, filter_name):
         FilterBase(self, filter_name).show()
 
-    def handle_generate(self):
-        #self.prompt_builder.inject_prompt()
-        pass
-
     def initialize_default_buttons(self):
         show_grid = self.settings["grid_settings"]["show_grid"]
         self.ui.toggle_active_grid_area_button.blockSignals(True)
@@ -1161,12 +1195,6 @@ class MainWindow(
         self.ui.toggle_eraser_button.blockSignals(False)
         self.ui.toggle_grid_button.blockSignals(False)
         self.ui.ai_button.blockSignals(False)
-
-    @pyqtSlot(dict)
-    def handle_button_clicked(self, kwargs):
-        action = kwargs.get("action", "")
-        if action == "toggle_tool":
-            self.toggle_tool(kwargs["tool"])
 
     def toggle_tool(self, tool):
         settings = self.settings
@@ -1383,23 +1411,6 @@ class MainWindow(
         if self.status_widget:
             self.status_widget.set_system_status(txt, error)
 
-    @pyqtSlot(dict)
-    def message_handler(self, response: dict):
-        try:
-            code = response["code"]
-        except TypeError:
-            # logger.error(f"Invalid response message: {response}")
-            # traceback.print_exc()
-            return
-        message = response["message"]
-        {
-            MessageCode.STATUS: self.handle_status,
-            MessageCode.ERROR: self.handle_error,
-            MessageCode.PROGRESS: self.handle_progress,
-            MessageCode.IMAGE_GENERATED: self.handle_image_generated,
-            MessageCode.CONTROLNET_IMAGE_GENERATED: self.handle_controlnet_image_generated,
-        }.get(code, lambda *args: None)(message)
-    
     def handle_controlnet_image_generated(self, message):
         self.controlnet_image = message["image"]
         self.controlnet_image_generated.emit(True)
