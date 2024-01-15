@@ -7,27 +7,94 @@
     <x>0</x>
     <y>0</y>
     <width>1262</width>
-    <height>1084</height>
+    <height>1207</height>
    </rect>
   </property>
   <property name="windowTitle">
    <string>Form</string>
   </property>
   <layout class="QGridLayout" name="gridLayout">
-   <item row="5" column="0">
-    <spacer name="verticalSpacer">
-     <property name="orientation">
-      <enum>Qt::Vertical</enum>
+   <item row="3" column="0" colspan="2">
+    <widget class="QGroupBox" name="groupBox_6">
+     <property name="title">
+      <string>DType</string>
      </property>
-     <property name="sizeHint" stdset="0">
-      <size>
-       <width>20</width>
-       <height>40</height>
-      </size>
-     </property>
-    </spacer>
+     <layout class="QGridLayout" name="gridLayout_9">
+      <item row="1" column="0">
+       <layout class="QHBoxLayout" name="horizontalLayout_3">
+        <item>
+         <widget class="QRadioButton" name="radio_button_2bit">
+          <property name="text">
+           <string>2-bit</string>
+          </property>
+         </widget>
+        </item>
+        <item>
+         <widget class="QRadioButton" name="radio_button_4bit">
+          <property name="text">
+           <string>4-bit</string>
+          </property>
+         </widget>
+        </item>
+        <item>
+         <widget class="QRadioButton" name="radio_button_8bit">
+          <property name="text">
+           <string>8-bit</string>
+          </property>
+         </widget>
+        </item>
+        <item>
+         <widget class="QRadioButton" name="radio_button_16bit">
+          <property name="text">
+           <string>16-bit</string>
+          </property>
+         </widget>
+        </item>
+        <item>
+         <widget class="QRadioButton" name="radio_button_32bit">
+          <property name="text">
+           <string>32-bit</string>
+          </property>
+         </widget>
+        </item>
+        <item>
+         <spacer name="horizontalSpacer">
+          <property name="orientation">
+           <enum>Qt::Horizontal</enum>
+          </property>
+          <property name="sizeHint" stdset="0">
+           <size>
+            <width>40</width>
+            <height>20</height>
+           </size>
+          </property>
+         </spacer>
+        </item>
+       </layout>
+      </item>
+      <item row="2" column="0">
+       <widget class="QLabel" name="dtype_description">
+        <property name="font">
+         <font>
+          <pointsize>9</pointsize>
+         </font>
+        </property>
+        <property name="text">
+         <string>Description</string>
+        </property>
+       </widget>
+      </item>
+      <item row="0" column="0">
+       <widget class="QCheckBox" name="use_gpu_checkbox">
+        <property name="text">
+         <string>Use GPU</string>
+        </property>
+       </widget>
+      </item>
+     </layout>
+    </widget>
    </item>
-   <item row="4" column="0">
+   <item row="4" column="0" colspan="2">
     <widget class="QGroupBox" name="override_parameters">
      <property name="title">
       <string>Override Prameters</string>
@@ -622,7 +689,157 @@
      </layout>
     </widget>
    </item>
-   <item row="1" column="0">
+   <item row="5" column="0" colspan="2">
+    <widget class="QGroupBox" name="groupBox_2">
+     <property name="title">
+      <string>Fine Temperature</string>
+     </property>
+     <layout class="QGridLayout" name="gridLayout_3">
+      <item row="0" column="0">
+       <widget class="SliderWidget" name="semantic_temperature_2" native="true">
+        <property name="slider_minimum" stdset="0">
+         <number>1</number>
+        </property>
+        <property name="slider_maximum" stdset="0">
+         <number>100</number>
+        </property>
+        <property name="spinbox_minimum" stdset="0">
+         <double>0.000000000000000</double>
+        </property>
+        <property name="spinbox_maximum" stdset="0">
+         <double>1.000000000000000</double>
+        </property>
+        <property name="display_as_float" stdset="0">
+         <bool>true</bool>
+        </property>
+        <property name="settings_property" stdset="0">
+         <string>tts_settings.fine_temperature</string>
+        </property>
+        <property name="slider_single_step" stdset="0">
+         <number>1</number>
+        </property>
+        <property name="slider_page_step" stdset="0">
+         <number>10</number>
+        </property>
+        <property name="spinbox_single_step" stdset="0">
+         <double>0.010000000000000</double>
+        </property>
+        <property name="spinbox_page_step" stdset="0">
+         <double>0.100000000000000</double>
+        </property>
+        <property name="slider_callback" stdset="0">
+         <string>handle_value_change</string>
+        </property>
+       </widget>
+      </item>
+     </layout>
+    </widget>
+   </item>
+   <item row="6" column="0" colspan="2">
+    <widget class="QGroupBox" name="groupBox">
+     <property name="title">
+      <string>Coarse Temperature</string>
+     </property>
+     <layout class="QGridLayout" name="gridLayout_2">
+      <item row="0" column="0">
+       <widget class="SliderWidget" name="semantic_temperature" native="true">
+        <property name="slider_minimum" stdset="0">
+         <number>1</number>
+        </property>
+        <property name="slider_maximum" stdset="0">
+         <number>100</number>
+        </property>
+        <property name="spinbox_minimum" stdset="0">
+         <double>0.000000000000000</double>
+        </property>
+        <property name="spinbox_maximum" stdset="0">
+         <double>1.000000000000000</double>
+        </property>
+        <property name="display_as_float" stdset="0">
+         <bool>true</bool>
+        </property>
+        <property name="settings_property" stdset="0">
+         <string>tts_settings.coarse_temperature</string>
+        </property>
+        <property name="slider_single_step" stdset="0">
+         <number>1</number>
+        </property>
+        <property name="slider_page_step" stdset="0">
+         <number>10</number>
+        </property>
+        <property name="spinbox_single_step" stdset="0">
+         <double>0.010000000000000</double>
+        </property>
+        <property name="spinbox_page_step" stdset="0">
+         <double>0.100000000000000</double>
+        </property>
+        <property name="slider_callback" stdset="0">
+         <string>handle_value_change</string>
+        </property>
+       </widget>
+      </item>
+     </layout>
+    </widget>
+   </item>
+   <item row="7" column="0" colspan="2">
+    <widget class="QGroupBox" name="groupBox_3">
+     <property name="title">
+      <string>Semantic Temperature</string>
+     </property>
+     <layout class="QGridLayout" name="gridLayout_4">
+      <item row="0" column="0">
+       <widget class="SliderWidget" name="semantic_temperature_3" native="true">
+        <property name="slider_minimum" stdset="0">
+         <number>1</number>
+        </property>
+        <property name="slider_maximum" stdset="0">
+         <number>100</number>
+        </property>
+        <property name="spinbox_minimum" stdset="0">
+         <double>0.000000000000000</double>
+        </property>
+        <property name="spinbox_maximum" stdset="0">
+         <double>1.000000000000000</double>
+        </property>
+        <property name="display_as_float" stdset="0">
+         <bool>true</bool>
+        </property>
+        <property name="settings_property" stdset="0">
+         <string>tts_settings.semantic_temperature</string>
+        </property>
+        <property name="slider_single_step" stdset="0">
+         <number>1</number>
+        </property>
+        <property name="slider_page_step" stdset="0">
+         <number>10</number>
+        </property>
+        <property name="spinbox_single_step" stdset="0">
+         <double>0.010000000000000</double>
+        </property>
+        <property name="spinbox_page_step" stdset="0">
+         <double>0.100000000000000</double>
+        </property>
+        <property name="slider_callback" stdset="0">
+         <string>handle_value_change</string>
+        </property>
+       </widget>
+      </item>
+     </layout>
+    </widget>
+   </item>
+   <item row="0" column="0" colspan="2">
+    <widget class="QGroupBox" name="groupBox_7">
+     <property name="title">
+      <string>Model Type</string>
+     </property>
+     <layout class="QGridLayout" name="gridLayout_10">
+      <item row="0" column="0">
+       <widget class="QComboBox" name="model"/>
+      </item>
+     </layout>
+    </widget>
+   </item>
+   <item row="1" column="0" colspan="2">
     <widget class="QGroupBox" name="groupBox_8">
      <property name="title">
       <string>Model Version</string>
@@ -638,87 +855,7 @@
      </layout>
     </widget>
    </item>
-   <item row="3" column="0">
-    <widget class="QGroupBox" name="groupBox_6">
-     <property name="title">
-      <string>DType</string>
-     </property>
-     <layout class="QGridLayout" name="gridLayout_9">
-      <item row="1" column="0">
-       <layout class="QHBoxLayout" name="horizontalLayout_3">
-        <item>
-         <widget class="QRadioButton" name="radio_button_2bit">
-          <property name="text">
-           <string>2-bit</string>
-          </property>
-         </widget>
-        </item>
-        <item>
-         <widget class="QRadioButton" name="radio_button_4bit">
-          <property name="text">
-           <string>4-bit</string>
-          </property>
-         </widget>
-        </item>
-        <item>
-         <widget class="QRadioButton" name="radio_button_8bit">
-          <property name="text">
-           <string>8-bit</string>
-          </property>
-         </widget>
-        </item>
-        <item>
-         <widget class="QRadioButton" name="radio_button_16bit">
-          <property name="text">
-           <string>16-bit</string>
-          </property>
-         </widget>
-        </item>
-        <item>
-         <widget class="QRadioButton" name="radio_button_32bit">
-          <property name="text">
-           <string>32-bit</string>
-          </property>
-         </widget>
-        </item>
-        <item>
-         <spacer name="horizontalSpacer">
-          <property name="orientation">
-           <enum>Qt::Horizontal</enum>
-          </property>
-          <property name="sizeHint" stdset="0">
-           <size>
-            <width>40</width>
-            <height>20</height>
-           </size>
-          </property>
-         </spacer>
-        </item>
-       </layout>
-      </item>
-      <item row="2" column="0">
-       <widget class="QLabel" name="dtype_description">
-        <property name="font">
-         <font>
-          <pointsize>9</pointsize>
-         </font>
-        </property>
-        <property name="text">
-         <string>Description</string>
-        </property>
-       </widget>
-      </item>
-      <item row="0" column="0">
-       <widget class="QCheckBox" name="use_gpu_checkbox">
-        <property name="text">
-         <string>Use GPU</string>
-        </property>
-       </widget>
-      </item>
-     </layout>
-    </widget>
-   </item>
-   <item row="2" column="0">
+   <item row="2" column="0" colspan="2">
     <widget class="QGroupBox" name="groupBox_14">
      <property name="title">
       <string>Prompt Template</string>
@@ -730,17 +867,18 @@
      </layout>
     </widget>
    </item>
-   <item row="0" column="0">
-    <widget class="QGroupBox" name="groupBox_7">
-     <property name="title">
-      <string>Model Type</string>
+   <item row="8" column="0">
+    <spacer name="verticalSpacer">
+     <property name="orientation">
+      <enum>Qt::Vertical</enum>
      </property>
-     <layout class="QGridLayout" name="gridLayout_10">
-      <item row="0" column="0">
-       <widget class="QComboBox" name="model"/>
-      </item>
-     </layout>
-    </widget>
+     <property name="sizeHint" stdset="0">
+      <size>
+       <width>20</width>
+       <height>40</height>
+      </size>
+     </property>
+    </spacer>
    </item>
   </layout>
  </widget>
