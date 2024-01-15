@@ -2,8 +2,6 @@ from PyQt6.QtCore import pyqtSlot, pyqtSignal
 from PyQt6.QtWidgets import QSpacerItem, QSizePolicy
 from PyQt6.QtCore import Qt
 
-import sqlalchemy
-
 from airunner.aihandler.enums import MessageCode
 from airunner.data.models import LLMPromptTemplate
 from airunner.widgets.base_widget import BaseWidget
@@ -31,6 +29,7 @@ class ChatPromptWidget(BaseWidget):
     suffix = ""
     conversation_history = []
     spacer = None
+    promptKeyPressEvent = None
     add_message_signal = pyqtSignal(Message, bool, bool, bool)
 
     @property
@@ -48,25 +47,8 @@ class ChatPromptWidget(BaseWidget):
     def current_generator(self):
         return self.app.settings["current_llm_generator"]
     
-    def __init__(self, *args, **kwargs):
-        super().__init__(*args, **kwargs)
-        self.add_message_signal.connect(self.add_bot_message_to_conversation)
-
-    def initialize(self):
-        self.app.token_signal.connect(self.handle_token_signal)
-        self.app.message_var.my_signal.connect(self.message_handler)
-
-        # handle return pressed on QPlainTextEdit
-        # there is no returnPressed signal for QPlainTextEdit
-        # so we have to use the keyPressEvent
-        self.promptKeyPressEvent = self.ui.prompt.keyPressEvent
-        self.ui.prompt.keyPressEvent = self.handle_key_press
-
-        self.ui.prompt.textChanged.connect(self.prompt_text_changed)
-        self.ui.conversation.hide()
-        self.ui.chat_container.show()
-    
-    def handle_token_signal(self, val):
+    @pyqtSlot(str)
+    def handle_token_signal(self, val: str):
         if val != "[END]":
             text = self.ui.conversation.toPlainText()
             text += val
@@ -76,6 +58,28 @@ class ChatPromptWidget(BaseWidget):
             self.generating = False
             self.enable_send_button()
 
+    @pyqtSlot(Message, bool, bool, bool)
+    def add_bot_message_to_conversation(self, message_object, is_bot, first_message=True, last_message=True):
+        if first_message:
+            self.stop_progress_bar()
+
+        self.add_message_to_conversation(message_object, is_bot, first_message, last_message)
+
+        if last_message:
+            self.generating = False
+            self.enable_send_button()
+
+    @pyqtSlot()
+    def action_button_clicked_clear_conversation(self):
+        self.conversation_history = []
+        self.ui.conversation.setText("")
+        self.app.client.message = {
+            "llm_request": True,
+            "request_data": {
+                "request_type": "clear_conversation",
+            }
+        }
+
     @pyqtSlot(dict)
     def message_handler(self, response: dict):
         try:
@@ -84,112 +88,10 @@ class ChatPromptWidget(BaseWidget):
             return
         message = response["message"]
 
-        if code == MessageCode.TEXT_GENERATED:
+        if code == MessageCode.ADD_TO_CONVERSATION:
             self.handle_text_generated(message)
-
-    def handle_text_generated(self, message):
-        # strip quotes from start and end of message
-        if not message:
-            return
-        if message.startswith("\""):
-            message = message[1:]
-        if message.endswith("\""):
-            message = message[:-1]
-        message_object = Message(
-            name=self.app.settings["llm_generator_settings"]["botname"],
-            message=message,
-            conversation=self.conversation
-        )
-        if self.app.settings["tts_settings"]["enable_tts"]:
-            if not self.app.settings["tts_settings"]["use_bark"]:
-                # split on sentence enders
-                sentence_enders = [".", "?", "!", "\n"]
-                text = message_object.message
-                sentences = []
-                # split text into sentences
-                current_sentence = ""
-                for char in text:
-                    current_sentence += char
-                    if char in sentence_enders:
-                        sentences.append(current_sentence)
-                        current_sentence = ""
-                if current_sentence != "":
-                    sentences.append(current_sentence)
-                self.send_tts_request(message_object, sentences)
-            else:
-                self.send_tts_request(message_object, [message_object.message])
-        else:
-            
-
-            self.add_bot_message_to_conversation(message_object, is_bot=True)
     
-    def send_tts_request(self, message_object, sentences):
-        Logger.info("SENDING TTS REQUEST")
-        for index, sentence in enumerate(sentences):
-            sentence = sentence.strip()
-            self.app.client.message = dict(
-                tts_request=True,
-                request_data=dict(
-                    text=sentence,
-                    message_object=Message(
-                        name=message_object.name,
-                        message=sentence,
-                    ),
-                    is_bot=True,
-                    signal=self.add_message_signal,
-                    gender=self.app.settings["tts_settings"]["gender"],
-                    first_message=index == 0,
-                    last_message=index == len(sentences) - 1,
-                    tts_settings=self.app.settings["tts_settings"]
-                )
-            )
-
-    def prompt_text_changed(self):
-        self.prompt = self.ui.prompt.toPlainText()
-
-    def clear_prompt(self):
-        self.ui.prompt.setPlainText("")
-
-    def start_progress_bar(self):
-        self.ui.progressBar.setRange(0, 0)
-        self.ui.progressBar.setValue(0)
-
-    def stop_progress_bar(self):
-        self.ui.progressBar.setRange(0, 1)
-        self.ui.progressBar.setValue(1)
-        self.ui.progressBar.reset()
-
-    def disable_send_button(self):
-        self.ui.send_button.setEnabled(False)
-
-    def enable_send_button(self):
-        self.ui.send_button.setEnabled(True)
-
-    def response_text_changed(self):
-        pass
-
-    def parent(self):
-        return self.app.ui.llm_widget
-
-    promptKeyPressEvent = None
-
-    def handle_key_press(self, event):
-        # check if return pressed. if shift return pressed call insert_newline
-        # else call action_butjton_clicked_send()
-        if event.key() == Qt.Key.Key_Return:
-            if event.modifiers() != Qt.KeyboardModifier.ShiftModifier:
-                self.action_button_clicked_send()
-                return
-        # handle the keypress normally. There is no super() call because
-        # we are overriding the keyPressEvent
-        self.promptKeyPressEvent(event)
-
-    def insert_newline(self):
-        self.ui.prompt.insertPlainText("\n")
-
-    def respond_to_voice(self, heard):
-        self.action_button_clicked_send(prompt_override=heard)
-
+    @pyqtSlot()
     def action_button_clicked_send(self, image_override=None, prompt_override=None, callback=None, generator_name="casuallm"):
         if self.generating:
             Logger.warning("Already generating")
@@ -271,6 +173,79 @@ class ChatPromptWidget(BaseWidget):
         self.clear_prompt()
         self.start_progress_bar()
     
+    def __init__(self, *args, **kwargs):
+        super().__init__(*args, **kwargs)
+        self.add_message_signal.connect(self.add_bot_message_to_conversation)
+
+    def initialize(self):
+        self.app.token_signal.connect(self.handle_token_signal)
+        self.app.message_var.my_signal.connect(self.message_handler)
+
+        # handle return pressed on QPlainTextEdit
+        # there is no returnPressed signal for QPlainTextEdit
+        # so we have to use the keyPressEvent
+        self.promptKeyPressEvent = self.ui.prompt.keyPressEvent
+        self.ui.prompt.keyPressEvent = self.handle_key_press
+
+        self.ui.prompt.textChanged.connect(self.prompt_text_changed)
+        self.ui.conversation.hide()
+        self.ui.chat_container.show()
+
+    def handle_text_generated(self, message):
+        name = message["name"]
+        self.add_message_signal.emit(Message(
+            name=name,
+            message=message["text"],
+            conversation=self.conversation
+        ), 
+        message["is_bot"], 
+        message["first_message"],
+        message["last_message"])
+
+    def prompt_text_changed(self):
+        self.prompt = self.ui.prompt.toPlainText()
+
+    def clear_prompt(self):
+        self.ui.prompt.setPlainText("")
+
+    def start_progress_bar(self):
+        self.ui.progressBar.setRange(0, 0)
+        self.ui.progressBar.setValue(0)
+
+    def stop_progress_bar(self):
+        self.ui.progressBar.setRange(0, 1)
+        self.ui.progressBar.setValue(1)
+        self.ui.progressBar.reset()
+
+    def disable_send_button(self):
+        self.ui.send_button.setEnabled(False)
+
+    def enable_send_button(self):
+        self.ui.send_button.setEnabled(True)
+
+    def response_text_changed(self):
+        pass
+
+    def parent(self):
+        return self.app.ui.llm_widget
+
+    def handle_key_press(self, event):
+        # check if return pressed. if shift return pressed call insert_newline
+        # else call action_butjton_clicked_send()
+        if event.key() == Qt.Key.Key_Return:
+            if event.modifiers() != Qt.KeyboardModifier.ShiftModifier:
+                self.action_button_clicked_send()
+                return
+        # handle the keypress normally. There is no super() call because
+        # we are overriding the keyPressEvent
+        self.promptKeyPressEvent(event)
+
+    def insert_newline(self):
+        self.ui.prompt.insertPlainText("\n")
+
+    def respond_to_voice(self, heard):
+        self.action_button_clicked_send(prompt_override=heard)
+
     def parse_template(self, template):
         system_instructions = template.system_instructions
         model = template.model
@@ -279,7 +254,7 @@ class ChatPromptWidget(BaseWidget):
         if llm_category == "casuallm":
             if model == "mistralai/Mistral-7B-Instruct-v0.1":
                 return "\n".join((
-                    "<s>[INST] <<SYS>>",
+                    "[INST]<<SYS>>",
                     system_instructions,# + "\nYou must say everything in Japanese with Japanese characters.",
                     "<</SYS>>",
                     template,
@@ -294,17 +269,27 @@ class ChatPromptWidget(BaseWidget):
             generator_name="visualqa"
         )
     
-    @pyqtSlot(Message, bool, bool, bool)
-    def add_bot_message_to_conversation(self, message_object, is_bot, first_message=True, last_message=True):
-        self.stop_progress_bar()
-        self.add_message_to_conversation(message_object, is_bot, first_message, last_message)
-        self.generating = False
-        self.enable_send_button()
-    
     def add_message_to_conversation(self, message_object, is_bot, first_message=True, last_message=True):
-        # remove spacer from self.ui.chat_container
-        widget = MessageWidget(message=message_object, is_bot=is_bot)
+        # If we are at the start of a message, create a widget to hold and display the message
+        # message = ""
+        # if first_message:
+        #     message = f"{message_object.name} Says: \""
+        # message += message_object.message
+        # if last_message:
+        #     message += "\""
+        # message_object.message = message
 
+        if not first_message:
+            # get the last widget from the scrollAreaWidgetContents.layout()
+            # and append the message to it. must be a MessageWidget object
+            # must start at the end of the layout and work backwards
+            for i in range(self.ui.scrollAreaWidgetContents.layout().count()-1, -1, -1):
+                current_widget = self.ui.scrollAreaWidgetContents.layout().itemAt(i).widget()
+                if isinstance(current_widget, MessageWidget):
+                    current_widget.update_message(message_object.message)
+                    return
+
+        widget = MessageWidget(message=message_object, is_bot=is_bot)
         if is_bot:
             # remove the last LoadingWidget from scrollAreaWidgetContents.layout()
             for i in range(self.ui.scrollAreaWidgetContents.layout().count()):
@@ -319,20 +304,6 @@ class ChatPromptWidget(BaseWidget):
         if self.spacer is not None:
             self.ui.scrollAreaWidgetContents.layout().removeItem(self.spacer)
 
-        message = ""
-        if first_message:
-            message = f"{message_object.name} Says: \""
-        message += message_object.message
-        if last_message:
-            message += "\""
-
-        if first_message:
-            self.conversation_history.append(message)
-        if not first_message:
-            self.conversation_history[-1] += message
-            self.ui.conversation.undo()
-        self.ui.conversation.append(self.conversation_history[-1])
-
         # if is not is_bot, then we want to add a widget that shows a
         # text icon
         if not is_bot:
@@ -345,16 +316,6 @@ class ChatPromptWidget(BaseWidget):
             self.spacer = QSpacerItem(20, 40, QSizePolicy.Policy.Minimum, QSizePolicy.Policy.Expanding)
         self.ui.scrollAreaWidgetContents.layout().addItem(self.spacer)
 
-    def action_button_clicked_clear_conversation(self):
-        self.conversation_history = []
-        self.ui.conversation.setText("")
-        self.app.client.message = {
-            "llm_request": True,
-            "request_data": {
-                "request_type": "clear_conversation",
-            }
-        }
-    
     def message_type_text_changed(self, val):
         with session_scope() as session:
             session.add(self.app.settings["llm_generator_settings"])

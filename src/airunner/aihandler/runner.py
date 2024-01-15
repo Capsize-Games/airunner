@@ -830,24 +830,7 @@ class SDRunner(
         self.send_message(message, MessageCode.ERROR)
 
     def send_message(self, message, code=None):
-        code = code or MessageCode.STATUS
-
-        if code == MessageCode.ERROR:
-            traceback.print_stack()
-            Logger.error(message)
-        elif code == MessageCode.WARNING:
-            Logger.warning(message)
-        elif code == MessageCode.STATUS:
-            Logger.info(message)
-
-        formatted_message = {
-            "code": code,
-            "message": message
-        }
-        if self._message_handler:
-            self._message_handler(formatted_message)
-        elif self._message_var:
-            self._message_var.emit(formatted_message)
+        self.engine.send_message(message, code)
 
     def error_handler(self, error):
         message = str(error)
