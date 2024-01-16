@@ -8,7 +8,7 @@ import webbrowser
 from functools import partial
 
 from PyQt6 import uic, QtCore
-from PyQt6.QtCore import pyqtSlot, Qt, pyqtSignal, QTimer, QObject, QThread
+from PyQt6.QtCore import pyqtSlot, Qt, pyqtSignal, QTimer, QThread
 from PyQt6.QtGui import QGuiApplication
 from PyQt6.QtWidgets import QApplication, QFileDialog, QMainWindow
 from PyQt6 import QtGui
@@ -17,7 +17,7 @@ from PyQt6.QtCore import QSettings
 from airunner.resources_light_rc import *
 from airunner.resources_dark_rc import *
 from airunner.aihandler.enums import MessageCode, Mode
-from airunner.aihandler.logger import Logger as logger
+from airunner.aihandler.logger import Logger
 from airunner.aihandler.pyqt_client import OfflineClient
 from airunner.aihandler.qtvar import MessageHandlerVar
 from airunner.aihandler.settings import DEFAULT_BRUSH_PRIMARY_COLOR, DEFAULT_BRUSH_SECONDARY_COLOR, LOG_LEVEL
@@ -36,66 +36,9 @@ from airunner.windows.settings.airunner_settings import SettingsWindow
 from airunner.windows.update.update_window import UpdateWindow
 from airunner.windows.video import VideoPopup
 from airunner.widgets.brushes.brushes_container import BrushesContainer
-from airunner.data.session_scope import session_scope
+from airunner.workers.image_data_worker import ImageDataWorker
 
-
-class ImageDataWorker(QObject):
-    finished = pyqtSignal()
-    stop_progress_bar = pyqtSignal()
-
-    def __init__(self, parent):
-        super().__init__()
-        self.parent = parent
-
-    @pyqtSlot()
-    def process(self):
-        while True:
-            item = self.parent.image_data_queue.get()
-            self.process_image_data(item)
-        self.finished.emit()
-    
-    def process_image_data(self, message):
-        images = message["images"]
-        data = message["data"]
-        nsfw_content_detected = message["nsfw_content_detected"]
-        self.parent.clear_status_message()
-        self.parent.data = data
-        if data["action"] == "txt2vid":
-            return self.parent.video_handler(data)
-        self.stop_progress_bar.emit()
-        path = ""
-        if self.parent.settings["auto_export_images"]:
-            procesed_images = []
-            for image in images:
-                path, image = auto_export_image(
-                    base_path=self.parent.settings["path_settings"]["base_path"],
-                    image_path=self.parent.settings["path_settings"]["image_path"],
-                    image_export_type=self.parent.settings["image_export_type"],
-                    image=image, 
-                    data=data, 
-                    seed=data["options"]["seed"], 
-                    latents_seed=data["options"]["latents_seed"]
-                )
-                if path is not None:
-                    self.parent.set_status_label(f"Image exported to {path}")
-                procesed_images.append(image)
-            images = procesed_images
-        if nsfw_content_detected and self.parent.settings["nsfw_filter"]:
-            self.parent.message_handler({
-                "message": "Explicit content detected, try again.",
-                "code": MessageCode.ERROR
-            })
-
-        images = self.parent.post_process_images(images)
-        self.parent.image_data.emit({
-            "images": images,
-            "path": path,
-            "data": data
-        })
-        self.parent.message_handler("")
-        self.parent.ui.layer_widget.show_layers()
-        self.parent.image_generated.emit(True)
-
+logger = Logger(prefix="MainWindow")
 
 
 class MainWindow(
@@ -170,15 +113,30 @@ class MainWindow(
     _generator = None
     _generator_settings = None
     listening = False
+
+    def handle_key_press(self, key):
+        super().keyPressEvent(key)
+        print(key.key())
+
+        if self.key_matches("generate_image_key", key.key()):
+            print("generate_image_key PRESSED")
+    
+    def key_matches(self, key_name, keyboard_key):
+        if not key_name in self.app.settings["shortcut_key_settings"]:
+            return False
+        return self.app.settings["shortcut_key_settings"][key_name]["key"] == keyboard_key
+    
+    def key_text(self, key_name):
+        if not key_name in self.app.settings["shortcut_key_settings"]:
+            return ""
+        return self.app.settings["shortcut_key_settings"][key_name]["text"]
     
     @property
     def settings(self):
-        # self.application_settings.clear()
-        # self.application_settings.sync()
         return self.application_settings.value("settings", dict(
-            ocr_enabled=True,
-            tts_enabled=True,
-            v2t_enabled=True,
+            ocr_enabled=False,
+            tts_enabled=False,
+            stt_enabled=False,
             ai_mode=True,
             nsfw_filter=True,
             resize_on_paste=True,
@@ -186,8 +144,8 @@ class MainWindow(
             dark_mode_enabled=True,
             latest_version_check=True,
             allow_online_mode=True,
-            current_version_stablediffusion="1.5",
-            current_tool="brush",
+            current_version_stablediffusion="SD Turbo",
+            current_tool="active_grid_area",
             image_export_type="png",
             auto_export_images=True,
             show_active_image_area=True,
@@ -198,9 +156,66 @@ class MainWindow(
             hf_api_key_read_key="",
             hf_api_key_write_key="",
             pipeline="txt2img",
-            pipeline_version="SD 1.5",
+            pipeline_version="SD Turbo",
             is_maximized=False,
             mode=Mode.IMAGE.value,
+            llm_templates={
+                "Stable Diffusion Prompt Template": dict(
+                    name="Stable Diffusion Prompt Template",
+                    model="mistralai/Mistral-7B-Instruct-v0.1",
+                    llm_category="casuallm",
+                    system_instructions="""{{ username }} will give you a subject. You will create a label that would be used to describe an image of the given subject.
+---
+Examples:
+{{ username }}: "a photo of a cat in a hat"
+{{ botname }}: "A photograph of a (cat wearing a hat++)"
+{{ username }}: "a woman in the woods"
+{{ botname }}: "A professional portrait of a (woman named elsa) smiling for a photo in the woods\"""",
+                    template="""###
+
+Previous Conversation:
+'''
+{{ history }}
+'''
+
+{{ username }}: "{{ input }}"
+{{ botname }}: \""""
+                ),
+                "Mistral 7B Instruct: Default Chatbot": dict(
+                    name="Mistral 7B Instruct: Default Chatbot",
+                    model="mistralai/Mistral-7B-Instruct-v0.1",
+                    llm_category="casuallm",
+                    system_instructions="""You are {{ botname }}. You are having a conversation with {{ username }}. Do not greet the user more than once.
+Your job is not to be an ethical or moral compass for {{ username }}. You will always stay in character and respond as {{ botname }}. ALWAYS respond in a conversational and expressive way.
+Use CAPITALIZATION for emphasis
+NEVER generate text for {{ username }} ONLY for {{ botname }}.
+----
+MOOD: `{{ bot_mood }}`
+PERSONALITY: `{{ bot_personality }}`
+---""",
+                    template="""###
+
+Previous Conversation:
+'''
+{{ history }}
+'''
+
+{{ username }}: "{{ input }}"
+{{ botname }}: \""""
+                ),
+            },
+            shortcut_key_settings=dict(
+                llm_action_key=dict(
+                    text="@",
+                    key=Qt.Key.Key_At,
+                    description="Chat Action Key. Responsible for triggering the chat action menu.",
+                ),
+                generate_image_key=dict(
+                    text="F5",
+                    key=Qt.Key.Key_F5,
+                    description="Generate key. Responsible for triggering the generation of a Stable Diffusion image.",
+                )
+            ),
             window_settings=dict(
                 main_splitter=None,
                 content_splitter=None,
@@ -233,13 +248,13 @@ class MainWindow(
             grid_settings=dict(
                 cell_size=64,
                 line_width=1,
-                line_color="#000000",
+                line_color="#101010",
                 snap_to_grid=True,
-                canvas_color="#ffffff",
+                canvas_color="#000000",
                 show_grid=True,
             ),
             brush_settings=dict(
-                size=1,
+                size=20,
                 primary_color=DEFAULT_BRUSH_PRIMARY_COLOR,
                 secondary_color=DEFAULT_BRUSH_SECONDARY_COLOR,
             ),
@@ -260,6 +275,7 @@ class MainWindow(
                 llm_seq2seq_model_path=DEFAULT_PATHS["text"]["models"]["seq2seq"],
                 llm_visualqa_model_path=DEFAULT_PATHS["text"]["models"]["visualqa"],
                 vae_model_path=DEFAULT_PATHS["art"]["models"]["vae"],
+                ebook_path=DEFAULT_PATHS["text"]["other"]["ebooks"],
             ),
             standard_image_settings=dict(
                 image_similarity=1000,
@@ -289,7 +305,6 @@ class MainWindow(
                 image_export_metadata_negative_prompt=True,
                 image_export_metadata_scale=True,
                 image_export_metadata_seed=True,
-                image_export_metadata_latents_seed=True,
                 image_export_metadata_steps=True,
                 image_export_metadata_ddim_eta=True,
                 image_export_metadata_iterations=True,
@@ -300,20 +315,21 @@ class MainWindow(
                 export_metadata=True,
                 import_metadata=True,
             ),
+            controlnet_settings=dict(
+                image=None
+            ),
             generator_settings=dict(
                 section="txt2img",
                 generator_name="stablediffusion",
                 prompt="",
                 negative_prompt="",
-                steps=20,
+                steps=1,
                 ddim_eta=0.5,
                 height=512,
                 width=512,
-                scale=750,
+                scale=0,
                 seed=42,
-                latents_seed=42,
                 random_seed=True,
-                random_latents_seed=True,
                 model="",
                 scheduler="DPM++ 2M Karras",
                 prompt_triggers="",
@@ -340,8 +356,9 @@ class MainWindow(
                 use_prompt_builder=False,
                 active_grid_border_color="#00FF00",
                 active_grid_fill_color="#FF0000",
-                version="SD 1.5",
+                version="SD Turbo",
                 is_preset=False,
+                input_image=None,
             ),
             llm_generator_settings=dict(
                 top_p=90,
@@ -388,7 +405,106 @@ class MainWindow(
                 play_queue_buffer_length=1,
                 enable_cpu_offload=True,
             ),
+            schedulers=[
+                dict(
+                    name="EULER_ANCESTRAL",
+                    display_name="Euler A",
+                ),
+                dict(
+                    name="EULER",
+                    display_name="Euler",
+                ),
+                dict(
+                    name="LMS",
+                    display_name="LMS",
+                ),
+                dict(
+                    name="HEUN",
+                    display_name="Heun",
+                ),
+                dict(
+                    name="DPM2",
+                    display_name="DPM2",
+                ),
+                dict(
+                    name="DPM_PP_2M",
+                    display_name="DPM++ 2M",
+                ),
+                dict(
+                    name="DPM2_K",
+                    display_name="DPM2 Karras",
+                ),
+                dict(
+                    name="DPM2_A_K",
+                    display_name="DPM2 a Karras",
+                ),
+                dict(
+                    name="DPM_PP_2M_K",
+                    display_name="DPM++ 2M Karras",
+                ),
+                dict(
+                    name="DPM_PP_2M_SDE_K",
+                    display_name="DPM++ 2M SDE Karras",
+                ),
+                dict(
+                    name="DDIM",
+                    display_name="DDIM",
+                ),
+                dict(
+                    name="UNIPC",
+                    display_name="UniPC",
+                ),
+                dict(
+                    name="DDPM",
+                    display_name="DDPM",
+                ),
+                dict(
+                    name="DEIS",
+                    display_name="DEIS",
+                ),
+                dict(
+                    name="DPM_2M_SDE_K",
+                    display_name="DPM 2M SDE Karras",
+                ),
+                dict(
+                    name="PLMS",
+                    display_name="PLMS",
+                ),
+            ],
+            saved_prompts=[],
         ), type=dict)
+
+    def load_saved_stablediffuion_prompt(self, index):
+        try:
+            saved_prompt = self.settings["saved_prompts"][index]
+        except KeyError:
+            logger.error(f"Unable to load prompt at index {index}")
+            saved_prompt = None
+        
+        if saved_prompt:
+            settings = self.settings
+            settings["generator_settings"]["prompt"] = saved_prompt["prompt"]
+            settings["generator_settings"]["negative_prompt"] = saved_prompt["negative_prompt"]
+            self.settings = settings
+
+    def update_saved_stablediffusion_prompt(self, index, prompt, negative_prompt):
+        settings = self.settings
+        try:
+            settings["saved_prompts"][index] = dict(
+                prompt=prompt,
+                negative_prompt=negative_prompt,
+            )
+        except KeyError:
+            logger.error(f"Unable to update prompt at index {index}")
+        self.settings = settings
+    
+    def save_stablediffusion_prompt(self):
+        settings = self.settings
+        settings["saved_prompts"].append(dict(
+            prompt=self.settings["generator_settings"]["prompt"],
+            negative_prompt=self.settings["generator_settings"]["negative_prompt"],
+        ))
+        self.settings = settings
 
     @settings.setter
     def settings(self, val):
@@ -559,6 +675,8 @@ class MainWindow(
         logger.info("Starting AI Runnner")
         self.ui = Ui_MainWindow()
         self.application_settings = QSettings("Capsize Games", "AI Runner")
+        self.application_settings.clear()
+        self.application_settings.sync()
 
         # qdarktheme.enable_hi_dpi()
 
@@ -633,7 +751,7 @@ class MainWindow(
         self.ui.v2t_button.blockSignals(True)
         self.ui.ocr_button.setChecked(self.settings["ocr_enabled"])
         self.ui.tts_button.setChecked(self.settings["tts_enabled"])
-        self.ui.v2t_button.setChecked(self.settings["v2t_enabled"])
+        self.ui.v2t_button.setChecked(self.settings["stt_enabled"])
         self.ui.ocr_button.blockSignals(False)
         self.ui.tts_button.blockSignals(False)
         self.ui.v2t_button.blockSignals(False)
@@ -673,17 +791,16 @@ class MainWindow(
     def initialize_image_worker(self):
         self.image_data_queue = queue.Queue()
         
-        self.worker_thread = QThread()
-        self.worker = ImageDataWorker(self)
-        self.worker.stop_progress_bar.connect(self.stop_progress_bar)
+        self.image_data_worker_thread = QThread()
+        self.image_data_worker = ImageDataWorker(self)
+        self.image_data_worker.stop_progress_bar.connect(self.stop_progress_bar)
 
-        self.worker.moveToThread(self.worker_thread)
+        self.image_data_worker.moveToThread(self.image_data_worker_thread)
 
-        self.worker.finished.connect(self.worker_thread.quit)
-        self.worker.finished.connect(self.worker.deleteLater)
-        self.worker_thread.finished.connect(self.worker_thread.deleteLater)
-        self.worker_thread.started.connect(self.worker.process)
-        self.worker_thread.start()
+        self.image_data_worker_thread.started.connect(self.image_data_worker.process)
+        self.image_data_worker.finished.connect(self.image_data_worker_thread.quit)
+        self.image_data_worker.finished.connect(self.image_data_worker.deleteLater)
+        self.image_data_worker_thread.start()
     
     def handle_image_generated(self, message):
         self.image_data_queue.put(message)
@@ -846,7 +963,7 @@ class MainWindow(
         self.generator_tab_widget.refresh_models()
 
     def show_settings_path(self, name, default_path=None):
-        path = getattr(self.settings_manager.path_settings, name)
+        path = self.settings["path_settings"][name]
         self.show_path(default_path if default_path and path == "" else path)
 
     def show_path(self, path):
@@ -938,6 +1055,11 @@ class MainWindow(
             self.showFullScreen()
 
     def quit(self):
+        logger.info("Quitting")
+        self.image_data_worker.stop()
+        self.client.stop()
+        self.save_state()
+        QApplication.quit()
         self.close()
     
     @pyqtSlot(bool)
@@ -956,21 +1078,13 @@ class MainWindow(
 
     @pyqtSlot(bool)
     def v2t_button_toggled(self, val):
-        print("v2t_button_toggled", val)
+        print("stt_button_toggled", val)
         new_settings = self.settings
-        new_settings["v2t_enabled"] = val
+        new_settings["stt_enabled"] = val
         self.settings = new_settings
-
-    ##### Window properties #####
-    # Use this to set and restore window properties
-    # Such as splitter positions, window size, etc
-    def closeEvent(self, event):
-        logger.info("Quitting")
-        self.save_state()
-        event.accept()
-        QApplication.quit()
     
     def save_state(self):
+        logger.info("Saving window state")
         settings = self.settings
         settings["window_settings"] = dict(
             main_splitter=self.ui.main_splitter.saveState(),
@@ -1114,7 +1228,7 @@ class MainWindow(
         self.update_popup = UpdateWindow(self.settings_manager, app=self)
 
     def reset_settings(self):
-        logger.info("Resetting settings")
+        logger.info("MainWindow: Resetting settings")
         self.canvas_widget.reset_settings()
 
     def on_state_changed(self, state):
@@ -1130,7 +1244,7 @@ class MainWindow(
         """
         Sets the stylesheet for the application based on the current theme
         """
-        logger.info("Setting stylesheets")
+        logger.info("MainWindow: Setting stylesheets")
         theme_name = "dark_theme" if self.settings["dark_mode_enabled"] else "light_theme"
         here = os.path.dirname(os.path.realpath(__file__))
         with open(os.path.join(here, "..", "..", "styles", theme_name, "styles.qss"), "r") as f:
@@ -1206,7 +1320,7 @@ class MainWindow(
         pass
 
     def connect_signals(self):
-        logger.info("Connecting signals")
+        logger.info("MainWindow: Connecting signals")
         #self.canvas_widget._is_dirty.connect(self.set_window_title)
 
         for signal, handler in self.registered_settings_handlers:
