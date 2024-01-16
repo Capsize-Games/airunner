@@ -5,7 +5,7 @@ from PyQt6.QtWidgets import QWidget
 
 from airunner.widgets.base_widget import BaseWidget
 from airunner.widgets.llm.templates.llm_settings_ui import Ui_llm_settings_widget
-from airunner.data.models import AIModel, LLMModelVersion, LLMPromptTemplate
+from airunner.data.models import AIModel
 from airunner.aihandler.logger import Logger
 from airunner.data.session_scope import session_scope
 
@@ -115,22 +115,20 @@ class LLMSettingsWidget(BaseWidget):
         ])
         self.ui.model.setCurrentText(self.current_generator)
 
-        with session_scope() as session:
-            templates = session.query(LLMPromptTemplate).filter(
-                LLMPromptTemplate.llm_category == self.current_generator
-            ).all()
-            names = [template.name for template in templates]
-            self.ui.prompt_template.blockSignals(True)
-            self.ui.prompt_template.clear()
-            self.ui.prompt_template.addItems(names)
-            template_name = self.app.settings["llm_generator_settings"]["prompt_template"]
-            if template_name == "":
-                template_name = names[0]
-                settings = self.app.settings
-                settings["llm_generator_settings"]["prompt_template"] = template_name
-                self.app.settings = settings
-            self.ui.prompt_template.setCurrentText(template_name)
-            self.ui.prompt_template.blockSignals(False)
+        templates = self.app.settings["llm_templates"]
+        names = [v["name"] for k, v in templates.items()]
+        
+        self.ui.prompt_template.blockSignals(True)
+        self.ui.prompt_template.clear()
+        self.ui.prompt_template.addItems(names)
+        template_name = self.app.settings["llm_generator_settings"]["prompt_template"]
+        if template_name == "":
+            template_name = names[0]
+            settings = self.app.settings
+            settings["llm_generator_settings"]["prompt_template"] = template_name
+            self.app.settings = settings
+        self.ui.prompt_template.setCurrentText(template_name)
+        self.ui.prompt_template.blockSignals(False)
 
         self.update_model_version_combobox()
         self.ui.model_version.setCurrentText(llm_generator_settings["model_version"])
