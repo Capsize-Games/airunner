@@ -356,6 +356,7 @@ Previous Conversation:
             layers=[],
             presets=[],
             lora=[],
+            embeddings=[],
         ), type=dict)
 
     @settings.setter
