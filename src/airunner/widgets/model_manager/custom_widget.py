@@ -69,8 +69,9 @@ class CustomModelWidget(BaseWidget):
                             model.category = "stablediffusion"
                             model.enabled = True
                             model.pipeline_action = key
-                            model.pipeline_class = self.app.settings_manager.get_pipeline_classname(
-                                model.pipeline_action, model.version, model.category)
+                            model.pipeline_class = self.app.get_pipeline_classname(
+                                model.pipeline_action, model.version, model.category
+                            )
 
                             if entry.is_file():  # ckpt or safetensors file
                                 if entry.name.endswith(".ckpt") or entry.name.endswith(".safetensors"):
@@ -136,7 +137,7 @@ class CustomModelWidget(BaseWidget):
                 version = model.version
                 category = model.category
                 pipeline_action = model.pipeline_action
-                pipeline_class = self.app.settings_manager.get_pipeline_classname(
+                pipeline_class = self.app.get_pipeline_classname(
                     pipeline_action, version, category)
 
                 model_widget = ModelWidget(
@@ -189,7 +190,7 @@ class CustomModelWidget(BaseWidget):
         self.ui.model_form.pipeline_action.setCurrentText(model.pipeline_action)
 
         self.ui.model_form.model_name.setText(model.name)
-        pipeline_class = self.app.settings_manager.get_pipeline_classname(
+        pipeline_class = self.app.get_pipeline_classname(
             model.pipeline_action, model.version, model.category)
         self.ui.model_form.pipeline_class_line_edit.setText(pipeline_class)
         self.ui.model_form.enabled.setChecked(True)

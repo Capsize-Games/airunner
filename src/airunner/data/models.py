@@ -123,18 +123,6 @@ class AIModel(BaseModel):
     model_type = Column(String, default="art")
 
 
-class Pipeline(BaseModel):
-    __tablename__ = 'pipelines'
-
-    id = Column(Integer, primary_key=True)
-    category = Column(String)
-    version = Column(String)
-    pipeline_action = Column(String)
-    classname = Column(String)
-    singlefile_classname = Column(String)
-    default = Column(Boolean, default=True)
-    
-
 class ImageFilter(BaseModel):
     __tablename__ = 'image_filter'
 

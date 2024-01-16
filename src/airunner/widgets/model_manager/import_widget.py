@@ -61,7 +61,7 @@ class ImportWidget(BaseWidget):
         if "inpaint" in model_version_name:
             pipeline_action = "outpaint"
         diffuser_model_version = model_version["baseModel"]
-        pipeline_class = self.app.settings_manager.get_pipeline_classname(pipeline_action, diffuser_model_version, category)
+        pipeline_class = self.app.get_pipeline_classname(pipeline_action, diffuser_model_version, category)
         diffuser_model_versions = self.app.settings_manager.model_versions
         model_type = model_data["type"]
         file_path = self.download_path(file, diffuser_model_version, pipeline_action, model_type)  # path is the download path of the model
@@ -246,7 +246,7 @@ class ImportWidget(BaseWidget):
         if "inpaint" in model_version_name:
             pipeline_action = "outpaint"
         diffuser_model_version = model_version["baseModel"]
-        pipeline_class = self.app.settings_manager.get_pipeline_classname(pipeline_action, diffuser_model_version, category)
+        pipeline_class = self.app.get_pipeline_classname(pipeline_action, diffuser_model_version, category)
         diffuser_model_versions = self.app.settings_manager.model_versions
         path = self.download_path(file, diffuser_model_version, pipeline_action, self.current_model_data["type"])  # path is the download path of the model
 

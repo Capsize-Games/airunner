@@ -1,8 +1,7 @@
 from airunner.data.bootstrap.controlnet_bootstrap_data import controlnet_bootstrap_data
 from airunner.data.bootstrap.imagefilter_bootstrap_data import imagefilter_bootstrap_data
 from airunner.data.bootstrap.model_bootstrap_data import model_bootstrap_data
-from airunner.data.bootstrap.pipeline_bootstrap_data import pipeline_bootstrap_data
-from airunner.data.models import ControlnetModel, Pipeline, \
+from airunner.data.models import ControlnetModel, \
     AIModel, ImageFilter, ImageFilterValue
 from airunner.data.session_scope import session_scope, engine
 from alembic.config import Config
@@ -31,12 +30,6 @@ def prepare_database():
             # Add AIModel objects
             for model_data in model_bootstrap_data:
                 my_session.add(AIModel(**model_data))
-            
-
-
-            # Add Pipeline objects
-            for pipeline_data in pipeline_bootstrap_data:
-                my_session.add(Pipeline(**pipeline_data))
             
             
 

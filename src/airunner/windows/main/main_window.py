@@ -41,6 +41,7 @@ from airunner.windows.main.settings_mixin import SettingsMixin
 from airunner.windows.main.layer_mixin import LayerMixin
 from airunner.windows.main.lora_mixin import LoraMixin
 from airunner.windows.main.embedding_mixin import EmbeddingMixin
+from airunner.windows.main.pipeline_mixin import PipelineMixin
 
 
 class MainWindow(
@@ -48,7 +49,8 @@ class MainWindow(
     SettingsMixin,
     LayerMixin,
     LoraMixin,
-    EmbeddingMixin
+    EmbeddingMixin,
+    PipelineMixin,
 ):
     logger = Logger(prefix="MainWindow")
     # signals
