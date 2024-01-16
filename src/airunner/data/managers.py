@@ -139,19 +139,6 @@ class SettingsManager(QObject):
             models.filter_by(pipeline_action=pipeline_action).all()
             yield models
     
-    def get_pipeline_classname(self, pipeline_action, version, category):
-        from airunner.data.models import Pipeline
-        try:
-            with session_scope() as session:
-                return session.query(Pipeline).filter_by(
-                    category=category,
-                    pipeline_action=pipeline_action,
-                    version=version
-                ).first().classname
-        except AttributeError:
-            self.logger.error(f"Unable to find pipeline classname for {pipeline_action} {version} {category}")
-            return None
-
     def get_value(self, key):
         keys = key.split('.')
         obj = self
