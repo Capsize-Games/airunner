@@ -75,11 +75,9 @@ class FilterBase:
         pass
 
     def load_image_filter_data(self):
-        print("LOAD FILTER DATA")
         with self.parent.settings_manager.image_filter_by_name(self.image_filter_model_name) as image_filter:
             for filter_value in image_filter.image_filter_values:
                 self._filter_values[filter_value.name] = filter_value
-        print(self._filter_values)
 
     def show(self):
         self.filter_window = uic.loadUi(os.path.join(f"widgets/base_filter/templates/base_filter.ui"))
