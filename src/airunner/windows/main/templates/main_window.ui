@@ -1328,6 +1328,7 @@
     <addaction name="actionNew"/>
     <addaction name="separator"/>
     <addaction name="actionQuit"/>
+    <addaction name="actionReset_Settings_2"/>
    </widget>
    <widget class="QMenu" name="menuEdit">
     <property name="title">
@@ -2002,6 +2003,11 @@
   <action name="actionLLM_beta">
    <property name="text">
     <string>LLM (beta)</string>
+   </property>
+  </action>
+  <action name="actionReset_Settings_2">
+   <property name="text">
+    <string>Reset Settings</string>
    </property>
   </action>
  </widget>
@@ -2918,6 +2924,22 @@
     </hint>
    </hints>
   </connection>
+  <connection>
+   <sender>actionReset_Settings_2</sender>
+   <signal>triggered()</signal>
+   <receiver>MainWindow</receiver>
+   <slot>action_reset_settings()</slot>
+   <hints>
+    <hint type="sourcelabel">
+     <x>-1</x>
+     <y>-1</y>
+    </hint>
+    <hint type="destinationlabel">
+     <x>600</x>
+     <y>592</y>
+    </hint>
+   </hints>
+  </connection>
  </connections>
  <designerdata>
   <property name="gridDeltaX">
@@ -3012,5 +3034,6 @@
   <slot>tts_button_toggled(bool)</slot>
   <slot>v2t_button_toggled(bool)</slot>
   <slot>ocr_button_toggled(bool)</slot>
+  <slot>action_reset_settings()</slot>
  </slots>
 </ui>

@@ -739,9 +739,12 @@ class Ui_MainWindow(object):
         self.actionStandard_Batches.setObjectName("actionStandard_Batches")
         self.actionLLM_beta = QtGui.QAction(parent=MainWindow)
         self.actionLLM_beta.setObjectName("actionLLM_beta")
+        self.actionReset_Settings_2 = QtGui.QAction(parent=MainWindow)
+        self.actionReset_Settings_2.setObjectName("actionReset_Settings_2")
         self.menuFile.addAction(self.actionNew)
         self.menuFile.addSeparator()
         self.menuFile.addAction(self.actionQuit)
+        self.menuFile.addAction(self.actionReset_Settings_2)
         self.menuEdit.addSeparator()
         self.menuEdit.addAction(self.actionUndo)
         self.menuEdit.addAction(self.actionRedo)
@@ -847,6 +850,7 @@ class Ui_MainWindow(object):
         self.tts_button.toggled['bool'].connect(MainWindow.tts_button_toggled) # type: ignore
         self.v2t_button.toggled['bool'].connect(MainWindow.v2t_button_toggled) # type: ignore
         self.ocr_button.toggled['bool'].connect(MainWindow.ocr_button_toggled) # type: ignore
+        self.actionReset_Settings_2.triggered.connect(MainWindow.action_reset_settings) # type: ignore
         QtCore.QMetaObject.connectSlotsByName(MainWindow)
 
     def retranslateUi(self, MainWindow):
@@ -999,6 +1003,7 @@ class Ui_MainWindow(object):
         self.actionDeterministic_Batches.setText(_translate("MainWindow", "Deterministic Batches"))
         self.actionStandard_Batches.setText(_translate("MainWindow", "Standard Batches"))
         self.actionLLM_beta.setText(_translate("MainWindow", "LLM (beta)"))
+        self.actionReset_Settings_2.setText(_translate("MainWindow", "Reset Settings"))
 from airunner.widgets.active_grid_settings.active_grid_settings_widget import ActiveGridSettingsWidget
 from airunner.widgets.brush.brush_container_widget import BrushContainerWidget
 from airunner.widgets.canvas_plus.standard_image_widget import StandardImageWidget
