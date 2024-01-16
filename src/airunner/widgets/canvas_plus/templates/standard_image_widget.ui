@@ -92,7 +92,7 @@
              <property name="orientation">
               <enum>Qt::Vertical</enum>
              </property>
-             <widget class="QWidget" name="">
+             <widget class="QWidget" name="layoutWidget">
               <layout class="QVBoxLayout" name="Upscale">
                <item>
                 <widget class="QLabel" name="label">
@@ -202,7 +202,7 @@
                </item>
               </layout>
              </widget>
-             <widget class="QWidget" name="">
+             <widget class="QWidget" name="layoutWidget">
               <layout class="QVBoxLayout" name="Similar">
                <item>
                 <widget class="QLabel" name="label_2">
@@ -232,16 +232,29 @@
                 </widget>
                </item>
                <item>
-                <widget class="QWidget" name="advanced_settings" native="true">
-                 <layout class="QGridLayout" name="gridLayout_4">
-                  <item row="1" column="0">
-                   <widget class="ControlNetSettingsWidget" name="controlnet_settings" native="true"/>
-                  </item>
-                 </layout>
+                <widget class="QScrollArea" name="advanced_settings">
+                 <property name="widgetResizable">
+                  <bool>true</bool>
+                 </property>
+                 <widget class="QWidget" name="scrollAreaWidgetContents_2">
+                  <property name="geometry">
+                   <rect>
+                    <x>0</x>
+                    <y>0</y>
+                    <width>621</width>
+                    <height>95</height>
+                   </rect>
+                  </property>
+                  <layout class="QGridLayout" name="gridLayout_4">
+                   <item row="0" column="0">
+                    <widget class="InputImageSettingsWidget" name="input_image_widget" native="true"/>
+                   </item>
+                   <item row="1" column="0">
+                    <widget class="ControlNetSettingsWidget" name="controlnet_settings" native="true"/>
+                   </item>
+                  </layout>
+                 </widget>
                 </widget>
-               </item>
-               <item>
-                <widget class="InputImageSettingsWidget" name="input_image_widget" native="true"/>
                </item>
                <item>
                 <layout class="QHBoxLayout" name="horizontalLayout_4">
@@ -316,9 +329,22 @@
                  </item>
                 </layout>
                </item>
+               <item>
+                <spacer name="verticalSpacer_2">
+                 <property name="orientation">
+                  <enum>Qt::Vertical</enum>
+                 </property>
+                 <property name="sizeHint" stdset="0">
+                  <size>
+                   <width>20</width>
+                   <height>40</height>
+                  </size>
+                 </property>
+                </spacer>
+               </item>
               </layout>
              </widget>
-             <widget class="QWidget" name="">
+             <widget class="QWidget" name="layoutWidget">
               <layout class="QVBoxLayout" name="verticalLayout_5">
                <item>
                 <widget class="QLabel" name="label_7">
@@ -766,7 +792,8 @@
          </widget>
          <widget class="QWidget" name="tab_4">
           <attribute name="icon">
-           <iconset theme="document-properties"/>
+           <iconset theme="document-properties">
+            <normaloff>.</normaloff>.</iconset>
           </attribute>
           <attribute name="title">
            <string>LLM</string>

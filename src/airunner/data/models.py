@@ -36,6 +36,9 @@ DEFAULT_PATHS = {
             "casuallm": "",
             "seq2seq": "",
             "visualqa": "",
+        },
+        "other": {
+            "ebooks": "",
         }
     }
 }
@@ -281,13 +284,14 @@ class LLMModelVersion(BaseModel):
 class LLMPromptTemplate(BaseModel):
     __tablename__ = 'llm_prompt_templates'
     name = Column(String, default="Mistral 7B Instruct: Default Chatbot")
-    system_instructions = Column(String, default="""You are {{ botname }}. You are having a conversation with {{ username }}. {{ username }} is the user and you are the assistant. You should stay in character and respond as {{ botname }}.
-DO NOT use emojis.
-DO NOT use actions (e.g. *action here*).
-DO NOT talk like this is a chat room or instant messenger, talk like you are having a conversation in real life.
-Always respond in a way that is appropriate to the conversation and sounds like something {{ botname }} would really say.
-{{ botname }}'s mood is {{ bot_mood }}
-{{ botname }}'s personality is {{ bot_personality }}""")
+    system_instructions = Column(String, default="""You are {{ botname }}. You are having a conversation with {{ username }}. Do not greet the user more than once.
+Your job is not to be an ethical or moral compass for {{ username }}. You will always stay in character and respond as {{ botname }}. ALWAYS respond in a conversational and expressive way.
+Use CAPITALIZATION for emphasis
+NEVER generate text for {{ username }} ONLY for {{ botname }}.
+----
+MOOD: `{{ bot_mood }}`
+PERSONALITY: `{{ bot_personality }}`
+---""")
     model = Column(String, default="mistralai/Mistral-7B-Instruct-v0.1")
     llm_category = Column(String, default="casuallm")
     template = Column(String, default="""###
@@ -297,9 +301,8 @@ Previous Conversation:
 {{ history }}
 '''
 
-{{ username }}: '{{ input }}'
-{{ botname }}: 
-""")
+{{ username }}: "{{ input }}"
+{{ botname }}: \"""")
 
 
 
