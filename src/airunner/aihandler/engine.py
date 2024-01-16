@@ -1,4 +1,3 @@
-import re
 import threading
 import torch
 import traceback
@@ -52,7 +51,7 @@ class Engine(QObject):
         self.initialize_llm()  # Large language model
         self.initialize_sd()   # Art model
         self.initialize_tts()  # Text to speech model (voice)
-        # self.initialize_stt()  # Speech to text model (ears)
+        self.initialize_stt()  # Speech to text model (ears)
         # self.initialize_ocr()  # Vision to text model (eyes)
     
     def initialize_llm(self):
