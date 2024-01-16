@@ -83,13 +83,14 @@
         <string/>
        </property>
        <property name="icon">
-        <iconset theme="user-trash"/>
+        <iconset theme="user-trash">
+         <normaloff>.</normaloff>.</iconset>
        </property>
       </widget>
      </item>
     </layout>
    </item>
-   <item row="2" column="0">
+   <item row="2" column="0" colspan="2">
     <widget class="QPlainTextEdit" name="prompt">
      <property name="sizePolicy">
       <sizepolicy hsizetype="Expanding" vsizetype="Maximum">
