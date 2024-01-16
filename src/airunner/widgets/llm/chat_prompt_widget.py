@@ -232,9 +232,29 @@ class ChatPromptWidget(BaseWidget):
             if event.modifiers() != Qt.KeyboardModifier.ShiftModifier:
                 self.action_button_clicked_send()
                 return
+        #else:
+            # check if the user has pressed the action key.
+            # if there are no other characters in self.ui.prompt then we
+            # display the action menu.
+            # key_name = "llm_action_key"
+            # if event.key() == self.app.key_matches(key_name, event.key()):
+            #     text = self.ui.prompt.toPlainText()
+            #     if not self.action_menu_displayed and (
+            #         len(text) == 0 or text == self.app.key_text(key_name)
+            #     ):
+            #         self.display_action_menu()
+
         # handle the keypress normally. There is no super() call because
         # we are overriding the keyPressEvent
         self.promptKeyPressEvent(event)
+
+    def hide_action_menu(self):
+        self.action_menu_displayed = False
+        self.ui.action_menu.hide()
+
+    def display_action_menu(self):
+        self.action_menu_displayed = True
+        self.ui.action_menu.show()
 
     def insert_newline(self):
         self.ui.prompt.insertPlainText("\n")
