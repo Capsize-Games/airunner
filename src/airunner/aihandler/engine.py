@@ -49,7 +49,6 @@ class Engine(QObject):
         self.message_var = kwargs.get("message_var", None)
         self.message_handler = kwargs.get("message_handler", None)
         self.clear_memory()
-
         self.initialize_llm()  # Large language model
         self.initialize_sd()   # Art model
         self.initialize_tts()  # Text to speech model (voice)
@@ -340,3 +339,7 @@ class Engine(QObject):
         torch.cuda.empty_cache()
         torch.cuda.synchronize()
         gc.collect()
+    
+    def clear_llm_history(self):
+        if self.llm:
+            self.llm.clear_history()

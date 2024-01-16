@@ -196,6 +196,9 @@ class LLM(QObject):
         else:
             Logger.error("Failed to load processor")
 
+    def clear_history(self):
+        self.history = []
+
     def unload_tokenizer(self):
         Logger.info("Unloading tokenizer")
         self.tokenizer = None
@@ -412,7 +415,8 @@ class LLM(QObject):
                     #history.append("<s>[INST]" + self.username + ': "'+ message["content"] +'"[/INST]')
                     history.append(self.username + ': "'+ message["content"] +'"')
                 else:
-                    history.append(self.botname + ': "'+ message["content"] +'"</s>')
+                    #history.append(self.botname + ': "'+ message["content"] +'"</s>')
+                    history.append(self.botname + ': "'+ message["content"])
             history = "\n".join(history)
             if history == "":
                 history = None
@@ -426,10 +430,6 @@ class LLM(QObject):
                 "bos_token": self.tokenizer.bos_token,
                 "bot_mood": self.bot_mood,
                 "bot_personality": self.bot_personality,
-                #"botmood": "angry. He hates " + self.username
-                #"botmood": "happy. He loves " + self.username
-                #"botmood": "Sad. He is very depressed"
-                #"botmood": "Tired. He is very sleepy"
             }
 
             self.history.append({
@@ -504,6 +504,14 @@ class LLM(QObject):
                     streamed_template = streamed_template.replace(rendered_template, "")
                 else:
                     self.engine.send_message(new_text, code=MessageCode.TEXT_STREAMED)
+                
+                if "</s>" in new_text:
+                    self.history.append({
+                        "role": "bot",
+                        "content": streamed_template.replace("</s>", "").strip()
+                    })
+                    streamed_template = ""
+                    replaced = False
         elif self.requested_generator_name == "visualqa":
             inputs = self.processor(
                 self.image, 
