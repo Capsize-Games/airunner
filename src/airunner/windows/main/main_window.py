@@ -1,9 +1,12 @@
+import base64
+import io
 import os
 import queue
 import pickle
 import platform
 import subprocess
 import sys
+import uuid
 import webbrowser
 from functools import partial
 
@@ -13,6 +16,9 @@ from PyQt6.QtGui import QGuiApplication
 from PyQt6.QtWidgets import QApplication, QFileDialog, QMainWindow
 from PyQt6 import QtGui
 from PyQt6.QtCore import QSettings
+from PyQt6.QtGui import QPixmap
+
+from PIL import Image
 
 from airunner.resources_light_rc import *
 from airunner.resources_dark_rc import *
@@ -38,12 +44,10 @@ from airunner.windows.video import VideoPopup
 from airunner.widgets.brushes.brushes_container import BrushesContainer
 from airunner.workers.image_data_worker import ImageDataWorker
 
-logger = Logger(prefix="MainWindow")
-
-
 class MainWindow(
     QMainWindow
 ):
+    logger = Logger(prefix="MainWindow")
     # signals
     show_grid_toggled = pyqtSignal(bool)
     cell_size_changed_signal = pyqtSignal(int)
@@ -122,18 +126,19 @@ class MainWindow(
             print("generate_image_key PRESSED")
     
     def key_matches(self, key_name, keyboard_key):
-        if not key_name in self.app.settings["shortcut_key_settings"]:
+        if not key_name in self.settings["shortcut_key_settings"]:
             return False
-        return self.app.settings["shortcut_key_settings"][key_name]["key"] == keyboard_key
+        return self.settings["shortcut_key_settings"][key_name]["key"] == keyboard_key
     
     def key_text(self, key_name):
-        if not key_name in self.app.settings["shortcut_key_settings"]:
+        if not key_name in self.settings["shortcut_key_settings"]:
             return ""
-        return self.app.settings["shortcut_key_settings"][key_name]["text"]
+        return self.settings["shortcut_key_settings"][key_name]["text"]
     
     @property
     def settings(self):
         return self.application_settings.value("settings", dict(
+            current_layer_index=0,
             ocr_enabled=False,
             tts_enabled=False,
             stt_enabled=False,
@@ -472,13 +477,186 @@ Previous Conversation:
                 ),
             ],
             saved_prompts=[],
+            layers=[]
         ), type=dict)
+    
+    def add_layer(self):
+        settings = self.settings
+        total_layers = len(self.settings['layers'])
+        name=f"Layer {total_layers + 1}"
+        settings["layers"].append(dict(
+            name=name,
+            visible=True,
+            opacity=100,
+            position=total_layers,
+            base_64_image="",
+            pos_x="",
+            pos_y="",
+            pivot_point_x=0,
+            pivot_point_y=0,
+            root_point_x=0,
+            root_point_y=0,
+            uuid=str(uuid.uuid4()),
+            pixmap=QPixmap(),
+        ))
+        self.settings = settings
+        return total_layers
+
+    def current_draggable_pixmap(self):
+        return self.current_layer()["pixmap"]
+
+    def delete_layer(self, index, layer):
+        self.logger.info(f"delete_layer requested index {index}")
+        layers = self.settings["layers"]
+        current_index = index
+        if layer and current_index is None:
+            for layer_index, layer_object in enumerate(layers):
+                if layer_object is layer:
+                    current_index = layer_index
+        self.logger.info(f"current_index={current_index}")
+        if current_index is None:
+            current_index = self.settings["current_layer_index"]
+        self.logger.info(f"Deleting layer {current_index}")
+        self.standard_image_panel.canvas_widget.delete_image()
+        try:
+            layer = layers.pop(current_index)
+            layer.layer_widget.deleteLater()
+        except IndexError as e:
+            self.logger.error(f"Could not delete layer {current_index}. Error: {e}")
+        if len(layers) == 0:
+            self.add_layer()
+            self.switch_layer(0)
+        settings = self.settings
+        settings["layers"] = layers
+        self.settings = settings
+        self.show_layers()
+        self.update()
+    
+    def clear_layers(self):
+        # delete all widgets from self.container.layout()
+        layers = self.settings["layers"]
+        for index, layer in enumerate(layers):
+            if not layer.layer_widget:
+                continue
+            layer.layer_widget.deleteLater()
+        self.add_layer()
+        settings = self.settings
+        settings["layers"] = layers
+        self.settings = settings
+        self.switch_layer(0)
+    
+    def set_current_layer(self, index):
+        self.logger.info(f"set_current_layer current_layer_index={index}")
+        self.current_layer_index = index
+        if not hasattr(self, "container"):
+            return
+        if self.canvas.container:
+            item = self.canvas.container.layout().itemAt(self.current_layer_index)
+            if item:
+                item.widget().frame.setStyleSheet(self.css("layer_normal_style"))
+        self.current_layer_index = index
+        if self.canvas.container:
+            item = self.canvas.container.layout().itemAt(self.current_layer_index)
+            if item:
+                item.widget().frame.setStyleSheet(self.css("layer_highlight_style"))
+
+    def move_layer_up(self):
+        layer = self.current_layer()
+        settings = self.settings
+        index = self.settings["current_layer_index"]
+        if index == 0:
+            return
+        layers = settings["layers"]
+        layers.remove(layer)
+        layers.insert(index - 1, layer)
+        self.settings["current_layer_index"] = index - 1
+        settings["layers"] = layers
+        self.settings = settings
+    
+    def move_layer_down(self):
+        layer = self.current_layer()
+        settings = self.settings
+        index = self.settings["current_layer_index"]
+        if index == len(settings["layers"]) - 1:
+            return
+        layers = settings["layers"]
+        layers.remove(layer)
+        layers.insert(index + 1, layer)
+        self.settings["current_layer_index"] = index + 1
+        settings["layers"] = layers
+        self.settings = settings
+    
+    def current_layer(self):
+        if len(self.settings["layers"]) == 0:
+            self.add_layer()
+        try:
+            return self.settings["layers"][self.settings["current_layer_index"]]
+        except IndexError:
+            self.logger.error(f"Unable to get current layer with index {self.settings['current_layer_index']}")
+
+    def update_current_layer(self, data):
+        settings = self.settings
+        layer = settings["layers"][settings["current_layer_index"]]
+        for k, v in data.items():
+            layer[k] = v
+        settings["layers"][settings["current_layer_index"]] = layer
+        self.settings = settings
+    
+    def update_layer(self, data):
+        uuid = data["uuid"]
+        settings = self.settings
+        for index, layer in enumerate(settings["layers"]):
+            if layer["uuid"] == uuid:
+                for k, v in data.items():
+                    layer[k] = v
+                settings["layers"][index] = layer
+                self.settings = settings
+                return
+        self.logger.error(f"Unable to find layer with uuid {uuid}")
+
+    
+    def switch_layer(self, layer_index):
+        settings = self.settings
+        settings["current_layer_index"] = layer_index
+        self.settings = settings
+
+    def delete_current_layer(self):
+        self.delete_layer(self.settings["current_layer_index"], None)
+
+    def get_image_from_current_layer(self):
+        layer = self.current_layer()
+        return self.get_image_from_layer(layer)
+
+    def get_image_from_layer(self, layer):
+        if layer["base_64_image"]:
+            decoded_image = base64.b64decode(layer["base_64_image"])
+            bytes_image = io.BytesIO(decoded_image)
+            # convert bytes to PIL iamge:
+            image = Image.open(bytes_image)
+            image = image.convert("RGBA")
+            return image
+        return None
+
+    def add_image_to_current_layer(self, value):
+        self.add_image_to_layer(self.settings["current_layer_index"], value)
+
+    def add_image_to_layer(self, layer_index, value):
+        if value:
+            buffered = io.BytesIO()
+            value.save(buffered, format="PNG")
+            base_64_image = base64.b64encode(buffered.getvalue())
+        else:
+            base_64_image = ""
+        
+        settings = self.settings
+        settings["layers"][layer_index]["base_64_image"] = base_64_image
+        self.settings = settings
 
     def load_saved_stablediffuion_prompt(self, index):
         try:
             saved_prompt = self.settings["saved_prompts"][index]
         except KeyError:
-            logger.error(f"Unable to load prompt at index {index}")
+            self.logger.error(f"Unable to load prompt at index {index}")
             saved_prompt = None
         
         if saved_prompt:
@@ -495,7 +673,7 @@ Previous Conversation:
                 negative_prompt=negative_prompt,
             )
         except KeyError:
-            logger.error(f"Unable to update prompt at index {index}")
+            self.logger.error(f"Unable to update prompt at index {index}")
         self.settings = settings
     
     def save_stablediffusion_prompt(self):
@@ -659,7 +837,7 @@ Previous Conversation:
         try:
             code = response["code"]
         except TypeError:
-            # logger.error(f"Invalid response message: {response}")
+            # self.logger.error(f"Invalid response message: {response}")
             # traceback.print_exc()
             return
         message = response["message"]
@@ -672,7 +850,7 @@ Previous Conversation:
         }.get(code, lambda *args: None)(message)
 
     def __init__(self, settings_manager, *args, **kwargs):
-        logger.info("Starting AI Runnner")
+        self.logger.info("Starting AI Runnner")
         self.ui = Ui_MainWindow()
         self.application_settings = QSettings("Capsize Games", "AI Runner")
         self.application_settings.clear()
@@ -703,7 +881,7 @@ Previous Conversation:
         self.register_keypress()
 
         if not self.testing:
-            logger.info("Executing window")
+            self.logger.info("Executing window")
             self.display()
         self.set_window_state()
         self.is_started = True
@@ -1055,7 +1233,7 @@ Previous Conversation:
             self.showFullScreen()
 
     def quit(self):
-        logger.info("Quitting")
+        self.logger.info("Quitting")
         self.image_data_worker.stop()
         self.client.stop()
         self.save_state()
@@ -1084,7 +1262,7 @@ Previous Conversation:
         self.settings = new_settings
     
     def save_state(self):
-        logger.info("Saving window state")
+        self.logger.info("Saving window state")
         settings = self.settings
         settings["window_settings"] = dict(
             main_splitter=self.ui.main_splitter.saveState(),
@@ -1228,7 +1406,7 @@ Previous Conversation:
         self.update_popup = UpdateWindow(self.settings_manager, app=self)
 
     def reset_settings(self):
-        logger.info("MainWindow: Resetting settings")
+        self.logger.info("MainWindow: Resetting settings")
         self.canvas_widget.reset_settings()
 
     def on_state_changed(self, state):
@@ -1244,7 +1422,7 @@ Previous Conversation:
         """
         Sets the stylesheet for the application based on the current theme
         """
-        logger.info("MainWindow: Setting stylesheets")
+        self.logger.info("MainWindow: Setting stylesheets")
         theme_name = "dark_theme" if self.settings["dark_mode_enabled"] else "light_theme"
         here = os.path.dirname(os.path.realpath(__file__))
         with open(os.path.join(here, "..", "..", "styles", theme_name, "styles.qss"), "r") as f:
@@ -1320,7 +1498,7 @@ Previous Conversation:
         pass
 
     def connect_signals(self):
-        logger.info("MainWindow: Connecting signals")
+        self.logger.info("MainWindow: Connecting signals")
         #self.canvas_widget._is_dirty.connect(self.set_window_title)
 
         for signal, handler in self.registered_settings_handlers:
@@ -1430,7 +1608,7 @@ Previous Conversation:
         self.set_window_title()
 
     def initialize_stable_diffusion(self):
-        logger.info("Initializing stable diffusion")
+        self.logger.info("Initializing stable diffusion")
         self.client = OfflineClient(
             app=self,
             message_var=self.message_var,
@@ -1441,7 +1619,7 @@ Previous Conversation:
         self.settings_manager.save_settings()
 
     def display(self):
-        logger.info("Displaying window")
+        self.logger.info("Displaying window")
         self.set_stylesheet()
         if not self.testing:
             self.setWindowFlags(self.windowFlags() | QtCore.Qt.WindowType.Window)
@@ -1560,7 +1738,7 @@ Previous Conversation:
         self.generator_tab_widget.set_progress_bar_value(tab_section, action, int(current * 100))
 
     def handle_unknown(self, message):
-        logger.error(f"Unknown message code: {message}")
+        self.logger.error(f"Unknown message code: {message}")
 
     def clear_status_message(self):
         self.set_status_label("")
