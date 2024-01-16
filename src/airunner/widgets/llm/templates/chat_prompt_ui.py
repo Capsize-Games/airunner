@@ -56,7 +56,7 @@ class Ui_chat_prompt(object):
         self.prompt.setMinimumSize(QtCore.QSize(0, 150))
         self.prompt.setMaximumSize(QtCore.QSize(16777215, 150))
         self.prompt.setObjectName("prompt")
-        self.gridLayout.addWidget(self.prompt, 2, 0, 1, 1)
+        self.gridLayout.addWidget(self.prompt, 2, 0, 1, 2)
 
         self.retranslateUi(chat_prompt)
         self.send_button.clicked.connect(chat_prompt.action_button_clicked_send) # type: ignore
