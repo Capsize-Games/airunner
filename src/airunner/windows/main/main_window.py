@@ -1,12 +1,9 @@
-import base64
-import io
 import os
 import queue
 import pickle
 import platform
 import subprocess
 import sys
-import uuid
 import webbrowser
 from functools import partial
 
@@ -16,9 +13,6 @@ from PyQt6.QtGui import QGuiApplication
 from PyQt6.QtWidgets import QApplication, QFileDialog, QMainWindow
 from PyQt6 import QtGui
 from PyQt6.QtCore import QSettings
-from PyQt6.QtGui import QPixmap
-
-from PIL import Image
 
 from airunner.resources_light_rc import *
 from airunner.resources_dark_rc import *
@@ -26,7 +20,7 @@ from airunner.aihandler.enums import MessageCode, Mode
 from airunner.aihandler.logger import Logger
 from airunner.aihandler.pyqt_client import OfflineClient
 from airunner.aihandler.qtvar import MessageHandlerVar
-from airunner.aihandler.settings import DEFAULT_BRUSH_PRIMARY_COLOR, DEFAULT_BRUSH_SECONDARY_COLOR, LOG_LEVEL
+from airunner.aihandler.settings import LOG_LEVEL
 from airunner.airunner_api import AIRunnerAPI
 from airunner.data.models import DEFAULT_PATHS
 from airunner.filters.windows.filter_base import FilterBase
@@ -43,9 +37,14 @@ from airunner.windows.update.update_window import UpdateWindow
 from airunner.windows.video import VideoPopup
 from airunner.widgets.brushes.brushes_container import BrushesContainer
 from airunner.workers.image_data_worker import ImageDataWorker
+from airunner.windows.main.settings_mixin import SettingsMixin
+from airunner.windows.main.layer_mixin import LayerMixin
+
 
 class MainWindow(
-    QMainWindow
+    QMainWindow,
+    SettingsMixin,
+    LayerMixin,
 ):
     logger = Logger(prefix="MainWindow")
     # signals
@@ -111,7 +110,6 @@ class MainWindow(
     load_image = pyqtSignal(str)
     load_image_object = pyqtSignal(object)
     window_resized_signal = pyqtSignal(object)
-    application_settings_changed_signal = pyqtSignal()
 
     generator = None
     _generator = None
@@ -135,385 +133,6 @@ class MainWindow(
             return ""
         return self.settings["shortcut_key_settings"][key_name]["text"]
     
-    @property
-    def settings(self):
-        return self.application_settings.value("settings", dict(
-            current_layer_index=0,
-            ocr_enabled=False,
-            tts_enabled=False,
-            stt_enabled=False,
-            ai_mode=True,
-            nsfw_filter=True,
-            resize_on_paste=True,
-            image_to_new_layer=True,
-            dark_mode_enabled=True,
-            latest_version_check=True,
-            allow_online_mode=True,
-            current_version_stablediffusion="SD Turbo",
-            current_tool="active_grid_area",
-            image_export_type="png",
-            auto_export_images=True,
-            show_active_image_area=True,
-            working_width=512,
-            working_height=512,
-            current_llm_generator="casuallm",
-            current_image_generator="stablediffusion",
-            hf_api_key_read_key="",
-            hf_api_key_write_key="",
-            pipeline="txt2img",
-            pipeline_version="SD Turbo",
-            is_maximized=False,
-            mode=Mode.IMAGE.value,
-            llm_templates={
-                "Stable Diffusion Prompt Template": dict(
-                    name="Stable Diffusion Prompt Template",
-                    model="mistralai/Mistral-7B-Instruct-v0.1",
-                    llm_category="casuallm",
-                    system_instructions="""{{ username }} will give you a subject. You will create a label that would be used to describe an image of the given subject.
----
-Examples:
-{{ username }}: "a photo of a cat in a hat"
-{{ botname }}: "A photograph of a (cat wearing a hat++)"
-{{ username }}: "a woman in the woods"
-{{ botname }}: "A professional portrait of a (woman named elsa) smiling for a photo in the woods\"""",
-                    template="""###
-
-Previous Conversation:
-'''
-{{ history }}
-'''
-
-{{ username }}: "{{ input }}"
-{{ botname }}: \""""
-                ),
-                "Mistral 7B Instruct: Default Chatbot": dict(
-                    name="Mistral 7B Instruct: Default Chatbot",
-                    model="mistralai/Mistral-7B-Instruct-v0.1",
-                    llm_category="casuallm",
-                    system_instructions="""You are {{ botname }}. You are having a conversation with {{ username }}. Do not greet the user more than once.
-Your job is not to be an ethical or moral compass for {{ username }}. You will always stay in character and respond as {{ botname }}. ALWAYS respond in a conversational and expressive way.
-Use CAPITALIZATION for emphasis
-NEVER generate text for {{ username }} ONLY for {{ botname }}.
-----
-MOOD: `{{ bot_mood }}`
-PERSONALITY: `{{ bot_personality }}`
----""",
-                    template="""###
-
-Previous Conversation:
-'''
-{{ history }}
-'''
-
-{{ username }}: "{{ input }}"
-{{ botname }}: \""""
-                ),
-            },
-            shortcut_key_settings=dict(
-                llm_action_key=dict(
-                    text="@",
-                    key=Qt.Key.Key_At,
-                    description="Chat Action Key. Responsible for triggering the chat action menu.",
-                ),
-                generate_image_key=dict(
-                    text="F5",
-                    key=Qt.Key.Key_F5,
-                    description="Generate key. Responsible for triggering the generation of a Stable Diffusion image.",
-                )
-            ),
-            window_settings=dict(
-                main_splitter=None,
-                content_splitter=None,
-                center_splitter=None,
-                canvas_splitter=None,
-                splitter=None,
-                mode_tab_widget_index=0,
-                tool_tab_widget_index=0,
-                center_tab_index=0,
-                generator_tab_index=0,
-                is_maximized=False,
-                is_fullscreen=False,
-            ),
-            memory_settings=dict(
-                use_last_channels=True,
-                use_attention_slicing=False,
-                use_tf32=False,
-                use_enable_vae_slicing=True,
-                use_accelerated_transformers=True,
-                use_tiled_vae=True,
-                enable_model_cpu_offload=False,
-                use_enable_sequential_cpu_offload=False,
-                use_cudnn_benchmark=True,
-                use_torch_compile=False,
-                use_tome_sd=True,
-                tome_sd_ratio=600,
-                move_unused_model_to_cpu=False,
-                unload_unused_models=True,
-            ),
-            grid_settings=dict(
-                cell_size=64,
-                line_width=1,
-                line_color="#101010",
-                snap_to_grid=True,
-                canvas_color="#000000",
-                show_grid=True,
-            ),
-            brush_settings=dict(
-                size=20,
-                primary_color=DEFAULT_BRUSH_PRIMARY_COLOR,
-                secondary_color=DEFAULT_BRUSH_SECONDARY_COLOR,
-            ),
-            path_settings=dict(
-                hf_cache_path=default_hf_cache_dir(),
-                base_path=BASE_PATH,
-                txt2img_model_path=DEFAULT_PATHS["art"]["models"]["txt2img"],
-                depth2img_model_path=DEFAULT_PATHS["art"]["models"]["depth2img"],
-                pix2pix_model_path=DEFAULT_PATHS["art"]["models"]["pix2pix"],
-                inpaint_model_path=DEFAULT_PATHS["art"]["models"]["inpaint"],
-                upscale_model_path=DEFAULT_PATHS["art"]["models"]["upscale"],
-                txt2vid_model_path=DEFAULT_PATHS["art"]["models"]["txt2vid"],
-                embeddings_model_path=DEFAULT_PATHS["art"]["models"]["embeddings"],
-                lora_model_path=DEFAULT_PATHS["art"]["models"]["lora"],
-                image_path=DEFAULT_PATHS["art"]["other"]["images"],
-                video_path=DEFAULT_PATHS["art"]["other"]["videos"],
-                llm_casuallm_model_path=DEFAULT_PATHS["text"]["models"]["casuallm"],
-                llm_seq2seq_model_path=DEFAULT_PATHS["text"]["models"]["seq2seq"],
-                llm_visualqa_model_path=DEFAULT_PATHS["text"]["models"]["visualqa"],
-                vae_model_path=DEFAULT_PATHS["art"]["models"]["vae"],
-                ebook_path=DEFAULT_PATHS["text"]["other"]["ebooks"],
-            ),
-            standard_image_settings=dict(
-                image_similarity=1000,
-                controlnet="Canny",
-                prompt="",
-                negative_prompt="",
-                upscale_model="RealESRGAN_x4plus",
-                face_enhance=False,
-            ),
-            active_grid_settings=dict(
-                enabled=False,
-                render_border=True,
-                render_fill=True,
-                border_opacity=50,
-                fill_opacity=50,
-                pos_x=0,
-                pos_y=0,
-                width=512,
-                height=512,
-            ),
-            canvas_settings=dict(
-                pos_x=0,
-                pos_y=0,
-            ),
-            metadata_settings=dict(
-                image_export_metadata_prompt=True,
-                image_export_metadata_negative_prompt=True,
-                image_export_metadata_scale=True,
-                image_export_metadata_seed=True,
-                image_export_metadata_steps=True,
-                image_export_metadata_ddim_eta=True,
-                image_export_metadata_iterations=True,
-                image_export_metadata_samples=True,
-                image_export_metadata_model=True,
-                image_export_metadata_model_branch=True,
-                image_export_metadata_scheduler=True,
-                export_metadata=True,
-                import_metadata=True,
-            ),
-            controlnet_settings=dict(
-                image=None
-            ),
-            generator_settings=dict(
-                section="txt2img",
-                generator_name="stablediffusion",
-                prompt="",
-                negative_prompt="",
-                steps=1,
-                ddim_eta=0.5,
-                height=512,
-                width=512,
-                scale=0,
-                seed=42,
-                random_seed=True,
-                model="",
-                scheduler="DPM++ 2M Karras",
-                prompt_triggers="",
-                strength=50,
-                image_guidance_scale=150,
-                n_samples=1,
-                controlnet="",
-                enable_controlnet=False,
-                enable_input_image=False,
-                controlnet_guidance_scale=50,
-                clip_skip=0,
-                variation=False,
-                input_image_use_imported_image=True,
-                input_image_use_grid_image=True,
-                input_image_recycle_grid_image=True,
-                input_image_mask_use_input_image=True,
-                input_image_mask_use_imported_image=False,
-                controlnet_input_image_link_to_input_image=True,
-                controlnet_input_image_use_imported_image=False,
-                controlnet_use_grid_image=False,
-                controlnet_recycle_grid_image=False,
-                controlnet_mask_link_input_image=False,
-                controlnet_mask_use_imported_image=False,
-                use_prompt_builder=False,
-                active_grid_border_color="#00FF00",
-                active_grid_fill_color="#FF0000",
-                version="SD Turbo",
-                is_preset=False,
-                input_image=None,
-            ),
-            llm_generator_settings=dict(
-                top_p=90,
-                max_length=50,
-                repetition_penalty=100,
-                min_length=10,
-                length_penalty=100,
-                num_beams=1,
-                ngram_size=0,
-                temperature=1000,
-                sequences=1,
-                top_k=0,
-                seed=0,
-                do_sample=False,
-                eta_cutoff=10,
-                early_stopping=True,
-                random_seed=False,
-                model_version="mistralai/Mistral-7B-Instruct-v0.1",
-                dtype="4bit",
-                use_gpu=True,
-                username="User",
-                botname="Bot",
-                message_type="chat",
-                bot_personality="happy. He loves {{ username }}",
-                bot_mood="",
-                prompt_template="Mistral 7B Instruct: Default Chatbot",
-                override_parameters=False
-            ),
-            tts_settings=dict(
-                language="English",
-                voice="v2/en_speaker_6",
-                gender="Male",
-                fine_temperature=80,
-                coarse_temperature=40,
-                semantic_temperature=80,
-                use_bark=False,
-                enable_tts=True,
-                use_cuda=True,
-                use_sentence_chunks=True,
-                use_word_chunks=False,
-                cuda_index=0,
-                word_chunks=1,
-                sentence_chunks=1,
-                play_queue_buffer_length=1,
-                enable_cpu_offload=True,
-            ),
-            schedulers=[
-                dict(
-                    name="EULER_ANCESTRAL",
-                    display_name="Euler A",
-                ),
-                dict(
-                    name="EULER",
-                    display_name="Euler",
-                ),
-                dict(
-                    name="LMS",
-                    display_name="LMS",
-                ),
-                dict(
-                    name="HEUN",
-                    display_name="Heun",
-                ),
-                dict(
-                    name="DPM2",
-                    display_name="DPM2",
-                ),
-                dict(
-                    name="DPM_PP_2M",
-                    display_name="DPM++ 2M",
-                ),
-                dict(
-                    name="DPM2_K",
-                    display_name="DPM2 Karras",
-                ),
-                dict(
-                    name="DPM2_A_K",
-                    display_name="DPM2 a Karras",
-                ),
-                dict(
-                    name="DPM_PP_2M_K",
-                    display_name="DPM++ 2M Karras",
-                ),
-                dict(
-                    name="DPM_PP_2M_SDE_K",
-                    display_name="DPM++ 2M SDE Karras",
-                ),
-                dict(
-                    name="DDIM",
-                    display_name="DDIM",
-                ),
-                dict(
-                    name="UNIPC",
-                    display_name="UniPC",
-                ),
-                dict(
-                    name="DDPM",
-                    display_name="DDPM",
-                ),
-                dict(
-                    name="DEIS",
-                    display_name="DEIS",
-                ),
-                dict(
-                    name="DPM_2M_SDE_K",
-                    display_name="DPM 2M SDE Karras",
-                ),
-                dict(
-                    name="PLMS",
-                    display_name="PLMS",
-                ),
-            ],
-            saved_prompts=[],
-            layers=[],
-            presets=[],
-            lora=[],
-        ), type=dict)
-
-    def add_lora(self, params):
-        settings = self.settings
-        name = params["name"]
-        path = params["path"]
-        # ensure we have a unique name and path combo
-        for index, lora in enumerate(settings["lora"]):
-            if not lora:
-                del settings["lora"][index]
-                continue
-            if lora["name"] == name and lora["path"] == path:
-                return
-        lora = dict(
-            name=params.get("name", ""),
-            path=params.get("path", ""),
-            scale=params.get("scale", 1),
-            enabled=params.get("enabled", True),
-            loaded=params.get("loaded", False),
-            trigger_word=params.get("trigger_word", ""),
-            version=params.get("version", "SD 1.5"),
-        )
-        settings["lora"].append(lora)
-        self.settings = settings
-        return lora
-    
-    def update_lora(self, lora):
-        settings = self.settings
-        for index, _lora in enumerate(self.settings["lora"]):
-            if _lora["name"] == lora["name"] and _lora["path"] == lora["path"]:
-                settings["lora"][index] = lora
-                self.settings = settings
-                return
-
     def add_preset(self, name, thumnail):
         settings = self.settings
         settings["presets"].append(dict(
@@ -522,178 +141,6 @@ Previous Conversation:
         ))
         self.settings = settings
     
-    def add_layer(self):
-        settings = self.settings
-        total_layers = len(self.settings['layers'])
-        name=f"Layer {total_layers + 1}"
-        settings["layers"].append(dict(
-            name=name,
-            visible=True,
-            opacity=100,
-            position=total_layers,
-            base_64_image="",
-            pos_x="",
-            pos_y="",
-            pivot_point_x=0,
-            pivot_point_y=0,
-            root_point_x=0,
-            root_point_y=0,
-            uuid=str(uuid.uuid4()),
-            pixmap=QPixmap(),
-        ))
-        self.settings = settings
-        return total_layers
-
-    def current_draggable_pixmap(self):
-        return self.current_layer()["pixmap"]
-
-    def delete_layer(self, index, layer):
-        self.logger.info(f"delete_layer requested index {index}")
-        layers = self.settings["layers"]
-        current_index = index
-        if layer and current_index is None:
-            for layer_index, layer_object in enumerate(layers):
-                if layer_object is layer:
-                    current_index = layer_index
-        self.logger.info(f"current_index={current_index}")
-        if current_index is None:
-            current_index = self.settings["current_layer_index"]
-        self.logger.info(f"Deleting layer {current_index}")
-        self.standard_image_panel.canvas_widget.delete_image()
-        try:
-            layer = layers.pop(current_index)
-            layer.layer_widget.deleteLater()
-        except IndexError as e:
-            self.logger.error(f"Could not delete layer {current_index}. Error: {e}")
-        if len(layers) == 0:
-            self.add_layer()
-            self.switch_layer(0)
-        settings = self.settings
-        settings["layers"] = layers
-        self.settings = settings
-        self.show_layers()
-        self.update()
-    
-    def clear_layers(self):
-        # delete all widgets from self.container.layout()
-        layers = self.settings["layers"]
-        for index, layer in enumerate(layers):
-            if not layer.layer_widget:
-                continue
-            layer.layer_widget.deleteLater()
-        self.add_layer()
-        settings = self.settings
-        settings["layers"] = layers
-        self.settings = settings
-        self.switch_layer(0)
-    
-    def set_current_layer(self, index):
-        self.logger.info(f"set_current_layer current_layer_index={index}")
-        self.current_layer_index = index
-        if not hasattr(self, "container"):
-            return
-        if self.canvas.container:
-            item = self.canvas.container.layout().itemAt(self.current_layer_index)
-            if item:
-                item.widget().frame.setStyleSheet(self.css("layer_normal_style"))
-        self.current_layer_index = index
-        if self.canvas.container:
-            item = self.canvas.container.layout().itemAt(self.current_layer_index)
-            if item:
-                item.widget().frame.setStyleSheet(self.css("layer_highlight_style"))
-
-    def move_layer_up(self):
-        layer = self.current_layer()
-        settings = self.settings
-        index = self.settings["current_layer_index"]
-        if index == 0:
-            return
-        layers = settings["layers"]
-        layers.remove(layer)
-        layers.insert(index - 1, layer)
-        self.settings["current_layer_index"] = index - 1
-        settings["layers"] = layers
-        self.settings = settings
-    
-    def move_layer_down(self):
-        layer = self.current_layer()
-        settings = self.settings
-        index = self.settings["current_layer_index"]
-        if index == len(settings["layers"]) - 1:
-            return
-        layers = settings["layers"]
-        layers.remove(layer)
-        layers.insert(index + 1, layer)
-        self.settings["current_layer_index"] = index + 1
-        settings["layers"] = layers
-        self.settings = settings
-    
-    def current_layer(self):
-        if len(self.settings["layers"]) == 0:
-            self.add_layer()
-        try:
-            return self.settings["layers"][self.settings["current_layer_index"]]
-        except IndexError:
-            self.logger.error(f"Unable to get current layer with index {self.settings['current_layer_index']}")
-
-    def update_current_layer(self, data):
-        settings = self.settings
-        layer = settings["layers"][settings["current_layer_index"]]
-        for k, v in data.items():
-            layer[k] = v
-        settings["layers"][settings["current_layer_index"]] = layer
-        self.settings = settings
-    
-    def update_layer(self, data):
-        uuid = data["uuid"]
-        settings = self.settings
-        for index, layer in enumerate(settings["layers"]):
-            if layer["uuid"] == uuid:
-                for k, v in data.items():
-                    layer[k] = v
-                settings["layers"][index] = layer
-                self.settings = settings
-                return
-        self.logger.error(f"Unable to find layer with uuid {uuid}")
-
-    
-    def switch_layer(self, layer_index):
-        settings = self.settings
-        settings["current_layer_index"] = layer_index
-        self.settings = settings
-
-    def delete_current_layer(self):
-        self.delete_layer(self.settings["current_layer_index"], None)
-
-    def get_image_from_current_layer(self):
-        layer = self.current_layer()
-        return self.get_image_from_layer(layer)
-
-    def get_image_from_layer(self, layer):
-        if layer["base_64_image"]:
-            decoded_image = base64.b64decode(layer["base_64_image"])
-            bytes_image = io.BytesIO(decoded_image)
-            # convert bytes to PIL iamge:
-            image = Image.open(bytes_image)
-            image = image.convert("RGBA")
-            return image
-        return None
-
-    def add_image_to_current_layer(self, value):
-        self.add_image_to_layer(self.settings["current_layer_index"], value)
-
-    def add_image_to_layer(self, layer_index, value):
-        if value:
-            buffered = io.BytesIO()
-            value.save(buffered, format="PNG")
-            base_64_image = base64.b64encode(buffered.getvalue())
-        else:
-            base_64_image = ""
-        
-        settings = self.settings
-        settings["layers"][layer_index]["base_64_image"] = base_64_image
-        self.settings = settings
-
     def load_saved_stablediffuion_prompt(self, index):
         try:
             saved_prompt = self.settings["saved_prompts"][index]
@@ -725,12 +172,6 @@ Previous Conversation:
             negative_prompt=self.settings["generator_settings"]["negative_prompt"],
         ))
         self.settings = settings
-
-    @settings.setter
-    def settings(self, val):
-        self.application_settings.setValue("settings", val)
-        self.application_settings.sync()
-        self.application_settings_changed_signal.emit()
 
     def reset_paths(self):
         settings = self.settings
@@ -976,11 +417,6 @@ Previous Conversation:
         self.ui.v2t_button.blockSignals(False)
         
         self.loaded.emit()
-    
-    def action_reset_settings(self):
-        self.application_settings.clear()
-        self.application_settings.sync()
-        self.settings = self.settings
     
     def do_listen(self):
         if not self.listening:
