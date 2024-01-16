@@ -77,11 +77,6 @@ class ExportPreferencesWidget(BaseWidget):
         settings = self.app.settings
         settings["metadata_settings"]["image_export_metadata_seed"] = val
         self.app.settings = settings
-    
-    def action_toggled_latents_seed(self, val):
-        settings = self.app.settings
-        settings["metadata_settings"]["image_export_metadata_latents_seed"] = val
-        self.app.settings = settings
 
     def action_toggled_scheduler(self, val):
         settings = self.app.settings

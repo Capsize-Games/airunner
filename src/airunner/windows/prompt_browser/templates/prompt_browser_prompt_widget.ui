@@ -130,6 +130,38 @@
     </hint>
    </hints>
   </connection>
+  <connection>
+   <sender>prompt</sender>
+   <signal>textChanged()</signal>
+   <receiver>prompt_widget</receiver>
+   <slot>action_text_changed_prompt()</slot>
+   <hints>
+    <hint type="sourcelabel">
+     <x>338</x>
+     <y>85</y>
+    </hint>
+    <hint type="destinationlabel">
+     <x>287</x>
+     <y>-17</y>
+    </hint>
+   </hints>
+  </connection>
+  <connection>
+   <sender>negative_prompt</sender>
+   <signal>textChanged()</signal>
+   <receiver>prompt_widget</receiver>
+   <slot>action_text_changed_negative_prompt()</slot>
+   <hints>
+    <hint type="sourcelabel">
+     <x>321</x>
+     <y>197</y>
+    </hint>
+    <hint type="destinationlabel">
+     <x>146</x>
+     <y>-1</y>
+    </hint>
+   </hints>
+  </connection>
  </connections>
  <slots>
   <slot>action_clicked_button_load()</slot>
