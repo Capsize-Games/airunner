@@ -15,6 +15,7 @@ from airunner.aihandler.logger import Logger
 
 
 class StandardImageWidget(StandardBaseWidget):
+    logger = Logger(prefix="StandardImageWidget")
     widget_class_ = Ui_standard_image_widget
     _pixmap = None
     _label = None
@@ -31,7 +32,7 @@ class StandardImageWidget(StandardBaseWidget):
             try:
                 self.image = self.app.canvas_widget.current_layer.image
             except Exception as e:
-                Logger.error(f"Error while getting image: {e}")
+                self.logger.error(f"Error while getting image: {e}")
         return self._image
     
     @image.setter

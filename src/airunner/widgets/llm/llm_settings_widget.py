@@ -11,6 +11,7 @@ from airunner.data.session_scope import session_scope
 
 
 class LLMSettingsWidget(BaseWidget):
+    logger = Logger(prefix="LLMSettingsWidget")
     widget_class_ = Ui_llm_settings_widget
     current_generator = None
     dtype_descriptions = {
@@ -26,7 +27,7 @@ class LLMSettingsWidget(BaseWidget):
         try:
             return self.app.settings["llm_generator_settings"]
         except Exception as e:
-            Logger.error(e)
+            self.logger.error(e)
             import traceback
             traceback.print_exc()
     
@@ -35,7 +36,7 @@ class LLMSettingsWidget(BaseWidget):
         try:
             return self.app.settings["generator_settings"]
         except Exception as e:
-            Logger.error(e)
+            self.logger.error(e)
 
     @property
     def current_generator(self):

@@ -5,6 +5,7 @@ from airunner.aihandler.logger import Logger
 
 
 class DownloadCivitAI:
+    logger = Logger(prefix="DownloadCivitAI")
     cancel_download = False
 
     @staticmethod
@@ -18,7 +19,7 @@ class DownloadCivitAI:
         try:
             json = response.json()
         except JSONDecodeError:
-            Logger.error(f"Failed to decode JSON from {url}")
+            self.logger.error(f"Failed to decode JSON from {url}")
             print(response)
         return json
 
