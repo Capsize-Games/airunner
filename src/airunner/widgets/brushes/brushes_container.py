@@ -6,15 +6,12 @@ from PIL import Image
 
 from PyQt6.QtWidgets import QInputDialog
 from PyQt6.QtGui import QPixmap
-from PyQt6.QtCore import Qt
 from PyQt6.QtCore import QBuffer
 from PyQt6.QtWidgets import QMenu
 
 from airunner.widgets.base_widget import BaseWidget
 from airunner.widgets.image.image_widget import BrushImageWidget
 from airunner.widgets.qflowlayout.q_flow_layout import QFlowLayout
-from airunner.data.models import Brush
-from airunner.data.session_scope import session_scope
 
 
 class BrushesContainer(BaseWidget):
@@ -62,11 +59,14 @@ class BrushesContainer(BaseWidget):
             # Convert the bytes to base64
             img_base64 = base64.b64encode(img_bytes).decode()
 
-        with session_scope() as session:
-        
-            # Create a new Brush entry
-            brush = Brush(name=brush_name, thumbnail=img_base64)
-            session.add(brush)
+        # Create a new Brush entry
+        settings = self.app.settings
+        brush = dict(
+            name=brush_name, 
+            thumbnail=img_base64
+        )
+        settings["presets"].append(brush)
+        self.settings = settings
         return brush
     
     selected_brushes = []
@@ -107,8 +107,6 @@ class BrushesContainer(BaseWidget):
             widget.setStyleSheet(f"""
                 border: 2px solid #ff0000;
             """)
-            with widget.brush() as brush:
-                self.app.settings_manager.set_value("settings.generator_settings_override_id", brush.generator_setting_id)
     
     def display_brush_menu(self, event, widget, brush):
         context_menu = QMenu(self)
@@ -119,17 +117,16 @@ class BrushesContainer(BaseWidget):
         global_position = self.mapToGlobal(event.pos())
         context_menu.exec(global_position)
 
-    def delete_brush(self, widget, _brush):
-        with widget.brush() as brush:
-            with session_scope() as session:
-                brush = session.query(Brush).filter(Brush.id == brush.id).first()
-                
-                if brush is not None:
-                    session.delete(brush)
-
+    def delete_brush(self, widget, brush):
+        settings = self.app.settings
+        for index, brush_data in enumerate(settings["presets"]):
+            if brush["name"] == brush_data["name"]:
+                del settings["presets"][index]
+                break
+        self.settings = settings
         widget.deleteLater()
     
-    def create_and_add_widget(self, image_source, is_base64=False, brush=None):
+    def create_and_add_widget(self, image_source, is_base64=False, brush: dict=None):
         widget = BrushImageWidget(self, container=self, brush=brush)
 
         if is_base64:
@@ -180,6 +177,9 @@ class BrushesContainer(BaseWidget):
         event.acceptProposedAction()
 
     def load_brushes(self):
-        with self.app.settings_manager.brushes() as brushes:
-            for brush in brushes:
-                self.create_and_add_widget(brush.thumbnail, is_base64=True, brush=brush)
+        for brush in self.app.settings["presets"]:
+            self.create_and_add_widget(
+                brush["thumbnail"], 
+                is_base64=True, 
+                brush=brush
+            )
