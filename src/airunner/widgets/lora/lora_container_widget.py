@@ -2,8 +2,6 @@ import os
 
 from PyQt6.QtWidgets import QWidget, QSizePolicy
 
-from airunner.data.models import Lora
-from airunner.data.session_scope import session_scope
 from airunner.widgets.base_widget import BaseWidget
 from airunner.widgets.lora.lora_widget import LoraWidget
 from airunner.widgets.lora.templates.lora_container_ui import Ui_lora_container
@@ -21,13 +19,6 @@ class LoraContainerWidget(BaseWidget):
             if isinstance(widget, LoraWidget):
                 widget.set_enabled(val)
 
-    @property
-    def loras(self):
-        with self.app.settings_manager.loras(self.search_filter) as available_loras:
-            if not available_loras or isinstance(available_loras, dict):
-                return []
-            return available_loras
-
     def __init__(self, *args, **kwargs):
         super().__init__(*args, **kwargs)
 
@@ -35,9 +26,11 @@ class LoraContainerWidget(BaseWidget):
         self.load_lora()
 
     def load_lora(self):
-        with self.app.settings_manager.loras(self.search_filter) as loras:       
-            for lora in loras:
-                self.add_lora(lora)
+        for lora in self.app.settings["lora"]:
+            if self.search_filter != "":
+                if self.search_filter.lower() not in lora["name"].lower():
+                    continue
+            self.add_lora(lora)
         
         # add spacer to end of self.ui.scrollAreaWidgetContents.layout()
         if not self.spacer:
@@ -46,20 +39,27 @@ class LoraContainerWidget(BaseWidget):
         self.ui.scrollAreaWidgetContents.layout().addWidget(self.spacer)
 
     def add_lora(self, lora):
+        if lora is None:
+            return
         lora_widget = LoraWidget(lora=lora)
         self.ui.scrollAreaWidgetContents.layout().addWidget(lora_widget)
 
     def scan_for_lora(self):
-        with session_scope() as session:
-            lora_path = self.app.settings["path_settings"]["lora_model_path"]
-            for dirpath, dirnames, filenames in os.walk(lora_path):
-                # get version from dirpath
-                version = dirpath.split("/")[-1]
-                for file in filenames:
-                    if file.endswith(".ckpt") or file.endswith(".safetensors") or file.endswith(".pt"):
-                        name = file.replace(".ckpt", "").replace(".safetensors", "").replace(".pt", "")
-                        lora = Lora(name=name, path=os.path.join(dirpath, file), enabled=True, scale=100.0, version=version)
-                        session.add(lora)
+        lora_path = self.app.settings["path_settings"]["lora_model_path"]
+        for dirpath, dirnames, filenames in os.walk(lora_path):
+            # get version from dirpath
+            version = dirpath.split("/")[-1]
+            for file in filenames:
+                if file.endswith(".ckpt") or file.endswith(".safetensors") or file.endswith(".pt"):
+                    name = file.replace(".ckpt", "").replace(".safetensors", "").replace(".pt", "")
+                    print("add lora", name, os.path.join(dirpath, file), version)
+                    lora = self.app.add_lora(dict(
+                        name=name,
+                        path=os.path.join(dirpath, file),
+                        enabled=True,
+                        scale=100.0,
+                        version=version
+                    ))
 
     def toggle_all_lora(self, checked):
         for i in range(self.ui.lora_scroll_area.widget().layout().count()):
@@ -72,7 +72,7 @@ class LoraContainerWidget(BaseWidget):
 
     def available_lora(self, action):
         available_lora = []
-        for lora in self.loras:
+        for lora in self.app.settings["lora"]:
             if lora["enabled"] and lora["scale"] > 0:
                 available_lora.append(lora)
         return available_lora
@@ -84,9 +84,9 @@ class LoraContainerWidget(BaseWidget):
             lora_path = os.path.join(base_path, lora_path)
         if not os.path.exists(lora_path):
             return []
-        available_lora = self.loras
+        available_lora = self.app.settings["lora"]
         available_lora = self.get_list_of_available_loras(tab_name, lora_path, lora_names=available_lora)
-        self.loras = available_lora
+        self.app.settings["lora"] = available_lora
         self.app.settings_manager.save_settings()
         return available_lora
 
@@ -110,7 +110,7 @@ class LoraContainerWidget(BaseWidget):
                 scale = 100.0
                 enabled = True
                 trigger_word = ""
-                available_lora = self.loras
+                available_lora = self.app.settings["lora"]
                 for lora in available_lora:
                     if lora["name"] == name:
                         scale = lora["scale"]
@@ -152,7 +152,7 @@ class LoraContainerWidget(BaseWidget):
     lora_tab_container = None
 
     def initialize_lora_trigger_words(self):
-        for lora in self.loras:
+        for lora in self.app.settings["lora"]:
             trigger_word = lora["trigger_word"] if "trigger_word" in lora else ""
             for tab_name in self.tabs.keys():
                 tab = self.tabs[tab_name]
@@ -172,15 +172,15 @@ class LoraContainerWidget(BaseWidget):
                         break
 
     def handle_lora_trigger_word(self, lora, lora_widget, value):
-        available_loras = self.loras
+        available_loras = self.app.settings["lora"]
         for n in range(len(available_loras)):
             if available_loras[n]["name"] == lora["name"]:
                 available_loras[n]["trigger_word"] = value
-        self.loras = available_loras
+        self.app.settings["lora"] = available_loras
         self.app.settings_manager.save_settings()
 
     def toggle_lora(self, lora, value, tab_name):
-        available_loras = self.loras
+        available_loras = self.app.settings["lora"]
         for n in range(len(available_loras)):
             if available_loras[n]["name"] == lora["name"]:
                 available_loras[n]["enabled"] = value == 2
@@ -189,7 +189,7 @@ class LoraContainerWidget(BaseWidget):
                 else:
                     self.total_lora_by_section["enabled"] -= 1
                 self.update_lora_tab_name(tab_name)
-        self.loras = available_loras
+        self.app.settings["lora"] = available_loras
         self.app.settings_manager.save_settings()
 
     def update_lora_tab_name(self, tab_name):
@@ -202,17 +202,17 @@ class LoraContainerWidget(BaseWidget):
         pass
 
     def handle_lora_slider(self, lora, lora_widget, value, tab_name):
-        available_loras = self.loras
+        available_loras = self.app.settings["lora"]
         float_val = value / 100
         for n in range(len(available_loras)):
             if available_loras[n]["name"] == lora["name"]:
                 available_loras[n]["scale"] = float_val
         lora_widget.scaleSpinBox.setValue(float_val)
-        self.loras = available_loras
+        self.app.settings["lora"] = available_loras
         self.app.settings_manager.save_settings()
 
     def handle_lora_spinbox(self, lora, lora_widget, value, tab_name):
-        available_loras = self.loras
+        available_loras = self.app.settings["lora"]
         for n in range(len(available_loras)):
             if available_loras[n]["name"] == lora["name"]:
                 available_loras[n]["scale"] = value
