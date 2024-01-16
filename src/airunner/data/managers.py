@@ -2,7 +2,7 @@ from contextlib import contextmanager
 from typing import Any, Iterator
 from sqlalchemy.orm import joinedload
 from PyQt6.QtCore import QObject, pyqtSignal
-from airunner.utils import Logger
+from airunner.utils import Logger as logger
 
 from airunner.data.session_scope import (
     models_scope,
@@ -27,7 +27,7 @@ class Modelmanager:
         except Exception as e:
             import traceback
             traceback.print_exc()
-            Logger.error(f"Error while getting property {name}: {e}")
+            logger.error(f"Error while getting property {name}: {e}")
             value = None  # Return None if there's an error
         return value
 
@@ -46,7 +46,7 @@ class Modelmanager:
         except Exception as e:
             import traceback
             traceback.print_exc()
-            Logger.error(f"Error while getting property {name}: {e}")
+            logger.error(f"Error while getting property {name}: {e}")
             yield None  # Yield None if there's an error
 
     def __getattr__(self, name):
@@ -154,7 +154,7 @@ class SettingsManager(QObject):
                     version=version
                 ).first().classname
         except AttributeError:
-            Logger.error(f"Unable to find pipeline classname for {pipeline_action} {version} {category}")
+            logger.error(f"Unable to find pipeline classname for {pipeline_action} {version} {category}")
             return None
 
     def get_value(self, key):
@@ -164,7 +164,7 @@ class SettingsManager(QObject):
             try:
                 obj = getattr(obj, k)
             except AttributeError:
-                Logger.error(f"Unable to find key {key}")
+                logger.error(f"Unable to find key {key}")
                 return None
         return obj
     

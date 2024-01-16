@@ -149,7 +149,6 @@ class ImageWidget(BaseWidget):
 
     def send_image_to_grid(self):
         #self.app.ui.canvas_plus_widget.load_image(self.image_path)
-        print(self.image_path)
         self.app.load_image.emit(self.image_path)
 
     def view_image(self):

@@ -261,7 +261,6 @@ class StandardImageWidget(StandardBaseWidget):
         meta_data["controlnet_conditioning_scale"] = self.app.settings_manager.standard_image_widget_settings.image_similarity / 100.0
         #meta_data["image_guidance_scale"] = 100 * (100 - self.app.settings_manager.image_similarity) / 100.0
         meta_data["strength"] = 1.1 - (self.app.settings_manager.standard_image_widget_settings.image_similarity / 100.0)
-        print(meta_data["controlnet_conditioning_scale"], meta_data["strength"])
         meta_data["enable_input_image"] = True
         meta_data["use_cropped_image"] = False
         meta_data["batch_size"] = batch_size
