@@ -477,8 +477,17 @@ Previous Conversation:
                 ),
             ],
             saved_prompts=[],
-            layers=[]
+            layers=[],
+            presets=[],
         ), type=dict)
+
+    def add_preset(self, name, thumnail):
+        settings = self.settings
+        settings["presets"].append(dict(
+            name=name,
+            thumnail=thumnail,
+        ))
+        self.settings = settings
     
     def add_layer(self):
         settings = self.settings
