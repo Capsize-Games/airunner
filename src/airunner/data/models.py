@@ -171,14 +171,6 @@ class Lora(BaseModel):
     __table_args__ = (
         UniqueConstraint('name', 'path', name='name_path_unique'),
     )
-
-
-class Brush(BaseModel):
-    __tablename__ = 'brushes'
-
-    id = Column(Integer, primary_key=True)
-    name = Column(String, nullable=False)
-    thumbnail = Column(String, nullable=False)
     
 
 class ImageFilter(BaseModel):
