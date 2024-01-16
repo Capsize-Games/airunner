@@ -147,27 +147,6 @@ class Pipeline(BaseModel):
     classname = Column(String)
     singlefile_classname = Column(String)
     default = Column(Boolean, default=True)
-
-
-class Lora(BaseModel):
-    __tablename__ = 'loras'
-
-    id = Column(Integer, primary_key=True)
-    name = Column(String)
-    path = Column(String)
-    scale = Column(Float)
-    enabled = Column(Boolean, default=True)
-    loaded = Column(Boolean, default=False)
-    trigger_word = Column(String, default="")
-    version = Column(String, default="SD 1.5")
-
-    @classmethod
-    def get_all(cls, session):
-        return session.query(cls).all()
-
-    __table_args__ = (
-        UniqueConstraint('name', 'path', name='name_path_unique'),
-    )
     
 
 class ImageFilter(BaseModel):
