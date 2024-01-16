@@ -31,7 +31,7 @@
         </font>
        </property>
        <property name="text">
-        <string>Tooggle all</string>
+        <string>Toggle all</string>
        </property>
       </widget>
      </item>

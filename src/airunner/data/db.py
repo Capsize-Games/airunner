@@ -170,7 +170,17 @@ def prepare_database():
                 
 
             prompt_template = LLMPromptTemplate()
+            sd_prompt_template = LLMPromptTemplate(
+                system_instructions="""{{ username }} will give you a subject. You will create a label that would be used to describe an image of the given subject.
+---
+Examples:
+{{ username }}: "a photo of a cat in a hat"
+{{ botname }}: "A photograph of a (cat wearing a hat++)"
+{{ username }}: "a woman in the woods"
+{{ botname }}: "A professional portrait of a (woman named elsa) smiling for a photo in the woods\""""
+            )
             my_session.add(prompt_template)
+            my_session.add(sd_prompt_template)
                 
 
     HERE = os.path.abspath(os.path.dirname(__file__)) 

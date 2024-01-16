@@ -1,6 +1,8 @@
 from airunner.widgets.base_widget import BaseWidget
 from airunner.widgets.llm.templates.message_ui import Ui_message
 
+from PyQt6.QtGui import QTextCursor
+
 
 class MessageWidget(BaseWidget):
     widget_class_ = Ui_message
@@ -9,7 +11,8 @@ class MessageWidget(BaseWidget):
         self.is_bot = kwargs.pop("is_bot")
         self.message = kwargs.pop("message")
         super().__init__(*args, **kwargs)
-        self.ui.content.setPlainText(self.message.message)
+        self.ui.content.setReadOnly(True)
+        self.ui.content.setText(self.message.message)
         name = self.message.name
         if self.is_bot:
             self.ui.bot_name.show()
@@ -26,4 +29,5 @@ class MessageWidget(BaseWidget):
 
     def update_message(self, text):
         self.message.message += text
-        self.ui.content.setPlainText(self.message.message)
+        self.ui.content.moveCursor(QTextCursor.MoveOperation.End)
+        self.ui.content.insertPlainText(text)

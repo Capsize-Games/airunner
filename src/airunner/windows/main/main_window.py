@@ -37,7 +37,7 @@ from airunner.windows.update.update_window import UpdateWindow
 from airunner.windows.video import VideoPopup
 from airunner.widgets.brushes.brushes_container import BrushesContainer
 from airunner.data.session_scope import session_scope
-
+from airunner.utils import KeyboardKey
 
 class ImageDataWorker(QObject):
     finished = pyqtSignal()
@@ -170,13 +170,30 @@ class MainWindow(
     _generator = None
     _generator_settings = None
     listening = False
+
+    def handle_key_press(self, key):
+        super().keyPressEvent(key)
+        print(key.key())
+
+        if self.key_matches("generate_image_key", key.key()):
+            print("generate_image_key PRESSED")
+    
+    def key_matches(self, key_name, keyboard_key):
+        if not key_name in self.app.settings["shortcut_key_settings"]:
+            return False
+        return self.app.settings["shortcut_key_settings"][key_name].key == keyboard_key
+    
+    def key_text(self, key_name):
+        if not key_name in self.app.settings["shortcut_key_settings"]:
+            return ""
+        return self.app.settings["shortcut_key_settings"][key_name].text
     
     @property
     def settings(self):
         return self.application_settings.value("settings", dict(
             ocr_enabled=True,
             tts_enabled=True,
-            v2t_enabled=True,
+            stt_enabled=True,
             ai_mode=True,
             nsfw_filter=True,
             resize_on_paste=True,
@@ -199,6 +216,18 @@ class MainWindow(
             pipeline_version="SD 1.5",
             is_maximized=False,
             mode=Mode.IMAGE.value,
+            shortcut_key_settings=dict(
+                llm_action_key=KeyboardKey(
+                    text="@",
+                    key=Qt.Key.Key_At,
+                    description="Chat Action Key. Responsible for triggering the chat action menu.",
+                ),
+                generate_image_key=KeyboardKey(
+                    text="F5",
+                    key=Qt.Key.Key_F5,
+                    description="Generate key. Responsible for triggering the generation of a Stable Diffusion image.",
+                )
+            ),
             window_settings=dict(
                 main_splitter=None,
                 content_splitter=None,
@@ -634,7 +663,7 @@ class MainWindow(
         self.ui.v2t_button.blockSignals(True)
         self.ui.ocr_button.setChecked(self.settings["ocr_enabled"])
         self.ui.tts_button.setChecked(self.settings["tts_enabled"])
-        self.ui.v2t_button.setChecked(self.settings["v2t_enabled"])
+        self.ui.v2t_button.setChecked(self.settings["stt_enabled"])
         self.ui.ocr_button.blockSignals(False)
         self.ui.tts_button.blockSignals(False)
         self.ui.v2t_button.blockSignals(False)
@@ -957,9 +986,9 @@ class MainWindow(
 
     @pyqtSlot(bool)
     def v2t_button_toggled(self, val):
-        print("v2t_button_toggled", val)
+        print("stt_button_toggled", val)
         new_settings = self.settings
-        new_settings["v2t_enabled"] = val
+        new_settings["stt_enabled"] = val
         self.settings = new_settings
 
     ##### Window properties #####

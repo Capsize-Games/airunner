@@ -56,5 +56,5 @@ class Ui_embeddings_container(object):
         _translate = QtCore.QCoreApplication.translate
         embeddings_container.setWindowTitle(_translate("embeddings_container", "Form"))
         self.lineEdit.setPlaceholderText(_translate("embeddings_container", "Search"))
-        self.checkBox.setText(_translate("embeddings_container", "Tooggle all"))
+        self.checkBox.setText(_translate("embeddings_container", "Toggle all"))
         self.pushButton.setText(_translate("embeddings_container", "Scan for embeddings"))
