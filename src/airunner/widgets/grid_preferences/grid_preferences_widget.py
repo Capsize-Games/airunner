@@ -51,7 +51,6 @@ class GridPreferencesWidget(BaseWidget):
         color = QColorDialog.getColor()
         if color.isValid():
             settings = self.app.settings
-            print("SETTING CANVAS COLOR TO " + color.name())
             settings["grid_settings"]["canvas_color"] = color.name()
             self.app.settings = settings
 

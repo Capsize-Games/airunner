@@ -5,7 +5,6 @@ import numpy as np
 
 from PyQt6.QtCore import QObject, pyqtSignal, pyqtSlot, QThread
 
-from transformers import BitsAndBytesConfig
 from transformers import SpeechT5Processor, SpeechT5ForTextToSpeech, SpeechT5HifiGan, BarkModel, BarkProcessor
 from datasets import load_dataset
 
@@ -52,7 +51,7 @@ class VocalizerWorker(QObject):
         try:
             self.queue.put(generated_speech)
         except Exception as e:
-            print(f"Error while adding speech to stream: {e}")
+            Logger.error(f"Error while adding speech to stream: {e}")
 
 
 class GeneratorWorker(QObject):
@@ -70,6 +69,8 @@ class GeneratorWorker(QObject):
         while True:
             if not self.parent.text_queue.empty():
                 data = self.parent.text_queue.get()
+                if not self.parent.engine.app.settings["tts_enabled"]:
+                    continue
                 play_queue.append(data)
                 if data["is_end_of_message"] or len(play_queue) == self.parent.play_queue_buffer_length or play_queue_started:
                     for item in play_queue:
@@ -125,6 +126,7 @@ class GeneratorWorker(QObject):
         text = text.replace("\n", " ").strip()
         
         Logger.info("Processing inputs...")
+
         inputs = self.parent.processor(text=text, return_tensors="pt")
         inputs = self.move_inputs_to_device(inputs)
 
@@ -168,6 +170,7 @@ class TTS(QObject):
     do_offload_to_cpu = True
     message = ""
     local_files_only = True
+    loaded = False
 
     @property
     def processor_path(self):
@@ -326,9 +329,13 @@ class TTS(QObject):
                 self.speaker_embeddings = self.speaker_embeddings.to(self.device)
 
     def initialize(self):
+        if not self.engine.app.settings["tts_enabled"]:
+            self.unload()
+            return
+
         target_model = "bark" if self.use_bark else "t5"
         if target_model != self.current_model:
-            self.unload_model()
+            self.unload()
         
         if not self.current_model:
             self.load_model()
@@ -337,21 +344,38 @@ class TTS(QObject):
             self.load_dataset()
             self.load_corpus()
             self.current_model = target_model
+            self.loaded = True
     
-    def unload_model(self):
+    def unload(self):
+        if not self.loaded:
+            return
         Logger.info("Unloading TTS")
-        del self.model
-        del self.processor
+        self.loaded = False
+        do_clear_memory = False
+        try:
+            del self.model
+            do_clear_memory = True
+        except AttributeError:
+            pass
+        try:
+            del self.processor
+            do_clear_memory = True
+        except AttributeError:
+            pass
         try:
             del self.vocoder
+            do_clear_memory = True
         except AttributeError:
             pass
         try:
             del self.speaker_embeddings
+            do_clear_memory = True
         except AttributeError:
             pass
         self.current_model = None
-        self.engine.clear_memory()
+        
+        if do_clear_memory:
+            self.engine.clear_memory()
 
     def run(self):
         self.initialize()
@@ -443,7 +467,6 @@ class TTS(QObject):
     
     def process_message(self, is_end_of_message: bool):
         # split on sentence enders
-        Logger.info("TTS: Processing message")
         sentence_enders = self.single_character_sentence_enders + self.double_character_sentence_enders
         
         # split text into words

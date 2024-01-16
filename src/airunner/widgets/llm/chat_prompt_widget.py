@@ -72,13 +72,9 @@ class ChatPromptWidget(BaseWidget):
     @pyqtSlot()
     def action_button_clicked_clear_conversation(self):
         self.conversation_history = []
-        self.ui.conversation.setText("")
-        self.app.client.message = {
-            "llm_request": True,
-            "request_data": {
-                "request_type": "clear_conversation",
-            }
-        }
+        for widget in self.ui.scrollAreaWidgetContents.findChildren(MessageWidget):
+            widget.deleteLater()
+        self.app.client.engine.clear_llm_history()
 
     @pyqtSlot(dict)
     def message_handler(self, response: dict):
@@ -270,15 +266,6 @@ class ChatPromptWidget(BaseWidget):
         )
     
     def add_message_to_conversation(self, message_object, is_bot, first_message=True, last_message=True):
-        # If we are at the start of a message, create a widget to hold and display the message
-        # message = ""
-        # if first_message:
-        #     message = f"{message_object.name} Says: \""
-        # message += message_object.message
-        # if last_message:
-        #     message += "\""
-        # message_object.message = message
-
         if not first_message:
             # get the last widget from the scrollAreaWidgetContents.layout()
             # and append the message to it. must be a MessageWidget object

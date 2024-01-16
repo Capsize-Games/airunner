@@ -158,7 +158,6 @@ class LLMSettingsWidget(BaseWidget):
         self.ui.unload_model.blockSignals(False)
 
     def model_text_changed(self, val):
-        print("model_text_changed", val)
         settings = self.app.settings
         settings["current_llm_generator"] = val
         self.app.settings = settings
