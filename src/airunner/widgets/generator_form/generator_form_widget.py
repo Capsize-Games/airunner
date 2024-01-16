@@ -1,7 +1,7 @@
 import random
 
 from PIL import Image
-from PyQt6.QtCore import pyqtSignal, QRect
+from PyQt6.QtCore import pyqtSignal, QRect, pyqtSlot
 
 from airunner.aihandler.settings import MAX_SEED
 from airunner.widgets.base_widget import BaseWidget
@@ -67,21 +67,6 @@ class GeneratorForm(BaseWidget):
         return self.app.settings["generator_settings"]["random_seed"]
 
     @property
-    def random_latents_seed(self):
-        return self.app.settings["generator_settings"]["random_latents_seed"]
-
-    @property
-    def latents_seed(self):
-        return self.app.settings["generator_settings"]["latents_seed"]
-
-    @latents_seed.setter
-    def latents_seed(self, val):
-        settings = self.app.settings
-        settings["generator_settings"]["latents_seed"] = val
-        self.app.settings = settings
-        self.app.standard_image_panel.ui.seed_widget_latents.ui.lineEdit.setText(str(val))
-
-    @property
     def seed(self):
         return self.app.settings["generator_settings"]["seed"]
 
@@ -90,7 +75,6 @@ class GeneratorForm(BaseWidget):
         settings = self.app.settings
         settings["generator_settings"]["seed"] = val
         self.app.settings = settings
-        self.app.standard_image_panel.ui.seed_widget.ui.lineEdit.setText(str(val))
 
     @property
     def image_scale(self):
@@ -114,20 +98,31 @@ class GeneratorForm(BaseWidget):
 
     @property
     def controlnet_image(self):
-        return self.app.standard_image_panel.ui.controlnet_settings.current_controlnet_image
+        return self.app.settings["controlnet_settings"]["image"]
+
+    pyqtSlot()
+    def handle_changed_signal(self):
+        if self.initialized:
+            if self.current_prompt_value != self.app.settings["generator_settings"]["prompt"]:
+                self.current_prompt_value = self.app.settings["generator_settings"]["prompt"]
+                self.ui.prompt.setPlainText(self.current_prompt_value)
+            if self.current_negative_prompt_value != self.app.settings["generator_settings"]["negative_prompt"]:
+                self.current_negative_prompt_value = self.app.settings["generator_settings"]["negative_prompt"]
+                self.ui.negative_prompt.setPlainText(self.current_negative_prompt_value)
+        self.activate_ai_mode()
 
     def __init__(self, *args, **kwargs):
         super().__init__(*args, **kwargs)
+        self.initialized = False
         self.ui.generator_form_tabs.tabBar().hide()
-        self.activate_ai_mode(self.app.settings["ai_mode"])
+        self.activate_ai_mode()
         self.app.application_settings_changed_signal.connect(self.handle_changed_signal)
-    
-    def handle_changed_signal(self):
-        self.activate_ai_mode(self.app.settings["ai_mode"])
+        
+    current_prompt_value = None
+    current_negative_prompt_value = None
 
-    
-    def activate_ai_mode(self, active):
-        self.ui.generator_form_tabs.setCurrentIndex(1 if active is True else 0)
+    def activate_ai_mode(self):
+        self.ui.generator_form_tabs.setCurrentIndex(1 if self.app.settings["ai_mode"] is True else 0)
     
     """
     Slot functions
@@ -136,21 +131,20 @@ class GeneratorForm(BaseWidget):
     signals in the corresponding ui file.
     """
     def action_clicked_button_save_prompts(self):
-        self.app.settings_manager.create_saved_prompt(
-            self.app.settings["generator_settings"]["prompt"],
-            self.app.settings["generator_settings"]["negative_prompt"]
-        )
+        self.app.save_stablediffusion_prompt()
 
     def handle_prompt_changed(self):
-        if not self.initialized:
-            return
         settings = self.app.settings
-        settings["generator_settings"]["prompt"] = self.ui.prompt.toPlainText()
+        value = self.ui.prompt.toPlainText()
+        self.current_prompt_value = value
+        settings["generator_settings"]["prompt"] = value
         self.app.settings = settings
 
     def handle_negative_prompt_changed(self):
         settings = self.app.settings
-        settings["generator_settings"]["negative_prompt"] = self.ui.negative_prompt.toPlainText()
+        value = self.ui.negative_prompt.toPlainText()
+        self.current_negative_prompt_value = value
+        settings["generator_settings"]["negative_prompt"] = value
         self.app.settings = settings
 
     def toggle_prompt_builder_checkbox(self, toggled):
@@ -168,8 +162,8 @@ class GeneratorForm(BaseWidget):
 
     def generate(self, image=None, seed=None):
         if seed is None:
-            seed = self.app.standard_image_panel.ui.seed_widget.seed
-        if self.app.standard_image_panel.ui.samples_widget.current_value > 1:
+            seed = self.app.settings["generator_settings"]["seed"]
+        if self.app.settings["generator_settings"]["n_samples"] > 1:
             self.app.client.do_process_queue = False
         self.call_generate(image, seed=seed)
         self.seed_override = None
@@ -195,7 +189,7 @@ class GeneratorForm(BaseWidget):
                 self.app.settings["generator_settings"]["enable_input_image"]
             )
             if enable_input_image:
-                input_image = self.app.standard_image_panel.ui.input_image_widget.current_input_image
+                input_image = self.app.settings["generator_settings"]["input_image"]
             elif self.generator_section == "txt2img":
                 input_image = override_data.get("input_image", None)
                 image = input_image
@@ -287,14 +281,14 @@ class GeneratorForm(BaseWidget):
     def prep_video(self):
         return []
 
-    def do_generate(self, extra_options=None, seed=None, latents_seed=None, do_deterministic=False, override_data=False):
+    def do_generate(self, extra_options=None, seed=None, do_deterministic=False, override_data=False):
         if not extra_options:
             extra_options = {}
 
         if self.enable_controlnet:
             extra_options["controlnet_image"] = self.ui.controlnet_settings.current_controlnet_image
 
-        self.set_seed(seed=seed, latents_seed=latents_seed)
+        self.set_seed(seed=seed)
 
         if self.deterministic_data and do_deterministic:
             return self.do_deterministic_generation(extra_options)
@@ -312,7 +306,6 @@ class GeneratorForm(BaseWidget):
         image_guidance_scale = float(override_data.get("image_guidance_scale", self.app.settings["generator_settings"]["image_guidance_scale"] / 10000.0 * 100.0))
         scale = float(override_data.get("scale", self.app.settings["generator_settings"]["scale"] / 100))
         seed = int(override_data.get("seed", self.app.settings["generator_settings"]["seed"]))
-        latents_seed = int(override_data.get("latents_seed", self.app.settings["generator_settings"]["latents_seed"]))
         ddim_eta = float(override_data.get("ddim_eta", self.app.settings["generator_settings"]["ddim_eta"]))
         n_iter = int(override_data.get("n_iter", 1))
         n_samples = int(override_data.get("n_samples", self.app.settings["generator_settings"]["n_samples"]))
@@ -387,7 +380,6 @@ class GeneratorForm(BaseWidget):
                     n_samples=n_samples,
                     scale=scale,
                     seed=seed,
-                    latents_seed=latents_seed,
                     model=model.name,
                     model_data=model_data,
                     original_model_data=original_model_data,
@@ -474,18 +466,12 @@ class GeneratorForm(BaseWidget):
             "tome_sd_ratio": self.app.settings["memory_settings"]["tome_sd_ratio"],
         }
 
-    def set_seed(self, seed=None, latents_seed=None):
+    def set_seed(self, seed=None):
         """
         Set the seed - either set to random, deterministic or keep current, then display the seed in the UI.
         :return:
         """
         self.set_primary_seed(seed)
-        self.set_latents_seed(latents_seed)
-        self.update_seed()
-
-    def update_seed(self):
-        self.app.standard_image_panel.ui.seed_widget.update_seed()
-        self.app.standard_image_panel.ui.seed_widget_latents.update_seed()
 
     def set_primary_seed(self, seed=None):
         if self.deterministic_data:
@@ -494,13 +480,6 @@ class GeneratorForm(BaseWidget):
             self.seed = random.randint(0, MAX_SEED)
         elif seed is not None:
             self.seed = seed
-
-    def set_latents_seed(self, latents_seed=None):
-        if self.random_latents_seed:
-            random.seed()
-            latents_seed = random.randint(0, MAX_SEED)
-        if latents_seed is not None:
-            self.latents_seed = latents_seed
 
     def start_progress_bar(self):
         self.ui.progress_bar.setRange(0, 0)
@@ -527,20 +506,21 @@ class GeneratorForm(BaseWidget):
     def initialize(self):
         self.set_form_values()
         self.initialized = True
-        self.ui.prompt.setPlainText(self.app.settings["generator_settings"]["prompt"])
-        self.ui.negative_prompt.setPlainText(self.app.settings["generator_settings"]["negative_prompt"])
 
     def handle_settings_manager_changed(self, key, val, settings_manager):
         self.set_form_values()
+    
+    def set_form_values(self):
+        self.ui.prompt.blockSignals(True)
+        self.ui.negative_prompt.blockSignals(True)
+        self.ui.prompt.setPlainText(self.app.settings["generator_settings"]["prompt"])
+        self.ui.negative_prompt.setPlainText(self.app.settings["generator_settings"]["negative_prompt"])
+        self.ui.prompt.blockSignals(False)
+        self.ui.negative_prompt.blockSignals(False)
 
     def clear_prompts(self):
         self.ui.prompt.setPlainText("")
         self.ui.negative_prompt.setPlainText("")
-
-    def set_form_values(self):
-        generator_settings = self.app.settings["generator_settings"]
-        self.set_form_value("prompt", generator_settings["prompt"])
-        self.set_form_value("negative_prompt", generator_settings["negative_prompt"])
 
     def new_batch(self, index, image, data):
         self.new_batch(index, image, data)

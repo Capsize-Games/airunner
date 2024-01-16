@@ -1,9 +1,8 @@
 import os
 from airunner.aihandler.settings import LOG_LEVEL
-from airunner.aihandler.logger import Logger as logger
-import logging
-logging.disable(LOG_LEVEL)
-logger.set_level(logger.DEBUG)
+from airunner.aihandler.logger import Logger
+
+logger = Logger(prefix="LoraMixin")
 
 
 class LoraMixin:

@@ -7,13 +7,10 @@ from PyQt6.QtGui import QImage
 
 from PIL import Image
 
-from airunner.data.models import AIModel
 from airunner.widgets.canvas_plus.standard_base_widget import StandardBaseWidget
 from airunner.widgets.canvas_plus.templates.standard_image_widget_ui import Ui_standard_image_widget
 from airunner.utils import load_metadata_from_image, prepare_metadata
 from airunner.widgets.slider.slider_widget import SliderWidget
-from airunner.data.models import ActionScheduler, Pipeline
-from airunner.data.session_scope import session_scope
 from airunner.aihandler.logger import Logger
 
 
@@ -51,8 +48,6 @@ class StandardImageWidget(StandardBaseWidget):
         self.load_upscale_options()
         self.set_controlnet_settings_properties()
         self.set_input_image_widget_properties()
-        self.ui.ddim_eta_slider_widget.hide()
-        self.ui.frames_slider_widget.hide()
     
     def set_controlnet_settings_properties(self):
         self.ui.controlnet_settings.initialize()
@@ -252,7 +247,6 @@ class StandardImageWidget(StandardBaseWidget):
             meta_data["negative_prompt"] = "verybadimagenegative_v1.3, EasyNegative"
         
         meta_data.pop("seed", None)
-        meta_data.pop("latents_seed", None)
         meta_data["action"] = "txt2img"
         meta_data["width"] = self.image.width
         meta_data["height"] = self.image.height
@@ -290,7 +284,6 @@ class StandardImageWidget(StandardBaseWidget):
             meta_data["negative_prompt"] = "verybadimagenegative_v1.3, EasyNegative"
         
         meta_data.pop("seed", None)
-        meta_data.pop("latents_seed", None)
         meta_data["model_data_path"] = self.app.settings_manager.standard_image_widget_settings.upscale_model
         meta_data["face_enhance"] = self.app.settings_manager.standard_image_widget_settings.face_enhance
         meta_data["denoise_strength"] = 0.5
@@ -305,127 +298,7 @@ class StandardImageWidget(StandardBaseWidget):
             override_data=meta_data
         )
     
-    def set_form_values(self):
-        steps = target_val = self.app.settings["generator_settings"]["steps"]
-        scale = target_val = self.app.settings["generator_settings"]["scale"]
-
-        current_steps = self.get_form_element("steps_widget").property("current_value")
-        current_scale = self.get_form_element("scale_widget").property("current_value")
-
-        if steps != current_steps:
-            self.get_form_element("steps_widget").setProperty("current_value", target_val)
-
-        if scale != current_scale:
-            self.get_form_element("scale_widget").setProperty("current_value", target_val)
-    
-    def load_pipelines(self):
-        self.ui.pipeline.blockSignals(True)
-        self.ui.pipeline.clear()
-        pipeline_names = ["txt2img / img2img", "inpaint / outpaint", "depth2img", "pix2pix", "upscale", "superresolution", "txt2vid"]
-        self.ui.pipeline.addItems(pipeline_names)
-        current_pipeline = self.app.settings["pipeline"]
-        if current_pipeline != "":
-            if current_pipeline == "txt2img":
-                current_pipeline = "txt2img / img2img"
-            elif current_pipeline == "outpaint":
-                current_pipeline = "inpaint / outpaint"
-            self.ui.pipeline.setCurrentText(current_pipeline)
-        self.ui.pipeline.blockSignals(False)
-    
-    def load_versions(self):
-        with session_scope() as session:
-            self.ui.version.blockSignals(True)
-            self.ui.version.clear()
-            pipelines = session.query(Pipeline).filter(Pipeline.category == "stablediffusion").all()
-            version_names = set([pipeline.version for pipeline in pipelines])
-            self.ui.version.addItems(version_names)
-            current_version = self.app.settings["current_version_stablediffusion"]
-            if current_version != "":
-                self.ui.version.setCurrentText(current_version)
-            self.ui.version.blockSignals(False)
-
-    def load_models(self):
-        with session_scope() as session:
-            self.ui.model.blockSignals(True)
-            self.clear_models()
-
-            image_generator = "stablediffusion"
-            pipeline = self.app.settings["pipeline"]
-            version = self.app.settings["current_version_stablediffusion"]
-
-            models = session.query(AIModel).filter(
-                AIModel.category == image_generator,
-                AIModel.pipeline_action == pipeline,
-                AIModel.version == version,
-                AIModel.enabled == True
-            ).all()
-            model_names = [model.name for model in models]
-            self.ui.model.addItems(model_names)
-            settings = self.app.settings
-            current_model = settings["generator_settings"]["model"]
-            if current_model != "":
-                self.ui.model.setCurrentText(current_model)
-            settings["generator_settings"]["model"] = self.ui.model.currentText()
-            self.ui.model.blockSignals(False)
-            self.app.settings = settings
-
-    def load_schedulers(self):
-        with session_scope() as session:
-            self.ui.scheduler.blockSignals(True)
-            schedulers = session.query(ActionScheduler).filter(
-                ActionScheduler.section == self.app.settings["pipeline"],
-                ActionScheduler.generator_name == "stablediffusion"
-            ).all()
-            scheduler_names = [s.scheduler.display_name for s in schedulers]
-            self.ui.scheduler.clear()
-            self.ui.scheduler.addItems(scheduler_names)
-
-            settings = self.app.settings
-            current_scheduler = settings["generator_settings"]["scheduler"]
-            if current_scheduler != "":
-                self.ui.scheduler.setCurrentText(current_scheduler)
-            else:
-                settings["generator_settings"]["scheduler"] = self.ui.scheduler.currentText() 
-            self.app.settings = settings
-            self.ui.scheduler.blockSignals(False)
-    
-    def clear_models(self):
-        self.ui.model.clear()
-    
-    def initialize_generator_form(self, override_id=None):
-        if override_id:
-            self.ui.steps_widget.set_slider_and_spinbox_values(self.app.settings["generator_settings"]["steps"])
-            self.ui.scale_widget.set_slider_and_spinbox_values(self.app.settings["generator_settings"]["scale"] * 100)
-            self.ui.clip_skip_slider_widget.set_slider_and_spinbox_values(self.app.settings["generator_settings"]["clip_skip"])
-            
-            self.ui.pipeline.blockSignals(True)
-            self.ui.version.blockSignals(True)
-            self.ui.model.blockSignals(True)
-            self.ui.scheduler.blockSignals(True)
-            
-            self.ui.pipeline.setCurrentText(self.app.settings["generator_settings"]["section"])
-            self.ui.version.setCurrentText(self.app.settings["generator_settings"]["version"])
-            self.ui.model.setCurrentText(self.app.settings["generator_settings"]["model"])
-            self.ui.scheduler.setCurrentText(self.app.settings["generator_settings"]["scheduler"])
-
-            self.ui.pipeline.blockSignals(False)
-            self.ui.version.blockSignals(False)
-            self.ui.model.blockSignals(False)
-            self.ui.scheduler.blockSignals(False)
-        else:
-            self.set_form_values()
-            self.load_pipelines()
-            self.load_versions()
-            self.load_models()
-            self.load_schedulers()
-        
     def initialize(self):
-        self.set_form_values()
-        self.load_pipelines()
-        self.load_versions()
-        self.load_models()
-        self.load_schedulers()
-
         # find all SliderWidget widgets in the template and call initialize
         for widget in self.findChildren(SliderWidget):
             try:
@@ -438,49 +311,4 @@ class StandardImageWidget(StandardBaseWidget):
             if current_value is not None:
                 widget.setProperty("current_value", current_value)
             widget.initialize()
-
-        self.ui.seed_widget.setProperty("generator_section", self.app.settings["pipeline"])
-        self.ui.seed_widget.setProperty("generator_name", "stablediffusion")
-        # self.ui.seed_widget.initialize(
-        #     self.generator_section,
-        #     self.generator_name
-        # )
-
-        self.ui.seed_widget_latents.setProperty("generator_section", self.app.settings["pipeline"])
-        self.ui.seed_widget_latents.setProperty("generator_name", "stablediffusion")
-        # self.ui.seed_widget_latents.initialize(
-        #     self.generator_section,
-        #     self.generator_name
-        # )
         self.initialized = True
-    
-    def handle_model_changed(self, name):
-        if not self.initialized:
-            return
-        settings = self.app.settings
-        settings["generator_settings"]["model"] = name
-        self.app.settings = settings
-
-    def handle_scheduler_changed(self, name):
-        if not self.initialized:
-            return
-        settings = self.app.settings
-        settings["generator_settings"]["scheduler"] = name
-        self.app.settings = settings
-    
-    def handle_pipeline_changed(self, val):
-        if val == "txt2img / img2img":
-            val = "txt2img"
-        elif val == "inpaint / outpaint":
-            val = "outpaint"
-        settings = self.app.settings
-        settings["pipeline"] = val
-        self.app.settings = settings
-        self.load_versions()
-        self.load_models()
-
-    def handle_version_changed(self, val):
-        settings = self.app.settings
-        settings["current_version_stablediffusion"] = val
-        self.app.settings = settings
-        self.load_models()
