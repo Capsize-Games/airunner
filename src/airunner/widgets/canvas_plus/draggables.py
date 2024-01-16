@@ -15,10 +15,9 @@ class DraggablePixmap(QGraphicsPixmapItem):
         self.setFlag(QGraphicsItem.GraphicsItemFlag.ItemIsMovable, True)
 
     def snap_to_grid(self):
-        cell_size = self.parent.cell_size
-        grid_size = cell_size
-        x = round(self.x() / grid_size) * grid_size
-        y = round(self.y() / grid_size) * grid_size
+        cell_size = self.parent.app.settings["grid_settings"]["cell_size"]
+        x = round(self.x() / cell_size) * cell_size
+        y = round(self.y() / cell_size) * cell_size
         x += self.parent.last_pos.x()
         y += self.parent.last_pos.y()
         self.setPos(x, y)

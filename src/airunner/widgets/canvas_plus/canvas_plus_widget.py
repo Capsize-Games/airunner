@@ -45,18 +45,20 @@ class CanvasPlusWidget(CanvasBaseWidget):
 
     @property
     def image_pivot_point(self):
-        with self.layer_container_widget.current_layer() as layer:
-            try:
-                return QPoint(layer.pivot_x, layer.pivot_y)
-            except Exception as e:
-                pass
-            return QPoint(0, 0)
+        try:
+            layer = self.app.current_layer()
+            return QPoint(layer["pivot_x"], layer["pivot_y"])
+        except Exception as e:
+            self.logger.error(e)
+        return QPoint(0, 0)
 
     @image_pivot_point.setter
     def image_pivot_point(self, value):
-        with self.layer_container_widget.current_layer() as layer:
-            layer.pivot_x = value.x()
-            layer.pivot_y = value.y()
+        layer = self.app.current_layer()
+        self.app.update_current_layer({
+            "pivot_x": value.x(),
+            "pivot_y": value.y()
+        })
 
     @property
     def brush_size(self):
@@ -79,21 +81,11 @@ class CanvasPlusWidget(CanvasBaseWidget):
 
     @property
     def current_active_image(self):
-        with self.layer_container_widget.current_layer() as layer:
-            return layer.image
+        return self.app.get_image_from_current_layer()
     
     @current_active_image.setter
     def current_active_image(self, value):
-        with self.layer_container_widget.current_layer() as layer:
-            layer.image = value
-
-    @property
-    def current_layer_index(self):
-        return self.layer_container_widget.current_layer_index
-    
-    @current_layer_index.setter
-    def current_layer_index(self, value):
-        self.layer_container_widget.current_layer_index = value
+        self.app.add_image_to_current_layer(value)
 
     @property
     def layer_container_widget(self):
@@ -105,14 +97,12 @@ class CanvasPlusWidget(CanvasBaseWidget):
 
     def __init__(self, *args, **kwargs):
         super().__init__(*args, **kwargs)
-        #self.app.settings_manager.changed_signal.connect(self.handle_changed_signal)
         self.app.application_settings_changed_signal.connect(self.handle_changed_signal)
-        with session_scope() as session:
-            self.ui.central_widget.resizeEvent = self.resizeEvent
-            self.app.add_image_to_canvas_signal.connect(self.handle_add_image_to_canvas)
-            self.app.image_data.connect(self.handle_image_data)
-            self.app.load_image.connect(self.load_image_from_path)
-            self.app.load_image_object.connect(self.add_image_to_scene)
+        self.ui.central_widget.resizeEvent = self.resizeEvent
+        self.app.add_image_to_canvas_signal.connect(self.handle_add_image_to_canvas)
+        self.app.image_data.connect(self.handle_image_data)
+        self.app.load_image.connect(self.load_image_from_path)
+        self.app.load_image_object.connect(self.add_image_to_scene)
         self.app.loaded.connect(self.handle_loaded)
         self._zoom_level = 1
         self.canvas_container.resizeEvent = self.window_resized
@@ -331,46 +321,27 @@ class CanvasPlusWidget(CanvasBaseWidget):
         self.scene.setBackgroundBrush(QBrush(QColor(self.canvas_color)))
 
     def draw_layers(self):
-        with self.app.settings_manager.layers() as layers:
-            for layer in layers:
-                image = layer.image
-                if image is None:
-                    continue
+        layers = self.app.settings["layers"]
+        for layer in layers:
+            image = self.app.get_image_from_layer(layer)
+            if image is None:
+                continue
 
-                image = apply_opacity_to_image(
-                    image,
-                    layer.opacity / 100.0
-                )
+            image = apply_opacity_to_image(
+                image,
+                layer["opacity"] / 100.0
+            )
 
-                if layer.id in self.layers:
-                    if not layer.visible:
-                        if self.layers[layer.id] in self.scene.items():
-                            self.scene.removeItem(self.layers[layer.id])
-                    elif layer.visible:
-                        if not self.layers[layer.id] in self.scene.items():
-                            self.scene.addItem(self.layers[layer.id])
-                        self.layers[layer.id].pixmap.convertFromImage(ImageQt(image))
-                    continue
-
-                draggable_pixmap = None
-                if layer.id in self.layers:
-                    self.layers[layer.id].pixmap.convertFromImage(ImageQt(image))
-                    draggable_pixmap = self.layers[layer.id]
-                    self.scene.removeItem(draggable_pixmap)
-                
-                if not draggable_pixmap:
-                    draggable_pixmap = DraggablePixmap(self, QPixmap.fromImage(ImageQt(image)))
-                    self.layers[layer.id] = draggable_pixmap
-
-                if layer.visible:
-                    self.scene.addItem(draggable_pixmap)
-
-                pos = QPoint(layer.pos_x, layer.pos_y)
-                canvas_settings = self.app.settings["canvas_settings"]
-                draggable_pixmap.setPos(QPointF(
-                    canvas_settings["pos_x"] + pos.x(),
-                    canvas_settings["pos_y"] + pos.y()
-                ))
+            if not layer["visible"]:
+                if layer["pixmap"] in self.scene.items():
+                    self.scene.removeItem(layer["pixmap"])
+            elif layer["visible"]:
+                if type(layer["pixmap"]) is not DraggablePixmap or layer["pixmap"] not in self.scene.items():
+                    layer["pixmap"].convertFromImage(ImageQt(image))
+                    layer["pixmap"] = DraggablePixmap(self, layer["pixmap"])
+                    self.app.update_layer(layer)
+                    self.scene.addItem(layer["pixmap"])
+            continue
 
     def set_scene_rect(self):
         self.scene.setSceneRect(0, 0, self.view_size.width(), self.view_size.height())
@@ -487,8 +458,8 @@ class CanvasPlusWidget(CanvasBaseWidget):
 
         pivot_point = self.image_pivot_point
         root_point = QPoint(0, 0)
-        with self.layer_container_widget.current_layer() as layer:
-            current_image_position = QPoint(layer.pos_x, layer.pos_y)
+        layer = self.app.current_layer()
+        current_image_position = QPoint(layer["pos_x"], layer["pos_y"])
 
         is_drawing_left = outpaint_box_rect.x() < current_image_position.x()
         is_drawing_right = outpaint_box_rect.x() > current_image_position.x()
@@ -546,11 +517,8 @@ class CanvasPlusWidget(CanvasBaseWidget):
         self.add_image_to_scene(image)
     
     def current_draggable_pixmap(self):
-        with self.layer_container_widget.current_layer() as layer:
-            index = layer + 1
-            if index in self.layers:
-                return self.layers[index]
-
+        self.app.current_draggable_pixmap()
+        
     def copy_image(self, image:Image=None) -> DraggablePixmap:
         pixmap = self.current_pixmap() if image is None else QPixmap.fromImage(ImageQt(image))
         return self.move_pixmap_to_clipboard(pixmap)
@@ -561,9 +529,7 @@ class CanvasPlusWidget(CanvasBaseWidget):
         if not draggable_pixmap:
             return
         self.scene.removeItem(draggable_pixmap)
-        with self.layer_container_widget.current_layer() as layer:
-            if layer.id in self.layers:
-                del self.layers[layer.id]
+        self.app.delete_current_layer()
         self.update()
     
     def delete_image(self):
@@ -636,7 +602,7 @@ class CanvasPlusWidget(CanvasBaseWidget):
         return self.app.ui.layer_widget.add_layer()
 
     def switch_to_layer(self, layer_index):
-        self.current_layer_index = layer_index
+        self.app.switch_layer(layer_index)
 
     def add_image_to_scene(self, image, is_outpaint=False, image_root_point=None):
         #self.image_adder = ImageAdder(self, image, is_outpaint, image_root_point)

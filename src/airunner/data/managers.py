@@ -1,9 +1,8 @@
 from contextlib import contextmanager
-from typing import Any, Iterator
+from typing import Iterator
 from sqlalchemy.orm import joinedload
 from PyQt6.QtCore import QObject, pyqtSignal
 from airunner.utils import Logger
-
 
 from airunner.data.session_scope import (
     models_scope,
@@ -124,13 +123,6 @@ class SettingsManager(QObject):
             else:
                 loras = session.query(Lora).options(joinedload('*')).all()
             yield loras            
-
-    @contextmanager
-    def layers(self):
-        from airunner.data.models import Layer
-        with session_scope() as session:
-            layers = session.query(Layer).options(joinedload('*')).all()
-            yield layers
 
     @contextmanager
     def document(self):
