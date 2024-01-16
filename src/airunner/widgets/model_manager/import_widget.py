@@ -1,5 +1,3 @@
-import threading
-
 from airunner.data.models import AIModel, Lora, Embedding
 from airunner.data.session_scope import session_scope
 from airunner.widgets.base_widget import BaseWidget
@@ -8,6 +6,7 @@ from airunner.aihandler.download_civitai import DownloadCivitAI
 from airunner.aihandler.logger import Logger
 
 class ImportWidget(BaseWidget):
+    logger = Logger(prefix="ImportWidget")
     widget_class_ = Ui_import_model_widget
     model_widgets = []
 
@@ -157,7 +156,7 @@ class ImportWidget(BaseWidget):
 
         data = DownloadCivitAI.get_json(model_id)
         if data is None:
-            Logger.error("Failed to get JSON from CivitAI")
+            self.logger.error("Failed to get JSON from CivitAI")
             return
         self.current_model_data = data
         self.is_civitai = "civitai.com" in url

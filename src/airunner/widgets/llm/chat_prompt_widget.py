@@ -19,6 +19,7 @@ class Message:
 
 
 class ChatPromptWidget(BaseWidget):
+    logger = Logger(prefix="ChatPromptWidget")
     widget_class_ = Ui_chat_prompt
     conversation = None
     is_modal = True
@@ -40,7 +41,7 @@ class ChatPromptWidget(BaseWidget):
         try:
             return self.app.settings_manager.llm_generator_settings
         except Exception as e:
-            Logger.error(e)
+            self.logger.error(e)
 
     @property
     def current_generator(self):
@@ -89,7 +90,7 @@ class ChatPromptWidget(BaseWidget):
     @pyqtSlot()
     def action_button_clicked_send(self, image_override=None, prompt_override=None, callback=None, generator_name="casuallm"):
         if self.generating:
-            Logger.warning("Already generating")
+            self.logger.warning("Already generating")
             return
             
         self.generating = True
@@ -99,7 +100,7 @@ class ChatPromptWidget(BaseWidget):
 
         prompt = self.prompt if (prompt_override is None or prompt_override == "") else prompt_override
         if prompt is None or prompt == "":
-            Logger.warning("Prompt is empty")
+            self.logger.warning("Prompt is empty")
             return
 
         with session_scope() as session:

@@ -16,9 +16,8 @@ from airunner.aihandler.enums import MessageCode
 from airunner.aihandler.logger import Logger
 
 
-
-
 class LLM(QObject):
+    logger = Logger(prefix="LLM")
     dtype = ""
     local_files_only = True
     set_attention_mask = False
@@ -89,7 +88,7 @@ class LLM(QObject):
 
     def move_to_cpu(self):
         if self.model:
-            Logger.info("Moving model to CPU")
+            self.logger.info("Moving model to CPU")
             self.model.to("cpu")
         self.tokenizer = None
 
@@ -102,16 +101,16 @@ class LLM(QObject):
             device_name = "cuda"
         else:
             device_name = "cpu"
-        Logger.info("Moving model to device {device_name}")
+        self.logger.info("Moving model to device {device_name}")
         self.model.to(device_name)
     
     def load_tokenizer(self, local_files_only = None):
-        Logger.info(f"Loading tokenizer for {self.requested_generator_name}")
+        self.logger.info(f"Loading tokenizer for {self.requested_generator_name}")
         if self.requested_generator_name == "casuallm":
             local_files_only = self.local_files_only if local_files_only is None else local_files_only
             if not self.tokenizer is None:
                 return
-            Logger.info("Load tokenizer")
+            self.logger.info("Load tokenizer")
             try:
                 self.tokenizer = AutoTokenizer.from_pretrained(
                     self.current_model_path,
@@ -122,19 +121,19 @@ class LLM(QObject):
             except OSError as e:
                 if "Checkout your internet connection" in str(e):
                     if local_files_only:
-                        Logger.info("Unable to load tokenizer, model does not exist locally, trying to load from remote")
+                        self.logger.info("Unable to load tokenizer, model does not exist locally, trying to load from remote")
                         return self.load_tokenizer(local_files_only=False)
                     else:
-                        Logger.error(e)
+                        self.logger.error(e)
             if self.tokenizer:
                 self.tokenizer.use_default_system_prompt = False
 
     def load_streamer(self):
-        Logger.info("Loading LLM text streamer")
+        self.logger.info("Loading LLM text streamer")
         self.streamer = TextIteratorStreamer(self.tokenizer)
 
     def load_model(self, local_files_only = None):
-        Logger.info("Loading model")
+        self.logger.info("Loading model")
         if not self.do_load_model:
             return
 
@@ -166,7 +165,7 @@ class LLM(QObject):
             auto_class_ = InstructBlipForConditionalGeneration
             params.pop("use_cache", None)
         
-        Logger.info(f"Loading model from {path}")
+        self.logger.info(f"Loading model from {path}")
         try:
             self.model = auto_class_.from_pretrained(path, **params)
         except OSError as e:
@@ -174,12 +173,12 @@ class LLM(QObject):
                 if local_files_only:
                     return self.load_model(local_files_only=False)
                 else:
-                    Logger.error(e)
+                    self.logger.error(e)
         
         # print the type of class that self.model is
    
     def load_processor(self, local_files_only = None):
-        Logger.info(f"Loading processor {self.model_path}")
+        self.logger.info(f"Loading processor {self.model_path}")
         local_files_only = self.local_files_only if local_files_only is None else local_files_only
         kwargs = {}
         config = self.quantization_config()
@@ -192,15 +191,15 @@ class LLM(QObject):
             **kwargs
         )
         if self.processor:
-            Logger.info("Processor loaded")
+            self.logger.info("Processor loaded")
         else:
-            Logger.error("Failed to load processor")
+            self.logger.error("Failed to load processor")
 
     def clear_history(self):
         self.history = []
 
     def unload_tokenizer(self):
-        Logger.info("Unloading tokenizer")
+        self.logger.info("Unloading tokenizer")
         self.tokenizer = None
         self.engine.clear_memory()
         
@@ -210,14 +209,14 @@ class LLM(QObject):
         self.engine.clear_memory()
 
     def unload_processor(self):
-        Logger.info("Unloading processor")
+        self.logger.info("Unloading processor")
         self.processor = None
         self.engine.clear_memory()
 
     def quantization_config(self):
         config = None
         if self.dtype == "8bit":
-            Logger.info("Loading 8bit model")
+            self.logger.info("Loading 8bit model")
             config = BitsAndBytesConfig(
                 load_in_4bit=False,
                 load_in_8bit=True,
@@ -228,7 +227,7 @@ class LLM(QObject):
                 bnb_4bit_quant_type='nf4',
             )
         elif self.dtype == "4bit":
-            Logger.info("Loading 4bit model")
+            self.logger.info("Loading 4bit model")
             config = BitsAndBytesConfig(
                 load_in_4bit=True,
                 load_in_8bit=False,
@@ -239,7 +238,7 @@ class LLM(QObject):
                 bnb_4bit_quant_type='nf4',
             )
         elif self.dtype == "2bit":
-            Logger.info("Loading 2bit model")
+            self.logger.info("Loading 2bit model")
             config = GPTQConfig(bits=2, dataset = "c4", tokenizer=self.tokenizer)
         return config
 
@@ -272,7 +271,7 @@ class LLM(QObject):
         }.get(self.request_type, default_)()
     
     def prepare_input_args(self):
-        Logger.info("Preparing input args")
+        self.logger.info("Preparing input args")
         self.system_instructions = self.request_data.get("system_instructions", "")
         top_k = self.parameters.get("top_k", self.top_k)
         eta_cutoff = self.parameters.get("eta_cutoff", self.eta_cutoff)
@@ -344,7 +343,7 @@ class LLM(QObject):
             self.tokenizer.seed = self.seed
 
     def handle_generate_request(self):
-        Logger.info("Handling generate request")
+        self.logger.info("Handling generate request")
         self._processing_request = True
         kwargs = self.prepare_input_args()
         self.do_set_seed(kwargs.get("seed"))
@@ -361,14 +360,14 @@ class LLM(QObject):
             self.chain.clear()
     
     def do_generate(self, data):
-        Logger.info("Generating with LLM")
+        self.logger.info("Generating with LLM")
         self.process_data(data)
         self.handle_request()
         self.requested_generator_name = data["request_data"]["generator_name"]
         return self.generate()
 
     def generate(self):
-        Logger.info("Generating with LLM " + self.requested_generator_name)
+        self.logger.info("Generating with LLM " + self.requested_generator_name)
         # Create a FileSystemLoader object with the directory of the template
         HERE = os.path.dirname(os.path.abspath(__file__))
         file_loader = FileSystemLoader(os.path.join(HERE, "chat_templates"))
@@ -428,7 +427,7 @@ class LLM(QObject):
             model_inputs = encoded.to("cuda" if torch.cuda.is_available() else "cpu")
 
             # Generate the response
-            Logger.info("Generating...")
+            self.logger.info("Generating...")
             import threading
             thread = threading.Thread(target=self.model.generate, kwargs=dict(
                 model_inputs,
@@ -507,4 +506,4 @@ class LLM(QObject):
                 answers.append(answer.strip().lower())
             return answers
         else:
-            Logger.error(f"Failed to call generator for {self.requested_generator_name}")
+            self.logger.error(f"Failed to call generator for {self.requested_generator_name}")

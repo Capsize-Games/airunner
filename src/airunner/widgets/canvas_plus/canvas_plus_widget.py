@@ -18,10 +18,10 @@ from airunner.utils import apply_opacity_to_image
 from airunner.data.session_scope import session_scope
 from airunner.widgets.canvas_plus.draggables import DraggablePixmap, ActiveGridArea
 from airunner.widgets.canvas_plus.custom_scene import CustomScene
-from airunner.widgets.canvas_plus.image_adder import ImageAdder
 
 
 class CanvasPlusWidget(CanvasBaseWidget):
+    logger = Logger(prefix="CanvasPlusWidget")
     widget_class_ = Ui_canvas
     scene = None
     view = None
@@ -567,7 +567,7 @@ class CanvasPlusWidget(CanvasBaseWidget):
         self.update()
     
     def delete_image(self):
-        Logger.info("Deleting image from canvas")
+        self.logger.info("Deleting image from canvas")
         draggable_pixmap = self.current_draggable_pixmap()
         if not draggable_pixmap:
             return
@@ -575,11 +575,11 @@ class CanvasPlusWidget(CanvasBaseWidget):
         self.update()
     
     def paste_image_from_clipboard(self):
-        Logger.info("paste image from clipboard")
+        self.logger.info("paste image from clipboard")
         image = self.get_image_from_clipboard()
 
         if not image:
-            Logger.info("No image in clipboard")
+            self.logger.info("No image in clipboard")
             return
 
         self.create_image(image)
@@ -610,7 +610,7 @@ class CanvasPlusWidget(CanvasBaseWidget):
             subprocess.Popen(["xclip", "-selection", "clipboard", "-t", "image/png"],
                             stdin=subprocess.PIPE).communicate(data)
         except FileNotFoundError:
-            Logger.error("xclip not found. Please install xclip to copy image to clipboard.")
+            self.logger.error("xclip not found. Please install xclip to copy image to clipboard.")
 
     def create_image(self, image):
         if self.app.settings["resize_on_paste"]:
@@ -648,7 +648,7 @@ class CanvasPlusWidget(CanvasBaseWidget):
     def image_to_system_clipboard_windows(self, pixmap):
         if not pixmap:
             return None
-        Logger.info("image_to_system_clipboard_windows")
+        self.logger.info("image_to_system_clipboard_windows")
         import win32clipboard
         data = io.BytesIO()
         # Convert QImage to PIL Image
@@ -662,7 +662,7 @@ class CanvasPlusWidget(CanvasBaseWidget):
         win32clipboard.CloseClipboard()
 
     def image_from_system_clipboard_windows(self):
-        Logger.info("image_from_system_clipboard_windows")
+        self.logger.info("image_from_system_clipboard_windows")
         import win32clipboard
         try:
             win32clipboard.OpenClipboard()
@@ -677,11 +677,11 @@ class CanvasPlusWidget(CanvasBaseWidget):
             return None
     
     def image_from_system_clipboard_linux(self):
-        Logger.info("image_from_system_clipboard_linux")
+        self.logger.info("image_from_system_clipboard_linux")
         try:
             image = ImageGrab.grabclipboard()
             if not image:
-                Logger.info("No image in clipboard")
+                self.logger.info("No image in clipboard")
                 return None
             # with transparency
             image = image.convert("RGBA")

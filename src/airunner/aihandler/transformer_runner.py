@@ -7,12 +7,12 @@ from transformers import BitsAndBytesConfig
 from transformers import AutoModelForCausalLM, AutoModelForSeq2SeqLM, AutoTokenizer
 from transformers import InstructBlipForConditionalGeneration
 from transformers import InstructBlipProcessor
-from airunner.aihandler.enums import MessageCode
 from airunner.aihandler.logger import Logger
 from transformers import GPTQConfig
 
 
 class TransformerRunner(QObject):
+    logger = Logger(prefix="TransformerRunner")
     dtype = ""
     local_files_only = True
     set_attention_mask = False
@@ -83,7 +83,7 @@ class TransformerRunner(QObject):
 
     def move_to_cpu(self):
         if self.model:
-            Logger.info("Moving model to CPU")
+            self.logger.info("Moving model to CPU")
             self.model.to("cpu")
         self.tokenizer = None
 
@@ -96,11 +96,11 @@ class TransformerRunner(QObject):
             device_name = "cuda"
         else:
             device_name = "cpu"
-        Logger.info("Moving model to device {device_name}")
+        self.logger.info("Moving model to device {device_name}")
         self.model.to(device_name)
     
     def unload_tokenizer(self):
-        Logger.info("Unloading tokenizer")
+        self.logger.info("Unloading tokenizer")
         self.tokenizer = None
         self.engine.clear_memory()
         
@@ -112,7 +112,7 @@ class TransformerRunner(QObject):
     def quantization_config(self):
         config = None
         if self.dtype == "8bit":
-            Logger.info("Loading 8bit model")
+            self.logger.info("Loading 8bit model")
             config = BitsAndBytesConfig(
                 load_in_4bit=False,
                 load_in_8bit=True,
@@ -123,7 +123,7 @@ class TransformerRunner(QObject):
                 bnb_4bit_quant_type='nf4',
             )
         elif self.dtype == "4bit":
-            Logger.info("Loading 4bit model")
+            self.logger.info("Loading 4bit model")
             config = BitsAndBytesConfig(
                 load_in_4bit=True,
                 load_in_8bit=False,
@@ -134,17 +134,17 @@ class TransformerRunner(QObject):
                 bnb_4bit_quant_type='nf4',
             )
         elif self.dtype == "2bit":
-            Logger.info("Loading 2bit model")
+            self.logger.info("Loading 2bit model")
             config = GPTQConfig(bits=2, dataset = "c4", tokenizer=self.tokenizer)
         return config
 
     def unload_processor(self):
-        Logger.info("Unloading processor")
+        self.logger.info("Unloading processor")
         self.processor = None
         self.engine.clear_memory()
 
     def load_processor(self, local_files_only = None):
-        Logger.info(f"Loading processor {self.model_path}")
+        self.logger.info(f"Loading processor {self.model_path}")
         local_files_only = self.local_files_only if local_files_only is None else local_files_only
         kwargs = {}
         config = self.quantization_config()
@@ -157,12 +157,12 @@ class TransformerRunner(QObject):
             **kwargs
         )
         if self.processor:
-            Logger.info("Processor loaded")
+            self.logger.info("Processor loaded")
         else:
-            Logger.error("Failed to load processor")
+            self.logger.error("Failed to load processor")
 
     def load_model(self, local_files_only = None):
-        Logger.info("Loading model")
+        self.logger.info("Loading model")
         if not self.do_load_model:
             return
 
@@ -194,7 +194,7 @@ class TransformerRunner(QObject):
             auto_class_ = InstructBlipForConditionalGeneration
             params.pop("use_cache", None)
         
-        Logger.info(f"Loading model from {path}")
+        self.logger.info(f"Loading model from {path}")
         try:
             self.model = auto_class_.from_pretrained(path, **params)
         except OSError as e:
@@ -202,7 +202,7 @@ class TransformerRunner(QObject):
                 if local_files_only:
                     return self.load_model(local_files_only=False)
                 else:
-                    Logger.error(e)
+                    self.logger.error(e)
 
             
     def process_data(self, data):
@@ -241,7 +241,7 @@ class TransformerRunner(QObject):
         pass
 
     def prepare_input_args(self):
-        Logger.info("Preparing input args")
+        self.logger.info("Preparing input args")
         self.system_instructions = self.request_data.get("system_instructions", "")
         top_k = self.parameters.get("top_k", self.top_k)
         eta_cutoff = self.parameters.get("eta_cutoff", self.eta_cutoff)
@@ -299,12 +299,12 @@ class TransformerRunner(QObject):
         return kwargs
     
     def load_tokenizer(self, local_files_only = None):
-        Logger.info(f"Loading tokenizer for {self.requested_generator_name}")
+        self.logger.info(f"Loading tokenizer for {self.requested_generator_name}")
         if self.requested_generator_name == "casuallm":
             local_files_only = self.local_files_only if local_files_only is None else local_files_only
             if not self.tokenizer is None:
                 return
-            Logger.info("Load tokenizer")
+            self.logger.info("Load tokenizer")
             try:
                 self.tokenizer = AutoTokenizer.from_pretrained(
                     self.current_model_path,
@@ -315,10 +315,10 @@ class TransformerRunner(QObject):
             except OSError as e:
                 if "Checkout your internet connection" in str(e):
                     if local_files_only:
-                        Logger.info("Unable to load tokenizer, model does not exist locally, trying to load from remote")
+                        self.logger.info("Unable to load tokenizer, model does not exist locally, trying to load from remote")
                         return self.load_tokenizer(local_files_only=False)
                     else:
-                        Logger.error(e)
+                        self.logger.error(e)
             if self.tokenizer:
                 self.tokenizer.use_default_system_prompt = False
 
@@ -337,7 +337,7 @@ class TransformerRunner(QObject):
             self.tokenizer.seed = self.seed
 
     def handle_generate_request(self):
-        Logger.info("Handling generate request")
+        self.logger.info("Handling generate request")
         self.disable_request_processing()
         kwargs = self.prepare_input_args()
         self.do_set_seed(kwargs.get("seed"))
