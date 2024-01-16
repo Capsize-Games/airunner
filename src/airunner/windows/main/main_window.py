@@ -862,8 +862,6 @@ Previous Conversation:
         self.logger.info("Starting AI Runnner")
         self.ui = Ui_MainWindow()
         self.application_settings = QSettings("Capsize Games", "AI Runner")
-        self.application_settings.clear()
-        self.application_settings.sync()
 
         # qdarktheme.enable_hi_dpi()
 
@@ -944,6 +942,11 @@ Previous Conversation:
         self.ui.v2t_button.blockSignals(False)
         
         self.loaded.emit()
+    
+    def action_reset_settings(self):
+        self.application_settings.clear()
+        self.application_settings.sync()
+        self.settings = self.settings
     
     def do_listen(self):
         if not self.listening:
