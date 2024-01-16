@@ -39,12 +39,14 @@ from airunner.widgets.brushes.brushes_container import BrushesContainer
 from airunner.workers.image_data_worker import ImageDataWorker
 from airunner.windows.main.settings_mixin import SettingsMixin
 from airunner.windows.main.layer_mixin import LayerMixin
+from airunner.windows.main.lora_mixin import LoraMixin
 
 
 class MainWindow(
     QMainWindow,
     SettingsMixin,
     LayerMixin,
+    LoraMixin,
 ):
     logger = Logger(prefix="MainWindow")
     # signals
