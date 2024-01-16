@@ -5,6 +5,7 @@ from airunner.data.models import DEFAULT_PATHS
 from airunner.utils import default_hf_cache_dir
 from airunner.settings import BASE_PATH
 from airunner.aihandler.enums import Mode
+from airunner.data.bootstrap.pipeline_bootstrap_data import pipeline_bootstrap_data
 
 
 class SettingsMixin:
@@ -357,6 +358,7 @@ Previous Conversation:
             presets=[],
             lora=[],
             embeddings=[],
+            pipelines=pipeline_bootstrap_data,
         ), type=dict)
 
     @settings.setter

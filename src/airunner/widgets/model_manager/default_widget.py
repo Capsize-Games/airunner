@@ -49,7 +49,7 @@ class DefaultModelWidget(BaseWidget):
                 version = model.version
                 category = model.category
                 pipeline_action = model.pipeline_action
-                pipeline_class = self.app.settings_manager.get_pipeline_classname(pipeline_action, version, category)
+                pipeline_class = self.app.get_pipeline_classname(pipeline_action, version, category)
                 model_widget = ModelWidget(
                     path=model.path,
                     branch=model.branch,
