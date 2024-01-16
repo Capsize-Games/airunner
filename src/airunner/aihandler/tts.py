@@ -5,7 +5,6 @@ import numpy as np
 
 from PyQt6.QtCore import QObject, pyqtSignal, pyqtSlot, QThread
 
-from transformers import BitsAndBytesConfig
 from transformers import SpeechT5Processor, SpeechT5ForTextToSpeech, SpeechT5HifiGan, BarkModel, BarkProcessor
 from datasets import load_dataset
 
@@ -463,7 +462,6 @@ class TTS(QObject):
     
     def process_message(self, is_end_of_message: bool):
         # split on sentence enders
-        Logger.info("TTS: Processing message")
         sentence_enders = self.single_character_sentence_enders + self.double_character_sentence_enders
         
         # split text into words
