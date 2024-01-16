@@ -72,8 +72,9 @@ class ChatPromptWidget(BaseWidget):
     @pyqtSlot()
     def action_button_clicked_clear_conversation(self):
         self.conversation_history = []
-        self.ui.conversation.setText("")
-        self.app.engine.clear_llm_history()
+        for widget in self.ui.scrollAreaWidgetContents.findChildren(MessageWidget):
+            widget.deleteLater()
+        self.app.client.engine.clear_llm_history()
 
     @pyqtSlot(dict)
     def message_handler(self, response: dict):

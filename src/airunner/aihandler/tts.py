@@ -51,7 +51,7 @@ class VocalizerWorker(QObject):
         try:
             self.queue.put(generated_speech)
         except Exception as e:
-            print(f"Error while adding speech to stream: {e}")
+            Logger.error(f"Error while adding speech to stream: {e}")
 
 
 class GeneratorWorker(QObject):
@@ -170,6 +170,7 @@ class TTS(QObject):
     do_offload_to_cpu = True
     message = ""
     local_files_only = True
+    loaded = False
 
     @property
     def processor_path(self):
@@ -343,9 +344,13 @@ class TTS(QObject):
             self.load_dataset()
             self.load_corpus()
             self.current_model = target_model
+            self.loaded = True
     
     def unload(self):
+        if not self.loaded:
+            return
         Logger.info("Unloading TTS")
+        self.loaded = False
         do_clear_memory = False
         try:
             del self.model

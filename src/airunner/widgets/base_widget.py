@@ -67,8 +67,6 @@ class BaseWidget(QWidget):
         for icon_data in self.icons:
             icon_name = icon_data[0]
             widget_name = icon_data[1]
-            print(icon_name, widget_name)
-            print(self.icons)
             icon = QtGui.QIcon()
             icon.addPixmap(
                 QtGui.QPixmap(f":/icons/{theme}/{icon_name}.svg"),
