@@ -214,7 +214,6 @@ class ImageWidget(BaseWidget):
         image = Image.open(self.image_path)
         meta_data = self.meta_data.copy()
         meta_data.pop("seed", None)
-        meta_data.pop("latents_seed", None)
         meta_data["action"] = "txt2img"
         meta_data["width"] = image.width
         meta_data["height"] = image.height
@@ -234,7 +233,6 @@ class ImageWidget(BaseWidget):
         image = Image.open(self.image_path)
         meta_data = self.meta_data.copy()
         meta_data.pop("seed", None)
-        meta_data.pop("latents_seed", None)
         meta_data["action"] = "txt2img"
         meta_data["width"] = image.width
         meta_data["height"] = image.height

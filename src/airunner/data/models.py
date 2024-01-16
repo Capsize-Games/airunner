@@ -10,7 +10,6 @@ from sqlalchemy.orm import relationship
 from PyQt6.QtCore import Qt, QAbstractTableModel, QModelIndex
 
 from airunner.settings import BASE_PATH
-from airunner.data.bootstrap.prompt_templates import prompt_template_seed_data
 
 
 DEFAULT_PATHS = {
@@ -36,6 +35,9 @@ DEFAULT_PATHS = {
             "casuallm": "",
             "seq2seq": "",
             "visualqa": "",
+        },
+        "other": {
+            "ebooks": "",
         }
     }
 }
@@ -107,36 +109,6 @@ class Embedding(BaseModel):
 
     __table_args__ = (
         UniqueConstraint('name', 'path', name='name_path_unique'),
-    )
-
-
-class Scheduler(BaseModel):
-    __tablename__ = "schedulers"
-
-    id = Column(Integer, primary_key=True)
-    name = Column(String)
-    display_name = Column(String)
-
-
-class ActionScheduler(BaseModel):
-    __tablename__ = "action_schedulers"
-
-    id = Column(Integer, primary_key=True)
-    section = Column(String)
-    generator_name = Column(String)
-    scheduler_id = Column(Integer, ForeignKey('schedulers.id'))
-    scheduler = relationship("Scheduler", backref="action_schedulers")
-
-
-class SavedPrompt(BaseModel):
-    __tablename__ = 'saved_prompts'
-
-    id = Column(Integer, primary_key=True)
-    prompt = Column(String)
-    negative_prompt = Column(String)
-
-    __table_args__ = (
-        UniqueConstraint('prompt', 'negative_prompt', name='prompt_negative_prompt_unique'),
     )
 
 
@@ -269,53 +241,3 @@ class Layer(BaseModel):
     pivot_point_y = Column(Integer, default=0)
     root_point_x = Column(Integer, default=0)
     root_point_y = Column(Integer, default=0)
-
-
-class LLMModelVersion(BaseModel):
-    __tablename__ = 'llm_model_version'
-    id = Column(Integer, primary_key=True)
-    created_at = Column(DateTime, default=datetime.datetime.utcnow)
-    name = Column(String)
-
-
-class LLMPromptTemplate(BaseModel):
-    __tablename__ = 'llm_prompt_templates'
-    name = Column(String, default="Mistral 7B Instruct: Default Chatbot")
-    system_instructions = Column(String, default="""You are {{ botname }}. You are having a conversation with {{ username }}. {{ username }} is the user and you are the assistant. You should stay in character and respond as {{ botname }}.
-DO NOT use emojis.
-DO NOT use actions (e.g. *action here*).
-DO NOT talk like this is a chat room or instant messenger, talk like you are having a conversation in real life.
-Always respond in a way that is appropriate to the conversation and sounds like something {{ botname }} would really say.
-{{ botname }}'s mood is {{ bot_mood }}
-{{ botname }}'s personality is {{ bot_personality }}""")
-    model = Column(String, default="mistralai/Mistral-7B-Instruct-v0.1")
-    llm_category = Column(String, default="casuallm")
-    template = Column(String, default="""###
-
-Previous Conversation:
-'''
-{{ history }}
-'''
-
-{{ username }}: '{{ input }}'
-{{ botname }}: 
-""")
-
-
-
-# class Conversation(BaseModel):
-#     __tablename__ = 'conversation'
-#     id = Column(Integer, primary_key=True)
-#     created_at = Column(DateTime, default=datetime.datetime.utcnow)
-#     messages = relationship('Message', back_populates='conversation')
-
-
-# class Message(BaseModel):
-#     __tablename__ = 'messages'
-#     id = Column(Integer, primary_key=True)
-#     created_at = Column(DateTime, default=datetime.datetime.utcnow)
-#     name = Column(String)
-#     message = Column(String)
-#     conversation_id = Column(Integer, ForeignKey('conversation.id'))
-#     conversation = relationship('Conversation', back_populates='messages')
-

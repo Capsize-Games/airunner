@@ -13,6 +13,8 @@ from PyQt6.QtCore import QObject, pyqtSignal, pyqtSlot
 from airunner.aihandler.speech_to_text import SpeechToText
 from airunner.aihandler.tts import TTS
 
+logger = Logger(prefix="Engine")
+
 class Message:
     def __init__(self, *args, **kwargs):
         self.name = kwargs.get("name")
@@ -101,7 +103,7 @@ class Engine(QObject):
         self.ocr = ImageProcessor(engine=self)
 
     def move_pipe_to_cpu(self):
-        Logger.info("Moving pipe to CPU")
+        logger.info("Moving pipe to CPU")
         self.sd.move_pipe_to_cpu()
         self.clear_memory()
     
@@ -111,7 +113,7 @@ class Engine(QObject):
         :param data:
         :return:
         """
-        Logger.info("generator_sample called")
+        logger.info("generator_sample called")
         self.llm_generator_sample(data)
         self.tts_generator_sample(data)
         self.sd_generator_sample(data)
@@ -120,7 +122,7 @@ class Engine(QObject):
         if "llm_request" not in data or not self.llm:
             return
         if self.model_type != "llm":
-            Logger.info("Preparing LLM model...")
+            logger.info("Preparing LLM model...")
             # if self.tts:
             #     self.tts.move_model(to_cpu=False)
             self.clear_memory()
@@ -133,13 +135,13 @@ class Engine(QObject):
                 self.sd.unload_model()
                 self.sd.unload_tokenizer()
                 self.clear_memory()
-        Logger.info("Engine calling llm.do_generate")
+        logger.info("Engine calling llm.do_generate")
         self.llm.do_generate(data)
     
     def tts_generator_sample(self, data: dict):
         if "tts_request" not in data or not self.tts:
             return
-        Logger.info("Preparing TTS model...")
+        logger.info("Preparing TTS model...")
         # self.tts.move_model(to_cpu=False)
         signal = data["request_data"].get("signal", None)
         message_object = data["request_data"].get("message_object", None)
@@ -157,15 +159,13 @@ class Engine(QObject):
                     signal.emit(message_object, is_bot, first_message, last_message)
 
     def sd_generator_sample(self, data:dict):
-        if "sd_request" not in data or not self.sd:
+        if "options" not in data or "sd_request" not in data["options"] or not self.sd:
             return
         if self.model_type != "art":
-            Logger.info("Preparing Art model...")
-            do_unload_model = data["options"].get("unload_unused_model", False)
-            move_unused_model_to_cpu = data["options"].get("move_unused_model_to_cpu", False)
+            logger.info("Preparing Art model...")
             self.model_type = "art"
-            self.do_unload_llm(data["request_data"], do_unload_model, move_unused_model_to_cpu)
-        Logger.info("Engine calling sd.generator_sample")
+            self.do_unload_llm()
+        logger.info("Engine calling sd.generator_sample")
         self.sd.generator_sample(data)
 
     def do_listen(self):
@@ -190,14 +190,14 @@ class Engine(QObject):
                 do_move_to_cpu = False
 
         if do_move_to_cpu:
-            Logger.info("Moving LLM to CPU")
+            logger.info("Moving LLM to CPU")
             self.llm.move_to_cpu()
             self.clear_memory()
         elif do_unload_model:
             self.do_unload_llm()
     
     def do_unload_llm(self):
-        Logger.info("Unloading LLM")
+        logger.info("Unloading LLM")
         self.llm.unload_model()
         self.llm.unload_tokenizer()
         self.clear_memory()
@@ -218,11 +218,11 @@ class Engine(QObject):
         code = code or MessageCode.STATUS
         if code == MessageCode.ERROR:
             traceback.print_stack()
-            Logger.error(message)
+            logger.error(message)
         elif code == MessageCode.WARNING:
-            Logger.warning(message)
+            logger.warning(message)
         elif code == MessageCode.STATUS:
-            Logger.info(message)
+            logger.info(message)
 
     message = ""
     first_message = True
@@ -243,7 +243,7 @@ class Engine(QObject):
                     is_bot=True,
                 )
             })
-        if code == MessageCode.TEXT_STREAMED:
+        elif code == MessageCode.TEXT_STREAMED:
             self.message += message
             self.current_message += message
             self.message = self.message.replace("</s>", "")
@@ -273,6 +273,8 @@ class Engine(QObject):
                 self.first_message = True
                 self.message = ""
                 self.current_message = ""
+            
+            # self.stt.do_listen()
 
             # if is_end_of_sentence and not is_end_of_message:
             #     # split on all sentence enders
@@ -297,6 +299,11 @@ class Engine(QObject):
             #     })
             #     self.message = ""
             #     self.current_message = ""
+        elif code == MessageCode.IMAGE_GENERATED:
+            self.message_var.emit(dict(
+                code=code,
+                message=message
+            ))
     
     current_message = ""
 
@@ -334,7 +341,7 @@ class Engine(QObject):
         """
         Clear the GPU ram.
         """
-        Logger.info("Clearing memory")
+        logger.info("Clearing memory")
         torch.cuda.empty_cache()
         torch.cuda.synchronize()
         gc.collect()
@@ -342,3 +349,6 @@ class Engine(QObject):
     def clear_llm_history(self):
         if self.llm:
             self.llm.clear_history()
+    
+    def stop(self):
+        self.stt.stop()
