@@ -66,6 +66,8 @@ class Ui_prompt_widget(object):
         self.retranslateUi(prompt_widget)
         self.load_button.clicked.connect(prompt_widget.action_clicked_button_load) # type: ignore
         self.delete_button.clicked.connect(prompt_widget.action_clicked_button_delete) # type: ignore
+        self.prompt.textChanged.connect(prompt_widget.action_text_changed_prompt) # type: ignore
+        self.negative_prompt.textChanged.connect(prompt_widget.action_text_changed_negative_prompt) # type: ignore
         QtCore.QMetaObject.connectSlotsByName(prompt_widget)
 
     def retranslateUi(self, prompt_widget):

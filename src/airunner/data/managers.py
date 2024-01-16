@@ -2,7 +2,8 @@ from contextlib import contextmanager
 from typing import Any, Iterator
 from sqlalchemy.orm import joinedload
 from PyQt6.QtCore import QObject, pyqtSignal
-from airunner.utils import Logger as logger
+from airunner.utils import Logger
+
 
 from airunner.data.session_scope import (
     models_scope,
@@ -11,6 +12,7 @@ from airunner.data.session_scope import (
 
 
 class Modelmanager:
+    logger = Logger(prefix="Modelmanager")
     def __init__(self, scope_function):
         self.scope_function = scope_function
 
@@ -27,7 +29,7 @@ class Modelmanager:
         except Exception as e:
             import traceback
             traceback.print_exc()
-            logger.error(f"Error while getting property {name}: {e}")
+            self.logger.error(f"Error while getting property {name}: {e}")
             value = None  # Return None if there's an error
         return value
 
@@ -46,7 +48,7 @@ class Modelmanager:
         except Exception as e:
             import traceback
             traceback.print_exc()
-            logger.error(f"Error while getting property {name}: {e}")
+            self.logger.error(f"Error while getting property {name}: {e}")
             yield None  # Yield None if there's an error
 
     def __getattr__(self, name):
@@ -54,6 +56,7 @@ class Modelmanager:
 
 
 class SettingsManager(QObject):
+    logger = Logger(prefix="SettingsManager")
     _instance = None  # Keep instance reference 
     changed_signal = pyqtSignal(str, object)
 
@@ -154,7 +157,7 @@ class SettingsManager(QObject):
                     version=version
                 ).first().classname
         except AttributeError:
-            logger.error(f"Unable to find pipeline classname for {pipeline_action} {version} {category}")
+            self.logger.error(f"Unable to find pipeline classname for {pipeline_action} {version} {category}")
             return None
 
     def get_value(self, key):
@@ -164,7 +167,7 @@ class SettingsManager(QObject):
             try:
                 obj = getattr(obj, k)
             except AttributeError:
-                logger.error(f"Unable to find key {key}")
+                self.logger.error(f"Unable to find key {key}")
                 return None
         return obj
     

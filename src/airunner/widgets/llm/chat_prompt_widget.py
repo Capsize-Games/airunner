@@ -3,7 +3,6 @@ from PyQt6.QtWidgets import QSpacerItem, QSizePolicy
 from PyQt6.QtCore import Qt
 
 from airunner.aihandler.enums import MessageCode
-from airunner.data.models import LLMPromptTemplate
 from airunner.widgets.base_widget import BaseWidget
 from airunner.widgets.llm.loading_widget import LoadingWidget
 from airunner.widgets.llm.templates.chat_prompt_ui import Ui_chat_prompt
@@ -104,10 +103,11 @@ class ChatPromptWidget(BaseWidget):
             return
 
         with session_scope() as session:
-            prompt_template = session.query(LLMPromptTemplate).filter(
-                LLMPromptTemplate.name == self.app.settings["llm_generator_settings"]["prompt_template"]
-            ).first()
-            if prompt_template is None:
+            prompt_template = None
+            template_name = self.app.settings["llm_generator_settings"]["prompt_template"]
+            if template_name in self.app.settings["llm_templates"]:
+                prompt_template = self.app.settings["llm_templates"][template_name]
+            else:
                 raise Exception("Prompt template not found for "+self.app.settings["llm_generator_settings"]["prompt_template"])
 
             llm_generator_settings = self.app.settings["llm_generator_settings"]
@@ -263,10 +263,10 @@ class ChatPromptWidget(BaseWidget):
         self.action_button_clicked_send(prompt_override=heard)
 
     def parse_template(self, template):
-        system_instructions = template.system_instructions
-        model = template.model
-        llm_category = template.llm_category
-        template = template.template
+        system_instructions = template["system_instructions"]
+        model = template["model"]
+        llm_category = template["llm_category"]
+        template = template["template"]
         if llm_category == "casuallm":
             if model == "mistralai/Mistral-7B-Instruct-v0.1":
                 return "\n".join((
