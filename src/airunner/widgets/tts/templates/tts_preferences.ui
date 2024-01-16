@@ -7,68 +7,14 @@
     <x>0</x>
     <y>0</y>
     <width>400</width>
-    <height>301</height>
+    <height>619</height>
    </rect>
   </property>
   <property name="windowTitle">
    <string>Form</string>
   </property>
-  <layout class="QGridLayout" name="gridLayout_2">
-   <item row="3" column="0">
-    <widget class="QCheckBox" name="use_bark">
-     <property name="text">
-      <string>Use Bark</string>
-     </property>
-    </widget>
-   </item>
-   <item row="0" column="0">
-    <widget class="QGroupBox" name="groupBox_3">
-     <property name="title">
-      <string>Language</string>
-     </property>
-     <layout class="QGridLayout" name="gridLayout_4">
-      <item row="0" column="0">
-       <widget class="QComboBox" name="language_combobox"/>
-      </item>
-     </layout>
-    </widget>
-   </item>
-   <item row="1" column="0">
-    <widget class="QGroupBox" name="groupBox_2">
-     <property name="title">
-      <string>Gender</string>
-     </property>
-     <layout class="QGridLayout" name="gridLayout_3">
-      <item row="0" column="0">
-       <widget class="QComboBox" name="gender_combobox">
-        <item>
-         <property name="text">
-          <string>Male</string>
-         </property>
-        </item>
-        <item>
-         <property name="text">
-          <string>Female</string>
-         </property>
-        </item>
-       </widget>
-      </item>
-     </layout>
-    </widget>
-   </item>
-   <item row="2" column="0">
-    <widget class="QGroupBox" name="groupBox">
-     <property name="title">
-      <string>Voice</string>
-     </property>
-     <layout class="QGridLayout" name="gridLayout">
-      <item row="0" column="0">
-       <widget class="QComboBox" name="voice_combobox"/>
-      </item>
-     </layout>
-    </widget>
-   </item>
-   <item row="5" column="0">
+  <layout class="QGridLayout" name="gridLayout_7">
+   <item row="10" column="0">
     <spacer name="verticalSpacer">
      <property name="orientation">
       <enum>Qt::Vertical</enum>
@@ -81,15 +27,220 @@
      </property>
     </spacer>
    </item>
-   <item row="4" column="0">
+   <item row="9" column="0">
     <widget class="QCheckBox" name="enable_tts">
      <property name="text">
       <string>Enable Text to Speech</string>
      </property>
     </widget>
    </item>
+   <item row="0" column="0">
+    <widget class="QGroupBox" name="use_bark">
+     <property name="title">
+      <string>Use Bark</string>
+     </property>
+     <property name="checkable">
+      <bool>true</bool>
+     </property>
+     <layout class="QGridLayout" name="gridLayout_8">
+      <item row="2" column="0">
+       <widget class="QGroupBox" name="groupBox">
+        <property name="title">
+         <string>Voice</string>
+        </property>
+        <layout class="QGridLayout" name="gridLayout">
+         <item row="0" column="0">
+          <widget class="QComboBox" name="voice_combobox"/>
+         </item>
+        </layout>
+       </widget>
+      </item>
+      <item row="0" column="0">
+       <widget class="QGroupBox" name="groupBox_3">
+        <property name="title">
+         <string>Language</string>
+        </property>
+        <layout class="QGridLayout" name="gridLayout_4">
+         <item row="0" column="0">
+          <widget class="QComboBox" name="language_combobox"/>
+         </item>
+        </layout>
+       </widget>
+      </item>
+      <item row="4" column="0">
+       <widget class="QGroupBox" name="groupBox_6">
+        <property name="title">
+         <string>Coarse Temperature</string>
+        </property>
+        <layout class="QGridLayout" name="gridLayout_2">
+         <item row="0" column="0">
+          <widget class="SliderWidget" name="semantic_temperature" native="true">
+           <property name="slider_minimum" stdset="0">
+            <number>1</number>
+           </property>
+           <property name="slider_maximum" stdset="0">
+            <number>100</number>
+           </property>
+           <property name="spinbox_minimum" stdset="0">
+            <double>0.000000000000000</double>
+           </property>
+           <property name="spinbox_maximum" stdset="0">
+            <double>1.000000000000000</double>
+           </property>
+           <property name="display_as_float" stdset="0">
+            <bool>true</bool>
+           </property>
+           <property name="settings_property" stdset="0">
+            <string>tts_settings.coarse_temperature</string>
+           </property>
+           <property name="slider_single_step" stdset="0">
+            <number>1</number>
+           </property>
+           <property name="slider_page_step" stdset="0">
+            <number>10</number>
+           </property>
+           <property name="spinbox_single_step" stdset="0">
+            <double>0.010000000000000</double>
+           </property>
+           <property name="spinbox_page_step" stdset="0">
+            <double>0.100000000000000</double>
+           </property>
+           <property name="slider_callback" stdset="0">
+            <string>handle_value_change</string>
+           </property>
+          </widget>
+         </item>
+        </layout>
+       </widget>
+      </item>
+      <item row="5" column="0">
+       <widget class="QGroupBox" name="groupBox_5">
+        <property name="title">
+         <string>Semantic Temperature</string>
+        </property>
+        <layout class="QGridLayout" name="gridLayout_6">
+         <item row="0" column="0">
+          <widget class="SliderWidget" name="semantic_temperature_3" native="true">
+           <property name="slider_minimum" stdset="0">
+            <number>1</number>
+           </property>
+           <property name="slider_maximum" stdset="0">
+            <number>100</number>
+           </property>
+           <property name="spinbox_minimum" stdset="0">
+            <double>0.000000000000000</double>
+           </property>
+           <property name="spinbox_maximum" stdset="0">
+            <double>1.000000000000000</double>
+           </property>
+           <property name="display_as_float" stdset="0">
+            <bool>true</bool>
+           </property>
+           <property name="settings_property" stdset="0">
+            <string>tts_settings.semantic_temperature</string>
+           </property>
+           <property name="slider_single_step" stdset="0">
+            <number>1</number>
+           </property>
+           <property name="slider_page_step" stdset="0">
+            <number>10</number>
+           </property>
+           <property name="spinbox_single_step" stdset="0">
+            <double>0.010000000000000</double>
+           </property>
+           <property name="spinbox_page_step" stdset="0">
+            <double>0.100000000000000</double>
+           </property>
+           <property name="slider_callback" stdset="0">
+            <string>handle_value_change</string>
+           </property>
+          </widget>
+         </item>
+        </layout>
+       </widget>
+      </item>
+      <item row="1" column="0">
+       <widget class="QGroupBox" name="groupBox_2">
+        <property name="title">
+         <string>Gender</string>
+        </property>
+        <layout class="QGridLayout" name="gridLayout_3">
+         <item row="0" column="0">
+          <widget class="QComboBox" name="gender_combobox">
+           <item>
+            <property name="text">
+             <string>Male</string>
+            </property>
+           </item>
+           <item>
+            <property name="text">
+             <string>Female</string>
+            </property>
+           </item>
+          </widget>
+         </item>
+        </layout>
+       </widget>
+      </item>
+      <item row="3" column="0">
+       <widget class="QGroupBox" name="groupBox_4">
+        <property name="title">
+         <string>Fine Temperature</string>
+        </property>
+        <layout class="QGridLayout" name="gridLayout_5">
+         <item row="0" column="0">
+          <widget class="SliderWidget" name="semantic_temperature_2" native="true">
+           <property name="slider_minimum" stdset="0">
+            <number>1</number>
+           </property>
+           <property name="slider_maximum" stdset="0">
+            <number>100</number>
+           </property>
+           <property name="spinbox_minimum" stdset="0">
+            <double>0.000000000000000</double>
+           </property>
+           <property name="spinbox_maximum" stdset="0">
+            <double>1.000000000000000</double>
+           </property>
+           <property name="display_as_float" stdset="0">
+            <bool>true</bool>
+           </property>
+           <property name="settings_property" stdset="0">
+            <string>tts_settings.fine_temperature</string>
+           </property>
+           <property name="slider_single_step" stdset="0">
+            <number>1</number>
+           </property>
+           <property name="slider_page_step" stdset="0">
+            <number>10</number>
+           </property>
+           <property name="spinbox_single_step" stdset="0">
+            <double>0.010000000000000</double>
+           </property>
+           <property name="spinbox_page_step" stdset="0">
+            <double>0.100000000000000</double>
+           </property>
+           <property name="slider_callback" stdset="0">
+            <string>handle_value_change</string>
+           </property>
+          </widget>
+         </item>
+        </layout>
+       </widget>
+      </item>
+     </layout>
+    </widget>
+   </item>
   </layout>
  </widget>
+ <customwidgets>
+  <customwidget>
+   <class>SliderWidget</class>
+   <extends>QWidget</extends>
+   <header>airunner/widgets/slider/slider_widget</header>
+   <container>1</container>
+  </customwidget>
+ </customwidgets>
  <resources/>
  <connections>
   <connection>
@@ -99,12 +250,12 @@
    <slot>language_changed(QString)</slot>
    <hints>
     <hint type="sourcelabel">
-     <x>134</x>
-     <y>47</y>
+     <x>167</x>
+     <y>97</y>
     </hint>
     <hint type="destinationlabel">
      <x>63</x>
-     <y>-14</y>
+     <y>0</y>
     </hint>
    </hints>
   </connection>
@@ -115,12 +266,12 @@
    <slot>voice_changed(QString)</slot>
    <hints>
     <hint type="sourcelabel">
-     <x>226</x>
-     <y>196</y>
+     <x>259</x>
+     <y>247</y>
     </hint>
     <hint type="destinationlabel">
      <x>326</x>
-     <y>-11</y>
+     <y>0</y>
     </hint>
    </hints>
   </connection>
@@ -131,28 +282,12 @@
    <slot>gender_changed(QString)</slot>
    <hints>
     <hint type="sourcelabel">
-     <x>253</x>
-     <y>124</y>
+     <x>286</x>
+     <y>172</y>
     </hint>
     <hint type="destinationlabel">
-     <x>402</x>
+     <x>399</x>
      <y>14</y>
-    </hint>
-   </hints>
-  </connection>
-  <connection>
-   <sender>use_bark</sender>
-   <signal>toggled(bool)</signal>
-   <receiver>tts_preferences</receiver>
-   <slot>use_bark_changed(bool)</slot>
-   <hints>
-    <hint type="sourcelabel">
-     <x>39</x>
-     <y>244</y>
-    </hint>
-    <hint type="destinationlabel">
-     <x>2</x>
-     <y>2</y>
     </hint>
    </hints>
   </connection>
@@ -163,12 +298,28 @@
    <slot>enable_tts_changed(bool)</slot>
    <hints>
     <hint type="sourcelabel">
-     <x>18</x>
-     <y>272</y>
+     <x>27</x>
+     <y>480</y>
     </hint>
     <hint type="destinationlabel">
      <x>1</x>
      <y>41</y>
+    </hint>
+   </hints>
+  </connection>
+  <connection>
+   <sender>use_bark</sender>
+   <signal>clicked(bool)</signal>
+   <receiver>tts_preferences</receiver>
+   <slot>use_bark_changed(bool)</slot>
+   <hints>
+    <hint type="sourcelabel">
+     <x>70</x>
+     <y>15</y>
+    </hint>
+    <hint type="destinationlabel">
+     <x>101</x>
+     <y>-14</y>
     </hint>
    </hints>
   </connection>
