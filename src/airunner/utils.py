@@ -452,3 +452,10 @@ def load_extension(extension_dir):
     sys.path.append(install_dir)
 
     # Now you can import any library that was in the extension's dependencies
+
+
+class KeyboardKey:
+    def __init__(self, text, key, description):
+        self.text = text
+        self.key = key
+        self.description = description
