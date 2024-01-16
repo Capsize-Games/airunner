@@ -7,6 +7,11 @@ class SeedWidget(BaseWidget):
     widget_class_ = Ui_seed_widget
     name = "seed_widget"
 
+    def __init__(self, *args, **kwargs):
+        super().__init__(*args, **kwargs)
+
+        self.app.application_settings_changed_signal.connect(self.update_seed)
+
     def update_seed(self):
         self.ui.lineEdit.setText(str(self.seed))
 
@@ -17,7 +22,3 @@ class SeedWidget(BaseWidget):
 
     def action_value_changed_seed(self, value):
         self.seed = value
-
-
-class LatentsSeedWidget(SeedWidget):
-    setting_name = "generator.random_latents_seed"

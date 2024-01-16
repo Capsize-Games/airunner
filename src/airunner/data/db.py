@@ -2,8 +2,8 @@ from airunner.data.bootstrap.controlnet_bootstrap_data import controlnet_bootstr
 from airunner.data.bootstrap.imagefilter_bootstrap_data import imagefilter_bootstrap_data
 from airunner.data.bootstrap.model_bootstrap_data import model_bootstrap_data
 from airunner.data.bootstrap.pipeline_bootstrap_data import pipeline_bootstrap_data
-from airunner.data.models import ControlnetModel, LLMPromptTemplate, Pipeline, \
-    AIModel, ImageFilter, ImageFilterValue, Scheduler, ActionScheduler
+from airunner.data.models import ControlnetModel, Pipeline, \
+    AIModel, ImageFilter, ImageFilterValue
 from airunner.data.session_scope import session_scope, engine
 from alembic.config import Config
 from alembic import command
@@ -88,101 +88,7 @@ def prepare_database():
                     }
                 },
             }
-
-            my_session.add(Document(
-                name="Untitled",
-                active=True
-            ))
             
-
-
-            available_schedulers = {}
-            for scheduler_data in [
-                ("Euler a", "EULER_ANCESTRAL"),
-                ("Euler", "EULER"),
-                ("LMS", "LMS"),
-                ("Heun", "HEUN"),
-                ("DPM2", "DPM2"),
-                ("DPM++ 2M", "DPM_PP_2M"),
-                ("DPM2 Karras", "DPM2_K"),
-                ("DPM2 a Karras", "DPM2_A_K"),
-                ("DPM++ 2M Karras", "DPM_PP_2M_K"),
-                ("DPM++ 2M SDE Karras", "DPM_PP_2M_SDE_K"),
-                ("DDIM", "DDIM"),
-                ("UniPC", "UNIPC"),
-                ("DDPM", "DDPM"),
-                ("DEIS", "DEIS"),
-                ("DPM 2M SDE Karras", "DPM_2M_SDE_K"),
-                ("PLMS", "PLMS"),
-            ]:
-                obj = Scheduler(
-                    name=scheduler_data[1],
-                    display_name=scheduler_data[0]
-                )
-                my_session.add(obj)
-                available_schedulers[scheduler_data[1]] = obj
-            
-
-            generator_sections = {
-                "stablediffusion": {
-                    "upscale": ["EULER"],
-                    "superresolution": ["DDIM", "LMS", "PLMS"],
-                },
-            }
-
-            # add all of the schedulers for the defined generator sections
-            for generator, sections in generator_sections.items():
-                for section, schedulers in sections.items():
-                    for scheduler in schedulers:
-                        my_session.add(ActionScheduler(
-                            section=section,
-                            generator_name=generator,
-                            scheduler_id=my_session.query(Scheduler).filter_by(name=scheduler).first().id
-                        ))
-            
-
-            # add the rest of the stable diffusion schedulers
-            for k, v in available_schedulers.items():
-                for section in [
-                    "txt2img", "depth2img", "pix2pix", "vid2vid",
-                    "outpaint", "controlnet", "txt2vid"
-                ]:
-                    obj = ActionScheduler(
-                        section=section,
-                        generator_name="stablediffusion",
-                        scheduler_id=v.id
-                    )
-                    my_session.add(obj)
-            
-                        
-
-            # for generator_name, generator_data in seed_data.items():
-            #     if "model_versions" in generator_data:
-            #         model_versions = []
-            #         for name in generator_data["model_versions"]:
-            #             print("Name", name)
-            #             model_versions.append(LLMModelVersion(name=name))
-
-            #     for version in model_versions:
-            #         generator.model_versions.append(version)
-
-            #     my_session.add(generator)
-                
-
-            prompt_template = LLMPromptTemplate()
-            sd_prompt_template = LLMPromptTemplate(
-                system_instructions="""{{ username }} will give you a subject. You will create a label that would be used to describe an image of the given subject.
----
-Examples:
-{{ username }}: "a photo of a cat in a hat"
-{{ botname }}: "A photograph of a (cat wearing a hat++)"
-{{ username }}: "a woman in the woods"
-{{ botname }}: "A professional portrait of a (woman named elsa) smiling for a photo in the woods\""""
-            )
-            my_session.add(prompt_template)
-            my_session.add(sd_prompt_template)
-                
-
     HERE = os.path.abspath(os.path.dirname(__file__)) 
     alembic_ini_path = os.path.join(HERE, "../alembic.ini")
 
