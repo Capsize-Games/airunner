@@ -350,7 +350,8 @@ class MainWindow(
         self.testing = kwargs.pop("testing", False)
 
         super().__init__(*args, **kwargs)
-        self.action_reset_settings()
+        
+        # self.action_reset_settings()
 
         self.ui.setupUi(self)
 
