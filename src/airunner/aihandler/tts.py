@@ -17,6 +17,7 @@ from PyQt6.QtCore import QObject, pyqtSignal, pyqtSlot, QThread
 class VocalizerWorker(QObject):
     add_to_stream_signal = pyqtSignal(np.ndarray)
     reader_mode_active = False
+    logger = Logger(prefix="VocalizerWorker")
 
     def __init__(self, *args, **kwargs):
         super().__init__()
@@ -47,14 +48,15 @@ class VocalizerWorker(QObject):
                 continue
         
     def handle_speech(self, generated_speech):
-        Logger.info("Adding speech to stream...")
+        self.logger.info("Adding speech to stream...")
         try:
             self.queue.put(generated_speech)
         except Exception as e:
-            Logger.error(f"Error while adding speech to stream: {e}")
+            self.logger.error(f"Error while adding speech to stream: {e}")
 
 
 class GeneratorWorker(QObject):
+    logger = Logger(prefix="GeneratorWorker")
     add_to_stream_signal = pyqtSignal(np.ndarray)
 
     def __init__(self, *args, **kwargs):
@@ -80,7 +82,7 @@ class GeneratorWorker(QObject):
             time.sleep(0.1)
 
     def generate(self, text):
-        Logger.info("Generating TTS...")
+        self.logger.info("Generating TTS...")
         text = text.replace("\n", " ").strip()
         
         if self.parent.use_bark:
@@ -92,7 +94,7 @@ class GeneratorWorker(QObject):
     
     def move_inputs_to_device(self, inputs):
         if self.parent.use_cuda:
-            Logger.info("Moving inputs to CUDA")
+            self.logger.info("Moving inputs to CUDA")
             try:
                 inputs = {k: v.cuda() for k, v in inputs.items()}
             except AttributeError:
@@ -100,14 +102,14 @@ class GeneratorWorker(QObject):
         return inputs
 
     def generate_with_bark(self, text):
-        Logger.info("Generating TTS...")
+        self.logger.info("Generating TTS...")
         text = text.replace("\n", " ").strip()
         
-        Logger.info("Processing inputs...")
+        self.logger.info("Processing inputs...")
         inputs = self.parent.processor(text, voice_preset=self.parent.voice_preset).to(self.parent.device)
         inputs = self.move_inputs_to_device(inputs)
 
-        Logger.info("Generating speech...")
+        self.logger.info("Generating speech...")
         start = time.time()
         params = dict(
             **inputs, 
@@ -116,21 +118,21 @@ class GeneratorWorker(QObject):
             semantic_temperature=self.parent.semantic_temperature,
         )
         speech = self.parent.model.generate(**params)
-        Logger.info("Generated speech in " + str(time.time() - start) + " seconds")
+        self.logger.info("Generated speech in " + str(time.time() - start) + " seconds")
 
         tts = speech[0].cpu().float().numpy()
         return tts
     
     def generate_with_t5(self, text):
-        Logger.info("Generating TTS...")
+        self.logger.info("Generating TTS...")
         text = text.replace("\n", " ").strip()
         
-        Logger.info("Processing inputs...")
+        self.logger.info("Processing inputs...")
 
         inputs = self.parent.processor(text=text, return_tensors="pt")
         inputs = self.move_inputs_to_device(inputs)
 
-        Logger.info("Generating speech...")
+        self.logger.info("Generating speech...")
         start = time.time()
         params = dict(
             **inputs,
@@ -139,12 +141,13 @@ class GeneratorWorker(QObject):
             max_length=100,
         )
         speech = self.parent.model.generate(**params)
-        Logger.info("Generated speech in " + str(time.time() - start) + " seconds")
+        self.logger.info("Generated speech in " + str(time.time() - start) + " seconds")
         tts = speech.cpu().float().numpy()
         return tts
 
 
 class TTS(QObject):
+    logger = Logger(prefix="TTS")
     character_replacement_map = {
         "\n": " ",
         "’": "'",
@@ -254,7 +257,7 @@ class TTS(QObject):
 
     def __init__(self, *args, **kwargs):
         super().__init__()
-        Logger.info("Loading TTS...")
+        self.logger.info("Loading")
         """
         Initialize the TTS
         """
@@ -307,7 +310,7 @@ class TTS(QObject):
         """
         Move the model, vocoder, processor and speaker_embeddings to the CPU
         """
-        Logger.info("Moving TTS to CPU")
+        self.logger.info("Moving TTS to CPU")
         if self.model:
             self.model = self.model.cpu()
         if self.vocoder:
@@ -319,7 +322,7 @@ class TTS(QObject):
         """
         Move the model, vocoder, processor and speaker_embeddings to the GPU
         """
-        Logger.info("Moving TTS to device")
+        self.logger.info("Moving TTS to device")
         if torch.cuda.is_available():
             if self.model:
                 self.model = self.model.to(self.device)
@@ -349,7 +352,7 @@ class TTS(QObject):
     def unload(self):
         if not self.loaded:
             return
-        Logger.info("Unloading TTS")
+        self.logger.info("Unloading TTS")
         self.loaded = False
         do_clear_memory = False
         try:
@@ -382,7 +385,7 @@ class TTS(QObject):
         self.process_sentences()
 
     def load_model(self):
-        Logger.info("Loading TTS Model")
+        self.logger.info("Loading TTS Model")
         model_class_ = BarkModel if self.use_bark else SpeechT5ForTextToSpeech
         self.model = model_class_.from_pretrained(
             self.model_path, 
@@ -396,7 +399,7 @@ class TTS(QObject):
     
     def load_vocoder(self):
         if not self.use_bark:
-            Logger.info("Loading TTS Vocoder")
+            self.logger.info("Loading TTS Vocoder")
             self.vocoder = SpeechT5HifiGan.from_pretrained(
                 self.vocoder_path,
                 torch_dtype=self.torch_dtype
@@ -406,7 +409,7 @@ class TTS(QObject):
                 self.vocoder = self.vocoder.cuda()
     
     def load_processor(self):
-        Logger.info("Loading TTS Procesor")
+        self.logger.info("Loading TTS Procesor")
         processor_class_ = BarkProcessor if self.use_bark else SpeechT5Processor
         self.processor = processor_class_.from_pretrained(self.processor_path)
 
@@ -416,7 +419,7 @@ class TTS(QObject):
         :return:
         """
         if not self.use_bark:
-            Logger.info("Loading TTS Dataset")
+            self.logger.info("Loading TTS Dataset")
             embeddings_dataset = load_dataset(self.speaker_embeddings_dataset_path, split="validation")
             self.speaker_embeddings = torch.tensor(embeddings_dataset[7306]["xvector"]).unsqueeze(0)
             
@@ -441,7 +444,7 @@ class TTS(QObject):
         words.
         :return:
         """
-        Logger.info("TTS: Processing sentences")
+        self.logger.info("Processing sentences")
         self.sentences = []
         sentence = ""
         for word in self.corpus:
@@ -480,7 +483,7 @@ class TTS(QObject):
             if len(chunks) < 30 and not is_end_of_message:
                 return False
 
-            Logger.info("Adding text to TTS queue...")
+            self.logger.info("Adding text to TTS queue...")
         
             for chunk in chunks:
                 # add "..." to chunk if it doesn't end with a sentence ender

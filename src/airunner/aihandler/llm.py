@@ -348,28 +348,12 @@ class LLM(QObject):
         self._processing_request = True
         kwargs = self.prepare_input_args()
         self.do_set_seed(kwargs.get("seed"))
-
         self.current_model_path = self.model_path
         self.load_tokenizer()
         self.load_streamer()
         self.load_model()
         if self.requested_generator_name == "visualqa":
             self.load_processor()
-
-        # self.engine.send_message("Generating output")
-        # with torch.backends.cuda.sdp_kernel(
-        #     enable_flash=True, 
-        #     enable_math=False, 
-        #     enable_mem_efficient=False
-        # ):
-        #     with torch.no_grad():
-        #         print("************** CALLING GENERATE")
-        #         value = self.generate()
-        #         print("VALUE", value)
-        #         if self.callback:
-        #             self.callback(value)
-        #         else:
-        #             self.engine.send_message(value, code=MessageCode.TEXT_GENERATED)
         self._processing_request = True
     
     def clear_conversation(self):
@@ -381,14 +365,7 @@ class LLM(QObject):
         self.process_data(data)
         self.handle_request()
         self.requested_generator_name = data["request_data"]["generator_name"]
-        return self.generate(
-            # app=self.app,
-            # endpoint=data["request_data"]["generator_name"],
-            # prompt=prompt, 
-            # model=model_path,
-            # stream=data["request_data"]["stream"],
-            # images=[data["request_data"]["image"]],
-        )
+        return self.generate()
 
     def generate(self):
         Logger.info("Generating with LLM " + self.requested_generator_name)
@@ -399,7 +376,6 @@ class LLM(QObject):
         # Create an Environment object with the FileSystemLoader object
         env = Environment(loader=file_loader)
 
-        # Load the template
         # Load the template
         chat_template = self.prompt_template#env.get_template('chat.j2')
 
@@ -481,8 +457,8 @@ class LLM(QObject):
             replaced = False
             for new_text in self.streamer:
                 # strip all newlines from new_text
-                new_text = new_text.replace("\n", " ")
-                streamed_template += new_text
+                parsed_new_text = new_text.replace("\n", " ")
+                streamed_template += parsed_new_text
                 streamed_template = streamed_template.replace("<s> [INST]", "<s>[INST]")
                 # iterate over every character in rendered_template and
                 # check if we have the same character in streamed_template

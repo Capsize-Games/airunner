@@ -10,6 +10,8 @@ from airunner.widgets.model_manager.templates.custom_ui import Ui_custom_model_w
 from PyQt6 import QtWidgets
 from airunner.aihandler.logger import Logger
 
+logger = Logger(prefix="CustomModelWidget")
+
 
 class CustomModelWidget(BaseWidget):
     initialized = False
@@ -56,7 +58,7 @@ class CustomModelWidget(BaseWidget):
                 for entry in dir_object:
                     version = entry.name
 
-                    Logger.info(f"Scan for models {key} {model_path}")
+                    logger.info(f"Scan for models {key} {model_path}")
             
                     with os.scandir(os.path.join(model_path, version)) as dir_object:
                         for entry in dir_object:
