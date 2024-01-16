@@ -1,12 +1,7 @@
-import os
-
 from PyQt6.QtCore import pyqtSlot
 from PyQt6.QtWidgets import QWidget, QSizePolicy
 
 from airunner.aihandler.enums import MessageCode
-from airunner.data.managers import SettingsManager
-from airunner.data.models import Embedding
-from airunner.data.session_scope import session_scope
 from airunner.widgets.base_widget import BaseWidget
 from airunner.widgets.embeddings.embedding_widget import EmbeddingWidget
 from airunner.widgets.embeddings.templates.embeddings_container_ui import Ui_embeddings_container
@@ -82,9 +77,7 @@ class EmbeddingsContainerWidget(BaseWidget):
     def load_embeddings(self):
         self.clear_embedding_widgets()
         
-        with session_scope() as session:
-            embeddings = session.query(Embedding).filter(
-                Embedding.name.like(f"%{self.search_filter}%") if self.search_filter != "" else True).all()
+        embeddings = self.app.get_embeddings(self.search_filter)
         
         for embedding in embeddings:
             self.add_embedding(embedding)
@@ -95,44 +88,18 @@ class EmbeddingsContainerWidget(BaseWidget):
         self.ui.scrollAreaWidgetContents.layout().addWidget(self.spacer)
 
     def add_embedding(self, embedding):
-        with session_scope() as session:
-            embedding_widget = EmbeddingWidget(embedding=embedding)
-            session.add(embedding)
-            self.register_embedding_widget(embedding.name, embedding_widget)
+        embedding_widget = EmbeddingWidget(embedding=embedding)
+        self.register_embedding_widget(embedding["name"], embedding_widget)
         self.ui.scrollAreaWidgetContents.layout().addWidget(embedding_widget)
 
     def action_clicked_button_scan_for_embeddings(self):
         self.scan_for_embeddings()
     
     def check_saved_embeddings(self):
-        with session_scope() as session:
-            embeddings = session.query(Embedding).all()
-            for embedding in embeddings:
-                if not os.path.exists(embedding.path):
-                    session.delete(embedding)
+        self.app.delete_missing_embeddings()
 
     def scan_for_embeddings(self):
-        # recursively scan for embedding model files in the embeddings path
-        # for each embedding model file, create an Embedding model
-        # add the Embedding model to the database
-        # add the Embedding model to the UI
-        self.check_saved_embeddings()
-
-        with session_scope() as session:
-            embeddings_path = self.app.settings["path_settings"]["embeddings_model_path"]
-
-            if os.path.exists(embeddings_path):
-                for root, dirs, _ in os.walk(embeddings_path):
-                    for dir in dirs:
-                        version = dir.split("/")[-1]
-                        path = os.path.join(root, dir)
-                        for entry in os.scandir(path):
-                            if entry.is_file() and entry.name.endswith((".ckpt", ".safetensors", ".pt")):
-                                name = os.path.splitext(entry.name)[0]
-                                embedding = session.query(Embedding).filter_by(name=name).first()
-                                if not embedding:
-                                    embedding = Embedding(name=name, path=entry.path, version=version)
-                                    session.add(embedding)
+        self.app.scan_for_embeddings()
         self.load_embeddings()
 
     def toggle_all_toggled(self, checked):

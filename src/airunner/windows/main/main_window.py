@@ -40,6 +40,7 @@ from airunner.workers.image_data_worker import ImageDataWorker
 from airunner.windows.main.settings_mixin import SettingsMixin
 from airunner.windows.main.layer_mixin import LayerMixin
 from airunner.windows.main.lora_mixin import LoraMixin
+from airunner.windows.main.embedding_mixin import EmbeddingMixin
 
 
 class MainWindow(
@@ -47,6 +48,7 @@ class MainWindow(
     SettingsMixin,
     LayerMixin,
     LoraMixin,
+    EmbeddingMixin
 ):
     logger = Logger(prefix="MainWindow")
     # signals
@@ -351,7 +353,7 @@ class MainWindow(
 
         super().__init__(*args, **kwargs)
         
-        # self.action_reset_settings()
+        self.action_reset_settings()
 
         self.ui.setupUi(self)
 

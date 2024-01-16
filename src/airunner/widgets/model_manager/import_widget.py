@@ -1,4 +1,4 @@
-from airunner.data.models import AIModel, Embedding
+from airunner.data.models import AIModel
 from airunner.data.session_scope import session_scope
 from airunner.widgets.base_widget import BaseWidget
 from airunner.widgets.model_manager.templates.import_ui import Ui_import_model_widget

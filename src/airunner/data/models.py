@@ -95,20 +95,6 @@ class BaseModel(Base):
     created_at = Column(DateTime, default=datetime.datetime.utcnow)
 
 
-class Embedding(BaseModel):
-    __tablename__ = 'embeddings'
-
-    name = Column(String)
-    path = Column(String)
-    tags = Column(String)
-    active = Column(Boolean, default=True)
-    version = Column(String, default="SD 1.5")
-
-    __table_args__ = (
-        UniqueConstraint('name', 'path', name='name_path_unique'),
-    )
-
-
 class ControlnetModel(BaseModel):
     __tablename__ = 'controlnet_models'
 
