@@ -173,8 +173,6 @@ class MainWindow(
     
     @property
     def settings(self):
-        # self.application_settings.clear()
-        # self.application_settings.sync()
         return self.application_settings.value("settings", dict(
             ocr_enabled=True,
             tts_enabled=True,
@@ -260,6 +258,7 @@ class MainWindow(
                 llm_seq2seq_model_path=DEFAULT_PATHS["text"]["models"]["seq2seq"],
                 llm_visualqa_model_path=DEFAULT_PATHS["text"]["models"]["visualqa"],
                 vae_model_path=DEFAULT_PATHS["art"]["models"]["vae"],
+                ebook_path=DEFAULT_PATHS["text"]["other"]["ebooks"],
             ),
             standard_image_settings=dict(
                 image_similarity=1000,
@@ -559,6 +558,8 @@ class MainWindow(
         logger.info("Starting AI Runnner")
         self.ui = Ui_MainWindow()
         self.application_settings = QSettings("Capsize Games", "AI Runner")
+        # self.application_settings.clear()
+        # self.application_settings.sync()
 
         # qdarktheme.enable_hi_dpi()
 
@@ -846,7 +847,7 @@ class MainWindow(
         self.generator_tab_widget.refresh_models()
 
     def show_settings_path(self, name, default_path=None):
-        path = getattr(self.settings_manager.path_settings, name)
+        path = self.settings["path_settings"][name]
         self.show_path(default_path if default_path and path == "" else path)
 
     def show_path(self, path):
