@@ -272,7 +272,6 @@ def prepare_metadata(data, index=0):
     metadata.add_text("image_guidance_scale", str(options.get("image_guidance_scale", 100)))
     metadata.add_text("scale", str(options.get("scale", 7)))
     metadata.add_text("seed", str(options.get("seed", 0)))
-    metadata.add_text("latents_seed", str(options.get("latents_seed", 0)))
     metadata.add_text("steps", str(options.get("steps", 20)))
     metadata.add_text("ddim_eta", str(options.get("ddim_eta", 0.0001)))
     metadata.add_text("n_iter", str(options.get("n_iter", 1)))
@@ -303,17 +302,12 @@ def auto_export_image(
     image,
     data=None,
     seed=None,
-    latents_seed=None,
     type="image",
 ):
     if seed is None:
         raise Exception("Seed must be set when auto exporting an image")
-    
-    if latents_seed is None:
-        raise Exception("Latents seed must be set when auto exporting an image")
 
     data["options"]["seed"] = seed
-    data["options"]["latents_seed"] = latents_seed
     
     if data and "action" in data and data["action"] == "txt2vid":
         return None, None
@@ -339,7 +333,7 @@ def auto_export_image(
         elif type == "controlnet":
             filename = f"mask_{data['controlnet']}"
     
-    filename = f"{filename}_{str(seed)}_{str(latents_seed)}"
+    filename = f"{filename}_{str(seed)}"
     if os.path.exists(os.path.join(path, filename + extension)):
         i = 1
         while os.path.exists(os.path.join(path, filename + "_" + str(i) + extension)):
