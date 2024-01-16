@@ -273,6 +273,8 @@ class Engine(QObject):
                 self.first_message = True
                 self.message = ""
                 self.current_message = ""
+            
+            # self.stt.do_listen()
 
             # if is_end_of_sentence and not is_end_of_message:
             #     # split on all sentence enders
