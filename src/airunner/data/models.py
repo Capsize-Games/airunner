@@ -1,9 +1,6 @@
-import base64
 import datetime
-import io
 import os
 
-from PIL import Image
 from sqlalchemy import Column, Integer, String, Boolean, ForeignKey, Float, UniqueConstraint, DateTime
 from sqlalchemy.ext.declarative import declarative_base
 from sqlalchemy.orm import relationship
