@@ -81,8 +81,6 @@ class ControlNetSettingsWidget(InputImageSettingsWidget):
         self.ui.groupBox.setChecked(self.app.settings["generator_settings"]["enable_controlnet"] is True)
 
     def handle_toggle_controlnet(self, value):
-        if self.app.settings_manager.current_tab != "stablediffusion":
-            value = False
         settings = self.app.settings
         settings["generator_settings"]["enable_controlnet"] = value
         self.app.settings = settings
@@ -119,18 +117,7 @@ class ControlNetSettingsWidget(InputImageSettingsWidget):
     def send_active_mask_to_canvas(self):
         if not self.current_controlnet_image:
             return
-
-        self.app.canvas.update_image_canvas(
-            self.app.settings_manager.current_tab,
-            {
-                "action": self.app.settings_manager.current_tab,
-                "options": {
-                    "outpaint_box_rect": self.app.canvas.active_grid_area_rect,
-                    "generator_section": self.app.settings_manager.current_generator_section
-                }
-            },
-            self.current_controlnet_image
-        )
+        print("TODO: send_active_mask_to_canvas")
         self.app.canvas.update()
 
     def toggle_mask_link(self, value):
@@ -269,7 +256,8 @@ class ControlNetSettingsWidget(InputImageSettingsWidget):
         self.app.settings = settings
 
     def handle_controlnet_change(self, attr_name, value=None, widget=None):
-        self.app.settings_manager.set_value(attr_name, value)
+        settings = self.settings
+        settings["generator_settings"]["controlnet"] = value
 
     def action_controlnet_model_text_changed(self, model_value):
         settings = self.app.settings
