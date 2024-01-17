@@ -1,3 +1,4 @@
+import os
 import base64
 import re
 import traceback
@@ -21,7 +22,8 @@ from diffusers import ConsistencyDecoderVAE
 from transformers import AutoFeatureExtractor
 
 from PyQt6.QtCore import QSettings
-from PyQt6.QtCore import pyqtSignal
+from PyQt6.QtCore import pyqtSignal, pyqtSlot
+from PyQt6.QtCore import QObject, QThread
 
 from airunner.aihandler.enums import FilterType
 from airunner.aihandler.enums import EngineResponseCode
@@ -42,13 +44,120 @@ from airunner.windows.main.embedding_mixin import EmbeddingMixin as EmbeddingDat
 from airunner.windows.main.pipeline_mixin import PipelineMixin
 from airunner.windows.main.controlnet_model_mixin import ControlnetModelMixin
 from airunner.windows.main.ai_model_mixin import AIModelMixin
+from airunner.workers.worker import Worker
 
 logger = Logger(prefix="SDRunner")
 
 torch.backends.cuda.matmul.allow_tf32 = True
 
 
+class SDGenerateWorker(Worker):
+    def __init__(self, prefix="SD Generate Worker", image_base_path=""):
+        self.sd = SDRunner()
+        self.image_base_path = image_base_path
+        super().__init__(prefix=prefix)
+    
+    def handle_message(self, message):
+        for response in self.sd.generator_sample(message):
+            if not response:
+                continue
+
+            images = response['images']
+            data = response["data"]
+            nsfw_content_detected = response["nsfw_content_detected"]
+            if nsfw_content_detected:
+                self.response_signal.emit(dict(
+                    message=response,
+                    code=EngineResponseCode.NSFW_CONTENT_DETECTED
+                ))
+                continue
+
+            print(response)
+            seed = data["options"]["seed"]
+            updated_images = []
+            print(images)
+            for index, image in enumerate(images):
+                # hash the prompt and negative prompt along with the action
+                action = data["action"]
+                prompt = data["options"]["prompt"][0]
+                negative_prompt = data["options"]["negative_prompt"][0]
+                prompt_hash = hash(f"{action}{prompt}{negative_prompt}{index}")
+                image_name = f"{prompt_hash}_{seed}.png"
+                image_path = os.path.join(self.image_base_path, image_name)
+                # save the image
+                image.save(image_path)
+                print(image)
+                updated_images.append(dict(
+                    path=image_path,
+                    image=image
+                ))
+            response["images"] = updated_images
+            
+            self.response_signal.emit(dict(
+                message=response,
+                code=EngineResponseCode.IMAGE_GENERATED
+            ))
+
+
+class SDController(QObject):
+
+    logger = Logger(prefix="SDController")
+    response_signal = pyqtSignal(dict)
+
+    def __init__(self, *args, **kwargs):
+        self.engine = kwargs.pop("engine", None)
+        self.app = self.engine.app
+        super().__init__()
+        self.sd = SDRunner()
+        self.request_worker = Worker(prefix="SD Request Worker")
+        self.request_worker_thread = QThread()
+        self.request_worker.moveToThread(self.request_worker_thread)
+        self.request_worker.response_signal.connect(self.request_worker_response_signal_slot)
+        self.request_worker.finished.connect(self.request_worker_thread.quit)
+        self.request_worker_thread.started.connect(self.request_worker.start)
+        self.request_worker_thread.start()
+
+        self.generate_worker = SDGenerateWorker(prefix="SD Generate Worker", image_base_path=self.app.settings["path_settings"]["image_path"])
+        self.generate_worker_thread = QThread()
+        self.generate_worker.moveToThread(self.generate_worker_thread)
+        self.generate_worker.response_signal.connect(self.generate_worker_response_signal_slot)
+        self.generate_worker.finished.connect(self.generate_worker_thread.quit)
+        self.generate_worker_thread.started.connect(self.generate_worker.start)
+        self.generate_worker_thread.start()
+    
+    def pause(self):
+        self.request_worker.pause()
+        self.generate_worker.pause()
+
+    def resume(self):
+        self.request_worker.resume()
+        self.generate_worker.resume()
+    
+    def do_request(self, message):
+        self.request_worker.add_to_queue(message)
+
+    @pyqtSlot(dict)
+    def request_worker_response_signal_slot(self, message):
+        self.generate_worker.add_to_queue(message)
+
+    @pyqtSlot(dict)
+    def generate_worker_response_signal_slot(self, message):
+        self.response_signal.emit(message)
+
+    @property
+    def is_pipe_on_cpu(self):
+        return self.generate_worker.sd.is_pipe_on_cpu
+    
+    @property
+    def has_pipe(self):
+        return self.generate_worker.sd.has_pipe
+
+    def move_pipe_to_cpu(self):
+        self.generate_worker.sd.move_pipe_to_cpu()
+
+
 class SDRunner(
+    QObject,
     MergeMixin,
     LoraMixin,
     MemoryEfficientMixin,
@@ -66,7 +175,7 @@ class SDRunner(
     ControlnetModelMixin,
     AIModelMixin,
 ):
-    application_settings_changed_signal = pyqtSignal()
+    response_signal = pyqtSignal(dict)
     _current_model: str = ""
     _previous_model: str = ""
     _initialized: bool = False
@@ -720,14 +829,12 @@ class SDRunner(
     def  __init__(self, **kwargs):
         #logger.set_level(LOG_LEVEL)
         logger.info("Loading Stable Diffusion model runner...")
+        super().__init__()
         self.application_settings = QSettings("Capsize Games", "AI Runner")
         self.safety_checker_model = self.models_by_pipeline_action("safety_checker")
         self.text_encoder_model = self.models_by_pipeline_action("text_encoder")
         self.inpaint_vae_model = self.models_by_pipeline_action("inpaint_vae")
 
-        self.engine = kwargs.pop("engine", None)
-        self.app = kwargs.get("app", None)
-        self._message_handler = kwargs.get("message_handler", None)
         self._safety_checker = None
         self._controlnet = None
         self.txt2img = None
@@ -850,7 +957,10 @@ class SDRunner(
         self.send_message(message, EngineResponseCode.ERROR)
 
     def send_message(self, message, code=None):
-        self.engine.send_message(message, code)
+        self.response_signal.emit(dict(
+            message=message,
+            code=code
+        ))
 
     def error_handler(self, error):
         message = str(error)
@@ -867,7 +977,8 @@ class SDRunner(
             try:
                 self.pipe.safety_checker = StableDiffusionSafetyChecker.from_pretrained(
                     self.safety_checker_model[0]["path"],
-                    local_files_only=local_files_only
+                    local_files_only=local_files_only,
+                    torch_dtype=self.data_type
                 )
             except OSError:
                 self.initialize_safety_checker(local_files_only=False)
@@ -875,7 +986,8 @@ class SDRunner(
             try:
                 self.pipe.feature_extractor = AutoFeatureExtractor.from_pretrained(
                     self.safety_checker_model[0]["path"],
-                    local_files_only=local_files_only
+                    local_files_only=local_files_only,
+                    torch_dtype=self.data_type
                 )
             except OSError:
                 self.initialize_safety_checker(local_files_only=False)
@@ -1041,6 +1153,7 @@ class SDRunner(
         args["clip_skip"] = self.clip_skip
 
         with torch.inference_mode():
+            print(args)
             for n in range(self.n_samples):
                 return self.pipe(**args)
 
@@ -1087,10 +1200,9 @@ class SDRunner(
                     pose_images = self.read_video()
                     latents = torch.randn(
                         (1, 4, 64, 64),
-                        device="cuda",
-                        dtype=torch.float16).repeat(len(pose_images),
-                        1, 1, 1
-                    )
+                        device=torch.device(self.device),
+                        torch_dtype=self.data_type,
+                    ).repeat(len(pose_images), 1, 1, 1)
                     kwargs["prompt"] = [prompt] * len(pose_images)
                     kwargs["latents"] = latents
                     kwargs["image"] = pose_images
@@ -1248,11 +1360,11 @@ class SDRunner(
         images, nsfw_content_detected = self.sample_diffusers_model(data)
         if self.is_vid_action and "video_filename" not in self.requested_data:
             self.requested_data["video_filename"] = self.txt2vid_file
-        self.image_handler(images, self.requested_data, nsfw_content_detected)
         if self.do_cancel:
             self.do_cancel = False
 
         self.current_sample = 0
+        return self.image_handler(images, self.requested_data, nsfw_content_detected)
 
     def image_handler(self, images, data, nsfw_content_detected):
         data["original_model_data"] = self.original_model_data or {}
@@ -1288,13 +1400,12 @@ class SDRunner(
                                   fill=(255, 255, 255, 255))
                         images[i] = image.convert("RGB")
 
-            logger.info("Sending IMAGE_GENERATED message")
-            self.send_message({
-                "images": images,
-                "data": data,
-                "request_type": data.get("request_type", None),
-                "nsfw_content_detected": has_nsfw,
-            }, EngineResponseCode.IMAGE_GENERATED)
+            return dict(
+                images=images,
+                data=data,
+                request_type=data.get("request_type", None),
+                nsfw_content_detected=has_nsfw,
+            )
 
     def final_callback(self):
         total = int(self.steps * self.strength)
@@ -1330,7 +1441,7 @@ class SDRunner(
     def unload(self):
         self.unload_model()
         self.unload_tokenizer()
-        self.engine.clear_memory()
+        self.clear_memory()
 
     def unload_model(self):
         self.pipe = None
@@ -1351,7 +1462,7 @@ class SDRunner(
                 denoise_strength=self.options.get("denoise_strength", 0.5), 
                 face_enhance=self.options.get("face_enhance", True),
             ).run()
-            self.engine.clear_memory()
+            self.clear_memory()
         else:
             self.log_error("No image found, unable to upscale")
         # check if results is a list
@@ -1364,10 +1475,9 @@ class SDRunner(
 
         if self.is_upscale:
             images = self.process_upscale(data)
-            self.image_handler(images, self.requested_data, None)
             self.current_sample = 0
             self.do_cancel = False
-            return
+            return self.image_handler(images, self.requested_data, None)
 
         if not self.pipe:
             logger.info("pipe is None")
@@ -1386,7 +1496,7 @@ class SDRunner(
         error = None
         error_message = ""
         try:
-            self.generate(data)
+            yield self.generate(data)
         except TypeError as e:
             error_message = f"TypeError during generation {self.action}"
             error = e
@@ -1394,7 +1504,7 @@ class SDRunner(
             error = e
             if "PYTORCH_CUDA_ALLOC_CONF" in str(e):
                 error = self.cuda_error_message
-                self.engine.clear_memory()
+                self.clear_memory()
                 self.reset_applied_memory_settings()
             else:
                 error_message = f"Error during generation"
@@ -1410,8 +1520,6 @@ class SDRunner(
             self.scheduler_name = ""
             self._current_model = ""
             self.local_files_only = True
-
-        return self.pipe
 
     def cancel(self):
         self.do_cancel = True
@@ -1441,7 +1549,8 @@ class SDRunner(
         self._controlnet = None
         self.current_controlnet_type = self.controlnet_type
         controlnet = StableDiffusionControlNetPipeline.from_pretrained(
-            self.controlnet_model
+            self.controlnet_model,
+            torch_dtype=self.data_type
         )
         # self.load_controlnet_scheduler()
         return controlnet
@@ -1492,8 +1601,14 @@ class SDRunner(
                 val.to("cpu")
                 setattr(self, action, None)
                 del val
-        self.engine.clear_memory()
+        self.clear_memory()
         self.reset_applied_memory_settings()
+
+    def clear_memory(self):
+        self.response_signal.emit(dict(
+            code=EngineResponseCode.CLEAR_MEMORY,
+            message=""
+        ))
 
     def load_model(self):
         logger.info("Loading model")
@@ -1527,8 +1642,6 @@ class SDRunner(
 
             if self.enable_controlnet and not self.is_vid2vid:
                 kwargs["controlnet"] = self.controlnet()
-            else:
-                print("DO NOT USE CONTROLNET", self.enable_controlnet, self.is_vid2vid)
 
             if self.is_single_file:
                 try:
@@ -1549,7 +1662,7 @@ class SDRunner(
                     #     **kwargs
                     # )
                 except OSError as e:
-                    return self.handle_missing_files(self.action)
+                    self.handle_missing_files(self.action)
             else:
                 logger.info(f"Loading model {self.model_path} from PRETRAINED")
                 scheduler = self.load_scheduler()
@@ -1558,6 +1671,7 @@ class SDRunner(
                 
                 self.pipe = StableDiffusionPipeline.from_pretrained(
                     self.model_path,
+                    torch_dtype=self.data_type,
                     **kwargs
                 )
 
@@ -1577,7 +1691,8 @@ class SDRunner(
             if self.is_outpaint:
                 logger.info("Initializing vae for inpaint / outpaint")
                 self.pipe.vae = AsymmetricAutoencoderKL.from_pretrained(
-                    self.inpaint_vae_model
+                    self.inpaint_vae_model,
+                    torch_dtype=self.data_type
                 )
 
             if not self.is_depth2img:
@@ -1649,7 +1764,7 @@ class SDRunner(
     def clear_controlnet(self):
         logger.info("Clearing controlnet")
         self._controlnet = None
-        self.engine.clear_memory()
+        self.clear_memory()
         self.reset_applied_memory_settings()
         self.controlnet_loaded = False
     
@@ -1694,7 +1809,6 @@ class SDRunner(
 
                 pipe = pipeline_class_.from_single_file(
                     self.model_path,
-                    device=self.device,
                 )
                 return pipe
             else:
