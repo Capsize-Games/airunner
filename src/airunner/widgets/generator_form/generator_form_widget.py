@@ -328,16 +328,17 @@ class GeneratorForm(BaseWidget):
         name = model_data["name"] if "name" in model_data else self.app.settings["generator_settings"]["model"]
         model = self.app.ai_model_by_name(name)
         if model:
+            model = model[0]
             # set the model data, first using model_data pulled from the override_data
             model_data = dict(
-                name=model_data.get("name", model.name),
-                path=model_data.get("path", model.path),
-                branch=model_data.get("branch", model.branch),
-                version=model_data.get("version", model.version),
-                category=model_data.get("category", model.category),
-                pipeline_action=model_data.get("pipeline_action", model.pipeline_action),
-                enabled=model_data.get("enabled", model.enabled),
-                default=model_data.get("default", model.is_default)
+                name=model_data.get("name", model["name"]),
+                path=model_data.get("path", model["path"]),
+                branch=model_data.get("branch", model["branch"]),
+                version=model_data.get("version", model['version']),
+                category=model_data.get("category", model['category']),
+                pipeline_action=model_data.get("pipeline_action", model["pipeline_action"]),
+                enabled=model_data.get("enabled", model["enabled"]),
+                default=model_data.get("default", model["is_default"])
             )
 
             input_image = override_data.get("input_image", None),
@@ -380,12 +381,12 @@ class GeneratorForm(BaseWidget):
                 n_samples=n_samples,
                 scale=scale,
                 seed=seed,
-                model=model.name,
+                model=model['name'],
                 model_data=model_data,
                 original_model_data=original_model_data,
                 scheduler=scheduler,
-                model_path=model.path,
-                model_branch=model.branch,
+                model_path=model["path"],
+                model_branch=model["branch"],
                 # lora=self.available_lora(action),
                 generator_section=self.generator_section,
                 width=width,
