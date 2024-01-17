@@ -1,11 +1,8 @@
 from PIL import Image
 from PyQt6.QtCore import QRect, QPoint, Qt
 from PyQt6.QtWidgets import QSpacerItem, QSizePolicy
-from contextlib import contextmanager
 
 from airunner.aihandler.logger import Logger
-from airunner.models.layerdata import LayerData
-from airunner.data.session_scope import session_scope
 from airunner.widgets.base_widget import BaseWidget
 from airunner.widgets.layers.layer_widget import LayerWidget
 from airunner.widgets.layers.templates.layer_container_ui import Ui_layer_container
