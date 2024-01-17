@@ -1,8 +1,13 @@
 from airunner.aihandler.logger import Logger as logger
-from airunner.data.managers import SettingsManager
+from airunner.windows.main.pipeline_mixin import PipelineMixin
+from airunner.windows.main.settings_mixin import SettingsMixin
 
 
-class AutoImport:
+
+class AutoImport(
+    SettingsMixin,
+    PipelineMixin
+):
     def __init__(self, requested_action, pipeline_action="", category=None):
         self.__class__ = AutoImport.class_object(requested_action, pipeline_action, category)
 
@@ -59,24 +64,23 @@ class AutoImport:
         category = category if category else model_data["category"]
         if pipeline_action == "txt2img" and requested_action == "img2img":
             pipeline_action = "img2img"
-        settings_manager = SettingsManager()
-        with settings_manager.available_pipeline_by_section(pipeline_action, version, category) as pipeline:
-            try:
-                if single_file and pipeline.singlefile_classname != "" and pipeline.singlefile_classname is not None:
-                    classname = pipeline.singlefile_classname
-                else:
-                    classname = pipeline.classname
-            except KeyError:
-                logger.error(f"Failed to find classname for pipeline_action {pipeline_action} {version} {category}")
-                return
-            except AttributeError as e:
-                logger.error(f"Failed to find classname for pipeline_action {pipeline_action} {version} {category}")
-                return
-            pipeline_classname = classname.split(".")
-            module = None
-            for index, module_name in enumerate(pipeline_classname):
-                if index == 0:
-                    module = __import__(module_name)
-                else:
-                    module = getattr(module, module_name)
-            return module
+        pipeline = PipelineMixin.available_pipeline_by_section(pipeline_action, version, category)
+        try:
+            if single_file and pipeline.singlefile_classname != "" and pipeline.singlefile_classname is not None:
+                classname = pipeline.singlefile_classname
+            else:
+                classname = pipeline.classname
+        except KeyError:
+            logger.error(f"Failed to find classname for pipeline_action {pipeline_action} {version} {category}")
+            return
+        except AttributeError as e:
+            logger.error(f"Failed to find classname for pipeline_action {pipeline_action} {version} {category}")
+            return
+        pipeline_classname = classname.split(".")
+        module = None
+        for index, module_name in enumerate(pipeline_classname):
+            if index == 0:
+                module = __import__(module_name)
+            else:
+                module = getattr(module, module_name)
+        return module

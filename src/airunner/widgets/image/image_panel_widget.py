@@ -35,12 +35,14 @@ class ImagePanelWidget(BaseWidget):
         self.ui.scrollArea.verticalScrollBar().valueChanged.connect(self.handle_scroll)
         flowLayout = QFlowLayout()
         self.ui.scrollAreaWidgetContents.setLayout(flowLayout)
-        if self.app.settings["path_settings"]["image_path"] != "":
-            self.show_files()
-        
-        self.load_files()
-        self.show_files()
         self.display_thread = threading.Thread(target=self.display_thumbnails)
+    
+    def initialize(self):
+        if self.app.settings["path_settings"]["image_path"] != "":
+            self.load_files()
+            self.show_files()
+        else:
+            self.logger.warning("Image path not set. Please set the image path in the settings.")
     
     def add_image(self, image_path):
         """

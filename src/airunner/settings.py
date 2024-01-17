@@ -31,3 +31,32 @@ CONTROLNET_OPTIONS = [
     # "Inpaint",
     "Shuffle",
 ]
+DEFAULT_PATHS = {
+    "art": {
+        "models": {
+            "txt2img": os.path.join(BASE_PATH, "art", "models", "txt2img"),
+            "depth2img": os.path.join(BASE_PATH, "art", "models", "depth2img"),
+            "pix2pix": os.path.join(BASE_PATH, "art", "models", "pix2pix"),
+            "inpaint": os.path.join(BASE_PATH, "art", "models", "inpaint"),
+            "upscale": os.path.join(BASE_PATH, "art", "models", "upscale"),
+            "txt2vid": os.path.join(BASE_PATH, "art", "models", "txt2vid"),
+            "embeddings": os.path.join(BASE_PATH, "art", "models", "embeddings"),
+            "lora": os.path.join(BASE_PATH, "art", "models", "lora"),
+            "vae": os.path.join(BASE_PATH, "art", "models", "vae"),
+        },
+        "other": {
+            "images": os.path.join(BASE_PATH, "art", "other", "images"),
+            "videos": os.path.join(BASE_PATH, "art", "other", "videos"),
+        },
+    },
+    "text": {
+        "models": {
+            "casuallm": os.path.join(BASE_PATH, "text", "models", "casuallm"),
+            "seq2seq": os.path.join(BASE_PATH, "text", "models", "seq2seq"),
+            "visualqa": os.path.join(BASE_PATH, "text", "models", "visualqa"),
+        },
+        "other": {
+            "ebooks": os.path.join(BASE_PATH, "text", "other", "ebooks"),
+        }
+    }
+}

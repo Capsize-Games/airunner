@@ -665,9 +665,6 @@ class CanvasPlusWidget(CanvasBaseWidget):
                     image.save(image_path)
         else:
             image.save(image_path)
-    
-    def update_image_canvas(self):
-        print("TODO")
 
     def rotate_90_clockwise(self):
         if self.current_active_image:

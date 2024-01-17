@@ -1,7 +1,6 @@
 from airunner.data.session_scope import session_scope
 from airunner.widgets.base_widget import BaseWidget
 from airunner.widgets.stablediffusion.templates.stable_diffusion_settings_ui import Ui_stable_diffusion_settings_widget
-from airunner.data.models import AIModel
 
 
 class StableDiffusionSettingsWidget(BaseWidget):
@@ -95,13 +94,13 @@ class StableDiffusionSettingsWidget(BaseWidget):
             pipeline = self.app.settings["pipeline"]
             version = self.app.settings["current_version_stablediffusion"]
 
-            models = session.query(AIModel).filter(
-                AIModel.category == image_generator,
-                AIModel.pipeline_action == pipeline,
-                AIModel.version == version,
-                AIModel.enabled == True
-            ).all()
-            model_names = [model.name for model in models]
+            models = self.app.ai_model_get_by_filter(dict(
+                category=image_generator,
+                pipeline_action=pipeline,
+                version=version,
+                enabled=True
+            ))
+            model_names = [model["name"] for model in models]
             self.ui.model.addItems(model_names)
             settings = self.app.settings
             current_model = settings["generator_settings"]["model"]

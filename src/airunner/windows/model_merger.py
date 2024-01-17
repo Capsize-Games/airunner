@@ -156,7 +156,7 @@ class ModelMerger(BaseWindow):
 
         model = self.ui.base_models.currentText()
         section = self.section
-        available_models_by_section = self.app.settings_manager.available_models_by_category(category=section)
+        available_models_by_section = self.app.ai_model_available_models_by_category(category=section)
         model_data = None
         for data in available_models_by_section:
             if data["name"] == model:

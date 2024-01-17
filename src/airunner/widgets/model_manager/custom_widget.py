@@ -1,8 +1,6 @@
 import os
 
-from airunner.data.models import AIModel
 from airunner.models.modeldata import ModelData
-from airunner.data.session_scope import session_scope
 from airunner.widgets.base_widget import BaseWidget
 from airunner.widgets.model_manager.model_widget import ModelWidget
 from airunner.widgets.model_manager.templates.custom_ui import Ui_custom_model_widget
@@ -95,27 +93,16 @@ class CustomModelWidget(BaseWidget):
         self.update_generator_model_dropdown()
 
     def save_model(self, model):
-        with session_scope() as session:
-            model_exists = session.query(AIModel).filter_by(
-                name=model.name,
-                path=model.path,
-                branch=model.branch,
-                version=model.version,
-                category=model.category,
-                pipeline_action=model.pipeline_action
-            ).first()
-            if not model_exists:
-                new_model = AIModel(
-                    name=model.name,
-                    path=model.path,
-                    branch=model.branch,
-                    version=model.version,
-                    category=model.category,
-                    pipeline_action=model.pipeline_action,
-                    enabled=model.enabled,
-                    is_default=False
-                )
-                session.add(new_model)
+        self.app.ai_model_save_or_update(dict(
+            name=model.name,
+            path=model.path,
+            branch=model.branch,
+            version=model.version,
+            category=model.category,
+            pipeline_action=model.pipeline_action,
+            enabled=model.enabled,
+            is_default=False
+        ))
     
     spacer = None
 
@@ -125,49 +112,47 @@ class CustomModelWidget(BaseWidget):
         for child in self.ui.scrollAreaWidgetContents.children():
             if isinstance(child, ModelWidget):
                 child.deleteLater()
-        with session_scope() as session:
-            if search:
-                models = session.query(AIModel).filter_by(is_default=False).filter(AIModel.name.like(f"%{search}%")).all()
-            else:
-                models = session.query(AIModel).filter_by(is_default=False).all()
-            for model_widget in self.model_widgets:
-                model_widget.deleteLater()
-            self.model_widgets = []
-            for index, model in enumerate(models):
-                version = model.version
-                category = model.category
-                pipeline_action = model.pipeline_action
-                pipeline_class = self.app.get_pipeline_classname(
-                    pipeline_action, version, category)
+        if search:
+            models = self.app.find_models(search, default=False)
+        else:
+            models = self.app.find_models(default=False)
+        for model_widget in self.model_widgets:
+            model_widget.deleteLater()
+        self.model_widgets = []
+        for index, model in enumerate(models):
+            version = model['version']
+            category = model['category']
+            pipeline_action = model["pipeline_action"]
+            pipeline_class = self.app.get_pipeline_classname(
+                pipeline_action, version, category)
 
-                model_widget = ModelWidget(
-                    path=model.path,
-                    branch=model.branch,
-                    version=version,
-                    category=category,
-                    pipeline_action=pipeline_action,
-                    pipeline_class=pipeline_class,
-                    # prompts=model.prompts,
-                )
+            model_widget = ModelWidget(
+                path=model["path"],
+                branch=model["branch"],
+                version=version,
+                category=category,
+                pipeline_action=pipeline_action,
+                pipeline_class=pipeline_class,
+            )
 
-                model_widget.ui.name.setChecked(model.enabled)
+            model_widget.ui.name.setChecked(model["enabled"])
 
-                self.ui.scrollAreaWidgetContents.layout().addWidget(
-                    model_widget)
+            self.ui.scrollAreaWidgetContents.layout().addWidget(
+                model_widget)
 
-                self.model_widgets.append(model_widget)
+            self.model_widgets.append(model_widget)
         
         if not self.spacer:
             self.spacer = QtWidgets.QSpacerItem(20, 40, QtWidgets.QSizePolicy.Policy.Minimum, QtWidgets.QSizePolicy.Policy.Expanding)
         self.ui.scrollAreaWidgetContents.layout().addItem(self.spacer)
 
     def models_changed(self, key, model, value):
-        model.enabled = True
-        self.app.settings_manager.update_model(model)
+        model["enabled"] = True
+        self.app.ai_model_save_or_update(model)
         self.update_generator_model_dropdown()
 
     def handle_delete_model(self, model):
-        self.app.settings_manager.delete_model(model)
+        self.app.ai_model_delete(model)
         self.show_items_in_scrollarea()
         self.update_generator_model_dropdown()
 
@@ -179,12 +164,12 @@ class CustomModelWidget(BaseWidget):
         print("edit button clicked", index)
         self.toggle_model_form_frame(show=True)
 
-        categories = self.app.settings_manager.model_categories
+        categories = self.app.ai_model_categories()
         self.ui.model_form.category.clear()
         self.ui.model_form.category.addItems(categories)
         self.ui.model_form.category.setCurrentText(model.category)
 
-        actions = self.app.settings_manager.pipeline_actions
+        actions = self.app.ai_model_pipeline_actions()
         self.ui.model_form.pipeline_action.clear()
         self.ui.model_form.pipeline_action.addItems(actions)
         self.ui.model_form.pipeline_action.setCurrentText(model.pipeline_action)
@@ -196,7 +181,7 @@ class CustomModelWidget(BaseWidget):
         self.ui.model_form.enabled.setChecked(True)
         self.ui.model_form.path_line_edit.setText(model.path)
 
-        versions = self.app.settings_manager.versions
+        versions = self.app.ai_model_versions()
         self.ui.model_form.versions.clear()
         self.ui.model_form.versions.addItems(versions)
         self.ui.model_form.versions.setCurrentText(model.version)

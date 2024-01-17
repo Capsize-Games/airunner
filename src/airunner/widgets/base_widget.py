@@ -39,21 +39,6 @@ class BaseWidget(QWidget):
             #     self.setStyleSheet(stylesheet)
             self.set_icons()
     
-    def handle_settings_manager_changed(self, key, val, settings_manager):
-        """
-        Handle the change in settings manager.
-
-        Args:
-            key (str): The key of the changed setting.
-            val: The new value of the changed setting.
-            settings_manager: The settings manager object.
-
-        Returns:
-            None
-        """
-        print("handle_settings_manager_changed")
-        pass
-    
     def initialize(self):
         """
         Triggered when the app is loaded.
@@ -150,12 +135,13 @@ class BaseWidget(QWidget):
             val = self.get_value(element)
         if val is None:
             val = self.get_is_checked(element)
-        target_val = self.app.settings_manager.get_value(settings_key_name)
+        # target_val = self.app.settings_manager.get_value(settings_key_name)
 
-        if val != target_val:
-            if not self.set_plain_text(element, target_val):
-                if not self.set_text(element, target_val):
-                    if not self.set_value(element, target_val):
-                        if not self.set_is_checked(element, target_val):
-                            raise Exception(f"Could not set value for {element} to {target_val}")
+        # if val != target_val:
+        #     if not self.set_plain_text(element, target_val):
+        #         if not self.set_text(element, target_val):
+        #             if not self.set_value(element, target_val):
+        #                 if not self.set_is_checked(element, target_val):
+        #                     raise Exception(f"Could not set value for {element} to {target_val}")
+        print("TODO: finish this")
 
