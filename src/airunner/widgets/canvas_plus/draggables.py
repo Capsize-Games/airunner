@@ -4,8 +4,6 @@ from PyQt6.QtCore import QRect
 from PyQt6.QtGui import QBrush, QColor, QPen, QPixmap, QPainter
 from PyQt6.QtWidgets import QGraphicsItem, QGraphicsPixmapItem
 
-from airunner.data.session_scope import session_scope
-
 
 class DraggablePixmap(QGraphicsPixmapItem):
     def __init__(self, parent, pixmap):
@@ -42,11 +40,9 @@ class LayerImageItem(DraggablePixmap):
 
     def mouseReleaseEvent(self, event):
         super().mouseReleaseEvent(event)
-        with session_scope() as session:
-            pos = self.pos()
-            self.layer_image_data.pos_x = pos.x()
-            self.layer_image_data.pos_y = pos.y()
-            session.add(self.layer_image_data)
+        pos = self.pos()
+        self.layer_image_data["pos_x"] = pos.x()
+        self.layer_image_data["pos_y"] = pos.y()
 
 
 class ActiveGridArea(DraggablePixmap):
