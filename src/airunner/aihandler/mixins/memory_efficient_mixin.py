@@ -40,7 +40,7 @@ class MemoryEfficientMixin:
     model_cpu_offload_applied: bool = None
     tome_sd_applied: bool = False
     tome_ratio = None
-
+    
     @property
     def do_apply_tome_sd(self):
         return (self.use_tome_sd and not self.tome_sd_applied) or \
