@@ -19,10 +19,6 @@ class LayerImageWidget(BaseWidget):
         with session_scope() as session:
             session.add(self.layer_image_data)
             self.layer_image_data.visible = value
-            self.app.settings_manager.save_and_emit(
-                "layer_image_data.visible",
-                value
-            )
 
     def set_thumbnail(self):
         image = self.layer_image_data.image

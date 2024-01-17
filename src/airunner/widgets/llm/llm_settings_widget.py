@@ -5,7 +5,6 @@ from PyQt6.QtWidgets import QWidget
 
 from airunner.widgets.base_widget import BaseWidget
 from airunner.widgets.llm.templates.llm_settings_ui import Ui_llm_settings_widget
-from airunner.data.models import AIModel
 from airunner.aihandler.logger import Logger
 from airunner.data.session_scope import session_scope
 
@@ -276,10 +275,7 @@ class LLMSettingsWidget(BaseWidget):
     def update_model_version_combobox(self):
         self.ui.model_version.blockSignals(True)
         self.ui.model_version.clear()
-        with session_scope() as session:
-            ai_model_paths = [model.path for model in session.query(AIModel).filter(
-                AIModel.pipeline_action == self.current_generator
-            )]
+        ai_model_paths = self.app.ai_model_paths()
         self.ui.model_version.addItems(ai_model_paths)
         self.ui.model_version.blockSignals(False)
 

@@ -42,9 +42,8 @@ class LayerContainerWidget(BaseWidget):
         self.delete_layer()
 
     def add_layers(self):
-        with self.app.settings_manager.layers() as layers:
-            for layer in layers:
-                self.add_layer_widget(layer, layer.position)
+        for layer in self.app.settings["layers"]:
+            self.add_layer_widget(layer, layer.position)
 
     def add_layer(self):
         return self.create_layer()
@@ -120,10 +119,11 @@ class LayerContainerWidget(BaseWidget):
             layer_index = self.app.canvas.get_index_by_layer(selected_layer)
             self.logger.info("Setting current_layer_index={layer_index}")
             self.current_layer_index = layer_index
-            with self.app.settings_manager.layers() as layers:
-                if new_image:
-                    layers[self.current_layer_index].image_data.image = new_image
-                    layers[self.current_layer_index].image_data.position = QPoint(rect.x(), rect.y())
+            settings = self.app.settings
+            if new_image:
+                settings["layers"][self.current_layer_index].image_data.image = new_image
+                settings["layers"][self.current_layer_index].image_data.position = QPoint(rect.x(), rect.y())
+            self.app.settings = settings
 
             # reset the selected layers dictionary and refresh the canvas
             self.selected_layers = {}
@@ -197,7 +197,7 @@ class LayerContainerWidget(BaseWidget):
             event.pos().y() if self.app.canvas.drag_pos is not None else 0
         )
         # snap to grid
-        grid_size = self.app.settings_manager.grid_settings.cell_size
+        grid_size = self.app.settings["grid_settings"]["cell_size"]
         point.setX(point.x() - (point.x() % grid_size))
         point.setY(point.y() - (point.y() % grid_size))
 

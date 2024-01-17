@@ -101,14 +101,6 @@ class GeneratorTabWidget(BaseWidget):
         if generator_form:
             generator_form.clear_prompts()
 
-    def set_current_section_tab(self):
-        current_tab = self.app.settings_manager.current_tab
-        current_section = getattr(self.app.settings_manager, f"current_section_{current_tab}")
-
-        tab_object = self.ui.generator_tabs.findChild(QWidget, f"tab_{current_tab}")
-        tab_index = self.ui.generator_tabs.indexOf(tab_object)
-        self.ui.generator_tabs.setCurrentIndex(tab_index)
-
     def generate_form(self, tab_section, tab):
         self.tab_section = tab_section
         self.tab = tab

@@ -1,17 +1,17 @@
-from PyQt6.QtCore import Qt, pyqtSignal
+from PyQt6.QtCore import Qt
 
 from airunner.aihandler.settings import DEFAULT_BRUSH_PRIMARY_COLOR, DEFAULT_BRUSH_SECONDARY_COLOR
-from airunner.data.models import DEFAULT_PATHS
+from airunner.settings import DEFAULT_PATHS
 from airunner.utils import default_hf_cache_dir
 from airunner.settings import BASE_PATH
 from airunner.aihandler.enums import Mode
 from airunner.data.bootstrap.pipeline_bootstrap_data import pipeline_bootstrap_data
+from airunner.data.bootstrap.controlnet_bootstrap_data import controlnet_bootstrap_data
+from airunner.data.bootstrap.model_bootstrap_data import model_bootstrap_data
+from airunner.data.bootstrap.imagefilter_bootstrap_data import imagefilter_bootstrap_data
 
 
 class SettingsMixin:
-    application_settings_changed_signal = pyqtSignal()
-
-
     @property
     def settings(self):
         return self.application_settings.value("settings", dict(
@@ -359,7 +359,12 @@ Previous Conversation:
             lora=[],
             embeddings=[],
             pipelines=pipeline_bootstrap_data,
-        ), type=dict)
+            controlnet=controlnet_bootstrap_data,
+            ai_models=model_bootstrap_data,
+            image_filters=imagefilter_bootstrap_data,
+        ), 
+        type=dict
+    )
 
     @settings.setter
     def settings(self, val):

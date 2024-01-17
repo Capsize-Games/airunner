@@ -9,9 +9,9 @@ class VideoPopup(BaseWindow):
     template_name = "video"
     window_title = "Video preview"
 
-    def __init__(self, settings_manager, file_path):
+    def __init__(self, file_path):
         self.file_path = file_path
-        super().__init__(settings_manager)
+        super().__init__()
 
     def initialize_window(self):
         # Create a video widget

@@ -22,7 +22,7 @@ from airunner.aihandler.pyqt_client import OfflineClient
 from airunner.aihandler.qtvar import MessageHandlerVar
 from airunner.aihandler.settings import LOG_LEVEL
 from airunner.airunner_api import AIRunnerAPI
-from airunner.data.models import DEFAULT_PATHS
+from airunner.settings import DEFAULT_PATHS
 from airunner.filters.windows.filter_base import FilterBase
 from airunner.input_event_manager import InputEventManager
 from airunner.settings import BASE_PATH
@@ -42,6 +42,9 @@ from airunner.windows.main.layer_mixin import LayerMixin
 from airunner.windows.main.lora_mixin import LoraMixin
 from airunner.windows.main.embedding_mixin import EmbeddingMixin
 from airunner.windows.main.pipeline_mixin import PipelineMixin
+from airunner.windows.main.controlnet_model_mixin import ControlnetModelMixin
+from airunner.windows.main.ai_model_mixin import AIModelMixin
+from airunner.windows.main.image_filter_mixin import ImageFilterMixin
 
 
 class MainWindow(
@@ -51,9 +54,13 @@ class MainWindow(
     LoraMixin,
     EmbeddingMixin,
     PipelineMixin,
+    ControlnetModelMixin,
+    AIModelMixin,
+    ImageFilterMixin,
 ):
     logger = Logger(prefix="MainWindow")
     # signals
+    application_settings_changed_signal = pyqtSignal()
     show_grid_toggled = pyqtSignal(bool)
     cell_size_changed_signal = pyqtSignal(int)
     line_width_changed_signal = pyqtSignal(int)
@@ -74,7 +81,6 @@ class MainWindow(
     window = None
     history = None
     canvas = None
-    _settings_manager = None
     models = None
     client = None
     _version = None
@@ -107,7 +113,6 @@ class MainWindow(
             "txt2vid": None
         },
     }
-    registered_settings_handlers = []
     image_generated = pyqtSignal(bool)
     controlnet_image_generated = pyqtSignal(bool)
     generator_tab_changed_signal = pyqtSignal()
@@ -287,10 +292,6 @@ class MainWindow(
             "message": message,
         })
 
-    def available_model_names_by_section(self, section):
-        for model in self.settings_manager.settings.available_models_by_category(section):
-            yield model["name"]
-    
     loaded = pyqtSignal()
     window_opened = pyqtSignal()
 
@@ -338,14 +339,11 @@ class MainWindow(
             MessageCode.CONTROLNET_IMAGE_GENERATED: self.handle_controlnet_image_generated,
         }.get(code, lambda *args: None)(message)
 
-    def __init__(self, settings_manager, *args, **kwargs):
+    def __init__(self, *args, **kwargs):
         self.logger.info("Starting AI Runnner")
         self.ui = Ui_MainWindow()
-        self.application_settings = QSettings("Capsize Games", "AI Runner")
 
         # qdarktheme.enable_hi_dpi()
-
-        self.settings_manager = settings_manager
 
         # set the api
         self.api = AIRunnerAPI(window=self)
@@ -354,6 +352,7 @@ class MainWindow(
         self.testing = kwargs.pop("testing", False)
 
         super().__init__(*args, **kwargs)
+        self.application_settings = QSettings("Capsize Games", "AI Runner")
         
         self.action_reset_settings()
 
@@ -411,8 +410,6 @@ class MainWindow(
 
         self.restore_state()
 
-        self.settings_manager.changed_signal.connect(self.handle_changed_signal)
-
         self.ui.ocr_button.blockSignals(True)
         self.ui.tts_button.blockSignals(True)
         self.ui.v2t_button.blockSignals(True)
@@ -437,22 +434,10 @@ class MainWindow(
         self.ui.generator_widget.ui.chat_prompt_widget.respond_to_voice(heard)
     
     def create_airunner_paths(self):
-        paths = [
-            self.settings["path_settings"]["base_path"],
-            self.settings["path_settings"]["txt2img_model_path"],
-            self.settings["path_settings"]["depth2img_model_path"],
-            self.settings["path_settings"]["pix2pix_model_path"],
-            self.settings["path_settings"]["inpaint_model_path"],
-            self.settings["path_settings"]["upscale_model_path"],
-            self.settings["path_settings"]["txt2vid_model_path"],
-            self.settings["path_settings"]["embeddings_model_path"],
-            self.settings["path_settings"]["lora_model_path"],
-            self.settings["path_settings"]["image_path"],
-            self.settings["path_settings"]["video_path"],
-        ]
-        for index, path in enumerate(paths):
+        print(self.settings["path_settings"])
+        for k, path in self.settings["path_settings"].items():
             if not os.path.exists(path):
-                print("cerating path", index, path)
+                print("cerating path", path)
                 os.makedirs(path)
 
     def initialize_image_worker(self):
@@ -473,14 +458,12 @@ class MainWindow(
         self.image_data_queue.put(message)
 
     def mode_tab_index_changed(self, index):
-        self.settings_manager.set_value("settings.mode", self.ui.mode_tab_widget.tabText(index))
+        settings = self.settings
+        settings["mode"] = self.ui.mode_tab_widget.tabText(index)
+        self.settings = settings
 
     def on_show(self):
-        pass
-
-    def action_slider_changed(self, settings_property, value):
-        print("action_slider_changed")
-        self.settings_manager.set_value(settings_property, value)
+        pass        
 
     def layer_opacity_changed(self, attr_name, value=None, widget=None):
         print("layer_opacity_changed", attr_name, value)
@@ -865,12 +848,16 @@ class MainWindow(
         self.set_stylesheet()
     
     def image_generation_toggled(self):
-        self.settings_manager.set_value("settings.mode", Mode.IMAGE.value)
+        settings = self.settings
+        settings["mode"] = Mode.IMAGE.value
+        self.settings = settings
         self.activate_image_generation_section()
         self.set_all_section_buttons()
 
     def language_processing_toggled(self):
-        self.settings_manager.set_value("settings.mode", Mode.LANGUAGE_PROCESSOR.value)
+        settings = self.settings
+        settings["mode"] = Mode.LANGUAGE_PROCESSOR.value
+        self.settings = settings
         self.activate_language_processing_section()
         self.set_all_section_buttons()
     
@@ -878,7 +865,9 @@ class MainWindow(
         if not val:
             self.image_generators_toggled()
         else:
-            self.settings_manager.set_value("settings.mode", Mode.MODEL_MANAGER.value)
+            settings = self.settings
+            settings["mode"] = Mode.MODEL_MANAGER.value
+            self.settings = settings
             self.activate_model_manager_section()
             self.set_all_section_buttons()
     ###### End window handlers ######
@@ -892,7 +881,7 @@ class MainWindow(
         self.set_status_label(f"New version available: {self.latest_version}")
 
     def show_update_popup(self):
-        self.update_popup = UpdateWindow(self.settings_manager, app=self)
+        self.update_popup = UpdateWindow(app=self)
 
     def reset_settings(self):
         self.logger.info("MainWindow: Resetting settings")
@@ -935,7 +924,7 @@ class MainWindow(
 
         self.input_event_manager = InputEventManager(app=self)
         self.initialize_window()
-        self.initialize_handlers()
+        self.message_var.my_signal.connect(self.message_handler)
         self.initialize_mixins()
         self.generate_signal.connect(self.handle_generate)
         # self.header_widget.initialize()
@@ -947,15 +936,13 @@ class MainWindow(
             self.prompt_builder.process_prompt()
         except AttributeError:
             pass
-        self.connect_signals()
         self.initialize_filter_actions()
 
     def initialize_filter_actions(self):
         # add more filters:
-        with self.settings_manager.image_filters_scope() as image_filters:
-            for filter in image_filters:
-                action = self.ui.menuFilters.addAction(filter.display_name)
-                action.triggered.connect(partial(self.display_filter_window, filter.name))
+        for filter in self.image_filter_get_all():
+            action = self.ui.menuFilters.addAction(filter["display_name"])
+            action.triggered.connect(partial(self.display_filter_window, filter["name"]))
 
     def display_filter_window(self, filter_name):
         FilterBase(self, filter_name).show()
@@ -985,15 +972,6 @@ class MainWindow(
     def initialize_mixins(self):
         #self.canvas = Canvas()
         pass
-
-    def connect_signals(self):
-        self.logger.info("MainWindow: Connecting signals")
-        #self.canvas_widget._is_dirty.connect(self.set_window_title)
-
-        for signal, handler in self.registered_settings_handlers:
-            getattr(self.settings_manager, signal).connect(handler)
-
-        self.button_clicked_signal.connect(self.handle_button_clicked)
 
     def show_section(self, section):
         section_lists = {
@@ -1089,9 +1067,6 @@ class MainWindow(
         for event, callback in event_callbacks.items():
             self.input_event_manager.register_event(event, callback)
 
-    def initialize_handlers(self):
-        self.message_var.my_signal.connect(self.message_handler)
-
     def initialize_window(self):
         self.center()
         self.set_window_title()
@@ -1100,12 +1075,8 @@ class MainWindow(
         self.logger.info("Initializing stable diffusion")
         self.client = OfflineClient(
             app=self,
-            message_var=self.message_var,
-            settings_manager=self.settings_manager,
+            message_var=self.message_var
         )
-
-    def save_settings(self):
-        self.settings_manager.save_settings()
 
     def display(self):
         self.logger.info("Displaying window")
@@ -1199,7 +1170,7 @@ class MainWindow(
 
     def video_handler(self, data):
         filename = data["video_filename"]
-        VideoPopup(settings_manager=self.settings_manager, file_path=filename)
+        VideoPopup(file_path=filename)
 
     def post_process_images(self, images):
         #return self.automatic_filter_manager.apply_filters(images)
@@ -1303,7 +1274,7 @@ class MainWindow(
         self.generator_tab_widget.clear_prompts()
 
     def show_prompt_browser(self):
-        PromptBrowser(settings_manager=self.settings_manager, app=self)
+        PromptBrowser(app=self)
 
     def import_image(self):
         file_path, _ = self.display_import_image_dialog(

@@ -247,15 +247,17 @@ class StandardImageWidget(StandardBaseWidget):
         if negative_prompt is None:
             meta_data["negative_prompt"] = "verybadimagenegative_v1.3, EasyNegative"
         
+        image_similarity = self.app.settings["standard_image_settings"]["image_similarity"]
+        controlnet = self.app.settings["standard_image_settings"]["controlnet"]
+
         meta_data.pop("seed", None)
         meta_data["action"] = "txt2img"
         meta_data["width"] = self.image.width
         meta_data["height"] = self.image.height
         meta_data["enable_controlnet"] = True
-        meta_data["controlnet"] = self.app.settings_manager.standard_image_widget_settings.controlnet.lower()
-        meta_data["controlnet_conditioning_scale"] = self.app.settings_manager.standard_image_widget_settings.image_similarity / 100.0
-        #meta_data["image_guidance_scale"] = 100 * (100 - self.app.settings_manager.image_similarity) / 100.0
-        meta_data["strength"] = 1.1 - (self.app.settings_manager.standard_image_widget_settings.image_similarity / 100.0)
+        meta_data["controlnet"] = controlnet.lower()
+        meta_data["controlnet_conditioning_scale"] = image_similarity / 100.0
+        meta_data["strength"] = 1.1 - (image_similarity / 100.0)
         meta_data["enable_input_image"] = True
         meta_data["use_cropped_image"] = False
         meta_data["batch_size"] = batch_size
@@ -285,8 +287,8 @@ class StandardImageWidget(StandardBaseWidget):
             meta_data["negative_prompt"] = "verybadimagenegative_v1.3, EasyNegative"
         
         meta_data.pop("seed", None)
-        meta_data["model_data_path"] = self.app.settings_manager.standard_image_widget_settings.upscale_model
-        meta_data["face_enhance"] = self.app.settings_manager.standard_image_widget_settings.face_enhance
+        meta_data["model_data_path"] = self.app.settings["standard_image_settings"]["upscale_model"]
+        meta_data["face_enhance"] = self.app.settings["standard_image_settings"]['face_enhance']
         meta_data["denoise_strength"] = 0.5
         meta_data["action"] = "upscale"
         meta_data["width"] = self.ui.canvas_widget.current_layer.image.width
