@@ -1,4 +1,3 @@
-from airunner.data.models import AIModel
 from airunner.data.session_scope import session_scope
 from airunner.widgets.base_widget import BaseWidget
 from airunner.widgets.model_manager.templates.import_ui import Ui_import_model_widget
@@ -54,15 +53,11 @@ class ImportWidget(BaseWidget):
         name = model_data["name"] + " " + model_version["name"]
         
         model_version_name = model_version["name"]
-        categories = self.app.settings_manager.model_categories
-        actions = self.app.settings_manager.pipeline_actions
         category = "stablediffusion"
         pipeline_action = "txt2img"
         if "inpaint" in model_version_name:
             pipeline_action = "outpaint"
         diffuser_model_version = model_version["baseModel"]
-        pipeline_class = self.app.get_pipeline_classname(pipeline_action, diffuser_model_version, category)
-        diffuser_model_versions = self.app.settings_manager.model_versions
         model_type = model_data["type"]
         file_path = self.download_path(file, diffuser_model_version, pipeline_action, model_type)  # path is the download path of the model
 
@@ -72,26 +67,16 @@ class ImportWidget(BaseWidget):
         trained_words = ",".join(trained_words)
         with session_scope() as session:
             if model_type == "Checkpoint":
-                model_exists = session.query(AIModel).filter_by(
+               self.app.ai_model_save_or_update(dict(
                     name=name,
                     path=file_path,
                     branch="main",
                     version=diffuser_model_version,
                     category=category,
                     pipeline_action=pipeline_action,
-                ).first()
-                if not model_exists:
-                    new_model = AIModel(
-                        name=name,
-                        path=file_path,
-                        branch="main",
-                        version=diffuser_model_version,
-                        category=category,
-                        pipeline_action=pipeline_action,
-                        enabled=True,
-                        is_default=False
-                    )
-                    session.add(new_model)
+                    enabled=True,
+                    is_default=False
+                ))
             elif model_type == "LORA":
                 lora_exists = session.query(Lora).filter_by(
                     name=name,
@@ -144,7 +129,7 @@ class ImportWidget(BaseWidget):
         self.ui.download_progress_bar.setValue(current_size)
         if current_size >= total_size:
             self.reset_form()
-            self.app.settings_manager.add_model(self.current_model_data)
+            self.app.ai_model_create(self.current_model_data)
             self.show_items_in_scrollarea()
     
     def import_models(self):
@@ -239,15 +224,15 @@ class ImportWidget(BaseWidget):
             return
         model_version_name = model_version["name"]
 
-        categories = self.app.settings_manager.model_categories
-        actions = self.app.settings_manager.pipeline_actions
+        categories = self.app.ai_model_categories()
+        actions = self.app.pipeline_actions()
         category = "stablediffusion"
         pipeline_action = "txt2img"
         if "inpaint" in model_version_name:
             pipeline_action = "outpaint"
         diffuser_model_version = model_version["baseModel"]
         pipeline_class = self.app.get_pipeline_classname(pipeline_action, diffuser_model_version, category)
-        diffuser_model_versions = self.app.settings_manager.model_versions
+        diffuser_model_versions = self.app.ai_model_versions()
         path = self.download_path(file, diffuser_model_version, pipeline_action, self.current_model_data["type"])  # path is the download path of the model
 
         self.ui.model_form.set_model_form_data(
