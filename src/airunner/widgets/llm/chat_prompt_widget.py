@@ -29,7 +29,6 @@ class ChatPromptWidget(BaseWidget):
     conversation_history = []
     spacer = None
     promptKeyPressEvent = None
-    add_message_signal = pyqtSignal(Message, bool, bool, bool)
 
     @property
     def llm_generator(self):
@@ -54,8 +53,17 @@ class ChatPromptWidget(BaseWidget):
             self.generating = False
             self.enable_send_button()
 
-    @pyqtSlot(Message, bool, bool, bool)
-    def add_bot_message_to_conversation(self, message_object, is_bot, first_message=True, last_message=True):
+    @pyqtSlot(dict)
+    def add_bot_message_to_conversation(self, message):
+        message_object = Message(
+            name=message["name"],
+            message=message["text"],
+            conversation=self.conversation
+        )
+        is_bot = message["is_bot"]
+        first_message = message["first_message"]
+        last_message = message["last_message"]
+
         if first_message:
             self.stop_progress_bar()
 
@@ -71,17 +79,6 @@ class ChatPromptWidget(BaseWidget):
         for widget in self.ui.scrollAreaWidgetContents.findChildren(MessageWidget):
             widget.deleteLater()
         self.app.engine.clear_llm_history()
-
-    @pyqtSlot(dict)
-    def message_handler(self, response: dict):
-        try:
-            code = response["code"]
-        except TypeError:
-            return
-        message = response["message"]
-
-        if code == EngineResponseCode.ADD_TO_CONVERSATION:
-            self.handle_text_generated(message)
     
     @pyqtSlot()
     def action_button_clicked_send(self, image_override=None, prompt_override=None, callback=None, generator_name="casuallm"):
@@ -169,11 +166,10 @@ class ChatPromptWidget(BaseWidget):
     
     def __init__(self, *args, **kwargs):
         super().__init__(*args, **kwargs)
-        self.add_message_signal.connect(self.add_bot_message_to_conversation)
 
     def initialize(self):
         self.app.token_signal.connect(self.handle_token_signal)
-        self.app.message_handler_signal.connect(self.message_handler)
+        self.app.engine.text_generated_signal.connect(self.add_bot_message_to_conversation)
 
         # handle return pressed on QPlainTextEdit
         # there is no returnPressed signal for QPlainTextEdit
@@ -184,17 +180,6 @@ class ChatPromptWidget(BaseWidget):
         self.ui.prompt.textChanged.connect(self.prompt_text_changed)
         self.ui.conversation.hide()
         self.ui.chat_container.show()
-
-    def handle_text_generated(self, message):
-        name = message["name"]
-        self.add_message_signal.emit(Message(
-            name=name,
-            message=message["text"],
-            conversation=self.conversation
-        ), 
-        message["is_bot"], 
-        message["first_message"],
-        message["last_message"])
 
     def prompt_text_changed(self):
         self.prompt = self.ui.prompt.toPlainText()
