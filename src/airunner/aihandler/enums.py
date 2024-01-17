@@ -18,6 +18,8 @@ class EngineResponseCode(Enum):
     TEXT_STREAMED = 701
     CAPTION_GENERATED = 800
     ADD_TO_CONVERSATION = 900
+    CLEAR_MEMORY = 1000
+    NSFW_CONTENT_DETECTED = 1100
 
 
 class EngineRequestCode(Enum):

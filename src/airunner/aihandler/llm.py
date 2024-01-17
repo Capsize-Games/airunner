@@ -18,29 +18,25 @@ from airunner.aihandler.logger import Logger
 from airunner.workers.worker import Worker
 
 class GenerateWorker(Worker):
-    def __init__(self, prefix="Worker"):
+    def __init__(self, prefix):
         self.llm = LLM()
-        self.llm.response_signal.connect(self.handle_response)
         super().__init__(prefix=prefix)
 
     def handle_message(self, message):
-        self.llm.do_generate(message)
-    
-    def handle_response(self, response):
-        self.response_signal.emit(response)
+        for response in self.llm.do_generate(message):
+            self.response_signal.emit(response)
 
 
-class LLMEngine(QObject):
-    logger = Logger(prefix="LLMEngine")
+class LLMController(QObject):
+    logger = Logger(prefix="LLMController")
     response_signal = pyqtSignal(dict)
 
     def __init__(self, *args, **kwargs):
-        app = kwargs.pop("app", None)
         self.engine = kwargs.pop("engine", None)
+        self.app = self.engine.app
         super().__init__(*args, **kwargs)
-        self.app = app
         
-        self.request_worker = Worker(prefix="LLM Worker")
+        self.request_worker = Worker(prefix="LLM Request Worker")
         self.request_worker_thread = QThread()
         self.request_worker.moveToThread(self.request_worker_thread)
         self.request_worker.response_signal.connect(self.request_worker_response_signal_slot)
@@ -56,6 +52,14 @@ class LLMEngine(QObject):
         self.generate_worker_thread.started.connect(self.generate_worker.start)
         self.generate_worker_thread.start()
     
+    def pause(self):
+        self.request_worker.pause()
+        self.generate_worker.pause()
+
+    def resume(self):
+        self.request_worker.resume()
+        self.generate_worker.resume()
+    
     def do_request(self, message):
         self.request_worker.add_to_queue(message)
     
@@ -66,11 +70,14 @@ class LLMEngine(QObject):
     @pyqtSlot(dict)
     def generate_worker_response_signal_slot(self, message):
         self.response_signal.emit(message)
+    
+    def do_unload_llm(self):
+        self.generate_worker.llm.unload_model()
+        self.generate_worker.llm.unload_tokenizer()
 
 
 class LLM(QObject):
     logger = Logger(prefix="LLM")
-    response_signal = pyqtSignal(dict)
     dtype = ""
     local_files_only = True
     set_attention_mask = False
@@ -251,17 +258,14 @@ class LLM(QObject):
     def unload_tokenizer(self):
         self.logger.info("Unloading tokenizer")
         self.tokenizer = None
-        self.engine.clear_memory()
         
     def unload_model(self):
         self.model = None
         self.processor = None
-        self.engine.clear_memory()
 
     def unload_processor(self):
         self.logger.info("Unloading processor")
         self.processor = None
-        self.engine.clear_memory()
 
     def quantization_config(self):
         config = None
@@ -528,10 +532,10 @@ class LLM(QObject):
                     replaced = True
                     streamed_template = streamed_template.replace(rendered_template, "")
                 else:
-                    self.response_signal.emit(dict(
+                    yield dict(
                         code=EngineResponseCode.TEXT_STREAMED,
                         message=new_text
-                    ))
+                    )
                 
                 if "</s>" in new_text:
                     self.history.append({

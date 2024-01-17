@@ -36,6 +36,14 @@ class ImagePanelWidget(BaseWidget):
         flowLayout = QFlowLayout()
         self.ui.scrollAreaWidgetContents.setLayout(flowLayout)
         self.display_thread = threading.Thread(target=self.display_thumbnails)
+
+        self.app.engine.image_generated_signal.connect(self.handle_image_data)
+    
+    def handle_image_data(self, data):
+        for image in data["images"]:
+            image_widget = ImageWidget(self, is_thumbnail=True)
+            image_widget.set_image(image["path"])
+            self.ui.scrollAreaWidgetContents.layout().addWidget(image_widget)
     
     def initialize(self):
         if self.app.settings["path_settings"]["image_path"] != "":
@@ -43,21 +51,6 @@ class ImagePanelWidget(BaseWidget):
             self.show_files()
         else:
             self.logger.warning("Image path not set. Please set the image path in the settings.")
-    
-    def add_image(self, image_path):
-        """
-        Adds an image to the image panel widget.
-
-        Args:
-            image_path (str): The path of the image to be added.
-
-        Returns:
-            None
-        """
-        image_widget = ImageWidget(self, is_thumbnail=True)
-        image_widget.set_image(image_path)
-
-        self.ui.scrollAreaWidgetContents.layout().addWidget(image_widget)
 
     def clear_files(self):
         self.page = 0
