@@ -38,10 +38,7 @@ class ChatPromptWidget(BaseWidget):
     
     @property
     def llm_generator_settings(self):
-        try:
-            return self.app.settings_manager.llm_generator_settings
-        except Exception as e:
-            self.logger.error(e)
+        return self.app.settings["llm_generator_settings"]
 
     @property
     def current_generator(self):

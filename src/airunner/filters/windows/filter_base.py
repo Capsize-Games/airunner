@@ -37,13 +37,13 @@ class FilterBase:
     def __setattr__(self, key, value):
         if key in self._filter_values:
             self._filter_values[key].value = str(value)
-            self.parent.settings_manager.save()
+            print("TODO: save filter value")
         else:
             super().__setattr__(key, value)
 
     @property
     def filter(self):
-        with self.parent.settings_manager.image_filter_by_name(self.image_filter_model_name) as image_filter:
+        with self.parent.image_filter_by_name(self.image_filter_model_name) as image_filter:
             module = importlib.import_module(f"airunner.filters.{image_filter.name}")
             class_ = getattr(module, image_filter.filter_class)
         kwargs = {}
@@ -69,19 +69,19 @@ class FilterBase:
 
     def update_value(self, name, value):
         self._filter_values[name].value = str(value)
-        self.parent.settings_manager.save()
+        print("TODO: save filter value")
 
     def update_canvas(self):
         pass
 
     def load_image_filter_data(self):
-        with self.parent.settings_manager.image_filter_by_name(self.image_filter_model_name) as image_filter:
+        with self.parent.image_filter_by_name(self.image_filter_model_name) as image_filter:
             for filter_value in image_filter.image_filter_values:
                 self._filter_values[filter_value.name] = filter_value
 
     def show(self):
         self.filter_window = uic.loadUi(os.path.join(f"widgets/base_filter/templates/base_filter.ui"))
-        with self.parent.settings_manager.image_filter_by_name(self.image_filter_model_name) as image_filter:
+        with self.parent.image_filter_by_name(self.image_filter_model_name) as image_filter:
             self.filter_window.label.setText(image_filter.display_name)
         self.reject = self.filter_window.reject
         self.accept = self.filter_window.accept
@@ -126,7 +126,7 @@ class FilterBase:
                     )
                     self.filter_window.content.layout().addWidget(slider_spinbox_widget)
 
-        with self.parent.settings_manager.image_filter_by_name(self.image_filter_model_name) as image_filter:
+        with self.parent.image_filter_by_name(self.image_filter_model_name) as image_filter:
             self.filter_window.auto_apply.setChecked(image_filter.auto_apply)
         self.filter_window.auto_apply.clicked.connect(partial(self.handle_auto_apply_toggle))
 
@@ -138,9 +138,9 @@ class FilterBase:
         self.filter_window.exec()
 
     def handle_auto_apply_toggle(self):
-        with self.parent.settings_manager.image_filter_by_name(self.image_filter_model_name) as image_filter:
+        with self.parent.image_filter_by_name(self.image_filter_model_name) as image_filter:
             image_filter.auto_apply = self.filter_window.auto_apply.isChecked()
-        self.parent.settings_manager.save()
+        print("TODO: save auto_apply")
 
     def handle_slider_change(self, settings_property, val):
         self.update_value(settings_property, val)
