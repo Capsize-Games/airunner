@@ -274,7 +274,7 @@ class LLMSettingsWidget(BaseWidget):
     def update_model_version_combobox(self):
         self.ui.model_version.blockSignals(True)
         self.ui.model_version.clear()
-        ai_model_paths = self.app.ai_model_paths()
+        ai_model_paths = self.app.ai_model_paths(model_type="llm", pipeline_action=self.ui.model.currentText())
         self.ui.model_version.addItems(ai_model_paths)
         self.ui.model_version.blockSignals(False)
 

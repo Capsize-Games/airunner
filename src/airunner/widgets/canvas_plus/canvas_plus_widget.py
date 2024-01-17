@@ -10,7 +10,7 @@ from PyQt6.QtGui import QBrush, QColor, QPen, QPixmap
 from PyQt6.QtWidgets import QGraphicsPixmapItem
 from PyQt6 import QtWidgets, QtCore
 from PyQt6.QtWidgets import QGraphicsItemGroup
-from PyQt6.QtCore import pyqtSlot, QThread
+from PyQt6.QtCore import pyqtSlot, pyqtSignal, QThread
 from airunner.aihandler.enums import EngineResponseCode
 
 from airunner.workers.image_data_worker import ImageDataWorker
@@ -20,6 +20,58 @@ from airunner.utils import apply_opacity_to_image
 from airunner.widgets.canvas_plus.draggables import DraggablePixmap, ActiveGridArea
 from airunner.widgets.canvas_plus.custom_scene import CustomScene
 from airunner.widgets.base_widget import BaseWidget
+from airunner.workers.worker import Worker
+
+
+class CanvasResizeWorker(Worker):
+    response_signal = pyqtSignal(tuple)
+    do_draw_signal = pyqtSignal()
+    clear_lines_signal = pyqtSignal()
+    queue_type = "get_last_item"
+
+    def handle_message(self, data):
+        self.draw_lines(data)
+    
+    def draw_lines(self, data:dict):
+        self.clear_lines_signal.emit()
+        settings = data["settings"]
+        view_size = data["view_size"]
+
+        cell_size = settings["grid_settings"]["cell_size"]
+        line_color = settings["grid_settings"]["line_color"]
+        line_width = settings["grid_settings"]["line_width"]
+
+        width_cells = math.ceil(view_size.width() / cell_size)
+        height_cells = math.ceil(view_size.height() / cell_size)
+        pen = QPen(
+            QBrush(QColor(line_color)),
+            line_width,
+            Qt.PenStyle.SolidLine
+        )
+
+        # for line_data in lines:
+        
+        # vertical lines
+        h = view_size.height() + abs(settings["canvas_settings"]["pos_y"]) % cell_size
+        y = 0
+        for i in range(width_cells):
+            x = i * cell_size + settings["canvas_settings"]["pos_x"] % cell_size
+            line_data = (x, y, x, h, pen)
+            # line = scene.addLine(x, y, x, h, pen)
+            # line_group.addToGroup(line)
+            self.response_signal.emit(line_data)
+
+        # # horizontal lines
+        w = view_size.width() + abs(settings["canvas_settings"]["pos_x"]) % cell_size
+        x = 0
+        for i in range(height_cells):
+            y = i * cell_size + settings["canvas_settings"]["pos_y"] % cell_size
+            line_data = (x, y, w, y, pen)
+            # line = scene.addLine(x, y, w, y, pen)
+            # line_group.addToGroup(line)
+            self.response_signal.emit(line_data)
+        
+        self.do_draw_signal.emit()
 
 
 class CanvasPlusWidget(BaseWidget):
@@ -112,17 +164,42 @@ class CanvasPlusWidget(BaseWidget):
         self._zoom_level = 1
         self.canvas_container.resizeEvent = self.window_resized
 
-        self.image_data_worker = ImageDataWorker(prefix="ImageDataWorker")
-        self.image_data_worker_thread = QThread()
-        self.image_data_worker.moveToThread(self.image_data_worker_thread)
-        self.image_data_worker.response_signal.connect(self.image_data_worker_response_signal_slot)
-        self.image_data_worker.finished.connect(self.image_data_worker_thread.quit)
-        self.image_data_worker_thread.started.connect(self.image_data_worker.start)
-        self.image_data_worker_thread.start()
+        self.image_data_worker = self.create_worker(
+            ImageDataWorker, 
+            self.image_data_worker_response_signal_slot
+        )
+        self.canvas_resize_worker = self.create_worker(
+            CanvasResizeWorker, 
+            self.canvas_resize_worker_response_signal_slot
+        )
+        self.canvas_resize_worker.do_draw_signal.connect(self.do_draw_signal_slot)
+        self.canvas_resize_worker.clear_lines_signal.connect(self.clear_lines_slot)
+    
+    @pyqtSlot()
+    def clear_lines_slot(self):
+        self.clear_lines()
+
+    @pyqtSlot()
+    def do_draw_signal_slot(self):
+        self.do_draw()
 
     @pyqtSlot(dict)
     def handle_image_data(self, image_data):
         self.image_data_worker.add_to_queue(image_data)
+
+    @pyqtSlot(tuple)
+    def canvas_resize_worker_response_signal_slot(self, line_data):
+        # self.app.clear_status_message()
+        # self.app.stop_progress_bar()
+        # self.app.show_layers()
+        # self.app.set_status_label(f"Image resized")
+        # self.redraw_lines = True
+        # self.do_draw()
+        draw_grid = self.app.settings["grid_settings"]["show_grid"]
+        if not draw_grid:
+            return
+        line = self.scene.addLine(*line_data)
+        self.line_group.addToGroup(line)
 
     @pyqtSlot()
     def image_data_worker_response_signal_slot(self, message):
@@ -195,9 +272,18 @@ class CanvasPlusWidget(BaseWidget):
             return None
         return Image.fromqpixmap(pixmap)
 
+    def handle_resize_canvas(self):
+        if not self.view:
+            return
+        self.canvas_resize_worker.add_to_queue(dict(
+            settings=self.app.settings,
+            view_size=self.view.viewport().size(),
+            scene=self.scene,
+            line_group=self.line_group
+        ))
+
     def window_resized(self, event):
-        self.redraw_lines = True
-        self.do_draw()
+        self.handle_resize_canvas()
 
     def toggle_grid(self, val):
         self.do_draw()
@@ -325,7 +411,7 @@ class CanvasPlusWidget(BaseWidget):
 
     def resizeEvent(self, event):
         if self.view:
-            self.do_draw()
+            self.handle_resize_canvas()
         if self.scene:
             self.scene.resize()
 
@@ -384,35 +470,6 @@ class CanvasPlusWidget(BaseWidget):
         self.scene.removeItem(self.line_group)
         self.line_group = QGraphicsItemGroup()
 
-    def draw_lines(self):
-        width_cells = math.ceil(self.view_size.width() / self.cell_size)
-        height_cells = math.ceil(self.view_size.height() / self.cell_size)
-        
-        pen = QPen(
-            QBrush(QColor(self.line_color)),
-            self.line_width,
-            Qt.PenStyle.SolidLine
-        )
-        
-        # vertical lines
-        h = self.view_size.height() + abs(self.app.settings["canvas_settings"]["pos_y"]) % self.cell_size
-        y = 0
-        for i in range(width_cells):
-            x = i * self.cell_size + self.app.settings["canvas_settings"]["pos_x"] % self.cell_size
-            line = self.scene.addLine(x, y, x, h, pen)
-            self.line_group.addToGroup(line)
-
-        # # horizontal lines
-        w = self.view_size.width() + abs(self.app.settings["canvas_settings"]["pos_x"]) % self.cell_size
-        x = 0
-        for i in range(height_cells):
-            y = i * self.cell_size + self.app.settings["canvas_settings"]["pos_y"] % self.cell_size
-            line = self.scene.addLine(x, y, w, y, pen)
-            self.line_group.addToGroup(line)
-
-        # Add the group to the scene
-        self.scene.addItem(self.line_group)
-
     def draw_active_grid_area_container(self):
         """
         Draw a rectangle around the active grid area of
@@ -441,8 +498,8 @@ class CanvasPlusWidget(BaseWidget):
         self.view_size = self.view.viewport().size()
         self.set_scene_rect()
         self.draw_grid()
-        self.draw_layers()
-        self.draw_active_grid_area_container()
+        #self.draw_layers()
+        #self.draw_active_grid_area_container()
         self.ui.canvas_position.setText(
             f"X {-self.app.settings['canvas_settings']['pos_x']: 05d} Y {self.app.settings['canvas_settings']['pos_y']: 05d}"
         )
@@ -450,19 +507,7 @@ class CanvasPlusWidget(BaseWidget):
         self.drawing = False
     
     def draw_grid(self):
-        draw_grid = self.app.settings["grid_settings"]["show_grid"]
-
-        if draw_grid and self.redraw_lines:
-            self.clear_lines()
-            self.has_lines = False
-        self.redraw_lines = False
-
-        if draw_grid and not self.has_lines:
-            self.draw_lines()
-            self.has_lines = True
-        elif not draw_grid and self.has_lines:
-            self.clear_lines()
-            self.has_lines = False
+        self.scene.addItem(self.line_group)
     
     def handle_image_data(self, data):
         options = data["data"]["options"]
@@ -534,7 +579,6 @@ class CanvasPlusWidget(BaseWidget):
         return new_image, image_root_point, image_pivot_point
     
     def load_image_from_path(self, image_path):
-        print("canvas_plus_widget load_image_from_path", image_path)
         if image_path is None or image_path == "":
             return
         image = Image.open(image_path)
