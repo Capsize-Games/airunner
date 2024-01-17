@@ -101,11 +101,7 @@ class SchedulerMixin:
                 else:
                     kwargs["algorithm_type"] = "dpmsolver"
             try:
-                self._scheduler = self.from_pretrained(
-                    class_object=scheduler_class,
-                    model=self.model_path,
-                    **kwargs
-                )
+                self._scheduler = scheduler_class.from_pretrained(self.model_path, **kwargs)
             except NotImplementedError as e:
                 logger.error(f"Unable to load scheduler {scheduler_name} from {self.model_path}")
         return self._scheduler
