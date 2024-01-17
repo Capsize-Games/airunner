@@ -86,7 +86,7 @@ class BrushesContainer(BaseWidget):
                     else:
                         self.selected_brushes.remove(widget)
                         widget.setStyleSheet("")
-            self.app.settings_manager.set_value("settings.generator_settings_override_id", None)
+            print("TODO: save this?")
             return
 
         for widget in self.selected_brushes:

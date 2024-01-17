@@ -7,7 +7,6 @@ from airunner.utils import get_main_window
 
 class BaseWindow(QDialog):
     template_class_ = None
-    settings_manager: SettingsManager = None
     template = None
     is_modal: bool = False  # allow the window to be treated as a modal
 
