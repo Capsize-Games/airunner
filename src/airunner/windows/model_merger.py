@@ -163,7 +163,7 @@ class ModelMerger(BaseWindow):
                 model_data = data
 
         if model_data:
-            self.app.client.sd_runner.merge_models(
+            self.app.engine.sd_runner.merge_models(
                 model_data["path"],
                 models,
                 weights,
