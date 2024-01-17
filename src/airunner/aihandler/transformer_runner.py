@@ -361,7 +361,7 @@ class TransformerRunner(QObject):
         #         if self.callback:
         #             self.callback(value)
         #         else:
-        #             self.engine.send_message(value, code=MessageCode.TEXT_GENERATED)
+        #             self.engine.send_message(value, code=EngineResponseCode.TEXT_GENERATED)
         self.enable_request_processing()
     
     def disable_request_processing(self):
