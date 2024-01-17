@@ -1,6 +1,5 @@
 from airunner.widgets.base_widget import BaseWidget
 from airunner.windows.prompt_browser.templates.prompt_browser_prompt_widget_ui import Ui_prompt_widget
-from airunner.data.session_scope import session_scope
 
 
 class PromptWidget(BaseWidget):
@@ -23,8 +22,6 @@ class PromptWidget(BaseWidget):
         self.app.load_saved_stablediffuion_prompt(self.index)
 
     def action_clicked_button_delete(self):
-        with session_scope() as session:
-            session.delete(self.prompt_data)
         self.deleteLater()
 
     def save_prompt(self):
