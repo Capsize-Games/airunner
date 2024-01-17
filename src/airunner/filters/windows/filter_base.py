@@ -3,7 +3,6 @@ import os
 from functools import partial
 
 from PyQt6 import uic
-from airunner.data.session_scope import session_scope
 
 from airunner.widgets.slider.slider_widget import SliderWidget
 

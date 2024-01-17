@@ -6,7 +6,6 @@ from PyQt6.QtWidgets import QWidget
 from airunner.widgets.base_widget import BaseWidget
 from airunner.widgets.llm.templates.llm_settings_ui import Ui_llm_settings_widget
 from airunner.aihandler.logger import Logger
-from airunner.data.session_scope import session_scope
 
 
 class LLMSettingsWidget(BaseWidget):
