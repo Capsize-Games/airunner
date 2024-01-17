@@ -1,4 +1,3 @@
-from airunner.data.session_scope import session_scope
 from airunner.widgets.base_widget import BaseWidget
 from airunner.widgets.model_manager.templates.import_ui import Ui_import_model_widget
 from airunner.aihandler.download_civitai import DownloadCivitAI
@@ -65,56 +64,55 @@ class ImportWidget(BaseWidget):
         if isinstance(trained_words, str):
             trained_words = [trained_words]
         trained_words = ",".join(trained_words)
-        with session_scope() as session:
-            if model_type == "Checkpoint":
-               self.app.ai_model_save_or_update(dict(
+        if model_type == "Checkpoint":
+            self.app.ai_model_save_or_update(dict(
+                name=name,
+                path=file_path,
+                branch="main",
+                version=diffuser_model_version,
+                category=category,
+                pipeline_action=pipeline_action,
+                enabled=True,
+                is_default=False
+            ))
+        elif model_type == "LORA":
+            lora_exists = session.query(Lora).filter_by(
+                name=name,
+                path=file_path,
+            ).first()
+            if not lora_exists:
+                new_lora = Lora(
                     name=name,
                     path=file_path,
-                    branch="main",
-                    version=diffuser_model_version,
-                    category=category,
-                    pipeline_action=pipeline_action,
+                    scale=1,
                     enabled=True,
-                    is_default=False
-                ))
-            elif model_type == "LORA":
-                lora_exists = session.query(Lora).filter_by(
+                    loaded=False,
+                    trigger_word=trained_words,
+                )
+                session.add(new_lora)
+        elif model_type == "TextualInversion":
+            name = file_path.split("/")[-1].split(".")[0]
+            embedding_exists = session.query(Embedding).filter_by(
+                name=name,
+                path=file_path,
+            ).first()
+            if not embedding_exists:                
+                new_embedding = Embedding(
                     name=name,
                     path=file_path,
-                ).first()
-                if not lora_exists:
-                    new_lora = Lora(
-                        name=name,
-                        path=file_path,
-                        scale=1,
-                        enabled=True,
-                        loaded=False,
-                        trigger_word=trained_words,
-                    )
-                    session.add(new_lora)
-            elif model_type == "TextualInversion":
-                name = file_path.split("/")[-1].split(".")[0]
-                embedding_exists = session.query(Embedding).filter_by(
-                    name=name,
-                    path=file_path,
-                ).first()
-                if not embedding_exists:                
-                    new_embedding = Embedding(
-                        name=name,
-                        path=file_path,
-                        active=True,
-                        tags=trained_words,
-                    )
-                    session.add(new_embedding)
-            elif model_type == "VAE":
-                # todo save vae here
-                pass
-            elif model_type == "Controlnet":
-                # todo save controlnet here
-                pass
-            elif model_type == "Poses":
-                # todo save poses here
-                pass
+                    active=True,
+                    tags=trained_words,
+                )
+                session.add(new_embedding)
+        elif model_type == "VAE":
+            # todo save vae here
+            pass
+        elif model_type == "Controlnet":
+            # todo save controlnet here
+            pass
+        elif model_type == "Poses":
+            # todo save poses here
+            pass
         
         print("starting download")
         self.download_model_thread(download_url, file_path, size_kb)
