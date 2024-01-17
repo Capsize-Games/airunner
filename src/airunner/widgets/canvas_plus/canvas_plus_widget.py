@@ -10,16 +10,19 @@ from PyQt6.QtGui import QBrush, QColor, QPen, QPixmap
 from PyQt6.QtWidgets import QGraphicsPixmapItem
 from PyQt6 import QtWidgets, QtCore
 from PyQt6.QtWidgets import QGraphicsItemGroup
+from PyQt6.QtCore import pyqtSlot, QThread
+from airunner.aihandler.enums import EngineResponseCode
 
+from airunner.workers.image_data_worker import ImageDataWorker
 from airunner.aihandler.logger import Logger
-from airunner.widgets.canvas_plus.canvas_base_widget import CanvasBaseWidget
 from airunner.widgets.canvas_plus.templates.canvas_plus_ui import Ui_canvas
 from airunner.utils import apply_opacity_to_image
 from airunner.widgets.canvas_plus.draggables import DraggablePixmap, ActiveGridArea
 from airunner.widgets.canvas_plus.custom_scene import CustomScene
+from airunner.widgets.base_widget import BaseWidget
 
 
-class CanvasPlusWidget(CanvasBaseWidget):
+class CanvasPlusWidget(BaseWidget):
     logger = Logger(prefix="CanvasPlusWidget")
     widget_class_ = Ui_canvas
     scene = None
@@ -41,6 +44,9 @@ class CanvasPlusWidget(CanvasBaseWidget):
     grid_settings: dict = {}
     active_grid_settings: dict = {}
     canvas_settings: dict = {}
+    image = None
+    image_backup = None
+    previewing_filter = False
 
     @property
     def image_pivot_point(self):
@@ -96,15 +102,42 @@ class CanvasPlusWidget(CanvasBaseWidget):
 
     def __init__(self, *args, **kwargs):
         super().__init__(*args, **kwargs)
-        self.app.application_settings_changed_signal.connect(self.handle_changed_signal)
         self.ui.central_widget.resizeEvent = self.resizeEvent
+        self.app.engine.image_generated_signal.connect(self.handle_image_data)
+        self.app.application_settings_changed_signal.connect(self.handle_changed_signal)
         self.app.add_image_to_canvas_signal.connect(self.handle_add_image_to_canvas)
-        self.app.image_data.connect(self.handle_image_data)
         self.app.load_image.connect(self.load_image_from_path)
         self.app.load_image_object.connect(self.add_image_to_scene)
         self.app.loaded.connect(self.handle_loaded)
         self._zoom_level = 1
         self.canvas_container.resizeEvent = self.window_resized
+
+        self.image_data_worker = ImageDataWorker(prefix="ImageDataWorker")
+        self.image_data_worker_thread = QThread()
+        self.image_data_worker.moveToThread(self.image_data_worker_thread)
+        self.image_data_worker.response_signal.connect(self.image_data_worker_response_signal_slot)
+        self.image_data_worker.finished.connect(self.image_data_worker_thread.quit)
+        self.image_data_worker_thread.started.connect(self.image_data_worker.start)
+        self.image_data_worker_thread.start()
+
+    @pyqtSlot(dict)
+    def handle_image_data(self, image_data):
+        self.image_data_worker.add_to_queue(image_data)
+
+    @pyqtSlot()
+    def image_data_worker_response_signal_slot(self, message):
+        self.app.clear_status_message()
+        self.app.stop_progress_bar()
+        nsfw_content_detected = message["nsfw_content_detected"]
+        path = message["path"]
+        if nsfw_content_detected and self.parent.settings["nsfw_filter"]:
+            self.app.send_message(
+                code=EngineResponseCode.ERROR,
+                message="Explicit content detected, try again."
+            )
+        self.app.show_layers()
+        if path is not None:
+            self.app.set_status_label(f"Image exported to {path}")
     
     @property
     def zoom_in_step(self):
@@ -297,7 +330,6 @@ class CanvasPlusWidget(CanvasBaseWidget):
             self.scene.resize()
 
     def initialize(self):
-        # Create a QGraphicsScene object
         self.scene = CustomScene(parent=self)
 
         self.view = self.canvas_container
@@ -606,10 +638,10 @@ class CanvasPlusWidget(CanvasBaseWidget):
     def switch_to_layer(self, layer_index):
         self.app.switch_layer(layer_index)
 
-    def add_image_to_scene(self, image, is_outpaint=False, image_root_point=None):
+    def add_image_to_scene(self, image_data, is_outpaint=False, image_root_point=None):
         #self.image_adder = ImageAdder(self, image, is_outpaint, image_root_point)
         #self.image_adder.finished.connect(self.on_image_adder_finished)
-        self.current_active_image = image
+        self.current_active_image = image_data["image"]
         self.do_draw()
         #self.image_adder.start()
     
@@ -677,3 +709,42 @@ class CanvasPlusWidget(CanvasBaseWidget):
         if self.current_active_image:
             self.current_active_image = self.current_active_image.transpose(Image.ROTATE_90)
             self.do_draw()
+
+    def current_image(self):
+        if self.previewing_filter:
+            return self.image_backup.copy()
+        return self.image
+    
+    def filter_with_filter(self, filter):
+        return type(filter).__name__ in [
+            "SaturationFilter", 
+            "ColorBalanceFilter", 
+            "RGBNoiseFilter", 
+            "PixelFilter", 
+            "HalftoneFilter", 
+            "RegistrationErrorFilter"]
+
+    def preview_filter(self, filter):
+        image = self.current_image()
+        if not image:
+            return
+        if not self.previewing_filter:
+            self.image_backup = image.copy()
+            self.previewing_filter = True
+        else:
+            image = self.image_backup.copy()
+        if self.filter_with_filter:
+            filtered_image = filter.filter(image)
+        else:
+            filtered_image = image.filter(filter)
+        self.load_image_from_object(image=filtered_image)
+    
+    def cancel_filter(self):
+        if self.image_backup:
+            self.load_image_from_object(image=self.image_backup)
+            self.image_backup = None
+        self.previewing_filter = False
+    
+    def apply_filter(self, filter):
+        self.previewing_filter = False
+        self.image_backup = None

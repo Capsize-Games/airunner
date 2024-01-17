@@ -6,15 +6,22 @@ from PyQt6.QtWidgets import QDialog
 from PyQt6.QtGui import QImage
 
 from PIL import Image
+from PyQt6.QtCore import pyqtSlot, QThread
 
-from airunner.widgets.canvas_plus.standard_base_widget import StandardBaseWidget
 from airunner.widgets.canvas_plus.templates.standard_image_widget_ui import Ui_standard_image_widget
 from airunner.utils import load_metadata_from_image, prepare_metadata
 from airunner.widgets.slider.slider_widget import SliderWidget
 from airunner.aihandler.logger import Logger
+from airunner.widgets.base_widget import BaseWidget
+from airunner.workers.worker import Worker
 
 
-class StandardImageWidget(StandardBaseWidget):
+class ImageDataWorker(Worker):
+    def handle_message(self, message):
+        pass
+
+
+class StandardImageWidget(BaseWidget):
     logger = Logger(prefix="StandardImageWidget")
     widget_class_ = Ui_standard_image_widget
     _pixmap = None
@@ -103,84 +110,6 @@ class StandardImageWidget(StandardBaseWidget):
         settings = self.app.settings
         settings["standard_image_settings"]["controlnet"] = val
         self.app.settings = settings
-
-    def handle_image_data(self, data):
-        images = data["images"]
-        if len(images) == 1:
-            self.load_image_from_path(data["path"])
-    
-    def load_image_from_path(self, image_path):
-        image = Image.open(image_path)
-        self.load_image_from_object(image=image, image_path=image_path)
-        self.app.ui.image_browser.add_image(image_path)
-    
-    def load_image_from_object(self, image, image_path=NotImplemented):
-        self.set_pixmap(image=image, image_path=image_path)
-
-    def set_pixmap(self, image_path=None, image=None):
-        self.image_path = image_path
-        self.image = image
-        meta_data = image.info
-        self.meta_data = meta_data if meta_data is not None else load_metadata_from_image(image)
-        return
-        #size = self.ui.image_frame.width() - 20
-
-        pixmap = self._pixmap
-        if not pixmap:
-            pixmap = QPixmap()
-            self._pixmap = pixmap
-
-        if image_path:
-            pixmap.load(image_path)
-        else:
-            raw_data = image.tobytes("raw", "RGBA")
-            qimage = QImage(
-                raw_data, 
-                image.size[0], 
-                image.size[1], 
-                QImage.Format.Format_RGBA8888
-            )
-            pixmap = QPixmap.fromImage(qimage)
-        
-        width = pixmap.width()
-        height = pixmap.height()
-        
-        label = self._label
-        if not label:
-            label = QLabel(self.ui.image_frame)
-            label.setAlignment(Qt.AlignmentFlag.AlignCenter)
-            self._label = label
-
-        pixmap = pixmap.scaled(
-            size, 
-            size, 
-            Qt.AspectRatioMode.KeepAspectRatio,
-            Qt.TransformationMode.SmoothTransformation
-        )
-        label.setPixmap(pixmap)
-        label.setFixedWidth(size)
-        label.setFixedHeight(size)
-
-        # on label click:
-        label.mousePressEvent = self.handle_label_clicked
-        label.setCursor(Qt.CursorShape.PointingHandCursor)
-        
-        layout = self._layout
-        if not layout:
-            layout = QVBoxLayout(self.ui.image_frame)
-            layout.addWidget(label)        
-            self._layout = layout
-        
-        # get the metadata from this image, load it as a png first
-        # then load the metadata from the png
-        if image_path:
-            image = Image.open(image_path)
-            meta_data = image.info
-
-            meta_data["width"] = width
-            meta_data["height"] = height
-
-            #self.set_table_data(meta_data)
     
     def handle_label_clicked(self, event):
         # create a popup window and show the full size image in it
