@@ -7,7 +7,8 @@ model_bootstrap_data = [
         "category": "stablediffusion",
         "pipeline_action": "txt2img",
         "enabled": True,
-        "model_type": "art"
+        "model_type": "art",
+        "is_default": True
     },
     {
         "name": "Stable Diffusion 2.1 768",
@@ -17,7 +18,8 @@ model_bootstrap_data = [
         "category": "stablediffusion",
         "pipeline_action": "txt2img",
         "enabled": True,
-        "model_type": "art"
+        "model_type": "art",
+        "is_default": True
     },
     {
         "name": "Stable Diffusion 1.5",
@@ -27,7 +29,8 @@ model_bootstrap_data = [
         "category": "stablediffusion",
         "pipeline_action": "txt2img",
         "enabled": True,
-        "model_type": "art"
+        "model_type": "art",
+        "is_default": True
     },
     {
         "name": "Stable Diffusion Turbo",
@@ -37,7 +40,8 @@ model_bootstrap_data = [
         "category": "stablediffusion",
         "pipeline_action": "txt2img",
         "enabled": True,
-        "model_type": "art"
+        "model_type": "art",
+        "is_default": True
     },
     {
         "name": "Stable Diffusion XL Base 1.0",
@@ -47,7 +51,8 @@ model_bootstrap_data = [
         "category": "stablediffusion",
         "pipeline_action": "txt2img",
         "enabled": True,
-        "model_type": "art"
+        "model_type": "art",
+        "is_default": True
     },
     {
         "name": "Stable Diffusion XL Turbo",
@@ -57,7 +62,8 @@ model_bootstrap_data = [
         "category": "stablediffusion",
         "pipeline_action": "txt2img",
         "enabled": True,
-        "model_type": "art"
+        "model_type": "art",
+        "is_default": True
     },
     {
         "name": "Stable Diffusion Inpaint 2",
@@ -67,7 +73,8 @@ model_bootstrap_data = [
         "category": "stablediffusion",
         "pipeline_action": "outpaint",
         "enabled": True,
-        "model_type": "art"
+        "model_type": "art",
+        "is_default": True
     },
     {
         "name": "Stable Diffusion Inpaint 1.5",
@@ -77,7 +84,8 @@ model_bootstrap_data = [
         "category": "stablediffusion",
         "pipeline_action": "outpaint",
         "enabled": True,
-        "model_type": "art"
+        "model_type": "art",
+        "is_default": True
     },
     {
         "name": "Stable Diffusion Depth2Img",
@@ -87,7 +95,8 @@ model_bootstrap_data = [
         "category": "stablediffusion",
         "pipeline_action": "depth2img",
         "enabled": True,
-        "model_type": "art"
+        "model_type": "art",
+        "is_default": True
     },
     {
         "name": "Stable Diffusion 1.5",
@@ -97,7 +106,8 @@ model_bootstrap_data = [
         "category": "stablediffusion",
         "pipeline_action": "controlnet",
         "enabled": True,
-        "model_type": "art"
+        "model_type": "art",
+        "is_default": True
     },
     {
         "name": "Stability AI 4x resolution",
@@ -107,7 +117,8 @@ model_bootstrap_data = [
         "category": "stablediffusion",
         "pipeline_action": "superresolution",
         "enabled": True,
-        "model_type": "art"
+        "model_type": "art",
+        "is_default": True
     },
     {
         "name": "Instruct pix2pix",
@@ -117,7 +128,8 @@ model_bootstrap_data = [
         "category": "stablediffusion",
         "pipeline_action": "pix2pix",
         "enabled": True,
-        "model_type": "art"
+        "model_type": "art",
+        "is_default": True
     },
     {
         "name": "SD Image Variations",
@@ -127,7 +139,8 @@ model_bootstrap_data = [
         "category": "stablediffusion",
         "pipeline_action": "vid2vid",
         "enabled": True,
-        "model_type": "art"
+        "model_type": "art",
+        "is_default": True
     },
     {
         "name": "sd-x2-latent-upscaler",
@@ -137,7 +150,8 @@ model_bootstrap_data = [
         "category": "stablediffusion",
         "pipeline_action": "upscale",
         "enabled": True,
-        "model_type": "art"
+        "model_type": "art",
+        "is_default": True
     },
     {
         "name": "CompVis Safety Checker",
@@ -147,7 +161,8 @@ model_bootstrap_data = [
         "category": "stablediffusion",
         "pipeline_action": "safety_checker",
         "enabled": True,
-        "model_type": "art"
+        "model_type": "art",
+        "is_default": True
     },
     {
         "name": "CompVis Safety Checker",
@@ -157,7 +172,8 @@ model_bootstrap_data = [
         "category": "stablediffusion",
         "pipeline_action": "safety_checker",
         "enabled": True,
-        "model_type": "art"
+        "model_type": "art",
+        "is_default": True
     },
     {
         "name": "CompVis Safety Checker",
@@ -167,7 +183,8 @@ model_bootstrap_data = [
         "category": "stablediffusion",
         "pipeline_action": "safety_checker",
         "enabled": True,
-        "model_type": "art"
+        "model_type": "art",
+        "is_default": True
     },
     {
         "name": "CompVis Safety Checker",
@@ -177,7 +194,8 @@ model_bootstrap_data = [
         "category": "stablediffusion",
         "pipeline_action": "safety_checker",
         "enabled": True,
-        "model_type": "art"
+        "model_type": "art",
+        "is_default": True
     },
     {
         "name": "CompVis Safety Checker",
@@ -187,7 +205,8 @@ model_bootstrap_data = [
         "category": "stablediffusion",
         "pipeline_action": "safety_checker",
         "enabled": True,
-        "model_type": "art"
+        "model_type": "art",
+        "is_default": True
     },
     {
         "name": "OpenAI Text Encoder",
@@ -197,7 +216,8 @@ model_bootstrap_data = [
         "category": "stablediffusion",
         "pipeline_action": "text_encoder",
         "enabled": True,
-        "model_type": "art"
+        "model_type": "art",
+        "is_default": True
     },
     {
         "name": "Inpaint vae",
@@ -207,7 +227,8 @@ model_bootstrap_data = [
         "category": "stablediffusion",
         "pipeline_action": "inpaint_vae",
         "enabled": True,
-        "model_type": "art"
+        "model_type": "art",
+        "is_default": True
     },
     {
         "name": "Flan T5 XL",
@@ -217,7 +238,8 @@ model_bootstrap_data = [
         "category": "llm",
         "pipeline_action": "seq2seq",
         "enabled": True,
-        "model_type": "llm"
+        "model_type": "llm",
+        "is_default": True
     },
     {
         "name": "Llama 2 7b",
@@ -227,7 +249,8 @@ model_bootstrap_data = [
         "category": "llm",
         "pipeline_action": "casuallm",
         "enabled": True,
-        "model_type": "llm"
+        "model_type": "llm",
+        "is_default": True
     },
     {
         "name": "Llama 2 7b Chat",
@@ -237,7 +260,8 @@ model_bootstrap_data = [
         "category": "llm",
         "pipeline_action": "casuallm",
         "enabled": True,
-        "model_type": "llm"
+        "model_type": "llm",
+        "is_default": True
     },
     {
         "name": "Mistral 7B",
@@ -247,7 +271,8 @@ model_bootstrap_data = [
         "category": "llm",
         "pipeline_action": "casuallm",
         "enabled": True,
-        "model_type": "llm"
+        "model_type": "llm",
+        "is_default": True
     },
     {
         "name": "Mistral 7B Instruct",
@@ -257,7 +282,8 @@ model_bootstrap_data = [
         "category": "llm",
         "pipeline_action": "casuallm",
         "enabled": True,
-        "model_type": "llm"
+        "model_type": "llm",
+        "is_default": True
     },
     {
         "name": "GPT 2 XL",
@@ -267,7 +293,8 @@ model_bootstrap_data = [
         "category": "llm",
         "pipeline_action": "casuallm",
         "enabled": True,
-        "model_type": "llm"
+        "model_type": "llm",
+        "is_default": True
     },
     {
         "name": "GPT 2 Large",
@@ -277,7 +304,8 @@ model_bootstrap_data = [
         "category": "llm",
         "pipeline_action": "casuallm",
         "enabled": True,
-        "model_type": "llm"
+        "model_type": "llm",
+        "is_default": True
     },
     {
         "name": "Salesforce InstructBlip Flan T5 XL",
@@ -287,7 +315,8 @@ model_bootstrap_data = [
         "category": "llm",
         "pipeline_action": "visualqa",
         "enabled": True,
-        "model_type": "llm"
+        "model_type": "llm",
+        "is_default": True
     },
     {
         "name": "Salesforce Blip2 Opt 2.7b",
@@ -297,7 +326,8 @@ model_bootstrap_data = [
         "category": "llm",
         "pipeline_action": "visualqa",
         "enabled": True,
-        "model_type": "llm"
+        "model_type": "llm",
+        "is_default": True
     },
     {
         "name": "stablelm-zephyr-3b",
@@ -307,6 +337,7 @@ model_bootstrap_data = [
         "category": "llm",
         "pipeline_action": "casuallm",
         "enabled": True,
-        "model_type": "llm"
+        "model_type": "llm",
+        "is_default": True
     },
 ]

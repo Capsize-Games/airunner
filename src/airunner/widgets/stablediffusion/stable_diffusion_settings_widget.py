@@ -1,9 +1,6 @@
 from airunner.data.session_scope import session_scope
 from airunner.widgets.base_widget import BaseWidget
 from airunner.widgets.stablediffusion.templates.stable_diffusion_settings_ui import Ui_stable_diffusion_settings_widget
-from airunner.data.models import Pipeline
-from airunner.data.session_scope import session_scope
-from airunner.data.models import AIModel
 
 
 class StableDiffusionSettingsWidget(BaseWidget):
@@ -75,16 +72,15 @@ class StableDiffusionSettingsWidget(BaseWidget):
         self.ui.pipeline.blockSignals(False)
     
     def load_versions(self):
-        with session_scope() as session:
-            self.ui.version.blockSignals(True)
-            self.ui.version.clear()
-            pipelines = session.query(Pipeline).filter(Pipeline.category == "stablediffusion").all()
-            version_names = set([pipeline.version for pipeline in pipelines])
-            self.ui.version.addItems(version_names)
-            current_version = self.app.settings["current_version_stablediffusion"]
-            if current_version != "":
-                self.ui.version.setCurrentText(current_version)
-            self.ui.version.blockSignals(False)
+        self.ui.version.blockSignals(True)
+        self.ui.version.clear()
+        pipelines = self.app.get_pipelines(category="stablediffusion")
+        version_names = set([pipeline["version"] for pipeline in pipelines])
+        self.ui.version.addItems(version_names)
+        current_version = self.app.settings["current_version_stablediffusion"]
+        if current_version != "":
+            self.ui.version.setCurrentText(current_version)
+        self.ui.version.blockSignals(False)
 
     def clear_models(self):
         self.ui.model.clear()
@@ -98,13 +94,13 @@ class StableDiffusionSettingsWidget(BaseWidget):
             pipeline = self.app.settings["pipeline"]
             version = self.app.settings["current_version_stablediffusion"]
 
-            models = session.query(AIModel).filter(
-                AIModel.category == image_generator,
-                AIModel.pipeline_action == pipeline,
-                AIModel.version == version,
-                AIModel.enabled == True
-            ).all()
-            model_names = [model.name for model in models]
+            models = self.app.ai_model_get_by_filter(dict(
+                category=image_generator,
+                pipeline_action=pipeline,
+                version=version,
+                enabled=True
+            ))
+            model_names = [model["name"] for model in models]
             self.ui.model.addItems(model_names)
             settings = self.app.settings
             current_model = settings["generator_settings"]["model"]

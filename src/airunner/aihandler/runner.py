@@ -17,6 +17,9 @@ from diffusers.utils.torch_utils import randn_tensor
 from torchvision import transforms
 from diffusers import StableDiffusionPipeline, StableDiffusionXLPipeline
 
+from PyQt6.QtCore import QSettings
+from PyQt6.QtCore import pyqtSignal
+
 from airunner.aihandler.auto_pipeline import AutoImport
 from airunner.aihandler.enums import FilterType
 from airunner.aihandler.enums import MessageCode
@@ -27,10 +30,16 @@ from airunner.aihandler.mixins.memory_efficient_mixin import MemoryEfficientMixi
 from airunner.aihandler.mixins.merge_mixin import MergeMixin
 from airunner.aihandler.mixins.scheduler_mixin import SchedulerMixin
 from airunner.aihandler.mixins.txttovideo_mixin import TexttovideoMixin
-from airunner.aihandler.settings import LOG_LEVEL, AIRUNNER_ENVIRONMENT
-from airunner.data.managers import SettingsManager
+from airunner.aihandler.settings import AIRUNNER_ENVIRONMENT
 from airunner.scripts.realesrgan.main import RealESRGAN
 from airunner.aihandler.logger import Logger
+from airunner.windows.main.settings_mixin import SettingsMixin
+from airunner.windows.main.layer_mixin import LayerMixin
+from airunner.windows.main.lora_mixin import LoraMixin as LoraDataMixin
+from airunner.windows.main.embedding_mixin import EmbeddingMixin as EmbeddingDataMixin
+from airunner.windows.main.pipeline_mixin import PipelineMixin
+from airunner.windows.main.controlnet_model_mixin import ControlnetModelMixin
+from airunner.windows.main.ai_model_mixin import AIModelMixin
 
 logger = Logger(prefix="SDRunner")
 
@@ -44,8 +53,18 @@ class SDRunner(
     EmbeddingMixin,
     TexttovideoMixin,
     CompelMixin,
-    SchedulerMixin
+    SchedulerMixin,
+
+    # Data Mixins
+    SettingsMixin,
+    LayerMixin,
+    LoraDataMixin,
+    EmbeddingDataMixin,
+    PipelineMixin,
+    ControlnetModelMixin,
+    AIModelMixin,
 ):
+    application_settings_changed_signal = pyqtSignal()
     _current_model: str = ""
     _previous_model: str = ""
     _initialized: bool = False
@@ -109,7 +128,7 @@ class SDRunner(
         name = self.controlnet_type
         if self.is_vid2vid:
             name = "openpose"
-        model = self.settings_manager.controlnet_model_by_name(name)
+        model = self.controlnet_model_by_name(name)
         if not model:
             raise ValueError(f"Unable to find controlnet model {name}")
         return model.path
@@ -696,10 +715,10 @@ class SDRunner(
     def  __init__(self, **kwargs):
         #logger.set_level(LOG_LEVEL)
         logger.info("Loading Stable Diffusion model runner...")
-        self.settings_manager = SettingsManager()
-        self.safety_checker_model = self.settings_manager.models_by_pipeline_action("safety_checker")
-        self.text_encoder_model = self.settings_manager.models_by_pipeline_action("text_encoder")
-        self.inpaint_vae_model = self.settings_manager.models_by_pipeline_action("inpaint_vae")
+        self.application_settings = QSettings("Capsize Games", "AI Runner")
+        self.safety_checker_model = self.models_by_pipeline_action("safety_checker")
+        self.text_encoder_model = self.models_by_pipeline_action("text_encoder")
+        self.inpaint_vae_model = self.models_by_pipeline_action("inpaint_vae")
 
         self.engine = kwargs.pop("engine", None)
         self.app = kwargs.get("app", None)

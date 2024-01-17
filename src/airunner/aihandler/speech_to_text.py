@@ -21,35 +21,13 @@ class AudioCaptureWorker(QObject):
     logger = Logger(prefix="AudioCaptureWorker")
     finished = pyqtSignal()
 
-    def __init__(self, duration=5.0, fs=16000, audio_queue=None):
+    def __init__(self, parent, duration=5.0, fs=16000):
+        self.parent = parent
         super().__init__()
         self.duration = duration
         self.fs = fs
-        self.audio_queue = audio_queue
         self.running = False
         self.listening = False
-        self.thread = None
-        self.is_recording = False
-        self.recording = None
-
-    def start_recording(self):
-        self.is_recording = True
-        self.thread = threading.Thread(target=self._record)
-        self.thread.start()
-    
-    def stop_recording(self):
-        self.is_recording = False
-        if self.thread is not None:
-            self.thread.join()
-            self.thread = None
-        self.recording = None
-    
-    def _record(self):
-        self.recording = np.empty((self.fs * self.duration,))
-        while self.is_recording:
-            self.recording = np.append(self.recording, sd.rec(int(self.duration * self.fs), samplerate=self.fs, channels=1))
-            sd.wait()
-            self.audio_queue.put(self.recording)
 
     def run(self):
         self.logger.info("AudioCaptureWorker Starting")
@@ -57,10 +35,13 @@ class AudioCaptureWorker(QObject):
         self.start_listening()
         while self.running:
             while self.listening:
-                time.sleep(0.1)
+                self.recording = sd.rec(int(self.duration * self.fs), samplerate=self.fs, channels=1)
+                sd.wait()
+                print("Putting recording into queue")
+                self.parent.audio_captured_signal.emit(self.recording)
             while not self.listening:
                 time.sleep(0.1)
-    
+
     def stop(self):
         self.logger.info("AudioCaptureWorker Stopping")
         self.stop_listening()
@@ -69,13 +50,10 @@ class AudioCaptureWorker(QObject):
     def start_listening(self):
         self.logger.info("Start listening")
         self.listening = True
-        self.start_recording()
 
     def stop_listening(self):
         self.logger.info("Stop listening")
         self.listening = False
-        self.stop_recording()
-        self.finished.emit()
 
 
 class AudioProcessorWorker(QObject):
@@ -85,6 +63,7 @@ class AudioProcessorWorker(QObject):
     """
     logger = Logger(prefix="AudioProcessorWorker")
     finished = pyqtSignal()
+    queue = queue.Queue()
 
     def __init__(self, parent, fs=None, model=None, processor=None, feature_extractor=None, audio_queue=None):
         super().__init__()
@@ -93,22 +72,25 @@ class AudioProcessorWorker(QObject):
         self.model = model
         self.processor = processor
         self.feature_extractor = feature_extractor
-        self.audio_queue = audio_queue
-        self.listening = False
+        self.running = False
+    
+    def add_to_queue(self, audio_data):
+        self.logger.info("Adding audio to queue")
+        self.queue.put(audio_data)
 
     def run(self):
         self.logger.info("AudioProcessorWorker Starting")
-        self.start_listening()
+        self.running = True
         while self.running:
-            if not self.audio_queue.empty():
-                audio_data = self.audio_queue.get()
+            if not self.queue.empty():
+                audio_data = self.queue.get()
                 # convert audio_data into a numpy array
                 inputs = np.squeeze(audio_data)
                 inputs = self.feature_extractor(inputs, sampling_rate=self.fs, return_tensors="pt")
                 inputs = inputs.to(self.model.device)
                 transcription = self.parent.run(inputs)
+                print("transcription:", transcription)
                 if transcription is not None:
-                    self.stop_listening()
                     self.parent.hear_signal.emit(transcription)
             time.sleep(0.1)
     
@@ -122,6 +104,12 @@ class SpeechToText(QObject):
     logger = Logger(prefix="SpeechToText")
     listening = False
     move_to_cpu_signal = pyqtSignal()
+    audio_captured_signal = pyqtSignal(np.ndarray)
+
+    @pyqtSlot(np.ndarray)
+    def audio_captured(self, audio_data):
+        self.logger.info("Audio captured")
+        self.audio_processor_worker.add_to_queue(audio_data)
 
     @pyqtSlot()
     def move_to_cpu(self):
@@ -135,15 +123,15 @@ class SpeechToText(QObject):
         self.fs = fs
         self.hear_signal = hear_signal
         self.model, self.processor, self.feature_extractor = self.load_whisper_model()
-        self.audio_queue = queue.Queue()
+        self.audio_captured_signal.connect(self.audio_captured)
 
         self.move_to_cpu_signal.connect(self.move_to_cpu)
 
         # Audio capture worker and thread
         self.audio_capture_worker = AudioCaptureWorker(
+            parent=self,
             duration=self.duration, 
-            fs=self.fs, 
-            audio_queue=self.audio_queue
+            fs=self.fs
         )
         self.audio_capture_worker_thread = QThread()
         self.audio_capture_worker.moveToThread(self.audio_capture_worker_thread)
@@ -157,8 +145,7 @@ class SpeechToText(QObject):
             parent=self,
             model=self.model, 
             processor=self.processor, 
-            feature_extractor=self.feature_extractor, 
-            audio_queue=self.audio_queue
+            feature_extractor=self.feature_extractor
         )
         self.audio_processor_worker_thread = QThread()
         self.audio_processor_worker.moveToThread(self.audio_processor_worker_thread)
@@ -238,6 +225,3 @@ class SpeechToText(QObject):
         self.start_listening()
         self.audio_capture_worker_thread.start()
         self.audio_processor_worker_thread.start()
-        # self.audio_capture_worker_thread.wait()
-        # self.audio_processor_worker_thread.wait()
-        self.move_to_cpu()
