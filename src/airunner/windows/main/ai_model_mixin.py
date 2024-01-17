@@ -43,8 +43,14 @@ class AIModelMixin:
         else:
             self.ai_model_create(model_data)
         
-    def ai_model_paths(self):
-        return [model["path"] for model in self.settings["ai_models"]]
+    def ai_model_paths(self, model_type=None, pipeline_action=None):
+        models = self.settings["ai_models"]
+        if model_type:
+            models = [model for model in models if "model_type" in model and model["model_type"] == model_type]
+        if pipeline_action:
+            models = [model for model in models if model["pipeline_action"] == pipeline_action]
+
+        return [model["path"] for model in models]
 
     def ai_model_categories(self):
         return [model["category"] for model in self.settings["ai_models"]]
