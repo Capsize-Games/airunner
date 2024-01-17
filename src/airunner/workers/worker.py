@@ -15,6 +15,7 @@ class Worker(QtCore.QObject):
         self.queue = queue.Queue()
         self.items = {}
         self.current_index = 0
+        self.paused = False
 
     @QtCore.pyqtSlot()
     def start(self):
@@ -28,6 +29,17 @@ class Worker(QtCore.QObject):
                 msg = None
             if msg is not None:
                 self.handle_message(msg)
+            if self.paused:
+                self.logger.info("Paused")
+                while self.paused:
+                    QtCore.QThread.msleep(100)
+                self.logger.info("Resumed")
+    
+    def pause(self):
+        self.paused = True
+
+    def resume(self):
+        self.paused = False
 
     def handle_message(self, message):
         self.response_signal.emit(message)

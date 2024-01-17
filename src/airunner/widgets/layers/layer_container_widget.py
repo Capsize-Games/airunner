@@ -1,5 +1,5 @@
 from PIL import Image
-from PyQt6.QtCore import QRect, QPoint, Qt
+from PyQt6.QtCore import QRect, QPoint, Qt, pyqtSlot
 from PyQt6.QtWidgets import QSpacerItem, QSizePolicy
 
 from airunner.aihandler.logger import Logger
@@ -13,6 +13,10 @@ class LayerContainerWidget(BaseWidget):
     current_layer_index = 0
     layers = []
     selected_layers = {}
+
+    def __init__(self, *args, **kwargs):
+        super().__init__(*args, **kwargs)
+        self.app.show_layers_signal.connect(self.show_layers)
 
     def initialize(self):
         current_layer = self.app.current_layer()
@@ -237,5 +241,6 @@ class LayerContainerWidget(BaseWidget):
             "opacity": opacity
         })
 
+    @pyqtSlot()
     def show_layers(self):
-        pass
+        self.logger.info("TODO: show_layers")
