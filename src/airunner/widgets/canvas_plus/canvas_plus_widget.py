@@ -46,7 +46,7 @@ class CanvasPlusWidget(CanvasBaseWidget):
     def image_pivot_point(self):
         try:
             layer = self.app.current_layer()
-            return QPoint(layer["pivot_x"], layer["pivot_y"])
+            return QPoint(layer["pivot_point_x"], layer["pivot_point_y"])
         except Exception as e:
             self.logger.error(e)
         return QPoint(0, 0)
@@ -55,8 +55,8 @@ class CanvasPlusWidget(CanvasBaseWidget):
     def image_pivot_point(self, value):
         layer = self.app.current_layer()
         self.app.update_current_layer({
-            "pivot_x": value.x(),
-            "pivot_y": value.y()
+            "pivot_point_x": value.x(),
+            "pivot_point_y": value.y()
         })
 
     @property
@@ -253,18 +253,21 @@ class CanvasPlusWidget(CanvasBaseWidget):
                     self.set_canvas_color()
                 elif k in ["line_color", "cell_size", "line_width"]:
                     self.redraw_lines = True
+                self.logger.debug("grid_settings changed")
                 do_draw = True
         
         active_grid_settings = self.app.settings["active_grid_settings"]
         for k,v in active_grid_settings.items():
-            if k not in self.grid_settings or self.grid_settings[k] != v:
+            if k not in self.active_grid_settings or self.active_grid_settings[k] != v:
                 if k in ["pos_x", "pos_y", "width", "height"]:
                     self.redraw_lines = True
+                self.logger.debug("active_grid_settings changed")
                 do_draw = True
         
         canvas_settings = self.app.settings["canvas_settings"]
         for k,v in canvas_settings.items():
-            if k not in self.grid_settings or self.grid_settings[k] != v:
+            if k not in self.canvas_settings or self.canvas_settings[k] != v:
+                self.logger.debug("canvas_settings changed")
                 do_draw = True
         
         if do_draw:

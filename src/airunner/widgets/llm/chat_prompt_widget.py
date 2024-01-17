@@ -2,7 +2,7 @@ from PyQt6.QtCore import pyqtSlot, pyqtSignal
 from PyQt6.QtWidgets import QSpacerItem, QSizePolicy
 from PyQt6.QtCore import Qt
 
-from airunner.aihandler.enums import MessageCode
+from airunner.aihandler.enums import EngineResponseCode, EngineRequestCode
 from airunner.widgets.base_widget import BaseWidget
 from airunner.widgets.llm.loading_widget import LoadingWidget
 from airunner.widgets.llm.templates.chat_prompt_ui import Ui_chat_prompt
@@ -70,7 +70,7 @@ class ChatPromptWidget(BaseWidget):
         self.conversation_history = []
         for widget in self.ui.scrollAreaWidgetContents.findChildren(MessageWidget):
             widget.deleteLater()
-        self.app.client.engine.clear_llm_history()
+        self.app.engine.clear_llm_history()
 
     @pyqtSlot(dict)
     def message_handler(self, response: dict):
@@ -80,7 +80,7 @@ class ChatPromptWidget(BaseWidget):
             return
         message = response["message"]
 
-        if code == MessageCode.ADD_TO_CONVERSATION:
+        if code == EngineResponseCode.ADD_TO_CONVERSATION:
             self.handle_text_generated(message)
     
     @pyqtSlot()
@@ -110,57 +110,59 @@ class ChatPromptWidget(BaseWidget):
 
         parsed_template = self.parse_template(prompt_template)
 
-        data = {
-            "llm_request": True,
-            "request_data": {
-                "unload_unused_model": self.app.settings["memory_settings"]["unload_unused_models"],
-                "move_unused_model_to_cpu": self.app.settings["memory_settings"]["move_unused_model_to_cpu"],
-                "generator_name": generator_name,
-                "model_path": llm_generator_settings["model_version"],
-                "stream": True,
-                "prompt": prompt,
-                "do_summary": False,
-                "is_bot_alive": True,
-                "conversation_history": self.conversation_history,
-                "generator": self.app.settings["llm_generator_settings"],
-                "prefix": self.prefix,
-                "suffix": self.suffix,
-                "dtype": llm_generator_settings["dtype"],
-                "use_gpu": llm_generator_settings["use_gpu"],
-                "request_type": "image_caption_generator",
-                "username": self.app.settings["llm_generator_settings"]["username"],
-                "botname": self.app.settings["llm_generator_settings"]["botname"],
-                "prompt_template": parsed_template,
-                "hf_api_key_read_key": self.app.settings["hf_api_key_read_key"],
-                "parameters": {
-                    "override_parameters": self.app.settings["llm_generator_settings"]["override_parameters"],
-                    "top_p": llm_generator_settings["top_p"] / 100.0,
-                    "max_length": llm_generator_settings["max_length"],
-                    "repetition_penalty": llm_generator_settings["repetition_penalty"] / 100.0,
-                    "min_length": llm_generator_settings["min_length"],
-                    "length_penalty": llm_generator_settings["length_penalty"] / 100,
-                    "num_beams": llm_generator_settings["num_beams"],
-                    "ngram_size": llm_generator_settings["ngram_size"],
-                    "temperature": llm_generator_settings["temperature"] / 10000.0,
-                    "sequences": llm_generator_settings["sequences"],
-                    "top_k": llm_generator_settings["top_k"],
-                    "eta_cutoff": llm_generator_settings['eta_cutoff'] / 100.0,
-                    "seed": llm_generator_settings["do_sample"],
-                    "early_stopping": llm_generator_settings["early_stopping"],
-                },
-                "image": image,
-                "callback": callback,
-                "tts_settings": self.app.settings["tts_settings"],
-                "bot_mood": self.app.settings["llm_generator_settings"]["bot_mood"],
-                "bot_personality": self.app.settings["llm_generator_settings"]["bot_personality"],
-            }
-        }
         message_object = Message(
             name=self.app.settings["llm_generator_settings"]["username"],
             message=self.prompt,
             conversation=self.conversation
         )
-        self.app.client.message = data
+        self.app.engine.do_request(
+            code=EngineRequestCode.GENERATE_TEXT,
+            message={
+                "llm_request": True,
+                "request_data": {
+                    "unload_unused_model": self.app.settings["memory_settings"]["unload_unused_models"],
+                    "move_unused_model_to_cpu": self.app.settings["memory_settings"]["move_unused_model_to_cpu"],
+                    "generator_name": generator_name,
+                    "model_path": llm_generator_settings["model_version"],
+                    "stream": True,
+                    "prompt": prompt,
+                    "do_summary": False,
+                    "is_bot_alive": True,
+                    "conversation_history": self.conversation_history,
+                    "generator": self.app.settings["llm_generator_settings"],
+                    "prefix": self.prefix,
+                    "suffix": self.suffix,
+                    "dtype": llm_generator_settings["dtype"],
+                    "use_gpu": llm_generator_settings["use_gpu"],
+                    "request_type": "image_caption_generator",
+                    "username": self.app.settings["llm_generator_settings"]["username"],
+                    "botname": self.app.settings["llm_generator_settings"]["botname"],
+                    "prompt_template": parsed_template,
+                    "hf_api_key_read_key": self.app.settings["hf_api_key_read_key"],
+                    "parameters": {
+                        "override_parameters": self.app.settings["llm_generator_settings"]["override_parameters"],
+                        "top_p": llm_generator_settings["top_p"] / 100.0,
+                        "max_length": llm_generator_settings["max_length"],
+                        "repetition_penalty": llm_generator_settings["repetition_penalty"] / 100.0,
+                        "min_length": llm_generator_settings["min_length"],
+                        "length_penalty": llm_generator_settings["length_penalty"] / 100,
+                        "num_beams": llm_generator_settings["num_beams"],
+                        "ngram_size": llm_generator_settings["ngram_size"],
+                        "temperature": llm_generator_settings["temperature"] / 10000.0,
+                        "sequences": llm_generator_settings["sequences"],
+                        "top_k": llm_generator_settings["top_k"],
+                        "eta_cutoff": llm_generator_settings['eta_cutoff'] / 100.0,
+                        "seed": llm_generator_settings["do_sample"],
+                        "early_stopping": llm_generator_settings["early_stopping"],
+                    },
+                    "image": image,
+                    "callback": callback,
+                    "tts_settings": self.app.settings["tts_settings"],
+                    "bot_mood": self.app.settings["llm_generator_settings"]["bot_mood"],
+                    "bot_personality": self.app.settings["llm_generator_settings"]["bot_personality"],
+                }
+            }
+        )
         self.add_message_to_conversation(message_object=message_object, is_bot=False)
         self.clear_prompt()
         self.start_progress_bar()
@@ -171,7 +173,7 @@ class ChatPromptWidget(BaseWidget):
 
     def initialize(self):
         self.app.token_signal.connect(self.handle_token_signal)
-        self.app.message_var.my_signal.connect(self.message_handler)
+        self.app.message_handler_signal.connect(self.message_handler)
 
         # handle return pressed on QPlainTextEdit
         # there is no returnPressed signal for QPlainTextEdit

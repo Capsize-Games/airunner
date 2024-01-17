@@ -16,10 +16,8 @@ from PyQt6.QtCore import QSettings
 
 from airunner.resources_light_rc import *
 from airunner.resources_dark_rc import *
-from airunner.aihandler.enums import MessageCode, Mode
+from airunner.aihandler.enums import EngineResponseCode, Mode
 from airunner.aihandler.logger import Logger
-from airunner.aihandler.pyqt_client import OfflineClient
-from airunner.aihandler.qtvar import MessageHandlerVar
 from airunner.aihandler.settings import LOG_LEVEL
 from airunner.airunner_api import AIRunnerAPI
 from airunner.settings import DEFAULT_PATHS
@@ -45,6 +43,7 @@ from airunner.windows.main.pipeline_mixin import PipelineMixin
 from airunner.windows.main.controlnet_model_mixin import ControlnetModelMixin
 from airunner.windows.main.ai_model_mixin import AIModelMixin
 from airunner.windows.main.image_filter_mixin import ImageFilterMixin
+from airunner.aihandler.engine import Engine
 
 
 class MainWindow(
@@ -67,6 +66,7 @@ class MainWindow(
     line_color_changed_signal = pyqtSignal(str)
     canvas_color_changed_signal = pyqtSignal(str)
     snap_to_grid_changed_signal = pyqtSignal(bool)
+    message_handler_signal = pyqtSignal(dict)
 
     token_signal = pyqtSignal(str)
     api = None
@@ -76,7 +76,6 @@ class MainWindow(
     _document_name = "Untitled"
     is_saved = False
     action = "txt2img"
-    message_var = MessageHandlerVar()
     progress_bar_started = False
     window = None
     history = None
@@ -287,7 +286,7 @@ class MainWindow(
         return self.standard_image_panel.image.copy() if self.standard_image_panel.image else None
 
     def send_message(self, code, message):
-        self.message_var.emit({
+        self.message_handler_signal.emit({
             "code": code,
             "message": message,
         })
@@ -332,12 +331,17 @@ class MainWindow(
             return
         message = response["message"]
         {
-            MessageCode.STATUS: self.handle_status,
-            MessageCode.ERROR: self.handle_error,
-            MessageCode.PROGRESS: self.handle_progress,
-            MessageCode.IMAGE_GENERATED: self.handle_image_generated,
-            MessageCode.CONTROLNET_IMAGE_GENERATED: self.handle_controlnet_image_generated,
+            EngineResponseCode.STATUS: self.handle_status,
+            EngineResponseCode.ERROR: self.handle_error,
+            EngineResponseCode.PROGRESS: self.handle_progress,
+            EngineResponseCode.IMAGE_GENERATED: self.handle_image_generated,
+            EngineResponseCode.CONTROLNET_IMAGE_GENERATED: self.handle_controlnet_image_generated,
+            EngineResponseCode.ADD_TO_CONVERSATION: self.handle_add_to_conversation,
         }.get(code, lambda *args: None)(message)
+    
+    def handle_add_to_conversation(self, message):
+        #self.ui.generator_widget.ui.chat_prompt_widget.add_to_conversation(message)
+        pass
 
     def __init__(self, *args, **kwargs):
         self.logger.info("Starting AI Runnner")
@@ -425,7 +429,7 @@ class MainWindow(
     def do_listen(self):
         if not self.listening:
             self.listening = True
-            self.client.engine.do_listen()
+            self.engine.do_listen()
 
     def respond_to_voice(self, heard):
         heard = heard.strip()
@@ -434,7 +438,6 @@ class MainWindow(
         self.ui.generator_widget.ui.chat_prompt_widget.respond_to_voice(heard)
     
     def create_airunner_paths(self):
-        print(self.settings["path_settings"])
         for k, path in self.settings["path_settings"].items():
             if not os.path.exists(path):
                 print("cerating path", path)
@@ -707,7 +710,7 @@ class MainWindow(
     def quit(self):
         self.logger.info("Quitting")
         self.image_data_worker.stop()
-        self.client.stop()
+        self.engine.stop()
         self.save_state()
         QApplication.quit()
         self.close()
@@ -875,7 +878,9 @@ class MainWindow(
     def timerEvent(self, event):
         # self.canvas_widget.timerEvent(event)
         if self.status_widget:
-            self.status_widget.update_system_stats(queue_size=self.client.queue.qsize())
+            self.status_widget.update_system_stats(
+                queue_size=self.engine.request_queue_size()
+            )
 
     def show_update_message(self):
         self.set_status_label(f"New version available: {self.latest_version}")
@@ -924,13 +929,13 @@ class MainWindow(
 
         self.input_event_manager = InputEventManager(app=self)
         self.initialize_window()
-        self.message_var.my_signal.connect(self.message_handler)
+        self.message_handler_signal.connect(self.message_handler)
         self.initialize_mixins()
         self.generate_signal.connect(self.handle_generate)
         # self.header_widget.initialize()
         # self.header_widget.set_size_increment_levels()
         self.initialize_shortcuts()
-        self.initialize_stable_diffusion()
+        self.start_engine()
         self.initialize_default_buttons()
         try:
             self.prompt_builder.process_prompt()
@@ -1071,12 +1076,9 @@ class MainWindow(
         self.center()
         self.set_window_title()
 
-    def initialize_stable_diffusion(self):
+    def start_engine(self):
         self.logger.info("Initializing stable diffusion")
-        self.client = OfflineClient(
-            app=self,
-            message_var=self.message_var
-        )
+        self.engine = Engine(app=self)
 
     def display(self):
         self.logger.info("Displaying window")
@@ -1344,3 +1346,6 @@ class MainWindow(
 
     def action_center_clicked(self):
         print("center clicked")
+    
+    def action_slider_changed(self):
+        print("action_slider_changed")
