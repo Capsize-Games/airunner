@@ -1278,7 +1278,7 @@ class MainWindow(
 
     def import_image(self):
         file_path, _ = self.display_import_image_dialog(
-            directory=self.image_path)
+            directory=self.settings["path_settings"]["image_path"])
         if file_path == "":
             return
 
