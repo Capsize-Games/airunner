@@ -52,7 +52,6 @@ class LoraContainerWidget(BaseWidget):
             for file in filenames:
                 if file.endswith(".ckpt") or file.endswith(".safetensors") or file.endswith(".pt"):
                     name = file.replace(".ckpt", "").replace(".safetensors", "").replace(".pt", "")
-                    print("add lora", name, os.path.join(dirpath, file), version)
                     lora = self.app.add_lora(dict(
                         name=name,
                         path=os.path.join(dirpath, file),

@@ -48,7 +48,6 @@ def get_venv_python_executable():
 
 
 def initialize_os_environment():
-    from airunner.data.managers import SettingsManager
     hf_cache_path = ""
     if hf_cache_path != "":
         # check if hf_cache_path exists
