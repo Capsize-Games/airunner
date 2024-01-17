@@ -5,10 +5,7 @@ import torch
 from PIL import Image
 from PyQt6.QtGui import QPixmap, QImage
 from PyQt6.QtWidgets import QFileDialog, QApplication, QMainWindow
-from airunner.aihandler.logger import Logger
-from airunner.settings import SQLITE_DB_PATH
 from PIL import PngImagePlugin
-from airunner.data.session_scope import session_scope
 
 SESSION = None
 

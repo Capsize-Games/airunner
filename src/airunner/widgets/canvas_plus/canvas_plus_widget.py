@@ -5,7 +5,7 @@ from functools import partial
 
 from PIL import Image, ImageGrab
 from PIL.ImageQt import ImageQt
-from PyQt6.QtCore import Qt, QPoint, QPointF, QRect
+from PyQt6.QtCore import Qt, QPoint, QRect
 from PyQt6.QtGui import QBrush, QColor, QPen, QPixmap
 from PyQt6.QtWidgets import QGraphicsPixmapItem
 from PyQt6 import QtWidgets, QtCore
@@ -15,7 +15,6 @@ from airunner.aihandler.logger import Logger
 from airunner.widgets.canvas_plus.canvas_base_widget import CanvasBaseWidget
 from airunner.widgets.canvas_plus.templates.canvas_plus_ui import Ui_canvas
 from airunner.utils import apply_opacity_to_image
-from airunner.data.session_scope import session_scope
 from airunner.widgets.canvas_plus.draggables import DraggablePixmap, ActiveGridArea
 from airunner.widgets.canvas_plus.custom_scene import CustomScene
 
