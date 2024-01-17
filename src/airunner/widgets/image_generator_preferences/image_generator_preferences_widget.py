@@ -14,4 +14,6 @@ class ImageGeneratorPreferencesWidget(BaseWidget):
             settings["current_image_generator"] = "stablediffusion"
             self.app.settings = settings
             self.app.generator_tab_widget.set_current_section_tab()
-            self.app.settings_manager.set_value("settings.generator_section", "txt2img")
+            settings = self.app.settings
+            settings["generator_section"] = "txt2img"
+            self.app.settings = settings
