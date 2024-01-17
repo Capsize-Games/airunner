@@ -127,7 +127,8 @@ class SliderWidget(BaseWidget):
 
         # check if slider_callback is str
         if isinstance(slider_callback, str):
-            slider_callback = getattr(self.app, slider_callback)
+            #slider_callback = getattr(self.app, slider_callback)
+            print("TODO: handle action_slider_changed callback")
 
         # set slider and spinbox names
         if slider_name:
