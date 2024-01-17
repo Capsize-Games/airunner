@@ -34,7 +34,6 @@ from airunner.windows.settings.airunner_settings import SettingsWindow
 from airunner.windows.update.update_window import UpdateWindow
 from airunner.windows.video import VideoPopup
 from airunner.widgets.brushes.brushes_container import BrushesContainer
-from airunner.workers.image_data_worker import ImageDataWorker
 from airunner.windows.main.settings_mixin import SettingsMixin
 from airunner.windows.main.layer_mixin import LayerMixin
 from airunner.windows.main.lora_mixin import LoraMixin
@@ -67,6 +66,7 @@ class MainWindow(
     canvas_color_changed_signal = pyqtSignal(str)
     snap_to_grid_changed_signal = pyqtSignal(bool)
     message_handler_signal = pyqtSignal(dict)
+    show_layers_signal = pyqtSignal()
 
     token_signal = pyqtSignal(str)
     api = None
@@ -116,7 +116,6 @@ class MainWindow(
     controlnet_image_generated = pyqtSignal(bool)
     generator_tab_changed_signal = pyqtSignal()
     tab_section_changed_signal = pyqtSignal()
-    image_data = pyqtSignal(dict)
     load_image = pyqtSignal(str)
     load_image_object = pyqtSignal(object)
     window_resized_signal = pyqtSignal(object)
@@ -211,6 +210,14 @@ class MainWindow(
     def resizeEvent(self, event):
         self.window_resized_signal.emit(event)
     #### END GENERATOR SETTINGS ####
+        
+    _engine = None
+    @property
+    def engine(self):
+        if self._engine is None:
+            self.logger.info("Initializing stable diffusion")
+            self._engine = Engine(app=self)
+        return self._engine
 
     @property
     def generate_signal(self):
@@ -305,7 +312,6 @@ class MainWindow(
         if action == "toggle_tool":
             self.toggle_tool(kwargs["tool"])
 
-    @pyqtSlot()
     def stop_progress_bar(self):
         self.generator_tab_widget.stop_progress_bar()
 
@@ -321,6 +327,9 @@ class MainWindow(
         elif key == "models":
             self.model_manager.models_changed(key, value)
 
+    def show_layers(self):
+        self.show_layers_signal.emit()
+
     @pyqtSlot(dict)
     def message_handler(self, response: dict):
         try:
@@ -334,7 +343,6 @@ class MainWindow(
             EngineResponseCode.STATUS: self.handle_status,
             EngineResponseCode.ERROR: self.handle_error,
             EngineResponseCode.PROGRESS: self.handle_progress,
-            EngineResponseCode.IMAGE_GENERATED: self.handle_image_generated,
             EngineResponseCode.CONTROLNET_IMAGE_GENERATED: self.handle_controlnet_image_generated,
             EngineResponseCode.ADD_TO_CONVERSATION: self.handle_add_to_conversation,
         }.get(code, lambda *args: None)(message)
@@ -410,8 +418,6 @@ class MainWindow(
         else:
             self.model_manager_toggled(True)
 
-        self.initialize_image_worker()
-
         self.restore_state()
 
         self.ui.ocr_button.blockSignals(True)
@@ -442,24 +448,7 @@ class MainWindow(
             if not os.path.exists(path):
                 print("cerating path", path)
                 os.makedirs(path)
-
-    def initialize_image_worker(self):
-        self.image_data_queue = queue.Queue()
-        
-        self.image_data_worker_thread = QThread()
-        self.image_data_worker = ImageDataWorker(self)
-        self.image_data_worker.stop_progress_bar.connect(self.stop_progress_bar)
-
-        self.image_data_worker.moveToThread(self.image_data_worker_thread)
-
-        self.image_data_worker_thread.started.connect(self.image_data_worker.process)
-        self.image_data_worker.finished.connect(self.image_data_worker_thread.quit)
-        self.image_data_worker.finished.connect(self.image_data_worker.deleteLater)
-        self.image_data_worker_thread.start()
     
-    def handle_image_generated(self, message):
-        self.image_data_queue.put(message)
-
     def mode_tab_index_changed(self, index):
         settings = self.settings
         settings["mode"] = self.ui.mode_tab_widget.tabText(index)
@@ -709,7 +698,6 @@ class MainWindow(
 
     def quit(self):
         self.logger.info("Quitting")
-        self.image_data_worker.stop()
         self.engine.stop()
         self.save_state()
         QApplication.quit()
@@ -935,7 +923,6 @@ class MainWindow(
         # self.header_widget.initialize()
         # self.header_widget.set_size_increment_levels()
         self.initialize_shortcuts()
-        self.start_engine()
         self.initialize_default_buttons()
         try:
             self.prompt_builder.process_prompt()
@@ -1075,10 +1062,6 @@ class MainWindow(
     def initialize_window(self):
         self.center()
         self.set_window_title()
-
-    def start_engine(self):
-        self.logger.info("Initializing stable diffusion")
-        self.engine = Engine(app=self)
 
     def display(self):
         self.logger.info("Displaying window")

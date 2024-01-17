@@ -21,7 +21,7 @@ class AudioCaptureWorker(QObject):
     logger = Logger(prefix="AudioCaptureWorker")
     finished = pyqtSignal()
 
-    def __init__(self, parent, duration=5.0, fs=16000):
+    def __init__(self, parent, duration=10.0, fs=16000):
         self.parent = parent
         super().__init__()
         self.duration = duration
