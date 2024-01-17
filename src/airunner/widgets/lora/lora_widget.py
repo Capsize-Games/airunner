@@ -12,7 +12,6 @@ class LoraWidget(BaseWidget):
         enabled = self.lora["enabled"]
         self.ui.enabledCheckbox.setTitle(name)
         self.ui.enabledCheckbox.setChecked(enabled)
-        print(self.lora)
         self.ui.trigger_word_edit.setText(self.lora["trigger_word"])
         self.create_trigger_word_widgets(self.lora)
 

@@ -39,3 +39,6 @@ class PipelineMixin:
 
     def available_pipeline_by_section(self, section):
         return [pipeline["name"] for pipeline in self.settings["pipelines"] if pipeline["section"] == section]
+
+    def available_pipeline_by_action_version_category(self, pipeline_action, version, category):
+        return [pipeline["name"] for pipeline in self.settings["pipelines"] if pipeline["pipeline_action"] == pipeline_action and pipeline["version"] == version and pipeline["category"] == category]

@@ -3,8 +3,7 @@ import socket
 import json
 import time
 
-from airunner.aihandler.offline_client import OfflineClient
-from airunner.aihandler.enums import MessageCode
+from airunner.aihandler.enums import EngineResponseCode
 from airunner.aihandler.logger import Logger as logger
 
 
@@ -17,7 +16,7 @@ class SocketServer:
         self.host = kwargs.get("host")
         self.port = kwargs.get("port")
         self.packet_size = kwargs.get("packet_size", 1024)
-        self.client = OfflineClient(
+        self.engine = Engine(
             do_base64=True,
             message_handler=self.message_handler
         )
@@ -26,7 +25,7 @@ class SocketServer:
         self.start_server()
 
     def start_server(self):
-        if self.client.stopped():
+        if self.engine.stopped():
             return
         try:
             self.start()
@@ -50,13 +49,13 @@ class SocketServer:
     def run(self):
         self.running = True
         # set a timeout on client_socket.recv so that we can check if the server is still running
-        (self.client_socket, self.client_address) = self.server_socket.accept()
-        self.client_socket.settimeout(1)
-        logger.info(f"Client connected from {self.client_address}")
+        (self.engine_socket, self.engine_address) = self.server_socket.accept()
+        self.engine_socket.settimeout(1)
+        logger.info(f"Client connected from {self.engine_address}")
         packets = []
         while self.running:
             try:
-                data = self.client_socket.recv(self.packet_size)
+                data = self.engine_socket.recv(self.packet_size)
                 if data == b'':
                     break
                 # get data in packet_size packets until we get a packet_size byte zero chunk
@@ -68,7 +67,7 @@ class SocketServer:
                     data = data.rstrip(b'\x00')
                     packets = []
                     try:
-                        self.client.message = json.loads(data.decode("utf-8"))
+                        self.engine.do_request(json.loads(data.decode("utf-8")))
                     except json.decoder.JSONDecodeError:
                         logger.error("Invalid json in request")
                     continue
@@ -104,11 +103,11 @@ class SocketServer:
             return
         message = response["message"]
         {
-            MessageCode.STATUS: self.handle_status,
-            MessageCode.ERROR: self.handle_error,
-            MessageCode.PROGRESS: self.handle_progress,
-            MessageCode.IMAGE_GENERATED: self.handle_image_generated,
-            MessageCode.EMBEDDING_LOAD_FAILED: self.handle_embedding_load_failed,
+            EngineResponseCode.STATUS: self.handle_status,
+            EngineResponseCode.ERROR: self.handle_error,
+            EngineResponseCode.PROGRESS: self.handle_progress,
+            EngineResponseCode.IMAGE_GENERATED: self.handle_image_generated,
+            EngineResponseCode.EMBEDDING_LOAD_FAILED: self.handle_embedding_load_failed,
         }.get(code, self.handle_unknown)(message)
 
     def handle_status(self, message):
@@ -134,16 +133,16 @@ class SocketServer:
         packets = self.process_response(response)
         for packet in packets:
             packet = self.pad_packet(packet)
-            self.client_socket.sendall(packet)
+            self.engine_socket.sendall(packet)
         self.send_end_message()
 
     def send_end_message(self):
         # send a packet_size byte zero chunk to indicate the end of the message
-        self.client_socket.sendall(b'\x00' * self.packet_size)
+        self.engine_socket.sendall(b'\x00' * self.packet_size)
 
     def stop(self):
-        if self.client_socket:
-            self.client_socket.close()
+        if self.engine_socket:
+            self.engine_socket.close()
         if self.server_socket:
             self.server_socket.close()
         self.running = False
@@ -151,11 +150,11 @@ class SocketServer:
 
     def close_server(self, signal=None, frame=None):
         logger.info("stopping threads")
-        self.client.stop()
+        self.engine.stop()
         logger.info("waiting for response worker thread")
-        self.client.response_worker_thread.join()
+        self.engine.response_worker_thread.join()
         logger.info("waiting for request worker thread")
-        self.client.request_worker_thread.join()
+        self.engine.request_worker_thread.join()
         logger.info("Closing server")
         self.stop()
         logger.info("Exiting")
