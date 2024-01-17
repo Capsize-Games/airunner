@@ -55,7 +55,7 @@ class ImageDataWorker(QObject):
         if nsfw_content_detected and self.parent.settings["nsfw_filter"]:
             self.parent.message_handler({
                 "message": "Explicit content detected, try again.",
-                "code": MessageCode.ERROR
+                "code": EngineResponseCode.ERROR
             })
 
         images = self.parent.post_process_images(images)

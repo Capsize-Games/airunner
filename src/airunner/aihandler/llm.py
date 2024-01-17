@@ -11,13 +11,66 @@ from transformers import InstructBlipProcessor
 from transformers import TextIteratorStreamer
 
 from PyQt6.QtCore import QObject
+from PyQt6.QtCore import pyqtSignal, pyqtSlot, QThread
 
-from airunner.aihandler.enums import MessageCode
+from airunner.aihandler.enums import EngineResponseCode
 from airunner.aihandler.logger import Logger
+from airunner.workers.worker import Worker
+
+class GenerateWorker(Worker):
+    def __init__(self, prefix="Worker"):
+        self.llm = LLM()
+        self.llm.response_signal.connect(self.handle_response)
+        super().__init__(prefix=prefix)
+
+    def handle_message(self, message):
+        self.llm.do_generate(message)
+    
+    def handle_response(self, response):
+        self.response_signal.emit(response)
+
+
+class LLMEngine(QObject):
+    logger = Logger(prefix="LLMEngine")
+    response_signal = pyqtSignal(dict)
+
+    def __init__(self, *args, **kwargs):
+        app = kwargs.pop("app", None)
+        self.engine = kwargs.pop("engine", None)
+        super().__init__(*args, **kwargs)
+        self.app = app
+        
+        self.request_worker = Worker(prefix="LLM Worker")
+        self.request_worker_thread = QThread()
+        self.request_worker.moveToThread(self.request_worker_thread)
+        self.request_worker.response_signal.connect(self.request_worker_response_signal_slot)
+        self.request_worker.finished.connect(self.request_worker_thread.quit)
+        self.request_worker_thread.started.connect(self.request_worker.start)
+        self.request_worker_thread.start()
+
+        self.generate_worker = GenerateWorker(prefix="LLM Generate Worker")
+        self.generate_worker_thread = QThread()
+        self.generate_worker.moveToThread(self.generate_worker_thread)
+        self.generate_worker.response_signal.connect(self.generate_worker_response_signal_slot)
+        self.generate_worker.finished.connect(self.generate_worker_thread.quit)
+        self.generate_worker_thread.started.connect(self.generate_worker.start)
+        self.generate_worker_thread.start()
+    
+    def do_request(self, message):
+        self.request_worker.add_to_queue(message)
+    
+    @pyqtSlot(dict)
+    def request_worker_response_signal_slot(self, message):
+        self.generate_worker.add_to_queue(message)
+    
+    @pyqtSlot(dict)
+    def generate_worker_response_signal_slot(self, message):
+        self.response_signal.emit(message)
 
 
 class LLM(QObject):
     logger = Logger(prefix="LLM")
+    response_signal = pyqtSignal(dict)
     dtype = ""
     local_files_only = True
     set_attention_mask = False
@@ -80,12 +133,9 @@ class LLM(QObject):
         return torch.cuda.is_available()
 
     def __init__(self, *args, **kwargs):
-        self.engine = kwargs.pop("engine", None)
-        app = kwargs.pop("app", None)
-        self.app = app
         super().__init__(*args, **kwargs)
         # self.llm_api = LLMAPI(app=app)
-
+    
     def move_to_cpu(self):
         if self.model:
             self.logger.info("Moving model to CPU")
@@ -154,7 +204,7 @@ class LLM(QObject):
                 params["quantization_config"] = config
 
         path = self.current_model_path
-        self.engine.send_message(f"Loading {self.requested_generator_name} model from {path}")
+        # self.engine.send_message(f"Loading {self.requested_generator_name} model from {path}")
         
         auto_class_ = None
         if self.requested_generator_name == "seq2seq":
@@ -478,7 +528,10 @@ class LLM(QObject):
                     replaced = True
                     streamed_template = streamed_template.replace(rendered_template, "")
                 else:
-                    self.engine.send_message(new_text, code=MessageCode.TEXT_STREAMED)
+                    self.response_signal.emit(dict(
+                        code=EngineResponseCode.TEXT_STREAMED,
+                        message=new_text
+                    ))
                 
                 if "</s>" in new_text:
                     self.history.append({

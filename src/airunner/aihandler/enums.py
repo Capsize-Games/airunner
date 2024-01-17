@@ -5,7 +5,7 @@ class FilterType(Enum):
     PIXEL_ART = "pixelart"
 
 
-class MessageCode(Enum):
+class EngineResponseCode(Enum):
     STATUS = 100
     ERROR = 200
     WARNING = 300
@@ -18,6 +18,12 @@ class MessageCode(Enum):
     TEXT_STREAMED = 701
     CAPTION_GENERATED = 800
     ADD_TO_CONVERSATION = 900
+
+
+class EngineRequestCode(Enum):
+    GENERATE_IMAGE = 100
+    GENERATE_TEXT = 200
+    GENERATE_CAPTION = 300
 
 
 class Scheduler(Enum):

@@ -30,7 +30,7 @@ class StandardImageWidget(StandardBaseWidget):
     def image(self):
         if self._image is None:
             try:
-                self.image = self.app.canvas_widget.current_layer.image
+                self.image = self.app.get_image_from_current_layer()
             except Exception as e:
                 self.logger.error(f"Error while getting image: {e}")
         return self._image
@@ -225,7 +225,8 @@ class StandardImageWidget(StandardBaseWidget):
             image = Image.open(self.image_path)
             image.save(self.image_path, pnginfo=meta_data)
         else:
-            image = self.app.canvas_widget.current_layer.image
+            current_layer = self.app.current_layer()
+            image = current_layer['image']
         self.image = image
         self.meta_data = load_metadata_from_image(self.image)
         self.generate_similar_image()

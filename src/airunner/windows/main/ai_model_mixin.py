@@ -59,4 +59,4 @@ class AIModelMixin:
         return [model for model in self.settings["ai_models"] if model["category"] == category]
 
     def ai_model_by_name(self, name):
-        return [model for model in self.settings["ai_models"] if model["name"] == name]
+        return [model for model in self.settings["ai_models"] if model["name"] == name][0]

@@ -1,7 +1,7 @@
 from PyQt6.QtCore import pyqtSlot
 from PyQt6.QtWidgets import QWidget, QSizePolicy
 
-from airunner.aihandler.enums import MessageCode
+from airunner.aihandler.enums import EngineResponseCode
 from airunner.widgets.base_widget import BaseWidget
 from airunner.widgets.embeddings.embedding_widget import EmbeddingWidget
 from airunner.widgets.embeddings.templates.embeddings_container_ui import Ui_embeddings_container
@@ -19,7 +19,7 @@ class EmbeddingsContainerWidget(BaseWidget):
         super().__init__(*args, **kwargs)
         self.app.generator_tab_changed_signal.connect(self.handle_generator_tab_changed)
         self.app.tab_section_changed_signal.connect(self.handle_tab_section_changed)
-        self.app.message_var.my_signal.connect(self.message_handler)
+        self.app.message_handler_signal.connect(self.message_handler)
 
         self.scan_for_embeddings()
 
@@ -71,7 +71,7 @@ class EmbeddingsContainerWidget(BaseWidget):
     def message_handler(self, response: dict):
         code = response["code"]
         message = response["message"]
-        if code == MessageCode.EMBEDDING_LOAD_FAILED:
+        if code == EngineResponseCode.EMBEDDING_LOAD_FAILED:
             self.handle_embedding_load_failed(message)
 
     def load_embeddings(self):
