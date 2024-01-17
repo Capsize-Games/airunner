@@ -1,7 +1,6 @@
 import os
 from PyQt6.QtCore import Qt
 from PyQt6.QtWidgets import QDialog
-from airunner.data.managers import SettingsManager
 from airunner.utils import get_main_window
 
 
