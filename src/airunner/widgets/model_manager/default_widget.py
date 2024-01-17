@@ -1,6 +1,5 @@
 from PyQt6 import QtCore
 
-from airunner.data.session_scope import session_scope
 from airunner.widgets.base_widget import BaseWidget
 from airunner.widgets.model_manager.model_widget import ModelWidget
 from airunner.widgets.model_manager.templates.default_ui import Ui_default_model_widget
@@ -34,33 +33,32 @@ class DefaultModelWidget(BaseWidget):
         for child in self.ui.scrollAreaWidgetContents.children():
             if isinstance(child, ModelWidget):
                 child.deleteLater()
-        with session_scope() as session:
-            if search:
-                # search by name
-                models = self.app.find_models(search, default=True)
-            else:
-                models = self.app.find_models(default=True)
-            for model_widget in self.model_widgets:
-                model_widget.deleteLater()
-            self.model_widgets = []
-            for index, model in enumerate(models):
-                version = model["version"]
-                category = model["category"]
-                pipeline_action = model["pipeline_action"]
-                pipeline_class = self.app.get_pipeline_classname(pipeline_action, version, category)
-                model_widget = ModelWidget(
-                    path=model["path"],
-                    branch=model["branch"],
-                    version=version,
-                    category=category,
-                    pipeline_action=pipeline_action,
-                    pipeline_class=pipeline_class,
-                )
-                model_widget.ui.delete_button.hide()
-                model_widget.ui.edit_button.deleteLater()
-                model_widget.ui.name.setChecked(model["enabled"])
-                self.ui.scrollAreaWidgetContents.layout().addWidget(model_widget)
-                self.model_widgets.append(model_widget)
+        if search:
+            # search by name
+            models = self.app.find_models(search, default=True)
+        else:
+            models = self.app.find_models(default=True)
+        for model_widget in self.model_widgets:
+            model_widget.deleteLater()
+        self.model_widgets = []
+        for index, model in enumerate(models):
+            version = model["version"]
+            category = model["category"]
+            pipeline_action = model["pipeline_action"]
+            pipeline_class = self.app.get_pipeline_classname(pipeline_action, version, category)
+            model_widget = ModelWidget(
+                path=model["path"],
+                branch=model["branch"],
+                version=version,
+                category=category,
+                pipeline_action=pipeline_action,
+                pipeline_class=pipeline_class,
+            )
+            model_widget.ui.delete_button.hide()
+            model_widget.ui.edit_button.deleteLater()
+            model_widget.ui.name.setChecked(model["enabled"])
+            self.ui.scrollAreaWidgetContents.layout().addWidget(model_widget)
+            self.model_widgets.append(model_widget)
         if not self.spacer:
             self.spacer = QtWidgets.QSpacerItem(20, 40, QtWidgets.QSizePolicy.Policy.Minimum, QtWidgets.QSizePolicy.Policy.Expanding)
         self.ui.scrollAreaWidgetContents.layout().addItem(self.spacer)

@@ -1,4 +1,3 @@
-from airunner.data.session_scope import session_scope
 from airunner.widgets.base_widget import BaseWidget
 from airunner.widgets.stablediffusion.templates.stable_diffusion_settings_ui import Ui_stable_diffusion_settings_widget
 
@@ -86,41 +85,39 @@ class StableDiffusionSettingsWidget(BaseWidget):
         self.ui.model.clear()
 
     def load_models(self):
-        with session_scope() as session:
-            self.ui.model.blockSignals(True)
-            self.clear_models()
+        self.ui.model.blockSignals(True)
+        self.clear_models()
 
-            image_generator = "stablediffusion"
-            pipeline = self.app.settings["pipeline"]
-            version = self.app.settings["current_version_stablediffusion"]
+        image_generator = "stablediffusion"
+        pipeline = self.app.settings["pipeline"]
+        version = self.app.settings["current_version_stablediffusion"]
 
-            models = self.app.ai_model_get_by_filter(dict(
-                category=image_generator,
-                pipeline_action=pipeline,
-                version=version,
-                enabled=True
-            ))
-            model_names = [model["name"] for model in models]
-            self.ui.model.addItems(model_names)
-            settings = self.app.settings
-            current_model = settings["generator_settings"]["model"]
-            if current_model != "":
-                self.ui.model.setCurrentText(current_model)
-            settings["generator_settings"]["model"] = self.ui.model.currentText()
-            self.ui.model.blockSignals(False)
-            self.app.settings = settings
+        models = self.app.ai_model_get_by_filter(dict(
+            category=image_generator,
+            pipeline_action=pipeline,
+            version=version,
+            enabled=True
+        ))
+        model_names = [model["name"] for model in models]
+        self.ui.model.addItems(model_names)
+        settings = self.app.settings
+        current_model = settings["generator_settings"]["model"]
+        if current_model != "":
+            self.ui.model.setCurrentText(current_model)
+        settings["generator_settings"]["model"] = self.ui.model.currentText()
+        self.ui.model.blockSignals(False)
+        self.app.settings = settings
 
     def load_schedulers(self):
-        with session_scope() as session:
-            scheduler_names = [s["display_name"] for s in self.app.settings["schedulers"]]
-            self.ui.scheduler.clear()
-            self.ui.scheduler.addItems(scheduler_names)
+        scheduler_names = [s["display_name"] for s in self.app.settings["schedulers"]]
+        self.ui.scheduler.clear()
+        self.ui.scheduler.addItems(scheduler_names)
 
-            settings = self.app.settings
-            current_scheduler = settings["generator_settings"]["scheduler"]
-            if current_scheduler != "":
-                self.ui.scheduler.setCurrentText(current_scheduler)
-            else:
-                settings["generator_settings"]["scheduler"] = self.ui.scheduler.currentText() 
-            self.app.settings = settings
-            self.ui.scheduler.blockSignals(False)
+        settings = self.app.settings
+        current_scheduler = settings["generator_settings"]["scheduler"]
+        if current_scheduler != "":
+            self.ui.scheduler.setCurrentText(current_scheduler)
+        else:
+            settings["generator_settings"]["scheduler"] = self.ui.scheduler.currentText() 
+        self.app.settings = settings
+        self.ui.scheduler.blockSignals(False)
