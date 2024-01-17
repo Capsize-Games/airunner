@@ -1,4 +1,4 @@
-pipeline_bootstrap_data = pipelines = [
+pipeline_bootstrap_data = [
     {
         "pipeline_action": "safety_checker",
         "version": "SD 1.5",
