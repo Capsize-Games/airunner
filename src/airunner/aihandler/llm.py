@@ -18,13 +18,20 @@ from airunner.aihandler.logger import Logger
 from airunner.workers.worker import Worker
 
 class GenerateWorker(Worker):
+    clear_history_signal = pyqtSignal()
+
     def __init__(self, prefix):
         self.llm = LLM()
         super().__init__(prefix=prefix)
+        self.clear_history_signal.connect(self.clear_history)
 
     def handle_message(self, message):
         for response in self.llm.do_generate(message):
             self.response_signal.emit(response)
+    
+    @pyqtSlot()
+    def clear_history(self):
+        self.llm.clear_history()
 
 
 class LLMController(QObject):
@@ -62,6 +69,9 @@ class LLMController(QObject):
     
     def do_request(self, message):
         self.request_worker.add_to_queue(message)
+    
+    def clear_history(self):
+        self.generate_worker.clear_history_signal.emit()
     
     @pyqtSlot(dict)
     def request_worker_response_signal_slot(self, message):

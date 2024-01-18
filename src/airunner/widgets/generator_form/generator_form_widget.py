@@ -7,6 +7,7 @@ from airunner.aihandler.enums import EngineRequestCode
 from airunner.aihandler.settings import MAX_SEED
 from airunner.widgets.base_widget import BaseWidget
 from airunner.widgets.generator_form.templates.generatorform_ui import Ui_generator_form
+from airunner.aihandler.enums import EngineResponseCode
 
 
 class GeneratorForm(BaseWidget):
@@ -22,6 +23,8 @@ class GeneratorForm(BaseWidget):
     initialized = False
     parent = None
     generate_signal = pyqtSignal(dict)
+    current_prompt_value = None
+    current_negative_prompt_value = None
 
     @property
     def is_txt2img(self):
@@ -102,7 +105,7 @@ class GeneratorForm(BaseWidget):
         return self.app.settings["controlnet_settings"]["image"]
 
     pyqtSlot()
-    def handle_changed_signal(self):
+    def changed_signal_slot(self):
         # if self.initialized:
         #     if self.current_prompt_value != self.app.settings["generator_settings"]["prompt"]:
         #         self.current_prompt_value = self.app.settings["generator_settings"]["prompt"]
@@ -111,16 +114,21 @@ class GeneratorForm(BaseWidget):
         #         self.current_negative_prompt_value = self.app.settings["generator_settings"]["negative_prompt"]
         #         self.ui.negative_prompt.setPlainText(self.current_negative_prompt_value)
         self.activate_ai_mode()
-
+    
+    @pyqtSlot(dict)
+    def handle_message_slot(self, response: dict):
+        message = response["message"]
+        {
+            EngineResponseCode.PROGRESS: self.handle_progress_bar
+        }.get(response["code"], lambda *args: None)(message)
+    
     def __init__(self, *args, **kwargs):
         super().__init__(*args, **kwargs)
         self.initialized = False
         self.ui.generator_form_tabs.tabBar().hide()
         self.activate_ai_mode()
-        self.app.application_settings_changed_signal.connect(self.handle_changed_signal)
-        
-    current_prompt_value = None
-    current_negative_prompt_value = None
+        self.app.application_settings_changed_signal.connect(self.changed_signal_slot)
+        self.app.message_handler_signal.connect(self.handle_message_slot)
 
     def activate_ai_mode(self):
         self.ui.generator_form_tabs.setCurrentIndex(1 if self.app.settings["ai_mode"] is True else 0)
@@ -484,6 +492,29 @@ class GeneratorForm(BaseWidget):
         elif seed is not None:
             self.seed = seed
 
+    def handle_progress_bar(self, message):
+        step = message.get("step")
+        total = message.get("total")
+        action = message.get("action")
+        tab_section = message.get("tab_section")
+
+        if step == 0 and total == 0:
+            current = 0
+        else:
+            try:
+                current = (step / total)
+            except ZeroDivisionError:
+                current = 0
+        self.set_progress_bar_value(tab_section, action, int(current * 100))
+    
+    def set_progress_bar_value(self, tab_section, section, value):
+        progressbar = self.ui.progress_bar
+        if not progressbar:
+            return
+        if progressbar.maximum() == 0:
+            progressbar.setRange(0, 100)
+        progressbar.setValue(value)
+
     def start_progress_bar(self):
         self.ui.progress_bar.setRange(0, 0)
         self.ui.progress_bar.show()
@@ -543,14 +574,6 @@ class GeneratorForm(BaseWidget):
         self.deterministic = False
         self.deterministic_data = None
         self.deterministic_images = None
-    
-    def set_progress_bar_value(self, tab_section, section, value):
-        progressbar = self.ui.progress_bar
-        if not progressbar:
-            return
-        if progressbar.maximum() == 0:
-            progressbar.setRange(0, 100)
-        progressbar.setValue(value)
     
     def stop_progress_bar(self):
         progressbar = self.ui.progress_bar
