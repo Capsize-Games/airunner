@@ -28,12 +28,16 @@ class CanvasResizeWorker(Worker):
     do_draw_signal = pyqtSignal()
     clear_lines_signal = pyqtSignal()
     queue_type = "get_last_item"
+    last_cell_count = (0, 0)
+
+    def __init__(self, prefix):
+        super().__init__(prefix=prefix)
+        self.buffer = None
 
     def handle_message(self, data):
         self.draw_lines(data)
     
     def draw_lines(self, data:dict):
-        self.clear_lines_signal.emit()
         settings = data["settings"]
         view_size = data["view_size"]
 
@@ -41,36 +45,45 @@ class CanvasResizeWorker(Worker):
         line_color = settings["grid_settings"]["line_color"]
         line_width = settings["grid_settings"]["line_width"]
 
-        width_cells = math.ceil(view_size.width() / cell_size)
-        height_cells = math.ceil(view_size.height() / cell_size)
+        width_cells = view_size.width() // cell_size
+        height_cells = view_size.height() // cell_size
+
+        # Check if the number of cells has changed
+        if (width_cells, height_cells) == self.last_cell_count:
+            return
+        self.last_cell_count = (width_cells, height_cells)
+
         pen = QPen(
             QBrush(QColor(line_color)),
             line_width,
             Qt.PenStyle.SolidLine
         )
-
-        # for line_data in lines:
         
+        lines_data = []
+
         # vertical lines
         h = view_size.height() + abs(settings["canvas_settings"]["pos_y"]) % cell_size
         y = 0
+        x = settings["canvas_settings"]["pos_x"] % cell_size
         for i in range(width_cells):
-            x = i * cell_size + settings["canvas_settings"]["pos_x"] % cell_size
             line_data = (x, y, x, h, pen)
-            # line = scene.addLine(x, y, x, h, pen)
-            # line_group.addToGroup(line)
-            self.response_signal.emit(line_data)
+            lines_data.append(line_data)
+            x += cell_size
 
-        # # horizontal lines
+        # horizontal lines
         w = view_size.width() + abs(settings["canvas_settings"]["pos_x"]) % cell_size
         x = 0
+        y = settings["canvas_settings"]["pos_y"] % cell_size
         for i in range(height_cells):
-            y = i * cell_size + settings["canvas_settings"]["pos_y"] % cell_size
             line_data = (x, y, w, y, pen)
-            # line = scene.addLine(x, y, w, y, pen)
-            # line_group.addToGroup(line)
+            lines_data.append(line_data)
+            y += cell_size
+
+        self.clear_lines_signal.emit()
+
+        for line_data in lines_data:
             self.response_signal.emit(line_data)
-        
+
         self.do_draw_signal.emit()
 
 
@@ -189,12 +202,6 @@ class CanvasPlusWidget(BaseWidget):
 
     @pyqtSlot(tuple)
     def canvas_resize_worker_response_signal_slot(self, line_data):
-        # self.app.clear_status_message()
-        # self.app.stop_progress_bar()
-        # self.app.show_layers()
-        # self.app.set_status_label(f"Image resized")
-        # self.redraw_lines = True
-        # self.do_draw()
         draw_grid = self.app.settings["grid_settings"]["show_grid"]
         if not draw_grid:
             return
