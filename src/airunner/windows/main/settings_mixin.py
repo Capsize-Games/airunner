@@ -287,6 +287,11 @@ Previous Conversation:
                 play_queue_buffer_length=1,
                 enable_cpu_offload=True,
             ),
+            stt_settings=dict(
+                duration=10,
+                fs=16000,
+                channels=1,
+            ),
             schedulers=[
                 dict(
                     name="EULER_ANCESTRAL",

@@ -210,14 +210,6 @@ class MainWindow(
     def resizeEvent(self, event):
         self.window_resized_signal.emit(event)
     #### END GENERATOR SETTINGS ####
-        
-    _engine = None
-    @property
-    def engine(self):
-        if self._engine is None:
-            self.logger.info("Initializing stable diffusion")
-            self._engine = Engine(app=self)
-        return self._engine
 
     @property
     def generate_signal(self):
@@ -342,14 +334,8 @@ class MainWindow(
         {
             EngineResponseCode.STATUS: self.handle_status,
             EngineResponseCode.ERROR: self.handle_error,
-            EngineResponseCode.PROGRESS: self.handle_progress,
             EngineResponseCode.CONTROLNET_IMAGE_GENERATED: self.handle_controlnet_image_generated,
-            EngineResponseCode.ADD_TO_CONVERSATION: self.handle_add_to_conversation,
         }.get(code, lambda *args: None)(message)
-    
-    def handle_add_to_conversation(self, message):
-        #self.ui.generator_widget.ui.chat_prompt_widget.add_to_conversation(message)
-        pass
 
     def __init__(self, *args, **kwargs):
         self.logger.info("Starting AI Runnner")
@@ -367,6 +353,8 @@ class MainWindow(
         self.application_settings = QSettings("Capsize Games", "AI Runner")
         
         self.action_reset_settings()
+
+        self.engine = Engine(app=self)
 
         self.ui.setupUi(self)
 
@@ -436,12 +424,6 @@ class MainWindow(
         if not self.listening:
             self.listening = True
             self.engine.do_listen()
-
-    def respond_to_voice(self, heard):
-        heard = heard.strip()
-        if heard == "." or heard is None or heard == "":
-            return
-        self.ui.generator_widget.ui.chat_prompt_widget.respond_to_voice(heard)
     
     def create_airunner_paths(self):
         for k, path in self.settings["path_settings"].items():
@@ -1166,21 +1148,6 @@ class MainWindow(
 
     def handle_error(self, message):
         self.set_status_label(message, error=True)
-
-    def handle_progress(self, message):
-        step = message.get("step")
-        total = message.get("total")
-        action = message.get("action")
-        tab_section = message.get("tab_section")
-
-        if step == 0 and total == 0:
-            current = 0
-        else:
-            try:
-                current = (step / total)
-            except ZeroDivisionError:
-                current = 0
-        self.generator_tab_widget.set_progress_bar_value(tab_section, action, int(current * 100))
 
     def handle_unknown(self, message):
         self.logger.error(f"Unknown message code: {message}")

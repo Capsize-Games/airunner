@@ -163,11 +163,9 @@ class ChatPromptWidget(BaseWidget):
         self.add_message_to_conversation(message_object=message_object, is_bot=False)
         self.clear_prompt()
         self.start_progress_bar()
-    
-    def __init__(self, *args, **kwargs):
-        super().__init__(*args, **kwargs)
 
     def initialize(self):
+        self.app.engine.hear_signal.connect(self.respond_to_voice)
         self.app.token_signal.connect(self.handle_token_signal)
         self.app.engine.text_generated_signal.connect(self.add_bot_message_to_conversation)
 
@@ -242,8 +240,11 @@ class ChatPromptWidget(BaseWidget):
     def insert_newline(self):
         self.ui.prompt.insertPlainText("\n")
 
-    def respond_to_voice(self, heard):
-        self.action_button_clicked_send(prompt_override=heard)
+    def respond_to_voice(self, transcript):
+        transcript = transcript.strip()
+        if transcript == "." or transcript is None or transcript == "":
+            return
+        self.action_button_clicked_send(prompt_override=transcript)
 
     def parse_template(self, template):
         system_instructions = template["system_instructions"]
