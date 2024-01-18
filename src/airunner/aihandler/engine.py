@@ -13,7 +13,7 @@ from airunner.aihandler.image_processor import ImageProcessor
 from airunner.aihandler.llm import LLMController
 from airunner.aihandler.logger import Logger
 from airunner.aihandler.runner import SDController
-from airunner.aihandler.speech_to_text import SpeechToText
+from airunner.aihandler.speech_to_text import STTController
 from airunner.aihandler.tts import TTS
 
 
@@ -88,13 +88,15 @@ class Engine(QObject):
     # END OFFLINE CLIENT
     #######################
 
+    
+
     pyqtSlot(str)
     def hear(self, message):
         """
         This is a slot function for the hear_signal.
         The hear signal is triggered from the speech_to_text.listen function.
         """
-        self.app.respond_to_voice(heard=message)
+        self.hear_signal.emit(message)
 
     pyqtSlot(dict)
     def request_worker_response_signal_slot(self, message):
@@ -197,11 +199,9 @@ class Engine(QObject):
         # Initialize Controllers
         self.llm_controller = LLMController(engine=self)
         self.sd_controller = SDController(engine=self)
-        #self.stt_controller = SpeechToText(engine=self, hear_signal=self.hear_signal, duration=10.0, fs=16000)
-        #self.hear_signal.connect(self.hear)
-        # self.listen_thread = threading.Thread(target=self.stt_controller.listen)
-        # self.listen_thread.start()
-
+        self.stt_controller = STTController(engine=self)
+        self.stt_controller.response_signal.connect(self.hear)
+        
         self.tts_controller = TTS(engine=self)
         #self.tts_thread = threading.Thread(target=self.tts_controller.run)
         #self.tts_thread.start()
