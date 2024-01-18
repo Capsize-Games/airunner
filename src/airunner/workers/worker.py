@@ -1,12 +1,13 @@
 import queue
-from PyQt6 import QtCore
+
+from PyQt6.QtCore import pyqtSignal, pyqtSlot, QThread, QSettings, QObject
 
 from airunner.aihandler.logger import Logger
 
 
-class Worker(QtCore.QObject):
-    response_signal = QtCore.pyqtSignal(dict)
-    finished = QtCore.pyqtSignal()
+class Worker(QObject):
+    response_signal = pyqtSignal(dict)
+    finished = pyqtSignal()
     queue_type = "get_next_item"
     
     def __init__(self, prefix="Worker"):
@@ -17,8 +18,17 @@ class Worker(QtCore.QObject):
         self.items = {}
         self.current_index = 0
         self.paused = False
+        self.application_settings = QSettings("Capsize Games", "AI Runner")
+        self.update_properties()
+    
+    @pyqtSlot()
+    def settings_changed_slot(self):
+        self.update_properties()
+    
+    def update_properties(self):
+        pass
 
-    @QtCore.pyqtSlot()
+    pyqtSlot()
     def start(self):
         self.logger.info("Starting")
         self.running = True
@@ -34,9 +44,9 @@ class Worker(QtCore.QObject):
             if self.paused:
                 self.logger.info("Paused")
                 while self.paused:
-                    QtCore.QThread.msleep(100)
+                    QThread.msleep(100)
                 self.logger.info("Resumed")
-            QtCore.QThread.msleep(100)
+            QThread.msleep(1)
     
     def get_item_from_queue(self):
         if self.queue_type == "get_last_item":
@@ -47,18 +57,17 @@ class Worker(QtCore.QObject):
     
     def get_last_item(self):
         msg = None
-        while not self.queue.empty():
-            index = self.queue.get(timeout=0.1)
-            if index is not None:
-                msg = self.items.pop(index, None)
+        index = self.queue.get()
+        msg = self.items.pop(index, None)
+        self.items = {}
+        self.queue.empty()
         return msg
 
     def get_next_item(self):
-        index = self.queue.get(timeout=0.1)
+        index = self.queue.get()
         msg = self.items.pop(index, None)
         return msg
 
-    
     def pause(self):
         self.paused = True
 
