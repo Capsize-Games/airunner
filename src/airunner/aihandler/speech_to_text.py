@@ -9,6 +9,7 @@ from PyQt6.QtCore import pyqtSignal, pyqtSlot, QThread
 
 from airunner.aihandler.logger import Logger
 from airunner.workers.worker import Worker
+from airunner.mediator_mixin import MediatorMixin
 
 
 class AudioCaptureWorker(Worker):
@@ -16,7 +17,6 @@ class AudioCaptureWorker(Worker):
     This class is responsible for capturing audio from the microphone.
     It will capture audio for a specified duration and then send the audio to the audio_processor_worker.
     """
-    response_signal = pyqtSignal(np.ndarray)
     duration = 0
     fs = 0
     channels = 0
@@ -41,7 +41,7 @@ class AudioCaptureWorker(Worker):
             while self.listening:
                 self.recording = sd.rec(int(self.duration * self.fs), samplerate=self.fs, channels=self.channels)
                 sd.wait()
-                self.response_signal.emit(self.recording)
+                self.handle_message(self.recording)
             while not self.listening:
                 QThread.msleep(100)
 
@@ -59,81 +59,73 @@ class AudioProcessorWorker(Worker):
     This class is responsible for processing audio.
     It will process audio from the audio_queue and send it to the model.
     """ 
-    process_audio_signal = pyqtSignal(np.ndarray, int)
     fs = 0
 
     def __init__(self, prefix):
         super().__init__(prefix=prefix)
         self.stt = SpeechToText()
-        self.process_audio_signal.connect(self.stt.process_audio)
-        self.stt.audio_processed.connect(self.response_signal.emit)
+        self.register("stt_audio_processed", self)
+    
+    def on_stt_audio_processed(self, transcription):
+        self.emit("response_signal", transcription)
 
     def handle_message(self, audio_data):
-        self.process_audio_signal.emit(audio_data)
+        self.emit("processed_audio", audio_data)
     
     def update_properties(self):
         settings = self.application_settings.value("settings")
         self.fs = settings["stt_settings"]["fs"]
 
 
-class STTController(QObject):
+class STTController(QObject, MediatorMixin):
     logger = Logger(prefix="STTController")
-    response_signal = pyqtSignal(dict)
-
+    
     def __init__(self, *args, **kwargs):
+        MediatorMixin.__init__(self)
         self.engine = kwargs.pop("engine", None)
         self.app = self.engine.app
         super().__init__(*args, **kwargs)
 
         # Audio capture worker and thread
-        self.audio_capture_worker = AudioCaptureWorker(prefix="AudioCaptureWorker")
-        self.audio_capture_worker_thread = QThread()
-        self.audio_capture_worker.moveToThread(self.audio_capture_worker_thread)
-        self.app.application_settings_changed_signal.connect(self.audio_capture_worker.settings_changed_slot)
-        self.audio_capture_worker.response_signal.connect(self.audio_captured_slot)
-        self.audio_capture_worker_thread.started.connect(self.audio_capture_worker.start)
-        self.audio_capture_worker.finished.connect(self.audio_capture_worker_thread.quit)
-        self.audio_capture_worker.finished.connect(self.audio_capture_worker_thread.deleteLater)
+        self.worker = self.create_worker(AudioCaptureWorker)
         
         # # Audio processor worker and thread
-        self.audio_processor_worker = AudioProcessorWorker(prefix="AudioProcessorWorker")
-        self.audio_processor_worker_thread = QThread()
-        self.audio_processor_worker.moveToThread(self.audio_processor_worker_thread)
-        self.app.application_settings_changed_signal.connect(self.audio_processor_worker.settings_changed_slot)
-        self.audio_processor_worker.response_signal.connect(self.response_signal.emit)
-        self.audio_processor_worker_thread.started.connect(self.audio_processor_worker.start)
-        self.audio_processor_worker.finished.connect(self.audio_processor_worker_thread.quit)
-        self.audio_processor_worker.finished.connect(self.audio_processor_worker_thread.deleteLater)
+        self.audio_processor_worker = self.create_worker(AudioProcessorWorker)
+        
+        self.register("AudioCaptureWorker_response_signal", self)
+        self.register("AudioProcessorWorker_processed_audio", self)
 
-    @pyqtSlot(dict)
-    def audio_captured_slot(self, message):
-        self.logger.info("Audio capture worker response signal slot")
+    def on_AudioCaptureWorker_response_signal(self, message: np.ndarray):
+        self.logger.info("Heard signal")
         self.audio_processor_worker.add_to_queue(message)
+
+    def on_AudioProcessorWorker_processed_audio(self, message: np.ndarray):
+        self.logger.info("Processed audio")
+        self.emit("processed_audio", message)
         
 
-class SpeechToText(QObject):
+class SpeechToText(QObject, MediatorMixin):
     logger = Logger(prefix="SpeechToText")
     listening = False
     move_to_cpu_signal = pyqtSignal()
-    audio_processed = pyqtSignal(str)
 
-    @pyqtSlot(dict)
-    def process_audio(self, audio_data, fs):
+    def on_process_audio(self, audio_data, fs):
         inputs = np.squeeze(audio_data)
         inputs = self.feature_extractor(inputs, sampling_rate=fs, return_tensors="pt")
         inputs = inputs.to(self.model.device)
         transcription = self.run(inputs)
-        self.audio_processed.emit(transcription)
+        self.emit("stt_audio_processed", transcription)
 
-    @pyqtSlot()
-    def move_to_cpu(self):
+    def on_move_to_cpu(self):
         self.logger.info("Moving model to CPU")
         self.model = self.model.to("cpu")
 
     def __init__(self):
         super().__init__()
+        MediatorMixin.__init__(self)
         self.load_model()
-        self.move_to_cpu_signal.connect(self.move_to_cpu)
+        self.register("move_to_cpu_signal", self)
+        self.register("process_audio", self)
 
     @property
     def device(self):

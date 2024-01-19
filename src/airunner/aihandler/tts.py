@@ -3,49 +3,50 @@ import torch
 import sounddevice as sd
 import numpy as np
 
+from queue import Queue
+
 from PyQt6.QtCore import QObject, pyqtSignal, pyqtSlot, QThread
 
 from transformers import SpeechT5Processor, SpeechT5ForTextToSpeech, SpeechT5HifiGan, BarkModel, BarkProcessor
 from datasets import load_dataset
 
 from airunner.aihandler.logger import Logger
+from airunner.mediator_mixin import MediatorMixin
+from airunner.workers.worker import Worker
 
 
-from queue import Queue, Empty
-from PyQt6.QtCore import QObject, pyqtSignal, pyqtSlot, QThread
-
-class VocalizerWorker(QObject):
-    add_to_stream_signal = pyqtSignal(np.ndarray)
+class VocalizerWorker(Worker):
+    """
+    Speech (in the form of numpy arrays generated with the TTS class) is added to the
+    vocalizer's queue. The vocalizer plays the speech using sounddevice.
+    """
     reader_mode_active = False
     logger = Logger(prefix="VocalizerWorker")
 
     def __init__(self, *args, **kwargs):
         super().__init__()
-        self.parent = kwargs.get("parent")
         self.queue = Queue()
-
-    def process(self):
         self.stream = sd.OutputStream(samplerate=24000, channels=1)
         self.stream.start()
-        data = []
-        started = False
-        while True:
-            try:
-                item = self.queue.get(timeout=1)
-                if item is None:
-                    break
-                if started or not self.reader_mode_active:
-                    self.stream.write(item)
-                else:
-                    data.append(item)
+        self.data = []
+        self.started = False
+        self.register("TTSGeneratorWorker_add_to_stream_signal", self)
+    
+    def on_TTSGeneratorWorker_add_to_stream_signal(self, response):
+        self.queue.put(response)
 
-                if not started and len(data) >= 6 and self.reader_mode_active:
-                    for item in data:
-                        self.stream.write(item)
-                    started = True
-                    data = []
-            except Empty:
-                continue
+    def handle_message(self, item):
+        item = self.queue.get(timeout=1)
+        if self.started or not self.reader_mode_active:
+            self.stream.write(item)
+        else:
+            self.data.append(item)
+
+        if not self.started and len(self.data) >= 6 and self.reader_mode_active:
+            for item in self.data:
+                self.stream.write(item)
+            self.started = True
+            self.data = []
         
     def handle_speech(self, generated_speech):
         self.logger.info("Adding speech to stream...")
@@ -55,45 +56,52 @@ class VocalizerWorker(QObject):
             self.logger.error(f"Error while adding speech to stream: {e}")
 
 
-class GeneratorWorker(QObject):
-    logger = Logger(prefix="GeneratorWorker")
-    add_to_stream_signal = pyqtSignal(np.ndarray)
-
-    def __init__(self, *args, **kwargs):
-        super().__init__()
-        self.parent = kwargs.get("parent")
-    
-    @pyqtSlot()
-    def process(self):
-        # get item from self.parent.text.queue
-        play_queue = []
-        play_queue_started = False
-        while True:
-            if not self.parent.text_queue.empty():
-                data = self.parent.text_queue.get()
-                if not self.parent.engine.app.settings["tts_enabled"]:
-                    continue
-                play_queue.append(data)
-                if data["is_end_of_message"] or len(play_queue) == self.parent.play_queue_buffer_length or play_queue_started:
-                    for item in play_queue:
-                        self.generate(item["text"])
-                    play_queue_started = True
-                    play_queue = []
-            time.sleep(0.1)
+class TTSGeneratorWorker(Worker):
+    """
+    Takes input text from any source and generates speech from it using the TTS class.
+    """
+    def __init__(self, prefix="TTSGeneratorWorker"):
+        super().__init__(prefix)
+        self.tts = TTS()
+        self.play_queue = []
+        self.play_queue_started = False
+        self.tts_settings = None
+        
+    def handle_message(self, data):
+        tts_settings = data["tts_settings"]
+        self.tts_settings = tts_settings
+        message = data["message"]
+        is_end_of_message = data["is_end_of_message"]
+        play_queue_buffer_length = tts_settings["play_queue_buffer_length"]
+        play_queue.append(data)
+        if is_end_of_message or len(play_queue) == play_queue_buffer_length or play_queue_started:
+            for item in play_queue:
+                self.generate(item)
+            play_queue_started = True
+            play_queue = []
+            if is_end_of_message or len(self.play_queue) == play_queue_buffer_length or self.play_queue_started:
+                self.play_queue_started = True
+                self.generate_message()
+            for item in play_queue:
+                self.generate(message)
+                self.play_queue_started = True
+                self.play_queue = []
+            
 
     def generate(self, text):
         self.logger.info("Generating TTS...")
         text = text.replace("\n", " ").strip()
         
-        if self.parent.use_bark:
-            tts = self.generate_with_bark(text)
+        if self.tts_settings["use_bark"]:
+            response = self.generate_with_bark(text)
         else:
-            tts = self.generate_with_t5(text)
+            response = self.generate_with_t5(text)
 
-        self.add_to_stream_signal.emit(tts)
+        self.emit("TTSGeneratorWorker_add_to_stream_signal", response)
     
     def move_inputs_to_device(self, inputs):
-        if self.parent.use_cuda:
+        use_cuda = self.settings["memory_settings"]["use_cuda"]
+        if use_cuda:
             self.logger.info("Moving inputs to CUDA")
             try:
                 inputs = {k: v.cuda() for k, v in inputs.items()}
@@ -106,22 +114,22 @@ class GeneratorWorker(QObject):
         text = text.replace("\n", " ").strip()
         
         self.logger.info("Processing inputs...")
-        inputs = self.parent.processor(text, voice_preset=self.parent.voice_preset).to(self.parent.device)
+        inputs = self.parent.processor(text, voice_preset=self.settings["tts_settings"]["voice"]).to(self.parent.device)
         inputs = self.move_inputs_to_device(inputs)
 
         self.logger.info("Generating speech...")
         start = time.time()
         params = dict(
             **inputs, 
-            fine_temperature=self.parent.fine_temperature,
-            coarse_temperature=self.parent.coarse_temperature,
-            semantic_temperature=self.parent.semantic_temperature,
+            fine_temperature=self.settings["tts_settings"]["fine_temperature"],
+            coarse_temperature=self.settings["tts_settings"]["coarse_temperature"],
+            semantic_temperature=self.settings["tts_settings"]["semantic_temperature"],
         )
         speech = self.parent.model.generate(**params)
         self.logger.info("Generated speech in " + str(time.time() - start) + " seconds")
 
-        tts = speech[0].cpu().float().numpy()
-        return tts
+        response = speech[0].cpu().float().numpy()
+        return response
     
     def generate_with_t5(self, text):
         self.logger.info("Generating TTS...")
@@ -142,11 +150,42 @@ class GeneratorWorker(QObject):
         )
         speech = self.parent.model.generate(**params)
         self.logger.info("Generated speech in " + str(time.time() - start) + " seconds")
-        tts = speech.cpu().float().numpy()
-        return tts
+        response = speech.cpu().float().numpy()
+        return response
 
 
-class TTS(QObject):
+class TTSController(QObject, MediatorMixin):
+    """
+    Handles TTS requests from the main thread and passes them to the generator worker.
+    Also handles speech from the generator worker and passes it to the vocalizer worker.
+    Responses from the vocalizer worker are passed back to the main thread.
+    """
+    def __init__(self, *args, **kwargs):
+        self.engine = kwargs.pop("engine")
+        self.app = self.engine.app
+        super().__init__(*args, **kwargs)
+        MediatorMixin.__init__(self)
+
+        self.generator_worker = self.create_worker(GeneratorWorker)
+        self.vocalizer_worker = self.create_worker(VocalizerWorker)
+
+        self.register("GeneratorWorker")
+        
+        self.register("tts_request", self)
+    
+    @pyqtSlot(dict)
+    def on_tts_request(self, data: dict):
+        self.generator_worker.add_to_queue(data)
+
+
+class TTS(QObject, MediatorMixin):
+    """
+    Generates speech from given text. 
+    Responsible for managing the model, processor, vocoder, and speaker embeddings.
+    Generates using either the SpeechT5 or Bark model.
+
+    Use from a worker to avoid blocking the main thread.
+    """
     logger = Logger(prefix="TTS")
     character_replacement_map = {
         "\n": " ",
@@ -204,96 +243,78 @@ class TTS(QObject):
         return torch.float16 if self.use_cuda else torch.float32
 
     @property
+    def settings(self):
+        return self._settings
+    
+    @settings.setter
+    def settings(self, value):
+        self._settings = value
+
+    @property
     def word_chunks(self):
-        return self.engine.app.settings["tts_settings"]["word_chunks"]
+        return self.settings["word_chunks"]
 
     @property
     def use_bark(self):
-        return self.engine.app.settings["tts_settings"]["use_bark"]
+        return self.settings["use_bark"]
 
     @property
     def cuda_index(self):
-        return self.engine.app.settings["tts_settings"]["cuda_index"]
+        return self.settings["cuda_index"]
     
     @property
     def voice_preset(self):
-        return self.engine.app.settings["tts_settings"]["voice"]
+        return self.settings["voice"]
 
     @property
     def use_cuda(self):
-        return self.engine.app.settings["tts_settings"]["use_cuda"] and torch.cuda.is_available()
+        return self.settings["use_cuda"] and torch.cuda.is_available()
 
     @property
     def fine_temperature(self):
-        return self.engine.app.settings["tts_settings"]["fine_temperature"] / 100
+        return self.settings["fine_temperature"] / 100
     
     @property
     def coarse_temperature(self):
-        return self.engine.app.settings["tts_settings"]["coarse_temperature"] / 100
+        return self.settings["coarse_temperature"] / 100
     
     @property
     def semantic_temperature(self):
-        return self.engine.app.settings["tts_settings"]["semantic_temperature"] / 100
+        return self.settings["semantic_temperature"] / 100
     
     @property
     def enable_cpu_offload(self):
-        return self.engine.app.settings["tts_settings"]["enable_cpu_offload"]
+        return self.settings["enable_cpu_offload"]
     
     @property
     def play_queue_buffer_length(self):
-        return self.engine.app.settings["tts_settings"]["play_queue_buffer_length"]
+        return self.settings["play_queue_buffer_length"]
     
     @property
     def use_word_chunks(self):
-        return self.engine.app.settings["tts_settings"]["use_word_chunks"]
+        return self.settings["use_word_chunks"]
     
     @property
     def use_sentence_chunks(self):
-        return self.engine.app.settings["tts_settings"]["use_sentence_chunks"]
+        return self.settings["use_sentence_chunks"]
 
     @property
     def sentence_chunks(self):
-        return self.engine.app.settings["tts_settings"]["sentence_chunks"]
+        return self.settings["sentence_chunks"]
 
     def __init__(self, *args, **kwargs):
         super().__init__()
+        MediatorMixin.__init__(self)
         self.logger.info("Loading")
-        """
-        Initialize the TTS
-        """
-        self.engine = kwargs.get("engine")
         self.corpus = []
         self.processor = None
         self.model = None
         self.vocoder = None
         self.speaker_embeddings = None
         self.sentences = []
-
-        """
-        The vocalizer takes generated speech in the form of numpy arrays and plays them
-        using sounddevice. It runs in a separate thread so that we can perform other operations
-        while playing speech.
-        """
-        self.vocalizer = VocalizerWorker(parent=self)
-        self.vocalizer_thread = QThread()
-        self.vocalizer.moveToThread(self.vocalizer_thread)
-        self.vocalizer_thread.started.connect(self.vocalizer.process)
-        self.vocalizer_thread.start()
-        
-        """
-        The generator worker takes text from the text queue and generates speech from it.
-        It runs in a separate thread so that we can perform other operations while generating
-        speech.
-        """
-        self.generator_worker_thread = QThread()
-        self.generator_worker = GeneratorWorker(parent=self)
-        self.generator_worker.add_to_stream_signal.connect(self.add_to_stream)
-        self.generator_worker.moveToThread(self.generator_worker_thread)
-        self.generator_worker_thread.started.connect(self.generator_worker.process)
-        self.generator_worker_thread.start()
     
     @pyqtSlot(np.ndarray)
-    def add_to_stream(self, generated_speech: np.ndarray):
+    def on_add_to_stream(self, generated_speech: np.ndarray):
         """
         This function is called from the generator worker when speech has been generated.
         It adds the generated speech to the vocalizer's queue.
@@ -332,10 +353,6 @@ class TTS(QObject):
                 self.speaker_embeddings = self.speaker_embeddings.to(self.device)
 
     def initialize(self):
-        if not self.engine.app.settings["tts_enabled"]:
-            self.unload()
-            return
-
         target_model = "bark" if self.use_bark else "t5"
         if target_model != self.current_model:
             self.unload()
@@ -376,9 +393,6 @@ class TTS(QObject):
         except AttributeError:
             pass
         self.current_model = None
-        
-        if do_clear_memory:
-            self.engine.clear_memory()
 
     def run(self):
         self.initialize()
@@ -462,9 +476,10 @@ class TTS(QObject):
         if sentence != "":
             self.sentences.append(sentence)
 
-    def add_text(self, text: str, is_end_of_message: bool):
+    def add_text(self, data: dict, is_end_of_message: bool):
+        self.settings = data["tts_settings"]
         self.initialize()
-        self.message += text
+        self.message += data["message"]
         #if is_end_of_message:
         return self.process_message(is_end_of_message=is_end_of_message)
     
