@@ -19,14 +19,14 @@ class PromptWidget(BaseWidget):
         self.save_prompt()
 
     def action_clicked_button_load(self):
-        self.app.load_saved_stablediffuion_prompt(self.index)
+        self.emit("load_saved_stablediffuion_prompt_signal", self.index)
 
     def action_clicked_button_delete(self):
         self.deleteLater()
 
     def save_prompt(self):
-        self.app.update_saved_stablediffusion_prompt(
+        self.emit("update_saved_stablediffusion_prompt_signal", (
             self.index,
             self.ui.prompt.toPlainText(), 
             self.ui.negative_prompt.toPlainText()
-        )
+        ))
