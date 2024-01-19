@@ -1,5 +1,4 @@
 import os
-import queue
 import pickle
 import platform
 import subprocess
@@ -19,7 +18,6 @@ from airunner.resources_dark_rc import *
 from airunner.aihandler.enums import EngineResponseCode, Mode
 from airunner.aihandler.logger import Logger
 from airunner.aihandler.settings import LOG_LEVEL
-from airunner.airunner_api import AIRunnerAPI
 from airunner.settings import DEFAULT_PATHS
 from airunner.filters.windows.filter_base import FilterBase
 from airunner.input_event_manager import InputEventManager
@@ -43,6 +41,7 @@ from airunner.windows.main.controlnet_model_mixin import ControlnetModelMixin
 from airunner.windows.main.ai_model_mixin import AIModelMixin
 from airunner.windows.main.image_filter_mixin import ImageFilterMixin
 from airunner.aihandler.engine import Engine
+from airunner.mediator_mixin import MediatorMixin
 
 
 class MainWindow(
@@ -55,17 +54,17 @@ class MainWindow(
     ControlnetModelMixin,
     AIModelMixin,
     ImageFilterMixin,
+    MediatorMixin,
 ):
+    main_window_loaded = pyqtSignal()
     logger = Logger(prefix="MainWindow")
     # signals
-    application_settings_changed_signal = pyqtSignal()
     show_grid_toggled = pyqtSignal(bool)
     cell_size_changed_signal = pyqtSignal(int)
     line_width_changed_signal = pyqtSignal(int)
     line_color_changed_signal = pyqtSignal(str)
     canvas_color_changed_signal = pyqtSignal(str)
     snap_to_grid_changed_signal = pyqtSignal(bool)
-    message_handler_signal = pyqtSignal(dict)
     show_layers_signal = pyqtSignal()
 
     token_signal = pyqtSignal(str)
@@ -84,7 +83,6 @@ class MainWindow(
     client = None
     _version = None
     _latest_version = None
-    add_image_to_canvas_signal = pyqtSignal(dict)
     data = None  # this is set in the generator_mixin image_handler function and used for deterministic generation
     status_error_color = "#ff0000"
     status_normal_color_light = "#000000"
@@ -118,7 +116,6 @@ class MainWindow(
     tab_section_changed_signal = pyqtSignal()
     load_image = pyqtSignal(str)
     load_image_object = pyqtSignal(object)
-    window_resized_signal = pyqtSignal(object)
 
     generator = None
     _generator = None
@@ -206,9 +203,6 @@ class MainWindow(
         settings = self.settings
         settings["path_settings"][key] = val
         self.settings = settings
-    
-    def resizeEvent(self, event):
-        self.window_resized_signal.emit(event)
     #### END GENERATOR SETTINGS ####
 
     @property
@@ -284,12 +278,6 @@ class MainWindow(
     def current_active_image(self):
         return self.standard_image_panel.image.copy() if self.standard_image_panel.image else None
 
-    def send_message(self, code, message):
-        self.message_handler_signal.emit({
-            "code": code,
-            "message": message,
-        })
-
     loaded = pyqtSignal()
     window_opened = pyqtSignal()
 
@@ -322,8 +310,7 @@ class MainWindow(
     def show_layers(self):
         self.show_layers_signal.emit()
 
-    @pyqtSlot(dict)
-    def message_handler(self, response: dict):
+    def on_message_handler_signal(self, response: dict):
         try:
             code = response["code"]
         except TypeError:
@@ -343,13 +330,11 @@ class MainWindow(
 
         # qdarktheme.enable_hi_dpi()
 
-        # set the api
-        self.api = AIRunnerAPI(window=self)
-
         self.set_log_levels()
         self.testing = kwargs.pop("testing", False)
 
         super().__init__(*args, **kwargs)
+        MediatorMixin.__init__(self)
         self.application_settings = QSettings("Capsize Games", "AI Runner")
         
         self.action_reset_settings()
@@ -418,7 +403,7 @@ class MainWindow(
         self.ui.tts_button.blockSignals(False)
         self.ui.v2t_button.blockSignals(False)
         
-        self.loaded.emit()
+        self.main_window_loaded.emit()
     
     def do_listen(self):
         if not self.listening:
@@ -899,7 +884,7 @@ class MainWindow(
 
         self.input_event_manager = InputEventManager(app=self)
         self.initialize_window()
-        self.message_handler_signal.connect(self.message_handler)
+        self.register("message_handler_signal", self)
         self.initialize_mixins()
         self.generate_signal.connect(self.handle_generate)
         # self.header_widget.initialize()
