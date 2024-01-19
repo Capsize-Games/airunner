@@ -20,7 +20,6 @@ class EngineRequestWorker(Worker):
         self.register("engine_do_request_signal", self)
     
     def on_engine_do_request_signal(self, message):
-        print("adding to request queue")
         self.add_to_queue(message)
 
 
@@ -82,9 +81,7 @@ class Engine(QObject, MediatorMixin):
         print("HEARD", message)
     
     def handle_generate_text(self, message):
-        print("doing llm controller request...", message)
         self.move_sd_to_cpu()
-        print("lets go")
         self.llm_controller.do_request(message)
 
     def handle_generate_image(self, message):
@@ -142,7 +139,6 @@ class Engine(QObject, MediatorMixin):
         """
         Handle a response from the request worker.
         """
-        print("on_EngineRequestWorker_response_signal", message)
         self.handle_system_response_messages(message)
         {
             EngineRequestCode.GENERATE_TEXT: self.handle_generate_text,
@@ -164,7 +160,6 @@ class Engine(QObject, MediatorMixin):
             self.logger.info(message)
 
     def on_EngineResponseWorker_response_signal(self, message:dict):
-        print(message)
         self.handle_system_response_messages(message)
         {
             EngineResponseCode.TEXT_STREAMED: self.handle_text_streamed,
@@ -177,7 +172,6 @@ class Engine(QObject, MediatorMixin):
         self.send_message(code, message)
 
     def on_image_generate_request_signal(self, message):
-        print(message)
         self.do_request(EngineRequestCode.GENERATE_IMAGE, message)
     
     def on_text_generate_request_signal(self, message):
