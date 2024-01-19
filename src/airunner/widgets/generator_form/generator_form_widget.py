@@ -116,10 +116,8 @@ class GeneratorForm(BaseWidget):
     
     @pyqtSlot(dict)
     def on_message_handler_signal(self, response: dict):
-        message = response["message"]
-        {
-            EngineResponseCode.PROGRESS: self.handle_progress_bar
-        }.get(response["code"], lambda *args: None)(message)
+        if response["code"] == EngineResponseCode.PROGRESS:
+            self.handle_progress_bar(response["message"])
     
     def __init__(self, *args, **kwargs):
         super().__init__(*args, **kwargs)
