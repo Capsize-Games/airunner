@@ -76,8 +76,6 @@ class TransformerRunner(QObject):
 
     def __init__(self, *args, **kwargs):
         self.engine = kwargs.pop("engine", None)
-        app = kwargs.pop("app", None)
-        self.app = app
         super().__init__(*args, **kwargs)
 
     def move_to_cpu(self):
@@ -182,7 +180,7 @@ class TransformerRunner(QObject):
                 params["quantization_config"] = config
 
         path = self.current_model_path
-        self.engine.send_message(f"Loading {self.requested_generator_name} model from {path}")
+        self.emit("status_signal", f"Loading {self.requested_generator_name} model from {path}")
         
         auto_class_ = None
         if self.requested_generator_name == "seq2seq":

@@ -33,7 +33,6 @@ from PyQt6.QtGui import QGuiApplication, QPixmap
 from airunner.process_qss import Watcher, process_qss, build_ui
 from airunner.windows.main.main_window import MainWindow
 from airunner.aihandler.settings import SERVER
-from airunner.aihandler.socket_server import SocketServer
 from airunner.utils import get_version
 
 def watch_frontend_files():

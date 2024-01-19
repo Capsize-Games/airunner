@@ -1,7 +1,14 @@
 import os
 
+from airunner.service_locator import ServiceLocator
+
 
 class EmbeddingMixin:
+    def __init__(self):
+        ServiceLocator.register("get_embeddings", self.get_embeddings)
+        ServiceLocator.register("delete_missing_embeddings", self.delete_missing_embeddings)
+        ServiceLocator.register("scan_for_embeddings", self.scan_for_embeddings)
+
     def add_embedding(self, params):
         settings = self.settings
         name = params["name"]
@@ -57,7 +64,7 @@ class EmbeddingMixin:
                 return
     
     def scan_for_embeddings(self):
-        embeddings_path = self.settings["path_settings"]["embeddings_model_path"]
+        embeddings_path = self.path_settings["embeddings_model_path"]
         if os.path.exists(embeddings_path):
             for root, dirs, _ in os.walk(embeddings_path):
                 for dir in dirs:

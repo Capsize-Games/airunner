@@ -8,7 +8,10 @@ import imageio
 import numpy as np
 import requests
 import torch
+
 from PIL import Image, ImageDraw, ImageFont
+from PyQt6.QtCore import QObject
+
 from controlnet_aux.processor import Processor
 from diffusers.pipelines.stable_diffusion.convert_from_ckpt import \
     download_from_original_stable_diffusion_ckpt
@@ -21,11 +24,7 @@ from diffusers import StableDiffusionControlNetPipeline, StableDiffusionControlN
 from diffusers import ConsistencyDecoderVAE
 from transformers import AutoFeatureExtractor
 
-from PyQt6.QtCore import QSettings
-from PyQt6.QtCore import QObject, QThread
-
 from airunner.aihandler.enums import FilterType
-from airunner.aihandler.enums import EngineResponseCode
 from airunner.aihandler.mixins.compel_mixin import CompelMixin
 from airunner.aihandler.mixins.embedding_mixin import EmbeddingMixin
 from airunner.aihandler.mixins.lora_mixin import LoraMixin
@@ -36,7 +35,6 @@ from airunner.aihandler.mixins.txttovideo_mixin import TexttovideoMixin
 from airunner.aihandler.settings import AIRUNNER_ENVIRONMENT
 from airunner.scripts.realesrgan.main import RealESRGAN
 from airunner.aihandler.logger import Logger
-from airunner.windows.main.settings_mixin import SettingsMixin
 from airunner.windows.main.layer_mixin import LayerMixin
 from airunner.windows.main.lora_mixin import LoraMixin as LoraDataMixin
 from airunner.windows.main.embedding_mixin import EmbeddingMixin as EmbeddingDataMixin
@@ -45,6 +43,7 @@ from airunner.windows.main.controlnet_model_mixin import ControlnetModelMixin
 from airunner.windows.main.ai_model_mixin import AIModelMixin
 from airunner.workers.worker import Worker
 from airunner.mediator_mixin import MediatorMixin
+from airunner.windows.main.settings_mixin import SettingsMixin
 
 logger = Logger(prefix="SDRunner")
 
@@ -91,10 +90,7 @@ class SDGenerateWorker(Worker):
                     image=image
                 ))
             response["images"] = updated_images
-            super().handle_message(dict(
-                message=response,
-                code=EngineResponseCode.IMAGE_GENERATED
-            ))
+            self.emit("sd_image_generated_signal", response)
 
 
 class SDController(QObject, MediatorMixin):
@@ -104,7 +100,6 @@ class SDController(QObject, MediatorMixin):
     def __init__(self, *args, **kwargs):
         MediatorMixin.__init__(self)
         self.engine = kwargs.pop("engine", None)
-        self.app = self.engine.app
         super().__init__()
         self.request_worker = self.create_worker(SDRequestWorker)
         self.generate_worker = self.create_worker(SDGenerateWorker)
@@ -117,7 +112,7 @@ class SDController(QObject, MediatorMixin):
     def on_SDRequestWorker_response_signal(self, message):
         self.generate_worker.add_to_queue(dict(
             message=message,
-            image_base_path=self.app.settings["path_settings"]["image_path"]
+            image_base_path=self.path_settings["image_path"]
         ))
 
     def on_SDGenerateWorker_response_signal(self, message):
@@ -743,13 +738,12 @@ class SDRunner(
 
         if not controlnet_image and self.input_image:
             controlnet_image = self.preprocess_for_controlnet(self.input_image)
-            self.send_message({
-                "image": controlnet_image,
-                "data": {
-                    "controlnet_image": controlnet_image
-                },
-                "request_type": None
-            }, EngineResponseCode.CONTROLNET_IMAGE_GENERATED)
+            self.emit("controlnet_image_generated_signal", dict(
+                image=controlnet_image,
+                data=dict(
+                    controlnet_image=controlnet_image
+                )
+            ))
 
         self._controlnet_image = controlnet_image
 
@@ -808,9 +802,9 @@ class SDRunner(
     def  __init__(self, **kwargs):
         #logger.set_level(LOG_LEVEL)
         logger.info("Loading Stable Diffusion model runner...")
-        super().__init__()
         MediatorMixin.__init__(self)
-        self.application_settings = QSettings("Capsize Games", "AI Runner")
+        SettingsMixin.__init__(self)
+        super().__init__()
         self.safety_checker_model = self.models_by_pipeline_action("safety_checker")
         self.text_encoder_model = self.models_by_pipeline_action("text_encoder")
         self.inpaint_vae_model = self.models_by_pipeline_action("inpaint_vae")
@@ -934,13 +928,7 @@ class SDRunner(
         torch.backends.cuda.matmul.allow_tf32 = self.use_tf32
 
     def send_error(self, message):
-        self.send_message(message, EngineResponseCode.ERROR)
-
-    def send_message(self, message, code):
-        self.emit("sd_controller_response_signal", dict(
-            code=code,
-            message=message
-        ))
+        self.emit("error_signal", message)
 
     def error_handler(self, error):
         message = str(error)
@@ -948,7 +936,7 @@ class SDRunner(
             message = f"This model does not support {self.action}"
         traceback.print_exc()
         logger.error(error)
-        self.send_message(message, EngineResponseCode.ERROR)
+        self.emit("error_signal", message)
 
     def initialize_safety_checker(self, local_files_only=None):
         local_files_only = self.local_files_only if local_files_only is None else local_files_only
@@ -992,7 +980,7 @@ class SDRunner(
         else:
             message = "Generating image"
 
-        self.send_message(message, EngineResponseCode.STATUS)
+        self.emit("status_signal", message)
 
         try:
             output = self.call_pipe(**kwargs)
@@ -1160,7 +1148,7 @@ class SDRunner(
             frame_ids = list(range(ch_start, ch_end))
             try:
                 logger.info(f"Generating video with {len(frame_ids)} frames")
-                self.send_message(f"Generating video, frames {cur_frame} to {cur_frame + len(frame_ids)-1} of {self.n_samples}", EngineResponseCode.STATUS)
+                self.emit("status_signal", f"Generating video, frames {cur_frame} to {cur_frame + len(frame_ids)-1} of {self.n_samples}")
                 cur_frame += len(frame_ids)
                 kwargs = {
                     "prompt": prompt,
@@ -1330,7 +1318,7 @@ class SDRunner(
         self.do_cancel = False
         self.process_data(data)
 
-        self.send_message(f"Applying memory settings", EngineResponseCode.STATUS)
+        self.emit("status_signal", f"Applying memory settings")
         self.apply_memory_efficient_settings()
 
         seed = self.seed
@@ -1389,12 +1377,12 @@ class SDRunner(
     def final_callback(self):
         total = int(self.steps * self.strength)
         tab_section = "stablediffusion"
-        self.send_message({
+        self.emit("progress_signal",{
             "step": total,
             "total": total,
             "action": self.action,
             "tab_section": tab_section,
-        }, code=EngineResponseCode.PROGRESS)
+        })
 
     def callback(self, step: int, _time_step, latents):
         image = None
@@ -1415,7 +1403,7 @@ class SDRunner(
             "tab_section": tab_section,
             "latents": latents
         }
-        self.send_message(res, code=EngineResponseCode.PROGRESS)
+        self.emit("progress_signal", res)
 
     def unload(self):
         self.unload_model()
@@ -1462,7 +1450,7 @@ class SDRunner(
             logger.info("pipe is None")
             return
 
-        self.send_message(f"Generating {'video' if self.is_vid_action else 'image'}", EngineResponseCode.STATUS)
+        self.emit("status_signal", f"Generating {'video' if self.is_vid_action else 'image'}")
 
         action = "depth2img" if data["action"] == "depth" else data["action"]
 
@@ -1584,10 +1572,7 @@ class SDRunner(
         self.reset_applied_memory_settings()
 
     def clear_memory(self):
-        self.send_message(
-            code=EngineResponseCode.CLEAR_MEMORY,
-            message=""
-        )
+        self.emit("clear_memory_signal")
 
     def load_model(self):
         logger.info("Loading model")
@@ -1655,8 +1640,7 @@ class SDRunner(
                 )
 
             if self.pipe is None:
-                logger.error("Failed to load pipeline")
-                self.send_message("Failed to load model", EngineResponseCode.ERROR)
+                self.emit("error_signal", "Failed to load model")
                 return
         
             """
@@ -1817,7 +1801,7 @@ class SDRunner(
                 message = f"Downloading model {model_name}"
         else:
             message = f"Loading model {model_name}"
-        self.send_message(message, EngineResponseCode.STATUS)
+        self.emit("status_signal", message)
 
     def prepare_model(self):
         logger.info("Prepare model")
@@ -1854,7 +1838,7 @@ class SDRunner(
                 logger.info("Model not found, attempting download")
             # check if we have an internet connection
             if self.allow_online_when_missing_files:
-                self.send_message("Downloading model files", EngineResponseCode.STATUS)
+                self.emit("status_signal", "Downloading model files")
                 self.local_files_only = False
             else:
                 self.send_error("Required files not found, enable online access to download")

@@ -100,7 +100,7 @@ class TTSGeneratorWorker(Worker):
         self.emit("TTSGeneratorWorker_add_to_stream_signal", response)
     
     def move_inputs_to_device(self, inputs):
-        use_cuda = self.settings["memory_settings"]["use_cuda"]
+        use_cuda = self.memory_settings["use_cuda"]
         if use_cuda:
             self.logger.info("Moving inputs to CUDA")
             try:
@@ -114,16 +114,16 @@ class TTSGeneratorWorker(Worker):
         text = text.replace("\n", " ").strip()
         
         self.logger.info("Processing inputs...")
-        inputs = self.parent.processor(text, voice_preset=self.settings["tts_settings"]["voice"]).to(self.parent.device)
+        inputs = self.parent.processor(text, voice_preset=self.tts_settings["voice"]).to(self.parent.device)
         inputs = self.move_inputs_to_device(inputs)
 
         self.logger.info("Generating speech...")
         start = time.time()
         params = dict(
             **inputs, 
-            fine_temperature=self.settings["tts_settings"]["fine_temperature"],
-            coarse_temperature=self.settings["tts_settings"]["coarse_temperature"],
-            semantic_temperature=self.settings["tts_settings"]["semantic_temperature"],
+            fine_temperature=self.tts_settings["fine_temperature"],
+            coarse_temperature=self.tts_settings["coarse_temperature"],
+            semantic_temperature=self.tts_settings["semantic_temperature"],
         )
         speech = self.parent.model.generate(**params)
         self.logger.info("Generated speech in " + str(time.time() - start) + " seconds")
@@ -162,7 +162,6 @@ class TTSController(QObject, MediatorMixin):
     """
     def __init__(self, *args, **kwargs):
         self.engine = kwargs.pop("engine")
-        self.app = self.engine.app
         super().__init__(*args, **kwargs)
         MediatorMixin.__init__(self)
 

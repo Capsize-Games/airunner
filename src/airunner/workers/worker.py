@@ -28,8 +28,8 @@ class Worker(QObject, MediatorMixin):
         self.register("application_settings_changed_signal", self)
         self.update_properties()
     
-    @pyqtSlot()
-    def on_application_settings_changed_signal(self):
+    @pyqtSlot(object)
+    def on_application_settings_changed_signal(self, _ignore):
         self.update_properties()
     
     def update_properties(self):

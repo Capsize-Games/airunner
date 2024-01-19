@@ -11,6 +11,7 @@ from airunner.utils import load_metadata_from_image, prepare_metadata
 from airunner.widgets.slider.slider_widget import SliderWidget
 from airunner.aihandler.logger import Logger
 from airunner.widgets.base_widget import BaseWidget
+from airunner.service_locator import ServiceLocator
 
 
 class StandardImageWidget(BaseWidget):
@@ -29,7 +30,7 @@ class StandardImageWidget(BaseWidget):
     def image(self):
         if self._image is None:
             try:
-                self.image = self.app.get_image_from_current_layer()
+                self.image = ServiceLocator.get("current_active_image")()
             except Exception as e:
                 self.logger.error(f"Error while getting image: {e}")
         return self._image
@@ -68,7 +69,7 @@ class StandardImageWidget(BaseWidget):
     
     def load_upscale_options(self):
         self.ui.upscale_model.blockSignals(True)
-        model = self.app.settings["standard_image_settings"]["upscale_model"]
+        model = self.settings["standard_image_settings"]["upscale_model"]
         index = self.ui.upscale_model.findText(model)
         if index == -1:
             index = 0
@@ -76,23 +77,23 @@ class StandardImageWidget(BaseWidget):
         self.ui.upscale_model.blockSignals(False)
 
         self.ui.face_enhance.blockSignals(True)
-        self.ui.face_enhance.setChecked(self.app.settings["standard_image_settings"]["face_enhance"])
+        self.ui.face_enhance.setChecked(self.settings["standard_image_settings"]["face_enhance"])
         self.ui.face_enhance.blockSignals(False)
     
     def upscale_model_changed(self, model):
-        settings = self.app.settings
+        settings = self.settings
         settings["standard_image_settings"]["upscale_model"] = model
-        self.app.settings = settings
+        self.settings = settings
 
     def face_enhance_toggled(self, val):
-        settings = self.app.settings
+        settings = self.settings
         settings["standard_image_settings"]["face_enhance"] = val
-        self.app.settings = settings
+        self.settings = settings
     
     def handle_controlnet_changed(self, val):
-        settings = self.app.settings
+        settings = self.settings
         settings["standard_image_settings"]["controlnet"] = val
-        self.app.settings = settings
+        self.settings = settings
     
     def handle_label_clicked(self, event):
         # create a popup window and show the full size image in it
@@ -123,10 +124,10 @@ class StandardImageWidget(BaseWidget):
         """
         Using the LLM, generate a description of the image
         """
-        self.app.describe_image(image=self.image, callback=self.handle_prompt_generated)
-        # prompt = self.app.generator_tab_widget.ui.prompt.toPlainText()
-        # negative_prompt = self.app.generator_tab_widget.ui.negative_prompt.toPlainText()
-        # self.handle_prompt_generated([prompt], [negative_prompt])
+        self.emit("describe_image_signal", dict(
+            image=self.image, 
+            callback=self.handle_prompt_generated
+        ))
     
     def handle_prompt_generated(self, prompt, negative_prompt):
         meta_data = load_metadata_from_image(self.image)
@@ -137,7 +138,7 @@ class StandardImageWidget(BaseWidget):
             image = Image.open(self.image_path)
             image.save(self.image_path, pnginfo=meta_data)
         else:
-            current_layer = self.app.current_layer()
+            current_layer = ServiceLocator.get("current_layer")()
             image = current_layer['image']
         self.image = image
         self.meta_data = load_metadata_from_image(self.image)
@@ -160,8 +161,8 @@ class StandardImageWidget(BaseWidget):
         if negative_prompt is None:
             meta_data["negative_prompt"] = "verybadimagenegative_v1.3, EasyNegative"
         
-        image_similarity = self.app.settings["standard_image_settings"]["image_similarity"]
-        controlnet = self.app.settings["standard_image_settings"]["controlnet"]
+        image_similarity = self.settings["standard_image_settings"]["image_similarity"]
+        controlnet = self.settings["standard_image_settings"]["controlnet"]
 
         meta_data.pop("seed", None)
         meta_data["action"] = "txt2img"
@@ -175,10 +176,10 @@ class StandardImageWidget(BaseWidget):
         meta_data["use_cropped_image"] = False
         meta_data["batch_size"] = batch_size
 
-        self.app.generator_tab_widget.call_generate(
+        self.emit("generate_image_signal", dict(
             image=self.image,
-            override_data=meta_data
-        )
+            meta_data=meta_data
+        ))
     
     def handle_similar_slider_change(self, value):
         self.similarity = value
@@ -200,8 +201,8 @@ class StandardImageWidget(BaseWidget):
             meta_data["negative_prompt"] = "verybadimagenegative_v1.3, EasyNegative"
         
         meta_data.pop("seed", None)
-        meta_data["model_data_path"] = self.app.settings["standard_image_settings"]["upscale_model"]
-        meta_data["face_enhance"] = self.app.settings["standard_image_settings"]['face_enhance']
+        meta_data["model_data_path"] = self.settings["standard_image_settings"]["upscale_model"]
+        meta_data["face_enhance"] = self.settings["standard_image_settings"]['face_enhance']
         meta_data["denoise_strength"] = 0.5
         meta_data["action"] = "upscale"
         meta_data["width"] = self.ui.canvas_widget.current_layer.image.width
@@ -209,10 +210,10 @@ class StandardImageWidget(BaseWidget):
         meta_data["enable_input_image"] = True
         meta_data["use_cropped_image"] = False
 
-        self.app.generator_tab_widget.call_generate(
-            image=self.ui.canvas_widget.current_layer.image,
+        self.emit("generate_image_signal", dict(
+            image=self.image,
             override_data=meta_data
-        )
+        ))
     
     def showEvent(self, event):
         super().showEvent(event)

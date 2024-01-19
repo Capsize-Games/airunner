@@ -15,9 +15,6 @@ class FilterData:
 class AutomaticFilterManager:
     registered_filters = []
 
-    def __init__(self, app):
-        self.app = app
-
     def register_filter(self, class_name, **options):
         self.registered_filters.append(FilterData(class_name, options))
 

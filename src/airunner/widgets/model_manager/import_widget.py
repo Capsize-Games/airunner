@@ -65,7 +65,7 @@ class ImportWidget(BaseWidget):
             trained_words = [trained_words]
         trained_words = ",".join(trained_words)
         if model_type == "Checkpoint":
-            self.app.ai_model_save_or_update(dict(
+            self.emit("model_save_or_update_signal", dict(
                 name=name,
                 path=file_path,
                 branch="main",
@@ -127,7 +127,7 @@ class ImportWidget(BaseWidget):
         self.ui.download_progress_bar.setValue(current_size)
         if current_size >= total_size:
             self.reset_form()
-            self.app.ai_model_create(self.current_model_data)
+            self.emit("ai_model_create_signal", self.current_model_data)
             self.show_items_in_scrollarea()
     
     def import_models(self):
@@ -188,20 +188,20 @@ class ImportWidget(BaseWidget):
     def download_path(self, file, version, pipeline_action, model_type):
 
         if model_type == "LORA":
-            path = self.app.settings["path_settings"]["lora_model_path"]
+            path = self.path_settings["lora_model_path"]
         elif model_type == "Checkpoint":
             if pipeline_action == "txt2img":
-                path = self.app.settings["path_settings"]["txt2img_model_path"]
+                path = self.path_settings["txt2img_model_path"]
             elif pipeline_action == "outpaint":
-                path = self.app.outpaint_model_path
+                path = self.path_settings["outpaint_model_path"]
             elif pipeline_action == "upscale":
-                path = self.app.settings["path_settings"]["upscale_model_path"]
+                path = self.path_settings["upscale_model_path"]
             elif pipeline_action == "depth2img":
-                path = self.app.settings["path_settings"]["depth2img_model_path"]
+                path = self.path_settings["depth2img_model_path"]
             elif pipeline_action == "pix2pix":
-                path = self.app.settings["path_settings"]["pix2pix_model_path"]
+                path = self.path_settings["pix2pix_model_path"]
         elif model_type == "TextualInversion":
-            path = self.app.settings["path_settings"]["embeddings_model_path"]
+            path = self.path_settings["embeddings_model_path"]
         elif model_type == "VAE":
             # todo save vae here
             pass
@@ -222,15 +222,15 @@ class ImportWidget(BaseWidget):
             return
         model_version_name = model_version["name"]
 
-        categories = self.app.ai_model_categories()
-        actions = self.app.pipeline_actions()
+        categories = self.get_service("ai_model_categories")()
+        actions = self.get_service("pipeline_actions")()
         category = "stablediffusion"
         pipeline_action = "txt2img"
         if "inpaint" in model_version_name:
             pipeline_action = "outpaint"
         diffuser_model_version = model_version["baseModel"]
-        pipeline_class = self.app.get_pipeline_classname(pipeline_action, diffuser_model_version, category)
-        diffuser_model_versions = self.app.ai_model_versions()
+        pipeline_class = self.get_service("get_pipeline_classname")(pipeline_action, diffuser_model_version, category)
+        diffuser_model_versions = self.get_service("ai_model_versions")()
         path = self.download_path(file, diffuser_model_version, pipeline_action, self.current_model_data["type"])  # path is the download path of the model
 
         self.ui.model_form.set_model_form_data(

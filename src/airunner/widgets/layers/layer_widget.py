@@ -58,7 +58,7 @@ class LayerWidget(BaseWidget):
     def action_clicked_button_toggle_layer_visibility(self, val):
         self.set_visible_button_icon(val)
         self.layer_data["visible"] = val
-        self.app.canvas_widget.do_draw()
+        self.emit("canvas_do_draw_signal")
 
     def set_thumbnail(self):
         # with self.layer_data as layer_data:

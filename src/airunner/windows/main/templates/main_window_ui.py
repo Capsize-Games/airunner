@@ -244,7 +244,7 @@ class Ui_MainWindow(object):
         self.scrollArea.setWidgetResizable(True)
         self.scrollArea.setObjectName("scrollArea")
         self.scrollAreaWidgetContents = QtWidgets.QWidget()
-        self.scrollAreaWidgetContents.setGeometry(QtCore.QRect(0, 0, 407, 1057))
+        self.scrollAreaWidgetContents.setGeometry(QtCore.QRect(0, 0, 407, 1062))
         self.scrollAreaWidgetContents.setObjectName("scrollAreaWidgetContents")
         self.gridLayout = QtWidgets.QGridLayout(self.scrollAreaWidgetContents)
         self.gridLayout.setObjectName("gridLayout")
@@ -799,7 +799,6 @@ class Ui_MainWindow(object):
         self.actionHuggingface_Cache_manager.triggered.connect(MainWindow.action_show_hf_cache_manager) # type: ignore
         self.actionModel_Merger.triggered.connect(MainWindow.action_show_model_merger_window) # type: ignore
         self.actionAbout.triggered.connect(MainWindow.action_show_about_window) # type: ignore
-        self.actionPrompt_Builder.triggered.connect(MainWindow.action_show_prompt_builder) # type: ignore
         self.actionControlNet.triggered.connect(MainWindow.action_show_controlnet) # type: ignore
         self.actionEmbeddings.triggered.connect(MainWindow.action_show_embeddings) # type: ignore
         self.actionLoRA.triggered.connect(MainWindow.action_show_lora) # type: ignore

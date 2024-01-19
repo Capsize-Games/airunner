@@ -11,9 +11,7 @@ from transformers import InstructBlipProcessor
 from transformers import TextIteratorStreamer
 
 from PyQt6.QtCore import QObject
-from PyQt6.QtCore import pyqtSignal, pyqtSlot, QThread
 
-from airunner.aihandler.enums import EngineResponseCode
 from airunner.aihandler.logger import Logger
 from airunner.workers.worker import Worker
 from airunner.mediator_mixin import MediatorMixin
@@ -25,11 +23,8 @@ class LLMGenerateWorker(Worker):
         self.register("clear_history", self)
 
     def handle_message(self, message):
-        for response in self.llm.do_generate(message["message"]):
-            super().handle_message(dict(
-                code=response["code"],
-                message=response["message"]
-            ))
+        for response in self.llm.do_generate(message):
+            self.emit("llm_text_streamed_signal", response)
     
     def on_clear_history(self):
         self.llm.clear_history()
@@ -44,13 +39,12 @@ class LLMRequestWorker(Worker):
 
 
 class LLMController(QObject, MediatorMixin):
-    logger = Logger(prefix="LLMController")
     
     def __init__(self, *args, **kwargs):
         MediatorMixin.__init__(self)
         self.engine = kwargs.pop("engine")
-        self.app = self.engine.app
         super().__init__(*args, **kwargs)
+        self.logger = Logger(prefix="LLMController")
         
         self.request_worker = self.create_worker(LLMRequestWorker)
         self.generate_worker = self.create_worker(LLMGenerateWorker)
@@ -217,7 +211,6 @@ class LLM(QObject, MediatorMixin):
                 params["quantization_config"] = config
 
         path = self.current_model_path
-        # self.engine.send_message(f"Loading {self.requested_generator_name} model from {path}")
         
         auto_class_ = None
         if self.requested_generator_name == "seq2seq":
@@ -545,13 +538,10 @@ class LLM(QObject, MediatorMixin):
                         new_text = new_text.replace("</s>", "")
                         is_end_of_message = True
                     yield dict(
-                        code=EngineResponseCode.TEXT_STREAMED,
-                        message={
-                            "message": new_text,
-                            "is_first_message": is_first_message,
-                            "is_end_of_message": is_end_of_message,
-                            "name": self.botname,
-                        }
+                        message=new_text,
+                        is_first_message=is_first_message,
+                        is_end_of_message=is_end_of_message,
+                        name=self.botname,
                     )
                     is_first_message = False
                 

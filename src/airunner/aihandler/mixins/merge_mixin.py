@@ -1,11 +1,24 @@
 import os
+
+from PyQt6.QtCore import pyqtSlot
+
 from airunner.aihandler.logger import Logger
 
 logger = Logger(prefix="MergeMixin")
 
 
 class MergeMixin:
-    def merge_models(self, base_model_path, models_to_merge_path, weights, output_path, name, action):
+    def __init__(self, *args, **kwargs):
+        super().__init__(*args, **kwargs)
+        self.register("sd_merge_models_signal", self)
+    
+    @pyqtSlot(object)
+    def on_sd_merge_models_signal(self, options):
+        print("TODO: on_sd_merge_models_signal")
+
+    @pyqtSlot(object)
+    def merge_models(self, options):
+        base_model_path, models_to_merge_path, weights, output_path, name, action = options
         from diffusers import (
             StableDiffusionPipeline,
             StableDiffusionInstructPix2PixPipeline,
