@@ -52,23 +52,22 @@ class ActiveGridArea(DraggablePixmap):
     @property
     def active_grid_area_rect(self):
         return QRect(
-            self.app.settings["active_grid_settings"]["pos_x"],
-            self.app.settings["active_grid_settings"]["pos_y"],
-            self.app.settings["is_maximized"],
-            self.app.settings["working_height"]
+            self.active_grid_settings["pos_x"],
+            self.active_grid_settings["pos_y"],
+            self.settings["is_maximized"],
+            self.settings["working_height"]
         )
 
     def __init__(self, parent, rect):
-        self.app = parent.app
         self.update_settings()
 
         super().__init__(parent, self.pixmap)
         self.setFlag(QGraphicsItem.GraphicsItemFlag.ItemIsMovable, True)
 
     def update_settings(self):
-        border_color = self.app.settings["generator_settings"]["active_grid_border_color"]
+        border_color = self.generator_settings["active_grid_border_color"]
         border_color = QColor(border_color)
-        border_opacity = self.app.settings["active_grid_settings"]["border_opacity"]
+        border_opacity = self.active_grid_settings["border_opacity"]
         border_color.setAlpha(border_opacity)
         fill_color = self.get_fill_color()
 
@@ -94,22 +93,22 @@ class ActiveGridArea(DraggablePixmap):
         scene = self.scene()
         if scene:
             scene.removeItem(self)
-            if self.app.settings["active_grid_settings"]["enabled"]:
+            if self.active_grid_settings["enabled"]:
                 scene.addItem(self)
 
     def get_fill_color(self):
-        fill_color = self.app.settings["generator_settings"]["active_grid_fill_color"]
+        fill_color = self.generator_settings["active_grid_fill_color"]
         fill_color = QColor(fill_color)
-        fill_opacity = self.app.settings["active_grid_settings"]["fill_opacity"]
+        fill_opacity = self.active_grid_settings["fill_opacity"]
         fill_opacity = max(1, fill_opacity)
         fill_color.setAlpha(fill_opacity)
         return fill_color
 
     def paint(self, painter: QPainter, option, widget=None):
-        if not self.app.settings["active_grid_settings"]["render_fill"]:
+        if not self.active_grid_settings["render_fill"]:
             self.pixmap.fill(QColor(0, 0, 0, 1))
 
-        if self.app.settings["active_grid_settings"]["render_border"]:
+        if self.active_grid_settings["render_border"]:
             painter.setPen(QPen(
                 self.active_grid_area_color,
                 self.parent.line_width

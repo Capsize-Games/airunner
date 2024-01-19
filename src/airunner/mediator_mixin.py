@@ -13,11 +13,9 @@ class MediatorMixin:
         self.mediator = SignalMediator()
         self.threads = []
         
-    def emit(self, signal_name, *args, **kwargs):
+    def emit(self, signal_name, data=None):
         # Pass None as the second argument if no additional arguments are provided
-        arg1 = args[0] if args else None
-        arg2 = args[1] if len(args) > 1 else None
-        self.mediator.emit(signal_name, arg1, arg2)
+        self.mediator.emit(signal_name, data)
 
     pyqtSlot(object, object)
     def receive(self, signal_name, *args, **kwargs):

@@ -1,4 +1,12 @@
+from airunner.service_locator import ServiceLocator
+
+
 class PipelineMixin:
+    def __init__(self, *args, **kwargs):
+        ServiceLocator.register("get_pipeline_classname", self.get_pipeline_classname)
+        ServiceLocator.register("pipeline_actions", self.pipeline_actions)
+        ServiceLocator.register("get_pipelines", self.get_pipelines)
+
     def pipeline_get_by_filter(self, filter_dict):
         return [item for item in self.settings["pipelines"] if all(item.get(k) == v for k, v in filter_dict.items())]
 
@@ -42,3 +50,6 @@ class PipelineMixin:
 
     def available_pipeline_by_action_version_category(self, pipeline_action, version, category):
         return [pipeline["name"] for pipeline in self.settings["pipelines"] if pipeline["pipeline_action"] == pipeline_action and pipeline["version"] == version and pipeline["category"] == category]
+
+    def pipeline_actions(self):
+        return [pipeline["pipeline_action"] for pipeline in self.settings["pipelines"]]

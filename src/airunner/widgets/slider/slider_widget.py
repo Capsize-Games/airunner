@@ -85,9 +85,9 @@ class SliderWidget(BaseWidget):
 
     def __init__(self, *args, **kwargs):
         super().__init__(*args, **kwargs)
-        self.app.main_window_loaded.connect(self.on_main_window_loaded)
-
-    def on_main_window_loaded(self):
+        self.register("main_window_loaded_signal", self)
+    
+    def on_main_window_loaded_signal(self):
         self.initialize()
     
     def initialize(self, **kwargs):
@@ -120,11 +120,11 @@ class SliderWidget(BaseWidget):
         self.divide_by = self.property("divide_by") or 1.0
 
         if settings_property is not None:
-            current_value = self.app.get_current_value(settings_property)
+            current_value = self.get_service("get_settings_value")(settings_property)
 
         # check if slider_callback is str
         if isinstance(slider_callback, str):
-            slider_callback = getattr(self.app, slider_callback)
+            slider_callback = self.get_service("get_callback_for_slider")(slider_callback)
 
         # set slider and spinbox names
         if slider_name:
