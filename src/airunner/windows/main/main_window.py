@@ -344,8 +344,6 @@ class MainWindow(
 
         self.ui.setupUi(self)
 
-        self.initialize()
-
         # on window resize:
         # self.windowStateChanged.connect(self.on_state_changed)
 
@@ -423,7 +421,7 @@ class MainWindow(
         self.settings = settings
 
     def on_show(self):
-        pass        
+        print("MAIN WINDOW ONSHOW")        
 
     def layer_opacity_changed(self, attr_name, value=None, widget=None):
         print("layer_opacity_changed", attr_name, value)
@@ -653,10 +651,11 @@ class MainWindow(
         pass
 
     def register_keypress(self):
-        self.input_event_manager.register_keypress("fullscreen", self.toggle_fullscreen)
-        self.input_event_manager.register_keypress("control_pressed", self.dragmode_pressed, self.dragmode_released)
-        self.input_event_manager.register_keypress("shift_pressed", self.shift_pressed, self.shift_released)
+        # self.input_event_manager.register_keypress("fullscreen", self.toggle_fullscreen)
+        # self.input_event_manager.register_keypress("control_pressed", self.dragmode_pressed, self.dragmode_released)
+        # self.input_event_manager.register_keypress("shift_pressed", self.shift_pressed, self.shift_released)
         #self.input_event_manager.register_keypress("delete_outside_active_grid_area", self.canvas_widget.delete_outside_active_grid_area)
+        print("TODO: register keypress vents")
 
     def toggle_fullscreen(self):
         if self.isFullScreen():
@@ -879,7 +878,8 @@ class MainWindow(
         ]:
             self.set_icons(icon_data[0], icon_data[1], "dark" if self.settings["dark_mode_enabled"] else "light")
 
-    def initialize(self):
+    def showEvent(self, event):
+        super().showEvent(event)
         # self.automatic_filter_manager = AutomaticFilterManager(app=self)
         # self.automatic_filter_manager.register_filter(PixelFilter, base_size=256)
 

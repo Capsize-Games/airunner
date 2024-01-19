@@ -5,7 +5,8 @@ from airunner.widgets.stablediffusion.templates.stable_diffusion_settings_ui imp
 class StableDiffusionSettingsWidget(BaseWidget):
     widget_class_ = Ui_stable_diffusion_settings_widget
 
-    def initialize(self):
+    def showEvent(self, event):
+        super().showEvent(event)
         steps = target_val = self.app.settings["generator_settings"]["steps"]
         scale = target_val = self.app.settings["generator_settings"]["scale"]
 

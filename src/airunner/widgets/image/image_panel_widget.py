@@ -45,7 +45,8 @@ class ImagePanelWidget(BaseWidget):
             image_widget.set_image(image["path"])
             self.ui.scrollAreaWidgetContents.layout().addWidget(image_widget)
     
-    def initialize(self):
+    def showEvent(self, event):
+        super().showEvent(event)
         if self.app.settings["path_settings"]["image_path"] != "":
             self.load_files()
             self.show_files()

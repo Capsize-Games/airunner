@@ -32,10 +32,8 @@ class CanvasResizeWorker(Worker):
         self.buffer = None
         self.register("application_settings_changed_signal", self)
 
-    def handle_message(self, data):
-        self.draw_lines(data)
-    
-    def draw_lines(self, data:dict):
+    def handle_message(self, data:dict):
+        print("DRAW LINES", data)
         settings = data["settings"]
         view_size = data["view_size"]
 
@@ -80,7 +78,7 @@ class CanvasResizeWorker(Worker):
         self.emit("canvas_clear_lines_signal")
 
         for line_data in lines_data:
-            self.handle_message(line_data)
+            self.emit("CanvasResizeWorker_response_signal", line_data)
 
         self.emit("canvas_do_draw_signal")
 
@@ -196,8 +194,10 @@ class CanvasPlusWidget(BaseWidget):
         ))
 
     def on_CanvasResizeWorker_response_signal(self, line_data: tuple):
+        print("on_CanvasResizeWorker_response_signal:", line_data)
         draw_grid = self.app.settings["grid_settings"]["show_grid"]
         if not draw_grid:
+            print("not draw_grid")
             return
         line = self.scene.addLine(*line_data)
         self.line_group.addToGroup(line)
@@ -274,7 +274,9 @@ class CanvasPlusWidget(BaseWidget):
 
     def handle_resize_canvas(self):
         if not self.view:
+            self.logger.warning("view not found")
             return
+        print("adding to queue")
         self.canvas_resize_worker.add_to_queue(dict(
             settings=self.app.settings,
             view_size=self.view.viewport().size(),
@@ -415,7 +417,8 @@ class CanvasPlusWidget(BaseWidget):
         if self.scene:
             self.scene.resize()
 
-    def initialize(self):
+    def showEvent(self, event):
+        super().showEvent(event)
         self.scene = CustomScene(parent=self)
 
         self.view = self.canvas_container

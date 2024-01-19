@@ -18,7 +18,8 @@ class LayerContainerWidget(BaseWidget):
         super().__init__(*args, **kwargs)
         self.app.show_layers_signal.connect(self.show_layers)
 
-    def initialize(self):
+    def showEvent(self, event):
+        super().showEvent(event)
         current_layer = self.app.current_layer()
         self.ui.scrollAreaWidgetContents.layout().addSpacerItem(QSpacerItem(0, 0, QSizePolicy.Policy.Minimum, QSizePolicy.Policy.Expanding))
         # set the current_value property of the slider

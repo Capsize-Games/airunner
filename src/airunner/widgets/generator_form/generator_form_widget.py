@@ -531,7 +531,8 @@ class GeneratorForm(BaseWidget):
         self.save_db_session()
         self.changed_signal.emit(key, value)
 
-    def initialize(self):
+    def showEvent(self, event):
+        super().showEvent(event)
         self.set_form_values()
         self.initialized = True
     
