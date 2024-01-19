@@ -16,10 +16,6 @@ class GeneratorTabWidget(BaseWidget):
     col = 0
     layout = None
 
-    def __init__(self, *args, **kwargs):
-        super().__init__(*args, **kwargs)
-        self.app.loaded.connect(self.initialize)
-
     @property
     def current_generator_widget(self):
         return self.ui.generator_form_stablediffusion
