@@ -9,16 +9,15 @@ class SeedWidget(BaseWidget):
 
     def __init__(self, *args, **kwargs):
         super().__init__(*args, **kwargs)
+        self.register("application_settings_changed_signal", self)
 
-        self.app.application_settings_changed_signal.connect(self.update_seed)
-
-    def update_seed(self):
+    def on_application_settings_changed_signal(self):
         self.ui.lineEdit.setText(str(self.seed))
 
     def action_clicked_button_random_seed(self, value):
-        settings = self.app.settings
+        settings = self.settings
         settings["generator_settings"]["random_seed"] = value
-        self.app.settings = settings
+        self.settings = settings
         self.ui.lineEdit.setEnabled(not value)
 
     def action_value_changed_seed(self, value):

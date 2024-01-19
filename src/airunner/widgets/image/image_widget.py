@@ -147,8 +147,7 @@ class ImageWidget(BaseWidget):
             self.meta_data = load_metadata_from_image(image)
 
     def send_image_to_grid(self):
-        #self.app.ui.canvas_plus_widget.load_image(self.image_path)
-        self.app.load_image.emit(self.image_path)
+        self.emit("load_image_from_path", self.image_path)
 
     def view_image(self):
         from PyQt6.QtWidgets import QGraphicsView, QGraphicsScene, QDialog, QVBoxLayout
@@ -223,10 +222,10 @@ class ImageWidget(BaseWidget):
         meta_data["strength"] = 1.0
         meta_data["enable_input_image"] = True
         meta_data["use_cropped_image"] = False
-        self.app.generator_tab_widget.current_generator_widget.call_generate(
+        self.emit("generate_image_signal", dict(
             image=image,
             override_data=meta_data
-        )
+        ))
         
     def generate_variant(self):
         image = Image.open(self.image_path)
@@ -242,10 +241,10 @@ class ImageWidget(BaseWidget):
         meta_data["strength"] = 1.0
         meta_data["enable_input_image"] = True
         meta_data["use_cropped_image"] = False
-        self.app.generator_tab_widget.current_generator_widget.call_generate(
+        self.emit("generate_image_signal", dict(
             image=image,
             override_data=meta_data
-        )
+        ))
 
 
 class BrushImageWidget(ImageWidget):
