@@ -1,7 +1,4 @@
-class ImageFilterMixin:
-    def __init__(self, settings):
-        super().__init__(settings["image_filters"])
-    
+class ImageFilterMixin:    
     def image_filter_get_all(self):
         return self.settings["image_filters"]
 

@@ -19,12 +19,12 @@ class ModelMerger(BaseWindow):
         model_types = ["txt2img / img2img", "inpaint / outpaint", "depth2img", "pix2pix", "upscale", "superresolution"]
         self.ui.model_types.addItems(model_types)
         self.ui.model_types.currentIndexChanged.connect(self.change_model_type)
-        self.ui.base_models.addItems(self.app.available_model_names_by_section("txt2img"))
+        self.ui.base_models.addItems(self.get_service("ai_model_names_by_section")("txt2img"))
 
         # get standard models from model_base_path
         # load the model_merger_model widget that will be used to add models
         for n in range(len(self.widgets), self.total_models):
-            self.add_model(self.app.available_model_names_by_section("txt2img"), n)
+            self.add_model(self.get_service("ai_model_names_by_section")("txt2img"), n)
         layout = QVBoxLayout()
         self.ui.models.setLayout(layout)
         self.ui.merge_button.clicked.connect(self.merge_models)
@@ -43,21 +43,21 @@ class ModelMerger(BaseWindow):
     def output_path(self):
         output_path = None
         if self.section == "outpaint":
-            output_path = self.app.settings["path_settings"]["inpaint_model_path"]
+            output_path = self.path_settings["inpaint_model_path"]
         elif self.section == "depth2img":
-            output_path = self.app.settings["path_settings"]["depth2img_model_path"]
+            output_path = self.path_settings["depth2img_model_path"]
         elif self.section == "pix2pix":
-            output_path = self.app.settings["path_settings"]["pix2pix_model_path"]
+            output_path = self.path_settings["pix2pix_model_path"]
         elif self.section == "upscale":
-            output_path = self.app.settings["path_settings"]["upscale_model_path"]
+            output_path = self.path_settings["upscale_model_path"]
         if not output_path or output_path == "":
-            output_path = self.app.settings["path_settings"]["base_path"]
+            output_path = self.path_settings["base_path"]
         return output_path
 
     def change_model_type(self, index):
         self.model_type = self.ui.model_types.currentText()
         self.ui.base_models.clear()
-        self.ui.base_models.addItems(self.app.available_model_names_by_section(self.section))
+        self.ui.base_models.addItems(self.get_service("ai_model_names_by_section")(self.section))
     
     def add_new_model(self):
         self.total_models += 1
@@ -143,7 +143,7 @@ class ModelMerger(BaseWindow):
     def do_model_merge(self):
         models = []
         weights = []
-        path = self.app.settings["path_settings"]["base_path"]
+        path = self.path_settings["base_path"]
 
         for widget in self.widgets:
             if widget.models.currentText() != "":
@@ -156,18 +156,18 @@ class ModelMerger(BaseWindow):
 
         model = self.ui.base_models.currentText()
         section = self.section
-        available_models_by_section = self.app.ai_model_available_models_by_category(category=section)
+        available_models_by_section = self.get_service("ai_models_by_category")(category=section)
         model_data = None
         for data in available_models_by_section:
             if data["name"] == model:
                 model_data = data
 
         if model_data:
-            self.app.engine.sd_runner.merge_models(
+            self.emit("sd_merge_models_signal", (
                 model_data["path"],
                 models,
                 weights,
                 self.output_path,
                 self.ui.model_name.text(),
                 self.section
-            )
+            ))
