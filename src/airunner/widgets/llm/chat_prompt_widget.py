@@ -166,7 +166,8 @@ class ChatPromptWidget(BaseWidget, MediatorMixin):
     def on_token_signal(self, val):
         self.handle_token_signal(val)
 
-    def initialize(self):
+    def showEvent(self, event):
+        super().showEvent(event)
         self.register("hear_signal", self)
         self.register("token_signal", self)
         self.register("add_bot_message_to_conversation", self)

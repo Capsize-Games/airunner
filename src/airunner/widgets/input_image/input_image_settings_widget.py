@@ -40,7 +40,8 @@ class InputImageSettingsWidget(BaseWidget):
         except AttributeError:
             return None
 
-    def initialize(self):
+    def showEvent(self, event):
+        super().showEvent(event)
         self.update_buttons()
         self.ui.groupBox.setTitle(self.property("checkbox_label"))
         self.ui.scale_slider_widget.initialize()
