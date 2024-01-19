@@ -187,7 +187,13 @@ class CanvasPlusWidget(BaseWidget):
         self.do_draw()
 
     def on_image_generated_signal(self, image_data: dict):
-        self.image_data_worker.add_to_queue(image_data)
+        self.image_data_worker.add_to_queue(dict(
+            auto_export_images=self.app.settings["auto_export_images"],
+            base_path=self.app.settings["path_settings"]["base_path"],
+            image_path=self.app.settings["path_settings"]["image_path"],
+            image_export_type=self.app.settings["image_export_type"],
+            image_data=image_data
+        ))
 
     def on_CanvasResizeWorker_response_signal(self, line_data: tuple):
         draw_grid = self.app.settings["grid_settings"]["show_grid"]

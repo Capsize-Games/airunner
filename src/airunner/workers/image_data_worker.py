@@ -7,18 +7,23 @@ class ImageDataWorker(Worker):
         super().__init__(prefix=prefix)
         self.running = False
 
-    def handle_message(self, message):
+    def handle_message(self, incoming_message):
+        auto_export_images = incoming_message["auto_export_images"]
+        base_path = incoming_message["base_path"]
+        image_path = incoming_message["image_path"]
+        image_export_type = incoming_message["image_export_type"]
+        message = incoming_message["image_data"]
         images = message["images"]
         data = message["data"]
         path = ""
-        if self.parent.settings["auto_export_images"]:
+        if auto_export_images:
             procesed_images = []
             for image in images:
                 path, image = auto_export_image(
-                    base_path=self.parent.settings["path_settings"]["base_path"],
-                    image_path=self.parent.settings["path_settings"]["image_path"],
-                    image_export_type=self.parent.settings["image_export_type"],
-                    image=image, 
+                    base_path=base_path,
+                    image_path=image_path,
+                    image_export_type=image_export_type,
+                    image=image["image"], 
                     data=data, 
                     seed=data["options"]["seed"]
                 )

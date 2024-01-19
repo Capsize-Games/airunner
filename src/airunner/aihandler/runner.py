@@ -74,10 +74,8 @@ class SDGenerateWorker(Worker):
                 self.emit("nsfw_content_detected_signal", response)
                 continue
 
-            print(response)
             seed = data["options"]["seed"]
             updated_images = []
-            print(images)
             for index, image in enumerate(images):
                 # hash the prompt and negative prompt along with the action
                 action = data["action"]
@@ -88,13 +86,15 @@ class SDGenerateWorker(Worker):
                 image_path = os.path.join(image_base_path, image_name)
                 # save the image
                 image.save(image_path)
-                print(image)
                 updated_images.append(dict(
                     path=image_path,
                     image=image
                 ))
             response["images"] = updated_images
-            super().handle_message(response)
+            super().handle_message(dict(
+                message=response,
+                code=EngineResponseCode.IMAGE_GENERATED
+            ))
 
 
 class SDController(QObject, MediatorMixin):
@@ -106,7 +106,7 @@ class SDController(QObject, MediatorMixin):
         self.engine = kwargs.pop("engine", None)
         self.app = self.engine.app
         super().__init__()
-        self.generate_worker = self.create_worker(SDRequestWorker)
+        self.request_worker = self.create_worker(SDRequestWorker)
         self.generate_worker = self.create_worker(SDGenerateWorker)
         self.register("SDGenerateWorker_response_signal", self)
         self.register("SDRequestWorker_response_signal", self)
@@ -121,7 +121,7 @@ class SDController(QObject, MediatorMixin):
         ))
 
     def on_SDGenerateWorker_response_signal(self, message):
-        self.response_signal.emit(message)
+        self.emit("sd_controller_response_signal", message)
 
     @property
     def is_pipe_on_cpu(self):
@@ -936,7 +936,7 @@ class SDRunner(
     def send_error(self, message):
         self.send_message(message, EngineResponseCode.ERROR)
 
-    def send_message(self, message, code=None):
+    def send_message(self, message, code):
         self.emit("sd_controller_response_signal", dict(
             code=code,
             message=message
@@ -992,7 +992,7 @@ class SDRunner(
         else:
             message = "Generating image"
 
-        self.send_message(message)
+        self.send_message(message, EngineResponseCode.STATUS)
 
         try:
             output = self.call_pipe(**kwargs)
@@ -1161,7 +1161,7 @@ class SDRunner(
             frame_ids = list(range(ch_start, ch_end))
             try:
                 logger.info(f"Generating video with {len(frame_ids)} frames")
-                self.send_message(f"Generating video, frames {cur_frame} to {cur_frame + len(frame_ids)-1} of {self.n_samples}")
+                self.send_message(f"Generating video, frames {cur_frame} to {cur_frame + len(frame_ids)-1} of {self.n_samples}", EngineResponseCode.STATUS)
                 cur_frame += len(frame_ids)
                 kwargs = {
                     "prompt": prompt,
@@ -1331,7 +1331,7 @@ class SDRunner(
         self.do_cancel = False
         self.process_data(data)
 
-        self.send_message(f"Applying memory settings")
+        self.send_message(f"Applying memory settings", EngineResponseCode.STATUS)
         self.apply_memory_efficient_settings()
 
         seed = self.seed
@@ -1463,7 +1463,7 @@ class SDRunner(
             logger.info("pipe is None")
             return
 
-        self.send_message(f"Generating {'video' if self.is_vid_action else 'image'}")
+        self.send_message(f"Generating {'video' if self.is_vid_action else 'image'}", EngineResponseCode.STATUS)
 
         action = "depth2img" if data["action"] == "depth" else data["action"]
 
@@ -1585,10 +1585,10 @@ class SDRunner(
         self.reset_applied_memory_settings()
 
     def clear_memory(self):
-        self.send_message(dict(
+        self.send_message(
             code=EngineResponseCode.CLEAR_MEMORY,
             message=""
-        ))
+        )
 
     def load_model(self):
         logger.info("Loading model")
@@ -1818,7 +1818,7 @@ class SDRunner(
                 message = f"Downloading model {model_name}"
         else:
             message = f"Loading model {model_name}"
-        self.send_message(message)
+        self.send_message(message, EngineResponseCode.STATUS)
 
     def prepare_model(self):
         logger.info("Prepare model")
@@ -1855,7 +1855,7 @@ class SDRunner(
                 logger.info("Model not found, attempting download")
             # check if we have an internet connection
             if self.allow_online_when_missing_files:
-                self.send_message("Downloading model files")
+                self.send_message("Downloading model files", EngineResponseCode.STATUS)
                 self.local_files_only = False
             else:
                 self.send_error("Required files not found, enable online access to download")
