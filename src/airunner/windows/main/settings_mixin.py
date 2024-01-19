@@ -212,7 +212,7 @@ Previous Conversation:
                 scale=0,
                 seed=42,
                 random_seed=True,
-                model="",
+                model="stabilityai/sd-turbo",
                 scheduler="DPM++ 2M Karras",
                 prompt_triggers="",
                 strength=50,
