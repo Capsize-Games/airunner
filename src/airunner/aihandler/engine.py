@@ -164,6 +164,7 @@ class Engine(QObject, MediatorMixin):
             self.logger.info(message)
 
     def on_EngineResponseWorker_response_signal(self, message:dict):
+        print(message)
         self.handle_system_response_messages(message)
         {
             EngineResponseCode.TEXT_STREAMED: self.handle_text_streamed,
@@ -176,7 +177,8 @@ class Engine(QObject, MediatorMixin):
         self.send_message(code, message)
 
     def on_image_generate_request_signal(self, message):
-        self.do_request(EngineRequestCode.GENERATE_IMAGE, message["message"])
+        print(message)
+        self.do_request(EngineRequestCode.GENERATE_IMAGE, message)
     
     def on_text_generate_request_signal(self, message):
         self.do_request(EngineRequestCode.GENERATE_TEXT, message)
