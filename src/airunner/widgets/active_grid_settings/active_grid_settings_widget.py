@@ -7,9 +7,9 @@ class ActiveGridSettingsWidget(BaseWidget):
 
     def __init__(self, *args, **kwargs):
         super().__init__(*args, **kwargs)
-        settings = self.app.settings
-        self.ui.width_slider_widget.setProperty("current_value", self.app.settings["is_maximized"])
-        self.ui.height_slider_widget.setProperty("current_value", self.app.settings["working_height"])
+        settings = self.settings
+        self.ui.width_slider_widget.setProperty("current_value", self.settings["is_maximized"])
+        self.ui.height_slider_widget.setProperty("current_value", self.settings["working_height"])
         self.ui.width_slider_widget.initialize()
         self.ui.height_slider_widget.initialize()
         self.ui.border_opacity_slider_widget.setProperty("current_value", settings["active_grid_settings"]["border_opacity"])
@@ -21,16 +21,16 @@ class ActiveGridSettingsWidget(BaseWidget):
         self.ui.active_grid_fill_groupbox.setChecked(settings["active_grid_settings"]["render_fill"])
 
     def action_clicked_checkbox_toggle_active_grid_border(self, checked):
-        settings = self.app.settings
+        settings = self.settings
         settings["active_grid_settings"]["render_border"] = checked
-        self.app.settings = settings
+        self.settings = settings
 
     def action_clicked_checkbox_toggle_active_grid_fill(self, checked):
-        settings = self.app.settings
+        settings = self.settings
         settings["active_grid_settings"]["render_fill"] = checked
-        self.app.settings = settings
+        self.settings = settings
 
     def action_clicked_checkbox_toggle_active_grid_area(self, checked):
-        settings = self.app.settings
+        settings = self.settings
         settings["active_grid_settings"]["enabled"] = checked
-        self.app.settings = settings
+        self.settings = settings

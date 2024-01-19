@@ -1,10 +1,11 @@
-from PyQt6.QtCore import Qt
+from PyQt6.QtCore import Qt, QSettings
 
 from airunner.aihandler.settings import DEFAULT_BRUSH_PRIMARY_COLOR, DEFAULT_BRUSH_SECONDARY_COLOR
 from airunner.settings import DEFAULT_PATHS
 from airunner.utils import default_hf_cache_dir
 from airunner.settings import BASE_PATH
 from airunner.aihandler.enums import Mode
+from airunner.service_locator import ServiceLocator
 from airunner.data.bootstrap.pipeline_bootstrap_data import pipeline_bootstrap_data
 from airunner.data.bootstrap.controlnet_bootstrap_data import controlnet_bootstrap_data
 from airunner.data.bootstrap.model_bootstrap_data import model_bootstrap_data
@@ -12,8 +13,13 @@ from airunner.data.bootstrap.imagefilter_bootstrap_data import imagefilter_boots
 
 
 class SettingsMixin:
-    @property
-    def settings(self):
+    def __init__(self):
+        self.application_settings = QSettings("Capsize Games", "AI Runner")
+        ServiceLocator.register("get_settings", self.get_settings)
+        ServiceLocator.register("set_settings", self.set_settings)
+        self.register("reset_settings_signal", self)
+
+    def get_settings(self):
         return self.application_settings.value("settings", dict(
             current_layer_index=0,
             ocr_enabled=False,
@@ -25,6 +31,7 @@ class SettingsMixin:
             image_to_new_layer=True,
             dark_mode_enabled=True,
             latest_version_check=True,
+            app_version="",
             allow_online_mode=True,
             current_version_stablediffusion="SD Turbo",
             current_tool="active_grid_area",
@@ -212,7 +219,7 @@ Previous Conversation:
                 scale=0,
                 seed=42,
                 random_seed=True,
-                model="",
+                model="stabilityai/sd-turbo",
                 scheduler="DPM++ 2M Karras",
                 prompt_triggers="",
                 strength=50,
@@ -286,6 +293,11 @@ Previous Conversation:
                 sentence_chunks=1,
                 play_queue_buffer_length=1,
                 enable_cpu_offload=True,
+            ),
+            stt_settings=dict(
+                duration=10,
+                fs=16000,
+                channels=1,
             ),
             schedulers=[
                 dict(
@@ -366,13 +378,204 @@ Previous Conversation:
         type=dict
     )
 
-    @settings.setter
-    def settings(self, val):
+    def set_settings(self, val):
         self.application_settings.setValue("settings", val)
         self.application_settings.sync()
-        self.application_settings_changed_signal.emit()
+        self.emit("application_settings_changed_signal")
 
-    def action_reset_settings(self):
+    def on_reset_settings_signal(self):
         self.application_settings.clear()
         self.application_settings.sync()
-        self.settings = self.settings
+        self.set_settings(self.get_settings())
+
+    @property
+    def generator_settings(self):
+        return self.get_settings()["generator_settings"]
+    
+    @generator_settings.setter
+    def generator_settings(self, val):
+        settings = self.get_settings()
+        settings["generator_settings"] = val
+        self.set_settings(settings)
+
+    @property
+    def stt_settings(self):
+        return self.get_settings()["stt_settings"]
+    
+    @stt_settings.setter
+    def stt_settings(self, val):
+        settings = self.get_settings()
+        settings["stt_settings"] = val
+        self.set_settings(settings)
+
+    @property
+    def controlnet_settings(self):
+        return self.get_settings()["controlnet_settings"]
+    
+    @controlnet_settings.setter
+    def controlnet_settings(self, val):
+        settings = self.get_settings()
+        settings["controlnet_settings"] = val
+        self.set_settings(settings)
+
+    @property
+    def metadata_settings(self):
+        return self.get_settings()["metadata_settings"]
+    
+    @metadata_settings.setter
+    def metadata_settings(self, val):
+        settings = self.get_settings()
+        settings["metadata_settings"] = val
+        self.set_settings(settings)
+
+    @property
+    def canvas_settings(self):
+        return self.get_settings()["canvas_settings"]
+    
+    @canvas_settings.setter
+    def canvas_settings(self, val):
+        settings = self.get_settings()
+        settings["canvas_settings"] = val
+        self.set_settings(settings)
+
+    @property
+    def active_grid_settings(self):
+        return self.get_settings()["active_grid_settings"]
+    
+    @active_grid_settings.setter
+    def active_grid_settings(self, val):
+        settings = self.get_settings()
+        settings["active_grid_settings"] = val
+        self.set_settings(settings)
+
+    @property
+    def standard_image_settings(self):
+        return self.get_settings()["standard_image_settings"]
+    
+    @standard_image_settings.setter
+    def standard_image_settings(self, val):
+        settings = self.get_settings()
+        settings["standard_image_settings"] = val
+        self.set_settings(settings)
+
+    @property
+    def path_settings(self):
+        return self.get_settings()["path_settings"]
+    
+    @path_settings.setter
+    def path_settings(self, val):
+        settings = self.get_settings()
+        settings["path_settings"] = val
+        self.set_settings(settings)
+    
+    @property
+    def brush_settings(self):
+        return self.get_settings()["brush_settings"]
+    
+    @brush_settings.setter
+    def brush_settings(self, val):
+        settings = self.get_settings()
+        settings["brush_settings"] = val
+        self.set_settings(settings)
+
+    @property
+    def grid_settings(self):
+        return self.get_settings()["grid_settings"]
+    
+    @grid_settings.setter
+    def grid_settings(self, val):
+        settings = self.get_settings()
+        settings["grid_settings"] = val
+        self.set_settings(settings)
+
+    @property
+    def window_settings(self):
+        return self.get_settings()["window_settings"]
+    
+    @window_settings.setter
+    def window_settings(self, val):
+        settings = self.get_settings()
+        settings["window_settings"] = val
+        self.set_settings(settings)
+
+    @property
+    def shortcut_key_settings(self):
+        return self.get_settings()["shortcut_key_settings"]
+    
+    @shortcut_key_settings.setter
+    def shortcut_key_settings(self, val):
+        settings = self.get_settings()
+        settings["shortcut_key_settings"] = val
+        self.set_settings(settings)
+
+    @property
+    def memory_settings(self):
+        return self.get_settings()["memory_settings"]
+    
+    @memory_settings.setter
+    def memory_settings(self, val):
+        settings = self.get_settings()
+        settings["memory_settings"] = val
+        self.set_settings(settings)
+    
+    @property
+    def llm_generator_settings(self):
+        return self.get_settings()["llm_generator_settings"]
+    
+    @llm_generator_settings.setter
+    def llm_generator_settings(self, val):
+        settings = self.get_settings()
+        settings["llm_generator_settings"] = val
+        self.set_settings(settings)
+
+    @property
+    def tts_settings(self):
+        return self.get_settings()["tts_settings"]
+    
+    @tts_settings.setter
+    def tts_settings(self, val):
+        settings = self.get_settings()
+        settings["tts_settings"] = val
+        self.set_settings(settings)
+
+    @property
+    def llm_templates(self):
+        return self.get_settings()["llm_templates"]
+    
+    @llm_templates.setter
+    def llm_templates(self, val):
+        settings = self.get_settings()
+        settings["llm_templates"] = val
+        self.set_settings(settings)
+
+    @property
+    def settings(self):
+        return self.get_settings()
+    
+    @settings.setter
+    def settings(self, val):
+        self.set_settings(val)
+
+    def reset_paths(self):
+        path_settings = self.path_settings
+        path_settings["hf_cache_path"] = default_hf_cache_dir()
+        path_settings["base_path"] = BASE_PATH
+        path_settings["txt2img_model_path"] = DEFAULT_PATHS["art"]["models"]["txt2img"]
+        path_settings["depth2img_model_path"] = DEFAULT_PATHS["art"]["models"]["depth2img"]
+        path_settings["pix2pix_model_path"] = DEFAULT_PATHS["art"]["models"]["pix2pix"]
+        path_settings["inpaint_model_path"] = DEFAULT_PATHS["art"]["models"]["inpaint"]
+        path_settings["upscale_model_path"] = DEFAULT_PATHS["art"]["models"]["upscale"]
+        path_settings["txt2vid_model_path"] = DEFAULT_PATHS["art"]["models"]["txt2vid"]
+        path_settings["vae_model_path"] = DEFAULT_PATHS["art"]["models"]["vae"]
+        path_settings["embeddings_model_path"] = DEFAULT_PATHS["art"]["models"]["embeddings"]
+        path_settings["lora_model_path"] = DEFAULT_PATHS["art"]["models"]["lora"]
+        path_settings["image_path"] = DEFAULT_PATHS["art"]["other"]["images"]
+        path_settings["video_path"] = DEFAULT_PATHS["art"]["other"]["videos"]
+        path_settings["llm_casuallm_model_path"] = DEFAULT_PATHS["text"]["models"]["casuallm"]
+        path_settings["llm_seq2seq_model_path"] = DEFAULT_PATHS["text"]["models"]["seq2seq"]
+        path_settings["llm_visualqa_model_path"] = DEFAULT_PATHS["text"]["models"]["visualqa"]
+        self.path_settings = path_settings
+
+    @property
+    def is_windows(self):
+        return self.get_service("is_windows")()

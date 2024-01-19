@@ -16,10 +16,10 @@ class DefaultModelWidget(BaseWidget):
         self.show_items_in_scrollarea()
         # find how many models are set to enabled = FAlse
         self.ui.toggle_all.blockSignals(True)
-        disabled_models = self.app.ai_model_get_disabled_default()
+        disabled_models = self.get_service("ai_model_get_disabled_default")()
         if len(disabled_models) == 0:
             self.ui.toggle_all.setCheckState(QtCore.Qt.CheckState.Checked)
-        elif len(disabled_models) < len(self.app.find_models(default=True)):
+        elif len(disabled_models) < len(self.get_service("ai_models_find")(default=True)):
             self.ui.toggle_all.setCheckState(QtCore.Qt.CheckState.PartiallyChecked)
         else:
             self.ui.toggle_all.setCheckState(QtCore.Qt.CheckState.Unchecked)
@@ -35,9 +35,9 @@ class DefaultModelWidget(BaseWidget):
                 child.deleteLater()
         if search:
             # search by name
-            models = self.app.find_models(search, default=True)
+            models = self.get_service("ai_models_find")(search, default=True)
         else:
-            models = self.app.find_models(default=True)
+            models = self.get_service("ai_models_find")(default=True)
         for model_widget in self.model_widgets:
             model_widget.deleteLater()
         self.model_widgets = []
@@ -45,7 +45,7 @@ class DefaultModelWidget(BaseWidget):
             version = model["version"]
             category = model["category"]
             pipeline_action = model["pipeline_action"]
-            pipeline_class = self.app.get_pipeline_classname(pipeline_action, version, category)
+            pipeline_class = self.get_service("get_pipeline_classname")(pipeline_action, version, category)
             model_widget = ModelWidget(
                 path=model["path"],
                 branch=model["branch"],
@@ -69,17 +69,17 @@ class DefaultModelWidget(BaseWidget):
     def toggle_all_state_change(self, val: int):
         if val == 0:
             # disable all by setting AIModel.enabled to False where is_default=True
-            for item in self.app.ai_model_get_all():
+            for item in self.get_service("ai_model_get_all")():
                 item["enabled"] = False
-                self.app.ai_model_update(item)
+                self.get_service("ai_model_update")(item)
             self.show_items_in_scrollarea()
         elif val == 1:
             # self.ui.toggle_all is a checkbox with tri-state enabled, how can we set it to checked?
             self.ui.toggle_all.setCheckState(QtCore.Qt.CheckState.Checked)
         elif val == 2:
-            for item in self.app.ai_model_get_all():
+            for item in self.get_service("ai_model_get_all")():
                 item["enabled"] = True
-                self.app.ai_model_update(item)
+                self.get_service("ai_model_update")(item)
             self.show_items_in_scrollarea()
             
     

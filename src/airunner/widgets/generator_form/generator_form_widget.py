@@ -2,7 +2,6 @@ import random
 
 from PIL import Image
 from PyQt6.QtCore import pyqtSignal, QRect, pyqtSlot
-from airunner.aihandler.enums import EngineRequestCode
 
 from airunner.aihandler.settings import MAX_SEED
 from airunner.widgets.base_widget import BaseWidget
@@ -22,6 +21,8 @@ class GeneratorForm(BaseWidget):
     initialized = False
     parent = None
     generate_signal = pyqtSignal(dict)
+    current_prompt_value = None
+    current_negative_prompt_value = None
 
     @property
     def is_txt2img(self):
@@ -53,77 +54,76 @@ class GeneratorForm(BaseWidget):
 
     @property
     def generator_section(self):
-        return self.app.settings["pipeline"]
+        return self.settings["pipeline"]
 
     @property
     def generator_name(self):
-        return self.app.settings["current_image_generator"]
-
-    @property
-    def generator_settings(self):
-        return self.app.settings["generator_settings"]
+        return self.settings["current_image_generator"]
 
     @property
     def random_seed(self):
-        return self.app.settings["generator_settings"]["random_seed"]
+        return self.generator_settings["random_seed"]
 
     @property
     def seed(self):
-        return self.app.settings["generator_settings"]["seed"]
+        return self.generator_settings["seed"]
 
     @seed.setter
     def seed(self, val):
-        settings = self.app.settings
+        settings = self.settings
         settings["generator_settings"]["seed"] = val
-        self.app.settings = settings
+        self.settings = settings
 
     @property
     def image_scale(self):
-        return self.app.settings["generator_settings"]["image_guidance_scale"]
+        return self.generator_settings["image_guidance_scale"]
 
     @property
     def active_rect(self):
         rect = QRect(
-            self.app.settings["active_grid_settings"]["pos_x"],
-            self.app.settings["active_grid_settings"]["pos_y"],
-            self.app.settings["active_grid_settings"]["width"],
-            self.app.settings["active_grid_settings"]["height"]
+            self.active_grid_settings["pos_x"],
+            self.active_grid_settings["pos_y"],
+            self.active_grid_settings["width"],
+            self.active_grid_settings["height"]
         )
-        rect.translate(-self.app.settings["canvas_settings"]["pos_x"], -self.app.settings["canvas_settings"]["pos_y"])
+        rect.translate(-self.canvas_settings["pos_x"], -self.canvas_settings["pos_y"])
 
         return rect
 
     @property
     def enable_controlnet(self):
-        return self.app.settings["generator_settings"]["enable_controlnet"]
+        return self.generator_settings["enable_controlnet"]
 
     @property
     def controlnet_image(self):
-        return self.app.settings["controlnet_settings"]["image"]
+        return self.controlnet_settings["image"]
 
-    pyqtSlot()
-    def handle_changed_signal(self):
+    def on_application_settings_changed_signal(self):
         # if self.initialized:
-        #     if self.current_prompt_value != self.app.settings["generator_settings"]["prompt"]:
-        #         self.current_prompt_value = self.app.settings["generator_settings"]["prompt"]
+        #     if self.current_prompt_value != self.generator_settings["prompt"]:
+        #         self.current_prompt_value = self.generator_settings["prompt"]
         #         self.ui.prompt.setPlainText(self.current_prompt_value)
-        #     if self.current_negative_prompt_value != self.app.settings["generator_settings"]["negative_prompt"]:
-        #         self.current_negative_prompt_value = self.app.settings["generator_settings"]["negative_prompt"]
+        #     if self.current_negative_prompt_value != self.generator_settings["negative_prompt"]:
+        #         self.current_negative_prompt_value = self.generator_settings["negative_prompt"]
         #         self.ui.negative_prompt.setPlainText(self.current_negative_prompt_value)
         self.activate_ai_mode()
-
+    
+    @pyqtSlot(object)
+    def on_progress_signal(self, response):
+        self.handle_progress_bar(response["message"])
+    
     def __init__(self, *args, **kwargs):
         super().__init__(*args, **kwargs)
         self.initialized = False
         self.ui.generator_form_tabs.tabBar().hide()
         self.activate_ai_mode()
-        self.app.application_settings_changed_signal.connect(self.handle_changed_signal)
-        
-    current_prompt_value = None
-    current_negative_prompt_value = None
+        self.register("application_settings_changed_signal", self)
+        self.register("generate_image_signal", self)
+        self.register("stop_image_generator_progress_bar_signal", self)
+        self.register("progress_signal", self)
 
     def activate_ai_mode(self):
-        self.ui.generator_form_tabs.setCurrentIndex(1 if self.app.settings["ai_mode"] is True else 0)
+        self.ui.generator_form_tabs.setCurrentIndex(1 if self.settings["ai_mode"] is True else 0)
     
     """
     Slot functions
@@ -132,43 +132,43 @@ class GeneratorForm(BaseWidget):
     signals in the corresponding ui file.
     """
     def action_clicked_button_save_prompts(self):
-        self.app.save_stablediffusion_prompt()
+        self.emit("save_stablediffusion_prompt_signal")
 
     def handle_prompt_changed(self):
-        settings = self.app.settings
+        settings = self.settings
         value = self.ui.prompt.toPlainText()
         self.current_prompt_value = value
         settings["generator_settings"]["prompt"] = value
-        self.app.settings = settings
+        self.settings = settings
 
     def handle_negative_prompt_changed(self):
-        settings = self.app.settings
+        settings = self.settings
         value = self.ui.negative_prompt.toPlainText()
         self.current_negative_prompt_value = value
         settings["generator_settings"]["negative_prompt"] = value
-        self.app.settings = settings
-
-    def toggle_prompt_builder_checkbox(self, toggled):
-        pass
+        self.settings = settings
 
     def handle_generate_button_clicked(self):
         self.start_progress_bar()
-        self.generate(image=self.app.current_active_image())
+        self.generate(image=self.get_service("current_active_image")())
 
     def handle_interrupt_button_clicked(self):
-        self.app.engine.cancel()
+        self.emit("engine_cancel_signal")
     """
     End Slot functions
     """
 
     def generate(self, image=None, seed=None):
         if seed is None:
-            seed = self.app.settings["generator_settings"]["seed"]
-        if self.app.settings["generator_settings"]["n_samples"] > 1:
-            self.app.engine.do_process_queue = False
+            seed = self.generator_settings["seed"]
+        if self.generator_settings["n_samples"] > 1:
+            self.emit("engine_stop_processing_queue_signal")
         self.call_generate(image, seed=seed)
         self.seed_override = None
-        self.app.engine.do_process_queue = True
+        self.emit("engine_start_processing_queue")
+
+    def on_generate_image_signal(self, message):
+        self.call_generate(**message)
 
     def call_generate(self, image=None, seed=None, override_data=None):
         override_data = {} if override_data is None else override_data
@@ -187,10 +187,10 @@ class GeneratorForm(BaseWidget):
             # Get input image from input image
             enable_input_image = override_data.get(
                 "enable_input_image",
-                self.app.settings["generator_settings"]["enable_input_image"]
+                self.generator_settings["enable_input_image"]
             )
             if enable_input_image:
-                input_image = self.app.settings["generator_settings"]["input_image"]
+                input_image = self.generator_settings["input_image"]
             elif self.generator_section == "txt2img":
                 input_image = override_data.get("input_image", None)
                 image = input_image
@@ -198,7 +198,7 @@ class GeneratorForm(BaseWidget):
             override_data["input_image"] = image
 
             if self.is_upscale and image is None:
-                image = self.app.current_active_image()
+                image = self.get_service("current_active_image")()
             
             if self.is_upscale and image is None:
                 return
@@ -206,9 +206,9 @@ class GeneratorForm(BaseWidget):
             if image is None:
                 if self.is_txt2img:
                     return self.do_generate(seed=seed, override_data=override_data)
-                # Create a transparent image the size of self.app.canvas_widget.active_grid_area_rect
-                width = self.app.settings["working_width"]
-                height = self.app.settings["working_height"]
+                # Create a transparent image the size of  active_grid_area_rect
+                width = self.settings["working_width"]
+                height = self.settings["working_height"]
                 image = Image.new("RGBA", (int(width), int(height)), (0, 0, 0, 0))
             
             use_cropped_image = override_data.get("use_cropped_image", True)
@@ -223,21 +223,15 @@ class GeneratorForm(BaseWidget):
                 new_image = Image.new(
                     "RGBA",
                     (
-                        self.app.settings["working_width"], 
-                        self.app.settings["working_height"]
+                        self.settings["working_width"], 
+                        self.settings["working_height"]
                     ),
                     (255, 255, 255, 0)
                 )
 
                 # Get the cropped image
                 cropped_outpaint_box_rect = self.active_rect
-                # crop_location = (
-                #     cropped_outpaint_box_rect.x() - self.app.canvas_widget.image_pivot_point.x(),
-                #     cropped_outpaint_box_rect.y() - self.app.canvas_widget.image_pivot_point.y(),
-                #     cropped_outpaint_box_rect.width() - self.app.canvas_widget.image_pivot_point.x(),
-                #     cropped_outpaint_box_rect.height() - self.app.canvas_widget.image_pivot_point.y()
-                # )
-                current_layer = self.app.current_layer()
+                current_layer = self.get_service("current_layer")()
                 crop_location = (
                     cropped_outpaint_box_rect.x() - current_layer["pos_x"],
                     cropped_outpaint_box_rect.y() - current_layer["pos_y"],
@@ -270,7 +264,7 @@ class GeneratorForm(BaseWidget):
                 "mask": mask,
                 "image": image,
                 "original_image": original_image,
-                "location": QRect(0, 0, self.app.settings["working_width"], self.app.settings["working_height"])
+                "location": QRect(0, 0, self.settings["working_width"], self.settings["working_height"])
             }, seed=seed, override_data=override_data)
         elif self.generator_section == "vid2vid":
             images = self.prep_video()
@@ -301,34 +295,35 @@ class GeneratorForm(BaseWidget):
             override_data = {}
         
         action = override_data.get("action", action)
-        prompt = override_data.get("prompt", self.app.settings["generator_settings"]["prompt"])
-        negative_prompt = override_data.get("negative_prompt", self.app.settings["generator_settings"]["negative_prompt"])
-        steps = int(override_data.get("steps", self.app.settings["generator_settings"]["steps"]))
-        strength = float(override_data.get("strength", self.app.settings["generator_settings"]["strength"] / 100.0))
-        image_guidance_scale = float(override_data.get("image_guidance_scale", self.app.settings["generator_settings"]["image_guidance_scale"] / 10000.0 * 100.0))
-        scale = float(override_data.get("scale", self.app.settings["generator_settings"]["scale"] / 100))
-        seed = int(override_data.get("seed", self.app.settings["generator_settings"]["seed"]))
-        ddim_eta = float(override_data.get("ddim_eta", self.app.settings["generator_settings"]["ddim_eta"]))
+        prompt = override_data.get("prompt", self.generator_settings["prompt"])
+        negative_prompt = override_data.get("negative_prompt", self.generator_settings["negative_prompt"])
+        steps = int(override_data.get("steps", self.generator_settings["steps"]))
+        strength = float(override_data.get("strength", self.generator_settings["strength"] / 100.0))
+        image_guidance_scale = float(override_data.get("image_guidance_scale", self.generator_settings["image_guidance_scale"] / 10000.0 * 100.0))
+        scale = float(override_data.get("scale", self.generator_settings["scale"] / 100))
+        seed = int(override_data.get("seed", self.generator_settings["seed"]))
+        ddim_eta = float(override_data.get("ddim_eta", self.generator_settings["ddim_eta"]))
         n_iter = int(override_data.get("n_iter", 1))
-        n_samples = int(override_data.get("n_samples", self.app.settings["generator_settings"]["n_samples"]))
+        n_samples = int(override_data.get("n_samples", self.generator_settings["n_samples"]))
         # iterate over all keys in model_data
         model_data = {}
         for k,v in override_data.items():
             if k.startswith("model_data_"):
                 model_data[k.replace("model_data_", "")] = v
-        scheduler = override_data.get("scheduler", self.app.settings["generator_settings"]["scheduler"])
-        enable_controlnet = bool(override_data.get("enable_controlnet", self.app.settings["generator_settings"]["enable_controlnet"]))
-        controlnet = override_data.get("controlnet", self.app.settings["generator_settings"]["controlnet"])
-        controlnet_conditioning_scale = float(override_data.get("controlnet_conditioning_scale", self.app.settings["generator_settings"]["controlnet_guidance_scale"]))
-        width = int(override_data.get("width", self.app.settings["working_width"]))
-        height = int(override_data.get("height", self.app.settings["working_height"]))
-        clip_skip = int(override_data.get("clip_skip", self.app.settings["generator_settings"]["clip_skip"]))
+        scheduler = override_data.get("scheduler", self.generator_settings["scheduler"])
+        enable_controlnet = bool(override_data.get("enable_controlnet", self.generator_settings["enable_controlnet"]))
+        controlnet = override_data.get("controlnet", self.generator_settings["controlnet"])
+        controlnet_conditioning_scale = float(override_data.get("controlnet_conditioning_scale", self.generator_settings["controlnet_guidance_scale"]))
+        width = int(override_data.get("width", self.settings["working_width"]))
+        height = int(override_data.get("height", self.settings["working_height"]))
+        clip_skip = int(override_data.get("clip_skip", self.generator_settings["clip_skip"]))
         batch_size = int(override_data.get("batch_size", 1))
 
 
         # get the model from the database
-        name = model_data["name"] if "name" in model_data else self.app.settings["generator_settings"]["model"]
-        model = self.app.ai_model_by_name(name)
+        print(model_data, self.generator_settings["model"])
+        name = model_data["name"] if "name" in model_data else self.generator_settings["model"]
+        model = self.get_service("ai_model_by_name")(name)
         # set the model data, first using model_data pulled from the override_data
         model_data = dict(
             name=model_data.get("name", model["name"]),
@@ -370,7 +365,7 @@ class GeneratorForm(BaseWidget):
             }
 
         # get controlnet_dropdown from active tab
-        nsfw_filter = self.app.settings["nsfw_filter"]
+        nsfw_filter = self.settings["nsfw_filter"]
         options = dict(
             sd_request=True,
             prompt=prompt,
@@ -395,37 +390,33 @@ class GeneratorForm(BaseWidget):
             pos_x=0,
             pos_y=0,
             outpaint_box_rect=self.active_rect,
-            hf_token=self.app.settings["hf_api_key_read_key"],
-            model_base_path=self.app.settings["path_settings"]["base_path"],
-            outpaint_model_path=self.app.settings["path_settings"]["inpaint_model_path"],
-            pix2pix_model_path=self.app.settings["path_settings"]["pix2pix_model_path"],
-            depth2img_model_path=self.app.settings["path_settings"]["depth2img_model_path"],
-            upscale_model_path=self.app.settings["path_settings"]["upscale_model_path"],
-            image_path=self.app.settings["path_settings"]["image_path"],
-            lora_path=self.app.settings["path_settings"]["lora_model_path"],
-            embeddings_path=self.app.settings["path_settings"]["embeddings_model_path"],
-            video_path=self.app.settings["path_settings"]["video_path"],
+            hf_token=self.settings["hf_api_key_read_key"],
+            model_base_path=self.path_settings["base_path"],
+            outpaint_model_path=self.path_settings["inpaint_model_path"],
+            pix2pix_model_path=self.path_settings["pix2pix_model_path"],
+            depth2img_model_path=self.path_settings["depth2img_model_path"],
+            upscale_model_path=self.path_settings["upscale_model_path"],
+            image_path=self.path_settings["image_path"],
+            lora_path=self.path_settings["lora_model_path"],
+            embeddings_path=self.path_settings["embeddings_model_path"],
+            video_path=self.path_settings["video_path"],
             clip_skip=clip_skip,
             batch_size=batch_size,
-            variation=self.app.settings["generator_settings"]["variation"],
+            variation=self.generator_settings["variation"],
             deterministic_generation=False,
             input_image=input_image,
             enable_controlnet=enable_controlnet,
             controlnet_conditioning_scale=controlnet_conditioning_scale,
             controlnet=controlnet,
-            allow_online_mode=self.app.settings["allow_online_mode"],
-            hf_api_key_read_key=self.app.settings["hf_api_key_read_key"],
-            hf_api_key_write_key=self.app.settings["hf_api_key_write_key"],
-            unload_unused_model=self.app.settings["memory_settings"]["unload_unused_models"],
-            move_unused_model_to_cpu=self.app.settings["memory_settings"]["move_unused_model_to_cpu"],
+            allow_online_mode=self.settings["allow_online_mode"],
+            hf_api_key_read_key=self.settings["hf_api_key_read_key"],
+            hf_api_key_write_key=self.settings["hf_api_key_write_key"],
+            unload_unused_model=self.memory_settings["unload_unused_models"],
+            move_unused_model_to_cpu=self.memory_settings["move_unused_model_to_cpu"],
         )
 
         if self.controlnet_image:
             options["controlnet_image"] = self.controlnet_image
-
-        if action == "superresolution":
-            options["original_image_width"] = self.app.canvas_widget.current_active_image_data.image.width
-            options["original_image_height"] = self.app.canvas_widget.current_active_image_data.image.height
 
         if action in ["txt2img", "img2img", "outpaint", "depth2img"]:
             options[f"strength"] = strength
@@ -436,37 +427,34 @@ class GeneratorForm(BaseWidget):
         Emitting generate_signal with options allows us to pass more options to the dict from
         modal windows such as the image interpolation window.
         """
-        self.app.generate_signal.emit(options)
+        self.emit("generate_image_signal", options)
 
         memory_options = self.get_memory_options()
 
-        self.app.engine.do_request(
-            code=EngineRequestCode.GENERATE_IMAGE, 
-            message={
-                "action": action,
-                "options": {
-                    **options,
-                    **extra_options,
-                    **memory_options
-                }
+        self.emit("image_generate_request_signal", dict(
+            action=action,
+            options={
+                **options,
+                **extra_options,
+                **memory_options
             }
-        )
+        ))
 
 
     def get_memory_options(self):
         return {
-            "use_last_channels": self.app.settings["memory_settings"]["use_last_channels"],
-            "use_enable_sequential_cpu_offload": self.app.settings["memory_settings"]["use_enable_sequential_cpu_offload"],
-            "enable_model_cpu_offload": self.app.settings["memory_settings"]["enable_model_cpu_offload"],
-            "use_attention_slicing": self.app.settings["memory_settings"]["use_attention_slicing"],
-            "use_tf32": self.app.settings["memory_settings"]["use_tf32"],
-            "use_cudnn_benchmark": self.app.settings["memory_settings"]["use_cudnn_benchmark"],
-            "use_enable_vae_slicing": self.app.settings["memory_settings"]["use_enable_vae_slicing"],
-            "use_accelerated_transformers": self.app.settings["memory_settings"]["use_accelerated_transformers"],
-            "use_torch_compile": self.app.settings["memory_settings"]["use_torch_compile"],
-            "use_tiled_vae": self.app.settings["memory_settings"]["use_tiled_vae"],
-            "use_tome_sd": self.app.settings["memory_settings"]["use_tome_sd"],
-            "tome_sd_ratio": self.app.settings["memory_settings"]["tome_sd_ratio"],
+            "use_last_channels": self.memory_settings["use_last_channels"],
+            "use_enable_sequential_cpu_offload": self.memory_settings["use_enable_sequential_cpu_offload"],
+            "enable_model_cpu_offload": self.memory_settings["enable_model_cpu_offload"],
+            "use_attention_slicing": self.memory_settings["use_attention_slicing"],
+            "use_tf32": self.memory_settings["use_tf32"],
+            "use_cudnn_benchmark": self.memory_settings["use_cudnn_benchmark"],
+            "use_enable_vae_slicing": self.memory_settings["use_enable_vae_slicing"],
+            "use_accelerated_transformers": self.memory_settings["use_accelerated_transformers"],
+            "use_torch_compile": self.memory_settings["use_torch_compile"],
+            "use_tiled_vae": self.memory_settings["use_tiled_vae"],
+            "use_tome_sd": self.memory_settings["use_tome_sd"],
+            "tome_sd_ratio": self.memory_settings["tome_sd_ratio"],
         }
 
     def set_seed(self, seed=None):
@@ -484,20 +472,32 @@ class GeneratorForm(BaseWidget):
         elif seed is not None:
             self.seed = seed
 
+    def handle_progress_bar(self, message):
+        step = message.get("step")
+        total = message.get("total")
+        action = message.get("action")
+        tab_section = message.get("tab_section")
+
+        if step == 0 and total == 0:
+            current = 0
+        else:
+            try:
+                current = (step / total)
+            except ZeroDivisionError:
+                current = 0
+        self.set_progress_bar_value(tab_section, action, int(current * 100))
+    
+    def set_progress_bar_value(self, tab_section, section, value):
+        progressbar = self.ui.progress_bar
+        if not progressbar:
+            return
+        if progressbar.maximum() == 0:
+            progressbar.setRange(0, 100)
+        progressbar.setValue(value)
+
     def start_progress_bar(self):
         self.ui.progress_bar.setRange(0, 0)
         self.ui.progress_bar.show()
-        # self.app.message_handler_signal.emit({
-        #     "message": {
-        #         "step": 0,
-        #         "total": 0,
-        #         "action": self.generator_section,
-        #         "image": None,
-        #         "data": None,
-        #         "tab_section": self.generator_name,
-        #     },
-        #     "code": EngineResponseCode.PROGRESS
-        # })
 
     def handle_checkbox_change(self, key, widget_name):
         widget = getattr(self.ui, widget_name)
@@ -506,15 +506,16 @@ class GeneratorForm(BaseWidget):
         self.save_db_session()
         self.changed_signal.emit(key, value)
 
-    def initialize(self):
+    def showEvent(self, event):
+        super().showEvent(event)
         self.set_form_values()
         self.initialized = True
     
     def set_form_values(self):
         self.ui.prompt.blockSignals(True)
         self.ui.negative_prompt.blockSignals(True)
-        self.ui.prompt.setPlainText(self.app.settings["generator_settings"]["prompt"])
-        self.ui.negative_prompt.setPlainText(self.app.settings["generator_settings"]["negative_prompt"])
+        self.ui.prompt.setPlainText(self.generator_settings["prompt"])
+        self.ui.negative_prompt.setPlainText(self.generator_settings["negative_prompt"])
         self.ui.prompt.blockSignals(False)
         self.ui.negative_prompt.blockSignals(False)
 
@@ -544,20 +545,12 @@ class GeneratorForm(BaseWidget):
         self.deterministic_data = None
         self.deterministic_images = None
     
-    def set_progress_bar_value(self, tab_section, section, value):
-        progressbar = self.ui.progress_bar
-        if not progressbar:
-            return
-        if progressbar.maximum() == 0:
-            progressbar.setRange(0, 100)
-        progressbar.setValue(value)
-    
+    def on_stop_image_generator_progress_bar_signal(self):
+        self.stop_progress_bar()
+
     def stop_progress_bar(self):
         progressbar = self.ui.progress_bar
         if not progressbar:
             return
         progressbar.setRange(0, 100)
         progressbar.setValue(100)
-
-    def handle_prompt_builder_button_toggled(self, val):
-        self.app.toggle_prompt_builder(val)
