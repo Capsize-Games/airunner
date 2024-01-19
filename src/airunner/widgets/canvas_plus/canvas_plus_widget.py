@@ -1,5 +1,5 @@
 import io
-import math
+import base64
 import subprocess
 from functools import partial
 
@@ -10,7 +10,6 @@ from PyQt6.QtGui import QBrush, QColor, QPen, QPixmap
 from PyQt6.QtWidgets import QGraphicsPixmapItem
 from PyQt6 import QtWidgets, QtCore
 from PyQt6.QtWidgets import QGraphicsItemGroup
-from PyQt6.QtCore import pyqtSlot, pyqtSignal, QThread
 from airunner.aihandler.enums import EngineResponseCode
 
 from airunner.workers.image_data_worker import ImageDataWorker
@@ -151,7 +150,24 @@ class CanvasPlusWidget(BaseWidget):
     
     @current_active_image.setter
     def current_active_image(self, value):
-        self.app.add_image_to_current_layer(value)
+        self.add_image_to_current_layer(value)
+    
+    def add_image_to_current_layer(self,value):
+        self.logger.info("Adding image to current layer")
+        layer_index = self.app.settings["current_layer_index"]
+        base_64_image = ""
+
+        try:
+            if value:
+                buffered = io.BytesIO()
+                value.save(buffered, format="PNG")
+                base_64_image = base64.b64encode(buffered.getvalue())
+        except Exception as e:
+            self.logger.error(e)
+        
+        settings = self.app.settings
+        settings["layers"][layer_index]["base_64_image"] = base_64_image
+        self.app.settings = settings
 
     @property
     def layer_container_widget(self):
@@ -185,13 +201,14 @@ class CanvasPlusWidget(BaseWidget):
         self.do_draw()
 
     def on_image_generated_signal(self, image_data: dict):
-        self.image_data_worker.add_to_queue(dict(
-            auto_export_images=self.app.settings["auto_export_images"],
-            base_path=self.app.settings["path_settings"]["base_path"],
-            image_path=self.app.settings["path_settings"]["image_path"],
-            image_export_type=self.app.settings["image_export_type"],
-            image_data=image_data
-        ))
+        # self.image_data_worker.add_to_queue(dict(
+        #     auto_export_images=self.app.settings["auto_export_images"],
+        #     base_path=self.app.settings["path_settings"]["base_path"],
+        #     image_path=self.app.settings["path_settings"]["image_path"],
+        #     image_export_type=self.app.settings["image_export_type"],
+        #     image_data=image_data
+        # ))
+        self.add_image_to_scene(image_data["images"][0])
 
     def on_CanvasResizeWorker_response_signal(self, line_data: tuple):
         print("on_CanvasResizeWorker_response_signal:", line_data)
@@ -460,8 +477,10 @@ class CanvasPlusWidget(BaseWidget):
                     self.scene.removeItem(layer["pixmap"])
             elif layer["visible"]:
                 if type(layer["pixmap"]) is not DraggablePixmap or layer["pixmap"] not in self.scene.items():
+                    print("adding to scene")
                     layer["pixmap"].convertFromImage(ImageQt(image))
                     layer["pixmap"] = DraggablePixmap(self, layer["pixmap"])
+
                     self.app.update_layer(layer)
                     self.scene.addItem(layer["pixmap"])
             continue
@@ -499,7 +518,7 @@ class CanvasPlusWidget(BaseWidget):
         self.view_size = self.view.viewport().size()
         self.set_scene_rect()
         self.draw_grid()
-        #self.draw_layers()
+        self.draw_layers()
         #self.draw_active_grid_area_container()
         self.ui.canvas_position.setText(
             f"X {-self.app.settings['canvas_settings']['pos_x']: 05d} Y {self.app.settings['canvas_settings']['pos_y']: 05d}"
@@ -586,7 +605,13 @@ class CanvasPlusWidget(BaseWidget):
         self.load_image_from_object(image)
     
     def load_image_from_object(self, image, is_outpaint=False, image_root_point=None):
-        self.add_image_to_scene(image, is_outpaint=is_outpaint, image_root_point=image_root_point)
+        self.add_image_to_scene(
+            image_data=dict(
+                image=image
+            ), 
+            is_outpaint=is_outpaint, 
+            image_root_point=image_root_point
+        )
 
     def load_image(self, image_path):
         image = Image.open(image_path)
@@ -678,10 +703,10 @@ class CanvasPlusWidget(BaseWidget):
             self.scene.removeItem(current_draggable_pixmap)
     
     def add_layer(self):
-        return self.app.ui.layer_widget.add_layer()
+        self.emit("add_layer_signal")
 
     def switch_to_layer(self, layer_index):
-        self.app.switch_layer(layer_index)
+        self.emit("switch_layer_signal", layer_index)
 
     def add_image_to_scene(self, image_data, is_outpaint=False, image_root_point=None):
         #self.image_adder = ImageAdder(self, image, is_outpaint, image_root_point)

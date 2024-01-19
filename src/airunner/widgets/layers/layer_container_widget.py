@@ -17,6 +17,7 @@ class LayerContainerWidget(BaseWidget):
     def __init__(self, *args, **kwargs):
         super().__init__(*args, **kwargs)
         self.app.show_layers_signal.connect(self.show_layers)
+        self.register("add_layer_signal", self)
 
     def showEvent(self, event):
         super().showEvent(event)
@@ -42,18 +43,17 @@ class LayerContainerWidget(BaseWidget):
     def action_clicked_button_delete_selected_layers(self):
         self.delete_selected_layers()
         self.delete_layer()
+    
+    pyqtSlot()
+    def on_add_layer_signal(self, layer):
+        self.add_layer()
 
     def add_layers(self):
         for layer in self.app.settings["layers"]:
             self.add_layer_widget(layer, layer.position)
 
     def add_layer(self):
-        return self.create_layer()
-
-    def create_layer(self):
-        index = self.app.add_layer()
-        self.app.switch_layer(index)
-        return index
+        self.emit("create_layer_signal")
 
     def add_layer_widget(self, layer_data, index):
         self.logger.info(f"add_layer_widget index={index}")
