@@ -1133,7 +1133,6 @@ class SDRunner(
         args["clip_skip"] = self.clip_skip
 
         with torch.inference_mode():
-            print(args)
             for n in range(self.n_samples):
                 return self.pipe(**args)
 

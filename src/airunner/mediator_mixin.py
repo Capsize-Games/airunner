@@ -22,7 +22,6 @@ class MediatorMixin:
     pyqtSlot(object, object)
     def receive(self, signal_name, *args, **kwargs):
         method_name = f"on_{signal_name}"
-        print(method_name)
         if hasattr(self, method_name):
             method = getattr(self, method_name)
             method(*args, **kwargs)
