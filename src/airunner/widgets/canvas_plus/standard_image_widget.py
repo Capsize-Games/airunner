@@ -46,15 +46,6 @@ class StandardImageWidget(BaseWidget):
         super().__init__(*args, **kwargs)
         self.ui.advanced_settings.hide()
         self.load_upscale_options()
-        self.set_controlnet_settings_properties()
-        self.set_input_image_widget_properties()
-    
-    def set_controlnet_settings_properties(self):
-        self.ui.controlnet_settings.initialize()
-
-    def set_input_image_widget_properties(self):
-        self.ui.input_image_widget.initialize()
-        self.ui.controlnet_settings.initialize()
     
     def update_image_input_thumbnail(self):
         self.ui.input_image_widget.set_thumbnail()
@@ -223,7 +214,8 @@ class StandardImageWidget(BaseWidget):
             override_data=meta_data
         )
     
-    def initialize(self):
+    def showEvent(self, event):
+        super().showEvent(event)
         # find all SliderWidget widgets in the template and call initialize
         for widget in self.findChildren(SliderWidget):
             try:
