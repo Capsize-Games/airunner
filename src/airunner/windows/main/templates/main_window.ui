@@ -652,7 +652,7 @@
                <x>0</x>
                <y>0</y>
                <width>407</width>
-               <height>1057</height>
+               <height>1062</height>
               </rect>
              </property>
              <layout class="QGridLayout" name="gridLayout">
@@ -2097,22 +2097,6 @@
    <signal>triggered()</signal>
    <receiver>MainWindow</receiver>
    <slot>action_show_about_window()</slot>
-   <hints>
-    <hint type="sourcelabel">
-     <x>-1</x>
-     <y>-1</y>
-    </hint>
-    <hint type="destinationlabel">
-     <x>442</x>
-     <y>432</y>
-    </hint>
-   </hints>
-  </connection>
-  <connection>
-   <sender>actionPrompt_Builder</sender>
-   <signal>triggered()</signal>
-   <receiver>MainWindow</receiver>
-   <slot>action_show_prompt_builder()</slot>
    <hints>
     <hint type="sourcelabel">
      <x>-1</x>
