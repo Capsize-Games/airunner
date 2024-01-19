@@ -40,7 +40,8 @@ class LLMSettingsWidget(BaseWidget):
     def current_generator(self):
         return self.app.settings["current_llm_generator"]
 
-    def initialize(self):
+    def showEvent(self, event):
+        super().showEvent(event)
         self.initialize_form()
 
     def early_stopping_toggled(self, val):

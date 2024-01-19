@@ -26,7 +26,8 @@ class PathWidget(BaseWidget):
     def path(self):
         return self.app.settings["path_settings"][self.path_name]
 
-    def initialize(self):
+    def showEvent(self, event):
+        super().showEvent(event)
         self.ui.title_label.setText(self.title)
         self.ui.description_label.setText(self.description)
         path = self.path
