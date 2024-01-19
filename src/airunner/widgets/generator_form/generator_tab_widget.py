@@ -75,9 +75,6 @@ class GeneratorTabWidget(BaseWidget):
             traceback.print_stack()
             print(e)
 
-    def initialize(self):
-        pass
-
     def refresh_models(self):
         # iterate over all generator tabs and call load_models on the generatorform widget
         from airunner.widgets.generator_form.generator_form_widget import GeneratorForm

@@ -31,7 +31,6 @@ class BaseWidget(QWidget, MediatorMixin):
         super().__init__(*args, **kwargs)
         MediatorMixin.__init__(self)
         self.app = get_main_window()
-        self.app.main_window_loaded.connect(self.on_main_window_loaded)
         
         if self.widget_class_:
             self.ui = self.widget_class_()
@@ -45,10 +44,8 @@ class BaseWidget(QWidget, MediatorMixin):
             #     self.setStyleSheet(stylesheet)
             self.set_icons()
     
-    def on_main_window_loaded(self):
-        self.initialize()
-    
-    def initialize(self):
+    def showEvent(self, event):
+        super().showEvent(event)
         """
         Triggered when the app is loaded.
         Override this function in order to initialize the widget rather than

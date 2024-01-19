@@ -233,7 +233,8 @@ class ControlNetSettingsWidget(InputImageSettingsWidget):
             # clear the image
             self.ui.mask_thumbnail.clear()
     
-    def initialize(self):
+    def showEvent(self, event):
+        super().showEvent(event)
         super().initialize()
         self.initialize_combobox()
     
