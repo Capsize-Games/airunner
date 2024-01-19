@@ -18,16 +18,16 @@ class EmbeddingWidget(BaseWidget):
             self.ui.tags.hide()
 
     def action_clicked_button_to_prompt(self):
-        val = f"{self.app.settings['generator_settings']['prompt']} {self.embedding['name']}"
-        settings = self.app.settings
+        val = f"{self.settings['generator_settings']['prompt']} {self.embedding['name']}"
+        settings = self.settings
         settings["generator_settings"]["prompt"] = val
-        self.app.settings = settings
+        self.settings = settings
 
     def action_clicked_button_to_negative_prompt(self):
-        val = f"{self.app.settings['generator_settings']['negative_prompt']} {self.embedding['name']}"
-        settings = self.app.settings
+        val = f"{self.settings['generator_settings']['negative_prompt']} {self.embedding['name']}"
+        settings = self.settings
         settings["generator_settings"]["negative_prompt"] = val
-        self.app.settings = settings
+        self.settings = settings
 
     def action_toggled_embedding(self, val):
         self.embedding['active'] = val

@@ -37,16 +37,17 @@ class ImagePanelWidget(BaseWidget):
         self.ui.scrollAreaWidgetContents.setLayout(flowLayout)
         self.display_thread = threading.Thread(target=self.display_thumbnails)
 
-        self.app.engine.image_generated_signal.connect(self.handle_image_data)
+        self.register("image_generated_signal", self)
     
-    def handle_image_data(self, data):
+    def on_image_generated_signal(self, data):
         for image in data["images"]:
             image_widget = ImageWidget(self, is_thumbnail=True)
             image_widget.set_image(image["path"])
             self.ui.scrollAreaWidgetContents.layout().addWidget(image_widget)
     
-    def initialize(self):
-        if self.app.settings["path_settings"]["image_path"] != "":
+    def showEvent(self, event):
+        super().showEvent(event)
+        if self.path_settings["image_path"] != "":
             self.load_files()
             self.show_files()
         else:
@@ -84,12 +85,12 @@ class ImagePanelWidget(BaseWidget):
         Returns:
             None
         """
-        files_in_image_path = os.listdir(self.app.settings["path_settings"]["image_path"])
+        files_in_image_path = os.listdir(self.path_settings["image_path"])
         sorted_files = {}
         for file in files_in_image_path:
-            if os.path.isdir(os.path.join(self.app.settings["path_settings"]["image_path"], file)):
+            if os.path.isdir(os.path.join(self.path_settings["image_path"], file)):
                 sorted_files[file] = []
-                for root, dirs, files_in_dir in os.walk(os.path.join(self.app.settings["path_settings"]["image_path"], file)):
+                for root, dirs, files_in_dir in os.walk(os.path.join(self.path_settings["image_path"], file)):
                     files = []
                     for f in files_in_dir:
                         if ".png.thumbnail.png" not in f:
@@ -112,7 +113,7 @@ class ImagePanelWidget(BaseWidget):
         for file in self.sorted_files[self.start:self.end]:
             if file.endswith(".png"):
                 image_widget = ImageWidget(self, is_thumbnail=True)
-                image_widget.set_image(os.path.join(self.app.settings["path_settings"]["image_path"], file))
+                image_widget.set_image(os.path.join(self.path_settings["image_path"], file))
                 self.ui.scrollAreaWidgetContents.layout().addWidget(image_widget)
     
     def handle_folder_clicked(self, path):

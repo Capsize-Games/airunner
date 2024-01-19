@@ -1,7 +1,6 @@
 from PyQt6.QtCore import pyqtSlot
 from PyQt6.QtWidgets import QWidget, QSizePolicy
 
-from airunner.aihandler.enums import EngineResponseCode
 from airunner.widgets.base_widget import BaseWidget
 from airunner.widgets.embeddings.embedding_widget import EmbeddingWidget
 from airunner.widgets.embeddings.templates.embeddings_container_ui import Ui_embeddings_container
@@ -17,9 +16,7 @@ class EmbeddingsContainerWidget(BaseWidget):
 
     def __init__(self, *args, **kwargs):
         super().__init__(*args, **kwargs)
-        self.app.generator_tab_changed_signal.connect(self.handle_generator_tab_changed)
-        self.app.tab_section_changed_signal.connect(self.handle_tab_section_changed)
-        self.app.message_handler_signal.connect(self.message_handler)
+        self.register("embedding_load_failed_signal", self)
 
         self.scan_for_embeddings()
 
@@ -38,9 +35,6 @@ class EmbeddingsContainerWidget(BaseWidget):
     def enable_embeddings(self):
         for name in self.embedding_widgets.keys():
             enable = True
-            if name in self.bad_model_embedding_map:
-                if self.app.model in self.bad_model_embedding_map[name]:
-                    enable = False
             self.embedding_widgets[name].setEnabled(enable)
 
     def handle_embedding_load_failed(self, message):
@@ -52,32 +46,16 @@ class EmbeddingsContainerWidget(BaseWidget):
 
     def update_embedding_names(self):
         self._embedding_names = None
-        for tab_name in self.app.tabs.keys():
-            tab = self.app.tabs[tab_name]
-            # clear embeddings
-            try:
-                tab.embeddings.widget().deleteLater()
-            except AttributeError:
-                pass
-            self.load_embeddings(tab)
+        self.load_embeddings()
 
-    def handle_generator_tab_changed(self):
-        self.enable_embeddings()
-
-    def handle_tab_section_changed(self):
-        self.enable_embeddings()
-
-    @pyqtSlot(dict)
-    def message_handler(self, response: dict):
-        code = response["code"]
-        message = response["message"]
-        if code == EngineResponseCode.EMBEDDING_LOAD_FAILED:
-            self.handle_embedding_load_failed(message)
+    @pyqtSlot(object)
+    def on_embedding_load_failed_signal(self, response: dict):
+        self.handle_embedding_load_failed(response["message"])
 
     def load_embeddings(self):
         self.clear_embedding_widgets()
         
-        embeddings = self.app.get_embeddings(self.search_filter)
+        embeddings = self.get_service("get_embeddings")(self.search_filter)
         
         for embedding in embeddings:
             self.add_embedding(embedding)
@@ -96,10 +74,10 @@ class EmbeddingsContainerWidget(BaseWidget):
         self.scan_for_embeddings()
     
     def check_saved_embeddings(self):
-        self.app.delete_missing_embeddings()
+        self.get_service("delete_missing_embeddings")()
 
     def scan_for_embeddings(self):
-        self.app.scan_for_embeddings()
+        self.get_service("scan_for_embeddings")()
         self.load_embeddings()
 
     def toggle_all_toggled(self, checked):

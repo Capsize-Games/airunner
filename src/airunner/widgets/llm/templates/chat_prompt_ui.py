@@ -61,6 +61,7 @@ class Ui_chat_prompt(object):
         self.retranslateUi(chat_prompt)
         self.send_button.clicked.connect(chat_prompt.action_button_clicked_send) # type: ignore
         self.clear_conversatiion_button.clicked.connect(chat_prompt.action_button_clicked_clear_conversation) # type: ignore
+        self.prompt.textChanged.connect(chat_prompt.prompt_text_changed) # type: ignore
         QtCore.QMetaObject.connectSlotsByName(chat_prompt)
 
     def retranslateUi(self, chat_prompt):

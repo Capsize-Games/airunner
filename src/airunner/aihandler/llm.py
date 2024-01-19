@@ -11,46 +11,45 @@ from transformers import InstructBlipProcessor
 from transformers import TextIteratorStreamer
 
 from PyQt6.QtCore import QObject
-from PyQt6.QtCore import pyqtSignal, pyqtSlot, QThread
 
-from airunner.aihandler.enums import EngineResponseCode
 from airunner.aihandler.logger import Logger
 from airunner.workers.worker import Worker
+from airunner.mediator_mixin import MediatorMixin
 
-class GenerateWorker(Worker):
-    def __init__(self, prefix):
+class LLMGenerateWorker(Worker):
+    def __init__(self, prefix="LLMGenerateWorker"):
         self.llm = LLM()
         super().__init__(prefix=prefix)
+        self.register("clear_history", self)
 
     def handle_message(self, message):
         for response in self.llm.do_generate(message):
-            self.response_signal.emit(response)
+            self.emit("llm_text_streamed_signal", response)
+    
+    def on_clear_history(self):
+        self.llm.clear_history()
 
 
-class LLMController(QObject):
-    logger = Logger(prefix="LLMController")
-    response_signal = pyqtSignal(dict)
+class LLMRequestWorker(Worker):
+    def __init__(self, prefix="LLMRequestWorker"):
+        super().__init__(prefix=prefix)
+    
+    def handle_message(self, message):
+        super().handle_message(message)
 
+
+class LLMController(QObject, MediatorMixin):
+    
     def __init__(self, *args, **kwargs):
-        self.engine = kwargs.pop("engine", None)
-        self.app = self.engine.app
+        MediatorMixin.__init__(self)
+        self.engine = kwargs.pop("engine")
         super().__init__(*args, **kwargs)
+        self.logger = Logger(prefix="LLMController")
         
-        self.request_worker = Worker(prefix="LLM Request Worker")
-        self.request_worker_thread = QThread()
-        self.request_worker.moveToThread(self.request_worker_thread)
-        self.request_worker.response_signal.connect(self.request_worker_response_signal_slot)
-        self.request_worker.finished.connect(self.request_worker_thread.quit)
-        self.request_worker_thread.started.connect(self.request_worker.start)
-        self.request_worker_thread.start()
-
-        self.generate_worker = GenerateWorker(prefix="LLM Generate Worker")
-        self.generate_worker_thread = QThread()
-        self.generate_worker.moveToThread(self.generate_worker_thread)
-        self.generate_worker.response_signal.connect(self.generate_worker_response_signal_slot)
-        self.generate_worker.finished.connect(self.generate_worker_thread.quit)
-        self.generate_worker_thread.started.connect(self.generate_worker.start)
-        self.generate_worker_thread.start()
+        self.request_worker = self.create_worker(LLMRequestWorker)
+        self.generate_worker = self.create_worker(LLMGenerateWorker)
+        self.register("LLMRequestWorker_response_signal", self)
+        self.register("LLMGenerateWorker_response_signal", self)
     
     def pause(self):
         self.request_worker.pause()
@@ -63,20 +62,21 @@ class LLMController(QObject):
     def do_request(self, message):
         self.request_worker.add_to_queue(message)
     
-    @pyqtSlot(dict)
-    def request_worker_response_signal_slot(self, message):
+    def clear_history(self):
+        self.emit("clear_history")
+    
+    def on_LLMRequestWorker_response_signal(self, message):
         self.generate_worker.add_to_queue(message)
     
-    @pyqtSlot(dict)
-    def generate_worker_response_signal_slot(self, message):
-        self.response_signal.emit(message)
+    def on_LLMGenerateWorker_response_signal(self, message:dict):
+        self.emit("llm_controller_response_signal", message)
     
     def do_unload_llm(self):
         self.generate_worker.llm.unload_model()
         self.generate_worker.llm.unload_tokenizer()
 
 
-class LLM(QObject):
+class LLM(QObject, MediatorMixin):
     logger = Logger(prefix="LLM")
     dtype = ""
     local_files_only = True
@@ -138,11 +138,11 @@ class LLM(QObject):
         if self.dtype == "32bit" or not self.use_gpu:
             return False
         return torch.cuda.is_available()
-
+    
     def __init__(self, *args, **kwargs):
         super().__init__(*args, **kwargs)
-        # self.llm_api = LLMAPI(app=app)
-    
+        MediatorMixin.__init__(self)
+
     def move_to_cpu(self):
         if self.model:
             self.logger.info("Moving model to CPU")
@@ -211,7 +211,6 @@ class LLM(QObject):
                 params["quantization_config"] = config
 
         path = self.current_model_path
-        # self.engine.send_message(f"Loading {self.requested_generator_name} model from {path}")
         
         auto_class_ = None
         if self.requested_generator_name == "seq2seq":
@@ -508,6 +507,8 @@ class LLM(QObject):
             n = 0
             streamed_template = ""
             replaced = False
+            is_end_of_message = False
+            is_first_message = True
             for new_text in self.streamer:
                 # strip all newlines from new_text
                 parsed_new_text = new_text.replace("\n", " ")
@@ -532,15 +533,22 @@ class LLM(QObject):
                     replaced = True
                     streamed_template = streamed_template.replace(rendered_template, "")
                 else:
+                    if "</s>" in new_text:
+                        streamed_template = streamed_template.replace("</s>", "")
+                        new_text = new_text.replace("</s>", "")
+                        is_end_of_message = True
                     yield dict(
-                        code=EngineResponseCode.TEXT_STREAMED,
-                        message=new_text
+                        message=new_text,
+                        is_first_message=is_first_message,
+                        is_end_of_message=is_end_of_message,
+                        name=self.botname,
                     )
+                    is_first_message = False
                 
-                if "</s>" in new_text:
+                if is_end_of_message:
                     self.history.append({
                         "role": "bot",
-                        "content": streamed_template.replace("</s>", "").strip()
+                        "content": streamed_template.strip()
                     })
                     streamed_template = ""
                     replaced = False

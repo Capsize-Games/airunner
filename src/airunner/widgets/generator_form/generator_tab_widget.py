@@ -16,9 +16,12 @@ class GeneratorTabWidget(BaseWidget):
     col = 0
     layout = None
 
-    def __init__(self, *args, **kwargs):
-        super().__init__(*args, **kwargs)
-        self.app.loaded.connect(self.initialize)
+    def get_current_input_image(self):
+        """
+        Interface method registered with service manager 
+        so that the current input image can be retrieved from other widgets
+        """
+        return self.current_input_image
 
     @property
     def current_generator_widget(self):
@@ -30,7 +33,7 @@ class GeneratorTabWidget(BaseWidget):
 
     @property
     def current_input_image(self):
-        if self.app.enable_input_image:
+        if self.settings["enable_input_image"]:
             return self.current_input_image_widget.current_input_image
         return None
 
@@ -79,10 +82,12 @@ class GeneratorTabWidget(BaseWidget):
             traceback.print_stack()
             print(e)
 
-    def initialize(self):
-        pass
+    def __init__(self, *args, **kwargs):
+        super().__init__(*args, **kwargs)
+        self.register("refresh_ai_models_signal", self)
+        self.register_service("get_current_input_image", self.current_input_image)
 
-    def refresh_models(self):
+    def on_refresh_ai_models_signal(self):
         # iterate over all generator tabs and call load_models on the generatorform widget
         from airunner.widgets.generator_form.generator_form_widget import GeneratorForm
         for tab in self.ui.generator_form_stablediffusion.findChildren(GeneratorForm):
@@ -101,10 +106,7 @@ class GeneratorTabWidget(BaseWidget):
         if generator_form:
             generator_form.clear_prompts()
 
-    def generate_form(self, tab_section, tab):
-        self.tab_section = tab_section
-        self.tab = tab
-        self.force_tab_section(tab_section, tab)
+    def generate_form(self):
         self.row = 0
         self.col = 0
         self.layout = None
@@ -130,9 +132,9 @@ class GeneratorTabWidget(BaseWidget):
                 self.load_model_by_section(section, tab)
 
     def toggle_variation(self, val):
-        settings = self.app.settings
+        settings = self.settings
         settings["generator_settings"]["variation"] = val
-        self.app.settings = settings
+        self.settings = settings
 
     def set_progress_bar_value(self, tab_section, section, value):
         progressbar = self.find_widget("progress_bar", tab_section, section)
@@ -151,10 +153,6 @@ class GeneratorTabWidget(BaseWidget):
             row = self.row
             self.row += 1
         self.layout.addWidget(widget, row, col, 1, 1)
-
-    def force_tab_section(self, tab_section, tab):
-        self.app.override_current_generator = tab_section
-        self.app.override_section = tab
 
     def set_prompt(self, prompt):
         self.current_generator_widget.ui.prompt.setPlainText(prompt)

@@ -1,47 +1,47 @@
 import os
 from PyQt6 import QtGui
 from PyQt6.QtWidgets import QWidget
-from PyQt6.QtCore import QThread
 
 from airunner.utils import get_main_window
+from airunner.mediator_mixin import MediatorMixin
+from airunner.service_locator import ServiceLocator
+from airunner.windows.main.settings_mixin  import SettingsMixin
 
-
-class BaseWidget(QWidget):
+class BaseWidget(QWidget, SettingsMixin, MediatorMixin):
     widget_class_ = None
     icons = ()
     ui = None
     qss_filename = None
 
+    def register_service(self, name, service):
+        ServiceLocator.register(name, service)
+    
+    def get_service(self, name):
+        return ServiceLocator.get(name)
+
+    @property
+    def settings(self):
+        return ServiceLocator.get('get_settings')()
+
+    @settings.setter
+    def settings(self, value):
+        ServiceLocator.get('set_settings')(value)
+
     @property
     def is_dark(self):
-        if not "dark_mode_enabled" in self.app.settings:
+        if not "dark_mode_enabled" in self.settings:
             return False
-        return self.app.settings["dark_mode_enabled"]
-
-    @property
-    def canvas(self):
-        return self.app.canvas
+        return self.settings["dark_mode_enabled"]
 
     threads = []
-    def create_worker(self, worker_class_, response_signal_slot):
-        prefix = worker_class_.__name__
-        worker = worker_class_(prefix=prefix)
-        worker_thread = QThread()
-        worker.moveToThread(worker_thread)
-        worker.response_signal.connect(response_signal_slot)
-        worker.finished.connect(worker_thread.quit)
-        worker_thread.started.connect(worker.start)
-        worker_thread.start()
-        self.threads.append(worker_thread)
-        return worker
 
     def add_to_grid(self, widget, row, column, row_span=1, column_span=1):
         self.layout().addWidget(widget, row, column, row_span, column_span)
 
     def __init__(self, *args, **kwargs):
+        MediatorMixin.__init__(self)
+        SettingsMixin.__init__(self)
         super().__init__(*args, **kwargs)
-        self.app = get_main_window()
-        self.app.loaded.connect(self.initialize)
         
         if self.widget_class_:
             self.ui = self.widget_class_()
@@ -55,7 +55,8 @@ class BaseWidget(QWidget):
             #     self.setStyleSheet(stylesheet)
             self.set_icons()
     
-    def initialize(self):
+    def showEvent(self, event):
+        super().showEvent(event)
         """
         Triggered when the app is loaded.
         Override this function in order to initialize the widget rather than
@@ -151,13 +152,5 @@ class BaseWidget(QWidget):
             val = self.get_value(element)
         if val is None:
             val = self.get_is_checked(element)
-        # target_val = self.app.settings_manager.get_value(settings_key_name)
-
-        # if val != target_val:
-        #     if not self.set_plain_text(element, target_val):
-        #         if not self.set_text(element, target_val):
-        #             if not self.set_value(element, target_val):
-        #                 if not self.set_is_checked(element, target_val):
-        #                     raise Exception(f"Could not set value for {element} to {target_val}")
         print("TODO: finish this")
 

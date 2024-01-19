@@ -3,12 +3,70 @@ import io
 import uuid
 
 from PyQt6.QtGui import QPixmap
+from PyQt6.QtCore import pyqtSlot
 
 from PIL import Image
 
+from airunner.service_locator import ServiceLocator
+
 
 class LayerMixin:
-    def add_layer(self):
+    def __init__(self):
+        self.register("switch_layer_signal", self)
+        self.register("add_layer_signal", self)
+        self.register("create_layer_signal", self)
+        self.register("update_current_layer_signal", self)
+        self.register("update_layer_signal", self)
+        self.register("delete_current_layer_signal", self)
+        self.register("delete_layer_signal", self)
+        self.register("move_layer_up_signal", self)
+        self.register("move_layer_down_signal", self)
+        self.register("clear_layers_signal", self)
+        self.register("set_current_layer_signal", self)
+
+        ServiceLocator.register("current_layer", self.current_layer)
+        ServiceLocator.register("current_draggable_pixmap", self.current_layer)
+        ServiceLocator.register("current_active_image", self.current_active_image)
+        ServiceLocator.register("get_image_from_layer", self.get_image_from_layer)
+
+    @pyqtSlot(object)
+    def on_delete_layer_signal(self, data):
+        layer = data.get("layer", None)
+        index = data.get("index", None)
+        self.delete_layer(index, layer)
+
+    @pyqtSlot(object)
+    def on_delete_current_layer_signal(self, _ignore):
+        self.delete_layer(self.settings["current_layer_index"], None)
+
+    @pyqtSlot(object)
+    def on_update_layer_signal(self, data):
+        self.update_layer_by_index(data)
+    
+    @pyqtSlot(object)
+    def on_create_layer_signal(self, _ignore):
+        index = self.add_layer()
+        self.switch_layer(index)
+    
+    @pyqtSlot(object)
+    def on_switch_layer_signal(self, index):
+        self.switch_layer(index)
+
+    @pyqtSlot(object)
+    def on_add_layer_signal(self, _ignore):
+        self.add_layer()
+    
+    @pyqtSlot(object)
+    def on_update_current_layer_signal(self, data):
+        current_layer_index = self.settings["current_layer_index"]
+        settings = self.settings
+        layer = settings["layers"][current_layer_index]
+        for k, v in data.items():
+            layer[k] = v
+        settings["layers"][current_layer_index] = layer
+        self.settings = settings
+
+    def add_layer(self) -> int:
         settings = self.settings
         total_layers = len(self.settings['layers'])
         name=f"Layer {total_layers + 1}"
@@ -60,7 +118,8 @@ class LayerMixin:
         self.show_layers()
         self.update()
     
-    def clear_layers(self):
+    @pyqtSlot(object)
+    def on_clear_layers_signal(self, _ignore):
         # delete all widgets from self.container.layout()
         layers = self.settings["layers"]
         for index, layer in enumerate(layers):
@@ -73,22 +132,15 @@ class LayerMixin:
         self.settings = settings
         self.switch_layer(0)
     
-    def set_current_layer(self, index):
+    def on_set_current_layer_signal(self, index):
         self.logger.info(f"set_current_layer current_layer_index={index}")
         self.current_layer_index = index
         if not hasattr(self, "container"):
             return
-        if self.canvas.container:
-            item = self.canvas.container.layout().itemAt(self.current_layer_index)
-            if item:
-                item.widget().frame.setStyleSheet(self.css("layer_normal_style"))
         self.current_layer_index = index
-        if self.canvas.container:
-            item = self.canvas.container.layout().itemAt(self.current_layer_index)
-            if item:
-                item.widget().frame.setStyleSheet(self.css("layer_highlight_style"))
 
-    def move_layer_up(self):
+    @pyqtSlot(object)
+    def on_move_layer_up_signal(self, _ignore):
         layer = self.current_layer()
         settings = self.settings
         index = self.settings["current_layer_index"]
@@ -101,7 +153,8 @@ class LayerMixin:
         settings["layers"] = layers
         self.settings = settings
     
-    def move_layer_down(self):
+    @pyqtSlot(object)
+    def on_move_layer_down_signal(self, _ignore):
         layer = self.current_layer()
         settings = self.settings
         index = self.settings["current_layer_index"]
@@ -121,35 +174,21 @@ class LayerMixin:
             return self.settings["layers"][self.settings["current_layer_index"]]
         except IndexError:
             self.logger.error(f"Unable to get current layer with index {self.settings['current_layer_index']}")
+    
+    def current_active_image(self):
+        return self.get_image_from_current_layer()
 
-    def update_current_layer(self, data):
+    def update_layer_by_index(self, data):
+        index = data["index"]
+        layer = data["layer"]
         settings = self.settings
-        layer = settings["layers"][settings["current_layer_index"]]
-        for k, v in data.items():
-            layer[k] = v
-        settings["layers"][settings["current_layer_index"]] = layer
+        settings["layers"][index] = layer
         self.settings = settings
-    
-    def update_layer(self, data):
-        uuid = data["uuid"]
-        settings = self.settings
-        for index, layer in enumerate(settings["layers"]):
-            if layer["uuid"] == uuid:
-                for k, v in data.items():
-                    layer[k] = v
-                settings["layers"][index] = layer
-                self.settings = settings
-                return
-        self.logger.error(f"Unable to find layer with uuid {uuid}")
 
-    
     def switch_layer(self, layer_index):
         settings = self.settings
         settings["current_layer_index"] = layer_index
         self.settings = settings
-
-    def delete_current_layer(self):
-        self.delete_layer(self.settings["current_layer_index"], None)
 
     def get_image_from_current_layer(self):
         layer = self.current_layer()
@@ -164,18 +203,3 @@ class LayerMixin:
             image = image.convert("RGBA")
             return image
         return None
-
-    def add_image_to_current_layer(self, value):
-        self.add_image_to_layer(self.settings["current_layer_index"], value)
-
-    def add_image_to_layer(self, layer_index, value):
-        if value:
-            buffered = io.BytesIO()
-            value.save(buffered, format="PNG")
-            base_64_image = base64.b64encode(buffered.getvalue())
-        else:
-            base_64_image = ""
-        
-        settings = self.settings
-        settings["layers"][layer_index]["base_64_image"] = base_64_image
-        self.settings = settings

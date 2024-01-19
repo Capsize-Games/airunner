@@ -2,16 +2,17 @@ import os
 from PyQt6.QtCore import Qt
 from PyQt6.QtWidgets import QDialog
 from airunner.utils import get_main_window
+from airunner.windows.main.settings_mixin import SettingsMixin
 
 
-class BaseWindow(QDialog):
+class BaseWindow(QDialog, SettingsMixin):
     template_class_ = None
     template = None
     is_modal: bool = False  # allow the window to be treated as a modal
 
     def __init__(self, **kwargs):
         super().__init__()
-        self.app = get_main_window()
+        SettingsMixin.__init__(self)
         self.do_exec = kwargs.get("exec", True)
 
         self.set_stylesheet()
@@ -32,7 +33,7 @@ class BaseWindow(QDialog):
         """
         Sets the stylesheet for the application based on the current theme
         """
-        theme_name = "dark_theme" if self.app.settings["dark_mode_enabled"] else "light_theme"
+        theme_name = "dark_theme" if self.settings["dark_mode_enabled"] else "light_theme"
         here = os.path.dirname(os.path.realpath(__file__))
         with open(os.path.join(here, "..", "styles", theme_name, "styles.qss"), "r") as f:
             stylesheet = f.read()

@@ -1,24 +1,41 @@
 import queue
-from PyQt6 import QtCore
+
+from PyQt6.QtCore import pyqtSignal, pyqtSlot, QThread, QSettings, QObject
 
 from airunner.aihandler.logger import Logger
+from airunner.mediator_mixin import MediatorMixin
 
 
-class Worker(QtCore.QObject):
-    response_signal = QtCore.pyqtSignal(dict)
-    finished = QtCore.pyqtSignal()
+class Worker(QObject, MediatorMixin):
     queue_type = "get_next_item"
+    finished = pyqtSignal()
+
+    @property
+    def settings(self):
+        return self.application_settings.value("settings")
     
     def __init__(self, prefix="Worker"):
+        self.prefix = prefix
         super().__init__()
+        MediatorMixin.__init__(self)
         self.logger = Logger(prefix=prefix)
         self.running = False
         self.queue = queue.Queue()
         self.items = {}
         self.current_index = 0
         self.paused = False
+        self.application_settings = QSettings("Capsize Games", "AI Runner")
+        self.register("application_settings_changed_signal", self)
+        self.update_properties()
+    
+    @pyqtSlot(object)
+    def on_application_settings_changed_signal(self, _ignore):
+        self.update_properties()
+    
+    def update_properties(self):
+        pass
 
-    @QtCore.pyqtSlot()
+    pyqtSlot()
     def start(self):
         self.logger.info("Starting")
         self.running = True
@@ -27,16 +44,18 @@ class Worker(QtCore.QObject):
                 # if self.queue has more than one item, scrap everything other than the last item that
                 # was added to the queue
                 msg = self.get_item_from_queue()
-                if msg:
+                if msg is not None:
                     self.handle_message(msg)
+                else:
+                    self.logger.warning("No message")
             except queue.Empty:
                 msg = None
             if self.paused:
                 self.logger.info("Paused")
                 while self.paused:
-                    QtCore.QThread.msleep(100)
+                    QThread.msleep(100)
                 self.logger.info("Resumed")
-            QtCore.QThread.msleep(100)
+            QThread.msleep(1)
     
     def get_item_from_queue(self):
         if self.queue_type == "get_last_item":
@@ -47,18 +66,17 @@ class Worker(QtCore.QObject):
     
     def get_last_item(self):
         msg = None
-        while not self.queue.empty():
-            index = self.queue.get(timeout=0.1)
-            if index is not None:
-                msg = self.items.pop(index, None)
+        index = self.queue.get()
+        msg = self.items.pop(index, None)
+        self.items = {}
+        self.queue.empty()
         return msg
 
     def get_next_item(self):
-        index = self.queue.get(timeout=0.1)
+        index = self.queue.get()
         msg = self.items.pop(index, None)
         return msg
 
-    
     def pause(self):
         self.paused = True
 
@@ -66,7 +84,7 @@ class Worker(QtCore.QObject):
         self.paused = False
 
     def handle_message(self, message):
-        self.response_signal.emit(message)
+        self.emit(self.prefix + "_response_signal", message)
 
     def add_to_queue(self, message):
         self.items[self.current_index] = message

@@ -1,6 +1,5 @@
 import os
 from airunner.aihandler.logger import Logger as logger
-from airunner.aihandler.enums import EngineResponseCode
 
 
 class EmbeddingMixin:
@@ -25,10 +24,10 @@ class EmbeddingMixin:
                         self.pipe.load_textual_inversion(path, token=token, weight_name=f)
                     except Exception as e:
                         if "already in tokenizer vocabulary" not in str(e):
-                            self.send_message({
-                                "embedding_name": token,
-                                "model_name": self.model,
-                            }, EngineResponseCode.EMBEDDING_LOAD_FAILED)
+                            self.emit("embedding_load_failed_signal", dict(
+                                embedding_name=token,
+                                model_name=self.model,
+                            ))
                             logger.warning(e)
             except AttributeError as e:
                 if "load_textual_inversion" in str(e):
