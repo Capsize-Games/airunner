@@ -82,18 +82,15 @@ class SliderWidget(BaseWidget):
     def spinbox_minimum(self, val):
         self.ui.slider_spinbox.setMinimum(val)
 
-    def initialize(self):
-        # import traceback
-        # traceback.print_stack()
-        # print("initialize")
-        pass
 
     def __init__(self, *args, **kwargs):
         super().__init__(*args, **kwargs)
-        self.app.loaded.connect(self.initialize_properties)
-        self.app.window_opened.connect(self.initialize_properties)
+        self.register("main_window_loaded_signal", self)
     
-    def initialize_properties(self, **kwargs):
+    def on_main_window_loaded_signal(self):
+        self.initialize()
+    
+    def initialize(self, **kwargs):
         slider_callback = kwargs.pop("slider_callback", None)
         slider_minimum = kwargs.pop("slider_minimum", 0)
         slider_maximum = kwargs.pop("slider_maximum", 100)
@@ -123,11 +120,11 @@ class SliderWidget(BaseWidget):
         self.divide_by = self.property("divide_by") or 1.0
 
         if settings_property is not None:
-            current_value = self.app.get_current_value(settings_property)
+            current_value = self.get_service("get_settings_value")(settings_property)
 
         # check if slider_callback is str
         if isinstance(slider_callback, str):
-            slider_callback = getattr(self.app, slider_callback)
+            slider_callback = self.get_service("get_callback_for_slider")(slider_callback)
 
         # set slider and spinbox names
         if slider_name:
