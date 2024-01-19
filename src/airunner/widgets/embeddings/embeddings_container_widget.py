@@ -17,11 +17,12 @@ class EmbeddingsContainerWidget(BaseWidget):
 
     def __init__(self, *args, **kwargs):
         super().__init__(*args, **kwargs)
-        self.app.generator_tab_changed_signal.connect(self.handle_generator_tab_changed)
-        self.app.tab_section_changed_signal.connect(self.handle_tab_section_changed)
-        self.app.message_handler_signal.connect(self.message_handler)
+        self.register("message_handler_signal", self)
 
         self.scan_for_embeddings()
+    
+    def on_message_handler_signal(self, message):
+        self.message_handler(message)
 
     def disable_embedding(self, name, model_name):
         if name not in self.embedding_widgets:
@@ -60,12 +61,6 @@ class EmbeddingsContainerWidget(BaseWidget):
             except AttributeError:
                 pass
             self.load_embeddings(tab)
-
-    def handle_generator_tab_changed(self):
-        self.enable_embeddings()
-
-    def handle_tab_section_changed(self):
-        self.enable_embeddings()
 
     @pyqtSlot(dict)
     def message_handler(self, response: dict):

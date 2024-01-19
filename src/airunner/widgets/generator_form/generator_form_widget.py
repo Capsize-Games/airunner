@@ -104,8 +104,7 @@ class GeneratorForm(BaseWidget):
     def controlnet_image(self):
         return self.app.settings["controlnet_settings"]["image"]
 
-    pyqtSlot()
-    def changed_signal_slot(self):
+    def on_application_settings_changed_signal(self):
         # if self.initialized:
         #     if self.current_prompt_value != self.app.settings["generator_settings"]["prompt"]:
         #         self.current_prompt_value = self.app.settings["generator_settings"]["prompt"]
@@ -116,7 +115,7 @@ class GeneratorForm(BaseWidget):
         self.activate_ai_mode()
     
     @pyqtSlot(dict)
-    def handle_message_slot(self, response: dict):
+    def on_message_handler_signal(self, response: dict):
         message = response["message"]
         {
             EngineResponseCode.PROGRESS: self.handle_progress_bar
@@ -127,8 +126,8 @@ class GeneratorForm(BaseWidget):
         self.initialized = False
         self.ui.generator_form_tabs.tabBar().hide()
         self.activate_ai_mode()
-        self.app.application_settings_changed_signal.connect(self.changed_signal_slot)
-        self.app.message_handler_signal.connect(self.handle_message_slot)
+        self.register("message_handler_signal", self)
+        self.register("application_settings_changed_signal", self)
 
     def activate_ai_mode(self):
         self.ui.generator_form_tabs.setCurrentIndex(1 if self.app.settings["ai_mode"] is True else 0)
@@ -448,17 +447,14 @@ class GeneratorForm(BaseWidget):
 
         memory_options = self.get_memory_options()
 
-        self.app.engine.do_request(
-            code=EngineRequestCode.GENERATE_IMAGE, 
-            message={
-                "action": action,
-                "options": {
-                    **options,
-                    **extra_options,
-                    **memory_options
-                }
+        self.emit("image_generate_request_signal", dict(
+            action=action,
+            options={
+                **options,
+                **extra_options,
+                **memory_options
             }
-        )
+        ))
 
 
     def get_memory_options(self):

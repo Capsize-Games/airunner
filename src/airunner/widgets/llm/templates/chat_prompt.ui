@@ -148,6 +148,22 @@
     </hint>
    </hints>
   </connection>
+  <connection>
+   <sender>prompt</sender>
+   <signal>textChanged()</signal>
+   <receiver>chat_prompt</receiver>
+   <slot>prompt_text_changed()</slot>
+   <hints>
+    <hint type="sourcelabel">
+     <x>460</x>
+     <y>935</y>
+    </hint>
+    <hint type="destinationlabel">
+     <x>161</x>
+     <y>-13</y>
+    </hint>
+   </hints>
+  </connection>
  </connections>
  <slots>
   <slot>action_button_clicked_send()</slot>
@@ -156,5 +172,6 @@
   <slot>username_text_changed(QString)</slot>
   <slot>botname_text_changed(QString)</slot>
   <slot>personality_type_changed(QString)</slot>
+  <slot>prompt_text_changed()</slot>
  </slots>
 </ui>

@@ -112,7 +112,7 @@ class FilterBase:
                         spinbox_maximum = float(max_value) / max_value
 
                     slider_spinbox_widget = SliderWidget()
-                    slider_spinbox_widget.initialize_properties(
+                    slider_spinbox_widget.initialize(
                         slider_callback=self.handle_slider_change,
                         slider_minimum=min_value,
                         slider_maximum=max_value,

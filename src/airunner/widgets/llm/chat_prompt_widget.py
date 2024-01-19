@@ -1,8 +1,9 @@
-from PyQt6.QtCore import pyqtSlot, pyqtSignal
+from PyQt6.QtCore import pyqtSlot
 from PyQt6.QtWidgets import QSpacerItem, QSizePolicy
 from PyQt6.QtCore import Qt
 
-from airunner.aihandler.enums import EngineResponseCode, EngineRequestCode
+from airunner.aihandler.enums import EngineRequestCode
+from airunner.mediator_mixin import MediatorMixin
 from airunner.widgets.base_widget import BaseWidget
 from airunner.widgets.llm.loading_widget import LoadingWidget
 from airunner.widgets.llm.templates.chat_prompt_ui import Ui_chat_prompt
@@ -10,14 +11,7 @@ from airunner.widgets.llm.message_widget import MessageWidget
 from airunner.aihandler.logger import Logger
 
 
-class Message:
-    def __init__(self, *args, **kwargs):
-        self.name = kwargs.get("name")
-        self.message = kwargs.get("message")
-        self.conversation = kwargs.get("conversation")
-
-
-class ChatPromptWidget(BaseWidget):
+class ChatPromptWidget(BaseWidget, MediatorMixin):
     logger = Logger(prefix="ChatPromptWidget")
     widget_class_ = Ui_chat_prompt
     conversation = None
@@ -53,23 +47,25 @@ class ChatPromptWidget(BaseWidget):
             self.generating = False
             self.enable_send_button()
 
-    @pyqtSlot(dict)
-    def add_bot_message_to_conversation(self, message):
-        message_object = Message(
-            name=message["name"],
-            message=message["text"],
-            conversation=self.conversation
-        )
-        is_bot = message["is_bot"]
-        first_message = message["first_message"]
-        last_message = message["last_message"]
+    def on_add_to_conversation_signal(self, name, text, is_bot):
+        self.add_message_to_conversation(name=name, message=text, is_bot=is_bot)
 
-        if first_message:
+    def on_add_bot_message_to_conversation(self, data: dict):
+        name = data["name"]
+        message = data["message"]
+        is_first_message = data["is_first_message"]
+        is_end_of_message = data["is_end_of_message"]
+        if is_first_message:
             self.stop_progress_bar()
 
-        self.add_message_to_conversation(message_object, is_bot, first_message, last_message)
+        self.add_message_to_conversation(
+            name=name,
+            message=message,
+            is_bot=True, 
+            first_message=is_first_message
+        )
 
-        if last_message:
+        if is_end_of_message:
             self.generating = False
             self.enable_send_button()
 
@@ -107,14 +103,10 @@ class ChatPromptWidget(BaseWidget):
 
         parsed_template = self.parse_template(prompt_template)
 
-        message_object = Message(
-            name=self.app.settings["llm_generator_settings"]["username"],
-            message=self.prompt,
-            conversation=self.conversation
-        )
-        self.app.engine.do_request(
-            code=EngineRequestCode.GENERATE_TEXT,
-            message={
+        print("EMITTING TEXT GENERATE REQUEST SIGNAL")
+        self.emit(
+            "text_generate_request_signal",
+            {
                 "llm_request": True,
                 "request_data": {
                     "unload_unused_model": self.app.settings["memory_settings"]["unload_unused_models"],
@@ -160,14 +152,25 @@ class ChatPromptWidget(BaseWidget):
                 }
             }
         )
-        self.add_message_to_conversation(message_object=message_object, is_bot=False)
+        self.add_message_to_conversation(
+            name=self.app.settings["llm_generator_settings"]["username"],
+            message=self.prompt, 
+            is_bot=False
+        )
         self.clear_prompt()
         self.start_progress_bar()
 
+    def on_hear_signal(self, transcript):
+        self.respond_to_voice(transcript)
+
+    def on_token_signal(self, val):
+        self.handle_token_signal(val)
+
     def initialize(self):
-        self.app.engine.hear_signal.connect(self.respond_to_voice)
-        self.app.token_signal.connect(self.handle_token_signal)
-        self.app.engine.text_generated_signal.connect(self.add_bot_message_to_conversation)
+        print("CHAT PROMPT WIDGET REGISTER")
+        self.register("hear_signal", self)
+        self.register("token_signal", self)
+        self.register("add_bot_message_to_conversation", self)
 
         # handle return pressed on QPlainTextEdit
         # there is no returnPressed signal for QPlainTextEdit
@@ -175,12 +178,12 @@ class ChatPromptWidget(BaseWidget):
         self.promptKeyPressEvent = self.ui.prompt.keyPressEvent
         self.ui.prompt.keyPressEvent = self.handle_key_press
 
-        self.ui.prompt.textChanged.connect(self.prompt_text_changed)
         self.ui.conversation.hide()
         self.ui.chat_container.show()
 
     def prompt_text_changed(self):
         self.prompt = self.ui.prompt.toPlainText()
+        print(self.prompt)
 
     def clear_prompt(self):
         self.ui.prompt.setPlainText("")
@@ -269,7 +272,13 @@ class ChatPromptWidget(BaseWidget):
             generator_name="visualqa"
         )
     
-    def add_message_to_conversation(self, message_object, is_bot, first_message=True, last_message=True):
+    def add_message_to_conversation(
+        self,
+        name,
+        message,
+        is_bot, 
+        first_message=True
+    ):
         if not first_message:
             # get the last widget from the scrollAreaWidgetContents.layout()
             # and append the message to it. must be a MessageWidget object
@@ -277,10 +286,10 @@ class ChatPromptWidget(BaseWidget):
             for i in range(self.ui.scrollAreaWidgetContents.layout().count()-1, -1, -1):
                 current_widget = self.ui.scrollAreaWidgetContents.layout().itemAt(i).widget()
                 if isinstance(current_widget, MessageWidget):
-                    current_widget.update_message(message_object.message)
+                    current_widget.update_message(message)
                     return
 
-        widget = MessageWidget(message=message_object, is_bot=is_bot)
+        widget = MessageWidget(name=name, message=message, is_bot=is_bot)
         if is_bot:
             # remove the last LoadingWidget from scrollAreaWidgetContents.layout()
             for i in range(self.ui.scrollAreaWidgetContents.layout().count()):
@@ -308,9 +317,9 @@ class ChatPromptWidget(BaseWidget):
         self.ui.scrollAreaWidgetContents.layout().addItem(self.spacer)
 
     def message_type_text_changed(self, val):
-        with session_scope() as session:
-            session.add(self.app.settings["llm_generator_settings"])
-            self.app.settings["llm_generator_settings"]["message_type"] = val
+        settings = self.app.settings
+        settings["llm_generator_settings"]["message_type"] = val
+        self.app.settings = settings
 
     def action_button_clicked_generate_characters(self):
         pass

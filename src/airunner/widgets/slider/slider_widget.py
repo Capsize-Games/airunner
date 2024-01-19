@@ -82,18 +82,15 @@ class SliderWidget(BaseWidget):
     def spinbox_minimum(self, val):
         self.ui.slider_spinbox.setMinimum(val)
 
-    def initialize(self):
-        # import traceback
-        # traceback.print_stack()
-        # print("initialize")
-        pass
 
     def __init__(self, *args, **kwargs):
         super().__init__(*args, **kwargs)
-        self.app.loaded.connect(self.initialize_properties)
-        self.app.window_opened.connect(self.initialize_properties)
+        self.app.main_window_loaded.connect(self.on_main_window_loaded)
+
+    def on_main_window_loaded(self):
+        self.initialize()
     
-    def initialize_properties(self, **kwargs):
+    def initialize(self, **kwargs):
         slider_callback = kwargs.pop("slider_callback", None)
         slider_minimum = kwargs.pop("slider_minimum", 0)
         slider_maximum = kwargs.pop("slider_maximum", 100)

@@ -22,7 +22,6 @@ from diffusers import ConsistencyDecoderVAE
 from transformers import AutoFeatureExtractor
 
 from PyQt6.QtCore import QSettings
-from PyQt6.QtCore import pyqtSignal, pyqtSlot
 from PyQt6.QtCore import QObject, QThread
 
 from airunner.aihandler.enums import FilterType
@@ -45,19 +44,25 @@ from airunner.windows.main.pipeline_mixin import PipelineMixin
 from airunner.windows.main.controlnet_model_mixin import ControlnetModelMixin
 from airunner.windows.main.ai_model_mixin import AIModelMixin
 from airunner.workers.worker import Worker
+from airunner.mediator_mixin import MediatorMixin
 
 logger = Logger(prefix="SDRunner")
 
 torch.backends.cuda.matmul.allow_tf32 = True
 
+class SDRequestWorker(Worker):
+    def __init__(self, prefix="SDRequestWorker"):
+        super().__init__(prefix=prefix)
+
 
 class SDGenerateWorker(Worker):
-    def __init__(self, prefix="SD Generate Worker", image_base_path=""):
+    def __init__(self, prefix):
         self.sd = SDRunner()
-        self.image_base_path = image_base_path
-        super().__init__(prefix=prefix)
-    
-    def handle_message(self, message):
+        super().__init__(prefix)
+        
+    def handle_message(self, data):
+        image_base_path = data["image_base_path"]
+        message = data["message"]
         for response in self.sd.generator_sample(message):
             if not response:
                 continue
@@ -66,10 +71,7 @@ class SDGenerateWorker(Worker):
             data = response["data"]
             nsfw_content_detected = response["nsfw_content_detected"]
             if nsfw_content_detected:
-                self.response_signal.emit(dict(
-                    message=response,
-                    code=EngineResponseCode.NSFW_CONTENT_DETECTED
-                ))
+                self.emit("nsfw_content_detected_signal", response)
                 continue
 
             print(response)
@@ -83,7 +85,7 @@ class SDGenerateWorker(Worker):
                 negative_prompt = data["options"]["negative_prompt"][0]
                 prompt_hash = hash(f"{action}{prompt}{negative_prompt}{index}")
                 image_name = f"{prompt_hash}_{seed}.png"
-                image_path = os.path.join(self.image_base_path, image_name)
+                image_path = os.path.join(image_base_path, image_name)
                 # save the image
                 image.save(image_path)
                 print(image)
@@ -92,56 +94,33 @@ class SDGenerateWorker(Worker):
                     image=image
                 ))
             response["images"] = updated_images
-            
-            self.response_signal.emit(dict(
-                message=response,
-                code=EngineResponseCode.IMAGE_GENERATED
-            ))
+            super().handle_message(response)
 
 
-class SDController(QObject):
+class SDController(QObject, MediatorMixin):
 
     logger = Logger(prefix="SDController")
-    response_signal = pyqtSignal(dict)
-
+    
     def __init__(self, *args, **kwargs):
+        MediatorMixin.__init__(self)
         self.engine = kwargs.pop("engine", None)
         self.app = self.engine.app
         super().__init__()
-        self.sd = SDRunner()
-        self.request_worker = Worker(prefix="SD Request Worker")
-        self.request_worker_thread = QThread()
-        self.request_worker.moveToThread(self.request_worker_thread)
-        self.request_worker.response_signal.connect(self.request_worker_response_signal_slot)
-        self.request_worker.finished.connect(self.request_worker_thread.quit)
-        self.request_worker_thread.started.connect(self.request_worker.start)
-        self.request_worker_thread.start()
+        self.generate_worker = self.create_worker(SDRequestWorker)
+        self.generate_worker = self.create_worker(SDGenerateWorker)
+        self.register("SDGenerateWorker_response_signal", self)
+        self.register("SDRequestWorker_response_signal", self)
 
-        self.generate_worker = SDGenerateWorker(prefix="SD Generate Worker", image_base_path=self.app.settings["path_settings"]["image_path"])
-        self.generate_worker_thread = QThread()
-        self.generate_worker.moveToThread(self.generate_worker_thread)
-        self.generate_worker.response_signal.connect(self.generate_worker_response_signal_slot)
-        self.generate_worker.finished.connect(self.generate_worker_thread.quit)
-        self.generate_worker_thread.started.connect(self.generate_worker.start)
-        self.generate_worker_thread.start()
-    
-    def pause(self):
-        self.request_worker.pause()
-        self.generate_worker.pause()
-
-    def resume(self):
-        self.request_worker.resume()
-        self.generate_worker.resume()
-    
     def do_request(self, message):
         self.request_worker.add_to_queue(message)
 
-    @pyqtSlot(dict)
-    def request_worker_response_signal_slot(self, message):
-        self.generate_worker.add_to_queue(message)
+    def on_SDRequestWorker_response_signal(self, message):
+        self.generate_worker.add_to_queue(dict(
+            message=message,
+            image_base_path=self.app.settings["path_settings"]["image_path"]
+        ))
 
-    @pyqtSlot(dict)
-    def generate_worker_response_signal_slot(self, message):
+    def on_SDGenerateWorker_response_signal(self, message):
         self.response_signal.emit(message)
 
     @property
@@ -174,8 +153,8 @@ class SDRunner(
     PipelineMixin,
     ControlnetModelMixin,
     AIModelMixin,
+    MediatorMixin
 ):
-    response_signal = pyqtSignal(dict)
     _current_model: str = ""
     _previous_model: str = ""
     _initialized: bool = False
@@ -830,6 +809,7 @@ class SDRunner(
         #logger.set_level(LOG_LEVEL)
         logger.info("Loading Stable Diffusion model runner...")
         super().__init__()
+        MediatorMixin.__init__(self)
         self.application_settings = QSettings("Capsize Games", "AI Runner")
         self.safety_checker_model = self.models_by_pipeline_action("safety_checker")
         self.text_encoder_model = self.models_by_pipeline_action("text_encoder")
@@ -957,9 +937,9 @@ class SDRunner(
         self.send_message(message, EngineResponseCode.ERROR)
 
     def send_message(self, message, code=None):
-        self.response_signal.emit(dict(
-            message=message,
-            code=code
+        self.emit("sd_controller_response_signal", dict(
+            code=code,
+            message=message
         ))
 
     def error_handler(self, error):
@@ -1605,7 +1585,7 @@ class SDRunner(
         self.reset_applied_memory_settings()
 
     def clear_memory(self):
-        self.response_signal.emit(dict(
+        self.send_message(dict(
             code=EngineResponseCode.CLEAR_MEMORY,
             message=""
         ))

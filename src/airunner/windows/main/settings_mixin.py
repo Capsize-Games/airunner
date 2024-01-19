@@ -375,7 +375,7 @@ Previous Conversation:
     def settings(self, val):
         self.application_settings.setValue("settings", val)
         self.application_settings.sync()
-        self.application_settings_changed_signal.emit()
+        self.emit("application_settings_changed_signal")
 
     def action_reset_settings(self):
         self.application_settings.clear()

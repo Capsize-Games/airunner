@@ -24,15 +24,13 @@ from airunner.workers.worker import Worker
 
 
 class CanvasResizeWorker(Worker):
-    response_signal = pyqtSignal(tuple)
-    do_draw_signal = pyqtSignal()
-    clear_lines_signal = pyqtSignal()
     queue_type = "get_last_item"
     last_cell_count = (0, 0)
 
     def __init__(self, prefix):
         super().__init__(prefix=prefix)
         self.buffer = None
+        self.register("application_settings_changed_signal", self)
 
     def handle_message(self, data):
         self.draw_lines(data)
@@ -79,12 +77,12 @@ class CanvasResizeWorker(Worker):
             lines_data.append(line_data)
             y += cell_size
 
-        self.clear_lines_signal.emit()
+        self.emit("canvas_clear_lines_signal")
 
         for line_data in lines_data:
-            self.response_signal.emit(line_data)
+            self.handle_message(line_data)
 
-        self.do_draw_signal.emit()
+        self.emit("canvas_do_draw_signal")
 
 
 class CanvasPlusWidget(BaseWidget):
@@ -168,54 +166,43 @@ class CanvasPlusWidget(BaseWidget):
     def __init__(self, *args, **kwargs):
         super().__init__(*args, **kwargs)
         self.ui.central_widget.resizeEvent = self.resizeEvent
-        self.app.engine.image_generated_signal.connect(self.handle_image_data)
-        self.app.application_settings_changed_signal.connect(self.handle_changed_signal)
-        self.app.add_image_to_canvas_signal.connect(self.handle_add_image_to_canvas)
-        self.app.load_image.connect(self.load_image_from_path)
-        self.app.load_image_object.connect(self.add_image_to_scene)
-        self.app.loaded.connect(self.handle_loaded)
+        self.app.main_window_loaded.connect(self.on_main_window_loaded)
         self._zoom_level = 1
         self.canvas_container.resizeEvent = self.window_resized
 
-        self.image_data_worker = self.create_worker(
-            ImageDataWorker, 
-            self.image_data_worker_response_signal_slot
-        )
-        self.canvas_resize_worker = self.create_worker(
-            CanvasResizeWorker, 
-            self.canvas_resize_worker_response_signal_slot
-        )
-        self.canvas_resize_worker.do_draw_signal.connect(self.do_draw_signal_slot)
-        self.canvas_resize_worker.clear_lines_signal.connect(self.clear_lines_slot)
+        self.image_data_worker = self.create_worker(ImageDataWorker)
+        self.canvas_resize_worker = self.create_worker(CanvasResizeWorker)
+        self.register("canvas_do_draw_signal", self)
+        self.register("canvas_clear_lines_signal", self)
+        
+        self.register("ImageDataWorker_response_signal", self)
+        self.register("CanvasResizeWorker_response_signal", self)
+        self.register("image_generated_signal", self)
+        self.register("load_image_from_path", self)
     
-    @pyqtSlot()
-    def clear_lines_slot(self):
+    def on_canvas_clear_lines_signal(self):
         self.clear_lines()
 
-    @pyqtSlot()
-    def do_draw_signal_slot(self):
+    def on_canvas_do_draw_signal(self):
         self.do_draw()
 
-    @pyqtSlot(dict)
-    def handle_image_data(self, image_data):
+    def on_image_generated_signal(self, image_data: dict):
         self.image_data_worker.add_to_queue(image_data)
 
-    @pyqtSlot(tuple)
-    def canvas_resize_worker_response_signal_slot(self, line_data):
+    def on_CanvasResizeWorker_response_signal(self, line_data: tuple):
         draw_grid = self.app.settings["grid_settings"]["show_grid"]
         if not draw_grid:
             return
         line = self.scene.addLine(*line_data)
         self.line_group.addToGroup(line)
 
-    @pyqtSlot()
-    def image_data_worker_response_signal_slot(self, message):
+    def on_ImageDataWorker_response_signal(self, message):
         self.app.clear_status_message()
         self.app.stop_progress_bar()
         nsfw_content_detected = message["nsfw_content_detected"]
         path = message["path"]
         if nsfw_content_detected and self.parent.settings["nsfw_filter"]:
-            self.app.send_message(
+            self.app.engine.send_message(message, code)(
                 code=EngineResponseCode.ERROR,
                 message="Explicit content detected, try again."
             )
@@ -369,7 +356,7 @@ class CanvasPlusWidget(BaseWidget):
         else:
             super().wheelEvent(event)  # Propagate the event to the base class if no modifier keys are pressed
 
-    def handle_changed_signal(self):
+    def on_application_settings_changed_signal(self):
         do_draw = False
         
         grid_settings = self.app.settings["grid_settings"]
@@ -403,7 +390,7 @@ class CanvasPlusWidget(BaseWidget):
         self.active_grid_settings = active_grid_settings
         self.canvas_settings = canvas_settings
     
-    def handle_loaded(self):
+    def on_main_window_loaded(self):
         self.initialized = True
 
     def handle_mouse_event(self, original_mouse_event, event):
@@ -490,9 +477,6 @@ class CanvasPlusWidget(BaseWidget):
             self.scene.addItem(self.active_grid_area)
         else:
             self.active_grid_area.redraw()
-
-    def handle_add_image_to_canvas(self):
-        self.draw_layers()
 
     def action_button_clicked_focus(self):
         self.last_pos = QPoint(0, 0)
@@ -585,7 +569,7 @@ class CanvasPlusWidget(BaseWidget):
 
         return new_image, image_root_point, image_pivot_point
     
-    def load_image_from_path(self, image_path):
+    def on_load_image_from_path(self, image_path):
         if image_path is None or image_path == "":
             return
         image = Image.open(image_path)
