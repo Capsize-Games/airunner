@@ -41,7 +41,7 @@ class MemoryPreferencesWidget(BaseWidget):
         self.ui.use_enable_vae_slicing.blockSignals(False)
         self.ui.use_tome.blockSignals(False)
         #self.app.window_opened.emit()
-        self.ui.tome_sd_ratio.initialize_properties()
+        self.ui.tome_sd_ratio.initialize()
 
 
     def action_toggled_tome(self, val):

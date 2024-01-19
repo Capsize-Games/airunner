@@ -23,7 +23,7 @@ class LayerContainerWidget(BaseWidget):
         self.ui.scrollAreaWidgetContents.layout().addSpacerItem(QSpacerItem(0, 0, QSizePolicy.Policy.Minimum, QSizePolicy.Policy.Expanding))
         # set the current_value property of the slider
         self.ui.opacity_slider_widget.set_slider_and_spinbox_values(current_layer["opacity"])
-        self.ui.opacity_slider_widget.initialize_properties()
+        self.ui.opacity_slider_widget.initialize()
         self.set_layer_opacity(current_layer["opacity"])
 
     def action_clicked_button_add_new_layer(self):

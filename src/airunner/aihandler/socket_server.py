@@ -23,6 +23,7 @@ class SocketServer:
         logger.info("Starting server")
         logger.info(f"Listening at {self.host}:{self.port}")
         self.start_server()
+        self.connect("image_generated_signal", self)
 
     def start_server(self):
         if self.engine.stopped():
@@ -106,7 +107,6 @@ class SocketServer:
             EngineResponseCode.STATUS: self.handle_status,
             EngineResponseCode.ERROR: self.handle_error,
             EngineResponseCode.PROGRESS: self.handle_progress,
-            EngineResponseCode.IMAGE_GENERATED: self.handle_image_generated,
             EngineResponseCode.EMBEDDING_LOAD_FAILED: self.handle_embedding_load_failed,
         }.get(code, self.handle_unknown)(message)
 
@@ -119,7 +119,7 @@ class SocketServer:
     def handle_error(self, message):
         print(message)
 
-    def handle_image_generated(self, message):
+    def on_image_generated_signal(self, message):
         logger.info("Image generated")
         self.send_response(message)
 

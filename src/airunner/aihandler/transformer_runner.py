@@ -79,7 +79,6 @@ class TransformerRunner(QObject):
         app = kwargs.pop("app", None)
         self.app = app
         super().__init__(*args, **kwargs)
-        # self.llm_api = LLMAPI(app=app)
 
     def move_to_cpu(self):
         if self.model:
@@ -347,21 +346,6 @@ class TransformerRunner(QObject):
         self.load_model()
         if self.requested_generator_name == "visualqa":
             self.load_processor()
-
-        # self.engine.send_message("Generating output")
-        # with torch.backends.cuda.sdp_kernel(
-        #     enable_flash=True, 
-        #     enable_math=False, 
-        #     enable_mem_efficient=False
-        # ):
-        #     with torch.no_grad():
-        #         print("************** CALLING GENERATE")
-        #         value = self.generate()
-        #         print("VALUE", value)
-        #         if self.callback:
-        #             self.callback(value)
-        #         else:
-        #             self.engine.send_message(value, code=EngineResponseCode.TEXT_GENERATED)
         self.enable_request_processing()
     
     def disable_request_processing(self):

@@ -8,12 +8,13 @@ class MessageWidget(BaseWidget):
     widget_class_ = Ui_message
 
     def __init__(self, *args, **kwargs):
-        self.is_bot = kwargs.pop("is_bot")
+        self.name = kwargs.pop("name")
         self.message = kwargs.pop("message")
+        self.is_bot = kwargs.pop("is_bot")
         super().__init__(*args, **kwargs)
         self.ui.content.setReadOnly(True)
-        self.ui.content.setText(self.message.message)
-        name = self.message.name
+        self.ui.content.setText(self.message)
+        name = self.name
         if self.is_bot:
             self.ui.bot_name.show()
             self.ui.bot_name.setText(f"{name}")
@@ -28,6 +29,6 @@ class MessageWidget(BaseWidget):
         self.ui.content.setStyleSheet("color: #f2f2f2;")
 
     def update_message(self, text):
-        self.message.message += text
+        self.message += text
         self.ui.content.moveCursor(QTextCursor.MoveOperation.End)
         self.ui.content.insertPlainText(text)
