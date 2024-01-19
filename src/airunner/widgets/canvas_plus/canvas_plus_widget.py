@@ -489,6 +489,7 @@ class CanvasPlusWidget(BaseWidget):
         self.do_draw()
     
     def do_draw(self):
+        print("DO DRAW CANVAS")
         if self.drawing or not self.initialized:
             return
         self.drawing = True
