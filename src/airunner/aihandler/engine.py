@@ -1,20 +1,32 @@
-import threading
 import torch
 import traceback
 import gc
-import json
 
-from PyQt6.QtCore import QObject, pyqtSignal, pyqtSlot, QThread
-
+from PyQt6.QtCore import QObject, pyqtSignal, pyqtSlot
 from airunner.aihandler.logger import Logger
+from airunner.mediator_mixin import MediatorMixin
 from airunner.workers.worker import Worker
 from airunner.aihandler.enums import EngineRequestCode, EngineResponseCode
-from airunner.aihandler.image_processor import ImageProcessor
 from airunner.aihandler.llm import LLMController
 from airunner.aihandler.logger import Logger
 from airunner.aihandler.runner import SDController
 from airunner.aihandler.speech_to_text import STTController
 from airunner.aihandler.tts import TTS
+
+
+class EngineRequestWorker(Worker):
+    def __init__(self, prefix="EngineRequestWorker"):
+        super().__init__(prefix=prefix)
+        self.register("engine_do_request_signal", self)
+    
+    def on_engine_do_request_signal(self, message):
+        print("adding to request queue")
+        self.add_to_queue(message)
+
+
+class EngineResponseWorker(Worker):
+    def __init__(self, prefix="EngineResponseWorker"):
+        super().__init__(prefix=prefix)
 
 
 class Message:
@@ -24,7 +36,7 @@ class Message:
         self.conversation = kwargs.get("conversation")
 
 
-class Engine(QObject):
+class Engine(QObject, MediatorMixin):
     """
     The engine is responsible for processing requests and offloading
     them to the appropriate AI model controller.
@@ -33,8 +45,6 @@ class Engine(QObject):
 
     # Signals
     request_signal_status = pyqtSignal(str)
-    hear_signal = pyqtSignal(str)
-    text_generated_signal = pyqtSignal(dict)
     image_generated_signal = pyqtSignal(dict)
 
     # Loaded flags
@@ -50,101 +60,32 @@ class Engine(QObject):
 
     # Message properties for EngineResponseCode.TEXT_STREAMED
     message = ""
-    first_message = True
     current_message = ""
 
-    #######################
-    # START OFFLINE CLINET
-    def do_request(self, code:EngineRequestCode, message:dict):
-        """
-        Handle a request from the application by putting it into
-        a request worker queue.
-        """
-        if message == "cancel":
-            self.logger.info("cancel message recieved")
-            self.cancel()
-        else:
-            self.request_worker.add_to_queue(dict(
-                code=code,
-                message=message
-            ))
-
-    @pyqtSlot(dict)  
     def do_response(self, response):
         """
         Handle a response from the application by putting it into
         a response worker queue.
         """
-        self.response_worker.add_to_queue(dict(
-            code=response["code"],
-            message=response["message"]
-        ))
+        self.response_worker.add_to_queue(response)
 
     def cancel(self):
         self.logger.info("Canceling")
         self.sd_controller.cancel()
         self.request_worker.cancel()
 
-    # END OFFLINE CLIENT
-    #######################
-
-    
-
-    pyqtSlot(str)
-    def hear(self, message):
+    def on_hear_signal(self, message):
         """
         This is a slot function for the hear_signal.
         The hear signal is triggered from the speech_to_text.listen function.
         """
-        self.hear_signal.emit(message)
-
-    pyqtSlot(dict)
-    def request_worker_response_signal_slot(self, message):
-        """
-        Handle a response from the request worker.
-        """
-        self.logger.debug(f"message['code']: {message['code']}, type: {type(message['code'])}")
-        {
-            EngineRequestCode.GENERATE_TEXT: self.handle_generate_text,
-            EngineRequestCode.GENERATE_IMAGE: self.handle_generate_image,
-            EngineRequestCode.GENERATE_CAPTION: self.handle_generate_caption,
-        }.get(message["code"], self.handle_default)(message)
+        print("HEARD", message)
     
-    pyqtSlot(dict)
-    def response_worker_response_signal_slot(self, message):
-        code = message["code"]
-        if code == EngineResponseCode.ERROR:
-            traceback.print_stack()
-            self.logger.error(message)
-        elif code == EngineResponseCode.WARNING:
-            self.logger.warning(message)
-        elif code == EngineResponseCode.STATUS:
-            self.logger.info(message)
-        if code == EngineResponseCode.TEXT_GENERATED:
-            message = self.parse_message(message)
-            self.app.message_handler_signal.emit({
-                "code": EngineResponseCode.ADD_TO_CONVERSATION,
-                "message": dict(
-                    name=self.app.settings["llm_generator_settings"]["botname"],
-                    text=message,
-                    is_bot=True,
-                )
-            })
-
-        """
-        Handle a response from the response worker.
-        """
-        {
-            EngineResponseCode.TEXT_GENERATED: self.handle_text_generated,
-            EngineResponseCode.TEXT_STREAMED: self.handle_text_streamed,
-            EngineResponseCode.IMAGE_GENERATED: self.handle_image_generated,
-            EngineResponseCode.CAPTION_GENERATED: self.handle_caption_generated,
-            EngineResponseCode.CLEAR_MEMORY: self.clear_memory
-        }.get(message["code"], self.handle_default_response)(message["message"], message["code"])
-
     def handle_generate_text(self, message):
+        print("doing llm controller request...", message)
         self.move_sd_to_cpu()
-        self.llm_controller.do_request(message["message"])
+        print("lets go")
+        self.llm_controller.do_request(message)
 
     def handle_generate_image(self, message):
         self.unload_llm(
@@ -160,38 +101,15 @@ class Engine(QObject):
     def handle_text_generated(self, message, code):
         print("TODO: handle text generated no stream")
 
-    def handle_text_streamed(self, message, code):
-        self.message += message
-        self.current_message += message
-        self.message = self.message.replace("</s>", "")
-        self.current_message = self.current_message.replace("</s>", "")
-        # check if sentence enders are in self.current_message
-        is_end_of_message = "</s>" in message
-        self.tts_controller.add_text(message.replace("</s>", ""), is_end_of_message=is_end_of_message)
-        self.text_generated_signal.emit(dict(
-            name=self.app.settings["llm_generator_settings"]["botname"],
-            text=message.replace("</s>", ""),
-            is_bot=True,
-            first_message=self.first_message,
-            last_message=is_end_of_message
-        ))
-        self.first_message = False
-        if is_end_of_message:
-            self.first_message = True
-            self.message = ""
-            self.current_message = ""
-        
-        # self.stt_controller.do_listen()
-
     def handle_image_generated(self, message, code):
-        self.image_generated_signal.emit(message)
+        self.emit("image_generated_signal", message)
 
     def handle_caption_generated(self, message, code):
         self.send_message(message, code)
     
     def __init__(self, **kwargs):
         super().__init__()
-        
+        MediatorMixin.__init__(self)
         self.app = kwargs.get("app", None)
         self.message_handler = kwargs.get("message_handler", None)
         self.clear_memory()
@@ -199,41 +117,89 @@ class Engine(QObject):
         # Initialize Controllers
         self.llm_controller = LLMController(engine=self)
         self.sd_controller = SDController(engine=self)
-        self.stt_controller = STTController(engine=self)
-        self.stt_controller.response_signal.connect(self.hear)
-        
+        #self.stt_controller = STTController(engine=self)
         self.tts_controller = TTS(engine=self)
-        #self.tts_thread = threading.Thread(target=self.tts_controller.run)
-        #self.tts_thread.start()
+        self.register("hear_signal", self)
 
         # self.ocr_controller = ImageProcessor(engine=self)
 
-        self.llm_controller.response_signal.connect(self.do_response)
-        self.sd_controller.response_signal.connect(self.do_response)
-
-        # Request worker and thread
-        self.request_worker = Worker(prefix="RequestWorker")
-        self.request_worker_thread = QThread()
-        self.request_worker.moveToThread(self.request_worker_thread)
-        self.request_worker.response_signal.connect(self.request_worker_response_signal_slot)
-        self.request_worker.finished.connect(self.request_worker_thread.quit)
-        self.request_worker_thread.started.connect(self.request_worker.start)
-        self.request_worker_thread.start()
-
-        # # Response worker and thread
-        self.response_worker = Worker(prefix="ResponseWorker")
-        self.response_worker_thread = QThread()
-        self.response_worker.moveToThread(self.response_worker_thread)
-        self.response_worker.response_signal.connect(self.response_worker_response_signal_slot)
-        self.response_worker.finished.connect(self.response_worker_thread.quit)
-        self.response_worker_thread.started.connect(self.response_worker.start)
-        self.response_worker_thread.start()
-
-    def handle_default(self, message):
+        self.request_worker = self.create_worker(EngineRequestWorker)
+        self.response_worker = self.create_worker(EngineResponseWorker)
+        self.register("EngineRequestWorker_response_signal", self)
+        self.register("EngineResponseWorker_response_signal", self)
+        self.register("image_generate_request_signal", self)
+        self.register("text_generate_request_signal", self)
+        self.register("sd_controller_response_signal", self)
+        self.register("llm_controller_response_signal", self)
+    
+    def on_sd_controller_response_signal(self, message):
+        self.do_response(message)
+    
+    def on_llm_controller_response_signal(self, message):
+        self.do_response(message)
+    
+    def on_EngineRequestWorker_response_signal(self, message):
+        """
+        Handle a response from the request worker.
+        """
+        print("on_EngineRequestWorker_response_signal", message)
+        self.handle_system_response_messages(message)
+        {
+            EngineRequestCode.GENERATE_TEXT: self.handle_generate_text,
+            EngineRequestCode.GENERATE_IMAGE: self.handle_generate_image,
+            EngineRequestCode.GENERATE_CAPTION: self.handle_generate_caption,
+        }.get(message["code"], self.EngineRequestWorker_handle_default)(message)
+    
+    def EngineRequestWorker_handle_default(self, message):
         self.logger.error(f"Unknown code: {message['code']}")
     
-    def handle_default_response(self, message, code):
-        self.app.send_message(code, message)
+    def handle_system_response_messages(self, message:dict):
+        code = message["code"]
+        if code == EngineResponseCode.ERROR:
+            traceback.print_stack()
+            self.logger.error(message)
+        elif code == EngineResponseCode.WARNING:
+            self.logger.warning(message)
+        elif code == EngineResponseCode.STATUS:
+            self.logger.info(message)
+
+    def on_EngineResponseWorker_response_signal(self, message:dict):
+        self.handle_system_response_messages(message)
+        {
+            EngineResponseCode.TEXT_STREAMED: self.handle_text_streamed,
+            EngineResponseCode.IMAGE_GENERATED: self.handle_image_generated,
+            EngineResponseCode.CAPTION_GENERATED: self.handle_caption_generated,
+            EngineResponseCode.CLEAR_MEMORY: self.clear_memory
+        }.get(message["code"], self.EngineResponseWorker_handle_default)(message["message"], message["code"])
+    
+    def EngineResponseWorker_handle_default(self, message, code):
+        self.send_message(code, message)
+
+    def on_image_generate_request_signal(self, message):
+        self.do_request(EngineRequestCode.GENERATE_IMAGE, message["message"])
+    
+    def on_text_generate_request_signal(self, message):
+        self.do_request(EngineRequestCode.GENERATE_TEXT, message)
+    
+    def handle_text_streamed(self, data, code):
+        self.do_tts_request(data["message"], data["is_end_of_message"])
+        self.emit("add_bot_message_to_conversation", data)
+        
+        # self.stt_controller.do_listen()
+
+    def do_request(self, code:EngineRequestCode, message:dict):
+        """
+        Handle a request from the application by putting it into
+        a request worker queue.
+        """
+        if message == "cancel":
+            self.logger.info("cancel message recieved")
+            self.cancel()
+        else:
+            self.emit("engine_do_request_signal", dict(
+                code=code,
+                message=message
+            ))
 
     def request_queue_size(self):
         return self.request_worker.queue.qsize()
@@ -242,11 +208,10 @@ class Engine(QObject):
         """
         Send a message to the Stable Diffusion model.
         """
-        if code == EngineResponseCode.IMAGE_GENERATED:
-            self.app.message_handler_signal.emit(dict(
-                code=code,
-                message=message
-            ))
+        self.emit("message_handler_signal", dict(
+            code=code,
+            message=message
+        ))
     
     # def generator_sample(self, data: dict):
     #     """
@@ -350,7 +315,14 @@ class Engine(QObject):
             #         tts_settings=self.app.settings["tts_settings"]
             #     )
             # )
-            self.tts_controller.add_text(message)
+            self.do_tts_request(message=message)
+    
+    def do_tts_request(self, message: str, is_end_of_message: bool=False):
+        self.emit("tts_request", dict(
+            message=message.replace("</s>", ""),
+            tts_settings=self.app.settings["tts_settings"],
+            is_end_of_message=is_end_of_message,
+        ))
     
     def clear_memory(self, *args, **kwargs):
         """
@@ -369,7 +341,6 @@ class Engine(QObject):
         self.logger.info("Stopping")
         self.request_worker.stop()
         self.response_worker.stop()
-        #self.stt_controller.stop()
     
     def unload_llm(self, request_data: dict, do_unload_model: bool, move_unused_model_to_cpu: bool):
         """

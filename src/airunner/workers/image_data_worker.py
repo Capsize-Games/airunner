@@ -26,7 +26,7 @@ class ImageDataWorker(Worker):
             images = procesed_images
 
         #images = self.post_process_images(images)
-        self.response_signal.emit(dict(
+        super().handle_message(dict(
             images=images,
             path=path,
             data=data,

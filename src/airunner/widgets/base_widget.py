@@ -1,12 +1,12 @@
 import os
 from PyQt6 import QtGui
 from PyQt6.QtWidgets import QWidget
-from PyQt6.QtCore import QThread
 
 from airunner.utils import get_main_window
+from airunner.mediator_mixin import MediatorMixin
 
 
-class BaseWidget(QWidget):
+class BaseWidget(QWidget, MediatorMixin):
     widget_class_ = None
     icons = ()
     ui = None
@@ -23,25 +23,15 @@ class BaseWidget(QWidget):
         return self.app.canvas
 
     threads = []
-    def create_worker(self, worker_class_, response_signal_slot):
-        prefix = worker_class_.__name__
-        worker = worker_class_(prefix=prefix)
-        worker_thread = QThread()
-        worker.moveToThread(worker_thread)
-        worker.response_signal.connect(response_signal_slot)
-        worker.finished.connect(worker_thread.quit)
-        worker_thread.started.connect(worker.start)
-        worker_thread.start()
-        self.threads.append(worker_thread)
-        return worker
 
     def add_to_grid(self, widget, row, column, row_span=1, column_span=1):
         self.layout().addWidget(widget, row, column, row_span, column_span)
 
     def __init__(self, *args, **kwargs):
         super().__init__(*args, **kwargs)
+        MediatorMixin.__init__(self)
         self.app = get_main_window()
-        self.app.loaded.connect(self.initialize)
+        self.app.main_window_loaded.connect(self.on_main_window_loaded)
         
         if self.widget_class_:
             self.ui = self.widget_class_()
@@ -54,6 +44,9 @@ class BaseWidget(QWidget):
             #         stylesheet = f.read()
             #     self.setStyleSheet(stylesheet)
             self.set_icons()
+    
+    def on_main_window_loaded(self):
+        self.initialize()
     
     def initialize(self):
         """
