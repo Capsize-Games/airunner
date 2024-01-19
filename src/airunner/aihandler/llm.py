@@ -66,14 +66,12 @@ class LLMController(QObject, MediatorMixin):
         self.generate_worker.resume()
     
     def do_request(self, message):
-        print("llm_controller do request", message)
         self.request_worker.add_to_queue(message)
     
     def clear_history(self):
         self.emit("clear_history")
     
     def on_LLMRequestWorker_response_signal(self, message):
-        print("on_LLMRequestWorker_response_signal")
         self.generate_worker.add_to_queue(message)
     
     def on_LLMGenerateWorker_response_signal(self, message:dict):
