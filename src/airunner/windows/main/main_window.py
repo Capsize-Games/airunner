@@ -46,6 +46,7 @@ from airunner.mediator_mixin import MediatorMixin
 
 class MainWindow(
     QMainWindow,
+    MediatorMixin,
     SettingsMixin,
     LayerMixin,
     LoraMixin,
@@ -54,7 +55,6 @@ class MainWindow(
     ControlnetModelMixin,
     AIModelMixin,
     ImageFilterMixin,
-    MediatorMixin,
 ):
     main_window_loaded = pyqtSignal()
     logger = Logger(prefix="MainWindow")
@@ -336,6 +336,8 @@ class MainWindow(
 
         super().__init__(*args, **kwargs)
         MediatorMixin.__init__(self)
+        LayerMixin.__init__(self)
+
         self.application_settings = QSettings("Capsize Games", "AI Runner")
         
         self.action_reset_settings()

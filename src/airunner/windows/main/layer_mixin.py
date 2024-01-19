@@ -3,12 +3,31 @@ import io
 import uuid
 
 from PyQt6.QtGui import QPixmap
+from PyQt6.QtCore import pyqtSlot
 
 from PIL import Image
 
 
 class LayerMixin:
-    def add_layer(self):
+    def __init__(self):
+        self.register("switch_layer_signal", self)
+        self.register("add_layer_signal", self)
+        self.register("create_layer_signal", self)
+    
+    @pyqtSlot()
+    def on_create_layer_signal(self):
+        index = self.add_layer()
+        self.switch_layer(index)
+    
+    @pyqtSlot()
+    def on_switch_layer_signal(self, index):
+        self.switch_layer(index)
+
+    @pyqtSlot()
+    def on_add_layer_signal(self):
+        self.add_layer()
+
+    def add_layer(self) -> int:
         settings = self.settings
         total_layers = len(self.settings['layers'])
         name=f"Layer {total_layers + 1}"
@@ -142,7 +161,6 @@ class LayerMixin:
                 return
         self.logger.error(f"Unable to find layer with uuid {uuid}")
 
-    
     def switch_layer(self, layer_index):
         settings = self.settings
         settings["current_layer_index"] = layer_index
@@ -164,18 +182,3 @@ class LayerMixin:
             image = image.convert("RGBA")
             return image
         return None
-
-    def add_image_to_current_layer(self, value):
-        self.add_image_to_layer(self.settings["current_layer_index"], value)
-
-    def add_image_to_layer(self, layer_index, value):
-        if value:
-            buffered = io.BytesIO()
-            value.save(buffered, format="PNG")
-            base_64_image = base64.b64encode(buffered.getvalue())
-        else:
-            base_64_image = ""
-        
-        settings = self.settings
-        settings["layers"][layer_index]["base_64_image"] = base_64_image
-        self.settings = settings
