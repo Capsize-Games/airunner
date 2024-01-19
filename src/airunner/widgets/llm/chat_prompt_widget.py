@@ -182,7 +182,6 @@ class ChatPromptWidget(BaseWidget, MediatorMixin):
 
     def prompt_text_changed(self):
         self.prompt = self.ui.prompt.toPlainText()
-        print(self.prompt)
 
     def clear_prompt(self):
         self.ui.prompt.setPlainText("")
