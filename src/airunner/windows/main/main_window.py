@@ -318,11 +318,12 @@ class MainWindow(
             # traceback.print_exc()
             return
         message = response["message"]
-        {
-            EngineResponseCode.STATUS: self.handle_status,
-            EngineResponseCode.ERROR: self.handle_error,
-            EngineResponseCode.CONTROLNET_IMAGE_GENERATED: self.handle_controlnet_image_generated,
-        }.get(code, lambda *args: None)(message)
+        if code == EngineResponseCode.STATUS:
+            self.handle_status(message)
+        elif code == EngineResponseCode.ERROR:
+            self.handle_error(message)
+        elif code == EngineResponseCode.CONTROLNET_IMAGE_GENERATED:
+            self.handle_controlnet_image_generated(message)
 
     def __init__(self, *args, **kwargs):
         self.logger.info("Starting AI Runnner")
