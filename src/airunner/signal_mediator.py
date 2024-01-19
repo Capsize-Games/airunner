@@ -14,7 +14,7 @@ class Signal(QObject):
     """
     This class represents a signal that can be emitted and received.
     """
-    signal = pyqtSignal(object, object)
+    signal = pyqtSignal(object)
 
 
 class SignalMediator(metaclass=SingletonMeta):
@@ -31,7 +31,7 @@ class SignalMediator(metaclass=SingletonMeta):
         # Connect the Signal's pyqtSignal to the receive method of the slot parent
         self.signals[signal_name].signal.connect(getattr(slot_parent, f"on_{signal_name}"))
 
-    def emit(self, signal_name, arg1=None, arg2=None):
+    def emit(self, signal_name, data=None):
         if signal_name in self.signals:
             # Emit the Signal's pyqtSignal with two arguments
-            self.signals[signal_name].signal.emit(arg1, arg2)
+            self.signals[signal_name].signal.emit(data)

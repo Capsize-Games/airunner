@@ -7,4 +7,4 @@ class AboutWindow(BaseWindow):
     template_class_ = Ui_about_window
 
     def initialize_window(self):
-        self.ui.title.setText(f"AI Runner {self.app.version}")
+        self.ui.title.setText(f"AI Runner {self.settings['app_version']}")

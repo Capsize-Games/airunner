@@ -83,7 +83,6 @@ class STTController(QObject, MediatorMixin):
     def __init__(self, *args, **kwargs):
         MediatorMixin.__init__(self)
         self.engine = kwargs.pop("engine", None)
-        self.app = self.engine.app
         super().__init__(*args, **kwargs)
 
         # Audio capture worker and thread

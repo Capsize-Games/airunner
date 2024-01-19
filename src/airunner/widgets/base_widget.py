@@ -4,23 +4,34 @@ from PyQt6.QtWidgets import QWidget
 
 from airunner.utils import get_main_window
 from airunner.mediator_mixin import MediatorMixin
+from airunner.service_locator import ServiceLocator
+from airunner.windows.main.settings_mixin  import SettingsMixin
 
-
-class BaseWidget(QWidget, MediatorMixin):
+class BaseWidget(QWidget, SettingsMixin, MediatorMixin):
     widget_class_ = None
     icons = ()
     ui = None
     qss_filename = None
 
-    @property
-    def is_dark(self):
-        if not "dark_mode_enabled" in self.app.settings:
-            return False
-        return self.app.settings["dark_mode_enabled"]
+    def register_service(self, name, service):
+        ServiceLocator.register(name, service)
+    
+    def get_service(self, name):
+        return ServiceLocator.get(name)
 
     @property
-    def canvas(self):
-        return self.app.canvas
+    def settings(self):
+        return ServiceLocator.get('get_settings')()
+
+    @settings.setter
+    def settings(self, value):
+        ServiceLocator.get('set_settings')(value)
+
+    @property
+    def is_dark(self):
+        if not "dark_mode_enabled" in self.settings:
+            return False
+        return self.settings["dark_mode_enabled"]
 
     threads = []
 
@@ -28,9 +39,9 @@ class BaseWidget(QWidget, MediatorMixin):
         self.layout().addWidget(widget, row, column, row_span, column_span)
 
     def __init__(self, *args, **kwargs):
-        super().__init__(*args, **kwargs)
         MediatorMixin.__init__(self)
-        self.app = get_main_window()
+        SettingsMixin.__init__(self)
+        super().__init__(*args, **kwargs)
         
         if self.widget_class_:
             self.ui = self.widget_class_()
@@ -141,13 +152,5 @@ class BaseWidget(QWidget, MediatorMixin):
             val = self.get_value(element)
         if val is None:
             val = self.get_is_checked(element)
-        # target_val = self.app.settings_manager.get_value(settings_key_name)
-
-        # if val != target_val:
-        #     if not self.set_plain_text(element, target_val):
-        #         if not self.set_text(element, target_val):
-        #             if not self.set_value(element, target_val):
-        #                 if not self.set_is_checked(element, target_val):
-        #                     raise Exception(f"Could not set value for {element} to {target_val}")
         print("TODO: finish this")
 

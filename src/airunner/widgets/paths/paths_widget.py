@@ -11,7 +11,7 @@ class PathsWidget(BaseWidget):
         self.initialize_widgets()
 
     def action_button_clicked_reset(self):
-        self.app.reset_paths()
+        self.emit("reset_paths_signal")
         self.initialize_widgets()
 
     def initialize_widgets(self):

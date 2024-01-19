@@ -15,9 +15,9 @@ class SeedWidget(BaseWidget):
         self.ui.lineEdit.setText(str(self.seed))
 
     def action_clicked_button_random_seed(self, value):
-        settings = self.app.settings
+        settings = self.settings
         settings["generator_settings"]["random_seed"] = value
-        self.app.settings = settings
+        self.settings = settings
         self.ui.lineEdit.setEnabled(not value)
 
     def action_value_changed_seed(self, value):

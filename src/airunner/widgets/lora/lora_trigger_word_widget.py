@@ -13,14 +13,14 @@ class LoraTriggerWordWidget(BaseWidget):
         self.ui.trigger_word.setText(self.trigger_word)
 
     def action_click_button_to_prompt(self):
-        settings = self.app.settings
-        settings["generator_settings"]["prompt"] = f"{self.app.settings['generator_settings']['prompt']} {self.trigger_word}"
-        self.app.settings = settings
+        settings = self.settings
+        settings["generator_settings"]["prompt"] = f"{self.settings['generator_settings']['prompt']} {self.trigger_word}"
+        self.settings = settings
 
     def action_click_button_to_negative_prompt(self):
-        settings = self.app.settings
-        settings["generator_settings"]["negative_prompt"] = f"{self.app.settings['generator_settings']['negative_prompt']} {self.trigger_word}"
-        self.app.settings = settings
+        settings = self.settings
+        settings["generator_settings"]["negative_prompt"] = f"{self.settings['generator_settings']['negative_prompt']} {self.trigger_word}"
+        self.settings = settings
     
     def action_click_button_copy(self):
         # copy trigger word to clipboard

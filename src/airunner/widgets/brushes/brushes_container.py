@@ -60,7 +60,7 @@ class BrushesContainer(BaseWidget):
             img_base64 = base64.b64encode(img_bytes).decode()
 
         # Create a new Brush entry
-        settings = self.app.settings
+        settings = self.settings
         brush = dict(
             name=brush_name, 
             thumbnail=img_base64
@@ -118,7 +118,7 @@ class BrushesContainer(BaseWidget):
         context_menu.exec(global_position)
 
     def delete_brush(self, widget, brush):
-        settings = self.app.settings
+        settings = self.settings
         for index, brush_data in enumerate(settings["presets"]):
             if brush["name"] == brush_data["name"]:
                 del settings["presets"][index]
@@ -177,7 +177,7 @@ class BrushesContainer(BaseWidget):
         event.acceptProposedAction()
 
     def load_brushes(self):
-        for brush in self.app.settings["presets"]:
+        for brush in self.settings["presets"]:
             self.create_and_add_widget(
                 brush["thumbnail"], 
                 is_base64=True, 

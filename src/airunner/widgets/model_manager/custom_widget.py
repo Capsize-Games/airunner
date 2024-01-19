@@ -28,15 +28,15 @@ class CustomModelWidget(BaseWidget):
     def scan_for_models(self):
         # look at model path and determine if we can import existing local models
         # first look at all files and folders inside of the model paths
-        base_model_path = self.app.settings["path_settings"]["base_path"]
-        txt2img_model_path = self.app.settings["path_settings"]["txt2img_model_path"]
-        depth2img_model_path = self.app.settings["path_settings"]["depth2img_model_path"]
-        pix2pix_model_path = self.app.settings["path_settings"]["pix2pix_model_path"]
-        outpaint_model_path = self.app.settings["path_settings"]["inpaint_model_path"]
-        upscale_model_path = self.app.settings["path_settings"]["upscale_model_path"]
-        txt2vid_model_path = self.app.settings["path_settings"]["txt2vid_model_path"]
-        llm_casuallm_model_path = self.app.settings["path_settings"]["llm_casuallm_model_path"]
-        llm_seq2seq_model_path = self.app.settings["path_settings"]["llm_seq2seq_model_path"]
+        base_model_path = self.path_settings["base_path"]
+        txt2img_model_path = self.path_settings["txt2img_model_path"]
+        depth2img_model_path = self.path_settings["depth2img_model_path"]
+        pix2pix_model_path = self.path_settings["pix2pix_model_path"]
+        outpaint_model_path = self.path_settings["inpaint_model_path"]
+        upscale_model_path = self.path_settings["upscale_model_path"]
+        txt2vid_model_path = self.path_settings["txt2vid_model_path"]
+        llm_casuallm_model_path = self.path_settings["llm_casuallm_model_path"]
+        llm_seq2seq_model_path = self.path_settings["llm_seq2seq_model_path"]
         diffusers_folders = ["scheduler", "text_encoder", "tokenizer", "unet", "vae"]
         for key, model_path in {
             "txt2img": txt2img_model_path,
@@ -67,7 +67,7 @@ class CustomModelWidget(BaseWidget):
                             model.category = "stablediffusion"
                             model.enabled = True
                             model.pipeline_action = key
-                            model.pipeline_class = self.app.get_pipeline_classname(
+                            model.pipeline_class = self.get_service("get_pipeline_classname")(
                                 model.pipeline_action, model.version, model.category
                             )
 
@@ -93,7 +93,7 @@ class CustomModelWidget(BaseWidget):
         self.update_generator_model_dropdown()
 
     def save_model(self, model):
-        self.app.ai_model_save_or_update(dict(
+        self.emit("ai_model_save_or_update_signal", dict(
             name=model.name,
             path=model.path,
             branch=model.branch,
@@ -113,9 +113,9 @@ class CustomModelWidget(BaseWidget):
             if isinstance(child, ModelWidget):
                 child.deleteLater()
         if search:
-            models = self.app.find_models(search, default=False)
+            models = self.get_service("ai_models_find")(search, default=False)
         else:
-            models = self.app.find_models(default=False)
+            models = self.get_service("ai_models_find")(default=False)
         for model_widget in self.model_widgets:
             model_widget.deleteLater()
         self.model_widgets = []
@@ -123,7 +123,7 @@ class CustomModelWidget(BaseWidget):
             version = model['version']
             category = model['category']
             pipeline_action = model["pipeline_action"]
-            pipeline_class = self.app.get_pipeline_classname(
+            pipeline_class = self.get_service("get_pipeline_classname")(
                 pipeline_action, version, category)
 
             model_widget = ModelWidget(
@@ -148,40 +148,40 @@ class CustomModelWidget(BaseWidget):
 
     def models_changed(self, key, model, value):
         model["enabled"] = True
-        self.app.ai_model_save_or_update(model)
+        self.emit("model_save_or_update_signal", model)
         self.update_generator_model_dropdown()
 
     def handle_delete_model(self, model):
-        self.app.ai_model_delete(model)
+        self.emit("ai_model_delete_signal", model)
         self.show_items_in_scrollarea()
         self.update_generator_model_dropdown()
 
     def update_generator_model_dropdown(self):
         if self.initialized:
-            self.app.refresh_available_models()
+            self.emit("refresh_available_models")
 
     def handle_edit_model(self, model, index):
         print("edit button clicked", index)
         self.toggle_model_form_frame(show=True)
 
-        categories = self.app.ai_model_categories()
+        categories = self.get_service("ai_model_categories")()
         self.ui.model_form.category.clear()
         self.ui.model_form.category.addItems(categories)
         self.ui.model_form.category.setCurrentText(model.category)
 
-        actions = self.app.ai_model_pipeline_actions()
+        actions = self.get_service("ai_model_pipeline_actions")()
         self.ui.model_form.pipeline_action.clear()
         self.ui.model_form.pipeline_action.addItems(actions)
         self.ui.model_form.pipeline_action.setCurrentText(model.pipeline_action)
 
         self.ui.model_form.model_name.setText(model.name)
-        pipeline_class = self.app.get_pipeline_classname(
+        pipeline_class = self.get_service("get_pipeline_classname")(
             model.pipeline_action, model.version, model.category)
         self.ui.model_form.pipeline_class_line_edit.setText(pipeline_class)
         self.ui.model_form.enabled.setChecked(True)
         self.ui.model_form.path_line_edit.setText(model.path)
 
-        versions = self.app.ai_model_versions()
+        versions = self.get_service("ai_model_versions")()
         self.ui.model_form.versions.clear()
         self.ui.model_form.versions.addItems(versions)
         self.ui.model_form.versions.setCurrentText(model.version)
