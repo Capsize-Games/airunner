@@ -99,12 +99,10 @@ class TransformerRunner(QObject):
     def unload_tokenizer(self):
         self.logger.info("Unloading tokenizer")
         self.tokenizer = None
-        self.engine.clear_memory()
         
     def unload_model(self):
         self.model = None
         self.processor = None
-        self.engine.clear_memory()
 
     def quantization_config(self):
         config = None
