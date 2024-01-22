@@ -8,9 +8,10 @@ from airunner.mediator_mixin import MediatorMixin
 from airunner.workers.worker import Worker
 from airunner.aihandler.llm import LLMController
 from airunner.aihandler.logger import Logger
-from airunner.aihandler.runner import SDController
+from airunner.aihandler.runner import SDGenerateWorker, SDRequestWorker
 from airunner.aihandler.tts import TTS
 from airunner.windows.main.settings_mixin import SettingsMixin
+from airunner.service_locator import ServiceLocator
 
 
 class EngineRequestWorker(Worker):
@@ -51,7 +52,6 @@ class Engine(QObject, MediatorMixin, SettingsMixin):
 
     # Model controllers
     llm_controller = None
-    sd_controller = None
     tts_controller = None
     stt_controller = None
     ocr_controller = None
@@ -69,7 +69,7 @@ class Engine(QObject, MediatorMixin, SettingsMixin):
     @pyqtSlot(object)
     def on_engine_cancel_signal(self, _ignore):
         self.logger.info("Canceling")
-        self.sd_controller.cancel()
+        self.emit("sd_cancel_signal")
         self.request_worker.cancel()
 
     @pyqtSlot(object)
@@ -105,7 +105,6 @@ class Engine(QObject, MediatorMixin, SettingsMixin):
 
         # Initialize Controllers
         self.llm_controller = LLMController(engine=self)
-        self.sd_controller = SDController(engine=self)
         #self.stt_controller = STTController(engine=self)
         # self.ocr_controller = ImageProcessor(engine=self)
         self.tts_controller = TTS(engine=self)
@@ -123,16 +122,14 @@ class Engine(QObject, MediatorMixin, SettingsMixin):
         self.register("EngineResponseWorker_response_signal", self)
         self.register("text_generate_request_signal", self)
         self.register("image_generate_request_signal", self)
-        self.register("sd_controller_response_signal", self)
         self.register("llm_controller_response_signal", self)
         self.register("llm_text_streamed_signal", self)
+
+        self.sd_request_worker = self.create_worker(SDRequestWorker)
+        self.sd_generate_worker = self.create_worker(SDGenerateWorker)
         
         self.request_worker = self.create_worker(EngineRequestWorker)
         self.response_worker = self.create_worker(EngineResponseWorker)
-
-    
-    def on_sd_controller_response_signal(self, message):
-        self.do_response(message)
     
     def on_llm_controller_response_signal(self, message):
         self.do_response(message)
@@ -178,7 +175,7 @@ class Engine(QObject, MediatorMixin, SettingsMixin):
             self.memory_settings["unload_unused_models"], 
             self.memory_settings["move_unused_model_to_cpu"]
         )
-        self.sd_controller.do_request(message["message"])
+        self.sd_request_worker.add_to_queue(message)
 
     def request_queue_size(self):
         return self.request_worker.queue.qsize()
@@ -249,7 +246,7 @@ class Engine(QObject, MediatorMixin, SettingsMixin):
         """
         Unload the Stable Diffusion model from memory.
         """
-        self.sd_controller.unload()
+        self.emit("unload_stablediffusion_signal")
 
     def parse_message(self, message):
         if message:
@@ -313,10 +310,10 @@ class Engine(QObject, MediatorMixin, SettingsMixin):
     def do_unload_llm(self):
         self.logger.info("Unloading LLM")
         self.llm_controller.do_unload_llm()
-        self.clear_memory()
+        #self.clear_memory()
 
     def move_sd_to_cpu(self):
-        if self.sd_controller.is_pipe_on_cpu or not self.sd_controller.has_pipe:
+        if ServiceLocator.get("is_pipe_on_cpu")() or not ServiceLocator.get("has_pipe")():
             return
-        self.sd_controller.move_pipe_to_cpu()
+        self.emit("move_pipe_to_cpu_signal")
         self.clear_memory()

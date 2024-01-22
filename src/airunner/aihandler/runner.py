@@ -10,7 +10,7 @@ import requests
 import torch
 
 from PIL import Image, ImageDraw, ImageFont
-from PyQt6.QtCore import QObject
+from PyQt6.QtCore import QObject, pyqtSlot
 
 from controlnet_aux.processor import Processor
 from diffusers.pipelines.stable_diffusion.convert_from_ckpt import \
@@ -44,20 +44,31 @@ from airunner.windows.main.ai_model_mixin import AIModelMixin
 from airunner.workers.worker import Worker
 from airunner.mediator_mixin import MediatorMixin
 from airunner.windows.main.settings_mixin import SettingsMixin
-
-logger = Logger(prefix="SDRunner")
+from airunner.service_locator import ServiceLocator
 
 torch.backends.cuda.matmul.allow_tf32 = True
+
 
 class SDRequestWorker(Worker):
     def __init__(self, prefix="SDRequestWorker"):
         super().__init__(prefix=prefix)
+    
+    def handle_message(self, message):
+        self.emit("add_sd_response_to_queue_signal", dict(
+            message=message,
+            image_base_path=self.path_settings["image_path"]
+        ))
 
 
 class SDGenerateWorker(Worker):
     def __init__(self, prefix):
         self.sd = SDRunner()
         super().__init__(prefix)
+        self.register("add_sd_response_to_queue_signal", self)
+    
+    @pyqtSlot(object)
+    def on_add_sd_response_to_queue_signal(self, data):
+        self.add_to_queue(data)
         
     def handle_message(self, data):
         image_base_path = data["image_base_path"]
@@ -90,44 +101,6 @@ class SDGenerateWorker(Worker):
                     image=image
                 ))
             response["images"] = updated_images
-            self.emit("sd_image_generated_signal", response)
-
-
-class SDController(QObject, MediatorMixin):
-
-    logger = Logger(prefix="SDController")
-    
-    def __init__(self, *args, **kwargs):
-        MediatorMixin.__init__(self)
-        self.engine = kwargs.pop("engine", None)
-        super().__init__()
-        self.request_worker = self.create_worker(SDRequestWorker)
-        self.generate_worker = self.create_worker(SDGenerateWorker)
-        self.register("SDGenerateWorker_response_signal", self)
-        self.register("SDRequestWorker_response_signal", self)
-
-    def do_request(self, message):
-        self.request_worker.add_to_queue(message)
-
-    def on_SDRequestWorker_response_signal(self, message):
-        self.generate_worker.add_to_queue(dict(
-            message=message,
-            image_base_path=self.path_settings["image_path"]
-        ))
-
-    def on_SDGenerateWorker_response_signal(self, message):
-        self.emit("sd_controller_response_signal", message)
-
-    @property
-    def is_pipe_on_cpu(self):
-        return self.generate_worker.sd.is_pipe_on_cpu
-    
-    @property
-    def has_pipe(self):
-        return self.generate_worker.sd.has_pipe
-
-    def move_pipe_to_cpu(self):
-        self.generate_worker.sd.move_pipe_to_cpu()
 
 
 class SDRunner(
@@ -150,6 +123,7 @@ class SDRunner(
     AIModelMixin,
     MediatorMixin
 ):
+    logger = Logger(prefix="SDRunner")
     _current_model: str = ""
     _previous_model: str = ""
     _initialized: bool = False
@@ -244,7 +218,7 @@ class SDRunner(
 
     @local_files_only.setter
     def local_files_only(self, value):
-        logger.info("Setting local_files_only to %s" % value)
+        self.logger.info("Setting local_files_only to %s" % value)
         self._local_files_only = value
 
     @property
@@ -635,7 +609,7 @@ class SDRunner(
         elif self.is_vid_action:
             return self.txt2vid
         else:
-            logger.warning(f"Invalid action {self.action} unable to get pipe")
+            self.logger.warning(f"Invalid action {self.action} unable to get pipe")
 
     @pipe.setter
     def pipe(self, value):
@@ -800,14 +774,28 @@ class SDRunner(
         return self.options.get("original_model_data", {})
 
     def  __init__(self, **kwargs):
-        #logger.set_level(LOG_LEVEL)
-        logger.info("Loading Stable Diffusion model runner...")
+        #self.logger.set_level(LOG_LEVEL)
         MediatorMixin.__init__(self)
         SettingsMixin.__init__(self)
+        LayerMixin.__init__(self)
+        LoraDataMixin.__init__(self)
+        EmbeddingDataMixin.__init__(self)
+        PipelineMixin.__init__(self)
+        ControlnetModelMixin.__init__(self)
+        AIModelMixin.__init__(self)
         super().__init__()
+        self.logger.info("Loading Stable Diffusion model runner...")
         self.safety_checker_model = self.models_by_pipeline_action("safety_checker")
         self.text_encoder_model = self.models_by_pipeline_action("text_encoder")
         self.inpaint_vae_model = self.models_by_pipeline_action("inpaint_vae")
+        self.register("sd_cancel_signal", self)
+        services = [
+            "is_pipe_on_cpu", 
+            "has_pipe",
+        ]
+
+        for service in services:
+            ServiceLocator.register(service, lambda: getattr(self, service))
 
         self._safety_checker = None
         self._controlnet = None
@@ -817,6 +805,8 @@ class SDRunner(
         self.outpaint = None
         self.depth2img = None
         self.txt2vid = None
+
+        self.register("unload_stablediffusion_signal", self)
 
     @staticmethod
     def latents_to_image(latents: torch.Tensor):
@@ -875,7 +865,7 @@ class SDRunner(
 
     def initialize(self):
         if not self.initialized or self.reload_model or self.pipe is None:
-            logger.info("Initializing")
+            self.logger.info("Initializing")
             self.compel_proc = None
             self.prompt_embeds = None
             self.negative_prompt_embeds = None
@@ -893,7 +883,8 @@ class SDRunner(
         return torch.Generator(device=device).manual_seed(seed)
 
     def prepare_options(self, data):
-        logger.info(f"Preparing options")
+        print("DATA", data)
+        self.logger.info(f"Preparing options")
         action = data["action"]
         options = data["options"]
         requested_model = options.get(f"model", None)
@@ -906,9 +897,9 @@ class SDRunner(
 
         if (self.is_pipe_loaded and (sequential_cpu_offload_changed)) or model_changed:  # model change
             if model_changed:
-                logger.info(f"Model changed, reloading model" + f" (from {self.model} to {requested_model})")
+                self.logger.info(f"Model changed, reloading model" + f" (from {self.model} to {requested_model})")
             if sequential_cpu_offload_changed:
-                logger.info(f"Sequential cpu offload changed, reloading model")
+                self.logger.info(f"Sequential cpu offload changed, reloading model")
             self.reload_model = True
             self.clear_scheduler()
             self.clear_controlnet()
@@ -935,7 +926,7 @@ class SDRunner(
         if "got an unexpected keyword argument 'image'" in message and self.action in ["outpaint", "pix2pix", "depth2img"]:
             message = f"This model does not support {self.action}"
         traceback.print_exc()
-        logger.error(error)
+        self.logger.error(error)
         self.emit("error_signal", message)
 
     def initialize_safety_checker(self, local_files_only=None):
@@ -964,16 +955,16 @@ class SDRunner(
         if not self.pipe:
             return
         if not self.do_nsfw_filter:
-            logger.info("Disabling safety checker")
+            self.logger.info("Disabling safety checker")
             self.pipe.safety_checker = None
         elif self.pipe.safety_checker is None:
-            logger.info("Loading safety checker")
+            self.logger.info("Loading safety checker")
             self.pipe.safety_checker = self.safety_checker
             if self.pipe.safety_checker:
                 self.pipe.safety_checker.to(self.device)
 
     def do_sample(self, **kwargs):
-        logger.info(f"Sampling {self.action}")
+        self.logger.info(f"Sampling {self.action}")
 
         if self.is_vid_action:
             message = "Generating video"
@@ -1003,12 +994,12 @@ class SDRunner(
                 try:
                     images = output.images
                 except AttributeError:
-                    logger.error("Unable to get images from output")
+                    self.logger.error("Unable to get images from output")
                 if self.action_has_safety_checker:
                     try:
                         nsfw_content_detected = output.nsfw_content_detected
                     except AttributeError:
-                        logger.error("Unable to get nsfw_content_detected from output")
+                        self.logger.error("Unable to get nsfw_content_detected from output")
             return images, nsfw_content_detected
 
     def generate_latents(self):
@@ -1068,7 +1059,7 @@ class SDRunner(
                     "prompt_embeds": self.prompt_embeds,
                 })
             except Exception as _e:
-                logger.warning("Compel failed: " + str(_e))
+                self.logger.warning("Compel failed: " + str(_e))
                 args.update({
                     "prompt": self.prompt,
                 })
@@ -1082,7 +1073,7 @@ class SDRunner(
                     "negative_prompt_embeds": self.negative_prompt_embeds,
                 })
             except Exception as _e:
-                logger.warning("Compel failed: " + str(_e))
+                self.logger.warning("Compel failed: " + str(_e))
                 args.update({
                     "negative_prompt": self.negative_prompt,
                 })
@@ -1107,7 +1098,7 @@ class SDRunner(
                 args["generator"] = generator
 
         if self.enable_controlnet:
-            logger.info(f"Setting up controlnet")
+            self.logger.info(f"Setting up controlnet")
             args = self.load_controlnet_arguments(**args)
 
         self.load_safety_checker()
@@ -1147,7 +1138,7 @@ class SDRunner(
             ch_end = video_length if i == len(chunk_ids) - 1 else chunk_ids[i + 1]
             frame_ids = list(range(ch_start, ch_end))
             try:
-                logger.info(f"Generating video with {len(frame_ids)} frames")
+                self.logger.info(f"Generating video with {len(frame_ids)} frames")
                 self.emit("status_signal", f"Generating video, frames {cur_frame} to {cur_frame + len(frame_ids)-1} of {self.n_samples}")
                 cur_frame += len(frame_ids)
                 kwargs = {
@@ -1225,7 +1216,7 @@ class SDRunner(
         return extra_args
 
     def sample_diffusers_model(self, data: dict):
-        logger.info("sample_diffusers_model")
+        self.logger.info("sample_diffusers_model")
         from pytorch_lightning import seed_everything
         image = self.image
         mask = self.mask
@@ -1258,7 +1249,7 @@ class SDRunner(
         data["options"][f"negative_prompt"] = [negative_prompt for _ in range(self.batch_size)]
         return data
         prompt_data = self.prompt_data
-        logger.info(f"Process prompt")
+        self.logger.info(f"Process prompt")
         if self.deterministic_seed:
             prompt = data["options"][f"prompt"]
             if ".blend(" in prompt:
@@ -1302,7 +1293,7 @@ class SDRunner(
 
     def process_data(self, data: dict):
         import traceback
-        logger.info("Runner: process_data called")
+        self.logger.info("Runner: process_data called")
         self.requested_data = data
         self.prepare_options(data)
         #self.prepare_scheduler()
@@ -1314,7 +1305,7 @@ class SDRunner(
     def generate(self, data: dict):
         if not self.pipe:
             return
-        logger.info("generate called")
+        self.logger.info("generate called")
         self.do_cancel = False
         self.process_data(data)
 
@@ -1405,6 +1396,10 @@ class SDRunner(
         }
         self.emit("progress_signal", res)
 
+    @pyqtSlot(object)
+    def on_unload_stablediffusion_signal(self):
+        self.unload()
+
     def unload(self):
         self.unload_model()
         self.unload_tokenizer()
@@ -1417,7 +1412,7 @@ class SDRunner(
         self.tokenizer = None
 
     def process_upscale(self, data: dict):
-        logger.info("Processing upscale")
+        self.logger.info("Processing upscale")
         image = self.input_image
         results = []
         if image:
@@ -1447,7 +1442,7 @@ class SDRunner(
             return self.image_handler(images, self.requested_data, None)
 
         if not self.pipe:
-            logger.info("pipe is None")
+            self.logger.info("pipe is None")
             return
 
         self.emit("status_signal", f"Generating {'video' if self.is_vid_action else 'image'}")
@@ -1457,7 +1452,7 @@ class SDRunner(
         try:
             self.initialized = self.__dict__[action] is not None
         except KeyError:
-            logger.info(f"{action} model has not been initialized yet")
+            self.logger.info(f"{action} model has not been initialized yet")
             self.initialized = False
 
         error = None
@@ -1488,7 +1483,8 @@ class SDRunner(
             self._current_model = ""
             self.local_files_only = True
 
-    def cancel(self):
+    @pyqtSlot(object)
+    def on_sd_cancel_signal(self):
         self.do_cancel = True
 
     def log_error(self, error, message=None):
@@ -1497,7 +1493,7 @@ class SDRunner(
         self.error_handler(message)
 
     def load_controlnet_from_ckpt(self, pipeline):
-        logger.info("Loading controlnet from ckpt")
+        self.logger.info("Loading controlnet from ckpt")
         pipeline = self.controlnet_action_diffuser(
             vae=pipeline.vae,
             text_encoder=pipeline.text_encoder,
@@ -1512,7 +1508,7 @@ class SDRunner(
         return pipeline
 
     def load_controlnet(self):
-        logger.info(f"Loading controlnet {self.controlnet_type} self.controlnet_model {self.controlnet_model}")
+        self.logger.info(f"Loading controlnet {self.controlnet_type} self.controlnet_model {self.controlnet_model}")
         self._controlnet = None
         self.current_controlnet_type = self.controlnet_type
         controlnet = StableDiffusionControlNetPipeline.from_pretrained(
@@ -1524,17 +1520,17 @@ class SDRunner(
 
     def preprocess_for_controlnet(self, image):
         if self.current_controlnet_type != self.controlnet_type or not self.processor:
-            logger.info("Loading controlnet processor " + self.controlnet_type)
+            self.logger.info("Loading controlnet processor " + self.controlnet_type)
             self.current_controlnet_type = self.controlnet_type
-            logger.info("Controlnet: Processing image")
+            self.logger.info("Controlnet: Processing image")
             self.processor = Processor(self.controlnet_type)
         if self.processor:
-            logger.info("Controlnet: Processing image")
+            self.logger.info("Controlnet: Processing image")
             image = self.processor(image)
             # resize image to width and height
             image = image.resize((self.width, self.height))
             return image
-        logger.error("No controlnet processor found")
+        self.logger.error("No controlnet processor found")
 
     def load_controlnet_arguments(self, **kwargs):
         if not self.is_vid_action:
@@ -1552,7 +1548,7 @@ class SDRunner(
         return kwargs
 
     def unload_unused_models(self):
-        logger.info("Unloading unused models")
+        self.logger.info("Unloading unused models")
         for action in [
             "txt2img",
             "img2img",
@@ -1575,7 +1571,7 @@ class SDRunner(
         self.emit("clear_memory_signal")
 
     def load_model(self):
-        logger.info("Loading model")
+        self.logger.info("Loading model")
         self.torch_compile_applied = False
         self.lora_loaded = False
         self.embeds_loaded = False
@@ -1600,7 +1596,7 @@ class SDRunner(
 
         if self.pipe is None or self.reload_model:
             kwargs["from_safetensors"] = self.is_safetensors
-            logger.info(f"Loading model from scratch {self.reload_model}")
+            self.logger.info(f"Loading model from scratch {self.reload_model}")
             self.reset_applied_memory_settings()
             self.send_model_loading_message(self.model_path)
 
@@ -1628,7 +1624,7 @@ class SDRunner(
                 except OSError as e:
                     self.handle_missing_files(self.action)
             else:
-                logger.info(f"Loading model {self.model_path} from PRETRAINED")
+                self.logger.info(f"Loading model {self.model_path} from PRETRAINED")
                 scheduler = self.load_scheduler()
                 if scheduler:
                     kwargs["scheduler"] = scheduler
@@ -1647,12 +1643,12 @@ class SDRunner(
             Initialize pipe for video to video zero
             """
             if self.pipe and self.is_vid2vid:
-                logger.info("Initializing pipe for vid2vid")
+                self.logger.info("Initializing pipe for vid2vid")
                 self.pipe.unet.set_attn_processor(CrossFrameAttnProcessor(batch_size=2))
                 self.pipe.controlnet.set_attn_processor(CrossFrameAttnProcessor(batch_size=2))
 
             if self.is_outpaint:
-                logger.info("Initializing vae for inpaint / outpaint")
+                self.logger.info("Initializing vae for inpaint / outpaint")
                 self.pipe.vae = AsymmetricAutoencoderKL.from_pretrained(
                     self.inpaint_vae_model,
                     torch_dtype=self.data_type
@@ -1677,7 +1673,7 @@ class SDRunner(
             #self.load_learned_embed_in_clip()
 
     def load_ckpt_model(self):
-        logger.info(f"Loading ckpt file {self.model_path}")
+        self.logger.info(f"Loading ckpt file {self.model_path}")
         pipeline = self.download_from_original_stable_diffusion_ckpt(path=self.model_path)
         return pipeline
 
@@ -1721,11 +1717,11 @@ class SDRunner(
                     local_files_only=False
                 )
         except Exception as e:
-            logger.error(f"Failed to load model from ckpt: {e}")
+            self.logger.error(f"Failed to load model from ckpt: {e}")
         return pipe
 
     def clear_controlnet(self):
-        logger.info("Clearing controlnet")
+        self.logger.info("Clearing controlnet")
         self._controlnet = None
         self.clear_memory()
         self.reset_applied_memory_settings()
@@ -1738,14 +1734,14 @@ class SDRunner(
         )
 
     def reuse_pipeline(self, do_load_controlnet):
-        logger.info("Reusing pipeline")
+        self.logger.info("Reusing pipeline")
         pipe = None
         if self.is_txt2img:
             pipe = self.img2img if self.txt2img is None else self.txt2img
         elif self.is_img2img:
             pipe = self.txt2img if self.img2img is None else self.img2img
         if pipe is None:
-            logger.warning("Failed to reuse pipeline")
+            self.logger.warning("Failed to reuse pipeline")
             self.clear_controlnet()
             return
         kwargs = pipe.components
@@ -1804,7 +1800,7 @@ class SDRunner(
         self.emit("status_signal", message)
 
     def prepare_model(self):
-        logger.info("Prepare model")
+        self.logger.info("Prepare model")
         # get model and switch to it
 
         # get models from database
@@ -1824,18 +1820,18 @@ class SDRunner(
 
     def unload_controlnet(self):
         if self.pipe:
-            logger.info("Unloading controlnet")
+            self.logger.info("Unloading controlnet")
             self.pipe.controlnet = None
         self.controlnet_loaded = False
 
     def handle_missing_files(self, action):
         if not self.attempt_download:
             if self.is_ckpt_model or self.is_safetensors:
-                logger.info("Required files not found, attempting download")
+                self.logger.info("Required files not found, attempting download")
             else:
                 import traceback
                 traceback.print_exc()
-                logger.info("Model not found, attempting download")
+                self.logger.info("Model not found, attempting download")
             # check if we have an internet connection
             if self.allow_online_when_missing_files:
                 self.emit("status_signal", "Downloading model files")

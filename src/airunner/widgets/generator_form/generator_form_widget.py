@@ -20,7 +20,6 @@ class GeneratorForm(BaseWidget):
     deterministic_seed = None
     initialized = False
     parent = None
-    generate_signal = pyqtSignal(dict)
     current_prompt_value = None
     current_negative_prompt_value = None
 
@@ -109,8 +108,8 @@ class GeneratorForm(BaseWidget):
         self.activate_ai_mode()
     
     @pyqtSlot(object)
-    def on_progress_signal(self, response):
-        self.handle_progress_bar(response["message"])
+    def on_progress_signal(self, message):
+        self.handle_progress_bar(message)
     
     def __init__(self, *args, **kwargs):
         super().__init__(*args, **kwargs)
@@ -306,7 +305,7 @@ class GeneratorForm(BaseWidget):
         n_iter = int(override_data.get("n_iter", 1))
         n_samples = int(override_data.get("n_samples", self.generator_settings["n_samples"]))
         # iterate over all keys in model_data
-        model_data = {}
+        model_data=self.generator_settings
         for k,v in override_data.items():
             if k.startswith("model_data_"):
                 model_data[k.replace("model_data_", "")] = v
@@ -324,6 +323,7 @@ class GeneratorForm(BaseWidget):
         print(model_data, self.generator_settings["model"])
         name = model_data["name"] if "name" in model_data else self.generator_settings["model"]
         model = self.get_service("ai_model_by_name")(name)
+        print("MODEL:", model, name)
         # set the model data, first using model_data pulled from the override_data
         model_data = dict(
             name=model_data.get("name", model["name"]),
@@ -427,8 +427,6 @@ class GeneratorForm(BaseWidget):
         Emitting generate_signal with options allows us to pass more options to the dict from
         modal windows such as the image interpolation window.
         """
-        self.emit("generate_image_signal", options)
-
         memory_options = self.get_memory_options()
 
         self.emit("image_generate_request_signal", dict(

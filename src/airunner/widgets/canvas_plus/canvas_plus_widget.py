@@ -10,7 +10,7 @@ from PyQt6.QtGui import QBrush, QColor, QPen, QPixmap
 from PyQt6.QtWidgets import QGraphicsPixmapItem
 from PyQt6 import QtWidgets, QtCore
 from PyQt6.QtCore import pyqtSlot
-from PyQt6.QtWidgets import QGraphicsItemGroup
+from PyQt6.QtWidgets import QGraphicsItemGroup, QGraphicsItem
 
 from airunner.workers.image_data_worker import ImageDataWorker
 from airunner.aihandler.logger import Logger
@@ -172,23 +172,6 @@ class CanvasPlusWidget(BaseWidget):
     def current_active_image(self, value):
         self.add_image_to_current_layer(value)
     
-    def add_image_to_current_layer(self,value):
-        self.logger.info("Adding image to current layer")
-        layer_index = self.settings["current_layer_index"]
-        base_64_image = ""
-
-        try:
-            if value:
-                buffered = io.BytesIO()
-                value.save(buffered, format="PNG")
-                base_64_image = base64.b64encode(buffered.getvalue())
-        except Exception as e:
-            self.logger.error(e)
-        
-        settings = self.settings
-        settings["layers"][layer_index]["base_64_image"] = base_64_image
-        self.settings = settings
-
     @property
     def layer_container_widget(self):
         # TODO
@@ -204,6 +187,7 @@ class CanvasPlusWidget(BaseWidget):
         self.register("main_window_loaded_signal", self)
         self._zoom_level = 1
         self.canvas_container.resizeEvent = self.window_resized
+        self.pixmaps = {}
 
         self.image_data_worker = self.create_worker(ImageDataWorker)
         self.canvas_resize_worker = self.create_worker(CanvasResizeWorker)
@@ -494,6 +478,28 @@ class CanvasPlusWidget(BaseWidget):
             return
         self.scene.setBackgroundBrush(QBrush(QColor(self.canvas_color)))
 
+    def add_image_to_current_layer(self,value):
+        self.logger.info("Adding image to current layer")
+        layer_index = self.settings["current_layer_index"]
+        base_64_image = ""
+
+        try:
+            if value:
+                buffered = io.BytesIO()
+                value.save(buffered, format="PNG")
+                base_64_image = base64.b64encode(buffered.getvalue())
+        except Exception as e:
+            self.logger.error(e)
+        
+        settings = self.settings
+        # If there's an existing image in the layer, remove it from the scene
+        if layer_index in self.pixmaps and isinstance(self.pixmaps[layer_index], QGraphicsItem):
+            if self.pixmaps[layer_index].scene() == self.scene:
+                self.scene.removeItem(self.pixmaps[layer_index])
+            del self.pixmaps[layer_index]
+        settings["layers"][layer_index]["base_64_image"] = base_64_image
+        self.settings = settings
+
     def draw_layers(self):
         layers = self.settings["layers"]
         for index, layer in enumerate(layers):
@@ -507,18 +513,23 @@ class CanvasPlusWidget(BaseWidget):
             )
 
             if not layer["visible"]:
-                if layer["pixmap"] in self.scene.items():
-                    self.scene.removeItem(layer["pixmap"])
+                if index in self.pixmaps and isinstance(self.pixmaps[index], QGraphicsItem) and self.pixmaps[index].scene() == self.scene:
+                    self.scene.removeItem(self.pixmaps[index])
             elif layer["visible"]:
-                if type(layer["pixmap"]) is not DraggablePixmap or layer["pixmap"] not in self.scene.items():
-                    print("adding to scene")
-                    layer["pixmap"].convertFromImage(ImageQt(image))
-                    layer["pixmap"] = DraggablePixmap(self, layer["pixmap"])
-                    self.emit("update_layer_signal", dict(
-                        layer=layer,
-                        index=index
-                    ))
-                    self.scene.addItem(layer["pixmap"])
+                # If there's an existing pixmap in the layer, remove it from the scene
+                if index in self.pixmaps and isinstance(self.pixmaps[index], QGraphicsItem):
+                    if self.pixmaps[index].scene() == self.scene:
+                        self.scene.removeItem(self.pixmaps[index])
+                    del self.pixmaps[index]
+                pixmap = QPixmap()
+                pixmap.convertFromImage(ImageQt(image))
+                self.pixmaps[index] = DraggablePixmap(self, pixmap)
+                self.emit("update_layer_signal", dict(
+                    layer=layer,
+                    index=index
+                ))
+                if self.pixmaps[index].scene() != self.scene:
+                    self.scene.addItem(self.pixmaps[index])
             continue
 
     def set_scene_rect(self):
