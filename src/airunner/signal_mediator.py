@@ -29,7 +29,10 @@ class SignalMediator(metaclass=SingletonMeta):
             # Create a new Signal instance for this signal name
             self.signals[signal_name] = Signal()
         # Connect the Signal's pyqtSignal to the receive method of the slot parent
-        self.signals[signal_name].signal.connect(getattr(slot_parent, f"on_{signal_name}"))
+        try:
+            self.signals[signal_name].signal.connect(getattr(slot_parent, f"on_{signal_name}"))
+        except Exception as e:
+            print(f"Error connecting signal {signal_name}", e)
 
     def emit(self, signal_name, data=None):
         if signal_name in self.signals:

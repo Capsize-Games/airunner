@@ -7,7 +7,6 @@ from airunner.widgets.generator_form.templates.generator_tab_ui import Ui_genera
 
 class GeneratorTabWidget(BaseWidget):
     widget_class_ = Ui_generator_tab
-    generate_signal = pyqtSignal(dict)
     data = {}
     clip_skip_disabled_tabs = []
     clip_skip_disabled_sections = ["upscale", "superresolution", "txt2vid"]

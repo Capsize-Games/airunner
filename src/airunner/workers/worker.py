@@ -4,20 +4,18 @@ from PyQt6.QtCore import pyqtSignal, pyqtSlot, QThread, QSettings, QObject
 
 from airunner.aihandler.logger import Logger
 from airunner.mediator_mixin import MediatorMixin
+from airunner.windows.main.settings_mixin import SettingsMixin
 
 
-class Worker(QObject, MediatorMixin):
+class Worker(QObject, MediatorMixin, SettingsMixin):
     queue_type = "get_next_item"
     finished = pyqtSignal()
 
-    @property
-    def settings(self):
-        return self.application_settings.value("settings")
-    
     def __init__(self, prefix="Worker"):
         self.prefix = prefix
         super().__init__()
         MediatorMixin.__init__(self)
+        SettingsMixin.__init__(self)
         self.logger = Logger(prefix=prefix)
         self.running = False
         self.queue = queue.Queue()
