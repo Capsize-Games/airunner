@@ -3,17 +3,21 @@ from PIL.ImageQt import QImage
 from PyQt6.QtCore import QRect
 from PyQt6.QtGui import QBrush, QColor, QPen, QPixmap, QPainter
 from PyQt6.QtWidgets import QGraphicsItem, QGraphicsPixmapItem
+from airunner.windows.main.settings_mixin import SettingsMixin
+from airunner.mediator_mixin import MediatorMixin
 
 
-class DraggablePixmap(QGraphicsPixmapItem):
+class DraggablePixmap(QGraphicsPixmapItem, MediatorMixin, SettingsMixin):
     def __init__(self, parent, pixmap):
         self.parent = parent
         super().__init__(pixmap)
+        MediatorMixin.__init__(self)
+        SettingsMixin.__init__(self)
         self.pixmap = pixmap
         self.setFlag(QGraphicsItem.GraphicsItemFlag.ItemIsMovable, True)
 
     def snap_to_grid(self):
-        cell_size = self.parent.app.settings["grid_settings"]["cell_size"]
+        cell_size = self.grid_settings["cell_size"]
         x = round(self.x() / cell_size) * cell_size
         y = round(self.y() / cell_size) * cell_size
         x += self.parent.last_pos.x()
