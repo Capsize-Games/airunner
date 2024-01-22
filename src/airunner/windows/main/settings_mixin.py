@@ -18,9 +18,7 @@ class SettingsMixin:
         ServiceLocator.register("get_settings", self.get_settings)
         ServiceLocator.register("set_settings", self.set_settings)
         self.register("reset_settings_signal", self)
-
-    def get_settings(self):
-        return self.application_settings.value("settings", dict(
+        self.default_settings = dict(
             current_layer_index=0,
             ocr_enabled=False,
             tts_enabled=False,
@@ -374,9 +372,18 @@ Previous Conversation:
             controlnet=controlnet_bootstrap_data,
             ai_models=model_bootstrap_data,
             image_filters=imagefilter_bootstrap_data,
-        ), 
-        type=dict
-    )
+        )
+
+    def update_settings(self):
+        default_settings = self.default_settings
+        current_settings = self.settings
+        for k,v in default_settings.items():
+            if k not in current_settings:
+                current_settings[k] = v
+        self.settings = current_settings
+
+    def get_settings(self):
+        return self.application_settings.value("settings", self.default_settings, type=dict)
 
     def set_settings(self, val):
         self.application_settings.setValue("settings", val)
@@ -387,6 +394,16 @@ Previous Conversation:
         self.application_settings.clear()
         self.application_settings.sync()
         self.set_settings(self.get_settings())
+
+    @property
+    def ai_models(self):
+        return self.get_settings()["ai_models"]
+    
+    @ai_models.setter
+    def ai_models(self, val):
+        settings = self.get_settings()
+        settings["ai_models"] = val
+        self.set_settings(settings)
 
     @property
     def generator_settings(self):
