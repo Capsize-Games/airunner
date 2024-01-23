@@ -12,6 +12,26 @@ from airunner.data.bootstrap.model_bootstrap_data import model_bootstrap_data
 from airunner.data.bootstrap.imagefilter_bootstrap_data import imagefilter_bootstrap_data
 
 
+tts_settings_default = dict(
+    language="English",
+    voice="v2/en_speaker_6",
+    gender="Male",
+    fine_temperature=80,
+    coarse_temperature=40,
+    semantic_temperature=80,
+    use_bark=False,
+    enable_tts=True,
+    use_cuda=True,
+    use_sentence_chunks=True,
+    use_word_chunks=False,
+    cuda_index=0,
+    word_chunks=1,
+    sentence_chunks=1,
+    play_queue_buffer_length=1,
+    enable_cpu_offload=True,
+)
+
+
 class SettingsMixin:
     def __init__(self):
         self.application_settings = QSettings("Capsize Games", "AI Runner")
@@ -274,24 +294,7 @@ Previous Conversation:
                 prompt_template="Mistral 7B Instruct: Default Chatbot",
                 override_parameters=False
             ),
-            tts_settings=dict(
-                language="English",
-                voice="v2/en_speaker_6",
-                gender="Male",
-                fine_temperature=80,
-                coarse_temperature=40,
-                semantic_temperature=80,
-                use_bark=False,
-                enable_tts=True,
-                use_cuda=True,
-                use_sentence_chunks=True,
-                use_word_chunks=False,
-                cuda_index=0,
-                word_chunks=1,
-                sentence_chunks=1,
-                play_queue_buffer_length=1,
-                enable_cpu_offload=True,
-            ),
+            tts_settings=tts_settings_default,
             stt_settings=dict(
                 duration=10,
                 fs=16000,
@@ -394,175 +397,180 @@ Previous Conversation:
         self.logger.info("Resetting settings")
         self.application_settings.clear()
         self.application_settings.sync()
-        self.set_settings(self.get_settings())
+        self.set_settings(self.settings)
 
     @property
     def ai_models(self):
-        return self.get_settings()["ai_models"]
+        return self.settings["ai_models"]
     
     @ai_models.setter
     def ai_models(self, val):
-        settings = self.get_settings()
+        settings = self.settings
         settings["ai_models"] = val
         self.set_settings(settings)
 
     @property
     def generator_settings(self):
-        return self.get_settings()["generator_settings"]
+        return self.settings["generator_settings"]
     
     @generator_settings.setter
     def generator_settings(self, val):
-        settings = self.get_settings()
+        settings = self.settings
         settings["generator_settings"] = val
         self.set_settings(settings)
 
     @property
     def stt_settings(self):
-        return self.get_settings()["stt_settings"]
+        return self.settings["stt_settings"]
     
     @stt_settings.setter
     def stt_settings(self, val):
-        settings = self.get_settings()
+        settings = self.settings
         settings["stt_settings"] = val
         self.set_settings(settings)
 
     @property
     def controlnet_settings(self):
-        return self.get_settings()["controlnet_settings"]
+        return self.settings["controlnet_settings"]
     
     @controlnet_settings.setter
     def controlnet_settings(self, val):
-        settings = self.get_settings()
+        settings = self.settings
         settings["controlnet_settings"] = val
         self.set_settings(settings)
 
     @property
     def metadata_settings(self):
-        return self.get_settings()["metadata_settings"]
+        return self.settings["metadata_settings"]
     
     @metadata_settings.setter
     def metadata_settings(self, val):
-        settings = self.get_settings()
+        settings = self.settings
         settings["metadata_settings"] = val
         self.set_settings(settings)
 
     @property
     def canvas_settings(self):
-        return self.get_settings()["canvas_settings"]
+        return self.settings["canvas_settings"]
     
     @canvas_settings.setter
     def canvas_settings(self, val):
-        settings = self.get_settings()
+        settings = self.settings
         settings["canvas_settings"] = val
         self.set_settings(settings)
 
     @property
     def active_grid_settings(self):
-        return self.get_settings()["active_grid_settings"]
+        return self.settings["active_grid_settings"]
     
     @active_grid_settings.setter
     def active_grid_settings(self, val):
-        settings = self.get_settings()
+        settings = self.settings
         settings["active_grid_settings"] = val
         self.set_settings(settings)
 
     @property
     def standard_image_settings(self):
-        return self.get_settings()["standard_image_settings"]
+        return self.settings["standard_image_settings"]
     
     @standard_image_settings.setter
     def standard_image_settings(self, val):
-        settings = self.get_settings()
+        settings = self.settings
         settings["standard_image_settings"] = val
         self.set_settings(settings)
 
     @property
     def path_settings(self):
-        return self.get_settings()["path_settings"]
+        return self.settings["path_settings"]
     
     @path_settings.setter
     def path_settings(self, val):
-        settings = self.get_settings()
+        settings = self.settings
         settings["path_settings"] = val
         self.set_settings(settings)
     
     @property
     def brush_settings(self):
-        return self.get_settings()["brush_settings"]
+        return self.settings["brush_settings"]
     
     @brush_settings.setter
     def brush_settings(self, val):
-        settings = self.get_settings()
+        settings = self.settings
         settings["brush_settings"] = val
         self.set_settings(settings)
 
     @property
     def grid_settings(self):
-        return self.get_settings()["grid_settings"]
+        return self.settings["grid_settings"]
     
     @grid_settings.setter
     def grid_settings(self, val):
-        settings = self.get_settings()
+        settings = self.settings
         settings["grid_settings"] = val
         self.set_settings(settings)
 
     @property
     def window_settings(self):
-        return self.get_settings()["window_settings"]
+        return self.settings["window_settings"]
     
     @window_settings.setter
     def window_settings(self, val):
-        settings = self.get_settings()
+        settings = self.settings
         settings["window_settings"] = val
         self.set_settings(settings)
 
     @property
     def shortcut_key_settings(self):
-        return self.get_settings()["shortcut_key_settings"]
+        return self.settings["shortcut_key_settings"]
     
     @shortcut_key_settings.setter
     def shortcut_key_settings(self, val):
-        settings = self.get_settings()
+        settings = self.settings
         settings["shortcut_key_settings"] = val
         self.set_settings(settings)
 
     @property
     def memory_settings(self):
-        return self.get_settings()["memory_settings"]
+        return self.settings["memory_settings"]
     
     @memory_settings.setter
     def memory_settings(self, val):
-        settings = self.get_settings()
+        settings = self.settings
         settings["memory_settings"] = val
         self.set_settings(settings)
     
     @property
     def llm_generator_settings(self):
-        return self.get_settings()["llm_generator_settings"]
+        return self.settings["llm_generator_settings"]
     
     @llm_generator_settings.setter
     def llm_generator_settings(self, val):
-        settings = self.get_settings()
+        settings = self.settings
         settings["llm_generator_settings"] = val
         self.set_settings(settings)
 
     @property
     def tts_settings(self):
-        return self.get_settings()["tts_settings"]
+        tts_settings = self.settings.get("tts_settings")
+        if tts_settings is None:
+            self.tts_settings = tts_settings_default
+            tts_settings = self.settings.get("tts_settings")
+            print("GETTING TTS_SETTINGS", tts_settings)
+        return tts_settings
     
     @tts_settings.setter
     def tts_settings(self, val):
-        settings = self.get_settings()
+        settings = self.settings
         settings["tts_settings"] = val
         self.set_settings(settings)
 
     @property
     def llm_templates(self):
-        return self.get_settings()["llm_templates"]
+        return self.settings["llm_templates"]
     
     @llm_templates.setter
     def llm_templates(self, val):
-        settings = self.get_settings()
+        settings = self.settings
         settings["llm_templates"] = val
         self.set_settings(settings)
 
