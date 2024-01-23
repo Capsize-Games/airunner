@@ -53,11 +53,9 @@ class CustomModelWidget(BaseWidget):
             # find all folders inside of model_path, each of those folders is a model version
             with os.scandir(model_path) as dir_object:
                 # check if dir_object is a directory
+                logger.info(f"Scan for models {key} {model_path}")
                 for entry in dir_object:
                     version = entry.name
-
-                    logger.info(f"Scan for models {key} {model_path}")
-            
                     with os.scandir(os.path.join(model_path, version)) as dir_object:
                         for entry in dir_object:
                             model = ModelData()
