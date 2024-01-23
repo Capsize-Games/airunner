@@ -132,7 +132,6 @@ class ImportWidget(BaseWidget):
     
     def import_models(self):
         url = self.ui.import_url.text()
-        print("IMPORT MODELS")
         try:
             model_id = url.split("models/")[1]
         except IndexError:

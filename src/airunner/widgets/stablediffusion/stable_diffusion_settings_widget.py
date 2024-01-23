@@ -5,6 +5,10 @@ from airunner.widgets.stablediffusion.templates.stable_diffusion_settings_ui imp
 class StableDiffusionSettingsWidget(BaseWidget):
     widget_class_ = Ui_stable_diffusion_settings_widget
 
+    def __init__(self, *args, **kwargs):
+        super().__init__(*args, **kwargs)
+        self.register("models_changed_signal", self)
+
     def showEvent(self, event):
         super().showEvent(event)
         steps = target_val = self.generator_settings["steps"]
@@ -58,6 +62,7 @@ class StableDiffusionSettingsWidget(BaseWidget):
         self.load_models()
 
     def load_pipelines(self):
+        self.logger.info("load_pipelines")
         self.ui.pipeline.blockSignals(True)
         self.ui.pipeline.clear()
         pipeline_names = ["txt2img / img2img", "inpaint / outpaint", "depth2img", "pix2pix", "upscale", "superresolution", "txt2vid"]
@@ -72,6 +77,7 @@ class StableDiffusionSettingsWidget(BaseWidget):
         self.ui.pipeline.blockSignals(False)
     
     def load_versions(self):
+        self.logger.info("load_versions")
         self.ui.version.blockSignals(True)
         self.ui.version.clear()
         pipelines = self.get_service("get_pipelines")(category="stablediffusion")
@@ -82,10 +88,17 @@ class StableDiffusionSettingsWidget(BaseWidget):
             self.ui.version.setCurrentText(current_version)
         self.ui.version.blockSignals(False)
 
+    def on_models_changed_signal(self, _ignore):
+        self.load_pipelines()
+        self.load_versions()
+        self.load_models()
+        self.load_schedulers()
+
     def clear_models(self):
         self.ui.model.clear()
 
     def load_models(self):
+        self.logger.info("load_models")
         self.ui.model.blockSignals(True)
         self.clear_models()
 
@@ -110,6 +123,7 @@ class StableDiffusionSettingsWidget(BaseWidget):
         self.settings = settings
 
     def load_schedulers(self):
+        self.logger.info("load_schedulers")
         scheduler_names = [s["display_name"] for s in self.settings["schedulers"]]
         self.ui.scheduler.clear()
         self.ui.scheduler.addItems(scheduler_names)

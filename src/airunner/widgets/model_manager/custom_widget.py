@@ -1,9 +1,11 @@
 import os
 
 from airunner.models.modeldata import ModelData
+from airunner.service_locator import ServiceLocator
 from airunner.widgets.base_widget import BaseWidget
 from airunner.widgets.model_manager.model_widget import ModelWidget
 from airunner.widgets.model_manager.templates.custom_ui import Ui_custom_model_widget
+from airunner.workers.worker import Worker
 
 from PyQt6 import QtWidgets
 from airunner.aihandler.logger import Logger
@@ -11,24 +13,14 @@ from airunner.aihandler.logger import Logger
 logger = Logger(prefix="CustomModelWidget")
 
 
-class CustomModelWidget(BaseWidget):
-    initialized = False
-    widget_class_ = Ui_custom_model_widget
-    model_widgets = []
-
-    def __init__(self, *args, **kwargs):
-        super().__init__(*args, **kwargs)
-        self.show_items_in_scrollarea()
-        self.scan_for_models()
-        self.initialized = True
-
-    def action_button_clicked_scan_for_models(self):
+class ModelScannerWorker(Worker):
+    def handle_message(self, _message):
         self.scan_for_models()
 
     def scan_for_models(self):
+        self.logger.info("Scan for models")
         # look at model path and determine if we can import existing local models
         # first look at all files and folders inside of the model paths
-        base_model_path = self.path_settings["base_path"]
         txt2img_model_path = self.path_settings["txt2img_model_path"]
         depth2img_model_path = self.path_settings["depth2img_model_path"]
         pix2pix_model_path = self.path_settings["pix2pix_model_path"]
@@ -38,6 +30,7 @@ class CustomModelWidget(BaseWidget):
         llm_casuallm_model_path = self.path_settings["llm_casuallm_model_path"]
         llm_seq2seq_model_path = self.path_settings["llm_seq2seq_model_path"]
         diffusers_folders = ["scheduler", "text_encoder", "tokenizer", "unet", "vae"]
+        models = []
         for key, model_path in {
             "txt2img": txt2img_model_path,
             "depth2img": depth2img_model_path,
@@ -65,7 +58,7 @@ class CustomModelWidget(BaseWidget):
                             model.category = "stablediffusion"
                             model.enabled = True
                             model.pipeline_action = key
-                            model.pipeline_class = self.get_service("get_pipeline_classname")(
+                            model.pipeline_class = ServiceLocator.get("get_pipeline_classname")(
                                 model.pipeline_action, model.version, model.category
                             )
 
@@ -85,25 +78,36 @@ class CustomModelWidget(BaseWidget):
                                     model.name = entry.name
 
                             if model:
-                                self.save_model(model)
+                                models.append(dict(
+                                    name=model.name,
+                                    path=model.path,
+                                    branch=model.branch,
+                                    version=model.version,
+                                    category=model.category,
+                                    pipeline_action=model.pipeline_action,
+                                    enabled=model.enabled,
+                                    is_default=False
+                                ))
 
-        self.show_items_in_scrollarea()
-        self.update_generator_model_dropdown()
+        self.emit("ai_models_save_or_update_signal", models)
 
-    def save_model(self, model):
-        self.emit("ai_model_save_or_update_signal", dict(
-            name=model.name,
-            path=model.path,
-            branch=model.branch,
-            version=model.version,
-            category=model.category,
-            pipeline_action=model.pipeline_action,
-            enabled=model.enabled,
-            is_default=False
-        ))
-    
+
+class CustomModelWidget(BaseWidget):
+    initialized = False
+    widget_class_ = Ui_custom_model_widget
+    model_widgets = []
     spacer = None
 
+    def __init__(self, *args, **kwargs):
+        super().__init__(*args, **kwargs)
+        self.show_items_in_scrollarea()
+        self.initialized = True
+        self.model_scanner_worker = self.create_worker(ModelScannerWorker)
+        self.model_scanner_worker.add_to_queue("scan_for_models")
+    
+    def action_button_clicked_scan_for_models(self):
+        self.model_scanner_worker.add_to_queue("scan_for_models")
+   
     def show_items_in_scrollarea(self, search=None):
         if self.spacer:
             self.ui.scrollAreaWidgetContents.layout().removeItem(self.spacer)
@@ -143,46 +147,6 @@ class CustomModelWidget(BaseWidget):
         if not self.spacer:
             self.spacer = QtWidgets.QSpacerItem(20, 40, QtWidgets.QSizePolicy.Policy.Minimum, QtWidgets.QSizePolicy.Policy.Expanding)
         self.ui.scrollAreaWidgetContents.layout().addItem(self.spacer)
-
-    def models_changed(self, key, model, value):
-        model["enabled"] = True
-        self.emit("model_save_or_update_signal", model)
-        self.update_generator_model_dropdown()
-
-    def handle_delete_model(self, model):
-        self.emit("ai_model_delete_signal", model)
-        self.show_items_in_scrollarea()
-        self.update_generator_model_dropdown()
-
-    def update_generator_model_dropdown(self):
-        if self.initialized:
-            self.emit("refresh_available_models")
-
-    def handle_edit_model(self, model, index):
-        print("edit button clicked", index)
-        self.toggle_model_form_frame(show=True)
-
-        categories = self.get_service("ai_model_categories")()
-        self.ui.model_form.category.clear()
-        self.ui.model_form.category.addItems(categories)
-        self.ui.model_form.category.setCurrentText(model.category)
-
-        actions = self.get_service("ai_model_pipeline_actions")()
-        self.ui.model_form.pipeline_action.clear()
-        self.ui.model_form.pipeline_action.addItems(actions)
-        self.ui.model_form.pipeline_action.setCurrentText(model.pipeline_action)
-
-        self.ui.model_form.model_name.setText(model.name)
-        pipeline_class = self.get_service("get_pipeline_classname")(
-            model.pipeline_action, model.version, model.category)
-        self.ui.model_form.pipeline_class_line_edit.setText(pipeline_class)
-        self.ui.model_form.enabled.setChecked(True)
-        self.ui.model_form.path_line_edit.setText(model.path)
-
-        versions = self.get_service("ai_model_versions")()
-        self.ui.model_form.versions.clear()
-        self.ui.model_form.versions.addItems(versions)
-        self.ui.model_form.versions.setCurrentText(model.version)
 
     def mode_type_changed(self, val):
         print("mode_type_changed", val)
