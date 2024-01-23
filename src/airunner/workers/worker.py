@@ -62,11 +62,18 @@ class Worker(QObject, MediatorMixin, SettingsMixin):
     
     def get_last_item(self):
         msg = None
-        index = self.queue.get()
-        msg = self.items.pop(index, None)
-        self.items = {}
-        self.queue.empty()
-        return msg
+        index = None
+        while not self.queue.empty():
+            index = self.queue.get()
+            if index in self.items:
+                break
+        if index in self.items:
+            msg = self.items.pop(index)
+            self.items = {}
+            self.queue.empty()
+            return msg
+        else:
+            return None
 
     def get_next_item(self):
         index = self.queue.get()

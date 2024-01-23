@@ -1,18 +1,19 @@
 import os
 from PyQt6.QtCore import Qt
 from PyQt6.QtWidgets import QDialog
-from airunner.utils import get_main_window
+from airunner.mediator_mixin import MediatorMixin
 from airunner.windows.main.settings_mixin import SettingsMixin
 
 
-class BaseWindow(QDialog, SettingsMixin):
+class BaseWindow(QDialog, SettingsMixin, MediatorMixin):
     template_class_ = None
     template = None
     is_modal: bool = False  # allow the window to be treated as a modal
 
     def __init__(self, **kwargs):
-        super().__init__()
+        MediatorMixin.__init__(self)
         SettingsMixin.__init__(self)
+        super().__init__()
         self.do_exec = kwargs.get("exec", True)
 
         self.set_stylesheet()
