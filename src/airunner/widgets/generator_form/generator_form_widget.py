@@ -322,11 +322,9 @@ class GeneratorForm(BaseWidget):
 
 
         # get the model from the database
-        print(model_data, self.generator_settings["model"])
         name = model_data["name"] if "name" in model_data else self.generator_settings["model"]
         model = self.get_service("ai_model_by_name")(name)
         
-        print("MODEL:", model, name)
         # set the model data, first using model_data pulled from the override_data
         model_data = dict(
             name=model_data.get("name", model["name"]),
