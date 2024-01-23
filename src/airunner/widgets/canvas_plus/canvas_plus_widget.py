@@ -25,6 +25,7 @@ from airunner.service_locator import ServiceLocator
 class CanvasResizeWorker(Worker):
     def __init__(self, *args, **kwargs):
         super().__init__(*args, **kwargs)
+        self.queue_type = "get_last_item"
         self.register("canvas_resize_signal", self)
         self.last_cell_count = (0, 0)
 
@@ -34,6 +35,8 @@ class CanvasResizeWorker(Worker):
         self.add_to_queue(data)
 
     def handle_message(self, data:dict):
+        if not data:
+            return
         settings = data["settings"]
         view_size = data["view_size"]
 
@@ -243,7 +246,6 @@ class CanvasPlusWidget(BaseWidget):
 
     def on_CanvasResizeWorker_response_signal(self, line_data: tuple):
         draw_grid = self.settings["grid_settings"]["show_grid"]
-        print("on_CanvasResizeWorker_response_signal", draw_grid)
         if not draw_grid:
             return
         line = self.scene.addLine(*line_data)
