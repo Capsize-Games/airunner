@@ -25,6 +25,7 @@ from airunner.service_locator import ServiceLocator
 class CanvasResizeWorker(Worker):
     def __init__(self, *args, **kwargs):
         super().__init__(*args, **kwargs)
+        self.queue_type = "get_last_item"
         self.register("canvas_resize_signal", self)
         self.last_cell_count = (0, 0)
 
@@ -34,6 +35,8 @@ class CanvasResizeWorker(Worker):
         self.add_to_queue(data)
 
     def handle_message(self, data:dict):
+        if not data:
+            return
         settings = data["settings"]
         view_size = data["view_size"]
 
@@ -77,10 +80,8 @@ class CanvasResizeWorker(Worker):
 
         self.emit("canvas_clear_lines_signal")
 
-        for line_data in lines_data:
-            self.emit("CanvasResizeWorker_response_signal", line_data)
-
-        self.emit("canvas_do_draw_signal")
+        #for line_data in lines_data:
+        self.emit("CanvasResizeWorker_response_signal", lines_data)
 
 
 class CanvasPlusWidget(BaseWidget):
@@ -241,13 +242,14 @@ class CanvasPlusWidget(BaseWidget):
         # ))
         self.add_image_to_scene(image_data["images"][0])
 
-    def on_CanvasResizeWorker_response_signal(self, line_data: tuple):
+    def on_CanvasResizeWorker_response_signal(self, lines_data: list):
         draw_grid = self.settings["grid_settings"]["show_grid"]
-        print("on_CanvasResizeWorker_response_signal", draw_grid)
         if not draw_grid:
             return
-        line = self.scene.addLine(*line_data)
-        self.line_group.addToGroup(line)
+        for line_data in lines_data:
+            line = self.scene.addLine(*line_data)
+            self.line_group.addToGroup(line)
+        self.emit("canvas_do_draw_signal")
 
     def on_ImageDataWorker_response_signal(self, message):
         self.emit("clear_status_message_signal")
