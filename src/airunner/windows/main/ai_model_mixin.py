@@ -1,6 +1,7 @@
-from airunner.service_locator import ServiceLocator
-
 from PyQt6.QtCore import pyqtSlot
+
+from airunner.service_locator import ServiceLocator
+from airunner.data.bootstrap.model_bootstrap_data import model_bootstrap_data
 
 
 class AIModelMixin:
@@ -23,9 +24,9 @@ class AIModelMixin:
         for service in services:
             ServiceLocator.register(service, getattr(self, service))
         
-        self.register("ai_model_save_or_update_signal", self)
+        self.register("ai_models_save_or_update_signal", self)
         self.register("ai_model_delete_signal", self)
-        self.register("ai_model_create_signal", self)
+        self.register("ai_models_create_signal", self)
 
     def ai_model_get_by_filter(self, filter_dict):
         return [item for item in self.ai_models if all(item.get(k) == v for k, v in filter_dict.items())]
@@ -35,6 +36,13 @@ class AIModelMixin:
         settings = self.settings
         settings["ai_models"].append(item)
         self.settings = settings
+
+    @pyqtSlot(object)
+    def on_ai_models_create_signal(self, models):
+        settings = self.settings
+        settings["ai_models"] = models
+        self.settings = settings
+        self.emit("models_changed_signal", "models")
 
     def ai_model_update(self, item):
         settings = self.settings
@@ -63,13 +71,24 @@ class AIModelMixin:
         return [model for model in self.ai_models if model["is_default"] == True and model["enabled"] == False]
 
     @pyqtSlot(object)
-    def on_ai_model_save_or_update_signal(self, model_data):
-        # find the model by name and path, if it exists, update it, otherwise insert it
-        existing_model = self.ai_model_get_by_filter({"name": model_data["name"], "path": model_data["path"]})
-        if existing_model:
-            self.ai_model_update(model_data)
-        else:
-            self.emit("ai_model_create_signal", model_data)
+    def on_ai_models_save_or_update_signal(self, new_models):
+        settings = self.settings
+        default_models = model_bootstrap_data
+        existing_models = settings["ai_models"]
+
+        # Convert list of models to dictionary with model name as key
+        model_dict = {model['name']: model for model in default_models}
+
+        # Update the dictionary with existing models
+        model_dict.update({model['name']: model for model in existing_models})
+
+        # Update the dictionary with new models
+        model_dict.update({model['name']: model for model in new_models})
+
+        # Convert back to list
+        merged_models = list(model_dict.values())
+
+        self.emit("ai_models_create_signal", merged_models)
         
     def ai_model_paths(self, model_type=None, pipeline_action=None):
         models = self.ai_models
