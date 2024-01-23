@@ -6,6 +6,7 @@ from PyQt6.QtCore import pyqtSignal, QRect, pyqtSlot
 from airunner.aihandler.settings import MAX_SEED
 from airunner.widgets.base_widget import BaseWidget
 from airunner.widgets.generator_form.templates.generatorform_ui import Ui_generator_form
+from airunner.aihandler.logger import Logger
 
 
 class GeneratorForm(BaseWidget):
@@ -22,6 +23,7 @@ class GeneratorForm(BaseWidget):
     parent = None
     current_prompt_value = None
     current_negative_prompt_value = None
+    logger = Logger(prefix="GeneratorForm")
 
     @property
     def is_txt2img(self):
@@ -323,6 +325,7 @@ class GeneratorForm(BaseWidget):
         print(model_data, self.generator_settings["model"])
         name = model_data["name"] if "name" in model_data else self.generator_settings["model"]
         model = self.get_service("ai_model_by_name")(name)
+        
         print("MODEL:", model, name)
         # set the model data, first using model_data pulled from the override_data
         model_data = dict(
@@ -428,6 +431,8 @@ class GeneratorForm(BaseWidget):
         modal windows such as the image interpolation window.
         """
         memory_options = self.get_memory_options()
+
+        self.logger.info(f"Attempting to generate image")
 
         self.emit("image_generate_request_signal", dict(
             action=action,

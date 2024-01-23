@@ -3,6 +3,7 @@ import traceback
 import gc
 
 from PyQt6.QtCore import QObject, pyqtSignal, pyqtSlot
+from airunner.aihandler.enums import EngineRequestCode, EngineResponseCode
 from airunner.aihandler.logger import Logger
 from airunner.mediator_mixin import MediatorMixin
 from airunner.workers.worker import Worker
@@ -19,13 +20,25 @@ class EngineRequestWorker(Worker):
         super().__init__(prefix=prefix)
         self.register("engine_do_request_signal", self)
     
-    def on_engine_do_request_signal(self, message):
-        self.add_to_queue(message)
+    def on_engine_do_request_signal(self, request):
+        self.logger.info("Adding to queue")
+        self.add_to_queue(request)
+    
+    def handle_message(self, request):
+        if request["code"] == EngineRequestCode.GENERATE_IMAGE:
+            self.emit("sd_request_signal", request)
+        else:
+            self.logger.error(f"Unknown code: {request['code']}")
 
 
 class EngineResponseWorker(Worker):
     def __init__(self, prefix="EngineResponseWorker"):
         super().__init__(prefix=prefix)
+        self.register("engine_do_response_signal", self)
+    
+    def on_engine_do_response_signal(self, request):
+        self.logger.info("Adding to queue")
+        self.add_to_queue(request)
 
 
 class Message:
@@ -40,7 +53,6 @@ class Engine(QObject, MediatorMixin, SettingsMixin):
     The engine is responsible for processing requests and offloading
     them to the appropriate AI model controller.
     """
-    logger = Logger(prefix="Engine")
 
     # Signals
     request_signal_status = pyqtSignal(str)
@@ -101,6 +113,7 @@ class Engine(QObject, MediatorMixin, SettingsMixin):
         super().__init__()
         MediatorMixin.__init__(self)
         SettingsMixin.__init__(self)
+        self.logger = Logger(prefix="Engine")
         self.clear_memory()
 
         # Initialize Controllers
@@ -147,8 +160,11 @@ class Engine(QObject, MediatorMixin, SettingsMixin):
     def on_status_signal(self, message):
         self.logger.info(message)
         
-    def on_EngineResponseWorker_response_signal(self, message:dict):
-        pass
+    def on_EngineResponseWorker_response_signal(self, response:dict):
+        self.logger.info("EngineResponseWorker_response_signal received")
+        code = response["code"]
+        if code == EngineResponseCode.IMAGE_GENERATED:
+            self.emit("image_generated_signal", response["message"])
 
     @pyqtSlot()
     def on_clear_memory_signal(self):
@@ -170,12 +186,16 @@ class Engine(QObject, MediatorMixin, SettingsMixin):
     
     @pyqtSlot(object)
     def on_image_generate_request_signal(self, message):
-        self.unload_llm(
-            message, 
-            self.memory_settings["unload_unused_models"], 
-            self.memory_settings["move_unused_model_to_cpu"]
-        )
-        self.sd_request_worker.add_to_queue(message)
+        self.logger.info("on_image_generate_request_signal received")
+        # self.unload_llm(
+        #     message, 
+        #     self.memory_settings["unload_unused_models"], 
+        #     self.memory_settings["move_unused_model_to_cpu"]
+        # )
+        self.emit("engine_do_request_signal", dict(
+            code=EngineRequestCode.GENERATE_IMAGE,
+            message=message
+        ))
 
     def request_queue_size(self):
         return self.request_worker.queue.qsize()
@@ -304,8 +324,8 @@ class Engine(QObject, MediatorMixin, SettingsMixin):
             self.logger.info("Moving LLM to CPU")
             self.llm_controller.move_to_cpu()
             self.clear_memory()
-        elif do_unload_model:
-            self.do_unload_llm()
+        # elif do_unload_model:
+        #     self.do_unload_llm()
     
     def do_unload_llm(self):
         self.logger.info("Unloading LLM")
