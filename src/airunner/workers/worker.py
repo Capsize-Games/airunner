@@ -10,9 +10,10 @@ from airunner.windows.main.settings_mixin import SettingsMixin
 class Worker(QObject, MediatorMixin, SettingsMixin):
     queue_type = "get_next_item"
     finished = pyqtSignal()
+    prefix = "Worker"
 
-    def __init__(self, prefix="Worker"):
-        self.prefix = prefix
+    def __init__(self, prefix=None):
+        self.prefix = prefix or self.__class__.__name__
         super().__init__()
         MediatorMixin.__init__(self)
         SettingsMixin.__init__(self)
@@ -42,10 +43,7 @@ class Worker(QObject, MediatorMixin, SettingsMixin):
                 # if self.queue has more than one item, scrap everything other than the last item that
                 # was added to the queue
                 msg = self.get_item_from_queue()
-                if msg is not None:
-                    self.handle_message(msg)
-                else:
-                    self.logger.warning("No message")
+                self.handle_message(msg)
             except queue.Empty:
                 msg = None
             if self.paused:

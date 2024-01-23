@@ -1,6 +1,7 @@
 import os
 from PyQt6 import QtGui
 from PyQt6.QtWidgets import QWidget
+from airunner.aihandler.logger import Logger
 
 from airunner.utils import get_main_window
 from airunner.mediator_mixin import MediatorMixin
@@ -42,6 +43,7 @@ class BaseWidget(QWidget, SettingsMixin, MediatorMixin):
         MediatorMixin.__init__(self)
         SettingsMixin.__init__(self)
         super().__init__(*args, **kwargs)
+        self.logger = Logger(prefix=self.__class__.__name__)
         
         if self.widget_class_:
             self.ui = self.widget_class_()

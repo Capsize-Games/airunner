@@ -98,3 +98,41 @@ class ModelManagerWidget(BaseWidget):
 
     def tab_changed(self, val):
         print("tab_changed", val)
+
+    def models_changed(self, key, model, value):
+        model["enabled"] = True
+        self.update_generator_model_dropdown()
+
+    def handle_delete_model(self, model):
+        self.emit("ai_model_delete_signal", model)
+        self.show_items_in_scrollarea()
+        self.update_generator_model_dropdown()
+
+    def update_generator_model_dropdown(self):
+        self.ui.generator_model_dropdown.clear()
+        self.ui.generator_model_dropdown.addItems(self.settings["ai_models"])
+    
+    def handle_edit_model(self, model, index):
+        self.toggle_model_form_frame(show=True)
+
+        categories = self.get_service("ai_model_categories")()
+        self.ui.model_form.category.clear()
+        self.ui.model_form.category.addItems(categories)
+        self.ui.model_form.category.setCurrentText(model.category)
+
+        actions = self.get_service("ai_model_pipeline_actions")()
+        self.ui.model_form.pipeline_action.clear()
+        self.ui.model_form.pipeline_action.addItems(actions)
+        self.ui.model_form.pipeline_action.setCurrentText(model.pipeline_action)
+
+        self.ui.model_form.model_name.setText(model.name)
+        pipeline_class = self.get_service("get_pipeline_classname")(
+            model.pipeline_action, model.version, model.category)
+        self.ui.model_form.pipeline_class_line_edit.setText(pipeline_class)
+        self.ui.model_form.enabled.setChecked(True)
+        self.ui.model_form.path_line_edit.setText(model.path)
+
+        versions = self.get_service("ai_model_versions")()
+        self.ui.model_form.versions.clear()
+        self.ui.model_form.versions.addItems(versions)
+        self.ui.model_form.versions.setCurrentText(model.version)

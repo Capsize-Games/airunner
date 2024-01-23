@@ -391,6 +391,7 @@ Previous Conversation:
         self.emit("application_settings_changed_signal")
 
     def on_reset_settings_signal(self):
+        self.logger.info("Resetting settings")
         self.application_settings.clear()
         self.application_settings.sync()
         self.set_settings(self.get_settings())
