@@ -5,11 +5,10 @@ from functools import partial
 
 from PIL import Image, ImageGrab
 from PIL.ImageQt import ImageQt
-from PyQt6.QtCore import Qt, QPoint, QRect
+from PyQt6.QtCore import Qt, QPoint, QRect, pyqtSlot
 from PyQt6.QtGui import QBrush, QColor, QPen, QPixmap
 from PyQt6.QtWidgets import QGraphicsPixmapItem
 from PyQt6 import QtWidgets, QtCore
-from PyQt6.QtCore import pyqtSlot
 from PyQt6.QtWidgets import QGraphicsItemGroup, QGraphicsItem
 
 from airunner.workers.image_data_worker import ImageDataWorker
@@ -24,33 +23,15 @@ from airunner.service_locator import ServiceLocator
 
 
 class CanvasResizeWorker(Worker):
-    queue_type = "get_last_item"
-    last_cell_count = (0, 0)
+    def __init__(self, *args, **kwargs):
+        super().__init__(*args, **kwargs)
+        self.register("canvas_resize_signal", self)
+        self.last_cell_count = (0, 0)
 
-    def __init__(self, prefix):
-        super().__init__(prefix=prefix)
-        self.buffer = None
-        self.register("application_settings_changed_signal", self)
-        self.register("set_current_layer_signal", self)
-        self.register("update_canvas_signal", self)
-    
     @pyqtSlot(object)
-    def on_update_canvas_signal(self, _ignore):
-        self.update()
-    
-    @pyqtSlot(object)
-    def on_set_current_layer_signal(self, args):
-        self.set_current_layer(args)
-        
-    def set_current_layer(self, args):
-        index, current_layer_index = args
-        item = self.ui.container.layout().itemAt(current_layer_index)
-        if item:
-            item.widget().frame.setStyleSheet(self.css("layer_normal_style"))
-        if self.ui.container:
-            item = self.ui.container.layout().itemAt(index)
-            if item:
-                item.widget().frame.setStyleSheet(self.css("layer_highlight_style"))
+    def on_canvas_resize_signal(self, data):
+        self.logger.info("Adding to queue")
+        self.add_to_queue(data)
 
     def handle_message(self, data:dict):
         settings = data["settings"]
@@ -198,9 +179,30 @@ class CanvasPlusWidget(BaseWidget):
         self.register("image_generated_signal", self)
         self.register("load_image_from_path", self)
         self.register("canvas_handle_layer_click_signal", self)
+        self.register("update_canvas_signal", self)
+        self.register("set_current_layer_signal", self)
+        self.register("application_settings_changed_signal", self)
 
         self.register_service("canvas_drag_pos", self.canvas_drag_pos)
         self.register_service("canvas_current_active_image", self.canvas_current_active_image)
+    
+    @pyqtSlot(object)
+    def on_set_current_layer_signal(self, args):
+        self.set_current_layer(args)
+        
+    def set_current_layer(self, args):
+        index, current_layer_index = args
+        item = self.ui.container.layout().itemAt(current_layer_index)
+        if item:
+            item.widget().frame.setStyleSheet(self.css("layer_normal_style"))
+        if self.ui.container:
+            item = self.ui.container.layout().itemAt(index)
+            if item:
+                item.widget().frame.setStyleSheet(self.css("layer_highlight_style"))
+
+    @pyqtSlot(object)
+    def on_update_canvas_signal(self, _ignore):
+        self.update()
     
     def canvas_drag_pos(self):
         return self.drag_pos
@@ -241,8 +243,8 @@ class CanvasPlusWidget(BaseWidget):
 
     def on_CanvasResizeWorker_response_signal(self, line_data: tuple):
         draw_grid = self.settings["grid_settings"]["show_grid"]
+        print("on_CanvasResizeWorker_response_signal", draw_grid)
         if not draw_grid:
-            print("not draw_grid")
             return
         line = self.scene.addLine(*line_data)
         self.line_group.addToGroup(line)
@@ -315,15 +317,20 @@ class CanvasPlusWidget(BaseWidget):
         return Image.fromqpixmap(pixmap)
 
     def handle_resize_canvas(self):
+        self.do_resize_canvas()
+    
+    def do_resize_canvas(self):
         if not self.view:
             self.logger.warning("view not found")
             return
-        self.canvas_resize_worker.add_to_queue(dict(
+        data = dict(
             settings=self.settings,
             view_size=self.view.viewport().size(),
             scene=self.scene,
             line_group=self.line_group
-        ))
+        )
+        #self.emit("canvas_resize_signal", data)
+        self.canvas_resize_worker.add_to_queue(data)
 
     def window_resized(self, event):
         self.handle_resize_canvas()
@@ -407,6 +414,8 @@ class CanvasPlusWidget(BaseWidget):
 
     def on_application_settings_changed_signal(self):
         do_draw = False
+
+        self.do_resize_canvas()
         
         grid_settings = self.settings["grid_settings"]
         for k,v in grid_settings.items():
