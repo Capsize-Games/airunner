@@ -24,7 +24,7 @@ from diffusers import StableDiffusionControlNetPipeline, StableDiffusionControlN
 from diffusers import ConsistencyDecoderVAE
 from transformers import AutoFeatureExtractor
 
-from airunner.aihandler.enums import FilterType
+from airunner.aihandler.enums import EngineRequestCode, EngineResponseCode, FilterType
 from airunner.aihandler.mixins.compel_mixin import CompelMixin
 from airunner.aihandler.mixins.embedding_mixin import EmbeddingMixin
 from airunner.aihandler.mixins.lora_mixin import LoraMixin
@@ -52,8 +52,14 @@ torch.backends.cuda.matmul.allow_tf32 = True
 class SDRequestWorker(Worker):
     def __init__(self, prefix="SDRequestWorker"):
         super().__init__(prefix=prefix)
+        self.register("sd_request_signal", self)
+    
+    def on_sd_request_signal(self, request):
+        self.logger.info("Request recieved")
+        self.add_to_queue(request["message"])
     
     def handle_message(self, message):
+        self.logger.info("Handling message")
         self.emit("add_sd_response_to_queue_signal", dict(
             message=message,
             image_base_path=self.path_settings["image_path"]
@@ -61,16 +67,17 @@ class SDRequestWorker(Worker):
 
 
 class SDGenerateWorker(Worker):
-    def __init__(self, prefix):
+    def __init__(self, prefix="SDGenerateWorker"):
+        super().__init__(prefix=prefix)
         self.sd = SDRunner()
-        super().__init__(prefix)
         self.register("add_sd_response_to_queue_signal", self)
     
-    @pyqtSlot(object)
-    def on_add_sd_response_to_queue_signal(self, data):
-        self.add_to_queue(data)
+    def on_add_sd_response_to_queue_signal(self, request):
+        self.logger.info("Request recieved")
+        self.add_to_queue(request)
         
     def handle_message(self, data):
+        self.logger.info("Generating")
         image_base_path = data["image_base_path"]
         message = data["message"]
         for response in self.sd.generator_sample(message):
@@ -101,6 +108,10 @@ class SDGenerateWorker(Worker):
                     image=image
                 ))
             response["images"] = updated_images
+            self.emit("engine_do_response_signal", dict(
+                code=EngineResponseCode.IMAGE_GENERATED,
+                message=response
+            ))
 
 
 class SDRunner(
@@ -883,7 +894,6 @@ class SDRunner(
         return torch.Generator(device=device).manual_seed(seed)
 
     def prepare_options(self, data):
-        print("DATA", data)
         self.logger.info(f"Preparing options")
         action = data["action"]
         options = data["options"]
