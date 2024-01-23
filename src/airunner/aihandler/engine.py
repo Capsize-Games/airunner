@@ -6,6 +6,8 @@ from PyQt6.QtCore import QObject, pyqtSignal, pyqtSlot
 from airunner.aihandler.enums import EngineRequestCode, EngineResponseCode
 from airunner.aihandler.logger import Logger
 from airunner.mediator_mixin import MediatorMixin
+from airunner.workers.tts_generator_worker import TTSGeneratorWorker
+from airunner.workers.tts_vocalizer_worker import TTSVocalizerWorker
 from airunner.workers.worker import Worker
 from airunner.aihandler.llm import LLMController
 from airunner.aihandler.logger import Logger
@@ -64,7 +66,6 @@ class Engine(QObject, MediatorMixin, SettingsMixin):
 
     # Model controllers
     llm_controller = None
-    tts_controller = None
     stt_controller = None
     ocr_controller = None
 
@@ -143,6 +144,14 @@ class Engine(QObject, MediatorMixin, SettingsMixin):
         
         self.request_worker = self.create_worker(EngineRequestWorker)
         self.response_worker = self.create_worker(EngineResponseWorker)
+
+        self.generator_worker = self.create_worker(TTSGeneratorWorker)
+        self.vocalizer_worker = self.create_worker(TTSVocalizerWorker)
+        self.register("tts_request", self)
+    
+    @pyqtSlot(dict)
+    def on_tts_request(self, data: dict):
+        self.generator_worker.add_to_queue(data)
     
     def on_llm_controller_response_signal(self, message):
         self.do_response(message)

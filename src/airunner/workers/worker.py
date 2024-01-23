@@ -14,9 +14,9 @@ class Worker(QObject, MediatorMixin, SettingsMixin):
 
     def __init__(self, prefix=None):
         self.prefix = prefix or self.__class__.__name__
-        super().__init__()
         MediatorMixin.__init__(self)
         SettingsMixin.__init__(self)
+        super().__init__()
         self.logger = Logger(prefix=prefix)
         self.running = False
         self.queue = queue.Queue()
