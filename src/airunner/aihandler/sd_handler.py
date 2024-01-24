@@ -9,7 +9,6 @@ import requests
 import torch
 
 from PIL import Image, ImageDraw, ImageFont
-from PyQt6.QtCore import QObject
 
 from controlnet_aux.processor import Processor
 from diffusers.pipelines.stable_diffusion.convert_from_ckpt import \
@@ -24,7 +23,7 @@ from diffusers import ConsistencyDecoderVAE
 from transformers import AutoFeatureExtractor
 from airunner.aihandler.base_handler import BaseHandler
 
-from airunner.aihandler.enums import FilterType
+from airunner.aihandler.enums import FilterType, HandlerType
 from airunner.aihandler.mixins.compel_mixin import CompelMixin
 from airunner.aihandler.mixins.embedding_mixin import EmbeddingMixin
 from airunner.aihandler.mixins.lora_mixin import LoraMixin
@@ -34,7 +33,6 @@ from airunner.aihandler.mixins.scheduler_mixin import SchedulerMixin
 from airunner.aihandler.mixins.txttovideo_mixin import TexttovideoMixin
 from airunner.aihandler.settings import AIRUNNER_ENVIRONMENT
 from airunner.scripts.realesrgan.main import RealESRGAN
-from airunner.aihandler.logger import Logger
 from airunner.windows.main.layer_mixin import LayerMixin
 from airunner.windows.main.lora_mixin import LoraMixin as LoraDataMixin
 from airunner.windows.main.embedding_mixin import EmbeddingMixin as EmbeddingDataMixin
@@ -65,6 +63,7 @@ class SDHandler(
     ControlnetModelMixin,
     AIModelMixin,
 ):
+    handler_type = HandlerType.DIFFUSER
     _current_model: str = ""
     _previous_model: str = ""
     _initialized: bool = False

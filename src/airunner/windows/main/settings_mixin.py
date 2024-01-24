@@ -39,6 +39,7 @@ class SettingsMixin:
         ServiceLocator.register("set_settings", self.set_settings)
         self.register("reset_settings_signal", self)
         self.default_settings = dict(
+            use_cuda=True,
             current_layer_index=0,
             ocr_enabled=False,
             tts_enabled=False,
