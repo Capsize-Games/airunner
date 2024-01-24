@@ -1,8 +1,4 @@
 import os
-from airunner.aihandler.settings import LOG_LEVEL
-from airunner.aihandler.logger import Logger
-
-logger = Logger(prefix="LoraMixin")
 
 
 class LoraMixin:
@@ -34,4 +30,4 @@ class LoraMixin:
             self.pipe.load_lora_weights(".", weight_name=checkpoint_path)
             self.loaded_lora.append({"name": lora["name"], "scale": lora["scale"]})
         except AttributeError:
-            logger.warning("This model does not support LORA")
+            self.logger.warning("This model does not support LORA")

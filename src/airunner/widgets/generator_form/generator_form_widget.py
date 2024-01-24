@@ -23,7 +23,6 @@ class GeneratorForm(BaseWidget):
     parent = None
     current_prompt_value = None
     current_negative_prompt_value = None
-    logger = Logger(prefix="GeneratorForm")
 
     @property
     def is_txt2img(self):
