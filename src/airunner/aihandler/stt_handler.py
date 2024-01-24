@@ -3,15 +3,12 @@ import numpy as np
 
 from transformers import AutoProcessor, WhisperForConditionalGeneration, AutoFeatureExtractor
 
-from PyQt6.QtCore import QObject
+from airunner.aihandler.base_handler import BaseHandler
+
 from PyQt6.QtCore import pyqtSignal
 
-from airunner.aihandler.logger import Logger
-from airunner.mediator_mixin import MediatorMixin
-        
 
-class STTHandler(QObject, MediatorMixin):
-    logger = Logger(prefix="STTHandler")
+class STTHandler(BaseHandler):
     listening = False
     move_to_cpu_signal = pyqtSignal()
 
@@ -26,9 +23,8 @@ class STTHandler(QObject, MediatorMixin):
         self.logger.info("Moving model to CPU")
         self.model = self.model.to("cpu")
 
-    def __init__(self):
-        super().__init__()
-        MediatorMixin.__init__(self)
+    def __init__(self, *args, **kwargs):
+        super().__init__(*args, **kwargs)
         self.load_model()
         self.register("move_to_cpu_signal", self)
         self.register("process_audio", self)
