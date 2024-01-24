@@ -1,9 +1,12 @@
 import traceback
+import numpy as np
 
 from PyQt6.QtCore import QObject, pyqtSignal
 from airunner.aihandler.enums import EngineRequestCode, EngineResponseCode
 from airunner.aihandler.logger import Logger
 from airunner.mediator_mixin import MediatorMixin
+from airunner.workers.audio_capture_worker import AudioCaptureWorker
+from airunner.workers.audio_processor_worker import AudioProcessorWorker
 from airunner.workers.tts_generator_worker import TTSGeneratorWorker
 from airunner.workers.tts_vocalizer_worker import TTSVocalizerWorker
 from airunner.workers.llm_request_worker import LLMRequestWorker
@@ -117,7 +120,21 @@ class Engine(QObject, MediatorMixin, SettingsMixin):
         self.request_worker = self.create_worker(LLMRequestWorker)
         self.generate_worker = self.create_worker(LLMGenerateWorker)
 
+        self.audio_capture_worker = self.create_worker(AudioCaptureWorker)
+        self.audio_processor_worker = self.create_worker(AudioProcessorWorker)
+
+        self.register("AudioCaptureWorker_response_signal", self)
+        self.register("AudioProcessorWorker_processed_audio", self)
+
         self.register("tts_request", self)
+    
+    def on_AudioCaptureWorker_response_signal(self, message: np.ndarray):
+        self.logger.info("Heard signal")
+        self.audio_processor_worker.add_to_queue(message)
+
+    def on_AudioProcessorWorker_processed_audio(self, message: np.ndarray):
+        self.logger.info("Processed audio")
+        self.emit("processed_audio", message)
     
     def on_LLMGenerateWorker_response_signal(self, message:dict):
         self.emit("llm_response_signal", message)
