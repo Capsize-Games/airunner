@@ -1,10 +1,10 @@
 from airunner.workers.worker import Worker
-from airunner.aihandler.llm import LLM
+from airunner.aihandler.llm_handler import LLMHandler
 
 
 class LLMGenerateWorker(Worker):
     def __init__(self, prefix="LLMGenerateWorker"):
-        self.llm = LLM()
+        self.llm = LLMHandler()
         super().__init__(prefix=prefix)
         self.register("clear_history", self)
         self.register("LLMRequestWorker_response_signal", self)
