@@ -50,7 +50,7 @@ setup(
         "regex",
         "matplotlib==3.7.2",
         "torch==2.1.0",
-        "torchvision==0.16.0",
+        "torchvision==0.16.2",
         "torchaudio==2.1.0",
         "auto-gptq==0.4.2",
         "optimum==1.13.2",
