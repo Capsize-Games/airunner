@@ -45,6 +45,7 @@ from airunner.workers.worker import Worker
 from airunner.mediator_mixin import MediatorMixin
 from airunner.windows.main.settings_mixin import SettingsMixin
 from airunner.service_locator import ServiceLocator
+from airunner.utils import clear_memory
 
 torch.backends.cuda.matmul.allow_tf32 = True
 
@@ -81,6 +82,7 @@ class SDGenerateWorker(Worker):
         image_base_path = data["image_base_path"]
         message = data["message"]
         for response in self.sd.generator_sample(message):
+            print("RESPONSE FROM sd.generate_sample", response)
             if not response:
                 continue
 
@@ -1117,6 +1119,7 @@ class SDRunner(
             return self.call_pipe_txt2vid(**args)
 
         if not self.is_outpaint and not self.is_vid_action and not self.is_upscale:
+            self.latents = self.latents.to(self.device)
             args["latents"] = self.latents
 
         args["clip_skip"] = self.clip_skip
@@ -1413,7 +1416,7 @@ class SDRunner(
     def unload(self):
         self.unload_model()
         self.unload_tokenizer()
-        self.clear_memory()
+        clear_memory()
 
     def unload_model(self):
         self.pipe = None
@@ -1434,7 +1437,7 @@ class SDRunner(
                 denoise_strength=self.options.get("denoise_strength", 0.5), 
                 face_enhance=self.options.get("face_enhance", True),
             ).run()
-            self.clear_memory()
+            clear_memory()
         else:
             self.log_error("No image found, unable to upscale")
         # check if results is a list
@@ -1476,7 +1479,7 @@ class SDRunner(
             error = e
             if "PYTORCH_CUDA_ALLOC_CONF" in str(e):
                 error = self.cuda_error_message
-                self.clear_memory()
+                clear_memory()
                 self.reset_applied_memory_settings()
             else:
                 error_message = f"Error during generation"
@@ -1574,11 +1577,8 @@ class SDRunner(
                 val.to("cpu")
                 setattr(self, action, None)
                 del val
-        self.clear_memory()
+        clear_memory()
         self.reset_applied_memory_settings()
-
-    def clear_memory(self):
-        self.emit("clear_memory_signal")
 
     def load_model(self):
         self.logger.info("Loading model")
@@ -1733,7 +1733,7 @@ class SDRunner(
     def clear_controlnet(self):
         self.logger.info("Clearing controlnet")
         self._controlnet = None
-        self.clear_memory()
+        clear_memory()
         self.reset_applied_memory_settings()
         self.controlnet_loaded = False
     
