@@ -1,11 +1,9 @@
-import time
 import torch
-import sounddevice as sd
 import numpy as np
 
 from queue import Queue
 
-from PyQt6.QtCore import QObject, pyqtSignal, pyqtSlot, QThread
+from PyQt6.QtCore import QObject, pyqtSlot
 
 from transformers import SpeechT5Processor, SpeechT5ForTextToSpeech, SpeechT5HifiGan, BarkModel, BarkProcessor
 from datasets import load_dataset

@@ -12,7 +12,6 @@ class MergeMixin:
         super().__init__(*args, **kwargs)
         self.register("sd_merge_models_signal", self)
     
-    @pyqtSlot(object)
     def on_sd_merge_models_signal(self, options):
         print("TODO: on_sd_merge_models_signal")
 

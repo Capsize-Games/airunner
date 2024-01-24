@@ -1,4 +1,3 @@
-from PyQt6.QtCore import pyqtSlot
 from PyQt6.QtWidgets import QWidget, QSizePolicy
 
 from airunner.widgets.base_widget import BaseWidget
@@ -48,7 +47,6 @@ class EmbeddingsContainerWidget(BaseWidget):
         self._embedding_names = None
         self.load_embeddings()
 
-    @pyqtSlot(object)
     def on_embedding_load_failed_signal(self, response: dict):
         self.handle_embedding_load_failed(response["message"])
 
