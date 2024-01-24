@@ -37,7 +37,7 @@ from airunner.windows.main.pipeline_mixin import PipelineMixin
 from airunner.windows.main.controlnet_model_mixin import ControlnetModelMixin
 from airunner.windows.main.ai_model_mixin import AIModelMixin
 from airunner.windows.main.image_filter_mixin import ImageFilterMixin
-from airunner.aihandler.engine import Engine
+from airunner.worker_manager import WorkerManager
 from airunner.mediator_mixin import MediatorMixin
 from airunner.service_locator import ServiceLocator
 
@@ -300,7 +300,7 @@ class MainWindow(
         ServiceLocator.register("get_callback_for_slider", self.get_callback_for_slider)
         
 
-        self.engine = Engine()
+        self.engine = WorkerManager()
 
         self.ui.setupUi(self)
 

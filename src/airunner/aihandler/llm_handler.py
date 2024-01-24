@@ -9,15 +9,14 @@ from transformers import AutoModelForCausalLM, AutoModelForSeq2SeqLM, AutoTokeni
 from transformers import InstructBlipForConditionalGeneration
 from transformers import InstructBlipProcessor
 from transformers import TextIteratorStreamer
-
-from PyQt6.QtCore import QObject
+from airunner.aihandler.base_handler import BaseHandler
 
 from airunner.aihandler.logger import Logger
 from airunner.mediator_mixin import MediatorMixin
 
 
-class LLM(QObject, MediatorMixin):
-    logger = Logger(prefix="LLM")
+class LLMHandler(BaseHandler):
+    logger = Logger(prefix="LLMHandler")
     dtype = ""
     local_files_only = True
     set_attention_mask = False
@@ -78,10 +77,6 @@ class LLM(QObject, MediatorMixin):
         if self.dtype == "32bit" or not self.use_gpu:
             return False
         return torch.cuda.is_available()
-    
-    def __init__(self, *args, **kwargs):
-        super().__init__(*args, **kwargs)
-        MediatorMixin.__init__(self)
 
     def move_to_cpu(self):
         if self.model:

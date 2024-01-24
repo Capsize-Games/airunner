@@ -22,6 +22,7 @@ from diffusers.pipelines.stable_diffusion import StableDiffusionSafetyChecker
 from diffusers import StableDiffusionControlNetPipeline, StableDiffusionControlNetImg2ImgPipeline, StableDiffusionControlNetInpaintPipeline, AsymmetricAutoencoderKL
 from diffusers import ConsistencyDecoderVAE
 from transformers import AutoFeatureExtractor
+from airunner.aihandler.base_handler import BaseHandler
 
 from airunner.aihandler.enums import FilterType
 from airunner.aihandler.mixins.compel_mixin import CompelMixin
@@ -40,16 +41,14 @@ from airunner.windows.main.embedding_mixin import EmbeddingMixin as EmbeddingDat
 from airunner.windows.main.pipeline_mixin import PipelineMixin
 from airunner.windows.main.controlnet_model_mixin import ControlnetModelMixin
 from airunner.windows.main.ai_model_mixin import AIModelMixin
-from airunner.mediator_mixin import MediatorMixin
-from airunner.windows.main.settings_mixin import SettingsMixin
 from airunner.service_locator import ServiceLocator
 from airunner.utils import clear_memory
 
 torch.backends.cuda.matmul.allow_tf32 = True
 
 
-class SDRunner(
-    QObject,
+class SDHandler(
+    BaseHandler,
     MergeMixin,
     LoraMixin,
     MemoryEfficientMixin,
@@ -59,16 +58,14 @@ class SDRunner(
     SchedulerMixin,
 
     # Data Mixins
-    SettingsMixin,
     LayerMixin,
     LoraDataMixin,
     EmbeddingDataMixin,
     PipelineMixin,
     ControlnetModelMixin,
     AIModelMixin,
-    MediatorMixin
 ):
-    logger = Logger(prefix="SDRunner")
+    logger = Logger(prefix="SDHandler")
     _current_model: str = ""
     _previous_model: str = ""
     _initialized: bool = False
@@ -720,15 +717,13 @@ class SDRunner(
 
     def  __init__(self, **kwargs):
         #self.logger.set_level(LOG_LEVEL)
-        MediatorMixin.__init__(self)
-        SettingsMixin.__init__(self)
+        super().__init__()
         LayerMixin.__init__(self)
         LoraDataMixin.__init__(self)
         EmbeddingDataMixin.__init__(self)
         PipelineMixin.__init__(self)
         ControlnetModelMixin.__init__(self)
         AIModelMixin.__init__(self)
-        super().__init__()
         self.logger.info("Loading Stable Diffusion model runner...")
         self.safety_checker_model = self.models_by_pipeline_action("safety_checker")
         self.text_encoder_model = self.models_by_pipeline_action("text_encoder")

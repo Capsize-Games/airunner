@@ -3,7 +3,7 @@ import torch
 
 from airunner.aihandler.enums import EngineResponseCode
 from airunner.workers.worker import Worker
-from airunner.aihandler.runner import SDRunner
+from airunner.aihandler.sd_handler import SDHandler
 
 torch.backends.cuda.matmul.allow_tf32 = True
 
@@ -11,7 +11,7 @@ torch.backends.cuda.matmul.allow_tf32 = True
 class SDGenerateWorker(Worker):
     def __init__(self, prefix="SDGenerateWorker"):
         super().__init__(prefix=prefix)
-        self.sd = SDRunner()
+        self.sd = SDHandler()
         self.register("add_sd_response_to_queue_signal", self)
     
     def on_add_sd_response_to_queue_signal(self, request):

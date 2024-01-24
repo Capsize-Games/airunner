@@ -1,7 +1,7 @@
 import time
 
 from airunner.workers.worker import Worker
-from airunner.aihandler.tts import TTS
+from airunner.aihandler.tts_handler import TTSHandler
 
 
 class TTSGeneratorWorker(Worker):
@@ -10,7 +10,7 @@ class TTSGeneratorWorker(Worker):
     """
     def __init__(self, *args, **kwargs):
         super().__init__(*args, **kwargs)
-        self.tts = TTS()
+        self.tts = TTSHandler()
         self.tts.run()
         self.play_queue = []
         self.play_queue_started = False
@@ -49,7 +49,6 @@ class TTSGeneratorWorker(Worker):
         else:
             response = self.generate_with_t5(text)
 
-        print("adding to stream", response)
         self.emit("TTSGeneratorWorker_add_to_stream_signal", response)
     
     def move_inputs_to_device(self, inputs):
