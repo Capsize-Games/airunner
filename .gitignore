@@ -22,3 +22,4 @@ alembic.ini
 src/airunner/scripts/realesrgan
 src/airunner/scripts/weights
 gfpgan
+test.json
