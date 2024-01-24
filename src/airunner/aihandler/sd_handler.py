@@ -65,7 +65,6 @@ class SDHandler(
     ControlnetModelMixin,
     AIModelMixin,
 ):
-    logger = Logger(prefix="SDHandler")
     _current_model: str = ""
     _previous_model: str = ""
     _initialized: bool = False
