@@ -90,7 +90,6 @@ class Engine(QObject, MediatorMixin, SettingsMixin):
         # Initialize Controllers
         #self.stt_controller = STTController(engine=self)
         # self.ocr_controller = ImageProcessor(engine=self)
-        self.tts_controller = TTS(engine=self)
 
         self.register("hear_signal", self)
         self.register("engine_cancel_signal", self)
