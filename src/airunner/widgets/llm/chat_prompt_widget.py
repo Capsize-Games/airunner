@@ -11,7 +11,6 @@ from airunner.aihandler.logger import Logger
 
 
 class ChatPromptWidget(BaseWidget, MediatorMixin):
-    logger = Logger(prefix="ChatPromptWidget")
     widget_class_ = Ui_chat_prompt
     conversation = None
     is_modal = True
