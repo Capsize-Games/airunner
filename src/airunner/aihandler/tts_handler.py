@@ -46,6 +46,10 @@ class TTSHandler(BaseHandler):
     loaded = False
 
     @property
+    def cuda_index(self):
+        return self.tts_settings["cuda_index"]
+
+    @property
     def processor_path(self):
         if self.use_bark:
             return "suno/bark-small"
@@ -66,14 +70,6 @@ class TTSHandler(BaseHandler):
         return "Matthijs/cmu-arctic-xvectors"
 
     @property
-    def device(self):
-        return f"cuda:{self.cuda_index}" if self.use_cuda else "cpu"
-
-    @property
-    def torch_dtype(self):
-        return torch.float16 if self.use_cuda else torch.float32
-
-    @property
     def word_chunks(self):
         return self.tts_settings["word_chunks"]
 
@@ -82,16 +78,8 @@ class TTSHandler(BaseHandler):
         return self.tts_settings["use_bark"]
 
     @property
-    def cuda_index(self):
-        return self.tts_settings["cuda_index"]
-    
-    @property
     def voice_preset(self):
         return self.tts_settings["voice"]
-
-    @property
-    def use_cuda(self):
-        return self.tts_settings["use_cuda"] and torch.cuda.is_available()
 
     @property
     def fine_temperature(self):
@@ -129,9 +117,6 @@ class TTSHandler(BaseHandler):
         super().__init__(*args, **kwargs)
         self.logger.info("Loading")
         self.corpus = []
-        self.processor = None
-        self.model = None
-        self.vocoder = None
         self.speaker_embeddings = None
         self.sentences = []
     
@@ -161,7 +146,7 @@ class TTSHandler(BaseHandler):
         if self.speaker_embeddings:
             self.speaker_embeddings = self.speaker_embeddings.cpu()
     
-    def move_to_device(self):
+    def move_to_device(self, device=None):
         """
         Move the model, vocoder, processor and speaker_embeddings to the GPU
         """

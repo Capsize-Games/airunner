@@ -2,7 +2,7 @@ import traceback
 import numpy as np
 
 from PyQt6.QtCore import QObject, pyqtSignal
-from airunner.aihandler.enums import EngineRequestCode, EngineResponseCode
+from airunner.aihandler.enums import EngineRequestCode, EngineResponseCode, WorkerCode, SignalCode
 from airunner.aihandler.logger import Logger
 from airunner.mediator_mixin import MediatorMixin
 from airunner.workers.audio_capture_worker import AudioCaptureWorker
@@ -85,8 +85,9 @@ class WorkerManager(QObject, MediatorMixin, SettingsMixin):
         super().__init__()
         MediatorMixin.__init__(self)
         SettingsMixin.__init__(self)
+        self.logger = Logger(prefix=self.__class__.__name__)
+        self.is_capturing_image = False
         self.clear_memory()
-
         self.register("hear_signal", self)
         self.register("engine_cancel_signal", self)
         self.register("engine_stop_processing_queue_signal", self)
@@ -104,7 +105,8 @@ class WorkerManager(QObject, MediatorMixin, SettingsMixin):
         self.register("llm_text_streamed_signal", self)
         self.register("AudioCaptureWorker_response_signal", self)
         self.register("AudioProcessorWorker_processed_audio", self)
-        self.register("vision_captured_signal", self)
+        self.register(SignalCode.VISION_CAPTURED_SIGNAL, self, self.on_vision_captured)
+        self.register(SignalCode.VISION_PROCESSED_SIGNAL, self, self.on_vision_processed)
 
         self.sd_request_worker = self.create_worker(SDRequestWorker)
         self.sd_generate_worker = self.create_worker(SDGenerateWorker)
@@ -125,12 +127,30 @@ class WorkerManager(QObject, MediatorMixin, SettingsMixin):
         self.vision_processor_worker = self.create_worker(VisionProcessorWorker)
 
         self.register("tts_request", self)
-    
-    def on_vision_captured_signal(self, message):
-        print("TODO: place request in worker_manager request queue")
+        self.register("application_settings_changed_signal", self)
 
-    def on_vision_processed_signal(self, message):
-        print("TODO: store processed image for RAG")
+        self.toggle_vision_capture()
+
+    def toggle_vision_capture(self):
+        do_capture_image = self.settings["ocr_enabled"]
+        if do_capture_image != self.is_capturing_image:
+            self.is_capturing_image = do_capture_image
+            if self.is_capturing_image:
+                self.emit(SignalCode.START_VISION_CAPTURE)
+            else:
+                self.emit(SignalCode.STOP_VISION_CAPTURE)
+
+    def on_application_settings_changed_signal(self, message):
+        self.toggle_vision_capture()
+    
+    def on_vision_captured(self, message):
+        self.emit(SignalCode.VISION_CAPTURE_PROCESS_SIGNAL, message)
+
+    processed_vision_history = []
+    def on_vision_processed(self, message):
+        self.processed_vision_history.append(message)
+        print(self.processed_vision_history)
+        self.emit(SignalCode.VISION_CAPTURE_UNPAUSE_SIGNAL)
     
     def on_AudioCaptureWorker_response_signal(self, message: np.ndarray):
         self.logger.info("Heard signal")
