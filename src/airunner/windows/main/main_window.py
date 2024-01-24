@@ -269,15 +269,15 @@ class MainWindow(
         self.handle_controlnet_image_generated(response)
 
     def __init__(self, *args, **kwargs):
-        self.logger.info("Starting AI Runnner")
         self.ui = Ui_MainWindow()
-
-        # qdarktheme.enable_hi_dpi()
 
         self.set_log_levels()
         self.testing = kwargs.pop("testing", False)
 
         super().__init__(*args, **kwargs)
+        self.logger = Logger(prefix=self.__class__.__name__)
+        self.logger.info("Starting AI Runnner")
+
         MediatorMixin.__init__(self)
         SettingsMixin.__init__(self)
         
