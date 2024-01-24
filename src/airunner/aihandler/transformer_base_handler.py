@@ -504,6 +504,9 @@ class VisualQATransformerBaseHandler(TransformerBaseHandler):
             self.logger.error("Failed to load processor")
 
     def do_generate(self, prompt, chat_template):
+        if not self.processor or not self.model:
+            return
+
         image = self.image.convert("RGB")
         inputs = self.processor(
             images=image,
