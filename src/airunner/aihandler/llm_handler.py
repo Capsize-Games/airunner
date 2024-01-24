@@ -16,8 +16,8 @@ from airunner.aihandler.logger import Logger
 from airunner.mediator_mixin import MediatorMixin
 
 
-class LLM(QObject, MediatorMixin):
-    logger = Logger(prefix="LLM")
+class LLMHandler(QObject, MediatorMixin):
+    logger = Logger(prefix="LLMHandler")
     dtype = ""
     local_files_only = True
     set_attention_mask = False
