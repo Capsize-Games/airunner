@@ -38,6 +38,7 @@ class Worker(QObject, MediatorMixin, SettingsMixin):
         self.logger.info("Starting")
         self.running = True
         while self.running:
+            self.preprocess()
             try:
                 # if self.queue has more than one item, scrap everything other than the last item that
                 # was added to the queue
@@ -51,6 +52,9 @@ class Worker(QObject, MediatorMixin, SettingsMixin):
                     QThread.msleep(100)
                 self.logger.info("Resumed")
             QThread.msleep(1)
+    
+    def preprocess(self):
+        pass
     
     def get_item_from_queue(self):
         if self.queue_type == "get_last_item":
