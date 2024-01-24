@@ -49,7 +49,6 @@ class TTSGeneratorWorker(Worker):
         else:
             response = self.generate_with_t5(text)
 
-        print("adding to stream", response)
         self.emit("TTSGeneratorWorker_add_to_stream_signal", response)
     
     def move_inputs_to_device(self, inputs):

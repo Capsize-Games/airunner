@@ -24,7 +24,6 @@ class TTSVocalizerWorker(Worker):
         self.register("TTSGeneratorWorker_add_to_stream_signal", self)
     
     def on_TTSGeneratorWorker_add_to_stream_signal(self, response):
-        print("on_TTSGeneratorWorker_add_to_stream_signal", response)
         self.logger.debug("Adding speech to stream...")
         self.add_to_queue(response)
 
