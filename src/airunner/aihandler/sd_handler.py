@@ -48,7 +48,7 @@ from airunner.utils import clear_memory
 torch.backends.cuda.matmul.allow_tf32 = True
 
 
-class SDRunner(
+class SDHandler(
     QObject,
     MergeMixin,
     LoraMixin,
@@ -68,7 +68,7 @@ class SDRunner(
     AIModelMixin,
     MediatorMixin
 ):
-    logger = Logger(prefix="SDRunner")
+    logger = Logger(prefix="SDHandler")
     _current_model: str = ""
     _previous_model: str = ""
     _initialized: bool = False
