@@ -1,12 +1,8 @@
-from PyQt6.QtCore import pyqtSlot
-
-
 class LoraMixin:
     def __init__(self):
         self.register("update_lora_signal", self)
         self.register("add_lora_signal", self)
 
-    @pyqtSlot(object)
     def on_add_lora_signal(self, params):
         settings = self.settings
         name = params["name"]
@@ -31,7 +27,6 @@ class LoraMixin:
         self.settings = settings
         return lora
     
-    @pyqtSlot(object)
     def on_update_lora_signal(self, lora):
         settings = self.settings
         for index, _lora in enumerate(self.settings["lora"]):
