@@ -40,7 +40,7 @@ class LLMGenerateWorker(Worker):
         self.add_to_queue(message)
 
     def handle_message(self, message):
-        for response in self.llm.do_generate(message):
+        for response in self.llm.handle_request(message):
             self.emit("llm_text_streamed_signal", response)
     
     def on_clear_history(self):
