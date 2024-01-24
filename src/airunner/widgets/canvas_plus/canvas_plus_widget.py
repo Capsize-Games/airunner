@@ -11,6 +11,7 @@ from PyQt6.QtWidgets import QGraphicsPixmapItem
 from PyQt6 import QtWidgets, QtCore
 from PyQt6.QtWidgets import QGraphicsItemGroup, QGraphicsItem
 
+from airunner.workers.canvas_resize_worker import CanvasResizeWorker
 from airunner.workers.image_data_worker import ImageDataWorker
 from airunner.widgets.canvas_plus.templates.canvas_plus_ui import Ui_canvas
 from airunner.utils import apply_opacity_to_image
@@ -180,8 +181,12 @@ class CanvasPlusWidget(BaseWidget):
         if not draw_grid:
             return
         for line_data in lines_data:
-            line = self.scene.addLine(*line_data)
-            self.line_group.addToGroup(line)
+            try:
+                line = self.scene.addLine(*line_data)
+                self.line_group.addToGroup(line)
+            except TypeError as e:
+                self.logger.error(f"TypeError: {e}")
+                print(line_data)
         self.emit("canvas_do_draw_signal")
 
     def on_ImageDataWorker_response_signal(self, message):

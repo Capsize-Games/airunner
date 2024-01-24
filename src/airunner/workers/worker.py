@@ -2,13 +2,14 @@ import queue
 
 from PyQt6.QtCore import pyqtSignal, pyqtSlot, QThread, QSettings, QObject
 
+from airunner.aihandler.enums import QueueType
 from airunner.aihandler.logger import Logger
 from airunner.mediator_mixin import MediatorMixin
 from airunner.windows.main.settings_mixin import SettingsMixin
 
 
 class Worker(QObject, MediatorMixin, SettingsMixin):
-    queue_type = "get_next_item"
+    queue_type = QueueType.GET_NEXT_ITEM
     finished = pyqtSignal()
     prefix = "Worker"
 
@@ -35,6 +36,8 @@ class Worker(QObject, MediatorMixin, SettingsMixin):
 
     pyqtSlot()
     def start(self):
+        if self.queue_type == QueueType.NONE:
+            return
         self.logger.info("Starting")
         self.running = True
         while self.running:
@@ -57,7 +60,7 @@ class Worker(QObject, MediatorMixin, SettingsMixin):
         pass
     
     def get_item_from_queue(self):
-        if self.queue_type == "get_last_item":
+        if self.queue_type == QueueType.GET_LAST_ITEM:
             msg = self.get_last_item()
         else:
             msg = self.get_next_item()

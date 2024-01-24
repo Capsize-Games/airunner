@@ -1,10 +1,12 @@
-from PyQt6.QtCore import Qt,
+from PyQt6.QtCore import Qt
 from PyQt6.QtGui import QBrush, QColor, QPen
+
+from airunner.aihandler.enums import QueueType
 from airunner.workers.worker import Worker
 
 
 class CanvasResizeWorker(Worker):
-    queue_type = "get_last_item"
+    queue_type = QueueType.GET_LAST_ITEM
     last_cell_count = (0, 0)
 
     def __init__(self, *args, **kwargs):
@@ -15,6 +17,8 @@ class CanvasResizeWorker(Worker):
         self.add_to_queue(data)
     
     def handle_message(self, data):
+        if data is None:
+            return
         settings = data["settings"]
         view_size = data["view_size"]
 
@@ -58,7 +62,6 @@ class CanvasResizeWorker(Worker):
 
         self.emit("canvas_clear_lines_signal")
 
-        for line_data in lines_data:
-            self.emit("CanvasResizeWorker_response_signal", line_data)
+        self.emit("CanvasResizeWorker_response_signal", lines_data)
 
         self.emit("canvas_do_draw_signal")
