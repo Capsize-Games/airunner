@@ -25,7 +25,7 @@ setup(
         "diffusers==0.25.1",
         "huggingface-hub==0.20.2",
         "numpy==1.23.5",
-        "Pillow==9.5.0",
+        "Pillow==10.2.0",
         "pip==23.3.1",
         "PyQt6==6.4.2",
         "PyQt6-Qt6==6.4.2",
