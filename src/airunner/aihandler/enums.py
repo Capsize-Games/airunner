@@ -1,8 +1,34 @@
 from enum import Enum
 
 
+class QueueType(Enum):
+    GET_LAST_ITEM = 100
+    GET_NEXT_ITEM = 200
+    NONE = 300
+
+
+class WorkerCode(Enum):
+    START_VISION_CAPTURE = 100
+    STOP_VISION_CAPTURE = 200
+    UNPAUSE_VISION_CAPTURE = 300
+
+
+class HandlerType(Enum):
+    TRANSFORMER = 100
+    DIFFUSER = 200
+
+
 class FilterType(Enum):
     PIXEL_ART = "pixelart"
+
+
+class SignalCode(Enum):
+    START_VISION_CAPTURE = "start_vision_capture"
+    STOP_VISION_CAPTURE = "stop_vision_capture"
+    VISION_CAPTURE_UNPAUSE_SIGNAL = "unpause_vision_capture"
+    VISION_CAPTURE_PROCESS_SIGNAL = "vision_capture_process_signal"
+    VISION_CAPTURED_SIGNAL = "vision_captured_signal"
+    VISION_PROCESSED_SIGNAL = "vision_processed_signal"
 
 
 class EngineResponseCode(Enum):

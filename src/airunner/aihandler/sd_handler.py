@@ -23,7 +23,7 @@ from diffusers import ConsistencyDecoderVAE
 from transformers import AutoFeatureExtractor
 from airunner.aihandler.base_handler import BaseHandler
 
-from airunner.aihandler.enums import FilterType
+from airunner.aihandler.enums import FilterType, HandlerType
 from airunner.aihandler.mixins.compel_mixin import CompelMixin
 from airunner.aihandler.mixins.embedding_mixin import EmbeddingMixin
 from airunner.aihandler.mixins.lora_mixin import LoraMixin
@@ -63,6 +63,7 @@ class SDHandler(
     ControlnetModelMixin,
     AIModelMixin,
 ):
+    handler_type = HandlerType.DIFFUSER
     _current_model: str = ""
     _previous_model: str = ""
     _initialized: bool = False

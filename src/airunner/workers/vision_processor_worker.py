@@ -1,17 +1,29 @@
+from airunner.aihandler.enums import SignalCode
+from airunner.aihandler.vision_handler import VisionHandler
 from airunner.workers.worker import Worker
 
 
 class VisionProcessorWorker(Worker):
     def __init__(self, *args, **kwargs):
         super().__init__(*args, **kwargs)
-        self.register("vision_process_signal", self)
+        self.register(SignalCode.STOP_VISION_CAPTURE, self, self.on_stop_vision_capture)
+        self.register(SignalCode.VISION_CAPTURE_PROCESS_SIGNAL, self, self.on_vision_process)
+        self.vision_handler = VisionHandler()
+
+    def on_stop_vision_capture(self, _message):
+        self.vision_handler.unload()
     
-    def on_vision_process_signal(self, message):
+    def on_vision_process(self, message):
         self.add_to_queue(message)
-    
-    def preprocess(self):
-        pass
 
     def handle_message(self, message):
-        print("TODO: USE AI MODEL TO PROCESS IMAGE HERE")
-        self.emit("vision_processed_signal", message)
+        """
+        Process the image and emit the vision processed signal.
+        :param message:
+        :return:
+        """
+        print("VisionProcessorWorker.handle_message", message)
+        message = self.vision_handler.handle_request(dict(
+            request_data=message
+        ))
+        self.emit(SignalCode.VISION_PROCESSED_SIGNAL, message)
