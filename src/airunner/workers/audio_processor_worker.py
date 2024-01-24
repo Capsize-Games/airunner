@@ -1,4 +1,4 @@
-from airunner.aihandler.speech_to_text import SpeechToText
+from airunner.aihandler.speech_to_text import STTHandler
 from airunner.workers.worker import Worker
 
 
@@ -11,7 +11,7 @@ class AudioProcessorWorker(Worker):
 
     def __init__(self, prefix):
         super().__init__(prefix=prefix)
-        self.stt = SpeechToText()
+        self.stt = STTHandler()
         self.register("stt_audio_processed", self)
     
     def on_stt_audio_processed(self, transcription):
