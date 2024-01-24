@@ -2,8 +2,6 @@ import sounddevice as sd
 
 from queue import Queue
 
-from PyQt6.QtCore import pyqtSlot
-
 from airunner.aihandler.logger import Logger
 from airunner.workers.worker import Worker
 
