@@ -109,7 +109,6 @@ class GeneratorForm(BaseWidget):
         #         self.ui.negative_prompt.setPlainText(self.current_negative_prompt_value)
         self.activate_ai_mode()
     
-    @pyqtSlot(object)
     def on_progress_signal(self, message):
         self.handle_progress_bar(message)
     

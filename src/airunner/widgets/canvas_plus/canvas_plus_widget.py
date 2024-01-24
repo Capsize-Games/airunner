@@ -5,7 +5,7 @@ from functools import partial
 
 from PIL import Image, ImageGrab
 from PIL.ImageQt import ImageQt
-from PyQt6.QtCore import Qt, QPoint, QRect, pyqtSlot
+from PyQt6.QtCore import Qt, QPoint, QRect
 from PyQt6.QtGui import QBrush, QColor, QPen, QPixmap
 from PyQt6.QtWidgets import QGraphicsPixmapItem
 from PyQt6 import QtWidgets, QtCore
@@ -29,7 +29,6 @@ class CanvasResizeWorker(Worker):
         self.register("canvas_resize_signal", self)
         self.last_cell_count = (0, 0)
 
-    @pyqtSlot(object)
     def on_canvas_resize_signal(self, data):
         self.logger.info("Adding to queue")
         self.add_to_queue(data)
@@ -187,7 +186,6 @@ class CanvasPlusWidget(BaseWidget):
         self.register_service("canvas_drag_pos", self.canvas_drag_pos)
         self.register_service("canvas_current_active_image", self.canvas_current_active_image)
     
-    @pyqtSlot(object)
     def on_set_current_layer_signal(self, args):
         self.set_current_layer(args)
         
@@ -201,7 +199,6 @@ class CanvasPlusWidget(BaseWidget):
             if item:
                 item.widget().frame.setStyleSheet(self.css("layer_highlight_style"))
 
-    @pyqtSlot(object)
     def on_update_canvas_signal(self, _ignore):
         self.update()
     
@@ -426,7 +423,6 @@ class CanvasPlusWidget(BaseWidget):
                     self.set_canvas_color()
                 elif k in ["line_color", "cell_size", "line_width"]:
                     self.redraw_lines = True
-                self.logger.debug("grid_settings changed")
                 do_draw = True
         
         active_grid_settings = self.settings["active_grid_settings"]
@@ -434,7 +430,6 @@ class CanvasPlusWidget(BaseWidget):
             if k not in self.active_grid_settings or self.active_grid_settings[k] != v:
                 if k in ["pos_x", "pos_y", "width", "height"]:
                     self.redraw_lines = True
-                self.logger.debug("active_grid_settings changed")
                 do_draw = True
         
         canvas_settings = self.settings["canvas_settings"]
