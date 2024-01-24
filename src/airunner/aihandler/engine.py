@@ -1,20 +1,19 @@
-import torch
 import traceback
-import gc
 
-from PyQt6.QtCore import QObject, pyqtSignal, pyqtSlot
+from PyQt6.QtCore import QObject, pyqtSignal
 from airunner.aihandler.enums import EngineRequestCode, EngineResponseCode
 from airunner.aihandler.logger import Logger
 from airunner.mediator_mixin import MediatorMixin
 from airunner.workers.tts_generator_worker import TTSGeneratorWorker
 from airunner.workers.tts_vocalizer_worker import TTSVocalizerWorker
 from airunner.workers.worker import Worker
-from airunner.aihandler.llm import LLMController
+from airunner.aihandler.llm import LLMGenerateWorker, LLMRequestWorker
 from airunner.aihandler.logger import Logger
 from airunner.aihandler.runner import SDGenerateWorker, SDRequestWorker
 from airunner.aihandler.tts import TTS
 from airunner.windows.main.settings_mixin import SettingsMixin
 from airunner.service_locator import ServiceLocator
+from airunner.utils import clear_memory
 
 
 class EngineRequestWorker(Worker):
@@ -79,17 +78,14 @@ class Engine(QObject, MediatorMixin, SettingsMixin):
         """
         self.response_worker.add_to_queue(response)
 
-    @pyqtSlot(object)
     def on_engine_cancel_signal(self, _ignore):
         self.logger.info("Canceling")
         self.emit("sd_cancel_signal")
         self.request_worker.cancel()
 
-    @pyqtSlot(object)
     def on_engine_stop_processing_queue_signal(self):
         self.do_process_queue = False
     
-    @pyqtSlot(object)
     def on_engine_start_processing_queue_signal(self):
         self.do_process_queue = True
 
@@ -103,7 +99,6 @@ class Engine(QObject, MediatorMixin, SettingsMixin):
     def handle_generate_caption(self, message):
         pass
 
-    @pyqtSlot(object)
     def on_caption_generated_signal(self, message):
         print("TODO: caption generated signal", message)
 
@@ -118,7 +113,6 @@ class Engine(QObject, MediatorMixin, SettingsMixin):
         self.clear_memory()
 
         # Initialize Controllers
-        self.llm_controller = LLMController(engine=self)
         #self.stt_controller = STTController(engine=self)
         # self.ocr_controller = ImageProcessor(engine=self)
         self.tts_controller = TTS(engine=self)
@@ -147,9 +141,15 @@ class Engine(QObject, MediatorMixin, SettingsMixin):
 
         self.generator_worker = self.create_worker(TTSGeneratorWorker)
         self.vocalizer_worker = self.create_worker(TTSVocalizerWorker)
+
+        self.request_worker = self.create_worker(LLMRequestWorker)
+        self.generate_worker = self.create_worker(LLMGenerateWorker)
+
         self.register("tts_request", self)
     
-    @pyqtSlot(dict)
+    def on_LLMGenerateWorker_response_signal(self, message:dict):
+        self.emit("llm_controller_response_signal", message)
+    
     def on_tts_request(self, data: dict):
         self.generator_worker.add_to_queue(data)
     
@@ -175,34 +175,33 @@ class Engine(QObject, MediatorMixin, SettingsMixin):
         if code == EngineResponseCode.IMAGE_GENERATED:
             self.emit("image_generated_signal", response["message"])
 
-    @pyqtSlot()
     def on_clear_memory_signal(self):
         self.clear_memory()
 
-    @pyqtSlot(object)
     def on_llm_text_streamed_signal(self, data):
         self.do_tts_request(data["message"], data["is_end_of_message"])
         self.emit("add_bot_message_to_conversation", data)
 
-    @pyqtSlot(object)
     def on_sd_image_generated_signal(self, message):
         self.emit("image_generated_signal", message)
 
-    @pyqtSlot(object)
     def on_text_generate_request_signal(self, message):
         self.move_sd_to_cpu()
-        self.llm_controller.do_request(message)
+        self.emit("llm_request_signal", message)
     
-    @pyqtSlot(object)
     def on_image_generate_request_signal(self, message):
         self.logger.info("on_image_generate_request_signal received")
-        # self.unload_llm(
-        #     message, 
-        #     self.memory_settings["unload_unused_models"], 
-        #     self.memory_settings["move_unused_model_to_cpu"]
-        # )
+        self.emit("unload_llm_signal", dict(
+            do_unload_model=self.memory_settings["unload_unused_models"],
+            move_unused_model_to_cpu=self.memory_settings["move_unused_model_to_cpu"],
+            dtype=self.llm_generator_settings["dtype"],
+            callback=lambda _message=message: self.do_image_generate_request(_message)
+        ))
+    
+    def do_image_generate_request(self, message):
+        self.clear_memory()
         self.emit("engine_do_request_signal", dict(
-            code=EngineRequestCode.GENERATE_IMAGE,
+            code=EngineRequestCode.GENERATE_IMAGE, 
             message=message
         ))
 
@@ -292,57 +291,19 @@ class Engine(QObject, MediatorMixin, SettingsMixin):
             is_end_of_message=is_end_of_message,
         ))
     
-    def clear_memory(self, *args, **kwargs):
-        """
-        Clear the GPU ram.
-        """
-        self.logger.info("Clearing memory")
-        torch.cuda.empty_cache()
-        torch.cuda.synchronize()
-        gc.collect()
-    
     def on_clear_llm_history_signal(self):
-        if self.llm:
-            self.llm_controller.clear_history()
+        self.emit("clear_history")
     
     def stop(self):
         self.logger.info("Stopping")
         self.request_worker.stop()
         self.response_worker.stop()
-    
-    def unload_llm(self, request_data: dict, do_unload_model: bool, move_unused_model_to_cpu: bool):
-        """
-        This function will either 
-        
-        1. Leave the LLM on the GPU
-        2. Move it to the CPU
-        3. Unload it from memory
-
-        The choice is dependent on the current dtype and other settings.
-        """
-        do_move_to_cpu = not do_unload_model and move_unused_model_to_cpu
-        
-        if request_data:
-            # Firist check the dtype
-            dtype = self.llm_generator_settings["dtype"]
-            if dtype in ["2bit", "4bit", "8bit"]:
-                do_unload_model = True
-                do_move_to_cpu = False
-
-        if do_move_to_cpu:
-            self.logger.info("Moving LLM to CPU")
-            self.llm_controller.move_to_cpu()
-            self.clear_memory()
-        # elif do_unload_model:
-        #     self.do_unload_llm()
-    
-    def do_unload_llm(self):
-        self.logger.info("Unloading LLM")
-        self.llm_controller.do_unload_llm()
-        #self.clear_memory()
 
     def move_sd_to_cpu(self):
         if ServiceLocator.get("is_pipe_on_cpu")() or not ServiceLocator.get("has_pipe")():
             return
         self.emit("move_pipe_to_cpu_signal")
         self.clear_memory()
+    
+    def clear_memory(self):
+        clear_memory()
