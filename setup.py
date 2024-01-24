@@ -39,7 +39,7 @@ setup(
         "scipy==1.10.1",
         "tokenizers==0.15.0",
         "tqdm==4.65.0",
-        "charset-normalizer==3.1.0",
+        "charset-normalizer==3.3.2",
         "opencv-python==4.8.0.74",
         "setuptools==67.7.2",
         "typing_extensions==4.5.0",
