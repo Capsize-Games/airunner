@@ -3,7 +3,6 @@ import io
 import uuid
 
 from PyQt6.QtGui import QPixmap
-from PyQt6.QtCore import pyqtSlot
 
 from PIL import Image
 
@@ -29,34 +28,27 @@ class LayerMixin:
         ServiceLocator.register("current_active_image", self.current_active_image)
         ServiceLocator.register("get_image_from_layer", self.get_image_from_layer)
 
-    @pyqtSlot(object)
     def on_delete_layer_signal(self, data):
         layer = data.get("layer", None)
         index = data.get("index", None)
         self.delete_layer(index, layer)
 
-    @pyqtSlot(object)
     def on_delete_current_layer_signal(self, _ignore):
         self.delete_layer(self.settings["current_layer_index"], None)
 
-    @pyqtSlot(object)
     def on_update_layer_signal(self, data):
         self.update_layer_by_index(data)
     
-    @pyqtSlot(object)
     def on_create_layer_signal(self, _ignore):
         index = self.add_layer()
         self.switch_layer(index)
     
-    @pyqtSlot(object)
     def on_switch_layer_signal(self, index):
         self.switch_layer(index)
 
-    @pyqtSlot(object)
     def on_add_layer_signal(self, _ignore):
         self.add_layer()
     
-    @pyqtSlot(object)
     def on_update_current_layer_signal(self, data):
         current_layer_index = self.settings["current_layer_index"]
         settings = self.settings
@@ -118,7 +110,6 @@ class LayerMixin:
         self.show_layers()
         self.update()
     
-    @pyqtSlot(object)
     def on_clear_layers_signal(self, _ignore):
         # delete all widgets from self.container.layout()
         layers = self.settings["layers"]
@@ -139,7 +130,6 @@ class LayerMixin:
             return
         self.current_layer_index = index
 
-    @pyqtSlot(object)
     def on_move_layer_up_signal(self, _ignore):
         layer = self.current_layer()
         settings = self.settings
@@ -153,7 +143,6 @@ class LayerMixin:
         settings["layers"] = layers
         self.settings = settings
     
-    @pyqtSlot(object)
     def on_move_layer_down_signal(self, _ignore):
         layer = self.current_layer()
         settings = self.settings

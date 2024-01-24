@@ -1,5 +1,3 @@
-from PyQt6.QtCore import pyqtSlot
-
 from airunner.service_locator import ServiceLocator
 from airunner.data.bootstrap.model_bootstrap_data import model_bootstrap_data
 
@@ -31,13 +29,11 @@ class AIModelMixin:
     def ai_model_get_by_filter(self, filter_dict):
         return [item for item in self.ai_models if all(item.get(k) == v for k, v in filter_dict.items())]
 
-    @pyqtSlot(object)
     def on_ai_model_create_signal(self, item):
         settings = self.settings
         settings["ai_models"].append(item)
         self.settings = settings
 
-    @pyqtSlot(object)
     def on_ai_models_create_signal(self, models):
         settings = self.settings
         settings["ai_models"] = models
@@ -52,7 +48,6 @@ class AIModelMixin:
                 self.settings = settings
                 break
 
-    @pyqtSlot(object)
     def on_ai_model_delete_signal(self, item):
         settings = self.settings
         settings["ai_models"] = [existing_item for existing_item in self.ai_models if existing_item['name'] != item['name']]
@@ -70,7 +65,6 @@ class AIModelMixin:
     def ai_model_get_disabled_default(self):
         return [model for model in self.ai_models if model["is_default"] == True and model["enabled"] == False]
 
-    @pyqtSlot(object)
     def on_ai_models_save_or_update_signal(self, new_models):
         settings = self.settings
         default_models = model_bootstrap_data
