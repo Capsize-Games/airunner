@@ -1,5 +1,5 @@
 from PIL import Image
-from PyQt6.QtCore import QRect, QPoint, Qt, pyqtSlot
+from PyQt6.QtCore import QRect, QPoint, Qt
 from PyQt6.QtWidgets import QSpacerItem, QSizePolicy
 
 from airunner.aihandler.logger import Logger
@@ -43,7 +43,6 @@ class LayerContainerWidget(BaseWidget):
         self.delete_selected_layers()
         self.delete_layer()
     
-    @pyqtSlot(object)
     def on_add_layer_signal(self, layer):
         self.add_layer()
 
@@ -235,7 +234,6 @@ class LayerContainerWidget(BaseWidget):
             opacity=opacity
         ))
 
-    @pyqtSlot()
     def on_show_layers_signal(self):
         self.show_layers()
 
