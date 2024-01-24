@@ -5,8 +5,6 @@ from airunner.aihandler.logger import Logger
 from dataclasses import dataclass
 import tomesd
 
-logger = Logger(prefix="MemoryEfficientMixin")
-
 
 
 @dataclass
@@ -72,10 +70,10 @@ class MemoryEfficientMixin:
 
         self.last_channels_applied = self.use_last_channels
         if self.use_last_channels:
-            logger.info("Enabling torch.channels_last")
+            self.logger.info("Enabling torch.channels_last")
             self.pipe.unet.to(memory_format=torch.channels_last)
         else:
-            logger.info("Disabling torch.channels_last")
+            self.logger.info("Disabling torch.channels_last")
             self.pipe.unet.to(memory_format=torch.contiguous_format)
 
     def apply_vae_slicing(self):
@@ -87,13 +85,13 @@ class MemoryEfficientMixin:
             "img2img", "depth2img", "pix2pix", "outpaint", "superresolution", "controlnet", "upscale"
         ]:
             if self.use_enable_vae_slicing or self.is_txt2vid:
-                logger.info("Enabling vae slicing")
+                self.logger.info("Enabling vae slicing")
                 try:
                     self.pipe.enable_vae_slicing()
                 except AttributeError:
                     pass
             else:
-                logger.info("Disabling vae slicing")
+                self.logger.info("Disabling vae slicing")
                 try:
                     self.pipe.disable_vae_slicing()
                 except AttributeError:
@@ -105,10 +103,10 @@ class MemoryEfficientMixin:
         self.attention_slicing_applied = self.use_attention_slicing
 
         if self.use_attention_slicing:
-            logger.info("Enabling attention slicing")
+            self.logger.info("Enabling attention slicing")
             self.pipe.enable_attention_slicing(1)
         else:
-            logger.info("Disabling attention slicing")
+            self.logger.info("Disabling attention slicing")
             self.pipe.disable_attention_slicing()
 
     def apply_tiled_vae(self):
@@ -117,13 +115,13 @@ class MemoryEfficientMixin:
         self.tiled_vae_applied = self.use_tiled_vae
 
         if self.use_tiled_vae:
-            logger.info("Applying tiled vae")
+            self.logger.info("Applying tiled vae")
             # from diffusers import UniPCMultistepScheduler
             # self.pipe.scheduler = UniPCMultistepScheduler.from_config(self.pipe.scheduler.config)
             try:
                 self.pipe.vae.enable_tiling()
             except AttributeError:
-                logger.warning("Tiled vae not supported for this model")
+                self.logger.warning("Tiled vae not supported for this model")
 
     def apply_accelerated_transformers(self):
         if self.accelerated_transformers_applied == self.use_accelerated_transformers:
@@ -132,20 +130,20 @@ class MemoryEfficientMixin:
 
         from diffusers.models.attention_processor import AttnProcessor, AttnProcessor2_0
         if not self.cuda_is_available or not self.use_accelerated_transformers:
-            logger.info("Disabling accelerated transformers")
+            self.logger.info("Disabling accelerated transformers")
             self.pipe.unet.set_attn_processor(AttnProcessor())
         else:
             self.pipe.unet.set_attn_processor(AttnProcessor2_0())
 
     def save_unet(self, file_path, file_name):
-        logger.info(f"Saving compiled torch model {file_name}")
+        self.logger.info(f"Saving compiled torch model {file_name}")
         unet_file = os.path.join(file_path, file_name)
         if not os.path.exists(file_path):
             os.makedirs(file_path)
         torch.save(self.pipe.unet.state_dict(), unet_file)
 
     def load_unet(self, file_path, file_name):
-        logger.info(f"Loading compiled torch model {file_name}")
+        self.logger.info(f"Loading compiled torch model {file_name}")
         unet_file = os.path.join(file_path, file_name)
         self.pipe.unet.state_dict = torch.load(unet_file, map_location="cuda")
 
@@ -168,7 +166,7 @@ class MemoryEfficientMixin:
         #     self.load_unet(file_path, file_name)
         #     self.pipe.unet.to(memory_format=torch.channels_last)
         # else:
-        logger.info(f"Compiling torch model {model_name}")
+        self.logger.info(f"Compiling torch model {model_name}")
         #self.pipe.unet.to(memory_format=torch.channels_last)
         self.pipe.unet = torch.compile(self.pipe.unet, mode="reduce-overhead", fullgraph=True)
         self.pipe(prompt=self.prompt)
@@ -213,30 +211,30 @@ class MemoryEfficientMixin:
     def move_pipe_to_cuda(self):
         if self.cuda_is_available and not self.use_enable_sequential_cpu_offload and not self.enable_model_cpu_offload:
             if not str(self.pipe.device).startswith("cuda"):
-                logger.info(f"Moving pipe to cuda (currently {self.pipe.device})")
+                self.logger.info(f"Moving pipe to cuda (currently {self.pipe.device})")
                 self.pipe.to("cuda") if self.cuda_is_available else None
             if hasattr(self.pipe, "controlnet") and self.pipe.controlnet is not None:
                 if not self.pipe.controlnet.device or not str(self.pipe.controlnet.device).startswith("cuda"):
-                    logger.info(f"Moving controlnet to cuda (currently {self.pipe.controlnet.device})")
+                    self.logger.info(f"Moving controlnet to cuda (currently {self.pipe.controlnet.device})")
                     self.pipe.controlnet.half().to("cuda")
                 if not self.pipe.controlnet.dtype == torch.float16:
-                    logger.info("Changing controlnet dtype to float16")
+                    self.logger.info("Changing controlnet dtype to float16")
                     self.pipe.controlnet.half()
 
     def move_pipe_to_cpu(self):
-        logger.info("Moving to cpu")
+        self.logger.info("Moving to cpu")
         if not self.pipe:
             return
         try:
             self.pipe.to("cpu", self.data_type)
         except NotImplementedError:
-            logger.warning("Not implemented error when moving to cpu")
+            self.logger.warning("Not implemented error when moving to cpu")
         
         if hasattr(self.pipe, "controlnet"):
             try:
                 self.pipe.controlnet.to("cpu", self.data_type)
             except NotImplementedError:
-                logger.warning("Not implemented error when moving to cpu")
+                self.logger.warning("Not implemented error when moving to cpu")
             except AttributeError:
                 pass
 
@@ -246,12 +244,12 @@ class MemoryEfficientMixin:
         self.cpu_offload_applied = self.enable_model_cpu_offload
 
         if self.use_enable_sequential_cpu_offload and not self.enable_model_cpu_offload:
-            logger.info("Enabling sequential cpu offload")
+            self.logger.info("Enabling sequential cpu offload")
             self.move_pipe_to_cpu()
             try:
                 self.pipe.enable_sequential_cpu_offload()
             except NotImplementedError:
-                logger.warning("Not implemented error when applying sequential cpu offload")
+                self.logger.warning("Not implemented error when applying sequential cpu offload")
                 self.move_pipe_to_cuda()
 
     def apply_model_offload(self):
@@ -262,7 +260,7 @@ class MemoryEfficientMixin:
         if self.enable_model_cpu_offload \
            and not self.use_enable_sequential_cpu_offload \
            and hasattr(self.pipe, "enable_model_cpu_offload"):
-            logger.info("Enabling model cpu offload")
+            self.logger.info("Enabling model cpu offload")
             self.move_pipe_to_cpu()
             self.pipe.enable_model_cpu_offload()
     
@@ -275,19 +273,19 @@ class MemoryEfficientMixin:
             self.remove_tome_sd()
     
     def apply_tome_sd(self):
-        logger.info(f"Applying ToMe SD weight merging with ratio {self.tome_sd_ratio}")
+        self.logger.info(f"Applying ToMe SD weight merging with ratio {self.tome_sd_ratio}")
         tomesd.apply_patch(self.pipe, ratio=self.tome_sd_ratio)
         self.tome_sd_applied = True
         self.tome_ratio = self.tome_sd_ratio
     
     def remove_tome_sd(self):
-        logger.info("Removing ToMe SD weight merging")
+        self.logger.info("Removing ToMe SD weight merging")
         tomesd.remove_patch(self.pipe)
         self.tome_ratio = None
         self.tome_sd_applied = False
 
     def apply_memory_efficient_settings(self):
-        logger.info("Applying memory efficient settings")
+        self.logger.info("Applying memory efficient settings")
         self.apply_last_channels()
         self.enable_memory_chunking()
         self.apply_vae_slicing()

@@ -16,7 +16,6 @@ from airunner.mediator_mixin import MediatorMixin
 
 
 class LLMHandler(BaseHandler):
-    logger = Logger(prefix="LLMHandler")
     dtype = ""
     local_files_only = True
     set_attention_mask = False
