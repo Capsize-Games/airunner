@@ -1,7 +1,8 @@
+from urllib.parse import urlparse
+
 from airunner.widgets.base_widget import BaseWidget
 from airunner.widgets.model_manager.templates.import_ui import Ui_import_model_widget
 from airunner.aihandler.download_civitai import DownloadCivitAI
-from airunner.aihandler.logger import Logger
 
 
 class ImportWidget(BaseWidget):
@@ -141,7 +142,8 @@ class ImportWidget(BaseWidget):
             self.logger.error("Failed to get JSON from CivitAI")
             return
         self.current_model_data = data
-        self.is_civitai = "civitai.com" in url
+        parsed_url = urlparse(url)
+        self.is_civitai = "civitai.com" in parsed_url.netloc
         model_name = data["name"]
         model_versions = data["modelVersions"]
         self.ui.model_choices.clear()
