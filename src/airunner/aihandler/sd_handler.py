@@ -9,7 +9,6 @@ import requests
 import torch
 
 from PIL import Image, ImageDraw, ImageFont
-from PyQt6.QtCore import QObject
 
 from controlnet_aux.processor import Processor
 from diffusers.pipelines.stable_diffusion.convert_from_ckpt import \
@@ -34,7 +33,6 @@ from airunner.aihandler.mixins.scheduler_mixin import SchedulerMixin
 from airunner.aihandler.mixins.txttovideo_mixin import TexttovideoMixin
 from airunner.aihandler.settings import AIRUNNER_ENVIRONMENT
 from airunner.scripts.realesrgan.main import RealESRGAN
-from airunner.aihandler.logger import Logger
 from airunner.windows.main.layer_mixin import LayerMixin
 from airunner.windows.main.lora_mixin import LoraMixin as LoraDataMixin
 from airunner.windows.main.embedding_mixin import EmbeddingMixin as EmbeddingDataMixin
