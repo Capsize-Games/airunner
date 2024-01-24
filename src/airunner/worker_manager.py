@@ -2,8 +2,7 @@ import traceback
 import numpy as np
 
 from PyQt6.QtCore import QObject, pyqtSignal
-from airunner.aihandler.enums import EngineRequestCode, EngineResponseCode, WorkerCode, SignalCode
-from airunner.aihandler.logger import Logger
+from airunner.aihandler.enums import EngineRequestCode, EngineResponseCode, SignalCode
 from airunner.mediator_mixin import MediatorMixin
 from airunner.workers.audio_capture_worker import AudioCaptureWorker
 from airunner.workers.audio_processor_worker import AudioProcessorWorker
@@ -46,6 +45,7 @@ class WorkerManager(QObject, MediatorMixin, SettingsMixin):
 
     message = ""
     current_message = ""
+    processed_vision_history = []
 
     def do_response(self, response):
         """
@@ -142,11 +142,10 @@ class WorkerManager(QObject, MediatorMixin, SettingsMixin):
 
     def on_application_settings_changed_signal(self, message):
         self.toggle_vision_capture()
-    
+
     def on_vision_captured(self, message):
         self.emit(SignalCode.VISION_CAPTURE_PROCESS_SIGNAL, message)
 
-    processed_vision_history = []
     def on_vision_processed(self, message):
         self.processed_vision_history.append(message)
         print(self.processed_vision_history)
