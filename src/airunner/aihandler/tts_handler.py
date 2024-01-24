@@ -3,17 +3,14 @@ import numpy as np
 
 from queue import Queue
 
-from PyQt6.QtCore import QObject, pyqtSlot
+from PyQt6.QtCore import pyqtSlot
 
 from transformers import SpeechT5Processor, SpeechT5ForTextToSpeech, SpeechT5HifiGan, BarkModel, BarkProcessor
 from datasets import load_dataset
-
-from airunner.aihandler.logger import Logger
-from airunner.mediator_mixin import MediatorMixin
-from airunner.windows.main.settings_mixin import SettingsMixin
+from airunner.aihandler.base_handler import BaseHandler
 
 
-class TTS(QObject, MediatorMixin, SettingsMixin):
+class TTSHandler(BaseHandler):
     """
     Generates speech from given text. 
     Responsible for managing the model, processor, vocoder, and speaker embeddings.
@@ -21,7 +18,6 @@ class TTS(QObject, MediatorMixin, SettingsMixin):
 
     Use from a worker to avoid blocking the main thread.
     """
-    logger = Logger(prefix="TTS")
     character_replacement_map = {
         "\n": " ",
         "’": "'",
@@ -130,9 +126,7 @@ class TTS(QObject, MediatorMixin, SettingsMixin):
         return self.tts_settings["sentence_chunks"]
 
     def __init__(self, *args, **kwargs):
-        super().__init__()
-        SettingsMixin.__init__(self)
-        MediatorMixin.__init__(self)
+        super().__init__(*args, **kwargs)
         self.logger.info("Loading")
         self.corpus = []
         self.processor = None
