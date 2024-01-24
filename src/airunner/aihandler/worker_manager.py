@@ -20,6 +20,8 @@ from airunner.aihandler.tts import TTS
 from airunner.windows.main.settings_mixin import SettingsMixin
 from airunner.service_locator import ServiceLocator
 from airunner.utils import clear_memory
+from airunner.workers.vision_capture_worker import VisionCaptureWorker
+from airunner.workers.vision_processor_worker import VisionProcessorWorker
 
 
 class Message:
@@ -29,7 +31,7 @@ class Message:
         self.conversation = kwargs.get("conversation")
 
 
-class Engine(QObject, MediatorMixin, SettingsMixin):
+class WorkerManager(QObject, MediatorMixin, SettingsMixin):
     """
     The engine is responsible for processing requests and offloading
     them to the appropriate AI model controller.
@@ -87,10 +89,6 @@ class Engine(QObject, MediatorMixin, SettingsMixin):
         self.logger = Logger(prefix="Engine")
         self.clear_memory()
 
-        # Initialize Controllers
-        #self.stt_controller = STTController(engine=self)
-        # self.ocr_controller = ImageProcessor(engine=self)
-
         self.register("hear_signal", self)
         self.register("engine_cancel_signal", self)
         self.register("engine_stop_processing_queue_signal", self)
@@ -106,6 +104,8 @@ class Engine(QObject, MediatorMixin, SettingsMixin):
         self.register("image_generate_request_signal", self)
         self.register("llm_response_signal", self)
         self.register("llm_text_streamed_signal", self)
+        self.register("AudioCaptureWorker_response_signal", self)
+        self.register("AudioProcessorWorker_processed_audio", self)
 
         self.sd_request_worker = self.create_worker(SDRequestWorker)
         self.sd_generate_worker = self.create_worker(SDGenerateWorker)
@@ -122,8 +122,8 @@ class Engine(QObject, MediatorMixin, SettingsMixin):
         self.stt_audio_capture_worker = self.create_worker(AudioCaptureWorker)
         self.stt_audio_processor_worker = self.create_worker(AudioProcessorWorker)
 
-        self.register("AudioCaptureWorker_response_signal", self)
-        self.register("AudioProcessorWorker_processed_audio", self)
+        self.vision_capture_worker = self.create_worker(VisionCaptureWorker)
+        self.vision_processor_worker = self.create_worker(VisionProcessorWorker)
 
         self.register("tts_request", self)
     
