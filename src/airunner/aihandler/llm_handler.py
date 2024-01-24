@@ -11,9 +11,6 @@ from transformers import InstructBlipProcessor
 from transformers import TextIteratorStreamer
 from airunner.aihandler.base_handler import BaseHandler
 
-from airunner.aihandler.logger import Logger
-from airunner.mediator_mixin import MediatorMixin
-
 
 class LLMHandler(BaseHandler):
     dtype = ""
