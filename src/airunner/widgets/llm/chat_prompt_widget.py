@@ -97,7 +97,6 @@ class ChatPromptWidget(BaseWidget, MediatorMixin):
 
         parsed_template = self.parse_template(prompt_template)
 
-        print("EMITTING TEXT GENERATE REQUEST SIGNAL")
         self.emit(
             "text_generate_request_signal",
             {

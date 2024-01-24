@@ -2,6 +2,7 @@ import datetime
 import os
 import threading
 import torch
+import gc
 from PIL import Image
 from PyQt6.QtGui import QPixmap, QImage
 from PyQt6.QtWidgets import QFileDialog, QApplication, QMainWindow
@@ -442,3 +443,12 @@ def load_extension(extension_dir):
     sys.path.append(install_dir)
 
     # Now you can import any library that was in the extension's dependencies
+
+
+def clear_memory():
+    """
+    Clear the GPU ram.
+    """ 
+    torch.cuda.empty_cache()
+    torch.cuda.synchronize()
+    gc.collect()
