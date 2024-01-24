@@ -131,7 +131,6 @@ class MainWindow(
         ))
         self.settings = settings
     
-    @pyqtSlot(object)
     def on_load_saved_stablediffuion_prompt_signal(self, index):
         try:
             saved_prompt = self.settings["saved_prompts"][index]
@@ -145,7 +144,6 @@ class MainWindow(
             settings["generator_settings"]["negative_prompt"] = saved_prompt["negative_prompt"]
             self.settings = settings
 
-    @pyqtSlot(object)
     def on_update_saved_stablediffusion_prompt_signal(self, options):
         index, prompt, negative_prompt = options
         settings = self.settings
@@ -158,7 +156,6 @@ class MainWindow(
             self.logger.error(f"Unable to update prompt at index {index}")
         self.settings = settings
 
-    @pyqtSlot(object)
     def on_save_stablediffusion_prompt_signal(self):
         settings = self.settings
         settings["saved_prompts"].append(dict(
@@ -232,7 +229,6 @@ class MainWindow(
     def current_canvas(self):
         return self.standard_image_panel
 
-    @pyqtSlot(object)
     def on_describe_image_signal(self, data):
         image = data["image"]
         callback = data["callback"]
@@ -270,7 +266,6 @@ class MainWindow(
     def show_layers(self):
         self.emit("show_layers_signal")
 
-    @pyqtSlot(object)
     def on_controlnet_image_generated_signal(self, response: dict):
         self.handle_controlnet_image_generated(response)
 
@@ -801,7 +796,6 @@ class MainWindow(
     def show_update_popup(self):
         self.update_popup = UpdateWindow()
 
-    @pyqtSlot(object)
     def on_state_changed(self, state):
         if state == Qt.ApplicationState.ApplicationActive:
             self.canvas_widget.pos_x = int(self.x() / 4)
@@ -1046,18 +1040,15 @@ class MainWindow(
         #return self.automatic_filter_manager.apply_filters(images)
         return images
 
-    @pyqtSlot(object)
     def on_set_status_label_signal(self, message):
         self.set_status_label(message)
 
-    @pyqtSlot(object)
     def on_set_error_label_signal(self, message):
         self.set_status_label(message, error=True)
 
     def handle_unknown(self, message):
         self.logger.error(f"Unknown message code: {message}")
 
-    @pyqtSlot(object)
     def on_clear_status_message_signal(self, _ignore):
         self.emit("set_status_label_signal", "")
 

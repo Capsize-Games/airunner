@@ -1,4 +1,4 @@
-from PyQt6.QtCore import Qt, pyqtSlot
+from PyQt6.QtCore import Qt,
 from PyQt6.QtGui import QBrush, QColor, QPen
 from airunner.workers.worker import Worker
 
@@ -11,7 +11,6 @@ class CanvasResizeWorker(Worker):
         super().__init__(*args, **kwargs)
         self.register("canvas_resize_signal", self)
     
-    @pyqtSlot(object)
     def on_canvas_resize_signal(self, data):
         self.add_to_queue(data)
     

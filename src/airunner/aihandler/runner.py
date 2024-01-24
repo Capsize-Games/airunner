@@ -10,7 +10,7 @@ import requests
 import torch
 
 from PIL import Image, ImageDraw, ImageFont
-from PyQt6.QtCore import QObject, pyqtSlot
+from PyQt6.QtCore import QObject
 
 from controlnet_aux.processor import Processor
 from diffusers.pipelines.stable_diffusion.convert_from_ckpt import \
@@ -24,7 +24,7 @@ from diffusers import StableDiffusionControlNetPipeline, StableDiffusionControlN
 from diffusers import ConsistencyDecoderVAE
 from transformers import AutoFeatureExtractor
 
-from airunner.aihandler.enums import EngineRequestCode, EngineResponseCode, FilterType
+from airunner.aihandler.enums import EngineResponseCode, FilterType
 from airunner.aihandler.mixins.compel_mixin import CompelMixin
 from airunner.aihandler.mixins.embedding_mixin import EmbeddingMixin
 from airunner.aihandler.mixins.lora_mixin import LoraMixin
@@ -1409,7 +1409,6 @@ class SDRunner(
         }
         self.emit("progress_signal", res)
 
-    @pyqtSlot(object)
     def on_unload_stablediffusion_signal(self):
         self.unload()
 
@@ -1496,7 +1495,6 @@ class SDRunner(
             self._current_model = ""
             self.local_files_only = True
 
-    @pyqtSlot(object)
     def on_sd_cancel_signal(self):
         self.do_cancel = True
 
