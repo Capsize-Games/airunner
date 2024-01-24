@@ -2,10 +2,6 @@ import os
 
 from PyQt6.QtCore import pyqtSlot
 
-from airunner.aihandler.logger import Logger
-
-logger = Logger(prefix="MergeMixin")
-
 
 class MergeMixin:
     def __init__(self, *args, **kwargs):

@@ -2,7 +2,6 @@ import sounddevice as sd
 
 from queue import Queue
 
-from airunner.aihandler.logger import Logger
 from airunner.workers.worker import Worker
 
 
@@ -12,7 +11,6 @@ class TTSVocalizerWorker(Worker):
     vocalizer's queue. The vocalizer plays the speech using sounddevice.
     """
     reader_mode_active = False
-    logger = Logger(prefix="VocalizerWorker")
 
     def __init__(self, *args, **kwargs):
         super().__init__(*args, **kwargs)

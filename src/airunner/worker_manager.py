@@ -85,7 +85,6 @@ class WorkerManager(QObject, MediatorMixin, SettingsMixin):
         super().__init__()
         MediatorMixin.__init__(self)
         SettingsMixin.__init__(self)
-        self.logger = Logger(prefix="Engine")
         self.clear_memory()
 
         self.register("hear_signal", self)
@@ -105,6 +104,7 @@ class WorkerManager(QObject, MediatorMixin, SettingsMixin):
         self.register("llm_text_streamed_signal", self)
         self.register("AudioCaptureWorker_response_signal", self)
         self.register("AudioProcessorWorker_processed_audio", self)
+        self.register("vision_captured_signal", self)
 
         self.sd_request_worker = self.create_worker(SDRequestWorker)
         self.sd_generate_worker = self.create_worker(SDGenerateWorker)
@@ -125,6 +125,12 @@ class WorkerManager(QObject, MediatorMixin, SettingsMixin):
         self.vision_processor_worker = self.create_worker(VisionProcessorWorker)
 
         self.register("tts_request", self)
+    
+    def on_vision_captured_signal(self, message):
+        print("TODO: place request in worker_manager request queue")
+
+    def on_vision_processed_signal(self, message):
+        print("TODO: store processed image for RAG")
     
     def on_AudioCaptureWorker_response_signal(self, message: np.ndarray):
         self.logger.info("Heard signal")
