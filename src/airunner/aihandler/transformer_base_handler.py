@@ -21,7 +21,7 @@ class TransformerBaseHandler(BaseHandler):
     def __init__(self, *args, **kwargs):
         super().__init__(*args, **kwargs)
         self.callback = None
-        self.request_data = None
+        self.request_data = {}
         self.model = None
         self.processor = None
         self.vocoder = None
@@ -134,7 +134,10 @@ class TransformerBaseHandler(BaseHandler):
             if config:
                 params["quantization_config"] = config
 
-        path = self.current_model_path
+        path = self.model_path
+        if path == self.current_model_path and self.model:
+            return
+        self.current_model_path = self.model_path
 
         self.logger.info(f"Loading model from {path}")
         try:
@@ -203,6 +206,8 @@ class TransformerBaseHandler(BaseHandler):
 
     def process_data(self, data):
         self.request_data = data.get("request_data", {})
+        print(self.request_data.keys())
+        print(self.request_data.get("model_path"))
         self.callback = self.request_data.get("callback", None)
         self.use_gpu = self.request_data.get("use_gpu", self.use_gpu)
         self.image = self.request_data.get("image", None)
@@ -312,10 +317,9 @@ class TransformerBaseHandler(BaseHandler):
         self._processing_request = True
         kwargs = self.prepare_input_args()
         self.do_set_seed(kwargs.get("seed"))
-        self.current_model_path = self.model_path
+        self.process_data(data)
         self.load()
         self._processing_request = True
-        self.process_data(data)
         return self.generate()
 
 
