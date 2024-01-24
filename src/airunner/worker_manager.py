@@ -16,7 +16,6 @@ from airunner.workers.engine_response_worker import EngineResponseWorker
 from airunner.workers.sd_generate_worker import SDGenerateWorker
 from airunner.workers.sd_request_worker import SDRequestWorker
 from airunner.aihandler.logger import Logger
-from airunner.aihandler.tts import TTS
 from airunner.windows.main.settings_mixin import SettingsMixin
 from airunner.service_locator import ServiceLocator
 from airunner.utils import clear_memory
