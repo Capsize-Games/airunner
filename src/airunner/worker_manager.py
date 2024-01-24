@@ -16,10 +16,11 @@ from airunner.workers.engine_response_worker import EngineResponseWorker
 from airunner.workers.sd_generate_worker import SDGenerateWorker
 from airunner.workers.sd_request_worker import SDRequestWorker
 from airunner.aihandler.logger import Logger
-from airunner.aihandler.tts import TTS
 from airunner.windows.main.settings_mixin import SettingsMixin
 from airunner.service_locator import ServiceLocator
 from airunner.utils import clear_memory
+from airunner.workers.vision_capture_worker import VisionCaptureWorker
+from airunner.workers.vision_processor_worker import VisionProcessorWorker
 
 
 class Message:
@@ -29,7 +30,7 @@ class Message:
         self.conversation = kwargs.get("conversation")
 
 
-class Engine(QObject, MediatorMixin, SettingsMixin):
+class WorkerManager(QObject, MediatorMixin, SettingsMixin):
     """
     The engine is responsible for processing requests and offloading
     them to the appropriate AI model controller.
@@ -51,12 +52,12 @@ class Engine(QObject, MediatorMixin, SettingsMixin):
         Handle a response from the application by putting it into
         a response worker queue.
         """
-        self.response_worker.add_to_queue(response)
+        self.engine_response_worker.add_to_queue(response)
 
     def on_engine_cancel_signal(self, _ignore):
         self.logger.info("Canceling")
         self.emit("sd_cancel_signal")
-        self.request_worker.cancel()
+        self.engine_request_worker.cancel()
 
     def on_engine_stop_processing_queue_signal(self):
         self.do_process_queue = False
@@ -87,11 +88,6 @@ class Engine(QObject, MediatorMixin, SettingsMixin):
         self.logger = Logger(prefix="Engine")
         self.clear_memory()
 
-        # Initialize Controllers
-        #self.stt_controller = STTController(engine=self)
-        # self.ocr_controller = ImageProcessor(engine=self)
-        self.tts_controller = TTS(engine=self)
-
         self.register("hear_signal", self)
         self.register("engine_cancel_signal", self)
         self.register("engine_stop_processing_queue_signal", self)
@@ -107,30 +103,32 @@ class Engine(QObject, MediatorMixin, SettingsMixin):
         self.register("image_generate_request_signal", self)
         self.register("llm_response_signal", self)
         self.register("llm_text_streamed_signal", self)
+        self.register("AudioCaptureWorker_response_signal", self)
+        self.register("AudioProcessorWorker_processed_audio", self)
 
         self.sd_request_worker = self.create_worker(SDRequestWorker)
         self.sd_generate_worker = self.create_worker(SDGenerateWorker)
         
-        self.request_worker = self.create_worker(EngineRequestWorker)
-        self.response_worker = self.create_worker(EngineResponseWorker)
+        self.engine_request_worker = self.create_worker(EngineRequestWorker)
+        self.engine_response_worker = self.create_worker(EngineResponseWorker)
 
-        self.generator_worker = self.create_worker(TTSGeneratorWorker)
-        self.vocalizer_worker = self.create_worker(TTSVocalizerWorker)
+        self.tts_generator_worker = self.create_worker(TTSGeneratorWorker)
+        self.tts_vocalizer_worker = self.create_worker(TTSVocalizerWorker)
 
-        self.request_worker = self.create_worker(LLMRequestWorker)
-        self.generate_worker = self.create_worker(LLMGenerateWorker)
+        self.llm_request_worker = self.create_worker(LLMRequestWorker)
+        self.llm_generate_worker = self.create_worker(LLMGenerateWorker)
 
-        self.audio_capture_worker = self.create_worker(AudioCaptureWorker)
-        self.audio_processor_worker = self.create_worker(AudioProcessorWorker)
+        self.stt_audio_capture_worker = self.create_worker(AudioCaptureWorker)
+        self.stt_audio_processor_worker = self.create_worker(AudioProcessorWorker)
 
-        self.register("AudioCaptureWorker_response_signal", self)
-        self.register("AudioProcessorWorker_processed_audio", self)
+        self.vision_capture_worker = self.create_worker(VisionCaptureWorker)
+        self.vision_processor_worker = self.create_worker(VisionProcessorWorker)
 
         self.register("tts_request", self)
     
     def on_AudioCaptureWorker_response_signal(self, message: np.ndarray):
         self.logger.info("Heard signal")
-        self.audio_processor_worker.add_to_queue(message)
+        self.stt_audio_processor_worker.add_to_queue(message)
 
     def on_AudioProcessorWorker_processed_audio(self, message: np.ndarray):
         self.logger.info("Processed audio")
@@ -140,7 +138,7 @@ class Engine(QObject, MediatorMixin, SettingsMixin):
         self.emit("llm_response_signal", message)
     
     def on_tts_request(self, data: dict):
-        self.generator_worker.add_to_queue(data)
+        self.tts_generator_worker.add_to_queue(data)
     
     def on_llm_response_signal(self, message):
         self.do_response(message)
@@ -195,7 +193,7 @@ class Engine(QObject, MediatorMixin, SettingsMixin):
         ))
 
     def request_queue_size(self):
-        return self.request_worker.queue.qsize()
+        return self.engine_request_worker.queue.qsize()
 
     def do_listen(self):
         # self.stt_controller.do_listen()
@@ -227,8 +225,8 @@ class Engine(QObject, MediatorMixin, SettingsMixin):
     
     def stop(self):
         self.logger.info("Stopping")
-        self.request_worker.stop()
-        self.response_worker.stop()
+        self.engine_request_worker.stop()
+        self.engine_response_worker.stop()
 
     def move_sd_to_cpu(self):
         if ServiceLocator.get("is_pipe_on_cpu")() or not ServiceLocator.get("has_pipe")():
