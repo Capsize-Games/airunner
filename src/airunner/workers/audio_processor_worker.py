@@ -1,4 +1,4 @@
-from airunner.aihandler.speech_to_text import STTHandler
+from airunner.aihandler.stt_handler import STTHandler
 from airunner.workers.worker import Worker
 
 
