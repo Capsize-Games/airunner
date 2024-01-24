@@ -21,6 +21,37 @@ class LLMGenerateWorker(Worker):
         self.llm = LLM()
         super().__init__(prefix=prefix)
         self.register("clear_history", self)
+        self.register("LLMRequestWorker_response_signal", self)
+        self.register("unload_llm_signal", self)
+
+    def on_unload_llm_signal(self, message):
+        """
+        This function will either 
+        
+        1. Leave the LLM on the GPU
+        2. Move it to the CPU
+        3. Unload it from memory
+
+        The choice is dependent on the current dtype and other settings.
+        """
+        do_unload_model = message.get("do_unload_model", False)
+        move_unused_model_to_cpu = message.get("move_unused_model_to_cpu", False)
+        do_move_to_cpu = not do_unload_model and move_unused_model_to_cpu
+        dtype = message.get("dtype", "")
+        callback = message.get("callback", None)
+        if dtype in ["2bit", "4bit", "8bit"]:
+            do_unload_model = True
+            do_move_to_cpu = False
+        if do_move_to_cpu:
+            self.logger.info("Moving LLM to CPU")
+            self.llm.move_to_cpu()
+        elif do_unload_model:
+            self.llm.unload()
+        if callback:
+            callback()
+
+    def on_LLMRequestWorker_response_signal(self, message):
+        self.add_to_queue(message)
 
     def handle_message(self, message):
         for response in self.llm.do_generate(message):
@@ -28,52 +59,22 @@ class LLMGenerateWorker(Worker):
     
     def on_clear_history(self):
         self.llm.clear_history()
+    
+    def unload_llm(self):
+        self.llm.unload()
 
 
 class LLMRequestWorker(Worker):
     def __init__(self, prefix="LLMRequestWorker"):
         super().__init__(prefix=prefix)
+        self.register("llm_request_signal", self)
+    
+    def on_llm_request_signal(self, message):
+        print("adding llm request to queue", message)
+        self.add_to_queue(message)
     
     def handle_message(self, message):
         super().handle_message(message)
-
-
-class LLMController(QObject, MediatorMixin):
-    
-    def __init__(self, *args, **kwargs):
-        MediatorMixin.__init__(self)
-        self.engine = kwargs.pop("engine")
-        super().__init__(*args, **kwargs)
-        self.logger = Logger(prefix="LLMController")
-        
-        self.request_worker = self.create_worker(LLMRequestWorker)
-        self.generate_worker = self.create_worker(LLMGenerateWorker)
-        self.register("LLMRequestWorker_response_signal", self)
-        self.register("LLMGenerateWorker_response_signal", self)
-    
-    def pause(self):
-        self.request_worker.pause()
-        self.generate_worker.pause()
-
-    def resume(self):
-        self.request_worker.resume()
-        self.generate_worker.resume()
-    
-    def do_request(self, message):
-        self.request_worker.add_to_queue(message)
-    
-    def clear_history(self):
-        self.emit("clear_history")
-    
-    def on_LLMRequestWorker_response_signal(self, message):
-        self.generate_worker.add_to_queue(message)
-    
-    def on_LLMGenerateWorker_response_signal(self, message:dict):
-        self.emit("llm_controller_response_signal", message)
-    
-    def do_unload_llm(self):
-        self.generate_worker.llm.unload_model()
-        self.generate_worker.llm.unload_tokenizer()
 
 
 class LLM(QObject, MediatorMixin):
@@ -253,6 +254,12 @@ class LLM(QObject, MediatorMixin):
 
     def clear_history(self):
         self.history = []
+
+    def unload(self):
+        self.unload_model()
+        self.unload_tokenizer()
+        self.unload_processor()
+        self._processing_request = False
 
     def unload_tokenizer(self):
         self.logger.info("Unloading tokenizer")
