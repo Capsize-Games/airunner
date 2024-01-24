@@ -15,7 +15,6 @@ from airunner.service_locator import ServiceLocator
 
 
 class StandardImageWidget(BaseWidget):
-    logger = Logger(prefix="StandardImageWidget")
     widget_class_ = Ui_standard_image_widget
     _pixmap = None
     _label = None

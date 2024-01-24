@@ -9,7 +9,6 @@ from airunner.aihandler.logger import Logger
 
 
 class LLMSettingsWidget(BaseWidget):
-    logger = Logger(prefix="LLMSettingsWidget")
     widget_class_ = Ui_llm_settings_widget
     current_generator = None
     dtype_descriptions = {

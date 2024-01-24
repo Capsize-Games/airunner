@@ -5,7 +5,6 @@ from airunner.aihandler.logger import Logger
 
 
 class ImportWidget(BaseWidget):
-    logger = Logger(prefix="ImportWidget")
     widget_class_ = Ui_import_model_widget
     model_widgets = []
 

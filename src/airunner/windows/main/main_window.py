@@ -54,7 +54,6 @@ class MainWindow(
     AIModelMixin,
     ImageFilterMixin,
 ):
-    logger = Logger(prefix="MainWindow")
     # signals
     show_grid_toggled = pyqtSignal(bool)
     cell_size_changed_signal = pyqtSignal(int)

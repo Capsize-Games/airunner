@@ -13,7 +13,6 @@ class LayerContainerWidget(BaseWidget):
         self.register("show_layers_signal", self)
         self.register("add_layer_signal", self)
         self.register_service("get_index_by_layer", self.get_index_by_layer)
-        self.logger = Logger(prefix="LayerContainerWidget")
         self.widget_class_ = Ui_layer_container
         self.selected_layers = {}
         self.layers = []
