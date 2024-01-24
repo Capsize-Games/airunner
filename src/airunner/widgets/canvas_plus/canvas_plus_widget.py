@@ -6,85 +6,21 @@ from functools import partial
 from PIL import Image, ImageGrab
 from PIL.ImageQt import ImageQt
 from PyQt6.QtCore import Qt, QPoint, QRect
-from PyQt6.QtGui import QBrush, QColor, QPen, QPixmap
+from PyQt6.QtGui import QBrush, QColor, QPixmap
 from PyQt6.QtWidgets import QGraphicsPixmapItem
 from PyQt6 import QtWidgets, QtCore
 from PyQt6.QtWidgets import QGraphicsItemGroup, QGraphicsItem
 
 from airunner.workers.image_data_worker import ImageDataWorker
-from airunner.aihandler.logger import Logger
 from airunner.widgets.canvas_plus.templates.canvas_plus_ui import Ui_canvas
 from airunner.utils import apply_opacity_to_image
 from airunner.widgets.canvas_plus.draggables import DraggablePixmap, ActiveGridArea
 from airunner.widgets.canvas_plus.custom_scene import CustomScene
 from airunner.widgets.base_widget import BaseWidget
-from airunner.workers.worker import Worker
 from airunner.service_locator import ServiceLocator
 
 
-class CanvasResizeWorker(Worker):
-    def __init__(self, *args, **kwargs):
-        super().__init__(*args, **kwargs)
-        self.queue_type = "get_last_item"
-        self.register("canvas_resize_signal", self)
-        self.last_cell_count = (0, 0)
-
-    def on_canvas_resize_signal(self, data):
-        self.logger.info("Adding to queue")
-        self.add_to_queue(data)
-
-    def handle_message(self, data:dict):
-        if not data:
-            return
-        settings = data["settings"]
-        view_size = data["view_size"]
-
-        cell_size = settings["grid_settings"]["cell_size"]
-        line_color = settings["grid_settings"]["line_color"]
-        line_width = settings["grid_settings"]["line_width"]
-
-        width_cells = view_size.width() // cell_size
-        height_cells = view_size.height() // cell_size
-
-        # Check if the number of cells has changed
-        if (width_cells, height_cells) == self.last_cell_count:
-            return
-        self.last_cell_count = (width_cells, height_cells)
-
-        pen = QPen(
-            QBrush(QColor(line_color)),
-            line_width,
-            Qt.PenStyle.SolidLine
-        )
-        
-        lines_data = []
-
-        # vertical lines
-        h = view_size.height() + abs(settings["canvas_settings"]["pos_y"]) % cell_size
-        y = 0
-        x = settings["canvas_settings"]["pos_x"] % cell_size
-        for i in range(width_cells):
-            line_data = (x, y, x, h, pen)
-            lines_data.append(line_data)
-            x += cell_size
-
-        # horizontal lines
-        w = view_size.width() + abs(settings["canvas_settings"]["pos_x"]) % cell_size
-        x = 0
-        y = settings["canvas_settings"]["pos_y"] % cell_size
-        for i in range(height_cells):
-            line_data = (x, y, w, y, pen)
-            lines_data.append(line_data)
-            y += cell_size
-
-        self.emit("canvas_clear_lines_signal")
-
-        #for line_data in lines_data:
-        self.emit("CanvasResizeWorker_response_signal", lines_data)
-
-
 class CanvasPlusWidget(BaseWidget):
-    logger = Logger(prefix="CanvasPlusWidget")
     widget_class_ = Ui_canvas
     scene = None
     view = None
