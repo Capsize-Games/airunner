@@ -52,7 +52,7 @@ setup(
         "torch==2.1.0",
         "torchvision==0.16.0",
         "torchaudio==2.1.0",
-        "auto-gptq==0.4.2",
+        "auto-gptq==0.6.0",
         "optimum==1.13.2",
         "bitsandbytes==0.42.0",
         "langchain==0.0.331",
