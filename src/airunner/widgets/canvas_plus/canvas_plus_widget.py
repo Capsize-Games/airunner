@@ -11,6 +11,7 @@ from PyQt6.QtWidgets import QGraphicsPixmapItem
 from PyQt6 import QtWidgets, QtCore
 from PyQt6.QtWidgets import QGraphicsItemGroup, QGraphicsItem
 
+from airunner.aihandler.enums import SignalCode
 from airunner.workers.canvas_resize_worker import CanvasResizeWorker
 from airunner.workers.image_data_worker import ImageDataWorker
 from airunner.widgets.canvas_plus.templates.canvas_plus_ui import Ui_canvas
@@ -58,7 +59,7 @@ class CanvasPlusWidget(BaseWidget):
 
     @image_pivot_point.setter
     def image_pivot_point(self, value):
-        self.emit("update_current_layer_signal", dict(
+        self.emit(SignalCode.UPDATE_CURRENT_LAYER_SIGNAL, dict(
             pivot_point_x=value.x(),
             pivot_point_y=value.y()
         ))
@@ -102,23 +103,23 @@ class CanvasPlusWidget(BaseWidget):
     def __init__(self, *args, **kwargs):
         super().__init__(*args, **kwargs)
         self.ui.central_widget.resizeEvent = self.resizeEvent
-        self.register("main_window_loaded_signal", self)
+        self.register(SignalCode.MAIN_WINDOW_LOADED_SIGNAL, self.on_main_window_loaded_signal)
         self._zoom_level = 1
         self.canvas_container.resizeEvent = self.window_resized
         self.pixmaps = {}
 
         self.image_data_worker = self.create_worker(ImageDataWorker)
         self.canvas_resize_worker = self.create_worker(CanvasResizeWorker)
-        self.register("canvas_do_draw_signal", self)
-        self.register("canvas_clear_lines_signal", self)
-        self.register("ImageDataWorker_response_signal", self)
-        self.register("CanvasResizeWorker_response_signal", self)
-        self.register("image_generated_signal", self)
-        self.register("load_image_from_path", self)
-        self.register("canvas_handle_layer_click_signal", self)
-        self.register("update_canvas_signal", self)
-        self.register("set_current_layer_signal", self)
-        self.register("application_settings_changed_signal", self)
+        self.register(SignalCode.CANVAS_DO_DRAW_SIGNAL, self.on_canvas_do_draw_signal)
+        self.register(SignalCode.CANVAS_CLEAR_LINES_SIGNAL, self.on_canvas_clear_lines_signal)
+        self.register(SignalCode.IMAGE_DATA_WORKER_RESPONSE_SIGNAL, self.on_ImageDataWorker_response_signal)
+        self.register(SignalCode.CANVAS_RESIZE_WORKER_RESPONSE_SIGNAL, self.on_CanvasResizeWorker_response_signal)
+        self.register(SignalCode.IMAGE_GENERATED_SIGNAL, self.on_image_generated_signal)
+        self.register(SignalCode.LOAD_IMAGE_FROM_PATH_SIGNAL, self.on_load_image_from_path)
+        self.register(SignalCode.CANVAS_HANDLE_LAYER_CLICK_SIGNAL, self.on_canvas_handle_layer_click_signal)
+        self.register(SignalCode.UPDATE_CANVAS_SIGNAL, self.on_update_canvas_signal)
+        self.register(SignalCode.SET_CURRENT_LAYER_SIGNAL, self.on_set_current_layer_signal)
+        self.register(SignalCode.APPLICATION_SETTINGS_CHANGED_SIGNAL, self.on_application_settings_changed_signal)
 
         self.register_service("canvas_drag_pos", self.canvas_drag_pos)
         self.register_service("canvas_current_active_image", self.canvas_current_active_image)
@@ -187,18 +188,18 @@ class CanvasPlusWidget(BaseWidget):
             except TypeError as e:
                 self.logger.error(f"TypeError: {e}")
                 print(line_data)
-        self.emit("canvas_do_draw_signal")
+        self.emit(SignalCode.CANVAS_DO_DRAW_SIGNAL)
 
     def on_ImageDataWorker_response_signal(self, message):
-        self.emit("clear_status_message_signal")
-        self.emit("stop_image_generator_progress_bar_signal")
+        self.emit(SignalCode.CLEAR_STATUS_MESSAGE_SIGNAL)
+        self.emit(SignalCode.STOP_IMAGE_GENERATOR_PROGRESS_BAR_SIGNAL)
         nsfw_content_detected = message["nsfw_content_detected"]
         path = message["path"]
         if nsfw_content_detected and self.parent.settings["nsfw_filter"]:
-            self.emit("error_signal", "Explicit content detected, try again.")
-        self.emit("show_layers_signal")
+            self.emit(SignalCode.ERROR_SIGNAL, "Explicit content detected, try again.")
+        self.emit(SignalCode.SHOW_LAYERS_SIGNAL)
         if path is not None:
-            self.emit("set_status_label_signal", f"Image generated to {path}")
+            self.emit(SignalCode.SET_STATUS_LABEL_SIGNAL, f"Image generated to {path}")
     
     @property
     def zoom_in_step(self):
@@ -268,7 +269,7 @@ class CanvasPlusWidget(BaseWidget):
             scene=self.scene,
             line_group=self.line_group
         )
-        self.emit("canvas_resize_signal", data)
+        self.emit(SignalCode.CANVAS_RESIZE_SIGNAL, data)
 
     def window_resized(self, event):
         self.handle_resize_canvas()
@@ -469,7 +470,7 @@ class CanvasPlusWidget(BaseWidget):
                 pixmap = QPixmap()
                 pixmap.convertFromImage(ImageQt(image))
                 self.pixmaps[index] = DraggablePixmap(self, pixmap)
-                self.emit("update_layer_signal", dict(
+                self.emit(SignalCode.UPDATE_LAYER_SIGNAL, dict(
                     layer=layer,
                     index=index
                 ))
@@ -624,7 +625,7 @@ class CanvasPlusWidget(BaseWidget):
         if not draggable_pixmap:
             return
         self.scene.removeItem(draggable_pixmap)
-        self.emit("delete_current_layer_signal")
+        self.emit(SignalCode.DELETE_CURRENT_LAYER_SIGNAL)
         self.update()
     
     def delete_image(self):
@@ -694,10 +695,10 @@ class CanvasPlusWidget(BaseWidget):
             self.scene.removeItem(current_draggable_pixmap)
     
     def add_layer(self):
-        self.emit("add_layer_signal")
+        self.emit(SignalCode.ADD_LAYER_SIGNAL)
 
     def switch_to_layer(self, layer_index):
-        self.emit("switch_layer_signal", layer_index)
+        self.emit(SignalCode.SWITCH_LAYER_SIGNAL, layer_index)
 
     def add_image_to_scene(self, image_data, is_outpaint=False, image_root_point=None):
         #self.image_adder = ImageAdder(self, image, is_outpaint, image_root_point)

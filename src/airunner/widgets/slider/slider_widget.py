@@ -1,6 +1,7 @@
 from PyQt6.QtCore import Qt
 from PyQt6.QtWidgets import QLabel
 
+from airunner.aihandler.enums import SignalCode
 from airunner.widgets.base_widget import BaseWidget
 from airunner.widgets.slider.templates.slider_ui import Ui_slider_widget
 
@@ -85,7 +86,7 @@ class SliderWidget(BaseWidget):
 
     def __init__(self, *args, **kwargs):
         super().__init__(*args, **kwargs)
-        self.register("main_window_loaded_signal", self)
+        self.register(SignalCode.MAIN_WINDOW_LOADED_SIGNAL, self.on_main_window_loaded_signal)
     
     def on_main_window_loaded_signal(self):
         self.initialize()

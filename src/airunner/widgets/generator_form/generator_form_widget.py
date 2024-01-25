@@ -3,6 +3,7 @@ import random
 from PIL import Image
 from PyQt6.QtCore import pyqtSignal, QRect, pyqtSlot
 
+from airunner.aihandler.enums import SignalCode
 from airunner.aihandler.settings import MAX_SEED
 from airunner.widgets.base_widget import BaseWidget
 from airunner.widgets.generator_form.templates.generatorform_ui import Ui_generator_form
@@ -116,10 +117,10 @@ class GeneratorForm(BaseWidget):
         self.initialized = False
         self.ui.generator_form_tabs.tabBar().hide()
         self.activate_ai_mode()
-        self.register("application_settings_changed_signal", self)
-        self.register("generate_image_signal", self)
-        self.register("stop_image_generator_progress_bar_signal", self)
-        self.register("progress_signal", self)
+        self.register(SignalCode.APPLICATION_SETTINGS_CHANGED_SIGNAL, self.on_application_settings_changed_signal)
+        self.register(SignalCode.GENERATE_IMAGE_SIGNAL, self.on_generate_image_signal)
+        self.register(SignalCode.STOP_IMAGE_GENERATOR_PROGRESS_BAR_SIGNAL, self.on_stop_image_generator_progress_bar_signal)
+        self.register(SignalCode.SD_PROGRESS_SIGNAL, self.on_progress_signal)
 
     def activate_ai_mode(self):
         self.ui.generator_form_tabs.setCurrentIndex(1 if self.settings["ai_mode"] is True else 0)
@@ -131,7 +132,7 @@ class GeneratorForm(BaseWidget):
     signals in the corresponding ui file.
     """
     def action_clicked_button_save_prompts(self):
-        self.emit("save_stablediffusion_prompt_signal")
+        self.emit(SignalCode.SAVE_SD_PROMPT_SIGNAL)
 
     def handle_prompt_changed(self):
         settings = self.settings
@@ -152,7 +153,7 @@ class GeneratorForm(BaseWidget):
         self.generate(image=self.get_service("current_active_image")())
 
     def handle_interrupt_button_clicked(self):
-        self.emit("engine_cancel_signal")
+        self.emit(SignalCode.ENGINE_CANCEL_SIGNAL)
     """
     End Slot functions
     """
@@ -161,10 +162,10 @@ class GeneratorForm(BaseWidget):
         if seed is None:
             seed = self.generator_settings["seed"]
         if self.generator_settings["n_samples"] > 1:
-            self.emit("engine_stop_processing_queue_signal")
+            self.emit(SignalCode.ENGINE_STOP_PROCESSING_QUEUE_SIGNAL)
         self.call_generate(image, seed=seed)
         self.seed_override = None
-        self.emit("engine_start_processing_queue")
+        self.emit(SignalCode.ENGINE_START_PROCESSING_QUEUE_SIGNAL)
 
     def on_generate_image_signal(self, message):
         self.call_generate(**message)
@@ -430,7 +431,7 @@ class GeneratorForm(BaseWidget):
 
         self.logger.info(f"Attempting to generate image")
 
-        self.emit("image_generate_request_signal", dict(
+        self.emit(SignalCode.IMAGE_GENERATE_REQUEST_SIGNAL, dict(
             action=action,
             options={
                 **options,

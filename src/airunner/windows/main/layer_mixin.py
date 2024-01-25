@@ -6,22 +6,23 @@ from PyQt6.QtGui import QPixmap
 
 from PIL import Image
 
+from airunner.aihandler.enums import SignalCode
 from airunner.service_locator import ServiceLocator
 
 
 class LayerMixin:
     def __init__(self):
-        self.register("switch_layer_signal", self)
-        self.register("add_layer_signal", self)
-        self.register("create_layer_signal", self)
-        self.register("update_current_layer_signal", self)
-        self.register("update_layer_signal", self)
-        self.register("delete_current_layer_signal", self)
-        self.register("delete_layer_signal", self)
-        self.register("move_layer_up_signal", self)
-        self.register("move_layer_down_signal", self)
-        self.register("clear_layers_signal", self)
-        self.register("set_current_layer_signal", self)
+        self.register(SignalCode.SWITCH_LAYER_SIGNAL, self.on_switch_layer_signal)
+        self.register(SignalCode.ADD_LAYER_SIGNAL, self.on_add_layer_signal)
+        self.register(SignalCode.CREATE_LAYER_SIGNAL, self.on_create_layer_signal)
+        self.register(SignalCode.UPDATE_CURRENT_LAYER_SIGNAL, self.on_update_current_layer_signal)
+        self.register(SignalCode.UPDATE_LAYER_SIGNAL, self.on_update_layer_signal)
+        self.register(SignalCode.DELETE_CURRENT_LAYER_SIGNAL, self.on_delete_current_layer_signal)
+        self.register(SignalCode.DELETE_LAYER_SIGNAL, self.on_delete_layer_signal)
+        self.register(SignalCode.MOVE_LAYER_UP_SIGNAL, self.on_move_layer_up_signal)
+        self.register(SignalCode.MOVE_LAYER_DOWN_SIGNAL, self.on_move_layer_down_signal)
+        self.register(SignalCode.CLEAR_LAYERS_SIGNAL, self.on_clear_layers_signal)
+        self.register(SignalCode.SET_CURRENT_LAYER_SIGNAL, self.on_set_current_layer_signal)
 
         ServiceLocator.register("current_layer", self.current_layer)
         ServiceLocator.register("current_draggable_pixmap", self.current_layer)
