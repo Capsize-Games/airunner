@@ -296,7 +296,6 @@ class MainWindow(
         ServiceLocator.register(ServiceCode.IS_WINDOWS, self.check_is_windows)
         ServiceLocator.register(ServiceCode.GET_SETTINGS_VALUE, self.get_settings_value)
         ServiceLocator.register(ServiceCode.GET_CALLBACK_FOR_SLIDER, self.get_callback_for_slider)
-        
 
         self.worker_manager = WorkerManager()
 
