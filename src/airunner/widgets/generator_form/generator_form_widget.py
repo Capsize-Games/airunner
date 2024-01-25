@@ -99,13 +99,6 @@ class GeneratorForm(BaseWidget):
         return self.controlnet_settings["image"]
 
     def on_application_settings_changed_signal(self):
-        # if self.initialized:
-        #     if self.current_prompt_value != self.generator_settings["prompt"]:
-        #         self.current_prompt_value = self.generator_settings["prompt"]
-        #         self.ui.prompt.setPlainText(self.current_prompt_value)
-        #     if self.current_negative_prompt_value != self.generator_settings["negative_prompt"]:
-        #         self.current_negative_prompt_value = self.generator_settings["negative_prompt"]
-        #         self.ui.negative_prompt.setPlainText(self.current_negative_prompt_value)
         self.activate_ai_mode()
     
     def on_progress_signal(self, message):
