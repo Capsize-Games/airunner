@@ -1,10 +1,9 @@
 import functools
 import os
-import torch
-from airunner.aihandler.logger import Logger
 from dataclasses import dataclass
-import tomesd
 
+import tomesd
+import torch
 
 
 @dataclass
