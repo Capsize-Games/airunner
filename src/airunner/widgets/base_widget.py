@@ -36,7 +36,7 @@ class BaseWidget(
         self.logger = Logger(prefix=self.__class__.__name__)
         MediatorMixin.__init__(self)
         SettingsMixin.__init__(self)
-        QWidget.__init__(self, *args, **kwargs)
+        super().__init__(*args, **kwargs)
         if self.widget_class_:
             self.ui = self.widget_class_()
         if self.ui:
