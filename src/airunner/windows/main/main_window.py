@@ -269,19 +269,12 @@ class MainWindow(
 
     def __init__(self, *args, **kwargs):
         self.ui = Ui_MainWindow()
-
         self.set_log_levels()
-        self.testing = kwargs.pop("testing", False)
-
-        super().__init__(*args, **kwargs)
         self.logger = Logger(prefix=self.__class__.__name__)
         self.logger.info("Starting AI Runnner")
-
         MediatorMixin.__init__(self)
         SettingsMixin.__init__(self)
-        
-        self.update_settings()
-        
+        super().__init__(*args, **kwargs)
         LoraMixin.__init__(self)
         LayerMixin.__init__(self)
         EmbeddingMixin.__init__(self)
@@ -289,7 +282,17 @@ class MainWindow(
         ControlnetModelMixin.__init__(self)
         AIModelMixin.__init__(self)
         ImageFilterMixin.__init__(self)
-        
+        self.register_services()
+        self.update_settings()
+        self.create_airunner_paths()
+        self.register_signals()
+        self.initialize_ui()
+        self.worker_manager = WorkerManager()
+        self.is_started = True
+        self.emit(SignalCode.MAIN_WINDOW_LOADED_SIGNAL)
+
+    def register_services(self):
+        self.logger.info("Registering services")
         ServiceLocator.register(ServiceCode.LAYER_WIDGET, lambda: self.ui.layer_widget)
         ServiceLocator.register(ServiceCode.GET_LLM_WIDGET, lambda: self.ui.llm_widget)
         ServiceLocator.register(ServiceCode.DISPLAY_IMPORT_IMAGE_DIALOG, self.display_import_image_dialog)
@@ -297,25 +300,10 @@ class MainWindow(
         ServiceLocator.register(ServiceCode.GET_SETTINGS_VALUE, self.get_settings_value)
         ServiceLocator.register(ServiceCode.GET_CALLBACK_FOR_SLIDER, self.get_callback_for_slider)
 
-        self.worker_manager = WorkerManager()
-
-        self.ui.setupUi(self)
-
+    def register_signals(self):
         # on window resize:
         # self.windowStateChanged.connect(self.on_state_changed)
-
-        # check for self.current_layer.lines every 100ms
-        self.timer = self.startTimer(100)
-
-        if not self.testing:
-            self.logger.info("Executing window")
-            self.display()
-        self.set_window_state()
-        self.is_started = True
-
-        # change the color of tooltips
-        #self.setStyleSheet("QToolTip { color: #000000; background-color: #ffffff; border: 1px solid black; }")
-
+        self.logger.info("Connecting signals")
         self.register(SignalCode.SET_STATUS_LABEL_SIGNAL, self.on_set_status_label_signal)
         self.register(SignalCode.CLEAR_STATUS_MESSAGE_SIGNAL, self.on_clear_status_message_signal)
         self.register(SignalCode.DESCRIBE_IMAGE_SIGNAL, self.on_describe_image_signal)
@@ -323,37 +311,21 @@ class MainWindow(
         self.register(SignalCode.LOAD_SD_PROMPT_SIGNAL, self.on_load_saved_stablediffuion_prompt_signal)
         self.register(SignalCode.UPDATE_SAVED_SD_PROMPT_SIGNAL, self.on_update_saved_stablediffusion_prompt_signal)
 
+    def initialize_ui(self):
+        self.logger.info("Loading ui")
+        self.ui.setupUi(self)
+
+        # self.ui.layer_widget.initialize()
+
         self.status_widget = StatusWidget()
         self.statusBar().addPermanentWidget(self.status_widget)
         self.emit(SignalCode.CLEAR_STATUS_MESSAGE_SIGNAL)
 
-        # create paths if they do not exist
-        self.create_airunner_paths()
-
-        #self.ui.layer_widget.initialize()
-
-        # call a function after the window has finished loading:
-        QTimer.singleShot(500, self.on_show)
+        self.set_stylesheet()
 
         self.ui.mode_tab_widget.tabBar().hide()
         self.ui.center_tab.tabBar().hide()
-
-        # initialize the brushes container
         self.ui.brushes_container = BrushesContainer(self)
-
-        self.set_all_section_buttons()
-
-        self.initialize_tool_section_buttons()
-        
-        if self.settings["mode"] == Mode.IMAGE.value:
-            self.image_generation_toggled()
-        elif self.settings["mode"] == Mode.LANGUAGE_PROCESSOR.value:
-            self.language_processing_toggled()
-        else:
-            self.model_manager_toggled(True)
-
-        self.restore_state()
-
         self.ui.ocr_button.blockSignals(True)
         self.ui.tts_button.blockSignals(True)
         self.ui.v2t_button.blockSignals(True)
@@ -363,8 +335,19 @@ class MainWindow(
         self.ui.ocr_button.blockSignals(False)
         self.ui.tts_button.blockSignals(False)
         self.ui.v2t_button.blockSignals(False)
-        
-        self.emit(SignalCode.MAIN_WINDOW_LOADED_SIGNAL)
+        self.logger.info("Setting buttons")
+        self.set_all_section_buttons()
+        self.initialize_tool_section_buttons()
+
+        # Toggling the ai button will trigger the ai_button_toggled function
+        # if self.settings["mode"] == Mode.IMAGE.value:
+        #     self.image_generation_toggled()
+        # elif self.settings["mode"] == Mode.LANGUAGE_PROCESSOR.value:
+        #     self.language_processing_toggled()
+        # else:
+        #     self.model_manager_toggled(True)
+
+        self.restore_state()
     
     def do_listen(self):
         if not self.listening:
@@ -381,10 +364,6 @@ class MainWindow(
         settings = self.settings
         settings["mode"] = self.ui.mode_tab_widget.tabText(index)
         self.settings = settings
-
-    @pyqtSlot()
-    def on_show(self):
-        pass
 
     def layer_opacity_changed(self, attr_name, value=None, widget=None):
         print("layer_opacity_changed", attr_name, value)
@@ -660,6 +639,7 @@ class MainWindow(
         self.settings = settings
     
     def restore_state(self):
+        self.logger.info("Restoring state")
         window_settings = self.window_settings
         if window_settings is None:
             return
@@ -688,6 +668,11 @@ class MainWindow(
             self.showFullScreen()
         self.ui.ai_button.setChecked(self.settings["ai_mode"])
         self.set_button_checked("toggle_grid", self.grid_settings["show_grid"], False)
+
+        if self.settings["is_maximized"]:
+            self.showMaximized()
+        else:
+            self.showNormal()
 
     ##### End window properties #####
     #################################
@@ -806,7 +791,7 @@ class MainWindow(
         """
         Sets the stylesheet for the application based on the current theme
         """
-        self.logger.info("MainWindow: Setting stylesheets")
+        self.logger.info("Setting stylesheet")
         theme_name = "dark_theme" if self.settings["dark_mode_enabled"] else "light_theme"
         here = os.path.dirname(os.path.realpath(__file__))
         with open(os.path.join(here, "..", "..", "styles", theme_name, "styles.qss"), "r") as f:
@@ -972,22 +957,8 @@ class MainWindow(
     def display(self):
         self.logger.info("Displaying window")
         self.set_stylesheet()
-        if not self.testing:
-            self.setWindowFlags(self.windowFlags() | QtCore.Qt.WindowType.Window)
-            self.show()
-        else:
-            # do not show the window when testing, otherwise it will block the tests
-            # self.hide()
-            # the above solution doesn't work, gives this error:
-            # QBasicTimer::start: QBasicTimer can only be used with threads started with QThread
-            # so instead we do this in order to run without showing the window:
-            self.showMinimized()
-
-    def set_window_state(self):
-        if self.settings["is_maximized"]:
-            self.showMaximized()
-        else:
-            self.showNormal()
+        self.setWindowFlags(self.windowFlags() | QtCore.Qt.WindowType.Window)
+        self.show()
 
     def set_log_levels(self):
         uic.properties.logger.setLevel(LOG_LEVEL)
