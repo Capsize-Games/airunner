@@ -40,7 +40,7 @@ setup(
         "tokenizers==0.15.0",
         "tqdm==4.65.0",
         "charset-normalizer==3.3.2",
-        "opencv-python==4.8.0.74",
+        "opencv-python==4.9.0.80",
         "setuptools==67.7.2",
         "typing_extensions==4.9.0",
         "urllib3==1.26.18",
