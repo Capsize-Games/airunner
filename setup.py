@@ -42,7 +42,7 @@ setup(
         "charset-normalizer==3.3.2",
         "opencv-python==4.8.0.74",
         "setuptools==67.7.2",
-        "typing_extensions==4.5.0",
+        "typing_extensions==4.9.0",
         "urllib3==1.26.18",
         "transformers==4.37.1",
         "compel==2.0.2",
