@@ -3,7 +3,6 @@ from PyQt6 import QtGui
 from PyQt6.QtWidgets import QWidget
 from airunner.aihandler.logger import Logger
 
-from airunner.utils import get_main_window
 from airunner.mediator_mixin import MediatorMixin
 from airunner.service_locator import ServiceLocator
 from airunner.windows.main.settings_mixin  import SettingsMixin

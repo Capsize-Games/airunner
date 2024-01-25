@@ -22,5 +22,5 @@ class AudioProcessorWorker(Worker):
         self.emit(SignalCode.AUDIO_PROCESSOR_PROCESSED_AUDIO, audio_data)
     
     def update_properties(self):
-        settings = self.application_settings.value("settings")
+        settings = self.settings
         self.fs = settings["stt_settings"]["fs"]
