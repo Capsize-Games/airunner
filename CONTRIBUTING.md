@@ -74,7 +74,7 @@ class which defines the function.
 
 ### Example
 
-Register a function with `self.register_service("some_function", self.some_function)`
+Register a function with `self.register_service(ServiceCode.SOME_CODE, self.some_function)`
 
 Define the function
 
@@ -86,4 +86,4 @@ def some_function(self, message):
 
 Call the function from some other class (or the same class)
 
-`self.get_service("some_function")("Hello World!")`
+`self.get_service(ServiceCode.SOME_CODE)("Hello World!")`
