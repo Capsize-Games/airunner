@@ -30,14 +30,16 @@ class VisionCaptureWorker(Worker):
         self.halted = True
 
     def start(self):
-        if not self.settings["ocr_enabled"]:
-            self.pause = True
         self.logger.info("Starting")
         self.is_capturing = True
-        self.enable_cam()
+
+        if self.settings["ocr_enabled"]:
+            self.enable_cam()
+        else:
+            self.halted = True
+
         while self.is_capturing:
-            if not self.pause:
-                self.logger.info("capturing...")
+            if not self.pause and not self.halted:
                 self.emit(SignalCode.VISION_CAPTURED_SIGNAL, dict(
                     image=self.capture_image()
                 ))
@@ -55,21 +57,22 @@ class VisionCaptureWorker(Worker):
         self.disable_cam()
 
     def enable_cam(self):
-        # Open the webcam
         self.cap = cv2.VideoCapture(0)
-        # Check if the webcam is opened correctly
         if not self.cap.isOpened():
             raise IOError("Unable to open webcam")
 
     def disable_cam(self):
-        # When everything done, release the capture and destroy the window
-        self.cap.release()
+        if self.cap:
+            self.cap.release()
 
     def capture_image(self):
         """
         Captures an image from active camera and returns it
         :return:
         """
+        if not self.cap:
+            return
+
         self.logger.info("Capturing image")
 
         # Capture frame-by-frame
