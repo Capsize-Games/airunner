@@ -1,5 +1,6 @@
 from PyQt6.QtWidgets import QWidget, QSizePolicy
 
+from airunner.aihandler.enums import SignalCode
 from airunner.widgets.base_widget import BaseWidget
 from airunner.widgets.embeddings.embedding_widget import EmbeddingWidget
 from airunner.widgets.embeddings.templates.embeddings_container_ui import Ui_embeddings_container
@@ -15,7 +16,7 @@ class EmbeddingsContainerWidget(BaseWidget):
 
     def __init__(self, *args, **kwargs):
         super().__init__(*args, **kwargs)
-        self.register("embedding_load_failed_signal", self)
+        self.register(SignalCode.EMBEDDING_LOAD_FAILED_SIGNAL, self.on_embedding_load_failed_signal)
 
         self.scan_for_embeddings()
 
