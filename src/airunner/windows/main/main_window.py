@@ -14,7 +14,7 @@ from PyQt6 import QtGui
 
 from airunner.resources_light_rc import *
 from airunner.resources_dark_rc import *
-from airunner.aihandler.enums import Mode
+from airunner.aihandler.enums import Mode, SignalCode
 from airunner.aihandler.logger import Logger
 from airunner.aihandler.settings import LOG_LEVEL
 from airunner.filters.windows.filter_base import FilterBase
@@ -263,7 +263,7 @@ class MainWindow(
             self.model_manager.models_changed(key, value)
 
     def show_layers(self):
-        self.emit("show_layers_signal")
+        self.emit(SignalCode.SHOW_LAYERS_SIGNAL)
 
     def on_controlnet_image_generated_signal(self, response: dict):
         self.handle_controlnet_image_generated(response)
@@ -318,16 +318,16 @@ class MainWindow(
         # change the color of tooltips
         #self.setStyleSheet("QToolTip { color: #000000; background-color: #ffffff; border: 1px solid black; }")
 
-        self.register("clear_status_message_signal", self)
-        self.register("describe_image_signal", self)
-        self.register("set_status_label_signal", self)
-        self.register("save_stablediffusion_prompt_signal", self)
-        self.register("load_saved_stablediffuion_prompt_signal", self)
-        self.register("update_saved_stablediffusion_prompt_signal", self)
+        self.register(SignalCode.SET_STATUS_LABEL_SIGNAL, self.on_set_status_label_signal)
+        self.register(SignalCode.CLEAR_STATUS_MESSAGE_SIGNAL, self.on_clear_status_message_signal)
+        self.register(SignalCode.DESCRIBE_IMAGE_SIGNAL, self.on_describe_image_signal)
+        self.register(SignalCode.SAVE_SD_PROMPT_SIGNAL, self.on_save_stablediffusion_prompt_signal)
+        self.register(SignalCode.LOAD_SD_PROMPT_SIGNAL, self.on_load_saved_stablediffuion_prompt_signal)
+        self.register(SignalCode.UPDATE_SAVED_SD_PROMPT_SIGNAL, self.on_update_saved_stablediffusion_prompt_signal)
 
         self.status_widget = StatusWidget()
         self.statusBar().addPermanentWidget(self.status_widget)
-        self.emit("clear_status_message_signal")
+        self.emit(SignalCode.CLEAR_STATUS_MESSAGE_SIGNAL)
 
         # create paths if they do not exist
         self.create_airunner_paths()
@@ -366,7 +366,7 @@ class MainWindow(
         self.ui.tts_button.blockSignals(False)
         self.ui.v2t_button.blockSignals(False)
         
-        self.emit("main_window_loaded_signal")
+        self.emit(SignalCode.MAIN_WINDOW_LOADED_SIGNAL)
     
     def do_listen(self):
         if not self.listening:
@@ -405,7 +405,7 @@ class MainWindow(
             seed=self.seed
         )
         if path is not None:
-            self.emit("set_status_label_signal", f"Image exported to {path}")
+            self.emit(SignalCode.SET_STATUS_LABEL_SIGNAL, f"Image exported to {path}")
 
     """
     Slot functions
@@ -790,7 +790,7 @@ class MainWindow(
             )
 
     def show_update_message(self):
-        self.emit("set_status_label_signal", f"New version available: {self.latest_version}")
+        self.emit(SignalCode.SET_STATUS_LABEL_SIGNAL, f"New version available: {self.latest_version}")
 
     def show_update_popup(self):
         self.update_popup = UpdateWindow()
@@ -832,7 +832,7 @@ class MainWindow(
         # self.automatic_filter_manager.register_filter(PixelFilter, base_size=256)
 
         self.initialize_window()
-        self.register("controlnet_image_generated_signal", self)
+        self.register(SignalCode.CONTROLNET_IMAGE_GENERATED_SIGNAL, self.on_controlnet_image_generated_signal)
         self.initialize_mixins()
         # self.header_widget.initialize()
         # self.header_widget.set_size_increment_levels()
@@ -1049,7 +1049,7 @@ class MainWindow(
         self.logger.error(f"Unknown message code: {message}")
 
     def on_clear_status_message_signal(self, _ignore):
-        self.emit("set_status_label_signal", "")
+        self.emit(SignalCode.SET_STATUS_LABEL_SIGNAL, "")
 
     def set_size_form_element_step_values(self):
         """
@@ -1198,4 +1198,4 @@ class MainWindow(
         print("action_slider_changed")
 
     def action_reset_settings(self):
-        self.emit("reset_settings_signal")
+        self.emit(SignalCode.RESET_SETTINGS_SIGNAL)

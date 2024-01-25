@@ -1,3 +1,4 @@
+from airunner.aihandler.enums import SignalCode
 from airunner.service_locator import ServiceLocator
 from airunner.data.bootstrap.model_bootstrap_data import model_bootstrap_data
 
@@ -22,9 +23,9 @@ class AIModelMixin:
         for service in services:
             ServiceLocator.register(service, getattr(self, service))
         
-        self.register("ai_models_save_or_update_signal", self)
-        self.register("ai_model_delete_signal", self)
-        self.register("ai_models_create_signal", self)
+        self.register(SignalCode.AI_MODELS_SAVE_OR_UPDATE_SIGNAL, self.on_ai_models_save_or_update_signal)
+        self.register(SignalCode.AI_MODEL_DELETE_SIGNAL, self.on_ai_model_delete_signal)
+        self.register(SignalCode.AI_MODELS_CREATE_SIGNAL, self.on_ai_models_create_signal)
 
     def ai_model_get_by_filter(self, filter_dict):
         return [item for item in self.ai_models if all(item.get(k) == v for k, v in filter_dict.items())]
@@ -38,7 +39,7 @@ class AIModelMixin:
         settings = self.settings
         settings["ai_models"] = models
         self.settings = settings
-        self.emit("models_changed_signal", "models")
+        self.emit(SignalCode.MODELS_CHANGED_SIGNAL, "models")
 
     def ai_model_update(self, item):
         settings = self.settings
@@ -82,7 +83,7 @@ class AIModelMixin:
         # Convert back to list
         merged_models = list(model_dict.values())
 
-        self.emit("ai_models_create_signal", merged_models)
+        self.emit(SignalCode.AI_MODELS_CREATE_SIGNAL, merged_models)
         
     def ai_model_paths(self, model_type=None, pipeline_action=None):
         models = self.ai_models

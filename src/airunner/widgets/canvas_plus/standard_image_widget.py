@@ -6,6 +6,7 @@ from PyQt6.QtGui import QImage
 
 from PIL import Image
 
+from airunner.aihandler.enums import SignalCode
 from airunner.widgets.canvas_plus.templates.standard_image_widget_ui import Ui_standard_image_widget
 from airunner.utils import load_metadata_from_image, prepare_metadata
 from airunner.widgets.slider.slider_widget import SliderWidget
@@ -123,7 +124,7 @@ class StandardImageWidget(BaseWidget):
         """
         Using the LLM, generate a description of the image
         """
-        self.emit("describe_image_signal", dict(
+        self.emit(SignalCode.DESCRIBE_IMAGE_SIGNAL, dict(
             image=self.image, 
             callback=self.handle_prompt_generated
         ))
@@ -175,7 +176,7 @@ class StandardImageWidget(BaseWidget):
         meta_data["use_cropped_image"] = False
         meta_data["batch_size"] = batch_size
 
-        self.emit("generate_image_signal", dict(
+        self.emit(SignalCode.GENERATE_IMAGE_SIGNAL, dict(
             image=self.image,
             meta_data=meta_data
         ))
@@ -209,7 +210,7 @@ class StandardImageWidget(BaseWidget):
         meta_data["enable_input_image"] = True
         meta_data["use_cropped_image"] = False
 
-        self.emit("generate_image_signal", dict(
+        self.emit(SignalCode.GENERATE_IMAGE_SIGNAL, dict(
             image=self.image,
             override_data=meta_data
         ))
