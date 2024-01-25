@@ -102,6 +102,9 @@ class CanvasPlusWidget(BaseWidget):
 
     def __init__(self, *args, **kwargs):
         super().__init__(*args, **kwargs)
+        self._grid_settings = {}
+        self._canvas_settings = {}
+        self._active_grid_settings = {}
         self.ui.central_widget.resizeEvent = self.resizeEvent
         self.register(SignalCode.MAIN_WINDOW_LOADED_SIGNAL, self.on_main_window_loaded_signal)
         self._zoom_level = 1
@@ -350,32 +353,45 @@ class CanvasPlusWidget(BaseWidget):
         else:
             super().wheelEvent(event)  # Propagate the event to the base class if no modifier keys are pressed
 
-    def on_application_settings_changed_signal(self):
-        do_draw = False
-        
+    def grid_settings_changed(self) -> bool:
+        changed = False
         grid_settings = self.settings["grid_settings"]
-        for k,v in grid_settings.items():
-            if k not in grid_settings or grid_settings[k] != v:
+        for k, v in grid_settings.items():
+            if k not in self._grid_settings or self._grid_settings[k] != v:
+                self._grid_settings[k] = v
                 if k == "canvas_color":
                     self.set_canvas_color()
                 elif k in ["line_color", "cell_size", "line_width"]:
                     self.redraw_lines = True
-                do_draw = True
-        
+                changed = True
+        return changed
+
+    def active_grid_settings_changed(self) -> bool:
+        changed = False
         active_grid_settings = self.settings["active_grid_settings"]
-        for k,v in active_grid_settings.items():
-            if k not in self.active_grid_settings or self.active_grid_settings[k] != v:
+        for k, v in active_grid_settings.items():
+            if k not in self._active_grid_settings or self._active_grid_settings[k] != v:
+                self._active_grid_settings[k] = v
                 if k in ["pos_x", "pos_y", "width", "height"]:
                     self.redraw_lines = True
-                do_draw = True
-        
+                changed = True
+        return changed
+
+    def canvas_settings_changed(self) -> bool:
+        changed = False
         canvas_settings = self.settings["canvas_settings"]
-        for k,v in canvas_settings.items():
-            if k not in self.canvas_settings or self.canvas_settings[k] != v:
-                self.logger.debug("canvas_settings changed")
-                do_draw = True
+        for k, v in canvas_settings.items():
+            if k not in self._canvas_settings or self._canvas_settings[k] != v:
+                self._canvas_settings[k] = v
+                changed = True
+        return changed
+
+    def on_application_settings_changed_signal(self):
+        grid_settings_changed = self.grid_settings_changed()
+        active_grid_settings_changed = self.active_grid_settings_changed()
+        canvas_settings_changed = self.canvas_settings_changed()
         
-        if do_draw:
+        if grid_settings_changed or active_grid_settings_changed or canvas_settings_changed:
             self.do_resize_canvas(force_draw=True)
     
     def on_main_window_loaded_signal(self):
