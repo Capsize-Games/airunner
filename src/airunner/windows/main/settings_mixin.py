@@ -4,7 +4,7 @@ from airunner.aihandler.settings import DEFAULT_BRUSH_PRIMARY_COLOR, DEFAULT_BRU
 from airunner.settings import DEFAULT_PATHS
 from airunner.utils import default_hf_cache_dir
 from airunner.settings import BASE_PATH
-from airunner.enums import Mode, SignalCode
+from airunner.enums import Mode, SignalCode, ServiceCode
 from airunner.service_locator import ServiceLocator
 from airunner.data.bootstrap.pipeline_bootstrap_data import pipeline_bootstrap_data
 from airunner.data.bootstrap.controlnet_bootstrap_data import controlnet_bootstrap_data
@@ -35,8 +35,8 @@ tts_settings_default = dict(
 class SettingsMixin:
     def __init__(self):
         self.application_settings = QSettings("Capsize Games", "AI Runner")
-        ServiceLocator.register("get_settings", self.get_settings)
-        ServiceLocator.register("set_settings", self.set_settings)
+        ServiceLocator.register(ServiceCode.GET_SETTINGS, self.get_settings)
+        ServiceLocator.register(ServiceCode.SET_SETTINGS, self.set_settings)
         self.register(SignalCode.RESET_SETTINGS_SIGNAL, self.on_reset_settings_signal)
         self.default_settings = dict(
             use_cuda=True,
@@ -605,4 +605,4 @@ Previous Conversation:
 
     @property
     def is_windows(self):
-        return self.get_service("is_windows")()
+        return self.get_service(ServiceCode.IS_WINDOWS)()

@@ -13,7 +13,7 @@ from PyQt6.QtWidgets import QApplication, QFileDialog, QMainWindow
 from PyQt6 import QtGui
 
 from airunner.resources_dark_rc import *
-from airunner.enums import Mode, SignalCode
+from airunner.enums import Mode, SignalCode, ServiceCode
 from airunner.aihandler.logger import Logger
 from airunner.aihandler.settings import LOG_LEVEL
 from airunner.filters.windows.filter_base import FilterBase
@@ -290,12 +290,12 @@ class MainWindow(
         AIModelMixin.__init__(self)
         ImageFilterMixin.__init__(self)
         
-        ServiceLocator.register("layer_widget", lambda: self.ui.layer_widget)
-        ServiceLocator.register("get_llm_widget", lambda: self.ui.llm_widget)
-        ServiceLocator.register("display_import_image_dialog", self.display_import_image_dialog)
-        ServiceLocator.register("is_windows", self.check_is_windows)
-        ServiceLocator.register("get_settings_value", self.get_settings_value)
-        ServiceLocator.register("get_callback_for_slider", self.get_callback_for_slider)
+        ServiceLocator.register(ServiceCode.LAYER_WIDGET, lambda: self.ui.layer_widget)
+        ServiceLocator.register(ServiceCode.GET_LLM_WIDGET, lambda: self.ui.llm_widget)
+        ServiceLocator.register(ServiceCode.DISPLAY_IMPORT_IMAGE_DIALOG, self.display_import_image_dialog)
+        ServiceLocator.register(ServiceCode.IS_WINDOWS, self.check_is_windows)
+        ServiceLocator.register(ServiceCode.GET_SETTINGS_VALUE, self.get_settings_value)
+        ServiceLocator.register(ServiceCode.GET_CALLBACK_FOR_SLIDER, self.get_callback_for_slider)
         
 
         self.worker_manager = WorkerManager()
@@ -439,7 +439,7 @@ class MainWindow(
 
     def action_copy_image_triggered(self):
         if self.settings["mode"] == Mode.IMAGE.value:
-            self.canvas_widget.copy_image(ServiceLocator.get("current_active_image")())
+            self.canvas_widget.copy_image(ServiceLocator.get(ServiceCode.CURRENT_ACTIVE_IMAGE)())
 
     def action_cut_image_triggered(self):
         if self.settings["mode"] == Mode.IMAGE.value:

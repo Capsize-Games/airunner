@@ -2,7 +2,7 @@ from PIL import Image
 from PyQt6.QtGui import QIcon
 from PyQt6.QtWidgets import QHBoxLayout, QWidget
 
-from airunner.enums import SignalCode
+from airunner.enums import SignalCode, ServiceCode
 from airunner.utils import image_to_pixmap
 from airunner.widgets.input_image.templates.input_image_ui import Ui_input_image
 from airunner.widgets.base_widget import BaseWidget
@@ -123,7 +123,7 @@ class InputImageSettingsWidget(BaseWidget):
         self.settings = settings
 
     def import_input_image(self):
-        file_path, _ = self.get_service("display_import_image_dialog")(
+        file_path, _ = self.get_service(ServiceCode.DISPLAY_IMPORT_IMAGE_DIALOG)(
             directory=self.path_settings["image_path"],
         )
         if file_path == "":

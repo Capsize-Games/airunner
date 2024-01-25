@@ -1,5 +1,6 @@
 from PyQt6 import QtCore
 
+from airunner.enums import ServiceCode
 from airunner.widgets.base_widget import BaseWidget
 from airunner.widgets.model_manager.model_widget import ModelWidget
 from airunner.widgets.model_manager.templates.default_ui import Ui_default_model_widget
@@ -45,7 +46,7 @@ class DefaultModelWidget(BaseWidget):
             version = model["version"]
             category = model["category"]
             pipeline_action = model["pipeline_action"]
-            pipeline_class = self.get_service("get_pipeline_classname")(pipeline_action, version, category)
+            pipeline_class = self.get_service(ServiceCode.GET_PIPELINE_CLASSNAME)(pipeline_action, version, category)
             model_widget = ModelWidget(
                 path=model["path"],
                 branch=model["branch"],

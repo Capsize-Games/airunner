@@ -11,7 +11,7 @@ from PyQt6.QtWidgets import QGraphicsPixmapItem
 from PyQt6 import QtWidgets, QtCore
 from PyQt6.QtWidgets import QGraphicsItemGroup, QGraphicsItem
 
-from airunner.enums import SignalCode
+from airunner.enums import SignalCode, ServiceCode
 from airunner.workers.canvas_resize_worker import CanvasResizeWorker
 from airunner.workers.image_data_worker import ImageDataWorker
 from airunner.widgets.canvas_plus.templates.canvas_plus_ui import Ui_canvas
@@ -51,7 +51,7 @@ class CanvasPlusWidget(BaseWidget):
     @property
     def image_pivot_point(self):
         try:
-            layer = ServiceLocator.get("current_layer")
+            layer = ServiceLocator.get(ServiceCode.CURRENT_LAYER)
             return QPoint(layer["pivot_point_x"], layer["pivot_point_y"])
         except Exception as e:
             self.logger.error(e)
@@ -85,7 +85,7 @@ class CanvasPlusWidget(BaseWidget):
 
     @property
     def current_active_image(self):
-        return self.get_service("current_active_image")()
+        return self.get_service(ServiceCode.CURRENT_ACTIVE_IMAGE)()
     
     @current_active_image.setter
     def current_active_image(self, value):
@@ -94,7 +94,7 @@ class CanvasPlusWidget(BaseWidget):
     @property
     def layer_container_widget(self):
         # TODO
-        return ServiceLocator("layer_widget")
+        return ServiceLocator(ServiceCode.LAYER_WIDGET)
     
     @property
     def canvas_container(self):
@@ -451,7 +451,7 @@ class CanvasPlusWidget(BaseWidget):
     def draw_layers(self):
         layers = self.settings["layers"]
         for index, layer in enumerate(layers):
-            image = self.get_service("get_image_from_layer")(layer)
+            image = self.get_service(ServiceCode.GET_IMAGE_FROM_LAYER)(layer)
             if image is None:
                 continue
 
@@ -551,7 +551,7 @@ class CanvasPlusWidget(BaseWidget):
 
         pivot_point = self.image_pivot_point
         root_point = QPoint(0, 0)
-        layer = ServiceLocator.get("current_layer")
+        layer = ServiceLocator.get(ServiceCode.CURRENT_LAYER)
         current_image_position = QPoint(layer["pos_x"], layer["pos_y"])
 
         is_drawing_left = outpaint_box_rect.x() < current_image_position.x()
@@ -615,7 +615,7 @@ class CanvasPlusWidget(BaseWidget):
         self.add_image_to_scene(image)
     
     def current_draggable_pixmap(self):
-        return ServiceLocator.get("current_draggable_pixmap")
+        return ServiceLocator.get(ServiceCode.CURRENT_DRAGGABLE_PIXMAP)
         
     def copy_image(self, image:Image=None) -> DraggablePixmap:
         pixmap = self.current_pixmap() if image is None else QPixmap.fromImage(ImageQt(image))

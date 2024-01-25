@@ -1,13 +1,14 @@
 import os
 
+from airunner.enums import ServiceCode
 from airunner.service_locator import ServiceLocator
 
 
 class EmbeddingMixin:
     def __init__(self):
-        ServiceLocator.register("get_embeddings", self.get_embeddings)
-        ServiceLocator.register("delete_missing_embeddings", self.delete_missing_embeddings)
-        ServiceLocator.register("scan_for_embeddings", self.scan_for_embeddings)
+        ServiceLocator.register(ServiceCode.GET_EMBEDDINGS, self.get_embeddings)
+        ServiceLocator.register(ServiceCode.DELETE_MISSING_EMBEDDINGS, self.delete_missing_embeddings)
+        ServiceLocator.register(ServiceCode.SCAN_FOR_EMBEDDINGS, self.scan_for_embeddings)
 
     def add_embedding(self, params):
         settings = self.settings
