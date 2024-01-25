@@ -223,7 +223,7 @@ class StandardImageWidget(BaseWidget):
         for widget in self.findChildren(SliderWidget):
             try:
                 current_value = getattr(
-                    self.generator_settings,
+                    self.settings["generator_settings"],
                     widget.property("settings_property").split(".")[1]
                 )
             except Exception as e:

@@ -50,14 +50,14 @@ class GeneratorTabWidget(BaseWidget):
 
     @property
     def current_controlnet_input_image(self):
-        if self.controlnet_settings_widget:
-            return self.controlnet_settings_widget.current_image
+        if self.settings["controlnet_settings"]_widget:
+            return self.settings["controlnet_settings"]_widget.current_image
         return None
 
     @property
     def controlnet_image(self):
-        if self.controlnet_settings_widget:
-            return self.controlnet_settings_widget.current_controlnet_image
+        if self.settings["controlnet_settings"]_widget:
+            return self.settings["controlnet_settings"]_widget.current_controlnet_image
         return None
 
     @property

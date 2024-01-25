@@ -47,7 +47,7 @@ class LoraContainerWidget(BaseWidget):
         self.ui.scrollAreaWidgetContents.layout().addWidget(lora_widget)
 
     def scan_for_lora(self):
-        lora_path = self.path_settings["lora_model_path"]
+        lora_path = self.settings["path_settings"]["lora_model_path"]
         for dirpath, dirnames, filenames in os.walk(lora_path):
             # get version from dirpath
             version = dirpath.split("/")[-1]
@@ -79,8 +79,8 @@ class LoraContainerWidget(BaseWidget):
         return available_lora
 
     def get_available_loras(self, tab_name):
-        base_path = self.path_settings["base_path"]
-        lora_path = self.path_settings["lora_model_path"]
+        base_path = self.settings["path_settings"]["base_path"]
+        lora_path = self.settings["path_settings"]["lora_model_path"]
         if lora_path == "lora":
             lora_path = os.path.join(base_path, lora_path)
         if not os.path.exists(lora_path):

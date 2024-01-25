@@ -18,7 +18,7 @@ class TTSGeneratorWorker(Worker):
         
     def handle_message(self, data):
         message = data["message"]
-        #play_queue_buffer_length = self.tts_settings["play_queue_buffer_length"]
+        #play_queue_buffer_length = self.settings["tts_settings"]["play_queue_buffer_length"]
         self.play_queue.append(message)
         if data["is_end_of_message"] or len(self.play_queue) >= 15:
             # for item in self.play_queue:
@@ -45,7 +45,7 @@ class TTSGeneratorWorker(Worker):
         
         self.logger.info(f"Generating TTS with {text}")
         
-        if self.tts_settings["use_bark"]:
+        if self.settings["tts_settings"]["use_bark"]:
             response = self.generate_with_bark(text)
         else:
             response = self.generate_with_t5(text)
@@ -53,7 +53,7 @@ class TTSGeneratorWorker(Worker):
         self.emit(SignalCode.TTS_GENERATOR_WORKER_ADD_TO_STREAM_SIGNAL, response)
     
     def move_inputs_to_device(self, inputs):
-        use_cuda = self.tts_settings["use_cuda"]
+        use_cuda = self.settings["tts_settings"]["use_cuda"]
         if use_cuda:
             self.logger.info("Moving inputs to CUDA")
             try:
@@ -67,16 +67,16 @@ class TTSGeneratorWorker(Worker):
         text = text.replace("\n", " ").strip()
         
         self.logger.info("Processing inputs...")
-        inputs = self.tts.processor(text, voice_preset=self.tts_settings["voice"]).to(self.tts.device)
+        inputs = self.tts.processor(text, voice_preset=self.settings["tts_settings"]["voice"]).to(self.tts.device)
         inputs = self.move_inputs_to_device(inputs)
 
         self.logger.info("Generating speech...")
         start = time.time()
         params = dict(
             **inputs, 
-            fine_temperature=self.tts_settings["fine_temperature"],
-            coarse_temperature=self.tts_settings["coarse_temperature"],
-            semantic_temperature=self.tts_settings["semantic_temperature"],
+            fine_temperature=self.settings["tts_settings"]["fine_temperature"],
+            coarse_temperature=self.settings["tts_settings"]["coarse_temperature"],
+            semantic_temperature=self.settings["tts_settings"]["semantic_temperature"],
         )
         speech = self.tts.model.generate(**params)
         self.logger.info("Generated speech in " + str(time.time() - start) + " seconds")

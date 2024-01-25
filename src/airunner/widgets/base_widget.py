@@ -6,13 +6,11 @@ from PyQt6.QtWidgets import QWidget
 from airunner.aihandler.logger import Logger
 from airunner.mediator_mixin import MediatorMixin
 from airunner.service_locator import ServiceLocator
-from airunner.windows.main.settings_mixin  import SettingsMixin
 
 
 class BaseWidget(
     QWidget,
-    MediatorMixin,
-    SettingsMixin
+    MediatorMixin
 ):
     widget_class_ = None
     icons = ()
@@ -35,7 +33,6 @@ class BaseWidget(
     def __init__(self, *args, **kwargs):
         self.logger = Logger(prefix=self.__class__.__name__)
         MediatorMixin.__init__(self)
-        SettingsMixin.__init__(self)
         super().__init__(*args, **kwargs)
         if self.widget_class_:
             self.ui = self.widget_class_()
@@ -145,3 +142,10 @@ class BaseWidget(
             val = self.get_is_checked(element)
         print("TODO: finish this")
 
+    @property
+    def settings(self):
+        return ServiceLocator.get("get_settings")()
+
+    @settings.setter
+    def settings(self, value):
+        ServiceLocator.get("set_settings")(value)

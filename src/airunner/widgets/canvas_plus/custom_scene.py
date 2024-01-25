@@ -7,13 +7,15 @@ from PyQt6.QtWidgets import QGraphicsScene, QGraphicsPixmapItem
 
 from airunner.enums import SignalCode
 from airunner.mediator_mixin import MediatorMixin
-from airunner.windows.main.settings_mixin import SettingsMixin
+from airunner.service_locator import ServiceLocator
 
 
-class CustomScene(QGraphicsScene, SettingsMixin, MediatorMixin):
+class CustomScene(
+    QGraphicsScene,
+    MediatorMixin
+):
     def __init__(self, parent=None):
         MediatorMixin.__init__(self)
-        SettingsMixin.__init__(self)
         super().__init__(parent)
         
         # Get the size of the parent widget
@@ -43,7 +45,7 @@ class CustomScene(QGraphicsScene, SettingsMixin, MediatorMixin):
 
     def drawAt(self, position):
         painter = QPainter(self.image)
-        painter.setPen(QPen(Qt.GlobalColor.black, self.brush_settings["size"], Qt.PenStyle.SolidLine, Qt.PenCapStyle.RoundCap))
+        painter.setPen(QPen(Qt.GlobalColor.black, self.settings["brush_settings"]["size"], Qt.PenStyle.SolidLine, Qt.PenCapStyle.RoundCap))
         
         # Draw a line from the last position to the current one
         if self.last_pos is not None:
@@ -79,7 +81,7 @@ class CustomScene(QGraphicsScene, SettingsMixin, MediatorMixin):
 
     def eraseAt(self, position):
         painter = QPainter(self.image)
-        painter.setPen(QPen(Qt.GlobalColor.white, self.brush_settings["size"], Qt.PenStyle.SolidLine, Qt.PenCapStyle.RoundCap))
+        painter.setPen(QPen(Qt.GlobalColor.white, self.settings["brush_settings"]["size"], Qt.PenStyle.SolidLine, Qt.PenCapStyle.RoundCap))
         painter.setCompositionMode(QPainter.CompositionMode.CompositionMode_Clear)
         
         # Create a QPainterPath
@@ -90,7 +92,7 @@ class CustomScene(QGraphicsScene, SettingsMixin, MediatorMixin):
             path.moveTo(self.last_pos)
             path.lineTo(position)
         else:
-            path.addEllipse(position, self.brush_settings["size"]/2, self.brush_settings["size"]/2)
+            path.addEllipse(position, self.settings["brush_settings"]["size"]/2, self.settings["brush_settings"]["size"]/2)
         
         # Draw the path
         painter.drawPath(path)
@@ -143,3 +145,10 @@ class CustomScene(QGraphicsScene, SettingsMixin, MediatorMixin):
         self.setCursor(Qt.ArrowCursor)
         super(CustomScene, self).leaveEvent(event)
 
+    @property
+    def settings(self):
+        return ServiceLocator.get("get_settings")()
+
+    @settings.setter
+    def settings(self, value):
+        ServiceLocator.get("set_settings")(value)

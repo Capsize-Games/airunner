@@ -73,11 +73,11 @@ class LLMSettingsWidget(BaseWidget):
         self.ui.sequences.initialize()
         self.ui.top_k.initialize()
 
-        self.ui.leave_in_vram.setChecked(not self.memory_settings["unload_unused_models"] and not self.memory_settings["move_unused_model_to_cpu"])
-        self.ui.move_to_cpu.setChecked(self.memory_settings["move_unused_model_to_cpu"])
-        self.ui.unload_model.setChecked(self.memory_settings["unload_unused_models"])
+        self.ui.leave_in_vram.setChecked(not self.settings["memory_settings"]["unload_unused_models"] and not self.settings["memory_settings"]["move_unused_model_to_cpu"])
+        self.ui.move_to_cpu.setChecked(self.settings["memory_settings"]["move_unused_model_to_cpu"])
+        self.ui.unload_model.setChecked(self.settings["memory_settings"]["unload_unused_models"])
 
-        llm_generator_settings = self.llm_generator_settings
+        llm_generator_settings = self.settings["llm_generator_settings"]
 
         dtype = llm_generator_settings["dtype"]
         self.ui.radio_button_2bit.setChecked(dtype == "2bit")
@@ -97,13 +97,13 @@ class LLMSettingsWidget(BaseWidget):
         ])
         self.ui.model.setCurrentText(self.current_generator)
 
-        templates = self.llm_templates
+        templates = self.settings["llm_templates"]
         names = [v["name"] for k, v in templates.items()]
         
         self.ui.prompt_template.blockSignals(True)
         self.ui.prompt_template.clear()
         self.ui.prompt_template.addItems(names)
-        template_name = self.llm_generator_settings["prompt_template"]
+        template_name = self.settings["llm_generator_settings"]["prompt_template"]
         if template_name == "":
             template_name = names[0]
             settings = self.settings
@@ -118,7 +118,7 @@ class LLMSettingsWidget(BaseWidget):
         self.ui.do_sample.setChecked(llm_generator_settings["do_sample"])
         self.ui.early_stopping.setChecked(llm_generator_settings["early_stopping"])
         self.ui.use_gpu_checkbox.setChecked(llm_generator_settings["use_gpu"])
-        self.ui.override_parameters.setChecked(self.llm_generator_settings["override_parameters"])
+        self.ui.override_parameters.setChecked(self.settings["llm_generator_settings"]["override_parameters"])
 
         self.ui.model.blockSignals(False)
         self.ui.model_version.blockSignals(False)
@@ -230,7 +230,7 @@ class LLMSettingsWidget(BaseWidget):
     
     def reset_settings_to_default_clicked(self):
         print("TODO")
-        llm_generator_settings = self.llm_generator_settings
+        llm_generator_settings = self.settings["llm_generator_settings"]
         self.initialize_form()
         self.ui.top_p.set_slider_and_spinbox_values(llm_generator_settings["top_p"])
         self.ui.max_length.set_slider_and_spinbox_values(llm_generator_settings["max_length"])
@@ -267,12 +267,12 @@ class LLMSettingsWidget(BaseWidget):
     
     def bot_personality_changed(self):
         value = self.ui.bot_personality.currentText()
-        llm_generator_settings = self.llm_generator_settings
+        llm_generator_settings = self.settings["llm_generator_settings"]
         llm_generator_settings["bot_personality"] = value
-        self.llm_generator_settings = llm_generator_settings
+        self.settings["llm_generator_settings"] = llm_generator_settings
 
     def bot_mood_changed(self):
         value = self.ui.bot_mood.currentText()
-        llm_generator_settings = self.llm_generator_settings
+        llm_generator_settings = self.settings["llm_generator_settings"]
         llm_generator_settings["bot_mood"] = value
-        self.llm_generator_settings = llm_generator_settings
+        self.settings["llm_generator_settings"] = llm_generator_settings

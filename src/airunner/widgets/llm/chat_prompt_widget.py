@@ -92,13 +92,13 @@ class ChatPromptWidget(BaseWidget):
             return
 
         prompt_template = None
-        template_name = self.llm_generator_settings["prompt_template"]
-        if template_name in self.llm_templates:
-            prompt_template = self.llm_templates[template_name]
+        template_name = self.settings["llm_generator_settings"]["prompt_template"]
+        if template_name in self.settings["llm_templates"]:
+            prompt_template = self.settings["llm_templates"][template_name]
         else:
-            raise Exception("Prompt template not found for "+self.llm_generator_settings["prompt_template"])
+            raise Exception("Prompt template not found for "+self.settings["llm_generator_settings"]["prompt_template"])
 
-        llm_generator_settings = self.llm_generator_settings
+        llm_generator_settings = self.settings["llm_generator_settings"]
 
         parsed_template = self.parse_template(prompt_template)
 
@@ -107,8 +107,8 @@ class ChatPromptWidget(BaseWidget):
             {
                 "llm_request": True,
                 "request_data": {
-                    "unload_unused_model": self.memory_settings["unload_unused_models"],
-                    "move_unused_model_to_cpu": self.memory_settings["move_unused_model_to_cpu"],
+                    "unload_unused_model": self.settings["memory_settings"]["unload_unused_models"],
+                    "move_unused_model_to_cpu": self.settings["memory_settings"]["move_unused_model_to_cpu"],
                     "generator_name": generator_name,
                     "model_path": llm_generator_settings["model_version"],
                     "stream": True,
@@ -116,18 +116,18 @@ class ChatPromptWidget(BaseWidget):
                     "do_summary": False,
                     "is_bot_alive": True,
                     "conversation_history": self.conversation_history,
-                    "generator": self.llm_generator_settings,
+                    "generator": self.settings["llm_generator_settings"],
                     "prefix": self.prefix,
                     "suffix": self.suffix,
                     "dtype": llm_generator_settings["dtype"],
                     "use_gpu": llm_generator_settings["use_gpu"],
                     "request_type": "image_caption_generator",
-                    "username": self.llm_generator_settings["username"],
-                    "botname": self.llm_generator_settings["botname"],
+                    "username": self.settings["llm_generator_settings"]["username"],
+                    "botname": self.settings["llm_generator_settings"]["botname"],
                     "prompt_template": parsed_template,
                     "hf_api_key_read_key": self.settings["hf_api_key_read_key"],
                     "parameters": {
-                        "override_parameters": self.llm_generator_settings["override_parameters"],
+                        "override_parameters": self.settings["llm_generator_settings"]["override_parameters"],
                         "top_p": llm_generator_settings["top_p"] / 100.0,
                         "max_length": llm_generator_settings["max_length"],
                         "repetition_penalty": llm_generator_settings["repetition_penalty"] / 100.0,
@@ -144,14 +144,14 @@ class ChatPromptWidget(BaseWidget):
                     },
                     "image": image,
                     "callback": callback,
-                    "tts_settings": self.tts_settings,
-                    "bot_mood": self.llm_generator_settings["bot_mood"],
-                    "bot_personality": self.llm_generator_settings["bot_personality"],
+                    "tts_settings": self.settings["tts_settings"],
+                    "bot_mood": self.settings["llm_generator_settings"]["bot_mood"],
+                    "bot_personality": self.settings["llm_generator_settings"]["bot_personality"],
                 }
             }
         )
         self.add_message_to_conversation(
-            name=self.llm_generator_settings["username"],
+            name=self.settings["llm_generator_settings"]["username"],
             message=self.prompt, 
             is_bot=False
         )
