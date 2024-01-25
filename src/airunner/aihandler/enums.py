@@ -1,6 +1,12 @@
 from enum import Enum
 
 
+class WorkerState(Enum):
+    RUNNING = 1
+    PAUSED = 2
+    HALTED = 3
+
+
 class QueueType(Enum):
     GET_LAST_ITEM = 100
     GET_NEXT_ITEM = 200
