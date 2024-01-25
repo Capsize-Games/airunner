@@ -1,33 +1,32 @@
-# Contributing to AI Runner
+# AI Runner Contribution Guide
 
-All commits must be signed.
-
-If you would like to contribute to AI Runner see the contributing guidelines below.
+Thank you for your interest in contributing to AI Runner. This guide provides an overview of our project's conventions and practices. Please ensure all commits are signed.
 
 ---
 
-## Code Style
+## Coding Conventions
 
-- Use enums instead of strings for constants.
-- Store enums in `enums.py`.
-- Use `snake_case` for variables and functions.
-- Use `PascalCase` for classes.
-- Use `UPPER_SNAKE_CASE` for constants.
-- Use `lowercase` for files and directories. Separate `PascalCase` classes with underscores.
-- Use `"""docstrings"""` for documentation.
-- Use `# TODO: ...` for todos.
-- Use `# FIXME: ...` for bugs.
-- Use `# NOTE: ...` for notes.
-- Use `# HACK: ...` for hacks.
-- Use `# XXX: ...` for warnings.
+- **Constants**: Use enums instead of strings. Enums should be stored in `enums.py`.
+- **Naming Conventions**: Follow these naming styles:
+  - Variables and functions: `snake_case`
+  - Classes: `PascalCase`
+  - Constants: `UPPER_SNAKE_CASE`
+  - Files and directories: `lowercase`. If a class name is `PascalCase`, separate it with underscores.
+- **Documentation**: Use `"""docstrings"""` for documenting code.
+- **Annotations**: Use the following annotations for specific purposes:
+  - `# TODO: ...` for tasks to be done.
+  - `# FIXME: ...` for known bugs that need fixing.
+  - `# NOTE: ...` for important remarks.
+  - `# HACK: ...` for temporary solutions.
+  - `# XXX: ...` for potential problems.
 
 ---
 
-## Logging
+## Logging Practices
 
-- Use `self.logger` for logging in classes.
+- Use `self.logger` for logging within classes.
 
-### Examples:
+**Examples**:
 - `self.logger.debug("...")`
 - `self.logger.info("...")`
 - `self.logger.warning("...")`
@@ -35,55 +34,50 @@ If you would like to contribute to AI Runner see the contributing guidelines bel
 
 ---
 
-## Signals and Slots
+## Signal and Slot Management
 
-We use a `SignalMediator` class (see `signal_mediator.py`) to connect signals and slots. 
-This allows us to connect signals and slots in different classes without having to import the other class.
+We utilize a `SignalMediator` class to manage signal-slot connections across different classes without direct imports.
 
-As most of our classes are extended from a base class (such as `BaseWidget` for 
-Widget classes), we can use certain functions to connect signals and slots.
+**Example**:
 
-### Examples:
-
-First connect a slot. This is typically done within the `__init__` function of a class.
+In the `__init__` function of a class, connect a slot:
 
 `self.register(SignalCode.SOME_CODE_SIGNAL, self.on_some_signal)`
 
-Define the slot function
+Then, define the slot function:
 
-```
+```python
 def on_some_signal(self, message):
-    # Do something here
+    # Implement functionality here
     ...
 ```
 
-Emit the signal from some other class (or the same class)
+To emit the signal (from any class):
 
 `self.emit(SignalCode.SOME_CODE_SIGNAL, "Hello World!")`
 
-We use the SignalCode enum (see `enums.py`) to define the signal codes.
-The message parameter is optional and can be any type of object.
+Note: We use the `SignalCode` enum to define signal codes. The message parameter is optional and can be any object type.
 
 ---
 
-## Calling functions from other classes
+## Inter-Class Function Calls
 
-We use a `ServiceLocator` class (see `service_locator.py`) to access functions
-which are defined in one class from another class without having to import the
-class which defines the function.
+We employ a `ServiceLocator` class to call functions defined in one class from another class, avoiding direct imports.
 
-### Example
+**Example**:
 
-Register a function with `self.register_service(ServiceCode.SOME_CODE, self.some_function)`
+Register a function:
 
-Define the function
+`self.register_service(ServiceCode.SOME_CODE, self.some_function)`
 
-```
+Define the function:
+
+```python
 def some_function(self, message):
-    # Do something here
+    # Implement functionality here
     ...
 ```
 
-Call the function from some other class (or the same class)
+To call the function (from any class):
 
 `self.get_service(ServiceCode.SOME_CODE)("Hello World!")`
