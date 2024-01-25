@@ -22,6 +22,12 @@ class ChatPromptWidget(BaseWidget, MediatorMixin):
     spacer = None
     promptKeyPressEvent = None
 
+    def __init__(self, *args, **kwargs):
+        super().__init__(args, kwargs)
+        self.originalKeyPressEvent = None
+        self.action_menu_displayed = None
+        self.action_menu_displayed = None
+
     @property
     def current_generator(self):
         return self.settings["current_llm_generator"]
