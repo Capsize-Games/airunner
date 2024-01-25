@@ -2,6 +2,7 @@ from PIL import Image
 from PyQt6.QtGui import QIcon
 from PyQt6.QtWidgets import QHBoxLayout, QWidget
 
+from airunner.aihandler.enums import SignalCode
 from airunner.utils import image_to_pixmap
 from airunner.widgets.input_image.templates.input_image_ui import Ui_input_image
 from airunner.widgets.base_widget import BaseWidget
@@ -198,4 +199,4 @@ class InputImageSettingsWidget(BaseWidget):
         # send the current input image to the canvas
         if not self.current_input_image:
             return
-        self.emit("update_canvas_signal")
+        self.emit(SignalCode.UPDATE_CANVAS_SIGNAL)
