@@ -73,6 +73,7 @@ def default_hf_cache_dir():
 def image_to_pixmap(image: Image, size=None):
     """
     Converts a PIL image to a QPixmap.
+    :param size:
     :param image:
     :return:
     """
