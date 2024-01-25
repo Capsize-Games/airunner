@@ -4,6 +4,12 @@ from airunner.filters.base_filter import BaseFilter
 
 
 class RGBNoiseFilter(BaseFilter):
+    def __init__(self, **kwargs):
+        super().__init__(kwargs)
+        self.red_grain = None
+        self.green_grain = None
+        self.blue_grain = None
+
     def apply_filter(self, image, do_reset):
         self.red_grain = Image.new("L", image.size)
         self.green_grain = Image.new("L", image.size)

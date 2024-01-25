@@ -95,6 +95,10 @@ class SliderWidget(BaseWidget):
 
     def __init__(self, *args, **kwargs):
         super().__init__(*args, **kwargs)
+        self.slider_callback = None
+        self.label_text = None
+        self.settings_property = None
+        self.label = None
         self.register(SignalCode.MAIN_WINDOW_LOADED_SIGNAL, self.on_main_window_loaded_signal)
     
     def on_main_window_loaded_signal(self):
