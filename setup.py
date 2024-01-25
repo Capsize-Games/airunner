@@ -51,7 +51,7 @@ setup(
         "matplotlib==3.7.2",
         "torch==2.1.0",
         "torchvision==0.16.2",
-        "torchaudio==2.1.0",
+        "torchaudio==2.1.2",
         "auto-gptq==0.6.0",
         "optimum==1.13.2",
         "bitsandbytes==0.42.0",
