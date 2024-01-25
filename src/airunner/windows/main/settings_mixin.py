@@ -598,7 +598,6 @@ Previous Conversation:
             return self.default_settings
 
     def set_settings(self, val):
-        self.logger.info("Setting settings")
         self.application_settings.setValue("settings", val)
         self.application_settings.sync()
         self.emit(SignalCode.APPLICATION_SETTINGS_CHANGED_SIGNAL)
