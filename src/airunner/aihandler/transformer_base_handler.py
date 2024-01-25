@@ -512,9 +512,6 @@ class VisualQATransformerBaseHandler(TransformerBaseHandler):
             self.logger.error("Failed to load processor")
 
     def do_generate(self, prompt, chat_template):
-        if not self.processor or not self.model:
-            return
-
         image = self.image.convert("RGB")
         inputs = self.processor(
             images=image,
@@ -522,17 +519,20 @@ class VisualQATransformerBaseHandler(TransformerBaseHandler):
             return_tensors="pt"
         ).to("cuda")
 
-        out = self.model.generate(
-            **inputs,
-            do_sample=self.do_sample,
-            num_beams=self.num_beams,
-            max_length=self.max_length,
-            min_length=self.min_length,
-            top_p=self.top_p,
-            repetition_penalty=self.repetition_penalty,
-            length_penalty=self.length_penalty,
-            temperature=self.temperature,
-        )
+        try:
+            out = self.model.generate(
+                **inputs,
+                do_sample=self.do_sample,
+                num_beams=self.num_beams,
+                max_length=self.max_length,
+                min_length=self.min_length,
+                top_p=self.top_p,
+                repetition_penalty=self.repetition_penalty,
+                length_penalty=self.length_penalty,
+                temperature=self.temperature,
+            )
+        except AttributeError as e:
+            return ""
 
         try:
             generated_text = self.processor.batch_decode(
