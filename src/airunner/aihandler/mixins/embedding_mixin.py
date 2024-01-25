@@ -1,4 +1,6 @@
 import os
+
+from airunner.aihandler.enums import SignalCode
 from airunner.aihandler.logger import Logger as logger
 
 
@@ -24,7 +26,7 @@ class EmbeddingMixin:
                         self.pipe.load_textual_inversion(path, token=token, weight_name=f)
                     except Exception as e:
                         if "already in tokenizer vocabulary" not in str(e):
-                            self.emit("embedding_load_failed_signal", dict(
+                            self.emit(SignalCode.EMBEDDING_LOAD_FAILED_SIGNAL, dict(
                                 embedding_name=token,
                                 model_name=self.model,
                             ))
