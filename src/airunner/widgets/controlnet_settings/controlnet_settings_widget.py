@@ -22,16 +22,16 @@ class ControlNetSettingsWidget(InputImageSettingsWidget):
 
     @property
     def current_controlnet_image(self):
-        if self.generator_settings["controlnet_mask_link_input_image"]:
+        if self.settings["generator_settings"]["controlnet_mask_link_input_image"]:
             return self.controlnet_image
-        elif self.generator_settings["controlnet_mask_use_imported_image"]:
+        elif self.settings["generator_settings"]["controlnet_mask_use_imported_image"]:
             return self.imported_controlnet_image
 
     @current_controlnet_image.setter
     def current_controlnet_image(self, value):
-        if self.generator_settings["controlnet_mask_link_input_image"]:
+        if self.settings["generator_settings"]["controlnet_mask_link_input_image"]:
             self.controlnet_image = value
-        elif self.generator_settings["controlnet_mask_use_imported_image"]:
+        elif self.settings["generator_settings"]["controlnet_mask_use_imported_image"]:
             self.imported_controlnet_image = value
         self.toggle_mask_export_button(value is not None)
         self.set_mask_thumbnail()
@@ -45,39 +45,39 @@ class ControlNetSettingsWidget(InputImageSettingsWidget):
 
     @property
     def current_image(self):
-        if not self.generator_settings["enable_controlnet"]:
+        if not self.settings["generator_settings"]["enable_controlnet"]:
             return None
-        if self.generator_settings["controlnet_input_image_link_to_input_image"]:
+        if self.settings["generator_settings"]["controlnet_input_image_link_to_input_image"]:
             return self.get_service("get_current_input_image")()
-        elif self.generator_settings["controlnet_input_image_use_imported_image"]:
+        elif self.settings["generator_settings"]["controlnet_input_image_use_imported_image"]:
             return self.input_image
-        elif self.generator_settings["controlnet_use_grid_image"]:
+        elif self.settings["generator_settings"]["controlnet_use_grid_image"]:
             return self.active_grid_area_image
         else:
             return None
 
     @property
     def cached_image(self):
-        if self.generator_settings["controlnet_input_image_link_to_input_image"]:
+        if self.settings["generator_settings"]["controlnet_input_image_link_to_input_image"]:
             return self._current_input_image
-        elif self.generator_settings["controlnet_input_image_use_imported_image"]:
+        elif self.settings["generator_settings"]["controlnet_input_image_use_imported_image"]:
             return self._current_imported_image
-        elif self.generator_settings["controlnet_use_grid_image"]:
+        elif self.settings["generator_settings"]["controlnet_use_grid_image"]:
             return self._current_active_grid_area_image
         else:
             return None
 
     @cached_image.setter
     def cached_image(self, value):
-        if self.generator_settings["controlnet_input_image_link_to_input_image"]:
+        if self.settings["generator_settings"]["controlnet_input_image_link_to_input_image"]:
             self._current_input_image = value
-        elif self.generator_settings["controlnet_input_image_use_imported_image"]:
+        elif self.settings["generator_settings"]["controlnet_input_image_use_imported_image"]:
             self._current_imported_image = value
-        elif self.generator_settings["controlnet_use_grid_image"]:
+        elif self.settings["generator_settings"]["controlnet_use_grid_image"]:
             self._current_active_grid_area_image = value
 
     def initialize_groupbox(self):
-        self.ui.groupBox.setChecked(self.generator_settings["enable_controlnet"] is True)
+        self.ui.groupBox.setChecked(self.settings["generator_settings"]["enable_controlnet"] is True)
 
     def handle_toggle_controlnet(self, value):
         settings = self.settings
@@ -120,14 +120,14 @@ class ControlNetSettingsWidget(InputImageSettingsWidget):
         self.emit(SignalCode.UPDATE_CANVAS_SIGNAL)
 
     def toggle_mask_link(self, value):
-        self.generator_settings["controlnet_mask_use_imported_image"] = not value
-        self.generator_settings["controlnet_mask_link_input_image"] = value
+        self.settings["generator_settings"]["controlnet_mask_use_imported_image"] = not value
+        self.settings["generator_settings"]["controlnet_mask_link_input_image"] = value
         self.set_mask_thumbnail()
         self.toggle_buttons()
 
     def toggle_mask_use_imported_image(self, value):
-        self.generator_settings["controlnet_mask_use_imported_image"] = value
-        self.generator_settings["controlnet_mask_link_input_image"] = not value
+        self.settings["generator_settings"]["controlnet_mask_use_imported_image"] = value
+        self.settings["generator_settings"]["controlnet_mask_link_input_image"] = not value
         self.set_mask_thumbnail()
         self.toggle_buttons()
 
@@ -136,24 +136,24 @@ class ControlNetSettingsWidget(InputImageSettingsWidget):
         Use the same setting as input image
         :return:
         """
-        self.generator_settings["controlnet_input_image_link_to_input_image"] = value
+        self.settings["generator_settings"]["controlnet_input_image_link_to_input_image"] = value
         if value:
-            self.generator_settings["controlnet_input_image_use_imported_image"] = False
-            self.generator_settings["controlnet_use_grid_image"] = False
+            self.settings["generator_settings"]["controlnet_input_image_use_imported_image"] = False
+            self.settings["generator_settings"]["controlnet_use_grid_image"] = False
         self.toggle_buttons()
         self.set_thumbnail()
 
     def export_generated_controlnet_image(self):
         path, image = auto_export_image(
-            base_path=self.path_settings["base_path"],
-            image_path=self.path_settings["image_path"],
+            base_path=self.settings["path_settings"]["base_path"],
+            image_path=self.settings["path_settings"]["image_path"],
             image_export_type=self.settings["image_export_type"],
             image=self.current_controlnet_image,
             type="controlnet",
             data={
-                "controlnet": self.generator_settings["controlnet"]
+                "controlnet": self.settings["generator_settings"]["controlnet"]
             },
-            seed=self.generator_settings["seed"]
+            seed=self.settings["generator_settings"]["seed"]
         )
         if path is not None:
             self.emit(SignalCode.SET_STATUS_LABEL_SIGNAL, "Controlnet image exported to: {}".format(path))
@@ -168,7 +168,7 @@ class ControlNetSettingsWidget(InputImageSettingsWidget):
         self.toggle_link_input_image_button()
         self.toggle_use_grid_image()
         self.toggle_mask_buttons()
-        use_grid = self.generator_settings["controlnet_use_grid_image"]
+        use_grid = self.settings["generator_settings"]["controlnet_use_grid_image"]
         if use_grid:
             self.ui.refresh_input_image_button.show()
             self.ui.clear_image_button.hide()
@@ -181,25 +181,25 @@ class ControlNetSettingsWidget(InputImageSettingsWidget):
             self.ui.recycle_grid_image_button.setEnabled(False)
 
     def toggle_mask_buttons(self):
-        self.ui.mask_import_button.setEnabled(self.generator_settings["controlnet_mask_use_imported_image"])
-        self.ui.mask_link_to_input_image_button.setChecked(self.generator_settings["controlnet_mask_link_input_image"])
-        self.ui.mask_use_imported_image_button.setChecked(self.generator_settings["controlnet_mask_use_imported_image"])
+        self.ui.mask_import_button.setEnabled(self.settings["generator_settings"]["controlnet_mask_use_imported_image"])
+        self.ui.mask_link_to_input_image_button.setChecked(self.settings["generator_settings"]["controlnet_mask_link_input_image"])
+        self.ui.mask_use_imported_image_button.setChecked(self.settings["generator_settings"]["controlnet_mask_use_imported_image"])
 
     def toggle_link_input_image_button(self):
-        use_input_image = self.generator_settings["controlnet_input_image_link_to_input_image"]
-        self.generator_settings["controlnet_input_image_link_to_input_image"] = use_input_image
+        use_input_image = self.settings["generator_settings"]["controlnet_input_image_link_to_input_image"]
+        self.settings["generator_settings"]["controlnet_input_image_link_to_input_image"] = use_input_image
         self.ui.link_settings_button.setChecked(use_input_image)
 
     def toggle_import_image_button(self):
-        use_import_image = self.generator_settings["controlnet_input_image_use_imported_image"]
+        use_import_image = self.settings["generator_settings"]["controlnet_input_image_use_imported_image"]
         self.ui.import_image_button.setEnabled(use_import_image)
         self.ui.use_imported_image_button.setChecked(use_import_image)
 
     def toggle_use_grid_image(self):
-        use_grid_image = self.generator_settings["controlnet_use_grid_image"]
+        use_grid_image = self.settings["generator_settings"]["controlnet_use_grid_image"]
         self.ui.recycle_grid_image_button.setEnabled(use_grid_image)
         self.ui.use_grid_image_button.setChecked(use_grid_image)
-        self.ui.recycle_grid_image_button.setChecked(use_grid_image and self.generator_settings["controlnet_recycle_grid_image"])
+        self.ui.recycle_grid_image_button.setChecked(use_grid_image and self.settings["generator_settings"]["controlnet_recycle_grid_image"])
 
     def clear_controlnet_input_image(self):
         self.current_controlnet_image = None
@@ -210,7 +210,7 @@ class ControlNetSettingsWidget(InputImageSettingsWidget):
         it into the application for use with controlnet during image generation.
         :return:
         """
-        controlnet_image_mask_path = os.path.join(self.path_settings["image_path"], "controlnet_masks")
+        controlnet_image_mask_path = os.path.join(self.settings["path_settings"]["image_path"], "controlnet_masks")
         file_path, _ = open_file_path(
             label="Import Mask",
             directory=controlnet_image_mask_path
@@ -221,7 +221,7 @@ class ControlNetSettingsWidget(InputImageSettingsWidget):
         self.set_mask_thumbnail()
 
     def handle_image_generated(self):
-        if self.generator_settings["controlnet_use_grid_image"]:
+        if self.settings["generator_settings"]["controlnet_use_grid_image"]:
             self.set_thumbnail()
 
     def set_mask_thumbnail(self):
@@ -244,7 +244,7 @@ class ControlNetSettingsWidget(InputImageSettingsWidget):
         self.ui.controlnet_dropdown.addItems(controlnet_options)
         current_index = 0
         for index, controlnet_name in enumerate(controlnet_options):
-            if controlnet_name.lower() == self.generator_settings["controlnet"]:
+            if controlnet_name.lower() == self.settings["generator_settings"]["controlnet"]:
                 current_index = index
                 break
         self.ui.controlnet_dropdown.setCurrentIndex(current_index)

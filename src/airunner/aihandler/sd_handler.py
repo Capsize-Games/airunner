@@ -39,7 +39,6 @@ from airunner.windows.main.embedding_mixin import EmbeddingMixin as EmbeddingDat
 from airunner.windows.main.pipeline_mixin import PipelineMixin
 from airunner.windows.main.controlnet_model_mixin import ControlnetModelMixin
 from airunner.windows.main.ai_model_mixin import AIModelMixin
-from airunner.service_locator import ServiceLocator
 from airunner.utils import clear_memory
 
 torch.backends.cuda.matmul.allow_tf32 = True
@@ -63,49 +62,6 @@ class SDHandler(
     ControlnetModelMixin,
     AIModelMixin,
 ):
-    handler_type = HandlerType.DIFFUSER
-    _current_model: str = ""
-    _previous_model: str = ""
-    _initialized: bool = False
-    _current_sample = 0
-    _reload_model: bool = False
-    do_cancel = False
-    current_model_branch = None
-    state = None
-    _local_files_only = True
-    lora_loaded = False
-    loaded_lora = []
-    _settings = None
-    _action = None
-    embeds_loaded = False
-    _compel_proc = None
-    _prompt_embeds = None
-    _negative_prompt_embeds = None
-    _data = {
-        "options": {}
-    }
-    current_prompt = None
-    current_negative_prompt = None
-    _model = None
-    requested_data = None
-    _allow_online_mode = None
-    current_load_controlnet = False
-
-    # controlnet atributes
-    processor = None
-    current_controlnet_type = None
-    controlnet_loaded = False
-    attempt_download = False
-    downloading_controlnet = False
-    safety_checker_model = ""
-    text_encoder_model = ""
-    inpaint_vae_model = ""
-    _controlnet_image = None
-    # end controlnet atributes
-
-    # latents attributes
-    _latents = None
-
     def controlnet(self):
         if self._controlnet is None \
             or self.current_controlnet_type != self.controlnet_type:
@@ -185,21 +141,22 @@ class SDHandler(
     def current_sample(self, value):
         self._current_sample = value
 
-    @property
-    def data(self):
-        return self._data
-
-    @data.setter
-    def data(self, value):
-        self._data = value
-
-    @property
     def has_pipe(self):
         return self.pipe is not None
 
-    @property
+    def pipe_on_cpu(self):
+        return self.pipe.device.type == "cpu"
+
     def is_pipe_on_cpu(self):
-        return self.has_pipe and self.pipe.device.type == "cpu"
+        return self.has_pipe() and self.pipe_on_cpu()
+
+    def on_move_to_cpu(self, callback):
+        self.logger.info("Moving model to CPU")
+        if self.is_pipe_on_cpu() or not self.has_pipe():
+            return
+        self.pipe = self.pipe.to("cpu")
+        clear_memory()
+        callback()
 
     @property
     def options(self):
@@ -381,7 +338,12 @@ class SDHandler(
 
     @property
     def action(self):
-        return self.data.get("action", None)
+        print("GETTING ACTION", self.data)
+        try:
+            return self.data.get("action", None)
+        except Exception as e:
+            self.logger.error(f"Error getting action {e}")
+            return None
 
     @property
     def action_has_safety_checker(self):
@@ -393,7 +355,11 @@ class SDHandler(
 
     @property
     def is_txt2img(self):
-        return self.action == "txt2img" and self.image is None
+        try:
+            return self.action == "txt2img" and self.image is None
+        except Exception as e:
+            self.logger.error(f"Error checking if is txt2img {e}")
+            return False
 
     @property
     def is_vid_action(self):
@@ -536,20 +502,25 @@ class SDHandler(
 
     @property
     def pipe(self):
-        if self.is_txt2img:
-            return self.txt2img
-        elif self.is_img2img:
-            return self.img2img
-        elif self.is_outpaint:
-            return self.outpaint
-        elif self.is_depth2img:
-            return self.depth2img
-        elif self.is_pix2pix:
-            return self.pix2pix
-        elif self.is_vid_action:
-            return self.txt2vid
-        else:
-            self.logger.warning(f"Invalid action {self.action} unable to get pipe")
+        try:
+            if self.is_txt2img:
+                return self.txt2img
+            elif self.is_img2img:
+                return self.img2img
+            elif self.is_outpaint:
+                return self.outpaint
+            elif self.is_depth2img:
+                return self.depth2img
+            elif self.is_pix2pix:
+                return self.pix2pix
+            elif self.is_vid_action:
+                return self.txt2vid
+            else:
+                self.logger.warning(f"Invalid action {self.action} unable to get pipe")
+                return None
+        except Exception as e:
+            self.logger.error(f"Error getting pipe {e}")
+            return None
 
     @pipe.setter
     def pipe(self, value):
@@ -714,6 +685,52 @@ class SDHandler(
         return self.options.get("original_model_data", {})
 
     def  __init__(self, *args, **kwargs):
+        self.handler_type = HandlerType.DIFFUSER
+        self._current_model: str = ""
+        self._previous_model: str = ""
+        self._initialized: bool = False
+        self._current_sample = 0
+        self._reload_model: bool = False
+        self.do_cancel = False
+        self.current_model_branch = None
+        self.state = None
+        self._local_files_only = True
+        self.lora_loaded = False
+        self.loaded_lora = []
+        self._settings = None
+        self._action = None
+        self.embeds_loaded = False
+        self._compel_proc = None
+        self._prompt_embeds = None
+        self._negative_prompt_embeds = None
+        self.current_prompt = None
+        self.current_negative_prompt = None
+        self._model = None
+        self.requested_data = None
+        self._allow_online_mode = None
+        self.current_load_controlnet = False
+        self.processor = None
+        self.current_controlnet_type = None
+        self.controlnet_loaded = False
+        self.attempt_download = False
+        self.downloading_controlnet = False
+        self.safety_checker_model = ""
+        self.text_encoder_model = ""
+        self.inpaint_vae_model = ""
+        self._controlnet_image = None
+        self._latents = None
+        self.txt2img = None
+        self.img2img = None
+        self.pix2pix = None
+        self.outpaint = None
+        self.depth2img = None
+        self.txt2vid = None
+        self.tokenizer = None
+        self._safety_checker = None
+        self._controlnet = None
+        self.data = dict(
+            action="txt2img",
+        )
         super().__init__(*args, **kwargs)
         LayerMixin.__init__(self)
         LoraDataMixin.__init__(self)
@@ -721,30 +738,13 @@ class SDHandler(
         PipelineMixin.__init__(self)
         ControlnetModelMixin.__init__(self)
         AIModelMixin.__init__(self)
-        self.tokenizer = None
         self.logger.info("Loading Stable Diffusion model runner...")
         self.safety_checker_model = self.models_by_pipeline_action("safety_checker")
         self.text_encoder_model = self.models_by_pipeline_action("text_encoder")
         self.inpaint_vae_model = self.models_by_pipeline_action("inpaint_vae")
         self.register(SignalCode.SD_CANCEL_SIGNAL, self.on_sd_cancel_signal)
-        services = [
-            "is_pipe_on_cpu", 
-            "has_pipe",
-        ]
-
-        for service in services:
-            ServiceLocator.register(service, lambda: getattr(self, service))
-
-        self._safety_checker = None
-        self._controlnet = None
-        self.txt2img = None
-        self.img2img = None
-        self.pix2pix = None
-        self.outpaint = None
-        self.depth2img = None
-        self.txt2vid = None
-
         self.register(SignalCode.UNLOAD_SD_SIGNAL, self.on_unload_stablediffusion_signal)
+        self.register(SignalCode.MOVE_TO_CPU_SIGNAL, self.on_move_to_cpu)
 
     @staticmethod
     def latents_to_image(latents: torch.Tensor):
@@ -852,7 +852,8 @@ class SDHandler(
             self._prompt_embeds = None
             self._negative_prompt_embeds = None
 
-        self.data = data
+        print("SETTING DATA", data)
+        self.data = data if data is not None else self.data
         torch.backends.cuda.matmul.allow_tf32 = self.use_tf32
 
     def send_error(self, message):

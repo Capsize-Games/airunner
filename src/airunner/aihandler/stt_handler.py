@@ -21,10 +21,6 @@ class STTHandler(BaseHandler):
         transcription = self.run(inputs)
         self.emit(SignalCode.STT_AUDIO_PROCESSED, transcription)
 
-    def on_move_to_cpu(self):
-        self.logger.info("Moving model to CPU")
-        self.model = self.model.to("cpu")
-
     def __init__(self, *args, **kwargs):
         super().__init__(*args, **kwargs)
         self.model = None
@@ -35,7 +31,6 @@ class STTHandler(BaseHandler):
         self.processor = None
         self.feature_extractor = None
         self.load_model()
-        self.register(SignalCode.MOVE_TO_CPU_SIGNAL, self.on_move_to_cpu)
         self.register(SignalCode.PROCESS_AUDIO_SIGNAL, self.on_process_audio)
 
     @property
