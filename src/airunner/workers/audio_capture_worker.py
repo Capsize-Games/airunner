@@ -1,8 +1,6 @@
 import sounddevice as sd
-
 from PyQt6.QtCore import pyqtSlot, QThread
 
-from airunner.enums import ServiceCode
 from airunner.workers.worker import Worker
 
 

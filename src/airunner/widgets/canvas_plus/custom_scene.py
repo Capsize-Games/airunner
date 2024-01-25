@@ -1,12 +1,10 @@
 from PIL.ImageQt import QImage
 from PyQt6.QtCore import Qt
-from PyQt6.QtGui import QPen, QPixmap, QPainter, QCursor
-from PyQt6.QtWidgets import QGraphicsScene, QGraphicsPixmapItem
-from PyQt6.QtGui import QPainterPath
 from PyQt6.QtGui import QEnterEvent
-from PyQt6.QtGui import QTransform
+from PyQt6.QtGui import QPainterPath
+from PyQt6.QtGui import QPen, QPixmap, QPainter
+from PyQt6.QtWidgets import QGraphicsScene, QGraphicsPixmapItem
 
-from airunner.cursors.circle_brush import CircleCursor
 from airunner.enums import SignalCode
 from airunner.mediator_mixin import MediatorMixin
 from airunner.windows.main.settings_mixin import SettingsMixin
