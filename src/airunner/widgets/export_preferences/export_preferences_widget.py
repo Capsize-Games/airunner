@@ -26,7 +26,7 @@ class ExportPreferencesWidget(BaseWidget):
         self.ui.image_type_dropdown.blockSignals(True)
         self.ui.image_path.blockSignals(True)
         # initialize values:
-        metadata_settings = self.metadata_settings
+        metadata_settings = self.settings["metadata_settings"]
         self.ui.metadata_prompt.setChecked(metadata_settings["image_export_metadata_prompt"] is True)
         self.ui.metadata_negative_prompt.setChecked(metadata_settings["image_export_metadata_negative_prompt"] is True)
         self.ui.metadata_scale.setChecked(metadata_settings["image_export_metadata_scale"] is True)
@@ -41,7 +41,7 @@ class ExportPreferencesWidget(BaseWidget):
         self.ui.export_metadata.setChecked(metadata_settings["export_metadata"] is True)
         self.ui.actionAuto_export_images.setChecked(self.settings["auto_export_images"] is True)
         self.ui.image_type_dropdown.setCurrentText(self.settings["image_export_type"])
-        self.ui.image_path.setText(self.path_settings["image_path"])
+        self.ui.image_path.setText(self.settings["path_settings"]["image_path"])
         image_types = [
             "png",
             "jpg",
@@ -139,11 +139,11 @@ class ExportPreferencesWidget(BaseWidget):
         self.settings = settings
     
     def image_export_path_text_edited(self, val):
-        self.path_settings["image_path"] = val
+        self.settings["path_settings"]["image_path"] = val
     
     def action_clicked_button_browse(self):
         path = QFileDialog.getExistingDirectory(None, "Select Directory")
         if path:
             self.ui.image_path.setText(path)
-            self.path_settings["embeddings_model_path"] = path
+            self.settings["path_settings"]["embeddings_model_path"] = path
 
