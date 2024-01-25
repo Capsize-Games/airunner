@@ -15,6 +15,10 @@ class ModelMerger(BaseWindow):
     models = []
     model_type = "txt2img / img2img"
 
+    def __init__(self, **kwargs):
+        super().__init__(kwargs)
+        self.merge_thread = None
+        self.merge_worker = None
 
     def initialize_window(self):
         model_types = ["txt2img / img2img", "inpaint / outpaint", "depth2img", "pix2pix", "upscale", "superresolution"]
