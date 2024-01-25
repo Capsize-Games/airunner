@@ -1,9 +1,8 @@
-import time
 import cv2
 from PIL import Image
 from PyQt6.QtCore import QThread
 
-from airunner.aihandler.enums import WorkerCode, SignalCode, QueueType
+from airunner.aihandler.enums import SignalCode, QueueType
 from airunner.workers.worker import Worker
 
 
