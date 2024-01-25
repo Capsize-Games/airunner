@@ -1,6 +1,6 @@
 from PyQt6.QtWidgets import QFileDialog
 
-from airunner.enums import SignalCode
+from airunner.enums import SignalCode, ServiceCode
 from airunner.models.modeldata import ModelData
 from airunner.widgets.base_widget import BaseWidget
 from airunner.widgets.model_manager.templates.model_manager_ui import Ui_model_manager
@@ -127,7 +127,7 @@ class ModelManagerWidget(BaseWidget):
         self.ui.model_form.pipeline_action.setCurrentText(model.pipeline_action)
 
         self.ui.model_form.model_name.setText(model.name)
-        pipeline_class = self.get_service("get_pipeline_classname")(
+        pipeline_class = self.get_service(ServiceCode.GET_PIPELINE_CLASSNAME)(
             model.pipeline_action, model.version, model.category)
         self.ui.model_form.pipeline_class_line_edit.setText(pipeline_class)
         self.ui.model_form.enabled.setChecked(True)
