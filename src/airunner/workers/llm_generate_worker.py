@@ -8,7 +8,7 @@ class LLMGenerateWorker(Worker):
         self.llm = LLMHandler()
         super().__init__(prefix=prefix)
         self.register(SignalCode.CLEAR_HISTORY, self.on_clear_history)
-        self.register(SignalCode.LLM_REQUEST_WORKER_RESPONSE_SIGNAL, self)
+        self.register(SignalCode.LLM_REQUEST_WORKER_RESPONSE_SIGNAL, self.on_LLMRequestWorker_response_signal)
         self.register(SignalCode.UNLOAD_LLM_SIGNAL, self.on_unload_llm_signal)
 
     def on_unload_llm_signal(self, message):

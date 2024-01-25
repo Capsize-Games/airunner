@@ -10,16 +10,18 @@ from PyQt6.QtGui import QBrush, QColor, QPixmap
 from PyQt6.QtWidgets import QGraphicsPixmapItem
 from PyQt6 import QtWidgets, QtCore
 from PyQt6.QtWidgets import QGraphicsItemGroup, QGraphicsItem
+from PySide6.QtGui import QTransform
 
+from airunner.cursors.circle_brush import CircleCursor
 from airunner.enums import SignalCode, ServiceCode
-from airunner.workers.canvas_resize_worker import CanvasResizeWorker
-from airunner.workers.image_data_worker import ImageDataWorker
 from airunner.widgets.canvas_plus.templates.canvas_plus_ui import Ui_canvas
 from airunner.utils import apply_opacity_to_image
 from airunner.widgets.canvas_plus.draggables import DraggablePixmap, ActiveGridArea
 from airunner.widgets.canvas_plus.custom_scene import CustomScene
 from airunner.widgets.base_widget import BaseWidget
 from airunner.service_locator import ServiceLocator
+from airunner.workers.canvas_resize_worker import CanvasResizeWorker
+from airunner.workers.image_data_worker import ImageDataWorker
 
 
 class CanvasPlusWidget(BaseWidget):
@@ -51,7 +53,7 @@ class CanvasPlusWidget(BaseWidget):
     @property
     def image_pivot_point(self):
         try:
-            layer = ServiceLocator.get(ServiceCode.CURRENT_LAYER)
+            layer = ServiceLocator.get(ServiceCode.CURRENT_LAYER)()
             return QPoint(layer["pivot_point_x"], layer["pivot_point_y"])
         except Exception as e:
             self.logger.error(e)
@@ -94,7 +96,7 @@ class CanvasPlusWidget(BaseWidget):
     @property
     def layer_container_widget(self):
         # TODO
-        return ServiceLocator(ServiceCode.LAYER_WIDGET)
+        return ServiceLocator.get(ServiceCode.LAYER_WIDGET)()
     
     @property
     def canvas_container(self):
@@ -105,14 +107,13 @@ class CanvasPlusWidget(BaseWidget):
         self._grid_settings = {}
         self._canvas_settings = {}
         self._active_grid_settings = {}
-        self.ui.central_widget.resizeEvent = self.resizeEvent
-        self.register(SignalCode.MAIN_WINDOW_LOADED_SIGNAL, self.on_main_window_loaded_signal)
-        self._zoom_level = 1
-        self.canvas_container.resizeEvent = self.window_resized
         self.pixmaps = {}
 
-        self.image_data_worker = self.create_worker(ImageDataWorker)
-        self.canvas_resize_worker = self.create_worker(CanvasResizeWorker)
+        self.ui.central_widget.resizeEvent = self.resizeEvent
+        self.canvas_container.resizeEvent = self.window_resized
+        #self.register(SignalCode.ZOOM_LEVEL_CHANGED, self.on_zoom_level_changed_signal)
+        self.register(SignalCode.CANVAS_UPDATE_CURSOR, self.on_canvas_update_cursor_signal)
+        self.register(SignalCode.MAIN_WINDOW_LOADED_SIGNAL, self.on_main_window_loaded_signal)
         self.register(SignalCode.CANVAS_DO_DRAW_SIGNAL, self.on_canvas_do_draw_signal)
         self.register(SignalCode.CANVAS_CLEAR_LINES_SIGNAL, self.on_canvas_clear_lines_signal)
         self.register(SignalCode.IMAGE_DATA_WORKER_RESPONSE_SIGNAL, self.on_ImageDataWorker_response_signal)
@@ -126,6 +127,38 @@ class CanvasPlusWidget(BaseWidget):
 
         self.register_service("canvas_drag_pos", self.canvas_drag_pos)
         self.register_service("canvas_current_active_image", self.canvas_current_active_image)
+
+        self.image_data_worker = None
+        self.canvas_resize_worker = None
+
+        self.image_data_worker = self.create_worker(ImageDataWorker)
+        self.canvas_resize_worker = self.create_worker(CanvasResizeWorker)
+
+    def on_canvas_update_cursor_signal(self, event):
+        if self.settings["current_tool"] in ['brush', 'eraser']:
+            self.setCursor(CircleCursor(
+                Qt.GlobalColor.white,
+                Qt.GlobalColor.transparent,
+                self.brush_settings["size"],
+            ))
+        elif self.settings["current_tool"] == "active_grid_area":
+            if event.buttons() == Qt.MouseButton.LeftButton:
+                self.setCursor(Qt.CursorShape.ClosedHandCursor)
+            else:
+                self.setCursor(Qt.CursorShape.OpenHandCursor)
+        else:
+            self.setCursor(Qt.CursorShape.ArrowCursor)
+
+    # def on_zoom_level_changed_signal(self):
+    #     # Create a QTransform object and scale it
+    #     transform = QTransform()
+    #     transform.scale(self.settings["grid_settings"]["zoom_level"], self.settings["grid_settings"]["zoom_level"])
+    #
+    #     # Set the transform
+    #     self.view.setTransform(transform)
+    #
+    #     # Redraw lines
+    #     self.emit(SignalCode.CANVAS_DO_DRAW_SIGNAL)
     
     def on_set_current_layer_signal(self, args):
         self.set_current_layer(args)
@@ -181,6 +214,7 @@ class CanvasPlusWidget(BaseWidget):
         self.add_image_to_scene(image_data["images"][0])
 
     def on_CanvasResizeWorker_response_signal(self, lines_data: list):
+        self.clear_lines()
         draw_grid = self.settings["grid_settings"]["show_grid"]
         if not draw_grid:
             return
@@ -190,62 +224,67 @@ class CanvasPlusWidget(BaseWidget):
                 self.line_group.addToGroup(line)
             except TypeError as e:
                 self.logger.error(f"TypeError: {e}")
+        self.do_draw()
 
     def on_ImageDataWorker_response_signal(self, message):
         self.emit(SignalCode.CLEAR_STATUS_MESSAGE_SIGNAL)
         self.emit(SignalCode.STOP_IMAGE_GENERATOR_PROGRESS_BAR_SIGNAL)
         nsfw_content_detected = message["nsfw_content_detected"]
         path = message["path"]
-        if nsfw_content_detected and self.parent.settings["nsfw_filter"]:
+        if nsfw_content_detected and self.settings["nsfw_filter"]:
             self.emit(SignalCode.ERROR_SIGNAL, "Explicit content detected, try again.")
         self.emit(SignalCode.SHOW_LAYERS_SIGNAL)
         if path is not None:
             self.emit(SignalCode.SET_STATUS_LABEL_SIGNAL, f"Image generated to {path}")
     
-    @property
-    def zoom_in_step(self):
-        if self.zoom_level > 6:
-            return 2
-        elif self.zoom_level > 4:
-            return 1
-        return 0.1
-
-    @property
-    def zoom_out_step(self):
-        if self.zoom_level > 6:
-            return 2
-        elif self.zoom_level > 4:
-            return 1
-        if self.zoom_level <= 1.0:
-            return 0.05
-        return 0.1
+    # @property
+    # def zoom_in_step(self):
+    #     zoom_level = self.settings["grid_settings"]["zoom_level"]
+    #     if zoom_level > 6:
+    #         return 2
+    #     elif zoom_level > 4:
+    #         return 1
+    #     return self.settings["grid_settings"]["zoom_in_step"]
+    #
+    # @property
+    # def zoom_out_step(self):
+    #     zoom_level = self.settings["grid_settings"]["zoom_level"]
+    #     if zoom_level > 6:
+    #         return 2
+    #     elif zoom_level > 4:
+    #         return 1
+    #     if zoom_level <= 1.0:
+    #         return 0.05
+    #     return self.settings["grid_settings"]["zoom_out_step"]
     
-    @property
-    def zoom_level(self):
-        zoom = self._zoom_level
-        if zoom <= 0:
-            zoom = 0.1
-        return zoom
-
-    @zoom_level.setter
-    def zoom_level(self, value):
-        self._zoom_level = value
+    # @property
+    # def zoom_level(self):
+    #     zoom = self.settings["grid_settings"]["zoom_level"]
+    #     if zoom <= 0:
+    #         zoom = 0.1
+    #     return zoom
+    #
+    # @zoom_level.setter
+    # def zoom_level(self, value):
+    #     settings = self.settings
+    #     settings["grid_settings"]["zoom_level"] = value
+    #     self.settings = settings
     
-    @property
-    def canvas_color(self):
-        return self.settings["grid_settings"]["canvas_color"]
-
-    @property
-    def line_color(self):
-        return self.settings["grid_settings"]["line_color"]
-
-    @property
-    def line_width(self):
-        return self.settings["grid_settings"]["line_width"]
-
-    @property
-    def cell_size(self):
-        return self.settings["grid_settings"]["cell_size"]
+    # @property
+    # def canvas_color(self):
+    #     return self.settings["grid_settings"]["canvas_color"]
+    #
+    # @property
+    # def line_color(self):
+    #     return self.settings["grid_settings"]["line_color"]
+    #
+    # @property
+    # def line_width(self):
+    #     return self.settings["grid_settings"]["line_width"]
+    #
+    # @property
+    # def cell_size(self):
+    #     return self.settings["grid_settings"]["cell_size"]
     
     def current_pixmap(self):
         draggable_pixmap = self.current_draggable_pixmap()
@@ -253,6 +292,8 @@ class CanvasPlusWidget(BaseWidget):
             return draggable_pixmap.pixmap
     
     def current_image(self):
+        if self.previewing_filter:
+            return self.image_backup.copy()
         pixmap = self.current_pixmap()
         if not pixmap:
             return None
@@ -296,7 +337,7 @@ class CanvasPlusWidget(BaseWidget):
         self.do_draw()
 
     def increase_active_grid_height(self, amount):
-        height = self.settings["working_height"] + self.cell_size * amount
+        height = self.settings["working_height"] + self.settings["grid_settings"]["cell_size"] * amount
         if height > 4096:
             height = 4096
         settings = self.settings
@@ -305,7 +346,7 @@ class CanvasPlusWidget(BaseWidget):
         self.do_draw()
         
     def decrease_active_grid_height(self, amount):
-        height = self.settings["working_height"] - self.cell_size * amount
+        height = self.settings["working_height"] - self.settings["grid_settings"]["cell_size"] * amount
         if height < 512:
             height = 512
         settings = self.settings
@@ -314,7 +355,7 @@ class CanvasPlusWidget(BaseWidget):
         self.do_draw()
 
     def increase_active_grid_width(self, amount):
-        width = self.settings["is_maximized"] + self.cell_size * amount
+        width = self.settings["is_maximized"] + self.settings["grid_settings"]["cell_size"] * amount
         if width > 4096:
             width = 4096
         settings = self.settings
@@ -323,7 +364,7 @@ class CanvasPlusWidget(BaseWidget):
         self.do_draw()
 
     def decrease_active_grid_width(self, amount):
-        width = self.settings["is_maximized"] - self.cell_size * amount
+        width = self.settings["is_maximized"] - self.settings["grid_settings"]["cell_size"] * amount
         if width < 512:
             width = 512
         settings = self.settings
@@ -431,7 +472,7 @@ class CanvasPlusWidget(BaseWidget):
     def set_canvas_color(self):
         if not self.scene:
             return
-        self.scene.setBackgroundBrush(QBrush(QColor(self.canvas_color)))
+        self.scene.setBackgroundBrush(QBrush(QColor(self.settings["grid_settings"]["canvas_color"])))
 
     def add_image_to_current_layer(self,value):
         self.logger.info("Adding image to current layer")
@@ -624,8 +665,10 @@ class CanvasPlusWidget(BaseWidget):
     def current_draggable_pixmap(self):
         return ServiceLocator.get(ServiceCode.CURRENT_DRAGGABLE_PIXMAP)
         
-    def copy_image(self, image:Image=None) -> DraggablePixmap:
+    def copy_image(self, image: Image = None) -> object:
         pixmap = self.current_pixmap() if image is None else QPixmap.fromImage(ImageQt(image))
+        if not pixmap:
+            return None
         return self.move_pixmap_to_clipboard(pixmap)
 
     def cut_image(self):
@@ -779,11 +822,6 @@ class CanvasPlusWidget(BaseWidget):
         if self.current_active_image:
             self.current_active_image = self.current_active_image.transpose(Image.ROTATE_90)
             self.do_draw()
-
-    def current_image(self):
-        if self.previewing_filter:
-            return self.image_backup.copy()
-        return self.image
     
     def filter_with_filter(self, filter):
         return type(filter).__name__ in [

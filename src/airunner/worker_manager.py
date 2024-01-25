@@ -91,7 +91,7 @@ class WorkerManager(QObject, MediatorMixin, SettingsMixin):
         self.register(SignalCode.HEAR_SIGNAL, self.on_hear_signal)
         self.register(SignalCode.ENGINE_CANCEL_SIGNAL, self.on_engine_cancel_signal)
         self.register(SignalCode.ENGINE_STOP_PROCESSING_QUEUE_SIGNAL, self.on_engine_stop_processing_queue_signal)
-        self.register(SignalCode.ENGINE_START_PROCESSING_QUEUE_SIGNAL, self)
+        self.register(SignalCode.ENGINE_START_PROCESSING_QUEUE_SIGNAL, self.on_engine_start_processing_queue_signal)
         self.register(SignalCode.CLEAR_LLM_HISTORY_SIGNAL, self.on_clear_llm_history_signal)
         self.register(SignalCode.CLEAR_MEMORY_SIGNAL, self.on_clear_memory_signal)
         self.register(SignalCode.ERROR_SIGNAL, self.on_error_signal)

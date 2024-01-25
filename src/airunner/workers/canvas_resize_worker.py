@@ -62,8 +62,4 @@ class CanvasResizeWorker(Worker):
             lines_data.append(line_data)
             y += cell_size
 
-        self.emit(SignalCode.CANVAS_CLEAR_LINES_SIGNAL)
-
         self.emit(SignalCode.CANVAS_RESIZE_WORKER_RESPONSE_SIGNAL, lines_data)
-
-        self.emit(SignalCode.CANVAS_DO_DRAW_SIGNAL)

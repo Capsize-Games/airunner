@@ -1,5 +1,5 @@
 from PyQt6.QtCore import Qt
-from PyQt6.QtWidgets import QLabel
+from PyQt6.QtWidgets import QLabel, QDoubleSpinBox
 
 from airunner.enums import SignalCode, ServiceCode
 from airunner.widgets.base_widget import BaseWidget
@@ -36,12 +36,21 @@ class SliderWidget(BaseWidget):
         self.ui.slider_spinbox.setSingleStep(val)
 
     @property
+    def is_double_spin_box(self):
+        return type(self.ui.slider_spinbox) == QDoubleSpinBox
+
+    @property
     def spinbox_page_step(self):
+        if self.is_double_spin_box:
+            return self.spinbox_single_step
         return self.ui.slider_spinbox.pageStep
 
     @spinbox_page_step.setter
     def spinbox_page_step(self, val):
-        self.ui.slider_spinbox.pageStep = val
+        if self.is_double_spin_box:
+            self.spinbox_single_step = val
+        else:
+            self.ui.slider_spinbox.pageStep = val
 
     @property
     def slider_tick_interval(self):

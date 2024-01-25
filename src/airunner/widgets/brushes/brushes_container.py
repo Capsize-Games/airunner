@@ -21,10 +21,6 @@ class BrushesContainer(BaseWidget):
         # Enable the widget to accept drops
         self.setAcceptDrops(True)
 
-        # Create a layout to manage the widgets
-        self.layout = QFlowLayout()
-        self.setLayout(self.layout)
-
         self.load_brushes()
 
     def dragEnterEvent(self, event):
