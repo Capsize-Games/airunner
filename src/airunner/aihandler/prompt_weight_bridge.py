@@ -9,6 +9,7 @@ class PromptWeightBridge:
     def get_weight(cls, total, subtract=False):
         """
         Get the weight of the prompt.
+        :param subtract:
         :param total: int
         :return: float
         """
