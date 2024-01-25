@@ -2,7 +2,7 @@ import cv2
 from PIL import Image
 from PyQt6.QtCore import QThread
 
-from airunner.aihandler.enums import SignalCode, QueueType
+from airunner.aihandler.enums import SignalCode, QueueType, WorkerState
 from airunner.workers.worker import Worker
 
 
@@ -11,49 +11,55 @@ class VisionCaptureWorker(Worker):
         super().__init__(*args, **kwargs)
         self.queue_type = QueueType.NONE
         self.cap = None
-        self.pause = False
-        self.halted = False
-        self.is_capturing = False
+        self.state = WorkerState.HALTED
         self.interval = 1  # the amount of seconds between each image capture
         self.register(SignalCode.START_VISION_CAPTURE, self, self.start_vision_capture)
         self.register(SignalCode.STOP_VISION_CAPTURE, self, self.stop_capturing)
         self.register(SignalCode.VISION_CAPTURE_UNPAUSE_SIGNAL, self, self.unpause)
 
     def unpause(self, _message):
-        self.pause = False
-    
+        if self.state == WorkerState.PAUSED:
+            self.state = WorkerState.RUNNING
+
     def start_vision_capture(self, message):
-        self.halted = False
+        """
+        Starts capturing images
+        :param message:
+        :return:
+        """
+        self.state = WorkerState.RUNNING
 
     def stop_capturing(self):
-        self.halted = True
+        """
+        Stops capturing images
+        :return:
+        """
+        self.state = WorkerState.HALTED
 
     def start(self):
         self.logger.info("Starting")
-        self.is_capturing = True
 
         if self.settings["ocr_enabled"]:
             self.enable_cam()
         else:
-            self.halted = True
+            self.state = WorkerState.HALTED
 
-        while self.is_capturing:
-            if not self.pause and not self.halted:
+        while True:
+            if self.state == WorkerState.RUNNING:
                 self.emit(SignalCode.VISION_CAPTURED_SIGNAL, dict(
                     image=self.capture_image()
                 ))
-                self.pause = True
+                self.state = WorkerState.PAUSED
                 QThread.msleep(self.interval)
 
-            while self.pause:
+            while self.state == WorkerState.PAUSED:
                 QThread.msleep(100)
 
-            if self.halted:
+            if self.state == WorkerState.HALTED:
                 self.disable_cam()
-                while self.halted:
+                while self.state == WorkerState.HALTED:
                     QThread.msleep(100)
                 self.enable_cam()
-        self.disable_cam()
 
     def enable_cam(self):
         self.cap = cv2.VideoCapture(0)
