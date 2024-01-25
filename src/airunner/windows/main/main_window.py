@@ -298,7 +298,7 @@ class MainWindow(
         ServiceLocator.register("get_callback_for_slider", self.get_callback_for_slider)
         
 
-        self.engine = WorkerManager()
+        self.worker_manager = WorkerManager()
 
         self.ui.setupUi(self)
 
@@ -370,7 +370,7 @@ class MainWindow(
     def do_listen(self):
         if not self.listening:
             self.listening = True
-            self.engine.do_listen()
+            self.worker_manager.do_listen()
     
     def create_airunner_paths(self):
         for k, path in self.path_settings.items():
@@ -616,7 +616,7 @@ class MainWindow(
 
     def quit(self):
         self.logger.info("Quitting")
-        self.engine.stop()
+        self.worker_manager.stop()
         self.save_state()
         QApplication.quit()
         self.close()
@@ -785,7 +785,7 @@ class MainWindow(
         # self.canvas_widget.timerEvent(event)
         if self.status_widget:
             self.status_widget.update_system_stats(
-                queue_size=self.engine.request_queue_size()
+                queue_size=self.worker_manager.request_queue_size()
             )
 
     def show_update_message(self):
