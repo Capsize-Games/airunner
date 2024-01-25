@@ -47,7 +47,7 @@ Widget classes), we can use certain functions to connect signals and slots.
 
 First connect a slot. This is typically done within the `__init__` function of a class.
 
-`self.register("some_signal", self)`
+`self.register(SignalCode.SOME_CODE_SIGNAL, self.on_some_signal)`
 
 Define the slot function
 
@@ -59,18 +59,10 @@ def on_some_signal(self, message):
 
 Emit the signal from some other class (or the same class)
 
-`self.emit("some_signal", "Hello World!")`
+`self.emit(SignalCode.SOME_CODE_SIGNAL, "Hello World!")`
 
+We use the SignalCode enum (see `enums.py`) to define the signal codes.
 The message parameter is optional and can be any type of object.
-
-When defining a signal, use `anything_signal` where `anything` is a descriptive
-but concise name for the signal.
-All signals must be suffixed with `_signal`.
-
-When defining a slot, you must use the name of the signal with `on_` prefixed
-so that the signature of the function is `on_signal_name(self, message)`.
-
-There are numerous examples of this in the codebase, some can be seen in `worker_manager.py`
 
 ---
 
