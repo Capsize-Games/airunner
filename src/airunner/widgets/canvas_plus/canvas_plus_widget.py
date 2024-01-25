@@ -395,35 +395,41 @@ class CanvasPlusWidget(BaseWidget):
 
     def grid_settings_changed(self) -> bool:
         changed = False
-        grid_settings = self.settings["grid_settings"]
-        for k, v in grid_settings.items():
-            if k not in self._grid_settings or self._grid_settings[k] != v:
-                self._grid_settings[k] = v
-                if k == "canvas_color":
-                    self.set_canvas_color()
-                elif k in ["line_color", "cell_size", "line_width"]:
-                    self.redraw_lines = True
-                changed = True
+        settings = self.settings
+        if "grid_settings" in settings:
+            grid_settings = settings["grid_settings"]
+            for k, v in grid_settings.items():
+                if k not in self._grid_settings or self._grid_settings[k] != v:
+                    self._grid_settings[k] = v
+                    if k == "canvas_color":
+                        self.set_canvas_color()
+                    elif k in ["line_color", "cell_size", "line_width"]:
+                        self.redraw_lines = True
+                    changed = True
         return changed
 
     def active_grid_settings_changed(self) -> bool:
         changed = False
-        active_grid_settings = self.settings["active_grid_settings"]
-        for k, v in active_grid_settings.items():
-            if k not in self._active_grid_settings or self._active_grid_settings[k] != v:
-                self._active_grid_settings[k] = v
-                if k in ["pos_x", "pos_y", "width", "height"]:
-                    self.redraw_lines = True
-                changed = True
+        settings = self.settings
+        if "active_grid_settings" in settings:
+            active_grid_settings = self.settings["active_grid_settings"]
+            for k, v in active_grid_settings.items():
+                if k not in self._active_grid_settings or self._active_grid_settings[k] != v:
+                    self._active_grid_settings[k] = v
+                    if k in ["pos_x", "pos_y", "width", "height"]:
+                        self.redraw_lines = True
+                    changed = True
         return changed
 
     def canvas_settings_changed(self) -> bool:
         changed = False
-        canvas_settings = self.settings["canvas_settings"]
-        for k, v in canvas_settings.items():
-            if k not in self._canvas_settings or self._canvas_settings[k] != v:
-                self._canvas_settings[k] = v
-                changed = True
+        settings = self.settings
+        if "canvas_settings" in settings:
+            canvas_settings = self.settings["canvas_settings"]
+            for k, v in canvas_settings.items():
+                if k not in self._canvas_settings or self._canvas_settings[k] != v:
+                    self._canvas_settings[k] = v
+                    changed = True
         return changed
 
     def on_application_settings_changed_signal(self):
@@ -466,7 +472,7 @@ class CanvasPlusWidget(BaseWidget):
         self.view.setContentsMargins(0, 0, 0, 0)
         self.set_canvas_color()
         self.view.setScene(self.scene)
-        self.do_draw()
+        self.do_draw(force_draw=True)
     
     def set_canvas_color(self):
         if not self.scene:
@@ -552,8 +558,8 @@ class CanvasPlusWidget(BaseWidget):
         self.last_pos = QPoint(0, 0)
         self.do_draw()
     
-    def do_draw(self):
-        if self.drawing or not self.initialized:
+    def do_draw(self, force_draw = False):
+        if (self.drawing or not self.initialized) and not force_draw:
             return
         self.drawing = True
         self.view_size = self.view.viewport().size()

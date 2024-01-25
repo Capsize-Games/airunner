@@ -713,9 +713,8 @@ class SDHandler(
     def original_model_data(self):
         return self.options.get("original_model_data", {})
 
-    def  __init__(self, **kwargs):
-        #self.logger.set_level(LOG_LEVEL)
-        super().__init__()
+    def  __init__(self, *args, **kwargs):
+        super().__init__(*args, **kwargs)
         LayerMixin.__init__(self)
         LoraDataMixin.__init__(self)
         EmbeddingDataMixin.__init__(self)
