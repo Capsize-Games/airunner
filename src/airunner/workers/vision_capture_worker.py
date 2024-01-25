@@ -1,6 +1,7 @@
 import time
 import cv2
 from PIL import Image
+from PyQt6.QtCore import QThread
 
 from airunner.aihandler.enums import WorkerCode, SignalCode, QueueType
 from airunner.workers.worker import Worker
@@ -12,6 +13,7 @@ class VisionCaptureWorker(Worker):
         self.queue_type = QueueType.NONE
         self.cap = None
         self.pause = False
+        self.halted = False
         self.is_capturing = False
         self.interval = 1  # the amount of seconds between each image capture
         self.register(SignalCode.START_VISION_CAPTURE, self, self.start_vision_capture)
@@ -22,36 +24,44 @@ class VisionCaptureWorker(Worker):
         self.pause = False
     
     def start_vision_capture(self, message):
-        try:
-            pass
-        except OSError as e:
-            self.logger.error(f"Error starting vision capture {e}")
+        self.halted = False
 
     def stop_capturing(self):
-        self.logger.info("Stopping vision capture")
-        self.is_capturing = False
+        self.halted = True
 
     def start(self):
-        self.logger.info("Starting vision capture")
+        if not self.settings["ocr_enabled"]:
+            self.pause = True
+        self.logger.info("Starting")
         self.is_capturing = True
+        self.enable_cam()
+        while self.is_capturing:
+            if not self.pause:
+                self.logger.info("capturing...")
+                self.emit(SignalCode.VISION_CAPTURED_SIGNAL, dict(
+                    image=self.capture_image()
+                ))
+                self.pause = True
+                QThread.msleep(self.interval)
+
+            while self.pause:
+                QThread.msleep(100)
+
+            if self.halted:
+                self.disable_cam()
+                while self.halted:
+                    QThread.msleep(100)
+                self.enable_cam()
+        self.disable_cam()
+
+    def enable_cam(self):
         # Open the webcam
         self.cap = cv2.VideoCapture(0)
-
         # Check if the webcam is opened correctly
         if not self.cap.isOpened():
-            raise IOError("Cannot open webcam")
+            raise IOError("Unable to open webcam")
 
-        while self.is_capturing:
-            self.logger.info("capturing...")
-            self.emit(SignalCode.VISION_CAPTURED_SIGNAL, dict(
-                image=self.capture_image()
-            ))
-            self.pause = True
-            while self.pause:
-                self.logger.info("paused...")
-                time.sleep(1)
-            time.sleep(self.interval)
-
+    def disable_cam(self):
         # When everything done, release the capture and destroy the window
         self.cap.release()
 
