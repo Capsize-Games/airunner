@@ -2,7 +2,7 @@ import sounddevice as sd
 
 from queue import Queue
 
-from airunner.aihandler.enums import SignalCode
+from airunner.enums import SignalCode
 from airunner.workers.worker import Worker
 
 
