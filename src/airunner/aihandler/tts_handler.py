@@ -47,7 +47,7 @@ class TTSHandler(BaseHandler):
 
     @property
     def cuda_index(self):
-        return self.tts_settings["cuda_index"]
+        return self.settings["tts_settings"]["cuda_index"]
 
     @property
     def processor_path(self):
@@ -71,47 +71,47 @@ class TTSHandler(BaseHandler):
 
     @property
     def word_chunks(self):
-        return self.tts_settings["word_chunks"]
+        return self.settings["tts_settings"]["word_chunks"]
 
     @property
     def use_bark(self):
-        return self.tts_settings["use_bark"]
+        return self.settings["tts_settings"]["use_bark"]
 
     @property
     def voice_preset(self):
-        return self.tts_settings["voice"]
+        return self.settings["tts_settings"]["voice"]
 
     @property
     def fine_temperature(self):
-        return self.tts_settings["fine_temperature"] / 100
+        return self.settings["tts_settings"]["fine_temperature"] / 100
     
     @property
     def coarse_temperature(self):
-        return self.tts_settings["coarse_temperature"] / 100
+        return self.settings["tts_settings"]["coarse_temperature"] / 100
     
     @property
     def semantic_temperature(self):
-        return self.tts_settings["semantic_temperature"] / 100
+        return self.settings["tts_settings"]["semantic_temperature"] / 100
     
     @property
     def enable_cpu_offload(self):
-        return self.tts_settings["enable_cpu_offload"]
+        return self.settings["tts_settings"]["enable_cpu_offload"]
     
     @property
     def play_queue_buffer_length(self):
-        return self.tts_settings["play_queue_buffer_length"]
+        return self.settings["tts_settings"]["play_queue_buffer_length"]
     
     @property
     def use_word_chunks(self):
-        return self.tts_settings["use_word_chunks"]
+        return self.settings["tts_settings"]["use_word_chunks"]
     
     @property
     def use_sentence_chunks(self):
-        return self.tts_settings["use_sentence_chunks"]
+        return self.settings["tts_settings"]["use_sentence_chunks"]
 
     @property
     def sentence_chunks(self):
-        return self.tts_settings["sentence_chunks"]
+        return self.settings["tts_settings"]["sentence_chunks"]
 
     def __init__(self, *args, **kwargs):
         super().__init__(*args, **kwargs)
@@ -167,7 +167,7 @@ class TTSHandler(BaseHandler):
                 self.speaker_embeddings = self.speaker_embeddings.to(self.device)
 
     def initialize(self):
-        target_model = "bark" if self.tts_settings["use_bark"] else "t5"
+        target_model = "bark" if self.settings["tts_settings"]["use_bark"] else "t5"
         if target_model != self.current_model:
             self.unload()
         

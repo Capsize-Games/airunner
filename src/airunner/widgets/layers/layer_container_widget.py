@@ -190,7 +190,7 @@ class LayerContainerWidget(BaseWidget):
             event.pos().y() if self.get_service("canvas_drag_pos")() is not None else 0
         )
         # snap to grid
-        grid_size = self.grid_settings["cell_size"]
+        grid_size = self.settings["grid_settings"]["cell_size"]
         point.setX(point.x() - (point.x() % grid_size))
         point.setY(point.y() - (point.y() % grid_size))
 

@@ -112,14 +112,14 @@ class MainWindow(
             print("generate_image_key PRESSED")
     
     def key_matches(self, key_name, keyboard_key):
-        if not key_name in self.shortcut_key_settings:
+        if not key_name in self.settings["shortcut_key_settings"]:
             return False
-        return self.shortcut_key_settings[key_name]["key"] == keyboard_key
+        return self.settings["shortcut_key_settings"][key_name]["key"] == keyboard_key
     
     def key_text(self, key_name):
-        if not key_name in self.shortcut_key_settings:
+        if not key_name in self.settings["shortcut_key_settings"]:
             return ""
-        return self.shortcut_key_settings[key_name]["text"]
+        return self.settings["shortcut_key_settings"][key_name]["text"]
     
     def add_preset(self, name, thumnail):
         settings = self.settings
@@ -157,8 +157,8 @@ class MainWindow(
     def on_save_stablediffusion_prompt_signal(self):
         settings = self.settings
         settings["saved_prompts"].append(dict(
-            prompt=self.generator_settings["prompt"],
-            negative_prompt=self.generator_settings["negative_prompt"],
+            prompt=self.settings["generator_settings"]["prompt"],
+            negative_prompt=self.settings["generator_settings"]["negative_prompt"],
         ))
         self.settings = settings
 
@@ -361,7 +361,7 @@ class MainWindow(
             self.worker_manager.do_listen()
     
     def create_airunner_paths(self):
-        for k, path in self.path_settings.items():
+        for k, path in self.settings["path_settings"].items():
             if not os.path.exists(path):
                 print("cerating path", path)
                 os.makedirs(path)
@@ -382,7 +382,7 @@ class MainWindow(
             return
         path, image = auto_export_image(
             self.base_path, 
-            self.path_settings["image_path"],
+            self.settings["path_settings"]["image_path"],
             self.settings["image_export_type"],
             self.ui.layer_widget.current_layer.image_data.image, 
             seed=self.seed
@@ -513,7 +513,7 @@ class MainWindow(
         pass
 
     def show_settings_path(self, name, default_path=None):
-        path = self.path_settings[name]
+        path = self.settings["path_settings"][name]
         self.show_path(default_path if default_path and path == "" else path)
 
     def show_path(self, path):
@@ -558,7 +558,7 @@ class MainWindow(
     """
 
     def set_size_increment_levels(self):
-        size = self.grid_settings["cell_size"]
+        size = self.settings["grid_settings"]["cell_size"]
         self.ui.width_slider_widget.slider_single_step = size
         self.ui.width_slider_widget.slider_tick_interval = size
 
@@ -646,7 +646,7 @@ class MainWindow(
     
     def restore_state(self):
         self.logger.info("Restoring state")
-        window_settings = self.window_settings
+        window_settings = self.settings["window_settings"]
         if window_settings is None:
             return
         if window_settings["main_splitter"]:
@@ -673,7 +673,7 @@ class MainWindow(
         if window_settings["is_fullscreen"]:
             self.showFullScreen()
         self.ui.ai_button.setChecked(self.settings["ai_mode"])
-        self.set_button_checked("toggle_grid", self.grid_settings["show_grid"], False)
+        self.set_button_checked("toggle_grid", self.settings["grid_settings"]["show_grid"], False)
 
         if self.settings["is_maximized"]:
             self.showMaximized()
@@ -842,7 +842,7 @@ class MainWindow(
         FilterBase(self, filter_name).show()
 
     def initialize_default_buttons(self):
-        show_grid = self.grid_settings["show_grid"]
+        show_grid = self.settings["grid_settings"]["show_grid"]
         self.ui.toggle_active_grid_area_button.blockSignals(True)
         self.ui.toggle_brush_button.blockSignals(True)
         self.ui.toggle_eraser_button.blockSignals(True)
@@ -1101,7 +1101,7 @@ class MainWindow(
 
     def import_image(self):
         file_path, _ = self.display_import_image_dialog_signal(
-            directory=self.path_settings["image_path"]
+            directory=self.settings["path_settings"]["image_path"]
         )
         if file_path == "":
             return
