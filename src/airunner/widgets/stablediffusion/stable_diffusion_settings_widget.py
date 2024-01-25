@@ -12,8 +12,8 @@ class StableDiffusionSettingsWidget(BaseWidget):
 
     def showEvent(self, event):
         super().showEvent(event)
-        steps = target_val = self.generator_settings["steps"]
-        scale = target_val = self.generator_settings["scale"]
+        steps = target_val = self.settings["generator_settings"]["steps"]
+        scale = target_val = self.settings["generator_settings"]["scale"]
 
         current_steps = self.get_form_element("steps_widget").property("current_value")
         current_scale = self.get_form_element("scale_widget").property("current_value")

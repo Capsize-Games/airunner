@@ -138,7 +138,7 @@ class CanvasPlusWidget(BaseWidget):
             self.setCursor(CircleCursor(
                 Qt.GlobalColor.white,
                 Qt.GlobalColor.transparent,
-                self.brush_settings["size"],
+                self.settings["brush_settings"]["size"],
             ))
         elif self.settings["current_tool"] == "active_grid_area":
             if event.buttons() == Qt.MouseButton.LeftButton:

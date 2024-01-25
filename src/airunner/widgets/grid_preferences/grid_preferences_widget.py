@@ -15,10 +15,10 @@ class GridPreferencesWidget(BaseWidget):
         self.ui.show_grid_checkbox.blockSignals(True)
         self.ui.snap_to_grid_checkbox.blockSignals(True)
 
-        line_width = self.grid_settings["line_width"]
-        cell_size = self.grid_settings["cell_size"]
-        show_grid = self.grid_settings["show_grid"]
-        snap_to_grid = self.grid_settings["snap_to_grid"]
+        line_width = self.settings["grid_settings"]["line_width"]
+        cell_size = self.settings["grid_settings"]["cell_size"]
+        show_grid = self.settings["grid_settings"]["show_grid"]
+        snap_to_grid = self.settings["grid_settings"]["snap_to_grid"]
 
         self.ui.grid_line_width_spinbox.setValue(line_width)
         self.ui.grid_size_spinbox.setValue(cell_size)

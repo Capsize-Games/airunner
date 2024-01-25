@@ -4,6 +4,7 @@ import numpy as np
 from PyQt6.QtCore import QObject, pyqtSignal
 from airunner.enums import EngineRequestCode, EngineResponseCode, SignalCode
 from airunner.mediator_mixin import MediatorMixin
+from airunner.service_locator import ServiceLocator
 from airunner.workers.audio_capture_worker import AudioCaptureWorker
 from airunner.workers.audio_processor_worker import AudioProcessorWorker
 from airunner.workers.tts_generator_worker import TTSGeneratorWorker
@@ -15,8 +16,6 @@ from airunner.workers.engine_response_worker import EngineResponseWorker
 from airunner.workers.sd_generate_worker import SDGenerateWorker
 from airunner.workers.sd_request_worker import SDRequestWorker
 from airunner.aihandler.logger import Logger
-from airunner.windows.main.settings_mixin import SettingsMixin
-from airunner.service_locator import ServiceLocator
 from airunner.utils import clear_memory
 from airunner.workers.vision_capture_worker import VisionCaptureWorker
 from airunner.workers.vision_processor_worker import VisionProcessorWorker
@@ -29,7 +28,7 @@ class Message:
         self.conversation = kwargs.get("conversation")
 
 
-class WorkerManager(QObject, MediatorMixin, SettingsMixin):
+class WorkerManager(QObject, MediatorMixin):
     """
     The engine is responsible for processing requests and offloading
     them to the appropriate AI model controller.
@@ -84,12 +83,11 @@ class WorkerManager(QObject, MediatorMixin, SettingsMixin):
     def __init__(self, **kwargs):
         super().__init__()
         MediatorMixin.__init__(self)
-        SettingsMixin.__init__(self)
         self.do_process_queue = None
         self.do_process_queue = None
         self.logger = Logger(prefix=self.__class__.__name__)
         self.is_capturing_image = False
-        self.clear_memory()
+        clear_memory()
         self.register(SignalCode.HEAR_SIGNAL, self.on_hear_signal)
         self.register(SignalCode.ENGINE_CANCEL_SIGNAL, self.on_engine_cancel_signal)
         self.register(SignalCode.ENGINE_STOP_PROCESSING_QUEUE_SIGNAL, self.on_engine_stop_processing_queue_signal)
@@ -190,7 +188,7 @@ class WorkerManager(QObject, MediatorMixin, SettingsMixin):
             self.emit(SignalCode.IMAGE_GENERATED_SIGNAL, response["message"])
 
     def on_clear_memory_signal(self):
-        self.clear_memory()
+        clear_memory()
 
     def on_llm_text_streamed_signal(self, data):
         self.do_tts_request(data["message"], data["is_end_of_message"])
@@ -200,20 +198,24 @@ class WorkerManager(QObject, MediatorMixin, SettingsMixin):
         self.emit(SignalCode.IMAGE_GENERATED_SIGNAL, message)
 
     def on_text_generate_request_signal(self, message):
-        self.move_sd_to_cpu()
-        self.emit(SignalCode.LLM_REQUEST_SIGNAL, message)
-    
+        self.emit(
+            SignalCode.MOVE_TO_CPU_SIGNAL,
+            dict(
+                callback=lambda _message=message: self.emit(SignalCode.LLM_REQUEST_SIGNAL, _message)
+            )
+        )
+
     def on_image_generate_request_signal(self, message):
         self.logger.info("on_image_generate_request_signal received")
         self.emit(SignalCode.UNLOAD_LLM_SIGNAL, dict(
-            do_unload_model=self.memory_settings["unload_unused_models"],
-            move_unused_model_to_cpu=self.memory_settings["move_unused_model_to_cpu"],
-            dtype=self.llm_generator_settings["dtype"],
+            do_unload_model=self.settings["memory_settings"]["unload_unused_models"],
+            move_unused_model_to_cpu=self.settings["memory_settings"]["move_unused_model_to_cpu"],
+            dtype=self.settings["llm_generator_settings"]["dtype"],
             callback=lambda _message=message: self.do_image_generate_request(_message)
         ))
     
     def do_image_generate_request(self, message):
-        self.clear_memory()
+        clear_memory()
         self.emit(SignalCode.ENGINE_DO_REQUEST_SIGNAL, dict(
             code=EngineRequestCode.GENERATE_IMAGE, 
             message=message
@@ -243,7 +245,7 @@ class WorkerManager(QObject, MediatorMixin, SettingsMixin):
     def do_tts_request(self, message: str, is_end_of_message: bool=False):
         self.emit(SignalCode.TTS_REQUEST, dict(
             message=message.replace("</s>", ""),
-            tts_settings=self.tts_settings,
+            tts_settings=self.settings["tts_settings"],
             is_end_of_message=is_end_of_message,
         ))
     
@@ -255,11 +257,10 @@ class WorkerManager(QObject, MediatorMixin, SettingsMixin):
         self.engine_request_worker.stop()
         self.engine_response_worker.stop()
 
-    def move_sd_to_cpu(self):
-        if ServiceLocator.get("is_pipe_on_cpu")() or not ServiceLocator.get("has_pipe")():
-            return
-        self.emit(SignalCode.MOVE_TO_CPU_SIGNAL)
-        self.clear_memory()
-    
-    def clear_memory(self):
-        clear_memory()
+    @property
+    def settings(self):
+        return ServiceLocator.get("get_settings")()
+
+    @settings.setter
+    def settings(self, value):
+        ServiceLocator.get("set_settings")(value)

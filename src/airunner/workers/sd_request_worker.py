@@ -19,5 +19,5 @@ class SDRequestWorker(Worker):
         self.logger.info("Handling message")
         self.emit(SignalCode.ADD_SD_RESPONSE_TO_QUEUE_SIGNAL, dict(
             message=message,
-            image_base_path=self.path_settings["image_path"]
+            image_base_path=self.settings["path_settings"]["image_path"]
         ))

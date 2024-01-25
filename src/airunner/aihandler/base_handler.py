@@ -4,14 +4,13 @@ from PyQt6.QtCore import QObject
 
 from airunner.enums import HandlerType
 from airunner.mediator_mixin import MediatorMixin
-from airunner.windows.main.settings_mixin import SettingsMixin
+from airunner.service_locator import ServiceLocator
 from airunner.aihandler.logger import Logger
 
 
 class BaseHandler(
     QObject,
-    MediatorMixin,
-    SettingsMixin
+    MediatorMixin
 ):
     """
     Base class for all AI handlers.
@@ -24,12 +23,11 @@ class BaseHandler(
         self.use_gpu = True
         self.logger = Logger(prefix=self.__class__.__name__)
         MediatorMixin.__init__(self)
-        SettingsMixin.__init__(self)
         super().__init__(*args, **kwargs)
 
     @property
     def llm_dtype(self):
-        return self.llm_generator_settings["dtype"]
+        return self.settings["llm_generator_settings"]["dtype"]
 
     @property
     def use_cuda(self):
@@ -50,3 +48,11 @@ class BaseHandler(
     @property
     def torch_dtype(self):
         return torch.float16 if self.use_cuda else torch.float32
+
+    @property
+    def settings(self):
+        return ServiceLocator.get("get_settings")()
+
+    @settings.setter
+    def settings(self, value):
+        ServiceLocator.get("set_settings")(value)

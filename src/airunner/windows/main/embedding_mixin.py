@@ -68,7 +68,7 @@ class EmbeddingMixin:
                 return
     
     def scan_for_embeddings(self):
-        embeddings_path = self.path_settings["embeddings_model_path"]
+        embeddings_path = self.settings["path_settings"]["embeddings_model_path"]
         if os.path.exists(embeddings_path):
             for root, dirs, _ in os.walk(embeddings_path):
                 for dir in dirs:
