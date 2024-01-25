@@ -1,7 +1,7 @@
 from PyQt6.QtCore import Qt
 from PyQt6.QtWidgets import QLabel
 
-from airunner.enums import SignalCode
+from airunner.enums import SignalCode, ServiceCode
 from airunner.widgets.base_widget import BaseWidget
 from airunner.widgets.slider.templates.slider_ui import Ui_slider_widget
 
@@ -121,11 +121,11 @@ class SliderWidget(BaseWidget):
         self.divide_by = self.property("divide_by") or 1.0
 
         if settings_property is not None:
-            current_value = self.get_service("get_settings_value")(settings_property)
+            current_value = self.get_service(ServiceCode.GET_SETTINGS_VALUE)(settings_property)
 
         # check if slider_callback is str
         if isinstance(slider_callback, str):
-            slider_callback = self.get_service("get_callback_for_slider")(slider_callback)
+            slider_callback = self.get_service(ServiceCode.GET_CALLBACK_FOR_SLIDER)(slider_callback)
 
         # set slider and spinbox names
         if slider_name:

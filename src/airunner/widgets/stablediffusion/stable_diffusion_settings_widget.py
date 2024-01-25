@@ -1,4 +1,4 @@
-from airunner.enums import SignalCode
+from airunner.enums import SignalCode, ServiceCode
 from airunner.widgets.base_widget import BaseWidget
 from airunner.widgets.stablediffusion.templates.stable_diffusion_settings_ui import Ui_stable_diffusion_settings_widget
 
@@ -81,7 +81,7 @@ class StableDiffusionSettingsWidget(BaseWidget):
         self.logger.info("load_versions")
         self.ui.version.blockSignals(True)
         self.ui.version.clear()
-        pipelines = self.get_service("get_pipelines")(category="stablediffusion")
+        pipelines = self.get_service(ServiceCode.GET_PIPELINES)(category="stablediffusion")
         version_names = set([pipeline["version"] for pipeline in pipelines])
         self.ui.version.addItems(version_names)
         current_version = self.settings["current_version_stablediffusion"]

@@ -6,7 +6,7 @@ from PyQt6.QtGui import QPixmap
 
 from PIL import Image
 
-from airunner.enums import SignalCode
+from airunner.enums import SignalCode, ServiceCode
 from airunner.service_locator import ServiceLocator
 
 
@@ -24,10 +24,10 @@ class LayerMixin:
         self.register(SignalCode.CLEAR_LAYERS_SIGNAL, self.on_clear_layers_signal)
         self.register(SignalCode.SET_CURRENT_LAYER_SIGNAL, self.on_set_current_layer_signal)
 
-        ServiceLocator.register("current_layer", self.current_layer)
-        ServiceLocator.register("current_draggable_pixmap", self.current_layer)
-        ServiceLocator.register("current_active_image", self.current_active_image)
-        ServiceLocator.register("get_image_from_layer", self.get_image_from_layer)
+        ServiceLocator.register(ServiceCode.CURRENT_LAYER, self.current_layer)
+        ServiceLocator.register(ServiceCode.CURRENT_DRAGGABLE_PIXMAP, self.current_layer)
+        ServiceLocator.register(ServiceCode.CURRENT_ACTIVE_IMAGE, self.current_active_image)
+        ServiceLocator.register(ServiceCode.GET_IMAGE_FROM_LAYER, self.get_image_from_layer)
 
     def on_delete_layer_signal(self, data):
         layer = data.get("layer", None)

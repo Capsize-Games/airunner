@@ -2,7 +2,7 @@ from PyQt6.QtCore import pyqtSlot
 from PyQt6.QtWidgets import QSpacerItem, QSizePolicy
 from PyQt6.QtCore import Qt
 
-from airunner.enums import SignalCode
+from airunner.enums import SignalCode, ServiceCode
 from airunner.mediator_mixin import MediatorMixin
 from airunner.widgets.base_widget import BaseWidget
 from airunner.widgets.llm.loading_widget import LoadingWidget
@@ -78,7 +78,7 @@ class ChatPromptWidget(BaseWidget, MediatorMixin):
         self.generating = True
         self.disable_send_button()
 
-        image = self.get_service("current_active_image")() if (image_override is None or image_override is False) else image_override
+        image = self.get_service(ServiceCode.CURRENT_ACTIVE_IMAGE)() if (image_override is None or image_override is False) else image_override
 
         prompt = self.prompt if (prompt_override is None or prompt_override == "") else prompt_override
         if prompt is None or prompt == "":

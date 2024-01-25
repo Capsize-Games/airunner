@@ -3,7 +3,7 @@ import random
 from PIL import Image
 from PyQt6.QtCore import pyqtSignal, QRect
 
-from airunner.enums import SignalCode
+from airunner.enums import SignalCode, ServiceCode
 from airunner.aihandler.settings import MAX_SEED
 from airunner.widgets.base_widget import BaseWidget
 from airunner.widgets.generator_form.templates.generatorform_ui import Ui_generator_form
@@ -149,7 +149,7 @@ class GeneratorForm(BaseWidget):
 
     def handle_generate_button_clicked(self):
         self.start_progress_bar()
-        self.generate(image=self.get_service("current_active_image")())
+        self.generate(image=self.get_service(ServiceCode.CURRENT_ACTIVE_IMAGE)())
 
     def handle_interrupt_button_clicked(self):
         self.emit(SignalCode.ENGINE_CANCEL_SIGNAL)
@@ -197,7 +197,7 @@ class GeneratorForm(BaseWidget):
             override_data["input_image"] = image
 
             if self.is_upscale and image is None:
-                image = self.get_service("current_active_image")()
+                image = self.get_service(ServiceCode.CURRENT_ACTIVE_IMAGE)()
             
             if self.is_upscale and image is None:
                 return
@@ -230,7 +230,7 @@ class GeneratorForm(BaseWidget):
 
                 # Get the cropped image
                 cropped_outpaint_box_rect = self.active_rect
-                current_layer = self.get_service("current_layer")()
+                current_layer = self.get_service(ServiceCode.CURRENT_LAYER)()
                 crop_location = (
                     cropped_outpaint_box_rect.x() - current_layer["pos_x"],
                     cropped_outpaint_box_rect.y() - current_layer["pos_y"],

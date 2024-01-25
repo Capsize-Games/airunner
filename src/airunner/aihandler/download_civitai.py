@@ -19,7 +19,7 @@ class DownloadCivitAI:
         try:
             json = response.json()
         except JSONDecodeError:
-            self.logger.error(f"Failed to decode JSON from {url}")
+            print(f"Failed to decode JSON from {url}")
             print(response)
         return json
 

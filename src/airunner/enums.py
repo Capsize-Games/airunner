@@ -28,6 +28,27 @@ class FilterType(Enum):
     PIXEL_ART = "pixelart"
 
 
+class ServiceCode(Enum):
+    CURRENT_LAYER = "current_layer"
+    CURRENT_DRAGGABLE_PIXMAP = "current_draggable_pixmap"
+    CURRENT_ACTIVE_IMAGE = "current_active_image"
+    GET_IMAGE_FROM_LAYER = "get_image_from_layer"
+    GET_EMBEDDINGS = "get_embeddings"
+    DELETE_MISSING_EMBEDDINGS = "delete_missing_embeddings"
+    SCAN_FOR_EMBEDDINGS = "scan_for_embeddings"
+    GET_SETTINGS = "get_settings"
+    SET_SETTINGS = "set_settings"
+    GET_PIPELINE_CLASSNAME = "get_pipeline_classname"
+    PIPELINE_ACTIONS = "pipeline_actions"
+    GET_PIPELINES = "get_pipelines"
+    LAYER_WIDGET = "layer_widget"
+    GET_LLM_WIDGET = "get_llm_widget"
+    DISPLAY_IMPORT_IMAGE_DIALOG = "display_import_image_dialog"
+    IS_WINDOWS = "is_windows"
+    GET_SETTINGS_VALUE = "get_settings_value"
+    GET_CALLBACK_FOR_SLIDER = "get_callback_for_slider"
+
+
 class SignalCode(Enum):
     START_VISION_CAPTURE = "start_vision_capture"
     STOP_VISION_CAPTURE = "stop_vision_capture"

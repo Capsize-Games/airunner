@@ -6,7 +6,7 @@ from PyQt6.QtGui import QImage
 
 from PIL import Image
 
-from airunner.enums import SignalCode
+from airunner.enums import SignalCode, ServiceCode
 from airunner.widgets.canvas_plus.templates.standard_image_widget_ui import Ui_standard_image_widget
 from airunner.utils import load_metadata_from_image, prepare_metadata
 from airunner.widgets.slider.slider_widget import SliderWidget
@@ -29,7 +29,7 @@ class StandardImageWidget(BaseWidget):
     def image(self):
         if self._image is None:
             try:
-                self.image = ServiceLocator.get("current_active_image")()
+                self.image = ServiceLocator.get(ServiceCode.CURRENT_ACTIVE_IMAGE)()
             except Exception as e:
                 self.logger.error(f"Error while getting image: {e}")
         return self._image
@@ -137,7 +137,7 @@ class StandardImageWidget(BaseWidget):
             image = Image.open(self.image_path)
             image.save(self.image_path, pnginfo=meta_data)
         else:
-            current_layer = ServiceLocator.get("current_layer")()
+            current_layer = ServiceLocator.get(ServiceCode.CURRENT_LAYER)()
             image = current_layer['image']
         self.image = image
         self.meta_data = load_metadata_from_image(self.image)
