@@ -178,7 +178,7 @@ class CanvasPlusWidget(BaseWidget):
         self.add_image_to_scene(image_data["images"][0])
 
     def on_CanvasResizeWorker_response_signal(self, lines_data: list):
-        draw_grid = self.settings["grid_settings"]["show_grid"]
+        draw_grid = self.grid_settings["show_grid"]
         if not draw_grid:
             return
         for line_data in lines_data:
@@ -358,7 +358,7 @@ class CanvasPlusWidget(BaseWidget):
         
         grid_settings = self.settings["grid_settings"]
         for k,v in grid_settings.items():
-            if k not in self.grid_settings or self.grid_settings[k] != v:
+            if k not in grid_settings or grid_settings[k] != v:
                 if k == "canvas_color":
                     self.set_canvas_color()
                 elif k in ["line_color", "cell_size", "line_width"]:
@@ -381,9 +381,11 @@ class CanvasPlusWidget(BaseWidget):
         if do_draw:
             self.do_draw()
 
-        self.grid_settings = grid_settings
+        settings = self.settings
+        settings["grid_settings"] = grid_settings
         self.active_grid_settings = active_grid_settings
         self.canvas_settings = canvas_settings
+        self.settings = settings
     
     def on_main_window_loaded_signal(self):
         self.initialized = True
