@@ -1,4 +1,4 @@
-from airunner.aihandler.enums import SignalCode
+from airunner.enums import SignalCode
 from airunner.aihandler.stt_handler import STTHandler
 from airunner.workers.worker import Worker
 

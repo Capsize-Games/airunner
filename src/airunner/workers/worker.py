@@ -2,7 +2,7 @@ import queue
 
 from PyQt6.QtCore import pyqtSignal, pyqtSlot, QThread, QSettings, QObject
 
-from airunner.aihandler.enums import QueueType, SignalCode
+from airunner.enums import QueueType, SignalCode
 from airunner.aihandler.logger import Logger
 from airunner.mediator_mixin import MediatorMixin
 from airunner.windows.main.settings_mixin import SettingsMixin

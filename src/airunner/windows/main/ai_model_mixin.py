@@ -1,4 +1,4 @@
-from airunner.aihandler.enums import SignalCode
+from airunner.enums import SignalCode
 from airunner.service_locator import ServiceLocator
 from airunner.data.bootstrap.model_bootstrap_data import model_bootstrap_data
 
