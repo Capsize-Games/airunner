@@ -115,7 +115,8 @@ class GeneratorForm(BaseWidget):
         self.register(SignalCode.SD_PROGRESS_SIGNAL, self.on_progress_signal)
 
     def activate_ai_mode(self):
-        self.ui.generator_form_tabs.setCurrentIndex(1 if self.settings["ai_mode"] is True else 0)
+        ai_mode = self.settings.get("ai_mode", False)
+        self.ui.generator_form_tabs.setCurrentIndex(1 if ai_mode is True else 0)
     
     """
     Slot functions

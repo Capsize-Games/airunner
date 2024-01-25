@@ -8,7 +8,11 @@ from airunner.windows.main.settings_mixin import SettingsMixin
 from airunner.aihandler.logger import Logger
 
 
-class BaseHandler(QObject, MediatorMixin, SettingsMixin):
+class BaseHandler(
+    QObject,
+    MediatorMixin,
+    SettingsMixin
+):
     """
     Base class for all AI handlers.
     AI Handlers are classes which load and process AI models.
@@ -17,11 +21,11 @@ class BaseHandler(QObject, MediatorMixin, SettingsMixin):
     handler_type = HandlerType.TRANSFORMER
 
     def __init__(self, *args, **kwargs):
-        super().__init__(*args, **kwargs)
-        SettingsMixin.__init__(self)
-        MediatorMixin.__init__(self)
         self.use_gpu = True
         self.logger = Logger(prefix=self.__class__.__name__)
+        MediatorMixin.__init__(self)
+        SettingsMixin.__init__(self)
+        super().__init__(*args, **kwargs)
 
     @property
     def llm_dtype(self):
