@@ -21,14 +21,6 @@ class BaseWidget(QWidget, SettingsMixin, MediatorMixin):
         return ServiceLocator.get(name)
 
     @property
-    def settings(self):
-        return ServiceLocator.get('get_settings')()
-
-    @settings.setter
-    def settings(self, value):
-        ServiceLocator.get('set_settings')(value)
-
-    @property
     def is_dark(self):
         if not "dark_mode_enabled" in self.settings:
             return False
