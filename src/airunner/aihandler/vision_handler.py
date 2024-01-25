@@ -1,4 +1,4 @@
-from airunner.aihandler.transformer_base_handler import VisualQATransformerBaseHandler
+from airunner.aihandler.visual_qa_transformer_base_model import VisualQATransformerBaseHandler
 
 
 class VisionHandler(VisualQATransformerBaseHandler):
