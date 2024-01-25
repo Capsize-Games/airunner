@@ -137,6 +137,8 @@ class SignalCode(Enum):
     ADD_SD_RESPONSE_TO_QUEUE_SIGNAL = "add_sd_response_to_queue_signal"
     RESET_PATHS_SIGNAL = "reset_paths_signal"
     NSFW_CONTENT_DETECTED_SIGNAL = "nsfw_content_detected_signal"
+    ZOOM_LEVEL_CHANGED = "zoom_level_changed"
+    CANVAS_UPDATE_CURSOR = "canvas_update_cursor"
 
 
 class EngineResponseCode(Enum):

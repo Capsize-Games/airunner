@@ -11,7 +11,7 @@ class LayerContainerWidget(BaseWidget):
     def __init__(self, *args, **kwargs):
         super().__init__(*args, **kwargs)
         self.register(SignalCode.SHOW_LAYERS_SIGNAL, self.on_show_layers_signal)
-        self.register(SignalCode.ADD_LAYER_SIGNAL, self)
+        self.register(SignalCode.ADD_LAYER_SIGNAL, self.on_add_layer_signal)
         self.register_service("get_index_by_layer", self.get_index_by_layer)
         self.widget_class_ = Ui_layer_container
         self.selected_layers = {}

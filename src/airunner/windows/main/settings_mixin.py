@@ -34,6 +34,7 @@ tts_settings_default = dict(
 
 class SettingsMixin:
     def __init__(self):
+        super().__init__()
         self.application_settings = QSettings("Capsize Games", "AI Runner")
         self.register(SignalCode.RESET_SETTINGS_SIGNAL, self.on_reset_settings_signal)
         self.default_settings = dict(
@@ -158,6 +159,9 @@ Previous Conversation:
                 snap_to_grid=True,
                 canvas_color="#000000",
                 show_grid=True,
+                zoom_level=1,
+                zoom_in_step=0.1,
+                zoom_out_step=0.1
             ),
             brush_settings=dict(
                 size=20,
@@ -204,7 +208,7 @@ Previous Conversation:
             ),
             canvas_settings=dict(
                 pos_x=0,
-                pos_y=0,
+                pos_y=0
             ),
             metadata_settings=dict(
                 image_export_metadata_prompt=True,
