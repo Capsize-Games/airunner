@@ -1,25 +1,24 @@
-import io
 import base64
+import io
 import subprocess
 from functools import partial
 
 from PIL import Image, ImageGrab
 from PIL.ImageQt import ImageQt
+from PyQt6 import QtWidgets, QtCore
 from PyQt6.QtCore import Qt, QPoint, QRect
 from PyQt6.QtGui import QBrush, QColor, QPixmap
-from PyQt6.QtWidgets import QGraphicsPixmapItem
-from PyQt6 import QtWidgets, QtCore
 from PyQt6.QtWidgets import QGraphicsItemGroup, QGraphicsItem
-from PySide6.QtGui import QTransform
+from PyQt6.QtWidgets import QGraphicsPixmapItem
 
 from airunner.cursors.circle_brush import CircleCursor
 from airunner.enums import SignalCode, ServiceCode
-from airunner.widgets.canvas_plus.templates.canvas_plus_ui import Ui_canvas
-from airunner.utils import apply_opacity_to_image
-from airunner.widgets.canvas_plus.draggables import DraggablePixmap, ActiveGridArea
-from airunner.widgets.canvas_plus.custom_scene import CustomScene
-from airunner.widgets.base_widget import BaseWidget
 from airunner.service_locator import ServiceLocator
+from airunner.utils import apply_opacity_to_image
+from airunner.widgets.base_widget import BaseWidget
+from airunner.widgets.canvas_plus.custom_scene import CustomScene
+from airunner.widgets.canvas_plus.draggables import DraggablePixmap, ActiveGridArea
+from airunner.widgets.canvas_plus.templates.canvas_plus_ui import Ui_canvas
 from airunner.workers.canvas_resize_worker import CanvasResizeWorker
 from airunner.workers.image_data_worker import ImageDataWorker
 

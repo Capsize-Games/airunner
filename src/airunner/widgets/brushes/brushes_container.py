@@ -1,17 +1,16 @@
-import io
-from io import BytesIO
-import json
 import base64
-from PIL import Image
+import io
+import json
+from io import BytesIO
 
-from PyQt6.QtWidgets import QInputDialog
-from PyQt6.QtGui import QPixmap
+from PIL import Image
 from PyQt6.QtCore import QBuffer
+from PyQt6.QtGui import QPixmap
+from PyQt6.QtWidgets import QInputDialog
 from PyQt6.QtWidgets import QMenu
 
 from airunner.widgets.base_widget import BaseWidget
 from airunner.widgets.image.image_widget import BrushImageWidget
-from airunner.widgets.qflowlayout.q_flow_layout import QFlowLayout
 
 
 class BrushesContainer(BaseWidget):
