@@ -63,12 +63,12 @@ class ActiveGridArea(DraggablePixmap):
         )
 
     def __init__(self, parent, rect):
-        self.update_settings()
+        self.update_draggable_settings()
 
         super().__init__(parent, self.pixmap)
         self.setFlag(QGraphicsItem.GraphicsItemFlag.ItemIsMovable, True)
 
-    def update_settings(self):
+    def update_draggable_settings(self):
         border_color = self.generator_settings["active_grid_border_color"]
         border_color = QColor(border_color)
         border_opacity = self.active_grid_settings["border_opacity"]
