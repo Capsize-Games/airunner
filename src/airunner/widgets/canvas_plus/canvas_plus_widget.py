@@ -261,7 +261,6 @@ class CanvasPlusWidget(BaseWidget):
     
     def do_resize_canvas(self):
         if not self.view:
-            self.logger.warning("view not found")
             return
         data = dict(
             settings=self.settings,
@@ -269,8 +268,7 @@ class CanvasPlusWidget(BaseWidget):
             scene=self.scene,
             line_group=self.line_group
         )
-        #self.emit("canvas_resize_signal", data)
-        self.canvas_resize_worker.add_to_queue(data)
+        self.emit("canvas_resize_signal", data)
 
     def window_resized(self, event):
         self.handle_resize_canvas()
