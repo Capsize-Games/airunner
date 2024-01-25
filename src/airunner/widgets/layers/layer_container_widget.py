@@ -2,7 +2,7 @@ from PIL import Image
 from PyQt6.QtCore import QRect, QPoint, Qt
 from PyQt6.QtWidgets import QSpacerItem, QSizePolicy
 
-from airunner.enums import SignalCode
+from airunner.enums import SignalCode, ServiceCode
 from airunner.widgets.base_widget import BaseWidget
 from airunner.widgets.layers.layer_widget import LayerWidget
 from airunner.widgets.layers.templates.layer_container_ui import Ui_layer_container
@@ -19,7 +19,7 @@ class LayerContainerWidget(BaseWidget):
         self.current_layer_index = 0
 
     def initialize(self):
-        current_layer = self.get_service("current_layer")()
+        current_layer = self.get_service(ServiceCode.CURRENT_LAYER)()
         self.ui.layers.scrollAreaWidgetContents.layout().addSpacerItem(QSpacerItem(0, 0, QSizePolicy.Policy.Minimum, QSizePolicy.Policy.Expanding))
         # set the current_value property of the slider
         self.ui.opacity_slider_widget.set_slider_and_spinbox_values(current_layer["opacity"])

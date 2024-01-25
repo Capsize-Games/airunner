@@ -1,9 +1,3 @@
-import os
-
-from PyQt6.QtGui import QPixmap
-from PyQt6.QtWidgets import QLabel
-from PyQt6.QtCore import Qt
-
 from airunner.widgets.base_widget import BaseWidget
 from airunner.widgets.image.templates.folder_widget_ui import Ui_folder_widget
 
