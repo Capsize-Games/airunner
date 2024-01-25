@@ -16,7 +16,7 @@ class EmbeddingsContainerWidget(BaseWidget):
 
     def __init__(self, *args, **kwargs):
         super().__init__(*args, **kwargs)
-        self.register(SignalCode.EMBEDDING_LOAD_FAILED_SIGNAL, self.on_embedding_load_failed_signal)
+        self.register(SignalCode.EMBEDDING_LOAD_FAILED_SIGNAL, self, self.on_embedding_load_failed_signal)
 
         self.scan_for_embeddings()
 
