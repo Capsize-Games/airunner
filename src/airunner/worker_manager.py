@@ -85,6 +85,8 @@ class WorkerManager(QObject, MediatorMixin, SettingsMixin):
         super().__init__()
         MediatorMixin.__init__(self)
         SettingsMixin.__init__(self)
+        self.do_process_queue = None
+        self.do_process_queue = None
         self.logger = Logger(prefix=self.__class__.__name__)
         self.is_capturing_image = False
         self.clear_memory()

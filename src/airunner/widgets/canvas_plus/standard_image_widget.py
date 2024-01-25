@@ -44,6 +44,9 @@ class StandardImageWidget(BaseWidget):
 
     def __init__(self, *args, **kwargs):
         super().__init__(*args, **kwargs)
+        self.dialog = None
+        self.similarity = None
+        self.initialized = None
         self.ui.advanced_settings.hide()
         self.load_upscale_options()
     

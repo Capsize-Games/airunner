@@ -6,6 +6,9 @@ from airunner.service_locator import ServiceLocator
 
 class EmbeddingMixin:
     def __init__(self):
+        self.settings = None
+        self.settings = None
+        self.settings = None
         ServiceLocator.register(ServiceCode.GET_EMBEDDINGS, self.get_embeddings)
         ServiceLocator.register(ServiceCode.DELETE_MISSING_EMBEDDINGS, self.delete_missing_embeddings)
         ServiceLocator.register(ServiceCode.SCAN_FOR_EMBEDDINGS, self.scan_for_embeddings)

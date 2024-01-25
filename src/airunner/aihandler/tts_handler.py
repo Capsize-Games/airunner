@@ -115,6 +115,13 @@ class TTSHandler(BaseHandler):
 
     def __init__(self, *args, **kwargs):
         super().__init__(*args, **kwargs)
+        self.model = None
+        self.vocoder = None
+        self.model = None
+        self.vocoder = None
+        self.model = None
+        self.vocoder = None
+        self.processor = None
         self.logger.info("Loading")
         self.corpus = []
         self.speaker_embeddings = None

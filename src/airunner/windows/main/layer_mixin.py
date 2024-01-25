@@ -12,6 +12,15 @@ from airunner.service_locator import ServiceLocator
 
 class LayerMixin:
     def __init__(self):
+        self.settings = None
+        self.settings = None
+        self.settings = None
+        self.settings = None
+        self.current_layer_index = None
+        self.settings = None
+        self.settings = None
+        self.settings = None
+        self.settings = None
         self.register(SignalCode.SWITCH_LAYER_SIGNAL, self.on_switch_layer_signal)
         self.register(SignalCode.ADD_LAYER_SIGNAL, self.on_add_layer_signal)
         self.register(SignalCode.CREATE_LAYER_SIGNAL, self.on_create_layer_signal)

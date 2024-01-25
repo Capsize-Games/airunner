@@ -10,6 +10,8 @@ class VideoPopup(BaseWindow):
     window_title = "Video preview"
 
     def __init__(self, file_path):
+        self.video_widget = None
+        self.media_player = None
         self.file_path = file_path
         super().__init__()
 

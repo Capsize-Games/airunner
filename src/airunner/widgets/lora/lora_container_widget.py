@@ -23,6 +23,7 @@ class LoraContainerWidget(BaseWidget):
     def __init__(self, *args, **kwargs):
         super().__init__(*args, **kwargs)
 
+        self.loars = None
         self.scan_for_lora()
         self.load_lora()
 

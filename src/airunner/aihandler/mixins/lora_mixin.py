@@ -2,6 +2,9 @@ import os
 
 
 class LoraMixin:
+    def __init__(self):
+        self.loaded_lora = None
+
     @property
     def available_lora(self):
         return self.options.get(f"lora", [])

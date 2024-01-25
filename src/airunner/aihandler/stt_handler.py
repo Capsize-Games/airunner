@@ -27,6 +27,13 @@ class STTHandler(BaseHandler):
 
     def __init__(self, *args, **kwargs):
         super().__init__(*args, **kwargs)
+        self.model = None
+        self.model = None
+        self.processor = None
+        self.feature_extractor = None
+        self.model = None
+        self.processor = None
+        self.feature_extractor = None
         self.load_model()
         self.register(SignalCode.MOVE_TO_CPU_SIGNAL, self.on_move_to_cpu)
         self.register(SignalCode.PROCESS_AUDIO_SIGNAL, self.on_process_audio)

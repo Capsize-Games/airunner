@@ -42,6 +42,13 @@ class SettingsWindow(BaseWindow):
     template_class_ = Ui_airunner_settings
     # template_name = "airunner_settings"
 
+    def __init__(self, **kwargs):
+        super().__init__(kwargs)
+        self.model = None
+        self.scroll_widget = None
+        self.scroll_layout = None
+        self.highlight_delegate = None
+
     def initialize_window(self):
         self.model = QStandardItemModel()
         self.ui.directory.setModel(self.model)

@@ -12,6 +12,9 @@ class ImportWidget(BaseWidget):
 
     def __init__(self, *args, **kwargs):
         super().__init__(*args, **kwargs)
+        self.download_civit_ai = None
+        self.current_model_data = None
+        self.is_civitai = None
         self.show_import_form()
 
     def action_clicked_button_import(self):
