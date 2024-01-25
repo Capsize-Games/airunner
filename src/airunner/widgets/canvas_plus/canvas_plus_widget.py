@@ -178,7 +178,7 @@ class CanvasPlusWidget(BaseWidget):
         self.add_image_to_scene(image_data["images"][0])
 
     def on_CanvasResizeWorker_response_signal(self, lines_data: list):
-        draw_grid = self.grid_settings["show_grid"]
+        draw_grid = self.settings["grid_settings"]["show_grid"]
         if not draw_grid:
             return
         for line_data in lines_data:
@@ -187,8 +187,6 @@ class CanvasPlusWidget(BaseWidget):
                 self.line_group.addToGroup(line)
             except TypeError as e:
                 self.logger.error(f"TypeError: {e}")
-                print(line_data)
-        self.emit(SignalCode.CANVAS_DO_DRAW_SIGNAL)
 
     def on_ImageDataWorker_response_signal(self, message):
         self.emit(SignalCode.CLEAR_STATUS_MESSAGE_SIGNAL)
