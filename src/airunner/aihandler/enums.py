@@ -2,9 +2,9 @@ from enum import Enum
 
 
 class WorkerState(Enum):
-    RUNNING = 1
-    PAUSED = 2
-    HALTED = 3
+    RUNNING = 100
+    PAUSED = 200
+    HALTED = 300
 
 
 class QueueType(Enum):
