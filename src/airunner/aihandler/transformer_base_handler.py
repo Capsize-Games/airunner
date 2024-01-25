@@ -473,6 +473,10 @@ class Seq2SeqTransformerBaseHandler(TransformerBaseHandler):
 
 
 class VisualQATransformerBaseHandler(TransformerBaseHandler):
+    """
+    Visual QA Transformer Base Handler.
+    Uses a processor and model to generate information about a given image.
+    """
     auto_class_ = BlipForConditionalGeneration
 
     def __init__(self, *args, **kwargs):
@@ -530,10 +534,13 @@ class VisualQATransformerBaseHandler(TransformerBaseHandler):
             temperature=self.temperature,
         )
 
-        generated_text = self.processor.batch_decode(
-            out, skip_special_tokens=True
-        )[0].strip()
-        return generated_text
+        try:
+            generated_text = self.processor.batch_decode(
+                out, skip_special_tokens=True
+            )[0].strip()
+            return generated_text
+        except AttributeError as e:
+            return ""
 
     def prepare_input_args(self):
         kwargs = super().prepare_input_args()
