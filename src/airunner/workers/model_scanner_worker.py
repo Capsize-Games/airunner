@@ -1,6 +1,6 @@
 import os
 
-from airunner.aihandler.enums import SignalCode
+from airunner.enums import SignalCode
 from airunner.models.modeldata import ModelData
 from airunner.service_locator import ServiceLocator
 from airunner.workers.worker import Worker

@@ -2,13 +2,12 @@ from PyQt6.QtCore import pyqtSlot
 from PyQt6.QtWidgets import QSpacerItem, QSizePolicy
 from PyQt6.QtCore import Qt
 
-from airunner.aihandler.enums import SignalCode
+from airunner.enums import SignalCode
 from airunner.mediator_mixin import MediatorMixin
 from airunner.widgets.base_widget import BaseWidget
 from airunner.widgets.llm.loading_widget import LoadingWidget
 from airunner.widgets.llm.templates.chat_prompt_ui import Ui_chat_prompt
 from airunner.widgets.llm.message_widget import MessageWidget
-from airunner.aihandler.logger import Logger
 
 
 class ChatPromptWidget(BaseWidget, MediatorMixin):

@@ -2,7 +2,7 @@ import traceback
 import numpy as np
 
 from PyQt6.QtCore import QObject, pyqtSignal
-from airunner.aihandler.enums import EngineRequestCode, EngineResponseCode, SignalCode
+from airunner.enums import EngineRequestCode, EngineResponseCode, SignalCode
 from airunner.mediator_mixin import MediatorMixin
 from airunner.workers.audio_capture_worker import AudioCaptureWorker
 from airunner.workers.audio_processor_worker import AudioProcessorWorker

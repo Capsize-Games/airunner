@@ -1,13 +1,12 @@
 import random
 
 from PIL import Image
-from PyQt6.QtCore import pyqtSignal, QRect, pyqtSlot
+from PyQt6.QtCore import pyqtSignal, QRect
 
-from airunner.aihandler.enums import SignalCode
+from airunner.enums import SignalCode
 from airunner.aihandler.settings import MAX_SEED
 from airunner.widgets.base_widget import BaseWidget
 from airunner.widgets.generator_form.templates.generatorform_ui import Ui_generator_form
-from airunner.aihandler.logger import Logger
 
 
 class GeneratorForm(BaseWidget):

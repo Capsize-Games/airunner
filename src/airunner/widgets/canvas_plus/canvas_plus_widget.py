@@ -11,7 +11,7 @@ from PyQt6.QtWidgets import QGraphicsPixmapItem
 from PyQt6 import QtWidgets, QtCore
 from PyQt6.QtWidgets import QGraphicsItemGroup, QGraphicsItem
 
-from airunner.aihandler.enums import SignalCode
+from airunner.enums import SignalCode
 from airunner.workers.canvas_resize_worker import CanvasResizeWorker
 from airunner.workers.image_data_worker import ImageDataWorker
 from airunner.widgets.canvas_plus.templates.canvas_plus_ui import Ui_canvas

@@ -1,6 +1,6 @@
 from PyQt6.QtWidgets import QFileDialog
 
-from airunner.aihandler.enums import SignalCode
+from airunner.enums import SignalCode
 from airunner.models.modeldata import ModelData
 from airunner.widgets.base_widget import BaseWidget
 from airunner.widgets.model_manager.templates.model_manager_ui import Ui_model_manager

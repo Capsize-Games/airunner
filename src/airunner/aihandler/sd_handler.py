@@ -23,7 +23,7 @@ from diffusers import ConsistencyDecoderVAE
 from transformers import AutoFeatureExtractor
 from airunner.aihandler.base_handler import BaseHandler
 
-from airunner.aihandler.enums import FilterType, HandlerType, SignalCode
+from airunner.enums import FilterType, HandlerType, SignalCode
 from airunner.aihandler.mixins.compel_mixin import CompelMixin
 from airunner.aihandler.mixins.embedding_mixin import EmbeddingMixin
 from airunner.aihandler.mixins.lora_mixin import LoraMixin
@@ -1230,7 +1230,6 @@ class SDHandler(
         return data
 
     def process_data(self, data: dict):
-        import traceback
         self.logger.info("Runner: process_data called")
         self.requested_data = data
         self.prepare_options(data)

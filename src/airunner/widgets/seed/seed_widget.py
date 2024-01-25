@@ -1,4 +1,4 @@
-from airunner.aihandler.enums import SignalCode
+from airunner.enums import SignalCode
 from airunner.widgets.base_widget import BaseWidget
 from airunner.widgets.seed.templates.seed_ui import Ui_seed_widget
 

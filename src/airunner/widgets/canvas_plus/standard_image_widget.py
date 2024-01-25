@@ -6,11 +6,10 @@ from PyQt6.QtGui import QImage
 
 from PIL import Image
 
-from airunner.aihandler.enums import SignalCode
+from airunner.enums import SignalCode
 from airunner.widgets.canvas_plus.templates.standard_image_widget_ui import Ui_standard_image_widget
 from airunner.utils import load_metadata_from_image, prepare_metadata
 from airunner.widgets.slider.slider_widget import SliderWidget
-from airunner.aihandler.logger import Logger
 from airunner.widgets.base_widget import BaseWidget
 from airunner.service_locator import ServiceLocator
 

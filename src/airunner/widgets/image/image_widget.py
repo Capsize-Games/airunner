@@ -1,4 +1,3 @@
-from contextlib import contextmanager
 import os
 import json
 
@@ -8,12 +7,11 @@ from PyQt6.QtCore import Qt
 from PyQt6.QtCore import pyqtSignal
 from PyQt6.QtWidgets import QMenu
 from PyQt6.QtWidgets import QMessageBox
-from PIL import Image
 
 from PIL import Image
 from PIL.ImageQt import ImageQt
 
-from airunner.aihandler.enums import SignalCode
+from airunner.enums import SignalCode
 from airunner.utils import load_metadata_from_image
 
 from airunner.utils import delete_image

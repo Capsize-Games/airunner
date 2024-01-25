@@ -1,6 +1,6 @@
 from urllib.parse import urlparse
 
-from airunner.aihandler.enums import SignalCode
+from airunner.enums import SignalCode
 from airunner.widgets.base_widget import BaseWidget
 from airunner.widgets.model_manager.templates.import_ui import Ui_import_model_widget
 from airunner.aihandler.download_civitai import DownloadCivitAI

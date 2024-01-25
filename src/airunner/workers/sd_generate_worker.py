@@ -1,7 +1,7 @@
 import os
 import torch
 
-from airunner.aihandler.enums import EngineResponseCode, SignalCode
+from airunner.enums import EngineResponseCode, SignalCode
 from airunner.workers.worker import Worker
 from airunner.aihandler.sd_handler import SDHandler
 

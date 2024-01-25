@@ -2,7 +2,7 @@ from PIL import Image
 from PyQt6.QtGui import QIcon
 from PyQt6.QtWidgets import QHBoxLayout, QWidget
 
-from airunner.aihandler.enums import SignalCode
+from airunner.enums import SignalCode
 from airunner.utils import image_to_pixmap
 from airunner.widgets.input_image.templates.input_image_ui import Ui_input_image
 from airunner.widgets.base_widget import BaseWidget

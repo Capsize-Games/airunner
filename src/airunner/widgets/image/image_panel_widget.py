@@ -1,9 +1,7 @@
 import os
 import threading
 
-from PyQt6.QtCore import QFileSystemWatcher
-
-from airunner.aihandler.enums import SignalCode
+from airunner.enums import SignalCode
 from airunner.widgets.base_widget import BaseWidget
 from airunner.widgets.image.image_widget import ImageWidget
 from airunner.widgets.image.templates.image_panel_widget_ui import Ui_image_panel_widget

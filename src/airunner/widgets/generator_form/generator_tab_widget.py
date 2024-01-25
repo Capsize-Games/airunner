@@ -1,7 +1,6 @@
-from PyQt6.QtCore import pyqtSignal
 from PyQt6.QtWidgets import QWidget, QGridLayout, QProgressBar
 
-from airunner.aihandler.enums import SignalCode
+from airunner.enums import SignalCode
 from airunner.widgets.base_widget import BaseWidget
 from airunner.widgets.generator_form.templates.generator_tab_ui import Ui_generator_tab
 

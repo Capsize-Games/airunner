@@ -2,7 +2,7 @@ import os
 
 from PyQt6.QtCore import pyqtSlot
 
-from airunner.aihandler.enums import SignalCode
+from airunner.enums import SignalCode
 
 
 class MergeMixin:

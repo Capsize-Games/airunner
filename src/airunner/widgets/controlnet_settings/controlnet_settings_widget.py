@@ -3,7 +3,7 @@ import os
 from PIL import Image
 from PyQt6.QtCore import pyqtSlot
 
-from airunner.aihandler.enums import SignalCode
+from airunner.enums import SignalCode
 from airunner.utils import image_to_pixmap, auto_export_image, open_file_path
 from airunner.widgets.controlnet_settings.templates.controlnet_settings_ui import Ui_controlnet_settings
 from airunner.widgets.input_image.input_image_settings_widget import InputImageSettingsWidget

@@ -6,7 +6,7 @@ from PyQt6.QtGui import QPixmap
 
 from PIL import Image
 
-from airunner.aihandler.enums import SignalCode
+from airunner.enums import SignalCode
 from airunner.service_locator import ServiceLocator
 
 

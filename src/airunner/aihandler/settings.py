@@ -2,7 +2,7 @@ import logging
 import os
 import platform
 
-from airunner.aihandler.enums import Scheduler
+from airunner.enums import Scheduler
 
 PLATFORM = platform.system()
 try:

@@ -1,7 +1,7 @@
 import traceback
 from airunner.aihandler.logger import Logger as logger
 from airunner.aihandler.settings import AVAILABLE_SCHEDULERS_BY_ACTION
-from airunner.aihandler.enums import Scheduler, SignalCode
+from airunner.enums import Scheduler, SignalCode
 
 
 class SchedulerMixin:

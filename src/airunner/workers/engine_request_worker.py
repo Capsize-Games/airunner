@@ -1,4 +1,4 @@
-from airunner.aihandler.enums import EngineRequestCode, SignalCode
+from airunner.enums import EngineRequestCode, SignalCode
 from airunner.workers.worker import Worker
 
 

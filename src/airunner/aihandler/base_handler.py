@@ -2,7 +2,7 @@ import torch
 
 from PyQt6.QtCore import QObject
 
-from airunner.aihandler.enums import HandlerType
+from airunner.enums import HandlerType
 from airunner.mediator_mixin import MediatorMixin
 from airunner.windows.main.settings_mixin import SettingsMixin
 from airunner.aihandler.logger import Logger
