@@ -1,6 +1,6 @@
 import os
 
-from airunner.aihandler.enums import SignalCode
+from airunner.enums import SignalCode
 from airunner.aihandler.logger import Logger as logger
 
 

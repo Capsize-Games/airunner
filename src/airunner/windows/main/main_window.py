@@ -12,9 +12,8 @@ from PyQt6.QtGui import QGuiApplication
 from PyQt6.QtWidgets import QApplication, QFileDialog, QMainWindow
 from PyQt6 import QtGui
 
-from airunner.resources_light_rc import *
 from airunner.resources_dark_rc import *
-from airunner.aihandler.enums import Mode, SignalCode
+from airunner.enums import Mode, SignalCode
 from airunner.aihandler.logger import Logger
 from airunner.aihandler.settings import LOG_LEVEL
 from airunner.filters.windows.filter_base import FilterBase

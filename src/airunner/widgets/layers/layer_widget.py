@@ -3,7 +3,7 @@ from functools import partial
 from PyQt6 import QtGui
 from PyQt6.QtCore import Qt, QPoint
 
-from airunner.aihandler.enums import SignalCode
+from airunner.enums import SignalCode
 from airunner.widgets.base_widget import BaseWidget
 from airunner.widgets.layers.templates.layer_ui import Ui_LayerWidget
 
