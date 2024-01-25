@@ -138,6 +138,7 @@ class SignalCode(Enum):
     RESET_PATHS_SIGNAL = "reset_paths_signal"
     NSFW_CONTENT_DETECTED_SIGNAL = "nsfw_content_detected_signal"
 
+
 class EngineResponseCode(Enum):
     STATUS = 100
     ERROR = 200

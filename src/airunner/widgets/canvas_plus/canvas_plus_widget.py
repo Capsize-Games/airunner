@@ -513,7 +513,7 @@ class CanvasPlusWidget(BaseWidget):
     
     def draw_grid(self):
         self.scene.addItem(self.line_group)
-    
+
     def handle_image_data(self, data):
         options = data["data"]["options"]
         images = data["images"]

@@ -2,6 +2,7 @@ import sounddevice as sd
 
 from PyQt6.QtCore import pyqtSlot, QThread
 
+from airunner.enums import ServiceCode
 from airunner.workers.worker import Worker
 
 
@@ -20,7 +21,7 @@ class AudioCaptureWorker(Worker):
         self.listening = False
     
     def update_properties(self):
-        settings = self.application_settings.value("settings")
+        settings = self.settings
         self.duration = settings["stt_settings"]["duration"]
         self.fs = settings["stt_settings"]["fs"]
         self.channels = settings["stt_settings"]["channels"]

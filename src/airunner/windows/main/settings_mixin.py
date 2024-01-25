@@ -35,8 +35,6 @@ tts_settings_default = dict(
 class SettingsMixin:
     def __init__(self):
         self.application_settings = QSettings("Capsize Games", "AI Runner")
-        ServiceLocator.register(ServiceCode.GET_SETTINGS, self.get_settings)
-        ServiceLocator.register(ServiceCode.SET_SETTINGS, self.set_settings)
         self.register(SignalCode.RESET_SETTINGS_SIGNAL, self.on_reset_settings_signal)
         self.default_settings = dict(
             use_cuda=True,
@@ -379,26 +377,20 @@ Previous Conversation:
         )
 
     def update_settings(self):
+        self.logger.info("Updating settings")
         default_settings = self.default_settings
         current_settings = self.settings
-        for k,v in default_settings.items():
+        for k, v in default_settings.items():
             if k not in current_settings:
                 current_settings[k] = v
+        self.logger.info("Settings updated")
         self.settings = current_settings
-
-    def get_settings(self):
-        return self.application_settings.value("settings", self.default_settings, type=dict)
-
-    def set_settings(self, val):
-        self.application_settings.setValue("settings", val)
-        self.application_settings.sync()
-        self.emit(SignalCode.APPLICATION_SETTINGS_CHANGED_SIGNAL)
 
     def on_reset_settings_signal(self):
         self.logger.info("Resetting settings")
         self.application_settings.clear()
         self.application_settings.sync()
-        self.set_settings(self.settings)
+        self.settings = self.settings
 
     @property
     def ai_models(self):
@@ -408,7 +400,7 @@ Previous Conversation:
     def ai_models(self, val):
         settings = self.settings
         settings["ai_models"] = val
-        self.set_settings(settings)
+        self.settings = settings
 
     @property
     def generator_settings(self):
@@ -418,7 +410,7 @@ Previous Conversation:
     def generator_settings(self, val):
         settings = self.settings
         settings["generator_settings"] = val
-        self.set_settings(settings)
+        self.settings = settings
 
     @property
     def stt_settings(self):
@@ -428,7 +420,7 @@ Previous Conversation:
     def stt_settings(self, val):
         settings = self.settings
         settings["stt_settings"] = val
-        self.set_settings(settings)
+        self.settings = settings
 
     @property
     def controlnet_settings(self):
@@ -438,7 +430,7 @@ Previous Conversation:
     def controlnet_settings(self, val):
         settings = self.settings
         settings["controlnet_settings"] = val
-        self.set_settings(settings)
+        self.settings = settings
 
     @property
     def metadata_settings(self):
@@ -448,7 +440,7 @@ Previous Conversation:
     def metadata_settings(self, val):
         settings = self.settings
         settings["metadata_settings"] = val
-        self.set_settings(settings)
+        self.settings = settings
 
     @property
     def canvas_settings(self):
@@ -458,7 +450,7 @@ Previous Conversation:
     def canvas_settings(self, val):
         settings = self.settings
         settings["canvas_settings"] = val
-        self.set_settings(settings)
+        self.settings = settings
 
     @property
     def active_grid_settings(self):
@@ -468,7 +460,7 @@ Previous Conversation:
     def active_grid_settings(self, val):
         settings = self.settings
         settings["active_grid_settings"] = val
-        self.set_settings(settings)
+        self.settings = settings
 
     @property
     def standard_image_settings(self):
@@ -478,7 +470,7 @@ Previous Conversation:
     def standard_image_settings(self, val):
         settings = self.settings
         settings["standard_image_settings"] = val
-        self.set_settings(settings)
+        self.settings = settings
 
     @property
     def path_settings(self):
@@ -488,7 +480,7 @@ Previous Conversation:
     def path_settings(self, val):
         settings = self.settings
         settings["path_settings"] = val
-        self.set_settings(settings)
+        self.settings = settings
     
     @property
     def brush_settings(self):
@@ -498,7 +490,7 @@ Previous Conversation:
     def brush_settings(self, val):
         settings = self.settings
         settings["brush_settings"] = val
-        self.set_settings(settings)
+        self.settings = settings
 
     @property
     def grid_settings(self):
@@ -508,7 +500,7 @@ Previous Conversation:
     def grid_settings(self, val):
         settings = self.settings
         settings["grid_settings"] = val
-        self.set_settings(settings)
+        self.settings = settings
 
     @property
     def window_settings(self):
@@ -518,7 +510,7 @@ Previous Conversation:
     def window_settings(self, val):
         settings = self.settings
         settings["window_settings"] = val
-        self.set_settings(settings)
+        self.settings = settings
 
     @property
     def shortcut_key_settings(self):
@@ -528,7 +520,7 @@ Previous Conversation:
     def shortcut_key_settings(self, val):
         settings = self.settings
         settings["shortcut_key_settings"] = val
-        self.set_settings(settings)
+        self.settings = settings
 
     @property
     def memory_settings(self):
@@ -538,7 +530,7 @@ Previous Conversation:
     def memory_settings(self, val):
         settings = self.settings
         settings["memory_settings"] = val
-        self.set_settings(settings)
+        self.settings = settings
     
     @property
     def llm_generator_settings(self):
@@ -548,7 +540,7 @@ Previous Conversation:
     def llm_generator_settings(self, val):
         settings = self.settings
         settings["llm_generator_settings"] = val
-        self.set_settings(settings)
+        self.settings = settings
 
     @property
     def tts_settings(self):
@@ -563,7 +555,7 @@ Previous Conversation:
     def tts_settings(self, val):
         settings = self.settings
         settings["tts_settings"] = val
-        self.set_settings(settings)
+        self.settings = settings
 
     @property
     def llm_templates(self):
@@ -573,15 +565,43 @@ Previous Conversation:
     def llm_templates(self, val):
         settings = self.settings
         settings["llm_templates"] = val
-        self.set_settings(settings)
+        self.settings = settings
 
     @property
     def settings(self):
-        return self.get_settings()
+        try:
+            return self.get_settings()
+        except Exception as e:
+            self.logger.error("Failed to get settings")
+            self.logger.error(e)
+            return {}
     
     @settings.setter
     def settings(self, val):
-        self.set_settings(val)
+        try:
+            self.set_settings(val)
+        except Exception as e:
+            self.logger.error("Failed to set settings")
+            self.logger.error(e)
+
+    def get_settings(self):
+        try:
+            return self.application_settings.value(
+                "settings",
+                self.default_settings,
+                type=dict
+            )
+        except TypeError as e:
+            print("Settings crashed, resetting to default")
+            # self.application_settings.setValue("settings", current_settings)
+            # self.application_settings.sync()
+            return self.default_settings
+
+    def set_settings(self, val):
+        self.logger.info("Setting settings")
+        self.application_settings.setValue("settings", val)
+        self.application_settings.sync()
+        self.emit(SignalCode.APPLICATION_SETTINGS_CHANGED_SIGNAL)
 
     def reset_paths(self):
         path_settings = self.path_settings
