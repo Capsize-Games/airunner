@@ -1,12 +1,12 @@
 import datetime
-import os
-import threading
-import torch
 import gc
+import threading
+
+import torch
 from PIL import Image
+from PIL import PngImagePlugin
 from PyQt6.QtGui import QPixmap, QImage
 from PyQt6.QtWidgets import QFileDialog, QApplication, QMainWindow
-from PIL import PngImagePlugin
 
 SESSION = None
 
@@ -417,7 +417,6 @@ def delete_image(path):
 import os
 import sys
 import subprocess
-import tempfile
 import urllib.request
 
 def install_library_from_url(url, install_dir):

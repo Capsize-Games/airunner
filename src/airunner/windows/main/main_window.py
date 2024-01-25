@@ -6,39 +6,39 @@ import sys
 import webbrowser
 from functools import partial
 
+from PyQt6 import QtGui
 from PyQt6 import uic, QtCore
-from PyQt6.QtCore import pyqtSlot, Qt, pyqtSignal, QTimer
+from PyQt6.QtCore import pyqtSlot, Qt, pyqtSignal
 from PyQt6.QtGui import QGuiApplication
 from PyQt6.QtWidgets import QApplication, QFileDialog, QMainWindow
-from PyQt6 import QtGui
 
-from airunner.resources_dark_rc import *
-from airunner.enums import Mode, SignalCode, ServiceCode
 from airunner.aihandler.logger import Logger
 from airunner.aihandler.settings import LOG_LEVEL
+from airunner.enums import Mode, SignalCode, ServiceCode
 from airunner.filters.windows.filter_base import FilterBase
+from airunner.mediator_mixin import MediatorMixin
+from airunner.resources_dark_rc import *
+from airunner.service_locator import ServiceLocator
 from airunner.settings import BASE_PATH
 from airunner.utils import get_version, auto_export_image, default_hf_cache_dir
+from airunner.widgets.brushes.brushes_container import BrushesContainer
 from airunner.widgets.status.status_widget import StatusWidget
 from airunner.windows.about.about import AboutWindow
+from airunner.windows.main.ai_model_mixin import AIModelMixin
+from airunner.windows.main.controlnet_model_mixin import ControlnetModelMixin
+from airunner.windows.main.embedding_mixin import EmbeddingMixin
+from airunner.windows.main.image_filter_mixin import ImageFilterMixin
+from airunner.windows.main.layer_mixin import LayerMixin
+from airunner.windows.main.lora_mixin import LoraMixin
+from airunner.windows.main.pipeline_mixin import PipelineMixin
+from airunner.windows.main.settings_mixin import SettingsMixin
 from airunner.windows.main.templates.main_window_ui import Ui_MainWindow
 from airunner.windows.model_merger import ModelMerger
 from airunner.windows.prompt_browser.prompt_browser import PromptBrowser
 from airunner.windows.settings.airunner_settings import SettingsWindow
 from airunner.windows.update.update_window import UpdateWindow
 from airunner.windows.video import VideoPopup
-from airunner.widgets.brushes.brushes_container import BrushesContainer
-from airunner.windows.main.settings_mixin import SettingsMixin
-from airunner.windows.main.layer_mixin import LayerMixin
-from airunner.windows.main.lora_mixin import LoraMixin
-from airunner.windows.main.embedding_mixin import EmbeddingMixin
-from airunner.windows.main.pipeline_mixin import PipelineMixin
-from airunner.windows.main.controlnet_model_mixin import ControlnetModelMixin
-from airunner.windows.main.ai_model_mixin import AIModelMixin
-from airunner.windows.main.image_filter_mixin import ImageFilterMixin
 from airunner.worker_manager import WorkerManager
-from airunner.mediator_mixin import MediatorMixin
-from airunner.service_locator import ServiceLocator
 
 
 class MainWindow(

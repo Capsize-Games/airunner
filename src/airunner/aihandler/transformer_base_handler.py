@@ -1,10 +1,8 @@
 import random
 import traceback
 
-import numpy as np
 import torch
-from transformers import BitsAndBytesConfig, GPTQConfig, AutoModelForCausalLM, TextIteratorStreamer, \
-    AutoModelForSeq2SeqLM, BlipForConditionalGeneration, BlipProcessor, AutoTokenizer
+from transformers import BitsAndBytesConfig, GPTQConfig, TextIteratorStreamer
 
 from airunner.aihandler.base_handler import BaseHandler
 
