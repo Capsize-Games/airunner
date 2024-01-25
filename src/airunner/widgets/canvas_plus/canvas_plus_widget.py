@@ -258,14 +258,15 @@ class CanvasPlusWidget(BaseWidget):
     def handle_resize_canvas(self):
         self.do_resize_canvas()
     
-    def do_resize_canvas(self):
+    def do_resize_canvas(self, force_draw=False):
         if not self.view:
             return
         data = dict(
             settings=self.settings,
             view_size=self.view.viewport().size(),
             scene=self.scene,
-            line_group=self.line_group
+            line_group=self.line_group,
+            force_draw=force_draw
         )
         self.emit(SignalCode.CANVAS_RESIZE_SIGNAL, data)
 
