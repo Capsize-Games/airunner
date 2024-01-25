@@ -32,7 +32,6 @@ tts_settings_default = dict(
 
 class SettingsMixin:
     def __init__(self):
-        super().__init__()
         self.application_settings = QSettings("Capsize Games", "AI Runner")
         self.register(SignalCode.RESET_SETTINGS_SIGNAL, self.on_reset_settings_signal)
         self.default_settings = dict(
@@ -572,34 +571,44 @@ Previous Conversation:
     @property
     def settings(self):
         try:
-            return self.get_settings()
+            settings = self.get_settings()
+            if settings == {} or settings == "" or settings is None:
+                print("SETTINGS IS BLANK")
+                import traceback
+                traceback.print_stack()
+            return settings
         except Exception as e:
-            self.logger.error("Failed to get settings")
-            self.logger.error(e)
-            return {}
+            print("Failed to get settings")
+            print(e)
+        return {}
     
     @settings.setter
     def settings(self, val):
         try:
             self.set_settings(val)
         except Exception as e:
-            self.logger.error("Failed to set settings")
-            self.logger.error(e)
+            print("Failed to set settings")
+            print(e)
 
     def get_settings(self):
         try:
-            return self.application_settings.value(
+            settings = self.application_settings.value(
                 "settings",
                 self.default_settings,
                 type=dict
             )
+            if settings != {} and settings != "" and settings != None:
+                return settings
         except TypeError as e:
             print("Settings crashed, resetting to default")
-            # self.application_settings.setValue("settings", current_settings)
-            # self.application_settings.sync()
-            return self.default_settings
+
+        self.application_settings.setValue("settings", self.default_settings)
+        self.application_settings.sync()
+        return self.default_settings
 
     def set_settings(self, val):
+        if val == {} or val == "" or val is None:
+            return
         self.application_settings.setValue("settings", val)
         self.application_settings.sync()
         self.emit(SignalCode.APPLICATION_SETTINGS_CHANGED_SIGNAL)
