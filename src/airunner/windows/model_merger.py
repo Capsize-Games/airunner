@@ -48,15 +48,15 @@ class ModelMerger(BaseWindow):
     def output_path(self):
         output_path = None
         if self.section == "outpaint":
-            output_path = self.path_settings["inpaint_model_path"]
+            output_path = self.settings["path_settings"]["inpaint_model_path"]
         elif self.section == "depth2img":
-            output_path = self.path_settings["depth2img_model_path"]
+            output_path = self.settings["path_settings"]["depth2img_model_path"]
         elif self.section == "pix2pix":
-            output_path = self.path_settings["pix2pix_model_path"]
+            output_path = self.settings["path_settings"]["pix2pix_model_path"]
         elif self.section == "upscale":
-            output_path = self.path_settings["upscale_model_path"]
+            output_path = self.settings["path_settings"]["upscale_model_path"]
         if not output_path or output_path == "":
-            output_path = self.path_settings["base_path"]
+            output_path = self.settings["path_settings"]["base_path"]
         return output_path
 
     def change_model_type(self, index):
@@ -148,7 +148,7 @@ class ModelMerger(BaseWindow):
     def do_model_merge(self):
         models = []
         weights = []
-        path = self.path_settings["base_path"]
+        path = self.settings["path_settings"]["base_path"]
 
         for widget in self.widgets:
             if widget.models.currentText() != "":
