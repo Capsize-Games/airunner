@@ -352,8 +352,6 @@ class CanvasPlusWidget(BaseWidget):
 
     def on_application_settings_changed_signal(self):
         do_draw = False
-
-        self.do_resize_canvas()
         
         grid_settings = self.settings["grid_settings"]
         for k,v in grid_settings.items():
@@ -378,13 +376,7 @@ class CanvasPlusWidget(BaseWidget):
                 do_draw = True
         
         if do_draw:
-            self.do_draw()
-
-        settings = self.settings
-        settings["grid_settings"] = grid_settings
-        self.active_grid_settings = active_grid_settings
-        self.canvas_settings = canvas_settings
-        self.settings = settings
+            self.do_resize_canvas(force_draw=True)
     
     def on_main_window_loaded_signal(self):
         self.initialized = True
