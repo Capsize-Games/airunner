@@ -15,6 +15,7 @@ class AudioCaptureWorker(Worker):
 
     def __init__(self, prefix):
         super().__init__(prefix)
+        self.recording = None
         self.running = False
         self.listening = False
     

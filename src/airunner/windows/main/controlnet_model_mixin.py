@@ -1,4 +1,7 @@
 class ControlnetModelMixin:
+    def __init__(self):
+        self.data = None
+
     def controlnet_model_get_all(self):
         return self.settings["controlnet"]
 

@@ -5,6 +5,10 @@ from airunner.data.bootstrap.model_bootstrap_data import model_bootstrap_data
 
 class AIModelMixin:
     def __init__(self):
+        self.settings = None
+        self.settings = None
+        self.settings = None
+        self.settings = None
         services = [
             "ai_model_paths", 
             "ai_models_find", 
