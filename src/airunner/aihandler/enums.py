@@ -35,6 +35,7 @@ class SignalCode(Enum):
     VISION_CAPTURE_PROCESS_SIGNAL = "vision_capture_process_signal"
     VISION_CAPTURED_SIGNAL = "vision_captured_signal"
     VISION_PROCESSED_SIGNAL = "vision_processed_signal"
+    EMBEDDING_LOAD_FAILED_SIGNAL = "embedding_load_failed_signal"
 
 
 class EngineResponseCode(Enum):
