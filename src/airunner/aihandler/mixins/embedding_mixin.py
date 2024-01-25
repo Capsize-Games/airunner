@@ -5,6 +5,9 @@ from airunner.aihandler.logger import Logger as logger
 
 
 class EmbeddingMixin:
+    def __init__(self):
+        self.embeds_loaded = None
+
     def load_learned_embed_in_clip(self):
         learned_embeds_path = self.embeddings_path
         if not os.path.exists(learned_embeds_path):
