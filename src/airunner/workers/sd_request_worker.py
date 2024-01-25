@@ -1,6 +1,6 @@
 import torch
 
-from airunner.aihandler.enums import SignalCode
+from airunner.enums import SignalCode
 from airunner.workers.worker import Worker
 
 torch.backends.cuda.matmul.allow_tf32 = True

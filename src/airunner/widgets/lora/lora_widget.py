@@ -1,4 +1,4 @@
-from airunner.aihandler.enums import SignalCode
+from airunner.enums import SignalCode
 from airunner.widgets.base_widget import BaseWidget
 from airunner.widgets.lora.lora_trigger_word_widget import LoraTriggerWordWidget
 from airunner.widgets.lora.templates.lora_ui import Ui_lora

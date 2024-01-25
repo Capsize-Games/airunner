@@ -2,8 +2,7 @@ from PIL import Image
 from PyQt6.QtCore import QRect, QPoint, Qt
 from PyQt6.QtWidgets import QSpacerItem, QSizePolicy
 
-from airunner.aihandler.enums import SignalCode
-from airunner.aihandler.logger import Logger
+from airunner.enums import SignalCode
 from airunner.widgets.base_widget import BaseWidget
 from airunner.widgets.layers.layer_widget import LayerWidget
 from airunner.widgets.layers.templates.layer_container_ui import Ui_layer_container

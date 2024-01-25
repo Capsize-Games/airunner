@@ -1,7 +1,7 @@
 from PyQt6.QtCore import Qt
 from PyQt6.QtGui import QBrush, QColor, QPen
 
-from airunner.aihandler.enums import QueueType, SignalCode
+from airunner.enums import QueueType, SignalCode
 from airunner.workers.worker import Worker
 
 

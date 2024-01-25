@@ -2,7 +2,7 @@ import cv2
 from PIL import Image
 from PyQt6.QtCore import QThread
 
-from airunner.aihandler.enums import SignalCode, QueueType, WorkerState
+from airunner.enums import SignalCode, QueueType, WorkerState
 from airunner.workers.worker import Worker
 
 

@@ -7,7 +7,7 @@ from airunner.aihandler.base_handler import BaseHandler
 
 from PyQt6.QtCore import pyqtSignal
 
-from airunner.aihandler.enums import SignalCode
+from airunner.enums import SignalCode
 
 
 class STTHandler(BaseHandler):

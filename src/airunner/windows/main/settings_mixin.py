@@ -4,7 +4,7 @@ from airunner.aihandler.settings import DEFAULT_BRUSH_PRIMARY_COLOR, DEFAULT_BRU
 from airunner.settings import DEFAULT_PATHS
 from airunner.utils import default_hf_cache_dir
 from airunner.settings import BASE_PATH
-from airunner.aihandler.enums import Mode, SignalCode
+from airunner.enums import Mode, SignalCode
 from airunner.service_locator import ServiceLocator
 from airunner.data.bootstrap.pipeline_bootstrap_data import pipeline_bootstrap_data
 from airunner.data.bootstrap.controlnet_bootstrap_data import controlnet_bootstrap_data

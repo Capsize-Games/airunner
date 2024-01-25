@@ -3,7 +3,7 @@ from PyQt6 import uic
 from PyQt6.QtCore import QThread, pyqtSignal, QObject
 from PyQt6.QtWidgets import QVBoxLayout
 
-from airunner.aihandler.enums import SignalCode
+from airunner.enums import SignalCode
 from airunner.widgets.model_merger.templates.model_merger_ui import Ui_model_merger
 from airunner.windows.base_window import BaseWindow
 

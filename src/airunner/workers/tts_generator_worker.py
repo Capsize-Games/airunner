@@ -1,6 +1,6 @@
 import time
 
-from airunner.aihandler.enums import SignalCode
+from airunner.enums import SignalCode
 from airunner.workers.worker import Worker
 from airunner.aihandler.tts_handler import TTSHandler
 

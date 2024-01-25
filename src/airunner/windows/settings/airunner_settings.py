@@ -2,7 +2,7 @@ from PyQt6.QtCore import Qt, QSize
 from PyQt6.QtGui import QStandardItemModel, QStandardItem, QBrush, QColor, QPainter
 from PyQt6.QtWidgets import QStyledItemDelegate, QStyleOptionViewItem, QLabel, QWidget, QVBoxLayout, QPlainTextEdit
 
-from airunner.aihandler.enums import SignalCode
+from airunner.enums import SignalCode
 from airunner.widgets.api_token.api_token_widget import APITokenWidget
 from airunner.widgets.export_preferences.export_preferences_widget import ExportPreferencesWidget
 from airunner.widgets.grid_preferences.grid_preferences_widget import GridPreferencesWidget

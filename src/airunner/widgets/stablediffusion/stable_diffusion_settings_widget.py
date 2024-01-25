@@ -1,4 +1,4 @@
-from airunner.aihandler.enums import SignalCode
+from airunner.enums import SignalCode
 from airunner.widgets.base_widget import BaseWidget
 from airunner.widgets.stablediffusion.templates.stable_diffusion_settings_ui import Ui_stable_diffusion_settings_widget
 
