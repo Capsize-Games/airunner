@@ -1,3 +1,4 @@
+from airunner.aihandler.enums import SignalCode
 from airunner.aihandler.stt_handler import STTHandler
 from airunner.workers.worker import Worker
 
@@ -12,13 +13,13 @@ class AudioProcessorWorker(Worker):
     def __init__(self, prefix):
         super().__init__(prefix=prefix)
         self.stt = STTHandler()
-        self.register("stt_audio_processed", self)
+        self.register(SignalCode.STT_AUDIO_PROCESSED, self.on_stt_audio_processed)
     
     def on_stt_audio_processed(self, transcription):
-        self.emit("response_signal", transcription)
+        self.emit(SignalCode.AUDIO_PROCESSOR_RESPONSE_SIGNAL, transcription)
 
     def handle_message(self, audio_data):
-        self.emit("processed_audio", audio_data)
+        self.emit(SignalCode.AUDIO_PROCESSOR_PROCESSED_AUDIO, audio_data)
     
     def update_properties(self):
         settings = self.application_settings.value("settings")

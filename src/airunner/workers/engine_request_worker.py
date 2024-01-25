@@ -1,11 +1,11 @@
-from airunner.aihandler.enums import EngineRequestCode
+from airunner.aihandler.enums import EngineRequestCode, SignalCode
 from airunner.workers.worker import Worker
 
 
 class EngineRequestWorker(Worker):
     def __init__(self, prefix="EngineRequestWorker"):
         super().__init__(prefix=prefix)
-        self.register("engine_do_request_signal", self)
+        self.register(SignalCode.ENGINE_DO_REQUEST_SIGNAL, self.on_engine_do_request_signal)
     
     def on_engine_do_request_signal(self, request):
         self.logger.info("Adding to queue")
@@ -13,6 +13,6 @@ class EngineRequestWorker(Worker):
     
     def handle_message(self, request):
         if request["code"] == EngineRequestCode.GENERATE_IMAGE:
-            self.emit("sd_request_signal", request)
+            self.emit(SignalCode.SD_REQUEST_SIGNAL, request)
         else:
             self.logger.error(f"Unknown code: {request['code']}")

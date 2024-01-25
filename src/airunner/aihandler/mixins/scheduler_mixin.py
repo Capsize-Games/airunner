@@ -1,7 +1,7 @@
 import traceback
 from airunner.aihandler.logger import Logger as logger
 from airunner.aihandler.settings import AVAILABLE_SCHEDULERS_BY_ACTION
-from airunner.aihandler.enums import Scheduler
+from airunner.aihandler.enums import Scheduler, SignalCode
 
 
 class SchedulerMixin:
@@ -119,7 +119,7 @@ class SchedulerMixin:
     def prepare_scheduler(self):
         scheduler_name = self.options.get(f"scheduler", "euler_a")
         if self.scheduler_name != scheduler_name:
-            self.emit("status_signal", f"Preparing scheduler {scheduler_name}")
+            self.emit(SignalCode.STATUS_SIGNAL, f"Preparing scheduler {scheduler_name}")
             self.scheduler_name = scheduler_name
             self.do_change_scheduler = True
         else:

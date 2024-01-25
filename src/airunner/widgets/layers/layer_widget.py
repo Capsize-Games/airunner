@@ -3,6 +3,7 @@ from functools import partial
 from PyQt6 import QtGui
 from PyQt6.QtCore import Qt, QPoint
 
+from airunner.aihandler.enums import SignalCode
 from airunner.widgets.base_widget import BaseWidget
 from airunner.widgets.layers.templates.layer_ui import Ui_LayerWidget
 
@@ -58,7 +59,7 @@ class LayerWidget(BaseWidget):
     def action_clicked_button_toggle_layer_visibility(self, val):
         self.set_visible_button_icon(val)
         self.layer_data["visible"] = val
-        self.emit("canvas_do_draw_signal")
+        self.emit(SignalCode.CANVAS_DO_DRAW_SIGNAL)
 
     def set_thumbnail(self):
         # with self.layer_data as layer_data:

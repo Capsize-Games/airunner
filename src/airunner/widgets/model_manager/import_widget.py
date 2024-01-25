@@ -1,5 +1,6 @@
 from urllib.parse import urlparse
 
+from airunner.aihandler.enums import SignalCode
 from airunner.widgets.base_widget import BaseWidget
 from airunner.widgets.model_manager.templates.import_ui import Ui_import_model_widget
 from airunner.aihandler.download_civitai import DownloadCivitAI
@@ -65,7 +66,7 @@ class ImportWidget(BaseWidget):
             trained_words = [trained_words]
         trained_words = ",".join(trained_words)
         if model_type == "Checkpoint":
-            self.emit("model_save_or_update_signal", dict(
+            self.emit(SignalCode.AI_MODELS_SAVE_OR_UPDATE_SIGNAL, dict(
                 name=name,
                 path=file_path,
                 branch="main",
@@ -127,7 +128,7 @@ class ImportWidget(BaseWidget):
         self.ui.download_progress_bar.setValue(current_size)
         if current_size >= total_size:
             self.reset_form()
-            self.emit("ai_model_create_signal", self.current_model_data)
+            self.emit(SignalCode.AI_MODELS_CREATE_SIGNAL, self.current_model_data)
             self.show_items_in_scrollarea()
     
     def import_models(self):

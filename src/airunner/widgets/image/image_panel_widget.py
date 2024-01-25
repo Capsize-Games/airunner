@@ -3,6 +3,7 @@ import threading
 
 from PyQt6.QtCore import QFileSystemWatcher
 
+from airunner.aihandler.enums import SignalCode
 from airunner.widgets.base_widget import BaseWidget
 from airunner.widgets.image.image_widget import ImageWidget
 from airunner.widgets.image.templates.image_panel_widget_ui import Ui_image_panel_widget
@@ -37,7 +38,7 @@ class ImagePanelWidget(BaseWidget):
         self.ui.scrollAreaWidgetContents.setLayout(flowLayout)
         self.display_thread = threading.Thread(target=self.display_thumbnails)
 
-        self.register("image_generated_signal", self)
+        self.register(SignalCode.IMAGE_GENERATED_SIGNAL, self.on_image_generated_signal)
     
     def on_image_generated_signal(self, data):
         for image in data["images"]:

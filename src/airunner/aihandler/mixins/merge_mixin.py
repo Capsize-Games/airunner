@@ -2,11 +2,13 @@ import os
 
 from PyQt6.QtCore import pyqtSlot
 
+from airunner.aihandler.enums import SignalCode
+
 
 class MergeMixin:
     def __init__(self, *args, **kwargs):
         super().__init__(*args, **kwargs)
-        self.register("sd_merge_models_signal", self)
+        self.register(SignalCode.SD_MERGE_MODELS_SIGNAL, self.on_sd_merge_models_signal)
     
     def on_sd_merge_models_signal(self, options):
         print("TODO: on_sd_merge_models_signal")

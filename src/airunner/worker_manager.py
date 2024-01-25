@@ -56,7 +56,7 @@ class WorkerManager(QObject, MediatorMixin, SettingsMixin):
 
     def on_engine_cancel_signal(self, _ignore):
         self.logger.info("Canceling")
-        self.emit("sd_cancel_signal")
+        self.emit(SignalCode.SD_CANCEL_SIGNAL)
         self.engine_request_worker.cancel()
 
     def on_engine_stop_processing_queue_signal(self):
@@ -88,25 +88,25 @@ class WorkerManager(QObject, MediatorMixin, SettingsMixin):
         self.logger = Logger(prefix=self.__class__.__name__)
         self.is_capturing_image = False
         self.clear_memory()
-        self.register("hear_signal", self)
-        self.register("engine_cancel_signal", self)
-        self.register("engine_stop_processing_queue_signal", self)
-        self.register("engine_start_processing_queue_signal", self)
-        self.register("clear_llm_history_signal", self)
-        self.register("clear_memory_signal", self)
-        self.register("error_signal", self)
-        self.register("warning_signal", self)
-        self.register("status_signal", self)
-        self.register("caption_generated_signal", self)
-        self.register("EngineResponseWorker_response_signal", self)
-        self.register("text_generate_request_signal", self)
-        self.register("image_generate_request_signal", self)
-        self.register("llm_response_signal", self)
-        self.register("llm_text_streamed_signal", self)
-        self.register("AudioCaptureWorker_response_signal", self)
-        self.register("AudioProcessorWorker_processed_audio", self)
-        self.register(SignalCode.VISION_CAPTURED_SIGNAL, self, self.on_vision_captured)
-        self.register(SignalCode.VISION_PROCESSED_SIGNAL, self, self.on_vision_processed)
+        self.register(SignalCode.HEAR_SIGNAL, self.on_hear_signal)
+        self.register(SignalCode.ENGINE_CANCEL_SIGNAL, self.on_engine_cancel_signal)
+        self.register(SignalCode.ENGINE_STOP_PROCESSING_QUEUE_SIGNAL, self.on_engine_stop_processing_queue_signal)
+        self.register(SignalCode.ENGINE_START_PROCESSING_QUEUE_SIGNAL, self)
+        self.register(SignalCode.CLEAR_LLM_HISTORY_SIGNAL, self.on_clear_llm_history_signal)
+        self.register(SignalCode.CLEAR_MEMORY_SIGNAL, self.on_clear_memory_signal)
+        self.register(SignalCode.ERROR_SIGNAL, self.on_error_signal)
+        self.register(SignalCode.WARNING_SIGNAL, self.on_warning_signal)
+        self.register(SignalCode.STATUS_SIGNAL, self.on_status_signal)
+        self.register(SignalCode.CAPTION_GENERATED_SIGNAL, self.on_caption_generated_signal)
+        self.register(SignalCode.ENGINE_RESPONSE_WORKER_RESPONSE_SIGNAL, self.on_EngineResponseWorker_response_signal)
+        self.register(SignalCode.TEXT_GENERATE_REQUEST_SIGNAL, self.on_text_generate_request_signal)
+        self.register(SignalCode.IMAGE_GENERATE_REQUEST_SIGNAL, self.on_image_generate_request_signal)
+        self.register(SignalCode.LLM_RESPONSE_SIGNAL, self.on_llm_response_signal)
+        self.register(SignalCode.LLM_TEXT_STREAMED_SIGNAL, self.on_llm_text_streamed_signal)
+        self.register(SignalCode.AUDIO_CAPTURE_WORKER_RESPONSE_SIGNAL, self.on_AudioCaptureWorker_response_signal)
+        self.register(SignalCode.AUDIO_PROCESSOR_WORKER_PROCESSED_SIGNAL, self.on_AudioProcessorWorker_processed_audio)
+        self.register(SignalCode.VISION_CAPTURED_SIGNAL, self.on_vision_captured)
+        self.register(SignalCode.VISION_PROCESSED_SIGNAL, self.on_vision_processed)
 
         self.sd_request_worker = self.create_worker(SDRequestWorker)
         self.sd_generate_worker = self.create_worker(SDGenerateWorker)
@@ -126,8 +126,8 @@ class WorkerManager(QObject, MediatorMixin, SettingsMixin):
         self.vision_capture_worker = self.create_worker(VisionCaptureWorker)
         self.vision_processor_worker = self.create_worker(VisionProcessorWorker)
 
-        self.register("tts_request", self)
-        self.register("application_settings_changed_signal", self)
+        self.register(SignalCode.TTS_REQUEST, self.on_tts_request)
+        self.register(SignalCode.APPLICATION_SETTINGS_CHANGED_SIGNAL, self.on_application_settings_changed_signal)
 
         self.toggle_vision_capture()
 
@@ -157,10 +157,10 @@ class WorkerManager(QObject, MediatorMixin, SettingsMixin):
 
     def on_AudioProcessorWorker_processed_audio(self, message: np.ndarray):
         self.logger.info("Processed audio")
-        self.emit("processed_audio", message)
+        self.emit(SignalCode.AUDIO_PROCESSOR_PROCESSED_AUDIO, message)
     
     def on_LLMGenerateWorker_response_signal(self, message:dict):
-        self.emit("llm_response_signal", message)
+        self.emit(SignalCode.LLM_RESPONSE_SIGNAL, message)
     
     def on_tts_request(self, data: dict):
         self.tts_generator_worker.add_to_queue(data)
@@ -185,25 +185,25 @@ class WorkerManager(QObject, MediatorMixin, SettingsMixin):
         self.logger.info("EngineResponseWorker_response_signal received")
         code = response["code"]
         if code == EngineResponseCode.IMAGE_GENERATED:
-            self.emit("image_generated_signal", response["message"])
+            self.emit(SignalCode.IMAGE_GENERATED_SIGNAL, response["message"])
 
     def on_clear_memory_signal(self):
         self.clear_memory()
 
     def on_llm_text_streamed_signal(self, data):
         self.do_tts_request(data["message"], data["is_end_of_message"])
-        self.emit("add_bot_message_to_conversation", data)
+        self.emit(SignalCode.ADD_BOT_MESSAGE_TO_CONVERSATION, data)
 
     def on_sd_image_generated_signal(self, message):
-        self.emit("image_generated_signal", message)
+        self.emit(SignalCode.IMAGE_GENERATED_SIGNAL, message)
 
     def on_text_generate_request_signal(self, message):
         self.move_sd_to_cpu()
-        self.emit("llm_request_signal", message)
+        self.emit(SignalCode.LLM_REQUEST_SIGNAL, message)
     
     def on_image_generate_request_signal(self, message):
         self.logger.info("on_image_generate_request_signal received")
-        self.emit("unload_llm_signal", dict(
+        self.emit(SignalCode.UNLOAD_LLM_SIGNAL, dict(
             do_unload_model=self.memory_settings["unload_unused_models"],
             move_unused_model_to_cpu=self.memory_settings["move_unused_model_to_cpu"],
             dtype=self.llm_generator_settings["dtype"],
@@ -212,7 +212,7 @@ class WorkerManager(QObject, MediatorMixin, SettingsMixin):
     
     def do_image_generate_request(self, message):
         self.clear_memory()
-        self.emit("engine_do_request_signal", dict(
+        self.emit(SignalCode.ENGINE_DO_REQUEST_SIGNAL, dict(
             code=EngineRequestCode.GENERATE_IMAGE, 
             message=message
         ))
@@ -228,7 +228,7 @@ class WorkerManager(QObject, MediatorMixin, SettingsMixin):
         """
         Unload the Stable Diffusion model from memory.
         """
-        self.emit("unload_stablediffusion_signal")
+        self.emit(SignalCode.UNLOAD_SD_SIGNAL)
 
     def parse_message(self, message):
         if message:
@@ -239,14 +239,14 @@ class WorkerManager(QObject, MediatorMixin, SettingsMixin):
         return message
     
     def do_tts_request(self, message: str, is_end_of_message: bool=False):
-        self.emit("tts_request", dict(
+        self.emit(SignalCode.TTS_REQUEST, dict(
             message=message.replace("</s>", ""),
             tts_settings=self.tts_settings,
             is_end_of_message=is_end_of_message,
         ))
     
     def on_clear_llm_history_signal(self):
-        self.emit("clear_history")
+        self.emit(SignalCode.CLEAR_HISTORY)
     
     def stop(self):
         self.logger.info("Stopping")
@@ -256,7 +256,7 @@ class WorkerManager(QObject, MediatorMixin, SettingsMixin):
     def move_sd_to_cpu(self):
         if ServiceLocator.get("is_pipe_on_cpu")() or not ServiceLocator.get("has_pipe")():
             return
-        self.emit("move_pipe_to_cpu_signal")
+        self.emit(SignalCode.MOVE_TO_CPU_SIGNAL)
         self.clear_memory()
     
     def clear_memory(self):

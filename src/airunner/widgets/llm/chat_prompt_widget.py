@@ -2,6 +2,7 @@ from PyQt6.QtCore import pyqtSlot
 from PyQt6.QtWidgets import QSpacerItem, QSizePolicy
 from PyQt6.QtCore import Qt
 
+from airunner.aihandler.enums import SignalCode
 from airunner.mediator_mixin import MediatorMixin
 from airunner.widgets.base_widget import BaseWidget
 from airunner.widgets.llm.loading_widget import LoadingWidget
@@ -64,7 +65,7 @@ class ChatPromptWidget(BaseWidget, MediatorMixin):
         self.conversation_history = []
         for widget in self.ui.scrollAreaWidgetContents.findChildren(MessageWidget):
             widget.deleteLater()
-        self.emit("clear_llm_history_signal")
+        self.emit(SignalCode.CLEAR_LLM_HISTORY_SIGNAL)
     
     @pyqtSlot(bool)
     def action_button_clicked_send(self, _ignore):
@@ -97,7 +98,7 @@ class ChatPromptWidget(BaseWidget, MediatorMixin):
         parsed_template = self.parse_template(prompt_template)
 
         self.emit(
-            "text_generate_request_signal",
+            SignalCode.TEXT_GENERATE_REQUEST_SIGNAL,
             {
                 "llm_request": True,
                 "request_data": {
@@ -160,9 +161,9 @@ class ChatPromptWidget(BaseWidget, MediatorMixin):
 
     def showEvent(self, event):
         super().showEvent(event)
-        self.register("hear_signal", self)
-        self.register("token_signal", self)
-        self.register("add_bot_message_to_conversation", self)
+        self.register(SignalCode.HEAR_SIGNAL, self.on_hear_signal)
+        self.register(SignalCode.TOKEN_SIGNAL, self.on_token_signal)
+        self.register(SignalCode.ADD_BOT_MESSAGE_TO_CONVERSATION, self.on_add_bot_message_to_conversation)
 
         # handle return pressed on QPlainTextEdit
         # there is no returnPressed signal for QPlainTextEdit

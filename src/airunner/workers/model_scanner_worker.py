@@ -1,5 +1,6 @@
 import os
 
+from airunner.aihandler.enums import SignalCode
 from airunner.models.modeldata import ModelData
 from airunner.service_locator import ServiceLocator
 from airunner.workers.worker import Worker
@@ -81,4 +82,4 @@ class ModelScannerWorker(Worker):
                                     is_default=False
                                 ))
 
-        self.emit("ai_models_save_or_update_signal", models)
+        self.emit(SignalCode.AI_MODELS_SAVE_OR_UPDATE_SIGNAL, models)

@@ -1,5 +1,6 @@
 import time
 
+from airunner.aihandler.enums import SignalCode
 from airunner.workers.worker import Worker
 from airunner.aihandler.tts_handler import TTSHandler
 
@@ -49,7 +50,7 @@ class TTSGeneratorWorker(Worker):
         else:
             response = self.generate_with_t5(text)
 
-        self.emit("TTSGeneratorWorker_add_to_stream_signal", response)
+        self.emit(SignalCode.TTS_GENERATOR_WORKER_ADD_TO_STREAM_SIGNAL, response)
     
     def move_inputs_to_device(self, inputs):
         use_cuda = self.tts_settings["use_cuda"]
