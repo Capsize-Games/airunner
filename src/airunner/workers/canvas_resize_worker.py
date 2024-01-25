@@ -22,6 +22,8 @@ class CanvasResizeWorker(Worker):
         settings = data["settings"]
         view_size = data["view_size"]
 
+        force_draw = data["force_draw"]
+
         cell_size = settings["grid_settings"]["cell_size"]
         line_color = settings["grid_settings"]["line_color"]
         line_width = settings["grid_settings"]["line_width"]
@@ -30,7 +32,7 @@ class CanvasResizeWorker(Worker):
         height_cells = view_size.height() // cell_size
 
         # Check if the number of cells has changed
-        if (width_cells, height_cells) == self.last_cell_count:
+        if not force_draw and (width_cells, height_cells) == self.last_cell_count:
             return
         self.last_cell_count = (width_cells, height_cells)
 
