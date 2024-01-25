@@ -1,7 +1,7 @@
 from PyQt6.QtCore import Qt
 from PyQt6.QtGui import QBrush, QColor, QPen
 
-from airunner.aihandler.enums import QueueType
+from airunner.aihandler.enums import QueueType, SignalCode
 from airunner.workers.worker import Worker
 
 
@@ -11,7 +11,7 @@ class CanvasResizeWorker(Worker):
 
     def __init__(self, *args, **kwargs):
         super().__init__(*args, **kwargs)
-        self.register("canvas_resize_signal", self)
+        self.register(SignalCode.CANVAS_RESIZE_SIGNAL, self.on_canvas_resize_signal)
     
     def on_canvas_resize_signal(self, data):
         self.add_to_queue(data)
@@ -60,8 +60,8 @@ class CanvasResizeWorker(Worker):
             lines_data.append(line_data)
             y += cell_size
 
-        self.emit("canvas_clear_lines_signal")
+        self.emit(SignalCode.CANVAS_CLEAR_LINES_SIGNAL)
 
-        self.emit("CanvasResizeWorker_response_signal", lines_data)
+        self.emit(SignalCode.CANVAS_RESIZE_WORKER_RESPONSE_SIGNAL, lines_data)
 
-        self.emit("canvas_do_draw_signal")
+        self.emit(SignalCode.CANVAS_DO_DRAW_SIGNAL)

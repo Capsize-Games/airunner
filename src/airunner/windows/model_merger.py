@@ -3,6 +3,7 @@ from PyQt6 import uic
 from PyQt6.QtCore import QThread, pyqtSignal, QObject
 from PyQt6.QtWidgets import QVBoxLayout
 
+from airunner.aihandler.enums import SignalCode
 from airunner.widgets.model_merger.templates.model_merger_ui import Ui_model_merger
 from airunner.windows.base_window import BaseWindow
 
@@ -163,7 +164,7 @@ class ModelMerger(BaseWindow):
                 model_data = data
 
         if model_data:
-            self.emit("sd_merge_models_signal", (
+            self.emit(SignalCode.SD_MERGE_MODELS_SIGNAL, (
                 model_data["path"],
                 models,
                 weights,

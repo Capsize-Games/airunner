@@ -1,3 +1,4 @@
+from airunner.aihandler.enums import SignalCode
 from airunner.workers.worker import Worker
 from airunner.aihandler.llm_handler import LLMHandler
 
@@ -6,9 +7,9 @@ class LLMGenerateWorker(Worker):
     def __init__(self, prefix="LLMGenerateWorker"):
         self.llm = LLMHandler()
         super().__init__(prefix=prefix)
-        self.register("clear_history", self)
-        self.register("LLMRequestWorker_response_signal", self)
-        self.register("unload_llm_signal", self)
+        self.register(SignalCode.CLEAR_HISTORY, self.on_clear_history)
+        self.register(SignalCode.LLM_REQUEST_WORKER_RESPONSE_SIGNAL, self)
+        self.register(SignalCode.UNLOAD_LLM_SIGNAL, self.on_unload_llm_signal)
 
     def on_unload_llm_signal(self, message):
         """
@@ -41,7 +42,7 @@ class LLMGenerateWorker(Worker):
 
     def handle_message(self, message):
         for response in self.llm.handle_request(message):
-            self.emit("llm_text_streamed_signal", response)
+            self.emit(SignalCode.LLM_TEXT_STREAMED_SIGNAL, response)
     
     def on_clear_history(self):
         self.llm.clear_history()

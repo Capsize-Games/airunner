@@ -24,15 +24,14 @@ class MediatorMixin:
             method = getattr(self, method_name)
             method(*args, **kwargs)
 
-    def register(self, signal_name, slot_parent, slot_function=None):
+    def register(self, signal_name, slot_function=None):
         """
         Accessor method for SignalMediator.register method.
         :param signal_name:
-        :param slot_parent:
         :param slot_function:
         :return:
         """
-        self.mediator.register(signal_name, slot_parent, slot_function)
+        self.mediator.register(signal_name, slot_function)
 
     def create_worker(self, worker_class_):
         prefix = worker_class_.__name__

@@ -3,6 +3,7 @@ import os
 from PIL import Image
 from PyQt6.QtCore import pyqtSlot
 
+from airunner.aihandler.enums import SignalCode
 from airunner.utils import image_to_pixmap, auto_export_image, open_file_path
 from airunner.widgets.controlnet_settings.templates.controlnet_settings_ui import Ui_controlnet_settings
 from airunner.widgets.input_image.input_image_settings_widget import InputImageSettingsWidget
@@ -116,7 +117,7 @@ class ControlNetSettingsWidget(InputImageSettingsWidget):
         if not self.current_controlnet_image:
             return
         print("TODO: send_active_mask_to_canvas")
-        self.emit("update_canvas_signal")
+        self.emit(SignalCode.UPDATE_CANVAS_SIGNAL)
 
     def toggle_mask_link(self, value):
         self.generator_settings["controlnet_mask_use_imported_image"] = not value
@@ -155,7 +156,7 @@ class ControlNetSettingsWidget(InputImageSettingsWidget):
             seed=self.generator_settings["seed"]
         )
         if path is not None:
-            self.emit("set_status_label_signal", "Controlnet image exported to: {}".format(path))
+            self.emit(SignalCode.SET_STATUS_LABEL_SIGNAL, "Controlnet image exported to: {}".format(path))
 
     @pyqtSlot(bool)
     def handle_controlnet_image_generated(self):

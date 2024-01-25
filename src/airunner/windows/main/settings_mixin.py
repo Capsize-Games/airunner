@@ -4,7 +4,7 @@ from airunner.aihandler.settings import DEFAULT_BRUSH_PRIMARY_COLOR, DEFAULT_BRU
 from airunner.settings import DEFAULT_PATHS
 from airunner.utils import default_hf_cache_dir
 from airunner.settings import BASE_PATH
-from airunner.aihandler.enums import Mode
+from airunner.aihandler.enums import Mode, SignalCode
 from airunner.service_locator import ServiceLocator
 from airunner.data.bootstrap.pipeline_bootstrap_data import pipeline_bootstrap_data
 from airunner.data.bootstrap.controlnet_bootstrap_data import controlnet_bootstrap_data
@@ -37,7 +37,7 @@ class SettingsMixin:
         self.application_settings = QSettings("Capsize Games", "AI Runner")
         ServiceLocator.register("get_settings", self.get_settings)
         ServiceLocator.register("set_settings", self.set_settings)
-        self.register("reset_settings_signal", self)
+        self.register(SignalCode.RESET_SETTINGS_SIGNAL, self.on_reset_settings_signal)
         self.default_settings = dict(
             use_cuda=True,
             current_layer_index=0,
@@ -392,7 +392,7 @@ Previous Conversation:
     def set_settings(self, val):
         self.application_settings.setValue("settings", val)
         self.application_settings.sync()
-        self.emit("application_settings_changed_signal")
+        self.emit(SignalCode.APPLICATION_SETTINGS_CHANGED_SIGNAL)
 
     def on_reset_settings_signal(self):
         self.logger.info("Resetting settings")

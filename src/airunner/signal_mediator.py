@@ -25,26 +25,19 @@ class SignalMediator(metaclass=SingletonMeta):
     def __init__(self):
         self.signals = {}
 
-    def register(self, signal_name, slot_parent, slot_function=None):
+    def register(self, signal_name, slot_function=None):
         """
         Register a signal to be received by a class.
 
         :param signal_name: The name of the signal to register
-        :param slot_parent: The class that will receive the signal, and must have an on_{signal_name} method.
-        :param slot_function: The optional function to call when the signal is received. If not provided, the
-        slot_parent's on_{signal_name} method will be called.
+        :param slot_function: The function to call when the signal is received.
         """
         if signal_name not in self.signals:
             # Create a new Signal instance for this signal name
             self.signals[signal_name] = Signal()
         # Connect the Signal's pyqtSignal to receive the method of the slot parent
         try:
-            if slot_function:
-                # If a slot function is provided, connect the Signal's pyqtSignal to that function
-                self.signals[signal_name].signal.connect(slot_function)
-            else:
-                # If a slot function is not provided, connect the Signal's pyqtSignal to the slot parent's
-                self.signals[signal_name].signal.connect(getattr(slot_parent, f"on_{signal_name}"))
+            self.signals[signal_name].signal.connect(slot_function)
         except Exception as e:
             print(f"Error connecting signal {signal_name}", e)
 

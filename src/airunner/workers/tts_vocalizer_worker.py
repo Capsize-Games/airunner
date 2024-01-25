@@ -2,6 +2,7 @@ import sounddevice as sd
 
 from queue import Queue
 
+from airunner.aihandler.enums import SignalCode
 from airunner.workers.worker import Worker
 
 
@@ -19,7 +20,7 @@ class TTSVocalizerWorker(Worker):
         self.stream.start()
         self.data = []
         self.started = False
-        self.register("TTSGeneratorWorker_add_to_stream_signal", self)
+        self.register(SignalCode.TTS_GENERATOR_WORKER_ADD_TO_STREAM_SIGNAL, self)
     
     def on_TTSGeneratorWorker_add_to_stream_signal(self, response):
         self.logger.debug("Adding speech to stream...")

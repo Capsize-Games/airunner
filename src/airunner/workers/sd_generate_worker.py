@@ -1,7 +1,7 @@
 import os
 import torch
 
-from airunner.aihandler.enums import EngineResponseCode
+from airunner.aihandler.enums import EngineResponseCode, SignalCode
 from airunner.workers.worker import Worker
 from airunner.aihandler.sd_handler import SDHandler
 
@@ -12,7 +12,7 @@ class SDGenerateWorker(Worker):
     def __init__(self, prefix="SDGenerateWorker"):
         super().__init__(prefix=prefix)
         self.sd = SDHandler()
-        self.register("add_sd_response_to_queue_signal", self)
+        self.register(SignalCode.ADD_SD_RESPONSE_TO_QUEUE_SIGNAL, self.on_add_sd_response_to_queue_signal)
     
     def on_add_sd_response_to_queue_signal(self, request):
         self.logger.info("Request recieved")
@@ -31,7 +31,7 @@ class SDGenerateWorker(Worker):
             data = response["data"]
             nsfw_content_detected = response["nsfw_content_detected"]
             if nsfw_content_detected:
-                self.emit("nsfw_content_detected_signal", response)
+                self.emit(SignalCode.NSFW_CONTENT_DETECTED_SIGNAL, response)
                 continue
 
             seed = data["options"]["seed"]
@@ -51,7 +51,7 @@ class SDGenerateWorker(Worker):
                     image=image
                 ))
             response["images"] = updated_images
-            self.emit("engine_do_response_signal", dict(
+            self.emit(SignalCode.ENGINE_DO_RESPONSE_SIGNAL, dict(
                 code=EngineResponseCode.IMAGE_GENERATED,
                 message=response
             ))

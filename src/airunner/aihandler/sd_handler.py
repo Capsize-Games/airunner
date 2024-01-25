@@ -23,7 +23,7 @@ from diffusers import ConsistencyDecoderVAE
 from transformers import AutoFeatureExtractor
 from airunner.aihandler.base_handler import BaseHandler
 
-from airunner.aihandler.enums import FilterType, HandlerType
+from airunner.aihandler.enums import FilterType, HandlerType, SignalCode
 from airunner.aihandler.mixins.compel_mixin import CompelMixin
 from airunner.aihandler.mixins.embedding_mixin import EmbeddingMixin
 from airunner.aihandler.mixins.lora_mixin import LoraMixin
@@ -652,7 +652,7 @@ class SDHandler(
 
         if not controlnet_image and self.input_image:
             controlnet_image = self.preprocess_for_controlnet(self.input_image)
-            self.emit("controlnet_image_generated_signal", dict(
+            self.emit(SignalCode.CONTROLNET_IMAGE_GENERATED_SIGNAL, dict(
                 image=controlnet_image,
                 data=dict(
                     controlnet_image=controlnet_image
@@ -726,7 +726,7 @@ class SDHandler(
         self.safety_checker_model = self.models_by_pipeline_action("safety_checker")
         self.text_encoder_model = self.models_by_pipeline_action("text_encoder")
         self.inpaint_vae_model = self.models_by_pipeline_action("inpaint_vae")
-        self.register("sd_cancel_signal", self)
+        self.register(SignalCode.SD_CANCEL_SIGNAL, self.on_sd_cancel_signal)
         services = [
             "is_pipe_on_cpu", 
             "has_pipe",
@@ -744,7 +744,7 @@ class SDHandler(
         self.depth2img = None
         self.txt2vid = None
 
-        self.register("unload_stablediffusion_signal", self)
+        self.register(SignalCode.UNLOAD_SD_SIGNAL, self.on_unload_stablediffusion_signal)
 
     @staticmethod
     def latents_to_image(latents: torch.Tensor):
@@ -856,7 +856,7 @@ class SDHandler(
         torch.backends.cuda.matmul.allow_tf32 = self.use_tf32
 
     def send_error(self, message):
-        self.emit("error_signal", message)
+        self.emit(SignalCode.ERROR_SIGNAL, message)
 
     def error_handler(self, error):
         message = str(error)
@@ -864,7 +864,7 @@ class SDHandler(
             message = f"This model does not support {self.action}"
         traceback.print_exc()
         self.logger.error(error)
-        self.emit("error_signal", message)
+        self.emit(SignalCode.ERROR_SIGNAL, message)
 
     def initialize_safety_checker(self, local_files_only=None):
         local_files_only = self.local_files_only if local_files_only is None else local_files_only
@@ -908,7 +908,7 @@ class SDHandler(
         else:
             message = "Generating image"
 
-        self.emit("status_signal", message)
+        self.emit(SignalCode.STATUS_SIGNAL, message)
 
         try:
             output = self.call_pipe(**kwargs)
@@ -1077,7 +1077,7 @@ class SDHandler(
             frame_ids = list(range(ch_start, ch_end))
             try:
                 self.logger.info(f"Generating video with {len(frame_ids)} frames")
-                self.emit("status_signal", f"Generating video, frames {cur_frame} to {cur_frame + len(frame_ids)-1} of {self.n_samples}")
+                self.emit(SignalCode.STATUS_SIGNAL, f"Generating video, frames {cur_frame} to {cur_frame + len(frame_ids)-1} of {self.n_samples}")
                 cur_frame += len(frame_ids)
                 kwargs = {
                     "prompt": prompt,
@@ -1247,7 +1247,7 @@ class SDHandler(
         self.do_cancel = False
         self.process_data(data)
 
-        self.emit("status_signal", f"Applying memory settings")
+        self.emit(SignalCode.STATUS_SIGNAL, f"Applying memory settings")
         self.apply_memory_efficient_settings()
 
         seed = self.seed
@@ -1306,7 +1306,7 @@ class SDHandler(
     def final_callback(self):
         total = int(self.steps * self.strength)
         tab_section = "stablediffusion"
-        self.emit("progress_signal",{
+        self.emit(SignalCode.SD_PROGRESS_SIGNAL,{
             "step": total,
             "total": total,
             "action": self.action,
@@ -1332,7 +1332,7 @@ class SDHandler(
             "tab_section": tab_section,
             "latents": latents
         }
-        self.emit("progress_signal", res)
+        self.emit(SignalCode.SD_PROGRESS_SIGNAL, res)
 
     def on_unload_stablediffusion_signal(self):
         self.unload()
@@ -1382,7 +1382,7 @@ class SDHandler(
             self.logger.info("pipe is None")
             return
 
-        self.emit("status_signal", f"Generating {'video' if self.is_vid_action else 'image'}")
+        self.emit(SignalCode.STATUS_SIGNAL, f"Generating {'video' if self.is_vid_action else 'image'}")
 
         action = "depth2img" if data["action"] == "depth" else data["action"]
 
@@ -1569,7 +1569,7 @@ class SDHandler(
                 )
 
             if self.pipe is None:
-                self.emit("error_signal", "Failed to load model")
+                self.emit(SignalCode.ERROR_SIGNAL, "Failed to load model")
                 return
         
             """
@@ -1730,7 +1730,7 @@ class SDHandler(
                 message = f"Downloading model {model_name}"
         else:
             message = f"Loading model {model_name}"
-        self.emit("status_signal", message)
+        self.emit(SignalCode.STATUS_SIGNAL, message)
 
     def prepare_model(self):
         self.logger.info("Prepare model")
@@ -1767,7 +1767,7 @@ class SDHandler(
                 self.logger.info("Model not found, attempting download")
             # check if we have an internet connection
             if self.allow_online_when_missing_files:
-                self.emit("status_signal", "Downloading model files")
+                self.emit(SignalCode.STATUS_SIGNAL, "Downloading model files")
                 self.local_files_only = False
             else:
                 self.send_error("Required files not found, enable online access to download")
