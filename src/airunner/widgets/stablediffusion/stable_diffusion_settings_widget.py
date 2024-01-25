@@ -1,3 +1,4 @@
+from airunner.aihandler.enums import SignalCode
 from airunner.widgets.base_widget import BaseWidget
 from airunner.widgets.stablediffusion.templates.stable_diffusion_settings_ui import Ui_stable_diffusion_settings_widget
 
@@ -7,7 +8,7 @@ class StableDiffusionSettingsWidget(BaseWidget):
 
     def __init__(self, *args, **kwargs):
         super().__init__(*args, **kwargs)
-        self.register("models_changed_signal", self)
+        self.register(SignalCode.MODELS_CHANGED_SIGNAL, self.on_models_changed_signal)
 
     def showEvent(self, event):
         super().showEvent(event)
