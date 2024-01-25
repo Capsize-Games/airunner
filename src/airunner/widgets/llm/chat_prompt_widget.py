@@ -10,20 +10,20 @@ from airunner.widgets.llm.templates.chat_prompt_ui import Ui_chat_prompt
 from airunner.widgets.llm.message_widget import MessageWidget
 
 
-class ChatPromptWidget(BaseWidget, MediatorMixin):
+class ChatPromptWidget(BaseWidget):
     widget_class_ = Ui_chat_prompt
-    conversation = None
-    is_modal = True
-    generating = False
-    prefix = ""
-    prompt = ""
-    suffix = ""
-    conversation_history = []
-    spacer = None
-    promptKeyPressEvent = None
 
     def __init__(self, *args, **kwargs):
-        super().__init__(args, kwargs)
+        super().__init__()
+        self.conversation = None
+        self.is_modal = True
+        self.generating = False
+        self.prefix = ""
+        self.prompt = ""
+        self.suffix = ""
+        self.conversation_history = []
+        self.spacer = None
+        self.promptKeyPressEvent = None
         self.originalKeyPressEvent = None
         self.action_menu_displayed = None
         self.action_menu_displayed = None

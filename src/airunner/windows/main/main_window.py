@@ -268,13 +268,13 @@ class MainWindow(
         self.handle_controlnet_image_generated(response)
 
     def __init__(self, *args, **kwargs):
+        self.ui = Ui_MainWindow()
         self.update_popup = None
         self.controlnet_image = None
         self._document_path = None
         self.prompt = None
         self.negative_prompt = None
         self.image_path = None
-        self.ui = Ui_MainWindow()
         self.set_log_levels()
         self.logger = Logger(prefix=self.__class__.__name__)
         self.logger.info("Starting AI Runnner")
