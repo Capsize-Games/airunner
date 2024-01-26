@@ -16,7 +16,7 @@ setup(
     python_requires=">=3.10.0",
     install_requires=[
         "einops==0.7.0",
-        "ninja==1.11.1",
+        "ninja==1.11.1.1",
         "JIT==0.2.7",
         "tqdm==4.65.0",
         "omegaconf==2.3.0",
