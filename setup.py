@@ -35,7 +35,7 @@ setup(
         "lightning==2.0.2",
         "requests==2.31.0",
         "requests-oauthlib==1.3.1",
-        "safetensors==0.3.1",
+        "safetensors==0.4.2",
         "scipy==1.10.1",
         "tokenizers==0.15.0",
         "tqdm==4.65.0",
