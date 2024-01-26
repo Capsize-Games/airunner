@@ -220,9 +220,6 @@ class MainWindow(
         # return f"{name} - {self.version}"
         return "Untitled"
 
-    def check_is_windows(self):
-        return sys.platform.startswith("win") or sys.platform.startswith("cygwin") or sys.platform.startswith("msys")
-
     @property
     def current_canvas(self):
         return self.standard_image_panel
@@ -302,7 +299,6 @@ class MainWindow(
         ServiceLocator.register(ServiceCode.LAYER_WIDGET, lambda: self.ui.layer_widget)
         ServiceLocator.register(ServiceCode.GET_LLM_WIDGET, lambda: self.ui.llm_widget)
         ServiceLocator.register(ServiceCode.DISPLAY_IMPORT_IMAGE_DIALOG, self.display_import_image_dialog)
-        ServiceLocator.register(ServiceCode.IS_WINDOWS, self.check_is_windows)
         ServiceLocator.register(ServiceCode.GET_SETTINGS_VALUE, self.get_settings_value)
         ServiceLocator.register(ServiceCode.GET_CALLBACK_FOR_SLIDER, self.get_callback_for_slider)
 

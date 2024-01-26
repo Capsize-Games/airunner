@@ -44,7 +44,6 @@ class ServiceCode(Enum):
     LAYER_WIDGET = "layer_widget"
     GET_LLM_WIDGET = "get_llm_widget"
     DISPLAY_IMPORT_IMAGE_DIALOG = "display_import_image_dialog"
-    IS_WINDOWS = "is_windows"
     GET_SETTINGS_VALUE = "get_settings_value"
     GET_CALLBACK_FOR_SLIDER = "get_callback_for_slider"
 

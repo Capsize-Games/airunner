@@ -10,6 +10,7 @@ from PyQt6.QtCore import Qt, QPoint, QRect
 from PyQt6.QtGui import QBrush, QColor, QPixmap
 from PyQt6.QtWidgets import QGraphicsItemGroup, QGraphicsItem
 from PyQt6.QtWidgets import QGraphicsPixmapItem
+from watchdog.utils.platform import is_windows
 
 from airunner.cursors.circle_brush import CircleCursor
 from airunner.enums import SignalCode, ServiceCode
@@ -707,12 +708,12 @@ class CanvasPlusWidget(BaseWidget):
         self.create_image(image)
     
     def get_image_from_clipboard(self):
-        if self.is_windows:
+        if is_windows():
             return self.image_from_system_clipboard_windows()
         return self.image_from_system_clipboard_linux()
 
     def move_pixmap_to_clipboard(self, pixmap):
-        if self.is_windows:
+        if is_windows():
             return self.image_to_system_clipboard_windows(pixmap)
         return self.image_to_system_clipboard_linux(pixmap)
     
