@@ -371,7 +371,6 @@
                  <property name="acceptDrops">
                   <bool>true</bool>
                  </property>
-                 <layout class="QGridLayout" name="gridLayout_17"/>
                 </widget>
                </item>
                <item>
@@ -551,7 +550,7 @@
   <customwidget>
    <class>BrushesContainer</class>
    <extends>QWidget</extends>
-   <header>airunner/widgets/brushes/brushes_container</header>
+   <header>airunner/widgets/canvas_plus/brushes_container</header>
    <container>1</container>
   </customwidget>
   <customwidget>

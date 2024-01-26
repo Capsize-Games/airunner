@@ -1,5 +1,4 @@
 import os
-import pickle
 import platform
 import subprocess
 import sys
@@ -21,7 +20,6 @@ from airunner.resources_dark_rc import *
 from airunner.service_locator import ServiceLocator
 from airunner.settings import BASE_PATH
 from airunner.utils import get_version, auto_export_image, default_hf_cache_dir, open_file_path
-from airunner.widgets.brushes.brushes_container import BrushesContainer
 from airunner.widgets.status.status_widget import StatusWidget
 from airunner.windows.about.about import AboutWindow
 from airunner.windows.main.ai_model_mixin import AIModelMixin
@@ -325,7 +323,6 @@ class MainWindow(
 
         self.ui.mode_tab_widget.tabBar().hide()
         self.ui.center_tab.tabBar().hide()
-        self.ui.brushes_container = BrushesContainer(self)
         self.ui.ocr_button.blockSignals(True)
         self.ui.tts_button.blockSignals(True)
         self.ui.v2t_button.blockSignals(True)

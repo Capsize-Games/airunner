@@ -9,17 +9,40 @@ from PyQt6.QtGui import QPixmap
 from PyQt6.QtWidgets import QInputDialog
 from PyQt6.QtWidgets import QMenu
 
+from airunner.enums import SignalCode
 from airunner.widgets.base_widget import BaseWidget
+from airunner.widgets.canvas_plus.templates.brushes_container_ui import Ui_brushes_container
 from airunner.widgets.image.image_widget import BrushImageWidget
+from airunner.widgets.qflowlayout.q_flow_layout import QFlowLayout
 
 
 class BrushesContainer(BaseWidget):
+    widget_class_ = Ui_brushes_container
+
     def __init__(self, *args, **kwargs):
         super().__init__(*args, **kwargs)
+
+        self.selected_brushes = []
 
         # Enable the widget to accept drops
         self.setAcceptDrops(True)
 
+        flow_layout = QFlowLayout()
+        self.ui.scrollArea.widget().setLayout(flow_layout)
+
+        self.register(
+            SignalCode.PRESET_IMAGE_GENERATOR_DISPLAY_ITEM_MENU_SIGNAL,
+            self.display_brush_menu
+        )
+        self.register(
+            SignalCode.PRESET_IMAGE_GENERATOR_ACTIVATE_BRUSH_SIGNAL,
+            self.activate_brush
+        )
+
+        self.load_brushes()
+
+    def showEvent(self, event):
+        super().showEvent(event)
         self.load_brushes()
 
     def dragEnterEvent(self, event):
@@ -64,8 +87,6 @@ class BrushesContainer(BaseWidget):
         self.settings = settings
         return brush
     
-    selected_brushes = []
-
     def activate_brush(self, clicked_widget, brush, multiple):
         if clicked_widget in self.selected_brushes:
             if len(self.selected_brushes) == 1:
@@ -103,19 +124,24 @@ class BrushesContainer(BaseWidget):
                 border: 2px solid #ff0000;
             """)
     
-    def display_brush_menu(self, event, widget, brush):
+    def display_brush_menu(self, message):
+        event = message["event"]
+        widget = message["widget"]
+        brush = message["brush"]
         context_menu = QMenu(self)
-
         delete_action = context_menu.addAction("Delete brush")
-        delete_action.triggered.connect(lambda: self.delete_brush(widget, brush))
-
+        delete_action.triggered.connect(
+            lambda: self.delete_brush(widget, brush)
+        )
         global_position = self.mapToGlobal(event.pos())
         context_menu.exec(global_position)
 
     def delete_brush(self, widget, brush):
         settings = self.settings
         for index, brush_data in enumerate(settings["presets"]):
-            if brush["name"] == brush_data["name"]:
+            brush_name = brush["name"]
+            brush_data_name = brush_data["name"]
+            if brush_name == brush_data_name:
                 del settings["presets"][index]
                 break
         self.settings = settings
@@ -135,15 +161,18 @@ class BrushesContainer(BaseWidget):
             img = Image.open(buffer)
         else:
             img = image_source
+
         # Set the image to the widget
         widget.set_image(img)
         
         # Add the widget to the layout
-        self.layout.addWidget(widget)
+        self.ui.scrollArea.widget().layout().addWidget(widget)
 
         return widget
 
     def dropEvent(self, event):
+        print("dropEvent")
+
         # Get the metadata from the event's mime data
         meta_data_bytes = event.mimeData().data("application/x-qt-image-metadata")
 
@@ -167,7 +196,6 @@ class BrushesContainer(BaseWidget):
         else:
             # Save the brush name, thumbnail, and metadata to the database
             widget._brush = self.save_brush(brush_name, widget.pixmap, meta_data)
-            
 
         event.acceptProposedAction()
 
