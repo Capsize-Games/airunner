@@ -10,14 +10,6 @@ from airunner.widgets.qflowlayout.q_flow_layout import QFlowLayout
 
 class ImagePanelWidget(BaseWidget):
     widget_class_ = Ui_image_panel_widget
-    page = 0
-    total_per_page = 50
-    page_step = 512
-    last_page = False
-    sorted_files = []
-    start = 0
-    end = 0
-
 
     def __init__(self, *args, **kwargs):
         """
@@ -31,6 +23,13 @@ class ImagePanelWidget(BaseWidget):
             None
         """
         super().__init__(*args, **kwargs)
+        self.page = 0
+        self.total_per_page = 50
+        self.page_step = 512
+        self.last_page = False
+        self.sorted_files = []
+        self.start = 0
+        self.end = 0
         self.ui.scrollArea.verticalScrollBar().valueChanged.connect(self.handle_scroll)
         flowLayout = QFlowLayout()
         self.ui.scrollAreaWidgetContents.setLayout(flowLayout)
