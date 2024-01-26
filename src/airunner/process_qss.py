@@ -3,12 +3,10 @@ import re
 import subprocess
 import time
 from pathlib import Path
-from watchdog.observers import Observer
-from watchdog.events import FileSystemEventHandler
 
 from PyQt6.QtCore import QObject, pyqtSignal
-
-from airunner.utils import get_venv_python_executable
+from watchdog.events import FileSystemEventHandler
+from watchdog.observers import Observer
 
 
 def build_ui(path):
