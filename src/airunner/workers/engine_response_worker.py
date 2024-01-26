@@ -10,3 +10,6 @@ class EngineResponseWorker(Worker):
     def on_engine_do_response_signal(self, request):
         self.logger.info("Adding to queue")
         self.add_to_queue(request)
+
+    def handle_message(self, request):
+        self.emit(SignalCode.ENGINE_RESPONSE_WORKER_RESPONSE_SIGNAL, request)
