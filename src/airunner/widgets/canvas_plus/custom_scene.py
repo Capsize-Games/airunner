@@ -76,7 +76,7 @@ class CustomScene(
         # settings["grid_settings"]["zoom_level"] = zoom_level
         # self.settings = settings
         #
-        # self.emit(SignalCode.ZOOM_LEVEL_CHANGED)
+        # self.emit(SignalCode.CANVAS_ZOOM_LEVEL_CHANGED)
         pass
 
     def eraseAt(self, position):
