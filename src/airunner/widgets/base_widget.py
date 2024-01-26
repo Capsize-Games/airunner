@@ -1,32 +1,28 @@
 import os
+
 from PyQt6 import QtGui
 from PyQt6.QtWidgets import QWidget
-from airunner.aihandler.logger import Logger
 
-from airunner.utils import get_main_window
+from airunner.aihandler.logger import Logger
 from airunner.mediator_mixin import MediatorMixin
 from airunner.service_locator import ServiceLocator
-from airunner.windows.main.settings_mixin  import SettingsMixin
 
-class BaseWidget(QWidget, SettingsMixin, MediatorMixin):
+
+class BaseWidget(
+    QWidget,
+    MediatorMixin
+):
     widget_class_ = None
     icons = ()
     ui = None
     qss_filename = None
+    threads = []
 
     def register_service(self, name, service):
         ServiceLocator.register(name, service)
-    
+
     def get_service(self, name):
         return ServiceLocator.get(name)
-
-    @property
-    def settings(self):
-        return ServiceLocator.get('get_settings')()
-
-    @settings.setter
-    def settings(self, value):
-        ServiceLocator.get('set_settings')(value)
 
     @property
     def is_dark(self):
@@ -34,28 +30,18 @@ class BaseWidget(QWidget, SettingsMixin, MediatorMixin):
             return False
         return self.settings["dark_mode_enabled"]
 
-    threads = []
-
-    def add_to_grid(self, widget, row, column, row_span=1, column_span=1):
-        self.layout().addWidget(widget, row, column, row_span, column_span)
-
     def __init__(self, *args, **kwargs):
-        MediatorMixin.__init__(self)
-        SettingsMixin.__init__(self)
-        super().__init__(*args, **kwargs)
         self.logger = Logger(prefix=self.__class__.__name__)
-        
+        MediatorMixin.__init__(self)
+        super().__init__(*args, **kwargs)
         if self.widget_class_:
             self.ui = self.widget_class_()
         if self.ui:
             self.ui.setupUi(self)
-            # if self.qss_filename:
-            #     theme_name = "dark_theme"
-            #     here = os.path.dirname(os.path.realpath(__file__))
-            #     with open(os.path.join(here, "..", "styles", theme_name, self.qss_filename), "r") as f:
-            #         stylesheet = f.read()
-            #     self.setStyleSheet(stylesheet)
             self.set_icons()
+
+    def add_to_grid(self, widget, row, column, row_span=1, column_span=1):
+        self.layout().addWidget(widget, row, column, row_span, column_span)
     
     def showEvent(self, event):
         super().showEvent(event)
@@ -156,3 +142,10 @@ class BaseWidget(QWidget, SettingsMixin, MediatorMixin):
             val = self.get_is_checked(element)
         print("TODO: finish this")
 
+    @property
+    def settings(self):
+        return ServiceLocator.get("get_settings")()
+
+    @settings.setter
+    def settings(self, value):
+        ServiceLocator.get("set_settings")(value)

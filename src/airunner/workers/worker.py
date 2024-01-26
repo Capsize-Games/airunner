@@ -2,13 +2,13 @@ import queue
 
 from PyQt6.QtCore import pyqtSignal, pyqtSlot, QThread, QSettings, QObject
 
-from airunner.aihandler.enums import QueueType
+from airunner.enums import QueueType, SignalCode
 from airunner.aihandler.logger import Logger
 from airunner.mediator_mixin import MediatorMixin
-from airunner.windows.main.settings_mixin import SettingsMixin
+from airunner.service_locator import ServiceLocator
 
 
-class Worker(QObject, MediatorMixin, SettingsMixin):
+class Worker(QObject, MediatorMixin):
     queue_type = QueueType.GET_NEXT_ITEM
     finished = pyqtSignal()
     prefix = "Worker"
@@ -16,7 +16,6 @@ class Worker(QObject, MediatorMixin, SettingsMixin):
     def __init__(self, prefix=None):
         self.prefix = prefix or self.__class__.__name__
         MediatorMixin.__init__(self)
-        SettingsMixin.__init__(self)
         super().__init__()
         self.logger = Logger(prefix=prefix)
         self.running = False
@@ -25,7 +24,7 @@ class Worker(QObject, MediatorMixin, SettingsMixin):
         self.current_index = 0
         self.paused = False
         self.application_settings = QSettings("Capsize Games", "AI Runner")
-        self.register("application_settings_changed_signal", self)
+        self.register(SignalCode.APPLICATION_SETTINGS_CHANGED_SIGNAL, self.on_application_settings_changed_signal)
         self.update_properties()
     
     def on_application_settings_changed_signal(self, _ignore):
@@ -93,7 +92,7 @@ class Worker(QObject, MediatorMixin, SettingsMixin):
         self.paused = False
 
     def handle_message(self, message):
-        self.emit(self.prefix + "_response_signal", message)
+        raise NotImplementedError
 
     def add_to_queue(self, message):
         self.items[self.current_index] = message
@@ -109,3 +108,11 @@ class Worker(QObject, MediatorMixin, SettingsMixin):
         self.logger.info("Canceling")
         while not self.queue.empty():
             self.queue.get()
+
+    @property
+    def settings(self):
+        return ServiceLocator.get("get_settings")()
+
+    @settings.setter
+    def settings(self, value):
+        ServiceLocator.get("set_settings")(value)

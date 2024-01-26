@@ -3,21 +3,24 @@ from PIL.ImageQt import QImage
 from PyQt6.QtCore import QRect
 from PyQt6.QtGui import QBrush, QColor, QPen, QPixmap, QPainter
 from PyQt6.QtWidgets import QGraphicsItem, QGraphicsPixmapItem
-from airunner.windows.main.settings_mixin import SettingsMixin
 from airunner.mediator_mixin import MediatorMixin
+from airunner.service_locator import ServiceLocator
 
 
-class DraggablePixmap(QGraphicsPixmapItem, MediatorMixin, SettingsMixin):
+class DraggablePixmap(
+    QGraphicsPixmapItem,
+    MediatorMixin
+):
     def __init__(self, parent, pixmap):
         self.parent = parent
         super().__init__(pixmap)
         MediatorMixin.__init__(self)
-        SettingsMixin.__init__(self)
         self.pixmap = pixmap
         self.setFlag(QGraphicsItem.GraphicsItemFlag.ItemIsMovable, True)
 
     def snap_to_grid(self):
-        cell_size = self.grid_settings["cell_size"]
+        settings = ServiceLocator.get("get_settings")()
+        cell_size = settings["grid_settings"]["cell_size"]
         x = round(self.x() / cell_size) * cell_size
         y = round(self.y() / cell_size) * cell_size
         x += self.parent.last_pos.x()
@@ -55,23 +58,25 @@ class ActiveGridArea(DraggablePixmap):
 
     @property
     def active_grid_area_rect(self):
+        settings = ServiceLocator.get("get_settings")()
         return QRect(
-            self.active_grid_settings["pos_x"],
-            self.active_grid_settings["pos_y"],
-            self.settings["is_maximized"],
-            self.settings["working_height"]
+            settings["active_grid_settings"]["pos_x"],
+            settings["active_grid_settings"]["pos_y"],
+            settings["is_maximized"],
+            settings["working_height"]
         )
 
     def __init__(self, parent, rect):
-        self.update_settings()
+        self.update_draggable_settings()
 
         super().__init__(parent, self.pixmap)
         self.setFlag(QGraphicsItem.GraphicsItemFlag.ItemIsMovable, True)
 
-    def update_settings(self):
-        border_color = self.generator_settings["active_grid_border_color"]
+    def update_draggable_settings(self):
+        settings = ServiceLocator.get("get_settings")()
+        border_color = settings["generator_settings"]["active_grid_border_color"]
         border_color = QColor(border_color)
-        border_opacity = self.active_grid_settings["border_opacity"]
+        border_opacity = settings["active_grid_settings"]["border_opacity"]
         border_color.setAlpha(border_opacity)
         fill_color = self.get_fill_color()
 
@@ -96,23 +101,26 @@ class ActiveGridArea(DraggablePixmap):
         self.update_settings()
         scene = self.scene()
         if scene:
+            settings = ServiceLocator.get("get_settings")()
             scene.removeItem(self)
-            if self.active_grid_settings["enabled"]:
+            if settings["active_grid_settings"]["enabled"]:
                 scene.addItem(self)
 
     def get_fill_color(self):
-        fill_color = self.generator_settings["active_grid_fill_color"]
+        settings = ServiceLocator.get("get_settings")()
+        fill_color = settings["generator_settings"]["active_grid_fill_color"]
         fill_color = QColor(fill_color)
-        fill_opacity = self.active_grid_settings["fill_opacity"]
+        fill_opacity = settings["active_grid_settings"]["fill_opacity"]
         fill_opacity = max(1, fill_opacity)
         fill_color.setAlpha(fill_opacity)
         return fill_color
 
     def paint(self, painter: QPainter, option, widget=None):
-        if not self.active_grid_settings["render_fill"]:
+        settings = ServiceLocator.get("get_settings")()
+        if not settings["active_grid_settings"]["render_fill"]:
             self.pixmap.fill(QColor(0, 0, 0, 1))
 
-        if self.active_grid_settings["render_border"]:
+        if settings["active_grid_settings"]["render_border"]:
             painter.setPen(QPen(
                 self.active_grid_area_color,
                 self.parent.line_width
@@ -149,3 +157,11 @@ class ActiveGridArea(DraggablePixmap):
     def mouseReleaseEvent(self, event):
         super().mouseReleaseEvent(event)
         pos = self.pos()
+
+    @property
+    def settings(self):
+        return ServiceLocator.get("get_settings")()
+
+    @settings.setter
+    def settings(self, value):
+        ServiceLocator.get("set_settings")(value)
