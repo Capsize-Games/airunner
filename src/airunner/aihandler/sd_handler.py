@@ -693,9 +693,9 @@ class SDHandler(
         ControlnetModelMixin.__init__(self)
         AIModelMixin.__init__(self)
         self.logger.info("Loading Stable Diffusion model runner...")
-        self.safety_checker_model = self.models_by_pipeline_action("safety_checker")
-        self.text_encoder_model = self.models_by_pipeline_action("text_encoder")
-        self.inpaint_vae_model = self.models_by_pipeline_action("inpaint_vae")
+        self.safety_checker_model = self.models_by_pipeline_action("safety_checker")[0]
+        self.text_encoder_model = self.models_by_pipeline_action("text_encoder")[0]
+        self.inpaint_vae_model = self.models_by_pipeline_action("inpaint_vae")[0]
         self.register(SignalCode.SD_CANCEL_SIGNAL, self.on_sd_cancel_signal)
         self.register(SignalCode.SD_UNLOAD_SIGNAL, self.on_unload_stablediffusion_signal)
         self.register(SignalCode.SD_MOVE_TO_CPU_SIGNAL, self.on_move_to_cpu)
@@ -852,7 +852,6 @@ class SDHandler(
             self._prompt_embeds = None
             self._negative_prompt_embeds = None
 
-        print("SETTING DATA", data)
         self.data = data if data is not None else self.data
         torch.backends.cuda.matmul.allow_tf32 = self.use_tf32
 
@@ -870,10 +869,14 @@ class SDHandler(
     def initialize_safety_checker(self, local_files_only=None):
         local_files_only = self.local_files_only if local_files_only is None else local_files_only
 
-        if not hasattr(self.pipe, "safety_checker") or not self.pipe.safety_checker:
+        if (
+            not hasattr(self.pipe, "safety_checker") or
+            not self.pipe.safety_checker
+        ) and "path" in self.safety_checker_model:
+            self.logger.info(f"Initializing safety checker with {self.safety_checker_model}")
             try:
                 self.pipe.safety_checker = StableDiffusionSafetyChecker.from_pretrained(
-                    self.safety_checker_model[0]["path"],
+                    self.safety_checker_model["path"],
                     local_files_only=local_files_only,
                     torch_dtype=self.data_type
                 )
@@ -882,7 +885,7 @@ class SDHandler(
             
             try:
                 self.pipe.feature_extractor = AutoFeatureExtractor.from_pretrained(
-                    self.safety_checker_model[0]["path"],
+                    self.safety_checker_model["path"],
                     local_files_only=local_files_only,
                     torch_dtype=self.data_type
                 )
@@ -1583,7 +1586,7 @@ class SDHandler(
             if self.is_outpaint:
                 self.logger.info("Initializing vae for inpaint / outpaint")
                 self.pipe.vae = AsymmetricAutoencoderKL.from_pretrained(
-                    self.inpaint_vae_model,
+                    self.inpaint_vae_model["path"],
                     torch_dtype=self.data_type
                 )
 

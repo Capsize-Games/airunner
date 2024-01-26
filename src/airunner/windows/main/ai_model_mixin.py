@@ -62,7 +62,8 @@ class AIModelMixin:
         return [model["name"] for model in self.settings["ai_models"] if model["section"] == section]
 
     def models_by_pipeline_action(self, pipeline_action):
-        return [model for model in self.settings["ai_models"] if model["pipeline_action"] == pipeline_action]
+        val = [model for model in self.settings["ai_models"] if model["pipeline_action"] == pipeline_action]
+        return val
     
     def ai_models_find(self, search="", default=False):
         return [model for model in self.settings["ai_models"] if model["is_default"] == default and search.lower() in model["name"].lower()]
