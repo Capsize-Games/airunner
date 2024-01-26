@@ -460,7 +460,3 @@ Previous Conversation:
         path_settings["llm_seq2seq_model_path"] = DEFAULT_PATHS["text"]["models"]["seq2seq"]
         path_settings["llm_visualqa_model_path"] = DEFAULT_PATHS["text"]["models"]["visualqa"]
         self.settings["path_settings"] = path_settings
-
-    @property
-    def is_windows(self):
-        return self.get_service(ServiceCode.IS_WINDOWS)()
