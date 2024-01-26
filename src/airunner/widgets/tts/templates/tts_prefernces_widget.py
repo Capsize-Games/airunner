@@ -225,9 +225,9 @@ class TTSPreferencesWidget(BaseWidget):
         self.ui.use_bark.blockSignals(True)
         self.ui.enable_tts.blockSignals(True)
 
-        language = self.tts_settings["language"]
-        gender = self.tts_settings["gender"]
-        voice = self.tts_settings["voice"]
+        language = self.settings["tts_settings"]["language"]
+        gender = self.settings["tts_settings"]["gender"]
+        voice = self.settings["tts_settings"]["voice"]
 
         self.ui.voice_combobox.clear()
 
@@ -236,8 +236,8 @@ class TTSPreferencesWidget(BaseWidget):
         self.ui.gender_combobox.setCurrentText(gender)
         self.ui.voice_combobox.addItems(self.voices[language][gender])
         self.ui.voice_combobox.setCurrentText(voice)
-        self.ui.use_bark.setChecked(self.tts_settings["use_bark"])
-        self.ui.enable_tts.setChecked(self.tts_settings["enable_tts"])
+        self.ui.use_bark.setChecked(self.settings["tts_settings"]["use_bark"])
+        self.ui.enable_tts.setChecked(self.settings["tts_settings"]["enable_tts"])
 
         self.ui.language_combobox.blockSignals(False)
         self.ui.gender_combobox.blockSignals(False)

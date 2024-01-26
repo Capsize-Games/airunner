@@ -1,4 +1,3 @@
-from contextlib import contextmanager
 import os
 import json
 
@@ -8,10 +7,11 @@ from PyQt6.QtCore import Qt
 from PyQt6.QtCore import pyqtSignal
 from PyQt6.QtWidgets import QMenu
 from PyQt6.QtWidgets import QMessageBox
-from PIL import Image
 
 from PIL import Image
 from PIL.ImageQt import ImageQt
+
+from airunner.enums import SignalCode
 from airunner.utils import load_metadata_from_image
 
 from airunner.utils import delete_image
@@ -147,7 +147,7 @@ class ImageWidget(BaseWidget):
             self.meta_data = load_metadata_from_image(image)
 
     def send_image_to_grid(self):
-        self.emit("load_image_from_path", self.image_path)
+        self.emit(SignalCode.CANVAS_LOAD_IMAGE_FROM_PATH_SIGNAL, self.image_path)
 
     def view_image(self):
         from PyQt6.QtWidgets import QGraphicsView, QGraphicsScene, QDialog, QVBoxLayout
@@ -222,7 +222,7 @@ class ImageWidget(BaseWidget):
         meta_data["strength"] = 1.0
         meta_data["enable_input_image"] = True
         meta_data["use_cropped_image"] = False
-        self.emit("generate_image_signal", dict(
+        self.emit(SignalCode.SD_GENERATE_IMAGE_SIGNAL, dict(
             image=image,
             override_data=meta_data
         ))
@@ -241,7 +241,7 @@ class ImageWidget(BaseWidget):
         meta_data["strength"] = 1.0
         meta_data["enable_input_image"] = True
         meta_data["use_cropped_image"] = False
-        self.emit("generate_image_signal", dict(
+        self.emit(SignalCode.SD_GENERATE_IMAGE_SIGNAL, dict(
             image=image,
             override_data=meta_data
         ))
