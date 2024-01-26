@@ -126,7 +126,7 @@ class StandardImageWidget(BaseWidget):
         """
         Using the LLM, generate a description of the image
         """
-        self.emit(SignalCode.DESCRIBE_IMAGE_SIGNAL, dict(
+        self.emit(SignalCode.VISION_DESCRIBE_IMAGE_SIGNAL, dict(
             image=self.image, 
             callback=self.handle_prompt_generated
         ))
@@ -178,7 +178,7 @@ class StandardImageWidget(BaseWidget):
         meta_data["use_cropped_image"] = False
         meta_data["batch_size"] = batch_size
 
-        self.emit(SignalCode.GENERATE_IMAGE_SIGNAL, dict(
+        self.emit(SignalCode.SD_GENERATE_IMAGE_SIGNAL, dict(
             image=self.image,
             meta_data=meta_data
         ))
@@ -212,7 +212,7 @@ class StandardImageWidget(BaseWidget):
         meta_data["enable_input_image"] = True
         meta_data["use_cropped_image"] = False
 
-        self.emit(SignalCode.GENERATE_IMAGE_SIGNAL, dict(
+        self.emit(SignalCode.SD_GENERATE_IMAGE_SIGNAL, dict(
             image=self.image,
             override_data=meta_data
         ))
