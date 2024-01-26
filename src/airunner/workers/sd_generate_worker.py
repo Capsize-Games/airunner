@@ -23,7 +23,6 @@ class SDGenerateWorker(Worker):
         image_base_path = data["image_base_path"]
         message = data["message"]
         for response in self.sd.generator_sample(message):
-            print("RESPONSE FROM sd.generate_sample", response)
             if not response:
                 continue
 
