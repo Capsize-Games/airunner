@@ -1,3 +1,4 @@
+from airunner.enums import SignalCode
 from airunner.widgets.base_widget import BaseWidget
 from airunner.widgets.seed.templates.seed_ui import Ui_seed_widget
 
@@ -9,7 +10,7 @@ class SeedWidget(BaseWidget):
 
     def __init__(self, *args, **kwargs):
         super().__init__(*args, **kwargs)
-        self.register("application_settings_changed_signal", self)
+        self.register(SignalCode.APPLICATION_SETTINGS_CHANGED_SIGNAL, self.on_application_settings_changed_signal)
 
     def on_application_settings_changed_signal(self):
         self.ui.lineEdit.setText(str(self.seed))

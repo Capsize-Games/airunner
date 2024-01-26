@@ -1,4 +1,7 @@
 class ImageFilterMixin:    
+    def __init__(self):
+        self.data = None
+
     def image_filter_get_all(self):
         return self.settings["image_filters"]
 
