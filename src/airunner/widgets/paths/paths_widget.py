@@ -12,7 +12,7 @@ class PathsWidget(BaseWidget):
         self.initialize_widgets()
 
     def action_button_clicked_reset(self):
-        self.emit(SignalCode.RESET_PATHS_SIGNAL)
+        self.emit(SignalCode.APPLICATION_RESET_PATHS_SIGNAL)
         self.initialize_widgets()
 
     def initialize_widgets(self):

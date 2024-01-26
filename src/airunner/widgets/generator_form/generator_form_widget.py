@@ -110,8 +110,8 @@ class GeneratorForm(BaseWidget):
         self.ui.generator_form_tabs.tabBar().hide()
         self.activate_ai_mode()
         self.register(SignalCode.APPLICATION_SETTINGS_CHANGED_SIGNAL, self.on_application_settings_changed_signal)
-        self.register(SignalCode.GENERATE_IMAGE_SIGNAL, self.on_generate_image_signal)
-        self.register(SignalCode.STOP_IMAGE_GENERATOR_PROGRESS_BAR_SIGNAL, self.on_stop_image_generator_progress_bar_signal)
+        self.register(SignalCode.SD_GENERATE_IMAGE_SIGNAL, self.on_generate_image_signal)
+        self.register(SignalCode.APPLICATION_STOP_SD_PROGRESS_BAR_SIGNAL, self.on_stop_image_generator_progress_bar_signal)
         self.register(SignalCode.SD_PROGRESS_SIGNAL, self.on_progress_signal)
 
     def activate_ai_mode(self):
@@ -125,7 +125,7 @@ class GeneratorForm(BaseWidget):
     signals in the corresponding ui file.
     """
     def action_clicked_button_save_prompts(self):
-        self.emit(SignalCode.SAVE_SD_PROMPT_SIGNAL)
+        self.emit(SignalCode.SD_SAVE_PROMPT_SIGNAL)
 
     def handle_prompt_changed(self):
         settings = self.settings
@@ -424,7 +424,7 @@ class GeneratorForm(BaseWidget):
 
         self.logger.info(f"Attempting to generate image")
 
-        self.emit(SignalCode.IMAGE_GENERATE_REQUEST_SIGNAL, dict(
+        self.emit(SignalCode.SD_IMAGE_GENERATE_REQUEST_SIGNAL, dict(
             action=action,
             options={
                 **options,

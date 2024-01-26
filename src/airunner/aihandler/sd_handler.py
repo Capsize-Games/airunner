@@ -697,8 +697,8 @@ class SDHandler(
         self.text_encoder_model = self.models_by_pipeline_action("text_encoder")
         self.inpaint_vae_model = self.models_by_pipeline_action("inpaint_vae")
         self.register(SignalCode.SD_CANCEL_SIGNAL, self.on_sd_cancel_signal)
-        self.register(SignalCode.UNLOAD_SD_SIGNAL, self.on_unload_stablediffusion_signal)
-        self.register(SignalCode.MOVE_TO_CPU_SIGNAL, self.on_move_to_cpu)
+        self.register(SignalCode.SD_UNLOAD_SIGNAL, self.on_unload_stablediffusion_signal)
+        self.register(SignalCode.SD_MOVE_TO_CPU_SIGNAL, self.on_move_to_cpu)
         self.handler_type = HandlerType.DIFFUSER
         self._current_model: str = ""
         self._previous_model: str = ""
@@ -857,7 +857,7 @@ class SDHandler(
         torch.backends.cuda.matmul.allow_tf32 = self.use_tf32
 
     def send_error(self, message):
-        self.emit(SignalCode.ERROR_SIGNAL, message)
+        self.emit(SignalCode.LOG_ERROR_SIGNAL, message)
 
     def error_handler(self, error):
         message = str(error)
@@ -865,7 +865,7 @@ class SDHandler(
             message = f"This model does not support {self.action}"
         traceback.print_exc()
         self.logger.error(error)
-        self.emit(SignalCode.ERROR_SIGNAL, message)
+        self.emit(SignalCode.LOG_ERROR_SIGNAL, message)
 
     def initialize_safety_checker(self, local_files_only=None):
         local_files_only = self.local_files_only if local_files_only is None else local_files_only
@@ -909,7 +909,7 @@ class SDHandler(
         else:
             message = "Generating image"
 
-        self.emit(SignalCode.STATUS_SIGNAL, message)
+        self.emit(SignalCode.LOG_STATUS_SIGNAL, message)
 
         try:
             output = self.call_pipe(**kwargs)
@@ -1078,7 +1078,7 @@ class SDHandler(
             frame_ids = list(range(ch_start, ch_end))
             try:
                 self.logger.info(f"Generating video with {len(frame_ids)} frames")
-                self.emit(SignalCode.STATUS_SIGNAL, f"Generating video, frames {cur_frame} to {cur_frame + len(frame_ids)-1} of {self.n_samples}")
+                self.emit(SignalCode.LOG_STATUS_SIGNAL, f"Generating video, frames {cur_frame} to {cur_frame + len(frame_ids) - 1} of {self.n_samples}")
                 cur_frame += len(frame_ids)
                 kwargs = {
                     "prompt": prompt,
@@ -1247,7 +1247,7 @@ class SDHandler(
         self.do_cancel = False
         self.process_data(data)
 
-        self.emit(SignalCode.STATUS_SIGNAL, f"Applying memory settings")
+        self.emit(SignalCode.LOG_STATUS_SIGNAL, f"Applying memory settings")
         self.apply_memory_efficient_settings()
 
         seed = self.seed
@@ -1382,7 +1382,7 @@ class SDHandler(
             self.logger.info("pipe is None")
             return
 
-        self.emit(SignalCode.STATUS_SIGNAL, f"Generating {'video' if self.is_vid_action else 'image'}")
+        self.emit(SignalCode.LOG_STATUS_SIGNAL, f"Generating {'video' if self.is_vid_action else 'image'}")
 
         action = "depth2img" if data["action"] == "depth" else data["action"]
 
@@ -1569,7 +1569,7 @@ class SDHandler(
                 )
 
             if self.pipe is None:
-                self.emit(SignalCode.ERROR_SIGNAL, "Failed to load model")
+                self.emit(SignalCode.LOG_ERROR_SIGNAL, "Failed to load model")
                 return
         
             """
@@ -1730,7 +1730,7 @@ class SDHandler(
                 message = f"Downloading model {model_name}"
         else:
             message = f"Loading model {model_name}"
-        self.emit(SignalCode.STATUS_SIGNAL, message)
+        self.emit(SignalCode.LOG_STATUS_SIGNAL, message)
 
     def prepare_model(self):
         self.logger.info("Prepare model")
@@ -1767,7 +1767,7 @@ class SDHandler(
                 self.logger.info("Model not found, attempting download")
             # check if we have an internet connection
             if self.allow_online_when_missing_files:
-                self.emit(SignalCode.STATUS_SIGNAL, "Downloading model files")
+                self.emit(SignalCode.LOG_STATUS_SIGNAL, "Downloading model files")
                 self.local_files_only = False
             else:
                 self.send_error("Required files not found, enable online access to download")

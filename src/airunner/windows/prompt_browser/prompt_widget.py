@@ -20,13 +20,13 @@ class PromptWidget(BaseWidget):
         self.save_prompt()
 
     def action_clicked_button_load(self):
-        self.emit(SignalCode.LOAD_SD_PROMPT_SIGNAL, self.index)
+        self.emit(SignalCode.SD_LOAD_PROMPT_SIGNAL, self.index)
 
     def action_clicked_button_delete(self):
         self.deleteLater()
 
     def save_prompt(self):
-        self.emit(SignalCode.UPDATE_SAVED_SD_PROMPT_SIGNAL, (
+        self.emit(SignalCode.SD_UPDATE_SAVED_PROMPT_SIGNAL, (
             self.index,
             self.ui.prompt.toPlainText(), 
             self.ui.negative_prompt.toPlainText()

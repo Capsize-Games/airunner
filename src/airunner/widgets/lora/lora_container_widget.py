@@ -54,7 +54,7 @@ class LoraContainerWidget(BaseWidget):
             for file in filenames:
                 if file.endswith(".ckpt") or file.endswith(".safetensors") or file.endswith(".pt"):
                     name = file.replace(".ckpt", "").replace(".safetensors", "").replace(".pt", "")
-                    self.emit(SignalCode.ADD_LORA_SIGNAL, dict(
+                    self.emit(SignalCode.LORA_ADD_SIGNAL, dict(
                         name=name,
                         path=os.path.join(dirpath, file),
                         enabled=True,

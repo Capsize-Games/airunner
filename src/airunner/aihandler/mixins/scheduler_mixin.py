@@ -119,7 +119,7 @@ class SchedulerMixin:
     def prepare_scheduler(self):
         scheduler_name = self.options.get(f"scheduler", "euler_a")
         if self.scheduler_name != scheduler_name:
-            self.emit(SignalCode.STATUS_SIGNAL, f"Preparing scheduler {scheduler_name}")
+            self.emit(SignalCode.LOG_STATUS_SIGNAL, f"Preparing scheduler {scheduler_name}")
             self.scheduler_name = scheduler_name
             self.do_change_scheduler = True
         else:

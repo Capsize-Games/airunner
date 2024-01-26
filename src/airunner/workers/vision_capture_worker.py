@@ -13,8 +13,8 @@ class VisionCaptureWorker(Worker):
         self.cap = None
         self.state = WorkerState.HALTED
         self.interval = 1  # the amount of seconds between each image capture
-        self.register(SignalCode.START_VISION_CAPTURE, self.start_vision_capture)
-        self.register(SignalCode.STOP_VISION_CAPTURE, self.stop_capturing)
+        self.register(SignalCode.VISION_START_CAPTURE, self.start_vision_capture)
+        self.register(SignalCode.VISION_STOP_CAPTURE, self.stop_capturing)
         self.register(SignalCode.VISION_CAPTURE_UNPAUSE_SIGNAL, self.unpause)
 
     def unpause(self, _message):

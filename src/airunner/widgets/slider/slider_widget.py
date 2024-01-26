@@ -99,7 +99,7 @@ class SliderWidget(BaseWidget):
         self.label_text = None
         self.settings_property = None
         self.label = None
-        self.register(SignalCode.MAIN_WINDOW_LOADED_SIGNAL, self.on_main_window_loaded_signal)
+        self.register(SignalCode.APPLICATION_MAIN_WINDOW_LOADED_SIGNAL, self.on_main_window_loaded_signal)
     
     def on_main_window_loaded_signal(self):
         self.initialize()

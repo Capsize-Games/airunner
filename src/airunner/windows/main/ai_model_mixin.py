@@ -43,7 +43,7 @@ class AIModelMixin:
         settings = self.settings
         settings["ai_models"] = models
         self.settings = settings
-        self.emit(SignalCode.MODELS_CHANGED_SIGNAL, "models")
+        self.emit(SignalCode.APPLICATION_MODELS_CHANGED_SIGNAL, "models")
 
     def ai_model_update(self, item):
         settings = self.settings

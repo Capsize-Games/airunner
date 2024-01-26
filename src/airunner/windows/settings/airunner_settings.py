@@ -261,7 +261,7 @@ class SettingsWindow(BaseWindow):
             checked = item.checkState() == Qt.CheckState.Checked
             settings["allow_online_mode"] = checked
         elif name == "reset_settings":
-            self.emit(SignalCode.RESET_SETTINGS_SIGNAL)
+            self.emit(SignalCode.APPLICATION_RESET_SETTINGS_SIGNAL)
         
         self.settings = settings
         self.show_content(section, display_name, name, description)
