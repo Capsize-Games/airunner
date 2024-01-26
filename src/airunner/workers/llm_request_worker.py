@@ -8,8 +8,7 @@ class LLMRequestWorker(Worker):
         self.register(SignalCode.LLM_REQUEST_SIGNAL, self.on_llm_request_signal)
     
     def on_llm_request_signal(self, message):
-        print("adding llm request to queue", message)
         self.add_to_queue(message)
-    
+
     def handle_message(self, message):
-        super().handle_message(message)
+        self.emit(SignalCode.LLM_REQUEST_WORKER_RESPONSE_SIGNAL, message)

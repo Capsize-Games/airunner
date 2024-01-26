@@ -122,9 +122,7 @@ class CasualLMTransformerBaseHandler(TransformerBaseHandler):
                 replaced = False
 
     def load_tokenizer(self, local_files_only=None):
-        if self.tokenizer is not None:
-            return
-        self.logger.info(f"Loading tokenizer")
+        self.logger.info(f"Loading tokenizer from {self.current_model_path}")
         local_files_only = self.local_files_only if local_files_only is None else local_files_only
         try:
             self.tokenizer = AutoTokenizer.from_pretrained(
@@ -133,13 +131,20 @@ class CasualLMTransformerBaseHandler(TransformerBaseHandler):
                 token=self.request_data.get("hf_api_key_read_key"),
                 device_map=self.device,
             )
+            self.logger.info("Tokenizer loaded")
         except OSError as e:
             if "Checkout your internet connection" in str(e):
                 if local_files_only:
-                    self.logger.info(
-                        "Unable to load tokenizer, model does not exist locally, trying to load from remote")
+                    self.logger.warning(
+                        "Unable to load tokenizer, model does not exist locally, trying to load from remote"
+                    )
                     return self.load_tokenizer(local_files_only=False)
                 else:
                     self.logger.error(e)
+        except Exception as e:
+            self.logger.error(e)
+
         if self.tokenizer:
             self.tokenizer.use_default_system_prompt = False
+        else:
+            self.logger.error("Tokenizer failed to load")
