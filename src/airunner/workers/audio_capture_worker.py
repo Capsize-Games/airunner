@@ -1,6 +1,7 @@
 import sounddevice as sd
 from PyQt6.QtCore import pyqtSlot, QThread
 
+from airunner.enums import SignalCode
 from airunner.workers.worker import Worker
 
 
@@ -37,6 +38,9 @@ class AudioCaptureWorker(Worker):
                 self.handle_message(self.recording)
             while not self.listening:
                 QThread.msleep(100)
+
+    def handle_message(self, message):
+        self.emit(SignalCode.AUDIO_CAPTURE_WORKER_RESPONSE_SIGNAL, message)
 
     def start_listening(self):
         self.logger.info("Start listening")

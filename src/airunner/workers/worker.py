@@ -92,7 +92,7 @@ class Worker(QObject, MediatorMixin):
         self.paused = False
 
     def handle_message(self, message):
-        self.emit(self.prefix + "_response_signal", message)
+        raise NotImplementedError
 
     def add_to_queue(self, message):
         self.items[self.current_index] = message
