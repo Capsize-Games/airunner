@@ -150,13 +150,14 @@ class SDHandler(
     def is_pipe_on_cpu(self):
         return self.has_pipe() and self.pipe_on_cpu()
 
-    def on_move_to_cpu(self, callback):
-        self.logger.info("Moving model to CPU")
-        if self.is_pipe_on_cpu() or not self.has_pipe():
-            return
-        self.pipe = self.pipe.to("cpu")
-        clear_memory()
-        callback()
+    def on_move_to_cpu(self, message: dict = None):
+        message = message or {}
+        if not self.is_pipe_on_cpu() and self.has_pipe():
+            self.logger.info("Moving model to CPU")
+            self.pipe = self.pipe.to("cpu")
+            clear_memory()
+        if "callback" in message:
+            message["callback"]()
 
     @property
     def options(self):
@@ -338,7 +339,6 @@ class SDHandler(
 
     @property
     def action(self):
-        print("GETTING ACTION", self.data)
         try:
             return self.data.get("action", None)
         except Exception as e:
@@ -685,6 +685,20 @@ class SDHandler(
         return self.options.get("original_model_data", {})
 
     def  __init__(self, *args, **kwargs):
+        super().__init__(*args, **kwargs)
+        LayerMixin.__init__(self)
+        LoraDataMixin.__init__(self)
+        EmbeddingDataMixin.__init__(self)
+        PipelineMixin.__init__(self)
+        ControlnetModelMixin.__init__(self)
+        AIModelMixin.__init__(self)
+        self.logger.info("Loading Stable Diffusion model runner...")
+        self.safety_checker_model = self.models_by_pipeline_action("safety_checker")
+        self.text_encoder_model = self.models_by_pipeline_action("text_encoder")
+        self.inpaint_vae_model = self.models_by_pipeline_action("inpaint_vae")
+        self.register(SignalCode.SD_CANCEL_SIGNAL, self.on_sd_cancel_signal)
+        self.register(SignalCode.UNLOAD_SD_SIGNAL, self.on_unload_stablediffusion_signal)
+        self.register(SignalCode.MOVE_TO_CPU_SIGNAL, self.on_move_to_cpu)
         self.handler_type = HandlerType.DIFFUSER
         self._current_model: str = ""
         self._previous_model: str = ""
@@ -731,20 +745,6 @@ class SDHandler(
         self.data = dict(
             action="txt2img",
         )
-        super().__init__(*args, **kwargs)
-        LayerMixin.__init__(self)
-        LoraDataMixin.__init__(self)
-        EmbeddingDataMixin.__init__(self)
-        PipelineMixin.__init__(self)
-        ControlnetModelMixin.__init__(self)
-        AIModelMixin.__init__(self)
-        self.logger.info("Loading Stable Diffusion model runner...")
-        self.safety_checker_model = self.models_by_pipeline_action("safety_checker")
-        self.text_encoder_model = self.models_by_pipeline_action("text_encoder")
-        self.inpaint_vae_model = self.models_by_pipeline_action("inpaint_vae")
-        self.register(SignalCode.SD_CANCEL_SIGNAL, self.on_sd_cancel_signal)
-        self.register(SignalCode.UNLOAD_SD_SIGNAL, self.on_unload_stablediffusion_signal)
-        self.register(SignalCode.MOVE_TO_CPU_SIGNAL, self.on_move_to_cpu)
 
     @staticmethod
     def latents_to_image(latents: torch.Tensor):
