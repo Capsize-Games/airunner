@@ -34,7 +34,7 @@ tts_settings_default = dict(
 class SettingsMixin:
     def __init__(self):
         self.application_settings = QSettings("Capsize Games", "AI Runner")
-        self.register(SignalCode.RESET_SETTINGS_SIGNAL, self.on_reset_settings_signal)
+        self.register(SignalCode.APPLICATION_RESET_SETTINGS_SIGNAL, self.on_reset_settings_signal)
         ServiceLocator.register("get_settings", self.get_settings)
         ServiceLocator.register("set_settings", self.set_settings)
         self.default_settings = dict(

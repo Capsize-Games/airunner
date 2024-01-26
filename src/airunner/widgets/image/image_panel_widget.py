@@ -36,7 +36,7 @@ class ImagePanelWidget(BaseWidget):
         self.ui.scrollAreaWidgetContents.setLayout(flowLayout)
         self.display_thread = threading.Thread(target=self.display_thumbnails)
 
-        self.register(SignalCode.IMAGE_GENERATED_SIGNAL, self.on_image_generated_signal)
+        self.register(SignalCode.SD_IMAGE_GENERATED_SIGNAL, self.on_image_generated_signal)
     
     def on_image_generated_signal(self, data):
         for image in data["images"]:
