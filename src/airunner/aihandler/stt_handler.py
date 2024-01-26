@@ -12,7 +12,6 @@ from airunner.enums import SignalCode
 
 class STTHandler(BaseHandler):
     listening = False
-    move_to_cpu_signal = pyqtSignal()
 
     def on_process_audio(self, audio_data, fs):
         inputs = np.squeeze(audio_data)
@@ -31,7 +30,7 @@ class STTHandler(BaseHandler):
         self.processor = None
         self.feature_extractor = None
         self.load_model()
-        self.register(SignalCode.PROCESS_AUDIO_SIGNAL, self.on_process_audio)
+        self.register(SignalCode.STT_PROCESS_AUDIO_SIGNAL, self.on_process_audio)
 
     @property
     def device(self):

@@ -60,7 +60,7 @@ class CanvasPlusWidget(BaseWidget):
 
     @image_pivot_point.setter
     def image_pivot_point(self, value):
-        self.emit(SignalCode.UPDATE_CURRENT_LAYER_SIGNAL, dict(
+        self.emit(SignalCode.LAYER_UPDATE_CURRENT_SIGNAL, dict(
             pivot_point_x=value.x(),
             pivot_point_y=value.y()
         ))
@@ -110,18 +110,18 @@ class CanvasPlusWidget(BaseWidget):
 
         self.ui.central_widget.resizeEvent = self.resizeEvent
         self.canvas_container.resizeEvent = self.window_resized
-        #self.register(SignalCode.ZOOM_LEVEL_CHANGED, self.on_zoom_level_changed_signal)
+        #self.register(SignalCode.CANVAS_ZOOM_LEVEL_CHANGED, self.on_zoom_level_changed_signal)
         self.register(SignalCode.CANVAS_UPDATE_CURSOR, self.on_canvas_update_cursor_signal)
-        self.register(SignalCode.MAIN_WINDOW_LOADED_SIGNAL, self.on_main_window_loaded_signal)
+        self.register(SignalCode.APPLICATION_MAIN_WINDOW_LOADED_SIGNAL, self.on_main_window_loaded_signal)
         self.register(SignalCode.CANVAS_DO_DRAW_SIGNAL, self.on_canvas_do_draw_signal)
         self.register(SignalCode.CANVAS_CLEAR_LINES_SIGNAL, self.on_canvas_clear_lines_signal)
-        self.register(SignalCode.IMAGE_DATA_WORKER_RESPONSE_SIGNAL, self.on_ImageDataWorker_response_signal)
+        self.register(SignalCode.SD_IMAGE_DATA_WORKER_RESPONSE_SIGNAL, self.on_ImageDataWorker_response_signal)
         self.register(SignalCode.CANVAS_RESIZE_WORKER_RESPONSE_SIGNAL, self.on_CanvasResizeWorker_response_signal)
-        self.register(SignalCode.IMAGE_GENERATED_SIGNAL, self.on_image_generated_signal)
-        self.register(SignalCode.LOAD_IMAGE_FROM_PATH_SIGNAL, self.on_load_image_from_path)
+        self.register(SignalCode.SD_IMAGE_GENERATED_SIGNAL, self.on_image_generated_signal)
+        self.register(SignalCode.CANVAS_LOAD_IMAGE_FROM_PATH_SIGNAL, self.on_load_image_from_path)
         self.register(SignalCode.CANVAS_HANDLE_LAYER_CLICK_SIGNAL, self.on_canvas_handle_layer_click_signal)
-        self.register(SignalCode.UPDATE_CANVAS_SIGNAL, self.on_update_canvas_signal)
-        self.register(SignalCode.SET_CURRENT_LAYER_SIGNAL, self.on_set_current_layer_signal)
+        self.register(SignalCode.CANVAS_UPDATE_SIGNAL, self.on_update_canvas_signal)
+        self.register(SignalCode.LAYER_SET_CURRENT_SIGNAL, self.on_set_current_layer_signal)
         self.register(SignalCode.APPLICATION_SETTINGS_CHANGED_SIGNAL, self.on_application_settings_changed_signal)
 
         self.register_service("canvas_drag_pos", self.canvas_drag_pos)
@@ -226,15 +226,15 @@ class CanvasPlusWidget(BaseWidget):
         self.do_draw()
 
     def on_ImageDataWorker_response_signal(self, message):
-        self.emit(SignalCode.CLEAR_STATUS_MESSAGE_SIGNAL)
-        self.emit(SignalCode.STOP_IMAGE_GENERATOR_PROGRESS_BAR_SIGNAL)
+        self.emit(SignalCode.APPLICATION_CLEAR_STATUS_MESSAGE_SIGNAL)
+        self.emit(SignalCode.APPLICATION_STOP_SD_PROGRESS_BAR_SIGNAL)
         nsfw_content_detected = message["nsfw_content_detected"]
         path = message["path"]
         if nsfw_content_detected and self.settings["nsfw_filter"]:
-            self.emit(SignalCode.ERROR_SIGNAL, "Explicit content detected, try again.")
-        self.emit(SignalCode.SHOW_LAYERS_SIGNAL)
+            self.emit(SignalCode.LOG_ERROR_SIGNAL, "Explicit content detected, try again.")
+        self.emit(SignalCode.LAYERS_SHOW_SIGNAL)
         if path is not None:
-            self.emit(SignalCode.SET_STATUS_LABEL_SIGNAL, f"Image generated to {path}")
+            self.emit(SignalCode.APPLICATION_SET_STATUS_LABEL_SIGNAL, f"Image generated to {path}")
     
     # @property
     # def zoom_in_step(self):
@@ -525,7 +525,7 @@ class CanvasPlusWidget(BaseWidget):
                 pixmap = QPixmap()
                 pixmap.convertFromImage(ImageQt(image))
                 self.pixmaps[index] = DraggablePixmap(self, pixmap)
-                self.emit(SignalCode.UPDATE_LAYER_SIGNAL, dict(
+                self.emit(SignalCode.LAYER_UPDATE_SIGNAL, dict(
                     layer=layer,
                     index=index
                 ))
@@ -682,7 +682,7 @@ class CanvasPlusWidget(BaseWidget):
         if not draggable_pixmap:
             return
         self.scene.removeItem(draggable_pixmap)
-        self.emit(SignalCode.DELETE_CURRENT_LAYER_SIGNAL)
+        self.emit(SignalCode.LAYER_DELETE_CURRENT_SIGNAL)
         self.update()
     
     def delete_image(self):
@@ -752,10 +752,10 @@ class CanvasPlusWidget(BaseWidget):
             self.scene.removeItem(current_draggable_pixmap)
     
     def add_layer(self):
-        self.emit(SignalCode.ADD_LAYER_SIGNAL)
+        self.emit(SignalCode.LAYER_ADD_SIGNAL)
 
     def switch_to_layer(self, layer_index):
-        self.emit(SignalCode.SWITCH_LAYER_SIGNAL, layer_index)
+        self.emit(SignalCode.LAYER_SWITCH_SIGNAL, layer_index)
 
     def add_image_to_scene(self, image_data, is_outpaint=False, image_root_point=None):
         #self.image_adder = ImageAdder(self, image, is_outpaint, image_root_point)

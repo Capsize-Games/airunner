@@ -262,7 +262,7 @@ class MainWindow(
             self.model_manager.models_changed(key, value)
 
     def show_layers(self):
-        self.emit(SignalCode.SHOW_LAYERS_SIGNAL)
+        self.emit(SignalCode.LAYERS_SHOW_SIGNAL)
 
     def on_controlnet_image_generated_signal(self, response: dict):
         self.handle_controlnet_image_generated(response)
@@ -295,7 +295,7 @@ class MainWindow(
         self.initialize_ui()
         self.worker_manager = WorkerManager()
         self.is_started = True
-        self.emit(SignalCode.MAIN_WINDOW_LOADED_SIGNAL)
+        self.emit(SignalCode.APPLICATION_MAIN_WINDOW_LOADED_SIGNAL)
 
     def register_services(self):
         self.logger.info("Registering services")
@@ -310,12 +310,12 @@ class MainWindow(
         # on window resize:
         # self.windowStateChanged.connect(self.on_state_changed)
         self.logger.info("Connecting signals")
-        self.register(SignalCode.SET_STATUS_LABEL_SIGNAL, self.on_set_status_label_signal)
-        self.register(SignalCode.CLEAR_STATUS_MESSAGE_SIGNAL, self.on_clear_status_message_signal)
-        self.register(SignalCode.DESCRIBE_IMAGE_SIGNAL, self.on_describe_image_signal)
-        self.register(SignalCode.SAVE_SD_PROMPT_SIGNAL, self.on_save_stablediffusion_prompt_signal)
-        self.register(SignalCode.LOAD_SD_PROMPT_SIGNAL, self.on_load_saved_stablediffuion_prompt_signal)
-        self.register(SignalCode.UPDATE_SAVED_SD_PROMPT_SIGNAL, self.on_update_saved_stablediffusion_prompt_signal)
+        self.register(SignalCode.APPLICATION_SET_STATUS_LABEL_SIGNAL, self.on_set_status_label_signal)
+        self.register(SignalCode.APPLICATION_CLEAR_STATUS_MESSAGE_SIGNAL, self.on_clear_status_message_signal)
+        self.register(SignalCode.VISION_DESCRIBE_IMAGE_SIGNAL, self.on_describe_image_signal)
+        self.register(SignalCode.SD_SAVE_PROMPT_SIGNAL, self.on_save_stablediffusion_prompt_signal)
+        self.register(SignalCode.SD_LOAD_PROMPT_SIGNAL, self.on_load_saved_stablediffuion_prompt_signal)
+        self.register(SignalCode.SD_UPDATE_SAVED_PROMPT_SIGNAL, self.on_update_saved_stablediffusion_prompt_signal)
 
     def initialize_ui(self):
         self.logger.info("Loading ui")
@@ -325,7 +325,7 @@ class MainWindow(
 
         self.status_widget = StatusWidget()
         self.statusBar().addPermanentWidget(self.status_widget)
-        self.emit(SignalCode.CLEAR_STATUS_MESSAGE_SIGNAL)
+        self.emit(SignalCode.APPLICATION_CLEAR_STATUS_MESSAGE_SIGNAL)
 
         self.set_stylesheet()
 
@@ -388,7 +388,7 @@ class MainWindow(
             seed=self.seed
         )
         if path is not None:
-            self.emit(SignalCode.SET_STATUS_LABEL_SIGNAL, f"Image exported to {path}")
+            self.emit(SignalCode.APPLICATION_SET_STATUS_LABEL_SIGNAL, f"Image exported to {path}")
 
     """
     Slot functions
@@ -779,7 +779,7 @@ class MainWindow(
             )
 
     def show_update_message(self):
-        self.emit(SignalCode.SET_STATUS_LABEL_SIGNAL, f"New version available: {self.latest_version}")
+        self.emit(SignalCode.APPLICATION_SET_STATUS_LABEL_SIGNAL, f"New version available: {self.latest_version}")
 
     def show_update_popup(self):
         self.update_popup = UpdateWindow()
@@ -1024,7 +1024,7 @@ class MainWindow(
         self.logger.error(f"Unknown message code: {message}")
 
     def on_clear_status_message_signal(self, _ignore):
-        self.emit(SignalCode.SET_STATUS_LABEL_SIGNAL, "")
+        self.emit(SignalCode.APPLICATION_SET_STATUS_LABEL_SIGNAL, "")
 
     def set_size_form_element_step_values(self):
         """
@@ -1173,4 +1173,4 @@ class MainWindow(
         print("action_slider_changed")
 
     def action_reset_settings(self):
-        self.emit(SignalCode.RESET_SETTINGS_SIGNAL)
+        self.emit(SignalCode.APPLICATION_RESET_SETTINGS_SIGNAL)

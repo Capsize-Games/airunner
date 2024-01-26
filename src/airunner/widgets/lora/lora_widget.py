@@ -30,17 +30,17 @@ class LoraWidget(BaseWidget):
     def action_changed_trigger_words(self, val):
         self.lora["trigger_word"] = val
         self.create_trigger_word_widgets(self.lora)
-        self.emit(SignalCode.UPDATE_LORA_SIGNAL, self.lora)
+        self.emit(SignalCode.LORA_UPDATE_SIGNAL, self.lora)
 
     def action_toggled_lora_enabled(self, val):
         self.lora['enabled'] = val
-        self.emit(SignalCode.UPDATE_LORA_SIGNAL, self.lora)
+        self.emit(SignalCode.LORA_UPDATE_SIGNAL, self.lora)
         
     def set_enabled(self, val):
         self.ui.enabledCheckbox.setChecked(val)
         self.lora["enabled"] = val
-        self.emit(SignalCode.UPDATE_LORA_SIGNAL, self.lora)
+        self.emit(SignalCode.LORA_UPDATE_SIGNAL, self.lora)
     
     def action_text_changed_trigger_word(self, val):
         self.lora["trigger_word"] = val
-        self.emit(SignalCode.UPDATE_LORA_SIGNAL, self.lora)
+        self.emit(SignalCode.LORA_UPDATE_SIGNAL, self.lora)

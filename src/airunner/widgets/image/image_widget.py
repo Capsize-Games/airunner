@@ -147,7 +147,7 @@ class ImageWidget(BaseWidget):
             self.meta_data = load_metadata_from_image(image)
 
     def send_image_to_grid(self):
-        self.emit(SignalCode.LOAD_IMAGE_FROM_PATH_SIGNAL, self.image_path)
+        self.emit(SignalCode.CANVAS_LOAD_IMAGE_FROM_PATH_SIGNAL, self.image_path)
 
     def view_image(self):
         from PyQt6.QtWidgets import QGraphicsView, QGraphicsScene, QDialog, QVBoxLayout
@@ -222,7 +222,7 @@ class ImageWidget(BaseWidget):
         meta_data["strength"] = 1.0
         meta_data["enable_input_image"] = True
         meta_data["use_cropped_image"] = False
-        self.emit(SignalCode.GENERATE_IMAGE_SIGNAL, dict(
+        self.emit(SignalCode.SD_GENERATE_IMAGE_SIGNAL, dict(
             image=image,
             override_data=meta_data
         ))
@@ -241,7 +241,7 @@ class ImageWidget(BaseWidget):
         meta_data["strength"] = 1.0
         meta_data["enable_input_image"] = True
         meta_data["use_cropped_image"] = False
-        self.emit(SignalCode.GENERATE_IMAGE_SIGNAL, dict(
+        self.emit(SignalCode.SD_GENERATE_IMAGE_SIGNAL, dict(
             image=image,
             override_data=meta_data
         ))

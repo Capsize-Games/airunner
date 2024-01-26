@@ -199,4 +199,4 @@ class InputImageSettingsWidget(BaseWidget):
         # send the current input image to the canvas
         if not self.current_input_image:
             return
-        self.emit(SignalCode.UPDATE_CANVAS_SIGNAL)
+        self.emit(SignalCode.CANVAS_UPDATE_SIGNAL)
