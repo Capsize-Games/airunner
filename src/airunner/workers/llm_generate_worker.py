@@ -41,6 +41,7 @@ class LLMGenerateWorker(Worker):
         self.add_to_queue(message)
 
     def handle_message(self, message):
+        print("HANDLE MESSAGE")
         for response in self.llm.handle_request(message):
             self.emit(SignalCode.LLM_TEXT_STREAMED_SIGNAL, response)
     
