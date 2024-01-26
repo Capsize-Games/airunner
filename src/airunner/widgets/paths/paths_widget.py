@@ -1,3 +1,4 @@
+from airunner.enums import SignalCode
 from airunner.widgets.base_widget import BaseWidget
 from airunner.widgets.paths.path_widget import PathWidget
 from airunner.widgets.paths.templates.paths_ui import Ui_paths_form
@@ -11,7 +12,7 @@ class PathsWidget(BaseWidget):
         self.initialize_widgets()
 
     def action_button_clicked_reset(self):
-        self.emit("reset_paths_signal")
+        self.emit(SignalCode.APPLICATION_RESET_PATHS_SIGNAL)
         self.initialize_widgets()
 
     def initialize_widgets(self):

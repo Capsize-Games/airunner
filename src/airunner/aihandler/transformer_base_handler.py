@@ -1,12 +1,11 @@
 import random
 import traceback
 
-import numpy as np
 import torch
-from transformers import BitsAndBytesConfig, GPTQConfig, AutoModelForCausalLM, TextIteratorStreamer, \
-    AutoModelForSeq2SeqLM, BlipForConditionalGeneration, BlipProcessor, AutoTokenizer
+from transformers import BitsAndBytesConfig, GPTQConfig, TextIteratorStreamer
 
 from airunner.aihandler.base_handler import BaseHandler
+from airunner.utils import clear_memory
 
 
 class TransformerBaseHandler(BaseHandler):
@@ -21,7 +20,7 @@ class TransformerBaseHandler(BaseHandler):
     def __init__(self, *args, **kwargs):
         super().__init__(*args, **kwargs)
         self.callback = None
-        self.request_data = None
+        self.request_data = {}
         self.model = None
         self.processor = None
         self.vocoder = None
@@ -122,9 +121,6 @@ class TransformerBaseHandler(BaseHandler):
 
     def load_model(self, local_files_only=None):
         self.logger.info("Loading model")
-        if not self.do_load_model:
-            return
-
         params = self.model_params(local_files_only=local_files_only)
         if self.request_data:
             params["token"] = self.request_data.get("hf_api_key_read_key", "")
@@ -134,11 +130,9 @@ class TransformerBaseHandler(BaseHandler):
             if config:
                 params["quantization_config"] = config
 
-        path = self.current_model_path
-
-        self.logger.info(f"Loading model from {path}")
+        self.logger.info(f"Loading model from {self.current_model_path}")
         try:
-            self.model = self.auto_class_.from_pretrained(path, **params)
+            self.model = self.auto_class_.from_pretrained(self.current_model_path, **params)
         except OSError as e:
             if "Checkout your internet connection" in str(e):
                 if local_files_only:
@@ -155,29 +149,51 @@ class TransformerBaseHandler(BaseHandler):
         pass
 
     def unload(self):
-        self.unload_model()
-        self.unload_tokenizer()
-        self.unload_processor()
         self._processing_request = False
+        if (
+            self.unload_model() or
+            self.unload_tokenizer() or
+            self.unload_processor()
+        ):
+            clear_memory()
 
     def unload_tokenizer(self):
         self.logger.info("Unloading tokenizer")
-        self.tokenizer = None
+        if self.tokenizer:
+            self.tokenizer = None
+            return True
 
     def unload_model(self):
-        self.model = None
-        self.processor = None
+        if self.model:
+            self.model = None
+            return True
 
     def unload_processor(self):
         self.logger.info("Unloading processor")
-        self.processor = None
+        if self.processor:
+            self.processor = None
+            return True
 
     def load(self):
         self.logger.info("Loading LLM")
-        self.load_tokenizer()
-        self.load_streamer()
-        self.load_processor()
-        self.load_model()
+        do_load_model = self.do_load_model
+        do_load_tokenizer = self.tokenizer is None
+        do_load_processor = self.processor is None
+        do_load_streamer = self.streamer is None
+
+        self.current_model_path = self.model_path
+
+        if do_load_tokenizer:
+            self.load_tokenizer()
+
+        if do_load_streamer:
+            self.load_streamer()
+
+        if do_load_processor:
+            self.load_processor()
+
+        if do_load_model:
+            self.load_model()
 
     def generate(self):
         self.logger.info("Generating")
@@ -203,6 +219,8 @@ class TransformerBaseHandler(BaseHandler):
 
     def process_data(self, data):
         self.request_data = data.get("request_data", {})
+        print(self.request_data.keys())
+        print(self.request_data.get("model_path"))
         self.callback = self.request_data.get("callback", None)
         self.use_gpu = self.request_data.get("use_gpu", self.use_gpu)
         self.image = self.request_data.get("image", None)
@@ -312,232 +330,7 @@ class TransformerBaseHandler(BaseHandler):
         self._processing_request = True
         kwargs = self.prepare_input_args()
         self.do_set_seed(kwargs.get("seed"))
-        self.current_model_path = self.model_path
+        self.process_data(data)
         self.load()
         self._processing_request = True
-        self.process_data(data)
         return self.generate()
-
-
-class CasualLMTransformerBaseHandler(TransformerBaseHandler):
-    auto_class_ = AutoModelForCausalLM
-
-    def do_generate(self, prompt, chat_template):
-        history = []
-        for message in self.history:
-            if message["role"] == "user":
-                # history.append("<s>[INST]" + self.username + ': "'+ message["content"] +'"[/INST]')
-                history.append(self.username + ': "' + message["content"] + '"')
-            else:
-                # history.append(self.botname + ': "'+ message["content"] +'"</s>')
-                history.append(self.botname + ': "' + message["content"])
-        history = "\n".join(history)
-        if history == "":
-            history = None
-
-        # Create a dictionary with the variables
-        variables = {
-            "username": self.username,
-            "botname": self.botname,
-            "history": history or "",
-            "input": prompt,
-            "bos_token": self.tokenizer.bos_token,
-            "bot_mood": self.bot_mood,
-            "bot_personality": self.bot_personality,
-        }
-
-        self.history.append({
-            "role": "user",
-            "content": prompt
-        })
-
-        # Render the template with the variables
-        # rendered_template = chat_template.render(variables)
-
-        # iterate over variables and replace again, this allows us to use variables
-        # in custom template variables (for example variables inside of botmood and bot_personality)
-        rendered_template = chat_template
-        for n in range(2):
-            for key, value in variables.items():
-                rendered_template = rendered_template.replace("{{ " + key + " }}", value)
-
-        # Encode the rendered template
-        encoded = self.tokenizer(rendered_template, return_tensors="pt")
-        model_inputs = encoded.to("cuda" if torch.cuda.is_available() else "cpu")
-
-        # Generate the response
-        self.logger.info("Generating...")
-        import threading
-        thread = threading.Thread(target=self.model.generate, kwargs=dict(
-            model_inputs,
-            min_length=self.min_length,
-            max_length=self.max_length,
-            num_beams=self.num_beams,
-            do_sample=True,
-            top_k=self.top_k,
-            eta_cutoff=self.eta_cutoff,
-            top_p=self.top_p,
-            num_return_sequences=self.sequences,
-            eos_token_id=self.tokenizer.eos_token_id,
-            early_stopping=True,
-            repetition_penalty=self.repetition_penalty,
-            temperature=self.temperature,
-            streamer=self.streamer
-        ))
-        thread.start()
-        # strip all new lines from rendered_template:
-        rendered_template = rendered_template.replace("\n", " ")
-        rendered_template = "<s>" + rendered_template
-        skip = True
-        streamed_template = ""
-        replaced = False
-        is_end_of_message = False
-        is_first_message = True
-        for new_text in self.streamer:
-            # strip all newlines from new_text
-            parsed_new_text = new_text.replace("\n", " ")
-            streamed_template += parsed_new_text
-            streamed_template = streamed_template.replace("<s> [INST]", "<s>[INST]")
-            # iterate over every character in rendered_template and
-            # check if we have the same character in streamed_template
-            if not replaced:
-                for i, char in enumerate(rendered_template):
-                    try:
-                        if char == streamed_template[i]:
-                            skip = False
-                        else:
-                            skip = True
-                            break
-                    except IndexError:
-                        skip = True
-                        break
-            if skip:
-                continue
-            elif not replaced:
-                replaced = True
-                streamed_template = streamed_template.replace(rendered_template, "")
-            else:
-                if "</s>" in new_text:
-                    streamed_template = streamed_template.replace("</s>", "")
-                    new_text = new_text.replace("</s>", "")
-                    is_end_of_message = True
-                yield dict(
-                    message=new_text,
-                    is_first_message=is_first_message,
-                    is_end_of_message=is_end_of_message,
-                    name=self.botname,
-                )
-                is_first_message = False
-
-            if is_end_of_message:
-                self.history.append({
-                    "role": "bot",
-                    "content": streamed_template.strip()
-                })
-                streamed_template = ""
-                replaced = False
-
-    def load_tokenizer(self, local_files_only=None):
-        if self.tokenizer is not None:
-            return
-        self.logger.info(f"Loading tokenizer")
-        local_files_only = self.local_files_only if local_files_only is None else local_files_only
-        try:
-            self.tokenizer = AutoTokenizer.from_pretrained(
-                self.current_model_path,
-                local_files_only=local_files_only,
-                token=self.request_data.get("hf_api_key_read_key"),
-                device_map=self.device,
-            )
-        except OSError as e:
-            if "Checkout your internet connection" in str(e):
-                if local_files_only:
-                    self.logger.info(
-                        "Unable to load tokenizer, model does not exist locally, trying to load from remote")
-                    return self.load_tokenizer(local_files_only=False)
-                else:
-                    self.logger.error(e)
-        if self.tokenizer:
-            self.tokenizer.use_default_system_prompt = False
-
-
-class Seq2SeqTransformerBaseHandler(TransformerBaseHandler):
-    def do_generate(self, prompt, chat_template):
-        pass
-
-    auto_class_ = AutoModelForSeq2SeqLM
-
-
-class VisualQATransformerBaseHandler(TransformerBaseHandler):
-    auto_class_ = BlipForConditionalGeneration
-
-    def __init__(self, *args, **kwargs):
-        super().__init__(*args, **kwargs)
-        self.prompt = "This is an image of"
-        self.model_path = "Salesforce/blip-image-captioning-large"
-        self.do_sample = False
-        self.num_beams = 5
-        self.max_length = 256
-        self.min_length = 1
-        self.top_p = 0.9
-        self.repetition_penalty = 1.5
-        self.length_penalty = 1.0
-        self.temperature = 1
-
-    def load_processor(self, local_files_only=None):
-        self.logger.info(f"Loading processor {self.model_path}")
-        kwargs = dict(
-            device_map="auto",
-            torch_dtype=torch.float16,
-            local_files_only=self.local_files_only if local_files_only is None else local_files_only,
-        )
-        config = self.quantization_config()
-        if config:
-            kwargs["quantization_config"] = config
-        self.processor = BlipProcessor.from_pretrained(
-            self.model_path,
-            **kwargs
-        )
-        if self.processor:
-            self.logger.info("Processor loaded")
-        else:
-            self.logger.error("Failed to load processor")
-
-    def do_generate(self, prompt, chat_template):
-        if not self.processor or not self.model:
-            return
-
-        image = self.image.convert("RGB")
-        inputs = self.processor(
-            images=image,
-            text=prompt,
-            return_tensors="pt"
-        ).to("cuda")
-
-        out = self.model.generate(
-            **inputs,
-            do_sample=self.do_sample,
-            num_beams=self.num_beams,
-            max_length=self.max_length,
-            min_length=self.min_length,
-            top_p=self.top_p,
-            repetition_penalty=self.repetition_penalty,
-            length_penalty=self.length_penalty,
-            temperature=self.temperature,
-        )
-
-        generated_text = self.processor.batch_decode(
-            out, skip_special_tokens=True
-        )[0].strip()
-        return generated_text
-
-    def prepare_input_args(self):
-        kwargs = super().prepare_input_args()
-        for key in ["return_result", "skip_special_tokens", "seed"]:
-            kwargs.pop(key)
-        return kwargs
-
-    def model_params(self, local_files_only) -> dict:
-        params = super().model_params(local_files_only)
-        del params["use_cache"]
-        return params

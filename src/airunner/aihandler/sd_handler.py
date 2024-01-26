@@ -23,7 +23,7 @@ from diffusers import ConsistencyDecoderVAE
 from transformers import AutoFeatureExtractor
 from airunner.aihandler.base_handler import BaseHandler
 
-from airunner.aihandler.enums import FilterType, HandlerType
+from airunner.enums import FilterType, HandlerType, SignalCode
 from airunner.aihandler.mixins.compel_mixin import CompelMixin
 from airunner.aihandler.mixins.embedding_mixin import EmbeddingMixin
 from airunner.aihandler.mixins.lora_mixin import LoraMixin
@@ -39,7 +39,6 @@ from airunner.windows.main.embedding_mixin import EmbeddingMixin as EmbeddingDat
 from airunner.windows.main.pipeline_mixin import PipelineMixin
 from airunner.windows.main.controlnet_model_mixin import ControlnetModelMixin
 from airunner.windows.main.ai_model_mixin import AIModelMixin
-from airunner.service_locator import ServiceLocator
 from airunner.utils import clear_memory
 
 torch.backends.cuda.matmul.allow_tf32 = True
@@ -63,49 +62,6 @@ class SDHandler(
     ControlnetModelMixin,
     AIModelMixin,
 ):
-    handler_type = HandlerType.DIFFUSER
-    _current_model: str = ""
-    _previous_model: str = ""
-    _initialized: bool = False
-    _current_sample = 0
-    _reload_model: bool = False
-    do_cancel = False
-    current_model_branch = None
-    state = None
-    _local_files_only = True
-    lora_loaded = False
-    loaded_lora = []
-    _settings = None
-    _action = None
-    embeds_loaded = False
-    _compel_proc = None
-    _prompt_embeds = None
-    _negative_prompt_embeds = None
-    _data = {
-        "options": {}
-    }
-    current_prompt = None
-    current_negative_prompt = None
-    _model = None
-    requested_data = None
-    _allow_online_mode = None
-    current_load_controlnet = False
-
-    # controlnet atributes
-    processor = None
-    current_controlnet_type = None
-    controlnet_loaded = False
-    attempt_download = False
-    downloading_controlnet = False
-    safety_checker_model = ""
-    text_encoder_model = ""
-    inpaint_vae_model = ""
-    _controlnet_image = None
-    # end controlnet atributes
-
-    # latents attributes
-    _latents = None
-
     def controlnet(self):
         if self._controlnet is None \
             or self.current_controlnet_type != self.controlnet_type:
@@ -185,21 +141,23 @@ class SDHandler(
     def current_sample(self, value):
         self._current_sample = value
 
-    @property
-    def data(self):
-        return self._data
-
-    @data.setter
-    def data(self, value):
-        self._data = value
-
-    @property
     def has_pipe(self):
         return self.pipe is not None
 
-    @property
+    def pipe_on_cpu(self):
+        return self.pipe.device.type == "cpu"
+
     def is_pipe_on_cpu(self):
-        return self.has_pipe and self.pipe.device.type == "cpu"
+        return self.has_pipe() and self.pipe_on_cpu()
+
+    def on_move_to_cpu(self, message: dict = None):
+        message = message or {}
+        if not self.is_pipe_on_cpu() and self.has_pipe():
+            self.logger.info("Moving model to CPU")
+            self.pipe = self.pipe.to("cpu")
+            clear_memory()
+        if "callback" in message:
+            message["callback"]()
 
     @property
     def options(self):
@@ -381,7 +339,11 @@ class SDHandler(
 
     @property
     def action(self):
-        return self.data.get("action", None)
+        try:
+            return self.data.get("action", None)
+        except Exception as e:
+            self.logger.error(f"Error getting action {e}")
+            return None
 
     @property
     def action_has_safety_checker(self):
@@ -393,7 +355,11 @@ class SDHandler(
 
     @property
     def is_txt2img(self):
-        return self.action == "txt2img" and self.image is None
+        try:
+            return self.action == "txt2img" and self.image is None
+        except Exception as e:
+            self.logger.error(f"Error checking if is txt2img {e}")
+            return False
 
     @property
     def is_vid_action(self):
@@ -536,20 +502,25 @@ class SDHandler(
 
     @property
     def pipe(self):
-        if self.is_txt2img:
-            return self.txt2img
-        elif self.is_img2img:
-            return self.img2img
-        elif self.is_outpaint:
-            return self.outpaint
-        elif self.is_depth2img:
-            return self.depth2img
-        elif self.is_pix2pix:
-            return self.pix2pix
-        elif self.is_vid_action:
-            return self.txt2vid
-        else:
-            self.logger.warning(f"Invalid action {self.action} unable to get pipe")
+        try:
+            if self.is_txt2img:
+                return self.txt2img
+            elif self.is_img2img:
+                return self.img2img
+            elif self.is_outpaint:
+                return self.outpaint
+            elif self.is_depth2img:
+                return self.depth2img
+            elif self.is_pix2pix:
+                return self.pix2pix
+            elif self.is_vid_action:
+                return self.txt2vid
+            else:
+                self.logger.warning(f"Invalid action {self.action} unable to get pipe")
+                return None
+        except Exception as e:
+            self.logger.error(f"Error getting pipe {e}")
+            return None
 
     @pipe.setter
     def pipe(self, value):
@@ -652,7 +623,7 @@ class SDHandler(
 
         if not controlnet_image and self.input_image:
             controlnet_image = self.preprocess_for_controlnet(self.input_image)
-            self.emit("controlnet_image_generated_signal", dict(
+            self.emit(SignalCode.CONTROLNET_IMAGE_GENERATED_SIGNAL, dict(
                 image=controlnet_image,
                 data=dict(
                     controlnet_image=controlnet_image
@@ -713,9 +684,8 @@ class SDHandler(
     def original_model_data(self):
         return self.options.get("original_model_data", {})
 
-    def  __init__(self, **kwargs):
-        #self.logger.set_level(LOG_LEVEL)
-        super().__init__()
+    def  __init__(self, *args, **kwargs):
+        super().__init__(*args, **kwargs)
         LayerMixin.__init__(self)
         LoraDataMixin.__init__(self)
         EmbeddingDataMixin.__init__(self)
@@ -723,28 +693,58 @@ class SDHandler(
         ControlnetModelMixin.__init__(self)
         AIModelMixin.__init__(self)
         self.logger.info("Loading Stable Diffusion model runner...")
-        self.safety_checker_model = self.models_by_pipeline_action("safety_checker")
-        self.text_encoder_model = self.models_by_pipeline_action("text_encoder")
-        self.inpaint_vae_model = self.models_by_pipeline_action("inpaint_vae")
-        self.register("sd_cancel_signal", self)
-        services = [
-            "is_pipe_on_cpu", 
-            "has_pipe",
-        ]
-
-        for service in services:
-            ServiceLocator.register(service, lambda: getattr(self, service))
-
-        self._safety_checker = None
-        self._controlnet = None
+        self.safety_checker_model = self.models_by_pipeline_action("safety_checker")[0]
+        self.text_encoder_model = self.models_by_pipeline_action("text_encoder")[0]
+        self.inpaint_vae_model = self.models_by_pipeline_action("inpaint_vae")[0]
+        self.register(SignalCode.SD_CANCEL_SIGNAL, self.on_sd_cancel_signal)
+        self.register(SignalCode.SD_UNLOAD_SIGNAL, self.on_unload_stablediffusion_signal)
+        self.register(SignalCode.SD_MOVE_TO_CPU_SIGNAL, self.on_move_to_cpu)
+        self.handler_type = HandlerType.DIFFUSER
+        self._current_model: str = ""
+        self._previous_model: str = ""
+        self._initialized: bool = False
+        self._current_sample = 0
+        self._reload_model: bool = False
+        self.do_cancel = False
+        self.current_model_branch = None
+        self.state = None
+        self._local_files_only = True
+        self.lora_loaded = False
+        self.loaded_lora = []
+        self._settings = None
+        self._action = None
+        self.embeds_loaded = False
+        self._compel_proc = None
+        self._prompt_embeds = None
+        self._negative_prompt_embeds = None
+        self.current_prompt = None
+        self.current_negative_prompt = None
+        self._model = None
+        self.requested_data = None
+        self._allow_online_mode = None
+        self.current_load_controlnet = False
+        self.processor = None
+        self.current_controlnet_type = None
+        self.controlnet_loaded = False
+        self.attempt_download = False
+        self.downloading_controlnet = False
+        self.safety_checker_model = ""
+        self.text_encoder_model = ""
+        self.inpaint_vae_model = ""
+        self._controlnet_image = None
+        self._latents = None
         self.txt2img = None
         self.img2img = None
         self.pix2pix = None
         self.outpaint = None
         self.depth2img = None
         self.txt2vid = None
-
-        self.register("unload_stablediffusion_signal", self)
+        self.tokenizer = None
+        self._safety_checker = None
+        self._controlnet = None
+        self.data = dict(
+            action="txt2img",
+        )
 
     @staticmethod
     def latents_to_image(latents: torch.Tensor):
@@ -852,11 +852,11 @@ class SDHandler(
             self._prompt_embeds = None
             self._negative_prompt_embeds = None
 
-        self.data = data
+        self.data = data if data is not None else self.data
         torch.backends.cuda.matmul.allow_tf32 = self.use_tf32
 
     def send_error(self, message):
-        self.emit("error_signal", message)
+        self.emit(SignalCode.LOG_ERROR_SIGNAL, message)
 
     def error_handler(self, error):
         message = str(error)
@@ -864,15 +864,19 @@ class SDHandler(
             message = f"This model does not support {self.action}"
         traceback.print_exc()
         self.logger.error(error)
-        self.emit("error_signal", message)
+        self.emit(SignalCode.LOG_ERROR_SIGNAL, message)
 
     def initialize_safety_checker(self, local_files_only=None):
         local_files_only = self.local_files_only if local_files_only is None else local_files_only
 
-        if not hasattr(self.pipe, "safety_checker") or not self.pipe.safety_checker:
+        if (
+            not hasattr(self.pipe, "safety_checker") or
+            not self.pipe.safety_checker
+        ) and "path" in self.safety_checker_model:
+            self.logger.info(f"Initializing safety checker with {self.safety_checker_model}")
             try:
                 self.pipe.safety_checker = StableDiffusionSafetyChecker.from_pretrained(
-                    self.safety_checker_model[0]["path"],
+                    self.safety_checker_model["path"],
                     local_files_only=local_files_only,
                     torch_dtype=self.data_type
                 )
@@ -881,7 +885,7 @@ class SDHandler(
             
             try:
                 self.pipe.feature_extractor = AutoFeatureExtractor.from_pretrained(
-                    self.safety_checker_model[0]["path"],
+                    self.safety_checker_model["path"],
                     local_files_only=local_files_only,
                     torch_dtype=self.data_type
                 )
@@ -908,7 +912,7 @@ class SDHandler(
         else:
             message = "Generating image"
 
-        self.emit("status_signal", message)
+        self.emit(SignalCode.LOG_STATUS_SIGNAL, message)
 
         try:
             output = self.call_pipe(**kwargs)
@@ -1077,7 +1081,7 @@ class SDHandler(
             frame_ids = list(range(ch_start, ch_end))
             try:
                 self.logger.info(f"Generating video with {len(frame_ids)} frames")
-                self.emit("status_signal", f"Generating video, frames {cur_frame} to {cur_frame + len(frame_ids)-1} of {self.n_samples}")
+                self.emit(SignalCode.LOG_STATUS_SIGNAL, f"Generating video, frames {cur_frame} to {cur_frame + len(frame_ids) - 1} of {self.n_samples}")
                 cur_frame += len(frame_ids)
                 kwargs = {
                     "prompt": prompt,
@@ -1230,7 +1234,6 @@ class SDHandler(
         return data
 
     def process_data(self, data: dict):
-        import traceback
         self.logger.info("Runner: process_data called")
         self.requested_data = data
         self.prepare_options(data)
@@ -1247,7 +1250,7 @@ class SDHandler(
         self.do_cancel = False
         self.process_data(data)
 
-        self.emit("status_signal", f"Applying memory settings")
+        self.emit(SignalCode.LOG_STATUS_SIGNAL, f"Applying memory settings")
         self.apply_memory_efficient_settings()
 
         seed = self.seed
@@ -1306,7 +1309,7 @@ class SDHandler(
     def final_callback(self):
         total = int(self.steps * self.strength)
         tab_section = "stablediffusion"
-        self.emit("progress_signal",{
+        self.emit(SignalCode.SD_PROGRESS_SIGNAL,{
             "step": total,
             "total": total,
             "action": self.action,
@@ -1332,7 +1335,7 @@ class SDHandler(
             "tab_section": tab_section,
             "latents": latents
         }
-        self.emit("progress_signal", res)
+        self.emit(SignalCode.SD_PROGRESS_SIGNAL, res)
 
     def on_unload_stablediffusion_signal(self):
         self.unload()
@@ -1382,7 +1385,7 @@ class SDHandler(
             self.logger.info("pipe is None")
             return
 
-        self.emit("status_signal", f"Generating {'video' if self.is_vid_action else 'image'}")
+        self.emit(SignalCode.LOG_STATUS_SIGNAL, f"Generating {'video' if self.is_vid_action else 'image'}")
 
         action = "depth2img" if data["action"] == "depth" else data["action"]
 
@@ -1569,7 +1572,7 @@ class SDHandler(
                 )
 
             if self.pipe is None:
-                self.emit("error_signal", "Failed to load model")
+                self.emit(SignalCode.LOG_ERROR_SIGNAL, "Failed to load model")
                 return
         
             """
@@ -1583,7 +1586,7 @@ class SDHandler(
             if self.is_outpaint:
                 self.logger.info("Initializing vae for inpaint / outpaint")
                 self.pipe.vae = AsymmetricAutoencoderKL.from_pretrained(
-                    self.inpaint_vae_model,
+                    self.inpaint_vae_model["path"],
                     torch_dtype=self.data_type
                 )
 
@@ -1730,7 +1733,7 @@ class SDHandler(
                 message = f"Downloading model {model_name}"
         else:
             message = f"Loading model {model_name}"
-        self.emit("status_signal", message)
+        self.emit(SignalCode.LOG_STATUS_SIGNAL, message)
 
     def prepare_model(self):
         self.logger.info("Prepare model")
@@ -1767,7 +1770,7 @@ class SDHandler(
                 self.logger.info("Model not found, attempting download")
             # check if we have an internet connection
             if self.allow_online_when_missing_files:
-                self.emit("status_signal", "Downloading model files")
+                self.emit(SignalCode.LOG_STATUS_SIGNAL, "Downloading model files")
                 self.local_files_only = False
             else:
                 self.send_error("Required files not found, enable online access to download")
