@@ -1,3 +1,4 @@
+from airunner.enums import SignalCode, ServiceCode
 from airunner.widgets.base_widget import BaseWidget
 from airunner.widgets.stablediffusion.templates.stable_diffusion_settings_ui import Ui_stable_diffusion_settings_widget
 
@@ -7,12 +8,12 @@ class StableDiffusionSettingsWidget(BaseWidget):
 
     def __init__(self, *args, **kwargs):
         super().__init__(*args, **kwargs)
-        self.register("models_changed_signal", self)
+        self.register(SignalCode.APPLICATION_MODELS_CHANGED_SIGNAL, self.on_models_changed_signal)
 
     def showEvent(self, event):
         super().showEvent(event)
-        steps = target_val = self.generator_settings["steps"]
-        scale = target_val = self.generator_settings["scale"]
+        steps = target_val = self.settings["generator_settings"]["steps"]
+        scale = target_val = self.settings["generator_settings"]["scale"]
 
         current_steps = self.get_form_element("steps_widget").property("current_value")
         current_scale = self.get_form_element("scale_widget").property("current_value")
@@ -80,7 +81,7 @@ class StableDiffusionSettingsWidget(BaseWidget):
         self.logger.info("load_versions")
         self.ui.version.blockSignals(True)
         self.ui.version.clear()
-        pipelines = self.get_service("get_pipelines")(category="stablediffusion")
+        pipelines = self.get_service(ServiceCode.GET_PIPELINES)(category="stablediffusion")
         version_names = set([pipeline["version"] for pipeline in pipelines])
         self.ui.version.addItems(version_names)
         current_version = self.settings["current_version_stablediffusion"]

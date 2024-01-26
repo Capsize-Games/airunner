@@ -2,6 +2,7 @@ import os
 
 from PyQt6.QtWidgets import QWidget, QSizePolicy
 
+from airunner.enums import SignalCode
 from airunner.widgets.base_widget import BaseWidget
 from airunner.widgets.lora.lora_widget import LoraWidget
 from airunner.widgets.lora.templates.lora_container_ui import Ui_lora_container
@@ -22,6 +23,7 @@ class LoraContainerWidget(BaseWidget):
     def __init__(self, *args, **kwargs):
         super().__init__(*args, **kwargs)
 
+        self.loars = None
         self.scan_for_lora()
         self.load_lora()
 
@@ -45,14 +47,14 @@ class LoraContainerWidget(BaseWidget):
         self.ui.scrollAreaWidgetContents.layout().addWidget(lora_widget)
 
     def scan_for_lora(self):
-        lora_path = self.path_settings["lora_model_path"]
+        lora_path = self.settings["path_settings"]["lora_model_path"]
         for dirpath, dirnames, filenames in os.walk(lora_path):
             # get version from dirpath
             version = dirpath.split("/")[-1]
             for file in filenames:
                 if file.endswith(".ckpt") or file.endswith(".safetensors") or file.endswith(".pt"):
                     name = file.replace(".ckpt", "").replace(".safetensors", "").replace(".pt", "")
-                    self.emit("add_lora_signal", dict(
+                    self.emit(SignalCode.LORA_ADD_SIGNAL, dict(
                         name=name,
                         path=os.path.join(dirpath, file),
                         enabled=True,
@@ -77,8 +79,8 @@ class LoraContainerWidget(BaseWidget):
         return available_lora
 
     def get_available_loras(self, tab_name):
-        base_path = self.path_settings["base_path"]
-        lora_path = self.path_settings["lora_model_path"]
+        base_path = self.settings["path_settings"]["base_path"]
+        lora_path = self.settings["path_settings"]["lora_model_path"]
         if lora_path == "lora":
             lora_path = os.path.join(base_path, lora_path)
         if not os.path.exists(lora_path):

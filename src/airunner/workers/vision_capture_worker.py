@@ -1,8 +1,8 @@
-import time
 import cv2
 from PIL import Image
+from PyQt6.QtCore import QThread
 
-from airunner.aihandler.enums import WorkerCode, SignalCode, QueueType
+from airunner.enums import SignalCode, QueueType, WorkerState
 from airunner.workers.worker import Worker
 
 
@@ -11,55 +11,73 @@ class VisionCaptureWorker(Worker):
         super().__init__(*args, **kwargs)
         self.queue_type = QueueType.NONE
         self.cap = None
-        self.pause = False
-        self.is_capturing = False
+        self.state = WorkerState.HALTED
         self.interval = 1  # the amount of seconds between each image capture
-        self.register(SignalCode.START_VISION_CAPTURE, self, self.start_vision_capture)
-        self.register(SignalCode.STOP_VISION_CAPTURE, self, self.stop_capturing)
-        self.register(SignalCode.VISION_CAPTURE_UNPAUSE_SIGNAL, self, self.unpause)
+        self.register(SignalCode.VISION_START_CAPTURE, self.start_vision_capture)
+        self.register(SignalCode.VISION_STOP_CAPTURE, self.stop_capturing)
+        self.register(SignalCode.VISION_CAPTURE_UNPAUSE_SIGNAL, self.unpause)
 
     def unpause(self, _message):
-        self.pause = False
-    
+        if self.state == WorkerState.PAUSED:
+            self.state = WorkerState.RUNNING
+
     def start_vision_capture(self, message):
-        try:
-            pass
-        except OSError as e:
-            self.logger.error(f"Error starting vision capture {e}")
+        """
+        Starts capturing images
+        :param message:
+        :return:
+        """
+        self.state = WorkerState.RUNNING
 
     def stop_capturing(self):
-        self.logger.info("Stopping vision capture")
-        self.is_capturing = False
+        """
+        Stops capturing images
+        :return:
+        """
+        self.state = WorkerState.HALTED
 
     def start(self):
-        self.logger.info("Starting vision capture")
-        self.is_capturing = True
-        # Open the webcam
+        self.logger.info("Starting")
+
+        if self.settings["ocr_enabled"]:
+            self.enable_cam()
+        else:
+            self.state = WorkerState.HALTED
+
+        while True:
+            if self.state == WorkerState.RUNNING:
+                self.emit(SignalCode.VISION_CAPTURED_SIGNAL, dict(
+                    image=self.capture_image()
+                ))
+                self.state = WorkerState.PAUSED
+                QThread.msleep(self.interval)
+
+            while self.state == WorkerState.PAUSED:
+                QThread.msleep(100)
+
+            if self.state == WorkerState.HALTED:
+                self.disable_cam()
+                while self.state == WorkerState.HALTED:
+                    QThread.msleep(100)
+                self.enable_cam()
+
+    def enable_cam(self):
         self.cap = cv2.VideoCapture(0)
-
-        # Check if the webcam is opened correctly
         if not self.cap.isOpened():
-            raise IOError("Cannot open webcam")
+            raise IOError("Unable to open webcam")
 
-        while self.is_capturing:
-            self.logger.info("capturing...")
-            self.emit(SignalCode.VISION_CAPTURED_SIGNAL, dict(
-                image=self.capture_image()
-            ))
-            self.pause = True
-            while self.pause:
-                self.logger.info("paused...")
-                time.sleep(1)
-            time.sleep(self.interval)
-
-        # When everything done, release the capture and destroy the window
-        self.cap.release()
+    def disable_cam(self):
+        if self.cap:
+            self.cap.release()
 
     def capture_image(self):
         """
         Captures an image from active camera and returns it
         :return:
         """
+        if not self.cap:
+            return
+
         self.logger.info("Capturing image")
 
         # Capture frame-by-frame

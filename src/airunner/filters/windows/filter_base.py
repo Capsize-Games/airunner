@@ -58,7 +58,9 @@ class FilterBase:
         # filter_values are the names of the ImageFilterValue objects in the database.
         # when the filter is shown, the values are loaded from the database
         # and stored in this dictionary.
-        
+
+        self.reject = None
+        self.accept = None
         self._filter_values = {}
 
         self.filter_window = None

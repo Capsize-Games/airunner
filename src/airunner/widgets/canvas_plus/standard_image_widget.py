@@ -6,10 +6,10 @@ from PyQt6.QtGui import QImage
 
 from PIL import Image
 
+from airunner.enums import SignalCode, ServiceCode
 from airunner.widgets.canvas_plus.templates.standard_image_widget_ui import Ui_standard_image_widget
 from airunner.utils import load_metadata_from_image, prepare_metadata
 from airunner.widgets.slider.slider_widget import SliderWidget
-from airunner.aihandler.logger import Logger
 from airunner.widgets.base_widget import BaseWidget
 from airunner.service_locator import ServiceLocator
 
@@ -29,7 +29,7 @@ class StandardImageWidget(BaseWidget):
     def image(self):
         if self._image is None:
             try:
-                self.image = ServiceLocator.get("current_active_image")()
+                self.image = ServiceLocator.get(ServiceCode.CURRENT_ACTIVE_IMAGE)()
             except Exception as e:
                 self.logger.error(f"Error while getting image: {e}")
         return self._image
@@ -44,6 +44,9 @@ class StandardImageWidget(BaseWidget):
 
     def __init__(self, *args, **kwargs):
         super().__init__(*args, **kwargs)
+        self.dialog = None
+        self.similarity = None
+        self.initialized = None
         self.ui.advanced_settings.hide()
         self.load_upscale_options()
     
@@ -123,7 +126,7 @@ class StandardImageWidget(BaseWidget):
         """
         Using the LLM, generate a description of the image
         """
-        self.emit("describe_image_signal", dict(
+        self.emit(SignalCode.VISION_DESCRIBE_IMAGE_SIGNAL, dict(
             image=self.image, 
             callback=self.handle_prompt_generated
         ))
@@ -137,7 +140,7 @@ class StandardImageWidget(BaseWidget):
             image = Image.open(self.image_path)
             image.save(self.image_path, pnginfo=meta_data)
         else:
-            current_layer = ServiceLocator.get("current_layer")()
+            current_layer = ServiceLocator.get(ServiceCode.CURRENT_LAYER)()
             image = current_layer['image']
         self.image = image
         self.meta_data = load_metadata_from_image(self.image)
@@ -175,7 +178,7 @@ class StandardImageWidget(BaseWidget):
         meta_data["use_cropped_image"] = False
         meta_data["batch_size"] = batch_size
 
-        self.emit("generate_image_signal", dict(
+        self.emit(SignalCode.SD_GENERATE_IMAGE_SIGNAL, dict(
             image=self.image,
             meta_data=meta_data
         ))
@@ -209,7 +212,7 @@ class StandardImageWidget(BaseWidget):
         meta_data["enable_input_image"] = True
         meta_data["use_cropped_image"] = False
 
-        self.emit("generate_image_signal", dict(
+        self.emit(SignalCode.SD_GENERATE_IMAGE_SIGNAL, dict(
             image=self.image,
             override_data=meta_data
         ))
@@ -220,7 +223,7 @@ class StandardImageWidget(BaseWidget):
         for widget in self.findChildren(SliderWidget):
             try:
                 current_value = getattr(
-                    self.generator_settings,
+                    self.settings["generator_settings"],
                     widget.property("settings_property").split(".")[1]
                 )
             except Exception as e:

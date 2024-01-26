@@ -1,11 +1,15 @@
+from airunner.enums import ServiceCode
 from airunner.service_locator import ServiceLocator
 
 
 class PipelineMixin:
     def __init__(self, *args, **kwargs):
-        ServiceLocator.register("get_pipeline_classname", self.get_pipeline_classname)
-        ServiceLocator.register("pipeline_actions", self.pipeline_actions)
-        ServiceLocator.register("get_pipelines", self.get_pipelines)
+        self.settings = None
+        self.settings = None
+        self.settings = None
+        ServiceLocator.register(ServiceCode.GET_PIPELINE_CLASSNAME, self.get_pipeline_classname)
+        ServiceLocator.register(ServiceCode.PIPELINE_ACTIONS, self.pipeline_actions)
+        ServiceLocator.register(ServiceCode.GET_PIPELINES, self.get_pipelines)
 
     def pipeline_get_by_filter(self, filter_dict):
         return [item for item in self.settings["pipelines"] if all(item.get(k) == v for k, v in filter_dict.items())]

@@ -1,4 +1,3 @@
-from PyQt6 import uic
 from airunner.windows.base_window import BaseWindow
 
 
