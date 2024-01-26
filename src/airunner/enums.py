@@ -54,6 +54,7 @@ class SignalCode(Enum):
     AI_MODELS_SAVE_OR_UPDATE_SIGNAL = "ai_models_save_or_update_signal"
     AI_MODEL_DELETE_SIGNAL = "ai_model_delete_signal"
     AI_MODELS_CREATE_SIGNAL = "ai_models_create_signal"
+
     APPLICATION_MAIN_WINDOW_LOADED_SIGNAL = "main_window_loaded_signal"
     APPLICATION_ADD_BOT_MESSAGE_TO_CONVERSATION = "add_bot_message_to_conversation"
     APPLICATION_MODELS_CHANGED_SIGNAL = "models_changed_signal"
@@ -63,10 +64,12 @@ class SignalCode(Enum):
     APPLICATION_STOP_SD_PROGRESS_BAR_SIGNAL = "stop_image_generator_progress_bar_signal"
     APPLICATION_SETTINGS_CHANGED_SIGNAL = "application_settings_changed_signal"
     APPLICATION_SET_STATUS_LABEL_SIGNAL = "set_status_label_signal"
+
     AUDIO_CAPTURE_WORKER_RESPONSE_SIGNAL = "AudioCaptureWorker_response_signal"
     AUDIO_PROCESSOR_WORKER_PROCESSED_SIGNAL = "AudioProcessorWorker_processed_audio"
     AUDIO_PROCESSOR_RESPONSE_SIGNAL = "audio_processor_response_signal"
     AUDIO_PROCESSOR_PROCESSED_AUDIO = "audio_processor_processed_audio"
+
     CANVAS_LOAD_IMAGE_FROM_PATH_SIGNAL = "load_image_from_path_signal"
     CANVAS_DO_DRAW_SIGNAL = "canvas_do_draw_signal"
     CANVAS_CLEAR_LINES_SIGNAL = "canvas_clear_lines_signal"
@@ -76,15 +79,18 @@ class SignalCode(Enum):
     CANVAS_RESIZE_SIGNAL = "canvas_resize_signal"
     CANVAS_UPDATE_CURSOR = "canvas_update_cursor"
     CANVAS_ZOOM_LEVEL_CHANGED = "zoom_level_changed"
+
     CLEAR_MEMORY_SIGNAL = "clear_memory_signal"
     CONTROLNET_IMAGE_GENERATED_SIGNAL = "controlnet_image_generated_signal"
     EMBEDDING_LOAD_FAILED_SIGNAL = "embedding_load_failed_signal"
+
     ENGINE_CANCEL_SIGNAL = "engine_cancel_signal"
     ENGINE_STOP_PROCESSING_QUEUE_SIGNAL = "engine_stop_processing_queue_signal"
     ENGINE_START_PROCESSING_QUEUE_SIGNAL = "engine_start_processing_queue_signal"
     ENGINE_DO_RESPONSE_SIGNAL = "engine_do_response_signal"
     ENGINE_DO_REQUEST_SIGNAL = "engine_do_request_signal"
     ENGINE_RESPONSE_WORKER_RESPONSE_SIGNAL = "EngineResponseWorker_response_signal"
+
     LAYER_SWITCH_SIGNAL = "switch_layer_signal"
     LAYER_ADD_SIGNAL = "add_layer_signal"
     LAYER_CREATE_SIGNAL = "create_layer_signal"
@@ -97,6 +103,7 @@ class SignalCode(Enum):
     LAYER_MOVE_UP_SIGNAL = "move_layer_up_signal"
     LAYER_MOVE_DOWN_SIGNAL = "move_layer_down_signal"
     LAYERS_SHOW_SIGNAL = "show_layers_signal"
+
     LLM_CLEAR_HISTORY = "clear_history"
     LLM_RESPONSE_SIGNAL = "llm_response_signal"
     LLM_CLEAR_HISTORY_SIGNAL = "clear_llm_history_signal"
@@ -106,11 +113,14 @@ class SignalCode(Enum):
     LLM_REQUEST_SIGNAL = "llm_request_signal"
     LLM_TEXT_GENERATE_REQUEST_SIGNAL = "text_generate_request_signal"
     LLM_TOKEN_SIGNAL = "token_signal"
+
     LOG_ERROR_SIGNAL = "error_signal"
     LOG_WARNING_SIGNAL = "warning_signal"
     LOG_STATUS_SIGNAL = "status_signal"
+
     LORA_ADD_SIGNAL = "add_lora_signal"
     LORA_UPDATE_SIGNAL = "update_lora_signal"
+
     SD_IMAGE_GENERATE_REQUEST_SIGNAL = "image_generate_request_signal"
     SD_PROGRESS_SIGNAL = "progress_signal"
     SD_REQUEST_SIGNAL = "sd_request_signal"
@@ -126,11 +136,14 @@ class SignalCode(Enum):
     SD_GENERATE_IMAGE_SIGNAL = "generate_image_signal"
     SD_IMAGE_GENERATED_SIGNAL = "image_generated_signal"
     SD_NSFW_CONTENT_DETECTED_SIGNAL = "nsfw_content_detected_signal"
+
     STT_HEAR_SIGNAL = "hear_signal"
     STT_AUDIO_PROCESSED = "stt_audio_processed_signal"
     STT_PROCESS_AUDIO_SIGNAL = "process_audio"
+
     TTS_REQUEST = "tts_request"
     TTS_GENERATOR_WORKER_ADD_TO_STREAM_SIGNAL = "TTSGeneratorWorker_add_to_stream_signal"
+
     VISION_START_CAPTURE = "start_vision_capture"
     VISION_STOP_CAPTURE = "stop_vision_capture"
     VISION_CAPTURE_UNPAUSE_SIGNAL = "unpause_vision_capture"
