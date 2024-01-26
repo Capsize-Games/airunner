@@ -6,27 +6,37 @@ from PyQt6.QtGui import QPixmap
 
 from PIL import Image
 
+from airunner.enums import SignalCode, ServiceCode
 from airunner.service_locator import ServiceLocator
 
 
 class LayerMixin:
     def __init__(self):
-        self.register("switch_layer_signal", self)
-        self.register("add_layer_signal", self)
-        self.register("create_layer_signal", self)
-        self.register("update_current_layer_signal", self)
-        self.register("update_layer_signal", self)
-        self.register("delete_current_layer_signal", self)
-        self.register("delete_layer_signal", self)
-        self.register("move_layer_up_signal", self)
-        self.register("move_layer_down_signal", self)
-        self.register("clear_layers_signal", self)
-        self.register("set_current_layer_signal", self)
+        self.settings = None
+        self.settings = None
+        self.settings = None
+        self.settings = None
+        self.current_layer_index = None
+        self.settings = None
+        self.settings = None
+        self.settings = None
+        self.settings = None
+        self.register(SignalCode.LAYER_SWITCH_SIGNAL, self.on_switch_layer_signal)
+        self.register(SignalCode.LAYER_ADD_SIGNAL, self.on_add_layer_signal)
+        self.register(SignalCode.LAYER_CREATE_SIGNAL, self.on_create_layer_signal)
+        self.register(SignalCode.LAYER_UPDATE_CURRENT_SIGNAL, self.on_update_current_layer_signal)
+        self.register(SignalCode.LAYER_UPDATE_SIGNAL, self.on_update_layer_signal)
+        self.register(SignalCode.LAYER_DELETE_CURRENT_SIGNAL, self.on_delete_current_layer_signal)
+        self.register(SignalCode.LAYER_DELETE_SIGNAL, self.on_delete_layer_signal)
+        self.register(SignalCode.LAYER_MOVE_UP_SIGNAL, self.on_move_layer_up_signal)
+        self.register(SignalCode.LAYER_MOVE_DOWN_SIGNAL, self.on_move_layer_down_signal)
+        self.register(SignalCode.LAYER_CLEAR_LAYERS_SIGNAL, self.on_clear_layers_signal)
+        self.register(SignalCode.LAYER_SET_CURRENT_SIGNAL, self.on_set_current_layer_signal)
 
-        ServiceLocator.register("current_layer", self.current_layer)
-        ServiceLocator.register("current_draggable_pixmap", self.current_layer)
-        ServiceLocator.register("current_active_image", self.current_active_image)
-        ServiceLocator.register("get_image_from_layer", self.get_image_from_layer)
+        ServiceLocator.register(ServiceCode.CURRENT_LAYER, self.current_layer)
+        ServiceLocator.register(ServiceCode.CURRENT_DRAGGABLE_PIXMAP, self.current_layer)
+        ServiceLocator.register(ServiceCode.CURRENT_ACTIVE_IMAGE, self.current_active_image)
+        ServiceLocator.register(ServiceCode.GET_IMAGE_FROM_LAYER, self.get_image_from_layer)
 
     def on_delete_layer_signal(self, data):
         layer = data.get("layer", None)

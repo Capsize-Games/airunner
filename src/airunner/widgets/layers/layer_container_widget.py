@@ -2,7 +2,7 @@ from PIL import Image
 from PyQt6.QtCore import QRect, QPoint, Qt
 from PyQt6.QtWidgets import QSpacerItem, QSizePolicy
 
-from airunner.aihandler.logger import Logger
+from airunner.enums import SignalCode, ServiceCode
 from airunner.widgets.base_widget import BaseWidget
 from airunner.widgets.layers.layer_widget import LayerWidget
 from airunner.widgets.layers.templates.layer_container_ui import Ui_layer_container
@@ -10,8 +10,8 @@ from airunner.widgets.layers.templates.layer_container_ui import Ui_layer_contai
 class LayerContainerWidget(BaseWidget):
     def __init__(self, *args, **kwargs):
         super().__init__(*args, **kwargs)
-        self.register("show_layers_signal", self)
-        self.register("add_layer_signal", self)
+        self.register(SignalCode.LAYERS_SHOW_SIGNAL, self.on_show_layers_signal)
+        self.register(SignalCode.LAYER_ADD_SIGNAL, self.on_add_layer_signal)
         self.register_service("get_index_by_layer", self.get_index_by_layer)
         self.widget_class_ = Ui_layer_container
         self.selected_layers = {}
@@ -19,7 +19,7 @@ class LayerContainerWidget(BaseWidget):
         self.current_layer_index = 0
 
     def initialize(self):
-        current_layer = self.get_service("current_layer")()
+        current_layer = self.get_service(ServiceCode.CURRENT_LAYER)()
         self.ui.layers.scrollAreaWidgetContents.layout().addSpacerItem(QSpacerItem(0, 0, QSizePolicy.Policy.Minimum, QSizePolicy.Policy.Expanding))
         # set the current_value property of the slider
         self.ui.opacity_slider_widget.set_slider_and_spinbox_values(current_layer["opacity"])
@@ -50,7 +50,7 @@ class LayerContainerWidget(BaseWidget):
             self.add_layer_widget(layer, layer.position)
 
     def add_layer(self):
-        self.emit("create_layer_signal")
+        self.emit(SignalCode.LAYER_CREATE_SIGNAL)
 
     def add_layer_widget(self, layer_data, index):
         self.logger.info(f"add_layer_widget index={index}")
@@ -62,14 +62,14 @@ class LayerContainerWidget(BaseWidget):
             layer_widget.reset_position()
 
     def move_layer_up(self):
-        self.emit("move_layer_up_signal")
+        self.emit(SignalCode.LAYER_MOVE_UP_SIGNAL)
         self.show_layers()
-        self.emit("canvas_update_signal")
+        self.emit(SignalCode.CANVAS_UPDATE_SIGNAL)
 
     def move_layer_down(self):
-        self.emit("move_layer_down_signal")
+        self.emit(SignalCode.LAYER_MOVE_DOWN_SIGNAL)
         self.show_layers()
-        self.emit("canvas_update_signal")
+        self.emit(SignalCode.CANVAS_UPDATE_SIGNAL)
 
     def merge_selected_layers(self):
         with self.current_layer() as current_layer:
@@ -112,7 +112,7 @@ class LayerContainerWidget(BaseWidget):
 
                 # delete any layers which are not the current layer index
                 if index != self.current_layer_index:
-                    self.emit("delete_layer_signal", dict(
+                    self.emit(SignalCode.LAYER_DELETE_SIGNAL, dict(
                         layer=layer,
                     ))
 
@@ -129,7 +129,7 @@ class LayerContainerWidget(BaseWidget):
             # reset the selected layers dictionary and refresh the canvas
             self.selected_layers = {}
             self.show_layers()
-            self.emit("canvas_update_signal")
+            self.emit(SignalCode.CANVAS_UPDATE_SIGNAL)
 
     selected_layers = {}
 
@@ -139,23 +139,23 @@ class LayerContainerWidget(BaseWidget):
             self.delete_layer(index=index, layer=layer)
         self.selected_layers = {}
         self.show_layers()
-        self.emit("canvas_do_draw_signal")
+        self.emit(SignalCode.CANVAS_DO_DRAW_SIGNAL)
 
     def delete_layer(self, _value=False, index=None, layer=None):
-        self.emit("delete_layer_signal", dict(
+        self.emit(SignalCode.LAYER_DELETE_SIGNAL, dict(
             index=index,
             layer=layer
         ))
 
     def clear_layers(self):
-        self.emit("clear_layers_signal")
+        self.emit(SignalCode.LAYER_CLEAR_LAYERS_SIGNAL)
     
     def set_current_layer(self, index):
-        self.emit("set_current_layer_signal", index)
+        self.emit(SignalCode.LAYER_SET_CURRENT_SIGNAL, index)
 
     def handle_layer_click(self, layer, index, event):
         if event.modifiers() == Qt.KeyboardModifier.ControlModifier:
-            self.emit("canvas_handle_layer_click_signal", dict(
+            self.emit(SignalCode.CANVAS_HANDLE_LAYER_CLICK_SIGNAL, dict(
                 layer=layer,
                 index=index,
                 selected_layers=self.selected_layers,
@@ -182,7 +182,7 @@ class LayerContainerWidget(BaseWidget):
         layer.visible = not layer.visible
         self.update()
         layer_obj.set_icon()
-        self.emit("canvas_do_draw_signal")
+        self.emit(SignalCode.CANVAS_DO_DRAW_SIGNAL)
 
     def handle_move_layer(self, event):
         point = QPoint(
@@ -190,7 +190,7 @@ class LayerContainerWidget(BaseWidget):
             event.pos().y() if self.get_service("canvas_drag_pos")() is not None else 0
         )
         # snap to grid
-        grid_size = self.grid_settings["cell_size"]
+        grid_size = self.settings["grid_settings"]["cell_size"]
         point.setX(point.x() - (point.x() % grid_size))
         point.setY(point.y() - (point.y() % grid_size))
 
@@ -219,17 +219,17 @@ class LayerContainerWidget(BaseWidget):
         point.setX(int(point.x() - int(rect.width() / 2)))
         point.setY(int(point.y() - int(rect.height() / 2)))
 
-        self.emit("update_current_layer_signal", dict(
+        self.emit(SignalCode.LAYER_UPDATE_CURRENT_SIGNAL, dict(
             offset=point
         ))
-        self.emit("canvas_update_signal")
+        self.emit(SignalCode.CANVAS_UPDATE_SIGNAL)
 
     def get_layer_opacity(self, index):
         layers = self.settings["layers"]
         return layers[index]["opacity"]
 
     def set_layer_opacity(self, opacity: int):
-        self.emit("update_current_layer_signal", dict(
+        self.emit(SignalCode.LAYER_UPDATE_CURRENT_SIGNAL, dict(
             opacity=opacity
         ))
 

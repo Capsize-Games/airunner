@@ -2,6 +2,7 @@ from PyQt6.QtCore import Qt, QSize
 from PyQt6.QtGui import QStandardItemModel, QStandardItem, QBrush, QColor, QPainter
 from PyQt6.QtWidgets import QStyledItemDelegate, QStyleOptionViewItem, QLabel, QWidget, QVBoxLayout, QPlainTextEdit
 
+from airunner.enums import SignalCode
 from airunner.widgets.api_token.api_token_widget import APITokenWidget
 from airunner.widgets.export_preferences.export_preferences_widget import ExportPreferencesWidget
 from airunner.widgets.grid_preferences.grid_preferences_widget import GridPreferencesWidget
@@ -40,6 +41,13 @@ class SettingsWindow(BaseWindow):
     is_modal = False
     template_class_ = Ui_airunner_settings
     # template_name = "airunner_settings"
+
+    def __init__(self, **kwargs):
+        super().__init__(**kwargs)
+        self.model = None
+        self.scroll_widget = None
+        self.scroll_layout = None
+        self.highlight_delegate = None
 
     def initialize_window(self):
         self.model = QStandardItemModel()
@@ -253,7 +261,7 @@ class SettingsWindow(BaseWindow):
             checked = item.checkState() == Qt.CheckState.Checked
             settings["allow_online_mode"] = checked
         elif name == "reset_settings":
-            self.emit("reset_settings_signal")
+            self.emit(SignalCode.APPLICATION_RESET_SETTINGS_SIGNAL)
         
         self.settings = settings
         self.show_content(section, display_name, name, description)

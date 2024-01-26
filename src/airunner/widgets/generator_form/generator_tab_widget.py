@@ -1,6 +1,6 @@
-from PyQt6.QtCore import pyqtSignal
 from PyQt6.QtWidgets import QWidget, QGridLayout, QProgressBar
 
+from airunner.enums import SignalCode
 from airunner.widgets.base_widget import BaseWidget
 from airunner.widgets.generator_form.templates.generator_tab_ui import Ui_generator_tab
 
@@ -50,14 +50,14 @@ class GeneratorTabWidget(BaseWidget):
 
     @property
     def current_controlnet_input_image(self):
-        if self.controlnet_settings_widget:
-            return self.controlnet_settings_widget.current_image
+        if self.settings["controlnet_settings"]_widget:
+            return self.settings["controlnet_settings"]_widget.current_image
         return None
 
     @property
     def controlnet_image(self):
-        if self.controlnet_settings_widget:
-            return self.controlnet_settings_widget.current_controlnet_image
+        if self.settings["controlnet_settings"]_widget:
+            return self.settings["controlnet_settings"]_widget.current_controlnet_image
         return None
 
     @property
@@ -83,7 +83,7 @@ class GeneratorTabWidget(BaseWidget):
 
     def __init__(self, *args, **kwargs):
         super().__init__(*args, **kwargs)
-        self.register("refresh_ai_models_signal", self)
+        self.register(SignalCode.REFRESH_AI_MODELS_SIGNALm, self.on_refresh_ai_models_signal)
         self.register_service("get_current_input_image", self.current_input_image)
 
     def on_refresh_ai_models_signal(self):

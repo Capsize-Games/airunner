@@ -1,5 +1,6 @@
 import os
 
+from airunner.enums import SignalCode, ServiceCode
 from airunner.models.modeldata import ModelData
 from airunner.service_locator import ServiceLocator
 from airunner.workers.worker import Worker
@@ -13,14 +14,14 @@ class ModelScannerWorker(Worker):
         self.logger.info("Scan for models")
         # look at model path and determine if we can import existing local models
         # first look at all files and folders inside of the model paths
-        txt2img_model_path = self.path_settings["txt2img_model_path"]
-        depth2img_model_path = self.path_settings["depth2img_model_path"]
-        pix2pix_model_path = self.path_settings["pix2pix_model_path"]
-        outpaint_model_path = self.path_settings["inpaint_model_path"]
-        upscale_model_path = self.path_settings["upscale_model_path"]
-        txt2vid_model_path = self.path_settings["txt2vid_model_path"]
-        llm_casuallm_model_path = self.path_settings["llm_casuallm_model_path"]
-        llm_seq2seq_model_path = self.path_settings["llm_seq2seq_model_path"]
+        txt2img_model_path = self.settings["path_settings"]["txt2img_model_path"]
+        depth2img_model_path = self.settings["path_settings"]["depth2img_model_path"]
+        pix2pix_model_path = self.settings["path_settings"]["pix2pix_model_path"]
+        outpaint_model_path = self.settings["path_settings"]["inpaint_model_path"]
+        upscale_model_path = self.settings["path_settings"]["upscale_model_path"]
+        txt2vid_model_path = self.settings["path_settings"]["txt2vid_model_path"]
+        llm_casuallm_model_path = self.settings["path_settings"]["llm_casuallm_model_path"]
+        llm_seq2seq_model_path = self.settings["path_settings"]["llm_seq2seq_model_path"]
         diffusers_folders = ["scheduler", "text_encoder", "tokenizer", "unet", "vae"]
         models = []
         for key, model_path in {
@@ -50,7 +51,7 @@ class ModelScannerWorker(Worker):
                             model.category = "stablediffusion"
                             model.enabled = True
                             model.pipeline_action = key
-                            model.pipeline_class = ServiceLocator.get("get_pipeline_classname")(
+                            model.pipeline_class = ServiceLocator.get(ServiceCode.GET_PIPELINE_CLASSNAME)(
                                 model.pipeline_action, model.version, model.category
                             )
 
@@ -81,4 +82,4 @@ class ModelScannerWorker(Worker):
                                     is_default=False
                                 ))
 
-        self.emit("ai_models_save_or_update_signal", models)
+        self.emit(SignalCode.AI_MODELS_SAVE_OR_UPDATE_SIGNAL, models)
