@@ -43,7 +43,7 @@ class SettingsWindow(BaseWindow):
     # template_name = "airunner_settings"
 
     def __init__(self, **kwargs):
-        super().__init__(kwargs)
+        super().__init__(**kwargs)
         self.model = None
         self.scroll_widget = None
         self.scroll_layout = None

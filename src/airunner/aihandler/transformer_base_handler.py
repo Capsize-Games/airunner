@@ -5,6 +5,7 @@ import torch
 from transformers import BitsAndBytesConfig, GPTQConfig, TextIteratorStreamer
 
 from airunner.aihandler.base_handler import BaseHandler
+from airunner.utils import clear_memory
 
 
 class TransformerBaseHandler(BaseHandler):
@@ -120,9 +121,6 @@ class TransformerBaseHandler(BaseHandler):
 
     def load_model(self, local_files_only=None):
         self.logger.info("Loading model")
-        if not self.do_load_model:
-            return
-
         params = self.model_params(local_files_only=local_files_only)
         if self.request_data:
             params["token"] = self.request_data.get("hf_api_key_read_key", "")
@@ -132,14 +130,9 @@ class TransformerBaseHandler(BaseHandler):
             if config:
                 params["quantization_config"] = config
 
-        path = self.model_path
-        if path == self.current_model_path and self.model:
-            return
-        self.current_model_path = self.model_path
-
-        self.logger.info(f"Loading model from {path}")
+        self.logger.info(f"Loading model from {self.current_model_path}")
         try:
-            self.model = self.auto_class_.from_pretrained(path, **params)
+            self.model = self.auto_class_.from_pretrained(self.current_model_path, **params)
         except OSError as e:
             if "Checkout your internet connection" in str(e):
                 if local_files_only:
@@ -156,29 +149,51 @@ class TransformerBaseHandler(BaseHandler):
         pass
 
     def unload(self):
-        self.unload_model()
-        self.unload_tokenizer()
-        self.unload_processor()
         self._processing_request = False
+        if (
+            self.unload_model() or
+            self.unload_tokenizer() or
+            self.unload_processor()
+        ):
+            clear_memory()
 
     def unload_tokenizer(self):
         self.logger.info("Unloading tokenizer")
-        self.tokenizer = None
+        if self.tokenizer:
+            self.tokenizer = None
+            return True
 
     def unload_model(self):
-        self.model = None
-        self.processor = None
+        if self.model:
+            self.model = None
+            return True
 
     def unload_processor(self):
         self.logger.info("Unloading processor")
-        self.processor = None
+        if self.processor:
+            self.processor = None
+            return True
 
     def load(self):
         self.logger.info("Loading LLM")
-        self.load_tokenizer()
-        self.load_streamer()
-        self.load_processor()
-        self.load_model()
+        do_load_model = self.do_load_model
+        do_load_tokenizer = self.tokenizer is None
+        do_load_processor = self.processor is None
+        do_load_streamer = self.streamer is None
+
+        self.current_model_path = self.model_path
+
+        if do_load_tokenizer:
+            self.load_tokenizer()
+
+        if do_load_streamer:
+            self.load_streamer()
+
+        if do_load_processor:
+            self.load_processor()
+
+        if do_load_model:
+            self.load_model()
 
     def generate(self):
         self.logger.info("Generating")

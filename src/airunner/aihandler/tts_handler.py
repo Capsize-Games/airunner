@@ -127,14 +127,6 @@ class TTSHandler(BaseHandler):
         self.speaker_embeddings = None
         self.sentences = []
     
-    @pyqtSlot(np.ndarray)
-    def on_add_to_stream_signal(self, generated_speech: np.ndarray):
-        """
-        This function is called from the generator worker when speech has been generated.
-        It adds the generated speech to the vocalizer's queue.
-        """
-        self.vocalizer.handle_speech(generated_speech)
-    
     def move_model(self, to_cpu: bool = False):
         if to_cpu and self.do_offload_to_cpu:
             self.offload_to_cpu()
