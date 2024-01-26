@@ -10,15 +10,15 @@ class AudioCaptureWorker(Worker):
     This class is responsible for capturing audio from the microphone.
     It will capture audio for a specified duration and then send the audio to the audio_processor_worker.
     """
-    duration = 0
-    fs = 0
-    channels = 0
 
     def __init__(self, prefix):
         super().__init__(prefix)
         self.recording = None
         self.running = False
         self.listening = False
+        self.duration = 0
+        self.fs = 0
+        self.channels = 0
     
     def update_properties(self):
         settings = self.settings
@@ -33,14 +33,26 @@ class AudioCaptureWorker(Worker):
         self.start_listening()
         while self.running:
             while self.listening:
-                self.recording = sd.rec(int(self.duration * self.fs), samplerate=self.fs, channels=self.channels)
+                try:
+                    self.recording = sd.rec(
+                        int(self.duration * self.fs),
+                        samplerate=self.fs,
+                        channels=self.channels
+                    )
+                except Exception as e:
+                    self.logger.error(e)
+                    self.stop_listening()
+                    continue
                 sd.wait()
                 self.handle_message(self.recording)
             while not self.listening:
                 QThread.msleep(100)
 
     def handle_message(self, message):
-        self.emit(SignalCode.AUDIO_CAPTURE_WORKER_RESPONSE_SIGNAL, message)
+        self.emit(
+            SignalCode.AUDIO_CAPTURE_WORKER_RESPONSE_SIGNAL,
+            message
+        )
 
     def start_listening(self):
         self.logger.info("Start listening")
