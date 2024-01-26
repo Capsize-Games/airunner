@@ -1,13 +1,11 @@
+import time
+
 import torch
-import numpy as np
-
 from queue import Queue
-
-from PyQt6.QtCore import pyqtSlot
-
 from transformers import SpeechT5Processor, SpeechT5ForTextToSpeech, SpeechT5HifiGan, BarkModel, BarkProcessor
 from datasets import load_dataset
 from airunner.aihandler.base_handler import BaseHandler
+from airunner.enums import SignalCode
 from airunner.utils import clear_memory
 
 
@@ -19,32 +17,6 @@ class TTSHandler(BaseHandler):
 
     Use from a worker to avoid blocking the main thread.
     """
-    character_replacement_map = {
-        "\n": " ",
-        "’": "'",
-        "-": " "
-    }
-    text_queue = Queue()
-    # single_character_sentence_enders = [".", "?", "!", "...", "…"]
-    # double_character_sentence_enders = [".”", "?”", "!”", "...”", "…”", ".'", "?'", "!'", "...'", "…'"]
-    single_character_sentence_enders = [".", "?", "!", "…"]
-    double_character_sentence_enders = [".”", "?”", "!”", "…”", ".'", "?'", "!'", "…'"]
-    sentence_delay_time = 1500
-    sentence_sample_rate = 20000
-    sentence_blocking = True
-    buffer_length = 10
-    input_text = ""
-    buffer = []
-    current_sentence = ""
-    new_sentence = ""
-    tts_sentence = None
-    thread_started = False
-    is_playing = False
-    current_model = None
-    do_offload_to_cpu = True
-    message = ""
-    local_files_only = True
-    loaded = False
 
     @property
     def cuda_index(self):
@@ -116,18 +88,56 @@ class TTSHandler(BaseHandler):
 
     def __init__(self, *args, **kwargs):
         super().__init__(*args, **kwargs)
-        self.model = None
-        self.vocoder = None
-        self.model = None
-        self.vocoder = None
+
+        self.character_replacement_map = {
+            "\n": " ",
+            "’": "'",
+            "-": " "
+        }
+        self.text_queue = Queue()
+        # self.single_character_sentence_enders = [".", "?", "!", "...", "…"]
+        # self.double_character_sentence_enders = [".”", "?”", "!”", "...”", "…”", ".'", "?'", "!'", "...'", "…'"]
+        self.single_character_sentence_enders = [".", "?", "!", "…"]
+        self.double_character_sentence_enders = [".”", "?”", "!”", "…”", ".'", "?'", "!'", "…'"]
+        self.sentence_delay_time = 1500
+        self.sentence_sample_rate = 20000
+        self.sentence_blocking = True
+        self.buffer_length = 10
+        self.input_text = ""
+        self.buffer = []
+        self.current_sentence = ""
+        self.new_sentence = ""
+        self.tts_sentence = None
+        self.thread_started = False
+        self.is_playing = False
+        self.current_model = None
+        self.do_offload_to_cpu = True
+        self.message = ""
+        self.local_files_only = True
+        self.loaded = False
         self.model = None
         self.vocoder = None
         self.processor = None
-        self.logger.info("Loading")
         self.corpus = []
         self.speaker_embeddings = None
         self.sentences = []
-    
+        self.tts_enabled = self.settings["tts_enabled"]
+
+        self.logger.info("Loading")
+        self.register(
+            SignalCode.APPLICATION_SETTINGS_CHANGED_SIGNAL,
+            self.on_application_settings_changed_signal
+        )
+
+    def on_application_settings_changed_signal(self, _ignore):
+        tts_enabled = self.settings["tts_enabled"]
+        if tts_enabled != self.tts_enabled:
+            self.tts_enabled = tts_enabled
+            if not self.tts_enabled:
+                self.unload()
+            else:
+                self.initialize()
+
     def move_model(self, to_cpu: bool = False):
         if to_cpu and self.do_offload_to_cpu:
             self.offload_to_cpu()
@@ -166,6 +176,9 @@ class TTSHandler(BaseHandler):
         self.load(target_model)
 
     def load(self, target_model=None):
+        if not self.tts_enabled:
+            return
+        self.logger.info("Loading")
         target_model = target_model or self.current_model
         if self.current_model is None or self.model is None:
             self.load_model()
@@ -183,26 +196,26 @@ class TTSHandler(BaseHandler):
     def unload(self):
         if not self.loaded:
             return
-        self.logger.info("Unloading TTS")
+        self.logger.info("Unloading")
         self.loaded = False
         do_clear_memory = False
         try:
-            del self.model
+            self.model = None
             do_clear_memory = True
         except AttributeError:
             pass
         try:
-            del self.processor
+            self.processor = None
             do_clear_memory = True
         except AttributeError:
             pass
         try:
-            del self.vocoder
+            self.vocoder = None
             do_clear_memory = True
         except AttributeError:
             pass
         try:
-            del self.speaker_embeddings
+            self.speaker_embeddings = None
             do_clear_memory = True
         except AttributeError:
             pass
@@ -216,7 +229,7 @@ class TTSHandler(BaseHandler):
         self.process_sentences()
 
     def load_model(self):
-        self.logger.info("Loading TTS Model")
+        self.logger.info("Loading Model")
         model_class_ = BarkModel if self.use_bark else SpeechT5ForTextToSpeech
         self.model = model_class_.from_pretrained(
             self.model_path, 
@@ -230,7 +243,7 @@ class TTSHandler(BaseHandler):
     
     def load_vocoder(self):
         if not self.use_bark:
-            self.logger.info("Loading TTS Vocoder")
+            self.logger.info("Loading Vocoder")
             self.vocoder = SpeechT5HifiGan.from_pretrained(
                 self.vocoder_path,
                 torch_dtype=self.torch_dtype
@@ -240,7 +253,7 @@ class TTSHandler(BaseHandler):
                 self.vocoder = self.vocoder.cuda()
     
     def load_processor(self):
-        self.logger.info("Loading TTS Procesor")
+        self.logger.info("Loading Procesor")
         processor_class_ = BarkProcessor if self.use_bark else SpeechT5Processor
         self.processor = processor_class_.from_pretrained(self.processor_path)
 
@@ -250,7 +263,7 @@ class TTSHandler(BaseHandler):
         :return:
         """
         if not self.use_bark:
-            self.logger.info("Loading TTS Dataset")
+            self.logger.info("Loading Dataset")
             embeddings_dataset = load_dataset(self.speaker_embeddings_dataset_path, split="validation")
             self.speaker_embeddings = torch.tensor(embeddings_dataset[7306]["xvector"]).unsqueeze(0)
             
@@ -300,9 +313,6 @@ class TTSHandler(BaseHandler):
         return self.process_message(is_end_of_message=is_end_of_message)
     
     def process_message(self, is_end_of_message: bool):
-        # split on sentence enders
-        sentence_enders = self.single_character_sentence_enders + self.double_character_sentence_enders
-        
         # split text into words
         words = self.message.split()
         # if not is_end_of_message and len(words) < self.word_chunks:
@@ -314,7 +324,7 @@ class TTSHandler(BaseHandler):
             if len(chunks) < 30 and not is_end_of_message:
                 return False
 
-            self.logger.info("Adding text to TTS queue...")
+            self.logger.info("Adding text to queue...")
         
             for chunk in chunks:
                 # add "..." to chunk if it doesn't end with a sentence ender
@@ -360,3 +370,69 @@ class TTSHandler(BaseHandler):
                 is_end_of_message=is_end_of_message
             ))
             self.message = ""
+
+    def generate(self, message):
+        if not self.tts_enabled:
+            return
+        if self.use_bark:
+            response = self.generate_with_bark(message)
+        else:
+            response = self.generate_with_t5(message)
+        return response
+
+    def generate_with_bark(self, text):
+        self.logger.info("Generating TTS with Bark...")
+        text = text.replace("\n", " ").strip()
+
+        self.logger.info("Processing inputs...")
+        inputs = self.processor(
+            text=text,
+            voice_preset=self.settings["tts_settings"]["voice"]
+        ).to(self.device)
+        inputs = self.move_inputs_to_device(inputs)
+
+        self.logger.info("Generating speech...")
+        start = time.time()
+        params = dict(
+            **inputs,
+            fine_temperature=self.settings["tts_settings"]["fine_temperature"] / 100.0,
+            coarse_temperature=self.settings["tts_settings"]["coarse_temperature"] / 100.0,
+            semantic_temperature=self.settings["tts_settings"]["semantic_temperature"] / 100.0,
+        )
+        speech = self.model.generate(**params)
+        self.logger.info("Generated speech in " + str(time.time() - start) + " seconds")
+
+        response = speech[0].cpu().float().numpy()
+        return response
+
+    def generate_with_t5(self, text):
+        self.logger.info("Generating TTS with SpeechT5...")
+        text = text.replace("\n", " ").strip()
+
+        self.logger.info("Processing inputs...")
+
+        inputs = self.processor(text=text, return_tensors="pt")
+        inputs = self.move_inputs_to_device(inputs)
+
+        self.logger.info("Generating speech...")
+        start = time.time()
+        params = dict(
+            **inputs,
+            speaker_embeddings=self.speaker_embeddings,
+            vocoder=self.vocoder,
+            max_length=100,
+        )
+        speech = self.model.generate(**params)
+        self.logger.info("Generated speech in " + str(time.time() - start) + " seconds")
+        response = speech.cpu().float().numpy()
+        return response
+
+    def move_inputs_to_device(self, inputs):
+        use_cuda = self.settings["tts_settings"]["use_cuda"]
+        if use_cuda:
+            self.logger.info("Moving inputs to CUDA")
+            try:
+                inputs = {k: v.cuda() for k, v in inputs.items()}
+            except AttributeError:
+                pass
+        return inputs
