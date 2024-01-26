@@ -115,8 +115,8 @@ class CanvasPlusWidget(BaseWidget):
         self.register(SignalCode.APPLICATION_MAIN_WINDOW_LOADED_SIGNAL, self.on_main_window_loaded_signal)
         self.register(SignalCode.CANVAS_DO_DRAW_SIGNAL, self.on_canvas_do_draw_signal)
         self.register(SignalCode.CANVAS_CLEAR_LINES_SIGNAL, self.on_canvas_clear_lines_signal)
-        self.register(SignalCode.SD_IMAGE_DATA_WORKER_RESPONSE_SIGNAL, self.on_ImageDataWorker_response_signal)
-        self.register(SignalCode.CANVAS_RESIZE_WORKER_RESPONSE_SIGNAL, self.on_CanvasResizeWorker_response_signal)
+        self.register(SignalCode.SD_IMAGE_DATA_WORKER_RESPONSE_SIGNAL, self.on_image_data_worker_response_signal)
+        self.register(SignalCode.CANVAS_RESIZE_WORKER_RESPONSE_SIGNAL, self.on_canvas_resize_worker_response_signal)
         self.register(SignalCode.SD_IMAGE_GENERATED_SIGNAL, self.on_image_generated_signal)
         self.register(SignalCode.CANVAS_LOAD_IMAGE_FROM_PATH_SIGNAL, self.on_load_image_from_path)
         self.register(SignalCode.CANVAS_HANDLE_LAYER_CLICK_SIGNAL, self.on_canvas_handle_layer_click_signal)
@@ -212,7 +212,7 @@ class CanvasPlusWidget(BaseWidget):
         # ))
         self.add_image_to_scene(image_data["images"][0])
 
-    def on_CanvasResizeWorker_response_signal(self, lines_data: list):
+    def on_canvas_resize_worker_response_signal(self, lines_data: list):
         self.clear_lines()
         draw_grid = self.settings["grid_settings"]["show_grid"]
         if not draw_grid:
@@ -225,7 +225,7 @@ class CanvasPlusWidget(BaseWidget):
                 self.logger.error(f"TypeError: {e}")
         self.do_draw()
 
-    def on_ImageDataWorker_response_signal(self, message):
+    def on_image_data_worker_response_signal(self, message):
         self.emit(SignalCode.APPLICATION_CLEAR_STATUS_MESSAGE_SIGNAL)
         self.emit(SignalCode.APPLICATION_STOP_SD_PROGRESS_BAR_SIGNAL)
         nsfw_content_detected = message["nsfw_content_detected"]
@@ -234,7 +234,10 @@ class CanvasPlusWidget(BaseWidget):
             self.emit(SignalCode.LOG_ERROR_SIGNAL, "Explicit content detected, try again.")
         self.emit(SignalCode.LAYERS_SHOW_SIGNAL)
         if path is not None:
-            self.emit(SignalCode.APPLICATION_SET_STATUS_LABEL_SIGNAL, f"Image generated to {path}")
+            self.emit(
+                SignalCode.STATUS_INFO_SIGNAL,
+                f"Image generated to {path}"
+            )
     
     # @property
     # def zoom_in_step(self):
