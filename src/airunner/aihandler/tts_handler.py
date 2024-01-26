@@ -8,6 +8,7 @@ from PyQt6.QtCore import pyqtSlot
 from transformers import SpeechT5Processor, SpeechT5ForTextToSpeech, SpeechT5HifiGan, BarkModel, BarkProcessor
 from datasets import load_dataset
 from airunner.aihandler.base_handler import BaseHandler
+from airunner.utils import clear_memory
 
 
 class TTSHandler(BaseHandler):
@@ -162,15 +163,22 @@ class TTSHandler(BaseHandler):
         target_model = "bark" if self.settings["tts_settings"]["use_bark"] else "t5"
         if target_model != self.current_model:
             self.unload()
-        
-        if not self.current_model:
+        self.load(target_model)
+
+    def load(self, target_model=None):
+        target_model = target_model or self.current_model
+        if self.current_model is None or self.model is None:
             self.load_model()
+        if self.vocoder is None:
             self.load_vocoder()
+        if self.processor is None:
             self.load_processor()
+        if self.speaker_embeddings is None:
             self.load_dataset()
+        if self.corpus is None:
             self.load_corpus()
-            self.current_model = target_model
-            self.loaded = True
+        self.current_model = target_model
+        self.loaded = True
     
     def unload(self):
         if not self.loaded:
@@ -199,6 +207,9 @@ class TTSHandler(BaseHandler):
         except AttributeError:
             pass
         self.current_model = None
+
+        if do_clear_memory:
+            clear_memory()
 
     def run(self):
         self.initialize()
@@ -349,21 +360,3 @@ class TTSHandler(BaseHandler):
                 is_end_of_message=is_end_of_message
             ))
             self.message = ""
-            
-    # def play_buffer(self):
-    #     """
-    #     now we iterate over each sentence and keep a buffer of 10 sentences. We'll
-    #     generate speech for each sentence, and then play the oldest sentence in the
-    #     buffer when it fills up. This way we can generate speech for the next sentence
-    #     while the current one is playing.
-    #     :return:
-    #     """
-    #     while True:
-    #         if len(self.buffer) > 0:
-    #             tts = self.buffer.pop(0)
-    #             sd.play(
-    #                 tts,
-    #                 samplerate=self.sentence_sample_rate,
-    #                 blocking=self.sentence_blocking
-    #             )
-    #             time.sleep(self.sentence_delay_time / 1000)

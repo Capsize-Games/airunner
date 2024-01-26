@@ -10,14 +10,22 @@ class TTSGeneratorWorker(Worker):
     """
     Takes input text from any source and generates speech from it using the TTS class.
     """
+    tokens = []
+
     def __init__(self, *args, **kwargs):
         super().__init__(*args, **kwargs)
         self.tts = TTSHandler()
         self.tts.run()
         self.play_queue = []
         self.play_queue_started = False
+        self.register(SignalCode.APPLICATION_SETTINGS_CHANGED_SIGNAL, self.on_application_settings_changed_signal)
 
-    tokens = []
+    def on_application_settings_changed_signal(self, _data):
+        if not self.settings["tts_settings"]["enable_tts"]:
+            self.tts.unload()
+        else:
+            self.tts.load()
+
     def handle_message(self, data):
         # Add the incoming tokens to the list
         self.tokens.extend(data["message"])

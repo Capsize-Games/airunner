@@ -63,7 +63,6 @@ class SignalCode(Enum):
     APPLICATION_RESET_PATHS_SIGNAL = "reset_paths_signal"
     APPLICATION_STOP_SD_PROGRESS_BAR_SIGNAL = "stop_image_generator_progress_bar_signal"
     APPLICATION_SETTINGS_CHANGED_SIGNAL = "application_settings_changed_signal"
-    APPLICATION_SET_STATUS_LABEL_SIGNAL = "set_status_label_signal"
 
     AUDIO_CAPTURE_WORKER_RESPONSE_SIGNAL = "AudioCaptureWorker_response_signal"
     AUDIO_PROCESSOR_WORKER_PROCESSED_SIGNAL = "AudioProcessorWorker_processed_audio"
@@ -136,6 +135,9 @@ class SignalCode(Enum):
     SD_GENERATE_IMAGE_SIGNAL = "generate_image_signal"
     SD_IMAGE_GENERATED_SIGNAL = "image_generated_signal"
     SD_NSFW_CONTENT_DETECTED_SIGNAL = "nsfw_content_detected_signal"
+
+    STATUS_INFO_SIGNAL = "status_info_signal"
+    STATUS_ERROR_SIGNAL = "status_error_signal"
 
     STT_HEAR_SIGNAL = "hear_signal"
     STT_AUDIO_PROCESSED = "stt_audio_processed_signal"
