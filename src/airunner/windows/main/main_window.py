@@ -20,7 +20,7 @@ from airunner.mediator_mixin import MediatorMixin
 from airunner.resources_dark_rc import *
 from airunner.service_locator import ServiceLocator
 from airunner.settings import BASE_PATH
-from airunner.utils import get_version, auto_export_image, default_hf_cache_dir
+from airunner.utils import get_version, auto_export_image, default_hf_cache_dir, open_file_path
 from airunner.widgets.brushes.brushes_container import BrushesContainer
 from airunner.widgets.status.status_widget import StatusWidget
 from airunner.windows.about.about import AboutWindow
@@ -310,8 +310,6 @@ class MainWindow(
         # on window resize:
         # self.windowStateChanged.connect(self.on_state_changed)
         self.logger.info("Connecting signals")
-        self.register(SignalCode.APPLICATION_SET_STATUS_LABEL_SIGNAL, self.on_set_status_label_signal)
-        self.register(SignalCode.APPLICATION_CLEAR_STATUS_MESSAGE_SIGNAL, self.on_clear_status_message_signal)
         self.register(SignalCode.VISION_DESCRIBE_IMAGE_SIGNAL, self.on_describe_image_signal)
         self.register(SignalCode.SD_SAVE_PROMPT_SIGNAL, self.on_save_stablediffusion_prompt_signal)
         self.register(SignalCode.SD_LOAD_PROMPT_SIGNAL, self.on_load_saved_stablediffuion_prompt_signal)
@@ -344,14 +342,6 @@ class MainWindow(
         self.logger.info("Setting buttons")
         self.set_all_section_buttons()
         self.initialize_tool_section_buttons()
-
-        # Toggling the ai button will trigger the ai_button_toggled function
-        # if self.settings["mode"] == Mode.IMAGE.value:
-        #     self.image_generation_toggled()
-        # elif self.settings["mode"] == Mode.LANGUAGE_PROCESSOR.value:
-        #     self.language_processing_toggled()
-        # else:
-        #     self.model_manager_toggled(True)
 
         self.restore_state()
     
@@ -388,7 +378,10 @@ class MainWindow(
             seed=self.seed
         )
         if path is not None:
-            self.emit(SignalCode.APPLICATION_SET_STATUS_LABEL_SIGNAL, f"Image exported to {path}")
+            self.emit(
+                SignalCode.STATUS_INFO_SIGNAL,
+                f"Image exported to {path}"
+            )
 
     """
     Slot functions
@@ -607,21 +600,18 @@ class MainWindow(
     
     @pyqtSlot(bool)
     def tts_button_toggled(self, val):
-        print("tts_button_toggled", val)
         new_settings = self.settings
         new_settings["tts_enabled"] = val
         self.settings = new_settings
 
     @pyqtSlot(bool)
     def ocr_button_toggled(self, val):
-        print("ocr_button_toggled", val)
         new_settings = self.settings
         new_settings["ocr_enabled"] = val
         self.settings = new_settings
 
     @pyqtSlot(bool)
     def v2t_button_toggled(self, val):
-        print("stt_button_toggled", val)
         new_settings = self.settings
         new_settings["stt_enabled"] = val
         self.settings = new_settings
@@ -771,15 +761,11 @@ class MainWindow(
             self.set_all_section_buttons()
     ###### End window handlers ######
 
-    def timerEvent(self, event):
-        # self.canvas_widget.timerEvent(event)
-        if self.status_widget:
-            self.status_widget.update_system_stats(
-                queue_size=self.worker_manager.request_queue_size()
-            )
-
     def show_update_message(self):
-        self.emit(SignalCode.APPLICATION_SET_STATUS_LABEL_SIGNAL, f"New version available: {self.latest_version}")
+        self.emit(
+            SignalCode.STATUS_INFO_SIGNAL,
+            f"New version available: {self.latest_version}"
+        )
 
     def show_update_popup(self):
         self.update_popup = UpdateWindow()
@@ -993,14 +979,6 @@ class MainWindow(
         #self.canvas_widget.update()
         self.ui.layer_widget.show_layers()
 
-    def set_status_label(self, txt):
-        if self.status_widget:
-            self.status_widget.set_system_status(txt, False)
-    
-    def set_error_label(self, txt):
-        if self.status_widget:
-            self.status_widget.set_system_status(txt, True)
-
     def handle_controlnet_image_generated(self, message):
         self.controlnet_image = message["image"]
         self.controlnet_image_generated.emit(True)
@@ -1014,17 +992,8 @@ class MainWindow(
         #return self.automatic_filter_manager.apply_filters(images)
         return images
 
-    def on_set_status_label_signal(self, message):
-        self.set_status_label(message)
-
-    def on_set_error_label_signal(self, message):
-        self.set_status_label(message, error=True)
-
     def handle_unknown(self, message):
         self.logger.error(f"Unknown message code: {message}")
-
-    def on_clear_status_message_signal(self, _ignore):
-        self.emit(SignalCode.APPLICATION_SET_STATUS_LABEL_SIGNAL, "")
 
     def set_size_form_element_step_values(self):
         """
@@ -1033,48 +1002,6 @@ class MainWindow(
         :return:
         """
         self.set_size_increment_levels()
-
-    def saveas_document(self):
-        # get file path
-        file_path, _ = QFileDialog.getSaveFileName(
-            self.ui, "Save Document", "", "AI Runner Document (*.airunner)"
-        )
-        if file_path == "":
-            return
-
-        # ensure file_path ends with .airunner
-        if not file_path.endswith(".airunner"):
-            file_path += ".airunner"
-
-        self.do_save(file_path)
-
-    def do_save(self, document_name):
-        # save self.ui.layer_widget.layers as pickle
-        layers = []
-        # we need to save self.ui.layer_widget.layers but it contains a QWdget
-        # so we will remove the QWidget from each layer, add the layer to a new
-        # list and then restore the QWidget
-        layer_widgets = []
-        for layer in self.ui.layer_widget.layers:
-            layer_widgets.append(layer.layer_widget)
-            layer.layer_widget = None
-            layers.append(layer)
-        data = {
-            "layers": layers,
-            "image_pivot_point": self.canvas_widget.image_pivot_point,
-            "image_root_point": self.canvas_widget.image_root_point,
-        }
-        with open(document_name, "wb") as f:
-            pickle.dump(data, f)
-        # restore the QWidget
-        for i, layer in enumerate(layers):
-            layer.layer_widget = layer_widgets[i]
-        # get the document name stripping .airunner from the end
-        self._document_path = document_name
-        self._document_name = document_name.split("/")[-1].split(".")[0]
-        self.set_window_title()
-        self.is_saved = True
-        self.canvas_widget.is_dirty = False
 
     def update(self):
         self.standard_image_panel.update_thumbnails()
@@ -1100,7 +1027,8 @@ class MainWindow(
         PromptBrowser()
 
     def import_image(self):
-        file_path, _ = self.display_import_image_dialog_signal(
+        file_path, _ = open_file_path(
+            label="Import Image",
             directory=self.settings["path_settings"]["image_path"]
         )
         if file_path == "":

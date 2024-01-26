@@ -1,6 +1,9 @@
+from PyQt6.QtCore import QTimer
+
 import psutil
 import torch
 
+from airunner.enums import SignalCode
 from airunner.widgets.base_widget import BaseWidget
 from airunner.widgets.status.templates.status_ui import Ui_status_widget
 
@@ -8,7 +11,26 @@ from airunner.widgets.status.templates.status_ui import Ui_status_widget
 class StatusWidget(BaseWidget):
     widget_class_ = Ui_status_widget
 
-    def update_system_stats(self, queue_size):
+    def __init__(self, *args, **kwargs):
+        super().__init__(*args, **kwargs)
+        self.register(SignalCode.STATUS_INFO_SIGNAL, self.on_status_info_signal)
+        self.register(SignalCode.STATUS_ERROR_SIGNAL, self.on_status_error_signal)
+        self.register(SignalCode.APPLICATION_CLEAR_STATUS_MESSAGE_SIGNAL, self.on_clear_status_message_signal)
+
+        self.timer = QTimer()
+        self.timer.timeout.connect(self.update_system_stats)
+        self.timer.start(100)
+
+    def on_status_info_signal(self, message):
+        self.set_system_status(message, False)
+
+    def on_status_error_signal(self, message):
+        self.set_system_status(message, False)
+
+    def on_clear_status_message_signal(self, _ignore):
+        self.set_system_status("", False)
+
+    def update_system_stats(self, queue_size=0):
         nsfw_filter = self.settings["nsfw_filter"]
         has_cuda = torch.cuda.is_available()
         nsfw_status = f"NSFW Filter {'On' if nsfw_filter else 'Off'}"
