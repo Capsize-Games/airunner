@@ -64,7 +64,8 @@ class VisionCaptureWorker(Worker):
     def enable_cam(self):
         self.cap = cv2.VideoCapture(0)
         if not self.cap.isOpened():
-            raise IOError("Unable to open webcam")
+            self.logger.error("Unable to open camera")
+            self.state = WorkerState.HALTED
 
     def disable_cam(self):
         if self.cap:
