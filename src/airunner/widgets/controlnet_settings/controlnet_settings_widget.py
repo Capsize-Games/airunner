@@ -156,7 +156,10 @@ class ControlNetSettingsWidget(InputImageSettingsWidget):
             seed=self.settings["generator_settings"]["seed"]
         )
         if path is not None:
-            self.emit(SignalCode.APPLICATION_SET_STATUS_LABEL_SIGNAL, "Controlnet image exported to: {}".format(path))
+            self.emit(
+                SignalCode.STATUS_INFO_SIGNAL,
+                "Controlnet image exported to: {}".format(path)
+            )
 
     @pyqtSlot(bool)
     def handle_controlnet_image_generated(self):
