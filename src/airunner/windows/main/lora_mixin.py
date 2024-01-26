@@ -5,8 +5,8 @@ class LoraMixin:
     def __init__(self):
         self.settings = None
         self.settings = None
-        self.register(SignalCode.UPDATE_LORA_SIGNAL, self.on_update_lora_signal)
-        self.register(SignalCode.ADD_LORA_SIGNAL, self.on_add_lora_signal)
+        self.register(SignalCode.LORA_UPDATE_SIGNAL, self.on_update_lora_signal)
+        self.register(SignalCode.LORA_ADD_SIGNAL, self.on_add_lora_signal)
 
     def on_add_lora_signal(self, params):
         settings = self.settings

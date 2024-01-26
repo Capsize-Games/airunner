@@ -117,7 +117,7 @@ class ControlNetSettingsWidget(InputImageSettingsWidget):
         if not self.current_controlnet_image:
             return
         print("TODO: send_active_mask_to_canvas")
-        self.emit(SignalCode.UPDATE_CANVAS_SIGNAL)
+        self.emit(SignalCode.CANVAS_UPDATE_SIGNAL)
 
     def toggle_mask_link(self, value):
         self.settings["generator_settings"]["controlnet_mask_use_imported_image"] = not value
@@ -156,7 +156,7 @@ class ControlNetSettingsWidget(InputImageSettingsWidget):
             seed=self.settings["generator_settings"]["seed"]
         )
         if path is not None:
-            self.emit(SignalCode.SET_STATUS_LABEL_SIGNAL, "Controlnet image exported to: {}".format(path))
+            self.emit(SignalCode.APPLICATION_SET_STATUS_LABEL_SIGNAL, "Controlnet image exported to: {}".format(path))
 
     @pyqtSlot(bool)
     def handle_controlnet_image_generated(self):

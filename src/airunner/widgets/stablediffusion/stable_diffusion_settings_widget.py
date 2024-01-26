@@ -8,7 +8,7 @@ class StableDiffusionSettingsWidget(BaseWidget):
 
     def __init__(self, *args, **kwargs):
         super().__init__(*args, **kwargs)
-        self.register(SignalCode.MODELS_CHANGED_SIGNAL, self.on_models_changed_signal)
+        self.register(SignalCode.APPLICATION_MODELS_CHANGED_SIGNAL, self.on_models_changed_signal)
 
     def showEvent(self, event):
         super().showEvent(event)

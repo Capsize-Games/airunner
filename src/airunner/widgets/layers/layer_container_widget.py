@@ -10,8 +10,8 @@ from airunner.widgets.layers.templates.layer_container_ui import Ui_layer_contai
 class LayerContainerWidget(BaseWidget):
     def __init__(self, *args, **kwargs):
         super().__init__(*args, **kwargs)
-        self.register(SignalCode.SHOW_LAYERS_SIGNAL, self.on_show_layers_signal)
-        self.register(SignalCode.ADD_LAYER_SIGNAL, self.on_add_layer_signal)
+        self.register(SignalCode.LAYERS_SHOW_SIGNAL, self.on_show_layers_signal)
+        self.register(SignalCode.LAYER_ADD_SIGNAL, self.on_add_layer_signal)
         self.register_service("get_index_by_layer", self.get_index_by_layer)
         self.widget_class_ = Ui_layer_container
         self.selected_layers = {}
@@ -50,7 +50,7 @@ class LayerContainerWidget(BaseWidget):
             self.add_layer_widget(layer, layer.position)
 
     def add_layer(self):
-        self.emit(SignalCode.CREATE_LAYER_SIGNAL)
+        self.emit(SignalCode.LAYER_CREATE_SIGNAL)
 
     def add_layer_widget(self, layer_data, index):
         self.logger.info(f"add_layer_widget index={index}")
@@ -62,14 +62,14 @@ class LayerContainerWidget(BaseWidget):
             layer_widget.reset_position()
 
     def move_layer_up(self):
-        self.emit(SignalCode.MOVE_LAYER_UP_SIGNAL)
+        self.emit(SignalCode.LAYER_MOVE_UP_SIGNAL)
         self.show_layers()
-        self.emit(SignalCode.UPDATE_CANVAS_SIGNAL)
+        self.emit(SignalCode.CANVAS_UPDATE_SIGNAL)
 
     def move_layer_down(self):
-        self.emit(SignalCode.MOVE_LAYER_DOWN_SIGNAL)
+        self.emit(SignalCode.LAYER_MOVE_DOWN_SIGNAL)
         self.show_layers()
-        self.emit(SignalCode.UPDATE_CANVAS_SIGNAL)
+        self.emit(SignalCode.CANVAS_UPDATE_SIGNAL)
 
     def merge_selected_layers(self):
         with self.current_layer() as current_layer:
@@ -112,7 +112,7 @@ class LayerContainerWidget(BaseWidget):
 
                 # delete any layers which are not the current layer index
                 if index != self.current_layer_index:
-                    self.emit(SignalCode.DELETE_LAYER_SIGNAL, dict(
+                    self.emit(SignalCode.LAYER_DELETE_SIGNAL, dict(
                         layer=layer,
                     ))
 
@@ -129,7 +129,7 @@ class LayerContainerWidget(BaseWidget):
             # reset the selected layers dictionary and refresh the canvas
             self.selected_layers = {}
             self.show_layers()
-            self.emit(SignalCode.UPDATE_CANVAS_SIGNAL)
+            self.emit(SignalCode.CANVAS_UPDATE_SIGNAL)
 
     selected_layers = {}
 
@@ -142,16 +142,16 @@ class LayerContainerWidget(BaseWidget):
         self.emit(SignalCode.CANVAS_DO_DRAW_SIGNAL)
 
     def delete_layer(self, _value=False, index=None, layer=None):
-        self.emit(SignalCode.DELETE_LAYER_SIGNAL, dict(
+        self.emit(SignalCode.LAYER_DELETE_SIGNAL, dict(
             index=index,
             layer=layer
         ))
 
     def clear_layers(self):
-        self.emit(SignalCode.CLEAR_LAYERS_SIGNAL)
+        self.emit(SignalCode.LAYER_CLEAR_LAYERS_SIGNAL)
     
     def set_current_layer(self, index):
-        self.emit(SignalCode.SET_CURRENT_LAYER_SIGNAL, index)
+        self.emit(SignalCode.LAYER_SET_CURRENT_SIGNAL, index)
 
     def handle_layer_click(self, layer, index, event):
         if event.modifiers() == Qt.KeyboardModifier.ControlModifier:
@@ -219,17 +219,17 @@ class LayerContainerWidget(BaseWidget):
         point.setX(int(point.x() - int(rect.width() / 2)))
         point.setY(int(point.y() - int(rect.height() / 2)))
 
-        self.emit(SignalCode.UPDATE_CURRENT_LAYER_SIGNAL, dict(
+        self.emit(SignalCode.LAYER_UPDATE_CURRENT_SIGNAL, dict(
             offset=point
         ))
-        self.emit(SignalCode.UPDATE_CANVAS_SIGNAL)
+        self.emit(SignalCode.CANVAS_UPDATE_SIGNAL)
 
     def get_layer_opacity(self, index):
         layers = self.settings["layers"]
         return layers[index]["opacity"]
 
     def set_layer_opacity(self, opacity: int):
-        self.emit(SignalCode.UPDATE_CURRENT_LAYER_SIGNAL, dict(
+        self.emit(SignalCode.LAYER_UPDATE_CURRENT_SIGNAL, dict(
             opacity=opacity
         ))
 
