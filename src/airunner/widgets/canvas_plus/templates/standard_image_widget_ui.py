@@ -173,8 +173,6 @@ class Ui_standard_image_widget(object):
         self.brushes = BrushesContainer(parent=self.layoutWidget2)
         self.brushes.setAcceptDrops(True)
         self.brushes.setObjectName("brushes")
-        self.gridLayout_17 = QtWidgets.QGridLayout(self.brushes)
-        self.gridLayout_17.setObjectName("gridLayout_17")
         self.verticalLayout_5.addWidget(self.brushes)
         spacerItem2 = QtWidgets.QSpacerItem(20, 40, QtWidgets.QSizePolicy.Policy.Minimum, QtWidgets.QSizePolicy.Policy.Expanding)
         self.verticalLayout_5.addItem(spacerItem2)
@@ -284,7 +282,7 @@ class Ui_standard_image_widget(object):
         self.tabWidget.setTabText(self.tabWidget.indexOf(self.tab_6), _translate("standard_image_widget", "Stable Diffusion"))
         self.tabWidget.setTabToolTip(self.tabWidget.indexOf(self.tab_6), _translate("standard_image_widget", "Stable Diffusion settings"))
         self.tabWidget.setTabText(self.tabWidget.indexOf(self.tab_4), _translate("standard_image_widget", "LLM"))
-from airunner.widgets.brushes.brushes_container import BrushesContainer
+from airunner.widgets.canvas_plus.brushes_container import BrushesContainer
 from airunner.widgets.canvas_plus.canvas_plus_widget import CanvasPlusWidget
 from airunner.widgets.controlnet_settings.controlnet_settings_widget import ControlNetSettingsWidget
 from airunner.widgets.embeddings.embeddings_container_widget import EmbeddingsContainerWidget
