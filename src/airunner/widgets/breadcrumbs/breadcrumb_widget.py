@@ -1,5 +1,3 @@
-import os
-
 from airunner.widgets.base_widget import BaseWidget
 from airunner.widgets.breadcrumbs.templates.breadcrumb_ui import Ui_breadcrumb_widget
 

@@ -2,25 +2,31 @@ from PyQt6.QtCore import pyqtSlot
 from PyQt6.QtWidgets import QSpacerItem, QSizePolicy
 from PyQt6.QtCore import Qt
 
+from airunner.enums import SignalCode, ServiceCode
 from airunner.mediator_mixin import MediatorMixin
 from airunner.widgets.base_widget import BaseWidget
 from airunner.widgets.llm.loading_widget import LoadingWidget
 from airunner.widgets.llm.templates.chat_prompt_ui import Ui_chat_prompt
 from airunner.widgets.llm.message_widget import MessageWidget
-from airunner.aihandler.logger import Logger
 
 
-class ChatPromptWidget(BaseWidget, MediatorMixin):
+class ChatPromptWidget(BaseWidget):
     widget_class_ = Ui_chat_prompt
-    conversation = None
-    is_modal = True
-    generating = False
-    prefix = ""
-    prompt = ""
-    suffix = ""
-    conversation_history = []
-    spacer = None
-    promptKeyPressEvent = None
+
+    def __init__(self, *args, **kwargs):
+        super().__init__()
+        self.conversation = None
+        self.is_modal = True
+        self.generating = False
+        self.prefix = ""
+        self.prompt = ""
+        self.suffix = ""
+        self.conversation_history = []
+        self.spacer = None
+        self.promptKeyPressEvent = None
+        self.originalKeyPressEvent = None
+        self.action_menu_displayed = None
+        self.action_menu_displayed = None
 
     @property
     def current_generator(self):
@@ -64,7 +70,7 @@ class ChatPromptWidget(BaseWidget, MediatorMixin):
         self.conversation_history = []
         for widget in self.ui.scrollAreaWidgetContents.findChildren(MessageWidget):
             widget.deleteLater()
-        self.emit("clear_llm_history_signal")
+        self.emit(SignalCode.LLM_CLEAR_HISTORY_SIGNAL)
     
     @pyqtSlot(bool)
     def action_button_clicked_send(self, _ignore):
@@ -78,7 +84,7 @@ class ChatPromptWidget(BaseWidget, MediatorMixin):
         self.generating = True
         self.disable_send_button()
 
-        image = self.get_service("current_active_image")() if (image_override is None or image_override is False) else image_override
+        image = self.get_service(ServiceCode.CURRENT_ACTIVE_IMAGE)() if (image_override is None or image_override is False) else image_override
 
         prompt = self.prompt if (prompt_override is None or prompt_override == "") else prompt_override
         if prompt is None or prompt == "":
@@ -86,23 +92,23 @@ class ChatPromptWidget(BaseWidget, MediatorMixin):
             return
 
         prompt_template = None
-        template_name = self.llm_generator_settings["prompt_template"]
-        if template_name in self.llm_templates:
-            prompt_template = self.llm_templates[template_name]
+        template_name = self.settings["llm_generator_settings"]["prompt_template"]
+        if template_name in self.settings["llm_templates"]:
+            prompt_template = self.settings["llm_templates"][template_name]
         else:
-            raise Exception("Prompt template not found for "+self.llm_generator_settings["prompt_template"])
+            raise Exception("Prompt template not found for "+self.settings["llm_generator_settings"]["prompt_template"])
 
-        llm_generator_settings = self.llm_generator_settings
+        llm_generator_settings = self.settings["llm_generator_settings"]
 
         parsed_template = self.parse_template(prompt_template)
 
         self.emit(
-            "text_generate_request_signal",
+            SignalCode.LLM_TEXT_GENERATE_REQUEST_SIGNAL,
             {
                 "llm_request": True,
                 "request_data": {
-                    "unload_unused_model": self.memory_settings["unload_unused_models"],
-                    "move_unused_model_to_cpu": self.memory_settings["move_unused_model_to_cpu"],
+                    "unload_unused_model": self.settings["memory_settings"]["unload_unused_models"],
+                    "move_unused_model_to_cpu": self.settings["memory_settings"]["move_unused_model_to_cpu"],
                     "generator_name": generator_name,
                     "model_path": llm_generator_settings["model_version"],
                     "stream": True,
@@ -110,18 +116,18 @@ class ChatPromptWidget(BaseWidget, MediatorMixin):
                     "do_summary": False,
                     "is_bot_alive": True,
                     "conversation_history": self.conversation_history,
-                    "generator": self.llm_generator_settings,
+                    "generator": self.settings["llm_generator_settings"],
                     "prefix": self.prefix,
                     "suffix": self.suffix,
                     "dtype": llm_generator_settings["dtype"],
                     "use_gpu": llm_generator_settings["use_gpu"],
                     "request_type": "image_caption_generator",
-                    "username": self.llm_generator_settings["username"],
-                    "botname": self.llm_generator_settings["botname"],
+                    "username": self.settings["llm_generator_settings"]["username"],
+                    "botname": self.settings["llm_generator_settings"]["botname"],
                     "prompt_template": parsed_template,
                     "hf_api_key_read_key": self.settings["hf_api_key_read_key"],
                     "parameters": {
-                        "override_parameters": self.llm_generator_settings["override_parameters"],
+                        "override_parameters": self.settings["llm_generator_settings"]["override_parameters"],
                         "top_p": llm_generator_settings["top_p"] / 100.0,
                         "max_length": llm_generator_settings["max_length"],
                         "repetition_penalty": llm_generator_settings["repetition_penalty"] / 100.0,
@@ -138,14 +144,14 @@ class ChatPromptWidget(BaseWidget, MediatorMixin):
                     },
                     "image": image,
                     "callback": callback,
-                    "tts_settings": self.tts_settings,
-                    "bot_mood": self.llm_generator_settings["bot_mood"],
-                    "bot_personality": self.llm_generator_settings["bot_personality"],
+                    "tts_settings": self.settings["tts_settings"],
+                    "bot_mood": self.settings["llm_generator_settings"]["bot_mood"],
+                    "bot_personality": self.settings["llm_generator_settings"]["bot_personality"],
                 }
             }
         )
         self.add_message_to_conversation(
-            name=self.llm_generator_settings["username"],
+            name=self.settings["llm_generator_settings"]["username"],
             message=self.prompt, 
             is_bot=False
         )
@@ -160,9 +166,9 @@ class ChatPromptWidget(BaseWidget, MediatorMixin):
 
     def showEvent(self, event):
         super().showEvent(event)
-        self.register("hear_signal", self)
-        self.register("token_signal", self)
-        self.register("add_bot_message_to_conversation", self)
+        self.register(SignalCode.STT_HEAR_SIGNAL, self.on_hear_signal)
+        self.register(SignalCode.LLM_TOKEN_SIGNAL, self.on_token_signal)
+        self.register(SignalCode.APPLICATION_ADD_BOT_MESSAGE_TO_CONVERSATION, self.on_add_bot_message_to_conversation)
 
         # handle return pressed on QPlainTextEdit
         # there is no returnPressed signal for QPlainTextEdit

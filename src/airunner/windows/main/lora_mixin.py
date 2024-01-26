@@ -1,7 +1,12 @@
+from airunner.enums import SignalCode
+
+
 class LoraMixin:
     def __init__(self):
-        self.register("update_lora_signal", self)
-        self.register("add_lora_signal", self)
+        self.settings = None
+        self.settings = None
+        self.register(SignalCode.LORA_UPDATE_SIGNAL, self.on_update_lora_signal)
+        self.register(SignalCode.LORA_ADD_SIGNAL, self.on_add_lora_signal)
 
     def on_add_lora_signal(self, params):
         settings = self.settings

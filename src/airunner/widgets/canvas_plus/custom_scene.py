@@ -1,20 +1,21 @@
 from PIL.ImageQt import QImage
 from PyQt6.QtCore import Qt
-from PyQt6.QtGui import QPen, QPixmap, QPainter, QCursor
-from PyQt6.QtWidgets import QGraphicsScene, QGraphicsPixmapItem
-from PyQt6.QtGui import QPainterPath
 from PyQt6.QtGui import QEnterEvent
-from PyQt6.QtGui import QTransform
+from PyQt6.QtGui import QPainterPath
+from PyQt6.QtGui import QPen, QPixmap, QPainter
+from PyQt6.QtWidgets import QGraphicsScene, QGraphicsPixmapItem
 
-from airunner.cursors.circle_brush import CircleCursor
+from airunner.enums import SignalCode
 from airunner.mediator_mixin import MediatorMixin
-from airunner.windows.main.settings_mixin import SettingsMixin
+from airunner.service_locator import ServiceLocator
 
 
-class CustomScene(QGraphicsScene, SettingsMixin, MediatorMixin):
+class CustomScene(
+    QGraphicsScene,
+    MediatorMixin
+):
     def __init__(self, parent=None):
         MediatorMixin.__init__(self)
-        SettingsMixin.__init__(self)
         super().__init__(parent)
         
         # Get the size of the parent widget
@@ -44,7 +45,7 @@ class CustomScene(QGraphicsScene, SettingsMixin, MediatorMixin):
 
     def drawAt(self, position):
         painter = QPainter(self.image)
-        painter.setPen(QPen(Qt.GlobalColor.black, self.brush_settings["size"], Qt.PenStyle.SolidLine, Qt.PenCapStyle.RoundCap))
+        painter.setPen(QPen(Qt.GlobalColor.black, self.settings["brush_settings"]["size"], Qt.PenStyle.SolidLine, Qt.PenCapStyle.RoundCap))
         
         # Draw a line from the last position to the current one
         if self.last_pos is not None:
@@ -56,36 +57,31 @@ class CustomScene(QGraphicsScene, SettingsMixin, MediatorMixin):
         self.item.setPixmap(QPixmap.fromImage(self.image))
     
     def wheelEvent(self, event):
-        # Calculate the zoom factor
-        zoom_in_factor = self.parent().zoom_in_step
-        zoom_out_factor = -self.parent().zoom_out_step
-
-        # Use delta instead of angleDelta
-        if event.delta() > 0:
-            zoom_factor = zoom_in_factor
-        else:
-            zoom_factor = zoom_out_factor
-
-        # Update zoom level
-        zoom_level = self.parent().zoom_level
-        zoom_level += zoom_factor
-        if zoom_level < 0.1:
-            zoom_level = 0.1
-        self.parent().zoom_level = zoom_level
-
-        # Create a QTransform object and scale it
-        transform = QTransform()
-        transform.scale(self.parent().zoom_level, self.parent().zoom_level)
-
-        # Set the transform
-        self.parent().view.setTransform(transform)
-
-        # Redraw lines
-        self.parent().draw_lines()
+        # # Calculate the zoom factor
+        # zoom_in_factor = self.settings["canvas_settings"]["zoom_in_step"]
+        # zoom_out_factor = -self.settings["canvas_settings"]["zoom_out_step"]
+        #
+        # # Use delta instead of angleDelta
+        # if event.delta() > 0:
+        #     zoom_factor = zoom_in_factor
+        # else:
+        #     zoom_factor = zoom_out_factor
+        #
+        # # Update zoom level
+        # zoom_level = self.settings["grid_settings"]["zoom_level"]
+        # zoom_level += zoom_factor
+        # if zoom_level < 0.1:
+        #     zoom_level = 0.1
+        # settings = self.settings
+        # settings["grid_settings"]["zoom_level"] = zoom_level
+        # self.settings = settings
+        #
+        # self.emit(SignalCode.CANVAS_ZOOM_LEVEL_CHANGED)
+        pass
 
     def eraseAt(self, position):
         painter = QPainter(self.image)
-        painter.setPen(QPen(Qt.GlobalColor.white, self.brush_settings["size"], Qt.PenStyle.SolidLine, Qt.PenCapStyle.RoundCap))
+        painter.setPen(QPen(Qt.GlobalColor.white, self.settings["brush_settings"]["size"], Qt.PenStyle.SolidLine, Qt.PenCapStyle.RoundCap))
         painter.setCompositionMode(QPainter.CompositionMode.CompositionMode_Clear)
         
         # Create a QPainterPath
@@ -96,7 +92,7 @@ class CustomScene(QGraphicsScene, SettingsMixin, MediatorMixin):
             path.moveTo(self.last_pos)
             path.lineTo(position)
         else:
-            path.addEllipse(position, self.brush_settings["size"]/2, self.brush_settings["size"]/2)
+            path.addEllipse(position, self.settings["brush_settings"]["size"]/2, self.settings["brush_settings"]["size"]/2)
         
         # Draw the path
         painter.drawPath(path)
@@ -116,19 +112,7 @@ class CustomScene(QGraphicsScene, SettingsMixin, MediatorMixin):
             self.eraseAt(self.last_pos)
 
     def handle_cursor(self, event):
-        if self.settings["current_tool"] in ['brush', 'eraser']:
-            self.parent().setCursor(CircleCursor(
-                Qt.GlobalColor.white,
-                Qt.GlobalColor.transparent,
-                self.brush_settings["size"],
-            ))
-        elif self.settings["current_tool"] == "active_grid_area":
-            if event.buttons() == Qt.MouseButton.LeftButton:
-                self.parent().setCursor(Qt.CursorShape.ClosedHandCursor)
-            else:
-                self.parent().setCursor(Qt.CursorShape.OpenHandCursor)
-        else:
-            self.parent().setCursor(Qt.CursorShape.ArrowCursor)
+        self.emit(SignalCode.CANVAS_UPDATE_CURSOR, event)
         
     def event(self, event):
         if type(event) == QEnterEvent:
@@ -161,3 +145,10 @@ class CustomScene(QGraphicsScene, SettingsMixin, MediatorMixin):
         self.setCursor(Qt.ArrowCursor)
         super(CustomScene, self).leaveEvent(event)
 
+    @property
+    def settings(self):
+        return ServiceLocator.get("get_settings")()
+
+    @settings.setter
+    def settings(self, value):
+        ServiceLocator.get("set_settings")(value)

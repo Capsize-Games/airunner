@@ -7,27 +7,30 @@ from airunner.aihandler.base_handler import BaseHandler
 
 from PyQt6.QtCore import pyqtSignal
 
+from airunner.enums import SignalCode
+
 
 class STTHandler(BaseHandler):
     listening = False
-    move_to_cpu_signal = pyqtSignal()
 
     def on_process_audio(self, audio_data, fs):
         inputs = np.squeeze(audio_data)
         inputs = self.feature_extractor(inputs, sampling_rate=fs, return_tensors="pt")
         inputs = inputs.to(self.model.device)
         transcription = self.run(inputs)
-        self.emit("stt_audio_processed", transcription)
-
-    def on_move_to_cpu(self):
-        self.logger.info("Moving model to CPU")
-        self.model = self.model.to("cpu")
+        self.emit(SignalCode.STT_AUDIO_PROCESSED, transcription)
 
     def __init__(self, *args, **kwargs):
         super().__init__(*args, **kwargs)
+        self.model = None
+        self.model = None
+        self.processor = None
+        self.feature_extractor = None
+        self.model = None
+        self.processor = None
+        self.feature_extractor = None
         self.load_model()
-        self.register("move_to_cpu_signal", self)
-        self.register("process_audio", self)
+        self.register(SignalCode.STT_PROCESS_AUDIO_SIGNAL, self.on_process_audio)
 
     @property
     def device(self):

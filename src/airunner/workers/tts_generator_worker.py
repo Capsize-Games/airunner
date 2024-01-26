@@ -1,5 +1,7 @@
+import re
 import time
 
+from airunner.enums import SignalCode
 from airunner.workers.worker import Worker
 from airunner.aihandler.tts_handler import TTSHandler
 
@@ -14,45 +16,51 @@ class TTSGeneratorWorker(Worker):
         self.tts.run()
         self.play_queue = []
         self.play_queue_started = False
-        
+
+    tokens = []
     def handle_message(self, data):
-        message = data["message"]
-        #play_queue_buffer_length = self.tts_settings["play_queue_buffer_length"]
-        self.play_queue.append(message)
-        if data["is_end_of_message"] or len(self.play_queue) >= 15:
-            # for item in self.play_queue:
-            #     self.generate(item)
-            # self.play_queue = []
-            # if is_end_of_message or len(self.play_queue) == play_queue_buffer_length or self.play_queue_started:
-            #     self.play_queue_started = True
-            #     self.generate(message)
-            sentence = " ".join(self.play_queue).strip()
-            self.logger.debug(f"Generating TTS for sentence {sentence}")
-            self.generate(sentence)
-            self.play_queue_started = True
-            self.play_queue = []
+        # Add the incoming tokens to the list
+        self.tokens.extend(data["message"])
+
+        # Convert the tokens to a string
+        text = "".join(self.tokens).strip()
+
+        # Split text at punctuation
+        punctuation = [".", "?", "!"]
+        for p in punctuation:
+            if p in text:
+                split_text = text.split(p, 1)  # Split at the first occurrence of punctuation
+                if len(split_text) > 1:
+                    sentence = split_text[0]
+                    print(f"SENTENCE: {sentence}")
+                    self.generate(sentence)
+                    self.play_queue_started = True
+
+                    # Convert the remaining string back to a list of tokens
+                    remaining_text = split_text[1].strip()
+                    self.tokens = list(remaining_text)
+                    break
+
+    def trim_sentence(self, sentence):
+        return re.sub(' +', ' ', sentence.replace("\n", "").strip())
 
     def generate(self, message):
         self.logger.info("Generating TTS...")
-        self.logger.info(message)
+
         if type(message) == dict:
             message = message.get("message", "")
-        text = message.replace("\n", " ").strip()
-
-        if text == "":
-            return
         
-        self.logger.info(f"Generating TTS with {text}")
+        self.logger.info(message)
         
-        if self.tts_settings["use_bark"]:
-            response = self.generate_with_bark(text)
+        if self.settings["tts_settings"]["use_bark"]:
+            response = self.generate_with_bark(message)
         else:
-            response = self.generate_with_t5(text)
+            response = self.generate_with_t5(message)
 
-        self.emit("TTSGeneratorWorker_add_to_stream_signal", response)
+        self.emit(SignalCode.TTS_GENERATOR_WORKER_ADD_TO_STREAM_SIGNAL, response)
     
     def move_inputs_to_device(self, inputs):
-        use_cuda = self.tts_settings["use_cuda"]
+        use_cuda = self.settings["tts_settings"]["use_cuda"]
         if use_cuda:
             self.logger.info("Moving inputs to CUDA")
             try:
@@ -62,20 +70,23 @@ class TTSGeneratorWorker(Worker):
         return inputs
 
     def generate_with_bark(self, text):
-        self.logger.info("Generating TTS...")
+        self.logger.info("Generating TTS with Bark...")
         text = text.replace("\n", " ").strip()
         
         self.logger.info("Processing inputs...")
-        inputs = self.tts.processor(text, voice_preset=self.tts_settings["voice"]).to(self.tts.device)
+        inputs = self.tts.processor(
+            text=text,
+            voice_preset=self.settings["tts_settings"]["voice"]
+        ).to(self.tts.device)
         inputs = self.move_inputs_to_device(inputs)
 
         self.logger.info("Generating speech...")
         start = time.time()
         params = dict(
             **inputs, 
-            fine_temperature=self.tts_settings["fine_temperature"],
-            coarse_temperature=self.tts_settings["coarse_temperature"],
-            semantic_temperature=self.tts_settings["semantic_temperature"],
+            fine_temperature=self.settings["tts_settings"]["fine_temperature"] / 100.0,
+            coarse_temperature=self.settings["tts_settings"]["coarse_temperature"] / 100.0,
+            semantic_temperature=self.settings["tts_settings"]["semantic_temperature"] / 100.0,
         )
         speech = self.tts.model.generate(**params)
         self.logger.info("Generated speech in " + str(time.time() - start) + " seconds")
@@ -84,7 +95,7 @@ class TTSGeneratorWorker(Worker):
         return response
     
     def generate_with_t5(self, text):
-        self.logger.info("Generating TTS...")
+        self.logger.info("Generating TTS with SpeechT5...")
         text = text.replace("\n", " ").strip()
         
         self.logger.info("Processing inputs...")

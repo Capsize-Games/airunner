@@ -3,6 +3,16 @@ from compel import Compel, DiffusersTextualInversionManager
 
 
 class CompelMixin:
+    def __init__(self):
+        self._compel_proc = None
+        self._compel_proc = None
+        self._prompt_embeds = None
+        self._prompt_embeds = None
+        self._negative_prompt_embeds = None
+        self._negative_prompt_embeds = None
+        self._prompt_embeds = None
+        self._negative_prompt_embeds = None
+
     @property
     def compel_proc(self):
         if not self._compel_proc:

@@ -1,6 +1,7 @@
 from PyQt6.QtCore import Qt
-from PyQt6.QtWidgets import QLabel
+from PyQt6.QtWidgets import QLabel, QDoubleSpinBox
 
+from airunner.enums import SignalCode, ServiceCode
 from airunner.widgets.base_widget import BaseWidget
 from airunner.widgets.slider.templates.slider_ui import Ui_slider_widget
 
@@ -35,12 +36,21 @@ class SliderWidget(BaseWidget):
         self.ui.slider_spinbox.setSingleStep(val)
 
     @property
+    def is_double_spin_box(self):
+        return type(self.ui.slider_spinbox) == QDoubleSpinBox
+
+    @property
     def spinbox_page_step(self):
+        if self.is_double_spin_box:
+            return self.spinbox_single_step
         return self.ui.slider_spinbox.pageStep
 
     @spinbox_page_step.setter
     def spinbox_page_step(self, val):
-        self.ui.slider_spinbox.pageStep = val
+        if self.is_double_spin_box:
+            self.spinbox_single_step = val
+        else:
+            self.ui.slider_spinbox.pageStep = val
 
     @property
     def slider_tick_interval(self):
@@ -85,7 +95,11 @@ class SliderWidget(BaseWidget):
 
     def __init__(self, *args, **kwargs):
         super().__init__(*args, **kwargs)
-        self.register("main_window_loaded_signal", self)
+        self.slider_callback = None
+        self.label_text = None
+        self.settings_property = None
+        self.label = None
+        self.register(SignalCode.APPLICATION_MAIN_WINDOW_LOADED_SIGNAL, self.on_main_window_loaded_signal)
     
     def on_main_window_loaded_signal(self):
         self.initialize()
@@ -120,11 +134,11 @@ class SliderWidget(BaseWidget):
         self.divide_by = self.property("divide_by") or 1.0
 
         if settings_property is not None:
-            current_value = self.get_service("get_settings_value")(settings_property)
+            current_value = self.get_service(ServiceCode.GET_SETTINGS_VALUE)(settings_property)
 
         # check if slider_callback is str
         if isinstance(slider_callback, str):
-            slider_callback = self.get_service("get_callback_for_slider")(slider_callback)
+            slider_callback = self.get_service(ServiceCode.GET_CALLBACK_FOR_SLIDER)(slider_callback)
 
         # set slider and spinbox names
         if slider_name:
