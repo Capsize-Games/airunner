@@ -18,18 +18,18 @@ class MemoryPreferencesWidget(BaseWidget):
         self.ui.use_enable_vae_slicing.blockSignals(True)
         self.ui.use_tome.blockSignals(True)
 
-        self.ui.use_accelerated_transformers.setChecked(self.memory_settings["use_accelerated_transformers"] is True)
-        self.ui.use_attention_slicing.setChecked(self.memory_settings["use_attention_slicing"] is True)
+        self.ui.use_accelerated_transformers.setChecked(self.settings["memory_settings"]["use_accelerated_transformers"] is True)
+        self.ui.use_attention_slicing.setChecked(self.settings["memory_settings"]["use_attention_slicing"] is True)
         self.ui.use_enable_sequential_cpu_offload.setChecked(
-            self.memory_settings["use_enable_sequential_cpu_offload"] is True)
+            self.settings["memory_settings"]["use_enable_sequential_cpu_offload"] is True)
         self.ui.enable_model_cpu_offload.setChecked(
-            self.memory_settings["enable_model_cpu_offload"] is True
+            self.settings["memory_settings"]["enable_model_cpu_offload"] is True
         )
-        self.ui.use_lastchannels.setChecked(self.memory_settings["use_last_channels"] is True)
-        self.ui.use_tf32.setChecked(self.memory_settings["use_tf32"] is True)
-        self.ui.use_tiled_vae.setChecked(self.memory_settings["use_tiled_vae"] is True)
-        self.ui.use_enable_vae_slicing.setChecked(self.memory_settings["use_enable_vae_slicing"] is True)
-        self.ui.use_tome.setChecked(self.memory_settings["use_tome_sd"] is True)
+        self.ui.use_lastchannels.setChecked(self.settings["memory_settings"]["use_last_channels"] is True)
+        self.ui.use_tf32.setChecked(self.settings["memory_settings"]["use_tf32"] is True)
+        self.ui.use_tiled_vae.setChecked(self.settings["memory_settings"]["use_tiled_vae"] is True)
+        self.ui.use_enable_vae_slicing.setChecked(self.settings["memory_settings"]["use_enable_vae_slicing"] is True)
+        self.ui.use_tome.setChecked(self.settings["memory_settings"]["use_tome_sd"] is True)
 
         self.ui.use_accelerated_transformers.blockSignals(False)
         self.ui.use_attention_slicing.blockSignals(False)
