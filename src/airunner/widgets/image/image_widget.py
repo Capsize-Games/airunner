@@ -85,7 +85,7 @@ class ImageWidget(BaseWidget):
     
     def handle_label_clicked(self, event):
         if event.button() == Qt.MouseButton.LeftButton:
-            drag = QDrag(self.app)
+            drag = QDrag(self)
             mime_data = QMimeData()
 
             # Load the image metadata
@@ -257,6 +257,15 @@ class BrushImageWidget(ImageWidget):
         # get the clicked object
         if event.button() == Qt.MouseButton.LeftButton:
             shift_pressed = event.modifiers() == Qt.KeyboardModifier.ShiftModifier
-            self.container.activate_brush(self, self.brush, shift_pressed)
+            self.emit(SignalCode.PRESET_IMAGE_GENERATOR_ACTIVATE_BRUSH_SIGNAL, dict(
+                event=event,
+                widget=self,
+                brush=self.brush,
+                shift_pressed=shift_pressed
+            ))
         elif event.button() == Qt.MouseButton.RightButton:
-            self.container.display_brush_menu(event, self, self.brush)
+            self.emit(SignalCode.PRESET_IMAGE_GENERATOR_DISPLAY_ITEM_MENU_SIGNAL, dict(
+                event=event,
+                widget=self,
+                brush=self.brush
+            ))

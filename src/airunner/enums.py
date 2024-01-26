@@ -68,6 +68,9 @@ class SignalCode(Enum):
     AUDIO_PROCESSOR_RESPONSE_SIGNAL = "audio_processor_response_signal"
     AUDIO_PROCESSOR_PROCESSED_AUDIO = "audio_processor_processed_audio"
 
+    PRESET_IMAGE_GENERATOR_DISPLAY_ITEM_MENU_SIGNAL = "preset_image_generator_display_menu_signal"
+    PRESET_IMAGE_GENERATOR_ACTIVATE_BRUSH_SIGNAL = "activate_brush"
+
     CANVAS_LOAD_IMAGE_FROM_PATH_SIGNAL = "load_image_from_path_signal"
     CANVAS_DO_DRAW_SIGNAL = "canvas_do_draw_signal"
     CANVAS_CLEAR_LINES_SIGNAL = "canvas_clear_lines_signal"
