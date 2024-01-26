@@ -9,13 +9,6 @@ class PathsWidget(BaseWidget):
 
     def __init__(self, **kwargs):
         super().__init__(**kwargs)
-        self.initialize_widgets()
 
     def action_button_clicked_reset(self):
         self.emit(SignalCode.APPLICATION_RESET_PATHS_SIGNAL)
-        self.initialize_widgets()
-
-    def initialize_widgets(self):
-        widgets = self.findChildren(PathWidget)
-        for widget in widgets:
-            widget.initialize()
