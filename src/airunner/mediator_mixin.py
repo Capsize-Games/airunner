@@ -1,6 +1,7 @@
 from PyQt6.QtCore import QThread
 from PyQt6.QtCore import pyqtSlot
 
+from airunner.enums import SignalCode
 from airunner.signal_mediator import SignalMediator
 
 
@@ -13,9 +14,13 @@ class MediatorMixin:
         self.mediator = SignalMediator()
         self.threads = []
         
-    def emit(self, signal_name, data=None):
+    def emit(
+        self,
+        code: SignalCode,
+        data: object = None
+    ):
         # Pass None as the second argument if no additional arguments are provided
-        self.mediator.emit(signal_name, data)
+        self.mediator.emit(code, data)
 
     pyqtSlot(object, object)
     def receive(self, signal_name, *args, **kwargs):
@@ -24,15 +29,18 @@ class MediatorMixin:
             method = getattr(self, method_name)
             method(*args, **kwargs)
 
-    def register(self, signal_name, slot_parent, slot_function=None):
+    def register(
+        self,
+        code: SignalCode,
+        slot_function: object
+    ):
         """
         Accessor method for SignalMediator.register method.
-        :param signal_name:
-        :param slot_parent:
+        :param code:
         :param slot_function:
         :return:
         """
-        self.mediator.register(signal_name, slot_parent, slot_function)
+        self.mediator.register(code, slot_function)
 
     def create_worker(self, worker_class_):
         prefix = worker_class_.__name__

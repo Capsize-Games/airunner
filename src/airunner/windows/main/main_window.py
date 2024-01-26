@@ -6,40 +6,39 @@ import sys
 import webbrowser
 from functools import partial
 
+from PyQt6 import QtGui
 from PyQt6 import uic, QtCore
-from PyQt6.QtCore import pyqtSlot, Qt, pyqtSignal, QTimer
+from PyQt6.QtCore import pyqtSlot, Qt, pyqtSignal
 from PyQt6.QtGui import QGuiApplication
 from PyQt6.QtWidgets import QApplication, QFileDialog, QMainWindow
-from PyQt6 import QtGui
 
-from airunner.resources_light_rc import *
-from airunner.resources_dark_rc import *
-from airunner.aihandler.enums import Mode
 from airunner.aihandler.logger import Logger
 from airunner.aihandler.settings import LOG_LEVEL
+from airunner.enums import Mode, SignalCode, ServiceCode
 from airunner.filters.windows.filter_base import FilterBase
+from airunner.mediator_mixin import MediatorMixin
+from airunner.resources_dark_rc import *
+from airunner.service_locator import ServiceLocator
 from airunner.settings import BASE_PATH
 from airunner.utils import get_version, auto_export_image, default_hf_cache_dir
+from airunner.widgets.brushes.brushes_container import BrushesContainer
 from airunner.widgets.status.status_widget import StatusWidget
 from airunner.windows.about.about import AboutWindow
+from airunner.windows.main.ai_model_mixin import AIModelMixin
+from airunner.windows.main.controlnet_model_mixin import ControlnetModelMixin
+from airunner.windows.main.embedding_mixin import EmbeddingMixin
+from airunner.windows.main.image_filter_mixin import ImageFilterMixin
+from airunner.windows.main.layer_mixin import LayerMixin
+from airunner.windows.main.lora_mixin import LoraMixin
+from airunner.windows.main.pipeline_mixin import PipelineMixin
+from airunner.windows.main.settings_mixin import SettingsMixin
 from airunner.windows.main.templates.main_window_ui import Ui_MainWindow
 from airunner.windows.model_merger import ModelMerger
 from airunner.windows.prompt_browser.prompt_browser import PromptBrowser
 from airunner.windows.settings.airunner_settings import SettingsWindow
 from airunner.windows.update.update_window import UpdateWindow
 from airunner.windows.video import VideoPopup
-from airunner.widgets.brushes.brushes_container import BrushesContainer
-from airunner.windows.main.settings_mixin import SettingsMixin
-from airunner.windows.main.layer_mixin import LayerMixin
-from airunner.windows.main.lora_mixin import LoraMixin
-from airunner.windows.main.embedding_mixin import EmbeddingMixin
-from airunner.windows.main.pipeline_mixin import PipelineMixin
-from airunner.windows.main.controlnet_model_mixin import ControlnetModelMixin
-from airunner.windows.main.ai_model_mixin import AIModelMixin
-from airunner.windows.main.image_filter_mixin import ImageFilterMixin
 from airunner.worker_manager import WorkerManager
-from airunner.mediator_mixin import MediatorMixin
-from airunner.service_locator import ServiceLocator
 
 
 class MainWindow(
@@ -113,14 +112,14 @@ class MainWindow(
             print("generate_image_key PRESSED")
     
     def key_matches(self, key_name, keyboard_key):
-        if not key_name in self.shortcut_key_settings:
+        if not key_name in self.settings["shortcut_key_settings"]:
             return False
-        return self.shortcut_key_settings[key_name]["key"] == keyboard_key
+        return self.settings["shortcut_key_settings"][key_name]["key"] == keyboard_key
     
     def key_text(self, key_name):
-        if not key_name in self.shortcut_key_settings:
+        if not key_name in self.settings["shortcut_key_settings"]:
             return ""
-        return self.shortcut_key_settings[key_name]["text"]
+        return self.settings["shortcut_key_settings"][key_name]["text"]
     
     def add_preset(self, name, thumnail):
         settings = self.settings
@@ -158,8 +157,8 @@ class MainWindow(
     def on_save_stablediffusion_prompt_signal(self):
         settings = self.settings
         settings["saved_prompts"].append(dict(
-            prompt=self.generator_settings["prompt"],
-            negative_prompt=self.generator_settings["negative_prompt"],
+            prompt=self.settings["generator_settings"]["prompt"],
+            negative_prompt=self.settings["generator_settings"]["negative_prompt"],
         ))
         self.settings = settings
 
@@ -263,26 +262,25 @@ class MainWindow(
             self.model_manager.models_changed(key, value)
 
     def show_layers(self):
-        self.emit("show_layers_signal")
+        self.emit(SignalCode.LAYERS_SHOW_SIGNAL)
 
     def on_controlnet_image_generated_signal(self, response: dict):
         self.handle_controlnet_image_generated(response)
 
     def __init__(self, *args, **kwargs):
         self.ui = Ui_MainWindow()
-
+        self.update_popup = None
+        self.controlnet_image = None
+        self._document_path = None
+        self.prompt = None
+        self.negative_prompt = None
+        self.image_path = None
         self.set_log_levels()
-        self.testing = kwargs.pop("testing", False)
-
-        super().__init__(*args, **kwargs)
         self.logger = Logger(prefix=self.__class__.__name__)
         self.logger.info("Starting AI Runnner")
-
         MediatorMixin.__init__(self)
         SettingsMixin.__init__(self)
-        
-        self.update_settings()
-        
+        super().__init__(*args, **kwargs)
         LoraMixin.__init__(self)
         LayerMixin.__init__(self)
         EmbeddingMixin.__init__(self)
@@ -290,72 +288,50 @@ class MainWindow(
         ControlnetModelMixin.__init__(self)
         AIModelMixin.__init__(self)
         ImageFilterMixin.__init__(self)
-        
-        ServiceLocator.register("layer_widget", lambda: self.ui.layer_widget)
-        ServiceLocator.register("get_llm_widget", lambda: self.ui.llm_widget)
-        ServiceLocator.register("display_import_image_dialog", self.display_import_image_dialog)
-        ServiceLocator.register("is_windows", self.check_is_windows)
-        ServiceLocator.register("get_settings_value", self.get_settings_value)
-        ServiceLocator.register("get_callback_for_slider", self.get_callback_for_slider)
-        
+        self.register_services()
+        self.update_settings()
+        self.create_airunner_paths()
+        self.register_signals()
+        self.initialize_ui()
+        self.worker_manager = WorkerManager()
+        self.is_started = True
+        self.emit(SignalCode.APPLICATION_MAIN_WINDOW_LOADED_SIGNAL)
 
-        self.engine = WorkerManager()
+    def register_services(self):
+        self.logger.info("Registering services")
+        ServiceLocator.register(ServiceCode.LAYER_WIDGET, lambda: self.ui.layer_widget)
+        ServiceLocator.register(ServiceCode.GET_LLM_WIDGET, lambda: self.ui.llm_widget)
+        ServiceLocator.register(ServiceCode.DISPLAY_IMPORT_IMAGE_DIALOG, self.display_import_image_dialog)
+        ServiceLocator.register(ServiceCode.IS_WINDOWS, self.check_is_windows)
+        ServiceLocator.register(ServiceCode.GET_SETTINGS_VALUE, self.get_settings_value)
+        ServiceLocator.register(ServiceCode.GET_CALLBACK_FOR_SLIDER, self.get_callback_for_slider)
 
-        self.ui.setupUi(self)
-
+    def register_signals(self):
         # on window resize:
         # self.windowStateChanged.connect(self.on_state_changed)
+        self.logger.info("Connecting signals")
+        self.register(SignalCode.APPLICATION_SET_STATUS_LABEL_SIGNAL, self.on_set_status_label_signal)
+        self.register(SignalCode.APPLICATION_CLEAR_STATUS_MESSAGE_SIGNAL, self.on_clear_status_message_signal)
+        self.register(SignalCode.VISION_DESCRIBE_IMAGE_SIGNAL, self.on_describe_image_signal)
+        self.register(SignalCode.SD_SAVE_PROMPT_SIGNAL, self.on_save_stablediffusion_prompt_signal)
+        self.register(SignalCode.SD_LOAD_PROMPT_SIGNAL, self.on_load_saved_stablediffuion_prompt_signal)
+        self.register(SignalCode.SD_UPDATE_SAVED_PROMPT_SIGNAL, self.on_update_saved_stablediffusion_prompt_signal)
 
-        # check for self.current_layer.lines every 100ms
-        self.timer = self.startTimer(100)
+    def initialize_ui(self):
+        self.logger.info("Loading ui")
+        self.ui.setupUi(self)
 
-        if not self.testing:
-            self.logger.info("Executing window")
-            self.display()
-        self.set_window_state()
-        self.is_started = True
-
-        # change the color of tooltips
-        #self.setStyleSheet("QToolTip { color: #000000; background-color: #ffffff; border: 1px solid black; }")
-
-        self.register("clear_status_message_signal", self)
-        self.register("describe_image_signal", self)
-        self.register("set_status_label_signal", self)
-        self.register("save_stablediffusion_prompt_signal", self)
-        self.register("load_saved_stablediffuion_prompt_signal", self)
-        self.register("update_saved_stablediffusion_prompt_signal", self)
+        # self.ui.layer_widget.initialize()
 
         self.status_widget = StatusWidget()
         self.statusBar().addPermanentWidget(self.status_widget)
-        self.emit("clear_status_message_signal")
+        self.emit(SignalCode.APPLICATION_CLEAR_STATUS_MESSAGE_SIGNAL)
 
-        # create paths if they do not exist
-        self.create_airunner_paths()
-
-        #self.ui.layer_widget.initialize()
-
-        # call a function after the window has finished loading:
-        QTimer.singleShot(500, self.on_show)
+        self.set_stylesheet()
 
         self.ui.mode_tab_widget.tabBar().hide()
         self.ui.center_tab.tabBar().hide()
-
-        # initialize the brushes container
         self.ui.brushes_container = BrushesContainer(self)
-
-        self.set_all_section_buttons()
-
-        self.initialize_tool_section_buttons()
-        
-        if self.settings["mode"] == Mode.IMAGE.value:
-            self.image_generation_toggled()
-        elif self.settings["mode"] == Mode.LANGUAGE_PROCESSOR.value:
-            self.language_processing_toggled()
-        else:
-            self.model_manager_toggled(True)
-
-        self.restore_state()
-
         self.ui.ocr_button.blockSignals(True)
         self.ui.tts_button.blockSignals(True)
         self.ui.v2t_button.blockSignals(True)
@@ -365,16 +341,27 @@ class MainWindow(
         self.ui.ocr_button.blockSignals(False)
         self.ui.tts_button.blockSignals(False)
         self.ui.v2t_button.blockSignals(False)
-        
-        self.emit("main_window_loaded_signal")
+        self.logger.info("Setting buttons")
+        self.set_all_section_buttons()
+        self.initialize_tool_section_buttons()
+
+        # Toggling the ai button will trigger the ai_button_toggled function
+        # if self.settings["mode"] == Mode.IMAGE.value:
+        #     self.image_generation_toggled()
+        # elif self.settings["mode"] == Mode.LANGUAGE_PROCESSOR.value:
+        #     self.language_processing_toggled()
+        # else:
+        #     self.model_manager_toggled(True)
+
+        self.restore_state()
     
     def do_listen(self):
         if not self.listening:
             self.listening = True
-            self.engine.do_listen()
+            self.worker_manager.do_listen()
     
     def create_airunner_paths(self):
-        for k, path in self.path_settings.items():
+        for k, path in self.settings["path_settings"].items():
             if not os.path.exists(path):
                 print("cerating path", path)
                 os.makedirs(path)
@@ -383,10 +370,6 @@ class MainWindow(
         settings = self.settings
         settings["mode"] = self.ui.mode_tab_widget.tabText(index)
         self.settings = settings
-
-    @pyqtSlot()
-    def on_show(self):
-        pass
 
     def layer_opacity_changed(self, attr_name, value=None, widget=None):
         print("layer_opacity_changed", attr_name, value)
@@ -399,13 +382,13 @@ class MainWindow(
             return
         path, image = auto_export_image(
             self.base_path, 
-            self.path_settings["image_path"],
+            self.settings["path_settings"]["image_path"],
             self.settings["image_export_type"],
             self.ui.layer_widget.current_layer.image_data.image, 
             seed=self.seed
         )
         if path is not None:
-            self.emit("set_status_label_signal", f"Image exported to {path}")
+            self.emit(SignalCode.APPLICATION_SET_STATUS_LABEL_SIGNAL, f"Image exported to {path}")
 
     """
     Slot functions
@@ -440,7 +423,7 @@ class MainWindow(
 
     def action_copy_image_triggered(self):
         if self.settings["mode"] == Mode.IMAGE.value:
-            self.canvas_widget.copy_image(ServiceLocator.get("current_active_image")())
+            self.canvas_widget.copy_image(ServiceLocator.get(ServiceCode.CURRENT_ACTIVE_IMAGE)())
 
     def action_cut_image_triggered(self):
         if self.settings["mode"] == Mode.IMAGE.value:
@@ -530,7 +513,7 @@ class MainWindow(
         pass
 
     def show_settings_path(self, name, default_path=None):
-        path = self.path_settings[name]
+        path = self.settings["path_settings"][name]
         self.show_path(default_path if default_path and path == "" else path)
 
     def show_path(self, path):
@@ -575,7 +558,7 @@ class MainWindow(
     """
 
     def set_size_increment_levels(self):
-        size = self.grid_settings["cell_size"]
+        size = self.settings["grid_settings"]["cell_size"]
         self.ui.width_slider_widget.slider_single_step = size
         self.ui.width_slider_widget.slider_tick_interval = size
 
@@ -617,7 +600,7 @@ class MainWindow(
 
     def quit(self):
         self.logger.info("Quitting")
-        self.engine.stop()
+        self.worker_manager.stop()
         self.save_state()
         QApplication.quit()
         self.close()
@@ -662,7 +645,8 @@ class MainWindow(
         self.settings = settings
     
     def restore_state(self):
-        window_settings = self.window_settings
+        self.logger.info("Restoring state")
+        window_settings = self.settings["window_settings"]
         if window_settings is None:
             return
         if window_settings["main_splitter"]:
@@ -689,7 +673,12 @@ class MainWindow(
         if window_settings["is_fullscreen"]:
             self.showFullScreen()
         self.ui.ai_button.setChecked(self.settings["ai_mode"])
-        self.set_button_checked("toggle_grid", self.grid_settings["show_grid"], False)
+        self.set_button_checked("toggle_grid", self.settings["grid_settings"]["show_grid"], False)
+
+        if self.settings["is_maximized"]:
+            self.showMaximized()
+        else:
+            self.showNormal()
 
     ##### End window properties #####
     #################################
@@ -786,11 +775,11 @@ class MainWindow(
         # self.canvas_widget.timerEvent(event)
         if self.status_widget:
             self.status_widget.update_system_stats(
-                queue_size=self.engine.request_queue_size()
+                queue_size=self.worker_manager.request_queue_size()
             )
 
     def show_update_message(self):
-        self.emit("set_status_label_signal", f"New version available: {self.latest_version}")
+        self.emit(SignalCode.APPLICATION_SET_STATUS_LABEL_SIGNAL, f"New version available: {self.latest_version}")
 
     def show_update_popup(self):
         self.update_popup = UpdateWindow()
@@ -808,7 +797,7 @@ class MainWindow(
         """
         Sets the stylesheet for the application based on the current theme
         """
-        self.logger.info("MainWindow: Setting stylesheets")
+        self.logger.info("Setting stylesheet")
         theme_name = "dark_theme" if self.settings["dark_mode_enabled"] else "light_theme"
         here = os.path.dirname(os.path.realpath(__file__))
         with open(os.path.join(here, "..", "..", "styles", theme_name, "styles.qss"), "r") as f:
@@ -832,7 +821,7 @@ class MainWindow(
         # self.automatic_filter_manager.register_filter(PixelFilter, base_size=256)
 
         self.initialize_window()
-        self.register("controlnet_image_generated_signal", self)
+        self.register(SignalCode.CONTROLNET_IMAGE_GENERATED_SIGNAL, self.on_controlnet_image_generated_signal)
         self.initialize_mixins()
         # self.header_widget.initialize()
         # self.header_widget.set_size_increment_levels()
@@ -853,7 +842,7 @@ class MainWindow(
         FilterBase(self, filter_name).show()
 
     def initialize_default_buttons(self):
-        show_grid = self.grid_settings["show_grid"]
+        show_grid = self.settings["grid_settings"]["show_grid"]
         self.ui.toggle_active_grid_area_button.blockSignals(True)
         self.ui.toggle_brush_button.blockSignals(True)
         self.ui.toggle_eraser_button.blockSignals(True)
@@ -974,22 +963,8 @@ class MainWindow(
     def display(self):
         self.logger.info("Displaying window")
         self.set_stylesheet()
-        if not self.testing:
-            self.setWindowFlags(self.windowFlags() | QtCore.Qt.WindowType.Window)
-            self.show()
-        else:
-            # do not show the window when testing, otherwise it will block the tests
-            # self.hide()
-            # the above solution doesn't work, gives this error:
-            # QBasicTimer::start: QBasicTimer can only be used with threads started with QThread
-            # so instead we do this in order to run without showing the window:
-            self.showMinimized()
-
-    def set_window_state(self):
-        if self.settings["is_maximized"]:
-            self.showMaximized()
-        else:
-            self.showNormal()
+        self.setWindowFlags(self.windowFlags() | QtCore.Qt.WindowType.Window)
+        self.show()
 
     def set_log_levels(self):
         uic.properties.logger.setLevel(LOG_LEVEL)
@@ -1049,7 +1024,7 @@ class MainWindow(
         self.logger.error(f"Unknown message code: {message}")
 
     def on_clear_status_message_signal(self, _ignore):
-        self.emit("set_status_label_signal", "")
+        self.emit(SignalCode.APPLICATION_SET_STATUS_LABEL_SIGNAL, "")
 
     def set_size_form_element_step_values(self):
         """
@@ -1126,7 +1101,7 @@ class MainWindow(
 
     def import_image(self):
         file_path, _ = self.display_import_image_dialog_signal(
-            directory=self.path_settings["image_path"]
+            directory=self.settings["path_settings"]["image_path"]
         )
         if file_path == "":
             return
@@ -1198,4 +1173,4 @@ class MainWindow(
         print("action_slider_changed")
 
     def action_reset_settings(self):
-        self.emit("reset_settings_signal")
+        self.emit(SignalCode.APPLICATION_RESET_SETTINGS_SIGNAL)
