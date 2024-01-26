@@ -29,7 +29,7 @@ setup(
         "pip==23.3.1",
         "PyQt6==6.4.2",
         "PyQt6-Qt6==6.4.2",
-        "PyQt6-sip==13.4.1",
+        "PyQt6-sip==13.6.0",
         "PySide6==6.4.2",
         "pyre-extensions==0.0.29",
         "lightning==2.0.2",
