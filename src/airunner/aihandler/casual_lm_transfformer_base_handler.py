@@ -68,7 +68,7 @@ class CasualLMTransformerBaseHandler(TokenizerHandler):
         )
 
     def load_embed_model(self):
-        self.logger.info("Loading embeddings")
+        self.logger.info("Loading embedding model")
         self.embed_model = HuggingFaceEmbedding(
             model_name=self.settings["llm_generator_settings"]["embeddings_model_path"],
         )
