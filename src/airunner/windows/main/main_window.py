@@ -102,6 +102,8 @@ class MainWindow(
     _generator = None
     _generator_settings = None
     listening = False
+    loaded = pyqtSignal()
+    window_opened = pyqtSignal()
 
     def handle_key_press(self, key):
         super().keyPressEvent(key)
@@ -230,9 +232,6 @@ class MainWindow(
             callback=callback
         )
     
-    loaded = pyqtSignal()
-    window_opened = pyqtSignal()
-
     @pyqtSlot()
     def handle_generate(self):
         #self.prompt_builder.inject_prompt()
