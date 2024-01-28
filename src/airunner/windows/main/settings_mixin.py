@@ -302,6 +302,12 @@ Previous Conversation:
                 bot_mood="",
                 prompt_template="Mistral 7B Instruct: Default Chatbot",
                 override_parameters=False,
+                guardrails_prompt=(
+                    "Always assist with care, respect, and truth. "
+                    "Respond with utmost utility yet securely. "
+                    "Avoid harmful, unethical, prejudiced, or negative content. "
+                    "Ensure replies promote fairness and positivity."
+                ),
                 self_reflection_categories=[
                     {
                         "category": SelfReflectionCategory.ILLEGAL,
