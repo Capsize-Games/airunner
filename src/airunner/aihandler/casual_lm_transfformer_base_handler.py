@@ -188,6 +188,16 @@ class CasualLMTransformerBaseHandler(TokenizerHandler):
                 )
             )
             is_first_message = False
+        if not is_end_of_message:
+            self.emit(
+                SignalCode.LLM_TEXT_STREAMED_SIGNAL,
+                dict(
+                    message="",
+                    is_first_message=False,
+                    is_end_of_message=True,
+                    name=self.botname,
+                )
+            )
 
     def llm_stream(self):
         prompt = self.prompt
