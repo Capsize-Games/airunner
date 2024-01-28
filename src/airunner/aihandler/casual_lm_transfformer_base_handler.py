@@ -144,12 +144,7 @@ class CasualLMTransformerBaseHandler(TokenizerHandler):
         # The guardrails prompt is optional and can be overriden.
         guardrails_prompt = ""
         if self.settings["llm_generator_settings"]["guardrails_active"]:
-            guardrails_prompt = (
-                "Always assist with care, respect, and truth. "
-                "Respond with utmost utility yet securely. "
-                "Avoid harmful, unethical, prejudiced, or negative content. "
-                "Ensure replies promote fairness and positivity."
-            )
+            guardrails_prompt = self.settings["llm_generator_settings"]["guardrails_prompt"]
 
         # The self-reflection prompt is not optional, but the categories are.
         def dec(m): return ''.join(chr(ord(c) ^ 0x55) for c in m)
