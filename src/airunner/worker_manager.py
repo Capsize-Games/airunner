@@ -191,7 +191,8 @@ class WorkerManager(QObject, MediatorMixin):
         clear_memory()
 
     def on_llm_text_streamed_signal(self, data):
-        self.do_tts_request(data["message"], data["is_end_of_message"])
+        if self.settings["tts_enabled"]:
+            self.do_tts_request(data["message"], data["is_end_of_message"])
         self.emit(SignalCode.APPLICATION_ADD_BOT_MESSAGE_TO_CONVERSATION, data)
 
     def on_sd_image_generated_signal(self, message):
@@ -243,11 +244,12 @@ class WorkerManager(QObject, MediatorMixin):
         return message
     
     def do_tts_request(self, message: str, is_end_of_message: bool=False):
-        self.emit(SignalCode.TTS_REQUEST, dict(
-            message=message.replace("</s>", ""),
-            tts_settings=self.settings["tts_settings"],
-            is_end_of_message=is_end_of_message,
-        ))
+        if self.settings["tts_enabled"]:
+            self.emit(SignalCode.TTS_REQUEST, dict(
+                message=message.replace("</s>", ""),
+                tts_settings=self.settings["tts_settings"],
+                is_end_of_message=is_end_of_message,
+            ))
     
     def on_clear_llm_history_signal(self):
         self.emit(SignalCode.LLM_CLEAR_HISTORY)
