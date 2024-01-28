@@ -62,13 +62,6 @@ class CasualLMTransformerBaseHandler(TokenizerHandler):
 
     def load_llm(self):
         self.logger.info("Loading RAG")
-        variables = {
-            "username": self.username,
-            "botname": self.botname,
-            "bos_token": self.tokenizer.bos_token,
-            "bot_mood": self.bot_mood,
-            "bot_personality": self.bot_personality,
-        }
         self.llm = HuggingFaceLLM(
             model=self.model,
             tokenizer=self.tokenizer,
