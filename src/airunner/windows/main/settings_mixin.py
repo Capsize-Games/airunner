@@ -5,7 +5,7 @@ from airunner.data.bootstrap.controlnet_bootstrap_data import controlnet_bootstr
 from airunner.data.bootstrap.imagefilter_bootstrap_data import imagefilter_bootstrap_data
 from airunner.data.bootstrap.model_bootstrap_data import model_bootstrap_data
 from airunner.data.bootstrap.pipeline_bootstrap_data import pipeline_bootstrap_data
-from airunner.enums import Mode, SignalCode, ServiceCode, SelfReflectionCategory
+from airunner.enums import Mode, SignalCode
 from airunner.service_locator import ServiceLocator
 from airunner.settings import BASE_PATH
 from airunner.settings import DEFAULT_PATHS
@@ -295,8 +295,9 @@ Previous Conversation:
                 botname="Bot",
                 use_personality=True,
                 use_mood=True,
+                use_guardrails=True,
+                use_system_instructions=True,
                 assign_names=True,
-                guardrails_active=True,
                 message_type="chat",
                 bot_personality="happy. He loves {{ username }}",
                 bot_mood="",
@@ -308,60 +309,10 @@ Previous Conversation:
                     "Avoid harmful, unethical, prejudiced, or negative content. "
                     "Ensure replies promote fairness and positivity."
                 ),
-                self_reflection_categories=[
-                    {
-                        "category": SelfReflectionCategory.ILLEGAL,
-                        "active": True,
-                    },
-                    {
-                        "category": SelfReflectionCategory.HATE_VIOLENCE_HARASSMENT,
-                        "active": True,
-                    },
-                    {
-                        "category": SelfReflectionCategory.MALWARE,
-                        "active": True,
-                    },
-                    {
-                        "category": SelfReflectionCategory.PHYSICAL_HARM,
-                        "active": True,
-                    },
-                    {
-                        "category": SelfReflectionCategory.ECONOMIC_HARM,
-                        "active": True,
-                    },
-                    {
-                        "category": SelfReflectionCategory.FRAUD,
-                        "active": True,
-                    },
-                    {
-                        "category": SelfReflectionCategory.ADULT,
-                        "active": True,
-                    },
-                    {
-                        "category": SelfReflectionCategory.POLITICAL,
-                        "active": True,
-                    },
-                    {
-                        "category": SelfReflectionCategory.PRIVACY,
-                        "active": True,
-                    },
-                    {
-                        "category": SelfReflectionCategory.UNQUALIFIED_LAW,
-                        "active": True,
-                    },
-                    {
-                        "category": SelfReflectionCategory.UNQUALIFIED_FINANCIAL,
-                        "active": True,
-                    },
-                    {
-                        "category": SelfReflectionCategory.UNQUALIFIED_HEALTH,
-                        "active": True,
-                    },
-                ],
-                system_instructions=[
-                    "You are a dungeon master for a roleplaying game. ",
-                    "You will respond to the player's actions and questions. ",
-                ],
+                system_instructions=(
+                    "You are a dungeon master for a roleplaying game. "
+                    "You will respond to the player's actions and questions. "
+                ),
                 embeddings_model_path="BAAI/bge-small-en-v1.5",
             ),
             tts_settings=tts_settings_default,
