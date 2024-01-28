@@ -6,18 +6,116 @@
    <rect>
     <x>0</x>
     <y>0</y>
-    <width>826</width>
-    <height>387</height>
+    <width>701</width>
+    <height>721</height>
    </rect>
   </property>
   <property name="windowTitle">
    <string>Form</string>
   </property>
   <layout class="QGridLayout" name="gridLayout">
+   <item row="4" column="0">
+    <widget class="QGroupBox" name="mood_groupbox">
+     <property name="title">
+      <string>Bot Mood</string>
+     </property>
+     <property name="checkable">
+      <bool>true</bool>
+     </property>
+     <layout class="QGridLayout" name="gridLayout_2">
+      <item row="0" column="0">
+       <widget class="QPlainTextEdit" name="bot_mood">
+        <property name="placeholderText">
+         <string>EXAMPLE: Excited</string>
+        </property>
+       </widget>
+      </item>
+     </layout>
+    </widget>
+   </item>
+   <item row="6" column="0">
+    <widget class="QGroupBox" name="guardrails_groupbox">
+     <property name="title">
+      <string>Guardrails</string>
+     </property>
+     <property name="checkable">
+      <bool>true</bool>
+     </property>
+     <layout class="QVBoxLayout" name="verticalLayout_2">
+      <item>
+       <widget class="QPlainTextEdit" name="guardrails_prompt">
+        <property name="placeholderText">
+         <string>The guardrails prompt is used to moderate results.</string>
+        </property>
+       </widget>
+      </item>
+     </layout>
+    </widget>
+   </item>
    <item row="2" column="0">
-    <widget class="QGroupBox" name="groupBox_4">
+    <widget class="QGroupBox" name="names_groupbox">
+     <property name="title">
+      <string>Use names</string>
+     </property>
+     <property name="checkable">
+      <bool>true</bool>
+     </property>
+     <layout class="QVBoxLayout" name="verticalLayout">
+      <item>
+       <layout class="QVBoxLayout" name="verticalLayout_5">
+        <item>
+         <widget class="QLabel" name="label_3">
+          <property name="text">
+           <string>User name</string>
+          </property>
+         </widget>
+        </item>
+        <item>
+         <widget class="QLineEdit" name="username">
+          <property name="text">
+           <string>User</string>
+          </property>
+          <property name="placeholderText">
+           <string>User name</string>
+          </property>
+         </widget>
+        </item>
+       </layout>
+      </item>
+      <item>
+       <layout class="QVBoxLayout" name="verticalLayout_6">
+        <item>
+         <widget class="QLabel" name="label">
+          <property name="text">
+           <string>Bot name</string>
+          </property>
+         </widget>
+        </item>
+        <item>
+         <widget class="QLineEdit" name="botname">
+          <property name="text">
+           <string>ChatAI</string>
+          </property>
+          <property name="cursorPosition">
+           <number>6</number>
+          </property>
+          <property name="placeholderText">
+           <string>Bot name</string>
+          </property>
+         </widget>
+        </item>
+       </layout>
+      </item>
+     </layout>
+    </widget>
+   </item>
+   <item row="3" column="0">
+    <widget class="QGroupBox" name="personality_groupbox">
      <property name="title">
       <string>Bot Personality</string>
+     </property>
+     <property name="checkable">
+      <bool>true</bool>
      </property>
      <layout class="QGridLayout" name="gridLayout_5">
       <item row="1" column="0">
@@ -37,66 +135,24 @@
      </layout>
     </widget>
    </item>
-   <item row="1" column="0">
-    <layout class="QVBoxLayout" name="verticalLayout_6">
-     <item>
-      <widget class="QLabel" name="label">
-       <property name="text">
-        <string>Bot name</string>
-       </property>
-      </widget>
-     </item>
-     <item>
-      <widget class="QLineEdit" name="botname">
-       <property name="text">
-        <string>ChatAI</string>
-       </property>
-       <property name="cursorPosition">
-        <number>6</number>
-       </property>
-       <property name="placeholderText">
-        <string>Bot name</string>
-       </property>
-      </widget>
-     </item>
-    </layout>
-   </item>
-   <item row="3" column="0">
-    <widget class="QGroupBox" name="groupBox">
+   <item row="5" column="0">
+    <widget class="QGroupBox" name="system_instructions_groupbox">
      <property name="title">
-      <string>Bot Mood</string>
+      <string>System Instructions</string>
      </property>
-     <layout class="QGridLayout" name="gridLayout_2">
-      <item row="0" column="0">
-       <widget class="QPlainTextEdit" name="bot_mood">
+     <property name="checkable">
+      <bool>true</bool>
+     </property>
+     <layout class="QVBoxLayout" name="verticalLayout_3">
+      <item>
+       <widget class="QPlainTextEdit" name="system_instructions">
         <property name="placeholderText">
-         <string>EXAMPLE: Excited</string>
+         <string>Instructions for the LLM</string>
         </property>
        </widget>
       </item>
      </layout>
     </widget>
-   </item>
-   <item row="0" column="0">
-    <layout class="QVBoxLayout" name="verticalLayout_5">
-     <item>
-      <widget class="QLabel" name="label_3">
-       <property name="text">
-        <string>User name</string>
-       </property>
-      </widget>
-     </item>
-     <item>
-      <widget class="QLineEdit" name="username">
-       <property name="text">
-        <string>User</string>
-       </property>
-       <property name="placeholderText">
-        <string>User name</string>
-       </property>
-      </widget>
-     </item>
-    </layout>
    </item>
   </layout>
  </widget>
@@ -109,12 +165,12 @@
    <slot>username_changed(QString)</slot>
    <hints>
     <hint type="sourcelabel">
-     <x>91</x>
-     <y>39</y>
+     <x>103</x>
+     <y>72</y>
     </hint>
     <hint type="destinationlabel">
      <x>55</x>
-     <y>-17</y>
+     <y>0</y>
     </hint>
    </hints>
   </connection>
@@ -125,12 +181,12 @@
    <slot>botname_changed(QString)</slot>
    <hints>
     <hint type="sourcelabel">
-     <x>191</x>
-     <y>105</y>
+     <x>203</x>
+     <y>128</y>
     </hint>
     <hint type="destinationlabel">
      <x>127</x>
-     <y>-8</y>
+     <y>0</y>
     </hint>
    </hints>
   </connection>
@@ -142,11 +198,11 @@
    <hints>
     <hint type="sourcelabel">
      <x>338</x>
-     <y>221</y>
+     <y>249</y>
     </hint>
     <hint type="destinationlabel">
      <x>292</x>
-     <y>-6</y>
+     <y>0</y>
     </hint>
    </hints>
   </connection>
@@ -157,12 +213,124 @@
    <slot>bot_mood_changed()</slot>
    <hints>
     <hint type="sourcelabel">
-     <x>507</x>
-     <y>322</y>
+     <x>494</x>
+     <y>409</y>
     </hint>
     <hint type="destinationlabel">
      <x>451</x>
-     <y>-7</y>
+     <y>0</y>
+    </hint>
+   </hints>
+  </connection>
+  <connection>
+   <sender>names_groupbox</sender>
+   <signal>toggled(bool)</signal>
+   <receiver>bot_preferences</receiver>
+   <slot>toggle_use_names(bool)</slot>
+   <hints>
+    <hint type="sourcelabel">
+     <x>42</x>
+     <y>107</y>
+    </hint>
+    <hint type="destinationlabel">
+     <x>0</x>
+     <y>62</y>
+    </hint>
+   </hints>
+  </connection>
+  <connection>
+   <sender>personality_groupbox</sender>
+   <signal>toggled(bool)</signal>
+   <receiver>bot_preferences</receiver>
+   <slot>toggle_use_personality(bool)</slot>
+   <hints>
+    <hint type="sourcelabel">
+     <x>90</x>
+     <y>172</y>
+    </hint>
+    <hint type="destinationlabel">
+     <x>0</x>
+     <y>196</y>
+    </hint>
+   </hints>
+  </connection>
+  <connection>
+   <sender>guardrails_prompt</sender>
+   <signal>textChanged()</signal>
+   <receiver>bot_preferences</receiver>
+   <slot>guardrails_prompt_changed()</slot>
+   <hints>
+    <hint type="sourcelabel">
+     <x>160</x>
+     <y>649</y>
+    </hint>
+    <hint type="destinationlabel">
+     <x>1</x>
+     <y>379</y>
+    </hint>
+   </hints>
+  </connection>
+  <connection>
+   <sender>system_instructions</sender>
+   <signal>textChanged()</signal>
+   <receiver>bot_preferences</receiver>
+   <slot>system_instructions_changed()</slot>
+   <hints>
+    <hint type="sourcelabel">
+     <x>306</x>
+     <y>529</y>
+    </hint>
+    <hint type="destinationlabel">
+     <x>0</x>
+     <y>545</y>
+    </hint>
+   </hints>
+  </connection>
+  <connection>
+   <sender>mood_groupbox</sender>
+   <signal>toggled(bool)</signal>
+   <receiver>bot_preferences</receiver>
+   <slot>toggle_use_mood(bool)</slot>
+   <hints>
+    <hint type="sourcelabel">
+     <x>55</x>
+     <y>392</y>
+    </hint>
+    <hint type="destinationlabel">
+     <x>0</x>
+     <y>276</y>
+    </hint>
+   </hints>
+  </connection>
+  <connection>
+   <sender>guardrails_groupbox</sender>
+   <signal>toggled(bool)</signal>
+   <receiver>bot_preferences</receiver>
+   <slot>toggle_use_guardrails(bool)</slot>
+   <hints>
+    <hint type="sourcelabel">
+     <x>56</x>
+     <y>560</y>
+    </hint>
+    <hint type="destinationlabel">
+     <x>-2</x>
+     <y>510</y>
+    </hint>
+   </hints>
+  </connection>
+  <connection>
+   <sender>system_instructions_groupbox</sender>
+   <signal>toggled(bool)</signal>
+   <receiver>bot_preferences</receiver>
+   <slot>toggle_use_system_instructions(bool)</slot>
+   <hints>
+    <hint type="sourcelabel">
+     <x>82</x>
+     <y>439</y>
+    </hint>
+    <hint type="destinationlabel">
+     <x>-2</x>
+     <y>424</y>
     </hint>
    </hints>
   </connection>
@@ -172,5 +340,13 @@
   <slot>botname_changed(QString)</slot>
   <slot>bot_personality_changed()</slot>
   <slot>bot_mood_changed()</slot>
+  <slot>toggle_use_names(bool)</slot>
+  <slot>toggle_use_personality(bool)</slot>
+  <slot>toggle_use_mood(bool)</slot>
+  <slot>toggle_use_guardrails(bool)</slot>
+  <slot>guardrails_prompt_changed()</slot>
+  <slot>reset_guardrails_to_default()</slot>
+  <slot>system_instructions_changed()</slot>
+  <slot>toggle_use_system_instructions(bool)</slot>
  </slots>
 </ui>
