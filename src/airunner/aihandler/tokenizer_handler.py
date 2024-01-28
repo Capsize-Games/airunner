@@ -16,12 +16,25 @@ class TokenizerHandler(TransformerBaseHandler):
     def load_tokenizer(self, local_files_only=None):
         self.logger.info(f"Loading tokenizer from {self.current_model_path}")
         local_files_only = self.local_files_only if local_files_only is None else local_files_only
+        chat_template = (
+            "{{ bos_token }}"
+            "{% for message in messages %}"
+            "{% if message['role'] == 'system' %}"
+            "{{ '[INST] <<SYS>>' + message['content'] + ' <</SYS>>[/INST]' }}"
+            "{% elif message['role'] == 'user' %}"
+            "{{ '[INST] ' + message['content'] + ' [/INST]' }}"
+            "{% elif message['role'] == 'assistant' %}"
+            "{{ message['content'] + eos_token + ' ' }}"
+            "{% endif %}"
+            "{% endfor %}"
+        )
         try:
             self.tokenizer = self.tokenizer_class_.from_pretrained(
                 self.tokenizer_path,
                 local_files_only=local_files_only,
                 token=self.request_data.get("hf_api_key_read_key"),
                 device_map=self.device,
+                chat_template=chat_template,
             )
             self.logger.info("Tokenizer loaded")
         except OSError as e:

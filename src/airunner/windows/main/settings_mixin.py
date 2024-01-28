@@ -5,7 +5,7 @@ from airunner.data.bootstrap.controlnet_bootstrap_data import controlnet_bootstr
 from airunner.data.bootstrap.imagefilter_bootstrap_data import imagefilter_bootstrap_data
 from airunner.data.bootstrap.model_bootstrap_data import model_bootstrap_data
 from airunner.data.bootstrap.pipeline_bootstrap_data import pipeline_bootstrap_data
-from airunner.enums import Mode, SignalCode, ServiceCode
+from airunner.enums import Mode, SignalCode, ServiceCode, SelfReflectionCategory
 from airunner.service_locator import ServiceLocator
 from airunner.settings import BASE_PATH
 from airunner.settings import DEFAULT_PATHS
@@ -293,11 +293,65 @@ Previous Conversation:
                 use_gpu=True,
                 username="User",
                 botname="Bot",
+                use_personality=True,
+                use_mood=True,
+                assign_names=True,
+                guardrails_active=True,
                 message_type="chat",
                 bot_personality="happy. He loves {{ username }}",
                 bot_mood="",
                 prompt_template="Mistral 7B Instruct: Default Chatbot",
-                override_parameters=False
+                override_parameters=False,
+                self_reflection_categories=[
+                    {
+                        "category": SelfReflectionCategory.ILLEGAL,
+                        "active": True,
+                    },
+                    {
+                        "category": SelfReflectionCategory.HATE_VIOLENCE_HARASSMENT,
+                        "active": True,
+                    },
+                    {
+                        "category": SelfReflectionCategory.MALWARE,
+                        "active": True,
+                    },
+                    {
+                        "category": SelfReflectionCategory.PHYSICAL_HARM,
+                        "active": True,
+                    },
+                    {
+                        "category": SelfReflectionCategory.ECONOMIC_HARM,
+                        "active": True,
+                    },
+                    {
+                        "category": SelfReflectionCategory.FRAUD,
+                        "active": True,
+                    },
+                    {
+                        "category": SelfReflectionCategory.ADULT,
+                        "active": True,
+                    },
+                    {
+                        "category": SelfReflectionCategory.POLITICAL,
+                        "active": True,
+                    },
+                    {
+                        "category": SelfReflectionCategory.PRIVACY,
+                        "active": True,
+                    },
+                    {
+                        "category": SelfReflectionCategory.UNQUALIFIED_LAW,
+                        "active": True,
+                    },
+                    {
+                        "category": SelfReflectionCategory.UNQUALIFIED_FINANCIAL,
+                        "active": True,
+                    },
+                    {
+                        "category": SelfReflectionCategory.UNQUALIFIED_HEALTH,
+                        "active": True,
+                    },
+                ],
             ),
             tts_settings=tts_settings_default,
             stt_settings=dict(

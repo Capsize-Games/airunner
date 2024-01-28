@@ -48,6 +48,21 @@ class ServiceCode(Enum):
     GET_CALLBACK_FOR_SLIDER = "get_callback_for_slider"
 
 
+class SelfReflectionCategory(Enum):
+    ILLEGAL = "illegal",
+    HATE_VIOLENCE_HARASSMENT = "hate violence harassment"
+    MALWARE = "malware"
+    PHYSICAL_HARM = "physical harm"
+    ECONOMIC_HARM = "economic harm"
+    FRAUD = "fraud"
+    ADULT = "adult"
+    POLITICAL = "political"
+    PRIVACY = "privacy"
+    UNQUALIFIED_LAW = "unqualified law"
+    UNQUALIFIED_FINANCIAL = "unqualified financial"
+    UNQUALIFIED_HEALTH = "unqualified health"
+
+
 class SignalCode(Enum):
     AI_MODELS_REFRESH_SIGNAL = "refresh_ai_models_signal"
     AI_MODELS_SAVE_OR_UPDATE_SIGNAL = "ai_models_save_or_update_signal"
