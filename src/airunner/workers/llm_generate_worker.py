@@ -1,11 +1,11 @@
+from airunner.aihandler.casual_lm_transfformer_base_handler import CasualLMTransformerBaseHandler
 from airunner.enums import SignalCode
 from airunner.workers.worker import Worker
-from airunner.aihandler.llm_handler import LLMHandler
 
 
 class LLMGenerateWorker(Worker):
     def __init__(self, prefix="LLMGenerateWorker"):
-        self.llm = LLMHandler()
+        self.llm = CasualLMTransformerBaseHandler()
         super().__init__(prefix=prefix)
         self.register(SignalCode.LLM_CLEAR_HISTORY, self.on_clear_history)
         self.register(SignalCode.LLM_REQUEST_WORKER_RESPONSE_SIGNAL, self.on_LLMRequestWorker_response_signal)
@@ -41,9 +41,7 @@ class LLMGenerateWorker(Worker):
         self.add_to_queue(message)
 
     def handle_message(self, message):
-        print("HANDLE MESSAGE")
-        for response in self.llm.handle_request(message):
-            self.emit(SignalCode.LLM_TEXT_STREAMED_SIGNAL, response)
+        self.llm.handle_request(message)
     
     def on_clear_history(self):
         self.llm.clear_history()
