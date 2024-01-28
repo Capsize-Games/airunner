@@ -182,12 +182,9 @@ class CasualLMTransformerBaseHandler(TokenizerHandler):
         ])
         self_reflection_prompt = "\n".join(self_reflection_prompt)
 
-        # TODO: override this
-        system_instructions = [
-            "You are a dungeon master for a roleplaying game. ",
-            "You will respond to the player's actions and questions. ",
-        ]
+        system_instructions = self.settings["llm_generator_settings"]["system_instructions"]
 
+        system_instructions.append(guardrails_prompt)
         system_instructions.append(self_reflection_prompt)
 
         if self.settings["llm_generator_settings"]["assign_names"]:
