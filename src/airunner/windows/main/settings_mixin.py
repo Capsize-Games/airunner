@@ -356,6 +356,7 @@ Previous Conversation:
                     "You are a dungeon master for a roleplaying game. ",
                     "You will respond to the player's actions and questions. ",
                 ],
+                embeddings_model_path="BAAI/bge-small-en-v1.5",
             ),
             tts_settings=tts_settings_default,
             stt_settings=dict(
