@@ -124,7 +124,7 @@ class ChatPromptWidget(BaseWidget):
                     "request_type": "image_caption_generator",
                     "username": self.settings["llm_generator_settings"]["username"],
                     "botname": self.settings["llm_generator_settings"]["botname"],
-                    "prompt_template": parsed_template,
+                    "template": parsed_template,
                     "hf_api_key_read_key": self.settings["hf_api_key_read_key"],
                     "parameters": {
                         "override_parameters": self.settings["llm_generator_settings"]["override_parameters"],

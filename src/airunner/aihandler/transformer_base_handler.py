@@ -1,8 +1,9 @@
+import asyncio
 import random
 import traceback
 
 import torch
-from transformers import BitsAndBytesConfig, GPTQConfig, TextIteratorStreamer
+from transformers import BitsAndBytesConfig, GPTQConfig
 
 from airunner.aihandler.base_handler import BaseHandler
 from airunner.utils import clear_memory
@@ -24,7 +25,6 @@ class TransformerBaseHandler(BaseHandler):
         self.model = None
         self.processor = None
         self.vocoder = None
-        self.streamer = None
         self.temperature = 0.7
         self.max_length = 1000
         self.min_length = 0
@@ -43,8 +43,6 @@ class TransformerBaseHandler(BaseHandler):
         self.bot_mood = None
         self.bot_personality = None
         self.prompt = None
-        self.prompt_template = None
-        self.system_instructions = None
         self.do_quantize_model = True
         self.current_model_path = ""
         self.local_files_only = False
@@ -106,13 +104,10 @@ class TransformerBaseHandler(BaseHandler):
             )
         return config
 
-    def load_streamer(self):
-        self.logger.info("Loading LLM text streamer")
-        self.streamer = TextIteratorStreamer(self.tokenizer)
-
     def model_params(self, local_files_only) -> dict:
+        local_files_only = self.local_files_only if local_files_only is None else local_files_only
         return dict(
-            local_files_only=self.local_files_only if local_files_only is None else local_files_only,
+            local_files_only=local_files_only,
             device_map=self.device,
             use_cache=self.use_cache,
             torch_dtype=torch.float16 if self.llm_dtype != "32bit" else torch.float32,
@@ -123,7 +118,10 @@ class TransformerBaseHandler(BaseHandler):
         self.logger.info("Loading model")
         params = self.model_params(local_files_only=local_files_only)
         if self.request_data:
-            params["token"] = self.request_data.get("hf_api_key_read_key", "")
+            params["token"] = self.request_data.get(
+                "hf_api_key_read_key",
+                ""
+            )
 
         if self.do_quantize_model:
             config = self.quantization_config()
@@ -132,7 +130,10 @@ class TransformerBaseHandler(BaseHandler):
 
         self.logger.info(f"Loading model from {self.current_model_path}")
         try:
-            self.model = self.auto_class_.from_pretrained(self.current_model_path, **params)
+            self.model = self.auto_class_.from_pretrained(
+                self.current_model_path,
+                **params
+            )
         except OSError as e:
             if "Checkout your internet connection" in str(e):
                 if local_files_only:
@@ -174,20 +175,24 @@ class TransformerBaseHandler(BaseHandler):
             self.processor = None
             return True
 
+    def pre_load(self):
+        """
+        This function is called at the start of the load function.
+        Override this function to add custom pre load functionality.
+        :return:
+        """
+        self.current_model_path = self.model_path
+
     def load(self):
         self.logger.info("Loading LLM")
         do_load_model = self.do_load_model
         do_load_tokenizer = self.tokenizer is None
         do_load_processor = self.processor is None
-        do_load_streamer = self.streamer is None
 
-        self.current_model_path = self.model_path
+        self.pre_load()
 
         if do_load_tokenizer:
             self.load_tokenizer()
-
-        if do_load_streamer:
-            self.load_streamer()
 
         if do_load_processor:
             self.load_processor()
@@ -195,32 +200,25 @@ class TransformerBaseHandler(BaseHandler):
         if do_load_model:
             self.load_model()
 
+        self.post_load()
+
+    def post_load(self):
+        """
+        This function is called at the end of the load function.
+        Override this function to add custom post load functionality.
+        :return:
+        """
+        self.logger.error("Define post_load here")
+
     def generate(self):
-        self.logger.info("Generating")
+        print("GENERATE")
+        return self.do_generate()
 
-        # Create a FileSystemLoader object with the directory of the template
-        # here = os.path.dirname(os.path.abspath(__file__))
-        # Create an Environment object with the FileSystemLoader object
-        # file_loader = FileSystemLoader(os.path.join(here, "chat_templates"))
-        # env = Environment(loader=file_loader)
-
-        # Load the template
-        chat_template = self.prompt_template  # env.get_template('chat.j2')
-
-        prompt = self.prompt
-        if prompt is None or prompt == "":
-            traceback.print_stack()
-            return
-
-        return self.do_generate(prompt, chat_template)
-
-    def do_generate(self, prompt, chat_template):
+    def do_generate(self):
         raise NotImplementedError
 
     def process_data(self, data):
         self.request_data = data.get("request_data", {})
-        print(self.request_data.keys())
-        print(self.request_data.get("model_path"))
         self.callback = self.request_data.get("callback", None)
         self.use_gpu = self.request_data.get("use_gpu", self.use_gpu)
         self.image = self.request_data.get("image", None)
@@ -232,11 +230,7 @@ class TransformerBaseHandler(BaseHandler):
         self.bot_mood = self.request_data.get("bot_mood", "")
         self.bot_personality = self.request_data.get("bot_personality", "")
         self.prompt = self.request_data.get("prompt", self.prompt)
-        self.prompt_template = self.request_data.get("prompt_template", "")
-        self.system_instructions = f"Your name is {self.botname}. You are talking to {self.username}. You will always " \
-                                   f"respond in character. You will always respond to the user. You will not give " \
-                                   f"ethical or moral advice to the user unless it is something appropriate for " \
-                                   f"{self.botname} to say. "
+        self.template = self.request_data.get("template", "")
 
     def move_to_cpu(self):
         if self.model:
@@ -258,8 +252,6 @@ class TransformerBaseHandler(BaseHandler):
 
     def prepare_input_args(self):
         self.logger.info("Preparing input args")
-        if self.request_data:
-            self.system_instructions = self.request_data.get("system_instructions", "")
         parameters = self.parameters or {}
         top_k = parameters.get("top_k", self.top_k)
         eta_cutoff = parameters.get("eta_cutoff", self.eta_cutoff)
