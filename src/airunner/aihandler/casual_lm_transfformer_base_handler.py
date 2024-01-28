@@ -1,12 +1,136 @@
+import os
 import torch
-from transformers import AutoTokenizer, AutoModelForCausalLM
-from airunner.aihandler.transformer_base_handler import TransformerBaseHandler
+from llama_index.core.base_query_engine import BaseQueryEngine
+from transformers import AutoModelForCausalLM, TextIteratorStreamer
+
+from llama_index.llms import HuggingFaceLLM
+from llama_index.embeddings import HuggingFaceEmbedding
+from llama_index import ServiceContext
+from llama_index import VectorStoreIndex, SimpleDirectoryReader
+
+from airunner.aihandler.tokenizer_handler import TokenizerHandler
+from airunner.enums import SignalCode
 
 
-class CasualLMTransformerBaseHandler(TransformerBaseHandler):
+class CasualLMTransformerBaseHandler(TokenizerHandler):
     auto_class_ = AutoModelForCausalLM
 
-    def do_generate(self, prompt, chat_template):
+    def __init__(self, *args, **kwargs):
+        super().__init__(*args, **kwargs)
+        self.streamer = None
+        self.llm = None
+        self.embed_model = None
+        self.service_context_model = None
+        self.documents = None
+        self.index = None
+        self.query_engine: BaseQueryEngine = None
+        self.documents_path = os.path.join(
+            "documents"#self.settings["path_settings"]["documents_path"]
+        )
+
+    def post_load(self):
+        super().post_load()
+
+        do_load_streamer = self.streamer is None
+        if do_load_streamer:
+            self.load_streamer()
+
+        do_load_llm = self.llm is None
+        if do_load_llm:
+            self.load_llm()
+
+        do_load_embed_model = self.embed_model is None
+        if do_load_embed_model:
+            self.load_embed_model()
+
+        do_load_service_context = self.service_context_model is None
+        if do_load_service_context:
+            self.load_service_context()
+
+        do_load_documents = self.documents is None
+        if do_load_documents:
+            self.load_documents()
+
+        do_load_index = self.index is None
+        if do_load_index:
+            self.load_index()
+
+        do_load_query_engine = self.query_engine is None
+        if do_load_query_engine:
+            self.load_query_engine()
+
+    def load_streamer(self):
+        self.logger.info("Loading LLM text streamer")
+        self.streamer = TextIteratorStreamer(self.tokenizer)
+
+    def load_llm(self):
+        self.logger.info("Loading RAG")
+        self.llm = HuggingFaceLLM(
+            model=self.model,
+            tokenizer=self.tokenizer
+        )
+
+    def load_embed_model(self):
+        self.logger.info("Loading embeddings")
+        self.embed_model = HuggingFaceEmbedding(
+            model_name="BAAI/bge-small-en-v1.5",
+        )
+
+    def load_service_context(self):
+        self.logger.info("Loading service context")
+        self.service_context_model = ServiceContext.from_defaults(
+            llm=self.llm,
+            embed_model=self.embed_model
+        )
+
+    def load_documents(self):
+        self.logger.info(f"Loading documents from {self.documents_path}")
+        self.documents = SimpleDirectoryReader(
+            self.documents_path
+        ).load_data()
+
+    def load_index(self):
+        self.logger.info("Loading index")
+        self.index = VectorStoreIndex(
+            self.documents,
+            service_context=self.service_context_model
+        )
+
+    def load_query_engine(self):
+        self.logger.info("Loading query engine")
+        self.query_engine: BaseQueryEngine = self.index.as_query_engine()
+
+    def do_generate(self):
+        #self.llm_stream()
+        self.rag_stream()
+
+    def save_query_engine_to_disk(self):
+        # TODO
+        pass
+
+    def load_query_engine_from_disk(self):
+        # TODO
+        pass
+
+    def rag_stream(self):
+        self.logger.info("Generating RAG response")
+        res = self.query_engine.query(
+            self.prompt
+        )
+        print(res)
+        self.emit(
+            SignalCode.LLM_TEXT_STREAMED_SIGNAL,
+            dict(
+                message=res.__str__(),
+                is_first_message=True,
+                is_end_of_message=True,
+                name=self.botname,
+            )
+        )
+        # todo: streaming
+
+    def llm_stream(self):
+        prompt = self.prompt
         history = []
         for message in self.history:
             if message["role"] == "user":
@@ -40,7 +164,7 @@ class CasualLMTransformerBaseHandler(TransformerBaseHandler):
 
         # iterate over variables and replace again, this allows us to use variables
         # in custom template variables (for example variables inside of botmood and bot_personality)
-        rendered_template = chat_template
+        rendered_template = self.template
         for n in range(2):
             for key, value in variables.items():
                 rendered_template = rendered_template.replace("{{ " + key + " }}", value)
@@ -52,7 +176,7 @@ class CasualLMTransformerBaseHandler(TransformerBaseHandler):
         # Generate the response
         self.logger.info("Generating...")
         import threading
-        thread = threading.Thread(target=self.model.generate, kwargs=dict(
+        self.thread = threading.Thread(target=self.model.generate, kwargs=dict(
             model_inputs,
             min_length=self.min_length,
             max_length=self.max_length,
@@ -68,7 +192,7 @@ class CasualLMTransformerBaseHandler(TransformerBaseHandler):
             temperature=self.temperature,
             streamer=self.streamer
         ))
-        thread.start()
+        self.thread.start()
         # strip all new lines from rendered_template:
         rendered_template = rendered_template.replace("\n", " ")
         rendered_template = "<s>" + rendered_template
@@ -105,46 +229,13 @@ class CasualLMTransformerBaseHandler(TransformerBaseHandler):
                     streamed_template = streamed_template.replace("</s>", "")
                     new_text = new_text.replace("</s>", "")
                     is_end_of_message = True
-                yield dict(
-                    message=new_text,
-                    is_first_message=is_first_message,
-                    is_end_of_message=is_end_of_message,
-                    name=self.botname,
+                self.emit(
+                    SignalCode.LLM_TEXT_STREAMED_SIGNAL,
+                    dict(
+                        message=new_text,
+                        is_first_message=is_first_message,
+                        is_end_of_message=is_end_of_message,
+                        name=self.botname,
+                    )
                 )
                 is_first_message = False
-
-            if is_end_of_message:
-                self.history.append({
-                    "role": "bot",
-                    "content": streamed_template.strip()
-                })
-                streamed_template = ""
-                replaced = False
-
-    def load_tokenizer(self, local_files_only=None):
-        self.logger.info(f"Loading tokenizer from {self.current_model_path}")
-        local_files_only = self.local_files_only if local_files_only is None else local_files_only
-        try:
-            self.tokenizer = AutoTokenizer.from_pretrained(
-                self.current_model_path,
-                local_files_only=local_files_only,
-                token=self.request_data.get("hf_api_key_read_key"),
-                device_map=self.device,
-            )
-            self.logger.info("Tokenizer loaded")
-        except OSError as e:
-            if "Checkout your internet connection" in str(e):
-                if local_files_only:
-                    self.logger.warning(
-                        "Unable to load tokenizer, model does not exist locally, trying to load from remote"
-                    )
-                    return self.load_tokenizer(local_files_only=False)
-                else:
-                    self.logger.error(e)
-        except Exception as e:
-            self.logger.error(e)
-
-        if self.tokenizer:
-            self.tokenizer.use_default_system_prompt = False
-        else:
-            self.logger.error("Tokenizer failed to load")
