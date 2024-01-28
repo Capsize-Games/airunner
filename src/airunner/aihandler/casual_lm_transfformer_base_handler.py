@@ -24,6 +24,7 @@ class CasualLMTransformerBaseHandler(TokenizerHandler):
         self.index = None
         self.query_engine: BaseQueryEngine = None
         self.documents_path = self.settings["path_settings"]["documents_path"]
+        self.embeddings_model_path = "BAAI/bge-small-en-v1.5"
 
     def post_load(self):
         super().post_load()
@@ -70,7 +71,7 @@ class CasualLMTransformerBaseHandler(TokenizerHandler):
     def load_embed_model(self):
         self.logger.info("Loading embeddings")
         self.embed_model = HuggingFaceEmbedding(
-            model_name="BAAI/bge-small-en-v1.5",
+            model_name=self.embeddings_model_path,
         )
 
     def load_service_context(self):
