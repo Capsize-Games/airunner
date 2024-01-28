@@ -352,6 +352,10 @@ Previous Conversation:
                         "active": True,
                     },
                 ],
+                system_instructions=[
+                    "You are a dungeon master for a roleplaying game. ",
+                    "You will respond to the player's actions and questions. ",
+                ],
             ),
             tts_settings=tts_settings_default,
             stt_settings=dict(
