@@ -4,7 +4,7 @@ from transformers import AutoModelForCausalLM, TextIteratorStreamer
 
 from llama_index.llms import HuggingFaceLLM
 from llama_index.embeddings import HuggingFaceEmbedding
-from llama_index import ServiceContext
+from llama_index import ServiceContext, StorageContext, load_index_from_storage
 from llama_index import VectorStoreIndex, SimpleDirectoryReader
 
 from airunner.aihandler.tokenizer_handler import TokenizerHandler
@@ -23,7 +23,6 @@ class CasualLMTransformerBaseHandler(TokenizerHandler):
         self.documents = None
         self.index = None
         self.query_engine: BaseQueryEngine = None
-        self.documents_path = self.settings["path_settings"]["documents_path"]
         self.embeddings_model_path = "BAAI/bge-small-en-v1.5"
 
     def post_load(self):
@@ -56,6 +55,7 @@ class CasualLMTransformerBaseHandler(TokenizerHandler):
         do_load_query_engine = self.query_engine is None
         if do_load_query_engine:
             self.load_query_engine()
+            self.save_query_engine_to_disk()
 
     def load_streamer(self):
         self.logger.info("Loading LLM text streamer")
@@ -82,18 +82,22 @@ class CasualLMTransformerBaseHandler(TokenizerHandler):
         )
 
     def load_documents(self):
-        self.logger.info(f"Loading documents from {self.documents_path}")
+        documents_path = self.settings["path_settings"]["documents_path"]
+        self.logger.info(f"Loading documents from {documents_path}")
         self.documents = SimpleDirectoryReader(
-            self.documents_path,
+            documents_path,
             exclude_hidden=False,
         ).load_data()
 
     def load_index(self):
         self.logger.info("Loading index")
-        self.index = VectorStoreIndex(
-            self.documents,
-            service_context=self.service_context_model
-        )
+        try:
+            self.load_query_engine_from_disk()
+        except FileNotFoundError:
+            self.index = VectorStoreIndex(
+                self.documents,
+                service_context=self.service_context_model
+            )
 
     def load_query_engine(self):
         self.logger.info("Loading query engine")
@@ -106,12 +110,21 @@ class CasualLMTransformerBaseHandler(TokenizerHandler):
         self.rag_stream()
 
     def save_query_engine_to_disk(self):
-        # TODO
-        pass
+        self.index.storage_context.persist(
+            persist_dir=self.settings["path_settings"]["llama_index_path"]
+        )
 
     def load_query_engine_from_disk(self):
-        # TODO
-        pass
+        storage_context = StorageContext.from_defaults(
+            persist_dir=self.settings["path_settings"]["llama_index_path"]
+        )
+        self.index = load_index_from_storage(
+            storage_context,
+            service_context=self.service_context_model
+        )
+        self.query_engine = self.index.as_query_engine(
+            streaming=True
+        )
 
     def prepare_template(self):
         prompt = self.prompt
