@@ -24,6 +24,7 @@ class CasualLMTransformerBaseHandler(TokenizerHandler):
         self.index = None
         self.query_engine: BaseQueryEngine = None
         self.documents_path = self.settings["path_settings"]["documents_path"]
+        self.embeddings_model_path = "BAAI/bge-small-en-v1.5"
 
     def post_load(self):
         super().post_load()
@@ -70,7 +71,7 @@ class CasualLMTransformerBaseHandler(TokenizerHandler):
     def load_embed_model(self):
         self.logger.info("Loading embeddings")
         self.embed_model = HuggingFaceEmbedding(
-            model_name="BAAI/bge-small-en-v1.5",
+            model_name=self.embeddings_model_path,
         )
 
     def load_service_context(self):
@@ -96,7 +97,9 @@ class CasualLMTransformerBaseHandler(TokenizerHandler):
 
     def load_query_engine(self):
         self.logger.info("Loading query engine")
-        self.query_engine: BaseQueryEngine = self.index.as_query_engine()
+        self.query_engine: BaseQueryEngine = self.index.as_query_engine(
+            streaming=True
+        )
 
     def do_generate(self):
         #self.llm_stream()
@@ -110,22 +113,68 @@ class CasualLMTransformerBaseHandler(TokenizerHandler):
         # TODO
         pass
 
+    def prepare_template(self):
+        prompt = self.prompt
+        history = []
+        for message in self.history:
+            if message["role"] == "user":
+                # history.append("<s>[INST]" + self.username + ': "'+ message["content"] +'"[/INST]')
+                history.append(self.username + ': "' + message["content"] + '"')
+            else:
+                # history.append(self.botname + ': "'+ message["content"] +'"</s>')
+                history.append(self.botname + ': "' + message["content"])
+        history = "\n".join(history)
+        if history == "":
+            history = None
+
+        # Create a dictionary with the variables
+        variables = {
+            "username": self.username,
+            "botname": self.botname,
+            "history": history or "",
+            "input": prompt,
+            "bos_token": self.tokenizer.bos_token,
+            "bot_mood": self.bot_mood,
+            "bot_personality": self.bot_personality,
+        }
+
+        self.history.append({
+            "role": "user",
+            "content": prompt
+        })
+
+        # Render the template with the variables
+        # rendered_template = chat_template.render(variables)
+
+        # iterate over variables and replace again, this allows us to use variables
+        # in custom template variables (for example variables inside of botmood and bot_personality)
+        rendered_template = self.template
+        for n in range(2):
+            for key, value in variables.items():
+                rendered_template = rendered_template.replace("{{ " + key + " }}", value)
+        return rendered_template
+
     def rag_stream(self):
         self.logger.info("Generating RAG response")
-        res = self.query_engine.query(
+        streaming_response = self.query_engine.query(
             self.prompt
         )
-        print(res)
-        self.emit(
-            SignalCode.LLM_TEXT_STREAMED_SIGNAL,
-            dict(
-                message=res.__str__(),
-                is_first_message=True,
-                is_end_of_message=True,
-                name=self.botname,
+        is_first_message = True
+        is_end_of_message = False
+        for new_text in streaming_response.response_gen:
+            if "</s>" in new_text:
+                new_text = new_text.replace("</s>", "")
+                is_end_of_message = True
+            self.emit(
+                SignalCode.LLM_TEXT_STREAMED_SIGNAL,
+                dict(
+                    message=new_text,
+                    is_first_message=is_first_message,
+                    is_end_of_message=is_end_of_message,
+                    name=self.botname,
+                )
             )
-        )
-        # todo: streaming
+            is_first_message = False
 
     def llm_stream(self):
         prompt = self.prompt
