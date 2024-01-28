@@ -186,6 +186,7 @@ Previous Conversation:
                 llm_visualqa_model_path=DEFAULT_PATHS["text"]["models"]["visualqa"],
                 vae_model_path=DEFAULT_PATHS["art"]["models"]["vae"],
                 ebook_path=DEFAULT_PATHS["text"]["other"]["ebooks"],
+                documents_path=DEFAULT_PATHS["text"]["other"]["documents"],
             ),
             standard_image_settings=dict(
                 image_similarity=1000,
@@ -459,4 +460,6 @@ Previous Conversation:
         path_settings["llm_casuallm_model_path"] = DEFAULT_PATHS["text"]["models"]["casuallm"]
         path_settings["llm_seq2seq_model_path"] = DEFAULT_PATHS["text"]["models"]["seq2seq"]
         path_settings["llm_visualqa_model_path"] = DEFAULT_PATHS["text"]["models"]["visualqa"]
+        path_settings["ebook_path"] = DEFAULT_PATHS["text"]["other"]["ebooks"]
+        path_settings["documents_path"] = DEFAULT_PATHS["text"]["other"]["documents"]
         self.settings["path_settings"] = path_settings
