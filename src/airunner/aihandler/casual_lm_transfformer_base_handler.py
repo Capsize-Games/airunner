@@ -105,9 +105,8 @@ class CasualLMTransformerBaseHandler(TokenizerHandler):
         )
 
     def do_generate(self):
-        #self.llm_stream()
-        #self.rag_stream()
         self.chat_stream()
+        #self.rag_stream()
 
     def save_query_engine_to_disk(self):
         self.index.storage_context.persist(
@@ -127,6 +126,12 @@ class CasualLMTransformerBaseHandler(TokenizerHandler):
         )
 
     def prepare_messages(self):
+        """
+        This is currently crafted for mistralai/Mistral-7B-Instruct-v0.1
+        (specially the guardrails, self-reflection, and prompt template).
+        It will need to be updated or overriden for other models.
+        :return:
+        """
         optional_self_reflection = {}
         optional_self_reflection[SelfReflectionCategory.ILLEGAL] = "illegal: Illegal activity."
         optional_self_reflection[SelfReflectionCategory.HATE_VIOLENCE_HARASSMENT] = "hate violence harassment: Generation of hateful, harassing, or violent content: content that expresses, incites, or promotes hate based on identity, content that intends to harass, threaten, or bully an individual, content that promotes or glorifies violence or celebrates the suffering or humiliation of others."
@@ -293,114 +298,3 @@ class CasualLMTransformerBaseHandler(TokenizerHandler):
             is_first_message=False,
             is_end_of_message=True
         )
-
-    def llm_stream(self):
-        prompt = self.prompt
-        history = []
-        for message in self.history:
-            if message["role"] == "user":
-                # history.append("<s>[INST]" + self.username + ': "'+ message["content"] +'"[/INST]')
-                history.append(self.username + ': "' + message["content"] + '"')
-            else:
-                # history.append(self.botname + ': "'+ message["content"] +'"</s>')
-                history.append(self.botname + ': "' + message["content"])
-        history = "\n".join(history)
-        if history == "":
-            history = None
-
-        # Create a dictionary with the variables
-        variables = {
-            "username": self.username,
-            "botname": self.botname,
-            "history": history or "",
-            "input": prompt,
-            "bos_token": self.tokenizer.bos_token,
-            "bot_mood": self.bot_mood,
-            "bot_personality": self.bot_personality,
-        }
-
-        self.history.append({
-            "role": "user",
-            "content": prompt
-        })
-
-        # Render the template with the variables
-        # rendered_template = chat_template.render(variables)
-
-        # iterate over variables and replace again, this allows us to use variables
-        # in custom template variables (for example variables inside of botmood and bot_personality)
-        rendered_template = self.template
-        for n in range(2):
-            for key, value in variables.items():
-                rendered_template = rendered_template.replace("{{ " + key + " }}", value)
-
-        # Encode the rendered template
-        encoded = self.tokenizer(rendered_template, return_tensors="pt")
-        model_inputs = encoded.to("cuda" if torch.cuda.is_available() else "cpu")
-
-        # Generate the response
-        self.logger.info("Generating...")
-        import threading
-        self.thread = threading.Thread(target=self.model.generate, kwargs=dict(
-            model_inputs,
-            min_length=self.min_length,
-            max_length=self.max_length,
-            num_beams=self.num_beams,
-            do_sample=True,
-            top_k=self.top_k,
-            eta_cutoff=self.eta_cutoff,
-            top_p=self.top_p,
-            num_return_sequences=self.sequences,
-            eos_token_id=self.tokenizer.eos_token_id,
-            early_stopping=True,
-            repetition_penalty=self.repetition_penalty,
-            temperature=self.temperature,
-            streamer=self.streamer
-        ))
-        self.thread.start()
-        # strip all new lines from rendered_template:
-        rendered_template = rendered_template.replace("\n", " ")
-        rendered_template = "<s>" + rendered_template
-        skip = True
-        streamed_template = ""
-        replaced = False
-        is_end_of_message = False
-        is_first_message = True
-        for new_text in self.streamer:
-            # strip all newlines from new_text
-            parsed_new_text = new_text.replace("\n", " ")
-            streamed_template += parsed_new_text
-            streamed_template = streamed_template.replace("<s> [INST]", "<s>[INST]")
-            # iterate over every character in rendered_template and
-            # check if we have the same character in streamed_template
-            if not replaced:
-                for i, char in enumerate(rendered_template):
-                    try:
-                        if char == streamed_template[i]:
-                            skip = False
-                        else:
-                            skip = True
-                            break
-                    except IndexError:
-                        skip = True
-                        break
-            if skip:
-                continue
-            elif not replaced:
-                replaced = True
-                streamed_template = streamed_template.replace(rendered_template, "")
-            else:
-                if "</s>" in new_text:
-                    streamed_template = streamed_template.replace("</s>", "")
-                    new_text = new_text.replace("</s>", "")
-                    is_end_of_message = True
-                self.emit(
-                    SignalCode.LLM_TEXT_STREAMED_SIGNAL,
-                    dict(
-                        message=new_text,
-                        is_first_message=is_first_message,
-                        is_end_of_message=is_end_of_message,
-                        name=self.botname,
-                    )
-                )
-                is_first_message = False
