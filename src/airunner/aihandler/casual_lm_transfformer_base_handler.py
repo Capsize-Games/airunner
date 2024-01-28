@@ -1,4 +1,3 @@
-import os
 import torch
 from llama_index.core.base_query_engine import BaseQueryEngine
 from transformers import AutoModelForCausalLM, TextIteratorStreamer
@@ -24,9 +23,7 @@ class CasualLMTransformerBaseHandler(TokenizerHandler):
         self.documents = None
         self.index = None
         self.query_engine: BaseQueryEngine = None
-        self.documents_path = os.path.join(
-            "documents"#self.settings["path_settings"]["documents_path"]
-        )
+        self.documents_path = self.settings["path_settings"]["documents_path"]
 
     def post_load(self):
         super().post_load()
@@ -86,7 +83,8 @@ class CasualLMTransformerBaseHandler(TokenizerHandler):
     def load_documents(self):
         self.logger.info(f"Loading documents from {self.documents_path}")
         self.documents = SimpleDirectoryReader(
-            self.documents_path
+            self.documents_path,
+            exclude_hidden=False,
         ).load_data()
 
     def load_index(self):
