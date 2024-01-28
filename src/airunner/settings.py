@@ -58,6 +58,7 @@ DEFAULT_PATHS = {
         "other": {
             "ebooks": os.path.join(BASE_PATH, "text", "other", "ebooks"),
             "documents": os.path.join(BASE_PATH, "text", "other", "documents"),
+            "llama_index": os.path.join(BASE_PATH, "text", "other", "llama_index"),
         }
     }
 }
