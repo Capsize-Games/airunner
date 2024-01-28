@@ -187,6 +187,7 @@ Previous Conversation:
                 vae_model_path=DEFAULT_PATHS["art"]["models"]["vae"],
                 ebook_path=DEFAULT_PATHS["text"]["other"]["ebooks"],
                 documents_path=DEFAULT_PATHS["text"]["other"]["documents"],
+                llama_index_path=DEFAULT_PATHS["text"]["other"]["llama_index"],
             ),
             standard_image_settings=dict(
                 image_similarity=1000,
@@ -385,11 +386,16 @@ Previous Conversation:
         self.logger.info("Updating settings")
         default_settings = self.default_settings
         current_settings = self.settings
-        for k, v in default_settings.items():
-            if k not in current_settings:
-                current_settings[k] = v
+        self.recursive_update(current_settings, default_settings)
         self.logger.info("Settings updated")
         self.settings = current_settings
+
+    def recursive_update(self, current, default):
+        for k, v in default.items():
+            if k not in current:
+                current[k] = v
+            elif isinstance(v, dict):
+                self.recursive_update(current[k], v)
 
     def on_reset_settings_signal(self):
         self.logger.info("Resetting settings")
@@ -462,4 +468,5 @@ Previous Conversation:
         path_settings["llm_visualqa_model_path"] = DEFAULT_PATHS["text"]["models"]["visualqa"]
         path_settings["ebook_path"] = DEFAULT_PATHS["text"]["other"]["ebooks"]
         path_settings["documents_path"] = DEFAULT_PATHS["text"]["other"]["documents"]
+        path_settings["llama_index_path"] = DEFAULT_PATHS["text"]["other"]["llama_index"]
         self.settings["path_settings"] = path_settings
