@@ -1,5 +1,8 @@
+from typing import Iterable, Any
+
 import torch
 from llama_index.core.base_query_engine import BaseQueryEngine
+from llama_index.core.llms.types import ChatResponse
 from transformers import AutoModelForCausalLM, TextIteratorStreamer
 
 from llama_index.llms import HuggingFaceLLM, ChatMessage
@@ -8,7 +11,7 @@ from llama_index import ServiceContext, StorageContext, load_index_from_storage
 from llama_index import VectorStoreIndex, SimpleDirectoryReader
 
 from airunner.aihandler.tokenizer_handler import TokenizerHandler
-from airunner.enums import SignalCode
+from airunner.enums import SignalCode, LLMAction
 
 
 class CasualLMTransformerBaseHandler(TokenizerHandler):
@@ -105,8 +108,15 @@ class CasualLMTransformerBaseHandler(TokenizerHandler):
         )
 
     def do_generate(self):
-        self.chat_stream()
-        #self.rag_stream()
+        self.logger.info("Generating response")
+        self.add_message_to_history(
+            self.prompt,
+            role="user"
+        )
+        #full_message = self.chat_stream()
+        full_message = self.rag_stream()
+        self.add_message_to_history(full_message)
+        self.send_final_message()
 
     def save_query_engine_to_disk(self):
         self.index.storage_context.persist(
@@ -184,74 +194,67 @@ class CasualLMTransformerBaseHandler(TokenizerHandler):
         return messages
 
     def chat_stream(self):
-        self.logger.info("Generating chat response")
-        self.add_message_to_history(
-            self.prompt,
-            role="user"
-        )
-
-        messages = self.prepare_messages()
-
-        streaming_response = self.llm.stream_chat(messages)
-        is_first_message = True
-        is_end_of_message = False
-        assistant_message = ""
-        for chat_response in streaming_response:
-            content, is_end_of_message = self.parse_chat_response(chat_response)
-            content = content.replace(assistant_message, "")
-            assistant_message += content
-            self.emit_streamed_text_signal(
-                message=content,
-                is_first_message=is_first_message,
-                is_end_of_message=is_end_of_message
-            )
-            is_first_message = False
-
-        if not is_end_of_message:
-            self.send_final_message()
-
-        self.add_message_to_history(
-            assistant_message
+        return self.stream_text(
+            text_stream=self.llm.stream_chat(self.prepare_messages()),
+            action=LLMAction.CHAT
         )
 
     def rag_stream(self):
-        self.logger.info("Generating RAG response")
-        streaming_response = self.query_engine.query(self.prompt)
-        is_first_message = True
-        is_end_of_message = False
-        assistant_message = ""
-        for new_text in streaming_response.response_gen:
-            content, is_end_of_message = self.parse_rag_response(new_text)
-            assistant_message += content
+        return self.stream_text(
+            text_stream=self.query_engine.query(self.prompt).response_gen,
+            action=LLMAction.RAG
+        )
+
+    def stream_text(
+        self,
+        text_stream: Iterable[object],
+        action: LLMAction,
+        is_first_message: bool = True,
+        full_message: str = "",
+    ):
+        response_parser = self.parse_chat_response
+        if action == LLMAction.RAG:
+            response_parser = self.parse_rag_response
+
+        for chat_response in text_stream:
+            content, is_end_of_message, full_message = response_parser(
+                content=chat_response,
+                full_message=full_message
+            )
             self.emit_streamed_text_signal(
                 message=content,
                 is_first_message=is_first_message,
                 is_end_of_message=is_end_of_message
             )
             is_first_message = False
+        return full_message
 
-        if not is_end_of_message:
-            self.send_final_message()
+    def parse_rag_response(
+        self,
+        content: Any,
+        full_message: str = ""
+    ):
+        content, is_end_of_message = self.is_end_of_message(content)
+        content = content.replace(full_message, "")
+        full_message += content
+        return content, is_end_of_message, full_message
 
-        self.add_message_to_history(
-            assistant_message
-        )
+    def parse_chat_response(
+        self,
+        content: Any,
+        full_message: str = ""
+    ):
+        content, is_end_of_message = self.is_end_of_message(content.message.content)
+        content = content.replace(full_message, "")
+        full_message += content
+        return content, is_end_of_message, full_message
 
-    def parse_rag_response(self, content):
-        is_end_of_message = False
+    @staticmethod
+    def is_end_of_message(content: str) -> (str, bool):
         if "</s>" in content:
             content = content.replace("</s>", "")
-            is_end_of_message = True
-        return content, is_end_of_message
-
-    def parse_chat_response(self, chat_response):
-        message = chat_response.message
-        content = message.content
-        is_end_of_message = False
-        if "</s>" in content:
-            content = content.replace("</s>", "")
-            is_end_of_message = True
-        return content, is_end_of_message
+            return content, True
+        return content, False
 
     def emit_streamed_text_signal(self, **kwargs):
         kwargs["name"] = self.botname
@@ -260,11 +263,11 @@ class CasualLMTransformerBaseHandler(TokenizerHandler):
             kwargs
         )
 
-    def add_message_to_history(self, message, role="assistant"):
-        self.history.append({
-            "role": role,
-            "content": message
-        })
+    def add_message_to_history(self, content, role="assistant"):
+        self.history.append(dict(
+            role=role,
+            content=content
+        ))
 
     def send_final_message(self):
         self.emit_streamed_text_signal(

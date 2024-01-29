@@ -226,3 +226,8 @@ class GeneratorSection(Enum):
     VID2VID = "vid2vid"
     TXT2VID = "txt2vid"
     PROMPT_BUILDER = "prompt_builder"
+
+
+class LLMAction(Enum):
+    CHAT = "chat"
+    RAG = "rag"

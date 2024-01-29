@@ -640,6 +640,13 @@ class MainWindow(
         else:
             self.showNormal()
 
+        self.ui.mode_tab_widget.setCurrentIndex(window_settings["mode_tab_widget_index"])
+        self.ui.tool_tab_widget.setCurrentIndex(window_settings["tool_tab_widget_index"])
+        self.ui.center_tab.setCurrentIndex(window_settings["center_tab_index"])
+        self.ui.standard_image_widget.ui.tabWidget.setCurrentIndex(window_settings["generator_tab_index"])
+        self.ui.ai_button.setChecked(self.settings["ai_mode"])
+        self.set_button_checked("toggle_grid", self.settings["grid_settings"]["show_grid"], False)
+
         if window_settings["main_splitter"]:
             self.ui.main_splitter.restoreState(window_settings["main_splitter"])
 
@@ -654,13 +661,6 @@ class MainWindow(
 
         if window_settings["splitter"]:
             self.ui.splitter.restoreState(window_settings["splitter"])
-
-        self.ui.mode_tab_widget.setCurrentIndex(window_settings["mode_tab_widget_index"])
-        self.ui.tool_tab_widget.setCurrentIndex(window_settings["tool_tab_widget_index"])
-        self.ui.center_tab.setCurrentIndex(window_settings["center_tab_index"])
-        self.ui.standard_image_widget.ui.tabWidget.setCurrentIndex(window_settings["generator_tab_index"])
-        self.ui.ai_button.setChecked(self.settings["ai_mode"])
-        self.set_button_checked("toggle_grid", self.settings["grid_settings"]["show_grid"], False)
 
     ##### End window properties #####
     #################################
