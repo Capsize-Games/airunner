@@ -9,6 +9,7 @@ from airunner.enums import Mode, SignalCode
 from airunner.service_locator import ServiceLocator
 from airunner.settings import BASE_PATH
 from airunner.settings import DEFAULT_PATHS
+from airunner.settings import DEFAULT_CHATBOT
 from airunner.utils import default_hf_cache_dir
 
 tts_settings_default = dict(
@@ -291,27 +292,11 @@ Previous Conversation:
                 model_version="mistralai/Mistral-7B-Instruct-v0.1",
                 dtype="4bit",
                 use_gpu=True,
-                username="User",
-                botname="Bot",
-                use_personality=True,
-                use_mood=True,
-                use_guardrails=True,
-                use_system_instructions=True,
-                assign_names=True,
                 message_type="chat",
-                bot_personality="happy. He loves {{ username }}",
-                bot_mood="",
-                prompt_template="Mistral 7B Instruct: Default Chatbot",
                 override_parameters=False,
-                guardrails_prompt=(
-                    "Always assist with care, respect, and truth. "
-                    "Respond with utmost utility yet securely. "
-                    "Avoid harmful, unethical, prejudiced, or negative content. "
-                    "Ensure replies promote fairness and positivity."
-                ),
-                system_instructions=(
-                    "You are a dungeon master for a roleplaying game. "
-                    "You will respond to the player's actions and questions. "
+                current_chatbot="Default",
+                saved_chatbots=dict(
+                    Default=DEFAULT_CHATBOT
                 ),
                 embeddings_model_path="BAAI/bge-small-en-v1.5",
             ),
@@ -408,7 +393,7 @@ Previous Conversation:
 
     def recursive_update(self, current, default):
         for k, v in default.items():
-            if k not in current:
+            if k not in current or not isinstance(current[k], type(v)):
                 current[k] = v
             elif isinstance(v, dict):
                 self.recursive_update(current[k], v)

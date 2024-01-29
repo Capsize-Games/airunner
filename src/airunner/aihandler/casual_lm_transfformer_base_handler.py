@@ -24,17 +24,50 @@ class CasualLMTransformerBaseHandler(TokenizerHandler):
         self.documents = None
         self.index = None
         self.query_engine: BaseQueryEngine = None
-        self.username = None
-        self.botname = None
-        self.bot_mood = None
-        self.bot_personality = None
+        self._username: str = ""
+        self._botname: str = ""
+        self.bot_mood: str = ""
+        self.bot_personality: str = ""
+        self.user_evaluation: str = ""
+        self.register(SignalCode.LLM_CLEAR_HISTORY, self.on_clear_history_signal)
+        self.use_personality: bool = False
+        self.use_mood: bool = False
+        self.use_guardrails: bool = False
+        self.use_system_instructions: bool = False
+        self.assign_names: bool = False
+        self.prompt_template: str = ""
+        self.guardrails_prompt: str = ""
+        self.system_instructions: str = ""
+
+    @property
+    def username(self):
+        if self.assign_names:
+            return self._username
+        return "User"
+
+    @property
+    def botname(self):
+        if self.assign_names:
+            return self._botname
+        return "Assistant"
+
+    def on_clear_history_signal(self):
+        self.history = []
 
     def process_data(self, data):
         super().process_data(data)
-        self.username = self.request_data.get("username", "")
-        self.botname = self.request_data.get("botname", "")
+        self._username = self.request_data.get("username", "")
+        self._botname = self.request_data.get("botname", "")
         self.bot_mood = self.request_data.get("bot_mood", "")
         self.bot_personality = self.request_data.get("bot_personality", "")
+        self.use_personality = self.request_data.get("use_personality", False)
+        self.use_mood = self.request_data.get("use_mood", False)
+        self.use_guardrails = self.request_data.get("use_guardrails", False)
+        self.use_system_instructions = self.request_data.get("use_system_instructions", False)
+        self.assign_names = self.request_data.get("assign_names", False)
+        self.prompt_template = self.request_data.get("prompt_template", "")
+        self.guardrails_prompt = self.request_data.get("guardrails_prompt", "")
+        self.system_instructions = self.request_data.get("system_instructions", "")
 
     def post_load(self):
         super().post_load()
@@ -122,8 +155,12 @@ class CasualLMTransformerBaseHandler(TokenizerHandler):
             self.prompt,
             role="user"
         )
-        #full_message = self.chat_stream()
-        full_message = self.rag_stream()
+        self.bot_mood = self.do_summary()
+        self.user_evaluation = self.do_user_evaluation()
+        print("self.bot_mood: ", self.bot_mood)
+        print("self.user_evaluation: ", self.user_evaluation)
+        full_message = self.chat_stream()
+        #full_message = self.rag_stream()
         self.add_message_to_history(full_message)
         self.send_final_message()
 
@@ -144,29 +181,66 @@ class CasualLMTransformerBaseHandler(TokenizerHandler):
             streaming=True
         )
 
-    def build_system_prompt(self):
-        settings_prompts = {
-            "use_guardrails": self.settings["llm_generator_settings"]["guardrails_prompt"],
-            "use_system_instructions": self.settings["llm_generator_settings"]["system_instructions"],
-            "assign_names": f"Your name is {self.botname}. \nThe user's name is {self.username}.",
-            "use_mood": f"Your mood: {self.bot_mood}.",
-            "use_personality": f"Your personality: {self.bot_personality}."
-        }
+    def build_system_prompt(self, action: LLMAction):
+        system_prompt = []
+        if action == LLMAction.CHAT:
+            guardrails = self.guardrails_prompt if self.use_guardrails else ""
+            system_instructions = self.system_instructions if self.use_system_instructions else ""
+            names = f"Your name is {self.botname}. \nThe user's name is {self.username}."
+            mood = (
+                f"{self.botname} is not a computer or a bot, you are a human with emotions. "
+                f"{self.botname}'s mood changes depending on the conversation and other factors.\n"
+                f"{self.botname}'s current mood: {self.bot_mood}.\n"
+                f"{self.botname}'s evaluation of {self.username}: {self.user_evaluation}"
+            ) if self.use_mood else ""
+            personality = (
+                f"Your personality: {self.bot_personality}."
+            ) if self.use_personality else ""
+            system_prompt = [
+                guardrails,
+                system_instructions,
+                names,
+                mood,
+                personality,
+            ]
+        elif action == LLMAction.RAG:
+            system_prompt = [
+                (
+                    f"Based on the context, provide an accurate response to the "
+                    f"user's message."
+                )
+            ]
+        elif action == LLMAction.UPDATE_BOT_MOOD:
+            system_prompt = [
+                (
+                    f"{self.username} and {self.botname} are having a "
+                    f"conversation. You will analyze the conversation. "
+                    f"The user will ask you questions about the conversation. "
+                    f"You will answer the questions accurately"
+                )
+            ]
+        elif action == LLMAction.EVALUATE_USER:
+            system_prompt = [
+                (
+                    f"{self.username} and {self.botname} are having a "
+                    f"conversation. You will analyze the conversation. The "
+                    f"user will ask you questions about the conversation. You "
+                    f"will answer the questions accurately"
+                    "You are a professional psychologist. You are a master at "
+                    "reading people and understanding their emotions. You are "
+                    f"identifying {self.username}'s personality."
+                )
+            ]
 
-        system_prompt = [
-            prompt for setting, prompt in settings_prompts.items() if self.settings["llm_generator_settings"][setting]
-        ]
 
         return "\n".join(system_prompt)
 
-    def prepare_messages(self, system_prompt=None):
-        if system_prompt is None:
-            system_prompt = ChatMessage(
-                role="system",
-                content=self.build_system_prompt()
-            )
+    def prepare_messages(self, action: LLMAction):
         messages = [
-            system_prompt
+            ChatMessage(
+                role="system",
+                content=self.build_system_prompt(action)
+            )
         ]
         for message in self.history:
             messages.append(
@@ -175,19 +249,61 @@ class CasualLMTransformerBaseHandler(TokenizerHandler):
                     content=message["content"]
                 )
             )
-        if self.prompt:
+        if action == LLMAction.UPDATE_BOT_MOOD:
             messages.append(
                 ChatMessage(
                     role="user",
-                    content=self.prompt
+                    content=(
+                        f"Based on the previous conversation what is "
+                        f"{self.botname}'s mood? Give a brief description:"
+                    )
                 )
             )
+        elif action == LLMAction.EVALUATE_USER:
+            messages.append(
+                ChatMessage(
+                    role="user",
+                    content=(
+                        f"Based on the previous conversation, what is "
+                        f"{self.botname}'s evaluation of {self.username}?"
+                    )
+                )
+            )
+        elif action == LLMAction.CHAT:
+            if self.prompt:
+                messages.append(
+                    ChatMessage(
+                        role="user",
+                        content=self.prompt
+                    )
+                )
+        print(messages)
         return messages
 
     def chat_stream(self):
         return self.stream_text(
-            text_stream=self.llm.stream_chat(self.prepare_messages()),
+            text_stream=self.llm.stream_chat(
+                self.prepare_messages(LLMAction.CHAT)
+            ),
             action=LLMAction.CHAT
+        )
+
+    def do_summary(self):
+        return self.stream_text(
+            text_stream=self.llm.stream_chat(
+                self.prepare_messages(LLMAction.UPDATE_BOT_MOOD)
+            ),
+            action=LLMAction.UPDATE_BOT_MOOD,
+            do_emit_streamed_text_signal=False
+        )
+
+    def do_user_evaluation(self):
+        return self.stream_text(
+            text_stream=self.llm.stream_chat(
+                self.prepare_messages(LLMAction.EVALUATE_USER)
+            ),
+            action=LLMAction.EVALUATE_USER,
+            do_emit_streamed_text_signal=False
         )
 
     def rag_stream(self):
@@ -202,6 +318,7 @@ class CasualLMTransformerBaseHandler(TokenizerHandler):
         action: LLMAction,
         is_first_message: bool = True,
         full_message: str = "",
+        do_emit_streamed_text_signal: bool = True
     ):
         response_parser = self.parse_chat_response
         if action == LLMAction.RAG:
@@ -212,11 +329,12 @@ class CasualLMTransformerBaseHandler(TokenizerHandler):
                 content=chat_response,
                 full_message=full_message
             )
-            self.emit_streamed_text_signal(
-                message=content,
-                is_first_message=is_first_message,
-                is_end_of_message=is_end_of_message
-            )
+            if do_emit_streamed_text_signal:
+                self.emit_streamed_text_signal(
+                    message=content,
+                    is_first_message=is_first_message,
+                    is_end_of_message=is_end_of_message
+                )
             is_first_message = False
         return full_message
 
