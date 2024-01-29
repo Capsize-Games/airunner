@@ -48,7 +48,7 @@ setup(
         "compel==2.0.2",
         "sympy==1.12.0",
         "regex",
-        "matplotlib==3.7.2",
+        "matplotlib==3.8.2",
         "torch==2.1.2",
         "torchvision==0.16.2",
         "torchaudio==2.1.2",
