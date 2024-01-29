@@ -123,10 +123,10 @@ class LayerMixin:
     def on_clear_layers_signal(self, _ignore):
         # delete all widgets from self.container.layout()
         layers = self.settings["layers"]
-        for index, layer in enumerate(layers):
-            if not layer.layer_widget:
-                continue
-            layer.layer_widget.deleteLater()
+        # for index, layer in enumerate(layers):
+        #     if not layer["layer_widget"]:
+        #         continue
+        #     layer["layer_widget"].deleteLater()
         self.add_layer()
         settings = self.settings
         settings["layers"] = layers
