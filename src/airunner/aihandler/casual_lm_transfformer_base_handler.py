@@ -1,8 +1,6 @@
 from typing import Iterable, Any
 
-import torch
 from llama_index.core.base_query_engine import BaseQueryEngine
-from llama_index.core.llms.types import ChatResponse
 from transformers import AutoModelForCausalLM, TextIteratorStreamer
 
 from llama_index.llms import HuggingFaceLLM, ChatMessage
