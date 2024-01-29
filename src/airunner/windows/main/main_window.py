@@ -383,6 +383,7 @@ class MainWindow(
     """
     def action_new_document_triggered(self):
         self.new_document()
+        self.emit(SignalCode.CANVAS_CLEAR)
 
     def action_quick_export_image_triggered(self):
         self.quick_export()
@@ -963,7 +964,6 @@ class MainWindow(
 
     def new_document(self):
         self.ui.layer_widget.clear_layers()
-        self.clear_history()
         self.is_saved = False
         self._document_name = "Untitled"
         self.set_window_title()
