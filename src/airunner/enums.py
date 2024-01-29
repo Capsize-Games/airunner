@@ -231,3 +231,4 @@ class GeneratorSection(Enum):
 class LLMAction(Enum):
     CHAT = "chat"
     RAG = "rag"
+    SUMMARY = "summary"
