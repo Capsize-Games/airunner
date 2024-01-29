@@ -136,37 +136,19 @@ class CasualLMTransformerBaseHandler(TokenizerHandler):
         )
 
     def build_system_prompt(self):
-        # The guardrails prompt is optional and can be overriden.
-        guardrails_prompt = ""
-        if self.settings["llm_generator_settings"]["use_guardrails"]:
-            guardrails_prompt = self.settings["llm_generator_settings"]["guardrails_prompt"]
+        settings_prompts = {
+            "use_guardrails": self.settings["llm_generator_settings"]["guardrails_prompt"],
+            "use_system_instructions": self.settings["llm_generator_settings"]["system_instructions"],
+            "assign_names": f"Your name is {self.botname}. \nThe user's name is {self.username}.",
+            "use_mood": f"Your mood: {self.bot_mood}.",
+            "use_personality": f"Your personality: {self.bot_personality}."
+        }
 
-        system_prompt = []
+        system_prompt = [
+            prompt for setting, prompt in settings_prompts.items() if self.settings["llm_generator_settings"][setting]
+        ]
 
-        if self.settings["llm_generator_settings"]["use_guardrails"]:
-            system_prompt.append(guardrails_prompt)
-
-        if self.settings["llm_generator_settings"]["use_system_instructions"]:
-            system_prompt.append(
-                self.settings["llm_generator_settings"]["system_instructions"]
-            )
-
-        if self.settings["llm_generator_settings"]["assign_names"]:
-            system_prompt.append(
-                "Your name is " + self.botname + ". "
-            )
-            system_prompt.append(
-                "The user's name is " + self.username + "."
-            )
-
-        if self.settings["llm_generator_settings"]["use_mood"]:
-            system_prompt.append(f"Your mood: {self.bot_mood}.")
-
-        if self.settings["llm_generator_settings"]["use_personality"]:
-            system_prompt.append(f"Your personality: {self.bot_personality}.")
-
-        system_prompt = "\n".join(system_prompt)
-        return system_prompt
+        return "\n".join(system_prompt)
 
     def prepare_messages(self, system_prompt=None):
         if system_prompt is None:
