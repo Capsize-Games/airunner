@@ -231,4 +231,5 @@ class GeneratorSection(Enum):
 class LLMAction(Enum):
     CHAT = "chat"
     RAG = "rag"
-    SUMMARY = "summary"
+    UPDATE_BOT_MOOD = "summary"
+    EVALUATE_USER = "user_evaluation"
