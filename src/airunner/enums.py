@@ -80,6 +80,7 @@ class SignalCode(Enum):
     CANVAS_RESIZE_SIGNAL = "canvas_resize_signal"
     CANVAS_UPDATE_CURSOR = "canvas_update_cursor"
     CANVAS_ZOOM_LEVEL_CHANGED = "zoom_level_changed"
+    CANVAS_CLEAR = "clear_canvas"
 
     CLEAR_MEMORY_SIGNAL = "clear_memory_signal"
     CONTROLNET_IMAGE_GENERATED_SIGNAL = "controlnet_image_generated_signal"

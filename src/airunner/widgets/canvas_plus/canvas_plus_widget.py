@@ -124,6 +124,7 @@ class CanvasPlusWidget(BaseWidget):
         self.register(SignalCode.CANVAS_UPDATE_SIGNAL, self.on_update_canvas_signal)
         self.register(SignalCode.LAYER_SET_CURRENT_SIGNAL, self.on_set_current_layer_signal)
         self.register(SignalCode.APPLICATION_SETTINGS_CHANGED_SIGNAL, self.on_application_settings_changed_signal)
+        self.register(SignalCode.CANVAS_CLEAR, self.on_canvas_clear_signal)
 
         self.register_service("canvas_drag_pos", self.canvas_drag_pos)
         self.register_service("canvas_current_active_image", self.canvas_current_active_image)
@@ -536,6 +537,17 @@ class CanvasPlusWidget(BaseWidget):
                 if self.pixmaps[index].scene() != self.scene:
                     self.scene.addItem(self.pixmaps[index])
             continue
+
+    def on_canvas_clear_signal(self):
+        print("on canvas clear signal")
+        self.scene.clear()
+        self.line_group = QGraphicsItemGroup()
+        self.pixmaps = {}
+        settings = self.settings
+        settings["layers"] = []
+        self.settings = settings
+        self.add_layer()
+        self.do_draw()
 
     def set_scene_rect(self):
         self.scene.setSceneRect(0, 0, self.view_size.width(), self.view_size.height())
