@@ -395,7 +395,16 @@ class MainWindow(
         self.import_image()
 
     def action_quit_triggered(self):
-        self.quit()
+        QApplication.quit()
+        self.close()
+
+    def closeEvent(self, event) -> None:
+        self.logger.info("Quitting")
+        self.worker_manager.stop()
+        self.save_state()
+        self.worker_manager.stop()
+        self.save_state()
+        super().closeEvent(event)
 
     def action_undo_triggered(self):
         self.undo()
@@ -584,13 +593,6 @@ class MainWindow(
         else:
             self.showFullScreen()
 
-    def quit(self):
-        self.logger.info("Quitting")
-        self.worker_manager.stop()
-        self.save_state()
-        QApplication.quit()
-        self.close()
-    
     @pyqtSlot(bool)
     def tts_button_toggled(self, val):
         new_settings = self.settings
@@ -630,8 +632,14 @@ class MainWindow(
     def restore_state(self):
         self.logger.info("Restoring state")
         window_settings = self.settings["window_settings"]
-        if window_settings is None:
-            return
+
+        if self.settings["is_maximized"]:
+            self.showMaximized()
+        elif window_settings["is_fullscreen"]:
+            self.showFullScreen()
+        else:
+            self.showNormal()
+
         if window_settings["main_splitter"]:
             self.ui.main_splitter.restoreState(window_settings["main_splitter"])
 
@@ -651,17 +659,8 @@ class MainWindow(
         self.ui.tool_tab_widget.setCurrentIndex(window_settings["tool_tab_widget_index"])
         self.ui.center_tab.setCurrentIndex(window_settings["center_tab_index"])
         self.ui.standard_image_widget.ui.tabWidget.setCurrentIndex(window_settings["generator_tab_index"])
-        if window_settings["is_maximized"]:
-            self.showMaximized()
-        if window_settings["is_fullscreen"]:
-            self.showFullScreen()
         self.ui.ai_button.setChecked(self.settings["ai_mode"])
         self.set_button_checked("toggle_grid", self.settings["grid_settings"]["show_grid"], False)
-
-        if self.settings["is_maximized"]:
-            self.showMaximized()
-        else:
-            self.showNormal()
 
     ##### End window properties #####
     #################################
