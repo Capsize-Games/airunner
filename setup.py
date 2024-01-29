@@ -55,7 +55,7 @@ setup(
         "auto-gptq==0.6.0",
         "optimum==1.16.2",
         "bitsandbytes==0.42.0",
-        "langchain==0.0.331",
+        "langchain==0.1.4",
         "tomesd==0.1.3",
         "llama-index==0.9.39"
     ],
