@@ -506,7 +506,11 @@ class CanvasPlusWidget(BaseWidget):
         settings["layers"][layer_index]["base_64_image"] = base_64_image
         self.settings = settings
 
+    do_draw_layers = True
     def draw_layers(self):
+        if not self.do_draw_layers:
+            return
+        self.do_draw_layers = False
         layers = self.settings["layers"]
         for index, layer in enumerate(layers):
             image = self.get_service(ServiceCode.GET_IMAGE_FROM_LAYER)(layer)
@@ -774,6 +778,7 @@ class CanvasPlusWidget(BaseWidget):
         self.emit(SignalCode.LAYER_SWITCH_SIGNAL, layer_index)
 
     def add_image_to_scene(self, image_data, is_outpaint=False, image_root_point=None):
+        self.do_draw_layers = True
         #self.image_adder = ImageAdder(self, image, is_outpaint, image_root_point)
         #self.image_adder.finished.connect(self.on_image_adder_finished)
         self.current_active_image = image_data["image"]
