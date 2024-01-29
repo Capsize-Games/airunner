@@ -26,7 +26,7 @@ setup(
         "huggingface-hub==0.20.3",
         "numpy==1.26.3",
         "Pillow==10.2.0",
-        "pip==23.3.1",
+        "pip==23.3.2",
         "PyQt6==6.6.1",
         "PyQt6-Qt6==6.6.1",
         "PyQt6-sip==13.6.0",
