@@ -26,6 +26,17 @@ class CasualLMTransformerBaseHandler(TokenizerHandler):
         self.documents = None
         self.index = None
         self.query_engine: BaseQueryEngine = None
+        self.username = None
+        self.botname = None
+        self.bot_mood = None
+        self.bot_personality = None
+
+    def process_data(self, data):
+        super().process_data(data)
+        self.username = self.request_data.get("username", "")
+        self.botname = self.request_data.get("botname", "")
+        self.bot_mood = self.request_data.get("bot_mood", "")
+        self.bot_personality = self.request_data.get("bot_personality", "")
 
     def post_load(self):
         super().post_load()
