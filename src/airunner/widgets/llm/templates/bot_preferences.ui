@@ -7,32 +7,13 @@
     <x>0</x>
     <y>0</y>
     <width>701</width>
-    <height>721</height>
+    <height>777</height>
    </rect>
   </property>
   <property name="windowTitle">
    <string>Form</string>
   </property>
   <layout class="QGridLayout" name="gridLayout">
-   <item row="4" column="0">
-    <widget class="QGroupBox" name="mood_groupbox">
-     <property name="title">
-      <string>Bot Mood</string>
-     </property>
-     <property name="checkable">
-      <bool>true</bool>
-     </property>
-     <layout class="QGridLayout" name="gridLayout_2">
-      <item row="0" column="0">
-       <widget class="QPlainTextEdit" name="bot_mood">
-        <property name="placeholderText">
-         <string>EXAMPLE: Excited</string>
-        </property>
-       </widget>
-      </item>
-     </layout>
-    </widget>
-   </item>
    <item row="6" column="0">
     <widget class="QGroupBox" name="guardrails_groupbox">
      <property name="title">
@@ -46,6 +27,96 @@
        <widget class="QPlainTextEdit" name="guardrails_prompt">
         <property name="placeholderText">
          <string>The guardrails prompt is used to moderate results.</string>
+        </property>
+       </widget>
+      </item>
+     </layout>
+    </widget>
+   </item>
+   <item row="5" column="0">
+    <widget class="QGroupBox" name="system_instructions_groupbox">
+     <property name="title">
+      <string>System Instructions</string>
+     </property>
+     <property name="checkable">
+      <bool>true</bool>
+     </property>
+     <layout class="QVBoxLayout" name="verticalLayout_3">
+      <item>
+       <widget class="QPlainTextEdit" name="system_instructions">
+        <property name="placeholderText">
+         <string>Instructions for the LLM</string>
+        </property>
+       </widget>
+      </item>
+     </layout>
+    </widget>
+   </item>
+   <item row="0" column="0">
+    <widget class="QGroupBox" name="groupBox">
+     <property name="title">
+      <string>Chatbots</string>
+     </property>
+     <layout class="QGridLayout" name="gridLayout_3">
+      <item row="0" column="0">
+       <widget class="QComboBox" name="saved_chatbots"/>
+      </item>
+      <item row="1" column="0">
+       <widget class="QPushButton" name="create_new_button">
+        <property name="text">
+         <string>Create New</string>
+        </property>
+       </widget>
+      </item>
+      <item row="2" column="0">
+       <widget class="QPushButton" name="pushButton">
+        <property name="text">
+         <string>Delete</string>
+        </property>
+       </widget>
+      </item>
+     </layout>
+    </widget>
+   </item>
+   <item row="3" column="0">
+    <widget class="QGroupBox" name="personality_groupbox">
+     <property name="title">
+      <string>Bot Personality</string>
+     </property>
+     <property name="checkable">
+      <bool>true</bool>
+     </property>
+     <layout class="QGridLayout" name="gridLayout_5">
+      <item row="1" column="0">
+       <widget class="QPlainTextEdit" name="bot_personality">
+        <property name="placeholderText">
+         <string>EXAMPLE: {{ botname }} is very helpful and {{ gender }} loves {{ username }}.</string>
+        </property>
+       </widget>
+      </item>
+      <item row="0" column="0">
+       <widget class="QLabel" name="label_2">
+        <property name="text">
+         <string>A brief description of the bot's personality</string>
+        </property>
+       </widget>
+      </item>
+     </layout>
+    </widget>
+   </item>
+   <item row="4" column="0">
+    <widget class="QGroupBox" name="mood_groupbox">
+     <property name="title">
+      <string>Bot Mood</string>
+     </property>
+     <property name="checkable">
+      <bool>true</bool>
+     </property>
+     <layout class="QGridLayout" name="gridLayout_2">
+      <item row="0" column="0">
+       <widget class="QPlainTextEdit" name="bot_mood">
+        <property name="placeholderText">
+         <string>EXAMPLE: Excited</string>
         </property>
        </widget>
       </item>
@@ -87,17 +158,17 @@
         <item>
          <widget class="QLabel" name="label">
           <property name="text">
-           <string>Bot name</string>
+           <string>Assistant name</string>
           </property>
          </widget>
         </item>
         <item>
          <widget class="QLineEdit" name="botname">
           <property name="text">
-           <string>ChatAI</string>
+           <string>AI Runner</string>
           </property>
           <property name="cursorPosition">
-           <number>6</number>
+           <number>9</number>
           </property>
           <property name="placeholderText">
            <string>Bot name</string>
@@ -105,51 +176,6 @@
          </widget>
         </item>
        </layout>
-      </item>
-     </layout>
-    </widget>
-   </item>
-   <item row="3" column="0">
-    <widget class="QGroupBox" name="personality_groupbox">
-     <property name="title">
-      <string>Bot Personality</string>
-     </property>
-     <property name="checkable">
-      <bool>true</bool>
-     </property>
-     <layout class="QGridLayout" name="gridLayout_5">
-      <item row="1" column="0">
-       <widget class="QPlainTextEdit" name="bot_personality">
-        <property name="placeholderText">
-         <string>EXAMPLE: {{ botname }} is very helpful and {{ gender }} loves {{ username }}.</string>
-        </property>
-       </widget>
-      </item>
-      <item row="0" column="0">
-       <widget class="QLabel" name="label_2">
-        <property name="text">
-         <string>A brief description of the bot's personality</string>
-        </property>
-       </widget>
-      </item>
-     </layout>
-    </widget>
-   </item>
-   <item row="5" column="0">
-    <widget class="QGroupBox" name="system_instructions_groupbox">
-     <property name="title">
-      <string>System Instructions</string>
-     </property>
-     <property name="checkable">
-      <bool>true</bool>
-     </property>
-     <layout class="QVBoxLayout" name="verticalLayout_3">
-      <item>
-       <widget class="QPlainTextEdit" name="system_instructions">
-        <property name="placeholderText">
-         <string>Instructions for the LLM</string>
-        </property>
-       </widget>
       </item>
      </layout>
     </widget>
@@ -166,7 +192,7 @@
    <hints>
     <hint type="sourcelabel">
      <x>103</x>
-     <y>72</y>
+     <y>206</y>
     </hint>
     <hint type="destinationlabel">
      <x>55</x>
@@ -182,7 +208,7 @@
    <hints>
     <hint type="sourcelabel">
      <x>203</x>
-     <y>128</y>
+     <y>252</y>
     </hint>
     <hint type="destinationlabel">
      <x>127</x>
@@ -198,7 +224,7 @@
    <hints>
     <hint type="sourcelabel">
      <x>338</x>
-     <y>249</y>
+     <y>355</y>
     </hint>
     <hint type="destinationlabel">
      <x>292</x>
@@ -214,7 +240,7 @@
    <hints>
     <hint type="sourcelabel">
      <x>494</x>
-     <y>409</y>
+     <y>503</y>
     </hint>
     <hint type="destinationlabel">
      <x>451</x>
@@ -230,7 +256,7 @@
    <hints>
     <hint type="sourcelabel">
      <x>42</x>
-     <y>107</y>
+     <y>213</y>
     </hint>
     <hint type="destinationlabel">
      <x>0</x>
@@ -246,7 +272,7 @@
    <hints>
     <hint type="sourcelabel">
      <x>90</x>
-     <y>172</y>
+     <y>286</y>
     </hint>
     <hint type="destinationlabel">
      <x>0</x>
@@ -262,7 +288,7 @@
    <hints>
     <hint type="sourcelabel">
      <x>160</x>
-     <y>649</y>
+     <y>718</y>
     </hint>
     <hint type="destinationlabel">
      <x>1</x>
@@ -278,7 +304,7 @@
    <hints>
     <hint type="sourcelabel">
      <x>306</x>
-     <y>529</y>
+     <y>610</y>
     </hint>
     <hint type="destinationlabel">
      <x>0</x>
@@ -294,7 +320,7 @@
    <hints>
     <hint type="sourcelabel">
      <x>55</x>
-     <y>392</y>
+     <y>486</y>
     </hint>
     <hint type="destinationlabel">
      <x>0</x>
@@ -309,11 +335,11 @@
    <slot>toggle_use_guardrails(bool)</slot>
    <hints>
     <hint type="sourcelabel">
-     <x>56</x>
-     <y>560</y>
+     <x>65</x>
+     <y>711</y>
     </hint>
     <hint type="destinationlabel">
-     <x>-2</x>
+     <x>0</x>
      <y>510</y>
     </hint>
    </hints>
@@ -325,12 +351,60 @@
    <slot>toggle_use_system_instructions(bool)</slot>
    <hints>
     <hint type="sourcelabel">
-     <x>82</x>
-     <y>439</y>
+     <x>91</x>
+     <y>578</y>
     </hint>
     <hint type="destinationlabel">
-     <x>-2</x>
+     <x>0</x>
      <y>424</y>
+    </hint>
+   </hints>
+  </connection>
+  <connection>
+   <sender>saved_chatbots</sender>
+   <signal>currentTextChanged(QString)</signal>
+   <receiver>bot_preferences</receiver>
+   <slot>saved_chatbots_changed(QString)</slot>
+   <hints>
+    <hint type="sourcelabel">
+     <x>235</x>
+     <y>45</y>
+    </hint>
+    <hint type="destinationlabel">
+     <x>2</x>
+     <y>27</y>
+    </hint>
+   </hints>
+  </connection>
+  <connection>
+   <sender>create_new_button</sender>
+   <signal>clicked()</signal>
+   <receiver>bot_preferences</receiver>
+   <slot>create_new_chatbot_clicked()</slot>
+   <hints>
+    <hint type="sourcelabel">
+     <x>446</x>
+     <y>86</y>
+    </hint>
+    <hint type="destinationlabel">
+     <x>479</x>
+     <y>7</y>
+    </hint>
+   </hints>
+  </connection>
+  <connection>
+   <sender>pushButton</sender>
+   <signal>clicked()</signal>
+   <receiver>bot_preferences</receiver>
+   <slot>delete_clicked()</slot>
+   <hints>
+    <hint type="sourcelabel">
+     <x>515</x>
+     <y>110</y>
+    </hint>
+    <hint type="destinationlabel">
+     <x>480</x>
+     <y>-13</y>
     </hint>
    </hints>
   </connection>
@@ -348,5 +422,8 @@
   <slot>reset_guardrails_to_default()</slot>
   <slot>system_instructions_changed()</slot>
   <slot>toggle_use_system_instructions(bool)</slot>
+  <slot>saved_chatbots_changed(QString)</slot>
+  <slot>create_new_chatbot_clicked()</slot>
+  <slot>delete_clicked()</slot>
  </slots>
 </ui>
