@@ -38,10 +38,6 @@ class TransformerBaseHandler(BaseHandler):
         self.parameters = None
         self.model_path = None
         self.override_parameters = None
-        self.username = None
-        self.botname = None
-        self.bot_mood = None
-        self.bot_personality = None
         self.prompt = None
         self.do_quantize_model = True
         self.current_model_path = ""
@@ -225,10 +221,6 @@ class TransformerBaseHandler(BaseHandler):
         self.parameters = self.request_data.get("parameters", {})
         self.model_path = self.request_data.get("model_path", self.model_path)
         self.override_parameters = self.parameters.get("override_parameters", self.override_parameters)
-        self.username = self.request_data.get("username", "")
-        self.botname = self.request_data.get("botname", "")
-        self.bot_mood = self.request_data.get("bot_mood", "")
-        self.bot_personality = self.request_data.get("bot_personality", "")
         self.prompt = self.request_data.get("prompt", self.prompt)
         self.template = self.request_data.get("template", "")
 
