@@ -160,7 +160,7 @@ class ChatPromptWidget(BaseWidget):
             }
         )
         self.add_message_to_conversation(
-            name=self.settings["llm_generator_settings"]["username"],
+            name=current_bot["username"],
             message=self.prompt, 
             is_bot=False
         )
