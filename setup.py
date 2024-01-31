@@ -36,7 +36,7 @@ setup(
         "requests==2.31.0",
         "requests-oauthlib==1.3.1",
         "safetensors==0.4.2",
-        "scipy==1.10.1",
+        "scipy==1.12.0",
         "tokenizers==0.15.0",
         "tqdm==4.65.0",
         "charset-normalizer==3.3.2",
