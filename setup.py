@@ -23,7 +23,7 @@ setup(
         "accelerate==0.23.0",
         "controlnet_aux==0.0.7",
         "diffusers==0.25.1",
-        "huggingface-hub==0.20.2",
+        "huggingface-hub==0.20.3",
         "numpy==1.26.3",
         "Pillow==10.2.0",
         "pip==23.3.1",
