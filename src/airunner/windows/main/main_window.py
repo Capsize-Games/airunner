@@ -307,6 +307,7 @@ class MainWindow(
         self.register(SignalCode.SD_SAVE_PROMPT_SIGNAL, self.on_save_stablediffusion_prompt_signal)
         self.register(SignalCode.SD_LOAD_PROMPT_SIGNAL, self.on_load_saved_stablediffuion_prompt_signal)
         self.register(SignalCode.SD_UPDATE_SAVED_PROMPT_SIGNAL, self.on_update_saved_stablediffusion_prompt_signal)
+        self.register(SignalCode.QUIT_APPLICATION, self.action_quit_triggered)
 
     def initialize_ui(self):
         self.logger.info("Loading ui")
