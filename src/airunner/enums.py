@@ -115,6 +115,7 @@ class SignalCode(Enum):
     LLM_REQUEST_SIGNAL = "llm_request_signal"
     LLM_TEXT_GENERATE_REQUEST_SIGNAL = "text_generate_request_signal"
     LLM_TOKEN_SIGNAL = "token_signal"
+    LLM_RESPOND_TO_USER = "llm_respond_to_user_signal"
 
     LOG_ERROR_SIGNAL = "error_signal"
     LOG_WARNING_SIGNAL = "warning_signal"
@@ -157,6 +158,9 @@ class SignalCode(Enum):
     VISION_PROCESSED_SIGNAL = "vision_processed_signal"
     VISION_CAPTION_GENERATED_SIGNAL = "caption_generated_signal"
     VISION_DESCRIBE_IMAGE_SIGNAL = "describe_image_signal"
+
+    QUIT_APPLICATION = "quit"
+    RUN_BASH_TOOL = "run_bash_tool"
 
 
 class EngineResponseCode(Enum):
@@ -233,3 +237,21 @@ class LLMAction(Enum):
     RAG = "rag"
     UPDATE_BOT_MOOD = "summary"
     EVALUATE_USER = "user_evaluation"
+
+
+class LLMChatRole(Enum):
+    ASSISTANT = "assistant"
+    HUMAN = "user"
+    SYSTEM = "system"
+
+
+class LLMToolName(Enum):
+    RAG_SEARCH = "rag_search"
+    COMMENT_ON_IMAGE = "comment_on_image"
+    DESCRIBE_IMAGE = "describe_image"
+    GENERATE_IMAGE = "generate_image"
+    QUIT_APPLICATION = "quit_application"
+    VISION_START_CAPTURE = "start_vision_capture"
+    VISION_STOP_CAPTURE = "stop_vision_capture"
+    LLM_RESPOND_TO_USER = "llm_respond_to_user"
+    RUN_BASH_TOOL = "run_bash_tool"
