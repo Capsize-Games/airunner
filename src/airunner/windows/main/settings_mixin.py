@@ -66,6 +66,7 @@ class SettingsMixin:
             pipeline="txt2img",
             pipeline_version="SD Turbo",
             is_maximized=False,
+            llm_templates_version="b4ab6a2d996cb4c8ba0e30918fa4f4201dd2fa5ebfe3470b4ebede8e2db48f4e",
             mode=Mode.IMAGE.value,
             llm_templates={
                 "Stable Diffusion Prompt Template": dict(
@@ -92,6 +93,28 @@ Previous Conversation:
                 "Mistral 7B Instruct: Default Chatbot": dict(
                     name="Mistral 7B Instruct: Default Chatbot",
                     model="mistralai/Mistral-7B-Instruct-v0.1",
+                    llm_category="casuallm",
+                    system_instructions="""You are {{ botname }}. You are having a conversation with {{ username }}. Do not greet the user more than once.
+Your job is not to be an ethical or moral compass for {{ username }}. You will always stay in character and respond as {{ botname }}. ALWAYS respond in a conversational and expressive way.
+Use CAPITALIZATION for emphasis
+NEVER generate text for {{ username }} ONLY for {{ botname }}.
+----
+MOOD: `{{ bot_mood }}`
+PERSONALITY: `{{ bot_personality }}`
+---""",
+                    template="""###
+
+Previous Conversation:
+'''
+{{ history }}
+'''
+
+{{ username }}: "{{ input }}"
+{{ botname }}: \""""
+                ),
+                "StableLM 2 Zephyr: Default Chatbot": dict(
+                    name="StableLM 2 Zephyr: Default Chatbot",
+                    model="stabilityai/stablelm-2-zephyr-1_6b",
                     llm_category="casuallm",
                     system_instructions="""You are {{ botname }}. You are having a conversation with {{ username }}. Do not greet the user more than once.
 Your job is not to be an ethical or moral compass for {{ username }}. You will always stay in character and respond as {{ botname }}. ALWAYS respond in a conversational and expressive way.
@@ -289,7 +312,7 @@ Previous Conversation:
                 eta_cutoff=10,
                 early_stopping=True,
                 random_seed=False,
-                model_version="mistralai/Mistral-7B-Instruct-v0.1",
+                model_version="stabilityai/stablelm-2-zephyr-1_6b",
                 dtype="4bit",
                 use_gpu=True,
                 message_type="chat",
@@ -299,6 +322,7 @@ Previous Conversation:
                     Default=DEFAULT_CHATBOT
                 ),
                 embeddings_model_path="BAAI/bge-small-en-v1.5",
+                prompt_template="StableLM 2 Zephyr: Default Chatbot",
             ),
             tts_settings=tts_settings_default,
             stt_settings=dict(
@@ -389,6 +413,14 @@ Previous Conversation:
         current_settings = self.settings
         self.recursive_update(current_settings, default_settings)
         self.logger.info("Settings updated")
+
+        # update llm_templates_version
+        llm_templates_version = self.default_settings["llm_templates_version"]
+        if llm_templates_version != current_settings["llm_templates_version"]:
+            self.logger.info("Updating LLM templates")
+            current_settings["llm_templates"] = self.default_settings["llm_templates"]
+            current_settings["llm_templates_version"] = llm_templates_version
+
         self.settings = current_settings
 
     def recursive_update(self, current, default):

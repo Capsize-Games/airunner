@@ -286,6 +286,17 @@ model_bootstrap_data = [
         "is_default": True
     },
     {
+        "name": "StableLM 2 Zephyr 1 6b",
+        "path": "stabilityai/stablelm-2-zephyr-1_6b",
+        "branch": "main",
+        "version": "1",
+        "category": "llm",
+        "pipeline_action": "casuallm",
+        "enabled": True,
+        "model_type": "llm",
+        "is_default": True
+    },
+    {
         "name": "GPT 2 XL",
         "path": "gpt2-xl",
         "branch": "main",

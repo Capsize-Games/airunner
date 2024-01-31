@@ -34,7 +34,8 @@ class TokenizerHandler(TransformerBaseHandler):
                 local_files_only=local_files_only,
                 token=self.request_data.get("hf_api_key_read_key"),
                 device_map=self.device,
-                chat_template=chat_template,
+                #chat_template=chat_template,
+                trust_remote_code=True
             )
             self.logger.info("Tokenizer loaded")
         except OSError as e:
