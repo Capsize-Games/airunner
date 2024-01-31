@@ -64,32 +64,6 @@ class ApplicationControlTool(BaseTool):
         return "emitting signal"
 
 
-class BashCommandTool(ApplicationControlTool):
-    def __call__(self, command):
-        self.emit(self.signal_code, command)
-        return "emitting signal"
-
-
-
-class RunBashTool(ApplicationControlTool):
-    description = "This tool which writes and runs bash commands for linux. It takes a bash command string as input and returns a string. You should use this tool any time the user asks to run a linux command."
-    name = LLMToolName.RUN_BASH_TOOL.value
-    signal_code = SignalCode.RUN_BASH_TOOL
-
-    def __call__(self, *args, **kwargs):
-        if len(args) > 0:
-            val = args[0]
-        elif len(kwargs.keys()) > 0:
-            val = kwargs[list(kwargs.keys())[0]]
-        else:
-            val = None
-        if val:
-            self.emit(self.signal_code, val)
-            return "emitting signal"
-        else:
-            return "No command provided"
-
-
 class QuitApplicationTool(ApplicationControlTool):
     description = "This tool quits the application. It takes no input and returns a string."
     name = LLMToolName.QUIT_APPLICATION.value
@@ -136,7 +110,6 @@ class CasualLMTransformerBaseHandler(TokenizerHandler):
         self.guardrails_prompt: str = ""
         self.system_instructions: str = ""
         self.agent = None
-        self.register(SignalCode.RUN_BASH_TOOL, self.on_RUN_BASH_TOOL_signal)
         #self.register(SignalCode.LLM_RESPOND_TO_USER, self.on_llm_respond_to_user_signal)
 
     @property
@@ -150,18 +123,6 @@ class CasualLMTransformerBaseHandler(TokenizerHandler):
         if self.assign_names:
             return self._botname
         return "Assistant"
-
-    def on_RUN_BASH_TOOL_signal(self, message):
-        self.logger.info("Executing process")
-        if message is not None:
-            subprocess.Popen(
-                message,
-                shell=True
-            )
-            self.logger.info("Process executed")
-        else:
-            self.logger.error("No command provided to run")
-        self.send_final_message()
 
     def on_clear_history_signal(self):
         self.history = []
@@ -207,7 +168,6 @@ class CasualLMTransformerBaseHandler(TokenizerHandler):
         # )
         tools = {
             LLMToolName.QUIT_APPLICATION.value: QuitApplicationTool(),
-            LLMToolName.RUN_BASH_TOOL.value: RunBashTool(),
             LLMToolName.VISION_START_CAPTURE.value: StartVisionCaptureTool(),
             LLMToolName.VISION_STOP_CAPTURE.value: StopVisionCaptureTool(),
         }

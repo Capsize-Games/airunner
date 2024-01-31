@@ -160,7 +160,6 @@ class SignalCode(Enum):
     VISION_DESCRIBE_IMAGE_SIGNAL = "describe_image_signal"
 
     QUIT_APPLICATION = "quit"
-    RUN_BASH_TOOL = "run_bash_tool"
 
 
 class EngineResponseCode(Enum):
@@ -254,4 +253,3 @@ class LLMToolName(Enum):
     VISION_START_CAPTURE = "start_vision_capture"
     VISION_STOP_CAPTURE = "stop_vision_capture"
     LLM_RESPOND_TO_USER = "llm_respond_to_user"
-    RUN_BASH_TOOL = "run_bash_tool"
