@@ -40,6 +40,64 @@ class BaseWidget(
             self.ui.setupUi(self)
             self.set_icons()
 
+        self.signal_handlers: dict = {}
+        self.services: dict = {}
+        self.worker_class_map: dict = {}
+
+    def initialize(self):
+        """
+        Call this function to initialize the widget.
+        :return:
+        """
+        self.register_signals()
+        self.register_services()
+        self.initialize_workers()
+
+    def register_signals(self):
+        """
+        Set signal_handlers dict in order to register signals.
+
+        signal_handlers should be a dictionary of SignalCode enums and functions.
+        Example:
+        signal_handlers = {
+            SignalCode.GET_SETTINGS: self.get_settings,
+            SignalCode.SET_SETTINGS: self.set_settings
+        }
+        :return:
+        """
+        for signal, handler in self.signal_handlers.items():
+            self.register(signal, handler)
+
+    def register_services(self):
+        """
+        Set services dict in order to register services.
+
+        services should be a dictionary of ServiceCode enums and functions.
+        Example:
+        services = {
+            ServiceCode.GET_SETTINGS: self.get_settings,
+            ServiceCode.SET_SETTINGS: self.set_settings
+        }
+        :return:
+        """
+        for name, service in self.services.items():
+            self.register_service(name, service)
+
+    def initialize_workers(self):
+        """
+        Override this function to initialize workers.
+
+        worker_class_map should be a dictionary of property names and worker classes.
+        Example:
+        worker_class_map = {
+            "worker": WorkerClass
+        }
+        :return:
+        """
+        for property_name, worker_class_name_ in self.worker_class_map.items():
+            worker = self.create_worker(worker_class_name_)
+            setattr(self, property_name, worker)
+
     def add_to_grid(self, widget, row, column, row_span=1, column_span=1):
         self.layout().addWidget(widget, row, column, row_span, column_span)
     
@@ -50,7 +108,7 @@ class BaseWidget(
         Override this function in order to initialize the widget rather than
         using __init__.
         """
-        pass
+        self.initialize()
     
     def set_icons(self):
         theme = "dark" if self.is_dark else "light"
