@@ -5,7 +5,7 @@ from transformers import AutoModelForCausalLM, TextIteratorStreamer
 from transformers import pipeline as hf_pipeline
 
 from airunner.aihandler.local_agent import LocalAgent
-from airunner.aihandler.tools import QuitApplicationTool, StartVisionCaptureTool, StopVisionCaptureTool
+from airunner.aihandler.llm_tools import QuitApplicationTool, StartVisionCaptureTool, StopVisionCaptureTool
 from airunner.aihandler.tokenizer_handler import TokenizerHandler
 from airunner.enums import SignalCode, LLMAction, LLMChatRole, LLMToolName
 
