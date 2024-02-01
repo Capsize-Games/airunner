@@ -31,12 +31,12 @@ class ImageDataWorker(Worker):
             images = procesed_images
 
         #images = self.post_process_images(images)
-        super().handle_message(dict(
-            images=images,
-            path=path,
-            data=data,
-            nsfw_content_detected=message["nsfw_content_detected"],
-        ))
+        super().handle_message({
+            'images': images,
+            'path': path,
+            'data': data,
+            'nsfw_content_detected': message["nsfw_content_detected"],
+        })
         
     def post_process_images(self, images):
         #return self.automatic_filter_manager.apply_filters(images)

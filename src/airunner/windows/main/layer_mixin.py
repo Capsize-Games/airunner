@@ -72,21 +72,21 @@ class LayerMixin:
         settings = self.settings
         total_layers = len(self.settings['layers'])
         name=f"Layer {total_layers + 1}"
-        settings["layers"].append(dict(
-            name=name,
-            visible=True,
-            opacity=100,
-            position=total_layers,
-            base_64_image="",
-            pos_x=0,
-            pos_y=0,
-            pivot_point_x=0,
-            pivot_point_y=0,
-            root_point_x=0,
-            root_point_y=0,
-            uuid=str(uuid.uuid4()),
-            pixmap=QPixmap(),
-        ))
+        settings["layers"].append({
+            'name': name,
+            'visible': True,
+            'opacity': 100,
+            'position': total_layers,
+            'base_64_image': "",
+            'pos_x': 0,
+            'pos_y': 0,
+            'pivot_point_x': 0,
+            'pivot_point_y': 0,
+            'root_point_x': 0,
+            'root_point_y': 0,
+            'uuid': str(uuid.uuid4()),
+            'pixmap': QPixmap(),
+        })
         self.settings = settings
         return total_layers
 

@@ -19,15 +19,15 @@ class LoraMixin:
                 continue
             if lora["name"] == name and lora["path"] == path:
                 return
-        lora = dict(
-            name=params.get("name", ""),
-            path=params.get("path", ""),
-            scale=params.get("scale", 1),
-            enabled=params.get("enabled", True),
-            loaded=params.get("loaded", False),
-            trigger_word=params.get("trigger_word", ""),
-            version=params.get("version", "SD 1.5"),
-        )
+        lora = {
+            'name': params.get("name", ""),
+            'path': params.get("path", ""),
+            'scale': params.get("scale", 1),
+            'enabled': params.get("enabled", True),
+            'loaded': params.get("loaded", False),
+            'trigger_word': params.get("trigger_word", ""),
+            'version': params.get("version", "SD 1.5"),
+        }
         settings["lora"].append(lora)
         self.settings = settings
         return lora

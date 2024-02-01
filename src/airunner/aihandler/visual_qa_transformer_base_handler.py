@@ -25,11 +25,11 @@ class VisualQATransformerBaseHandler(TransformerBaseHandler):
 
     def load_processor(self, local_files_only=None):
         self.logger.info(f"Loading processor {self.model_path}")
-        kwargs = dict(
-            device_map="auto",
-            torch_dtype=torch.float16,
-            local_files_only=self.local_files_only if local_files_only is None else local_files_only,
-        )
+        kwargs = {
+            'device_map': 'auto',
+            'torch_dtype': torch.float16,
+            'local_files_only': self.local_files_only if local_files_only is None else local_files_only,
+        }
         config = self.quantization_config()
         if config:
             kwargs["quantization_config"] = config

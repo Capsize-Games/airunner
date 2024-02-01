@@ -623,12 +623,12 @@ class SDHandler(
 
         if not controlnet_image and self.input_image:
             controlnet_image = self.preprocess_for_controlnet(self.input_image)
-            self.emit(SignalCode.CONTROLNET_IMAGE_GENERATED_SIGNAL, dict(
-                image=controlnet_image,
-                data=dict(
-                    controlnet_image=controlnet_image
-                )
-            ))
+            self.emit(SignalCode.CONTROLNET_IMAGE_GENERATED_SIGNAL, {
+                'image': controlnet_image,
+                'data': {
+                    'controlnet_image': controlnet_image
+                }
+            })
 
         self._controlnet_image = controlnet_image
 
@@ -742,9 +742,9 @@ class SDHandler(
         self.tokenizer = None
         self._safety_checker = None
         self._controlnet = None
-        self.data = dict(
-            action="txt2img",
-        )
+        self.data = {
+            "action": "txt2img",
+        }
 
     @staticmethod
     def latents_to_image(latents: torch.Tensor):
