@@ -62,13 +62,67 @@ class SDHandler(
     ControlnetModelMixin,
     AIModelMixin,
 ):
-    def controlnet(self):
-        if self._controlnet is None \
-            or self.current_controlnet_type != self.controlnet_type:
-            self._controlnet = self.load_controlnet()
-        else:
-            print("controlnet already loaded")
-        return self._controlnet
+    def  __init__(self, *args, **kwargs):
+        super().__init__(*args, **kwargs)
+        LayerMixin.__init__(self)
+        LoraDataMixin.__init__(self)
+        EmbeddingDataMixin.__init__(self)
+        PipelineMixin.__init__(self)
+        ControlnetModelMixin.__init__(self)
+        AIModelMixin.__init__(self)
+        self.logger.info("Loading Stable Diffusion model runner...")
+        self.safety_checker_model = self.models_by_pipeline_action("safety_checker")[0]
+        self.text_encoder_model = self.models_by_pipeline_action("text_encoder")[0]
+        self.inpaint_vae_model = self.models_by_pipeline_action("inpaint_vae")[0]
+        self.register(SignalCode.SD_CANCEL_SIGNAL, self.on_sd_cancel_signal)
+        self.register(SignalCode.SD_UNLOAD_SIGNAL, self.on_unload_stablediffusion_signal)
+        self.register(SignalCode.SD_MOVE_TO_CPU_SIGNAL, self.on_move_to_cpu)
+        self.handler_type = HandlerType.DIFFUSER
+        self._current_model: str = ""
+        self._previous_model: str = ""
+        self._initialized: bool = False
+        self._current_sample = 0
+        self._reload_model: bool = False
+        self.do_cancel = False
+        self.current_model_branch = None
+        self.state = None
+        self._local_files_only = True
+        self.lora_loaded = False
+        self.loaded_lora = []
+        self._settings = None
+        self._action = None
+        self.embeds_loaded = False
+        self._compel_proc = None
+        self._prompt_embeds = None
+        self._negative_prompt_embeds = None
+        self.current_prompt = None
+        self.current_negative_prompt = None
+        self._model = None
+        self.requested_data = None
+        self._allow_online_mode = None
+        self.current_load_controlnet = False
+        self.processor = None
+        self.current_controlnet_type = None
+        self.controlnet_loaded = False
+        self.attempt_download = False
+        self.downloading_controlnet = False
+        self.safety_checker_model = ""
+        self.text_encoder_model = ""
+        self.inpaint_vae_model = ""
+        self._controlnet_image = None
+        self._latents = None
+        self.txt2img = None
+        self.img2img = None
+        self.pix2pix = None
+        self.outpaint = None
+        self.depth2img = None
+        self.txt2vid = None
+        self.tokenizer = None
+        self._safety_checker = None
+        self._controlnet = None
+        self.data = {
+            "action": "txt2img",
+        }
 
     @property
     def allow_online_mode(self):
@@ -637,8 +691,8 @@ class SDHandler(
     @property
     def do_load_controlnet(self):
         return (
-            (not self.controlnet_loaded and self.enable_controlnet) or
-            (self.controlnet_loaded and self.enable_controlnet)
+                (not self.controlnet_loaded and self.enable_controlnet) or
+                (self.controlnet_loaded and self.enable_controlnet)
         )
 
     @property
@@ -648,12 +702,12 @@ class SDHandler(
     @property
     def do_reuse_pipeline(self):
         return (
-            (self.is_txt2img and self.txt2img is None and self.img2img) or
-            (self.is_img2img and self.img2img is None and self.txt2img) or
-            ((
-                (self.is_txt2img and self.txt2img) or
-                (self.is_img2img and self.img2img)
-            ) and (self.do_load_controlnet or self.do_unload_controlnet))
+                (self.is_txt2img and self.txt2img is None and self.img2img) or
+                (self.is_img2img and self.img2img is None and self.txt2img) or
+                ((
+                         (self.is_txt2img and self.txt2img) or
+                         (self.is_img2img and self.img2img)
+                 ) and (self.do_load_controlnet or self.do_unload_controlnet))
         )
 
     @property
@@ -667,7 +721,7 @@ class SDHandler(
     @property
     def hf_api_key_read_key(self):
         return self.options.get("hf_api_key_read_key", "")
-    
+
     @hf_api_key_read_key.setter
     def hf_api_key_read_key(self, value):
         self.options["hf_api_key_read_key"] = value
@@ -683,68 +737,6 @@ class SDHandler(
     @property
     def original_model_data(self):
         return self.options.get("original_model_data", {})
-
-    def  __init__(self, *args, **kwargs):
-        super().__init__(*args, **kwargs)
-        LayerMixin.__init__(self)
-        LoraDataMixin.__init__(self)
-        EmbeddingDataMixin.__init__(self)
-        PipelineMixin.__init__(self)
-        ControlnetModelMixin.__init__(self)
-        AIModelMixin.__init__(self)
-        self.logger.info("Loading Stable Diffusion model runner...")
-        self.safety_checker_model = self.models_by_pipeline_action("safety_checker")[0]
-        self.text_encoder_model = self.models_by_pipeline_action("text_encoder")[0]
-        self.inpaint_vae_model = self.models_by_pipeline_action("inpaint_vae")[0]
-        self.register(SignalCode.SD_CANCEL_SIGNAL, self.on_sd_cancel_signal)
-        self.register(SignalCode.SD_UNLOAD_SIGNAL, self.on_unload_stablediffusion_signal)
-        self.register(SignalCode.SD_MOVE_TO_CPU_SIGNAL, self.on_move_to_cpu)
-        self.handler_type = HandlerType.DIFFUSER
-        self._current_model: str = ""
-        self._previous_model: str = ""
-        self._initialized: bool = False
-        self._current_sample = 0
-        self._reload_model: bool = False
-        self.do_cancel = False
-        self.current_model_branch = None
-        self.state = None
-        self._local_files_only = True
-        self.lora_loaded = False
-        self.loaded_lora = []
-        self._settings = None
-        self._action = None
-        self.embeds_loaded = False
-        self._compel_proc = None
-        self._prompt_embeds = None
-        self._negative_prompt_embeds = None
-        self.current_prompt = None
-        self.current_negative_prompt = None
-        self._model = None
-        self.requested_data = None
-        self._allow_online_mode = None
-        self.current_load_controlnet = False
-        self.processor = None
-        self.current_controlnet_type = None
-        self.controlnet_loaded = False
-        self.attempt_download = False
-        self.downloading_controlnet = False
-        self.safety_checker_model = ""
-        self.text_encoder_model = ""
-        self.inpaint_vae_model = ""
-        self._controlnet_image = None
-        self._latents = None
-        self.txt2img = None
-        self.img2img = None
-        self.pix2pix = None
-        self.outpaint = None
-        self.depth2img = None
-        self.txt2vid = None
-        self.tokenizer = None
-        self._safety_checker = None
-        self._controlnet = None
-        self.data = {
-            "action": "txt2img",
-        }
 
     @staticmethod
     def latents_to_image(latents: torch.Tensor):
@@ -813,6 +805,14 @@ class SDHandler(
                 self.load_model()
             self.reload_model = False
             self.initialized = True
+
+    def controlnet(self):
+        if self._controlnet is None \
+            or self.current_controlnet_type != self.controlnet_type:
+            self._controlnet = self.load_controlnet()
+        else:
+            print("controlnet already loaded")
+        return self._controlnet
 
     def generator(self, device=None, seed=None):
         device = self.device if not device else device
