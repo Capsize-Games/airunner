@@ -61,10 +61,10 @@ class CanvasPlusWidget(BaseWidget):
 
     @image_pivot_point.setter
     def image_pivot_point(self, value):
-        self.emit(SignalCode.LAYER_UPDATE_CURRENT_SIGNAL, dict(
-            pivot_point_x=value.x(),
-            pivot_point_y=value.y()
-        ))
+        self.emit(SignalCode.LAYER_UPDATE_CURRENT_SIGNAL, {
+            "pivot_point_x": value.x(),
+            "pivot_point_y": value.y()
+        })
 
     @property
     def brush_size(self):
@@ -309,13 +309,13 @@ class CanvasPlusWidget(BaseWidget):
     def do_resize_canvas(self, force_draw=False):
         if not self.view:
             return
-        data = dict(
-            settings=self.settings,
-            view_size=self.view.viewport().size(),
-            scene=self.scene,
-            line_group=self.line_group,
-            force_draw=force_draw
-        )
+        data = {
+            'settings': self.settings,
+            'view_size': self.view.viewport().size(),
+            'scene': self.scene,
+            'line_group': self.line_group,
+            'force_draw': force_draw
+        }
         self.emit(SignalCode.CANVAS_RESIZE_SIGNAL, data)
 
     def window_resized(self, event):
@@ -534,10 +534,10 @@ class CanvasPlusWidget(BaseWidget):
                 pixmap = QPixmap()
                 pixmap.convertFromImage(ImageQt(image))
                 self.pixmaps[index] = DraggablePixmap(self, pixmap)
-                self.emit(SignalCode.LAYER_UPDATE_SIGNAL, dict(
-                    layer=layer,
-                    index=index
-                ))
+                self.emit(SignalCode.LAYER_UPDATE_SIGNAL, {
+                    "layer": layer,
+                    "index": index
+                })
                 if self.pixmaps[index].scene() != self.scene:
                     self.scene.addItem(self.pixmaps[index])
             continue
