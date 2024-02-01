@@ -324,10 +324,10 @@ class CasualLMTransformerBaseHandler(TokenizerHandler):
         content: AnyStr,
         role: LLMChatRole = LLMChatRole.ASSISTANT
     ):
-        self.history.append(dict(
-            content=content,
-            role=role.value
-        ))
+        self.history.append({
+            'content': content,
+            'role': role.value
+        })
 
     def send_final_message(self):
         self.emit_streamed_text_signal(

@@ -45,12 +45,12 @@ class SDGenerateWorker(Worker):
                 image_path = os.path.join(image_base_path, image_name)
                 # save the image
                 image.save(image_path)
-                updated_images.append(dict(
-                    path=image_path,
-                    image=image
-                ))
+                updated_images.append({
+                    'path': image_path,
+                    'image': image
+                })
             response["images"] = updated_images
-            self.emit(SignalCode.ENGINE_DO_RESPONSE_SIGNAL, dict(
-                code=EngineResponseCode.IMAGE_GENERATED,
-                message=response
-            ))
+            self.emit(SignalCode.ENGINE_DO_RESPONSE_SIGNAL, {
+                'code': EngineResponseCode.IMAGE_GENERATED,
+                'message': response
+            })
