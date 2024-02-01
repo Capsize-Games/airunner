@@ -1,6 +1,7 @@
 import torch
 from transformers import BlipForConditionalGeneration, BlipProcessor
 from airunner.aihandler.transformer_base_handler import TransformerBaseHandler
+from airunner.utils import clear_memory
 
 
 class VisualQATransformerBaseHandler(TransformerBaseHandler):
@@ -14,6 +15,7 @@ class VisualQATransformerBaseHandler(TransformerBaseHandler):
         super().__init__(*args, **kwargs)
         self.prompt = "This is an image of"
         self.model_path = "Salesforce/blip-image-captioning-large"
+        self.processor = None
         self.do_sample = False
         self.num_beams = 5
         self.max_length = 256
@@ -22,6 +24,13 @@ class VisualQATransformerBaseHandler(TransformerBaseHandler):
         self.repetition_penalty = 1.5
         self.length_penalty = 1.0
         self.temperature = 1
+        self.vision_history = []
+        self.processed_vision_history = []
+
+    def post_load(self):
+        do_load_processor = self.processor is None
+        if do_load_processor:
+            self.load_processor()
 
     def load_processor(self, local_files_only=None):
         self.logger.info(f"Loading processor {self.model_path}")
@@ -42,11 +51,29 @@ class VisualQATransformerBaseHandler(TransformerBaseHandler):
         else:
             self.logger.error("Failed to load processor")
 
-    def do_generate(self, prompt, chat_template):
+    def unload_processor(self):
+        self.logger.info("Unloading processor")
+        if self.processor:
+            self.processor = None
+            return True
+
+    def unload(self):
+        super().unload()
+        if (
+            self.unload_processor()
+        ):
+            clear_memory()
+
+    def process_data(self, data):
+        super().process_data(data)
+        self.image = self.request_data.get("image")
+        self.vision_history.append(self.image)
+
+    def do_generate(self) -> str:
         image = self.image.convert("RGB")
         inputs = self.processor(
             images=image,
-            text=prompt,
+            text="This is an image of",
             return_tensors="pt"
         ).to("cuda")
 
@@ -69,6 +96,8 @@ class VisualQATransformerBaseHandler(TransformerBaseHandler):
             generated_text = self.processor.batch_decode(
                 out, skip_special_tokens=True
             )[0].strip()
+            self.processed_vision_history.append(generated_text)
+            print("Generated text:", generated_text)
             return generated_text
         except AttributeError as e:
             return ""

@@ -23,7 +23,6 @@ class TransformerBaseHandler(BaseHandler):
         self.callback = None
         self.request_data = {}
         self.model = None
-        self.processor = None
         self.vocoder = None
         self.temperature = 0.7
         self.max_length = 1000
@@ -142,15 +141,11 @@ class TransformerBaseHandler(BaseHandler):
     def load_tokenizer(self, local_files_only=None):
         pass
 
-    def load_processor(self, local_files_only=None):
-        pass
-
     def unload(self):
         self._processing_request = False
         if (
             self.unload_model() or
-            self.unload_tokenizer() or
-            self.unload_processor()
+            self.unload_tokenizer()
         ):
             clear_memory()
 
@@ -165,12 +160,6 @@ class TransformerBaseHandler(BaseHandler):
             self.model = None
             return True
 
-    def unload_processor(self):
-        self.logger.info("Unloading processor")
-        if self.processor:
-            self.processor = None
-            return True
-
     def pre_load(self):
         """
         This function is called at the start of the load function.
@@ -183,15 +172,11 @@ class TransformerBaseHandler(BaseHandler):
         self.logger.info("Loading LLM")
         do_load_model = self.do_load_model
         do_load_tokenizer = self.tokenizer is None
-        do_load_processor = self.processor is None
 
         self.pre_load()
 
         if do_load_tokenizer:
             self.load_tokenizer()
-
-        if do_load_processor:
-            self.load_processor()
 
         if do_load_model:
             self.load_model()
@@ -207,7 +192,6 @@ class TransformerBaseHandler(BaseHandler):
         self.logger.error("Define post_load here")
 
     def generate(self):
-        print("GENERATE")
         return self.do_generate()
 
     def do_generate(self):
