@@ -5,7 +5,9 @@ from transformers import AutoModelForCausalLM, TextIteratorStreamer
 from transformers import pipeline as hf_pipeline
 
 from airunner.aihandler.local_agent import LocalAgent
-from airunner.aihandler.llm_tools import QuitApplicationTool, StartVisionCaptureTool, StopVisionCaptureTool
+from airunner.aihandler.llm_tools import QuitApplicationTool, StartVisionCaptureTool, StopVisionCaptureTool, \
+    StartAudioCaptureTool, StopAudioCaptureTool, StartSpeakersTool, StopSpeakersTool, ProcessVisionTool, \
+    ProcessAudioTool
 from airunner.aihandler.tokenizer_handler import TokenizerHandler
 from airunner.enums import SignalCode, LLMAction, LLMChatRole, LLMToolName
 
@@ -41,6 +43,9 @@ class CasualLMTransformerBaseHandler(TokenizerHandler):
         self.guardrails_prompt: str = ""
         self.system_instructions: str = ""
         self.agent = None
+        self.tools: dict = self.load_tools()
+        self.restrict_tools_to_additional: bool = True
+        self.return_agent_code: bool = False
         #self.register(SignalCode.LLM_RESPOND_TO_USER, self.on_llm_respond_to_user_signal)
 
     @property
@@ -54,6 +59,20 @@ class CasualLMTransformerBaseHandler(TokenizerHandler):
         if self.assign_names:
             return self._botname
         return "Assistant"
+
+    @staticmethod
+    def load_tools() -> dict:
+        return {
+            LLMToolName.QUIT_APPLICATION.value: QuitApplicationTool(),
+            LLMToolName.VISION_START_CAPTURE.value: StartVisionCaptureTool(),
+            LLMToolName.VISION_STOP_CAPTURE.value: StopVisionCaptureTool(),
+            LLMToolName.STT_START_CAPTURE.value: StartAudioCaptureTool(),
+            LLMToolName.STT_STOP_CAPTURE.value: StopAudioCaptureTool(),
+            LLMToolName.TTS_ENABLE.value: StartSpeakersTool(),
+            LLMToolName.TTS_DISABLE.value: StopSpeakersTool(),
+            LLMToolName.DESCRIBE_IMAGE.value: ProcessVisionTool,
+            LLMToolName.LLM_PROCESS_STT_AUDIO.value: ProcessAudioTool(),
+        }
 
     def on_clear_history_signal(self):
         self.history = []
@@ -97,27 +116,18 @@ class CasualLMTransformerBaseHandler(TokenizerHandler):
         #         description="Agent that can return help results about the application."
         #     )
         # )
-        tools = {
-            LLMToolName.QUIT_APPLICATION.value: QuitApplicationTool(),
-            LLMToolName.VISION_START_CAPTURE.value: StartVisionCaptureTool(),
-            LLMToolName.VISION_STOP_CAPTURE.value: StopVisionCaptureTool(),
-        }
         self.agent = LocalAgent(
             model=self.model,
             tokenizer=self.tokenizer,
-            additional_tools=tools
+            additional_tools=self.tools,
+            restrict_tools_to_additional=self.restrict_tools_to_additional
         )
-        self.agent._toolbox = tools
 
     def chat(self, prompt: AnyStr) -> AnyStr:
         self.logger.info("Chat Stream")
         res = self.agent.chat(
             task=self.prompt,
-            return_code=False
-            #task="add 5 and 5"
-            #message=prompt,
-            #chat_history=self.prepare_messages(LLMAction.CHAT),
-            #task=LLMToolName.ADD.value
+            return_code=self.return_agent_code
         )
         # self.stream_text(
         #     self.streamer,
