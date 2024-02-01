@@ -372,7 +372,7 @@ class MainWindow(
         )
         if path is not None:
             self.emit(
-                SignalCode.STATUS_INFO_SIGNAL,
+                SignalCode.APPLICATION_STATUS_INFO_SIGNAL,
                 f"Image exported to {path}"
             )
 
@@ -756,7 +756,7 @@ class MainWindow(
 
     def show_update_message(self):
         self.emit(
-            SignalCode.STATUS_INFO_SIGNAL,
+            SignalCode.APPLICATION_STATUS_INFO_SIGNAL,
             f"New version available: {self.latest_version}"
         )
 
