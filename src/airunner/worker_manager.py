@@ -44,7 +44,6 @@ class WorkerManager(QObject, MediatorMixin):
 
     message = ""
     current_message = ""
-    processed_vision_history = []
 
     def do_response(self, response):
         """
@@ -147,8 +146,6 @@ class WorkerManager(QObject, MediatorMixin):
         self.emit(SignalCode.VISION_CAPTURE_PROCESS_SIGNAL, message)
 
     def on_vision_processed(self, message):
-        self.processed_vision_history.append(message)
-        print(self.processed_vision_history)
         self.emit(SignalCode.VISION_CAPTURE_UNPAUSE_SIGNAL)
     
     def on_AudioCaptureWorker_response_signal(self, message: np.ndarray):
