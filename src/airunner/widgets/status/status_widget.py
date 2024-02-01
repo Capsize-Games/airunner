@@ -13,8 +13,8 @@ class StatusWidget(BaseWidget):
 
     def __init__(self, *args, **kwargs):
         super().__init__(*args, **kwargs)
-        self.register(SignalCode.STATUS_INFO_SIGNAL, self.on_status_info_signal)
-        self.register(SignalCode.STATUS_ERROR_SIGNAL, self.on_status_error_signal)
+        self.register(SignalCode.APPLICATION_STATUS_INFO_SIGNAL, self.on_status_info_signal)
+        self.register(SignalCode.APPLICATION_STATUS_ERROR_SIGNAL, self.on_status_error_signal)
         self.register(SignalCode.APPLICATION_CLEAR_STATUS_MESSAGE_SIGNAL, self.on_clear_status_message_signal)
 
         self.timer = QTimer()
