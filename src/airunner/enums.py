@@ -41,7 +41,6 @@ class ServiceCode(Enum):
     GET_PIPELINE_CLASSNAME = "get_pipeline_classname"
     PIPELINE_ACTIONS = "pipeline_actions"
     GET_PIPELINES = "get_pipelines"
-    LAYER_WIDGET = "layer_widget"
     GET_LLM_WIDGET = "get_llm_widget"
     DISPLAY_IMPORT_IMAGE_DIALOG = "display_import_image_dialog"
     GET_SETTINGS_VALUE = "get_settings_value"
@@ -83,6 +82,11 @@ class SignalCode(Enum):
     CANVAS_UPDATE_CURSOR = "canvas_update_cursor"
     CANVAS_ZOOM_LEVEL_CHANGED = "zoom_level_changed"
     CANVAS_CLEAR = "clear_canvas"
+    CANVAS_PASTE_IMAGE_SIGNAL = "canvas_paste_image_signal"
+    CANVAS_COPY_IMAGE_SIGNAL = "canvas_copy_image_signal"
+    CANVAS_CUT_IMAGE_SIGNAL = "canvas_cut_image_signal"
+    CANVAS_ROTATE_90_CLOCKWISE_SIGNAL = "canvas_rotate_90_clockwise_signal"
+    CANVAS_ROTATE_90_COUNTER_CLOCKWISE_SIGNAL = "canvas_rotate_90_counter_clockwise_signal"
 
     CLEAR_MEMORY_SIGNAL = "clear_memory_signal"
     CONTROLNET_IMAGE_GENERATED_SIGNAL = "controlnet_image_generated_signal"
@@ -107,6 +111,7 @@ class SignalCode(Enum):
     LAYER_MOVE_UP_SIGNAL = "move_layer_up_signal"
     LAYER_MOVE_DOWN_SIGNAL = "move_layer_down_signal"
     LAYERS_SHOW_SIGNAL = "show_layers_signal"
+    LAYER_OPACITY_CHANGED_SIGNAL = "layers_layer_opacity_changed_signal"
 
     # TODO: combine clear history signals - we have two by mistake
     LLM_CLEAR_HISTORY = "llm_clear_history"

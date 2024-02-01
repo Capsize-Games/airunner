@@ -79,7 +79,12 @@ class CanvasPlusWidget(BaseWidget):
             SignalCode.CANVAS_UPDATE_SIGNAL: self.on_update_canvas_signal,
             SignalCode.LAYER_SET_CURRENT_SIGNAL: self.on_set_current_layer_signal,
             SignalCode.APPLICATION_SETTINGS_CHANGED_SIGNAL: self.on_application_settings_changed_signal,
-            SignalCode.CANVAS_CLEAR: self.on_canvas_clear_signal
+            SignalCode.CANVAS_CLEAR: self.on_canvas_clear_signal,
+            SignalCode.CANVAS_PASTE_IMAGE_SIGNAL: self.on_canvas_paste_image_signal,
+            SignalCode.CANVAS_COPY_IMAGE_SIGNAL: self.on_canvas_copy_image_signal,
+            SignalCode.CANVAS_CUT_IMAGE_SIGNAL: self.on_canvas_cut_image_signal,
+            SignalCode.CANVAS_ROTATE_90_CLOCKWISE_SIGNAL: self.on_canvas_rotate_90_clockwise_signal,
+            SignalCode.CANVAS_ROTATE_90_COUNTER_CLOCKWISE_SIGNAL: self.on_canvas_rotate_90_counter_clockwise_signal,
         }
 
         # Map service codes to class functions
@@ -138,13 +143,23 @@ class CanvasPlusWidget(BaseWidget):
         self.add_image_to_current_layer(value)
 
     @property
-    def layer_container_widget(self):
-        # TODO
-        return ServiceLocator.get(ServiceCode.LAYER_WIDGET)()
-
-    @property
     def canvas_container(self):
         return self.ui.canvas_container
+
+    def on_canvas_paste_image_signal(self, _event):
+        self.paste_image_from_clipboard()
+
+    def on_canvas_copy_image_signal(self, _event):
+        self.copy_image(ServiceLocator.get(ServiceCode.CURRENT_ACTIVE_IMAGE)())
+
+    def on_canvas_cut_image_signal(self, _event):
+        self.cut_image()
+
+    def on_canvas_rotate_90_clockwise_signal(self, _event):
+        self.rotate_90_clockwise()
+
+    def on_canvas_rotate_90_counter_clockwise_signal(self, _event):
+        self.rotate_90_counterclockwise()
 
     def on_canvas_update_cursor_signal(self, event):
         if self.settings["current_tool"] in ['brush', 'eraser']:
