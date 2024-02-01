@@ -123,10 +123,10 @@ class MainWindow(
     
     def add_preset(self, name, thumnail):
         settings = self.settings
-        settings["presets"].append(dict(
-            name=name,
-            thumnail=thumnail,
-        ))
+        settings["presets"].append({
+            'name': name,
+            'thumnail': thumnail,
+        })
         self.settings = settings
     
     def on_load_saved_stablediffuion_prompt_signal(self, index):
@@ -146,20 +146,20 @@ class MainWindow(
         index, prompt, negative_prompt = options
         settings = self.settings
         try:
-            settings["saved_prompts"][index] = dict(
-                prompt=prompt,
-                negative_prompt=negative_prompt,
-            )
+            settings["saved_prompts"][index] = {
+                'prompt': prompt,
+                'negative_prompt': negative_prompt,
+            }
         except KeyError:
             self.logger.error(f"Unable to update prompt at index {index}")
         self.settings = settings
 
     def on_save_stablediffusion_prompt_signal(self):
         settings = self.settings
-        settings["saved_prompts"].append(dict(
-            prompt=self.settings["generator_settings"]["prompt"],
-            negative_prompt=self.settings["generator_settings"]["negative_prompt"],
-        ))
+        settings["saved_prompts"].append({
+            'prompt': self.settings["generator_settings"]["prompt"],
+            'negative_prompt': self.settings["generator_settings"]["negative_prompt"],
+        })
         self.settings = settings
 
     def set_path_settings(self, key, val):
@@ -615,19 +615,19 @@ class MainWindow(
     def save_state(self):
         self.logger.info("Saving window state")
         settings = self.settings
-        settings["window_settings"] = dict(
-            main_splitter=self.ui.main_splitter.saveState(),
-            content_splitter=self.ui.content_splitter.saveState(),
-            center_splitter=self.ui.center_splitter.saveState(),
-            canvas_splitter=self.ui.canvas_splitter.saveState(),
-            splitter=self.ui.splitter.saveState(),
-            mode_tab_widget_index=self.ui.mode_tab_widget.currentIndex(),
-            tool_tab_widget_index=self.ui.tool_tab_widget.currentIndex(),
-            center_tab_index=self.ui.center_tab.currentIndex(),
-            generator_tab_index=self.ui.standard_image_widget.ui.tabWidget.currentIndex(),
-            is_maximized=self.isMaximized(),
-            is_fullscreen=self.isFullScreen(),
-        )
+        settings["window_settings"] = {
+            'main_splitter': self.ui.main_splitter.saveState(),
+            'content_splitter': self.ui.content_splitter.saveState(),
+            'center_splitter': self.ui.center_splitter.saveState(),
+            'canvas_splitter': self.ui.canvas_splitter.saveState(),
+            'splitter': self.ui.splitter.saveState(),
+            'mode_tab_widget_index': self.ui.mode_tab_widget.currentIndex(),
+            'tool_tab_widget_index': self.ui.tool_tab_widget.currentIndex(),
+            'center_tab_index': self.ui.center_tab.currentIndex(),
+            'generator_tab_index': self.ui.standard_image_widget.ui.tabWidget.currentIndex(),
+            'is_maximized': self.isMaximized(),
+            'is_fullscreen': self.isFullScreen(),
+        }
         self.settings = settings
     
     def restore_state(self):

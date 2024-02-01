@@ -337,10 +337,10 @@ class TTSHandler(BaseHandler):
                     chunk = chunk[1:]
                 if chunk.endswith("\n") or chunk.endswith(" "):
                     chunk = chunk[:-1]
-                self.text_queue.put(dict(
-                    text=chunk,
-                    is_end_of_message=is_end_of_message
-                ))
+                self.text_queue.put({
+                    'text': chunk,
+                    'is_end_of_message': is_end_of_message
+                })
                 self.message = ""
         elif self.use_sentence_chunks:
             chunks = []
@@ -359,16 +359,16 @@ class TTSHandler(BaseHandler):
 
             for chunk in chunks:
                 if chunk.strip() != "":
-                    self.text_queue.put(dict(
-                        text=chunk,
-                        is_end_of_message=is_end_of_message
-                    ))
+                    self.text_queue.put({
+                        'text': chunk,
+                        'is_end_of_message': is_end_of_message
+                    })
             self.message = ""
         else:            
-            self.text_queue.put(dict(
-                text=self.message,
-                is_end_of_message=is_end_of_message
-            ))
+            self.text_queue.put({
+                'text': self.message,
+                'is_end_of_message': is_end_of_message
+            })
             self.message = ""
 
     def generate(self, message):
@@ -393,12 +393,12 @@ class TTSHandler(BaseHandler):
 
         self.logger.info("Generating speech...")
         start = time.time()
-        params = dict(
+        params = {
             **inputs,
-            fine_temperature=self.settings["tts_settings"]["fine_temperature"] / 100.0,
-            coarse_temperature=self.settings["tts_settings"]["coarse_temperature"] / 100.0,
-            semantic_temperature=self.settings["tts_settings"]["semantic_temperature"] / 100.0,
-        )
+            'fine_temperature': self.settings["tts_settings"]["fine_temperature"] / 100.0,
+            'coarse_temperature': self.settings["tts_settings"]["coarse_temperature"] / 100.0,
+            'semantic_temperature': self.settings["tts_settings"]["semantic_temperature"] / 100.0,
+        }
         speech = self.model.generate(**params)
         self.logger.info("Generated speech in " + str(time.time() - start) + " seconds")
 
@@ -416,12 +416,12 @@ class TTSHandler(BaseHandler):
 
         self.logger.info("Generating speech...")
         start = time.time()
-        params = dict(
+        params = {
             **inputs,
-            speaker_embeddings=self.speaker_embeddings,
-            vocoder=self.vocoder,
-            max_length=100,
-        )
+            'speaker_embeddings': self.speaker_embeddings,
+            'vocoder': self.vocoder,
+            'max_length': 100,
+        }
         speech = self.model.generate(**params)
         self.logger.info("Generated speech in " + str(time.time() - start) + " seconds")
         response = speech.cpu().float().numpy()

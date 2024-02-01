@@ -12,24 +12,24 @@ from airunner.settings import DEFAULT_PATHS
 from airunner.settings import DEFAULT_CHATBOT
 from airunner.utils import default_hf_cache_dir
 
-tts_settings_default = dict(
-    language="English",
-    voice="v2/en_speaker_6",
-    gender="Male",
-    fine_temperature=80,
-    coarse_temperature=40,
-    semantic_temperature=80,
-    use_bark=False,
-    enable_tts=True,
-    use_cuda=True,
-    use_sentence_chunks=True,
-    use_word_chunks=False,
-    cuda_index=0,
-    word_chunks=1,
-    sentence_chunks=1,
-    play_queue_buffer_length=1,
-    enable_cpu_offload=True,
-)
+tts_settings_default = {
+    'language': "English",
+    'voice': "v2/en_speaker_6",
+    'gender': "Male",
+    'fine_temperature': 80,
+    'coarse_temperature': 40,
+    'semantic_temperature': 80,
+    'use_bark': False,
+    'enable_tts': True,
+    'use_cuda': True,
+    'use_sentence_chunks': True,
+    'use_word_chunks': False,
+    'cuda_index': 0,
+    'word_chunks': 1,
+    'sentence_chunks': 1,
+    'play_queue_buffer_length': 1,
+    'enable_cpu_offload': True,
+}
 
 
 class SettingsMixin:
