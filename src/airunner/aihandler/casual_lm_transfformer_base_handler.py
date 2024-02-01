@@ -11,9 +11,6 @@ from airunner.aihandler.llm_tools import QuitApplicationTool, StartVisionCapture
 from airunner.aihandler.tokenizer_handler import TokenizerHandler
 from airunner.enums import SignalCode, LLMAction, LLMChatRole, LLMToolName
 
-VALID_TASKS = ("text2text-generation", "text-generation", "summarization")
-DEFAULT_BATCH_SIZE = 4
-
 
 class CasualLMTransformerBaseHandler(TokenizerHandler):
     auto_class_ = AutoModelForCausalLM
@@ -46,6 +43,7 @@ class CasualLMTransformerBaseHandler(TokenizerHandler):
         self.tools: dict = self.load_tools()
         self.restrict_tools_to_additional: bool = True
         self.return_agent_code: bool = False
+        self.batch_size: int = 1
         #self.register(SignalCode.LLM_RESPOND_TO_USER, self.on_llm_respond_to_user_signal)
 
     @property
@@ -91,6 +89,7 @@ class CasualLMTransformerBaseHandler(TokenizerHandler):
         self.prompt_template = self.request_data.get("prompt_template", "")
         self.guardrails_prompt = self.request_data.get("guardrails_prompt", "")
         self.system_instructions = self.request_data.get("system_instructions", "")
+        self.batch_size = self.request_data.get("batch_size", 1)
 
     def post_load(self):
         super().post_load()
@@ -191,7 +190,7 @@ class CasualLMTransformerBaseHandler(TokenizerHandler):
             task="text-generation",
             model=self.model,
             tokenizer=self.tokenizer,
-            batch_size=DEFAULT_BATCH_SIZE,
+            batch_size=self.batch_size,
             use_fast=True,
             **dict(),
         )
