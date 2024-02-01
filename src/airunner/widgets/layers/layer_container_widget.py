@@ -1,11 +1,11 @@
 from PIL import Image
 from PyQt6.QtCore import QRect, QPoint, Qt
-from PyQt6.QtWidgets import QSpacerItem, QSizePolicy
 
-from airunner.enums import SignalCode, ServiceCode
+from airunner.enums import SignalCode
 from airunner.widgets.base_widget import BaseWidget
 from airunner.widgets.layers.layer_widget import LayerWidget
 from airunner.widgets.layers.templates.layer_container_ui import Ui_layer_container
+
 
 class LayerContainerWidget(BaseWidget):
     def __init__(self, *args, **kwargs):
