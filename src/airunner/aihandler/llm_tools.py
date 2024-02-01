@@ -1,3 +1,21 @@
+"""
+This module, `llm_tools.py`, contains tools for an LLM agent.
+These tools are used to control the application, analyze images,
+audio and more.
+
+The tools are implemented as classes, which are generated
+using a factory function `create_application_control_tool_class`.
+This function takes a description, a name, and a signal code, and returns a
+class that inherits from `BaseTool` and `MediatorMixin`.
+
+Each tool class has a `__call__` method that emits a signal when the
+tool is used. The application listens for these signals and
+responds accordingly.
+
+Classes:
+    See below for a list of classes and their descriptions.
+"""
+
 from transformers import Tool
 
 from airunner.mediator_mixin import MediatorMixin
@@ -5,34 +23,127 @@ from airunner.enums import SignalCode, LLMToolName
 
 
 class BaseTool(Tool, MediatorMixin):
+    """
+    Base class for all tools. Adds the `MediatorMixin` to the `Tool` class.
+    This allows for signals to be emitted when the tool is used.
+    """
     def __init__(self, *args, **kwargs):
         MediatorMixin.__init__(self)
         super().__init__(*args, **kwargs)
 
 
-class ApplicationControlTool(BaseTool):
-    inputs = ["text"]
-    outputs = ["text"]
-    signal_code = None
+def create_application_control_tool_class(description, name, signal_code):
+    """
+    Factory function to create a class for an application control tool.
 
-    def __call__(self, *args, **kwargs):
-        self.emit(self.signal_code)
-        return "emitting signal"
+    Args:
+        description (str): The description of the tool.
+        name (str): The name of the tool.
+        signal_code (SignalCode): The signal code that the tool emits when used.
+
+    Returns:
+        type: A class that represents the tool.
+    """
+    class ApplicationControlTool(BaseTool):
+        inputs = ["text"]
+        outputs = ["text"]
+        signal_code = None
+
+        def __init__(self, *args, **kwargs):
+            super().__init__(*args, **kwargs)
+
+        def __call__(self, *args, **kwargs):
+            self.emit(self.signal_code)
+            return "emitting signal"
+
+    ApplicationControlTool.__doc__ = description
+    ApplicationControlTool.__name__ = name
+    ApplicationControlTool.signal_code = signal_code
+
+    return ApplicationControlTool
 
 
-class QuitApplicationTool(ApplicationControlTool):
-    description = "This tool quits the application. It takes no input and returns a string."
-    name = LLMToolName.QUIT_APPLICATION.value
-    signal_code = SignalCode.QUIT_APPLICATION
+QuitApplicationTool = create_application_control_tool_class(
+    (
+        "This tool quits the application. It takes no input and returns a "
+        "string."
+    ),
+    LLMToolName.QUIT_APPLICATION.value,
+    SignalCode.QUIT_APPLICATION
+)
 
 
-class StartVisionCaptureTool(ApplicationControlTool):
-    description = "This tool turns the camera on - it starts the input feed. It takes no input and returns a string."
-    name = LLMToolName.VISION_START_CAPTURE.value
-    signal_code = SignalCode.VISION_START_CAPTURE
+StartVisionCaptureTool = create_application_control_tool_class(
+    (
+        "This tool turns the camera on - it starts the input feed. It takes no "
+        "input and returns a string."
+    ),
+    LLMToolName.VISION_START_CAPTURE.value,
+    SignalCode.VISION_START_CAPTURE
+)
 
 
-class StopVisionCaptureTool(ApplicationControlTool):
-    description = "This tool turns the camera off - it stops the input feed. It takes no input and returns a string."
-    name = LLMToolName.VISION_STOP_CAPTURE.value
-    signal_code = SignalCode.VISION_STOP_CAPTURE
+StopVisionCaptureTool = create_application_control_tool_class(
+    (
+        "This tool turns the camera off - it stops the input feed. It takes no "
+        "input and returns a string."
+    ),
+    LLMToolName.VISION_STOP_CAPTURE.value,
+    SignalCode.VISION_STOP_CAPTURE
+)
+
+StartAudioCaptureTool = create_application_control_tool_class(
+    (
+        "This tool turns the microphone on. It takes no input and returns a "
+        "string."
+    ),
+    LLMToolName.STT_START_CAPTURE.value,
+    SignalCode.STT_START_CAPTURE_SIGNAL
+)
+
+StopAudioCaptureTool = create_application_control_tool_class(
+    (
+        "This tool turns the microphone off. It takes no input and returns a "
+        "string."
+    ),
+    LLMToolName.STT_STOP_CAPTURE.value,
+    SignalCode.STT_STOP_CAPTURE_SIGNAL
+)
+
+StartSpeakersTool = create_application_control_tool_class(
+    (
+        "This tool turns the speakers on. It takes no input and returns a "
+        "string."
+    ),
+    LLMToolName.TTS_ENABLE.value,
+    SignalCode.TTS_ENABLE_SIGNAL
+)
+
+StopSpeakersTool = create_application_control_tool_class(
+    (
+        "This tool turns the speakers off. It takes no input and returns a "
+        "string."
+    ),
+    LLMToolName.TTS_DISABLE.value,
+    SignalCode.TTS_DISABLE_SIGNAL
+)
+
+ProcessVisionTool = create_application_control_tool_class(
+    (
+        "This tool processes the images which are captured by the camera. "
+        "These are images that the assistant may use in the context of a "
+        "conversation with the user. It takes no input and returns a string."
+    ),
+    LLMToolName.VISION_PROCESS_IMAGES.value,
+    SignalCode.VISION_PROCESS_IMAGES
+)
+
+ProcessAudioTool = create_application_control_tool_class(
+    (
+        "This tool processes the audio which is captured by the microphone. "
+        "This is audio that the assistant may use in the context of a "
+        "conversation with the user. It takes no input and returns a string."
+    ),
+    LLMToolName.LLM_PROCESS_STT_AUDIO.value,
+    SignalCode.LLM_PROCESS_STT_AUDIO_SIGNAL
+)
