@@ -25,6 +25,14 @@ from airunner.workers.image_data_worker import ImageDataWorker
 
 
 class CanvasPlusWidget(BaseWidget):
+    """
+    Widget responsible for multiple functionalities:
+
+    - Allows the user to draw on a canvas.
+    - Displays the grid.
+    - Displays images.
+    - Handles the active grid area.
+    """
     widget_class_ = Ui_canvas
 
     def __init__(self, *args, **kwargs):
