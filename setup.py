@@ -43,7 +43,7 @@ setup(
         "opencv-python==4.9.0.80",
         "setuptools==67.7.2",
         "typing_extensions==4.9.0",
-        "urllib3==2.1.0",
+        "urllib3==2.2.0",
         "transformers==4.37.1",
         "compel==2.0.2",
         "sympy==1.12.0",
