@@ -1,13 +1,12 @@
 import os
 import platform
 import subprocess
-import sys
 import webbrowser
 from functools import partial
 
 from PyQt6 import QtGui
 from PyQt6 import uic, QtCore
-from PyQt6.QtCore import pyqtSlot, Qt, pyqtSignal
+from PyQt6.QtCore import pyqtSlot, pyqtSignal
 from PyQt6.QtGui import QGuiApplication
 from PyQt6.QtWidgets import QApplication, QFileDialog, QMainWindow
 
@@ -19,7 +18,7 @@ from airunner.mediator_mixin import MediatorMixin
 from airunner.resources_dark_rc import *
 from airunner.service_locator import ServiceLocator
 from airunner.settings import BASE_PATH
-from airunner.utils import get_version, auto_export_image, default_hf_cache_dir, open_file_path
+from airunner.utils import get_version, default_hf_cache_dir, open_file_path
 from airunner.widgets.status.status_widget import StatusWidget
 from airunner.windows.about.about import AboutWindow
 from airunner.windows.main.ai_model_mixin import AIModelMixin
