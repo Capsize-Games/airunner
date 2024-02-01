@@ -23,7 +23,7 @@ class VisionProcessorWorker(Worker):
         :return:
         """
         print("VisionProcessorWorker.handle_message", message)
-        message = self.vision_handler.handle_request(dict(
-            request_data=message
-        ))
+        message = self.vision_handler.handle_request({
+            "request_data": message
+        })
         self.emit(SignalCode.VISION_PROCESSED_SIGNAL, message)

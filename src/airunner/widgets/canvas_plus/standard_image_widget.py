@@ -126,10 +126,10 @@ class StandardImageWidget(BaseWidget):
         """
         Using the LLM, generate a description of the image
         """
-        self.emit(SignalCode.VISION_DESCRIBE_IMAGE_SIGNAL, dict(
-            image=self.image, 
-            callback=self.handle_prompt_generated
-        ))
+        self.emit(SignalCode.VISION_DESCRIBE_IMAGE_SIGNAL, {
+            "image": self.image,
+            "callback": self.handle_prompt_generated
+        })
     
     def handle_prompt_generated(self, prompt, negative_prompt):
         meta_data = load_metadata_from_image(self.image)
@@ -178,10 +178,10 @@ class StandardImageWidget(BaseWidget):
         meta_data["use_cropped_image"] = False
         meta_data["batch_size"] = batch_size
 
-        self.emit(SignalCode.SD_GENERATE_IMAGE_SIGNAL, dict(
-            image=self.image,
-            meta_data=meta_data
-        ))
+        self.emit(SignalCode.SD_GENERATE_IMAGE_SIGNAL, {
+            "image": self.image,
+            "meta_data": meta_data
+        })
     
     def handle_similar_slider_change(self, value):
         self.similarity = value
@@ -212,10 +212,10 @@ class StandardImageWidget(BaseWidget):
         meta_data["enable_input_image"] = True
         meta_data["use_cropped_image"] = False
 
-        self.emit(SignalCode.SD_GENERATE_IMAGE_SIGNAL, dict(
-            image=self.image,
-            override_data=meta_data
-        ))
+        self.emit(SignalCode.SD_GENERATE_IMAGE_SIGNAL, {
+            "image": self.image,
+            "override_data": meta_data
+        })
     
     def showEvent(self, event):
         super().showEvent(event)

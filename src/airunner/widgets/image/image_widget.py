@@ -222,10 +222,10 @@ class ImageWidget(BaseWidget):
         meta_data["strength"] = 1.0
         meta_data["enable_input_image"] = True
         meta_data["use_cropped_image"] = False
-        self.emit(SignalCode.SD_GENERATE_IMAGE_SIGNAL, dict(
-            image=image,
-            override_data=meta_data
-        ))
+        self.emit(SignalCode.SD_GENERATE_IMAGE_SIGNAL, {
+            'image': image,
+            'override_data': meta_data
+        })
         
     def generate_variant(self):
         image = Image.open(self.image_path)
@@ -241,10 +241,10 @@ class ImageWidget(BaseWidget):
         meta_data["strength"] = 1.0
         meta_data["enable_input_image"] = True
         meta_data["use_cropped_image"] = False
-        self.emit(SignalCode.SD_GENERATE_IMAGE_SIGNAL, dict(
-            image=image,
-            override_data=meta_data
-        ))
+        self.emit(SignalCode.SD_GENERATE_IMAGE_SIGNAL, {
+            'image': image,
+            'override_data': meta_data
+        })
 
 
 class BrushImageWidget(ImageWidget):
@@ -257,15 +257,15 @@ class BrushImageWidget(ImageWidget):
         # get the clicked object
         if event.button() == Qt.MouseButton.LeftButton:
             shift_pressed = event.modifiers() == Qt.KeyboardModifier.ShiftModifier
-            self.emit(SignalCode.PRESET_IMAGE_GENERATOR_ACTIVATE_BRUSH_SIGNAL, dict(
-                event=event,
-                widget=self,
-                brush=self.brush,
-                shift_pressed=shift_pressed
-            ))
+            self.emit(SignalCode.PRESET_IMAGE_GENERATOR_ACTIVATE_BRUSH_SIGNAL, {
+                'event': event,
+                'widget': self,
+                'brush': self.brush,
+                'shift_pressed': shift_pressed
+            })
         elif event.button() == Qt.MouseButton.RightButton:
-            self.emit(SignalCode.PRESET_IMAGE_GENERATOR_DISPLAY_ITEM_MENU_SIGNAL, dict(
-                event=event,
-                widget=self,
-                brush=self.brush
-            ))
+            self.emit(SignalCode.PRESET_IMAGE_GENERATOR_DISPLAY_ITEM_MENU_SIGNAL, {
+                'event': event,
+                'widget': self,
+                'brush': self.brush
+            })

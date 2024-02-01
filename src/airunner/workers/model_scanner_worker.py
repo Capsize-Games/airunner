@@ -71,15 +71,15 @@ class ModelScannerWorker(Worker):
                                     model.name = entry.name
 
                             if model:
-                                models.append(dict(
-                                    name=model.name,
-                                    path=model.path,
-                                    branch=model.branch,
-                                    version=model.version,
-                                    category=model.category,
-                                    pipeline_action=model.pipeline_action,
-                                    enabled=model.enabled,
-                                    is_default=False
-                                ))
+                                models.append({
+                                    'name': model.name,
+                                    'path': model.path,
+                                    'branch': model.branch,
+                                    'version': model.version,
+                                    'category': model.category,
+                                    'pipeline_action': model.pipeline_action,
+                                    'enabled': model.enabled,
+                                    'is_default': False
+                                })
 
         self.emit(SignalCode.AI_MODELS_SAVE_OR_UPDATE_SIGNAL, models)

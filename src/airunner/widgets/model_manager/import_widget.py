@@ -69,16 +69,16 @@ class ImportWidget(BaseWidget):
             trained_words = [trained_words]
         trained_words = ",".join(trained_words)
         if model_type == "Checkpoint":
-            self.emit(SignalCode.AI_MODELS_SAVE_OR_UPDATE_SIGNAL, dict(
-                name=name,
-                path=file_path,
-                branch="main",
-                version=diffuser_model_version,
-                category=category,
-                pipeline_action=pipeline_action,
-                enabled=True,
-                is_default=False
-            ))
+            self.emit(SignalCode.AI_MODELS_SAVE_OR_UPDATE_SIGNAL, {
+                'name': name,
+                'path': file_path,
+                'branch': "main",
+                'version': diffuser_model_version,
+                'category': category,
+                'pipeline_action': pipeline_action,
+                'enabled': True,
+                'is_default': False
+            })
         elif model_type == "LORA":
             lora_exists = session.query(Lora).filter_by(
                 name=name,

@@ -46,9 +46,9 @@ class VisionCaptureWorker(Worker):
 
         while True:
             if self.state == WorkerState.RUNNING:
-                self.emit(SignalCode.VISION_CAPTURED_SIGNAL, dict(
-                    image=self.capture_image()
-                ))
+                self.emit(SignalCode.VISION_CAPTURED_SIGNAL, {
+                    "image": self.capture_image()
+                })
                 self.state = WorkerState.PAUSED
                 QThread.msleep(self.interval)
 

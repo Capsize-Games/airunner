@@ -102,13 +102,13 @@ class TransformerBaseHandler(BaseHandler):
 
     def model_params(self, local_files_only) -> dict:
         local_files_only = self.local_files_only if local_files_only is None else local_files_only
-        return dict(
-            local_files_only=local_files_only,
-            device_map=self.device,
-            use_cache=self.use_cache,
-            torch_dtype=torch.float16 if self.llm_dtype != "32bit" else torch.float32,
-            trust_remote_code=True
-        )
+        return {
+            'local_files_only': local_files_only,
+            'device_map': self.device,
+            'use_cache': self.use_cache,
+            'torch_dtype': torch.float16 if self.llm_dtype != "32bit" else torch.float32,
+            'trust_remote_code': True
+        }
 
     def load_model(self, local_files_only=None):
         self.logger.info("Loading model")
