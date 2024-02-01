@@ -22,7 +22,6 @@ class VisionProcessorWorker(Worker):
         :param message:
         :return:
         """
-        print("VisionProcessorWorker.handle_message", message)
         message = self.vision_handler.handle_request({
             "request_data": message
         })
