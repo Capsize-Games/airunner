@@ -5,6 +5,12 @@ from transformers.tools.python_interpreter import evaluate
 
 
 class LocalAgent(LocalAgentBase):
+    def __init__(self, *args, **kwargs):
+        self.restrict_tools_to_additional = kwargs.pop("restrict_tools_to_additional", False)
+        super().__init__(*args, **kwargs)
+        if self.restrict_tools_to_additional:
+            self._toolbox = kwargs.get("additional_tools")
+
     def format_prompt(self, task, chat_mode=False):
         task = super().format_prompt(task, chat_mode=chat_mode)
         task = task.replace("</s>", "")
