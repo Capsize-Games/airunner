@@ -65,8 +65,7 @@ def create_application_control_tool_class(description, name, signal_code):
 
 QuitApplicationTool = create_application_control_tool_class(
     (
-        "This tool quits the application. It takes no input and returns a "
-        "string."
+        "Quit the application. No input, returns nothing."
     ),
     LLMToolName.QUIT_APPLICATION.value,
     SignalCode.QUIT_APPLICATION
@@ -75,8 +74,7 @@ QuitApplicationTool = create_application_control_tool_class(
 
 StartVisionCaptureTool = create_application_control_tool_class(
     (
-        "This tool turns the camera on - it starts the input feed. It takes no "
-        "input and returns a string."
+        "Enable camera. No input, returns nothing."
     ),
     LLMToolName.VISION_START_CAPTURE.value,
     SignalCode.VISION_START_CAPTURE
@@ -85,8 +83,7 @@ StartVisionCaptureTool = create_application_control_tool_class(
 
 StopVisionCaptureTool = create_application_control_tool_class(
     (
-        "This tool turns the camera off - it stops the input feed. It takes no "
-        "input and returns a string."
+        "Disable camera. No input, returns nothing."
     ),
     LLMToolName.VISION_STOP_CAPTURE.value,
     SignalCode.VISION_STOP_CAPTURE
@@ -94,8 +91,7 @@ StopVisionCaptureTool = create_application_control_tool_class(
 
 StartAudioCaptureTool = create_application_control_tool_class(
     (
-        "This tool turns the microphone on. It takes no input and returns a "
-        "string."
+        "Enable microphone. No input, returns nothing."
     ),
     LLMToolName.STT_START_CAPTURE.value,
     SignalCode.STT_START_CAPTURE_SIGNAL
@@ -103,8 +99,7 @@ StartAudioCaptureTool = create_application_control_tool_class(
 
 StopAudioCaptureTool = create_application_control_tool_class(
     (
-        "This tool turns the microphone off. It takes no input and returns a "
-        "string."
+        "Disable microphone. No input, returns nothing."
     ),
     LLMToolName.STT_STOP_CAPTURE.value,
     SignalCode.STT_STOP_CAPTURE_SIGNAL
@@ -112,8 +107,7 @@ StopAudioCaptureTool = create_application_control_tool_class(
 
 StartSpeakersTool = create_application_control_tool_class(
     (
-        "This tool turns the speakers on. It takes no input and returns a "
-        "string."
+        "Enable text to speech. No input, returns nothing."
     ),
     LLMToolName.TTS_ENABLE.value,
     SignalCode.TTS_ENABLE_SIGNAL
@@ -121,8 +115,7 @@ StartSpeakersTool = create_application_control_tool_class(
 
 StopSpeakersTool = create_application_control_tool_class(
     (
-        "This tool turns the speakers off. It takes no input and returns a "
-        "string."
+        "Disable text to speech. No input, returns nothing."
     ),
     LLMToolName.TTS_DISABLE.value,
     SignalCode.TTS_DISABLE_SIGNAL
@@ -130,9 +123,8 @@ StopSpeakersTool = create_application_control_tool_class(
 
 ProcessVisionTool = create_application_control_tool_class(
     (
-        "This tool processes the images which are captured by the camera. "
-        "These are images that the assistant may use in the context of a "
-        "conversation with the user. It takes no input and returns a string."
+        "Process images captured by the camera. "
+        "Takes no input and returns a string."
     ),
     LLMToolName.VISION_PROCESS_IMAGES.value,
     SignalCode.VISION_PROCESS_IMAGES
@@ -140,9 +132,8 @@ ProcessVisionTool = create_application_control_tool_class(
 
 ProcessAudioTool = create_application_control_tool_class(
     (
-        "This tool processes the audio which is captured by the microphone. "
-        "This is audio that the assistant may use in the context of a "
-        "conversation with the user. It takes no input and returns a string."
+        "Process audio captured by the microphone. "
+        "Takes no input and returns a string."
     ),
     LLMToolName.LLM_PROCESS_STT_AUDIO.value,
     SignalCode.LLM_PROCESS_STT_AUDIO_SIGNAL
