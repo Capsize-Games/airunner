@@ -12,6 +12,11 @@ Each tool class has a `__call__` method that emits a signal when the
 tool is used. The application listens for these signals and
 responds accordingly.
 
+Tool descriptions must be written in a way that is understandable to an LLM.
+These are the commands that an LLM can use to control the application and
+the descriptions are meant to be used as a guide for the LLM so that it
+is able to select the correct tool for the task at hand.
+
 Classes:
     See below for a list of classes and their descriptions.
 """
