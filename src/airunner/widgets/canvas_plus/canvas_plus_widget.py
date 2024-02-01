@@ -49,6 +49,7 @@ class CanvasPlusWidget(BaseWidget):
     image_backup = None
     previewing_filter = False
     drag_pos: QPoint = None
+    do_draw_layers = True
 
     @property
     def image_pivot_point(self):
@@ -506,7 +507,6 @@ class CanvasPlusWidget(BaseWidget):
         settings["layers"][layer_index]["base_64_image"] = base_64_image
         self.settings = settings
 
-    do_draw_layers = True
     def draw_layers(self):
         if not self.do_draw_layers:
             return
