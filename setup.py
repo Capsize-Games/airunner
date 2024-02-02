@@ -44,7 +44,7 @@ setup(
         "setuptools==69.0.3",
         "typing_extensions==4.9.0",
         "urllib3==2.2.0",
-        "transformers==4.37.1",
+        "transformers==4.37.2",
         "compel==2.0.2",
         "sympy==1.12.0",
         "regex",
