@@ -20,7 +20,7 @@ setup(
         "JIT==0.2.7",
         "tqdm==4.65.0",
         "omegaconf==2.3.0",
-        "accelerate==0.23.0",
+        "accelerate==0.26.1",
         "controlnet_aux==0.0.7",
         "diffusers==0.25.1",
         "huggingface-hub==0.20.3",
