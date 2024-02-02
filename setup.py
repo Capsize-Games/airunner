@@ -49,7 +49,7 @@ setup(
         "sympy==1.12.0",
         "regex",
         "matplotlib==3.8.2",
-        "torch==2.1.2",
+        "torch==2.2.0",
         "torchvision==0.17.0",
         "torchaudio==2.1.2",
         "auto-gptq==0.6.0",
