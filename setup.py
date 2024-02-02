@@ -57,7 +57,7 @@ setup(
         "bitsandbytes==0.42.0",
         "langchain==0.0.331",
         "tomesd==0.1.3",
-        "llama-index==0.9.39"
+        "llama-index==0.9.41"
     ],
     dependency_links=[]
 )
