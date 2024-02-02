@@ -41,7 +41,7 @@ setup(
         "tqdm==4.65.0",
         "charset-normalizer==3.3.2",
         "opencv-python==4.9.0.80",
-        "setuptools==67.7.2",
+        "setuptools==69.0.3",
         "typing_extensions==4.9.0",
         "urllib3==2.2.0",
         "transformers==4.37.1",
