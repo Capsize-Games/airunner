@@ -51,12 +51,15 @@ setup(
         "matplotlib==3.8.2",
         "torch==2.2.0",
         "torchvision==0.17.0",
-        "torchaudio==2.1.2",
+        "torchaudio==2.2.0",
         "auto-gptq==0.6.0",
         "optimum==1.16.2",
         "bitsandbytes==0.42.0",
         "tomesd==0.1.3",
-        "llama-index==0.9.39"
+        "llama-index==0.9.39",
+        "watchdog==3.0.0",
+        "sounddevice==0.4.6",
+        "basicsr==1.4.2"
     ],
     dependency_links=[]
 )
