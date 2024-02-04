@@ -123,7 +123,7 @@ class SignalCode(Enum):
     LLM_REQUEST_SIGNAL = "llm_request_signal"
     LLM_TEXT_GENERATE_REQUEST_SIGNAL = "llm_text_generate_request_signal"
     LLM_TOKEN_SIGNAL = "llm_token_signal"
-    LLM_RESPOND_TO_USER = "llm_respond_to_user_signal"
+    LLM_RESPOND_TO_USER_SIGNAL = "llm_respond_to_user_signal"
     LLM_PROCESS_STT_AUDIO_SIGNAL = "llm_process_stt_audio"
 
     LOG_ERROR_SIGNAL = "error_signal"
@@ -169,6 +169,7 @@ class SignalCode(Enum):
     VISION_CAPTION_GENERATED_SIGNAL = "caption_generated_signal"
     VISION_DESCRIBE_IMAGE_SIGNAL = "describe_image_signal"
     VISION_PROCESS_IMAGES = "process_images"
+
 
     QUIT_APPLICATION = "quit"
 
@@ -259,7 +260,7 @@ class LLMToolName(Enum):
     COMMENT_ON_IMAGE = "comment_on_image"
     DESCRIBE_IMAGE = "describe_image"
     GENERATE_IMAGE = "generate_image"
-    LLM_RESPOND_TO_USER = "llm_respond_to_user"
+    DEFAULT_TOOL = "default_response_tool"
     LLM_PROCESS_STT_AUDIO = "llm_process_stt_audio"
     RAG_SEARCH = "llm_rag_search"
     QUIT_APPLICATION = "quit_application"

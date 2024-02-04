@@ -1,13 +1,15 @@
+import torch
+import threading
 from typing import Any, Generator
 from typing import AnyStr
 
-from transformers import AutoModelForCausalLM, TextIteratorStreamer
+from transformers import AutoModelForCausalLM, TextIteratorStreamer, MistralForCausalLM
 from transformers import pipeline as hf_pipeline
 
 from airunner.aihandler.local_agent import LocalAgent
 from airunner.aihandler.llm_tools import QuitApplicationTool, StartVisionCaptureTool, StopVisionCaptureTool, \
     StartAudioCaptureTool, StopAudioCaptureTool, StartSpeakersTool, StopSpeakersTool, ProcessVisionTool, \
-    ProcessAudioTool
+    ProcessAudioTool, RespondToUserTool
 from airunner.aihandler.tokenizer_handler import TokenizerHandler
 from airunner.enums import SignalCode, LLMAction, LLMChatRole, LLMToolName
 
@@ -44,7 +46,30 @@ class CasualLMTransformerBaseHandler(TokenizerHandler):
         self.restrict_tools_to_additional: bool = True
         self.return_agent_code: bool = False
         self.batch_size: int = 1
-        #self.register(SignalCode.LLM_RESPOND_TO_USER, self.on_llm_respond_to_user_signal)
+
+        self.register(
+            SignalCode.LLM_RESPOND_TO_USER_SIGNAL,
+            self.llm_stream
+        )
+
+    @property
+    def is_mistral(self) -> bool:
+        return self.model_path == "mistralai/Mistral-7B-Instruct-v0.1"
+
+    @property
+    def chat_template(self):
+        return (
+            "{{ bos_token }}"
+            "{% for message in messages %}"
+            "{% if message['role'] == 'system' %}"
+            "{{ '[INST] <<SYS>>' + message['content'] + ' <</SYS>>[/INST]' }}"
+            "{% elif message['role'] == 'user' %}"
+            "{{ '[INST] ' + message['content'] + ' [/INST]' }}"
+            "{% elif message['role'] == 'assistant' %}"
+            "{{ message['content'] + eos_token + ' ' }}"
+            "{% endif %}"
+            "{% endfor %}"
+        ) if self.is_mistral else None
 
     @property
     def username(self):
@@ -70,6 +95,7 @@ class CasualLMTransformerBaseHandler(TokenizerHandler):
             LLMToolName.TTS_DISABLE.value: StopSpeakersTool(),
             LLMToolName.DESCRIBE_IMAGE.value: ProcessVisionTool,
             LLMToolName.LLM_PROCESS_STT_AUDIO.value: ProcessAudioTool(),
+            LLMToolName.DEFAULT_TOOL.value: RespondToUserTool(),
         }
 
     def on_clear_history_signal(self):
@@ -122,63 +148,155 @@ class CasualLMTransformerBaseHandler(TokenizerHandler):
             restrict_tools_to_additional=self.restrict_tools_to_additional
         )
 
-    def chat(self, prompt: AnyStr) -> AnyStr:
+    def chat(self):
+        return self.agent_chat(self.prompt)
+        return self.llm_stream()
+
+    def on_llm_process_stt_audio_signal(self):
+        self.llm_stream()
+
+    def get_rendered_template(self, use_latest_human_message: bool = True):
+        rendered_template = self.tokenizer.apply_chat_template(
+            chat_template=self.chat_template,
+            conversation=self.prepare_messages(use_latest_human_message),
+            tokenize=False
+        )
+
+        # HACK: current version of transformers does not allow us to pass
+        # variables to the chat template function, so we apply those here
+        variables = {
+            "username": self.username,
+            "botname": self.botname,
+            "bot_mood": self.bot_mood,
+            "bot_personality": self.bot_personality,
+        }
+        for key, value in variables.items():
+            rendered_template = rendered_template.replace("{{ " + key + " }}", value)
+        return rendered_template
+
+    def llm_stream(self):
+        rendered_template = self.get_rendered_template()
+
+        # Encode the rendered template
+        encoded = self.tokenizer(rendered_template, return_tensors="pt")
+        model_inputs = encoded.to("cuda" if torch.cuda.is_available() else "cpu")
+
+        # Generate the response
+        self.logger.info("Generating...")
+        self.thread = threading.Thread(target=self.model.generate, kwargs=dict(
+            model_inputs,
+            min_length=self.min_length,
+            max_length=self.max_length,
+            num_beams=self.num_beams,
+            do_sample=True,
+            top_k=self.top_k,
+            eta_cutoff=self.eta_cutoff,
+            top_p=self.top_p,
+            num_return_sequences=self.sequences,
+            eos_token_id=self.tokenizer.eos_token_id,
+            early_stopping=True,
+            repetition_penalty=self.repetition_penalty,
+            temperature=self.temperature,
+            streamer=self.streamer
+        ))
+        self.thread.start()
+        # strip all new lines from rendered_template:
+        rendered_template = rendered_template.replace("\n", " ")
+        if self.is_mistral:
+            rendered_template = "<s>" + rendered_template
+        skip = True
+        streamed_template = ""
+        replaced = False
+        is_end_of_message = False
+        is_first_message = True
+        for new_text in self.streamer:
+            # strip all newlines from new_text
+            parsed_new_text = new_text.replace("\n", " ")
+            streamed_template += parsed_new_text
+            if self.is_mistral:
+                streamed_template = streamed_template.replace("<s> [INST]", "<s>[INST]")
+                streamed_template = streamed_template.replace("  [INST]", " [INST]")
+            # iterate over every character in rendered_template and
+            # check if we have the same character in streamed_template
+            if not replaced:
+                for i, char in enumerate(rendered_template):
+                    try:
+                        if char == streamed_template[i]:
+                            skip = False
+                        else:
+                            skip = True
+                            break
+                    except IndexError:
+                        skip = True
+                        break
+            if skip:
+                continue
+            elif not replaced:
+                replaced = True
+                streamed_template = streamed_template.replace(rendered_template, "")
+            else:
+                if self.is_mistral:
+                    if "</s>" in new_text:
+                        streamed_template = streamed_template.replace("</s>", "")
+                        new_text = new_text.replace("</s>", "")
+                        is_end_of_message = True
+                self.emit(
+                    SignalCode.LLM_TEXT_STREAMED_SIGNAL,
+                    dict(
+                        message=new_text,
+                        is_first_message=is_first_message,
+                        is_end_of_message=is_end_of_message,
+                        name=self.botname,
+                    )
+                )
+                is_first_message = False
+        return streamed_template
+
+    def agent_chat(self, prompt: AnyStr) -> AnyStr:
         self.logger.info("Chat Stream")
-        res = self.agent.chat(
-            task=self.prompt,
-            return_code=self.return_agent_code
-        )
-        # self.stream_text(
-        #     self.streamer,
-        #     LLMAction.CHAT
-        # )
-        print("RES FROM AGENT: ", res)
-        if not res:
-            return "No response"
-        # self.emit_streamed_text_signal(
-        #     message=res,
-        #     is_first_message=True,
-        #     is_end_of_message=True
-        # )
-        return res
-        # return self.stream_text(
-        #     response=self.streamer,
-        #     action=action
-        # )
-
-        # res = self.agent.chat(
-        #     message=self.prompt,
-        #     chat_history=self.prepare_messages(LLMAction.CHAT),
-        #     tool_choice="help_agent"
-        # )
-        # self.emit_streamed_text_signal(
-        #     message=res.response,
-        #     is_first_message=True,
-        #     is_end_of_message=True
-        # )
-        # return res.response
-
-    def on_llm_respond_to_user_signal(self, message):
-        self.logger.info("Responding to user")
-        self.prompt = message
-        self.llm.stream_chat(
-            self.prepare_messages()
+        res = self.agent.run(
+            prompt
         )
 
-        full_message = self.stream_text(
-            response=self.streamer,
-            action=LLMAction.CHAT
-        )
+        # if not res:
+        #     return "No response"
+        #
+        # if "</s>" in res:
+        #     res = res.replace("</s>", "")
+        #
+        # self.emit(
+        #     SignalCode.LLM_TEXT_STREAMED_SIGNAL,
+        #     dict(
+        #         message=res,
+        #         is_first_message=True,
+        #         is_end_of_message=True,
+        #         name=self.botname,
+        #     )
+        # )
+        # return res
+        return ""
 
-        self.add_message_to_history(
-            self.prompt,
-            LLMChatRole.HUMAN
-        )
-        self.add_message_to_history(
-            full_message,
-            LLMChatRole.ASSISTANT
-        )
-        self.send_final_message()
+    # def on_llm_respond_to_user_signal(self, message):
+    #     self.logger.info("Responding to user")
+    #     self.prompt = message
+    #     self.llm.stream_chat(
+    #         self.prepare_messages()
+    #     )
+    #
+    #     full_message = self.stream_text(
+    #         response=self.streamer,
+    #         action=LLMAction.CHAT
+    #     )
+    #
+    #     self.add_message_to_history(
+    #         self.prompt,
+    #         LLMChatRole.HUMAN
+    #     )
+    #     self.add_message_to_history(
+    #         full_message,
+    #         LLMChatRole.ASSISTANT
+    #     )
+    #     self.send_final_message()
 
     def load_streamer(self):
         self.logger.info("Loading LLM text streamer")
@@ -199,9 +317,7 @@ class CasualLMTransformerBaseHandler(TokenizerHandler):
         self.logger.info("Generating response")
         # self.bot_mood = self.update_bot_mood()
         # self.user_evaluation = self.do_user_evaluation()
-        full_message = self.chat(
-            self.prompt
-        )
+        full_message = self.chat()
         #full_message = self.rag_stream()
         self.add_message_to_history(
             self.prompt,
@@ -244,22 +360,28 @@ class CasualLMTransformerBaseHandler(TokenizerHandler):
 
         return "\n".join(system_prompt)
 
-    def prepare_messages(self):
+    def latest_human_message(self) -> dict:
+        return {} if not self.prompt else {
+            "content": self.prompt,
+            "role": LLMChatRole.HUMAN.value
+        }
+
+    def prepare_messages(
+        self,
+        use_latest_human_message: bool = True
+    ) -> list:
         messages = [
-            # dict(
-            #     content=self.build_system_prompt(),
-            #     role=LLMChatRole.SYSTEM.value
-            # )
+            {
+                "content": self.build_system_prompt(),
+                "role": LLMChatRole.SYSTEM.value
+            }
         ]
 
         messages += self.history
 
-        if self.prompt:
+        if use_latest_human_message:
             messages.append(
-                dict(
-                    content=self.prompt,
-                    role=LLMChatRole.HUMAN.value
-                )
+                self.latest_human_message()
             )
 
         return messages

@@ -1,4 +1,4 @@
-from transformers import AutoTokenizer, RagTokenizer
+from transformers import AutoTokenizer, RagTokenizer, MistralForCausalLM
 
 from airunner.aihandler.transformer_base_handler import TransformerBaseHandler
 
@@ -10,32 +10,29 @@ class TokenizerHandler(TransformerBaseHandler):
     def tokenizer_path(self):
         return self.current_model_path
 
+    @property
+    def chat_template(self):
+        return None
+
     def post_load(self):
         self.load_tokenizer()
 
     def load_tokenizer(self, local_files_only=None):
         self.logger.info(f"Loading tokenizer from {self.current_model_path}")
         local_files_only = self.local_files_only if local_files_only is None else local_files_only
-        chat_template = (
-            "{{ bos_token }}"
-            "{% for message in messages %}"
-            "{% if message['role'] == 'system' %}"
-            "{{ '[INST] <<SYS>>' + message['content'] + ' <</SYS>>[/INST]' }}"
-            "{% elif message['role'] == 'user' %}"
-            "{{ '[INST] ' + message['content'] + ' [/INST]' }}"
-            "{% elif message['role'] == 'assistant' %}"
-            "{{ message['content'] + eos_token + ' ' }}"
-            "{% endif %}"
-            "{% endfor %}"
-        )
+        kwargs = {
+            "local_files_only": local_files_only,
+            "token": self.request_data.get("hf_api_key_read_key"),
+            "device_map": self.device,
+            "trust_remote_code": True,
+        }
+        # </s>  [INST]
+        if self.chat_template:
+            kwargs["chat_template"] = self.chat_template
         try:
             self.tokenizer = self.tokenizer_class_.from_pretrained(
                 self.tokenizer_path,
-                local_files_only=local_files_only,
-                token=self.request_data.get("hf_api_key_read_key"),
-                device_map=self.device,
-                #chat_template=chat_template,
-                trust_remote_code=True
+                **kwargs,
             )
             self.logger.info("Tokenizer loaded")
         except OSError as e:

@@ -143,3 +143,12 @@ ProcessAudioTool = create_application_control_tool_class(
     LLMToolName.LLM_PROCESS_STT_AUDIO.value,
     SignalCode.LLM_PROCESS_STT_AUDIO_SIGNAL
 )
+
+RespondToUserTool = create_application_control_tool_class(
+    (
+        "This is a default tool. It is the tool to use when no other tool is applicable. "
+        "Takes no input and returns nothing."
+    ),
+    LLMToolName.DEFAULT_TOOL.value,
+    SignalCode.LLM_RESPOND_TO_USER_SIGNAL
+)
