@@ -32,7 +32,6 @@ from airunner.aihandler.mixins.merge_mixin import MergeMixin
 from airunner.aihandler.mixins.scheduler_mixin import SchedulerMixin
 from airunner.aihandler.mixins.txttovideo_mixin import TexttovideoMixin
 from airunner.aihandler.settings import AIRUNNER_ENVIRONMENT
-from airunner.scripts.realesrgan.main import RealESRGAN
 from airunner.windows.main.layer_mixin import LayerMixin
 from airunner.windows.main.lora_mixin import LoraMixin as LoraDataMixin
 from airunner.windows.main.embedding_mixin import EmbeddingMixin as EmbeddingDataMixin
@@ -1353,6 +1352,7 @@ class SDHandler(
 
     def process_upscale(self, data: dict):
         self.logger.info("Processing upscale")
+        from airunner.scripts.realesrgan.main import RealESRGAN
         image = self.input_image
         results = []
         if image:
