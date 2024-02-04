@@ -59,7 +59,7 @@ setup(
         "llama-index==0.9.39",
         "watchdog==3.0.0",
         "sounddevice==0.4.6",
-        "basicsr==1.4.2"
+        #"basicsr==1.4.2"
     ],
     dependency_links=[]
 )
