@@ -48,8 +48,8 @@ class CanvasResizeWorker(Worker):
         h = view_size.height() + abs(settings["canvas_settings"]["pos_y"]) % cell_size
         y = 0
         x = settings["canvas_settings"]["pos_x"] % cell_size
-        for i in range(width_cells):
-            line_data = (x, y, x, h, pen)
+        for i in range(width_cells+1):
+            line_data = (x, y, x, h+cell_size, pen)
             lines_data.append(line_data)
             x += cell_size
 
@@ -57,8 +57,8 @@ class CanvasResizeWorker(Worker):
         w = view_size.width() + abs(settings["canvas_settings"]["pos_x"]) % cell_size
         x = 0
         y = settings["canvas_settings"]["pos_y"] % cell_size
-        for i in range(height_cells):
-            line_data = (x, y, w, y, pen)
+        for i in range(height_cells+1):
+            line_data = (x, y, w+cell_size, y, pen)
             lines_data.append(line_data)
             y += cell_size
 
