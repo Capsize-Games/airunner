@@ -107,12 +107,12 @@ class StableDiffusionSettingsWidget(BaseWidget):
         pipeline = self.settings["pipeline"]
         version = self.settings["current_version_stablediffusion"]
 
-        models = self.get_service("ai_model_get_by_filter")(dict(
-            category=image_generator,
-            pipeline_action=pipeline,
-            version=version,
-            enabled=True
-        ))
+        models = self.get_service("ai_model_get_by_filter")({
+            'category': image_generator,
+            'pipeline_action': pipeline,
+            'version': version,
+            'enabled': True
+        })
         model_names = [model["name"] for model in models]
         self.ui.model.addItems(model_names)
         settings = self.settings
