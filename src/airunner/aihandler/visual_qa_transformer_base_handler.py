@@ -97,7 +97,6 @@ class VisualQATransformerBaseHandler(TransformerBaseHandler):
                 out, skip_special_tokens=True
             )[0].strip()
             self.processed_vision_history.append(generated_text)
-            print("Generated text:", generated_text)
             return generated_text
         except AttributeError as e:
             return ""
