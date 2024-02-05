@@ -6,19 +6,7 @@ Thank you for your interest in contributing to AI Runner. This guide provides an
 
 ## Coding Conventions
 
-- **Constants**: Use enums instead of strings. Enums should be stored in `enums.py`.
-- **Naming Conventions**: Follow these naming styles:
-  - Variables and functions: `snake_case`
-  - Classes: `PascalCase`
-  - Constants: `UPPER_SNAKE_CASE`
-  - Files and directories: `lowercase`. If a class name is `PascalCase`, separate it with underscores.
-- **Documentation**: Use `"""docstrings"""` for documenting code.
-- **Annotations**: Use the following annotations for specific purposes:
-  - `# TODO: ...` for tasks to be done.
-  - `# FIXME: ...` for known bugs that need fixing.
-  - `# NOTE: ...` for important remarks.
-  - `# HACK: ...` for temporary solutions.
-  - `# XXX: ...` for potential problems.
+We follow the PEP 8 style guide for Python code. You can find the complete guide [here](https://pep8.org/). 
 
 ---
 
