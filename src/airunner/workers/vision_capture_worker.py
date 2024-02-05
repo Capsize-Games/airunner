@@ -79,8 +79,6 @@ class VisionCaptureWorker(Worker):
         if not self.cap:
             return
 
-        self.logger.info("Capturing image")
-
         # Capture frame-by-frame
         ret, frame = self.cap.read()
 
