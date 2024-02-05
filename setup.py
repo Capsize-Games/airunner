@@ -56,7 +56,7 @@ setup(
         "optimum==1.16.2",
         "bitsandbytes==0.42.0",
         "tomesd==0.1.3",
-        "llama-index==0.9.39",
+        "llama-index==0.9.43",
         "watchdog==3.0.0",
         "sounddevice==0.4.6",
         "datasets==2.16.1",
