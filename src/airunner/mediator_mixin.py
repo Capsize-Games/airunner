@@ -13,6 +13,7 @@ class MediatorMixin:
     def __init__(self):
         self.mediator = SignalMediator()
         self.threads = []
+        self.workers = []
         
     def emit(
         self,
@@ -50,5 +51,6 @@ class MediatorMixin:
         worker.finished.connect(worker_thread.quit)
         worker_thread.started.connect(worker.start)
         worker_thread.start()
+        self.workers.append(worker)
         self.threads.append(worker_thread)
         return worker
