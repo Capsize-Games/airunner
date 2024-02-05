@@ -264,8 +264,13 @@ class TTSHandler(BaseHandler):
         """
         if not self.use_bark:
             self.logger.info("Loading Dataset")
-            embeddings_dataset = load_dataset(self.speaker_embeddings_dataset_path, split="validation")
-            self.speaker_embeddings = torch.tensor(embeddings_dataset[7306]["xvector"]).unsqueeze(0)
+            embeddings_dataset = load_dataset(
+                self.speaker_embeddings_dataset_path,
+                split="validation"
+            )
+            self.speaker_embeddings = torch.tensor(
+                embeddings_dataset[7306]["xvector"]
+            ).unsqueeze(0)
             
             if self.use_cuda:
                 self.speaker_embeddings = self.speaker_embeddings.half().cuda()
