@@ -1,4 +1,5 @@
 from airunner.aihandler.casual_lm_transfformer_base_handler import CasualLMTransformerBaseHandler
+from airunner.aihandler.settings import AVAILABLE_DTYPES
 from airunner.enums import SignalCode
 from airunner.workers.worker import Worker
 
@@ -7,7 +8,7 @@ class LLMGenerateWorker(Worker):
     def __init__(self, prefix="LLMGenerateWorker"):
         self.llm = CasualLMTransformerBaseHandler()
         super().__init__(prefix=prefix)
-        self.register(SignalCode.LLM_REQUEST_WORKER_RESPONSE_SIGNAL, self.on_LLMRequestWorker_response_signal)
+        self.register(SignalCode.LLM_REQUEST_WORKER_RESPONSE_SIGNAL, self.on_llm_request_worker_response_signal)
         self.register(SignalCode.LLM_UNLOAD_SIGNAL, self.on_unload_llm_signal)
 
     def on_unload_llm_signal(self, message):
@@ -25,7 +26,7 @@ class LLMGenerateWorker(Worker):
         do_move_to_cpu = not do_unload_model and move_unused_model_to_cpu
         dtype = message.get("dtype", "")
         callback = message.get("callback", None)
-        if dtype in ["2bit", "4bit", "8bit"]:
+        if dtype in AVAILABLE_DTYPES:
             do_unload_model = True
             do_move_to_cpu = False
         if do_move_to_cpu:
@@ -36,7 +37,7 @@ class LLMGenerateWorker(Worker):
         if callback:
             callback()
 
-    def on_LLMRequestWorker_response_signal(self, message):
+    def on_llm_request_worker_response_signal(self, message):
         self.add_to_queue(message)
 
     def handle_message(self, message):

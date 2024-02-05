@@ -80,8 +80,8 @@ class WorkerManager(QObject, MediatorMixin):
         print("TODO: handle text generated no stream")
     
     def __init__(self, **kwargs):
-        super().__init__()
         MediatorMixin.__init__(self)
+        super().__init__()
         self.do_process_queue = None
         self.do_process_queue = None
         self.logger = Logger(prefix=self.__class__.__name__)
