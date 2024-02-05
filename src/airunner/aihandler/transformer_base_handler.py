@@ -24,43 +24,43 @@ class TransformerBaseHandler(BaseHandler):
         self.request_data = {}
         self.model = None
         self.vocoder = None
-        self.temperature = 0.7
-        self.max_length = 1000
-        self.min_length = 0
-        self.num_beams = 1
-        self.top_k = 20
-        self.eta_cutoff = 10
-        self.top_p = 1.0
-        self.repetition_penalty = 1.15
-        self.early_stopping = True
-        self.length_penalty = 1.0
-        self.parameters = None
-        self.model_path = None
-        self.override_parameters = None
-        self.prompt = None
-        self.do_quantize_model = True
-        self.current_model_path = ""
-        self.local_files_only = False
-        self.use_cache = False
+        self.temperature = kwargs.get("temperature", 0.7)
+        self.max_length = kwargs.get("max_length", 1000)
+        self.min_length = kwargs.get("min_length", 0)
+        self.num_beams = kwargs.get("num_beams", 1)
+        self.top_k = kwargs.get("top_k", 20)
+        self.eta_cutoff = kwargs.get("eta_cutoff", 10)
+        self.top_p = kwargs.get("top_p", 1.0)
+        self.repetition_penalty = kwargs.get("repetition_penalty", 1.15)
+        self.early_stopping = kwargs.get("early_stopping", True)
+        self.length_penalty = kwargs.get("length_penalty", 1.0)
+        self.parameters = kwargs.get("parameters", None)
+        self.model_path = kwargs.get("model_path", None)
+        self.override_parameters = kwargs.get("override_parameters", None)
+        self.prompt = kwargs.get("prompt", None)
+        self.do_quantize_model = kwargs.get("do_quantize_model", True)
+        self.current_model_path = kwargs.get("current_model_path", "")
+        self.local_files_only = kwargs.get("local_files_only", False)
+        self.use_cache = kwargs.get("use_cache", False)
         self.history = []
-        self.sequences = 1
-        self.seed = 42
-        self.set_attention_mask = False
-        self.do_push_to_hub = False
-        self.llm_int8_enable_fp32_cpu_offload = True
-        self.generator_name = ""
-        self.default_model_path = ""
-        self.request_type = ""
-        self.return_result = True
-        self.skip_special_tokens = True
-        self.do_sample = True
-        self._processing_request = False
-        self.bad_words_ids = None
-        self.bos_token_id = None
-        self.pad_token_id = None
-        self.eos_token_id = None
-        self.no_repeat_ngram_size = 1
-        self.decoder_start_token_id = None
+        self.sequences = kwargs.get("sequences", 1)
+        self.seed = kwargs.get("seed", 42)
+        self.set_attention_mask = kwargs.get("set_attention_mask", False)
+        self.do_push_to_hub = kwargs.get("do_push_to_hub", False)
+        self.llm_int8_enable_fp32_cpu_offload = kwargs.get("llm_int8_enable_fp32_cpu_offload", True)
+        self.generator_name = kwargs.get("generator_name", "")
+        self.default_model_path = kwargs.get("default_model_path", "")
+        self.request_type = kwargs.get("request_type", "")
+        self.return_result = kwargs.get("return_result", True)
+        self.skip_special_tokens = kwargs.get("skip_special_tokens", True)
+        self.do_sample = kwargs.get("do_sample", True)
+        self._processing_request = kwargs.get("_processing_request", False)
+        self.bad_words_ids = kwargs.get("bad_words_ids", None)
+        self.bos_token_id = kwargs.get("bos_token_id", None)
+        self.pad_token_id = kwargs.get("pad_token_id", None)
+        self.eos_token_id = kwargs.get("eos_token_id", None)
+        self.no_repeat_ngram_size = kwargs.get("no_repeat_ngram_size", 1)
+        self.decoder_start_token_id = kwargs.get("decoder_start_token_id", None)
         self.tokenizer = None
         self._generator = None
         self.template = None
@@ -169,7 +169,6 @@ class TransformerBaseHandler(BaseHandler):
         self.current_model_path = self.model_path
 
     def load(self):
-        self.logger.info("Loading LLM")
         do_load_model = self.do_load_model
         do_load_tokenizer = self.tokenizer is None
 
@@ -227,7 +226,6 @@ class TransformerBaseHandler(BaseHandler):
         self.model.to(device_name)
 
     def prepare_input_args(self):
-        self.logger.info("Preparing input args")
         parameters = self.parameters or {}
         top_k = parameters.get("top_k", self.top_k)
         eta_cutoff = parameters.get("eta_cutoff", self.eta_cutoff)
@@ -294,7 +292,6 @@ class TransformerBaseHandler(BaseHandler):
             self.tokenizer.seed = self.seed
 
     def handle_request(self, data):
-        self.logger.info("Handling generate request")
         self._processing_request = True
         kwargs = self.prepare_input_args()
         self.do_set_seed(kwargs.get("seed"))
