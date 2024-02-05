@@ -264,15 +264,3 @@ class LLMSettingsWidget(BaseWidget):
     def set_tab(self, tab_name):
         index = self.ui.tabWidget.indexOf(self.ui.tabWidget.findChild(QWidget, tab_name))
         self.ui.tabWidget.setCurrentIndex(index)
-    
-    def bot_personality_changed(self):
-        value = self.ui.bot_personality.currentText()
-        llm_generator_settings = self.settings["llm_generator_settings"]
-        llm_generator_settings["bot_personality"] = value
-        self.settings["llm_generator_settings"] = llm_generator_settings
-
-    def bot_mood_changed(self):
-        value = self.ui.bot_mood.currentText()
-        llm_generator_settings = self.settings["llm_generator_settings"]
-        llm_generator_settings["bot_mood"] = value
-        self.settings["llm_generator_settings"] = llm_generator_settings

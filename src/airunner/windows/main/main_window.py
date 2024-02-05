@@ -1,13 +1,12 @@
 import os
 import platform
 import subprocess
-import sys
 import webbrowser
 from functools import partial
 
 from PyQt6 import QtGui
 from PyQt6 import uic, QtCore
-from PyQt6.QtCore import pyqtSlot, Qt, pyqtSignal
+from PyQt6.QtCore import pyqtSlot, pyqtSignal
 from PyQt6.QtGui import QGuiApplication
 from PyQt6.QtWidgets import QApplication, QFileDialog, QMainWindow
 
@@ -19,7 +18,7 @@ from airunner.mediator_mixin import MediatorMixin
 from airunner.resources_dark_rc import *
 from airunner.service_locator import ServiceLocator
 from airunner.settings import BASE_PATH
-from airunner.utils import get_version, auto_export_image, default_hf_cache_dir, open_file_path
+from airunner.utils import get_version, default_hf_cache_dir, open_file_path
 from airunner.widgets.status.status_widget import StatusWidget
 from airunner.windows.about.about import AboutWindow
 from airunner.windows.main.ai_model_mixin import AIModelMixin
@@ -123,10 +122,10 @@ class MainWindow(
     
     def add_preset(self, name, thumnail):
         settings = self.settings
-        settings["presets"].append(dict(
-            name=name,
-            thumnail=thumnail,
-        ))
+        settings["presets"].append({
+            'name': name,
+            'thumnail': thumnail,
+        })
         self.settings = settings
     
     def on_load_saved_stablediffuion_prompt_signal(self, index):
@@ -146,20 +145,20 @@ class MainWindow(
         index, prompt, negative_prompt = options
         settings = self.settings
         try:
-            settings["saved_prompts"][index] = dict(
-                prompt=prompt,
-                negative_prompt=negative_prompt,
-            )
+            settings["saved_prompts"][index] = {
+                'prompt': prompt,
+                'negative_prompt': negative_prompt,
+            }
         except KeyError:
             self.logger.error(f"Unable to update prompt at index {index}")
         self.settings = settings
 
     def on_save_stablediffusion_prompt_signal(self):
         settings = self.settings
-        settings["saved_prompts"].append(dict(
-            prompt=self.settings["generator_settings"]["prompt"],
-            negative_prompt=self.settings["generator_settings"]["negative_prompt"],
-        ))
+        settings["saved_prompts"].append({
+            'prompt': self.settings["generator_settings"]["prompt"],
+            'negative_prompt': self.settings["generator_settings"]["negative_prompt"],
+        })
         self.settings = settings
 
     def set_path_settings(self, key, val):
@@ -177,30 +176,6 @@ class MainWindow(
         return self.ui.generator_widget
     
     @property
-    def canvas_widget(self):
-        return self.standard_image_panel.canvas_widget
-
-    @property
-    def toolbar_widget(self):
-        return self.ui.toolbar_widget
-
-    @property
-    def prompt_builder(self):
-        return self.ui.prompt_builder
-
-    @property
-    def footer_widget(self):
-        return self.ui.footer_widget
-
-    @property
-    def generator_type(self):
-        """
-        Returns stablediffusion
-        :return: string
-        """
-        return self._generator_type
-
-    @property
     def version(self):
         if self._version is None:
             self._version = get_version()
@@ -216,8 +191,6 @@ class MainWindow(
 
     @property
     def document_name(self):
-        # name = f"{self._document_name}{'*' if self.canvas and self.canvas_widget.is_dirty else ''}"
-        # return f"{name} - {self.version}"
         return "Untitled"
 
     @property
@@ -242,18 +215,6 @@ class MainWindow(
         action = kwargs.get("action", "")
         if action == "toggle_tool":
             self.toggle_tool(kwargs["tool"])
-
-    @pyqtSlot(str, object)
-    def handle_changed_signal(self, key, value):
-        print("main_window: handle_changed_signal", key, value)
-        if key == "grid_settings.cell_size":
-            self.set_size_form_element_step_values()
-        elif key == "settings.line_color":
-            self.canvas_widget.update_grid_pen()
-        # elif key == "use_prompt_builder_checkbox":
-        #     self.generator_tab_widget.toggle_all_prompt_builder_checkboxes(value)
-        elif key == "models":
-            self.model_manager.models_changed(key, value)
 
     def show_layers(self):
         self.emit(SignalCode.LAYERS_SHOW_SIGNAL)
@@ -293,26 +254,22 @@ class MainWindow(
 
     def register_services(self):
         self.logger.info("Registering services")
-        ServiceLocator.register(ServiceCode.LAYER_WIDGET, lambda: self.ui.layer_widget)
-        ServiceLocator.register(ServiceCode.GET_LLM_WIDGET, lambda: self.ui.llm_widget)
         ServiceLocator.register(ServiceCode.DISPLAY_IMPORT_IMAGE_DIALOG, self.display_import_image_dialog)
         ServiceLocator.register(ServiceCode.GET_SETTINGS_VALUE, self.get_settings_value)
         ServiceLocator.register(ServiceCode.GET_CALLBACK_FOR_SLIDER, self.get_callback_for_slider)
 
     def register_signals(self):
         # on window resize:
-        # self.windowStateChanged.connect(self.on_state_changed)
         self.logger.info("Connecting signals")
         self.register(SignalCode.VISION_DESCRIBE_IMAGE_SIGNAL, self.on_describe_image_signal)
         self.register(SignalCode.SD_SAVE_PROMPT_SIGNAL, self.on_save_stablediffusion_prompt_signal)
         self.register(SignalCode.SD_LOAD_PROMPT_SIGNAL, self.on_load_saved_stablediffuion_prompt_signal)
         self.register(SignalCode.SD_UPDATE_SAVED_PROMPT_SIGNAL, self.on_update_saved_stablediffusion_prompt_signal)
+        self.register(SignalCode.QUIT_APPLICATION, self.action_quit_triggered)
 
     def initialize_ui(self):
         self.logger.info("Loading ui")
         self.ui.setupUi(self)
-
-        # self.ui.layer_widget.initialize()
 
         self.status_widget = StatusWidget()
         self.statusBar().addPermanentWidget(self.status_widget)
@@ -354,26 +311,7 @@ class MainWindow(
         self.settings = settings
 
     def layer_opacity_changed(self, attr_name, value=None, widget=None):
-        print("layer_opacity_changed", attr_name, value)
-        self.ui.layer_widget.set_layer_opacity(value)
-
-    def quick_export(self):
-        if os.path.isdir(self.image_path) is False:
-            self.choose_image_export_path()
-        if os.path.isdir(self.image_path) is False:
-            return
-        path, image = auto_export_image(
-            self.base_path, 
-            self.settings["path_settings"]["image_path"],
-            self.settings["image_export_type"],
-            self.ui.layer_widget.current_layer.image_data.image, 
-            seed=self.seed
-        )
-        if path is not None:
-            self.emit(
-                SignalCode.STATUS_INFO_SIGNAL,
-                f"Image exported to {path}"
-            )
+        self.emit(SignalCode.LAYER_OPACITY_CHANGED_SIGNAL, value)
 
     """
     Slot functions
@@ -386,7 +324,7 @@ class MainWindow(
         self.emit(SignalCode.CANVAS_CLEAR)
 
     def action_quick_export_image_triggered(self):
-        self.quick_export()
+        print("TODO: remove this")
 
     def action_export_image_triggered(self):
         self.export_image()
@@ -395,7 +333,16 @@ class MainWindow(
         self.import_image()
 
     def action_quit_triggered(self):
-        self.quit()
+        QApplication.quit()
+        self.close()
+
+    def closeEvent(self, event) -> None:
+        self.logger.info("Quitting")
+        self.worker_manager.stop()
+        self.save_state()
+        self.worker_manager.stop()
+        self.save_state()
+        super().closeEvent(event)
 
     def action_undo_triggered(self):
         self.undo()
@@ -405,23 +352,33 @@ class MainWindow(
 
     def action_paste_image_triggered(self):
         if self.settings["mode"] == Mode.IMAGE.value:
-            self.canvas_widget.paste_image_from_clipboard()
+            self.emit(
+                SignalCode.CANVAS_PASTE_IMAGE_SIGNAL
+            )
 
     def action_copy_image_triggered(self):
         if self.settings["mode"] == Mode.IMAGE.value:
-            self.canvas_widget.copy_image(ServiceLocator.get(ServiceCode.CURRENT_ACTIVE_IMAGE)())
+            self.emit(
+                SignalCode.CANVAS_COPY_IMAGE_SIGNAL
+            )
 
     def action_cut_image_triggered(self):
         if self.settings["mode"] == Mode.IMAGE.value:
-            self.canvas_widget.cut_image()
+            self.emit(
+                SignalCode.CANVAS_CUT_IMAGE_SIGNAL
+            )
 
     def action_rotate_90_clockwise_triggered(self):
         if self.settings["mode"] == Mode.IMAGE.value:
-            self.canvas_widget.rotate_90_clockwise()
+            self.emit(
+                SignalCode.CANVAS_ROTATE_90_CLOCKWISE_SIGNAL
+            )
 
     def action_rotate_90_counterclockwise_triggered(self):
         if self.settings["mode"] == Mode.IMAGE.value:
-            self.canvas_widget.rotate_90_counterclockwise()
+            self.emit(
+                SignalCode.CANVAS_ROTATE_90_COUNTER_CLOCKWISE_SIGNAL
+            )
 
     def action_show_prompt_browser_triggered(self):
         self.show_prompt_browser()
@@ -543,18 +500,7 @@ class MainWindow(
     End slot functions
     """
 
-    def set_size_increment_levels(self):
-        size = self.settings["grid_settings"]["cell_size"]
-        self.ui.width_slider_widget.slider_single_step = size
-        self.ui.width_slider_widget.slider_tick_interval = size
-
-        self.ui.height_slider_widget.slider_single_step = size
-        self.ui.height_slider_widget.slider_tick_interval = size
-
-        self.canvas_widget.update()
-
     def toggle_nsfw_filter(self):
-        # self.canvas_widget.update()
         self.set_nsfw_filter_tooltip()
 
     def set_nsfw_filter_tooltip(self):
@@ -562,35 +508,12 @@ class MainWindow(
             f"Click to {'enable' if not self.settings['nsfw_filter'] else 'disable'} NSFW filter"
         )
 
-    def dragmode_pressed(self):
-        # self.canvas_widget.is_canvas_drag_mode = True
-        pass
-
-    def dragmode_released(self):
-        # self.canvas_widget.is_canvas_drag_mode = False
-        pass
-
-    def shift_pressed(self):
-        # self.canvas_widget.shift_is_pressed = True
-        pass
-
-    def shift_released(self):
-        # self.canvas_widget.shift_is_pressed = False
-        pass
-
     def toggle_fullscreen(self):
         if self.isFullScreen():
             self.showNormal()
         else:
             self.showFullScreen()
 
-    def quit(self):
-        self.logger.info("Quitting")
-        self.worker_manager.stop()
-        self.save_state()
-        QApplication.quit()
-        self.close()
-    
     @pyqtSlot(bool)
     def tts_button_toggled(self, val):
         new_settings = self.settings
@@ -612,26 +535,39 @@ class MainWindow(
     def save_state(self):
         self.logger.info("Saving window state")
         settings = self.settings
-        settings["window_settings"] = dict(
-            main_splitter=self.ui.main_splitter.saveState(),
-            content_splitter=self.ui.content_splitter.saveState(),
-            center_splitter=self.ui.center_splitter.saveState(),
-            canvas_splitter=self.ui.canvas_splitter.saveState(),
-            splitter=self.ui.splitter.saveState(),
-            mode_tab_widget_index=self.ui.mode_tab_widget.currentIndex(),
-            tool_tab_widget_index=self.ui.tool_tab_widget.currentIndex(),
-            center_tab_index=self.ui.center_tab.currentIndex(),
-            generator_tab_index=self.ui.standard_image_widget.ui.tabWidget.currentIndex(),
-            is_maximized=self.isMaximized(),
-            is_fullscreen=self.isFullScreen(),
-        )
+        settings["window_settings"] = {
+            'main_splitter': self.ui.main_splitter.saveState(),
+            'content_splitter': self.ui.content_splitter.saveState(),
+            'center_splitter': self.ui.center_splitter.saveState(),
+            'canvas_splitter': self.ui.canvas_splitter.saveState(),
+            'splitter': self.ui.splitter.saveState(),
+            'mode_tab_widget_index': self.ui.mode_tab_widget.currentIndex(),
+            'tool_tab_widget_index': self.ui.tool_tab_widget.currentIndex(),
+            'center_tab_index': self.ui.center_tab.currentIndex(),
+            'generator_tab_index': self.ui.standard_image_widget.ui.tabWidget.currentIndex(),
+            'is_maximized': self.isMaximized(),
+            'is_fullscreen': self.isFullScreen(),
+        }
         self.settings = settings
     
     def restore_state(self):
         self.logger.info("Restoring state")
         window_settings = self.settings["window_settings"]
-        if window_settings is None:
-            return
+
+        if self.settings["is_maximized"]:
+            self.showMaximized()
+        elif window_settings["is_fullscreen"]:
+            self.showFullScreen()
+        else:
+            self.showNormal()
+
+        self.ui.mode_tab_widget.setCurrentIndex(window_settings["mode_tab_widget_index"])
+        self.ui.tool_tab_widget.setCurrentIndex(window_settings["tool_tab_widget_index"])
+        self.ui.center_tab.setCurrentIndex(window_settings["center_tab_index"])
+        self.ui.standard_image_widget.ui.tabWidget.setCurrentIndex(window_settings["generator_tab_index"])
+        self.ui.ai_button.setChecked(self.settings["ai_mode"])
+        self.set_button_checked("toggle_grid", self.settings["grid_settings"]["show_grid"], False)
+
         if window_settings["main_splitter"]:
             self.ui.main_splitter.restoreState(window_settings["main_splitter"])
 
@@ -646,22 +582,6 @@ class MainWindow(
 
         if window_settings["splitter"]:
             self.ui.splitter.restoreState(window_settings["splitter"])
-
-        self.ui.mode_tab_widget.setCurrentIndex(window_settings["mode_tab_widget_index"])
-        self.ui.tool_tab_widget.setCurrentIndex(window_settings["tool_tab_widget_index"])
-        self.ui.center_tab.setCurrentIndex(window_settings["center_tab_index"])
-        self.ui.standard_image_widget.ui.tabWidget.setCurrentIndex(window_settings["generator_tab_index"])
-        if window_settings["is_maximized"]:
-            self.showMaximized()
-        if window_settings["is_fullscreen"]:
-            self.showFullScreen()
-        self.ui.ai_button.setChecked(self.settings["ai_mode"])
-        self.set_button_checked("toggle_grid", self.settings["grid_settings"]["show_grid"], False)
-
-        if self.settings["is_maximized"]:
-            self.showMaximized()
-        else:
-            self.showNormal()
 
     ##### End window properties #####
     #################################
@@ -756,18 +676,12 @@ class MainWindow(
 
     def show_update_message(self):
         self.emit(
-            SignalCode.STATUS_INFO_SIGNAL,
+            SignalCode.APPLICATION_STATUS_INFO_SIGNAL,
             f"New version available: {self.latest_version}"
         )
 
     def show_update_popup(self):
         self.update_popup = UpdateWindow()
-
-    def on_state_changed(self, state):
-        if state == Qt.ApplicationState.ApplicationActive:
-            self.canvas_widget.pos_x = int(self.x() / 4)
-            self.canvas_widget.pos_y = int(self.y() / 2)
-            self.canvas_widget.update()
 
     def refresh_styles(self):
         self.set_stylesheet()
@@ -801,9 +715,6 @@ class MainWindow(
 
         self.initialize_window()
         self.register(SignalCode.CONTROLNET_IMAGE_GENERATED_SIGNAL, self.on_controlnet_image_generated_signal)
-        self.initialize_mixins()
-        # self.header_widget.initialize()
-        # self.header_widget.set_size_increment_levels()
         self.initialize_default_buttons()
         try:
             self.prompt_builder.process_prompt()
@@ -841,10 +752,6 @@ class MainWindow(
         settings = self.settings
         settings["current_tool"] = tool
         self.settings = settings
-
-    def initialize_mixins(self):
-        #self.canvas = Canvas()
-        pass
 
     def show_section(self, section):
         section_lists = {
@@ -963,13 +870,10 @@ class MainWindow(
         self.setWindowTitle(f"AI Runner")
 
     def new_document(self):
-        self.ui.layer_widget.clear_layers()
         self.is_saved = False
         self._document_name = "Untitled"
         self.set_window_title()
         self.current_filter = None
-        #self.canvas_widget.update()
-        self.ui.layer_widget.show_layers()
 
     def handle_controlnet_image_generated(self, message):
         self.controlnet_image = message["image"]
@@ -986,14 +890,6 @@ class MainWindow(
 
     def handle_unknown(self, message):
         self.logger.error(f"Unknown message code: {message}")
-
-    def set_size_form_element_step_values(self):
-        """
-        This function is called when grid_size is changed in the settings.
-
-        :return:
-        """
-        self.set_size_increment_levels()
 
     def update(self):
         self.standard_image_panel.update_thumbnails()

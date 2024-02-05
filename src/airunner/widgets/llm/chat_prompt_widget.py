@@ -91,8 +91,8 @@ class ChatPromptWidget(BaseWidget):
             self.logger.warning("Prompt is empty")
             return
 
-        prompt_template = None
-        template_name = self.settings["llm_generator_settings"]["prompt_template"]
+        current_bot_name = self.settings["llm_generator_settings"]["current_chatbot"]
+        template_name = self.settings["llm_generator_settings"]["saved_chatbots"][current_bot_name]["prompt_template"]
         if template_name in self.settings["llm_templates"]:
             prompt_template = self.settings["llm_templates"][template_name]
         else:
@@ -102,6 +102,7 @@ class ChatPromptWidget(BaseWidget):
 
         parsed_template = self.parse_template(prompt_template)
 
+        current_bot = self.settings["llm_generator_settings"]["saved_chatbots"][self.settings["llm_generator_settings"]["current_chatbot"]]
         self.emit(
             SignalCode.LLM_TEXT_GENERATE_REQUEST_SIGNAL,
             {
@@ -122,8 +123,6 @@ class ChatPromptWidget(BaseWidget):
                     "dtype": llm_generator_settings["dtype"],
                     "use_gpu": llm_generator_settings["use_gpu"],
                     "request_type": "image_caption_generator",
-                    "username": self.settings["llm_generator_settings"]["username"],
-                    "botname": self.settings["llm_generator_settings"]["botname"],
                     "template": parsed_template,
                     "hf_api_key_read_key": self.settings["hf_api_key_read_key"],
                     "parameters": {
@@ -145,13 +144,23 @@ class ChatPromptWidget(BaseWidget):
                     "image": image,
                     "callback": callback,
                     "tts_settings": self.settings["tts_settings"],
-                    "bot_mood": self.settings["llm_generator_settings"]["bot_mood"],
-                    "bot_personality": self.settings["llm_generator_settings"]["bot_personality"],
+                    "username": current_bot["username"],
+                    "botname": current_bot["botname"],
+                    "use_personality": current_bot["use_personality"],
+                    "use_mood": current_bot["use_mood"],
+                    "use_guardrails": current_bot["use_guardrails"],
+                    "use_system_instructions": current_bot["use_system_instructions"],
+                    "assign_names": current_bot["assign_names"],
+                    "bot_personality": current_bot["bot_personality"],
+                    "bot_mood": current_bot["bot_mood"],
+                    "prompt_template": current_bot["prompt_template"],
+                    "guardrails_prompt": current_bot["guardrails_prompt"],
+                    "system_instructions": current_bot["system_instructions"],
                 }
             }
         )
         self.add_message_to_conversation(
-            name=self.settings["llm_generator_settings"]["username"],
+            name=current_bot["username"],
             message=self.prompt, 
             is_bot=False
         )

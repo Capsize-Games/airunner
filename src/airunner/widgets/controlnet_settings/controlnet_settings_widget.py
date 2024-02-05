@@ -157,7 +157,7 @@ class ControlNetSettingsWidget(InputImageSettingsWidget):
         )
         if path is not None:
             self.emit(
-                SignalCode.STATUS_INFO_SIGNAL,
+                SignalCode.APPLICATION_STATUS_INFO_SIGNAL,
                 "Controlnet image exported to: {}".format(path)
             )
 

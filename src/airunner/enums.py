@@ -41,7 +41,6 @@ class ServiceCode(Enum):
     GET_PIPELINE_CLASSNAME = "get_pipeline_classname"
     PIPELINE_ACTIONS = "pipeline_actions"
     GET_PIPELINES = "get_pipelines"
-    LAYER_WIDGET = "layer_widget"
     GET_LLM_WIDGET = "get_llm_widget"
     DISPLAY_IMPORT_IMAGE_DIALOG = "display_import_image_dialog"
     GET_SETTINGS_VALUE = "get_settings_value"
@@ -62,6 +61,8 @@ class SignalCode(Enum):
     APPLICATION_RESET_PATHS_SIGNAL = "reset_paths_signal"
     APPLICATION_STOP_SD_PROGRESS_BAR_SIGNAL = "stop_image_generator_progress_bar_signal"
     APPLICATION_SETTINGS_CHANGED_SIGNAL = "application_settings_changed_signal"
+    APPLICATION_STATUS_INFO_SIGNAL = "status_info_signal"
+    APPLICATION_STATUS_ERROR_SIGNAL = "status_error_signal"
 
     AUDIO_CAPTURE_WORKER_RESPONSE_SIGNAL = "AudioCaptureWorker_response_signal"
     AUDIO_PROCESSOR_WORKER_PROCESSED_SIGNAL = "AudioProcessorWorker_processed_audio"
@@ -81,6 +82,11 @@ class SignalCode(Enum):
     CANVAS_UPDATE_CURSOR = "canvas_update_cursor"
     CANVAS_ZOOM_LEVEL_CHANGED = "zoom_level_changed"
     CANVAS_CLEAR = "clear_canvas"
+    CANVAS_PASTE_IMAGE_SIGNAL = "canvas_paste_image_signal"
+    CANVAS_COPY_IMAGE_SIGNAL = "canvas_copy_image_signal"
+    CANVAS_CUT_IMAGE_SIGNAL = "canvas_cut_image_signal"
+    CANVAS_ROTATE_90_CLOCKWISE_SIGNAL = "canvas_rotate_90_clockwise_signal"
+    CANVAS_ROTATE_90_COUNTER_CLOCKWISE_SIGNAL = "canvas_rotate_90_counter_clockwise_signal"
 
     CLEAR_MEMORY_SIGNAL = "clear_memory_signal"
     CONTROLNET_IMAGE_GENERATED_SIGNAL = "controlnet_image_generated_signal"
@@ -105,16 +111,20 @@ class SignalCode(Enum):
     LAYER_MOVE_UP_SIGNAL = "move_layer_up_signal"
     LAYER_MOVE_DOWN_SIGNAL = "move_layer_down_signal"
     LAYERS_SHOW_SIGNAL = "show_layers_signal"
+    LAYER_OPACITY_CHANGED_SIGNAL = "layers_layer_opacity_changed_signal"
 
-    LLM_CLEAR_HISTORY = "clear_history"
+    # TODO: combine clear history signals - we have two by mistake
+    LLM_CLEAR_HISTORY = "llm_clear_history"
+    LLM_CLEAR_HISTORY_SIGNAL = "llm_clear_history_signal"
     LLM_RESPONSE_SIGNAL = "llm_response_signal"
-    LLM_CLEAR_HISTORY_SIGNAL = "clear_llm_history_signal"
     LLM_TEXT_STREAMED_SIGNAL = "llm_text_streamed_signal"
     LLM_REQUEST_WORKER_RESPONSE_SIGNAL = "LLMRequestWorker_response_signal"
-    LLM_UNLOAD_SIGNAL = "unload_llm_signal"
+    LLM_UNLOAD_SIGNAL = "llm_unload_signal"
     LLM_REQUEST_SIGNAL = "llm_request_signal"
-    LLM_TEXT_GENERATE_REQUEST_SIGNAL = "text_generate_request_signal"
-    LLM_TOKEN_SIGNAL = "token_signal"
+    LLM_TEXT_GENERATE_REQUEST_SIGNAL = "llm_text_generate_request_signal"
+    LLM_TOKEN_SIGNAL = "llm_token_signal"
+    LLM_RESPOND_TO_USER_SIGNAL = "llm_respond_to_user_signal"
+    LLM_PROCESS_STT_AUDIO_SIGNAL = "llm_process_stt_audio"
 
     LOG_ERROR_SIGNAL = "error_signal"
     LOG_WARNING_SIGNAL = "warning_signal"
@@ -139,15 +149,16 @@ class SignalCode(Enum):
     SD_IMAGE_GENERATED_SIGNAL = "image_generated_signal"
     SD_NSFW_CONTENT_DETECTED_SIGNAL = "nsfw_content_detected_signal"
 
-    STATUS_INFO_SIGNAL = "status_info_signal"
-    STATUS_ERROR_SIGNAL = "status_error_signal"
-
     STT_HEAR_SIGNAL = "hear_signal"
     STT_AUDIO_PROCESSED = "stt_audio_processed_signal"
-    STT_PROCESS_AUDIO_SIGNAL = "process_audio"
+    STT_PROCESS_AUDIO_SIGNAL = "stt_process_audio"
+    STT_START_CAPTURE_SIGNAL = "stt_start_capture"
+    STT_STOP_CAPTURE_SIGNAL = "stt_stop_capture"
 
     TTS_REQUEST = "tts_request"
     TTS_GENERATOR_WORKER_ADD_TO_STREAM_SIGNAL = "TTSGeneratorWorker_add_to_stream_signal"
+    TTS_ENABLE_SIGNAL = "tts_enable_signal"
+    TTS_DISABLE_SIGNAL = "tts_disable_signal"
 
     VISION_START_CAPTURE = "start_vision_capture"
     VISION_STOP_CAPTURE = "stop_vision_capture"
@@ -157,6 +168,10 @@ class SignalCode(Enum):
     VISION_PROCESSED_SIGNAL = "vision_processed_signal"
     VISION_CAPTION_GENERATED_SIGNAL = "caption_generated_signal"
     VISION_DESCRIBE_IMAGE_SIGNAL = "describe_image_signal"
+    VISION_PROCESS_IMAGES = "process_images"
+
+
+    QUIT_APPLICATION = "quit"
 
 
 class EngineResponseCode(Enum):
@@ -226,3 +241,33 @@ class GeneratorSection(Enum):
     VID2VID = "vid2vid"
     TXT2VID = "txt2vid"
     PROMPT_BUILDER = "prompt_builder"
+
+
+class LLMAction(Enum):
+    CHAT = "chat"
+    RAG = "rag"
+    UPDATE_BOT_MOOD = "summary"
+    EVALUATE_USER = "user_evaluation"
+
+
+class LLMChatRole(Enum):
+    ASSISTANT = "assistant"
+    HUMAN = "user"
+    SYSTEM = "system"
+
+
+class LLMToolName(Enum):
+    COMMENT_ON_IMAGE = "comment_on_image"
+    DESCRIBE_IMAGE = "describe_image"
+    GENERATE_IMAGE = "generate_image"
+    DEFAULT_TOOL = "default_response_tool"
+    LLM_PROCESS_STT_AUDIO = "llm_process_stt_audio"
+    RAG_SEARCH = "llm_rag_search"
+    QUIT_APPLICATION = "quit_application"
+    STT_START_CAPTURE = "stt_start_audio_capture"
+    STT_STOP_CAPTURE = "stt_stop_audio_capture"
+    TTS_ENABLE = "tts_enable"
+    TTS_DISABLE = "tts_disable"
+    VISION_PROCESS_IMAGES = "vision_process_images"
+    VISION_START_CAPTURE = "vision_start_capture"
+    VISION_STOP_CAPTURE = "vision_stop_capture"

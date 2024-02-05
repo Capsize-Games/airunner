@@ -44,7 +44,6 @@ class WorkerManager(QObject, MediatorMixin):
 
     message = ""
     current_message = ""
-    processed_vision_history = []
 
     def do_response(self, response):
         """
@@ -147,8 +146,6 @@ class WorkerManager(QObject, MediatorMixin):
         self.emit(SignalCode.VISION_CAPTURE_PROCESS_SIGNAL, message)
 
     def on_vision_processed(self, message):
-        self.processed_vision_history.append(message)
-        print(self.processed_vision_history)
         self.emit(SignalCode.VISION_CAPTURE_UNPAUSE_SIGNAL)
     
     def on_AudioCaptureWorker_response_signal(self, message: np.ndarray):
@@ -201,26 +198,26 @@ class WorkerManager(QObject, MediatorMixin):
     def on_text_generate_request_signal(self, message):
         self.emit(
             SignalCode.SD_MOVE_TO_CPU_SIGNAL,
-            dict(
-                callback=lambda _message=message: self.emit(SignalCode.LLM_REQUEST_SIGNAL, _message)
-            )
+            {
+                'callback': lambda _message=message: self.emit(SignalCode.LLM_REQUEST_SIGNAL, _message)
+            }
         )
 
     def on_image_generate_request_signal(self, message):
         self.logger.info("on_image_generate_request_signal received")
-        self.emit(SignalCode.LLM_UNLOAD_SIGNAL, dict(
-            do_unload_model=self.settings["memory_settings"]["unload_unused_models"],
-            move_unused_model_to_cpu=self.settings["memory_settings"]["move_unused_model_to_cpu"],
-            dtype=self.settings["llm_generator_settings"]["dtype"],
-            callback=lambda _message=message: self.do_image_generate_request(_message)
-        ))
+        self.emit(SignalCode.LLM_UNLOAD_SIGNAL, {
+            'do_unload_model': self.settings["memory_settings"]["unload_unused_models"],
+            'move_unused_model_to_cpu': self.settings["memory_settings"]["move_unused_model_to_cpu"],
+            'dtype': self.settings["llm_generator_settings"]["dtype"],
+            'callback': lambda _message=message: self.do_image_generate_request(_message)
+        })
     
     def do_image_generate_request(self, message):
         clear_memory()
-        self.emit(SignalCode.ENGINE_DO_REQUEST_SIGNAL, dict(
-            code=EngineRequestCode.GENERATE_IMAGE, 
-            message=message
-        ))
+        self.emit(SignalCode.ENGINE_DO_REQUEST_SIGNAL, {
+            'code': EngineRequestCode.GENERATE_IMAGE,
+            'message': message
+        })
 
     def request_queue_size(self):
         return self.engine_request_worker.queue.qsize()
@@ -245,11 +242,11 @@ class WorkerManager(QObject, MediatorMixin):
     
     def do_tts_request(self, message: str, is_end_of_message: bool=False):
         if self.settings["tts_enabled"]:
-            self.emit(SignalCode.TTS_REQUEST, dict(
-                message=message.replace("</s>", ""),
-                tts_settings=self.settings["tts_settings"],
-                is_end_of_message=is_end_of_message,
-            ))
+            self.emit(SignalCode.TTS_REQUEST, {
+                'message': message.replace("</s>", ""),
+                'tts_settings': self.settings["tts_settings"],
+                'is_end_of_message': is_end_of_message,
+            })
     
     def on_clear_llm_history_signal(self):
         self.emit(SignalCode.LLM_CLEAR_HISTORY)

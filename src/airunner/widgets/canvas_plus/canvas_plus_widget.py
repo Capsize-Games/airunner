@@ -25,30 +25,87 @@ from airunner.workers.image_data_worker import ImageDataWorker
 
 
 class CanvasPlusWidget(BaseWidget):
+    """
+    Widget responsible for multiple functionalities:
+
+    - Allows the user to draw on a canvas.
+    - Displays the grid.
+    - Displays images.
+    - Handles the active grid area.
+    """
     widget_class_ = Ui_canvas
-    scene = None
-    view = None
-    view_size = None
-    layers = {}
-    images = {}
-    active_grid_area = None
-    active_grid_area_pivot_point = QPoint(0, 0)
-    active_grid_area_position = QPoint(0, 0)
-    last_pos = QPoint(0, 0)
-    current_image_index = 0
-    draggable_pixmaps_in_scene = {}
-    initialized = False
-    drawing = False
-    redraw_lines = False
-    has_lines = False
-    line_group = QGraphicsItemGroup()
-    grid_settings: dict = {}
-    active_grid_settings: dict = {}
-    canvas_settings: dict = {}
-    image = None
-    image_backup = None
-    previewing_filter = False
-    drag_pos: QPoint = None
+
+    def __init__(self, *args, **kwargs):
+        super().__init__(*args, **kwargs)
+        self.scene = None
+        self.view = None
+        self.view_size = None
+        self.layers = {}
+        self.images = {}
+        self.active_grid_area = None
+        self.active_grid_area_pivot_point = QPoint(0, 0)
+        self.active_grid_area_position = QPoint(0, 0)
+        self.last_pos = QPoint(0, 0)
+        self.current_image_index = 0
+        self.draggable_pixmaps_in_scene = {}
+        self.initialized = False
+        self.drawing = False
+        self.redraw_lines = False
+        self.has_lines = False
+        self.line_group = QGraphicsItemGroup()
+        self.grid_settings: dict = {}
+        self.active_grid_settings: dict = {}
+        self.canvas_settings: dict = {}
+        self.image = None
+        self.image_backup = None
+        self.previewing_filter = False
+        self.drag_pos: QPoint = None
+        self.do_draw_layers = True
+        
+        self._grid_settings = {}
+        self._canvas_settings = {}
+        self._active_grid_settings = {}
+        self.pixmaps = {}
+
+        self.ui.central_widget.resizeEvent = self.resizeEvent
+        self.canvas_container.resizeEvent = self.window_resized
+
+        self.image_data_worker = None
+        self.canvas_resize_worker = None
+
+        # Map signal codes to class function slots
+        self.signal_handlers = {
+            SignalCode.CANVAS_UPDATE_CURSOR: self.on_canvas_update_cursor_signal,
+            SignalCode.APPLICATION_MAIN_WINDOW_LOADED_SIGNAL: self.on_main_window_loaded_signal,
+            SignalCode.CANVAS_DO_DRAW_SIGNAL: self.on_canvas_do_draw_signal,
+            SignalCode.CANVAS_CLEAR_LINES_SIGNAL: self.on_canvas_clear_lines_signal,
+            SignalCode.SD_IMAGE_DATA_WORKER_RESPONSE_SIGNAL: self.on_image_data_worker_response_signal,
+            SignalCode.CANVAS_RESIZE_WORKER_RESPONSE_SIGNAL: self.on_canvas_resize_worker_response_signal,
+            SignalCode.SD_IMAGE_GENERATED_SIGNAL: self.on_image_generated_signal,
+            SignalCode.CANVAS_LOAD_IMAGE_FROM_PATH_SIGNAL: self.on_load_image_from_path,
+            SignalCode.CANVAS_HANDLE_LAYER_CLICK_SIGNAL: self.on_canvas_handle_layer_click_signal,
+            SignalCode.CANVAS_UPDATE_SIGNAL: self.on_update_canvas_signal,
+            SignalCode.LAYER_SET_CURRENT_SIGNAL: self.on_set_current_layer_signal,
+            SignalCode.APPLICATION_SETTINGS_CHANGED_SIGNAL: self.on_application_settings_changed_signal,
+            SignalCode.CANVAS_CLEAR: self.on_canvas_clear_signal,
+            SignalCode.CANVAS_PASTE_IMAGE_SIGNAL: self.on_canvas_paste_image_signal,
+            SignalCode.CANVAS_COPY_IMAGE_SIGNAL: self.on_canvas_copy_image_signal,
+            SignalCode.CANVAS_CUT_IMAGE_SIGNAL: self.on_canvas_cut_image_signal,
+            SignalCode.CANVAS_ROTATE_90_CLOCKWISE_SIGNAL: self.on_canvas_rotate_90_clockwise_signal,
+            SignalCode.CANVAS_ROTATE_90_COUNTER_CLOCKWISE_SIGNAL: self.on_canvas_rotate_90_counter_clockwise_signal,
+        }
+
+        # Map service codes to class functions
+        self.services = {
+            ServiceCode.CURRENT_ACTIVE_IMAGE: self.canvas_current_active_image,
+            ServiceCode.CURRENT_LAYER: self.canvas_current_active_image
+        }
+
+        # Map class properties to worker classes
+        self.worker_class_map = {
+            "image_data_worker": ImageDataWorker,
+            "canvas_resize_worker": CanvasResizeWorker
+        }
 
     @property
     def image_pivot_point(self):
@@ -61,10 +118,10 @@ class CanvasPlusWidget(BaseWidget):
 
     @image_pivot_point.setter
     def image_pivot_point(self, value):
-        self.emit(SignalCode.LAYER_UPDATE_CURRENT_SIGNAL, dict(
-            pivot_point_x=value.x(),
-            pivot_point_y=value.y()
-        ))
+        self.emit(SignalCode.LAYER_UPDATE_CURRENT_SIGNAL, {
+            "pivot_point_x": value.x(),
+            "pivot_point_y": value.y()
+        })
 
     @property
     def brush_size(self):
@@ -88,52 +145,29 @@ class CanvasPlusWidget(BaseWidget):
     @property
     def current_active_image(self):
         return self.get_service(ServiceCode.CURRENT_ACTIVE_IMAGE)()
-    
+
     @current_active_image.setter
     def current_active_image(self, value):
         self.add_image_to_current_layer(value)
-    
-    @property
-    def layer_container_widget(self):
-        # TODO
-        return ServiceLocator.get(ServiceCode.LAYER_WIDGET)()
-    
+
     @property
     def canvas_container(self):
         return self.ui.canvas_container
 
-    def __init__(self, *args, **kwargs):
-        super().__init__(*args, **kwargs)
-        self._grid_settings = {}
-        self._canvas_settings = {}
-        self._active_grid_settings = {}
-        self.pixmaps = {}
+    def on_canvas_paste_image_signal(self, _event):
+        self.paste_image_from_clipboard()
 
-        self.ui.central_widget.resizeEvent = self.resizeEvent
-        self.canvas_container.resizeEvent = self.window_resized
-        #self.register(SignalCode.CANVAS_ZOOM_LEVEL_CHANGED, self.on_zoom_level_changed_signal)
-        self.register(SignalCode.CANVAS_UPDATE_CURSOR, self.on_canvas_update_cursor_signal)
-        self.register(SignalCode.APPLICATION_MAIN_WINDOW_LOADED_SIGNAL, self.on_main_window_loaded_signal)
-        self.register(SignalCode.CANVAS_DO_DRAW_SIGNAL, self.on_canvas_do_draw_signal)
-        self.register(SignalCode.CANVAS_CLEAR_LINES_SIGNAL, self.on_canvas_clear_lines_signal)
-        self.register(SignalCode.SD_IMAGE_DATA_WORKER_RESPONSE_SIGNAL, self.on_image_data_worker_response_signal)
-        self.register(SignalCode.CANVAS_RESIZE_WORKER_RESPONSE_SIGNAL, self.on_canvas_resize_worker_response_signal)
-        self.register(SignalCode.SD_IMAGE_GENERATED_SIGNAL, self.on_image_generated_signal)
-        self.register(SignalCode.CANVAS_LOAD_IMAGE_FROM_PATH_SIGNAL, self.on_load_image_from_path)
-        self.register(SignalCode.CANVAS_HANDLE_LAYER_CLICK_SIGNAL, self.on_canvas_handle_layer_click_signal)
-        self.register(SignalCode.CANVAS_UPDATE_SIGNAL, self.on_update_canvas_signal)
-        self.register(SignalCode.LAYER_SET_CURRENT_SIGNAL, self.on_set_current_layer_signal)
-        self.register(SignalCode.APPLICATION_SETTINGS_CHANGED_SIGNAL, self.on_application_settings_changed_signal)
-        self.register(SignalCode.CANVAS_CLEAR, self.on_canvas_clear_signal)
+    def on_canvas_copy_image_signal(self, _event):
+        self.copy_image(ServiceLocator.get(ServiceCode.CURRENT_ACTIVE_IMAGE)())
 
-        self.register_service("canvas_drag_pos", self.canvas_drag_pos)
-        self.register_service("canvas_current_active_image", self.canvas_current_active_image)
+    def on_canvas_cut_image_signal(self, _event):
+        self.cut_image()
 
-        self.image_data_worker = None
-        self.canvas_resize_worker = None
+    def on_canvas_rotate_90_clockwise_signal(self, _event):
+        self.rotate_90_clockwise()
 
-        self.image_data_worker = self.create_worker(ImageDataWorker)
-        self.canvas_resize_worker = self.create_worker(CanvasResizeWorker)
+    def on_canvas_rotate_90_counter_clockwise_signal(self, _event):
+        self.rotate_90_counterclockwise()
 
     def on_canvas_update_cursor_signal(self, event):
         if self.settings["current_tool"] in ['brush', 'eraser']:
@@ -237,7 +271,7 @@ class CanvasPlusWidget(BaseWidget):
         self.emit(SignalCode.LAYERS_SHOW_SIGNAL)
         if path is not None:
             self.emit(
-                SignalCode.STATUS_INFO_SIGNAL,
+                SignalCode.APPLICATION_STATUS_INFO_SIGNAL,
                 f"Image generated to {path}"
             )
     
@@ -309,13 +343,13 @@ class CanvasPlusWidget(BaseWidget):
     def do_resize_canvas(self, force_draw=False):
         if not self.view:
             return
-        data = dict(
-            settings=self.settings,
-            view_size=self.view.viewport().size(),
-            scene=self.scene,
-            line_group=self.line_group,
-            force_draw=force_draw
-        )
+        data = {
+            'settings': self.settings,
+            'view_size': self.view.viewport().size(),
+            'scene': self.scene,
+            'line_group': self.line_group,
+            'force_draw': force_draw
+        }
         self.emit(SignalCode.CANVAS_RESIZE_SIGNAL, data)
 
     def window_resized(self, event):
@@ -507,6 +541,9 @@ class CanvasPlusWidget(BaseWidget):
         self.settings = settings
 
     def draw_layers(self):
+        if not self.do_draw_layers:
+            return
+        self.do_draw_layers = False
         layers = self.settings["layers"]
         for index, layer in enumerate(layers):
             image = self.get_service(ServiceCode.GET_IMAGE_FROM_LAYER)(layer)
@@ -530,10 +567,10 @@ class CanvasPlusWidget(BaseWidget):
                 pixmap = QPixmap()
                 pixmap.convertFromImage(ImageQt(image))
                 self.pixmaps[index] = DraggablePixmap(self, pixmap)
-                self.emit(SignalCode.LAYER_UPDATE_SIGNAL, dict(
-                    layer=layer,
-                    index=index
-                ))
+                self.emit(SignalCode.LAYER_UPDATE_SIGNAL, {
+                    "layer": layer,
+                    "index": index
+                })
                 if self.pixmaps[index].scene() != self.scene:
                     self.scene.addItem(self.pixmaps[index])
             continue
@@ -774,6 +811,7 @@ class CanvasPlusWidget(BaseWidget):
         self.emit(SignalCode.LAYER_SWITCH_SIGNAL, layer_index)
 
     def add_image_to_scene(self, image_data, is_outpaint=False, image_root_point=None):
+        self.do_draw_layers = True
         #self.image_adder = ImageAdder(self, image, is_outpaint, image_root_point)
         #self.image_adder.finished.connect(self.on_image_adder_finished)
         self.current_active_image = image_data["image"]

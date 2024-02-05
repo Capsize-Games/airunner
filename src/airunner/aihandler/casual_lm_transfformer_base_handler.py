@@ -1,14 +1,16 @@
-import torch
-from llama_index.core.base_query_engine import BaseQueryEngine
+from typing import Any, Generator
+from typing import AnyStr
+
+from airunner.aihandler.agent import AIRunnerAgent
+from airunner.aihandler.local_agent import LocalAgent
 from transformers import AutoModelForCausalLM, TextIteratorStreamer
+from transformers import pipeline as hf_pipeline
 
-from llama_index.llms import HuggingFaceLLM, ChatMessage
-from llama_index.embeddings import HuggingFaceEmbedding
-from llama_index import ServiceContext, StorageContext, load_index_from_storage
-from llama_index import VectorStoreIndex, SimpleDirectoryReader
-
+from airunner.aihandler.llm_tools import QuitApplicationTool, StartVisionCaptureTool, StopVisionCaptureTool, \
+    StartAudioCaptureTool, StopAudioCaptureTool, StartSpeakersTool, StopSpeakersTool, ProcessVisionTool, \
+    ProcessAudioTool, RespondToUserTool
 from airunner.aihandler.tokenizer_handler import TokenizerHandler
-from airunner.enums import SignalCode
+from airunner.enums import SignalCode, LLMAction, LLMChatRole, LLMToolName
 
 
 class CasualLMTransformerBaseHandler(TokenizerHandler):
@@ -18,11 +20,97 @@ class CasualLMTransformerBaseHandler(TokenizerHandler):
         super().__init__(*args, **kwargs)
         self.streamer = None
         self.llm = None
+        self.llm_with_tools = None
+        self.agent_executor = None
         self.embed_model = None
         self.service_context_model = None
-        self.documents = None
-        self.index = None
-        self.query_engine: BaseQueryEngine = None
+        self.use_query_engine: bool = False
+        self.use_chat_engine: bool = True
+        self._username: str = ""
+        self._botname: str = ""
+        self.bot_mood: str = ""
+        self.bot_personality: str = ""
+        self.user_evaluation: str = ""
+        self.register(SignalCode.LLM_CLEAR_HISTORY, self.on_clear_history_signal)
+        self.use_personality: bool = False
+        self.use_mood: bool = False
+        self.use_guardrails: bool = False
+        self.use_system_instructions: bool = False
+        self.assign_names: bool = False
+        self.prompt_template: str = ""
+        self.guardrails_prompt: str = ""
+        self.system_instructions: str = ""
+        self.chat_agent = None
+        self.tool_agent = None
+        self.tools: dict = self.load_tools()
+        self.restrict_tools_to_additional: bool = True
+        self.return_agent_code: bool = False
+        self.batch_size: int = 1
+
+    @property
+    def is_mistral(self) -> bool:
+        return "mistral" in self.model_path.lower()
+
+    @property
+    def chat_template(self):
+        return (
+            "{{ bos_token }}"
+            "{% for message in messages %}"
+            "{% if message['role'] == 'system' %}"
+            "{{ '[INST] <<SYS>>' + message['content'] + ' <</SYS>>[/INST]' }}"
+            "{% elif message['role'] == 'user' %}"
+            "{{ '[INST] ' + message['content'] + ' [/INST]' }}"
+            "{% elif message['role'] == 'assistant' %}"
+            "{{ message['content'] + eos_token + ' ' }}"
+            "{% endif %}"
+            "{% endfor %}"
+        ) if self.is_mistral else None
+
+    @property
+    def username(self):
+        if self.assign_names:
+            return self._username
+        return "User"
+
+    @property
+    def botname(self):
+        if self.assign_names:
+            return self._botname
+        return "Assistant"
+
+    @staticmethod
+    def load_tools() -> dict:
+        return {
+            LLMToolName.QUIT_APPLICATION.value: QuitApplicationTool(),
+            LLMToolName.VISION_START_CAPTURE.value: StartVisionCaptureTool(),
+            LLMToolName.VISION_STOP_CAPTURE.value: StopVisionCaptureTool(),
+            LLMToolName.STT_START_CAPTURE.value: StartAudioCaptureTool(),
+            LLMToolName.STT_STOP_CAPTURE.value: StopAudioCaptureTool(),
+            LLMToolName.TTS_ENABLE.value: StartSpeakersTool(),
+            LLMToolName.TTS_DISABLE.value: StopSpeakersTool(),
+            LLMToolName.DESCRIBE_IMAGE.value: ProcessVisionTool,
+            LLMToolName.LLM_PROCESS_STT_AUDIO.value: ProcessAudioTool(),
+            #LLMToolName.DEFAULT_TOOL.value: RespondToUserTool(),
+        }
+
+    def on_clear_history_signal(self):
+        self.history = []
+
+    def process_data(self, data):
+        super().process_data(data)
+        self._username = self.request_data.get("username", "")
+        self._botname = self.request_data.get("botname", "")
+        self.bot_mood = self.request_data.get("bot_mood", "")
+        self.bot_personality = self.request_data.get("bot_personality", "")
+        self.use_personality = self.request_data.get("use_personality", False)
+        self.use_mood = self.request_data.get("use_mood", False)
+        self.use_guardrails = self.request_data.get("use_guardrails", False)
+        self.use_system_instructions = self.request_data.get("use_system_instructions", False)
+        self.assign_names = self.request_data.get("assign_names", False)
+        self.prompt_template = self.request_data.get("prompt_template", "")
+        self.guardrails_prompt = self.request_data.get("guardrails_prompt", "")
+        self.system_instructions = self.request_data.get("system_instructions", "")
+        self.batch_size = self.request_data.get("batch_size", 1)
 
     def post_load(self):
         super().post_load()
@@ -35,26 +123,59 @@ class CasualLMTransformerBaseHandler(TokenizerHandler):
         if do_load_llm:
             self.load_llm()
 
-        do_load_embed_model = self.embed_model is None
-        if do_load_embed_model:
-            self.load_embed_model()
+        do_load_agent = self.chat_agent is None
+        if do_load_agent:
+            self.load_agent()
 
-        do_load_service_context = self.service_context_model is None
-        if do_load_service_context:
-            self.load_service_context()
+    def load_agent(self):
+        self.logger.info("Loading agent")
+        # query_engine_tool = QueryEngineTool(
+        #     query_engine=self.query_engine,
+        #     metadata=ToolMetadata(
+        #         name="help_agent",
+        #         description="Agent that can return help results about the application."
+        #     )
+        # )
 
-        do_load_documents = self.documents is None
-        if do_load_documents:
-            self.load_documents()
+        self.tool_agent = LocalAgent(
+            model=self.model,
+            tokenizer=self.tokenizer,
+            additional_tools=self.tools,
+            restrict_tools_to_additional=self.restrict_tools_to_additional,
+        )
+        self.chat_agent = AIRunnerAgent(
+            model=self.model,
+            tokenizer=self.tokenizer,
+            streamer=self.streamer,
+            tools=self.tools,
+            chat_template=self.chat_template,
+            username=self.username,
+            botname=self.botname,
+            bot_mood=self.bot_mood,
+            bot_personality=self.bot_personality,
+            min_length=self.min_length,
+            max_length=self.max_length,
+            num_beams=self.num_beams,
+            do_sample=self.do_sample,
+            top_k=self.top_k,
+            eta_cutoff=self.eta_cutoff,
+            sequences=self.sequences,
+            early_stopping=self.early_stopping,
+            repetition_penalty=self.repetition_penalty,
+            temperature=self.temperature,
+            is_mistral=self.is_mistral,
+            top_p=self.top_p,
+            guardrails_prompt=self.guardrails_prompt,
+            use_guardrails=self.use_guardrails,
+            system_instructions=self.system_instructions,
+            use_system_instructions=self.use_system_instructions,
+            user_evaluation=self.user_evaluation,
+            use_mood=self.use_mood,
+            use_personality=self.use_personality
+        )
 
-        do_load_index = self.index is None
-        if do_load_index:
-            self.load_index()
-
-        do_load_query_engine = self.query_engine is None
-        if do_load_query_engine:
-            self.load_query_engine()
-            self.save_query_engine_to_disk()
+    def on_llm_process_stt_audio_signal(self):
+        print("TODO: on_llm_process_stt_audio_signal")
 
     def load_streamer(self):
         self.logger.info("Loading LLM text streamer")
@@ -62,196 +183,27 @@ class CasualLMTransformerBaseHandler(TokenizerHandler):
 
     def load_llm(self):
         self.logger.info("Loading RAG")
-        self.llm = HuggingFaceLLM(
+        self.llm = hf_pipeline(
+            task="text-generation",
             model=self.model,
             tokenizer=self.tokenizer,
-        )
-
-    def load_embed_model(self):
-        self.logger.info("Loading embedding model")
-        self.embed_model = HuggingFaceEmbedding(
-            model_name=self.settings["llm_generator_settings"]["embeddings_model_path"],
-        )
-
-    def load_service_context(self):
-        self.logger.info("Loading service context")
-        self.service_context_model = ServiceContext.from_defaults(
-            llm=self.llm,
-            embed_model=self.embed_model
-        )
-
-    def load_documents(self):
-        documents_path = self.settings["path_settings"]["documents_path"]
-        self.logger.info(f"Loading documents from {documents_path}")
-        self.documents = SimpleDirectoryReader(
-            documents_path,
-            exclude_hidden=False,
-        ).load_data()
-
-    def load_index(self):
-        self.logger.info("Loading index")
-        try:
-            self.load_query_engine_from_disk()
-        except FileNotFoundError:
-            self.index = VectorStoreIndex(
-                self.documents,
-                service_context=self.service_context_model
-            )
-
-    def load_query_engine(self):
-        self.logger.info("Loading query engine")
-        self.query_engine: BaseQueryEngine = self.index.as_query_engine(
-            streaming=True
+            batch_size=self.batch_size,
+            use_fast=True,
+            **dict(),
         )
 
     def do_generate(self):
-        self.chat_stream()
-        #self.rag_stream()
+        self.logger.info("Generating response")
+        # self.bot_mood = self.update_bot_mood()
+        # self.user_evaluation = self.do_user_evaluation()
+        #full_message = self.rag_stream()
 
-    def save_query_engine_to_disk(self):
-        self.index.storage_context.persist(
-            persist_dir=self.settings["path_settings"]["llama_index_path"]
-        )
+        # First try running a tool
+        self.tool_agent.run(self.prompt)
 
-    def load_query_engine_from_disk(self):
-        storage_context = StorageContext.from_defaults(
-            persist_dir=self.settings["path_settings"]["llama_index_path"]
-        )
-        self.index = load_index_from_storage(
-            storage_context,
-            service_context=self.service_context_model
-        )
-        self.query_engine = self.index.as_query_engine(
-            streaming=True
-        )
-
-    def build_system_prompt(self):
-        # The guardrails prompt is optional and can be overriden.
-        guardrails_prompt = ""
-        if self.settings["llm_generator_settings"]["use_guardrails"]:
-            guardrails_prompt = self.settings["llm_generator_settings"]["guardrails_prompt"]
-
-        system_prompt = []
-
-        if self.settings["llm_generator_settings"]["use_guardrails"]:
-            system_prompt.append(guardrails_prompt)
-
-        if self.settings["llm_generator_settings"]["use_system_instructions"]:
-            system_prompt.append(
-                self.settings["llm_generator_settings"]["system_instructions"]
-            )
-
-        if self.settings["llm_generator_settings"]["assign_names"]:
-            system_prompt.append(
-                "Your name is " + self.botname + ". "
-            )
-            system_prompt.append(
-                "The user's name is " + self.username + "."
-            )
-
-        if self.settings["llm_generator_settings"]["use_mood"]:
-            system_prompt.append(f"Your mood: {self.bot_mood}.")
-
-        if self.settings["llm_generator_settings"]["use_personality"]:
-            system_prompt.append(f"Your personality: {self.bot_personality}.")
-
-        system_prompt = "\n".join(system_prompt)
-        return system_prompt
-
-    def prepare_messages(self, system_prompt=None):
-        if system_prompt is None:
-            system_prompt = ChatMessage(
-                role="system",
-                content=self.build_system_prompt()
-            )
-        messages = [
-            system_prompt
-        ]
-        for message in self.history:
-            messages.append(
-                ChatMessage(
-                    role=message["role"],
-                    content=message["content"]
-                )
-            )
-        if self.prompt:
-            messages.append(
-                ChatMessage(
-                    role="user",
-                    content=self.prompt
-                )
-            )
-        return messages
-
-    def chat_stream(self):
-        self.logger.info("Generating chat response")
-        self.add_message_to_history(
-            self.prompt,
-            role="user"
-        )
-
-        messages = self.prepare_messages()
-
-        streaming_response = self.llm.stream_chat(messages)
-        is_first_message = True
-        is_end_of_message = False
-        assistant_message = ""
-        for chat_response in streaming_response:
-            content, is_end_of_message = self.parse_chat_response(chat_response)
-            content = content.replace(assistant_message, "")
-            assistant_message += content
-            self.emit_streamed_text_signal(
-                message=content,
-                is_first_message=is_first_message,
-                is_end_of_message=is_end_of_message
-            )
-            is_first_message = False
-
-        if not is_end_of_message:
-            self.send_final_message()
-
-        self.add_message_to_history(
-            assistant_message
-        )
-
-    def rag_stream(self):
-        self.logger.info("Generating RAG response")
-        streaming_response = self.query_engine.query(self.prompt)
-        is_first_message = True
-        is_end_of_message = False
-        assistant_message = ""
-        for new_text in streaming_response.response_gen:
-            content, is_end_of_message = self.parse_rag_response(new_text)
-            assistant_message += content
-            self.emit_streamed_text_signal(
-                message=content,
-                is_first_message=is_first_message,
-                is_end_of_message=is_end_of_message
-            )
-            is_first_message = False
-
-        if not is_end_of_message:
-            self.send_final_message()
-
-        self.add_message_to_history(
-            assistant_message
-        )
-
-    def parse_rag_response(self, content):
-        is_end_of_message = False
-        if "</s>" in content:
-            content = content.replace("</s>", "")
-            is_end_of_message = True
-        return content, is_end_of_message
-
-    def parse_chat_response(self, chat_response):
-        message = chat_response.message
-        content = message.content
-        is_end_of_message = False
-        if "</s>" in content:
-            content = content.replace("</s>", "")
-            is_end_of_message = True
-        return content, is_end_of_message
+        # Then do chat prompt
+        self.chat_agent.run(self.prompt)
+        self.send_final_message()
 
     def emit_streamed_text_signal(self, **kwargs):
         kwargs["name"] = self.botname
@@ -260,15 +212,12 @@ class CasualLMTransformerBaseHandler(TokenizerHandler):
             kwargs
         )
 
-    def add_message_to_history(self, message, role="assistant"):
-        self.history.append({
-            "role": role,
-            "content": message
-        })
-
     def send_final_message(self):
         self.emit_streamed_text_signal(
             message="",
             is_first_message=False,
             is_end_of_message=True
         )
+
+    def load_chat_engine(self):
+        self.chat_engine = self.index.as_chat_engine()
