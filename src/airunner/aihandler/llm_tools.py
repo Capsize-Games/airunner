@@ -20,7 +20,6 @@ is able to select the correct tool for the task at hand.
 Classes:
     See below for a list of classes and their descriptions.
 """
-
 from transformers import Tool
 
 from airunner.mediator_mixin import MediatorMixin
@@ -40,6 +39,7 @@ class BaseTool(Tool, MediatorMixin):
 def create_application_control_tool_class(description, name, signal_code):
     """
     Factory function to create a class for an application control tool.
+    Used for huggingface tools.
 
     Args:
         description (str): The description of the tool.
@@ -60,11 +60,9 @@ def create_application_control_tool_class(description, name, signal_code):
         def __call__(self, *args, **kwargs):
             self.emit(self.signal_code)
             return "emitting signal"
-
-    ApplicationControlTool.__doc__ = description
+    ApplicationControlTool.description = description
     ApplicationControlTool.__name__ = name
     ApplicationControlTool.signal_code = signal_code
-
     return ApplicationControlTool
 
 
