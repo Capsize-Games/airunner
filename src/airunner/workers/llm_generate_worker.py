@@ -7,7 +7,6 @@ class LLMGenerateWorker(Worker):
     def __init__(self, prefix="LLMGenerateWorker"):
         self.llm = CasualLMTransformerBaseHandler()
         super().__init__(prefix=prefix)
-        self.register(SignalCode.LLM_CLEAR_HISTORY, self.on_clear_history)
         self.register(SignalCode.LLM_REQUEST_WORKER_RESPONSE_SIGNAL, self.on_LLMRequestWorker_response_signal)
         self.register(SignalCode.LLM_UNLOAD_SIGNAL, self.on_unload_llm_signal)
 
@@ -42,9 +41,6 @@ class LLMGenerateWorker(Worker):
 
     def handle_message(self, message):
         self.llm.handle_request(message)
-    
-    def on_clear_history(self):
-        self.llm.clear_history()
     
     def unload_llm(self):
         self.llm.unload()

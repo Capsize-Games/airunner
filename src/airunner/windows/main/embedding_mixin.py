@@ -24,13 +24,13 @@ class EmbeddingMixin:
                 continue
             if embedding["name"] == name and embedding["path"] == path:
                 return
-        embedding = dict(
-            name=params.get("name", ""),
-            path=params.get("path", ""),
-            tags=params.get("tags", ""),
-            active=params.get("active", True),
-            version=params.get("version", "SD 1.5"),
-        )
+        embedding = {
+            "name": params.get("name", ""),
+            "path": params.get("path", ""),
+            "tags": params.get("tags", ""),
+            "active": params.get("active", True),
+            "version": params.get("version", "SD 1.5"),
+        }
         settings["embeddings"].append(embedding)
         self.settings = settings
         return embedding
@@ -71,12 +71,16 @@ class EmbeddingMixin:
         embeddings_path = self.settings["path_settings"]["embeddings_model_path"]
         if os.path.exists(embeddings_path):
             for root, dirs, _ in os.walk(embeddings_path):
-                for dir in dirs:
-                    version = dir.split("/")[-1]
-                    path = os.path.join(root, dir)
+                for directory in dirs:
+                    version = directory.split("/")[-1]
+                    path = os.path.join(root, directory)
                     for entry in os.scandir(path):
                         if entry.is_file() and entry.name.endswith((".ckpt", ".safetensors", ".pt")):
                             name = os.path.splitext(entry.name)[0]
-                            embedding = dict(name=name, path=entry.path, version=version)
+                            embedding = {
+                                "name": name,
+                                "path": entry.path,
+                                "version": version
+                            }
                             self.add_embedding(embedding)
         self.delete_missing_embeddings()
