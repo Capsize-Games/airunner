@@ -3,7 +3,7 @@ from PyQt6.QtWidgets import QSpacerItem, QSizePolicy
 from PyQt6.QtCore import Qt
 
 from airunner.enums import SignalCode, ServiceCode
-from airunner.mediator_mixin import MediatorMixin
+from airunner.utils import parse_template
 from airunner.widgets.base_widget import BaseWidget
 from airunner.widgets.llm.loading_widget import LoadingWidget
 from airunner.widgets.llm.templates.chat_prompt_ui import Ui_chat_prompt
@@ -100,7 +100,7 @@ class ChatPromptWidget(BaseWidget):
 
         llm_generator_settings = self.settings["llm_generator_settings"]
 
-        parsed_template = self.parse_template(prompt_template)
+        parsed_template = parse_template(prompt_template)
 
         current_bot = self.settings["llm_generator_settings"]["saved_chatbots"][self.settings["llm_generator_settings"]["current_chatbot"]]
         self.emit(
@@ -238,21 +238,6 @@ class ChatPromptWidget(BaseWidget):
         if transcript == "." or transcript is None or transcript == "":
             return
         self.do_generate(prompt_override=transcript)
-
-    def parse_template(self, template):
-        system_instructions = template["system_instructions"]
-        model = template["model"]
-        llm_category = template["llm_category"]
-        template = template["template"]
-        if llm_category == "casuallm":
-            if model == "mistralai/Mistral-7B-Instruct-v0.1":
-                return "\n".join((
-                    "[INST]<<SYS>>",
-                    system_instructions,# + "\nYou must say everything in Japanese with Japanese characters.",
-                    "<</SYS>>",
-                    template,
-                    "[/INST]"
-                ))
     
     def describe_image(self, image, callback):
         self.do_generate(

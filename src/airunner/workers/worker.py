@@ -42,8 +42,6 @@ class Worker(QObject, MediatorMixin):
         while self.running:
             self.preprocess()
             try:
-                # if self.queue has more than one item, scrap everything other than the last item that
-                # was added to the queue
                 msg = self.get_item_from_queue()
                 self.handle_message(msg)
             except queue.Empty:
