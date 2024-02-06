@@ -5,7 +5,7 @@ from PyQt6.QtGui import QPainterPath
 from PyQt6.QtGui import QPen, QPixmap, QPainter
 from PyQt6.QtWidgets import QGraphicsScene, QGraphicsPixmapItem
 
-from airunner.enums import SignalCode
+from airunner.enums import SignalCode, CanvasToolName
 from airunner.mediator_mixin import MediatorMixin
 from airunner.service_locator import ServiceLocator
 
@@ -101,14 +101,14 @@ class CustomScene(
         self.item.setPixmap(QPixmap.fromImage(self.image))
 
     def mousePressEvent(self, event):
-        if self.settings["current_tool"] not in ["brush", "eraser"]:
+        if self.settings["current_tool"] not in [CanvasToolName.BRUSH, CanvasToolName.ERASER]:
             super(CustomScene, self).mousePressEvent(event)
             return
 
         self.last_pos = event.scenePos()
-        if self.settings["current_tool"] == "brush":
+        if self.settings["current_tool"] == CanvasToolName.BRUSH:
             self.drawAt(self.last_pos)
-        elif self.settings["current_tool"] == "eraser":
+        elif self.settings["current_tool"] == CanvasToolName.ERASER:
             self.eraseAt(self.last_pos)
 
     def handle_cursor(self, event):
@@ -129,13 +129,13 @@ class CustomScene(
 
     def mouseMoveEvent(self, event):
         self.handle_cursor(event)
-        if self.settings["current_tool"] not in ["brush", "eraser"]:
+        if self.settings["current_tool"] not in [CanvasToolName.BRUSH, CanvasToolName.ERASER]:
             super(CustomScene, self).mouseMoveEvent(event)
             return
         
-        if self.settings["current_tool"] == "brush":
+        if self.settings["current_tool"] == CanvasToolName.BRUSH:
             self.drawAt(event.scenePos())
-        elif self.settings["current_tool"] == "eraser":
+        elif self.settings["current_tool"] == CanvasToolName.ERASER:
             self.eraseAt(event.scenePos())
         
         # Update the last position

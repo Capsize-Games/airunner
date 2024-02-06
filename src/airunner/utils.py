@@ -489,3 +489,9 @@ def create_worker(worker_class_):
     WORKERS.append(worker)
     THREADS.append(worker_thread)
     return worker
+
+
+def set_widget_state(widget, checked, block_signals=True):
+    widget.blockSignals(block_signals)
+    widget.setChecked(checked)
+    widget.blockSignals(False)

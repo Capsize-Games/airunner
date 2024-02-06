@@ -5,7 +5,7 @@ from airunner.data.bootstrap.controlnet_bootstrap_data import controlnet_bootstr
 from airunner.data.bootstrap.imagefilter_bootstrap_data import imagefilter_bootstrap_data
 from airunner.data.bootstrap.model_bootstrap_data import model_bootstrap_data
 from airunner.data.bootstrap.pipeline_bootstrap_data import pipeline_bootstrap_data
-from airunner.enums import Mode, SignalCode
+from airunner.enums import Mode, SignalCode, CanvasToolName
 from airunner.service_locator import ServiceLocator
 from airunner.settings import BASE_PATH
 from airunner.settings import DEFAULT_PATHS
@@ -53,7 +53,7 @@ class SettingsMixin:
             app_version="",
             allow_online_mode=True,
             current_version_stablediffusion="SD Turbo",
-            current_tool="active_grid_area",
+            current_tool=CanvasToolName.ACTIVE_GRID_AREA,
             image_export_type="png",
             auto_export_images=True,
             show_active_image_area=True,

@@ -92,3 +92,12 @@ DEFAULT_CHATBOT = dict(
         "the assistant."
     ),
 )
+
+AVAILABLE_IMAGE_FILTERS = [
+    "SaturationFilter",
+    "ColorBalanceFilter",
+    "RGBNoiseFilter",
+    "PixelFilter",
+    "HalftoneFilter",
+    "RegistrationErrorFilter"
+]
