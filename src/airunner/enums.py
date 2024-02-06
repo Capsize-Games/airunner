@@ -87,6 +87,7 @@ class SignalCode(Enum):
     CANVAS_CUT_IMAGE_SIGNAL = "canvas_cut_image_signal"
     CANVAS_ROTATE_90_CLOCKWISE_SIGNAL = "canvas_rotate_90_clockwise_signal"
     CANVAS_ROTATE_90_COUNTER_CLOCKWISE_SIGNAL = "canvas_rotate_90_counter_clockwise_signal"
+    CANVAS_PREVIEW_FILTER_SIGNAL = "canvas_preview_filter_signal"
 
     CLEAR_MEMORY_SIGNAL = "clear_memory_signal"
     CONTROLNET_IMAGE_GENERATED_SIGNAL = "controlnet_image_generated_signal"
