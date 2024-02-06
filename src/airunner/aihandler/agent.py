@@ -138,9 +138,6 @@ class AIRunnerAgent(QObject, MediatorMixin):
         conversation = self.prepare_messages()
         rendered_template = self.get_rendered_template(conversation)
 
-        print("conversation", conversation)
-        print(rendered_template)
-
         # Encode the rendered template
         encoded = self.tokenizer(rendered_template, return_tensors="pt")
         model_inputs = encoded.to("cuda" if torch.cuda.is_available() else "cpu")

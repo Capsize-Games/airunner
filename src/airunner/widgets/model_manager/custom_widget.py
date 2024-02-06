@@ -1,4 +1,5 @@
 from airunner.enums import ServiceCode
+from airunner.utils import create_worker
 from airunner.widgets.base_widget import BaseWidget
 from airunner.widgets.model_manager.model_widget import ModelWidget
 from airunner.widgets.model_manager.templates.custom_ui import Ui_custom_model_widget
@@ -18,7 +19,7 @@ class CustomModelWidget(BaseWidget):
         super().__init__(*args, **kwargs)
         self.show_items_in_scrollarea()
         self.initialized = True
-        self.model_scanner_worker = self.create_worker(ModelScannerWorker)
+        self.model_scanner_worker = create_worker(ModelScannerWorker)
         self.model_scanner_worker.add_to_queue("scan_for_models")
     
     def action_button_clicked_scan_for_models(self):

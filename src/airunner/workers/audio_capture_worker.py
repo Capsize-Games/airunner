@@ -26,13 +26,12 @@ class AudioCaptureWorker(Worker):
         self.fs = settings["stt_settings"]["fs"]
         self.channels = settings["stt_settings"]["channels"]
 
-    @pyqtSlot()
     def start(self):
         self.logger.info("Starting")
         self.running = True
         self.start_listening()
         while self.running:
-            while self.listening:
+            while self.listening and self.running:
                 try:
                     self.recording = sd.rec(
                         int(self.duration * self.fs),
@@ -45,7 +44,7 @@ class AudioCaptureWorker(Worker):
                     continue
                 sd.wait()
                 self.handle_message(self.recording)
-            while not self.listening:
+            while not self.listening and self.running:
                 QThread.msleep(100)
 
     def handle_message(self, message):
