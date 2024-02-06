@@ -3,7 +3,7 @@ import io
 import subprocess
 from functools import partial
 
-from PIL import Image, ImageGrab
+from PIL import Image, ImageGrab, ImageFilter
 from PIL.ImageQt import ImageQt
 from PyQt6 import QtWidgets, QtCore
 from PyQt6.QtCore import Qt, QPoint, QRect
@@ -13,8 +13,9 @@ from PyQt6.QtWidgets import QGraphicsPixmapItem
 from watchdog.utils.platform import is_windows
 
 from airunner.cursors.circle_brush import CircleCursor
-from airunner.enums import SignalCode, ServiceCode
+from airunner.enums import SignalCode, ServiceCode, CanvasToolName
 from airunner.service_locator import ServiceLocator
+from airunner.settings import AVAILABLE_IMAGE_FILTERS
 from airunner.utils import apply_opacity_to_image
 from airunner.widgets.base_widget import BaseWidget
 from airunner.widgets.canvas_plus.custom_scene import CustomScene
@@ -171,13 +172,13 @@ class CanvasPlusWidget(BaseWidget):
         self.rotate_90_counterclockwise()
 
     def on_canvas_update_cursor_signal(self, event):
-        if self.settings["current_tool"] in ['brush', 'eraser']:
+        if self.settings["current_tool"] in [CanvasToolName.BRUSH, CanvasToolName.ERASER]:
             self.setCursor(CircleCursor(
                 Qt.GlobalColor.white,
                 Qt.GlobalColor.transparent,
                 self.settings["brush_settings"]["size"],
             ))
-        elif self.settings["current_tool"] == "active_grid_area":
+        elif self.settings["current_tool"] == CanvasToolName.ACTIVE_GRID_AREA:
             if event.buttons() == Qt.MouseButton.LeftButton:
                 self.setCursor(Qt.CursorShape.ClosedHandCursor)
             else:
@@ -883,17 +884,11 @@ class CanvasPlusWidget(BaseWidget):
             self.current_active_image = self.current_active_image.transpose(Image.ROTATE_90)
             self.do_draw()
     
-    def filter_with_filter(self, filter):
-        return type(filter).__name__ in [
-            "SaturationFilter",
-            "ColorBalanceFilter",
-            "RGBNoiseFilter",
-            "PixelFilter",
-            "HalftoneFilter",
-            "RegistrationErrorFilter"
-        ]
+    @staticmethod
+    def filter_with_filter(filter_object: ImageFilter.Filter):
+        return type(filter_object).__name__ in AVAILABLE_IMAGE_FILTERS
 
-    def preview_filter(self, filter):
+    def preview_filter(self, filter_object: ImageFilter.Filter):
         image = self.current_image()
         if not image:
             return
@@ -902,10 +897,11 @@ class CanvasPlusWidget(BaseWidget):
             self.previewing_filter = True
         else:
             image = self.image_backup.copy()
-        if self.filter_with_filter:
-            filtered_image = filter.filter(image)
-        else:
-            filtered_image = image.filter(filter)
+        # if self.filter_with_filter:
+        #     filtered_image = filter_object.filter(image)
+        # else:
+        #     filtered_image = image.filter(filter_object)
+        filtered_image = image.filter(filter_object)
         self.load_image_from_object(image=filtered_image)
 
     def cancel_filter(self):
@@ -914,6 +910,6 @@ class CanvasPlusWidget(BaseWidget):
             self.image_backup = None
         self.previewing_filter = False
 
-    def apply_filter(self, filter):
+    def apply_filter(self, _filter_object: ImageFilter.Filter):
         self.previewing_filter = False
         self.image_backup = None
