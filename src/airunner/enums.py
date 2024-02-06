@@ -272,3 +272,9 @@ class LLMToolName(Enum):
     VISION_PROCESS_IMAGES = "vision_process_images"
     VISION_START_CAPTURE = "vision_start_capture"
     VISION_STOP_CAPTURE = "vision_stop_capture"
+
+
+class CanvasToolName(Enum):
+    ACTIVE_GRID_AREA = "active_grid_area"
+    BRUSH = "brush"
+    ERASER = "eraser"
