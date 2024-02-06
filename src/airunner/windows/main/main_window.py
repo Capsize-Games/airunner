@@ -721,12 +721,12 @@ class MainWindow(
 
     def initialize_filter_actions(self):
         # add more filters:
-        for filter in self.image_filter_get_all():
-            action = self.ui.menuFilters.addAction(filter["display_name"])
-            action.triggered.connect(partial(self.display_filter_window, filter["name"]))
+        for filter_name, filter_data in self.settings["image_filters"].items():
+            action = self.ui.menuFilters.addAction(filter_data["display_name"])
+            action.triggered.connect(partial(self.display_filter_window, filter_data["name"]))
 
     def display_filter_window(self, filter_name):
-        FilterWindow(self, filter_name).show()
+        FilterWindow(filter_name).show()
 
     def initialize_default_buttons(self):
         show_grid = self.settings["grid_settings"]["show_grid"]
@@ -779,25 +779,16 @@ class MainWindow(
         return getattr(self, callback_name)
 
     def get_settings_value(self, settings_property):
-        current_value = 0
-        try:
-            current_value = getattr(self, settings_property) or 0
-        except AttributeError:
-            keys = settings_property.split(".")
-            if keys[0] == "settings":
-                data = getattr(self, keys[0]) or None
+        keys = settings_property.split(".")
+        data = self.settings
+
+        for key in keys:
+            if isinstance(data, dict) and key in data:
+                data = data[key]
             else:
-                settings = self.settings
-                if len(keys) > 1:
-                    data = settings[keys[0]]
-                else:
-                    data = settings
-            if data:
-                if len(keys) > 1:
-                    current_value = data[keys[1]]
-                else:
-                    current_value = data[keys[0]]
-        return current_value
+                return None
+
+        return data
 
     def handle_value_change(self, attr_name, value=None, widget=None):
         """
@@ -981,28 +972,3 @@ class MainWindow(
 
     def action_reset_settings(self):
         self.emit(SignalCode.APPLICATION_RESET_SETTINGS_SIGNAL)
-
-    """
-    **************************************************************
-    IMAGE FILTER FUNCTIONS
-    
-    The following functions are used to interact with the image filters
-    stored in the settings. These functions are used to get, create, update,
-    and delete image filters.
-    **************************************************************
-    """
-    def image_filter_get_all(self):
-        return self.settings["image_filters"]
-
-    def image_filter_get_by_filter(self, filter_dict):
-        data = self.image_filter_get_all()
-        return [item for item in data if all(item.get(k) == v for k, v in filter_dict.items())]
-
-    def image_filter_by_name(self, name):
-        data = self.image_filter_get_all()
-        return [item for item in data if item["name"] == name][0]
-    """
-    **************************************************************
-    END IMAGE FILTER FUNCTIONS
-    **************************************************************
-    """
