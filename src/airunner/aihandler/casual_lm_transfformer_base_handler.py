@@ -199,7 +199,7 @@ class CasualLMTransformerBaseHandler(TokenizerHandler):
         #full_message = self.rag_stream()
 
         # First try running a tool
-        self.tool_agent.run(self.prompt)
+        #self.tool_agent.run(self.prompt)
 
         # Then do chat prompt
         self.chat_agent.run(self.prompt)
