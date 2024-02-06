@@ -4,6 +4,7 @@ from PyQt6.QtGui import QEnterEvent
 from PyQt6.QtGui import QPainterPath
 from PyQt6.QtGui import QPen, QPixmap, QPainter
 from PyQt6.QtWidgets import QGraphicsScene, QGraphicsPixmapItem
+from PyQt6.QtGui import QColor, QBrush
 
 from airunner.enums import SignalCode, CanvasToolName
 from airunner.mediator_mixin import MediatorMixin
@@ -45,14 +46,23 @@ class CustomScene(
 
     def drawAt(self, position):
         painter = QPainter(self.image)
-        painter.setPen(QPen(Qt.GlobalColor.black, self.settings["brush_settings"]["size"], Qt.PenStyle.SolidLine, Qt.PenCapStyle.RoundCap))
-        
+        brush_color = self.settings["brush_settings"]["primary_color"]
+        color = QColor(brush_color)
+        size = self.settings["brush_settings"]["size"]
+        pen = QPen(
+            color,
+            size,
+            Qt.PenStyle.SolidLine,
+            Qt.PenCapStyle.RoundCap
+        )
+        painter.setPen(pen)
+
         # Draw a line from the last position to the current one
         if self.last_pos is not None:
             painter.drawLine(self.last_pos, position)
         else:
             painter.drawPoint(position)
-        
+
         painter.end()
         self.item.setPixmap(QPixmap.fromImage(self.image))
     
@@ -101,6 +111,7 @@ class CustomScene(
         self.item.setPixmap(QPixmap.fromImage(self.image))
 
     def mousePressEvent(self, event):
+        self.handle_cursor(event)
         if self.settings["current_tool"] not in [CanvasToolName.BRUSH, CanvasToolName.ERASER]:
             super(CustomScene, self).mousePressEvent(event)
             return
@@ -118,14 +129,11 @@ class CustomScene(
         if type(event) == QEnterEvent:
             self.handle_cursor(event)
         return super(CustomScene, self).event(event)
-
-    def mousePressEvent(self, event):
-        super(CustomScene, self).mousePressEvent(event)
-        self.handle_cursor(event)
     
     def mouseReleaseEvent(self, event):
         super(CustomScene, self).mouseReleaseEvent(event)
         self.handle_cursor(event)
+        self.last_pos = None
 
     def mouseMoveEvent(self, event):
         self.handle_cursor(event)
