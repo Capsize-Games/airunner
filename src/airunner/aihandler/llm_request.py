@@ -17,11 +17,11 @@ class LLMRequest(
 
     def __call__(
         self,
-        settings,
+        settings: dict,
         prompt: str,
         conversation_history: list,
         generator_name: str = "casuallm"
-    ):
+    ) -> dict:
         llm_generator_settings = settings["llm_generator_settings"]
         current_bot = settings["llm_generator_settings"]["saved_chatbots"][
             settings["llm_generator_settings"]["current_chatbot"]]
