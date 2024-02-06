@@ -1,6 +1,6 @@
 import queue
 
-from PyQt6.QtCore import pyqtSignal, pyqtSlot, QThread, QSettings, QObject
+from PyQt6.QtCore import pyqtSignal, QThread, QSettings, QObject
 
 from airunner.enums import QueueType, SignalCode
 from airunner.aihandler.logger import Logger
@@ -24,8 +24,16 @@ class Worker(QObject, MediatorMixin):
         self.current_index = 0
         self.paused = False
         self.application_settings = QSettings("Capsize Games", "AI Runner")
-        self.register(SignalCode.APPLICATION_SETTINGS_CHANGED_SIGNAL, self.on_application_settings_changed_signal)
         self.update_properties()
+        self.register(
+            SignalCode.APPLICATION_SETTINGS_CHANGED_SIGNAL,
+            self.on_application_settings_changed_signal
+        )
+        self.register(
+            SignalCode.QUIT_APPLICATION,
+            self.stop
+        )
+        self.register_signals()
     
     def on_application_settings_changed_signal(self, _ignore):
         self.update_properties()
@@ -33,8 +41,13 @@ class Worker(QObject, MediatorMixin):
     def update_properties(self):
         pass
 
-    pyqtSlot()
+    def register_signals(self):
+        pass
+
     def start(self):
+        self.run()
+
+    def run(self):
         if self.queue_type == QueueType.NONE:
             return
         self.logger.info("Starting")
@@ -43,7 +56,8 @@ class Worker(QObject, MediatorMixin):
             self.preprocess()
             try:
                 msg = self.get_item_from_queue()
-                self.handle_message(msg)
+                if msg is not None:
+                    self.handle_message(msg)
             except queue.Empty:
                 msg = None
             if self.paused:
@@ -67,9 +81,12 @@ class Worker(QObject, MediatorMixin):
         msg = None
         index = None
         while not self.queue.empty():
-            index = self.queue.get()
-            if index in self.items:
-                break
+            try:
+                index = self.queue.get_nowait()
+                if index in self.items:
+                    break
+            except queue.Empty:
+                pass
         if index in self.items:
             msg = self.items.pop(index)
             self.items = {}
@@ -79,10 +96,12 @@ class Worker(QObject, MediatorMixin):
             return None
 
     def get_next_item(self):
-        index = self.queue.get()
-        msg = self.items.pop(index, None)
-        return msg
-
+        try:
+            index = self.queue.get_nowait()
+            msg = self.items.pop(index, None)
+            return msg
+        except queue.Empty:
+            return None
     def pause(self):
         self.paused = True
 

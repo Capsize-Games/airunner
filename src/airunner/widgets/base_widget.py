@@ -6,6 +6,7 @@ from PyQt6.QtWidgets import QWidget
 from airunner.aihandler.logger import Logger
 from airunner.mediator_mixin import MediatorMixin
 from airunner.service_locator import ServiceLocator
+from airunner.utils import create_worker
 
 
 class BaseWidget(
@@ -95,7 +96,7 @@ class BaseWidget(
         :return:
         """
         for property_name, worker_class_name_ in self.worker_class_map.items():
-            worker = self.create_worker(worker_class_name_)
+            worker = create_worker(worker_class_name_)
             setattr(self, property_name, worker)
 
     def add_to_grid(self, widget, row, column, row_span=1, column_span=1):

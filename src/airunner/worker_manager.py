@@ -16,7 +16,7 @@ from airunner.workers.engine_response_worker import EngineResponseWorker
 from airunner.workers.sd_generate_worker import SDGenerateWorker
 from airunner.workers.sd_request_worker import SDRequestWorker
 from airunner.aihandler.logger import Logger
-from airunner.utils import clear_memory
+from airunner.utils import clear_memory, create_worker
 from airunner.workers.vision_capture_worker import VisionCaptureWorker
 from airunner.workers.vision_processor_worker import VisionProcessorWorker
 
@@ -107,23 +107,23 @@ class WorkerManager(QObject, MediatorMixin):
         self.register(SignalCode.VISION_CAPTURED_SIGNAL, self.on_vision_captured)
         self.register(SignalCode.VISION_PROCESSED_SIGNAL, self.on_vision_processed)
 
-        self.sd_request_worker = self.create_worker(SDRequestWorker)
-        self.sd_generate_worker = self.create_worker(SDGenerateWorker)
+        self.sd_request_worker = create_worker(SDRequestWorker)
+        self.sd_generate_worker = create_worker(SDGenerateWorker)
         
-        self.engine_request_worker = self.create_worker(EngineRequestWorker)
-        self.engine_response_worker = self.create_worker(EngineResponseWorker)
+        self.engine_request_worker = create_worker(EngineRequestWorker)
+        self.engine_response_worker = create_worker(EngineResponseWorker)
 
-        self.tts_generator_worker = self.create_worker(TTSGeneratorWorker)
-        self.tts_vocalizer_worker = self.create_worker(TTSVocalizerWorker)
+        self.tts_generator_worker = create_worker(TTSGeneratorWorker)
+        self.tts_vocalizer_worker = create_worker(TTSVocalizerWorker)
 
-        self.llm_request_worker = self.create_worker(LLMRequestWorker)
-        self.llm_generate_worker = self.create_worker(LLMGenerateWorker)
+        self.llm_request_worker = create_worker(LLMRequestWorker)
+        self.llm_generate_worker = create_worker(LLMGenerateWorker)
 
-        self.stt_audio_capture_worker = self.create_worker(AudioCaptureWorker)
-        self.stt_audio_processor_worker = self.create_worker(AudioProcessorWorker)
+        self.stt_audio_capture_worker = create_worker(AudioCaptureWorker)
+        self.stt_audio_processor_worker = create_worker(AudioProcessorWorker)
 
-        self.vision_capture_worker = self.create_worker(VisionCaptureWorker)
-        self.vision_processor_worker = self.create_worker(VisionProcessorWorker)
+        self.vision_capture_worker = create_worker(VisionCaptureWorker)
+        self.vision_processor_worker = create_worker(VisionProcessorWorker)
 
         self.register(SignalCode.TTS_REQUEST, self.on_tts_request)
         self.register(SignalCode.APPLICATION_SETTINGS_CHANGED_SIGNAL, self.on_application_settings_changed_signal)

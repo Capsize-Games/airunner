@@ -1,3 +1,5 @@
+from PyQt6.QtCore import pyqtSlot
+
 from airunner.aihandler.casual_lm_transfformer_base_handler import CasualLMTransformerBaseHandler
 from airunner.aihandler.settings import AVAILABLE_DTYPES
 from airunner.enums import SignalCode
@@ -5,9 +7,10 @@ from airunner.workers.worker import Worker
 
 
 class LLMGenerateWorker(Worker):
-    def __init__(self, prefix="LLMGenerateWorker"):
+    llm = None
+
+    def register_signals(self):
         self.llm = CasualLMTransformerBaseHandler()
-        super().__init__(prefix=prefix)
         self.register(SignalCode.LLM_REQUEST_WORKER_RESPONSE_SIGNAL, self.on_llm_request_worker_response_signal)
         self.register(SignalCode.LLM_UNLOAD_SIGNAL, self.on_unload_llm_signal)
 
