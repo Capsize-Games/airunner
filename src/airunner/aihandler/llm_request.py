@@ -31,13 +31,16 @@ class LLMRequest(
         if template_name in settings["llm_templates"]:
             prompt_template = settings["llm_templates"][template_name]
             parsed_template = parse_template(prompt_template)
+
+        current_bot.update(settings["bot_settings"])
+
         return {
             "llm_request": True,
             "request_data": {
                 "unload_unused_model": settings["memory_settings"]["unload_unused_models"],
                 "move_unused_model_to_cpu": settings["memory_settings"]["move_unused_model_to_cpu"],
                 "generator_name": generator_name,
-                "model_path": "mistralai/Mistral-7B-Instruct-v0.1", #llm_generator_settings["model_version"],
+                "model_path": settings.get("model_path", llm_generator_settings["model_version"]),
                 "stream": True,
                 "prompt": prompt,
                 "do_summary": False,
