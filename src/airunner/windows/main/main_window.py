@@ -12,15 +12,15 @@ from PyQt6.QtWidgets import QApplication, QFileDialog, QMainWindow
 
 from airunner.aihandler.logger import Logger
 from airunner.aihandler.settings import LOG_LEVEL
-from airunner.enums import Mode, SignalCode, ServiceCode
-from airunner.filters.windows.filter_base import FilterBase
+from airunner.enums import Mode, SignalCode, ServiceCode, CanvasToolName
 from airunner.mediator_mixin import MediatorMixin
 from airunner.resources_dark_rc import *
 from airunner.service_locator import ServiceLocator
 from airunner.settings import BASE_PATH
-from airunner.utils import get_version, default_hf_cache_dir, open_file_path
+from airunner.utils import get_version, default_hf_cache_dir, open_file_path, set_widget_state
 from airunner.widgets.status.status_widget import StatusWidget
 from airunner.windows.about.about import AboutWindow
+from airunner.windows.filter_window import FilterWindow
 from airunner.windows.main.ai_model_mixin import AIModelMixin
 from airunner.windows.main.controlnet_model_mixin import ControlnetModelMixin
 from airunner.windows.main.embedding_mixin import EmbeddingMixin
@@ -621,19 +621,19 @@ class MainWindow(
     
     def action_toggle_brush(self, active):
         if active:
-            self.toggle_tool("brush")
+            self.toggle_tool(CanvasToolName.BRUSH)
             self.ui.toggle_active_grid_area_button.setChecked(False)
             self.ui.toggle_eraser_button.setChecked(False)
 
     def action_toggle_eraser(self, active):
         if active:
-            self.toggle_tool("eraser")
+            self.toggle_tool(CanvasToolName.ERASER)
             self.ui.toggle_active_grid_area_button.setChecked(False)
             self.ui.toggle_brush_button.setChecked(False)
 
     def action_toggle_active_grid_area(self, active):
         if active:
-            self.toggle_tool("active_grid_area")
+            self.toggle_tool(CanvasToolName.ACTIVE_GRID_AREA)
             self.ui.toggle_brush_button.setChecked(False)
             self.ui.toggle_eraser_button.setChecked(False)
 
@@ -726,24 +726,18 @@ class MainWindow(
             action.triggered.connect(partial(self.display_filter_window, filter["name"]))
 
     def display_filter_window(self, filter_name):
-        FilterBase(self, filter_name).show()
+        FilterWindow(self, filter_name).show()
 
     def initialize_default_buttons(self):
         show_grid = self.settings["grid_settings"]["show_grid"]
-        self.ui.toggle_active_grid_area_button.blockSignals(True)
-        self.ui.toggle_brush_button.blockSignals(True)
-        self.ui.toggle_eraser_button.blockSignals(True)
-        self.ui.toggle_grid_button.blockSignals(True)
-        self.ui.ai_button.blockSignals(True)
-        self.ui.toggle_active_grid_area_button.setChecked(self.settings["current_tool"] == "active_grid_area")
-        self.ui.toggle_brush_button.setChecked(self.settings["current_tool"] == "brush")
-        self.ui.toggle_eraser_button.setChecked(self.settings["current_tool"] == "eraser")
-        self.ui.toggle_grid_button.setChecked(show_grid is True)
-        self.ui.toggle_active_grid_area_button.blockSignals(False)
-        self.ui.toggle_brush_button.blockSignals(False)
-        self.ui.toggle_eraser_button.blockSignals(False)
-        self.ui.toggle_grid_button.blockSignals(False)
-        self.ui.ai_button.blockSignals(False)
+        current_tool = self.settings["current_tool"]
+        ai_mode = self.settings["ai_mode"]
+
+        set_widget_state(self.ui.toggle_active_grid_area_button, current_tool == CanvasToolName.ACTIVE_GRID_AREA)
+        set_widget_state(self.ui.toggle_brush_button, current_tool == CanvasToolName.BRUSH)
+        set_widget_state(self.ui.toggle_eraser_button, current_tool == CanvasToolName.ERASER)
+        set_widget_state(self.ui.toggle_grid_button, show_grid is True)
+        set_widget_state(self.ui.ai_button, ai_mode)
 
     def toggle_tool(self, tool):
         settings = self.settings

@@ -11,7 +11,7 @@ from PyQt6.QtWidgets import QMessageBox
 from PIL import Image
 from PIL.ImageQt import ImageQt
 
-from airunner.enums import SignalCode
+from airunner.enums import SignalCode, CanvasToolName
 from airunner.utils import load_metadata_from_image
 
 from airunner.utils import delete_image
@@ -250,7 +250,7 @@ class ImageWidget(BaseWidget):
 class BrushImageWidget(ImageWidget):
     def __init__(self, *args, **kwargs):
         self.container = kwargs.pop("container", None)
-        self.brush = kwargs.pop("brush", None)
+        self.brush = kwargs.pop("brush", CanvasToolName.BRUSH)
         super().__init__(*args, **kwargs)
 
     def handle_label_clicked(self, event):
