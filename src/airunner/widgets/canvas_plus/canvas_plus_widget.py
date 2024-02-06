@@ -885,12 +885,13 @@ class CanvasPlusWidget(BaseWidget):
     
     def filter_with_filter(self, filter):
         return type(filter).__name__ in [
-            "SaturationFilter", 
-            "ColorBalanceFilter", 
-            "RGBNoiseFilter", 
-            "PixelFilter", 
-            "HalftoneFilter", 
-            "RegistrationErrorFilter"]
+            "SaturationFilter",
+            "ColorBalanceFilter",
+            "RGBNoiseFilter",
+            "PixelFilter",
+            "HalftoneFilter",
+            "RegistrationErrorFilter"
+        ]
 
     def preview_filter(self, filter):
         image = self.current_image()
