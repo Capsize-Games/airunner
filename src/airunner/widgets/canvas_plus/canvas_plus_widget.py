@@ -93,12 +93,13 @@ class CanvasPlusWidget(BaseWidget):
             SignalCode.CANVAS_CUT_IMAGE_SIGNAL: self.on_canvas_cut_image_signal,
             SignalCode.CANVAS_ROTATE_90_CLOCKWISE_SIGNAL: self.on_canvas_rotate_90_clockwise_signal,
             SignalCode.CANVAS_ROTATE_90_COUNTER_CLOCKWISE_SIGNAL: self.on_canvas_rotate_90_counter_clockwise_signal,
+            SignalCode.CANVAS_PREVIEW_FILTER_SIGNAL: self.preview_filter,
         }
 
         # Map service codes to class functions
         self.services = {
             ServiceCode.CURRENT_ACTIVE_IMAGE: self.canvas_current_active_image,
-            ServiceCode.CURRENT_LAYER: self.canvas_current_active_image
+            ServiceCode.CURRENT_LAYER: self.canvas_current_active_image,
         }
 
         # Map class properties to worker classes
@@ -905,13 +906,13 @@ class CanvasPlusWidget(BaseWidget):
         else:
             filtered_image = image.filter(filter)
         self.load_image_from_object(image=filtered_image)
-    
+
     def cancel_filter(self):
         if self.image_backup:
             self.load_image_from_object(image=self.image_backup)
             self.image_backup = None
         self.previewing_filter = False
-    
+
     def apply_filter(self, filter):
         self.previewing_filter = False
         self.image_backup = None

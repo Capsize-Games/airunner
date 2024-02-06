@@ -4,6 +4,7 @@ from functools import partial
 
 from PyQt6 import uic
 
+from airunner.enums import SignalCode
 from airunner.widgets.slider.slider_widget import SliderWidget
 
 
@@ -71,9 +72,6 @@ class FilterBase:
     def update_value(self, name, value):
         self._filter_values[name].value = str(value)
         print("TODO: save filter value")
-
-    def update_canvas(self):
-        pass
 
     def load_image_filter_data(self):
         with self.parent.image_filter_by_name(self.image_filter_model_name) as image_filter:
@@ -146,19 +144,18 @@ class FilterBase:
     def handle_slider_change(self, settings_property, val):
         self.update_value(settings_property, val)
         self.preview_filter()
-        self.update_canvas()
 
     def cancel_filter(self):
         self.reject()
         self.parent.canvas_widget.cancel_filter()
-        self.update_canvas()
 
     def apply_filter(self):
         self.accept()
         self.parent.canvas_widget.apply_filter(self.filter)
         self.filter_window.close()
-        self.update_canvas()
 
     def preview_filter(self):
-        self.parent.canvas_widget.preview_filter(self.filter)
-        self.update_canvas()
+        self.emit(
+            SignalCode.CANVAS_PREVIEW_FILTER_SIGNAL,
+            self.filter
+        )
