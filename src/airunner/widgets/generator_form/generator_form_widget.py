@@ -3,6 +3,7 @@ import random
 from PIL import Image
 from PyQt6.QtCore import pyqtSignal, QRect
 
+from airunner.aihandler.sd_request import SDRequest
 from airunner.enums import SignalCode, ServiceCode
 from airunner.aihandler.settings import MAX_SEED
 from airunner.widgets.base_widget import BaseWidget
@@ -270,7 +271,12 @@ class GeneratorForm(BaseWidget):
     def prep_video(self):
         return []
 
-    def do_generate(self, extra_options=None, seed=None, do_deterministic=False, override_data=False):
+    def do_generate(
+        self,
+        extra_options: dict = None,
+        seed: int = None,
+        override_data: dict = None
+    ):
         if not extra_options:
             extra_options = {}
 
@@ -279,45 +285,17 @@ class GeneratorForm(BaseWidget):
 
         self.set_seed(seed=seed)
 
-        if self.deterministic_data and do_deterministic:
-            return self.do_deterministic_generation(extra_options)
+        self.logger.info(f"Attempting to generate image")
 
         action = self.generator_section
-
-        if not override_data:
-            override_data = {}
-        
-        action = override_data.get("action", action)
-        prompt = override_data.get("prompt", self.settings["generator_settings"]["prompt"])
-        negative_prompt = override_data.get("negative_prompt", self.settings["generator_settings"]["negative_prompt"])
-        steps = int(override_data.get("steps", self.settings["generator_settings"]["steps"]))
-        strength = float(override_data.get("strength", self.settings["generator_settings"]["strength"] / 100.0))
-        image_guidance_scale = float(override_data.get("image_guidance_scale", self.settings["generator_settings"]["image_guidance_scale"] / 10000.0 * 100.0))
-        scale = float(override_data.get("scale", self.settings["generator_settings"]["scale"] / 100))
-        seed = int(override_data.get("seed", self.settings["generator_settings"]["seed"]))
-        ddim_eta = float(override_data.get("ddim_eta", self.settings["generator_settings"]["ddim_eta"]))
-        n_iter = int(override_data.get("n_iter", 1))
-        n_samples = int(override_data.get("n_samples", self.settings["generator_settings"]["n_samples"]))
-        # iterate over all keys in model_data
-        model_data=self.settings["generator_settings"]
-        for k,v in override_data.items():
+        model_data = self.settings["generator_settings"]
+        for k, v in override_data.items():
             if k.startswith("model_data_"):
                 model_data[k.replace("model_data_", "")] = v
-        scheduler = override_data.get("scheduler", self.settings["generator_settings"]["scheduler"])
-        enable_controlnet = bool(override_data.get("enable_controlnet", self.settings["generator_settings"]["enable_controlnet"]))
-        controlnet = override_data.get("controlnet", self.settings["generator_settings"]["controlnet"])
-        controlnet_conditioning_scale = float(override_data.get("controlnet_conditioning_scale", self.settings["generator_settings"]["controlnet_guidance_scale"]))
-        width = int(override_data.get("width", self.settings["working_width"]))
-        height = int(override_data.get("height", self.settings["working_height"]))
-        clip_skip = int(override_data.get("clip_skip", self.settings["generator_settings"]["clip_skip"]))
-        batch_size = int(override_data.get("batch_size", 1))
-
-
-        # get the model from the database
         name = model_data["name"] if "name" in model_data else self.settings["generator_settings"]["model"]
         model = self.get_service("ai_model_by_name")(name)
-        
-        # set the model data, first using model_data pulled from the override_data
+        prompt = override_data.get("prompt", self.settings["generator_settings"]["prompt"])
+        negative_prompt = override_data.get("negative_prompt", self.settings["generator_settings"]["negative_prompt"])
         model_data = {
             "name": model_data.get("name", model["name"]),
             "path": model_data.get("path", model["path"]),
@@ -328,110 +306,24 @@ class GeneratorForm(BaseWidget):
             "enabled": model_data.get("enabled", model["enabled"]),
             "default": model_data.get("default", model["is_default"])
         }
-
-        input_image = override_data.get("input_image", None),
-        if input_image:
-            # check if input image is a tupil
-            if isinstance(input_image, tuple):
-                input_image = input_image[0]
-
-        original_model_data = {}
-        if input_image is not None:
-            if isinstance(input_image, tuple):
-                input_image_info = input_image[0].info
-            else:
-                input_image_info = input_image.info
-
-            keys = [
-                "name", 
-                "path", 
-                "branch", 
-                "version", 
-                "category", 
-                "pipeline_action", 
-                "enabled", 
-                "default",
-            ]
-            original_model_data = {
-                key: model_data.get(
-                    key, input_image_info.get(key, "")) for key in keys
-            }
-
-        # get controlnet_dropdown from active tab
-        nsfw_filter = self.settings["nsfw_filter"]
-        options = {
-            "sd_request": True,
-            "prompt": prompt,
-            "negative_prompt": negative_prompt,
-            "steps": steps,
-            "ddim_eta": ddim_eta,  # only applies to ddim scheduler
-            "n_iter": n_iter,
-            "n_samples": n_samples,
-            "scale": scale,
-            "seed": seed,
-            "model": model['name'],
-            "model_data": model_data,
-            "original_model_data": original_model_data,
-            "scheduler": scheduler,
-            "model_path": model["path"],
-            "model_branch": model["branch"],
-            # lora=self.available_lora(action),
-            "generator_section": self.generator_section,
-            "width": width,
-            "height": height,
-            "do_nsfw_filter": nsfw_filter,
-            "pos_x": 0,
-            "pos_y": 0,
-            "outpaint_box_rect": self.active_rect,
-            "hf_token": self.settings["hf_api_key_read_key"],
-            "model_base_path": self.settings["path_settings"]["base_path"],
-            "outpaint_model_path": self.settings["path_settings"]["inpaint_model_path"],
-            "pix2pix_model_path": self.settings["path_settings"]["pix2pix_model_path"],
-            "depth2img_model_path": self.settings["path_settings"]["depth2img_model_path"],
-            "upscale_model_path": self.settings["path_settings"]["upscale_model_path"],
-            "image_path": self.settings["path_settings"]["image_path"],
-            "lora_path": self.settings["path_settings"]["lora_model_path"],
-            "embeddings_path": self.settings["path_settings"]["embeddings_model_path"],
-            "video_path": self.settings["path_settings"]["video_path"],
-            "clip_skip": clip_skip,
-            "batch_size": batch_size,
-            "variation": self.settings["generator_settings"]["variation"],
-            "deterministic_generation": False,
-            "input_image": input_image,
-            "enable_controlnet": enable_controlnet,
-            "controlnet_conditioning_scale": controlnet_conditioning_scale,
-            "controlnet": controlnet,
-            "allow_online_mode": self.settings["allow_online_mode"],
-            "hf_api_key_read_key": self.settings["hf_api_key_read_key"],
-            "hf_api_key_write_key": self.settings["hf_api_key_write_key"],
-            "unload_unused_model": self.settings["memory_settings"]["unload_unused_models"],
-            "move_unused_model_to_cpu": self.settings["memory_settings"]["move_unused_model_to_cpu"],
-        }
-
-        if self.controlnet_image:
-            options["controlnet_image"] = self.controlnet_image
-
-        if action in ["txt2img", "img2img", "outpaint", "depth2img"]:
-            options[f"strength"] = strength
-        elif action in ["pix2pix"]:
-            options[f"image_guidance_scale"] = image_guidance_scale
-
-        """
-        Emitting generate_signal with options allows us to pass more options to the dict from
-        modal windows such as the image interpolation window.
-        """
-        memory_options = self.get_memory_options()
-
-        self.logger.info(f"Attempting to generate image")
-
-        self.emit(SignalCode.SD_IMAGE_GENERATE_REQUEST_SIGNAL, {
-            "action": action,
-            "options": {
-                **options,
-                **extra_options,
-                **memory_options
-            }
-        })
+        self.emit(
+            SignalCode.SD_IMAGE_GENERATE_REQUEST_SIGNAL,
+            SDRequest()(
+                model=model,
+                model_data=model_data,
+                settings=self.settings,
+                override_data=override_data,
+                prompt=prompt,
+                negative_prompt=negative_prompt,
+                action=action,
+                active_rect=[] if not self.active_rect else self.active_rect,
+                generator_section=self.generator_section,
+                enable_controlnet=self.enable_controlnet,
+                controlnet_image=self.controlnet_image,
+                memory_options=self.get_memory_options(),
+                extra_options=extra_options,
+            )
+        )
 
 
     def get_memory_options(self):
