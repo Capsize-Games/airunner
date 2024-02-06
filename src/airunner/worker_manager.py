@@ -79,7 +79,15 @@ class WorkerManager(QObject, MediatorMixin):
     def handle_text_generated(self, message, code):
         print("TODO: handle text generated no stream")
     
-    def __init__(self, **kwargs):
+    def __init__(
+        self,
+        disable_sd: bool = False,
+        disable_llm: bool = False,
+        disable_tts: bool = False,
+        disable_stt: bool = False,
+        disable_vision_capture: bool = False,
+        **kwargs
+    ):
         MediatorMixin.__init__(self)
         super().__init__()
         self.do_process_queue = None
@@ -106,27 +114,32 @@ class WorkerManager(QObject, MediatorMixin):
         self.register(SignalCode.AUDIO_PROCESSOR_WORKER_PROCESSED_SIGNAL, self.on_AudioProcessorWorker_processed_audio)
         self.register(SignalCode.VISION_CAPTURED_SIGNAL, self.on_vision_captured)
         self.register(SignalCode.VISION_PROCESSED_SIGNAL, self.on_vision_processed)
+        self.register(SignalCode.TTS_REQUEST, self.on_tts_request)
+        self.register(SignalCode.APPLICATION_SETTINGS_CHANGED_SIGNAL, self.on_application_settings_changed_signal)
 
-        self.sd_request_worker = create_worker(SDRequestWorker)
-        self.sd_generate_worker = create_worker(SDGenerateWorker)
-        
+        if not disable_sd:
+            self.sd_request_worker = create_worker(SDRequestWorker)
+            self.sd_generate_worker = create_worker(SDGenerateWorker)
+
         self.engine_request_worker = create_worker(EngineRequestWorker)
         self.engine_response_worker = create_worker(EngineResponseWorker)
 
-        self.tts_generator_worker = create_worker(TTSGeneratorWorker)
-        self.tts_vocalizer_worker = create_worker(TTSVocalizerWorker)
+        if not disable_tts:
+            self.tts_generator_worker = create_worker(TTSGeneratorWorker)
+            self.tts_vocalizer_worker = create_worker(TTSVocalizerWorker)
 
-        self.llm_request_worker = create_worker(LLMRequestWorker)
-        self.llm_generate_worker = create_worker(LLMGenerateWorker)
+        if not disable_llm:
+            self.llm_request_worker = create_worker(LLMRequestWorker)
+            self.llm_generate_worker = create_worker(LLMGenerateWorker)
 
-        self.stt_audio_capture_worker = create_worker(AudioCaptureWorker)
-        self.stt_audio_processor_worker = create_worker(AudioProcessorWorker)
+        if not disable_stt:
+            self.stt_audio_capture_worker = create_worker(AudioCaptureWorker)
+            self.stt_audio_processor_worker = create_worker(AudioProcessorWorker)
 
-        self.vision_capture_worker = create_worker(VisionCaptureWorker)
-        self.vision_processor_worker = create_worker(VisionProcessorWorker)
+        if not disable_vision_capture:
+            self.vision_capture_worker = create_worker(VisionCaptureWorker)
+            self.vision_processor_worker = create_worker(VisionProcessorWorker)
 
-        self.register(SignalCode.TTS_REQUEST, self.on_tts_request)
-        self.register(SignalCode.APPLICATION_SETTINGS_CHANGED_SIGNAL, self.on_application_settings_changed_signal)
 
         self.toggle_vision_capture()
 
