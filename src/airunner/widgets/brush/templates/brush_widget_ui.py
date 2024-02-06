@@ -58,6 +58,7 @@ class Ui_brush_widget(object):
         self.gridLayout.addItem(spacerItem, 2, 0, 1, 1)
 
         self.retranslateUi(brush_widget)
+        self.primary_color_button.clicked.connect(brush_widget.color_button_clicked) # type: ignore
         QtCore.QMetaObject.connectSlotsByName(brush_widget)
 
     def retranslateUi(self, brush_widget):

@@ -126,10 +126,6 @@ class CanvasPlusWidget(BaseWidget):
         })
 
     @property
-    def brush_size(self):
-        return self.settings["brush_settings"]["size"]
-
-    @property
     def active_grid_area_rect(self):
         settings = self.settings
         rect = QRect(
@@ -560,7 +556,7 @@ class CanvasPlusWidget(BaseWidget):
             if not layer["visible"]:
                 if index in self.pixmaps and isinstance(self.pixmaps[index], QGraphicsItem) and self.pixmaps[index].scene() == self.scene:
                     self.scene.removeItem(self.pixmaps[index])
-            elif layer["visible"]:
+            else:
                 # If there's an existing pixmap in the layer, remove it from the scene
                 if index in self.pixmaps and isinstance(self.pixmaps[index], QGraphicsItem):
                     if self.pixmaps[index].scene() == self.scene:
