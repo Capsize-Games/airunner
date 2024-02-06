@@ -24,7 +24,6 @@ from airunner.windows.about.about import AboutWindow
 from airunner.windows.main.ai_model_mixin import AIModelMixin
 from airunner.windows.main.controlnet_model_mixin import ControlnetModelMixin
 from airunner.windows.main.embedding_mixin import EmbeddingMixin
-from airunner.windows.main.image_filter_mixin import ImageFilterMixin
 from airunner.windows.main.layer_mixin import LayerMixin
 from airunner.windows.main.lora_mixin import LoraMixin
 from airunner.windows.main.pipeline_mixin import PipelineMixin
@@ -47,8 +46,7 @@ class MainWindow(
     EmbeddingMixin,
     PipelineMixin,
     ControlnetModelMixin,
-    AIModelMixin,
-    ImageFilterMixin,
+    AIModelMixin
 ):
     # signals
     show_grid_toggled = pyqtSignal(bool)
@@ -242,7 +240,6 @@ class MainWindow(
         PipelineMixin.__init__(self)
         ControlnetModelMixin.__init__(self)
         AIModelMixin.__init__(self)
-        ImageFilterMixin.__init__(self)
         self.register_services()
         self.update_settings()
         self.create_airunner_paths()
@@ -990,3 +987,28 @@ class MainWindow(
 
     def action_reset_settings(self):
         self.emit(SignalCode.APPLICATION_RESET_SETTINGS_SIGNAL)
+
+    """
+    **************************************************************
+    IMAGE FILTER FUNCTIONS
+    
+    The following functions are used to interact with the image filters
+    stored in the settings. These functions are used to get, create, update,
+    and delete image filters.
+    **************************************************************
+    """
+    def image_filter_get_all(self):
+        return self.settings["image_filters"]
+
+    def image_filter_get_by_filter(self, filter_dict):
+        data = self.image_filter_get_all()
+        return [item for item in data if all(item.get(k) == v for k, v in filter_dict.items())]
+
+    def image_filter_by_name(self, name):
+        data = self.image_filter_get_all()
+        return [item for item in data if item["name"] == name][0]
+    """
+    **************************************************************
+    END IMAGE FILTER FUNCTIONS
+    **************************************************************
+    """
