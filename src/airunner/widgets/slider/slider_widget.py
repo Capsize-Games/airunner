@@ -185,6 +185,8 @@ class SliderWidget(BaseWidget):
         single_step = self.ui.slider.singleStep()
         adjusted_value = val
         if single_step > 0:
+            val = float(val)
+            single_step = float(single_step)
             adjusted_value = round(val / single_step) * single_step
         normalized = adjusted_value / self.slider_maximum
         spinbox_val = normalized * self.spinbox_maximum

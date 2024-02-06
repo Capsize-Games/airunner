@@ -3,8 +3,8 @@ import io
 import subprocess
 from functools import partial
 
-from PIL import Image, ImageGrab, ImageFilter
-from PIL.ImageQt import ImageQt
+from PIL import Image, ImageGrab, ImageFilter, UnidentifiedImageError
+from PIL.ImageQt import ImageQt, QImage
 from PyQt6 import QtWidgets, QtCore
 from PyQt6.QtCore import Qt, QPoint, QRect
 from PyQt6.QtGui import QBrush, QColor, QPixmap
@@ -94,6 +94,8 @@ class CanvasPlusWidget(BaseWidget):
             SignalCode.CANVAS_CUT_IMAGE_SIGNAL: self.on_canvas_cut_image_signal,
             SignalCode.CANVAS_ROTATE_90_CLOCKWISE_SIGNAL: self.on_canvas_rotate_90_clockwise_signal,
             SignalCode.CANVAS_ROTATE_90_COUNTER_CLOCKWISE_SIGNAL: self.on_canvas_rotate_90_counter_clockwise_signal,
+            SignalCode.CANVAS_CANCEL_FILTER_SIGNAL: self.cancel_filter,
+            SignalCode.CANVAS_APPLY_FILTER_SIGNAL: self.apply_filter,
             SignalCode.CANVAS_PREVIEW_FILTER_SIGNAL: self.preview_filter,
         }
 
@@ -322,18 +324,22 @@ class CanvasPlusWidget(BaseWidget):
     # def cell_size(self):
     #     return self.settings["grid_settings"]["cell_size"]
     
-    def current_pixmap(self):
-        draggable_pixmap = self.current_draggable_pixmap()
-        if draggable_pixmap:
-            return draggable_pixmap.pixmap
-    
     def current_image(self):
-        if self.previewing_filter:
-            return self.image_backup.copy()
-        pixmap = self.current_pixmap()
+        draggable_pixmap = self.current_draggable_pixmap()
+        pixmap = None
+        if draggable_pixmap:
+            pixmap = draggable_pixmap["pixmap"]
         if not pixmap:
             return None
-        return Image.fromqpixmap(pixmap)
+        qimage = QImage(pixmap.size(), QImage.Format.Format_ARGB32)
+        if qimage.isNull():
+            print("Failed to convert QPixmap to QImage")
+            return None
+        try:
+            return Image.fromqpixmap(pixmap)
+        except UnidentifiedImageError:
+            print("Failed to convert QPixmap to PIL Image")
+            return None
 
     def handle_resize_canvas(self):
         self.do_resize_canvas()
@@ -719,7 +725,7 @@ class CanvasPlusWidget(BaseWidget):
         self.add_image_to_scene(image)
     
     def current_draggable_pixmap(self):
-        return ServiceLocator.get(ServiceCode.CURRENT_DRAGGABLE_PIXMAP)
+        return ServiceLocator.get(ServiceCode.CURRENT_DRAGGABLE_PIXMAP)()
         
     def copy_image(self, image: Image = None) -> object:
         pixmap = self.current_pixmap() if image is None else QPixmap.fromImage(ImageQt(image))
@@ -885,6 +891,7 @@ class CanvasPlusWidget(BaseWidget):
         return type(filter_object).__name__ in AVAILABLE_IMAGE_FILTERS
 
     def preview_filter(self, filter_object: ImageFilter.Filter):
+        print("PREVIEW FILTER")
         image = self.current_image()
         if not image:
             return
