@@ -44,7 +44,8 @@ class VisionCaptureWorker(Worker):
         else:
             self.state = WorkerState.HALTED
 
-        while True:
+        self.running = True
+        while self.running:
             if self.state == WorkerState.RUNNING:
                 self.emit(SignalCode.VISION_CAPTURED_SIGNAL, {
                     "image": self.capture_image()
@@ -60,6 +61,7 @@ class VisionCaptureWorker(Worker):
                 while self.state == WorkerState.HALTED:
                     QThread.msleep(100)
                 self.enable_cam()
+            QThread.msleep(1)
 
     def enable_cam(self):
         self.cap = cv2.VideoCapture(0)
