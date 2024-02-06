@@ -1,3 +1,7 @@
+import os
+import sys
+import subprocess
+import urllib.request
 import datetime
 import gc
 import threading
@@ -5,11 +9,13 @@ import threading
 import torch
 from PIL import Image
 from PIL import PngImagePlugin
+from PyQt6.QtCore import QThread
 from PyQt6.QtGui import QPixmap, QImage
 from PyQt6.QtWidgets import QFileDialog, QApplication, QMainWindow
 
 SESSION = None
-
+WORKERS = []
+THREADS = []
 
 def get_venv_python_executable():
     """
@@ -415,11 +421,6 @@ def delete_image(path):
             os.remove(path)
 
 
-import os
-import sys
-import subprocess
-import urllib.request
-
 def install_library_from_url(url, install_dir):
     # Download the wheel file
     wheel_file = urllib.request.urlretrieve(url)[0]
@@ -475,3 +476,16 @@ def parse_template(template: dict) -> str:
                 "[/INST]"
             ))
     return parsed_template
+
+
+def create_worker(worker_class_):
+    prefix = worker_class_.__name__
+    worker = worker_class_(prefix=prefix)
+    worker_thread = QThread()
+    worker.moveToThread(worker_thread)
+    worker.finished.connect(worker_thread.quit)
+    worker_thread.started.connect(worker.start)
+    worker_thread.start()
+    WORKERS.append(worker)
+    THREADS.append(worker_thread)
+    return worker

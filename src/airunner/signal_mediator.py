@@ -20,12 +20,12 @@ class Signal(QObject):
     signal = pyqtSignal(object)
 
 
+SIGNALS = {}
+
 class SignalMediator(metaclass=SingletonMeta):
     """
     This class is responsible for mediating signals between classes.
     """
-    def __init__(self):
-        self.signals = {}
 
     def register(
         self,
@@ -38,12 +38,12 @@ class SignalMediator(metaclass=SingletonMeta):
         :param code: The SignalCode of the signal to register
         :param slot_function: The function to call when the signal is received.
         """
-        if code not in self.signals:
+        if code not in SIGNALS:
             # Create a new Signal instance for this signal name
-            self.signals[code] = Signal()
+            SIGNALS[code] = Signal()
         # Connect the Signal's pyqtSignal to receive the method of the slot parent
         try:
-            self.signals[code].signal.connect(slot_function)
+            SIGNALS[code].signal.connect(slot_function)
         except Exception as e:
             print(f"Error connecting signal {code}", e)
 
@@ -58,5 +58,5 @@ class SignalMediator(metaclass=SingletonMeta):
         :param data:
         :return:
         """
-        if code in self.signals:
-            self.signals[code].signal.emit(data)
+        if code in SIGNALS:
+            SIGNALS[code].signal.emit(data)
