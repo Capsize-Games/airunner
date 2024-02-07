@@ -280,3 +280,11 @@ class CanvasToolName(Enum):
     ACTIVE_GRID_AREA = "active_grid_area"
     BRUSH = "brush"
     ERASER = "eraser"
+
+
+class WindowSection(Enum):
+    CONTROLNET = "controlnet"
+    EMBEDDINGS = "Embeddings"
+    LORA = "LoRA"
+    PEN = "Pen"
+    ACTIVE_GRID = "Active Grid"
