@@ -334,17 +334,12 @@ class CanvasPlusWidget(BaseWidget):
     
     def current_image(self):
         draggable_pixmap = self.current_draggable_pixmap()
-        pixmap = None
-        if draggable_pixmap:
-            pixmap = draggable_pixmap["pixmap"]
-        if not pixmap:
+        if draggable_pixmap.isNull():
+            self.logger.warning("pixmap is null")
             return None
-        qimage = QImage(pixmap.size(), QImage.Format.Format_ARGB32)
-        if qimage.isNull():
-            print("Failed to convert QPixmap to QImage")
-            return None
+        draggable_pixmap.save("current_image.png")
         try:
-            return Image.fromqpixmap(pixmap)
+            return Image.fromqpixmap(draggable_pixmap)
         except UnidentifiedImageError:
             print("Failed to convert QPixmap to PIL Image")
             return None

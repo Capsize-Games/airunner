@@ -716,11 +716,12 @@ class MainWindow(
     def initialize_filter_actions(self):
         # add more filters:
         for filter_name, filter_data in self.settings["image_filters"].items():
+
             action = self.ui.menuFilters.addAction(filter_data["display_name"])
             action.triggered.connect(partial(self.display_filter_window, filter_data["name"]))
 
     def display_filter_window(self, filter_name):
-        FilterWindow(filter_name).show()
+        FilterWindow(filter_name)
 
     def initialize_default_buttons(self):
         show_grid = self.settings["grid_settings"]["show_grid"]

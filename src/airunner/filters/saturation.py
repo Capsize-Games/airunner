@@ -5,7 +5,7 @@ from airunner.filters.base_filter import BaseFilter
 
 class SaturationFilter(BaseFilter):
     def __init__(self, **kwargs):
-        super().__init__(kwargs)
+        super().__init__(**kwargs)
         self.factor = None
 
     def apply_filter(self, image, do_reset):

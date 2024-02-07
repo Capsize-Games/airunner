@@ -5,7 +5,7 @@ from airunner.filters.base_filter import BaseFilter
 
 class RGBNoiseFilter(BaseFilter):
     def __init__(self, **kwargs):
-        super().__init__(kwargs)
+        super().__init__(**kwargs)
         self.red_grain = None
         self.green_grain = None
         self.blue_grain = None
