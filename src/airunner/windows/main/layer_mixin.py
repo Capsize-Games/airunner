@@ -34,7 +34,7 @@ class LayerMixin:
         self.register(SignalCode.LAYER_SET_CURRENT_SIGNAL, self.on_set_current_layer_signal)
 
         ServiceLocator.register(ServiceCode.CURRENT_LAYER, self.current_layer)
-        ServiceLocator.register(ServiceCode.CURRENT_DRAGGABLE_PIXMAP, self.current_layer)
+        ServiceLocator.register(ServiceCode.CURRENT_DRAGGABLE_PIXMAP, self.current_draggable_pixmap)
         ServiceLocator.register(ServiceCode.CURRENT_ACTIVE_IMAGE, self.current_active_image)
         ServiceLocator.register(ServiceCode.GET_IMAGE_FROM_LAYER, self.get_image_from_layer)
 
