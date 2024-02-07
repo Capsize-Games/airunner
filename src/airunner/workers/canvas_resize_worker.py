@@ -23,6 +23,7 @@ class CanvasResizeWorker(Worker):
         view_size = data["view_size"]
 
         force_draw = data["force_draw"]
+        do_draw_layers = data["do_draw_layers"]
 
         cell_size = settings["grid_settings"]["cell_size"]
         line_color = settings["grid_settings"]["line_color"]
@@ -62,4 +63,8 @@ class CanvasResizeWorker(Worker):
             lines_data.append(line_data)
             y += cell_size
 
-        self.emit(SignalCode.CANVAS_RESIZE_WORKER_RESPONSE_SIGNAL, lines_data)
+        self.emit(SignalCode.CANVAS_RESIZE_WORKER_RESPONSE_SIGNAL, {
+            "lines_data": lines_data,
+            "do_draw_layers": do_draw_layers,
+            "force_draw": force_draw
+        })

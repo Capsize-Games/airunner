@@ -248,7 +248,10 @@ class CanvasPlusWidget(BaseWidget):
         # ))
         self.add_image_to_scene(image_data["images"][0])
 
-    def on_canvas_resize_worker_response_signal(self, lines_data: list):
+    def on_canvas_resize_worker_response_signal(self, data: dict):
+        force_draw = data["force_draw"]
+        do_draw_layers = data["do_draw_layers"]
+        lines_data = data["lines_data"]
         self.clear_lines()
         draw_grid = self.settings["grid_settings"]["show_grid"]
         if not draw_grid:
@@ -259,7 +262,10 @@ class CanvasPlusWidget(BaseWidget):
                 self.line_group.addToGroup(line)
             except TypeError as e:
                 self.logger.error(f"TypeError: {e}")
-        self.do_draw()
+        self.do_draw(
+            force_draw=force_draw,
+            do_draw_layers=do_draw_layers
+        )
 
     def on_image_data_worker_response_signal(self, message):
         self.emit(SignalCode.APPLICATION_CLEAR_STATUS_MESSAGE_SIGNAL)
@@ -344,7 +350,11 @@ class CanvasPlusWidget(BaseWidget):
     def handle_resize_canvas(self):
         self.do_resize_canvas()
     
-    def do_resize_canvas(self, force_draw=False):
+    def do_resize_canvas(
+        self,
+        force_draw: bool = False,
+        do_draw_layers: bool = None
+    ):
         if not self.view:
             return
         data = {
@@ -352,7 +362,8 @@ class CanvasPlusWidget(BaseWidget):
             'view_size': self.view.viewport().size(),
             'scene': self.scene,
             'line_group': self.line_group,
-            'force_draw': force_draw
+            'force_draw': force_draw,
+            'do_draw_layers': do_draw_layers
         }
         self.emit(SignalCode.CANVAS_RESIZE_SIGNAL, data)
 
@@ -580,7 +591,6 @@ class CanvasPlusWidget(BaseWidget):
             continue
 
     def on_canvas_clear_signal(self):
-        print("on canvas clear signal")
         self.scene.clear()
         self.line_group = QGraphicsItemGroup()
         self.pixmaps = {}
@@ -588,7 +598,9 @@ class CanvasPlusWidget(BaseWidget):
         settings["layers"] = []
         self.settings = settings
         self.add_layer()
-        self.do_draw()
+        self.do_resize_canvas(
+            force_draw=True
+        )
 
     def set_scene_rect(self):
         self.scene.setSceneRect(0, 0, self.view_size.width(), self.view_size.height())
@@ -825,7 +837,10 @@ class CanvasPlusWidget(BaseWidget):
         #self.image_adder = ImageAdder(self, image, is_outpaint, image_root_point)
         #self.image_adder.finished.connect(self.on_image_adder_finished)
         self.current_active_image = image_data["image"]
-        self.do_draw()
+        self.do_resize_canvas(
+            force_draw=True,
+            do_draw_layers=True
+        )
         #self.image_adder.start()
     
     def image_to_system_clipboard_windows(self, pixmap):
@@ -885,7 +900,7 @@ class CanvasPlusWidget(BaseWidget):
     def rotate_image(self, angle):
         if self.current_active_image:
             self.current_active_image = self.current_active_image.transpose(angle)
-            self.do_draw(
+            self.do_resize_canvas(
                 force_draw=True,
                 do_draw_layers=True
             )
