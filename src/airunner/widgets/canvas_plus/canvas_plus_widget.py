@@ -7,7 +7,7 @@ from PIL import Image, ImageGrab, ImageFilter, UnidentifiedImageError
 from PIL.ImageQt import ImageQt, QImage
 from PyQt6 import QtWidgets, QtCore
 from PyQt6.QtCore import Qt, QPoint, QRect
-from PyQt6.QtGui import QBrush, QColor, QPixmap
+from PyQt6.QtGui import QBrush, QColor, QPixmap, QTransform
 from PyQt6.QtWidgets import QGraphicsItemGroup, QGraphicsItem
 from PyQt6.QtWidgets import QGraphicsPixmapItem
 from watchdog.utils.platform import is_windows
@@ -97,6 +97,7 @@ class CanvasPlusWidget(BaseWidget):
             SignalCode.CANVAS_CANCEL_FILTER_SIGNAL: self.cancel_filter,
             SignalCode.CANVAS_APPLY_FILTER_SIGNAL: self.apply_filter,
             SignalCode.CANVAS_PREVIEW_FILTER_SIGNAL: self.preview_filter,
+            SignalCode.CANVAS_ZOOM_LEVEL_CHANGED: self.on_zoom_level_changed_signal,
         }
 
         # Map service codes to class functions
@@ -184,16 +185,17 @@ class CanvasPlusWidget(BaseWidget):
         else:
             self.setCursor(Qt.CursorShape.ArrowCursor)
 
-    # def on_zoom_level_changed_signal(self):
-    #     # Create a QTransform object and scale it
-    #     transform = QTransform()
-    #     transform.scale(self.settings["grid_settings"]["zoom_level"], self.settings["grid_settings"]["zoom_level"])
-    #
-    #     # Set the transform
-    #     self.view.setTransform(transform)
-    #
-    #     # Redraw lines
-    #     self.emit(SignalCode.CANVAS_DO_DRAW_SIGNAL)
+    def on_zoom_level_changed_signal(self):
+        print("on_zoom_level_changed_signal")
+        # Create a QTransform object and scale it
+        transform = QTransform()
+        transform.scale(self.settings["grid_settings"]["zoom_level"], self.settings["grid_settings"]["zoom_level"])
+
+        # Set the transform
+        self.view.setTransform(transform)
+
+        # Redraw lines
+        self.emit(SignalCode.CANVAS_DO_DRAW_SIGNAL)
     
     def on_set_current_layer_signal(self, args):
         self.set_current_layer(args)
@@ -281,38 +283,38 @@ class CanvasPlusWidget(BaseWidget):
                 f"Image generated to {path}"
             )
     
-    # @property
-    # def zoom_in_step(self):
-    #     zoom_level = self.settings["grid_settings"]["zoom_level"]
-    #     if zoom_level > 6:
-    #         return 2
-    #     elif zoom_level > 4:
-    #         return 1
-    #     return self.settings["grid_settings"]["zoom_in_step"]
-    #
-    # @property
-    # def zoom_out_step(self):
-    #     zoom_level = self.settings["grid_settings"]["zoom_level"]
-    #     if zoom_level > 6:
-    #         return 2
-    #     elif zoom_level > 4:
-    #         return 1
-    #     if zoom_level <= 1.0:
-    #         return 0.05
-    #     return self.settings["grid_settings"]["zoom_out_step"]
+    @property
+    def zoom_in_step(self):
+        zoom_level = self.settings["grid_settings"]["zoom_level"]
+        if zoom_level > 6:
+            return 2
+        elif zoom_level > 4:
+            return 1
+        return self.settings["grid_settings"]["zoom_in_step"]
+
+    @property
+    def zoom_out_step(self):
+        zoom_level = self.settings["grid_settings"]["zoom_level"]
+        if zoom_level > 6:
+            return 2
+        elif zoom_level > 4:
+            return 1
+        if zoom_level <= 1.0:
+            return 0.05
+        return self.settings["grid_settings"]["zoom_out_step"]
     
-    # @property
-    # def zoom_level(self):
-    #     zoom = self.settings["grid_settings"]["zoom_level"]
-    #     if zoom <= 0:
-    #         zoom = 0.1
-    #     return zoom
-    #
-    # @zoom_level.setter
-    # def zoom_level(self, value):
-    #     settings = self.settings
-    #     settings["grid_settings"]["zoom_level"] = value
-    #     self.settings = settings
+    @property
+    def zoom_level(self):
+        zoom = self.settings["grid_settings"]["zoom_level"]
+        if zoom <= 0:
+            zoom = 0.1
+        return zoom
+
+    @zoom_level.setter
+    def zoom_level(self, value):
+        settings = self.settings
+        settings["grid_settings"]["zoom_level"] = value
+        self.settings = settings
     
     # @property
     # def canvas_color(self):
