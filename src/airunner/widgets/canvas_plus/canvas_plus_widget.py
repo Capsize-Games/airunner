@@ -615,14 +615,20 @@ class CanvasPlusWidget(BaseWidget):
         self.last_pos = QPoint(0, 0)
         self.do_draw()
     
-    def do_draw(self, force_draw = False):
+    def do_draw(
+        self,
+        force_draw: bool = False,
+        do_draw_layers: bool = None
+    ):
+        if do_draw_layers is not None:
+            self.do_draw_layers = do_draw_layers
         if (self.drawing or not self.initialized) and not force_draw:
             return
         self.drawing = True
         self.view_size = self.view.viewport().size()
         self.set_scene_rect()
-        self.draw_grid()
         self.draw_layers()
+        self.draw_grid()
         #self.draw_active_grid_area_container()
         self.ui.canvas_position.setText(
             f"X {-self.settings['canvas_settings']['pos_x']: 05d} Y {self.settings['canvas_settings']['pos_y']: 05d}"
@@ -876,15 +882,19 @@ class CanvasPlusWidget(BaseWidget):
         else:
             image.save(image_path)
 
-    def rotate_90_clockwise(self):
+    def rotate_image(self, angle):
         if self.current_active_image:
-            self.current_active_image = self.current_active_image.transpose(Image.ROTATE_270)
-            self.do_draw()
+            self.current_active_image = self.current_active_image.transpose(angle)
+            self.do_draw(
+                force_draw=True,
+                do_draw_layers=True
+            )
+
+    def rotate_90_clockwise(self):
+        self.rotate_image(Image.ROTATE_270)
 
     def rotate_90_counterclockwise(self):
-        if self.current_active_image:
-            self.current_active_image = self.current_active_image.transpose(Image.ROTATE_90)
-            self.do_draw()
+        self.rotate_image(Image.ROTATE_90)
     
     @staticmethod
     def filter_with_filter(filter_object: ImageFilter.Filter):
