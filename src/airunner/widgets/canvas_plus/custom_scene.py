@@ -67,27 +67,26 @@ class CustomScene(
         self.item.setPixmap(QPixmap.fromImage(self.image))
     
     def wheelEvent(self, event):
-        # # Calculate the zoom factor
-        # zoom_in_factor = self.settings["canvas_settings"]["zoom_in_step"]
-        # zoom_out_factor = -self.settings["canvas_settings"]["zoom_out_step"]
-        #
-        # # Use delta instead of angleDelta
-        # if event.delta() > 0:
-        #     zoom_factor = zoom_in_factor
-        # else:
-        #     zoom_factor = zoom_out_factor
-        #
-        # # Update zoom level
-        # zoom_level = self.settings["grid_settings"]["zoom_level"]
-        # zoom_level += zoom_factor
-        # if zoom_level < 0.1:
-        #     zoom_level = 0.1
-        # settings = self.settings
-        # settings["grid_settings"]["zoom_level"] = zoom_level
-        # self.settings = settings
-        #
-        # self.emit(SignalCode.CANVAS_ZOOM_LEVEL_CHANGED)
-        pass
+        # Calculate the zoom factor
+        zoom_in_factor = self.settings["grid_settings"]["zoom_in_step"]
+        zoom_out_factor = -self.settings["grid_settings"]["zoom_out_step"]
+
+        # Use delta instead of angleDelta
+        if event.delta() > 0:
+            zoom_factor = zoom_in_factor
+        else:
+            zoom_factor = zoom_out_factor
+
+        # Update zoom level
+        zoom_level = self.settings["grid_settings"]["zoom_level"]
+        zoom_level += zoom_factor
+        if zoom_level < 0.1:
+            zoom_level = 0.1
+        settings = self.settings
+        settings["grid_settings"]["zoom_level"] = zoom_level
+        self.settings = settings
+
+        self.emit(SignalCode.CANVAS_ZOOM_LEVEL_CHANGED)
 
     def eraseAt(self, position):
         painter = QPainter(self.image)
