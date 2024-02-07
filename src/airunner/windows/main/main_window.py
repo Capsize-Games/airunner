@@ -740,7 +740,6 @@ class MainWindow(
 
     def show_section(self, section: WindowSection):
         section_lists = {
-            "center": [self.ui.center_tab.tabText(i) for i in range(self.ui.center_tab.count())],
             "right": [self.ui.tool_tab_widget.tabText(i) for i in range(self.ui.tool_tab_widget.count())]
         }
         for k, v in section_lists.items():
