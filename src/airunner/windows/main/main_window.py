@@ -12,7 +12,7 @@ from PyQt6.QtWidgets import QApplication, QFileDialog, QMainWindow
 
 from airunner.aihandler.logger import Logger
 from airunner.aihandler.settings import LOG_LEVEL
-from airunner.enums import Mode, SignalCode, ServiceCode, CanvasToolName
+from airunner.enums import Mode, SignalCode, ServiceCode, CanvasToolName, WindowSection
 from airunner.mediator_mixin import MediatorMixin
 from airunner.resources_dark_rc import *
 from airunner.service_locator import ServiceLocator
@@ -383,29 +383,23 @@ class MainWindow(
     def action_clear_all_prompts_triggered(self):
         self.clear_all_prompts()
 
-    def action_show_deterministic_batches(self):
-        self.show_section("Deterministic Batches")
-
-    def action_show_standard_batches(self):
-        self.show_section("Standard Batches")
-
     def action_show_model_manager(self):
         self.activate_model_manager_section()
 
     def action_show_controlnet(self):
-        self.show_section("controlnet")
+        self.show_section(WindowSection.CONTROLNET)
 
     def action_show_embeddings(self):
-        self.show_section("Embeddings")
+        self.show_section(WindowSection.EMBEDDINGS)
 
     def action_show_lora(self):
-        self.show_section("LoRA")
+        self.show_section(WindowSection.LORA)
 
     def action_show_pen(self):
-        self.show_section("Pen")
+        self.show_section(WindowSection.PEN)
 
     def action_show_active_grid(self):
-        self.show_section("Active Grid")
+        self.show_section(WindowSection.ACTIVE_GRID)
 
     def action_show_stablediffusion(self):
         self.activate_image_generation_section()
@@ -744,17 +738,14 @@ class MainWindow(
         settings["current_tool"] = tool
         self.settings = settings
 
-    def show_section(self, section):
+    def show_section(self, section: WindowSection):
         section_lists = {
             "center": [self.ui.center_tab.tabText(i) for i in range(self.ui.center_tab.count())],
             "right": [self.ui.tool_tab_widget.tabText(i) for i in range(self.ui.tool_tab_widget.count())]
         }
         for k, v in section_lists.items():
-            if section in v:
-                if k == "right":
-                    self.ui.tool_tab_widget.setCurrentIndex(v.index(section))
-                elif k == "bottom":
-                    self.ui.bottom_panel_tab_widget.setCurrentIndex(v.index(section))
+            if section.value in v:
+                self.ui.tool_tab_widget.setCurrentIndex(v.index(section.value))
                 break
 
     def plain_text_widget_value(self, widget):
