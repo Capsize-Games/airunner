@@ -1630,7 +1630,6 @@ class SDHandler(
                 local_files_only=local_files_only,
                 extract_ema=False,
                 #vae=self.load_vae(),
-                pipeline_class=AutoPipelineForText2Image,
                 config_files={
                     "v1": "v1.yaml",
                     "v2": "v2.yaml",
