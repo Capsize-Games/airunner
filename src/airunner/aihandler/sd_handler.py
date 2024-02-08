@@ -233,8 +233,7 @@ class SDHandler(
 
     @property
     def batch_size(self):
-        return self.options.get("batch_size", 4) if self.deterministic_generation \
-            else self.options.get("batch_size", 1)
+        return self.options.get("batch_size", 1)
 
     @property
     def prompt_data(self):
@@ -459,10 +458,6 @@ class SDHandler(
     @property
     def interpolation_data(self):
         return self.options.get("interpolation_data", None)
-
-    @property
-    def deterministic_generation(self):
-        return self.options.get("deterministic_generation", False)
 
     @property
     def current_model(self):
@@ -961,7 +956,7 @@ class SDHandler(
             ),
             device=torch.device(self.device),
             dtype=self.data_type,
-            generator=self.generator(self.device),
+            generator=self.generator(torch.device(self.device)),
         )
 
     def call_pipe(self, **kwargs):
@@ -1031,14 +1026,6 @@ class SDHandler(
         
         if not self.is_pix2pix and len(self.available_lora) > 0 and len(self.loaded_lora) > 0:
             args["cross_attention_kwargs"] = {"scale": 1.0}
-
-        if self.deterministic_generation:
-            if self.is_txt2img:
-                if self.deterministic_seed:
-                    generator = [self.generator() for _i in range(self.batch_size)]
-                else:
-                    generator = [self.generator(seed=self.seed + i) for i in range(self.batch_size)]
-                args["generator"] = generator
 
         if self.enable_controlnet:
             self.logger.info(f"Setting up controlnet")
@@ -1219,8 +1206,6 @@ class SDHandler(
             seed=seed,
             prompt=prompt,
             negative_prompt=negative_prompt,
-            is_deterministic=self.deterministic_generation,
-            is_batch=self.deterministic_generation,
             batch_size=self.batch_size,
             deterministic_style=self.deterministic_style
         )
