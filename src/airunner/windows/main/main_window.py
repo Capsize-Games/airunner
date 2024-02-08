@@ -263,6 +263,7 @@ class MainWindow(
         self.register(SignalCode.SD_LOAD_PROMPT_SIGNAL, self.on_load_saved_stablediffuion_prompt_signal)
         self.register(SignalCode.SD_UPDATE_SAVED_PROMPT_SIGNAL, self.on_update_saved_stablediffusion_prompt_signal)
         self.register(SignalCode.QUIT_APPLICATION, self.action_quit_triggered)
+        self.register(SignalCode.SD_NSFW_CONTENT_DETECTED_SIGNAL, self.on_nsfw_content_detected_signal)
 
     def initialize_ui(self):
         self.logger.info("Loading ui")
@@ -332,6 +333,13 @@ class MainWindow(
     def action_quit_triggered(self):
         QApplication.quit()
         self.close()
+
+    def on_nsfw_content_detected_signal(self, _response):
+        # display message in status
+        self.emit(
+            SignalCode.APPLICATION_STATUS_ERROR_SIGNAL,
+            "NSFW content detected"
+        )
 
     def closeEvent(self, event) -> None:
         self.logger.info("Quitting")
