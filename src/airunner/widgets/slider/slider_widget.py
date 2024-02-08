@@ -218,9 +218,7 @@ class SliderWidget(BaseWidget):
         self.ui.slider_spinbox.setValue(spinbox_val)
 
         # self.update_label()
-        print("slider change", self.slider_callback)
         if self.slider_callback:
-            print("slider_callback")
             self.slider_callback(self.settings_property, adjusted_value)
 
     def update_value(self, val):

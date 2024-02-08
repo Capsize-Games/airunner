@@ -333,16 +333,15 @@ class CanvasPlusWidget(BaseWidget):
     #     return self.settings["grid_settings"]["cell_size"]
     
     def current_image(self):
-        draggable_pixmap = self.current_draggable_pixmap()
-        if draggable_pixmap.isNull():
-            self.logger.warning("pixmap is null")
-            return None
-        draggable_pixmap.save("current_image.png")
+        image = None
         try:
-            return Image.fromqpixmap(draggable_pixmap)
-        except UnidentifiedImageError:
-            print("Failed to convert QPixmap to PIL Image")
-            return None
+            layer = self.settings["layers"][self.settings["current_layer_index"]]
+            base_64_image = layer["base_64_image"]
+            image = Image.open(io.BytesIO(base64.b64decode(base_64_image)))
+            image = image.convert("RGBA")
+        except IndexError:
+            pass
+        return image
 
     def handle_resize_canvas(self):
         self.do_resize_canvas()
@@ -578,7 +577,7 @@ class CanvasPlusWidget(BaseWidget):
                     del self.pixmaps[index]
                 pixmap = QPixmap()
                 pixmap.convertFromImage(ImageQt(image))
-                self.pixmaps[index] = DraggablePixmap(self, pixmap)
+                self.pixmaps[index] = DraggablePixmap(pixmap)
                 self.emit(SignalCode.LAYER_UPDATE_SIGNAL, {
                     "layer": layer,
                     "index": index
@@ -612,7 +611,6 @@ class CanvasPlusWidget(BaseWidget):
         """
         if not self.active_grid_area:
             self.active_grid_area = ActiveGridArea(
-                parent=self,
                 rect=self.active_grid_area_rect
             )
             self.active_grid_area.setZValue(1)
@@ -742,8 +740,11 @@ class CanvasPlusWidget(BaseWidget):
     def current_draggable_pixmap(self):
         return ServiceLocator.get(ServiceCode.CURRENT_DRAGGABLE_PIXMAP)()
         
-    def copy_image(self, image: Image = None) -> object:
-        pixmap = self.current_pixmap() if image is None else QPixmap.fromImage(ImageQt(image))
+    def copy_image(
+        self,
+        image: Image = None
+    ) -> object:
+        pixmap = self.current_draggable_pixmap() if image is None else QPixmap.fromImage(ImageQt(image))
         if not pixmap:
             return None
         return self.move_pixmap_to_clipboard(pixmap)
@@ -829,7 +830,12 @@ class CanvasPlusWidget(BaseWidget):
     def switch_to_layer(self, layer_index):
         self.emit(SignalCode.LAYER_SWITCH_SIGNAL, layer_index)
 
-    def add_image_to_scene(self, image_data, is_outpaint=False, image_root_point=None):
+    def add_image_to_scene(
+        self,
+        image_data: dict,
+        is_outpaint: bool = False,
+        image_root_point: QPoint = None
+    ):
         self.do_draw_layers = True
         #self.image_adder = ImageAdder(self, image, is_outpaint, image_root_point)
         #self.image_adder.finished.connect(self.on_image_adder_finished)
@@ -913,7 +919,6 @@ class CanvasPlusWidget(BaseWidget):
         return type(filter_object).__name__ in AVAILABLE_IMAGE_FILTERS
 
     def preview_filter(self, filter_object: ImageFilter.Filter):
-        print("PREVIEW FILTER")
         image = self.current_image()
         if not image:
             return
@@ -926,7 +931,8 @@ class CanvasPlusWidget(BaseWidget):
         #     filtered_image = filter_object.filter(image)
         # else:
         #     filtered_image = image.filter(filter_object)
-        filtered_image = image.filter(filter_object)
+        #filtered_image = image.filter(filter_object)
+        filtered_image = filter_object.filter(image)
         self.load_image_from_object(image=filtered_image)
 
     def cancel_filter(self):
