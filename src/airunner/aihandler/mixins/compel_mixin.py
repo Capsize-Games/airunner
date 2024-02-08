@@ -1,4 +1,4 @@
-from airunner.aihandler.logger import Logger as logger
+from airunner.aihandler.logger import Logger
 from compel import Compel, DiffusersTextualInversionManager
 
 
@@ -60,12 +60,12 @@ class CompelMixin:
         self._negative_prompt_embeds = value
 
     def clear_prompt_embeds(self):
-        logger.info("Clearing prompt embeds")
+        self.logger.info("Clearing prompt embeds")
         self._prompt_embeds = None
         self._negative_prompt_embeds = None
 
     def load_prompt_embeds(self):
-        logger.info("Loading prompt embeds")
+        self.logger.info("Loading prompt embeds")
         self.compel_proc = None
         self.engine.clear_memory()
         prompt = self.prompt
