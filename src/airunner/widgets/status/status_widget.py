@@ -22,13 +22,13 @@ class StatusWidget(BaseWidget):
         self.timer.start(100)
 
     def on_status_info_signal(self, message):
-        self.set_system_status(message, False)
+        self.set_system_status(message, error=False)
 
     def on_status_error_signal(self, message):
-        self.set_system_status(message, False)
+        self.set_system_status(message, error=True)
 
     def on_clear_status_message_signal(self, _ignore):
-        self.set_system_status("", False)
+        self.set_system_status("", error=False)
 
     def update_system_stats(self, queue_size=0):
         nsfw_filter = self.settings["nsfw_filter"]
