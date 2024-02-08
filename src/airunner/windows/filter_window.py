@@ -76,7 +76,6 @@ class FilterWindow(BaseWindow):
             elif val_type == "bool":
                 val = val == "True"
             kwargs[k] = val
-        print(class_, kwargs)
         self._filter = class_(**kwargs)
         return self._filter
 
@@ -165,19 +164,16 @@ class FilterWindow(BaseWindow):
         image_filter["auto_apply"] = self.ui.auto_apply.isChecked()
 
     def handle_slider_change(self, settings_property, val):
-        print("handle_slider_change")
         self.update_value(settings_property, val)
         self.preview_filter()
 
     def cancel_filter(self):
-        print("cancel_filter")
         self.emit(
             SignalCode.CANVAS_CANCEL_FILTER_SIGNAL
         )
         self.close()
 
     def apply_filter(self):
-        print("apply_filter")
         self.emit(
             SignalCode.CANVAS_APPLY_FILTER_SIGNAL,
             self.filter_object()
@@ -185,7 +181,6 @@ class FilterWindow(BaseWindow):
         self.close()
 
     def preview_filter(self):
-        print("preview_filter")
         self.emit(
             SignalCode.CANVAS_PREVIEW_FILTER_SIGNAL,
             self.filter_object()

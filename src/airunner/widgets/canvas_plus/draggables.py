@@ -1,6 +1,6 @@
 from PIL.ImageQt import QImage
 
-from PyQt6.QtCore import QRect
+from PyQt6.QtCore import QRect, QPoint
 from PyQt6.QtGui import QBrush, QColor, QPen, QPixmap, QPainter
 from PyQt6.QtWidgets import QGraphicsItem, QGraphicsPixmapItem
 from airunner.mediator_mixin import MediatorMixin
@@ -11,20 +11,20 @@ class DraggablePixmap(
     QGraphicsPixmapItem,
     MediatorMixin
 ):
-    def __init__(self, parent, pixmap):
-        self.parent = parent
+    def __init__(self, pixmap):
         super().__init__(pixmap)
         MediatorMixin.__init__(self)
         self.pixmap = pixmap
         self.setFlag(QGraphicsItem.GraphicsItemFlag.ItemIsMovable, True)
+        self.last_pos = QPoint(0, 0)
 
     def snap_to_grid(self):
         settings = ServiceLocator.get("get_settings")()
         cell_size = settings["grid_settings"]["cell_size"]
         x = round(self.x() / cell_size) * cell_size
         y = round(self.y() / cell_size) * cell_size
-        x += self.parent.last_pos.x()
-        y += self.parent.last_pos.y()
+        x += self.last_pos.x()
+        y += self.last_pos.y()
         self.setPos(x, y)
 
     def mouseMoveEvent(self, event):
@@ -40,9 +40,9 @@ class DraggablePixmap(
 
 
 class LayerImageItem(DraggablePixmap):
-    def __init__(self, parent, pixmap, layer_image_data):
+    def __init__(self, pixmap, layer_image_data):
         self.layer_image_data = layer_image_data
-        super().__init__(parent, pixmap)
+        super().__init__(pixmap)
         self.setFlag(QGraphicsItem.GraphicsItemFlag.ItemIsMovable, True)
 
     def mouseReleaseEvent(self, event):
@@ -66,10 +66,10 @@ class ActiveGridArea(DraggablePixmap):
             settings["working_height"]
         )
 
-    def __init__(self, parent, rect):
+    def __init__(self, rect):
         self.update_draggable_settings()
 
-        super().__init__(parent, self.pixmap)
+        super().__init__(self.pixmap)
         self.setFlag(QGraphicsItem.GraphicsItemFlag.ItemIsMovable, True)
 
     def update_draggable_settings(self):
@@ -123,13 +123,13 @@ class ActiveGridArea(DraggablePixmap):
         if settings["active_grid_settings"]["render_border"]:
             painter.setPen(QPen(
                 self.active_grid_area_color,
-                self.parent.line_width
+                self.settings["grid_settings"]["line_width"]
             ))
             painter.setBrush(QBrush(QColor(0, 0, 0, 0)))
             painter.drawRect(self.active_grid_area_rect)
             painter.setPen(QPen(
                 self.active_grid_area_color,
-                self.parent.line_width + 1
+                self.settings["grid_settings"]["line_width"] + 1
             ))
             painter.drawRect(QRect(
                 self.active_grid_area_rect.x(),
