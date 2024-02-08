@@ -1,7 +1,10 @@
+import io
 import base64
 import re
 import traceback
 from io import BytesIO
+from typing import List
+
 import PIL
 import imageio
 import numpy as np
@@ -1264,46 +1267,57 @@ class SDHandler(
         self.current_sample = 0
         return self.image_handler(images, self.requested_data, nsfw_content_detected)
 
-    def image_handler(self, images, data, nsfw_content_detected):
+    def image_handler(
+        self,
+        images: List[Image.Image],
+        data: dict,
+        nsfw_content_detected: List[bool]
+    ):
         data["original_model_data"] = self.original_model_data or {}
+        has_nsfw = True in nsfw_content_detected
         if images:
             tab_section = "stablediffusion"
             data["tab_section"] = tab_section
 
-            # apply filters and convert to base64 if requested
-            has_filters = self.filters != {}
-
             do_base64 = data.get("do_base64", False)
-            if has_filters or do_base64:
-                for i, image in enumerate(images):
-                    if has_filters:
-                        image = self.apply_filters(image, self.filters)
-                    if do_base64:
-                        image = self.image_to_base64(image)
-                    images[i] = image
 
-            has_nsfw = False
-            if nsfw_content_detected is not None:
+            if not has_nsfw:
+                # apply filters and convert to base64 if requested
+                has_filters = self.filters != {}
+
+                if has_filters or do_base64:
+                    for i, image in enumerate(images):
+                        if has_filters:
+                            image = self.apply_filters(image, self.filters)
+                        if do_base64:
+                            img_byte_arr = io.BytesIO()
+                            image.save(img_byte_arr, format='PNG')
+                            img_byte_arr = img_byte_arr.getvalue()
+                            image = base64.encodebytes(img_byte_arr).decode('ascii')
+                        images[i] = image
+
+            if has_nsfw:
                 for i, is_nsfw in enumerate(nsfw_content_detected):
                     if is_nsfw:
                         has_nsfw = True
-                        # iterate over each image and add the word "NSFW" to the
-                        # center with bold white letters
                         image = images[i]
                         image = image.convert("RGBA")
                         draw = ImageDraw.Draw(image)
-                        font = ImageFont.truetype("arial.ttf", 30)
-                        w, h = draw.textsize(f"NSFW", font=font)
-                        draw.text(((image.width - w) / 2, (image.height - h) / 2), "NSFW", font=font,
-                                  fill=(255, 255, 255, 255))
-                        images[i] = image.convert("RGB")
+                        font = ImageFont.truetype("arial", 15)
+                        draw.text((0, 0), "NSFW", (255, 255, 255), font=font)
+                        if do_base64:
+                            img_byte_arr = io.BytesIO()
+                            image.save(img_byte_arr, format='PNG')
+                            img_byte_arr = img_byte_arr.getvalue()
+                            image = base64.encodebytes(img_byte_arr).decode('ascii')
+                        images[i] = image
 
-            return dict(
-                images=images,
-                data=data,
-                request_type=data.get("request_type", None),
-                nsfw_content_detected=has_nsfw,
-            )
+        return dict(
+            images=images,
+            data=data,
+            request_type=data.get("request_type", None),
+            nsfw_content_detected=has_nsfw,
+        )
 
     def final_callback(self):
         total = int(self.steps * self.strength)
