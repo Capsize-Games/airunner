@@ -59,6 +59,7 @@ class StableDiffusionSettingsWidget(BaseWidget):
     def handle_version_changed(self, val):
         settings = self.settings
         settings["current_version_stablediffusion"] = val
+        settings["generator_settings"]["version"] = val
         self.settings = settings
         self.load_models()
 
