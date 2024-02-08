@@ -52,3 +52,7 @@ class StatusWidget(BaseWidget):
 
     def set_system_status(self, txt, error):
         self.ui.system_message.setText(txt)
+        if error:
+            self.ui.system_message.setStyleSheet("QLabel { color: #ff0000; }")
+        else:
+            self.ui.system_message.setStyleSheet("QLabel { color: #ffffff; }")
