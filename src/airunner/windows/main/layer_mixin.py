@@ -2,12 +2,14 @@ import base64
 import io
 import uuid
 
+from PIL.ImageQt import ImageQt
 from PyQt6.QtGui import QPixmap
 
 from PIL import Image
 
 from airunner.enums import SignalCode, ServiceCode
 from airunner.service_locator import ServiceLocator
+from airunner.widgets.canvas_plus.draggables import DraggablePixmap
 
 
 class LayerMixin:
@@ -90,8 +92,15 @@ class LayerMixin:
         self.settings = settings
         return total_layers
 
-    def current_draggable_pixmap(self):
-        return self.current_layer()["pixmap"]
+    def current_draggable_pixmap(self) -> DraggablePixmap:
+        pixmap = self.current_layer()["pixmap"]
+        if pixmap is None or pixmap.isNull():
+            pixmap = QPixmap()
+            base_64_image = self.current_layer()["base_64_image"]
+            pil_image = Image.open(io.BytesIO(base64.b64decode(base_64_image)))
+            q_image = ImageQt(pil_image)
+            pixmap.convertFromImage(q_image)
+        return DraggablePixmap(pixmap)
 
     def delete_layer(self, index, layer):
         self.logger.info(f"delete_layer requested index {index}")
