@@ -31,8 +31,7 @@ class CompelMixin:
 
     @property
     def prompt_embeds(self):
-        # reset prompt_embeds if deterministic_generation is True and it has a size of 1
-        if self._prompt_embeds is not None and self.deterministic_generation:
+        if self._prompt_embeds is not None:
             shape = self._prompt_embeds.shape
             size = shape[0]
             if size == 1:
@@ -47,8 +46,7 @@ class CompelMixin:
 
     @property
     def negative_prompt_embeds(self):
-        # reset negative_prompt_embeds if deterministic_generation is True and it has a size of 1
-        if self._negative_prompt_embeds is not None and self.deterministic_generation:
+        if self._negative_prompt_embeds is not None:
             shape = self._negative_prompt_embeds.shape
             size = shape[0]
             if size == 1:
@@ -83,3 +81,5 @@ class CompelMixin:
         [prompt_embeds, negative_prompt_embeds] = self.compel_proc.pad_conditioning_tensors_to_same_length([prompt_embeds, negative_prompt_embeds])
         self.prompt_embeds = prompt_embeds
         self.negative_prompt_embeds = negative_prompt_embeds
+        self.prompt_embeds.to(self.device)
+        self.negative_prompt_embeds.to(self.device)
