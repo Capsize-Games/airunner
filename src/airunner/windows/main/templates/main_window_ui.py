@@ -827,8 +827,6 @@ class Ui_MainWindow(object):
         self.actionTxt2vid.triggered.connect(MainWindow.action_show_model_path_txt2vid) # type: ignore
         self.actionActive_Grid.triggered.connect(MainWindow.action_show_active_grid) # type: ignore
         self.actionModel_Manager_2.triggered.connect(MainWindow.action_show_model_manager) # type: ignore
-        self.actionDeterministic_Batches.triggered.connect(MainWindow.action_show_deterministic_batches) # type: ignore
-        self.actionStandard_Batches.triggered.connect(MainWindow.action_show_standard_batches) # type: ignore
         self.actionLLM_beta.triggered.connect(MainWindow.action_show_llm) # type: ignore
         self.settings_button.clicked.connect(MainWindow.action_show_settings) # type: ignore
         self.toggle_grid_button.toggled['bool'].connect(MainWindow.action_toggle_grid) # type: ignore

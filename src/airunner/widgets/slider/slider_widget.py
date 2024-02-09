@@ -92,7 +92,6 @@ class SliderWidget(BaseWidget):
     def spinbox_minimum(self, val):
         self.ui.slider_spinbox.setMinimum(val)
 
-
     def __init__(self, *args, **kwargs):
         super().__init__(*args, **kwargs)
         self.slider_callback = None
@@ -102,36 +101,30 @@ class SliderWidget(BaseWidget):
         self.register(SignalCode.APPLICATION_MAIN_WINDOW_LOADED_SIGNAL, self.on_main_window_loaded_signal)
     
     def on_main_window_loaded_signal(self):
-        self.initialize()
+        self.init()
     
-    def initialize(self, **kwargs):
-        slider_callback = kwargs.pop("slider_callback", None)
-        slider_minimum = kwargs.pop("slider_minimum", 0)
-        slider_maximum = kwargs.pop("slider_maximum", 100)
-        spinbox_minimum = kwargs.pop("spinbox_minimum", 0.0)
-        spinbox_maximum = kwargs.pop("spinbox_maximum", 100.0)
-        current_value = kwargs.pop("current_value", 0)
-        settings_property = kwargs.pop("settings_property", None)
-        label_text = kwargs.pop("label_text", "")
-        display_as_float = kwargs.pop("display_as_float", False)
-        
-        slider_minimum = self.property("slider_minimum") or slider_minimum
-        slider_maximum = self.property("slider_maximum") or slider_maximum
+    def init(self, **kwargs):
+        slider_callback = kwargs.get("slider_callback", self.property("slider_callback") or None)
+        slider_minimum = kwargs.get("slider_minimum", self.property("slider_minimum") or 0)
+        slider_maximum = kwargs.get("slider_maximum", self.property("slider_maximum") or 100)
+        spinbox_minimum = kwargs.get("spinbox_minimum", self.property("spinbox_minimum") or 0.0)
+        spinbox_maximum = kwargs.get("spinbox_maximum", self.property("spinbox_maximum") or 100.0)
+        current_value = kwargs.get("current_value", self.property("current_value") or 0)
+        settings_property = kwargs.get("settings_property", self.property("settings_property") or None)
+        label_text = kwargs.get("label_text", self.property("label_text") or "")
+        display_as_float = kwargs.get("display_as_float", self.property("display_as_float") or False)
+
         slider_tick_interval = self.property("slider_tick_interval") or 8
-        slider_callback = self.property("slider_callback") or slider_callback
         slider_single_step = self.property("slider_single_step") or 1
         slider_page_step = self.property("slider_page_step") or 1
-        spinbox_minimum = self.property("spinbox_minimum") or spinbox_minimum
-        spinbox_maximum = self.property("spinbox_maximum") or spinbox_maximum
+
         spinbox_single_step = self.property("spinbox_single_step") or 0.01
         spinbox_page_step = self.property("spinbox_page_step") or 0.01
-        label_text = self.property("label_text") or label_text
-        current_value = self.property("current_value") or current_value
+
         slider_name = self.property("slider_name") or None
         spinbox_name = self.property("spinbox_name") or None
-        settings_property = self.property("settings_property") or settings_property
-        self.display_as_float = self.property("display_as_float") or display_as_float
-        self.divide_by = self.property("divide_by") or 1.0
+
+        divide_by = self.property("divide_by") or 1.0
 
         if settings_property is not None:
             current_value = self.get_service(ServiceCode.GET_SETTINGS_VALUE)(settings_property)
@@ -159,6 +152,8 @@ class SliderWidget(BaseWidget):
         self.spinbox_maximum = spinbox_maximum
         self.label_text = label_text
         self.settings_property = settings_property
+        self.display_as_float = display_as_float
+        self.divide_by = divide_by
 
         self.label = QLabel(f"{label_text}")
         self.label.setAlignment(Qt.AlignmentFlag.AlignCenter)
@@ -185,6 +180,8 @@ class SliderWidget(BaseWidget):
         single_step = self.ui.slider.singleStep()
         adjusted_value = val
         if single_step > 0:
+            val = float(val)
+            single_step = float(single_step)
             adjusted_value = round(val / single_step) * single_step
         normalized = adjusted_value / self.slider_maximum
         spinbox_val = normalized * self.spinbox_maximum

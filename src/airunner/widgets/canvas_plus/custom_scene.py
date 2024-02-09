@@ -4,8 +4,9 @@ from PyQt6.QtGui import QEnterEvent
 from PyQt6.QtGui import QPainterPath
 from PyQt6.QtGui import QPen, QPixmap, QPainter
 from PyQt6.QtWidgets import QGraphicsScene, QGraphicsPixmapItem
+from PyQt6.QtGui import QColor, QBrush
 
-from airunner.enums import SignalCode
+from airunner.enums import SignalCode, CanvasToolName
 from airunner.mediator_mixin import MediatorMixin
 from airunner.service_locator import ServiceLocator
 
@@ -45,39 +46,47 @@ class CustomScene(
 
     def drawAt(self, position):
         painter = QPainter(self.image)
-        painter.setPen(QPen(Qt.GlobalColor.black, self.settings["brush_settings"]["size"], Qt.PenStyle.SolidLine, Qt.PenCapStyle.RoundCap))
-        
+        brush_color = self.settings["brush_settings"]["primary_color"]
+        color = QColor(brush_color)
+        size = self.settings["brush_settings"]["size"]
+        pen = QPen(
+            color,
+            size,
+            Qt.PenStyle.SolidLine,
+            Qt.PenCapStyle.RoundCap
+        )
+        painter.setPen(pen)
+
         # Draw a line from the last position to the current one
         if self.last_pos is not None:
             painter.drawLine(self.last_pos, position)
         else:
             painter.drawPoint(position)
-        
+
         painter.end()
         self.item.setPixmap(QPixmap.fromImage(self.image))
     
     def wheelEvent(self, event):
-        # # Calculate the zoom factor
-        # zoom_in_factor = self.settings["canvas_settings"]["zoom_in_step"]
-        # zoom_out_factor = -self.settings["canvas_settings"]["zoom_out_step"]
-        #
-        # # Use delta instead of angleDelta
-        # if event.delta() > 0:
-        #     zoom_factor = zoom_in_factor
-        # else:
-        #     zoom_factor = zoom_out_factor
-        #
-        # # Update zoom level
-        # zoom_level = self.settings["grid_settings"]["zoom_level"]
-        # zoom_level += zoom_factor
-        # if zoom_level < 0.1:
-        #     zoom_level = 0.1
-        # settings = self.settings
-        # settings["grid_settings"]["zoom_level"] = zoom_level
-        # self.settings = settings
-        #
-        # self.emit(SignalCode.CANVAS_ZOOM_LEVEL_CHANGED)
-        pass
+        # Calculate the zoom factor
+        zoom_in_factor = self.settings["grid_settings"]["zoom_in_step"]
+        zoom_out_factor = -self.settings["grid_settings"]["zoom_out_step"]
+
+        # Use delta instead of angleDelta
+        if event.delta() > 0:
+            zoom_factor = zoom_in_factor
+        else:
+            zoom_factor = zoom_out_factor
+
+        # Update zoom level
+        zoom_level = self.settings["grid_settings"]["zoom_level"]
+        zoom_level += zoom_factor
+        if zoom_level < 0.1:
+            zoom_level = 0.1
+        settings = self.settings
+        settings["grid_settings"]["zoom_level"] = zoom_level
+        self.settings = settings
+
+        self.emit(SignalCode.CANVAS_ZOOM_LEVEL_CHANGED)
 
     def eraseAt(self, position):
         painter = QPainter(self.image)
@@ -101,14 +110,15 @@ class CustomScene(
         self.item.setPixmap(QPixmap.fromImage(self.image))
 
     def mousePressEvent(self, event):
-        if self.settings["current_tool"] not in ["brush", "eraser"]:
+        self.handle_cursor(event)
+        if self.settings["current_tool"] not in [CanvasToolName.BRUSH, CanvasToolName.ERASER]:
             super(CustomScene, self).mousePressEvent(event)
             return
 
         self.last_pos = event.scenePos()
-        if self.settings["current_tool"] == "brush":
+        if self.settings["current_tool"] == CanvasToolName.BRUSH:
             self.drawAt(self.last_pos)
-        elif self.settings["current_tool"] == "eraser":
+        elif self.settings["current_tool"] == CanvasToolName.ERASER:
             self.eraseAt(self.last_pos)
 
     def handle_cursor(self, event):
@@ -118,24 +128,21 @@ class CustomScene(
         if type(event) == QEnterEvent:
             self.handle_cursor(event)
         return super(CustomScene, self).event(event)
-
-    def mousePressEvent(self, event):
-        super(CustomScene, self).mousePressEvent(event)
-        self.handle_cursor(event)
     
     def mouseReleaseEvent(self, event):
         super(CustomScene, self).mouseReleaseEvent(event)
         self.handle_cursor(event)
+        self.last_pos = None
 
     def mouseMoveEvent(self, event):
         self.handle_cursor(event)
-        if self.settings["current_tool"] not in ["brush", "eraser"]:
+        if self.settings["current_tool"] not in [CanvasToolName.BRUSH, CanvasToolName.ERASER]:
             super(CustomScene, self).mouseMoveEvent(event)
             return
         
-        if self.settings["current_tool"] == "brush":
+        if self.settings["current_tool"] == CanvasToolName.BRUSH:
             self.drawAt(event.scenePos())
-        elif self.settings["current_tool"] == "eraser":
+        elif self.settings["current_tool"] == CanvasToolName.ERASER:
             self.eraseAt(event.scenePos())
         
         # Update the last position

@@ -30,7 +30,7 @@ class SDRequest(
         controlnet_image: Image = None,
         memory_options: dict = None,
         extra_options: dict = None
-    ):
+    ) -> dict:
         settings = settings if not settings else settings
         override_data = {} if not override_data else override_data
         extra_options = {} if not extra_options else extra_options

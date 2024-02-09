@@ -59,6 +59,7 @@ class StableDiffusionSettingsWidget(BaseWidget):
     def handle_version_changed(self, val):
         settings = self.settings
         settings["current_version_stablediffusion"] = val
+        settings["generator_settings"]["version"] = val
         self.settings = settings
         self.load_models()
 
@@ -125,6 +126,7 @@ class StableDiffusionSettingsWidget(BaseWidget):
 
     def load_schedulers(self):
         self.logger.info("load_schedulers")
+        self.ui.scheduler.blockSignals(True)
         scheduler_names = [s["display_name"] for s in self.settings["schedulers"]]
         self.ui.scheduler.clear()
         self.ui.scheduler.addItems(scheduler_names)

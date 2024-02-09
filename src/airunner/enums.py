@@ -87,6 +87,9 @@ class SignalCode(Enum):
     CANVAS_CUT_IMAGE_SIGNAL = "canvas_cut_image_signal"
     CANVAS_ROTATE_90_CLOCKWISE_SIGNAL = "canvas_rotate_90_clockwise_signal"
     CANVAS_ROTATE_90_COUNTER_CLOCKWISE_SIGNAL = "canvas_rotate_90_counter_clockwise_signal"
+    CANVAS_PREVIEW_FILTER_SIGNAL = "canvas_preview_filter_signal"
+    CANVAS_CANCEL_FILTER_SIGNAL = "canvas_cancel_filter_signal"
+    CANVAS_APPLY_FILTER_SIGNAL = "canvas_apply_filter_signal"
 
     CLEAR_MEMORY_SIGNAL = "clear_memory_signal"
     CONTROLNET_IMAGE_GENERATED_SIGNAL = "controlnet_image_generated_signal"
@@ -271,3 +274,17 @@ class LLMToolName(Enum):
     VISION_PROCESS_IMAGES = "vision_process_images"
     VISION_START_CAPTURE = "vision_start_capture"
     VISION_STOP_CAPTURE = "vision_stop_capture"
+
+
+class CanvasToolName(Enum):
+    ACTIVE_GRID_AREA = "active_grid_area"
+    BRUSH = "brush"
+    ERASER = "eraser"
+
+
+class WindowSection(Enum):
+    CONTROLNET = "controlnet"
+    EMBEDDINGS = "Embeddings"
+    LORA = "LoRA"
+    PEN = "Pen"
+    ACTIVE_GRID = "Active Grid"

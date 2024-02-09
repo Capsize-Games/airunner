@@ -19,16 +19,16 @@ class StatusWidget(BaseWidget):
 
         self.timer = QTimer()
         self.timer.timeout.connect(self.update_system_stats)
-        self.timer.start(100)
+        self.timer.start(1000)
 
     def on_status_info_signal(self, message):
-        self.set_system_status(message, False)
+        self.set_system_status(message, error=False)
 
     def on_status_error_signal(self, message):
-        self.set_system_status(message, False)
+        self.set_system_status(message, error=True)
 
     def on_clear_status_message_signal(self, _ignore):
-        self.set_system_status("", False)
+        self.set_system_status("", error=False)
 
     def update_system_stats(self, queue_size=0):
         nsfw_filter = self.settings["nsfw_filter"]
@@ -52,3 +52,7 @@ class StatusWidget(BaseWidget):
 
     def set_system_status(self, txt, error):
         self.ui.system_message.setText(txt)
+        if error:
+            self.ui.system_message.setStyleSheet("QLabel { color: #ff0000; }")
+        else:
+            self.ui.system_message.setStyleSheet("QLabel { color: #ffffff; }")

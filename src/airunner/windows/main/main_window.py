@@ -12,19 +12,18 @@ from PyQt6.QtWidgets import QApplication, QFileDialog, QMainWindow
 
 from airunner.aihandler.logger import Logger
 from airunner.aihandler.settings import LOG_LEVEL
-from airunner.enums import Mode, SignalCode, ServiceCode
-from airunner.filters.windows.filter_base import FilterBase
+from airunner.enums import Mode, SignalCode, ServiceCode, CanvasToolName, WindowSection
 from airunner.mediator_mixin import MediatorMixin
 from airunner.resources_dark_rc import *
 from airunner.service_locator import ServiceLocator
 from airunner.settings import BASE_PATH
-from airunner.utils import get_version, default_hf_cache_dir, open_file_path
+from airunner.utils import get_version, default_hf_cache_dir, open_file_path, set_widget_state
 from airunner.widgets.status.status_widget import StatusWidget
 from airunner.windows.about.about import AboutWindow
+from airunner.windows.filter_window import FilterWindow
 from airunner.windows.main.ai_model_mixin import AIModelMixin
 from airunner.windows.main.controlnet_model_mixin import ControlnetModelMixin
 from airunner.windows.main.embedding_mixin import EmbeddingMixin
-from airunner.windows.main.image_filter_mixin import ImageFilterMixin
 from airunner.windows.main.layer_mixin import LayerMixin
 from airunner.windows.main.lora_mixin import LoraMixin
 from airunner.windows.main.pipeline_mixin import PipelineMixin
@@ -47,8 +46,7 @@ class MainWindow(
     EmbeddingMixin,
     PipelineMixin,
     ControlnetModelMixin,
-    AIModelMixin,
-    ImageFilterMixin,
+    AIModelMixin
 ):
     # signals
     show_grid_toggled = pyqtSignal(bool)
@@ -242,7 +240,6 @@ class MainWindow(
         PipelineMixin.__init__(self)
         ControlnetModelMixin.__init__(self)
         AIModelMixin.__init__(self)
-        ImageFilterMixin.__init__(self)
         self.register_services()
         self.update_settings()
         self.create_airunner_paths()
@@ -266,6 +263,7 @@ class MainWindow(
         self.register(SignalCode.SD_LOAD_PROMPT_SIGNAL, self.on_load_saved_stablediffuion_prompt_signal)
         self.register(SignalCode.SD_UPDATE_SAVED_PROMPT_SIGNAL, self.on_update_saved_stablediffusion_prompt_signal)
         self.register(SignalCode.QUIT_APPLICATION, self.action_quit_triggered)
+        self.register(SignalCode.SD_NSFW_CONTENT_DETECTED_SIGNAL, self.on_nsfw_content_detected_signal)
 
     def initialize_ui(self):
         self.logger.info("Loading ui")
@@ -336,6 +334,13 @@ class MainWindow(
         QApplication.quit()
         self.close()
 
+    def on_nsfw_content_detected_signal(self, _response):
+        # display message in status
+        self.emit(
+            SignalCode.APPLICATION_STATUS_ERROR_SIGNAL,
+            "NSFW content detected"
+        )
+
     def closeEvent(self, event) -> None:
         self.logger.info("Quitting")
         self.worker_manager.stop()
@@ -386,29 +391,23 @@ class MainWindow(
     def action_clear_all_prompts_triggered(self):
         self.clear_all_prompts()
 
-    def action_show_deterministic_batches(self):
-        self.show_section("Deterministic Batches")
-
-    def action_show_standard_batches(self):
-        self.show_section("Standard Batches")
-
     def action_show_model_manager(self):
         self.activate_model_manager_section()
 
     def action_show_controlnet(self):
-        self.show_section("controlnet")
+        self.show_section(WindowSection.CONTROLNET)
 
     def action_show_embeddings(self):
-        self.show_section("Embeddings")
+        self.show_section(WindowSection.EMBEDDINGS)
 
     def action_show_lora(self):
-        self.show_section("LoRA")
+        self.show_section(WindowSection.LORA)
 
     def action_show_pen(self):
-        self.show_section("Pen")
+        self.show_section(WindowSection.PEN)
 
     def action_show_active_grid(self):
-        self.show_section("Active Grid")
+        self.show_section(WindowSection.ACTIVE_GRID)
 
     def action_show_stablediffusion(self):
         self.activate_image_generation_section()
@@ -624,19 +623,19 @@ class MainWindow(
     
     def action_toggle_brush(self, active):
         if active:
-            self.toggle_tool("brush")
+            self.toggle_tool(CanvasToolName.BRUSH)
             self.ui.toggle_active_grid_area_button.setChecked(False)
             self.ui.toggle_eraser_button.setChecked(False)
 
     def action_toggle_eraser(self, active):
         if active:
-            self.toggle_tool("eraser")
+            self.toggle_tool(CanvasToolName.ERASER)
             self.ui.toggle_active_grid_area_button.setChecked(False)
             self.ui.toggle_brush_button.setChecked(False)
 
     def action_toggle_active_grid_area(self, active):
         if active:
-            self.toggle_tool("active_grid_area")
+            self.toggle_tool(CanvasToolName.ACTIVE_GRID_AREA)
             self.ui.toggle_brush_button.setChecked(False)
             self.ui.toggle_eraser_button.setChecked(False)
 
@@ -724,46 +723,37 @@ class MainWindow(
 
     def initialize_filter_actions(self):
         # add more filters:
-        for filter in self.image_filter_get_all():
-            action = self.ui.menuFilters.addAction(filter["display_name"])
-            action.triggered.connect(partial(self.display_filter_window, filter["name"]))
+        for filter_name, filter_data in self.settings["image_filters"].items():
+
+            action = self.ui.menuFilters.addAction(filter_data["display_name"])
+            action.triggered.connect(partial(self.display_filter_window, filter_data["name"]))
 
     def display_filter_window(self, filter_name):
-        FilterBase(self, filter_name).show()
+        FilterWindow(filter_name)
 
     def initialize_default_buttons(self):
         show_grid = self.settings["grid_settings"]["show_grid"]
-        self.ui.toggle_active_grid_area_button.blockSignals(True)
-        self.ui.toggle_brush_button.blockSignals(True)
-        self.ui.toggle_eraser_button.blockSignals(True)
-        self.ui.toggle_grid_button.blockSignals(True)
-        self.ui.ai_button.blockSignals(True)
-        self.ui.toggle_active_grid_area_button.setChecked(self.settings["current_tool"] == "active_grid_area")
-        self.ui.toggle_brush_button.setChecked(self.settings["current_tool"] == "brush")
-        self.ui.toggle_eraser_button.setChecked(self.settings["current_tool"] == "eraser")
-        self.ui.toggle_grid_button.setChecked(show_grid is True)
-        self.ui.toggle_active_grid_area_button.blockSignals(False)
-        self.ui.toggle_brush_button.blockSignals(False)
-        self.ui.toggle_eraser_button.blockSignals(False)
-        self.ui.toggle_grid_button.blockSignals(False)
-        self.ui.ai_button.blockSignals(False)
+        current_tool = self.settings["current_tool"]
+        ai_mode = self.settings["ai_mode"]
+
+        set_widget_state(self.ui.toggle_active_grid_area_button, current_tool == CanvasToolName.ACTIVE_GRID_AREA)
+        set_widget_state(self.ui.toggle_brush_button, current_tool == CanvasToolName.BRUSH)
+        set_widget_state(self.ui.toggle_eraser_button, current_tool == CanvasToolName.ERASER)
+        set_widget_state(self.ui.toggle_grid_button, show_grid is True)
+        set_widget_state(self.ui.ai_button, ai_mode)
 
     def toggle_tool(self, tool):
         settings = self.settings
         settings["current_tool"] = tool
         self.settings = settings
 
-    def show_section(self, section):
+    def show_section(self, section: WindowSection):
         section_lists = {
-            "center": [self.ui.center_tab.tabText(i) for i in range(self.ui.center_tab.count())],
             "right": [self.ui.tool_tab_widget.tabText(i) for i in range(self.ui.tool_tab_widget.count())]
         }
         for k, v in section_lists.items():
-            if section in v:
-                if k == "right":
-                    self.ui.tool_tab_widget.setCurrentIndex(v.index(section))
-                elif k == "bottom":
-                    self.ui.bottom_panel_tab_widget.setCurrentIndex(v.index(section))
+            if section.value in v:
+                self.ui.tool_tab_widget.setCurrentIndex(v.index(section.value))
                 break
 
     def plain_text_widget_value(self, widget):
@@ -788,25 +778,16 @@ class MainWindow(
         return getattr(self, callback_name)
 
     def get_settings_value(self, settings_property):
-        current_value = 0
-        try:
-            current_value = getattr(self, settings_property) or 0
-        except AttributeError:
-            keys = settings_property.split(".")
-            if keys[0] == "settings":
-                data = getattr(self, keys[0]) or None
+        keys = settings_property.split(".")
+        data = self.settings
+
+        for key in keys:
+            if isinstance(data, dict) and key in data:
+                data = data[key]
             else:
-                settings = self.settings
-                if len(keys) > 1:
-                    data = settings[keys[0]]
-                else:
-                    data = settings
-            if data:
-                if len(keys) > 1:
-                    current_value = data[keys[1]]
-                else:
-                    current_value = data[keys[0]]
-        return current_value
+                return None
+
+        return data
 
     def handle_value_change(self, attr_name, value=None, widget=None):
         """
