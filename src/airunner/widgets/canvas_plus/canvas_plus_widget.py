@@ -3,18 +3,19 @@ import io
 import subprocess
 from functools import partial
 
-from PIL import Image, ImageGrab
-from PIL.ImageQt import ImageQt
+from PIL import Image, ImageGrab, ImageFilter, UnidentifiedImageError
+from PIL.ImageQt import ImageQt, QImage
 from PyQt6 import QtWidgets, QtCore
 from PyQt6.QtCore import Qt, QPoint, QRect
-from PyQt6.QtGui import QBrush, QColor, QPixmap
+from PyQt6.QtGui import QBrush, QColor, QPixmap, QTransform
 from PyQt6.QtWidgets import QGraphicsItemGroup, QGraphicsItem
 from PyQt6.QtWidgets import QGraphicsPixmapItem
 from watchdog.utils.platform import is_windows
 
 from airunner.cursors.circle_brush import CircleCursor
-from airunner.enums import SignalCode, ServiceCode
+from airunner.enums import SignalCode, ServiceCode, CanvasToolName
 from airunner.service_locator import ServiceLocator
+from airunner.settings import AVAILABLE_IMAGE_FILTERS
 from airunner.utils import apply_opacity_to_image
 from airunner.widgets.base_widget import BaseWidget
 from airunner.widgets.canvas_plus.custom_scene import CustomScene
@@ -93,12 +94,16 @@ class CanvasPlusWidget(BaseWidget):
             SignalCode.CANVAS_CUT_IMAGE_SIGNAL: self.on_canvas_cut_image_signal,
             SignalCode.CANVAS_ROTATE_90_CLOCKWISE_SIGNAL: self.on_canvas_rotate_90_clockwise_signal,
             SignalCode.CANVAS_ROTATE_90_COUNTER_CLOCKWISE_SIGNAL: self.on_canvas_rotate_90_counter_clockwise_signal,
+            SignalCode.CANVAS_CANCEL_FILTER_SIGNAL: self.cancel_filter,
+            SignalCode.CANVAS_APPLY_FILTER_SIGNAL: self.apply_filter,
+            SignalCode.CANVAS_PREVIEW_FILTER_SIGNAL: self.preview_filter,
+            SignalCode.CANVAS_ZOOM_LEVEL_CHANGED: self.on_zoom_level_changed_signal,
         }
 
         # Map service codes to class functions
         self.services = {
             ServiceCode.CURRENT_ACTIVE_IMAGE: self.canvas_current_active_image,
-            ServiceCode.CURRENT_LAYER: self.canvas_current_active_image
+            ServiceCode.CURRENT_LAYER: self.canvas_current_active_image,
         }
 
         # Map class properties to worker classes
@@ -122,10 +127,6 @@ class CanvasPlusWidget(BaseWidget):
             "pivot_point_x": value.x(),
             "pivot_point_y": value.y()
         })
-
-    @property
-    def brush_size(self):
-        return self.settings["brush_settings"]["size"]
 
     @property
     def active_grid_area_rect(self):
@@ -170,13 +171,13 @@ class CanvasPlusWidget(BaseWidget):
         self.rotate_90_counterclockwise()
 
     def on_canvas_update_cursor_signal(self, event):
-        if self.settings["current_tool"] in ['brush', 'eraser']:
+        if self.settings["current_tool"] in [CanvasToolName.BRUSH, CanvasToolName.ERASER]:
             self.setCursor(CircleCursor(
                 Qt.GlobalColor.white,
                 Qt.GlobalColor.transparent,
                 self.settings["brush_settings"]["size"],
             ))
-        elif self.settings["current_tool"] == "active_grid_area":
+        elif self.settings["current_tool"] == CanvasToolName.ACTIVE_GRID_AREA:
             if event.buttons() == Qt.MouseButton.LeftButton:
                 self.setCursor(Qt.CursorShape.ClosedHandCursor)
             else:
@@ -184,16 +185,17 @@ class CanvasPlusWidget(BaseWidget):
         else:
             self.setCursor(Qt.CursorShape.ArrowCursor)
 
-    # def on_zoom_level_changed_signal(self):
-    #     # Create a QTransform object and scale it
-    #     transform = QTransform()
-    #     transform.scale(self.settings["grid_settings"]["zoom_level"], self.settings["grid_settings"]["zoom_level"])
-    #
-    #     # Set the transform
-    #     self.view.setTransform(transform)
-    #
-    #     # Redraw lines
-    #     self.emit(SignalCode.CANVAS_DO_DRAW_SIGNAL)
+    def on_zoom_level_changed_signal(self):
+        print("on_zoom_level_changed_signal")
+        # Create a QTransform object and scale it
+        transform = QTransform()
+        transform.scale(self.settings["grid_settings"]["zoom_level"], self.settings["grid_settings"]["zoom_level"])
+
+        # Set the transform
+        self.view.setTransform(transform)
+
+        # Redraw lines
+        self.emit(SignalCode.CANVAS_DO_DRAW_SIGNAL)
     
     def on_set_current_layer_signal(self, args):
         self.set_current_layer(args)
@@ -248,7 +250,10 @@ class CanvasPlusWidget(BaseWidget):
         # ))
         self.add_image_to_scene(image_data["images"][0])
 
-    def on_canvas_resize_worker_response_signal(self, lines_data: list):
+    def on_canvas_resize_worker_response_signal(self, data: dict):
+        force_draw = data["force_draw"]
+        do_draw_layers = data["do_draw_layers"]
+        lines_data = data["lines_data"]
         self.clear_lines()
         draw_grid = self.settings["grid_settings"]["show_grid"]
         if not draw_grid:
@@ -259,7 +264,10 @@ class CanvasPlusWidget(BaseWidget):
                 self.line_group.addToGroup(line)
             except TypeError as e:
                 self.logger.error(f"TypeError: {e}")
-        self.do_draw()
+        self.do_draw(
+            force_draw=force_draw,
+            do_draw_layers=do_draw_layers
+        )
 
     def on_image_data_worker_response_signal(self, message):
         self.emit(SignalCode.APPLICATION_CLEAR_STATUS_MESSAGE_SIGNAL)
@@ -275,38 +283,38 @@ class CanvasPlusWidget(BaseWidget):
                 f"Image generated to {path}"
             )
     
-    # @property
-    # def zoom_in_step(self):
-    #     zoom_level = self.settings["grid_settings"]["zoom_level"]
-    #     if zoom_level > 6:
-    #         return 2
-    #     elif zoom_level > 4:
-    #         return 1
-    #     return self.settings["grid_settings"]["zoom_in_step"]
-    #
-    # @property
-    # def zoom_out_step(self):
-    #     zoom_level = self.settings["grid_settings"]["zoom_level"]
-    #     if zoom_level > 6:
-    #         return 2
-    #     elif zoom_level > 4:
-    #         return 1
-    #     if zoom_level <= 1.0:
-    #         return 0.05
-    #     return self.settings["grid_settings"]["zoom_out_step"]
+    @property
+    def zoom_in_step(self):
+        zoom_level = self.settings["grid_settings"]["zoom_level"]
+        if zoom_level > 6:
+            return 2
+        elif zoom_level > 4:
+            return 1
+        return self.settings["grid_settings"]["zoom_in_step"]
+
+    @property
+    def zoom_out_step(self):
+        zoom_level = self.settings["grid_settings"]["zoom_level"]
+        if zoom_level > 6:
+            return 2
+        elif zoom_level > 4:
+            return 1
+        if zoom_level <= 1.0:
+            return 0.05
+        return self.settings["grid_settings"]["zoom_out_step"]
     
-    # @property
-    # def zoom_level(self):
-    #     zoom = self.settings["grid_settings"]["zoom_level"]
-    #     if zoom <= 0:
-    #         zoom = 0.1
-    #     return zoom
-    #
-    # @zoom_level.setter
-    # def zoom_level(self, value):
-    #     settings = self.settings
-    #     settings["grid_settings"]["zoom_level"] = value
-    #     self.settings = settings
+    @property
+    def zoom_level(self):
+        zoom = self.settings["grid_settings"]["zoom_level"]
+        if zoom <= 0:
+            zoom = 0.1
+        return zoom
+
+    @zoom_level.setter
+    def zoom_level(self, value):
+        settings = self.settings
+        settings["grid_settings"]["zoom_level"] = value
+        self.settings = settings
     
     # @property
     # def canvas_color(self):
@@ -324,23 +332,25 @@ class CanvasPlusWidget(BaseWidget):
     # def cell_size(self):
     #     return self.settings["grid_settings"]["cell_size"]
     
-    def current_pixmap(self):
-        draggable_pixmap = self.current_draggable_pixmap()
-        if draggable_pixmap:
-            return draggable_pixmap.pixmap
-    
     def current_image(self):
-        if self.previewing_filter:
-            return self.image_backup.copy()
-        pixmap = self.current_pixmap()
-        if not pixmap:
-            return None
-        return Image.fromqpixmap(pixmap)
+        image = None
+        try:
+            layer = self.settings["layers"][self.settings["current_layer_index"]]
+            base_64_image = layer["base_64_image"]
+            image = Image.open(io.BytesIO(base64.b64decode(base_64_image)))
+            image = image.convert("RGBA")
+        except IndexError:
+            pass
+        return image
 
     def handle_resize_canvas(self):
         self.do_resize_canvas()
     
-    def do_resize_canvas(self, force_draw=False):
+    def do_resize_canvas(
+        self,
+        force_draw: bool = False,
+        do_draw_layers: bool = None
+    ):
         if not self.view:
             return
         data = {
@@ -348,7 +358,8 @@ class CanvasPlusWidget(BaseWidget):
             'view_size': self.view.viewport().size(),
             'scene': self.scene,
             'line_group': self.line_group,
-            'force_draw': force_draw
+            'force_draw': force_draw,
+            'do_draw_layers': do_draw_layers
         }
         self.emit(SignalCode.CANVAS_RESIZE_SIGNAL, data)
 
@@ -558,7 +569,7 @@ class CanvasPlusWidget(BaseWidget):
             if not layer["visible"]:
                 if index in self.pixmaps and isinstance(self.pixmaps[index], QGraphicsItem) and self.pixmaps[index].scene() == self.scene:
                     self.scene.removeItem(self.pixmaps[index])
-            elif layer["visible"]:
+            else:
                 # If there's an existing pixmap in the layer, remove it from the scene
                 if index in self.pixmaps and isinstance(self.pixmaps[index], QGraphicsItem):
                     if self.pixmaps[index].scene() == self.scene:
@@ -566,7 +577,7 @@ class CanvasPlusWidget(BaseWidget):
                     del self.pixmaps[index]
                 pixmap = QPixmap()
                 pixmap.convertFromImage(ImageQt(image))
-                self.pixmaps[index] = DraggablePixmap(self, pixmap)
+                self.pixmaps[index] = DraggablePixmap(pixmap)
                 self.emit(SignalCode.LAYER_UPDATE_SIGNAL, {
                     "layer": layer,
                     "index": index
@@ -576,7 +587,6 @@ class CanvasPlusWidget(BaseWidget):
             continue
 
     def on_canvas_clear_signal(self):
-        print("on canvas clear signal")
         self.scene.clear()
         self.line_group = QGraphicsItemGroup()
         self.pixmaps = {}
@@ -584,7 +594,9 @@ class CanvasPlusWidget(BaseWidget):
         settings["layers"] = []
         self.settings = settings
         self.add_layer()
-        self.do_draw()
+        self.do_resize_canvas(
+            force_draw=True
+        )
 
     def set_scene_rect(self):
         self.scene.setSceneRect(0, 0, self.view_size.width(), self.view_size.height())
@@ -599,7 +611,6 @@ class CanvasPlusWidget(BaseWidget):
         """
         if not self.active_grid_area:
             self.active_grid_area = ActiveGridArea(
-                parent=self,
                 rect=self.active_grid_area_rect
             )
             self.active_grid_area.setZValue(1)
@@ -611,14 +622,20 @@ class CanvasPlusWidget(BaseWidget):
         self.last_pos = QPoint(0, 0)
         self.do_draw()
     
-    def do_draw(self, force_draw = False):
+    def do_draw(
+        self,
+        force_draw: bool = False,
+        do_draw_layers: bool = None
+    ):
+        if do_draw_layers is not None:
+            self.do_draw_layers = do_draw_layers
         if (self.drawing or not self.initialized) and not force_draw:
             return
         self.drawing = True
         self.view_size = self.view.viewport().size()
         self.set_scene_rect()
-        self.draw_grid()
         self.draw_layers()
+        self.draw_grid()
         #self.draw_active_grid_area_container()
         self.ui.canvas_position.setText(
             f"X {-self.settings['canvas_settings']['pos_x']: 05d} Y {self.settings['canvas_settings']['pos_y']: 05d}"
@@ -721,10 +738,13 @@ class CanvasPlusWidget(BaseWidget):
         self.add_image_to_scene(image)
     
     def current_draggable_pixmap(self):
-        return ServiceLocator.get(ServiceCode.CURRENT_DRAGGABLE_PIXMAP)
+        return ServiceLocator.get(ServiceCode.CURRENT_DRAGGABLE_PIXMAP)()
         
-    def copy_image(self, image: Image = None) -> object:
-        pixmap = self.current_pixmap() if image is None else QPixmap.fromImage(ImageQt(image))
+    def copy_image(
+        self,
+        image: Image = None
+    ) -> object:
+        pixmap = self.current_draggable_pixmap() if image is None else QPixmap.fromImage(ImageQt(image))
         if not pixmap:
             return None
         return self.move_pixmap_to_clipboard(pixmap)
@@ -810,12 +830,20 @@ class CanvasPlusWidget(BaseWidget):
     def switch_to_layer(self, layer_index):
         self.emit(SignalCode.LAYER_SWITCH_SIGNAL, layer_index)
 
-    def add_image_to_scene(self, image_data, is_outpaint=False, image_root_point=None):
+    def add_image_to_scene(
+        self,
+        image_data: dict,
+        is_outpaint: bool = False,
+        image_root_point: QPoint = None
+    ):
         self.do_draw_layers = True
         #self.image_adder = ImageAdder(self, image, is_outpaint, image_root_point)
         #self.image_adder.finished.connect(self.on_image_adder_finished)
         self.current_active_image = image_data["image"]
-        self.do_draw()
+        self.do_resize_canvas(
+            force_draw=True,
+            do_draw_layers=True
+        )
         #self.image_adder.start()
     
     def image_to_system_clipboard_windows(self, pixmap):
@@ -872,26 +900,25 @@ class CanvasPlusWidget(BaseWidget):
         else:
             image.save(image_path)
 
-    def rotate_90_clockwise(self):
+    def rotate_image(self, angle):
         if self.current_active_image:
-            self.current_active_image = self.current_active_image.transpose(Image.ROTATE_270)
-            self.do_draw()
+            self.current_active_image = self.current_active_image.transpose(angle)
+            self.do_resize_canvas(
+                force_draw=True,
+                do_draw_layers=True
+            )
+
+    def rotate_90_clockwise(self):
+        self.rotate_image(Image.ROTATE_270)
 
     def rotate_90_counterclockwise(self):
-        if self.current_active_image:
-            self.current_active_image = self.current_active_image.transpose(Image.ROTATE_90)
-            self.do_draw()
+        self.rotate_image(Image.ROTATE_90)
     
-    def filter_with_filter(self, filter):
-        return type(filter).__name__ in [
-            "SaturationFilter", 
-            "ColorBalanceFilter", 
-            "RGBNoiseFilter", 
-            "PixelFilter", 
-            "HalftoneFilter", 
-            "RegistrationErrorFilter"]
+    @staticmethod
+    def filter_with_filter(filter_object: ImageFilter.Filter):
+        return type(filter_object).__name__ in AVAILABLE_IMAGE_FILTERS
 
-    def preview_filter(self, filter):
+    def preview_filter(self, filter_object: ImageFilter.Filter):
         image = self.current_image()
         if not image:
             return
@@ -900,18 +927,20 @@ class CanvasPlusWidget(BaseWidget):
             self.previewing_filter = True
         else:
             image = self.image_backup.copy()
-        if self.filter_with_filter:
-            filtered_image = filter.filter(image)
-        else:
-            filtered_image = image.filter(filter)
+        # if self.filter_with_filter:
+        #     filtered_image = filter_object.filter(image)
+        # else:
+        #     filtered_image = image.filter(filter_object)
+        #filtered_image = image.filter(filter_object)
+        filtered_image = filter_object.filter(image)
         self.load_image_from_object(image=filtered_image)
-    
+
     def cancel_filter(self):
         if self.image_backup:
             self.load_image_from_object(image=self.image_backup)
             self.image_backup = None
         self.previewing_filter = False
-    
-    def apply_filter(self, filter):
+
+    def apply_filter(self, _filter_object: ImageFilter.Filter):
         self.previewing_filter = False
         self.image_backup = None
