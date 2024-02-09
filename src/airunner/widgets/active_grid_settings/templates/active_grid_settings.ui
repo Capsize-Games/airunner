@@ -60,7 +60,7 @@
             <string>Border Opacity</string>
            </property>
            <property name="slider_callback" stdset="0">
-            <string>action_slider_changed</string>
+            <string>handle_value_change</string>
            </property>
            <property name="settings_property" stdset="0">
             <string>active_grid_settings.border_opacity</string>
@@ -118,7 +118,7 @@
             <string>Fill Opacity</string>
            </property>
            <property name="slider_callback" stdset="0">
-            <string>action_slider_changed</string>
+            <string>handle_value_change</string>
            </property>
            <property name="settings_property" stdset="0">
             <string>active_grid_settings.fill_opacity</string>
@@ -195,7 +195,7 @@
             <number>64</number>
            </property>
            <property name="slider_callback" stdset="0">
-            <string notr="true">action_slider_changed</string>
+            <string notr="true">handle_value_change</string>
            </property>
            <property name="settings_property" stdset="0">
             <string notr="true">working_width</string>
@@ -238,7 +238,7 @@
             <string>Active Grid Height</string>
            </property>
            <property name="slider_callback" stdset="0">
-            <string notr="true">action_slider_changed</string>
+            <string notr="true">handle_value_change</string>
            </property>
            <property name="settings_property" stdset="0">
             <string>working_height</string>
