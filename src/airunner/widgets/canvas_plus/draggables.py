@@ -59,8 +59,8 @@ class ActiveGridArea(DraggablePixmap):
     def __init__(self, rect):
         self.rect = rect
         self.update_draggable_settings()
-
         super().__init__(self.pixmap)
+        self.update_position()
         self.setFlag(QGraphicsItem.GraphicsItemFlag.ItemIsMovable, True)
 
     def update_draggable_settings(self):
@@ -75,26 +75,24 @@ class ActiveGridArea(DraggablePixmap):
 
         if not self.image:
             self.image = QImage(
-                self.rect.width(),
-                self.rect.height(),
+                abs(self.rect.width()),
+                abs(self.rect.height()),
                 QImage.Format.Format_ARGB32
             )
         else:
             self.image = self.image.scaled(
-                self.rect.width(),
-                self.rect.height()
+                abs(self.rect.width()),
+                abs(self.rect.height())
             )
 
         self.image.fill(fill_color)
         self.pixmap = QPixmap.fromImage(self.image)
 
-    def redraw(self):
-        scene = self.scene()
-        if scene:
-            settings = ServiceLocator.get("get_settings")()
-            scene.removeItem(self)
-            if settings["active_grid_settings"]["enabled"]:
-                scene.addItem(self)
+    def update_position(self):
+        self.setPos(
+            self.rect.x(),
+            self.rect.y()
+        )
 
     def get_fill_color(self):
         settings = ServiceLocator.get("get_settings")()
@@ -106,27 +104,29 @@ class ActiveGridArea(DraggablePixmap):
         return fill_color
 
     def paint(self, painter: QPainter, option, widget=None):
+        self.update_position()
         settings = ServiceLocator.get("get_settings")()
-        if not settings["active_grid_settings"]["render_fill"]:
-            self.pixmap.fill(QColor(0, 0, 0, 1))
+        self.update_draggable_settings()
 
         if settings["active_grid_settings"]["render_border"]:
+            rect = QRect(
+                0,
+                0,
+                abs(self.rect.width()),
+                abs(self.rect.height())
+            )
             painter.setPen(QPen(
                 self.active_grid_area_color,
                 self.settings["grid_settings"]["line_width"]
             ))
             painter.setBrush(QBrush(QColor(0, 0, 0, 0)))
-            painter.drawRect(self.rect)
+            painter.drawRect(rect)
             painter.setPen(QPen(
                 self.active_grid_area_color,
                 self.settings["grid_settings"]["line_width"] + 1
             ))
-            painter.drawRect(QRect(
-                self.rect.x(),
-                self.rect.y(),
-                self.rect.width(),
-                self.rect.height()
-            ))
+            painter.drawRect(rect)
+            self.update_position()
         super().paint(painter, option, widget)
 
     def toggle_render_fill(self, render_fill):

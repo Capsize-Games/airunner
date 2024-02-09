@@ -188,7 +188,6 @@ class CanvasPlusWidget(BaseWidget):
             self.setCursor(Qt.CursorShape.ArrowCursor)
 
     def on_zoom_level_changed_signal(self):
-        print("on_zoom_level_changed_signal")
         # Create a QTransform object and scale it
         transform = QTransform()
         transform.scale(self.settings["grid_settings"]["zoom_level"], self.settings["grid_settings"]["zoom_level"])
@@ -240,7 +239,6 @@ class CanvasPlusWidget(BaseWidget):
         self.clear_lines()
 
     def on_canvas_do_draw_signal(self, force_draw: bool = False):
-        print("on_canvas_do_draw_signal", force_draw)
         self.do_draw(force_draw=force_draw)
 
     def on_image_generated_signal(self, image_data: dict):
@@ -621,6 +619,9 @@ class CanvasPlusWidget(BaseWidget):
         selection_start_pos = self.scene.selection_start_pos
         selection_stop_pos = self.scene.selection_stop_pos
         if selection_start_pos is None or selection_stop_pos is None:
+            if self.active_grid_area:
+                self.scene.removeItem(self.active_grid_area)
+                self.active_grid_area = None
             return
         rect = QRect(selection_start_pos, selection_stop_pos)
 
