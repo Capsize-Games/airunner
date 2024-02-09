@@ -35,6 +35,10 @@ class CustomScene(
 
         self.selection_start_pos = None
         self.selection_stop_pos = None
+
+    def clear_selection(self):
+        self.selection_start_pos = None
+        self.selection_stop_pos = None
     
     def resize(self):
         # only resize if the new size is larger than the existing image size
@@ -112,25 +116,43 @@ class CustomScene(
         painter.end()
         self.item.setPixmap(QPixmap.fromImage(self.image))
 
-    def handle_left_mouse_press(self, event):
-        view = self.views()[0]
-        pos = view.mapFromScene(event.scenePos())
-        self.selection_stop_pos = None
-        self.selection_start_pos = QPoint(
-            pos.x(),
-            pos.y()
-        )
-        self.emit(SignalCode.CANVAS_DO_DRAW_SIGNAL, True)
+    def snap_to_grid(self, pos):
+        # Assuming grid_size is the size of each grid cell
+        grid_size = self.settings["grid_settings"]["cell_size"]
 
-    def handle_left_mouse_release(self, event):
-        if event.button() == Qt.MouseButton.LeftButton:
+        # Calculate the grid cell coordinates
+        grid_x = round(pos.x() / grid_size) * grid_size
+        grid_y = round(pos.y() / grid_size) * grid_size
+
+        # Return the new position
+        return QPoint(grid_x, grid_y)
+
+    def handle_left_mouse_press(self, event):
+        current_tool = self.settings["current_tool"]
+        if current_tool == CanvasToolName.SELECTION:
             view = self.views()[0]
             pos = view.mapFromScene(event.scenePos())
+            pos = self.snap_to_grid(pos)  # Snap position to grid
+            self.selection_stop_pos = None
+            self.selection_start_pos = QPoint(
+                pos.x(),
+                pos.y()
+            )
+            self.emit(SignalCode.CANVAS_DO_DRAW_SIGNAL, True)
+            self.emit(SignalCode.APPLICATION_ACTIVE_GRID_AREA_UPDATED)
+
+    def handle_left_mouse_release(self, event):
+        current_tool = self.settings["current_tool"]
+        if current_tool == CanvasToolName.SELECTION:
+            view = self.views()[0]
+            pos = view.mapFromScene(event.scenePos())
+            pos = self.snap_to_grid(pos)  # Snap position to grid
             self.selection_stop_pos = QPoint(
                 pos.x(),
                 pos.y()
             )
             self.emit(SignalCode.CANVAS_DO_DRAW_SIGNAL, True)
+            self.emit(SignalCode.APPLICATION_ACTIVE_GRID_AREA_UPDATED)
 
     def mousePressEvent(self, event):
         if event.button() == Qt.MouseButton.LeftButton:
@@ -148,7 +170,8 @@ class CustomScene(
             self.eraseAt(self.last_pos)
 
     def mouseReleaseEvent(self, event):
-        self.handle_left_mouse_release(event)
+        if event.button() == Qt.MouseButton.LeftButton:
+            self.handle_left_mouse_release(event)
         super(CustomScene, self).mouseReleaseEvent(event)
         self.handle_cursor(event)
         self.last_pos = None
