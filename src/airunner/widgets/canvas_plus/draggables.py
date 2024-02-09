@@ -73,16 +73,19 @@ class ActiveGridArea(DraggablePixmap):
 
         self.active_grid_area_color = border_color
 
+        width = abs(self.rect.width())
+        height = abs(self.rect.height())
+
         if not self.image:
             self.image = QImage(
-                abs(self.rect.width()),
-                abs(self.rect.height()),
+                width,
+                height,
                 QImage.Format.Format_ARGB32
             )
         else:
             self.image = self.image.scaled(
-                abs(self.rect.width()),
-                abs(self.rect.height())
+                width,
+                height
             )
 
         self.image.fill(fill_color)
@@ -90,8 +93,8 @@ class ActiveGridArea(DraggablePixmap):
 
     def update_position(self):
         self.setPos(
-            self.rect.x(),
-            self.rect.y()
+            min(self.rect.x(), self.rect.x() + self.rect.width()),
+            min(self.rect.y(), self.rect.y() + self.rect.height())
         )
 
     def get_fill_color(self):
