@@ -1,5 +1,5 @@
 from PIL.ImageQt import QImage
-from PyQt6.QtCore import Qt
+from PyQt6.QtCore import Qt, QPoint
 from PyQt6.QtGui import QEnterEvent
 from PyQt6.QtGui import QPainterPath
 from PyQt6.QtGui import QPen, QPixmap, QPainter
@@ -32,7 +32,9 @@ class CustomScene(
 
         # Add a variable to store the last mouse position
         self.last_pos = None
-        self._startPos = None
+
+        self.selection_start_pos = None
+        self.selection_stop_pos = None
     
     def resize(self):
         # only resize if the new size is larger than the existing image size
@@ -112,7 +114,14 @@ class CustomScene(
 
     def mousePressEvent(self, event):
         if event.button() == Qt.MouseButton.LeftButton:
-            self._startPos = event.pos()
+            view = self.views()[0]
+            pos = view.mapFromScene(event.scenePos())
+            self.selection_stop_pos = None
+            self.selection_start_pos = QPoint(
+                pos.x(),
+                pos.y()
+            )
+            self.emit(SignalCode.CANVAS_DO_DRAW_SIGNAL, True)
 
         self.handle_cursor(event)
         if self.settings["current_tool"] not in [CanvasToolName.BRUSH, CanvasToolName.ERASER]:
@@ -125,22 +134,26 @@ class CustomScene(
         elif self.settings["current_tool"] == CanvasToolName.ERASER:
             self.eraseAt(self.last_pos)
 
+    def mouseReleaseEvent(self, event):
+        if event.button() == Qt.MouseButton.LeftButton:
+            view = self.views()[0]
+            pos = view.mapFromScene(event.scenePos())
+            self.selection_stop_pos = QPoint(
+                pos.x(),
+                pos.y()
+            )
+            self.emit(SignalCode.CANVAS_DO_DRAW_SIGNAL, True)
+        super(CustomScene, self).mouseReleaseEvent(event)
+        self.handle_cursor(event)
+        self.last_pos = None
+
     def handle_cursor(self, event):
         self.emit(SignalCode.CANVAS_UPDATE_CURSOR, event)
-        
+
     def event(self, event):
         if type(event) == QEnterEvent:
             self.handle_cursor(event)
         return super(CustomScene, self).event(event)
-    
-    def mouseReleaseEvent(self, event):
-        if event.button() == Qt.MouseButton.LeftButton:
-            path = QPainterPath()
-            path.addRect(self._startPos.x(), self._startPos.y(), event.pos().x() - self._startPos.x(), event.pos().y() - self._startPos.y())
-            self.setSelectionArea(path)
-        super(CustomScene, self).mouseReleaseEvent(event)
-        self.handle_cursor(event)
-        self.last_pos = None
 
     def mouseMoveEvent(self, event):
         self.handle_cursor(event)

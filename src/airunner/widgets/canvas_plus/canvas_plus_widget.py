@@ -239,8 +239,9 @@ class CanvasPlusWidget(BaseWidget):
     def on_canvas_clear_lines_signal(self):
         self.clear_lines()
 
-    def on_canvas_do_draw_signal(self):
-        self.do_draw()
+    def on_canvas_do_draw_signal(self, force_draw: bool = False):
+        print("on_canvas_do_draw_signal", force_draw)
+        self.do_draw(force_draw=force_draw)
 
     def on_image_generated_signal(self, image_data: dict):
         # self.image_data_worker.add_to_queue(dict(
@@ -617,14 +618,20 @@ class CanvasPlusWidget(BaseWidget):
         """
         Draw a rectangle around the active grid area of
         """
+        selection_start_pos = self.scene.selection_start_pos
+        selection_stop_pos = self.scene.selection_stop_pos
+        if selection_start_pos is None or selection_stop_pos is None:
+            return
+        rect = QRect(selection_start_pos, selection_stop_pos)
+
         if not self.active_grid_area:
             self.active_grid_area = ActiveGridArea(
-                rect=self.active_grid_area_rect
+                rect=rect
             )
             self.active_grid_area.setZValue(1)
             self.scene.addItem(self.active_grid_area)
         else:
-            self.active_grid_area.redraw()
+            self.active_grid_area.rect = rect
 
     def action_button_clicked_focus(self):
         self.last_pos = QPoint(0, 0)
@@ -643,8 +650,8 @@ class CanvasPlusWidget(BaseWidget):
         self.view_size = self.view.viewport().size()
         self.set_scene_rect()
         self.draw_layers()
+        self.draw_active_grid_area_container()
         self.draw_grid()
-        #self.draw_active_grid_area_container()
         self.ui.canvas_position.setText(
             f"X {-self.settings['canvas_settings']['pos_x']: 05d} Y {self.settings['canvas_settings']['pos_y']: 05d}"
         )
