@@ -1,7 +1,9 @@
 from PIL import ImageFilter
 
+
 class BaseFilter(ImageFilter.Filter):
     def __init__(self, **kwargs):
+        super().__init__()
         self.image = None
         self.image_id = None
 

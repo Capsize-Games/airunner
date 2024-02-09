@@ -2,7 +2,7 @@ from setuptools import setup, find_packages
 
 setup(
     name='airunner',
-    version="2.3.0",
+    version="3.0.0",
     author="Capsize LLC",
     description="A Stable Diffusion GUI",
     long_description=open("README.md", "r", encoding="utf-8").read(),
@@ -51,12 +51,11 @@ setup(
         "matplotlib==3.8.2",
         "torch==2.2.0",
         "torchvision==0.17.0",
-        "torchaudio==2.1.2",
+        "torchaudio==2.2.0",
         "auto-gptq==0.6.0",
         "optimum==1.16.2",
         "bitsandbytes==0.42.0",
         "tomesd==0.1.3",
-        "llama-index==0.9.43",
         "watchdog==3.0.0",
         "sounddevice==0.4.6",
         "datasets==2.16.1",
