@@ -1555,12 +1555,12 @@ class SDHandler(
                 self.pipe.unet.set_attn_processor(CrossFrameAttnProcessor(batch_size=2))
                 self.pipe.controlnet.set_attn_processor(CrossFrameAttnProcessor(batch_size=2))
 
-            if self.is_outpaint:
-                self.logger.info("Initializing vae for inpaint / outpaint")
-                self.pipe.vae = AsymmetricAutoencoderKL.from_pretrained(
-                    self.inpaint_vae_model["path"],
-                    torch_dtype=self.data_type
-                )
+            # if self.is_outpaint:
+            #     self.logger.info("Initializing vae for inpaint / outpaint")
+            #     self.pipe.vae = AsymmetricAutoencoderKL.from_pretrained(
+            #         self.inpaint_vae_model["path"],
+            #         torch_dtype=self.data_type
+            #     )
 
             if not self.is_depth2img:
                 self.initialize_safety_checker()
