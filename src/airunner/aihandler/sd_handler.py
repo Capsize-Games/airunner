@@ -2,9 +2,9 @@ import io
 import base64
 import re
 import traceback
+from pytorch_lightning import seed_everything
 from io import BytesIO
 from typing import List
-
 import PIL
 import imageio
 import numpy as np
@@ -42,6 +42,7 @@ from airunner.windows.main.pipeline_mixin import PipelineMixin
 from airunner.windows.main.controlnet_model_mixin import ControlnetModelMixin
 from airunner.windows.main.ai_model_mixin import AIModelMixin
 from airunner.utils import clear_memory
+#from airunner.scripts.realesrgan.main import RealESRGAN
 
 torch.backends.cuda.matmul.allow_tf32 = True
 
@@ -736,22 +737,6 @@ class SDHandler(
         return self.options.get("original_model_data", {})
 
     @staticmethod
-    def latents_to_image(latents: torch.Tensor):
-        image = latents.permute(0, 2, 3, 1)
-        image = image.detach().cpu().numpy()
-        image = image[0]
-        image = (image * 255).astype(np.uint8)
-        image = Image.fromarray(image)
-        return image
-
-    @staticmethod
-    def image_to_latents(image: PIL.Image):
-        image = image.convert("RGBA")
-        image = transforms.ToTensor()(image)
-        image = image.unsqueeze(0)
-        return image
-
-    @staticmethod
     def apply_filters(image, filters):
         for image_filter in filters:
             filter_type = FilterType(image_filter["filter_name"])
@@ -771,12 +756,6 @@ class SDHandler(
                 image = image.resize((int(width / scale), int(height / scale)), resample=Image.NEAREST)
                 image = image.resize((width, height), resample=Image.NEAREST)
         return image
-
-    @staticmethod
-    def image_to_base64(image):
-        buffered = BytesIO()
-        image.save(buffered, format="PNG")
-        return base64.b64encode(buffered.getvalue()).decode("utf-8")
 
     @staticmethod
     def is_ckpt_file(model):
@@ -993,11 +972,9 @@ class SDHandler(
             })
         if self.use_compel:
             try:
-                args.update({
-                    "prompt_embeds": self.prompt_embeds,
-                })
+                args["prompt_embeds"] = self.prompt_embeds
             except Exception as _e:
-                self.logger.warning("Compel failed: " + str(_e))
+                self.logger.warning("prompt_embeds failed: " + str(_e))
                 args.update({
                     "prompt": self.prompt,
                 })
@@ -1007,11 +984,9 @@ class SDHandler(
             })
         if self.use_compel:
             try:
-                args.update({
-                    "negative_prompt_embeds": self.negative_prompt_embeds,
-                })
+                args["negative_prompt_embeds"] = self.negative_prompt_embeds
             except Exception as _e:
-                self.logger.warning("Compel failed: " + str(_e))
+                self.logger.warning("negative_prompt_embeds failed: " + str(_e))
                 args.update({
                     "negative_prompt": self.negative_prompt,
                 })
@@ -1129,7 +1104,7 @@ class SDHandler(
             extra_args = {**extra_args, **{
                 "image": image,
                 "strength": self.strength,
-                "depth_map": self.depth_map
+                #"depth_map": self.depth_map
             }}
         elif self.is_vid_action:
             pass
@@ -1148,7 +1123,6 @@ class SDHandler(
 
     def sample_diffusers_model(self, data: dict):
         self.logger.info("sample_diffusers_model")
-        from pytorch_lightning import seed_everything
         image = self.image
         mask = self.mask
         nsfw_content_detected = None
@@ -1224,13 +1198,13 @@ class SDHandler(
         self.logger.info("Runner: process_data called")
         self.requested_data = data
         self.prepare_options(data)
-        #self.prepare_scheduler()
+        self.prepare_scheduler()
         self.prepare_model()
         self.initialize()
         if self.pipe:
             self.change_scheduler()
 
-    def generate(self, data: dict):
+    def generate(self, data):
         if not self.pipe:
             return
         self.logger.info("generate called")
@@ -1351,7 +1325,6 @@ class SDHandler(
 
     def process_upscale(self, data: dict):
         self.logger.info("Processing upscale")
-        from airunner.scripts.realesrgan.main import RealESRGAN
         image = self.input_image
         results = []
         if image:
@@ -1446,11 +1419,14 @@ class SDHandler(
         return pipeline
 
     def load_controlnet(self):
-        self.logger.info(f"Loading controlnet {self.controlnet_type} self.controlnet_model {self.controlnet_model}")
+        standard_image_settings = self.settings["standard_image_settings"]
+        controlnet_name = standard_image_settings["controlnet"]
+        controlnet_model = self.controlnet_model_by_name(controlnet_name)
+        self.logger.info(f"Loading controlnet {self.controlnet_type} self.controlnet_model {controlnet_model}")
         self._controlnet = None
         self.current_controlnet_type = self.controlnet_type
         controlnet = StableDiffusionControlNetPipeline.from_pretrained(
-            self.controlnet_model,
+            controlnet_model,
             torch_dtype=self.data_type
         )
         # self.load_controlnet_scheduler()
@@ -1763,7 +1739,6 @@ class SDHandler(
             if self.is_ckpt_model or self.is_safetensors:
                 self.logger.info("Required files not found, attempting download")
             else:
-                import traceback
                 traceback.print_exc()
                 self.logger.info("Model not found, attempting download")
             # check if we have an internet connection
