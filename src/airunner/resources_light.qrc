@@ -1,5 +1,6 @@
 <RCC>
   <qresource>
+    <file>icons/light/select-svgrepo-com.svg</file>
     <file>icons/light/check-mark-icon.svg</file>
     <file>icons/light/eye-look-icon.svg</file>
     <file>icons/light/recycle-bin-line-icon.svg</file>

@@ -63,6 +63,7 @@ class SignalCode(Enum):
     APPLICATION_SETTINGS_CHANGED_SIGNAL = "application_settings_changed_signal"
     APPLICATION_STATUS_INFO_SIGNAL = "status_info_signal"
     APPLICATION_STATUS_ERROR_SIGNAL = "status_error_signal"
+    APPLICATION_TOOL_CHANGED_SIGNAL = "tool_changed_signal"
 
     AUDIO_CAPTURE_WORKER_RESPONSE_SIGNAL = "AudioCaptureWorker_response_signal"
     AUDIO_PROCESSOR_WORKER_PROCESSED_SIGNAL = "AudioProcessorWorker_processed_audio"
@@ -280,6 +281,8 @@ class CanvasToolName(Enum):
     ACTIVE_GRID_AREA = "active_grid_area"
     BRUSH = "brush"
     ERASER = "eraser"
+    SELECTION = "selection"
+    NONE = "none"
 
 
 class WindowSection(Enum):
