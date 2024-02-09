@@ -69,3 +69,33 @@ def some_function(self, message):
 To call the function (from any class):
 
 `self.get_service(ServiceCode.SOME_CODE)("Hello World!")`
+
+---
+
+## Widgets, templates and resources (icons)
+
+### Widgets
+
+Widgets are stored under `src/airunner/widgets`. Each widget has a `templates` 
+directory which contains template files for the widget (see below for more information).
+
+- Widgets all extends from `BaseWidget`.
+- Classes are named `ExampleWidget` where `Example` is the name of the widget and `Widget` is the suffix.
+- See existing widgets for examples of how to extend `BaseWidget` and use the `widget_class_` attribute.
+
+### Templates
+
+- Templates are stored in a `templates` directory inside of each `widget` directory
+- Use `pyside6-designer` to edit templates
+- Build templates with `python bin/build_ui.py`
+- See existing widgets for examples of how to use templates
+
+### Icons
+
+Icons are managed with resource files which are in turn managed with `pyside6-designer` 
+and built with a custom script (see the following list).
+
+- Use [svgrepo](https://www.svgrepo.com/) for icons
+- Icons are stored in `src/airunner/icons/dark` and `src/airunner/icons/light` for dark and light themes respectively.
+- Use `pyside6-designer` to add or edit icons
+- Build resources with `python bin/build_ui.py`
