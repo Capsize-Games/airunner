@@ -57,7 +57,7 @@ class ActiveGridArea(DraggablePixmap):
     image = None
 
     def __init__(self, rect):
-        self.active_grid_area_rect = rect
+        self.rect = rect
         self.update_draggable_settings()
 
         super().__init__(self.pixmap)
@@ -75,14 +75,14 @@ class ActiveGridArea(DraggablePixmap):
 
         if not self.image:
             self.image = QImage(
-                self.active_grid_area_rect.width(),
-                self.active_grid_area_rect.height(),
+                self.rect.width(),
+                self.rect.height(),
                 QImage.Format.Format_ARGB32
             )
         else:
             self.image = self.image.scaled(
-                self.active_grid_area_rect.width(),
-                self.active_grid_area_rect.height()
+                self.rect.width(),
+                self.rect.height()
             )
 
         self.image.fill(fill_color)
@@ -116,16 +116,16 @@ class ActiveGridArea(DraggablePixmap):
                 self.settings["grid_settings"]["line_width"]
             ))
             painter.setBrush(QBrush(QColor(0, 0, 0, 0)))
-            painter.drawRect(self.active_grid_area_rect)
+            painter.drawRect(self.rect)
             painter.setPen(QPen(
                 self.active_grid_area_color,
                 self.settings["grid_settings"]["line_width"] + 1
             ))
             painter.drawRect(QRect(
-                self.active_grid_area_rect.x(),
-                self.active_grid_area_rect.y(),
-                self.active_grid_area_rect.width(),
-                self.active_grid_area_rect.height()
+                self.rect.x(),
+                self.rect.y(),
+                self.rect.width(),
+                self.rect.height()
             ))
         super().paint(painter, option, widget)
 
