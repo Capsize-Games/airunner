@@ -7,8 +7,8 @@ from PIL import Image, ImageGrab, ImageFilter, UnidentifiedImageError
 from PIL.ImageQt import ImageQt, QImage
 from PyQt6 import QtWidgets, QtCore
 from PyQt6.QtCore import Qt, QPoint, QRect
-from PyQt6.QtGui import QBrush, QColor, QPixmap, QTransform
-from PyQt6.QtWidgets import QGraphicsItemGroup, QGraphicsItem
+from PyQt6.QtGui import QBrush, QColor, QPixmap, QTransform, QMouseEvent, QPainterPath
+from PyQt6.QtWidgets import QGraphicsItemGroup, QGraphicsItem, QGraphicsView
 from PyQt6.QtWidgets import QGraphicsPixmapItem
 from watchdog.utils.platform import is_windows
 
@@ -38,6 +38,7 @@ class CanvasPlusWidget(BaseWidget):
 
     def __init__(self, *args, **kwargs):
         super().__init__(*args, **kwargs)
+        self._startPos = QPoint(0, 0)
         self.scene = None
         self.view = None
         self.view_size = None
@@ -98,6 +99,7 @@ class CanvasPlusWidget(BaseWidget):
             SignalCode.CANVAS_APPLY_FILTER_SIGNAL: self.apply_filter,
             SignalCode.CANVAS_PREVIEW_FILTER_SIGNAL: self.preview_filter,
             SignalCode.CANVAS_ZOOM_LEVEL_CHANGED: self.on_zoom_level_changed_signal,
+            SignalCode.APPLICATION_TOOL_CHANGED_SIGNAL: self.on_tool_changed_signal,
         }
 
         # Map service codes to class functions
@@ -509,6 +511,13 @@ class CanvasPlusWidget(BaseWidget):
         if self.scene:
             self.scene.resize()
 
+    def on_tool_changed_signal(self, tool: CanvasToolName):
+        current_tool = self.settings["current_tool"]
+        if current_tool == CanvasToolName.SELECTION:
+            self.view.setDragMode(QGraphicsView.DragMode.RubberBandDrag)
+        else:
+            self.view.setDragMode(QGraphicsView.DragMode.NoDrag)
+
     def showEvent(self, event):
         super().showEvent(event)
         self.scene = CustomScene(parent=self)
@@ -516,8 +525,7 @@ class CanvasPlusWidget(BaseWidget):
         self.view = self.canvas_container
         original_mouse_event = self.view.mouseMoveEvent
         self.view.mouseMoveEvent = partial(self.handle_mouse_event, original_mouse_event)
-        #self.view.setDragMode(QGraphicsView.DragMode.RubberBandDrag)
-
+        self.view.setDragMode(QGraphicsView.DragMode.RubberBandDrag)
         self.view_size = self.view.viewport().size()
         self.view.setContentsMargins(0, 0, 0, 0)
         self.set_canvas_color()
