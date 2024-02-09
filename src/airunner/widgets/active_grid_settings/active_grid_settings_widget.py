@@ -1,3 +1,4 @@
+from airunner.enums import SignalCode
 from airunner.widgets.active_grid_settings.templates.active_grid_settings_ui import Ui_active_grid_settings_widget
 from airunner.widgets.base_widget import BaseWidget
 
@@ -20,17 +21,17 @@ class ActiveGridSettingsWidget(BaseWidget):
         self.ui.active_grid_border_groupbox.setChecked(settings["active_grid_settings"]["render_border"])
         self.ui.active_grid_fill_groupbox.setChecked(settings["active_grid_settings"]["render_fill"])
 
-    def action_clicked_checkbox_toggle_active_grid_border(self, checked):
+    def update_active_grid_settings(self, setting_key, checked):
         settings = self.settings
-        settings["active_grid_settings"]["render_border"] = checked
+        settings["active_grid_settings"][setting_key] = checked
         self.settings = settings
+        self.emit(SignalCode.ACTIVE_GRID_SETTINGS_CHANGED_SIGNAL)
+
+    def action_clicked_checkbox_toggle_active_grid_border(self, checked):
+        self.update_active_grid_settings("render_border", checked)
 
     def action_clicked_checkbox_toggle_active_grid_fill(self, checked):
-        settings = self.settings
-        settings["active_grid_settings"]["render_fill"] = checked
-        self.settings = settings
+        self.update_active_grid_settings("render_fill", checked)
 
     def action_clicked_checkbox_toggle_active_grid_area(self, checked):
-        settings = self.settings
-        settings["active_grid_settings"]["enabled"] = checked
-        self.settings = settings
+        self.update_active_grid_settings("enabled", checked)
