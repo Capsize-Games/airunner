@@ -652,7 +652,7 @@
                <x>0</x>
                <y>0</y>
                <width>407</width>
-               <height>1062</height>
+               <height>1057</height>
               </rect>
              </property>
              <layout class="QGridLayout" name="gridLayout">
@@ -816,6 +816,54 @@
               </property>
               <property name="flat">
                <bool>true</bool>
+              </property>
+             </widget>
+            </item>
+            <item>
+             <widget class="QPushButton" name="toggle_select_button">
+              <property name="sizePolicy">
+               <sizepolicy hsizetype="Maximum" vsizetype="MinimumExpanding">
+                <horstretch>0</horstretch>
+                <verstretch>0</verstretch>
+               </sizepolicy>
+              </property>
+              <property name="minimumSize">
+               <size>
+                <width>50</width>
+                <height>45</height>
+               </size>
+              </property>
+              <property name="maximumSize">
+               <size>
+                <width>50</width>
+                <height>45</height>
+               </size>
+              </property>
+              <property name="text">
+               <string/>
+              </property>
+              <property name="icon">
+               <iconset resource="../../../resources_light.qrc">
+                <normaloff>:/icons/light/select-svgrepo-com.svg</normaloff>:/icons/light/select-svgrepo-com.svg</iconset>
+              </property>
+              <property name="iconSize">
+               <size>
+                <width>20</width>
+                <height>20</height>
+               </size>
+              </property>
+              <property name="checkable">
+               <bool>true</bool>
+              </property>
+              <property name="flat">
+               <bool>true</bool>
+              </property>
+             </widget>
+            </item>
+            <item>
+             <widget class="Line" name="line_7">
+              <property name="orientation">
+               <enum>Qt::Horizontal</enum>
               </property>
              </widget>
             </item>
@@ -2580,7 +2628,7 @@
    <hints>
     <hint type="sourcelabel">
      <x>1195</x>
-     <y>551</y>
+     <y>611</y>
     </hint>
     <hint type="destinationlabel">
      <x>1002</x>
@@ -2596,7 +2644,7 @@
    <hints>
     <hint type="sourcelabel">
      <x>1195</x>
-     <y>315</y>
+     <y>380</y>
     </hint>
     <hint type="destinationlabel">
      <x>1002</x>
@@ -2628,7 +2676,7 @@
    <hints>
     <hint type="sourcelabel">
      <x>1195</x>
-     <y>255</y>
+     <y>320</y>
     </hint>
     <hint type="destinationlabel">
      <x>0</x>
@@ -2644,7 +2692,7 @@
    <hints>
     <hint type="sourcelabel">
      <x>1195</x>
-     <y>204</y>
+     <y>269</y>
     </hint>
     <hint type="destinationlabel">
      <x>0</x>
@@ -2707,8 +2755,8 @@
    <slot>action_center_clicked()</slot>
    <hints>
     <hint type="sourcelabel">
-     <x>1177</x>
-     <y>350</y>
+     <x>1195</x>
+     <y>431</y>
     </hint>
     <hint type="destinationlabel">
      <x>806</x>
@@ -2723,8 +2771,8 @@
    <slot>action_ai_toggled(bool)</slot>
    <hints>
     <hint type="sourcelabel">
-     <x>1167</x>
-     <y>412</y>
+     <x>1195</x>
+     <y>491</y>
     </hint>
     <hint type="destinationlabel">
      <x>917</x>
@@ -2803,8 +2851,8 @@
    <slot>model_manager_toggled(bool)</slot>
    <hints>
     <hint type="sourcelabel">
-     <x>1156</x>
-     <y>469</y>
+     <x>1195</x>
+     <y>551</y>
     </hint>
     <hint type="destinationlabel">
      <x>1021</x>
@@ -2835,8 +2883,8 @@
    <slot>tts_button_toggled(bool)</slot>
    <hints>
     <hint type="sourcelabel">
-     <x>1168</x>
-     <y>591</y>
+     <x>1195</x>
+     <y>671</y>
     </hint>
     <hint type="destinationlabel">
      <x>1204</x>
@@ -2851,8 +2899,8 @@
    <slot>v2t_button_toggled(bool)</slot>
    <hints>
     <hint type="sourcelabel">
-     <x>1165</x>
-     <y>640</y>
+     <x>1195</x>
+     <y>722</y>
     </hint>
     <hint type="destinationlabel">
      <x>1203</x>
@@ -2867,8 +2915,8 @@
    <slot>ocr_button_toggled(bool)</slot>
    <hints>
     <hint type="sourcelabel">
-     <x>1153</x>
-     <y>684</y>
+     <x>1195</x>
+     <y>773</y>
     </hint>
     <hint type="destinationlabel">
      <x>1204</x>
@@ -2889,6 +2937,22 @@
     <hint type="destinationlabel">
      <x>600</x>
      <y>592</y>
+    </hint>
+   </hints>
+  </connection>
+  <connection>
+   <sender>toggle_select_button</sender>
+   <signal>toggled(bool)</signal>
+   <receiver>MainWindow</receiver>
+   <slot>action_toggle_select(bool)</slot>
+   <hints>
+    <hint type="sourcelabel">
+     <x>1170</x>
+     <y>194</y>
+    </hint>
+    <hint type="destinationlabel">
+     <x>1148</x>
+     <y>-14</y>
     </hint>
    </hints>
   </connection>
@@ -2985,5 +3049,6 @@
   <slot>v2t_button_toggled(bool)</slot>
   <slot>ocr_button_toggled(bool)</slot>
   <slot>action_reset_settings()</slot>
+  <slot>action_toggle_select(bool)</slot>
  </slots>
 </ui>
