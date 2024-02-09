@@ -64,6 +64,7 @@ class SignalCode(Enum):
     APPLICATION_STATUS_INFO_SIGNAL = "status_info_signal"
     APPLICATION_STATUS_ERROR_SIGNAL = "status_error_signal"
     APPLICATION_TOOL_CHANGED_SIGNAL = "tool_changed_signal"
+    APPLICATION_ACTIVE_GRID_AREA_UPDATED = "active_grid_area_updated"
 
     AUDIO_CAPTURE_WORKER_RESPONSE_SIGNAL = "AudioCaptureWorker_response_signal"
     AUDIO_PROCESSOR_WORKER_PROCESSED_SIGNAL = "AudioProcessorWorker_processed_audio"
