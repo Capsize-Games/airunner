@@ -188,7 +188,6 @@ class CanvasPlusWidget(BaseWidget):
             self.setCursor(Qt.CursorShape.ArrowCursor)
 
     def on_zoom_level_changed_signal(self):
-        print("on_zoom_level_changed_signal")
         # Create a QTransform object and scale it
         transform = QTransform()
         transform.scale(self.settings["grid_settings"]["zoom_level"], self.settings["grid_settings"]["zoom_level"])
@@ -239,8 +238,8 @@ class CanvasPlusWidget(BaseWidget):
     def on_canvas_clear_lines_signal(self):
         self.clear_lines()
 
-    def on_canvas_do_draw_signal(self):
-        self.do_draw()
+    def on_canvas_do_draw_signal(self, force_draw: bool = False):
+        self.do_draw(force_draw=force_draw)
 
     def on_image_generated_signal(self, image_data: dict):
         # self.image_data_worker.add_to_queue(dict(
@@ -511,7 +510,10 @@ class CanvasPlusWidget(BaseWidget):
         if self.scene:
             self.scene.resize()
 
-    def on_tool_changed_signal(self, tool: CanvasToolName):
+    def on_tool_changed_signal(self, _tool: CanvasToolName):
+        self.toggle_drag_mode()
+
+    def toggle_drag_mode(self):
         current_tool = self.settings["current_tool"]
         if current_tool == CanvasToolName.SELECTION:
             self.view.setDragMode(QGraphicsView.DragMode.RubberBandDrag)
@@ -525,7 +527,7 @@ class CanvasPlusWidget(BaseWidget):
         self.view = self.canvas_container
         original_mouse_event = self.view.mouseMoveEvent
         self.view.mouseMoveEvent = partial(self.handle_mouse_event, original_mouse_event)
-        self.view.setDragMode(QGraphicsView.DragMode.RubberBandDrag)
+        self.toggle_drag_mode()
         self.view_size = self.view.viewport().size()
         self.view.setContentsMargins(0, 0, 0, 0)
         self.set_canvas_color()
@@ -615,16 +617,52 @@ class CanvasPlusWidget(BaseWidget):
 
     def draw_active_grid_area_container(self):
         """
-        Draw a rectangle around the active grid area of
+        Draw the active grid area container
         """
-        if not self.active_grid_area:
-            self.active_grid_area = ActiveGridArea(
-                rect=self.active_grid_area_rect
+
+        # Handle any active selections
+        selection_start_pos = self.scene.selection_start_pos
+        selection_stop_pos = self.scene.selection_stop_pos
+
+        # This will clear the active grid area while a selection is being made
+        if selection_stop_pos is None and selection_start_pos is not None:
+            if self.active_grid_area:
+                self.scene.removeItem(self.active_grid_area)
+                self.active_grid_area = None
+            return
+
+        # this will update the active grid area in the settings
+        if selection_start_pos is not None and selection_stop_pos is not None:
+            rect = QRect(
+                selection_start_pos,
+                selection_stop_pos
             )
+
+            # update the active grid area in settings
+            settings = self.settings
+            active_grid_settings = settings["active_grid_settings"]
+            active_grid_settings["pos_x"] = rect.x()
+            active_grid_settings["pos_y"] = rect.y()
+            active_grid_settings["width"] = rect.width()
+            active_grid_settings["height"] = rect.height()
+            generator_settings = settings["generator_settings"]
+            generator_settings["width"] = rect.width()
+            generator_settings["height"] = rect.height()
+            settings["active_grid_settings"] = active_grid_settings
+            settings["generator_settings"] = generator_settings
+            settings["working_width"] = rect.width()
+            settings["working_height"] = rect.height()
+            self.settings = settings
+
+            # Clear the selection from the scene
+            self.scene.clear_selection()
+
+        # Create an ActiveGridArea object if it doesn't exist
+        # and add it to the scene
+        if not self.active_grid_area:
+            self.active_grid_area = ActiveGridArea()
             self.active_grid_area.setZValue(1)
             self.scene.addItem(self.active_grid_area)
-        else:
-            self.active_grid_area.redraw()
 
     def action_button_clicked_focus(self):
         self.last_pos = QPoint(0, 0)
@@ -643,8 +681,8 @@ class CanvasPlusWidget(BaseWidget):
         self.view_size = self.view.viewport().size()
         self.set_scene_rect()
         self.draw_layers()
+        self.draw_active_grid_area_container()
         self.draw_grid()
-        #self.draw_active_grid_area_container()
         self.ui.canvas_position.setText(
             f"X {-self.settings['canvas_settings']['pos_x']: 05d} Y {self.settings['canvas_settings']['pos_y']: 05d}"
         )
