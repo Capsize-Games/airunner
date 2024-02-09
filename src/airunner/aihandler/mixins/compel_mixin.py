@@ -1,6 +1,8 @@
 from airunner.aihandler.logger import Logger
 from compel import Compel, DiffusersTextualInversionManager
 
+from airunner.utils import clear_memory
+
 
 class CompelMixin:
     def __init__(self):
@@ -67,8 +69,8 @@ class CompelMixin:
     def load_prompt_embeds(self):
         self.logger.info("Loading prompt embeds")
         self.compel_proc = None
-        self.engine.clear_memory()
-        prompt = self.prompt
+        clear_memory()
+        prompt = self.prompt if self.prompt else ""
         negative_prompt = self.negative_prompt if self.negative_prompt else ""
 
         # check if prompt is string

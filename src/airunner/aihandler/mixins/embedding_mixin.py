@@ -1,7 +1,6 @@
 import os
 
 from airunner.enums import SignalCode
-from airunner.aihandler.logger import Logger as logger
 
 
 class EmbeddingMixin:
@@ -17,7 +16,7 @@ class EmbeddingMixin:
         embeddings_not_supported = False
         self.embeds_loaded = True
         if os.path.exists(learned_embeds_path):
-            logger.info("Loading embeddings")
+            self.logger.info("Loading embeddings")
             try:
                 for f in os.listdir(learned_embeds_path):
                     path = os.path.join(learned_embeds_path, f)
@@ -33,7 +32,7 @@ class EmbeddingMixin:
                                 'embedding_name': token,
                                 'model_name': self.model,
                             })
-                            logger.warning(e)
+                            self.logger.warning(e)
             except AttributeError as e:
                 if "load_textual_inversion" in str(e):
                     embeddings_not_supported = True
@@ -43,4 +42,4 @@ class EmbeddingMixin:
                 embeddings_not_supported = True
 
             if embeddings_not_supported:
-                logger.warning("Embeddings not supported in this model")
+                self.logger.warning("Embeddings not supported in this model")

@@ -162,7 +162,11 @@ class GeneratorForm(BaseWidget):
         self.emit(SignalCode.ENGINE_START_PROCESSING_QUEUE_SIGNAL)
 
     def on_generate_image_signal(self, message):
-        self.call_generate(**message)
+        print(message)
+        self.call_generate(
+            image=message["image"],
+            override_data=message["meta_data"]
+        )
 
     def call_generate(self, image=None, seed=None, override_data=None):
         override_data = {} if override_data is None else override_data
@@ -239,7 +243,7 @@ class GeneratorForm(BaseWidget):
                 # Convert the new image to RGB and assign it to image variable
             else:
                 new_image = image
-            
+
             # Create the mask image
             mask = Image.new("RGB", (new_image.width, new_image.height), (255, 255, 255))
             for x in range(new_image.width):
@@ -280,8 +284,9 @@ class GeneratorForm(BaseWidget):
         if not extra_options:
             extra_options = {}
 
-        if self.enable_controlnet:
-            extra_options["controlnet_image"] = self.ui.controlnet_settings.current_controlnet_image
+        # TODO: fix controlnet
+        # if self.enable_controlnet:
+        #     extra_options["controlnet_image"] = self.ui.controlnet_settings.current_controlnet_image
 
         self.set_seed(seed=seed)
 

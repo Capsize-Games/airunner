@@ -3,11 +3,11 @@ import os
 from PIL import Image
 from PyQt6.QtCore import pyqtSlot
 
+from airunner.data.bootstrap.controlnet_bootstrap_data import controlnet_bootstrap_data
 from airunner.enums import SignalCode
 from airunner.utils import image_to_pixmap, auto_export_image, open_file_path
 from airunner.widgets.controlnet_settings.templates.controlnet_settings_ui import Ui_controlnet_settings
 from airunner.widgets.input_image.input_image_settings_widget import InputImageSettingsWidget
-from airunner.settings import CONTROLNET_OPTIONS
 from airunner.service_locator import ServiceLocator
 
 
@@ -241,7 +241,7 @@ class ControlNetSettingsWidget(InputImageSettingsWidget):
         self.initialize_combobox()
     
     def initialize_combobox(self):
-        controlnet_options = CONTROLNET_OPTIONS
+        controlnet_options = [item["display_name"] for item in controlnet_bootstrap_data]
         self.ui.controlnet_dropdown.blockSignals(True)
         self.ui.controlnet_dropdown.clear()
         self.ui.controlnet_dropdown.addItems(controlnet_options)

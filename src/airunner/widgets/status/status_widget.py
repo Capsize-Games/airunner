@@ -19,7 +19,7 @@ class StatusWidget(BaseWidget):
 
         self.timer = QTimer()
         self.timer.timeout.connect(self.update_system_stats)
-        self.timer.start(100)
+        self.timer.start(1000)
 
     def on_status_info_signal(self, message):
         self.set_system_status(message, error=False)

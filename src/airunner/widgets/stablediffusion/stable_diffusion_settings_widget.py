@@ -126,6 +126,7 @@ class StableDiffusionSettingsWidget(BaseWidget):
 
     def load_schedulers(self):
         self.logger.info("load_schedulers")
+        self.ui.scheduler.blockSignals(True)
         scheduler_names = [s["display_name"] for s in self.settings["schedulers"]]
         self.ui.scheduler.clear()
         self.ui.scheduler.addItems(scheduler_names)
