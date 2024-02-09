@@ -129,7 +129,7 @@ class CustomScene(
 
     def handle_left_mouse_press(self, event):
         current_tool = self.settings["current_tool"]
-        if current_tool == CanvasToolName.SELECTION:
+        if current_tool is CanvasToolName.SELECTION:
             view = self.views()[0]
             pos = view.mapFromScene(event.scenePos())
             pos = self.snap_to_grid(pos)  # Snap position to grid
@@ -143,7 +143,7 @@ class CustomScene(
 
     def handle_left_mouse_release(self, event):
         current_tool = self.settings["current_tool"]
-        if current_tool == CanvasToolName.SELECTION:
+        if current_tool is CanvasToolName.SELECTION:
             view = self.views()[0]
             pos = view.mapFromScene(event.scenePos())
             pos = self.snap_to_grid(pos)  # Snap position to grid
@@ -164,9 +164,9 @@ class CustomScene(
             return
 
         self.last_pos = event.scenePos()
-        if self.settings["current_tool"] == CanvasToolName.BRUSH:
+        if self.settings["current_tool"] is CanvasToolName.BRUSH:
             self.drawAt(self.last_pos)
-        elif self.settings["current_tool"] == CanvasToolName.ERASER:
+        elif self.settings["current_tool"] is CanvasToolName.ERASER:
             self.eraseAt(self.last_pos)
 
     def mouseReleaseEvent(self, event):
@@ -190,9 +190,9 @@ class CustomScene(
             super(CustomScene, self).mouseMoveEvent(event)
             return
         
-        if self.settings["current_tool"] == CanvasToolName.BRUSH:
+        if self.settings["current_tool"] is CanvasToolName.BRUSH:
             self.drawAt(event.scenePos())
-        elif self.settings["current_tool"] == CanvasToolName.ERASER:
+        elif self.settings["current_tool"] is CanvasToolName.ERASER:
             self.eraseAt(event.scenePos())
         
         # Update the last position
