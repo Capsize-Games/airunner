@@ -19,7 +19,8 @@ from diffusers.pipelines.stable_diffusion.convert_from_ckpt import \
 from diffusers.pipelines.text_to_video_synthesis.pipeline_text_to_video_zero import CrossFrameAttnProcessor
 from diffusers.utils.torch_utils import randn_tensor
 from torchvision import transforms
-from diffusers import StableDiffusionPipeline, StableDiffusionXLPipeline, AutoPipelineForText2Image
+from diffusers import StableDiffusionPipeline, StableDiffusionXLPipeline, AutoPipelineForText2Image, \
+    StableDiffusionDepth2ImgPipeline, AutoPipelineForInpainting, StableDiffusionInstructPix2PixPipeline
 from diffusers.pipelines.stable_diffusion import StableDiffusionSafetyChecker
 from diffusers import StableDiffusionControlNetPipeline, StableDiffusionControlNetImg2ImgPipeline, StableDiffusionControlNetInpaintPipeline, AsymmetricAutoencoderKL
 from diffusers import ConsistencyDecoderVAE
@@ -871,7 +872,7 @@ class SDHandler(
     def load_safety_checker(self):
         if not self.pipe:
             return
-        if not self.do_nsfw_filter:
+        if not self.do_nsfw_filter or self.action in ["depth2img"]:
             self.logger.info("Disabling safety checker")
             self.pipe.safety_checker = None
         elif self.pipe.safety_checker is None:
@@ -1230,10 +1231,11 @@ class SDHandler(
         self,
         images: List[Image.Image],
         data: dict,
-        nsfw_content_detected: List[bool]
+        nsfw_content_detected: List[bool] = None
     ):
         data["original_model_data"] = self.original_model_data or {}
-        has_nsfw = True in nsfw_content_detected
+        has_nsfw = True in nsfw_content_detected if nsfw_content_detected is not None else False
+
         if images:
             tab_section = "stablediffusion"
             data["tab_section"] = tab_section
@@ -1373,6 +1375,7 @@ class SDHandler(
             yield self.generate(data)
         except TypeError as e:
             error_message = f"TypeError during generation {self.action}"
+            print(e)
             error = e
         except Exception as e:
             error = e
@@ -1517,30 +1520,24 @@ class SDHandler(
             if self.is_single_file:
                 try:
                     self.pipe = self.load_ckpt_model()
-                    # pipeline_action = self.get_pipeline_action()
-
-                    # pipeline_class_ = None
-                    # if self.model_version == "SDXL 1.0":
-                    #     pipeline_class_ = StableDiffusionXLPipeline
-                    # elif self.model_version == "SD 2.1":
-                    #     pipeline_class_ = DiffusionPipeline
-                    # else:
-                    #     pipeline_class_ = StableDiffusionPipeline
-                    # print(self.model_version)
-
-                    # self.pipe = pipeline_class_.from_single_file(
-                    #     self.model_path,
-                    #     **kwargs
-                    # )
                 except OSError as e:
                     self.handle_missing_files(self.action)
             else:
                 self.logger.info(f"Loading model {self.model_path} from PRETRAINED")
+
                 scheduler = self.load_scheduler()
                 if scheduler:
                     kwargs["scheduler"] = scheduler
+
+                pipeline_classname_ = StableDiffusionPipeline
+                if self.action == "depth2img":
+                    pipeline_classname_ = StableDiffusionDepth2ImgPipeline
+                elif self.action == "outpaint":
+                    pipeline_classname_ = AutoPipelineForInpainting
+                elif self.action == "pix2pix":
+                    pipeline_classname_ = StableDiffusionInstructPix2PixPipeline
                 
-                self.pipe = StableDiffusionPipeline.from_pretrained(
+                self.pipe = pipeline_classname_.from_pretrained(
                     self.model_path,
                     torch_dtype=self.data_type,
                     **kwargs
