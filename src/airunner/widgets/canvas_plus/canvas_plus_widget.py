@@ -179,7 +179,7 @@ class CanvasPlusWidget(BaseWidget):
                 Qt.GlobalColor.transparent,
                 self.settings["brush_settings"]["size"],
             ))
-        elif self.settings["current_tool"] == CanvasToolName.ACTIVE_GRID_AREA:
+        elif self.settings["current_tool"] is CanvasToolName.ACTIVE_GRID_AREA:
             if event.buttons() == Qt.MouseButton.LeftButton:
                 self.setCursor(Qt.CursorShape.ClosedHandCursor)
             else:
@@ -515,7 +515,7 @@ class CanvasPlusWidget(BaseWidget):
 
     def toggle_drag_mode(self):
         current_tool = self.settings["current_tool"]
-        if current_tool == CanvasToolName.SELECTION:
+        if current_tool is CanvasToolName.SELECTION:
             self.view.setDragMode(QGraphicsView.DragMode.RubberBandDrag)
         else:
             self.view.setDragMode(QGraphicsView.DragMode.NoDrag)
