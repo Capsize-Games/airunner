@@ -133,5 +133,25 @@
   </customwidget>
  </customwidgets>
  <resources/>
- <connections/>
+ <connections>
+  <connection>
+   <sender>primary_color_button</sender>
+   <signal>clicked()</signal>
+   <receiver>brush_widget</receiver>
+   <slot>color_button_clicked()</slot>
+   <hints>
+    <hint type="sourcelabel">
+     <x>237</x>
+     <y>57</y>
+    </hint>
+    <hint type="destinationlabel">
+     <x>144</x>
+     <y>-8</y>
+    </hint>
+   </hints>
+  </connection>
+ </connections>
+ <slots>
+  <slot>color_button_clicked()</slot>
+ </slots>
 </ui>
