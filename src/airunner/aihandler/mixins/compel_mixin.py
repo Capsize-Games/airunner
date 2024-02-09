@@ -33,11 +33,18 @@ class CompelMixin:
 
     @property
     def prompt_embeds(self):
-        if self._prompt_embeds is not None:
-            shape = self._prompt_embeds.shape
-            size = shape[0]
-            if size == 1:
-                self._prompt_embeds = None
+        # try:
+        #     if self._prompt_embeds is not None:
+        #         shape = self._prompt_embeds.shape
+        #         size = shape[0]
+        #         if size == 1:
+        #             self.logger.error("Prompt embeds are not valid, clearing")
+        #             self._prompt_embeds = None
+        #     if self._prompt_embeds is None:
+        #         self.load_prompt_embeds()
+        # except Exception as e:
+        #     self.logger.error(f"Error loading prompt embeds: {e}")
+        #     self._prompt_embeds = None
         if self._prompt_embeds is None:
             self.load_prompt_embeds()
         return self._prompt_embeds
@@ -48,11 +55,12 @@ class CompelMixin:
 
     @property
     def negative_prompt_embeds(self):
-        if self._negative_prompt_embeds is not None:
-            shape = self._negative_prompt_embeds.shape
-            size = shape[0]
-            if size == 1:
-                self._negative_prompt_embeds = None
+        # if self._negative_prompt_embeds is not None:
+        #     shape = self._negative_prompt_embeds.shape
+        #     size = shape[0]
+        #     if size == 1:
+        #         self.logger.error("Negative prompt embeds are not valid, clearing")
+        #         self._negative_prompt_embeds = None
         if self._negative_prompt_embeds is None:
             self.load_prompt_embeds()
         return self._negative_prompt_embeds
@@ -83,5 +91,9 @@ class CompelMixin:
         [prompt_embeds, negative_prompt_embeds] = self.compel_proc.pad_conditioning_tensors_to_same_length([prompt_embeds, negative_prompt_embeds])
         self.prompt_embeds = prompt_embeds
         self.negative_prompt_embeds = negative_prompt_embeds
-        self.prompt_embeds.to(self.device)
-        self.negative_prompt_embeds.to(self.device)
+
+        if prompt_embeds is not None:
+            self.prompt_embeds.to(self.device)
+
+        if negative_prompt_embeds is not None:
+            self.negative_prompt_embeds.to(self.device)
