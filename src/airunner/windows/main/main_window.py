@@ -741,9 +741,9 @@ class MainWindow(
         current_tool = self.settings["current_tool"]
         ai_mode = self.settings["ai_mode"]
 
-        set_widget_state(self.ui.toggle_active_grid_area_button, current_tool == CanvasToolName.ACTIVE_GRID_AREA)
-        set_widget_state(self.ui.toggle_brush_button, current_tool == CanvasToolName.BRUSH)
-        set_widget_state(self.ui.toggle_eraser_button, current_tool == CanvasToolName.ERASER)
+        set_widget_state(self.ui.toggle_active_grid_area_button, current_tool is CanvasToolName.ACTIVE_GRID_AREA)
+        set_widget_state(self.ui.toggle_brush_button, current_tool is CanvasToolName.BRUSH)
+        set_widget_state(self.ui.toggle_eraser_button, current_tool is CanvasToolName.ERASER)
         set_widget_state(self.ui.toggle_grid_button, show_grid is True)
         set_widget_state(self.ui.ai_button, ai_mode)
 
