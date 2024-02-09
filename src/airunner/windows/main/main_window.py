@@ -975,9 +975,6 @@ class MainWindow(
 
     def action_center_clicked(self):
         print("center clicked")
-    
-    def action_slider_changed(self):
-        print("action_slider_changed")
 
     def action_reset_settings(self):
         self.emit(SignalCode.APPLICATION_RESET_SETTINGS_SIGNAL)
