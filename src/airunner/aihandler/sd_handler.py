@@ -20,7 +20,7 @@ from diffusers.pipelines.text_to_video_synthesis.pipeline_text_to_video_zero imp
 from diffusers.utils.torch_utils import randn_tensor
 from torchvision import transforms
 from diffusers import StableDiffusionPipeline, StableDiffusionXLPipeline, AutoPipelineForText2Image, \
-    StableDiffusionDepth2ImgPipeline, AutoPipelineForInpainting, StableDiffusionInstructPix2PixPipeline
+    StableDiffusionDepth2ImgPipeline, AutoPipelineForInpainting, StableDiffusionInstructPix2PixPipeline, ControlNetModel
 from diffusers.pipelines.stable_diffusion import StableDiffusionSafetyChecker
 from diffusers import StableDiffusionControlNetPipeline, StableDiffusionControlNetImg2ImgPipeline, StableDiffusionControlNetInpaintPipeline, AsymmetricAutoencoderKL
 from diffusers import ConsistencyDecoderVAE
@@ -1421,17 +1421,26 @@ class SDHandler(
         self.controlnet_loaded = True
         return pipeline
 
-    def load_controlnet(self):
+    def load_controlnet(self, local_files_only: bool = None):
         standard_image_settings = self.settings["standard_image_settings"]
         controlnet_name = standard_image_settings["controlnet"]
         controlnet_model = self.controlnet_model_by_name(controlnet_name)
         self.logger.info(f"Loading controlnet {self.controlnet_type} self.controlnet_model {controlnet_model}")
         self._controlnet = None
         self.current_controlnet_type = self.controlnet_type
-        controlnet = StableDiffusionControlNetPipeline.from_pretrained(
-            controlnet_model,
-            torch_dtype=self.data_type
-        )
+        local_files_only = self.local_files_only if local_files_only is None else local_files_only
+        try:
+            controlnet = ControlNetModel.from_pretrained(
+                controlnet_model["path"],
+                torch_dtype=self.data_type,
+                local_files_only=local_files_only
+            )
+        except Exception as e:
+            if "We couldn't connect to 'https://huggingface.co'" in str(e) and local_files_only is True:
+                self.logger.info("Failed to load controlnet from local files, trying to load from huggingface")
+                return self.load_controlnet(local_files_only=False)
+            self.logger.error(f"Error loading controlnet {e}")
+            return None
         # self.load_controlnet_scheduler()
         return controlnet
 
@@ -1536,7 +1545,11 @@ class SDHandler(
                     pipeline_classname_ = AutoPipelineForInpainting
                 elif self.action == "pix2pix":
                     pipeline_classname_ = StableDiffusionInstructPix2PixPipeline
-                
+                elif self.enable_controlnet and not self.is_vid2vid:
+                    pipeline_classname_ = StableDiffusionControlNetPipeline
+                else:
+                    pipeline_classname_ = StableDiffusionPipeline
+
                 self.pipe = pipeline_classname_.from_pretrained(
                     self.model_path,
                     torch_dtype=self.data_type,
