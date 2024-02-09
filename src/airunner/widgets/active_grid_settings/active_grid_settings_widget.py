@@ -21,6 +21,16 @@ class ActiveGridSettingsWidget(BaseWidget):
         self.ui.active_grid_border_groupbox.setChecked(settings["active_grid_settings"]["render_border"])
         self.ui.active_grid_fill_groupbox.setChecked(settings["active_grid_settings"]["render_fill"])
 
+        self.register(
+            SignalCode.APPLICATION_ACTIVE_GRID_AREA_UPDATED,
+            self.update_size
+        )
+
+    def update_size(self):
+        settings = self.settings
+        self.ui.width_slider_widget.slider_maximum = settings["working_width"]
+        self.ui.height_slider_widget.slider_maximum = settings["working_height"]
+
     def update_active_grid_settings(self, setting_key, checked):
         settings = self.settings
         settings["active_grid_settings"][setting_key] = checked

@@ -222,7 +222,7 @@ Previous Conversation:
                 face_enhance=False,
             ),
             active_grid_settings=dict(
-                enabled=False,
+                enabled=True,
                 render_border=True,
                 render_fill=True,
                 border_opacity=50,
