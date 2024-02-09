@@ -24,24 +24,23 @@ class InputImageSettingsWidget(BaseWidget):
     
     def __init__(self, *args, **kwargs):
         super().__init__(*args, **kwargs)
-        
 
     def active_grid_area_image(self):
         if not self.settings["generator_settings"]["input_image_recycle_grid_image"] or not self._active_grid_area_image:
-            layer_image = self.get_service("current_layer_image")()
+            layer_image = self.get_service(ServiceCode.CURRENT_ACTIVE_IMAGE)()
             if layer_image.image:
                 self._active_grid_area_image = layer_image.image.copy()
         return self._active_grid_area_image
 
     @property
-    def current_input_image(self):
+    def get_current_input_image(self):
         try:
             if not self.settings["generator_settings"]:
                 return None
             if self.settings["generator_settings"]["input_image_use_imported_image"]:
                 return self.input_image
             elif self.settings["generator_settings"]["input_image_use_grid_image"]:
-                return self.active_grid_area_image()
+                return self.get_current_input_image()
         except AttributeError:
             return None
 

@@ -1,5 +1,5 @@
 import traceback
-from airunner.aihandler.logger import Logger as logger
+import diffusers
 from airunner.aihandler.settings import AVAILABLE_SCHEDULERS_BY_ACTION
 from airunner.enums import Scheduler, SignalCode
 
@@ -43,7 +43,7 @@ class SchedulerMixin:
         return self.action
 
     def clear_scheduler(self):
-        logger.info("Clearing scheduler")
+        self.logger.info("Clearing scheduler")
         self.scheduler_name = ""
         self.do_change_scheduler = True
         self._scheduler = None
@@ -52,8 +52,6 @@ class SchedulerMixin:
     def load_scheduler(self, force_scheduler_name=None, config=None):
         if self.is_sd_xl_turbo:
             return None
-
-        import diffusers
         if (
             not force_scheduler_name and
             self._scheduler and not self.do_change_scheduler and
@@ -65,12 +63,14 @@ class SchedulerMixin:
             traceback.print_stack()
             raise Exception("Chicken / egg problem, model path not set")
         self.current_scheduler_name = force_scheduler_name if force_scheduler_name else self.options.get(f"scheduler")
+
+        self.logger.info(f"Loading scheduler " + self.scheduler_name + " "+self.scheduler_section)
+
         scheduler_name = force_scheduler_name if force_scheduler_name else self.scheduler_name
         if not force_scheduler_name and scheduler_name not in AVAILABLE_SCHEDULERS_BY_ACTION[self.scheduler_section]:
             scheduler_name = AVAILABLE_SCHEDULERS_BY_ACTION[self.scheduler_section][0]
         scheduler_class_name = self.schedulers[scheduler_name]
         scheduler_class = getattr(diffusers, scheduler_class_name)
-
 
         kwargs = {
             "subfolder": "scheduler"
@@ -101,9 +101,10 @@ class SchedulerMixin:
                 else:
                     kwargs["algorithm_type"] = "dpmsolver"
             try:
+                self.logger.info(f"Loading scheduler " + scheduler_name)
                 self._scheduler = scheduler_class.from_pretrained(self.model_path, **kwargs)
             except NotImplementedError as e:
-                logger.error(f"Unable to load scheduler {scheduler_name} from {self.model_path}")
+                self.logger.error(f"Unable to load scheduler {scheduler_name} from {self.model_path}")
         return self._scheduler
 
     def change_scheduler(self):
@@ -114,10 +115,11 @@ class SchedulerMixin:
             self.pipe.scheduler = self.load_scheduler(config=config)
             self.do_change_scheduler = False
         else:
-            logger.warning("Unable to change scheduler, model_path is not set")
+            self.logger.warning("Unable to change scheduler, model_path is not set")
 
     def prepare_scheduler(self):
-        scheduler_name = self.options.get(f"scheduler", "euler_a")
+        self.logger.info("Preparing scheduler " + self.options.get(f"scheduler", ""))
+        scheduler_name = self.options.get(f"scheduler", "Euler a")
         if self.scheduler_name != scheduler_name:
             self.emit(SignalCode.LOG_STATUS_SIGNAL, f"Preparing scheduler {scheduler_name}")
             self.scheduler_name = scheduler_name
