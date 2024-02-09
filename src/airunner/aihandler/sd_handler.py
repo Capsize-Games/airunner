@@ -1018,6 +1018,11 @@ class SDHandler(
 
         args["clip_skip"] = self.clip_skip
 
+
+        if self.action == "pix2pix":
+            args["image_guidance_scale"] = self.image_guidance_scale
+            args["generator"] = self.generator()
+            del args["latents"]
         with torch.inference_mode():
             for n in range(self.n_samples):
                 return self.pipe(**args)
@@ -1538,7 +1543,6 @@ class SDHandler(
                 if scheduler:
                     kwargs["scheduler"] = scheduler
 
-                pipeline_classname_ = StableDiffusionPipeline
                 if self.action == "depth2img":
                     pipeline_classname_ = StableDiffusionDepth2ImgPipeline
                 elif self.action == "outpaint":
