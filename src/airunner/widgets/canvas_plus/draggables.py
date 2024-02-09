@@ -56,17 +56,8 @@ class ActiveGridArea(DraggablePixmap):
     active_grid_area_color = None
     image = None
 
-    @property
-    def active_grid_area_rect(self):
-        settings = ServiceLocator.get("get_settings")()
-        return QRect(
-            settings["active_grid_settings"]["pos_x"],
-            settings["active_grid_settings"]["pos_y"],
-            settings["is_maximized"],
-            settings["working_height"]
-        )
-
     def __init__(self, rect):
+        self.active_grid_area_rect = rect
         self.update_draggable_settings()
 
         super().__init__(self.pixmap)
@@ -98,7 +89,6 @@ class ActiveGridArea(DraggablePixmap):
         self.pixmap = QPixmap.fromImage(self.image)
 
     def redraw(self):
-        self.update_settings()
         scene = self.scene()
         if scene:
             settings = ServiceLocator.get("get_settings")()
