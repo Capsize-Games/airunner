@@ -2,7 +2,6 @@ import os
 import imageio
 import numpy as np
 from PIL import Image
-from airunner.aihandler.logger import Logger as logger
 
 
 class TexttovideoMixin:
@@ -23,7 +22,7 @@ class TexttovideoMixin:
     def handle_txt2vid_output(self, output):
         output_image = None
         if output is None:
-            logger.error("txt2vid output is None")
+            self.logger.error("txt2vid output is None")
         else:
             if self.enable_controlnet:
                 result = output["frames"]
@@ -32,16 +31,16 @@ class TexttovideoMixin:
                 result = [(r * 255).astype("uint8") for r in result]
 
             if len(result) > 0:
-                logger.info(f"Saving video to {self.txt2vid_file}")
+                self.logger.info(f"Saving video to {self.txt2vid_file}")
                 filename = self.txt2vid_file
                 index = 1
                 while os.path.exists(filename):
                     filename = self.txt2vid_file.replace(".mp4", f"_{index}.mp4")
                     index += 1
                 imageio.mimsave(filename, result, format="FFMPEG", codec="libx264")
-                logger.info(f"Save complete")
+                self.logger.info(f"Save complete")
                 output_image = Image.fromarray(result[0])
             else:
-                logger.error("No frames in txt2vid output")
+                self.logger.error("No frames in txt2vid output")
 
         return output_image, None
