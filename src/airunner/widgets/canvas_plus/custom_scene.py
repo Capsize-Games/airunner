@@ -112,16 +112,29 @@ class CustomScene(
         painter.end()
         self.item.setPixmap(QPixmap.fromImage(self.image))
 
-    def mousePressEvent(self, event):
+    def handle_left_mouse_press(self, event):
+        view = self.views()[0]
+        pos = view.mapFromScene(event.scenePos())
+        self.selection_stop_pos = None
+        self.selection_start_pos = QPoint(
+            pos.x(),
+            pos.y()
+        )
+        self.emit(SignalCode.CANVAS_DO_DRAW_SIGNAL, True)
+
+    def handle_left_mouse_release(self, event):
         if event.button() == Qt.MouseButton.LeftButton:
             view = self.views()[0]
             pos = view.mapFromScene(event.scenePos())
-            self.selection_stop_pos = None
-            self.selection_start_pos = QPoint(
+            self.selection_stop_pos = QPoint(
                 pos.x(),
                 pos.y()
             )
             self.emit(SignalCode.CANVAS_DO_DRAW_SIGNAL, True)
+
+    def mousePressEvent(self, event):
+        if event.button() == Qt.MouseButton.LeftButton:
+            self.handle_left_mouse_press(event)
 
         self.handle_cursor(event)
         if self.settings["current_tool"] not in [CanvasToolName.BRUSH, CanvasToolName.ERASER]:
@@ -135,14 +148,7 @@ class CustomScene(
             self.eraseAt(self.last_pos)
 
     def mouseReleaseEvent(self, event):
-        if event.button() == Qt.MouseButton.LeftButton:
-            view = self.views()[0]
-            pos = view.mapFromScene(event.scenePos())
-            self.selection_stop_pos = QPoint(
-                pos.x(),
-                pos.y()
-            )
-            self.emit(SignalCode.CANVAS_DO_DRAW_SIGNAL, True)
+        self.handle_left_mouse_release(event)
         super(CustomScene, self).mouseReleaseEvent(event)
         self.handle_cursor(event)
         self.last_pos = None

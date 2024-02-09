@@ -174,6 +174,7 @@ class SignalCode(Enum):
     VISION_DESCRIBE_IMAGE_SIGNAL = "describe_image_signal"
     VISION_PROCESS_IMAGES = "process_images"
 
+    ACTIVE_GRID_SETTINGS_CHANGED_SIGNAL = "active_grid_settings_changed_signal"
 
     QUIT_APPLICATION = "quit"
 
