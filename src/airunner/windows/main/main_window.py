@@ -208,12 +208,6 @@ class MainWindow(
         #self.prompt_builder.inject_prompt()
         pass
 
-    @pyqtSlot(dict)
-    def handle_button_clicked(self, kwargs):
-        action = kwargs.get("action", "")
-        if action == "toggle_tool":
-            self.toggle_tool(kwargs["tool"])
-
     def show_layers(self):
         self.emit(SignalCode.LAYERS_SHOW_SIGNAL)
 
@@ -623,21 +617,31 @@ class MainWindow(
     
     def action_toggle_brush(self, active):
         if active:
-            self.toggle_tool(CanvasToolName.BRUSH)
+            self.ui.toggle_select_button.setChecked(False)
             self.ui.toggle_active_grid_area_button.setChecked(False)
             self.ui.toggle_eraser_button.setChecked(False)
+        self.toggle_tool(CanvasToolName.BRUSH, active)
+
+    def action_toggle_select(self, active):
+        if active:
+            self.ui.toggle_active_grid_area_button.setChecked(False)
+            self.ui.toggle_brush_button.setChecked(False)
+            self.ui.toggle_eraser_button.setChecked(False)
+        self.toggle_tool(CanvasToolName.SELECTION, active)
 
     def action_toggle_eraser(self, active):
         if active:
-            self.toggle_tool(CanvasToolName.ERASER)
+            self.ui.toggle_select_button.setChecked(False)
             self.ui.toggle_active_grid_area_button.setChecked(False)
             self.ui.toggle_brush_button.setChecked(False)
+        self.toggle_tool(CanvasToolName.ERASER, active)
 
     def action_toggle_active_grid_area(self, active):
         if active:
-            self.toggle_tool(CanvasToolName.ACTIVE_GRID_AREA)
+            self.ui.toggle_select_button.setChecked(False)
             self.ui.toggle_brush_button.setChecked(False)
             self.ui.toggle_eraser_button.setChecked(False)
+        self.toggle_tool(CanvasToolName.ACTIVE_GRID_AREA, active)
 
     def action_toggle_nsfw_filter_triggered(self, val):
         settings = self.settings
@@ -704,6 +708,7 @@ class MainWindow(
             ("artificial-intelligence-ai-chip-icon", "ai_button"),
             ("setting-line-icon", "settings_button"),
             ("object-selected-icon", "toggle_active_grid_area_button"),
+            ("select-svgrepo-com", "toggle_select_button")
         ]:
             self.set_icons(icon_data[0], icon_data[1], "dark" if self.settings["dark_mode_enabled"] else "light")
 
@@ -742,14 +747,19 @@ class MainWindow(
         set_widget_state(self.ui.toggle_grid_button, show_grid is True)
         set_widget_state(self.ui.ai_button, ai_mode)
 
-    def toggle_tool(self, tool):
+    def toggle_tool(self, tool: CanvasToolName, active: bool):
+        if not active:
+            tool = CanvasToolName.NONE
         settings = self.settings
         settings["current_tool"] = tool
         self.settings = settings
+        self.emit(SignalCode.APPLICATION_TOOL_CHANGED_SIGNAL, tool)
 
     def show_section(self, section: WindowSection):
         section_lists = {
-            "right": [self.ui.tool_tab_widget.tabText(i) for i in range(self.ui.tool_tab_widget.count())]
+            "right": [
+                self.ui.tool_tab_widget.tabText(i) for i in range(self.ui.tool_tab_widget.count())
+            ]
         }
         for k, v in section_lists.items():
             if section.value in v:
