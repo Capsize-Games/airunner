@@ -1,7 +1,10 @@
+import io
 import base64
 import re
 import traceback
+from pytorch_lightning import seed_everything
 from io import BytesIO
+from typing import List
 import PIL
 import imageio
 import numpy as np
@@ -16,7 +19,8 @@ from diffusers.pipelines.stable_diffusion.convert_from_ckpt import \
 from diffusers.pipelines.text_to_video_synthesis.pipeline_text_to_video_zero import CrossFrameAttnProcessor
 from diffusers.utils.torch_utils import randn_tensor
 from torchvision import transforms
-from diffusers import StableDiffusionPipeline, StableDiffusionXLPipeline, AutoPipelineForText2Image
+from diffusers import StableDiffusionPipeline, StableDiffusionXLPipeline, AutoPipelineForText2Image, \
+    StableDiffusionDepth2ImgPipeline, AutoPipelineForInpainting, StableDiffusionInstructPix2PixPipeline, ControlNetModel
 from diffusers.pipelines.stable_diffusion import StableDiffusionSafetyChecker
 from diffusers import StableDiffusionControlNetPipeline, StableDiffusionControlNetImg2ImgPipeline, StableDiffusionControlNetInpaintPipeline, AsymmetricAutoencoderKL
 from diffusers import ConsistencyDecoderVAE
@@ -39,6 +43,7 @@ from airunner.windows.main.pipeline_mixin import PipelineMixin
 from airunner.windows.main.controlnet_model_mixin import ControlnetModelMixin
 from airunner.windows.main.ai_model_mixin import AIModelMixin
 from airunner.utils import clear_memory
+#from airunner.scripts.realesrgan.main import RealESRGAN
 
 torch.backends.cuda.matmul.allow_tf32 = True
 
@@ -230,8 +235,7 @@ class SDHandler(
 
     @property
     def batch_size(self):
-        return self.options.get("batch_size", 4) if self.deterministic_generation \
-            else self.options.get("batch_size", 1)
+        return self.options.get("batch_size", 1)
 
     @property
     def prompt_data(self):
@@ -456,10 +460,6 @@ class SDHandler(
     @property
     def interpolation_data(self):
         return self.options.get("interpolation_data", None)
-
-    @property
-    def deterministic_generation(self):
-        return self.options.get("deterministic_generation", False)
 
     @property
     def current_model(self):
@@ -738,22 +738,6 @@ class SDHandler(
         return self.options.get("original_model_data", {})
 
     @staticmethod
-    def latents_to_image(latents: torch.Tensor):
-        image = latents.permute(0, 2, 3, 1)
-        image = image.detach().cpu().numpy()
-        image = image[0]
-        image = (image * 255).astype(np.uint8)
-        image = Image.fromarray(image)
-        return image
-
-    @staticmethod
-    def image_to_latents(image: PIL.Image):
-        image = image.convert("RGBA")
-        image = transforms.ToTensor()(image)
-        image = image.unsqueeze(0)
-        return image
-
-    @staticmethod
     def apply_filters(image, filters):
         for image_filter in filters:
             filter_type = FilterType(image_filter["filter_name"])
@@ -773,12 +757,6 @@ class SDHandler(
                 image = image.resize((int(width / scale), int(height / scale)), resample=Image.NEAREST)
                 image = image.resize((width, height), resample=Image.NEAREST)
         return image
-
-    @staticmethod
-    def image_to_base64(image):
-        buffered = BytesIO()
-        image.save(buffered, format="PNG")
-        return base64.b64encode(buffered.getvalue()).decode("utf-8")
 
     @staticmethod
     def is_ckpt_file(model):
@@ -894,7 +872,7 @@ class SDHandler(
     def load_safety_checker(self):
         if not self.pipe:
             return
-        if not self.do_nsfw_filter:
+        if not self.do_nsfw_filter or self.action in ["depth2img"]:
             self.logger.info("Disabling safety checker")
             self.pipe.safety_checker = None
         elif self.pipe.safety_checker is None:
@@ -958,7 +936,7 @@ class SDHandler(
             ),
             device=torch.device(self.device),
             dtype=self.data_type,
-            generator=self.generator(self.device),
+            generator=self.generator(torch.device(self.device)),
         )
 
     def call_pipe(self, **kwargs):
@@ -995,11 +973,9 @@ class SDHandler(
             })
         if self.use_compel:
             try:
-                args.update({
-                    "prompt_embeds": self.prompt_embeds,
-                })
+                args["prompt_embeds"] = self.prompt_embeds
             except Exception as _e:
-                self.logger.warning("Compel failed: " + str(_e))
+                self.logger.warning("prompt_embeds failed: " + str(_e))
                 args.update({
                     "prompt": self.prompt,
                 })
@@ -1009,11 +985,9 @@ class SDHandler(
             })
         if self.use_compel:
             try:
-                args.update({
-                    "negative_prompt_embeds": self.negative_prompt_embeds,
-                })
+                args["negative_prompt_embeds"] = self.negative_prompt_embeds
             except Exception as _e:
-                self.logger.warning("Compel failed: " + str(_e))
+                self.logger.warning("negative_prompt_embeds failed: " + str(_e))
                 args.update({
                     "negative_prompt": self.negative_prompt,
                 })
@@ -1028,14 +1002,6 @@ class SDHandler(
         
         if not self.is_pix2pix and len(self.available_lora) > 0 and len(self.loaded_lora) > 0:
             args["cross_attention_kwargs"] = {"scale": 1.0}
-
-        if self.deterministic_generation:
-            if self.is_txt2img:
-                if self.deterministic_seed:
-                    generator = [self.generator() for _i in range(self.batch_size)]
-                else:
-                    generator = [self.generator(seed=self.seed + i) for i in range(self.batch_size)]
-                args["generator"] = generator
 
         if self.enable_controlnet:
             self.logger.info(f"Setting up controlnet")
@@ -1052,6 +1018,11 @@ class SDHandler(
 
         args["clip_skip"] = self.clip_skip
 
+
+        if self.action == "pix2pix":
+            args["image_guidance_scale"] = self.image_guidance_scale
+            args["generator"] = self.generator()
+            del args["latents"]
         with torch.inference_mode():
             for n in range(self.n_samples):
                 return self.pipe(**args)
@@ -1139,7 +1110,7 @@ class SDHandler(
             extra_args = {**extra_args, **{
                 "image": image,
                 "strength": self.strength,
-                "depth_map": self.depth_map
+                #"depth_map": self.depth_map
             }}
         elif self.is_vid_action:
             pass
@@ -1158,7 +1129,6 @@ class SDHandler(
 
     def sample_diffusers_model(self, data: dict):
         self.logger.info("sample_diffusers_model")
-        from pytorch_lightning import seed_everything
         image = self.image
         mask = self.mask
         nsfw_content_detected = None
@@ -1216,8 +1186,6 @@ class SDHandler(
             seed=seed,
             prompt=prompt,
             negative_prompt=negative_prompt,
-            is_deterministic=self.deterministic_generation,
-            is_batch=self.deterministic_generation,
             batch_size=self.batch_size,
             deterministic_style=self.deterministic_style
         )
@@ -1236,13 +1204,13 @@ class SDHandler(
         self.logger.info("Runner: process_data called")
         self.requested_data = data
         self.prepare_options(data)
-        #self.prepare_scheduler()
+        self.prepare_scheduler()
         self.prepare_model()
         self.initialize()
         if self.pipe:
             self.change_scheduler()
 
-    def generate(self, data: dict):
+    def generate(self, data):
         if not self.pipe:
             return
         self.logger.info("generate called")
@@ -1264,46 +1232,58 @@ class SDHandler(
         self.current_sample = 0
         return self.image_handler(images, self.requested_data, nsfw_content_detected)
 
-    def image_handler(self, images, data, nsfw_content_detected):
+    def image_handler(
+        self,
+        images: List[Image.Image],
+        data: dict,
+        nsfw_content_detected: List[bool] = None
+    ):
         data["original_model_data"] = self.original_model_data or {}
+        has_nsfw = True in nsfw_content_detected if nsfw_content_detected is not None else False
+
         if images:
             tab_section = "stablediffusion"
             data["tab_section"] = tab_section
 
-            # apply filters and convert to base64 if requested
-            has_filters = self.filters != {}
-
             do_base64 = data.get("do_base64", False)
-            if has_filters or do_base64:
-                for i, image in enumerate(images):
-                    if has_filters:
-                        image = self.apply_filters(image, self.filters)
-                    if do_base64:
-                        image = self.image_to_base64(image)
-                    images[i] = image
 
-            has_nsfw = False
-            if nsfw_content_detected is not None:
+            if not has_nsfw:
+                # apply filters and convert to base64 if requested
+                has_filters = self.filters != {}
+
+                if has_filters or do_base64:
+                    for i, image in enumerate(images):
+                        if has_filters:
+                            image = self.apply_filters(image, self.filters)
+                        if do_base64:
+                            img_byte_arr = io.BytesIO()
+                            image.save(img_byte_arr, format='PNG')
+                            img_byte_arr = img_byte_arr.getvalue()
+                            image = base64.encodebytes(img_byte_arr).decode('ascii')
+                        images[i] = image
+
+            if has_nsfw:
                 for i, is_nsfw in enumerate(nsfw_content_detected):
                     if is_nsfw:
                         has_nsfw = True
-                        # iterate over each image and add the word "NSFW" to the
-                        # center with bold white letters
                         image = images[i]
                         image = image.convert("RGBA")
                         draw = ImageDraw.Draw(image)
-                        font = ImageFont.truetype("arial.ttf", 30)
-                        w, h = draw.textsize(f"NSFW", font=font)
-                        draw.text(((image.width - w) / 2, (image.height - h) / 2), "NSFW", font=font,
-                                  fill=(255, 255, 255, 255))
-                        images[i] = image.convert("RGB")
+                        font = ImageFont.truetype("arial", 15)
+                        draw.text((0, 0), "NSFW", (255, 255, 255), font=font)
+                        if do_base64:
+                            img_byte_arr = io.BytesIO()
+                            image.save(img_byte_arr, format='PNG')
+                            img_byte_arr = img_byte_arr.getvalue()
+                            image = base64.encodebytes(img_byte_arr).decode('ascii')
+                        images[i] = image
 
-            return dict(
-                images=images,
-                data=data,
-                request_type=data.get("request_type", None),
-                nsfw_content_detected=has_nsfw,
-            )
+        return dict(
+            images=images,
+            data=data,
+            request_type=data.get("request_type", None),
+            nsfw_content_detected=has_nsfw,
+        )
 
     def final_callback(self):
         total = int(self.steps * self.strength)
@@ -1352,7 +1332,6 @@ class SDHandler(
 
     def process_upscale(self, data: dict):
         self.logger.info("Processing upscale")
-        from airunner.scripts.realesrgan.main import RealESRGAN
         image = self.input_image
         results = []
         if image:
@@ -1401,6 +1380,7 @@ class SDHandler(
             yield self.generate(data)
         except TypeError as e:
             error_message = f"TypeError during generation {self.action}"
+            print(e)
             error = e
         except Exception as e:
             error = e
@@ -1446,14 +1426,26 @@ class SDHandler(
         self.controlnet_loaded = True
         return pipeline
 
-    def load_controlnet(self):
-        self.logger.info(f"Loading controlnet {self.controlnet_type} self.controlnet_model {self.controlnet_model}")
+    def load_controlnet(self, local_files_only: bool = None):
+        standard_image_settings = self.settings["standard_image_settings"]
+        controlnet_name = standard_image_settings["controlnet"]
+        controlnet_model = self.controlnet_model_by_name(controlnet_name)
+        self.logger.info(f"Loading controlnet {self.controlnet_type} self.controlnet_model {controlnet_model}")
         self._controlnet = None
         self.current_controlnet_type = self.controlnet_type
-        controlnet = StableDiffusionControlNetPipeline.from_pretrained(
-            self.controlnet_model,
-            torch_dtype=self.data_type
-        )
+        local_files_only = self.local_files_only if local_files_only is None else local_files_only
+        try:
+            controlnet = ControlNetModel.from_pretrained(
+                controlnet_model["path"],
+                torch_dtype=self.data_type,
+                local_files_only=local_files_only
+            )
+        except Exception as e:
+            if "We couldn't connect to 'https://huggingface.co'" in str(e) and local_files_only is True:
+                self.logger.info("Failed to load controlnet from local files, trying to load from huggingface")
+                return self.load_controlnet(local_files_only=False)
+            self.logger.error(f"Error loading controlnet {e}")
+            return None
         # self.load_controlnet_scheduler()
         return controlnet
 
@@ -1542,30 +1534,27 @@ class SDHandler(
             if self.is_single_file:
                 try:
                     self.pipe = self.load_ckpt_model()
-                    # pipeline_action = self.get_pipeline_action()
-
-                    # pipeline_class_ = None
-                    # if self.model_version == "SDXL 1.0":
-                    #     pipeline_class_ = StableDiffusionXLPipeline
-                    # elif self.model_version == "SD 2.1":
-                    #     pipeline_class_ = DiffusionPipeline
-                    # else:
-                    #     pipeline_class_ = StableDiffusionPipeline
-                    # print(self.model_version)
-
-                    # self.pipe = pipeline_class_.from_single_file(
-                    #     self.model_path,
-                    #     **kwargs
-                    # )
                 except OSError as e:
                     self.handle_missing_files(self.action)
             else:
                 self.logger.info(f"Loading model {self.model_path} from PRETRAINED")
+
                 scheduler = self.load_scheduler()
                 if scheduler:
                     kwargs["scheduler"] = scheduler
-                
-                self.pipe = StableDiffusionPipeline.from_pretrained(
+
+                if self.action == "depth2img":
+                    pipeline_classname_ = StableDiffusionDepth2ImgPipeline
+                elif self.action == "outpaint":
+                    pipeline_classname_ = AutoPipelineForInpainting
+                elif self.action == "pix2pix":
+                    pipeline_classname_ = StableDiffusionInstructPix2PixPipeline
+                elif self.enable_controlnet and not self.is_vid2vid:
+                    pipeline_classname_ = StableDiffusionControlNetPipeline
+                else:
+                    pipeline_classname_ = StableDiffusionPipeline
+
+                self.pipe = pipeline_classname_.from_pretrained(
                     self.model_path,
                     torch_dtype=self.data_type,
                     **kwargs
@@ -1583,12 +1572,12 @@ class SDHandler(
                 self.pipe.unet.set_attn_processor(CrossFrameAttnProcessor(batch_size=2))
                 self.pipe.controlnet.set_attn_processor(CrossFrameAttnProcessor(batch_size=2))
 
-            if self.is_outpaint:
-                self.logger.info("Initializing vae for inpaint / outpaint")
-                self.pipe.vae = AsymmetricAutoencoderKL.from_pretrained(
-                    self.inpaint_vae_model["path"],
-                    torch_dtype=self.data_type
-                )
+            # if self.is_outpaint:
+            #     self.logger.info("Initializing vae for inpaint / outpaint")
+            #     self.pipe.vae = AsymmetricAutoencoderKL.from_pretrained(
+            #         self.inpaint_vae_model["path"],
+            #         torch_dtype=self.data_type
+            #     )
 
             if not self.is_depth2img:
                 self.initialize_safety_checker()
@@ -1631,7 +1620,6 @@ class SDHandler(
                 local_files_only=local_files_only,
                 extract_ema=False,
                 #vae=self.load_vae(),
-                pipeline_class=AutoPipelineForText2Image,
                 config_files={
                     "v1": "v1.yaml",
                     "v2": "v2.yaml",
@@ -1765,7 +1753,6 @@ class SDHandler(
             if self.is_ckpt_model or self.is_safetensors:
                 self.logger.info("Required files not found, attempting download")
             else:
-                import traceback
                 traceback.print_exc()
                 self.logger.info("Model not found, attempting download")
             # check if we have an internet connection

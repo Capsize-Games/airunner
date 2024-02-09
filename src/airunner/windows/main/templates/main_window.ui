@@ -2557,38 +2557,6 @@
    </hints>
   </connection>
   <connection>
-   <sender>actionDeterministic_Batches</sender>
-   <signal>triggered()</signal>
-   <receiver>MainWindow</receiver>
-   <slot>action_show_deterministic_batches()</slot>
-   <hints>
-    <hint type="sourcelabel">
-     <x>-1</x>
-     <y>-1</y>
-    </hint>
-    <hint type="destinationlabel">
-     <x>628</x>
-     <y>436</y>
-    </hint>
-   </hints>
-  </connection>
-  <connection>
-   <sender>actionStandard_Batches</sender>
-   <signal>triggered()</signal>
-   <receiver>MainWindow</receiver>
-   <slot>action_show_standard_batches()</slot>
-   <hints>
-    <hint type="sourcelabel">
-     <x>-1</x>
-     <y>-1</y>
-    </hint>
-    <hint type="destinationlabel">
-     <x>628</x>
-     <y>436</y>
-    </hint>
-   </hints>
-  </connection>
-  <connection>
    <sender>actionLLM_beta</sender>
    <signal>triggered()</signal>
    <receiver>MainWindow</receiver>
@@ -2998,8 +2966,6 @@
   <slot>batches_panel_tab_index_changed(int)</slot>
   <slot>center_panel_tab_index_changed(int)</slot>
   <slot>action_show_active_grid()</slot>
-  <slot>action_show_deterministic_batches()</slot>
-  <slot>action_show_standard_batches()</slot>
   <slot>action_show_llm()</slot>
   <slot>image_generation_toggled()</slot>
   <slot>language_processing_toggled()</slot>
