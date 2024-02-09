@@ -4,7 +4,7 @@ from PyQt6.QtCore import QRect, QPoint
 from PyQt6.QtGui import QBrush, QColor, QPen, QPixmap, QPainter
 from PyQt6.QtWidgets import QGraphicsItem, QGraphicsPixmapItem
 
-from airunner.enums import SignalCode
+from airunner.enums import SignalCode, CanvasToolName
 from airunner.mediator_mixin import MediatorMixin
 from airunner.service_locator import ServiceLocator
 
@@ -30,6 +30,12 @@ class DraggablePixmap(
         self.setPos(x, y)
 
     def mouseMoveEvent(self, event):
+        settings = ServiceLocator.get("get_settings")()
+        tool = settings["current_tool"]
+
+        if tool is not CanvasToolName.ACTIVE_GRID_AREA:
+            return
+
         super().mouseMoveEvent(event)
         self.snap_to_grid()
 
