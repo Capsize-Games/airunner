@@ -32,15 +32,15 @@ class DraggablePixmap(
     def mouseMoveEvent(self, event):
         settings = ServiceLocator.get("get_settings")()
         tool = settings["current_tool"]
-
-        if tool is not CanvasToolName.ACTIVE_GRID_AREA:
-            return
-
         super().mouseMoveEvent(event)
-        self.snap_to_grid()
+        if tool is CanvasToolName.ACTIVE_GRID_AREA:
+            self.snap_to_grid()
 
     def mouseReleaseEvent(self, event):
-        self.snap_to_grid()
+        settings = ServiceLocator.get("get_settings")()
+        tool = settings["current_tool"]
+        if tool is CanvasToolName.ACTIVE_GRID_AREA:
+            self.snap_to_grid()
         super().mouseReleaseEvent(event)
 
     def paint(self, painter: QPainter, option, widget=None):
@@ -195,3 +195,13 @@ class ActiveGridArea(DraggablePixmap):
     @settings.setter
     def settings(self, value):
         ServiceLocator.get("set_settings")(value)
+
+    def setPos(self, x, y):
+        super().setPos(x, y)
+        settings = ServiceLocator.get("get_settings")()
+        tool = settings["current_tool"]
+        if tool is CanvasToolName.ACTIVE_GRID_AREA:
+            active_grid_settings = settings["active_grid_settings"]
+            active_grid_settings["pos_x"] = x
+            active_grid_settings["pos_y"] = y
+            self.settings = settings
