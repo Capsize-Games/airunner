@@ -6,7 +6,7 @@ from functools import partial
 from PIL import Image, ImageGrab, ImageFilter, UnidentifiedImageError
 from PIL.ImageQt import ImageQt, QImage
 from PyQt6 import QtWidgets, QtCore
-from PyQt6.QtCore import Qt, QPoint, QRect
+from PyQt6.QtCore import Qt, QPoint, QRect, QPointF
 from PyQt6.QtGui import QBrush, QColor, QPixmap, QTransform, QMouseEvent, QPainterPath
 from PyQt6.QtWidgets import QGraphicsItemGroup, QGraphicsItem, QGraphicsView
 from PyQt6.QtWidgets import QGraphicsPixmapItem
@@ -19,6 +19,7 @@ from airunner.settings import AVAILABLE_IMAGE_FILTERS
 from airunner.utils import apply_opacity_to_image
 from airunner.widgets.base_widget import BaseWidget
 from airunner.widgets.canvas.custom_scene import CustomScene
+from airunner.widgets.canvas.custom_view import CustomGraphicsView
 from airunner.widgets.canvas.draggables import DraggablePixmap, ActiveGridArea
 from airunner.widgets.canvas.templates.canvas_ui import Ui_canvas
 from airunner.workers.canvas_resize_worker import CanvasResizeWorker
@@ -40,8 +41,7 @@ class CanvasWidget(BaseWidget):
         super().__init__(*args, **kwargs)
         self._startPos = QPoint(0, 0)
         self.scene = None
-        self.view = None
-        self.view_size = None
+        self.ui.canvas_container_size = None
         self.layers = {}
         self.images = {}
         self.active_grid_area = None
@@ -63,14 +63,15 @@ class CanvasWidget(BaseWidget):
         self.previewing_filter = False
         self.drag_pos: QPoint = None
         self.do_draw_layers = True
-        
+
         self._grid_settings = {}
         self._canvas_settings = {}
         self._active_grid_settings = {}
         self.pixmaps = {}
 
         self.ui.central_widget.resizeEvent = self.resizeEvent
-        self.canvas_container.resizeEvent = self.window_resized
+        self.ui.canvas_container.resizeEvent = self.window_resized
+        #self.ui.canvas_container.mouseMoveEvent = self.canvas_mouseMoveEvent
 
         self.image_data_worker = None
         self.canvas_resize_worker = None
@@ -114,6 +115,25 @@ class CanvasWidget(BaseWidget):
             "canvas_resize_worker": CanvasResizeWorker
         }
 
+    # def canvas_mouseMoveEvent(self, event):
+    #     # Calculate the grid cell coordinates
+    #     cell_size = self.settings["grid_settings"]["cell_size"]
+    #     grid_x = round(event.pos().x() / cell_size) * cell_size
+    #     grid_y = round(event.pos().y() / cell_size) * cell_size
+    #
+    #     # Create a new event with the adjusted position
+    #     new_event = QMouseEvent(
+    #         event.type(),
+    #         QPointF(grid_x, grid_y),  # Convert QPoint to QPointF
+    #         event.button(),
+    #         event.buttons(),
+    #         event.modifiers()
+    #     )
+    #
+    #     # Pass the new event to the base class's method
+    #     # call super on self.ui.canvas_container
+    #     super(self.ui.canvas_container.__class__, self.ui.canvas_container).mouseMoveEvent(new_event)
+
     @property
     def image_pivot_point(self):
         try:
@@ -153,10 +173,6 @@ class CanvasWidget(BaseWidget):
     def current_active_image(self, value):
         self.add_image_to_current_layer(value)
 
-    @property
-    def canvas_container(self):
-        return self.ui.canvas_container
-
     def on_canvas_paste_image_signal(self, _event):
         self.paste_image_from_clipboard()
 
@@ -193,7 +209,7 @@ class CanvasWidget(BaseWidget):
         transform.scale(self.settings["grid_settings"]["zoom_level"], self.settings["grid_settings"]["zoom_level"])
 
         # Set the transform
-        self.view.setTransform(transform)
+        self.ui.canvas_container.setTransform(transform)
 
         # Redraw lines
         self.emit(SignalCode.CANVAS_DO_DRAW_SIGNAL)
@@ -352,11 +368,11 @@ class CanvasWidget(BaseWidget):
         force_draw: bool = False,
         do_draw_layers: bool = None
     ):
-        if not self.view:
+        if not self.ui.canvas_container:
             return
         data = {
             'settings': self.settings,
-            'view_size': self.view.viewport().size(),
+            'view_size': self.ui.canvas_container.viewport().size(),
             'scene': self.scene,
             'line_group': self.line_group,
             'force_draw': force_draw,
@@ -498,14 +514,14 @@ class CanvasWidget(BaseWidget):
         if event.buttons() == Qt.MouseButton.MiddleButton:
             if self.last_pos:
                 delta = event.pos() - self.last_pos
-                self.view.horizontalScrollBar().setValue(self.view.horizontalScrollBar().value() - delta.x())
-                self.view.verticalScrollBar().setValue(self.view.verticalScrollBar().value() - delta.y())
+                self.ui.canvas_container.horizontalScrollBar().setValue(self.ui.canvas_container.horizontalScrollBar().value() - delta.x())
+                self.ui.canvas_container.verticalScrollBar().setValue(self.ui.canvas_container.verticalScrollBar().value() - delta.y())
             self.last_pos = event.pos()
             self.do_draw()
         original_mouse_event(event)
 
     def resizeEvent(self, event):
-        if self.view:
+        if self.ui.canvas_container:
             self.handle_resize_canvas()
         if self.scene:
             self.scene.resize()
@@ -516,22 +532,21 @@ class CanvasWidget(BaseWidget):
     def toggle_drag_mode(self):
         current_tool = self.settings["current_tool"]
         if current_tool is CanvasToolName.SELECTION:
-            self.view.setDragMode(QGraphicsView.DragMode.RubberBandDrag)
+            self.ui.canvas_container.setDragMode(QGraphicsView.DragMode.RubberBandDrag)
         else:
-            self.view.setDragMode(QGraphicsView.DragMode.NoDrag)
+            self.ui.canvas_container.setDragMode(QGraphicsView.DragMode.NoDrag)
 
     def showEvent(self, event):
         super().showEvent(event)
         self.scene = CustomScene(parent=self)
 
-        self.view = self.canvas_container
-        original_mouse_event = self.view.mouseMoveEvent
-        self.view.mouseMoveEvent = partial(self.handle_mouse_event, original_mouse_event)
+        original_mouse_event = self.ui.canvas_container.mouseMoveEvent
+        self.ui.canvas_container.mouseMoveEvent = partial(self.handle_mouse_event, original_mouse_event)
         self.toggle_drag_mode()
-        self.view_size = self.view.viewport().size()
-        self.view.setContentsMargins(0, 0, 0, 0)
+        self.ui.canvas_container_size = self.ui.canvas_container.viewport().size()
+        self.ui.canvas_container.setContentsMargins(0, 0, 0, 0)
         self.set_canvas_color()
-        self.view.setScene(self.scene)
+        self.ui.canvas_container.setScene(self.scene)
         self.do_draw(force_draw=True)
     
     def set_canvas_color(self):
@@ -609,7 +624,7 @@ class CanvasWidget(BaseWidget):
         )
 
     def set_scene_rect(self):
-        self.scene.setSceneRect(0, 0, self.view_size.width(), self.view_size.height())
+        self.scene.setSceneRect(0, 0, self.ui.canvas_container_size.width(), self.ui.canvas_container_size.height())
 
     def clear_lines(self):
         self.scene.removeItem(self.line_group)
@@ -678,7 +693,7 @@ class CanvasWidget(BaseWidget):
         if (self.drawing or not self.initialized) and not force_draw:
             return
         self.drawing = True
-        self.view_size = self.view.viewport().size()
+        self.ui.canvas_container_size = self.ui.canvas_container.viewport().size()
         self.set_scene_rect()
         self.draw_layers()
         self.draw_active_grid_area_container()
