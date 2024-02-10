@@ -1,5 +1,5 @@
 from PIL.ImageQt import QImage
-from PyQt6.QtCore import Qt, QPoint
+from PyQt6.QtCore import Qt, QPoint, QPointF
 from PyQt6.QtGui import QEnterEvent
 from PyQt6.QtGui import QPainterPath
 from PyQt6.QtGui import QPen, QPixmap, QPainter
@@ -23,7 +23,11 @@ class CustomScene(
         parent_size = parent.size()
 
         # Create the QImage with the size of the parent widget
-        self.image = QImage(parent_size.width(), parent_size.height(), QImage.Format.Format_ARGB32)
+        self.image = QImage(
+            parent_size.width(),
+            parent_size.height(),
+            QImage.Format.Format_ARGB32
+        )
         self.image.fill(Qt.GlobalColor.transparent)
         self.item = QGraphicsPixmapItem(QPixmap.fromImage(self.image))
         self.addItem(self.item)
@@ -36,14 +40,28 @@ class CustomScene(
         self.selection_start_pos = None
         self.selection_stop_pos = None
 
+    @property
+    def is_brush_or_eraser(self):
+        return self.settings["current_tool"] in (
+            CanvasToolName.BRUSH,
+            CanvasToolName.ERASER
+        )
+
     def clear_selection(self):
         self.selection_start_pos = None
         self.selection_stop_pos = None
     
     def resize(self):
         # only resize if the new size is larger than the existing image size
-        if self.image.width() < self.parent().size().width() or self.image.height() < self.parent().size().height():
-            new_image = QImage(self.parent().size().width(), self.parent().size().height(), QImage.Format.Format_ARGB32)
+        if (
+            self.image.width() < self.parent().size().width() or
+            self.image.height() < self.parent().size().height()
+        ):
+            new_image = QImage(
+                self.parent().size().width(),
+                self.parent().size().height(),
+                QImage.Format.Format_ARGB32
+            )
             new_image.fill(Qt.GlobalColor.transparent)
             painter = QPainter(new_image)
             painter.drawImage(0, 0, self.image)
@@ -51,27 +69,45 @@ class CustomScene(
             self.image = new_image
             self.item.setPixmap(QPixmap.fromImage(self.image))
 
-    def drawAt(self, position):
-        painter = QPainter(self.image)
-        brush_color = self.settings["brush_settings"]["primary_color"]
-        color = QColor(brush_color)
+    def drawAt(self, position: QPointF):
+        """
+        Draw a line from the last position to the current one
+        :param position:
+        :return:
+        """
         size = self.settings["brush_settings"]["size"]
+        brush_color = self.settings["brush_settings"]["primary_color"]
+
+        # Create a QPen
+        color = QColor(brush_color)
         pen = QPen(
             color,
             size,
             Qt.PenStyle.SolidLine,
             Qt.PenCapStyle.RoundCap
         )
+
+        # Create a QPainter
+        painter = QPainter(self.image)
         painter.setPen(pen)
 
         # Draw a line from the last position to the current one
         if self.last_pos is not None:
-            painter.drawLine(self.last_pos, position)
+            painter.drawLine(
+                self.last_pos,
+                position
+            )
         else:
-            painter.drawPoint(position)
+            painter.drawPoint(
+                position
+            )
 
+        # End the painter
         painter.end()
-        self.item.setPixmap(QPixmap.fromImage(self.image))
+
+        # Create a QPixmap from the image and set it to the QGraphicsPixmapItem
+        pixmap = QPixmap.fromImage(self.image)
+        self.item.setPixmap(pixmap)
     
     def wheelEvent(self, event):
         # Calculate the zoom factor
@@ -96,9 +132,20 @@ class CustomScene(
         self.emit(SignalCode.CANVAS_ZOOM_LEVEL_CHANGED)
 
     def eraseAt(self, position):
-        painter = QPainter(self.image)
-        painter.setPen(QPen(Qt.GlobalColor.white, self.settings["brush_settings"]["size"], Qt.PenStyle.SolidLine, Qt.PenCapStyle.RoundCap))
-        painter.setCompositionMode(QPainter.CompositionMode.CompositionMode_Clear)
+        painter = QPainter(
+            self.image
+        )
+        painter.setPen(
+            QPen(
+                Qt.GlobalColor.white,
+                self.settings["brush_settings"]["size"],
+                Qt.PenStyle.SolidLine,
+                Qt.PenCapStyle.RoundCap
+            )
+        )
+        painter.setCompositionMode(
+            QPainter.CompositionMode.CompositionMode_Clear
+        )
         
         # Create a QPainterPath
         path = QPainterPath()
@@ -108,7 +155,11 @@ class CustomScene(
             path.moveTo(self.last_pos)
             path.lineTo(position)
         else:
-            path.addEllipse(position, self.settings["brush_settings"]["size"]/2, self.settings["brush_settings"]["size"]/2)
+            path.addEllipse(
+                position,
+                self.settings["brush_settings"]["size"] / 2,
+                self.settings["brush_settings"]["size"] / 2
+            )
         
         # Draw the path
         painter.drawPath(path)
@@ -152,7 +203,7 @@ class CustomScene(
             self.handle_left_mouse_press(event)
 
         self.handle_cursor(event)
-        if self.settings["current_tool"] not in [CanvasToolName.BRUSH, CanvasToolName.ERASER]:
+        if not self.is_brush_or_eraser:
             super(CustomScene, self).mousePressEvent(event)
             return
 
@@ -170,7 +221,10 @@ class CustomScene(
         self.last_pos = None
 
     def handle_cursor(self, event):
-        self.emit(SignalCode.CANVAS_UPDATE_CURSOR, event)
+        self.emit(
+            SignalCode.CANVAS_UPDATE_CURSOR,
+            event
+        )
 
     def event(self, event):
         if type(event) == QEnterEvent:
@@ -179,7 +233,7 @@ class CustomScene(
 
     def mouseMoveEvent(self, event):
         self.handle_cursor(event)
-        if self.settings["current_tool"] not in [CanvasToolName.BRUSH, CanvasToolName.ERASER]:
+        if not self.is_brush_or_eraser:
             super(CustomScene, self).mouseMoveEvent(event)
             return
         
