@@ -282,8 +282,8 @@ class Ui_standard_image_widget(object):
         self.tabWidget.setTabText(self.tabWidget.indexOf(self.tab_6), _translate("standard_image_widget", "Stable Diffusion"))
         self.tabWidget.setTabToolTip(self.tabWidget.indexOf(self.tab_6), _translate("standard_image_widget", "Stable Diffusion settings"))
         self.tabWidget.setTabText(self.tabWidget.indexOf(self.tab_4), _translate("standard_image_widget", "LLM"))
-from airunner.widgets.canvas_plus.brushes_container import BrushesContainer
-from airunner.widgets.canvas_plus.canvas_plus_widget import CanvasPlusWidget
+from airunner.widgets.canvas.brushes_container import BrushesContainer
+from airunner.widgets.canvas.canvas_plus_widget import CanvasPlusWidget
 from airunner.widgets.controlnet_settings.controlnet_settings_widget import ControlNetSettingsWidget
 from airunner.widgets.embeddings.embeddings_container_widget import EmbeddingsContainerWidget
 from airunner.widgets.input_image.input_image_settings_widget import InputImageSettingsWidget
