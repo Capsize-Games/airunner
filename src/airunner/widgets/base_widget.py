@@ -7,11 +7,13 @@ from airunner.aihandler.logger import Logger
 from airunner.mediator_mixin import MediatorMixin
 from airunner.service_locator import ServiceLocator
 from airunner.utils import create_worker
+from airunner.windows.main.settings_mixin import SettingsMixin
 
 
 class BaseWidget(
     QWidget,
-    MediatorMixin
+    MediatorMixin,
+    SettingsMixin
 ):
     widget_class_ = None
     icons = ()
@@ -34,6 +36,7 @@ class BaseWidget(
     def __init__(self, *args, **kwargs):
         self.logger = Logger(prefix=self.__class__.__name__)
         MediatorMixin.__init__(self)
+        SettingsMixin.__init__(self)
         super().__init__(*args, **kwargs)
         if self.widget_class_:
             self.ui = self.widget_class_()
