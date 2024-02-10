@@ -127,32 +127,25 @@ class CustomScene(
         # Return the new position
         return QPoint(grid_x, grid_y)
 
-    def handle_left_mouse_press(self, event):
+    def handle_mouse_event(self, event, is_press_event):
         current_tool = self.settings["current_tool"]
         if current_tool is CanvasToolName.SELECTION:
             view = self.views()[0]
             pos = view.mapFromScene(event.scenePos())
             pos = self.snap_to_grid(pos)  # Snap position to grid
-            self.selection_stop_pos = None
-            self.selection_start_pos = QPoint(
-                pos.x(),
-                pos.y()
-            )
+            if is_press_event:
+                self.selection_stop_pos = None
+                self.selection_start_pos = QPoint(pos.x(), pos.y())
+            else:
+                self.selection_stop_pos = QPoint(pos.x(), pos.y())
             self.emit(SignalCode.CANVAS_DO_DRAW_SIGNAL, True)
             self.emit(SignalCode.APPLICATION_ACTIVE_GRID_AREA_UPDATED)
 
+    def handle_left_mouse_press(self, event):
+        self.handle_mouse_event(event, True)
+
     def handle_left_mouse_release(self, event):
-        current_tool = self.settings["current_tool"]
-        if current_tool is CanvasToolName.SELECTION:
-            view = self.views()[0]
-            pos = view.mapFromScene(event.scenePos())
-            pos = self.snap_to_grid(pos)  # Snap position to grid
-            self.selection_stop_pos = QPoint(
-                pos.x(),
-                pos.y()
-            )
-            self.emit(SignalCode.CANVAS_DO_DRAW_SIGNAL, True)
-            self.emit(SignalCode.APPLICATION_ACTIVE_GRID_AREA_UPDATED)
+        self.handle_mouse_event(event, False)
 
     def mousePressEvent(self, event):
         if event.button() == Qt.MouseButton.LeftButton:
