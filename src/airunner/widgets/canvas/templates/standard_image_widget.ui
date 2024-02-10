@@ -489,7 +489,7 @@
         <number>0</number>
        </property>
        <item row="0" column="0">
-        <widget class="CanvasPlusWidget" name="canvas_widget" native="true">
+        <widget class="CanvasWidget" name="canvas_widget" native="true">
          <property name="sizePolicy">
           <sizepolicy hsizetype="MinimumExpanding" vsizetype="MinimumExpanding">
            <horstretch>0</horstretch>
@@ -550,7 +550,7 @@
   <customwidget>
    <class>BrushesContainer</class>
    <extends>QWidget</extends>
-   <header>airunner/widgets/canvas_plus/brushes_container</header>
+   <header>airunner/widgets/canvas/brushes_container</header>
    <container>1</container>
   </customwidget>
   <customwidget>
@@ -566,9 +566,9 @@
    <container>1</container>
   </customwidget>
   <customwidget>
-   <class>CanvasPlusWidget</class>
+   <class>CanvasWidget</class>
    <extends>QWidget</extends>
-   <header>airunner/widgets/canvas_plus/canvas_plus_widget</header>
+   <header>airunner/widgets/canvas/canvas_widget</header>
    <container>1</container>
   </customwidget>
   <customwidget>
