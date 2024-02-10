@@ -1,4 +1,4 @@
-# Form implementation generated from reading ui file '/home/joe/Projects/imagetopixel/airunner/src/airunner/../../src/airunner/widgets/canvas_plus/templates/standard_image_widget.ui'
+# Form implementation generated from reading ui file '/home/joe/Projects/imagetopixel/airunner/src/airunner/../../src/airunner/widgets/canvas/templates/standard_image_widget.ui'
 #
 # Created by: PyQt6 UI code generator 6.6.1
 #
@@ -231,7 +231,7 @@ class Ui_standard_image_widget(object):
         self.gridLayout = QtWidgets.QGridLayout(self.layoutWidget3)
         self.gridLayout.setContentsMargins(0, 0, 9, 0)
         self.gridLayout.setObjectName("gridLayout")
-        self.canvas_widget = CanvasPlusWidget(parent=self.layoutWidget3)
+        self.canvas_widget = CanvasWidget(parent=self.layoutWidget3)
         sizePolicy = QtWidgets.QSizePolicy(QtWidgets.QSizePolicy.Policy.MinimumExpanding, QtWidgets.QSizePolicy.Policy.MinimumExpanding)
         sizePolicy.setHorizontalStretch(0)
         sizePolicy.setVerticalStretch(0)
@@ -283,7 +283,7 @@ class Ui_standard_image_widget(object):
         self.tabWidget.setTabToolTip(self.tabWidget.indexOf(self.tab_6), _translate("standard_image_widget", "Stable Diffusion settings"))
         self.tabWidget.setTabText(self.tabWidget.indexOf(self.tab_4), _translate("standard_image_widget", "LLM"))
 from airunner.widgets.canvas.brushes_container import BrushesContainer
-from airunner.widgets.canvas.canvas_plus_widget import CanvasPlusWidget
+from airunner.widgets.canvas.canvas_widget import CanvasWidget
 from airunner.widgets.controlnet_settings.controlnet_settings_widget import ControlNetSettingsWidget
 from airunner.widgets.embeddings.embeddings_container_widget import EmbeddingsContainerWidget
 from airunner.widgets.input_image.input_image_settings_widget import InputImageSettingsWidget
