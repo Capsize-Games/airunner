@@ -12,12 +12,6 @@ from airunner.utils import clear_memory
 class TransformerBaseHandler(BaseHandler):
     auto_class_ = None
 
-    @property
-    def do_load_model(self):
-        if self.model is None or self.current_model_path != self.model_path:
-            return True
-        return False
-
     def __init__(self, *args, **kwargs):
         super().__init__(*args, **kwargs)
         self.callback = None
@@ -65,6 +59,12 @@ class TransformerBaseHandler(BaseHandler):
         self._generator = None
         self.template = None
         self.image = None
+
+    @property
+    def do_load_model(self):
+        if self.model is None or self.current_model_path != self.model_path:
+            return True
+        return False
 
     def quantization_config(self):
         config = None
