@@ -31,6 +31,7 @@ class CustomScene(
         self.image.fill(Qt.GlobalColor.transparent)
         self.item = QGraphicsPixmapItem(QPixmap.fromImage(self.image))
         self.addItem(self.item)
+
         # self.item should always be on top
         self.item.setZValue(1)
 
