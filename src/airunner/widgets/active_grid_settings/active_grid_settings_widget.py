@@ -17,14 +17,19 @@ class ActiveGridSettingsWidget(BaseWidget):
         self.ui.fill_opacity_slider_widget.setProperty("current_value", settings["active_grid_settings"]["fill_opacity"])
         self.ui.border_opacity_slider_widget.initialize()
         self.ui.fill_opacity_slider_widget.initialize()
+        self.ui.active_grid_area_groupbox.blockSignals(True)
+        self.ui.active_grid_border_groupbox.blockSignals(True)
+        self.ui.active_grid_fill_groupbox.blockSignals(True)
         self.ui.active_grid_area_groupbox.setChecked(settings["active_grid_settings"]["enabled"])
         self.ui.active_grid_border_groupbox.setChecked(settings["active_grid_settings"]["render_border"])
         self.ui.active_grid_fill_groupbox.setChecked(settings["active_grid_settings"]["render_fill"])
+        self.ui.active_grid_area_groupbox.blockSignals(False)
+        self.ui.active_grid_border_groupbox.blockSignals(False)
+        self.ui.active_grid_fill_groupbox.blockSignals(False)
 
-        self.register(
-            SignalCode.APPLICATION_ACTIVE_GRID_AREA_UPDATED,
-            self.update_size
-        )
+        self.signal_handlers = {
+            SignalCode.APPLICATION_ACTIVE_GRID_AREA_UPDATED: self.update_size
+        }
 
     def update_size(self):
         settings = self.settings
