@@ -11,7 +11,7 @@ from PyQt6.QtWidgets import QMenu
 
 from airunner.enums import SignalCode
 from airunner.widgets.base_widget import BaseWidget
-from airunner.widgets.canvas_plus.templates.brushes_container_ui import Ui_brushes_container
+from airunner.widgets.canvas.templates.brushes_container_ui import Ui_brushes_container
 from airunner.widgets.image.image_widget import BrushImageWidget
 from airunner.widgets.qflowlayout.q_flow_layout import QFlowLayout
 

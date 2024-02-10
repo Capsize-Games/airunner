@@ -1026,7 +1026,7 @@ class Ui_MainWindow(object):
         self.actionReset_Settings_2.setText(_translate("MainWindow", "Reset Settings"))
 from airunner.widgets.active_grid_settings.active_grid_settings_widget import ActiveGridSettingsWidget
 from airunner.widgets.brush.brush_container_widget import BrushContainerWidget
-from airunner.widgets.canvas_plus.standard_image_widget import StandardImageWidget
+from airunner.widgets.canvas.standard_image_widget import StandardImageWidget
 from airunner.widgets.generator_form.generator_form_widget import GeneratorForm
 from airunner.widgets.image.image_panel_widget import ImagePanelWidget
 from airunner.widgets.layers.layer_container_widget import LayerContainerWidget
