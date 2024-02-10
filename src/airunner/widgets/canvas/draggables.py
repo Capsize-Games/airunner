@@ -75,14 +75,6 @@ class ActiveGridArea(DraggablePixmap):
             active_grid_settings["height"]
         )
 
-    def setPos(self, x, y):
-        super().setPos(x, y)
-        settings = ServiceLocator.get("get_settings")()
-        active_grid_settings = settings["active_grid_settings"]
-        active_grid_settings["pos_x"] = x
-        active_grid_settings["pos_y"] = y
-        self.settings = settings
-
     def __init__(self):
         self.update_draggable_settings()
         super().__init__(self.pixmap)

@@ -9,7 +9,7 @@ from PIL import Image
 
 from airunner.enums import SignalCode, ServiceCode
 from airunner.service_locator import ServiceLocator
-from airunner.widgets.canvas_plus.draggables import DraggablePixmap
+from airunner.widgets.canvas.draggables import DraggablePixmap
 
 
 class LayerMixin:

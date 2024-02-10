@@ -18,14 +18,14 @@ from airunner.service_locator import ServiceLocator
 from airunner.settings import AVAILABLE_IMAGE_FILTERS
 from airunner.utils import apply_opacity_to_image
 from airunner.widgets.base_widget import BaseWidget
-from airunner.widgets.canvas_plus.custom_scene import CustomScene
-from airunner.widgets.canvas_plus.draggables import DraggablePixmap, ActiveGridArea
-from airunner.widgets.canvas_plus.templates.canvas_plus_ui import Ui_canvas
+from airunner.widgets.canvas.custom_scene import CustomScene
+from airunner.widgets.canvas.draggables import DraggablePixmap, ActiveGridArea
+from airunner.widgets.canvas.templates.canvas_ui import Ui_canvas
 from airunner.workers.canvas_resize_worker import CanvasResizeWorker
 from airunner.workers.image_data_worker import ImageDataWorker
 
 
-class CanvasPlusWidget(BaseWidget):
+class CanvasWidget(BaseWidget):
     """
     Widget responsible for multiple functionalities:
 
