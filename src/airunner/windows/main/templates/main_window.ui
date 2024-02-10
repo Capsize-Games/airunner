@@ -2099,7 +2099,7 @@
   <customwidget>
    <class>StandardImageWidget</class>
    <extends>QWidget</extends>
-   <header>airunner/widgets/canvas_plus/standard_image_widget</header>
+   <header>airunner/widgets/canvas/standard_image_widget</header>
    <container>1</container>
   </customwidget>
  </customwidgets>
