@@ -35,7 +35,7 @@ class Ui_canvas(object):
         self.central_widget.setObjectName("central_widget")
         self.gridLayout_2 = QtWidgets.QGridLayout(self.central_widget)
         self.gridLayout_2.setObjectName("gridLayout_2")
-        self.canvas_container = QtWidgets.QGraphicsView(parent=self.central_widget)
+        self.canvas_container = CustomGraphicsView(parent=self.central_widget)
         self.canvas_container.setVerticalScrollBarPolicy(QtCore.Qt.ScrollBarPolicy.ScrollBarAlwaysOff)
         self.canvas_container.setHorizontalScrollBarPolicy(QtCore.Qt.ScrollBarPolicy.ScrollBarAlwaysOff)
         self.canvas_container.setObjectName("canvas_container")
@@ -62,3 +62,4 @@ class Ui_canvas(object):
         _translate = QtCore.QCoreApplication.translate
         canvas.setWindowTitle(_translate("canvas", "Form"))
         self.canvas_position.setText(_translate("canvas", "TextLabel"))
+from airunner.widgets.canvas.custom_view import CustomGraphicsView

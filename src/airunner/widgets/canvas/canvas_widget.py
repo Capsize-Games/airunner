@@ -6,7 +6,7 @@ from functools import partial
 from PIL import Image, ImageGrab, ImageFilter, UnidentifiedImageError
 from PIL.ImageQt import ImageQt, QImage
 from PyQt6 import QtWidgets, QtCore
-from PyQt6.QtCore import Qt, QPoint, QRect
+from PyQt6.QtCore import Qt, QPoint, QRect, QPointF
 from PyQt6.QtGui import QBrush, QColor, QPixmap, QTransform, QMouseEvent, QPainterPath
 from PyQt6.QtWidgets import QGraphicsItemGroup, QGraphicsItem, QGraphicsView
 from PyQt6.QtWidgets import QGraphicsPixmapItem
@@ -19,6 +19,7 @@ from airunner.settings import AVAILABLE_IMAGE_FILTERS
 from airunner.utils import apply_opacity_to_image
 from airunner.widgets.base_widget import BaseWidget
 from airunner.widgets.canvas.custom_scene import CustomScene
+from airunner.widgets.canvas.custom_view import CustomGraphicsView
 from airunner.widgets.canvas.draggables import DraggablePixmap, ActiveGridArea
 from airunner.widgets.canvas.templates.canvas_ui import Ui_canvas
 from airunner.workers.canvas_resize_worker import CanvasResizeWorker
@@ -40,7 +41,6 @@ class CanvasWidget(BaseWidget):
         super().__init__(*args, **kwargs)
         self._startPos = QPoint(0, 0)
         self.scene = None
-        self.ui.canvas_container = None
         self.ui.canvas_container_size = None
         self.layers = {}
         self.images = {}
@@ -63,7 +63,7 @@ class CanvasWidget(BaseWidget):
         self.previewing_filter = False
         self.drag_pos: QPoint = None
         self.do_draw_layers = True
-        
+
         self._grid_settings = {}
         self._canvas_settings = {}
         self._active_grid_settings = {}
@@ -71,6 +71,7 @@ class CanvasWidget(BaseWidget):
 
         self.ui.central_widget.resizeEvent = self.resizeEvent
         self.ui.canvas_container.resizeEvent = self.window_resized
+        #self.ui.canvas_container.mouseMoveEvent = self.canvas_mouseMoveEvent
 
         self.image_data_worker = None
         self.canvas_resize_worker = None
@@ -113,6 +114,25 @@ class CanvasWidget(BaseWidget):
             "image_data_worker": ImageDataWorker,
             "canvas_resize_worker": CanvasResizeWorker
         }
+
+    # def canvas_mouseMoveEvent(self, event):
+    #     # Calculate the grid cell coordinates
+    #     cell_size = self.settings["grid_settings"]["cell_size"]
+    #     grid_x = round(event.pos().x() / cell_size) * cell_size
+    #     grid_y = round(event.pos().y() / cell_size) * cell_size
+    #
+    #     # Create a new event with the adjusted position
+    #     new_event = QMouseEvent(
+    #         event.type(),
+    #         QPointF(grid_x, grid_y),  # Convert QPoint to QPointF
+    #         event.button(),
+    #         event.buttons(),
+    #         event.modifiers()
+    #     )
+    #
+    #     # Pass the new event to the base class's method
+    #     # call super on self.ui.canvas_container
+    #     super(self.ui.canvas_container.__class__, self.ui.canvas_container).mouseMoveEvent(new_event)
 
     @property
     def image_pivot_point(self):
