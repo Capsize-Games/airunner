@@ -6,8 +6,8 @@
    <rect>
     <x>0</x>
     <y>0</y>
-    <width>371</width>
-    <height>90</height>
+    <width>400</width>
+    <height>168</height>
    </rect>
   </property>
   <property name="windowTitle">
@@ -41,77 +41,18 @@
       <bool>false</bool>
      </property>
      <layout class="QGridLayout" name="gridLayout">
-      <item row="1" column="0">
-       <widget class="QPushButton" name="to_prompt_button">
-        <property name="minimumSize">
-         <size>
-          <width>90</width>
-          <height>0</height>
-         </size>
-        </property>
+      <item row="2" column="0">
+       <widget class="QLineEdit" name="trigger_word_edit">
         <property name="font">
          <font>
-          <pointsize>10</pointsize>
+          <pointsize>9</pointsize>
          </font>
         </property>
-        <property name="cursor">
-         <cursorShape>PointingHandCursor</cursorShape>
+        <property name="toolTip">
+         <string>&lt;html&gt;&lt;head/&gt;&lt;body&gt;&lt;p&gt;Some LoRA require a trigger word to activate.&lt;/p&gt;&lt;p&gt;Make a note here for your records.&lt;/p&gt;&lt;/body&gt;&lt;/html&gt;</string>
         </property>
-        <property name="text">
-         <string>Prompt</string>
-        </property>
-        <property name="icon">
-         <iconset theme="edit-paste"/>
-        </property>
-        <property name="flat">
-         <bool>false</bool>
-        </property>
-       </widget>
-      </item>
-      <item row="1" column="1">
-       <widget class="QPushButton" name="to_negative_prompt_button">
-        <property name="minimumSize">
-         <size>
-          <width>90</width>
-          <height>0</height>
-         </size>
-        </property>
-        <property name="font">
-         <font>
-          <pointsize>10</pointsize>
-         </font>
-        </property>
-        <property name="cursor">
-         <cursorShape>PointingHandCursor</cursorShape>
-        </property>
-        <property name="text">
-         <string>Negative</string>
-        </property>
-        <property name="icon">
-         <iconset theme="edit-paste"/>
-        </property>
-        <property name="flat">
-         <bool>false</bool>
-        </property>
-       </widget>
-      </item>
-      <item row="0" column="0" colspan="2">
-       <widget class="QLabel" name="tags">
-        <property name="text">
-         <string>Tags</string>
-        </property>
-       </widget>
-      </item>
-      <item row="1" column="2">
-       <widget class="QPushButton" name="copy_button">
-        <property name="cursor">
-         <cursorShape>PointingHandCursor</cursorShape>
-        </property>
-        <property name="text">
-         <string/>
-        </property>
-        <property name="icon">
-         <iconset theme="edit-copy"/>
+        <property name="placeholderText">
+         <string>Trigger words (comma separated)</string>
         </property>
        </widget>
       </item>
@@ -123,38 +64,6 @@
  <resources/>
  <connections>
   <connection>
-   <sender>to_prompt_button</sender>
-   <signal>clicked()</signal>
-   <receiver>embedding</receiver>
-   <slot>action_clicked_button_to_prompt()</slot>
-   <hints>
-    <hint type="sourcelabel">
-     <x>97</x>
-     <y>77</y>
-    </hint>
-    <hint type="destinationlabel">
-     <x>43</x>
-     <y>0</y>
-    </hint>
-   </hints>
-  </connection>
-  <connection>
-   <sender>to_negative_prompt_button</sender>
-   <signal>clicked()</signal>
-   <receiver>embedding</receiver>
-   <slot>action_clicked_button_to_negative_prompt()</slot>
-   <hints>
-    <hint type="sourcelabel">
-     <x>240</x>
-     <y>77</y>
-    </hint>
-    <hint type="destinationlabel">
-     <x>199</x>
-     <y>0</y>
-    </hint>
-   </hints>
-  </connection>
-  <connection>
    <sender>enabledCheckbox</sender>
    <signal>toggled(bool)</signal>
    <receiver>embedding</receiver>
@@ -162,27 +71,27 @@
    <hints>
     <hint type="sourcelabel">
      <x>185</x>
-     <y>70</y>
+     <y>68</y>
     </hint>
     <hint type="destinationlabel">
      <x>185</x>
-     <y>70</y>
+     <y>68</y>
     </hint>
    </hints>
   </connection>
   <connection>
-   <sender>copy_button</sender>
-   <signal>clicked()</signal>
+   <sender>trigger_word_edit</sender>
+   <signal>textChanged(QString)</signal>
    <receiver>embedding</receiver>
-   <slot>action_clicked_copy()</slot>
+   <slot>action_changed_trigger_word(QString)</slot>
    <hints>
     <hint type="sourcelabel">
-     <x>298</x>
-     <y>61</y>
+     <x>162</x>
+     <y>93</y>
     </hint>
     <hint type="destinationlabel">
-     <x>278</x>
-     <y>-9</y>
+     <x>106</x>
+     <y>-13</y>
     </hint>
    </hints>
   </connection>
@@ -192,5 +101,6 @@
   <slot>action_clicked_button_to_negative_prompt()</slot>
   <slot>action_toggled_embedding(bool)</slot>
   <slot>action_clicked_copy()</slot>
+  <slot>action_changed_trigger_word(QString)</slot>
  </slots>
 </ui>
