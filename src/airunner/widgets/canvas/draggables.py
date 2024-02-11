@@ -32,9 +32,10 @@ class DraggablePixmap(
     def mouseMoveEvent(self, event):
         settings = ServiceLocator.get("get_settings")()
         tool = settings["current_tool"]
+        if tool is not CanvasToolName.ACTIVE_GRID_AREA:
+            return
         super().mouseMoveEvent(event)
-        if tool is CanvasToolName.ACTIVE_GRID_AREA:
-            self.snap_to_grid()
+        self.snap_to_grid()
 
     def mouseReleaseEvent(self, event):
         settings = ServiceLocator.get("get_settings")()
