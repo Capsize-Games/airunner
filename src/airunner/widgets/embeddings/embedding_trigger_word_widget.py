@@ -1,11 +1,11 @@
 from airunner.enums import SignalCode
 from airunner.widgets.base_widget import BaseWidget
-from airunner.widgets.lora.templates.lora_trigger_word_ui import Ui_lora_trigger_word
+from airunner.widgets.embeddings.templates.embedding_trigger_word_ui import Ui_embedding_trigger_word
 from PyQt6.QtWidgets import QApplication
 
 
-class LoraTriggerWordWidget(BaseWidget):
-    widget_class_ = Ui_lora_trigger_word
+class EmbeddingTriggerWordWidget(BaseWidget):
+    widget_class_ = Ui_embedding_trigger_word
     trigger_word = None
 
     def __init__(self, *args, **kwargs):
@@ -14,18 +14,20 @@ class LoraTriggerWordWidget(BaseWidget):
         self.ui.trigger_word.setText(self.trigger_word)
 
     def action_click_button_to_prompt(self):
+        val = f"{self.settings['generator_settings']['prompt']} {self.trigger_word}"
         settings = self.settings
-        settings["generator_settings"]["prompt"] = f"{self.settings['generator_settings']['prompt']} {self.trigger_word}"
+        settings["generator_settings"]["prompt"] = val
         self.settings = settings
         self.emit(SignalCode.GENERATOR_FORM_UPDATE_VALUES_SIGNAL)
 
     def action_click_button_to_negative_prompt(self):
+        val = f"{self.settings['generator_settings']['negative_prompt']} {self.trigger_word}"
         settings = self.settings
-        settings["generator_settings"]["negative_prompt"] = f"{self.settings['generator_settings']['negative_prompt']} {self.trigger_word}"
+        settings["generator_settings"]["negative_prompt"] = val
         self.settings = settings
         self.emit(SignalCode.GENERATOR_FORM_UPDATE_VALUES_SIGNAL)
-    
+
     def action_click_button_copy(self):
-        # copy trigger word to clipboard
+        # copy embedding name to clipboard
         clipboard = QApplication.clipboard()
-        clipboard.setText(self.trigger_word)
+        clipboard.setText(self.embedding["name"])
