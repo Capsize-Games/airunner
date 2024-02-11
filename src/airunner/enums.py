@@ -36,6 +36,7 @@ class ServiceCode(Enum):
     GET_EMBEDDINGS = "get_embeddings"
     DELETE_MISSING_EMBEDDINGS = "delete_missing_embeddings"
     SCAN_FOR_EMBEDDINGS = "scan_for_embeddings"
+    UPDATE_EMBEDDING = "update_embedding"
     GET_SETTINGS = "get_settings"
     SET_SETTINGS = "set_settings"
     GET_PIPELINE_CLASSNAME = "get_pipeline_classname"
@@ -92,10 +93,16 @@ class SignalCode(Enum):
     CANVAS_PREVIEW_FILTER_SIGNAL = "canvas_preview_filter_signal"
     CANVAS_CANCEL_FILTER_SIGNAL = "canvas_cancel_filter_signal"
     CANVAS_APPLY_FILTER_SIGNAL = "canvas_apply_filter_signal"
-
     CLEAR_MEMORY_SIGNAL = "clear_memory_signal"
     CONTROLNET_IMAGE_GENERATED_SIGNAL = "controlnet_image_generated_signal"
+
     EMBEDDING_LOAD_FAILED_SIGNAL = "embedding_load_failed_signal"
+    EMBEDDING_UPDATE_SIGNAL = "update_embedding_signal"
+    EMBEDDING_ADD_SIGNAL = "add_embedding_signal"
+    EMBEDDING_SCAN_SIGNAL = "scan_for_embeddings_signal"
+    EMBEDDING_DELETE_MISSING_SIGNAL = "delete_missing_embeddings_signal"
+    EMBEDDING_GET_ALL_SIGNAL = "get_all_embeddings"
+    EMBEDDING_GET_ALL_RESULTS_SIGNAL = "get_all_embeddings_results"
 
     ENGINE_CANCEL_SIGNAL = "engine_cancel_signal"
     ENGINE_STOP_PROCESSING_QUEUE_SIGNAL = "engine_stop_processing_queue_signal"
@@ -103,6 +110,8 @@ class SignalCode(Enum):
     ENGINE_DO_RESPONSE_SIGNAL = "engine_do_response_signal"
     ENGINE_DO_REQUEST_SIGNAL = "engine_do_request_signal"
     ENGINE_RESPONSE_WORKER_RESPONSE_SIGNAL = "EngineResponseWorker_response_signal"
+
+    GENERATOR_FORM_UPDATE_VALUES_SIGNAL = "generator_form_update_values"
 
     LAYER_SWITCH_SIGNAL = "switch_layer_signal"
     LAYER_ADD_SIGNAL = "add_layer_signal"

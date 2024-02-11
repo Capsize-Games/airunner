@@ -5,15 +5,26 @@ from airunner.widgets.lora.templates.lora_ui import Ui_lora
 
 
 class LoraWidget(BaseWidget):
+    """
+    This class represents a single lora.
+    It is responsible for displaying the lora's name, trigger words,
+    and active status.
+    """
     widget_class_ = Ui_lora
+
     def __init__(self, *args, **kwargs):
         self.lora = kwargs.pop("lora", None)
         super().__init__(*args, **kwargs)
         name = self.lora["name"]
         enabled = self.lora["enabled"]
+        trigger_word = self.lora["trigger_word"]
+        self.ui.enabledCheckbox.blockSignals(True)
+        self.ui.trigger_word_edit.blockSignals(True)
         self.ui.enabledCheckbox.setTitle(name)
         self.ui.enabledCheckbox.setChecked(enabled)
-        self.ui.trigger_word_edit.setText(self.lora["trigger_word"])
+        self.ui.trigger_word_edit.setText(trigger_word)
+        self.ui.enabledCheckbox.blockSignals(False)
+        self.ui.trigger_word_edit.blockSignals(False)
         self.create_trigger_word_widgets(self.lora)
 
     def create_trigger_word_widgets(self, lora):
