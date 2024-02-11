@@ -1,17 +1,16 @@
 import os
 
-from airunner.enums import ServiceCode
+from airunner.enums import ServiceCode, SignalCode
 from airunner.service_locator import ServiceLocator
 
 
 class EmbeddingMixin:
     def __init__(self):
-        self.settings = None
-        self.settings = None
-        self.settings = None
-        ServiceLocator.register(ServiceCode.GET_EMBEDDINGS, self.get_embeddings)
-        ServiceLocator.register(ServiceCode.DELETE_MISSING_EMBEDDINGS, self.delete_missing_embeddings)
-        ServiceLocator.register(ServiceCode.SCAN_FOR_EMBEDDINGS, self.scan_for_embeddings)
+        self.register(SignalCode.EMBEDDING_UPDATE_SIGNAL, self.update_embedding)
+        self.register(SignalCode.EMBEDDING_ADD_SIGNAL, self.add_embedding)
+        self.register(SignalCode.EMBEDDING_SCAN_SIGNAL, self.scan_for_embeddings)
+        self.register(SignalCode.EMBEDDING_DELETE_MISSING_SIGNAL, self.delete_missing_embeddings)
+        self.register(SignalCode.EMBEDDING_GET_ALL_SIGNAL, self.get_embeddings)
 
     def add_embedding(self, params):
         settings = self.settings
@@ -30,6 +29,7 @@ class EmbeddingMixin:
             "tags": params.get("tags", ""),
             "active": params.get("active", True),
             "version": params.get("version", "SD 1.5"),
+            'trigger_word': params.get("trigger_word", ""),
         }
         settings["embeddings"].append(embedding)
         self.settings = settings
@@ -51,6 +51,10 @@ class EmbeddingMixin:
                 continue
             if name_filter in embedding["name"]:
                 embeddings.append(embedding)
+        self.emit(
+            SignalCode.EMBEDDING_GET_ALL_RESULTS_SIGNAL,
+            embeddings
+        )
         return embeddings
 
     def delete_missing_embeddings(self):
@@ -80,7 +84,11 @@ class EmbeddingMixin:
                             embedding = {
                                 "name": name,
                                 "path": entry.path,
-                                "version": version
+                                "version": version,
+                                "tags": "",
+                                "active": True,
+                                "trigger_word": ""
                             }
                             self.add_embedding(embedding)
         self.delete_missing_embeddings()
+        self.get_embeddings()

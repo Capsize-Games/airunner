@@ -1,6 +1,6 @@
 from PyQt6.QtWidgets import QWidget, QSizePolicy
 
-from airunner.enums import SignalCode, ServiceCode
+from airunner.enums import SignalCode
 from airunner.widgets.base_widget import BaseWidget
 from airunner.widgets.embeddings.embedding_widget import EmbeddingWidget
 from airunner.widgets.embeddings.templates.embeddings_container_ui import Ui_embeddings_container
@@ -17,7 +17,10 @@ class EmbeddingsContainerWidget(BaseWidget):
     def __init__(self, *args, **kwargs):
         super().__init__(*args, **kwargs)
         self.register(SignalCode.EMBEDDING_LOAD_FAILED_SIGNAL, self.on_embedding_load_failed_signal)
-
+        self.register(
+            SignalCode.EMBEDDING_GET_ALL_RESULTS_SIGNAL,
+            self.on_get_all_embeddings_signal
+        )
         self.scan_for_embeddings()
 
     def disable_embedding(self, name, model_name):
@@ -52,10 +55,14 @@ class EmbeddingsContainerWidget(BaseWidget):
         self.handle_embedding_load_failed(response["message"])
 
     def load_embeddings(self):
+        self.emit(
+            SignalCode.EMBEDDING_GET_ALL_SIGNAL,
+            self.search_filter
+        )
+
+    def on_get_all_embeddings_signal(self, embeddings: dict):
         self.clear_embedding_widgets()
-        
-        embeddings = self.get_service(ServiceCode.GET_EMBEDDINGS)(self.search_filter)
-        
+
         for embedding in embeddings:
             self.add_embedding(embedding)
         
@@ -73,10 +80,10 @@ class EmbeddingsContainerWidget(BaseWidget):
         self.scan_for_embeddings()
     
     def check_saved_embeddings(self):
-        self.get_service(ServiceCode.DELETE_MISSING_EMBEDDINGS)()
+        self.emit(SignalCode.EMBEDDING_DELETE_MISSING_SIGNAL)
 
     def scan_for_embeddings(self):
-        self.get_service(ServiceCode.SCAN_FOR_EMBEDDINGS)()
+        self.emit(SignalCode.EMBEDDING_SCAN_SIGNAL)
         self.load_embeddings()
 
     def toggle_all_toggled(self, checked):
