@@ -12,7 +12,7 @@ from PyQt6 import QtCore, QtGui, QtWidgets
 class Ui_embedding(object):
     def setupUi(self, embedding):
         embedding.setObjectName("embedding")
-        embedding.resize(371, 90)
+        embedding.resize(400, 168)
         self.gridLayout_2 = QtWidgets.QGridLayout(embedding)
         self.gridLayout_2.setContentsMargins(0, 0, 0, 0)
         self.gridLayout_2.setSpacing(0)
@@ -23,51 +23,22 @@ class Ui_embedding(object):
         self.enabledCheckbox.setObjectName("enabledCheckbox")
         self.gridLayout = QtWidgets.QGridLayout(self.enabledCheckbox)
         self.gridLayout.setObjectName("gridLayout")
-        self.to_prompt_button = QtWidgets.QPushButton(parent=self.enabledCheckbox)
-        self.to_prompt_button.setMinimumSize(QtCore.QSize(90, 0))
+        self.trigger_word_edit = QtWidgets.QLineEdit(parent=self.enabledCheckbox)
         font = QtGui.QFont()
-        font.setPointSize(10)
-        self.to_prompt_button.setFont(font)
-        self.to_prompt_button.setCursor(QtGui.QCursor(QtCore.Qt.CursorShape.PointingHandCursor))
-        icon = QtGui.QIcon.fromTheme("edit-paste")
-        self.to_prompt_button.setIcon(icon)
-        self.to_prompt_button.setFlat(False)
-        self.to_prompt_button.setObjectName("to_prompt_button")
-        self.gridLayout.addWidget(self.to_prompt_button, 1, 0, 1, 1)
-        self.to_negative_prompt_button = QtWidgets.QPushButton(parent=self.enabledCheckbox)
-        self.to_negative_prompt_button.setMinimumSize(QtCore.QSize(90, 0))
-        font = QtGui.QFont()
-        font.setPointSize(10)
-        self.to_negative_prompt_button.setFont(font)
-        self.to_negative_prompt_button.setCursor(QtGui.QCursor(QtCore.Qt.CursorShape.PointingHandCursor))
-        icon = QtGui.QIcon.fromTheme("edit-paste")
-        self.to_negative_prompt_button.setIcon(icon)
-        self.to_negative_prompt_button.setFlat(False)
-        self.to_negative_prompt_button.setObjectName("to_negative_prompt_button")
-        self.gridLayout.addWidget(self.to_negative_prompt_button, 1, 1, 1, 1)
-        self.tags = QtWidgets.QLabel(parent=self.enabledCheckbox)
-        self.tags.setObjectName("tags")
-        self.gridLayout.addWidget(self.tags, 0, 0, 1, 2)
-        self.copy_button = QtWidgets.QPushButton(parent=self.enabledCheckbox)
-        self.copy_button.setCursor(QtGui.QCursor(QtCore.Qt.CursorShape.PointingHandCursor))
-        self.copy_button.setText("")
-        icon = QtGui.QIcon.fromTheme("edit-copy")
-        self.copy_button.setIcon(icon)
-        self.copy_button.setObjectName("copy_button")
-        self.gridLayout.addWidget(self.copy_button, 1, 2, 1, 1)
+        font.setPointSize(9)
+        self.trigger_word_edit.setFont(font)
+        self.trigger_word_edit.setObjectName("trigger_word_edit")
+        self.gridLayout.addWidget(self.trigger_word_edit, 2, 0, 1, 1)
         self.gridLayout_2.addWidget(self.enabledCheckbox, 0, 0, 1, 2)
 
         self.retranslateUi(embedding)
-        self.to_prompt_button.clicked.connect(embedding.action_clicked_button_to_prompt) # type: ignore
-        self.to_negative_prompt_button.clicked.connect(embedding.action_clicked_button_to_negative_prompt) # type: ignore
         self.enabledCheckbox.toggled['bool'].connect(embedding.action_toggled_embedding) # type: ignore
-        self.copy_button.clicked.connect(embedding.action_clicked_copy) # type: ignore
+        self.trigger_word_edit.textChanged['QString'].connect(embedding.action_changed_trigger_word) # type: ignore
         QtCore.QMetaObject.connectSlotsByName(embedding)
 
     def retranslateUi(self, embedding):
         _translate = QtCore.QCoreApplication.translate
         embedding.setWindowTitle(_translate("embedding", "Form"))
         self.enabledCheckbox.setTitle(_translate("embedding", "Embedding name here"))
-        self.to_prompt_button.setText(_translate("embedding", "Prompt"))
-        self.to_negative_prompt_button.setText(_translate("embedding", "Negative"))
-        self.tags.setText(_translate("embedding", "Tags"))
+        self.trigger_word_edit.setToolTip(_translate("embedding", "<html><head/><body><p>Some LoRA require a trigger word to activate.</p><p>Make a note here for your records.</p></body></html>"))
+        self.trigger_word_edit.setPlaceholderText(_translate("embedding", "Trigger words (comma separated)"))
