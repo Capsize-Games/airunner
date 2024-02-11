@@ -114,6 +114,7 @@ class GeneratorForm(BaseWidget):
         self.register(SignalCode.SD_GENERATE_IMAGE_SIGNAL, self.on_generate_image_signal)
         self.register(SignalCode.APPLICATION_STOP_SD_PROGRESS_BAR_SIGNAL, self.on_stop_image_generator_progress_bar_signal)
         self.register(SignalCode.SD_PROGRESS_SIGNAL, self.on_progress_signal)
+        self.register(SignalCode.GENERATOR_FORM_UPDATE_VALUES_SIGNAL, self.set_form_values)
 
     def activate_ai_mode(self):
         ai_mode = self.settings.get("ai_mode", False)
@@ -400,7 +401,7 @@ class GeneratorForm(BaseWidget):
         super().showEvent(event)
         self.set_form_values()
         self.initialized = True
-    
+
     def set_form_values(self):
         self.ui.prompt.blockSignals(True)
         self.ui.negative_prompt.blockSignals(True)
