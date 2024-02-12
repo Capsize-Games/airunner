@@ -435,7 +435,9 @@ class CanvasWidget(BaseWidget):
     def set_canvas_color(self):
         if not self.scene:
             return
-        self.scene.setBackgroundBrush(QBrush(QColor(self.settings["grid_settings"]["canvas_color"])))
+        color = QColor(self.settings["grid_settings"]["canvas_color"])
+        brush = QBrush(color)
+        self.scene.setBackgroundBrush(brush)
 
     def add_image_to_current_layer(self,value):
         self.logger.info("Adding image to current layer")
@@ -475,7 +477,11 @@ class CanvasWidget(BaseWidget):
             )
 
             if not layer["visible"]:
-                if index in self.pixmaps and isinstance(self.pixmaps[index], QGraphicsItem) and self.pixmaps[index].scene() == self.scene:
+                if (
+                    index in self.pixmaps and
+                    isinstance(self.pixmaps[index], QGraphicsItem) and
+                    self.pixmaps[index].scene() == self.scene
+                ):
                     self.scene.removeItem(self.pixmaps[index])
             else:
                 # If there's an existing pixmap in the layer, remove it from the scene
@@ -495,7 +501,12 @@ class CanvasWidget(BaseWidget):
             continue
 
     def set_scene_rect(self):
-        self.scene.setSceneRect(0, 0, self.ui.canvas_container_size.width(), self.ui.canvas_container_size.height())
+        self.scene.setSceneRect(
+            0,
+            0,
+            self.ui.canvas_container_size.width(),
+            self.ui.canvas_container_size.height()
+        )
 
     def clear_lines(self):
         self.scene.removeItem(self.line_group)
