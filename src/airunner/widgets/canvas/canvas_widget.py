@@ -273,11 +273,11 @@ class CanvasWidget(BaseWidget):
             )
 
     def on_application_settings_changed_signal(self):
-        grid_settings_changed = self.grid_settings_changed()
-        active_grid_settings_changed = self.active_grid_settings_changed()
-        canvas_settings_changed = self.canvas_settings_changed()
-
-        if grid_settings_changed or active_grid_settings_changed or canvas_settings_changed:
+        if (
+            self.grid_settings_changed() or
+            self.active_grid_settings_changed() or
+            self.canvas_settings_changed()
+        ):
             self.do_resize_canvas(force_draw=True)
 
     def on_main_window_loaded_signal(self):
@@ -396,8 +396,12 @@ class CanvasWidget(BaseWidget):
         if event.buttons() == Qt.MouseButton.MiddleButton:
             if self.last_pos:
                 delta = event.pos() - self.last_pos
-                self.ui.canvas_container.horizontalScrollBar().setValue(self.ui.canvas_container.horizontalScrollBar().value() - delta.x())
-                self.ui.canvas_container.verticalScrollBar().setValue(self.ui.canvas_container.verticalScrollBar().value() - delta.y())
+                horizontal_value = self.ui.canvas_container.horizontalScrollBar().value()
+                vertical_value = self.ui.canvas_container.verticalScrollBar().value()
+                horizontal_value -= delta.x()
+                vertical_value -= delta.y()
+                self.ui.canvas_container.horizontalScrollBar().setValue(horizontal_value)
+                self.ui.canvas_container.verticalScrollBar().setValue(vertical_value)
             self.last_pos = event.pos()
             self.do_draw()
         original_mouse_event(event)
