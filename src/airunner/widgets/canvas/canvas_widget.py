@@ -639,7 +639,6 @@ class CanvasWidget(BaseWidget):
         new_image_a = Image.new("RGBA", new_dimensions, (0, 0, 0, 0))
         new_image_b = Image.new("RGBA", new_dimensions, (0, 0, 0, 0))
 
-        existing_image_pos = [0, 0]
         image_root_point = QPoint(root_point.x(), root_point.y())
         image_pivot_point = QPoint(pivot_point.x(), pivot_point.y())
 
