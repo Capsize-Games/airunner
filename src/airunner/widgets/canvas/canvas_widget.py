@@ -10,7 +10,7 @@ from PyQt6.QtGui import QBrush, QColor, QPixmap, QTransform
 from PyQt6.QtWidgets import QGraphicsItemGroup, QGraphicsItem, QGraphicsView
 
 from airunner.cursors.circle_brush import CircleCursor
-from airunner.enums import SignalCode, ServiceCode, CanvasToolName
+from airunner.enums import SignalCode, ServiceCode, CanvasToolName, GeneratorSection
 from airunner.service_locator import ServiceLocator
 from airunner.settings import AVAILABLE_IMAGE_FILTERS
 from airunner.utils import apply_opacity_to_image
@@ -21,6 +21,7 @@ from airunner.widgets.canvas.draggables import DraggablePixmap, ActiveGridArea
 from airunner.widgets.canvas.grid_handler import GridHandler
 from airunner.widgets.canvas.image_handler import ImageHandler
 from airunner.widgets.canvas.templates.canvas_ui import Ui_canvas
+from airunner.widgets.canvas.zoom_handler import ZoomHandler
 from airunner.workers.canvas_resize_worker import CanvasResizeWorker
 from airunner.workers.image_data_worker import ImageDataWorker
 
@@ -112,6 +113,7 @@ class CanvasWidget(BaseWidget):
         self.image_handler = ImageHandler()
         self.grid_handler = GridHandler()
         self.clipboard_handler = ClipboardHandler()
+        self.zoom_handler = ZoomHandler()
 
     @property
     def image_pivot_point(self):
@@ -152,39 +154,6 @@ class CanvasWidget(BaseWidget):
     def current_active_image(self, value):
         self.add_image_to_current_layer(value)
 
-    @property
-    def zoom_in_step(self):
-        zoom_level = self.settings["grid_settings"]["zoom_level"]
-        if zoom_level > 6:
-            return 2
-        elif zoom_level > 4:
-            return 1
-        return self.settings["grid_settings"]["zoom_in_step"]
-
-    @property
-    def zoom_out_step(self):
-        zoom_level = self.settings["grid_settings"]["zoom_level"]
-        if zoom_level > 6:
-            return 2
-        elif zoom_level > 4:
-            return 1
-        if zoom_level <= 1.0:
-            return 0.05
-        return self.settings["grid_settings"]["zoom_out_step"]
-
-    @property
-    def zoom_level(self):
-        zoom = self.settings["grid_settings"]["zoom_level"]
-        if zoom <= 0:
-            zoom = 0.1
-        return zoom
-
-    @zoom_level.setter
-    def zoom_level(self, value):
-        settings = self.settings
-        settings["grid_settings"]["zoom_level"] = value
-        self.settings = settings
-
     def on_canvas_paste_image_signal(self, _event):
         self.paste_image_from_clipboard()
 
@@ -216,16 +185,14 @@ class CanvasWidget(BaseWidget):
             self.setCursor(Qt.CursorShape.ArrowCursor)
 
     def on_zoom_level_changed_signal(self):
-        # Create a QTransform object and scale it
-        transform = QTransform()
-        transform.scale(self.settings["grid_settings"]["zoom_level"], self.settings["grid_settings"]["zoom_level"])
+        transform = self.zoom_handler.on_zoom_level_changed()
 
         # Set the transform
         self.ui.canvas_container.setTransform(transform)
 
         # Redraw lines
         self.emit(SignalCode.CANVAS_DO_DRAW_SIGNAL)
-    
+
     def on_set_current_layer_signal(self, args):
         self.set_current_layer(args)
 
@@ -616,7 +583,7 @@ class CanvasWidget(BaseWidget):
         )
         self.load_image_from_object(
             processed_image, 
-            is_outpaint=section == "outpaint",
+            is_outpaint=section == GeneratorSection.OUTPAINT.value,
             image_root_point=image_root_point
         )
     
@@ -664,7 +631,7 @@ class CanvasWidget(BaseWidget):
         new_image_a.paste(outpainted_image, (int(outpaint_box_rect.x()), int(outpaint_box_rect.y())))
         new_image_b.paste(existing_image_copy, (current_image_position.x(), current_image_position.y()))
 
-        if action == "outpaint":
+        if action == GeneratorSection.OUTPAINT.value:
             new_image = Image.alpha_composite(new_image, new_image_a)
             new_image = Image.alpha_composite(new_image, new_image_b)
         else:
@@ -673,7 +640,12 @@ class CanvasWidget(BaseWidget):
 
         return new_image, image_root_point, image_pivot_point
     
-    def load_image_from_object(self, image, is_outpaint=False, image_root_point=None):
+    def load_image_from_object(
+        self,
+        image: Image,
+        is_outpaint: bool = False,
+        image_root_point: QPoint = None
+    ):
         self.add_image_to_scene(
             image_data=dict(
                 image=image
@@ -682,14 +654,18 @@ class CanvasWidget(BaseWidget):
             image_root_point=image_root_point
         )
 
-    def current_draggable_pixmap(self):
+    @staticmethod
+    def current_draggable_pixmap():
         return ServiceLocator.get(ServiceCode.CURRENT_DRAGGABLE_PIXMAP)()
         
     def copy_image(
         self,
         image: Image = None
     ) -> object:
-        self.clipboard_handler.copy_image(image, self.current_draggable_pixmap())
+        return self.clipboard_handler.copy_image(
+            image,
+            self.current_draggable_pixmap()
+        )
 
     def cut_image(self):
         draggable_pixmap: DraggablePixmap = self.clipboard_handler.cut_image()
@@ -791,18 +767,18 @@ class CanvasWidget(BaseWidget):
     def draw_grid(self):
         self.scene.addItem(self.line_group)
 
-    def cell_size_changed(self, val):
+    def cell_size_changed(self, _val):
         self.redraw_lines = True
         self.do_draw()
 
-    def line_width_changed(self, val):
+    def line_width_changed(self, _val):
         self.redraw_lines = True
         self.do_draw()
 
-    def line_color_changed(self, val):
+    def line_color_changed(self, _val):
         self.redraw_lines = True
         self.do_draw()
 
-    def canvas_color_changed(self, val):
+    def canvas_color_changed(self, _val):
         self.set_canvas_color()
         self.do_draw()
