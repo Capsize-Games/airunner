@@ -24,7 +24,7 @@ setup(
         "controlnet_aux==0.0.7",
         "diffusers==0.26.1",
         "huggingface-hub==0.20.3",
-        "numpy==1.26.3",
+        "numpy==1.26.4",
         "Pillow==10.2.0",
         "pip==24.0",
         "PyQt6==6.6.1",
