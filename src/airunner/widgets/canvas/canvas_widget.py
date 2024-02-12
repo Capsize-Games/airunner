@@ -6,7 +6,7 @@ from PIL import Image, ImageFilter
 from PIL.ImageQt import ImageQt
 from PyQt6 import QtWidgets
 from PyQt6.QtCore import Qt, QPoint, QRect
-from PyQt6.QtGui import QBrush, QColor, QPixmap, QTransform
+from PyQt6.QtGui import QBrush, QColor, QPixmap
 from PyQt6.QtWidgets import QGraphicsItemGroup, QGraphicsItem, QGraphicsView
 
 from airunner.cursors.circle_brush import CircleCursor
