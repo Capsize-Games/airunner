@@ -142,7 +142,10 @@ class CanvasWidget(BaseWidget):
         )
 
         # apply self.pos_x and self.pox_y to the rect
-        rect.translate(self.settings["canvas_settings"]["pos_x"], self.settings["canvas_settings"]["pos_y"])
+        rect.translate(
+            self.settings["canvas_settings"]["pos_x"],
+            self.settings["canvas_settings"]["pos_y"]
+        )
 
         return rect
 
@@ -170,19 +173,23 @@ class CanvasWidget(BaseWidget):
         self.rotate_90_counterclockwise()
 
     def on_canvas_update_cursor_signal(self, event):
-        if self.settings["current_tool"] in [CanvasToolName.BRUSH, CanvasToolName.ERASER]:
-            self.setCursor(CircleCursor(
+        if self.settings["current_tool"] in (
+            CanvasToolName.BRUSH,
+            CanvasToolName.ERASER
+        ):
+            cursor = CircleCursor(
                 Qt.GlobalColor.white,
                 Qt.GlobalColor.transparent,
                 self.settings["brush_settings"]["size"],
-            ))
+            )
         elif self.settings["current_tool"] is CanvasToolName.ACTIVE_GRID_AREA:
             if event.buttons() == Qt.MouseButton.LeftButton:
-                self.setCursor(Qt.CursorShape.ClosedHandCursor)
+                cursor = Qt.CursorShape.ClosedHandCursor
             else:
-                self.setCursor(Qt.CursorShape.OpenHandCursor)
+                cursor = Qt.CursorShape.OpenHandCursor
         else:
-            self.setCursor(Qt.CursorShape.ArrowCursor)
+            cursor = Qt.CursorShape.ArrowCursor
+        self.setCursor(cursor)
 
     def on_zoom_level_changed_signal(self):
         transform = self.zoom_handler.on_zoom_level_changed()
