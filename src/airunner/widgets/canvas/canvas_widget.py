@@ -547,6 +547,14 @@ class CanvasWidget(BaseWidget):
                 selection_stop_pos
             )
 
+            # Ensure width and height ar divisible by 8
+            width = rect.width()
+            height = rect.height()
+            if width % 8 != 0:
+                width -= width % 8
+            if height % 8 != 0:
+                height -= height % 8
+
             # update the active grid area in settings
             settings = self.settings
             active_grid_settings = settings["active_grid_settings"]
@@ -555,12 +563,12 @@ class CanvasWidget(BaseWidget):
             active_grid_settings["width"] = rect.width()
             active_grid_settings["height"] = rect.height()
             generator_settings = settings["generator_settings"]
-            generator_settings["width"] = rect.width()
-            generator_settings["height"] = rect.height()
+            generator_settings["width"] = width
+            generator_settings["height"] = height
             settings["active_grid_settings"] = active_grid_settings
             settings["generator_settings"] = generator_settings
-            settings["working_width"] = rect.width()
-            settings["working_height"] = rect.height()
+            settings["working_width"] = width
+            settings["working_height"] = height
             self.settings = settings
 
             # Clear the selection from the scene
