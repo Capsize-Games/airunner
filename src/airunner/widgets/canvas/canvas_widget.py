@@ -244,7 +244,12 @@ class CanvasWidget(BaseWidget):
         self.do_draw(force_draw=force_draw)
 
     def on_image_generated_signal(self, image_data: dict):
-        self.add_image_to_scene(image_data["images"][0])
+        print(image_data)
+        self.add_image_to_scene(
+            image_data["images"][0],
+            is_outpaint=image_data["data"]["action"] == GeneratorSection.OUTPAINT.value,
+            outpaint_box_rect=image_data["data"]["options"]["outpaint_box_rect"]
+        )
 
     def on_canvas_resize_worker_response_signal(self, data: dict):
         force_draw = data["force_draw"]
@@ -542,6 +547,14 @@ class CanvasWidget(BaseWidget):
                 selection_stop_pos
             )
 
+            # Ensure width and height ar divisible by 8
+            width = rect.width()
+            height = rect.height()
+            if width % 8 != 0:
+                width -= width % 8
+            if height % 8 != 0:
+                height -= height % 8
+
             # update the active grid area in settings
             settings = self.settings
             active_grid_settings = settings["active_grid_settings"]
@@ -550,12 +563,12 @@ class CanvasWidget(BaseWidget):
             active_grid_settings["width"] = rect.width()
             active_grid_settings["height"] = rect.height()
             generator_settings = settings["generator_settings"]
-            generator_settings["width"] = rect.width()
-            generator_settings["height"] = rect.height()
+            generator_settings["width"] = width
+            generator_settings["height"] = height
             settings["active_grid_settings"] = active_grid_settings
             settings["generator_settings"] = generator_settings
-            settings["working_width"] = rect.width()
-            settings["working_height"] = rect.height()
+            settings["working_width"] = width
+            settings["working_height"] = height
             self.settings = settings
 
             # Clear the selection from the scene
@@ -593,23 +606,7 @@ class CanvasWidget(BaseWidget):
         self.scene.update()
         self.drawing = False
     
-    def handle_image_data(self, data):
-        options = data["data"]["options"]
-        images = data["images"]
-        outpaint_box_rect = options["outpaint_box_rect"]
-        section = options["generator_section"]
-        processed_image, image_root_point, image_pivot_point = self.handle_outpaint(
-            outpaint_box_rect,
-            images[0],
-            section
-        )
-        self.load_image_from_object(
-            processed_image, 
-            is_outpaint=section == GeneratorSection.OUTPAINT.value,
-            image_root_point=image_root_point
-        )
-    
-    def handle_outpaint(self, outpaint_box_rect, outpainted_image, action=None):
+    def handle_outpaint(self, outpaint_box_rect, outpainted_image, action=None) -> [Image, QPoint, QPoint]:
         if self.current_active_image is None:
             point = QPoint(outpaint_box_rect.x(), outpaint_box_rect.y())
             return outpainted_image, QPoint(0, 0), point
@@ -621,7 +618,7 @@ class CanvasWidget(BaseWidget):
 
         pivot_point = self.image_pivot_point
         root_point = QPoint(0, 0)
-        layer = ServiceLocator.get(ServiceCode.CURRENT_LAYER)
+        layer = ServiceLocator.get(ServiceCode.CURRENT_LAYER)()
         current_image_position = QPoint(layer["pos_x"], layer["pos_y"])
 
         is_drawing_left = outpaint_box_rect.x() < current_image_position.x()
@@ -664,15 +661,13 @@ class CanvasWidget(BaseWidget):
     def load_image_from_object(
         self,
         image: Image,
-        is_outpaint: bool = False,
-        image_root_point: QPoint = None
+        is_outpaint: bool = False
     ):
         self.add_image_to_scene(
             image_data=dict(
                 image=image
             ), 
-            is_outpaint=is_outpaint, 
-            image_root_point=image_root_point
+            is_outpaint=is_outpaint
         )
 
     @staticmethod
@@ -734,14 +729,34 @@ class CanvasWidget(BaseWidget):
         self,
         image_data: dict,
         is_outpaint: bool = False,
-        image_root_point: QPoint = None
+        outpaint_box_rect: QPoint = None
     ):
+        """
+        Adds a given image to the scene
+        :param image_data: dict containing the image to be added to the scene
+        :param is_outpaint: bool indicating if the image is an outpaint
+        :param outpaint_box_rect: QPoint indicating the root point of the image
+        :return:
+        """
         self.do_draw_layers = True
-        self.current_active_image = image_data["image"]
-        self.do_resize_canvas(
-            force_draw=True,
-            do_draw_layers=True
-        )
+
+        if not is_outpaint:
+            self.current_active_image = image_data["image"]
+            self.do_resize_canvas(
+                force_draw=True,
+                do_draw_layers=True
+            )
+        else:
+            image, root_point, pivot_point = self.handle_outpaint(
+                outpaint_box_rect,
+                image_data["image"],
+                action=GeneratorSection.OUTPAINT.value
+            )
+            self.current_active_image = image
+            self.do_resize_canvas(
+                force_draw=True,
+                do_draw_layers=True
+            )
     
     @staticmethod
     def filter_with_filter(filter_object: ImageFilter.Filter):
