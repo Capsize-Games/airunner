@@ -164,38 +164,46 @@ class ActiveGridArea(DraggablePixmap):
     _render_border: bool = False
     _line_width: int = 1
     _do_draw = True
+    _draggable_rect: QRect = None
+    _border_pen: QPen = None
+    _outter_border_pen: QPen = None
+    _border_color: QColor = None
+    _border_brush: QBrush = None
 
     def paint(self, painter: QPainter, option, widget=None):
-        #self.update_position()
         settings = ServiceLocator.get("get_settings")()
         render_border = settings["active_grid_settings"]["render_border"]
         line_width = settings["grid_settings"]["line_width"]
+
         if render_border != self._render_border or line_width != self._line_width or self._do_draw:
             self._do_draw = False
             self._render_border = render_border
             self._line_width = line_width
             self.update_draggable_settings()
+            self._draggable_rect = QRect(
+                0,
+                0,
+                abs(self.rect.width()),
+                abs(self.rect.height())
+            )
+            self._border_pen = self._border_pen = QPen(
+                self.active_grid_area_color,
+                line_width
+            )
+            self._outter_border_pen = QPen(
+                self.active_grid_area_color,
+                line_width + 1
+            )
+            self._border_color = QColor(0, 0, 0, 0)
+            self._border_brush = QBrush(self._border_color)
 
-            if render_border:
-                rect = QRect(
-                    0,
-                    0,
-                    abs(self.rect.width()),
-                    abs(self.rect.height())
-                )
-                painter.setPen(QPen(
-                    self.active_grid_area_color,
-                    line_width
-                ))
-                painter.setBrush(QBrush(QColor(0, 0, 0, 0)))
-                painter.drawRect(rect)
-                painter.setPen(QPen(
-                    self.active_grid_area_color,
-                    line_width + 1
-                ))
-                painter.drawRect(rect)
-                #self.update_position()
-            self.emit(SignalCode.CANVAS_DO_DRAW_SELECTION_AREA_SIGNAL)
+        if render_border:
+            painter.setPen(self._border_pen)
+            painter.setBrush(self._border_brush)
+            painter.drawRect(self._draggable_rect)
+            painter.setPen(self._outter_border_pen)
+            painter.drawRect(self._draggable_rect)
+
         super().paint(painter, option, widget)
 
     def toggle_render_border(self, value):
