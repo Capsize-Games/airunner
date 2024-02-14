@@ -5,7 +5,7 @@ import urllib.request
 import datetime
 import gc
 import threading
-
+import cProfile
 import torch
 from PIL import Image
 from PIL import PngImagePlugin
@@ -495,3 +495,13 @@ def set_widget_state(widget, checked, block_signals=True):
     widget.blockSignals(block_signals)
     widget.setChecked(checked)
     widget.blockSignals(False)
+
+
+def start_profiler():
+    pr = cProfile.Profile()
+    pr.enable()
+    return pr
+
+def stop_profiler(pr):
+    pr.disable()
+    pr.print_stats(sort="time")
