@@ -4,7 +4,7 @@ from PyQt6.QtGui import QEnterEvent
 from PyQt6.QtGui import QPainterPath
 from PyQt6.QtGui import QPen, QPixmap, QPainter
 from PyQt6.QtWidgets import QGraphicsScene, QGraphicsPixmapItem
-from PyQt6.QtGui import QColor, QBrush
+from PyQt6.QtGui import QColor
 
 from airunner.enums import SignalCode, CanvasToolName
 from airunner.mediator_mixin import MediatorMixin
@@ -180,18 +180,20 @@ class CustomScene(
         return QPoint(grid_x, grid_y)
 
     def handle_mouse_event(self, event, is_press_event):
-        current_tool = self.settings["current_tool"]
-        if current_tool is CanvasToolName.SELECTION:
-            view = self.views()[0]
-            pos = view.mapFromScene(event.scenePos())
+        view = self.views()[0]
+        pos = view.mapFromScene(event.scenePos())
+        if (
+            self.settings["grid_settings"]["snap_to_grid"] and
+            self.settings["current_tool"] == CanvasToolName.SELECTION
+        ):
             pos = self.snap_to_grid(pos)  # Snap position to grid
             if is_press_event:
                 self.selection_stop_pos = None
                 self.selection_start_pos = QPoint(pos.x(), pos.y())
             else:
                 self.selection_stop_pos = QPoint(pos.x(), pos.y())
-            self.emit(SignalCode.CANVAS_DO_DRAW_SIGNAL, True)
             self.emit(SignalCode.APPLICATION_ACTIVE_GRID_AREA_UPDATED)
+        self.emit(SignalCode.CANVAS_DO_DRAW_SIGNAL, True)
 
     def handle_left_mouse_press(self, event):
         self.handle_mouse_event(event, True)
