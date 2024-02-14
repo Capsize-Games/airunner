@@ -100,5 +100,5 @@ AIRUNNER_OS = platform.system()  # Windows or linux
 LARGEST_WORKING_SIZE = 2048
 SMALLEST_WORKING_SIZE = 8
 BRUSH_INC_SIZE = 8
-LOG_LEVEL = logging.FATAL if AIRUNNER_ENVIRONMENT == "prod" else logging.DEBUG
+LOG_LEVEL = logging.FATAL if AIRUNNER_ENVIRONMENT == "prod" else logging.INFO
 AVAILABLE_DTYPES = ("2bit", "4bit", "8bit")
