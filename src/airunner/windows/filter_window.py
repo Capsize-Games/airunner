@@ -24,8 +24,6 @@ class FilterWindow(BaseWindow):
         # and stored in this dictionary.
         super().__init__(exec=False)
 
-        self.reject = None
-        self.accept = None
         self._filter = None
         self._filter_values = {}
         self.image_filter_model_name = model_name
@@ -105,11 +103,6 @@ class FilterWindow(BaseWindow):
                 image_filter = filter_data
                 break
 
-        self.reject = self.reject
-        self.accept = self.accept
-        self.reject = self.cancel_filter
-        self.accept = self.apply_filter
-
         for filter_name, filter_data in image_filter['image_filter_values'].items():
             self._filter_values[filter_name] = filter_data
             if filter_data['value_type'] in ["float", "int"]:
@@ -167,18 +160,18 @@ class FilterWindow(BaseWindow):
         self.update_value(settings_property, val)
         self.preview_filter()
 
-    def cancel_filter(self):
+    def reject(self):
         self.emit(
             SignalCode.CANVAS_CANCEL_FILTER_SIGNAL
         )
-        self.close()
+        super().reject()
 
-    def apply_filter(self):
+    def accept(self):
         self.emit(
             SignalCode.CANVAS_APPLY_FILTER_SIGNAL,
             self.filter_object()
         )
-        self.close()
+        super().accept()
 
     def preview_filter(self):
         self.emit(
