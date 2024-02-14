@@ -84,7 +84,7 @@ class ActiveGridArea(DraggablePixmap):
         self._do_draw = True
         self._draggable_rect: QRect = Optional[None]
         self._border_pen: QPen = Optional[None]
-        self._outter_border_pen: QPen = Optional[None]
+        self._outer_border_pen: QPen = Optional[None]
         self._border_color: QColor = Optional[None]
         self._border_brush: QBrush = Optional[None]
         self.update_draggable_settings()
@@ -191,7 +191,7 @@ class ActiveGridArea(DraggablePixmap):
                 self.active_grid_area_color,
                 line_width
             )
-            self._outter_border_pen = QPen(
+            self._outer_border_pen = QPen(
                 self.active_grid_area_color,
                 line_width + 1
             )
@@ -202,7 +202,7 @@ class ActiveGridArea(DraggablePixmap):
             painter.setPen(self._border_pen)
             painter.setBrush(self._border_brush)
             painter.drawRect(self._draggable_rect)
-            painter.setPen(self._outter_border_pen)
+            painter.setPen(self._outer_border_pen)
             painter.drawRect(self._draggable_rect)
 
         super().paint(painter, option, widget)
