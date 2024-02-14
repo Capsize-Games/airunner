@@ -14,7 +14,7 @@ from airunner.cursors.circle_brush import CircleCursor
 from airunner.enums import SignalCode, ServiceCode, CanvasToolName, GeneratorSection
 from airunner.service_locator import ServiceLocator
 from airunner.settings import AVAILABLE_IMAGE_FILTERS
-from airunner.utils import apply_opacity_to_image, stop_profiler, start_profiler
+from airunner.utils import apply_opacity_to_image
 from airunner.widgets.base_widget import BaseWidget
 from airunner.widgets.canvas.clipboard_handler import ClipboardHandler
 from airunner.widgets.canvas.custom_scene import CustomScene
