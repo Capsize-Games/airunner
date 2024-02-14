@@ -212,8 +212,11 @@ class SliderWidget(BaseWidget):
             adjusted_value = self.slider_minimum
         self.ui.slider.setValue(int(adjusted_value))
 
-        normalized = adjusted_value / self.slider_maximum
-        spinbox_val = normalized * self.spinbox_maximum
+        try:
+            normalized = adjusted_value / self.slider_maximum
+            spinbox_val = normalized * self.spinbox_maximum
+        except ZeroDivisionError:
+            spinbox_val = 0.0
         spinbox_val = round(spinbox_val, 2)
         self.ui.slider_spinbox.setValue(spinbox_val)
 
