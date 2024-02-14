@@ -222,6 +222,13 @@ class MainWindow(
         self.prompt = None
         self.negative_prompt = None
         self.image_path = None
+        self.splitter_names = [
+            "main_splitter",
+            "content_splitter",
+            "center_splitter",
+            "splitter",
+            "canvas_splitter",
+        ]
         self.set_log_levels()
         self.logger = Logger(prefix=self.__class__.__name__)
         self.logger.info("Starting AI Runnner")
@@ -235,7 +242,6 @@ class MainWindow(
         ControlnetModelMixin.__init__(self)
         AIModelMixin.__init__(self)
         self.register_services()
-        self.update_settings()
         self.create_airunner_paths()
         self.register_signals()
         self.initialize_ui()
@@ -262,6 +268,7 @@ class MainWindow(
     def initialize_ui(self):
         self.logger.info("Loading ui")
         self.ui.setupUi(self)
+        self.restore_state()
 
         self.status_widget = StatusWidget()
         self.statusBar().addPermanentWidget(self.status_widget)
@@ -284,8 +291,7 @@ class MainWindow(
         self.set_all_section_buttons()
         self.initialize_tool_section_buttons()
 
-        self.restore_state()
-    
+
     def do_listen(self):
         if not self.listening:
             self.listening = True
@@ -524,16 +530,16 @@ class MainWindow(
         new_settings = self.settings
         new_settings["stt_enabled"] = val
         self.settings = new_settings
-    
+
+    quitting = False
+
     def save_state(self):
+        if self.quitting:
+            return
+        self.quitting = True
         self.logger.info("Saving window state")
         settings = self.settings
         settings["window_settings"] = {
-            'main_splitter': self.ui.main_splitter.saveState(),
-            'content_splitter': self.ui.content_splitter.saveState(),
-            'center_splitter': self.ui.center_splitter.saveState(),
-            'canvas_splitter': self.ui.canvas_splitter.saveState(),
-            'splitter': self.ui.splitter.saveState(),
             'mode_tab_widget_index': self.ui.mode_tab_widget.currentIndex(),
             'tool_tab_widget_index': self.ui.tool_tab_widget.currentIndex(),
             'center_tab_index': self.ui.center_tab.currentIndex(),
@@ -541,14 +547,19 @@ class MainWindow(
             'is_maximized': self.isMaximized(),
             'is_fullscreen': self.isFullScreen(),
         }
+
+        # Store splitter settings in application settings
+        for splitter in self.splitter_names:
+            settings["window_settings"][splitter] = getattr(self.ui, splitter).saveState()
+
         self.settings = settings
         self.save_settings()
-    
+
     def restore_state(self):
         self.logger.info("Restoring state")
         window_settings = self.settings["window_settings"]
 
-        if self.settings["is_maximized"]:
+        if window_settings["is_maximized"]:
             self.showMaximized()
         elif window_settings["is_fullscreen"]:
             self.showFullScreen()
@@ -562,20 +573,14 @@ class MainWindow(
         self.ui.ai_button.setChecked(self.settings["ai_mode"])
         self.set_button_checked("toggle_grid", self.settings["grid_settings"]["show_grid"], False)
 
-        if window_settings["main_splitter"]:
-            self.ui.main_splitter.restoreState(window_settings["main_splitter"])
-
-        if window_settings["content_splitter"]:
-            self.ui.content_splitter.restoreState(window_settings["content_splitter"])
-
-        if window_settings["center_splitter"]:
-            self.ui.center_splitter.restoreState(window_settings["center_splitter"])
-
-        if window_settings["canvas_splitter"]:
-            self.ui.canvas_splitter.restoreState(window_settings["canvas_splitter"])
-
-        if window_settings["splitter"]:
-            self.ui.splitter.restoreState(window_settings["splitter"])
+        # Restore splitters
+        for splitter in self.splitter_names:
+            try:
+                getattr(self.ui, splitter).restoreState(window_settings[splitter])
+            except TypeError:
+                self.logger.warning(f"failed to restore {splitter} splitter")
+            except KeyError:
+                self.logger.warning(f"{splitter} missing in window_settings")
 
     ##### End window properties #####
     #################################
