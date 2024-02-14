@@ -542,6 +542,7 @@ class MainWindow(
             'is_fullscreen': self.isFullScreen(),
         }
         self.settings = settings
+        self.save_settings()
     
     def restore_state(self):
         self.logger.info("Restoring state")
