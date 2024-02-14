@@ -1,6 +1,7 @@
 import base64
 import io
 from functools import partial
+from typing import Optional
 
 from PIL import Image, ImageFilter
 from PIL.ImageQt import ImageQt
@@ -13,7 +14,7 @@ from airunner.cursors.circle_brush import CircleCursor
 from airunner.enums import SignalCode, ServiceCode, CanvasToolName, GeneratorSection
 from airunner.service_locator import ServiceLocator
 from airunner.settings import AVAILABLE_IMAGE_FILTERS
-from airunner.utils import apply_opacity_to_image
+from airunner.utils import apply_opacity_to_image, stop_profiler, start_profiler
 from airunner.widgets.base_widget import BaseWidget
 from airunner.widgets.canvas.clipboard_handler import ClipboardHandler
 from airunner.widgets.canvas.custom_scene import CustomScene
@@ -450,27 +451,23 @@ class CanvasWidget(BaseWidget):
         brush = QBrush(color)
         self.scene.setBackgroundBrush(brush)
 
-    def add_image_to_current_layer(self,value):
-        self.logger.info("Adding image to current layer")
-        layer_index = self.settings["current_layer_index"]
-        base_64_image = ""
+    def add_image_to_current_layer(self, image: Image):
+        self.logger.debug("Adding image to current layer")
+        layer_index: int = self.settings["current_layer_index"]
+        base_64_image: Optional[bytes] = None
 
         try:
-            if value:
+            if image:
                 buffered = io.BytesIO()
-                value.save(buffered, format="PNG")
+                image.save(buffered, format="PNG")
                 base_64_image = base64.b64encode(buffered.getvalue())
         except Exception as e:
             self.logger.error(e)
-        
-        settings = self.settings
-        # If there's an existing image in the layer, remove it from the scene
-        if layer_index in self.pixmaps and isinstance(self.pixmaps[layer_index], QGraphicsItem):
-            if self.pixmaps[layer_index].scene() == self.scene:
-                self.scene.removeItem(self.pixmaps[layer_index])
-            del self.pixmaps[layer_index]
-        settings["layers"][layer_index]["base_64_image"] = base_64_image
-        self.settings = settings
+
+        if base_64_image is not None:
+            settings = self.settings
+            settings["layers"][layer_index]["base_64_image"] = base_64_image
+            self.settings = settings
 
     def draw_layers(self):
         if not self.do_draw_layers:
