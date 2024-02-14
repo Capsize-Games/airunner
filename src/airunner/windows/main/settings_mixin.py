@@ -474,11 +474,14 @@ Previous Conversation:
         self.application_settings.sync()
         return self.default_settings
 
+    def save_settings(self):
+        self.application_settings.sync()
+
     def set_settings(self, val):
         if val == {} or val == "" or val is None:
             return
         self.application_settings.setValue("settings", val)
-        self.application_settings.sync()
+        #self.application_settings.sync()
         self.emit(SignalCode.APPLICATION_SETTINGS_CHANGED_SIGNAL)
 
     def reset_paths(self):
