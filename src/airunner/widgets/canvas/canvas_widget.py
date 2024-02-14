@@ -96,6 +96,7 @@ class CanvasWidget(BaseWidget):
             SignalCode.CANVAS_PREVIEW_FILTER_SIGNAL: self.preview_filter,
             SignalCode.CANVAS_ZOOM_LEVEL_CHANGED: self.on_zoom_level_changed_signal,
             SignalCode.APPLICATION_TOOL_CHANGED_SIGNAL: self.on_tool_changed_signal,
+            SignalCode.CANVAS_DO_DRAW_SELECTION_AREA_SIGNAL: self.draw_selected_area,
         }
 
         # Map service codes to class functions
