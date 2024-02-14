@@ -93,6 +93,8 @@ class SignalCode(Enum):
     CANVAS_PREVIEW_FILTER_SIGNAL = "canvas_preview_filter_signal"
     CANVAS_CANCEL_FILTER_SIGNAL = "canvas_cancel_filter_signal"
     CANVAS_APPLY_FILTER_SIGNAL = "canvas_apply_filter_signal"
+    CANVAS_DO_DRAW_SELECTION_AREA_SIGNAL = "canvas_do_draw_selection_area_signal"
+
     CLEAR_MEMORY_SIGNAL = "clear_memory_signal"
     CONTROLNET_IMAGE_GENERATED_SIGNAL = "controlnet_image_generated_signal"
 

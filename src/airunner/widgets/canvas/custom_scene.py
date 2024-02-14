@@ -193,7 +193,7 @@ class CustomScene(
             else:
                 self.selection_stop_pos = QPoint(pos.x(), pos.y())
             self.emit(SignalCode.APPLICATION_ACTIVE_GRID_AREA_UPDATED)
-        self.emit(SignalCode.CANVAS_DO_DRAW_SIGNAL, True)
+            self.emit(SignalCode.CANVAS_DO_DRAW_SELECTION_AREA_SIGNAL)
 
     def handle_left_mouse_press(self, event):
         self.handle_mouse_event(event, True)
