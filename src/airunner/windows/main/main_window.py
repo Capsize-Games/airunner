@@ -223,11 +223,8 @@ class MainWindow(
         self.negative_prompt = None
         self.image_path = None
         self.splitter_names = [
-            "main_splitter",
             "content_splitter",
-            "center_splitter",
             "splitter",
-            "canvas_splitter",
         ]
         self.set_log_levels()
         self.logger = Logger(prefix=self.__class__.__name__)

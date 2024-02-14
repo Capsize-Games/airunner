@@ -148,10 +148,7 @@ Previous Conversation:
                 )
             ),
             window_settings=dict(
-                main_splitter=None,
                 content_splitter=None,
-                center_splitter=None,
-                canvas_splitter=None,
                 splitter=None,
                 mode_tab_widget_index=0,
                 tool_tab_widget_index=0,
