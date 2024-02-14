@@ -1,3 +1,5 @@
+from typing import Optional
+
 from PIL.ImageQt import QImage
 
 from PyQt6.QtCore import QRect, QPoint
@@ -61,9 +63,6 @@ class LayerImageItem(DraggablePixmap):
 
 
 class ActiveGridArea(DraggablePixmap):
-    active_grid_area_color = None
-    image = None
-
     @property
     def rect(self):
         settings = ServiceLocator.get("get_settings")()
@@ -76,8 +75,22 @@ class ActiveGridArea(DraggablePixmap):
         )
 
     def __init__(self):
+        self.active_grid_area_color = None
+        self.image = None
+        self._current_width = 0
+        self._current_height = 0
+        self._render_border: bool = False
+        self._line_width: int = 1
+        self._do_draw = True
+        self._draggable_rect: QRect = Optional[None]
+        self._border_pen: QPen = Optional[None]
+        self._outter_border_pen: QPen = Optional[None]
+        self._border_color: QColor = Optional[None]
+        self._border_brush: QBrush = Optional[None]
         self.update_draggable_settings()
+
         super().__init__(self.pixmap)
+
         self.update_position()
         self.setFlag(
             QGraphicsItem.GraphicsItemFlag.ItemIsMovable,
@@ -88,8 +101,11 @@ class ActiveGridArea(DraggablePixmap):
             self.update_draggable_settings
         )
 
-    _current_width = 0
-    _current_height = 0
+    def update_position(self):
+        self.setPos(
+            min(self.rect.x(), self.rect.x() + self.rect.width()),
+            min(self.rect.y(), self.rect.y() + self.rect.height())
+        )
 
     def update_draggable_settings(self):
         if self._current_width != self.rect.width() or self._current_height != self.rect.height():
@@ -133,12 +149,6 @@ class ActiveGridArea(DraggablePixmap):
                 self.image.fill(QColor(0, 0, 0, 1))
             self.pixmap = QPixmap.fromImage(self.image)
 
-    def update_position(self):
-        self.setPos(
-            min(self.rect.x(), self.rect.x() + self.rect.width()),
-            min(self.rect.y(), self.rect.y() + self.rect.height())
-        )
-
     def get_fill_color(self) -> QColor:
         settings = ServiceLocator.get("get_settings")()
         render_fill = settings["active_grid_settings"]["render_fill"]
@@ -160,15 +170,6 @@ class ActiveGridArea(DraggablePixmap):
 
     def update_selection_fill(self):
         self.pixmap.fill(self.get_fill_color())
-
-    _render_border: bool = False
-    _line_width: int = 1
-    _do_draw = True
-    _draggable_rect: QRect = None
-    _border_pen: QPen = None
-    _outter_border_pen: QPen = None
-    _border_color: QColor = None
-    _border_brush: QBrush = None
 
     def paint(self, painter: QPainter, option, widget=None):
         settings = ServiceLocator.get("get_settings")()
@@ -214,7 +215,6 @@ class ActiveGridArea(DraggablePixmap):
 
     def mouseReleaseEvent(self, event):
         super().mouseReleaseEvent(event)
-        pos = self.pos()
 
     @property
     def settings(self):
