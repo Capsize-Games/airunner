@@ -1,6 +1,7 @@
 from PIL import ImageFilter
 
 
+
 class BaseFilter(ImageFilter.Filter):
     def __init__(self, **kwargs):
         super().__init__()
@@ -16,7 +17,8 @@ class BaseFilter(ImageFilter.Filter):
             self.image_id = id(image)
             self.image = image
             do_reset = True
-        return self.apply_filter(image, do_reset)
+        res = self.apply_filter(image, do_reset)
+        return res
 
     def apply_filter(self, image, do_reset=False):
         """
