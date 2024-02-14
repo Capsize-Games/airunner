@@ -75,21 +75,25 @@ class ActiveGridArea(DraggablePixmap):
         )
 
     def __init__(self):
-        self.active_grid_area_color = None
         self.image = None
         self._current_width = 0
         self._current_height = 0
         self._render_border: bool = False
         self._line_width: int = 1
         self._do_draw = True
-        self._draggable_rect: QRect = Optional[None]
-        self._border_pen: QPen = Optional[None]
-        self._outer_border_pen: QPen = Optional[None]
-        self._border_color: QColor = Optional[None]
-        self._border_brush: QBrush = Optional[None]
-        self.update_draggable_settings()
+        self._do_render_fill = False
+        self._active_grid_settings_enabled = False
+        self._draggable_rect: QRect = None
+        self._border_pen: QPen = None
+        self._outer_border_pen: QPen = None
+        self._border_color: QColor = None
+        self._border_brush: QBrush = None
+        self.render_fill()
 
         super().__init__(self.pixmap)
+
+        painter = self.draw_border()
+        super().paint(painter, None, None)
 
         self.update_position()
         self.setFlag(
@@ -98,7 +102,7 @@ class ActiveGridArea(DraggablePixmap):
         )
         self.register(
             SignalCode.ACTIVE_GRID_SETTINGS_CHANGED_SIGNAL,
-            self.update_draggable_settings
+            self.render_fill
         )
 
     def update_position(self):
@@ -107,24 +111,22 @@ class ActiveGridArea(DraggablePixmap):
             min(self.rect.y(), self.rect.y() + self.rect.height())
         )
 
-    def update_draggable_settings(self):
-        if self._current_width != self.rect.width() or self._current_height != self.rect.height():
+    def render_fill(self):
+        settings = ServiceLocator.get("get_settings")()
+
+        if (
+            self._current_width != self.rect.width() or
+            self._current_height != self.rect.height() or
+            self._do_render_fill != settings["active_grid_settings"]["render_fill"] or
+            self._active_grid_settings_enabled != settings["active_grid_settings"]["enabled"]
+        ):
+            self._do_render_fill = settings["active_grid_settings"]["render_fill"]
             self._current_width = self.rect.width()
             self._current_height = self.rect.height()
-
-            settings = ServiceLocator.get("get_settings")()
-            generator_settings = settings["generator_settings"]
-            border_color = generator_settings["active_grid_border_color"]
+            self._active_grid_settings_enabled = settings["active_grid_settings"]["enabled"]
 
             active_grid_settings = settings["active_grid_settings"]
-            render_border = active_grid_settings["render_border"]
-            render_fill = active_grid_settings["render_fill"]
-            border_opacity = active_grid_settings["border_opacity"]
-
-            if render_border:
-                border_color = QColor(border_color)
-                border_color.setAlpha(border_opacity)
-                self.active_grid_area_color = border_color
+            render_fill = active_grid_settings["render_fill"] and active_grid_settings["enabled"]
 
             fill_color = self.get_fill_color()
 
@@ -171,41 +173,47 @@ class ActiveGridArea(DraggablePixmap):
     def update_selection_fill(self):
         self.pixmap.fill(self.get_fill_color())
 
-    def paint(self, painter: QPainter, option, widget=None):
-        settings = ServiceLocator.get("get_settings")()
-        render_border = settings["active_grid_settings"]["render_border"]
-        line_width = settings["grid_settings"]["line_width"]
+    def draw_border(self, painter: QPainter = None):
+        if painter is None:
+            painter = QPainter()
 
-        if render_border != self._render_border or line_width != self._line_width or self._do_draw:
-            self._do_draw = False
-            self._render_border = render_border
-            self._line_width = line_width
-            self.update_draggable_settings()
+        settings = ServiceLocator.get("get_settings")()
+
+        if settings["active_grid_settings"]["enabled"]:
+            render_border = settings["active_grid_settings"]["render_border"]
+            line_width = settings["grid_settings"]["line_width"]
+
             self._draggable_rect = QRect(
                 0,
                 0,
                 abs(self.rect.width()),
                 abs(self.rect.height())
             )
-            self._border_pen = self._border_pen = QPen(
-                self.active_grid_area_color,
+            border_color = QColor(settings["generator_settings"]["active_grid_border_color"])
+            border_color.setAlpha(settings["active_grid_settings"]["border_opacity"])
+            self._border_pen = QPen(
+                border_color,
                 line_width
             )
             self._outer_border_pen = QPen(
-                self.active_grid_area_color,
+                border_color,
                 line_width + 1
             )
             self._border_color = QColor(0, 0, 0, 0)
             self._border_brush = QBrush(self._border_color)
 
-        if render_border:
-            painter.setPen(self._border_pen)
-            painter.setBrush(self._border_brush)
-            painter.drawRect(self._draggable_rect)
-            painter.setPen(self._outer_border_pen)
-            painter.drawRect(self._draggable_rect)
+            if render_border:
+                painter.setPen(self._border_pen)
+                painter.setBrush(self._border_brush)
+                painter.drawRect(self._draggable_rect)
+                painter.setPen(self._outer_border_pen)
+                painter.drawRect(self._draggable_rect)
+        return painter
 
+    def paint(self, painter: QPainter, option, widget=None):
+        painter = self.draw_border(painter)
         super().paint(painter, option, widget)
+        #super().paint(painter, option, widget)
 
     def toggle_render_border(self, value):
         pass
