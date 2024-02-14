@@ -25,7 +25,6 @@ from airunner.widgets.canvas.zoom_handler import ZoomHandler
 from airunner.workers.canvas_resize_worker import CanvasResizeWorker
 from airunner.workers.image_data_worker import ImageDataWorker
 
-
 class CanvasWidget(BaseWidget):
     """
     Widget responsible for multiple functionalities:
@@ -524,11 +523,10 @@ class CanvasWidget(BaseWidget):
         self.scene.removeItem(self.line_group)
         self.line_group = QGraphicsItemGroup()
 
-    def draw_active_grid_area_container(self):
+    def draw_selected_area(self):
         """
-        Draw the active grid area container
+        Draw the selected active grid area container
         """
-
         # Handle any active selections
         selection_start_pos = self.scene.selection_start_pos
         selection_stop_pos = self.scene.selection_stop_pos
@@ -598,7 +596,7 @@ class CanvasWidget(BaseWidget):
         self.ui.canvas_container_size = self.ui.canvas_container.viewport().size()
         self.set_scene_rect()
         self.draw_layers()
-        self.draw_active_grid_area_container()
+        self.draw_selected_area()
         self.draw_grid()
         self.ui.canvas_position.setText(
             f"X {-self.settings['canvas_settings']['pos_x']: 05d} Y {self.settings['canvas_settings']['pos_y']: 05d}"

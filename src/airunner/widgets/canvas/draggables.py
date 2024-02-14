@@ -8,7 +8,6 @@ from airunner.enums import SignalCode, CanvasToolName
 from airunner.mediator_mixin import MediatorMixin
 from airunner.service_locator import ServiceLocator
 
-
 class DraggablePixmap(
     QGraphicsPixmapItem,
     MediatorMixin
@@ -80,8 +79,10 @@ class ActiveGridArea(DraggablePixmap):
         self.update_draggable_settings()
         super().__init__(self.pixmap)
         self.update_position()
-        self.setFlag(QGraphicsItem.GraphicsItemFlag.ItemIsMovable, True)
-
+        self.setFlag(
+            QGraphicsItem.GraphicsItemFlag.ItemIsMovable,
+            True
+        )
         self.register(
             SignalCode.ACTIVE_GRID_SETTINGS_CHANGED_SIGNAL,
             self.update_draggable_settings
@@ -154,7 +155,7 @@ class ActiveGridArea(DraggablePixmap):
         self.pixmap.fill(self.get_fill_color())
 
     def paint(self, painter: QPainter, option, widget=None):
-        self.update_position()
+        #self.update_position()
         settings = ServiceLocator.get("get_settings")()
         self.update_draggable_settings()
 
@@ -176,7 +177,7 @@ class ActiveGridArea(DraggablePixmap):
                 self.settings["grid_settings"]["line_width"] + 1
             ))
             painter.drawRect(rect)
-            self.update_position()
+            #self.update_position()
         super().paint(painter, option, widget)
 
     def toggle_render_border(self, value):
