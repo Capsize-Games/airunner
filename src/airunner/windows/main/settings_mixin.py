@@ -425,7 +425,8 @@ Previous Conversation:
 
     def recursive_update(self, current, default):
         for k, v in default.items():
-            if k not in current or not isinstance(current[k], type(v)):
+            if k not in current or (not isinstance(current[k], type(v)) and v is not None):
+                self.logger.info(f"Updating {k} to {v}")
                 current[k] = v
             elif isinstance(v, dict):
                 self.recursive_update(current[k], v)
