@@ -149,6 +149,8 @@ class SignalCode(Enum):
     LORA_ADD_SIGNAL = "add_lora_signal"
     LORA_UPDATE_SIGNAL = "update_lora_signal"
 
+    SCENE_RESIZE_SIGNAL = "scene_resize_signal"
+
     SD_IMAGE_GENERATE_REQUEST_SIGNAL = "image_generate_request_signal"
     SD_PROGRESS_SIGNAL = "progress_signal"
     SD_REQUEST_SIGNAL = "sd_request_signal"
