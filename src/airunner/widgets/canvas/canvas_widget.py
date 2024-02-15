@@ -245,7 +245,6 @@ class CanvasWidget(BaseWidget):
         self.do_draw(force_draw=force_draw)
 
     def on_image_generated_signal(self, image_data: dict):
-        print(image_data)
         self.add_image_to_scene(
             image_data["images"][0],
             is_outpaint=image_data["data"]["action"] == GeneratorSection.OUTPAINT.value,
@@ -556,13 +555,22 @@ class CanvasWidget(BaseWidget):
             if height % 8 != 0:
                 height -= height % 8
 
+            cell_size = self.settings["grid_settings"]["cell_size"]
+            if width < cell_size:
+                width = cell_size
+            if height < cell_size:
+                height = cell_size
+
+            x = rect.x()
+            y = rect.y()
+
             # update the active grid area in settings
             settings = self.settings
             active_grid_settings = settings["active_grid_settings"]
-            active_grid_settings["pos_x"] = rect.x()
-            active_grid_settings["pos_y"] = rect.y()
-            active_grid_settings["width"] = rect.width()
-            active_grid_settings["height"] = rect.height()
+            active_grid_settings["pos_x"] = x
+            active_grid_settings["pos_y"] = y
+            active_grid_settings["width"] = width
+            active_grid_settings["height"] = height
             generator_settings = settings["generator_settings"]
             generator_settings["width"] = width
             generator_settings["height"] = height
