@@ -300,8 +300,9 @@ class CanvasWidget(BaseWidget):
         self.toggle_drag_mode()
 
     def on_canvas_clear_signal(self):
-        self.scene.clear()
+        self.create_scene()
         self.line_group = QGraphicsItemGroup()
+        self.active_grid_area = None
         self.pixmaps = {}
         settings = self.settings
         settings["layers"] = []
@@ -436,17 +437,19 @@ class CanvasWidget(BaseWidget):
 
     def showEvent(self, event):
         super().showEvent(event)
-        self.scene = CustomScene(size=self.size())
-
         original_mouse_event = self.ui.canvas_container.mouseMoveEvent
         self.ui.canvas_container.mouseMoveEvent = partial(self.handle_mouse_event, original_mouse_event)
         self.toggle_drag_mode()
         self.ui.canvas_container_size = self.ui.canvas_container.viewport().size()
         self.ui.canvas_container.setContentsMargins(0, 0, 0, 0)
-        self.set_canvas_color()
-        self.ui.canvas_container.setScene(self.scene)
+        self.create_scene()
         self.do_draw(force_draw=True)
-    
+
+    def create_scene(self):
+        self.scene = CustomScene(size=self.size())
+        self.ui.canvas_container.setScene(self.scene)
+        self.set_canvas_color()
+
     def set_canvas_color(self):
         if not self.scene:
             return
