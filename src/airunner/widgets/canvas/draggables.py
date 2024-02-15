@@ -1,3 +1,4 @@
+import math
 from typing import Optional
 
 from PIL.ImageQt import QImage
@@ -9,6 +10,8 @@ from PyQt6.QtWidgets import QGraphicsItem, QGraphicsPixmapItem
 from airunner.enums import SignalCode, CanvasToolName
 from airunner.mediator_mixin import MediatorMixin
 from airunner.service_locator import ServiceLocator
+from airunner.utils import snap_to_grid
+
 
 class DraggablePixmap(
     QGraphicsPixmapItem,
@@ -20,15 +23,6 @@ class DraggablePixmap(
         self.pixmap = pixmap
         self.setFlag(QGraphicsItem.GraphicsItemFlag.ItemIsMovable, True)
         self.last_pos = QPoint(0, 0)
-
-    def snap_to_grid(self):
-        settings = ServiceLocator.get("get_settings")()
-        cell_size = settings["grid_settings"]["cell_size"]
-        x = round(self.x() / cell_size) * cell_size
-        y = round(self.y() / cell_size) * cell_size
-        x += self.last_pos.x()
-        y += self.last_pos.y()
-        self.setPos(x, y)
 
     def mouseMoveEvent(self, event):
         settings = ServiceLocator.get("get_settings")()
@@ -44,6 +38,15 @@ class DraggablePixmap(
         if tool is CanvasToolName.ACTIVE_GRID_AREA:
             self.snap_to_grid()
         super().mouseReleaseEvent(event)
+
+    def snap_to_grid(self):
+        x, y = snap_to_grid(
+            int(self.x()),
+            int(self.y())
+        )
+        x += self.last_pos.x()
+        y += self.last_pos.y()
+        self.setPos(x, y)
 
     def paint(self, painter: QPainter, option, widget=None):
         painter.drawPixmap(self.pixmap.rect(), self.pixmap)
