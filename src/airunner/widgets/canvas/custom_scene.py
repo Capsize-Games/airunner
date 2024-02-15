@@ -1,3 +1,5 @@
+import math
+
 from PIL.ImageQt import QImage
 from PyQt6.QtCore import Qt, QPoint, QPointF
 from PyQt6.QtGui import QEnterEvent
@@ -9,6 +11,7 @@ from PyQt6.QtGui import QColor
 from airunner.enums import SignalCode, CanvasToolName
 from airunner.mediator_mixin import MediatorMixin
 from airunner.service_locator import ServiceLocator
+from airunner.utils import snap_to_grid
 
 
 class CustomScene(
@@ -174,32 +177,23 @@ class CustomScene(
         painter.end()
         self.item.setPixmap(QPixmap.fromImage(self.image))
 
-    def snap_to_grid(self, pos):
-        # Assuming grid_size is the size of each grid cell
-        grid_size = self.settings["grid_settings"]["cell_size"]
-
-        # Calculate the grid cell coordinates
-        grid_x = round(pos.x() / grid_size) * grid_size
-        grid_y = round(pos.y() / grid_size) * grid_size
-
-        # Return the new position
-        return QPoint(grid_x, grid_y)
-
     def handle_mouse_event(self, event, is_press_event):
         view = self.views()[0]
         pos = view.mapFromScene(event.scenePos())
-        if (
-            self.settings["grid_settings"]["snap_to_grid"] and
-            self.settings["current_tool"] == CanvasToolName.SELECTION
-        ):
-            pos = self.snap_to_grid(pos)  # Snap position to grid
-            if is_press_event:
-                self.selection_stop_pos = None
-                self.selection_start_pos = QPoint(pos.x(), pos.y())
-            else:
-                self.selection_stop_pos = QPoint(pos.x(), pos.y())
-            self.emit(SignalCode.APPLICATION_ACTIVE_GRID_AREA_UPDATED)
-            self.emit(SignalCode.CANVAS_DO_DRAW_SELECTION_AREA_SIGNAL)
+        if event.button() == Qt.MouseButton.LeftButton:
+            if (
+                self.settings["grid_settings"]["snap_to_grid"] and
+                self.settings["current_tool"] == CanvasToolName.SELECTION
+            ):
+                x, y = snap_to_grid(pos.x(), pos.y(), False)
+                pos = QPoint(x, y)
+                if is_press_event:
+                    self.selection_stop_pos = None
+                    self.selection_start_pos = QPoint(pos.x(), pos.y())
+                else:
+                    self.selection_stop_pos = QPoint(pos.x(), pos.y())
+                self.emit(SignalCode.APPLICATION_ACTIVE_GRID_AREA_UPDATED)
+                self.emit(SignalCode.CANVAS_DO_DRAW_SELECTION_AREA_SIGNAL)
 
     def handle_left_mouse_press(self, event):
         self.handle_mouse_event(event, True)
