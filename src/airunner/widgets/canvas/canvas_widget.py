@@ -422,8 +422,10 @@ class CanvasWidget(BaseWidget):
     def resizeEvent(self, event):
         if self.ui.canvas_container:
             self.handle_resize_canvas()
-        if self.scene:
-            self.scene.resize()
+        self.emit(
+            SignalCode.SCENE_RESIZE_SIGNAL,
+            self.size()
+        )
 
     def toggle_drag_mode(self):
         current_tool = self.settings["current_tool"]
@@ -434,7 +436,7 @@ class CanvasWidget(BaseWidget):
 
     def showEvent(self, event):
         super().showEvent(event)
-        self.scene = CustomScene(parent=self)
+        self.scene = CustomScene(size=self.size())
 
         original_mouse_event = self.ui.canvas_container.mouseMoveEvent
         self.ui.canvas_container.mouseMoveEvent = partial(self.handle_mouse_event, original_mouse_event)
