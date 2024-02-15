@@ -4,6 +4,7 @@ from PyQt6.QtWidgets import QGraphicsView
 
 from airunner.enums import CanvasToolName
 from airunner.mediator_mixin import MediatorMixin
+from airunner.utils import snap_to_grid
 from airunner.windows.main.settings_mixin import SettingsMixin
 
 
@@ -17,10 +18,10 @@ class CustomGraphicsView(
         MediatorMixin.__init__(self)
         SettingsMixin.__init__(self)
 
-    def adjust_to_grid(self, event: QMouseEvent) -> QMouseEvent:
+    def snap_to_grid(self, event: QMouseEvent, use_floor: bool = True) -> QMouseEvent:
         """
         This is used to adjust the selection tool to the grid
-        in real time.
+        in real time during rubberband mode.
         :param event:
         :return:
         """
@@ -28,17 +29,15 @@ class CustomGraphicsView(
             self.settings["grid_settings"]["snap_to_grid"] and
             self.settings["current_tool"] == CanvasToolName.SELECTION
         ):
-            cell_size = self.settings["grid_settings"]["cell_size"]
-            grid_x = round(event.pos().x() / cell_size) * cell_size
-            grid_y = round(event.pos().y() / cell_size) * cell_size
+            x, y = snap_to_grid(event.pos().x(), event.pos().y(), use_floor)
         else:
-            grid_x = event.pos().x()
-            grid_y = event.pos().y()
+            x = event.pos().x()
+            y = event.pos().y()
 
         # Create a new event with the adjusted position
         new_event = QMouseEvent(
             event.type(),
-            QPointF(grid_x, grid_y),
+            QPointF(x, y),
             event.button(),
             event.buttons(),
             event.modifiers()
@@ -46,9 +45,9 @@ class CustomGraphicsView(
         return new_event
 
     def mousePressEvent(self, event: QMouseEvent):
-        new_event = self.adjust_to_grid(event)
+        new_event = self.snap_to_grid(event)
         super().mousePressEvent(new_event)
 
     def mouseMoveEvent(self, event: QMouseEvent):
-        new_event = self.adjust_to_grid(event)
+        new_event = self.snap_to_grid(event, False)
         super().mouseMoveEvent(new_event)
