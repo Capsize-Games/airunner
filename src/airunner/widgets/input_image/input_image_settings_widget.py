@@ -26,10 +26,13 @@ class InputImageSettingsWidget(BaseWidget):
         super().__init__(*args, **kwargs)
 
     def active_grid_area_image(self):
+        print("TESTING")
         if not self.settings["generator_settings"]["input_image_recycle_grid_image"] or not self._active_grid_area_image:
-            layer_image = self.get_service(ServiceCode.CURRENT_ACTIVE_IMAGE)()
-            if layer_image.image:
-                self._active_grid_area_image = layer_image.image.copy()
+            print("TESTING2")
+            image = self.grid_image()
+            if image:
+                print("TESTING3")
+                self._active_grid_area_image = image.copy()
         return self._active_grid_area_image
 
     @property
@@ -40,9 +43,12 @@ class InputImageSettingsWidget(BaseWidget):
             if self.settings["generator_settings"]["input_image_use_imported_image"]:
                 return self.input_image
             elif self.settings["generator_settings"]["input_image_use_grid_image"]:
-                return self.get_current_input_image()
+                return self.grid_image()
         except AttributeError:
             return None
+
+    def grid_image(self):
+        return self.get_service(ServiceCode.CURRENT_ACTIVE_IMAGE)()
 
     def showEvent(self, event):
         super().showEvent(event)
@@ -63,6 +69,7 @@ class InputImageSettingsWidget(BaseWidget):
         settings = self.settings
         settings["generator_settings"]["enable_input_image"] = val
         self.settings = settings
+        self.set_thumbnail()
 
     def action_toggled_button_use_imported_image(self, val):
         self.toggle_use_imported_image(val)
@@ -143,7 +150,7 @@ class InputImageSettingsWidget(BaseWidget):
         settings = self.settings
         settings["generator_settings"]["input_image_use_grid_image"] = value
         self.settings = settings
-        self.set_thumbnail(self.current_input_image)
+        self.set_thumbnail(self.get_current_input_image)
 
     def update_buttons(self):
         self.ui.use_imported_image_button.blockSignals(True)
@@ -185,7 +192,7 @@ class InputImageSettingsWidget(BaseWidget):
 
     def set_thumbnail(self, image=None):
         try:
-            image = self.current_input_image if not image else image
+            image = self.get_current_input_image if not image else image
         except AttributeError:
             return
         if image:
