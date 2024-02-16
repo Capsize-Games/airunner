@@ -1,68 +1,12 @@
-import math
-from typing import Optional
-
 from PIL.ImageQt import QImage
 
-from PyQt6.QtCore import QRect, QPoint
+from PyQt6.QtCore import QRect
 from PyQt6.QtGui import QBrush, QColor, QPen, QPixmap, QPainter
-from PyQt6.QtWidgets import QGraphicsItem, QGraphicsPixmapItem
+from PyQt6.QtWidgets import QGraphicsItem
 
 from airunner.enums import SignalCode, CanvasToolName
-from airunner.mediator_mixin import MediatorMixin
 from airunner.service_locator import ServiceLocator
-from airunner.utils import snap_to_grid
-
-
-class DraggablePixmap(
-    QGraphicsPixmapItem,
-    MediatorMixin
-):
-    def __init__(self, pixmap):
-        super().__init__(pixmap)
-        MediatorMixin.__init__(self)
-        self.pixmap = pixmap
-        self.setFlag(QGraphicsItem.GraphicsItemFlag.ItemIsMovable, True)
-        self.last_pos = QPoint(0, 0)
-
-    def mouseMoveEvent(self, event):
-        settings = ServiceLocator.get("get_settings")()
-        tool = settings["current_tool"]
-        if tool is not CanvasToolName.ACTIVE_GRID_AREA:
-            return
-        super().mouseMoveEvent(event)
-        self.snap_to_grid()
-
-    def mouseReleaseEvent(self, event):
-        settings = ServiceLocator.get("get_settings")()
-        tool = settings["current_tool"]
-        if tool is CanvasToolName.ACTIVE_GRID_AREA:
-            self.snap_to_grid()
-        super().mouseReleaseEvent(event)
-
-    def snap_to_grid(self):
-        x, y = snap_to_grid(
-            int(self.x()),
-            int(self.y())
-        )
-        x += self.last_pos.x()
-        y += self.last_pos.y()
-        self.setPos(x, y)
-
-    def paint(self, painter: QPainter, option, widget=None):
-        painter.drawPixmap(self.pixmap.rect(), self.pixmap)
-
-
-class LayerImageItem(DraggablePixmap):
-    def __init__(self, pixmap, layer_image_data):
-        self.layer_image_data = layer_image_data
-        super().__init__(pixmap)
-        self.setFlag(QGraphicsItem.GraphicsItemFlag.ItemIsMovable, True)
-
-    def mouseReleaseEvent(self, event):
-        super().mouseReleaseEvent(event)
-        pos = self.pos()
-        self.layer_image_data["pos_x"] = pos.x()
-        self.layer_image_data["pos_y"] = pos.y()
+from airunner.widgets.canvas.draggables.draggable_pixmap import DraggablePixmap
 
 
 class ActiveGridArea(DraggablePixmap):
