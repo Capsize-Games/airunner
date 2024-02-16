@@ -45,3 +45,4 @@ class DraggablePixmap(
 
     def paint(self, painter: QPainter, option, widget=None):
         painter.drawPixmap(self.pixmap.rect(), self.pixmap)
+
