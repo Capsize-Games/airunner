@@ -102,8 +102,8 @@ class CanvasWidget(BaseWidget):
 
         # Map service codes to class functions
         self.services = {
-            ServiceCode.CURRENT_ACTIVE_IMAGE: self.canvas_current_active_image,
-            ServiceCode.CURRENT_LAYER: self.canvas_current_active_image,
+            ServiceCode.CURRENT_ACTIVE_IMAGE: self.current_active_image,
+            ServiceCode.CURRENT_LAYER: self.current_layer,
         }
 
         # Map class properties to worker classes
@@ -152,18 +152,23 @@ class CanvasWidget(BaseWidget):
         return rect
 
     @property
-    def current_active_image(self):
-        return self.get_service(ServiceCode.CURRENT_ACTIVE_IMAGE)()
+    def current_layer(self):
+        layer_index: int = self.settings["current_layer_index"]
+        return self.settings["layers"][layer_index]
 
-    @current_active_image.setter
-    def current_active_image(self, value):
+    def current_active_image(self) -> Image:
+        layer = self.current_layer
+        base_64_image = layer["base_64_image"]
+        return Image.open(io.BytesIO(base64.b64decode(base_64_image)))
+
+    def set_current_active_image(self, value: Image):
         self.add_image_to_current_layer(value)
 
     def on_canvas_paste_image_signal(self, _event):
         self.paste_image_from_clipboard()
 
     def on_canvas_copy_image_signal(self, _event):
-        self.copy_image(ServiceLocator.get(ServiceCode.CURRENT_ACTIVE_IMAGE)())
+        self.copy_image(self.current_active_image())
 
     def on_canvas_cut_image_signal(self, _event):
         self.cut_image()
@@ -221,9 +226,6 @@ class CanvasWidget(BaseWidget):
     def canvas_drag_pos(self):
         return self.drag_pos
 
-    def canvas_current_active_image(self):
-        return self.current_active_image
-    
     def on_canvas_handle_layer_click_signal(self, data):
         layer = data["layer"]
         index = data["index"]
@@ -617,12 +619,12 @@ class CanvasWidget(BaseWidget):
         self.drawing = False
     
     def handle_outpaint(self, outpaint_box_rect, outpainted_image, action=None) -> [Image, QPoint, QPoint]:
-        if self.current_active_image is None:
+        if self.current_active_image() is None:
             point = QPoint(outpaint_box_rect.x(), outpaint_box_rect.y())
             return outpainted_image, QPoint(0, 0), point
 
         # make a copy of the current canvas image
-        existing_image_copy = self.current_active_image.copy()
+        existing_image_copy = self.current_active_image().copy()
         width = existing_image_copy.width
         height = existing_image_copy.height
 
@@ -751,7 +753,7 @@ class CanvasWidget(BaseWidget):
         self.do_draw_layers = True
 
         if not is_outpaint:
-            self.current_active_image = image_data["image"]
+            self.set_current_active_image(image_data["image"])
             self.do_resize_canvas(
                 force_draw=True,
                 do_draw_layers=True
@@ -762,7 +764,7 @@ class CanvasWidget(BaseWidget):
                 image_data["image"],
                 action=GeneratorSection.OUTPAINT.value
             )
-            self.current_active_image = image
+            self.set_current_active_image(image)
             self.do_resize_canvas(
                 force_draw=True,
                 do_draw_layers=True
@@ -786,10 +788,11 @@ class CanvasWidget(BaseWidget):
         self.rotate_image(Image.ROTATE_90)
 
     def rotate_image(self, angle):
-        self.current_active_image = self.image_handler.rotate_image(
+        image = self.image_handler.rotate_image(
             angle,
-            self.current_active_image
+            self.current_active_image()
         )
+        self.set_current_active_image(image)
         self.do_resize_canvas(
             force_draw=True,
             do_draw_layers=True
