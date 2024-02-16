@@ -18,7 +18,8 @@ from airunner.utils import apply_opacity_to_image
 from airunner.widgets.base_widget import BaseWidget
 from airunner.widgets.canvas.clipboard_handler import ClipboardHandler
 from airunner.widgets.canvas.custom_scene import CustomScene
-from airunner.widgets.canvas.draggables import DraggablePixmap, ActiveGridArea
+from airunner.widgets.canvas.draggables.active_grid_area import ActiveGridArea
+from airunner.widgets.canvas.draggables.draggable_pixmap import DraggablePixmap
 from airunner.widgets.canvas.grid_handler import GridHandler
 from airunner.widgets.canvas.image_handler import ImageHandler
 from airunner.widgets.canvas.templates.canvas_ui import Ui_canvas
