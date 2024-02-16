@@ -8,7 +8,7 @@ from watchdog.utils.platform import is_windows
 
 from airunner.aihandler.logger import Logger
 from airunner.mediator_mixin import MediatorMixin
-from airunner.widgets.canvas.draggables import DraggablePixmap
+from airunner.widgets.canvas.draggables.draggable_pixmap import DraggablePixmap
 from airunner.windows.main.settings_mixin import SettingsMixin
 
 
