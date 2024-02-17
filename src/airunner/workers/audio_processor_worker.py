@@ -12,8 +12,8 @@ class AudioProcessorWorker(Worker):
 
     def __init__(self, prefix):
         super().__init__(prefix=prefix)
-        self.stt = STTHandler()
-        self.register(SignalCode.STT_AUDIO_PROCESSED, self.on_stt_audio_processed)
+        # self.stt = STTHandler()
+        # self.register(SignalCode.STT_AUDIO_PROCESSED, self.on_stt_audio_processed)
     
     def on_stt_audio_processed(self, transcription):
         self.emit(SignalCode.AUDIO_PROCESSOR_RESPONSE_SIGNAL, transcription)
