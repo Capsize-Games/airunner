@@ -232,6 +232,7 @@ class MainWindow(
         MediatorMixin.__init__(self)
         SettingsMixin.__init__(self)
         super().__init__(*args, **kwargs)
+        self.update_settings()
         LoraMixin.__init__(self)
         LayerMixin.__init__(self)
         EmbeddingMixin.__init__(self)
