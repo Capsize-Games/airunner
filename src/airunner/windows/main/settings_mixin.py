@@ -148,10 +148,7 @@ Previous Conversation:
                 )
             ),
             window_settings=dict(
-                main_splitter=None,
                 content_splitter=None,
-                center_splitter=None,
-                canvas_splitter=None,
                 splitter=None,
                 mode_tab_widget_index=0,
                 tool_tab_widget_index=0,
@@ -255,6 +252,24 @@ Previous Conversation:
                 image=None
             ),
             generator_settings=dict(
+                input_image_settings=dict(
+                    imported_image_base64=None,
+                    use_imported_image=True,
+                    use_grid_image=True,
+                    recycle_grid_image=True,
+                    enable_input_image=False,
+                ),
+                controlnet_image_settings=dict(
+                    imported_image_base64=None,
+                    link_to_input_image=True,
+                    use_imported_image=False,
+                    use_grid_image=False,
+                    recycle_grid_image=False,
+                    mask_link_input_image=False,
+                    mask_use_imported_image=False,
+                    controlnet="",
+                    guidance_scale=50,
+                ),
                 section="txt2img",
                 generator_name="stablediffusion",
                 prompt="",
@@ -272,23 +287,9 @@ Previous Conversation:
                 strength=50,
                 image_guidance_scale=150,
                 n_samples=1,
-                controlnet="",
                 enable_controlnet=False,
-                enable_input_image=False,
-                controlnet_guidance_scale=50,
                 clip_skip=0,
                 variation=False,
-                input_image_use_imported_image=True,
-                input_image_use_grid_image=True,
-                input_image_recycle_grid_image=True,
-                input_image_mask_use_input_image=True,
-                input_image_mask_use_imported_image=False,
-                controlnet_input_image_link_to_input_image=True,
-                controlnet_input_image_use_imported_image=False,
-                controlnet_use_grid_image=False,
-                controlnet_recycle_grid_image=False,
-                controlnet_mask_link_input_image=False,
-                controlnet_mask_use_imported_image=False,
                 use_prompt_builder=False,
                 active_grid_border_color="#00FF00",
                 active_grid_fill_color="#FF0000",
@@ -425,7 +426,8 @@ Previous Conversation:
 
     def recursive_update(self, current, default):
         for k, v in default.items():
-            if k not in current or not isinstance(current[k], type(v)):
+            if k not in current or (not isinstance(current[k], type(v)) and v is not None):
+                self.logger.info(f"Updating {k} to {v}")
                 current[k] = v
             elif isinstance(v, dict):
                 self.recursive_update(current[k], v)
