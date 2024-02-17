@@ -14,11 +14,12 @@ from airunner.cursors.circle_brush import CircleCursor
 from airunner.enums import SignalCode, ServiceCode, CanvasToolName, GeneratorSection
 from airunner.service_locator import ServiceLocator
 from airunner.settings import AVAILABLE_IMAGE_FILTERS
-from airunner.utils import apply_opacity_to_image, stop_profiler, start_profiler
+from airunner.utils import apply_opacity_to_image
 from airunner.widgets.base_widget import BaseWidget
 from airunner.widgets.canvas.clipboard_handler import ClipboardHandler
 from airunner.widgets.canvas.custom_scene import CustomScene
-from airunner.widgets.canvas.draggables import DraggablePixmap, ActiveGridArea
+from airunner.widgets.canvas.draggables.active_grid_area import ActiveGridArea
+from airunner.widgets.canvas.draggables.draggable_pixmap import DraggablePixmap
 from airunner.widgets.canvas.grid_handler import GridHandler
 from airunner.widgets.canvas.image_handler import ImageHandler
 from airunner.widgets.canvas.templates.canvas_ui import Ui_canvas
@@ -96,12 +97,13 @@ class CanvasWidget(BaseWidget):
             SignalCode.CANVAS_PREVIEW_FILTER_SIGNAL: self.preview_filter,
             SignalCode.CANVAS_ZOOM_LEVEL_CHANGED: self.on_zoom_level_changed_signal,
             SignalCode.APPLICATION_TOOL_CHANGED_SIGNAL: self.on_tool_changed_signal,
+            SignalCode.CANVAS_DO_DRAW_SELECTION_AREA_SIGNAL: self.draw_selected_area,
         }
 
         # Map service codes to class functions
         self.services = {
-            ServiceCode.CURRENT_ACTIVE_IMAGE: self.canvas_current_active_image,
-            ServiceCode.CURRENT_LAYER: self.canvas_current_active_image,
+            ServiceCode.CURRENT_ACTIVE_IMAGE: self.current_active_image,
+            ServiceCode.CURRENT_LAYER: self.current_layer,
         }
 
         # Map class properties to worker classes
@@ -150,18 +152,23 @@ class CanvasWidget(BaseWidget):
         return rect
 
     @property
-    def current_active_image(self):
-        return self.get_service(ServiceCode.CURRENT_ACTIVE_IMAGE)()
+    def current_layer(self):
+        layer_index: int = self.settings["current_layer_index"]
+        return self.settings["layers"][layer_index]
 
-    @current_active_image.setter
-    def current_active_image(self, value):
+    def current_active_image(self) -> Image:
+        layer = self.current_layer
+        base_64_image = layer["base_64_image"]
+        return Image.open(io.BytesIO(base64.b64decode(base_64_image)))
+
+    def set_current_active_image(self, value: Image):
         self.add_image_to_current_layer(value)
 
     def on_canvas_paste_image_signal(self, _event):
         self.paste_image_from_clipboard()
 
     def on_canvas_copy_image_signal(self, _event):
-        self.copy_image(ServiceLocator.get(ServiceCode.CURRENT_ACTIVE_IMAGE)())
+        self.copy_image(self.current_active_image())
 
     def on_canvas_cut_image_signal(self, _event):
         self.cut_image()
@@ -219,9 +226,6 @@ class CanvasWidget(BaseWidget):
     def canvas_drag_pos(self):
         return self.drag_pos
 
-    def canvas_current_active_image(self):
-        return self.current_active_image
-    
     def on_canvas_handle_layer_click_signal(self, data):
         layer = data["layer"]
         index = data["index"]
@@ -244,7 +248,6 @@ class CanvasWidget(BaseWidget):
         self.do_draw(force_draw=force_draw)
 
     def on_image_generated_signal(self, image_data: dict):
-        print(image_data)
         self.add_image_to_scene(
             image_data["images"][0],
             is_outpaint=image_data["data"]["action"] == GeneratorSection.OUTPAINT.value,
@@ -299,8 +302,9 @@ class CanvasWidget(BaseWidget):
         self.toggle_drag_mode()
 
     def on_canvas_clear_signal(self):
-        self.scene.clear()
+        self.create_scene()
         self.line_group = QGraphicsItemGroup()
+        self.active_grid_area = None
         self.pixmaps = {}
         settings = self.settings
         settings["layers"] = []
@@ -421,8 +425,10 @@ class CanvasWidget(BaseWidget):
     def resizeEvent(self, event):
         if self.ui.canvas_container:
             self.handle_resize_canvas()
-        if self.scene:
-            self.scene.resize()
+        self.emit(
+            SignalCode.SCENE_RESIZE_SIGNAL,
+            self.size()
+        )
 
     def toggle_drag_mode(self):
         current_tool = self.settings["current_tool"]
@@ -433,17 +439,19 @@ class CanvasWidget(BaseWidget):
 
     def showEvent(self, event):
         super().showEvent(event)
-        self.scene = CustomScene(parent=self)
-
         original_mouse_event = self.ui.canvas_container.mouseMoveEvent
         self.ui.canvas_container.mouseMoveEvent = partial(self.handle_mouse_event, original_mouse_event)
         self.toggle_drag_mode()
         self.ui.canvas_container_size = self.ui.canvas_container.viewport().size()
         self.ui.canvas_container.setContentsMargins(0, 0, 0, 0)
-        self.set_canvas_color()
-        self.ui.canvas_container.setScene(self.scene)
+        self.create_scene()
         self.do_draw(force_draw=True)
-    
+
+    def create_scene(self):
+        self.scene = CustomScene(size=self.size())
+        self.ui.canvas_container.setScene(self.scene)
+        self.set_canvas_color()
+
     def set_canvas_color(self):
         if not self.scene:
             return
@@ -550,13 +558,22 @@ class CanvasWidget(BaseWidget):
             if height % 8 != 0:
                 height -= height % 8
 
+            cell_size = self.settings["grid_settings"]["cell_size"]
+            if width < cell_size:
+                width = cell_size
+            if height < cell_size:
+                height = cell_size
+
+            x = rect.x()
+            y = rect.y()
+
             # update the active grid area in settings
             settings = self.settings
             active_grid_settings = settings["active_grid_settings"]
-            active_grid_settings["pos_x"] = rect.x()
-            active_grid_settings["pos_y"] = rect.y()
-            active_grid_settings["width"] = rect.width()
-            active_grid_settings["height"] = rect.height()
+            active_grid_settings["pos_x"] = x
+            active_grid_settings["pos_y"] = y
+            active_grid_settings["width"] = width
+            active_grid_settings["height"] = height
             generator_settings = settings["generator_settings"]
             generator_settings["width"] = width
             generator_settings["height"] = height
@@ -602,12 +619,12 @@ class CanvasWidget(BaseWidget):
         self.drawing = False
     
     def handle_outpaint(self, outpaint_box_rect, outpainted_image, action=None) -> [Image, QPoint, QPoint]:
-        if self.current_active_image is None:
+        if self.current_active_image() is None:
             point = QPoint(outpaint_box_rect.x(), outpaint_box_rect.y())
             return outpainted_image, QPoint(0, 0), point
 
         # make a copy of the current canvas image
-        existing_image_copy = self.current_active_image.copy()
+        existing_image_copy = self.current_active_image().copy()
         width = existing_image_copy.width
         height = existing_image_copy.height
 
@@ -736,7 +753,7 @@ class CanvasWidget(BaseWidget):
         self.do_draw_layers = True
 
         if not is_outpaint:
-            self.current_active_image = image_data["image"]
+            self.set_current_active_image(image_data["image"])
             self.do_resize_canvas(
                 force_draw=True,
                 do_draw_layers=True
@@ -747,7 +764,7 @@ class CanvasWidget(BaseWidget):
                 image_data["image"],
                 action=GeneratorSection.OUTPAINT.value
             )
-            self.current_active_image = image
+            self.set_current_active_image(image)
             self.do_resize_canvas(
                 force_draw=True,
                 do_draw_layers=True
@@ -771,10 +788,11 @@ class CanvasWidget(BaseWidget):
         self.rotate_image(Image.ROTATE_90)
 
     def rotate_image(self, angle):
-        self.current_active_image = self.image_handler.rotate_image(
+        image = self.image_handler.rotate_image(
             angle,
-            self.current_active_image
+            self.current_active_image()
         )
+        self.set_current_active_image(image)
         self.do_resize_canvas(
             force_draw=True,
             do_draw_layers=True
