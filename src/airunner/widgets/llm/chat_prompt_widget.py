@@ -220,7 +220,8 @@ class ChatPromptWidget(BaseWidget):
             if event.modifiers() != Qt.KeyboardModifier.ShiftModifier:
                 self.do_generate()
         # Call the original method
-        self.originalKeyPressEvent(event)
+        if self.originalKeyPressEvent is not None:
+            self.originalKeyPressEvent(event)
 
     def hide_action_menu(self):
         self.action_menu_displayed = False
