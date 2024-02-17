@@ -1,31 +1,31 @@
+import math
+
 from PIL.ImageQt import QImage
 from PyQt6.QtCore import Qt, QPoint, QPointF
 from PyQt6.QtGui import QEnterEvent
 from PyQt6.QtGui import QPainterPath
 from PyQt6.QtGui import QPen, QPixmap, QPainter
 from PyQt6.QtWidgets import QGraphicsScene, QGraphicsPixmapItem
-from PyQt6.QtGui import QColor, QBrush
+from PyQt6.QtGui import QColor
 
 from airunner.enums import SignalCode, CanvasToolName
 from airunner.mediator_mixin import MediatorMixin
 from airunner.service_locator import ServiceLocator
+from airunner.utils import snap_to_grid
 
 
 class CustomScene(
     QGraphicsScene,
     MediatorMixin
 ):
-    def __init__(self, parent=None):
+    def __init__(self, size):
         MediatorMixin.__init__(self)
-        super().__init__(parent)
+        super().__init__()
         
-        # Get the size of the parent widget
-        parent_size = parent.size()
-
         # Create the QImage with the size of the parent widget
         self.image = QImage(
-            parent_size.width(),
-            parent_size.height(),
+            size.width(),
+            size.height(),
             QImage.Format.Format_ARGB32
         )
         self.image.fill(Qt.GlobalColor.transparent)
@@ -41,6 +41,8 @@ class CustomScene(
         self.selection_start_pos = None
         self.selection_stop_pos = None
 
+        self.register(SignalCode.SCENE_RESIZE_SIGNAL, self.resize)
+
     @property
     def is_brush_or_eraser(self):
         return self.settings["current_tool"] in (
@@ -52,19 +54,26 @@ class CustomScene(
         self.selection_start_pos = None
         self.selection_stop_pos = None
     
-    def resize(self):
+    def resize(self, size):
+        """
+        This function is triggered on canvas viewport resize.
+        It is used to resize the pixmap which is used for drawing on the canvas.
+        :param size:
+        :return:
+        """
         # only resize if the new size is larger than the existing image size
         if (
-            self.image.width() < self.parent().size().width() or
-            self.image.height() < self.parent().size().height()
+            self.image.width() < size.width() or
+            self.image.height() < size.height()
         ):
             new_image = QImage(
-                self.parent().size().width(),
-                self.parent().size().height(),
+                size.width(),
+                size.height(),
                 QImage.Format.Format_ARGB32
             )
             new_image.fill(Qt.GlobalColor.transparent)
             painter = QPainter(new_image)
+            painter.begin(new_image)
             painter.drawImage(0, 0, self.image)
             painter.end()
             self.image = new_image
@@ -168,30 +177,23 @@ class CustomScene(
         painter.end()
         self.item.setPixmap(QPixmap.fromImage(self.image))
 
-    def snap_to_grid(self, pos):
-        # Assuming grid_size is the size of each grid cell
-        grid_size = self.settings["grid_settings"]["cell_size"]
-
-        # Calculate the grid cell coordinates
-        grid_x = round(pos.x() / grid_size) * grid_size
-        grid_y = round(pos.y() / grid_size) * grid_size
-
-        # Return the new position
-        return QPoint(grid_x, grid_y)
-
     def handle_mouse_event(self, event, is_press_event):
-        current_tool = self.settings["current_tool"]
-        if current_tool is CanvasToolName.SELECTION:
-            view = self.views()[0]
-            pos = view.mapFromScene(event.scenePos())
-            pos = self.snap_to_grid(pos)  # Snap position to grid
-            if is_press_event:
-                self.selection_stop_pos = None
-                self.selection_start_pos = QPoint(pos.x(), pos.y())
-            else:
-                self.selection_stop_pos = QPoint(pos.x(), pos.y())
-            self.emit(SignalCode.CANVAS_DO_DRAW_SIGNAL, True)
-            self.emit(SignalCode.APPLICATION_ACTIVE_GRID_AREA_UPDATED)
+        view = self.views()[0]
+        pos = view.mapFromScene(event.scenePos())
+        if event.button() == Qt.MouseButton.LeftButton:
+            if (
+                self.settings["grid_settings"]["snap_to_grid"] and
+                self.settings["current_tool"] == CanvasToolName.SELECTION
+            ):
+                x, y = snap_to_grid(pos.x(), pos.y(), False)
+                pos = QPoint(x, y)
+                if is_press_event:
+                    self.selection_stop_pos = None
+                    self.selection_start_pos = QPoint(pos.x(), pos.y())
+                else:
+                    self.selection_stop_pos = QPoint(pos.x(), pos.y())
+                self.emit(SignalCode.APPLICATION_ACTIVE_GRID_AREA_UPDATED)
+                self.emit(SignalCode.CANVAS_DO_DRAW_SELECTION_AREA_SIGNAL)
 
     def handle_left_mouse_press(self, event):
         self.handle_mouse_event(event, True)
