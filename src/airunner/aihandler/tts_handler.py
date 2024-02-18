@@ -135,8 +135,10 @@ class TTSHandler(BaseHandler):
             self.tts_enabled = tts_enabled
             if not self.tts_enabled:
                 self.unload()
+                self.logger.info("Text to Speech is disabled")
             else:
                 self.initialize()
+                self.logger.info("Text to Speech is enabled")
 
     def move_model(self, to_cpu: bool = False):
         if to_cpu and self.do_offload_to_cpu:
@@ -190,6 +192,7 @@ class TTSHandler(BaseHandler):
             self.load_dataset()
         if self.corpus is None:
             self.load_corpus()
+        self.logger.info("Setting current model to " + target_model)
         self.current_model = target_model
         self.loaded = True
     
@@ -225,6 +228,7 @@ class TTSHandler(BaseHandler):
             clear_memory()
 
     def run(self):
+        self.logger.info("Running")
         self.initialize()
         self.process_sentences()
 
@@ -277,6 +281,7 @@ class TTSHandler(BaseHandler):
 
     def load_corpus(self):
         if self.input_text:
+            self.logger.info("Loading Corpus")
             corpus = open(self.input_text, "r").read()
             for key, value in self.character_replacement_map.items():
                 corpus = corpus.replace(key, value)
