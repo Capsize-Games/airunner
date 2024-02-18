@@ -25,10 +25,7 @@ class CustomGraphicsView(
         :param event:
         :return:
         """
-        if (
-            self.settings["grid_settings"]["snap_to_grid"] and
-            self.settings["current_tool"] == CanvasToolName.SELECTION
-        ):
+        if self.settings["current_tool"] == CanvasToolName.SELECTION:
             x, y = snap_to_grid(event.pos().x(), event.pos().y(), use_floor)
         else:
             x = event.pos().x()
