@@ -21,7 +21,12 @@ class CustomScene(
     def __init__(self, size):
         MediatorMixin.__init__(self)
         super().__init__()
-        
+
+        self._target_size = None
+        self._do_resize = False
+        self._erase_at = None
+        self._draw_at = None
+
         # Create the QImage with the size of the parent widget
         self.image = QImage(
             size.width(),
@@ -61,6 +66,23 @@ class CustomScene(
         :param size:
         :return:
         """
+        self._target_size = size
+        self._do_resize = True
+
+    def paint(self, painter: QPainter, option, widget=None):
+        if self._do_resize:
+            self._do_resize = False
+            painter = self.do_resize(painter)
+        if self._erase_at:
+            self.erase_at(self._erase_at, painter)
+            self._erase_at = None
+        if self._draw_at:
+            self.draw_at(self._draw_at, painter)
+            self._draw_at = None
+        super().paint(painter, option, widget)
+
+    def do_resize(self, painter=None):
+        size = self._target_size
         # only resize if the new size is larger than the existing image size
         if (
             self.image.width() < size.width() or
@@ -72,14 +94,15 @@ class CustomScene(
                 QImage.Format.Format_ARGB32
             )
             new_image.fill(Qt.GlobalColor.transparent)
-            painter = QPainter(new_image)
-            painter.begin(new_image)
+            if painter is None:
+                painter = QPainter(new_image)
             painter.drawImage(0, 0, self.image)
-            painter.end()
+
             self.image = new_image
             self.item.setPixmap(QPixmap.fromImage(self.image))
+        return painter
 
-    def drawAt(self, position: QPointF):
+    def draw_at(self, position: QPointF, painter=None):
         """
         Draw a line from the last position to the current one
         :param position:
@@ -98,7 +121,8 @@ class CustomScene(
         )
 
         # Create a QPainter
-        painter = QPainter(self.image)
+        if painter is None:
+            painter = QPainter(self.image)
         painter.setPen(pen)
 
         # Draw a line from the last position to the current one
@@ -113,7 +137,6 @@ class CustomScene(
             )
 
         # End the painter
-        painter.end()
 
         # Create a QPixmap from the image and set it to the QGraphicsPixmapItem
         pixmap = QPixmap.fromImage(self.image)
@@ -141,10 +164,11 @@ class CustomScene(
 
         self.emit(SignalCode.CANVAS_ZOOM_LEVEL_CHANGED)
 
-    def eraseAt(self, position):
-        painter = QPainter(
-            self.image
-        )
+    def erase_at(self, position, painter=None):
+        if painter is None:
+            painter = QPainter(
+                self.image
+            )
         painter.setPen(
             QPen(
                 Qt.GlobalColor.white,
@@ -173,8 +197,7 @@ class CustomScene(
         
         # Draw the path
         painter.drawPath(path)
-        
-        painter.end()
+
         self.item.setPixmap(QPixmap.fromImage(self.image))
 
     def handle_mouse_event(self, event, is_press_event):
@@ -212,9 +235,9 @@ class CustomScene(
 
         self.last_pos = event.scenePos()
         if self.settings["current_tool"] is CanvasToolName.BRUSH:
-            self.drawAt(self.last_pos)
+            self._draw_at = self.last_pos
         elif self.settings["current_tool"] is CanvasToolName.ERASER:
-            self.eraseAt(self.last_pos)
+            self._erase_at = self.last_pos
 
     def mouseReleaseEvent(self, event):
         if event.button() == Qt.MouseButton.LeftButton:
@@ -241,9 +264,9 @@ class CustomScene(
             return
         
         if self.settings["current_tool"] is CanvasToolName.BRUSH:
-            self.drawAt(event.scenePos())
+            self._draw_at = event.scenePos()
         elif self.settings["current_tool"] is CanvasToolName.ERASER:
-            self.eraseAt(event.scenePos())
+            self._erase_at = event.scenePos()
         
         # Update the last position
         self.last_pos = event.scenePos()
