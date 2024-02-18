@@ -195,10 +195,11 @@ class CasualLMTransformerBaseHandler(TokenizerHandler):
         # self.user_evaluation = self.do_user_evaluation()
         #full_message = self.rag_stream()
 
-        # First try running a tool
-        #self.tool_agent.run(self.prompt)
+        if self.settings["llm_generator_settings"]["use_tool_filter"]:
+            # First try running a tool
+            self.tool_agent.run(self.prompt)
 
-        # Then do chat prompt
+        # Do chat prompt
         self.chat_agent.run(self.prompt)
         self.send_final_message()
 
