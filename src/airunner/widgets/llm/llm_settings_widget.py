@@ -61,6 +61,8 @@ class LLMSettingsWidget(BaseWidget):
         self.ui.leave_in_vram.blockSignals(True)
         self.ui.move_to_cpu.blockSignals(True)
         self.ui.unload_model.blockSignals(True)
+        self.ui.automatic_tools.blockSignals(True)
+        self.ui.manual_tools.blockSignals(True)
         self.ui.top_p.initialize()
         self.ui.max_length.initialize()
         self.ui.max_length.initialize()
@@ -87,6 +89,9 @@ class LLMSettingsWidget(BaseWidget):
         self.ui.radio_button_32bit.setChecked(dtype == "32bit")
         self.set_dtype_by_gpu(llm_generator_settings["use_gpu"])
         self.set_dtype(dtype)
+
+        self.ui.automatic_tools.setChecked(llm_generator_settings["use_tool_filter"])
+        self.ui.manual_tools.setChecked(not llm_generator_settings["use_tool_filter"])
 
         # get unique model names
         self.ui.model.clear()
@@ -136,6 +141,8 @@ class LLMSettingsWidget(BaseWidget):
         self.ui.leave_in_vram.blockSignals(False)
         self.ui.move_to_cpu.blockSignals(False)
         self.ui.unload_model.blockSignals(False)
+        self.ui.automatic_tools.blockSignals(False)
+        self.ui.manual_tools.blockSignals(False)
 
     def model_text_changed(self, val):
         settings = self.settings
@@ -264,3 +271,13 @@ class LLMSettingsWidget(BaseWidget):
     def set_tab(self, tab_name):
         index = self.ui.tabWidget.indexOf(self.ui.tabWidget.findChild(QWidget, tab_name))
         self.ui.tabWidget.setCurrentIndex(index)
+
+    def enable_automatic_tools(self):
+        settings = self.settings
+        settings["llm_generator_settings"]["use_tool_filter"] = True
+        self.settings = settings
+
+    def enable_manual_tools(self):
+        settings = self.settings
+        settings["llm_generator_settings"]["use_tool_filter"] = False
+        self.settings = settings
