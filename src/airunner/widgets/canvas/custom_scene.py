@@ -92,13 +92,14 @@ class CustomScene(
             self._do_resize = False
             self.do_resize()
 
-        self.painter.drawImage(0, 0, self.image)
+        if self.painter is not None and self.painter.isActive():
+            self.painter.drawImage(0, 0, self.image)
 
-        if self.last_pos:
-            if self.settings["current_tool"] is CanvasToolName.BRUSH:
-                self.draw_at(self.painter)
-            elif self.settings["current_tool"] is CanvasToolName.ERASER:
-                self.erase_at(self.painter)
+            if self.last_pos:
+                if self.settings["current_tool"] is CanvasToolName.BRUSH:
+                    self.draw_at(self.painter)
+                elif self.settings["current_tool"] is CanvasToolName.ERASER:
+                    self.erase_at(self.painter)
 
         super().drawBackground(painter, rect)
 
