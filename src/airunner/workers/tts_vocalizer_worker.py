@@ -17,10 +17,19 @@ class TTSVocalizerWorker(Worker):
     def __init__(self, *args, **kwargs):
         super().__init__(*args, **kwargs)
         self.queue = Queue()
-        self.stream = sd.OutputStream(samplerate=24000, channels=1)
-        self.stream.start()
+        # check if speakers are available
+        self.stream = None
+        self.start_stream()
         self.started = False
-        self.register(SignalCode.TTS_GENERATOR_WORKER_ADD_TO_STREAM_SIGNAL, self.on_TTSGeneratorWorker_add_to_stream_signal)
+        self.register(
+            SignalCode.TTS_GENERATOR_WORKER_ADD_TO_STREAM_SIGNAL,
+            self.on_TTSGeneratorWorker_add_to_stream_signal
+        )
+
+    def start_stream(self):
+        if sd.query_devices(kind='output'):
+            self.stream = sd.OutputStream(samplerate=24000, channels=1)
+            self.stream.start()
 
     def on_TTSGeneratorWorker_add_to_stream_signal(self, response):
         self.logger.debug("Adding speech to stream...")
@@ -29,6 +38,13 @@ class TTSVocalizerWorker(Worker):
     def handle_message(self, item):
         if item is None:
             self.logger.warning("item is none")
+            return
+
+        if not self.stream:
+            self.start_stream()
+
+        if not self.stream:
+            self.logger.warning("No speakers available")
             return
 
         # Write the item to the stream
