@@ -72,6 +72,8 @@ class SignalCode(Enum):
     AUDIO_PROCESSOR_RESPONSE_SIGNAL = "audio_processor_response_signal"
     AUDIO_PROCESSOR_PROCESSED_AUDIO = "audio_processor_processed_audio"
 
+    BRUSH_COLOR_CHANGED_SIGNAL = "brush_color_changed_signal"
+
     PRESET_IMAGE_GENERATOR_DISPLAY_ITEM_MENU_SIGNAL = "preset_image_generator_display_menu_signal"
     PRESET_IMAGE_GENERATOR_ACTIVATE_BRUSH_SIGNAL = "activate_brush"
 
@@ -94,6 +96,7 @@ class SignalCode(Enum):
     CANVAS_CANCEL_FILTER_SIGNAL = "canvas_cancel_filter_signal"
     CANVAS_APPLY_FILTER_SIGNAL = "canvas_apply_filter_signal"
     CANVAS_DO_DRAW_SELECTION_AREA_SIGNAL = "canvas_do_draw_selection_area_signal"
+
 
     CLEAR_MEMORY_SIGNAL = "clear_memory_signal"
     CONTROLNET_IMAGE_GENERATED_SIGNAL = "controlnet_image_generated_signal"
