@@ -3,7 +3,7 @@ import torch
 
 from airunner.enums import EngineResponseCode, SignalCode
 from airunner.workers.worker import Worker
-from airunner.aihandler.sd_handler import SDHandler
+from airunner.aihandler.stablediffusion.sd_handler import SDHandler
 
 torch.backends.cuda.matmul.allow_tf32 = True
 

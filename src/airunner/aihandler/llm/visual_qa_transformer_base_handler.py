@@ -1,6 +1,6 @@
 import torch
 from transformers import BlipForConditionalGeneration, BlipProcessor
-from airunner.aihandler.transformer_base_handler import TransformerBaseHandler
+from airunner.aihandler.llm.transformer_base_handler import TransformerBaseHandler
 from airunner.utils import clear_memory
 
 
