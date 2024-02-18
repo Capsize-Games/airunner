@@ -1,5 +1,5 @@
 from airunner.enums import SignalCode
-from airunner.aihandler.vision_handler import VisionHandler
+from airunner.aihandler.llm.vision_handler import VisionHandler
 from airunner.workers.worker import Worker
 
 
