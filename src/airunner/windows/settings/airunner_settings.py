@@ -10,6 +10,7 @@ from airunner.widgets.image_generator_preferences.image_generator_preferences_wi
 
 from airunner.widgets.keyboard_shortcuts.keyboard_shortcuts_widget import KeyboardShortcutsWidget
 from airunner.widgets.llm.bot_preferences import BotPreferencesWidget
+from airunner.widgets.llm.llm_settings_widget import LLMSettingsWidget
 from airunner.widgets.memory_preferences.memory_preferences_widget import MemoryPreferencesWidget
 from airunner.widgets.paths.paths_widget import PathsWidget
 from airunner.widgets.tts.templates.tts_prefernces_widget import TTSPreferencesWidget
@@ -121,6 +122,16 @@ class SettingsWindow(BaseWindow):
                         "display_name": "Keyboard Shortcuts",
                         "checkable": False
                     }
+                ]
+            },
+            {
+                "section": "LLM Preferences",
+                "files": [
+                    {
+                        "name": "llm_preferences",
+                        "display_name": "LLM Preferences",
+                        "checkable": False
+                    },
                 ]
             },
             {
@@ -280,7 +291,8 @@ class SettingsWindow(BaseWindow):
             "memory": MemoryPreferencesWidget,
             "hf_api_key": APITokenWidget,
             "tts_preferences": TTSPreferencesWidget,
-            "bot_preferences": BotPreferencesWidget
+            "bot_preferences": BotPreferencesWidget,
+            "llm_preferences": LLMSettingsWidget
         }
         if name in widgets:
             widget_object = widgets[name]()
