@@ -39,7 +39,8 @@ class DraggablePixmap(
     def snap_to_grid(self, save=False):
         x, y = snap_to_grid(
             int(self.x()),
-            int(self.y())
+            int(self.y()),
+            False
         )
         x += self.last_pos.x()
         y += self.last_pos.y()
