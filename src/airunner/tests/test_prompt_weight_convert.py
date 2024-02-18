@@ -1,5 +1,5 @@
 import unittest
-from airunner.aihandler.prompt_weight_bridge import PromptWeightBridge
+from airunner.aihandler.stablediffusion.prompt_weight_bridge import PromptWeightBridge
 
 
 class TestPromptWeightConvert(unittest.TestCase):

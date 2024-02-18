@@ -3,7 +3,7 @@ import random
 from PIL import Image
 from PyQt6.QtCore import pyqtSignal, QRect
 
-from airunner.aihandler.sd_request import SDRequest
+from airunner.aihandler.stablediffusion.sd_request import SDRequest
 from airunner.enums import SignalCode, ServiceCode
 from airunner.aihandler.settings import MAX_SEED
 from airunner.widgets.base_widget import BaseWidget
