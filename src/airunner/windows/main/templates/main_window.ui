@@ -516,7 +516,7 @@
        </attribute>
        <layout class="QGridLayout" name="gridLayout_6">
         <item row="0" column="0">
-         <widget class="QSplitter" name="splitter_2">
+         <widget class="QSplitter" name="content_splitter">
           <property name="orientation">
            <enum>Qt::Horizontal</enum>
           </property>
@@ -641,7 +641,7 @@
              <rect>
               <x>0</x>
               <y>0</y>
-              <width>208</width>
+              <width>267</width>
               <height>1117</height>
              </rect>
             </property>
@@ -1233,8 +1233,7 @@
               <string/>
              </property>
              <property name="icon">
-              <iconset theme="audio-volume-high">
-               <normaloff>.</normaloff>.</iconset>
+              <iconset theme="audio-volume-high"/>
              </property>
              <property name="iconSize">
               <size>
@@ -1268,8 +1267,7 @@
               <string/>
              </property>
              <property name="icon">
-              <iconset theme="audio-input-microphone">
-               <normaloff>.</normaloff>.</iconset>
+              <iconset theme="audio-input-microphone"/>
              </property>
              <property name="iconSize">
               <size>
@@ -1303,8 +1301,7 @@
               <string/>
              </property>
              <property name="icon">
-              <iconset theme="camera-web">
-               <normaloff>.</normaloff>.</iconset>
+              <iconset theme="camera-web"/>
              </property>
              <property name="iconSize">
               <size>
