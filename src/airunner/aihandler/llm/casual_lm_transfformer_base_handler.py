@@ -1,16 +1,13 @@
-from typing import Any, Generator
-from typing import AnyStr
-
 from airunner.aihandler.agent import AIRunnerAgent
-from airunner.aihandler.local_agent import LocalAgent
+from airunner.aihandler.llm.local_agent import LocalAgent
 from transformers import AutoModelForCausalLM, TextIteratorStreamer
 from transformers import pipeline as hf_pipeline
 
-from airunner.aihandler.llm_tools import QuitApplicationTool, StartVisionCaptureTool, StopVisionCaptureTool, \
+from airunner.aihandler.llm.llm_tools import QuitApplicationTool, StartVisionCaptureTool, StopVisionCaptureTool, \
     StartAudioCaptureTool, StopAudioCaptureTool, StartSpeakersTool, StopSpeakersTool, ProcessVisionTool, \
-    ProcessAudioTool, RespondToUserTool
-from airunner.aihandler.tokenizer_handler import TokenizerHandler
-from airunner.enums import SignalCode, LLMAction, LLMChatRole, LLMToolName
+    ProcessAudioTool
+from airunner.aihandler.llm.tokenizer_handler import TokenizerHandler
+from airunner.enums import SignalCode, LLMToolName
 
 
 class CasualLMTransformerBaseHandler(TokenizerHandler):
