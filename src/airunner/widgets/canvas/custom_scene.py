@@ -24,6 +24,9 @@ class CustomScene(
 
         self._target_size = None
         self._do_resize = False
+        self.path = None
+        self._is_drawing = False
+        self._is_erasing = False
 
         # Create the QImage with the size of the parent widget
         self.image = QImage(
@@ -128,10 +131,6 @@ class CustomScene(
             image = self.initialize_image(size)
             pixmap = QPixmap.fromImage(image)
             self.item.setPixmap(pixmap)
-
-    path = None
-    _is_drawing = False
-    _is_erasing = False
 
     def handle_brush_color_changed(self, color_name):
         self._brush_color = QColor(color_name)
