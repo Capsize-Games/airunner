@@ -1,6 +1,4 @@
-from PyQt6.QtCore import pyqtSlot
-
-from airunner.aihandler.casual_lm_transfformer_base_handler import CasualLMTransformerBaseHandler
+from airunner.aihandler.llm.casual_lm_transfformer_base_handler import CasualLMTransformerBaseHandler
 from airunner.aihandler.settings import AVAILABLE_DTYPES
 from airunner.enums import SignalCode
 from airunner.workers.worker import Worker

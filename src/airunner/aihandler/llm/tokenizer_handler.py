@@ -1,6 +1,6 @@
-from transformers import AutoTokenizer, RagTokenizer, MistralForCausalLM
+from transformers import AutoTokenizer, RagTokenizer
 
-from airunner.aihandler.transformer_base_handler import TransformerBaseHandler
+from airunner.aihandler.llm.transformer_base_handler import TransformerBaseHandler
 
 
 class TokenizerHandler(TransformerBaseHandler):
