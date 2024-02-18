@@ -31,17 +31,28 @@ class DraggablePixmap(
         settings = ServiceLocator.get("get_settings")()
         tool = settings["current_tool"]
         if tool is CanvasToolName.ACTIVE_GRID_AREA:
-            self.snap_to_grid()
+            self.snap_to_grid(save=True)
         super().mouseReleaseEvent(event)
 
-    def snap_to_grid(self):
+    def snap_to_grid(self, save=False):
         x, y = snap_to_grid(
             int(self.x()),
             int(self.y())
         )
         x += self.last_pos.x()
         y += self.last_pos.y()
-        self.setPos(x, y)
+        self.setPos(x, y, save)
+
+    def setPos(self, x, y, save=False):
+        super().setPos(x, y)
+        if save:
+            settings = ServiceLocator.get("get_settings")()
+            tool = settings["current_tool"]
+            if tool is CanvasToolName.ACTIVE_GRID_AREA:
+                active_grid_settings = settings["active_grid_settings"]
+                active_grid_settings["pos_x"] = x
+                active_grid_settings["pos_y"] = y
+                self.settings = settings
 
     def paint(self, painter: QPainter, option, widget=None):
         painter.drawPixmap(self.pixmap.rect(), self.pixmap)
