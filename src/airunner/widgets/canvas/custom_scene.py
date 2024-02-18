@@ -24,8 +24,6 @@ class CustomScene(
 
         self._target_size = None
         self._do_resize = False
-        self._erase_at = None
-        self._draw_at = None
 
         # Create the QImage with the size of the parent widget
         self.image = QImage(
@@ -42,11 +40,28 @@ class CustomScene(
 
         # Add a variable to store the last mouse position
         self.last_pos = None
+        self.start_pos = None
 
         self.selection_start_pos = None
         self.selection_stop_pos = None
 
+        self.painter = None
+
         self.register(SignalCode.SCENE_RESIZE_SIGNAL, self.resize)
+
+        brush_color = self.settings["brush_settings"]["primary_color"]
+        self._brush_color = QColor(brush_color)
+        self.pen = QPen(
+            self._brush_color,
+            self.settings["brush_settings"]["size"],
+            Qt.PenStyle.SolidLine,
+            Qt.PenCapStyle.RoundCap
+        )
+
+        self.register(
+            SignalCode.BRUSH_COLOR_CHANGED_SIGNAL,
+            self.handle_brush_color_changed
+        )
 
     @property
     def is_brush_or_eraser(self):
@@ -69,79 +84,125 @@ class CustomScene(
         self._target_size = size
         self._do_resize = True
 
-    def paint(self, painter: QPainter, option, widget=None):
+    def drawBackground(self, painter, rect):
         if self._do_resize:
             self._do_resize = False
-            painter = self.do_resize(painter)
-        if self._erase_at:
-            self.erase_at(self._erase_at, painter)
-            self._erase_at = None
-        if self._draw_at:
-            self.draw_at(self._draw_at, painter)
-            self._draw_at = None
-        super().paint(painter, option, widget)
+            self.do_resize()
 
-    def do_resize(self, painter=None):
+        self.painter.drawImage(0, 0, self.image)
+
+        if self.last_pos:
+            if self.settings["current_tool"] is CanvasToolName.BRUSH:
+                self.draw_at(self.painter)
+            elif self.settings["current_tool"] is CanvasToolName.ERASER:
+                self.erase_at(self.painter)
+
+        super().drawBackground(painter, rect)
+
+    def initialize_image(self, size=None):
+        size = self._target_size if size is None else size
+        if size is None:
+            size = self.views()[0].size()
+
+        # Ensure that the QPainter object has finished painting before creating a new QImage
+        if self.painter is not None and self.painter.isActive():
+            self.painter.end()
+
+        self.image = QImage(
+            size.width(),
+            size.height(),
+            QImage.Format.Format_ARGB32
+        )
+        self.image.fill(Qt.GlobalColor.transparent)
+
+        self.painter = QPainter(self.image)
+        return self.image
+
+    def do_resize(self):
         size = self._target_size
         # only resize if the new size is larger than the existing image size
         if (
             self.image.width() < size.width() or
             self.image.height() < size.height()
         ):
-            new_image = QImage(
-                size.width(),
-                size.height(),
-                QImage.Format.Format_ARGB32
-            )
-            new_image.fill(Qt.GlobalColor.transparent)
-            if painter is None:
-                painter = QPainter(new_image)
-            painter.drawImage(0, 0, self.image)
+            image = self.initialize_image(size)
+            pixmap = QPixmap.fromImage(image)
+            self.item.setPixmap(pixmap)
 
-            self.image = new_image
-            self.item.setPixmap(QPixmap.fromImage(self.image))
-        return painter
+    path = None
+    _is_drawing = False
+    _is_erasing = False
 
-    def draw_at(self, position: QPointF, painter=None):
-        """
-        Draw a line from the last position to the current one
-        :param position:
-        :return:
-        """
-        size = self.settings["brush_settings"]["size"]
-        brush_color = self.settings["brush_settings"]["primary_color"]
+    def handle_brush_color_changed(self, color_name):
+        self._brush_color = QColor(color_name)
 
-        # Create a QPen
-        color = QColor(brush_color)
-        pen = QPen(
-            color,
-            size,
-            Qt.PenStyle.SolidLine,
-            Qt.PenCapStyle.RoundCap
+    def create_line(self, drawing=False, erasing=False, painter=None, color: QColor=None):
+        if drawing and not self._is_drawing or erasing and not self._is_erasing:
+            self._is_drawing = drawing
+            self._is_erasing = erasing
+
+            # set the size of the pen
+            self.pen.setWidth(self.settings["brush_settings"]["size"])
+
+            if drawing:
+                composition_mode = QPainter.CompositionMode.CompositionMode_SourceOver
+            else:
+                composition_mode = QPainter.CompositionMode.CompositionMode_Source
+
+            # check if painter is active
+            if not painter.isActive():
+                painter.begin(self.image)
+
+            self.pen.setColor(self._brush_color if color is None else color)
+
+            # Set the pen to the painter
+            painter.setPen(self.pen)
+
+            # Set the CompositionMode to SourceOver
+            painter.setCompositionMode(composition_mode)
+
+            # Create a QPainterPath object
+            self.path = QPainterPath()
+
+        self.path.moveTo(self.start_pos)
+
+        # Calculate the midpoint and use it as control point for quadTo
+        start_pos = self.start_pos
+        last_pos = self.last_pos
+
+        control_point = QPointF(
+            (start_pos.x() + last_pos.x()) * 0.5,
+            (start_pos.y() + last_pos.y()) * 0.5
+        )
+        self.path.quadTo(
+            control_point,
+            self.last_pos
         )
 
-        # Create a QPainter
-        if painter is None:
-            painter = QPainter(self.image)
-        painter.setPen(pen)
+        # Draw the path
+        painter.drawPath(self.path)
 
-        # Draw a line from the last position to the current one
-        if self.last_pos is not None:
-            painter.drawLine(
-                self.last_pos,
-                position
-            )
-        else:
-            painter.drawPoint(
-                position
-            )
-
-        # End the painter
+        self.start_pos = self.last_pos
 
         # Create a QPixmap from the image and set it to the QGraphicsPixmapItem
         pixmap = QPixmap.fromImage(self.image)
+
+        # save the image
         self.item.setPixmap(pixmap)
-    
+
+    def draw_at(self, painter=None):
+        self.create_line(
+            drawing=True,
+            painter=painter
+        )
+
+    def erase_at(self, painter=None):
+        self.create_line(
+            erasing=True,
+            painter=painter,
+            color=QColor(Qt.GlobalColor.transparent)
+        )
+
     def wheelEvent(self, event):
         # Calculate the zoom factor
         zoom_in_factor = self.settings["grid_settings"]["zoom_in_step"]
@@ -163,42 +224,6 @@ class CustomScene(
         self.settings = settings
 
         self.emit(SignalCode.CANVAS_ZOOM_LEVEL_CHANGED)
-
-    def erase_at(self, position, painter=None):
-        if painter is None:
-            painter = QPainter(
-                self.image
-            )
-        painter.setPen(
-            QPen(
-                Qt.GlobalColor.white,
-                self.settings["brush_settings"]["size"],
-                Qt.PenStyle.SolidLine,
-                Qt.PenCapStyle.RoundCap
-            )
-        )
-        painter.setCompositionMode(
-            QPainter.CompositionMode.CompositionMode_Clear
-        )
-        
-        # Create a QPainterPath
-        path = QPainterPath()
-        
-        # Move to the last position and draw a line to the current one
-        if self.last_pos is not None:
-            path.moveTo(self.last_pos)
-            path.lineTo(position)
-        else:
-            path.addEllipse(
-                position,
-                self.settings["brush_settings"]["size"] / 2,
-                self.settings["brush_settings"]["size"] / 2
-            )
-        
-        # Draw the path
-        painter.drawPath(path)
-
-        self.item.setPixmap(QPixmap.fromImage(self.image))
 
     def handle_mouse_event(self, event, is_press_event):
         view = self.views()[0]
@@ -233,11 +258,9 @@ class CustomScene(
             super(CustomScene, self).mousePressEvent(event)
             return
 
+        self.start_pos = event.scenePos()
         self.last_pos = event.scenePos()
-        if self.settings["current_tool"] is CanvasToolName.BRUSH:
-            self._draw_at = self.last_pos
-        elif self.settings["current_tool"] is CanvasToolName.ERASER:
-            self._erase_at = self.last_pos
+        self.update()
 
     def mouseReleaseEvent(self, event):
         if event.button() == Qt.MouseButton.LeftButton:
@@ -245,6 +268,9 @@ class CustomScene(
         super(CustomScene, self).mouseReleaseEvent(event)
         self.handle_cursor(event)
         self.last_pos = None
+        self.start_pos = None
+        self._is_drawing = False
+        self._is_erasing = False
 
     def handle_cursor(self, event):
         self.emit(
@@ -263,13 +289,10 @@ class CustomScene(
             super(CustomScene, self).mouseMoveEvent(event)
             return
         
-        if self.settings["current_tool"] is CanvasToolName.BRUSH:
-            self._draw_at = event.scenePos()
-        elif self.settings["current_tool"] is CanvasToolName.ERASER:
-            self._erase_at = event.scenePos()
-        
         # Update the last position
         self.last_pos = event.scenePos()
+
+        self.update()
     
     def leaveEvent(self, event):
         self.setCursor(Qt.ArrowCursor)
