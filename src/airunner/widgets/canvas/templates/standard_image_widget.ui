@@ -406,8 +406,7 @@
           <string notr="true"/>
          </property>
          <attribute name="icon">
-          <iconset theme="document-properties">
-           <normaloff>.</normaloff>.</iconset>
+          <iconset theme="document-properties"/>
          </attribute>
          <attribute name="title">
           <string>Stable Diffusion</string>
@@ -418,39 +417,6 @@
          <layout class="QHBoxLayout" name="horizontalLayout_13">
           <item>
            <widget class="StableDiffusionSettingsWidget" name="widget" native="true"/>
-          </item>
-         </layout>
-        </widget>
-        <widget class="QWidget" name="tab_4">
-         <attribute name="icon">
-          <iconset theme="document-properties">
-           <normaloff>.</normaloff>.</iconset>
-         </attribute>
-         <attribute name="title">
-          <string>LLM</string>
-         </attribute>
-         <layout class="QGridLayout" name="gridLayout_8">
-          <item row="0" column="0">
-           <widget class="QScrollArea" name="scrollArea">
-            <property name="widgetResizable">
-             <bool>true</bool>
-            </property>
-            <widget class="QWidget" name="scrollAreaWidgetContents">
-             <property name="geometry">
-              <rect>
-               <x>0</x>
-               <y>0</y>
-               <width>80</width>
-               <height>28</height>
-              </rect>
-             </property>
-             <layout class="QGridLayout" name="gridLayout_10">
-              <item row="0" column="0">
-               <widget class="LLMSettingsWidget" name="llm_settings_widget" native="true"/>
-              </item>
-             </layout>
-            </widget>
-           </widget>
           </item>
          </layout>
         </widget>
@@ -466,12 +432,6 @@
    <class>SliderWidget</class>
    <extends>QWidget</extends>
    <header>airunner/widgets/slider/slider_widget</header>
-   <container>1</container>
-  </customwidget>
-  <customwidget>
-   <class>LLMSettingsWidget</class>
-   <extends>QWidget</extends>
-   <header>airunner/widgets/llm/llm_settings_widget</header>
    <container>1</container>
   </customwidget>
   <customwidget>
