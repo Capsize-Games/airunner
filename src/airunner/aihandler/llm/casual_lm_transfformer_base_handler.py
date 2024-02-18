@@ -1,4 +1,4 @@
-from airunner.aihandler.agent import AIRunnerAgent
+from airunner.aihandler.llm.agent import AIRunnerAgent
 from airunner.aihandler.llm.local_agent import LocalAgent
 from transformers import AutoModelForCausalLM, TextIteratorStreamer
 from transformers import pipeline as hf_pipeline
