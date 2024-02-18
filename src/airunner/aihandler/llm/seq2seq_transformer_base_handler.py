@@ -1,6 +1,6 @@
 from transformers import AutoModelForSeq2SeqLM
 
-from airunner.aihandler.transformer_base_handler import TransformerBaseHandler
+from airunner.aihandler.llm.transformer_base_handler import TransformerBaseHandler
 
 
 class Seq2SeqTransformerBaseHandler(TransformerBaseHandler):
