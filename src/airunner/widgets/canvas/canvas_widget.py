@@ -3,6 +3,7 @@ import io
 from functools import partial
 from typing import Optional
 
+import PIL
 from PIL import Image, ImageFilter
 from PIL.ImageQt import ImageQt
 from PyQt6 import QtWidgets
@@ -159,7 +160,10 @@ class CanvasWidget(BaseWidget):
     def current_active_image(self) -> Image:
         layer = self.current_layer
         base_64_image = layer["base_64_image"]
-        return Image.open(io.BytesIO(base64.b64decode(base_64_image)))
+        try:
+            return Image.open(io.BytesIO(base64.b64decode(base_64_image)))
+        except PIL.UnidentifiedImageError:
+            return None
 
     def set_current_active_image(self, value: Image):
         self.add_image_to_current_layer(value)
@@ -448,6 +452,8 @@ class CanvasWidget(BaseWidget):
         self.do_draw(force_draw=True)
 
     def create_scene(self):
+        if self.scene:
+            self.scene.painter.end()
         self.scene = CustomScene(size=self.size())
         self.ui.canvas_container.setScene(self.scene)
         self.set_canvas_color()
@@ -498,12 +504,12 @@ class CanvasWidget(BaseWidget):
                     isinstance(self.pixmaps[index], QGraphicsItem) and
                     self.pixmaps[index].scene() == self.scene
                 ):
-                    self.scene.removeItem(self.pixmaps[index])
+                    self.remove_scene_item(self.pixmaps[index])
             else:
                 # If there's an existing pixmap in the layer, remove it from the scene
                 if index in self.pixmaps and isinstance(self.pixmaps[index], QGraphicsItem):
                     if self.pixmaps[index].scene() == self.scene:
-                        self.scene.removeItem(self.pixmaps[index])
+                        self.remove_scene_item(self.pixmaps[index])
                     del self.pixmaps[index]
                 pixmap = QPixmap()
                 pixmap.convertFromImage(ImageQt(image))
@@ -516,6 +522,10 @@ class CanvasWidget(BaseWidget):
                     self.scene.addItem(self.pixmaps[index])
             continue
 
+    def remove_scene_item(self, item):
+        if item.scene() == self.scene:
+            self.scene.removeItem(item)
+
     def set_scene_rect(self):
         self.scene.setSceneRect(
             0,
@@ -525,7 +535,7 @@ class CanvasWidget(BaseWidget):
         )
 
     def clear_lines(self):
-        self.scene.removeItem(self.line_group)
+        self.remove_scene_item(self.line_group)
         self.line_group = QGraphicsItemGroup()
 
     def draw_selected_area(self):
@@ -539,7 +549,7 @@ class CanvasWidget(BaseWidget):
         # This will clear the active grid area while a selection is being made
         if selection_stop_pos is None and selection_start_pos is not None:
             if self.active_grid_area:
-                self.scene.removeItem(self.active_grid_area)
+                self.remove_scene_item(self.active_grid_area)
                 self.active_grid_area = None
             return
 
@@ -698,7 +708,7 @@ class CanvasWidget(BaseWidget):
     def cut_image(self):
         draggable_pixmap: DraggablePixmap = self.clipboard_handler.cut_image()
         if draggable_pixmap:
-            self.scene.removeItem(draggable_pixmap)
+            self.remove_scene_item(draggable_pixmap)
             self.emit(SignalCode.LAYER_DELETE_CURRENT_SIGNAL)
             self.update()
     
@@ -707,7 +717,7 @@ class CanvasWidget(BaseWidget):
         draggable_pixmap = self.current_draggable_pixmap()
         if not draggable_pixmap:
             return
-        self.scene.removeItem(draggable_pixmap)
+        self.remove_scene_item(draggable_pixmap)
         self.update()
     
     def paste_image_from_clipboard(self):
@@ -732,7 +742,7 @@ class CanvasWidget(BaseWidget):
     def remove_current_draggable_pixmap_from_scene(self):
         current_draggable_pixmap = self.current_draggable_pixmap()
         if current_draggable_pixmap:
-            self.scene.removeItem(current_draggable_pixmap)
+            self.remove_scene_item(current_draggable_pixmap)
     
     def switch_to_layer(self, layer_index):
         self.emit(SignalCode.LAYER_SWITCH_SIGNAL, layer_index)
