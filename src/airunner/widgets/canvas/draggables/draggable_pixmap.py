@@ -19,18 +19,20 @@ class DraggablePixmap(
         self.setFlag(QGraphicsItem.GraphicsItemFlag.ItemIsMovable, True)
         self.last_pos = QPoint(0, 0)
 
-    def mouseMoveEvent(self, event):
+    @property
+    def current_tool(self):
         settings = ServiceLocator.get("get_settings")()
         tool = settings["current_tool"]
-        if tool is not CanvasToolName.ACTIVE_GRID_AREA:
+        return tool
+
+    def mouseMoveEvent(self, event):
+        if self.current_tool is not CanvasToolName.ACTIVE_GRID_AREA:
             return
         super().mouseMoveEvent(event)
         self.snap_to_grid()
 
     def mouseReleaseEvent(self, event):
-        settings = ServiceLocator.get("get_settings")()
-        tool = settings["current_tool"]
-        if tool is CanvasToolName.ACTIVE_GRID_AREA:
+        if self.current_tool is CanvasToolName.ACTIVE_GRID_AREA:
             self.snap_to_grid(save=True)
         super().mouseReleaseEvent(event)
 
@@ -46,9 +48,8 @@ class DraggablePixmap(
     def setPos(self, x, y, save=False):
         super().setPos(x, y)
         if save:
-            settings = ServiceLocator.get("get_settings")()
-            tool = settings["current_tool"]
-            if tool is CanvasToolName.ACTIVE_GRID_AREA:
+            if self.current_tool is CanvasToolName.ACTIVE_GRID_AREA:
+                settings = ServiceLocator.get("get_settings")()
                 active_grid_settings = settings["active_grid_settings"]
                 active_grid_settings["pos_x"] = x
                 active_grid_settings["pos_y"] = y
