@@ -130,7 +130,7 @@ class ActiveGridArea(DraggablePixmap):
 
     def draw_border(self, painter: QPainter = None):
         if painter is None:
-            painter = QPainter()
+            painter = QPainter(self.pixmap)
 
         settings = ServiceLocator.get("get_settings")()
 
@@ -168,7 +168,6 @@ class ActiveGridArea(DraggablePixmap):
     def paint(self, painter: QPainter, option, widget=None):
         painter = self.draw_border(painter)
         super().paint(painter, option, widget)
-        #super().paint(painter, option, widget)
 
     def toggle_render_border(self, value):
         pass
