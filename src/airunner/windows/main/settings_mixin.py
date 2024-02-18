@@ -298,6 +298,7 @@ Previous Conversation:
                 input_image=None,
             ),
             llm_generator_settings=dict(
+                use_tool_filter=False,
                 top_p=90,
                 max_length=50,
                 repetition_penalty=100,
