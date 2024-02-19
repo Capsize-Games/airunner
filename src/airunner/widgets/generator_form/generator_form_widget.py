@@ -163,7 +163,6 @@ class GeneratorForm(BaseWidget):
         self.emit(SignalCode.ENGINE_START_PROCESSING_QUEUE_SIGNAL)
 
     def on_generate_image_signal(self, message):
-        print(message)
         self.call_generate(
             image=message["image"],
             override_data=message["meta_data"]
@@ -186,7 +185,7 @@ class GeneratorForm(BaseWidget):
             # Get input image from input image
             enable_input_image = override_data.get(
                 "enable_input_image",
-                self.settings["generator_settings"]["enable_input_image"]
+                self.settings["generator_settings"]["input_image_settings"]["enable_input_image"]
             )
             if enable_input_image:
                 input_image = self.settings["generator_settings"]["input_image"]
