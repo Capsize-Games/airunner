@@ -181,7 +181,6 @@ class SDHandler(
 
     @initialized.setter
     def initialized(self, value):
-        print("SETTING INITALIZED TO ", value)
         if value is False:
             import traceback
             traceback.print_stack()
@@ -830,8 +829,6 @@ class SDHandler(
 
         if ((self.controlnet_loaded and not self.enable_controlnet) or
            (not self.controlnet_loaded and self.enable_controlnet)):
-            print("*" * 80)
-            print("prepare_options")
             self.initialized = False
 
         if self.prompt != options.get(f"prompt") or \
@@ -1405,8 +1402,6 @@ class SDHandler(
                 traceback.print_exc()
 
         if error:
-            print("*" * 80)
-            print("generator_sample 2")
             self.initialized = False
             self.reload_model = True
             if not self.has_internet_connection:
@@ -1786,7 +1781,5 @@ class SDHandler(
                 self.log_error("Unable to download required files, check internet connection")
             else:
                 self.log_error("Unable to download model, check internet connection")
-            print("*"*80)
-            print("handle_missing_files")
             self.initialized = False
             return None
