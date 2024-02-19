@@ -163,7 +163,6 @@ class GeneratorForm(BaseWidget):
         self.emit(SignalCode.ENGINE_START_PROCESSING_QUEUE_SIGNAL)
 
     def on_generate_image_signal(self, message):
-        print(message)
         self.call_generate(
             image=message["image"],
             override_data=message["meta_data"]
