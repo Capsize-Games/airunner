@@ -44,12 +44,15 @@
        <property name="bottomMargin">
         <number>0</number>
        </property>
-       <item row="0" column="0">
+       <item row="1" column="0">
         <widget class="QTextEdit" name="conversation">
          <property name="readOnly">
           <bool>true</bool>
          </property>
         </widget>
+       </item>
+       <item row="0" column="0">
+        <widget class="QComboBox" name="action"/>
        </item>
       </layout>
      </widget>
@@ -166,6 +169,22 @@
     </hint>
    </hints>
   </connection>
+  <connection>
+   <sender>action</sender>
+   <signal>currentTextChanged(QString)</signal>
+   <receiver>chat_prompt</receiver>
+   <slot>llm_action_changed(QString)</slot>
+   <hints>
+    <hint type="sourcelabel">
+     <x>169</x>
+     <y>12</y>
+    </hint>
+    <hint type="destinationlabel">
+     <x>47</x>
+     <y>2</y>
+    </hint>
+   </hints>
+  </connection>
  </connections>
  <slots>
   <slot>action_button_clicked_send()</slot>
@@ -175,5 +194,6 @@
   <slot>botname_text_changed(QString)</slot>
   <slot>personality_type_changed(QString)</slot>
   <slot>prompt_text_changed()</slot>
+  <slot>llm_action_changed(QString)</slot>
  </slots>
 </ui>
