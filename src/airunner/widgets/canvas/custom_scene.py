@@ -52,11 +52,12 @@ class CustomScene(
 
         self.register(SignalCode.SCENE_RESIZE_SIGNAL, self.resize)
 
-        brush_color = self.settings["brush_settings"]["primary_color"]
+        brush_settings = self.settings["brush_settings"]
+        brush_color = brush_settings["primary_color"]
         self._brush_color = QColor(brush_color)
         self.pen = QPen(
             self._brush_color,
-            self.settings["brush_settings"]["size"],
+            brush_settings["size"],
             Qt.PenStyle.SolidLine,
             Qt.PenCapStyle.RoundCap
         )
