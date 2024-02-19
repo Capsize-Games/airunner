@@ -5,7 +5,7 @@ from airunner.data.bootstrap.controlnet_bootstrap_data import controlnet_bootstr
 from airunner.data.bootstrap.imagefilter_bootstrap_data import imagefilter_bootstrap_data
 from airunner.data.bootstrap.model_bootstrap_data import model_bootstrap_data
 from airunner.data.bootstrap.pipeline_bootstrap_data import pipeline_bootstrap_data
-from airunner.enums import Mode, SignalCode, CanvasToolName
+from airunner.enums import Mode, SignalCode, CanvasToolName, LLMActionType
 from airunner.service_locator import ServiceLocator
 from airunner.settings import BASE_PATH
 from airunner.settings import DEFAULT_PATHS
@@ -298,7 +298,8 @@ Previous Conversation:
                 input_image=None,
             ),
             llm_generator_settings=dict(
-                use_tool_filter=False,
+                action=LLMActionType.CHAT.value,
+                use_tool_flter=False,
                 top_p=90,
                 max_length=50,
                 repetition_penalty=100,
