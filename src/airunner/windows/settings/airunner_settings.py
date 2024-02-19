@@ -39,7 +39,7 @@ class HighlightDelegate(QStyledItemDelegate):
 
 
 class SettingsWindow(BaseWindow):
-    is_modal = False
+    is_modal = True
     template_class_ = Ui_airunner_settings
     # template_name = "airunner_settings"
 
