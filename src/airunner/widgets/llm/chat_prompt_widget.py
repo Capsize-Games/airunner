@@ -2,7 +2,7 @@ from PyQt6.QtCore import pyqtSlot
 from PyQt6.QtWidgets import QSpacerItem, QSizePolicy
 from PyQt6.QtCore import Qt
 
-from airunner.enums import SignalCode, ServiceCode
+from airunner.enums import SignalCode, ServiceCode, LLMActionType
 from airunner.utils import parse_template
 from airunner.widgets.base_widget import BaseWidget
 from airunner.widgets.llm.loading_widget import LoadingWidget
@@ -27,6 +27,12 @@ class ChatPromptWidget(BaseWidget):
         self.originalKeyPressEvent = None
         self.action_menu_displayed = None
         self.action_menu_displayed = None
+
+        self.ui.action.blockSignals(True)
+        # iterate over each LLMActionType enum and add its value to the llm_tool_name
+        for action_type in LLMActionType:
+            self.ui.action.addItem(action_type.value)
+        self.ui.action.blockSignals(False)
 
     @property
     def current_generator(self):
@@ -108,6 +114,7 @@ class ChatPromptWidget(BaseWidget):
             {
                 "llm_request": True,
                 "request_data": {
+                    "action": self.settings["llm_generator_settings"]["action"],
                     "unload_unused_model": self.settings["memory_settings"]["unload_unused_models"],
                     "move_unused_model_to_cpu": self.settings["memory_settings"]["move_unused_model_to_cpu"],
                     "generator_name": generator_name,
@@ -190,6 +197,11 @@ class ChatPromptWidget(BaseWidget):
 
         self.ui.conversation.hide()
         self.ui.chat_container.show()
+
+    def llm_action_changed(self, val: str):
+        settings = self.settings
+        settings["llm_generator_settings"]["llm_tool_name"] = val
+        self.settings = settings
 
     def prompt_text_changed(self):
         self.prompt = self.ui.prompt.toPlainText()

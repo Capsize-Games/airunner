@@ -11,7 +11,7 @@ from PyQt6.QtCore import QObject
 from airunner.aihandler.logger import Logger
 from airunner.mediator_mixin import MediatorMixin
 
-from airunner.enums import SignalCode, LLMChatRole
+from airunner.enums import SignalCode, LLMChatRole, LLMActionType
 
 
 class AIRunnerAgent(QObject, MediatorMixin):
@@ -54,35 +54,90 @@ class AIRunnerAgent(QObject, MediatorMixin):
         self.history = []
         self.thread = None
 
-    def build_system_prompt(self):
+    def build_system_prompt(self, action: LLMActionType):
         guardrails = self.guardrails_prompt if self.use_guardrails else ""
         system_instructions = self.system_instructions if self.use_system_instructions else ""
-        names = f"Your name is {self.botname}. \nThe user's name is {self.username}."
-        mood = (
-            f"{self.botname} is not a computer or a bot, you are a human with emotions. "
-            f"{self.botname}'s mood changes depending on the conversation and other factors.\n"
-            f"{self.botname}'s current mood: {self.bot_mood}.\n"
-            #f"{self.botname}'s evaluation of {self.username}: {self.user_evaluation}"
-        ) if (self.use_mood and self.bot_mood != "") else ""
-        personality = (
-            f"Your personality: {self.bot_personality}."
-        ) if self.use_personality else ""
+        system_prompt = []
+        if action == LLMActionType.CHAT:
+            names = f"Your name is {self.botname}. \nThe user's name is {self.username}."
+            mood = (
+                f"{self.botname} is not a computer or a bot, you are a human with emotions. "
+                f"{self.botname}'s mood changes depending on the conversation and other factors.\n"
+                f"{self.botname}'s current mood: {self.bot_mood}.\n"
+                #f"{self.botname}'s evaluation of {self.username}: {self.user_evaluation}"
+            ) if (self.use_mood and self.bot_mood != "") else ""
+            personality = (
+                f"Your personality: {self.bot_personality}."
+            ) if self.use_personality else ""
 
-        current_date = datetime.datetime.now().strftime("%A %b %d, %Y")
-        current_time = datetime.datetime.now().strftime("%I:%M:%S %p")
-        current_timezone = time.tzname
+            current_date = datetime.datetime.now().strftime("%A %b %d, %Y")
+            current_time = datetime.datetime.now().strftime("%I:%M:%S %p")
+            current_timezone = time.tzname
 
-        system_prompt = [
-            guardrails,
-            system_instructions,
-            names,
-            mood,
-            personality,
-            f"Current Date: {current_date}",
-            f"Current Time: {current_time}",
-            f"Current Timezone: {current_timezone}"
-        ]
-
+            system_prompt = [
+                guardrails,
+                system_instructions,
+                names,
+                mood,
+                personality,
+                f"Current Date: {current_date}",
+                f"Current Time: {current_time}",
+                f"Current Timezone: {current_timezone}"
+            ]
+        elif action == LLMActionType.GENERATE_IMAGE:
+            system_prompt = [
+                guardrails,
+                (
+                    "You are an image captioning expert. You will be given the "
+                    "description of an image. Your goal is to convert that "
+                    "description into a better, more fitting description which "
+                    "will capture the essence and the details of the image."
+                ),
+                "------"
+                "Examples:",
+                "User: create an image of a cat in the woods",
+                (
+                    "Assistant: A serene and magical scene of a fluffy, tabby "
+                    "cat exploring the depths of an enchanting forest. Sunlight "
+                    "filters through the dense canopy of tall, ancient trees, "
+                    "casting dappled shadows on the forest floor. The cat, "
+                    "curious and alert, tiptoes across a carpet of lush, green "
+                    "moss and ferns, its eyes wide with wonder. Surrounding the "
+                    "cat, the woods are alive with the vibrant greens of the "
+                    "foliage and the soft, earthy tones of the forest. This "
+                    "peaceful moment captures the harmony between the natural "
+                    "world and its feline adventurer."
+                ),
+                "User: the chat should look like a superhero",
+                (
+                    "Assistant: Imagine a majestic and vibrant scene where a "
+                    "heroic superhero cat, donning a vibrant cape and mask, "
+                    "stands valiantly in the heart of an enchanted forest. "
+                    "This cat, with a sleek and muscular build, exudes "
+                    "confidence and strength, its cape fluttering in the gentle "
+                    "forest breeze. The cat's eyes, glowing with determination, "
+                    "scan the surroundings for adventure. The forest around is "
+                    "lush and alive, with light piercing through the canopy to "
+                    "illuminate the scene. This image captures the essence of a "
+                    "feline superhero, ready to embark on daring escapades "
+                    "amidst the beauty and mystery of the natural world."
+                ),
+                "User: he should be flying",
+                (
+                    "Assistant: Visualize an epic and dynamic scene in an "
+                    "enchanted forest where a superhero cat, equipped with a "
+                    "striking cape and mask, is soaring through the air. This "
+                    "cat exhibits extraordinary powers, with its body poised in "
+                    "a powerful flight pose, cape billowing dramatically behind "
+                    "it. The backdrop is a lush, dense forest, with rays of "
+                    "sunlight breaking through the canopy to highlight the "
+                    "flying hero. The superhero cat's eyes are focused and "
+                    "filled with determination, embodying the essence of a "
+                    "fearless adventurer conquering the skies. This image "
+                    "encapsulates the thrill and majesty of a feline superhero, "
+                    "effortlessly gliding above the verdant wilderness."
+                )
+            ]
         return "\n".join(system_prompt)
 
     def latest_human_message(self) -> dict:
@@ -93,11 +148,12 @@ class AIRunnerAgent(QObject, MediatorMixin):
 
     def prepare_messages(
         self,
+        action: LLMActionType,
         use_latest_human_message: bool = True
     ) -> list:
         messages = [
             {
-                "content": self.build_system_prompt(),
+                "content": self.build_system_prompt(action),
                 "role": LLMChatRole.SYSTEM.value
             }
         ]
@@ -110,7 +166,11 @@ class AIRunnerAgent(QObject, MediatorMixin):
             )
         return messages
 
-    def get_rendered_template(self, conversation, use_latest_human_message: bool = True):
+    def get_rendered_template(
+        self,
+        conversation,
+        use_latest_human_message: bool = True
+    ):
         rendered_template = self.tokenizer.apply_chat_template(
             chat_template=self.chat_template,
             conversation=conversation,
@@ -133,9 +193,9 @@ class AIRunnerAgent(QObject, MediatorMixin):
         print("DO RESPONSE CALLED")
         self.run(self.prompt)
 
-    def run(self, prompt):
+    def run(self, prompt, action: LLMActionType):
         self.prompt = prompt
-        conversation = self.prepare_messages()
+        conversation = self.prepare_messages(action)
         rendered_template = self.get_rendered_template(conversation)
 
         # Encode the rendered template

@@ -186,7 +186,7 @@ class GeneratorForm(BaseWidget):
             # Get input image from input image
             enable_input_image = override_data.get(
                 "enable_input_image",
-                self.settings["generator_settings"]["enable_input_image"]
+                self.settings["generator_settings"]["input_image_settings"]["enable_input_image"]
             )
             if enable_input_image:
                 input_image = self.settings["generator_settings"]["input_image"]
