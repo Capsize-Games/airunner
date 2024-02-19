@@ -37,7 +37,7 @@ setup(
         "requests-oauthlib==1.3.1",
         "safetensors==0.4.2",
         "scipy==1.12.0",
-        "tokenizers==0.15.1",
+        "tokenizers==0.15.2",
         "tqdm==4.66.2",
         "charset-normalizer==3.3.2",
         "opencv-python==4.9.0.80",
