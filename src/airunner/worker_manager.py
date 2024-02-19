@@ -33,52 +33,10 @@ class WorkerManager(QObject, MediatorMixin):
     The engine is responsible for processing requests and offloading
     them to the appropriate AI model controller.
     """
-
     # Signals
     request_signal_status = pyqtSignal(str)
     image_generated_signal = pyqtSignal(dict)
 
-    # Loaded flags
-    llm_loaded: bool = False
-    sd_loaded: bool = False
-
-    message = ""
-    current_message = ""
-
-    def do_response(self, response):
-        """
-        Handle a response from the application by putting it into
-        a response worker queue.
-        """
-        self.engine_response_worker.add_to_queue(response)
-
-    def on_engine_cancel_signal(self, _ignore):
-        self.logger.info("Canceling")
-        self.emit(SignalCode.SD_CANCEL_SIGNAL)
-        self.engine_request_worker.cancel()
-
-    def on_engine_stop_processing_queue_signal(self):
-        self.do_process_queue = False
-    
-    def on_engine_start_processing_queue_signal(self):
-        self.do_process_queue = True
-
-    def on_hear_signal(self, message):
-        """
-        This is a slot function for the hear_signal.
-        The hear signal is triggered from the speech_to_text.listen function.
-        """
-        print("HEARD", message)
-    
-    def handle_generate_caption(self, message):
-        pass
-
-    def on_caption_generated_signal(self, message):
-        print("TODO: caption generated signal", message)
-
-    def handle_text_generated(self, message, code):
-        print("TODO: handle text generated no stream")
-    
     def __init__(
         self,
         disable_sd: bool = False,
@@ -90,6 +48,11 @@ class WorkerManager(QObject, MediatorMixin):
     ):
         MediatorMixin.__init__(self)
         super().__init__()
+
+        self.llm_loaded: bool = False
+        self.sd_loaded: bool = False
+        self.message = ""
+        self.current_message = ""
         self.do_process_queue = None
         self.do_process_queue = None
         self.logger = Logger(prefix=self.__class__.__name__)
@@ -142,6 +105,40 @@ class WorkerManager(QObject, MediatorMixin):
 
 
         self.toggle_vision_capture()
+
+    def do_response(self, response):
+        """
+        Handle a response from the application by putting it into
+        a response worker queue.
+        """
+        self.engine_response_worker.add_to_queue(response)
+
+    def on_engine_cancel_signal(self, _ignore):
+        self.logger.info("Canceling")
+        self.emit(SignalCode.SD_CANCEL_SIGNAL)
+        self.engine_request_worker.cancel()
+
+    def on_engine_stop_processing_queue_signal(self):
+        self.do_process_queue = False
+
+    def on_engine_start_processing_queue_signal(self):
+        self.do_process_queue = True
+
+    def on_hear_signal(self, message):
+        """
+        This is a slot function for the hear_signal.
+        The hear signal is triggered from the speech_to_text.listen function.
+        """
+        print("HEARD", message)
+
+    def handle_generate_caption(self, message):
+        pass
+
+    def on_caption_generated_signal(self, message):
+        print("TODO: caption generated signal", message)
+
+    def handle_text_generated(self, message, code):
+        print("TODO: handle text generated no stream")
 
     def toggle_vision_capture(self):
         do_capture_image = self.settings["ocr_enabled"]

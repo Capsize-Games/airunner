@@ -7,7 +7,7 @@ from airunner.aihandler.llm.llm_tools import QuitApplicationTool, StartVisionCap
     StartAudioCaptureTool, StopAudioCaptureTool, StartSpeakersTool, StopSpeakersTool, ProcessVisionTool, \
     ProcessAudioTool
 from airunner.aihandler.llm.tokenizer_handler import TokenizerHandler
-from airunner.enums import SignalCode, LLMToolName
+from airunner.enums import SignalCode, LLMToolName, LLMActionType
 
 
 class CasualLMTransformerBaseHandler(TokenizerHandler):
@@ -23,6 +23,8 @@ class CasualLMTransformerBaseHandler(TokenizerHandler):
         self.service_context_model = None
         self.use_query_engine: bool = False
         self.use_chat_engine: bool = True
+        self.chat_engine = None
+        self.action: LLMActionType = LLMActionType.CHAT
         self._username: str = ""
         self._botname: str = ""
         self.bot_mood: str = ""
@@ -108,6 +110,11 @@ class CasualLMTransformerBaseHandler(TokenizerHandler):
         self.guardrails_prompt = self.request_data.get("guardrails_prompt", "")
         self.system_instructions = self.request_data.get("system_instructions", "")
         self.batch_size = self.request_data.get("batch_size", 1)
+        action = self.request_data.get("action", LLMActionType.CHAT.value)
+        for action_type in LLMActionType:
+            if action_type.value == action:
+                self.action = action_type
+                break
 
     def post_load(self):
         super().post_load()
@@ -195,12 +202,13 @@ class CasualLMTransformerBaseHandler(TokenizerHandler):
         # self.user_evaluation = self.do_user_evaluation()
         #full_message = self.rag_stream()
 
-        if self.settings["llm_generator_settings"]["use_tool_filter"]:
-            # First try running a tool
-            self.tool_agent.run(self.prompt)
+        if self.action == LLMActionType.CHAT:
+            if self.settings["llm_generator_settings"]["use_tool_filter"]:
+                self.tool_agent.run(self.prompt)
+            self.chat_agent.run(self.prompt, LLMActionType.GENERATE_IMAGE)
 
-        # Do chat prompt
-        self.chat_agent.run(self.prompt)
+
+
         self.send_final_message()
 
     def emit_streamed_text_signal(self, **kwargs):
