@@ -279,6 +279,10 @@ class LLMChatRole(Enum):
 
 
 class LLMToolName(Enum):
+    """
+    The following tools are used by the LLM to process various user
+    requests. They should be named with the same convention as python functions.
+    """
     COMMENT_ON_IMAGE = "comment_on_image"
     DESCRIBE_IMAGE = "describe_image"
     GENERATE_IMAGE = "generate_image"
@@ -293,6 +297,18 @@ class LLMToolName(Enum):
     VISION_PROCESS_IMAGES = "vision_process_images"
     VISION_START_CAPTURE = "vision_start_capture"
     VISION_STOP_CAPTURE = "vision_stop_capture"
+
+
+class LLMActionType(Enum):
+    """
+    The following action types are used by the LLM to process various user
+    requests. The default action type is "Chat". This is used when the user
+    wants to interact with a chatbot. When this is combined with the
+    use_tool_flter flag, the LLM will attempt to determine which action to take
+    based on the user's words.
+    """
+    CHAT = "Chat"
+    GENERATE_IMAGE = "Generate Image"
 
 
 class CanvasToolName(Enum):

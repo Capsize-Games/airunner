@@ -181,6 +181,10 @@ class SDHandler(
 
     @initialized.setter
     def initialized(self, value):
+        print("SETTING INITALIZED TO ", value)
+        if value is False:
+            import traceback
+            traceback.print_stack()
         self._initialized = value
 
     @property
@@ -771,8 +775,14 @@ class SDHandler(
         return model.endswith(".safetensors")
 
     def initialize(self):
-        if not self.initialized or self.reload_model or self.pipe is None:
-            self.logger.info("Initializing")
+        if self.initialized is False or self.reload_model is True or self.pipe is None:
+            if not self.initialized:
+                self.logger.info("Initializing")
+            elif self.reload_model:
+                self.logger.info("Reloading model")
+            elif self.pipe is None:
+                self.logger.info("Pipe is None")
+            self.send_model_loading_message(self.current_model)
             self.compel_proc = None
             self.prompt_embeds = None
             self.negative_prompt_embeds = None
@@ -820,6 +830,8 @@ class SDHandler(
 
         if ((self.controlnet_loaded and not self.enable_controlnet) or
            (not self.controlnet_loaded and self.enable_controlnet)):
+            print("*" * 80)
+            print("prepare_options")
             self.initialized = False
 
         if self.prompt != options.get(f"prompt") or \
@@ -1366,10 +1378,10 @@ class SDHandler(
 
         self.emit(SignalCode.LOG_STATUS_SIGNAL, f"Generating {'video' if self.is_vid_action else 'image'}")
 
-        action = "depth2img" if data["action"] == "depth" else data["action"]
+        action = "depth2img" if self.action == "depth" else self.action
 
         try:
-            self.initialized = self.__dict__[action] is not None
+            self.initialized = self.pipe is not None
         except KeyError:
             self.logger.info(f"{action} model has not been initialized yet")
             self.initialized = False
@@ -1393,6 +1405,8 @@ class SDHandler(
                 traceback.print_exc()
 
         if error:
+            print("*" * 80)
+            print("generator_sample 2")
             self.initialized = False
             self.reload_model = True
             if not self.has_internet_connection:
@@ -1730,8 +1744,6 @@ class SDHandler(
         # get models from database
         model_name = self.options.get(f"model", None)
 
-        self.send_model_loading_message(model_name)
-
         self._previous_model = self.current_model
         if self.is_single_file:
             self.current_model = model_name
@@ -1774,5 +1786,7 @@ class SDHandler(
                 self.log_error("Unable to download required files, check internet connection")
             else:
                 self.log_error("Unable to download model, check internet connection")
+            print("*"*80)
+            print("handle_missing_files")
             self.initialized = False
             return None
