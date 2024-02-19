@@ -58,10 +58,8 @@ class SDRequest(
         scheduler = override_data.get("scheduler", settings["generator_settings"]["scheduler"])
         enable_controlnet = bool(
             override_data.get("enable_controlnet", settings["generator_settings"]["enable_controlnet"]))
-        controlnet = override_data.get("controlnet", settings["generator_settings"]["controlnet"])
-        controlnet_conditioning_scale = float(override_data.get("controlnet_conditioning_scale",
-                                                                settings["generator_settings"][
-                                                                    "controlnet_guidance_scale"]))
+        controlnet = override_data.get("controlnet", settings["generator_settings"]["controlnet_image_settings"]["controlnet"])
+        controlnet_conditioning_scale = float(override_data.get("controlnet_conditioning_scale", settings["generator_settings"]["controlnet_image_settings"]["guidance_scale"]))
         width = int(override_data.get("width", settings["working_width"]))
         height = int(override_data.get("height", settings["working_height"]))
         clip_skip = int(override_data.get("clip_skip", settings["generator_settings"]["clip_skip"]))
