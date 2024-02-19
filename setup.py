@@ -56,7 +56,7 @@ setup(
         "optimum==1.16.2",
         "bitsandbytes==0.42.0",
         "tomesd==0.1.3",
-        "watchdog==3.0.0",
+        "watchdog==4.0.0",
         "sounddevice==0.4.6",
         "datasets==2.17.0",
         #"basicsr==1.4.2"
