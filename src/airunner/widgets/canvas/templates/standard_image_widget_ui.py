@@ -202,25 +202,6 @@ class Ui_standard_image_widget(object):
         self.horizontalLayout_13.addWidget(self.widget)
         icon = QtGui.QIcon.fromTheme("document-properties")
         self.tabWidget.addTab(self.tab_6, icon, "")
-        self.tab_4 = QtWidgets.QWidget()
-        self.tab_4.setObjectName("tab_4")
-        self.gridLayout_8 = QtWidgets.QGridLayout(self.tab_4)
-        self.gridLayout_8.setObjectName("gridLayout_8")
-        self.scrollArea = QtWidgets.QScrollArea(parent=self.tab_4)
-        self.scrollArea.setWidgetResizable(True)
-        self.scrollArea.setObjectName("scrollArea")
-        self.scrollAreaWidgetContents = QtWidgets.QWidget()
-        self.scrollAreaWidgetContents.setGeometry(QtCore.QRect(0, 0, 80, 28))
-        self.scrollAreaWidgetContents.setObjectName("scrollAreaWidgetContents")
-        self.gridLayout_10 = QtWidgets.QGridLayout(self.scrollAreaWidgetContents)
-        self.gridLayout_10.setObjectName("gridLayout_10")
-        self.llm_settings_widget = LLMSettingsWidget(parent=self.scrollAreaWidgetContents)
-        self.llm_settings_widget.setObjectName("llm_settings_widget")
-        self.gridLayout_10.addWidget(self.llm_settings_widget, 0, 0, 1, 1)
-        self.scrollArea.setWidget(self.scrollAreaWidgetContents)
-        self.gridLayout_8.addWidget(self.scrollArea, 0, 0, 1, 1)
-        icon = QtGui.QIcon.fromTheme("document-properties")
-        self.tabWidget.addTab(self.tab_4, icon, "")
         self.gridLayout_7.addWidget(self.tabWidget, 0, 0, 1, 1)
         self.gridLayout.addWidget(self.sidebar, 0, 0, 1, 1)
 
@@ -260,12 +241,10 @@ class Ui_standard_image_widget(object):
         self.tabWidget.setTabText(self.tabWidget.indexOf(self.tab), _translate("standard_image_widget", "Tools"))
         self.tabWidget.setTabText(self.tabWidget.indexOf(self.tab_6), _translate("standard_image_widget", "Stable Diffusion"))
         self.tabWidget.setTabToolTip(self.tabWidget.indexOf(self.tab_6), _translate("standard_image_widget", "Stable Diffusion settings"))
-        self.tabWidget.setTabText(self.tabWidget.indexOf(self.tab_4), _translate("standard_image_widget", "LLM"))
 from airunner.widgets.canvas.brushes_container import BrushesContainer
 from airunner.widgets.controlnet_settings.controlnet_settings_widget import ControlNetSettingsWidget
 from airunner.widgets.embeddings.embeddings_container_widget import EmbeddingsContainerWidget
 from airunner.widgets.input_image.input_image_settings_widget import InputImageSettingsWidget
-from airunner.widgets.llm.llm_settings_widget import LLMSettingsWidget
 from airunner.widgets.lora.lora_container_widget import LoraContainerWidget
 from airunner.widgets.slider.slider_widget import SliderWidget
 from airunner.widgets.stablediffusion.stable_diffusion_settings_widget import StableDiffusionSettingsWidget
