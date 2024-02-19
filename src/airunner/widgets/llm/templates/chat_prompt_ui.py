@@ -28,7 +28,10 @@ class Ui_chat_prompt(object):
         self.conversation = QtWidgets.QTextEdit(parent=self.scrollAreaWidgetContents)
         self.conversation.setReadOnly(True)
         self.conversation.setObjectName("conversation")
-        self.gridLayout_2.addWidget(self.conversation, 0, 0, 1, 1)
+        self.gridLayout_2.addWidget(self.conversation, 1, 0, 1, 1)
+        self.action = QtWidgets.QComboBox(parent=self.scrollAreaWidgetContents)
+        self.action.setObjectName("action")
+        self.gridLayout_2.addWidget(self.action, 0, 0, 1, 1)
         self.chat_container.setWidget(self.scrollAreaWidgetContents)
         self.gridLayout.addWidget(self.chat_container, 1, 0, 1, 2)
         self.horizontalLayout_2 = QtWidgets.QHBoxLayout()
@@ -65,6 +68,7 @@ class Ui_chat_prompt(object):
         self.send_button.clicked.connect(chat_prompt.action_button_clicked_send) # type: ignore
         self.clear_conversatiion_button.clicked.connect(chat_prompt.action_button_clicked_clear_conversation) # type: ignore
         self.prompt.textChanged.connect(chat_prompt.prompt_text_changed) # type: ignore
+        self.action.currentTextChanged['QString'].connect(chat_prompt.llm_action_changed) # type: ignore
         QtCore.QMetaObject.connectSlotsByName(chat_prompt)
 
     def retranslateUi(self, chat_prompt):
