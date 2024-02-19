@@ -181,6 +181,9 @@ class SDHandler(
 
     @initialized.setter
     def initialized(self, value):
+        if value is False:
+            import traceback
+            traceback.print_stack()
         self._initialized = value
 
     @property
@@ -771,8 +774,14 @@ class SDHandler(
         return model.endswith(".safetensors")
 
     def initialize(self):
-        if not self.initialized or self.reload_model or self.pipe is None:
-            self.logger.info("Initializing")
+        if self.initialized is False or self.reload_model is True or self.pipe is None:
+            if not self.initialized:
+                self.logger.info("Initializing")
+            elif self.reload_model:
+                self.logger.info("Reloading model")
+            elif self.pipe is None:
+                self.logger.info("Pipe is None")
+            self.send_model_loading_message(self.current_model)
             self.compel_proc = None
             self.prompt_embeds = None
             self.negative_prompt_embeds = None
@@ -1366,10 +1375,10 @@ class SDHandler(
 
         self.emit(SignalCode.LOG_STATUS_SIGNAL, f"Generating {'video' if self.is_vid_action else 'image'}")
 
-        action = "depth2img" if data["action"] == "depth" else data["action"]
+        action = "depth2img" if self.action == "depth" else self.action
 
         try:
-            self.initialized = self.__dict__[action] is not None
+            self.initialized = self.pipe is not None
         except KeyError:
             self.logger.info(f"{action} model has not been initialized yet")
             self.initialized = False
@@ -1729,8 +1738,6 @@ class SDHandler(
 
         # get models from database
         model_name = self.options.get(f"model", None)
-
-        self.send_model_loading_message(model_name)
 
         self._previous_model = self.current_model
         if self.is_single_file:
