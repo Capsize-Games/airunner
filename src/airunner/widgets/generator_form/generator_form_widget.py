@@ -115,6 +115,7 @@ class GeneratorForm(BaseWidget):
         self.register(SignalCode.APPLICATION_STOP_SD_PROGRESS_BAR_SIGNAL, self.on_stop_image_generator_progress_bar_signal)
         self.register(SignalCode.SD_PROGRESS_SIGNAL, self.on_progress_signal)
         self.register(SignalCode.GENERATOR_FORM_UPDATE_VALUES_SIGNAL, self.set_form_values)
+        self.register(SignalCode.LLM_IMAGE_PROMPT_GENERATED_SIGNAL, self.on_llm_image_prompt_generated_signal)
 
     def activate_ai_mode(self):
         ai_mode = self.settings.get("ai_mode", False)
@@ -274,6 +275,11 @@ class GeneratorForm(BaseWidget):
 
     def prep_video(self):
         return []
+
+    def on_llm_image_prompt_generated_signal(self, prompt):
+        self.ui.prompt.setPlainText(prompt)
+        self.handle_prompt_changed()
+        self.handle_generate_button_clicked()
 
     def do_generate(
         self,
