@@ -12,7 +12,7 @@ from PyQt6 import QtCore, QtGui, QtWidgets
 class Ui_message(object):
     def setupUi(self, message):
         message.setObjectName("message")
-        message.resize(605, 707)
+        message.resize(566, 902)
         sizePolicy = QtWidgets.QSizePolicy(QtWidgets.QSizePolicy.Policy.Preferred, QtWidgets.QSizePolicy.Policy.MinimumExpanding)
         sizePolicy.setHorizontalStretch(0)
         sizePolicy.setVerticalStretch(0)
@@ -37,7 +37,8 @@ class Ui_message(object):
         self.content.setStyleSheet("border-radius: 5px; border: 5px solid #1f1f1f; background-color: #1f1f1f; color: #ffffff;")
         self.content.setFrameShape(QtWidgets.QFrame.Shape.NoFrame)
         self.content.setFrameShadow(QtWidgets.QFrame.Shadow.Plain)
-        self.content.setVerticalScrollBarPolicy(QtCore.Qt.ScrollBarPolicy.ScrollBarAsNeeded)
+        self.content.setVerticalScrollBarPolicy(QtCore.Qt.ScrollBarPolicy.ScrollBarAlwaysOff)
+        self.content.setHorizontalScrollBarPolicy(QtCore.Qt.ScrollBarPolicy.ScrollBarAlwaysOff)
         self.content.setObjectName("content")
         self.horizontalLayout.addWidget(self.content)
         self.bot_name = QtWidgets.QLabel(parent=message)
