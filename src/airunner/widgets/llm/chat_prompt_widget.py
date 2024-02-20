@@ -33,6 +33,8 @@ class ChatPromptWidget(BaseWidget):
         for action_type in LLMActionType:
             self.ui.action.addItem(action_type.value)
         self.ui.action.blockSignals(False)
+        self.originalKeyPressEvent = None
+        self.originalKeyPressEvent = self.ui.prompt.keyPressEvent
 
     @property
     def current_generator(self):
@@ -190,7 +192,6 @@ class ChatPromptWidget(BaseWidget):
         # there is no returnPressed signal for QPlainTextEdit
         # so we have to use the keyPressEvent
         self.promptKeyPressEvent = self.ui.prompt.keyPressEvent
-        self.originalKeyPressEvent = self.ui.prompt.keyPressEvent
 
         # Override the method
         self.ui.prompt.keyPressEvent = self.handle_key_press
