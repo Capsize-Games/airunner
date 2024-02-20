@@ -452,7 +452,7 @@ class CanvasWidget(BaseWidget):
         self.do_draw(force_draw=True)
 
     def create_scene(self):
-        if self.scene:
+        if self.scene and self.scene.painter:
             self.scene.painter.end()
         self.scene = CustomScene(size=self.size())
         self.ui.canvas_container.setScene(self.scene)
