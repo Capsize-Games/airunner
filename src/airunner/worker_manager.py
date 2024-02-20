@@ -223,7 +223,6 @@ class WorkerManager(QObject, MediatorMixin):
         })
     
     def do_image_generate_request(self, message):
-        clear_memory()
         self.emit(SignalCode.ENGINE_DO_REQUEST_SIGNAL, {
             'code': EngineRequestCode.GENERATE_IMAGE,
             'message': message
