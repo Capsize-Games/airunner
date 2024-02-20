@@ -138,12 +138,13 @@ class BrushesContainer(BaseWidget):
 
     def delete_brush(self, widget, brush):
         settings = self.settings
-        for index, brush_data in enumerate(settings["presets"]):
-            brush_name = brush["name"]
-            brush_data_name = brush_data["name"]
-            if brush_name == brush_data_name:
-                del settings["presets"][index]
-                break
+        if brush is not None:
+            for index, brush_data in enumerate(settings["presets"]):
+                brush_name = brush["name"]
+                brush_data_name = brush_data["name"]
+                if brush_name == brush_data_name:
+                    del settings["presets"][index]
+                    break
         self.settings = settings
         widget.deleteLater()
     
