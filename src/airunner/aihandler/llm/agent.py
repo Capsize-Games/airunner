@@ -97,46 +97,19 @@ class AIRunnerAgent(QObject, MediatorMixin):
                 "Examples:",
                 "User: create an image of a cat in the woods",
                 (
-                    "Assistant: A serene and magical scene of a fluffy, tabby "
-                    "cat exploring the depths of an enchanting forest. Sunlight "
-                    "filters through the dense canopy of tall, ancient trees, "
-                    "casting dappled shadows on the forest floor. The cat, "
-                    "curious and alert, tiptoes across a carpet of lush, green "
-                    "moss and ferns, its eyes wide with wonder. Surrounding the "
-                    "cat, the woods are alive with the vibrant greens of the "
-                    "foliage and the soft, earthy tones of the forest. This "
-                    "peaceful moment captures the harmony between the natural "
-                    "world and its feline adventurer."
+                    "Assistant: A (fluffy, tabby cat)+ exploring the depths of "
+                    "an (enchanting forest). (well-lit), sunlight filters, "
+                    "professional portrait."
                 ),
                 "User: the chat should look like a superhero",
                 (
-                    "Assistant: Imagine a majestic and vibrant scene where a "
-                    "heroic superhero cat, donning a vibrant cape and mask, "
-                    "stands valiantly in the heart of an enchanted forest. "
-                    "This cat, with a sleek and muscular build, exudes "
-                    "confidence and strength, its cape fluttering in the gentle "
-                    "forest breeze. The cat's eyes, glowing with determination, "
-                    "scan the surroundings for adventure. The forest around is "
-                    "lush and alive, with light piercing through the canopy to "
-                    "illuminate the scene. This image captures the essence of a "
-                    "feline superhero, ready to embark on daring escapades "
-                    "amidst the beauty and mystery of the natural world."
+                    "Assistant: " "A (cat dressed in a superhero costume), standing in the (middle of a forest)."
                 ),
-                "User: he should be flying",
-                (
-                    "Assistant: Visualize an epic and dynamic scene in an "
-                    "enchanted forest where a superhero cat, equipped with a "
-                    "striking cape and mask, is soaring through the air. This "
-                    "cat exhibits extraordinary powers, with its body poised in "
-                    "a powerful flight pose, cape billowing dramatically behind "
-                    "it. The backdrop is a lush, dense forest, with rays of "
-                    "sunlight breaking through the canopy to highlight the "
-                    "flying hero. The superhero cat's eyes are focused and "
-                    "filled with determination, embodying the essence of a "
-                    "fearless adventurer conquering the skies. This image "
-                    "encapsulates the thrill and majesty of a feline superhero, "
-                    "effortlessly gliding above the verdant wilderness."
-                )
+                "------",
+                "Use parentheses to indicate the most important details of the "
+                "image. Add a plus sign after a word or parenthesis to add "
+                "extra emphasis. More plus signs indicate more emphasis. Minus "
+                "signs can be used to indicate less emphasis.",
             ]
         return "\n".join(system_prompt)
 
@@ -191,7 +164,7 @@ class AIRunnerAgent(QObject, MediatorMixin):
 
     def do_response(self):
         print("DO RESPONSE CALLED")
-        self.run(self.prompt)
+        self.run(self.prompt, LLMActionType.CHAT)
 
     def run(self, prompt, action: LLMActionType):
         self.prompt = prompt
@@ -277,10 +250,17 @@ class AIRunnerAgent(QObject, MediatorMixin):
             self.prompt,
             LLMChatRole.HUMAN
         )
-        self.add_message_to_history(
-            streamed_template,
-            LLMChatRole.ASSISTANT
-        )
+
+        if action == LLMActionType.CHAT:
+            self.add_message_to_history(
+                streamed_template,
+                LLMChatRole.ASSISTANT
+            )
+        elif action == LLMActionType.GENERATE_IMAGE:
+            self.emit(
+                SignalCode.LLM_IMAGE_PROMPT_GENERATED_SIGNAL,
+                streamed_template
+            )
 
         return streamed_template
 
