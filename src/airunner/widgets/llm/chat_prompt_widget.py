@@ -27,6 +27,7 @@ class ChatPromptWidget(BaseWidget):
         self.originalKeyPressEvent = None
         self.action_menu_displayed = None
         self.action_menu_displayed = None
+        self.messages_spacer = None
 
         self.ui.action.blockSignals(True)
         # iterate over each LLMActionType enum and add its value to the llm_tool_name
@@ -201,7 +202,7 @@ class ChatPromptWidget(BaseWidget):
 
     def llm_action_changed(self, val: str):
         settings = self.settings
-        settings["llm_generator_settings"]["llm_tool_name"] = val
+        settings["llm_generator_settings"]["action"] = val
         self.settings = settings
 
     def prompt_text_changed(self):
@@ -233,7 +234,7 @@ class ChatPromptWidget(BaseWidget):
             if event.modifiers() != Qt.KeyboardModifier.ShiftModifier:
                 self.do_generate()
         # Call the original method
-        if self.originalKeyPressEvent is not None:
+        if self.originalKeyPressEvent is not None and self.originalKeyPressEvent != self.handle_key_press:
             self.originalKeyPressEvent(event)
 
     def hide_action_menu(self):
@@ -288,7 +289,14 @@ class ChatPromptWidget(BaseWidget):
                     current_widget.deleteLater()
                     break
 
+        # if self.messages_spacer is not None:
+        #     self.ui.scrollAreaWidgetContents.layout().removeItem(self.messages_spacer)
+
         self.ui.scrollAreaWidgetContents.layout().addWidget(widget)
+
+        # if self.messages_spacer is None:
+        #     self.messages_spacer = QSpacerItem(20, 40, QSizePolicy.Policy.Minimum, QSizePolicy.Policy.Expanding)
+        # self.ui.scrollAreaWidgetContents.layout().addItem(self.messages_spacer)
         
         if self.spacer is not None:
             self.ui.scrollAreaWidgetContents.layout().removeItem(self.spacer)
@@ -312,3 +320,8 @@ class ChatPromptWidget(BaseWidget):
 
     def action_button_clicked_generate_characters(self):
         pass
+
+    def scroll_to_bottom(self):
+        self.ui.scrollAreaWidgetContents.verticalScrollBar().setValue(
+            self.ui.scrollAreaWidgetContents.verticalScrollBar().maximum()
+        )
