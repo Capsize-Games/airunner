@@ -94,5 +94,5 @@ git archive --format=tar.gz --prefix=airunner-2.2.1/ -o ../airunner_2.2.1.orig.t
 
 Build
 ```bash
-debuild -D
+dpkg-buildpackage -S -D
 ```
