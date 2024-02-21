@@ -82,22 +82,4 @@ Unit tests can be run using the following command:
 
 ### Debian package
 
-Update for latest release:
-```bash
-dch -v 2.2.2-[NEW_VERSION_HERE] -D jammy "Message here"
-```
-
-Archive
-```bash
-git archive --format=tar.gz --prefix=airunner-2.2.2/ -o ../airunner_2.2.2.orig.tar.gz HEAD
-```
-
-Build
-```bash
-dpkg-buildpackage -S -D -sa
-```
-
-Upload to PPA
-```bash
-dput ppa:capsize/airunner airunner_2.2.2-[NEW_VERSION_HERE]_source.changes
-```
+Release latest debian package by running `release_debian_ppa.sh`
