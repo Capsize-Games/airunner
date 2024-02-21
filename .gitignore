@@ -20,3 +20,4 @@ venv
 extensions
 gfpgan
 butler
+.pybuild
