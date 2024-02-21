@@ -84,7 +84,7 @@ Unit tests can be run using the following command:
 
 Update for latest release:
 ```bash
-dch -v 2.2.1-[NEW_VERSION_HERE] "Update for 2.2.1 release"
+dch -v 2.2.1-[NEW_VERSION_HERE] -D focal "Message here"
 ```
 
 Archive
@@ -94,5 +94,10 @@ git archive --format=tar.gz --prefix=airunner-2.2.1/ -o ../airunner_2.2.1.orig.t
 
 Build
 ```bash
-dpkg-buildpackage -S -D
+dpkg-buildpackage -S -D -sa
+```
+
+Upload to PPA
+```bash
+dput ppa:capsize/airunner airunner_2.2.1-[NEW_VERSION_HERE]_source.changes
 ```
