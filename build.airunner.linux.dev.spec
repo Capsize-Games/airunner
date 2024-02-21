@@ -107,7 +107,7 @@ a = Analysis(
         "cmake",
         "cryptography",
         "email-validator",
-        "google",
+        #"google",
         "google-auth",
         "google-auth-oauthlib",
         "google-pasta",

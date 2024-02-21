@@ -17,3 +17,6 @@ settings.pickle
 .run
 *egg-info*
 venv
+extensions
+gfpgan
+butler
