@@ -1,8 +1,12 @@
-airunner (2.2.1-1) UNRELEASED; urgency=medium
+airunner (2.2.1-2) UNRELEASED; urgency=medium
 
+  [ w4ffl35 ]
   * Update for 2.2.1 release
 
- -- w4ffl35 <contact@capsizegames.com>  Wed, 21 Feb 2024 07:51:08 -0700
+  [ w4ffl35 ]
+  * Fixes for build
+
+ -- w4ffl35 <contact@capsizegames.com>  Wed, 21 Feb 2024 08:04:19 -0700
 
 airunner (2.2.0) stable; urgency=low
 
