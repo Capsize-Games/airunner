@@ -110,6 +110,11 @@ class AIRunnerAgent(QObject, MediatorMixin):
                 "image. Add a plus sign after a word or parenthesis to add "
                 "extra emphasis. More plus signs indicate more emphasis. Minus "
                 "signs can be used to indicate less emphasis.",
+                "You should describe the image type (professional photograph, portrait, illustration etc)",
+                (
+                    "You should also describe the lighting (well-lit, dim, dark etc), "
+                    "the color, the composition and the mood."
+                ),
             ]
         return "\n".join(system_prompt)
 
@@ -167,6 +172,7 @@ class AIRunnerAgent(QObject, MediatorMixin):
         self.run(self.prompt, LLMActionType.CHAT)
 
     def run(self, prompt, action: LLMActionType):
+        self.logger.info("Running...")
         self.prompt = prompt
         conversation = self.prepare_messages(action)
         rendered_template = self.get_rendered_template(conversation)
