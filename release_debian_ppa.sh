@@ -7,8 +7,11 @@ AIRUNNER_VERSION=$(python3 -c "from distutils.core import run_setup; print(run_s
 echo "Enter the debian version: "
 read DEBIAN_VERSION
 
+echo "Enter a commit message: "
+read MESSAGE
+
 # Update for latest release
-dch -v $AIRUNNER_VERSION-$DEBIAN_VERSION -D jammy "Message here"
+dch -v $AIRUNNER_VERSION-$DEBIAN_VERSION -D jammy MESSAGE
 
 # Archive
 git archive --format=tar.gz --prefix=airunner-$AIRUNNER_VERSION/ -o ../airunner_$AIRUNNER_VERSION.orig.tar.gz HEAD
