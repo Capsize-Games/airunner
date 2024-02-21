@@ -2,7 +2,7 @@ from setuptools import setup, find_packages
 
 setup(
     name='airunner',
-    version="2.2.1",
+    version="2.2.2",
     author="Capsize LLC",
     description="A Stable Diffusion GUI",
     long_description=open("README.md", "r", encoding="utf-8").read(),

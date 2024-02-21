@@ -1,3 +1,9 @@
+airunner (2.2.2-1) jammy; urgency=medium
+
+  * bump airunner version
+
+ -- w4ffl35 <25737761+w4ffl35@users.noreply.github.com>  Wed, 21 Feb 2024 11:58:38 -0700
+
 airunner (2.2.1-8) jammy; urgency=medium
 
   * fix archive
