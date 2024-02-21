@@ -84,7 +84,7 @@ Unit tests can be run using the following command:
 
 Update for latest release:
 ```bash
-dch -v 2.2.1-1 "Update for 2.2.1 release"
+dch -v 2.2.1-[NEW_VERSION_HERE] "Update for 2.2.1 release"
 ```
 
 Archive
