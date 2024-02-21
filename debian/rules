@@ -19,4 +19,6 @@ override_dh_auto_test:
 override_dh_auto_install:
 	# Manually specify installation of your PyInstaller binary
 	# This line must be indented with a tab
-	mv dist/airunner/airunner /usr/bin/airunner
+	mkdir -p debian/airunner/usr/bin/
+	zip -r dist/airunner.zip dist/airunner
+	cp dist/airunner.zip debian/airunner/usr/bin/
