@@ -1,4 +1,4 @@
-airunner (2.2.1-3) UNRELEASED; urgency=medium
+airunner (2.2.1-3) focal; urgency=medium
 
   * Fix build
 
