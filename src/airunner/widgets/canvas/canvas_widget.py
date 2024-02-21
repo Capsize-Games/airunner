@@ -764,7 +764,7 @@ class CanvasWidget(BaseWidget):
 
         if not is_outpaint:
             self.set_current_active_image(image_data["image"])
-            self.do_resize_canvas(
+            self.do_draw(
                 force_draw=True,
                 do_draw_layers=True
             )
@@ -775,7 +775,7 @@ class CanvasWidget(BaseWidget):
                 action=GeneratorSection.OUTPAINT.value
             )
             self.set_current_active_image(image)
-            self.do_resize_canvas(
+            self.do_draw(
                 force_draw=True,
                 do_draw_layers=True
             )
