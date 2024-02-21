@@ -16,7 +16,7 @@ from airunner.enums import Mode, SignalCode, ServiceCode, CanvasToolName, Window
 from airunner.mediator_mixin import MediatorMixin
 from airunner.resources_dark_rc import *
 from airunner.service_locator import ServiceLocator
-from airunner.settings import BASE_PATH
+from airunner.settings import BASE_PATH, DISCORD_LINK, BUG_REPORT_LINK, VULNERABILITY_REPORT_LINK
 from airunner.utils import get_version, default_hf_cache_dir, open_file_path, set_widget_state
 from airunner.widgets.status.status_widget import StatusWidget
 from airunner.windows.about.about import AboutWindow
@@ -485,13 +485,13 @@ class MainWindow(
         SettingsWindow()
 
     def action_open_vulnerability_report(self):
-        webbrowser.open("https://github.com/Capsize-Games/airunner/security/advisories/new")
+        webbrowser.open(VULNERABILITY_REPORT_LINK)
 
     def action_open_bug_report(self):
-        webbrowser.open("https://github.com/Capsize-Games/airunner/issues/new?assignees=&labels=&template=bug_report.md&title=")
+        webbrowser.open(BUG_REPORT_LINK)
 
     def action_open_discord(self):
-        webbrowser.open("https://discord.gg/ukcgjEpc5f")
+        webbrowser.open(DISCORD_LINK)
 
     """
     End slot functions

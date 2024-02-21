@@ -85,3 +85,7 @@ PHOTO_REALISTIC_NEGATIVE_PROMPT = (
     "Virtual avatar, Deepfake, AI-generated art, Hologram, Virtual set, "
     "Previsualization art), (bad eyes)+"
 )
+
+BUG_REPORT_LINK = "https://github.com/Capsize-Games/airunner/issues/new?assignees=&labels=&template=bug_report.md&title="
+DISCORD_LINK = "https://discord.gg/ukcgjEpc5f"
+VULNERABILITY_REPORT_LINK = "https://github.com/Capsize-Games/airunner/security/advisories/new"
