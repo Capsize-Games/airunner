@@ -1,0 +1,2 @@
+#!/bin/sh
+unzip /usr/bin/airunner.zip -d /usr/bin/
