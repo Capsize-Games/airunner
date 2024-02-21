@@ -73,3 +73,15 @@ AVAILABLE_IMAGE_FILTERS = [
     "HalftoneFilter",
     "RegistrationErrorFilter"
 ]
+
+PHOTO_REALISTIC_NEGATIVE_PROMPT = (
+    "(illustration, drawing, cartoon, not real, fake, cgi, 3d animation, "
+    "3d art, sculpture, animation, anime, Digital art, Concept art, Pixel art, "
+    "Virtual reality, Augmented reality, Synthetic image, Computer-generated imagery, "
+    "Visual effect, Render, Conceptual illustration, Matte painting, Graphic novel art, "
+    "Photomontage, Digital painting, Virtual model, Artificially generated image, "
+    "Simulated image, Computer-assisted design (CAD) art, Virtual environment, "
+    "Digital sculpture, Game art, Motion capture, Digital collage, "
+    "Virtual avatar, Deepfake, AI-generated art, Hologram, Virtual set, "
+    "Previsualization art), (bad eyes)+"
+)
