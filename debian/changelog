@@ -1,3 +1,15 @@
+airunner (2.2.1-8) jammy; urgency=medium
+
+  * fix archive
+
+ -- w4ffl35 <25737761+w4ffl35@users.noreply.github.com>  Wed, 21 Feb 2024 11:55:52 -0700
+
+airunner (2.2.1-7) jammy; urgency=medium
+
+  * fix archive
+
+ -- w4ffl35 <25737761+w4ffl35@users.noreply.github.com>  Wed, 21 Feb 2024 11:53:50 -0700
+
 airunner (2.2.1-6) jammy; urgency=medium
 
   * update for jammy
