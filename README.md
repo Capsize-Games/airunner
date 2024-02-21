@@ -84,7 +84,7 @@ Unit tests can be run using the following command:
 
 Update for latest release:
 ```bash
-dch -v 2.2.1-[NEW_VERSION_HERE] -D focal "Message here"
+dch -v 2.2.1-[NEW_VERSION_HERE] -D jammy "Message here"
 ```
 
 Archive
