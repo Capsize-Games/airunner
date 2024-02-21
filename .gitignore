@@ -21,3 +21,8 @@ extensions
 gfpgan
 butler
 .pybuild
+debian/airunner
+debian/.debhelper
+debian/debhelper-build-stamp
+debian/files
+debian/airunner.substvars
