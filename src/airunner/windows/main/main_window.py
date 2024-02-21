@@ -501,7 +501,7 @@ class MainWindow(
         self.set_nsfw_filter_tooltip()
 
     def set_nsfw_filter_tooltip(self):
-        self.ui.safety_checker_button.setToolTip(
+        self.ui.nsfw_button.setToolTip(
             f"Click to {'enable' if not self.settings['nsfw_filter'] else 'disable'} NSFW filter"
         )
 
@@ -712,7 +712,8 @@ class MainWindow(
             ("artificial-intelligence-ai-chip-icon", "ai_button"),
             ("setting-line-icon", "settings_button"),
             ("object-selected-icon", "toggle_active_grid_area_button"),
-            ("select-svgrepo-com", "toggle_select_button")
+            ("select-svgrepo-com", "toggle_select_button"),
+            ("adult-sign-icon", "nsfw_button"),
         ]:
             self.set_icons(icon_data[0], icon_data[1], "dark" if self.settings["dark_mode_enabled"] else "light")
 
@@ -750,6 +751,8 @@ class MainWindow(
         set_widget_state(self.ui.toggle_eraser_button, current_tool is CanvasToolName.ERASER)
         set_widget_state(self.ui.toggle_grid_button, show_grid is True)
         set_widget_state(self.ui.ai_button, ai_mode)
+
+        set_widget_state(self.ui.nsfw_button, self.settings["nsfw_filter"])
 
     def toggle_tool(self, tool: CanvasToolName, active: bool):
         if not active:
