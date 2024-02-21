@@ -77,3 +77,22 @@ Unit tests can be run using the following command:
 
 **Individual test:**
 `python -m unittest tests.test_canvas`
+
+---
+
+### Debian package
+
+Update for latest release:
+```bash
+dch -v 2.2.1-1 "Update for 2.2.1 release"
+```
+
+Archive
+```bash
+git archive --format=tar.gz --prefix=airunner-2.2.1/ -o ../airunner_2.2.1.orig.tar.gz HEAD
+```
+
+Build
+```bash
+sudo debuild -us -uc -v -D
+```
