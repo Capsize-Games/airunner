@@ -10,6 +10,8 @@ override_dh_auto_clean:
 override_dh_auto_build:
 	# Your custom build commands go here
 	# This line must be indented with a tab
+	pip install pyinstaller
+	bash build.sh
 
 override_dh_auto_test:
 	# If you don't have tests, override to do nothing
@@ -19,5 +21,4 @@ override_dh_auto_install:
 	# Manually specify installation of your PyInstaller binary
 	# This line must be indented with a tab
 	mkdir -p debian/airunner/usr/bin/
-	zip -r dist/airunner.zip dist/airunner
-	cp dist/airunner.zip debian/airunner/usr/bin/
+	cp -R dist/airunner debian/airunner/usr/bin/

@@ -13,8 +13,14 @@ read MESSAGE
 # Update for latest release
 dch -v $AIRUNNER_VERSION-$DEBIAN_VERSION -D jammy MESSAGE
 
+# Create a temporary .gitignore file that does not include venv
+grep -v '^venv$' .gitignore > .gitignore.tmp
+
 # Archive
-git archive --format=tar.gz --prefix=airunner-$AIRUNNER_VERSION/ -o ../airunner_$AIRUNNER_VERSION.orig.tar.gz HEAD
+tar -czvf ../airunner_$AIRUNNER_VERSION.orig.tar.gz --exclude-vcs --exclude-from=.gitignore.tmp --transform 's,^,airunner-'$AIRUNNER_VERSION'/' .
+
+# Remove the temporary .gitignore file
+rm .gitignore.tmp
 
 # Build
 dpkg-buildpackage -S -D -sa
