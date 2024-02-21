@@ -20,4 +20,5 @@ git archive --format=tar.gz --prefix=airunner-$AIRUNNER_VERSION/ -o ../airunner_
 dpkg-buildpackage -S -D -sa
 
 # Upload to PPA
-dput ppa:capsize/airunner airunner_$AIRUNNER_VERSION-$DEBIAN_VERSION"_source.changes
+cd ..
+dput ppa:capsize/airunner airunner_$AIRUNNER_VERSION-$DEBIAN_VERSION"_source.changes"
