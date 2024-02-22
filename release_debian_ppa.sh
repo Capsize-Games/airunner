@@ -11,7 +11,7 @@ echo "Enter a commit message: "
 read MESSAGE
 
 # Create a temporary .gitignore file that does not include venv
-grep -v '^venv$' .gitignore|grep -v '^dist$' > .gitignore.tmp
+grep -v '^dist$' .gitignore > .gitignore.tmp
 
 # Archive
 tar -czvf ../airunner_$AIRUNNER_VERSION.orig.tar.gz --exclude-vcs --exclude-from=.gitignore.tmp .

@@ -5,6 +5,7 @@ output
 __pycache__
 build
 dist
+dist/airunner.zip
 tmp
 lib
 build.log
