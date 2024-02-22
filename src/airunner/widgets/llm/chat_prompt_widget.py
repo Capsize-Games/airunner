@@ -58,10 +58,16 @@ class ChatPromptWidget(BaseWidget):
         self.add_message_to_conversation(name=name, message=text, is_bot=is_bot)
 
     def on_add_bot_message_to_conversation(self, data: dict):
-        name = data["name"]
-        message = data["message"]
-        is_first_message = data["is_first_message"]
-        is_end_of_message = data["is_end_of_message"]
+        try:
+            name = data["name"]
+            message = data["message"]
+            is_first_message = data["is_first_message"]
+            is_end_of_message = data["is_end_of_message"]
+        except TypeError as e:
+            self.logger.error("Error parsing data: "+str(e))
+            self.enable_generate()
+            return
+
         if is_first_message:
             self.stop_progress_bar()
 
@@ -73,8 +79,11 @@ class ChatPromptWidget(BaseWidget):
         )
 
         if is_end_of_message:
-            self.generating = False
-            self.enable_send_button()
+            self.enable_generate()
+
+    def enable_generate(self):
+        self.generating = False
+        self.enable_send_button()
 
     @pyqtSlot()
     def action_button_clicked_clear_conversation(self):
