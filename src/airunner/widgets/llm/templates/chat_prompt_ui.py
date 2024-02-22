@@ -60,9 +60,9 @@ class Ui_chat_prompt(object):
         self.prompt.setMaximumSize(QtCore.QSize(16777215, 150))
         self.prompt.setObjectName("prompt")
         self.gridLayout.addWidget(self.prompt, 3, 0, 1, 2)
-        self.action = QtWidgets.QComboBox(parent=chat_prompt)
-        self.action.setObjectName("action")
-        self.gridLayout.addWidget(self.action, 2, 0, 1, 2)
+        self.action1 = QtWidgets.QComboBox(parent=chat_prompt)
+        self.action1.setObjectName("action1")
+        self.gridLayout.addWidget(self.action1, 2, 0, 1, 2)
 
         self.retranslateUi(chat_prompt)
         self.send_button.clicked.connect(chat_prompt.action_button_clicked_send) # type: ignore

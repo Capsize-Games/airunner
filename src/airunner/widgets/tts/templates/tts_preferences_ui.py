@@ -12,7 +12,7 @@ from PyQt6 import QtCore, QtGui, QtWidgets
 class Ui_tts_preferences(object):
     def setupUi(self, tts_preferences):
         tts_preferences.setObjectName("tts_preferences")
-        tts_preferences.resize(400, 861)
+        tts_preferences.resize(512, 787)
         self.gridLayout_7 = QtWidgets.QGridLayout(tts_preferences)
         self.gridLayout_7.setObjectName("gridLayout_7")
         self.use_bark = QtWidgets.QGroupBox(parent=tts_preferences)

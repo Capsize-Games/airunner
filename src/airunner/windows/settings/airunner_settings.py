@@ -13,6 +13,7 @@ from airunner.widgets.llm.bot_preferences import BotPreferencesWidget
 from airunner.widgets.llm.llm_settings_widget import LLMSettingsWidget
 from airunner.widgets.memory_preferences.memory_preferences_widget import MemoryPreferencesWidget
 from airunner.widgets.paths.paths_widget import PathsWidget
+from airunner.widgets.translation_preferences.translation_preferences_widget import TranslationPreferencesWidget
 from airunner.widgets.tts.templates.tts_prefernces_widget import TTSPreferencesWidget
 from airunner.windows.settings.templates.airunner_settings_ui import Ui_airunner_settings
 from airunner.windows.base_window import BaseWindow
@@ -41,7 +42,6 @@ class HighlightDelegate(QStyledItemDelegate):
 class SettingsWindow(BaseWindow):
     is_modal = True
     template_class_ = Ui_airunner_settings
-    # template_name = "airunner_settings"
 
     def __init__(self, **kwargs):
         super().__init__(**kwargs)
@@ -125,21 +125,21 @@ class SettingsWindow(BaseWindow):
                 ]
             },
             {
-                "section": "LLM Preferences",
+                "section": "LLM, TTS, Translation, Chatbot",
                 "files": [
                     {
                         "name": "llm_preferences",
                         "display_name": "LLM Preferences",
                         "checkable": False
                     },
-                ]
-            },
-            {
-                "section": "Text and Speech Preferences",
-                "files": [
                     {
                         "name": "tts_preferences",
                         "display_name": "Text-to-Speech",
+                        "checkable": False
+                    },
+                    {
+                        "name": "translation_preferences",
+                        "display_name": "Translation Preferences",
                         "checkable": False
                     },
                     {
@@ -290,6 +290,7 @@ class SettingsWindow(BaseWindow):
             "grid": GridPreferencesWidget,
             "memory": MemoryPreferencesWidget,
             "hf_api_key": APITokenWidget,
+            "translation_preferences": TranslationPreferencesWidget,
             "tts_preferences": TTSPreferencesWidget,
             "bot_preferences": BotPreferencesWidget,
             "llm_preferences": LLMSettingsWidget
