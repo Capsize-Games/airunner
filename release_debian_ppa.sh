@@ -10,17 +10,17 @@ read DEBIAN_VERSION
 echo "Enter a commit message: "
 read MESSAGE
 
-# Update for latest release
-dch -v $AIRUNNER_VERSION-$DEBIAN_VERSION -D jammy MESSAGE
-
 # Create a temporary .gitignore file that does not include venv
-grep -v '^venv$' .gitignore > .gitignore.tmp
+grep -v '^venv$' .gitignore|grep -v '^dist$' > .gitignore.tmp
 
 # Archive
-tar -czvf ../airunner_$AIRUNNER_VERSION.orig.tar.gz --exclude-vcs --exclude-from=.gitignore.tmp --transform 's,^,airunner-'$AIRUNNER_VERSION'/' .
+tar -czvf ../airunner_$AIRUNNER_VERSION.orig.tar.gz --exclude-vcs --exclude-from=.gitignore.tmp .
 
 # Remove the temporary .gitignore file
 rm .gitignore.tmp
+
+# Update for latest release
+dch -v $AIRUNNER_VERSION-$DEBIAN_VERSION -D jammy MESSAGE
 
 # Build
 dpkg-buildpackage -S -D -sa
