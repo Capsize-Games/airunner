@@ -1,3 +1,4 @@
+import os
 import random
 import torch
 from transformers import BitsAndBytesConfig, GPTQConfig
@@ -121,9 +122,18 @@ class TransformerBaseHandler(BaseHandler):
                 params["quantization_config"] = config
 
         self.logger.info(f"Loading model from {self.current_model_path}")
+
+        # check if testmodel path exists
+        test_model_path = "test_model_path"
+        if os.path.exists(test_model_path):
+            path = test_model_path
+        else:
+            path = self.current_model_path
+
         try:
+            print("LOADING FROM ", path)
             self.model = self.auto_class_.from_pretrained(
-                self.current_model_path,
+                path,
                 **params
             )
         except OSError as e:
@@ -132,6 +142,9 @@ class TransformerBaseHandler(BaseHandler):
                     return self.load_model(local_files_only=False)
                 else:
                     self.logger.error(e)
+
+        if not os.path.exists(test_model_path):
+            self.model.save_pretrained(test_model_path)
 
         # print the type of class that self.model is
 
