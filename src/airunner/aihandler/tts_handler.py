@@ -1,3 +1,5 @@
+import inflect
+import re
 import time
 
 import torch
@@ -287,6 +289,17 @@ class TTSHandler(BaseHandler):
                 corpus = corpus.replace(key, value)
             self.corpus = corpus.split(" ")
 
+    def replace_numbers_with_words(self, text):
+        p = inflect.engine()
+        words = text.split()
+        for i in range(len(words)):
+            if re.search(r'\d', words[i]):  # check if the word contains a digit
+                parts = words[i].split(':')
+                parts_in_words = [p.number_to_words(part) if part.isdigit() else part for part in parts]
+                words[i] = ':'.join(parts_in_words)
+
+        return ' '.join(words)
+
     def process_sentences(self):
         """
         now we have a list of words, but we want a list of sentences. Sentences should
@@ -392,8 +405,6 @@ class TTSHandler(BaseHandler):
 
     def generate_with_bark(self, text):
         self.logger.info("Generating TTS with Bark...")
-        text = text.replace("\n", " ").strip()
-
         self.logger.info("Processing inputs...")
         inputs = self.processor(
             text=text,
@@ -418,6 +429,8 @@ class TTSHandler(BaseHandler):
     def generate_with_t5(self, text):
         self.logger.info("Generating TTS with SpeechT5...")
         text = text.replace("\n", " ").strip()
+        text = text.replace("\n", " ").strip()
+        text = self.replace_numbers_with_words(text)
 
         self.logger.info("Processing inputs...")
 
