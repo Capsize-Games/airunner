@@ -315,7 +315,7 @@ def auto_export_image(
         raise Exception("Seed must be set when auto exporting an image")
 
     data["options"]["seed"] = seed
-    
+
     if data and "action" in data and data["action"] == "txt2vid":
         return None, None
     

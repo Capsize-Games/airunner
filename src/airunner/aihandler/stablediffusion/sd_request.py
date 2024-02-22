@@ -151,6 +151,7 @@ class SDRequest(
             "hf_api_key_write_key": settings["hf_api_key_write_key"],
             "unload_unused_model": settings["memory_settings"]["unload_unused_models"],
             "move_unused_model_to_cpu": settings["memory_settings"]["move_unused_model_to_cpu"],
+            "auto_export_images": settings["auto_export_images"],
         }
 
         if controlnet_image:

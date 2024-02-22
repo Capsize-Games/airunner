@@ -86,6 +86,26 @@ PHOTO_REALISTIC_NEGATIVE_PROMPT = (
     "Previsualization art), (bad eyes)+"
 )
 
+ILLUSTRATION_NEGATIVE_PROMPT = (
+    "(Photography, Realistic photography, High-definition video, 4K video, "
+    "8K video, Live action, Documentary footage, Cinematography, "
+    "Photojournalism, Landscape photography, Portrait photography, "
+    "Wildlife photography, Aerial photography, Sports photography, "
+    "Macro photography, Underwater photography, Real-time video, "
+    "Broadcast quality video, Stock footage, Archival footage, "
+    "Slow motion video, Time-lapse photography, Hyperlapse video, "
+    "Virtual tour, 360-degree video, Drone footage, Surveillance footage, "
+    "Bodycam footage, Dashcam video, Photorealism, "
+    "High dynamic range imaging (HDR), Realism, "
+    "Ultra-high-definition television (UHDTV), Live streaming, "
+    "Night vision footage, Thermal imaging, Infrared photography, Photo essay, "
+    "News footage, Reality TV, Unedited footage, Behind-the-scenes video, "
+    "Real-world simulation, Eyewitness video, Authentic image, "
+    "Real-life capture, Cinéma vérité),"
+)
+
 BUG_REPORT_LINK = "https://github.com/Capsize-Games/airunner/issues/new?assignees=&labels=&template=bug_report.md&title="
 DISCORD_LINK = "https://discord.gg/ukcgjEpc5f"
 VULNERABILITY_REPORT_LINK = "https://github.com/Capsize-Games/airunner/security/advisories/new"
+
+

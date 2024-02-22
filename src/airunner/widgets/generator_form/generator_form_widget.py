@@ -6,6 +6,7 @@ from PyQt6.QtCore import pyqtSignal, QRect
 from airunner.aihandler.stablediffusion.sd_request import SDRequest
 from airunner.enums import SignalCode, ServiceCode
 from airunner.aihandler.settings import MAX_SEED
+from airunner.settings import PHOTO_REALISTIC_NEGATIVE_PROMPT, ILLUSTRATION_NEGATIVE_PROMPT
 from airunner.widgets.base_widget import BaseWidget
 from airunner.widgets.generator_form.templates.generatorform_ui import Ui_generator_form
 
@@ -276,9 +277,17 @@ class GeneratorForm(BaseWidget):
     def prep_video(self):
         return []
 
-    def on_llm_image_prompt_generated_signal(self, prompt):
+    def on_llm_image_prompt_generated_signal(self, data):
+        prompt = data.get("prompt", None)
+        prompt_type = data.get("type", "photo")
         self.ui.prompt.setPlainText(prompt)
+        if prompt_type == "photo":
+            negative_prompt = PHOTO_REALISTIC_NEGATIVE_PROMPT
+        else:
+            negative_prompt = ILLUSTRATION_NEGATIVE_PROMPT
+        self.ui.negative_prompt.setPlainText(negative_prompt)
         self.handle_prompt_changed()
+        self.handle_negative_prompt_changed()
         self.handle_generate_button_clicked()
 
     def do_generate(
