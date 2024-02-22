@@ -139,7 +139,8 @@ class SettingsWindow(BaseWindow):
                     },
                     {
                         "name": "translation_preferences",
-                        "display_name": "Translation Preferences",
+                        "display_name": "Translation Preferences (experimental)",
+                        "description": "Set your preferred translation and override the TTS voice settings.",
                         "checkable": False
                     },
                     {
