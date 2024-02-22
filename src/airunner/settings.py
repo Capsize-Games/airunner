@@ -286,3 +286,13 @@ VOICES = {
         ],
     },
 }
+TRANSLATION_LANGUAGES = [
+    "English",
+    "Spanish",
+]
+TRANSLATION_MODELS = {
+    "English": None,
+    "Spanish": None,
+}
+MALE = "Male"
+FEMALE = "Female"

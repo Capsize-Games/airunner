@@ -1,0 +1,251 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<ui version="4.0">
+ <class>translation_preferences</class>
+ <widget class="QWidget" name="translation_preferences">
+  <property name="geometry">
+   <rect>
+    <x>0</x>
+    <y>0</y>
+    <width>390</width>
+    <height>379</height>
+   </rect>
+  </property>
+  <property name="windowTitle">
+   <string>Form</string>
+  </property>
+  <layout class="QGridLayout" name="gridLayout">
+   <item row="0" column="0">
+    <widget class="QGroupBox" name="translate_groupbox">
+     <property name="title">
+      <string>Translate</string>
+     </property>
+     <property name="checkable">
+      <bool>true</bool>
+     </property>
+     <layout class="QGridLayout" name="gridLayout_3">
+      <item row="13" column="0">
+       <widget class="QLabel" name="label_5">
+        <property name="text">
+         <string>Translation model</string>
+        </property>
+       </widget>
+      </item>
+      <item row="3" column="0">
+       <widget class="Line" name="line">
+        <property name="orientation">
+         <enum>Qt::Horizontal</enum>
+        </property>
+       </widget>
+      </item>
+      <item row="1" column="0">
+       <widget class="QLabel" name="label_4">
+        <property name="font">
+         <font>
+          <pointsize>9</pointsize>
+         </font>
+        </property>
+        <property name="text">
+         <string>Your preferred language</string>
+        </property>
+       </widget>
+      </item>
+      <item row="14" column="0">
+       <widget class="QLabel" name="label_6">
+        <property name="font">
+         <font>
+          <pointsize>9</pointsize>
+         </font>
+        </property>
+        <property name="text">
+         <string>This model will be used to translate</string>
+        </property>
+       </widget>
+      </item>
+      <item row="5" column="0">
+       <widget class="QLabel" name="label">
+        <property name="font">
+         <font>
+          <pointsize>9</pointsize>
+         </font>
+        </property>
+        <property name="text">
+         <string>Override TTS voice model</string>
+        </property>
+       </widget>
+      </item>
+      <item row="12" column="0">
+       <widget class="Line" name="line_2">
+        <property name="orientation">
+         <enum>Qt::Horizontal</enum>
+        </property>
+       </widget>
+      </item>
+      <item row="2" column="0">
+       <widget class="QComboBox" name="language_combobox"/>
+      </item>
+      <item row="0" column="0">
+       <widget class="QLabel" name="label_3">
+        <property name="text">
+         <string>Language</string>
+        </property>
+       </widget>
+      </item>
+      <item row="4" column="0">
+       <widget class="QLabel" name="label_2">
+        <property name="text">
+         <string>Voice</string>
+        </property>
+       </widget>
+      </item>
+      <item row="15" column="0">
+       <widget class="QComboBox" name="translation_model_combobox"/>
+      </item>
+      <item row="6" column="0">
+       <widget class="QComboBox" name="voice_combobox"/>
+      </item>
+      <item row="8" column="0">
+       <widget class="QWidget" name="horizontalWidget" native="true">
+        <layout class="QFormLayout" name="formLayout">
+         <item row="0" column="0">
+          <widget class="QRadioButton" name="female_radio_button">
+           <property name="text">
+            <string>Male</string>
+           </property>
+          </widget>
+         </item>
+         <item row="0" column="1">
+          <widget class="QRadioButton" name="male_radio_button">
+           <property name="text">
+            <string>Female</string>
+           </property>
+          </widget>
+         </item>
+        </layout>
+       </widget>
+      </item>
+     </layout>
+    </widget>
+   </item>
+   <item row="2" column="0">
+    <spacer name="verticalSpacer">
+     <property name="orientation">
+      <enum>Qt::Vertical</enum>
+     </property>
+     <property name="sizeHint" stdset="0">
+      <size>
+       <width>20</width>
+       <height>40</height>
+      </size>
+     </property>
+    </spacer>
+   </item>
+  </layout>
+ </widget>
+ <resources/>
+ <connections>
+  <connection>
+   <sender>language_combobox</sender>
+   <signal>currentTextChanged(QString)</signal>
+   <receiver>translation_preferences</receiver>
+   <slot>language_text_changed(QString)</slot>
+   <hints>
+    <hint type="sourcelabel">
+     <x>135</x>
+     <y>85</y>
+    </hint>
+    <hint type="destinationlabel">
+     <x>94</x>
+     <y>0</y>
+    </hint>
+   </hints>
+  </connection>
+  <connection>
+   <sender>translate_groupbox</sender>
+   <signal>toggled(bool)</signal>
+   <receiver>translation_preferences</receiver>
+   <slot>toggle_translation(bool)</slot>
+   <hints>
+    <hint type="sourcelabel">
+     <x>74</x>
+     <y>19</y>
+    </hint>
+    <hint type="destinationlabel">
+     <x>56</x>
+     <y>2</y>
+    </hint>
+   </hints>
+  </connection>
+  <connection>
+   <sender>translation_model_combobox</sender>
+   <signal>currentTextChanged(QString)</signal>
+   <receiver>translation_preferences</receiver>
+   <slot>translation_model_changed(QString)</slot>
+   <hints>
+    <hint type="sourcelabel">
+     <x>73</x>
+     <y>293</y>
+    </hint>
+    <hint type="destinationlabel">
+     <x>0</x>
+     <y>306</y>
+    </hint>
+   </hints>
+  </connection>
+  <connection>
+   <sender>female_radio_button</sender>
+   <signal>clicked()</signal>
+   <receiver>translation_preferences</receiver>
+   <slot>female_clicked()</slot>
+   <hints>
+    <hint type="sourcelabel">
+     <x>47</x>
+     <y>213</y>
+    </hint>
+    <hint type="destinationlabel">
+     <x>-2</x>
+     <y>132</y>
+    </hint>
+   </hints>
+  </connection>
+  <connection>
+   <sender>male_radio_button</sender>
+   <signal>clicked()</signal>
+   <receiver>translation_preferences</receiver>
+   <slot>male_clicked()</slot>
+   <hints>
+    <hint type="sourcelabel">
+     <x>115</x>
+     <y>214</y>
+    </hint>
+    <hint type="destinationlabel">
+     <x>0</x>
+     <y>204</y>
+    </hint>
+   </hints>
+  </connection>
+  <connection>
+   <sender>voice_combobox</sender>
+   <signal>currentTextChanged(QString)</signal>
+   <receiver>translation_preferences</receiver>
+   <slot>voice_text_changed(QString)</slot>
+   <hints>
+    <hint type="sourcelabel">
+     <x>29</x>
+     <y>183</y>
+    </hint>
+    <hint type="destinationlabel">
+     <x>1</x>
+     <y>167</y>
+    </hint>
+   </hints>
+  </connection>
+ </connections>
+ <slots>
+  <slot>language_text_changed(QString)</slot>
+  <slot>voice_text_changed(QString)</slot>
+  <slot>toggle_translation(bool)</slot>
+  <slot>translation_model_changed(QString)</slot>
+  <slot>male_clicked()</slot>
+  <slot>female_clicked()</slot>
+ </slots>
+</ui>
