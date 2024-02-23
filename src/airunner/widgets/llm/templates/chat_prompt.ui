@@ -14,7 +14,7 @@
    <string>Form</string>
   </property>
   <layout class="QGridLayout" name="gridLayout">
-   <item row="6" column="0" colspan="2">
+   <item row="5" column="0" colspan="2">
     <layout class="QHBoxLayout" name="horizontalLayout_2">
      <item>
       <widget class="QPushButton" name="send_button">
@@ -78,53 +78,16 @@
        <property name="bottomMargin">
         <number>0</number>
        </property>
-       <item row="1" column="0">
+       <item row="0" column="0">
         <widget class="QTextEdit" name="conversation">
          <property name="readOnly">
           <bool>true</bool>
          </property>
         </widget>
        </item>
-       <item row="0" column="0">
-        <widget class="QComboBox" name="action"/>
-       </item>
       </layout>
      </widget>
     </widget>
-   </item>
-   <item row="5" column="0" colspan="2">
-    <layout class="QHBoxLayout" name="horizontalLayout_2">
-     <item>
-      <widget class="QPushButton" name="send_button">
-       <property name="toolTip">
-        <string>Send message</string>
-       </property>
-       <property name="text">
-        <string>Send</string>
-       </property>
-      </widget>
-     </item>
-     <item>
-      <widget class="QProgressBar" name="progressBar">
-       <property name="value">
-        <number>0</number>
-       </property>
-      </widget>
-     </item>
-     <item>
-      <widget class="QPushButton" name="clear_conversatiion_button">
-       <property name="toolTip">
-        <string>Clear conversation</string>
-       </property>
-       <property name="text">
-        <string/>
-       </property>
-       <property name="icon">
-        <iconset theme="user-trash"/>
-       </property>
-      </widget>
-     </item>
-    </layout>
    </item>
    <item row="3" column="0" colspan="2">
     <widget class="QPlainTextEdit" name="prompt">
@@ -155,38 +118,6 @@
  </widget>
  <resources/>
  <connections>
-  <connection>
-   <sender>send_button</sender>
-   <signal>clicked()</signal>
-   <receiver>chat_prompt</receiver>
-   <slot>action_button_clicked_send()</slot>
-   <hints>
-    <hint type="sourcelabel">
-     <x>89</x>
-     <y>1033</y>
-    </hint>
-    <hint type="destinationlabel">
-     <x>211</x>
-     <y>0</y>
-    </hint>
-   </hints>
-  </connection>
-  <connection>
-   <sender>clear_conversatiion_button</sender>
-   <signal>clicked()</signal>
-   <receiver>chat_prompt</receiver>
-   <slot>action_button_clicked_clear_conversation()</slot>
-   <hints>
-    <hint type="sourcelabel">
-     <x>668</x>
-     <y>1009</y>
-    </hint>
-    <hint type="destinationlabel">
-     <x>565</x>
-     <y>0</y>
-    </hint>
-   </hints>
-  </connection>
   <connection>
    <sender>prompt</sender>
    <signal>textChanged()</signal>
