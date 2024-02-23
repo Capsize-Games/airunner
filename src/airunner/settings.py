@@ -1,5 +1,7 @@
 import os
 
+from airunner.enums import GeneratorSection, StableDiffusionVersion
+
 BASE_PATH = os.path.join(os.path.expanduser("~"), ".airunner")
 SQLITE_DB_NAME = "airunner.db"
 SQLITE_DB_PATH = os.path.join(BASE_PATH, SQLITE_DB_NAME)
@@ -329,3 +331,25 @@ ILLUSTRATION_NEGATIVE_PROMPT = (
 BUG_REPORT_LINK = "https://github.com/Capsize-Games/airunner/issues/new?assignees=&labels=&template=bug_report.md&title="
 DISCORD_LINK = "https://discord.gg/ukcgjEpc5f"
 VULNERABILITY_REPORT_LINK = "https://github.com/Capsize-Games/airunner/security/advisories/new"
+DEFAULT_SCHEDULER = "DPM++ 2M Karras"
+DEFAULT_MODELS = {}
+DEFAULT_MODELS[GeneratorSection.TXT2IMG] = {
+    "version": StableDiffusionVersion.SDXL_TURBO,
+    "model": "stabilityai/sd-turbo",
+}
+DEFAULT_MODELS[GeneratorSection.IMG2IMG] = {
+    "version": StableDiffusionVersion.SDXL_TURBO,
+    "model": "stabilityai/sd-turbo",
+}
+DEFAULT_MODELS[GeneratorSection.INPAINT] = {
+    "version": StableDiffusionVersion.SD1_5,
+    "model": "runwayml/stable-diffusion-inpainting",
+}
+DEFAULT_MODELS[GeneratorSection.DEPTH2IMG] = {
+    "version": StableDiffusionVersion.SD1_5,
+    "model": "stabilityai/stable-diffusion-2-depth",
+}
+DEFAULT_MODELS[GeneratorSection.PIX2PIX] = {
+    "version": StableDiffusionVersion.SD1_5,
+    "model": "timbrooks/instruct-pix2pix",
+}

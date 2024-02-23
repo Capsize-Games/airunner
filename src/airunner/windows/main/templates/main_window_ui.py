@@ -192,7 +192,7 @@ class Ui_MainWindow(object):
         self.generator_widget = GeneratorForm(parent=self.content_splitter)
         self.generator_widget.setObjectName("generator_widget")
         self.canvas_widget = QtWidgets.QWidget(parent=self.content_splitter)
-        self.canvas_widget.setMinimumSize(QtCore.QSize(0, 0))
+        self.canvas_widget.setMinimumSize(QtCore.QSize(512, 0))
         self.canvas_widget.setObjectName("canvas_widget")
         self.gridLayout_5 = QtWidgets.QGridLayout(self.canvas_widget)
         self.gridLayout_5.setContentsMargins(0, 0, 0, 0)
@@ -227,26 +227,22 @@ class Ui_MainWindow(object):
         self.gridLayout_7.addWidget(self.model_manager, 0, 0, 1, 1)
         self.center_tab.addTab(self.tab, "")
         self.gridLayout_5.addWidget(self.center_tab, 0, 0, 1, 1)
-        self.image_browser = ImagePanelWidget(parent=self.content_splitter)
-        sizePolicy = QtWidgets.QSizePolicy(QtWidgets.QSizePolicy.Policy.MinimumExpanding, QtWidgets.QSizePolicy.Policy.Preferred)
-        sizePolicy.setHorizontalStretch(0)
-        sizePolicy.setVerticalStretch(0)
-        sizePolicy.setHeightForWidth(self.image_browser.sizePolicy().hasHeightForWidth())
-        self.image_browser.setSizePolicy(sizePolicy)
-        self.image_browser.setMinimumSize(QtCore.QSize(0, 0))
-        self.image_browser.setObjectName("image_browser")
         self.scrollArea = QtWidgets.QScrollArea(parent=self.content_splitter)
+        self.scrollArea.setMaximumSize(QtCore.QSize(450, 16777215))
         self.scrollArea.setWidgetResizable(True)
         self.scrollArea.setObjectName("scrollArea")
         self.scrollAreaWidgetContents = QtWidgets.QWidget()
-        self.scrollAreaWidgetContents.setGeometry(QtCore.QRect(0, 0, 408, 1163))
+        self.scrollAreaWidgetContents.setGeometry(QtCore.QRect(0, 0, 415, 1177))
         self.scrollAreaWidgetContents.setObjectName("scrollAreaWidgetContents")
         self.gridLayout = QtWidgets.QGridLayout(self.scrollAreaWidgetContents)
         self.gridLayout.setObjectName("gridLayout")
         self.splitter = QtWidgets.QSplitter(parent=self.scrollAreaWidgetContents)
+        self.splitter.setMaximumSize(QtCore.QSize(16777215, 16777215))
         self.splitter.setOrientation(QtCore.Qt.Orientation.Vertical)
         self.splitter.setObjectName("splitter")
         self.tool_tab_widget = QtWidgets.QTabWidget(parent=self.splitter)
+        self.tool_tab_widget.setMinimumSize(QtCore.QSize(0, 0))
+        self.tool_tab_widget.setMaximumSize(QtCore.QSize(16777215, 16777215))
         self.tool_tab_widget.setAcceptDrops(False)
         self.tool_tab_widget.setObjectName("tool_tab_widget")
         self.tab_pen = QtWidgets.QWidget()
@@ -342,7 +338,7 @@ class Ui_MainWindow(object):
         self.advanced_settings.setWidgetResizable(True)
         self.advanced_settings.setObjectName("advanced_settings")
         self.scrollAreaWidgetContents_2 = QtWidgets.QWidget()
-        self.scrollAreaWidgetContents_2.setGeometry(QtCore.QRect(0, 0, 364, 200))
+        self.scrollAreaWidgetContents_2.setGeometry(QtCore.QRect(0, 0, 371, 388))
         self.scrollAreaWidgetContents_2.setObjectName("scrollAreaWidgetContents_2")
         self.gridLayout_9 = QtWidgets.QGridLayout(self.scrollAreaWidgetContents_2)
         self.gridLayout_9.setObjectName("gridLayout_9")
@@ -699,6 +695,8 @@ class Ui_MainWindow(object):
         self.menuView.setObjectName("menuView")
         self.menuBrowse_Models_Path = QtWidgets.QMenu(parent=self.menuView)
         self.menuBrowse_Models_Path.setObjectName("menuBrowse_Models_Path")
+        self.menuTools = QtWidgets.QMenu(parent=self.menubar)
+        self.menuTools.setObjectName("menuTools")
         MainWindow.setMenuBar(self.menubar)
         self.statusbar = QtWidgets.QStatusBar(parent=MainWindow)
         self.statusbar.setObjectName("statusbar")
@@ -909,6 +907,10 @@ class Ui_MainWindow(object):
         self.actionLLM_beta.setObjectName("actionLLM_beta")
         self.actionReset_Settings_2 = QtGui.QAction(parent=MainWindow)
         self.actionReset_Settings_2.setObjectName("actionReset_Settings_2")
+        self.actionImage_Browser = QtGui.QAction(parent=MainWindow)
+        self.actionImage_Browser.setObjectName("actionImage_Browser")
+        self.actionModel_Manager_3 = QtGui.QAction(parent=MainWindow)
+        self.actionModel_Manager_3.setObjectName("actionModel_Manager_3")
         self.menuFile.addAction(self.actionNew)
         self.menuFile.addSeparator()
         self.menuFile.addAction(self.actionQuit)
@@ -953,17 +955,20 @@ class Ui_MainWindow(object):
         self.menuView.addAction(self.actionBrowse_Images_Path_2)
         self.menuView.addAction(self.actionBrowse_Videos_Path)
         self.menuView.addSeparator()
+        self.menuTools.addAction(self.actionImage_Browser)
+        self.menuTools.addAction(self.actionModel_Manager_3)
         self.menubar.addAction(self.menuFile.menuAction())
         self.menubar.addAction(self.menuEdit.menuAction())
         self.menubar.addAction(self.menuView.menuAction())
         self.menubar.addAction(self.menuImage.menuAction())
         self.menubar.addAction(self.menuFilters.menuAction())
+        self.menubar.addAction(self.menuTools.menuAction())
         self.menubar.addAction(self.menuAbout.menuAction())
 
         self.retranslateUi(MainWindow)
         self.mode_tab_widget.setCurrentIndex(0)
         self.center_tab.setCurrentIndex(0)
-        self.tool_tab_widget.setCurrentIndex(2)
+        self.tool_tab_widget.setCurrentIndex(0)
         self.actionHuggingface_Cache_manager.triggered.connect(MainWindow.action_show_hf_cache_manager) # type: ignore
         self.actionModel_Merger.triggered.connect(MainWindow.action_show_model_merger_window) # type: ignore
         self.actionAbout.triggered.connect(MainWindow.action_show_about_window) # type: ignore
@@ -1018,6 +1023,8 @@ class Ui_MainWindow(object):
         self.actionReset_Settings_2.triggered.connect(MainWindow.action_reset_settings) # type: ignore
         self.toggle_select_button.toggled['bool'].connect(MainWindow.action_toggle_select) # type: ignore
         self.nsfw_button.toggled['bool'].connect(MainWindow.action_toggle_nsfw_filter_triggered) # type: ignore
+        self.actionImage_Browser.triggered.connect(MainWindow.action_show_image_browser) # type: ignore
+        self.actionModel_Manager_3.triggered.connect(MainWindow.action_show_model_manager) # type: ignore
         QtCore.QMetaObject.connectSlotsByName(MainWindow)
 
     def retranslateUi(self, MainWindow):
@@ -1073,6 +1080,7 @@ class Ui_MainWindow(object):
         self.menuImage.setTitle(_translate("MainWindow", "Image"))
         self.menuView.setTitle(_translate("MainWindow", "View"))
         self.menuBrowse_Models_Path.setTitle(_translate("MainWindow", "Browse Models Paths"))
+        self.menuTools.setTitle(_translate("MainWindow", "Tools"))
         self.actionNew.setText(_translate("MainWindow", "New"))
         self.actionNew.setShortcut(_translate("MainWindow", "Ctrl+N"))
         self.actionImport.setText(_translate("MainWindow", "Import image"))
@@ -1192,13 +1200,14 @@ class Ui_MainWindow(object):
         self.actionStandard_Batches.setText(_translate("MainWindow", "Standard Batches"))
         self.actionLLM_beta.setText(_translate("MainWindow", "LLM (beta)"))
         self.actionReset_Settings_2.setText(_translate("MainWindow", "Reset Settings"))
+        self.actionImage_Browser.setText(_translate("MainWindow", "Image Browser"))
+        self.actionModel_Manager_3.setText(_translate("MainWindow", "Model Manager"))
 from airunner.widgets.active_grid_settings.active_grid_settings_widget import ActiveGridSettingsWidget
 from airunner.widgets.brush.brush_container_widget import BrushContainerWidget
 from airunner.widgets.canvas.brushes_container import BrushesContainer
 from airunner.widgets.canvas.canvas_widget import CanvasWidget
 from airunner.widgets.controlnet_settings.controlnet_settings_widget import ControlNetSettingsWidget
 from airunner.widgets.generator_form.generator_form_widget import GeneratorForm
-from airunner.widgets.image.image_panel_widget import ImagePanelWidget
 from airunner.widgets.input_image.input_image_settings_widget import InputImageSettingsWidget
 from airunner.widgets.layers.layer_container_widget import LayerContainerWidget
 from airunner.widgets.model_manager.model_manager_widget import ModelManagerWidget
