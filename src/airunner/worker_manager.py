@@ -198,8 +198,11 @@ class WorkerManager(QObject, MediatorMixin):
         clear_memory()
 
     def on_llm_text_streamed_signal(self, data):
-        if self.settings["tts_enabled"]:
-            self.do_tts_request(data["message"], data["is_end_of_message"])
+        try:
+            if self.settings["tts_enabled"]:
+                self.do_tts_request(data["message"], data["is_end_of_message"])
+        except TypeError as e:
+            self.logger.error(f"Error in on_llm_text_streamed_signal: {e}")
         self.emit(SignalCode.APPLICATION_ADD_BOT_MESSAGE_TO_CONVERSATION, data)
 
     def on_sd_image_generated_signal(self, message):
