@@ -6,67 +6,23 @@
    <rect>
     <x>0</x>
     <y>0</y>
-    <width>400</width>
-    <height>619</height>
+    <width>512</width>
+    <height>787</height>
    </rect>
   </property>
   <property name="windowTitle">
    <string>Form</string>
   </property>
   <layout class="QGridLayout" name="gridLayout_7">
-   <item row="10" column="0">
-    <spacer name="verticalSpacer">
-     <property name="orientation">
-      <enum>Qt::Vertical</enum>
-     </property>
-     <property name="sizeHint" stdset="0">
-      <size>
-       <width>20</width>
-       <height>40</height>
-      </size>
-     </property>
-    </spacer>
-   </item>
-   <item row="9" column="0">
-    <widget class="QCheckBox" name="enable_tts">
-     <property name="text">
-      <string>Enable Text to Speech</string>
-     </property>
-    </widget>
-   </item>
-   <item row="0" column="0">
+   <item row="4" column="0">
     <widget class="QGroupBox" name="use_bark">
      <property name="title">
-      <string>Use Bark</string>
+      <string>Bark</string>
      </property>
      <property name="checkable">
-      <bool>true</bool>
+      <bool>false</bool>
      </property>
      <layout class="QGridLayout" name="gridLayout_8">
-      <item row="2" column="0">
-       <widget class="QGroupBox" name="groupBox">
-        <property name="title">
-         <string>Voice</string>
-        </property>
-        <layout class="QGridLayout" name="gridLayout">
-         <item row="0" column="0">
-          <widget class="QComboBox" name="voice_combobox"/>
-         </item>
-        </layout>
-       </widget>
-      </item>
-      <item row="0" column="0">
-       <widget class="QGroupBox" name="groupBox_3">
-        <property name="title">
-         <string>Language</string>
-        </property>
-        <layout class="QGridLayout" name="gridLayout_4">
-         <item row="0" column="0">
-          <widget class="QComboBox" name="language_combobox"/>
-         </item>
-        </layout>
-       </widget>
-      </item>
       <item row="4" column="0">
        <widget class="QGroupBox" name="groupBox_6">
         <property name="title">
@@ -109,6 +65,87 @@
             <string>handle_value_change</string>
            </property>
           </widget>
+         </item>
+        </layout>
+       </widget>
+      </item>
+      <item row="3" column="0">
+       <widget class="QGroupBox" name="groupBox_4">
+        <property name="title">
+         <string>Fine Temperature</string>
+        </property>
+        <layout class="QGridLayout" name="gridLayout_5">
+         <item row="0" column="0">
+          <widget class="SliderWidget" name="semantic_temperature_2" native="true">
+           <property name="slider_minimum" stdset="0">
+            <number>1</number>
+           </property>
+           <property name="slider_maximum" stdset="0">
+            <number>100</number>
+           </property>
+           <property name="spinbox_minimum" stdset="0">
+            <double>0.000000000000000</double>
+           </property>
+           <property name="spinbox_maximum" stdset="0">
+            <double>1.000000000000000</double>
+           </property>
+           <property name="display_as_float" stdset="0">
+            <bool>true</bool>
+           </property>
+           <property name="settings_property" stdset="0">
+            <string>tts_settings.fine_temperature</string>
+           </property>
+           <property name="slider_single_step" stdset="0">
+            <number>1</number>
+           </property>
+           <property name="slider_page_step" stdset="0">
+            <number>10</number>
+           </property>
+           <property name="spinbox_single_step" stdset="0">
+            <double>0.010000000000000</double>
+           </property>
+           <property name="spinbox_page_step" stdset="0">
+            <double>0.100000000000000</double>
+           </property>
+           <property name="slider_callback" stdset="0">
+            <string>handle_value_change</string>
+           </property>
+          </widget>
+         </item>
+        </layout>
+       </widget>
+      </item>
+      <item row="1" column="0">
+       <widget class="QGroupBox" name="groupBox_2">
+        <property name="title">
+         <string>Gender</string>
+        </property>
+        <layout class="QGridLayout" name="gridLayout_3">
+         <item row="0" column="0">
+          <widget class="QComboBox" name="gender_combobox">
+           <item>
+            <property name="text">
+             <string>Male</string>
+            </property>
+           </item>
+           <item>
+            <property name="text">
+             <string>Female</string>
+            </property>
+           </item>
+          </widget>
+         </item>
+        </layout>
+       </widget>
+      </item>
+      <item row="2" column="0">
+       <widget class="QGroupBox" name="groupBox">
+        <property name="title">
+         <string>Voice</string>
+        </property>
+        <layout class="QGridLayout" name="gridLayout">
+         <item row="0" column="0">
+          <widget class="QComboBox" name="voice_combobox"/>
          </item>
         </layout>
        </widget>
@@ -159,73 +196,121 @@
         </layout>
        </widget>
       </item>
-      <item row="1" column="0">
-       <widget class="QGroupBox" name="groupBox_2">
+      <item row="6" column="0">
+       <widget class="QGroupBox" name="groupBox_3">
         <property name="title">
-         <string>Gender</string>
+         <string>Language</string>
         </property>
-        <layout class="QGridLayout" name="gridLayout_3">
+        <property name="checkable">
+         <bool>true</bool>
+        </property>
+        <layout class="QGridLayout" name="gridLayout_4">
+         <item row="1" column="0">
+          <widget class="QComboBox" name="language_combobox"/>
+         </item>
          <item row="0" column="0">
-          <widget class="QComboBox" name="gender_combobox">
-           <item>
-            <property name="text">
-             <string>Male</string>
-            </property>
-           </item>
-           <item>
-            <property name="text">
-             <string>Female</string>
-            </property>
-           </item>
+          <widget class="QLabel" name="label">
+           <property name="font">
+            <font>
+             <pointsize>9</pointsize>
+            </font>
+           </property>
+           <property name="text">
+            <string>Override the system language</string>
+           </property>
           </widget>
          </item>
         </layout>
        </widget>
       </item>
-      <item row="3" column="0">
-       <widget class="QGroupBox" name="groupBox_4">
-        <property name="title">
-         <string>Fine Temperature</string>
+      <item row="0" column="0">
+       <widget class="QLabel" name="label_3">
+        <property name="font">
+         <font>
+          <pointsize>9</pointsize>
+         </font>
         </property>
-        <layout class="QGridLayout" name="gridLayout_5">
-         <item row="0" column="0">
-          <widget class="SliderWidget" name="semantic_temperature_2" native="true">
-           <property name="slider_minimum" stdset="0">
-            <number>1</number>
-           </property>
-           <property name="slider_maximum" stdset="0">
-            <number>100</number>
-           </property>
-           <property name="spinbox_minimum" stdset="0">
-            <double>0.000000000000000</double>
-           </property>
-           <property name="spinbox_maximum" stdset="0">
-            <double>1.000000000000000</double>
-           </property>
-           <property name="display_as_float" stdset="0">
-            <bool>true</bool>
-           </property>
-           <property name="settings_property" stdset="0">
-            <string>tts_settings.fine_temperature</string>
-           </property>
-           <property name="slider_single_step" stdset="0">
-            <number>1</number>
-           </property>
-           <property name="slider_page_step" stdset="0">
-            <number>10</number>
-           </property>
-           <property name="spinbox_single_step" stdset="0">
-            <double>0.010000000000000</double>
-           </property>
-           <property name="spinbox_page_step" stdset="0">
-            <double>0.100000000000000</double>
-           </property>
-           <property name="slider_callback" stdset="0">
-            <string>handle_value_change</string>
-           </property>
-          </widget>
-         </item>
-        </layout>
+        <property name="text">
+         <string>Realistic, slow and higher VRAM usage.</string>
+        </property>
+       </widget>
+      </item>
+     </layout>
+    </widget>
+   </item>
+   <item row="0" column="0">
+    <widget class="QCheckBox" name="enable_tts">
+     <property name="text">
+      <string>Enable Text to Speech</string>
+     </property>
+    </widget>
+   </item>
+   <item row="2" column="0">
+    <widget class="QGroupBox" name="groupBox_7">
+     <property name="title">
+      <string>Model</string>
+     </property>
+     <layout class="QGridLayout" name="gridLayout_9">
+      <item row="0" column="0">
+       <widget class="QComboBox" name="comboBox">
+        <item>
+         <property name="text">
+          <string>Bark</string>
+         </property>
+        </item>
+        <item>
+         <property name="text">
+          <string>SpeechT5</string>
+         </property>
+        </item>
+       </widget>
+      </item>
+     </layout>
+    </widget>
+   </item>
+   <item row="15" column="0">
+    <spacer name="verticalSpacer">
+     <property name="orientation">
+      <enum>Qt::Vertical</enum>
+     </property>
+     <property name="sizeHint" stdset="0">
+      <size>
+       <width>20</width>
+       <height>40</height>
+      </size>
+     </property>
+    </spacer>
+   </item>
+   <item row="1" column="0">
+    <widget class="Line" name="line">
+     <property name="orientation">
+      <enum>Qt::Horizontal</enum>
+     </property>
+    </widget>
+   </item>
+   <item row="3" column="0">
+    <widget class="Line" name="line_2">
+     <property name="orientation">
+      <enum>Qt::Horizontal</enum>
+     </property>
+    </widget>
+   </item>
+   <item row="14" column="0">
+    <widget class="QGroupBox" name="speech_t5">
+     <property name="title">
+      <string>SpeechT5</string>
+     </property>
+     <layout class="QGridLayout" name="gridLayout_10">
+      <item row="0" column="0">
+       <widget class="QLabel" name="label_2">
+        <property name="font">
+         <font>
+          <pointsize>9</pointsize>
+         </font>
+        </property>
+        <property name="text">
+         <string>Less realistic but fast and small VRAM usage.</string>
+        </property>
        </widget>
       </item>
      </layout>
