@@ -14,7 +14,7 @@
    <string>Form</string>
   </property>
   <layout class="QGridLayout" name="gridLayout">
-   <item row="6" column="0" colspan="2">
+   <item row="3" column="0">
     <layout class="QHBoxLayout" name="horizontalLayout_2">
      <item>
       <widget class="QPushButton" name="send_button">
@@ -48,145 +48,88 @@
      </item>
     </layout>
    </item>
-   <item row="1" column="0" colspan="2">
-    <widget class="QScrollArea" name="chat_container">
-     <property name="frameShape">
-      <enum>QFrame::NoFrame</enum>
+   <item row="1" column="0">
+    <widget class="QSplitter" name="splitter">
+     <property name="orientation">
+      <enum>Qt::Vertical</enum>
      </property>
-     <property name="widgetResizable">
-      <bool>true</bool>
+     <property name="childrenCollapsible">
+      <bool>false</bool>
      </property>
-     <widget class="QWidget" name="scrollAreaWidgetContents">
-      <property name="geometry">
-       <rect>
-        <x>0</x>
-        <y>0</y>
-        <width>661</width>
-        <height>806</height>
-       </rect>
-      </property>
-      <layout class="QGridLayout" name="gridLayout_2">
-       <property name="leftMargin">
-        <number>0</number>
-       </property>
-       <property name="topMargin">
-        <number>0</number>
-       </property>
-       <property name="rightMargin">
-        <number>0</number>
-       </property>
-       <property name="bottomMargin">
-        <number>0</number>
-       </property>
-       <item row="1" column="0">
-        <widget class="QTextEdit" name="conversation">
-         <property name="readOnly">
+     <widget class="QWidget" name="verticalLayoutWidget">
+      <layout class="QVBoxLayout" name="verticalLayout">
+       <item>
+        <widget class="QScrollArea" name="chat_container">
+         <property name="frameShape">
+          <enum>QFrame::NoFrame</enum>
+         </property>
+         <property name="widgetResizable">
           <bool>true</bool>
          </property>
+         <widget class="QWidget" name="scrollAreaWidgetContents">
+          <property name="geometry">
+           <rect>
+            <x>0</x>
+            <y>0</y>
+            <width>659</width>
+            <height>515</height>
+           </rect>
+          </property>
+          <layout class="QGridLayout" name="gridLayout_2">
+           <property name="leftMargin">
+            <number>0</number>
+           </property>
+           <property name="topMargin">
+            <number>0</number>
+           </property>
+           <property name="rightMargin">
+            <number>0</number>
+           </property>
+           <property name="bottomMargin">
+            <number>0</number>
+           </property>
+           <item row="0" column="0">
+            <widget class="QTextEdit" name="conversation">
+             <property name="readOnly">
+              <bool>true</bool>
+             </property>
+            </widget>
+           </item>
+          </layout>
+         </widget>
         </widget>
-       </item>
-       <item row="0" column="0">
-        <widget class="QComboBox" name="action"/>
        </item>
       </layout>
      </widget>
+     <widget class="QPlainTextEdit" name="prompt">
+      <property name="sizePolicy">
+       <sizepolicy hsizetype="Expanding" vsizetype="MinimumExpanding">
+        <horstretch>0</horstretch>
+        <verstretch>0</verstretch>
+       </sizepolicy>
+      </property>
+      <property name="minimumSize">
+       <size>
+        <width>0</width>
+        <height>150</height>
+       </size>
+      </property>
+      <property name="maximumSize">
+       <size>
+        <width>16777215</width>
+        <height>16777215</height>
+       </size>
+      </property>
+     </widget>
     </widget>
    </item>
-   <item row="5" column="0" colspan="2">
-    <layout class="QHBoxLayout" name="horizontalLayout_2">
-     <item>
-      <widget class="QPushButton" name="send_button">
-       <property name="toolTip">
-        <string>Send message</string>
-       </property>
-       <property name="text">
-        <string>Send</string>
-       </property>
-      </widget>
-     </item>
-     <item>
-      <widget class="QProgressBar" name="progressBar">
-       <property name="value">
-        <number>0</number>
-       </property>
-      </widget>
-     </item>
-     <item>
-      <widget class="QPushButton" name="clear_conversatiion_button">
-       <property name="toolTip">
-        <string>Clear conversation</string>
-       </property>
-       <property name="text">
-        <string/>
-       </property>
-       <property name="icon">
-        <iconset theme="user-trash"/>
-       </property>
-      </widget>
-     </item>
-    </layout>
-   </item>
-   <item row="3" column="0" colspan="2">
-    <widget class="QPlainTextEdit" name="prompt">
-     <property name="sizePolicy">
-      <sizepolicy hsizetype="Expanding" vsizetype="Maximum">
-       <horstretch>0</horstretch>
-       <verstretch>0</verstretch>
-      </sizepolicy>
-     </property>
-     <property name="minimumSize">
-      <size>
-       <width>0</width>
-       <height>150</height>
-      </size>
-     </property>
-     <property name="maximumSize">
-      <size>
-       <width>16777215</width>
-       <height>150</height>
-      </size>
-     </property>
-    </widget>
-   </item>
-   <item row="2" column="0" colspan="2">
+   <item row="2" column="0">
     <widget class="QComboBox" name="action"/>
    </item>
   </layout>
  </widget>
  <resources/>
  <connections>
-  <connection>
-   <sender>send_button</sender>
-   <signal>clicked()</signal>
-   <receiver>chat_prompt</receiver>
-   <slot>action_button_clicked_send()</slot>
-   <hints>
-    <hint type="sourcelabel">
-     <x>89</x>
-     <y>1033</y>
-    </hint>
-    <hint type="destinationlabel">
-     <x>211</x>
-     <y>0</y>
-    </hint>
-   </hints>
-  </connection>
-  <connection>
-   <sender>clear_conversatiion_button</sender>
-   <signal>clicked()</signal>
-   <receiver>chat_prompt</receiver>
-   <slot>action_button_clicked_clear_conversation()</slot>
-   <hints>
-    <hint type="sourcelabel">
-     <x>668</x>
-     <y>1009</y>
-    </hint>
-    <hint type="destinationlabel">
-     <x>565</x>
-     <y>0</y>
-    </hint>
-   </hints>
-  </connection>
   <connection>
    <sender>prompt</sender>
    <signal>textChanged()</signal>
@@ -210,12 +153,44 @@
    <slot>llm_action_changed(QString)</slot>
    <hints>
     <hint type="sourcelabel">
-     <x>169</x>
-     <y>12</y>
+     <x>178</x>
+     <y>989</y>
     </hint>
     <hint type="destinationlabel">
      <x>47</x>
      <y>2</y>
+    </hint>
+   </hints>
+  </connection>
+  <connection>
+   <sender>send_button</sender>
+   <signal>clicked()</signal>
+   <receiver>chat_prompt</receiver>
+   <slot>action_button_clicked_send()</slot>
+   <hints>
+    <hint type="sourcelabel">
+     <x>34</x>
+     <y>1023</y>
+    </hint>
+    <hint type="destinationlabel">
+     <x>-4</x>
+     <y>922</y>
+    </hint>
+   </hints>
+  </connection>
+  <connection>
+   <sender>clear_conversatiion_button</sender>
+   <signal>clicked()</signal>
+   <receiver>chat_prompt</receiver>
+   <slot>action_button_clicked_clear_conversation()</slot>
+   <hints>
+    <hint type="sourcelabel">
+     <x>655</x>
+     <y>1021</y>
+    </hint>
+    <hint type="destinationlabel">
+     <x>676</x>
+     <y>1003</y>
     </hint>
    </hints>
   </connection>
