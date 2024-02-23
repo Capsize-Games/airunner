@@ -205,9 +205,9 @@ class CasualLMTransformerBaseHandler(TokenizerHandler):
         if self.action == LLMActionType.CHAT:
             if self.settings["llm_generator_settings"]["use_tool_filter"]:
                 self.tool_agent.run(self.prompt)
+            self.chat_agent.run(self.prompt, LLMActionType.CHAT)
+        elif self.action == LLMActionType.GENERATE_IMAGE:
             self.chat_agent.run(self.prompt, LLMActionType.GENERATE_IMAGE)
-
-
 
         self.send_final_message()
 
