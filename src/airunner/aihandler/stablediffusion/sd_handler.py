@@ -74,6 +74,7 @@ class SDHandler(
         PipelineMixin.__init__(self)
         ControlnetModelMixin.__init__(self)
         AIModelMixin.__init__(self)
+        LoraMixin.__init__(self)
         self.logger.info("Loading Stable Diffusion model runner...")
         self.safety_checker_model = self.models_by_pipeline_action("safety_checker")[0]
         self.text_encoder_model = self.models_by_pipeline_action("text_encoder")[0]
@@ -962,6 +963,7 @@ class SDHandler(
         
         if self.do_add_lora_to_pipe:
             try:
+                self.logger.info("Adding LoRA to pipe")
                 self.add_lora_to_pipe()
             except Exception as _e:
                 self.error_handler("Selected LoRA are not supported with this model")
