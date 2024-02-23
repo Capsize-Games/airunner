@@ -524,7 +524,7 @@
           <widget class="QWidget" name="canvas_widget" native="true">
            <property name="minimumSize">
             <size>
-             <width>0</width>
+             <width>512</width>
              <height>0</height>
             </size>
            </property>
@@ -610,21 +610,13 @@
             </item>
            </layout>
           </widget>
-          <widget class="ImagePanelWidget" name="image_browser" native="true">
-           <property name="sizePolicy">
-            <sizepolicy hsizetype="MinimumExpanding" vsizetype="Preferred">
-             <horstretch>0</horstretch>
-             <verstretch>0</verstretch>
-            </sizepolicy>
-           </property>
-           <property name="minimumSize">
+          <widget class="QScrollArea" name="scrollArea">
+           <property name="maximumSize">
             <size>
-             <width>0</width>
-             <height>0</height>
+             <width>450</width>
+             <height>16777215</height>
             </size>
            </property>
-          </widget>
-          <widget class="QScrollArea" name="scrollArea">
            <property name="widgetResizable">
             <bool>true</bool>
            </property>
@@ -633,22 +625,40 @@
              <rect>
               <x>0</x>
               <y>0</y>
-              <width>408</width>
-              <height>1163</height>
+              <width>415</width>
+              <height>1177</height>
              </rect>
             </property>
             <layout class="QGridLayout" name="gridLayout">
              <item row="0" column="0">
               <widget class="QSplitter" name="splitter">
+               <property name="maximumSize">
+                <size>
+                 <width>16777215</width>
+                 <height>16777215</height>
+                </size>
+               </property>
                <property name="orientation">
                 <enum>Qt::Vertical</enum>
                </property>
                <widget class="QTabWidget" name="tool_tab_widget">
+                <property name="minimumSize">
+                 <size>
+                  <width>0</width>
+                  <height>0</height>
+                 </size>
+                </property>
+                <property name="maximumSize">
+                 <size>
+                  <width>16777215</width>
+                  <height>16777215</height>
+                 </size>
+                </property>
                 <property name="acceptDrops">
                  <bool>false</bool>
                 </property>
                 <property name="currentIndex">
-                 <number>2</number>
+                 <number>0</number>
                 </property>
                 <widget class="QWidget" name="tab_pen">
                  <attribute name="title">
@@ -840,8 +850,8 @@
                           <rect>
                            <x>0</x>
                            <y>0</y>
-                           <width>364</width>
-                           <height>200</height>
+                           <width>371</width>
+                           <height>388</height>
                           </rect>
                          </property>
                          <layout class="QGridLayout" name="gridLayout_9">
@@ -1750,11 +1760,19 @@
     <addaction name="actionBrowse_Videos_Path"/>
     <addaction name="separator"/>
    </widget>
+   <widget class="QMenu" name="menuTools">
+    <property name="title">
+     <string>Tools</string>
+    </property>
+    <addaction name="actionImage_Browser"/>
+    <addaction name="actionModel_Manager_3"/>
+   </widget>
    <addaction name="menuFile"/>
    <addaction name="menuEdit"/>
    <addaction name="menuView"/>
    <addaction name="menuImage"/>
    <addaction name="menuFilters"/>
+   <addaction name="menuTools"/>
    <addaction name="menuAbout"/>
   </widget>
   <widget class="QStatusBar" name="statusbar"/>
@@ -2357,6 +2375,16 @@
     <string>Reset Settings</string>
    </property>
   </action>
+  <action name="actionImage_Browser">
+   <property name="text">
+    <string>Image Browser</string>
+   </property>
+  </action>
+  <action name="actionModel_Manager_3">
+   <property name="text">
+    <string>Model Manager</string>
+   </property>
+  </action>
  </widget>
  <customwidgets>
   <customwidget>
@@ -2387,12 +2415,6 @@
    <class>ActiveGridSettingsWidget</class>
    <extends>QWidget</extends>
    <header>airunner/widgets/active_grid_settings/active_grid_settings_widget</header>
-   <container>1</container>
-  </customwidget>
-  <customwidget>
-   <class>ImagePanelWidget</class>
-   <extends>QWidget</extends>
-   <header>airunner/widgets/image/image_panel_widget</header>
    <container>1</container>
   </customwidget>
   <customwidget>
@@ -3295,6 +3317,38 @@
     </hint>
    </hints>
   </connection>
+  <connection>
+   <sender>actionImage_Browser</sender>
+   <signal>triggered()</signal>
+   <receiver>MainWindow</receiver>
+   <slot>action_show_image_browser()</slot>
+   <hints>
+    <hint type="sourcelabel">
+     <x>-1</x>
+     <y>-1</y>
+    </hint>
+    <hint type="destinationlabel">
+     <x>561</x>
+     <y>661</y>
+    </hint>
+   </hints>
+  </connection>
+  <connection>
+   <sender>actionModel_Manager_3</sender>
+   <signal>triggered()</signal>
+   <receiver>MainWindow</receiver>
+   <slot>action_show_model_manager()</slot>
+   <hints>
+    <hint type="sourcelabel">
+     <x>-1</x>
+     <y>-1</y>
+    </hint>
+    <hint type="destinationlabel">
+     <x>561</x>
+     <y>661</y>
+    </hint>
+   </hints>
+  </connection>
  </connections>
  <designerdata>
   <property name="gridDeltaX">
@@ -3389,5 +3443,6 @@
   <slot>ocr_button_toggled(bool)</slot>
   <slot>action_reset_settings()</slot>
   <slot>action_toggle_select(bool)</slot>
+  <slot>action_show_image_browser()</slot>
  </slots>
 </ui>

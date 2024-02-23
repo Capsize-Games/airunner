@@ -1,3 +1,5 @@
+import os
+
 import inflect
 import re
 import time
@@ -247,33 +249,50 @@ class TTSHandler(BaseHandler):
             self.model = self.model.to_bettertransformer()
             self.model.enable_cpu_offload()
     
-    def load_vocoder(self):
+    def load_vocoder(self, local_files_only=True):
         if not self.use_bark:
             self.logger.info("Loading Vocoder")
-            self.vocoder = SpeechT5HifiGan.from_pretrained(
-                self.vocoder_path,
-                torch_dtype=self.torch_dtype
-            )
+            try:
+                self.vocoder = SpeechT5HifiGan.from_pretrained(
+                    self.vocoder_path,
+                    torch_dtype=self.torch_dtype,
+                    local_files_only=local_files_only
+                )
+            except OSError as _e:
+                return self.load_vocoder(local_files_only=False)
 
             if self.use_cuda:
                 self.vocoder = self.vocoder.cuda()
     
-    def load_processor(self):
+    def load_processor(self, local_files_only=True):
         self.logger.info("Loading Procesor")
         processor_class_ = BarkProcessor if self.use_bark else SpeechT5Processor
-        self.processor = processor_class_.from_pretrained(self.processor_path)
+        try:
+            self.processor = processor_class_.from_pretrained(
+                self.processor_path,
+                local_files_only=local_files_only
+            )
+        except OSError as _e:
+            return self.load_processor(local_files_only=False)
 
-    def load_dataset(self):
+    def load_dataset(self, local_files_only=True):
         """
         load xvector containing speaker's voice characteristics from a dataset
         :return:
         """
+        os.environ["HF_DATASETS_OFFLINE"] = str(int(local_files_only))
+
         if not self.use_bark:
             self.logger.info("Loading Dataset")
-            embeddings_dataset = load_dataset(
-                self.speaker_embeddings_dataset_path,
-                split="validation"
-            )
+            try:
+                embeddings_dataset = load_dataset(
+                    self.speaker_embeddings_dataset_path,
+                    split="validation"
+                )
+            except OSError as _e:
+                return self.load_dataset(
+                    local_files_only=False
+                )
             self.speaker_embeddings = torch.tensor(
                 embeddings_dataset[7306]["xvector"]
             ).unsqueeze(0)
