@@ -140,13 +140,14 @@ class CasualLMTransformerBaseHandler(TokenizerHandler):
         #         description="Agent that can return help results about the application."
         #     )
         # )
-
+        self.logger.info("Loading local agent")
         self.tool_agent = LocalAgent(
             model=self.model,
             tokenizer=self.tokenizer,
             additional_tools=self.tools,
             restrict_tools_to_additional=self.restrict_tools_to_additional,
         )
+        self.logger.info("Loading chat agent")
         self.chat_agent = AIRunnerAgent(
             model=self.model,
             tokenizer=self.tokenizer,

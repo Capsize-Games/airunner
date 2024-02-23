@@ -32,20 +32,23 @@ class VisualQATransformerBaseHandler(TransformerBaseHandler):
         if do_load_processor:
             self.load_processor()
 
-    def load_processor(self, local_files_only=None):
+    def load_processor(self, local_files_only=True):
         self.logger.info(f"Loading processor {self.model_path}")
         kwargs = {
             'device_map': 'auto',
             'torch_dtype': torch.float16,
-            'local_files_only': self.local_files_only if local_files_only is None else local_files_only,
+            'local_files_only': local_files_only,
         }
         config = self.quantization_config()
         if config:
             kwargs["quantization_config"] = config
-        self.processor = BlipProcessor.from_pretrained(
-            self.model_path,
-            **kwargs
-        )
+        try:
+            self.processor = BlipProcessor.from_pretrained(
+                self.model_path,
+                **kwargs
+            )
+        except OSError as _e:
+            return self.load_processor(local_files_only=False)
         if self.processor:
             self.logger.info("Processor loaded")
         else:

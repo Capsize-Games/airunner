@@ -33,7 +33,6 @@ class TTSGeneratorWorker(Worker):
                 split_text = text.split(p, 1)  # Split at the first occurrence of punctuation
                 if len(split_text) > 1:
                     sentence = split_text[0]
-                    print(f"SENTENCE: {sentence}")
                     self.generate(sentence)
                     self.play_queue_started = True
 

@@ -252,20 +252,6 @@ class Mode(Enum):
     MODEL_MANAGER = "Model Manager"
 
 
-class GeneratorSection(Enum):
-    TXT2IMG = "txt2img"
-    IMG2IMG = "img2img"
-    INPAINT = "inpaint"
-    OUTPAINT = "outpaint"
-    DEPTH2IMG = "depth2img"
-    PIX2PIX = "pix2pix"
-    SUPERRESOLUTION = "superresolution"
-    UPSCALE = "upscale"
-    VID2VID = "vid2vid"
-    TXT2VID = "txt2vid"
-    PROMPT_BUILDER = "prompt_builder"
-
-
 class LLMAction(Enum):
     CHAT = "chat"
     RAG = "rag"
@@ -326,3 +312,25 @@ class WindowSection(Enum):
     LORA = "LoRA"
     PEN = "Pen"
     ACTIVE_GRID = "Active Grid"
+
+
+class ImageGenerator(Enum):
+    STABLEDIFFUSION = "stablediffusion"
+
+
+class GeneratorSection(Enum):
+    TXT2IMG = "txt2img"
+    IMG2IMG = "img2img"
+    INPAINT = "inpaint"
+    OUTPAINT = "outpaint"
+    DEPTH2IMG = "depth2img"
+    PIX2PIX = "pix2pix"
+    UPSCALE = "upscale"
+
+
+class StableDiffusionVersion(Enum):
+    SDXL1_0 = "SDXL 1.0"
+    SD_TURBO = "SD Turbo"
+    SDXL_TURBO = "SDXL Turbo"
+    SD2_1 = "SD 2.1"
+    SD1_5 = "SD 1.5"
