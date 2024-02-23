@@ -111,7 +111,7 @@ class Ui_standard_image_widget(object):
         self.advanced_settings.setWidgetResizable(True)
         self.advanced_settings.setObjectName("advanced_settings")
         self.scrollAreaWidgetContents_2 = QtWidgets.QWidget()
-        self.scrollAreaWidgetContents_2.setGeometry(QtCore.QRect(0, 0, 646, 140))
+        self.scrollAreaWidgetContents_2.setGeometry(QtCore.QRect(0, 0, 646, 167))
         self.scrollAreaWidgetContents_2.setObjectName("scrollAreaWidgetContents_2")
         self.gridLayout_4 = QtWidgets.QGridLayout(self.scrollAreaWidgetContents_2)
         self.gridLayout_4.setObjectName("gridLayout_4")
@@ -172,42 +172,13 @@ class Ui_standard_image_widget(object):
         self.verticalLayout_5.addWidget(self.brushes)
         spacerItem2 = QtWidgets.QSpacerItem(20, 40, QtWidgets.QSizePolicy.Policy.Minimum, QtWidgets.QSizePolicy.Policy.Expanding)
         self.verticalLayout_5.addItem(spacerItem2)
-        self.tabWidget_2 = QtWidgets.QTabWidget(parent=self.splitter_2)
-        self.tabWidget_2.setObjectName("tabWidget_2")
-        self.tab_2 = QtWidgets.QWidget()
-        self.tab_2.setObjectName("tab_2")
-        self.gridLayout_5 = QtWidgets.QGridLayout(self.tab_2)
-        self.gridLayout_5.setObjectName("gridLayout_5")
-        self.embeddings_container_widget = EmbeddingsContainerWidget(parent=self.tab_2)
-        self.embeddings_container_widget.setObjectName("embeddings_container_widget")
-        self.gridLayout_5.addWidget(self.embeddings_container_widget, 0, 0, 1, 1)
-        self.tabWidget_2.addTab(self.tab_2, "")
-        self.tab_3 = QtWidgets.QWidget()
-        self.tab_3.setObjectName("tab_3")
-        self.gridLayout_3 = QtWidgets.QGridLayout(self.tab_3)
-        self.gridLayout_3.setObjectName("gridLayout_3")
-        self.lora_container_widget = LoraContainerWidget(parent=self.tab_3)
-        self.lora_container_widget.setObjectName("lora_container_widget")
-        self.gridLayout_3.addWidget(self.lora_container_widget, 0, 0, 1, 1)
-        self.tabWidget_2.addTab(self.tab_3, "")
         self.gridLayout_6.addWidget(self.splitter_2, 0, 0, 1, 1)
         self.tabWidget.addTab(self.tab, "")
-        self.tab_6 = QtWidgets.QWidget()
-        self.tab_6.setStyleSheet("")
-        self.tab_6.setObjectName("tab_6")
-        self.horizontalLayout_13 = QtWidgets.QHBoxLayout(self.tab_6)
-        self.horizontalLayout_13.setObjectName("horizontalLayout_13")
-        self.widget = StableDiffusionSettingsWidget(parent=self.tab_6)
-        self.widget.setObjectName("widget")
-        self.horizontalLayout_13.addWidget(self.widget)
-        icon = QtGui.QIcon.fromTheme("document-properties")
-        self.tabWidget.addTab(self.tab_6, icon, "")
         self.gridLayout_7.addWidget(self.tabWidget, 0, 0, 1, 1)
         self.gridLayout.addWidget(self.sidebar, 0, 0, 1, 1)
 
         self.retranslateUi(standard_image_widget)
         self.tabWidget.setCurrentIndex(0)
-        self.tabWidget_2.setCurrentIndex(0)
         self.generate_batch_similar_button.clicked.connect(standard_image_widget.similar_batch) # type: ignore
         self.generate_single_simillar_button.clicked.connect(standard_image_widget.similar_image) # type: ignore
         self.advanced_settings_checkbox.clicked['bool'].connect(standard_image_widget.handle_advanced_settings_checkbox) # type: ignore
@@ -236,15 +207,8 @@ class Ui_standard_image_widget(object):
         self.generate_batch_similar_button.setToolTip(_translate("standard_image_widget", "Generate a batch of four variations"))
         self.generate_batch_similar_button.setText(_translate("standard_image_widget", "Batch"))
         self.label_7.setText(_translate("standard_image_widget", "Brushes"))
-        self.tabWidget_2.setTabText(self.tabWidget_2.indexOf(self.tab_2), _translate("standard_image_widget", "Embeddings"))
-        self.tabWidget_2.setTabText(self.tabWidget_2.indexOf(self.tab_3), _translate("standard_image_widget", "LoRA"))
         self.tabWidget.setTabText(self.tabWidget.indexOf(self.tab), _translate("standard_image_widget", "Tools"))
-        self.tabWidget.setTabText(self.tabWidget.indexOf(self.tab_6), _translate("standard_image_widget", "Stable Diffusion"))
-        self.tabWidget.setTabToolTip(self.tabWidget.indexOf(self.tab_6), _translate("standard_image_widget", "Stable Diffusion settings"))
 from airunner.widgets.canvas.brushes_container import BrushesContainer
 from airunner.widgets.controlnet_settings.controlnet_settings_widget import ControlNetSettingsWidget
-from airunner.widgets.embeddings.embeddings_container_widget import EmbeddingsContainerWidget
 from airunner.widgets.input_image.input_image_settings_widget import InputImageSettingsWidget
-from airunner.widgets.lora.lora_container_widget import LoraContainerWidget
 from airunner.widgets.slider.slider_widget import SliderWidget
-from airunner.widgets.stablediffusion.stable_diffusion_settings_widget import StableDiffusionSettingsWidget
