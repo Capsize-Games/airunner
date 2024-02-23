@@ -42,8 +42,7 @@ class LLMSettingsWidget(BaseWidget):
             settings["memory_settings"]["unload_unused_models"] = not val
             settings["memory_settings"]["move_unused_model_to_cpu"] = False
             self.settings = settings
-            
-    
+
     def initialize_form(self):
         self.ui.prompt_template.blockSignals(True)
         self.ui.model.blockSignals(True)

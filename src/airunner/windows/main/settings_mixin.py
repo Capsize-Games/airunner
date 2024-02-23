@@ -7,7 +7,7 @@ from airunner.data.bootstrap.model_bootstrap_data import model_bootstrap_data
 from airunner.data.bootstrap.pipeline_bootstrap_data import pipeline_bootstrap_data
 from airunner.enums import Mode, SignalCode, CanvasToolName, LLMActionType
 from airunner.service_locator import ServiceLocator
-from airunner.settings import BASE_PATH
+from airunner.settings import BASE_PATH, MALE
 from airunner.settings import DEFAULT_PATHS
 from airunner.settings import DEFAULT_CHATBOT
 from airunner.utils import default_hf_cache_dir
@@ -399,6 +399,13 @@ Previous Conversation:
                     display_name="PLMS",
                 ),
             ],
+            translation_settings=dict(
+                language="English",
+                gender=MALE,
+                voice="",
+                translation_model="",
+                enabled=False,
+            ),
             saved_prompts=[],
             layers=[],
             presets=[],
