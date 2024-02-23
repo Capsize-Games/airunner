@@ -4,6 +4,7 @@ from PyQt6.QtWidgets import QStyledItemDelegate, QStyleOptionViewItem, QLabel, Q
 
 from airunner.enums import SignalCode
 from airunner.widgets.api_token.api_token_widget import APITokenWidget
+from airunner.widgets.embeddings.embeddings_container_widget import EmbeddingsContainerWidget
 from airunner.widgets.export_preferences.export_preferences_widget import ExportPreferencesWidget
 from airunner.widgets.grid_preferences.grid_preferences_widget import GridPreferencesWidget
 from airunner.widgets.image_generator_preferences.image_generator_preferences_widget import ImageGeneratorPreferencesWidget
@@ -11,8 +12,10 @@ from airunner.widgets.image_generator_preferences.image_generator_preferences_wi
 from airunner.widgets.keyboard_shortcuts.keyboard_shortcuts_widget import KeyboardShortcutsWidget
 from airunner.widgets.llm.bot_preferences import BotPreferencesWidget
 from airunner.widgets.llm.llm_settings_widget import LLMSettingsWidget
+from airunner.widgets.lora.lora_container_widget import LoraContainerWidget
 from airunner.widgets.memory_preferences.memory_preferences_widget import MemoryPreferencesWidget
 from airunner.widgets.paths.paths_widget import PathsWidget
+from airunner.widgets.stablediffusion.stable_diffusion_settings_widget import StableDiffusionSettingsWidget
 from airunner.widgets.translation_preferences.translation_preferences_widget import TranslationPreferencesWidget
 from airunner.widgets.tts.templates.tts_prefernces_widget import TTSPreferencesWidget
 from airunner.windows.settings.templates.airunner_settings_ui import Ui_airunner_settings
@@ -63,6 +66,21 @@ class SettingsWindow(BaseWindow):
                     {
                         "name": "image_generator_preferences",
                         "display_name": "Image Generator",
+                        "checkable": False
+                    },
+                    {
+                        "name": "stable_diffusion_preferences",
+                        "display_name": "Stable Diffusion",
+                        "checkable": False
+                    },
+                    {
+                        "name": "lora_settings",
+                        "display_name": "LoRA",
+                        "checkable": False
+                    },
+                    {
+                        "name": "embeddings_settings",
+                        "display_name": "Embeddings",
                         "checkable": False
                     }
                 ]
@@ -285,6 +303,9 @@ class SettingsWindow(BaseWindow):
         widget_object = None
         widgets = {
             "image_generator_preferences": ImageGeneratorPreferencesWidget,
+            "stable_diffusion_preferences": StableDiffusionSettingsWidget,
+            "lora_settings": LoraContainerWidget,
+            "embeddings_settings": EmbeddingsContainerWidget,
             "paths": PathsWidget,
             "keyboard_shortcuts": KeyboardShortcutsWidget,
             "export_preferences": ExportPreferencesWidget,
