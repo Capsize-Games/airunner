@@ -1,5 +1,6 @@
 import datetime
-import locale
+import json
+import re
 import time
 from typing import AnyStr
 
@@ -14,36 +15,74 @@ from airunner.mediator_mixin import MediatorMixin
 from airunner.enums import SignalCode, LLMChatRole, LLMActionType
 
 
+class JSONExtractor(json.JSONDecoder):
+    def decode(self, s):
+        self.json_objects = []
+        # Remove trailing characters
+        while s:
+            try:
+                # Try to decode the string as JSON
+                obj, end = super().raw_decode(s)
+                self.json_objects.append(obj)
+                s = s[end:].lstrip()
+            except json.JSONDecodeError:
+                # If the string is not valid JSON, find the first valid JSON object
+                match = re.match(r'[^\{]+(\{[^\}]+\}).*', s)
+                if match:
+                    json_part = match.group(1)  # Extract the JSON object from the match
+                    s = s[match.end():]
+                    s = s.replace("```json", "").replace("```", "")
+                    try:
+                        # Try to decode the extracted part as JSON
+                        obj = json.loads(json_part)
+                        self.json_objects.append(obj)
+                    except json.JSONDecodeError:
+                        # If the extracted part is not valid JSON, ignore it
+                        pass
+                else:
+                    break
+        return self.json_objects
+
+    def raw_decode(self, s, idx=0):
+        obj, end = super().raw_decode(s, idx)
+        self.json_objects.append(obj)
+        return obj, end
+
+
 class AIRunnerAgent(QObject, MediatorMixin):
     def __init__(self, *args, **kwargs):
-        self.model = kwargs.pop("model")
-        self.tokenizer = kwargs.pop("tokenizer")
-        self.streamer = kwargs.pop("streamer")
-        self.tools = kwargs.pop("tools")
-        self.chat_template = kwargs.pop("chat_template")
-        self.username = kwargs.pop("username")
-        self.botname = kwargs.pop("botname")
-        self.bot_mood = kwargs.pop("bot_mood")
-        self.bot_personality = kwargs.pop("bot_personality")
-        self.min_length = kwargs.pop("min_length")
-        self.max_length = kwargs.pop("max_length")
-        self.num_beams = kwargs.pop("num_beams")
-        self.do_sample = kwargs.pop("do_sample")
-        self.top_k = kwargs.pop("top_k")
-        self.eta_cutoff = kwargs.pop("eta_cutoff")
-        self.sequences = kwargs.pop("sequences")
-        self.early_stopping = kwargs.pop("early_stopping")
-        self.repetition_penalty = kwargs.pop("repetition_penalty")
-        self.temperature = kwargs.pop("temperature")
-        self.is_mistral = kwargs.pop("is_mistral")
-        self.top_p = kwargs.pop("top_p")
-        self.guardrails_prompt = kwargs.pop("guardrails_prompt")
-        self.use_guardrails = kwargs.pop("use_guardrails")
-        self.system_instructions = kwargs.pop("system_instructions")
-        self.use_system_instructions = kwargs.pop("use_system_instructions")
-        self.user_evaluation = kwargs.pop("user_evaluation")
-        self.use_mood = kwargs.pop("use_mood")
-        self.use_personality = kwargs.pop("use_personality")
+        try:
+            self.model = kwargs.pop("model")
+            self.tokenizer = kwargs.pop("tokenizer")
+            self.streamer = kwargs.pop("streamer")
+            self.tools = kwargs.pop("tools")
+            self.chat_template = kwargs.pop("chat_template")
+            self.username = kwargs.pop("username")
+            self.botname = kwargs.pop("botname")
+            self.bot_mood = kwargs.pop("bot_mood")
+            self.bot_personality = kwargs.pop("bot_personality")
+            self.min_length = kwargs.pop("min_length")
+            self.max_length = kwargs.pop("max_length")
+            self.num_beams = kwargs.pop("num_beams")
+            self.do_sample = kwargs.pop("do_sample")
+            self.top_k = kwargs.pop("top_k")
+            self.eta_cutoff = kwargs.pop("eta_cutoff")
+            self.sequences = kwargs.pop("sequences")
+            self.early_stopping = kwargs.pop("early_stopping")
+            self.repetition_penalty = kwargs.pop("repetition_penalty")
+            self.temperature = kwargs.pop("temperature")
+            self.is_mistral = kwargs.pop("is_mistral")
+            self.top_p = kwargs.pop("top_p")
+            self.guardrails_prompt = kwargs.pop("guardrails_prompt")
+            self.use_guardrails = kwargs.pop("use_guardrails")
+            self.system_instructions = kwargs.pop("system_instructions")
+            self.use_system_instructions = kwargs.pop("use_system_instructions")
+            self.user_evaluation = kwargs.pop("user_evaluation")
+            self.use_mood = kwargs.pop("use_mood")
+            self.use_personality = kwargs.pop("use_personality")
+        except KeyError as e:
+            pass
+
         self.logger = Logger(prefix=self.__class__.__name__)
         super().__init__(*args, **kwargs)
         self.register(
@@ -118,7 +157,7 @@ class AIRunnerAgent(QObject, MediatorMixin):
                 (
                     "When returning prompts you must choose either \"art\" or \"photo\" and you absolutely must include "
                     "the following JSON format:\n```json\n{\"prompt\": \"your prompt here\", \"type\": \"your type here\"}\n```\n"
-                    "You must never deviate from that format. The prompt should be verbose and approximately 150 words."
+                    "You must **NEVER** deviate from that format. You must always return the prompt and type as JSON format. This is **MANDATORY**."
                 )
             ]
         return "\n".join(system_prompt)
@@ -268,25 +307,21 @@ class AIRunnerAgent(QObject, MediatorMixin):
                 LLMChatRole.ASSISTANT
             )
         elif action == LLMActionType.GENERATE_IMAGE:
-            # check if streamed_template is valid json
-            import json
-            try:
-                json.loads(streamed_template)
-            except json.JSONDecodeError:
-                self.emit(
-                    SignalCode.LLM_TEXT_STREAMED_SIGNAL,
-                    "Invalid JSON format. Please try again."
-                )
-                print("Invalid JSON format. Please try again.")
-                return
-            data = json.loads(streamed_template)
-
+            json_objects = self.extract_json_objects(streamed_template)
             self.emit(
                 SignalCode.LLM_IMAGE_PROMPT_GENERATED_SIGNAL,
-                data
+                json_objects[0]
             )
 
         return streamed_template
+
+    def extract_json_objects(self, s):
+        extractor = JSONExtractor()
+        try:
+            extractor.decode(s)
+        except json.JSONDecodeError:
+            pass
+        return extractor.json_objects
 
     def add_message_to_history(
         self,
