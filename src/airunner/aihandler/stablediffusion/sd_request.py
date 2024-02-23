@@ -136,6 +136,7 @@ class SDRequest(
             "upscale_model_path": settings["path_settings"]["upscale_model_path"],
             "image_path": settings["path_settings"]["image_path"],
             "lora_path": settings["path_settings"]["lora_model_path"],
+            "lora": settings["lora"],
             "embeddings_path": settings["path_settings"]["embeddings_model_path"],
             "video_path": settings["path_settings"]["video_path"],
             "clip_skip": clip_skip,
