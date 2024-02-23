@@ -382,7 +382,10 @@ class MainWindow(
         self.clear_all_prompts()
 
     def action_show_model_manager(self):
-        self.activate_model_manager_section()
+        print("TODO: show model manager")
+
+    def action_show_image_browser(self):
+        print("TODO: show image browser window")
 
     def action_show_controlnet(self):
         self.show_section(WindowSection.CONTROLNET)
@@ -533,7 +536,6 @@ class MainWindow(
             'mode_tab_widget_index': self.ui.mode_tab_widget.currentIndex(),
             'tool_tab_widget_index': self.ui.tool_tab_widget.currentIndex(),
             'center_tab_index': self.ui.center_tab.currentIndex(),
-            'generator_tab_index': self.ui.standard_image_widget.ui.tabWidget.currentIndex(),
             'is_maximized': self.isMaximized(),
             'is_fullscreen': self.isFullScreen(),
         }
@@ -662,12 +664,10 @@ class MainWindow(
         self.set_all_section_buttons()
     
     def model_manager_toggled(self, val):
-        if not val:
-            self.image_generators_toggled()
-        else:
-            settings = self.settings
-            settings["mode"] = Mode.MODEL_MANAGER.value
-            self.settings = settings
+        settings = self.settings
+        settings["mode"] = Mode.MODEL_MANAGER.value
+        self.settings = settings
+        if val:
             self.activate_model_manager_section()
             self.set_all_section_buttons()
     ###### End window handlers ######
