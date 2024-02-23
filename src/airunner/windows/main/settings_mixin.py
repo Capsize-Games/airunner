@@ -1,13 +1,13 @@
 from PyQt6.QtCore import Qt, QSettings
 
-from airunner.aihandler.settings import DEFAULT_BRUSH_PRIMARY_COLOR, DEFAULT_BRUSH_SECONDARY_COLOR
+from airunner.aihandler.settings import DEFAULT_BRUSH_PRIMARY_COLOR, DEFAULT_BRUSH_SECONDARY_COLOR, DEFAULT_SCHEDULER
 from airunner.data.bootstrap.controlnet_bootstrap_data import controlnet_bootstrap_data
 from airunner.data.bootstrap.imagefilter_bootstrap_data import imagefilter_bootstrap_data
 from airunner.data.bootstrap.model_bootstrap_data import model_bootstrap_data
 from airunner.data.bootstrap.pipeline_bootstrap_data import pipeline_bootstrap_data
-from airunner.enums import Mode, SignalCode, CanvasToolName, LLMActionType
+from airunner.enums import Mode, SignalCode, CanvasToolName, LLMActionType, ImageGenerator, GeneratorSection
 from airunner.service_locator import ServiceLocator
-from airunner.settings import BASE_PATH, MALE
+from airunner.settings import BASE_PATH, MALE, DEFAULT_MODELS
 from airunner.settings import DEFAULT_PATHS
 from airunner.settings import DEFAULT_CHATBOT
 from airunner.utils import default_hf_cache_dir
@@ -30,6 +30,63 @@ tts_settings_default = {
     'play_queue_buffer_length': 1,
     'enable_cpu_offload': True,
 }
+
+GENERATOR_SETTINGS = dict(
+    input_image_settings=dict(
+        imported_image_base64=None,
+        use_imported_image=True,
+        use_grid_image=True,
+        recycle_grid_image=True,
+        enable_input_image=False,
+    ),
+    controlnet_image_settings=dict(
+        imported_image_base64=None,
+        link_to_input_image=True,
+        use_imported_image=False,
+        use_grid_image=False,
+        recycle_grid_image=False,
+        mask_link_input_image=False,
+        mask_use_imported_image=False,
+        controlnet="",
+        guidance_scale=50,
+    ),
+    section="txt2img",
+    generator_name="stablediffusion"
+)
+
+GENERATOR_SETTINGS[ImageGenerator.STABLEDIFFUSION.value] = {}
+
+for section in GeneratorSection:
+    if section in [GeneratorSection.TXT2IMG]:
+        model = "stabilityai/sd-turbo"
+        version = DEFAULT_MODELS[section]
+
+    GENERATOR_SETTINGS[ImageGenerator.STABLEDIFFUSION.value][section.value] = dict(
+        prompt="",
+        negative_prompt="",
+        steps=1,
+        ddim_eta=0.5,
+        height=512,
+        width=512,
+        scale=0,
+        seed=42,
+        random_seed=True,
+        model=model,
+        scheduler=DEFAULT_SCHEDULER,
+        prompt_triggers="",
+        strength=50,
+        image_guidance_scale=150,
+        n_samples=1,
+        enable_controlnet=False,
+        clip_skip=0,
+        variation=False,
+        use_prompt_builder=False,
+        active_grid_border_color="#00FF00",
+        active_grid_fill_color="#FF0000",
+        version=version,
+        is_preset=False,
+        input_image=None,
+    )
 
 
 class SettingsMixin:
@@ -60,7 +117,8 @@ class SettingsMixin:
             working_width=512,
             working_height=512,
             current_llm_generator="casuallm",
-            current_image_generator="stablediffusion",
+            current_image_generator=ImageGenerator.STABLEDIFFUSION.value,
+            generator_section=GeneratorSection.TXT2IMG.value,
             hf_api_key_read_key="",
             hf_api_key_write_key="",
             pipeline="txt2img",
@@ -251,52 +309,7 @@ Previous Conversation:
             controlnet_settings=dict(
                 image=None
             ),
-            generator_settings=dict(
-                input_image_settings=dict(
-                    imported_image_base64=None,
-                    use_imported_image=True,
-                    use_grid_image=True,
-                    recycle_grid_image=True,
-                    enable_input_image=False,
-                ),
-                controlnet_image_settings=dict(
-                    imported_image_base64=None,
-                    link_to_input_image=True,
-                    use_imported_image=False,
-                    use_grid_image=False,
-                    recycle_grid_image=False,
-                    mask_link_input_image=False,
-                    mask_use_imported_image=False,
-                    controlnet="",
-                    guidance_scale=50,
-                ),
-                section="txt2img",
-                generator_name="stablediffusion",
-                prompt="",
-                negative_prompt="",
-                steps=1,
-                ddim_eta=0.5,
-                height=512,
-                width=512,
-                scale=0,
-                seed=42,
-                random_seed=True,
-                model="stabilityai/sd-turbo",
-                scheduler="DPM++ 2M Karras",
-                prompt_triggers="",
-                strength=50,
-                image_guidance_scale=150,
-                n_samples=1,
-                enable_controlnet=False,
-                clip_skip=0,
-                variation=False,
-                use_prompt_builder=False,
-                active_grid_border_color="#00FF00",
-                active_grid_fill_color="#FF0000",
-                version="SD Turbo",
-                is_preset=False,
-                input_image=None,
-            ),
+            generator_settings=GENERATOR_SETTINGS,
             llm_generator_settings=dict(
                 action=LLMActionType.CHAT.value,
                 use_tool_filter=False,

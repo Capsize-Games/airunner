@@ -5,8 +5,6 @@ from transformers import AutoProcessor, WhisperForConditionalGeneration, AutoFea
 
 from airunner.aihandler.base_handler import BaseHandler
 
-from PyQt6.QtCore import pyqtSignal
-
 from airunner.enums import SignalCode
 
 
@@ -29,6 +27,7 @@ class STTHandler(BaseHandler):
         self.model = None
         self.processor = None
         self.feature_extractor = None
+        self.is_on_gpu = False
         self.load_model()
         self.register(SignalCode.STT_PROCESS_AUDIO_SIGNAL, self.on_process_audio)
 
@@ -40,13 +39,34 @@ class STTHandler(BaseHandler):
     def use_cuda(self):
         return torch.cuda.is_available()
 
-    def load_model(self):
+    def load_model(self, local_files_only=True):
         self.logger.info("Loading model")
-        self.model = WhisperForConditionalGeneration.from_pretrained("openai/whisper-tiny.en").to(self.device)
-        self.processor = AutoProcessor.from_pretrained("openai/whisper-tiny.en")
-        self.feature_extractor = AutoFeatureExtractor.from_pretrained("openai/whisper-base")
+        try:
+            self.model = WhisperForConditionalGeneration.from_pretrained(
+                "openai/whisper-tiny.en",
+                local_files_only=local_files_only
+            ).to(
+                self.device
+            )
+        except OSError as _e:
+            return self.load_model(local_files_only=False)
 
-    is_on_gpu = False
+        try:
+            self.processor = AutoProcessor.from_pretrained(
+                "openai/whisper-tiny.en",
+                local_files_only=local_files_only
+            )
+        except OSError as _e:
+            return self.load_model(local_files_only=False)
+
+        try:
+            self.feature_extractor = AutoFeatureExtractor.from_pretrained(
+                "openai/whisper-base",
+                local_files_only=local_files_only
+            )
+        except OSError as _e:
+            return self.load_model(local_files_only=False)
+
     def move_to_gpu(self):
         if not self.is_on_gpu:
             self.logger.info("Moving model to GPU")

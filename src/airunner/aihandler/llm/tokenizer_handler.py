@@ -17,7 +17,7 @@ class TokenizerHandler(TransformerBaseHandler):
     def post_load(self):
         self.load_tokenizer()
 
-    def load_tokenizer(self, local_files_only=None):
+    def load_tokenizer(self, local_files_only=True):
         self.logger.info(f"Loading tokenizer from {self.current_model_path}")
         local_files_only = self.local_files_only if local_files_only is None else local_files_only
         kwargs = {

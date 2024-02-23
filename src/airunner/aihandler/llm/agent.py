@@ -132,6 +132,11 @@ class AIRunnerAgent(QObject, MediatorMixin):
                     "description into a better, more fitting description which "
                     "will capture the essence and the details of the image."
                 ),
+                (
+                    "You may ask the user for more details before "
+                    "proceeding. You may also ask the user to clarify the "
+                    "description if it is not clear."
+                ),
                 "------"
                 "Examples:",
                 "User: create an image of a cat in the woods",
@@ -308,10 +313,13 @@ class AIRunnerAgent(QObject, MediatorMixin):
             )
         elif action == LLMActionType.GENERATE_IMAGE:
             json_objects = self.extract_json_objects(streamed_template)
-            self.emit(
-                SignalCode.LLM_IMAGE_PROMPT_GENERATED_SIGNAL,
-                json_objects[0]
-            )
+            if len(json_objects) > 0:
+                self.emit(
+                    SignalCode.LLM_IMAGE_PROMPT_GENERATED_SIGNAL,
+                    json_objects[0]
+                )
+            else:
+                self.logger.error("No JSON object found in the response.")
 
         return streamed_template
 

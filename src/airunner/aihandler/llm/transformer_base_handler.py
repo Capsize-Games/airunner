@@ -107,7 +107,7 @@ class TransformerBaseHandler(BaseHandler):
             'trust_remote_code': True
         }
 
-    def load_model(self, local_files_only=None):
+    def load_model(self, local_files_only=True):
         self.logger.info("Loading model")
         params = self.model_params(local_files_only=local_files_only)
         if self.request_data:
