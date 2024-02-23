@@ -16,7 +16,7 @@ from airunner.enums import Mode, SignalCode, ServiceCode, CanvasToolName, Window
 from airunner.mediator_mixin import MediatorMixin
 from airunner.resources_dark_rc import *
 from airunner.service_locator import ServiceLocator
-from airunner.settings import BASE_PATH
+from airunner.settings import BASE_PATH, DISCORD_LINK, BUG_REPORT_LINK, VULNERABILITY_REPORT_LINK
 from airunner.utils import get_version, default_hf_cache_dir, open_file_path, set_widget_state
 from airunner.widgets.status.status_widget import StatusWidget
 from airunner.windows.about.about import AboutWindow
@@ -485,13 +485,13 @@ class MainWindow(
         SettingsWindow()
 
     def action_open_vulnerability_report(self):
-        webbrowser.open("https://github.com/Capsize-Games/airunner/security/advisories/new")
+        webbrowser.open(VULNERABILITY_REPORT_LINK)
 
     def action_open_bug_report(self):
-        webbrowser.open("https://github.com/Capsize-Games/airunner/issues/new?assignees=&labels=&template=bug_report.md&title=")
+        webbrowser.open(BUG_REPORT_LINK)
 
     def action_open_discord(self):
-        webbrowser.open("https://discord.gg/ukcgjEpc5f")
+        webbrowser.open(DISCORD_LINK)
 
     """
     End slot functions
@@ -501,7 +501,7 @@ class MainWindow(
         self.set_nsfw_filter_tooltip()
 
     def set_nsfw_filter_tooltip(self):
-        self.ui.safety_checker_button.setToolTip(
+        self.ui.nsfw_button.setToolTip(
             f"Click to {'enable' if not self.settings['nsfw_filter'] else 'disable'} NSFW filter"
         )
 
@@ -712,7 +712,8 @@ class MainWindow(
             ("artificial-intelligence-ai-chip-icon", "ai_button"),
             ("setting-line-icon", "settings_button"),
             ("object-selected-icon", "toggle_active_grid_area_button"),
-            ("select-svgrepo-com", "toggle_select_button")
+            ("select-svgrepo-com", "toggle_select_button"),
+            ("adult-sign-icon", "nsfw_button"),
         ]:
             self.set_icons(icon_data[0], icon_data[1], "dark" if self.settings["dark_mode_enabled"] else "light")
 
@@ -750,6 +751,8 @@ class MainWindow(
         set_widget_state(self.ui.toggle_eraser_button, current_tool is CanvasToolName.ERASER)
         set_widget_state(self.ui.toggle_grid_button, show_grid is True)
         set_widget_state(self.ui.ai_button, ai_mode)
+
+        set_widget_state(self.ui.nsfw_button, self.settings["nsfw_filter"])
 
     def toggle_tool(self, tool: CanvasToolName, active: bool):
         if not active:

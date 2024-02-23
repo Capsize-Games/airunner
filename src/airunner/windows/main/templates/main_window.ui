@@ -7,7 +7,7 @@
    <rect>
     <x>0</x>
     <y>0</y>
-    <width>1154</width>
+    <width>1123</width>
     <height>1264</height>
    </rect>
   </property>
@@ -128,7 +128,7 @@
            <rect>
             <x>0</x>
             <y>0</y>
-            <width>1150</width>
+            <width>1119</width>
             <height>46</height>
            </rect>
           </property>
@@ -641,7 +641,7 @@
              <rect>
               <x>0</x>
               <y>0</y>
-              <width>267</width>
+              <width>259</width>
               <height>1117</height>
              </rect>
             </property>
@@ -1209,6 +1209,45 @@
             </widget>
            </item>
            <item>
+            <widget class="Line" name="line_8">
+             <property name="orientation">
+              <enum>Qt::Horizontal</enum>
+             </property>
+            </widget>
+           </item>
+           <item>
+            <widget class="QPushButton" name="nsfw_button">
+             <property name="minimumSize">
+              <size>
+               <width>50</width>
+               <height>45</height>
+              </size>
+             </property>
+             <property name="cursor">
+              <cursorShape>PointingHandCursor</cursorShape>
+             </property>
+             <property name="text">
+              <string/>
+             </property>
+             <property name="icon">
+              <iconset>
+               <normaloff>../../../icons/light/adult-sign-icon.svg</normaloff>../../../icons/light/adult-sign-icon.svg</iconset>
+             </property>
+             <property name="iconSize">
+              <size>
+               <width>18</width>
+               <height>18</height>
+              </size>
+             </property>
+             <property name="checkable">
+              <bool>true</bool>
+             </property>
+             <property name="flat">
+              <bool>true</bool>
+             </property>
+            </widget>
+           </item>
+           <item>
             <widget class="Line" name="line_6">
              <property name="orientation">
               <enum>Qt::Horizontal</enum>
@@ -1344,7 +1383,7 @@
     <rect>
      <x>0</x>
      <y>0</y>
-     <width>1154</width>
+     <width>1123</width>
      <height>22</height>
     </rect>
    </property>
@@ -2617,8 +2656,8 @@
    <slot>action_show_settings()</slot>
    <hints>
     <hint type="sourcelabel">
-     <x>1195</x>
-     <y>611</y>
+     <x>1108</x>
+     <y>620</y>
     </hint>
     <hint type="destinationlabel">
      <x>1002</x>
@@ -2633,8 +2672,8 @@
    <slot>action_toggle_grid(bool)</slot>
    <hints>
     <hint type="sourcelabel">
-     <x>1195</x>
-     <y>380</y>
+     <x>1108</x>
+     <y>389</y>
     </hint>
     <hint type="destinationlabel">
      <x>1002</x>
@@ -2649,8 +2688,8 @@
    <slot>action_toggle_active_grid_area(bool)</slot>
    <hints>
     <hint type="sourcelabel">
-     <x>1195</x>
-     <y>153</y>
+     <x>1108</x>
+     <y>167</y>
     </hint>
     <hint type="destinationlabel">
      <x>1002</x>
@@ -2665,8 +2704,8 @@
    <slot>action_toggle_eraser(bool)</slot>
    <hints>
     <hint type="sourcelabel">
-     <x>1195</x>
-     <y>320</y>
+     <x>1108</x>
+     <y>329</y>
     </hint>
     <hint type="destinationlabel">
      <x>0</x>
@@ -2681,8 +2720,8 @@
    <slot>action_toggle_brush(bool)</slot>
    <hints>
     <hint type="sourcelabel">
-     <x>1195</x>
-     <y>269</y>
+     <x>1108</x>
+     <y>278</y>
     </hint>
     <hint type="destinationlabel">
      <x>0</x>
@@ -2745,8 +2784,8 @@
    <slot>action_center_clicked()</slot>
    <hints>
     <hint type="sourcelabel">
-     <x>1195</x>
-     <y>431</y>
+     <x>1108</x>
+     <y>440</y>
     </hint>
     <hint type="destinationlabel">
      <x>806</x>
@@ -2761,8 +2800,8 @@
    <slot>action_ai_toggled(bool)</slot>
    <hints>
     <hint type="sourcelabel">
-     <x>1195</x>
-     <y>491</y>
+     <x>1108</x>
+     <y>500</y>
     </hint>
     <hint type="destinationlabel">
      <x>917</x>
@@ -2841,8 +2880,8 @@
    <slot>model_manager_toggled(bool)</slot>
    <hints>
     <hint type="sourcelabel">
-     <x>1195</x>
-     <y>551</y>
+     <x>1108</x>
+     <y>560</y>
     </hint>
     <hint type="destinationlabel">
      <x>1021</x>
@@ -2873,8 +2912,8 @@
    <slot>tts_button_toggled(bool)</slot>
    <hints>
     <hint type="sourcelabel">
-     <x>1195</x>
-     <y>671</y>
+     <x>1108</x>
+     <y>740</y>
     </hint>
     <hint type="destinationlabel">
      <x>1204</x>
@@ -2889,8 +2928,8 @@
    <slot>v2t_button_toggled(bool)</slot>
    <hints>
     <hint type="sourcelabel">
-     <x>1195</x>
-     <y>722</y>
+     <x>1108</x>
+     <y>791</y>
     </hint>
     <hint type="destinationlabel">
      <x>1203</x>
@@ -2905,8 +2944,8 @@
    <slot>ocr_button_toggled(bool)</slot>
    <hints>
     <hint type="sourcelabel">
-     <x>1195</x>
-     <y>773</y>
+     <x>1108</x>
+     <y>842</y>
     </hint>
     <hint type="destinationlabel">
      <x>1204</x>
@@ -2937,12 +2976,28 @@
    <slot>action_toggle_select(bool)</slot>
    <hints>
     <hint type="sourcelabel">
-     <x>1170</x>
-     <y>194</y>
+     <x>1108</x>
+     <y>218</y>
     </hint>
     <hint type="destinationlabel">
      <x>1148</x>
      <y>-14</y>
+    </hint>
+   </hints>
+  </connection>
+  <connection>
+   <sender>nsfw_button</sender>
+   <signal>toggled(bool)</signal>
+   <receiver>MainWindow</receiver>
+   <slot>action_toggle_nsfw_filter_triggered(bool)</slot>
+   <hints>
+    <hint type="sourcelabel">
+     <x>1083</x>
+     <y>646</y>
+    </hint>
+    <hint type="destinationlabel">
+     <x>776</x>
+     <y>-12</y>
     </hint>
    </hints>
   </connection>
