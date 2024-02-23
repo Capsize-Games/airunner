@@ -226,7 +226,7 @@
                    <x>0</x>
                    <y>0</y>
                    <width>646</width>
-                   <height>140</height>
+                   <height>167</height>
                   </rect>
                  </property>
                  <layout class="QGridLayout" name="gridLayout_4">
@@ -372,51 +372,7 @@
               </item>
              </layout>
             </widget>
-            <widget class="QTabWidget" name="tabWidget_2">
-             <property name="currentIndex">
-              <number>0</number>
-             </property>
-             <widget class="QWidget" name="tab_2">
-              <attribute name="title">
-               <string>Embeddings</string>
-              </attribute>
-              <layout class="QGridLayout" name="gridLayout_5">
-               <item row="0" column="0">
-                <widget class="EmbeddingsContainerWidget" name="embeddings_container_widget" native="true"/>
-               </item>
-              </layout>
-             </widget>
-             <widget class="QWidget" name="tab_3">
-              <attribute name="title">
-               <string>LoRA</string>
-              </attribute>
-              <layout class="QGridLayout" name="gridLayout_3">
-               <item row="0" column="0">
-                <widget class="LoraContainerWidget" name="lora_container_widget" native="true"/>
-               </item>
-              </layout>
-             </widget>
-            </widget>
            </widget>
-          </item>
-         </layout>
-        </widget>
-        <widget class="QWidget" name="tab_6">
-         <property name="styleSheet">
-          <string notr="true"/>
-         </property>
-         <attribute name="icon">
-          <iconset theme="document-properties"/>
-         </attribute>
-         <attribute name="title">
-          <string>Stable Diffusion</string>
-         </attribute>
-         <attribute name="toolTip">
-          <string>Stable Diffusion settings</string>
-         </attribute>
-         <layout class="QHBoxLayout" name="horizontalLayout_13">
-          <item>
-           <widget class="StableDiffusionSettingsWidget" name="widget" native="true"/>
           </item>
          </layout>
         </widget>
@@ -435,18 +391,6 @@
    <container>1</container>
   </customwidget>
   <customwidget>
-   <class>EmbeddingsContainerWidget</class>
-   <extends>QWidget</extends>
-   <header>airunner/widgets/embeddings/embeddings_container_widget</header>
-   <container>1</container>
-  </customwidget>
-  <customwidget>
-   <class>LoraContainerWidget</class>
-   <extends>QWidget</extends>
-   <header>airunner/widgets/lora/lora_container_widget</header>
-   <container>1</container>
-  </customwidget>
-  <customwidget>
    <class>BrushesContainer</class>
    <extends>QWidget</extends>
    <header>airunner/widgets/canvas/brushes_container</header>
@@ -462,12 +406,6 @@
    <class>ControlNetSettingsWidget</class>
    <extends>QWidget</extends>
    <header>airunner/widgets/controlnet_settings/controlnet_settings_widget</header>
-   <container>1</container>
-  </customwidget>
-  <customwidget>
-   <class>StableDiffusionSettingsWidget</class>
-   <extends>QWidget</extends>
-   <header>airunner/widgets/stablediffusion/stable_diffusion_settings_widget</header>
    <container>1</container>
   </customwidget>
  </customwidgets>

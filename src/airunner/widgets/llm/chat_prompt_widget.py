@@ -38,15 +38,6 @@ class ChatPromptWidget(BaseWidget):
         self.originalKeyPressEvent = None
         self.originalKeyPressEvent = self.ui.prompt.keyPressEvent
 
-
-        self.ui.action.blockSignals(True)
-        # iterate over each LLMActionType enum and add its value to the llm_tool_name
-        for action_type in LLMActionType:
-            self.ui.action.addItem(action_type.value)
-        self.ui.action.blockSignals(False)
-        self.originalKeyPressEvent = None
-        self.originalKeyPressEvent = self.ui.prompt.keyPressEvent
-
     @property
     def current_generator(self):
         return self.settings["current_llm_generator"]
@@ -202,11 +193,15 @@ class ChatPromptWidget(BaseWidget):
     def on_token_signal(self, val):
         self.handle_token_signal(val)
 
+    registered = False
+
     def showEvent(self, event):
         super().showEvent(event)
-        self.register(SignalCode.STT_HEAR_SIGNAL, self.on_hear_signal)
-        self.register(SignalCode.LLM_TOKEN_SIGNAL, self.on_token_signal)
-        self.register(SignalCode.APPLICATION_ADD_BOT_MESSAGE_TO_CONVERSATION, self.on_add_bot_message_to_conversation)
+        if not self.registered:
+            self.register(SignalCode.STT_HEAR_SIGNAL, self.on_hear_signal)
+            self.register(SignalCode.LLM_TOKEN_SIGNAL, self.on_token_signal)
+            self.register(SignalCode.APPLICATION_ADD_BOT_MESSAGE_TO_CONVERSATION, self.on_add_bot_message_to_conversation)
+            self.registered = True
 
         # handle return pressed on QPlainTextEdit
         # there is no returnPressed signal for QPlainTextEdit

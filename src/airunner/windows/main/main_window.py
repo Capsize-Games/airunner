@@ -166,10 +166,6 @@ class MainWindow(
     #### END GENERATOR SETTINGS ####
 
     @property
-    def standard_image_panel(self):
-        return self.ui.standard_image_widget
-
-    @property
     def generator_tab_widget(self):
         return self.ui.generator_widget
     
@@ -190,10 +186,6 @@ class MainWindow(
     @property
     def document_name(self):
         return "Untitled"
-
-    @property
-    def current_canvas(self):
-        return self.standard_image_panel
 
     def on_describe_image_signal(self, data):
         image = data["image"]
@@ -567,7 +559,6 @@ class MainWindow(
         self.ui.mode_tab_widget.setCurrentIndex(window_settings["mode_tab_widget_index"])
         self.ui.tool_tab_widget.setCurrentIndex(window_settings["tool_tab_widget_index"])
         self.ui.center_tab.setCurrentIndex(window_settings["center_tab_index"])
-        self.ui.standard_image_widget.ui.tabWidget.setCurrentIndex(window_settings["generator_tab_index"])
         self.ui.ai_button.setChecked(self.settings["ai_mode"])
         self.set_button_checked("toggle_grid", self.settings["grid_settings"]["show_grid"], False)
 
@@ -836,9 +827,6 @@ class MainWindow(
                 settings[property_key] = value
             
             self.settings = settings
-    
-    def handle_similar_slider_change(self, attr_name, value=None, widget=None):
-        self.standard_image_panel.handle_similar_slider_change(value)
 
     def initialize_window(self):
         self.center()
@@ -888,9 +876,6 @@ class MainWindow(
 
     def handle_unknown(self, message):
         self.logger.error(f"Unknown message code: {message}")
-
-    def update(self):
-        self.standard_image_panel.update_thumbnails()
 
     def insert_into_prompt(self, text, negative_prompt=False):
         prompt_widget = self.generator_tab_widget.data[self.current_generator][self.current_section]["prompt_widget"]
