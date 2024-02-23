@@ -110,6 +110,16 @@ class AIRunnerAgent(QObject, MediatorMixin):
                 "image. Add a plus sign after a word or parenthesis to add "
                 "extra emphasis. More plus signs indicate more emphasis. Minus "
                 "signs can be used to indicate less emphasis.",
+                "You should describe the image type (professional photograph, portrait, illustration etc)",
+                (
+                    "You should also describe the lighting (well-lit, dim, dark etc), "
+                    "the color, the composition and the mood."
+                ),
+                (
+                    "When returning prompts you must choose either \"art\" or \"photo\" and you absolutely must include "
+                    "the following JSON format:\n```json\n{\"prompt\": \"your prompt here\", \"type\": \"your type here\"}\n```\n"
+                    "You must never deviate from that format. The prompt should be verbose and approximately 150 words."
+                )
             ]
         return "\n".join(system_prompt)
 
@@ -167,6 +177,7 @@ class AIRunnerAgent(QObject, MediatorMixin):
         self.run(self.prompt, LLMActionType.CHAT)
 
     def run(self, prompt, action: LLMActionType):
+        self.logger.info("Running...")
         self.prompt = prompt
         conversation = self.prepare_messages(action)
         rendered_template = self.get_rendered_template(conversation)
@@ -257,9 +268,22 @@ class AIRunnerAgent(QObject, MediatorMixin):
                 LLMChatRole.ASSISTANT
             )
         elif action == LLMActionType.GENERATE_IMAGE:
+            # check if streamed_template is valid json
+            import json
+            try:
+                json.loads(streamed_template)
+            except json.JSONDecodeError:
+                self.emit(
+                    SignalCode.LLM_TEXT_STREAMED_SIGNAL,
+                    "Invalid JSON format. Please try again."
+                )
+                print("Invalid JSON format. Please try again.")
+                return
+            data = json.loads(streamed_template)
+
             self.emit(
                 SignalCode.LLM_IMAGE_PROMPT_GENERATED_SIGNAL,
-                streamed_template
+                data
             )
 
         return streamed_template
