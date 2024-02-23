@@ -39,6 +39,14 @@ class ChatPromptWidget(BaseWidget):
         self.originalKeyPressEvent = self.ui.prompt.keyPressEvent
 
 
+        self.ui.action.blockSignals(True)
+        # iterate over each LLMActionType enum and add its value to the llm_tool_name
+        for action_type in LLMActionType:
+            self.ui.action.addItem(action_type.value)
+        self.ui.action.blockSignals(False)
+        self.originalKeyPressEvent = None
+        self.originalKeyPressEvent = self.ui.prompt.keyPressEvent
+
     @property
     def current_generator(self):
         return self.settings["current_llm_generator"]
