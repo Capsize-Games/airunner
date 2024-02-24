@@ -149,3 +149,9 @@ class StableDiffusionSettingsWidget(BaseWidget):
             settings["generator_settings"]["scheduler"] = self.ui.scheduler.currentText() 
         self.settings = settings
         self.ui.scheduler.blockSignals(False)
+
+    def reload_selected_preset(self):
+        print("TODO RELOAD SELECTED PRESET")
+
+    def selected_preset_changed(self, val):
+        print("TODO SELECTED PRESET CHANGED")

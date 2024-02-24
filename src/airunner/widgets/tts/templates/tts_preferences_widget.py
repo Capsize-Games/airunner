@@ -67,3 +67,11 @@ class TTSPreferencesWidget(BaseWidget):
         settings = self.settings
         settings["tts_settings"]["enable_tts"] = val
         self.settings = settings
+
+    def model_changed(self, val):
+        settings = self.settings
+        settings["tts_settings"]["model"] = val
+        settings["tts_settings"]["use_bark"] = val == "Bark"
+        print(val)
+        print(settings["tts_settings"]["use_bark"])
+        self.settings = settings

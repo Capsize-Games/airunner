@@ -335,8 +335,8 @@
    <slot>language_changed(QString)</slot>
    <hints>
     <hint type="sourcelabel">
-     <x>167</x>
-     <y>97</y>
+     <x>200</x>
+     <y>589</y>
     </hint>
     <hint type="destinationlabel">
      <x>63</x>
@@ -351,8 +351,8 @@
    <slot>voice_changed(QString)</slot>
    <hints>
     <hint type="sourcelabel">
-     <x>259</x>
-     <y>247</y>
+     <x>292</x>
+     <y>314</y>
     </hint>
     <hint type="destinationlabel">
      <x>326</x>
@@ -367,8 +367,8 @@
    <slot>gender_changed(QString)</slot>
    <hints>
     <hint type="sourcelabel">
-     <x>286</x>
-     <y>172</y>
+     <x>319</x>
+     <y>239</y>
     </hint>
     <hint type="destinationlabel">
      <x>399</x>
@@ -383,8 +383,8 @@
    <slot>enable_tts_changed(bool)</slot>
    <hints>
     <hint type="sourcelabel">
-     <x>27</x>
-     <y>480</y>
+     <x>36</x>
+     <y>31</y>
     </hint>
     <hint type="destinationlabel">
      <x>1</x>
@@ -399,12 +399,28 @@
    <slot>use_bark_changed(bool)</slot>
    <hints>
     <hint type="sourcelabel">
-     <x>70</x>
-     <y>15</y>
+     <x>79</x>
+     <y>146</y>
     </hint>
     <hint type="destinationlabel">
      <x>101</x>
      <y>-14</y>
+    </hint>
+   </hints>
+  </connection>
+  <connection>
+   <sender>comboBox</sender>
+   <signal>currentTextChanged(QString)</signal>
+   <receiver>tts_preferences</receiver>
+   <slot>model_changed(QString)</slot>
+   <hints>
+    <hint type="sourcelabel">
+     <x>63</x>
+     <y>93</y>
+    </hint>
+    <hint type="destinationlabel">
+     <x>62</x>
+     <y>-13</y>
     </hint>
    </hints>
   </connection>
@@ -415,5 +431,6 @@
   <slot>voice_changed(QString)</slot>
   <slot>use_bark_changed(bool)</slot>
   <slot>enable_tts_changed(bool)</slot>
+  <slot>model_changed(QString)</slot>
  </slots>
 </ui>
