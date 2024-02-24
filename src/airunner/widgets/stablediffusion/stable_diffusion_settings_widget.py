@@ -1,4 +1,4 @@
-from airunner.enums import SignalCode, ServiceCode
+from airunner.enums import SignalCode, ServiceCode, GeneratorSection
 from airunner.widgets.base_widget import BaseWidget
 from airunner.widgets.stablediffusion.templates.stable_diffusion_settings_ui import Ui_stable_diffusion_settings_widget
 
@@ -46,10 +46,10 @@ class StableDiffusionSettingsWidget(BaseWidget):
         self.settings = settings
     
     def handle_pipeline_changed(self, val):
-        if val == "txt2img / img2img":
-            val = "txt2img"
-        elif val == "inpaint / outpaint":
-            val = "outpaint"
+        if val == f"{GeneratorSection.TXT2IMG.value} / {GeneratorSection.IMG2IMG.value}":
+            val = GeneratorSection.TXT2IMG.value
+        elif val == f"{GeneratorSection.INPAINT.value} / {GeneratorSection.OUTPAINT.value}":
+            val = GeneratorSection.OUTPAINT.value
         settings = self.settings
         settings["pipeline"] = val
         self.settings = settings
@@ -67,14 +67,20 @@ class StableDiffusionSettingsWidget(BaseWidget):
         self.logger.info("load_pipelines")
         self.ui.pipeline.blockSignals(True)
         self.ui.pipeline.clear()
-        pipeline_names = ["txt2img / img2img", "inpaint / outpaint", "depth2img", "pix2pix", "upscale", "superresolution", "txt2vid"]
+        pipeline_names = [
+            f"{GeneratorSection.TXT2IMG.value} / {GeneratorSection.IMG2IMG.value}",
+            f"{GeneratorSection.INPAINT.value} / {GeneratorSection.OUTPAINT.value}",
+            GeneratorSection.DEPTH2IMG.value,
+            GeneratorSection.PIX2PIX.value,
+            GeneratorSection.UPSCALE.value,
+        ]
         self.ui.pipeline.addItems(pipeline_names)
         current_pipeline = self.settings["pipeline"]
         if current_pipeline != "":
-            if current_pipeline == "txt2img":
-                current_pipeline = "txt2img / img2img"
-            elif current_pipeline == "outpaint":
-                current_pipeline = "inpaint / outpaint"
+            if current_pipeline == GeneratorSection.TXT2IMG.value:
+                current_pipeline = f"{GeneratorSection.TXT2IMG.value} / {GeneratorSection.IMG2IMG.value}"
+            elif current_pipeline == GeneratorSection.OUTPAINT.value:
+                current_pipeline = f"{GeneratorSection.INPAINT.value} / {GeneratorSection.OUTPAINT.value}"
             self.ui.pipeline.setCurrentText(current_pipeline)
         self.ui.pipeline.blockSignals(False)
     
