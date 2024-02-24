@@ -125,11 +125,6 @@ class InputImageSettingsWidget(BaseWidget):
 
     def action_clicked_button_clear_input_image(self):
         self.clear_input_image()
-        grid_layout = QHBoxLayout(self.ui.scale_frame)
-        grid_layout.setSpacing(0)
-        grid_layout.setContentsMargins(0, 0, 0, 0)
-        widget = QWidget()
-        grid_layout.addWidget(widget)
 
     def handle_image_strength_changed(self, val):
         generator_settings = self.generator_settings
