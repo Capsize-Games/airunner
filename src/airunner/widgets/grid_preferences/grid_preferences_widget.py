@@ -41,14 +41,14 @@ class GridPreferencesWidget(BaseWidget):
         self.settings = settings
 
     def action_button_clicked_grid_line_color(self):
-        color = QColorDialog.getColor()
+        color = QColorDialog.getColor(parent=self)
         if color.isValid():
             settings = self.settings
             settings["grid_settings"]["line_color"] = color.name()
             self.settings = settings
 
     def action_button_clicked_canvas_color(self):
-        color = QColorDialog.getColor()
+        color = QColorDialog.getColor(parent=self)
         if color.isValid():
             settings = self.settings
             settings["grid_settings"]["canvas_color"] = color.name()
