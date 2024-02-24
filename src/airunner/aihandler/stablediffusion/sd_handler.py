@@ -815,7 +815,7 @@ class SDHandler(
 
         # do model reload checks here
 
-    
+
         sequential_cpu_offload_changed = self.use_enable_sequential_cpu_offload != (options.get("use_enable_sequential_cpu_offload", True) is True)
         model_changed = (self.model is not None and self.model != requested_model)
 
@@ -828,14 +828,18 @@ class SDHandler(
             self.clear_scheduler()
             self.clear_controlnet()
 
-        if ((self.controlnet_loaded and not self.enable_controlnet) or
-           (not self.controlnet_loaded and self.enable_controlnet)):
+        if (
+            (self.controlnet_loaded and not self.enable_controlnet) or
+            (not self.controlnet_loaded and self.enable_controlnet)
+        ):
             self.initialized = False
 
-        if self.prompt != options.get(f"prompt") or \
-           self.negative_prompt != options.get(f"negative_prompt") or \
-           action != self.action or \
-           self.reload_model:
+        if (
+            self.prompt != options.get(f"prompt") or
+            self.negative_prompt != options.get(f"negative_prompt") or
+            action != self.action or
+            self.reload_model
+        ):
             self._prompt_embeds = None
             self._negative_prompt_embeds = None
 
@@ -847,7 +851,10 @@ class SDHandler(
 
     def error_handler(self, error):
         message = str(error)
-        if "got an unexpected keyword argument 'image'" in message and self.action in ["outpaint", "pix2pix", "depth2img"]:
+        if (
+            "got an unexpected keyword argument 'image'" in message and
+            self.action in ["outpaint", "pix2pix", "depth2img"]
+        ):
             message = f"This model does not support {self.action}"
         traceback.print_exc()
         self.logger.error(error)
@@ -1062,7 +1069,13 @@ class SDHandler(
             frame_ids = list(range(ch_start, ch_end))
             try:
                 self.logger.info(f"Generating video with {len(frame_ids)} frames")
-                self.emit(SignalCode.LOG_STATUS_SIGNAL, f"Generating video, frames {cur_frame} to {cur_frame + len(frame_ids) - 1} of {self.n_samples}")
+                self.emit(
+                    SignalCode.LOG_STATUS_SIGNAL,
+                    (
+                        f"Generating video, frames {cur_frame} to "
+                        f"{cur_frame + len(frame_ids) - 1} of {self.n_samples}"
+                    )
+                )
                 cur_frame += len(frame_ids)
                 kwargs = {
                     "prompt": prompt,
