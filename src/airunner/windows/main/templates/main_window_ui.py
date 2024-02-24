@@ -399,6 +399,14 @@ class Ui_MainWindow(object):
         self.verticalLayout_5.addItem(spacerItem1)
         self.gridLayout_10.addWidget(self.splitter_2, 0, 0, 1, 1)
         self.tool_tab_widget.addTab(self.tab_2, "")
+        self.tab_3 = QtWidgets.QWidget()
+        self.tab_3.setObjectName("tab_3")
+        self.gridLayout_11 = QtWidgets.QGridLayout(self.tab_3)
+        self.gridLayout_11.setObjectName("gridLayout_11")
+        self.widget = StableDiffusionSettingsWidget(parent=self.tab_3)
+        self.widget.setObjectName("widget")
+        self.gridLayout_11.addWidget(self.widget, 0, 0, 1, 1)
+        self.tool_tab_widget.addTab(self.tab_3, "")
         self.layer_frame = QtWidgets.QFrame(parent=self.splitter)
         self.layer_frame.setFrameShape(QtWidgets.QFrame.Shape.StyledPanel)
         self.layer_frame.setFrameShadow(QtWidgets.QFrame.Shadow.Raised)
@@ -1061,6 +1069,7 @@ class Ui_MainWindow(object):
         self.generate_batch_similar_button.setText(_translate("MainWindow", "Batch"))
         self.label_7.setText(_translate("MainWindow", "Brushes"))
         self.tool_tab_widget.setTabText(self.tool_tab_widget.indexOf(self.tab_2), _translate("MainWindow", "Upscale"))
+        self.tool_tab_widget.setTabText(self.tool_tab_widget.indexOf(self.tab_3), _translate("MainWindow", "StableDiffusion"))
         self.toggle_active_grid_area_button.setToolTip(_translate("MainWindow", "Active grid area selection tool"))
         self.toggle_brush_button.setToolTip(_translate("MainWindow", "Pen tool"))
         self.toggle_eraser_button.setToolTip(_translate("MainWindow", "Eraser tool"))
@@ -1212,3 +1221,4 @@ from airunner.widgets.input_image.input_image_settings_widget import InputImageS
 from airunner.widgets.layers.layer_container_widget import LayerContainerWidget
 from airunner.widgets.model_manager.model_manager_widget import ModelManagerWidget
 from airunner.widgets.slider.slider_widget import SliderWidget
+from airunner.widgets.stablediffusion.stable_diffusion_settings_widget import StableDiffusionSettingsWidget

@@ -1,4 +1,4 @@
-from airunner.enums import SignalCode, ServiceCode, GeneratorSection
+from airunner.enums import SignalCode, ServiceCode, GeneratorSection, ImageGenerator
 from airunner.widgets.base_widget import BaseWidget
 from airunner.widgets.stablediffusion.templates.stable_diffusion_settings_ui import Ui_stable_diffusion_settings_widget
 
@@ -9,23 +9,27 @@ class StableDiffusionSettingsWidget(BaseWidget):
     def __init__(self, *args, **kwargs):
         super().__init__(*args, **kwargs)
         self.register(SignalCode.APPLICATION_MODELS_CHANGED_SIGNAL, self.on_models_changed_signal)
+        self.load_presets()
+
+    def load_presets(self):
+        self.presets = self.settings["generator_settings"]["presets"]
 
     def showEvent(self, event):
         super().showEvent(event)
-        steps = target_val = self.settings["generator_settings"]["steps"]
-        scale = target_val = self.settings["generator_settings"]["scale"]
+        steps = self.settings["generator_settings"]["steps"]
+        scale = self.settings["generator_settings"]["scale"]
 
         current_steps = self.get_form_element("steps_widget").property("current_value")
         current_scale = self.get_form_element("scale_widget").property("current_value")
 
         if steps != current_steps:
-            self.get_form_element("steps_widget").setProperty("current_value", target_val)
+            self.get_form_element("steps_widget").setProperty("current_value", steps)
 
         if scale != current_scale:
-            self.get_form_element("scale_widget").setProperty("current_value", target_val)
+            self.get_form_element("scale_widget").setProperty("current_value", scale)
         
         self.ui.seed_widget.setProperty("generator_section", self.settings["pipeline"])
-        self.ui.seed_widget.setProperty("generator_name", "stablediffusion")
+        self.ui.seed_widget.setProperty("generator_name", ImageGenerator.STABLEDIFFUSION.value)
 
         self.ui.ddim_eta_slider_widget.hide()
         self.ui.frames_slider_widget.hide()
@@ -88,7 +92,7 @@ class StableDiffusionSettingsWidget(BaseWidget):
         self.logger.info("load_versions")
         self.ui.version.blockSignals(True)
         self.ui.version.clear()
-        pipelines = self.get_service(ServiceCode.GET_PIPELINES)(category="stablediffusion")
+        pipelines = self.get_service(ServiceCode.GET_PIPELINES)(category=ImageGenerator.STABLEDIFFUSION.value)
         version_names = set([pipeline["version"] for pipeline in pipelines])
         self.ui.version.addItems(version_names)
         current_version = self.settings["current_version_stablediffusion"]
@@ -110,7 +114,7 @@ class StableDiffusionSettingsWidget(BaseWidget):
         self.ui.model.blockSignals(True)
         self.clear_models()
 
-        image_generator = "stablediffusion"
+        image_generator = ImageGenerator.STABLEDIFFUSION.value
         pipeline = self.settings["pipeline"]
         version = self.settings["current_version_stablediffusion"]
 
