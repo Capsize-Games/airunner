@@ -4,7 +4,7 @@ from PIL import Image
 from PyQt6.QtCore import pyqtSignal, QRect
 
 from airunner.aihandler.stablediffusion.sd_request import SDRequest
-from airunner.enums import SignalCode, ServiceCode, GeneratorSection
+from airunner.enums import SignalCode, ServiceCode, GeneratorSection, ImageCategory
 from airunner.aihandler.settings import MAX_SEED
 from airunner.settings import PHOTO_REALISTIC_NEGATIVE_PROMPT, ILLUSTRATION_NEGATIVE_PROMPT
 from airunner.widgets.base_widget import BaseWidget

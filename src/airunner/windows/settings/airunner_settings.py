@@ -65,8 +65,13 @@ class SettingsWindow(BaseWindow):
                 "files": [
                     {
                         "name": "image_generator_preferences",
-                        "display_name": "Image Generator",
-                        "checkable": False
+                        "display_name": "Image Generator Preferences",
+                        "checkable": False,
+                        "description": (
+                            "Choose default models to use for creating images "
+                            "in various categories. These are used to generate "
+                            "images when using various tools, including the LLM."
+                        )
                     },
                     {
                         "name": "stable_diffusion_preferences",
