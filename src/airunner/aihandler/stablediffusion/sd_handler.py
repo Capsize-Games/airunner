@@ -75,6 +75,7 @@ class SDHandler(
         ControlnetModelMixin.__init__(self)
         AIModelMixin.__init__(self)
         LoraMixin.__init__(self)
+        CompelMixin.__init__(self)
         self.logger.info("Loading Stable Diffusion model runner...")
         self.safety_checker_model = self.models_by_pipeline_action("safety_checker")[0]
         self.text_encoder_model = self.models_by_pipeline_action("text_encoder")[0]
@@ -98,8 +99,6 @@ class SDHandler(
         self._action = None
         self.embeds_loaded = False
         self._compel_proc = None
-        self._prompt_embeds = None
-        self._negative_prompt_embeds = None
         self.current_prompt = None
         self.current_negative_prompt = None
         self._model = None
@@ -182,9 +181,6 @@ class SDHandler(
 
     @initialized.setter
     def initialized(self, value):
-        if value is False:
-            import traceback
-            traceback.print_stack()
         self._initialized = value
 
     @property
@@ -783,9 +779,6 @@ class SDHandler(
             elif self.pipe is None:
                 self.logger.info("Pipe is None")
             self.send_model_loading_message(self.current_model)
-            self.compel_proc = None
-            self.prompt_embeds = None
-            self.negative_prompt_embeds = None
             if self.reload_model:
                 self.reset_applied_memory_settings()
             if not self.is_upscale:
@@ -835,8 +828,6 @@ class SDHandler(
             self.initialized = False
 
         if (
-            self.prompt != options.get(f"prompt") or
-            self.negative_prompt != options.get(f"negative_prompt") or
             action != self.action or
             self.reload_model
         ):
@@ -1224,9 +1215,14 @@ class SDHandler(
             self.process_data(data)
         return data
 
+    do_load_compel = False
+
     def process_data(self, data: dict):
         self.logger.info("Runner: process_data called")
         self.requested_data = data
+        prompt = self.prompt if self.prompt else ""
+        negative_prompt = self.negative_prompt if self.negative_prompt else ""
+        self.do_load_compel = prompt != self.current_prompt or negative_prompt != self.current_negative_prompt
         self.prepare_options(data)
         self.prepare_scheduler()
         self.prepare_model()
@@ -1243,6 +1239,8 @@ class SDHandler(
 
         self.emit(SignalCode.LOG_STATUS_SIGNAL, f"Applying memory settings")
         self.apply_memory_efficient_settings()
+        if self.do_load_compel:
+            self.load_prompt_embeds()
 
         seed = self.seed
         data = self.process_prompts(data, seed)
@@ -1681,7 +1679,7 @@ class SDHandler(
             torch_dtype=self.data_type
         )
 
-    def reuse_pipeline(self, do_load_controlnet):
+    def reuse_pipeline(self, do_load_controlnet, local_files_only=True):
         self.logger.info("Reusing pipeline")
         pipe = None
         if self.is_txt2img:
@@ -1716,6 +1714,7 @@ class SDHandler(
 
                 pipe = pipeline_class_.from_single_file(
                     self.model_path,
+                    local_files_only=local_files_only
                 )
                 return pipe
             else:
