@@ -20,10 +20,10 @@
    <string>Form</string>
   </property>
   <layout class="QGridLayout" name="gridLayout">
-   <item row="1" column="0" colspan="5">
-    <layout class="QVBoxLayout" name="verticalLayout_7">
+   <item row="6" column="0" colspan="5">
+    <layout class="QVBoxLayout" name="verticalLayout_2">
      <item>
-      <widget class="QLabel" name="label_6">
+      <widget class="QLabel" name="label_4">
        <property name="font">
         <font>
          <pointsize>8</pointsize>
@@ -31,16 +31,60 @@
         </font>
        </property>
        <property name="text">
-        <string>Version</string>
+        <string>Scheduler</string>
        </property>
       </widget>
      </item>
      <item>
-      <widget class="QComboBox" name="version"/>
+      <widget class="QComboBox" name="scheduler">
+       <property name="cursor">
+        <cursorShape>ArrowCursor</cursorShape>
+       </property>
+      </widget>
      </item>
     </layout>
    </item>
-   <item row="7" column="0" colspan="5">
+   <item row="3" column="0" colspan="5">
+    <layout class="QVBoxLayout" name="verticalLayout_4">
+     <item>
+      <widget class="QLabel" name="label_5">
+       <property name="font">
+        <font>
+         <pointsize>8</pointsize>
+         <bold>true</bold>
+        </font>
+       </property>
+       <property name="text">
+        <string>Pipeline</string>
+       </property>
+      </widget>
+     </item>
+     <item>
+      <widget class="QComboBox" name="pipeline"/>
+     </item>
+    </layout>
+   </item>
+   <item row="5" column="0" colspan="5">
+    <layout class="QVBoxLayout" name="verticalLayout">
+     <item>
+      <widget class="QLabel" name="label_3">
+       <property name="font">
+        <font>
+         <pointsize>8</pointsize>
+         <bold>true</bold>
+        </font>
+       </property>
+       <property name="text">
+        <string>Model</string>
+       </property>
+      </widget>
+     </item>
+     <item>
+      <widget class="QComboBox" name="model"/>
+     </item>
+    </layout>
+   </item>
+   <item row="10" column="0" colspan="5">
     <layout class="QHBoxLayout" name="ddim_frames">
      <item>
       <widget class="SliderWidget" name="ddim_eta_slider_widget" native="true">
@@ -130,7 +174,164 @@
      </item>
     </layout>
    </item>
-   <item row="5" column="0" colspan="5">
+   <item row="7" column="0" colspan="5">
+    <layout class="QHBoxLayout" name="horizontalLayout_3">
+     <item>
+      <widget class="SeedWidget" name="seed_widget" native="true">
+       <property name="minimumSize">
+        <size>
+         <width>0</width>
+         <height>10</height>
+        </size>
+       </property>
+       <property name="generator_section" stdset="0">
+        <string/>
+       </property>
+       <property name="generator_name" stdset="0">
+        <string/>
+       </property>
+       <property name="property_name" stdset="0">
+        <string>generator_settings.random_seed</string>
+       </property>
+      </widget>
+     </item>
+    </layout>
+   </item>
+   <item row="1" column="4">
+    <widget class="QPushButton" name="reload_selected_preset">
+     <property name="maximumSize">
+      <size>
+       <width>32</width>
+       <height>16777215</height>
+      </size>
+     </property>
+     <property name="text">
+      <string/>
+     </property>
+     <property name="icon">
+      <iconset resource="../../../resources_light.qrc">
+       <normaloff>:/icons/light/exchange-refresh-icon.svg</normaloff>:/icons/light/exchange-refresh-icon.svg</iconset>
+     </property>
+    </widget>
+   </item>
+   <item row="13" column="0">
+    <spacer name="verticalSpacer">
+     <property name="orientation">
+      <enum>Qt::Vertical</enum>
+     </property>
+     <property name="sizeHint" stdset="0">
+      <size>
+       <width>20</width>
+       <height>40</height>
+      </size>
+     </property>
+    </spacer>
+   </item>
+   <item row="4" column="0" colspan="5">
+    <layout class="QVBoxLayout" name="verticalLayout_7">
+     <item>
+      <widget class="QLabel" name="label_6">
+       <property name="font">
+        <font>
+         <pointsize>8</pointsize>
+         <bold>true</bold>
+        </font>
+       </property>
+       <property name="text">
+        <string>Version</string>
+       </property>
+      </widget>
+     </item>
+     <item>
+      <widget class="QComboBox" name="version"/>
+     </item>
+    </layout>
+   </item>
+   <item row="11" column="0" colspan="5">
+    <layout class="QHBoxLayout" name="horizontalLayout_5">
+     <item>
+      <widget class="SliderWidget" name="steps_widget" native="true">
+       <property name="minimumSize">
+        <size>
+         <width>0</width>
+         <height>10</height>
+        </size>
+       </property>
+       <property name="label_text" stdset="0">
+        <string>Steps</string>
+       </property>
+       <property name="slider_callback" stdset="0">
+        <string notr="true">handle_value_change</string>
+       </property>
+       <property name="current_value" stdset="0">
+        <number>0</number>
+       </property>
+       <property name="slider_maximum" stdset="0">
+        <number>200</number>
+       </property>
+       <property name="spinbox_maximum" stdset="0">
+        <double>200.000000000000000</double>
+       </property>
+       <property name="display_as_float" stdset="0">
+        <bool>false</bool>
+       </property>
+       <property name="spinbox_single_step" stdset="0">
+        <number>1</number>
+       </property>
+       <property name="spinbox_page_step" stdset="0">
+        <number>1</number>
+       </property>
+       <property name="spinbox_minimum" stdset="0">
+        <number>1</number>
+       </property>
+       <property name="slider_minimum" stdset="0">
+        <number>1</number>
+       </property>
+       <property name="settings_property" stdset="0">
+        <string notr="true">generator_settings.steps</string>
+       </property>
+      </widget>
+     </item>
+     <item>
+      <widget class="SliderWidget" name="scale_widget" native="true">
+       <property name="minimumSize">
+        <size>
+         <width>0</width>
+         <height>10</height>
+        </size>
+       </property>
+       <property name="label_text" stdset="0">
+        <string>Scale</string>
+       </property>
+       <property name="current_value" stdset="0">
+        <number>0</number>
+       </property>
+       <property name="slider_maximum" stdset="0">
+        <number>10000</number>
+       </property>
+       <property name="spinbox_maximum" stdset="0">
+        <double>100.000000000000000</double>
+       </property>
+       <property name="display_as_float" stdset="0">
+        <bool>true</bool>
+       </property>
+       <property name="spinbox_single_step" stdset="0">
+        <double>0.010000000000000</double>
+       </property>
+       <property name="spinbox_page_step" stdset="0">
+        <double>0.010000000000000</double>
+       </property>
+       <property name="slider_callback" stdset="0">
+        <string notr="true">handle_value_change</string>
+       </property>
+       <property name="settings_property" stdset="0">
+        <string notr="true">generator_settings.scale</string>
+       </property>
+      </widget>
+     </item>
+    </layout>
+   </item>
+   <item row="8" column="0" colspan="5">
     <layout class="QHBoxLayout" name="horizontalLayout_6">
      <item>
       <widget class="SliderWidget" name="samples_widget_2" native="true">
@@ -220,189 +421,15 @@
      </item>
     </layout>
    </item>
-   <item row="10" column="0">
-    <spacer name="verticalSpacer">
-     <property name="orientation">
-      <enum>Qt::Vertical</enum>
+   <item row="1" column="0" colspan="4">
+    <widget class="QComboBox" name="presets"/>
+   </item>
+   <item row="0" column="0">
+    <widget class="QLabel" name="label">
+     <property name="text">
+      <string>Presets</string>
      </property>
-     <property name="sizeHint" stdset="0">
-      <size>
-       <width>20</width>
-       <height>40</height>
-      </size>
-     </property>
-    </spacer>
-   </item>
-   <item row="3" column="0" colspan="5">
-    <layout class="QVBoxLayout" name="verticalLayout_2">
-     <item>
-      <widget class="QLabel" name="label_4">
-       <property name="font">
-        <font>
-         <pointsize>8</pointsize>
-         <bold>true</bold>
-        </font>
-       </property>
-       <property name="text">
-        <string>Scheduler</string>
-       </property>
-      </widget>
-     </item>
-     <item>
-      <widget class="QComboBox" name="scheduler">
-       <property name="cursor">
-        <cursorShape>ArrowCursor</cursorShape>
-       </property>
-      </widget>
-     </item>
-    </layout>
-   </item>
-   <item row="0" column="0" colspan="5">
-    <layout class="QVBoxLayout" name="verticalLayout_4">
-     <item>
-      <widget class="QLabel" name="label_5">
-       <property name="font">
-        <font>
-         <pointsize>8</pointsize>
-         <bold>true</bold>
-        </font>
-       </property>
-       <property name="text">
-        <string>Pipeline</string>
-       </property>
-      </widget>
-     </item>
-     <item>
-      <widget class="QComboBox" name="pipeline"/>
-     </item>
-    </layout>
-   </item>
-   <item row="2" column="0" colspan="5">
-    <layout class="QVBoxLayout" name="verticalLayout">
-     <item>
-      <widget class="QLabel" name="label_3">
-       <property name="font">
-        <font>
-         <pointsize>8</pointsize>
-         <bold>true</bold>
-        </font>
-       </property>
-       <property name="text">
-        <string>Model</string>
-       </property>
-      </widget>
-     </item>
-     <item>
-      <widget class="QComboBox" name="model"/>
-     </item>
-    </layout>
-   </item>
-   <item row="8" column="0" colspan="5">
-    <layout class="QHBoxLayout" name="horizontalLayout_5">
-     <item>
-      <widget class="SliderWidget" name="steps_widget" native="true">
-       <property name="minimumSize">
-        <size>
-         <width>0</width>
-         <height>10</height>
-        </size>
-       </property>
-       <property name="label_text" stdset="0">
-        <string>Steps</string>
-       </property>
-       <property name="slider_callback" stdset="0">
-        <string notr="true">handle_value_change</string>
-       </property>
-       <property name="current_value" stdset="0">
-        <number>0</number>
-       </property>
-       <property name="slider_maximum" stdset="0">
-        <number>200</number>
-       </property>
-       <property name="spinbox_maximum" stdset="0">
-        <double>200.000000000000000</double>
-       </property>
-       <property name="display_as_float" stdset="0">
-        <bool>false</bool>
-       </property>
-       <property name="spinbox_single_step" stdset="0">
-        <number>1</number>
-       </property>
-       <property name="spinbox_page_step" stdset="0">
-        <number>1</number>
-       </property>
-       <property name="spinbox_minimum" stdset="0">
-        <number>1</number>
-       </property>
-       <property name="slider_minimum" stdset="0">
-        <number>1</number>
-       </property>
-       <property name="settings_property" stdset="0">
-        <string notr="true">generator_settings.steps</string>
-       </property>
-      </widget>
-     </item>
-     <item>
-      <widget class="SliderWidget" name="scale_widget" native="true">
-       <property name="minimumSize">
-        <size>
-         <width>0</width>
-         <height>10</height>
-        </size>
-       </property>
-       <property name="label_text" stdset="0">
-        <string>Scale</string>
-       </property>
-       <property name="current_value" stdset="0">
-        <number>0</number>
-       </property>
-       <property name="slider_maximum" stdset="0">
-        <number>10000</number>
-       </property>
-       <property name="spinbox_maximum" stdset="0">
-        <double>100.000000000000000</double>
-       </property>
-       <property name="display_as_float" stdset="0">
-        <bool>true</bool>
-       </property>
-       <property name="spinbox_single_step" stdset="0">
-        <double>0.010000000000000</double>
-       </property>
-       <property name="spinbox_page_step" stdset="0">
-        <double>0.010000000000000</double>
-       </property>
-       <property name="slider_callback" stdset="0">
-        <string notr="true">handle_value_change</string>
-       </property>
-       <property name="settings_property" stdset="0">
-        <string notr="true">generator_settings.scale</string>
-       </property>
-      </widget>
-     </item>
-    </layout>
-   </item>
-   <item row="4" column="0" colspan="5">
-    <layout class="QHBoxLayout" name="horizontalLayout_3">
-     <item>
-      <widget class="SeedWidget" name="seed_widget" native="true">
-       <property name="minimumSize">
-        <size>
-         <width>0</width>
-         <height>10</height>
-        </size>
-       </property>
-       <property name="generator_section" stdset="0">
-        <string/>
-       </property>
-       <property name="generator_name" stdset="0">
-        <string/>
-       </property>
-       <property name="property_name" stdset="0">
-        <string>generator_settings.random_seed</string>
-       </property>
-      </widget>
-     </item>
-    </layout>
+    </widget>
    </item>
   </layout>
  </widget>
@@ -420,7 +447,9 @@
    <container>1</container>
   </customwidget>
  </customwidgets>
- <resources/>
+ <resources>
+  <include location="../../../resources_light.qrc"/>
+ </resources>
  <connections>
   <connection>
    <sender>pipeline</sender>
@@ -429,8 +458,8 @@
    <slot>handle_pipeline_changed(QString)</slot>
    <hints>
     <hint type="sourcelabel">
-     <x>86</x>
-     <y>26</y>
+     <x>96</x>
+     <y>107</y>
     </hint>
     <hint type="destinationlabel">
      <x>121</x>
@@ -445,8 +474,8 @@
    <slot>handle_version_changed(QString)</slot>
    <hints>
     <hint type="sourcelabel">
-     <x>65</x>
-     <y>70</y>
+     <x>75</x>
+     <y>159</y>
     </hint>
     <hint type="destinationlabel">
      <x>59</x>
@@ -461,8 +490,8 @@
    <slot>handle_model_changed(QString)</slot>
    <hints>
     <hint type="sourcelabel">
-     <x>199</x>
-     <y>142</y>
+     <x>209</x>
+     <y>211</y>
     </hint>
     <hint type="destinationlabel">
      <x>202</x>
@@ -477,12 +506,44 @@
    <slot>handle_scheduler_changed(QString)</slot>
    <hints>
     <hint type="sourcelabel">
-     <x>164</x>
-     <y>194</y>
+     <x>174</x>
+     <y>263</y>
     </hint>
     <hint type="destinationlabel">
      <x>177</x>
      <y>4</y>
+    </hint>
+   </hints>
+  </connection>
+  <connection>
+   <sender>reload_selected_preset</sender>
+   <signal>clicked()</signal>
+   <receiver>stable_diffusion_settings_widget</receiver>
+   <slot>reload_selected_preset()</slot>
+   <hints>
+    <hint type="sourcelabel">
+     <x>661</x>
+     <y>43</y>
+    </hint>
+    <hint type="destinationlabel">
+     <x>600</x>
+     <y>-7</y>
+    </hint>
+   </hints>
+  </connection>
+  <connection>
+   <sender>presets</sender>
+   <signal>currentTextChanged(QString)</signal>
+   <receiver>stable_diffusion_settings_widget</receiver>
+   <slot>selected_preset_changed(QString)</slot>
+   <hints>
+    <hint type="sourcelabel">
+     <x>393</x>
+     <y>43</y>
+    </hint>
+    <hint type="destinationlabel">
+     <x>645</x>
+     <y>-3</y>
     </hint>
    </hints>
   </connection>
@@ -510,5 +571,7 @@
   <slot>handle_version_changed(QString)</slot>
   <slot>handle_model_changed(QString)</slot>
   <slot>handle_scheduler_changed(QString)</slot>
+  <slot>reload_selected_preset()</slot>
+  <slot>selected_preset_changed(QString)</slot>
  </slots>
 </ui>
