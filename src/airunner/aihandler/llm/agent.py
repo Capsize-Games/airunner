@@ -266,15 +266,6 @@ class AIRunnerAgent(QObject, MediatorMixin):
         replaced = False
         is_end_of_message = False
         is_first_message = True
-
-        print("Username: ", self.username)
-        print("Botname: ", self.botname)
-        print(conversation)
-        print("x"* 100)
-        print(self.chat_template)
-        print("x" * 100)
-        print(rendered_template)
-
         for new_text in self.streamer:
             # strip all newlines from new_text
             parsed_new_text = new_text.replace("\n", " ")
