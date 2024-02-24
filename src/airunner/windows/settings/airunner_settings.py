@@ -17,7 +17,7 @@ from airunner.widgets.memory_preferences.memory_preferences_widget import Memory
 from airunner.widgets.paths.paths_widget import PathsWidget
 from airunner.widgets.stablediffusion.stable_diffusion_settings_widget import StableDiffusionSettingsWidget
 from airunner.widgets.translation_preferences.translation_preferences_widget import TranslationPreferencesWidget
-from airunner.widgets.tts.templates.tts_prefernces_widget import TTSPreferencesWidget
+from airunner.widgets.tts.templates.tts_preferences_widget import TTSPreferencesWidget
 from airunner.windows.settings.templates.airunner_settings_ui import Ui_airunner_settings
 from airunner.windows.base_window import BaseWindow
 
