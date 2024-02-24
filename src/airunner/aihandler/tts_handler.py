@@ -167,7 +167,7 @@ class TTSHandler(BaseHandler):
         Move the model, vocoder, processor and speaker_embeddings to the GPU
         """
         self.logger.info("Moving TTS to device")
-        if torch.cuda.is_available():
+        if self.use_cuda:
             if self.model:
                 self.model = self.model.to(self.device)
             if self.vocoder:
@@ -176,7 +176,7 @@ class TTSHandler(BaseHandler):
                 self.speaker_embeddings = self.speaker_embeddings.to(self.device)
 
     def initialize(self):
-        target_model = "bark" if self.settings["tts_settings"]["use_bark"] else "t5"
+        target_model = "bark" if self.use_bark else "t5"
         if target_model != self.current_model:
             self.unload()
         self.load(target_model)
@@ -262,8 +262,8 @@ class TTSHandler(BaseHandler):
                 return self.load_vocoder(local_files_only=False)
 
             if self.use_cuda:
-                self.vocoder = self.vocoder.cuda()
-    
+                self.vocoder = self.vocoder.half().cuda()
+
     def load_processor(self, local_files_only=True):
         self.logger.info("Loading Procesor")
         processor_class_ = BarkProcessor if self.use_bark else SpeechT5Processor
@@ -274,6 +274,9 @@ class TTSHandler(BaseHandler):
             )
         except OSError as _e:
             return self.load_processor(local_files_only=False)
+
+        if self.use_cuda:
+            self.processor = self.processor
 
     def load_dataset(self, local_files_only=True):
         """
@@ -428,7 +431,7 @@ class TTSHandler(BaseHandler):
         inputs = self.processor(
             text=text,
             voice_preset=self.settings["tts_settings"]["voice"]
-        ).to(self.device)
+        )
         inputs = self.move_inputs_to_device(inputs)
 
         self.logger.info("Generating speech...")
@@ -446,7 +449,7 @@ class TTSHandler(BaseHandler):
         return response
 
     def generate_with_t5(self, text):
-        self.logger.info("Generating TTS with SpeechT5...")
+        self.logger.info("Generating TTS with SpeechT5..." + str(self.settings["tts_settings"]["use_bark"]))
         text = text.replace("\n", " ").strip()
         text = text.replace("\n", " ").strip()
         text = self.replace_numbers_with_words(text)
