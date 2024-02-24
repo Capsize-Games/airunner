@@ -658,7 +658,7 @@
                  <bool>false</bool>
                 </property>
                 <property name="currentIndex">
-                 <number>0</number>
+                 <number>3</number>
                 </property>
                 <widget class="QWidget" name="tab_pen">
                  <attribute name="title">
@@ -984,6 +984,36 @@
                       </item>
                      </layout>
                     </widget>
+                   </widget>
+                  </item>
+                 </layout>
+                </widget>
+                <widget class="QWidget" name="tab_3">
+                 <attribute name="title">
+                  <string>StableDiffusion</string>
+                 </attribute>
+                 <layout class="QGridLayout" name="gridLayout_11">
+                  <item row="0" column="0">
+                   <widget class="QComboBox" name="comboBox_2"/>
+                  </item>
+                  <item row="1" column="0">
+                   <widget class="StableDiffusionSettingsWidget" name="widget" native="true"/>
+                  </item>
+                  <item row="0" column="1">
+                   <widget class="QPushButton" name="pushButton">
+                    <property name="maximumSize">
+                     <size>
+                      <width>32</width>
+                      <height>16777215</height>
+                     </size>
+                    </property>
+                    <property name="text">
+                     <string/>
+                    </property>
+                    <property name="icon">
+                     <iconset resource="../../../resources_light.qrc">
+                      <normaloff>:/icons/light/exchange-refresh-icon.svg</normaloff>:/icons/light/exchange-refresh-icon.svg</iconset>
+                    </property>
                    </widget>
                   </item>
                  </layout>
@@ -2445,6 +2475,12 @@
    <class>ControlNetSettingsWidget</class>
    <extends>QWidget</extends>
    <header>airunner/widgets/controlnet_settings/controlnet_settings_widget</header>
+   <container>1</container>
+  </customwidget>
+  <customwidget>
+   <class>StableDiffusionSettingsWidget</class>
+   <extends>QWidget</extends>
+   <header>airunner/widgets/stablediffusion/stable_diffusion_settings_widget</header>
    <container>1</container>
   </customwidget>
  </customwidgets>

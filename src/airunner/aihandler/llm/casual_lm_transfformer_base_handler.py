@@ -53,14 +53,13 @@ class CasualLMTransformerBaseHandler(TokenizerHandler):
     @property
     def chat_template(self):
         return (
-            "{{ bos_token }}"
             "{% for message in messages %}"
             "{% if message['role'] == 'system' %}"
             "{{ '[INST] <<SYS>>' + message['content'] + ' <</SYS>>[/INST]' }}"
             "{% elif message['role'] == 'user' %}"
-            "{{ '[INST] ' + message['content'] + ' [/INST]' }}"
+            "{{ '[INST]{{ username }}: ' + message['content'] + ' [/INST]' }}"
             "{% elif message['role'] == 'assistant' %}"
-            "{{ message['content'] + eos_token + ' ' }}"
+            "{{ botname }}: {{ message['content'] + eos_token + ' ' }}"
             "{% endif %}"
             "{% endfor %}"
         ) if self.is_mistral else None
