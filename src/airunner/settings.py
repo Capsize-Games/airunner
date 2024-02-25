@@ -1,6 +1,6 @@
 import os
 
-from airunner.enums import GeneratorSection, StableDiffusionVersion
+from airunner.enums import GeneratorSection, StableDiffusionVersion, ImageGenerator
 
 BASE_PATH = os.path.join(os.path.expanduser("~"), ".airunner")
 SQLITE_DB_NAME = "airunner.db"
@@ -332,24 +332,29 @@ BUG_REPORT_LINK = "https://github.com/Capsize-Games/airunner/issues/new?assignee
 DISCORD_LINK = "https://discord.gg/ukcgjEpc5f"
 VULNERABILITY_REPORT_LINK = "https://github.com/Capsize-Games/airunner/security/advisories/new"
 DEFAULT_SCHEDULER = "DPM++ 2M Karras"
+
+# Set default models, currently only for stablediffusion (later Kandinsky as well)
 DEFAULT_MODELS = {}
-DEFAULT_MODELS[GeneratorSection.TXT2IMG] = {
+sd_key = ImageGenerator.STABLEDIFFUSION.value
+DEFAULT_MODELS[sd_key] = {}
+DEFAULT_MODELS[sd_key][GeneratorSection.TXT2IMG] = {
     "version": StableDiffusionVersion.SDXL_TURBO,
     "model": "stabilityai/sd-turbo",
 }
-DEFAULT_MODELS[GeneratorSection.IMG2IMG] = {
+DEFAULT_MODELS[sd_key][GeneratorSection.IMG2IMG] = {
     "version": StableDiffusionVersion.SDXL_TURBO,
     "model": "stabilityai/sd-turbo",
 }
-DEFAULT_MODELS[GeneratorSection.INPAINT] = {
+DEFAULT_MODELS[sd_key][GeneratorSection.INPAINT] = {
     "version": StableDiffusionVersion.SD1_5,
     "model": "runwayml/stable-diffusion-inpainting",
 }
-DEFAULT_MODELS[GeneratorSection.DEPTH2IMG] = {
+DEFAULT_MODELS[sd_key][GeneratorSection.OUTPAINT] = DEFAULT_MODELS[sd_key][GeneratorSection.INPAINT]
+DEFAULT_MODELS[sd_key][GeneratorSection.DEPTH2IMG] = {
     "version": StableDiffusionVersion.SD1_5,
     "model": "stabilityai/stable-diffusion-2-depth",
 }
-DEFAULT_MODELS[GeneratorSection.PIX2PIX] = {
+DEFAULT_MODELS[sd_key][GeneratorSection.PIX2PIX] = {
     "version": StableDiffusionVersion.SD1_5,
     "model": "timbrooks/instruct-pix2pix",
 }
