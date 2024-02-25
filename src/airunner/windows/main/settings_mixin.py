@@ -5,7 +5,8 @@ from airunner.data.bootstrap.controlnet_bootstrap_data import controlnet_bootstr
 from airunner.data.bootstrap.imagefilter_bootstrap_data import imagefilter_bootstrap_data
 from airunner.data.bootstrap.model_bootstrap_data import model_bootstrap_data
 from airunner.data.bootstrap.pipeline_bootstrap_data import pipeline_bootstrap_data
-from airunner.enums import Mode, SignalCode, CanvasToolName, LLMActionType, ImageGenerator, GeneratorSection
+from airunner.enums import Mode, SignalCode, CanvasToolName, LLMActionType, ImageGenerator, GeneratorSection, \
+    ImageCategory
 from airunner.service_locator import ServiceLocator
 from airunner.settings import BASE_PATH, MALE, DEFAULT_MODELS
 from airunner.settings import DEFAULT_PATHS
@@ -30,8 +31,33 @@ tts_settings_default = {
     'play_queue_buffer_length': 1,
     'enable_cpu_offload': True,
 }
-
-GENERATOR_SETTINGS = dict(
+STABLEDIFFUSION_GENERATOR_SETTINGS = dict(
+    prompt="",
+    negative_prompt="",
+    steps=1,
+    ddim_eta=0.5,
+    height=512,
+    width=512,
+    scale=0,
+    seed=42,
+    random_seed=True,
+    model="stabilityai/sd-turbo",
+    scheduler=DEFAULT_SCHEDULER,
+    prompt_triggers="",
+    strength=50,
+    image_guidance_scale=150,
+    n_samples=1,
+    enable_controlnet=False,
+    clip_skip=0,
+    variation=False,
+    use_prompt_builder=False,
+    active_grid_border_color="#00FF00",
+    active_grid_fill_color="#FF0000",
+    version="SD Turbo",
+    is_preset=False,
+    input_image=None,
+)
+DEFAULT_GENERATOR_SETTINGS = dict(
     input_image_settings=dict(
         imported_image_base64=None,
         use_imported_image=True,
@@ -51,42 +77,22 @@ GENERATOR_SETTINGS = dict(
         guidance_scale=50,
     ),
     section="txt2img",
-    generator_name="stablediffusion"
+    generator_name="stablediffusion",
+    presets={},
 )
+GENERATOR_SETTINGS = DEFAULT_GENERATOR_SETTINGS.copy()
+GENERATOR_SETTINGS.update(STABLEDIFFUSION_GENERATOR_SETTINGS)
 
-GENERATOR_SETTINGS[ImageGenerator.STABLEDIFFUSION.value] = {}
+for category in ImageCategory:
+    GENERATOR_SETTINGS["presets"][category.value] = {}
+    GENERATOR_SETTINGS["presets"][category.value][ImageGenerator.STABLEDIFFUSION.value] = {}
 
-for section in GeneratorSection:
-    if section in [GeneratorSection.TXT2IMG]:
-        model = "stabilityai/sd-turbo"
-        version = DEFAULT_MODELS[section]
-
-    GENERATOR_SETTINGS[ImageGenerator.STABLEDIFFUSION.value][section.value] = dict(
-        prompt="",
-        negative_prompt="",
-        steps=1,
-        ddim_eta=0.5,
-        height=512,
-        width=512,
-        scale=0,
-        seed=42,
-        random_seed=True,
-        model=model,
-        scheduler=DEFAULT_SCHEDULER,
-        prompt_triggers="",
-        strength=50,
-        image_guidance_scale=150,
-        n_samples=1,
-        enable_controlnet=False,
-        clip_skip=0,
-        variation=False,
-        use_prompt_builder=False,
-        active_grid_border_color="#00FF00",
-        active_grid_fill_color="#FF0000",
-        version=version,
-        is_preset=False,
-        input_image=None,
-    )
+    for section in GeneratorSection:
+        # TODO: default upscale model?
+        if section == GeneratorSection.UPSCALE:
+            continue
+        default_model = DEFAULT_MODELS[ImageGenerator.STABLEDIFFUSION.value][section]
+        GENERATOR_SETTINGS["presets"][category.value][ImageGenerator.STABLEDIFFUSION.value][section.value] = STABLEDIFFUSION_GENERATOR_SETTINGS.copy()
 
 
 class SettingsMixin:
@@ -328,7 +334,7 @@ Previous Conversation:
                 eta_cutoff=10,
                 early_stopping=True,
                 random_seed=False,
-                model_version="stabilityai/stablelm-2-zephyr-1_6b",
+                model_version="mistralai/Mistral-7B-Instruct-v0.1",
                 dtype="4bit",
                 use_gpu=True,
                 message_type="chat",

@@ -75,6 +75,7 @@ class SDHandler(
         ControlnetModelMixin.__init__(self)
         AIModelMixin.__init__(self)
         LoraMixin.__init__(self)
+        CompelMixin.__init__(self)
         self.logger.info("Loading Stable Diffusion model runner...")
         self.safety_checker_model = self.models_by_pipeline_action("safety_checker")[0]
         self.text_encoder_model = self.models_by_pipeline_action("text_encoder")[0]
@@ -98,8 +99,6 @@ class SDHandler(
         self._action = None
         self.embeds_loaded = False
         self._compel_proc = None
-        self._prompt_embeds = None
-        self._negative_prompt_embeds = None
         self.current_prompt = None
         self.current_negative_prompt = None
         self._model = None
@@ -182,9 +181,6 @@ class SDHandler(
 
     @initialized.setter
     def initialized(self, value):
-        if value is False:
-            import traceback
-            traceback.print_stack()
         self._initialized = value
 
     @property
@@ -783,9 +779,6 @@ class SDHandler(
             elif self.pipe is None:
                 self.logger.info("Pipe is None")
             self.send_model_loading_message(self.current_model)
-            self.compel_proc = None
-            self.prompt_embeds = None
-            self.negative_prompt_embeds = None
             if self.reload_model:
                 self.reset_applied_memory_settings()
             if not self.is_upscale:
@@ -815,7 +808,7 @@ class SDHandler(
 
         # do model reload checks here
 
-    
+
         sequential_cpu_offload_changed = self.use_enable_sequential_cpu_offload != (options.get("use_enable_sequential_cpu_offload", True) is True)
         model_changed = (self.model is not None and self.model != requested_model)
 
@@ -828,14 +821,16 @@ class SDHandler(
             self.clear_scheduler()
             self.clear_controlnet()
 
-        if ((self.controlnet_loaded and not self.enable_controlnet) or
-           (not self.controlnet_loaded and self.enable_controlnet)):
+        if (
+            (self.controlnet_loaded and not self.enable_controlnet) or
+            (not self.controlnet_loaded and self.enable_controlnet)
+        ):
             self.initialized = False
 
-        if self.prompt != options.get(f"prompt") or \
-           self.negative_prompt != options.get(f"negative_prompt") or \
-           action != self.action or \
-           self.reload_model:
+        if (
+            action != self.action or
+            self.reload_model
+        ):
             self._prompt_embeds = None
             self._negative_prompt_embeds = None
 
@@ -847,7 +842,10 @@ class SDHandler(
 
     def error_handler(self, error):
         message = str(error)
-        if "got an unexpected keyword argument 'image'" in message and self.action in ["outpaint", "pix2pix", "depth2img"]:
+        if (
+            "got an unexpected keyword argument 'image'" in message and
+            self.action in ["outpaint", "pix2pix", "depth2img"]
+        ):
             message = f"This model does not support {self.action}"
         traceback.print_exc()
         self.logger.error(error)
@@ -1062,7 +1060,13 @@ class SDHandler(
             frame_ids = list(range(ch_start, ch_end))
             try:
                 self.logger.info(f"Generating video with {len(frame_ids)} frames")
-                self.emit(SignalCode.LOG_STATUS_SIGNAL, f"Generating video, frames {cur_frame} to {cur_frame + len(frame_ids) - 1} of {self.n_samples}")
+                self.emit(
+                    SignalCode.LOG_STATUS_SIGNAL,
+                    (
+                        f"Generating video, frames {cur_frame} to "
+                        f"{cur_frame + len(frame_ids) - 1} of {self.n_samples}"
+                    )
+                )
                 cur_frame += len(frame_ids)
                 kwargs = {
                     "prompt": prompt,
@@ -1211,9 +1215,14 @@ class SDHandler(
             self.process_data(data)
         return data
 
+    do_load_compel = False
+
     def process_data(self, data: dict):
         self.logger.info("Runner: process_data called")
         self.requested_data = data
+        prompt = self.prompt if self.prompt else ""
+        negative_prompt = self.negative_prompt if self.negative_prompt else ""
+        self.do_load_compel = prompt != self.current_prompt or negative_prompt != self.current_negative_prompt
         self.prepare_options(data)
         self.prepare_scheduler()
         self.prepare_model()
@@ -1230,6 +1239,8 @@ class SDHandler(
 
         self.emit(SignalCode.LOG_STATUS_SIGNAL, f"Applying memory settings")
         self.apply_memory_efficient_settings()
+        if self.do_load_compel:
+            self.load_prompt_embeds()
 
         seed = self.seed
         data = self.process_prompts(data, seed)
@@ -1668,7 +1679,7 @@ class SDHandler(
             torch_dtype=self.data_type
         )
 
-    def reuse_pipeline(self, do_load_controlnet):
+    def reuse_pipeline(self, do_load_controlnet, local_files_only=True):
         self.logger.info("Reusing pipeline")
         pipe = None
         if self.is_txt2img:
@@ -1703,6 +1714,7 @@ class SDHandler(
 
                 pipe = pipeline_class_.from_single_file(
                     self.model_path,
+                    local_files_only=local_files_only
                 )
                 return pipe
             else:

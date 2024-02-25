@@ -4,7 +4,7 @@ from PIL import Image
 from PyQt6.QtCore import pyqtSignal, QRect
 
 from airunner.aihandler.stablediffusion.sd_request import SDRequest
-from airunner.enums import SignalCode, ServiceCode
+from airunner.enums import SignalCode, ServiceCode, GeneratorSection, ImageCategory
 from airunner.aihandler.settings import MAX_SEED
 from airunner.settings import PHOTO_REALISTIC_NEGATIVE_PROMPT, ILLUSTRATION_NEGATIVE_PROMPT
 from airunner.widgets.base_widget import BaseWidget
@@ -28,31 +28,31 @@ class GeneratorForm(BaseWidget):
 
     @property
     def is_txt2img(self):
-        return self.generator_section == "txt2img"
+        return self.generator_section == GeneratorSection.TXT2IMG.value
 
     @property
     def is_outpaint(self):
-        return self.generator_section == "outpaint"
+        return self.generator_section == GeneratorSection.OUTPAINT.value
 
     @property
     def is_depth2img(self):
-        return self.generator_section == "depth2img"
+        return self.generator_section == GeneratorSection.DEPTH2IMG.value
 
     @property
     def is_pix2pix(self):
-        return self.generator_section == "pix2pix"
+        return self.generator_section == GeneratorSection.PIX2PIX.value
 
     @property
     def is_upscale(self):
-        return self.generator_section == "upscale"
+        return self.generator_section == GeneratorSection.UPSCALE.value
 
     @property
     def is_superresolution(self):
-        return self.generator_section == "superresolution"
+        return False  # deprecated
 
     @property
     def is_txt2vid(self):
-        return self.generator_section == "txt2vid"
+        return False  # deprecated
 
     @property
     def generator_section(self):
@@ -279,7 +279,7 @@ class GeneratorForm(BaseWidget):
 
     def on_llm_image_prompt_generated_signal(self, data):
         prompt = data.get("prompt", None)
-        prompt_type = data.get("type", "photo")
+        prompt_type = data.get("type", ImageCategory.PHOTO.value)
         self.ui.prompt.setPlainText(prompt)
         if prompt_type == "photo":
             negative_prompt = PHOTO_REALISTIC_NEGATIVE_PROMPT

@@ -154,6 +154,7 @@ class Ui_tts_preferences(object):
         self.gender_combobox.currentTextChanged['QString'].connect(tts_preferences.gender_changed) # type: ignore
         self.enable_tts.toggled['bool'].connect(tts_preferences.enable_tts_changed) # type: ignore
         self.use_bark.clicked['bool'].connect(tts_preferences.use_bark_changed) # type: ignore
+        self.comboBox.currentTextChanged['QString'].connect(tts_preferences.model_changed) # type: ignore
         QtCore.QMetaObject.connectSlotsByName(tts_preferences)
 
     def retranslateUi(self, tts_preferences):
