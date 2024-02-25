@@ -334,3 +334,8 @@ class StableDiffusionVersion(Enum):
     SDXL_TURBO = "SDXL Turbo"
     SD2_1 = "SD 2.1"
     SD1_5 = "SD 1.5"
+
+
+class ImageCategory(Enum):
+    ART = "art"
+    PHOTO = "photo"

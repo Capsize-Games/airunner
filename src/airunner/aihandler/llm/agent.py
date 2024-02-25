@@ -12,7 +12,7 @@ from PyQt6.QtCore import QObject
 from airunner.aihandler.logger import Logger
 from airunner.mediator_mixin import MediatorMixin
 
-from airunner.enums import SignalCode, LLMChatRole, LLMActionType
+from airunner.enums import SignalCode, LLMChatRole, LLMActionType, ImageCategory
 
 
 class JSONExtractor(json.JSONDecoder):
@@ -123,7 +123,13 @@ class AIRunnerAgent(QObject, MediatorMixin):
                 f"Current Time: {current_time}",
                 f"Current Timezone: {current_timezone}"
             ]
+            print(system_prompt)
         elif action == LLMActionType.GENERATE_IMAGE:
+            ", ".join([
+                "'%s'" % category.value for category in ImageCategory
+            ])
+
+
             system_prompt = [
                 guardrails,
                 (
@@ -336,6 +342,10 @@ class AIRunnerAgent(QObject, MediatorMixin):
         content: AnyStr,
         role: LLMChatRole = LLMChatRole.ASSISTANT
     ):
+        if role == LLMChatRole.ASSISTANT:
+            content = content.replace(f"{self.botname}:", "")
+            content = content.replace(f"{self.botname}", "")
+
         self.history.append({
             'content': content,
             'role': role.value
