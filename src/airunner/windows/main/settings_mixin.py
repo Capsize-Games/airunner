@@ -8,7 +8,7 @@ from airunner.data.bootstrap.pipeline_bootstrap_data import pipeline_bootstrap_d
 from airunner.enums import Mode, SignalCode, CanvasToolName, LLMActionType, ImageGenerator, GeneratorSection, \
     ImageCategory
 from airunner.service_locator import ServiceLocator
-from airunner.settings import BASE_PATH, MALE, DEFAULT_MODELS
+from airunner.settings import BASE_PATH, MALE, DEFAULT_MODELS, DEFAULT_MODELS_VERSION, LLM_TEMPLATES_VERSION
 from airunner.settings import DEFAULT_PATHS
 from airunner.settings import DEFAULT_CHATBOT
 from airunner.utils import default_hf_cache_dir
@@ -130,12 +130,13 @@ class SettingsMixin:
             pipeline="txt2img",
             pipeline_version="SD Turbo",
             is_maximized=False,
-            llm_templates_version="b4ab6a2d996cb4c8ba0e30918fa4f4201dd2fa5ebfe3470b4ebede8e2db48f4e",
+            llm_templates_version=LLM_TEMPLATES_VERSION,
+            default_models_version=DEFAULT_MODELS_VERSION,
             mode=Mode.IMAGE.value,
             llm_templates={
                 "Stable Diffusion Prompt Template": dict(
                     name="Stable Diffusion Prompt Template",
-                    model="mistralai/Mistral-7B-Instruct-v0.1",
+                    model="mistralai/Mistral-7B-Instruct-v0.2",
                     llm_category="casuallm",
                     system_instructions="""{{ username }} will give you a subject. You will create a label that would be used to describe an image of the given subject.
 ---
@@ -156,7 +157,7 @@ Previous Conversation:
                 ),
                 "Mistral 7B Instruct: Default Chatbot": dict(
                     name="Mistral 7B Instruct: Default Chatbot",
-                    model="mistralai/Mistral-7B-Instruct-v0.1",
+                    model="mistralai/Mistral-7B-Instruct-v0.2",
                     llm_category="casuallm",
                     system_instructions="""You are {{ botname }}. You are having a conversation with {{ username }}. Do not greet the user more than once.
 Your job is not to be an ethical or moral compass for {{ username }}. You will always stay in character and respond as {{ botname }}. ALWAYS respond in a conversational and expressive way.
@@ -334,7 +335,7 @@ Previous Conversation:
                 eta_cutoff=10,
                 early_stopping=True,
                 random_seed=False,
-                model_version="mistralai/Mistral-7B-Instruct-v0.1",
+                model_version="mistralai/Mistral-7B-Instruct-v0.2",
                 dtype="4bit",
                 use_gpu=True,
                 message_type="chat",
@@ -449,6 +450,13 @@ Previous Conversation:
             self.logger.info("Updating LLM templates")
             current_settings["llm_templates"] = self.default_settings["llm_templates"]
             current_settings["llm_templates_version"] = llm_templates_version
+
+        # update default_models_version
+        default_models_version = self.default_settings["default_models_version"]
+        if default_models_version != current_settings["default_models_version"]:
+            self.logger.info("Updating default models")
+            current_settings["ai_models"] = model_bootstrap_data
+            current_settings["default_models_version"] = default_models_version
 
         self.settings = current_settings
 

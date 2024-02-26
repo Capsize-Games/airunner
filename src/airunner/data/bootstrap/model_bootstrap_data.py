@@ -276,7 +276,7 @@ model_bootstrap_data = [
     },
     {
         "name": "Mistral 7B Instruct",
-        "path": "mistralai/Mistral-7B-Instruct-v0.1",
+        "path": "mistralai/Mistral-7B-Instruct-v0.2",
         "branch": "main",
         "version": "0.1",
         "category": "llm",
