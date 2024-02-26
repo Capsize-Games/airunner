@@ -109,14 +109,14 @@
          <item row="0" column="0">
           <widget class="QRadioButton" name="female_radio_button">
            <property name="text">
-            <string>Male</string>
+            <string>Female</string>
            </property>
           </widget>
          </item>
          <item row="0" column="1">
           <widget class="QRadioButton" name="male_radio_button">
            <property name="text">
-            <string>Female</string>
+            <string>Male</string>
            </property>
           </widget>
          </item>
