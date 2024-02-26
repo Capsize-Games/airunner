@@ -59,7 +59,7 @@ setup(
         "watchdog==4.0.0",
         "sounddevice==0.4.6",
         "datasets==2.17.0",
-        "sentence_transformers==2.3.1"
+        "sentence_transformers==2.4.0"
     ],
     dependency_links=[]
 )
