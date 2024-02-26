@@ -1,3 +1,4 @@
+from airunner.enums import Language
 from airunner.settings import TRANSLATION_LANGUAGES, VOICES, TRANSLATION_MODELS, MALE, FEMALE
 from airunner.widgets.base_widget import BaseWidget
 from airunner.widgets.translation_preferences.templates.translation_preferences_widget_ui import \
@@ -36,6 +37,7 @@ class TranslationPreferencesWidget(BaseWidget):
         self.ui.voice_combobox.addItems(voices)
         self.ui.male_radio_button.setChecked(gender == MALE)
         self.ui.female_radio_button.setChecked(gender == FEMALE)
+        self.ui.voice_combobox.setCurrentText(self.settings["translation_settings"]["voice"])
         self.ui.voice_combobox.blockSignals(False)
         self.ui.male_radio_button.blockSignals(False)
         self.ui.female_radio_button.blockSignals(False)
@@ -44,6 +46,10 @@ class TranslationPreferencesWidget(BaseWidget):
         self.ui.translation_model_combobox.blockSignals(True)
         self.ui.translation_model_combobox.clear()
         self.ui.translation_model_combobox.addItems(TRANSLATION_MODELS)
+        for language in Language:
+            if language.value == self.settings["translation_settings"]["language"]:
+                self.ui.translation_model_combobox.setCurrentText(language.translation_model)
+                break
         self.ui.translation_model_combobox.setCurrentText(self.settings["translation_settings"]["translation_model"])
         self.ui.translation_model_combobox.blockSignals(False)
 
