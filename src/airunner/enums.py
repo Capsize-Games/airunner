@@ -339,3 +339,13 @@ class StableDiffusionVersion(Enum):
 class ImageCategory(Enum):
     ART = "art"
     PHOTO = "photo"
+
+
+class Language(Enum):
+    ENGLISH = "English"
+    SPANISH = "Spanish"
+
+
+class LanguageCode(Enum):
+    ENGLISH = "en"
+    SPANISH = "es"

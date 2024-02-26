@@ -151,6 +151,11 @@ class SettingsWindow(BaseWindow):
                 "section": "LLM, TTS, Translation, Chatbot",
                 "files": [
                     {
+                        "name": "bot_preferences",
+                        "display_name": "Chatbot Preferences",
+                        "checkable": False
+                    },
+                    {
                         "name": "llm_preferences",
                         "display_name": "LLM Preferences",
                         "checkable": False
@@ -162,15 +167,10 @@ class SettingsWindow(BaseWindow):
                     },
                     {
                         "name": "translation_preferences",
-                        "display_name": "Translation Preferences (experimental)",
+                        "display_name": "Translation Preferences",
                         "description": "Set your preferred translation and override the TTS voice settings.",
                         "checkable": False
                     },
-                    {
-                        "name": "bot_preferences",
-                        "display_name": "Chatbot Preferences",
-                        "checkable": False
-                    }
                 ]
             },
             {
