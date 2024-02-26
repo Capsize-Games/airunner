@@ -1,6 +1,6 @@
 import os
 
-from airunner.enums import GeneratorSection, StableDiffusionVersion, ImageGenerator
+from airunner.enums import GeneratorSection, StableDiffusionVersion, ImageGenerator, Language
 
 BASE_PATH = os.path.join(os.path.expanduser("~"), ".airunner")
 SQLITE_DB_NAME = "airunner.db"
