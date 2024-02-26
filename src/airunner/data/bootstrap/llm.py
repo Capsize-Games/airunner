@@ -48,7 +48,7 @@ seed_data = {
             "meta-llama/Llama-2-7b-hf",
             "meta-llama/Llama-2-7b-chat-hf",
             "mistralai/Mistral-7B-v0.1",
-            "mistralai/Mistral-7B-Instruct-v0.1",
+            "mistralai/Mistral-7B-Instruct-v0.2",
             "stabilityai/stablelm-2-zephyr-1_6b",
             "gpt2-xl",
             "gpt2-large",
