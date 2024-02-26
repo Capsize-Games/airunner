@@ -349,3 +349,10 @@ class Language(Enum):
 class LanguageCode(Enum):
     ENGLISH = "en"
     SPANISH = "es"
+
+
+class SchedulerAlgorithm(Enum):
+    SDE_DPM_SOLVER_PLUS_PLUS = "sde-dpmsolver++"
+    SDE_DPM_SOLVER = "sde-dpmsolver"
+    DPM_SOLVER_PLUS_PLUS = "dpmsolver++"
+    DPM_SOLVER = "dpmsolver"

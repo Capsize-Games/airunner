@@ -801,7 +801,7 @@ class SDHandler(
         return torch.Generator(device=device).manual_seed(seed)
 
     def prepare_options(self, data):
-        self.logger.info(f"Preparing options")
+        self.logger.debug(f"Preparing options")
         action = data["action"]
         options = data["options"]
         requested_model = options.get(f"model", None)
