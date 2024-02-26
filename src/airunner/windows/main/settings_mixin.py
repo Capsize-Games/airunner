@@ -286,7 +286,7 @@ Previous Conversation:
             active_grid_settings=dict(
                 enabled=True,
                 render_border=True,
-                render_fill=True,
+                render_fill=False,
                 border_opacity=50,
                 fill_opacity=50,
                 pos_x=0,
