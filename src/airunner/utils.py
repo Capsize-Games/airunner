@@ -470,7 +470,7 @@ def parse_template(template: dict) -> str:
     template = template["template"]
     parsed_template = ""
     if llm_category == "casuallm":
-        if model == "mistralai/Mistral-7B-Instruct-v0.1":
+        if model == "mistralai/Mistral-7B-Instruct-v0.2":
             parsed_template = "\n".join((
                 "[INST]<<SYS>>",
                 system_instructions,# + "\nYou must say everything in Japanese with Japanese characters.",
