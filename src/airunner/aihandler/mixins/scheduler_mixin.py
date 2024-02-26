@@ -1,7 +1,7 @@
 import traceback
 import diffusers
 from airunner.aihandler.settings import AVAILABLE_SCHEDULERS_BY_ACTION
-from airunner.enums import Scheduler, SignalCode
+from airunner.enums import Scheduler, SignalCode, SchedulerAlgorithm
 
 
 class SchedulerMixin:
@@ -82,24 +82,24 @@ class SchedulerMixin:
             config = dict(config)
             if scheduler_name == Scheduler.DPM_PP_2M_K.value:
                 config["use_karras_sigmas"] = True
-            if scheduler_name == "DPM++ 2M SDE Karras":
-                config["algorithm_type"] = "sde-dpmsolver++"
-            elif scheduler_name == "DPM 2M SDE Karras":
-                config["algorithm_type"] = "sde-dpmsolver"
+            if scheduler_name == Scheduler.DPM_PP_2M_SDE_K.value:
+                config["algorithm_type"] = SchedulerAlgorithm.SDE_DPM_SOLVER_PLUS_PLUS.value
+            elif scheduler_name == Scheduler.DPM_2M_SDE_K.value:
+                config["algorithm_type"] = SchedulerAlgorithm.SDE_DPM_SOLVER.value
             elif scheduler_name.startswith("DPM"):
                 if scheduler_name.find("++") != -1:
-                    config["algorithm_type"] = "dpmsolver++"
+                    config["algorithm_type"] = SchedulerAlgorithm.DPM_SOLVER_PLUS_PLUS.value
                 else:
-                    config["algorithm_type"] = "dpmsolver"
+                    config["algorithm_type"] = SchedulerAlgorithm.DPM_SOLVER.value
             self._scheduler = scheduler_class.from_config(config)
         else:
             if scheduler_name == Scheduler.DPM_PP_2M_K.value:
                 kwargs["use_karras_sigmas"] = True
             if scheduler_name.startswith("DPM"):
                 if scheduler_name.find("++") != -1:
-                    kwargs["algorithm_type"] = "dpmsolver++"
+                    kwargs["algorithm_type"] = SchedulerAlgorithm.DPM_SOLVER_PLUS_PLUS.value
                 else:
-                    kwargs["algorithm_type"] = "dpmsolver"
+                    kwargs["algorithm_type"] = SchedulerAlgorithm.DPM_SOLVER.value
             try:
                 self.logger.info(f"Loading scheduler " + scheduler_name)
                 self._scheduler = scheduler_class.from_pretrained(self.model_path, **kwargs)
@@ -118,9 +118,9 @@ class SchedulerMixin:
             self.logger.warning("Unable to change scheduler, model_path is not set")
 
     def prepare_scheduler(self):
-        self.logger.info("Preparing scheduler " + self.options.get(f"scheduler", ""))
-        scheduler_name = self.options.get(f"scheduler", "Euler a")
+        scheduler_name = self.options.get(f"scheduler", Scheduler.EULER_ANCESTRAL.value)
         if self.scheduler_name != scheduler_name:
+            self.logger.info("Preparing scheduler " + self.options.get(f"scheduler", ""))
             self.emit(SignalCode.LOG_STATUS_SIGNAL, f"Preparing scheduler {scheduler_name}")
             self.scheduler_name = scheduler_name
             self.do_change_scheduler = True
