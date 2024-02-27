@@ -97,6 +97,20 @@ class AIRunnerAgent(QObject, MediatorMixin):
                 f"Current Timezone: {current_timezone}"
             ]
             print(system_prompt)
+        elif action == LLMActionType.ANALYZE_VISION_HISTORY:
+            vision_history = vision_history[-10:] if len(vision_history) > 10 else vision_history
+            system_prompt = [
+                (
+                    "You will be given a list of image captions. Your goal is to "
+                    "analyze the captions and determine what is happening in the "
+                    "images. The captions won't be entirely accurate, so you must "
+                    "infer what you believe is happening in the images. "
+                    "After analyzing the captions, you must summarize what you "
+                    "believe is happening in the images. "
+                    "Here is a list of captions:"
+                ),
+                ','.join(vision_history),
+            ]
         elif action == LLMActionType.GENERATE_IMAGE:
             ", ".join([
                 "'%s'" % category.value for category in ImageCategory
