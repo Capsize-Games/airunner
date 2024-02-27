@@ -1,5 +1,5 @@
 import torch
-from transformers import BlipForConditionalGeneration, BlipProcessor
+from transformers import BlipForConditionalGeneration, BlipProcessor, AutoProcessor, AutoModel
 from airunner.aihandler.llm.transformer_base_handler import TransformerBaseHandler
 from airunner.utils import clear_memory
 
@@ -26,6 +26,7 @@ class VisualQATransformerBaseHandler(TransformerBaseHandler):
         self.temperature = 1
         self.vision_history = []
         self.processed_vision_history = []
+        self.use_saved_model = False
 
     def post_load(self):
         do_load_processor = self.processor is None
@@ -35,20 +36,30 @@ class VisualQATransformerBaseHandler(TransformerBaseHandler):
     def load_processor(self, local_files_only=True):
         self.logger.info(f"Loading processor {self.model_path}")
         kwargs = {
-            'device_map': 'auto',
-            'torch_dtype': torch.float16,
             'local_files_only': local_files_only,
+            'trust_remote_code': True,
+
         }
-        config = self.quantization_config()
-        if config:
-            kwargs["quantization_config"] = config
+        if self.do_quantize_model:
+            config = self.quantization_config()
+            if config:
+                kwargs["quantization_config"] = config
+        else:
+            kwargs["torch_dtype"] = self.torch_dtype
+            if self.use_cuda:
+                kwargs["device"] = self.device
+
         try:
-            self.processor = BlipProcessor.from_pretrained(
+            self.processor = AutoProcessor.from_pretrained(
                 self.model_path,
                 **kwargs
             )
         except OSError as _e:
-            return self.load_processor(local_files_only=False)
+            if local_files_only:
+                return self.load_processor(local_files_only=False)
+            else:
+                self.logger.error("Failed to load processor")
+                return False
         if self.processor:
             self.logger.info("Processor loaded")
         else:
@@ -78,7 +89,11 @@ class VisualQATransformerBaseHandler(TransformerBaseHandler):
             images=image,
             text="This is an image of",
             return_tensors="pt"
-        ).to("cuda")
+        )
+        # inputs = self.processor("This is an image of", [image], self.model, max_crops=100, num_tokens=728)
+
+        if self.use_cuda:
+            inputs = inputs.to(self.device)
 
         try:
             out = self.model.generate(

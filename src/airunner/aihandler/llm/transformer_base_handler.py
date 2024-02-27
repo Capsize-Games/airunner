@@ -11,6 +11,8 @@ class TransformerBaseHandler(BaseHandler):
     auto_class_ = None
 
     def __init__(self, *args, **kwargs):
+        self.do_quantize_model = kwargs.pop("do_quantize_model", True)
+
         super().__init__(*args, **kwargs)
         self.callback = None
         self.request_data = {}
@@ -30,7 +32,6 @@ class TransformerBaseHandler(BaseHandler):
         self.model_path = kwargs.get("model_path", None)
         self.override_parameters = kwargs.get("override_parameters", None)
         self.prompt = kwargs.get("prompt", None)
-        self.do_quantize_model = kwargs.get("do_quantize_model", True)
         self.current_model_path = kwargs.get("current_model_path", "")
         self.local_files_only = kwargs.get("local_files_only", False)
         self.use_cache = kwargs.get("use_cache", False)
@@ -57,6 +58,7 @@ class TransformerBaseHandler(BaseHandler):
         self._generator = None
         self.template = None
         self.image = None
+        self.use_saved_model = True
 
     @property
     def do_load_model(self):
@@ -101,7 +103,6 @@ class TransformerBaseHandler(BaseHandler):
         local_files_only = self.local_files_only if local_files_only is None else local_files_only
         return {
             'local_files_only': local_files_only,
-            'device_map': self.device,
             'use_cache': self.use_cache,
             'torch_dtype': torch.float16 if self.llm_dtype != "32bit" else torch.float32,
             'trust_remote_code': True
@@ -120,18 +121,20 @@ class TransformerBaseHandler(BaseHandler):
             config = self.quantization_config()
             if config:
                 params["quantization_config"] = config
+        else:
+            params["torch_dtype"] = torch.float16
+            params["device_map"] = "auto"
 
         self.logger.info(f"Loading model from {self.current_model_path}")
 
-        # check if testmodel path exists
         test_model_path = "test_model_path"
-        if os.path.exists(test_model_path):
-            path = test_model_path
-        else:
-            path = self.current_model_path
+        path = self.current_model_path
+
+        if self.use_saved_model:
+            if os.path.exists(test_model_path):
+                path = test_model_path
 
         try:
-            print("LOADING FROM ", path)
             self.model = self.auto_class_.from_pretrained(
                 path,
                 **params
@@ -143,8 +146,9 @@ class TransformerBaseHandler(BaseHandler):
                 else:
                     self.logger.error(e)
 
-        if not os.path.exists(test_model_path):
-            self.model.save_pretrained(test_model_path)
+        if self.use_saved_model:
+            if not os.path.exists(test_model_path):
+                self.model.save_pretrained(test_model_path)
 
         # print the type of class that self.model is
 
