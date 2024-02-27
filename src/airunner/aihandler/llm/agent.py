@@ -1,52 +1,14 @@
 import datetime
 import json
-import re
 import time
 from typing import AnyStr
-
 import torch
 import threading
-
 from PyQt6.QtCore import QObject
-
 from airunner.aihandler.logger import Logger
+from airunner.json_extractor import JSONExtractor
 from airunner.mediator_mixin import MediatorMixin
-
 from airunner.enums import SignalCode, LLMChatRole, LLMActionType, ImageCategory
-
-
-class JSONExtractor(json.JSONDecoder):
-    def decode(self, s):
-        self.json_objects = []
-        # Remove trailing characters
-        while s:
-            try:
-                # Try to decode the string as JSON
-                obj, end = super().raw_decode(s)
-                self.json_objects.append(obj)
-                s = s[end:].lstrip()
-            except json.JSONDecodeError:
-                # If the string is not valid JSON, find the first valid JSON object
-                match = re.match(r'[^\{]+(\{[^\}]+\}).*', s)
-                if match:
-                    json_part = match.group(1)  # Extract the JSON object from the match
-                    s = s[match.end():]
-                    s = s.replace("```json", "").replace("```", "")
-                    try:
-                        # Try to decode the extracted part as JSON
-                        obj = json.loads(json_part)
-                        self.json_objects.append(obj)
-                    except json.JSONDecodeError:
-                        # If the extracted part is not valid JSON, ignore it
-                        pass
-                else:
-                    break
-        return self.json_objects
-
-    def raw_decode(self, s, idx=0):
-        obj, end = super().raw_decode(s, idx)
-        self.json_objects.append(obj)
-        return obj, end
 
 
 class AIRunnerAgent(QObject, MediatorMixin):
@@ -121,7 +83,13 @@ class AIRunnerAgent(QObject, MediatorMixin):
                 mood,
                 personality,
                 "\n======\n",
-                "You have eyes, here is a list of things that you currently saw:",
+                (
+                    "You have eyes, you can see. You see many things but they "
+                    "are no always correct. You must try to determine what you "
+                    "are seeing based on these images Try to summarize them to "
+                    "determine what is happening. Here is a list of things that "
+                    "you currently saw:"
+                ),
                 ','.join(vision_history),
                 "\n======\n",
                 f"Current Date: {current_date}",
@@ -158,22 +126,29 @@ class AIRunnerAgent(QObject, MediatorMixin):
                 ),
                 "User: the chat should look like a superhero",
                 (
-                    "Assistant: " "A (cat dressed in a superhero costume), standing in the (middle of a forest)."
+                    "Assistant: " "A (cat dressed in a superhero costume), "
+                    "standing in the (middle of a forest)."
                 ),
                 "------",
                 "Use parentheses to indicate the most important details of the "
                 "image. Add a plus sign after a word or parenthesis to add "
                 "extra emphasis. More plus signs indicate more emphasis. Minus "
                 "signs can be used to indicate less emphasis.",
-                "You should describe the image type (professional photograph, portrait, illustration etc)",
+                "You should describe the image type (professional photograph, "
+                "portrait, illustration etc)",
                 (
-                    "You should also describe the lighting (well-lit, dim, dark etc), "
+                    "You should also describe the lighting (well-lit, dim, "
+                    "dark etc), "
                     "the color, the composition and the mood."
                 ),
                 (
-                    "When returning prompts you must choose either \"art\" or \"photo\" and you absolutely must include "
-                    "the following JSON format:\n```json\n{\"prompt\": \"your prompt here\", \"type\": \"your type here\"}\n```\n"
-                    "You must **NEVER** deviate from that format. You must always return the prompt and type as JSON format. This is **MANDATORY**."
+                    "When returning prompts you must choose either "
+                    "\"art\" or \"photo\" and you absolutely must include "
+                    "the following JSON format:\n"
+                    "```json\n{\"prompt\": \"your prompt here\", \"type\": \"your type here\"}\n```\n"
+                    "You must **NEVER** deviate from that format. You must "
+                    "always return the prompt and type as JSON format. "
+                    "This is **MANDATORY**."
                 )
             ]
         return "\n".join(system_prompt)
