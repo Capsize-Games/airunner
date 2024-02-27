@@ -11,7 +11,8 @@ from airunner.enums import SignalCode
 class STTHandler(BaseHandler):
     listening = False
 
-    def on_process_audio(self, audio_data, fs):
+    def on_process_audio(self, audio_data):
+        fs = self.settings["stt_settings"]["fs"]
         inputs = np.squeeze(audio_data)
         inputs = self.feature_extractor(inputs, sampling_rate=fs, return_tensors="pt")
         inputs = inputs.to(self.model.device)
@@ -91,7 +92,7 @@ class STTHandler(BaseHandler):
         generated_ids = self.model.generate(inputs=input_features)
         transcription = self.processor.batch_decode(generated_ids, skip_special_tokens=True)[0]
         transcription = transcription.strip()
-        print("transcription: ", transcription)
         if len(transcription) == 0 or len(transcription.split(" ")) == 1:
             return None
+        self.emit(SignalCode.AUDIO_PROCESSOR_RESPONSE_SIGNAL, transcription)
         return transcription
