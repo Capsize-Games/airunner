@@ -205,13 +205,16 @@ class CasualLMTransformerBaseHandler(TokenizerHandler):
         #full_message = self.rag_stream()
 
         if self.action == LLMActionType.CHAT:
+            self.emit(SignalCode.VISION_CAPTURE_LOCK_SIGNAL)
             if self.settings["llm_generator_settings"]["use_tool_filter"]:
                 self.tool_agent.run(self.prompt)
             self.chat_agent.run(self.prompt, LLMActionType.CHAT, vision_history=self.vision_history)
         elif self.action == LLMActionType.GENERATE_IMAGE:
+            self.emit(SignalCode.VISION_CAPTURE_LOCK_SIGNAL)
             self.chat_agent.run(self.prompt, LLMActionType.GENERATE_IMAGE)
 
         self.send_final_message()
+        self.emit(SignalCode.VISION_CAPTURE_UNLOCK_SIGNAL)
 
     def emit_streamed_text_signal(self, **kwargs):
         kwargs["name"] = self.botname
