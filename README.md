@@ -57,6 +57,29 @@ Typically models are between 2.5gb to 10gb in size. The more models you download
 
 ## 🔧 Installation
 
+### Development version
+
+Requires Python3
+
+You can install from github by doing the following
+
+```bash
+git clone https://github.com/Capsize-Games/airunner.git
+cd airunner
+python -m venv venv
+source venv/bin/activate
+pip install -e .
+```
+
+Run with
+
+```bash
+cd src/airunner
+python main.py
+```
+
+---
+
 ### [Download the official build on itch.io](https://capsizegames.itch.io/ai-runner)!
 
 This is the compiled version of AI Runner which you can use without installing any additional dependencies.
