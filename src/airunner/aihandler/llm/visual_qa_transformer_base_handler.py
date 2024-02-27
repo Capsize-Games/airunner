@@ -17,7 +17,7 @@ class VisualQATransformerBaseHandler(TransformerBaseHandler):
         self.model_path = "Salesforce/blip-image-captioning-large"
         self.processor = None
         self.do_sample = False
-        self.num_beams = 5
+        self.num_beams = 1
         self.max_length = 256
         self.min_length = 1
         self.top_p = 0.9
