@@ -58,7 +58,7 @@ setup(
         "tomesd==0.1.3",
         "watchdog==4.0.0",
         "sounddevice==0.4.6",
-        "datasets==2.17.0",
+        "datasets==2.17.1",
         "sentence_transformers==2.4.0"
     ],
     dependency_links=[]
