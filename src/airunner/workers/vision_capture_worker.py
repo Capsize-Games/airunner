@@ -11,15 +11,20 @@ class VisionCaptureWorker(Worker):
         super().__init__(*args, **kwargs)
         self.queue_type = QueueType.NONE
         self.cap = None
-        self.state = WorkerState.HALTED
+        self.locked = False
         self.interval = 1  # the amount of seconds between each image capture
         self.register(SignalCode.VISION_START_CAPTURE, self.start_vision_capture)
         self.register(SignalCode.VISION_STOP_CAPTURE, self.stop_capturing)
         self.register(SignalCode.VISION_CAPTURE_UNPAUSE_SIGNAL, self.unpause)
+        self.register(SignalCode.VISION_CAPTURE_PAUSE_SIGNAL, self.pause)
+        self.register(SignalCode.VISION_CAPTURE_UNLOCK_SIGNAL, self.unlock)
+        self.register(SignalCode.VISION_CAPTURE_LOCK_SIGNAL, self.lock)
 
-    def unpause(self, _message):
-        if self.state == WorkerState.PAUSED:
-            self.state = WorkerState.RUNNING
+    def lock(self):
+        self.locked = True
+
+    def unlock(self):
+        self.locked = False
 
     def start_vision_capture(self, message):
         """
@@ -53,7 +58,7 @@ class VisionCaptureWorker(Worker):
                 self.state = WorkerState.PAUSED
                 QThread.msleep(self.interval)
 
-            while self.state == WorkerState.PAUSED:
+            while self.state == WorkerState.PAUSED or self.locked:
                 QThread.msleep(100)
 
             if self.state == WorkerState.HALTED:
