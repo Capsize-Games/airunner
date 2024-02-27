@@ -120,7 +120,10 @@ class AIRunnerAgent(QObject, MediatorMixin):
                 names,
                 mood,
                 personality,
-                f"These are the last few things you saw: {','.join(vision_history)}.\n",
+                "\n======\n",
+                "You have eyes, here is a list of things that you currently saw:",
+                ','.join(vision_history),
+                "\n======\n",
                 f"Current Date: {current_date}",
                 f"Current Time: {current_time}",
                 f"Current Timezone: {current_timezone}"
