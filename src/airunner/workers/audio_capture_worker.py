@@ -16,9 +16,10 @@ class AudioCaptureWorker(Worker):
         self.recording = None
         self.running = False
         self.listening = False
-        self.duration = 0
-        self.fs = 0
-        self.channels = 0
+        self.duration = 10
+        self.fs = 16000
+        self.channels = 1
+        self.update_properties()
     
     def update_properties(self):
         settings = self.settings
