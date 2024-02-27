@@ -575,9 +575,10 @@ class MainWindow(
             except KeyError:
                 self.logger.warning(f"{splitter} missing in window_settings")
 
-        self.ui.generator_widget.ui.chat_prompt_widget.ui.chat_prompt_splitter.restoreState(
-            window_settings["chat_prompt_splitter"]
-        )
+        if "chat_prompt_splitter" in window_settings:
+            self.ui.generator_widget.ui.chat_prompt_widget.ui.chat_prompt_splitter.restoreState(
+                window_settings["chat_prompt_splitter"]
+            )
 
     ##### End window properties #####
     #################################
