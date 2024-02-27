@@ -299,6 +299,7 @@ class LLMActionType(Enum):
     """
     CHAT = "Chat"
     GENERATE_IMAGE = "Generate Image"
+    ANALYZE_VISION_HISTORY = "Analyze Vision History"
 
 
 class CanvasToolName(Enum):
