@@ -39,6 +39,7 @@ class ChatPromptWidget(BaseWidget):
         self.originalKeyPressEvent = self.ui.prompt.keyPressEvent
         self.vision_history = []
         self.register(SignalCode.VISION_PROCESSED_SIGNAL, self.on_vision_processed)
+        self.register(SignalCode.AUDIO_PROCESSOR_RESPONSE_SIGNAL, self.on_hear_signal)
 
     @property
     def current_generator(self):
@@ -55,8 +56,13 @@ class ChatPromptWidget(BaseWidget):
             self.generating = False
             self.enable_send_button()
 
+    def on_hear_signal(self, transcription):
+        self.respond_to_voice(transcription)
+        self.ui.prompt.setPlainText(transcription)
+
     def on_vision_processed(self, message):
         message = message.replace("this is an image of ", "")
+        print(message)
         if message not in self.vision_history:
             self.vision_history.append(message)
         self.emit(SignalCode.VISION_CAPTURE_UNPAUSE_SIGNAL)
@@ -195,9 +201,6 @@ class ChatPromptWidget(BaseWidget):
         )
         self.clear_prompt()
         self.start_progress_bar()
-
-    def on_hear_signal(self, transcript):
-        self.respond_to_voice(transcript)
 
     def on_token_signal(self, val):
         self.handle_token_signal(val)

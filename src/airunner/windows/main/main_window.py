@@ -256,6 +256,22 @@ class MainWindow(
         self.register(SignalCode.SD_UPDATE_SAVED_PROMPT_SIGNAL, self.on_update_saved_stablediffusion_prompt_signal)
         self.register(SignalCode.QUIT_APPLICATION, self.action_quit_triggered)
         self.register(SignalCode.SD_NSFW_CONTENT_DETECTED_SIGNAL, self.on_nsfw_content_detected_signal)
+        self.register(SignalCode.VISION_CAPTURED_SIGNAL, self.on_vision_captured_signal)
+
+    image_window = None
+
+    def on_vision_captured_signal(self, data: dict):
+        # Create the window if it doesn't exist
+        if self.image_window is None:
+            self.image_window = ImageWindow()
+
+        image = data.get("image", None)
+
+        if image:
+            # Update the image in the window
+            self.image_window.update_image(image)
+        else:
+            self.logger.error("on_vision_captured_signal failed - no image")
 
     def initialize_ui(self):
         self.logger.info("Loading ui")
