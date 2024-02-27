@@ -37,6 +37,8 @@ class ChatPromptWidget(BaseWidget):
         self.ui.action.blockSignals(False)
         self.originalKeyPressEvent = None
         self.originalKeyPressEvent = self.ui.prompt.keyPressEvent
+        self.vision_history = []
+        self.register(SignalCode.VISION_PROCESSED_SIGNAL, self.on_vision_processed)
 
     @property
     def current_generator(self):
@@ -52,6 +54,11 @@ class ChatPromptWidget(BaseWidget):
             self.stop_progress_bar()
             self.generating = False
             self.enable_send_button()
+
+    def on_vision_processed(self, message):
+        message = message.replace("this is an image of ", "")
+        self.vision_history.append(message)
+        self.emit(SignalCode.VISION_CAPTURE_UNPAUSE_SIGNAL)
 
     def on_add_to_conversation_signal(self, name, text, is_bot):
         self.add_message_to_conversation(name=name, message=text, is_bot=is_bot)
@@ -176,6 +183,7 @@ class ChatPromptWidget(BaseWidget):
                     "prompt_template": current_bot["prompt_template"],
                     "guardrails_prompt": current_bot["guardrails_prompt"],
                     "system_instructions": current_bot["system_instructions"],
+                    "vision_history": self.vision_history,
                 }
             }
         )

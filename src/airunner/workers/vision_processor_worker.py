@@ -8,7 +8,7 @@ class VisionProcessorWorker(Worker):
         super().__init__(*args, **kwargs)
         self.register(SignalCode.VISION_STOP_CAPTURE, self.on_stop_vision_capture)
         self.register(SignalCode.VISION_CAPTURE_PROCESS_SIGNAL, self.on_vision_process)
-        self.vision_handler = VisionHandler()
+        self.vision_handler = VisionHandler(do_quantize_model=True)
 
     def on_stop_vision_capture(self, _message):
         self.vision_handler.unload()
