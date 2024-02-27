@@ -100,5 +100,5 @@ class Ui_translation_preferences(object):
         self.label.setText(_translate("translation_preferences", "Override TTS voice model"))
         self.label_3.setText(_translate("translation_preferences", "Language"))
         self.label_2.setText(_translate("translation_preferences", "Voice"))
-        self.female_radio_button.setText(_translate("translation_preferences", "Male"))
-        self.male_radio_button.setText(_translate("translation_preferences", "Female"))
+        self.female_radio_button.setText(_translate("translation_preferences", "Female"))
+        self.male_radio_button.setText(_translate("translation_preferences", "Male"))

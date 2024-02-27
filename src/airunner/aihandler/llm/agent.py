@@ -93,10 +93,11 @@ class AIRunnerAgent(QObject, MediatorMixin):
         self.history = []
         self.thread = None
 
-    def build_system_prompt(self, action: LLMActionType):
+    def build_system_prompt(self, action: LLMActionType, vision_history: list = []):
         guardrails = self.guardrails_prompt if self.use_guardrails else ""
         system_instructions = self.system_instructions if self.use_system_instructions else ""
         system_prompt = []
+        vision_history = vision_history[-10:] if len(vision_history) > 10 else vision_history
         if action == LLMActionType.CHAT:
             names = f"Your name is {self.botname}. \nThe user's name is {self.username}."
             mood = (
@@ -119,6 +120,7 @@ class AIRunnerAgent(QObject, MediatorMixin):
                 names,
                 mood,
                 personality,
+                f"These are the last few things you saw: {','.join(vision_history)}.\n",
                 f"Current Date: {current_date}",
                 f"Current Time: {current_time}",
                 f"Current Timezone: {current_timezone}"
@@ -182,11 +184,12 @@ class AIRunnerAgent(QObject, MediatorMixin):
     def prepare_messages(
         self,
         action: LLMActionType,
-        use_latest_human_message: bool = True
+        use_latest_human_message: bool = True,
+        vision_history: list = []
     ) -> list:
         messages = [
             {
-                "content": self.build_system_prompt(action),
+                "content": self.build_system_prompt(action, vision_history=vision_history),
                 "role": LLMChatRole.SYSTEM.value
             }
         ]
@@ -226,10 +229,10 @@ class AIRunnerAgent(QObject, MediatorMixin):
         print("DO RESPONSE CALLED")
         self.run(self.prompt, LLMActionType.CHAT)
 
-    def run(self, prompt, action: LLMActionType):
+    def run(self, prompt, action: LLMActionType, vision_history: list = []):
         self.logger.info("Running...")
         self.prompt = prompt
-        conversation = self.prepare_messages(action)
+        conversation = self.prepare_messages(action, vision_history=vision_history)
         rendered_template = self.get_rendered_template(conversation)
 
         # Encode the rendered template

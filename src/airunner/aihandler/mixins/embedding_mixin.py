@@ -7,6 +7,15 @@ class EmbeddingMixin:
     def __init__(self):
         self.embeds_loaded = None
 
+    @property
+    def available_embeddings(self):
+        if not self._available_embeddings:
+            self._available_embeddings = {}
+            available_embeddings = self.options.get(f"embeddings", [])
+            for embedding in available_embeddings:
+                self._available_embeddings[embedding["version"]] = embedding
+        return self._available_embeddings
+
     def load_learned_embed_in_clip(self):
         learned_embeds_path = self.embeddings_path
         if not os.path.exists(learned_embeds_path):

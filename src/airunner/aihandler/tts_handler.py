@@ -512,13 +512,17 @@ class TTSHandler(BaseHandler):
             try:
                 inputs["input_ids"] = inputs["input_ids"].to(self.device)
                 inputs["attention_mask"] = inputs["attention_mask"].to(self.device)
-                inputs["history_prompt"]["semantic_prompt"] = inputs["history_prompt"]["semantic_prompt"].to(self.device)
-                inputs["history_prompt"]["coarse_prompt"] = inputs["history_prompt"]["coarse_prompt"].to(
-                    self.device)
-                inputs["history_prompt"]["fine_prompt"] = inputs["history_prompt"]["fine_prompt"].to(
-                    self.device)
+                if "history_prompt" in inputs:
+                    inputs["history_prompt"]["semantic_prompt"] = inputs["history_prompt"]["semantic_prompt"].to(
+                        self.device
+                    )
+                    inputs["history_prompt"]["coarse_prompt"] = inputs["history_prompt"]["coarse_prompt"].to(
+                        self.device
+                    )
+                    inputs["history_prompt"]["fine_prompt"] = inputs["history_prompt"]["fine_prompt"].to(
+                        self.device
+                    )
             except AttributeError as e:
                 self.logger.error("Failed to move inputs to CUDA")
                 self.logger.error(e)
-                print(inputs)
         return inputs

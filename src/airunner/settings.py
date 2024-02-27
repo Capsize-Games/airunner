@@ -1,6 +1,6 @@
 import os
 
-from airunner.enums import GeneratorSection, StableDiffusionVersion, ImageGenerator
+from airunner.enums import GeneratorSection, StableDiffusionVersion, ImageGenerator, Language
 
 BASE_PATH = os.path.join(os.path.expanduser("~"), ".airunner")
 SQLITE_DB_NAME = "airunner.db"
@@ -358,3 +358,5 @@ DEFAULT_MODELS[sd_key][GeneratorSection.PIX2PIX] = {
     "version": StableDiffusionVersion.SD1_5,
     "model": "timbrooks/instruct-pix2pix",
 }
+DEFAULT_MODELS_VERSION = "b4ab6a2d996cb4c8ba0e30918fa4f4201dd2fa5ebfe3470b4ebede8e2db48f4e"
+LLM_TEMPLATES_VERSION="b4ab6a2d996cb4c8ba0e30918fa4f4201dd2fa5ebfe3470b4ebede8e2db48f4e"
