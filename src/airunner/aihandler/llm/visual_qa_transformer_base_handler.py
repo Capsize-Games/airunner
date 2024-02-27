@@ -24,7 +24,6 @@ class VisualQATransformerBaseHandler(TransformerBaseHandler):
         self.repetition_penalty = 1.5
         self.length_penalty = 1.0
         self.temperature = 1
-        self.vision_history = []
         self.processed_vision_history = []
         self.use_saved_model = False
 
@@ -81,7 +80,6 @@ class VisualQATransformerBaseHandler(TransformerBaseHandler):
     def process_data(self, data):
         super().process_data(data)
         self.image = self.request_data.get("image")
-        self.vision_history.append(self.image)
 
     def do_generate(self) -> str:
         image = self.image.convert("RGB")
