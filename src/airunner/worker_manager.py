@@ -76,7 +76,6 @@ class WorkerManager(QObject, MediatorMixin):
         self.register(SignalCode.AUDIO_CAPTURE_WORKER_RESPONSE_SIGNAL, self.on_AudioCaptureWorker_response_signal)
         self.register(SignalCode.AUDIO_PROCESSOR_WORKER_PROCESSED_SIGNAL, self.on_AudioProcessorWorker_processed_audio)
         self.register(SignalCode.VISION_CAPTURED_SIGNAL, self.on_vision_captured)
-        self.register(SignalCode.VISION_PROCESSED_SIGNAL, self.on_vision_processed)
         self.register(SignalCode.TTS_REQUEST, self.on_tts_request)
         self.register(SignalCode.APPLICATION_SETTINGS_CHANGED_SIGNAL, self.on_application_settings_changed_signal)
 
@@ -155,9 +154,6 @@ class WorkerManager(QObject, MediatorMixin):
     def on_vision_captured(self, message):
         self.emit(SignalCode.VISION_CAPTURE_PROCESS_SIGNAL, message)
 
-    def on_vision_processed(self, message):
-        self.emit(SignalCode.VISION_CAPTURE_UNPAUSE_SIGNAL)
-    
     def on_AudioCaptureWorker_response_signal(self, message: np.ndarray):
         self.logger.info("Heard signal")
         self.stt_audio_processor_worker.add_to_queue(message)

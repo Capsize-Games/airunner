@@ -45,6 +45,7 @@ class CasualLMTransformerBaseHandler(TokenizerHandler):
         self.restrict_tools_to_additional: bool = True
         self.return_agent_code: bool = False
         self.batch_size: int = 1
+        self.vision_history: list = []
 
     @property
     def is_mistral(self) -> bool:
@@ -109,6 +110,7 @@ class CasualLMTransformerBaseHandler(TokenizerHandler):
         self.guardrails_prompt = self.request_data.get("guardrails_prompt", "")
         self.system_instructions = self.request_data.get("system_instructions", "")
         self.batch_size = self.request_data.get("batch_size", 1)
+        self.vision_history = self.request_data.get("vision_history", [])
         action = self.request_data.get("action", LLMActionType.CHAT.value)
         for action_type in LLMActionType:
             if action_type.value == action:
@@ -205,7 +207,7 @@ class CasualLMTransformerBaseHandler(TokenizerHandler):
         if self.action == LLMActionType.CHAT:
             if self.settings["llm_generator_settings"]["use_tool_filter"]:
                 self.tool_agent.run(self.prompt)
-            self.chat_agent.run(self.prompt, LLMActionType.CHAT)
+            self.chat_agent.run(self.prompt, LLMActionType.CHAT, vision_history=self.vision_history)
         elif self.action == LLMActionType.GENERATE_IMAGE:
             self.chat_agent.run(self.prompt, LLMActionType.GENERATE_IMAGE)
 

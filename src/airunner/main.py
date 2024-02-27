@@ -14,7 +14,7 @@ if hf_cache_path != "":
         os.environ["HUGGINGFACE_HUB_CACHE"] = hf_cache_path
 os.environ["DISABLE_TELEMETRY"] = "1"
 os.environ["HF_DATASETS_OFFLINE"] = "1"
-os.environ["TRANSFORMERS_OFFLINE"] = "1"
+#os.environ["TRANSFORMERS_OFFLINE"] = "1"
 """
 *******************************************************************************
 All remaining imports must be below this block.
