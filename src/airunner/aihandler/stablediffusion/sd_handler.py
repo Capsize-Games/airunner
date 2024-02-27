@@ -898,7 +898,7 @@ class SDHandler(
             message = "Generating image"
 
         self.emit(SignalCode.LOG_STATUS_SIGNAL, message)
-
+        self.emit(SignalCode.VISION_CAPTURE_LOCK_SIGNAL)
         try:
             output = self.call_pipe(**kwargs)
         except Exception as e:
@@ -926,6 +926,7 @@ class SDHandler(
                         nsfw_content_detected = output.nsfw_content_detected
                     except AttributeError:
                         self.logger.error("Unable to get nsfw_content_detected from output")
+            self.emit(SignalCode.VISION_CAPTURE_UNLOCK_SIGNAL)
             return images, nsfw_content_detected
 
     def generate_latents(self):
@@ -966,7 +967,6 @@ class SDHandler(
             except Exception as _e:
                 self.error_handler("Selected LoRA are not supported with this model")
                 self.reload_model = True
-                return
         
         if self.is_upscale:
             args.update({

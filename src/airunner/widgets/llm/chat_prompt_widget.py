@@ -57,7 +57,8 @@ class ChatPromptWidget(BaseWidget):
 
     def on_vision_processed(self, message):
         message = message.replace("this is an image of ", "")
-        self.vision_history.append(message)
+        if message not in self.vision_history:
+            self.vision_history.append(message)
         self.emit(SignalCode.VISION_CAPTURE_UNPAUSE_SIGNAL)
 
     def on_add_to_conversation_signal(self, name, text, is_bot):

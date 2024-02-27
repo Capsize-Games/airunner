@@ -2,7 +2,7 @@ import queue
 
 from PyQt6.QtCore import pyqtSignal, QThread, QSettings, QObject
 
-from airunner.enums import QueueType, SignalCode
+from airunner.enums import QueueType, SignalCode, WorkerState
 from airunner.aihandler.logger import Logger
 from airunner.mediator_mixin import MediatorMixin
 from airunner.service_locator import ServiceLocator
@@ -17,6 +17,7 @@ class Worker(QObject, MediatorMixin):
         self.prefix = prefix or self.__class__.__name__
         MediatorMixin.__init__(self)
         super().__init__()
+        self.state = WorkerState.HALTED
         self.logger = Logger(prefix=prefix)
         self.running = False
         self.queue = queue.Queue()
@@ -102,8 +103,13 @@ class Worker(QObject, MediatorMixin):
             return msg
         except queue.Empty:
             return None
+
     def pause(self):
-        self.paused = True
+        self.state = WorkerState.PAUSED
+
+    def unpause(self, _message):
+        if self.state == WorkerState.PAUSED:
+            self.state = WorkerState.RUNNING
 
     def resume(self):
         self.paused = False
