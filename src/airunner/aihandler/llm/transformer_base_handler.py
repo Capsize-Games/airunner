@@ -69,7 +69,6 @@ class TransformerBaseHandler(BaseHandler):
     def quantization_config(self):
         config = None
         if self.llm_dtype == "8bit":
-            self.logger.info("Loading 8bit model")
             config = BitsAndBytesConfig(
                 load_in_4bit=False,
                 load_in_8bit=True,
@@ -80,7 +79,6 @@ class TransformerBaseHandler(BaseHandler):
                 bnb_4bit_quant_type='nf4',
             )
         elif self.llm_dtype == "4bit":
-            self.logger.info("Loading 4bit model")
             config = BitsAndBytesConfig(
                 load_in_4bit=True,
                 load_in_8bit=False,
@@ -91,7 +89,6 @@ class TransformerBaseHandler(BaseHandler):
                 bnb_4bit_quant_type='nf4',
             )
         elif self.llm_dtype == "2bit":
-            self.logger.info("Loading 2bit model")
             config = GPTQConfig(
                 bits=2,
                 dataset="c4",
@@ -109,7 +106,6 @@ class TransformerBaseHandler(BaseHandler):
         }
 
     def load_model(self, local_files_only=True):
-        self.logger.info("Loading model")
         params = self.model_params(local_files_only=local_files_only)
         if self.request_data:
             params["token"] = self.request_data.get(
@@ -145,6 +141,8 @@ class TransformerBaseHandler(BaseHandler):
                     return self.load_model(local_files_only=False)
                 else:
                     self.logger.error(e)
+        except Exception as e:
+            self.logger.error(e)
 
         if self.use_saved_model:
             if not os.path.exists(test_model_path):

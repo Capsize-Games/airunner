@@ -66,7 +66,9 @@ class VisionCaptureWorker(Worker):
                 while self.state == WorkerState.HALTED:
                     QThread.msleep(100)
                 self.enable_cam()
-            QThread.msleep(1)
+
+            if self.state != WorkerState.RUNNING:
+                QThread.msleep(1)
 
     def enable_cam(self):
         self.cap = cv2.VideoCapture(0)

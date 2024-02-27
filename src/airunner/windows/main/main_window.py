@@ -4,6 +4,7 @@ import subprocess
 import webbrowser
 from functools import partial
 
+import numpy as np
 from PyQt6 import QtGui
 from PyQt6 import uic, QtCore
 from PyQt6.QtCore import pyqtSlot, pyqtSignal
@@ -21,6 +22,7 @@ from airunner.utils import get_version, default_hf_cache_dir, open_file_path, se
 from airunner.widgets.status.status_widget import StatusWidget
 from airunner.windows.about.about import AboutWindow
 from airunner.windows.filter_window import FilterWindow
+from airunner.windows.image_window import ImageWindow
 from airunner.windows.main.ai_model_mixin import AIModelMixin
 from airunner.windows.main.controlnet_model_mixin import ControlnetModelMixin
 from airunner.windows.main.embedding_mixin import EmbeddingMixin

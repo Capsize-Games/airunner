@@ -203,15 +203,21 @@ class CasualLMTransformerBaseHandler(TokenizerHandler):
         # self.bot_mood = self.update_bot_mood()
         # self.user_evaluation = self.do_user_evaluation()
         #full_message = self.rag_stream()
+        self.emit(SignalCode.VISION_CAPTURE_LOCK_SIGNAL)
 
-        if self.action == LLMActionType.CHAT:
-            self.emit(SignalCode.VISION_CAPTURE_LOCK_SIGNAL)
+        if self.action != LLMActionType.GENERATE_IMAGE:
             if self.settings["llm_generator_settings"]["use_tool_filter"]:
                 self.tool_agent.run(self.prompt)
-            self.chat_agent.run(self.prompt, LLMActionType.CHAT, vision_history=self.vision_history)
-        elif self.action == LLMActionType.GENERATE_IMAGE:
-            self.emit(SignalCode.VISION_CAPTURE_LOCK_SIGNAL)
-            self.chat_agent.run(self.prompt, LLMActionType.GENERATE_IMAGE)
+            self.chat_agent.run(
+                self.prompt,
+                self.action,
+                vision_history=self.vision_history
+            )
+        else:
+            self.chat_agent.run(
+                self.prompt,
+                LLMActionType.GENERATE_IMAGE
+            )
 
         self.send_final_message()
         self.emit(SignalCode.VISION_CAPTURE_UNLOCK_SIGNAL)
