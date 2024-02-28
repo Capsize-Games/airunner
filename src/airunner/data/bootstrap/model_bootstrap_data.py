@@ -296,6 +296,17 @@ model_bootstrap_data = [
         "model_type": "llm",
         "is_default": True
     },
+{
+        "name": "StableLM 2 Zephyr 1 7b",
+        "path": "HuggingFaceH4/zephyr-7b-alpha",
+        "branch": "main",
+        "version": "1",
+        "category": "llm",
+        "pipeline_action": "casuallm",
+        "enabled": True,
+        "model_type": "llm",
+        "is_default": True
+    },
     {
         "name": "GPT 2 XL",
         "path": "gpt2-xl",
