@@ -33,6 +33,7 @@ class ServiceCode(Enum):
     CURRENT_DRAGGABLE_PIXMAP = "current_draggable_pixmap"
     CURRENT_ACTIVE_IMAGE = "current_active_image"
     GET_IMAGE_FROM_LAYER = "get_image_from_layer"
+    GET_LINE_IMAGE_FROM_LAYER = "get_line_image_from_layer"
     GET_EMBEDDINGS = "get_embeddings"
     DELETE_MISSING_EMBEDDINGS = "delete_missing_embeddings"
     SCAN_FOR_EMBEDDINGS = "scan_for_embeddings"
