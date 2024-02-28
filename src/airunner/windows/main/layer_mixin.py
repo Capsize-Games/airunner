@@ -9,6 +9,7 @@ from PIL import Image
 
 from airunner.enums import SignalCode, ServiceCode
 from airunner.service_locator import ServiceLocator
+from airunner.utils import convert_base64_to_image
 from airunner.widgets.canvas.draggables.draggable_pixmap import DraggablePixmap
 
 
@@ -39,6 +40,7 @@ class LayerMixin:
         ServiceLocator.register(ServiceCode.CURRENT_DRAGGABLE_PIXMAP, self.current_draggable_pixmap)
         ServiceLocator.register(ServiceCode.CURRENT_ACTIVE_IMAGE, self.current_active_image)
         ServiceLocator.register(ServiceCode.GET_IMAGE_FROM_LAYER, self.get_image_from_layer)
+        ServiceLocator.register(ServiceCode.GET_LINE_IMAGE_FROM_LAYER, self.get_line_image_from_layer)
 
     def on_delete_layer_signal(self, data):
         layer = data.get("layer", None)
@@ -80,6 +82,7 @@ class LayerMixin:
             'opacity': 100,
             'position': total_layers,
             'base_64_image': "",
+            'base_64_lines': "",
             'pos_x': 0,
             'pos_y': 0,
             'pivot_point_x': 0,
@@ -92,12 +95,15 @@ class LayerMixin:
         self.settings = settings
         return total_layers
 
+    def current_layer_image(self):
+        base_64_image = self.current_layer()["base_64_image"]
+        return convert_base64_to_image(base_64_image)
+
     def current_draggable_pixmap(self) -> DraggablePixmap:
         pixmap = self.current_layer()["pixmap"]
         if pixmap is None or pixmap.isNull():
             pixmap = QPixmap()
-            base_64_image = self.current_layer()["base_64_image"]
-            pil_image = Image.open(io.BytesIO(base64.b64decode(base_64_image)))
+            pil_image = self.current_layer_image()
             q_image = ImageQt(pil_image)
             pixmap.convertFromImage(q_image)
         return DraggablePixmap(pixmap)
@@ -202,12 +208,20 @@ class LayerMixin:
         layer = self.current_layer()
         return self.get_image_from_layer(layer)
 
-    def get_image_from_layer(self, layer):
+    def get_image_from_layer(self, layer=None):
+        if not layer:
+            layer = self.current_layer()
         if layer["base_64_image"]:
-            decoded_image = base64.b64decode(layer["base_64_image"])
-            bytes_image = io.BytesIO(decoded_image)
-            # convert bytes to PIL iamge:
-            image = Image.open(bytes_image)
+            image = convert_base64_to_image(layer["base_64_image"])
+            image = image.convert("RGBA")
+            return image
+        return None
+
+    def get_line_image_from_layer(self, layer=None):
+        if not layer:
+            layer = self.current_layer()
+        if layer["base_64_lines"]:
+            image = convert_base64_to_image(layer["base_64_lines"])
             image = image.convert("RGBA")
             return image
         return None
