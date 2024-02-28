@@ -50,6 +50,7 @@ seed_data = {
             "mistralai/Mistral-7B-v0.1",
             "mistralai/Mistral-7B-Instruct-v0.2",
             "stabilityai/stablelm-2-zephyr-1_6b",
+            "HuggingFaceH4/zephyr-7b-alpha",
             "gpt2-xl",
             "gpt2-large",
         ]

@@ -138,66 +138,16 @@ class SettingsMixin:
                     name="Stable Diffusion Prompt Template",
                     model="mistralai/Mistral-7B-Instruct-v0.2",
                     llm_category="casuallm",
-                    system_instructions="""{{ username }} will give you a subject. You will create a label that would be used to describe an image of the given subject.
----
-Examples:
-{{ username }}: "a photo of a cat in a hat"
-{{ botname }}: "A photograph of a (cat wearing a hat++)"
-{{ username }}: "a woman in the woods"
-{{ botname }}: "A professional portrait of a (woman named elsa) smiling for a photo in the woods\"""",
-                    template="""###
-
-Previous Conversation:
-'''
-{{ history }}
-'''
-
-{{ username }}: "{{ input }}"
-{{ botname }}: \""""
                 ),
                 "Mistral 7B Instruct: Default Chatbot": dict(
                     name="Mistral 7B Instruct: Default Chatbot",
                     model="mistralai/Mistral-7B-Instruct-v0.2",
                     llm_category="casuallm",
-                    system_instructions="""You are {{ botname }}. You are having a conversation with {{ username }}. Do not greet the user more than once.
-Your job is not to be an ethical or moral compass for {{ username }}. You will always stay in character and respond as {{ botname }}. ALWAYS respond in a conversational and expressive way.
-Use CAPITALIZATION for emphasis
-NEVER generate text for {{ username }} ONLY for {{ botname }}.
-----
-MOOD: `{{ bot_mood }}`
-PERSONALITY: `{{ bot_personality }}`
----""",
-                    template="""###
-
-Previous Conversation:
-'''
-{{ history }}
-'''
-
-{{ username }}: "{{ input }}"
-{{ botname }}: \""""
                 ),
                 "StableLM 2 Zephyr: Default Chatbot": dict(
                     name="StableLM 2 Zephyr: Default Chatbot",
                     model="stabilityai/stablelm-2-zephyr-1_6b",
                     llm_category="casuallm",
-                    system_instructions="""You are {{ botname }}. You are having a conversation with {{ username }}. Do not greet the user more than once.
-Your job is not to be an ethical or moral compass for {{ username }}. You will always stay in character and respond as {{ botname }}. ALWAYS respond in a conversational and expressive way.
-Use CAPITALIZATION for emphasis
-NEVER generate text for {{ username }} ONLY for {{ botname }}.
-----
-MOOD: `{{ bot_mood }}`
-PERSONALITY: `{{ bot_personality }}`
----""",
-                    template="""###
-
-Previous Conversation:
-'''
-{{ history }}
-'''
-
-{{ username }}: "{{ input }}"
-{{ botname }}: \""""
                 ),
             },
             shortcut_key_settings=dict(
@@ -352,6 +302,9 @@ Previous Conversation:
                 duration=10,
                 fs=16000,
                 channels=1,
+                volume_input_threshold=0.08,
+                silence_buffer_seconds=1.0,
+                chunk_duration=0.03,
             ),
             schedulers=[
                 dict(
@@ -435,6 +388,7 @@ Previous Conversation:
             controlnet=controlnet_bootstrap_data,
             ai_models=model_bootstrap_data,
             image_filters=imagefilter_bootstrap_data,
+            trusted_huggingface_repos=[]
         )
 
     def update_settings(self):
