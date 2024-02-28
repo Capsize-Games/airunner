@@ -96,7 +96,6 @@ class AIRunnerAgent(QObject, MediatorMixin):
                 f"Current Time: {current_time}",
                 f"Current Timezone: {current_timezone}"
             ]
-            print(system_prompt)
         elif action == LLMActionType.ANALYZE_VISION_HISTORY:
             vision_history = vision_history[-10:] if len(vision_history) > 10 else vision_history
             system_prompt = [

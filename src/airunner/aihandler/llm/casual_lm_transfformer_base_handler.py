@@ -188,14 +188,14 @@ class CasualLMTransformerBaseHandler(TokenizerHandler):
         self.streamer = TextIteratorStreamer(self.tokenizer)
 
     def load_llm(self):
-        self.logger.info("Loading RAG")
+        self.logger.info("Loading LLM")
         self.llm = hf_pipeline(
             task="text-generation",
             model=self.model,
-            tokenizer=self.tokenizer,
+            tokenizer=self.tokenizer if self.is_mistral else self.tokenizer_path,
             batch_size=self.batch_size,
             use_fast=True,
-            **dict(),
+            trust_remote_code=self.model_path in self.settings["trusted_huggingface_repos"]
         )
 
     def do_generate(self):
