@@ -1,3 +1,5 @@
+import base64
+import io
 import math
 import os
 import sys
@@ -532,3 +534,9 @@ def snap_to_grid(x: int, y: int, use_floor: bool = True):
             y = round(y / cell_size) * cell_size
 
     return x, y
+
+
+def convert_base64_to_image(base_64_image) -> Image:
+    decoded = base64.b64decode(base_64_image)
+    bytes_ = io.BytesIO(decoded)
+    return Image.open(bytes_)

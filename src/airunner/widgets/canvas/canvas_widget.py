@@ -15,7 +15,7 @@ from airunner.cursors.circle_brush import CircleCursor
 from airunner.enums import SignalCode, ServiceCode, CanvasToolName, GeneratorSection
 from airunner.service_locator import ServiceLocator
 from airunner.settings import AVAILABLE_IMAGE_FILTERS
-from airunner.utils import apply_opacity_to_image
+from airunner.utils import apply_opacity_to_image, convert_base64_to_image
 from airunner.widgets.base_widget import BaseWidget
 from airunner.widgets.canvas.clipboard_handler import ClipboardHandler
 from airunner.widgets.canvas.custom_scene import CustomScene
@@ -160,10 +160,7 @@ class CanvasWidget(BaseWidget):
     def current_active_image(self) -> Image:
         layer = self.current_layer
         base_64_image = layer["base_64_image"]
-        try:
-            return Image.open(io.BytesIO(base64.b64decode(base_64_image)))
-        except PIL.UnidentifiedImageError:
-            return None
+        return convert_base64_to_image(base_64_image)
 
     def set_current_active_image(self, value: Image):
         self.add_image_to_current_layer(value)
@@ -327,13 +324,18 @@ class CanvasWidget(BaseWidget):
     def current_image(self):
         image = None
         try:
-            layer = self.settings["layers"][self.settings["current_layer_index"]]
-            base_64_image = layer["base_64_image"]
-            image = Image.open(io.BytesIO(base64.b64decode(base_64_image)))
-            image = image.convert("RGBA")
+            image = self.get_service(ServiceCode.GET_IMAGE_FROM_LAYER)()
         except IndexError:
             pass
         return image
+
+    def current_line_image(self):
+        line_image = None
+        try:
+            line_image = self.get_service(ServiceCode.GET_LINE_IMAGE_FROM_LAYER)()
+        except IndexError:
+            pass
+        return line_image
 
     def handle_resize_canvas(self):
         self.do_resize_canvas()
