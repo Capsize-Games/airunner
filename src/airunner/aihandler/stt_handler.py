@@ -11,9 +11,13 @@ from airunner.enums import SignalCode
 class STTHandler(BaseHandler):
     listening = False
 
-    def on_process_audio(self, audio_data):
-        fs = self.settings["stt_settings"]["fs"]
-        inputs = np.squeeze(audio_data)
+    def on_process_audio(self, audio_data: bytes):
+        fs = 16000
+        # Convert the byte string to a float32 array
+        inputs = np.frombuffer(audio_data, dtype=np.int16)
+        inputs = inputs.astype(np.float32) / 32767.0
+
+        # Extract features from the audio data
         inputs = self.feature_extractor(inputs, sampling_rate=fs, return_tensors="pt")
         inputs = inputs.to(self.model.device)
         transcription = self.run(inputs)

@@ -133,7 +133,7 @@ class ChatPromptWidget(BaseWidget):
 
         llm_generator_settings = self.settings["llm_generator_settings"]
 
-        parsed_template = parse_template(prompt_template)
+        #parsed_template = parse_template(prompt_template)
 
         current_bot = self.settings["llm_generator_settings"]["saved_chatbots"][self.settings["llm_generator_settings"]["current_chatbot"]]
         self.emit(
@@ -157,7 +157,7 @@ class ChatPromptWidget(BaseWidget):
                     "dtype": llm_generator_settings["dtype"],
                     "use_gpu": llm_generator_settings["use_gpu"],
                     "request_type": "image_caption_generator",
-                    "template": parsed_template,
+                    "template": "",
                     "hf_api_key_read_key": self.settings["hf_api_key_read_key"],
                     "parameters": {
                         "override_parameters": self.settings["llm_generator_settings"]["override_parameters"],
