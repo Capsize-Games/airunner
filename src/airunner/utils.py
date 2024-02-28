@@ -475,7 +475,7 @@ def parse_template(template: dict) -> str:
         if model == "mistralai/Mistral-7B-Instruct-v0.2":
             parsed_template = "\n".join((
                 "[INST]<<SYS>>",
-                system_instructions,# + "\nYou must say everything in Japanese with Japanese characters.",
+                system_instructions,
                 "<</SYS>>",
                 template,
                 "[/INST]"
