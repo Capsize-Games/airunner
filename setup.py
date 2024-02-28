@@ -60,7 +60,8 @@ setup(
         "sounddevice==0.4.6",
         "datasets==2.17.1",
         "sentence_transformers==2.4.0",
-        "inflect==7.0.0"
+        "inflect==7.0.0",
+        "tiktoken==0.6.0"
     ],
     dependency_links=[]
 )
