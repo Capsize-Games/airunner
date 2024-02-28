@@ -3,7 +3,6 @@ import io
 from functools import partial
 from typing import Optional
 
-import PIL
 from PIL import Image, ImageFilter
 from PIL.ImageQt import ImageQt
 from PyQt6 import QtWidgets
