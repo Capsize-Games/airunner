@@ -48,7 +48,7 @@ class TranslationPreferencesWidget(BaseWidget):
         self.ui.translation_model_combobox.addItems(TRANSLATION_MODELS)
         for language in Language:
             if language.value == self.settings["translation_settings"]["language"]:
-                self.ui.translation_model_combobox.setCurrentText(language.translation_model)
+                self.ui.translation_model_combobox.setCurrentText(self.settings["translation_settings"]["translation_model"])
                 break
         self.ui.translation_model_combobox.setCurrentText(self.settings["translation_settings"]["translation_model"])
         self.ui.translation_model_combobox.blockSignals(False)
