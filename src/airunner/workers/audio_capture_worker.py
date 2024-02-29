@@ -27,6 +27,14 @@ class AudioCaptureWorker(Worker):
         self.volume_input_threshold = stt_settings["volume_input_threshold"]  # threshold for volume input
         self.silence_buffer_seconds = stt_settings["silence_buffer_seconds"]  # in seconds
         self.update_properties()
+        self.register(
+            SignalCode.STT_STOP_CAPTURE_SIGNAL,
+            self.stop_listening
+        )
+        self.register(
+            SignalCode.STT_START_CAPTURE_SIGNAL,
+            self.start_listening
+        )
 
     def update_properties(self):
         stt_settings = self.settings["stt_settings"]
@@ -39,7 +47,8 @@ class AudioCaptureWorker(Worker):
     def start(self):
         self.logger.info("Starting")
         self.running = True
-        self.start_listening()
+        if self.settings["stt_enabled"]:
+            self.start_listening()
         while self.running:
             while self.listening and self.running:
                 chunk = sd.rec(
