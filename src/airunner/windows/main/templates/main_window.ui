@@ -850,8 +850,8 @@
                           <rect>
                            <x>0</x>
                            <y>0</y>
-                           <width>371</width>
-                           <height>388</height>
+                           <width>84</width>
+                           <height>44</height>
                           </rect>
                          </property>
                          <layout class="QGridLayout" name="gridLayout_9">
@@ -1763,7 +1763,6 @@
     <addaction name="actionImport"/>
     <addaction name="actionExport"/>
     <addaction name="separator"/>
-    <addaction name="actionQuick_Export"/>
    </widget>
    <widget class="QMenu" name="menuView">
     <property name="title">
@@ -2650,22 +2649,6 @@
    </hints>
   </connection>
   <connection>
-   <sender>actionQuick_Export</sender>
-   <signal>triggered()</signal>
-   <receiver>MainWindow</receiver>
-   <slot>action_quick_export_image_triggered()</slot>
-   <hints>
-    <hint type="sourcelabel">
-     <x>-1</x>
-     <y>-1</y>
-    </hint>
-    <hint type="destinationlabel">
-     <x>442</x>
-     <y>432</y>
-    </hint>
-   </hints>
-  </connection>
-  <connection>
    <sender>actionQuit</sender>
    <signal>triggered()</signal>
    <receiver>MainWindow</receiver>
@@ -3426,7 +3409,6 @@
   <slot>action_undo_triggered()</slot>
   <slot>action_redo_triggered()</slot>
   <slot>action_new_document_triggered()</slot>
-  <slot>action_quick_export_image_triggered()</slot>
   <slot>tool_tab_index_changed(int)</slot>
   <slot>bottom_panel_tab_index_changed(int)</slot>
   <slot>right_splitter_moved(int,int)</slot>
