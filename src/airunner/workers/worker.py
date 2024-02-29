@@ -118,9 +118,21 @@ class Worker(QObject, MediatorMixin):
         raise NotImplementedError
 
     def add_to_queue(self, message):
+        if (
+            type(message) is dict and
+            "options" in message and
+            message["options"]["empty_queue"]
+        ):
+            self.empty_queue()
+
         self.items[self.current_index] = message
         self.queue.put(self.current_index)
         self.current_index += 1
+
+    def empty_queue(self):
+        self.queue = queue.Queue()
+        self.items = {}
+        self.current_index = 0
     
     def stop(self):
         self.logger.info("Stopping")

@@ -42,7 +42,6 @@ class SDRequest(
         prompt = override_data.get("prompt", settings["generator_settings"]["prompt"])
         negative_prompt = override_data.get("negative_prompt", settings["generator_settings"]["negative_prompt"])
         steps = int(override_data.get("steps", settings["generator_settings"]["steps"]))
-        strength = float(override_data.get("strength", settings["generator_settings"]["strength"] / 100.0))
         image_guidance_scale = float(override_data.get("image_guidance_scale", settings["generator_settings"][
             "image_guidance_scale"] / 10000.0 * 100.0))
         scale = float(override_data.get("scale", settings["generator_settings"]["scale"] / 100))
@@ -59,7 +58,8 @@ class SDRequest(
         enable_controlnet = bool(
             override_data.get("enable_controlnet", settings["generator_settings"]["enable_controlnet"]))
         controlnet = override_data.get("controlnet", settings["generator_settings"]["controlnet_image_settings"]["controlnet"])
-        controlnet_conditioning_scale = float(override_data.get("controlnet_conditioning_scale", settings["generator_settings"]["controlnet_image_settings"]["guidance_scale"]))
+        controlnet_conditioning_scale = float(override_data.get("controlnet_conditioning_scale", self.settings["generator_settings"]["controlnet_conditioning_scale"] / 100.0))
+        strength = 1.1 - controlnet_conditioning_scale #float(override_data.get("strength", settings["generator_settings"]["strength"] / 100.0))
         width = int(override_data.get("width", settings["working_width"]))
         height = int(override_data.get("height", settings["working_height"]))
         clip_skip = int(override_data.get("clip_skip", settings["generator_settings"]["clip_skip"]))
@@ -107,6 +107,7 @@ class SDRequest(
 
         options = {
             "sd_request": True,
+            "empty_queue": override_data.get("empty_queue", False),
             "prompt": prompt,
             "negative_prompt": negative_prompt,
             "steps": steps,
