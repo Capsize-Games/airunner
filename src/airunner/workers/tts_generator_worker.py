@@ -27,7 +27,7 @@ class TTSGeneratorWorker(Worker):
         text = "".join(self.tokens).strip()
 
         # Split text at punctuation
-        punctuation = [".", "?", "!"]
+        punctuation = [".", "?", "!", ",", ";", ":"]
         for p in punctuation:
             if p in text:
                 split_text = text.split(p, 1)  # Split at the first occurrence of punctuation
