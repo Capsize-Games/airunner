@@ -329,11 +329,19 @@ class MainWindow(
         self.new_document()
         self.emit(SignalCode.CANVAS_CLEAR)
 
-    def action_quick_export_image_triggered(self):
-        print("TODO: remove this")
-
     def action_export_image_triggered(self):
-        self.export_image()
+        image = ServiceLocator.get(ServiceCode.GET_IMAGE_FROM_LAYER)()
+        if image:
+            file_path, _ = QFileDialog.getSaveFileName(
+                self,
+                "Export Image",
+                "",
+                "Image Files (*.png *.jpg *.jpeg)"
+            )
+            if file_path == "":
+                return
+            self.image_path = os.path.dirname(file_path)
+            image.save(file_path)
 
     def action_import_image_triggered(self):
         self.import_image()
@@ -929,26 +937,6 @@ class MainWindow(
         )
         if file_path == "":
             return
-
-    def export_image(self, image=None):
-        file_path, _ = self.display_file_export_dialog()
-        if file_path == "":
-            return
-
-    def choose_image_export_path(self):
-        # display a dialog to choose the export path
-        path = QFileDialog.getExistingDirectory(None, "Select Directory")
-        if path == "":
-            return
-        self.image_path = path
-
-    def display_file_export_dialog(self):
-        return QFileDialog.getSaveFileName(
-            self,
-            "Export Image",
-            "",
-            "Image Files (*.png *.jpg *.jpeg)"
-        )
 
     def display_import_image_dialog(self, label="Import Image", directory=""):
         return QFileDialog.getOpenFileName(
