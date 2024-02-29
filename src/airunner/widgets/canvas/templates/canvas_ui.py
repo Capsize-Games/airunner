@@ -12,7 +12,7 @@ from PyQt6 import QtCore, QtGui, QtWidgets
 class Ui_canvas(object):
     def setupUi(self, canvas):
         canvas.setObjectName("canvas")
-        canvas.resize(323, 311)
+        canvas.resize(613, 564)
         sizePolicy = QtWidgets.QSizePolicy(QtWidgets.QSizePolicy.Policy.Expanding, QtWidgets.QSizePolicy.Policy.Expanding)
         sizePolicy.setHorizontalStretch(0)
         sizePolicy.setVerticalStretch(0)
@@ -35,11 +35,19 @@ class Ui_canvas(object):
         self.central_widget.setObjectName("central_widget")
         self.gridLayout_2 = QtWidgets.QGridLayout(self.central_widget)
         self.gridLayout_2.setObjectName("gridLayout_2")
+        self.horizontalLayout = QtWidgets.QHBoxLayout()
+        self.horizontalLayout.setObjectName("horizontalLayout")
+        self.line_container = CustomGraphicsView(parent=self.central_widget)
+        self.line_container.setVerticalScrollBarPolicy(QtCore.Qt.ScrollBarPolicy.ScrollBarAlwaysOff)
+        self.line_container.setHorizontalScrollBarPolicy(QtCore.Qt.ScrollBarPolicy.ScrollBarAlwaysOff)
+        self.line_container.setObjectName("line_container")
+        self.horizontalLayout.addWidget(self.line_container)
         self.canvas_container = CustomGraphicsView(parent=self.central_widget)
         self.canvas_container.setVerticalScrollBarPolicy(QtCore.Qt.ScrollBarPolicy.ScrollBarAlwaysOff)
         self.canvas_container.setHorizontalScrollBarPolicy(QtCore.Qt.ScrollBarPolicy.ScrollBarAlwaysOff)
         self.canvas_container.setObjectName("canvas_container")
-        self.gridLayout_2.addWidget(self.canvas_container, 0, 0, 1, 1)
+        self.horizontalLayout.addWidget(self.canvas_container)
+        self.gridLayout_2.addLayout(self.horizontalLayout, 0, 0, 1, 1)
         self.canvas_position = QtWidgets.QLabel(parent=self.central_widget)
         sizePolicy = QtWidgets.QSizePolicy(QtWidgets.QSizePolicy.Policy.Preferred, QtWidgets.QSizePolicy.Policy.Maximum)
         sizePolicy.setHorizontalStretch(0)
@@ -61,5 +69,7 @@ class Ui_canvas(object):
     def retranslateUi(self, canvas):
         _translate = QtCore.QCoreApplication.translate
         canvas.setWindowTitle(_translate("canvas", "Form"))
+        self.line_container.setProperty("canvas_type", _translate("canvas", "brush"))
+        self.canvas_container.setProperty("canvas_type", _translate("canvas", "image"))
         self.canvas_position.setText(_translate("canvas", "TextLabel"))
 from airunner.widgets.canvas.custom_view import CustomGraphicsView
