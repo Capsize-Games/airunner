@@ -1,5 +1,4 @@
-import torch
-from transformers import BlipForConditionalGeneration, BlipProcessor, AutoProcessor, AutoModel
+from transformers import BlipForConditionalGeneration, BlipProcessor, BlipForQuestionAnswering, AutoProcessor, AutoModel
 from airunner.aihandler.llm.transformer_base_handler import TransformerBaseHandler
 from airunner.utils import clear_memory
 
@@ -9,21 +8,21 @@ class VisualQATransformerBaseHandler(TransformerBaseHandler):
     Visual QA Transformer Base Handler.
     Uses a processor and model to generate information about a given image.
     """
-    auto_class_ = BlipForConditionalGeneration
+    auto_class_ = BlipForQuestionAnswering
 
     def __init__(self, *args, **kwargs):
         super().__init__(*args, **kwargs)
         self.prompt = "This is an image of"
-        self.model_path = "Salesforce/blip-image-captioning-large"
+        self.model_path = "Salesforce/blip-vqa-base"
         self.processor = None
         self.do_sample = False
         self.num_beams = 1
         self.max_length = 256
         self.min_length = 1
-        self.top_p = 0.9
-        self.repetition_penalty = 1.5
+        self.top_p = 1.0
+        self.repetition_penalty = 1.0
         self.length_penalty = 1.0
-        self.temperature = 1
+        self.temperature = 0.9
         self.processed_vision_history = []
         self.use_saved_model = False
 
@@ -85,7 +84,7 @@ class VisualQATransformerBaseHandler(TransformerBaseHandler):
         image = self.image.convert("RGB")
         inputs = self.processor(
             images=image,
-            text="This is an image of",
+            text="What is happening in this image?",
             return_tensors="pt"
         )
         # inputs = self.processor("This is an image of", [image], self.model, max_crops=100, num_tokens=728)
