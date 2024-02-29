@@ -93,7 +93,7 @@
       <string notr="true">handle_value_change</string>
      </property>
      <property name="settings_property" stdset="0">
-      <string notr="true">strength</string>
+      <string notr="true">generator_settings.strength</string>
      </property>
      <property name="display_as_float" stdset="0">
       <bool>false</bool>
@@ -136,7 +136,7 @@
       <string notr="true">handle_value_change</string>
      </property>
      <property name="settings_property" stdset="0">
-      <string notr="true">controlnet_conditioning_scale</string>
+      <string notr="true">generator_settings.controlnet_conditioning_scale</string>
      </property>
      <property name="display_as_float" stdset="0">
       <bool>false</bool>
