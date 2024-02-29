@@ -49,7 +49,7 @@ class CasualLMTransformerBaseHandler(TokenizerHandler):
 
     @property
     def is_mistral(self) -> bool:
-        return "mistral" in self.model_path.lower()
+        return "mistral" in self.model_path.lower() or "HuggingFaceH4/zephyr-7b-alpha" in self.model_path
 
     @property
     def chat_template(self):
@@ -58,9 +58,9 @@ class CasualLMTransformerBaseHandler(TokenizerHandler):
             "{% if message['role'] == 'system' %}"
             "{{ '[INST] <<SYS>>' + message['content'] + ' <</SYS>>[/INST]' }}"
             "{% elif message['role'] == 'user' %}"
-            "{{ '[INST]{{ username }}: ' + message['content'] + ' [/INST]' }}"
+            "{{ '[INST]' + message['content'] + ' [/INST]' }}"
             "{% elif message['role'] == 'assistant' %}"
-            "{{ botname }}: {{ message['content'] + eos_token + ' ' }}"
+            "{{ message['content'] + eos_token + ' ' }}"
             "{% endif %}"
             "{% endfor %}"
         ) if self.is_mistral else None

@@ -338,7 +338,7 @@ class Ui_MainWindow(object):
         self.advanced_settings.setWidgetResizable(True)
         self.advanced_settings.setObjectName("advanced_settings")
         self.scrollAreaWidgetContents_2 = QtWidgets.QWidget()
-        self.scrollAreaWidgetContents_2.setGeometry(QtCore.QRect(0, 0, 371, 388))
+        self.scrollAreaWidgetContents_2.setGeometry(QtCore.QRect(0, 0, 84, 44))
         self.scrollAreaWidgetContents_2.setObjectName("scrollAreaWidgetContents_2")
         self.gridLayout_9 = QtWidgets.QGridLayout(self.scrollAreaWidgetContents_2)
         self.gridLayout_9.setObjectName("gridLayout_9")
@@ -958,7 +958,6 @@ class Ui_MainWindow(object):
         self.menuImage.addAction(self.actionImport)
         self.menuImage.addAction(self.actionExport)
         self.menuImage.addSeparator()
-        self.menuImage.addAction(self.actionQuick_Export)
         self.menuBrowse_Models_Path.addAction(self.actionTxt2img_Img2img_Models)
         self.menuBrowse_Models_Path.addAction(self.actionInpaint_Outpaint_Models)
         self.menuBrowse_Models_Path.addAction(self.actionDepth2img_Models)
@@ -998,7 +997,6 @@ class Ui_MainWindow(object):
         self.actionExport.triggered.connect(MainWindow.action_export_image_triggered) # type: ignore
         self.actionNew.triggered.connect(MainWindow.action_new_document_triggered) # type: ignore
         self.actionImport.triggered.connect(MainWindow.action_import_image_triggered) # type: ignore
-        self.actionQuick_Export.triggered.connect(MainWindow.action_quick_export_image_triggered) # type: ignore
         self.actionQuit.triggered.connect(MainWindow.action_quit_triggered) # type: ignore
         self.actionPaste.triggered.connect(MainWindow.action_paste_image_triggered) # type: ignore
         self.actionCopy.triggered.connect(MainWindow.action_copy_image_triggered) # type: ignore
