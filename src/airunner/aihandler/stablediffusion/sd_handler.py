@@ -3,9 +3,7 @@ import base64
 import re
 import traceback
 from pytorch_lightning import seed_everything
-from io import BytesIO
 from typing import List
-import PIL
 import imageio
 import numpy as np
 import requests
@@ -18,16 +16,16 @@ from diffusers.pipelines.stable_diffusion.convert_from_ckpt import \
     download_from_original_stable_diffusion_ckpt
 from diffusers.pipelines.text_to_video_synthesis.pipeline_text_to_video_zero import CrossFrameAttnProcessor
 from diffusers.utils.torch_utils import randn_tensor
-from torchvision import transforms
 from diffusers import StableDiffusionPipeline, StableDiffusionXLPipeline, AutoPipelineForText2Image, \
-    StableDiffusionDepth2ImgPipeline, AutoPipelineForInpainting, StableDiffusionInstructPix2PixPipeline, ControlNetModel
+    StableDiffusionDepth2ImgPipeline, AutoPipelineForInpainting, StableDiffusionInstructPix2PixPipeline, \
+    ControlNetModel, StableDiffusionImg2ImgPipeline
 from diffusers.pipelines.stable_diffusion import StableDiffusionSafetyChecker
 from diffusers import StableDiffusionControlNetPipeline, StableDiffusionControlNetImg2ImgPipeline, StableDiffusionControlNetInpaintPipeline, AsymmetricAutoencoderKL
 from diffusers import ConsistencyDecoderVAE
 from transformers import AutoFeatureExtractor
 from airunner.aihandler.base_handler import BaseHandler
 
-from airunner.enums import FilterType, HandlerType, SignalCode
+from airunner.enums import FilterType, HandlerType, SignalCode, Scheduler
 from airunner.aihandler.mixins.compel_mixin import CompelMixin
 from airunner.aihandler.mixins.embedding_mixin import EmbeddingMixin
 from airunner.aihandler.mixins.lora_mixin import LoraMixin
@@ -36,6 +34,7 @@ from airunner.aihandler.mixins.merge_mixin import MergeMixin
 from airunner.aihandler.mixins.scheduler_mixin import SchedulerMixin
 from airunner.aihandler.mixins.txttovideo_mixin import TexttovideoMixin
 from airunner.aihandler.settings import AIRUNNER_ENVIRONMENT
+from airunner.settings import CONFIG_FILES
 from airunner.windows.main.layer_mixin import LayerMixin
 from airunner.windows.main.lora_mixin import LoraMixin as LoraDataMixin
 from airunner.windows.main.embedding_mixin import EmbeddingMixin as EmbeddingDataMixin
@@ -1027,11 +1026,11 @@ class SDHandler(
 
         args["clip_skip"] = self.clip_skip
 
-
         if self.action == "pix2pix":
             args["image_guidance_scale"] = self.image_guidance_scale
             args["generator"] = self.generator()
             del args["latents"]
+
         with torch.inference_mode():
             for n in range(self.n_samples):
                 return self.pipe(**args)
@@ -1520,6 +1519,21 @@ class SDHandler(
         clear_memory()
         self.reset_applied_memory_settings()
 
+    def pipeline_class(self):
+        if self.action == "depth2img":
+            pipeline_classname_ = StableDiffusionDepth2ImgPipeline
+        elif self.action == "outpaint":
+            pipeline_classname_ = AutoPipelineForInpainting
+        elif self.action == "pix2pix":
+            pipeline_classname_ = StableDiffusionInstructPix2PixPipeline
+        elif self.enable_controlnet and not self.is_vid2vid:
+            pipeline_classname_ = StableDiffusionControlNetPipeline
+        elif self.is_img2img:
+            pipeline_classname_ = StableDiffusionImg2ImgPipeline
+        else:
+            pipeline_classname_ = StableDiffusionPipeline
+        return pipeline_classname_
+
     def load_model(self):
         self.logger.info("Loading model")
         self.torch_compile_applied = False
@@ -1565,16 +1579,7 @@ class SDHandler(
                 if scheduler:
                     kwargs["scheduler"] = scheduler
 
-                if self.action == "depth2img":
-                    pipeline_classname_ = StableDiffusionDepth2ImgPipeline
-                elif self.action == "outpaint":
-                    pipeline_classname_ = AutoPipelineForInpainting
-                elif self.action == "pix2pix":
-                    pipeline_classname_ = StableDiffusionInstructPix2PixPipeline
-                elif self.enable_controlnet and not self.is_vid2vid:
-                    pipeline_classname_ = StableDiffusionControlNetPipeline
-                else:
-                    pipeline_classname_ = StableDiffusionPipeline
+                pipeline_classname_ = self.pipeline_class()
 
                 self.pipe = pipeline_classname_.from_pretrained(
                     self.model_path,
@@ -1633,24 +1638,22 @@ class SDHandler(
     def download_from_original_stable_diffusion_ckpt(self, path, local_files_only=None):
         local_files_only = self.local_files_only if local_files_only is None else local_files_only
         pipe = None
+        kwargs = {
+            "checkpoint_path_or_dict": path,
+            "device": self.device,
+            "scheduler_type": Scheduler.DDIM.value.lower(),
+            "from_safetensors": self.is_safetensors,
+            "local_files_only": local_files_only,
+            "extract_ema": False,
+            "config_files": CONFIG_FILES,
+            "pipeline_class": self.pipeline_class(),
+        }
+        if self.enable_controlnet:
+            kwargs["controlnet"] = self.controlnet()
         try:
             pipe = download_from_original_stable_diffusion_ckpt(
-                checkpoint_path_or_dict=path,
-                device=self.device,
-                scheduler_type="ddim",
-                from_safetensors=self.is_safetensors,
-                local_files_only=local_files_only,
-                extract_ema=False,
-                #vae=self.load_vae(),
-                config_files={
-                    "v1": "v1.yaml",
-                    "v2": "v2.yaml",
-                    "xl": "sd_xl_base.yaml",
-                    "xl_refiner": "sd_xl_refiner.yaml"
-                }
+                **kwargs
             )
-            if self.enable_controlnet:
-                pipe = self.load_controlnet_from_ckpt(pipe)
             old_model_path = self.current_model
             self.current_model = path
             pipe.scheduler = self.load_scheduler(config=pipe.scheduler.config)

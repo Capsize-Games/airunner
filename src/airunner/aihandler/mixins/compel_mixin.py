@@ -26,7 +26,7 @@ class CompelMixin:
                     truncate_long_prompts=False,
                     textual_inversion_manager=textual_inversion_manager,
                     dtype_for_device_getter=lambda _x: self.data_type,
-                    device=self.device,
+                    device=self.pipe.device
                 )
             return self._compel_proc
         except Exception as e:

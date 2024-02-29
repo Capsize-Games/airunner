@@ -8,7 +8,7 @@ from PyQt6.QtGui import QPen, QPixmap, QPainter
 from PyQt6.QtWidgets import QGraphicsScene, QGraphicsPixmapItem
 from PyQt6.QtGui import QColor
 
-from airunner.enums import SignalCode, CanvasToolName
+from airunner.enums import SignalCode, CanvasToolName, CanvasType
 from airunner.mediator_mixin import MediatorMixin
 from airunner.service_locator import ServiceLocator
 from airunner.utils import snap_to_grid
@@ -24,9 +24,6 @@ class CustomScene(
 
         self._target_size = None
         self._do_resize = False
-        self.path = None
-        self._is_drawing = False
-        self._is_erasing = False
 
         # Create the QImage with the size of the parent widget
         self.image = QImage(
@@ -52,28 +49,6 @@ class CustomScene(
 
         self.register(SignalCode.SCENE_RESIZE_SIGNAL, self.resize)
 
-        brush_settings = self.settings["brush_settings"]
-        brush_color = brush_settings["primary_color"]
-        self._brush_color = QColor(brush_color)
-        self.pen = QPen(
-            self._brush_color,
-            brush_settings["size"],
-            Qt.PenStyle.SolidLine,
-            Qt.PenCapStyle.RoundCap
-        )
-
-        self.register(
-            SignalCode.BRUSH_COLOR_CHANGED_SIGNAL,
-            self.handle_brush_color_changed
-        )
-
-    @property
-    def is_brush_or_eraser(self):
-        return self.settings["current_tool"] in (
-            CanvasToolName.BRUSH,
-            CanvasToolName.ERASER
-        )
-
     def clear_selection(self):
         self.selection_start_pos = None
         self.selection_stop_pos = None
@@ -92,15 +67,6 @@ class CustomScene(
         if self._do_resize:
             self._do_resize = False
             self.do_resize()
-
-        if self.painter is not None and self.painter.isActive():
-            self.painter.drawImage(0, 0, self.image)
-
-            if self.last_pos:
-                if self.settings["current_tool"] is CanvasToolName.BRUSH:
-                    self.draw_at(self.painter)
-                elif self.settings["current_tool"] is CanvasToolName.ERASER:
-                    self.erase_at(self.painter)
 
         super().drawBackground(painter, rect)
 
@@ -134,8 +100,131 @@ class CustomScene(
             pixmap = QPixmap.fromImage(image)
             self.item.setPixmap(pixmap)
 
+    def wheelEvent(self, event):
+        # Calculate the zoom factor
+        zoom_in_factor = self.settings["grid_settings"]["zoom_in_step"]
+        zoom_out_factor = -self.settings["grid_settings"]["zoom_out_step"]
+
+        # Use delta instead of angleDelta
+        if event.delta() > 0:
+            zoom_factor = zoom_in_factor
+        else:
+            zoom_factor = zoom_out_factor
+
+        # Update zoom level
+        zoom_level = self.settings["grid_settings"]["zoom_level"]
+        zoom_level += zoom_factor
+        if zoom_level < 0.1:
+            zoom_level = 0.1
+        settings = self.settings
+        settings["grid_settings"]["zoom_level"] = zoom_level
+        self.settings = settings
+
+        self.emit(SignalCode.CANVAS_ZOOM_LEVEL_CHANGED)
+
+    def handle_mouse_event(self, event, is_press_event):
+        if event.button() == Qt.MouseButton.LeftButton:
+            view = self.views()[0]
+            pos = view.mapFromScene(event.scenePos())
+            if (
+                self.settings["grid_settings"]["snap_to_grid"] and
+                self.settings["current_tool"] == CanvasToolName.SELECTION
+            ):
+                x, y = snap_to_grid(pos.x(), pos.y(), False)
+                pos = QPoint(x, y)
+                if is_press_event:
+                    self.selection_stop_pos = None
+                    self.selection_start_pos = QPoint(pos.x(), pos.y())
+                else:
+                    self.selection_stop_pos = QPoint(pos.x(), pos.y())
+                self.emit(SignalCode.APPLICATION_ACTIVE_GRID_AREA_UPDATED)
+                self.emit(SignalCode.CANVAS_DO_DRAW_SELECTION_AREA_SIGNAL)
+
+    def handle_left_mouse_press(self, event):
+        self.start_pos = event.scenePos()
+        self.handle_mouse_event(event, True)
+
+    def handle_left_mouse_release(self, event):
+        self.handle_mouse_event(event, False)
+
+    def mousePressEvent(self, event):
+        self.handle_left_mouse_press(event)
+        self.handle_cursor(event)
+        self.last_pos = event.scenePos()
+        self.update()
+
+    def mouseReleaseEvent(self, event):
+        self.handle_left_mouse_release(event)
+        super(CustomScene, self).mouseReleaseEvent(event)
+        self.handle_cursor(event)
+
+    def handle_cursor(self, event):
+        self.emit(
+            SignalCode.CANVAS_UPDATE_CURSOR,
+            event
+        )
+
+    def event(self, event):
+        if type(event) == QEnterEvent:
+            self.handle_cursor(event)
+        return super(CustomScene, self).event(event)
+
+    def mouseMoveEvent(self, event):
+        self.handle_cursor(event)
+    
+    def leaveEvent(self, event):
+        self.setCursor(Qt.ArrowCursor)
+        super(CustomScene, self).leaveEvent(event)
+
+    @property
+    def settings(self):
+        return ServiceLocator.get("get_settings")()
+
+    @settings.setter
+    def settings(self, value):
+        ServiceLocator.get("set_settings")(value)
+
+
+class BrushScene(CustomScene):
+    def __init__(self, size):
+        super().__init__(size)
+        brush_settings = self.settings["brush_settings"]
+        brush_color = brush_settings["primary_color"]
+        self._brush_color = QColor(brush_color)
+        self.pen = QPen(
+            self._brush_color,
+            brush_settings["size"],
+            Qt.PenStyle.SolidLine,
+            Qt.PenCapStyle.RoundCap
+        )
+        self.path = None
+        self._is_drawing = False
+        self._is_erasing = False
+        self.register(
+            SignalCode.BRUSH_COLOR_CHANGED_SIGNAL,
+            self.handle_brush_color_changed
+        )
+
+    @property
+    def is_brush_or_eraser(self):
+        return self.settings["current_tool"] in (
+            CanvasToolName.BRUSH,
+            CanvasToolName.ERASER
+        )
+
     def handle_brush_color_changed(self, color_name):
         self._brush_color = QColor(color_name)
+
+    def drawBackground(self, painter, rect):
+        if self.painter is not None and self.painter.isActive():
+            self.painter.drawImage(0, 0, self.image)
+
+            if self.last_pos:
+                if self.settings["current_tool"] is CanvasToolName.BRUSH:
+                    self.draw_at(self.painter)
+                elif self.settings["current_tool"] is CanvasToolName.ERASER:
+                    self.erase_at(self.painter)
+        super().drawBackground(painter, rect)
 
     def create_line(self, drawing=False, erasing=False, painter=None, color: QColor=None):
         if drawing and not self._is_drawing or erasing and not self._is_erasing:
@@ -204,105 +293,31 @@ class CustomScene(
             color=QColor(Qt.GlobalColor.transparent)
         )
 
-    def wheelEvent(self, event):
-        # Calculate the zoom factor
-        zoom_in_factor = self.settings["grid_settings"]["zoom_in_step"]
-        zoom_out_factor = -self.settings["grid_settings"]["zoom_out_step"]
-
-        # Use delta instead of angleDelta
-        if event.delta() > 0:
-            zoom_factor = zoom_in_factor
-        else:
-            zoom_factor = zoom_out_factor
-
-        # Update zoom level
-        zoom_level = self.settings["grid_settings"]["zoom_level"]
-        zoom_level += zoom_factor
-        if zoom_level < 0.1:
-            zoom_level = 0.1
-        settings = self.settings
-        settings["grid_settings"]["zoom_level"] = zoom_level
-        self.settings = settings
-
-        self.emit(SignalCode.CANVAS_ZOOM_LEVEL_CHANGED)
-
     def handle_mouse_event(self, event, is_press_event):
-        view = self.views()[0]
-        pos = view.mapFromScene(event.scenePos())
-        if event.button() == Qt.MouseButton.LeftButton:
-            if (
-                self.settings["grid_settings"]["snap_to_grid"] and
-                self.settings["current_tool"] == CanvasToolName.SELECTION
-            ):
-                x, y = snap_to_grid(pos.x(), pos.y(), False)
-                pos = QPoint(x, y)
-                if is_press_event:
-                    self.selection_stop_pos = None
-                    self.selection_start_pos = QPoint(pos.x(), pos.y())
-                else:
-                    self.selection_stop_pos = QPoint(pos.x(), pos.y())
-                self.emit(SignalCode.APPLICATION_ACTIVE_GRID_AREA_UPDATED)
-                self.emit(SignalCode.CANVAS_DO_DRAW_SELECTION_AREA_SIGNAL)
-
-    def handle_left_mouse_press(self, event):
-        self.handle_mouse_event(event, True)
-
-    def handle_left_mouse_release(self, event):
-        self.handle_mouse_event(event, False)
+        if (
+            event.button() == Qt.MouseButton.LeftButton and
+            self.is_brush_or_eraser and
+            not is_press_event
+        ):
+            self.emit(
+                SignalCode.GENERATE_IMAGE_FROM_IMAGE_SIGNAL,
+                self.image
+            )
 
     def mousePressEvent(self, event):
-        if event.button() == Qt.MouseButton.LeftButton:
-            self.handle_left_mouse_press(event)
-
+        self.handle_left_mouse_press(event)
         self.handle_cursor(event)
         if not self.is_brush_or_eraser:
-            super(CustomScene, self).mousePressEvent(event)
-            return
-
-        self.start_pos = event.scenePos()
-        self.last_pos = event.scenePos()
-        self.update()
+            super().mousePressEvent(event)
 
     def mouseReleaseEvent(self, event):
-        if event.button() == Qt.MouseButton.LeftButton:
-            self.handle_left_mouse_release(event)
-        super(CustomScene, self).mouseReleaseEvent(event)
-        self.handle_cursor(event)
-        self.last_pos = None
-        self.start_pos = None
+        super().mouseReleaseEvent(event)
         self._is_drawing = False
         self._is_erasing = False
-
-    def handle_cursor(self, event):
-        self.emit(
-            SignalCode.CANVAS_UPDATE_CURSOR,
-            event
-        )
-
-    def event(self, event):
-        if type(event) == QEnterEvent:
-            self.handle_cursor(event)
-        return super(CustomScene, self).event(event)
+        self.last_pos = None
+        self.start_pos = None
 
     def mouseMoveEvent(self, event):
-        self.handle_cursor(event)
-        if not self.is_brush_or_eraser:
-            super(CustomScene, self).mouseMoveEvent(event)
-            return
-        
-        # Update the last position
+        super().mouseMoveEvent(event)
         self.last_pos = event.scenePos()
-
         self.update()
-    
-    def leaveEvent(self, event):
-        self.setCursor(Qt.ArrowCursor)
-        super(CustomScene, self).leaveEvent(event)
-
-    @property
-    def settings(self):
-        return ServiceLocator.get("get_settings")()
-
-    @settings.setter
-    def settings(self, value):
-        ServiceLocator.get("set_settings")(value)
