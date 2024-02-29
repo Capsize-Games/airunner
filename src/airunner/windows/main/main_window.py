@@ -549,6 +549,10 @@ class MainWindow(
         new_settings = self.settings
         new_settings["stt_enabled"] = val
         self.settings = new_settings
+        if not val:
+            self.emit(SignalCode.STT_STOP_CAPTURE_SIGNAL)
+        else:
+            self.emit(SignalCode.STT_START_CAPTURE_SIGNAL)
 
     quitting = False
 
