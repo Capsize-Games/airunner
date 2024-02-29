@@ -91,7 +91,6 @@ class MainWindow(
     history = History()
 
     image_generated = pyqtSignal(bool)
-    controlnet_image_generated = pyqtSignal(bool)
     generator_tab_changed_signal = pyqtSignal()
     tab_section_changed_signal = pyqtSignal()
     load_image = pyqtSignal(str)
@@ -205,13 +204,9 @@ class MainWindow(
     def show_layers(self):
         self.emit(SignalCode.LAYERS_SHOW_SIGNAL)
 
-    def on_controlnet_image_generated_signal(self, response: dict):
-        self.handle_controlnet_image_generated(response)
-
     def __init__(self, *args, **kwargs):
         self.ui = Ui_MainWindow()
         self.update_popup = None
-        self.controlnet_image = None
         self._document_path = None
         self.prompt = None
         self.negative_prompt = None
@@ -751,7 +746,6 @@ class MainWindow(
         # self.automatic_filter_manager.register_filter(PixelFilter, base_size=256)
 
         self.initialize_window()
-        self.register(SignalCode.CONTROLNET_IMAGE_GENERATED_SIGNAL, self.on_controlnet_image_generated_signal)
         self.initialize_default_buttons()
         try:
             self.prompt_builder.process_prompt()
@@ -897,11 +891,6 @@ class MainWindow(
         self._document_name = "Untitled"
         self.set_window_title()
         self.current_filter = None
-
-    def handle_controlnet_image_generated(self, message):
-        self.controlnet_image = message["image"]
-        self.controlnet_image_generated.emit(True)
-        #self.generator_tab_widget.controlnet_settings_widget.handle_controlnet_image_generated()
 
     def video_handler(self, data):
         filename = data["video_filename"]
