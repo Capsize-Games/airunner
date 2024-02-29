@@ -20,6 +20,7 @@ class TransformerBaseHandler(BaseHandler):
         self.vocoder = None
         self.temperature = kwargs.get("temperature", 0.7)
         self.max_length = kwargs.get("max_length", 1000)
+        self.max_new_tokens = 200
         self.min_length = kwargs.get("min_length", 0)
         self.num_beams = kwargs.get("num_beams", 1)
         self.top_k = kwargs.get("top_k", 20)
@@ -267,7 +268,8 @@ class TransformerBaseHandler(BaseHandler):
         seed = parameters.get("seed", self.seed)
 
         kwargs = {
-            "max_length": max_length,
+            #"max_length": max_length,
+            "max_new_tokens": self.max_new_tokens,
             "min_length": min_length,
             "do_sample": do_sample,
             "early_stopping": early_stopping,
