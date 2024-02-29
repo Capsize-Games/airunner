@@ -1,4 +1,4 @@
-# Form implementation generated from reading ui file '/home/joe/Projects/imagetopixel/airunner/src/airunner/../../src/airunner/widgets/brush/templates/brush_widget.ui'
+# Form implementation generated from reading ui file '/home/joe/Projects/imagetopixel/airunner/src/airunner/widgets/brush/templates/brush_widget.ui'
 #
 # Created by: PyQt6 UI code generator 6.6.1
 #
@@ -41,7 +41,7 @@ class Ui_brush_widget(object):
         self.strength_slider.setProperty("spinbox_single_step", 1)
         self.strength_slider.setProperty("spinbox_page_step", 10)
         self.strength_slider.setProperty("slider_callback", "handle_value_change")
-        self.strength_slider.setProperty("settings_property", "strength")
+        self.strength_slider.setProperty("settings_property", "generator_settings.strength")
         self.strength_slider.setProperty("display_as_float", False)
         self.strength_slider.setObjectName("strength_slider")
         self.gridLayout.addWidget(self.strength_slider, 1, 0, 1, 1)
@@ -56,7 +56,7 @@ class Ui_brush_widget(object):
         self.controlnet_conditioning_scale.setProperty("spinbox_single_step", 1)
         self.controlnet_conditioning_scale.setProperty("spinbox_page_step", 10)
         self.controlnet_conditioning_scale.setProperty("slider_callback", "handle_value_change")
-        self.controlnet_conditioning_scale.setProperty("settings_property", "controlnet_conditioning_scale")
+        self.controlnet_conditioning_scale.setProperty("settings_property", "generator_settings.controlnet_conditioning_scale")
         self.controlnet_conditioning_scale.setProperty("display_as_float", False)
         self.controlnet_conditioning_scale.setObjectName("controlnet_conditioning_scale")
         self.gridLayout.addWidget(self.controlnet_conditioning_scale, 2, 0, 1, 1)

@@ -169,16 +169,21 @@ class GeneratorForm(BaseWidget):
             self.active_rect.x() + self.active_rect.width(),
             self.active_rect.y() + self.active_rect.height()
         ))
+
+        print(
+            "controlnet_conditioning_scale",
+            self.settings["generator_settings"]["controlnet_conditioning_scale"] / 100.0,
+            "strength",
+            self.settings["generator_settings"]["strength"] / 100.0
+        )
+
         self.call_generate(
             override_data=dict(
                 input_image=image,
-                enable_input_image=False,
-                strength=self.settings["strength"] / 100.0,
-                controlnet_image=image,
                 enable_controlnet=True,
                 controlnet=Controlnet.CANNY.value,
-                controlnet_conditioning_scale=self.settings["controlnet_conditioning_scale"] / 100.0,
-                generator_section="txt2img"
+                generator_section="txt2img",
+                empty_queue=True
             )
         )
 
@@ -211,16 +216,6 @@ class GeneratorForm(BaseWidget):
             "upscale"
         ):
             self.start_progress_bar()
-
-            # Get input image from input image
-            enable_input_image = override_data.get(
-                "enable_input_image",
-                self.settings["generator_settings"]["input_image_settings"]["enable_input_image"]
-            )
-            # if enable_input_image:
-            #     input_image = self.settings["generator_settings"]["input_image"]
-            # else:
-            #     input_image = override_data.get("input_image", image)
             input_image = override_data.get("input_image", image)
             image = input_image
             override_data["input_image"] = image
