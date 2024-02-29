@@ -2,7 +2,7 @@ import time
 
 import sounddevice as sd
 import numpy as np
-from PyQt6.QtCore import pyqtSlot, QThread
+from PyQt6.QtCore import QThread
 from airunner.enums import SignalCode
 from airunner.workers.worker import Worker
 
