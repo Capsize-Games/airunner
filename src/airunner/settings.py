@@ -360,3 +360,9 @@ DEFAULT_MODELS[sd_key][GeneratorSection.PIX2PIX] = {
 }
 DEFAULT_MODELS_VERSION = "b4ab6a2d996cb4c8ba0e30918fa4f4201dd2fa5ebfe3470b4ebede8e2db48f4e"
 LLM_TEMPLATES_VERSION="b4ab6a2d996cb4c8ba0e30918fa4f4201dd2fa5ebfe3470b4ebede8e2db48f4e"
+CONFIG_FILES = {
+    "v1": "v1.yaml",
+    "v2": "v2.yaml",
+    "xl": "sd_xl_base.yaml",
+    "xl_refiner": "sd_xl_refiner.yaml"
+}
