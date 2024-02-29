@@ -28,6 +28,9 @@ class ControlNetSettingsWidget(BaseWidget):
         self._current_active_grid_area_image = None
         self.keep_refreshed = False
         self._active_grid_area_image = None
+        self.signal_handlers = {
+            SignalCode.CONTROLNET_IMAGE_GENERATED_SIGNAL: self.handle_controlnet_image_generated,
+        }
 
     @property
     def current_controlnet_image(self):
@@ -276,7 +279,6 @@ class ControlNetSettingsWidget(BaseWidget):
                 "Controlnet image exported to: {}".format(path)
             )
 
-    @pyqtSlot(bool)
     def handle_controlnet_image_generated(self):
         self.current_controlnet_image = ServiceLocator.get("controlnet_image")()
         self.set_mask_thumbnail()
