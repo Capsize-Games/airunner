@@ -530,10 +530,6 @@ class SDHandler(
 
     @property
     def enable_controlnet(self):
-        if self.input_image is None and self.controlnet_image is None:
-            return False
-        if self.is_vid2vid:
-            return True
         return self.options.get("enable_controlnet", False)
 
     @property
@@ -671,20 +667,15 @@ class SDHandler(
 
     @property
     def controlnet_image(self):
-        controlnet_image = self.options.get("controlnet_image", None)
-
-        if not controlnet_image and self.input_image:
-            controlnet_image = self.preprocess_for_controlnet(self.input_image)
-            self.emit(SignalCode.CONTROLNET_IMAGE_GENERATED_SIGNAL, {
-                'image': controlnet_image,
-                'data': {
-                    'controlnet_image': controlnet_image
-                }
-            })
-
-        self._controlnet_image = controlnet_image
-
-        return self._controlnet_image
+        self.logger.info("Getting controlnet image")
+        controlnet_image = self.preprocess_for_controlnet(self.input_image)
+        self.input_image.save("input_image.png")
+        self.emit(SignalCode.CONTROLNET_IMAGE_GENERATED_SIGNAL, {
+            'image': controlnet_image,
+            'data': {
+                'controlnet_image': controlnet_image
+            }
+        })
 
     @property
     def do_load_controlnet(self):
@@ -1031,9 +1022,29 @@ class SDHandler(
             args["generator"] = self.generator()
             del args["latents"]
 
+        if "prompt" not in args and (
+            "prompt_embeds" not in args or
+            args["prompt_embeds"] is None
+        ):
+            self.logger.warning("Prompt embeds are missing")
+            if "prompt_embeds" in args:
+                del args["prompt_embeds"]
+            if "negative_prompt_embeds" in args:
+                del args["negative_prompt_embeds"]
+            args["prompt"] = self.prompt
+            args["negative_prompt"] = self.negative_prompt
+
         with torch.inference_mode():
             for n in range(self.n_samples):
-                return self.pipe(**args)
+                try:
+                    return self.pipe(**args)
+                except RuntimeError as e:
+                    if "expected all tensors to be on the same device" in str(e):
+                        # retry
+                        if "prompt_embeds" in args:
+                            args["prompt_embeds"].to(self.device)
+                            args["negative_prompt_embeds"].to(self.device)
+                            return self.pipe(**args)
 
     def read_video(self):
         reader = imageio.get_reader(self.input_video, "ffmpeg")
@@ -1474,11 +1485,11 @@ class SDHandler(
         if self.current_controlnet_type != self.controlnet_type or not self.processor:
             self.logger.info("Loading controlnet processor " + self.controlnet_type)
             self.current_controlnet_type = self.controlnet_type
-            self.logger.info("Controlnet: Processing image")
             self.processor = Processor(self.controlnet_type)
         if self.processor:
             self.logger.info("Controlnet: Processing image")
             image = self.processor(image)
+            image.save("controlnet_image.png")
             # resize image to width and height
             image = image.resize((self.width, self.height))
             return image
