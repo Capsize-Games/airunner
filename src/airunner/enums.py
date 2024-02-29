@@ -47,6 +47,7 @@ class ServiceCode(Enum):
     DISPLAY_IMPORT_IMAGE_DIALOG = "display_import_image_dialog"
     GET_SETTINGS_VALUE = "get_settings_value"
     GET_CALLBACK_FOR_SLIDER = "get_callback_for_slider"
+    CANVAS_REGISTER_LINE_DATA = "canvas_register_line_data"
 
 
 class SignalCode(Enum):
@@ -80,11 +81,13 @@ class SignalCode(Enum):
 
     CANVAS_LOAD_IMAGE_FROM_PATH_SIGNAL = "load_image_from_path_signal"
     CANVAS_DO_DRAW_SIGNAL = "canvas_do_draw_signal"
+    SCENE_DO_DRAW_SIGNAL = "scene_do_draw_signal"
     CANVAS_CLEAR_LINES_SIGNAL = "canvas_clear_lines_signal"
     CANVAS_RESIZE_WORKER_RESPONSE_SIGNAL = "CanvasResizeWorker_response_signal"
     CANVAS_HANDLE_LAYER_CLICK_SIGNAL = "canvas_handle_layer_click_signal"
     CANVAS_UPDATE_SIGNAL = "update_canvas_signal"
     CANVAS_RESIZE_SIGNAL = "canvas_resize_signal"
+    CANVAS_DO_RESIZE_SIGNAL = "canvas_do_resize_signal"
     CANVAS_UPDATE_CURSOR = "canvas_update_cursor"
     CANVAS_ZOOM_LEVEL_CHANGED = "zoom_level_changed"
     CANVAS_CLEAR = "clear_canvas"
@@ -117,6 +120,7 @@ class SignalCode(Enum):
     ENGINE_RESPONSE_WORKER_RESPONSE_SIGNAL = "EngineResponseWorker_response_signal"
 
     GENERATOR_FORM_UPDATE_VALUES_SIGNAL = "generator_form_update_values"
+    GENERATE_IMAGE_FROM_IMAGE_SIGNAL = "generate_image_from_image"
 
     LAYER_SWITCH_SIGNAL = "switch_layer_signal"
     LAYER_ADD_SIGNAL = "add_layer_signal"
@@ -124,6 +128,7 @@ class SignalCode(Enum):
     LAYER_UPDATE_CURRENT_SIGNAL = "update_current_layer_signal"
     LAYER_UPDATE_SIGNAL = "update_layer_signal"
     LAYER_DELETE_CURRENT_SIGNAL = "delete_current_layer_signal"
+    REMOVE_SCENE_ITEM_SIGNAL = "remove_scene_item_signal"
     LAYER_DELETE_SIGNAL = "delete_layer_signal"
     LAYER_CLEAR_LAYERS_SIGNAL = "clear_layers_signal"
     LAYER_SET_CURRENT_SIGNAL = "set_current_layer_signal"
@@ -155,6 +160,11 @@ class SignalCode(Enum):
     LORA_UPDATE_SIGNAL = "update_lora_signal"
 
     SCENE_RESIZE_SIGNAL = "scene_resize_signal"
+
+    SET_CANVAS_COLOR_SIGNAL = "set_canvas_color_signal"
+    UPDATE_SCENE_SIGNAL = "update_scene_signal"
+    DRAW_GRID_SIGNAL = "draw_grid_signal"
+    SET_SCENE_RECT_SIGNAL = "set_scene_rect_signal"
 
     SD_IMAGE_GENERATE_REQUEST_SIGNAL = "image_generate_request_signal"
     SD_PROGRESS_SIGNAL = "progress_signal"
@@ -361,3 +371,12 @@ class SchedulerAlgorithm(Enum):
     SDE_DPM_SOLVER = "sde-dpmsolver"
     DPM_SOLVER_PLUS_PLUS = "dpmsolver++"
     DPM_SOLVER = "dpmsolver"
+
+
+class CanvasType(Enum):
+    BRUSH = "brush"
+    IMAGE = "image"
+
+
+class Controlnet(Enum):
+    CANNY = "canny"
