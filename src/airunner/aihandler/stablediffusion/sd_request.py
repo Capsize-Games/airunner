@@ -64,6 +64,7 @@ class SDRequest(
         height = int(override_data.get("height", settings["working_height"]))
         clip_skip = int(override_data.get("clip_skip", settings["generator_settings"]["clip_skip"]))
         batch_size = int(override_data.get("batch_size", 1))
+        controlnet_image = override_data.get("controlnet_image", controlnet_image)
 
         model_data = {
             "name": model_data.get("name", model["name"]),
