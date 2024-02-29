@@ -2,9 +2,10 @@ import random
 
 from PIL import Image
 from PyQt6.QtCore import pyqtSignal, QRect
+from PyQt6.QtGui import QImage
 
 from airunner.aihandler.stablediffusion.sd_request import SDRequest
-from airunner.enums import SignalCode, ServiceCode, GeneratorSection, ImageCategory
+from airunner.enums import SignalCode, ServiceCode, GeneratorSection, ImageCategory, Controlnet
 from airunner.aihandler.settings import MAX_SEED
 from airunner.settings import PHOTO_REALISTIC_NEGATIVE_PROMPT, ILLUSTRATION_NEGATIVE_PROMPT
 from airunner.widgets.base_widget import BaseWidget
@@ -14,17 +15,32 @@ from airunner.widgets.generator_form.templates.generatorform_ui import Ui_genera
 class GeneratorForm(BaseWidget):
     widget_class_ = Ui_generator_form
     changed_signal = pyqtSignal(str, object)
-    deterministic_generation_window = None
-    deterministic_images = []
-    deterministic_data = None
-    deterministic = False
-    seed_override = None
-    deterministic_index = 0
-    deterministic_seed = None
-    initialized = False
-    parent = None
-    current_prompt_value = None
-    current_negative_prompt_value = None
+
+    def __init__(self, *args, **kwargs):
+        super().__init__(*args, **kwargs)
+        self.deterministic_generation_window = None
+        self.deterministic_images = []
+        self.deterministic_data = None
+        self.deterministic = False
+        self.seed_override = None
+        self.deterministic_index = 0
+        self.deterministic_seed = None
+        self.parent = None
+        self.current_prompt_value = None
+        self.current_negative_prompt_value = None
+        self.initialized = False
+        self.ui.generator_form_tabs.tabBar().hide()
+        self.activate_ai_mode()
+
+        self.signal_handlers = {
+            SignalCode.APPLICATION_SETTINGS_CHANGED_SIGNAL: self.on_application_settings_changed_signal,
+            SignalCode.SD_GENERATE_IMAGE_SIGNAL: self.on_generate_image_signal,
+            SignalCode.APPLICATION_STOP_SD_PROGRESS_BAR_SIGNAL: self.on_stop_image_generator_progress_bar_signal,
+            SignalCode.SD_PROGRESS_SIGNAL: self.on_progress_signal,
+            SignalCode.GENERATOR_FORM_UPDATE_VALUES_SIGNAL: self.set_form_values,
+            SignalCode.LLM_IMAGE_PROMPT_GENERATED_SIGNAL: self.on_llm_image_prompt_generated_signal,
+            SignalCode.GENERATE_IMAGE_FROM_IMAGE_SIGNAL: self.generate_image_from_image
+        }
 
     @property
     def is_txt2img(self):
@@ -105,18 +121,6 @@ class GeneratorForm(BaseWidget):
     
     def on_progress_signal(self, message):
         self.handle_progress_bar(message)
-    
-    def __init__(self, *args, **kwargs):
-        super().__init__(*args, **kwargs)
-        self.initialized = False
-        self.ui.generator_form_tabs.tabBar().hide()
-        self.activate_ai_mode()
-        self.register(SignalCode.APPLICATION_SETTINGS_CHANGED_SIGNAL, self.on_application_settings_changed_signal)
-        self.register(SignalCode.SD_GENERATE_IMAGE_SIGNAL, self.on_generate_image_signal)
-        self.register(SignalCode.APPLICATION_STOP_SD_PROGRESS_BAR_SIGNAL, self.on_stop_image_generator_progress_bar_signal)
-        self.register(SignalCode.SD_PROGRESS_SIGNAL, self.on_progress_signal)
-        self.register(SignalCode.GENERATOR_FORM_UPDATE_VALUES_SIGNAL, self.set_form_values)
-        self.register(SignalCode.LLM_IMAGE_PROMPT_GENERATED_SIGNAL, self.on_llm_image_prompt_generated_signal)
 
     def activate_ai_mode(self):
         ai_mode = self.settings.get("ai_mode", False)
@@ -147,13 +151,36 @@ class GeneratorForm(BaseWidget):
 
     def handle_generate_button_clicked(self):
         self.start_progress_bar()
-        self.generate(image=self.get_service(ServiceCode.CURRENT_ACTIVE_IMAGE)())
+        self.generate()
 
     def handle_interrupt_button_clicked(self):
         self.emit(SignalCode.ENGINE_CANCEL_SIGNAL)
     """
     End Slot functions
     """
+
+    def generate_image_from_image(self, image: QImage):
+        image = Image.fromqpixmap(image)
+
+        # crop the image to active_grid_area_rect
+        image = image.crop((
+            self.active_rect.x(),
+            self.active_rect.y(),
+            self.active_rect.x() + self.active_rect.width(),
+            self.active_rect.y() + self.active_rect.height()
+        ))
+        self.call_generate(
+            override_data=dict(
+                input_image=image,
+                enable_input_image=False,
+                strength=self.settings["strength"] / 100.0,
+                controlnet_image=image,
+                enable_controlnet=True,
+                controlnet=Controlnet.CANNY.value,
+                controlnet_conditioning_scale=self.settings["controlnet_conditioning_scale"] / 100.0,
+                generator_section="txt2img"
+            )
+        )
 
     def generate(self, image=None, seed=None):
         if seed is None:
@@ -170,10 +197,11 @@ class GeneratorForm(BaseWidget):
             override_data=message["meta_data"]
         )
 
-    def call_generate(self, image=None, seed=None, override_data=None):
+    def call_generate(self, image: Image = None, seed=None, override_data=None):
         override_data = {} if override_data is None else override_data
+        generator_section = override_data.pop("generator_section", self.generator_section)
 
-        if self.generator_section in (
+        if generator_section in (
             "txt2img",
             "pix2pix",
             "depth2img",
@@ -189,12 +217,12 @@ class GeneratorForm(BaseWidget):
                 "enable_input_image",
                 self.settings["generator_settings"]["input_image_settings"]["enable_input_image"]
             )
-            if enable_input_image:
-                input_image = self.settings["generator_settings"]["input_image"]
-            elif self.generator_section == "txt2img":
-                input_image = override_data.get("input_image", None)
-                image = input_image
-            image = input_image if not image else image
+            # if enable_input_image:
+            #     input_image = self.settings["generator_settings"]["input_image"]
+            # else:
+            #     input_image = override_data.get("input_image", image)
+            input_image = override_data.get("input_image", image)
+            image = input_image
             override_data["input_image"] = image
 
             if self.is_upscale and image is None:

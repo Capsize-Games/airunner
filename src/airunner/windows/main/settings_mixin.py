@@ -6,7 +6,7 @@ from airunner.data.bootstrap.imagefilter_bootstrap_data import imagefilter_boots
 from airunner.data.bootstrap.model_bootstrap_data import model_bootstrap_data
 from airunner.data.bootstrap.pipeline_bootstrap_data import pipeline_bootstrap_data
 from airunner.enums import Mode, SignalCode, CanvasToolName, LLMActionType, ImageGenerator, GeneratorSection, \
-    ImageCategory
+    ImageCategory, Controlnet
 from airunner.service_locator import ServiceLocator
 from airunner.settings import BASE_PATH, MALE, DEFAULT_MODELS, DEFAULT_MODELS_VERSION, LLM_TEMPLATES_VERSION
 from airunner.settings import DEFAULT_PATHS
@@ -46,6 +46,7 @@ STABLEDIFFUSION_GENERATOR_SETTINGS = dict(
     prompt_triggers="",
     strength=50,
     image_guidance_scale=150,
+    controlnet_conditioning_scale=90,
     n_samples=1,
     enable_controlnet=False,
     clip_skip=0,
@@ -73,7 +74,7 @@ DEFAULT_GENERATOR_SETTINGS = dict(
         recycle_grid_image=False,
         mask_link_input_image=False,
         mask_use_imported_image=False,
-        controlnet="",
+        controlnet=Controlnet.CANNY.value,
         guidance_scale=50,
     ),
     section="txt2img",
