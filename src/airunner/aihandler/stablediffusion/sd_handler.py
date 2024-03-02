@@ -42,6 +42,7 @@ from airunner.windows.main.pipeline_mixin import PipelineMixin
 from airunner.windows.main.controlnet_model_mixin import ControlnetModelMixin
 from airunner.windows.main.ai_model_mixin import AIModelMixin
 from airunner.utils import clear_memory
+from airunner.settings import DEFAULT_SEED
 #from airunner.scripts.realesrgan.main import RealESRGAN
 
 torch.backends.cuda.matmul.allow_tf32 = True
@@ -128,14 +129,6 @@ class SDHandler(
         }
 
     @property
-    def allow_online_mode(self):
-        return self.options.get("allow_online_mode", False)
-
-    @property
-    def vae_path(self):
-        return self.options.get("vae_path", "openai/consistency-decoder")
-
-    @property
     def controlnet_model(self):
         name = self.controlnet_type
         if self.is_vid2vid:
@@ -144,16 +137,6 @@ class SDHandler(
         if not model:
             raise ValueError(f"Unable to find controlnet model {name}")
         return model.path
-
-    @property
-    def controlnet_type(self):
-        if self.is_vid2vid:
-            return "openpose"
-
-        controlnet_type = self.options.get("controlnet", None).lower()
-        if not controlnet_type:
-            controlnet_type = "canny"
-        return controlnet_type.replace(" ", "_")
 
     @property
     def allow_online_when_missing_files(self):
@@ -190,14 +173,6 @@ class SDHandler(
     def reload_model(self, value):
         self._reload_model = value
 
-    @property
-    def current_sample(self):
-        return self._current_sample
-
-    @current_sample.setter
-    def current_sample(self, value):
-        self._current_sample = value
-
     def has_pipe(self):
         return self.pipe is not None
 
@@ -217,297 +192,117 @@ class SDHandler(
             message["callback"]()
 
     @property
-    def options(self):
-        return self.data.get("options", {})
+    def current_sample(self):
+        return self._current_sample
 
-    @property
-    def seed(self):
-        return int(self.options.get(f"seed", 42)) + self.current_sample
+    @current_sample.setter
+    def current_sample(self, value):
+        self._current_sample = value
 
-    @property
-    def deterministic_seed(self):
-        return self.options.get("deterministic_seed", None)
-
-    @property
-    def deterministic_style(self):
-        return self.options.get("deterministic_style", None)
-
-    @property
-    def batch_size(self):
-        return self.options.get("batch_size", 1)
-
-    @property
-    def prompt_data(self):
-        return self.options.get(f"prompt_data", PromptData(file_name="prompts"))
-
-    @property
-    def prompt(self):
-        prompt = self.options.get(f"prompt", "")
-        self.requested_data[f"prompt"] = prompt
-        return prompt
-
-    @property
-    def negative_prompt(self):
-        negative_prompt = self.options.get(f"negative_prompt", "")
-        self.requested_data[f"negative_prompt"] = negative_prompt
-        return negative_prompt
-
-    @property
-    def use_prompt_converter(self):
-        return True
-
-    @property
-    def guidance_scale(self):
-        return self.options.get(f"scale", 7.5)
-
-    @property
-    def image_guidance_scale(self):
-        return self.options.get(f"image_guidance_scale", 1.5)
-
-    @property
-    def height(self):
-        return self.options.get(f"height", 512)
-
-    @property
-    def width(self):
-        return self.options.get(f"width", 512)
-
-    @property
-    def steps(self):
-        return self.options.get(f"steps", 20)
-
-    @property
-    def ddim_eta(self):
-        return self.options.get(f"ddim_eta", 0.5)
-
-    @property
-    def n_samples(self):
-        return self.options.get(f"n_samples", 1)
-
-    @property
-    def pos_x(self):
-        return self.options.get(f"pos_x", 0)
-
-    @property
-    def pos_y(self):
-        return self.options.get(f"pos_y", 0)
-
-    @property
-    def outpaint_box_rect(self):
-        return self.options.get(f"box_rect", "")
-
-    @property
-    def hf_token(self):
-        return self.data.get("hf_token", "")
-
-    @property
-    def strength(self):
-        return self.options.get(f"strength", 1.0)
-
-    @property
-    def depth_map(self):
-        return self.options.get("depth_map", None)
-
-    @property
-    def image(self):
-        return self.options.get(f"image", None)
-
-    @property
-    def input_image(self):
-        return self.options.get("input_image", None)
-
-    @property
-    def mask(self):
-        return self.options.get(f"mask", None)
-
-    @property
-    def enable_model_cpu_offload(self):
-        return self.options.get("enable_model_cpu_offload", False) is True
-
-    @property
-    def use_attention_slicing(self):
-        return self.options.get("use_attention_slicing", False) is True
-
-    @property
-    def use_tf32(self):
-        return self.options.get("use_tf32", False) is True
-
-    @property
-    def use_last_channels(self):
-        return self.options.get("use_last_channels", True) is True
-
-    @property
-    def use_enable_sequential_cpu_offload(self):
-        return self.options.get("use_enable_sequential_cpu_offload", True) is True
-
-    @property
-    def use_enable_vae_slicing(self):
-        return self.options.get("use_enable_vae_slicing", False) is True
-
-    @property
-    def use_tome_sd(self):
-        return self.options.get("use_tome_sd", False) is True
-
-    @property
-    def do_nsfw_filter(self):
-        return self.options.get("do_nsfw_filter", True) is True
-
-    @property
-    def model_version(self):
-        return self.model_data["version"]
-
-    @property
-    def use_compel(self):
-        return not self.use_enable_sequential_cpu_offload and \
-               not self.is_txt2vid and \
-               not self.is_vid2vid and \
-               not self.is_sd_xl and \
-               not self.is_sd_xl_turbo and \
-               not self.is_turbo
-
-    @property
-    def use_tiled_vae(self):
-        return self.options.get("use_tiled_vae", False) is True
-
-    @property
-    def use_accelerated_transformers(self):
-        return self.options.get("use_accelerated_transformers", False) is True
-
-    @property
-    def use_torch_compile(self):
-        return self.options.get("use_torch_compile", False) is True
-
-    @property
-    def is_sd_xl(self):
-        return self.model_version == "SDXL 1.0" or self.is_sd_xl_turbo
-
-    @property
-    def is_sd_xl_turbo(self):
-        return self.model_version == "SDXL Turbo"
-
-    @property
-    def is_turbo(self):
-        return self.model_version == "SD Turbo"
-
-    @property
-    def model(self):
-        return self.options.get(f"model", None)
-
-    @property
-    def action(self):
-        try:
-            return self.data.get("action", None)
-        except Exception as e:
-            self.logger.error(f"Error getting action {e}")
-            return None
-
-    @property
-    def action_has_safety_checker(self):
-        return self.action not in ["depth2img"]
-
-    @property
-    def is_outpaint(self):
-        return self.action == "outpaint"
-
-    @property
-    def is_txt2img(self):
-        try:
-            return self.action == "txt2img" and self.image is None
-        except Exception as e:
-            self.logger.error(f"Error checking if is txt2img {e}")
-            return False
-
-    @property
-    def is_vid_action(self):
-        return self.is_txt2vid or self.is_vid2vid
-
-    @property
-    def input_video(self):
-        return self.options.get(
-            "input_video",
-            None
+    def load_data(self, data):
+        self.data = data if data is not None else self.data
+        self.options = self.data.get("options", {})
+        self.seed = self.options.get("seed", DEFAULT_SEED) + self.current_sample
+        self.deterministic_seed = self.options.get("deterministic_seed", None)
+        self.deterministic_style = self.options.get("deterministic_style", None)
+        self.batch_size = self.options.get("batch_size", 1)
+        #self.prompt_data = self.options.get("prompt_data", PromptData(file_name="prompts"))
+        self.prompt = self.options.get("prompt", "")
+        self.negative_prompt = self.options.get("negative_prompt", "")
+        self.use_prompt_converter = self.options.get("use_prompt_converter", True)
+        self.guidance_scale = self.options.get("guidance_scale", 7.5)
+        self.image_guidance_scale = self.options.get("image_guidance_scale", 1.5)
+        self.height = self.options.get("height", 512)
+        self.width = self.options.get("width", 512)
+        self.steps = self.options.get("steps", 20)
+        self.ddim_eta = self.options.get("ddim_eta", 0.5)
+        self.n_samples = self.options.get("n_samples", 1)
+        self.pos_x = self.options.get("pos_x", 0)
+        self.pos_y = self.options.get("pos_y", 0)
+        self.outpaint_box_rect = self.options.get("box_rect", "")
+        self.hf_token = self.options.get("hf_token", "")
+        self.strength = self.options.get("strength", 1.0)
+        self.depth_map = self.options.get("depth_map", None)
+        self.image = self.options.get("image", None)
+        self.input_image = self.options.get("input_image", None)
+        self.mask = self.options.get("mask", None)
+        self.enable_model_cpu_offload = self.options.get("enable_model_cpu_offload", False) is True
+        self.use_attention_slicing = self.options.get("use_attention_slicing", False) is True
+        self.use_tf32 = self.options.get("use_tf32", False) is True
+        self.use_last_channels = self.options.get("use_last_channels", True) is True
+        self.use_enable_sequential_cpu_offload = self.options.get("use_enable_sequential_cpu_offload", True) is True
+        self.use_enable_vae_slicing = self.options.get("use_enable_vae_slicing", False) is True
+        self.use_tome_sd = self.options.get("use_tome_sd", False) is True
+        self.do_nsfw_filter = self.options.get("do_nsfw_filter", True) is True
+        self.model_data = self.options.get("model_data", {})
+        self.model_version = self.model_data["version"]
+        self.use_tiled_vae = self.options.get("use_tiled_vae", False) is True
+        self.use_accelerated_transformers = self.options.get("use_accelerated_transformers", False) is True
+        self.use_torch_compile = self.options.get("use_torch_compile", False) is True
+        self.is_sd_xl = self.model_version == "SDXL 1.0" or self.is_sd_xl_turbo
+        self.is_sd_xl_turbo = self.model_version == "SDXL Turbo"
+        self.is_turbo = self.model_version == "SD Turbo"
+        self.model = self.options.get("model", None)
+        self.use_compel = (
+            not self.use_enable_sequential_cpu_offload and \
+            not self.is_txt2vid and \
+            not self.is_vid2vid and \
+            not self.is_sd_xl and \
+            not self.is_sd_xl_turbo and \
+            not self.is_turbo
         )
+        self.action = self.data.get("action", "txt2img")
+        self.action_has_safety_checker = self.action not in ["depth2img"]
+        self.is_outpaint = self.action == "outpaint"
+        self.is_txt2img = self.action == "txt2img" and self.image is None
+        self.is_vid_action = self.is_txt2vid or self.is_vid2vid
+        self.input_video = self.options.get("input_video", None)
+        self.is_txt2vid = self.action == "txt2vid" and not self.input_video
+        self.is_vid2vid = self.action == "txt2vid" and self.input_video
+        self.is_upscale = self.action == "upscale"
+        self.is_img2img = self.action == "txt2img" and self.image is not None
+        self.is_depth2img = self.action == "depth2img"
+        self.is_pix2pix = self.action == "pix2pix"
+        self.use_interpolation = self.options.get("use_interpolation", False)
+        self.interpolation_data = self.options.get("interpolation_data", None)
+        self.model_base_path = self.options.get("model_base_path", None)
+        self.gif_path = self.options.get("gif_path", None)
+        self.image_path = self.options.get("image_path", None)
+        self.lora_path = self.options.get("lora_path", None)
+        self.embeddings_path = self.options.get("embeddings_path", None)
+        self.video_path = self.options.get("video_path", None)
+        self.outpaint_model_path = self.options.get("outpaint_model_path", None)
+        self.pix2pix_model_path = self.options.get("pix2pix_model_path", None)
+        self.depth2img_model_path = self.options.get("depth2img_model_path", None)
+        self.model_path = self.model_data["path"]
+        self.model_branch = self.options.get(f"model_branch", None)
+        self.enable_controlnet = self.options.get("enable_controlnet", False)
+        self.controlnet_conditioning_scale = self.options.get(f"controlnet_conditioning_scale", 1.0)
+        self.controlnet_guess_mode = self.options.get("controlnet_guess_mode", False)
+        self.control_guidance_start = self.options.get("control_guidance_start", 0.0)
+        self.control_guidance_end = self.options.get("control_guidance_end", 1.0)
+        self.filters = self.options.get("filters", {})
+        self.hf_api_key_read_key = self.options.get("hf_api_key_read_key", "")
+        self.hf_api_key_write_key = self.options.get("hf_api_key_write_key", "")
+        self.original_model_data = self.options.get("original_model_data", {})
+        self.clip_skip = self.options.get("clip_skip", 0)
+        self.denoise_strength = self.options.get("denoise_strength", 0.5)
+        self.face_enhance = self.options.get("face_enhance", True)
+        self.do_fast_generate = self.options.get("do_fast_generate", False)
+        self.allow_online_mode = self.options.get("allow_online_mode", False)
+        self.vae_path = self.options.get("vae_path", "openai/consistency-decoder")
 
-    @property
-    def is_txt2vid(self):
-        return self.action == "txt2vid" and not self.input_video
+        controlnet_type = self.options.get("controlnet", None).lower()
+        if self.is_vid2vid:
+            controlnet_type = "openpose"
+        if not controlnet_type:
+            controlnet_type = "canny"
+        controlnet_type = controlnet_type.replace(" ", "_")
+        self.controlnet_type = controlnet_type
 
-    @property
-    def is_vid2vid(self):
-        return self.action == "txt2vid" and self.input_video
 
-    @property
-    def is_upscale(self):
-        return self.action == "upscale"
-
-    @property
-    def is_img2img(self):
-        return self.action == "txt2img" and self.image is not None
-
-    @property
-    def is_depth2img(self):
-        return self.action == "depth2img"
-
-    @property
-    def is_pix2pix(self):
-        return self.action == "pix2pix"
-
-    @property
-    def use_interpolation(self):
-        return self.options.get("use_interpolation", False)
-
-    @property
-    def interpolation_data(self):
-        return self.options.get("interpolation_data", None)
-
-    @property
-    def current_model(self):
-        return self._current_model
-
-    @current_model.setter
-    def current_model(self, model):
-        if self._current_model != model:
-            self._current_model = model
-
-    @property
-    def model_base_path(self):
-        return self.options.get("model_base_path", None)
-
-    @property
-    def gif_path(self):
-        return self.options.get("gif_path", None)
-
-    @property
-    def image_path(self):
-        return self.options.get("image_path", None)
-
-    @property
-    def lora_path(self):
-        return self.options.get("lora_path", None)
-
-    @property
-    def embeddings_path(self):
-        return self.options.get("embeddings_path", None)
-
-    @property
-    def video_path(self):
-        return self.options.get("video_path", None)
-
-    @property
-    def outpaint_model_path(self):
-        return self.options.get("outpaint_model_path", None)
-
-    @property
-    def pix2pix_model_path(self):
-        return self.options.get("pix2pix_model_path", None)
-
-    @property
-    def depth2img_model_path(self):
-        return self.options.get("depth2img_model_path", None)
-
-    @property
-    def model_path(self):
-        return self.model_data["path"]
+        self.request_data["prompt"] = self.prompt
+        self.request_data["negative_prompt"] = self.negative_prompt
 
     @property
     def cuda_error_message(self):
@@ -527,26 +322,6 @@ class SDHandler(
             return self.depth2img is not None
         elif self.is_vid_action:
             return self.txt2vid is not None
-
-    @property
-    def enable_controlnet(self):
-        return self.options.get("enable_controlnet", False)
-
-    @property
-    def controlnet_conditioning_scale(self):
-        return self.options.get(f"controlnet_conditioning_scale", 1.0)
-
-    @property
-    def controlnet_guess_mode(self):
-        return self.options.get("controlnet_guess_mode", False)
-
-    @property
-    def control_guidance_start(self):
-        return self.options.get("control_guidance_start", 0.0)
-
-    @property
-    def control_guidance_end(self):
-        return self.options.get("control_guidance_end", 1.0)
 
     @property
     def pipe(self):
@@ -592,10 +367,6 @@ class SDHandler(
         return torch.cuda.is_available()
 
     @property
-    def model_data(self):
-        return self.options.get("model_data", {})
-
-    @property
     def is_ckpt_model(self):
         return self.is_ckpt_file(self.model_path)
 
@@ -629,10 +400,6 @@ class SDHandler(
             return False
 
     @property
-    def filters(self):
-        return self.options.get("filters", {})
-
-    @property
     def safety_checker(self):
         return self._safety_checker
 
@@ -645,10 +412,6 @@ class SDHandler(
     @property
     def is_dev_env(self):
         return AIRUNNER_ENVIRONMENT == "dev"
-
-    @property
-    def clip_skip(self):
-        return self.options.get("clip_skip", 0)
 
     @property
     def do_add_lora_to_pipe(self):
@@ -665,17 +428,24 @@ class SDHandler(
         else:
             raise ValueError(f"Invalid action {self.action} unable to get controlnet action diffuser")
 
+    _controlnet_image = None
+
     @property
     def controlnet_image(self):
-        self.logger.info("Getting controlnet image")
-        controlnet_image = self.preprocess_for_controlnet(self.input_image)
-        self.input_image.save("input_image.png")
-        self.emit(SignalCode.CONTROLNET_IMAGE_GENERATED_SIGNAL, {
-            'image': controlnet_image,
-            'data': {
-                'controlnet_image': controlnet_image
-            }
-        })
+        if self._controlnet_image is None or \
+            not self.do_fast_generate or \
+            not self.initialized:
+            self.logger.info("Getting controlnet image")
+            controlnet_image = self.preprocess_for_controlnet(self.input_image)
+            self.input_image.save("input_image.png")
+            self._controlnet_image = controlnet_image
+        # self.emit(SignalCode.CONTROLNET_IMAGE_GENERATED_SIGNAL, {
+        #     'image': self._controlnet_image,
+        #     'data': {
+        #         'controlnet_image': self._controlnet_image
+        #     }
+        # })
+        return self._controlnet_image
 
     @property
     def do_load_controlnet(self):
@@ -706,26 +476,6 @@ class SDHandler(
     @latents.setter
     def latents(self, value):
         self._latents = value
-
-    @property
-    def hf_api_key_read_key(self):
-        return self.options.get("hf_api_key_read_key", "")
-
-    @hf_api_key_read_key.setter
-    def hf_api_key_read_key(self, value):
-        self.options["hf_api_key_read_key"] = value
-
-    @property
-    def hf_api_key_write_key(self):
-        return self.options.get("hf_api_key_write_key", "")
-
-    @hf_api_key_write_key.setter
-    def hf_api_key_write_key(self, value):
-        self.options["hf_api_key_write_key"] = value
-
-    @property
-    def original_model_data(self):
-        return self.options.get("original_model_data", {})
 
     @staticmethod
     def apply_filters(image, filters):
@@ -774,7 +524,6 @@ class SDHandler(
             if not self.is_upscale:
                 self.load_model()
             self.reload_model = False
-            self.initialized = True
 
     def controlnet(self):
         if self._controlnet is None \
@@ -824,7 +573,6 @@ class SDHandler(
             self._prompt_embeds = None
             self._negative_prompt_embeds = None
 
-        self.data = data if data is not None else self.data
         torch.backends.cuda.matmul.allow_tf32 = self.use_tf32
 
     def send_error(self, message):
@@ -870,14 +618,16 @@ class SDHandler(
     def load_safety_checker(self):
         if not self.pipe:
             return
-        if not self.do_nsfw_filter or self.action in ["depth2img"]:
-            self.logger.info("Disabling safety checker")
-            self.pipe.safety_checker = None
-        elif self.pipe.safety_checker is None:
-            self.logger.info("Loading safety checker")
-            self.pipe.safety_checker = self.safety_checker
-            if self.pipe.safety_checker:
-                self.pipe.safety_checker.to(self.device)
+
+        if not self.do_fast_generate or not self.initialized:
+            if not self.do_nsfw_filter or self.action in ["depth2img"]:
+                self.logger.info("Disabling safety checker")
+                self.pipe.safety_checker = None
+            elif self.pipe.safety_checker is None:
+                self.logger.info("Loading safety checker")
+                self.pipe.safety_checker = self.safety_checker
+                if self.pipe.safety_checker:
+                    self.pipe.safety_checker.to(self.device)
 
     def do_sample(self, **kwargs):
         self.logger.info(f"Sampling {self.action}")
@@ -948,15 +698,17 @@ class SDHandler(
             "num_inference_steps": self.steps,
             "guidance_scale": self.guidance_scale,
             "callback": self.callback,
+            "callback_on_step_end": self.callback,
         }
-        
-        if self.do_add_lora_to_pipe:
-            try:
-                self.logger.info("Adding LoRA to pipe")
-                self.add_lora_to_pipe()
-            except Exception as _e:
-                self.error_handler("Selected LoRA are not supported with this model")
-                self.reload_model = True
+
+        if not self.do_fast_generate or not self.initialized:
+            if self.do_add_lora_to_pipe:
+                try:
+                    self.logger.info("Adding LoRA to pipe")
+                    self.add_lora_to_pipe()
+                except Exception as _e:
+                    self.error_handler("Selected LoRA are not supported with this model")
+                    self.reload_model = True
         
         if self.is_upscale:
             args.update({
@@ -982,6 +734,7 @@ class SDHandler(
             args.update({
                 "prompt": self.prompt,
             })
+
         if self.use_compel:
             try:
                 args["negative_prompt_embeds"] = self.negative_prompt_embeds
@@ -994,6 +747,7 @@ class SDHandler(
             args.update({
                 "negative_prompt": self.negative_prompt,
             })
+
         args["callback_steps"] = 1
         
         if not self.is_upscale:
@@ -1031,20 +785,34 @@ class SDHandler(
                 del args["prompt_embeds"]
             if "negative_prompt_embeds" in args:
                 del args["negative_prompt_embeds"]
-            args["prompt"] = self.prompt
-            args["negative_prompt"] = self.negative_prompt
+            args["prompt"] = self.prompt[0]
+            args["negative_prompt"] = self.negative_prompt[0]
+
+        del args["latents"]
+
+        print(args)
+
+        self.initialized = True
 
         with torch.inference_mode():
             for n in range(self.n_samples):
-                try:
-                    return self.pipe(**args)
-                except RuntimeError as e:
-                    if "expected all tensors to be on the same device" in str(e):
-                        # retry
-                        if "prompt_embeds" in args:
-                            args["prompt_embeds"].to(self.device)
-                            args["negative_prompt_embeds"].to(self.device)
-                            return self.pipe(**args)
+                return self.pipe(**args)
+                # try:
+                #     return self.pipe(**args)
+                # except RuntimeError as e:
+                #     if "expected all tensors to be on the same device" in str(e):
+                #         # retry
+                #         if "prompt_embeds" in args:
+                #             args["prompt_embeds"].to(self.device)
+                #             args["negative_prompt_embeds"].to(self.device)
+                #             return self.pipe(**args)
+                #     else:
+                #         self.error_handler(e)
+                #         return None
+                # except TypeError as e:
+                #     self.error_handler(e)
+                #     return None
+
 
     def read_video(self):
         reader = imageio.get_reader(self.input_video, "ffmpeg")
@@ -1089,6 +857,7 @@ class SDHandler(
                     "num_videos_per_prompt": 1,
                     "generator": generator,
                     "callback": self.callback,
+                    "callback_on_step_end": self.callback,
                     "frame_ids": frame_ids
                 }
                 if self.is_vid2vid:
@@ -1228,6 +997,9 @@ class SDHandler(
     do_load_compel = False
 
     def process_data(self, data: dict):
+        if self.do_fast_generate and self.initialized:
+            return
+
         self.logger.info("Runner: process_data called")
         self.requested_data = data
         prompt = self.prompt if self.prompt else ""
@@ -1247,7 +1019,6 @@ class SDHandler(
         self.do_cancel = False
         self.process_data(data)
 
-        self.emit(SignalCode.LOG_STATUS_SIGNAL, f"Applying memory settings")
         self.apply_memory_efficient_settings()
         if self.do_load_compel:
             self.load_prompt_embeds()
@@ -1341,10 +1112,7 @@ class SDHandler(
             "step": step,
             "total": steps,
             "action": self.action,
-            "image": image,
-            "data": data,
             "tab_section": tab_section,
-            "latents": latents
         }
         self.emit(SignalCode.SD_PROGRESS_SIGNAL, res)
 
@@ -1372,8 +1140,8 @@ class SDHandler(
                 input=image,
                 output=None,
                 model_name='RealESRGAN_x4plus', 
-                denoise_strength=self.options.get("denoise_strength", 0.5), 
-                face_enhance=self.options.get("face_enhance", True),
+                denoise_strength=self.denoise_strength,
+                face_enhance=self.face_enhance,
             ).run()
             clear_memory()
         else:
@@ -1399,12 +1167,6 @@ class SDHandler(
         self.emit(SignalCode.LOG_STATUS_SIGNAL, f"Generating {'video' if self.is_vid_action else 'image'}")
 
         action = "depth2img" if self.action == "depth" else self.action
-
-        try:
-            self.initialized = self.pipe is not None
-        except KeyError:
-            self.logger.info(f"{action} model has not been initialized yet")
-            self.initialized = False
 
         error = None
         error_message = ""
@@ -1531,14 +1293,21 @@ class SDHandler(
         self.reset_applied_memory_settings()
 
     def pipeline_class(self):
-        if self.action == "depth2img":
+        if self.enable_controlnet:
+            if self.is_img2img:
+                pipeline_classname_ = StableDiffusionControlNetImg2ImgPipeline
+            elif self.is_txt2img:
+                pipeline_classname_ = StableDiffusionControlNetPipeline
+            elif self.action == "outpaint":
+                pipeline_classname_ = StableDiffusionControlNetInpaintPipeline
+            else:
+                pipeline_classname_ = StableDiffusionControlNetPipeline
+        elif self.action == "depth2img":
             pipeline_classname_ = StableDiffusionDepth2ImgPipeline
         elif self.action == "outpaint":
             pipeline_classname_ = AutoPipelineForInpainting
         elif self.action == "pix2pix":
             pipeline_classname_ = StableDiffusionInstructPix2PixPipeline
-        elif self.enable_controlnet and not self.is_vid2vid:
-            pipeline_classname_ = StableDiffusionControlNetPipeline
         elif self.is_img2img:
             pipeline_classname_ = StableDiffusionImg2ImgPipeline
         else:
@@ -1558,11 +1327,10 @@ class SDHandler(
         # elif self.data_type == torch.float16:
         #     kwargs["variant"] = "fp16"
 
-        if self.do_reuse_pipeline and not self.reload_model:
-            self.initialized = True
+        already_loaded = self.do_reuse_pipeline and not self.reload_model
 
         # move all models except for our current action to the CPU
-        if not self.initialized or self.reload_model:
+        if not already_loaded or self.reload_model:
             self.unload_unused_models()
         elif self.pipe is None and self.do_reuse_pipeline or self.pipe and self.do_load_controlnet != self.current_load_controlnet:
             self.reuse_pipeline(self.do_load_controlnet)
@@ -1761,18 +1529,20 @@ class SDHandler(
         self.emit(SignalCode.LOG_STATUS_SIGNAL, message)
 
     def prepare_model(self):
+        if self.do_fast_generate and self.initialized:
+            return
         self.logger.info("Prepare model")
         # get model and switch to it
 
         # get models from database
-        model_name = self.options.get(f"model", None)
+        model_name = self.model
 
         self._previous_model = self.current_model
         if self.is_single_file:
             self.current_model = model_name
         else:
-            self.current_model = self.options.get(f"model_path", None)
-            self.current_model_branch = self.options.get(f"model_branch", None)
+            self.current_model = self.model_path
+            self.current_model_branch = self.model_branch
 
         if self.do_unload_controlnet:
             self.unload_controlnet()

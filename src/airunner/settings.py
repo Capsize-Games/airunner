@@ -366,3 +366,4 @@ CONFIG_FILES = {
     "xl": "sd_xl_base.yaml",
     "xl_refiner": "sd_xl_refiner.yaml"
 }
+DEFAULT_SEED = 42
