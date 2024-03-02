@@ -84,7 +84,6 @@ class SDHandler(
         self.register(SignalCode.SD_UNLOAD_SIGNAL, self.on_unload_stablediffusion_signal)
         self.register(SignalCode.SD_MOVE_TO_CPU_SIGNAL, self.on_move_to_cpu)
         self.handler_type = HandlerType.DIFFUSER
-        self._current_model: str = ""
         self._previous_model: str = ""
         self._initialized: bool = False
         self._current_sample = 0
@@ -124,6 +123,99 @@ class SDHandler(
         self.tokenizer = None
         self._safety_checker = None
         self._controlnet = None
+
+        self.options: dict = {}
+        self.current_model: str = ""
+        self.seed: int = 42
+        self.deterministic_seed: int = 42
+        self.deterministic_style: str = ""
+        self.batch_size: int = 1
+        self.prompt: str = ""
+        self.negative_prompt: str = ""
+        self.use_prompt_converter: bool = True
+        self.guidance_scale = None
+        self.image_guidance_scale = None
+        self.height: int = 512
+        self.width: int = 512
+        self.steps: int = 20
+        self.ddim_eta: int = 3
+        self.n_samples: int = 1
+        self.pos_x: int = 0
+        self.pos_y: int = 0
+        self.outpaint_box_rect = None
+        self.hf_token: str = ""
+        self.strength = None
+        self.depth_map = None
+        self.image = None
+        self.input_image = None
+        self.mask = None
+        self.enable_model_cpu_offload = None
+        self.use_attention_slicing: bool = False
+        self.use_tf32: bool = False
+        self.use_last_channels: bool = False
+        self.use_enable_sequential_cpu_offload: bool = False
+        self.use_enable_vae_slicing: bool = False
+        self.use_tome_sd: bool = False
+        self.do_nsfw_filter: bool = False
+        self.model_data = None
+        self.model_version: str = ""
+        self.use_tiled_vae: bool = False
+        self.use_accelerated_transformers: bool = False
+        self.use_torch_compile: bool = False
+        self.is_sd_xl: bool = False
+        self.is_sd_xl_turbo: bool = False
+        self.is_turbo: bool = False
+        self.model: str = ""
+        self.use_compel: bool = False
+        self.action: str = ""
+        self.action_has_safety_checker: bool = False
+        self.is_outpaint: bool = False
+        self.is_txt2img: bool = False
+        self.is_vid_action: bool = False
+        self.input_video: bool = False
+        self.is_txt2vid: bool = False
+        self.is_vid2vid: bool = False
+        self.is_upscale: bool = False
+        self.is_img2img: bool = False
+        self.is_depth2img: bool = False
+        self.is_pix2pix: bool = False
+        self.use_interpolation = None
+        self.interpolation_data = None
+        self.model_base_path: str = ""
+        self.gif_path: str = ""
+        self.image_path: str = ""
+        self.lora_path: str = ""
+        self.embeddings_path: str = ""
+        self.video_path: str = ""
+        self.outpaint_model_path: str = ""
+        self.pix2pix_model_path: str = ""
+        self.depth2img_model_path: str = ""
+        self.model_path: str = ""
+        self.model_branch: str = ""
+        self.enable_controlnet: bool = False
+        self.controlnet_conditioning_scale = None
+        self.controlnet_guess_mode = None
+        self.control_guidance_start = None
+        self.control_guidance_end = None
+        self.filters = None
+        self.hf_api_key_read_key: str = ""
+        self.hf_api_key_write_key: str = ""
+        self.original_model_data = None
+        self.clip_skip: int = 0
+        self.denoise_strength = None
+        self.face_enhance: bool = False
+        self.do_fast_generate: bool = False
+        self.allow_online_mode: bool = False
+        self.vae_path: str = ""
+        self.controlnet_type: str = ""
+        self.initialized: bool = False
+        self.reload_model: bool = False
+        self.local_files_only: bool = False
+        self.current_sample = None
+
+        self.is_dev_env = AIRUNNER_ENVIRONMENT == "dev"
+        self.latents = None
+
         self.data = {
             "action": "txt2img",
         }
@@ -148,31 +240,6 @@ class SDHandler(
             self._allow_online_mode = self.allow_online_mode
         return self._allow_online_mode
 
-    @property
-    def local_files_only(self):
-        return self._local_files_only
-
-    @local_files_only.setter
-    def local_files_only(self, value):
-        self.logger.info("Setting local_files_only to %s" % value)
-        self._local_files_only = value
-
-    @property
-    def initialized(self):
-        return self._initialized
-
-    @initialized.setter
-    def initialized(self, value):
-        self._initialized = value
-
-    @property
-    def reload_model(self):
-        return self._reload_model
-
-    @reload_model.setter
-    def reload_model(self, value):
-        self._reload_model = value
-
     def has_pipe(self):
         return self.pipe is not None
 
@@ -191,22 +258,12 @@ class SDHandler(
         if "callback" in message:
             message["callback"]()
 
-    @property
-    def current_sample(self):
-        return self._current_sample
-
-    @current_sample.setter
-    def current_sample(self, value):
-        self._current_sample = value
-
-    def load_data(self, data):
-        self.data = data if data is not None else self.data
+    def load_options(self):
         self.options = self.data.get("options", {})
         self.seed = self.options.get("seed", DEFAULT_SEED) + self.current_sample
         self.deterministic_seed = self.options.get("deterministic_seed", None)
         self.deterministic_style = self.options.get("deterministic_style", None)
         self.batch_size = self.options.get("batch_size", 1)
-        #self.prompt_data = self.options.get("prompt_data", PromptData(file_name="prompts"))
         self.prompt = self.options.get("prompt", "")
         self.negative_prompt = self.options.get("negative_prompt", "")
         self.use_prompt_converter = self.options.get("use_prompt_converter", True)
@@ -244,11 +301,11 @@ class SDHandler(
         self.is_turbo = self.model_version == "SD Turbo"
         self.model = self.options.get("model", None)
         self.use_compel = (
-            not self.use_enable_sequential_cpu_offload and \
-            not self.is_txt2vid and \
-            not self.is_vid2vid and \
-            not self.is_sd_xl and \
-            not self.is_sd_xl_turbo and \
+            not self.use_enable_sequential_cpu_offload and
+            not self.is_txt2vid and
+            not self.is_vid2vid and
+            not self.is_sd_xl and
+            not self.is_sd_xl_turbo and
             not self.is_turbo
         )
         self.action = self.data.get("action", "txt2img")
@@ -270,7 +327,6 @@ class SDHandler(
         self.image_path = self.options.get("image_path", None)
         self.lora_path = self.options.get("lora_path", None)
         self.embeddings_path = self.options.get("embeddings_path", None)
-        self.video_path = self.options.get("video_path", None)
         self.outpaint_model_path = self.options.get("outpaint_model_path", None)
         self.pix2pix_model_path = self.options.get("pix2pix_model_path", None)
         self.depth2img_model_path = self.options.get("depth2img_model_path", None)
@@ -300,13 +356,19 @@ class SDHandler(
         controlnet_type = controlnet_type.replace(" ", "_")
         self.controlnet_type = controlnet_type
 
+        if self.requested_data:
+            self.requested_data["prompt"] = self.prompt
+            self.requested_data["negative_prompt"] = self.negative_prompt
 
-        self.request_data["prompt"] = self.prompt
-        self.request_data["negative_prompt"] = self.negative_prompt
+        self.latents = self.generate_latents()
 
     @property
     def cuda_error_message(self):
-        return f"VRAM too low for {self.width}x{self.height} resolution. Potential solutions: try again, use a different model, restart the application, use a smaller size, upgrade your GPU."
+        return (
+            f"VRAM too low for {self.width}x{self.height} resolution. "
+            f"Potential solutions: try again, use a different model, "
+            f"restart the application, use a smaller size, upgrade your GPU."
+        )
 
     @property
     def is_pipe_loaded(self):
@@ -410,10 +472,6 @@ class SDHandler(
             self._safety_checker.to(self.device)
 
     @property
-    def is_dev_env(self):
-        return AIRUNNER_ENVIRONMENT == "dev"
-
-    @property
     def do_add_lora_to_pipe(self):
         return not self.is_vid_action
 
@@ -427,14 +485,15 @@ class SDHandler(
             return StableDiffusionControlNetInpaintPipeline
         else:
             raise ValueError(f"Invalid action {self.action} unable to get controlnet action diffuser")
-
     _controlnet_image = None
 
     @property
     def controlnet_image(self):
-        if self._controlnet_image is None or \
-            not self.do_fast_generate or \
-            not self.initialized:
+        if (
+            self._controlnet_image is None or
+            not self.do_fast_generate or
+            not self.initialized
+        ):
             self.logger.info("Getting controlnet image")
             controlnet_image = self.preprocess_for_controlnet(self.input_image)
             self.input_image.save("input_image.png")
@@ -450,8 +509,8 @@ class SDHandler(
     @property
     def do_load_controlnet(self):
         return (
-                (not self.controlnet_loaded and self.enable_controlnet) or
-                (self.controlnet_loaded and self.enable_controlnet)
+            (not self.controlnet_loaded and self.enable_controlnet) or
+            (self.controlnet_loaded and self.enable_controlnet)
         )
 
     @property
@@ -461,21 +520,18 @@ class SDHandler(
     @property
     def do_reuse_pipeline(self):
         return (
-                (self.is_txt2img and self.txt2img is None and self.img2img) or
-                (self.is_img2img and self.img2img is None and self.txt2img) or
-                ((
-                         (self.is_txt2img and self.txt2img) or
-                         (self.is_img2img and self.img2img)
-                 ) and (self.do_load_controlnet or self.do_unload_controlnet))
+            (self.is_txt2img and self.txt2img is None and self.img2img) or
+            (self.is_img2img and self.img2img is None and self.txt2img) or
+            (
+                (
+                    (self.is_txt2img and self.txt2img) or
+                    (self.is_img2img and self.img2img)
+                ) and
+                (
+                    self.do_load_controlnet or self.do_unload_controlnet
+                )
+            )
         )
-
-    @property
-    def latents(self):
-        return self.generate_latents()
-
-    @latents.setter
-    def latents(self, value):
-        self._latents = value
 
     @staticmethod
     def apply_filters(image, filters):
@@ -511,7 +567,11 @@ class SDHandler(
         return model.endswith(".safetensors")
 
     def initialize(self):
-        if self.initialized is False or self.reload_model is True or self.pipe is None:
+        if (
+            self.initialized is False or
+            self.reload_model is True or
+            self.pipe is None
+        ):
             if not self.initialized:
                 self.logger.info("Initializing")
             elif self.reload_model:
@@ -526,8 +586,10 @@ class SDHandler(
             self.reload_model = False
 
     def controlnet(self):
-        if self._controlnet is None \
-            or self.current_controlnet_type != self.controlnet_type:
+        if (
+            self._controlnet is None or
+            self.current_controlnet_type != self.controlnet_type
+        ):
             self._controlnet = self.load_controlnet()
         else:
             print("controlnet already loaded")
@@ -546,7 +608,6 @@ class SDHandler(
         requested_model = options.get(f"model", None)
 
         # do model reload checks here
-
 
         sequential_cpu_offload_changed = self.use_enable_sequential_cpu_offload != (options.get("use_enable_sequential_cpu_offload", True) is True)
         model_changed = (self.model is not None and self.model != requested_model)
@@ -997,11 +1058,14 @@ class SDHandler(
     do_load_compel = False
 
     def process_data(self, data: dict):
-        if self.do_fast_generate and self.initialized:
+        self.data = data if data is not None else self.data
+        options = self.data.get("options", {})
+        do_fast_generate = options.get("do_fast_generate", False)
+        if do_fast_generate and self.initialized:
             return
-
         self.logger.info("Runner: process_data called")
         self.requested_data = data
+        self.load_options()
         prompt = self.prompt if self.prompt else ""
         negative_prompt = self.negative_prompt if self.negative_prompt else ""
         self.do_load_compel = prompt != self.current_prompt or negative_prompt != self.current_negative_prompt
