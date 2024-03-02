@@ -259,47 +259,80 @@ class SDHandler(
             message["callback"]()
 
     def load_options(self):
-        self.options = self.data.get("options", {})
-        self.seed = self.options.get("seed", DEFAULT_SEED) + self.current_sample
-        self.deterministic_seed = self.options.get("deterministic_seed", None)
-        self.deterministic_style = self.options.get("deterministic_style", None)
-        self.batch_size = self.options.get("batch_size", 1)
-        self.prompt = self.options.get("prompt", "")
-        self.negative_prompt = self.options.get("negative_prompt", "")
-        self.use_prompt_converter = self.options.get("use_prompt_converter", True)
-        self.guidance_scale = self.options.get("guidance_scale", 7.5)
-        self.image_guidance_scale = self.options.get("image_guidance_scale", 1.5)
-        self.height = self.options.get("height", 512)
-        self.width = self.options.get("width", 512)
-        self.steps = self.options.get("steps", 20)
-        self.ddim_eta = self.options.get("ddim_eta", 0.5)
-        self.n_samples = self.options.get("n_samples", 1)
-        self.pos_x = self.options.get("pos_x", 0)
-        self.pos_y = self.options.get("pos_y", 0)
-        self.outpaint_box_rect = self.options.get("box_rect", "")
-        self.hf_token = self.options.get("hf_token", "")
-        self.strength = self.options.get("strength", 1.0)
-        self.depth_map = self.options.get("depth_map", None)
-        self.image = self.options.get("image", None)
-        self.input_image = self.options.get("input_image", None)
-        self.mask = self.options.get("mask", None)
-        self.enable_model_cpu_offload = self.options.get("enable_model_cpu_offload", False) is True
-        self.use_attention_slicing = self.options.get("use_attention_slicing", False) is True
-        self.use_tf32 = self.options.get("use_tf32", False) is True
-        self.use_last_channels = self.options.get("use_last_channels", True) is True
-        self.use_enable_sequential_cpu_offload = self.options.get("use_enable_sequential_cpu_offload", True) is True
-        self.use_enable_vae_slicing = self.options.get("use_enable_vae_slicing", False) is True
-        self.use_tome_sd = self.options.get("use_tome_sd", False) is True
-        self.do_nsfw_filter = self.options.get("do_nsfw_filter", True) is True
-        self.model_data = self.options.get("model_data", {})
+        properties = [
+            "seed",
+            "deterministic_seed",
+            "deterministic_style",
+            "batch_size",
+            "prompt",
+            "negative_prompt",
+            "use_prompt_converter",
+            "guidance_scale",
+            "image_guidance_scale",
+            "height",
+            "width",
+            "steps",
+            "ddim_eta",
+            "n_samples",
+            "pos_x",
+            "pos_y",
+            "outpaint_box_rect",
+            "hf_token",
+            "strength",
+            "depth_map",
+            "image",
+            "input_image",
+            "mask",
+            "enable_model_cpu_offload",
+            "use_attention_slicing",
+            "use_tf32",
+            "use_last_channels",
+            "use_enable_sequential_cpu_offload",
+            "use_enable_vae_slicing",
+            "use_tome_sd",
+            "do_nsfw_filter",
+            "model_data",
+            "use_tiled_vae",
+            "use_accelerated_transformers",
+            "use_torch_compile",
+            "use_interpolation",
+            "interpolation_data",
+            "model_base_path",
+            "gif_path",
+            "image_path",
+            "lora_path",
+            "embeddings_path",
+            "outpaint_model_path",
+            "pix2pix_model_path",
+            "depth2img_model_path",
+            "model_branch",
+            "enable_controlnet",
+            "controlnet_conditioning_scale",
+            "controlnet_guess_mode",
+            "control_guidance_start",
+            "control_guidance_end",
+            "filters",
+            "hf_api_key_read_key",
+            "hf_api_key_write_key",
+            "original_model_data",
+            "clip_skip",
+            "denoise_strength",
+            "face_enhance",
+            "do_fast_generate",
+            "allow_online_mode",
+            "vae_path",
+        ]
+        for prop in properties:
+            setattr(self, prop, self.options.get(prop, getattr(self, prop)))
+
+        self.seed += self.current_sample
+
+
+        self.options = self.data.get("options", self.options)
         self.model_version = self.model_data["version"]
-        self.use_tiled_vae = self.options.get("use_tiled_vae", False) is True
-        self.use_accelerated_transformers = self.options.get("use_accelerated_transformers", False) is True
-        self.use_torch_compile = self.options.get("use_torch_compile", False) is True
         self.is_sd_xl = self.model_version == "SDXL 1.0" or self.is_sd_xl_turbo
         self.is_sd_xl_turbo = self.model_version == "SDXL Turbo"
         self.is_turbo = self.model_version == "SD Turbo"
-        self.model = self.options.get("model", None)
         self.use_compel = (
             not self.use_enable_sequential_cpu_offload and
             not self.is_txt2vid and
@@ -313,40 +346,13 @@ class SDHandler(
         self.is_outpaint = self.action == "outpaint"
         self.is_txt2img = self.action == "txt2img" and self.image is None
         self.is_vid_action = self.is_txt2vid or self.is_vid2vid
-        self.input_video = self.options.get("input_video", None)
         self.is_txt2vid = self.action == "txt2vid" and not self.input_video
         self.is_vid2vid = self.action == "txt2vid" and self.input_video
         self.is_upscale = self.action == "upscale"
         self.is_img2img = self.action == "txt2img" and self.image is not None
         self.is_depth2img = self.action == "depth2img"
         self.is_pix2pix = self.action == "pix2pix"
-        self.use_interpolation = self.options.get("use_interpolation", False)
-        self.interpolation_data = self.options.get("interpolation_data", None)
-        self.model_base_path = self.options.get("model_base_path", None)
-        self.gif_path = self.options.get("gif_path", None)
-        self.image_path = self.options.get("image_path", None)
-        self.lora_path = self.options.get("lora_path", None)
-        self.embeddings_path = self.options.get("embeddings_path", None)
-        self.outpaint_model_path = self.options.get("outpaint_model_path", None)
-        self.pix2pix_model_path = self.options.get("pix2pix_model_path", None)
-        self.depth2img_model_path = self.options.get("depth2img_model_path", None)
         self.model_path = self.model_data["path"]
-        self.model_branch = self.options.get(f"model_branch", None)
-        self.enable_controlnet = self.options.get("enable_controlnet", False)
-        self.controlnet_conditioning_scale = self.options.get(f"controlnet_conditioning_scale", 1.0)
-        self.controlnet_guess_mode = self.options.get("controlnet_guess_mode", False)
-        self.control_guidance_start = self.options.get("control_guidance_start", 0.0)
-        self.control_guidance_end = self.options.get("control_guidance_end", 1.0)
-        self.filters = self.options.get("filters", {})
-        self.hf_api_key_read_key = self.options.get("hf_api_key_read_key", "")
-        self.hf_api_key_write_key = self.options.get("hf_api_key_write_key", "")
-        self.original_model_data = self.options.get("original_model_data", {})
-        self.clip_skip = self.options.get("clip_skip", 0)
-        self.denoise_strength = self.options.get("denoise_strength", 0.5)
-        self.face_enhance = self.options.get("face_enhance", True)
-        self.do_fast_generate = self.options.get("do_fast_generate", False)
-        self.allow_online_mode = self.options.get("allow_online_mode", False)
-        self.vae_path = self.options.get("vae_path", "openai/consistency-decoder")
 
         controlnet_type = self.options.get("controlnet", None).lower()
         if self.is_vid2vid:
