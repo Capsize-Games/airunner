@@ -1,15 +1,21 @@
 import random
+import threading
+import time
+from queue import Queue
 
 from PIL import Image
 from PyQt6.QtCore import pyqtSignal, QRect
 from PyQt6.QtGui import QImage
+from PyQt6.QtWidgets import QApplication
 
 from airunner.aihandler.stablediffusion.sd_request import SDRequest
-from airunner.enums import SignalCode, ServiceCode, GeneratorSection, ImageCategory, Controlnet
+from airunner.enums import SignalCode, ServiceCode, GeneratorSection, ImageCategory, Controlnet, SDMode
 from airunner.aihandler.settings import MAX_SEED
 from airunner.settings import PHOTO_REALISTIC_NEGATIVE_PROMPT, ILLUSTRATION_NEGATIVE_PROMPT
 from airunner.widgets.base_widget import BaseWidget
 from airunner.widgets.generator_form.templates.generatorform_ui import Ui_generator_form
+
+
 
 
 class GeneratorForm(BaseWidget):
@@ -39,8 +45,57 @@ class GeneratorForm(BaseWidget):
             SignalCode.SD_PROGRESS_SIGNAL: self.on_progress_signal,
             SignalCode.GENERATOR_FORM_UPDATE_VALUES_SIGNAL: self.set_form_values,
             SignalCode.LLM_IMAGE_PROMPT_GENERATED_SIGNAL: self.on_llm_image_prompt_generated_signal,
-            SignalCode.GENERATE_IMAGE_FROM_IMAGE_SIGNAL: self.generate_image_from_image
+            SignalCode.GENERATE_IMAGE_FROM_IMAGE_SIGNAL: self.handle_generate_image_from_image,
+            SignalCode.DO_GENERATE_IMAGE_FROM_IMAGE_SIGNAL: self.do_generate_image_from_image_signal_handler,
         }
+
+        # self.generate_image_from_image_queue = Queue()
+        # self.generate_image_from_image_thread = threading.Thread(target=self.generate_image_from_image_worker)
+        # self.generate_image_from_image_thread.start()
+
+    def generate_image_from_image_worker(self):
+        while True:
+            image = None
+            while not self.generate_image_from_image_queue.empty():
+                image = self.generate_image_from_image_queue.get()
+            if image:
+                self.generate_image_from_image(image)
+            time.sleep(0.01)
+
+    def handle_generate_image_from_image(self, image):
+        self.generate_image_from_image_queue.put(image)
+
+    def generate_image_from_image(self, image: QImage):
+        image = Image.fromqpixmap(image)
+
+        # crop the image to active_grid_area_rect
+        image = image.crop((
+            self.active_rect.x(),
+            self.active_rect.y(),
+            self.active_rect.x() + self.active_rect.width(),
+            self.active_rect.y() + self.active_rect.height()
+        ))
+        generator_settings = self.settings["generator_settings"]
+        controlnet_image_settings = generator_settings["controlnet_image_settings"]
+        # self.emit(
+        #     SignalCode.DO_GENERATE_IMAGE_FROM_IMAGE_SIGNAL,
+        #     dict(
+        #         input_image=image,
+        #         enable_controlnet=True,
+        #         controlnet=Controlnet.CANNY.value,
+        #         generator_section=GeneratorSection.TXT2IMG.value,
+        #         empty_queue=True,
+        #         sd_mode=SDMode.DRAWING,
+        #         guidance_scale=controlnet_image_settings["guidance_scale"],
+        #         controlnet_conditioning_scale=controlnet_image_settings["conditioning_scale"],
+        #         strength=generator_settings["strength"],
+        #     )
+        # )
+        self.emit(SignalCode.START_AUTO_IMAGE_GENERATION_SIGNAL)
+
+    def do_generate_image_from_image_signal_handler(self, res):
+        print("CALL GENERATE")
+        self.call_generate(override_data=res)
 
     @property
     def is_txt2img(self):
@@ -159,34 +214,6 @@ class GeneratorForm(BaseWidget):
     End Slot functions
     """
 
-    def generate_image_from_image(self, image: QImage):
-        image = Image.fromqpixmap(image)
-
-        # crop the image to active_grid_area_rect
-        image = image.crop((
-            self.active_rect.x(),
-            self.active_rect.y(),
-            self.active_rect.x() + self.active_rect.width(),
-            self.active_rect.y() + self.active_rect.height()
-        ))
-
-        print(
-            "controlnet_conditioning_scale",
-            self.settings["generator_settings"]["controlnet_conditioning_scale"] / 100.0,
-            "strength",
-            self.settings["generator_settings"]["strength"] / 100.0
-        )
-
-        self.call_generate(
-            override_data=dict(
-                input_image=image,
-                enable_controlnet=True,
-                controlnet=Controlnet.CANNY.value,
-                generator_section="txt2img",
-                empty_queue=True
-            )
-        )
-
     def generate(self, image=None, seed=None):
         if seed is None:
             seed = self.settings["generator_settings"]["seed"]
@@ -228,7 +255,10 @@ class GeneratorForm(BaseWidget):
 
             if image is None:
                 if self.is_txt2img:
-                    return self.do_generate(seed=seed, override_data=override_data)
+                    return self.do_generate(
+                        seed=seed,
+                        override_data=override_data
+                    )
                 # Create a transparent image the size of  active_grid_area_rect
                 width = self.settings["working_width"]
                 height = self.settings["working_height"]
@@ -287,7 +317,12 @@ class GeneratorForm(BaseWidget):
                 "mask": mask,
                 "image": image,
                 "original_image": original_image,
-                "location": QRect(0, 0, self.settings["working_width"], self.settings["working_height"])
+                "location": QRect(
+                    0,
+                    0,
+                    self.settings["working_width"],
+                    self.settings["working_height"]
+                )
             }, seed=seed, override_data=override_data)
         elif self.generator_section == "vid2vid":
             images = self.prep_video()
@@ -295,7 +330,10 @@ class GeneratorForm(BaseWidget):
                 "images": images
             }, seed=seed)
         else:
-            self.do_generate(seed=seed, override_data=override_data)
+            self.do_generate(
+                seed=seed,
+                override_data=override_data
+            )
 
     def prep_video(self):
         return []
@@ -328,7 +366,7 @@ class GeneratorForm(BaseWidget):
 
         self.set_seed(seed=seed)
 
-        self.logger.info(f"Attempting to generate image")
+        self.logger.debug(f"Attempting to generate image")
 
         action = self.generator_section
         model_data = self.settings["generator_settings"]
@@ -339,6 +377,7 @@ class GeneratorForm(BaseWidget):
         model = self.get_service("ai_model_by_name")(name)
         prompt = override_data.get("prompt", self.settings["generator_settings"]["prompt"])
         negative_prompt = override_data.get("negative_prompt", self.settings["generator_settings"]["negative_prompt"])
+        sd_mode = override_data.get("sd_mode", None)
         model_data = {
             "name": model_data.get("name", model["name"]),
             "path": model_data.get("path", model["path"]),
@@ -349,6 +388,7 @@ class GeneratorForm(BaseWidget):
             "enabled": model_data.get("enabled", model["enabled"]),
             "default": model_data.get("default", model["is_default"])
         }
+        strength = override_data.get("strength", 0.5)
         self.emit(
             SignalCode.SD_IMAGE_GENERATE_REQUEST_SIGNAL,
             SDRequest()(
@@ -365,9 +405,10 @@ class GeneratorForm(BaseWidget):
                 controlnet_image=self.controlnet_image,
                 memory_options=self.get_memory_options(),
                 extra_options=extra_options,
+                sd_mode=sd_mode,
+                strength=strength
             )
         )
-
 
     def get_memory_options(self):
         return {
@@ -422,6 +463,7 @@ class GeneratorForm(BaseWidget):
         if progressbar.maximum() == 0:
             progressbar.setRange(0, 100)
         progressbar.setValue(value)
+        QApplication.processEvents()
 
     def start_progress_bar(self):
         self.ui.progress_bar.setRange(0, 0)

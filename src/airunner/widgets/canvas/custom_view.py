@@ -273,14 +273,23 @@ class CustomGraphicsView(
 
     def showEvent(self, event):
         super().showEvent(event)
-        original_mouse_event = self.mouseMoveEvent
-        self.mouseMoveEvent = partial(self.handle_mouse_event, original_mouse_event)
+
+        if self.canvas_type == CanvasType.IMAGE.value:
+            original_mouse_event = self.mouseMoveEvent
+            self.mouseMoveEvent = partial(
+                self.handle_mouse_event,
+                original_mouse_event
+            )
+
         self.setContentsMargins(0, 0, 0, 0)
         self.create_scene()
-        self.emit(
-            SignalCode.CANVAS_DO_DRAW_SIGNAL,
-            True
-        )
+
+        if self.canvas_type == CanvasType.IMAGE.value:
+            self.emit(
+                SignalCode.CANVAS_DO_DRAW_SIGNAL,
+                True
+            )
+
         self.toggle_drag_mode()
 
     def create_scene(self):
@@ -305,6 +314,7 @@ class CustomGraphicsView(
         self.scene.setBackgroundBrush(brush)
 
     def handle_mouse_event(self, original_mouse_event, event):
+        print("handle_mouse_event")
         if event.buttons() == Qt.MouseButton.MiddleButton:
             if self.last_pos:
                 delta = event.pos() - self.last_pos
@@ -355,6 +365,7 @@ class CustomGraphicsView(
         new_event = self.snap_to_grid(event)
         super().mousePressEvent(new_event)
 
-    def mouseMoveEvent(self, event: QMouseEvent):
-        new_event = self.snap_to_grid(event, False)
-        super().mouseMoveEvent(new_event)
+    # def mouseMoveEvent_(self, event: QMouseEvent):
+    #     print("mouseMoveEvent")
+    #     new_event = self.snap_to_grid(event, False)
+    #     super().mouseMoveEvent(new_event)

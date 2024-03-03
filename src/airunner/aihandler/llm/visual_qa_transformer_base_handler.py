@@ -32,7 +32,7 @@ class VisualQATransformerBaseHandler(TransformerBaseHandler):
             self.load_processor()
 
     def load_processor(self, local_files_only=True):
-        self.logger.info(f"Loading processor {self.model_path}")
+        self.logger.debug(f"Loading processor {self.model_path}")
         kwargs = {
             'local_files_only': local_files_only,
             'trust_remote_code': True,
@@ -59,12 +59,12 @@ class VisualQATransformerBaseHandler(TransformerBaseHandler):
                 self.logger.error("Failed to load processor")
                 return False
         if self.processor:
-            self.logger.info("Processor loaded")
+            self.logger.debug("Processor loaded")
         else:
             self.logger.error("Failed to load processor")
 
     def unload_processor(self):
-        self.logger.info("Unloading processor")
+        self.logger.debug("Unloading processor")
         if self.processor:
             self.processor = None
             return True

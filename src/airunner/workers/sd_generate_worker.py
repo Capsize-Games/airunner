@@ -17,11 +17,11 @@ class SDGenerateWorker(Worker):
         self.register(SignalCode.SD_ADD_RESPONSE_TO_QUEUE_SIGNAL, self.on_add_sd_response_to_queue_signal)
     
     def on_add_sd_response_to_queue_signal(self, request):
-        self.logger.info("Request recieved")
+        self.logger.debug("Request recieved")
         self.add_to_queue(request)
         
     def handle_message(self, data):
-        self.logger.info("Generating")
+        self.logger.debug("Generating")
         image_base_path = data["image_base_path"]
         message = data["message"]
         for response in self.sd.generator_sample(message):

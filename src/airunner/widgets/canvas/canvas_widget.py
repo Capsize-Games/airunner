@@ -212,6 +212,8 @@ class CanvasWidget(BaseWidget):
         self.do_draw(force_draw=force_draw)
 
     def on_image_generated_signal(self, image_data: dict):
+        if not image_data or image_data["images"] is None:
+            return
         self.add_image_to_scene(
             image_data["images"][0],
             is_outpaint=image_data["data"]["action"] == GeneratorSection.OUTPAINT.value,
@@ -467,7 +469,7 @@ class CanvasWidget(BaseWidget):
             self.update()
     
     def delete_image(self):
-        self.logger.info("Deleting image from canvas")
+        self.logger.debug("Deleting image from canvas")
         draggable_pixmap = self.current_draggable_pixmap()
         if not draggable_pixmap:
             return
@@ -503,7 +505,7 @@ class CanvasWidget(BaseWidget):
 
     def add_image_to_scene(
         self,
-        image_data: dict,
+        image: Image,
         is_outpaint: bool = False,
         outpaint_box_rect: QPoint = None
     ):
@@ -517,7 +519,7 @@ class CanvasWidget(BaseWidget):
         self.do_draw_layers = True
 
         if not is_outpaint:
-            self.set_current_active_image(image_data["image"])
+            self.set_current_active_image(image)
             self.do_draw(
                 force_draw=True,
                 do_draw_layers=True
@@ -525,7 +527,7 @@ class CanvasWidget(BaseWidget):
         else:
             image, root_point, pivot_point = self.handle_outpaint(
                 outpaint_box_rect,
-                image_data["image"],
+                image,
                 action=GeneratorSection.OUTPAINT.value
             )
             self.set_current_active_image(image)

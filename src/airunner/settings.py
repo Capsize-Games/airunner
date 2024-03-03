@@ -1,6 +1,6 @@
 import os
 
-from airunner.enums import GeneratorSection, StableDiffusionVersion, ImageGenerator, Language
+from airunner.enums import GeneratorSection, StableDiffusionVersion, ImageGenerator, Language, Scheduler
 
 BASE_PATH = os.path.join(os.path.expanduser("~"), ".airunner")
 SQLITE_DB_NAME = "airunner.db"
@@ -331,7 +331,6 @@ ILLUSTRATION_NEGATIVE_PROMPT = (
 BUG_REPORT_LINK = "https://github.com/Capsize-Games/airunner/issues/new?assignees=&labels=&template=bug_report.md&title="
 DISCORD_LINK = "https://discord.gg/ukcgjEpc5f"
 VULNERABILITY_REPORT_LINK = "https://github.com/Capsize-Games/airunner/security/advisories/new"
-DEFAULT_SCHEDULER = "DPM++ 2M Karras"
 
 # Set default models, currently only for stablediffusion (later Kandinsky as well)
 DEFAULT_MODELS = {}
@@ -366,4 +365,30 @@ CONFIG_FILES = {
     "xl": "sd_xl_base.yaml",
     "xl_refiner": "sd_xl_refiner.yaml"
 }
-DEFAULT_SEED = 42
+SCHEDULER_CLASSES = {
+    Scheduler.EULER_ANCESTRAL.value: "EulerAncestralDiscreteScheduler",
+    Scheduler.EULER.value: "EulerDiscreteScheduler",
+    Scheduler.LMS.value: "LMSDiscreteScheduler",
+    Scheduler.HEUN.value: "HeunDiscreteScheduler",
+    Scheduler.DPM2.value: "DPMSolverSinglestepScheduler",
+    Scheduler.DPM_PP_2M.value: "DPMSolverMultistepScheduler",
+    Scheduler.DPM2_K.value: "KDPM2DiscreteScheduler",
+    Scheduler.DPM2_A_K.value: "KDPM2AncestralDiscreteScheduler",
+    Scheduler.DPM_PP_2M_K.value: "DPMSolverMultistepScheduler",
+    Scheduler.DPM_PP_2M_SDE_K.value: "DPMSolverMultistepScheduler",
+    Scheduler.DDIM.value: "DDIMScheduler",
+    Scheduler.UNIPC.value: "UniPCMultistepScheduler",
+    Scheduler.DDPM.value: "DDPMScheduler",
+    Scheduler.DEIS.value: "DEISMultistepScheduler",
+    Scheduler.DPM_2M_SDE_K.value: "DPMSolverMultistepScheduler",
+    Scheduler.PLMS.value: "PNDMScheduler",
+    Scheduler.DPM.value: "DPMSolverMultistepScheduler",
+    # "DDIM Inverse": "DDIMInverseScheduler",
+    # "IPNM": "IPNDMScheduler",
+    # "RePaint": "RePaintScheduler",
+    # "Karras Variance exploding": "KarrasVeScheduler",
+    # "VE-SDE": "ScoreSdeVeScheduler",
+    # "VP-SDE": "ScoreSdeVpScheduler",
+    # "VQ Diffusion": " VQDiffusionScheduler",
+}
+DEFAULT_SCHEDULER = Scheduler.DPM_PP_2M_K

@@ -1,4 +1,4 @@
-# Form implementation generated from reading ui file '/home/joe/Projects/imagetopixel/airunner/src/airunner/windows/main/templates/main_window.ui'
+# Form implementation generated from reading ui file '/home/joe/Projects/imagetopixel/airunner/src/airunner/../../src/airunner/windows/main/templates/main_window.ui'
 #
 # Created by: PyQt6 UI code generator 6.6.1
 #
@@ -642,7 +642,7 @@ class Ui_MainWindow(object):
         self.nsfw_button.setCursor(QtGui.QCursor(QtCore.Qt.CursorShape.PointingHandCursor))
         self.nsfw_button.setText("")
         icon11 = QtGui.QIcon()
-        icon11.addPixmap(QtGui.QPixmap("/home/joe/Projects/imagetopixel/airunner/src/airunner/windows/main/templates/../../../icons/light/adult-sign-icon.svg"), QtGui.QIcon.Mode.Normal, QtGui.QIcon.State.Off)
+        icon11.addPixmap(QtGui.QPixmap("/home/joe/Projects/imagetopixel/airunner/src/airunner/../../src/airunner/windows/main/templates/../../../icons/light/adult-sign-icon.svg"), QtGui.QIcon.Mode.Normal, QtGui.QIcon.State.Off)
         self.nsfw_button.setIcon(icon11)
         self.nsfw_button.setIconSize(QtCore.QSize(18, 18))
         self.nsfw_button.setCheckable(True)
@@ -732,13 +732,13 @@ class Ui_MainWindow(object):
         self.actionPaste.setObjectName("actionPaste")
         self.actionUndo = QtGui.QAction(parent=MainWindow)
         icon12 = QtGui.QIcon()
-        icon12.addPixmap(QtGui.QPixmap("/home/joe/Projects/imagetopixel/airunner/src/airunner/windows/main/templates/../../../../../../../../../../../../../../.designer/src/icons/007-undo.png"), QtGui.QIcon.Mode.Normal, QtGui.QIcon.State.Off)
+        icon12.addPixmap(QtGui.QPixmap("/home/joe/Projects/imagetopixel/airunner/src/airunner/../../src/airunner/windows/main/templates/../../../../../../../../../../../../../../.designer/src/icons/007-undo.png"), QtGui.QIcon.Mode.Normal, QtGui.QIcon.State.Off)
         self.actionUndo.setIcon(icon12)
         self.actionUndo.setWhatsThis("")
         self.actionUndo.setObjectName("actionUndo")
         self.actionRedo = QtGui.QAction(parent=MainWindow)
         icon13 = QtGui.QIcon()
-        icon13.addPixmap(QtGui.QPixmap("/home/joe/Projects/imagetopixel/airunner/src/airunner/windows/main/templates/../../../../../../../../../../../../../../.designer/src/icons/008-redo.png"), QtGui.QIcon.Mode.Normal, QtGui.QIcon.State.Off)
+        icon13.addPixmap(QtGui.QPixmap("/home/joe/Projects/imagetopixel/airunner/src/airunner/../../src/airunner/windows/main/templates/../../../../../../../../../../../../../../.designer/src/icons/008-redo.png"), QtGui.QIcon.Mode.Normal, QtGui.QIcon.State.Off)
         self.actionRedo.setIcon(icon13)
         self.actionRedo.setObjectName("actionRedo")
         self.actionGrid = QtGui.QAction(parent=MainWindow)

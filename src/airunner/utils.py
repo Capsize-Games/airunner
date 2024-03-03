@@ -9,6 +9,8 @@ import datetime
 import gc
 import threading
 import cProfile
+
+import PIL
 import torch
 from PIL import Image
 from PIL import PngImagePlugin
@@ -537,6 +539,19 @@ def snap_to_grid(x: int, y: int, use_floor: bool = True):
 
 
 def convert_base64_to_image(base_64_image) -> Image:
+    if base_64_image is None:
+        return base_64_image
     decoded = base64.b64decode(base_64_image)
     bytes_ = io.BytesIO(decoded)
-    return Image.open(bytes_)
+    try:
+        return Image.open(bytes_)
+    except PIL.UnidentifiedImageError:
+        return base_64_image
+
+
+def convert_image_to_base64(image: Image) -> str:
+    img_byte_arr = io.BytesIO()
+    image.save(img_byte_arr, format='PNG')
+    img_byte_arr = img_byte_arr.getvalue()
+    image_base64 = base64.encodebytes(img_byte_arr).decode('ascii')
+    return image_base64

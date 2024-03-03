@@ -75,7 +75,7 @@ class Logger:
         :param msg:
         :return: None
         """
-        self.logger.info(msg)
+        self.logger.debug(msg)
 
     def warning(self, msg):
         """

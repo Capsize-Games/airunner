@@ -217,11 +217,10 @@ class AIRunnerAgent(QObject, MediatorMixin):
         return rendered_template
 
     def do_response(self):
-        print("DO RESPONSE CALLED")
         self.run(self.prompt, LLMActionType.CHAT)
 
     def run(self, prompt, action: LLMActionType, vision_history: list = []):
-        self.logger.info("Running...")
+        self.logger.debug("Running...")
         self.prompt = prompt
         conversation = self.prepare_messages(action, vision_history=vision_history)
         rendered_template = self.get_rendered_template(conversation)
@@ -231,7 +230,7 @@ class AIRunnerAgent(QObject, MediatorMixin):
         model_inputs = encoded.to("cuda" if torch.cuda.is_available() else "cpu")
 
         # Generate the response
-        self.logger.info("Generating...")
+        self.logger.debug("Generating...")
         self.thread = threading.Thread(target=self.model.generate, kwargs=dict(
             model_inputs,
             min_length=self.min_length,

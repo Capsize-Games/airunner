@@ -128,7 +128,7 @@ class TTSHandler(BaseHandler):
         self.sentences = []
         self.tts_enabled = self.settings["tts_enabled"]
 
-        self.logger.info("Loading")
+        self.logger.debug("Loading")
         self.register(
             SignalCode.APPLICATION_SETTINGS_CHANGED_SIGNAL,
             self.on_application_settings_changed_signal
@@ -140,10 +140,10 @@ class TTSHandler(BaseHandler):
             self.tts_enabled = tts_enabled
             if not self.tts_enabled:
                 self.unload()
-                self.logger.info("Text to Speech is disabled")
+                self.logger.debug("Text to Speech is disabled")
             else:
                 self.initialize()
-                self.logger.info("Text to Speech is enabled")
+                self.logger.debug("Text to Speech is enabled")
 
     def move_model(self, to_cpu: bool = False):
         if to_cpu and self.do_offload_to_cpu:
@@ -155,7 +155,7 @@ class TTSHandler(BaseHandler):
         """
         Move the model, vocoder, processor and speaker_embeddings to the CPU
         """
-        self.logger.info("Moving TTS to CPU")
+        self.logger.debug("Moving TTS to CPU")
         if self.model:
             self.model = self.model.cpu()
         if self.vocoder:
@@ -167,7 +167,7 @@ class TTSHandler(BaseHandler):
         """
         Move the model, vocoder, processor and speaker_embeddings to the GPU
         """
-        self.logger.info("Moving TTS to device")
+        self.logger.debug("Moving TTS to device")
         if self.use_cuda:
             if self.model:
                 self.model = self.model.to(self.device)
@@ -185,7 +185,7 @@ class TTSHandler(BaseHandler):
     def load(self, target_model=None):
         if not self.tts_enabled:
             return
-        self.logger.info(f"Loading {target_model}...")
+        self.logger.debug(f"Loading {target_model}...")
         target_model = target_model or self.current_model
         if self.current_model is None or self.model is None:
             self.load_model()
@@ -197,14 +197,14 @@ class TTSHandler(BaseHandler):
             self.load_dataset()
         if self.corpus is None:
             self.load_corpus()
-        self.logger.info("Setting current model to " + target_model)
+        self.logger.debug("Setting current model to " + target_model)
         self.current_model = target_model
         self.loaded = True
     
     def unload(self):
         if not self.loaded:
             return
-        self.logger.info("Unloading")
+        self.logger.debug("Unloading")
         self.loaded = False
         do_clear_memory = False
         try:
@@ -233,14 +233,14 @@ class TTSHandler(BaseHandler):
             clear_memory()
 
     def run(self):
-        self.logger.info("Running")
+        self.logger.debug("Running")
         self.initialize()
         self.process_sentences()
 
     def quantization_config(self):
         config = None
         if self.llm_dtype == "8bit":
-            self.logger.info("Loading 8bit model")
+            self.logger.debug("Loading 8bit model")
             config = BitsAndBytesConfig(
                 load_in_4bit=False,
                 load_in_8bit=True,
@@ -251,7 +251,7 @@ class TTSHandler(BaseHandler):
                 bnb_4bit_quant_type='nf4',
             )
         elif self.llm_dtype == "4bit":
-            self.logger.info("Loading 4bit model")
+            self.logger.debug("Loading 4bit model")
             config = BitsAndBytesConfig(
                 load_in_4bit=True,
                 load_in_8bit=False,
@@ -262,7 +262,7 @@ class TTSHandler(BaseHandler):
                 bnb_4bit_quant_type='nf4',
             )
         elif self.llm_dtype == "2bit":
-            self.logger.info("Loading 2bit model")
+            self.logger.debug("Loading 2bit model")
             config = GPTQConfig(
                 bits=2,
                 dataset="c4",
@@ -271,7 +271,7 @@ class TTSHandler(BaseHandler):
         return config
 
     def load_model(self):
-        self.logger.info("Loading Model")
+        self.logger.debug("Loading Model")
         model_class_ = BarkModel if self.use_bark else SpeechT5ForTextToSpeech
         self.model = model_class_.from_pretrained(
             self.model_path, 
@@ -286,7 +286,7 @@ class TTSHandler(BaseHandler):
     
     def load_vocoder(self, local_files_only=True):
         if not self.use_bark:
-            self.logger.info("Loading Vocoder")
+            self.logger.debug("Loading Vocoder")
             try:
                 self.vocoder = SpeechT5HifiGan.from_pretrained(
                     self.vocoder_path,
@@ -298,7 +298,7 @@ class TTSHandler(BaseHandler):
                 return self.load_vocoder(local_files_only=False)
 
     def load_processor(self, local_files_only=True):
-        self.logger.info("Loading Procesor")
+        self.logger.debug("Loading Procesor")
         processor_class_ = BarkProcessor if self.use_bark else SpeechT5Processor
         try:
             self.processor = processor_class_.from_pretrained(
@@ -319,7 +319,7 @@ class TTSHandler(BaseHandler):
         os.environ["HF_DATASETS_OFFLINE"] = str(int(local_files_only))
 
         if not self.use_bark:
-            self.logger.info("Loading Dataset")
+            self.logger.debug("Loading Dataset")
             try:
                 embeddings_dataset = load_dataset(
                     self.speaker_embeddings_dataset_path,
@@ -338,7 +338,7 @@ class TTSHandler(BaseHandler):
 
     def load_corpus(self):
         if self.input_text:
-            self.logger.info("Loading Corpus")
+            self.logger.debug("Loading Corpus")
             corpus = open(self.input_text, "r").read()
             for key, value in self.character_replacement_map.items():
                 corpus = corpus.replace(key, value)
@@ -366,7 +366,7 @@ class TTSHandler(BaseHandler):
         words.
         :return:
         """
-        self.logger.info("Processing sentences")
+        self.logger.debug("Processing sentences")
         self.sentences = []
         sentence = ""
         for word in self.corpus:
@@ -402,7 +402,7 @@ class TTSHandler(BaseHandler):
             if len(chunks) < 30 and not is_end_of_message:
                 return False
 
-            self.logger.info("Adding text to queue...")
+            self.logger.debug("Adding text to queue...")
         
             for chunk in chunks:
                 # add "..." to chunk if it doesn't end with a sentence ender
@@ -459,15 +459,15 @@ class TTSHandler(BaseHandler):
         return response
 
     def generate_with_bark(self, text):
-        self.logger.info("Generating TTS with Bark...")
-        self.logger.info("Processing inputs...")
+        self.logger.debug("Generating TTS with Bark...")
+        self.logger.debug("Processing inputs...")
         inputs = self.processor(
             text=text,
             voice_preset=self.settings["tts_settings"]["voice"]
         )
         inputs = self.move_inputs_to_device(inputs)
 
-        self.logger.info("Generating speech...")
+        self.logger.debug("Generating speech...")
         start = time.time()
         params = {
             **inputs,
@@ -476,23 +476,23 @@ class TTSHandler(BaseHandler):
             'semantic_temperature': self.settings["tts_settings"]["semantic_temperature"] / 100.0,
         }
         speech = self.model.generate(**params)
-        self.logger.info("Generated speech in " + str(time.time() - start) + " seconds")
+        self.logger.debug("Generated speech in " + str(time.time() - start) + " seconds")
 
         response = speech[0].cpu().float().numpy()
         return response
 
     def generate_with_t5(self, text):
-        self.logger.info("Generating TTS with SpeechT5..." + str(self.settings["tts_settings"]["use_bark"]))
+        self.logger.debug("Generating TTS with SpeechT5..." + str(self.settings["tts_settings"]["use_bark"]))
         text = text.replace("\n", " ").strip()
         text = text.replace("\n", " ").strip()
         text = self.replace_numbers_with_words(text)
 
-        self.logger.info("Processing inputs...")
+        self.logger.debug("Processing inputs...")
 
         inputs = self.processor(text=text, return_tensors="pt")
         inputs = self.move_inputs_to_device(inputs)
 
-        self.logger.info("Generating speech...")
+        self.logger.debug("Generating speech...")
         start = time.time()
         print(inputs)
         speech = self.model.generate(
@@ -501,14 +501,14 @@ class TTSHandler(BaseHandler):
             vocoder=self.vocoder,
             max_length=100
         )
-        self.logger.info("Generated speech in " + str(time.time() - start) + " seconds")
+        self.logger.debug("Generated speech in " + str(time.time() - start) + " seconds")
         response = speech.cpu().float().numpy()
         return response
 
     def move_inputs_to_device(self, inputs):
         use_cuda = self.settings["tts_settings"]["use_cuda"]
         if use_cuda:
-            self.logger.info("Moving inputs to CUDA")
+            self.logger.debug("Moving inputs to CUDA")
             try:
                 inputs["input_ids"] = inputs["input_ids"].to(self.device)
                 inputs["attention_mask"] = inputs["attention_mask"].to(self.device)

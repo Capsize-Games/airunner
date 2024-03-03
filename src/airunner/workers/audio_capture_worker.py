@@ -45,7 +45,7 @@ class AudioCaptureWorker(Worker):
         self.silence_buffer_seconds = stt_settings["silence_buffer_seconds"]
 
     def start(self):
-        self.logger.info("Starting")
+        self.logger.debug("Starting")
         self.running = True
         if self.settings["stt_enabled"]:
             self.start_listening()
@@ -82,9 +82,9 @@ class AudioCaptureWorker(Worker):
         )
 
     def start_listening(self):
-        self.logger.info("Start listening")
+        self.logger.debug("Start listening")
         self.listening = True
 
     def stop_listening(self):
-        self.logger.info("Stop listening")
+        self.logger.debug("Stop listening")
         self.listening = False

@@ -21,12 +21,14 @@ class LoraMixin:
         self.apply_lora()
 
     def apply_lora(self):
-        model_base_path = self.model_base_path
-        lora_path = self.lora_path
+        self.logger.debug("Adding LoRA to pipe")
+        model_base_path = self.settings["path_settings"]["base_path"]
+        lora_path = self.settings["path_settings"]["lora_model_path"]
+        model_version = self.model["version"]
         path = os.path.join(model_base_path, lora_path) if lora_path == "lora" else lora_path
-        if self.model_version not in self.available_lora:
+        if model_version not in self.available_lora:
             return
-        for lora in self.available_lora[self.model_version]:
+        for lora in self.available_lora[model_version]:
             if lora["enabled"] == False:
                 continue
             filepath = None
@@ -38,8 +40,9 @@ class LoraMixin:
             self.load_lora(filepath, lora)
 
     def load_lora(self, checkpoint_path, lora):
-        if self.model_base_path in self.disabled_lora:
-            if checkpoint_path in self.disabled_lora[self.model_base_path]:
+        model_base_path = self.settings["path_settings"]["base_path"]
+        if model_base_path in self.disabled_lora:
+            if checkpoint_path in self.disabled_lora[model_base_path]:
                 return
 
         try:
@@ -53,6 +56,7 @@ class LoraMixin:
             self.disable_lora(checkpoint_path)
 
     def disable_lora(self, checkpoint_path):
-        if self.model_base_path not in self.disabled_lora:
-            self.disabled_lora[self.model_base_path] = []
-        self.disabled_lora[self.model_base_path].append(checkpoint_path)
+        model_base_path = self.settings["path_settings"]["base_path"]
+        if model_base_path not in self.disabled_lora:
+            self.disabled_lora[model_base_path] = []
+        self.disabled_lora[model_base_path].append(checkpoint_path)

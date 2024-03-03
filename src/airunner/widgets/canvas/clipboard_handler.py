@@ -36,11 +36,11 @@ class ClipboardHandler(
         return draggable_pixmap
 
     def paste_image_from_clipboard(self):
-        self.logger.info("paste image from clipboard")
+        self.logger.debug("paste image from clipboard")
         image = self.get_image_from_clipboard()
 
         if not image:
-            self.logger.info("No image in clipboard")
+            self.logger.debug("No image in clipboard")
             return
         return image
 
@@ -57,7 +57,7 @@ class ClipboardHandler(
     def image_to_system_clipboard_windows(self, pixmap):
         if not pixmap:
             return None
-        self.logger.info("image_to_system_clipboard_windows")
+        self.logger.debug("image_to_system_clipboard_windows")
         import win32clipboard
         data = io.BytesIO()
         # Convert QImage to PIL Image
@@ -72,7 +72,7 @@ class ClipboardHandler(
         return pixmap
 
     def image_from_system_clipboard_windows(self):
-        self.logger.info("image_from_system_clipboard_windows")
+        self.logger.debug("image_from_system_clipboard_windows")
         import win32clipboard
         try:
             win32clipboard.OpenClipboard()
@@ -105,11 +105,11 @@ class ClipboardHandler(
         return pixmap
 
     def image_from_system_clipboard_linux(self):
-        self.logger.info("image_from_system_clipboard_linux")
+        self.logger.debug("image_from_system_clipboard_linux")
         try:
             image = ImageGrab.grabclipboard()
             if not image:
-                self.logger.info("No image in clipboard")
+                self.logger.debug("No image in clipboard")
                 return None
             # with transparency
             image = image.convert("RGBA")
