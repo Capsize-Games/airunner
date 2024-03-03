@@ -195,9 +195,6 @@ class SDHandler(
         self.running = True
         self.do_generate = False
 
-    def on_do_generate_signal(self):
-        self.do_generate = True
-
     @property
     def do_load(self):
         return (
@@ -222,100 +219,6 @@ class SDHandler(
         if self._allow_online_mode is None:
             self._allow_online_mode = self.allow_online_mode
         return self._allow_online_mode
-
-    def run(self):
-        self.do_set_seed = (
-            not self.initialized or
-            (
-                self.sd_request and
-                self.sd_request.generator_settings and
-                self.settings is not None and
-                self.sd_request.generator_settings.seed != self.settings["generator_settings"]["seed"]
-            )
-        )
-
-        response = None
-        if not self.loaded and self.loading:
-            if self.initialized and self.pipe:
-                self.loaded = True
-                self.loading = False
-        elif not self.loaded and not self.loading:
-            self.loading = True
-            response = self.generator_sample()
-            self.initialized = True
-        elif self.loaded and not self.loading and self.do_generate:
-            response = self.generator_sample()
-
-        if response is not None:
-            nsfw_content_detected = response["nsfw_content_detected"]
-
-            if nsfw_content_detected:
-                self.emit(
-                    SignalCode.SD_NSFW_CONTENT_DETECTED_SIGNAL,
-                    response
-                )
-            else:
-                self.emit(SignalCode.ENGINE_DO_RESPONSE_SIGNAL, {
-                    'code': EngineResponseCode.IMAGE_GENERATED,
-                    'message': response
-                })
-        # data = response["data"]
-        # seed = data["options"]["seed"]
-        # if not drawing:
-        #     updated_images = []
-        #     image_base_path = self.settings["path_settings"]["image_path"]
-        #     images = response['images']
-        #     for index, image in enumerate(images):
-        #         # hash the prompt and negative prompt along with the action
-        #         action = data["action"]
-        #         prompt = data["options"]["prompt"][0]
-        #         negative_prompt = data["options"]["negative_prompt"][0]
-        #         prompt_hash = hash(f"{action}{prompt}{negative_prompt}{index}")
-        #         image_name = f"{prompt_hash}_{seed}.png"
-        #         image_path = os.path.join(image_base_path, image_name)
-        #         # save the image
-        #         image.save(image_path)
-        #         updated_images.append({
-        #             'path': image_path,
-        #             'image': image
-        #         })
-        #     response["images"] = updated_images
-
-
-    def has_pipe(self) -> bool:
-        return self.pipe is not None
-
-    def pipe_on_cpu(self) -> bool:
-        return self.pipe.device.type == "cpu"
-
-    def is_pipe_on_cpu(self) -> bool:
-        return self.has_pipe() and self.pipe_on_cpu()
-
-    def on_move_to_cpu(self, message: dict = None):
-        message = message or {}
-        if not self.is_pipe_on_cpu() and self.has_pipe():
-            self.logger.debug("Moving model to CPU")
-            self.pipe = self.pipe.to("cpu")
-            clear_memory()
-        if "callback" in message:
-            message["callback"]()
-
-    def load_options(self):
-        self.model_version = self.sd_request.generator_settings.version
-        self.is_sd_xl = self.model_version == StableDiffusionVersion.SDXL1_0.value or self.is_sd_xl_turbo
-        self.is_sd_xl_turbo = self.model_version == StableDiffusionVersion.SDXL_TURBO.value
-        self.is_turbo = self.model_version == StableDiffusionVersion.SD_TURBO.value
-        self.use_compel = (
-            not self.sd_request.memory_settings.use_enable_sequential_cpu_offload and
-            not self.is_sd_xl and
-            not self.is_sd_xl_turbo and
-            not self.is_turbo
-        )
-        self.controlnet_type = self.options.get(
-            "controlnet",
-            Controlnet.CANNY.value
-        ).lower()
-        self.controlnet_type = self.controlnet_type.replace(" ", "_")
 
     @property
     def cuda_error_message(self) -> str:
@@ -530,6 +433,106 @@ class SDHandler(
             raise ValueError("safetensors path is empty")
         return model.endswith(".safetensors")
 
+    @staticmethod
+    def is_pytorch_error(e) -> bool:
+        return "PYTORCH_CUDA_ALLOC_CONF" in str(e)
+
+    def on_do_generate_signal(self):
+        self.do_generate = True
+
+    def run(self):
+        self.do_set_seed = (
+            not self.initialized or
+            (
+                self.sd_request and
+                self.sd_request.generator_settings and
+                self.settings is not None and
+                self.sd_request.generator_settings.seed != self.settings["generator_settings"]["seed"]
+            )
+        )
+
+        response = None
+        if not self.loaded and self.loading:
+            if self.initialized and self.pipe:
+                self.loaded = True
+                self.loading = False
+        elif not self.loaded and not self.loading:
+            self.loading = True
+            response = self.generator_sample()
+            self.initialized = True
+        elif self.loaded and not self.loading and self.do_generate:
+            response = self.generator_sample()
+
+        if response is not None:
+            nsfw_content_detected = response["nsfw_content_detected"]
+
+            if nsfw_content_detected:
+                self.emit(
+                    SignalCode.SD_NSFW_CONTENT_DETECTED_SIGNAL,
+                    response
+                )
+            else:
+                self.emit(SignalCode.ENGINE_DO_RESPONSE_SIGNAL, {
+                    'code': EngineResponseCode.IMAGE_GENERATED,
+                    'message': response
+                })
+        # data = response["data"]
+        # seed = data["options"]["seed"]
+        # if not drawing:
+        #     updated_images = []
+        #     image_base_path = self.settings["path_settings"]["image_path"]
+        #     images = response['images']
+        #     for index, image in enumerate(images):
+        #         # hash the prompt and negative prompt along with the action
+        #         action = data["action"]
+        #         prompt = data["options"]["prompt"][0]
+        #         negative_prompt = data["options"]["negative_prompt"][0]
+        #         prompt_hash = hash(f"{action}{prompt}{negative_prompt}{index}")
+        #         image_name = f"{prompt_hash}_{seed}.png"
+        #         image_path = os.path.join(image_base_path, image_name)
+        #         # save the image
+        #         image.save(image_path)
+        #         updated_images.append({
+        #             'path': image_path,
+        #             'image': image
+        #         })
+        #     response["images"] = updated_images
+
+    def has_pipe(self) -> bool:
+        return self.pipe is not None
+
+    def pipe_on_cpu(self) -> bool:
+        return self.pipe.device.type == "cpu"
+
+    def is_pipe_on_cpu(self) -> bool:
+        return self.has_pipe() and self.pipe_on_cpu()
+
+    def on_move_to_cpu(self, message: dict = None):
+        message = message or {}
+        if not self.is_pipe_on_cpu() and self.has_pipe():
+            self.logger.debug("Moving model to CPU")
+            self.pipe = self.pipe.to("cpu")
+            clear_memory()
+        if "callback" in message:
+            message["callback"]()
+
+    def load_options(self):
+        self.model_version = self.sd_request.generator_settings.version
+        self.is_sd_xl = self.model_version == StableDiffusionVersion.SDXL1_0.value or self.is_sd_xl_turbo
+        self.is_sd_xl_turbo = self.model_version == StableDiffusionVersion.SDXL_TURBO.value
+        self.is_turbo = self.model_version == StableDiffusionVersion.SD_TURBO.value
+        self.use_compel = (
+            not self.sd_request.memory_settings.use_enable_sequential_cpu_offload and
+            not self.is_sd_xl and
+            not self.is_sd_xl_turbo and
+            not self.is_turbo
+        )
+        self.controlnet_type = self.options.get(
+            "controlnet",
+            Controlnet.CANNY.value
+        ).lower()
+        self.controlnet_type = self.controlnet_type.replace(" ", "_")
+
     def initialize(self):
         if (
             self.initialized is False or
@@ -680,7 +683,6 @@ class SDHandler(
         if self.pipe:
             return self.pipe(**self.data)
 
-
     def sample_diffusers_model(self):
         self.logger.debug("sample_diffusers_model")
         try:
@@ -739,7 +741,6 @@ class SDHandler(
             self.local_files_only = True
 
         self.final_callback()
-
 
     def image_handler(
         self,
@@ -978,13 +979,6 @@ class SDHandler(
                 return None
 
         return self.generate()
-
-    @staticmethod
-    def is_pytorch_error(e) -> bool:
-        return "PYTORCH_CUDA_ALLOC_CONF" in str(e)
-
-    def on_sd_cancel_signal(self):
-        print("CANCEL")
 
     def log_error(self, error, message=None):
         message = str(error) if not message else message
