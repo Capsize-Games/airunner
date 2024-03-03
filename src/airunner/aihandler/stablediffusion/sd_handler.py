@@ -334,7 +334,7 @@ class SDHandler(
             return self.img2img is not None
         elif self.sd_request.is_pix2pix:
             return self.pix2pix is not None
-        elif self.is_outpaint:
+        elif self.sd_request.is_outpaint:
             return self.outpaint is not None
         elif self.sd_request.is_depth2img:
             return self.depth2img is not None
@@ -346,7 +346,7 @@ class SDHandler(
                 return self.txt2img
             elif self.sd_request.is_img2img:
                 return self.img2img
-            elif self.is_outpaint:
+            elif self.sd_request.is_outpaint:
                 return self.outpaint
             elif self.sd_request.is_depth2img:
                 return self.depth2img
@@ -365,7 +365,7 @@ class SDHandler(
             self.txt2img = value
         elif self.sd_request.is_img2img:
             self.img2img = value
-        elif self.is_outpaint:
+        elif self.sd_request.is_outpaint:
             self.outpaint = value
         elif self.sd_request.is_depth2img:
             self.depth2img = value
@@ -427,7 +427,7 @@ class SDHandler(
             return StableDiffusionControlNetPipeline
         elif self.sd_request.is_img2img:
             return StableDiffusionControlNetImg2ImgPipeline
-        elif self.is_outpaint:
+        elif self.sd_request.is_outpaint:
             return StableDiffusionControlNetInpaintPipeline
         else:
             raise ValueError(f"Invalid action {self.sd_request.generator_settings.section} unable to get controlnet action diffuser")
