@@ -1,25 +1,101 @@
-import math
+import threading
+import time
+from abc import ABC
 
+from PIL import ImageQt, Image
 from PIL.ImageQt import QImage
-from PyQt6.QtCore import Qt, QPoint, QPointF
+from PyQt6.QtCore import Qt, QPoint, QPointF, pyqtSignal, pyqtSlot, QThread
 from PyQt6.QtGui import QEnterEvent
 from PyQt6.QtGui import QPainterPath
 from PyQt6.QtGui import QPen, QPixmap, QPainter
 from PyQt6.QtWidgets import QGraphicsScene, QGraphicsPixmapItem
 from PyQt6.QtGui import QColor
-
-from airunner.enums import SignalCode, CanvasToolName, CanvasType
+from airunner.enums import SignalCode, CanvasToolName
 from airunner.mediator_mixin import MediatorMixin
 from airunner.service_locator import ServiceLocator
-from airunner.utils import snap_to_grid
+from airunner.utils import snap_to_grid, convert_image_to_base64, create_worker
+from airunner.windows.main.settings_mixin import SettingsMixin
+from airunner.workers.worker import Worker
+
+
+class SaveLineImageWorker(Worker):
+    def __init__(self, prefix):
+        super().__init__()
+        self.image: QImage = None
+        self.running = True
+
+    def handle_message(self, message):
+        pass
+
+    def run(self):
+        while self.running:
+            if self.image:
+                settings = self.settings
+                image = self.image
+                if type(image) is Image:
+                    image = ImageQt.ImageQt(self.image.convert("RGBA"))
+                else:
+                    image = self.image
+                pil_image = ImageQt.fromqimage(image)
+                settings["drawing_pad_settings"]["image"] = convert_image_to_base64(pil_image)
+                self.settings = settings
+            QThread.msleep(5)
+
+    def stop(self):
+        self.running = False
+
+
+class UpdateSceneWorker(Worker):
+    def __init__(self, prefix):
+        super().__init__()
+        self.update_time_in_ms = 0.02
+        self.last_update = 0
+        self.do_update = False
+        self.register(SignalCode.LINES_UPDATED_SIGNAL, self.on_lines_updated_signal)
+
+    def on_lines_updated_signal(self):
+        self.do_update = True
+
+    def handle_message(self, message):
+        pass
+
+    def run(self):
+        self.running = True
+        while self.running:
+            if self.parent:
+                if self.last_update == 0:
+                    self.last_update = time.time()
+                if (
+                    time.time() - self.last_update >= self.update_time_in_ms and
+                    self.do_update
+                ):
+                    self.last_update = time.time()
+                    settings = self.settings
+                    if type(self.parent.image) is Image:
+                        image = ImageQt.ImageQt(self.parent.image.convert("RGBA"))
+                    else:
+                        image = self.parent.image
+                    pil_image = ImageQt.fromqimage(image)
+                    settings["drawing_pad_settings"]["image"] = convert_image_to_base64(pil_image)
+                    self.settings = settings
+                    self.do_update = False
+                    self.emit(SignalCode.DO_GENERATE_SIGNAL)
+                try:
+                    self.parent.update()
+                except RuntimeError as e:
+                    self.running = False
+                    return
+            QThread.msleep(10)
 
 
 class CustomScene(
     QGraphicsScene,
-    MediatorMixin
+    MediatorMixin,
+    SettingsMixin
 ):
     def __init__(self, size):
         MediatorMixin.__init__(self)
+        SettingsMixin.__init__(self)
         super().__init__()
 
         self._target_size = None
@@ -41,13 +117,41 @@ class CustomScene(
         # Add a variable to store the last mouse position
         self.last_pos = None
         self.start_pos = None
-
         self.selection_start_pos = None
         self.selection_stop_pos = None
-
         self.painter = None
-
+        self.do_update = False
         self.register(SignalCode.SCENE_RESIZE_SIGNAL, self.resize)
+        self.save_line_image_worker = create_worker(SaveLineImageWorker)
+        self.generate_image_time_in_ms = 0.5
+        self.do_generate_image = False
+        self.generate_image_time = 0
+        # base64image = self.settings["drawing_pad_settings"]["image"]
+        # if base64image:
+        #     pil_image = convert_base64_to_image(base64image).convert("RGBA")
+        #     self.image = ImageQt.ImageQt(pil_image)
+
+    @property
+    def settings(self):
+        return ServiceLocator.get("get_settings")()
+
+    @settings.setter
+    def settings(self, value):
+        ServiceLocator.get("set_settings")(value)
+
+    # def generate_new_image(self):
+    #     self.generate_image_time = time.time()
+    #     while True:
+    #         if self.do_generate_image and (
+    #             time.time() - self.generate_image_time >= self.generate_image_time_in_ms
+    #         ):
+    #             self.generate_image_time = time.time()
+    #             self.emit(
+    #                 SignalCode.GENERATE_IMAGE_FROM_IMAGE_SIGNAL,
+    #                 self.image
+    #             )
+    #             self.do_generate_image = False
+    #         time.sleep(0.01)
 
     def clear_selection(self):
         self.selection_start_pos = None
@@ -92,9 +196,17 @@ class CustomScene(
     def do_resize(self):
         size = self._target_size
         # only resize if the new size is larger than the existing image size
+
+        if type(self.image.width) == int:
+            width = self.image.width
+            height = self.image.height
+        else:
+            width = self.image.width()
+            height = self.image.height()
+
         if (
-            self.image.width() < size.width() or
-            self.image.height() < size.height()
+            width < size.width() or
+            height < size.height()
         ):
             image = self.initialize_image(size)
             pixmap = QPixmap.fromImage(image)
@@ -204,6 +316,8 @@ class BrushScene(CustomScene):
             SignalCode.BRUSH_COLOR_CHANGED_SIGNAL,
             self.handle_brush_color_changed
         )
+        self.update_scene_worker = create_worker(UpdateSceneWorker)
+        self.update_scene_worker.parent = self
 
     @property
     def is_brush_or_eraser(self):
@@ -294,21 +408,23 @@ class BrushScene(CustomScene):
         )
 
     def handle_mouse_event(self, event, is_press_event):
-        if (
-            event.button() == Qt.MouseButton.LeftButton and
-            self.is_brush_or_eraser and
-            not is_press_event
-        ):
-            self.emit(
-                SignalCode.GENERATE_IMAGE_FROM_IMAGE_SIGNAL,
-                self.image
-            )
+        # if (
+        #     event.button() == Qt.MouseButton.LeftButton and
+        #     self.is_brush_or_eraser and
+        #     not is_press_event
+        # ):
+        #     self.emit(
+        #         SignalCode.GENERATE_IMAGE_FROM_IMAGE_SIGNAL,
+        #         self.image
+        #     )
+        pass
 
     def mousePressEvent(self, event):
         self.handle_left_mouse_press(event)
         self.handle_cursor(event)
         if not self.is_brush_or_eraser:
             super().mousePressEvent(event)
+        #self.update_scene_worker.update_signal.emit(True)
 
     def mouseReleaseEvent(self, event):
         super().mouseReleaseEvent(event)
@@ -316,8 +432,9 @@ class BrushScene(CustomScene):
         self._is_erasing = False
         self.last_pos = None
         self.start_pos = None
+        # self.update_scene_worker.update_signal.emit(False)
+        self.emit(SignalCode.LINES_UPDATED_SIGNAL)
 
     def mouseMoveEvent(self, event):
-        super().mouseMoveEvent(event)
         self.last_pos = event.scenePos()
-        self.update()
+        # self.update_scene_worker.update_signal.emit(True)

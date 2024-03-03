@@ -217,7 +217,7 @@ class MainWindow(
         ]
         self.set_log_levels()
         self.logger = Logger(prefix=self.__class__.__name__)
-        self.logger.info("Starting AI Runnner")
+        self.logger.debug("Starting AI Runnner")
         MediatorMixin.__init__(self)
         SettingsMixin.__init__(self)
         super().__init__(*args, **kwargs)
@@ -237,14 +237,14 @@ class MainWindow(
         self.emit(SignalCode.APPLICATION_MAIN_WINDOW_LOADED_SIGNAL)
 
     def register_services(self):
-        self.logger.info("Registering services")
+        self.logger.debug("Registering services")
         ServiceLocator.register(ServiceCode.DISPLAY_IMPORT_IMAGE_DIALOG, self.display_import_image_dialog)
         ServiceLocator.register(ServiceCode.GET_SETTINGS_VALUE, self.get_settings_value)
         ServiceLocator.register(ServiceCode.GET_CALLBACK_FOR_SLIDER, self.get_callback_for_slider)
 
     def register_signals(self):
         # on window resize:
-        self.logger.info("Connecting signals")
+        self.logger.debug("Connecting signals")
         self.register(SignalCode.VISION_DESCRIBE_IMAGE_SIGNAL, self.on_describe_image_signal)
         self.register(SignalCode.SD_SAVE_PROMPT_SIGNAL, self.on_save_stablediffusion_prompt_signal)
         self.register(SignalCode.SD_LOAD_PROMPT_SIGNAL, self.on_load_saved_stablediffuion_prompt_signal)
@@ -269,7 +269,7 @@ class MainWindow(
             self.logger.error("on_vision_captured_signal failed - no image")
 
     def initialize_ui(self):
-        self.logger.info("Loading ui")
+        self.logger.debug("Loading ui")
         self.ui.setupUi(self)
         self.restore_state()
 
@@ -290,7 +290,7 @@ class MainWindow(
         self.ui.ocr_button.blockSignals(False)
         self.ui.tts_button.blockSignals(False)
         self.ui.v2t_button.blockSignals(False)
-        self.logger.info("Setting buttons")
+        self.logger.debug("Setting buttons")
         self.set_all_section_buttons()
         self.initialize_tool_section_buttons()
 
@@ -353,7 +353,7 @@ class MainWindow(
         )
 
     def closeEvent(self, event) -> None:
-        self.logger.info("Quitting")
+        self.logger.debug("Quitting")
         self.worker_manager.stop()
         self.save_state()
         self.worker_manager.stop()
@@ -555,7 +555,7 @@ class MainWindow(
         if self.quitting:
             return
         self.quitting = True
-        self.logger.info("Saving window state")
+        self.logger.debug("Saving window state")
         settings = self.settings
         settings["window_settings"] = {
             'mode_tab_widget_index': self.ui.mode_tab_widget.currentIndex(),
@@ -575,7 +575,7 @@ class MainWindow(
         self.save_settings()
 
     def restore_state(self):
-        self.logger.info("Restoring state")
+        self.logger.debug("Restoring state")
         window_settings = self.settings["window_settings"]
 
         if window_settings["is_maximized"]:
@@ -720,7 +720,7 @@ class MainWindow(
         """
         Sets the stylesheet for the application based on the current theme
         """
-        self.logger.info("Setting stylesheet")
+        self.logger.debug("Setting stylesheet")
         theme_name = "dark_theme" if self.settings["dark_mode_enabled"] else "light_theme"
         here = os.path.dirname(os.path.realpath(__file__))
         with open(os.path.join(here, "..", "..", "styles", theme_name, "styles.qss"), "r") as f:
@@ -840,23 +840,30 @@ class MainWindow(
         """
         if attr_name is None:
             return
-        
+
         keys = attr_name.split(".")
         if len(keys) > 0:
             settings = self.settings
-            
+
             object_key = "settings"
             if len(keys) == 1:
                 property_key = keys[0]
-            if len(keys) == 2:
+            elif len(keys) == 2:
                 object_key = keys[0]
                 property_key = keys[1]
+            elif len(keys) == 3:
+                object_key = keys[0]
+                property_key = keys[1]
+                sub_property_key = keys[2]
 
             if object_key != "settings":
-                settings[object_key][property_key] = value
+                if len(keys) == 3:
+                    settings[object_key][property_key][sub_property_key] = value
+                else:
+                    settings[object_key][property_key] = value
             else:
                 settings[property_key] = value
-            
+
             self.settings = settings
 
     def initialize_window(self):
@@ -864,7 +871,7 @@ class MainWindow(
         self.set_window_title()
 
     def display(self):
-        self.logger.info("Displaying window")
+        self.logger.debug("Displaying window")
         self.set_stylesheet()
         self.setWindowFlags(self.windowFlags() | QtCore.Qt.WindowType.Window)
         self.show()

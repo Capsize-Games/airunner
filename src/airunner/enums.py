@@ -121,6 +121,7 @@ class SignalCode(Enum):
 
     GENERATOR_FORM_UPDATE_VALUES_SIGNAL = "generator_form_update_values"
     GENERATE_IMAGE_FROM_IMAGE_SIGNAL = "generate_image_from_image"
+    DO_GENERATE_IMAGE_FROM_IMAGE_SIGNAL = "do_generate_image_from_image"
 
     LAYER_SWITCH_SIGNAL = "switch_layer_signal"
     LAYER_ADD_SIGNAL = "add_layer_signal"
@@ -210,6 +211,12 @@ class SignalCode(Enum):
 
     QUIT_APPLICATION = "quit"
 
+    START_AUTO_IMAGE_GENERATION_SIGNAL = "start_auto_image_generation_signal"
+    STOP_AUTO_IMAGE_GENERATION_SIGNAL = "stop_auto_image_generation_signal"
+
+    LINES_UPDATED_SIGNAL = "lines_updated_signal"
+    DO_GENERATE_SIGNAL = "do_generate_signal"
+
 
 class EngineResponseCode(Enum):
     STATUS = 100
@@ -239,6 +246,7 @@ class Scheduler(Enum):
     EULER = "Euler"
     LMS = "LMS"
     HEUN = "Heun"
+    DPM = "DPM"
     DPM2 = "DPM2"
     DPM_PP_2M = "DPM++ 2M"
     DPM2_K = "DPM2 Karras"
@@ -380,3 +388,9 @@ class CanvasType(Enum):
 
 class Controlnet(Enum):
     CANNY = "canny"
+
+
+class SDMode(Enum):
+    STANDARD = "standard"
+    DRAWING = "drawing"
+    FAST_GENERATE = "fast_generate"
