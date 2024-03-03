@@ -61,7 +61,7 @@ class LayerContainerWidget(BaseWidget):
         self.emit(SignalCode.LAYER_CREATE_SIGNAL)
 
     def add_layer_widget(self, layer_data, index):
-        self.logger.info(f"add_layer_widget index={index}")
+        self.logger.debug(f"add_layer_widget index={index}")
         layer_widget = LayerWidget(layer_container=self, layer_data=layer_data, layer_index=index)
 
         self.ui.scrollAreaWidgetContents.layout().insertWidget(0, layer_widget)
@@ -126,7 +126,7 @@ class LayerContainerWidget(BaseWidget):
 
             # if we have a new image object, set it as the current layer image
             layer_index = self.get_service("get_index_by_layer", selected_layer)
-            self.logger.info("Setting current_layer_index={layer_index}")
+            self.logger.debug("Setting current_layer_index={layer_index}")
             self.current_layer_index = layer_index
             settings = self.settings
             if new_image:
@@ -142,7 +142,7 @@ class LayerContainerWidget(BaseWidget):
     selected_layers = {}
 
     def delete_selected_layers(self):
-        self.logger.info("Deleting selected layers")
+        self.logger.debug("Deleting selected layers")
         for index, layer in self.selected_layers.items():
             self.delete_layer(index=index, layer=layer)
         self.selected_layers = {}
@@ -245,4 +245,4 @@ class LayerContainerWidget(BaseWidget):
         self.show_layers()
 
     def show_layers(self):
-        self.logger.info("TODO: show_layers")
+        self.logger.debug("TODO: show_layers")

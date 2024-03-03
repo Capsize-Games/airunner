@@ -109,17 +109,17 @@ class LayerMixin:
         return DraggablePixmap(pixmap)
 
     def delete_layer(self, index, layer):
-        self.logger.info(f"delete_layer requested index {index}")
+        self.logger.debug(f"delete_layer requested index {index}")
         layers = self.settings["layers"]
         current_index = index
         if layer and current_index is None:
             for layer_index, layer_object in enumerate(layers):
                 if layer_object is layer:
                     current_index = layer_index
-        self.logger.info(f"current_index={current_index}")
+        self.logger.debug(f"current_index={current_index}")
         if current_index is None:
             current_index = self.settings["current_layer_index"]
-        self.logger.info(f"Deleting layer {current_index}")
+        self.logger.debug(f"Deleting layer {current_index}")
         self.standard_image_panel.canvas_widget.delete_image()
         try:
             layer = layers.pop(current_index)
@@ -149,7 +149,7 @@ class LayerMixin:
         self.switch_layer(0)
     
     def on_set_current_layer_signal(self, index):
-        self.logger.info(f"set_current_layer current_layer_index={index}")
+        self.logger.debug(f"set_current_layer current_layer_index={index}")
         self.current_layer_index = index
         if not hasattr(self, "container"):
             return

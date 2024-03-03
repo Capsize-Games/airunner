@@ -1,4 +1,4 @@
-# Form implementation generated from reading ui file '/home/joe/Projects/imagetopixel/airunner/src/airunner/windows/prompt_browser/templates/prompt_browser_prompt_widget.ui'
+# Form implementation generated from reading ui file '/home/joe/Projects/imagetopixel/airunner/src/airunner/../../src/airunner/windows/prompt_browser/templates/prompt_browser_prompt_widget.ui'
 #
 # Created by: PyQt6 UI code generator 6.6.1
 #
