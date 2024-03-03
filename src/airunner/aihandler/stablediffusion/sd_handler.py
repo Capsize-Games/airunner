@@ -1,39 +1,53 @@
 import io
 import base64
-import re
 import traceback
+
+from PyQt6.QtWidgets import QApplication
 from pytorch_lightning import seed_everything
 from typing import List
-import imageio
-import numpy as np
 import requests
 import torch
-
 from PIL import Image, ImageDraw, ImageFont
-
 from controlnet_aux.processor import Processor
-from diffusers.pipelines.stable_diffusion.convert_from_ckpt import \
-    download_from_original_stable_diffusion_ckpt
-from diffusers.pipelines.text_to_video_synthesis.pipeline_text_to_video_zero import CrossFrameAttnProcessor
+from diffusers.pipelines.stable_diffusion.convert_from_ckpt import download_from_original_stable_diffusion_ckpt
 from diffusers.utils.torch_utils import randn_tensor
-from diffusers import StableDiffusionPipeline, StableDiffusionXLPipeline, AutoPipelineForText2Image, \
-    StableDiffusionDepth2ImgPipeline, AutoPipelineForInpainting, StableDiffusionInstructPix2PixPipeline, \
-    ControlNetModel, StableDiffusionImg2ImgPipeline
+from diffusers import (
+    StableDiffusionPipeline,
+    StableDiffusionXLPipeline,
+    AutoPipelineForText2Image,
+    StableDiffusionDepth2ImgPipeline,
+    AutoPipelineForInpainting,
+    StableDiffusionInstructPix2PixPipeline,
+    ControlNetModel,
+    StableDiffusionImg2ImgPipeline
+)
 from diffusers.pipelines.stable_diffusion import StableDiffusionSafetyChecker
-from diffusers import StableDiffusionControlNetPipeline, StableDiffusionControlNetImg2ImgPipeline, StableDiffusionControlNetInpaintPipeline, AsymmetricAutoencoderKL
-from diffusers import ConsistencyDecoderVAE
+from diffusers import (
+    StableDiffusionControlNetPipeline,
+    StableDiffusionControlNetImg2ImgPipeline,
+    StableDiffusionControlNetInpaintPipeline
+)
 from transformers import AutoFeatureExtractor
 from airunner.aihandler.base_handler import BaseHandler
-
-from airunner.enums import FilterType, HandlerType, SignalCode, Scheduler
+from airunner.aihandler.stablediffusion.sd_request import SDRequest
+from airunner.enums import (
+    FilterType,
+    HandlerType,
+    SignalCode,
+    Scheduler,
+    SDMode,
+    StableDiffusionVersion,
+    Controlnet,
+    EngineResponseCode
+)
 from airunner.aihandler.mixins.compel_mixin import CompelMixin
 from airunner.aihandler.mixins.embedding_mixin import EmbeddingMixin
 from airunner.aihandler.mixins.lora_mixin import LoraMixin
 from airunner.aihandler.mixins.memory_efficient_mixin import MemoryEfficientMixin
 from airunner.aihandler.mixins.merge_mixin import MergeMixin
 from airunner.aihandler.mixins.scheduler_mixin import SchedulerMixin
-from airunner.aihandler.mixins.txttovideo_mixin import TexttovideoMixin
 from airunner.aihandler.settings import AIRUNNER_ENVIRONMENT
+from airunner.service_locator import ServiceLocator
 from airunner.settings import CONFIG_FILES
 from airunner.windows.main.layer_mixin import LayerMixin
 from airunner.windows.main.lora_mixin import LoraMixin as LoraDataMixin
@@ -42,10 +56,17 @@ from airunner.windows.main.pipeline_mixin import PipelineMixin
 from airunner.windows.main.controlnet_model_mixin import ControlnetModelMixin
 from airunner.windows.main.ai_model_mixin import AIModelMixin
 from airunner.utils import clear_memory
-from airunner.settings import DEFAULT_SEED
 #from airunner.scripts.realesrgan.main import RealESRGAN
 
-torch.backends.cuda.matmul.allow_tf32 = True
+
+SKIP_RELOAD_CONSTS = (
+    SDMode.FAST_GENERATE,
+    SDMode.DRAWING,
+)
+RELOAD_CONTROLNET_IMAGE_CONSTS = (
+    SDMode.FAST_GENERATE,
+    SDMode.DRAWING,
+)
 
 
 class SDHandler(
@@ -54,10 +75,8 @@ class SDHandler(
     LoraMixin,
     MemoryEfficientMixin,
     EmbeddingMixin,
-    TexttovideoMixin,
     CompelMixin,
     SchedulerMixin,
-
     # Data Mixins
     LayerMixin,
     LoraDataMixin,
@@ -76,19 +95,16 @@ class SDHandler(
         AIModelMixin.__init__(self)
         LoraMixin.__init__(self)
         CompelMixin.__init__(self)
-        self.logger.info("Loading Stable Diffusion model runner...")
+        SchedulerMixin.__init__(self)
+        self.logger.debug("Loading Stable Diffusion model runner...")
         self.safety_checker_model = self.models_by_pipeline_action("safety_checker")[0]
         self.text_encoder_model = self.models_by_pipeline_action("text_encoder")[0]
         self.inpaint_vae_model = self.models_by_pipeline_action("inpaint_vae")[0]
-        self.register(SignalCode.SD_CANCEL_SIGNAL, self.on_sd_cancel_signal)
-        self.register(SignalCode.SD_UNLOAD_SIGNAL, self.on_unload_stablediffusion_signal)
-        self.register(SignalCode.SD_MOVE_TO_CPU_SIGNAL, self.on_move_to_cpu)
         self.handler_type = HandlerType.DIFFUSER
         self._previous_model: str = ""
+        self.cross_attention_kwargs_scale: float = 1.0
         self._initialized: bool = False
-        self._current_sample = 0
         self._reload_model: bool = False
-        self.do_cancel = False
         self.current_model_branch = None
         self.state = None
         self._local_files_only = True
@@ -109,9 +125,6 @@ class SDHandler(
         self.controlnet_loaded = False
         self.attempt_download = False
         self.downloading_controlnet = False
-        self.safety_checker_model = ""
-        self.text_encoder_model = ""
-        self.inpaint_vae_model = ""
         self._controlnet_image = None
         self._latents = None
         self.txt2img = None
@@ -119,44 +132,15 @@ class SDHandler(
         self.pix2pix = None
         self.outpaint = None
         self.depth2img = None
-        self.txt2vid = None
         self.tokenizer = None
         self._safety_checker = None
         self._controlnet = None
-
         self.options: dict = {}
         self.current_model: str = ""
         self.seed: int = 42
-        self.deterministic_seed: int = 42
-        self.deterministic_style: str = ""
         self.batch_size: int = 1
-        self.prompt: str = ""
-        self.negative_prompt: str = ""
         self.use_prompt_converter: bool = True
-        self.guidance_scale = None
-        self.image_guidance_scale = None
-        self.height: int = 512
-        self.width: int = 512
-        self.steps: int = 20
-        self.ddim_eta: int = 3
-        self.n_samples: int = 1
-        self.pos_x: int = 0
-        self.pos_y: int = 0
-        self.outpaint_box_rect = None
-        self.hf_token: str = ""
-        self.strength = None
         self.depth_map = None
-        self.image = None
-        self.input_image = None
-        self.mask = None
-        self.enable_model_cpu_offload = None
-        self.use_attention_slicing: bool = False
-        self.use_tf32: bool = False
-        self.use_last_channels: bool = False
-        self.use_enable_sequential_cpu_offload: bool = False
-        self.use_enable_vae_slicing: bool = False
-        self.use_tome_sd: bool = False
-        self.do_nsfw_filter: bool = False
         self.model_data = None
         self.model_version: str = ""
         self.use_tiled_vae: bool = False
@@ -165,73 +149,72 @@ class SDHandler(
         self.is_sd_xl: bool = False
         self.is_sd_xl_turbo: bool = False
         self.is_turbo: bool = False
-        self.model: str = ""
         self.use_compel: bool = False
-        self.action: str = ""
-        self.action_has_safety_checker: bool = False
-        self.is_outpaint: bool = False
-        self.is_txt2img: bool = False
-        self.is_vid_action: bool = False
-        self.input_video: bool = False
-        self.is_txt2vid: bool = False
-        self.is_vid2vid: bool = False
-        self.is_upscale: bool = False
-        self.is_img2img: bool = False
-        self.is_depth2img: bool = False
-        self.is_pix2pix: bool = False
-        self.use_interpolation = None
-        self.interpolation_data = None
-        self.model_base_path: str = ""
-        self.gif_path: str = ""
-        self.image_path: str = ""
-        self.lora_path: str = ""
-        self.embeddings_path: str = ""
-        self.video_path: str = ""
-        self.outpaint_model_path: str = ""
-        self.pix2pix_model_path: str = ""
-        self.depth2img_model_path: str = ""
-        self.model_path: str = ""
-        self.model_branch: str = ""
-        self.enable_controlnet: bool = False
-        self.controlnet_conditioning_scale = None
         self.controlnet_guess_mode = None
-        self.control_guidance_start = None
-        self.control_guidance_end = None
         self.filters = None
-        self.hf_api_key_read_key: str = ""
-        self.hf_api_key_write_key: str = ""
         self.original_model_data = None
-        self.clip_skip: int = 0
         self.denoise_strength = None
         self.face_enhance: bool = False
-        self.do_fast_generate: bool = False
         self.allow_online_mode: bool = False
-        self.vae_path: str = ""
         self.controlnet_type: str = ""
         self.initialized: bool = False
         self.reload_model: bool = False
         self.local_files_only: bool = False
-        self.current_sample = None
-
+        self.extra_args = None
+        self.do_set_seed: bool = True
+        self._controlnet_image = None
         self.is_dev_env = AIRUNNER_ENVIRONMENT == "dev"
         self.latents = None
-
+        self.sd_mode = None
+        self.safety_checker = None
+        self.feature_extractor = None
         self.data = {
             "action": "txt2img",
         }
+        signals = {
+            SignalCode.SD_CANCEL_SIGNAL: self.on_sd_cancel_signal,
+            SignalCode.SD_UNLOAD_SIGNAL: self.on_unload_stablediffusion_signal,
+            SignalCode.SD_MOVE_TO_CPU_SIGNAL: self.on_move_to_cpu,
+            SignalCode.START_AUTO_IMAGE_GENERATION_SIGNAL: self.on_start_auto_image_generation_signal,
+            SignalCode.STOP_AUTO_IMAGE_GENERATION_SIGNAL: self.on_stop_auto_image_generation_signal,
+            SignalCode.DO_GENERATE_SIGNAL: self.on_do_generate_signal,
+        }
+        for code, handler in signals.items():
+            self.register(code, handler)
+
+        torch.backends.cuda.matmul.allow_tf32 = self.settings["memory_settings"]["use_tf32"]
+        self.controlnet_type = "canny"
+        self.sd_mode = SDMode.DRAWING
+        settings = self.settings
+        settings["generator_settings"]["enable_controlnet"] = True
+        self.settings = settings
+        self.loaded = False
+        self.loading = False
+        self.sd_request = None
+        self.sd_request = SDRequest(model_data=self.model)
+        self.running = True
+        self.do_generate = False
+
+    def on_do_generate_signal(self):
+        self.do_generate = True
+
+    @property
+    def do_load(self):
+        return (
+            self.sd_mode not in SKIP_RELOAD_CONSTS or
+            not self.initialized
+        )
 
     @property
     def controlnet_model(self):
         name = self.controlnet_type
-        if self.is_vid2vid:
-            name = "openpose"
         model = self.controlnet_model_by_name(name)
         if not model:
             raise ValueError(f"Unable to find controlnet model {name}")
         return model.path
 
     @property
-    def allow_online_when_missing_files(self):
+    def allow_online_when_missing_files(self) -> bool:
         """
         This settings prevents the application from going online when a file is missing.
         :return:
@@ -240,174 +223,137 @@ class SDHandler(
             self._allow_online_mode = self.allow_online_mode
         return self._allow_online_mode
 
-    def has_pipe(self):
+    def run(self):
+        self.do_set_seed = (
+            not self.initialized or
+            (
+                self.sd_request and
+                self.sd_request.generator_settings and
+                self.settings is not None and
+                self.sd_request.generator_settings.seed != self.settings["generator_settings"]["seed"]
+            )
+        )
+
+        response = None
+        if not self.loaded and self.loading:
+            if self.initialized and self.pipe:
+                self.loaded = True
+                self.loading = False
+        elif not self.loaded and not self.loading:
+            self.loading = True
+            response = self.generator_sample()
+            self.initialized = True
+        elif self.loaded and not self.loading and self.do_generate:
+            response = self.generator_sample()
+
+        if response is not None:
+            nsfw_content_detected = response["nsfw_content_detected"]
+
+            if nsfw_content_detected:
+                self.emit(
+                    SignalCode.SD_NSFW_CONTENT_DETECTED_SIGNAL,
+                    response
+                )
+            else:
+                self.emit(SignalCode.ENGINE_DO_RESPONSE_SIGNAL, {
+                    'code': EngineResponseCode.IMAGE_GENERATED,
+                    'message': response
+                })
+        # data = response["data"]
+        # seed = data["options"]["seed"]
+        # if not drawing:
+        #     updated_images = []
+        #     image_base_path = self.settings["path_settings"]["image_path"]
+        #     images = response['images']
+        #     for index, image in enumerate(images):
+        #         # hash the prompt and negative prompt along with the action
+        #         action = data["action"]
+        #         prompt = data["options"]["prompt"][0]
+        #         negative_prompt = data["options"]["negative_prompt"][0]
+        #         prompt_hash = hash(f"{action}{prompt}{negative_prompt}{index}")
+        #         image_name = f"{prompt_hash}_{seed}.png"
+        #         image_path = os.path.join(image_base_path, image_name)
+        #         # save the image
+        #         image.save(image_path)
+        #         updated_images.append({
+        #             'path': image_path,
+        #             'image': image
+        #         })
+        #     response["images"] = updated_images
+
+
+    def has_pipe(self) -> bool:
         return self.pipe is not None
 
-    def pipe_on_cpu(self):
+    def pipe_on_cpu(self) -> bool:
         return self.pipe.device.type == "cpu"
 
-    def is_pipe_on_cpu(self):
+    def is_pipe_on_cpu(self) -> bool:
         return self.has_pipe() and self.pipe_on_cpu()
 
     def on_move_to_cpu(self, message: dict = None):
         message = message or {}
         if not self.is_pipe_on_cpu() and self.has_pipe():
-            self.logger.info("Moving model to CPU")
+            self.logger.debug("Moving model to CPU")
             self.pipe = self.pipe.to("cpu")
             clear_memory()
         if "callback" in message:
             message["callback"]()
 
     def load_options(self):
-        properties = [
-            "seed",
-            "deterministic_seed",
-            "deterministic_style",
-            "batch_size",
-            "prompt",
-            "negative_prompt",
-            "use_prompt_converter",
-            "guidance_scale",
-            "image_guidance_scale",
-            "height",
-            "width",
-            "steps",
-            "ddim_eta",
-            "n_samples",
-            "pos_x",
-            "pos_y",
-            "outpaint_box_rect",
-            "hf_token",
-            "strength",
-            "depth_map",
-            "image",
-            "input_image",
-            "mask",
-            "enable_model_cpu_offload",
-            "use_attention_slicing",
-            "use_tf32",
-            "use_last_channels",
-            "use_enable_sequential_cpu_offload",
-            "use_enable_vae_slicing",
-            "use_tome_sd",
-            "do_nsfw_filter",
-            "model_data",
-            "use_tiled_vae",
-            "use_accelerated_transformers",
-            "use_torch_compile",
-            "use_interpolation",
-            "interpolation_data",
-            "model_base_path",
-            "gif_path",
-            "image_path",
-            "lora_path",
-            "embeddings_path",
-            "outpaint_model_path",
-            "pix2pix_model_path",
-            "depth2img_model_path",
-            "model_branch",
-            "enable_controlnet",
-            "controlnet_conditioning_scale",
-            "controlnet_guess_mode",
-            "control_guidance_start",
-            "control_guidance_end",
-            "filters",
-            "hf_api_key_read_key",
-            "hf_api_key_write_key",
-            "original_model_data",
-            "clip_skip",
-            "denoise_strength",
-            "face_enhance",
-            "do_fast_generate",
-            "allow_online_mode",
-            "vae_path",
-        ]
-        for prop in properties:
-            setattr(self, prop, self.options.get(prop, getattr(self, prop)))
-
-        self.seed += self.current_sample
-
-
-        self.options = self.data.get("options", self.options)
-        self.model_version = self.model_data["version"]
-        self.is_sd_xl = self.model_version == "SDXL 1.0" or self.is_sd_xl_turbo
-        self.is_sd_xl_turbo = self.model_version == "SDXL Turbo"
-        self.is_turbo = self.model_version == "SD Turbo"
+        self.model_version = self.sd_request.generator_settings.version
+        self.is_sd_xl = self.model_version == StableDiffusionVersion.SDXL1_0.value or self.is_sd_xl_turbo
+        self.is_sd_xl_turbo = self.model_version == StableDiffusionVersion.SDXL_TURBO.value
+        self.is_turbo = self.model_version == StableDiffusionVersion.SD_TURBO.value
         self.use_compel = (
-            not self.use_enable_sequential_cpu_offload and
-            not self.is_txt2vid and
-            not self.is_vid2vid and
+            not self.sd_request.memory_settings.use_enable_sequential_cpu_offload and
             not self.is_sd_xl and
             not self.is_sd_xl_turbo and
             not self.is_turbo
         )
-        self.action = self.data.get("action", "txt2img")
-        self.action_has_safety_checker = self.action not in ["depth2img"]
-        self.is_outpaint = self.action == "outpaint"
-        self.is_txt2img = self.action == "txt2img" and self.image is None
-        self.is_vid_action = self.is_txt2vid or self.is_vid2vid
-        self.is_txt2vid = self.action == "txt2vid" and not self.input_video
-        self.is_vid2vid = self.action == "txt2vid" and self.input_video
-        self.is_upscale = self.action == "upscale"
-        self.is_img2img = self.action == "txt2img" and self.image is not None
-        self.is_depth2img = self.action == "depth2img"
-        self.is_pix2pix = self.action == "pix2pix"
-        self.model_path = self.model_data["path"]
-
-        controlnet_type = self.options.get("controlnet", None).lower()
-        if self.is_vid2vid:
-            controlnet_type = "openpose"
-        if not controlnet_type:
-            controlnet_type = "canny"
-        controlnet_type = controlnet_type.replace(" ", "_")
-        self.controlnet_type = controlnet_type
-
-        if self.requested_data:
-            self.requested_data["prompt"] = self.prompt
-            self.requested_data["negative_prompt"] = self.negative_prompt
-
-        self.latents = self.generate_latents()
+        self.controlnet_type = self.options.get(
+            "controlnet",
+            Controlnet.CANNY.value
+        ).lower()
+        self.controlnet_type = self.controlnet_type.replace(" ", "_")
 
     @property
-    def cuda_error_message(self):
+    def cuda_error_message(self) -> str:
         return (
-            f"VRAM too low for {self.width}x{self.height} resolution. "
-            f"Potential solutions: try again, use a different model, "
+            f"VRAM too low for "
+            f"{self.sd_request.generator_settings.width}x{self.sd_request.generator_settings.height} "
+            f"resolution. Potential solutions: try again, use a different model, "
             f"restart the application, use a smaller size, upgrade your GPU."
         )
 
     @property
-    def is_pipe_loaded(self):
-        if self.is_txt2img:
+    def is_pipe_loaded(self) -> bool:
+        if self.sd_request.is_txt2img:
             return self.txt2img is not None
-        elif self.is_img2img:
+        elif self.sd_request.is_img2img:
             return self.img2img is not None
-        elif self.is_pix2pix:
+        elif self.sd_request.is_pix2pix:
             return self.pix2pix is not None
         elif self.is_outpaint:
             return self.outpaint is not None
-        elif self.is_depth2img:
+        elif self.sd_request.is_depth2img:
             return self.depth2img is not None
-        elif self.is_vid_action:
-            return self.txt2vid is not None
 
     @property
     def pipe(self):
         try:
-            if self.is_txt2img:
+            if self.sd_request.is_txt2img:
                 return self.txt2img
-            elif self.is_img2img:
+            elif self.sd_request.is_img2img:
                 return self.img2img
             elif self.is_outpaint:
                 return self.outpaint
-            elif self.is_depth2img:
+            elif self.sd_request.is_depth2img:
                 return self.depth2img
-            elif self.is_pix2pix:
+            elif self.sd_request.is_pix2pix:
                 return self.pix2pix
-            elif self.is_vid_action:
-                return self.txt2vid
             else:
-                self.logger.warning(f"Invalid action {self.action} unable to get pipe")
+                self.logger.warning(f"Invalid action unable to get pipe")
                 return None
         except Exception as e:
             self.logger.error(f"Error getting pipe {e}")
@@ -415,52 +361,60 @@ class SDHandler(
 
     @pipe.setter
     def pipe(self, value):
-        if self.is_txt2img:
+        if self.sd_request.is_txt2img:
             self.txt2img = value
-        elif self.is_img2img:
+        elif self.sd_request.is_img2img:
             self.img2img = value
         elif self.is_outpaint:
             self.outpaint = value
-        elif self.is_depth2img:
+        elif self.sd_request.is_depth2img:
             self.depth2img = value
-        elif self.is_pix2pix:
+        elif self.sd_request.is_pix2pix:
             self.pix2pix = value
-        elif self.is_vid_action:
-            self.txt2vid = value
 
     @property
-    def cuda_is_available(self):
-        if self.enable_model_cpu_offload:
+    def cuda_is_available(self) -> bool:
+        if self.settings["memory_settings"]["enable_model_cpu_offload"]:
             return False
         return torch.cuda.is_available()
 
     @property
-    def is_ckpt_model(self):
+    def model(self):
+        name = self.settings["generator_settings"]["model"]
+        model = ServiceLocator.get("ai_model_by_name")(name)
+        return model
+
+    @property
+    def model_path(self):
+        return self.model["path"]
+
+    @property
+    def is_ckpt_model(self) -> bool:
         return self.is_ckpt_file(self.model_path)
 
     @property
-    def is_safetensors(self):
+    def is_safetensors(self) -> bool:
         return self.is_safetensor_file(self.model_path)
 
     @property
-    def is_single_file(self):
+    def is_single_file(self) -> bool:
         return self.is_ckpt_model or self.is_safetensors
 
     @property
     def data_type(self):
-        if self.use_enable_sequential_cpu_offload:
+        if self.sd_request.memory_settings.use_enable_sequential_cpu_offload:
             return torch.float
-        elif self.enable_model_cpu_offload:
+        elif self.sd_request.memory_settings.enable_model_cpu_offload:
             return torch.float16
         data_type = torch.float16 if self.cuda_is_available else torch.float
         return data_type
 
     @property
-    def device(self):
+    def device(self) -> str:
         return "cuda" if self.cuda_is_available else "cpu"
 
     @property
-    def has_internet_connection(self):
+    def has_internet_connection(self) -> bool:
         try:
             _response = requests.get('https://huggingface.co/')
             return True
@@ -468,42 +422,29 @@ class SDHandler(
             return False
 
     @property
-    def safety_checker(self):
-        return self._safety_checker
-
-    @safety_checker.setter
-    def safety_checker(self, value):
-        self._safety_checker = value
-        if value:
-            self._safety_checker.to(self.device)
-
-    @property
-    def do_add_lora_to_pipe(self):
-        return not self.is_vid_action
-
-    @property
     def controlnet_action_diffuser(self):
-        if self.is_txt2img or self.is_vid2vid:
+        if self.sd_request.is_txt2img:
             return StableDiffusionControlNetPipeline
-        elif self.is_img2img:
+        elif self.sd_request.is_img2img:
             return StableDiffusionControlNetImg2ImgPipeline
         elif self.is_outpaint:
             return StableDiffusionControlNetInpaintPipeline
         else:
-            raise ValueError(f"Invalid action {self.action} unable to get controlnet action diffuser")
-    _controlnet_image = None
+            raise ValueError(f"Invalid action {self.sd_request.generator_settings.section} unable to get controlnet action diffuser")
 
     @property
     def controlnet_image(self):
         if (
             self._controlnet_image is None or
-            not self.do_fast_generate or
-            not self.initialized
+            self.do_load or
+            self.sd_mode in RELOAD_CONTROLNET_IMAGE_CONSTS
         ):
-            self.logger.info("Getting controlnet image")
-            controlnet_image = self.preprocess_for_controlnet(self.input_image)
-            self.input_image.save("input_image.png")
+            self.logger.debug("Getting controlnet image")
+            controlnet_image = self.preprocess_for_controlnet(self.sd_request.drawing_pad_image)
             self._controlnet_image = controlnet_image
+            # settings = self.settings
+            # settings["controlnet_image_settings"]["controlnet_image_base64"] = controlnet_image
+            # self.settings = settings
         # self.emit(SignalCode.CONTROLNET_IMAGE_GENERATED_SIGNAL, {
         #     'image': self._controlnet_image,
         #     'data': {
@@ -512,26 +453,43 @@ class SDHandler(
         # })
         return self._controlnet_image
 
+    def preprocess_for_controlnet(self, image):
+        if image is None:
+            print("no input image")
+            return
+
+        if self.current_controlnet_type != self.controlnet_type or not self.processor:
+            self.logger.debug("Loading controlnet processor " + self.controlnet_type)
+            self.current_controlnet_type = self.controlnet_type
+            self.processor = Processor(self.controlnet_type)
+        if self.processor:
+            self.logger.debug("Controlnet: Processing image")
+            image = self.processor(image)
+            # resize image to width and height
+            image = image.resize((self.sd_request.generator_settings.width, self.sd_request.generator_settings.height))
+            return image
+        self.logger.error("No controlnet processor found")
+
     @property
-    def do_load_controlnet(self):
+    def do_load_controlnet(self) -> bool:
         return (
-            (not self.controlnet_loaded and self.enable_controlnet) or
-            (self.controlnet_loaded and self.enable_controlnet)
+            (not self.controlnet_loaded and self.settings["generator_settings"]["enable_controlnet"]) or
+            (self.controlnet_loaded and self.settings["generator_settings"]["enable_controlnet"])
         )
 
     @property
-    def do_unload_controlnet(self):
-        return not self.enable_controlnet and (self.controlnet_loaded)
+    def do_unload_controlnet(self) -> bool:
+        return not self.settings["generator_settings"]["enable_controlnet"] and (self.controlnet_loaded)
 
     @property
-    def do_reuse_pipeline(self):
+    def do_reuse_pipeline(self) -> bool:
         return (
-            (self.is_txt2img and self.txt2img is None and self.img2img) or
-            (self.is_img2img and self.img2img is None and self.txt2img) or
+            (self.sd_request.is_txt2img and self.txt2img is None and self.img2img) or
+            (self.sd_request.is_img2img and self.img2img is None and self.txt2img) or
             (
                 (
-                    (self.is_txt2img and self.txt2img) or
-                    (self.is_img2img and self.img2img)
+                    (self.sd_request.is_txt2img and self.txt2img) or
+                    (self.sd_request.is_img2img and self.img2img)
                 ) and
                 (
                     self.do_load_controlnet or self.do_unload_controlnet
@@ -561,13 +519,13 @@ class SDHandler(
         return image
 
     @staticmethod
-    def is_ckpt_file(model):
+    def is_ckpt_file(model) -> bool:
         if not model:
             raise ValueError("ckpt path is empty")
         return model.endswith(".ckpt")
 
     @staticmethod
-    def is_safetensor_file(model):
+    def is_safetensor_file(model) -> bool:
         if not model:
             raise ValueError("safetensors path is empty")
         return model.endswith(".safetensors")
@@ -578,16 +536,10 @@ class SDHandler(
             self.reload_model is True or
             self.pipe is None
         ):
-            if not self.initialized:
-                self.logger.info("Initializing")
-            elif self.reload_model:
-                self.logger.info("Reloading model")
-            elif self.pipe is None:
-                self.logger.info("Pipe is None")
             self.send_model_loading_message(self.current_model)
             if self.reload_model:
                 self.reset_applied_memory_settings()
-            if not self.is_upscale:
+            if not self.sd_request.is_upscale and self.do_load or not self.initialized:
                 self.load_model()
             self.reload_model = False
 
@@ -597,8 +549,6 @@ class SDHandler(
             self.current_controlnet_type != self.controlnet_type
         ):
             self._controlnet = self.load_controlnet()
-        else:
-            print("controlnet already loaded")
         return self._controlnet
 
     def generator(self, device=None, seed=None):
@@ -607,41 +557,6 @@ class SDHandler(
             seed = int(self.seed)
         return torch.Generator(device=device).manual_seed(seed)
 
-    def prepare_options(self, data):
-        self.logger.debug(f"Preparing options")
-        action = data["action"]
-        options = data["options"]
-        requested_model = options.get(f"model", None)
-
-        # do model reload checks here
-
-        sequential_cpu_offload_changed = self.use_enable_sequential_cpu_offload != (options.get("use_enable_sequential_cpu_offload", True) is True)
-        model_changed = (self.model is not None and self.model != requested_model)
-
-        if (self.is_pipe_loaded and (sequential_cpu_offload_changed)) or model_changed:  # model change
-            if model_changed:
-                self.logger.info(f"Model changed, reloading model" + f" (from {self.model} to {requested_model})")
-            if sequential_cpu_offload_changed:
-                self.logger.info(f"Sequential cpu offload changed, reloading model")
-            self.reload_model = True
-            self.clear_scheduler()
-            self.clear_controlnet()
-
-        if (
-            (self.controlnet_loaded and not self.enable_controlnet) or
-            (not self.controlnet_loaded and self.enable_controlnet)
-        ):
-            self.initialized = False
-
-        if (
-            action != self.action or
-            self.reload_model
-        ):
-            self._prompt_embeds = None
-            self._negative_prompt_embeds = None
-
-        torch.backends.cuda.matmul.allow_tf32 = self.use_tf32
-
     def send_error(self, message):
         self.emit(SignalCode.LOG_ERROR_SIGNAL, message)
 
@@ -649,96 +564,86 @@ class SDHandler(
         message = str(error)
         if (
             "got an unexpected keyword argument 'image'" in message and
-            self.action in ["outpaint", "pix2pix", "depth2img"]
+            self.sd_request.generator_settings.section in ["outpaint", "pix2pix", "depth2img"]
         ):
-            message = f"This model does not support {self.action}"
+            message = f"This model does not support {self.sd_request.generator_settings.section}"
         traceback.print_exc()
         self.logger.error(error)
         self.emit(SignalCode.LOG_ERROR_SIGNAL, message)
 
-    def initialize_safety_checker(self, local_files_only=None):
-        local_files_only = self.local_files_only if local_files_only is None else local_files_only
+    def initialize_safety_checker(self, local_files_only=True):
+        self.logger.debug(f"Initializing safety checker with {self.safety_checker_model}")
+        try:
+            return StableDiffusionSafetyChecker.from_pretrained(
+                self.safety_checker_model["path"],
+                local_files_only=local_files_only,
+                torch_dtype=self.data_type
+            )
+        except OSError:
+            if local_files_only:
+                return self.initialize_safety_checker(local_files_only=False)
+            else:
+                self.send_error("Unable to load safety checker")
+                return None
 
-        if (
-            not hasattr(self.pipe, "safety_checker") or
-            not self.pipe.safety_checker
-        ) and "path" in self.safety_checker_model:
-            self.logger.info(f"Initializing safety checker with {self.safety_checker_model}")
-            try:
-                self.pipe.safety_checker = StableDiffusionSafetyChecker.from_pretrained(
-                    self.safety_checker_model["path"],
-                    local_files_only=local_files_only,
-                    torch_dtype=self.data_type
-                )
-            except OSError:
-                self.initialize_safety_checker(local_files_only=False)
-            
-            try:
-                self.pipe.feature_extractor = AutoFeatureExtractor.from_pretrained(
-                    self.safety_checker_model["path"],
-                    local_files_only=local_files_only,
-                    torch_dtype=self.data_type
-                )
-            except OSError:
-                self.initialize_safety_checker(local_files_only=False)
+    def initialize_feature_extractor(self, local_files_only=True):
+        try:
+            return AutoFeatureExtractor.from_pretrained(
+                self.safety_checker_model["path"],
+                local_files_only=local_files_only,
+                torch_dtype=self.data_type
+            )
+        except OSError:
+            if local_files_only:
+                return self.initialize_feature_extractor(local_files_only=False)
+            else:
+                self.send_error("Unable to load feature extractor")
+                return None
 
     def load_safety_checker(self):
-        if not self.pipe:
-            return
+        if self.safety_checker is None and "path" in self.safety_checker_model:
+            self.safety_checker = self.initialize_safety_checker()
 
-        if not self.do_fast_generate or not self.initialized:
-            if not self.do_nsfw_filter or self.action in ["depth2img"]:
-                self.logger.info("Disabling safety checker")
-                self.pipe.safety_checker = None
-            elif self.pipe.safety_checker is None:
-                self.logger.info("Loading safety checker")
-                self.pipe.safety_checker = self.safety_checker
-                if self.pipe.safety_checker:
-                    self.pipe.safety_checker.to(self.device)
+        if self.feature_extractor is None and "path" in self.safety_checker_model:
+            self.feature_extractor = self.initialize_feature_extractor()
 
-    def do_sample(self, **kwargs):
-        self.logger.info(f"Sampling {self.action}")
-
-        if self.is_vid_action:
-            message = "Generating video"
-        else:
-            message = "Generating image"
-
-        self.emit(SignalCode.LOG_STATUS_SIGNAL, message)
+    def do_sample(self):
+        self.emit(SignalCode.LOG_STATUS_SIGNAL, "Generating image")
         self.emit(SignalCode.VISION_CAPTURE_LOCK_SIGNAL)
         try:
-            output = self.call_pipe(**kwargs)
+            output = self.call_pipe()
         except Exception as e:
             error_message = str(e)
-            if "PYTORCH_CUDA_ALLOC_CONF" in str(e):
+            if self.is_pytorch_error(e):
                 error_message = self.cuda_error_message
             elif "Scheduler.step() got an unexpected keyword argument" in str(e):
                 error_message = "Invalid scheduler"
                 self.clear_scheduler()
             self.log_error(error_message)
             output = None
+        return self.process_sample(output)
 
-        if self.is_vid_action:
-            return self.handle_txt2vid_output(output)
-        else:
-            nsfw_content_detected = None
-            images = None
-            if output:
+    def process_sample(self, output):
+        nsfw_content_detected = None
+        images = None
+        if output:
+            try:
+                images = output.images
+            except AttributeError:
+                self.logger.error("Unable to get images from output")
+            if self.sd_request.action_has_safety_checker:
                 try:
-                    images = output.images
+                    nsfw_content_detected = output.nsfw_content_detected
                 except AttributeError:
-                    self.logger.error("Unable to get images from output")
-                if self.action_has_safety_checker:
-                    try:
-                        nsfw_content_detected = output.nsfw_content_detected
-                    except AttributeError:
-                        self.logger.error("Unable to get nsfw_content_detected from output")
-            self.emit(SignalCode.VISION_CAPTURE_UNLOCK_SIGNAL)
-            return images, nsfw_content_detected
+                    self.logger.error("Unable to get nsfw_content_detected from output")
+        self.emit(SignalCode.VISION_CAPTURE_UNLOCK_SIGNAL)
+        return images, nsfw_content_detected
 
     def generate_latents(self):
-        width_scale = self.width / 512
-        height_scale = self.height / 512
+        self.logger.debug("Generating latents")
+
+        width_scale = self.sd_request.generator_settings.width / 512
+        height_scale = self.sd_request.generator_settings.height / 512
         latent_width = int(self.pipe.unet.config.sample_size * width_scale)
         latent_height = int(self.pipe.unet.config.sample_size * height_scale)
 
@@ -755,500 +660,67 @@ class SDHandler(
             generator=self.generator(torch.device(self.device)),
         )
 
-    def call_pipe(self, **kwargs):
+    def call_pipe(self):
         """
         Generate an image using the pipe
-        :param kwargs:
         :return:
         """
-        args = {
-            "num_inference_steps": self.steps,
-            "guidance_scale": self.guidance_scale,
-            "callback": self.callback,
-            "callback_on_step_end": self.callback,
-        }
+        if self.pipe and (self.do_load or self.do_set_seed):
+            self.latents = self.generate_latents()
 
-        if not self.do_fast_generate or not self.initialized:
-            if self.do_add_lora_to_pipe:
-                try:
-                    self.logger.info("Adding LoRA to pipe")
-                    self.add_lora_to_pipe()
-                except Exception as _e:
-                    self.error_handler("Selected LoRA are not supported with this model")
-                    self.reload_model = True
-        
-        if self.is_upscale:
-            args.update({
-                "prompt": self.prompt,
-                "negative_prompt": self.negative_prompt,
-                "image": kwargs.get("image"),
-                "generator": self.generator(),
-            })
-        elif self.is_vid_action:
-            args.update({
-                "prompt": self.prompt,
-                "negative_prompt": self.negative_prompt,
-            })
-        if self.use_compel:
-            try:
-                args["prompt_embeds"] = self.prompt_embeds
-            except Exception as _e:
-                self.logger.warning("prompt_embeds failed: " + str(_e))
-                args.update({
-                    "prompt": self.prompt,
-                })
-        else:
-            args.update({
-                "prompt": self.prompt,
-            })
-
-        if self.use_compel:
-            try:
-                args["negative_prompt_embeds"] = self.negative_prompt_embeds
-            except Exception as _e:
-                self.logger.warning("negative_prompt_embeds failed: " + str(_e))
-                args.update({
-                    "negative_prompt": self.negative_prompt,
-                })
-        else:
-            args.update({
-                "negative_prompt": self.negative_prompt,
-            })
-
-        args["callback_steps"] = 1
-        
-        if not self.is_upscale:
-            args.update(kwargs)
-        
-        if not self.is_pix2pix and len(self.available_lora) > 0 and len(self.loaded_lora) > 0:
-            args["cross_attention_kwargs"] = {"scale": 1.0}
-
-        if self.enable_controlnet:
-            self.logger.info(f"Setting up controlnet")
-            args = self.load_controlnet_arguments(**args)
-
-        self.load_safety_checker()
-
-        if self.is_vid_action:
-            return self.call_pipe_txt2vid(**args)
-
-        if not self.is_outpaint and not self.is_vid_action and not self.is_upscale:
-            self.latents = self.latents.to(self.device)
-            args["latents"] = self.latents
-
-        args["clip_skip"] = self.clip_skip
-
-        if self.action == "pix2pix":
-            args["image_guidance_scale"] = self.image_guidance_scale
-            args["generator"] = self.generator()
-            del args["latents"]
-
-        if "prompt" not in args and (
-            "prompt_embeds" not in args or
-            args["prompt_embeds"] is None
+        if (
+            not self.sd_request.is_outpaint and
+            not self.sd_request.is_upscale and
+            self.latents is not None
         ):
-            self.logger.warning("Prompt embeds are missing")
-            if "prompt_embeds" in args:
-                del args["prompt_embeds"]
-            if "negative_prompt_embeds" in args:
-                del args["negative_prompt_embeds"]
-            args["prompt"] = self.prompt[0]
-            args["negative_prompt"] = self.negative_prompt[0]
+            self.latents = self.latents.to(self.device)
+        else:
+            self.logger.error("NO LATENTS")
 
-        del args["latents"]
-
-        print(args)
-
-        self.initialized = True
-
-        with torch.inference_mode():
-            for n in range(self.n_samples):
-                return self.pipe(**args)
-                # try:
-                #     return self.pipe(**args)
-                # except RuntimeError as e:
-                #     if "expected all tensors to be on the same device" in str(e):
-                #         # retry
-                #         if "prompt_embeds" in args:
-                #             args["prompt_embeds"].to(self.device)
-                #             args["negative_prompt_embeds"].to(self.device)
-                #             return self.pipe(**args)
-                #     else:
-                #         self.error_handler(e)
-                #         return None
-                # except TypeError as e:
-                #     self.error_handler(e)
-                #     return None
+        if self.pipe:
+            return self.pipe(**self.data)
 
 
-    def read_video(self):
-        reader = imageio.get_reader(self.input_video, "ffmpeg")
-        frame_count = 8
-        pose_images = [Image.fromarray(reader.get_data(i)) for i in range(frame_count)]
-        return pose_images
-
-    def call_pipe_txt2vid(self, **kwargs):
-        video_length = self.n_samples
-        chunk_size = 4
-        prompt = kwargs["prompt"]
-        negative_prompt = kwargs["negative_prompt"]
-
-        # Generate the video chunk-by-chunk
-        result = []
-        chunk_ids = np.arange(0, video_length, chunk_size - 1)
-
-        generator = self.generator()
-        cur_frame = 0
-        for i in range(len(chunk_ids)):
-            ch_start = chunk_ids[i]
-            ch_end = video_length if i == len(chunk_ids) - 1 else chunk_ids[i + 1]
-            frame_ids = list(range(ch_start, ch_end))
-            try:
-                self.logger.info(f"Generating video with {len(frame_ids)} frames")
-                self.emit(
-                    SignalCode.LOG_STATUS_SIGNAL,
-                    (
-                        f"Generating video, frames {cur_frame} to "
-                        f"{cur_frame + len(frame_ids) - 1} of {self.n_samples}"
-                    )
-                )
-                cur_frame += len(frame_ids)
-                kwargs = {
-                    "prompt": prompt,
-                    "video_length": len(frame_ids),
-                    "height": self.height,
-                    "width": self.width,
-                    "num_inference_steps": self.steps,
-                    "guidance_scale": self.guidance_scale,
-                    "negative_prompt": negative_prompt,
-                    "num_videos_per_prompt": 1,
-                    "generator": generator,
-                    "callback": self.callback,
-                    "callback_on_step_end": self.callback,
-                    "frame_ids": frame_ids
-                }
-                if self.is_vid2vid:
-                    pose_images = self.read_video()
-                    latents = torch.randn(
-                        (1, 4, 64, 64),
-                        device=torch.device(self.device),
-                        torch_dtype=self.data_type,
-                    ).repeat(len(pose_images), 1, 1, 1)
-                    kwargs["prompt"] = [prompt] * len(pose_images)
-                    kwargs["latents"] = latents
-                    kwargs["image"] = pose_images
-                if self.enable_controlnet:
-                    #kwargs["controlnet"] = self.controlnet()
-                    kwargs = self.load_controlnet_arguments(**kwargs)
-                output = self.pipe(
-                    **kwargs
-                )
-                result.append(output.images[0:])
-            except Exception as e:
-                self.error_handler(e)
-        return {"frames": result}
-
-    def prepare_extra_args(self, _data, image, mask):
-        action = self.action
-        extra_args = {
-        }
-        if self.is_txt2img or self.is_vid_action:
-            extra_args = {**extra_args, **{
-                "width": self.width,
-                "height": self.height,
-            }}
-        if self.is_img2img:
-            extra_args = {**extra_args, **{
-                "image": image,
-                "strength": self.strength,
-            }}
-        elif self.is_pix2pix:
-            extra_args = {**extra_args, **{
-                "image": image,
-                "image_guidance_scale": self.image_guidance_scale,
-            }}
-        elif self.is_depth2img:
-            extra_args = {**extra_args, **{
-                "image": image,
-                "strength": self.strength,
-                #"depth_map": self.depth_map
-            }}
-        elif self.is_vid_action:
-            pass
-        elif self.is_upscale:
-            extra_args = {**extra_args, **{
-                "image": image
-            }}
-        elif self.is_outpaint:
-            extra_args = {**extra_args, **{
-                "image": image,
-                "mask_image": mask,
-                "width": self.width,
-                "height": self.height,
-            }}
-        return extra_args
-
-    def sample_diffusers_model(self, data: dict):
-        self.logger.info("sample_diffusers_model")
-        image = self.image
-        mask = self.mask
-        nsfw_content_detected = None
-        seed_everything(self.seed)
-        extra_args = self.prepare_extra_args(data, image, mask)
-
-        # do the sample
+    def sample_diffusers_model(self):
+        self.logger.debug("sample_diffusers_model")
         try:
-            images, nsfw_content_detected = self.do_sample(**extra_args)
+            return self.do_sample()
         except Exception as e:
             images = None
-            if "PYTORCH_CUDA_ALLOC_CONF" in str(e):
+            nsfw_content_detected = None
+            if self.is_pytorch_error(e):
                 self.log_error(self.cuda_error_message)
             else:
                 self.log_error(e, "Something went wrong while generating image")
 
-        self.final_callback()
+    def on_start_auto_image_generation_signal(self):
+        # self.sd_mode = SDMode.DRAWING
+        # self.generator_sample()
+        pass
 
-        return images, nsfw_content_detected
+    def on_sd_cancel_signal(self):
+        print("on_sd_cancel_signal")
 
-    def process_prompts(self, data, seed):
-        """
-        Process the prompts - called before generate (and during in the case of multiple samples)
-        :return:
-        """
-        prompt = data["options"][f"prompt"]
-        negative_prompt = data["options"][f"negative_prompt"]
-        data["options"][f"prompt"] = [prompt for _ in range(self.batch_size)]
-        data["options"][f"negative_prompt"] = [negative_prompt for _ in range(self.batch_size)]
-        return data
-        prompt_data = self.prompt_data
-        self.logger.info(f"Process prompt")
-        if self.deterministic_seed:
-            prompt = data["options"][f"prompt"]
-            if ".blend(" in prompt:
-                # replace .blend([0-9.]+, [0-9.]+) with ""
-                prompt = re.sub(r"\.blend\([\d.]+, [\d.]+\)", "", prompt)
-                # find this pattern r'\("(.*)", "(.*)"\)'
-                match = re.search(r'\("(.*)", "(.*)"\)', prompt)
-                # get the first and second group
-                prompt = match.group(1)
-                generated_prompt = match.group(2)
-                prompt_data.prompt = prompt
-                prompt_data.generated_prompt = generated_prompt
-        else:
-            prompt = prompt_data.current_prompt \
-                if prompt_data.current_prompt and prompt_data.current_prompt != "" \
-                else self.prompt
-        negative_prompt = prompt_data.current_negative_prompt \
-            if prompt_data.current_negative_prompt \
-               and prompt_data.current_negative_prompt != "" \
-            else self.negative_prompt
+    def on_stop_auto_image_generation_signal(self):
+        #self.sd_mode = SDMode.STANDARD
+        pass
 
-        prompt, negative_prompt = prompt_data.build_prompts(
-            seed=seed,
-            prompt=prompt,
-            negative_prompt=negative_prompt,
-            batch_size=self.batch_size,
-            deterministic_style=self.deterministic_style
-        )
-
-        # we only update the prompt embed if prompt or negative prompt has changed
-        if negative_prompt != self.current_negative_prompt or prompt != self.current_prompt:
-            self.current_negative_prompt = negative_prompt
-            self.current_prompt = prompt
-            data["options"][f"prompt"] = prompt
-            data["options"][f"negative_prompt"] = negative_prompt
-            self.clear_prompt_embeds()
-            self.process_data(data)
-        return data
-
-    do_load_compel = False
-
-    def process_data(self, data: dict):
-        self.data = data if data is not None else self.data
-        options = self.data.get("options", {})
-        do_fast_generate = options.get("do_fast_generate", False)
-        if do_fast_generate and self.initialized:
-            return
-        self.logger.info("Runner: process_data called")
-        self.requested_data = data
-        self.load_options()
-        prompt = self.prompt if self.prompt else ""
-        negative_prompt = self.negative_prompt if self.negative_prompt else ""
-        self.do_load_compel = prompt != self.current_prompt or negative_prompt != self.current_negative_prompt
-        self.prepare_options(data)
-        self.prepare_scheduler()
-        self.prepare_model()
-        self.initialize()
-        if self.pipe:
-            self.change_scheduler()
-
-    def generate(self, data):
-        if not self.pipe:
-            return
-        self.logger.info("generate called")
-        self.do_cancel = False
-        self.process_data(data)
-
-        self.apply_memory_efficient_settings()
-        if self.do_load_compel:
-            self.load_prompt_embeds()
-
-        seed = self.seed
-        data = self.process_prompts(data, seed)
-        self.current_sample = 1
-        images, nsfw_content_detected = self.sample_diffusers_model(data)
-        if self.is_vid_action and "video_filename" not in self.requested_data:
-            self.requested_data["video_filename"] = self.txt2vid_file
-        if self.do_cancel:
-            self.do_cancel = False
-
-        self.current_sample = 0
-        return self.image_handler(images, self.requested_data, nsfw_content_detected)
-
-    def image_handler(
-        self,
-        images: List[Image.Image],
-        data: dict,
-        nsfw_content_detected: List[bool] = None
-    ):
-        data["original_model_data"] = self.original_model_data or {}
-        has_nsfw = True in nsfw_content_detected if nsfw_content_detected is not None else False
-
-        if images:
-            tab_section = "stablediffusion"
-            data["tab_section"] = tab_section
-
-            do_base64 = data.get("do_base64", False)
-
-            if not has_nsfw:
-                # apply filters and convert to base64 if requested
-                has_filters = self.filters != {}
-
-                if has_filters or do_base64:
-                    for i, image in enumerate(images):
-                        if has_filters:
-                            image = self.apply_filters(image, self.filters)
-                        if do_base64:
-                            img_byte_arr = io.BytesIO()
-                            image.save(img_byte_arr, format='PNG')
-                            img_byte_arr = img_byte_arr.getvalue()
-                            image = base64.encodebytes(img_byte_arr).decode('ascii')
-                        images[i] = image
-
-            if has_nsfw:
-                for i, is_nsfw in enumerate(nsfw_content_detected):
-                    if is_nsfw:
-                        has_nsfw = True
-                        image = images[i]
-                        image = image.convert("RGBA")
-                        draw = ImageDraw.Draw(image)
-                        font = ImageFont.truetype("arial", 15)
-                        draw.text((0, 0), "NSFW", (255, 255, 255), font=font)
-                        if do_base64:
-                            img_byte_arr = io.BytesIO()
-                            image.save(img_byte_arr, format='PNG')
-                            img_byte_arr = img_byte_arr.getvalue()
-                            image = base64.encodebytes(img_byte_arr).decode('ascii')
-                        images[i] = image
-
-        return dict(
-            images=images,
-            data=data,
-            request_type=data.get("request_type", None),
-            nsfw_content_detected=has_nsfw,
-        )
-
-    def final_callback(self):
-        total = int(self.steps * self.strength)
-        tab_section = "stablediffusion"
-        self.emit(SignalCode.SD_PROGRESS_SIGNAL,{
-            "step": total,
-            "total": total,
-            "action": self.action,
-            "tab_section": tab_section,
-        })
-
-    def callback(self, step: int, _time_step, latents):
-        image = None
-        data = self.data
-        tab_section = "stablediffusion"
-        if self.is_vid_action:
-            data["video_filename"] = self.txt2vid_file
-        steps = int(self.steps * self.strength) if (
-                not self.enable_controlnet and
-                (self.is_img2img or self.is_depth2img)
-        ) else self.steps
-        res = {
-            "step": step,
-            "total": steps,
-            "action": self.action,
-            "tab_section": tab_section,
-        }
-        self.emit(SignalCode.SD_PROGRESS_SIGNAL, res)
-
-    def on_unload_stablediffusion_signal(self):
-        self.unload()
-
-    def unload(self):
-        self.unload_model()
-        self.unload_tokenizer()
-        clear_memory()
-
-    def unload_model(self):
-        self.pipe = None
-    
-    def unload_tokenizer(self):
-        self.tokenizer = None
-
-    def process_upscale(self, data: dict):
-        self.logger.info("Processing upscale")
-        image = self.input_image
-        results = []
-        if image:
-            self.move_pipe_to_cpu()
-            results = RealESRGAN(
-                input=image,
-                output=None,
-                model_name='RealESRGAN_x4plus', 
-                denoise_strength=self.denoise_strength,
-                face_enhance=self.face_enhance,
-            ).run()
-            clear_memory()
-        else:
-            self.log_error("No image found, unable to upscale")
-        # check if results is a list
-        if not isinstance(results, list):
-            return [results]
-        return results
-
-    def generator_sample(self, data: dict):
-        self.process_data(data)
-
-        if self.is_upscale:
-            images = self.process_upscale(data)
-            self.current_sample = 0
-            self.do_cancel = False
-            return self.image_handler(images, self.requested_data, None)
-
-        if not self.pipe:
-            self.logger.info("pipe is None")
-            return
-
-        self.emit(SignalCode.LOG_STATUS_SIGNAL, f"Generating {'video' if self.is_vid_action else 'image'}")
-
-        action = "depth2img" if self.action == "depth" else self.action
-
-        error = None
+    def generate(self):
         error_message = ""
         try:
-            yield self.generate(data)
+            images, nsfw_content_detected = self.sample_diffusers_model()
+            return self.image_handler(
+                images,
+                self.requested_data,
+                nsfw_content_detected
+            )
         except TypeError as e:
-            error_message = f"TypeError during generation {self.action}"
-            print(e)
+            error_message = f"TypeError during generation"
+            self.log_error(e, error_message)
             error = e
         except Exception as e:
             error = e
-            if "PYTORCH_CUDA_ALLOC_CONF" in str(e):
+            if self.is_pytorch_error(e):
                 error = self.cuda_error_message
                 clear_memory()
                 self.reset_applied_memory_settings()
@@ -1264,11 +736,255 @@ class SDHandler(
             else:
                 self.log_error(error, error_message)
             self.scheduler_name = ""
-            self._current_model = ""
             self.local_files_only = True
 
+        self.final_callback()
+
+
+    def image_handler(
+        self,
+        images: List[Image.Image],
+        data: dict,
+        nsfw_content_detected: List[bool] = None
+    ):
+        if data is not None:
+            data["original_model_data"] = self.original_model_data or {}
+        has_nsfw = True in nsfw_content_detected if nsfw_content_detected is not None else False
+
+        if images:
+            tab_section = "stablediffusion"
+            data["tab_section"] = tab_section
+
+            do_base64 = data.get("do_base64", False)
+
+            if not has_nsfw:
+                # apply filters and convert to base64 if requested
+                has_filters = self.filters is not None and len(self.filters) > 0
+                if has_filters or do_base64:
+                    for i, image in enumerate(images):
+                        if has_filters:
+                            image = self.apply_filters(image, self.filters)
+                        if do_base64:
+                            img_byte_arr = io.BytesIO()
+                            image.save(img_byte_arr, format='PNG')
+                            img_byte_arr = img_byte_arr.getvalue()
+                            image = base64.encodebytes(img_byte_arr).decode('ascii')
+                        images[i] = image
+            else:
+                for i, is_nsfw in enumerate(nsfw_content_detected):
+                    if is_nsfw:
+                        has_nsfw = True
+                        image = images[i]
+                        image = image.convert("RGBA")
+                        draw = ImageDraw.Draw(image)
+                        font = ImageFont.truetype("arial", 15)
+                        draw.text((0, 0), "NSFW", (255, 255, 255), font=font)
+                        if do_base64:
+                            img_byte_arr = io.BytesIO()
+                            image.save(img_byte_arr, format='PNG')
+                            img_byte_arr = img_byte_arr.getvalue()
+                            image = base64.encodebytes(img_byte_arr).decode('ascii')
+                        images[i] = image
+        return dict(
+            images=images,
+            data=data,
+            nsfw_content_detected=has_nsfw,
+        )
+
+    def final_callback(self):
+        total = 1
+        if self.sd_request.generator_settings:
+            total = int(self.sd_request.generator_settings.steps * self.sd_request.generator_settings.strength) if (
+                (self.sd_request.is_img2img or self.sd_request.is_depth2img)
+            ) else self.sd_request.generator_settings.steps
+        tab_section = "stablediffusion"
+        self.emit(SignalCode.SD_PROGRESS_SIGNAL, {
+            "step": total,
+            "total": total,
+        })
+
+    def callback(self, step: int, _time_step, latents):
+        total = 1
+        if self.sd_request.generator_settings:
+            total = int(self.sd_request.generator_settings.steps * self.sd_request.generator_settings.strength) if (
+                (self.sd_request.is_img2img or self.sd_request.is_depth2img)
+            ) else self.sd_request.generator_settings.steps
+        tab_section = "stablediffusion"
+        res = {
+            "step": step,
+            "total": total,
+        }
+        self.emit(SignalCode.SD_PROGRESS_SIGNAL, res)
+        QApplication.processEvents()
+        return {}
+
+    def on_unload_stablediffusion_signal(self):
+        self.unload()
+
+    def unload(self):
+        self.unload_model()
+        self.unload_tokenizer()
+        clear_memory()
+
+    def unload_model(self):
+        self.pipe = None
+
+    def unload_tokenizer(self):
+        self.tokenizer = None
+
+    def process_upscale(self, data: dict):
+        self.logger.debug("Processing upscale")
+        image = self.sd_request.generator_settings.input_image
+        results = []
+        if image:
+            self.move_pipe_to_cpu()
+            results = RealESRGAN(
+                input=image,
+                output=None,
+                model_name='RealESRGAN_x4plus',
+                denoise_strength=self.denoise_strength,
+                face_enhance=self.face_enhance,
+            ).run()
+            clear_memory()
+        else:
+            self.log_error("No image found, unable to upscale")
+        # check if results is a list
+        if not isinstance(results, list):
+            return [results]
+        return results
+
+    def do_upscale(self, data):
+        images = self.process_upscale(data)
+        return self.image_handler(images, self.requested_data, None)
+
+    def generator_sample(self):
+        """
+        Called from sd_generate_worker, kicks off the generation process.
+        :param data:
+        :return:
+        """
+
+        requested_model = self.settings["generator_settings"]["model"]
+        model_changed = (self.model["name"] is not None and self.model["name"] != requested_model)
+        action = self.settings["generator_settings"]["section"]
+        if (self.sd_request.generator_settings and action != self.sd_request.generator_settings.section) or self.reload_model:
+            self._prompt_embeds = None
+            self._negative_prompt_embeds = None
+
+        if (
+            (self.controlnet_loaded and not self.settings["generator_settings"]["enable_controlnet"]) or
+            (not self.controlnet_loaded and self.settings["generator_settings"]["enable_controlnet"])
+        ):
+            self.initialized = False
+
+        if model_changed:  # model change
+            self.logger.debug(f"Model changed clearing debugger: {self.model['name']} != {requested_model}")
+            self.reload_model = True
+            self.clear_scheduler()
+            self.clear_controlnet()
+
+        self.data = self.sd_request(
+            model_data=self.model,
+            extra_options={},
+            callback=self.callback,
+            cross_attention_kwargs_scale=(
+                not self.sd_request.is_pix2pix and
+                len(self.available_lora) > 0 and
+                len(self.loaded_lora) > 0
+            ),
+            latents=self.latents,
+            device=self.device,
+            do_load=self.do_load,
+            generator=self.generator(),
+            model_changed=model_changed,
+            prompt_embeds=self.prompt_embeds,
+            negative_prompt_embeds=self.negative_prompt_embeds,
+            controlnet_image=self.controlnet_image
+        )
+
+        self.requested_data = self.data
+        self.load_options()
+
+        if self.do_load or self.do_set_seed:
+            self.logger.debug("Seeding")
+            seed_everything(self.seed)
+
+        if self.do_load:
+            self.prepare_scheduler()
+            self.prepare_model()
+            self.initialize()
+
+        self.change_scheduler()
+
+        force_load_compel = self.use_compel and (self.prompt_embeds is None or self.negative_prompt_embeds is None)
+        if self.pipe and (self.do_load or force_load_compel):
+            """
+            Reload prompt embeds.
+            """
+            if self.use_compel:
+                if (
+                    self.sd_request.generator_settings.prompt != self.current_prompt or
+                    self.sd_request.generator_settings.negative_prompt != self.current_negative_prompt
+                ):
+                    self._current_prompt = self.sd_request.generator_settings.prompt
+                    self._current_negative_prompt = self.sd_request.generator_settings.negative_prompt
+                    self.load_prompt_embeds(
+                        self.pipe,
+                        prompt=self.sd_request.generator_settings.prompt,
+                        negative_prompt=self.sd_request.generator_settings.negative_prompt
+                    )
+                    self.load_options()
+
+        if self.pipe and self.do_load:
+            """
+            Reload prompt embeds.
+            """
+            self.apply_memory_efficient_settings()
+            # move pipe components to device and initialize text encoder for clip skip
+            self.pipe.vae.to(self.data_type)
+            self.pipe.text_encoder.to(self.data_type)
+            self.pipe.unet.to(self.data_type)
+
+            try:
+                self.add_lora_to_pipe()
+            except Exception as _e:
+                self.error_handler("Selected LoRA are not supported with this model")
+                self.reload_model = True
+
+        self.do_set_seed = False
+
+        if self.sd_request.is_upscale:
+            return self.do_upscale(self.data)
+
+        if not self.pipe:
+            self.logger.error("pipe is None")
+            return
+
+        self.emit(
+            SignalCode.LOG_STATUS_SIGNAL,
+            f"Generating media"
+        )
+
+        if not self.do_generate:
+            return
+        self.do_generate = False
+
+        if self.sd_request.is_img2img:
+            if "image" not in self.data or self.data["image"] is None:
+                return None
+
+        if self.sd_request.generator_settings.enable_controlnet:
+            if "control_image" not in self.data or self.data["control_image"] is None:
+                return None
+
+        return self.generate()
+
+    @staticmethod
+    def is_pytorch_error(e) -> bool:
+        return "PYTORCH_CUDA_ALLOC_CONF" in str(e)
+
     def on_sd_cancel_signal(self):
-        self.do_cancel = True
+        print("CANCEL")
 
     def log_error(self, error, message=None):
         message = str(error) if not message else message
@@ -1276,7 +992,7 @@ class SDHandler(
         self.error_handler(message)
 
     def load_controlnet_from_ckpt(self, pipeline):
-        self.logger.info("Loading controlnet from ckpt")
+        self.logger.debug("Loading controlnet from ckpt")
         pipeline = self.controlnet_action_diffuser(
             vae=pipeline.vae,
             text_encoder=pipeline.text_encoder,
@@ -1284,8 +1000,8 @@ class SDHandler(
             unet=pipeline.unet,
             controlnet=self.controlnet(),
             scheduler=pipeline.scheduler,
-            safety_checker=pipeline.safety_checker,
-            feature_extractor=pipeline.feature_extractor
+            safety_checker=self.safety_checker,
+            feature_extractor=self.feature_extractor
         )
         self.controlnet_loaded = True
         return pipeline
@@ -1294,7 +1010,7 @@ class SDHandler(
         standard_image_settings = self.settings["standard_image_settings"]
         controlnet_name = standard_image_settings["controlnet"]
         controlnet_model = self.controlnet_model_by_name(controlnet_name)
-        self.logger.info(f"Loading controlnet {self.controlnet_type} self.controlnet_model {controlnet_model}")
+        self.logger.debug(f"Loading controlnet {self.controlnet_type} self.controlnet_model {controlnet_model}")
         self._controlnet = None
         self.current_controlnet_type = self.controlnet_type
         local_files_only = self.local_files_only if local_files_only is None else local_files_only
@@ -1306,51 +1022,21 @@ class SDHandler(
             )
         except Exception as e:
             if "We couldn't connect to 'https://huggingface.co'" in str(e) and local_files_only is True:
-                self.logger.info("Failed to load controlnet from local files, trying to load from huggingface")
+                self.logger.error("Failed to load controlnet from local files, trying to load from huggingface")
                 return self.load_controlnet(local_files_only=False)
             self.logger.error(f"Error loading controlnet {e}")
             return None
         # self.load_controlnet_scheduler()
         return controlnet
 
-    def preprocess_for_controlnet(self, image):
-        if self.current_controlnet_type != self.controlnet_type or not self.processor:
-            self.logger.info("Loading controlnet processor " + self.controlnet_type)
-            self.current_controlnet_type = self.controlnet_type
-            self.processor = Processor(self.controlnet_type)
-        if self.processor:
-            self.logger.info("Controlnet: Processing image")
-            image = self.processor(image)
-            image.save("controlnet_image.png")
-            # resize image to width and height
-            image = image.resize((self.width, self.height))
-            return image
-        self.logger.error("No controlnet processor found")
-
-    def load_controlnet_arguments(self, **kwargs):
-        if not self.is_vid_action:
-            image_key = "image" if self.is_txt2img else "control_image"
-            kwargs = {**kwargs, **{
-                image_key: self.controlnet_image,
-            }}
-
-        kwargs = {**kwargs, **{
-            "guess_mode": self.controlnet_guess_mode,
-            "control_guidance_start": self.control_guidance_start,
-            "control_guidance_end": self.control_guidance_end,
-            "controlnet_conditioning_scale": self.controlnet_conditioning_scale,
-        }}
-        return kwargs
-
     def unload_unused_models(self):
-        self.logger.info("Unloading unused models")
+        self.logger.debug("Unloading unused models")
         for action in [
             "txt2img",
             "img2img",
             "pix2pix",
             "outpaint",
             "depth2img",
-            "txt2vid",
             "_controlnet",
             "safety_checker",
         ]:
@@ -1363,39 +1049,34 @@ class SDHandler(
         self.reset_applied_memory_settings()
 
     def pipeline_class(self):
-        if self.enable_controlnet:
-            if self.is_img2img:
+        if self.settings["generator_settings"]["enable_controlnet"]:
+            if self.sd_request.is_img2img:
                 pipeline_classname_ = StableDiffusionControlNetImg2ImgPipeline
-            elif self.is_txt2img:
+            elif self.sd_request.is_txt2img:
                 pipeline_classname_ = StableDiffusionControlNetPipeline
-            elif self.action == "outpaint":
+            elif self.sd_request.generator_settings.section == "outpaint":
                 pipeline_classname_ = StableDiffusionControlNetInpaintPipeline
             else:
                 pipeline_classname_ = StableDiffusionControlNetPipeline
-        elif self.action == "depth2img":
+        elif self.sd_request.generator_settings.section == "depth2img":
             pipeline_classname_ = StableDiffusionDepth2ImgPipeline
-        elif self.action == "outpaint":
+        elif self.sd_request.generator_settings.section == "outpaint":
             pipeline_classname_ = AutoPipelineForInpainting
-        elif self.action == "pix2pix":
+        elif self.sd_request.generator_settings.section == "pix2pix":
             pipeline_classname_ = StableDiffusionInstructPix2PixPipeline
-        elif self.is_img2img:
+        elif self.sd_request.is_img2img:
             pipeline_classname_ = StableDiffusionImg2ImgPipeline
         else:
             pipeline_classname_ = StableDiffusionPipeline
         return pipeline_classname_
 
     def load_model(self):
-        self.logger.info("Loading model")
+        self.logger.debug("Loading model")
         self.torch_compile_applied = False
         self.lora_loaded = False
         self.embeds_loaded = False
 
         kwargs = {}
-
-        # if self.current_model_branch:
-        #     kwargs["variant"] = self.current_model_branch
-        # elif self.data_type == torch.float16:
-        #     kwargs["variant"] = "fp16"
 
         already_loaded = self.do_reuse_pipeline and not self.reload_model
 
@@ -1408,22 +1089,27 @@ class SDHandler(
         self.current_load_controlnet = self.do_load_controlnet
 
         if self.pipe is None or self.reload_model:
-            kwargs["from_safetensors"] = self.is_safetensors
-            self.logger.info(f"Loading model from scratch {self.reload_model}")
+            self.logger.debug(f"Loading model from scratch {self.reload_model}")
             self.reset_applied_memory_settings()
             self.send_model_loading_message(self.model_path)
 
-            if self.enable_controlnet and not self.is_vid2vid:
+            if self.settings["generator_settings"]["enable_controlnet"]:
                 kwargs["controlnet"] = self.controlnet()
+
+            self.load_safety_checker()
 
             if self.is_single_file:
                 try:
-                    self.pipe = self.load_ckpt_model()
+                    self.logger.debug(f"Loading ckpt file {self.model_path}")
+                    self.pipe = self.download_from_original_stable_diffusion_ckpt()
+                    old_model_path = self.current_model
+                    self.current_model = self.model_path
+                    self.pipe.scheduler = self.load_scheduler(config=self.pipe.scheduler.config)
+                    self.current_model = old_model_path
                 except OSError as e:
-                    self.handle_missing_files(self.action)
+                    self.handle_missing_files(self.sd_request.generator_settings.section)
             else:
-                self.logger.info(f"Loading model {self.model_path} from PRETRAINED")
-
+                self.logger.debug(f"Loading model `{self.model['name']}` `{self.model_path}`")
                 scheduler = self.load_scheduler()
                 if scheduler:
                     kwargs["scheduler"] = scheduler
@@ -1433,62 +1119,44 @@ class SDHandler(
                 self.pipe = pipeline_classname_.from_pretrained(
                     self.model_path,
                     torch_dtype=self.data_type,
+                    safety_checker=self.safety_checker,
+                    feature_extractor=self.feature_extractor,
                     **kwargs
                 )
+
+            if self.settings["nsfw_filter"] is False:
+                self.pipe.safety_checker = None
+                self.pipe.feature_extractor = None
 
             if self.pipe is None:
                 self.emit(SignalCode.LOG_ERROR_SIGNAL, "Failed to load model")
                 return
-        
-            """
-            Initialize pipe for video to video zero
-            """
-            if self.pipe and self.is_vid2vid:
-                self.logger.info("Initializing pipe for vid2vid")
-                self.pipe.unet.set_attn_processor(CrossFrameAttnProcessor(batch_size=2))
-                self.pipe.controlnet.set_attn_processor(CrossFrameAttnProcessor(batch_size=2))
 
             # if self.is_outpaint:
-            #     self.logger.info("Initializing vae for inpaint / outpaint")
+            #     self.logger.debug("Initializing vae for inpaint / outpaint")
             #     self.pipe.vae = AsymmetricAutoencoderKL.from_pretrained(
             #         self.inpaint_vae_model["path"],
             #         torch_dtype=self.data_type
             #     )
 
-            if not self.is_depth2img:
-                self.initialize_safety_checker()
-
-            self.controlnet_loaded = self.enable_controlnet
-
-            if not self.is_depth2img:
-                self.safety_checker = self.pipe.safety_checker
+            self.controlnet_loaded = self.settings["generator_settings"]["enable_controlnet"]
 
             # store the model_path
             self.pipe.model_path = self.model_path
 
-            # move pipe components to device and initialize text encoder for clip skip
-            self.pipe.vae.to(self.data_type)
-            self.pipe.text_encoder.to(self.data_type)
-            self.pipe.unet.to(self.data_type)
-
-            #self.load_learned_embed_in_clip()
-
-    def load_ckpt_model(self):
-        self.logger.info(f"Loading ckpt file {self.model_path}")
-        pipeline = self.download_from_original_stable_diffusion_ckpt(path=self.model_path)
-        return pipeline
-
     def get_pipeline_action(self, action=None):
-        action = self.action if not action else action
-        if action == "txt2img" and self.is_img2img:
+        action = self.sd_request.generator_settings.section if not action else action
+        if action == "txt2img" and self.sd_request.is_img2img:
             action = "img2img"
         return action
 
-    def download_from_original_stable_diffusion_ckpt(self, path, local_files_only=None):
-        local_files_only = self.local_files_only if local_files_only is None else local_files_only
+    def download_from_original_stable_diffusion_ckpt(
+        self,
+        local_files_only=True
+    ):
         pipe = None
         kwargs = {
-            "checkpoint_path_or_dict": path,
+            "checkpoint_path_or_dict": self.model_path,
             "device": self.device,
             "scheduler_type": Scheduler.DDIM.value.lower(),
             "from_safetensors": self.is_safetensors,
@@ -1496,22 +1164,25 @@ class SDHandler(
             "extract_ema": False,
             "config_files": CONFIG_FILES,
             "pipeline_class": self.pipeline_class(),
+            "load_safety_checker": False,
+            "safety_checker": self.safety_checker,
+            "feature_extractor": self.feature_extractor,
         }
-        if self.enable_controlnet:
+        if self.settings["generator_settings"]["enable_controlnet"]:
             kwargs["controlnet"] = self.controlnet()
         try:
             pipe = download_from_original_stable_diffusion_ckpt(
                 **kwargs
             )
-            old_model_path = self.current_model
-            self.current_model = path
-            pipe.scheduler = self.load_scheduler(config=pipe.scheduler.config)
-            self.current_model = old_model_path
+            """
+            download_from_original_stable_diffusion_ckpt
+            """
+            pipe.safety_checker = self.safety_checker
+            pipe.feature_extractor = self.feature_extractor
         except ValueError:
             if local_files_only:
                 # missing required files, attempt again with online access
                 return self.download_from_original_stable_diffusion_ckpt(
-                    path, 
                     local_files_only=False
                 )
         except Exception as e:
@@ -1519,24 +1190,18 @@ class SDHandler(
         return pipe
 
     def clear_controlnet(self):
-        self.logger.info("Clearing controlnet")
+        self.logger.debug("Clearing controlnet")
         self._controlnet = None
         clear_memory()
         self.reset_applied_memory_settings()
         self.controlnet_loaded = False
-    
-    def load_vae(self):
-        return ConsistencyDecoderVAE.from_pretrained(
-            self.vae_path, 
-            torch_dtype=self.data_type
-        )
 
     def reuse_pipeline(self, do_load_controlnet, local_files_only=True):
-        self.logger.info("Reusing pipeline")
+        self.logger.debug("Reusing pipeline")
         pipe = None
-        if self.is_txt2img:
+        if self.sd_request.is_txt2img:
             pipe = self.img2img if self.txt2img is None else self.txt2img
-        elif self.is_img2img:
+        elif self.sd_request.is_img2img:
             pipe = self.txt2img if self.img2img is None else self.img2img
         if pipe is None:
             self.logger.warning("Failed to reuse pipeline")
@@ -1545,7 +1210,7 @@ class SDHandler(
         kwargs = pipe.components
 
         # either load from a pretrained model or from a pipe
-        if do_load_controlnet and not self.is_vid2vid:
+        if do_load_controlnet:
             self.controlnet_loaded = True
             pipe = self.load_controlnet_from_ckpt(pipe)
             kwargs["controlnet"] = self.controlnet()
@@ -1555,10 +1220,6 @@ class SDHandler(
             self.clear_controlnet()
 
             if self.is_single_file:
-                #pipe = self.download_from_original_stable_diffusion_ckpt(self.model_path)
-                pipeline_action = self.get_pipeline_action()
-
-                pipeline_class_ = None
                 if self.model_version == "SDXL 1.0":
                     pipeline_class_ = StableDiffusionXLPipeline
                 else:
@@ -1573,18 +1234,17 @@ class SDHandler(
                 components = pipe.components
                 if "controlnet" in components:
                     del components["controlnet"]
-                if self.is_vid2vid:
-                    components["controlnet"] = self.controlnet()
-                
+                components["controlnet"] = self.controlnet()
+
                 pipe = AutoPipelineForText2Image.from_pretrained(
                     self.model_path,
                     **components
                 )
 
-        if self.is_txt2img:
+        if self.sd_request.is_txt2img:
             self.txt2img = pipe
             self.img2img = None
-        elif self.is_img2img:
+        elif self.sd_request.is_img2img:
             self.img2img = pipe
             self.txt2img = None
 
@@ -1599,37 +1259,30 @@ class SDHandler(
         self.emit(SignalCode.LOG_STATUS_SIGNAL, message)
 
     def prepare_model(self):
-        if self.do_fast_generate and self.initialized:
-            return
-        self.logger.info("Prepare model")
-        # get model and switch to it
-
-        # get models from database
-        model_name = self.model
-
+        self.logger.debug("Prepare model")
         self._previous_model = self.current_model
         if self.is_single_file:
-            self.current_model = model_name
+            self.current_model = self.model
         else:
             self.current_model = self.model_path
-            self.current_model_branch = self.model_branch
+            self.current_model_branch = self.model["branch"]
 
         if self.do_unload_controlnet:
             self.unload_controlnet()
 
     def unload_controlnet(self):
         if self.pipe:
-            self.logger.info("Unloading controlnet")
+            self.logger.debug("Unloading controlnet")
             self.pipe.controlnet = None
         self.controlnet_loaded = False
 
     def handle_missing_files(self, action):
         if not self.attempt_download:
             if self.is_ckpt_model or self.is_safetensors:
-                self.logger.info("Required files not found, attempting download")
+                self.logger.debug("Required files not found, attempting download")
             else:
                 traceback.print_exc()
-                self.logger.info("Model not found, attempting download")
+                self.logger.debug("Model not found, attempting download")
             # check if we have an internet connection
             if self.allow_online_when_missing_files:
                 self.emit(SignalCode.LOG_STATUS_SIGNAL, "Downloading model files")
@@ -1640,7 +1293,7 @@ class SDHandler(
             self.attempt_download = True
             if action == "controlnet":
                 self.downloading_controlnet = True
-            return self.generator_sample(self.requested_data)
+            return self.generator_sample()
         else:
             self.local_files_only = True
             self.attempt_download = False

@@ -45,7 +45,7 @@ class STTHandler(BaseHandler):
         return torch.cuda.is_available()
 
     def load_model(self, local_files_only=True):
-        self.logger.info("Loading model")
+        self.logger.debug("Loading model")
         try:
             self.model = WhisperForConditionalGeneration.from_pretrained(
                 "openai/whisper-tiny.en",
@@ -55,6 +55,8 @@ class STTHandler(BaseHandler):
             )
         except OSError as _e:
             return self.load_model(local_files_only=False)
+        except NotImplementedError as _e:
+            return None
 
         try:
             self.processor = AutoProcessor.from_pretrained(
@@ -74,7 +76,7 @@ class STTHandler(BaseHandler):
 
     def move_to_gpu(self):
         if not self.is_on_gpu:
-            self.logger.info("Moving model to GPU")
+            self.logger.debug("Moving model to GPU")
             self.model = self.model.to(self.device)
             self.processor = self.processor
             self.feature_extractor = self.feature_extractor
@@ -82,7 +84,7 @@ class STTHandler(BaseHandler):
 
     def move_inputs_to_device(self, inputs):
         if self.use_cuda:
-            self.logger.info("Moving inputs to CUDA")
+            self.logger.debug("Moving inputs to CUDA")
             try:
                 inputs = {k: v.cuda() for k, v in inputs.items()}
             except AttributeError:
@@ -90,7 +92,7 @@ class STTHandler(BaseHandler):
         return inputs
 
     def run(self, inputs):
-        self.logger.info("Running model")
+        self.logger.debug("Running model")
         input_features = inputs.input_features
         input_features = self.move_inputs_to_device(input_features)
         generated_ids = self.model.generate(inputs=input_features)

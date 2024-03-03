@@ -1,4 +1,4 @@
-# Form implementation generated from reading ui file '/home/joe/Projects/imagetopixel/airunner/src/airunner/widgets/lora/templates/lora_trigger_word.ui'
+# Form implementation generated from reading ui file '/home/joe/Projects/imagetopixel/airunner/src/airunner/../../src/airunner/widgets/lora/templates/lora_trigger_word.ui'
 #
 # Created by: PyQt6 UI code generator 6.6.1
 #

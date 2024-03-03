@@ -14,7 +14,7 @@ from airunner.workers.llm_generate_worker import LLMGenerateWorker
 from airunner.workers.engine_request_worker import EngineRequestWorker
 from airunner.workers.engine_response_worker import EngineResponseWorker
 from airunner.workers.sd_generate_worker import SDGenerateWorker
-from airunner.workers.sd_request_worker import SDRequestWorker
+from airunner.workers.sd_request_worker import SDRequestWorker, SDWorker
 from airunner.aihandler.logger import Logger
 from airunner.utils import clear_memory, create_worker
 from airunner.workers.vision_capture_worker import VisionCaptureWorker
@@ -79,9 +79,11 @@ class WorkerManager(QObject, MediatorMixin):
         self.register(SignalCode.TTS_REQUEST, self.on_tts_request)
         self.register(SignalCode.APPLICATION_SETTINGS_CHANGED_SIGNAL, self.on_application_settings_changed_signal)
 
-        if not disable_sd:
-            self.sd_request_worker = create_worker(SDRequestWorker)
-            self.sd_generate_worker = create_worker(SDGenerateWorker)
+        # if not disable_sd:
+        #     self.sd_request_worker = create_worker(SDRequestWorker)
+        #     self.sd_generate_worker = create_worker(SDGenerateWorker)
+
+        self.sd_worker = create_worker(SDWorker)
 
         self.engine_request_worker = create_worker(EngineRequestWorker)
         self.engine_response_worker = create_worker(EngineResponseWorker)
@@ -113,7 +115,7 @@ class WorkerManager(QObject, MediatorMixin):
         self.engine_response_worker.add_to_queue(response)
 
     def on_engine_cancel_signal(self, _ignore):
-        self.logger.info("Canceling")
+        self.logger.debug("Canceling")
         self.emit(SignalCode.SD_CANCEL_SIGNAL)
         self.engine_request_worker.cancel()
 
@@ -155,11 +157,11 @@ class WorkerManager(QObject, MediatorMixin):
         self.emit(SignalCode.VISION_CAPTURE_PROCESS_SIGNAL, message)
 
     def on_AudioCaptureWorker_response_signal(self, message: np.ndarray):
-        self.logger.info("Heard signal")
+        self.logger.debug("Heard signal")
         self.stt_audio_processor_worker.add_to_queue(message)
 
     def on_AudioProcessorWorker_processed_audio(self, message: np.ndarray):
-        self.logger.info("Processed audio")
+        self.logger.debug("Processed audio")
         self.emit(SignalCode.AUDIO_PROCESSOR_PROCESSED_AUDIO, message)
     
     def on_LLMGenerateWorker_response_signal(self, message:dict):
@@ -182,10 +184,10 @@ class WorkerManager(QObject, MediatorMixin):
         self.logger.warning(message)
 
     def on_status_signal(self, message):
-        self.logger.info(message)
+        self.logger.debug(message)
         
     def on_EngineResponseWorker_response_signal(self, response:dict):
-        self.logger.info("EngineResponseWorker_response_signal received")
+        self.logger.debug("EngineResponseWorker_response_signal received")
         code = response["code"]
         if code == EngineResponseCode.IMAGE_GENERATED:
             self.emit(SignalCode.SD_IMAGE_GENERATED_SIGNAL, response["message"])
@@ -213,7 +215,7 @@ class WorkerManager(QObject, MediatorMixin):
         )
 
     def on_image_generate_request_signal(self, message):
-        self.logger.info("on_image_generate_request_signal received")
+        self.logger.debug("on_image_generate_request_signal received")
         self.emit(SignalCode.LLM_UNLOAD_SIGNAL, {
             'do_unload_model': self.settings["memory_settings"]["unload_unused_models"],
             'move_unused_model_to_cpu': self.settings["memory_settings"]["move_unused_model_to_cpu"],
@@ -260,7 +262,7 @@ class WorkerManager(QObject, MediatorMixin):
         self.emit(SignalCode.LLM_CLEAR_HISTORY)
     
     def stop(self):
-        self.logger.info("Stopping")
+        self.logger.debug("Stopping")
         self.engine_request_worker.stop()
         self.engine_response_worker.stop()
 

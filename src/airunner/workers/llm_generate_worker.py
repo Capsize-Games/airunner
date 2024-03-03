@@ -33,7 +33,7 @@ class LLMGenerateWorker(Worker):
             do_unload_model = True
             do_move_to_cpu = False
         if do_move_to_cpu:
-            self.logger.info("Moving LLM to CPU")
+            self.logger.debug("Moving LLM to CPU")
             self.llm.move_to_cpu()
         elif do_unload_model:
             self.unload_llm()

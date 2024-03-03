@@ -25,7 +25,7 @@ class EmbeddingMixin:
         embeddings_not_supported = False
         self.embeds_loaded = True
         if os.path.exists(learned_embeds_path):
-            self.logger.info("Loading embeddings")
+            self.logger.debug("Loading embeddings")
             try:
                 for f in os.listdir(learned_embeds_path):
                     path = os.path.join(learned_embeds_path, f)

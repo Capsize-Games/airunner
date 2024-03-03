@@ -6,6 +6,9 @@ This is due to the way huggingface diffusion models are imported.
 *******************************************************************************
 """
 import os
+import torch
+torch.backends.cuda.matmul.allow_tf32 = True
+
 hf_cache_path = ""
 if hf_cache_path != "":
     # check if hf_cache_path exists
@@ -58,7 +61,13 @@ def watch_frontend_files():
 if __name__ == "__main__":
     def signal_handler(_signal, _frame):
         print("\nExiting...")
-        sys.exit(0)
+        try:
+            app = QApplication.instance()
+            app.quit()
+            sys.exit(0)
+        except Exception as e:
+            print(e)
+            sys.exit(0)
 
     def display_splash_screen(app):
         screens = QGuiApplication.screens()

@@ -51,7 +51,7 @@ class Worker(QObject, MediatorMixin):
     def run(self):
         if self.queue_type == QueueType.NONE:
             return
-        self.logger.info("Starting")
+        self.logger.debug("Starting")
         self.running = True
         while self.running:
             self.preprocess()
@@ -62,12 +62,12 @@ class Worker(QObject, MediatorMixin):
             except queue.Empty:
                 msg = None
             if self.paused:
-                self.logger.info("Paused")
+                self.logger.debug("Paused")
                 while self.paused:
-                    QThread.msleep(100)
-                self.logger.info("Resumed")
+                    QThread.msleep(1)
+                self.logger.debug("Resumed")
             QThread.msleep(1)
-    
+
     def preprocess(self):
         pass
     
@@ -125,6 +125,11 @@ class Worker(QObject, MediatorMixin):
         ):
             self.empty_queue()
 
+        if self.queue_type == QueueType.GET_LAST_ITEM:
+            self.items = {}
+            self.queue.empty()
+            self.current_index = 0
+
         self.items[self.current_index] = message
         self.queue.put(self.current_index)
         self.current_index += 1
@@ -135,12 +140,12 @@ class Worker(QObject, MediatorMixin):
         self.current_index = 0
     
     def stop(self):
-        self.logger.info("Stopping")
+        self.logger.debug("Stopping")
         self.running = False
         self.finished.emit()
 
     def cancel(self):
-        self.logger.info("Canceling")
+        self.logger.debug("Canceling")
         while not self.queue.empty():
             self.queue.get()
 

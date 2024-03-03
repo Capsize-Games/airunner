@@ -60,7 +60,7 @@ class TTSVocalizerWorker(Worker):
         self.thread().msleep(sleep_time)
 
     def handle_speech(self, generated_speech):
-        self.logger.info("Adding speech to stream...")
+        self.logger.debug("Adding speech to stream...")
         try:
             self.queue.put(generated_speech)
         except Exception as e:

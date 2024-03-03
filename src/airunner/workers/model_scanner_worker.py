@@ -11,7 +11,7 @@ class ModelScannerWorker(Worker):
         self.scan_for_models()
 
     def scan_for_models(self):
-        self.logger.info("Scan for models")
+        self.logger.debug("Scan for models")
         # look at model path and determine if we can import existing local models
         # first look at all files and folders inside of the model paths
         txt2img_model_path = self.settings["path_settings"]["txt2img_model_path"]
@@ -39,7 +39,7 @@ class ModelScannerWorker(Worker):
             # find all folders inside of model_path, each of those folders is a model version
             with os.scandir(model_path) as dir_object:
                 # check if dir_object is a directory
-                self.logger.info(f"Scan for models {key} {model_path}")
+                self.logger.debug(f"Scan for models {key} {model_path}")
                 for entry in dir_object:
                     version = entry.name
                     with os.scandir(os.path.join(model_path, version)) as dir_object:
