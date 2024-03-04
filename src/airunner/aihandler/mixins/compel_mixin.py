@@ -95,7 +95,7 @@ class CompelMixin:
 
         if prompt_embeds is not None:
             self.logger.debug(f"Moving prompt embeds to device: {self.device}")
-            self.prompt_embeds.to(self.device)
+            self.prompt_embeds.half().to(self.device)
 
         if negative_prompt_embeds is not None:
-            self.negative_prompt_embeds.to(self.device)
+            self.negative_prompt_embeds.half().to(self.device)
