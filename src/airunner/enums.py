@@ -82,6 +82,7 @@ class SignalCode(Enum):
     CANVAS_LOAD_IMAGE_FROM_PATH_SIGNAL = "load_image_from_path_signal"
     CANVAS_DO_DRAW_SIGNAL = "canvas_do_draw_signal"
     SCENE_DO_DRAW_SIGNAL = "scene_do_draw_signal"
+    SCENE_DO_UPDATE_IMAGE_SIGNAL = "scene_do_update_image_signal"
     CANVAS_CLEAR_LINES_SIGNAL = "canvas_clear_lines_signal"
     CANVAS_RESIZE_WORKER_RESPONSE_SIGNAL = "CanvasResizeWorker_response_signal"
     CANVAS_HANDLE_LAYER_CLICK_SIGNAL = "canvas_handle_layer_click_signal"
@@ -182,6 +183,7 @@ class SignalCode(Enum):
     SD_GENERATE_IMAGE_SIGNAL = "generate_image_signal"
     SD_IMAGE_GENERATED_SIGNAL = "image_generated_signal"
     SD_NSFW_CONTENT_DETECTED_SIGNAL = "nsfw_content_detected_signal"
+    HANDLE_LATENTS_SIGNAL = "handle_latents_signal"
 
     STT_HEAR_SIGNAL = "hear_signal"
     STT_AUDIO_PROCESSED = "stt_audio_processed_signal"

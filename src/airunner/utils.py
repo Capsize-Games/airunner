@@ -2,6 +2,7 @@ import base64
 import io
 import math
 import os
+import random
 import sys
 import subprocess
 import urllib.request
@@ -19,6 +20,7 @@ from PyQt6.QtGui import QPixmap, QImage
 from PyQt6.QtWidgets import QFileDialog, QApplication, QMainWindow
 
 from airunner.service_locator import ServiceLocator
+from airunner.settings import MAX_SEED
 
 SESSION = None
 WORKERS = []
@@ -280,7 +282,6 @@ def prepare_metadata(data, index=0):
     metadata.add_text("negative_prompt", negative_prompt)
     
     metadata.add_text("strength", str(options.get("strength", 100)))
-    metadata.add_text("image_guidance_scale", str(options.get("image_guidance_scale", 100)))
     metadata.add_text("scale", str(options.get("scale", 7)))
     metadata.add_text("seed", str(options.get("seed", 0)))
     metadata.add_text("steps", str(options.get("steps", 20)))
@@ -555,3 +556,7 @@ def convert_image_to_base64(image: Image) -> str:
     img_byte_arr = img_byte_arr.getvalue()
     image_base64 = base64.encodebytes(img_byte_arr).decode('ascii')
     return image_base64
+
+
+def random_seed():
+    return random.randint(0, MAX_SEED)
