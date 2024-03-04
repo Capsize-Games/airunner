@@ -1,6 +1,10 @@
 from PyQt6.QtCore import Qt, QSettings
 import traceback
-from airunner.aihandler.settings import DEFAULT_BRUSH_PRIMARY_COLOR, DEFAULT_BRUSH_SECONDARY_COLOR, DEFAULT_SCHEDULER
+from airunner.settings import (
+    DEFAULT_BRUSH_PRIMARY_COLOR,
+    DEFAULT_BRUSH_SECONDARY_COLOR,
+    DEFAULT_SCHEDULER, ORGANIZATION, APPLICATION_NAME
+)
 from airunner.data.bootstrap.controlnet_bootstrap_data import controlnet_bootstrap_data
 from airunner.data.bootstrap.imagefilter_bootstrap_data import imagefilter_bootstrap_data
 from airunner.data.bootstrap.model_bootstrap_data import model_bootstrap_data
@@ -30,6 +34,7 @@ tts_settings_default = {
     'sentence_chunks': 1,
     'play_queue_buffer_length': 1,
     'enable_cpu_offload': True,
+    "model": "SpeechT5"
 }
 STABLEDIFFUSION_GENERATOR_SETTINGS = dict(
     prompt="",
@@ -99,7 +104,7 @@ for category in ImageCategory:
 
 class SettingsMixin:
     def __init__(self):
-        self.application_settings = QSettings("Capsize Games", "AI Runner")
+        self.application_settings = QSettings(ORGANIZATION, APPLICATION_NAME)
         self.register(SignalCode.APPLICATION_RESET_SETTINGS_SIGNAL, self.on_reset_settings_signal)
         ServiceLocator.register("get_settings", self.get_settings)
         ServiceLocator.register("set_settings", self.set_settings)
