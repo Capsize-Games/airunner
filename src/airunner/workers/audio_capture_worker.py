@@ -4,6 +4,7 @@ import sounddevice as sd
 import numpy as np
 from PyQt6.QtCore import QThread
 from airunner.enums import SignalCode
+from airunner.settings import SLEEP_TIME_IN_MS
 from airunner.workers.worker import Worker
 
 
@@ -73,7 +74,7 @@ class AudioCaptureWorker(Worker):
                     self.recording.append(chunk_bytes)
 
             while not self.listening and self.running:
-                QThread.msleep(100)
+                QThread.msleep(SLEEP_TIME_IN_MS)
 
     def handle_message(self, message):
         self.emit(
