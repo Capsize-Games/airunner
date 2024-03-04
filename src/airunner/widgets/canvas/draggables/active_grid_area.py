@@ -4,7 +4,7 @@ from PyQt6.QtCore import QRect
 from PyQt6.QtGui import QBrush, QColor, QPen, QPixmap, QPainter
 from PyQt6.QtWidgets import QGraphicsItem
 
-from airunner.enums import SignalCode, CanvasToolName
+from airunner.enums import SignalCode
 from airunner.service_locator import ServiceLocator
 from airunner.widgets.canvas.draggables.draggable_pixmap import DraggablePixmap
 

@@ -1,13 +1,12 @@
-import traceback
 import diffusers
-from airunner.aihandler.settings import AVAILABLE_SCHEDULERS_BY_ACTION
+from airunner.settings import AVAILABLE_SCHEDULERS_BY_ACTION
 from airunner.enums import Scheduler, SignalCode, SchedulerAlgorithm
 from airunner.settings import SCHEDULER_CLASSES, DEFAULT_SCHEDULER
 
 
 class SchedulerMixin:
     def __init__(self):
-        self.scheduler_name: str = DEFAULT_SCHEDULER.value
+        self.scheduler_name: str = DEFAULT_SCHEDULER
         self.schedulers: dict = SCHEDULER_CLASSES
         self.registered_schedulers: dict = {}
         self.current_scheduler_name: str = ""

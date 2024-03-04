@@ -1,5 +1,5 @@
 import logging
-from airunner.aihandler.settings import LOG_LEVEL
+from airunner.settings import LOG_LEVEL
 import warnings
 import time
 
