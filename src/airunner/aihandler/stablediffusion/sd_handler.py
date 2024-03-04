@@ -2,6 +2,7 @@ import io
 import base64
 import traceback
 
+import numpy as np
 from PyQt6.QtWidgets import QApplication
 from pytorch_lightning import seed_everything
 from typing import List
@@ -46,7 +47,7 @@ from airunner.aihandler.mixins.lora_mixin import LoraMixin
 from airunner.aihandler.mixins.memory_efficient_mixin import MemoryEfficientMixin
 from airunner.aihandler.mixins.merge_mixin import MergeMixin
 from airunner.aihandler.mixins.scheduler_mixin import SchedulerMixin
-from airunner.aihandler.settings import AIRUNNER_ENVIRONMENT
+from airunner.settings import AIRUNNER_ENVIRONMENT
 from airunner.service_locator import ServiceLocator
 from airunner.settings import CONFIG_FILES
 from airunner.windows.main.layer_mixin import LayerMixin
@@ -55,9 +56,10 @@ from airunner.windows.main.embedding_mixin import EmbeddingMixin as EmbeddingDat
 from airunner.windows.main.pipeline_mixin import PipelineMixin
 from airunner.windows.main.controlnet_model_mixin import ControlnetModelMixin
 from airunner.windows.main.ai_model_mixin import AIModelMixin
-from airunner.utils import clear_memory
-#from airunner.scripts.realesrgan.main import RealESRGAN
+from airunner.utils import clear_memory, random_seed, create_worker
 
+#from airunner.scripts.realesrgan.main import RealESRGAN
+from airunner.workers.worker import Worker
 
 SKIP_RELOAD_CONSTS = (
     SDMode.FAST_GENERATE,
@@ -67,6 +69,30 @@ RELOAD_CONTROLNET_IMAGE_CONSTS = (
     SDMode.FAST_GENERATE,
     SDMode.DRAWING,
 )
+
+
+class LatentsWorker(Worker):
+    def __init__(self, prefix="LatentsWorker"):
+        super().__init__(prefix=prefix)
+        self.register(SignalCode.HANDLE_LATENTS_SIGNAL, self.on_handle_latents_signal)
+
+    def on_handle_latents_signal(self, data: dict):
+        latents = data.get("latents")
+        sd_request = data.get("sd_request")
+        # convert latents to PIL image
+        latents = latents[0].detach().cpu().numpy().astype(np.uint8)  # convert to uint8
+        latents = latents.transpose(1, 2, 0)
+        image = Image.fromarray(latents)
+        image = image.resize((self.settings["working_width"], self.settings["working_height"]))
+        image = image.convert("RGBA")
+        self.emit(
+            SignalCode.SD_IMAGE_GENERATED_SIGNAL,
+            {
+                "images": [image],
+                "action": sd_request.generator_settings.section,
+                "outpaint_box_rect": sd_request.active_rect,
+            }
+        )
 
 
 class SDHandler(
@@ -168,6 +194,7 @@ class SDHandler(
         self.sd_mode = None
         self.safety_checker = None
         self.feature_extractor = None
+        self.reload_prompts = False
         self.data = {
             "action": "txt2img",
         }
@@ -185,15 +212,14 @@ class SDHandler(
         torch.backends.cuda.matmul.allow_tf32 = self.settings["memory_settings"]["use_tf32"]
         self.controlnet_type = "canny"
         self.sd_mode = SDMode.DRAWING
-        settings = self.settings
-        settings["generator_settings"]["enable_controlnet"] = True
-        self.settings = settings
         self.loaded = False
         self.loading = False
         self.sd_request = None
         self.sd_request = SDRequest(model_data=self.model)
         self.running = True
         self.do_generate = False
+
+        self.latents_worker = create_worker(LatentsWorker)
 
     @property
     def do_load(self):
@@ -224,7 +250,7 @@ class SDHandler(
     def cuda_error_message(self) -> str:
         return (
             f"VRAM too low for "
-            f"{self.sd_request.generator_settings.width}x{self.sd_request.generator_settings.height} "
+            f"{self.settings['working_width']}x{self.settings['working_height']} "
             f"resolution. Potential solutions: try again, use a different model, "
             f"restart the application, use a smaller size, upgrade your GPU."
         )
@@ -368,8 +394,7 @@ class SDHandler(
         if self.processor:
             self.logger.debug("Controlnet: Processing image")
             image = self.processor(image)
-            # resize image to width and height
-            image = image.resize((self.sd_request.generator_settings.width, self.sd_request.generator_settings.height))
+            image = image.resize((self.settings["working_width"], self.settings["working_height"]))
             return image
         self.logger.error("No controlnet processor found")
 
@@ -398,6 +423,16 @@ class SDHandler(
                     self.do_load_controlnet or self.do_unload_controlnet
                 )
             )
+        )
+
+    @property
+    def do_load_compel(self) -> bool:
+        return self.pipe and (
+            (
+                self.use_compel and (self.prompt_embeds is None or self.negative_prompt_embeds is None)
+            ) or
+            self.reload_prompts or
+            self.do_load
         )
 
     @staticmethod
@@ -451,6 +486,16 @@ class SDHandler(
             )
         )
 
+        cur_prompt = self.sd_request.generator_settings.prompt
+        cur_neg_prompt = self.sd_request.generator_settings.negative_prompt
+        if (
+            self.settings["generator_settings"]["prompt"] != cur_prompt or
+            self.settings["generator_settings"]["negative_prompt"] != cur_neg_prompt
+        ):
+            self.latents = None
+            self.latents_set = False
+            self.reload_prompts = True
+
         response = None
         if not self.loaded and self.loading:
             if self.initialized and self.pipe:
@@ -462,6 +507,14 @@ class SDHandler(
             self.initialized = True
         elif self.loaded and not self.loading and self.do_generate:
             response = self.generator_sample()
+            # Set random seed if random seed is true
+            if self.settings and self.settings["generator_settings"]["random_seed"]:
+                seed = self.settings["generator_settings"]["seed"]
+                while seed == self.sd_request.generator_settings.seed:
+                    seed = random_seed()
+                settings = self.settings
+                settings["generator_settings"]["seed"] = seed
+                self.settings = settings
 
         if response is not None:
             nsfw_content_detected = response["nsfw_content_detected"]
@@ -472,6 +525,9 @@ class SDHandler(
                     response
                 )
             else:
+                response["action"] = self.sd_request.generator_settings.section
+                response["outpaint_box_rect"] = self.sd_request.active_rect
+
                 self.emit(SignalCode.ENGINE_DO_RESPONSE_SIGNAL, {
                     'code': EngineResponseCode.IMAGE_GENERATED,
                     'message': response
@@ -554,11 +610,16 @@ class SDHandler(
             self._controlnet = self.load_controlnet()
         return self._controlnet
 
+
+    _generator = None
+
     def generator(self, device=None, seed=None):
-        device = self.device if not device else device
-        if seed is None:
-            seed = int(self.seed)
-        return torch.Generator(device=device).manual_seed(seed)
+        if self._generator is None:
+            device = self.device if not device else device
+            if seed is None:
+                seed = int(self.settings["generator_settings"]["seed"])
+            self._generator = torch.Generator(device=device).manual_seed(seed)
+        return self._generator
 
     def send_error(self, message):
         self.emit(SignalCode.LOG_ERROR_SIGNAL, message)
@@ -645,8 +706,8 @@ class SDHandler(
     def generate_latents(self):
         self.logger.debug("Generating latents")
 
-        width_scale = self.sd_request.generator_settings.width / 512
-        height_scale = self.sd_request.generator_settings.height / 512
+        width_scale = self.settings["working_width"] / self.settings["working_width"]
+        height_scale = self.settings["working_height"] / self.settings["working_height"]
         latent_width = int(self.pipe.unet.config.sample_size * width_scale)
         latent_height = int(self.pipe.unet.config.sample_size * height_scale)
 
@@ -668,32 +729,30 @@ class SDHandler(
         Generate an image using the pipe
         :return:
         """
-        if self.pipe and (self.do_load or self.do_set_seed):
-            self.latents = self.generate_latents()
-
-        if (
-            not self.sd_request.is_outpaint and
-            not self.sd_request.is_upscale and
-            self.latents is not None
-        ):
-            self.latents = self.latents.to(self.device)
-        else:
-            self.logger.error("NO LATENTS")
+        # if self.latents is None or self.do_set_seed:
+        #     self.latents = self.generate_latents()
+        #     if self.latents is not None:
+        #         self.latents = self.latents.to(self.device)
+        #     else:
+        #         self.logger.error("NO LATENTS")
 
         if self.pipe:
-            return self.pipe(**self.data)
+            try:
+                return self.pipe(**self.data)
+            except Exception as e:
+                self.error_handler("Something went wrong during generation")
+                return
 
     def sample_diffusers_model(self):
         self.logger.debug("sample_diffusers_model")
         try:
             return self.do_sample()
         except Exception as e:
-            images = None
-            nsfw_content_detected = None
             if self.is_pytorch_error(e):
                 self.log_error(self.cuda_error_message)
             else:
                 self.log_error(e, "Something went wrong while generating image")
+                return None, None
 
     def on_start_auto_image_generation_signal(self):
         # self.sd_mode = SDMode.DRAWING
@@ -748,6 +807,9 @@ class SDHandler(
         data: dict,
         nsfw_content_detected: List[bool] = None
     ):
+        if images is None:
+            return
+
         if data is not None:
             data["original_model_data"] = self.original_model_data or {}
         has_nsfw = True in nsfw_content_detected if nsfw_content_detected is not None else False
@@ -792,17 +854,18 @@ class SDHandler(
             nsfw_content_detected=has_nsfw,
         )
 
+    latents_set = False
     def final_callback(self):
         total = 1
         if self.sd_request.generator_settings:
             total = int(self.sd_request.generator_settings.steps * self.sd_request.generator_settings.strength) if (
                 (self.sd_request.is_img2img or self.sd_request.is_depth2img)
             ) else self.sd_request.generator_settings.steps
-        tab_section = "stablediffusion"
         self.emit(SignalCode.SD_PROGRESS_SIGNAL, {
             "step": total,
             "total": total,
         })
+        self.latents_set = True
 
     def callback(self, step: int, _time_step, latents):
         total = 1
@@ -810,13 +873,18 @@ class SDHandler(
             total = int(self.sd_request.generator_settings.steps * self.sd_request.generator_settings.strength) if (
                 (self.sd_request.is_img2img or self.sd_request.is_depth2img)
             ) else self.sd_request.generator_settings.steps
-        tab_section = "stablediffusion"
+        # self.emit(SignalCode.HANDLE_LATENTS_SIGNAL, {
+        #     "latents": latents,
+        #     "sd_request": self.sd_request
+        # })
         res = {
             "step": step,
-            "total": total,
+            "total": total
         }
         self.emit(SignalCode.SD_PROGRESS_SIGNAL, res)
         QApplication.processEvents()
+        if self.latents_set is False:
+            self.latents = latents
         return {}
 
     def on_unload_stablediffusion_signal(self):
@@ -858,31 +926,19 @@ class SDHandler(
         images = self.process_upscale(data)
         return self.image_handler(images, self.requested_data, None)
 
-    def generator_sample(self):
-        """
-        Called from sd_generate_worker, kicks off the generation process.
-        :param data:
-        :return:
-        """
-
+    def load_generator_arguments(self):
         requested_model = self.settings["generator_settings"]["model"]
         model_changed = (self.model["name"] is not None and self.model["name"] != requested_model)
-        action = self.settings["generator_settings"]["section"]
-        if (self.sd_request.generator_settings and action != self.sd_request.generator_settings.section) or self.reload_model:
-            self._prompt_embeds = None
-            self._negative_prompt_embeds = None
-
-        if (
-            (self.controlnet_loaded and not self.settings["generator_settings"]["enable_controlnet"]) or
-            (not self.controlnet_loaded and self.settings["generator_settings"]["enable_controlnet"])
-        ):
-            self.initialized = False
-
         if model_changed:  # model change
             self.logger.debug(f"Model changed clearing debugger: {self.model['name']} != {requested_model}")
             self.reload_model = True
             self.clear_scheduler()
             self.clear_controlnet()
+
+        if self.settings["generator_settings"]["enable_controlnet"]:
+            controlnet_image = self.controlnet_image
+        else:
+            controlnet_image = None
 
         self.data = self.sd_request(
             model_data=self.model,
@@ -900,15 +956,31 @@ class SDHandler(
             model_changed=model_changed,
             prompt_embeds=self.prompt_embeds,
             negative_prompt_embeds=self.negative_prompt_embeds,
-            controlnet_image=self.controlnet_image
+            controlnet_image=controlnet_image
         )
-
         self.requested_data = self.data
         self.load_options()
 
-        if self.do_load or self.do_set_seed:
-            self.logger.debug("Seeding")
-            seed_everything(self.seed)
+    def generator_sample(self):
+        """
+        Called from sd_generate_worker, kicks off the generation process.
+        :param data:
+        :return:
+        """
+        action = self.settings["generator_settings"]["section"]
+        if (self.sd_request.generator_settings and action != self.sd_request.generator_settings.section) or self.reload_model:
+            self._prompt_embeds = None
+            self._negative_prompt_embeds = None
+
+        if (
+            (self.controlnet_loaded and not self.settings["generator_settings"]["enable_controlnet"]) or
+            (not self.controlnet_loaded and self.settings["generator_settings"]["enable_controlnet"])
+        ):
+            self.initialized = False
+
+        self.load_generator_arguments()
+        self.generator().manual_seed(self.sd_request.generator_settings.seed)
+        seed_everything(self.seed)
 
         if self.do_load:
             self.prepare_scheduler()
@@ -917,24 +989,16 @@ class SDHandler(
 
         self.change_scheduler()
 
-        force_load_compel = self.use_compel and (self.prompt_embeds is None or self.negative_prompt_embeds is None)
-        if self.pipe and (self.do_load or force_load_compel):
-            """
-            Reload prompt embeds.
-            """
-            if self.use_compel:
-                if (
-                    self.sd_request.generator_settings.prompt != self.current_prompt or
-                    self.sd_request.generator_settings.negative_prompt != self.current_negative_prompt
-                ):
-                    self._current_prompt = self.sd_request.generator_settings.prompt
-                    self._current_negative_prompt = self.sd_request.generator_settings.negative_prompt
-                    self.load_prompt_embeds(
-                        self.pipe,
-                        prompt=self.sd_request.generator_settings.prompt,
-                        negative_prompt=self.sd_request.generator_settings.negative_prompt
-                    )
-                    self.load_options()
+        if self.do_load_compel:
+            self.reload_prompts = False
+            self.prompt_embeds = None
+            self.negative_prompt_embeds = None
+            self.load_prompt_embeds(
+                self.pipe,
+                prompt=self.sd_request.generator_settings.prompt,
+                negative_prompt=self.sd_request.generator_settings.negative_prompt
+            )
+            self.load_generator_arguments()
 
         if self.pipe and self.do_load:
             """
@@ -942,6 +1006,7 @@ class SDHandler(
             """
             self.apply_memory_efficient_settings()
             # move pipe components to device and initialize text encoder for clip skip
+            self.pipe.to(self.data_type)
             self.pipe.vae.to(self.data_type)
             self.pipe.text_encoder.to(self.data_type)
             self.pipe.unet.to(self.data_type)
@@ -1144,10 +1209,7 @@ class SDHandler(
             action = "img2img"
         return action
 
-    def download_from_original_stable_diffusion_ckpt(
-        self,
-        local_files_only=True
-    ):
+    def download_from_original_stable_diffusion_ckpt(self, local_files_only=True):
         pipe = None
         kwargs = {
             "checkpoint_path_or_dict": self.model_path,
@@ -1211,7 +1273,7 @@ class SDHandler(
         else:
             if "controlnet" in kwargs:
                 del kwargs["controlnet"]
-            self.clear_controlnet()
+            #self.clear_controlnet()
 
             if self.is_single_file:
                 if self.model_version == "SDXL 1.0":
