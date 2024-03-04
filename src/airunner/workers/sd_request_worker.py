@@ -2,7 +2,8 @@ import torch
 from PyQt6.QtCore import QThread
 
 from airunner.aihandler.stablediffusion.sd_handler import SDHandler
-from airunner.enums import SignalCode, QueueType, EngineResponseCode
+from airunner.enums import SignalCode, QueueType
+from airunner.settings import SLEEP_TIME_IN_MS
 from airunner.workers.worker import Worker
 
 torch.backends.cuda.matmul.allow_tf32 = True
@@ -20,7 +21,7 @@ class SDWorker(Worker):
         with torch.inference_mode():
             while self.running:
                 self.sd.run()
-                QThread.msleep(1)
+                QThread.msleep(SLEEP_TIME_IN_MS)
 
 
 class SDRequestWorker(Worker):
