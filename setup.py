@@ -32,7 +32,7 @@ setup(
         "PyQt6-sip==13.6.0",
         "PySide6==6.6.2",
         "pyre-extensions==0.0.30",
-        "lightning==2.2.0",
+        "lightning==2.2.0.post0",
         "requests==2.31.0",
         "requests-oauthlib==1.3.1",
         "safetensors==0.4.2",
