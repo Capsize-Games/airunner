@@ -31,13 +31,23 @@ class TTSHandler(BaseHandler):
     def processor_path(self):
         if self.use_bark:
             return "suno/bark-small"
-        return "microsoft/speecht5_tts"
+        elif self.use_speecht5:
+            return "microsoft/speecht5_tts"
+        elif self.use_spd:
+            return "microsoft/spd"
+        else:
+            raise ValueError("No model selected")
     
     @property
     def model_path(self):
         if self.use_bark:
             return "suno/bark-small"
-        return "microsoft/speecht5_tts"
+        elif self.use_speecht5:
+            return "microsoft/speecht5_tts"
+        elif self.use_spd:
+            return "microsoft/spd"
+        else:
+            raise ValueError("No model selected")
     
     @property
     def vocoder_path(self):
@@ -53,7 +63,15 @@ class TTSHandler(BaseHandler):
 
     @property
     def use_bark(self):
-        return self.settings["tts_settings"]["use_bark"]
+        return self.settings["tts_settings"]["model"] == "Bark"
+
+    @property
+    def use_speecht5(self):
+        return self.settings["tts_settings"]["model"] == "SpeechT5"
+
+    @property
+    def use_spd(self):
+        return self.settings["tts_settings"]["model"] == "SPD"
 
     @property
     def voice_preset(self):
@@ -177,6 +195,8 @@ class TTSHandler(BaseHandler):
                 self.speaker_embeddings = self.speaker_embeddings.to(self.device)
 
     def initialize(self):
+        if self.use_spd:
+            return
         target_model = "bark" if self.use_bark else "t5"
         if target_model != self.current_model:
             self.unload()
@@ -184,22 +204,21 @@ class TTSHandler(BaseHandler):
 
     def load(self, target_model=None):
         if not self.tts_enabled:
-            return
-        self.logger.debug(f"Loading {target_model}...")
-        target_model = target_model or self.current_model
-        if self.current_model is None or self.model is None:
-            self.load_model()
-        if self.vocoder is None:
-            self.load_vocoder()
-        if self.processor is None:
-            self.load_processor()
-        if self.speaker_embeddings is None:
-            self.load_dataset()
-        if self.corpus is None:
-            self.load_corpus()
-        self.logger.debug("Setting current model to " + target_model)
-        self.current_model = target_model
-        self.loaded = True
+            self.logger.debug(f"Loading {target_model}...")
+            target_model = target_model or self.current_model
+            if self.current_model is None or self.model is None:
+                self.load_model()
+            if self.vocoder is None:
+                self.load_vocoder()
+            if self.processor is None:
+                self.load_processor()
+            if self.speaker_embeddings is None:
+                self.load_dataset()
+            if self.corpus is None:
+                self.load_corpus()
+            self.logger.debug("Setting current model to " + target_model)
+            self.current_model = target_model
+            self.loaded = True
     
     def unload(self):
         if not self.loaded:
@@ -234,8 +253,11 @@ class TTSHandler(BaseHandler):
 
     def run(self):
         self.logger.debug("Running")
-        self.initialize()
-        self.process_sentences()
+        if self.use_spd:
+            pass
+        else:
+            self.initialize()
+            self.process_sentences()
 
     def quantization_config(self):
         config = None
@@ -450,12 +472,23 @@ class TTSHandler(BaseHandler):
             self.message = ""
 
     def generate(self, message):
-        if not self.tts_enabled:
-            return
-        if self.use_bark:
-            response = self.generate_with_bark(message)
-        else:
-            response = self.generate_with_t5(message)
+        response = None
+        if self.tts_enabled:
+            if self.use_bark:
+                response = self.generate_with_bark(message)
+            elif self.use_speecht5:
+                response = self.generate_with_t5(message)
+            elif self.use_spd:
+                """
+                With SPD we instantly generate the speech and return nothing.
+                We must call spd-say with the generated speech in quotes.
+                Example:
+                ```bash
+                spd-say "Hello, I am a computer."
+                ```
+                """
+                bash_command = f'spd-say "{message}"'
+                os.system(bash_command)
         return response
 
     def generate_with_bark(self, text):
