@@ -4,7 +4,6 @@ import subprocess
 import webbrowser
 from functools import partial
 
-import numpy as np
 from PyQt6 import QtGui
 from PyQt6 import uic, QtCore
 from PyQt6.QtCore import pyqtSlot, pyqtSignal
@@ -12,8 +11,9 @@ from PyQt6.QtGui import QGuiApplication
 from PyQt6.QtWidgets import QApplication, QFileDialog, QMainWindow
 
 from airunner.aihandler.logger import Logger
-from airunner.aihandler.settings import LOG_LEVEL
-from airunner.enums import Mode, SignalCode, ServiceCode, CanvasToolName, WindowSection
+from airunner.settings import LOG_LEVEL, STATUS_ERROR_COLOR, STATUS_NORMAL_COLOR_LIGHT, STATUS_NORMAL_COLOR_DARK, \
+    DARK_THEME_NAME, LIGHT_THEME_NAME, VALID_IMAGE_FILES, NSFW_CONTENT_DETECTED_MESSAGE
+from airunner.enums import Mode, SignalCode, ServiceCode, CanvasToolName, WindowSection, GeneratorSection
 from airunner.mediator_mixin import MediatorMixin
 from airunner.resources_dark_rc import *
 from airunner.service_locator import ServiceLocator
@@ -63,9 +63,8 @@ class MainWindow(
     input_event_manager = None
     current_filter = None
     tqdm_callback_triggered = False
-    _document_name = "Untitled"
     is_saved = False
-    action = "txt2img"
+    action = GeneratorSection.TXT2IMG.value
     progress_bar_started = False
     window = None
     history = None
@@ -75,9 +74,9 @@ class MainWindow(
     _version = None
     _latest_version = None
     data = None  # this is set in the generator_mixin image_handler function and used for deterministic generation
-    status_error_color = "#ff0000"
-    status_normal_color_light = "#000000"
-    status_normal_color_dark = "#ffffff"
+    status_error_color = STATUS_ERROR_COLOR
+    status_normal_color_light = STATUS_NORMAL_COLOR_LIGHT
+    status_normal_color_dark = STATUS_NORMAL_COLOR_DARK
     is_started = False
     _themes = None
     button_clicked_signal = pyqtSignal(dict)
@@ -118,14 +117,6 @@ class MainWindow(
         if not key_name in self.settings["shortcut_key_settings"]:
             return ""
         return self.settings["shortcut_key_settings"][key_name]["text"]
-    
-    def add_preset(self, name, thumnail):
-        settings = self.settings
-        settings["presets"].append({
-            'name': name,
-            'thumnail': thumnail,
-        })
-        self.settings = settings
     
     def on_load_saved_stablediffuion_prompt_signal(self, index):
         try:
@@ -236,6 +227,10 @@ class MainWindow(
         self.is_started = True
         self.emit(SignalCode.APPLICATION_MAIN_WINDOW_LOADED_SIGNAL)
 
+        self.ui.enable_controlnet.blockSignals(True)
+        self.ui.enable_controlnet.setChecked(self.settings["generator_settings"]["enable_controlnet"])
+        self.ui.enable_controlnet.blockSignals(False)
+
     def register_services(self):
         self.logger.debug("Registering services")
         ServiceLocator.register(ServiceCode.DISPLAY_IMPORT_IMAGE_DIALOG, self.display_import_image_dialog)
@@ -331,7 +326,7 @@ class MainWindow(
                 self,
                 "Export Image",
                 "",
-                "Image Files (*.png *.jpg *.jpeg)"
+                VALID_IMAGE_FILES
             )
             if file_path == "":
                 return
@@ -349,7 +344,7 @@ class MainWindow(
         # display message in status
         self.emit(
             SignalCode.APPLICATION_STATUS_ERROR_SIGNAL,
-            "NSFW content detected"
+            NSFW_CONTENT_DETECTED_MESSAGE
         )
 
     def closeEvent(self, event) -> None:
@@ -721,7 +716,7 @@ class MainWindow(
         Sets the stylesheet for the application based on the current theme
         """
         self.logger.debug("Setting stylesheet")
-        theme_name = "dark_theme" if self.settings["dark_mode_enabled"] else "light_theme"
+        theme_name = DARK_THEME_NAME if self.settings["dark_mode_enabled"] else LIGHT_THEME_NAME
         here = os.path.dirname(os.path.realpath(__file__))
         with open(os.path.join(here, "..", "..", "styles", theme_name, "styles.qss"), "r") as f:
             stylesheet = f.read()
@@ -895,7 +890,6 @@ class MainWindow(
 
     def new_document(self):
         self.is_saved = False
-        self._document_name = "Untitled"
         self.set_window_title()
         self.current_filter = None
 
@@ -943,7 +937,7 @@ class MainWindow(
             self,
             label,
             directory,
-            "Image Files (*.png *.jpg *.jpeg)"
+            VALID_IMAGE_FILES
         )
 
     def new_batch(self, index, image, data):
@@ -983,3 +977,8 @@ class MainWindow(
 
     def action_reset_settings(self):
         self.emit(SignalCode.APPLICATION_RESET_SETTINGS_SIGNAL)
+
+    def action_toggle_controlnet(self, val):
+        settings = self.settings
+        settings["generator_settings"]["enable_controlnet"] = val
+        self.settings = settings

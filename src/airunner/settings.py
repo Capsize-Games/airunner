@@ -1,6 +1,6 @@
 import os
-
-from airunner.enums import GeneratorSection, StableDiffusionVersion, ImageGenerator, Language, Scheduler
+import logging
+from airunner.enums import GeneratorSection, StableDiffusionVersion, ImageGenerator, Scheduler
 
 BASE_PATH = os.path.join(os.path.expanduser("~"), ".airunner")
 SQLITE_DB_NAME = "airunner.db"
@@ -391,4 +391,38 @@ SCHEDULER_CLASSES = {
     # "VP-SDE": "ScoreSdeVpScheduler",
     # "VQ Diffusion": " VQDiffusionScheduler",
 }
-DEFAULT_SCHEDULER = Scheduler.DPM_PP_2M_K
+MIN_SEED = 0
+MAX_SEED = 4294967295
+AIRUNNER_ENVIRONMENT = os.environ.get("AIRUNNER_ENVIRONMENT", "dev")  # dev or prod
+LOG_LEVEL = logging.FATAL if AIRUNNER_ENVIRONMENT == "prod" else logging.DEBUG
+SCHEDULERS = [e.value for e in Scheduler]
+DEFAULT_SCHEDULER = Scheduler.DPM_PP_2M_K.value
+AVAILABLE_SCHEDULERS_BY_ACTION = {
+    action: SCHEDULERS for action in [
+        "txt2img", "img2img", "depth2img", "pix2pix", "vid2vid",
+        "outpaint", "controlnet", "txt2vid"
+    ]
+}
+AVAILABLE_SCHEDULERS_BY_ACTION.update({
+    "upscale": [Scheduler.EULER.value],
+    "superresolution": [Scheduler.DDIM.value, Scheduler.LMS.value, Scheduler.PLMS.value],
+})
+AIRUNNER_ENVIRONMENT = os.environ.get("AIRUNNER_ENVIRONMENT", "dev")  # dev or prod
+SERVER = {
+    "host": "127.0.0.1",
+    "port": 50006,
+    "chunk_size": 1024,
+}
+DEFAULT_BRUSH_PRIMARY_COLOR = "#ffffff"
+DEFAULT_BRUSH_SECONDARY_COLOR = "#000000"
+AVAILABLE_DTYPES = ("2bit", "4bit", "8bit")
+STATUS_ERROR_COLOR = "#ff0000"
+STATUS_NORMAL_COLOR_LIGHT = "#000000"
+STATUS_NORMAL_COLOR_DARK = "#ffffff"
+DARK_THEME_NAME = "dark_theme"
+LIGHT_THEME_NAME = "light_theme"
+VALID_IMAGE_FILES = "Image Files (*.png *.jpg *.jpeg)"
+NSFW_CONTENT_DETECTED_MESSAGE = "NSFW content detected"
+SLEEP_TIME_IN_MS = 50
+ORGANIZATION = "Capsize Games"
+APPLICATION_NAME = "AI Runner"

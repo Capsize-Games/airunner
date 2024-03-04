@@ -218,7 +218,6 @@ class ImageWidget(BaseWidget):
         meta_data["enable_controlnet"] = True
         meta_data["controlnet"] = "canny"
         meta_data["controlnet_conditioning_scale"] = 1000
-        meta_data["image_guidance_scale"] = 100.0
         meta_data["strength"] = 1.0
         meta_data["enable_input_image"] = True
         meta_data["use_cropped_image"] = False
@@ -237,7 +236,6 @@ class ImageWidget(BaseWidget):
         meta_data["enable_controlnet"] = True
         meta_data["controlnet"] = "canny"
         meta_data["controlnet_conditioning_scale"] = 250
-        meta_data["image_guidance_scale"] = 100.0
         meta_data["strength"] = 1.0
         meta_data["enable_input_image"] = True
         meta_data["use_cropped_image"] = False

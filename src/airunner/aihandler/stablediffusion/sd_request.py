@@ -1,10 +1,8 @@
-import torch
 from PIL import Image
 from PyQt6.QtCore import QObject, QRect
 
 from airunner.enums import SDMode, GeneratorSection, Controlnet
 from airunner.mediator_mixin import MediatorMixin
-from airunner.service_locator import ServiceLocator
 from airunner.settings import DEFAULT_SCHEDULER
 from airunner.utils import convert_base64_to_image
 from airunner.windows.main.settings_mixin import SettingsMixin
@@ -21,7 +19,7 @@ class ControlnetImageSettings:
         self.mask_use_imported_image = data.get("mask_use_imported_image", False)
         self.controlnet = data.get("controlnet", Controlnet.CANNY.value)
         self.conditioning_scale = data.get("conditioning_scale", 100) / 100.0
-        self.guidance_scale = data.get("guidance_scale", 750 / 100.0)
+        self.guidance_scale = data.get("guidance_scale", 750) / 100.0
         self.controlnet_image_base64 = data.get("controlnet_image_base64", None)
 
 
@@ -111,6 +109,7 @@ class SDRequest(
         self.is_img2img = False
         self.is_depth2img = False
         self.is_pix2pix = False
+        self.active_rect = None
         self.load_generator_settings()
 
     def load_generator_settings(self):
@@ -170,9 +169,7 @@ class SDRequest(
         )
         args = {
             "num_inference_steps": self.generator_settings.steps,
-            "guidance_scale": self.generator_settings.controlnet_image_settings.guidance_scale,
             "callback": callback,
-            # "callback_on_step_end": self.callback,
         }
 
         args.update(kwargs)
@@ -185,32 +182,16 @@ class SDRequest(
                 "scale": self.cross_attention_kwargs_scale
             }
 
-        if self.generator_settings.enable_controlnet:
-            args = {
-                **args,
-                **{
-                    "control_image": self.controlnet_image,
-                    "guess_mode": None,
-                    "control_guidance_start": 0.0,
-                    "control_guidance_end": 1.0,
-                    "controlnet_conditioning_scale": self.generator_settings.controlnet_image_settings.conditioning_scale,
-                }
-            }
+        # if self.latents is not None and not self.is_pix2pix:
+        #     args["latents"] = self.latents
 
-        if self.latents is not None:
-            args["latents"] = self.latents
-
-        if self.generator_settings.section == "pix2pix":
-            args["image_guidance_scale"] = self.generator_settings.image_guidance_scale
-            args["generator"] = self.generator
-            del args["latents"]
-
-        if self.is_img2img and self.generator_settings.enable_controlnet:
-            args["height"] = self.generator_settings.height
-            args["width"] = self.generator_settings.width
+        if self.is_img2img:
+            args["height"] = self.settings["working_height"]
+            args["width"] = self.settings["working_width"]
             if args["num_inference_steps"] < 3:
                 args["num_inference_steps"] = 3
-            args["generator"] = self.generator
+
+        args["generator"] = self.generator
 
         return args
 
@@ -229,143 +210,39 @@ class SDRequest(
     ) -> dict:
         extra_options = {} if not extra_options else extra_options
 
-        if strength is None:
-            strength = self.generator_settings.strength
-
-        if model is None:
-            name = model_data["name"] if "name" in model_data else self.generator_settings.model
-            model = ServiceLocator.get("ai_model_by_name")(name)
-
         if self.generator_settings.enable_controlnet:
             extra_options["controlnet_image"] = controlnet_image
 
-        if active_rect is None:
-            active_rect = QRect(
+        self.active_rect = active_rect
+
+        if self.active_rect is None:
+            self.active_rect = QRect(
                 self.settings["active_grid_settings"]["pos_x"],
                 self.settings["active_grid_settings"]["pos_y"],
-                self.settings["active_grid_settings"]["width"],
-                self.settings["active_grid_settings"]["height"]
+                self.settings["working_width"],
+                self.settings["working_height"],
             )
-            active_rect.translate(
+            self.active_rect.translate(
                 -self.settings["canvas_settings"]["pos_x"],
                 -self.settings["canvas_settings"]["pos_y"]
             )
 
-        guidance_scale = self.generator_settings.controlnet_image_settings.guidance_scale
-        controlnet_conditioning_scale = float(self.generator_settings.controlnet_image_settings.conditioning_scale)
-        steps = int(self.generator_settings.steps)
-        image_guidance_scale = float(self.generator_settings.image_guidance_scale / 10000.0 * 100.0)
-        scale = float(self.generator_settings.scale / 100)
-        seed = int(self.generator_settings.seed)
-        ddim_eta = float(self.generator_settings.ddim_eta)
-        n_iter = int(self.generator_settings.steps)
-        n_samples = int(self.generator_settings.n_samples)
-        scheduler = self.generator_settings.scheduler
-        enable_controlnet = bool(self.generator_settings.enable_controlnet)
-        controlnet = self.generator_settings.controlnet_image_settings.controlnet
         width = int(self.settings["working_width"])
         height = int(self.settings["working_height"])
         clip_skip = int(self.generator_settings.clip_skip)
-        batch_size = int(1)
         self.mask = None
-        model_data = {
-            "name": model_data.get("name", model["name"]),
-            "path": model_data.get("path", model["path"]),
-            "branch": model_data.get("branch", model["branch"]),
-            "version": model_data.get("version", model['version']),
-            "category": model_data.get("category", model['category']),
-            "pipeline_action": model_data.get("pipeline_action", model["pipeline_action"]),
-            "enabled": model_data.get("enabled", model["enabled"]),
-            "default": model_data.get("default", model["is_default"])
-        }
-
         input_image = None
         base64image = self.settings["drawing_pad_settings"]["image"]
         if base64image:
             input_image = convert_base64_to_image(base64image).convert("RGBA")
 
-        options = {
-            "sd_request": True,
-            "empty_queue": False,
-            "steps": steps,
-            "ddim_eta": ddim_eta,  # only applies to ddim scheduler
-            "n_iter": n_iter,
-            "n_samples": n_samples,
-            "scale": scale,
-            "seed": seed,
-            "model": model['name'],
-            "model_data": model_data,
-            "original_model_data": {},
-            "scheduler": scheduler,
-            "model_path": model["path"],
-            "model_branch": model["branch"],
-            # lora=self.available_lora(action),
-            "width": width,
-            "height": height,
-            "pos_x": 0,
-            "pos_y": 0,
-            "outpaint_box_rect": active_rect,
-            "hf_token": self.settings["hf_api_key_read_key"],
-            "model_base_path": self.settings["path_settings"]["base_path"],
-            "outpaint_model_path": self.settings["path_settings"]["inpaint_model_path"],
-            "pix2pix_model_path": self.settings["path_settings"]["pix2pix_model_path"],
-            "depth2img_model_path": self.settings["path_settings"]["depth2img_model_path"],
-            "upscale_model_path": self.settings["path_settings"]["upscale_model_path"],
-            "image_path": self.settings["path_settings"]["image_path"],
-            "lora_path": self.settings["path_settings"]["lora_model_path"],
-            "lora": self.settings["lora"],
-            "embeddings_path": self.settings["path_settings"]["embeddings_model_path"],
-            "video_path": self.settings["path_settings"]["video_path"],
-            "clip_skip": clip_skip,
-            "batch_size": batch_size,
-            "variation": self.settings["generator_settings"]["variation"],
-            "deterministic_generation": False,
-            "input_image": input_image,
-            "enable_controlnet": enable_controlnet,
-            "controlnet": controlnet,
-            "allow_online_mode": self.settings["allow_online_mode"],
-            "hf_api_key_read_key": self.settings["hf_api_key_read_key"],
-            "hf_api_key_write_key": self.settings["hf_api_key_write_key"],
-            "unload_unused_model": self.settings["memory_settings"]["unload_unused_models"],
-            "move_unused_model_to_cpu": self.settings["memory_settings"]["move_unused_model_to_cpu"],
-            "auto_export_images": self.settings["auto_export_images"],
-            "guidance_scale": guidance_scale,
-            "controlnet_conditioning_scale": controlnet_conditioning_scale,
-            "sd_mode": sd_mode,
-        }
-
-        if controlnet_image:
-            options["controlnet_image"] = controlnet_image
-
-        if self.generator_settings.section in ["txt2img", "img2img", "outpaint", "depth2img"]:
-            options[f"strength"] = strength
-        elif self.generator_settings.section in ["pix2pix"]:
-            options[f"image_guidance_scale"] = image_guidance_scale
-
-        if memory_options is None:
-            memory_options = {
-                "use_last_channels": self.settings["memory_settings"]["use_last_channels"],
-                "use_enable_sequential_cpu_offload": self.settings["memory_settings"][
-                "use_enable_sequential_cpu_offload"],
-                "enable_model_cpu_offload": self.settings["memory_settings"]["enable_model_cpu_offload"],
-                "use_attention_slicing": self.settings["memory_settings"]["use_attention_slicing"],
-                "use_tf32": self.settings["memory_settings"]["use_tf32"],
-                "use_cudnn_benchmark": self.settings["memory_settings"]["use_cudnn_benchmark"],
-                "use_enable_vae_slicing": self.settings["memory_settings"]["use_enable_vae_slicing"],
-                "use_accelerated_transformers": self.settings["memory_settings"]["use_accelerated_transformers"],
-                "use_torch_compile": self.settings["memory_settings"]["use_torch_compile"],
-                "use_tiled_vae": self.settings["memory_settings"]["use_tiled_vae"],
-                "use_tome_sd": self.settings["memory_settings"]["use_tome_sd"],
-                "tome_sd_ratio": self.settings["memory_settings"]["tome_sd_ratio"],
-            }
-
         args = {
             "action": self.generator_settings.section,
-            "options": {
-                **options,
-                **extra_options,
-                **memory_options
-            }
+            "outpaint_box_rect": self.active_rect,
+            "width": width,
+            "height": height,
+            "clip_skip": clip_skip,
+            "input_image": input_image.convert("RGB"),
         }
 
         args = self.load_prompt_embed_args(
@@ -374,19 +251,25 @@ class SDRequest(
             args
         )
 
-        extra_args = self.prepare_extra_args(self.image, self.mask)
+        extra_args = self.prepare_extra_args()
 
         return {**args, **extra_args}
 
-    def prepare_extra_args(self, image, mask):
+    def prepare_extra_args(self):
         extra_args = {
         }
+        width = int(self.settings["working_width"])
+        height = int(self.settings["working_height"])
+        image = None
         if self.is_txt2img:
             extra_args = {**extra_args, **{
-                "width": self.generator_settings.width,
-                "height": self.generator_settings.height,
+                "width": width,
+                "height": height,
             }}
-        if self.is_img2img:
+        else:
+            image = self.drawing_pad_image.convert("RGB")#self.latents if self.latents is not None else self.drawing_pad_image.convert("RGB")
+
+        if self.is_img2img or self.is_depth2img:
             extra_args = {**extra_args, **{
                 "image": image,
                 "strength": self.generator_settings.strength,
@@ -394,24 +277,30 @@ class SDRequest(
         elif self.is_pix2pix:
             extra_args = {**extra_args, **{
                 "image": image,
-                "image_guidance_scale": self.generator_settings.image_guidance_scale,
-            }}
-        elif self.is_depth2img:
-            extra_args = {**extra_args, **{
-                "image": image,
-                "strength": self.generator_settings.strength,
-                #"depth_map": self.depth_map
+                "image_guidance_scale": self.generator_settings.strength,
             }}
         elif self.is_upscale:
             extra_args = {**extra_args, **{
-                "image": image
+                "image": image,
             }}
         elif self.is_outpaint:
+            mask = None
             extra_args = {**extra_args, **{
                 "image": image,
                 "mask_image": mask,
                 "width": self.generator_settings.width,
                 "height": self.generator_settings.height,
+            }}
+
+        if self.generator_settings.enable_controlnet:
+            extra_args = {**extra_args, **{
+                "control_image": self.controlnet_image,
+                "guess_mode": None,
+                "control_guidance_start": 0.0,
+                "control_guidance_end": 1.0,
+                "guidance_scale": self.generator_settings.controlnet_image_settings.guidance_scale,
+                "controlnet_conditioning_scale": self.generator_settings.controlnet_image_settings.conditioning_scale,
+                "controlnet": self.generator_settings.controlnet_image_settings.controlnet,
             }}
         return extra_args
 

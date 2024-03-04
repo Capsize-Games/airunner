@@ -1,7 +1,4 @@
-import random
-import threading
 import time
-from queue import Queue
 
 from PIL import Image
 from PyQt6.QtCore import pyqtSignal, QRect
@@ -9,13 +6,10 @@ from PyQt6.QtGui import QImage
 from PyQt6.QtWidgets import QApplication
 
 from airunner.aihandler.stablediffusion.sd_request import SDRequest
-from airunner.enums import SignalCode, ServiceCode, GeneratorSection, ImageCategory, Controlnet, SDMode
-from airunner.aihandler.settings import MAX_SEED
+from airunner.enums import SignalCode, ServiceCode, GeneratorSection, ImageCategory
 from airunner.settings import PHOTO_REALISTIC_NEGATIVE_PROMPT, ILLUSTRATION_NEGATIVE_PROMPT
 from airunner.widgets.base_widget import BaseWidget
 from airunner.widgets.generator_form.templates.generatorform_ui import Ui_generator_form
-
-
 
 
 class GeneratorForm(BaseWidget):
@@ -49,49 +43,8 @@ class GeneratorForm(BaseWidget):
             SignalCode.DO_GENERATE_IMAGE_FROM_IMAGE_SIGNAL: self.do_generate_image_from_image_signal_handler,
         }
 
-        # self.generate_image_from_image_queue = Queue()
-        # self.generate_image_from_image_thread = threading.Thread(target=self.generate_image_from_image_worker)
-        # self.generate_image_from_image_thread.start()
-
-    def generate_image_from_image_worker(self):
-        while True:
-            image = None
-            while not self.generate_image_from_image_queue.empty():
-                image = self.generate_image_from_image_queue.get()
-            if image:
-                self.generate_image_from_image(image)
-            time.sleep(0.01)
-
     def handle_generate_image_from_image(self, image):
-        self.generate_image_from_image_queue.put(image)
-
-    def generate_image_from_image(self, image: QImage):
-        image = Image.fromqpixmap(image)
-
-        # crop the image to active_grid_area_rect
-        image = image.crop((
-            self.active_rect.x(),
-            self.active_rect.y(),
-            self.active_rect.x() + self.active_rect.width(),
-            self.active_rect.y() + self.active_rect.height()
-        ))
-        generator_settings = self.settings["generator_settings"]
-        controlnet_image_settings = generator_settings["controlnet_image_settings"]
-        # self.emit(
-        #     SignalCode.DO_GENERATE_IMAGE_FROM_IMAGE_SIGNAL,
-        #     dict(
-        #         input_image=image,
-        #         enable_controlnet=True,
-        #         controlnet=Controlnet.CANNY.value,
-        #         generator_section=GeneratorSection.TXT2IMG.value,
-        #         empty_queue=True,
-        #         sd_mode=SDMode.DRAWING,
-        #         guidance_scale=controlnet_image_settings["guidance_scale"],
-        #         controlnet_conditioning_scale=controlnet_image_settings["conditioning_scale"],
-        #         strength=generator_settings["strength"],
-        #     )
-        # )
-        self.emit(SignalCode.START_AUTO_IMAGE_GENERATION_SIGNAL)
+        pass
 
     def do_generate_image_from_image_signal_handler(self, res):
         print("CALL GENERATE")
@@ -134,10 +87,6 @@ class GeneratorForm(BaseWidget):
         return self.settings["current_image_generator"]
 
     @property
-    def random_seed(self):
-        return self.settings["generator_settings"]["random_seed"]
-
-    @property
     def seed(self):
         return self.settings["generator_settings"]["seed"]
 
@@ -146,10 +95,6 @@ class GeneratorForm(BaseWidget):
         settings = self.settings
         settings["generator_settings"]["seed"] = val
         self.settings = settings
-
-    @property
-    def image_scale(self):
-        return self.settings["generator_settings"]["image_guidance_scale"]
 
     @property
     def active_rect(self):
@@ -230,6 +175,8 @@ class GeneratorForm(BaseWidget):
         )
 
     def call_generate(self, image: Image = None, seed=None, override_data=None):
+        self.emit(SignalCode.DO_GENERATE_SIGNAL)
+        return
         override_data = {} if override_data is None else override_data
         generator_section = override_data.pop("generator_section", self.generator_section)
 
@@ -360,12 +307,6 @@ class GeneratorForm(BaseWidget):
         if not extra_options:
             extra_options = {}
 
-        # TODO: fix controlnet
-        # if self.enable_controlnet:
-        #     extra_options["controlnet_image"] = self.ui.controlnet_settings.current_controlnet_image
-
-        self.set_seed(seed=seed)
-
         self.logger.debug(f"Attempting to generate image")
 
         action = self.generator_section
@@ -389,26 +330,8 @@ class GeneratorForm(BaseWidget):
             "default": model_data.get("default", model["is_default"])
         }
         strength = override_data.get("strength", 0.5)
-        self.emit(
-            SignalCode.SD_IMAGE_GENERATE_REQUEST_SIGNAL,
-            SDRequest()(
-                model=model,
-                model_data=model_data,
-                settings=self.settings,
-                override_data=override_data,
-                prompt=prompt,
-                negative_prompt=negative_prompt,
-                action=action,
-                active_rect=[] if not self.active_rect else self.active_rect,
-                generator_section=self.generator_section,
-                enable_controlnet=self.enable_controlnet,
-                controlnet_image=self.controlnet_image,
-                memory_options=self.get_memory_options(),
-                extra_options=extra_options,
-                sd_mode=sd_mode,
-                strength=strength
-            )
-        )
+
+        # TODO: emit mandual generate request here
 
     def get_memory_options(self):
         return {
@@ -426,26 +349,10 @@ class GeneratorForm(BaseWidget):
             "tome_sd_ratio": self.settings["memory_settings"]["tome_sd_ratio"],
         }
 
-    def set_seed(self, seed=None):
-        """
-        Set the seed - either set to random, deterministic or keep current, then display the seed in the UI.
-        :return:
-        """
-        self.set_primary_seed(seed)
-
-    def set_primary_seed(self, seed=None):
-        if self.deterministic_data:
-            self.seed = self.deterministic_data["options"][f"seed"]
-        elif self.random_seed:
-            self.seed = random.randint(0, MAX_SEED)
-        elif seed is not None:
-            self.seed = seed
-
     def handle_progress_bar(self, message):
         step = message.get("step")
         total = message.get("total")
-        action = message.get("action")
-        tab_section = message.get("tab_section")
+        image = message.get("image")
 
         if step == 0 and total == 0:
             current = 0
@@ -454,9 +361,9 @@ class GeneratorForm(BaseWidget):
                 current = (step / total)
             except ZeroDivisionError:
                 current = 0
-        self.set_progress_bar_value(tab_section, action, int(current * 100))
+        self.set_progress_bar_value(int(current * 100))
     
-    def set_progress_bar_value(self, tab_section, section, value):
+    def set_progress_bar_value(self, value):
         progressbar = self.ui.progress_bar
         if not progressbar:
             return
