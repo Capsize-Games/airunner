@@ -1,10 +1,7 @@
 import torch
 import numpy as np
-
 from transformers import AutoProcessor, WhisperForConditionalGeneration, AutoFeatureExtractor
-
 from airunner.aihandler.base_handler import BaseHandler
-
 from airunner.enums import SignalCode
 
 
