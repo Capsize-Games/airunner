@@ -1,5 +1,8 @@
 from PyQt6.QtCore import Qt, QSettings
 import traceback
+from PyQt6 import uic, QtCore
+
+
 from airunner.settings import (
     DEFAULT_BRUSH_PRIMARY_COLOR,
     DEFAULT_BRUSH_SECONDARY_COLOR,
@@ -405,7 +408,10 @@ class SettingsMixin:
         self.logger.debug("Updating settings")
         default_settings = self.default_settings
         current_settings = self.settings
-        self.recursive_update(current_settings, default_settings)
+        if current_settings is None:
+            current_settings = default_settings
+        else:
+            self.recursive_update(current_settings, default_settings)
         self.logger.debug("Settings updated")
 
         # update llm_templates_version
