@@ -41,7 +41,22 @@ class GeneratorForm(BaseWidget):
             SignalCode.LLM_IMAGE_PROMPT_GENERATED_SIGNAL: self.on_llm_image_prompt_generated_signal,
             SignalCode.GENERATE_IMAGE_FROM_IMAGE_SIGNAL: self.handle_generate_image_from_image,
             SignalCode.DO_GENERATE_IMAGE_FROM_IMAGE_SIGNAL: self.do_generate_image_from_image_signal_handler,
+            SignalCode.SD_LOAD_PROMPT_SIGNAL: self.on_load_saved_stablediffuion_prompt_signal
         }
+
+    def on_load_saved_stablediffuion_prompt_signal(self, index):
+        try:
+            saved_prompt = self.settings["saved_prompts"][index]
+        except KeyError:
+            self.logger.error(f"Unable to load prompt at index {index}")
+            saved_prompt = None
+
+        if saved_prompt:
+            settings = self.settings
+            settings["generator_settings"]["prompt"] = saved_prompt["prompt"]
+            settings["generator_settings"]["negative_prompt"] = saved_prompt["negative_prompt"]
+            self.settings = settings
+            self.set_form_values()
 
     def handle_generate_image_from_image(self, image):
         pass
