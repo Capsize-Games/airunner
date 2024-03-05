@@ -118,19 +118,6 @@ class MainWindow(
             return ""
         return self.settings["shortcut_key_settings"][key_name]["text"]
     
-    def on_load_saved_stablediffuion_prompt_signal(self, index):
-        try:
-            saved_prompt = self.settings["saved_prompts"][index]
-        except KeyError:
-            self.logger.error(f"Unable to load prompt at index {index}")
-            saved_prompt = None
-        
-        if saved_prompt:
-            settings = self.settings
-            settings["generator_settings"]["prompt"] = saved_prompt["prompt"]
-            settings["generator_settings"]["negative_prompt"] = saved_prompt["negative_prompt"]
-            self.settings = settings
-
     def on_update_saved_stablediffusion_prompt_signal(self, options):
         index, prompt, negative_prompt = options
         settings = self.settings
@@ -226,6 +213,7 @@ class MainWindow(
         self.worker_manager = WorkerManager()
         self.is_started = True
         self.emit(SignalCode.APPLICATION_MAIN_WINDOW_LOADED_SIGNAL)
+        self.image_window = None
 
         self.ui.enable_controlnet.blockSignals(True)
         self.ui.enable_controlnet.setChecked(self.settings["generator_settings"]["enable_controlnet"])
@@ -242,13 +230,10 @@ class MainWindow(
         self.logger.debug("Connecting signals")
         self.register(SignalCode.VISION_DESCRIBE_IMAGE_SIGNAL, self.on_describe_image_signal)
         self.register(SignalCode.SD_SAVE_PROMPT_SIGNAL, self.on_save_stablediffusion_prompt_signal)
-        self.register(SignalCode.SD_LOAD_PROMPT_SIGNAL, self.on_load_saved_stablediffuion_prompt_signal)
         self.register(SignalCode.SD_UPDATE_SAVED_PROMPT_SIGNAL, self.on_update_saved_stablediffusion_prompt_signal)
         self.register(SignalCode.QUIT_APPLICATION, self.action_quit_triggered)
         self.register(SignalCode.SD_NSFW_CONTENT_DETECTED_SIGNAL, self.on_nsfw_content_detected_signal)
         self.register(SignalCode.VISION_CAPTURED_SIGNAL, self.on_vision_captured_signal)
-
-    image_window = None
 
     def on_vision_captured_signal(self, data: dict):
         # Create the window if it doesn't exist
@@ -288,7 +273,6 @@ class MainWindow(
         self.logger.debug("Setting buttons")
         self.set_all_section_buttons()
         self.initialize_tool_section_buttons()
-
 
     def do_listen(self):
         if not self.listening:
