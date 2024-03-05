@@ -233,8 +233,10 @@ class SDRequest(
         self.mask = None
         input_image = None
         base64image = self.settings["drawing_pad_settings"]["image"]
-        if base64image:
-            input_image = convert_base64_to_image(base64image).convert("RGBA")
+        if base64image != "":
+            input_image = convert_base64_to_image(base64image)
+            if input_image is not None:
+                input_image = input_image.convert("RGB")
 
         args = {
             "action": self.generator_settings.section,
@@ -242,7 +244,7 @@ class SDRequest(
             "width": width,
             "height": height,
             "clip_skip": clip_skip,
-            "input_image": input_image.convert("RGB"),
+            "input_image": input_image,
         }
 
         args = self.load_prompt_embed_args(
@@ -266,7 +268,7 @@ class SDRequest(
                 "width": width,
                 "height": height,
             }}
-        else:
+        elif image is not None:
             image = self.drawing_pad_image.convert("RGB")#self.latents if self.latents is not None else self.drawing_pad_image.convert("RGB")
 
         if self.is_img2img or self.is_depth2img:
