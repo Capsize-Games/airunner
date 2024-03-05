@@ -160,18 +160,7 @@ class SettingsMixin:
                     llm_category="casuallm",
                 ),
             },
-            shortcut_key_settings=dict(
-                llm_action_key=dict(
-                    text="@",
-                    key=Qt.Key.Key_At,
-                    description="Chat Action Key. Responsible for triggering the chat action menu.",
-                ),
-                generate_image_key=dict(
-                    text="F5",
-                    key=Qt.Key.Key_F5,
-                    description="Generate key. Responsible for triggering the generation of a Stable Diffusion image.",
-                )
-            ),
+            shortcut_key_settings=dict(),
             window_settings=dict(
                 content_splitter=None,
                 splitter=None,
