@@ -29,9 +29,7 @@ class AudioCaptureWorker(Worker):
             SignalCode.STT_START_CAPTURE_SIGNAL,
             self.start_listening
         )
-        fs = self.settings["stt_settings"]["fs"]
-        channels = self.settings["stt_settings"]["channels"]
-        self.stream = sd.InputStream(samplerate=fs, channels=channels)
+        self.stream = None
 
     def start(self):
         self.logger.debug("Starting")
@@ -49,7 +47,11 @@ class AudioCaptureWorker(Worker):
         emit = self.emit
         while running:
             while self.listening and running:
-                chunk, overflowed = self.stream.read(int(chunk_duration * fs))
+                try:
+                    chunk, overflowed = self.stream.read(int(chunk_duration * fs))
+                except sd.PortAudioError as e:
+                    QThread.msleep(SLEEP_TIME_IN_MS)
+                    continue
                 if np.max(np.abs(chunk)) > volume_input_threshold:  # check if chunk is not silence
                     is_receiving_input = True
                     voice_input_start_time = time.time()
@@ -77,9 +79,13 @@ class AudioCaptureWorker(Worker):
     def start_listening(self):
         self.logger.debug("Start listening")
         self.listening = True
+        fs = self.settings["stt_settings"]["fs"]
+        channels = self.settings["stt_settings"]["channels"]
+        self.stream = sd.InputStream(samplerate=fs, channels=channels)
         self.stream.start()
 
     def stop_listening(self):
         self.logger.debug("Stop listening")
         self.listening = False
         self.stream.stop()
+        self.stream.close()
