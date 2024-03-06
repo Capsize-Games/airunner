@@ -1,4 +1,4 @@
-# Form implementation generated from reading ui file '/home/joe/Projects/imagetopixel/airunner/src/airunner/widgets/tts/templates/tts_preferences.ui'
+# Form implementation generated from reading ui file '/home/joe/Projects/imagetopixel/airunner/src/airunner/../../src/airunner/widgets/tts/templates/tts_preferences.ui'
 #
 # Created by: PyQt6 UI code generator 6.6.1
 #
@@ -122,6 +122,7 @@ class Ui_tts_preferences(object):
         self.comboBox.setObjectName("comboBox")
         self.comboBox.addItem("")
         self.comboBox.addItem("")
+        self.comboBox.addItem("")
         self.gridLayout_9.addWidget(self.comboBox, 0, 0, 1, 1)
         self.gridLayout_7.addWidget(self.groupBox_7, 2, 0, 1, 1)
         spacerItem = QtWidgets.QSpacerItem(20, 40, QtWidgets.QSizePolicy.Policy.Minimum, QtWidgets.QSizePolicy.Policy.Expanding)
@@ -181,6 +182,7 @@ class Ui_tts_preferences(object):
         self.groupBox_7.setTitle(_translate("tts_preferences", "Model"))
         self.comboBox.setItemText(0, _translate("tts_preferences", "Bark"))
         self.comboBox.setItemText(1, _translate("tts_preferences", "SpeechT5"))
+        self.comboBox.setItemText(2, _translate("tts_preferences", "SPD"))
         self.speech_t5.setTitle(_translate("tts_preferences", "SpeechT5"))
         self.label_2.setText(_translate("tts_preferences", "Less realistic but fast and small VRAM usage."))
 from airunner.widgets.slider.slider_widget import SliderWidget
