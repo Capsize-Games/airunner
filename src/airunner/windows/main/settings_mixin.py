@@ -1,8 +1,5 @@
-from PyQt6.QtCore import Qt, QSettings
+from PyQt6.QtCore import QSettings
 import traceback
-from PyQt6 import uic, QtCore
-
-
 from airunner.settings import (
     DEFAULT_BRUSH_PRIMARY_COLOR,
     DEFAULT_BRUSH_SECONDARY_COLOR,
@@ -37,7 +34,22 @@ tts_settings_default = {
     'sentence_chunks': 1,
     'play_queue_buffer_length': 1,
     'enable_cpu_offload': True,
-    "model": "SpeechT5"
+    "model": "SpeechT5",
+    "spd": dict(
+        voice="male1",
+        rate=0,
+        pitch=0,
+        volume=0,
+        punctuation_mode="none",
+    ),
+    "bark": dict(
+        language="English",
+        voice="v2/en_speaker_6",
+        gender="Male",
+        fine_temperature=80,
+        coarse_temperature=40,
+        semantic_temperature=80,
+    )
 }
 STABLEDIFFUSION_GENERATOR_SETTINGS = dict(
     prompt="",
@@ -248,7 +260,8 @@ class SettingsMixin:
             ),
             canvas_settings=dict(
                 pos_x=0,
-                pos_y=0
+                pos_y=0,
+                image=None,
             ),
             metadata_settings=dict(
                 image_export_metadata_prompt=True,
