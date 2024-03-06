@@ -444,3 +444,22 @@ DEFAULT_SHORTCUTS = {
         signal=SignalCode.QUIT_APPLICATION
     ),
 }
+SPD_SETTINGS = dict(
+    voices=["male1", "male2", "male3", "female1", "female2", "female3", "child_male", "child_female"],
+    rate=dict(
+        min=-100,
+        max=100,
+        default=0
+    ),
+    pitch=dict(
+        min=-100,
+        max=100,
+        default=0
+    ),
+    volume=dict(
+        min=0,
+        max=100,
+        default=100
+    ),
+    punctuation_modes=["none", "all", "some"],
+)
