@@ -1,15 +1,23 @@
+import base64
+import io
+from types import NoneType
 from typing import Optional
 
-from PIL import ImageQt
+from PIL import ImageQt, Image, ImageFilter
 from PIL.ImageQt import QImage
 from PyQt6.QtCore import Qt, QPoint
 from PyQt6.QtGui import QEnterEvent
 from PyQt6.QtGui import QPixmap, QPainter
 from PyQt6.QtWidgets import QGraphicsScene, QGraphicsPixmapItem
-from airunner.enums import SignalCode, CanvasToolName
+
+from airunner.aihandler.logger import Logger
+from airunner.enums import SignalCode, CanvasToolName, GeneratorSection, ServiceCode
 from airunner.mediator_mixin import MediatorMixin
 from airunner.service_locator import ServiceLocator
 from airunner.utils import snap_to_grid, convert_base64_to_image
+from airunner.widgets.canvas.clipboard_handler import ClipboardHandler
+from airunner.widgets.canvas.draggables.draggable_pixmap import DraggablePixmap
+from airunner.widgets.canvas.image_handler import ImageHandler
 from airunner.windows.main.settings_mixin import SettingsMixin
 
 
@@ -19,6 +27,7 @@ class CustomScene(
     SettingsMixin
 ):
     def __init__(self, size):
+        self.logger = Logger(prefix=self.__class__.__name__)
         MediatorMixin.__init__(self)
         SettingsMixin.__init__(self)
         super().__init__()
@@ -29,11 +38,9 @@ class CustomScene(
         # Create the QImage with the size of the parent widget
         self.image: ImageQt = Optional[None]
         self.item: QGraphicsPixmapItem = Optional[None]
+
         self.set_image()
         self.set_item()
-
-        # self.item should always be on top
-        self.item.setZValue(1)
 
         # Add a variable to store the last mouse position
         self.last_pos = None
@@ -51,6 +58,253 @@ class CustomScene(
             pil_image = convert_base64_to_image(base64image).convert("RGBA")
             self.image = ImageQt.ImageQt(pil_image)
 
+        self.register(SignalCode.CANVAS_CLEAR, self.on_canvas_clear_signal)
+        self.register(SignalCode.SCENE_DO_UPDATE_IMAGE_SIGNAL, self.update_current_pixmap)
+        self.register(SignalCode.CANVAS_PASTE_IMAGE_SIGNAL, self.paste_image_from_clipboard)
+        self.register(SignalCode.CANVAS_CANCEL_FILTER_SIGNAL, self.cancel_filter)
+        self.register(SignalCode.CANVAS_PREVIEW_FILTER_SIGNAL, self.preview_filter)
+        self.register(SignalCode.CANVAS_LOAD_IMAGE_FROM_PATH_SIGNAL, self.on_load_image_from_path)
+        self.register_signals()
+        self.clipboard_handler = ClipboardHandler()
+        self.image_handler = ImageHandler()
+        ServiceLocator.register(ServiceCode.CURRENT_ACTIVE_IMAGE, self.current_active_image)
+
+    @staticmethod
+    def current_draggable_pixmap():
+        return ServiceLocator.get(ServiceCode.CURRENT_DRAGGABLE_PIXMAP)()
+
+    def register_signals(self):
+        self.register(SignalCode.SD_IMAGE_GENERATED_SIGNAL, self.on_image_generated_signal)
+
+    @property
+    def image_pivot_point(self):
+        try:
+            layer = ServiceLocator.get(ServiceCode.CURRENT_LAYER)()
+            return QPoint(layer["pivot_point_x"], layer["pivot_point_y"])
+        except Exception as e:
+            self.logger.error(e)
+        return QPoint(0, 0)
+
+    @image_pivot_point.setter
+    def image_pivot_point(self, value):
+        self.emit(SignalCode.LAYER_UPDATE_CURRENT_SIGNAL, {
+            "pivot_point_x": value.x(),
+            "pivot_point_y": value.y()
+        })
+
+    def paste_image_from_clipboard(self):
+        image = self.clipboard_handler.paste_image_from_clipboard()
+        self.create_image(image)
+
+    def create_image(self, image):
+        if self.settings["resize_on_paste"]:
+            image = self.resize_image(image)
+        self.add_image_to_scene(image)
+
+    def resize_image(self, image):
+        image.thumbnail(
+            (
+                self.settings["is_maximized"],
+                self.settings["working_height"]
+            ),
+            Image.ANTIALIAS
+        )
+        return image
+
+    def on_load_image_from_path(self, image_path):
+        if image_path is None or image_path == "":
+            return
+        image = Image.open(image_path)
+        self.load_image_from_object(image)
+
+    def load_image_from_object(
+        self,
+        image: Image,
+        is_outpaint: bool = False
+    ):
+        self.add_image_to_scene(
+            is_outpaint=is_outpaint
+        )
+
+    def load_image(self, image_path: str):
+        image = self.image_handler.load_image(image_path)
+        self.add_image_to_scene(image)
+
+    def cancel_filter(self):
+        image = self.image_handler.cancel_filter()
+        if image:
+            self.load_image_from_object(image=image)
+
+    def preview_filter(self, filter_object: ImageFilter.Filter):
+        filtered_image = self.image_handler.preview_filter(
+            self.current_active_image(),
+            filter_object
+        )
+        self.load_image_from_object(image=filtered_image)
+
+    def add_image_to_scene(
+        self,
+        image: Image,
+        is_outpaint: bool = False,
+        outpaint_box_rect: QPoint = None
+    ):
+        """
+        Adds a given image to the scene
+        :param image_data: dict containing the image to be added to the scene
+        :param is_outpaint: bool indicating if the image is an outpaint
+        :param outpaint_box_rect: QPoint indicating the root point of the image
+        :return:
+        """
+        if is_outpaint:
+            image, root_point, pivot_point = self.handle_outpaint(
+                outpaint_box_rect,
+                image,
+                action=GeneratorSection.OUTPAINT.value
+            )
+        self.set_current_active_image(image)
+        q_image = ImageQt.ImageQt(image)
+        self.item.setPixmap(QPixmap.fromImage(q_image))
+        self.update()
+
+    def current_active_image(self) -> Image:
+        base_64_image = self.settings["canvas_settings"]["image"]
+        return convert_base64_to_image(base_64_image)
+
+    def handle_outpaint(self, outpaint_box_rect, outpainted_image, action=None) -> [Image, QPoint, QPoint]:
+        if self.current_active_image() is None:
+            point = QPoint(outpaint_box_rect.x(), outpaint_box_rect.y())
+            return outpainted_image, QPoint(0, 0), point
+
+        # make a copy of the current canvas image
+        existing_image_copy = self.current_active_image().copy()
+        width = existing_image_copy.width
+        height = existing_image_copy.height
+
+        pivot_point = self.image_pivot_point
+        root_point = QPoint(0, 0)
+        layer = ServiceLocator.get(ServiceCode.CURRENT_LAYER)()
+        current_image_position = QPoint(layer["pos_x"], layer["pos_y"])
+
+        is_drawing_left = outpaint_box_rect.x() < current_image_position.x()
+        is_drawing_right = outpaint_box_rect.x() > current_image_position.x()
+        is_drawing_up = outpaint_box_rect.y() < current_image_position.y()
+        is_drawing_down = outpaint_box_rect.y() > current_image_position.y()
+
+        if is_drawing_down:
+            height += outpaint_box_rect.y()
+        if is_drawing_right:
+            width += outpaint_box_rect.x()
+        if is_drawing_up:
+            height += current_image_position.y()
+            root_point.setY(outpaint_box_rect.y())
+        if is_drawing_left:
+            width += current_image_position.x()
+            root_point.setX(outpaint_box_rect.x())
+
+        new_dimensions = (width, height)
+
+        new_image = Image.new("RGBA", new_dimensions, (0, 0, 0, 0))
+        new_image_a = Image.new("RGBA", new_dimensions, (0, 0, 0, 0))
+        new_image_b = Image.new("RGBA", new_dimensions, (0, 0, 0, 0))
+
+        image_root_point = QPoint(root_point.x(), root_point.y())
+        image_pivot_point = QPoint(pivot_point.x(), pivot_point.y())
+
+        new_image_a.paste(outpainted_image, (int(outpaint_box_rect.x()), int(outpaint_box_rect.y())))
+        new_image_b.paste(existing_image_copy, (current_image_position.x(), current_image_position.y()))
+
+        if action == GeneratorSection.OUTPAINT.value:
+            new_image = Image.alpha_composite(new_image, new_image_a)
+            new_image = Image.alpha_composite(new_image, new_image_b)
+        else:
+            new_image = Image.alpha_composite(new_image, new_image_b)
+            new_image = Image.alpha_composite(new_image, new_image_a)
+
+        return new_image, image_root_point, image_pivot_point
+
+    def set_current_active_image(self, image: Image):
+        self.logger.debug("Adding image to current layer")
+        base_64_image: Optional[bytes] = None
+
+        try:
+            if image:
+                buffered = io.BytesIO()
+                image.save(buffered, format="PNG")
+                base_64_image = base64.b64encode(buffered.getvalue())
+        except Exception as e:
+            self.logger.error(e)
+
+        if base_64_image is not None:
+            settings = self.settings
+            settings["canvas_settings"]["image"] = base_64_image
+            self.settings = settings
+
+    def on_image_generated_signal(self, image_data):
+        self.add_image_to_scene(
+            image_data["images"][0],
+            is_outpaint=image_data["action"] == GeneratorSection.OUTPAINT.value,
+            outpaint_box_rect=image_data["outpaint_box_rect"]
+        )
+
+    def on_canvas_clear_signal(self):
+        print("CLEAR HERE")
+
+    def update_current_pixmap(self, image: Image):
+        self.item.setPixmap(QPixmap.fromImage(image))
+
+    def on_canvas_copy_image_signal(self, _event):
+        self.copy_image(self.current_active_image())
+
+    def on_canvas_cut_image_signal(self, _event):
+        self.cut_image()
+
+    def on_canvas_rotate_90_clockwise_signal(self, _event):
+        self.rotate_90_clockwise()
+
+    def on_canvas_rotate_90_counter_clockwise_signal(self, _event):
+        self.rotate_90_counterclockwise()
+
+    def rotate_90_clockwise(self):
+        self.rotate_image(Image.ROTATE_270)
+
+    def rotate_90_counterclockwise(self):
+        self.rotate_image(Image.ROTATE_90)
+
+    def copy_image(
+            self,
+            image: Image = None
+    ) -> object:
+        return self.clipboard_handler.copy_image(
+            image,
+            self.current_draggable_pixmap()
+        )
+
+    def rotate_image(self, angle):
+        image = self.image_handler.rotate_image(
+            angle,
+            self.current_active_image()
+        )
+        self.set_current_active_image(image)
+        self.emit(SignalCode.CANVAS_DO_RESIZE_SIGNAL, {
+            "force_draw": True,
+            "do_draw_layers": True
+        })
+
+    def cut_image(self):
+        draggable_pixmap: DraggablePixmap = self.clipboard_handler.cut_image()
+        if draggable_pixmap:
+            self.emit(SignalCode.REMOVE_SCENE_ITEM_SIGNAL, draggable_pixmap)
+            self.emit(SignalCode.LAYER_DELETE_CURRENT_SIGNAL)
+            self.update()
+
+    def delete_image(self):
+        self.logger.debug("Deleting image from canvas")
+        draggable_pixmap = self.current_draggable_pixmap()
+        if not draggable_pixmap:
+            return
+        self.remove_scene_item(draggable_pixmap)
+        self.update()
+
     def set_image(self):
         self.image = QImage(
             self.settings["working_width"],
@@ -60,8 +314,12 @@ class CustomScene(
         self.image.fill(Qt.GlobalColor.transparent)
 
     def set_item(self):
-        self.item = QGraphicsPixmapItem(QPixmap.fromImage(self.image))
-        self.addItem(self.item)
+        if self.item is NoneType:
+            self.item = QGraphicsPixmapItem(QPixmap.fromImage(self.image))
+            self.addItem(self.item)
+        else:
+            self.item.setPixmap(QPixmap.fromImage(self.image))
+        self.item.setZValue(1)
 
     @property
     def settings(self):
@@ -70,20 +328,6 @@ class CustomScene(
     @settings.setter
     def settings(self, value):
         ServiceLocator.get("set_settings")(value)
-
-    # def generate_new_image(self):
-    #     self.generate_image_time = time.time()
-    #     while True:
-    #         if self.do_generate_image and (
-    #             time.time() - self.generate_image_time >= self.generate_image_time_in_ms
-    #         ):
-    #             self.generate_image_time = time.time()
-    #             self.emit(
-    #                 SignalCode.GENERATE_IMAGE_FROM_IMAGE_SIGNAL,
-    #                 self.image
-    #             )
-    #             self.do_generate_image = False
-    #         time.sleep(0.01)
 
     def clear_selection(self):
         self.selection_start_pos = None
