@@ -68,7 +68,7 @@ class StableDiffusionSettingsWidget(BaseWidget):
         self.load_models()
 
     def load_pipelines(self):
-        self.logger.info("load_pipelines")
+        self.logger.debug("load_pipelines")
         self.ui.pipeline.blockSignals(True)
         self.ui.pipeline.clear()
         pipeline_names = [
@@ -89,7 +89,7 @@ class StableDiffusionSettingsWidget(BaseWidget):
         self.ui.pipeline.blockSignals(False)
     
     def load_versions(self):
-        self.logger.info("load_versions")
+        self.logger.debug("load_versions")
         self.ui.version.blockSignals(True)
         self.ui.version.clear()
         pipelines = self.get_service(ServiceCode.GET_PIPELINES)(category=ImageGenerator.STABLEDIFFUSION.value)
@@ -110,7 +110,7 @@ class StableDiffusionSettingsWidget(BaseWidget):
         self.ui.model.clear()
 
     def load_models(self):
-        self.logger.info("load_models")
+        self.logger.debug("load_models")
         self.ui.model.blockSignals(True)
         self.clear_models()
 
@@ -135,7 +135,7 @@ class StableDiffusionSettingsWidget(BaseWidget):
         self.settings = settings
 
     def load_schedulers(self):
-        self.logger.info("load_schedulers")
+        self.logger.debug("load_schedulers")
         self.ui.scheduler.blockSignals(True)
         scheduler_names = [s["display_name"] for s in self.settings["schedulers"]]
         self.ui.scheduler.clear()
