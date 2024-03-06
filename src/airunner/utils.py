@@ -26,6 +26,8 @@ SESSION = None
 WORKERS = []
 THREADS = []
 
+_random_generator = random.Random()
+
 def get_venv_python_executable():
     """
     Gets the python executable from the venv.
@@ -559,4 +561,4 @@ def convert_image_to_base64(image: Image) -> str:
 
 
 def random_seed():
-    return random.randint(0, MAX_SEED)
+    return _random_generator.randint(0, MAX_SEED)

@@ -201,7 +201,7 @@ class Ui_MainWindow(object):
         self.advanced_settings.setWidgetResizable(True)
         self.advanced_settings.setObjectName("advanced_settings")
         self.scrollAreaWidgetContents_2 = QtWidgets.QWidget()
-        self.scrollAreaWidgetContents_2.setGeometry(QtCore.QRect(0, 0, 371, 388))
+        self.scrollAreaWidgetContents_2.setGeometry(QtCore.QRect(0, 0, 84, 44))
         self.scrollAreaWidgetContents_2.setObjectName("scrollAreaWidgetContents_2")
         self.gridLayout_9 = QtWidgets.QGridLayout(self.scrollAreaWidgetContents_2)
         self.gridLayout_9.setObjectName("gridLayout_9")
@@ -281,15 +281,6 @@ class Ui_MainWindow(object):
         self.pushButton.setObjectName("pushButton")
         self.gridLayout_11.addWidget(self.pushButton, 0, 1, 1, 1)
         self.tool_tab_widget.addTab(self.tab_3, "")
-        self.layer_frame = QtWidgets.QFrame(parent=self.splitter)
-        self.layer_frame.setFrameShape(QtWidgets.QFrame.Shape.StyledPanel)
-        self.layer_frame.setFrameShadow(QtWidgets.QFrame.Shadow.Raised)
-        self.layer_frame.setObjectName("layer_frame")
-        self.gridLayout_2 = QtWidgets.QGridLayout(self.layer_frame)
-        self.gridLayout_2.setObjectName("gridLayout_2")
-        self.layer_widget = LayerContainerWidget(parent=self.layer_frame)
-        self.layer_widget.setObjectName("layer_widget")
-        self.gridLayout_2.addWidget(self.layer_widget, 0, 0, 1, 1)
         self.gridLayout.addWidget(self.splitter, 0, 0, 1, 1)
         self.scrollArea.setWidget(self.scrollAreaWidgetContents)
         self.gridLayout_6.addWidget(self.content_splitter, 0, 0, 1, 1)
@@ -1233,7 +1224,6 @@ from airunner.widgets.canvas.canvas_widget import CanvasWidget
 from airunner.widgets.controlnet_settings.controlnet_settings_widget import ControlNetSettingsWidget
 from airunner.widgets.generator_form.generator_form_widget import GeneratorForm
 from airunner.widgets.input_image.input_image_settings_widget import InputImageSettingsWidget
-from airunner.widgets.layers.layer_container_widget import LayerContainerWidget
 from airunner.widgets.model_manager.model_manager_widget import ModelManagerWidget
 from airunner.widgets.slider.slider_widget import SliderWidget
 from airunner.widgets.stablediffusion.stable_diffusion_settings_widget import StableDiffusionSettingsWidget

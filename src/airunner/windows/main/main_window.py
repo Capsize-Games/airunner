@@ -26,7 +26,6 @@ from airunner.windows.image_window import ImageWindow
 from airunner.windows.main.ai_model_mixin import AIModelMixin
 from airunner.windows.main.controlnet_model_mixin import ControlnetModelMixin
 from airunner.windows.main.embedding_mixin import EmbeddingMixin
-from airunner.windows.main.layer_mixin import LayerMixin
 from airunner.windows.main.lora_mixin import LoraMixin
 from airunner.windows.main.pipeline_mixin import PipelineMixin
 from airunner.windows.main.settings_mixin import SettingsMixin
@@ -48,7 +47,6 @@ class MainWindow(
     QMainWindow,
     MediatorMixin,
     SettingsMixin,
-    LayerMixin,
     LoraMixin,
     EmbeddingMixin,
     PipelineMixin,
@@ -205,7 +203,6 @@ class MainWindow(
         super().__init__(*args, **kwargs)
         self.update_settings()
         LoraMixin.__init__(self)
-        LayerMixin.__init__(self)
         EmbeddingMixin.__init__(self)
         PipelineMixin.__init__(self)
         ControlnetModelMixin.__init__(self)

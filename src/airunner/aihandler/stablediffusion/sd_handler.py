@@ -50,7 +50,6 @@ from airunner.aihandler.mixins.scheduler_mixin import SchedulerMixin
 from airunner.settings import AIRUNNER_ENVIRONMENT
 from airunner.service_locator import ServiceLocator
 from airunner.settings import CONFIG_FILES
-from airunner.windows.main.layer_mixin import LayerMixin
 from airunner.windows.main.lora_mixin import LoraMixin as LoraDataMixin
 from airunner.windows.main.embedding_mixin import EmbeddingMixin as EmbeddingDataMixin
 from airunner.windows.main.pipeline_mixin import PipelineMixin
@@ -104,7 +103,6 @@ class SDHandler(
     CompelMixin,
     SchedulerMixin,
     # Data Mixins
-    LayerMixin,
     LoraDataMixin,
     EmbeddingDataMixin,
     PipelineMixin,
@@ -113,7 +111,6 @@ class SDHandler(
 ):
     def  __init__(self, *args, **kwargs):
         super().__init__(*args, **kwargs)
-        LayerMixin.__init__(self)
         LoraDataMixin.__init__(self)
         EmbeddingDataMixin.__init__(self)
         PipelineMixin.__init__(self)
@@ -385,7 +382,6 @@ class SDHandler(
 
     def preprocess_for_controlnet(self, image):
         if image is None:
-            print("no input image")
             return
 
         if self.current_controlnet_type != self.controlnet_type or not self.processor:
@@ -983,12 +979,6 @@ class SDHandler(
 
         self.change_scheduler()
 
-        """
-        Check where the pipe currently exists
-        """
-        if self.pipe and self.pipe.device.type != self.device:
-            self.pipe.to(self.device)
-
         if self.pipe and self.do_load:
             """
             Reload prompt embeds.
@@ -1042,13 +1032,47 @@ class SDHandler(
 
         self.do_generate = False
 
+        is_img2img = self.sd_request.is_img2img
+
         if self.sd_request.is_img2img:
             if "image" not in self.data or self.data["image"] is None:
-                return None
+                self.data = self.sd_request.disable_img2img(self.data)
+                is_img2img = False
+                if self.sd_request.generator_settings.enable_controlnet:
+                    self.pipe = StableDiffusionControlNetPipeline(
+                        vae=self.pipe.vae,
+                        text_encoder=self.pipe.text_encoder,
+                        tokenizer=self.pipe.tokenizer,
+                        unet=self.pipe.unet,
+                        controlnet=self.pipe.controlnet,
+                        scheduler=self.pipe.scheduler,
+                        safety_checker=self.safety_checker,
+                        feature_extractor=self.feature_extractor
+                    )
 
         if self.sd_request.generator_settings.enable_controlnet:
             if "control_image" not in self.data or self.data["control_image"] is None:
-                return None
+                self.data = self.sd_request.disable_controlnet(self.data)
+                if is_img2img:
+                    self.pipe = StableDiffusionImg2ImgPipeline(
+                        vae=self.pipe.vae,
+                        text_encoder=self.pipe.text_encoder,
+                        tokenizer=self.pipe.tokenizer,
+                        unet=self.pipe.unet,
+                        scheduler=self.pipe.scheduler,
+                        safety_checker=self.safety_checker,
+                        feature_extractor=self.feature_extractor
+                    )
+                else:
+                    self.pipe = StableDiffusionPipeline(
+                        vae=self.pipe.vae,
+                        text_encoder=self.pipe.text_encoder,
+                        tokenizer=self.pipe.tokenizer,
+                        unet=self.pipe.unet,
+                        scheduler=self.pipe.scheduler,
+                        safety_checker=self.safety_checker,
+                        feature_extractor=self.feature_extractor
+                    )
 
         self.emit(
             SignalCode.LOG_STATUS_SIGNAL,
