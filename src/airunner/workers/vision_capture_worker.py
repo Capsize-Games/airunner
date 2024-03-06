@@ -3,6 +3,7 @@ from PIL import Image
 from PyQt6.QtCore import QThread
 
 from airunner.enums import SignalCode, QueueType, WorkerState
+from airunner.settings import SLEEP_TIME_IN_MS
 from airunner.workers.worker import Worker
 
 
@@ -12,7 +13,6 @@ class VisionCaptureWorker(Worker):
         self.queue_type = QueueType.NONE
         self.cap = None
         self.locked = False
-        self.interval = 1  # the amount of seconds between each image capture
         self.register(SignalCode.VISION_START_CAPTURE, self.start_vision_capture)
         self.register(SignalCode.VISION_STOP_CAPTURE, self.stop_capturing)
         self.register(SignalCode.VISION_CAPTURE_UNPAUSE_SIGNAL, self.unpause)
@@ -42,7 +42,7 @@ class VisionCaptureWorker(Worker):
         self.state = WorkerState.HALTED
 
     def start(self):
-        self.logger.info("Starting")
+        self.logger.debug("Starting")
 
         if self.settings["ocr_enabled"]:
             self.enable_cam()
@@ -56,19 +56,19 @@ class VisionCaptureWorker(Worker):
                     "image": self.capture_image()
                 })
                 self.state = WorkerState.PAUSED
-                QThread.msleep(self.interval)
+                QThread.msleep(SLEEP_TIME_IN_MS)
 
             while self.state == WorkerState.PAUSED or self.locked:
-                QThread.msleep(100)
+                QThread.msleep(SLEEP_TIME_IN_MS)
 
             if self.state == WorkerState.HALTED:
                 self.disable_cam()
                 while self.state == WorkerState.HALTED:
-                    QThread.msleep(100)
+                    QThread.msleep(SLEEP_TIME_IN_MS)
                 self.enable_cam()
 
             if self.state != WorkerState.RUNNING:
-                QThread.msleep(1)
+                QThread.msleep(SLEEP_TIME_IN_MS)
 
     def enable_cam(self):
         self.cap = cv2.VideoCapture(0)

@@ -52,6 +52,7 @@ class CustomGraphicsView(
             SignalCode.SCENE_DO_DRAW_SIGNAL: self.on_canvas_do_draw_signal,
             SignalCode.APPLICATION_MAIN_WINDOW_LOADED_SIGNAL: self.on_main_window_loaded_signal,
             SignalCode.REMOVE_SCENE_ITEM_SIGNAL: self.remove_scene_item,
+            SignalCode.SCENE_DO_UPDATE_IMAGE_SIGNAL: self.update_current_pixmap,
         }
         for k, v in signal_handlers.items():
             self.register(k, v)
@@ -99,6 +100,7 @@ class CustomGraphicsView(
 
     def on_canvas_clear_signal(self):
         self.create_scene()
+        self.toggle_drag_mode()
         self.line_group = QGraphicsItemGroup()
         self.active_grid_area = None
         self.pixmaps = {}
@@ -110,44 +112,54 @@ class CustomGraphicsView(
             "force_draw": True
         })
 
+    def update_current_pixmap(self, image):
+        if self.canvas_type == CanvasType.BRUSH.value:
+            return
+        for index, layer in enumerate(self.settings["layers"]):
+            if index not in self.pixmaps or self.pixmaps[index].pixmap.toImage() != ImageQt(image):
+                image = apply_opacity_to_image(image, layer["opacity"] / 100.0)
+                if index in self.pixmaps:
+                    self.pixmaps[index].pixmap.convertFromImage(ImageQt(image))
+                else:
+                    pixmap = QPixmap()
+                    pixmap.convertFromImage(ImageQt(image))
+                    self.pixmaps[index] = DraggablePixmap(pixmap)
+                if self.pixmaps[index].scene() != self.scene:
+                    self.scene.addItem(self.pixmaps[index])
+            self.emit(SignalCode.LAYER_UPDATE_SIGNAL, {
+                "layer": layer,
+                "index": index
+            })
+
     def draw_layers(self):
         if not self.do_draw_layers or self.canvas_type == CanvasType.BRUSH.value:
             return
         self.do_draw_layers = False
         layers = self.settings["layers"]
         for index, layer in enumerate(layers):
+            if not layer["visible"]:
+                if index in self.pixmaps and isinstance(self.pixmaps[index], QGraphicsItem):
+                    if self.pixmaps[index].scene() == self.scene:
+                        self.remove_scene_item(self.pixmaps[index])
+                continue
+
             image = ServiceLocator.get(ServiceCode.GET_IMAGE_FROM_LAYER)(layer)
             if image is None:
                 continue
 
-            image = apply_opacity_to_image(
-                image,
-                layer["opacity"] / 100.0
-            )
-
-            if not layer["visible"]:
-                if (
-                    index in self.pixmaps and
-                    isinstance(self.pixmaps[index], QGraphicsItem) and
-                    self.pixmaps[index].scene() == self.scene
-                ):
-                    self.remove_scene_item(self.pixmaps[index])
-            else:
-                # If there's an existing pixmap in the layer, remove it from the scene
-                if index in self.pixmaps and isinstance(self.pixmaps[index], QGraphicsItem):
-                    if self.pixmaps[index].scene() == self.scene:
-                        self.remove_scene_item(self.pixmaps[index])
-                    del self.pixmaps[index]
+            if index not in self.pixmaps or self.pixmaps[index].pixmap.toImage() != ImageQt(image):
+                image = apply_opacity_to_image(image, layer["opacity"] / 100.0)
                 pixmap = QPixmap()
                 pixmap.convertFromImage(ImageQt(image))
                 self.pixmaps[index] = DraggablePixmap(pixmap)
-                self.emit(SignalCode.LAYER_UPDATE_SIGNAL, {
-                    "layer": layer,
-                    "index": index
-                })
-                if self.pixmaps[index].scene() != self.scene:
-                    self.scene.addItem(self.pixmaps[index])
-            continue
+
+            if self.pixmaps[index].scene() != self.scene:
+                self.scene.addItem(self.pixmaps[index])
+
+            self.emit(SignalCode.LAYER_UPDATE_SIGNAL, {
+                "layer": layer,
+                "index": index
+            })
 
     def clear_lines(self):
         self.remove_scene_item(self.line_group)
@@ -273,14 +285,23 @@ class CustomGraphicsView(
 
     def showEvent(self, event):
         super().showEvent(event)
-        original_mouse_event = self.mouseMoveEvent
-        self.mouseMoveEvent = partial(self.handle_mouse_event, original_mouse_event)
+
+        if self.canvas_type == CanvasType.IMAGE.value:
+            original_mouse_event = self.mouseMoveEvent
+            self.mouseMoveEvent = partial(
+                self.handle_mouse_event,
+                original_mouse_event
+            )
+
         self.setContentsMargins(0, 0, 0, 0)
         self.create_scene()
-        self.emit(
-            SignalCode.CANVAS_DO_DRAW_SIGNAL,
-            True
-        )
+
+        if self.canvas_type == CanvasType.IMAGE.value:
+            self.emit(
+                SignalCode.CANVAS_DO_DRAW_SIGNAL,
+                True
+            )
+
         self.toggle_drag_mode()
 
     def create_scene(self):
@@ -305,6 +326,7 @@ class CustomGraphicsView(
         self.scene.setBackgroundBrush(brush)
 
     def handle_mouse_event(self, original_mouse_event, event):
+        print("handle_mouse_event")
         if event.buttons() == Qt.MouseButton.MiddleButton:
             if self.last_pos:
                 delta = event.pos() - self.last_pos
@@ -355,6 +377,7 @@ class CustomGraphicsView(
         new_event = self.snap_to_grid(event)
         super().mousePressEvent(new_event)
 
-    def mouseMoveEvent(self, event: QMouseEvent):
-        new_event = self.snap_to_grid(event, False)
-        super().mouseMoveEvent(new_event)
+    # def mouseMoveEvent_(self, event: QMouseEvent):
+    #     print("mouseMoveEvent")
+    #     new_event = self.snap_to_grid(event, False)
+    #     super().mouseMoveEvent(new_event)

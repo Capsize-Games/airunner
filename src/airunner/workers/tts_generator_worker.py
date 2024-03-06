@@ -42,12 +42,12 @@ class TTSGeneratorWorker(Worker):
                     break
 
     def generate(self, message):
-        self.logger.info("Generating TTS...")
+        self.logger.debug("Generating TTS...")
 
         if type(message) == dict:
             message = message.get("message", "")
         
-        self.logger.info(message)
+        self.logger.debug(message)
         
         response = self.tts.generate(message)
         if response is not None:

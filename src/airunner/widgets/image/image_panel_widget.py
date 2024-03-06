@@ -1,7 +1,6 @@
 import os
 import threading
 
-from airunner.enums import SignalCode
 from airunner.widgets.base_widget import BaseWidget
 from airunner.widgets.image.image_widget import ImageWidget
 from airunner.widgets.image.templates.image_panel_widget_ui import Ui_image_panel_widget
@@ -35,14 +34,6 @@ class ImagePanelWidget(BaseWidget):
         self.ui.scrollAreaWidgetContents.setLayout(flowLayout)
         self.display_thread = threading.Thread(target=self.display_thumbnails)
 
-        self.register(SignalCode.SD_IMAGE_GENERATED_SIGNAL, self.on_image_generated_signal)
-    
-    def on_image_generated_signal(self, data):
-        for image in data["images"]:
-            image_widget = ImageWidget(self, is_thumbnail=True)
-            image_widget.set_image(image["path"])
-            self.ui.scrollAreaWidgetContents.layout().addWidget(image_widget)
-    
     def showEvent(self, event):
         super().showEvent(event)
         if self.settings["path_settings"]["image_path"] != "":

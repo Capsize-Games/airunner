@@ -18,7 +18,7 @@ class TokenizerHandler(TransformerBaseHandler):
         self.load_tokenizer()
 
     def load_tokenizer(self, local_files_only=True):
-        self.logger.info(f"Loading tokenizer from {self.current_model_path}")
+        self.logger.debug(f"Loading tokenizer from {self.current_model_path}")
         local_files_only = self.local_files_only if local_files_only is None else local_files_only
         kwargs = {
             "local_files_only": local_files_only,
@@ -34,7 +34,7 @@ class TokenizerHandler(TransformerBaseHandler):
                 self.tokenizer_path,
                 **kwargs,
             )
-            self.logger.info("Tokenizer loaded")
+            self.logger.debug("Tokenizer loaded")
         except OSError as e:
             if "Checkout your internet connection" in str(e):
                 if local_files_only:
