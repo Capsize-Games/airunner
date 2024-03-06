@@ -6,7 +6,8 @@ from PyQt6.QtGui import QPen, QPixmap, QPainter
 from PyQt6.QtGui import QColor
 from airunner.enums import SignalCode, CanvasToolName
 from airunner.utils import convert_image_to_base64, create_worker, convert_base64_to_image
-from airunner.widgets.canvas.custom_scene import CustomScene, UpdateSceneWorker
+from airunner.widgets.canvas.custom_scene import CustomScene
+from airunner.workers.update_scene_worker import UpdateSceneWorker
 
 
 class BrushScene(CustomScene):
@@ -41,13 +42,11 @@ class BrushScene(CustomScene):
     def set_image(self):
         base64_image = self.settings["drawing_pad_settings"]["image"]
         if base64_image:
-            print("FOUND BASE64 IMAGE")
             pil_image = convert_base64_to_image(base64_image)
             self.image = QImage(
                 ImageQt.ImageQt(pil_image.convert("RGBA"))
             )
         else:
-            print("NOT FOUND BASE64 IMAGE")
             self.image = QImage(
                 self.settings["working_width"],
                 self.settings["working_height"],

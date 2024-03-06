@@ -1,42 +1,16 @@
 from typing import Optional
 
-from PIL import ImageQt, Image
+from PIL import ImageQt
 from PIL.ImageQt import QImage
-from PyQt6.QtCore import Qt, QPoint, QPointF, QThread, QSize
+from PyQt6.QtCore import Qt, QPoint
 from PyQt6.QtGui import QEnterEvent
-from PyQt6.QtGui import QPainterPath
-from PyQt6.QtGui import QPen, QPixmap, QPainter
+from PyQt6.QtGui import QPixmap, QPainter
 from PyQt6.QtWidgets import QGraphicsScene, QGraphicsPixmapItem
-from PyQt6.QtGui import QColor
 from airunner.enums import SignalCode, CanvasToolName
 from airunner.mediator_mixin import MediatorMixin
 from airunner.service_locator import ServiceLocator
-from airunner.settings import SLEEP_TIME_IN_MS
-from airunner.utils import snap_to_grid, convert_image_to_base64, create_worker, convert_base64_to_image
+from airunner.utils import snap_to_grid, convert_base64_to_image
 from airunner.windows.main.settings_mixin import SettingsMixin
-from airunner.workers.worker import Worker
-
-
-class UpdateSceneWorker(Worker):
-    def __init__(self, prefix):
-        super().__init__()
-        self.update_time_in_ms = 0.2
-        self.last_update = 0
-        self.do_update = False
-        self.register(SignalCode.LINES_UPDATED_SIGNAL, self.on_lines_updated_signal)
-
-    def on_lines_updated_signal(self):
-        self.do_update = True
-
-    def handle_message(self, message):
-        pass
-
-    def run(self):
-        self.running = True
-        while self.running:
-            if self.parent:
-                self.parent.update()
-            QThread.msleep(SLEEP_TIME_IN_MS)
 
 
 class CustomScene(
