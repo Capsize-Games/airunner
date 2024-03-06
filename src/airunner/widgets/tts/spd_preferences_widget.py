@@ -1,10 +1,10 @@
-from airunner.settings import SPD_SETTINGS
+from airunner.settings import ESPEAK_SETTINGS
 from airunner.widgets.base_widget import BaseWidget
-from airunner.widgets.tts.templates.spd_preferences_ui import Ui_spd_preferences
+from airunner.widgets.tts.templates.espeak_preferences_ui import Ui_espeak_preferences
 import pycountry
 
-class SpdPreferencesWidget(BaseWidget):
-    widget_class_ = Ui_spd_preferences
+class EspeakPreferencesWidget(BaseWidget):
+    widget_class_ = Ui_espeak_preferences
 
     def __init__(self, *args, **kwargs):
         super().__init__(*args, **kwargs)
@@ -20,9 +20,9 @@ class SpdPreferencesWidget(BaseWidget):
         for element in elements:
             element.blockSignals(True)
 
-        language = self.settings["tts_settings"]["spd"]["language"]
-        gender = self.settings["tts_settings"]["spd"]["gender"]
-        voice = self.settings["tts_settings"]["spd"]["voice"]
+        language = self.settings["tts_settings"]["espeak"]["language"]
+        gender = self.settings["tts_settings"]["espeak"]["gender"]
+        voice = self.settings["tts_settings"]["espeak"]["voice"]
         iso_codes = [country.alpha_2 for country in pycountry.countries]
 
         self.ui.voice_combobox.clear()
@@ -32,7 +32,7 @@ class SpdPreferencesWidget(BaseWidget):
         self.ui.gender_combobox.clear()
         self.ui.gender_combobox.addItems(["Male", "Female"])
         self.ui.gender_combobox.setCurrentText(gender)
-        self.ui.voice_combobox.addItems(SPD_SETTINGS["voices"][gender])
+        self.ui.voice_combobox.addItems(ESPEAK_SETTINGS["voices"][gender])
         self.ui.voice_combobox.setCurrentText(voice)
 
         for element in elements:
@@ -47,25 +47,25 @@ class SpdPreferencesWidget(BaseWidget):
 
     def callback(self, prop, val):
         settings = self.settings
-        settings["tts_settings"]["spd"][prop] = val
+        settings["tts_settings"]["espeak"][prop] = val
         self.settings = settings
 
     def language_changed(self, text):
         settings = self.settings
-        settings["tts_settings"]["spd"]["language"] = text
-        settings["tts_settings"]["spd"]["gender"] = self.ui.gender_combobox.currentText()
-        settings["tts_settings"]["spd"]["voice"] = self.ui.voice_combobox.currentText()
+        settings["tts_settings"]["espeak"]["language"] = text
+        settings["tts_settings"]["espeak"]["gender"] = self.ui.gender_combobox.currentText()
+        settings["tts_settings"]["espeak"]["voice"] = self.ui.voice_combobox.currentText()
         self.settings = settings
 
     def voice_changed(self, text):
         settings = self.settings
-        settings["tts_settings"]["spd"]["voice"] = text
+        settings["tts_settings"]["espeak"]["voice"] = text
         self.settings = settings
 
     def gender_changed(self, text):
         settings = self.settings
-        settings["tts_settings"]["spd"]["gender"] = text
+        settings["tts_settings"]["espeak"]["gender"] = text
         self.ui.voice_combobox.clear()
-        self.ui.voice_combobox.addItems(SPD_SETTINGS["voices"][text])
-        settings["tts_settings"]["spd"]["voice"] = self.ui.voice_combobox.currentText()
+        self.ui.voice_combobox.addItems(ESPEAK_SETTINGS["voices"][text])
+        settings["tts_settings"]["espeak"]["voice"] = self.ui.voice_combobox.currentText()
         self.settings = settings

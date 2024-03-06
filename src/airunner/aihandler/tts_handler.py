@@ -34,8 +34,8 @@ class TTSHandler(BaseHandler):
             return "suno/bark-small"
         elif self.use_speecht5:
             return "microsoft/speecht5_tts"
-        elif self.use_spd:
-            return "microsoft/spd"
+        elif self.use_espeak:
+            return ""
         else:
             raise ValueError("No model selected")
     
@@ -45,8 +45,8 @@ class TTSHandler(BaseHandler):
             return "suno/bark-small"
         elif self.use_speecht5:
             return "microsoft/speecht5_tts"
-        elif self.use_spd:
-            return "microsoft/spd"
+        elif self.use_espeak:
+            return ""
         else:
             raise ValueError("No model selected")
     
@@ -71,8 +71,8 @@ class TTSHandler(BaseHandler):
         return self.settings["tts_settings"]["model"] == "SpeechT5"
 
     @property
-    def use_spd(self):
-        return self.settings["tts_settings"]["model"] == "SPD"
+    def use_espeak(self):
+        return self.settings["tts_settings"]["model"] == "Espeak"
 
     @property
     def voice_preset(self):
@@ -254,7 +254,7 @@ class TTSHandler(BaseHandler):
 
     def run(self):
         self.logger.debug("Running")
-        if self.use_spd:
+        if self.use_espeak:
             if self.engine is None:
                 self.engine = pyttsx3.init()
         else:
@@ -480,17 +480,9 @@ class TTSHandler(BaseHandler):
                 response = self.generate_with_bark(message)
             elif self.use_speecht5:
                 response = self.generate_with_t5(message)
-            elif self.use_spd:
-                """
-                With SPD we instantly generate the speech and return nothing.
-                We must call spd-say with the generated speech in quotes.
-                Example:
-                ```bash
-                spd-say "Hello, I am a computer."
-                ```
-                """
+            elif self.use_espeak:
                 message = message.replace('"', "'")
-                settings = self.settings["tts_settings"]["spd"]
+                settings = self.settings["tts_settings"]["espeak"]
                 rate = settings["rate"]
                 pitch = settings["pitch"]
                 volume = settings["volume"]

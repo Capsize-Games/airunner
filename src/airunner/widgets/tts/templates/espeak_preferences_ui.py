@@ -1,4 +1,4 @@
-# Form implementation generated from reading ui file '/home/joe/Projects/imagetopixel/airunner/src/airunner/../../src/airunner/widgets/tts/templates/spd_preferences.ui'
+# Form implementation generated from reading ui file '/home/joe/Projects/imagetopixel/airunner/src/airunner/../../src/airunner/widgets/tts/templates/espeak_preferences.ui'
 #
 # Created by: PyQt6 UI code generator 6.6.1
 #
@@ -9,15 +9,15 @@
 from PyQt6 import QtCore, QtGui, QtWidgets
 
 
-class Ui_spd_preferences(object):
-    def setupUi(self, spd_preferences):
-        spd_preferences.setObjectName("spd_preferences")
-        spd_preferences.resize(512, 787)
-        self.gridLayout_7 = QtWidgets.QGridLayout(spd_preferences)
+class Ui_espeak_preferences(object):
+    def setupUi(self, espeak_preferences):
+        espeak_preferences.setObjectName("espeak_preferences")
+        espeak_preferences.resize(512, 787)
+        self.gridLayout_7 = QtWidgets.QGridLayout(espeak_preferences)
         self.gridLayout_7.setObjectName("gridLayout_7")
         spacerItem = QtWidgets.QSpacerItem(20, 40, QtWidgets.QSizePolicy.Policy.Minimum, QtWidgets.QSizePolicy.Policy.Expanding)
         self.gridLayout_7.addItem(spacerItem, 10, 0, 1, 1)
-        self.use_bark = QtWidgets.QGroupBox(parent=spd_preferences)
+        self.use_bark = QtWidgets.QGroupBox(parent=espeak_preferences)
         self.use_bark.setCheckable(False)
         self.use_bark.setObjectName("use_bark")
         self.gridLayout_8 = QtWidgets.QGridLayout(self.use_bark)
@@ -114,30 +114,30 @@ class Ui_spd_preferences(object):
         self.gridLayout_8.addWidget(self.groupBox_3, 3, 0, 1, 1)
         self.gridLayout_7.addWidget(self.use_bark, 0, 0, 1, 1)
 
-        self.retranslateUi(spd_preferences)
-        self.language_combobox.currentTextChanged['QString'].connect(spd_preferences.language_changed) # type: ignore
-        self.voice_combobox.currentTextChanged['QString'].connect(spd_preferences.voice_changed) # type: ignore
-        self.gender_combobox.currentTextChanged['QString'].connect(spd_preferences.gender_changed) # type: ignore
-        QtCore.QMetaObject.connectSlotsByName(spd_preferences)
+        self.retranslateUi(espeak_preferences)
+        self.language_combobox.currentTextChanged['QString'].connect(espeak_preferences.language_changed) # type: ignore
+        self.voice_combobox.currentTextChanged['QString'].connect(espeak_preferences.voice_changed) # type: ignore
+        self.gender_combobox.currentTextChanged['QString'].connect(espeak_preferences.gender_changed) # type: ignore
+        QtCore.QMetaObject.connectSlotsByName(espeak_preferences)
 
-    def retranslateUi(self, spd_preferences):
+    def retranslateUi(self, espeak_preferences):
         _translate = QtCore.QCoreApplication.translate
-        spd_preferences.setWindowTitle(_translate("spd_preferences", "Form"))
-        self.use_bark.setTitle(_translate("spd_preferences", "SPD"))
-        self.groupBox_6.setTitle(_translate("spd_preferences", "Pitch"))
-        self.pitch.setProperty("settings_property", _translate("spd_preferences", "tts_settings.spd.pitch"))
-        self.pitch.setProperty("slider_callback", _translate("spd_preferences", "handle_value_change"))
-        self.groupBox_2.setTitle(_translate("spd_preferences", "Gender"))
-        self.gender_combobox.setItemText(0, _translate("spd_preferences", "Male"))
-        self.gender_combobox.setItemText(1, _translate("spd_preferences", "Female"))
-        self.groupBox.setTitle(_translate("spd_preferences", "Voice"))
-        self.label_3.setText(_translate("spd_preferences", "Robotic, fast, no VRAM usage"))
-        self.groupBox_5.setTitle(_translate("spd_preferences", "Volume"))
-        self.volume.setProperty("settings_property", _translate("spd_preferences", "tts_settings.spd.volume"))
-        self.volume.setProperty("slider_callback", _translate("spd_preferences", "handle_value_change"))
-        self.groupBox_4.setTitle(_translate("spd_preferences", "Rate"))
-        self.rate.setProperty("settings_property", _translate("spd_preferences", "tts_settings.spd.rate"))
-        self.rate.setProperty("slider_callback", _translate("spd_preferences", "handle_value_change"))
-        self.groupBox_3.setTitle(_translate("spd_preferences", "Language"))
-        self.label.setText(_translate("spd_preferences", "Override the system language"))
+        espeak_preferences.setWindowTitle(_translate("espeak_preferences", "Form"))
+        self.use_bark.setTitle(_translate("espeak_preferences", "SPD"))
+        self.groupBox_6.setTitle(_translate("espeak_preferences", "Pitch"))
+        self.pitch.setProperty("settings_property", _translate("espeak_preferences", "pitch"))
+        self.pitch.setProperty("slider_callback", _translate("espeak_preferences", "handle_value_change"))
+        self.groupBox_2.setTitle(_translate("espeak_preferences", "Gender"))
+        self.gender_combobox.setItemText(0, _translate("espeak_preferences", "Male"))
+        self.gender_combobox.setItemText(1, _translate("espeak_preferences", "Female"))
+        self.groupBox.setTitle(_translate("espeak_preferences", "Voice"))
+        self.label_3.setText(_translate("espeak_preferences", "Robotic, fast, no VRAM usage"))
+        self.groupBox_5.setTitle(_translate("espeak_preferences", "Volume"))
+        self.volume.setProperty("settings_property", _translate("espeak_preferences", "volume"))
+        self.volume.setProperty("slider_callback", _translate("espeak_preferences", "handle_value_change"))
+        self.groupBox_4.setTitle(_translate("espeak_preferences", "Rate"))
+        self.rate.setProperty("settings_property", _translate("espeak_preferences", "rate"))
+        self.rate.setProperty("slider_callback", _translate("espeak_preferences", "handle_value_change"))
+        self.groupBox_3.setTitle(_translate("espeak_preferences", "Language"))
+        self.label.setText(_translate("espeak_preferences", "Override the system language"))
 from airunner.widgets.slider.slider_widget import SliderWidget

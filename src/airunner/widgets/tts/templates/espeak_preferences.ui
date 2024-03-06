@@ -1,7 +1,7 @@
 <?xml version="1.0" encoding="UTF-8"?>
 <ui version="4.0">
- <class>spd_preferences</class>
- <widget class="QWidget" name="spd_preferences">
+ <class>espeak_preferences</class>
+ <widget class="QWidget" name="espeak_preferences">
   <property name="geometry">
    <rect>
     <x>0</x>
@@ -266,7 +266,7 @@
   <connection>
    <sender>language_combobox</sender>
    <signal>currentTextChanged(QString)</signal>
-   <receiver>spd_preferences</receiver>
+   <receiver>espeak_preferences</receiver>
    <slot>language_changed(QString)</slot>
    <hints>
     <hint type="sourcelabel">
@@ -282,7 +282,7 @@
   <connection>
    <sender>voice_combobox</sender>
    <signal>currentTextChanged(QString)</signal>
-   <receiver>spd_preferences</receiver>
+   <receiver>espeak_preferences</receiver>
    <slot>voice_changed(QString)</slot>
    <hints>
     <hint type="sourcelabel">
@@ -298,7 +298,7 @@
   <connection>
    <sender>gender_combobox</sender>
    <signal>currentTextChanged(QString)</signal>
-   <receiver>spd_preferences</receiver>
+   <receiver>espeak_preferences</receiver>
    <slot>gender_changed(QString)</slot>
    <hints>
     <hint type="sourcelabel">
