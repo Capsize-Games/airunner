@@ -6,7 +6,7 @@ from PyQt6.QtGui import QIcon
 from PyQt6.QtWidgets import QHBoxLayout, QWidget
 
 from airunner.enums import SignalCode, ServiceCode
-from airunner.utils import image_to_pixmap
+from airunner.utils import image_to_pixmap, convert_image_to_base64
 from airunner.widgets.input_image.templates.input_image_ui import Ui_input_image
 from airunner.widgets.base_widget import BaseWidget
 
@@ -147,10 +147,7 @@ class InputImageSettingsWidget(BaseWidget):
         self.input_image = image
         self.set_thumbnail(image)
         # convert image to base64_image
-        img_byte_arr = io.BytesIO()
-        image.save(img_byte_arr, format='PNG')
-        img_byte_arr = img_byte_arr.getvalue()
-        image_base64 = base64.encodebytes(img_byte_arr).decode('ascii')
+        image_base64 = convert_image_to_base64(image)
         generator_settings = self.generator_settings
         generator_settings["imported_image_base64"] = image_base64
         self.generator_settings = generator_settings
