@@ -9,7 +9,7 @@ from airunner.aihandler.logger import Logger
 from airunner.enums import CanvasToolName, SignalCode, ServiceCode, CanvasType
 from airunner.mediator_mixin import MediatorMixin
 from airunner.service_locator import ServiceLocator
-from airunner.utils import snap_to_grid, apply_opacity_to_image
+from airunner.utils import snap_to_grid, apply_opacity_to_image, convert_base64_to_image
 from airunner.widgets.canvas.brush_scene import BrushScene
 from airunner.widgets.canvas.custom_scene import CustomScene
 from airunner.widgets.canvas.draggables.active_grid_area import ActiveGridArea
@@ -48,12 +48,10 @@ class CustomGraphicsView(
             SignalCode.SET_CANVAS_COLOR_SIGNAL: self.set_canvas_color,
             SignalCode.CANVAS_DO_DRAW_SELECTION_AREA_SIGNAL: self.draw_selected_area,
             SignalCode.UPDATE_SCENE_SIGNAL: self.update_scene,
-            SignalCode.CANVAS_CLEAR: self.on_canvas_clear_signal,
             SignalCode.CANVAS_CLEAR_LINES_SIGNAL: self.clear_lines,
             SignalCode.SCENE_DO_DRAW_SIGNAL: self.on_canvas_do_draw_signal,
             SignalCode.APPLICATION_MAIN_WINDOW_LOADED_SIGNAL: self.on_main_window_loaded_signal,
             SignalCode.REMOVE_SCENE_ITEM_SIGNAL: self.remove_scene_item,
-            SignalCode.SCENE_DO_UPDATE_IMAGE_SIGNAL: self.update_current_pixmap,
         }
         for k, v in signal_handlers.items():
             self.register(k, v)
@@ -99,67 +97,78 @@ class CustomGraphicsView(
     def draw_grid(self):
         self.scene.addItem(self.line_group)
 
-    def on_canvas_clear_signal(self):
-        self.create_scene()
-        self.toggle_drag_mode()
-        self.line_group = QGraphicsItemGroup()
-        self.active_grid_area = None
-        self.pixmaps = {}
-        self.emit(SignalCode.CANVAS_DO_RESIZE_SIGNAL, {
-            "force_draw": True
-        })
-        settings = self.settings
-        settings["drawing_pad_settings"]["image"] = None
-        self.settings = settings
+    # def on_canvas_clear_signal(self):
+    #     self.create_scene()
+    #     self.toggle_drag_mode()
+    #     self.line_group = QGraphicsItemGroup()
+    #     self.active_grid_area = None
+    #     self.pixmaps = {}
+    #     self.emit(SignalCode.CANVAS_DO_RESIZE_SIGNAL, {
+    #         "force_draw": True
+    #     })
+    #     settings = self.settings
+    #     settings["drawing_pad_settings"]["image"] = None
+    #     self.settings = settings
 
-    def update_current_pixmap(self, image):
-        if self.canvas_type == CanvasType.BRUSH.value:
-            return
-        for index, layer in enumerate(self.settings["layers"]):
-            if index not in self.pixmaps or self.pixmaps[index].pixmap.toImage() != ImageQt(image):
-                image = apply_opacity_to_image(image, layer["opacity"] / 100.0)
-                if index in self.pixmaps:
-                    self.pixmaps[index].pixmap.convertFromImage(ImageQt(image))
-                else:
-                    pixmap = QPixmap()
-                    pixmap.convertFromImage(ImageQt(image))
-                    self.pixmaps[index] = DraggablePixmap(pixmap)
-                if self.pixmaps[index].scene() != self.scene:
-                    self.scene.addItem(self.pixmaps[index])
-            self.emit(SignalCode.LAYER_UPDATE_SIGNAL, {
-                "layer": layer,
-                "index": index
-            })
+    # def update_current_pixmap(self, image):
+    #     if self.canvas_type == CanvasType.BRUSH.value:
+    #         return
+    #     for index, layer in enumerate(self.settings["layers"]):
+    #         if index not in self.pixmaps or self.pixmaps[index].pixmap.toImage() != ImageQt(image):
+    #             image = apply_opacity_to_image(image, layer["opacity"] / 100.0)
+    #             if index in self.pixmaps:
+    #                 self.pixmaps[index].pixmap.convertFromImage(ImageQt(image))
+    #             else:
+    #                 pixmap = QPixmap()
+    #                 pixmap.convertFromImage(ImageQt(image))
+    #                 self.pixmaps[index] = DraggablePixmap(pixmap)
+    #             if self.pixmaps[index].scene() != self.scene:
+    #                 self.scene.addItem(self.pixmaps[index])
+    #         self.emit(SignalCode.LAYER_UPDATE_SIGNAL, {
+    #             "layer": layer,
+    #             "index": index
+    #         })
 
+    # def draw_layers(self):
+    #     if not self.do_draw_layers or self.canvas_type == CanvasType.BRUSH.value:
+    #         return
+    #     self.do_draw_layers = False
+    #     layers = self.settings["layers"]
+    #     for index, layer in enumerate(layers):
+    #         if not layer["visible"]:
+    #             if index in self.pixmaps and isinstance(self.pixmaps[index], QGraphicsItem):
+    #                 if self.pixmaps[index].scene() == self.scene:
+    #                     self.remove_scene_item(self.pixmaps[index])
+    #             continue
+    #
+    #         #image = ServiceLocator.get(ServiceCode.GET_IMAGE_FROM_LAYER)(layer)
+    #         base64_image = self.settings["canvas_settings"]["image"]
+    #         image = convert_base64_to_image(base64_image)
+    #         image = image.convert("RGBA")
+    #         if image is None:
+    #             print("GET IMAGE FROM LAYER IS NONE")
+    #             continue
+    #
+    #         if index not in self.pixmaps or self.pixmaps[index].pixmap.toImage() != ImageQt(image):
+    #             image = apply_opacity_to_image(image, layer["opacity"] / 100.0)
+    #             pixmap = QPixmap()
+    #             pixmap.convertFromImage(ImageQt(image))
+    #             self.pixmaps[index] = DraggablePixmap(pixmap)
+    #
+    #         if self.pixmaps[index].scene() != self.scene:
+    #             self.scene.addItem(self.pixmaps[index])
+    #
+    #         self.emit(SignalCode.LAYER_UPDATE_SIGNAL, {
+    #             "layer": layer,
+    #             "index": index
+    #         })
     def draw_layers(self):
         if not self.do_draw_layers or self.canvas_type == CanvasType.BRUSH.value:
             return
         self.do_draw_layers = False
-        layers = self.settings["layers"]
-        for index, layer in enumerate(layers):
-            if not layer["visible"]:
-                if index in self.pixmaps and isinstance(self.pixmaps[index], QGraphicsItem):
-                    if self.pixmaps[index].scene() == self.scene:
-                        self.remove_scene_item(self.pixmaps[index])
-                continue
+        print("UPDATING SCENE")
+        self.scene.update()
 
-            image = ServiceLocator.get(ServiceCode.GET_IMAGE_FROM_LAYER)(layer)
-            if image is None:
-                continue
-
-            if index not in self.pixmaps or self.pixmaps[index].pixmap.toImage() != ImageQt(image):
-                image = apply_opacity_to_image(image, layer["opacity"] / 100.0)
-                pixmap = QPixmap()
-                pixmap.convertFromImage(ImageQt(image))
-                self.pixmaps[index] = DraggablePixmap(pixmap)
-
-            if self.pixmaps[index].scene() != self.scene:
-                self.scene.addItem(self.pixmaps[index])
-
-            self.emit(SignalCode.LAYER_UPDATE_SIGNAL, {
-                "layer": layer,
-                "index": index
-            })
 
     def clear_lines(self):
         self.remove_scene_item(self.line_group)

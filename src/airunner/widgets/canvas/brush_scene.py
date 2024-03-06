@@ -32,6 +32,9 @@ class BrushScene(CustomScene):
         self.update_scene_worker = create_worker(UpdateSceneWorker)
         self.update_scene_worker.parent = self
 
+    def register_signals(self):
+        pass
+
     @property
     def is_brush_or_eraser(self):
         return self.settings["current_tool"] in (
