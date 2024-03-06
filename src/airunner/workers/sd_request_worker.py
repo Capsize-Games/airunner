@@ -18,10 +18,10 @@ class SDWorker(Worker):
 
     def run(self):
         self.running = True
-        with torch.inference_mode():
-            while self.running:
-                self.sd.run()
-                QThread.msleep(SLEEP_TIME_IN_MS)
+        #with torch.inference_mode():
+        while self.running:
+            self.sd.run()
+            QThread.msleep(SLEEP_TIME_IN_MS)
 
 
 class SDRequestWorker(Worker):

@@ -6,7 +6,7 @@ from PyQt6 import uic, QtCore
 from airunner.settings import (
     DEFAULT_BRUSH_PRIMARY_COLOR,
     DEFAULT_BRUSH_SECONDARY_COLOR,
-    DEFAULT_SCHEDULER, ORGANIZATION, APPLICATION_NAME
+    DEFAULT_SCHEDULER, ORGANIZATION, APPLICATION_NAME, DEFAULT_SHORTCUTS
 )
 from airunner.data.bootstrap.controlnet_bootstrap_data import controlnet_bootstrap_data
 from airunner.data.bootstrap.imagefilter_bootstrap_data import imagefilter_bootstrap_data
@@ -160,7 +160,7 @@ class SettingsMixin:
                     llm_category="casuallm",
                 ),
             },
-            shortcut_key_settings=dict(),
+            shortcut_key_settings=DEFAULT_SHORTCUTS,
             window_settings=dict(
                 content_splitter=None,
                 splitter=None,

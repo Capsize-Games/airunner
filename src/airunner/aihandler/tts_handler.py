@@ -196,6 +196,7 @@ class TTSHandler(BaseHandler):
 
     def initialize(self):
         if self.use_spd:
+            self.logger.debug("Using SPD, skipping initialization")
             return
         target_model = "bark" if self.use_bark else "t5"
         if target_model != self.current_model:
@@ -203,7 +204,8 @@ class TTSHandler(BaseHandler):
         self.load(target_model)
 
     def load(self, target_model=None):
-        if not self.tts_enabled:
+        if self.tts_enabled:
+            self.logger.debug("Text to Speech is disabled")
             self.logger.debug(f"Loading {target_model}...")
             target_model = target_model or self.current_model
             if self.current_model is None or self.model is None:
@@ -487,7 +489,8 @@ class TTSHandler(BaseHandler):
                 spd-say "Hello, I am a computer."
                 ```
                 """
-                bash_command = f'spd-say "{message}"'
+                message = message.replace('"', "'")
+                bash_command = f'spd-say -w "{message}"'
                 os.system(bash_command)
         return response
 
@@ -522,7 +525,10 @@ class TTSHandler(BaseHandler):
 
         self.logger.debug("Processing inputs...")
 
-        inputs = self.processor(text=text, return_tensors="pt")
+        inputs = self.processor(
+            text=text,
+            return_tensors="pt"
+        )
         inputs = self.move_inputs_to_device(inputs)
 
         self.logger.debug("Generating speech...")

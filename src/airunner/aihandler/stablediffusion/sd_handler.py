@@ -218,6 +218,7 @@ class SDHandler(
         self.sd_request = SDRequest(model_data=self.model)
         self.running = True
         self.do_generate = False
+        self._generator = None
 
         self.latents_worker = create_worker(LatentsWorker)
 
@@ -572,23 +573,6 @@ class SDHandler(
         if "callback" in message:
             message["callback"]()
 
-    def load_options(self):
-        self.model_version = self.sd_request.generator_settings.version
-        self.is_sd_xl = self.model_version == StableDiffusionVersion.SDXL1_0.value or self.is_sd_xl_turbo
-        self.is_sd_xl_turbo = self.model_version == StableDiffusionVersion.SDXL_TURBO.value
-        self.is_turbo = self.model_version == StableDiffusionVersion.SD_TURBO.value
-        self.use_compel = (
-            not self.sd_request.memory_settings.use_enable_sequential_cpu_offload and
-            not self.is_sd_xl and
-            not self.is_sd_xl_turbo and
-            not self.is_turbo
-        )
-        self.controlnet_type = self.options.get(
-            "controlnet",
-            Controlnet.CANNY.value
-        ).lower()
-        self.controlnet_type = self.controlnet_type.replace(" ", "_")
-
     def initialize(self):
         if (
             self.initialized is False or
@@ -609,9 +593,6 @@ class SDHandler(
         ):
             self._controlnet = self.load_controlnet()
         return self._controlnet
-
-
-    _generator = None
 
     def generator(self, device=None, seed=None):
         if self._generator is None:
@@ -735,7 +716,6 @@ class SDHandler(
         #         self.latents = self.latents.to(self.device)
         #     else:
         #         self.logger.error("NO LATENTS")
-
         if self.pipe:
             try:
                 return self.pipe(**self.data)
@@ -959,7 +939,23 @@ class SDHandler(
             controlnet_image=controlnet_image
         )
         self.requested_data = self.data
-        self.load_options()
+        self.model_version = self.sd_request.generator_settings.version
+        self.is_sd_xl = self.model_version == StableDiffusionVersion.SDXL1_0.value or self.is_sd_xl_turbo
+        self.is_sd_xl_turbo = self.model_version == StableDiffusionVersion.SDXL_TURBO.value
+        self.is_turbo = self.model_version == StableDiffusionVersion.SD_TURBO.value
+        self.use_compel = (
+           not self.sd_request.memory_settings.use_enable_sequential_cpu_offload and
+           not self.is_sd_xl and
+           not self.is_sd_xl_turbo and
+           not self.is_turbo
+        )
+        self.controlnet_type = self.options.get(
+            "controlnet",
+            Controlnet.CANNY.value
+        ).lower()
+        self.controlnet_type = self.controlnet_type.replace(" ", "_")
+        self.generator().manual_seed(self.sd_request.generator_settings.seed)
+        seed_everything(self.seed)
 
     def generator_sample(self):
         """
@@ -979,8 +975,6 @@ class SDHandler(
             self.initialized = False
 
         self.load_generator_arguments()
-        self.generator().manual_seed(self.sd_request.generator_settings.seed)
-        seed_everything(self.seed)
 
         if self.do_load:
             self.prepare_scheduler()
@@ -989,16 +983,11 @@ class SDHandler(
 
         self.change_scheduler()
 
-        if self.do_load_compel:
-            self.reload_prompts = False
-            self.prompt_embeds = None
-            self.negative_prompt_embeds = None
-            self.load_prompt_embeds(
-                self.pipe,
-                prompt=self.sd_request.generator_settings.prompt,
-                negative_prompt=self.sd_request.generator_settings.negative_prompt
-            )
-            self.load_generator_arguments()
+        """
+        Check where the pipe currently exists
+        """
+        if self.pipe and self.pipe.device.type != self.device:
+            self.pipe.to(self.device)
 
         if self.pipe and self.do_load:
             """
@@ -1017,6 +1006,28 @@ class SDHandler(
                 self.error_handler("Selected LoRA are not supported with this model")
                 self.reload_model = True
 
+        if self.do_load_compel:
+            self.reload_prompts = False
+            self.prompt_embeds = None
+            self.negative_prompt_embeds = None
+            self.load_prompt_embeds(
+                self.pipe,
+                prompt=self.sd_request.generator_settings.prompt,
+                negative_prompt=self.sd_request.generator_settings.negative_prompt
+            )
+            self.data = self.sd_request.initialize_prompt_embeds(
+                prompt_embeds=self.prompt_embeds,
+                negative_prompt_embeds=self.negative_prompt_embeds,
+                args=self.data
+            )
+
+        # ensure only prompt OR prompt_embeds are used
+        if "prompt" in self.data and "prompt_embeds" in self.data:
+            del self.data["prompt"]
+
+        if "negative_prompt" in self.data and "negative_prompt_embeds" in self.data:
+            del self.data["negative_prompt"]
+
         self.do_set_seed = False
 
         if self.sd_request.is_upscale:
@@ -1026,13 +1037,9 @@ class SDHandler(
             self.logger.error("pipe is None")
             return
 
-        self.emit(
-            SignalCode.LOG_STATUS_SIGNAL,
-            f"Generating media"
-        )
-
         if not self.do_generate:
             return
+
         self.do_generate = False
 
         if self.sd_request.is_img2img:
@@ -1042,6 +1049,11 @@ class SDHandler(
         if self.sd_request.generator_settings.enable_controlnet:
             if "control_image" not in self.data or self.data["control_image"] is None:
                 return None
+
+        self.emit(
+            SignalCode.LOG_STATUS_SIGNAL,
+            f"Generating media"
+        )
 
         return self.generate()
 
@@ -1161,10 +1173,7 @@ class SDHandler(
                 try:
                     self.logger.debug(f"Loading ckpt file {self.model_path}")
                     self.pipe = self.download_from_original_stable_diffusion_ckpt()
-                    old_model_path = self.current_model
-                    self.current_model = self.model_path
                     self.pipe.scheduler = self.load_scheduler(config=self.pipe.scheduler.config)
-                    self.current_model = old_model_path
                 except OSError as e:
                     self.handle_missing_files(self.sd_request.generator_settings.section)
             else:
@@ -1191,6 +1200,10 @@ class SDHandler(
                 self.emit(SignalCode.LOG_ERROR_SIGNAL, "Failed to load model")
                 return
 
+            old_model_path = self.current_model
+            self.current_model = self.model_path
+            self.current_model = old_model_path
+
             # if self.is_outpaint:
             #     self.logger.debug("Initializing vae for inpaint / outpaint")
             #     self.pipe.vae = AsymmetricAutoencoderKL.from_pretrained(
@@ -1199,9 +1212,6 @@ class SDHandler(
             #     )
 
             self.controlnet_loaded = self.settings["generator_settings"]["enable_controlnet"]
-
-            # store the model_path
-            self.pipe.model_path = self.model_path
 
     def get_pipeline_action(self, action=None):
         action = self.sd_request.generator_settings.section if not action else action
@@ -1230,11 +1240,6 @@ class SDHandler(
             pipe = download_from_original_stable_diffusion_ckpt(
                 **kwargs
             )
-            """
-            download_from_original_stable_diffusion_ckpt
-            """
-            pipe.safety_checker = self.safety_checker
-            pipe.feature_extractor = self.feature_extractor
         except ValueError:
             if local_files_only:
                 # missing required files, attempt again with online access
