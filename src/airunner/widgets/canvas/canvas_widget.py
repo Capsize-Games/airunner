@@ -19,6 +19,7 @@ from airunner.widgets.canvas.image_handler import ImageHandler
 from airunner.widgets.canvas.templates.canvas_ui import Ui_canvas
 from airunner.workers.canvas_resize_worker import CanvasResizeWorker
 from airunner.workers.image_data_worker import ImageDataWorker
+from airunner.workers.worker import Worker
 
 
 class CanvasWidget(BaseWidget):
@@ -61,7 +62,6 @@ class CanvasWidget(BaseWidget):
             SignalCode.CANVAS_DO_DRAW_SIGNAL: self.on_canvas_do_draw_signal,
             SignalCode.SD_IMAGE_DATA_WORKER_RESPONSE_SIGNAL: self.on_image_data_worker_response_signal,
             SignalCode.CANVAS_RESIZE_WORKER_RESPONSE_SIGNAL: self.on_canvas_resize_worker_response_signal,
-            SignalCode.SD_IMAGE_GENERATED_SIGNAL: self.on_image_generated_signal,
             SignalCode.CANVAS_LOAD_IMAGE_FROM_PATH_SIGNAL: self.on_load_image_from_path,
             SignalCode.CANVAS_HANDLE_LAYER_CLICK_SIGNAL: self.on_canvas_handle_layer_click_signal,
             SignalCode.CANVAS_UPDATE_SIGNAL: self.on_update_canvas_signal,
@@ -75,6 +75,7 @@ class CanvasWidget(BaseWidget):
             SignalCode.CANVAS_CANCEL_FILTER_SIGNAL: self.cancel_filter,
             SignalCode.CANVAS_APPLY_FILTER_SIGNAL: self.apply_filter,
             SignalCode.CANVAS_PREVIEW_FILTER_SIGNAL: self.preview_filter,
+            SignalCode.SD_IMAGE_GENERATED_SIGNAL: self.on_image_generated_signal,
         }
 
         # Map service codes to class functions
@@ -214,8 +215,8 @@ class CanvasWidget(BaseWidget):
     def on_image_generated_signal(self, image_data: dict):
         self.add_image_to_scene(
             image_data["images"][0],
-            is_outpaint=image_data["data"]["action"] == GeneratorSection.OUTPAINT.value,
-            outpaint_box_rect=image_data["data"]["options"]["outpaint_box_rect"]
+            is_outpaint=image_data["action"] == GeneratorSection.OUTPAINT.value,
+            outpaint_box_rect=image_data["outpaint_box_rect"]
         )
 
     def on_canvas_resize_worker_response_signal(self, data: dict):
@@ -442,7 +443,7 @@ class CanvasWidget(BaseWidget):
         self.add_image_to_scene(
             image_data=dict(
                 image=image
-            ), 
+            ),
             is_outpaint=is_outpaint
         )
 
@@ -467,7 +468,7 @@ class CanvasWidget(BaseWidget):
             self.update()
     
     def delete_image(self):
-        self.logger.info("Deleting image from canvas")
+        self.logger.debug("Deleting image from canvas")
         draggable_pixmap = self.current_draggable_pixmap()
         if not draggable_pixmap:
             return
@@ -503,7 +504,7 @@ class CanvasWidget(BaseWidget):
 
     def add_image_to_scene(
         self,
-        image_data: dict,
+        image: Image,
         is_outpaint: bool = False,
         outpaint_box_rect: QPoint = None
     ):
@@ -517,7 +518,7 @@ class CanvasWidget(BaseWidget):
         self.do_draw_layers = True
 
         if not is_outpaint:
-            self.set_current_active_image(image_data["image"])
+            self.set_current_active_image(image)
             self.do_draw(
                 force_draw=True,
                 do_draw_layers=True
@@ -525,7 +526,7 @@ class CanvasWidget(BaseWidget):
         else:
             image, root_point, pivot_point = self.handle_outpaint(
                 outpaint_box_rect,
-                image_data["image"],
+                image,
                 action=GeneratorSection.OUTPAINT.value
             )
             self.set_current_active_image(image)

@@ -1,7 +1,7 @@
 import gc
 
 from airunner.aihandler.llm.casual_lm_transfformer_base_handler import CasualLMTransformerBaseHandler
-from airunner.aihandler.settings import AVAILABLE_DTYPES
+from airunner.settings import AVAILABLE_DTYPES
 from airunner.enums import SignalCode
 from airunner.workers.worker import Worker
 
@@ -33,7 +33,7 @@ class LLMGenerateWorker(Worker):
             do_unload_model = True
             do_move_to_cpu = False
         if do_move_to_cpu:
-            self.logger.info("Moving LLM to CPU")
+            self.logger.debug("Moving LLM to CPU")
             self.llm.move_to_cpu()
         elif do_unload_model:
             self.unload_llm()
