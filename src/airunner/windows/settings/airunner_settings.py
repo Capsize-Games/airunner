@@ -2,7 +2,8 @@ from PyQt6.QtCore import Qt, QSize
 from PyQt6.QtGui import QStandardItemModel, QStandardItem, QBrush, QColor, QPainter
 from PyQt6.QtWidgets import QStyledItemDelegate, QStyleOptionViewItem, QLabel, QWidget, QVBoxLayout, QPlainTextEdit
 
-from airunner.enums import SignalCode
+from airunner.enums import SignalCode, ServiceCode
+from airunner.service_locator import ServiceLocator
 from airunner.widgets.api_token.api_token_widget import APITokenWidget
 from airunner.widgets.embeddings.embeddings_container_widget import EmbeddingsContainerWidget
 from airunner.widgets.export_preferences.export_preferences_widget import ExportPreferencesWidget
@@ -52,6 +53,51 @@ class SettingsWindow(BaseWindow):
         self.scroll_widget = None
         self.scroll_layout = None
         self.highlight_delegate = None
+        ServiceLocator.register(ServiceCode.GET_PREFERENCES_CALLBACK_FOR_SLIDER, self.get_callback_for_slider)
+        self.emit(SignalCode.APPLICATION_SETTINGS_LOADED_SIGNAL)
+
+    def handle_value_change(self, attr_name, value=None, widget=None):
+        print("handle_value_change")
+        """
+        Slider widget callback - this is connected via dynamic properties in the
+        qt widget. This function is then called when the value of a SliderWidget
+        is changed.
+        :param attr_name: the name of the attribute to change
+        :param value: the value to set the attribute to
+        :param widget: the widget that triggered the callback
+        :return:
+        """
+        print("handle_value_change")
+        if attr_name is None:
+            return
+
+        keys = attr_name.split(".")
+        if len(keys) > 0:
+            settings = self.settings
+
+            object_key = "settings"
+            if len(keys) == 1:
+                property_key = keys[0]
+            elif len(keys) == 2:
+                object_key = keys[0]
+                property_key = keys[1]
+            elif len(keys) == 3:
+                object_key = keys[0]
+                property_key = keys[1]
+                sub_property_key = keys[2]
+
+            if object_key != "settings":
+                if len(keys) == 3:
+                    settings[object_key][property_key][sub_property_key] = value
+                else:
+                    settings[object_key][property_key] = value
+            else:
+                settings[property_key] = value
+
+            self.settings = settings
+
+    def get_callback_for_slider(self, callback_name):
+        return getattr(self, callback_name)
 
     def initialize_window(self):
         self.model = QStandardItemModel()

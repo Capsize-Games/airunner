@@ -166,7 +166,6 @@ class CustomGraphicsView(
         if not self.do_draw_layers or self.canvas_type == CanvasType.BRUSH.value:
             return
         self.do_draw_layers = False
-        print("UPDATING SCENE")
         self.scene.update()
 
 
