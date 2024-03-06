@@ -10,7 +10,8 @@ from airunner.enums import CanvasToolName, SignalCode, ServiceCode, CanvasType
 from airunner.mediator_mixin import MediatorMixin
 from airunner.service_locator import ServiceLocator
 from airunner.utils import snap_to_grid, apply_opacity_to_image
-from airunner.widgets.canvas.custom_scene import CustomScene, BrushScene
+from airunner.widgets.canvas.brush_scene import BrushScene
+from airunner.widgets.canvas.custom_scene import CustomScene
 from airunner.widgets.canvas.draggables.active_grid_area import ActiveGridArea
 from airunner.widgets.canvas.draggables.draggable_pixmap import DraggablePixmap
 from airunner.windows.main.settings_mixin import SettingsMixin
@@ -104,13 +105,12 @@ class CustomGraphicsView(
         self.line_group = QGraphicsItemGroup()
         self.active_grid_area = None
         self.pixmaps = {}
-        settings = self.settings
-        settings["layers"] = []
-        self.settings = settings
-        self.emit(SignalCode.LAYER_ADD_SIGNAL)
         self.emit(SignalCode.CANVAS_DO_RESIZE_SIGNAL, {
             "force_draw": True
         })
+        settings = self.settings
+        settings["drawing_pad_settings"]["image"] = None
+        self.settings = settings
 
     def update_current_pixmap(self, image):
         if self.canvas_type == CanvasType.BRUSH.value:
