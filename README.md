@@ -24,12 +24,29 @@ No web server to run, additional requirements to install or technical knowledge 
 
 ## 🔧 Installation
 
-### [Download the official build on itch.io](https://capsizegames.itch.io/ai-runner)!
+### Compiled
 
-This is the compiled version of AI Runner which you can use without installing any additional dependencies.
+[Download the official build on itch.io](https://capsizegames.itch.io/ai-runner)!
 
+This is the compiled version of AI Runner which you can use without 
+installing any additional dependencies.
 
-### PyPi
+### PyPi and Source
+
+#### Linux
+
+```bash
+sudo apt update
+sudo apt install espeak ffmpeg xclip
+```
+
+#### Windows
+
+```bash
+pip install pypiwin32
+```
+
+#### PyPi
 
 If you want to install AI Runner using pip, you can do so using the following command:
 
@@ -37,7 +54,7 @@ If you want to install AI Runner using pip, you can do so using the following co
 pip install airunner
 ```
 
-### From source
+#### Source
 
 If you want to install AI Runner from source, you can do so using the following command:
 
