@@ -206,7 +206,10 @@ class MemoryEfficientMixin:
         if self.cuda_is_available and not self.settings["memory_settings"]["use_enable_sequential_cpu_offload"] and not self.settings["memory_settings"]["enable_model_cpu_offload"]:
             if not str(self.pipe.device).startswith("cuda"):
                 self.logger.debug(f"Moving pipe to cuda (currently {self.pipe.device})")
-                self.pipe.to("cuda") if self.cuda_is_available else None
+                try:
+                    self.pipe.to("cuda") if self.cuda_is_available else None
+                except NotImplementedError:
+                    self.logger.warning("Not implemented error when moving to cuda")
             if hasattr(self.pipe, "controlnet") and self.pipe.controlnet is not None:
                 if not self.pipe.controlnet.device or not str(self.pipe.controlnet.device).startswith("cuda"):
                     self.logger.debug(f"Moving controlnet to cuda (currently {self.pipe.controlnet.device})")
