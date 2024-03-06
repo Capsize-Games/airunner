@@ -518,7 +518,7 @@ class TTSHandler(BaseHandler):
         return response
 
     def generate_with_t5(self, text):
-        self.logger.debug("Generating TTS with SpeechT5..." + str(self.settings["tts_settings"]["use_bark"]))
+        self.logger.debug("Generating TTS")
         text = text.replace("\n", " ").strip()
         text = text.replace("\n", " ").strip()
         text = self.replace_numbers_with_words(text)
