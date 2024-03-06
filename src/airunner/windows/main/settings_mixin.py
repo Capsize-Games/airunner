@@ -29,7 +29,7 @@ tts_settings_default = {
     'play_queue_buffer_length': 1,
     'enable_cpu_offload': True,
     "model": "SpeechT5",
-    "spd": dict(
+    "espeak": dict(
         gender="male",
         voice="male1",
         language="en-US",

@@ -444,7 +444,7 @@ DEFAULT_SHORTCUTS = {
         signal=SignalCode.QUIT_APPLICATION
     ),
 }
-SPD_SETTINGS = dict(
+ESPEAK_SETTINGS = dict(
     voices=dict(
         Male=[
             "m1", "m2", "m3",

@@ -34,9 +34,9 @@ class Ui_tts_preferences(object):
         self.bark_preferences = BarkPreferencesWidget(parent=tts_preferences)
         self.bark_preferences.setObjectName("bark_preferences")
         self.gridLayout.addWidget(self.bark_preferences, 3, 0, 1, 1)
-        self.spd_preferences = SpdPreferencesWidget(parent=tts_preferences)
-        self.spd_preferences.setObjectName("spd_preferences")
-        self.gridLayout.addWidget(self.spd_preferences, 4, 0, 1, 1)
+        self.espeak_preferences = ESpeakPreferencesWidget(parent=tts_preferences)
+        self.espeak_preferences.setObjectName("espeak_preferences")
+        self.gridLayout.addWidget(self.espeak_preferences, 4, 0, 1, 1)
         self.speecht5_preferences = SpeechT5PreferencesWidget(parent=tts_preferences)
         self.speecht5_preferences.setObjectName("speecht5_preferences")
         self.gridLayout.addWidget(self.speecht5_preferences, 5, 0, 1, 1)
@@ -54,5 +54,5 @@ class Ui_tts_preferences(object):
         self.enable_tts.setText(_translate("tts_preferences", "Enable Text to Speech"))
         self.groupBox_7.setTitle(_translate("tts_preferences", "Model"))
 from airunner.widgets.tts.bark_preferences_widget import BarkPreferencesWidget
-from airunner.widgets.tts.spd_preferences_widget import SpdPreferencesWidget
+from airunner.widgets.tts.espeak_preferences_widget import ESpeakPreferencesWidget
 from airunner.widgets.tts.speecht5_preferences_widget import SpeechT5PreferencesWidget
