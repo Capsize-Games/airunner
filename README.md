@@ -59,12 +59,29 @@ wiki page for more information](https://github.com/Capsize-Games/airunner/wiki/I
 
 ## ⭐ Features
 
-Easily generate AI art using Stable Diffusion.
+AI Runner is a multi-modal AI application which allows you to run open-source 
+large language models and AI image generators on your own hardware.
 
+- Have conversations with with a chatbot using your voice
+- Text-to-speech
+- Speech-to-text
+- Vision-to-text
+- Text generation with large language models (LLMs)
+- Image generation using Stable Diffusion and Kandinsky
+- Draw and generate images in near real-time
+- Run multiple models at once
 - Easy setup - download and run. No need to install any requirements*
+- Run offline, locally on your own hardware!
 - Fast! Generate images in approximately 2 seconds using an RTX 2080s, 512x512 dimensions, 20 steps euler_a (approximately 10 seconds for 512x512 20 steps Euler A on 1080gtx). Also runs on CPU†
-- txt2img, img2img, inpaint, outpaint, pix2pix, depth2img, controlnet
-- Layers and drawing tools
+- text-to-image
+- image-to-image
+- inpaint and outpaint
+- pix2pix
+- depth2img
+- controlnet
+- LoRA
+- textual embeddings
+- Drawing tools
 - Image filters
 - Dark mode
 - Infinite scrolling canvas - use outpainting to create artwork at any size you wish or expand existing images.
@@ -75,7 +92,7 @@ Easily generate AI art using Stable Diffusion.
 
 ### Requirements
 
-- Cuda capable GPU (2080s or higher recommended)
+- Cuda capable GPU (RTX 2080s or higher recommended)
 - At least 8gb of RAM
 - at least 5.8gb of disc space to install AI Runner
 
