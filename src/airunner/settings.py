@@ -1,6 +1,8 @@
 import os
-
-from airunner.enums import GeneratorSection, StableDiffusionVersion, ImageGenerator, Language
+import logging
+from PyQt6.QtCore import Qt
+from PyQt6 import QtCore
+from airunner.enums import GeneratorSection, StableDiffusionVersion, ImageGenerator, Scheduler, SignalCode
 
 BASE_PATH = os.path.join(os.path.expanduser("~"), ".airunner")
 SQLITE_DB_NAME = "airunner.db"
@@ -331,7 +333,6 @@ ILLUSTRATION_NEGATIVE_PROMPT = (
 BUG_REPORT_LINK = "https://github.com/Capsize-Games/airunner/issues/new?assignees=&labels=&template=bug_report.md&title="
 DISCORD_LINK = "https://discord.gg/ukcgjEpc5f"
 VULNERABILITY_REPORT_LINK = "https://github.com/Capsize-Games/airunner/security/advisories/new"
-DEFAULT_SCHEDULER = "DPM++ 2M Karras"
 
 # Set default models, currently only for stablediffusion (later Kandinsky as well)
 DEFAULT_MODELS = {}
@@ -365,4 +366,81 @@ CONFIG_FILES = {
     "v2": "v2.yaml",
     "xl": "sd_xl_base.yaml",
     "xl_refiner": "sd_xl_refiner.yaml"
+}
+SCHEDULER_CLASSES = {
+    Scheduler.EULER_ANCESTRAL.value: "EulerAncestralDiscreteScheduler",
+    Scheduler.EULER.value: "EulerDiscreteScheduler",
+    Scheduler.LMS.value: "LMSDiscreteScheduler",
+    Scheduler.HEUN.value: "HeunDiscreteScheduler",
+    Scheduler.DPM2.value: "DPMSolverSinglestepScheduler",
+    Scheduler.DPM_PP_2M.value: "DPMSolverMultistepScheduler",
+    Scheduler.DPM2_K.value: "KDPM2DiscreteScheduler",
+    Scheduler.DPM2_A_K.value: "KDPM2AncestralDiscreteScheduler",
+    Scheduler.DPM_PP_2M_K.value: "DPMSolverMultistepScheduler",
+    Scheduler.DPM_PP_2M_SDE_K.value: "DPMSolverMultistepScheduler",
+    Scheduler.DDIM.value: "DDIMScheduler",
+    Scheduler.UNIPC.value: "UniPCMultistepScheduler",
+    Scheduler.DDPM.value: "DDPMScheduler",
+    Scheduler.DEIS.value: "DEISMultistepScheduler",
+    Scheduler.DPM_2M_SDE_K.value: "DPMSolverMultistepScheduler",
+    Scheduler.PLMS.value: "PNDMScheduler",
+    Scheduler.DPM.value: "DPMSolverMultistepScheduler",
+    # "DDIM Inverse": "DDIMInverseScheduler",
+    # "IPNM": "IPNDMScheduler",
+    # "RePaint": "RePaintScheduler",
+    # "Karras Variance exploding": "KarrasVeScheduler",
+    # "VE-SDE": "ScoreSdeVeScheduler",
+    # "VP-SDE": "ScoreSdeVpScheduler",
+    # "VQ Diffusion": " VQDiffusionScheduler",
+}
+MIN_SEED = 0
+MAX_SEED = 4294967295
+AIRUNNER_ENVIRONMENT = os.environ.get("AIRUNNER_ENVIRONMENT", "dev")  # dev or prod
+LOG_LEVEL = logging.FATAL if AIRUNNER_ENVIRONMENT == "prod" else logging.DEBUG
+SCHEDULERS = [e.value for e in Scheduler]
+DEFAULT_SCHEDULER = Scheduler.DPM_PP_2M_K.value
+AVAILABLE_SCHEDULERS_BY_ACTION = {
+    action: SCHEDULERS for action in [
+        "txt2img", "img2img", "depth2img", "pix2pix", "vid2vid",
+        "outpaint", "controlnet", "txt2vid"
+    ]
+}
+AVAILABLE_SCHEDULERS_BY_ACTION.update({
+    "upscale": [Scheduler.EULER.value],
+    "superresolution": [Scheduler.DDIM.value, Scheduler.LMS.value, Scheduler.PLMS.value],
+})
+AIRUNNER_ENVIRONMENT = os.environ.get("AIRUNNER_ENVIRONMENT", "dev")  # dev or prod
+SERVER = {
+    "host": "127.0.0.1",
+    "port": 50006,
+    "chunk_size": 1024,
+}
+DEFAULT_BRUSH_PRIMARY_COLOR = "#ffffff"
+DEFAULT_BRUSH_SECONDARY_COLOR = "#000000"
+AVAILABLE_DTYPES = ("2bit", "4bit", "8bit")
+STATUS_ERROR_COLOR = "#ff0000"
+STATUS_NORMAL_COLOR_LIGHT = "#000000"
+STATUS_NORMAL_COLOR_DARK = "#ffffff"
+DARK_THEME_NAME = "dark_theme"
+LIGHT_THEME_NAME = "light_theme"
+VALID_IMAGE_FILES = "Image Files (*.png *.jpg *.jpeg)"
+NSFW_CONTENT_DETECTED_MESSAGE = "NSFW content detected"
+SLEEP_TIME_IN_MS = 50
+ORGANIZATION = "Capsize Games"
+APPLICATION_NAME = "AI Runner"
+DEFAULT_SHORTCUTS = {
+    "Generate Image": dict(
+        text="F5",
+        key=Qt.Key.Key_F5,
+        modifiers=QtCore.Qt.KeyboardModifier.NoModifier,
+        description="Generate key. Responsible for triggering the generation of a Stable Diffusion image.",
+        signal=SignalCode.SD_GENERATE_IMAGE_SIGNAL
+    ),
+    "Quit": dict(
+        text="Ctrl+Q",
+        key=Qt.Key.Key_Q,
+        modifiers=QtCore.Qt.KeyboardModifier.ControlModifier,
+        description="Quit key. Responsible for quitting the application.",
+        signal=SignalCode.QUIT_APPLICATION
+    ),
 }

@@ -122,7 +122,7 @@ class TransformerBaseHandler(BaseHandler):
             params["torch_dtype"] = torch.float16
             params["device_map"] = "auto"
 
-        self.logger.info(f"Loading model from {self.current_model_path}")
+        self.logger.debug(f"Loading model from {self.current_model_path}")
 
         test_model_path = "test_model_path"
         path = self.current_model_path
@@ -158,22 +158,24 @@ class TransformerBaseHandler(BaseHandler):
         self._processing_request = False
         model_unloaded = self.unload_model()
         tokenizer_unloaded = self.unload_tokenizer()
+        self.image = None
         if (
             model_unloaded or
             tokenizer_unloaded
         ):
+            self.logger.debug("Clearing memory")
             clear_memory()
 
     def unload_tokenizer(self):
         if self.tokenizer:
-            self.logger.info("Unloading tokenizer")
+            self.logger.debug("Unloading tokenizer")
             del self.tokenizer
             self.tokenizer = None
             return True
 
     def unload_model(self):
         if self.model:
-            self.logger.info("Unloading model")
+            self.logger.debug("Unloading model")
             del self.model
             self.model = None
             return True
@@ -227,7 +229,7 @@ class TransformerBaseHandler(BaseHandler):
 
     def move_to_cpu(self):
         if self.model:
-            self.logger.info("Moving model to CPU")
+            self.logger.debug("Moving model to CPU")
             self.model.to("cpu")
         self.tokenizer = None
 
@@ -240,7 +242,7 @@ class TransformerBaseHandler(BaseHandler):
             device_name = "cuda"
         else:
             device_name = "cpu"
-        self.logger.info("Moving model to device {device_name}")
+        self.logger.debug("Moving model to device {device_name}")
         self.model.to(device_name)
 
     def prepare_input_args(self):

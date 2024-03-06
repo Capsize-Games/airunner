@@ -4,7 +4,6 @@ import subprocess
 import webbrowser
 from functools import partial
 
-import numpy as np
 from PyQt6 import QtGui
 from PyQt6 import uic, QtCore
 from PyQt6.QtCore import pyqtSlot, pyqtSignal
@@ -12,8 +11,9 @@ from PyQt6.QtGui import QGuiApplication
 from PyQt6.QtWidgets import QApplication, QFileDialog, QMainWindow
 
 from airunner.aihandler.logger import Logger
-from airunner.aihandler.settings import LOG_LEVEL
-from airunner.enums import Mode, SignalCode, ServiceCode, CanvasToolName, WindowSection
+from airunner.settings import LOG_LEVEL, STATUS_ERROR_COLOR, STATUS_NORMAL_COLOR_LIGHT, STATUS_NORMAL_COLOR_DARK, \
+    DARK_THEME_NAME, LIGHT_THEME_NAME, VALID_IMAGE_FILES, NSFW_CONTENT_DETECTED_MESSAGE
+from airunner.enums import Mode, SignalCode, ServiceCode, CanvasToolName, WindowSection, GeneratorSection
 from airunner.mediator_mixin import MediatorMixin
 from airunner.resources_dark_rc import *
 from airunner.service_locator import ServiceLocator
@@ -39,6 +39,11 @@ from airunner.windows.video import VideoPopup
 from airunner.worker_manager import WorkerManager
 
 
+class History:
+    def add_event(self, *args, **kwargs):
+        print("TODO")
+
+
 class MainWindow(
     QMainWindow,
     MediatorMixin,
@@ -57,57 +62,24 @@ class MainWindow(
     line_color_changed_signal = pyqtSignal(str)
     canvas_color_changed_signal = pyqtSignal(str)
     snap_to_grid_changed_signal = pyqtSignal(bool)
-
-    token_signal = pyqtSignal(str)
-    api = None
-    input_event_manager = None
-    current_filter = None
-    tqdm_callback_triggered = False
-    _document_name = "Untitled"
-    is_saved = False
-    action = "txt2img"
-    progress_bar_started = False
-    window = None
-    history = None
-    canvas = None
-    models = None
-    client = None
-    _version = None
-    _latest_version = None
-    data = None  # this is set in the generator_mixin image_handler function and used for deterministic generation
-    status_error_color = "#ff0000"
-    status_normal_color_light = "#000000"
-    status_normal_color_dark = "#ffffff"
-    is_started = False
-    _themes = None
-    button_clicked_signal = pyqtSignal(dict)
-    status_widget = None
-    header_widget_spacer = None
-    deterministic_window = None
-
-    class History:
-        def add_event(self, *args, **kwargs):
-            print("TODO")
-    history = History()
-
     image_generated = pyqtSignal(bool)
     generator_tab_changed_signal = pyqtSignal()
     tab_section_changed_signal = pyqtSignal()
     load_image = pyqtSignal(str)
     load_image_object = pyqtSignal(object)
-
-    generator = None
-    _generator = None
-    _generator_settings = None
-    listening = False
     loaded = pyqtSignal()
     window_opened = pyqtSignal()
 
-    def handle_key_press(self, key):
-        super().keyPressEvent(key)
+    def keyPressEvent(self, event):
+        super().keyPressEvent(event)
+        self.handle_key_press(event.key)
 
-        if self.key_matches("generate_image_key", key.key()):
-            print("generate_image_key PRESSED")
+    def handle_key_press(self, key):
+        shortcut_key_settings = self.settings["shortcut_key_settings"]
+        for k, v in shortcut_key_settings.items():
+            print(k, v["key"].value == key())
+            if v["key"].value == key():
+                self.emit(v["signal"])
     
     def key_matches(self, key_name, keyboard_key):
         if not key_name in self.settings["shortcut_key_settings"]:
@@ -119,27 +91,6 @@ class MainWindow(
             return ""
         return self.settings["shortcut_key_settings"][key_name]["text"]
     
-    def add_preset(self, name, thumnail):
-        settings = self.settings
-        settings["presets"].append({
-            'name': name,
-            'thumnail': thumnail,
-        })
-        self.settings = settings
-    
-    def on_load_saved_stablediffuion_prompt_signal(self, index):
-        try:
-            saved_prompt = self.settings["saved_prompts"][index]
-        except KeyError:
-            self.logger.error(f"Unable to load prompt at index {index}")
-            saved_prompt = None
-        
-        if saved_prompt:
-            settings = self.settings
-            settings["generator_settings"]["prompt"] = saved_prompt["prompt"]
-            settings["generator_settings"]["negative_prompt"] = saved_prompt["negative_prompt"]
-            self.settings = settings
-
     def on_update_saved_stablediffusion_prompt_signal(self, options):
         index, prompt, negative_prompt = options
         settings = self.settings
@@ -211,13 +162,44 @@ class MainWindow(
         self.prompt = None
         self.negative_prompt = None
         self.image_path = None
+        self.token_signal = pyqtSignal(str)
+        self.api = None
+        self.input_event_manager = None
+        self.current_filter = None
+        self.tqdm_callback_triggered = False
+        self.is_saved = False
+        self.action = GeneratorSection.TXT2IMG.value
+        self.progress_bar_started = False
+        self.window = None
+        self.history = None
+        self.canvas = None
+        self.models = None
+        self.client = None
+        self._version = None
+        self._latest_version = None
+        self.data = None  # this is set in the generator_mixin image_handler function and used for deterministic generation
+        self.status_error_color = STATUS_ERROR_COLOR
+        self.status_normal_color_light = STATUS_NORMAL_COLOR_LIGHT
+        self.status_normal_color_dark = STATUS_NORMAL_COLOR_DARK
+        self.is_started = False
+        self._themes = None
+        self.button_clicked_signal = pyqtSignal(dict)
+        self.status_widget = None
+        self.header_widget_spacer = None
+        self.deterministic_window = None
+        self.generator = None
+        self._generator = None
+        self._generator_settings = None
+        self.listening = False
+        self.history = History()
+
         self.splitter_names = [
             "content_splitter",
             "splitter",
         ]
         self.set_log_levels()
         self.logger = Logger(prefix=self.__class__.__name__)
-        self.logger.info("Starting AI Runnner")
+        self.logger.debug("Starting AI Runnner")
         MediatorMixin.__init__(self)
         SettingsMixin.__init__(self)
         super().__init__(*args, **kwargs)
@@ -235,25 +217,29 @@ class MainWindow(
         self.worker_manager = WorkerManager()
         self.is_started = True
         self.emit(SignalCode.APPLICATION_MAIN_WINDOW_LOADED_SIGNAL)
+        self.image_window = None
+
+        self.ui.enable_controlnet.blockSignals(True)
+        self.ui.enable_controlnet.setChecked(self.settings["generator_settings"]["enable_controlnet"])
+        self.ui.enable_controlnet.blockSignals(False)
+
+
 
     def register_services(self):
-        self.logger.info("Registering services")
+        self.logger.debug("Registering services")
         ServiceLocator.register(ServiceCode.DISPLAY_IMPORT_IMAGE_DIALOG, self.display_import_image_dialog)
         ServiceLocator.register(ServiceCode.GET_SETTINGS_VALUE, self.get_settings_value)
         ServiceLocator.register(ServiceCode.GET_CALLBACK_FOR_SLIDER, self.get_callback_for_slider)
 
     def register_signals(self):
         # on window resize:
-        self.logger.info("Connecting signals")
+        self.logger.debug("Connecting signals")
         self.register(SignalCode.VISION_DESCRIBE_IMAGE_SIGNAL, self.on_describe_image_signal)
         self.register(SignalCode.SD_SAVE_PROMPT_SIGNAL, self.on_save_stablediffusion_prompt_signal)
-        self.register(SignalCode.SD_LOAD_PROMPT_SIGNAL, self.on_load_saved_stablediffuion_prompt_signal)
         self.register(SignalCode.SD_UPDATE_SAVED_PROMPT_SIGNAL, self.on_update_saved_stablediffusion_prompt_signal)
         self.register(SignalCode.QUIT_APPLICATION, self.action_quit_triggered)
         self.register(SignalCode.SD_NSFW_CONTENT_DETECTED_SIGNAL, self.on_nsfw_content_detected_signal)
         self.register(SignalCode.VISION_CAPTURED_SIGNAL, self.on_vision_captured_signal)
-
-    image_window = None
 
     def on_vision_captured_signal(self, data: dict):
         # Create the window if it doesn't exist
@@ -269,7 +255,7 @@ class MainWindow(
             self.logger.error("on_vision_captured_signal failed - no image")
 
     def initialize_ui(self):
-        self.logger.info("Loading ui")
+        self.logger.debug("Loading ui")
         self.ui.setupUi(self)
         self.restore_state()
 
@@ -290,10 +276,9 @@ class MainWindow(
         self.ui.ocr_button.blockSignals(False)
         self.ui.tts_button.blockSignals(False)
         self.ui.v2t_button.blockSignals(False)
-        self.logger.info("Setting buttons")
+        self.logger.debug("Setting buttons")
         self.set_all_section_buttons()
         self.initialize_tool_section_buttons()
-
 
     def do_listen(self):
         if not self.listening:
@@ -331,7 +316,7 @@ class MainWindow(
                 self,
                 "Export Image",
                 "",
-                "Image Files (*.png *.jpg *.jpeg)"
+                VALID_IMAGE_FILES
             )
             if file_path == "":
                 return
@@ -349,11 +334,11 @@ class MainWindow(
         # display message in status
         self.emit(
             SignalCode.APPLICATION_STATUS_ERROR_SIGNAL,
-            "NSFW content detected"
+            NSFW_CONTENT_DETECTED_MESSAGE
         )
 
     def closeEvent(self, event) -> None:
-        self.logger.info("Quitting")
+        self.logger.debug("Quitting")
         self.worker_manager.stop()
         self.save_state()
         self.worker_manager.stop()
@@ -555,7 +540,7 @@ class MainWindow(
         if self.quitting:
             return
         self.quitting = True
-        self.logger.info("Saving window state")
+        self.logger.debug("Saving window state")
         settings = self.settings
         settings["window_settings"] = {
             'mode_tab_widget_index': self.ui.mode_tab_widget.currentIndex(),
@@ -575,7 +560,7 @@ class MainWindow(
         self.save_settings()
 
     def restore_state(self):
-        self.logger.info("Restoring state")
+        self.logger.debug("Restoring state")
         window_settings = self.settings["window_settings"]
 
         if window_settings["is_maximized"]:
@@ -720,8 +705,8 @@ class MainWindow(
         """
         Sets the stylesheet for the application based on the current theme
         """
-        self.logger.info("Setting stylesheet")
-        theme_name = "dark_theme" if self.settings["dark_mode_enabled"] else "light_theme"
+        self.logger.debug("Setting stylesheet")
+        theme_name = DARK_THEME_NAME if self.settings["dark_mode_enabled"] else LIGHT_THEME_NAME
         here = os.path.dirname(os.path.realpath(__file__))
         with open(os.path.join(here, "..", "..", "styles", theme_name, "styles.qss"), "r") as f:
             stylesheet = f.read()
@@ -840,23 +825,30 @@ class MainWindow(
         """
         if attr_name is None:
             return
-        
+
         keys = attr_name.split(".")
         if len(keys) > 0:
             settings = self.settings
-            
+
             object_key = "settings"
             if len(keys) == 1:
                 property_key = keys[0]
-            if len(keys) == 2:
+            elif len(keys) == 2:
                 object_key = keys[0]
                 property_key = keys[1]
+            elif len(keys) == 3:
+                object_key = keys[0]
+                property_key = keys[1]
+                sub_property_key = keys[2]
 
             if object_key != "settings":
-                settings[object_key][property_key] = value
+                if len(keys) == 3:
+                    settings[object_key][property_key][sub_property_key] = value
+                else:
+                    settings[object_key][property_key] = value
             else:
                 settings[property_key] = value
-            
+
             self.settings = settings
 
     def initialize_window(self):
@@ -864,7 +856,7 @@ class MainWindow(
         self.set_window_title()
 
     def display(self):
-        self.logger.info("Displaying window")
+        self.logger.debug("Displaying window")
         self.set_stylesheet()
         self.setWindowFlags(self.windowFlags() | QtCore.Qt.WindowType.Window)
         self.show()
@@ -888,7 +880,6 @@ class MainWindow(
 
     def new_document(self):
         self.is_saved = False
-        self._document_name = "Untitled"
         self.set_window_title()
         self.current_filter = None
 
@@ -936,7 +927,7 @@ class MainWindow(
             self,
             label,
             directory,
-            "Image Files (*.png *.jpg *.jpeg)"
+            VALID_IMAGE_FILES
         )
 
     def new_batch(self, index, image, data):
@@ -976,3 +967,8 @@ class MainWindow(
 
     def action_reset_settings(self):
         self.emit(SignalCode.APPLICATION_RESET_SETTINGS_SIGNAL)
+
+    def action_toggle_controlnet(self, val):
+        settings = self.settings
+        settings["generator_settings"]["enable_controlnet"] = val
+        self.settings = settings
