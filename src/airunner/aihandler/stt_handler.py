@@ -68,7 +68,8 @@ class STTHandler(BaseHandler):
         except OSError as _e:
             return self.load_model(local_files_only=False)
         except NotImplementedError as _e:
-            self.logger.error("Failed to load processor")
+            self.logger.error("Failed to load model")
+            self.logger.error(_e)
             return None
 
     def load_processor(self, local_files_only=True):
@@ -84,6 +85,7 @@ class STTHandler(BaseHandler):
             return self.load_processor(local_files_only=False)
         except NotImplementedError as _e:
             self.logger.error("Failed to load processor")
+            self.logger.error(_e)
             return None
 
     def load_feature_extractor(self, local_files_only=True):

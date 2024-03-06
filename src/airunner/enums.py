@@ -47,6 +47,7 @@ class ServiceCode(Enum):
     DISPLAY_IMPORT_IMAGE_DIALOG = "display_import_image_dialog"
     GET_SETTINGS_VALUE = "get_settings_value"
     GET_CALLBACK_FOR_SLIDER = "get_callback_for_slider"
+    GET_PREFERENCES_CALLBACK_FOR_SLIDER = "get_preferences_callback_for_slider"
     CANVAS_REGISTER_LINE_DATA = "canvas_register_line_data"
 
 
@@ -57,6 +58,7 @@ class SignalCode(Enum):
     AI_MODELS_CREATE_SIGNAL = "ai_models_create_signal"
 
     APPLICATION_MAIN_WINDOW_LOADED_SIGNAL = "main_window_loaded_signal"
+    APPLICATION_SETTINGS_LOADED_SIGNAL = "settings_loaded_signal"
     APPLICATION_ADD_BOT_MESSAGE_TO_CONVERSATION = "add_bot_message_to_conversation"
     APPLICATION_MODELS_CHANGED_SIGNAL = "models_changed_signal"
     APPLICATION_CLEAR_STATUS_MESSAGE_SIGNAL = "clear_status_message_signal"

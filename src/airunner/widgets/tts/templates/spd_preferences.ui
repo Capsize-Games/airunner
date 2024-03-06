@@ -36,14 +36,14 @@
       <bool>false</bool>
      </property>
      <layout class="QGridLayout" name="gridLayout_8">
-      <item row="4" column="0">
+      <item row="5" column="0">
        <widget class="QGroupBox" name="groupBox_6">
         <property name="title">
          <string>Pitch</string>
         </property>
         <layout class="QGridLayout" name="gridLayout_2">
          <item row="0" column="0">
-          <widget class="SliderWidget" name="semantic_temperature" native="true">
+          <widget class="SliderWidget" name="pitch" native="true">
            <property name="slider_minimum" stdset="0">
             <number>1</number>
            </property>
@@ -60,53 +60,7 @@
             <bool>true</bool>
            </property>
            <property name="settings_property" stdset="0">
-            <string>tts_settings.spd.pitch</string>
-           </property>
-           <property name="slider_single_step" stdset="0">
-            <number>1</number>
-           </property>
-           <property name="slider_page_step" stdset="0">
-            <number>10</number>
-           </property>
-           <property name="spinbox_single_step" stdset="0">
-            <double>0.010000000000000</double>
-           </property>
-           <property name="spinbox_page_step" stdset="0">
-            <double>0.100000000000000</double>
-           </property>
-           <property name="slider_callback" stdset="0">
-            <string>handle_value_change</string>
-           </property>
-          </widget>
-         </item>
-        </layout>
-       </widget>
-      </item>
-      <item row="3" column="0">
-       <widget class="QGroupBox" name="groupBox_4">
-        <property name="title">
-         <string>Rate</string>
-        </property>
-        <layout class="QGridLayout" name="gridLayout_5">
-         <item row="0" column="0">
-          <widget class="SliderWidget" name="semantic_temperature_2" native="true">
-           <property name="slider_minimum" stdset="0">
-            <number>1</number>
-           </property>
-           <property name="slider_maximum" stdset="0">
-            <number>100</number>
-           </property>
-           <property name="spinbox_minimum" stdset="0">
-            <double>0.000000000000000</double>
-           </property>
-           <property name="spinbox_maximum" stdset="0">
-            <double>1.000000000000000</double>
-           </property>
-           <property name="display_as_float" stdset="0">
-            <bool>true</bool>
-           </property>
-           <property name="settings_property" stdset="0">
-            <string>tts_settings.spd.rate</string>
+            <string>pitch</string>
            </property>
            <property name="slider_single_step" stdset="0">
             <number>1</number>
@@ -163,14 +117,26 @@
         </layout>
        </widget>
       </item>
-      <item row="5" column="0">
+      <item row="0" column="0">
+       <widget class="QLabel" name="label_3">
+        <property name="font">
+         <font>
+          <pointsize>9</pointsize>
+         </font>
+        </property>
+        <property name="text">
+         <string>Robotic, fast, no VRAM usage</string>
+        </property>
+       </widget>
+      </item>
+      <item row="6" column="0">
        <widget class="QGroupBox" name="groupBox_5">
         <property name="title">
          <string>Volume</string>
         </property>
         <layout class="QGridLayout" name="gridLayout_6">
          <item row="0" column="0">
-          <widget class="SliderWidget" name="semantic_temperature_3" native="true">
+          <widget class="SliderWidget" name="volume" native="true">
            <property name="slider_minimum" stdset="0">
             <number>1</number>
            </property>
@@ -187,7 +153,7 @@
             <bool>true</bool>
            </property>
            <property name="settings_property" stdset="0">
-            <string>tts_settings.spd.volume</string>
+            <string>volume</string>
            </property>
            <property name="slider_single_step" stdset="0">
             <number>1</number>
@@ -209,7 +175,53 @@
         </layout>
        </widget>
       </item>
-      <item row="6" column="0">
+      <item row="4" column="0">
+       <widget class="QGroupBox" name="groupBox_4">
+        <property name="title">
+         <string>Rate</string>
+        </property>
+        <layout class="QGridLayout" name="gridLayout_5">
+         <item row="0" column="0">
+          <widget class="SliderWidget" name="rate" native="true">
+           <property name="slider_minimum" stdset="0">
+            <number>1</number>
+           </property>
+           <property name="slider_maximum" stdset="0">
+            <number>100</number>
+           </property>
+           <property name="spinbox_minimum" stdset="0">
+            <double>0.000000000000000</double>
+           </property>
+           <property name="spinbox_maximum" stdset="0">
+            <double>1.000000000000000</double>
+           </property>
+           <property name="display_as_float" stdset="0">
+            <bool>true</bool>
+           </property>
+           <property name="settings_property" stdset="0">
+            <string>rate</string>
+           </property>
+           <property name="slider_single_step" stdset="0">
+            <number>1</number>
+           </property>
+           <property name="slider_page_step" stdset="0">
+            <number>10</number>
+           </property>
+           <property name="spinbox_single_step" stdset="0">
+            <double>0.010000000000000</double>
+           </property>
+           <property name="spinbox_page_step" stdset="0">
+            <double>0.100000000000000</double>
+           </property>
+           <property name="slider_callback" stdset="0">
+            <string>handle_value_change</string>
+           </property>
+          </widget>
+         </item>
+        </layout>
+       </widget>
+      </item>
+      <item row="3" column="0">
        <widget class="QGroupBox" name="groupBox_3">
         <property name="title">
          <string>Language</string>
@@ -234,18 +246,6 @@
           </widget>
          </item>
         </layout>
-       </widget>
-      </item>
-      <item row="0" column="0">
-       <widget class="QLabel" name="label_3">
-        <property name="font">
-         <font>
-          <pointsize>9</pointsize>
-         </font>
-        </property>
-        <property name="text">
-         <string>Robotic, fast, no VRAM usage</string>
-        </property>
        </widget>
       </item>
      </layout>

@@ -1,6 +1,5 @@
 from airunner.settings import VOICES
 from airunner.widgets.base_widget import BaseWidget
-from airunner.widgets.tts.templates.spd_preferences_ui import Ui_spd_preferences
 from airunner.widgets.tts.templates.speecht5_preferences_ui import Ui_speecht5_preferences
 
 

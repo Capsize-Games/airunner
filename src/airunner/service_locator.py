@@ -1,13 +1,28 @@
-class ServiceLocator:
-    _services = {}
+import threading
 
-    @staticmethod
-    def register(service_name, service):
-        ServiceLocator._services[service_name] = service
+from airunner.signal_mediator import SingletonMeta
 
-    @staticmethod
-    def get(service_name):
-        if service_name in ServiceLocator._services:
-            return ServiceLocator._services[service_name]
-        else:
-            raise ValueError(f'Service not found: {service_name}')
+
+class ServiceLocator(metaclass=SingletonMeta):
+    _shared_state = {}
+    _lock = threading.Lock()
+
+    def __init__(self):
+        self.__dict__ = self._shared_state
+        if "_services" not in self.__dict__:
+            self.__dict__["_services"] = {}
+
+    @classmethod
+    def register(cls, service_name, service):
+        with cls._lock:
+            instance = cls()
+            instance._services[service_name] = service
+
+    @classmethod
+    def get(cls, service_name):
+        with cls._lock:
+            instance = cls()
+            if service_name in instance._services:
+                return instance._services[service_name]
+            else:
+                raise ValueError(f'Service not found: {service_name}')
