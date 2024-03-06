@@ -427,8 +427,8 @@
                           <rect>
                            <x>0</x>
                            <y>0</y>
-                           <width>371</width>
-                           <height>388</height>
+                           <width>84</width>
+                           <height>44</height>
                           </rect>
                          </property>
                          <layout class="QGridLayout" name="gridLayout_9">
@@ -595,19 +595,6 @@
                   </item>
                  </layout>
                 </widget>
-               </widget>
-               <widget class="QFrame" name="layer_frame">
-                <property name="frameShape">
-                 <enum>QFrame::StyledPanel</enum>
-                </property>
-                <property name="frameShadow">
-                 <enum>QFrame::Raised</enum>
-                </property>
-                <layout class="QGridLayout" name="gridLayout_2">
-                 <item row="0" column="0">
-                  <widget class="LayerContainerWidget" name="layer_widget" native="true"/>
-                 </item>
-                </layout>
                </widget>
               </widget>
              </item>
@@ -2442,12 +2429,6 @@
    <class>BrushContainerWidget</class>
    <extends>QWidget</extends>
    <header>airunner/widgets/brush/brush_container_widget</header>
-   <container>1</container>
-  </customwidget>
-  <customwidget>
-   <class>LayerContainerWidget</class>
-   <extends>QWidget</extends>
-   <header>airunner/widgets/layers/layer_container_widget</header>
    <container>1</container>
   </customwidget>
   <customwidget>

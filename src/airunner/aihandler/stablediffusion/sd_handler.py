@@ -50,7 +50,6 @@ from airunner.aihandler.mixins.scheduler_mixin import SchedulerMixin
 from airunner.settings import AIRUNNER_ENVIRONMENT
 from airunner.service_locator import ServiceLocator
 from airunner.settings import CONFIG_FILES
-from airunner.windows.main.layer_mixin import LayerMixin
 from airunner.windows.main.lora_mixin import LoraMixin as LoraDataMixin
 from airunner.windows.main.embedding_mixin import EmbeddingMixin as EmbeddingDataMixin
 from airunner.windows.main.pipeline_mixin import PipelineMixin
@@ -104,7 +103,6 @@ class SDHandler(
     CompelMixin,
     SchedulerMixin,
     # Data Mixins
-    LayerMixin,
     LoraDataMixin,
     EmbeddingDataMixin,
     PipelineMixin,
@@ -113,7 +111,6 @@ class SDHandler(
 ):
     def  __init__(self, *args, **kwargs):
         super().__init__(*args, **kwargs)
-        LayerMixin.__init__(self)
         LoraDataMixin.__init__(self)
         EmbeddingDataMixin.__init__(self)
         PipelineMixin.__init__(self)

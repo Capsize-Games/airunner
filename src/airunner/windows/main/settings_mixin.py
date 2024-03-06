@@ -395,7 +395,6 @@ class SettingsMixin:
                 enabled=False,
             ),
             saved_prompts=[],
-            layers=[],
             presets=[],
             lora=[],
             embeddings=[],
