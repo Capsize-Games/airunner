@@ -22,6 +22,41 @@ No web server to run, additional requirements to install or technical knowledge 
 
 ![Screenshot from 2023-06-30 10-43-49](https://github.com/Capsize-Games/airunner/assets/25737761/72e0dd26-53ca-4d5c-8f07-b6327a59b50c)
 
+## 🔧 Installation
+
+### [Download the official build on itch.io](https://capsizegames.itch.io/ai-runner)!
+
+This is the compiled version of AI Runner which you can use without installing any additional dependencies.
+
+
+### PyPi
+
+If you want to install AI Runner using pip, you can do so using the following command:
+
+```bash
+pip install airunner
+```
+
+### From source
+
+If you want to install AI Runner from source, you can do so using the following command:
+
+```bash
+git clone -b develop https://github.com/Capsize-Games/airunner.git
+cd airunner && pip install -e .
+```
+Run it with
+
+```bash
+cd src/airunner
+python main.py
+```
+
+[See the installation 
+wiki page for more information](https://github.com/Capsize-Games/airunner/wiki/Installation-instructions)
+
+---
+
 ## ⭐ Features
 
 Easily generate AI art using Stable Diffusion.
@@ -41,30 +76,17 @@ Easily generate AI art using Stable Diffusion.
 ### Requirements
 
 - Cuda capable GPU (2080s or higher recommended)
-- At least 10gb of RAM
+- At least 8gb of RAM
 - at least 5.8gb of disc space to install AI Runner
 
 The core AI Runner  program takes approximately 5.8gb of disc space to install, however the size of each model varies. 
-Typically models are between 2.5gb to 10gb in size. The more models you download, the more disc space you will need.
+Typically models are between 2.5gb to 8gb in size. The more models you download, the more disc space you will need.
 
 ---
 
 ## Using AI Runner
 
 [Instructions on how to use AI Runner can be found in the wiki](https://github.com/Capsize-Games/airunner/wiki/AI-Runner)
-
----
-
-## 🔧 Installation
-
-### [Download the official build on itch.io](https://capsizegames.itch.io/ai-runner)!
-
-This is the compiled version of AI Runner which you can use without installing any additional dependencies.
-
-For those interested in installing the development version, there are three options to choose from. 
-
-[See the installation 
-wiki page for more information](https://github.com/Capsize-Games/airunner/wiki/Installation-instructions)
 
 ---
 
