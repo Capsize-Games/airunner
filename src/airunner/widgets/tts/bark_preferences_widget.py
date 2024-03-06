@@ -1,24 +1,21 @@
 from airunner.settings import VOICES
 from airunner.widgets.base_widget import BaseWidget
-from airunner.widgets.tts.templates.tts_preferences_ui import Ui_tts_preferences
-#intfloat/multilingual-e5-large
+from airunner.widgets.tts.templates.bark_preferences_ui import Ui_bark_preferences
 
 
-class TTSPreferencesWidget(BaseWidget):
-    widget_class_ = Ui_tts_preferences
+class BarkPreferencesWidget(BaseWidget):
+    widget_class_ = Ui_bark_preferences
 
     def __init__(self, *args, **kwargs):
         super().__init__(*args, **kwargs)
         self.voices = VOICES
         self.initialize_form()
-    
+
     def initialize_form(self):
         elements = [
             self.ui.language_combobox,
             self.ui.gender_combobox,
             self.ui.voice_combobox,
-            self.ui.use_bark,
-            self.ui.enable_tts,
         ]
 
         for element in elements:
@@ -34,8 +31,6 @@ class TTSPreferencesWidget(BaseWidget):
         self.ui.gender_combobox.setCurrentText(gender)
         self.ui.voice_combobox.addItems(self.voices[language][gender])
         self.ui.voice_combobox.setCurrentText(voice)
-        self.ui.use_bark.setChecked(self.settings["tts_settings"]["use_bark"])
-        self.ui.enable_tts.setChecked(self.settings["tts_settings"]["enable_tts"])
 
         for element in elements:
             element.blockSignals(False)
@@ -56,22 +51,4 @@ class TTSPreferencesWidget(BaseWidget):
         settings = self.settings
         settings["tts_settings"]["gender"] = text
         settings["tts_settings"]["voice"] = self.ui.voice_combobox.currentText()
-        self.settings = settings
-
-    def use_bark_changed(self, val):
-        settings = self.settings
-        settings["tts_settings"]["use_bark"] = val
-        self.settings = settings
-
-    def enable_tts_changed(self, val):
-        settings = self.settings
-        settings["tts_settings"]["enable_tts"] = val
-        self.settings = settings
-
-    def model_changed(self, val):
-        settings = self.settings
-        settings["tts_settings"]["model"] = val
-        settings["tts_settings"]["use_bark"] = val == "Bark"
-        print(val)
-        print(settings["tts_settings"]["use_bark"])
         self.settings = settings
