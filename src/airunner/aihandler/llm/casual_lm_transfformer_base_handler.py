@@ -133,7 +133,7 @@ class CasualLMTransformerBaseHandler(TokenizerHandler):
             self.load_agent()
 
     def load_agent(self):
-        self.logger.info("Loading agent")
+        self.logger.debug("Loading agent")
         # query_engine_tool = QueryEngineTool(
         #     query_engine=self.query_engine,
         #     metadata=ToolMetadata(
@@ -141,14 +141,14 @@ class CasualLMTransformerBaseHandler(TokenizerHandler):
         #         description="Agent that can return help results about the application."
         #     )
         # )
-        self.logger.info("Loading local agent")
+        self.logger.debug("Loading local agent")
         self.tool_agent = LocalAgent(
             model=self.model,
             tokenizer=self.tokenizer,
             additional_tools=self.tools,
             restrict_tools_to_additional=self.restrict_tools_to_additional,
         )
-        self.logger.info("Loading chat agent")
+        self.logger.debug("Loading chat agent")
         self.chat_agent = AIRunnerAgent(
             model=self.model,
             tokenizer=self.tokenizer,
@@ -184,11 +184,11 @@ class CasualLMTransformerBaseHandler(TokenizerHandler):
         print("TODO: on_llm_process_stt_audio_signal")
 
     def load_streamer(self):
-        self.logger.info("Loading LLM text streamer")
+        self.logger.debug("Loading LLM text streamer")
         self.streamer = TextIteratorStreamer(self.tokenizer)
 
     def load_llm(self):
-        self.logger.info("Loading LLM")
+        self.logger.debug("Loading LLM")
         self.llm = hf_pipeline(
             task="text-generation",
             model=self.model,
@@ -199,7 +199,7 @@ class CasualLMTransformerBaseHandler(TokenizerHandler):
         )
 
     def do_generate(self):
-        self.logger.info("Generating response")
+        self.logger.debug("Generating response")
         # self.bot_mood = self.update_bot_mood()
         # self.user_evaluation = self.do_user_evaluation()
         #full_message = self.rag_stream()

@@ -1,6 +1,13 @@
 from PyQt6.QtCore import Qt, QSettings
+import traceback
+from PyQt6 import uic, QtCore
 
-from airunner.aihandler.settings import DEFAULT_BRUSH_PRIMARY_COLOR, DEFAULT_BRUSH_SECONDARY_COLOR, DEFAULT_SCHEDULER
+
+from airunner.settings import (
+    DEFAULT_BRUSH_PRIMARY_COLOR,
+    DEFAULT_BRUSH_SECONDARY_COLOR,
+    DEFAULT_SCHEDULER, ORGANIZATION, APPLICATION_NAME, DEFAULT_SHORTCUTS
+)
 from airunner.data.bootstrap.controlnet_bootstrap_data import controlnet_bootstrap_data
 from airunner.data.bootstrap.imagefilter_bootstrap_data import imagefilter_bootstrap_data
 from airunner.data.bootstrap.model_bootstrap_data import model_bootstrap_data
@@ -30,6 +37,7 @@ tts_settings_default = {
     'sentence_chunks': 1,
     'play_queue_buffer_length': 1,
     'enable_cpu_offload': True,
+    "model": "SpeechT5"
 }
 STABLEDIFFUSION_GENERATOR_SETTINGS = dict(
     prompt="",
@@ -46,7 +54,6 @@ STABLEDIFFUSION_GENERATOR_SETTINGS = dict(
     prompt_triggers="",
     strength=50,
     image_guidance_scale=150,
-    controlnet_conditioning_scale=90,
     n_samples=1,
     enable_controlnet=False,
     clip_skip=0,
@@ -75,7 +82,9 @@ DEFAULT_GENERATOR_SETTINGS = dict(
         mask_link_input_image=False,
         mask_use_imported_image=False,
         controlnet=Controlnet.CANNY.value,
-        guidance_scale=50,
+        conditioning_scale=100,
+        guidance_scale=750,
+        controlnet_image_base64=None
     ),
     section="txt2img",
     generator_name="stablediffusion",
@@ -98,7 +107,7 @@ for category in ImageCategory:
 
 class SettingsMixin:
     def __init__(self):
-        self.application_settings = QSettings("Capsize Games", "AI Runner")
+        self.application_settings = QSettings(ORGANIZATION, APPLICATION_NAME)
         self.register(SignalCode.APPLICATION_RESET_SETTINGS_SIGNAL, self.on_reset_settings_signal)
         ServiceLocator.register("get_settings", self.get_settings)
         ServiceLocator.register("set_settings", self.set_settings)
@@ -151,18 +160,7 @@ class SettingsMixin:
                     llm_category="casuallm",
                 ),
             },
-            shortcut_key_settings=dict(
-                llm_action_key=dict(
-                    text="@",
-                    key=Qt.Key.Key_At,
-                    description="Chat Action Key. Responsible for triggering the chat action menu.",
-                ),
-                generate_image_key=dict(
-                    text="F5",
-                    key=Qt.Key.Key_F5,
-                    description="Generate key. Responsible for triggering the generation of a Stable Diffusion image.",
-                )
-            ),
+            shortcut_key_settings=DEFAULT_SHORTCUTS,
             window_settings=dict(
                 content_splitter=None,
                 splitter=None,
@@ -188,6 +186,9 @@ class SettingsMixin:
                 tome_sd_ratio=600,
                 move_unused_model_to_cpu=False,
                 unload_unused_models=True,
+            ),
+            drawing_pad_settings=dict(
+                image=None
             ),
             grid_settings=dict(
                 cell_size=64,
@@ -393,23 +394,26 @@ class SettingsMixin:
         )
 
     def update_settings(self):
-        self.logger.info("Updating settings")
+        self.logger.debug("Updating settings")
         default_settings = self.default_settings
         current_settings = self.settings
-        self.recursive_update(current_settings, default_settings)
-        self.logger.info("Settings updated")
+        if current_settings is None:
+            current_settings = default_settings
+        else:
+            self.recursive_update(current_settings, default_settings)
+        self.logger.debug("Settings updated")
 
         # update llm_templates_version
         llm_templates_version = self.default_settings["llm_templates_version"]
         if llm_templates_version != current_settings["llm_templates_version"]:
-            self.logger.info("Updating LLM templates")
+            self.logger.debug("Updating LLM templates")
             current_settings["llm_templates"] = self.default_settings["llm_templates"]
             current_settings["llm_templates_version"] = llm_templates_version
 
         # update default_models_version
         default_models_version = self.default_settings["default_models_version"]
         if default_models_version != current_settings["default_models_version"]:
-            self.logger.info("Updating default models")
+            self.logger.debug("Updating default models")
             current_settings["ai_models"] = model_bootstrap_data
             current_settings["default_models_version"] = default_models_version
 
@@ -417,14 +421,14 @@ class SettingsMixin:
 
     def recursive_update(self, current, default):
         for k, v in default.items():
-            if k not in current or (not isinstance(current[k], type(v)) and v is not None):
-                self.logger.info(f"Updating {k} to {v}")
+            if k not in current or k not in current or (not isinstance(current[k], type(v)) and v is not None):
+                self.logger.debug(f"Updating {k} to {v}")
                 current[k] = v
             elif isinstance(v, dict):
                 self.recursive_update(current[k], v)
 
     def on_reset_settings_signal(self):
-        self.logger.info("Resetting settings")
+        self.logger.debug("Resetting settings")
         self.application_settings.clear()
         self.application_settings.sync()
         self.settings = self.settings
@@ -435,7 +439,6 @@ class SettingsMixin:
             settings = self.get_settings()
             if settings == {} or settings == "" or settings is None:
                 print("SETTINGS IS BLANK")
-                import traceback
                 traceback.print_stack()
             return settings
         except Exception as e:
@@ -461,11 +464,13 @@ class SettingsMixin:
             if settings != {} and settings != "" and settings != None:
                 return settings
         except TypeError as e:
-            print("Settings crashed, resetting to default")
+            print("Settings crashed")
+        except RuntimeError as e:
+            print("Settings crashed")
 
-        self.application_settings.setValue("settings", self.default_settings)
-        self.application_settings.sync()
-        return self.default_settings
+        # self.application_settings.setValue("settings", self.default_settings)
+        # self.application_settings.sync()
+        # return self.default_settings
 
     def save_settings(self):
         self.application_settings.sync()
