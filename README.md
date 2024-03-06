@@ -22,14 +22,83 @@ No web server to run, additional requirements to install or technical knowledge 
 
 ![Screenshot from 2023-06-30 10-43-49](https://github.com/Capsize-Games/airunner/assets/25737761/72e0dd26-53ca-4d5c-8f07-b6327a59b50c)
 
+## 🔧 Installation
+
+### Compiled
+
+[Download the official build on itch.io](https://capsizegames.itch.io/ai-runner)!
+
+This is the compiled version of AI Runner which you can use without 
+installing any additional dependencies.
+
+### PyPi and Source
+
+#### Linux
+
+```bash
+sudo apt update
+sudo apt install espeak ffmpeg xclip
+```
+
+#### Windows
+
+```bash
+pip install pypiwin32
+```
+
+#### PyPi
+
+If you want to install AI Runner using pip, you can do so using the following command:
+
+```bash
+pip install airunner
+```
+
+#### Source
+
+If you want to install AI Runner from source, you can do so using the following command:
+
+```bash
+git clone -b develop https://github.com/Capsize-Games/airunner.git
+cd airunner && pip install -e .
+```
+Run it with
+
+```bash
+cd src/airunner
+python main.py
+```
+
+[See the installation 
+wiki page for more information](https://github.com/Capsize-Games/airunner/wiki/Installation-instructions)
+
+---
+
 ## ⭐ Features
 
-Easily generate AI art using Stable Diffusion.
+AI Runner is a multi-modal AI application which allows you to run open-source 
+large language models and AI image generators on your own hardware.
 
+- Have conversations with with a chatbot using your voice
+- Text-to-speech
+- Speech-to-text
+- Vision-to-text
+- Text generation with large language models (LLMs)
+- Image generation using Stable Diffusion and Kandinsky
+- Draw and generate images in near real-time
+- Run multiple models at once
 - Easy setup - download and run. No need to install any requirements*
+- Run offline, locally on your own hardware!
 - Fast! Generate images in approximately 2 seconds using an RTX 2080s, 512x512 dimensions, 20 steps euler_a (approximately 10 seconds for 512x512 20 steps Euler A on 1080gtx). Also runs on CPU†
-- txt2img, img2img, inpaint, outpaint, pix2pix, depth2img, controlnet, txt2vid
-- Layers and drawing tools
+- text-to-image
+- image-to-image
+- inpaint and outpaint
+- pix2pix
+- depth2img
+- controlnet
+- LoRA
+- textual embeddings
+- Drawing tools
 - Image filters
 - Dark mode
 - Infinite scrolling canvas - use outpainting to create artwork at any size you wish or expand existing images.
@@ -40,54 +109,18 @@ Easily generate AI art using Stable Diffusion.
 
 ### Requirements
 
-- Cuda capable GPU (2080s or higher recommended)
-- At least 10gb of RAM
+- Cuda capable GPU (RTX 2080s or higher recommended)
+- At least 8gb of RAM
 - at least 5.8gb of disc space to install AI Runner
 
 The core AI Runner  program takes approximately 5.8gb of disc space to install, however the size of each model varies. 
-Typically models are between 2.5gb to 10gb in size. The more models you download, the more disc space you will need.
+Typically models are between 2.5gb to 8gb in size. The more models you download, the more disc space you will need.
 
 ---
 
 ## Using AI Runner
 
 [Instructions on how to use AI Runner can be found in the wiki](https://github.com/Capsize-Games/airunner/wiki/AI-Runner)
-
----
-
-## 🔧 Installation
-
-### Development version
-
-Requires Python3
-
-You can install from github by doing the following
-
-```bash
-git clone https://github.com/Capsize-Games/airunner.git
-cd airunner
-python -m venv venv
-source venv/bin/activate
-pip install -e .
-```
-
-Run with
-
-```bash
-cd src/airunner
-python main.py
-```
-
----
-
-### [Download the official build on itch.io](https://capsizegames.itch.io/ai-runner)!
-
-This is the compiled version of AI Runner which you can use without installing any additional dependencies.
-
-For those interested in installing the development version, there are three options to choose from. 
-
-[See the installation 
-wiki page for more information](https://github.com/Capsize-Games/airunner/wiki/Installation-instructions)
 
 ---
 
