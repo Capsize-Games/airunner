@@ -63,7 +63,7 @@ Easily generate AI art using Stable Diffusion.
 
 - Easy setup - download and run. No need to install any requirements*
 - Fast! Generate images in approximately 2 seconds using an RTX 2080s, 512x512 dimensions, 20 steps euler_a (approximately 10 seconds for 512x512 20 steps Euler A on 1080gtx). Also runs on CPU†
-- txt2img, img2img, inpaint, outpaint, pix2pix, depth2img, controlnet, txt2vid
+- txt2img, img2img, inpaint, outpaint, pix2pix, depth2img, controlnet
 - Layers and drawing tools
 - Image filters
 - Dark mode
