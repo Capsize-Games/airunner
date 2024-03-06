@@ -61,7 +61,9 @@ setup(
         "datasets==2.17.1",
         "sentence_transformers==2.4.0",
         "inflect==7.0.0",
-        "tiktoken==0.6.0"
+        "tiktoken==0.6.0",
+        "pycountry==23.12.11",
+        "pyttsx3==2.90"
     ],
     dependency_links=[]
 )
