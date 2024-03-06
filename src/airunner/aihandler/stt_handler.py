@@ -1,3 +1,4 @@
+import threading
 import torch
 import numpy as np
 from transformers import AutoProcessor, WhisperForConditionalGeneration, AutoFeatureExtractor
@@ -9,19 +10,33 @@ class STTHandler(BaseHandler):
     listening = False
 
     def on_process_audio(self, audio_data: bytes):
-        fs = 16000
-        # Convert the byte string to a float32 array
-        inputs = np.frombuffer(audio_data, dtype=np.int16)
-        inputs = inputs.astype(np.float32) / 32767.0
+        with self.lock:
+            fs = 16000
+            # Convert the byte string to a float32 array
+            inputs = np.frombuffer(audio_data, dtype=np.int16)
+            inputs = inputs.astype(np.float32) / 32767.0
 
-        # Extract features from the audio data
-        inputs = self.feature_extractor(inputs, sampling_rate=fs, return_tensors="pt")
-        inputs = inputs.to(self.model.device)
-        transcription = self.run(inputs)
-        self.emit(SignalCode.STT_AUDIO_PROCESSED, transcription)
+            # Convert numpy array to PyTorch tensor
+            inputs = torch.from_numpy(inputs)
+
+            # Extract features from the audio data
+            inputs = self.feature_extractor(inputs, sampling_rate=fs, return_tensors="pt")
+
+            # Convert inputs to BFloat16 if CUDA is available
+            if self.use_cuda:
+                inputs["input_features"] = inputs["input_features"].to(torch.bfloat16)
+
+            # Move inputs to device
+            inputs = inputs.to(self.model.device)
+
+            # Run the model
+            transcription = self.run(inputs)
+
+            self.emit(SignalCode.STT_AUDIO_PROCESSED, transcription)
 
     def __init__(self, *args, **kwargs):
         super().__init__(*args, **kwargs)
+        self.lock = threading.Lock()
         self.model = None
         self.model = None
         self.processor = None
@@ -107,11 +122,16 @@ class STTHandler(BaseHandler):
     def run(self, inputs):
         self.logger.debug("Running model")
         input_features = inputs.input_features
-        input_features = self.move_inputs_to_device(input_features)
-        generated_ids = self.model.generate(inputs=input_features)
+
+        # Generate ids
+        generated_ids = self.model.generate(input_features)
+
+        # Decode the generated ids
         transcription = self.processor.batch_decode(generated_ids, skip_special_tokens=True)[0]
         transcription = transcription.strip()
+
         if len(transcription) == 0 or len(transcription.split(" ")) == 1:
             return None
+
         self.emit(SignalCode.AUDIO_PROCESSOR_RESPONSE_SIGNAL, transcription)
         return transcription

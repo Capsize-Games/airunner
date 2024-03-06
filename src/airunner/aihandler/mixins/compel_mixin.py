@@ -28,9 +28,11 @@ class CompelMixin:
             self.prompt_embeds is not None and
             self.negative_prompt_embeds is not None
         ):
+            self.logger.debug("Prompt embeds already loaded, skipping load_prompt_embeds")
             return
         try:
             if self.compel_proc is None:
+                self.logger.debug("Loading Compel proc")
                 textual_inversion_manager = DiffusersTextualInversionManager(pipe)
                 self.compel_proc = Compel(
                     tokenizer=pipe.tokenizer,
@@ -47,18 +49,20 @@ class CompelMixin:
 
         # check if prompt is string
         if isinstance(prompt, str):
+            self.logger.debug("Loading prompt embeds from str")
             try:
                 prompt_embeds = self.compel_proc.build_conditioning_tensor(prompt)
             except RuntimeError as e:
-                self.logger.error("Error building prompt embeds")
+                self.logger.error("Error building prompt embeds from str")
                 self.logger.error(e)
 
             try:
                 negative_prompt_embeds = self.compel_proc.build_conditioning_tensor(negative_prompt)
             except RuntimeError as e:
-                self.logger.error("Error building negative prompt embeds")
+                self.logger.error("Error building negative prompt embeds from str")
                 self.logger.error(e)
         else:
+            self.logger.debug("Loading prompt embeds")
             try:
                 prompt_embeds = self.compel_proc(prompt)
             except RuntimeError as e:
