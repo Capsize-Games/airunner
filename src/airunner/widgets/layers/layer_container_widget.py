@@ -20,11 +20,17 @@ class LayerContainerWidget(BaseWidget):
         self.signal_handlers = {
             SignalCode.CANVAS_CLEAR: self.reset_layers,
             SignalCode.LAYER_OPACITY_CHANGED_SIGNAL: self.set_layer_opacity,
+            SignalCode.CANVAS_CLEAR: self.on_canvas_clear_signal,
         }
+
+    def on_canvas_clear_signal(self):
+        self.clear_layers()
+        self.add_layer()
 
     def reset_layers(self):
         self.clear_layers()
         self.show_layers()
+        self.update()
 
     # def initialize(self):
     #     current_layer = self.get_service(ServiceCode.CURRENT_LAYER)()
