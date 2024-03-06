@@ -184,13 +184,20 @@ class GeneratorForm(BaseWidget):
         self.emit(SignalCode.ENGINE_START_PROCESSING_QUEUE_SIGNAL)
 
     def on_generate_image_signal(self, message):
-        self.call_generate(
-            image=message["image"],
-            override_data=message["meta_data"]
-        )
+        self.start_progress_bar()
+        self.generate()
+
+    def do_generate_image(self):
+        time.sleep(0.1)
+        self.emit(SignalCode.DO_GENERATE_SIGNAL)
 
     def call_generate(self, image: Image = None, seed=None, override_data=None):
-        self.emit(SignalCode.DO_GENERATE_SIGNAL)
+        self.emit(SignalCode.LLM_UNLOAD_SIGNAL, {
+            'do_unload_model': self.settings["memory_settings"]["unload_unused_models"],
+            'move_unused_model_to_cpu': self.settings["memory_settings"]["move_unused_model_to_cpu"],
+            'dtype': self.settings["llm_generator_settings"]["dtype"],
+            'callback': lambda: self.do_generate_image()
+        })
         return
         override_data = {} if override_data is None else override_data
         generator_section = override_data.pop("generator_section", self.generator_section)

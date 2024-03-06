@@ -4,6 +4,7 @@ from PyQt6.QtCore import Qt
 from PyQt6 import uic, QtCore
 from PyQt6.QtWidgets import QSpacerItem, QSizePolicy
 
+from airunner.settings import DEFAULT_SHORTCUTS
 from airunner.widgets.base_widget import BaseWidget
 from airunner.widgets.keyboard_shortcuts.templates.keyboard_shortcuts_ui import Ui_keyboard_shortcuts
 
@@ -13,20 +14,7 @@ class KeyboardShortcutsWidget(BaseWidget):
 
     def __init__(self, **kwargs):
         super().__init__(**kwargs)
-        self.shortcuts = {
-            "Generate Image": dict(
-                text="F5",
-                key=Qt.Key.Key_F5,
-                modifiers=QtCore.Qt.KeyboardModifier.NoModifier,
-                description="Generate key. Responsible for triggering the generation of a Stable Diffusion image.",
-            ),
-            "Quit": dict(
-                text="Ctrl+Q",
-                key=Qt.Key.Key_Q,
-                modifiers=QtCore.Qt.KeyboardModifier.ControlModifier,
-                description="Quit key. Responsible for quitting the application.",
-            ),
-        }
+        self.shortcuts = DEFAULT_SHORTCUTS
         self.spacer = QSpacerItem(20, 40, QSizePolicy.Policy.Minimum, QSizePolicy.Policy.Expanding)
         self.initialize_ui()
 

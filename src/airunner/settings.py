@@ -1,6 +1,8 @@
 import os
 import logging
-from airunner.enums import GeneratorSection, StableDiffusionVersion, ImageGenerator, Scheduler
+from PyQt6.QtCore import Qt
+from PyQt6 import QtCore
+from airunner.enums import GeneratorSection, StableDiffusionVersion, ImageGenerator, Scheduler, SignalCode
 
 BASE_PATH = os.path.join(os.path.expanduser("~"), ".airunner")
 SQLITE_DB_NAME = "airunner.db"
@@ -426,3 +428,19 @@ NSFW_CONTENT_DETECTED_MESSAGE = "NSFW content detected"
 SLEEP_TIME_IN_MS = 50
 ORGANIZATION = "Capsize Games"
 APPLICATION_NAME = "AI Runner"
+DEFAULT_SHORTCUTS = {
+    "Generate Image": dict(
+        text="F5",
+        key=Qt.Key.Key_F5,
+        modifiers=QtCore.Qt.KeyboardModifier.NoModifier,
+        description="Generate key. Responsible for triggering the generation of a Stable Diffusion image.",
+        signal=SignalCode.SD_GENERATE_IMAGE_SIGNAL
+    ),
+    "Quit": dict(
+        text="Ctrl+Q",
+        key=Qt.Key.Key_Q,
+        modifiers=QtCore.Qt.KeyboardModifier.ControlModifier,
+        description="Quit key. Responsible for quitting the application.",
+        signal=SignalCode.QUIT_APPLICATION
+    ),
+}

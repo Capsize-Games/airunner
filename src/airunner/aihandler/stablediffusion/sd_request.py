@@ -115,12 +115,16 @@ class SDRequest(
     def load_generator_settings(self):
         self.generator_settings = GeneratorSettings(**self.settings["generator_settings"])
         self.action_has_safety_checker = self.generator_settings.section not in [GeneratorSection.DEPTH2IMG.value]
-        self.is_outpaint = self.generator_settings.section == GeneratorSection.OUTPAINT.value
-        self.is_txt2img = False #self.generator_settings.section == GeneratorSection.TXT2IMG.value and self.drawing_pad_image is None
-        self.is_upscale = self.generator_settings.section == GeneratorSection.UPSCALE.value
-        self.is_img2img = True #self.generator_settings.section == GeneratorSection.TXT2IMG.value and self.drawing_pad_image is not None
-        self.is_depth2img = self.generator_settings.section == GeneratorSection.DEPTH2IMG.value
-        self.is_pix2pix = self.generator_settings.section == GeneratorSection.PIX2PIX.value
+
+    def initialize_prompt_embeds(self, prompt_embeds, negative_prompt_embeds, args: dict):
+        self.prompt_embeds = prompt_embeds
+        self.negative_prompt_embeds = negative_prompt_embeds
+        args = self.load_prompt_embed_args(
+            prompt_embeds,
+            negative_prompt_embeds,
+            args
+        )
+        return args
 
     def __call__(
         self,
@@ -167,6 +171,15 @@ class SDRequest(
             prompt_embeds=prompt_embeds,
             negative_prompt_embeds=negative_prompt_embeds
         )
+
+        input_image = kwargs["image"] if "image" in kwargs else None
+        self.is_outpaint = self.generator_settings.section == GeneratorSection.OUTPAINT.value
+        self.is_txt2img = self.generator_settings.section == GeneratorSection.TXT2IMG.value and input_image is None
+        self.is_upscale = self.generator_settings.section == GeneratorSection.UPSCALE.value
+        self.is_img2img = self.generator_settings.section == GeneratorSection.TXT2IMG.value and input_image is not None
+        self.is_depth2img = self.generator_settings.section == GeneratorSection.DEPTH2IMG.value
+        self.is_pix2pix = self.generator_settings.section == GeneratorSection.PIX2PIX.value
+
         args = {
             "num_inference_steps": self.generator_settings.steps,
             "callback": callback,
@@ -244,7 +257,7 @@ class SDRequest(
             "width": width,
             "height": height,
             "clip_skip": clip_skip,
-            "input_image": input_image,
+            "image": input_image,
         }
 
         args = self.load_prompt_embed_args(

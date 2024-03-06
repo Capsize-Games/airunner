@@ -457,7 +457,7 @@ def load_extension(extension_dir):
 def clear_memory():
     """
     Clear the GPU ram.
-    """ 
+    """
     torch.cuda.empty_cache()
     torch.cuda.synchronize()
     gc.collect()

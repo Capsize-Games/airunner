@@ -39,6 +39,11 @@ from airunner.windows.video import VideoPopup
 from airunner.worker_manager import WorkerManager
 
 
+class History:
+    def add_event(self, *args, **kwargs):
+        print("TODO")
+
+
 class MainWindow(
     QMainWindow,
     MediatorMixin,
@@ -57,56 +62,24 @@ class MainWindow(
     line_color_changed_signal = pyqtSignal(str)
     canvas_color_changed_signal = pyqtSignal(str)
     snap_to_grid_changed_signal = pyqtSignal(bool)
-
-    token_signal = pyqtSignal(str)
-    api = None
-    input_event_manager = None
-    current_filter = None
-    tqdm_callback_triggered = False
-    is_saved = False
-    action = GeneratorSection.TXT2IMG.value
-    progress_bar_started = False
-    window = None
-    history = None
-    canvas = None
-    models = None
-    client = None
-    _version = None
-    _latest_version = None
-    data = None  # this is set in the generator_mixin image_handler function and used for deterministic generation
-    status_error_color = STATUS_ERROR_COLOR
-    status_normal_color_light = STATUS_NORMAL_COLOR_LIGHT
-    status_normal_color_dark = STATUS_NORMAL_COLOR_DARK
-    is_started = False
-    _themes = None
-    button_clicked_signal = pyqtSignal(dict)
-    status_widget = None
-    header_widget_spacer = None
-    deterministic_window = None
-
-    class History:
-        def add_event(self, *args, **kwargs):
-            print("TODO")
-    history = History()
-
     image_generated = pyqtSignal(bool)
     generator_tab_changed_signal = pyqtSignal()
     tab_section_changed_signal = pyqtSignal()
     load_image = pyqtSignal(str)
     load_image_object = pyqtSignal(object)
-
-    generator = None
-    _generator = None
-    _generator_settings = None
-    listening = False
     loaded = pyqtSignal()
     window_opened = pyqtSignal()
 
-    def handle_key_press(self, key):
-        super().keyPressEvent(key)
+    def keyPressEvent(self, event):
+        super().keyPressEvent(event)
+        self.handle_key_press(event.key)
 
-        if self.key_matches("generate_image_key", key.key()):
-            print("generate_image_key PRESSED")
+    def handle_key_press(self, key):
+        shortcut_key_settings = self.settings["shortcut_key_settings"]
+        for k, v in shortcut_key_settings.items():
+            print(k, v["key"].value == key())
+            if v["key"].value == key():
+                self.emit(v["signal"])
     
     def key_matches(self, key_name, keyboard_key):
         if not key_name in self.settings["shortcut_key_settings"]:
@@ -189,6 +162,37 @@ class MainWindow(
         self.prompt = None
         self.negative_prompt = None
         self.image_path = None
+        self.token_signal = pyqtSignal(str)
+        self.api = None
+        self.input_event_manager = None
+        self.current_filter = None
+        self.tqdm_callback_triggered = False
+        self.is_saved = False
+        self.action = GeneratorSection.TXT2IMG.value
+        self.progress_bar_started = False
+        self.window = None
+        self.history = None
+        self.canvas = None
+        self.models = None
+        self.client = None
+        self._version = None
+        self._latest_version = None
+        self.data = None  # this is set in the generator_mixin image_handler function and used for deterministic generation
+        self.status_error_color = STATUS_ERROR_COLOR
+        self.status_normal_color_light = STATUS_NORMAL_COLOR_LIGHT
+        self.status_normal_color_dark = STATUS_NORMAL_COLOR_DARK
+        self.is_started = False
+        self._themes = None
+        self.button_clicked_signal = pyqtSignal(dict)
+        self.status_widget = None
+        self.header_widget_spacer = None
+        self.deterministic_window = None
+        self.generator = None
+        self._generator = None
+        self._generator_settings = None
+        self.listening = False
+        self.history = History()
+
         self.splitter_names = [
             "content_splitter",
             "splitter",
@@ -218,6 +222,8 @@ class MainWindow(
         self.ui.enable_controlnet.blockSignals(True)
         self.ui.enable_controlnet.setChecked(self.settings["generator_settings"]["enable_controlnet"])
         self.ui.enable_controlnet.blockSignals(False)
+
+
 
     def register_services(self):
         self.logger.debug("Registering services")

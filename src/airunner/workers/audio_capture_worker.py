@@ -46,7 +46,7 @@ class AudioCaptureWorker(Worker):
         is_receiving_input = False
         emit = self.emit
         while running:
-            while self.listening and running:
+            while self.listening and running and self.stream:
                 try:
                     chunk, overflowed = self.stream.read(int(chunk_duration * fs))
                 except sd.PortAudioError as e:
