@@ -20,7 +20,7 @@ class BarkPreferencesWidget(BaseWidget):
 
     def callback(self, prop, val):
         settings = self.settings
-        settings["tts_settings"]["bark"]["spd"][prop] = val
+        settings["tts_settings"]["bark"]["espeak"][prop] = val
         self.settings = settings
 
     def initialize_form(self):

@@ -21,12 +21,12 @@ class TTSPreferencesWidget(BaseWidget):
         tts_model = self.settings["tts_settings"]["model"]
         self.ui.enable_tts.setChecked(self.settings["tts_settings"]["enable_tts"])
         self.ui.model_combobox.clear()
-        models = ["Bark", "SpeechT5", "SPD"]
+        models = ["Bark", "SpeechT5", "Espeak"]
         self.ui.model_combobox.addItems(models)
         self.ui.model_combobox.setCurrentText(tts_model)
         self.ui.bark_preferences.setVisible(tts_model == "Bark")
         self.ui.speecht5_preferences.setVisible(tts_model == "SpeechT5")
-        self.ui.spd_preferences.setVisible(tts_model == "SPD")
+        self.ui.espeak_preferences.setVisible(tts_model == "Espeak")
 
         for element in elements:
             element.blockSignals(False)

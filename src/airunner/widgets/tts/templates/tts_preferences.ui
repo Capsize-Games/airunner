@@ -44,7 +44,7 @@
     <widget class="BarkPreferencesWidget" name="bark_preferences" native="true"/>
    </item>
    <item row="4" column="0">
-    <widget class="SpdPreferencesWidget" name="spd_preferences" native="true"/>
+    <widget class="ESpeakPreferencesWidget" name="espeak_preferences" native="true"/>
    </item>
    <item row="5" column="0">
     <widget class="SpeechT5PreferencesWidget" name="speecht5_preferences" native="true"/>
@@ -72,9 +72,9 @@
    <container>1</container>
   </customwidget>
   <customwidget>
-   <class>SpdPreferencesWidget</class>
+   <class>ESpeakPreferencesWidget</class>
    <extends>QWidget</extends>
-   <header>airunner/widgets/tts/spd_preferences_widget</header>
+   <header>airunner/widgets/tts/espeak_preferences_widget</header>
    <container>1</container>
   </customwidget>
   <customwidget>
