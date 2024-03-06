@@ -4,6 +4,7 @@ import inflect
 import re
 import time
 
+import pyttsx3
 import torch
 from queue import Queue
 from transformers import SpeechT5Processor, SpeechT5ForTextToSpeech, SpeechT5HifiGan, BarkModel, BarkProcessor, \
@@ -145,6 +146,7 @@ class TTSHandler(BaseHandler):
         self.speaker_embeddings = None
         self.sentences = []
         self.tts_enabled = self.settings["tts_enabled"]
+        self.engine = None
 
         self.logger.debug("Loading")
         self.register(
@@ -195,9 +197,6 @@ class TTSHandler(BaseHandler):
                 self.speaker_embeddings = self.speaker_embeddings.to(self.device)
 
     def initialize(self):
-        if self.use_spd:
-            self.logger.debug("Using SPD, skipping initialization")
-            return
         target_model = "bark" if self.use_bark else "t5"
         if target_model != self.current_model:
             self.unload()
@@ -256,7 +255,8 @@ class TTSHandler(BaseHandler):
     def run(self):
         self.logger.debug("Running")
         if self.use_spd:
-            pass
+            if self.engine is None:
+                self.engine = pyttsx3.init()
         else:
             self.initialize()
             self.process_sentences()
@@ -490,8 +490,29 @@ class TTSHandler(BaseHandler):
                 ```
                 """
                 message = message.replace('"', "'")
-                bash_command = f'spd-say -w "{message}"'
-                os.system(bash_command)
+                settings = self.settings["tts_settings"]["spd"]
+                rate = settings["rate"]
+                pitch = settings["pitch"]
+                volume = settings["volume"]
+                voice = settings["voice"]
+                language = settings["language"]
+                gender = settings["gender"]
+
+                self.engine.setProperty('voice', 'english+f1')
+                self.engine.say(message)
+                self.engine.runAndWait()
+
+                # bash_command = (
+                #     f'spd-say -w "{message}" '
+                #     f'-r {rate} '
+                #     f'-p {pitch} '
+                #     f'-i {volume} '
+                #     f'-l {language} '
+                #     f'-y {voice} '
+                #     f'-t {voice} '
+                # )
+                # print(bash_command)
+                # os.system(bash_command)
         return response
 
     def generate_with_bark(self, text):
@@ -518,7 +539,7 @@ class TTSHandler(BaseHandler):
         return response
 
     def generate_with_t5(self, text):
-        self.logger.debug("Generating TTS with SpeechT5..." + str(self.settings["tts_settings"]["use_bark"]))
+        self.logger.debug("Generating TTS")
         text = text.replace("\n", " ").strip()
         text = text.replace("\n", " ").strip()
         text = self.replace_numbers_with_words(text)

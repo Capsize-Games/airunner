@@ -223,7 +223,7 @@ class SDRequest(
     ) -> dict:
         extra_options = {} if not extra_options else extra_options
 
-        if self.generator_settings.enable_controlnet:
+        if self.generator_settings.enable_controlnet and controlnet_image:
             extra_options["controlnet_image"] = controlnet_image
 
         self.active_rect = active_rect
@@ -307,9 +307,10 @@ class SDRequest(
                 "height": self.generator_settings.height,
             }}
 
-        if self.generator_settings.enable_controlnet:
+        controlnet_image = self.controlnet_image
+        if self.generator_settings.enable_controlnet and controlnet_image:
             extra_args = {**extra_args, **{
-                "control_image": self.controlnet_image,
+                "control_image": controlnet_image,
                 "guess_mode": None,
                 "control_guidance_start": 0.0,
                 "control_guidance_end": 1.0,
@@ -339,6 +340,39 @@ class SDRequest(
             args["prompt"] = self.generator_settings.prompt
             args["negative_prompt"] = self.generator_settings.negative_prompt
         return args
+
+    def disable_controlnet(self, data: dict) -> dict:
+        """
+        Remove controlnet settings from data
+        :param data:
+        :return:
+        """
+        for key in [
+            "control_image",
+            "guess_mode",
+            "control_guidance_start",
+            "control_guidance_end",
+            "guidance_scale",
+            "controlnet_conditioning_scale",
+            "controlnet",
+        ]:
+            if key in data:
+                del data[key]
+        return data
+
+    def disable_img2img(self, data: dict) -> dict:
+        """
+        Remove img2img settings from data
+        :param data:
+        :return:
+        """
+        for key in [
+            "strength",
+            "image"
+        ]:
+            if key in data:
+                del data[key]
+        return data
 
 
 class UpscaleRequest(SDRequest):
