@@ -18,12 +18,6 @@ from airunner.settings import DEFAULT_CHATBOT
 from airunner.utils import default_hf_cache_dir
 
 tts_settings_default = {
-    'language': "English",
-    'voice': "v2/en_speaker_6",
-    'gender': "Male",
-    'fine_temperature': 80,
-    'coarse_temperature': 40,
-    'semantic_temperature': 80,
     'use_bark': False,
     'enable_tts': True,
     'use_cuda': True,
@@ -36,7 +30,9 @@ tts_settings_default = {
     'enable_cpu_offload': True,
     "model": "SpeechT5",
     "spd": dict(
+        gender="male",
         voice="male1",
+        language="en-US",
         rate=0,
         pitch=0,
         volume=0,

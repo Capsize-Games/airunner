@@ -445,7 +445,14 @@ DEFAULT_SHORTCUTS = {
     ),
 }
 SPD_SETTINGS = dict(
-    voices=["male1", "male2", "male3", "female1", "female2", "female3", "child_male", "child_female"],
+    voices=dict(
+        Male=[
+            "m1", "m2", "m3",
+        ],
+        Female=[
+            "f1", "f2", "f3",
+        ],
+    ),
     rate=dict(
         min=-100,
         max=100,

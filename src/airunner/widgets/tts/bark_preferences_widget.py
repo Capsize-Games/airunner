@@ -11,6 +11,18 @@ class BarkPreferencesWidget(BaseWidget):
         self.voices = VOICES
         self.initialize_form()
 
+        for k in [
+            "fine_temperature",
+            "coarse_temperature",
+            "semantic_temperature",
+        ]:
+            getattr(self.ui, k).settings_loaded(self.callback)
+
+    def callback(self, prop, val):
+        settings = self.settings
+        settings["tts_settings"]["bark"]["spd"][prop] = val
+        self.settings = settings
+
     def initialize_form(self):
         elements = [
             self.ui.language_combobox,
@@ -21,9 +33,9 @@ class BarkPreferencesWidget(BaseWidget):
         for element in elements:
             element.blockSignals(True)
 
-        language = self.settings["tts_settings"]["language"]
-        gender = self.settings["tts_settings"]["gender"]
-        voice = self.settings["tts_settings"]["voice"]
+        language = self.settings["tts_settings"]["bark"]["language"]
+        gender = self.settings["tts_settings"]["bark"]["gender"]
+        voice = self.settings["tts_settings"]["bark"]["voice"]
 
         self.ui.voice_combobox.clear()
         self.ui.language_combobox.addItems(self.voices.keys())
@@ -37,18 +49,18 @@ class BarkPreferencesWidget(BaseWidget):
 
     def language_changed(self, text):
         settings = self.settings
-        settings["tts_settings"]["language"] = text
-        settings["tts_settings"]["gender"] = self.ui.gender_combobox.currentText()
-        settings["tts_settings"]["voice"] = self.ui.voice_combobox.currentText()
+        settings["tts_settings"]["bark"]["language"] = text
+        settings["tts_settings"]["bark"]["gender"] = self.ui.gender_combobox.currentText()
+        settings["tts_settings"]["bark"]["voice"] = self.ui.voice_combobox.currentText()
         self.settings = settings
 
     def voice_changed(self, text):
         settings = self.settings
-        settings["tts_settings"]["voice"] = text
+        settings["tts_settings"]["bark"]["voice"] = text
         self.settings = settings
 
     def gender_changed(self, text):
         settings = self.settings
-        settings["tts_settings"]["gender"] = text
-        settings["tts_settings"]["voice"] = self.ui.voice_combobox.currentText()
+        settings["tts_settings"]["bark"]["gender"] = text
+        settings["tts_settings"]["bark"]["voice"] = self.ui.voice_combobox.currentText()
         self.settings = settings
