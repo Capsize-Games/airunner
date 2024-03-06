@@ -1,12 +1,12 @@
-import random
+import time
 
 from PIL import Image
 from PyQt6.QtCore import pyqtSignal, QRect
 from PyQt6.QtGui import QImage
+from PyQt6.QtWidgets import QApplication
 
 from airunner.aihandler.stablediffusion.sd_request import SDRequest
-from airunner.enums import SignalCode, ServiceCode, GeneratorSection, ImageCategory, Controlnet
-from airunner.aihandler.settings import MAX_SEED
+from airunner.enums import SignalCode, ServiceCode, GeneratorSection, ImageCategory
 from airunner.settings import PHOTO_REALISTIC_NEGATIVE_PROMPT, ILLUSTRATION_NEGATIVE_PROMPT
 from airunner.widgets.base_widget import BaseWidget
 from airunner.widgets.generator_form.templates.generatorform_ui import Ui_generator_form
@@ -39,8 +39,31 @@ class GeneratorForm(BaseWidget):
             SignalCode.SD_PROGRESS_SIGNAL: self.on_progress_signal,
             SignalCode.GENERATOR_FORM_UPDATE_VALUES_SIGNAL: self.set_form_values,
             SignalCode.LLM_IMAGE_PROMPT_GENERATED_SIGNAL: self.on_llm_image_prompt_generated_signal,
-            SignalCode.GENERATE_IMAGE_FROM_IMAGE_SIGNAL: self.generate_image_from_image
+            SignalCode.GENERATE_IMAGE_FROM_IMAGE_SIGNAL: self.handle_generate_image_from_image,
+            SignalCode.DO_GENERATE_IMAGE_FROM_IMAGE_SIGNAL: self.do_generate_image_from_image_signal_handler,
+            SignalCode.SD_LOAD_PROMPT_SIGNAL: self.on_load_saved_stablediffuion_prompt_signal
         }
+
+    def on_load_saved_stablediffuion_prompt_signal(self, index):
+        try:
+            saved_prompt = self.settings["saved_prompts"][index]
+        except KeyError:
+            self.logger.error(f"Unable to load prompt at index {index}")
+            saved_prompt = None
+
+        if saved_prompt:
+            settings = self.settings
+            settings["generator_settings"]["prompt"] = saved_prompt["prompt"]
+            settings["generator_settings"]["negative_prompt"] = saved_prompt["negative_prompt"]
+            self.settings = settings
+            self.set_form_values()
+
+    def handle_generate_image_from_image(self, image):
+        pass
+
+    def do_generate_image_from_image_signal_handler(self, res):
+        print("CALL GENERATE")
+        self.call_generate(override_data=res)
 
     @property
     def is_txt2img(self):
@@ -79,10 +102,6 @@ class GeneratorForm(BaseWidget):
         return self.settings["current_image_generator"]
 
     @property
-    def random_seed(self):
-        return self.settings["generator_settings"]["random_seed"]
-
-    @property
     def seed(self):
         return self.settings["generator_settings"]["seed"]
 
@@ -91,10 +110,6 @@ class GeneratorForm(BaseWidget):
         settings = self.settings
         settings["generator_settings"]["seed"] = val
         self.settings = settings
-
-    @property
-    def image_scale(self):
-        return self.settings["generator_settings"]["image_guidance_scale"]
 
     @property
     def active_rect(self):
@@ -159,34 +174,6 @@ class GeneratorForm(BaseWidget):
     End Slot functions
     """
 
-    def generate_image_from_image(self, image: QImage):
-        image = Image.fromqpixmap(image)
-
-        # crop the image to active_grid_area_rect
-        image = image.crop((
-            self.active_rect.x(),
-            self.active_rect.y(),
-            self.active_rect.x() + self.active_rect.width(),
-            self.active_rect.y() + self.active_rect.height()
-        ))
-
-        print(
-            "controlnet_conditioning_scale",
-            self.settings["generator_settings"]["controlnet_conditioning_scale"] / 100.0,
-            "strength",
-            self.settings["generator_settings"]["strength"] / 100.0
-        )
-
-        self.call_generate(
-            override_data=dict(
-                input_image=image,
-                enable_controlnet=True,
-                controlnet=Controlnet.CANNY.value,
-                generator_section="txt2img",
-                empty_queue=True
-            )
-        )
-
     def generate(self, image=None, seed=None):
         if seed is None:
             seed = self.settings["generator_settings"]["seed"]
@@ -197,12 +184,21 @@ class GeneratorForm(BaseWidget):
         self.emit(SignalCode.ENGINE_START_PROCESSING_QUEUE_SIGNAL)
 
     def on_generate_image_signal(self, message):
-        self.call_generate(
-            image=message["image"],
-            override_data=message["meta_data"]
-        )
+        self.start_progress_bar()
+        self.generate()
+
+    def do_generate_image(self):
+        time.sleep(0.1)
+        self.emit(SignalCode.DO_GENERATE_SIGNAL)
 
     def call_generate(self, image: Image = None, seed=None, override_data=None):
+        self.emit(SignalCode.LLM_UNLOAD_SIGNAL, {
+            'do_unload_model': self.settings["memory_settings"]["unload_unused_models"],
+            'move_unused_model_to_cpu': self.settings["memory_settings"]["move_unused_model_to_cpu"],
+            'dtype': self.settings["llm_generator_settings"]["dtype"],
+            'callback': lambda: self.do_generate_image()
+        })
+        return
         override_data = {} if override_data is None else override_data
         generator_section = override_data.pop("generator_section", self.generator_section)
 
@@ -228,7 +224,10 @@ class GeneratorForm(BaseWidget):
 
             if image is None:
                 if self.is_txt2img:
-                    return self.do_generate(seed=seed, override_data=override_data)
+                    return self.do_generate(
+                        seed=seed,
+                        override_data=override_data
+                    )
                 # Create a transparent image the size of  active_grid_area_rect
                 width = self.settings["working_width"]
                 height = self.settings["working_height"]
@@ -287,7 +286,12 @@ class GeneratorForm(BaseWidget):
                 "mask": mask,
                 "image": image,
                 "original_image": original_image,
-                "location": QRect(0, 0, self.settings["working_width"], self.settings["working_height"])
+                "location": QRect(
+                    0,
+                    0,
+                    self.settings["working_width"],
+                    self.settings["working_height"]
+                )
             }, seed=seed, override_data=override_data)
         elif self.generator_section == "vid2vid":
             images = self.prep_video()
@@ -295,7 +299,10 @@ class GeneratorForm(BaseWidget):
                 "images": images
             }, seed=seed)
         else:
-            self.do_generate(seed=seed, override_data=override_data)
+            self.do_generate(
+                seed=seed,
+                override_data=override_data
+            )
 
     def prep_video(self):
         return []
@@ -322,13 +329,7 @@ class GeneratorForm(BaseWidget):
         if not extra_options:
             extra_options = {}
 
-        # TODO: fix controlnet
-        # if self.enable_controlnet:
-        #     extra_options["controlnet_image"] = self.ui.controlnet_settings.current_controlnet_image
-
-        self.set_seed(seed=seed)
-
-        self.logger.info(f"Attempting to generate image")
+        self.logger.debug(f"Attempting to generate image")
 
         action = self.generator_section
         model_data = self.settings["generator_settings"]
@@ -339,6 +340,7 @@ class GeneratorForm(BaseWidget):
         model = self.get_service("ai_model_by_name")(name)
         prompt = override_data.get("prompt", self.settings["generator_settings"]["prompt"])
         negative_prompt = override_data.get("negative_prompt", self.settings["generator_settings"]["negative_prompt"])
+        sd_mode = override_data.get("sd_mode", None)
         model_data = {
             "name": model_data.get("name", model["name"]),
             "path": model_data.get("path", model["path"]),
@@ -349,25 +351,9 @@ class GeneratorForm(BaseWidget):
             "enabled": model_data.get("enabled", model["enabled"]),
             "default": model_data.get("default", model["is_default"])
         }
-        self.emit(
-            SignalCode.SD_IMAGE_GENERATE_REQUEST_SIGNAL,
-            SDRequest()(
-                model=model,
-                model_data=model_data,
-                settings=self.settings,
-                override_data=override_data,
-                prompt=prompt,
-                negative_prompt=negative_prompt,
-                action=action,
-                active_rect=[] if not self.active_rect else self.active_rect,
-                generator_section=self.generator_section,
-                enable_controlnet=self.enable_controlnet,
-                controlnet_image=self.controlnet_image,
-                memory_options=self.get_memory_options(),
-                extra_options=extra_options,
-            )
-        )
+        strength = override_data.get("strength", 0.5)
 
+        # TODO: emit mandual generate request here
 
     def get_memory_options(self):
         return {
@@ -385,26 +371,10 @@ class GeneratorForm(BaseWidget):
             "tome_sd_ratio": self.settings["memory_settings"]["tome_sd_ratio"],
         }
 
-    def set_seed(self, seed=None):
-        """
-        Set the seed - either set to random, deterministic or keep current, then display the seed in the UI.
-        :return:
-        """
-        self.set_primary_seed(seed)
-
-    def set_primary_seed(self, seed=None):
-        if self.deterministic_data:
-            self.seed = self.deterministic_data["options"][f"seed"]
-        elif self.random_seed:
-            self.seed = random.randint(0, MAX_SEED)
-        elif seed is not None:
-            self.seed = seed
-
     def handle_progress_bar(self, message):
         step = message.get("step")
         total = message.get("total")
-        action = message.get("action")
-        tab_section = message.get("tab_section")
+        image = message.get("image")
 
         if step == 0 and total == 0:
             current = 0
@@ -413,15 +383,16 @@ class GeneratorForm(BaseWidget):
                 current = (step / total)
             except ZeroDivisionError:
                 current = 0
-        self.set_progress_bar_value(tab_section, action, int(current * 100))
+        self.set_progress_bar_value(int(current * 100))
     
-    def set_progress_bar_value(self, tab_section, section, value):
+    def set_progress_bar_value(self, value):
         progressbar = self.ui.progress_bar
         if not progressbar:
             return
         if progressbar.maximum() == 0:
             progressbar.setRange(0, 100)
         progressbar.setValue(value)
+        QApplication.processEvents()
 
     def start_progress_bar(self):
         self.ui.progress_bar.setRange(0, 0)

@@ -8,7 +8,7 @@ class EngineResponseWorker(Worker):
         self.register(SignalCode.ENGINE_DO_RESPONSE_SIGNAL, self.on_engine_do_response_signal)
     
     def on_engine_do_response_signal(self, request):
-        self.logger.info("Adding to queue")
+        self.logger.debug("Adding to queue")
         self.add_to_queue(request)
 
     def handle_message(self, request):

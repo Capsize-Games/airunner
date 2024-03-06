@@ -82,6 +82,7 @@ class SignalCode(Enum):
     CANVAS_LOAD_IMAGE_FROM_PATH_SIGNAL = "load_image_from_path_signal"
     CANVAS_DO_DRAW_SIGNAL = "canvas_do_draw_signal"
     SCENE_DO_DRAW_SIGNAL = "scene_do_draw_signal"
+    SCENE_DO_UPDATE_IMAGE_SIGNAL = "scene_do_update_image_signal"
     CANVAS_CLEAR_LINES_SIGNAL = "canvas_clear_lines_signal"
     CANVAS_RESIZE_WORKER_RESPONSE_SIGNAL = "CanvasResizeWorker_response_signal"
     CANVAS_HANDLE_LAYER_CLICK_SIGNAL = "canvas_handle_layer_click_signal"
@@ -121,6 +122,7 @@ class SignalCode(Enum):
 
     GENERATOR_FORM_UPDATE_VALUES_SIGNAL = "generator_form_update_values"
     GENERATE_IMAGE_FROM_IMAGE_SIGNAL = "generate_image_from_image"
+    DO_GENERATE_IMAGE_FROM_IMAGE_SIGNAL = "do_generate_image_from_image"
 
     LAYER_SWITCH_SIGNAL = "switch_layer_signal"
     LAYER_ADD_SIGNAL = "add_layer_signal"
@@ -181,6 +183,7 @@ class SignalCode(Enum):
     SD_GENERATE_IMAGE_SIGNAL = "generate_image_signal"
     SD_IMAGE_GENERATED_SIGNAL = "image_generated_signal"
     SD_NSFW_CONTENT_DETECTED_SIGNAL = "nsfw_content_detected_signal"
+    HANDLE_LATENTS_SIGNAL = "handle_latents_signal"
 
     STT_HEAR_SIGNAL = "hear_signal"
     STT_AUDIO_PROCESSED = "stt_audio_processed_signal"
@@ -209,6 +212,12 @@ class SignalCode(Enum):
     ACTIVE_GRID_SETTINGS_CHANGED_SIGNAL = "active_grid_settings_changed_signal"
 
     QUIT_APPLICATION = "quit"
+
+    START_AUTO_IMAGE_GENERATION_SIGNAL = "start_auto_image_generation_signal"
+    STOP_AUTO_IMAGE_GENERATION_SIGNAL = "stop_auto_image_generation_signal"
+
+    LINES_UPDATED_SIGNAL = "lines_updated_signal"
+    DO_GENERATE_SIGNAL = "do_generate_signal"
 
 
 class EngineResponseCode(Enum):
@@ -239,6 +248,7 @@ class Scheduler(Enum):
     EULER = "Euler"
     LMS = "LMS"
     HEUN = "Heun"
+    DPM = "DPM"
     DPM2 = "DPM2"
     DPM_PP_2M = "DPM++ 2M"
     DPM2_K = "DPM2 Karras"
@@ -380,3 +390,9 @@ class CanvasType(Enum):
 
 class Controlnet(Enum):
     CANNY = "canny"
+
+
+class SDMode(Enum):
+    STANDARD = "standard"
+    DRAWING = "drawing"
+    FAST_GENERATE = "fast_generate"

@@ -2,6 +2,7 @@ import base64
 import io
 import math
 import os
+import random
 import sys
 import subprocess
 import urllib.request
@@ -9,6 +10,8 @@ import datetime
 import gc
 import threading
 import cProfile
+
+import PIL
 import torch
 from PIL import Image
 from PIL import PngImagePlugin
@@ -17,6 +20,7 @@ from PyQt6.QtGui import QPixmap, QImage
 from PyQt6.QtWidgets import QFileDialog, QApplication, QMainWindow
 
 from airunner.service_locator import ServiceLocator
+from airunner.settings import MAX_SEED
 
 SESSION = None
 WORKERS = []
@@ -278,7 +282,6 @@ def prepare_metadata(data, index=0):
     metadata.add_text("negative_prompt", negative_prompt)
     
     metadata.add_text("strength", str(options.get("strength", 100)))
-    metadata.add_text("image_guidance_scale", str(options.get("image_guidance_scale", 100)))
     metadata.add_text("scale", str(options.get("scale", 7)))
     metadata.add_text("seed", str(options.get("seed", 0)))
     metadata.add_text("steps", str(options.get("steps", 20)))
@@ -454,7 +457,7 @@ def load_extension(extension_dir):
 def clear_memory():
     """
     Clear the GPU ram.
-    """ 
+    """
     torch.cuda.empty_cache()
     torch.cuda.synchronize()
     gc.collect()
@@ -537,6 +540,23 @@ def snap_to_grid(x: int, y: int, use_floor: bool = True):
 
 
 def convert_base64_to_image(base_64_image) -> Image:
+    if base_64_image is None:
+        return base_64_image
     decoded = base64.b64decode(base_64_image)
     bytes_ = io.BytesIO(decoded)
-    return Image.open(bytes_)
+    try:
+        return Image.open(bytes_)
+    except PIL.UnidentifiedImageError:
+        return base_64_image
+
+
+def convert_image_to_base64(image: Image) -> str:
+    img_byte_arr = io.BytesIO()
+    image.save(img_byte_arr, format='PNG')
+    img_byte_arr = img_byte_arr.getvalue()
+    image_base64 = base64.encodebytes(img_byte_arr).decode('ascii')
+    return image_base64
+
+
+def random_seed():
+    return random.randint(0, MAX_SEED)
