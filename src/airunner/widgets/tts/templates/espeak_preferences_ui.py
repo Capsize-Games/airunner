@@ -85,10 +85,10 @@ class Ui_espeak_preferences(object):
         self.gridLayout_5 = QtWidgets.QGridLayout(self.groupBox_4)
         self.gridLayout_5.setObjectName("gridLayout_5")
         self.rate = SliderWidget(parent=self.groupBox_4)
-        self.rate.setProperty("slider_minimum", 1)
-        self.rate.setProperty("slider_maximum", 100)
+        self.rate.setProperty("slider_minimum", 0)
+        self.rate.setProperty("slider_maximum", 300)
         self.rate.setProperty("spinbox_minimum", 0.0)
-        self.rate.setProperty("spinbox_maximum", 1.0)
+        self.rate.setProperty("spinbox_maximum", 3.0)
         self.rate.setProperty("display_as_float", True)
         self.rate.setProperty("slider_single_step", 1)
         self.rate.setProperty("slider_page_step", 10)
@@ -123,7 +123,7 @@ class Ui_espeak_preferences(object):
     def retranslateUi(self, espeak_preferences):
         _translate = QtCore.QCoreApplication.translate
         espeak_preferences.setWindowTitle(_translate("espeak_preferences", "Form"))
-        self.use_bark.setTitle(_translate("espeak_preferences", "SPD"))
+        self.use_bark.setTitle(_translate("espeak_preferences", "Espeak"))
         self.groupBox_6.setTitle(_translate("espeak_preferences", "Pitch"))
         self.pitch.setProperty("settings_property", _translate("espeak_preferences", "pitch"))
         self.pitch.setProperty("slider_callback", _translate("espeak_preferences", "handle_value_change"))
