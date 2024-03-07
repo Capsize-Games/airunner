@@ -78,6 +78,8 @@ class WorkerManager(QObject, MediatorMixin):
         self.register(SignalCode.TTS_REQUEST, self.on_tts_request)
         self.register(SignalCode.APPLICATION_SETTINGS_CHANGED_SIGNAL, self.on_application_settings_changed_signal)
 
+        self.sd_state = "loaded"
+
         # if not disable_sd:
         #     self.sd_request_worker = create_worker(SDRequestWorker)
         #     self.sd_generate_worker = create_worker(SDGenerateWorker)
@@ -206,12 +208,15 @@ class WorkerManager(QObject, MediatorMixin):
         self.emit(SignalCode.SD_IMAGE_GENERATED_SIGNAL, message)
 
     def on_text_generate_request_signal(self, message):
-        self.emit(
-            SignalCode.SD_MOVE_TO_CPU_SIGNAL,
-            {
-                'callback': lambda _message=message: self.emit(SignalCode.LLM_REQUEST_SIGNAL, _message)
-            }
-        )
+        if self.sd_state == "loaded":
+            self.emit(
+                SignalCode.SD_MOVE_TO_CPU_SIGNAL,
+                {
+                    'callback': lambda _message=message: self.emit(SignalCode.LLM_REQUEST_SIGNAL, _message)
+                }
+            )
+        else:
+            self.emit(SignalCode.LLM_REQUEST_SIGNAL, message)
 
     def on_image_generate_request_signal(self, message):
         self.logger.debug("on_image_generate_request_signal received")
