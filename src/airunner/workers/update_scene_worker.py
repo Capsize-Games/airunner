@@ -8,6 +8,7 @@ from airunner.workers.worker import Worker
 class UpdateSceneWorker(Worker):
     def __init__(self, prefix):
         super().__init__()
+        self.scene = None
         self.update_time_in_ms = 0.2
         self.last_update = 0
         self.do_update = False
@@ -22,6 +23,6 @@ class UpdateSceneWorker(Worker):
     def run(self):
         self.running = True
         while self.running:
-            if self.parent:
-                self.parent.update()
+            if self.scene:
+                self.scene.update()
             QThread.msleep(SLEEP_TIME_IN_MS)

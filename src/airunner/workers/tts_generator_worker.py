@@ -24,11 +24,15 @@ class TTSGeneratorWorker(Worker):
         self.tokens.extend(data["message"])
 
         # Convert the tokens to a string
-        text = "".join(self.tokens).strip()
+        text = "".join(self.tokens)
 
         # Split text at punctuation
-        punctuation = [".", "?", "!", ",", ";", ":"]
+        if self.tts.use_bark:
+            punctuation = ["\n"]
+        else:
+            punctuation = [".", "?", "!", ";"]
         for p in punctuation:
+            text = text.strip()
             if p in text:
                 split_text = text.split(p, 1)  # Split at the first occurrence of punctuation
                 if len(split_text) > 1:

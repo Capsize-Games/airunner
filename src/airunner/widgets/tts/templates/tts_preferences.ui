@@ -40,14 +40,14 @@
      </layout>
     </widget>
    </item>
-   <item row="3" column="0">
-    <widget class="BarkPreferencesWidget" name="bark_preferences" native="true"/>
-   </item>
    <item row="4" column="0">
     <widget class="ESpeakPreferencesWidget" name="espeak_preferences" native="true"/>
    </item>
    <item row="5" column="0">
     <widget class="SpeechT5PreferencesWidget" name="speecht5_preferences" native="true"/>
+   </item>
+   <item row="3" column="0">
+    <widget class="BarkPreferencesWidget" name="bark_preferences" native="true"/>
    </item>
    <item row="6" column="0">
     <spacer name="verticalSpacer">

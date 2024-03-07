@@ -275,8 +275,30 @@ model_bootstrap_data = [
         "is_default": True
     },
     {
-        "name": "Mistral 7B Instruct",
+        "name": "Mistral 7B",
+        "path": "mistralai/Mistral-7B-v0.2",
+        "branch": "main",
+        "version": "0.2",
+        "category": "llm",
+        "pipeline_action": "casuallm",
+        "enabled": True,
+        "model_type": "llm",
+        "is_default": True
+    },
+    {
+        "name": "Mistral 7B Instruct v2",
         "path": "mistralai/Mistral-7B-Instruct-v0.2",
+        "branch": "main",
+        "version": "0.2",
+        "category": "llm",
+        "pipeline_action": "casuallm",
+        "enabled": True,
+        "model_type": "llm",
+        "is_default": True
+    },
+{
+        "name": "Mistral 7B Instruct v1",
+        "path": "mistralai/Mistral-7B-Instruct-v0.1",
         "branch": "main",
         "version": "0.1",
         "category": "llm",

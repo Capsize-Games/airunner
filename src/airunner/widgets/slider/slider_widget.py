@@ -104,7 +104,6 @@ class SliderWidget(BaseWidget):
         self.init()
 
     def settings_loaded(self, callback):
-        print("on_settings_loaded_signal")
         self.init(slider_callback=callback)
     
     def init(self, **kwargs):

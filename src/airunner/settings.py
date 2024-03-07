@@ -30,6 +30,10 @@ DEFAULT_PATHS = {
             "casuallm": os.path.join(BASE_PATH, "text", "models", "casuallm"),
             "seq2seq": os.path.join(BASE_PATH, "text", "models", "seq2seq"),
             "visualqa": os.path.join(BASE_PATH, "text", "models", "visualqa"),
+            "casuallm_cache": os.path.join(BASE_PATH, "text", "models", "casuallm", "cache"),
+            "seq2seq_cache": os.path.join(BASE_PATH, "text", "models", "seq2seq", "cache"),
+            "visualqa_cache": os.path.join(BASE_PATH, "text", "models", "visualqa", "cache"),
+            "misc_cache": os.path.join(BASE_PATH, "text", "models", "misc", "cache"),
         },
         "other": {
             "ebooks": os.path.join(BASE_PATH, "text", "other", "ebooks"),

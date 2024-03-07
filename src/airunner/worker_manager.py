@@ -62,7 +62,6 @@ class WorkerManager(QObject, MediatorMixin):
         self.register(SignalCode.ENGINE_CANCEL_SIGNAL, self.on_engine_cancel_signal)
         self.register(SignalCode.ENGINE_STOP_PROCESSING_QUEUE_SIGNAL, self.on_engine_stop_processing_queue_signal)
         self.register(SignalCode.ENGINE_START_PROCESSING_QUEUE_SIGNAL, self.on_engine_start_processing_queue_signal)
-        self.register(SignalCode.LLM_CLEAR_HISTORY_SIGNAL, self.on_clear_llm_history_signal)
         self.register(SignalCode.CLEAR_MEMORY_SIGNAL, self.on_clear_memory_signal)
         self.register(SignalCode.LOG_ERROR_SIGNAL, self.on_error_signal)
         self.register(SignalCode.LOG_WARNING_SIGNAL, self.on_warning_signal)
@@ -257,9 +256,6 @@ class WorkerManager(QObject, MediatorMixin):
                 'tts_settings': self.settings["tts_settings"],
                 'is_end_of_message': is_end_of_message,
             })
-    
-    def on_clear_llm_history_signal(self):
-        self.emit(SignalCode.LLM_CLEAR_HISTORY)
     
     def stop(self):
         self.logger.debug("Stopping")
