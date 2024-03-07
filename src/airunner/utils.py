@@ -565,3 +565,8 @@ def convert_image_to_base64(image: Image) -> str:
 
 def random_seed():
     return _random_generator.randint(0, MAX_SEED)
+
+
+def get_torch_device():
+    use_cuda = torch.cuda.is_available()
+    return torch.device(f"cuda" if use_cuda else "cpu")
