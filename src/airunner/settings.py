@@ -431,14 +431,14 @@ APPLICATION_NAME = "AI Runner"
 DEFAULT_SHORTCUTS = {
     "Generate Image": dict(
         text="F5",
-        key=Qt.Key.Key_F5,
+        key=Qt.Key.Key_F5.value,
         modifiers=QtCore.Qt.KeyboardModifier.NoModifier,
         description="Generate key. Responsible for triggering the generation of a Stable Diffusion image.",
         signal=SignalCode.SD_GENERATE_IMAGE_SIGNAL
     ),
     "Quit": dict(
         text="Ctrl+Q",
-        key=Qt.Key.Key_Q,
+        key=Qt.Key.Key_Q.value,
         modifiers=QtCore.Qt.KeyboardModifier.ControlModifier,
         description="Quit key. Responsible for quitting the application.",
         signal=SignalCode.QUIT_APPLICATION
