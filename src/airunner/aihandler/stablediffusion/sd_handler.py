@@ -55,7 +55,7 @@ from airunner.windows.main.embedding_mixin import EmbeddingMixin as EmbeddingDat
 from airunner.windows.main.pipeline_mixin import PipelineMixin
 from airunner.windows.main.controlnet_model_mixin import ControlnetModelMixin
 from airunner.windows.main.ai_model_mixin import AIModelMixin
-from airunner.utils import clear_memory, random_seed, create_worker
+from airunner.utils import clear_memory, random_seed, create_worker, get_torch_device
 
 #from airunner.scripts.realesrgan.main import RealESRGAN
 from airunner.workers.worker import Worker
@@ -220,6 +220,10 @@ class SDHandler(
         self.latents_worker = create_worker(LatentsWorker)
 
     @property
+    def device(self):
+        return get_torch_device()
+
+    @property
     def do_load(self):
         return (
             self.sd_mode not in SKIP_RELOAD_CONSTS or
@@ -330,15 +334,11 @@ class SDHandler(
     @property
     def data_type(self):
         if self.sd_request.memory_settings.use_enable_sequential_cpu_offload:
-            return torch.float
+            return torch.float32
         elif self.sd_request.memory_settings.enable_model_cpu_offload:
             return torch.float16
         data_type = torch.float16 if self.cuda_is_available else torch.float
         return data_type
-
-    @property
-    def device(self) -> str:
-        return "cuda" if self.cuda_is_available else "cpu"
 
     @property
     def has_internet_connection(self) -> bool:
