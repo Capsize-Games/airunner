@@ -30,7 +30,7 @@ class BrushScene(CustomScene):
             self.handle_brush_color_changed
         )
         self.update_scene_worker = create_worker(UpdateSceneWorker)
-        self.update_scene_worker.parent = self
+        self.update_scene_worker.scene = self
 
     def register_signals(self):
         pass
