@@ -36,8 +36,7 @@ class TTSHandler(BaseHandler):
             return "microsoft/speecht5_tts"
         elif self.use_espeak:
             return ""
-        else:
-            raise ValueError("No model selected")
+        return ""
     
     @property
     def model_path(self):
@@ -47,8 +46,7 @@ class TTSHandler(BaseHandler):
             return "microsoft/speecht5_tts"
         elif self.use_espeak:
             return ""
-        else:
-            raise ValueError("No model selected")
+        return ""
     
     @property
     def vocoder_path(self):
@@ -256,6 +254,7 @@ class TTSHandler(BaseHandler):
         self.logger.debug("Running")
         if self.use_espeak:
             if self.engine is None:
+                self.logger.debug("Initializing espeak")
                 self.engine = pyttsx3.init()
         else:
             self.initialize()
@@ -297,12 +296,17 @@ class TTSHandler(BaseHandler):
     def load_model(self):
         self.logger.debug("Loading Model")
         model_class_ = BarkModel if self.use_bark else SpeechT5ForTextToSpeech
-        self.model = model_class_.from_pretrained(
-            self.model_path, 
-            local_files_only=self.local_files_only,
-            torch_dtype=self.torch_dtype,
-            device_map=self.device
-        )
+
+        try:
+            self.model = model_class_.from_pretrained(
+                self.model_path,
+                local_files_only=self.local_files_only,
+                torch_dtype=self.torch_dtype,
+                device_map=self.device
+            )
+        except EnvironmentError as _e:
+            self.logger.error("Failed to load model")
+            return
 
         if self.use_bark:
             self.model = self.model.to_bettertransformer()
@@ -329,8 +333,11 @@ class TTSHandler(BaseHandler):
                 self.processor_path,
                 local_files_only=local_files_only
             )
-        except OSError as _e:
-            return self.load_processor(local_files_only=False)
+        except OSError as e:
+            if "Incorrect path_or_model_id" in str(e):
+                self.logger.error("Failed to load processor")
+                return
+            #return self.load_processor(local_files_only=False)
 
         if self.use_cuda:
             self.processor = self.processor
@@ -490,21 +497,12 @@ class TTSHandler(BaseHandler):
                 language = settings["language"]
                 gender = settings["gender"]
 
-                self.engine.setProperty('voice', 'english+f1')
+                self.engine.setProperty('rate', rate)
+                self.engine.setProperty('volume', volume / 100.0)
+                self.engine.setProperty('pitch', pitch)
+                self.engine.setProperty('voice', f'{voice}')
                 self.engine.say(message)
                 self.engine.runAndWait()
-
-                # bash_command = (
-                #     f'spd-say -w "{message}" '
-                #     f'-r {rate} '
-                #     f'-p {pitch} '
-                #     f'-i {volume} '
-                #     f'-l {language} '
-                #     f'-y {voice} '
-                #     f'-t {voice} '
-                # )
-                # print(bash_command)
-                # os.system(bash_command)
         return response
 
     def generate_with_bark(self, text):

@@ -1,9 +1,11 @@
+import pyttsx3
+
 from airunner.settings import ESPEAK_SETTINGS
 from airunner.widgets.base_widget import BaseWidget
 from airunner.widgets.tts.templates.espeak_preferences_ui import Ui_espeak_preferences
 import pycountry
 
-class EspeakPreferencesWidget(BaseWidget):
+class ESpeakPreferencesWidget(BaseWidget):
     widget_class_ = Ui_espeak_preferences
 
     def __init__(self, *args, **kwargs):
@@ -25,14 +27,18 @@ class EspeakPreferencesWidget(BaseWidget):
         voice = self.settings["tts_settings"]["espeak"]["voice"]
         iso_codes = [country.alpha_2 for country in pycountry.countries]
 
-        self.ui.voice_combobox.clear()
+        engine = pyttsx3.init()
+        voices = engine.getProperty("voices")
+        voice_names = [voice.name for voice in voices]
+
         self.ui.language_combobox.clear()
         self.ui.language_combobox.addItems(iso_codes)
         self.ui.language_combobox.setCurrentText(language)
         self.ui.gender_combobox.clear()
         self.ui.gender_combobox.addItems(["Male", "Female"])
         self.ui.gender_combobox.setCurrentText(gender)
-        self.ui.voice_combobox.addItems(ESPEAK_SETTINGS["voices"][gender])
+        self.ui.voice_combobox.clear()
+        self.ui.voice_combobox.addItems(voice_names)
         self.ui.voice_combobox.setCurrentText(voice)
 
         for element in elements:
@@ -66,6 +72,6 @@ class EspeakPreferencesWidget(BaseWidget):
         settings = self.settings
         settings["tts_settings"]["espeak"]["gender"] = text
         self.ui.voice_combobox.clear()
-        self.ui.voice_combobox.addItems(ESPEAK_SETTINGS["voices"][text])
+        self.ui.voice_combobox.addItems(ESPEAK_SETTINGS["voices"][text.lower()])
         settings["tts_settings"]["espeak"]["voice"] = self.ui.voice_combobox.currentText()
         self.settings = settings
