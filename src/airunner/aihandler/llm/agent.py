@@ -6,11 +6,22 @@ from typing import AnyStr
 import torch
 import threading
 from PyQt6.QtCore import QObject
+from transformers import StoppingCriteria
+
 from airunner.aihandler.logger import Logger
 from airunner.json_extractor import JSONExtractor
 from airunner.mediator_mixin import MediatorMixin
 from airunner.enums import SignalCode, LLMChatRole, LLMActionType, ImageCategory
 from airunner.utils import get_torch_device
+
+
+class ExternalConditionStoppingCriteria(StoppingCriteria):
+    def __init__(self, external_condition_callable):
+        super().__init__()
+        self.external_condition_callable = external_condition_callable
+
+    def __call__(self, inputs_ids, scores):
+        return self.external_condition_callable()
 
 
 class AIRunnerAgent(QObject, MediatorMixin):
@@ -54,6 +65,15 @@ class AIRunnerAgent(QObject, MediatorMixin):
         self.prompt = ""
         self.history = []
         self.thread = None
+        self.do_interrupt = False
+
+    def interrupt_process(self):
+        self.do_interrupt = True
+
+    def do_interrupt_process(self):
+        interrupt = self.do_interrupt
+        self.do_interrupt = False
+        return interrupt
 
     @property
     def use_cuda(self):
@@ -253,6 +273,7 @@ class AIRunnerAgent(QObject, MediatorMixin):
 
         # Generate the response
         self.logger.debug("Generating...")
+        stopping_criteria = ExternalConditionStoppingCriteria(self.do_interrupt_process)
         try:
             self.thread = threading.Thread(target=self.model.generate, kwargs=dict(
                 **model_inputs,
@@ -268,7 +289,8 @@ class AIRunnerAgent(QObject, MediatorMixin):
                 early_stopping=True,
                 repetition_penalty=self.repetition_penalty,
                 temperature=self.temperature,
-                streamer=self.streamer
+                streamer=self.streamer,
+                stopping_criteria=[stopping_criteria],
             ))
             self.thread.start()
         except Exception as e:
@@ -287,6 +309,13 @@ class AIRunnerAgent(QObject, MediatorMixin):
         is_end_of_message = False
         is_first_message = True
         for new_text in self.streamer:
+            # if self.do_interrupt:
+            #     print("DO INTERRUPT PRESSED")
+            #     self.do_interrupt = False
+            #     streamed_template = None
+            #     self.streamer.on_finalized_text("", stream_end=True)
+            #     break
+
             # strip all newlines from new_text
             parsed_new_text = new_text.replace("\n", " ")
             streamed_template += parsed_new_text
@@ -332,20 +361,21 @@ class AIRunnerAgent(QObject, MediatorMixin):
             LLMChatRole.HUMAN
         )
 
-        if action == LLMActionType.CHAT:
-            self.add_message_to_history(
-                streamed_template,
-                LLMChatRole.ASSISTANT
-            )
-        elif action == LLMActionType.GENERATE_IMAGE:
-            json_objects = self.extract_json_objects(streamed_template)
-            if len(json_objects) > 0:
-                self.emit(
-                    SignalCode.LLM_IMAGE_PROMPT_GENERATED_SIGNAL,
-                    json_objects[0]
+        if streamed_template is not None:
+            if action == LLMActionType.CHAT:
+                self.add_message_to_history(
+                    streamed_template,
+                    LLMChatRole.ASSISTANT
                 )
-            else:
-                self.logger.error("No JSON object found in the response.")
+            elif action == LLMActionType.GENERATE_IMAGE:
+                json_objects = self.extract_json_objects(streamed_template)
+                if len(json_objects) > 0:
+                    self.emit(
+                        SignalCode.LLM_IMAGE_PROMPT_GENERATED_SIGNAL,
+                        json_objects[0]
+                    )
+                else:
+                    self.logger.error("No JSON object found in the response.")
 
         return streamed_template
 
