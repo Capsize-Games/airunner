@@ -60,11 +60,6 @@ class CanvasWidget(BaseWidget):
             SignalCode.CANVAS_APPLY_FILTER_SIGNAL: self.apply_filter,
         }
 
-        # Map service codes to class functions
-        self.services = {
-            ServiceCode.CURRENT_LAYER: self.current_layer,
-        }
-
         # Map class properties to worker classes
         self.worker_class_map = {
             "image_data_worker": ImageDataWorker,
@@ -78,18 +73,20 @@ class CanvasWidget(BaseWidget):
     @property
     def image_pivot_point(self):
         try:
-            layer = ServiceLocator.get(ServiceCode.CURRENT_LAYER)()
-            return QPoint(layer["pivot_point_x"], layer["pivot_point_y"])
+            return QPoint(
+                self.settings["pivot_point_x"],
+                self.settings["pivot_point_y"]
+            )
         except Exception as e:
             self.logger.error(e)
         return QPoint(0, 0)
 
     @image_pivot_point.setter
     def image_pivot_point(self, value):
-        self.emit(SignalCode.LAYER_UPDATE_CURRENT_SIGNAL, {
-            "pivot_point_x": value.x(),
-            "pivot_point_y": value.y()
-        })
+        settings = self.settings
+        settings["pivot_point_x"] = value.x()
+        settings["pivot_point_y"] = value.y()
+        self.settings = settings
 
     @property
     def active_grid_area_rect(self):
@@ -108,11 +105,6 @@ class CanvasWidget(BaseWidget):
         )
 
         return rect
-
-    @property
-    def current_layer(self):
-        layer_index: int = self.settings["current_layer_index"]
-        return self.settings["layers"][layer_index]
 
     def on_canvas_update_cursor_signal(self, event):
         if self.settings["current_tool"] in (
@@ -165,7 +157,6 @@ class CanvasWidget(BaseWidget):
         path = message["path"]
         if nsfw_content_detected and self.settings["nsfw_filter"]:
             self.emit(SignalCode.LOG_ERROR_SIGNAL, "Explicit content detected, try again.")
-        self.emit(SignalCode.LAYERS_SHOW_SIGNAL)
         if path is not None:
             self.emit(
                 SignalCode.APPLICATION_STATUS_INFO_SIGNAL,
