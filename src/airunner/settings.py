@@ -466,7 +466,14 @@ DEFAULT_SHORTCUTS = {
         key=Qt.Key.Key_S.value,
         modifiers=QtCore.Qt.KeyboardModifier.NoModifier,
         description="Select tool key. Responsible for selecting the select tool.",
-        signal=SignalCode.ENABLE_SELECT_TOOL_SIGNAL
+        signal=SignalCode.ENABLE_SELECTION_TOOL_SIGNAL
+    ),
+    "Interrupt": dict(
+        text="Shift+Ctrl+I",
+        key=Qt.Key.Key_I.value,
+        modifiers=QtCore.Qt.KeyboardModifier.ShiftModifier | QtCore.Qt.KeyboardModifier.ControlModifier,
+        description="Interrupt key. Responsible for interrupting the current process.",
+        signal=SignalCode.INTERRUPT_PROCESS_SIGNAL
     ),
     "Quit": dict(
         text="Ctrl+Q",
