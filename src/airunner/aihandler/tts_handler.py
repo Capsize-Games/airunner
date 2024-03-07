@@ -8,7 +8,7 @@ import pyttsx3
 import torch
 from queue import Queue
 from transformers import SpeechT5Processor, SpeechT5ForTextToSpeech, SpeechT5HifiGan, BarkModel, BarkProcessor, \
-    BitsAndBytesConfig, GPTQConfig
+    AutoTokenizer, VitsModel, VitsTokenizer
 from datasets import load_dataset
 from airunner.aihandler.base_handler import BaseHandler
 from airunner.enums import SignalCode
@@ -138,6 +138,8 @@ class TTSHandler(BaseHandler):
         self.local_files_only = True
         self.loaded = False
         self.model = None
+        self.tokenizer = None
+        self.current_tokenizer = None
         self.vocoder = None
         self.processor = None
         self.corpus = []
@@ -260,42 +262,14 @@ class TTSHandler(BaseHandler):
             self.initialize()
             self.process_sentences()
 
-    def quantization_config(self):
-        config = None
-        if self.llm_dtype == "8bit":
-            self.logger.debug("Loading 8bit model")
-            config = BitsAndBytesConfig(
-                load_in_4bit=False,
-                load_in_8bit=True,
-                llm_int8_threshold=200.0,
-                llm_int8_has_fp16_weight=False,
-                bnb_4bit_compute_dtype=torch.float16,
-                bnb_4bit_use_double_quant=True,
-                bnb_4bit_quant_type='nf4',
-            )
-        elif self.llm_dtype == "4bit":
-            self.logger.debug("Loading 4bit model")
-            config = BitsAndBytesConfig(
-                load_in_4bit=True,
-                load_in_8bit=False,
-                llm_int8_threshold=200.0,
-                llm_int8_has_fp16_weight=False,
-                bnb_4bit_compute_dtype=torch.float16,
-                bnb_4bit_use_double_quant=True,
-                bnb_4bit_quant_type='nf4',
-            )
-        elif self.llm_dtype == "2bit":
-            self.logger.debug("Loading 2bit model")
-            config = GPTQConfig(
-                bits=2,
-                dataset="c4",
-                tokenizer=self.tokenizer
-            )
-        return config
-
     def load_model(self):
         self.logger.debug("Loading Model")
-        model_class_ = BarkModel if self.use_bark else SpeechT5ForTextToSpeech
+        if self.use_speecht5:
+            model_class_ = SpeechT5ForTextToSpeech
+        elif self.use_bark:
+            model_class_ = BarkModel
+        else:
+            return
 
         try:
             self.model = model_class_.from_pretrained(
@@ -311,6 +285,16 @@ class TTSHandler(BaseHandler):
         if self.use_bark:
             self.model = self.model.to_bettertransformer()
             self.model.enable_cpu_offload()
+
+    def load_tokenizer(self, local_files_only=True):
+        self.logger.debug("Loading tokenizer")
+        self.tokenizer = AutoTokenizer.from_pretrained(
+            self.model_path,
+            #device_map=self.device,
+            #torch_dtype=self.torch_dtype,
+            local_files_only=local_files_only,
+            trust_remote_code=False
+        )
     
     def load_vocoder(self, local_files_only=True):
         if not self.use_bark:
@@ -319,7 +303,7 @@ class TTSHandler(BaseHandler):
                 self.vocoder = SpeechT5HifiGan.from_pretrained(
                     self.vocoder_path,
                     local_files_only=local_files_only,
-                    torch_dtype=self.torch_dtype,
+                    torch_dtype=torch.float16,
                     device_map=self.device
                 )
             except OSError as _e:
@@ -481,13 +465,15 @@ class TTSHandler(BaseHandler):
             self.message = ""
 
     def generate(self, message):
-        response = None
         if self.tts_enabled:
-            if self.use_bark:
-                response = self.generate_with_bark(message)
-            elif self.use_speecht5:
-                response = self.generate_with_t5(message)
-            elif self.use_espeak:
+            if not self.use_espeak:
+                response = None
+                if self.use_bark:
+                    response = self.generate_with_bark(message)
+                elif self.use_speecht5:
+                    response = self.generate_with_t5(message)
+                return response
+            else:
                 message = message.replace('"', "'")
                 settings = self.settings["tts_settings"]["espeak"]
                 rate = settings["rate"]
@@ -503,14 +489,14 @@ class TTSHandler(BaseHandler):
                 self.engine.setProperty('voice', f'{voice}')
                 self.engine.say(message)
                 self.engine.runAndWait()
-        return response
 
     def generate_with_bark(self, text):
         self.logger.debug("Generating TTS with Bark...")
         self.logger.debug("Processing inputs...")
+        settings = self.settings["tts_settings"]["bark"]
         inputs = self.processor(
             text=text,
-            voice_preset=self.settings["tts_settings"]["voice"]
+            voice_preset=settings["voice"]
         )
         inputs = self.move_inputs_to_device(inputs)
 
@@ -518,9 +504,9 @@ class TTSHandler(BaseHandler):
         start = time.time()
         params = {
             **inputs,
-            'fine_temperature': self.settings["tts_settings"]["fine_temperature"] / 100.0,
-            'coarse_temperature': self.settings["tts_settings"]["coarse_temperature"] / 100.0,
-            'semantic_temperature': self.settings["tts_settings"]["semantic_temperature"] / 100.0,
+            'fine_temperature': settings["fine_temperature"] / 100.0,
+            'coarse_temperature': settings["coarse_temperature"] / 100.0,
+            'semantic_temperature': settings["semantic_temperature"] / 100.0,
         }
         speech = self.model.generate(**params)
         self.logger.debug("Generated speech in " + str(time.time() - start) + " seconds")
@@ -528,11 +514,38 @@ class TTSHandler(BaseHandler):
         response = speech[0].cpu().float().numpy()
         return response
 
+    def replace_unspeakable_characters(self, text):
+        # strip things like eplisis, etc
+        text = text.replace("...", " ")
+        text = text.replace("…", " ")
+        text = text.replace("’", "'")
+        text = text.replace("“", '"')
+        text = text.replace("”", '"')
+        text = text.replace("‘", "'")
+        text = text.replace("’", "'")
+        text = text.replace("–", "-")
+        text = text.replace("—", "-")
+
+        # replace windows newlines
+        text = text.replace("\r\n", " ")
+
+        # replace newlines
+        text = text.replace("\n", " ")
+
+        # replace tabs
+        text = text.replace("\t", " ")
+
+        # replace excessive spaces
+        text = re.sub(r"\s+", " ", text)
+        return text
+
     def generate_with_t5(self, text):
         self.logger.debug("Generating TTS")
-        text = text.replace("\n", " ").strip()
-        text = text.replace("\n", " ").strip()
+        text = self.replace_unspeakable_characters(text)
         text = self.replace_numbers_with_words(text)
+        text = text.strip()
+        if text == "":
+            return None
 
         self.logger.debug("Processing inputs...")
 
@@ -544,7 +557,6 @@ class TTSHandler(BaseHandler):
 
         self.logger.debug("Generating speech...")
         start = time.time()
-        print(inputs)
         speech = self.model.generate(
             **inputs,
             speaker_embeddings=self.speaker_embeddings,
