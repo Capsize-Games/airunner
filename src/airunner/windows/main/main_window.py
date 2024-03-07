@@ -236,6 +236,10 @@ class MainWindow(
         self.register(SignalCode.QUIT_APPLICATION, self.action_quit_triggered)
         self.register(SignalCode.SD_NSFW_CONTENT_DETECTED_SIGNAL, self.on_nsfw_content_detected_signal)
         self.register(SignalCode.VISION_CAPTURED_SIGNAL, self.on_vision_captured_signal)
+        self.register(SignalCode.ENABLE_BRUSH_TOOL_SIGNAL, lambda: self.action_toggle_brush(True))
+        self.register(SignalCode.ENABLE_ERASER_TOOL_SIGNAL, lambda: self.action_toggle_eraser(True))
+        self.register(SignalCode.ENABLE_SELECTION_TOOL_SIGNAL, lambda: self.action_toggle_select(True))
+        self.register(SignalCode.ENABLE_MOVE_TOOL_SIGNAL, lambda: self.action_toggle_active_grid_area(True))
 
     def on_vision_captured_signal(self, data: dict):
         # Create the window if it doesn't exist
@@ -630,6 +634,9 @@ class MainWindow(
             self.ui.toggle_select_button.setChecked(False)
             self.ui.toggle_active_grid_area_button.setChecked(False)
             self.ui.toggle_eraser_button.setChecked(False)
+            self.ui.toggle_brush_button.blockSignals(True)
+            self.ui.toggle_brush_button.setChecked(True)
+            self.ui.toggle_brush_button.blockSignals(False)
         self.toggle_tool(CanvasToolName.BRUSH, active)
 
     def action_toggle_select(self, active):
@@ -644,6 +651,9 @@ class MainWindow(
             self.ui.toggle_select_button.setChecked(False)
             self.ui.toggle_active_grid_area_button.setChecked(False)
             self.ui.toggle_brush_button.setChecked(False)
+            self.ui.toggle_eraser_button.blockSignals(True)
+            self.ui.toggle_eraser_button.setChecked(True)
+            self.ui.toggle_eraser_button.blockSignals(False)
         self.toggle_tool(CanvasToolName.ERASER, active)
 
     def action_toggle_active_grid_area(self, active):

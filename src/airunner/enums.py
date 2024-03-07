@@ -52,6 +52,11 @@ class ServiceCode(Enum):
 
 
 class SignalCode(Enum):
+    ENABLE_BRUSH_TOOL_SIGNAL = "enable_brush_tool_signal"
+    ENABLE_ERASER_TOOL_SIGNAL = "enable_eraser_tool_signal"
+    ENABLE_SELECTION_TOOL_SIGNAL = "enable_selection_tool_signal"
+    ENABLE_MOVE_TOOL_SIGNAL = "enable_move_tool_signal"
+
     AI_MODELS_REFRESH_SIGNAL = "refresh_ai_models_signal"
     AI_MODELS_SAVE_OR_UPDATE_SIGNAL = "ai_models_save_or_update_signal"
     AI_MODEL_DELETE_SIGNAL = "ai_model_delete_signal"
