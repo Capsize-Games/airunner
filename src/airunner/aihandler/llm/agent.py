@@ -1,6 +1,7 @@
 import datetime
 import json
 import time
+import traceback
 from typing import AnyStr
 import torch
 import threading
@@ -9,10 +10,12 @@ from airunner.aihandler.logger import Logger
 from airunner.json_extractor import JSONExtractor
 from airunner.mediator_mixin import MediatorMixin
 from airunner.enums import SignalCode, LLMChatRole, LLMActionType, ImageCategory
+from airunner.utils import get_torch_device
 
 
 class AIRunnerAgent(QObject, MediatorMixin):
     def __init__(self, *args, **kwargs):
+        MediatorMixin.__init__(self)
         try:
             self.model = kwargs.pop("model")
             self.tokenizer = kwargs.pop("tokenizer")
@@ -47,20 +50,28 @@ class AIRunnerAgent(QObject, MediatorMixin):
 
         self.logger = Logger(prefix=self.__class__.__name__)
         super().__init__(*args, **kwargs)
-        self.register(
-            SignalCode.LLM_RESPOND_TO_USER_SIGNAL,
-            self.do_response
-        )
+        self.register(SignalCode.LLM_RESPOND_TO_USER_SIGNAL, self.do_response)
         self.prompt = ""
         self.history = []
         self.thread = None
+
+    @property
+    def use_cuda(self):
+        return torch.cuda.is_available()
+
+    @property
+    def cuda_index(self):
+        return 0
 
     def build_system_prompt(self, action: LLMActionType, vision_history: list = []):
         guardrails = self.guardrails_prompt if self.use_guardrails else ""
         system_instructions = self.system_instructions if self.use_system_instructions else ""
         system_prompt = []
-        vision_history = vision_history[-10:] if len(vision_history) > 10 else vision_history
+
         if action == LLMActionType.CHAT:
+            """
+            Build the system prompt for chat template
+            """
             names = f"Your name is {self.botname}. \nThe user's name is {self.username}."
             mood = (
                 f"{self.botname} is not a computer or a bot, you are a human with emotions. "
@@ -72,30 +83,41 @@ class AIRunnerAgent(QObject, MediatorMixin):
                 f"Your personality: {self.bot_personality}."
             ) if self.use_personality else ""
 
-            current_date = datetime.datetime.now().strftime("%A %b %d, %Y")
-            current_time = datetime.datetime.now().strftime("%I:%M:%S %p")
-            current_timezone = time.tzname
-
             system_prompt = [
                 guardrails,
                 system_instructions,
+                "Do not return tags, code, or any other form of non-human language. You are a human. You must communicate like a human.",
                 names,
                 mood,
                 personality,
-                "\n======\n",
-                (
+            ]
+
+            """
+            If we have a vision history, append it to the prompt
+            """
+            if len(vision_history) > 0:
+                vision_history = vision_history[-10:] if len(vision_history) > 10 else vision_history
+                system_prompt.append("\n======\n")
+                system_prompt.append((
                     "You have eyes, you can see. You see many things but they "
                     "are no always correct. You must try to determine what you "
                     "are seeing based on these images Try to summarize them to "
                     "determine what is happening. Here is a list of things that "
                     "you currently saw:"
-                ),
-                ','.join(vision_history),
-                "\n======\n",
-                f"Current Date: {current_date}",
-                f"Current Time: {current_time}",
-                f"Current Timezone: {current_timezone}"
-            ]
+                ))
+                system_prompt.append(','.join(vision_history))
+
+            """
+            Append the date, time and timezone
+            """
+            current_date = datetime.datetime.now().strftime("%A %b %d, %Y")
+            current_time = datetime.datetime.now().strftime("%I:%M:%S %p")
+            current_timezone = time.tzname
+            system_prompt.append("\n======\n")
+            system_prompt.append(f"Current Date: {current_date}")
+            system_prompt.append(f"Current Time: {current_time}")
+            system_prompt.append(f"Current Timezone: {current_timezone}")
+
         elif action == LLMActionType.ANALYZE_VISION_HISTORY:
             vision_history = vision_history[-10:] if len(vision_history) > 10 else vision_history
             system_prompt = [
@@ -110,11 +132,11 @@ class AIRunnerAgent(QObject, MediatorMixin):
                 ),
                 ','.join(vision_history),
             ]
+
         elif action == LLMActionType.GENERATE_IMAGE:
             ", ".join([
                 "'%s'" % category.value for category in ImageCategory
             ])
-
 
             system_prompt = [
                 guardrails,
@@ -227,27 +249,32 @@ class AIRunnerAgent(QObject, MediatorMixin):
 
         # Encode the rendered template
         encoded = self.tokenizer(rendered_template, return_tensors="pt")
-        model_inputs = encoded.to("cuda" if torch.cuda.is_available() else "cpu")
+        model_inputs = encoded.to(get_torch_device())
 
         # Generate the response
         self.logger.debug("Generating...")
-        self.thread = threading.Thread(target=self.model.generate, kwargs=dict(
-            model_inputs,
-            min_length=self.min_length,
-            max_length=self.max_length,
-            num_beams=self.num_beams,
-            do_sample=self.do_sample,
-            top_k=self.top_k,
-            eta_cutoff=self.eta_cutoff,
-            top_p=self.top_p,
-            num_return_sequences=self.sequences,
-            eos_token_id=self.tokenizer.eos_token_id,
-            early_stopping=True,
-            repetition_penalty=self.repetition_penalty,
-            temperature=self.temperature,
-            streamer=self.streamer
-        ))
-        self.thread.start()
+        try:
+            self.thread = threading.Thread(target=self.model.generate, kwargs=dict(
+                **model_inputs,
+                min_length=self.min_length,
+                max_length=self.max_length,
+                num_beams=self.num_beams,
+                do_sample=self.do_sample,
+                top_k=self.top_k,
+                eta_cutoff=self.eta_cutoff,
+                top_p=self.top_p,
+                num_return_sequences=self.sequences,
+                eos_token_id=self.tokenizer.eos_token_id,
+                early_stopping=True,
+                repetition_penalty=self.repetition_penalty,
+                temperature=self.temperature,
+                streamer=self.streamer
+            ))
+            self.thread.start()
+        except Exception as e:
+            print("An error occurred in model.generate:")
+            print(str(e))
+            print(traceback.format_exc())
         # strip all new lines from rendered_template:
         rendered_template = rendered_template.replace("\n", " ")
         eos_token = self.tokenizer.eos_token
