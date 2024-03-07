@@ -120,6 +120,7 @@ class SettingsMixin:
         ServiceLocator.register("get_settings", self.get_settings)
         ServiceLocator.register("set_settings", self.set_settings)
         self.default_settings = dict(
+            trust_remote_code=False,
             use_cuda=True,
             current_layer_index=0,
             ocr_enabled=False,
@@ -232,6 +233,10 @@ class SettingsMixin:
                 llm_casuallm_model_path=DEFAULT_PATHS["text"]["models"]["casuallm"],
                 llm_seq2seq_model_path=DEFAULT_PATHS["text"]["models"]["seq2seq"],
                 llm_visualqa_model_path=DEFAULT_PATHS["text"]["models"]["visualqa"],
+                llm_casuallm_model_cache_path=DEFAULT_PATHS["text"]["models"]["casuallm_cache"],
+                llm_seq2seq_model_cache_path=DEFAULT_PATHS["text"]["models"]["seq2seq_cache"],
+                llm_visualqa_model_cache_path=DEFAULT_PATHS["text"]["models"]["visualqa_cache"],
+                llm_misc_model_cache_path=DEFAULT_PATHS["text"]["models"]["misc_cache"],
                 vae_model_path=DEFAULT_PATHS["art"]["models"]["vae"],
                 ebook_path=DEFAULT_PATHS["text"]["other"]["ebooks"],
                 documents_path=DEFAULT_PATHS["text"]["other"]["documents"],
@@ -465,8 +470,9 @@ class SettingsMixin:
             print(e)
 
     def get_settings(self):
+        application_settings = QSettings(ORGANIZATION, APPLICATION_NAME)
         try:
-            settings = self.application_settings.value(
+            settings = application_settings.value(
                 "settings",
                 self.default_settings,
                 type=dict
@@ -483,12 +489,14 @@ class SettingsMixin:
         # return self.default_settings
 
     def save_settings(self):
-        self.application_settings.sync()
+        application_settings = QSettings(ORGANIZATION, APPLICATION_NAME)
+        application_settings.sync()
 
     def set_settings(self, val):
+        application_settings = QSettings(ORGANIZATION, APPLICATION_NAME)
         if val == {} or val == "" or val is None:
             return
-        self.application_settings.setValue("settings", val)
+        application_settings.setValue("settings", val)
         #self.application_settings.sync()
         self.emit(SignalCode.APPLICATION_SETTINGS_CHANGED_SIGNAL)
 
