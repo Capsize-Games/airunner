@@ -150,6 +150,8 @@ class SettingsMixin:
             is_maximized=False,
             llm_templates_version=LLM_TEMPLATES_VERSION,
             default_models_version=DEFAULT_MODELS_VERSION,
+            pivot_point_x=0,
+            pivot_point_y=0,
             mode=Mode.IMAGE.value,
             llm_templates={
                 "Stable Diffusion Prompt Template": dict(
