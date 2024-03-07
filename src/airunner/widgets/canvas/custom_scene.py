@@ -241,7 +241,7 @@ class CustomScene(
 
     def on_image_generated_signal(self, image_data):
         self.add_image_to_scene(
-            image_data["images"][0],
+            image_data["images"][0].convert("RGBA"),
             is_outpaint=image_data["action"] == GeneratorSection.OUTPAINT.value,
             outpaint_box_rect=image_data["outpaint_box_rect"]
         )
