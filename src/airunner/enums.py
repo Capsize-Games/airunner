@@ -143,7 +143,6 @@ class SignalCode(Enum):
     LLM_IMAGE_PROMPT_GENERATED_SIGNAL = "llm_image_prompt_generated_signal"
 
     # TODO: combine clear history signals - we have two by mistake
-    LLM_CLEAR_HISTORY = "llm_clear_history"
     LLM_CLEAR_HISTORY_SIGNAL = "llm_clear_history_signal"
     LLM_RESPONSE_SIGNAL = "llm_response_signal"
     LLM_TEXT_STREAMED_SIGNAL = "llm_text_streamed_signal"
@@ -398,3 +397,8 @@ class SDMode(Enum):
     STANDARD = "standard"
     DRAWING = "drawing"
     FAST_GENERATE = "fast_generate"
+
+
+class DeviceName(Enum):
+    CUDA = "cuda"
+    CPU = "cpu"
