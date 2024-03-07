@@ -440,6 +440,34 @@ DEFAULT_SHORTCUTS = {
         description="Generate key. Responsible for triggering the generation of a Stable Diffusion image.",
         signal=SignalCode.SD_GENERATE_IMAGE_SIGNAL
     ),
+    "Brush Tool": dict(
+        text="B",
+        key=Qt.Key.Key_B.value,
+        modifiers=QtCore.Qt.KeyboardModifier.NoModifier,
+        description="Brush tool key. Responsible for selecting the brush tool.",
+        signal=SignalCode.ENABLE_BRUSH_TOOL_SIGNAL
+    ),
+    "Eraser Tool": dict(
+        text="E",
+        key=Qt.Key.Key_E.value,
+        modifiers=QtCore.Qt.KeyboardModifier.NoModifier,
+        description="Eraser tool key. Responsible for selecting the eraser tool.",
+        signal=SignalCode.ENABLE_ERASER_TOOL_SIGNAL
+    ),
+    "Move Tool": dict(
+        text="V",
+        key=Qt.Key.Key_V.value,
+        modifiers=QtCore.Qt.KeyboardModifier.NoModifier,
+        description="Move tool key. Responsible for selecting the move tool.",
+        signal=SignalCode.ENABLE_MOVE_TOOL_SIGNAL
+    ),
+    "Select Tool": dict(
+        text="S",
+        key=Qt.Key.Key_S.value,
+        modifiers=QtCore.Qt.KeyboardModifier.NoModifier,
+        description="Select tool key. Responsible for selecting the select tool.",
+        signal=SignalCode.ENABLE_SELECT_TOOL_SIGNAL
+    ),
     "Quit": dict(
         text="Ctrl+Q",
         key=Qt.Key.Key_Q.value,
