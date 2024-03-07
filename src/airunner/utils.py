@@ -477,7 +477,10 @@ def parse_template(template: dict) -> str:
     template = template["template"]
     parsed_template = ""
     if llm_category == "casuallm":
-        if model == "mistralai/Mistral-7B-Instruct-v0.2":
+        if model in [
+            "mistralai/Mistral-7B-Instruct-v0.1",
+            "mistralai/Mistral-7B-Instruct-v0.2"
+        ]:
             parsed_template = "\n".join((
                 "[INST]<<SYS>>",
                 system_instructions,
