@@ -4,7 +4,7 @@ import torch
 from transformers import BitsAndBytesConfig, GPTQConfig
 
 from airunner.aihandler.base_handler import BaseHandler
-from airunner.utils import clear_memory
+from airunner.utils import clear_memory, get_torch_device
 
 
 class TransformerBaseHandler(BaseHandler):
@@ -35,7 +35,7 @@ class TransformerBaseHandler(BaseHandler):
         self.prompt = kwargs.get("prompt", None)
         self.current_model_path = kwargs.get("current_model_path", "")
         self.local_files_only = kwargs.get("local_files_only", False)
-        self.use_cache = kwargs.get("use_cache", False)
+        self.use_cache = kwargs.get("use_cache", True)
         self.history = []
         self.sequences = kwargs.get("sequences", 1)
         self.seed = kwargs.get("seed", 42)
@@ -73,21 +73,23 @@ class TransformerBaseHandler(BaseHandler):
             config = BitsAndBytesConfig(
                 load_in_4bit=False,
                 load_in_8bit=True,
-                llm_int8_threshold=200.0,
+                llm_int8_threshold=6.0,
                 llm_int8_has_fp16_weight=False,
-                bnb_4bit_compute_dtype=torch.float16,
+                bnb_4bit_compute_dtype=torch.bfloat16,
                 bnb_4bit_use_double_quant=True,
                 bnb_4bit_quant_type='nf4',
+                #llm_int8_enable_fp32_cpu_offload=True,
             )
         elif self.llm_dtype == "4bit":
             config = BitsAndBytesConfig(
                 load_in_4bit=True,
                 load_in_8bit=False,
-                llm_int8_threshold=200.0,
+                llm_int8_threshold=6.0,
                 llm_int8_has_fp16_weight=False,
-                bnb_4bit_compute_dtype=torch.float16,
+                bnb_4bit_compute_dtype=torch.bfloat16,
                 bnb_4bit_use_double_quant=True,
                 bnb_4bit_quant_type='nf4',
+                # llm_int8_enable_fp32_cpu_offload=True,
             )
         elif self.llm_dtype == "2bit":
             config = GPTQConfig(
@@ -102,9 +104,29 @@ class TransformerBaseHandler(BaseHandler):
         return {
             'local_files_only': local_files_only,
             'use_cache': self.use_cache,
-            'torch_dtype': torch.float16 if self.llm_dtype != "32bit" else torch.float32,
-            'trust_remote_code': True
+            'trust_remote_code': self.settings["trust_remote_code"]
         }
+
+    def get_model_cache_path(self, path):
+        model_name = path.split("/")[-1]
+        current_llm_generator = self.settings.get("current_llm_generator", "")
+        if current_llm_generator == "casuallm":
+            local_path = self.settings["path_settings"]["llm_casuallm_model_cache_path"]
+        elif current_llm_generator == "seq2seq":
+            local_path = self.settings["path_settings"]["llm_seq2seq_model_cache_path"]
+        elif current_llm_generator == "visualqa":
+            local_path = self.settings["path_settings"]["llm_visualqa_model_cache_path"]
+        else:
+            local_path = self.settings["path_settings"]["llm_misc_model_cache_path"]
+        local_path = os.path.join(local_path, self.llm_dtype, model_name)
+        return local_path
+
+    def get_model_path(self, path):
+        if self.do_quantize_model:
+            local_path = self.get_model_cache_path(path)
+            if self.use_saved_model and os.path.exists(local_path):
+                return local_path
+        return path
 
     def load_model(self, local_files_only=True):
         params = self.model_params(local_files_only=local_files_only)
@@ -114,22 +136,24 @@ class TransformerBaseHandler(BaseHandler):
                 ""
             )
 
-        if self.do_quantize_model:
+
+        path = self.get_model_path(self.current_model_path)
+
+        self.logger.debug(f"Loading model from {path}")
+
+        if self.do_quantize_model and self.use_cuda:
             config = self.quantization_config()
             if config:
                 params["quantization_config"] = config
+            params["torch_dtype"] = torch.bfloat16
+            params["device_map"] = get_torch_device()
         else:
-            params["torch_dtype"] = torch.float16
+            params["torch_dtype"] = torch.bfloat16
             params["device_map"] = "auto"
 
-        self.logger.debug(f"Loading model from {self.current_model_path}")
+        if path != self.current_model_path:
+            params = {}
 
-        test_model_path = "test_model_path"
-        path = self.current_model_path
-
-        if self.use_saved_model:
-            if os.path.exists(test_model_path):
-                path = test_model_path
 
         try:
             self.model = self.auto_class_.from_pretrained(
@@ -137,7 +161,7 @@ class TransformerBaseHandler(BaseHandler):
                 **params
             )
         except OSError as e:
-            if "Checkout your internet connection" in str(e):
+            if "We couldn't connect" in str(e):
                 if local_files_only:
                     return self.load_model(local_files_only=False)
                 else:
@@ -145,11 +169,14 @@ class TransformerBaseHandler(BaseHandler):
         except Exception as e:
             self.logger.error(e)
 
-        if self.use_saved_model:
-            if not os.path.exists(test_model_path):
-                self.model.save_pretrained(test_model_path)
+        if not self.model:
+            self.logger.error(f"Model not loaded from {path}")
+            return
 
-        # print the type of class that self.model is
+        if self.do_quantize_model and self.use_saved_model:
+            cache_path = self.get_model_cache_path(self.current_model_path)
+            if self.model and self.use_saved_model and not os.path.exists(cache_path):
+                self.model.save_pretrained(cache_path)
 
     def load_tokenizer(self, local_files_only=None):
         pass

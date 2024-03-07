@@ -477,7 +477,10 @@ def parse_template(template: dict) -> str:
     template = template["template"]
     parsed_template = ""
     if llm_category == "casuallm":
-        if model == "mistralai/Mistral-7B-Instruct-v0.2":
+        if model in [
+            "mistralai/Mistral-7B-Instruct-v0.1",
+            "mistralai/Mistral-7B-Instruct-v0.2"
+        ]:
             parsed_template = "\n".join((
                 "[INST]<<SYS>>",
                 system_instructions,
@@ -562,3 +565,8 @@ def convert_image_to_base64(image: Image) -> str:
 
 def random_seed():
     return _random_generator.randint(0, MAX_SEED)
+
+
+def get_torch_device():
+    use_cuda = torch.cuda.is_available()
+    return torch.device(f"cuda" if use_cuda else "cpu")
