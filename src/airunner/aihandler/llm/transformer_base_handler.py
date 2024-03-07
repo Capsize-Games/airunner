@@ -35,7 +35,7 @@ class TransformerBaseHandler(BaseHandler):
         self.prompt = kwargs.get("prompt", None)
         self.current_model_path = kwargs.get("current_model_path", "")
         self.local_files_only = kwargs.get("local_files_only", False)
-        self.use_cache = kwargs.get("use_cache", False)
+        self.use_cache = kwargs.get("use_cache", True)
         self.history = []
         self.sequences = kwargs.get("sequences", 1)
         self.seed = kwargs.get("seed", 42)
