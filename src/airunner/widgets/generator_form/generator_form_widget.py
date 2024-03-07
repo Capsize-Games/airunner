@@ -169,7 +169,7 @@ class GeneratorForm(BaseWidget):
         self.generate()
 
     def handle_interrupt_button_clicked(self):
-        self.emit(SignalCode.ENGINE_CANCEL_SIGNAL)
+        self.emit(SignalCode.INTERRUPT_PROCESS_SIGNAL)
     """
     End Slot functions
     """
