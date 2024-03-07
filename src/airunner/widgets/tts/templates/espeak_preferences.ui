@@ -30,7 +30,7 @@
    <item row="0" column="0">
     <widget class="QGroupBox" name="use_bark">
      <property name="title">
-      <string>SPD</string>
+      <string>Espeak</string>
      </property>
      <property name="checkable">
       <bool>false</bool>
@@ -184,16 +184,16 @@
          <item row="0" column="0">
           <widget class="SliderWidget" name="rate" native="true">
            <property name="slider_minimum" stdset="0">
-            <number>1</number>
+            <number>0</number>
            </property>
            <property name="slider_maximum" stdset="0">
-            <number>100</number>
+            <number>300</number>
            </property>
            <property name="spinbox_minimum" stdset="0">
             <double>0.000000000000000</double>
            </property>
            <property name="spinbox_maximum" stdset="0">
-            <double>1.000000000000000</double>
+            <double>3.000000000000000</double>
            </property>
            <property name="display_as_float" stdset="0">
             <bool>true</bool>
