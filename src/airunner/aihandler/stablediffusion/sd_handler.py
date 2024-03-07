@@ -218,7 +218,6 @@ class SDHandler(
         self.do_generate = False
         self._generator = None
         self.do_interrupt = False
-
         self.latents_worker = create_worker(LatentsWorker)
 
     def on_interrupt_process_signal(self):
@@ -508,6 +507,7 @@ class SDHandler(
             response = self.generator_sample()
             self.initialized = True
         elif self.loaded and not self.loading and self.do_generate:
+            self.do_interrupt = False
             response = self.generator_sample()
             # Set random seed if random seed is true
             if self.settings and self.settings["generator_settings"]["random_seed"]:
