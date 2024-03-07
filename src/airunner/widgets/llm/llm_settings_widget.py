@@ -44,24 +44,30 @@ class LLMSettingsWidget(BaseWidget):
             self.settings = settings
 
     def initialize_form(self):
-        self.ui.prompt_template.blockSignals(True)
-        self.ui.model.blockSignals(True)
-        self.ui.model_version.blockSignals(True)
-        self.ui.radio_button_2bit.blockSignals(True)
-        self.ui.radio_button_4bit.blockSignals(True)
-        self.ui.radio_button_8bit.blockSignals(True)
-        self.ui.radio_button_16bit.blockSignals(True)
-        self.ui.radio_button_32bit.blockSignals(True)
-        self.ui.random_seed.blockSignals(True)
-        self.ui.do_sample.blockSignals(True)
-        self.ui.early_stopping.blockSignals(True)
-        self.ui.use_gpu_checkbox.blockSignals(True)
-        self.ui.override_parameters.blockSignals(True)
-        self.ui.leave_in_vram.blockSignals(True)
-        self.ui.move_to_cpu.blockSignals(True)
-        self.ui.unload_model.blockSignals(True)
-        self.ui.automatic_tools.blockSignals(True)
-        self.ui.manual_tools.blockSignals(True)
+        elements = [
+            self.ui.prompt_template,
+            self.ui.model,
+            self.ui.model_version,
+            self.ui.radio_button_2bit,
+            self.ui.radio_button_4bit,
+            self.ui.radio_button_8bit,
+            self.ui.radio_button_16bit,
+            self.ui.radio_button_32bit,
+            self.ui.random_seed,
+            self.ui.do_sample,
+            self.ui.early_stopping,
+            self.ui.use_gpu_checkbox,
+            self.ui.override_parameters,
+            self.ui.leave_in_vram,
+            self.ui.move_to_cpu,
+            self.ui.unload_model,
+            self.ui.automatic_tools,
+            self.ui.manual_tools,
+        ]
+
+        for element in elements:
+            element.blockSignals(True)
+
         self.ui.top_p.initialize()
         self.ui.max_length.initialize()
         self.ui.max_length.initialize()
@@ -124,24 +130,27 @@ class LLMSettingsWidget(BaseWidget):
         self.ui.use_gpu_checkbox.setChecked(llm_generator_settings["use_gpu"])
         self.ui.override_parameters.setChecked(self.settings["llm_generator_settings"]["override_parameters"])
 
-        self.ui.model.blockSignals(False)
-        self.ui.model_version.blockSignals(False)
-        self.ui.radio_button_2bit.blockSignals(False)
-        self.ui.radio_button_4bit.blockSignals(False)
-        self.ui.radio_button_8bit.blockSignals(False)
-        self.ui.radio_button_16bit.blockSignals(False)
-        self.ui.radio_button_32bit.blockSignals(False)
-        self.ui.random_seed.blockSignals(False)
-        self.ui.do_sample.blockSignals(False)
-        self.ui.early_stopping.blockSignals(False)
-        self.ui.use_gpu_checkbox.blockSignals(False)
-        self.ui.override_parameters.blockSignals(False)
-        self.ui.prompt_template.blockSignals(False)
-        self.ui.leave_in_vram.blockSignals(False)
-        self.ui.move_to_cpu.blockSignals(False)
-        self.ui.unload_model.blockSignals(False)
-        self.ui.automatic_tools.blockSignals(False)
-        self.ui.manual_tools.blockSignals(False)
+        for element in elements:
+            element.blockSignals(False)
+
+        for k in [
+            "top_p",
+            "max_length",
+            "repetition_penalty",
+            "min_length",
+            "length_penalty",
+            "num_beams",
+            "ngram_size",
+            "temperature",
+            "sequences",
+            "top_k",
+        ]:
+            getattr(self.ui, k).settings_loaded(self.callback)
+
+    def callback(self, prop, val):
+        settings = self.settings
+        settings["llm_generator_settings"][prop] = val
+        self.settings = settings
 
     def model_text_changed(self, val):
         settings = self.settings
@@ -220,7 +229,7 @@ class LLMSettingsWidget(BaseWidget):
         settings = self.settings
         dtype = settings["llm_generator_settings"]["dtype"]
         if not use_gpu:            
-            if dtype in ["2bit","4bit", "8bit"]:
+            if dtype in ["2bit", "4bit", "8bit"]:
                 self.ui.radio_button_16bit.setChecked(True)
             self.ui.radio_button_2bit.setEnabled(False)
             self.ui.radio_button_4bit.setEnabled(False)

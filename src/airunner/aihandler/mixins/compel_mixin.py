@@ -1,7 +1,7 @@
 from airunner.aihandler.logger import Logger
 from compel import Compel, DiffusersTextualInversionManager
 
-from airunner.utils import clear_memory
+from airunner.utils import clear_memory, get_torch_device
 
 
 class CompelMixin:
@@ -97,9 +97,11 @@ class CompelMixin:
         self.prompt_embeds = prompt_embeds
         self.negative_prompt_embeds = negative_prompt_embeds
 
+        device = get_torch_device()
+
         if prompt_embeds is not None:
-            self.logger.debug(f"Moving prompt embeds to device: {self.device}")
-            self.prompt_embeds.half().to(self.device)
+            self.logger.debug(f"Moving prompt embeds to device: {device}")
+            self.prompt_embeds.half().to(device)
 
         if negative_prompt_embeds is not None:
-            self.negative_prompt_embeds.half().to(self.device)
+            self.negative_prompt_embeds.half().to(device)

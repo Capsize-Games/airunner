@@ -49,10 +49,6 @@ class STTHandler(BaseHandler):
         self.register(SignalCode.STT_PROCESS_AUDIO_SIGNAL, self.on_process_audio)
 
     @property
-    def device(self):
-        return torch.device("cuda:0" if self.use_cuda else "cpu")
-    
-    @property
     def use_cuda(self):
         return torch.cuda.is_available()
 

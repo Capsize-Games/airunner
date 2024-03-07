@@ -5,7 +5,10 @@ from transformers.tools.agents import StopSequenceCriteria
 class LocalAgent(LocalAgentBase):
     def __init__(self, *args, **kwargs):
         self.restrict_tools_to_additional = kwargs.pop("restrict_tools_to_additional", False)
-        super().__init__(*args, **kwargs)
+        super().__init__(
+            *args,
+            **kwargs,
+        )
         if self.restrict_tools_to_additional:
             self._toolbox = kwargs.get("additional_tools")
 

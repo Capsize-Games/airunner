@@ -30,7 +30,7 @@ class CasualLMTransformerBaseHandler(TokenizerHandler):
         self.bot_mood: str = ""
         self.bot_personality: str = ""
         self.user_evaluation: str = ""
-        self.register(SignalCode.LLM_CLEAR_HISTORY, self.on_clear_history_signal)
+        self.register(SignalCode.LLM_CLEAR_HISTORY_SIGNAL, self.on_clear_history_signal)
         self.use_personality: bool = False
         self.use_mood: bool = False
         self.use_guardrails: bool = False
@@ -46,6 +46,12 @@ class CasualLMTransformerBaseHandler(TokenizerHandler):
         self.return_agent_code: bool = False
         self.batch_size: int = 1
         self.vision_history: list = []
+
+        self.register(SignalCode.LLM_CLEAR_HISTORY_SIGNAL, self.on_clear_history_signal)
+
+    def on_clear_history_signal(self):
+        self.logger.debug("Clearing chat history")
+        self.chat_agent.history = []
 
     @property
     def is_mistral(self) -> bool:
@@ -93,7 +99,9 @@ class CasualLMTransformerBaseHandler(TokenizerHandler):
         }
 
     def on_clear_history_signal(self):
-        self.history = []
+        # self.logger.debug("Clearing vision history")
+        # self.vision_history = []
+        pass
 
     def process_data(self, data):
         super().process_data(data)

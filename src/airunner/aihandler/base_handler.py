@@ -6,6 +6,7 @@ from airunner.enums import HandlerType
 from airunner.mediator_mixin import MediatorMixin
 from airunner.service_locator import ServiceLocator
 from airunner.aihandler.logger import Logger
+from airunner.utils import get_torch_device
 
 
 class BaseHandler(
@@ -26,6 +27,10 @@ class BaseHandler(
         super().__init__(*args, **kwargs)
 
     @property
+    def device(self):
+        return get_torch_device()
+
+    @property
     def llm_dtype(self):
         return self.settings["llm_generator_settings"]["dtype"]
 
@@ -40,10 +45,6 @@ class BaseHandler(
     @property
     def cuda_index(self):
         return 0
-
-    @property
-    def device(self):
-        return f"cuda:{self.cuda_index}" if self.use_cuda else "cpu"
 
     @property
     def torch_dtype(self):
