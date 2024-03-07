@@ -446,10 +446,10 @@ DEFAULT_SHORTCUTS = {
 }
 ESPEAK_SETTINGS = dict(
     voices=dict(
-        Male=[
+        male=[
             "m1", "m2", "m3",
         ],
-        Female=[
+        female=[
             "f1", "f2", "f3",
         ],
     ),
