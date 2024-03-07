@@ -75,8 +75,7 @@ class MainWindow(
     def handle_key_press(self, key):
         shortcut_key_settings = self.settings["shortcut_key_settings"]
         for k, v in shortcut_key_settings.items():
-            print(k, v["key"].value == key())
-            if v["key"].value == key():
+            if v["key"] == key():
                 self.emit(v["signal"])
     
     def key_matches(self, key_name, keyboard_key):
