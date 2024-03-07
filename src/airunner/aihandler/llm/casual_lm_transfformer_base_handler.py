@@ -31,6 +31,7 @@ class CasualLMTransformerBaseHandler(TokenizerHandler):
         self.bot_personality: str = ""
         self.user_evaluation: str = ""
         self.register(SignalCode.LLM_CLEAR_HISTORY_SIGNAL, self.on_clear_history_signal)
+        self.register(SignalCode.INTERRUPT_PROCESS_SIGNAL, self.on_interrupt_process_signal)
         self.use_personality: bool = False
         self.use_mood: bool = False
         self.use_guardrails: bool = False
@@ -48,6 +49,10 @@ class CasualLMTransformerBaseHandler(TokenizerHandler):
         self.vision_history: list = []
 
         self.register(SignalCode.LLM_CLEAR_HISTORY_SIGNAL, self.on_clear_history_signal)
+
+    def on_interrupt_process_signal(self):
+        if self.chat_agent is not None:
+            self.chat_agent.interrupt_process()
 
     def on_clear_history_signal(self):
         self.logger.debug("Clearing chat history")
