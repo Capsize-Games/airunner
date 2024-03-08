@@ -14,7 +14,7 @@ from airunner.aihandler.logger import Logger
 from airunner.enums import SignalCode, CanvasToolName, GeneratorSection, ServiceCode
 from airunner.mediator_mixin import MediatorMixin
 from airunner.service_locator import ServiceLocator
-from airunner.utils import snap_to_grid, convert_base64_to_image
+from airunner.utils import snap_to_grid, convert_base64_to_image, convert_image_to_base64
 from airunner.widgets.canvas.clipboard_handler import ClipboardHandler
 from airunner.widgets.canvas.draggables.draggable_pixmap import DraggablePixmap
 from airunner.widgets.canvas.image_handler import ImageHandler
@@ -57,6 +57,7 @@ class CustomScene(
         self.clipboard_handler = ClipboardHandler()
         self.image_handler = ImageHandler()
         ServiceLocator.register(ServiceCode.CURRENT_ACTIVE_IMAGE, self.current_active_image)
+        self.register(SignalCode.CANVAS_CLEAR, self.on_canvas_clear_signal)
 
     @staticmethod
     def current_draggable_pixmap(self):
@@ -65,13 +66,16 @@ class CustomScene(
     def register_signals(self):
         signals = [
             (SignalCode.SCENE_RESIZE_SIGNAL, self.resize),
-            (SignalCode.CANVAS_CLEAR, self.on_canvas_clear_signal),
             (SignalCode.SCENE_DO_UPDATE_IMAGE_SIGNAL, self.update_current_pixmap),
-            (SignalCode.CANVAS_PASTE_IMAGE_SIGNAL, self.paste_image_from_clipboard),
             (SignalCode.CANVAS_CANCEL_FILTER_SIGNAL, self.cancel_filter),
             (SignalCode.CANVAS_PREVIEW_FILTER_SIGNAL, self.preview_filter),
             (SignalCode.CANVAS_LOAD_IMAGE_FROM_PATH_SIGNAL, self.on_load_image_from_path),
             (SignalCode.SD_IMAGE_GENERATED_SIGNAL, self.on_image_generated_signal),
+            (SignalCode.CANVAS_COPY_IMAGE_SIGNAL, self.on_canvas_copy_image_signal),
+            (SignalCode.CANVAS_CUT_IMAGE_SIGNAL, self.on_canvas_cut_image_signal),
+            (SignalCode.CANVAS_ROTATE_90_CLOCKWISE_SIGNAL, self.on_canvas_rotate_90_clockwise_signal),
+            (SignalCode.CANVAS_ROTATE_90_COUNTER_CLOCKWISE_SIGNAL, self.on_canvas_rotate_90_counter_clockwise_signal),
+            (SignalCode.CANVAS_PASTE_IMAGE_SIGNAL, self.paste_image_from_clipboard),
         ]
         for signal, handler in signals:
             self.register(signal, handler)
@@ -94,21 +98,30 @@ class CustomScene(
 
     def paste_image_from_clipboard(self):
         image = self.clipboard_handler.paste_image_from_clipboard()
-        self.create_image(image)
+        #self.delete_image()
+
+        settings = self.settings
+        if settings["resize_on_paste"]:
+            image = self.resize_image(image)
+        image = convert_image_to_base64(image)
+        settings[self.settings_key]["image"] = image
+        self.settings = settings
+        self.refresh_image()
 
     def create_image(self, image):
         if self.settings["resize_on_paste"]:
             image = self.resize_image(image)
-        self.add_image_to_scene(image)
+        if image is not None:
+            self.add_image_to_scene(image)
 
-    def resize_image(self, image):
-        image.thumbnail(
-            (
-                self.settings["is_maximized"],
-                self.settings["working_height"]
-            ),
-            Image.ANTIALIAS
-        )
+    def resize_image(self, image: Image) -> Image:
+        if image is None:
+            return None
+
+        width = self.settings["working_width"]
+        height = self.settings["working_height"]
+        if image.width > width or image.height > height:
+            image.thumbnail((width, height))
         return image
 
     def on_load_image_from_path(self, image_path):
@@ -162,6 +175,10 @@ class CustomScene(
                 action=GeneratorSection.OUTPAINT.value
             )
         self.set_current_active_image(image)
+        base64_image = convert_image_to_base64(image)
+        settings = self.settings
+        settings[self.settings_key]["image"] = base64_image
+        self.settings = settings
         q_image = ImageQt.ImageQt(image)
         self.item.setPixmap(QPixmap.fromImage(q_image))
         self.update()
@@ -223,31 +240,47 @@ class CustomScene(
         return new_image, image_root_point, image_pivot_point
 
     def set_current_active_image(self, image: Image):
-        self.logger.debug("Adding image to current layer")
-        base_64_image: Optional[bytes] = None
+        self.logger.debug("Setting current active image")
+        self.refresh_image(image)
 
+    def refresh_image(self, image: Image = None):
+        image = image if image is not None else self.current_active_image()
+
+        # Update base64 image in settings
+        base_64_image = None
         try:
             if image:
-                buffered = io.BytesIO()
-                image.save(buffered, format="PNG")
-                base_64_image = base64.b64encode(buffered.getvalue())
+                base_64_image = convert_image_to_base64(image)
         except Exception as e:
             self.logger.error(e)
-
         if base_64_image is not None:
             settings = self.settings
-            settings["canvas_settings"]["image"] = base_64_image
+            settings[self.settings_key]["image"] = base_64_image
             self.settings = settings
 
+        # Update the pixmap item, image+painter and scene
+        item_scene = self.item.scene() if self.item is not None else None
+        if item_scene is not None:
+            item_scene.removeItem(self.item)
+        if self.painter and self.painter.isActive():
+            self.painter.end()
+        self.set_image(image)
+        self.set_item()
+        self.initialize_image()
+
     def on_image_generated_signal(self, image_data):
-        self.add_image_to_scene(
-            image_data["images"][0].convert("RGBA"),
-            is_outpaint=image_data["action"] == GeneratorSection.OUTPAINT.value,
-            outpaint_box_rect=image_data["outpaint_box_rect"]
-        )
+        # self.add_image_to_scene(
+        #     image_data["images"][0].convert("RGBA"),
+        #     is_outpaint=image_data["action"] == GeneratorSection.OUTPAINT.value,
+        #     outpaint_box_rect=image_data["outpaint_box_rect"]
+        # )
+        self.create_image(image_data["images"][0].convert("RGBA"))
 
     def on_canvas_clear_signal(self):
-        print("CLEAR HERE")
+        settings = self.settings
+        settings[self.settings_key]["image"] = None
+        self.settings = settings
+        self.delete_image()
 
     def update_current_pixmap(self, image: Image):
         self.item.setPixmap(QPixmap.fromImage(image))
@@ -256,7 +289,7 @@ class CustomScene(
         self.copy_image(self.current_active_image())
 
     def on_canvas_cut_image_signal(self, _event):
-        self.cut_image()
+        self.cut_image(self.current_active_image())
 
     def on_canvas_rotate_90_clockwise_signal(self, _event):
         self.rotate_90_clockwise()
@@ -271,13 +304,10 @@ class CustomScene(
         self.rotate_image(Image.ROTATE_90)
 
     def copy_image(
-            self,
-            image: Image = None
+        self,
+        image: Image = None
     ) -> object:
-        return self.clipboard_handler.copy_image(
-            image,
-            self.current_draggable_pixmap()
-        )
+        return self.clipboard_handler.copy_image(image)
 
     def rotate_image(self, angle):
         image = self.image_handler.rotate_image(
@@ -285,33 +315,44 @@ class CustomScene(
             self.current_active_image()
         )
         self.set_current_active_image(image)
-        self.emit(SignalCode.CANVAS_DO_RESIZE_SIGNAL, {
-            "force_draw": True,
-            "do_draw_layers": True
-        })
 
-    def cut_image(self):
-        draggable_pixmap: DraggablePixmap = self.clipboard_handler.cut_image()
-        if draggable_pixmap:
-            self.emit(SignalCode.REMOVE_SCENE_ITEM_SIGNAL, draggable_pixmap)
-            self.emit(SignalCode.LAYER_DELETE_CURRENT_SIGNAL)
-            self.update()
+    def cut_image(self, image: Image = None) -> Image:
+        image = self.clipboard_handler.copy_image(image)
+        if image is not None:
+            self.delete_image()
 
     def delete_image(self):
         self.logger.debug("Deleting image from canvas")
-        draggable_pixmap = self.current_draggable_pixmap()
-        if not draggable_pixmap:
-            return
-        self.remove_scene_item(draggable_pixmap)
-        self.update()
 
-    def set_image(self):
-        base64image = self.settings[self.settings_key]["image"]
+        item_scene = self.item.scene()
+        if item_scene is not None:
+            item_scene.removeItem(self.item)
+
+        if self.painter and self.painter.isActive():
+            self.painter.end()
+        settings = self.settings
+        settings[self.settings_key]["image"] = None
+        self.settings = settings
+        self.image = None
+        self.set_image()
+        self.set_item()
+        self.initialize_image()
+
+    def set_image(self, pil_image: Image = None):
+        base64image = None
+        if not pil_image:
+            base64image = self.settings[self.settings_key]["image"]
+
         if base64image is not None:
             pil_image = convert_base64_to_image(base64image).convert("RGBA")
-            self.image = ImageQt.ImageQt(pil_image)
-            self.set_item()
-            self.initialize_image()
+
+        if pil_image is not None:
+            img = ImageQt.ImageQt(pil_image)
+            # img_scene = self.item.scene() if self.item is not NoneType else None
+            # if img_scene is not None:
+            #     img_scene.removeItem(self.item)
+            self.image = img
+            #self.initialize_image()
         else:
             self.image = QImage(
                 self.settings["working_width"],
@@ -326,6 +367,8 @@ class CustomScene(
             self.addItem(self.item)
         else:
             self.item.setPixmap(QPixmap.fromImage(self.image))
+            if self.item.scene() is None:
+                self.addItem(self.item)
         self.item.setZValue(1)
 
     @property
