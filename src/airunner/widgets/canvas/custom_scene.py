@@ -1,19 +1,22 @@
 import base64
 import io
+import os
 from types import NoneType
 from typing import Optional
 
+import PIL
 from PIL import ImageQt, Image, ImageFilter
 from PIL.ImageQt import QImage
 from PyQt6.QtCore import Qt, QPoint
 from PyQt6.QtGui import QEnterEvent
 from PyQt6.QtGui import QPixmap, QPainter
-from PyQt6.QtWidgets import QGraphicsScene, QGraphicsPixmapItem
+from PyQt6.QtWidgets import QGraphicsScene, QGraphicsPixmapItem, QFileDialog
 
 from airunner.aihandler.logger import Logger
 from airunner.enums import SignalCode, CanvasToolName, GeneratorSection, ServiceCode
 from airunner.mediator_mixin import MediatorMixin
 from airunner.service_locator import ServiceLocator
+from airunner.settings import VALID_IMAGE_FILES
 from airunner.utils import snap_to_grid, convert_base64_to_image, convert_image_to_base64
 from airunner.widgets.canvas.clipboard_handler import ClipboardHandler
 from airunner.widgets.canvas.draggables.draggable_pixmap import DraggablePixmap
@@ -76,9 +79,35 @@ class CustomScene(
             (SignalCode.CANVAS_ROTATE_90_CLOCKWISE_SIGNAL, self.on_canvas_rotate_90_clockwise_signal),
             (SignalCode.CANVAS_ROTATE_90_COUNTER_CLOCKWISE_SIGNAL, self.on_canvas_rotate_90_counter_clockwise_signal),
             (SignalCode.CANVAS_PASTE_IMAGE_SIGNAL, self.paste_image_from_clipboard),
+            (SignalCode.CANVAS_EXPORT_IMAGE_SIGNAL, self.export_image),
+            (SignalCode.CANVAS_IMPORT_IMAGE_SIGNAL, self.import_image),
         ]
         for signal, handler in signals:
             self.register(signal, handler)
+
+    def export_image(self):
+        image = self.current_active_image()
+        if image:
+            file_path, _ = QFileDialog.getSaveFileName(
+                None,
+                "Save Image",
+                "",
+                f"Image Files ({' '.join(VALID_IMAGE_FILES)})"
+            )
+            if file_path == "":
+                return
+            image.save(file_path)
+
+    def import_image(self):
+        file_path, _ = QFileDialog.getOpenFileName(
+            None,
+            "Open Image",
+            "",
+            f"Image Files ({' '.join(VALID_IMAGE_FILES)})"
+        )
+        if file_path == "":
+            return
+        self.load_image(file_path)
 
     @property
     def image_pivot_point(self):
@@ -115,13 +144,8 @@ class CustomScene(
             self.add_image_to_scene(image)
 
     def resize_image(self, image: Image) -> Image:
-        if image is None:
-            return None
-
-        width = self.settings["working_width"]
-        height = self.settings["working_height"]
-        if image.width > width or image.height > height:
-            image.thumbnail((width, height))
+        max_size = (self.settings["working_width"], self.settings["working_height"])
+        image.thumbnail(max_size, PIL.Image.Resampling.BICUBIC)
         return image
 
     def on_load_image_from_path(self, image_path):
@@ -136,11 +160,14 @@ class CustomScene(
         is_outpaint: bool = False
     ):
         self.add_image_to_scene(
-            is_outpaint=is_outpaint
+            is_outpaint=is_outpaint,
+            image=image
         )
 
     def load_image(self, image_path: str):
         image = self.image_handler.load_image(image_path)
+        if self.settings["resize_on_paste"]:
+            image = self.resize_image(image)
         self.add_image_to_scene(image)
 
     def cancel_filter(self):
