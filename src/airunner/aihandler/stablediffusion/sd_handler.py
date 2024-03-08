@@ -220,6 +220,7 @@ class SDHandler(
         self.do_interrupt = False
         self.latents_worker = create_worker(LatentsWorker)
 
+
     def on_interrupt_process_signal(self):
         self.do_interrupt = True
 
@@ -857,9 +858,11 @@ class SDHandler(
     def callback(self, step: int, _time_step, latents):
         total = 1
         if self.sd_request.generator_settings:
-            total = int(self.sd_request.generator_settings.steps * self.sd_request.generator_settings.strength) if (
-                (self.sd_request.is_img2img or self.sd_request.is_depth2img)
-            ) else self.sd_request.generator_settings.steps
+            total = self.sd_request.generator_settings.steps
+            # int(self.sd_request.generator_settings.steps * self.sd_request.generator_settings.strength) if (
+            #     (self.sd_request.is_img2img or self.sd_request.is_depth2img)
+            # ) else self.sd_request.generator_settings.steps
+        print(step, total * self.sd_request.generator_settings.strength, _time_step)
         # self.emit(SignalCode.HANDLE_LATENTS_SIGNAL, {
         #     "latents": latents,
         #     "sd_request": self.sd_request
@@ -1113,8 +1116,7 @@ class SDHandler(
         return pipeline
 
     def load_controlnet(self, local_files_only: bool = None):
-        standard_image_settings = self.settings["standard_image_settings"]
-        controlnet_name = standard_image_settings["controlnet"]
+        controlnet_name = self.settings["generator_settings"]["controlnet_image_settings"]["controlnet"]
         controlnet_model = self.controlnet_model_by_name(controlnet_name)
         self.logger.debug(f"Loading controlnet {self.controlnet_type} self.controlnet_model {controlnet_model}")
         self._controlnet = None
