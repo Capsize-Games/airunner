@@ -14,6 +14,62 @@
    <string>Form</string>
   </property>
   <layout class="QGridLayout" name="gridLayout">
+   <item row="3" column="0">
+    <widget class="SliderWidget" name="controlnet_conditioning_scale" native="true">
+     <property name="slider_minimum" stdset="0">
+      <number>0</number>
+     </property>
+     <property name="slider_maximum" stdset="0">
+      <number>100</number>
+     </property>
+     <property name="spinbox_minimum" stdset="0">
+      <number>0</number>
+     </property>
+     <property name="spinbox_maximum" stdset="0">
+      <double>1.000000000000000</double>
+     </property>
+     <property name="slider_tick_interval" stdset="0">
+      <number>1</number>
+     </property>
+     <property name="slider_single_step" stdset="0">
+      <number>1</number>
+     </property>
+     <property name="slider_page_step" stdset="0">
+      <number>2</number>
+     </property>
+     <property name="spinbox_single_step" stdset="0">
+      <double>0.100000000000000</double>
+     </property>
+     <property name="spinbox_page_step" stdset="0">
+      <double>0.200000000000000</double>
+     </property>
+     <property name="label_text" stdset="0">
+      <string>Controlnet Conditioning Scale</string>
+     </property>
+     <property name="slider_callback" stdset="0">
+      <string notr="true">handle_value_change</string>
+     </property>
+     <property name="settings_property" stdset="0">
+      <string notr="true">generator_settings.controlnet_image_settings.conditioning_scale</string>
+     </property>
+     <property name="display_as_float" stdset="0">
+      <bool>true</bool>
+     </property>
+    </widget>
+   </item>
+   <item row="7" column="0">
+    <spacer name="verticalSpacer">
+     <property name="orientation">
+      <enum>Qt::Vertical</enum>
+     </property>
+     <property name="sizeHint" stdset="0">
+      <size>
+       <width>20</width>
+       <height>40</height>
+      </size>
+     </property>
+    </spacer>
+   </item>
    <item row="1" column="0">
     <widget class="SliderWidget" name="brush_size_slider" native="true">
      <property name="slider_minimum" stdset="0">
@@ -54,6 +110,49 @@
      </property>
      <property name="display_as_float" stdset="0">
       <bool>false</bool>
+     </property>
+    </widget>
+   </item>
+   <item row="4" column="0">
+    <widget class="SliderWidget" name="controlnet_guidance_scale" native="true">
+     <property name="slider_minimum" stdset="0">
+      <number>1</number>
+     </property>
+     <property name="slider_maximum" stdset="0">
+      <number>10000</number>
+     </property>
+     <property name="spinbox_minimum" stdset="0">
+      <number>1</number>
+     </property>
+     <property name="spinbox_maximum" stdset="0">
+      <double>100.000000000000000</double>
+     </property>
+     <property name="slider_tick_interval" stdset="0">
+      <number>1</number>
+     </property>
+     <property name="slider_single_step" stdset="0">
+      <number>1</number>
+     </property>
+     <property name="slider_page_step" stdset="0">
+      <number>10</number>
+     </property>
+     <property name="spinbox_single_step" stdset="0">
+      <double>0.100000000000000</double>
+     </property>
+     <property name="spinbox_page_step" stdset="0">
+      <double>0.200000000000000</double>
+     </property>
+     <property name="label_text" stdset="0">
+      <string>Controlnet Guidance Scale</string>
+     </property>
+     <property name="slider_callback" stdset="0">
+      <string notr="true">handle_value_change</string>
+     </property>
+     <property name="settings_property" stdset="0">
+      <string notr="true">generator_settings.controlnet_image_settings.guidance_scale</string>
+     </property>
+     <property name="display_as_float" stdset="0">
+      <bool>true</bool>
      </property>
     </widget>
    </item>
@@ -152,107 +251,15 @@
      </layout>
     </widget>
    </item>
-   <item row="3" column="0">
-    <widget class="SliderWidget" name="controlnet_conditioning_scale" native="true">
-     <property name="slider_minimum" stdset="0">
-      <number>0</number>
-     </property>
-     <property name="slider_maximum" stdset="0">
-      <number>100</number>
-     </property>
-     <property name="spinbox_minimum" stdset="0">
-      <number>0</number>
-     </property>
-     <property name="spinbox_maximum" stdset="0">
-      <double>1.000000000000000</double>
-     </property>
-     <property name="slider_tick_interval" stdset="0">
-      <number>1</number>
-     </property>
-     <property name="slider_single_step" stdset="0">
-      <number>1</number>
-     </property>
-     <property name="slider_page_step" stdset="0">
-      <number>2</number>
-     </property>
-     <property name="spinbox_single_step" stdset="0">
-      <double>0.100000000000000</double>
-     </property>
-     <property name="spinbox_page_step" stdset="0">
-      <double>0.200000000000000</double>
-     </property>
-     <property name="label_text" stdset="0">
-      <string>Controlnet Conditioning Scale</string>
-     </property>
-     <property name="slider_callback" stdset="0">
-      <string notr="true">handle_value_change</string>
-     </property>
-     <property name="settings_property" stdset="0">
-      <string notr="true">generator_settings.controlnet_image_settings.conditioning_scale</string>
-     </property>
-     <property name="display_as_float" stdset="0">
-      <bool>true</bool>
-     </property>
-    </widget>
-   </item>
-   <item row="4" column="0">
-    <widget class="SliderWidget" name="controlnet_guidance_scale" native="true">
-     <property name="slider_minimum" stdset="0">
-      <number>1</number>
-     </property>
-     <property name="slider_maximum" stdset="0">
-      <number>10000</number>
-     </property>
-     <property name="spinbox_minimum" stdset="0">
-      <number>1</number>
-     </property>
-     <property name="spinbox_maximum" stdset="0">
-      <double>100.000000000000000</double>
-     </property>
-     <property name="slider_tick_interval" stdset="0">
-      <number>1</number>
-     </property>
-     <property name="slider_single_step" stdset="0">
-      <number>1</number>
-     </property>
-     <property name="slider_page_step" stdset="0">
-      <number>10</number>
-     </property>
-     <property name="spinbox_single_step" stdset="0">
-      <double>0.100000000000000</double>
-     </property>
-     <property name="spinbox_page_step" stdset="0">
-      <double>0.200000000000000</double>
-     </property>
-     <property name="label_text" stdset="0">
-      <string>Controlnet Guidance Scale</string>
-     </property>
-     <property name="slider_callback" stdset="0">
-      <string notr="true">handle_value_change</string>
-     </property>
-     <property name="settings_property" stdset="0">
-      <string notr="true">generator_settings.controlnet_image_settings.guidance_scale</string>
-     </property>
-     <property name="display_as_float" stdset="0">
-      <bool>true</bool>
-     </property>
-    </widget>
-   </item>
-   <item row="6" column="0">
-    <spacer name="verticalSpacer">
-     <property name="orientation">
-      <enum>Qt::Vertical</enum>
-     </property>
-     <property name="sizeHint" stdset="0">
-      <size>
-       <width>20</width>
-       <height>40</height>
-      </size>
-     </property>
-    </spacer>
-   </item>
    <item row="0" column="0">
     <widget class="QComboBox" name="controlnet"/>
+   </item>
+   <item row="6" column="0">
+    <widget class="QCheckBox" name="toggle_auto_generate_while_drawing">
+     <property name="text">
+      <string>Auto-generate while drawing</string>
+     </property>
+    </widget>
    </item>
   </layout>
  </widget>
@@ -298,9 +305,26 @@
     </hint>
    </hints>
   </connection>
+  <connection>
+   <sender>toggle_auto_generate_while_drawing</sender>
+   <signal>toggled(bool)</signal>
+   <receiver>brush_widget</receiver>
+   <slot>toggle_auto_generate_while_drawing(bool)</slot>
+   <hints>
+    <hint type="sourcelabel">
+     <x>162</x>
+     <y>185</y>
+    </hint>
+    <hint type="destinationlabel">
+     <x>340</x>
+     <y>0</y>
+    </hint>
+   </hints>
+  </connection>
  </connections>
  <slots>
   <slot>color_button_clicked()</slot>
   <slot>controlnet_changed(QString)</slot>
+  <slot>toggle_auto_generate_while_drawing(bool)</slot>
  </slots>
 </ui>

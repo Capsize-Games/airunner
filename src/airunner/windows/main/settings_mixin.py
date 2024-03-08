@@ -250,6 +250,7 @@ class SettingsMixin:
                 pos_x=0,
                 pos_y=0,
                 image=None,
+                enable_automatic_drawing=True,
             ),
             metadata_settings=dict(
                 image_export_metadata_prompt=True,
