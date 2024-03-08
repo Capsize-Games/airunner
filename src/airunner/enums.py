@@ -56,6 +56,7 @@ class SignalCode(Enum):
     ENABLE_ERASER_TOOL_SIGNAL = "enable_eraser_tool_signal"
     ENABLE_SELECTION_TOOL_SIGNAL = "enable_selection_tool_signal"
     ENABLE_MOVE_TOOL_SIGNAL = "enable_move_tool_signal"
+    INTERRUPT_PROCESS_SIGNAL = "interrupt_process_signal"
 
     AI_MODELS_REFRESH_SIGNAL = "refresh_ai_models_signal"
     AI_MODELS_SAVE_OR_UPDATE_SIGNAL = "ai_models_save_or_update_signal"
@@ -196,6 +197,8 @@ class SignalCode(Enum):
     STT_PROCESS_AUDIO_SIGNAL = "stt_process_audio"
     STT_START_CAPTURE_SIGNAL = "stt_start_capture"
     STT_STOP_CAPTURE_SIGNAL = "stt_stop_capture"
+
+    UNBLOCK_TTS_GENERATOR_SIGNAL = "unblock_tts_generator_signal"
 
     TTS_REQUEST = "tts_request"
     TTS_GENERATOR_WORKER_ADD_TO_STREAM_SIGNAL = "TTSGeneratorWorker_add_to_stream_signal"
