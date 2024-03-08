@@ -147,6 +147,7 @@ class SDHandler(
         self.current_controlnet_type = None
         self.controlnet_loaded = False
         self.attempt_download = False
+        self.latents_set = False
         self.downloading_controlnet = False
         self._controlnet_image = None
         self._latents = None
@@ -795,6 +796,7 @@ class SDHandler(
         data: dict,
         nsfw_content_detected: List[bool] = None
     ):
+        self.final_callback()
         if images is None:
             return
 
@@ -842,34 +844,18 @@ class SDHandler(
             nsfw_content_detected=has_nsfw,
         )
 
-    latents_set = False
     def final_callback(self):
-        total = 1
-        if self.sd_request.generator_settings:
-            total = int(self.sd_request.generator_settings.steps * self.sd_request.generator_settings.strength) if (
-                (self.sd_request.is_img2img or self.sd_request.is_depth2img)
-            ) else self.sd_request.generator_settings.steps
+        print("final callback")
         self.emit(SignalCode.SD_PROGRESS_SIGNAL, {
-            "step": total,
-            "total": total,
+            "step": self.sd_request.generator_settings.steps,
+            "total": self.sd_request.generator_settings.steps,
         })
         self.latents_set = True
 
     def callback(self, step: int, _time_step, latents):
-        total = 1
-        if self.sd_request.generator_settings:
-            total = self.sd_request.generator_settings.steps
-            # int(self.sd_request.generator_settings.steps * self.sd_request.generator_settings.strength) if (
-            #     (self.sd_request.is_img2img or self.sd_request.is_depth2img)
-            # ) else self.sd_request.generator_settings.steps
-        print(step, total * self.sd_request.generator_settings.strength, _time_step)
-        # self.emit(SignalCode.HANDLE_LATENTS_SIGNAL, {
-        #     "latents": latents,
-        #     "sd_request": self.sd_request
-        # })
         res = {
             "step": step,
-            "total": total
+            "total": self.sd_request.generator_settings.steps
         }
         self.emit(SignalCode.SD_PROGRESS_SIGNAL, res)
         QApplication.processEvents()
