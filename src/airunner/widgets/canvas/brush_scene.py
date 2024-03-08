@@ -158,6 +158,8 @@ class BrushScene(CustomScene):
         self.handle_cursor(event)
         if not self.is_brush_or_eraser:
             super().mousePressEvent(event)
+        else:
+            self.emit(SignalCode.INTERRUPT_PROCESS_SIGNAL)
         #self.update_scene_worker.update_signal.emit(True)
 
     def mouseReleaseEvent(self, event):
