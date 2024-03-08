@@ -223,7 +223,6 @@ class MainWindow(
 
     def register_services(self):
         self.logger.debug("Registering services")
-        ServiceLocator.register(ServiceCode.DISPLAY_IMPORT_IMAGE_DIALOG, self.display_import_image_dialog)
         ServiceLocator.register(ServiceCode.GET_SETTINGS_VALUE, self.get_settings_value)
         ServiceLocator.register(ServiceCode.GET_CALLBACK_FOR_SLIDER, self.get_callback_for_slider)
 
@@ -310,21 +309,10 @@ class MainWindow(
         self.emit(SignalCode.CANVAS_CLEAR)
 
     def action_export_image_triggered(self):
-        image = ServiceLocator.get(ServiceCode.GET_IMAGE_FROM_LAYER)()
-        if image:
-            file_path, _ = QFileDialog.getSaveFileName(
-                self,
-                "Export Image",
-                "",
-                VALID_IMAGE_FILES
-            )
-            if file_path == "":
-                return
-            self.image_path = os.path.dirname(file_path)
-            image.save(file_path)
+        self.emit(SignalCode.CANVAS_EXPORT_IMAGE_SIGNAL)
 
     def action_import_image_triggered(self):
-        self.import_image()
+        self.emit(SignalCode.CANVAS_IMPORT_IMAGE_SIGNAL)
 
     def action_quit_triggered(self):
         QApplication.quit()
@@ -919,22 +907,6 @@ class MainWindow(
 
     def show_prompt_browser(self):
         PromptBrowser()
-
-    def import_image(self):
-        file_path, _ = open_file_path(
-            label="Import Image",
-            directory=self.settings["path_settings"]["image_path"]
-        )
-        if file_path == "":
-            return
-
-    def display_import_image_dialog(self, label="Import Image", directory=""):
-        return QFileDialog.getOpenFileName(
-            self,
-            label,
-            directory,
-            VALID_IMAGE_FILES
-        )
 
     def new_batch(self, index, image, data):
         self.generator_tab_widget.new_batch(index, image, data)
