@@ -18,9 +18,6 @@ class ImageHandler(
 
     def load_image(self, image_path: str) -> Image:
         image = Image.open(image_path)
-        if self.settings["resize_on_paste"]:
-            image.thumbnail((self.settings["is_maximized"],
-                             self.settings["working_height"]), Image.ANTIALIAS)
         return image
 
     def save_image(
