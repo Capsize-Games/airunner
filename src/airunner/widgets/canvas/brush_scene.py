@@ -11,6 +11,7 @@ from airunner.workers.update_scene_worker import UpdateSceneWorker
 
 
 class BrushScene(CustomScene):
+    settings_key = "drawing_pad_settings"
     def __init__(self, size):
         super().__init__(size)
         brush_settings = self.settings["brush_settings"]
@@ -41,21 +42,6 @@ class BrushScene(CustomScene):
             CanvasToolName.BRUSH,
             CanvasToolName.ERASER
         )
-
-    def set_image(self):
-        base64_image = self.settings["drawing_pad_settings"]["image"]
-        if base64_image:
-            pil_image = convert_base64_to_image(base64_image)
-            self.image = QImage(
-                ImageQt.ImageQt(pil_image.convert("RGBA"))
-            )
-        else:
-            self.image = QImage(
-                self.settings["working_width"],
-                self.settings["working_height"],
-                QImage.Format.Format_ARGB32
-            )
-            self.image.fill(Qt.GlobalColor.transparent)
 
     def handle_brush_color_changed(self, color_name):
         self._brush_color = QColor(color_name)
@@ -101,6 +87,7 @@ class BrushScene(CustomScene):
 
         if not self.start_pos:
             return
+
 
         self.path.moveTo(self.start_pos)
 
@@ -176,7 +163,7 @@ class BrushScene(CustomScene):
             image = self.image
         pil_image = ImageQt.fromqimage(image)
         settings = self.settings
-        settings["drawing_pad_settings"]["image"] = convert_image_to_base64(pil_image)
+        settings[self.settings_key]["image"] = convert_image_to_base64(pil_image)
         self.settings = settings
         self.do_update = False
         self.emit(SignalCode.DO_GENERATE_SIGNAL)
@@ -184,12 +171,3 @@ class BrushScene(CustomScene):
     def mouseMoveEvent(self, event):
         self.last_pos = event.scenePos()
         # self.update_scene_worker.update_signal.emit(True)
-
-    def initialize_image(self, _size=None):
-        size = QSize(
-            self.settings["working_width"],
-            self.settings["working_height"]
-        )
-        return super().initialize_image(
-            size
-        )
