@@ -13,6 +13,15 @@ class BrushContainerWidget(BaseWidget):
         self.ui.brush_size_slider.setProperty("current_value", self.settings["brush_settings"]["size"])
         self.ui.brush_size_slider.initialize()
         self.set_button_color()
+        self.ui.controlnet.blockSignals(True)
+        self.ui.controlnet.clear()
+        current_index = 0
+        for index, item in enumerate(self.settings["controlnet"]):
+            self.ui.controlnet.addItem(item["display_name"])
+            if self.settings["generator_settings"]["controlnet_image_settings"]["controlnet"] == item["name"]:
+                current_index = index
+        self.ui.controlnet.setCurrentIndex(current_index)
+        self.ui.controlnet.blockSignals(False)
 
     def color_button_clicked(self):
         color = QColorDialog.getColor()
@@ -29,3 +38,13 @@ class BrushContainerWidget(BaseWidget):
     def set_button_color(self):
         color = self.settings["brush_settings"]["primary_color"]
         self.ui.primary_color_button.setStyleSheet(f"background-color: {color};")
+
+    def controlnet_changed(self, val):
+        settings = self.settings
+        controlnet_value = settings["generator_settings"]["controlnet_image_settings"]["controlnet"]
+        for item in self.settings["controlnet"]:
+            if item["display_name"] == val:
+                controlnet_value = item["name"]
+                break
+        settings["generator_settings"]["controlnet_image_settings"]["controlnet"] = controlnet_value
+        self.settings = settings
