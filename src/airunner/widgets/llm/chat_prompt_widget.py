@@ -40,6 +40,7 @@ class ChatPromptWidget(BaseWidget):
         self.vision_history = []
         self.register(SignalCode.VISION_PROCESSED_SIGNAL, self.on_vision_processed)
         self.register(SignalCode.AUDIO_PROCESSOR_RESPONSE_SIGNAL, self.on_hear_signal)
+        self.held_message = None
 
     @property
     def current_generator(self):
@@ -96,6 +97,9 @@ class ChatPromptWidget(BaseWidget):
 
     def enable_generate(self):
         self.generating = False
+        if self.held_message is not None:
+            self.do_generate(prompt_override=self.held_message)
+            self.held_message = None
         self.enable_send_button()
 
     @pyqtSlot()
@@ -109,17 +113,23 @@ class ChatPromptWidget(BaseWidget):
     def action_button_clicked_send(self, _ignore):
         self.do_generate()
 
+    def interrupt_button_clicked(self):
+        self.emit(SignalCode.INTERRUPT_PROCESS_SIGNAL)
+
     def do_generate(self, image_override=None, prompt_override=None, callback=None, generator_name="casuallm"):
+        prompt = self.prompt if (prompt_override is None or prompt_override == "") else prompt_override
+
         if self.generating:
-            self.logger.warning("Already generating")
+            if self.held_message is None:
+                self.held_message = prompt
+                self.disable_send_button()
+                self.interrupt_button_clicked()
             return
-            
+
         self.generating = True
-        self.disable_send_button()
 
         image = self.get_service(ServiceCode.CURRENT_ACTIVE_IMAGE)() if (image_override is None or image_override is False) else image_override
 
-        prompt = self.prompt if (prompt_override is None or prompt_override == "") else prompt_override
         if prompt is None or prompt == "":
             self.logger.warning("Prompt is empty")
             return
@@ -259,6 +269,7 @@ class ChatPromptWidget(BaseWidget):
         if event.key() == Qt.Key.Key_Return:
             if event.modifiers() != Qt.KeyboardModifier.ShiftModifier:
                 self.do_generate()
+                return
         # Call the original method
         if self.originalKeyPressEvent is not None and self.originalKeyPressEvent != self.handle_key_press:
             self.originalKeyPressEvent(event)
