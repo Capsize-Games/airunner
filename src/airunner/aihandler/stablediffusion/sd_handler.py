@@ -845,7 +845,6 @@ class SDHandler(
         )
 
     def final_callback(self):
-        print("final callback")
         self.emit(SignalCode.SD_PROGRESS_SIGNAL, {
             "step": self.sd_request.generator_settings.steps,
             "total": self.sd_request.generator_settings.steps,
