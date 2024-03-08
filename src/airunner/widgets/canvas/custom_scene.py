@@ -26,10 +26,12 @@ class CustomScene(
     MediatorMixin,
     SettingsMixin
 ):
+    settings_key = "canvas_settings"
     def __init__(self, size):
         self.logger = Logger(prefix=self.__class__.__name__)
         MediatorMixin.__init__(self)
         SettingsMixin.__init__(self)
+        self.painter = None
         super().__init__()
 
         self._target_size = None
@@ -47,34 +49,32 @@ class CustomScene(
         self.start_pos = None
         self.selection_start_pos = None
         self.selection_stop_pos = None
-        self.painter = None
         self.do_update = False
-        self.register(SignalCode.SCENE_RESIZE_SIGNAL, self.resize)
         self.generate_image_time_in_ms = 0.5
         self.do_generate_image = False
         self.generate_image_time = 0
-        base64image = self.settings["drawing_pad_settings"]["image"]
-        if base64image:
-            pil_image = convert_base64_to_image(base64image).convert("RGBA")
-            self.image = ImageQt.ImageQt(pil_image)
-
-        self.register(SignalCode.CANVAS_CLEAR, self.on_canvas_clear_signal)
-        self.register(SignalCode.SCENE_DO_UPDATE_IMAGE_SIGNAL, self.update_current_pixmap)
-        self.register(SignalCode.CANVAS_PASTE_IMAGE_SIGNAL, self.paste_image_from_clipboard)
-        self.register(SignalCode.CANVAS_CANCEL_FILTER_SIGNAL, self.cancel_filter)
-        self.register(SignalCode.CANVAS_PREVIEW_FILTER_SIGNAL, self.preview_filter)
-        self.register(SignalCode.CANVAS_LOAD_IMAGE_FROM_PATH_SIGNAL, self.on_load_image_from_path)
         self.register_signals()
         self.clipboard_handler = ClipboardHandler()
         self.image_handler = ImageHandler()
         ServiceLocator.register(ServiceCode.CURRENT_ACTIVE_IMAGE, self.current_active_image)
 
     @staticmethod
-    def current_draggable_pixmap():
+    def current_draggable_pixmap(self):
         return ServiceLocator.get(ServiceCode.CURRENT_DRAGGABLE_PIXMAP)()
 
     def register_signals(self):
-        self.register(SignalCode.SD_IMAGE_GENERATED_SIGNAL, self.on_image_generated_signal)
+        signals = [
+            (SignalCode.SCENE_RESIZE_SIGNAL, self.resize),
+            (SignalCode.CANVAS_CLEAR, self.on_canvas_clear_signal),
+            (SignalCode.SCENE_DO_UPDATE_IMAGE_SIGNAL, self.update_current_pixmap),
+            (SignalCode.CANVAS_PASTE_IMAGE_SIGNAL, self.paste_image_from_clipboard),
+            (SignalCode.CANVAS_CANCEL_FILTER_SIGNAL, self.cancel_filter),
+            (SignalCode.CANVAS_PREVIEW_FILTER_SIGNAL, self.preview_filter),
+            (SignalCode.CANVAS_LOAD_IMAGE_FROM_PATH_SIGNAL, self.on_load_image_from_path),
+            (SignalCode.SD_IMAGE_GENERATED_SIGNAL, self.on_image_generated_signal),
+        ]
+        for signal, handler in signals:
+            self.register(signal, handler)
 
     @property
     def image_pivot_point(self):
@@ -306,12 +306,19 @@ class CustomScene(
         self.update()
 
     def set_image(self):
-        self.image = QImage(
-            self.settings["working_width"],
-            self.settings["working_height"],
-            QImage.Format.Format_ARGB32
-        )
-        self.image.fill(Qt.GlobalColor.transparent)
+        base64image = self.settings[self.settings_key]["image"]
+        if base64image is not None:
+            pil_image = convert_base64_to_image(base64image).convert("RGBA")
+            self.image = ImageQt.ImageQt(pil_image)
+            self.set_item()
+            self.initialize_image()
+        else:
+            self.image = QImage(
+                self.settings["working_width"],
+                self.settings["working_height"],
+                QImage.Format.Format_ARGB32
+            )
+            self.image.fill(Qt.GlobalColor.transparent)
 
     def set_item(self):
         if self.item is NoneType:
@@ -337,11 +344,17 @@ class CustomScene(
         """
         This function is triggered on canvas viewport resize.
         It is used to resize the pixmap which is used for drawing on the canvas.
+
+        We are currently not using this function as it was causing issues
+        and may no longer be required.
         :param size:
         :return:
         """
-        self._target_size = size
-        self._do_resize = True
+        # self._target_size = size
+        # self._do_resize = True
+
+        # raise the self.item and self.image to the top
+        self.item.setZValue(1)
 
     def drawBackground(self, painter, rect):
         if self._do_resize:
@@ -350,22 +363,10 @@ class CustomScene(
 
         super().drawBackground(painter, rect)
 
-    def initialize_image(self, size=None):
-        size = self._target_size if size is None else size
-        if size is None:
-            size = self.views()[0].size()
-
+    def initialize_image(self):
         # Ensure that the QPainter object has finished painting before creating a new QImage
         if self.painter is not None and self.painter.isActive():
             self.painter.end()
-
-        self.image = QImage(
-            size.width(),
-            size.height(),
-            QImage.Format.Format_ARGB32
-        )
-        self.image.fill(Qt.GlobalColor.transparent)
-
         self.painter = QPainter(self.image)
         return self.image
 
@@ -384,7 +385,7 @@ class CustomScene(
             width < size.width() or
             height < size.height()
         ):
-            image = self.initialize_image(size)
+            image = self.initialize_image()
             pixmap = QPixmap.fromImage(image)
             self.item.setPixmap(pixmap)
 
