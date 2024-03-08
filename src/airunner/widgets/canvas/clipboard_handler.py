@@ -22,18 +22,14 @@ class ClipboardHandler(
         self.logger = Logger(prefix=self.__class__.__name__)
 
     def copy_image(
-            self,
-            image: Image = None,
-            draggable_pixmap: DraggablePixmap = None
+        self,
+        image: Image
     ) -> DraggablePixmap:
-        pixmap = draggable_pixmap if image is None else QPixmap.fromImage(ImageQt(image))
-        if not pixmap:
-            return None
-        return self.move_pixmap_to_clipboard(pixmap)
+        return self.move_pixmap_to_clipboard(image)
 
-    def cut_image(self) -> DraggablePixmap:
-        draggable_pixmap = self.copy_image()
-        return draggable_pixmap
+    def cut_image(self, image: Image) -> Image:
+        image = self.copy_image(image)
+        return image
 
     def paste_image_from_clipboard(self):
         self.logger.debug("paste image from clipboard")
@@ -49,27 +45,24 @@ class ClipboardHandler(
             return self.image_from_system_clipboard_windows()
         return self.image_from_system_clipboard_linux()
 
-    def move_pixmap_to_clipboard(self, pixmap):
+    def move_pixmap_to_clipboard(self, image: Image) -> Image:
         if is_windows():
-            return self.image_to_system_clipboard_windows(pixmap)
-        return self.image_to_system_clipboard_linux(pixmap)
+            return self.image_to_system_clipboard_windows(image)
+        return self.image_to_system_clipboard_linux(image)
 
-    def image_to_system_clipboard_windows(self, pixmap):
-        if not pixmap:
+    def image_to_system_clipboard_windows(self, image: Image) -> Image:
+        if image is None:
             return None
         self.logger.debug("image_to_system_clipboard_windows")
         import win32clipboard
         data = io.BytesIO()
-        # Convert QImage to PIL Image
-        image = Image.fromqpixmap(pixmap)
-        # Save PIL Image to BytesIO
         image.save(data, format="png")
         data = data.getvalue()
         win32clipboard.OpenClipboard()
         win32clipboard.EmptyClipboard()
         win32clipboard.SetClipboardData(win32clipboard.CF_DIB, data)
         win32clipboard.CloseClipboard()
-        return pixmap
+        return image
 
     def image_from_system_clipboard_windows(self):
         self.logger.debug("image_from_system_clipboard_windows")
@@ -85,13 +78,10 @@ class ClipboardHandler(
             print(e)
             return None
 
-    def image_to_system_clipboard_linux(self, pixmap):
-        if not pixmap:
+    def image_to_system_clipboard_linux(self, image: Image) -> Image:
+        if image is None:
             return None
         data = io.BytesIO()
-
-        # Convert QImage to PIL Image
-        image = Image.fromqpixmap(pixmap)
 
         # Save PIL Image to BytesIO
         image.save(data, format="png")
@@ -102,7 +92,7 @@ class ClipboardHandler(
                              stdin=subprocess.PIPE).communicate(data)
         except FileNotFoundError:
             self.logger.error("xclip not found. Please install xclip to copy image to clipboard.")
-        return pixmap
+        return image
 
     def image_from_system_clipboard_linux(self):
         self.logger.debug("image_from_system_clipboard_linux")
