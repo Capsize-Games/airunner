@@ -202,6 +202,7 @@ class SDHandler(
             SignalCode.START_AUTO_IMAGE_GENERATION_SIGNAL: self.on_start_auto_image_generation_signal,
             SignalCode.STOP_AUTO_IMAGE_GENERATION_SIGNAL: self.on_stop_auto_image_generation_signal,
             SignalCode.DO_GENERATE_SIGNAL: self.on_do_generate_signal,
+            SignalCode.INTERRUPT_PROCESS_SIGNAL: self.on_interrupt_process_signal,
         }
         for code, handler in signals.items():
             self.register(code, handler)
@@ -216,8 +217,11 @@ class SDHandler(
         self.running = True
         self.do_generate = False
         self._generator = None
-
+        self.do_interrupt = False
         self.latents_worker = create_worker(LatentsWorker)
+
+    def on_interrupt_process_signal(self):
+        self.do_interrupt = True
 
     @property
     def device(self):
@@ -503,6 +507,7 @@ class SDHandler(
             response = self.generator_sample()
             self.initialized = True
         elif self.loaded and not self.loading and self.do_generate:
+            self.do_interrupt = False
             response = self.generator_sample()
             # Set random seed if random seed is true
             if self.settings and self.settings["generator_settings"]["random_seed"]:
@@ -706,18 +711,24 @@ class SDHandler(
         Generate an image using the pipe
         :return:
         """
-        # if self.latents is None or self.do_set_seed:
-        #     self.latents = self.generate_latents()
-        #     if self.latents is not None:
-        #         self.latents = self.latents.to(self.device)
-        #     else:
-        #         self.logger.error("NO LATENTS")
         if self.pipe:
             try:
-                return self.pipe(**self.data)
+                return self.pipe(
+                    **self.data,
+                    callback_on_step_end=self.interrupt_callback
+                )
             except Exception as e:
+                if str(e) == "Interrupted":
+                    self.final_callback()
+                    return
                 self.error_handler("Something went wrong during generation")
                 return
+
+    def interrupt_callback(self, pipe, i, t, callback_kwargs):
+        if self.do_interrupt:
+            self.do_interrupt = False
+            raise Exception("Interrupted")
+        return callback_kwargs
 
     def sample_diffusers_model(self):
         self.logger.debug("sample_diffusers_model")

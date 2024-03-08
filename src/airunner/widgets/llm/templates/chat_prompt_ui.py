@@ -24,6 +24,9 @@ class Ui_chat_prompt(object):
         self.progressBar.setProperty("value", 0)
         self.progressBar.setObjectName("progressBar")
         self.horizontalLayout_2.addWidget(self.progressBar)
+        self.pushButton = QtWidgets.QPushButton(parent=chat_prompt)
+        self.pushButton.setObjectName("pushButton")
+        self.horizontalLayout_2.addWidget(self.pushButton)
         self.clear_conversatiion_button = QtWidgets.QPushButton(parent=chat_prompt)
         self.clear_conversatiion_button.setText("")
         icon = QtGui.QIcon.fromTheme("user-trash")
@@ -75,6 +78,7 @@ class Ui_chat_prompt(object):
         self.action.currentTextChanged['QString'].connect(chat_prompt.llm_action_changed) # type: ignore
         self.send_button.clicked.connect(chat_prompt.action_button_clicked_send) # type: ignore
         self.clear_conversatiion_button.clicked.connect(chat_prompt.action_button_clicked_clear_conversation) # type: ignore
+        self.pushButton.clicked.connect(chat_prompt.interrupt_button_clicked) # type: ignore
         QtCore.QMetaObject.connectSlotsByName(chat_prompt)
 
     def retranslateUi(self, chat_prompt):
@@ -82,4 +86,5 @@ class Ui_chat_prompt(object):
         chat_prompt.setWindowTitle(_translate("chat_prompt", "Form"))
         self.send_button.setToolTip(_translate("chat_prompt", "Send message"))
         self.send_button.setText(_translate("chat_prompt", "Send"))
+        self.pushButton.setText(_translate("chat_prompt", "Interrupt"))
         self.clear_conversatiion_button.setToolTip(_translate("chat_prompt", "Clear conversation"))

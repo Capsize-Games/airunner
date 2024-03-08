@@ -147,12 +147,40 @@ class TTSHandler(BaseHandler):
         self.sentences = []
         self.tts_enabled = self.settings["tts_enabled"]
         self.engine = None
+        self.do_interrupt = False
+        self.cancel_generated_speech = False
+        self.paused = False
 
         self.logger.debug("Loading")
         self.register(
             SignalCode.APPLICATION_SETTINGS_CHANGED_SIGNAL,
             self.on_application_settings_changed_signal
         )
+        self.register(
+            SignalCode.INTERRUPT_PROCESS_SIGNAL,
+            self.on_interrupt_process_signal
+        )
+        self.register(
+            SignalCode.UNBLOCK_TTS_GENERATOR_SIGNAL,
+            self.on_unblock_tts_generator_signal
+        )
+
+    def on_interrupt_process_signal(self):
+        self.logger.debug("Aborting TTS generation...")
+        self.do_interrupt = True
+        self.cancel_generated_speech = False
+        self.paused = True
+        self.text_queue = Queue()
+        self.buffer = []
+        self.current_sentence = ""
+        self.new_sentence = ""
+        self.tts_sentence = None
+        self.is_playing = False
+
+    def on_unblock_tts_generator_signal(self, _ignore):
+        self.logger.debug("Unblocking TTS generation...")
+        self.do_interrupt = False
+        self.paused = False
 
     def on_application_settings_changed_signal(self, _ignore):
         tts_enabled = self.settings["tts_enabled"]
@@ -466,6 +494,9 @@ class TTSHandler(BaseHandler):
 
     def generate(self, message):
         if self.tts_enabled:
+            if self.do_interrupt or self.paused:
+                return None
+
             if not self.use_espeak:
                 response = None
                 if self.use_bark:
@@ -508,11 +539,15 @@ class TTSHandler(BaseHandler):
             'coarse_temperature': settings["coarse_temperature"] / 100.0,
             'semantic_temperature': settings["semantic_temperature"] / 100.0,
         }
-        speech = self.model.generate(**params)
-        self.logger.debug("Generated speech in " + str(time.time() - start) + " seconds")
 
-        response = speech[0].cpu().float().numpy()
-        return response
+        speech = self.model.generate(**params)
+        if not self.cancel_generated_speech:
+            self.logger.debug("Generated speech in " + str(time.time() - start) + " seconds")
+            response = speech[0].cpu().float().numpy()
+            return response
+        if not self.do_interrupt:
+            self.cancel_generated_speech = False
+        return None
 
     def replace_unspeakable_characters(self, text):
         # strip things like eplisis, etc
@@ -540,7 +575,7 @@ class TTSHandler(BaseHandler):
         return text
 
     def generate_with_t5(self, text):
-        self.logger.debug("Generating TTS")
+        self.logger.debug("Generating TTS with T5")
         text = self.replace_unspeakable_characters(text)
         text = self.replace_numbers_with_words(text)
         text = text.strip()
@@ -563,9 +598,14 @@ class TTSHandler(BaseHandler):
             vocoder=self.vocoder,
             max_length=100
         )
-        self.logger.debug("Generated speech in " + str(time.time() - start) + " seconds")
-        response = speech.cpu().float().numpy()
-        return response
+        if not self.cancel_generated_speech:
+            self.logger.debug("Generated speech in " + str(time.time() - start) + " seconds")
+            response = speech.cpu().float().numpy()
+            return response
+        if not self.do_interrupt:
+            self.logger.debug("Skipping generated speech: " + text)
+            self.cancel_generated_speech = False
+        return None
 
     def move_inputs_to_device(self, inputs):
         use_cuda = self.settings["tts_settings"]["use_cuda"]
