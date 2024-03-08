@@ -13,8 +13,7 @@ from airunner.workers.llm_request_worker import LLMRequestWorker
 from airunner.workers.llm_generate_worker import LLMGenerateWorker
 from airunner.workers.engine_request_worker import EngineRequestWorker
 from airunner.workers.engine_response_worker import EngineResponseWorker
-from airunner.workers.sd_generate_worker import SDGenerateWorker
-from airunner.workers.sd_request_worker import SDRequestWorker, SDWorker
+from airunner.workers.sd_request_worker import SDWorker
 from airunner.aihandler.logger import Logger
 from airunner.utils import clear_memory, create_worker
 from airunner.workers.vision_capture_worker import VisionCaptureWorker

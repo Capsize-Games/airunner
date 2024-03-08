@@ -34,6 +34,13 @@
       </widget>
      </item>
      <item>
+      <widget class="QPushButton" name="pushButton">
+       <property name="text">
+        <string>Interrupt</string>
+       </property>
+      </widget>
+     </item>
+     <item>
       <widget class="QPushButton" name="clear_conversatiion_button">
        <property name="toolTip">
         <string>Clear conversation</string>
@@ -194,6 +201,22 @@
     </hint>
    </hints>
   </connection>
+  <connection>
+   <sender>pushButton</sender>
+   <signal>clicked()</signal>
+   <receiver>chat_prompt</receiver>
+   <slot>interrupt_button_clicked()</slot>
+   <hints>
+    <hint type="sourcelabel">
+     <x>605</x>
+     <y>1024</y>
+    </hint>
+    <hint type="destinationlabel">
+     <x>474</x>
+     <y>-8</y>
+    </hint>
+   </hints>
+  </connection>
  </connections>
  <slots>
   <slot>action_button_clicked_send()</slot>
@@ -204,5 +227,6 @@
   <slot>personality_type_changed(QString)</slot>
   <slot>prompt_text_changed()</slot>
   <slot>llm_action_changed(QString)</slot>
+  <slot>interrupt_button_clicked()</slot>
  </slots>
 </ui>
