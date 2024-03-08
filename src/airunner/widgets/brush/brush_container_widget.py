@@ -22,6 +22,14 @@ class BrushContainerWidget(BaseWidget):
                 current_index = index
         self.ui.controlnet.setCurrentIndex(current_index)
         self.ui.controlnet.blockSignals(False)
+        self.ui.toggle_auto_generate_while_drawing.blockSignals(True)
+        self.ui.toggle_auto_generate_while_drawing.setChecked(self.settings["canvas_settings"]["enable_automatic_drawing"])
+        self.ui.toggle_auto_generate_while_drawing.blockSignals(False)
+
+    def toggle_auto_generate_while_drawing(self, val):
+        settings = self.settings
+        settings["canvas_settings"]["enable_automatic_drawing"] = val
+        self.settings = settings
 
     def color_button_clicked(self):
         color = QColorDialog.getColor()

@@ -1,11 +1,10 @@
 from PIL import ImageQt, Image
-from PIL.ImageQt import QImage
-from PyQt6.QtCore import Qt, QPointF, QSize
+from PyQt6.QtCore import Qt, QPointF
 from PyQt6.QtGui import QPainterPath
 from PyQt6.QtGui import QPen, QPixmap, QPainter
 from PyQt6.QtGui import QColor
 from airunner.enums import SignalCode, CanvasToolName
-from airunner.utils import convert_image_to_base64, create_worker, convert_base64_to_image
+from airunner.utils import convert_image_to_base64, create_worker
 from airunner.widgets.canvas.custom_scene import CustomScene
 from airunner.workers.update_scene_worker import UpdateSceneWorker
 
@@ -47,6 +46,9 @@ class BrushScene(CustomScene):
         self._brush_color = QColor(color_name)
 
     def drawBackground(self, painter, rect):
+        if self.painter is None:
+            self.refresh_image()
+
         if self.painter is not None and self.painter.isActive():
             self.painter.drawImage(0, 0, self.image)
 
@@ -129,15 +131,6 @@ class BrushScene(CustomScene):
         )
 
     def handle_mouse_event(self, event, is_press_event):
-        # if (
-        #     event.button() == Qt.MouseButton.LeftButton and
-        #     self.is_brush_or_eraser and
-        #     not is_press_event
-        # ):
-        #     self.emit(
-        #         SignalCode.GENERATE_IMAGE_FROM_IMAGE_SIGNAL,
-        #         self.image
-        #     )
         pass
 
     def mousePressEvent(self, event):
@@ -145,9 +138,8 @@ class BrushScene(CustomScene):
         self.handle_cursor(event)
         if not self.is_brush_or_eraser:
             super().mousePressEvent(event)
-        else:
+        elif self.settings["canvas_settings"]["enable_automatic_drawing"]:
             self.emit(SignalCode.INTERRUPT_PROCESS_SIGNAL)
-        #self.update_scene_worker.update_signal.emit(True)
 
     def mouseReleaseEvent(self, event):
         super().mouseReleaseEvent(event)
@@ -155,8 +147,6 @@ class BrushScene(CustomScene):
         self._is_erasing = False
         self.last_pos = None
         self.start_pos = None
-        # self.update_scene_worker.update_signal.emit(False)
-        #self.emit(SignalCode.LINES_UPDATED_SIGNAL)
         if type(self.image) is Image:
             image = ImageQt.ImageQt(self.image.convert("RGBA"))
         else:
@@ -166,8 +156,8 @@ class BrushScene(CustomScene):
         settings[self.settings_key]["image"] = convert_image_to_base64(pil_image)
         self.settings = settings
         self.do_update = False
-        self.emit(SignalCode.DO_GENERATE_SIGNAL)
+        if self.settings["canvas_settings"]["enable_automatic_drawing"]:
+            self.emit(SignalCode.DO_GENERATE_SIGNAL)
 
     def mouseMoveEvent(self, event):
         self.last_pos = event.scenePos()
-        # self.update_scene_worker.update_signal.emit(True)

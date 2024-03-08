@@ -374,7 +374,9 @@ class GeneratorForm(BaseWidget):
     def handle_progress_bar(self, message):
         step = message.get("step")
         total = message.get("total")
-        image = message.get("image")
+        if step == total:
+            self.stop_progress_bar()
+            return
 
         if step == 0 and total == 0:
             current = 0
