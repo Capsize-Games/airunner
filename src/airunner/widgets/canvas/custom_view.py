@@ -51,7 +51,6 @@ class CustomGraphicsView(
             SignalCode.CANVAS_CLEAR_LINES_SIGNAL: self.clear_lines,
             SignalCode.SCENE_DO_DRAW_SIGNAL: self.on_canvas_do_draw_signal,
             SignalCode.APPLICATION_MAIN_WINDOW_LOADED_SIGNAL: self.on_main_window_loaded_signal,
-            SignalCode.REMOVE_SCENE_ITEM_SIGNAL: self.remove_scene_item,
         }
         for k, v in signal_handlers.items():
             self.register(k, v)
