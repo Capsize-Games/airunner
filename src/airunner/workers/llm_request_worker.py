@@ -1,5 +1,3 @@
-from PyQt6.QtCore import pyqtSignal, pyqtSlot
-
 from airunner.enums import SignalCode
 from airunner.workers.worker import Worker
 

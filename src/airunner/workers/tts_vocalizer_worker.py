@@ -3,7 +3,10 @@ import sounddevice as sd
 
 from queue import Queue
 
+from PyQt6.QtCore import QThread
+
 from airunner.enums import SignalCode
+from airunner.settings import SLEEP_TIME_IN_MS
 from airunner.workers.worker import Worker
 
 
@@ -21,10 +24,22 @@ class TTSVocalizerWorker(Worker):
         self.stream = None
         self.start_stream()
         self.started = False
-        self.register(
-            SignalCode.TTS_GENERATOR_WORKER_ADD_TO_STREAM_SIGNAL,
-            self.on_TTSGeneratorWorker_add_to_stream_signal
-        )
+        self.do_interrupt = False
+        self.accept_message = True
+        self.register(SignalCode.TTS_GENERATOR_WORKER_ADD_TO_STREAM_SIGNAL, self.on_TTSGeneratorWorker_add_to_stream_signal)
+        self.register(SignalCode.INTERRUPT_PROCESS_SIGNAL, self.on_interrupt_process_signal)
+        self.register(SignalCode.UNBLOCK_TTS_GENERATOR_SIGNAL, self.on_unblock_tts_generator_signal)
+
+    def on_interrupt_process_signal(self):
+        self.logger.debug("Aborting TTS stream...")
+        self.stream.abort()
+        self.accept_message = False
+        self.queue = Queue()
+
+    def on_unblock_tts_generator_signal(self):
+        self.logger.debug("Starting TTS stream...")
+        self.accept_message = True
+        self.stream.start()
 
     def start_stream(self):
         if sd.query_devices(kind='output'):
@@ -32,32 +47,34 @@ class TTSVocalizerWorker(Worker):
             self.stream.start()
 
     def on_TTSGeneratorWorker_add_to_stream_signal(self, response):
-        self.logger.debug("Adding speech to stream...")
-        self.add_to_queue(response)
+        if self.accept_message:
+            self.logger.debug("Adding speech to stream...")
+            self.add_to_queue(response)
 
     def handle_message(self, item):
+        if not self.accept_message:
+            return
+
         if item is None:
             self.logger.warning("item is none")
             return
 
-        if not self.stream:
+        if self.stream is None:
             self.start_stream()
-
-        if not self.stream:
             self.logger.warning("No speakers available")
             return
 
         # Write the item to the stream
-        self.stream.write(item)
+        if self.stream is not None and self.stream.active:
+            try:
+                self.stream.write(item)
+            except sd.PortAudioError:
+                self.logger.debug("PortAudioError")
+            except AttributeError:
+                self.logger.debug("stream is None")
 
-        # Wait until the stream has finished playing the sound
-        #sd.wait()
-
-        self.started = True
-
-        # Pause random between 0.5 to 1 second
-        sleep_time = random.randint(1500, 2000)
-        self.thread().msleep(sleep_time)
+            self.started = True
+        QThread.msleep(SLEEP_TIME_IN_MS)
 
     def handle_speech(self, generated_speech):
         self.logger.debug("Adding speech to stream...")

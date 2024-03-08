@@ -198,6 +198,8 @@ class SignalCode(Enum):
     STT_START_CAPTURE_SIGNAL = "stt_start_capture"
     STT_STOP_CAPTURE_SIGNAL = "stt_stop_capture"
 
+    UNBLOCK_TTS_GENERATOR_SIGNAL = "unblock_tts_generator_signal"
+
     TTS_REQUEST = "tts_request"
     TTS_GENERATOR_WORKER_ADD_TO_STREAM_SIGNAL = "TTSGeneratorWorker_add_to_stream_signal"
     TTS_ENABLE_SIGNAL = "tts_enable_signal"

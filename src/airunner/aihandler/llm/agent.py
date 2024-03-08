@@ -273,6 +273,11 @@ class AIRunnerAgent(QObject, MediatorMixin):
 
         # Generate the response
         self.logger.debug("Generating...")
+
+        if self.thread is not None:
+            self.thread.join()
+        self.emit(SignalCode.UNBLOCK_TTS_GENERATOR_SIGNAL)
+
         stopping_criteria = ExternalConditionStoppingCriteria(self.do_interrupt_process)
         try:
             self.thread = threading.Thread(target=self.model.generate, kwargs=dict(
@@ -292,6 +297,7 @@ class AIRunnerAgent(QObject, MediatorMixin):
                 streamer=self.streamer,
                 stopping_criteria=[stopping_criteria],
             ))
+            self.do_interrupt = False
             self.thread.start()
         except Exception as e:
             print("An error occurred in model.generate:")
