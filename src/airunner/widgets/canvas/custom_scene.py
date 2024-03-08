@@ -96,6 +96,11 @@ class CustomScene(
             )
             if file_path == "":
                 return
+
+            # If missing file extension, add it
+            if not file_path.endswith(VALID_IMAGE_FILES):
+                file_path = f"{file_path}.png"
+
             image.save(file_path)
 
     def import_image(self):
@@ -211,7 +216,7 @@ class CustomScene(
         self.update()
 
     def current_active_image(self) -> Image:
-        base_64_image = self.settings["canvas_settings"]["image"]
+        base_64_image = self.settings[self.settings_key]["image"]
         return convert_base64_to_image(base_64_image)
 
     def handle_outpaint(self, outpaint_box_rect, outpainted_image, action=None) -> [Image, QPoint, QPoint]:

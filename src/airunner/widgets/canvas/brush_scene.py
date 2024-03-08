@@ -46,6 +46,9 @@ class BrushScene(CustomScene):
         self._brush_color = QColor(color_name)
 
     def drawBackground(self, painter, rect):
+        if self.painter is None:
+            self.refresh_image()
+
         if self.painter is not None and self.painter.isActive():
             self.painter.drawImage(0, 0, self.image)
 
