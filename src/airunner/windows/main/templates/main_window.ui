@@ -235,7 +235,7 @@
                  <bool>false</bool>
                 </property>
                 <property name="currentIndex">
-                 <number>3</number>
+                 <number>2</number>
                 </property>
                 <widget class="QWidget" name="tab_pen">
                  <attribute name="title">
@@ -381,135 +381,6 @@
                           </property>
                           <property name="text">
                            <string>Upscale</string>
-                          </property>
-                         </widget>
-                        </item>
-                       </layout>
-                      </item>
-                     </layout>
-                    </widget>
-                    <widget class="QWidget" name="layoutWidget_2">
-                     <layout class="QVBoxLayout" name="Similar">
-                      <item>
-                       <widget class="QLabel" name="label_2">
-                        <property name="font">
-                         <font>
-                          <pointsize>10</pointsize>
-                          <bold>true</bold>
-                         </font>
-                        </property>
-                        <property name="text">
-                         <string>Similar</string>
-                        </property>
-                       </widget>
-                      </item>
-                      <item>
-                       <widget class="Line" name="line_10">
-                        <property name="orientation">
-                         <enum>Qt::Horizontal</enum>
-                        </property>
-                       </widget>
-                      </item>
-                      <item>
-                       <widget class="QCheckBox" name="advanced_settings_checkbox">
-                        <property name="text">
-                         <string>Advanced settings</string>
-                        </property>
-                       </widget>
-                      </item>
-                      <item>
-                       <widget class="QScrollArea" name="advanced_settings">
-                        <property name="widgetResizable">
-                         <bool>true</bool>
-                        </property>
-                        <widget class="QWidget" name="scrollAreaWidgetContents_2">
-                         <property name="geometry">
-                          <rect>
-                           <x>0</x>
-                           <y>0</y>
-                           <width>84</width>
-                           <height>44</height>
-                          </rect>
-                         </property>
-                         <layout class="QGridLayout" name="gridLayout_9">
-                          <item row="0" column="0">
-                           <widget class="InputImageSettingsWidget" name="input_image_widget" native="true"/>
-                          </item>
-                          <item row="1" column="0">
-                           <widget class="ControlNetSettingsWidget" name="controlnet_settings" native="true"/>
-                          </item>
-                         </layout>
-                        </widget>
-                       </widget>
-                      </item>
-                      <item>
-                       <layout class="QHBoxLayout" name="horizontalLayout_8">
-                        <item>
-                         <widget class="SliderWidget" name="samples_widget" native="true">
-                          <property name="minimumSize">
-                           <size>
-                            <width>0</width>
-                            <height>20</height>
-                           </size>
-                          </property>
-                          <property name="label_text" stdset="0">
-                           <string>Similarity</string>
-                          </property>
-                          <property name="slider_callback" stdset="0">
-                           <string notr="true">handle_value_change</string>
-                          </property>
-                          <property name="current_value" stdset="0">
-                           <number>100</number>
-                          </property>
-                          <property name="slider_maximum" stdset="0">
-                           <number>100</number>
-                          </property>
-                          <property name="spinbox_maximum" stdset="0">
-                           <double>1.000000000000000</double>
-                          </property>
-                          <property name="display_as_float" stdset="0">
-                           <bool>true</bool>
-                          </property>
-                          <property name="spinbox_single_step" stdset="0">
-                           <double>0.010000000000000</double>
-                          </property>
-                          <property name="spinbox_page_step" stdset="0">
-                           <double>0.010000000000000</double>
-                          </property>
-                          <property name="spinbox_minimum" stdset="0">
-                           <double>0.000000000000000</double>
-                          </property>
-                          <property name="slider_minimum" stdset="0">
-                           <number>0</number>
-                          </property>
-                          <property name="settings_property" stdset="0">
-                           <string>standard_image_settings.image_similarity</string>
-                          </property>
-                         </widget>
-                        </item>
-                        <item>
-                         <widget class="QPushButton" name="generate_single_simillar_button">
-                          <property name="cursor">
-                           <cursorShape>PointingHandCursor</cursorShape>
-                          </property>
-                          <property name="toolTip">
-                           <string>Generate one variation</string>
-                          </property>
-                          <property name="text">
-                           <string>Single</string>
-                          </property>
-                         </widget>
-                        </item>
-                        <item>
-                         <widget class="QPushButton" name="generate_batch_similar_button">
-                          <property name="cursor">
-                           <cursorShape>PointingHandCursor</cursorShape>
-                          </property>
-                          <property name="toolTip">
-                           <string>Generate a batch of four variations</string>
-                          </property>
-                          <property name="text">
-                           <string>Batch</string>
                           </property>
                          </widget>
                         </item>
@@ -2444,27 +2315,9 @@
    <container>1</container>
   </customwidget>
   <customwidget>
-   <class>SliderWidget</class>
-   <extends>QWidget</extends>
-   <header>airunner/widgets/slider/slider_widget</header>
-   <container>1</container>
-  </customwidget>
-  <customwidget>
    <class>BrushesContainer</class>
    <extends>QWidget</extends>
    <header>airunner/widgets/canvas/brushes_container</header>
-   <container>1</container>
-  </customwidget>
-  <customwidget>
-   <class>InputImageSettingsWidget</class>
-   <extends>QWidget</extends>
-   <header>airunner/widgets/input_image/input_image_settings_widget</header>
-   <container>1</container>
-  </customwidget>
-  <customwidget>
-   <class>ControlNetSettingsWidget</class>
-   <extends>QWidget</extends>
-   <header>airunner/widgets/controlnet_settings/controlnet_settings_widget</header>
    <container>1</container>
   </customwidget>
   <customwidget>

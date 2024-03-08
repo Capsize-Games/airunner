@@ -74,13 +74,6 @@ STABLEDIFFUSION_GENERATOR_SETTINGS = dict(
     input_image=None,
 )
 DEFAULT_GENERATOR_SETTINGS = dict(
-    input_image_settings=dict(
-        imported_image_base64=None,
-        use_imported_image=True,
-        use_grid_image=True,
-        recycle_grid_image=True,
-        enable_input_image=False,
-    ),
     controlnet_image_settings=dict(
         imported_image_base64=None,
         link_to_input_image=True,
@@ -241,14 +234,6 @@ class SettingsMixin:
                 ebook_path=DEFAULT_PATHS["text"]["other"]["ebooks"],
                 documents_path=DEFAULT_PATHS["text"]["other"]["documents"],
                 llama_index_path=DEFAULT_PATHS["text"]["other"]["llama_index"],
-            ),
-            standard_image_settings=dict(
-                image_similarity=1000,
-                controlnet="Canny",
-                prompt="",
-                negative_prompt="",
-                upscale_model="RealESRGAN_x4plus",
-                face_enhance=False,
             ),
             active_grid_settings=dict(
                 enabled=True,
