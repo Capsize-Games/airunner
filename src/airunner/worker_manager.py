@@ -2,7 +2,7 @@ import traceback
 import numpy as np
 
 from PyQt6.QtCore import QObject, pyqtSignal
-from airunner.enums import EngineRequestCode, EngineResponseCode, SignalCode
+from airunner.enums import EngineResponseCode, SignalCode, EngineRequestCode
 from airunner.mediator_mixin import MediatorMixin
 from airunner.service_locator import ServiceLocator
 from airunner.workers.audio_capture_worker import AudioCaptureWorker
@@ -13,7 +13,7 @@ from airunner.workers.llm_request_worker import LLMRequestWorker
 from airunner.workers.llm_generate_worker import LLMGenerateWorker
 from airunner.workers.engine_request_worker import EngineRequestWorker
 from airunner.workers.engine_response_worker import EngineResponseWorker
-from airunner.workers.sd_request_worker import SDWorker
+from airunner.workers.sd_worker import SDWorker
 from airunner.aihandler.logger import Logger
 from airunner.utils import clear_memory, create_worker
 from airunner.workers.vision_capture_worker import VisionCaptureWorker
@@ -68,7 +68,6 @@ class WorkerManager(QObject, MediatorMixin):
         self.register(SignalCode.VISION_CAPTION_GENERATED_SIGNAL, self.on_caption_generated_signal)
         self.register(SignalCode.ENGINE_RESPONSE_WORKER_RESPONSE_SIGNAL, self.on_EngineResponseWorker_response_signal)
         self.register(SignalCode.LLM_TEXT_GENERATE_REQUEST_SIGNAL, self.on_text_generate_request_signal)
-        self.register(SignalCode.SD_IMAGE_GENERATE_REQUEST_SIGNAL, self.on_image_generate_request_signal)
         self.register(SignalCode.LLM_RESPONSE_SIGNAL, self.on_llm_response_signal)
         self.register(SignalCode.LLM_TEXT_STREAMED_SIGNAL, self.on_llm_text_streamed_signal)
         self.register(SignalCode.AUDIO_CAPTURE_WORKER_RESPONSE_SIGNAL, self.on_AudioCaptureWorker_response_signal)
@@ -78,10 +77,6 @@ class WorkerManager(QObject, MediatorMixin):
         self.register(SignalCode.APPLICATION_SETTINGS_CHANGED_SIGNAL, self.on_application_settings_changed_signal)
 
         self.sd_state = "loaded"
-
-        # if not disable_sd:
-        #     self.sd_request_worker = create_worker(SDRequestWorker)
-        #     self.sd_generate_worker = create_worker(SDGenerateWorker)
 
         self.sd_worker = create_worker(SDWorker)
 
@@ -216,21 +211,6 @@ class WorkerManager(QObject, MediatorMixin):
             )
         else:
             self.emit(SignalCode.LLM_REQUEST_SIGNAL, message)
-
-    def on_image_generate_request_signal(self, message):
-        self.logger.debug("on_image_generate_request_signal received")
-        self.emit(SignalCode.LLM_UNLOAD_SIGNAL, {
-            'do_unload_model': self.settings["memory_settings"]["unload_unused_models"],
-            'move_unused_model_to_cpu': self.settings["memory_settings"]["move_unused_model_to_cpu"],
-            'dtype': self.settings["llm_generator_settings"]["dtype"],
-            'callback': lambda _message=message: self.do_image_generate_request(_message)
-        })
-    
-    def do_image_generate_request(self, message):
-        self.emit(SignalCode.ENGINE_DO_REQUEST_SIGNAL, {
-            'code': EngineRequestCode.GENERATE_IMAGE,
-            'message': message
-        })
 
     def request_queue_size(self):
         return self.engine_request_worker.queue.qsize()

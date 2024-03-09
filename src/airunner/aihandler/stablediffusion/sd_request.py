@@ -99,7 +99,6 @@ class SDRequest(
         self.model_data = kwargs.get("model_data", None)
         self.options = None
         self.do_set_seed = False
-        self.generator_settings = None
         self.memory_settings = MemorySettings(**self.settings["memory_settings"])
         self.generator_settings = None
         self.action_has_safety_checker = False
@@ -110,6 +109,7 @@ class SDRequest(
         self.is_depth2img = False
         self.is_pix2pix = False
         self.active_rect = None
+        self.parent = None
         self.load_generator_settings()
 
     def load_generator_settings(self):
@@ -158,7 +158,6 @@ class SDRequest(
         self.model_changed = model_changed
         self.do_load = do_load
         self.generator = generator
-
         kwargs = self.prepare_args(
             model=model,
             model_data=model_data,
@@ -179,24 +178,18 @@ class SDRequest(
         self.is_img2img = self.generator_settings.section == GeneratorSection.TXT2IMG.value and input_image is not None
         self.is_depth2img = self.generator_settings.section == GeneratorSection.DEPTH2IMG.value
         self.is_pix2pix = self.generator_settings.section == GeneratorSection.PIX2PIX.value
-
         args = {
             "num_inference_steps": self.generator_settings.steps,
             "callback": callback,
         }
 
         args.update(kwargs)
-
         args["callback_steps"] = self.callback_steps
         args["clip_skip"] = self.generator_settings.clip_skip
-
         if self.cross_attention_kwargs_scale is not None:
             args["cross_attention_kwargs"] = {
                 "scale": self.cross_attention_kwargs_scale
             }
-
-        # if self.latents is not None and not self.is_pix2pix:
-        #     args["latents"] = self.latents
 
         if self.is_img2img:
             args["height"] = self.settings["working_height"]
@@ -244,12 +237,6 @@ class SDRequest(
         height = int(self.settings["working_height"])
         clip_skip = int(self.generator_settings.clip_skip)
         self.mask = None
-        input_image = None
-        base64image = self.settings["drawing_pad_settings"]["image"]
-        if base64image != "":
-            input_image = convert_base64_to_image(base64image)
-            if input_image is not None:
-                input_image = input_image.convert("RGB")
 
         args = {
             "action": self.generator_settings.section,
@@ -257,7 +244,6 @@ class SDRequest(
             "width": width,
             "height": height,
             "clip_skip": clip_skip,
-            "image": input_image,
         }
 
         args = self.load_prompt_embed_args(
@@ -275,23 +261,25 @@ class SDRequest(
         }
         width = int(self.settings["working_width"])
         height = int(self.settings["working_height"])
+
         image = None
+        base64image = self.settings["drawing_pad_settings"]["image"]
+        if base64image != "":
+            image = convert_base64_to_image(base64image)
+            if image is not None:
+                image = image.convert("RGB")
+
         if self.is_txt2img:
             extra_args = {**extra_args, **{
                 "width": width,
                 "height": height,
             }}
-        elif image is not None:
-            image = self.drawing_pad_image.convert("RGB")#self.latents if self.latents is not None else self.drawing_pad_image.convert("RGB")
-
         if self.is_img2img or self.is_depth2img:
             extra_args = {**extra_args, **{
-                "image": image,
                 "strength": self.generator_settings.strength,
             }}
         elif self.is_pix2pix:
             extra_args = {**extra_args, **{
-                "image": image,
                 "image_guidance_scale": self.generator_settings.strength,
             }}
         elif self.is_upscale:
@@ -301,11 +289,13 @@ class SDRequest(
         elif self.is_outpaint:
             mask = None
             extra_args = {**extra_args, **{
-                "image": image,
                 "mask_image": mask,
                 "width": self.generator_settings.width,
                 "height": self.generator_settings.height,
             }}
+
+        if image is not None:
+            extra_args["image"] = image
 
         controlnet_image = self.controlnet_image
         if self.generator_settings.enable_controlnet and controlnet_image:

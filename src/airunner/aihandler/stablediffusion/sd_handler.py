@@ -20,7 +20,7 @@ from diffusers import (
     AutoPipelineForInpainting,
     StableDiffusionInstructPix2PixPipeline,
     ControlNetModel,
-    StableDiffusionImg2ImgPipeline
+    StableDiffusionImg2ImgPipeline, StableDiffusionInpaintPipeline
 )
 from diffusers.pipelines.stable_diffusion import StableDiffusionSafetyChecker
 from diffusers import (
@@ -193,6 +193,7 @@ class SDHandler(
         self.safety_checker = None
         self.feature_extractor = None
         self.reload_prompts = False
+        self.moved_to_cpu = False
         self.data = {
             "action": "txt2img",
         }
@@ -215,6 +216,7 @@ class SDHandler(
         self.loading = False
         self.sd_request = None
         self.sd_request = SDRequest(model_data=self.model)
+        self.sd_request.parent = self
         self.running = True
         self.do_generate = False
         self._generator = None
@@ -509,6 +511,8 @@ class SDHandler(
             response = self.generator_sample()
             self.initialized = True
         elif self.loaded and not self.loading and self.do_generate:
+            import traceback
+            traceback.print_stack()
             self.do_interrupt = False
             response = self.generator_sample()
             # Set random seed if random seed is true
@@ -536,27 +540,6 @@ class SDHandler(
                     'code': EngineResponseCode.IMAGE_GENERATED,
                     'message': response
                 })
-        # data = response["data"]
-        # seed = data["options"]["seed"]
-        # if not drawing:
-        #     updated_images = []
-        #     image_base_path = self.settings["path_settings"]["image_path"]
-        #     images = response['images']
-        #     for index, image in enumerate(images):
-        #         # hash the prompt and negative prompt along with the action
-        #         action = data["action"]
-        #         prompt = data["options"]["prompt"][0]
-        #         negative_prompt = data["options"]["negative_prompt"][0]
-        #         prompt_hash = hash(f"{action}{prompt}{negative_prompt}{index}")
-        #         image_name = f"{prompt_hash}_{seed}.png"
-        #         image_path = os.path.join(image_base_path, image_name)
-        #         # save the image
-        #         image.save(image_path)
-        #         updated_images.append({
-        #             'path': image_path,
-        #             'image': image
-        #         })
-        #     response["images"] = updated_images
 
     def has_pipe(self) -> bool:
         return self.pipe is not None
@@ -572,6 +555,7 @@ class SDHandler(
         if not self.is_pipe_on_cpu() and self.has_pipe():
             self.logger.debug("Moving model to CPU")
             self.pipe = self.pipe.to("cpu")
+            self.moved_to_cpu = True
             clear_memory()
         if "callback" in message:
             message["callback"]()
@@ -871,9 +855,11 @@ class SDHandler(
         clear_memory()
 
     def unload_model(self):
+        self.logger.debug("Unloading model")
         self.pipe = None
 
     def unload_tokenizer(self):
+        self.logger.debug("Unloading tokenizer")
         self.tokenizer = None
 
     def process_upscale(self, data: dict):
@@ -915,6 +901,12 @@ class SDHandler(
         else:
             controlnet_image = None
 
+        """
+        Set a reference to pipe
+        """
+        is_txt2img = self.sd_request.is_txt2img
+        is_img2img = self.sd_request.is_img2img
+        is_outpaint = self.sd_request.is_outpaint
         self.data = self.sd_request(
             model_data=self.model,
             extra_options={},
@@ -933,6 +925,39 @@ class SDHandler(
             negative_prompt_embeds=self.negative_prompt_embeds,
             controlnet_image=controlnet_image
         )
+        pipe = None
+        if self.pipe is None:
+            if self.sd_request.is_txt2img and not is_txt2img:
+                if is_img2img:
+                    pipe = self.img2img
+                elif is_outpaint:
+                    pipe = self.outpaint
+                if pipe is not None:
+                    pipeline_class_ = StableDiffusionPipeline
+                    if self.sd_request.generator_settings.enable_controlnet:
+                        pipeline_class_ = StableDiffusionControlNetPipeline
+                    self.pipe = pipeline_class_(**pipe.components)
+            elif self.sd_request.is_img2img and not is_img2img:
+                if is_txt2img:
+                    pipe = self.txt2img
+                elif is_outpaint:
+                    pipe = self.outpaint
+                if pipe is not None:
+                    pipeline_class_ = StableDiffusionImg2ImgPipeline
+                    if self.sd_request.generator_settings.enable_controlnet:
+                        pipeline_class_ = StableDiffusionControlNetImg2ImgPipeline
+                    self.pipe = pipeline_class_(**pipe.components)
+            elif self.sd_request.is_outpaint and not is_outpaint:
+                if is_txt2img:
+                    pipe = self.txt2img
+                elif is_img2img:
+                    pipe = self.img2img
+                if pipe is not None:
+                    pipeline_class_ = StableDiffusionInpaintPipeline
+                    if self.sd_request.generator_settings.enable_controlnet:
+                        pipeline_class_ = StableDiffusionControlNetInpaintPipeline
+                    self.pipe = pipeline_class_(**pipe.components)
+
         self.requested_data = self.data
         self.model_version = self.sd_request.generator_settings.version
         self.is_sd_xl = self.model_version == StableDiffusionVersion.SDXL1_0.value or self.is_sd_xl_turbo
@@ -977,6 +1002,10 @@ class SDHandler(
             self.initialize()
 
         self.change_scheduler()
+
+        if self.pipe and self.moved_to_cpu:
+            self.apply_memory_efficient_settings()
+            self.moved_to_cpu = False
 
         if self.pipe and self.do_load:
             """

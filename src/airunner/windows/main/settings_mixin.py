@@ -147,6 +147,8 @@ class SettingsMixin:
             pivot_point_x=0,
             pivot_point_y=0,
             mode=Mode.IMAGE.value,
+            autoload_sd=True,
+            autoload_llm=False,
             llm_templates={
                 "Stable Diffusion Prompt Template": dict(
                     name="Stable Diffusion Prompt Template",
