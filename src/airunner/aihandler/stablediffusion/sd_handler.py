@@ -1033,45 +1033,31 @@ class SDHandler(
 
         is_img2img = self.sd_request.is_img2img
 
+        kwargs = dict(
+            vae=self.pipe.vae,
+            text_encoder=self.pipe.text_encoder,
+            tokenizer=self.pipe.tokenizer,
+            unet=self.pipe.unet,
+            scheduler=self.pipe.scheduler,
+            safety_checker=self.safety_checker,
+            feature_extractor=self.feature_extractor
+        )
+
         if self.sd_request.is_img2img:
             if "image" not in self.data or self.data["image"] is None:
                 self.data = self.sd_request.disable_img2img(self.data)
                 is_img2img = False
                 if self.sd_request.generator_settings.enable_controlnet:
-                    self.pipe = StableDiffusionControlNetPipeline(
-                        vae=self.pipe.vae,
-                        text_encoder=self.pipe.text_encoder,
-                        tokenizer=self.pipe.tokenizer,
-                        unet=self.pipe.unet,
-                        controlnet=self.pipe.controlnet,
-                        scheduler=self.pipe.scheduler,
-                        safety_checker=self.safety_checker,
-                        feature_extractor=self.feature_extractor
-                    )
+                    kwargs["controlnet"] = self.pipe.controlnet
+                    self.pipe = StableDiffusionControlNetPipeline(**kwargs)
 
         if self.sd_request.generator_settings.enable_controlnet:
             if "control_image" not in self.data or self.data["control_image"] is None:
                 self.data = self.sd_request.disable_controlnet(self.data)
                 if is_img2img:
-                    self.pipe = StableDiffusionImg2ImgPipeline(
-                        vae=self.pipe.vae,
-                        text_encoder=self.pipe.text_encoder,
-                        tokenizer=self.pipe.tokenizer,
-                        unet=self.pipe.unet,
-                        scheduler=self.pipe.scheduler,
-                        safety_checker=self.safety_checker,
-                        feature_extractor=self.feature_extractor
-                    )
+                    self.pipe = StableDiffusionImg2ImgPipeline(**kwargs)
                 else:
-                    self.pipe = StableDiffusionPipeline(
-                        vae=self.pipe.vae,
-                        text_encoder=self.pipe.text_encoder,
-                        tokenizer=self.pipe.tokenizer,
-                        unet=self.pipe.unet,
-                        scheduler=self.pipe.scheduler,
-                        safety_checker=self.safety_checker,
-                        feature_extractor=self.feature_extractor
-                    )
+                    self.pipe = StableDiffusionPipeline(**kwargs)
 
         self.emit(
             SignalCode.LOG_STATUS_SIGNAL,
