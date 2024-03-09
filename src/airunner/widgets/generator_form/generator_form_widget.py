@@ -1,12 +1,9 @@
 import time
 
-from PIL import Image
 from PyQt6.QtCore import pyqtSignal, QRect
-from PyQt6.QtGui import QImage
 from PyQt6.QtWidgets import QApplication
 
-from airunner.aihandler.stablediffusion.sd_request import SDRequest
-from airunner.enums import SignalCode, ServiceCode, GeneratorSection, ImageCategory
+from airunner.enums import SignalCode, GeneratorSection, ImageCategory
 from airunner.settings import PHOTO_REALISTIC_NEGATIVE_PROMPT, ILLUSTRATION_NEGATIVE_PROMPT
 from airunner.widgets.base_widget import BaseWidget
 from airunner.widgets.generator_form.templates.generatorform_ui import Ui_generator_form
@@ -18,13 +15,7 @@ class GeneratorForm(BaseWidget):
 
     def __init__(self, *args, **kwargs):
         super().__init__(*args, **kwargs)
-        self.deterministic_generation_window = None
-        self.deterministic_images = []
-        self.deterministic_data = None
-        self.deterministic = False
         self.seed_override = None
-        self.deterministic_index = 0
-        self.deterministic_seed = None
         self.parent = None
         self.current_prompt_value = None
         self.current_negative_prompt_value = None
@@ -43,27 +34,6 @@ class GeneratorForm(BaseWidget):
             SignalCode.DO_GENERATE_IMAGE_FROM_IMAGE_SIGNAL: self.do_generate_image_from_image_signal_handler,
             SignalCode.SD_LOAD_PROMPT_SIGNAL: self.on_load_saved_stablediffuion_prompt_signal
         }
-
-    def on_load_saved_stablediffuion_prompt_signal(self, index):
-        try:
-            saved_prompt = self.settings["saved_prompts"][index]
-        except KeyError:
-            self.logger.error(f"Unable to load prompt at index {index}")
-            saved_prompt = None
-
-        if saved_prompt:
-            settings = self.settings
-            settings["generator_settings"]["prompt"] = saved_prompt["prompt"]
-            settings["generator_settings"]["negative_prompt"] = saved_prompt["negative_prompt"]
-            self.settings = settings
-            self.set_form_values()
-
-    def handle_generate_image_from_image(self, image):
-        pass
-
-    def do_generate_image_from_image_signal_handler(self, res):
-        print("CALL GENERATE")
-        self.call_generate(override_data=res)
 
     @property
     def is_txt2img(self):
@@ -131,6 +101,26 @@ class GeneratorForm(BaseWidget):
     def controlnet_image(self):
         return self.settings["controlnet_settings"]["image"]
 
+    def on_load_saved_stablediffuion_prompt_signal(self, index):
+        try:
+            saved_prompt = self.settings["saved_prompts"][index]
+        except KeyError:
+            self.logger.error(f"Unable to load prompt at index {index}")
+            saved_prompt = None
+
+        if saved_prompt:
+            settings = self.settings
+            settings["generator_settings"]["prompt"] = saved_prompt["prompt"]
+            settings["generator_settings"]["negative_prompt"] = saved_prompt["negative_prompt"]
+            self.settings = settings
+            self.set_form_values()
+
+    def handle_generate_image_from_image(self, image):
+        pass
+
+    def do_generate_image_from_image_signal_handler(self, res):
+        self.call_generate()
+
     def on_application_settings_changed_signal(self):
         self.activate_ai_mode()
     
@@ -140,13 +130,7 @@ class GeneratorForm(BaseWidget):
     def activate_ai_mode(self):
         ai_mode = self.settings.get("ai_mode", False)
         self.ui.generator_form_tabs.setCurrentIndex(1 if ai_mode is True else 0)
-    
-    """
-    Slot functions
 
-    The following functions are defined in and connected to the appropriate
-    signals in the corresponding ui file.
-    """
     def action_clicked_button_save_prompts(self):
         self.emit(SignalCode.SD_SAVE_PROMPT_SIGNAL)
 
@@ -170,144 +154,34 @@ class GeneratorForm(BaseWidget):
 
     def handle_interrupt_button_clicked(self):
         self.emit(SignalCode.INTERRUPT_PROCESS_SIGNAL)
-    """
-    End Slot functions
-    """
 
-    def generate(self, image=None, seed=None):
-        if seed is None:
-            seed = self.settings["generator_settings"]["seed"]
+    def generate(self):
         if self.settings["generator_settings"]["n_samples"] > 1:
             self.emit(SignalCode.ENGINE_STOP_PROCESSING_QUEUE_SIGNAL)
-        self.call_generate(image, seed=seed)
+        self.call_generate()
         self.seed_override = None
         self.emit(SignalCode.ENGINE_START_PROCESSING_QUEUE_SIGNAL)
 
-    def on_generate_image_signal(self, message):
+    def on_generate_image_signal(self, _message):
         self.start_progress_bar()
         self.generate()
 
     def do_generate_image(self):
+        print("DO GENERATE IMAGE")
         time.sleep(0.1)
         self.emit(SignalCode.DO_GENERATE_SIGNAL)
 
-    def call_generate(self, image: Image = None, seed=None, override_data=None):
+    def call_generate(self):
+        print("call_generate")
         self.emit(SignalCode.LLM_UNLOAD_SIGNAL, {
             'do_unload_model': self.settings["memory_settings"]["unload_unused_models"],
             'move_unused_model_to_cpu': self.settings["memory_settings"]["move_unused_model_to_cpu"],
             'dtype': self.settings["llm_generator_settings"]["dtype"],
             'callback': lambda: self.do_generate_image()
         })
-        return
-        override_data = {} if override_data is None else override_data
-        generator_section = override_data.pop("generator_section", self.generator_section)
-
-        if generator_section in (
-            "txt2img",
-            "pix2pix",
-            "depth2img",
-            "outpaint",
-            "controlnet",
-            "superresolution",
-            "upscale"
-        ):
-            self.start_progress_bar()
-            input_image = override_data.get("input_image", image)
-            image = input_image
-            override_data["input_image"] = image
-
-            if self.is_upscale and image is None:
-                image = self.get_service(ServiceCode.CURRENT_ACTIVE_IMAGE)()
-            
-            if self.is_upscale and image is None:
-                return
-
-            if image is None:
-                if self.is_txt2img:
-                    return self.do_generate(
-                        seed=seed,
-                        override_data=override_data
-                    )
-                # Create a transparent image the size of  active_grid_area_rect
-                width = self.settings["working_width"]
-                height = self.settings["working_height"]
-                image = Image.new("RGBA", (int(width), int(height)), (0, 0, 0, 0))
-            
-            use_cropped_image = override_data.get("use_cropped_image", True)
-            original_image = image.copy()
-            if use_cropped_image:
-                # Create a copy of the image and paste the cropped image into it
-
-                # Copy the image and convert to RGBA
-                img = image.copy().convert("RGBA")
-
-                # Create a new image
-                new_image = Image.new(
-                    "RGBA",
-                    (
-                        self.settings["working_width"], 
-                        self.settings["working_height"]
-                    ),
-                    (255, 255, 255, 0)
-                )
-
-                # Get the cropped image
-                cropped_outpaint_box_rect = self.active_rect
-                current_layer = self.get_service(ServiceCode.CURRENT_LAYER)()
-                crop_location = (
-                    cropped_outpaint_box_rect.x() - current_layer["pos_x"],
-                    cropped_outpaint_box_rect.y() - current_layer["pos_y"],
-                    cropped_outpaint_box_rect.width(),
-                    cropped_outpaint_box_rect.height()
-                )
-
-                # Paste the cropped image into the new image
-                new_image.paste(img.crop(crop_location), (0, 0))
-
-                # Convert the new image to RGB and assign it to image variable
-            else:
-                new_image = image
-
-            # Create the mask image
-            mask = Image.new("RGB", (new_image.width, new_image.height), (255, 255, 255))
-            for x in range(new_image.width):
-                for y in range(new_image.height):
-                    try:
-                        if new_image.getpixel((x, y))[3] != 0:
-                            mask.putpixel((x, y), (0, 0, 0))
-                    except IndexError:
-                        pass
-            
-            # Save the mask and input image for debugging
-            image = new_image.convert("RGB")
-
-            # Generate a new image using the mask and input image
-            self.do_generate({
-                "mask": mask,
-                "image": image,
-                "original_image": original_image,
-                "location": QRect(
-                    0,
-                    0,
-                    self.settings["working_width"],
-                    self.settings["working_height"]
-                )
-            }, seed=seed, override_data=override_data)
-        elif self.generator_section == "vid2vid":
-            images = self.prep_video()
-            self.do_generate({
-                "images": images
-            }, seed=seed)
-        else:
-            self.do_generate(
-                seed=seed,
-                override_data=override_data
-            )
-
-    def prep_video(self):
-        return []
 
     def on_llm_image_prompt_generated_signal(self, data):
+        print("on_llm_image_prompt_generated_signal")
         prompt = data.get("prompt", None)
         prompt_type = data.get("type", ImageCategory.PHOTO.value)
         self.ui.prompt.setPlainText(prompt)
@@ -319,41 +193,6 @@ class GeneratorForm(BaseWidget):
         self.handle_prompt_changed()
         self.handle_negative_prompt_changed()
         self.handle_generate_button_clicked()
-
-    def do_generate(
-        self,
-        extra_options: dict = None,
-        seed: int = None,
-        override_data: dict = None
-    ):
-        if not extra_options:
-            extra_options = {}
-
-        self.logger.debug(f"Attempting to generate image")
-
-        action = self.generator_section
-        model_data = self.settings["generator_settings"]
-        for k, v in override_data.items():
-            if k.startswith("model_data_"):
-                model_data[k.replace("model_data_", "")] = v
-        name = model_data["name"] if "name" in model_data else self.settings["generator_settings"]["model"]
-        model = self.get_service("ai_model_by_name")(name)
-        prompt = override_data.get("prompt", self.settings["generator_settings"]["prompt"])
-        negative_prompt = override_data.get("negative_prompt", self.settings["generator_settings"]["negative_prompt"])
-        sd_mode = override_data.get("sd_mode", None)
-        model_data = {
-            "name": model_data.get("name", model["name"]),
-            "path": model_data.get("path", model["path"]),
-            "branch": model_data.get("branch", model["branch"]),
-            "version": model_data.get("version", model['version']),
-            "category": model_data.get("category", model['category']),
-            "pipeline_action": model_data.get("pipeline_action", model["pipeline_action"]),
-            "enabled": model_data.get("enabled", model["enabled"]),
-            "default": model_data.get("default", model["is_default"])
-        }
-        strength = override_data.get("strength", 0.5)
-
-        # TODO: emit mandual generate request here
 
     def get_memory_options(self):
         return {
@@ -400,13 +239,6 @@ class GeneratorForm(BaseWidget):
         self.ui.progress_bar.setRange(0, 0)
         self.ui.progress_bar.show()
 
-    def handle_checkbox_change(self, key, widget_name):
-        widget = getattr(self.ui, widget_name)
-        value = widget.isChecked()
-        setattr(self.settings["generator_settings"], key, value)
-        self.save_db_session()
-        self.changed_signal.emit(key, value)
-
     def showEvent(self, event):
         super().showEvent(event)
         self.set_form_values()
@@ -424,28 +256,6 @@ class GeneratorForm(BaseWidget):
         self.ui.prompt.setPlainText("")
         self.ui.negative_prompt.setPlainText("")
 
-    def new_batch(self, index, image, data):
-        self.new_batch(index, image, data)
-        """
-        Generate a batch of images using deterministic geneartion based on a previous deterministic generation
-        batch. The previous seed that was chosen should be re-used with the index added to it to generate the new
-        batch of images.
-        :return:
-        """
-        if not data["options"]["deterministic_seed"]:
-            data["options"][f"seed"] = int(data["options"][f"seed"]) + index
-            seed = data["options"][f"seed"]
-        else:
-            seed = data["options"][f"deterministic_seed"]
-        self.deterministic_seed = int(seed) + index
-        self.deterministic_data = data
-        self.deterministic_index = index
-        self.deterministic = True
-        self.generate(image, seed=self.deterministic_seed)
-        self.deterministic = False
-        self.deterministic_data = None
-        self.deterministic_images = None
-    
     def on_stop_image_generator_progress_bar_signal(self):
         self.stop_progress_bar()
 
