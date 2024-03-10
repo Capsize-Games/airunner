@@ -1,19 +1,18 @@
 from functools import partial
 
-from PIL.ImageQt import ImageQt, QPixmap
 from PyQt6.QtCore import QPointF, QPoint, Qt, QRect
 from PyQt6.QtGui import QMouseEvent, QColor, QBrush
-from PyQt6.QtWidgets import QGraphicsView, QGraphicsItemGroup, QGraphicsItem
+from PyQt6.QtWidgets import QGraphicsView, QGraphicsItemGroup
 
 from airunner.aihandler.logger import Logger
 from airunner.enums import CanvasToolName, SignalCode, ServiceCode, CanvasType
 from airunner.mediator_mixin import MediatorMixin
 from airunner.service_locator import ServiceLocator
-from airunner.utils import snap_to_grid, apply_opacity_to_image, convert_base64_to_image
+from airunner.utils import snap_to_grid
 from airunner.widgets.canvas.brush_scene import BrushScene
+from airunner.widgets.canvas.controlnet_scene import ControlnetScene
 from airunner.widgets.canvas.custom_scene import CustomScene
 from airunner.widgets.canvas.draggables.active_grid_area import ActiveGridArea
-from airunner.widgets.canvas.draggables.draggable_pixmap import DraggablePixmap
 from airunner.windows.main.settings_mixin import SettingsMixin
 from airunner.widgets.canvas.zoom_handler import ZoomHandler
 
@@ -88,85 +87,12 @@ class CustomGraphicsView(
             return
         self.drawing = True
         self.set_scene_rect()
-        self.draw_layers()
         self.draw_grid()
         self.update_scene()
         self.drawing = False
 
     def draw_grid(self):
         self.scene.addItem(self.line_group)
-
-    # def on_canvas_clear_signal(self):
-    #     self.create_scene()
-    #     self.toggle_drag_mode()
-    #     self.line_group = QGraphicsItemGroup()
-    #     self.active_grid_area = None
-    #     self.pixmaps = {}
-    #     self.emit(SignalCode.CANVAS_DO_RESIZE_SIGNAL, {
-    #         "force_draw": True
-    #     })
-    #     settings = self.settings
-    #     settings["drawing_pad_settings"]["image"] = None
-    #     self.settings = settings
-
-    # def update_current_pixmap(self, image):
-    #     if self.canvas_type == CanvasType.BRUSH.value:
-    #         return
-    #     for index, layer in enumerate(self.settings["layers"]):
-    #         if index not in self.pixmaps or self.pixmaps[index].pixmap.toImage() != ImageQt(image):
-    #             image = apply_opacity_to_image(image, layer["opacity"] / 100.0)
-    #             if index in self.pixmaps:
-    #                 self.pixmaps[index].pixmap.convertFromImage(ImageQt(image))
-    #             else:
-    #                 pixmap = QPixmap()
-    #                 pixmap.convertFromImage(ImageQt(image))
-    #                 self.pixmaps[index] = DraggablePixmap(pixmap)
-    #             if self.pixmaps[index].scene() != self.scene:
-    #                 self.scene.addItem(self.pixmaps[index])
-    #         self.emit(SignalCode.LAYER_UPDATE_SIGNAL, {
-    #             "layer": layer,
-    #             "index": index
-    #         })
-
-    # def draw_layers(self):
-    #     if not self.do_draw_layers or self.canvas_type == CanvasType.BRUSH.value:
-    #         return
-    #     self.do_draw_layers = False
-    #     layers = self.settings["layers"]
-    #     for index, layer in enumerate(layers):
-    #         if not layer["visible"]:
-    #             if index in self.pixmaps and isinstance(self.pixmaps[index], QGraphicsItem):
-    #                 if self.pixmaps[index].scene() == self.scene:
-    #                     self.remove_scene_item(self.pixmaps[index])
-    #             continue
-    #
-    #         #image = ServiceLocator.get(ServiceCode.GET_IMAGE_FROM_LAYER)(layer)
-    #         base64_image = self.settings["canvas_settings"]["image"]
-    #         image = convert_base64_to_image(base64_image)
-    #         image = image.convert("RGBA")
-    #         if image is None:
-    #             print("GET IMAGE FROM LAYER IS NONE")
-    #             continue
-    #
-    #         if index not in self.pixmaps or self.pixmaps[index].pixmap.toImage() != ImageQt(image):
-    #             image = apply_opacity_to_image(image, layer["opacity"] / 100.0)
-    #             pixmap = QPixmap()
-    #             pixmap.convertFromImage(ImageQt(image))
-    #             self.pixmaps[index] = DraggablePixmap(pixmap)
-    #
-    #         if self.pixmaps[index].scene() != self.scene:
-    #             self.scene.addItem(self.pixmaps[index])
-    #
-    #         self.emit(SignalCode.LAYER_UPDATE_SIGNAL, {
-    #             "layer": layer,
-    #             "index": index
-    #         })
-    def draw_layers(self):
-        if not self.do_draw_layers or self.canvas_type == CanvasType.BRUSH.value:
-            return
-        self.do_draw_layers = False
-        self.scene.update()
-
 
     def clear_lines(self):
         self.remove_scene_item(self.line_group)
@@ -318,8 +244,12 @@ class CustomGraphicsView(
             self.scene = CustomScene(
                 size=self.size()
             )
-        else:
+        elif self.canvas_type == CanvasType.BRUSH.value:
             self.scene = BrushScene(
+                size=self.size()
+            )
+        elif self.canvas_type == CanvasType.CONTROLNET.value:
+            self.scene = ControlnetScene(
                 size=self.size()
             )
         self.setScene(self.scene)
