@@ -11,6 +11,7 @@ from airunner.workers.update_scene_worker import UpdateSceneWorker
 
 class BrushScene(CustomScene):
     settings_key = "drawing_pad_settings"
+
     def __init__(self, size):
         super().__init__(size)
         brush_settings = self.settings["brush_settings"]

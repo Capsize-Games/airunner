@@ -1,3 +1,5 @@
+from typing import Optional
+
 from PIL import ImageFilter
 from PyQt6 import QtWidgets
 from PyQt6.QtCore import Qt, QPoint, QRect
@@ -38,7 +40,7 @@ class CanvasWidget(BaseWidget):
         self.grid_settings: dict = {}
         self.active_grid_settings: dict = {}
         self.canvas_settings: dict = {}
-        self.drag_pos: QPoint = None
+        self.drag_pos: QPoint = Optional[None]
 
         self._grid_settings = {}
         self._canvas_settings = {}
@@ -69,6 +71,13 @@ class CanvasWidget(BaseWidget):
         self.image_handler = ImageHandler()
         self.grid_handler = GridHandler()
         self.clipboard_handler = ClipboardHandler()
+
+        self.ui.controlnet_groupbox.blockSignals(True)
+        self.ui.drawing_pad_groupbox.blockSignals(True)
+        self.ui.controlnet_groupbox.checked = self.settings["generator_settings"]["enable_controlnet"]
+        self.ui.drawing_pad_groupbox.checked = self.settings["drawing_pad_settings"]["enabled"]
+        self.ui.controlnet_groupbox.blockSignals(False)
+        self.ui.drawing_pad_groupbox.blockSignals(False)
 
     @property
     def image_pivot_point(self):
@@ -105,6 +114,16 @@ class CanvasWidget(BaseWidget):
         )
 
         return rect
+
+    def toggle_controlnet(self, val):
+        settings = self.settings
+        settings["generator_settings"]["enable_controlnet"] = val
+        self.settings = settings
+
+    def toggle_drawing_pad(self, val):
+        settings = self.settings
+        settings["drawing_pad_settings"]["enabled"] = val
+        self.settings = settings
 
     def on_canvas_update_cursor_signal(self, event):
         if self.settings["current_tool"] in (
