@@ -191,6 +191,7 @@ class SignalCode(Enum):
     SD_IMAGE_DATA_WORKER_RESPONSE_SIGNAL = "ImageDataWorker_response_signal"
     SD_GENERATE_IMAGE_SIGNAL = "generate_image_signal"
     SD_IMAGE_GENERATED_SIGNAL = "image_generated_signal"
+    SD_CONTROLNET_IMAGE_GENERATED_SIGNAL = "controlnet_image_generated_signal"
     SD_NSFW_CONTENT_DETECTED_SIGNAL = "nsfw_content_detected_signal"
     HANDLE_LATENTS_SIGNAL = "handle_latents_signal"
 
@@ -397,6 +398,7 @@ class SchedulerAlgorithm(Enum):
 class CanvasType(Enum):
     BRUSH = "brush"
     IMAGE = "image"
+    CONTROLNET = "controlnet"
 
 
 class Controlnet(Enum):

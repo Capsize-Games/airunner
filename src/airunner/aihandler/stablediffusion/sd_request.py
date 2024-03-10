@@ -86,10 +86,6 @@ class SDRequest(
 
     @property
     def image(self):
-        # current_layer_index = self.settings["current_layer_index"]
-        # layer = self.settings["layers"][current_layer_index]
-        # image = layer["base_64_image"]
-        # return convert_base64_to_image(image)
         return self.drawing_pad_image
 
     def __init__(self, *args, **kwargs):
@@ -110,6 +106,8 @@ class SDRequest(
         self.is_pix2pix = False
         self.active_rect = None
         self.parent = None
+        self.prompt_embeds = None
+        self.negative_prompt_embeds = None
         self.load_generator_settings()
 
     def load_generator_settings(self):
@@ -372,6 +370,7 @@ class UpscaleRequest(SDRequest):
             "image": kwargs.get("image"),
             "generator": self.generator,
         })
+        return args
 
     def load_prompt_embed_args(
         self,

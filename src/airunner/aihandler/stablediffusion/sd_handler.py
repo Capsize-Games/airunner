@@ -149,7 +149,6 @@ class SDHandler(
         self.attempt_download = False
         self.latents_set = False
         self.downloading_controlnet = False
-        self._controlnet_image = None
         self._latents = None
         self.txt2img = None
         self.img2img = None
@@ -375,23 +374,10 @@ class SDHandler(
             self.sd_mode in RELOAD_CONTROLNET_IMAGE_CONSTS
         ):
             self.logger.debug("Getting controlnet image")
-            controlnet_image = self.preprocess_for_controlnet(self.sd_request.drawing_pad_image)
-            self._controlnet_image = controlnet_image
-            # settings = self.settings
-            # settings["controlnet_image_settings"]["controlnet_image_base64"] = controlnet_image
-            # self.settings = settings
-        # self.emit(SignalCode.CONTROLNET_IMAGE_GENERATED_SIGNAL, {
-        #     'image': self._controlnet_image,
-        #     'data': {
-        #         'controlnet_image': self._controlnet_image
-        #     }
-        # })
+            self._controlnet_image = self.preprocess_for_controlnet(self.sd_request.drawing_pad_image)
         return self._controlnet_image
 
     def preprocess_for_controlnet(self, image):
-        if image is None:
-            return
-
         if self.current_controlnet_type != self.controlnet_type or not self.processor:
             self.logger.debug("Loading controlnet processor " + self.controlnet_type)
             self.current_controlnet_type = self.controlnet_type
@@ -511,8 +497,6 @@ class SDHandler(
             response = self.generator_sample()
             self.initialized = True
         elif self.loaded and not self.loading and self.do_generate:
-            import traceback
-            traceback.print_stack()
             self.do_interrupt = False
             response = self.generator_sample()
             # Set random seed if random seed is true
@@ -896,17 +880,23 @@ class SDHandler(
             self.clear_scheduler()
             self.clear_controlnet()
 
-        if self.settings["generator_settings"]["enable_controlnet"]:
-            controlnet_image = self.controlnet_image
-        else:
-            controlnet_image = None
-
         """
         Set a reference to pipe
         """
         is_txt2img = self.sd_request.is_txt2img
         is_img2img = self.sd_request.is_img2img
         is_outpaint = self.sd_request.is_outpaint
+
+        controlnet_image = self.controlnet_image
+
+        if controlnet_image:
+            self.emit(
+                SignalCode.SD_CONTROLNET_IMAGE_GENERATED_SIGNAL,
+                controlnet_image
+            )
+        else:
+            print("NO CONTROLNET IMAGE GENERATED")
+
         self.data = self.sd_request(
             model_data=self.model,
             extra_options={},
