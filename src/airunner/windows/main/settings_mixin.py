@@ -194,7 +194,9 @@ class SettingsMixin:
                 unload_unused_models=True,
             ),
             drawing_pad_settings=dict(
-                image=None
+                image=None,
+                mask=None,
+                enabled=True,
             ),
             grid_settings=dict(
                 cell_size=64,

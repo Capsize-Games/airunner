@@ -93,14 +93,6 @@ class GeneratorForm(BaseWidget):
 
         return rect
 
-    @property
-    def enable_controlnet(self):
-        return self.settings["generator_settings"]["enable_controlnet"]
-
-    @property
-    def controlnet_image(self):
-        return self.settings["controlnet_settings"]["image"]
-
     def on_load_saved_stablediffuion_prompt_signal(self, index):
         try:
             saved_prompt = self.settings["saved_prompts"][index]
