@@ -131,6 +131,18 @@
                 <string>Canvas</string>
                </attribute>
                <layout class="QGridLayout" name="gridLayout_4">
+                <property name="leftMargin">
+                 <number>0</number>
+                </property>
+                <property name="topMargin">
+                 <number>0</number>
+                </property>
+                <property name="rightMargin">
+                 <number>0</number>
+                </property>
+                <property name="bottomMargin">
+                 <number>0</number>
+                </property>
                 <item row="0" column="0">
                  <widget class="CanvasWidget" name="canvas_widget_2" native="true">
                   <property name="sizePolicy">
@@ -207,6 +219,18 @@
              </rect>
             </property>
             <layout class="QGridLayout" name="gridLayout">
+             <property name="leftMargin">
+              <number>0</number>
+             </property>
+             <property name="topMargin">
+              <number>0</number>
+             </property>
+             <property name="rightMargin">
+              <number>0</number>
+             </property>
+             <property name="bottomMargin">
+              <number>0</number>
+             </property>
              <item row="0" column="0">
               <widget class="QSplitter" name="splitter">
                <property name="maximumSize">
@@ -235,7 +259,7 @@
                  <bool>false</bool>
                 </property>
                 <property name="currentIndex">
-                 <number>2</number>
+                 <number>3</number>
                 </property>
                 <widget class="QWidget" name="tab_pen">
                  <attribute name="title">
@@ -286,6 +310,18 @@
                   <string>Upscale</string>
                  </attribute>
                  <layout class="QGridLayout" name="gridLayout_10">
+                  <property name="leftMargin">
+                   <number>0</number>
+                  </property>
+                  <property name="topMargin">
+                   <number>0</number>
+                  </property>
+                  <property name="rightMargin">
+                   <number>0</number>
+                  </property>
+                  <property name="bottomMargin">
+                   <number>0</number>
+                  </property>
                   <item row="0" column="0">
                    <widget class="UpscaleWidget" name="upscale_widget" native="true"/>
                   </item>
@@ -296,28 +332,20 @@
                   <string>StableDiffusion</string>
                  </attribute>
                  <layout class="QGridLayout" name="gridLayout_11">
+                  <property name="leftMargin">
+                   <number>0</number>
+                  </property>
+                  <property name="topMargin">
+                   <number>0</number>
+                  </property>
+                  <property name="rightMargin">
+                   <number>0</number>
+                  </property>
+                  <property name="bottomMargin">
+                   <number>0</number>
+                  </property>
                   <item row="0" column="0">
-                   <widget class="QComboBox" name="comboBox_2"/>
-                  </item>
-                  <item row="1" column="0">
                    <widget class="StableDiffusionSettingsWidget" name="widget" native="true"/>
-                  </item>
-                  <item row="0" column="1">
-                   <widget class="QPushButton" name="pushButton">
-                    <property name="maximumSize">
-                     <size>
-                      <width>32</width>
-                      <height>16777215</height>
-                     </size>
-                    </property>
-                    <property name="text">
-                     <string/>
-                    </property>
-                    <property name="icon">
-                     <iconset resource="../../../resources_light.qrc">
-                      <normaloff>:/icons/light/exchange-refresh-icon.svg</normaloff>:/icons/light/exchange-refresh-icon.svg</iconset>
-                    </property>
-                   </widget>
                   </item>
                  </layout>
                 </widget>
@@ -1509,7 +1537,6 @@
     <addaction name="menuBrowse_Models_Path"/>
     <addaction name="separator"/>
     <addaction name="actionBrowse_Images_Path_2"/>
-    <addaction name="actionBrowse_Videos_Path"/>
     <addaction name="separator"/>
    </widget>
    <widget class="QMenu" name="menuTools">
