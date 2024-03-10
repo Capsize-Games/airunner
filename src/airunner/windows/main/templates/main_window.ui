@@ -202,7 +202,7 @@
              <rect>
               <x>0</x>
               <y>0</y>
-              <width>415</width>
+              <width>357</width>
               <height>1177</height>
              </rect>
             </property>
@@ -287,152 +287,7 @@
                  </attribute>
                  <layout class="QGridLayout" name="gridLayout_10">
                   <item row="0" column="0">
-                   <widget class="QSplitter" name="splitter_2">
-                    <property name="orientation">
-                     <enum>Qt::Vertical</enum>
-                    </property>
-                    <widget class="QWidget" name="layoutWidget">
-                     <layout class="QVBoxLayout" name="Upscale">
-                      <item>
-                       <widget class="QLabel" name="label">
-                        <property name="font">
-                         <font>
-                          <pointsize>10</pointsize>
-                          <bold>true</bold>
-                         </font>
-                        </property>
-                        <property name="text">
-                         <string>Upscale</string>
-                        </property>
-                       </widget>
-                      </item>
-                      <item>
-                       <widget class="Line" name="line_9">
-                        <property name="orientation">
-                         <enum>Qt::Horizontal</enum>
-                        </property>
-                       </widget>
-                      </item>
-                      <item>
-                       <layout class="QHBoxLayout" name="horizontalLayout_6">
-                        <item>
-                         <widget class="QComboBox" name="upscale_model">
-                          <item>
-                           <property name="text">
-                            <string>RealESRGAN_x4plus</string>
-                           </property>
-                          </item>
-                          <item>
-                           <property name="text">
-                            <string>RealESRNet_x4plus</string>
-                           </property>
-                          </item>
-                          <item>
-                           <property name="text">
-                            <string>RealESRGAN_x4plus_anime_6B</string>
-                           </property>
-                          </item>
-                          <item>
-                           <property name="text">
-                            <string>RealESRGAN_x2plus</string>
-                           </property>
-                          </item>
-                          <item>
-                           <property name="text">
-                            <string>realesr-animevideov3</string>
-                           </property>
-                          </item>
-                          <item>
-                           <property name="text">
-                            <string>realesr-general-x4v3</string>
-                           </property>
-                          </item>
-                         </widget>
-                        </item>
-                        <item>
-                         <widget class="QCheckBox" name="face_enhance">
-                          <property name="text">
-                           <string>Face enhance</string>
-                          </property>
-                         </widget>
-                        </item>
-                       </layout>
-                      </item>
-                      <item>
-                       <layout class="QHBoxLayout" name="horizontalLayout_7">
-                        <item>
-                         <widget class="QComboBox" name="comboBox">
-                          <item>
-                           <property name="text">
-                            <string>2x</string>
-                           </property>
-                          </item>
-                          <item>
-                           <property name="text">
-                            <string>4x</string>
-                           </property>
-                          </item>
-                         </widget>
-                        </item>
-                        <item>
-                         <widget class="QPushButton" name="upscale_2x">
-                          <property name="cursor">
-                           <cursorShape>PointingHandCursor</cursorShape>
-                          </property>
-                          <property name="text">
-                           <string>Upscale</string>
-                          </property>
-                         </widget>
-                        </item>
-                       </layout>
-                      </item>
-                     </layout>
-                    </widget>
-                    <widget class="QWidget" name="layoutWidget_3">
-                     <layout class="QVBoxLayout" name="verticalLayout_5">
-                      <item>
-                       <widget class="QLabel" name="label_7">
-                        <property name="font">
-                         <font>
-                          <pointsize>10</pointsize>
-                          <bold>true</bold>
-                         </font>
-                        </property>
-                        <property name="text">
-                         <string>Brushes</string>
-                        </property>
-                       </widget>
-                      </item>
-                      <item>
-                       <widget class="Line" name="line_11">
-                        <property name="orientation">
-                         <enum>Qt::Horizontal</enum>
-                        </property>
-                       </widget>
-                      </item>
-                      <item>
-                       <widget class="BrushesContainer" name="brushes" native="true">
-                        <property name="acceptDrops">
-                         <bool>true</bool>
-                        </property>
-                       </widget>
-                      </item>
-                      <item>
-                       <spacer name="verticalSpacer_3">
-                        <property name="orientation">
-                         <enum>Qt::Vertical</enum>
-                        </property>
-                        <property name="sizeHint" stdset="0">
-                         <size>
-                          <width>20</width>
-                          <height>40</height>
-                         </size>
-                        </property>
-                       </spacer>
-                      </item>
-                     </layout>
-                    </widget>
-                   </widget>
+                   <widget class="UpscaleWidget" name="upscale_widget" native="true"/>
                   </item>
                  </layout>
                 </widget>
@@ -2315,15 +2170,15 @@
    <container>1</container>
   </customwidget>
   <customwidget>
-   <class>BrushesContainer</class>
-   <extends>QWidget</extends>
-   <header>airunner/widgets/canvas/brushes_container</header>
-   <container>1</container>
-  </customwidget>
-  <customwidget>
    <class>StableDiffusionSettingsWidget</class>
    <extends>QWidget</extends>
    <header>airunner/widgets/stablediffusion/stable_diffusion_settings_widget</header>
+   <container>1</container>
+  </customwidget>
+  <customwidget>
+   <class>UpscaleWidget</class>
+   <extends>QWidget</extends>
+   <header>airunner/widgets/upscale/upscale_widget</header>
    <container>1</container>
   </customwidget>
  </customwidgets>
