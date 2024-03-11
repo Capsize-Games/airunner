@@ -1,6 +1,7 @@
 import functools
 import os
 from dataclasses import dataclass
+from typing import Optional
 
 import tomesd
 import torch
@@ -26,22 +27,20 @@ class TracedUNet(torch.nn.Module):
 
 
 class MemoryEfficientMixin:
-    torch_compile_applied: bool = False
-
-    last_channels_applied: bool = None
-    vae_slicing_applied: bool = None
-    attention_slicing_applied: bool = None
-    tiled_vae_applied: bool = None
-    accelerated_transformers_applied: bool = None
-    cpu_offload_applied: bool = None
-    model_cpu_offload_applied: bool = None
-    tome_sd_applied: bool = False
-    tome_ratio = None
-    
-    @property
-    def do_apply_tome_sd(self):
-        return (self.settings["memory_settings"]["use_tome_sd"] and not self.tome_sd_applied) or \
-            (self.tome_ratio is None or self.tome_ratio != self.tome_sd_ratio)
+    def __init__(self):
+        self.torch_compile_applied: bool = False
+        self.last_channels_applied: bool = Optional[None]
+        self.vae_slicing_applied: bool = Optional[None]
+        self.attention_slicing_applied: bool = Optional[None]
+        self.tiled_vae_applied: bool = Optional[None]
+        self.accelerated_transformers_applied: bool = Optional[None]
+        self.cpu_offload_applied: bool = Optional[None]
+        self.model_cpu_offload_applied: bool = Optional[None]
+        self.tome_sd_applied: bool = Optional[None]
+        self.tome_ratio: float = Optional[None]
+        self.use_enable_sequential_cpu_offload: bool = Optional[None]
+        self.enable_model_cpu_offload: bool = Optional[None]
+        self.use_tome_sd: bool = Optional[None]
 
     @property
     def do_remove_tome_sd(self):
@@ -59,11 +58,12 @@ class MemoryEfficientMixin:
         self.accelerated_transformers_applied = None
         self.cpu_offload_applied = None
         self.model_cpu_offload_applied = None
+        self.use_enable_sequential_cpu_offload = None
+        self.enable_model_cpu_offload = None
 
     def apply_last_channels(self):
         if self.last_channels_applied == self.settings["memory_settings"]["use_last_channels"]:
             return
-
         self.last_channels_applied = self.settings["memory_settings"]["use_last_channels"]
         if self.settings["memory_settings"]["use_last_channels"]:
             self.logger.debug("Enabling torch.channels_last")
@@ -203,6 +203,15 @@ class MemoryEfficientMixin:
         return
 
     def move_pipe_to_cuda(self):
+        if self.use_enable_sequential_cpu_offload == self.settings["memory_settings"]["use_enable_sequential_cpu_offload"] and self.enable_model_cpu_offload == self.settings["memory_settings"]["enable_model_cpu_offload"]:
+            return
+
+        if not self.pipe or self.pipe.device == "cuda":
+            return
+
+        self.use_enable_sequential_cpu_offload = self.settings["memory_settings"]["use_enable_sequential_cpu_offload"]
+        self.enable_model_cpu_offload = self.settings["memory_settings"]["enable_model_cpu_offload"]
+
         if self.cuda_is_available and not self.settings["memory_settings"]["use_enable_sequential_cpu_offload"] and not self.settings["memory_settings"]["enable_model_cpu_offload"]:
             if not str(self.pipe.device).startswith("cuda"):
                 self.logger.debug(f"Moving pipe to cuda (currently {self.pipe.device})")
@@ -262,7 +271,12 @@ class MemoryEfficientMixin:
             self.pipe.enable_model_cpu_offload()
     
     def apply_tome(self):
-        if self.do_apply_tome_sd:
+        if self.use_tome_sd == self.settings["memory_settings"]["use_tome_sd"] and self.tome_ratio == self.settings["memory_settings"]["tome_sd_ratio"]:
+            return
+        self.use_tome_sd = self.settings["memory_settings"]["use_tome_sd"]
+        self.tome_ratio = self.settings["memory_settings"]["tome_sd_ratio"]
+
+        if self.use_tome_sd:
             if self.tome_sd_applied:
                 self.remove_tome_sd()
             self.apply_tome_sd()
