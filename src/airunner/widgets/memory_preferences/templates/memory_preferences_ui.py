@@ -204,7 +204,7 @@ class Ui_memory_preferences(object):
         self.gridLayout_2.addWidget(self.label_10, 0, 0, 1, 1)
         self.tome_sd_ratio = SliderWidget(parent=self.use_tome)
         self.tome_sd_ratio.setMinimumSize(QtCore.QSize(0, 20))
-        self.tome_sd_ratio.setProperty("slider_callback", "handle_value_change")
+        self.tome_sd_ratio.setProperty("slider_callback", "tome_sd_ratio_value_change")
         self.tome_sd_ratio.setProperty("current_value", 1000)
         self.tome_sd_ratio.setProperty("slider_maximum", 1000)
         self.tome_sd_ratio.setProperty("spinbox_maximum", 1.0)
