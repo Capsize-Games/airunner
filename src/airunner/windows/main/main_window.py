@@ -340,34 +340,19 @@ class MainWindow(
         self.redo()
 
     def action_paste_image_triggered(self):
-        if self.settings["mode"] == Mode.IMAGE.value:
-            self.emit(
-                SignalCode.CANVAS_PASTE_IMAGE_SIGNAL
-            )
+        self.emit(SignalCode.CANVAS_PASTE_IMAGE_SIGNAL)
 
     def action_copy_image_triggered(self):
-        if self.settings["mode"] == Mode.IMAGE.value:
-            self.emit(
-                SignalCode.CANVAS_COPY_IMAGE_SIGNAL
-            )
+        self.emit(SignalCode.CANVAS_COPY_IMAGE_SIGNAL)
 
     def action_cut_image_triggered(self):
-        if self.settings["mode"] == Mode.IMAGE.value:
-            self.emit(
-                SignalCode.CANVAS_CUT_IMAGE_SIGNAL
-            )
+        self.emit(SignalCode.CANVAS_CUT_IMAGE_SIGNAL)
 
     def action_rotate_90_clockwise_triggered(self):
-        if self.settings["mode"] == Mode.IMAGE.value:
-            self.emit(
-                SignalCode.CANVAS_ROTATE_90_CLOCKWISE_SIGNAL
-            )
+        self.emit(SignalCode.CANVAS_ROTATE_90_CLOCKWISE_SIGNAL)
 
     def action_rotate_90_counterclockwise_triggered(self):
-        if self.settings["mode"] == Mode.IMAGE.value:
-            self.emit(
-                SignalCode.CANVAS_ROTATE_90_COUNTER_CLOCKWISE_SIGNAL
-            )
+        self.emit(SignalCode.CANVAS_ROTATE_90_COUNTER_CLOCKWISE_SIGNAL)
 
     def action_show_prompt_browser_triggered(self):
         self.show_prompt_browser()
