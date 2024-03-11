@@ -6,8 +6,7 @@ from airunner.widgets.canvas.brush_scene import BrushScene
 class ControlnetScene(BrushScene):
     settings_key = "controlnet_settings"
 
-    def __init__(self, *args, **kwargs):
-        super().__init__(*args, **kwargs)
+    def register_signals(self):
         self.register(
             SignalCode.SD_CONTROLNET_IMAGE_GENERATED_SIGNAL,
             self.handle_controlnet_image_generated
