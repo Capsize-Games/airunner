@@ -390,7 +390,7 @@
            <string>Ratio</string>
           </property>
           <property name="slider_callback" stdset="0">
-           <string notr="true">handle_value_change</string>
+           <string notr="true">tome_sd_ratio_value_change</string>
           </property>
           <property name="current_value" stdset="0">
            <number>1000</number>
