@@ -4,9 +4,8 @@ from PyQt6.QtGui import QPainterPath
 from PyQt6.QtGui import QPen, QPixmap, QPainter
 from PyQt6.QtGui import QColor
 from airunner.enums import SignalCode, CanvasToolName
-from airunner.utils import convert_image_to_base64, create_worker
+from airunner.utils import convert_image_to_base64
 from airunner.widgets.canvas.custom_scene import CustomScene
-from airunner.workers.update_scene_worker import UpdateSceneWorker
 
 
 class BrushScene(CustomScene):
@@ -30,8 +29,6 @@ class BrushScene(CustomScene):
             SignalCode.BRUSH_COLOR_CHANGED_SIGNAL,
             self.handle_brush_color_changed
         )
-        self.update_scene_worker = create_worker(UpdateSceneWorker)
-        self.update_scene_worker.scene = self
 
     def register_signals(self):
         pass
@@ -90,7 +87,6 @@ class BrushScene(CustomScene):
 
         if not self.start_pos:
             return
-
 
         self.path.moveTo(self.start_pos)
 
@@ -162,3 +158,4 @@ class BrushScene(CustomScene):
 
     def mouseMoveEvent(self, event):
         self.last_pos = event.scenePos()
+        self.update()
