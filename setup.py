@@ -59,7 +59,7 @@ setup(
         "watchdog==4.0.0",
         "sounddevice==0.4.6",
         "datasets==2.18.0",
-        "sentence_transformers==2.4.0",
+        "sentence_transformers==2.5.1",
         "inflect==7.0.0",
         "tiktoken==0.6.0",
         "pycountry==23.12.11",
