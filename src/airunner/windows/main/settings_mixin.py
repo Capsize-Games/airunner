@@ -176,6 +176,8 @@ class SettingsMixin:
                 generator_tab_index=0,
                 is_maximized=False,
                 is_fullscreen=False,
+                canvas_splitter=None,
+                canvas_side_splitter=None
             ),
             memory_settings=dict(
                 use_last_channels=True,

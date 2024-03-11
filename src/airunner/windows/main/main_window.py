@@ -543,6 +543,8 @@ class MainWindow(
             settings["window_settings"][splitter] = getattr(self.ui, splitter).saveState()
 
         settings["window_settings"]["chat_prompt_splitter"] = self.ui.generator_widget.ui.chat_prompt_widget.ui.chat_prompt_splitter.saveState()
+        settings["window_settings"]["canvas_splitter"] = self.ui.canvas_widget_2.ui.canvas_splitter.saveState()
+        settings["window_settings"]["canvas_side_splitter"] = self.ui.canvas_widget_2.ui.canvas_side_splitter.saveState()
 
         self.settings = settings
         self.save_settings()
@@ -577,6 +579,12 @@ class MainWindow(
             self.ui.generator_widget.ui.chat_prompt_widget.ui.chat_prompt_splitter.restoreState(
                 window_settings["chat_prompt_splitter"]
             )
+
+        if window_settings["canvas_splitter"] is not None:
+            self.ui.canvas_widget_2.ui.canvas_splitter.restoreState(window_settings["canvas_splitter"])
+
+        if window_settings["canvas_side_splitter"] is not None:
+            self.ui.canvas_widget_2.ui.canvas_side_splitter.restoreState(window_settings["canvas_side_splitter"])
 
     ##### End window properties #####
     #################################
