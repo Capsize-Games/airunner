@@ -25,13 +25,12 @@ class BrushScene(CustomScene):
         self.path = None
         self._is_drawing = False
         self._is_erasing = False
+
+    def register_signals(self):
         self.register(
             SignalCode.BRUSH_COLOR_CHANGED_SIGNAL,
             self.handle_brush_color_changed
         )
-
-    def register_signals(self):
-        pass
 
     @property
     def is_brush_or_eraser(self):
