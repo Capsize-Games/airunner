@@ -34,7 +34,7 @@ setup(
         "pyre-extensions==0.0.30",
         "lightning==2.2.0.post0",
         "requests==2.31.0",
-        "requests-oauthlib==1.3.1",
+        "requests-oauthlib==1.4.0",
         "safetensors==0.4.2",
         "scipy==1.12.0",
         "tokenizers==0.15.2",
