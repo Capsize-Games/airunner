@@ -214,7 +214,7 @@
              <rect>
               <x>0</x>
               <y>0</y>
-              <width>357</width>
+              <width>347</width>
               <height>1177</height>
              </rect>
             </property>
@@ -259,7 +259,7 @@
                  <bool>false</bool>
                 </property>
                 <property name="currentIndex">
-                 <number>3</number>
+                 <number>0</number>
                 </property>
                 <widget class="QWidget" name="tab_pen">
                  <attribute name="title">
@@ -1420,16 +1420,6 @@
                    </property>
                   </spacer>
                  </item>
-                 <item>
-                  <widget class="QPushButton" name="enable_controlnet">
-                   <property name="text">
-                    <string>controlnet</string>
-                   </property>
-                   <property name="checkable">
-                    <bool>true</bool>
-                   </property>
-                  </widget>
-                 </item>
                 </layout>
                </widget>
               </item>
@@ -1509,11 +1499,39 @@
    </widget>
    <widget class="QMenu" name="menuImage">
     <property name="title">
-     <string>Image</string>
+     <string>Canvas</string>
     </property>
-    <addaction name="actionImport"/>
-    <addaction name="actionExport"/>
+    <widget class="QMenu" name="menuCanvas_Image">
+     <property name="title">
+      <string>Main</string>
+     </property>
+     <addaction name="actionImport"/>
+     <addaction name="actionExport"/>
+    </widget>
+    <widget class="QMenu" name="menuDrawingpad">
+     <property name="title">
+      <string>Input</string>
+     </property>
+     <addaction name="drawingpad_import"/>
+     <addaction name="drawingpad_export"/>
+     <addaction name="separator"/>
+     <addaction name="actionOverlay_input_image"/>
+    </widget>
+    <widget class="QMenu" name="menuControlnet">
+     <property name="title">
+      <string>Controlnet</string>
+     </property>
+     <addaction name="controlnet_import"/>
+     <addaction name="controlnet_export"/>
+     <addaction name="separator"/>
+     <addaction name="enable_controlnet"/>
+    </widget>
     <addaction name="separator"/>
+    <addaction name="menuCanvas_Image"/>
+    <addaction name="menuDrawingpad"/>
+    <addaction name="menuControlnet"/>
+    <addaction name="separator"/>
+    <addaction name="actionGenerate_while_drawing"/>
    </widget>
    <widget class="QMenu" name="menuView">
     <property name="title">
@@ -2162,6 +2180,90 @@
   <action name="actionModel_Manager_3">
    <property name="text">
     <string>Model Manager</string>
+   </property>
+  </action>
+  <action name="actionImport_input_image">
+   <property name="text">
+    <string>Import input image</string>
+   </property>
+  </action>
+  <action name="actionExport_input_image">
+   <property name="text">
+    <string>Export input image</string>
+   </property>
+  </action>
+  <action name="actionImport_2">
+   <property name="text">
+    <string>Import image</string>
+   </property>
+  </action>
+  <action name="actionExport_image">
+   <property name="text">
+    <string>Export image</string>
+   </property>
+  </action>
+  <action name="actionImport_Image">
+   <property name="text">
+    <string>Import Image</string>
+   </property>
+  </action>
+  <action name="actionExport_Image">
+   <property name="text">
+    <string>Export Image</string>
+   </property>
+  </action>
+  <action name="actionImport_3">
+   <property name="text">
+    <string>Import</string>
+   </property>
+  </action>
+  <action name="actionExport_2">
+   <property name="text">
+    <string>Export</string>
+   </property>
+  </action>
+  <action name="controlnet_import">
+   <property name="text">
+    <string>Import Image</string>
+   </property>
+  </action>
+  <action name="controlnet_export">
+   <property name="text">
+    <string>Export Image</string>
+   </property>
+  </action>
+  <action name="drawingpad_import">
+   <property name="text">
+    <string>Import Image</string>
+   </property>
+  </action>
+  <action name="drawingpad_export">
+   <property name="text">
+    <string>Export Image</string>
+   </property>
+  </action>
+  <action name="actionGenerate_while_drawing">
+   <property name="checkable">
+    <bool>true</bool>
+   </property>
+   <property name="text">
+    <string>Generate while drawing</string>
+   </property>
+  </action>
+  <action name="actionOverlay_input_image">
+   <property name="checkable">
+    <bool>true</bool>
+   </property>
+   <property name="text">
+    <string>Overlay input image</string>
+   </property>
+  </action>
+  <action name="enable_controlnet">
+   <property name="checkable">
+    <bool>true</bool>
+   </property>
+   <property name="text">
+    <string>Enabled</string>
    </property>
   </action>
  </widget>
@@ -3095,18 +3197,82 @@
    </hints>
   </connection>
   <connection>
+   <sender>drawingpad_import</sender>
+   <signal>triggered()</signal>
+   <receiver>MainWindow</receiver>
+   <slot>import_drawingpad_image()</slot>
+   <hints>
+    <hint type="sourcelabel">
+     <x>1083</x>
+     <y>568</y>
+    </hint>
+    <hint type="destinationlabel">
+     <x>561</x>
+     <y>661</y>
+    </hint>
+   </hints>
+  </connection>
+  <connection>
+   <sender>drawingpad_export</sender>
+   <signal>triggered()</signal>
+   <receiver>MainWindow</receiver>
+   <slot>export_drawingpad_image()</slot>
+   <hints>
+    <hint type="sourcelabel">
+     <x>-1</x>
+     <y>-1</y>
+    </hint>
+    <hint type="destinationlabel">
+     <x>561</x>
+     <y>661</y>
+    </hint>
+   </hints>
+  </connection>
+  <connection>
+   <sender>controlnet_import</sender>
+   <signal>triggered()</signal>
+   <receiver>MainWindow</receiver>
+   <slot>import_controlnet_image()</slot>
+   <hints>
+    <hint type="sourcelabel">
+     <x>-1</x>
+     <y>-1</y>
+    </hint>
+    <hint type="destinationlabel">
+     <x>561</x>
+     <y>661</y>
+    </hint>
+   </hints>
+  </connection>
+  <connection>
+   <sender>controlnet_export</sender>
+   <signal>triggered()</signal>
+   <receiver>MainWindow</receiver>
+   <slot>export_controlnet_image()</slot>
+   <hints>
+    <hint type="sourcelabel">
+     <x>-1</x>
+     <y>-1</y>
+    </hint>
+    <hint type="destinationlabel">
+     <x>561</x>
+     <y>661</y>
+    </hint>
+   </hints>
+  </connection>
+  <connection>
    <sender>enable_controlnet</sender>
    <signal>toggled(bool)</signal>
    <receiver>MainWindow</receiver>
    <slot>action_toggle_controlnet(bool)</slot>
    <hints>
     <hint type="sourcelabel">
-     <x>1096</x>
-     <y>45</y>
+     <x>-1</x>
+     <y>-1</y>
     </hint>
     <hint type="destinationlabel">
-     <x>1125</x>
-     <y>56</y>
+     <x>561</x>
+     <y>661</y>
     </hint>
    </hints>
   </connection>
@@ -3205,5 +3371,9 @@
   <slot>action_toggle_select(bool)</slot>
   <slot>action_show_image_browser()</slot>
   <slot>action_toggle_controlnet(bool)</slot>
+  <slot>import_controlnet_image()</slot>
+  <slot>export_controlnet_image()</slot>
+  <slot>import_drawingpad_image()</slot>
+  <slot>export_drawingpad_image()</slot>
  </slots>
 </ui>
