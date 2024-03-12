@@ -3,7 +3,10 @@ from PyQt6.QtCore import Qt, QPointF
 from PyQt6.QtGui import QPainterPath
 from PyQt6.QtGui import QPen, QPixmap, QPainter
 from PyQt6.QtGui import QColor
+from PyQt6.QtWidgets import QFileDialog
+
 from airunner.enums import SignalCode, CanvasToolName
+from airunner.settings import VALID_IMAGE_FILES
 from airunner.utils import convert_image_to_base64
 from airunner.widgets.canvas.custom_scene import CustomScene
 
@@ -27,10 +30,42 @@ class BrushScene(CustomScene):
         self._is_erasing = False
 
     def register_signals(self):
-        self.register(
-            SignalCode.BRUSH_COLOR_CHANGED_SIGNAL,
-            self.handle_brush_color_changed
+        signals = [
+            (SignalCode.BRUSH_COLOR_CHANGED_SIGNAL, self.handle_brush_color_changed),
+            (SignalCode.DRAWINGPAD_IMPORT_IMAGE_SIGNAL, self.import_image),
+            (SignalCode.DRAWINGPAD_EXPORT_IMAGE_SIGNAL, self.export_image),
+        ]
+        for signal, handler in signals:
+            self.register(signal, handler)
+
+    def export_image(self):
+        image = self.current_active_image()
+        if image:
+            file_path, _ = QFileDialog.getSaveFileName(
+                None,
+                "Save Image",
+                "",
+                f"Image Files ({' '.join(VALID_IMAGE_FILES)})"
+            )
+            if file_path == "":
+                return
+
+            # If missing file extension, add it
+            if not file_path.endswith(VALID_IMAGE_FILES):
+                file_path = f"{file_path}.png"
+
+            image.save(file_path)
+
+    def import_image(self):
+        file_path, _ = QFileDialog.getOpenFileName(
+            None,
+            "Open Image",
+            "",
+            f"Image Files ({' '.join(VALID_IMAGE_FILES)})"
         )
+        if file_path == "":
+            return
+        self.load_image(file_path)
 
     @property
     def is_brush_or_eraser(self):

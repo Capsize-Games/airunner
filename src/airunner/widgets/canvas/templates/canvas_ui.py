@@ -50,7 +50,7 @@ class Ui_canvas(object):
         self.drawing_pad.setVerticalScrollBarPolicy(QtCore.Qt.ScrollBarPolicy.ScrollBarAlwaysOff)
         self.drawing_pad.setHorizontalScrollBarPolicy(QtCore.Qt.ScrollBarPolicy.ScrollBarAlwaysOff)
         self.drawing_pad.setObjectName("drawing_pad")
-        self.gridLayout_3.addWidget(self.drawing_pad, 0, 0, 1, 1)
+        self.gridLayout_3.addWidget(self.drawing_pad, 4, 0, 1, 1)
         self.controlnet_groupbox = QtWidgets.QGroupBox(parent=self.canvas_side_splitter)
         self.controlnet_groupbox.setCheckable(True)
         self.controlnet_groupbox.setObjectName("controlnet_groupbox")
