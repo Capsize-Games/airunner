@@ -8,17 +8,17 @@ from PyQt6 import QtGui
 from PyQt6 import uic, QtCore
 from PyQt6.QtCore import pyqtSlot, pyqtSignal
 from PyQt6.QtGui import QGuiApplication
-from PyQt6.QtWidgets import QApplication, QFileDialog, QMainWindow
+from PyQt6.QtWidgets import QApplication, QMainWindow
 
 from airunner.aihandler.logger import Logger
 from airunner.settings import LOG_LEVEL, STATUS_ERROR_COLOR, STATUS_NORMAL_COLOR_LIGHT, STATUS_NORMAL_COLOR_DARK, \
-    DARK_THEME_NAME, LIGHT_THEME_NAME, VALID_IMAGE_FILES, NSFW_CONTENT_DETECTED_MESSAGE
+    DARK_THEME_NAME, LIGHT_THEME_NAME, NSFW_CONTENT_DETECTED_MESSAGE
 from airunner.enums import Mode, SignalCode, ServiceCode, CanvasToolName, WindowSection, GeneratorSection
 from airunner.mediator_mixin import MediatorMixin
 from airunner.resources_dark_rc import *
 from airunner.service_locator import ServiceLocator
 from airunner.settings import BASE_PATH, DISCORD_LINK, BUG_REPORT_LINK, VULNERABILITY_REPORT_LINK
-from airunner.utils import get_version, default_hf_cache_dir, open_file_path, set_widget_state
+from airunner.utils import get_version, default_hf_cache_dir, set_widget_state
 from airunner.widgets.status.status_widget import StatusWidget
 from airunner.windows.about.about import AboutWindow
 from airunner.windows.filter_window import FilterWindow
@@ -308,12 +308,6 @@ class MainWindow(
         self.new_document()
         self.emit(SignalCode.CANVAS_CLEAR)
 
-    def action_export_image_triggered(self):
-        self.emit(SignalCode.CANVAS_EXPORT_IMAGE_SIGNAL)
-
-    def action_import_image_triggered(self):
-        self.emit(SignalCode.CANVAS_IMPORT_IMAGE_SIGNAL)
-
     def action_quit_triggered(self):
         QApplication.quit()
         self.close()
@@ -340,34 +334,19 @@ class MainWindow(
         self.redo()
 
     def action_paste_image_triggered(self):
-        if self.settings["mode"] == Mode.IMAGE.value:
-            self.emit(
-                SignalCode.CANVAS_PASTE_IMAGE_SIGNAL
-            )
+        self.emit(SignalCode.CANVAS_PASTE_IMAGE_SIGNAL)
 
     def action_copy_image_triggered(self):
-        if self.settings["mode"] == Mode.IMAGE.value:
-            self.emit(
-                SignalCode.CANVAS_COPY_IMAGE_SIGNAL
-            )
+        self.emit(SignalCode.CANVAS_COPY_IMAGE_SIGNAL)
 
     def action_cut_image_triggered(self):
-        if self.settings["mode"] == Mode.IMAGE.value:
-            self.emit(
-                SignalCode.CANVAS_CUT_IMAGE_SIGNAL
-            )
+        self.emit(SignalCode.CANVAS_CUT_IMAGE_SIGNAL)
 
     def action_rotate_90_clockwise_triggered(self):
-        if self.settings["mode"] == Mode.IMAGE.value:
-            self.emit(
-                SignalCode.CANVAS_ROTATE_90_CLOCKWISE_SIGNAL
-            )
+        self.emit(SignalCode.CANVAS_ROTATE_90_CLOCKWISE_SIGNAL)
 
     def action_rotate_90_counterclockwise_triggered(self):
-        if self.settings["mode"] == Mode.IMAGE.value:
-            self.emit(
-                SignalCode.CANVAS_ROTATE_90_COUNTER_CLOCKWISE_SIGNAL
-            )
+        self.emit(SignalCode.CANVAS_ROTATE_90_COUNTER_CLOCKWISE_SIGNAL)
 
     def action_show_prompt_browser_triggered(self):
         self.show_prompt_browser()
@@ -543,6 +522,8 @@ class MainWindow(
             settings["window_settings"][splitter] = getattr(self.ui, splitter).saveState()
 
         settings["window_settings"]["chat_prompt_splitter"] = self.ui.generator_widget.ui.chat_prompt_widget.ui.chat_prompt_splitter.saveState()
+        settings["window_settings"]["canvas_splitter"] = self.ui.canvas_widget_2.ui.canvas_splitter.saveState()
+        settings["window_settings"]["canvas_side_splitter"] = self.ui.canvas_widget_2.ui.canvas_side_splitter.saveState()
 
         self.settings = settings
         self.save_settings()
@@ -577,6 +558,12 @@ class MainWindow(
             self.ui.generator_widget.ui.chat_prompt_widget.ui.chat_prompt_splitter.restoreState(
                 window_settings["chat_prompt_splitter"]
             )
+
+        if window_settings["canvas_splitter"] is not None:
+            self.ui.canvas_widget_2.ui.canvas_splitter.restoreState(window_settings["canvas_splitter"])
+
+        if window_settings["canvas_side_splitter"] is not None:
+            self.ui.canvas_widget_2.ui.canvas_side_splitter.restoreState(window_settings["canvas_side_splitter"])
 
     ##### End window properties #####
     #################################
@@ -950,3 +937,21 @@ class MainWindow(
         settings = self.settings
         settings["generator_settings"]["enable_controlnet"] = val
         self.settings = settings
+
+    def import_controlnet_image(self):
+        self.emit(SignalCode.CONTROLNET_IMPORT_IMAGE_SIGNAL)
+
+    def export_controlnet_image(self):
+        self.emit(SignalCode.CONTROLNET_EXPORT_IMAGE_SIGNAL)
+
+    def import_drawingpad_image(self):
+        self.emit(SignalCode.DRAWINGPAD_IMPORT_IMAGE_SIGNAL)
+
+    def export_drawingpad_image(self):
+        self.emit(SignalCode.DRAWINGPAD_EXPORT_IMAGE_SIGNAL)
+
+    def action_export_image_triggered(self):
+        self.emit(SignalCode.CANVAS_EXPORT_IMAGE_SIGNAL)
+
+    def action_import_image_triggered(self):
+        self.emit(SignalCode.CANVAS_IMPORT_IMAGE_SIGNAL)
