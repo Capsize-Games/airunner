@@ -25,7 +25,9 @@ class MemoryPreferencesWidget(BaseWidget):
             getattr(self.ui, ui_element).setChecked(self.settings["memory_settings"][setting] is True)
             getattr(self.ui, ui_element).blockSignals(False)
 
-        self.ui.tome_sd_ratio.initialize()
+        self.ui.tome_sd_ratio.init(
+            slider_callback=self.tome_sd_ratio_value_change,
+        )
 
     def action_toggled_setting(self, setting_name, val):
         settings = self.settings
@@ -70,3 +72,8 @@ class MemoryPreferencesWidget(BaseWidget):
         self.ui.use_enable_vae_slicing.setChecked(True)
         self.ui.use_tome.setChecked(True)
         self.ui.tome_sd_ratio.ui.slider.setValue(600)
+
+    def tome_sd_ratio_value_change(self, prop, val):
+        settings = self.settings
+        settings["memory_settings"]["tome_sd_ratio"] = val
+        self.settings = self.settings
