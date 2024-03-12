@@ -308,12 +308,6 @@ class MainWindow(
         self.new_document()
         self.emit(SignalCode.CANVAS_CLEAR)
 
-    def action_export_image_triggered(self):
-        self.emit(SignalCode.CANVAS_EXPORT_IMAGE_SIGNAL)
-
-    def action_import_image_triggered(self):
-        self.emit(SignalCode.CANVAS_IMPORT_IMAGE_SIGNAL)
-
     def action_quit_triggered(self):
         QApplication.quit()
         self.close()
@@ -943,3 +937,21 @@ class MainWindow(
         settings = self.settings
         settings["generator_settings"]["enable_controlnet"] = val
         self.settings = settings
+
+    def import_controlnet_image(self):
+        self.emit(SignalCode.CONTROLNET_IMPORT_IMAGE_SIGNAL)
+
+    def export_controlnet_image(self):
+        self.emit(SignalCode.CONTROLNET_EXPORT_IMAGE_SIGNAL)
+
+    def import_drawingpad_image(self):
+        self.emit(SignalCode.DRAWINGPAD_IMPORT_IMAGE_SIGNAL)
+
+    def export_drawingpad_image(self):
+        self.emit(SignalCode.DRAWINGPAD_EXPORT_IMAGE_SIGNAL)
+
+    def action_export_image_triggered(self):
+        self.emit(SignalCode.CANVAS_EXPORT_IMAGE_SIGNAL)
+
+    def action_import_image_triggered(self):
+        self.emit(SignalCode.CANVAS_IMPORT_IMAGE_SIGNAL)
