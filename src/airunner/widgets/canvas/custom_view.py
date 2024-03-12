@@ -263,7 +263,6 @@ class CustomGraphicsView(
         self.scene.setBackgroundBrush(brush)
 
     def handle_mouse_event(self, original_mouse_event, event):
-        print("handle_mouse_event")
         if event.buttons() == Qt.MouseButton.MiddleButton:
             if self.last_pos:
                 delta = event.pos() - self.last_pos

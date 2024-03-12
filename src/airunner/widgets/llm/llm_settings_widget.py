@@ -244,7 +244,6 @@ class LLMSettingsWidget(BaseWidget):
                 self.ui.radio_button_16bit.setChecked(True)
     
     def reset_settings_to_default_clicked(self):
-        print("TODO")
         llm_generator_settings = self.settings["llm_generator_settings"]
         self.initialize_form()
         self.ui.top_p.set_slider_and_spinbox_values(llm_generator_settings["top_p"])

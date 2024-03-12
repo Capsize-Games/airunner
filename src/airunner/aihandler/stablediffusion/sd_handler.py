@@ -119,6 +119,7 @@ class SDHandler(
         LoraMixin.__init__(self)
         CompelMixin.__init__(self)
         SchedulerMixin.__init__(self)
+        MemoryEfficientMixin.__init__(self)
         self.logger.debug("Loading Stable Diffusion model runner...")
         self.safety_checker_model = self.models_by_pipeline_action("safety_checker")[0]
         self.text_encoder_model = self.models_by_pipeline_action("text_encoder")[0]
@@ -994,8 +995,9 @@ class SDHandler(
         self.change_scheduler()
 
         if self.pipe and self.moved_to_cpu:
-            self.apply_memory_efficient_settings()
+            self.reset_applied_memory_settings()
             self.moved_to_cpu = False
+        self.apply_memory_efficient_settings()
 
         if self.pipe and self.do_load:
             """
