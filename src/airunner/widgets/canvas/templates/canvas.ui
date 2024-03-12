@@ -79,7 +79,7 @@
            <bool>true</bool>
           </property>
           <layout class="QGridLayout" name="gridLayout_3">
-           <item row="0" column="0">
+           <item row="4" column="0">
             <widget class="CustomGraphicsView" name="drawing_pad">
              <property name="verticalScrollBarPolicy">
               <enum>Qt::ScrollBarAlwaysOff</enum>
