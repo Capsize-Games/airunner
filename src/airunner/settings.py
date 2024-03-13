@@ -400,7 +400,7 @@ SCHEDULER_CLASSES = {
 MIN_SEED = 0
 MAX_SEED = 4294967295
 AIRUNNER_ENVIRONMENT = os.environ.get("AIRUNNER_ENVIRONMENT", "dev")  # dev or prod
-LOG_LEVEL = logging.FATAL if AIRUNNER_ENVIRONMENT == "prod" else logging.DEBUG
+LOG_LEVEL = logging.FATAL if AIRUNNER_ENVIRONMENT == "prod" else logging.WARNING
 SCHEDULERS = [e.value for e in Scheduler]
 DEFAULT_SCHEDULER = Scheduler.DPM_PP_2M_K.value
 AVAILABLE_SCHEDULERS_BY_ACTION = {
