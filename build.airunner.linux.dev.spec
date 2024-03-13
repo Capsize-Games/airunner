@@ -5,7 +5,7 @@ from PyInstaller.utils.hooks import copy_metadata, collect_data_files
 import sys ; sys.setrecursionlimit(sys.getrecursionlimit() * 5)
 os.environ["AIRUNNER_ENVIRONMENT"] = "prod"
 libraries = [
-    "./venv/lib/python3.10/site-packages/PyQt6/Qt6/lib/",
+    "./venv/lib/python3.10/site-packages/PySide6/Qt6/lib/",
     "/usr/lib/x86_64-linux-gnu/wine-development/",
     "./venv/lib/python3.10/site-packages/h5py.libs/",
     "./venv/lib/python3.10/site-packages/scipy.libs/",
@@ -40,7 +40,6 @@ datas += copy_metadata('filelock')
 datas += copy_metadata('numpy')
 datas += copy_metadata('tokenizers')
 datas += copy_metadata('transformers')
-datas += copy_metadata('rich')
 datas += copy_metadata('sympy')
 datas += copy_metadata('opencv-python')
 datas += collect_data_files("torch", include_py_files=True)
@@ -94,7 +93,7 @@ a = Analysis(
         "numpy",
         "PIL._tkinter_finder",
         "sympy",
-        "opencv-python",
+        #"opencv-python",
     ],
     hookspath=[],
     hooksconfig={},
@@ -126,6 +125,7 @@ a = Analysis(
         "wcwidth",
         "websocket-client",
         "websockets",
+        "PySide6",
     ],
     win_no_prefer_redirects=False,
     win_private_assemblies=False,
@@ -160,16 +160,18 @@ coll = COLLECT(
     name=COLLECT_NAME
 )
 
+os.makedirs('./dist/airunner/images/', exist_ok=True)
+os.makedirs('./dist/airunner/diffusers/pipelines/stable_diffusion', exist_ok=True)
+
 # copy files for distribution
-shutil.copytree('./src/airunner/pyqt', './dist/airunner/pyqt')
+#shutil.copytree('./src/airunner/pyqt', './dist/airunner/pyqt')
 shutil.copyfile('./linux.itch.toml', './dist/airunner/.itch.toml')
-shutil.copytree('src/airunner/images/icons', './dist/airunner/src/icons')
+#shutil.copytree('src/airunner/images/icons', './dist/airunner/src/icons')
 shutil.copytree('./src/airunner/data', './dist/airunner/data')
-shutil.copyfile('src/airunner/images/icon_256.png', './dist/airunner/src/icon_256.png')
+#shutil.copyfile('src/airunner/images/icon_256.png', './dist/airunner/src/icon_256.png')
 shutil.copyfile('src/airunner/images/splashscreen.png', './dist/airunner/images/splashscreen.png')
 
 # copy sd config files
-os.makedirs('./dist/airunner/diffusers/pipelines/stable_diffusion', exist_ok=True)
 shutil.copyfile('./src/airunner/v1.yaml', './dist/airunner/v1.yaml')
 shutil.copyfile('./src/airunner/v2.yaml', './dist/airunner/v2.yaml')
 shutil.copyfile('./src/airunner/sd_xl_base.yaml', './dist/airunner/sd_xl_base.yaml')

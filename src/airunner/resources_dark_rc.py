@@ -2,8 +2,7 @@
 # Created by: object code
 # Created by: The Resource Compiler for Qt version 6.6.2
 # WARNING! All changes made in this file will be lost!
-
-from PySide6 import QtCore
+from PyQt6 import QtCore
 
 qt_resource_data = b"\
 \x00\x00\x0b\x15\
