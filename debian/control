@@ -1,0 +1,16 @@
+Source: airunner
+Section: utils
+Priority: optional
+Maintainer: w4ffl35 <contact@capsizegames.com>
+Build-Depends: debhelper (>= 13), dh-python, python3 (>= 3.10.0), python3-setuptools, zip, git, python3-pip, python3-wheel, dh-virtualenv
+Standards-Version: 4.6.2.0
+Homepage: https://capsizegames.com/
+
+Package: airunner
+Architecture: any
+Depends: ${misc:Depends}, espeak, ffmpeg, xclip (>= 0.13-2)
+Description: AI Runner - Local Stable Diffusion & LLMs
+ AI Runner is a tool that allows you to run Stable Diffusion and LLMs locally
+ on your own hardware without an active internet connection. It's designed for
+ users who need to deploy machine learning models in environments where
+ internet access is limited or non-existent.

@@ -1,0 +1,1 @@
+extend-diff-ignore = "^debian|^butler|^src/airunner/extensions/|^.pybuild|^src/airunner/aihandler/.idea|^src/airunner/gfpgan/|^src/airunner/test.json|^intput|^output|^\.idea|^\.vscode|^__pycache__|^build|^dist|^tmp|^lib|^build\.log|^.*\.db|^.*\.airunner|^main\.build|^main\.dist|^main\.onefile-build|^settings\.pickle|^\.run|^.*egg-info*|^venv"
