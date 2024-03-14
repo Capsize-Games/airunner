@@ -449,16 +449,16 @@ class SDHandler(
                 image = image.resize((width, height), resample=Image.NEAREST)
         return image
 
-    @staticmethod
-    def is_ckpt_file(model_path) -> bool:
+    def is_ckpt_file(self, model_path) -> bool:
         if not model_path:
-            raise ValueError("ckpt path is empty")
+            self.logger.error("ckpt path is empty")
+            return False
         return model_path.endswith(".ckpt")
 
-    @staticmethod
-    def is_safetensor_file(model_path) -> bool:
+    def is_safetensor_file(self, model_path) -> bool:
         if not model_path:
-            raise ValueError("safetensors path is empty")
+            self.logger.error("safetensors path is empty")
+            return False
         return model_path.endswith(".safetensors")
 
     @staticmethod
@@ -1207,7 +1207,7 @@ class SDHandler(
                         self.pipe.scheduler = self.load_scheduler(config=self.pipe.scheduler.config)
                 except OSError as e:
                     self.handle_missing_files(self.sd_request.generator_settings.section)
-            else:
+            elif self.model is not None:
                 self.logger.debug(f"Loading model `{self.model['name']}` `{self.model_path}`")
                 scheduler = self.load_scheduler()
                 if scheduler:
@@ -1222,6 +1222,9 @@ class SDHandler(
                     feature_extractor=self.feature_extractor,
                     **kwargs
                 )
+
+            if self.pipe is None:
+                return
 
             if self.settings["nsfw_filter"] is False:
                 self.pipe.safety_checker = None
@@ -1352,6 +1355,8 @@ class SDHandler(
 
     def prepare_model(self):
         self.logger.debug("Prepare model")
+        if not self.model:
+            return
         self._previous_model = self.current_model
         if self.is_single_file:
             self.current_model = self.model

@@ -1,4 +1,4 @@
-# Form implementation generated from reading ui file '/home/joe/Projects/imagetopixel/airunner/src/airunner/../../src/airunner/widgets/generator_form/templates/generator_tab_backup.ui'
+# Form implementation generated from reading ui file '/home/joe/Projects/imagetopixel/airunner/src/airunner/widgets/generator_form/templates/generator_tab_backup.ui'
 #
 # Created by: PyQt6 UI code generator 6.6.1
 #

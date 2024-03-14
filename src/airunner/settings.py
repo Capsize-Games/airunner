@@ -483,29 +483,29 @@ DEFAULT_SHORTCUTS = {
         signal=SignalCode.QUIT_APPLICATION
     ),
 }
-ESPEAK_SETTINGS = dict(
-    voices=dict(
-        male=[
+ESPEAK_SETTINGS = {
+    "voices": {
+        "male": [
             "m1", "m2", "m3",
         ],
-        female=[
+        "female": [
             "f1", "f2", "f3",
         ],
-    ),
-    rate=dict(
-        min=-100,
-        max=100,
-        default=0
-    ),
-    pitch=dict(
-        min=-100,
-        max=100,
-        default=0
-    ),
-    volume=dict(
-        min=0,
-        max=100,
-        default=100
-    ),
-    punctuation_modes=["none", "all", "some"],
-)
+    },
+    "rate": {
+        "min": -100,
+        "max": 100,
+        "default": 0
+    },
+    "pitch": {
+        "min": -100,
+        "max": 100,
+        "default": 0
+    },
+    "volume": {
+        "min": 0,
+        "max": 100,
+        "default": 100
+    },
+    "punctuation_modes": ["none", "all", "some"],
+}
