@@ -325,7 +325,8 @@ class SDHandler(
 
     @property
     def model_path(self):
-        return self.model["path"]
+        if self.model is not None:
+            return self.model["path"]
 
     @property
     def is_ckpt_model(self) -> bool:
@@ -383,7 +384,7 @@ class SDHandler(
             self.logger.debug("Loading controlnet processor " + self.controlnet_type)
             self.current_controlnet_type = self.controlnet_type
             self.processor = Processor(self.controlnet_type)
-        if self.processor:
+        if self.processor is not None and image is not None:
             self.logger.debug("Controlnet: Processing image")
             image = self.processor(image)
             image = image.resize((self.settings["working_width"], self.settings["working_height"]))
@@ -448,17 +449,17 @@ class SDHandler(
                 image = image.resize((width, height), resample=Image.NEAREST)
         return image
 
-    @staticmethod
-    def is_ckpt_file(model) -> bool:
-        if not model:
-            raise ValueError("ckpt path is empty")
-        return model.endswith(".ckpt")
+    def is_ckpt_file(self, model_path) -> bool:
+        if not model_path:
+            self.logger.error("ckpt path is empty")
+            return False
+        return model_path.endswith(".ckpt")
 
-    @staticmethod
-    def is_safetensor_file(model) -> bool:
-        if not model:
-            raise ValueError("safetensors path is empty")
-        return model.endswith(".safetensors")
+    def is_safetensor_file(self, model_path) -> bool:
+        if not model_path:
+            self.logger.error("safetensors path is empty")
+            return False
+        return model_path.endswith(".safetensors")
 
     @staticmethod
     def is_pytorch_error(e) -> bool:
@@ -874,7 +875,7 @@ class SDHandler(
 
     def load_generator_arguments(self):
         requested_model = self.settings["generator_settings"]["model"]
-        model_changed = (self.model["name"] is not None and self.model["name"] != requested_model)
+        model_changed = (self.model is not None and self.model["name"] is not None and self.model["name"] != requested_model)
         if model_changed:  # model change
             self.logger.debug(f"Model changed clearing debugger: {self.model['name']} != {requested_model}")
             self.reload_model = True
@@ -1202,10 +1203,11 @@ class SDHandler(
                 try:
                     self.logger.debug(f"Loading ckpt file {self.model_path}")
                     self.pipe = self.download_from_original_stable_diffusion_ckpt()
-                    self.pipe.scheduler = self.load_scheduler(config=self.pipe.scheduler.config)
+                    if self.pipe is not None:
+                        self.pipe.scheduler = self.load_scheduler(config=self.pipe.scheduler.config)
                 except OSError as e:
                     self.handle_missing_files(self.sd_request.generator_settings.section)
-            else:
+            elif self.model is not None:
                 self.logger.debug(f"Loading model `{self.model['name']}` `{self.model_path}`")
                 scheduler = self.load_scheduler()
                 if scheduler:
@@ -1220,6 +1222,9 @@ class SDHandler(
                     feature_extractor=self.feature_extractor,
                     **kwargs
                 )
+
+            if self.pipe is None:
+                return
 
             if self.settings["nsfw_filter"] is False:
                 self.pipe.safety_checker = None
@@ -1350,6 +1355,8 @@ class SDHandler(
 
     def prepare_model(self):
         self.logger.debug("Prepare model")
+        if not self.model:
+            return
         self._previous_model = self.current_model
         if self.is_single_file:
             self.current_model = self.model
