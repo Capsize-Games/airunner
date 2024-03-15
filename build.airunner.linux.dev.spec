@@ -11,7 +11,7 @@ libraries = [
     "./venv/lib/python3.10/site-packages/scipy.libs/",
     "./venv/lib/python3.10/site-packages/tokenizers.libs/",
     "./venv/lib/python3.10/site-packages/Pillow.libs/",
-    "./venv/lib/python3.10/site-packages/opencv_python.libs/",
+    "./venv/lib/python3.10/site-packages/opencv_python_headless.libs/",
     "./venv/lib/python3.10/site-packages/torchaudio/lib/",
     "./venv/lib/python3.10/site-packages/torch/lib/",
     "/usr/lib/python3.10",
@@ -41,7 +41,8 @@ datas += copy_metadata('numpy')
 datas += copy_metadata('tokenizers')
 datas += copy_metadata('transformers')
 datas += copy_metadata('sympy')
-datas += copy_metadata('opencv-python')
+datas += copy_metadata('opencv-python-headless')
+datas += collect_data_files('pytz', include_py_files=True)
 datas += collect_data_files("torch", include_py_files=True)
 datas += collect_data_files("torchvision", include_py_files=True)
 datas += collect_data_files("JIT", include_py_files=True)
@@ -50,6 +51,7 @@ datas += collect_data_files("lightning_fabric", include_py_files=True)
 datas += collect_data_files("transformers", include_py_files=True)
 datas += collect_data_files("sympy", include_py_files=True)
 datas += collect_data_files("controlnet_aux", include_py_files=True)
+datas += collect_data_files("PyQt6", include_py_files=True)
 a = Analysis(
     [
         f'./src/airunner/main.py',
@@ -93,6 +95,7 @@ a = Analysis(
         "numpy",
         "PIL._tkinter_finder",
         "sympy",
+        "pytz",
         #"opencv-python",
     ],
     hookspath=[],
@@ -125,7 +128,7 @@ a = Analysis(
         "wcwidth",
         "websocket-client",
         "websockets",
-        "PySide6",
+        #"PySide6",
     ],
     win_no_prefer_redirects=False,
     win_private_assemblies=False,
