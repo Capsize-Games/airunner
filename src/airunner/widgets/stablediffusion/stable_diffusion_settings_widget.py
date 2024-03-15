@@ -100,16 +100,17 @@ class StableDiffusionSettingsWidget(BaseWidget):
             self.ui.version.setCurrentText(current_version)
         self.ui.version.blockSignals(False)
 
-    def on_models_changed_signal(self, _ignore):
+    def on_models_changed_signal(self, data):
         self.load_pipelines()
         self.load_versions()
-        self.load_models()
+        self.load_models(data["models"])
         self.load_schedulers()
 
     def clear_models(self):
         self.ui.model.clear()
 
-    def load_models(self):
+    def load_models(self, models=None):
+        models = models or self.settings["ai_models"]
         self.logger.debug("load_models")
         self.ui.model.blockSignals(True)
         self.clear_models()
@@ -118,7 +119,13 @@ class StableDiffusionSettingsWidget(BaseWidget):
         pipeline = self.settings["pipeline"]
         version = self.settings["current_version_stablediffusion"]
 
-        models = self.get_service("ai_model_get_by_filter")({
+        # models = self.get_service("ai_model_get_by_filter")({
+        #     'category': image_generator,
+        #     'pipeline_action': pipeline,
+        #     'version': version,
+        #     'enabled': True
+        # })
+        models = self.ai_model_get_by_filter(models, {
             'category': image_generator,
             'pipeline_action': pipeline,
             'version': version,
@@ -133,6 +140,9 @@ class StableDiffusionSettingsWidget(BaseWidget):
         settings["generator_settings"]["model"] = self.ui.model.currentText()
         self.ui.model.blockSignals(False)
         self.settings = settings
+
+    def ai_model_get_by_filter(self, models, filter_dict):
+        return [item for item in models if all(item.get(k) == v for k, v in filter_dict.items())]
 
     def load_schedulers(self):
         self.logger.debug("load_schedulers")
