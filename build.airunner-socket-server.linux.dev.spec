@@ -59,7 +59,7 @@ a = Analysis(
         "./venv/lib/python3.10/site-packages/torch/lib",
         "./venv/lib/python3.10/site-packages/tokenizers",
         "./venv/lib/python3.10/site-packages/tensorflow",
-        "/usr/lib/x86_64-linux-gnu/",
+        "/usr/lib/x86_64-linux-gnu/"
     ],
     binaries=[
         ('./venv/lib/python3.10/site-packages/nvidia/cudnn/lib/libcudnn_ops_infer.so.8', '.'),
@@ -122,7 +122,7 @@ a = Analysis(
         "watchfiles",
         "wcwidth",
         "websocket-client",
-        "websockets",
+        "websockets"
     ],
     win_no_prefer_redirects=False,
     win_private_assemblies=False,

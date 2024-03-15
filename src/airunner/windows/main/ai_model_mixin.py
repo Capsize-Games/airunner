@@ -43,7 +43,7 @@ class AIModelMixin:
         settings = self.settings
         settings["ai_models"] = models
         self.settings = settings
-        self.emit(SignalCode.APPLICATION_MODELS_CHANGED_SIGNAL, "models")
+        self.emit_signal(SignalCode.APPLICATION_MODELS_CHANGED_SIGNAL, "models")
 
     def ai_model_update(self, item):
         settings = self.settings
@@ -88,7 +88,7 @@ class AIModelMixin:
         # Convert back to list
         merged_models = list(model_dict.values())
 
-        self.emit(SignalCode.AI_MODELS_CREATE_SIGNAL, merged_models)
+        self.emit_signal(SignalCode.AI_MODELS_CREATE_SIGNAL, merged_models)
         
     def ai_model_paths(self, model_type=None, pipeline_action=None):
         models = self.settings["ai_models"]

@@ -3,7 +3,7 @@ import base64
 import traceback
 
 import numpy as np
-from PyQt6.QtWidgets import QApplication
+from PySide6.QtWidgets import QApplication
 from pytorch_lightning import seed_everything
 from typing import List
 import requests
@@ -84,7 +84,7 @@ class LatentsWorker(Worker):
         image = Image.fromarray(latents)
         image = image.resize((self.settings["working_width"], self.settings["working_height"]))
         image = image.convert("RGBA")
-        self.emit(
+        self.emit_signal(
             SignalCode.SD_IMAGE_GENERATED_SIGNAL,
             {
                 "images": [image],
@@ -514,7 +514,7 @@ class SDHandler(
             nsfw_content_detected = response["nsfw_content_detected"]
 
             if nsfw_content_detected:
-                self.emit(
+                self.emit_signal(
                     SignalCode.SD_NSFW_CONTENT_DETECTED_SIGNAL,
                     response
                 )
@@ -522,7 +522,7 @@ class SDHandler(
                 response["action"] = self.sd_request.generator_settings.section
                 response["outpaint_box_rect"] = self.sd_request.active_rect
 
-                self.emit(SignalCode.ENGINE_DO_RESPONSE_SIGNAL, {
+                self.emit_signal(SignalCode.ENGINE_DO_RESPONSE_SIGNAL, {
                     'code': EngineResponseCode.IMAGE_GENERATED,
                     'message': response
                 })
@@ -576,7 +576,7 @@ class SDHandler(
         return self._generator
 
     def send_error(self, message):
-        self.emit(SignalCode.LOG_ERROR_SIGNAL, message)
+        self.emit_signal(SignalCode.LOG_ERROR_SIGNAL, message)
 
     def error_handler(self, error):
         message = str(error)
@@ -587,7 +587,7 @@ class SDHandler(
             message = f"This model does not support {self.sd_request.generator_settings.section}"
         traceback.print_exc()
         self.logger.error(error)
-        self.emit(SignalCode.LOG_ERROR_SIGNAL, message)
+        self.emit_signal(SignalCode.LOG_ERROR_SIGNAL, message)
 
     def initialize_safety_checker(self, local_files_only=True):
         self.logger.debug(f"Initializing safety checker with {self.safety_checker_model}")
@@ -626,8 +626,8 @@ class SDHandler(
             self.feature_extractor = self.initialize_feature_extractor()
 
     def do_sample(self):
-        self.emit(SignalCode.LOG_STATUS_SIGNAL, "Generating image")
-        self.emit(SignalCode.VISION_CAPTURE_LOCK_SIGNAL)
+        self.emit_signal(SignalCode.LOG_STATUS_SIGNAL, "Generating image")
+        self.emit_signal(SignalCode.VISION_CAPTURE_LOCK_SIGNAL)
         try:
             output = self.call_pipe()
         except Exception as e:
@@ -654,7 +654,7 @@ class SDHandler(
                     nsfw_content_detected = output.nsfw_content_detected
                 except AttributeError:
                     self.logger.error("Unable to get nsfw_content_detected from output")
-        self.emit(SignalCode.VISION_CAPTURE_UNLOCK_SIGNAL)
+        self.emit_signal(SignalCode.VISION_CAPTURE_UNLOCK_SIGNAL)
         return images, nsfw_content_detected
 
     def generate_latents(self):
@@ -815,7 +815,7 @@ class SDHandler(
         )
 
     def final_callback(self):
-        self.emit(SignalCode.SD_PROGRESS_SIGNAL, {
+        self.emit_signal(SignalCode.SD_PROGRESS_SIGNAL, {
             "step": self.sd_request.generator_settings.steps,
             "total": self.sd_request.generator_settings.steps,
         })
@@ -826,7 +826,7 @@ class SDHandler(
             "step": step,
             "total": self.sd_request.generator_settings.steps
         }
-        self.emit(SignalCode.SD_PROGRESS_SIGNAL, res)
+        self.emit_signal(SignalCode.SD_PROGRESS_SIGNAL, res)
         QApplication.processEvents()
         if self.latents_set is False:
             self.latents = latents
@@ -892,7 +892,7 @@ class SDHandler(
         controlnet_image = self.controlnet_image
 
         if controlnet_image:
-            self.emit(
+            self.emit_signal(
                 SignalCode.SD_CONTROLNET_IMAGE_GENERATED_SIGNAL,
                 controlnet_image
             )
@@ -1081,7 +1081,7 @@ class SDHandler(
                 else:
                     self.pipe = StableDiffusionPipeline(**kwargs)
 
-        self.emit(
+        self.emit_signal(
             SignalCode.LOG_STATUS_SIGNAL,
             f"Generating media"
         )
@@ -1231,7 +1231,7 @@ class SDHandler(
                 self.pipe.feature_extractor = None
 
             if self.pipe is None:
-                self.emit(SignalCode.LOG_ERROR_SIGNAL, "Failed to load model")
+                self.emit_signal(SignalCode.LOG_ERROR_SIGNAL, "Failed to load model")
                 return
 
             old_model_path = self.current_model
@@ -1351,7 +1351,7 @@ class SDHandler(
                 message = f"Downloading model {model_name}"
         else:
             message = f"Loading model {model_name}"
-        self.emit(SignalCode.LOG_STATUS_SIGNAL, message)
+        self.emit_signal(SignalCode.LOG_STATUS_SIGNAL, message)
 
     def prepare_model(self):
         self.logger.debug("Prepare model")
@@ -1382,7 +1382,7 @@ class SDHandler(
                 self.logger.debug("Model not found, attempting download")
             # check if we have an internet connection
             if self.allow_online_when_missing_files:
-                self.emit(SignalCode.LOG_STATUS_SIGNAL, "Downloading model files")
+                self.emit_signal(SignalCode.LOG_STATUS_SIGNAL, "Downloading model files")
                 self.local_files_only = False
             else:
                 self.send_error("Required files not found, enable online access to download")

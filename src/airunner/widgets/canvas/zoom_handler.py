@@ -1,4 +1,4 @@
-from PyQt6.QtGui import QTransform
+from PySide6.QtGui import QTransform
 
 from airunner.mediator_mixin import MediatorMixin
 from airunner.windows.main.settings_mixin import SettingsMixin
