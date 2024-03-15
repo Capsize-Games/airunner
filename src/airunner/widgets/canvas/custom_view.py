@@ -1,6 +1,6 @@
 from functools import partial
 
-from PyQt6.QtCore import QPointF, QPoint, Qt, QRect
+from PyQt6.QtCore import QPointF, QPoint, Qt, QRect, QEvent
 from PyQt6.QtGui import QMouseEvent, QColor, QBrush
 from PyQt6.QtWidgets import QGraphicsView, QGraphicsItemGroup
 
@@ -300,9 +300,16 @@ class CustomGraphicsView(
             y = event.pos().y()
 
         # Create a new event with the adjusted position
+
+        x = float(x)
+        y = float(y)
+
+        point = QPointF(x, y)
+        event_type: QEvent.Type = QEvent.Type(event.type())
+
         new_event = QMouseEvent(
-            event.type(),
-            QPointF(x, y),
+            event_type,
+            point,
             event.button(),
             event.buttons(),
             event.modifiers()
