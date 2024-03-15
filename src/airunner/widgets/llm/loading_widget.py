@@ -1,7 +1,7 @@
 import os
 
-from PyQt6.QtGui import QMovie
-from PyQt6.QtCore import QSize
+from PySide6.QtGui import QMovie
+from PySide6.QtCore import QSize
 
 from airunner.widgets.base_widget import BaseWidget
 from airunner.widgets.llm.templates.loading_ui import Ui_loading_message

@@ -216,7 +216,7 @@ class CasualLMTransformerBaseHandler(TokenizerHandler):
         # self.bot_mood = self.update_bot_mood()
         # self.user_evaluation = self.do_user_evaluation()
         #full_message = self.rag_stream()
-        self.emit(SignalCode.VISION_CAPTURE_LOCK_SIGNAL)
+        self.emit_signal(SignalCode.VISION_CAPTURE_LOCK_SIGNAL)
 
         if self.action != LLMActionType.GENERATE_IMAGE:
             if self.settings["llm_generator_settings"]["use_tool_filter"]:
@@ -233,11 +233,11 @@ class CasualLMTransformerBaseHandler(TokenizerHandler):
             )
 
         self.send_final_message()
-        self.emit(SignalCode.VISION_CAPTURE_UNLOCK_SIGNAL)
+        self.emit_signal(SignalCode.VISION_CAPTURE_UNLOCK_SIGNAL)
 
     def emit_streamed_text_signal(self, **kwargs):
         kwargs["name"] = self.botname
-        self.emit(
+        self.emit_signal(
             SignalCode.LLM_TEXT_STREAMED_SIGNAL,
             kwargs
         )
