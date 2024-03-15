@@ -1,10 +1,11 @@
 import traceback
 import numpy as np
 
-from PyQt6.QtCore import QObject, pyqtSignal
+from PySide6.QtCore import QObject, Signal
 from airunner.enums import EngineResponseCode, SignalCode, EngineRequestCode
 from airunner.mediator_mixin import MediatorMixin
 from airunner.service_locator import ServiceLocator
+from airunner.windows.main.settings_mixin import SettingsMixin
 from airunner.workers.audio_capture_worker import AudioCaptureWorker
 from airunner.workers.audio_processor_worker import AudioProcessorWorker
 from airunner.workers.tts_generator_worker import TTSGeneratorWorker
@@ -27,14 +28,14 @@ class Message:
         self.conversation = kwargs.get("conversation")
 
 
-class WorkerManager(QObject, MediatorMixin):
+class WorkerManager(QObject, MediatorMixin, SettingsMixin):
     """
     The engine is responsible for processing requests and offloading
     them to the appropriate AI model controller.
     """
     # Signals
-    request_signal_status = pyqtSignal(str)
-    image_generated_signal = pyqtSignal(dict)
+    request_signal_status = Signal(str)
+    image_generated_signal = Signal(dict)
 
     def __init__(
         self,
@@ -46,6 +47,7 @@ class WorkerManager(QObject, MediatorMixin):
         **kwargs
     ):
         MediatorMixin.__init__(self)
+        SettingsMixin.__init__(self)
         super().__init__()
 
         self.llm_loaded: bool = False
@@ -111,7 +113,7 @@ class WorkerManager(QObject, MediatorMixin):
 
     def on_engine_cancel_signal(self, _ignore):
         self.logger.debug("Canceling")
-        self.emit(SignalCode.SD_CANCEL_SIGNAL)
+        self.emit_signal(SignalCode.SD_CANCEL_SIGNAL)
         self.engine_request_worker.cancel()
 
     def on_engine_stop_processing_queue_signal(self):
@@ -141,15 +143,15 @@ class WorkerManager(QObject, MediatorMixin):
         if do_capture_image != self.is_capturing_image:
             self.is_capturing_image = do_capture_image
             if self.is_capturing_image:
-                self.emit(SignalCode.VISION_START_CAPTURE)
+                self.emit_signal(SignalCode.VISION_START_CAPTURE)
             else:
-                self.emit(SignalCode.VISION_STOP_CAPTURE)
+                self.emit_signal(SignalCode.VISION_STOP_CAPTURE)
 
     def on_application_settings_changed_signal(self, message):
         self.toggle_vision_capture()
 
     def on_vision_captured(self, message):
-        self.emit(SignalCode.VISION_CAPTURE_PROCESS_SIGNAL, message)
+        self.emit_signal(SignalCode.VISION_CAPTURE_PROCESS_SIGNAL, message)
 
     def on_AudioCaptureWorker_response_signal(self, message: np.ndarray):
         self.logger.debug("Heard signal")
@@ -157,10 +159,10 @@ class WorkerManager(QObject, MediatorMixin):
 
     def on_AudioProcessorWorker_processed_audio(self, message: np.ndarray):
         self.logger.debug("Processed audio")
-        self.emit(SignalCode.AUDIO_PROCESSOR_PROCESSED_AUDIO, message)
+        self.emit_signal(SignalCode.AUDIO_PROCESSOR_PROCESSED_AUDIO, message)
     
     def on_LLMGenerateWorker_response_signal(self, message:dict):
-        self.emit(SignalCode.LLM_RESPONSE_SIGNAL, message)
+        self.emit_signal(SignalCode.LLM_RESPONSE_SIGNAL, message)
     
     def on_tts_request(self, data: dict):
         self.tts_generator_worker.add_to_queue(data)
@@ -185,7 +187,7 @@ class WorkerManager(QObject, MediatorMixin):
         self.logger.debug("EngineResponseWorker_response_signal received")
         code = response["code"]
         if code == EngineResponseCode.IMAGE_GENERATED:
-            self.emit(SignalCode.SD_IMAGE_GENERATED_SIGNAL, response["message"])
+            self.emit_signal(SignalCode.SD_IMAGE_GENERATED_SIGNAL, response["message"])
 
     def on_clear_memory_signal(self):
         clear_memory()
@@ -196,21 +198,21 @@ class WorkerManager(QObject, MediatorMixin):
                 self.do_tts_request(data["message"], data["is_end_of_message"])
         except TypeError as e:
             self.logger.error(f"Error in on_llm_text_streamed_signal: {e}")
-        self.emit(SignalCode.APPLICATION_ADD_BOT_MESSAGE_TO_CONVERSATION, data)
+        self.emit_signal(SignalCode.APPLICATION_ADD_BOT_MESSAGE_TO_CONVERSATION, data)
 
     def on_sd_image_generated_signal(self, message):
-        self.emit(SignalCode.SD_IMAGE_GENERATED_SIGNAL, message)
+        self.emit_signal(SignalCode.SD_IMAGE_GENERATED_SIGNAL, message)
 
     def on_text_generate_request_signal(self, message):
         if self.sd_state == "loaded":
-            self.emit(
+            self.emit_signal(
                 SignalCode.SD_MOVE_TO_CPU_SIGNAL,
                 {
-                    'callback': lambda _message=message: self.emit(SignalCode.LLM_REQUEST_SIGNAL, _message)
+                    'callback': lambda _message=message: self.emit_signal(SignalCode.LLM_REQUEST_SIGNAL, _message)
                 }
             )
         else:
-            self.emit(SignalCode.LLM_REQUEST_SIGNAL, message)
+            self.emit_signal(SignalCode.LLM_REQUEST_SIGNAL, message)
 
     def request_queue_size(self):
         return self.engine_request_worker.queue.qsize()
@@ -223,7 +225,7 @@ class WorkerManager(QObject, MediatorMixin):
         """
         Unload the Stable Diffusion model from memory.
         """
-        self.emit(SignalCode.SD_UNLOAD_SIGNAL)
+        self.emit_signal(SignalCode.SD_UNLOAD_SIGNAL)
 
     def parse_message(self, message):
         if message:
@@ -235,7 +237,7 @@ class WorkerManager(QObject, MediatorMixin):
     
     def do_tts_request(self, message: str, is_end_of_message: bool=False):
         if self.settings["tts_enabled"]:
-            self.emit(SignalCode.TTS_REQUEST, {
+            self.emit_signal(SignalCode.TTS_REQUEST, {
                 'message': message.replace("</s>", ""),
                 'tts_settings': self.settings["tts_settings"],
                 'is_end_of_message': is_end_of_message,
@@ -245,11 +247,3 @@ class WorkerManager(QObject, MediatorMixin):
         self.logger.debug("Stopping")
         self.engine_request_worker.stop()
         self.engine_response_worker.stop()
-
-    @property
-    def settings(self):
-        return ServiceLocator.get("get_settings")()
-
-    @settings.setter
-    def settings(self, value):
-        ServiceLocator.get("set_settings")(value)

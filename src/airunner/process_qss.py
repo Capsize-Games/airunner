@@ -4,7 +4,7 @@ import subprocess
 import time
 from pathlib import Path
 
-from PyQt6.QtCore import QObject, pyqtSignal
+from PySide6.QtCore import QObject, Signal
 from watchdog.events import FileSystemEventHandler
 from watchdog.observers import Observer
 
@@ -129,7 +129,7 @@ def process_qss(_path=None):
 
 
 class SignalEmitter(QObject):
-    file_changed = pyqtSignal()
+    file_changed = Signal()
 
 class Watcher:
     def __init__(self, directories_to_watch, scripts_to_run, ignore_files=[]):
