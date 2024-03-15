@@ -51,6 +51,8 @@ class StatusWidget(BaseWidget):
         self.ui.cuda_status.setStyleSheet(enabled_css if has_cuda else disabled_css)
 
     def set_system_status(self, txt, error):
+        if type(txt) is dict:
+            txt = ""
         self.ui.system_message.setText(txt)
         if error:
             self.ui.system_message.setStyleSheet("QLabel { color: #ff0000; }")
