@@ -1,8 +1,8 @@
 from typing import Optional
 
 from PIL import ImageFilter
-from PyQt6 import QtWidgets
-from PyQt6.QtCore import Qt, QPoint, QRect
+from PySide6 import QtWidgets
+from PySide6.QtCore import Qt, QPoint, QRect
 
 from airunner.cursors.circle_brush import CircleCursor
 from airunner.enums import SignalCode, ServiceCode, CanvasToolName
@@ -157,7 +157,7 @@ class CanvasWidget(BaseWidget):
         force_draw = data["force_draw"]
         do_draw_layers = data["do_draw_layers"]
         lines_data = data["lines_data"]
-        self.emit(SignalCode.CANVAS_CLEAR_LINES_SIGNAL)
+        self.emit_signal(SignalCode.CANVAS_CLEAR_LINES_SIGNAL)
         draw_grid = self.settings["grid_settings"]["show_grid"]
         if not draw_grid:
             return
@@ -170,14 +170,14 @@ class CanvasWidget(BaseWidget):
         )
 
     def on_image_data_worker_response_signal(self, message):
-        self.emit(SignalCode.APPLICATION_CLEAR_STATUS_MESSAGE_SIGNAL)
-        self.emit(SignalCode.APPLICATION_STOP_SD_PROGRESS_BAR_SIGNAL)
+        self.emit_signal(SignalCode.APPLICATION_CLEAR_STATUS_MESSAGE_SIGNAL)
+        self.emit_signal(SignalCode.APPLICATION_STOP_SD_PROGRESS_BAR_SIGNAL)
         nsfw_content_detected = message["nsfw_content_detected"]
         path = message["path"]
         if nsfw_content_detected and self.settings["nsfw_filter"]:
-            self.emit(SignalCode.LOG_ERROR_SIGNAL, "Explicit content detected, try again.")
+            self.emit_signal(SignalCode.LOG_ERROR_SIGNAL, "Explicit content detected, try again.")
         if path is not None:
-            self.emit(
+            self.emit_signal(
                 SignalCode.APPLICATION_STATUS_INFO_SIGNAL,
                 f"Image generated to {path}"
             )
@@ -188,7 +188,7 @@ class CanvasWidget(BaseWidget):
             self.active_grid_settings_changed() or
             self.canvas_settings_changed()
         ):
-            self.emit(SignalCode.CANVAS_DO_RESIZE_SIGNAL, {
+            self.emit_signal(SignalCode.CANVAS_DO_RESIZE_SIGNAL, {
                 "force_draw": True
             })
     
@@ -216,7 +216,7 @@ class CanvasWidget(BaseWidget):
                 if k not in self._grid_settings or self._grid_settings[k] != v:
                     self._grid_settings[k] = v
                     if k == "canvas_color":
-                        self.emit(SignalCode.SET_CANVAS_COLOR_SIGNAL)
+                        self.emit_signal(SignalCode.SET_CANVAS_COLOR_SIGNAL)
                     elif k in ["line_color", "cell_size", "line_width"]:
                         self.redraw_lines = True
                     changed = True
@@ -248,8 +248,8 @@ class CanvasWidget(BaseWidget):
 
     def resizeEvent(self, event):
         if self.ui.canvas_container:
-            self.emit(SignalCode.CANVAS_DO_RESIZE_SIGNAL)
-        self.emit(
+            self.emit_signal(SignalCode.CANVAS_DO_RESIZE_SIGNAL)
+        self.emit_signal(
             SignalCode.SCENE_RESIZE_SIGNAL,
             self.size()
         )
@@ -267,7 +267,7 @@ class CanvasWidget(BaseWidget):
         force_draw: bool = False,
         do_draw_layers: bool = None
     ):
-        self.emit(SignalCode.SCENE_DO_DRAW_SIGNAL, {
+        self.emit_signal(SignalCode.SCENE_DO_DRAW_SIGNAL, {
             "force_draw": force_draw,
             "do_draw_layers": do_draw_layers
         })

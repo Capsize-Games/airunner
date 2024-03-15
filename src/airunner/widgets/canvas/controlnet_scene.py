@@ -1,4 +1,4 @@
-from PyQt6.QtWidgets import QFileDialog
+from PySide6.QtWidgets import QFileDialog
 
 from airunner.enums import SignalCode
 from airunner.settings import VALID_IMAGE_FILES

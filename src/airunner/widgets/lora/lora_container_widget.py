@@ -1,6 +1,6 @@
 import os
 
-from PyQt6.QtWidgets import QWidget, QSizePolicy
+from PySide6.QtWidgets import QWidget, QSizePolicy
 
 from airunner.enums import SignalCode
 from airunner.widgets.base_widget import BaseWidget
@@ -54,7 +54,7 @@ class LoraContainerWidget(BaseWidget):
             for file in filenames:
                 if file.endswith(".ckpt") or file.endswith(".safetensors") or file.endswith(".pt"):
                     name = file.replace(".ckpt", "").replace(".safetensors", "").replace(".pt", "")
-                    self.emit(SignalCode.LORA_ADD_SIGNAL, {
+                    self.emit_signal(SignalCode.LORA_ADD_SIGNAL, {
                         'name': name,
                         'path': os.path.join(dirpath, file),
                         'enabled': True,
