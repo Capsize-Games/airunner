@@ -42,7 +42,7 @@ def generate_resources():
     print("Generating resources.py")
     subprocess.run(
         [
-            "pyuic6",
+            "pyside6-rcc",
             "-o",
             "src/airunner/resources_light_rc.py",
             "src/airunner/resources_light.qrc",
@@ -51,7 +51,7 @@ def generate_resources():
     )
     subprocess.run(
         [
-            "pyuic6",
+            "pyside6-rcc",
             "-o",
             "src/airunner/resources_dark_rc.py",
             "src/airunner/resources_dark.qrc",
@@ -61,7 +61,7 @@ def generate_resources():
 
 
 if __name__ == "__main__":
-    for dir in ["widgets", "windows"]:
-        path = os.path.join("src", "airunner", dir)
-        build_ui(path)
+    # for dir in ["widgets", "windows"]:
+    #     path = os.path.join("src", "airunner", dir)
+    #     build_ui(path)
     generate_resources()

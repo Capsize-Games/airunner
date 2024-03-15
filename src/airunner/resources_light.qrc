@@ -37,7 +37,6 @@
     <file>icons/light/layer-icon.svg</file>
     <file>icons/light/pencil-icon.svg</file>
     <file>icons/light/photo-editor-icon.svg</file>
-    <file>icons/light/play-rectangle-icon.svg</file>
     <file>icons/light/prompt-editor-icon.svg</file>
     <file>icons/light/reply-arrow-outline-icon.svg</file>
     <file>icons/light/round-black-bottom-arrow-icon.svg</file>
@@ -45,6 +44,5 @@
     <file>icons/light/setting-line-icon.svg</file>
     <file>icons/light/tech-icon.svg</file>
     <file>icons/light/text-file-line-icon.svg</file>
-    <file>icons/light/video-editor-icon.svg</file>
   </qresource>
 </RCC>
