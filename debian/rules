@@ -1,0 +1,31 @@
+#!/usr/bin/make -f
+
+%:
+	dh $@ --buildsystem=pybuild
+
+override_dh_auto_clean:
+	dh_clean
+	# find . -type d -name "__pycache__" -exec rm -r {} +
+
+override_dh_auto_build:
+	# Your custom build commands go here
+	# This line must be indented with a tab
+
+override_dh_auto_test:
+	# If you don't have tests, override to do nothing
+	# This line must be indented with a tab
+
+override_dh_auto_install:
+	# Manually specify installation of your PyInstaller binary
+	# This line must be indented with a tab
+	mkdir -p debian/airunner/usr/bin/
+	cp -R dist/airunner debian/airunner/usr/bin/
+
+override_dh_dwz:
+    # Skip dh_dwz processing for PyInstaller binaries
+
+override_dh_strip:
+    # Skip dh_strip processing for PyInstaller binaries
+
+override_dh_shlibdeps:
+	# Skip dh_shlibdeps processing for PyInstaller binaries

@@ -8,7 +8,7 @@ import pyttsx3
 import torch
 from queue import Queue
 from transformers import SpeechT5Processor, SpeechT5ForTextToSpeech, SpeechT5HifiGan, BarkModel, BarkProcessor, \
-    AutoTokenizer, VitsModel, VitsTokenizer
+    AutoTokenizer
 from datasets import load_dataset
 from airunner.aihandler.base_handler import BaseHandler
 from airunner.enums import SignalCode
