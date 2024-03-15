@@ -2313,6 +2313,7 @@
  </customwidgets>
  <resources>
   <include location="../../../resources_light.qrc"/>
+  <include location="../../../testresources.qrc"/>
   <include location="../../../resources_dark.qrc"/>
  </resources>
  <connections>
@@ -3203,8 +3204,8 @@
    <slot>import_drawingpad_image()</slot>
    <hints>
     <hint type="sourcelabel">
-     <x>1083</x>
-     <y>568</y>
+     <x>-1</x>
+     <y>-1</y>
     </hint>
     <hint type="destinationlabel">
      <x>561</x>
