@@ -1,11 +1,12 @@
 import os
 
-from PyQt6.QtCore import Qt
-from PyQt6 import uic, QtCore
-from PyQt6.QtWidgets import QSpacerItem, QSizePolicy
+from PySide6.QtCore import Qt
+from PySide6 import QtCore
+from PySide6.QtWidgets import QSpacerItem, QSizePolicy
 
 from airunner.settings import DEFAULT_SHORTCUTS
 from airunner.widgets.base_widget import BaseWidget
+from airunner.widgets.keyboard_shortcuts.templates.keyboard_shortcut_widget_ui import Ui_keyboard_shortcut_widget
 from airunner.widgets.keyboard_shortcuts.templates.keyboard_shortcuts_ui import Ui_keyboard_shortcuts
 
 
@@ -25,7 +26,7 @@ class KeyboardShortcutsWidget(BaseWidget):
         self.ui.scrollAreaWidgetContents.layout().addItem(self.spacer)
 
     def add_widget(self, key, value):
-        widget = uic.loadUi(os.path.join(f"widgets/keyboard_shortcuts/templates/keyboard_shortcut_widget.ui"))
+        widget = Ui_keyboard_shortcut_widget()
         widget.label.setText(key)
         widget.line_edit.setText(value["text"])
         widget.line_edit.mousePressEvent = lambda event: self.set_shortcut(key, widget.line_edit)
@@ -44,8 +45,9 @@ class KeyboardShortcutsWidget(BaseWidget):
         self.shortcuts[key]["text"] = self.get_key_text(event)
         line_edit.setText(self.shortcuts[key]["text"])
         self.shortcuts[key]["key"] = event.key()
-        self.shortcuts[key]["modifiers"] = event.modifiers()
-        print(f"Key: {self.shortcuts[key]['key']}, Modifiers: {self.shortcuts[key]['modifiers']}")
+
+        # iterate over modifiers and store them as a list of strings
+        self.shortcuts[key]["modifiers"] = [mod.value for mod in event.modifiers()]
         self.save_shortcuts()
 
     def get_key_text(self, event):

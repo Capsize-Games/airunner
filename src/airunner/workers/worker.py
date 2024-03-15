@@ -1,22 +1,24 @@
 import queue
 
-from PyQt6.QtCore import pyqtSignal, QThread, QSettings, QObject
+from PySide6.QtCore import Signal, QThread, QSettings, QObject
 
 from airunner.enums import QueueType, SignalCode, WorkerState
 from airunner.aihandler.logger import Logger
 from airunner.mediator_mixin import MediatorMixin
 from airunner.service_locator import ServiceLocator
 from airunner.settings import SLEEP_TIME_IN_MS, ORGANIZATION, APPLICATION_NAME
+from airunner.windows.main.settings_mixin import SettingsMixin
 
 
-class Worker(QObject, MediatorMixin):
+class Worker(QObject, MediatorMixin, SettingsMixin):
     queue_type = QueueType.GET_NEXT_ITEM
-    finished = pyqtSignal()
+    finished = Signal()
     prefix = "Worker"
 
     def __init__(self, prefix=None):
         self.prefix = prefix or self.__class__.__name__
         MediatorMixin.__init__(self)
+        SettingsMixin.__init__(self)
         super().__init__()
         self.state = WorkerState.HALTED
         self.logger = Logger(prefix=prefix)
@@ -149,11 +151,3 @@ class Worker(QObject, MediatorMixin):
         self.logger.debug("Canceling")
         while not self.queue.empty():
             self.queue.get()
-
-    @property
-    def settings(self):
-        return ServiceLocator.get("get_settings")()
-
-    @settings.setter
-    def settings(self, value):
-        ServiceLocator.get("set_settings")(value)

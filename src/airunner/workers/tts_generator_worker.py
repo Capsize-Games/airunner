@@ -2,7 +2,7 @@ import queue
 import re
 import time
 
-from PyQt6.QtCore import QThread
+from PySide6.QtCore import QThread
 
 from airunner.enums import SignalCode, QueueType
 from airunner.settings import SLEEP_TIME_IN_MS
@@ -122,7 +122,7 @@ class TTSGeneratorWorker(Worker):
             return
 
         if response is not None:
-            self.emit(
+            self.emit_signal(
                 SignalCode.TTS_GENERATOR_WORKER_ADD_TO_STREAM_SIGNAL,
                 response
             )

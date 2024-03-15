@@ -12,4 +12,4 @@ class EngineResponseWorker(Worker):
         self.add_to_queue(request)
 
     def handle_message(self, request):
-        self.emit(SignalCode.ENGINE_RESPONSE_WORKER_RESPONSE_SIGNAL, request)
+        self.emit_signal(SignalCode.ENGINE_RESPONSE_WORKER_RESPONSE_SIGNAL, request)

@@ -2,7 +2,7 @@ import time
 
 import sounddevice as sd
 import numpy as np
-from PyQt6.QtCore import QThread
+from PySide6.QtCore import QThread
 from airunner.enums import SignalCode
 from airunner.settings import SLEEP_TIME_IN_MS
 from airunner.workers.worker import Worker
@@ -54,7 +54,7 @@ class AudioCaptureWorker(Worker):
                     continue
                 if np.max(np.abs(chunk)) > volume_input_threshold:  # check if chunk is not silence
                     is_receiving_input = True
-                    self.emit(SignalCode.INTERRUPT_PROCESS_SIGNAL)
+                    self.emit_signal(SignalCode.INTERRUPT_PROCESS_SIGNAL)
                     voice_input_start_time = time.time()
                 elif voice_input_start_time is not None:
                     # make voice_end_time silence_buffer_seconds after voice_input_start_time

@@ -15,7 +15,7 @@ class AudioProcessorWorker(Worker):
         self.stt = STTHandler()
 
     def handle_message(self, audio_data):
-        self.emit(SignalCode.STT_PROCESS_AUDIO_SIGNAL, audio_data)
+        self.emit_signal(SignalCode.STT_PROCESS_AUDIO_SIGNAL, audio_data)
     
     def update_properties(self):
         settings = self.settings

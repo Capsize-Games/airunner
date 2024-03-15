@@ -1,6 +1,6 @@
-from PyQt6.QtCore import pyqtSlot
-from PyQt6.QtWidgets import QSpacerItem, QSizePolicy
-from PyQt6.QtCore import Qt
+from PySide6.QtCore import Slot
+from PySide6.QtWidgets import QSpacerItem, QSizePolicy
+from PySide6.QtCore import Qt
 
 from airunner.enums import SignalCode, ServiceCode, LLMActionType
 from airunner.utils import parse_template
@@ -46,7 +46,7 @@ class ChatPromptWidget(BaseWidget):
     def current_generator(self):
         return self.settings["current_llm_generator"]
     
-    @pyqtSlot(str)
+    @Slot(str)
     def handle_token_signal(self, val: str):
         if val != "[END]":
             text = self.ui.conversation.toPlainText()
@@ -66,7 +66,7 @@ class ChatPromptWidget(BaseWidget):
         print(message)
         if message not in self.vision_history:
             self.vision_history.append(message)
-        self.emit(SignalCode.VISION_CAPTURE_UNPAUSE_SIGNAL)
+        self.emit_signal(SignalCode.VISION_CAPTURE_UNPAUSE_SIGNAL)
 
     def on_add_to_conversation_signal(self, name, text, is_bot):
         self.add_message_to_conversation(name=name, message=text, is_bot=is_bot)
@@ -102,19 +102,19 @@ class ChatPromptWidget(BaseWidget):
             self.held_message = None
         self.enable_send_button()
 
-    @pyqtSlot()
+    @Slot()
     def action_button_clicked_clear_conversation(self):
         self.conversation_history = []
         for widget in self.ui.scrollAreaWidgetContents.findChildren(MessageWidget):
             widget.deleteLater()
-        self.emit(SignalCode.LLM_CLEAR_HISTORY_SIGNAL)
+        self.emit_signal(SignalCode.LLM_CLEAR_HISTORY_SIGNAL)
     
-    @pyqtSlot(bool)
+    @Slot(bool)
     def action_button_clicked_send(self, _ignore):
         self.do_generate()
 
     def interrupt_button_clicked(self):
-        self.emit(SignalCode.INTERRUPT_PROCESS_SIGNAL)
+        self.emit_signal(SignalCode.INTERRUPT_PROCESS_SIGNAL)
 
     def do_generate(self, image_override=None, prompt_override=None, callback=None, generator_name="casuallm"):
         prompt = self.prompt if (prompt_override is None or prompt_override == "") else prompt_override
@@ -146,7 +146,7 @@ class ChatPromptWidget(BaseWidget):
         #parsed_template = parse_template(prompt_template)
 
         current_bot = self.settings["llm_generator_settings"]["saved_chatbots"][self.settings["llm_generator_settings"]["current_chatbot"]]
-        self.emit(
+        self.emit_signal(
             SignalCode.LLM_TEXT_GENERATE_REQUEST_SIGNAL,
             {
                 "llm_request": True,

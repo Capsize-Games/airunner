@@ -1,17 +1,19 @@
 import torch
 
-from PyQt6.QtCore import QObject
+from PySide6.QtCore import QObject
 
 from airunner.enums import HandlerType
 from airunner.mediator_mixin import MediatorMixin
 from airunner.service_locator import ServiceLocator
 from airunner.aihandler.logger import Logger
 from airunner.utils import get_torch_device
+from airunner.windows.main.settings_mixin import SettingsMixin
 
 
 class BaseHandler(
     QObject,
-    MediatorMixin
+    MediatorMixin,
+    SettingsMixin
 ):
     """
     Base class for all AI handlers.
@@ -24,6 +26,7 @@ class BaseHandler(
         self.use_gpu = True
         self.logger = Logger(prefix=self.__class__.__name__)
         MediatorMixin.__init__(self)
+        SettingsMixin.__init__(self)
         super().__init__(*args, **kwargs)
 
     @property
@@ -49,11 +52,3 @@ class BaseHandler(
     @property
     def torch_dtype(self):
         return torch.float16 if self.use_cuda else torch.float32
-
-    @property
-    def settings(self):
-        return ServiceLocator.get("get_settings")()
-
-    @settings.setter
-    def settings(self, value):
-        ServiceLocator.get("set_settings")(value)

@@ -30,10 +30,10 @@ import signal
 import sys
 import traceback
 from functools import partial
-from PyQt6 import QtCore
-from PyQt6.QtWidgets import QApplication, QSplashScreen
-from PyQt6.QtCore import Qt, QTimer
-from PyQt6.QtGui import QGuiApplication, QPixmap
+from PySide6 import QtCore
+from PySide6.QtWidgets import QApplication, QSplashScreen
+from PySide6.QtCore import Qt, QTimer
+from PySide6.QtGui import QGuiApplication, QPixmap
 
 from airunner.process_qss import Watcher, process_qss, build_ui
 from airunner.windows.main.main_window import MainWindow

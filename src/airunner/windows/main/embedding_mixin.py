@@ -51,7 +51,7 @@ class EmbeddingMixin:
                 continue
             if name_filter in embedding["name"]:
                 embeddings.append(embedding)
-        self.emit(
+        self.emit_signal(
             SignalCode.EMBEDDING_GET_ALL_RESULTS_SIGNAL,
             embeddings
         )

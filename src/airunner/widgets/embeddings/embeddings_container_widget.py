@@ -1,4 +1,4 @@
-from PyQt6.QtWidgets import QWidget, QSizePolicy
+from PySide6.QtWidgets import QWidget, QSizePolicy
 
 from airunner.enums import SignalCode
 from airunner.widgets.base_widget import BaseWidget
@@ -55,7 +55,7 @@ class EmbeddingsContainerWidget(BaseWidget):
         self.handle_embedding_load_failed(response["message"])
 
     def load_embeddings(self):
-        self.emit(
+        self.emit_signal(
             SignalCode.EMBEDDING_GET_ALL_SIGNAL,
             self.search_filter
         )
@@ -80,10 +80,10 @@ class EmbeddingsContainerWidget(BaseWidget):
         self.scan_for_embeddings()
     
     def check_saved_embeddings(self):
-        self.emit(SignalCode.EMBEDDING_DELETE_MISSING_SIGNAL)
+        self.emit_signal(SignalCode.EMBEDDING_DELETE_MISSING_SIGNAL)
 
     def scan_for_embeddings(self):
-        self.emit(SignalCode.EMBEDDING_SCAN_SIGNAL)
+        self.emit_signal(SignalCode.EMBEDDING_SCAN_SIGNAL)
         self.load_embeddings()
 
     def toggle_all_toggled(self, checked):

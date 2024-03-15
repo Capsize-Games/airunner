@@ -1,4 +1,4 @@
-from PyQt6.QtCore import QObject, pyqtSignal
+from PySide6.QtCore import QObject, Signal as BaseSignal
 
 from airunner.enums import SignalCode
 
@@ -17,7 +17,7 @@ class Signal(QObject):
     """
     This class represents a signal that can be emitted and received.
     """
-    signal = pyqtSignal(object)
+    signal = BaseSignal(dict)
 
 
 SIGNALS = {}
@@ -41,16 +41,16 @@ class SignalMediator(metaclass=SingletonMeta):
         if code not in SIGNALS:
             # Create a new Signal instance for this signal name
             SIGNALS[code] = Signal()
-        # Connect the Signal's pyqtSignal to receive the method of the slot parent
+        # Connect the Signal's Signal to receive the method of the slot parent
         try:
             SIGNALS[code].signal.connect(slot_function)
         except Exception as e:
             print(f"Error connecting signal {code}", e)
 
-    def emit(
+    def emit_signal(
         self,
         code: SignalCode,
-        data: object = None
+        data: dict = None
     ):
         """
         Emit a signal.

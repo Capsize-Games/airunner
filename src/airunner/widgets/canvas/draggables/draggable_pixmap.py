@@ -1,20 +1,23 @@
-from PyQt6.QtCore import QPoint
-from PyQt6.QtGui import QPainter
-from PyQt6.QtWidgets import QGraphicsItem, QGraphicsPixmapItem
+from PySide6.QtCore import QPoint
+from PySide6.QtGui import QPainter
+from PySide6.QtWidgets import QGraphicsItem, QGraphicsPixmapItem
 
 from airunner.enums import CanvasToolName
 from airunner.mediator_mixin import MediatorMixin
 from airunner.service_locator import ServiceLocator
 from airunner.utils import snap_to_grid
+from airunner.windows.main.settings_mixin import SettingsMixin
 
 
 class DraggablePixmap(
     QGraphicsPixmapItem,
-    MediatorMixin
+    MediatorMixin,
+    SettingsMixin
 ):
     def __init__(self, pixmap):
         super().__init__(pixmap)
         MediatorMixin.__init__(self)
+        SettingsMixin.__init__(self)
         self.pixmap = pixmap
         self.setFlag(QGraphicsItem.GraphicsItemFlag.ItemIsMovable, True)
         self.last_pos = QPoint(0, 0)

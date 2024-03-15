@@ -3,7 +3,7 @@ import subprocess
 
 from PIL import Image, ImageGrab
 from PIL.ImageQt import ImageQt
-from PyQt6.QtGui import QPixmap
+from PySide6.QtGui import QPixmap
 from watchdog.utils.platform import is_windows
 
 from airunner.aihandler.logger import Logger

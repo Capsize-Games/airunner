@@ -5,7 +5,7 @@ import traceback
 from typing import AnyStr
 import torch
 import threading
-from PyQt6.QtCore import QObject
+from PySide6.QtCore import QObject
 from transformers import StoppingCriteria
 
 from airunner.aihandler.logger import Logger
@@ -276,7 +276,7 @@ class AIRunnerAgent(QObject, MediatorMixin):
 
         if self.thread is not None:
             self.thread.join()
-        self.emit(SignalCode.UNBLOCK_TTS_GENERATOR_SIGNAL)
+        self.emit_signal(SignalCode.UNBLOCK_TTS_GENERATOR_SIGNAL)
 
         stopping_criteria = ExternalConditionStoppingCriteria(self.do_interrupt_process)
         try:
@@ -351,7 +351,7 @@ class AIRunnerAgent(QObject, MediatorMixin):
                     streamed_template = streamed_template.replace(eos_token, "")
                     new_text = new_text.replace(eos_token, "")
                     is_end_of_message = True
-                self.emit(
+                self.emit_signal(
                     SignalCode.LLM_TEXT_STREAMED_SIGNAL,
                     dict(
                         message=new_text,
@@ -376,7 +376,7 @@ class AIRunnerAgent(QObject, MediatorMixin):
             elif action == LLMActionType.GENERATE_IMAGE:
                 json_objects = self.extract_json_objects(streamed_template)
                 if len(json_objects) > 0:
-                    self.emit(
+                    self.emit_signal(
                         SignalCode.LLM_IMAGE_PROMPT_GENERATED_SIGNAL,
                         json_objects[0]
                     )

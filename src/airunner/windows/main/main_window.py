@@ -4,14 +4,13 @@ import subprocess
 import webbrowser
 from functools import partial
 
-from PyQt6 import QtGui
-from PyQt6 import uic, QtCore
-from PyQt6.QtCore import pyqtSlot, pyqtSignal
-from PyQt6.QtGui import QGuiApplication
-from PyQt6.QtWidgets import QApplication, QMainWindow
+from PySide6 import QtGui
+from PySide6.QtCore import Slot, Signal
+from PySide6.QtGui import QGuiApplication
+from PySide6.QtWidgets import QApplication, QMainWindow
 
 from airunner.aihandler.logger import Logger
-from airunner.settings import LOG_LEVEL, STATUS_ERROR_COLOR, STATUS_NORMAL_COLOR_LIGHT, STATUS_NORMAL_COLOR_DARK, \
+from airunner.settings import STATUS_ERROR_COLOR, STATUS_NORMAL_COLOR_LIGHT, STATUS_NORMAL_COLOR_DARK, \
     DARK_THEME_NAME, LIGHT_THEME_NAME, NSFW_CONTENT_DETECTED_MESSAGE
 from airunner.enums import Mode, SignalCode, ServiceCode, CanvasToolName, WindowSection, GeneratorSection
 from airunner.mediator_mixin import MediatorMixin
@@ -54,19 +53,19 @@ class MainWindow(
     AIModelMixin
 ):
     # signals
-    show_grid_toggled = pyqtSignal(bool)
-    cell_size_changed_signal = pyqtSignal(int)
-    line_width_changed_signal = pyqtSignal(int)
-    line_color_changed_signal = pyqtSignal(str)
-    canvas_color_changed_signal = pyqtSignal(str)
-    snap_to_grid_changed_signal = pyqtSignal(bool)
-    image_generated = pyqtSignal(bool)
-    generator_tab_changed_signal = pyqtSignal()
-    tab_section_changed_signal = pyqtSignal()
-    load_image = pyqtSignal(str)
-    load_image_object = pyqtSignal(object)
-    loaded = pyqtSignal()
-    window_opened = pyqtSignal()
+    show_grid_toggled = Signal(bool)
+    cell_size_changed_signal = Signal(int)
+    line_width_changed_signal = Signal(int)
+    line_color_changed_signal = Signal(str)
+    canvas_color_changed_signal = Signal(str)
+    snap_to_grid_changed_signal = Signal(bool)
+    image_generated = Signal(bool)
+    generator_tab_changed_signal = Signal()
+    tab_section_changed_signal = Signal()
+    load_image = Signal(str)
+    load_image_object = Signal(object)
+    loaded = Signal()
+    window_opened = Signal()
 
     def keyPressEvent(self, event):
         super().keyPressEvent(event)
@@ -76,12 +75,15 @@ class MainWindow(
         shortcut_key_settings = self.settings["shortcut_key_settings"]
         for k, v in shortcut_key_settings.items():
             if v["key"] == key():
-                self.emit(v["signal"])
+                for signal in SignalCode:
+                    if signal.value == v["signal"]:
+                        self.emit_signal(signal)
+                        break
     
     def key_matches(self, key_name, keyboard_key):
         if not key_name in self.settings["shortcut_key_settings"]:
             return False
-        return self.settings["shortcut_key_settings"][key_name]["key"] == keyboard_key
+        return self.settings["shortcut_key_settings"][key_name]["key"] == keyboard_key.value
     
     def key_text(self, key_name):
         if not key_name in self.settings["shortcut_key_settings"]:
@@ -144,13 +146,13 @@ class MainWindow(
             callback=callback
         )
     
-    @pyqtSlot()
+    @Slot()
     def handle_generate(self):
         #self.prompt_builder.inject_prompt()
         pass
 
     def show_layers(self):
-        self.emit(SignalCode.LAYERS_SHOW_SIGNAL)
+        self.emit_signal(SignalCode.LAYERS_SHOW_SIGNAL)
 
     def __init__(self, *args, **kwargs):
         self.ui = Ui_MainWindow()
@@ -159,7 +161,7 @@ class MainWindow(
         self.prompt = None
         self.negative_prompt = None
         self.image_path = None
-        self.token_signal = pyqtSignal(str)
+        self.token_signal = Signal(str)
         self.api = None
         self.input_event_manager = None
         self.current_filter = None
@@ -180,7 +182,7 @@ class MainWindow(
         self.status_normal_color_dark = STATUS_NORMAL_COLOR_DARK
         self.is_started = False
         self._themes = None
-        self.button_clicked_signal = pyqtSignal(dict)
+        self.button_clicked_signal = Signal(dict)
         self.status_widget = None
         self.header_widget_spacer = None
         self.deterministic_window = None
@@ -194,7 +196,6 @@ class MainWindow(
             "content_splitter",
             "splitter",
         ]
-        self.set_log_levels()
         self.logger = Logger(prefix=self.__class__.__name__)
         self.logger.debug("Starting AI Runnner")
         MediatorMixin.__init__(self)
@@ -212,19 +213,16 @@ class MainWindow(
         self.initialize_ui()
         self.worker_manager = WorkerManager()
         self.is_started = True
-        self.emit(SignalCode.APPLICATION_MAIN_WINDOW_LOADED_SIGNAL)
+        self.emit_signal(SignalCode.APPLICATION_MAIN_WINDOW_LOADED_SIGNAL)
         self.image_window = None
 
         self.ui.enable_controlnet.blockSignals(True)
         self.ui.enable_controlnet.setChecked(self.settings["generator_settings"]["enable_controlnet"])
         self.ui.enable_controlnet.blockSignals(False)
 
-
-
     def register_services(self):
         self.logger.debug("Registering services")
-        ServiceLocator.register(ServiceCode.GET_SETTINGS_VALUE, self.get_settings_value)
-        ServiceLocator.register(ServiceCode.GET_CALLBACK_FOR_SLIDER, self.get_callback_for_slider)
+        pass
 
     def register_signals(self):
         # on window resize:
@@ -260,7 +258,7 @@ class MainWindow(
 
         self.status_widget = StatusWidget()
         self.statusBar().addPermanentWidget(self.status_widget)
-        self.emit(SignalCode.APPLICATION_CLEAR_STATUS_MESSAGE_SIGNAL)
+        self.emit_signal(SignalCode.APPLICATION_CLEAR_STATUS_MESSAGE_SIGNAL)
 
         self.set_stylesheet()
 
@@ -287,7 +285,6 @@ class MainWindow(
     def create_airunner_paths(self):
         for k, path in self.settings["path_settings"].items():
             if not os.path.exists(path):
-                print("cerating path", path)
                 os.makedirs(path)
     
     def mode_tab_index_changed(self, index):
@@ -296,7 +293,7 @@ class MainWindow(
         self.settings = settings
 
     def layer_opacity_changed(self, attr_name, value=None, widget=None):
-        self.emit(SignalCode.LAYER_OPACITY_CHANGED_SIGNAL, value)
+        self.emit_signal(SignalCode.LAYER_OPACITY_CHANGED_SIGNAL, value)
 
     """
     Slot functions
@@ -306,7 +303,7 @@ class MainWindow(
     """
     def action_new_document_triggered(self):
         self.new_document()
-        self.emit(SignalCode.CANVAS_CLEAR)
+        self.emit_signal(SignalCode.CANVAS_CLEAR)
 
     def action_quit_triggered(self):
         QApplication.quit()
@@ -314,7 +311,7 @@ class MainWindow(
 
     def on_nsfw_content_detected_signal(self, _response):
         # display message in status
-        self.emit(
+        self.emit_signal(
             SignalCode.APPLICATION_STATUS_ERROR_SIGNAL,
             NSFW_CONTENT_DETECTED_MESSAGE
         )
@@ -334,19 +331,19 @@ class MainWindow(
         self.redo()
 
     def action_paste_image_triggered(self):
-        self.emit(SignalCode.CANVAS_PASTE_IMAGE_SIGNAL)
+        self.emit_signal(SignalCode.CANVAS_PASTE_IMAGE_SIGNAL)
 
     def action_copy_image_triggered(self):
-        self.emit(SignalCode.CANVAS_COPY_IMAGE_SIGNAL)
+        self.emit_signal(SignalCode.CANVAS_COPY_IMAGE_SIGNAL)
 
     def action_cut_image_triggered(self):
-        self.emit(SignalCode.CANVAS_CUT_IMAGE_SIGNAL)
+        self.emit_signal(SignalCode.CANVAS_CUT_IMAGE_SIGNAL)
 
     def action_rotate_90_clockwise_triggered(self):
-        self.emit(SignalCode.CANVAS_ROTATE_90_CLOCKWISE_SIGNAL)
+        self.emit_signal(SignalCode.CANVAS_ROTATE_90_CLOCKWISE_SIGNAL)
 
     def action_rotate_90_counterclockwise_triggered(self):
-        self.emit(SignalCode.CANVAS_ROTATE_90_COUNTER_CLOCKWISE_SIGNAL)
+        self.emit_signal(SignalCode.CANVAS_ROTATE_90_COUNTER_CLOCKWISE_SIGNAL)
 
     def action_show_prompt_browser_triggered(self):
         self.show_prompt_browser()
@@ -479,27 +476,27 @@ class MainWindow(
         else:
             self.showFullScreen()
 
-    @pyqtSlot(bool)
+    @Slot(bool)
     def tts_button_toggled(self, val):
         new_settings = self.settings
         new_settings["tts_enabled"] = val
         self.settings = new_settings
 
-    @pyqtSlot(bool)
+    @Slot(bool)
     def ocr_button_toggled(self, val):
         new_settings = self.settings
         new_settings["ocr_enabled"] = val
         self.settings = new_settings
 
-    @pyqtSlot(bool)
+    @Slot(bool)
     def v2t_button_toggled(self, val):
         new_settings = self.settings
         new_settings["stt_enabled"] = val
         self.settings = new_settings
         if not val:
-            self.emit(SignalCode.STT_STOP_CAPTURE_SIGNAL)
+            self.emit_signal(SignalCode.STT_STOP_CAPTURE_SIGNAL)
         else:
-            self.emit(SignalCode.STT_START_CAPTURE_SIGNAL)
+            self.emit_signal(SignalCode.STT_START_CAPTURE_SIGNAL)
 
     quitting = False
 
@@ -671,7 +668,7 @@ class MainWindow(
     ###### End window handlers ######
 
     def show_update_message(self):
-        self.emit(
+        self.emit_signal(
             SignalCode.APPLICATION_STATUS_INFO_SIGNAL,
             f"New version available: {self.latest_version}"
         )
@@ -746,9 +743,9 @@ class MainWindow(
         if not active:
             tool = CanvasToolName.NONE
         settings = self.settings
-        settings["current_tool"] = tool
+        settings["current_tool"] = tool.value
         self.settings = settings
-        self.emit(SignalCode.APPLICATION_TOOL_CHANGED_SIGNAL, tool)
+        self.emit_signal(SignalCode.APPLICATION_TOOL_CHANGED_SIGNAL, tool)
 
     def show_section(self, section: WindowSection):
         section_lists = {
@@ -779,59 +776,6 @@ class MainWindow(
         except AttributeError:
             return None
 
-    def get_callback_for_slider(self, callback_name):
-        return getattr(self, callback_name)
-
-    def get_settings_value(self, settings_property):
-        keys = settings_property.split(".")
-        data = self.settings
-
-        for key in keys:
-            if isinstance(data, dict) and key in data:
-                data = data[key]
-            else:
-                return None
-
-        return data
-
-    def handle_value_change(self, attr_name, value=None, widget=None):
-        """
-        Slider widget callback - this is connected via dynamic properties in the
-        qt widget. This function is then called when the value of a SliderWidget
-        is changed.
-        :param attr_name: the name of the attribute to change
-        :param value: the value to set the attribute to
-        :param widget: the widget that triggered the callback
-        :return:
-        """
-        if attr_name is None:
-            return
-
-        keys = attr_name.split(".")
-        if len(keys) > 0:
-            settings = self.settings
-
-            object_key = "settings"
-            if len(keys) == 1:
-                property_key = keys[0]
-            elif len(keys) == 2:
-                object_key = keys[0]
-                property_key = keys[1]
-            elif len(keys) == 3:
-                object_key = keys[0]
-                property_key = keys[1]
-                sub_property_key = keys[2]
-
-            if object_key != "settings":
-                if len(keys) == 3:
-                    settings[object_key][property_key][sub_property_key] = value
-                else:
-                    settings[object_key][property_key] = value
-            else:
-                settings[property_key] = value
-
-            self.settings = settings
-
     def initialize_window(self):
         self.center()
         self.set_window_title()
@@ -841,10 +785,6 @@ class MainWindow(
         self.set_stylesheet()
         self.setWindowFlags(self.windowFlags() | QtCore.Qt.WindowType.Window)
         self.show()
-
-    def set_log_levels(self):
-        uic.properties.logger.setLevel(LOG_LEVEL)
-        uic.uiparser.logger.setLevel(LOG_LEVEL)
 
     def center(self):
         availableGeometry = QGuiApplication.primaryScreen().availableGeometry()
@@ -931,7 +871,7 @@ class MainWindow(
         print("center clicked")
 
     def action_reset_settings(self):
-        self.emit(SignalCode.APPLICATION_RESET_SETTINGS_SIGNAL)
+        self.emit_signal(SignalCode.APPLICATION_RESET_SETTINGS_SIGNAL)
 
     def action_toggle_controlnet(self, val):
         settings = self.settings
@@ -939,19 +879,19 @@ class MainWindow(
         self.settings = settings
 
     def import_controlnet_image(self):
-        self.emit(SignalCode.CONTROLNET_IMPORT_IMAGE_SIGNAL)
+        self.emit_signal(SignalCode.CONTROLNET_IMPORT_IMAGE_SIGNAL)
 
     def export_controlnet_image(self):
-        self.emit(SignalCode.CONTROLNET_EXPORT_IMAGE_SIGNAL)
+        self.emit_signal(SignalCode.CONTROLNET_EXPORT_IMAGE_SIGNAL)
 
     def import_drawingpad_image(self):
-        self.emit(SignalCode.DRAWINGPAD_IMPORT_IMAGE_SIGNAL)
+        self.emit_signal(SignalCode.DRAWINGPAD_IMPORT_IMAGE_SIGNAL)
 
     def export_drawingpad_image(self):
-        self.emit(SignalCode.DRAWINGPAD_EXPORT_IMAGE_SIGNAL)
+        self.emit_signal(SignalCode.DRAWINGPAD_EXPORT_IMAGE_SIGNAL)
 
     def action_export_image_triggered(self):
-        self.emit(SignalCode.CANVAS_EXPORT_IMAGE_SIGNAL)
+        self.emit_signal(SignalCode.CANVAS_EXPORT_IMAGE_SIGNAL)
 
     def action_import_image_triggered(self):
-        self.emit(SignalCode.CANVAS_IMPORT_IMAGE_SIGNAL)
+        self.emit_signal(SignalCode.CANVAS_IMPORT_IMAGE_SIGNAL)

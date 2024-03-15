@@ -82,4 +82,4 @@ class ModelScannerWorker(Worker):
                                     'is_default': False
                                 })
 
-        self.emit(SignalCode.AI_MODELS_SAVE_OR_UPDATE_SIGNAL, models)
+        self.emit_signal(SignalCode.AI_MODELS_SAVE_OR_UPDATE_SIGNAL, models)

@@ -29,7 +29,7 @@ def build_ui(path):
         print(f"Generating {ui_file_py}")
         subprocess.run(
             [
-                "pyuic6",
+                "pyside6-uic",
                 "-o",
                 ui_file_py,
                 ui_file,

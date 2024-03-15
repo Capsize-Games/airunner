@@ -15,9 +15,9 @@ import PIL
 import torch
 from PIL import Image
 from PIL import PngImagePlugin
-from PyQt6.QtCore import QThread
-from PyQt6.QtGui import QPixmap, QImage
-from PyQt6.QtWidgets import QFileDialog, QApplication, QMainWindow
+from PySide6.QtCore import QThread
+from PySide6.QtGui import QPixmap, QImage
+from PySide6.QtWidgets import QFileDialog, QApplication, QMainWindow
 
 from airunner.service_locator import ServiceLocator
 from airunner.settings import MAX_SEED

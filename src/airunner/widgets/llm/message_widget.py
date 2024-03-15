@@ -1,11 +1,11 @@
 from airunner.widgets.base_widget import BaseWidget
 from airunner.widgets.llm.templates.message_ui import Ui_message
 
-from PyQt6.QtGui import QTextCursor
-from PyQt6.QtWidgets import QTextEdit
-from PyQt6.QtGui import QFontMetrics
-from PyQt6.QtCore import Qt, QSize
-from PyQt6.QtCore import pyqtSignal
+from PySide6.QtGui import QTextCursor
+from PySide6.QtWidgets import QTextEdit
+from PySide6.QtGui import QFontMetrics
+from PySide6.QtCore import Qt, QSize
+from PySide6.QtCore import Signal
 
 
 class AutoResizingTextEdit(QTextEdit):
@@ -16,7 +16,7 @@ class AutoResizingTextEdit(QTextEdit):
 
 class MessageWidget(BaseWidget):
     widget_class_ = Ui_message
-    textChanged = pyqtSignal()
+    textChanged = Signal()
 
     def __init__(self, *args, **kwargs):
         self.name = kwargs.pop("name")

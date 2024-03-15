@@ -25,4 +25,4 @@ class VisionProcessorWorker(Worker):
         message = self.vision_handler.handle_request({
             "request_data": message
         })
-        self.emit(SignalCode.VISION_PROCESSED_SIGNAL, message)
+        self.emit_signal(SignalCode.VISION_PROCESSED_SIGNAL, message)

@@ -1,12 +1,12 @@
 import os
 import json
 
-from PyQt6.QtGui import QPixmap
-from PyQt6.QtWidgets import QLabel
-from PyQt6.QtCore import Qt
-from PyQt6.QtCore import pyqtSignal
-from PyQt6.QtWidgets import QMenu
-from PyQt6.QtWidgets import QMessageBox
+from PySide6.QtGui import QPixmap
+from PySide6.QtWidgets import QLabel
+from PySide6.QtCore import Qt
+from PySide6.QtCore import Signal
+from PySide6.QtWidgets import QMenu
+from PySide6.QtWidgets import QMessageBox
 
 from PIL import Image
 from PIL.ImageQt import ImageQt
@@ -17,9 +17,9 @@ from airunner.utils import load_metadata_from_image
 from airunner.utils import delete_image
 from airunner.widgets.base_widget import BaseWidget
 from airunner.widgets.image.templates.image_widget_ui import Ui_image_widget
-from PyQt6.QtGui import QDrag
-from PyQt6.QtCore import QMimeData
-from PyQt6.QtCore import QByteArray
+from PySide6.QtGui import QDrag
+from PySide6.QtCore import QMimeData
+from PySide6.QtCore import QByteArray
 
 
 class ImageWidget(BaseWidget):
@@ -28,7 +28,7 @@ class ImageWidget(BaseWidget):
     meta_data = {}
     image_width = 0
     image_height = 0
-    clicked = pyqtSignal()
+    clicked = Signal()
     pixmap = None
 
     def __init__(self, *args, **kwargs):
@@ -147,13 +147,13 @@ class ImageWidget(BaseWidget):
             self.meta_data = load_metadata_from_image(image)
 
     def send_image_to_grid(self):
-        self.emit(SignalCode.CANVAS_LOAD_IMAGE_FROM_PATH_SIGNAL, self.image_path)
+        self.emit_signal(SignalCode.CANVAS_LOAD_IMAGE_FROM_PATH_SIGNAL, self.image_path)
 
     def view_image(self):
-        from PyQt6.QtWidgets import QGraphicsView, QGraphicsScene, QDialog, QVBoxLayout
-        from PyQt6.QtGui import QPixmap
-        from PyQt6.QtCore import Qt
-        from PyQt6.QtGui import QPainter
+        from PySide6.QtWidgets import QGraphicsView, QGraphicsScene, QDialog, QVBoxLayout
+        from PySide6.QtGui import QPixmap
+        from PySide6.QtCore import Qt
+        from PySide6.QtGui import QPainter
         # Open the image
         image = QPixmap(self.image_path)
 
@@ -221,7 +221,7 @@ class ImageWidget(BaseWidget):
         meta_data["strength"] = 1.0
         meta_data["enable_input_image"] = True
         meta_data["use_cropped_image"] = False
-        self.emit(SignalCode.SD_GENERATE_IMAGE_SIGNAL, {
+        self.emit_signal(SignalCode.SD_GENERATE_IMAGE_SIGNAL, {
             'image': image,
             'override_data': meta_data
         })
@@ -239,7 +239,7 @@ class ImageWidget(BaseWidget):
         meta_data["strength"] = 1.0
         meta_data["enable_input_image"] = True
         meta_data["use_cropped_image"] = False
-        self.emit(SignalCode.SD_GENERATE_IMAGE_SIGNAL, {
+        self.emit_signal(SignalCode.SD_GENERATE_IMAGE_SIGNAL, {
             'image': image,
             'override_data': meta_data
         })
@@ -255,14 +255,14 @@ class BrushImageWidget(ImageWidget):
         # get the clicked object
         if event.button() == Qt.MouseButton.LeftButton:
             shift_pressed = event.modifiers() == Qt.KeyboardModifier.ShiftModifier
-            self.emit(SignalCode.PRESET_IMAGE_GENERATOR_ACTIVATE_BRUSH_SIGNAL, {
+            self.emit_signal(SignalCode.PRESET_IMAGE_GENERATOR_ACTIVATE_BRUSH_SIGNAL, {
                 'event': event,
                 'widget': self,
                 'brush': self.brush,
                 'shift_pressed': shift_pressed
             })
         elif event.button() == Qt.MouseButton.RightButton:
-            self.emit(SignalCode.PRESET_IMAGE_GENERATOR_DISPLAY_ITEM_MENU_SIGNAL, {
+            self.emit_signal(SignalCode.PRESET_IMAGE_GENERATOR_DISPLAY_ITEM_MENU_SIGNAL, {
                 'event': event,
                 'widget': self,
                 'brush': self.brush

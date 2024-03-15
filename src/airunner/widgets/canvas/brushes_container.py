@@ -4,10 +4,10 @@ import json
 from io import BytesIO
 
 from PIL import Image
-from PyQt6.QtCore import QBuffer
-from PyQt6.QtGui import QPixmap
-from PyQt6.QtWidgets import QInputDialog
-from PyQt6.QtWidgets import QMenu
+from PySide6.QtCore import QBuffer
+from PySide6.QtGui import QPixmap
+from PySide6.QtWidgets import QInputDialog
+from PySide6.QtWidgets import QMenu
 
 from airunner.enums import SignalCode
 from airunner.widgets.base_widget import BaseWidget
@@ -54,7 +54,7 @@ class BrushesContainer(BaseWidget):
         image = thumbnail.toImage()
 
         # Convert QImage to raw bytes
-        from PyQt6.QtCore import QIODevice  # Import the QIODevice class
+        from PySide6.QtCore import QIODevice  # Import the QIODevice class
 
         buffer = QBuffer()
         buffer.open(QIODevice.OpenModeFlag.ReadWrite)  # Use QIODevice.OpenModeFlag.ReadWrite
