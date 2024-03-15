@@ -8,7 +8,7 @@ Homepage: https://capsizegames.com/
 
 Package: airunner
 Architecture: any
-Depends: ${misc:Depends}, espeak, ffmpeg, xclip (>= 0.13-2)
+Depends: ${misc:Depends}, espeak, ffmpeg, qmake6, xclip (>= 0.13-2)
 Description: AI Runner - Local Stable Diffusion & LLMs
  AI Runner is a tool that allows you to run Stable Diffusion and LLMs locally
  on your own hardware without an active internet connection. It's designed for
