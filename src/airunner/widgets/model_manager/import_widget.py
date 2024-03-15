@@ -131,7 +131,9 @@ class ImportWidget(BaseWidget):
         self.ui.download_progress_bar.setValue(current_size)
         if current_size >= total_size:
             self.reset_form()
-            self.emit_signal(SignalCode.AI_MODELS_CREATE_SIGNAL, self.current_model_data)
+            self.emit_signal(SignalCode.AI_MODELS_CREATE_SIGNAL, {
+                "models": self.current_model_data
+            })
             self.show_items_in_scrollarea()
     
     def import_models(self):

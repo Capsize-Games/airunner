@@ -135,14 +135,16 @@ class CanvasWidget(BaseWidget):
                 Qt.GlobalColor.transparent,
                 self.settings["brush_settings"]["size"],
             )
+            self.setCursor(cursor)
         elif self.settings["current_tool"] is CanvasToolName.ACTIVE_GRID_AREA:
-            if event.buttons() == Qt.MouseButton.LeftButton:
-                cursor = Qt.CursorShape.ClosedHandCursor
-            else:
-                cursor = Qt.CursorShape.OpenHandCursor
+            # if event.buttons() == Qt.MouseButton.LeftButton:
+            #     cursor = Qt.CursorShape.ClosedHandCursor
+            # else:
+            #     cursor = Qt.CursorShape.OpenHandCursor
+            pass
         else:
             cursor = Qt.CursorShape.ArrowCursor
-        self.setCursor(cursor)
+            self.setCursor(cursor)
 
     def on_update_canvas_signal(self, _ignore):
         self.update()
