@@ -1,5 +1,5 @@
 from PIL import Image
-from PyQt6.QtCore import QObject, QRect
+from PySide6.QtCore import QObject, QRect
 
 from airunner.enums import SDMode, GeneratorSection, Controlnet
 from airunner.mediator_mixin import MediatorMixin

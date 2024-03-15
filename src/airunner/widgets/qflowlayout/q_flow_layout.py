@@ -1,9 +1,9 @@
-from PyQt6.QtCore import QPoint
-from PyQt6.QtCore import QRect
-from PyQt6.QtCore import QSize
-from PyQt6.QtCore import Qt
-from PyQt6.QtWidgets import QLayout
-from PyQt6.QtWidgets import QSizePolicy
+from PySide6.QtCore import QPoint
+from PySide6.QtCore import QRect
+from PySide6.QtCore import QSize
+from PySide6.QtCore import Qt
+from PySide6.QtWidgets import QLayout
+from PySide6.QtWidgets import QSizePolicy
 
 
 class QFlowLayout(QLayout):

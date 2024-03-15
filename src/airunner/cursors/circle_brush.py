@@ -1,5 +1,5 @@
-from PyQt6.QtCore import Qt
-from PyQt6.QtGui import QColor, QPainter, QPen, QBrush, QPixmap, QCursor
+from PySide6.QtCore import Qt
+from PySide6.QtGui import QColor, QPainter, QPen, QBrush, QPixmap, QCursor
 
 
 def CircleCursor(outline_color, fill_color, pixmap_size=32):

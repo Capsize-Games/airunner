@@ -4,7 +4,7 @@ from airunner.widgets.base_widget import BaseWidget
 from airunner.widgets.model_manager.model_widget import ModelWidget
 from airunner.widgets.model_manager.templates.custom_ui import Ui_custom_model_widget
 
-from PyQt6 import QtWidgets
+from PySide6 import QtWidgets
 
 from airunner.workers.model_scanner_worker import ModelScannerWorker
 

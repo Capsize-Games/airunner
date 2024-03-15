@@ -1,4 +1,4 @@
-from PyQt6 import QtWidgets
+from PySide6 import QtWidgets
 
 from airunner.widgets.base_widget import BaseWidget
 from airunner.widgets.model_manager.templates.model_form_ui import Ui_model_form_widget

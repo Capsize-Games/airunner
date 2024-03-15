@@ -1,7 +1,7 @@
 from airunner.enums import SignalCode
 from airunner.widgets.base_widget import BaseWidget
 from airunner.widgets.embeddings.templates.embedding_trigger_word_ui import Ui_embedding_trigger_word
-from PyQt6.QtWidgets import QApplication
+from PySide6.QtWidgets import QApplication
 
 
 class EmbeddingTriggerWordWidget(BaseWidget):
@@ -18,14 +18,14 @@ class EmbeddingTriggerWordWidget(BaseWidget):
         settings = self.settings
         settings["generator_settings"]["prompt"] = val
         self.settings = settings
-        self.emit(SignalCode.GENERATOR_FORM_UPDATE_VALUES_SIGNAL)
+        self.emit_signal(SignalCode.GENERATOR_FORM_UPDATE_VALUES_SIGNAL)
 
     def action_click_button_to_negative_prompt(self):
         val = f"{self.settings['generator_settings']['negative_prompt']} {self.trigger_word}"
         settings = self.settings
         settings["generator_settings"]["negative_prompt"] = val
         self.settings = settings
-        self.emit(SignalCode.GENERATOR_FORM_UPDATE_VALUES_SIGNAL)
+        self.emit_signal(SignalCode.GENERATOR_FORM_UPDATE_VALUES_SIGNAL)
 
     def action_click_button_copy(self):
         # copy embedding name to clipboard

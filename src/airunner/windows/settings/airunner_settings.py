@@ -1,6 +1,6 @@
-from PyQt6.QtCore import Qt, QSize
-from PyQt6.QtGui import QStandardItemModel, QStandardItem, QBrush, QColor, QPainter
-from PyQt6.QtWidgets import QStyledItemDelegate, QStyleOptionViewItem, QLabel, QWidget, QVBoxLayout, QPlainTextEdit
+from PySide6.QtCore import Qt, QSize
+from PySide6.QtGui import QStandardItemModel, QStandardItem, QBrush, QColor, QPainter
+from PySide6.QtWidgets import QStyledItemDelegate, QStyleOptionViewItem, QLabel, QWidget, QVBoxLayout, QPlainTextEdit
 
 from airunner.enums import SignalCode, ServiceCode
 from airunner.service_locator import ServiceLocator
@@ -54,7 +54,7 @@ class SettingsWindow(BaseWindow):
         self.scroll_layout = None
         self.highlight_delegate = None
         ServiceLocator.register(ServiceCode.GET_PREFERENCES_CALLBACK_FOR_SLIDER, self.get_callback_for_slider)
-        self.emit(SignalCode.APPLICATION_SETTINGS_LOADED_SIGNAL)
+        self.emit_signal(SignalCode.APPLICATION_SETTINGS_LOADED_SIGNAL)
 
     def handle_value_change(self, attr_name, value=None, widget=None):
         print("handle_value_change")
@@ -342,7 +342,7 @@ class SettingsWindow(BaseWindow):
             checked = item.checkState() == Qt.CheckState.Checked
             settings["allow_online_mode"] = checked
         elif name == "reset_settings":
-            self.emit(SignalCode.APPLICATION_RESET_SETTINGS_SIGNAL)
+            self.emit_signal(SignalCode.APPLICATION_RESET_SETTINGS_SIGNAL)
         
         self.settings = settings
         self.show_content(section, display_name, name, description)

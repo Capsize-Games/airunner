@@ -1,4 +1,4 @@
-from PyQt6.QtCore import QObject
+from PySide6.QtCore import QObject
 
 from airunner.mediator_mixin import MediatorMixin
 from airunner.utils import parse_template

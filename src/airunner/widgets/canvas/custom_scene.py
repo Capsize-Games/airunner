@@ -4,10 +4,10 @@ from typing import Optional
 import PIL
 from PIL import ImageQt, Image, ImageFilter
 from PIL.ImageQt import QImage
-from PyQt6.QtCore import Qt, QPoint
-from PyQt6.QtGui import QEnterEvent
-from PyQt6.QtGui import QPixmap, QPainter
-from PyQt6.QtWidgets import QGraphicsScene, QGraphicsPixmapItem, QFileDialog
+from PySide6.QtCore import Qt, QPoint
+from PySide6.QtGui import QEnterEvent
+from PySide6.QtGui import QPixmap, QPainter
+from PySide6.QtWidgets import QGraphicsScene, QGraphicsPixmapItem, QFileDialog
 
 from airunner.aihandler.logger import Logger
 from airunner.enums import SignalCode, CanvasToolName, GeneratorSection, ServiceCode
@@ -121,7 +121,7 @@ class CustomScene(
 
     @image_pivot_point.setter
     def image_pivot_point(self, value):
-        self.emit(SignalCode.LAYER_UPDATE_CURRENT_SIGNAL, {
+        self.emit_signal(SignalCode.LAYER_UPDATE_CURRENT_SIGNAL, {
             "pivot_point_x": value.x(),
             "pivot_point_y": value.y()
         })
@@ -399,14 +399,6 @@ class CustomScene(
                 self.addItem(self.item)
         self.item.setZValue(1)
 
-    @property
-    def settings(self):
-        return ServiceLocator.get("get_settings")()
-
-    @settings.setter
-    def settings(self, value):
-        ServiceLocator.get("set_settings")(value)
-
     def clear_selection(self):
         self.selection_start_pos = None
         self.selection_stop_pos = None
@@ -480,7 +472,7 @@ class CustomScene(
         settings["grid_settings"]["zoom_level"] = zoom_level
         self.settings = settings
 
-        self.emit(SignalCode.CANVAS_ZOOM_LEVEL_CHANGED)
+        self.emit_signal(SignalCode.CANVAS_ZOOM_LEVEL_CHANGED)
 
     def handle_mouse_event(self, event, is_press_event):
         if event.button() == Qt.MouseButton.LeftButton:
@@ -497,8 +489,8 @@ class CustomScene(
                     self.selection_start_pos = QPoint(pos.x(), pos.y())
                 else:
                     self.selection_stop_pos = QPoint(pos.x(), pos.y())
-                self.emit(SignalCode.APPLICATION_ACTIVE_GRID_AREA_UPDATED)
-                self.emit(SignalCode.CANVAS_DO_DRAW_SELECTION_AREA_SIGNAL)
+                self.emit_signal(SignalCode.APPLICATION_ACTIVE_GRID_AREA_UPDATED)
+                self.emit_signal(SignalCode.CANVAS_DO_DRAW_SELECTION_AREA_SIGNAL)
 
     def handle_left_mouse_press(self, event):
         self.start_pos = event.scenePos()
@@ -519,7 +511,7 @@ class CustomScene(
         self.handle_cursor(event)
 
     def handle_cursor(self, event):
-        self.emit(
+        self.emit_signal(
             SignalCode.CANVAS_UPDATE_CURSOR,
             event
         )

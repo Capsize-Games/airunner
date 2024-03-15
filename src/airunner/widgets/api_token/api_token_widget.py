@@ -1,4 +1,4 @@
-from PyQt6.QtWidgets import QLineEdit
+from PySide6.QtWidgets import QLineEdit
 
 from airunner.widgets.api_token.templates.api_token_ui import Ui_api_token
 from airunner.widgets.base_widget import BaseWidget

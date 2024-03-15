@@ -1,6 +1,6 @@
 import cv2
 from PIL import Image
-from PyQt6.QtCore import QThread
+from PySide6.QtCore import QThread
 
 from airunner.enums import SignalCode, QueueType, WorkerState
 from airunner.settings import SLEEP_TIME_IN_MS
@@ -52,7 +52,7 @@ class VisionCaptureWorker(Worker):
         self.running = True
         while self.running:
             if self.state == WorkerState.RUNNING:
-                self.emit(SignalCode.VISION_CAPTURED_SIGNAL, {
+                self.emit_signal(SignalCode.VISION_CAPTURED_SIGNAL, {
                     "image": self.capture_image()
                 })
                 self.state = WorkerState.PAUSED

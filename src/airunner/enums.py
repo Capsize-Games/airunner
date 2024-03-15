@@ -38,8 +38,6 @@ class ServiceCode(Enum):
     DELETE_MISSING_EMBEDDINGS = "delete_missing_embeddings"
     SCAN_FOR_EMBEDDINGS = "scan_for_embeddings"
     UPDATE_EMBEDDING = "update_embedding"
-    GET_SETTINGS = "get_settings"
-    SET_SETTINGS = "set_settings"
     GET_PIPELINE_CLASSNAME = "get_pipeline_classname"
     PIPELINE_ACTIONS = "pipeline_actions"
     GET_PIPELINES = "get_pipelines"

@@ -1,4 +1,4 @@
-from PyQt6.QtWidgets import QColorDialog
+from PySide6.QtWidgets import QColorDialog
 
 from airunner.enums import SignalCode
 from airunner.widgets.base_widget import BaseWidget
@@ -38,7 +38,7 @@ class BrushContainerWidget(BaseWidget):
             settings["brush_settings"]["primary_color"] = color.name()
             self.settings = settings
             self.set_button_color()
-            self.emit(
+            self.emit_signal(
                 SignalCode.BRUSH_COLOR_CHANGED_SIGNAL,
                 color.name()
             )

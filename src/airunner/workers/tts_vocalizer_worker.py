@@ -3,7 +3,7 @@ import sounddevice as sd
 
 from queue import Queue
 
-from PyQt6.QtCore import QThread
+from PySide6.QtCore import QThread
 
 from airunner.enums import SignalCode
 from airunner.settings import SLEEP_TIME_IN_MS

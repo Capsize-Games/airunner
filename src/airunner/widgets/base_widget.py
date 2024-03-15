@@ -1,7 +1,7 @@
 import os
 
-from PyQt6 import QtGui
-from PyQt6.QtWidgets import QWidget
+from PySide6 import QtGui
+from PySide6.QtWidgets import QWidget
 
 from airunner.aihandler.logger import Logger
 from airunner.mediator_mixin import MediatorMixin
@@ -203,11 +203,3 @@ class BaseWidget(
         if val is None:
             val = self.get_is_checked(element)
         print("TODO: finish this")
-
-    @property
-    def settings(self):
-        return ServiceLocator.get("get_settings")()
-
-    @settings.setter
-    def settings(self, value):
-        ServiceLocator.get("set_settings")(value)

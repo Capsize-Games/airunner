@@ -40,7 +40,7 @@ class ActiveGridSettingsWidget(BaseWidget):
         settings = self.settings
         settings["active_grid_settings"][setting_key] = checked
         self.settings = settings
-        self.emit(SignalCode.ACTIVE_GRID_SETTINGS_CHANGED_SIGNAL)
+        self.emit_signal(SignalCode.ACTIVE_GRID_SETTINGS_CHANGED_SIGNAL)
 
     def action_clicked_checkbox_toggle_active_grid_border(self, checked):
         self.update_active_grid_settings("render_border", checked)

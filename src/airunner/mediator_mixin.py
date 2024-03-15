@@ -12,13 +12,13 @@ class MediatorMixin:
         self.workers = []
         self.mediator = SignalMediator()
 
-    def emit(
+    def emit_signal(
         self,
         code: SignalCode,
         data: object = None
     ):
         # Pass None as the second argument if no additional arguments are provided
-        self.mediator.emit(code, data)
+        self.mediator.emit_signal(code, data)
 
     def register(
         self,

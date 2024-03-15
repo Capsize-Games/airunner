@@ -1,4 +1,4 @@
-from PyQt6.QtWidgets import QFileDialog
+from PySide6.QtWidgets import QFileDialog
 
 from airunner.enums import SignalCode, ServiceCode
 from airunner.models.modeldata import ModelData
@@ -105,7 +105,7 @@ class ModelManagerWidget(BaseWidget):
         self.update_generator_model_dropdown()
 
     def handle_delete_model(self, model):
-        self.emit(SignalCode.AI_MODEL_DELETE_SIGNAL, model)
+        self.emit_signal(SignalCode.AI_MODEL_DELETE_SIGNAL, model)
         self.show_items_in_scrollarea()
         self.update_generator_model_dropdown()
 

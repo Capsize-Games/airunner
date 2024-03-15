@@ -1,5 +1,5 @@
-from PyQt6.QtCore import Qt, QPoint
-from PyQt6.QtGui import QColor, QPen
+from PySide6.QtCore import Qt, QPoint
+from PySide6.QtGui import QColor, QPen
 
 
 class LineData:

@@ -1,8 +1,8 @@
 from functools import partial
 
-from PyQt6.QtCore import QPointF, QPoint, Qt, QRect, QEvent
-from PyQt6.QtGui import QMouseEvent, QColor, QBrush
-from PyQt6.QtWidgets import QGraphicsView, QGraphicsItemGroup
+from PySide6.QtCore import QPointF, QPoint, Qt, QRect, QEvent
+from PySide6.QtGui import QMouseEvent, QColor, QBrush
+from PySide6.QtWidgets import QGraphicsView, QGraphicsItemGroup
 
 from airunner.aihandler.logger import Logger
 from airunner.enums import CanvasToolName, SignalCode, ServiceCode, CanvasType
@@ -205,7 +205,7 @@ class CustomGraphicsView(
             "line_group": data.get("line_group", self.line_group),
             "view_size": data.get("view_size", self.viewport().size())
         }
-        self.emit(SignalCode.CANVAS_RESIZE_SIGNAL, kwargs)
+        self.emit_signal(SignalCode.CANVAS_RESIZE_SIGNAL, kwargs)
 
     def on_zoom_level_changed_signal(self):
         transform = self.zoom_handler.on_zoom_level_changed()
@@ -214,7 +214,7 @@ class CustomGraphicsView(
         self.setTransform(transform)
 
         # Redraw lines
-        self.emit(SignalCode.CANVAS_DO_DRAW_SIGNAL)
+        self.emit_signal(SignalCode.CANVAS_DO_DRAW_SIGNAL)
 
     def showEvent(self, event):
         super().showEvent(event)
@@ -230,7 +230,7 @@ class CustomGraphicsView(
         self.create_scene()
 
         if self.canvas_type == CanvasType.IMAGE.value:
-            self.emit(
+            self.emit_signal(
                 SignalCode.CANVAS_DO_DRAW_SIGNAL,
                 True
             )
@@ -273,7 +273,7 @@ class CustomGraphicsView(
                 self.horizontalScrollBar().setValue(horizontal_value)
                 self.verticalScrollBar().setValue(vertical_value)
             self.last_pos = event.pos()
-            self.emit(SignalCode.CANVAS_DO_DRAW_SIGNAL)
+            self.emit_signal(SignalCode.CANVAS_DO_DRAW_SIGNAL)
         original_mouse_event(event)
 
     def on_tool_changed_signal(self, _tool: CanvasToolName):

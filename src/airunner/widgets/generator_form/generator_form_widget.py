@@ -1,7 +1,7 @@
 import time
 
-from PyQt6.QtCore import pyqtSignal, QRect
-from PyQt6.QtWidgets import QApplication
+from PySide6.QtCore import Signal, QRect
+from PySide6.QtWidgets import QApplication
 
 from airunner.enums import SignalCode, GeneratorSection, ImageCategory
 from airunner.settings import PHOTO_REALISTIC_NEGATIVE_PROMPT, ILLUSTRATION_NEGATIVE_PROMPT
@@ -11,7 +11,7 @@ from airunner.widgets.generator_form.templates.generatorform_ui import Ui_genera
 
 class GeneratorForm(BaseWidget):
     widget_class_ = Ui_generator_form
-    changed_signal = pyqtSignal(str, object)
+    changed_signal = Signal(str, object)
 
     def __init__(self, *args, **kwargs):
         super().__init__(*args, **kwargs)
@@ -124,7 +124,7 @@ class GeneratorForm(BaseWidget):
         self.ui.generator_form_tabs.setCurrentIndex(1 if ai_mode is True else 0)
 
     def action_clicked_button_save_prompts(self):
-        self.emit(SignalCode.SD_SAVE_PROMPT_SIGNAL)
+        self.emit_signal(SignalCode.SD_SAVE_PROMPT_SIGNAL)
 
     def handle_prompt_changed(self):
         settings = self.settings
@@ -145,14 +145,14 @@ class GeneratorForm(BaseWidget):
         self.generate()
 
     def handle_interrupt_button_clicked(self):
-        self.emit(SignalCode.INTERRUPT_PROCESS_SIGNAL)
+        self.emit_signal(SignalCode.INTERRUPT_PROCESS_SIGNAL)
 
     def generate(self):
         if self.settings["generator_settings"]["n_samples"] > 1:
-            self.emit(SignalCode.ENGINE_STOP_PROCESSING_QUEUE_SIGNAL)
+            self.emit_signal(SignalCode.ENGINE_STOP_PROCESSING_QUEUE_SIGNAL)
         self.call_generate()
         self.seed_override = None
-        self.emit(SignalCode.ENGINE_START_PROCESSING_QUEUE_SIGNAL)
+        self.emit_signal(SignalCode.ENGINE_START_PROCESSING_QUEUE_SIGNAL)
 
     def on_generate_image_signal(self, _message):
         self.start_progress_bar()
@@ -161,11 +161,11 @@ class GeneratorForm(BaseWidget):
     def do_generate_image(self):
         print("DO GENERATE IMAGE")
         time.sleep(0.1)
-        self.emit(SignalCode.DO_GENERATE_SIGNAL)
+        self.emit_signal(SignalCode.DO_GENERATE_SIGNAL)
 
     def call_generate(self):
         print("call_generate")
-        self.emit(SignalCode.LLM_UNLOAD_SIGNAL, {
+        self.emit_signal(SignalCode.LLM_UNLOAD_SIGNAL, {
             'do_unload_model': self.settings["memory_settings"]["unload_unused_models"],
             'move_unused_model_to_cpu': self.settings["memory_settings"]["move_unused_model_to_cpu"],
             'dtype': self.settings["llm_generator_settings"]["dtype"],

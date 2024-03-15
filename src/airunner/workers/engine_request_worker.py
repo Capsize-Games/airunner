@@ -15,6 +15,6 @@ class EngineRequestWorker(Worker):
     
     def handle_message(self, request):
         if request["code"] == EngineRequestCode.GENERATE_IMAGE:
-            self.emit(SignalCode.SD_REQUEST_SIGNAL, request)
+            self.emit_signal(SignalCode.SD_REQUEST_SIGNAL, request)
         else:
             self.logger.error(f"Unknown code: {request['code']}")

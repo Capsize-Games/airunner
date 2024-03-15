@@ -1,4 +1,4 @@
-from PyQt6.QtWidgets import QInputDialog, QMessageBox
+from PySide6.QtWidgets import QInputDialog, QMessageBox
 
 from airunner.settings import DEFAULT_CHATBOT
 from airunner.utils import toggle_signals

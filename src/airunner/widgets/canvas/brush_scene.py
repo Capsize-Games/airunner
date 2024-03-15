@@ -1,9 +1,9 @@
 from PIL import ImageQt, Image
-from PyQt6.QtCore import Qt, QPointF
-from PyQt6.QtGui import QPainterPath
-from PyQt6.QtGui import QPen, QPixmap, QPainter
-from PyQt6.QtGui import QColor
-from PyQt6.QtWidgets import QFileDialog
+from PySide6.QtCore import Qt, QPointF
+from PySide6.QtGui import QPainterPath
+from PySide6.QtGui import QPen, QPixmap, QPainter
+from PySide6.QtGui import QColor
+from PySide6.QtWidgets import QFileDialog
 
 from airunner.enums import SignalCode, CanvasToolName
 from airunner.settings import VALID_IMAGE_FILES
@@ -170,7 +170,7 @@ class BrushScene(CustomScene):
         if not self.is_brush_or_eraser:
             super().mousePressEvent(event)
         elif self.settings["canvas_settings"]["enable_automatic_drawing"]:
-            self.emit(SignalCode.INTERRUPT_PROCESS_SIGNAL)
+            self.emit_signal(SignalCode.INTERRUPT_PROCESS_SIGNAL)
 
     def mouseReleaseEvent(self, event):
         super().mouseReleaseEvent(event)
@@ -188,7 +188,7 @@ class BrushScene(CustomScene):
         self.settings = settings
         self.do_update = False
         if self.settings["canvas_settings"]["enable_automatic_drawing"]:
-            self.emit(SignalCode.DO_GENERATE_SIGNAL)
+            self.emit_signal(SignalCode.DO_GENERATE_SIGNAL)
 
     def mouseMoveEvent(self, event):
         self.last_pos = event.scenePos()

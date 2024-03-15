@@ -1,5 +1,5 @@
 import uuid
-from PyQt6.QtCore import QPoint
+from PySide6.QtCore import QPoint
 
 from airunner.models.imagedata import ImageData
 

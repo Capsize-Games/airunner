@@ -1,4 +1,4 @@
-from PyQt6.QtWidgets import QColorDialog
+from PySide6.QtWidgets import QColorDialog
 
 from airunner.widgets.base_widget import BaseWidget
 from airunner.widgets.grid_preferences.templates.grid_preferences_ui import Ui_grid_preferences

@@ -37,7 +37,7 @@ class EmbeddingMixin:
                         self.pipe.load_textual_inversion(path, token=token, weight_name=f)
                     except Exception as e:
                         if "already in tokenizer vocabulary" not in str(e):
-                            self.emit(SignalCode.EMBEDDING_LOAD_FAILED_SIGNAL, {
+                            self.emit_signal(SignalCode.EMBEDDING_LOAD_FAILED_SIGNAL, {
                                 'embedding_name': token,
                                 'model_name': self.model,
                             })
