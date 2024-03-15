@@ -18,8 +18,6 @@ from airunner.utils import get_venv_python_executable
 
 def build_ui(path):
     """Build the UI for the application."""
-    # venv_python = get_venv_python_executable()
-    # recursively iterate over directories in path
     print("Building UI at path", path)
     ui_files = Path(__file__).parent.parent.joinpath(path).glob("**/*.ui")
     for ui_file in ui_files:
@@ -44,7 +42,7 @@ def generate_resources():
     print("Generating resources.py")
     subprocess.run(
         [
-            "pyside6-rcc",
+            "pyuic6",
             "-o",
             "src/airunner/resources_light_rc.py",
             "src/airunner/resources_light.qrc",
@@ -53,7 +51,7 @@ def generate_resources():
     )
     subprocess.run(
         [
-            "pyside6-rcc",
+            "pyuic6",
             "-o",
             "src/airunner/resources_dark_rc.py",
             "src/airunner/resources_dark.qrc",

@@ -400,7 +400,7 @@ SCHEDULER_CLASSES = {
 MIN_SEED = 0
 MAX_SEED = 4294967295
 AIRUNNER_ENVIRONMENT = os.environ.get("AIRUNNER_ENVIRONMENT", "dev")  # dev or prod
-LOG_LEVEL = logging.FATAL if AIRUNNER_ENVIRONMENT == "prod" else logging.DEBUG
+LOG_LEVEL = logging.FATAL if AIRUNNER_ENVIRONMENT == "prod" else logging.WARNING
 SCHEDULERS = [e.value for e in Scheduler]
 DEFAULT_SCHEDULER = Scheduler.DPM_PP_2M_K.value
 AVAILABLE_SCHEDULERS_BY_ACTION = {
@@ -483,29 +483,29 @@ DEFAULT_SHORTCUTS = {
         signal=SignalCode.QUIT_APPLICATION
     ),
 }
-ESPEAK_SETTINGS = dict(
-    voices=dict(
-        male=[
+ESPEAK_SETTINGS = {
+    "voices": {
+        "male": [
             "m1", "m2", "m3",
         ],
-        female=[
+        "female": [
             "f1", "f2", "f3",
         ],
-    ),
-    rate=dict(
-        min=-100,
-        max=100,
-        default=0
-    ),
-    pitch=dict(
-        min=-100,
-        max=100,
-        default=0
-    ),
-    volume=dict(
-        min=0,
-        max=100,
-        default=100
-    ),
-    punctuation_modes=["none", "all", "some"],
-)
+    },
+    "rate": {
+        "min": -100,
+        "max": 100,
+        "default": 0
+    },
+    "pitch": {
+        "min": -100,
+        "max": 100,
+        "default": 0
+    },
+    "volume": {
+        "min": 0,
+        "max": 100,
+        "default": 100
+    },
+    "punctuation_modes": ["none", "all", "some"],
+}
