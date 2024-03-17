@@ -372,10 +372,16 @@ class CustomScene(
             base64image = self.settings[self.settings_key]["image"]
 
         if base64image is not None:
-            pil_image = convert_base64_to_image(base64image).convert("RGBA")
+            try:
+                pil_image = convert_base64_to_image(base64image).convert("RGBA")
+            except AttributeError:
+                self.logger.warning("Failed to convert base64 to image")
 
         if pil_image is not None:
-            img = ImageQt.ImageQt(pil_image)
+            try:
+                img = ImageQt.ImageQt(pil_image)
+            except AttributeError as _e:
+                img = None
             # img_scene = self.item.scene() if self.item is not NoneType else None
             # if img_scene is not None:
             #     img_scene.removeItem(self.item)
@@ -390,14 +396,15 @@ class CustomScene(
             self.image.fill(Qt.GlobalColor.transparent)
 
     def set_item(self):
-        if self.item is NoneType:
-            self.item = QGraphicsPixmapItem(QPixmap.fromImage(self.image))
-            self.addItem(self.item)
-        else:
-            self.item.setPixmap(QPixmap.fromImage(self.image))
-            if self.item.scene() is None:
+        if self.image is not None:
+            if self.item is NoneType:
+                self.item = QGraphicsPixmapItem(QPixmap.fromImage(self.image))
                 self.addItem(self.item)
-        self.item.setZValue(1)
+            else:
+                self.item.setPixmap(QPixmap.fromImage(self.image))
+                if self.item.scene() is None:
+                    self.addItem(self.item)
+            self.item.setZValue(1)
 
     def clear_selection(self):
         self.selection_start_pos = None
@@ -430,7 +437,11 @@ class CustomScene(
         # Ensure that the QPainter object has finished painting before creating a new QImage
         if self.painter is not None and self.painter.isActive():
             self.painter.end()
-        self.painter = QPainter(self.image)
+
+        try:
+            self.painter = QPainter(self.image)
+        except TypeError as _e:
+            self.logger.error("Failed to initialize painter in initialize_image")
         return self.image
 
     def do_resize(self):

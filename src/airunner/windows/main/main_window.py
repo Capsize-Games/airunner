@@ -12,10 +12,9 @@ from PySide6.QtWidgets import QApplication, QMainWindow
 from airunner.aihandler.logger import Logger
 from airunner.settings import STATUS_ERROR_COLOR, STATUS_NORMAL_COLOR_LIGHT, STATUS_NORMAL_COLOR_DARK, \
     DARK_THEME_NAME, LIGHT_THEME_NAME, NSFW_CONTENT_DETECTED_MESSAGE
-from airunner.enums import Mode, SignalCode, ServiceCode, CanvasToolName, WindowSection, GeneratorSection
+from airunner.enums import Mode, SignalCode, CanvasToolName, WindowSection, GeneratorSection
 from airunner.mediator_mixin import MediatorMixin
 from airunner.resources_dark_rc import *
-from airunner.service_locator import ServiceLocator
 from airunner.settings import BASE_PATH, DISCORD_LINK, BUG_REPORT_LINK, VULNERABILITY_REPORT_LINK
 from airunner.utils import get_version, default_hf_cache_dir, set_widget_state
 from airunner.widgets.status.status_widget import StatusWidget
@@ -52,7 +51,6 @@ class MainWindow(
     ControlnetModelMixin,
     AIModelMixin
 ):
-    # signals
     show_grid_toggled = Signal(bool)
     cell_size_changed_signal = Signal(int)
     line_width_changed_signal = Signal(int)
@@ -66,93 +64,6 @@ class MainWindow(
     load_image_object = Signal(object)
     loaded = Signal()
     window_opened = Signal()
-
-    def keyPressEvent(self, event):
-        super().keyPressEvent(event)
-        self.handle_key_press(event.key)
-
-    def handle_key_press(self, key):
-        shortcut_key_settings = self.settings["shortcut_key_settings"]
-        for k, v in shortcut_key_settings.items():
-            if v["key"] == key():
-                for signal in SignalCode:
-                    if signal.value == v["signal"]:
-                        self.emit_signal(signal)
-                        break
-    
-    def key_matches(self, key_name, keyboard_key):
-        if not key_name in self.settings["shortcut_key_settings"]:
-            return False
-        return self.settings["shortcut_key_settings"][key_name]["key"] == keyboard_key.value
-    
-    def key_text(self, key_name):
-        if not key_name in self.settings["shortcut_key_settings"]:
-            return ""
-        return self.settings["shortcut_key_settings"][key_name]["text"]
-    
-    def on_update_saved_stablediffusion_prompt_signal(self, options):
-        index, prompt, negative_prompt = options
-        settings = self.settings
-        try:
-            settings["saved_prompts"][index] = {
-                'prompt': prompt,
-                'negative_prompt': negative_prompt,
-            }
-        except KeyError:
-            self.logger.error(f"Unable to update prompt at index {index}")
-        self.settings = settings
-
-    def on_save_stablediffusion_prompt_signal(self):
-        settings = self.settings
-        settings["saved_prompts"].append({
-            'prompt': self.settings["generator_settings"]["prompt"],
-            'negative_prompt': self.settings["generator_settings"]["negative_prompt"],
-        })
-        self.settings = settings
-
-    def set_path_settings(self, key, val):
-        settings = self.settings
-        settings["path_settings"][key] = val
-        self.settings = settings
-    #### END GENERATOR SETTINGS ####
-
-    @property
-    def generator_tab_widget(self):
-        return self.ui.generator_widget
-    
-    @property
-    def version(self):
-        if self._version is None:
-            self._version = get_version()
-        return f"v{self._version}"
-
-    @property
-    def latest_version(self):
-        return self._latest_version
-
-    @latest_version.setter
-    def latest_version(self, val):
-        self._latest_version = val
-
-    @property
-    def document_name(self):
-        return "Untitled"
-
-    def on_describe_image_signal(self, data):
-        image = data["image"]
-        callback = data["callback"]
-        self.generator_tab_widget.ui.ai_tab_widget.describe_image(
-            image=image, 
-            callback=callback
-        )
-    
-    @Slot()
-    def handle_generate(self):
-        #self.prompt_builder.inject_prompt()
-        pass
-
-    def show_layers(self):
-        self.emit_signal(SignalCode.LAYERS_SHOW_SIGNAL)
 
     def __init__(self, *args, **kwargs):
         self.ui = Ui_MainWindow()
@@ -219,6 +130,88 @@ class MainWindow(
         self.ui.enable_controlnet.blockSignals(True)
         self.ui.enable_controlnet.setChecked(self.settings["generator_settings"]["enable_controlnet"])
         self.ui.enable_controlnet.blockSignals(False)
+
+    def keyPressEvent(self, event):
+        super().keyPressEvent(event)
+        self.handle_key_press(event.key)
+
+    def handle_key_press(self, key):
+        shortcut_key_settings = self.settings["shortcut_key_settings"]
+        for k, v in shortcut_key_settings.items():
+            if v["key"] == key():
+                for signal in SignalCode:
+                    if signal.value == v["signal"]:
+                        self.emit_signal(signal)
+                        break
+
+    def key_matches(self, key_name, keyboard_key):
+        if not key_name in self.settings["shortcut_key_settings"]:
+            return False
+        return self.settings["shortcut_key_settings"][key_name]["key"] == keyboard_key.value
+
+    def key_text(self, key_name):
+        if not key_name in self.settings["shortcut_key_settings"]:
+            return ""
+        return self.settings["shortcut_key_settings"][key_name]["text"]
+
+    def on_update_saved_stablediffusion_prompt_signal(self, options):
+        index, prompt, negative_prompt = options
+        settings = self.settings
+        try:
+            settings["saved_prompts"][index] = {
+                'prompt': prompt,
+                'negative_prompt': negative_prompt,
+            }
+        except KeyError:
+            self.logger.error(f"Unable to update prompt at index {index}")
+        self.settings = settings
+
+    def on_save_stablediffusion_prompt_signal(self):
+        settings = self.settings
+        settings["saved_prompts"].append({
+            'prompt': self.settings["generator_settings"]["prompt"],
+            'negative_prompt': self.settings["generator_settings"]["negative_prompt"],
+        })
+        self.settings = settings
+
+    def set_path_settings(self, key, val):
+        settings = self.settings
+        settings["path_settings"][key] = val
+        self.settings = settings
+
+    @property
+    def generator_tab_widget(self):
+        return self.ui.generator_widget
+
+    @property
+    def version(self):
+        if self._version is None:
+            self._version = get_version()
+        return f"v{self._version}"
+
+    @property
+    def latest_version(self):
+        return self._latest_version
+
+    @latest_version.setter
+    def latest_version(self, val):
+        self._latest_version = val
+
+    @property
+    def document_name(self):
+        return "Untitled"
+
+    @Slot(object)
+    def on_describe_image_signal(self, data):
+        image = data["image"]
+        callback = data["callback"]
+        self.generator_tab_widget.ui.ai_tab_widget.describe_image(
+            image=image,
+            callback=callback
+        )
+
+    def show_layers(self):
+        self.emit_signal(SignalCode.LAYERS_SHOW_SIGNAL)
 
     def register_services(self):
         self.logger.debug("Registering services")
@@ -601,7 +594,7 @@ class MainWindow(
         settings["grid_settings"]["show_grid"] = val
         self.settings = settings
     
-    def action_toggle_brush(self, active):
+    def action_toggle_brush(self, active: bool):
         if active:
             self.ui.toggle_select_button.setChecked(False)
             self.ui.toggle_active_grid_area_button.setChecked(False)
@@ -743,7 +736,7 @@ class MainWindow(
         if not active:
             tool = CanvasToolName.NONE
         settings = self.settings
-        settings["current_tool"] = tool.value
+        settings["current_tool"] = tool
         self.settings = settings
         self.emit_signal(SignalCode.APPLICATION_TOOL_CHANGED_SIGNAL, tool)
 
