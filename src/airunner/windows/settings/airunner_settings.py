@@ -57,7 +57,6 @@ class SettingsWindow(BaseWindow):
         self.emit_signal(SignalCode.APPLICATION_SETTINGS_LOADED_SIGNAL)
 
     def handle_value_change(self, attr_name, value=None, widget=None):
-        print("handle_value_change")
         """
         Slider widget callback - this is connected via dynamic properties in the
         qt widget. This function is then called when the value of a SliderWidget

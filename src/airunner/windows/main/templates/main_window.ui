@@ -2313,7 +2313,6 @@
  </customwidgets>
  <resources>
   <include location="../../../resources_light.qrc"/>
-  <include location="../../../testresources.qrc"/>
   <include location="../../../resources_dark.qrc"/>
  </resources>
  <connections>
