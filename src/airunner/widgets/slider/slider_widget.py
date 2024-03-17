@@ -206,17 +206,11 @@ class SliderWidget(BaseWidget):
                 property_key = keys[1]
                 sub_property_key = keys[2]
 
-            if property_key is not None and sub_property_key is None:
+            if property_key:
                 if object_key != "settings":
                     settings[object_key][property_key] = value
-                else:
-                    settings[property_key] = value
-            elif property_key and sub_property_key:
-                if object_key != "settings":
-                    if len(keys) == 3:
+                    if sub_property_key and len(keys) == 3:
                         settings[object_key][property_key][sub_property_key] = value
-                    else:
-                        settings[object_key][property_key] = value
                 else:
                     settings[property_key] = value
             self.settings = settings
