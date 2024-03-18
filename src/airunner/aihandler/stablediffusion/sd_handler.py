@@ -522,7 +522,7 @@ class SDHandler(
                 response["action"] = self.sd_request.generator_settings.section
                 response["outpaint_box_rect"] = self.sd_request.active_rect
 
-                self.emit_signal(SignalCode.ENGINE_DO_RESPONSE_SIGNAL, {
+                self.emit_signal(SignalCode.ENGINE_RESPONSE_WORKER_RESPONSE_SIGNAL, {
                     'code': EngineResponseCode.IMAGE_GENERATED,
                     'message': response
                 })
