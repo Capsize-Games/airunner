@@ -4,13 +4,13 @@ from typing import Optional
 import PIL
 from PIL import ImageQt, Image, ImageFilter
 from PIL.ImageQt import QImage
-from PySide6.QtCore import Qt, QPoint
+from PySide6.QtCore import Qt, QPoint, Slot
 from PySide6.QtGui import QEnterEvent
 from PySide6.QtGui import QPixmap, QPainter
 from PySide6.QtWidgets import QGraphicsScene, QGraphicsPixmapItem, QFileDialog
 
 from airunner.aihandler.logger import Logger
-from airunner.enums import SignalCode, CanvasToolName, GeneratorSection, ServiceCode
+from airunner.enums import SignalCode, CanvasToolName, GeneratorSection, ServiceCode, EngineResponseCode
 from airunner.mediator_mixin import MediatorMixin
 from airunner.service_locator import ServiceLocator
 from airunner.settings import VALID_IMAGE_FILES
@@ -69,7 +69,7 @@ class CustomScene(
             (SignalCode.CANVAS_CANCEL_FILTER_SIGNAL, self.cancel_filter),
             (SignalCode.CANVAS_PREVIEW_FILTER_SIGNAL, self.preview_filter),
             (SignalCode.CANVAS_LOAD_IMAGE_FROM_PATH_SIGNAL, self.on_load_image_from_path),
-            (SignalCode.SD_IMAGE_GENERATED_SIGNAL, self.on_image_generated_signal),
+            (SignalCode.ENGINE_RESPONSE_WORKER_RESPONSE_SIGNAL, self.on_image_generated_signal),
             (SignalCode.CANVAS_COPY_IMAGE_SIGNAL, self.on_canvas_copy_image_signal),
             (SignalCode.CANVAS_CUT_IMAGE_SIGNAL, self.on_canvas_cut_image_signal),
             (SignalCode.CANVAS_ROTATE_90_CLOCKWISE_SIGNAL, self.on_canvas_rotate_90_clockwise_signal),
@@ -296,13 +296,11 @@ class CustomScene(
         self.set_item()
         self.initialize_image()
 
-    def on_image_generated_signal(self, image_data):
-        # self.add_image_to_scene(
-        #     image_data["images"][0].convert("RGBA"),
-        #     is_outpaint=image_data["action"] == GeneratorSection.OUTPAINT.value,
-        #     outpaint_box_rect=image_data["outpaint_box_rect"]
-        # )
-        self.create_image(image_data["images"][0].convert("RGBA"))
+    @Slot(object)
+    def on_image_generated_signal(self, response):
+        code = response["code"]
+        if code == EngineResponseCode.IMAGE_GENERATED:
+            self.create_image(response["message"]["images"][0].convert("RGBA"))
 
     def on_canvas_clear_signal(self):
         settings = self.settings
