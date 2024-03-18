@@ -1,3 +1,4 @@
+from PySide6.QtCore import Slot
 from PySide6.QtWidgets import QWidget, QSizePolicy
 
 from airunner.enums import SignalCode
@@ -17,10 +18,7 @@ class EmbeddingsContainerWidget(BaseWidget):
     def __init__(self, *args, **kwargs):
         super().__init__(*args, **kwargs)
         self.register(SignalCode.EMBEDDING_LOAD_FAILED_SIGNAL, self.on_embedding_load_failed_signal)
-        self.register(
-            SignalCode.EMBEDDING_GET_ALL_RESULTS_SIGNAL,
-            self.on_get_all_embeddings_signal
-        )
+        self.register(SignalCode.EMBEDDING_GET_ALL_RESULTS_SIGNAL, self.on_get_all_embeddings_signal)
         self.scan_for_embeddings()
 
     def disable_embedding(self, name, model_name):
@@ -57,7 +55,9 @@ class EmbeddingsContainerWidget(BaseWidget):
     def load_embeddings(self):
         self.emit_signal(
             SignalCode.EMBEDDING_GET_ALL_SIGNAL,
-            self.search_filter
+            {
+                "name_filter": self.search_filter
+            }
         )
 
     def on_get_all_embeddings_signal(self, embeddings: dict):
