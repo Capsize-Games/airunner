@@ -1,3 +1,5 @@
+from PySide6.QtCore import Slot
+
 from airunner.enums import EngineRequestCode, SignalCode, QueueType
 from airunner.workers.worker import Worker
 
@@ -8,11 +10,11 @@ class EngineRequestWorker(Worker):
     def __init__(self, prefix="EngineRequestWorker"):
         super().__init__(prefix=prefix)
         self.register(SignalCode.ENGINE_DO_REQUEST_SIGNAL, self.on_engine_do_request_signal)
-    
-    def on_engine_do_request_signal(self, request):
+
+    def on_engine_do_request_signal(self, request: dict):
         self.logger.debug("Adding to queue")
         self.add_to_queue(request)
-    
+
     def handle_message(self, request):
         if request["code"] == EngineRequestCode.GENERATE_IMAGE:
             self.emit_signal(SignalCode.SD_REQUEST_SIGNAL, request)

@@ -147,7 +147,9 @@ class ImageWidget(BaseWidget):
             self.meta_data = load_metadata_from_image(image)
 
     def send_image_to_grid(self):
-        self.emit_signal(SignalCode.CANVAS_LOAD_IMAGE_FROM_PATH_SIGNAL, self.image_path)
+        self.emit_signal(SignalCode.CANVAS_LOAD_IMAGE_FROM_PATH_SIGNAL, {
+            "image_path": self.image_path
+        })
 
     def view_image(self):
         from PySide6.QtWidgets import QGraphicsView, QGraphicsScene, QDialog, QVBoxLayout

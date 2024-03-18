@@ -1,3 +1,5 @@
+from PySide6.QtCore import Slot
+
 from airunner.enums import SignalCode, ServiceCode, GeneratorSection, ImageGenerator
 from airunner.widgets.base_widget import BaseWidget
 from airunner.widgets.stablediffusion.templates.stable_diffusion_settings_ui import Ui_stable_diffusion_settings_widget
@@ -100,7 +102,7 @@ class StableDiffusionSettingsWidget(BaseWidget):
             self.ui.version.setCurrentText(current_version)
         self.ui.version.blockSignals(False)
 
-    def on_models_changed_signal(self, data):
+    def on_models_changed_signal(self, data: dict):
         self.load_pipelines()
         self.load_versions()
         self.load_models(data["models"])

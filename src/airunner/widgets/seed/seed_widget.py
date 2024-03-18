@@ -1,3 +1,5 @@
+from PySide6.QtCore import Slot
+
 from airunner.enums import SignalCode
 from airunner.utils import random_seed
 from airunner.widgets.base_widget import BaseWidget
@@ -16,7 +18,7 @@ class SeedWidget(BaseWidget):
         self.ui.lineEdit.setEnabled(not self.settings["generator_settings"]["random_seed"])
         self.ui.lineEdit.blockSignals(False)
 
-    def on_application_settings_changed_signal(self):
+    def on_application_settings_changed_signal(self, _message):
         settings = self.settings
         self.ui.lineEdit.blockSignals(True)
         self.ui.lineEdit.setText(str(settings["generator_settings"]["seed"]))

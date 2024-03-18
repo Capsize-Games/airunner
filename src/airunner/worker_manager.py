@@ -1,8 +1,8 @@
 import traceback
 import numpy as np
 
-from PySide6.QtCore import QObject, Signal
-from airunner.enums import SignalCode
+from PySide6.QtCore import QObject, Signal, Slot
+from airunner.enums import SignalCode, EngineResponseCode
 from airunner.mediator_mixin import MediatorMixin
 from airunner.windows.main.settings_mixin import SettingsMixin
 from airunner.workers.audio_capture_worker import AudioCaptureWorker
@@ -70,7 +70,6 @@ class WorkerManager(QObject, MediatorMixin, SettingsMixin):
         self.register(SignalCode.LLM_RESPONSE_SIGNAL, self.on_llm_response_signal)
         self.register(SignalCode.LLM_TEXT_STREAMED_SIGNAL, self.on_llm_text_streamed_signal)
         self.register(SignalCode.AUDIO_CAPTURE_WORKER_RESPONSE_SIGNAL, self.on_AudioCaptureWorker_response_signal)
-        self.register(SignalCode.AUDIO_PROCESSOR_WORKER_PROCESSED_SIGNAL, self.on_AudioProcessorWorker_processed_audio)
         self.register(SignalCode.VISION_CAPTURED_SIGNAL, self.on_vision_captured)
         self.register(SignalCode.TTS_REQUEST, self.on_tts_request)
         self.register(SignalCode.APPLICATION_SETTINGS_CHANGED_SIGNAL, self.on_application_settings_changed_signal)
@@ -97,7 +96,6 @@ class WorkerManager(QObject, MediatorMixin, SettingsMixin):
             self.vision_capture_worker = create_worker(VisionCaptureWorker)
             self.vision_processor_worker = create_worker(VisionProcessorWorker)
 
-
         self.toggle_vision_capture()
 
     def do_response(self, response):
@@ -105,17 +103,20 @@ class WorkerManager(QObject, MediatorMixin, SettingsMixin):
         Handle a response from the application by putting it into
         a response worker queue.
         """
-        self.engine_response_worker.add_to_queue(response)
+        self.emit_signal(SignalCode.ENGINE_RESPONSE_WORKER_RESPONSE_SIGNAL, {
+            'code': EngineResponseCode.IMAGE_GENERATED,
+            'message': response
+        })
 
     def on_engine_cancel_signal(self, _ignore):
         self.logger.debug("Canceling")
         self.emit_signal(SignalCode.SD_CANCEL_SIGNAL)
         self.engine_request_worker.cancel()
 
-    def on_engine_stop_processing_queue_signal(self):
+    def on_engine_stop_processing_queue_signal(self, _message):
         self.do_process_queue = False
 
-    def on_engine_start_processing_queue_signal(self):
+    def on_engine_start_processing_queue_signal(self, _message):
         self.do_process_queue = True
 
     def on_hear_signal(self, message):
@@ -128,7 +129,7 @@ class WorkerManager(QObject, MediatorMixin, SettingsMixin):
     def handle_generate_caption(self, message):
         pass
 
-    def on_caption_generated_signal(self, message):
+    def on_caption_generated_signal(self, message: dict):
         print("TODO: caption generated signal", message)
 
     def handle_text_generated(self, message, code):
@@ -143,46 +144,40 @@ class WorkerManager(QObject, MediatorMixin, SettingsMixin):
             else:
                 self.emit_signal(SignalCode.VISION_STOP_CAPTURE)
 
-    def on_application_settings_changed_signal(self, message):
+    def on_application_settings_changed_signal(self, _message):
         self.toggle_vision_capture()
 
-    def on_vision_captured(self, message):
+    def on_vision_captured(self, message: dict):
         self.emit_signal(SignalCode.VISION_CAPTURE_PROCESS_SIGNAL, message)
 
-    def on_AudioCaptureWorker_response_signal(self, message: np.ndarray):
+    def on_AudioCaptureWorker_response_signal(self, message: dict):
+        item: np.ndarray = message["item"]
         self.logger.debug("Heard signal")
-        self.stt_audio_processor_worker.add_to_queue(message)
+        self.stt_audio_processor_worker.add_to_queue(item)
 
-    def on_AudioProcessorWorker_processed_audio(self, message: np.ndarray):
-        self.logger.debug("Processed audio")
-        self.emit_signal(SignalCode.AUDIO_PROCESSOR_PROCESSED_AUDIO, message)
-    
-    def on_LLMGenerateWorker_response_signal(self, message:dict):
-        self.emit_signal(SignalCode.LLM_RESPONSE_SIGNAL, message)
-    
     def on_tts_request(self, data: dict):
         self.tts_generator_worker.add_to_queue(data)
-    
-    def on_llm_response_signal(self, message):
+
+    def on_llm_response_signal(self, message: dict):
         self.do_response(message)
     
-    def EngineRequestWorker_handle_default(self, message):
+    def EngineRequestWorker_handle_default(self, message: dict):
         self.logger.error(f"Unknown code: {message['code']}")
-    
-    def on_error_signal(self, message):
+
+    def on_error_signal(self, message: dict):
         traceback.print_stack()
         self.logger.error(message)
 
-    def on_warning_signal(self, message):
+    def on_warning_signal(self, message: dict):
         self.logger.warning(message)
 
-    def on_status_signal(self, message):
+    def on_status_signal(self, message: dict):
         self.logger.debug(message)
 
-    def on_clear_memory_signal(self):
+    def on_clear_memory_signal(self, _message):
         clear_memory()
 
-    def on_llm_text_streamed_signal(self, data):
+    def on_llm_text_streamed_signal(self, data: dict):
         try:
             if self.settings["tts_enabled"]:
                 self.do_tts_request(data["message"], data["is_end_of_message"])
@@ -193,7 +188,7 @@ class WorkerManager(QObject, MediatorMixin, SettingsMixin):
     def on_sd_image_generated_signal(self, message):
         self.emit_signal(SignalCode.SD_IMAGE_GENERATED_SIGNAL, message)
 
-    def on_text_generate_request_signal(self, message):
+    def on_text_generate_request_signal(self, message: dict):
         if self.sd_state == "loaded":
             self.emit_signal(
                 SignalCode.SD_MOVE_TO_CPU_SIGNAL,
@@ -236,4 +231,3 @@ class WorkerManager(QObject, MediatorMixin, SettingsMixin):
     def stop(self):
         self.logger.debug("Stopping")
         self.engine_request_worker.stop()
-        self.engine_response_worker.stop()

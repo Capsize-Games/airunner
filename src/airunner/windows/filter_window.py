@@ -176,5 +176,7 @@ class FilterWindow(BaseWindow):
     def preview_filter(self):
         self.emit_signal(
             SignalCode.CANVAS_PREVIEW_FILTER_SIGNAL,
-            self.filter_object()
+            {
+                "filter_object": self.filter_object()
+            }
         )

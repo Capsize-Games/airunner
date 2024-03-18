@@ -1,6 +1,6 @@
 import traceback
 
-from PySide6.QtCore import QSettings, QByteArray, QDataStream, QIODevice
+from PySide6.QtCore import QSettings, QByteArray, QDataStream, QIODevice, Slot
 
 from airunner.settings import (
     DEFAULT_BRUSH_PRIMARY_COLOR,
@@ -434,7 +434,7 @@ class SettingsMixin:
             elif isinstance(v, dict):
                 self.recursive_update(current[k], v)
 
-    def on_reset_settings_signal(self):
+    def on_reset_settings_signal(self, _message: dict):
         self.logger.debug("Resetting settings")
         self.application_settings.clear()
         self.application_settings.sync()
