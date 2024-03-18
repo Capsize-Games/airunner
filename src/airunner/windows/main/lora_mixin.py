@@ -1,3 +1,5 @@
+from PySide6.QtCore import Slot
+
 from airunner.enums import SignalCode
 
 
@@ -6,7 +8,7 @@ class LoraMixin:
         self.register(SignalCode.LORA_UPDATE_SIGNAL, self.on_update_lora_signal)
         self.register(SignalCode.LORA_ADD_SIGNAL, self.on_add_lora_signal)
 
-    def on_add_lora_signal(self, params):
+    def on_add_lora_signal(self, params: dict):
         settings = self.settings
         name = params["name"]
         path = params["path"]
@@ -29,8 +31,8 @@ class LoraMixin:
         settings["lora"].append(lora)
         self.settings = settings
         return lora
-    
-    def on_update_lora_signal(self, lora):
+
+    def on_update_lora_signal(self, lora: dict):
         settings = self.settings
         for index, _lora in enumerate(self.settings["lora"]):
             if _lora["name"] == lora["name"] and _lora["path"] == lora["path"]:

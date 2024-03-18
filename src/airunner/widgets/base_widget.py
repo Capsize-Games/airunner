@@ -1,4 +1,5 @@
 import os
+from typing import Callable
 
 from PySide6 import QtGui
 from PySide6.QtWidgets import QWidget
@@ -21,10 +22,10 @@ class BaseWidget(
     qss_filename = None
     threads = []
 
-    def register_service(self, name, service):
+    def register_service(self, name: str, service: Callable):
         ServiceLocator.register(name, service)
 
-    def get_service(self, name):
+    def get_service(self, name: str):
         return ServiceLocator.get(name)
 
     @property
