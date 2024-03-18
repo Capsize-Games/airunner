@@ -1,11 +1,10 @@
 import queue
 
-from PySide6.QtCore import Signal, QThread, QSettings, QObject
+from PySide6.QtCore import Signal, QThread, QSettings, QObject, Slot
 
 from airunner.enums import QueueType, SignalCode, WorkerState
 from airunner.aihandler.logger import Logger
 from airunner.mediator_mixin import MediatorMixin
-from airunner.service_locator import ServiceLocator
 from airunner.settings import SLEEP_TIME_IN_MS, ORGANIZATION, APPLICATION_NAME
 from airunner.windows.main.settings_mixin import SettingsMixin
 
@@ -38,8 +37,8 @@ class Worker(QObject, MediatorMixin, SettingsMixin):
             self.stop
         )
         self.register_signals()
-    
-    def on_application_settings_changed_signal(self, _ignore):
+
+    def on_application_settings_changed_signal(self, _ignore: dict):
         self.update_properties()
     
     def update_properties(self):
@@ -107,10 +106,10 @@ class Worker(QObject, MediatorMixin, SettingsMixin):
         except queue.Empty:
             return None
 
-    def pause(self):
+    def pause(self, _message: None):
         self.state = WorkerState.PAUSED
 
-    def unpause(self, _message):
+    def unpause(self, _message: dict):
         if self.state == WorkerState.PAUSED:
             self.state = WorkerState.RUNNING
 
@@ -141,8 +140,8 @@ class Worker(QObject, MediatorMixin, SettingsMixin):
         self.queue = queue.Queue()
         self.items = {}
         self.current_index = 0
-    
-    def stop(self):
+
+    def stop(self, _message: dict=None):
         self.logger.debug("Stopping")
         self.running = False
         self.finished.emit()
