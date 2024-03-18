@@ -1,5 +1,5 @@
 from PIL import ImageQt, Image
-from PySide6.QtCore import Qt, QPointF
+from PySide6.QtCore import Qt, QPointF, Slot
 from PySide6.QtGui import QPainterPath
 from PySide6.QtGui import QPen, QPixmap, QPainter
 from PySide6.QtGui import QColor
@@ -74,8 +74,9 @@ class BrushScene(CustomScene):
             CanvasToolName.ERASER
         )
 
-    def handle_brush_color_changed(self, color_name):
-        self._brush_color = QColor(color_name)
+    @Slot(object)
+    def handle_brush_color_changed(self, data):
+        self._brush_color = QColor(data["color"])
 
     def drawBackground(self, painter, rect):
         if self.painter is None:

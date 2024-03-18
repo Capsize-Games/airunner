@@ -40,7 +40,9 @@ class BrushContainerWidget(BaseWidget):
             self.set_button_color()
             self.emit_signal(
                 SignalCode.BRUSH_COLOR_CHANGED_SIGNAL,
-                color.name()
+                {
+                    "color": color.name()
+                }
             )
 
     def set_button_color(self):
