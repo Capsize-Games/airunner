@@ -894,7 +894,9 @@ class SDHandler(
         if controlnet_image:
             self.emit_signal(
                 SignalCode.SD_CONTROLNET_IMAGE_GENERATED_SIGNAL,
-                controlnet_image
+                {
+                    "image": controlnet_image
+                }
             )
         else:
             print("NO CONTROLNET IMAGE GENERATED")
