@@ -2,9 +2,8 @@ import traceback
 import numpy as np
 
 from PySide6.QtCore import QObject, Signal
-from airunner.enums import EngineResponseCode, SignalCode, EngineRequestCode
+from airunner.enums import SignalCode
 from airunner.mediator_mixin import MediatorMixin
-from airunner.service_locator import ServiceLocator
 from airunner.windows.main.settings_mixin import SettingsMixin
 from airunner.workers.audio_capture_worker import AudioCaptureWorker
 from airunner.workers.audio_processor_worker import AudioProcessorWorker
@@ -13,7 +12,6 @@ from airunner.workers.tts_vocalizer_worker import TTSVocalizerWorker
 from airunner.workers.llm_request_worker import LLMRequestWorker
 from airunner.workers.llm_generate_worker import LLMGenerateWorker
 from airunner.workers.engine_request_worker import EngineRequestWorker
-from airunner.workers.engine_response_worker import EngineResponseWorker
 from airunner.workers.sd_worker import SDWorker
 from airunner.aihandler.logger import Logger
 from airunner.utils import clear_memory, create_worker
@@ -68,7 +66,6 @@ class WorkerManager(QObject, MediatorMixin, SettingsMixin):
         self.register(SignalCode.LOG_WARNING_SIGNAL, self.on_warning_signal)
         self.register(SignalCode.LOG_STATUS_SIGNAL, self.on_status_signal)
         self.register(SignalCode.VISION_CAPTION_GENERATED_SIGNAL, self.on_caption_generated_signal)
-        self.register(SignalCode.ENGINE_RESPONSE_WORKER_RESPONSE_SIGNAL, self.on_EngineResponseWorker_response_signal)
         self.register(SignalCode.LLM_TEXT_GENERATE_REQUEST_SIGNAL, self.on_text_generate_request_signal)
         self.register(SignalCode.LLM_RESPONSE_SIGNAL, self.on_llm_response_signal)
         self.register(SignalCode.LLM_TEXT_STREAMED_SIGNAL, self.on_llm_text_streamed_signal)
@@ -83,7 +80,6 @@ class WorkerManager(QObject, MediatorMixin, SettingsMixin):
         self.sd_worker = create_worker(SDWorker)
 
         self.engine_request_worker = create_worker(EngineRequestWorker)
-        self.engine_response_worker = create_worker(EngineResponseWorker)
 
         if not disable_tts:
             self.tts_generator_worker = create_worker(TTSGeneratorWorker)
@@ -182,12 +178,6 @@ class WorkerManager(QObject, MediatorMixin, SettingsMixin):
 
     def on_status_signal(self, message):
         self.logger.debug(message)
-        
-    def on_EngineResponseWorker_response_signal(self, response:dict):
-        self.logger.debug("EngineResponseWorker_response_signal received")
-        code = response["code"]
-        if code == EngineResponseCode.IMAGE_GENERATED:
-            self.emit_signal(SignalCode.SD_IMAGE_GENERATED_SIGNAL, response["message"])
 
     def on_clear_memory_signal(self):
         clear_memory()
