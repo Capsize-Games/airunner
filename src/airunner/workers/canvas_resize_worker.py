@@ -1,4 +1,4 @@
-from PySide6.QtCore import Qt
+from PySide6.QtCore import Qt, Slot
 from PySide6.QtGui import QBrush, QColor, QPen
 
 from airunner.enums import QueueType, SignalCode
@@ -12,8 +12,8 @@ class CanvasResizeWorker(Worker):
     def __init__(self, *args, **kwargs):
         super().__init__(*args, **kwargs)
         self.register(SignalCode.CANVAS_RESIZE_SIGNAL, self.on_canvas_resize_signal)
-    
-    def on_canvas_resize_signal(self, data):
+
+    def on_canvas_resize_signal(self, data: dict):
         self.add_to_queue(data)
     
     def handle_message(self, data):

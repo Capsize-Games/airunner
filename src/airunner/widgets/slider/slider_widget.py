@@ -1,4 +1,4 @@
-from PySide6.QtCore import Qt
+from PySide6.QtCore import Qt, Slot
 from PySide6.QtWidgets import QLabel, QDoubleSpinBox
 
 from airunner.enums import SignalCode, ServiceCode
@@ -99,8 +99,8 @@ class SliderWidget(BaseWidget):
         self.settings_property = None
         self.label = None
         self.register(SignalCode.APPLICATION_MAIN_WINDOW_LOADED_SIGNAL, self.on_main_window_loaded_signal)
-    
-    def on_main_window_loaded_signal(self):
+
+    def on_main_window_loaded_signal(self, _message):
         self.init()
 
     def settings_loaded(self, callback):

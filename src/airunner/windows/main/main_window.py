@@ -154,7 +154,7 @@ class MainWindow(
             return ""
         return self.settings["shortcut_key_settings"][key_name]["text"]
 
-    def on_update_saved_stablediffusion_prompt_signal(self, options):
+    def on_update_saved_stablediffusion_prompt_signal(self, options: dict):
         index, prompt, negative_prompt = options
         settings = self.settings
         try:
@@ -166,7 +166,7 @@ class MainWindow(
             self.logger.error(f"Unable to update prompt at index {index}")
         self.settings = settings
 
-    def on_save_stablediffusion_prompt_signal(self):
+    def on_save_stablediffusion_prompt_signal(self, _message):
         settings = self.settings
         settings["saved_prompts"].append({
             'prompt': self.settings["generator_settings"]["prompt"],
@@ -201,7 +201,6 @@ class MainWindow(
     def document_name(self):
         return "Untitled"
 
-    @Slot(object)
     def on_describe_image_signal(self, data):
         image = data["image"]
         callback = data["callback"]
@@ -226,10 +225,10 @@ class MainWindow(
         self.register(SignalCode.QUIT_APPLICATION, self.action_quit_triggered)
         self.register(SignalCode.SD_NSFW_CONTENT_DETECTED_SIGNAL, self.on_nsfw_content_detected_signal)
         self.register(SignalCode.VISION_CAPTURED_SIGNAL, self.on_vision_captured_signal)
-        self.register(SignalCode.ENABLE_BRUSH_TOOL_SIGNAL, lambda: self.action_toggle_brush(True))
-        self.register(SignalCode.ENABLE_ERASER_TOOL_SIGNAL, lambda: self.action_toggle_eraser(True))
-        self.register(SignalCode.ENABLE_SELECTION_TOOL_SIGNAL, lambda: self.action_toggle_select(True))
-        self.register(SignalCode.ENABLE_MOVE_TOOL_SIGNAL, lambda: self.action_toggle_active_grid_area(True))
+        self.register(SignalCode.ENABLE_BRUSH_TOOL_SIGNAL, lambda: self.action_toggle_brush_handler({"active": True}))
+        self.register(SignalCode.ENABLE_ERASER_TOOL_SIGNAL, lambda: self.action_toggle_eraser_handler({"active": True}))
+        self.register(SignalCode.ENABLE_SELECTION_TOOL_SIGNAL, lambda: self.action_toggle_select_handler({"active": True}))
+        self.register(SignalCode.ENABLE_MOVE_TOOL_SIGNAL, lambda: self.action_toggle_active_grid_area({"active": True}))
 
     def on_vision_captured_signal(self, data: dict):
         # Create the window if it doesn't exist
@@ -294,15 +293,11 @@ class MainWindow(
     The following functions are defined in and connected to the appropriate
     signals in the corresponding ui file.
     """
-    def action_new_document_triggered(self):
-        self.new_document()
-        self.emit_signal(SignalCode.CANVAS_CLEAR)
-
-    def action_quit_triggered(self):
+    def action_quit_triggered(self, _message: dict):
         QApplication.quit()
         self.close()
 
-    def on_nsfw_content_detected_signal(self, _response):
+    def on_nsfw_content_detected_signal(self, _message: dict):
         # display message in status
         self.emit_signal(
             SignalCode.APPLICATION_STATUS_ERROR_SIGNAL,
@@ -317,96 +312,131 @@ class MainWindow(
         self.save_state()
         super().closeEvent(event)
 
+    @Slot()
+    def action_new_document_triggered(self):
+        self.new_document()
+        self.emit_signal(SignalCode.CANVAS_CLEAR)
+
+    @Slot()
     def action_undo_triggered(self):
         self.undo()
 
+    @Slot()
     def action_redo_triggered(self):
         self.redo()
 
+    @Slot()
     def action_paste_image_triggered(self):
         self.emit_signal(SignalCode.CANVAS_PASTE_IMAGE_SIGNAL)
 
+    @Slot()
     def action_copy_image_triggered(self):
         self.emit_signal(SignalCode.CANVAS_COPY_IMAGE_SIGNAL)
 
+    @Slot()
     def action_cut_image_triggered(self):
         self.emit_signal(SignalCode.CANVAS_CUT_IMAGE_SIGNAL)
 
+    @Slot()
     def action_rotate_90_clockwise_triggered(self):
         self.emit_signal(SignalCode.CANVAS_ROTATE_90_CLOCKWISE_SIGNAL)
 
+    @Slot()
     def action_rotate_90_counterclockwise_triggered(self):
         self.emit_signal(SignalCode.CANVAS_ROTATE_90_COUNTER_CLOCKWISE_SIGNAL)
 
+    @Slot()
     def action_show_prompt_browser_triggered(self):
         self.show_prompt_browser()
 
+    @Slot()
     def action_clear_all_prompts_triggered(self):
         self.clear_all_prompts()
 
+    @Slot()
     def action_show_model_manager(self):
         print("TODO: show model manager")
 
+    @Slot()
     def action_show_image_browser(self):
         print("TODO: show image browser window")
 
+    @Slot()
     def action_show_controlnet(self):
         self.show_section(WindowSection.CONTROLNET)
 
+    @Slot()
     def action_show_embeddings(self):
         self.show_section(WindowSection.EMBEDDINGS)
 
+    @Slot()
     def action_show_lora(self):
         self.show_section(WindowSection.LORA)
 
+    @Slot()
     def action_show_pen(self):
         self.show_section(WindowSection.PEN)
 
+    @Slot()
     def action_show_active_grid(self):
         self.show_section(WindowSection.ACTIVE_GRID)
 
+    @Slot()
     def action_show_stablediffusion(self):
         self.activate_image_generation_section()
 
+    @Slot()
     def action_triggered_browse_ai_runner_path(self):
         path = self.base_path
         if path == "":
             path = BASE_PATH
         self.show_path(path)
 
+    @Slot()
     def action_show_hf_cache_manager(self):
         self.show_settings_path("hf_cache_path", default_hf_cache_dir())
 
+    @Slot()
     def action_show_images_path(self):
         self.show_settings_path("image_path")
-    
+
+    @Slot()
     def action_show_videos_path(self):
         self.show_settings_path("video_path")
-    
+
+    @Slot()
     def action_show_model_path_txt2img(self):
         self.show_settings_path("txt2img_model_path")
-    
+
+    @Slot()
     def action_show_model_path_depth2img(self):
         self.show_settings_path("depth2img_model_path")
-    
+
+    @Slot()
     def action_show_model_path_pix2pix(self):
         self.show_settings_path("pix2pix_model_path")
-    
+
+    @Slot()
     def action_show_model_path_inpaint(self):
         self.show_settings_path("inpaint_model_path")
-    
+
+    @Slot()
     def action_show_model_path_upscale(self):
         self.show_settings_path("upscale_model_path")
-    
+
+    @Slot()
     def action_show_model_path_txt2vid(self):
         self.show_settings_path("txt2vid_model_path")
-    
+
+    @Slot()
     def action_show_model_path_embeddings(self):
         self.show_settings_path("embeddings_model_path")
-    
+
+    @Slot()
     def action_show_model_path_lora(self):
         self.show_settings_path("lora_model_path")
 
+    @Slot()
     def action_show_llm(self):
         pass
 
@@ -433,21 +463,27 @@ class MainWindow(
         getattr(self.ui, widget_name).setIcon(icon)
         self.update()
 
+    @Slot()
     def action_show_about_window(self):
         AboutWindow()
 
+    @Slot()
     def action_show_model_merger_window(self):
         ModelMerger()
 
+    @Slot()
     def action_show_settings(self):
         SettingsWindow()
 
+    @Slot()
     def action_open_vulnerability_report(self):
         webbrowser.open(VULNERABILITY_REPORT_LINK)
 
+    @Slot()
     def action_open_bug_report(self):
         webbrowser.open(BUG_REPORT_LINK)
 
+    @Slot()
     def action_open_discord(self):
         webbrowser.open(DISCORD_LINK)
 
@@ -593,8 +629,27 @@ class MainWindow(
         settings = self.settings
         settings["grid_settings"]["show_grid"] = val
         self.settings = settings
-    
-    def action_toggle_brush(self, active: bool):
+
+    @Slot(bool)
+    def action_toggle_brush(self, val):
+        self.action_toggle_brush_handler({
+            "active": val
+        })
+
+    @Slot(bool)
+    def action_toggle_eraser(self, val: bool):
+        self.action_toggle_eraser_handler({
+            "active": val
+        })
+
+    @Slot(bool)
+    def action_toggle_select(self, val):
+        self.action_toggle_select_handler({
+            "active": val
+        })
+
+    def action_toggle_brush_handler(self, message: dict):
+        active: bool = message["active"]
         if active:
             self.ui.toggle_select_button.setChecked(False)
             self.ui.toggle_active_grid_area_button.setChecked(False)
@@ -604,14 +659,16 @@ class MainWindow(
             self.ui.toggle_brush_button.blockSignals(False)
         self.toggle_tool(CanvasToolName.BRUSH, active)
 
-    def action_toggle_select(self, active):
+    def action_toggle_select_handler(self, message: dict):
+        active: bool = message["active"]
         if active:
             self.ui.toggle_active_grid_area_button.setChecked(False)
             self.ui.toggle_brush_button.setChecked(False)
             self.ui.toggle_eraser_button.setChecked(False)
         self.toggle_tool(CanvasToolName.SELECTION, active)
 
-    def action_toggle_eraser(self, active):
+    def action_toggle_eraser_handler(self, message: dict):
+        active: bool = message["active"]
         if active:
             self.ui.toggle_select_button.setChecked(False)
             self.ui.toggle_active_grid_area_button.setChecked(False)
@@ -621,7 +678,8 @@ class MainWindow(
             self.ui.toggle_eraser_button.blockSignals(False)
         self.toggle_tool(CanvasToolName.ERASER, active)
 
-    def action_toggle_active_grid_area(self, active):
+    def action_toggle_active_grid_area(self, message: dict):
+        active: bool = message["active"]
         if active:
             self.ui.toggle_select_button.setChecked(False)
             self.ui.toggle_brush_button.setChecked(False)
@@ -738,7 +796,9 @@ class MainWindow(
         settings = self.settings
         settings["current_tool"] = tool
         self.settings = settings
-        self.emit_signal(SignalCode.APPLICATION_TOOL_CHANGED_SIGNAL, tool)
+        self.emit_signal(SignalCode.APPLICATION_TOOL_CHANGED_SIGNAL, {
+            "tool": tool
+        })
 
     def show_section(self, section: WindowSection):
         section_lists = {

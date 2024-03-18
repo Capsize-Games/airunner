@@ -65,7 +65,6 @@ class CustomScene(
     def register_signals(self):
         signals = [
             (SignalCode.SCENE_RESIZE_SIGNAL, self.resize),
-            (SignalCode.SCENE_DO_UPDATE_IMAGE_SIGNAL, self.update_current_pixmap),
             (SignalCode.CANVAS_CANCEL_FILTER_SIGNAL, self.cancel_filter),
             (SignalCode.CANVAS_PREVIEW_FILTER_SIGNAL, self.preview_filter),
             (SignalCode.CANVAS_LOAD_IMAGE_FROM_PATH_SIGNAL, self.on_load_image_from_path),
@@ -81,7 +80,7 @@ class CustomScene(
         for signal, handler in signals:
             self.register(signal, handler)
 
-    def export_image(self):
+    def export_image(self, _message):
         image = self.current_active_image()
         if image:
             file_path, _ = QFileDialog.getSaveFileName(
@@ -99,7 +98,7 @@ class CustomScene(
 
             image.save(file_path)
 
-    def import_image(self):
+    def import_image(self, _message):
         file_path, _ = QFileDialog.getOpenFileName(
             None,
             "Open Image",
@@ -126,7 +125,7 @@ class CustomScene(
             "pivot_point_y": value.y()
         })
 
-    def paste_image_from_clipboard(self):
+    def paste_image_from_clipboard(self, _message):
         image = self.clipboard_handler.paste_image_from_clipboard()
         #self.delete_image()
 
@@ -149,7 +148,8 @@ class CustomScene(
         image.thumbnail(max_size, PIL.Image.Resampling.BICUBIC)
         return image
 
-    def on_load_image_from_path(self, image_path):
+    def on_load_image_from_path(self, message):
+        image_path = message["image_path"]
         if image_path is None or image_path == "":
             return
         image = Image.open(image_path)
@@ -171,12 +171,13 @@ class CustomScene(
             image = self.resize_image(image)
         self.add_image_to_scene(image)
 
-    def cancel_filter(self):
+    def cancel_filter(self, _message):
         image = self.image_handler.cancel_filter()
         if image:
             self.load_image_from_object(image=image)
 
-    def preview_filter(self, filter_object: ImageFilter.Filter):
+    def preview_filter(self, message):
+        filter_object: ImageFilter.Filter = message["filter_object"]
         filtered_image = self.image_handler.preview_filter(
             self.current_active_image(),
             filter_object
@@ -296,31 +297,29 @@ class CustomScene(
         self.set_item()
         self.initialize_image()
 
-    @Slot(object)
     def on_image_generated_signal(self, response):
         code = response["code"]
         if code == EngineResponseCode.IMAGE_GENERATED:
             self.create_image(response["message"]["images"][0].convert("RGBA"))
+        else:
+            self.logger.error(f"Unhandled response code: {code}")
 
-    def on_canvas_clear_signal(self):
+    def on_canvas_clear_signal(self, _message):
         settings = self.settings
         settings[self.settings_key]["image"] = None
         self.settings = settings
         self.delete_image()
 
-    def update_current_pixmap(self, image: Image):
-        self.item.setPixmap(QPixmap.fromImage(image))
-
-    def on_canvas_copy_image_signal(self, _event):
+    def on_canvas_copy_image_signal(self, _message):
         self.copy_image(self.current_active_image())
 
-    def on_canvas_cut_image_signal(self, _event):
+    def on_canvas_cut_image_signal(self, _message):
         self.cut_image(self.current_active_image())
 
-    def on_canvas_rotate_90_clockwise_signal(self, _event):
+    def on_canvas_rotate_90_clockwise_signal(self, _message):
         self.rotate_90_clockwise()
 
-    def on_canvas_rotate_90_counter_clockwise_signal(self, _event):
+    def on_canvas_rotate_90_counter_clockwise_signal(self, _message):
         self.rotate_90_counterclockwise()
 
     def rotate_90_clockwise(self):
@@ -407,8 +406,8 @@ class CustomScene(
     def clear_selection(self):
         self.selection_start_pos = None
         self.selection_stop_pos = None
-    
-    def resize(self, size):
+
+    def resize(self, message):
         """
         This function is triggered on canvas viewport resize.
         It is used to resize the pixmap which is used for drawing on the canvas.
@@ -418,6 +417,7 @@ class CustomScene(
         :param size:
         :return:
         """
+        size = message["size"]
         # self._target_size = size
         # self._do_resize = True
 

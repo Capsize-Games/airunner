@@ -1,6 +1,6 @@
 from typing import Callable
 
-from PySide6.QtCore import QObject, Signal as BaseSignal
+from PySide6.QtCore import QObject, Signal as BaseSignal, Slot
 
 from airunner.enums import SignalCode
 
@@ -27,11 +27,9 @@ class Signal(QObject):
 
         self.signal.connect(self.on_signal_received)
 
+    @Slot(object)
     def on_signal_received(self, data: dict):
-        try:
-            self.callback(data)
-        except TypeError:
-            self.callback()
+        self.callback(data)
 
 
 SIGNALS = {}
@@ -55,11 +53,6 @@ class SignalMediator(metaclass=SingletonMeta):
         if code not in SIGNALS:
             # Create a new Signal instance for this signal name
             SIGNALS[code] = Signal(callback=slot_function)
-        # Connect the Signal's Signal to receive the method of the slot parent
-        try:
-            SIGNALS[code].signal.connect(slot_function)
-        except Exception as e:
-            print(f"Error connecting signal {code}", e)
 
     def emit_signal(
         self,
@@ -72,5 +65,6 @@ class SignalMediator(metaclass=SingletonMeta):
         :param data:
         :return:
         """
+        data = {} if data is None else data
         if code in SIGNALS:
             SIGNALS[code].signal.emit(data)

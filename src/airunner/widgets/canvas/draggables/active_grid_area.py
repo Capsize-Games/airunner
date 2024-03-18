@@ -1,6 +1,6 @@
 from PIL.ImageQt import QImage
 
-from PySide6.QtCore import QRect
+from PySide6.QtCore import QRect, Slot
 from PySide6.QtGui import QBrush, QColor, QPen, QPixmap, QPainter
 from PySide6.QtWidgets import QGraphicsItem
 
@@ -58,7 +58,7 @@ class ActiveGridArea(DraggablePixmap):
             min(self.rect.y(), self.rect.y() + self.rect.height())
         )
 
-    def render_fill(self):
+    def render_fill(self, _message):
         settings = ServiceLocator.get("get_settings")()
 
         if (

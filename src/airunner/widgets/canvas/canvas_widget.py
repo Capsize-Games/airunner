@@ -164,7 +164,7 @@ class CanvasWidget(BaseWidget):
         if not draw_grid:
             return
 
-        ServiceLocator.get(ServiceCode.CANVAS_REGISTER_LINE_DATA)(lines_data)
+        #ServiceLocator.get(ServiceCode.CANVAS_REGISTER_LINE_DATA)(lines_data)
 
         self.do_draw(
             force_draw=force_draw,
@@ -253,7 +253,9 @@ class CanvasWidget(BaseWidget):
             self.emit_signal(SignalCode.CANVAS_DO_RESIZE_SIGNAL)
         self.emit_signal(
             SignalCode.SCENE_RESIZE_SIGNAL,
-            self.size()
+            {
+                "size": self.size()
+            }
         )
 
     def showEvent(self, event):

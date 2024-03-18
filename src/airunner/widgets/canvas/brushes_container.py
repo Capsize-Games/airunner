@@ -4,7 +4,7 @@ import json
 from io import BytesIO
 
 from PIL import Image
-from PySide6.QtCore import QBuffer
+from PySide6.QtCore import QBuffer, Slot
 from PySide6.QtGui import QPixmap
 from PySide6.QtWidgets import QInputDialog
 from PySide6.QtWidgets import QMenu
@@ -86,22 +86,19 @@ class BrushesContainer(BaseWidget):
         settings["presets"].append(brush)
         self.settings = settings
         return brush
-    
-    def activate_brush(self, clicked_widget, brush, multiple):
+
+    def activate_brush(self, message):
+        clicked_widget = message["widget"]
         if clicked_widget in self.selected_brushes:
             if len(self.selected_brushes) == 1:
                 self.selected_brushes.remove(clicked_widget)
                 clicked_widget.setStyleSheet("")
             else:
                 for widget in self.selected_brushes:
-                    if not multiple:
-                        if widget is not clicked_widget:
-                            self.selected_brushes.remove(widget)
-                            widget.setStyleSheet("")
-                            break
-                    else:
+                    if widget is not clicked_widget:
                         self.selected_brushes.remove(widget)
                         widget.setStyleSheet("")
+                        break
             print("TODO: save this?")
             return
 
@@ -111,10 +108,7 @@ class BrushesContainer(BaseWidget):
             except RuntimeError:
                 pass
         
-        if not multiple:
-            self.selected_brushes = [clicked_widget]
-        else:
-            self.selected_brushes.append(clicked_widget)
+        self.selected_brushes = [clicked_widget]
         
         if len(self.selected_brushes) > 2:
             self.selected_brushes = self.selected_brushes[1:]
@@ -123,7 +117,7 @@ class BrushesContainer(BaseWidget):
             widget.setStyleSheet(f"""
                 border: 2px solid #ff0000;
             """)
-    
+
     def display_brush_menu(self, message):
         event = message["event"]
         widget = message["widget"]

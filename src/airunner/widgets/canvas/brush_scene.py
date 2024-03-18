@@ -38,7 +38,7 @@ class BrushScene(CustomScene):
         for signal, handler in signals:
             self.register(signal, handler)
 
-    def export_image(self):
+    def export_image(self, _message):
         image = self.current_active_image()
         if image:
             file_path, _ = QFileDialog.getSaveFileName(
@@ -56,7 +56,7 @@ class BrushScene(CustomScene):
 
             image.save(file_path)
 
-    def import_image(self):
+    def import_image(self, _message):
         file_path, _ = QFileDialog.getOpenFileName(
             None,
             "Open Image",
@@ -74,7 +74,6 @@ class BrushScene(CustomScene):
             CanvasToolName.ERASER
         )
 
-    @Slot(object)
     def handle_brush_color_changed(self, data):
         self._brush_color = QColor(data["color"])
 

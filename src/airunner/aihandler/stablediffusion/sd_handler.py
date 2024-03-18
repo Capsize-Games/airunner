@@ -3,6 +3,7 @@ import base64
 import traceback
 
 import numpy as np
+from PySide6.QtCore import Slot
 from PySide6.QtWidgets import QApplication
 from pytorch_lightning import seed_everything
 from typing import List
@@ -223,8 +224,7 @@ class SDHandler(
         self.do_interrupt = False
         self.latents_worker = create_worker(LatentsWorker)
 
-
-    def on_interrupt_process_signal(self):
+    def on_interrupt_process_signal(self, _message):
         self.do_interrupt = True
 
     @property
@@ -465,7 +465,7 @@ class SDHandler(
     def is_pytorch_error(e) -> bool:
         return "PYTORCH_CUDA_ALLOC_CONF" in str(e)
 
-    def on_do_generate_signal(self):
+    def on_do_generate_signal(self, _message):
         self.do_generate = True
 
     def run(self):
@@ -718,10 +718,10 @@ class SDHandler(
         # self.generator_sample()
         pass
 
-    def on_sd_cancel_signal(self):
+    def on_sd_cancel_signal(self, _message):
         print("on_sd_cancel_signal")
 
-    def on_stop_auto_image_generation_signal(self):
+    def on_stop_auto_image_generation_signal(self, _message):
         #self.sd_mode = SDMode.STANDARD
         pass
 
@@ -832,7 +832,8 @@ class SDHandler(
             self.latents = latents
         return {}
 
-    def on_unload_stablediffusion_signal(self):
+    @Slot(object)
+    def on_unload_stablediffusion_signal(self, _message):
         self.unload()
 
     def unload(self):
