@@ -1,6 +1,6 @@
 from functools import partial
 
-from PySide6.QtCore import QPointF, QPoint, Qt, QRect, QEvent
+from PySide6.QtCore import QPointF, QPoint, Qt, QRect, QEvent, Slot
 from PySide6.QtGui import QMouseEvent, QColor, QBrush
 from PySide6.QtWidgets import QGraphicsView, QGraphicsItemGroup
 
@@ -33,15 +33,12 @@ class CustomGraphicsView(
         self.initialized = False
         self.drawing = False
         self.pixmaps = {}
-        self.register(
-            SignalCode.APPLICATION_TOOL_CHANGED_SIGNAL,
-            self.on_tool_changed_signal
-        )
         self.line_group = QGraphicsItemGroup()
         self.resizeEvent = self.window_resized
 
         # register signal handlers
         signal_handlers = {
+            SignalCode.APPLICATION_TOOL_CHANGED_SIGNAL: self.on_tool_changed_signal,
             SignalCode.CANVAS_DO_RESIZE_SIGNAL: self.do_resize_canvas,
             SignalCode.CANVAS_ZOOM_LEVEL_CHANGED: self.on_zoom_level_changed_signal,
             SignalCode.SET_CANVAS_COLOR_SIGNAL: self.set_canvas_color,
@@ -54,10 +51,10 @@ class CustomGraphicsView(
         for k, v in signal_handlers.items():
             self.register(k, v)
 
-        ServiceLocator.register(
-            ServiceCode.CANVAS_REGISTER_LINE_DATA,
-            self.register_line_data
-        )
+        # ServiceLocator.register(
+        #     ServiceCode.CANVAS_REGISTER_LINE_DATA,
+        #     self.register_line_data
+        # )
 
         self.line_group = None
         self.last_pos = QPoint(0, 0)
@@ -67,7 +64,7 @@ class CustomGraphicsView(
     def canvas_type(self) -> str:
         return self.property("canvas_type")
 
-    def on_main_window_loaded_signal(self):
+    def on_main_window_loaded_signal(self, _message):
         self.initialized = True
 
     def on_canvas_do_draw_signal(self, data: dict):
@@ -94,17 +91,19 @@ class CustomGraphicsView(
     def draw_grid(self):
         self.scene.addItem(self.line_group)
 
-    def clear_lines(self):
+    def clear_lines(self, _message):
         self.remove_scene_item(self.line_group)
         self.line_group = QGraphicsItemGroup()
 
-    def register_line_data(self, lines_data):
-        for line_data in lines_data:
-            try:
-                line = self.scene.addLine(*line_data)
-                self.line_group.addToGroup(line)
-            except TypeError as e:
-                self.logger.error(f"TypeError: {e}")
+    # def register_line_data(self, lines_data):
+    #     for line_data in lines_data:
+    #         try:
+    #             line = self.scene.addLine(*line_data)
+    #             self.line_group.addToGroup(line)
+    #         except TypeError as e:
+    #             self.logger.error(f"TypeError: {e}")
+    #         except AttributeError as e:
+    #             self.logger.error(f"AttributeError: {e}")
 
     def set_scene_rect(self):
         canvas_container_size = self.viewport().size()
@@ -115,7 +114,7 @@ class CustomGraphicsView(
             canvas_container_size.height()
         )
 
-    def update_scene(self):
+    def update_scene(self, _message=None):
         self.scene.update()
 
     def remove_scene_item(self, item):
@@ -124,7 +123,7 @@ class CustomGraphicsView(
         if item.scene() == self.scene:
             self.scene.removeItem(item)
 
-    def draw_selected_area(self):
+    def draw_selected_area(self, _message):
         """
         Draw the selected active grid area container
         """
@@ -207,7 +206,7 @@ class CustomGraphicsView(
         }
         self.emit_signal(SignalCode.CANVAS_RESIZE_SIGNAL, kwargs)
 
-    def on_zoom_level_changed_signal(self):
+    def on_zoom_level_changed_signal(self, _message):
         transform = self.zoom_handler.on_zoom_level_changed()
 
         # Set the transform
@@ -255,7 +254,7 @@ class CustomGraphicsView(
         self.setScene(self.scene)
         self.set_canvas_color()
 
-    def set_canvas_color(self):
+    def set_canvas_color(self, _message=None):
         if not self.scene:
             return
         color = QColor(self.settings["grid_settings"]["canvas_color"])
@@ -276,7 +275,8 @@ class CustomGraphicsView(
             self.emit_signal(SignalCode.CANVAS_DO_DRAW_SIGNAL)
         original_mouse_event(event)
 
-    def on_tool_changed_signal(self, _tool: CanvasToolName):
+    def on_tool_changed_signal(self, message):
+        _tool: CanvasToolName = message["tool"]
         self.toggle_drag_mode()
 
     def toggle_drag_mode(self):
