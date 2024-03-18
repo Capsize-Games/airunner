@@ -1,3 +1,4 @@
+from PySide6.QtCore import Slot
 from PySide6.QtWidgets import QFileDialog
 
 from airunner.enums import SignalCode
@@ -18,9 +19,10 @@ class ControlnetScene(BrushScene):
         for signal, handler in signals:
             self.register(signal, handler)
 
-    def handle_controlnet_image_generated(self, image):
+    @Slot(dict)
+    def handle_controlnet_image_generated(self, message):
         settings = self.settings
-        settings["controlnet_settings"]["image"] = convert_image_to_base64(image)
+        settings["controlnet_settings"]["image"] = convert_image_to_base64(message["image"])
         self.settings = settings
         self.refresh_image()
 
