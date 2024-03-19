@@ -1,9 +1,9 @@
 import os
-from PyQt6 import uic
-from PyQt6.QtCore import QThread, pyqtSignal, QObject
-from PyQt6.QtWidgets import QVBoxLayout
+from PySide6.QtCore import QThread, Signal, QObject
+from PySide6.QtWidgets import QVBoxLayout
 
 from airunner.enums import SignalCode
+from airunner.widgets.model_merger.templates.model_merger_model_ui import Ui_model_merger_model
 from airunner.widgets.model_merger.templates.model_merger_ui import Ui_model_merger
 from airunner.windows.base_window import BaseWindow
 
@@ -69,7 +69,7 @@ class ModelMerger(BaseWindow):
         self.add_model(self.models, self.total_models-1)
     
     def add_model(self, models, index):
-        widget = uic.loadUi(os.path.join(f"pyqt/model_merger_model.ui"))
+        widget = Ui_model_merger_model()
         widget.models.addItems(models)
         widget.vae_weight_slider.setValue(50)
         widget.vae_weight_spinbox.setValue(0.5)
@@ -127,7 +127,7 @@ class ModelMerger(BaseWindow):
         self.merge_thread = QThread()
         class ModelMergeWorker(QObject):
             version = None
-            finished = pyqtSignal()
+            finished = Signal()
             def __init__(self, *args, **kwargs) -> None:
                 self.do_model_merge = kwargs.pop("do_model_merge")
                 super().__init__(*args)
@@ -168,7 +168,7 @@ class ModelMerger(BaseWindow):
                 model_data = data
 
         if model_data:
-            self.emit(SignalCode.SD_MERGE_MODELS_SIGNAL, (
+            self.emit_signal(SignalCode.SD_MERGE_MODELS_SIGNAL, (
                 model_data["path"],
                 models,
                 weights,

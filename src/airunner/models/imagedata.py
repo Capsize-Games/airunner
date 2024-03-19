@@ -1,5 +1,5 @@
 from PIL import Image
-from PyQt6.QtCore import QPoint
+from PySide6.QtCore import QPoint
 
 
 class ImageData:

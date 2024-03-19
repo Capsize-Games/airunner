@@ -1,4 +1,5 @@
-from PyQt6.QtWidgets import QFileDialog
+from PySide6.QtCore import Slot
+from PySide6.QtWidgets import QFileDialog
 
 from airunner.enums import SignalCode
 from airunner.settings import VALID_IMAGE_FILES
@@ -9,8 +10,18 @@ from airunner.widgets.canvas.brush_scene import BrushScene
 class ControlnetScene(BrushScene):
     settings_key = "controlnet_settings"
 
+    def __init__(self, canvas_type: str):
+        super().__init__(canvas_type)
+
     def register_signals(self):
         signals = [
+            (SignalCode.CANVAS_COPY_IMAGE_SIGNAL, self.on_canvas_copy_image_signal),
+            (SignalCode.CANVAS_CUT_IMAGE_SIGNAL, self.on_canvas_cut_image_signal),
+            (SignalCode.CANVAS_ROTATE_90_CLOCKWISE_SIGNAL, self.on_canvas_rotate_90_clockwise_signal),
+            (SignalCode.CANVAS_ROTATE_90_COUNTER_CLOCKWISE_SIGNAL, self.on_canvas_rotate_90_counter_clockwise_signal),
+            (SignalCode.CANVAS_PASTE_IMAGE_SIGNAL, self.paste_image_from_clipboard),
+            (SignalCode.CANVAS_EXPORT_IMAGE_SIGNAL, self.export_image),
+            (SignalCode.CANVAS_IMPORT_IMAGE_SIGNAL, self.import_image),
             (SignalCode.SD_CONTROLNET_IMAGE_GENERATED_SIGNAL, self.handle_controlnet_image_generated),
             (SignalCode.CONTROLNET_IMPORT_IMAGE_SIGNAL, self.import_image),
             (SignalCode.CONTROLNET_EXPORT_IMAGE_SIGNAL, self.export_image),
@@ -18,13 +29,14 @@ class ControlnetScene(BrushScene):
         for signal, handler in signals:
             self.register(signal, handler)
 
-    def handle_controlnet_image_generated(self, image):
+    @Slot(dict)
+    def handle_controlnet_image_generated(self, message):
         settings = self.settings
-        settings["controlnet_settings"]["image"] = convert_image_to_base64(image)
+        settings["controlnet_settings"]["image"] = convert_image_to_base64(message["image"])
         self.settings = settings
         self.refresh_image()
 
-    def export_image(self):
+    def export_image(self, _message):
         image = self.current_active_image()
         if image:
             file_path, _ = QFileDialog.getSaveFileName(
@@ -42,7 +54,7 @@ class ControlnetScene(BrushScene):
 
             image.save(file_path)
 
-    def import_image(self):
+    def import_image(self, _message):
         file_path, _ = QFileDialog.getOpenFileName(
             None,
             "Open Image",

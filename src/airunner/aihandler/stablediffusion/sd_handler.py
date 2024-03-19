@@ -3,7 +3,8 @@ import base64
 import traceback
 
 import numpy as np
-from PyQt6.QtWidgets import QApplication
+from PySide6.QtCore import Slot
+from PySide6.QtWidgets import QApplication
 from pytorch_lightning import seed_everything
 from typing import List
 import requests
@@ -38,7 +39,6 @@ from airunner.enums import (
     Scheduler,
     SDMode,
     StableDiffusionVersion,
-    Controlnet,
     EngineResponseCode
 )
 from airunner.aihandler.mixins.compel_mixin import CompelMixin
@@ -84,7 +84,7 @@ class LatentsWorker(Worker):
         image = Image.fromarray(latents)
         image = image.resize((self.settings["working_width"], self.settings["working_height"]))
         image = image.convert("RGBA")
-        self.emit(
+        self.emit_signal(
             SignalCode.SD_IMAGE_GENERATED_SIGNAL,
             {
                 "images": [image],
@@ -159,7 +159,6 @@ class SDHandler(
         self.tokenizer = None
         self._safety_checker = None
         self._controlnet = None
-        self.options: dict = {}
         self.current_model: str = ""
         self.seed: int = 42
         self.batch_size: int = 1
@@ -210,7 +209,9 @@ class SDHandler(
             self.register(code, handler)
 
         torch.backends.cuda.matmul.allow_tf32 = self.settings["memory_settings"]["use_tf32"]
-        self.controlnet_type = "canny"
+        controlnet = self.settings["generator_settings"]["controlnet_image_settings"]["controlnet"]
+        controlnet_item = self.controlnet_model_by_name(controlnet)
+        self.controlnet_type = controlnet_item["name"]
         self.sd_mode = SDMode.DRAWING
         self.loaded = False
         self.loading = False
@@ -223,8 +224,7 @@ class SDHandler(
         self.do_interrupt = False
         self.latents_worker = create_worker(LatentsWorker)
 
-
-    def on_interrupt_process_signal(self):
+    def on_interrupt_process_signal(self, _message: dict):
         self.do_interrupt = True
 
     @property
@@ -380,10 +380,14 @@ class SDHandler(
         return self._controlnet_image
 
     def preprocess_for_controlnet(self, image):
-        if self.current_controlnet_type != self.controlnet_type or not self.processor:
-            self.logger.debug("Loading controlnet processor " + self.controlnet_type)
-            self.current_controlnet_type = self.controlnet_type
-            self.processor = Processor(self.controlnet_type)
+        controlnet = self.sd_request.generator_settings.controlnet_image_settings.controlnet
+        controlnet_item = self.controlnet_model_by_name(controlnet)
+        controlnet_type = controlnet_item["name"]
+
+        if self.current_controlnet_type != controlnet_type or not self.processor:
+            self.logger.debug("Loading controlnet processor " + controlnet_type)
+            self.current_controlnet_type = controlnet_type
+            self.processor = Processor(controlnet_type)
         if self.processor is not None and image is not None:
             self.logger.debug("Controlnet: Processing image")
             image = self.processor(image)
@@ -465,7 +469,7 @@ class SDHandler(
     def is_pytorch_error(e) -> bool:
         return "PYTORCH_CUDA_ALLOC_CONF" in str(e)
 
-    def on_do_generate_signal(self):
+    def on_do_generate_signal(self, _message):
         self.do_generate = True
 
     def run(self):
@@ -514,7 +518,7 @@ class SDHandler(
             nsfw_content_detected = response["nsfw_content_detected"]
 
             if nsfw_content_detected:
-                self.emit(
+                self.emit_signal(
                     SignalCode.SD_NSFW_CONTENT_DETECTED_SIGNAL,
                     response
                 )
@@ -522,7 +526,7 @@ class SDHandler(
                 response["action"] = self.sd_request.generator_settings.section
                 response["outpaint_box_rect"] = self.sd_request.active_rect
 
-                self.emit(SignalCode.ENGINE_DO_RESPONSE_SIGNAL, {
+                self.emit_signal(SignalCode.ENGINE_RESPONSE_WORKER_RESPONSE_SIGNAL, {
                     'code': EngineResponseCode.IMAGE_GENERATED,
                     'message': response
                 })
@@ -576,7 +580,7 @@ class SDHandler(
         return self._generator
 
     def send_error(self, message):
-        self.emit(SignalCode.LOG_ERROR_SIGNAL, message)
+        self.emit_signal(SignalCode.LOG_ERROR_SIGNAL, message)
 
     def error_handler(self, error):
         message = str(error)
@@ -587,7 +591,7 @@ class SDHandler(
             message = f"This model does not support {self.sd_request.generator_settings.section}"
         traceback.print_exc()
         self.logger.error(error)
-        self.emit(SignalCode.LOG_ERROR_SIGNAL, message)
+        self.emit_signal(SignalCode.LOG_ERROR_SIGNAL, message)
 
     def initialize_safety_checker(self, local_files_only=True):
         self.logger.debug(f"Initializing safety checker with {self.safety_checker_model}")
@@ -626,8 +630,8 @@ class SDHandler(
             self.feature_extractor = self.initialize_feature_extractor()
 
     def do_sample(self):
-        self.emit(SignalCode.LOG_STATUS_SIGNAL, "Generating image")
-        self.emit(SignalCode.VISION_CAPTURE_LOCK_SIGNAL)
+        self.emit_signal(SignalCode.LOG_STATUS_SIGNAL, "Generating image")
+        self.emit_signal(SignalCode.VISION_CAPTURE_LOCK_SIGNAL)
         try:
             output = self.call_pipe()
         except Exception as e:
@@ -654,7 +658,7 @@ class SDHandler(
                     nsfw_content_detected = output.nsfw_content_detected
                 except AttributeError:
                     self.logger.error("Unable to get nsfw_content_detected from output")
-        self.emit(SignalCode.VISION_CAPTURE_UNLOCK_SIGNAL)
+        self.emit_signal(SignalCode.VISION_CAPTURE_UNLOCK_SIGNAL)
         return images, nsfw_content_detected
 
     def generate_latents(self):
@@ -718,10 +722,10 @@ class SDHandler(
         # self.generator_sample()
         pass
 
-    def on_sd_cancel_signal(self):
+    def on_sd_cancel_signal(self, _message):
         print("on_sd_cancel_signal")
 
-    def on_stop_auto_image_generation_signal(self):
+    def on_stop_auto_image_generation_signal(self, _message):
         #self.sd_mode = SDMode.STANDARD
         pass
 
@@ -815,7 +819,7 @@ class SDHandler(
         )
 
     def final_callback(self):
-        self.emit(SignalCode.SD_PROGRESS_SIGNAL, {
+        self.emit_signal(SignalCode.SD_PROGRESS_SIGNAL, {
             "step": self.sd_request.generator_settings.steps,
             "total": self.sd_request.generator_settings.steps,
         })
@@ -826,13 +830,14 @@ class SDHandler(
             "step": step,
             "total": self.sd_request.generator_settings.steps
         }
-        self.emit(SignalCode.SD_PROGRESS_SIGNAL, res)
+        self.emit_signal(SignalCode.SD_PROGRESS_SIGNAL, res)
         QApplication.processEvents()
         if self.latents_set is False:
             self.latents = latents
         return {}
 
-    def on_unload_stablediffusion_signal(self):
+    @Slot(object)
+    def on_unload_stablediffusion_signal(self, _message):
         self.unload()
 
     def unload(self):
@@ -892,9 +897,11 @@ class SDHandler(
         controlnet_image = self.controlnet_image
 
         if controlnet_image:
-            self.emit(
+            self.emit_signal(
                 SignalCode.SD_CONTROLNET_IMAGE_GENERATED_SIGNAL,
-                controlnet_image
+                {
+                    "image": controlnet_image
+                }
             )
         else:
             print("NO CONTROLNET IMAGE GENERATED")
@@ -961,11 +968,9 @@ class SDHandler(
            not self.is_sd_xl_turbo and
            not self.is_turbo
         )
-        self.controlnet_type = self.options.get(
-            "controlnet",
-            Controlnet.CANNY.value
-        ).lower()
-        self.controlnet_type = self.controlnet_type.replace(" ", "_")
+        controlnet = self.settings["generator_settings"]["controlnet_image_settings"]["controlnet"]
+        controlnet_item = self.controlnet_model_by_name(controlnet)
+        self.controlnet_type = controlnet_item["name"]
         self.generator().manual_seed(self.sd_request.generator_settings.seed)
         seed_everything(self.seed)
 
@@ -1081,7 +1086,7 @@ class SDHandler(
                 else:
                     self.pipe = StableDiffusionPipeline(**kwargs)
 
-        self.emit(
+        self.emit_signal(
             SignalCode.LOG_STATUS_SIGNAL,
             f"Generating media"
         )
@@ -1231,7 +1236,7 @@ class SDHandler(
                 self.pipe.feature_extractor = None
 
             if self.pipe is None:
-                self.emit(SignalCode.LOG_ERROR_SIGNAL, "Failed to load model")
+                self.emit_signal(SignalCode.LOG_ERROR_SIGNAL, "Failed to load model")
                 return
 
             old_model_path = self.current_model
@@ -1265,8 +1270,6 @@ class SDHandler(
             "config_files": CONFIG_FILES,
             "pipeline_class": self.pipeline_class(),
             "load_safety_checker": False,
-            "safety_checker": self.safety_checker,
-            "feature_extractor": self.feature_extractor,
         }
         if self.settings["generator_settings"]["enable_controlnet"]:
             kwargs["controlnet"] = self.controlnet()
@@ -1282,6 +1285,8 @@ class SDHandler(
                 )
         except Exception as e:
             self.logger.error(f"Failed to load model from ckpt: {e}")
+        pipe.safety_checker = self.safety_checker
+        pipe.feature_extractor = self.feature_extractor
         return pipe
 
     def clear_controlnet(self):
@@ -1351,7 +1356,7 @@ class SDHandler(
                 message = f"Downloading model {model_name}"
         else:
             message = f"Loading model {model_name}"
-        self.emit(SignalCode.LOG_STATUS_SIGNAL, message)
+        self.emit_signal(SignalCode.LOG_STATUS_SIGNAL, message)
 
     def prepare_model(self):
         self.logger.debug("Prepare model")
@@ -1382,7 +1387,7 @@ class SDHandler(
                 self.logger.debug("Model not found, attempting download")
             # check if we have an internet connection
             if self.allow_online_when_missing_files:
-                self.emit(SignalCode.LOG_STATUS_SIGNAL, "Downloading model files")
+                self.emit_signal(SignalCode.LOG_STATUS_SIGNAL, "Downloading model files")
                 self.local_files_only = False
             else:
                 self.send_error("Required files not found, enable online access to download")

@@ -334,7 +334,7 @@
    <item row="8" column="0" colspan="5">
     <layout class="QHBoxLayout" name="horizontalLayout_6">
      <item>
-      <widget class="SliderWidget" name="samples_widget_2" native="true">
+      <widget class="SliderWidget" name="samples" native="true">
        <property name="minimumSize">
         <size>
          <width>0</width>
@@ -372,7 +372,7 @@
         <number>1</number>
        </property>
        <property name="settings_property" stdset="0">
-        <string>generator_settings.n_samples</string>
+        <string>n_samples</string>
        </property>
       </widget>
      </item>

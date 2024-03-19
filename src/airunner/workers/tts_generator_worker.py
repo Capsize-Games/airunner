@@ -2,7 +2,7 @@ import queue
 import re
 import time
 
-from PyQt6.QtCore import QThread
+from PySide6.QtCore import QThread, Slot
 
 from airunner.enums import SignalCode, QueueType
 from airunner.settings import SLEEP_TIME_IN_MS
@@ -56,7 +56,7 @@ class TTSGeneratorWorker(Worker):
             return None
         return super().get_item_from_queue()
 
-    def on_interrupt_process_signal(self):
+    def on_interrupt_process_signal(self, _message: dict):
         self.logger.debug("Aborting TTS generation...")
         self.play_queue = []
         self.play_queue_started = False
@@ -65,7 +65,7 @@ class TTSGeneratorWorker(Worker):
         self.do_interrupt = True
         self.paused = True
 
-    def on_unblock_tts_generator_signal(self, _ignore):
+    def on_unblock_tts_generator_signal(self, _ignore: dict):
         self.logger.debug("Unblocking TTS generation...")
         self.do_interrupt = False
         self.paused = False
@@ -122,7 +122,7 @@ class TTSGeneratorWorker(Worker):
             return
 
         if response is not None:
-            self.emit(
+            self.emit_signal(
                 SignalCode.TTS_GENERATOR_WORKER_ADD_TO_STREAM_SIGNAL,
                 response
             )
