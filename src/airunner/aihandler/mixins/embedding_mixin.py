@@ -11,7 +11,7 @@ class EmbeddingMixin:
     def available_embeddings(self):
         if not self._available_embeddings:
             self._available_embeddings = {}
-            available_embeddings = self.options.get(f"embeddings", [])
+            available_embeddings = self.settings["embeddings"]
             for embedding in available_embeddings:
                 self._available_embeddings[embedding["version"]] = embedding
         return self._available_embeddings
