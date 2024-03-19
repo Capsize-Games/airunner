@@ -1,7 +1,7 @@
 controlnet_bootstrap_data = [
     {"display_name": "Canny", "name": "canny", "path": "lllyasviel/control_v11p_sd15_canny"},
     {"display_name": "Depth Leres", "name": "depth_leres", "path": "lllyasviel/control_v11f1p_sd15_depth"},
-    {"display_name": "Depth Leres++", "name": "depth_leres+", "path": "lllyasviel/control_v11f1p_sd15_depth"},
+    {"display_name": "Depth Leres++", "name": "depth_leres++", "path": "lllyasviel/control_v11f1p_sd15_depth"},
     {"display_name": "Depth Midas", "name": "depth_midas", "path": "lllyasviel/control_v11f1p_sd15_depth"},
     {"display_name": "Depth Zoe", "name": "depth_zoe", "path": "lllyasviel/control_v11f1p_sd15_depth"},
     {"display_name": "MLSD", "name": "mlsd", "path": "lllyasviel/control_v11p_sd15_mlsd"},

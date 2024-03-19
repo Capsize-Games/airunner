@@ -11,7 +11,7 @@ class LoraMixin:
     def available_lora(self):
         if not self._available_lora:
             self._available_lora = {}
-            available_lora = self.options.get(f"lora", [])
+            available_lora = self.settings["lora"]
             for lora in available_lora:
                 self._available_lora[lora["version"]] = lora
         return self._available_lora

@@ -25,4 +25,5 @@ class ControlnetModelMixin:
     
     def controlnet_model_by_name(self, name):
         controlnet_data = self.settings["controlnet"]
-        return [item for item in controlnet_data if item["name"] == name.lower()][0]
+        val = [item for item in controlnet_data if item["display_name"] == name][0]
+        return val
