@@ -24,13 +24,12 @@ def build_ui(path):
 
         print("Generating", ui_file)
         ui_file = str(ui_file)
-        ui_file_name = os.path.basename(ui_file)
         ui_file_dir = os.path.dirname(ui_file)
         ui_file_py = ui_file.replace(".ui", "_ui.py")
         print(f"Generating {ui_file_py}")
         subprocess.run(
             [
-                "pyuic6",
+                "pyside6-uic",
                 "-o",
                 ui_file_py,
                 ui_file,
@@ -42,7 +41,7 @@ def generate_resources():
     print("Generating resources.py")
     subprocess.run(
         [
-            "pyuic6",
+            "pyside6-rcc",
             "-o",
             "src/airunner/resources_light_rc.py",
             "src/airunner/resources_light.qrc",
@@ -51,7 +50,7 @@ def generate_resources():
     )
     subprocess.run(
         [
-            "pyuic6",
+            "pyside6-rcc",
             "-o",
             "src/airunner/resources_dark_rc.py",
             "src/airunner/resources_dark.qrc",

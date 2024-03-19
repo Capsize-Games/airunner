@@ -48,7 +48,7 @@ class MemoryEfficientMixin:
     
     @property
     def tome_sd_ratio(self):
-        return self.options.get("tome_sd_ratio", 600) / 1000
+        return self.settings["memory_settings"]["tome_sd_ratio"] / 1000
 
     def reset_applied_memory_settings(self):
         self.last_channels_applied = None
@@ -156,7 +156,7 @@ class MemoryEfficientMixin:
         # if unet_path is None or unet_path == "":
         #     unet_path = os.path.join(self.model_base_path, "compiled_unet")
         # file_path = os.path.join(os.path.join(unet_path, self.model_path))
-        model_name = self.options.get(f"model", None)
+        model_name = self.settings["generator_settings"]["model"]
         # file_name = f"{model_name}.pt"
         # if os.path.exists(os.path.join(file_path, file_name)):
         #     self.load_unet(file_path, file_name)

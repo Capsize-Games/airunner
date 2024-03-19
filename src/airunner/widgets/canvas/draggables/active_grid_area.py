@@ -1,8 +1,8 @@
 from PIL.ImageQt import QImage
 
-from PyQt6.QtCore import QRect
-from PyQt6.QtGui import QBrush, QColor, QPen, QPixmap, QPainter
-from PyQt6.QtWidgets import QGraphicsItem
+from PySide6.QtCore import QRect, Slot
+from PySide6.QtGui import QBrush, QColor, QPen, QPixmap, QPainter
+from PySide6.QtWidgets import QGraphicsItem
 
 from airunner.enums import SignalCode
 from airunner.service_locator import ServiceLocator
@@ -52,21 +52,13 @@ class ActiveGridArea(DraggablePixmap):
             active_grid_settings["height"]
         )
 
-    @property
-    def settings(self):
-        return ServiceLocator.get("get_settings")()
-
-    @settings.setter
-    def settings(self, value):
-        ServiceLocator.get("set_settings")(value)
-
     def update_position(self):
         self.setPos(
             min(self.rect.x(), self.rect.x() + self.rect.width()),
             min(self.rect.y(), self.rect.y() + self.rect.height())
         )
 
-    def render_fill(self):
+    def render_fill(self, _message):
         settings = ServiceLocator.get("get_settings")()
 
         if (

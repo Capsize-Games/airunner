@@ -1,4 +1,4 @@
-from PyQt6.QtWidgets import QGraphicsItem
+from PySide6.QtWidgets import QGraphicsItem
 from airunner.widgets.canvas.draggables.draggable_pixmap import DraggablePixmap
 
 

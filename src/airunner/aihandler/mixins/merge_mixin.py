@@ -1,6 +1,6 @@
 import os
 
-from PyQt6.QtCore import pyqtSlot
+from PySide6.QtCore import Slot
 
 from airunner.enums import SignalCode
 
@@ -10,11 +10,10 @@ class MergeMixin:
         super().__init__(*args, **kwargs)
         self.data = None
         self.register(SignalCode.SD_MERGE_MODELS_SIGNAL, self.on_sd_merge_models_signal)
-    
-    def on_sd_merge_models_signal(self, options):
+
+    def on_sd_merge_models_signal(self, _message):
         print("TODO: on_sd_merge_models_signal")
 
-    @pyqtSlot(object)
     def merge_models(self, options):
         base_model_path, models_to_merge_path, weights, output_path, name, action = options
         from diffusers import (

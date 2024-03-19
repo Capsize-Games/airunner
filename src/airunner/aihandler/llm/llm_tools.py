@@ -58,7 +58,7 @@ def create_application_control_tool_class(description, name, signal_code):
             super().__init__(*args, **kwargs)
 
         def __call__(self, *args, **kwargs):
-            self.emit(self.signal_code)
+            self.emit_signal(self.signal_code)
             return "emitting signal"
     ApplicationControlTool.description = description
     ApplicationControlTool.__name__ = name

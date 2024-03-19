@@ -15,10 +15,11 @@ import PIL
 import torch
 from PIL import Image
 from PIL import PngImagePlugin
-from PyQt6.QtCore import QThread
-from PyQt6.QtGui import QPixmap, QImage
-from PyQt6.QtWidgets import QFileDialog, QApplication, QMainWindow
+from PySide6.QtCore import QThread
+from PySide6.QtGui import QPixmap, QImage
+from PySide6.QtWidgets import QFileDialog, QApplication, QMainWindow
 
+from airunner.aihandler.logger import Logger
 from airunner.service_locator import ServiceLocator
 from airunner.settings import MAX_SEED
 
@@ -557,7 +558,12 @@ def convert_base64_to_image(base_64_image) -> Image:
 
 def convert_image_to_base64(image: Image) -> str:
     img_byte_arr = io.BytesIO()
-    image.save(img_byte_arr, format='PNG')
+    try:
+        image.save(img_byte_arr, format='PNG')
+    except AttributeError as e:
+        logger = Logger(prefix="convert_image_to_base64")
+        logger.error("Something went wrong with image conversion to base64")
+        return ""
     img_byte_arr = img_byte_arr.getvalue()
     image_base64 = base64.encodebytes(img_byte_arr).decode('ascii')
     return image_base64

@@ -1,6 +1,7 @@
 import threading
 import torch
 import numpy as np
+from PySide6.QtCore import Slot
 from transformers import AutoProcessor, WhisperForConditionalGeneration, AutoFeatureExtractor
 from airunner.aihandler.base_handler import BaseHandler
 from airunner.enums import SignalCode
@@ -9,7 +10,8 @@ from airunner.enums import SignalCode
 class STTHandler(BaseHandler):
     listening = False
 
-    def on_process_audio(self, audio_data: bytes):
+    def on_process_audio(self, message: object):
+        audio_data = message["audio_data"]
         with self.lock:
             fs = 16000
             # Convert the byte string to a float32 array
@@ -32,7 +34,7 @@ class STTHandler(BaseHandler):
             # Run the model
             transcription = self.run(inputs)
 
-            self.emit(SignalCode.STT_AUDIO_PROCESSED, transcription)
+            self.emit_signal(SignalCode.STT_AUDIO_PROCESSED, transcription)
 
     def __init__(self, *args, **kwargs):
         super().__init__(*args, **kwargs)
@@ -131,5 +133,5 @@ class STTHandler(BaseHandler):
         if len(transcription) == 0 or len(transcription.split(" ")) == 1:
             return None
 
-        self.emit(SignalCode.AUDIO_PROCESSOR_RESPONSE_SIGNAL, transcription)
+        self.emit_signal(SignalCode.AUDIO_PROCESSOR_RESPONSE_SIGNAL, transcription)
         return transcription
