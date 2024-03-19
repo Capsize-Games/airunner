@@ -3,7 +3,7 @@ import sounddevice as sd
 
 from queue import Queue
 
-from PyQt6.QtCore import QThread
+from PySide6.QtCore import QThread, Slot
 
 from airunner.enums import SignalCode
 from airunner.settings import SLEEP_TIME_IN_MS
@@ -30,13 +30,13 @@ class TTSVocalizerWorker(Worker):
         self.register(SignalCode.INTERRUPT_PROCESS_SIGNAL, self.on_interrupt_process_signal)
         self.register(SignalCode.UNBLOCK_TTS_GENERATOR_SIGNAL, self.on_unblock_tts_generator_signal)
 
-    def on_interrupt_process_signal(self):
+    def on_interrupt_process_signal(self, _message: dict):
         self.logger.debug("Aborting TTS stream...")
         self.stream.abort()
         self.accept_message = False
         self.queue = Queue()
 
-    def on_unblock_tts_generator_signal(self):
+    def on_unblock_tts_generator_signal(self, _message: dict):
         self.logger.debug("Starting TTS stream...")
         self.accept_message = True
         self.stream.start()
@@ -46,7 +46,7 @@ class TTSVocalizerWorker(Worker):
             self.stream = sd.OutputStream(samplerate=24000, channels=1)
             self.stream.start()
 
-    def on_TTSGeneratorWorker_add_to_stream_signal(self, response):
+    def on_TTSGeneratorWorker_add_to_stream_signal(self, response: dict):
         if self.accept_message:
             self.logger.debug("Adding speech to stream...")
             self.add_to_queue(response)

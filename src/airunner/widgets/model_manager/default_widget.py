@@ -1,10 +1,10 @@
-from PyQt6 import QtCore
+from PySide6 import QtCore
 
 from airunner.enums import ServiceCode
 from airunner.widgets.base_widget import BaseWidget
 from airunner.widgets.model_manager.model_widget import ModelWidget
 from airunner.widgets.model_manager.templates.default_ui import Ui_default_model_widget
-from PyQt6 import QtWidgets
+from PySide6 import QtWidgets
 
 
 

@@ -11,4 +11,4 @@ class PathsWidget(BaseWidget):
         super().__init__(**kwargs)
 
     def action_button_clicked_reset(self):
-        self.emit(SignalCode.APPLICATION_RESET_PATHS_SIGNAL)
+        self.emit_signal(SignalCode.APPLICATION_RESET_PATHS_SIGNAL)

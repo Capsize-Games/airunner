@@ -1,5 +1,5 @@
-from PyQt6.QtCore import Qt
-from PyQt6.QtWidgets import QLabel, QDoubleSpinBox
+from PySide6.QtCore import Qt, Slot
+from PySide6.QtWidgets import QLabel, QDoubleSpinBox
 
 from airunner.enums import SignalCode, ServiceCode
 from airunner.widgets.base_widget import BaseWidget
@@ -99,8 +99,8 @@ class SliderWidget(BaseWidget):
         self.settings_property = None
         self.label = None
         self.register(SignalCode.APPLICATION_MAIN_WINDOW_LOADED_SIGNAL, self.on_main_window_loaded_signal)
-    
-    def on_main_window_loaded_signal(self):
+
+    def on_main_window_loaded_signal(self, _message):
         self.init()
 
     def settings_loaded(self, callback):
@@ -130,11 +130,11 @@ class SliderWidget(BaseWidget):
         divide_by = self.property("divide_by") or 1.0
 
         if settings_property is not None:
-            current_value = self.get_service(ServiceCode.GET_SETTINGS_VALUE)(settings_property)
+            current_value = self.get_settings_value(settings_property)
 
         # check if slider_callback is str
         if isinstance(slider_callback, str):
-            slider_callback = self.get_service(ServiceCode.GET_CALLBACK_FOR_SLIDER)(slider_callback)
+            slider_callback = self.handle_value_change
 
         # set slider and spinbox names
         if slider_name:
@@ -175,7 +175,58 @@ class SliderWidget(BaseWidget):
         else:
             decimals = len(str(spinbox_single_step).split(".")[1])
             self.ui.slider_spinbox.setDecimals(2 if decimals < 2 else decimals)
-    
+
+    def handle_value_change(self, attr_name, value=None, widget=None):
+        """
+        Slider widget callback - this is connected via dynamic properties in the
+        qt widget. This function is then called when the value of a SliderWidget
+        is changed.
+        :param attr_name: the name of the attribute to change
+        :param value: the value to set the attribute to
+        :param widget: the widget that triggered the callback
+        :return:
+        """
+        if attr_name is None:
+            return
+
+        keys = attr_name.split(".")
+        if len(keys) > 0:
+            settings = self.settings
+
+            object_key = "settings"
+            property_key = None
+            sub_property_key = None
+            if len(keys) == 1:
+                property_key = keys[0]
+            elif len(keys) == 2:
+                object_key = keys[0]
+                property_key = keys[1]
+            elif len(keys) == 3:
+                object_key = keys[0]
+                property_key = keys[1]
+                sub_property_key = keys[2]
+
+            if property_key:
+                if object_key != "settings":
+                    settings[object_key][property_key] = value
+                    if sub_property_key and len(keys) == 3:
+                        settings[object_key][property_key][sub_property_key] = value
+                else:
+                    settings[property_key] = value
+            self.settings = settings
+
+    def get_settings_value(self, settings_property):
+        keys = settings_property.split(".")
+        data = self.settings
+
+        for key in keys:
+            if isinstance(data, dict) and key in data:
+                data = data[key]
+            else:
+                return None
+
+        return data
+
     def set_slider_and_spinbox_values(self, val):
         if val is None:
             val = 0

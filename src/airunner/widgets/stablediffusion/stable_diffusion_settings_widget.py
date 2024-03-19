@@ -11,6 +11,26 @@ class StableDiffusionSettingsWidget(BaseWidget):
         self.register(SignalCode.APPLICATION_MODELS_CHANGED_SIGNAL, self.on_models_changed_signal)
         self.load_presets()
 
+        for k in [
+            "samples",
+            "clip_skip_slider_widget",
+            "ddim_eta_slider_widget",
+            "frames_slider_widget",
+            "steps_widget",
+            "scale_widget"
+        ]:
+            getattr(self.ui, k).settings_loaded(self.callback)
+
+    def callback(self, prop, val):
+        settings = self.settings
+        if prop in ["strength"]:
+            settings["generator_settings"][prop] = val
+        elif prop in ["conditioning_scale", "guidance_scale"]:
+            settings["generator_settings"]["controlnet_image_settings"][prop] = val
+        else:
+            settings["generator_settings"][prop] = val
+        self.settings = settings
+
     def load_presets(self):
         self.presets = self.settings["generator_settings"]["presets"]
 
@@ -100,25 +120,24 @@ class StableDiffusionSettingsWidget(BaseWidget):
             self.ui.version.setCurrentText(current_version)
         self.ui.version.blockSignals(False)
 
-    def on_models_changed_signal(self, _ignore):
+    def on_models_changed_signal(self, data: dict):
         self.load_pipelines()
         self.load_versions()
-        self.load_models()
+        self.load_models(data["models"])
         self.load_schedulers()
 
     def clear_models(self):
         self.ui.model.clear()
 
-    def load_models(self):
+    def load_models(self, models=None):
+        models = models or self.settings["ai_models"]
         self.logger.debug("load_models")
         self.ui.model.blockSignals(True)
         self.clear_models()
-
         image_generator = ImageGenerator.STABLEDIFFUSION.value
         pipeline = self.settings["pipeline"]
         version = self.settings["current_version_stablediffusion"]
-
-        models = self.get_service("ai_model_get_by_filter")({
+        models = self.ai_model_get_by_filter(models, {
             'category': image_generator,
             'pipeline_action': pipeline,
             'version': version,
@@ -133,6 +152,9 @@ class StableDiffusionSettingsWidget(BaseWidget):
         settings["generator_settings"]["model"] = self.ui.model.currentText()
         self.ui.model.blockSignals(False)
         self.settings = settings
+
+    def ai_model_get_by_filter(self, models, filter_dict):
+        return [item for item in models if all(item.get(k) == v for k, v in filter_dict.items())]
 
     def load_schedulers(self):
         self.logger.debug("load_schedulers")

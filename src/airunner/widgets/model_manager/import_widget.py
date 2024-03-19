@@ -69,7 +69,7 @@ class ImportWidget(BaseWidget):
             trained_words = [trained_words]
         trained_words = ",".join(trained_words)
         if model_type == "Checkpoint":
-            self.emit(SignalCode.AI_MODELS_SAVE_OR_UPDATE_SIGNAL, {
+            self.emit_signal(SignalCode.AI_MODELS_SAVE_OR_UPDATE_SIGNAL, {
                 'name': name,
                 'path': file_path,
                 'branch': "main",
@@ -131,7 +131,9 @@ class ImportWidget(BaseWidget):
         self.ui.download_progress_bar.setValue(current_size)
         if current_size >= total_size:
             self.reset_form()
-            self.emit(SignalCode.AI_MODELS_CREATE_SIGNAL, self.current_model_data)
+            self.emit_signal(SignalCode.AI_MODELS_CREATE_SIGNAL, {
+                "models": self.current_model_data
+            })
             self.show_items_in_scrollarea()
     
     def import_models(self):

@@ -1,5 +1,7 @@
 import gc
 
+from PySide6.QtCore import Slot
+
 from airunner.aihandler.llm.casual_lm_transfformer_base_handler import CasualLMTransformerBaseHandler
 from airunner.settings import AVAILABLE_DTYPES
 from airunner.enums import SignalCode
@@ -14,7 +16,7 @@ class LLMGenerateWorker(Worker):
         self.register(SignalCode.LLM_REQUEST_WORKER_RESPONSE_SIGNAL, self.on_llm_request_worker_response_signal)
         self.register(SignalCode.LLM_UNLOAD_SIGNAL, self.on_unload_llm_signal)
 
-    def on_unload_llm_signal(self, message):
+    def on_unload_llm_signal(self, message: dict):
         """
         This function will either 
         
@@ -40,7 +42,7 @@ class LLMGenerateWorker(Worker):
         if callback:
             callback()
 
-    def on_llm_request_worker_response_signal(self, message):
+    def on_llm_request_worker_response_signal(self, message: dict):
         self.add_to_queue(message)
 
     def handle_message(self, message):

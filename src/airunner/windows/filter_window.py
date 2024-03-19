@@ -161,20 +161,22 @@ class FilterWindow(BaseWindow):
         self.preview_filter()
 
     def reject(self):
-        self.emit(
+        self.emit_signal(
             SignalCode.CANVAS_CANCEL_FILTER_SIGNAL
         )
         super().reject()
 
     def accept(self):
-        self.emit(
+        self.emit_signal(
             SignalCode.CANVAS_APPLY_FILTER_SIGNAL,
             self.filter_object()
         )
         super().accept()
 
     def preview_filter(self):
-        self.emit(
+        self.emit_signal(
             SignalCode.CANVAS_PREVIEW_FILTER_SIGNAL,
-            self.filter_object()
+            {
+                "filter_object": self.filter_object()
+            }
         )

@@ -48,13 +48,11 @@ class CasualLMTransformerBaseHandler(TokenizerHandler):
         self.batch_size: int = 1
         self.vision_history: list = []
 
-        self.register(SignalCode.LLM_CLEAR_HISTORY_SIGNAL, self.on_clear_history_signal)
-
-    def on_interrupt_process_signal(self):
+    def on_interrupt_process_signal(self, _message: dict):
         if self.chat_agent is not None:
             self.chat_agent.interrupt_process()
 
-    def on_clear_history_signal(self):
+    def on_clear_history_signal(self, _message):
         self.logger.debug("Clearing chat history")
         self.chat_agent.history = []
 
@@ -102,11 +100,6 @@ class CasualLMTransformerBaseHandler(TokenizerHandler):
             LLMToolName.LLM_PROCESS_STT_AUDIO.value: ProcessAudioTool(),
             #LLMToolName.DEFAULT_TOOL.value: RespondToUserTool(),
         }
-
-    def on_clear_history_signal(self):
-        # self.logger.debug("Clearing vision history")
-        # self.vision_history = []
-        pass
 
     def process_data(self, data):
         super().process_data(data)
@@ -216,7 +209,7 @@ class CasualLMTransformerBaseHandler(TokenizerHandler):
         # self.bot_mood = self.update_bot_mood()
         # self.user_evaluation = self.do_user_evaluation()
         #full_message = self.rag_stream()
-        self.emit(SignalCode.VISION_CAPTURE_LOCK_SIGNAL)
+        self.emit_signal(SignalCode.VISION_CAPTURE_LOCK_SIGNAL)
 
         if self.action != LLMActionType.GENERATE_IMAGE:
             if self.settings["llm_generator_settings"]["use_tool_filter"]:
@@ -233,11 +226,11 @@ class CasualLMTransformerBaseHandler(TokenizerHandler):
             )
 
         self.send_final_message()
-        self.emit(SignalCode.VISION_CAPTURE_UNLOCK_SIGNAL)
+        self.emit_signal(SignalCode.VISION_CAPTURE_UNLOCK_SIGNAL)
 
     def emit_streamed_text_signal(self, **kwargs):
         kwargs["name"] = self.botname
-        self.emit(
+        self.emit_signal(
             SignalCode.LLM_TEXT_STREAMED_SIGNAL,
             kwargs
         )

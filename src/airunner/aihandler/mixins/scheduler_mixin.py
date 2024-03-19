@@ -108,7 +108,7 @@ class SchedulerMixin:
         scheduler_name = self.sd_request.generator_settings.scheduler
         if self.scheduler_name != scheduler_name:
             self.logger.debug("Preparing scheduler")
-            self.emit(
+            self.emit_signal(
                 SignalCode.LOG_STATUS_SIGNAL,
                 f"Preparing scheduler {scheduler_name}"
             )

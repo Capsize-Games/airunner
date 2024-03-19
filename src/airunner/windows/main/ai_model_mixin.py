@@ -1,3 +1,5 @@
+from PySide6.QtCore import Slot
+
 from airunner.enums import SignalCode
 from airunner.service_locator import ServiceLocator
 from airunner.data.bootstrap.model_bootstrap_data import model_bootstrap_data
@@ -39,11 +41,12 @@ class AIModelMixin:
         settings["ai_models"].append(item)
         self.settings = settings
 
-    def on_ai_models_create_signal(self, models):
+    def on_ai_models_create_signal(self, data: dict):
+        models = data["models"]
         settings = self.settings
         settings["ai_models"] = models
         self.settings = settings
-        self.emit(SignalCode.APPLICATION_MODELS_CHANGED_SIGNAL, "models")
+        self.emit_signal(SignalCode.APPLICATION_MODELS_CHANGED_SIGNAL, data)
 
     def ai_model_update(self, item):
         settings = self.settings
@@ -53,7 +56,7 @@ class AIModelMixin:
                 self.settings = settings
                 break
 
-    def on_ai_model_delete_signal(self, item):
+    def on_ai_model_delete_signal(self, item: dict):
         settings = self.settings
         settings["ai_models"] = [existing_item for existing_item in self.settings["ai_models"] if existing_item['name'] != item['name']]
         self.settings = settings
@@ -71,7 +74,8 @@ class AIModelMixin:
     def ai_model_get_disabled_default(self):
         return [model for model in self.settings["ai_models"] if model["is_default"] == True and model["enabled"] == False]
 
-    def on_ai_models_save_or_update_signal(self, new_models):
+    def on_ai_models_save_or_update_signal(self, data: dict):
+        new_models = data["models"]
         settings = self.settings
         default_models = model_bootstrap_data
         existing_models = settings["ai_models"]
@@ -88,7 +92,9 @@ class AIModelMixin:
         # Convert back to list
         merged_models = list(model_dict.values())
 
-        self.emit(SignalCode.AI_MODELS_CREATE_SIGNAL, merged_models)
+        self.emit_signal(SignalCode.AI_MODELS_CREATE_SIGNAL, {
+            "models": merged_models
+        })
         
     def ai_model_paths(self, model_type=None, pipeline_action=None):
         models = self.settings["ai_models"]

@@ -1,6 +1,6 @@
-from PyQt6.QtCore import QUrl
-from PyQt6.QtMultimedia import QMediaPlayer
-from PyQt6.QtMultimediaWidgets import QVideoWidget
+from PySide6.QtCore import QUrl
+from PySide6.QtMultimedia import QMediaPlayer
+from PySide6.QtMultimediaWidgets import QVideoWidget
 
 from airunner.windows.base_window import BaseWindow
 

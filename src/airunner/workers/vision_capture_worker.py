@@ -1,6 +1,6 @@
 import cv2
 from PIL import Image
-from PyQt6.QtCore import QThread
+from PySide6.QtCore import QThread, Slot
 
 from airunner.enums import SignalCode, QueueType, WorkerState
 from airunner.settings import SLEEP_TIME_IN_MS
@@ -20,13 +20,13 @@ class VisionCaptureWorker(Worker):
         self.register(SignalCode.VISION_CAPTURE_UNLOCK_SIGNAL, self.unlock)
         self.register(SignalCode.VISION_CAPTURE_LOCK_SIGNAL, self.lock)
 
-    def lock(self):
+    def lock(self, _message: dict):
         self.locked = True
 
-    def unlock(self):
+    def unlock(self, _message: dict):
         self.locked = False
 
-    def start_vision_capture(self, message):
+    def start_vision_capture(self, _message: dict):
         """
         Starts capturing images
         :param message:
@@ -34,7 +34,7 @@ class VisionCaptureWorker(Worker):
         """
         self.state = WorkerState.RUNNING
 
-    def stop_capturing(self):
+    def stop_capturing(self, _message: dict):
         """
         Stops capturing images
         :return:
@@ -52,7 +52,7 @@ class VisionCaptureWorker(Worker):
         self.running = True
         while self.running:
             if self.state == WorkerState.RUNNING:
-                self.emit(SignalCode.VISION_CAPTURED_SIGNAL, {
+                self.emit_signal(SignalCode.VISION_CAPTURED_SIGNAL, {
                     "image": self.capture_image()
                 })
                 self.state = WorkerState.PAUSED

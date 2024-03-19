@@ -1,3 +1,5 @@
+from typing import Callable
+
 from airunner.enums import SignalCode
 from airunner.signal_mediator import SignalMediator
 
@@ -12,18 +14,17 @@ class MediatorMixin:
         self.workers = []
         self.mediator = SignalMediator()
 
-    def emit(
+    def emit_signal(
         self,
         code: SignalCode,
         data: object = None
     ):
-        # Pass None as the second argument if no additional arguments are provided
-        self.mediator.emit(code, data)
+        self.mediator.emit_signal(code, data)
 
     def register(
         self,
         code: SignalCode,
-        slot_function: object
+        slot_function: Callable
     ):
         """
         Accessor method for SignalMediator.register method.

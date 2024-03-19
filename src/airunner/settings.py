@@ -1,7 +1,7 @@
 import os
 import logging
-from PyQt6.QtCore import Qt
-from PyQt6 import QtCore
+from PySide6.QtCore import Qt
+from PySide6 import QtCore
 from airunner.enums import GeneratorSection, StableDiffusionVersion, ImageGenerator, Scheduler, SignalCode
 
 BASE_PATH = os.path.join(os.path.expanduser("~"), ".airunner")
@@ -433,55 +433,55 @@ SLEEP_TIME_IN_MS = 50
 ORGANIZATION = "Capsize Games"
 APPLICATION_NAME = "AI Runner"
 DEFAULT_SHORTCUTS = {
-    "Generate Image": dict(
-        text="F5",
-        key=Qt.Key.Key_F5.value,
-        modifiers=QtCore.Qt.KeyboardModifier.NoModifier,
-        description="Generate key. Responsible for triggering the generation of a Stable Diffusion image.",
-        signal=SignalCode.SD_GENERATE_IMAGE_SIGNAL
-    ),
-    "Brush Tool": dict(
-        text="B",
-        key=Qt.Key.Key_B.value,
-        modifiers=QtCore.Qt.KeyboardModifier.NoModifier,
-        description="Brush tool key. Responsible for selecting the brush tool.",
-        signal=SignalCode.ENABLE_BRUSH_TOOL_SIGNAL
-    ),
-    "Eraser Tool": dict(
-        text="E",
-        key=Qt.Key.Key_E.value,
-        modifiers=QtCore.Qt.KeyboardModifier.NoModifier,
-        description="Eraser tool key. Responsible for selecting the eraser tool.",
-        signal=SignalCode.ENABLE_ERASER_TOOL_SIGNAL
-    ),
-    "Move Tool": dict(
-        text="V",
-        key=Qt.Key.Key_V.value,
-        modifiers=QtCore.Qt.KeyboardModifier.NoModifier,
-        description="Move tool key. Responsible for selecting the move tool.",
-        signal=SignalCode.ENABLE_MOVE_TOOL_SIGNAL
-    ),
-    "Select Tool": dict(
-        text="S",
-        key=Qt.Key.Key_S.value,
-        modifiers=QtCore.Qt.KeyboardModifier.NoModifier,
-        description="Select tool key. Responsible for selecting the select tool.",
-        signal=SignalCode.ENABLE_SELECTION_TOOL_SIGNAL
-    ),
-    "Interrupt": dict(
-        text="Shift+Ctrl+I",
-        key=Qt.Key.Key_I.value,
-        modifiers=QtCore.Qt.KeyboardModifier.ShiftModifier | QtCore.Qt.KeyboardModifier.ControlModifier,
-        description="Interrupt key. Responsible for interrupting the current process.",
-        signal=SignalCode.INTERRUPT_PROCESS_SIGNAL
-    ),
-    "Quit": dict(
-        text="Ctrl+Q",
-        key=Qt.Key.Key_Q.value,
-        modifiers=QtCore.Qt.KeyboardModifier.ControlModifier,
-        description="Quit key. Responsible for quitting the application.",
-        signal=SignalCode.QUIT_APPLICATION
-    ),
+    "Generate Image": {
+        "text": "F5",
+        "key": Qt.Key.Key_F5.value,
+        "modifiers": QtCore.Qt.KeyboardModifier.NoModifier.value,
+        "description": "Generate key. Responsible for triggering the generation of a Stable Diffusion image.",
+        "signal": SignalCode.SD_GENERATE_IMAGE_SIGNAL.value
+    },
+    "Brush Tool": {
+        "text": "B",
+        "key": Qt.Key.Key_B.value,
+        "modifiers": QtCore.Qt.KeyboardModifier.NoModifier.value,
+        "description": "Brush tool key. Responsible for selecting the brush tool.",
+        "signal": SignalCode.ENABLE_BRUSH_TOOL_SIGNAL.value
+    },
+    "Eraser Tool": {
+        "text": "E",
+        "key": Qt.Key.Key_E.value,
+        "modifiers": QtCore.Qt.KeyboardModifier.NoModifier.value,
+        "description": "Eraser tool key. Responsible for selecting the eraser tool.",
+        "signal": SignalCode.ENABLE_ERASER_TOOL_SIGNAL.value
+    },
+    "Move Tool": {
+        "text": "V",
+        "key": Qt.Key.Key_V.value,
+        "modifiers": QtCore.Qt.KeyboardModifier.NoModifier.value,
+        "description": "Move tool key. Responsible for selecting the move tool.",
+        "signal": SignalCode.ENABLE_MOVE_TOOL_SIGNAL.value
+    },
+    "Select Tool": {
+        "text": "S",
+        "key": Qt.Key.Key_S.value,
+        "modifiers": QtCore.Qt.KeyboardModifier.NoModifier.value,
+        "description": "Select tool key. Responsible for selecting the select tool.",
+        "signal": SignalCode.ENABLE_SELECTION_TOOL_SIGNAL.value
+    },
+    "Interrupt": {
+        "text": "Shift+Ctrl+I",
+        "key": Qt.Key.Key_I.value,
+        "modifiers": QtCore.Qt.KeyboardModifier.ShiftModifier.value | QtCore.Qt.KeyboardModifier.ControlModifier.value,
+        "description": "Interrupt key. Responsible for interrupting the current process.",
+        "signal": SignalCode.INTERRUPT_PROCESS_SIGNAL.value
+    },
+    "Quit": {
+        "text": "Ctrl+Q",
+        "key": Qt.Key.Key_Q.value,
+        "modifiers": QtCore.Qt.KeyboardModifier.ControlModifier.value,
+        "description": "Quit key. Responsible for quitting the application.",
+        "signal": SignalCode.QUIT_APPLICATION.value
+    },
 }
 ESPEAK_SETTINGS = {
     "voices": {
