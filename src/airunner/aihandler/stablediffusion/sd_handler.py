@@ -224,7 +224,7 @@ class SDHandler(
         self.do_interrupt = False
         self.latents_worker = create_worker(LatentsWorker)
 
-    def on_interrupt_process_signal(self, _message):
+    def on_interrupt_process_signal(self, _message: dict):
         self.do_interrupt = True
 
     @property
