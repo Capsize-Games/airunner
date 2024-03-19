@@ -50,7 +50,7 @@
       <string notr="true">handle_value_change</string>
      </property>
      <property name="settings_property" stdset="0">
-      <string notr="true">generator_settings.controlnet_image_settings.conditioning_scale</string>
+      <string notr="true">conditioning_scale</string>
      </property>
      <property name="display_as_float" stdset="0">
       <bool>true</bool>
@@ -106,7 +106,7 @@
       <string notr="true">handle_value_change</string>
      </property>
      <property name="settings_property" stdset="0">
-      <string notr="true">brush_settings.size</string>
+      <string notr="true">size</string>
      </property>
      <property name="display_as_float" stdset="0">
       <bool>false</bool>
@@ -149,7 +149,7 @@
       <string notr="true">handle_value_change</string>
      </property>
      <property name="settings_property" stdset="0">
-      <string notr="true">generator_settings.controlnet_image_settings.guidance_scale</string>
+      <string notr="true">guidance_scale</string>
      </property>
      <property name="display_as_float" stdset="0">
       <bool>true</bool>
@@ -192,7 +192,7 @@
       <string notr="true">handle_value_change</string>
      </property>
      <property name="settings_property" stdset="0">
-      <string notr="true">generator_settings.strength</string>
+      <string notr="true">strength</string>
      </property>
      <property name="display_as_float" stdset="0">
       <bool>true</bool>
