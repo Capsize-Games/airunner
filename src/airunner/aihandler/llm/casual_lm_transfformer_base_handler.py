@@ -48,7 +48,7 @@ class CasualLMTransformerBaseHandler(TokenizerHandler):
         self.batch_size: int = 1
         self.vision_history: list = []
 
-    def on_interrupt_process_signal(self, _message):
+    def on_interrupt_process_signal(self, _message: dict):
         if self.chat_agent is not None:
             self.chat_agent.interrupt_process()
 

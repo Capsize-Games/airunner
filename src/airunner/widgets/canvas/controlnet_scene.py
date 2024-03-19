@@ -10,8 +10,18 @@ from airunner.widgets.canvas.brush_scene import BrushScene
 class ControlnetScene(BrushScene):
     settings_key = "controlnet_settings"
 
+    def __init__(self, canvas_type: str):
+        super().__init__(canvas_type)
+
     def register_signals(self):
         signals = [
+            (SignalCode.CANVAS_COPY_IMAGE_SIGNAL, self.on_canvas_copy_image_signal),
+            (SignalCode.CANVAS_CUT_IMAGE_SIGNAL, self.on_canvas_cut_image_signal),
+            (SignalCode.CANVAS_ROTATE_90_CLOCKWISE_SIGNAL, self.on_canvas_rotate_90_clockwise_signal),
+            (SignalCode.CANVAS_ROTATE_90_COUNTER_CLOCKWISE_SIGNAL, self.on_canvas_rotate_90_counter_clockwise_signal),
+            (SignalCode.CANVAS_PASTE_IMAGE_SIGNAL, self.paste_image_from_clipboard),
+            (SignalCode.CANVAS_EXPORT_IMAGE_SIGNAL, self.export_image),
+            (SignalCode.CANVAS_IMPORT_IMAGE_SIGNAL, self.import_image),
             (SignalCode.SD_CONTROLNET_IMAGE_GENERATED_SIGNAL, self.handle_controlnet_image_generated),
             (SignalCode.CONTROLNET_IMPORT_IMAGE_SIGNAL, self.import_image),
             (SignalCode.CONTROLNET_EXPORT_IMAGE_SIGNAL, self.export_image),
