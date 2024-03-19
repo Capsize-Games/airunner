@@ -38,7 +38,7 @@ class Worker(QObject, MediatorMixin, SettingsMixin):
         )
         self.register_signals()
 
-    def on_application_settings_changed_signal(self, _ignore: dict):
+    def on_application_settings_changed_signal(self, _message: dict):
         self.update_properties()
     
     def update_properties(self):

@@ -113,7 +113,7 @@ class GeneratorForm(BaseWidget):
     def do_generate_image_from_image_signal_handler(self, res):
         self.call_generate()
 
-    def on_application_settings_changed_signal(self):
+    def on_application_settings_changed_signal(self, _message: dict):
         self.activate_ai_mode()
     
     def on_progress_signal(self, message):

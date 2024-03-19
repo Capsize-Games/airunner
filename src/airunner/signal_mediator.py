@@ -50,9 +50,10 @@ class SignalMediator(metaclass=SingletonMeta):
         :param code: The SignalCode of the signal to register
         :param slot_function: The function to call when the signal is received.
         """
+        # Create a new Signal instance for this signal name
         if code not in SIGNALS:
-            # Create a new Signal instance for this signal name
-            SIGNALS[code] = Signal(callback=slot_function)
+            SIGNALS[code] = []
+        SIGNALS[code].append(Signal(callback=slot_function))
 
     def emit_signal(
         self,
@@ -67,4 +68,5 @@ class SignalMediator(metaclass=SingletonMeta):
         """
         data = {} if data is None else data
         if code in SIGNALS:
-            SIGNALS[code].signal.emit(data)
+            for signal in SIGNALS[code]:
+                signal.signal.emit(data)
