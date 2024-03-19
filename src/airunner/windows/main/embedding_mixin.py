@@ -1,5 +1,7 @@
 import os
 
+from PySide6.QtCore import Slot
+
 from airunner.enums import ServiceCode, SignalCode
 from airunner.service_locator import ServiceLocator
 
@@ -12,7 +14,7 @@ class EmbeddingMixin:
         self.register(SignalCode.EMBEDDING_DELETE_MISSING_SIGNAL, self.delete_missing_embeddings)
         self.register(SignalCode.EMBEDDING_GET_ALL_SIGNAL, self.get_embeddings)
 
-    def add_embedding(self, params):
+    def add_embedding(self, params: dict):
         settings = self.settings
         name = params["name"]
         path = params["path"]
@@ -34,8 +36,8 @@ class EmbeddingMixin:
         settings["embeddings"].append(embedding)
         self.settings = settings
         return embedding
-    
-    def update_embedding(self, embedding):
+
+    def update_embedding(self, embedding: dict):
         settings = self.settings
         for index, _embedding in enumerate(self.settings["embeddings"]):
             if _embedding["name"] == embedding["name"] and _embedding["path"] == embedding["path"]:
@@ -43,7 +45,8 @@ class EmbeddingMixin:
                 self.settings = settings
                 return
 
-    def get_embeddings(self, name_filter=""):
+    def get_embeddings(self, message: dict = None):
+        name_filter = message.get("name_filter") if message is not None else ""
         embeddings = []
         for embedding in self.settings["embeddings"]:
             if name_filter == "":
@@ -51,13 +54,13 @@ class EmbeddingMixin:
                 continue
             if name_filter in embedding["name"]:
                 embeddings.append(embedding)
-        self.emit(
+        self.emit_signal(
             SignalCode.EMBEDDING_GET_ALL_RESULTS_SIGNAL,
             embeddings
         )
         return embeddings
 
-    def delete_missing_embeddings(self):
+    def delete_missing_embeddings(self, _message: dict):
         embeddings = self.get_embeddings()
         for embedding in embeddings:
             if not os.path.exists(embedding["path"]):
@@ -70,8 +73,8 @@ class EmbeddingMixin:
                 del settings["embeddings"][index]
                 self.settings = settings
                 return
-    
-    def scan_for_embeddings(self):
+
+    def scan_for_embeddings(self, _message: dict):
         embeddings_path = self.settings["path_settings"]["embeddings_model_path"]
         if os.path.exists(embeddings_path):
             for root, dirs, _ in os.walk(embeddings_path):

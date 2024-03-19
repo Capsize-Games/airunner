@@ -1,17 +1,23 @@
 import os
-from PyQt6.QtCore import Qt
-from PyQt6.QtWidgets import QDialog
+from PySide6.QtCore import Qt
+from PySide6.QtWidgets import QDialog
 from airunner.mediator_mixin import MediatorMixin
 from airunner.service_locator import ServiceLocator
+from airunner.windows.main.settings_mixin import SettingsMixin
 
 
-class BaseWindow(QDialog, MediatorMixin):
+class BaseWindow(
+    QDialog,
+    MediatorMixin,
+    SettingsMixin
+):
     template_class_ = None
     template = None
     is_modal: bool = False  # allow the window to be treated as a modal
 
     def __init__(self, **kwargs):
         MediatorMixin.__init__(self)
+        SettingsMixin.__init__(self)
         super().__init__()
         self.do_exec = kwargs.get("exec", True)
 
@@ -38,11 +44,3 @@ class BaseWindow(QDialog, MediatorMixin):
         with open(os.path.join(here, "..", "styles", theme_name, "styles.qss"), "r") as f:
             stylesheet = f.read()
         self.setStyleSheet(stylesheet)
-
-    @property
-    def settings(self):
-        return ServiceLocator.get("get_settings")()
-
-    @settings.setter
-    def settings(self, value):
-        ServiceLocator.get("set_settings")(value)

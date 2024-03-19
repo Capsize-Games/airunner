@@ -1,5 +1,7 @@
-from PyQt6.QtCore import QSettings
 import traceback
+
+from PySide6.QtCore import QSettings, QByteArray, QDataStream, QIODevice, Slot
+
 from airunner.settings import (
     DEFAULT_BRUSH_PRIMARY_COLOR,
     DEFAULT_BRUSH_SECONDARY_COLOR,
@@ -103,15 +105,14 @@ for category in ImageCategory:
         if section == GeneratorSection.UPSCALE:
             continue
         default_model = DEFAULT_MODELS[ImageGenerator.STABLEDIFFUSION.value][section]
-        GENERATOR_SETTINGS["presets"][category.value][ImageGenerator.STABLEDIFFUSION.value][section.value] = STABLEDIFFUSION_GENERATOR_SETTINGS.copy()
+        GENERATOR_SETTINGS["presets"][category.value][ImageGenerator.STABLEDIFFUSION.value][
+            section.value] = STABLEDIFFUSION_GENERATOR_SETTINGS.copy()
 
 
 class SettingsMixin:
     def __init__(self):
         self.application_settings = QSettings(ORGANIZATION, APPLICATION_NAME)
         self.register(SignalCode.APPLICATION_RESET_SETTINGS_SIGNAL, self.on_reset_settings_signal)
-        ServiceLocator.register("get_settings", self.get_settings)
-        ServiceLocator.register("set_settings", self.set_settings)
         self.default_settings = dict(
             trust_remote_code=False,
             use_cuda=True,
@@ -257,6 +258,7 @@ class SettingsMixin:
                 pos_y=0,
                 image=None,
                 enable_automatic_drawing=True,
+                active_canvas="",
             ),
             metadata_settings=dict(
                 image_export_metadata_prompt=True,
@@ -429,12 +431,11 @@ class SettingsMixin:
     def recursive_update(self, current, default):
         for k, v in default.items():
             if k not in current or k not in current or (not isinstance(current[k], type(v)) and v is not None):
-                self.logger.debug(f"Updating {k} to {v}")
                 current[k] = v
             elif isinstance(v, dict):
                 self.recursive_update(current[k], v)
 
-    def on_reset_settings_signal(self):
+    def on_reset_settings_signal(self, _message: dict):
         self.logger.debug("Resetting settings")
         self.application_settings.clear()
         self.application_settings.sync()
@@ -452,7 +453,7 @@ class SettingsMixin:
             print("Failed to get settings")
             print(e)
         return {}
-    
+
     @settings.setter
     def settings(self, val):
         try:
@@ -464,33 +465,30 @@ class SettingsMixin:
     def get_settings(self):
         application_settings = QSettings(ORGANIZATION, APPLICATION_NAME)
         try:
-            settings = application_settings.value(
-                "settings",
-                self.default_settings,
-                type=dict
-            )
-            if settings != {} and settings != "" and settings != None:
+            settings_byte_array = application_settings.value("settings", QByteArray())
+            if settings_byte_array:
+                data_stream = QDataStream(settings_byte_array, QIODevice.ReadOnly)
+                settings = data_stream.readQVariant()
                 return settings
-        except TypeError as e:
-            print("Settings crashed")
-        except RuntimeError as e:
-            print("Settings crashed")
+            else:
+                return self.default_settings
+        except (TypeError, RuntimeError) as e:
+            print("Failed to get settings")
+            print(e)
+            return self.default_settings
 
-        # self.application_settings.setValue("settings", self.default_settings)
-        # self.application_settings.sync()
-        # return self.default_settings
+    def set_settings(self, val):
+        application_settings = QSettings(ORGANIZATION, APPLICATION_NAME)
+        if val:
+            settings_byte_array = QByteArray()
+            data_stream = QDataStream(settings_byte_array, QIODevice.WriteOnly)
+            data_stream.writeQVariant(val)
+            application_settings.setValue("settings", settings_byte_array)
+            self.emit_signal(SignalCode.APPLICATION_SETTINGS_CHANGED_SIGNAL)
 
     def save_settings(self):
         application_settings = QSettings(ORGANIZATION, APPLICATION_NAME)
         application_settings.sync()
-
-    def set_settings(self, val):
-        application_settings = QSettings(ORGANIZATION, APPLICATION_NAME)
-        if val == {} or val == "" or val is None:
-            return
-        application_settings.setValue("settings", val)
-        #self.application_settings.sync()
-        self.emit(SignalCode.APPLICATION_SETTINGS_CHANGED_SIGNAL)
 
     def reset_paths(self):
         path_settings = self.settings["path_settings"]
