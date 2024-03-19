@@ -372,7 +372,7 @@
         <number>1</number>
        </property>
        <property name="settings_property" stdset="0">
-        <string>generator_settings.n_samples</string>
+        <string>n_samples</string>
        </property>
       </widget>
      </item>
