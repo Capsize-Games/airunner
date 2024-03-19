@@ -31,7 +31,7 @@ setup(
         "PySide6_Addons==6.6.2",
         "PySide6_Essentials==6.6.2",
         "pyre-extensions==0.0.30",
-        "lightning==2.2.0.post0",
+        "lightning==2.2.1",
         "requests==2.31.0",
         "requests-oauthlib==1.4.0",
         "safetensors==0.4.2",
