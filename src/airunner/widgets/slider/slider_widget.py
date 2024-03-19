@@ -101,7 +101,6 @@ class SliderWidget(BaseWidget):
         self.register(SignalCode.APPLICATION_MAIN_WINDOW_LOADED_SIGNAL, self.on_main_window_loaded_signal)
 
     def on_main_window_loaded_signal(self, _message):
-        print("ON MAIN WINDOW LOADED SIGNAL")
         self.init()
 
     def settings_loaded(self, callback):
