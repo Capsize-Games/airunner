@@ -63,7 +63,7 @@
             <string>handle_value_change</string>
            </property>
            <property name="settings_property" stdset="0">
-            <string>active_grid_settings.border_opacity</string>
+            <string>border_opacity</string>
            </property>
            <property name="display_as_float" stdset="0">
             <bool>true</bool>
@@ -121,7 +121,7 @@
             <string>handle_value_change</string>
            </property>
            <property name="settings_property" stdset="0">
-            <string>active_grid_settings.fill_opacity</string>
+            <string>fill_opacity</string>
            </property>
            <property name="display_as_float" stdset="0">
             <bool>true</bool>
