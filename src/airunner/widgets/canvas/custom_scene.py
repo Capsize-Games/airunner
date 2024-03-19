@@ -4,7 +4,7 @@ from typing import Optional
 import PIL
 from PIL import ImageQt, Image, ImageFilter
 from PIL.ImageQt import QImage
-from PySide6.QtCore import Qt, QPoint, Slot, Signal
+from PySide6.QtCore import Qt, QPoint
 from PySide6.QtGui import QEnterEvent
 from PySide6.QtGui import QPixmap, QPainter
 from PySide6.QtWidgets import QGraphicsScene, QGraphicsPixmapItem, QFileDialog
@@ -26,9 +26,9 @@ class CustomScene(
     SettingsMixin
 ):
     settings_key = "canvas_settings"
-    activate_signal = Signal(object)
 
-    def __init__(self, size):
+    def __init__(self, canvas_type: str):
+        self.canvas_type = canvas_type
         self.logger = Logger(prefix=self.__class__.__name__)
         MediatorMixin.__init__(self)
         SettingsMixin.__init__(self)
@@ -54,37 +54,26 @@ class CustomScene(
         self.generate_image_time_in_ms = 0.5
         self.do_generate_image = False
         self.generate_image_time = 0
-        self.register_signals()
 
-        # These signals apply to all custom scenes
-        for signal, handler in [
+        self.signals = [
             (SignalCode.CANVAS_COPY_IMAGE_SIGNAL, self.on_canvas_copy_image_signal),
             (SignalCode.CANVAS_CUT_IMAGE_SIGNAL, self.on_canvas_cut_image_signal),
             (SignalCode.CANVAS_ROTATE_90_CLOCKWISE_SIGNAL, self.on_canvas_rotate_90_clockwise_signal),
-            (SignalCode.CANVAS_ROTATE_90_COUNTER_CLOCKWISE_SIGNAL,
-             self.on_canvas_rotate_90_counter_clockwise_signal),
+            (SignalCode.CANVAS_ROTATE_90_COUNTER_CLOCKWISE_SIGNAL, self.on_canvas_rotate_90_counter_clockwise_signal),
             (SignalCode.CANVAS_PASTE_IMAGE_SIGNAL, self.paste_image_from_clipboard),
             (SignalCode.CANVAS_EXPORT_IMAGE_SIGNAL, self.export_image),
             (SignalCode.CANVAS_IMPORT_IMAGE_SIGNAL, self.import_image),
-        ]:
-            self.register(signal, handler)
-
-        self.activate_signal.connect(self.activate_scene)
+        ]
+        self.register_signals()
 
         self.clipboard_handler = ClipboardHandler()
         self.image_handler = ImageHandler()
         ServiceLocator.register(ServiceCode.CURRENT_ACTIVE_IMAGE, self.current_active_image)
         self.register(SignalCode.CANVAS_CLEAR, self.on_canvas_clear_signal)
 
-        # Keep track of scenes that are current active
-        self.scene_is_active = False
-
-    @Slot(object)
-    def activate_scene(self, message):
-        self.scene_is_active = message["scene"] is self
-
-    def deactivate_scene(self):
-        self.scene_is_active = False
+    @property
+    def scene_is_active(self):
+        return self.canvas_type == self.settings["canvas_settings"]["active_canvas"]
 
     @staticmethod
     def current_draggable_pixmap(self):
@@ -92,6 +81,14 @@ class CustomScene(
 
     def register_signals(self):
         signals = [
+            (SignalCode.CANVAS_COPY_IMAGE_SIGNAL, self.on_canvas_copy_image_signal),
+            (SignalCode.CANVAS_CUT_IMAGE_SIGNAL, self.on_canvas_cut_image_signal),
+            (SignalCode.CANVAS_ROTATE_90_CLOCKWISE_SIGNAL, self.on_canvas_rotate_90_clockwise_signal),
+            (SignalCode.CANVAS_ROTATE_90_COUNTER_CLOCKWISE_SIGNAL,
+            self.on_canvas_rotate_90_counter_clockwise_signal),
+            (SignalCode.CANVAS_PASTE_IMAGE_SIGNAL, self.paste_image_from_clipboard),
+            (SignalCode.CANVAS_EXPORT_IMAGE_SIGNAL, self.export_image),
+            (SignalCode.CANVAS_IMPORT_IMAGE_SIGNAL, self.import_image),
             (SignalCode.SCENE_RESIZE_SIGNAL, self.resize),
             (SignalCode.CANVAS_CANCEL_FILTER_SIGNAL, self.cancel_filter),
             (SignalCode.CANVAS_PREVIEW_FILTER_SIGNAL, self.preview_filter),
@@ -147,16 +144,17 @@ class CustomScene(
         })
 
     def paste_image_from_clipboard(self, _message):
-        image = self.clipboard_handler.paste_image_from_clipboard()
-        #self.delete_image()
+        if self.scene_is_active:
+            image = self.clipboard_handler.paste_image_from_clipboard()
+            #self.delete_image()
 
-        settings = self.settings
-        if settings["resize_on_paste"]:
-            image = self.resize_image(image)
-        image = convert_image_to_base64(image)
-        settings[self.settings_key]["image"] = image
-        self.settings = settings
-        self.refresh_image()
+            settings = self.settings
+            if settings["resize_on_paste"]:
+                image = self.resize_image(image)
+            image = convert_image_to_base64(image)
+            settings[self.settings_key]["image"] = image
+            self.settings = settings
+            self.refresh_image()
 
     def create_image(self, image):
         if self.settings["resize_on_paste"]:
@@ -336,13 +334,16 @@ class CustomScene(
             self.copy_image(self.current_active_image())
 
     def on_canvas_cut_image_signal(self, _message):
-        self.cut_image(self.current_active_image())
+        if self.scene_is_active:
+            self.cut_image(self.current_active_image())
 
     def on_canvas_rotate_90_clockwise_signal(self, _message):
-        self.rotate_90_clockwise()
+        if self.scene_is_active:
+            self.rotate_90_clockwise()
 
     def on_canvas_rotate_90_counter_clockwise_signal(self, _message):
-        self.rotate_90_counterclockwise()
+        if self.scene_is_active:
+            self.rotate_90_counterclockwise()
 
     def rotate_90_clockwise(self):
         self.rotate_image(Image.ROTATE_270)
@@ -531,10 +532,6 @@ class CustomScene(
         self.handle_mouse_event(event, False)
 
     def mousePressEvent(self, event):
-        if event.button() == Qt.MouseButton.LeftButton:
-            self.activate_signal.emit({
-                "scene": self
-            })
         self.handle_left_mouse_press(event)
         self.handle_cursor(event)
         self.last_pos = event.scenePos()

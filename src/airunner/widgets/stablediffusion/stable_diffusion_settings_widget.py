@@ -1,5 +1,3 @@
-from PySide6.QtCore import Slot
-
 from airunner.enums import SignalCode, ServiceCode, GeneratorSection, ImageGenerator
 from airunner.widgets.base_widget import BaseWidget
 from airunner.widgets.stablediffusion.templates.stable_diffusion_settings_ui import Ui_stable_diffusion_settings_widget
@@ -136,17 +134,9 @@ class StableDiffusionSettingsWidget(BaseWidget):
         self.logger.debug("load_models")
         self.ui.model.blockSignals(True)
         self.clear_models()
-
         image_generator = ImageGenerator.STABLEDIFFUSION.value
         pipeline = self.settings["pipeline"]
         version = self.settings["current_version_stablediffusion"]
-
-        # models = self.get_service("ai_model_get_by_filter")({
-        #     'category': image_generator,
-        #     'pipeline_action': pipeline,
-        #     'version': version,
-        #     'enabled': True
-        # })
         models = self.ai_model_get_by_filter(models, {
             'category': image_generator,
             'pipeline_action': pipeline,
