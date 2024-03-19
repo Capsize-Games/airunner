@@ -159,12 +159,10 @@ class GeneratorForm(BaseWidget):
         self.generate()
 
     def do_generate_image(self):
-        print("DO GENERATE IMAGE")
         time.sleep(0.1)
         self.emit_signal(SignalCode.DO_GENERATE_SIGNAL)
 
     def call_generate(self):
-        print("call_generate")
         self.emit_signal(SignalCode.LLM_UNLOAD_SIGNAL, {
             'do_unload_model': self.settings["memory_settings"]["unload_unused_models"],
             'move_unused_model_to_cpu': self.settings["memory_settings"]["move_unused_model_to_cpu"],
@@ -173,7 +171,6 @@ class GeneratorForm(BaseWidget):
         })
 
     def on_llm_image_prompt_generated_signal(self, data):
-        print("on_llm_image_prompt_generated_signal")
         prompt = data.get("prompt", None)
         prompt_type = data.get("type", ImageCategory.PHOTO.value)
         self.ui.prompt.setPlainText(prompt)

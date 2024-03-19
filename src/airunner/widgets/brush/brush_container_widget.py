@@ -18,7 +18,7 @@ class BrushContainerWidget(BaseWidget):
         current_index = 0
         for index, item in enumerate(self.settings["controlnet"]):
             self.ui.controlnet.addItem(item["display_name"])
-            if self.settings["generator_settings"]["controlnet_image_settings"]["controlnet"] == item["name"]:
+            if self.settings["generator_settings"]["controlnet_image_settings"]["controlnet"] == item["display_name"]:
                 current_index = index
         self.ui.controlnet.setCurrentIndex(current_index)
         self.ui.controlnet.blockSignals(False)
@@ -69,10 +69,5 @@ class BrushContainerWidget(BaseWidget):
 
     def controlnet_changed(self, val):
         settings = self.settings
-        controlnet_value = settings["generator_settings"]["controlnet_image_settings"]["controlnet"]
-        for item in self.settings["controlnet"]:
-            if item["display_name"] == val:
-                controlnet_value = item["name"]
-                break
-        settings["generator_settings"]["controlnet_image_settings"]["controlnet"] = controlnet_value
+        settings["generator_settings"]["controlnet_image_settings"]["controlnet"] = val
         self.settings = settings
