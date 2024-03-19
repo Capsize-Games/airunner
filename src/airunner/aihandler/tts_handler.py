@@ -165,7 +165,7 @@ class TTSHandler(BaseHandler):
             self.on_unblock_tts_generator_signal
         )
 
-    def on_interrupt_process_signal(self):
+    def on_interrupt_process_signal(self, _message: dict):
         self.logger.debug("Aborting TTS generation...")
         self.do_interrupt = True
         self.cancel_generated_speech = False
@@ -182,7 +182,7 @@ class TTSHandler(BaseHandler):
         self.do_interrupt = False
         self.paused = False
 
-    def on_application_settings_changed_signal(self, _ignore):
+    def on_application_settings_changed_signal(self, _message: dict):
         tts_enabled = self.settings["tts_enabled"]
         if tts_enabled != self.tts_enabled:
             self.tts_enabled = tts_enabled

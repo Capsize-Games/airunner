@@ -184,7 +184,7 @@ class CanvasWidget(BaseWidget):
                 f"Image generated to {path}"
             )
 
-    def on_application_settings_changed_signal(self):
+    def on_application_settings_changed_signal(self, _message: dict):
         if (
             self.grid_settings_changed() or
             self.active_grid_settings_changed() or

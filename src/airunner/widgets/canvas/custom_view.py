@@ -1,13 +1,12 @@
 from functools import partial
 
-from PySide6.QtCore import QPointF, QPoint, Qt, QRect, QEvent, Slot
+from PySide6.QtCore import QPointF, QPoint, Qt, QRect, QEvent
 from PySide6.QtGui import QMouseEvent, QColor, QBrush
 from PySide6.QtWidgets import QGraphicsView, QGraphicsItemGroup
 
 from airunner.aihandler.logger import Logger
-from airunner.enums import CanvasToolName, SignalCode, ServiceCode, CanvasType
+from airunner.enums import CanvasToolName, SignalCode, CanvasType
 from airunner.mediator_mixin import MediatorMixin
-from airunner.service_locator import ServiceLocator
 from airunner.utils import snap_to_grid
 from airunner.widgets.canvas.brush_scene import BrushScene
 from airunner.widgets.canvas.controlnet_scene import ControlnetScene
@@ -35,6 +34,7 @@ class CustomGraphicsView(
         self.pixmaps = {}
         self.line_group = QGraphicsItemGroup()
         self.resizeEvent = self.window_resized
+        self.scene_is_active = False
 
         # register signal handlers
         signal_handlers = {
@@ -241,15 +241,15 @@ class CustomGraphicsView(
             self.scene.painter.end()
         if self.canvas_type == CanvasType.IMAGE.value:
             self.scene = CustomScene(
-                size=self.size()
+                self.canvas_type
             )
         elif self.canvas_type == CanvasType.BRUSH.value:
             self.scene = BrushScene(
-                size=self.size()
+                self.canvas_type
             )
         elif self.canvas_type == CanvasType.CONTROLNET.value:
             self.scene = ControlnetScene(
-                size=self.size()
+                self.canvas_type
             )
         self.setScene(self.scene)
         self.set_canvas_color()
@@ -299,8 +299,6 @@ class CustomGraphicsView(
             x = event.pos().x()
             y = event.pos().y()
 
-        # Create a new event with the adjusted position
-
         x = float(x)
         y = float(y)
 
@@ -317,10 +315,8 @@ class CustomGraphicsView(
         return new_event
 
     def mousePressEvent(self, event: QMouseEvent):
+        settings = self.settings
+        settings["canvas_settings"]["active_canvas"] = self.canvas_type
+        self.settings = settings
         new_event = self.snap_to_grid(event)
         super().mousePressEvent(new_event)
-
-    # def mouseMoveEvent_(self, event: QMouseEvent):
-    #     print("mouseMoveEvent")
-    #     new_event = self.snap_to_grid(event, False)
-    #     super().mouseMoveEvent(new_event)

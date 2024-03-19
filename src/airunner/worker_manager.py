@@ -144,7 +144,7 @@ class WorkerManager(QObject, MediatorMixin, SettingsMixin):
             else:
                 self.emit_signal(SignalCode.VISION_STOP_CAPTURE)
 
-    def on_application_settings_changed_signal(self, _message):
+    def on_application_settings_changed_signal(self, _message: dict):
         self.toggle_vision_capture()
 
     def on_vision_captured(self, message: dict):
