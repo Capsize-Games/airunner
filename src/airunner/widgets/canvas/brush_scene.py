@@ -165,6 +165,10 @@ class BrushScene(CustomScene):
         pass
 
     def mousePressEvent(self, event):
+        if event.button() == Qt.MouseButton.LeftButton:
+            self.activate_signal.emit({
+                "scene": self
+            })
         self.handle_left_mouse_press(event)
         self.handle_cursor(event)
         if not self.is_brush_or_eraser:

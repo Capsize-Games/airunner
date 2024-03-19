@@ -6,12 +6,17 @@ from airunner.service_locator import ServiceLocator
 from airunner.windows.main.settings_mixin import SettingsMixin
 
 
-class BaseWindow(QDialog, MediatorMixin, SettingsMixin):
+class BaseWindow(
+    QDialog,
+    MediatorMixin,
+    SettingsMixin
+):
     template_class_ = None
     template = None
     is_modal: bool = False  # allow the window to be treated as a modal
 
     def __init__(self, **kwargs):
+        MediatorMixin.__init__(self)
         SettingsMixin.__init__(self)
         super().__init__()
         self.do_exec = kwargs.get("exec", True)
