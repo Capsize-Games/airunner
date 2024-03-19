@@ -1,6 +1,6 @@
 import os
 
-from PyQt6.QtWidgets import QFileDialog
+from PySide6.QtWidgets import QFileDialog
 
 from airunner.widgets.base_widget import BaseWidget
 from airunner.widgets.paths.templates.path_ui import Ui_path_widget

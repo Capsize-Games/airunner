@@ -2,7 +2,7 @@ import time
 
 import sounddevice as sd
 import numpy as np
-from PyQt6.QtCore import QThread
+from PySide6.QtCore import QThread, Slot
 from airunner.enums import SignalCode
 from airunner.settings import SLEEP_TIME_IN_MS
 from airunner.workers.worker import Worker
@@ -44,7 +44,6 @@ class AudioCaptureWorker(Worker):
         voice_input_start_time = None
         recording = []
         is_receiving_input = False
-        emit = self.emit
         while running:
             while self.listening and running and self.stream:
                 try:
@@ -54,16 +53,18 @@ class AudioCaptureWorker(Worker):
                     continue
                 if np.max(np.abs(chunk)) > volume_input_threshold:  # check if chunk is not silence
                     is_receiving_input = True
-                    self.emit(SignalCode.INTERRUPT_PROCESS_SIGNAL)
+                    self.emit_signal(SignalCode.INTERRUPT_PROCESS_SIGNAL)
                     voice_input_start_time = time.time()
                 elif voice_input_start_time is not None:
                     # make voice_end_time silence_buffer_seconds after voice_input_start_time
                     end_time = voice_input_start_time + silence_buffer_seconds
                     if time.time() >= end_time:
                         if len(recording) > 0:
-                            emit(
+                            self.emit_signal(
                                 SignalCode.AUDIO_CAPTURE_WORKER_RESPONSE_SIGNAL,
-                                b''.join(recording)
+                                {
+                                    "item": b''.join(recording)
+                                }
                             )
                             recording = []
                             is_receiving_input = False
@@ -77,7 +78,7 @@ class AudioCaptureWorker(Worker):
     def handle_message(self, message):
         pass
 
-    def start_listening(self):
+    def start_listening(self, _message):
         self.logger.debug("Start listening")
         self.listening = True
         fs = self.settings["stt_settings"]["fs"]
@@ -85,7 +86,7 @@ class AudioCaptureWorker(Worker):
         self.stream = sd.InputStream(samplerate=fs, channels=channels)
         self.stream.start()
 
-    def stop_listening(self):
+    def stop_listening(self, _message):
         self.logger.debug("Stop listening")
         self.listening = False
         self.stream.stop()

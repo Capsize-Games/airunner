@@ -31,6 +31,22 @@ class ActiveGridSettingsWidget(BaseWidget):
             SignalCode.APPLICATION_ACTIVE_GRID_AREA_UPDATED: self.update_size
         }
 
+        for k in [
+            "border_opacity_slider_widget",
+            "fill_opacity_slider_widget",
+            "width_slider_widget",
+            "height_slider_widget",
+        ]:
+            getattr(self.ui, k).settings_loaded(self.callback)
+
+    def callback(self, prop, val):
+        settings = self.settings
+        if prop in ["border_opacity", "fill_opacity"]:
+            settings["active_grid_settings"][prop] = val
+        else:
+            settings[prop] = val
+        self.settings = settings
+
     def update_size(self):
         settings = self.settings
         self.ui.width_slider_widget.slider_maximum = settings["working_width"]
@@ -40,7 +56,7 @@ class ActiveGridSettingsWidget(BaseWidget):
         settings = self.settings
         settings["active_grid_settings"][setting_key] = checked
         self.settings = settings
-        self.emit(SignalCode.ACTIVE_GRID_SETTINGS_CHANGED_SIGNAL)
+        self.emit_signal(SignalCode.ACTIVE_GRID_SETTINGS_CHANGED_SIGNAL)
 
     def action_clicked_checkbox_toggle_active_grid_border(self, checked):
         self.update_active_grid_settings("render_border", checked)
