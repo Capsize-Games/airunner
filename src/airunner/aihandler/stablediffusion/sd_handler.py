@@ -39,7 +39,6 @@ from airunner.enums import (
     Scheduler,
     SDMode,
     StableDiffusionVersion,
-    Controlnet,
     EngineResponseCode
 )
 from airunner.aihandler.mixins.compel_mixin import CompelMixin
@@ -160,7 +159,6 @@ class SDHandler(
         self.tokenizer = None
         self._safety_checker = None
         self._controlnet = None
-        self.options: dict = {}
         self.current_model: str = ""
         self.seed: int = 42
         self.batch_size: int = 1
@@ -211,7 +209,9 @@ class SDHandler(
             self.register(code, handler)
 
         torch.backends.cuda.matmul.allow_tf32 = self.settings["memory_settings"]["use_tf32"]
-        self.controlnet_type = "canny"
+        controlnet = self.settings["generator_settings"]["controlnet_image_settings"]["controlnet"]
+        controlnet_item = self.controlnet_model_by_name(controlnet)
+        self.controlnet_type = controlnet_item["name"]
         self.sd_mode = SDMode.DRAWING
         self.loaded = False
         self.loading = False
@@ -380,10 +380,14 @@ class SDHandler(
         return self._controlnet_image
 
     def preprocess_for_controlnet(self, image):
-        if self.current_controlnet_type != self.controlnet_type or not self.processor:
-            self.logger.debug("Loading controlnet processor " + self.controlnet_type)
-            self.current_controlnet_type = self.controlnet_type
-            self.processor = Processor(self.controlnet_type)
+        controlnet = self.sd_request.generator_settings.controlnet_image_settings.controlnet
+        controlnet_item = self.controlnet_model_by_name(controlnet)
+        controlnet_type = controlnet_item["name"]
+
+        if self.current_controlnet_type != controlnet_type or not self.processor:
+            self.logger.debug("Loading controlnet processor " + controlnet_type)
+            self.current_controlnet_type = controlnet_type
+            self.processor = Processor(controlnet_type)
         if self.processor is not None and image is not None:
             self.logger.debug("Controlnet: Processing image")
             image = self.processor(image)
@@ -964,11 +968,9 @@ class SDHandler(
            not self.is_sd_xl_turbo and
            not self.is_turbo
         )
-        self.controlnet_type = self.options.get(
-            "controlnet",
-            Controlnet.CANNY.value
-        ).lower()
-        self.controlnet_type = self.controlnet_type.replace(" ", "_")
+        controlnet = self.settings["generator_settings"]["controlnet_image_settings"]["controlnet"]
+        controlnet_item = self.controlnet_model_by_name(controlnet)
+        self.controlnet_type = controlnet_item["name"]
         self.generator().manual_seed(self.sd_request.generator_settings.seed)
         seed_everything(self.seed)
 
@@ -1268,8 +1270,6 @@ class SDHandler(
             "config_files": CONFIG_FILES,
             "pipeline_class": self.pipeline_class(),
             "load_safety_checker": False,
-            "safety_checker": self.safety_checker,
-            "feature_extractor": self.feature_extractor,
         }
         if self.settings["generator_settings"]["enable_controlnet"]:
             kwargs["controlnet"] = self.controlnet()
@@ -1285,6 +1285,8 @@ class SDHandler(
                 )
         except Exception as e:
             self.logger.error(f"Failed to load model from ckpt: {e}")
+        pipe.safety_checker = self.safety_checker
+        pipe.feature_extractor = self.feature_extractor
         return pipe
 
     def clear_controlnet(self):
