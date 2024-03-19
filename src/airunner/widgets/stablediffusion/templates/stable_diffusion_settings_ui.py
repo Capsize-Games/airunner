@@ -268,7 +268,7 @@ class Ui_stable_diffusion_settings_widget(object):
         self.steps_widget.setProperty("label_text", QCoreApplication.translate("stable_diffusion_settings_widget", u"Steps", None))
         self.scale_widget.setProperty("label_text", QCoreApplication.translate("stable_diffusion_settings_widget", u"Scale", None))
         self.samples.setProperty("label_text", QCoreApplication.translate("stable_diffusion_settings_widget", u"Samples", None))
-        self.samples.setProperty("settings_property", QCoreApplication.translate("stable_diffusion_settings_widget", u"generator_settings.n_samples", None))
+        self.samples.setProperty("settings_property", QCoreApplication.translate("stable_diffusion_settings_widget", u"n_samples", None))
         self.clip_skip_slider_widget.setProperty("label_text", QCoreApplication.translate("stable_diffusion_settings_widget", u"Clip Skip", None))
         self.label.setText(QCoreApplication.translate("stable_diffusion_settings_widget", u"Presets", None))
     # retranslateUi

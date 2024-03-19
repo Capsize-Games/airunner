@@ -40,7 +40,7 @@ class Ui_brush_widget(object):
         self.controlnet_conditioning_scale.setProperty("spinbox_single_step", 0.100000000000000)
         self.controlnet_conditioning_scale.setProperty("spinbox_page_step", 0.200000000000000)
         self.controlnet_conditioning_scale.setProperty("slider_callback", u"handle_value_change")
-        self.controlnet_conditioning_scale.setProperty("settings_property", u"generator_settings.controlnet_image_settings.conditioning_scale")
+        self.controlnet_conditioning_scale.setProperty("settings_property", u"conditioning_scale")
         self.controlnet_conditioning_scale.setProperty("display_as_float", True)
 
         self.gridLayout.addWidget(self.controlnet_conditioning_scale, 3, 0, 1, 1)
@@ -61,7 +61,7 @@ class Ui_brush_widget(object):
         self.brush_size_slider.setProperty("spinbox_single_step", 1)
         self.brush_size_slider.setProperty("spinbox_page_step", 10)
         self.brush_size_slider.setProperty("slider_callback", u"handle_value_change")
-        self.brush_size_slider.setProperty("settings_property", u"brush_settings.size")
+        self.brush_size_slider.setProperty("settings_property", u"size")
         self.brush_size_slider.setProperty("display_as_float", False)
 
         self.gridLayout.addWidget(self.brush_size_slider, 1, 0, 1, 1)
@@ -78,7 +78,7 @@ class Ui_brush_widget(object):
         self.controlnet_guidance_scale.setProperty("spinbox_single_step", 0.100000000000000)
         self.controlnet_guidance_scale.setProperty("spinbox_page_step", 0.200000000000000)
         self.controlnet_guidance_scale.setProperty("slider_callback", u"handle_value_change")
-        self.controlnet_guidance_scale.setProperty("settings_property", u"generator_settings.controlnet_image_settings.guidance_scale")
+        self.controlnet_guidance_scale.setProperty("settings_property", u"guidance_scale")
         self.controlnet_guidance_scale.setProperty("display_as_float", True)
 
         self.gridLayout.addWidget(self.controlnet_guidance_scale, 4, 0, 1, 1)
@@ -95,7 +95,7 @@ class Ui_brush_widget(object):
         self.strength_slider.setProperty("spinbox_single_step", 0.100000000000000)
         self.strength_slider.setProperty("spinbox_page_step", 0.200000000000000)
         self.strength_slider.setProperty("slider_callback", u"handle_value_change")
-        self.strength_slider.setProperty("settings_property", u"generator_settings.strength")
+        self.strength_slider.setProperty("settings_property", u"strength")
         self.strength_slider.setProperty("display_as_float", True)
 
         self.gridLayout.addWidget(self.strength_slider, 2, 0, 1, 1)
