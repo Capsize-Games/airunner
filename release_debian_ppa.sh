@@ -1,5 +1,7 @@
 #!/bin/bash
 
+find dist -name '*.pyc' -delete
+
 # Extract airunner version from setup.py using Python and append ~dev
 AIRUNNER_VERSION=$(python3 -c "from distutils.core import run_setup; print(run_setup('setup.py', stop_after='init').get_version())")"~dev"
 
@@ -23,7 +25,7 @@ rm .gitignore.tmp
 dch -v $AIRUNNER_VERSION-$DEBIAN_VERSION -D jammy MESSAGE
 
 # Build
-dpkg-buildpackage -S -D -sa
+dpkg-buildpackage -D -sa
 
 # Upload to PPA
 cd ..

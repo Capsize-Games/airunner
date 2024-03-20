@@ -5,20 +5,14 @@ from PyInstaller.utils.hooks import copy_metadata, collect_data_files
 import sys ; sys.setrecursionlimit(sys.getrecursionlimit() * 5)
 os.environ["AIRUNNER_ENVIRONMENT"] = "prod"
 libraries = [
-    "/usr/local/lib/python3.10/dist-packages/PyQt6/Qt6/lib/",
-    "/usr/lib/x86_64-linux-gnu/wine-development/",
-    "/usr/local/lib/python3.10/dist-packages/h5py.libs/",
+    "/usr/local/lib/python3.10/dist-packages/PySide6/Qt/lib/",
     "/usr/local/lib/python3.10/dist-packages/scipy.libs/",
     "/usr/local/lib/python3.10/dist-packages/tokenizers.libs/",
-    "/usr/local/lib/python3.10/dist-packages/Pillow.libs/",
-    "/usr/local/lib/python3.10/dist-packages/opencv_python.libs/",
+    "/usr/local/lib/python3.10/dist-packages/opencv_python_headless.libs/",
     "/usr/local/lib/python3.10/dist-packages/torchaudio/lib/",
     "/usr/local/lib/python3.10/dist-packages/torch/lib/",
     "/usr/lib/python3.10",
     "/usr/lib/x86_64-linux-gnu/",
-    "/usr/local/lib/",
-    "/usr/local/lib/python3.10",
-    "/usr/local/lib/python3.10/dist-packages"
 ]
 os.environ["LD_LIBRARY_PATH"] = ":".join(libraries)
 block_cipher = None
@@ -31,7 +25,11 @@ EXE_RUNTIME_TMP_DIR = None
 COLLECT_NAME = 'airunner'
 COLLECT_STRIP = False
 COLLECT_UPX = True
-datas = []
+datas = [
+    ("src/airunner/resources_light_rc.py", "."),
+    ("src/airunner/resources_dark_rc.py", "."),
+    ("src/airunner/styles", "airunner/styles"),
+]
 datas += copy_metadata('tqdm')
 datas += copy_metadata('regex')
 datas += copy_metadata('requests')
@@ -40,9 +38,9 @@ datas += copy_metadata('filelock')
 datas += copy_metadata('numpy')
 datas += copy_metadata('tokenizers')
 datas += copy_metadata('transformers')
-datas += copy_metadata('rich')
 datas += copy_metadata('sympy')
-datas += copy_metadata('opencv-python')
+datas += copy_metadata('opencv-python-headless')
+datas += collect_data_files('pytz', include_py_files=True)
 datas += collect_data_files("torch", include_py_files=True)
 datas += collect_data_files("torchvision", include_py_files=True)
 datas += collect_data_files("JIT", include_py_files=True)
@@ -51,6 +49,7 @@ datas += collect_data_files("lightning_fabric", include_py_files=True)
 datas += collect_data_files("transformers", include_py_files=True)
 datas += collect_data_files("sympy", include_py_files=True)
 datas += collect_data_files("controlnet_aux", include_py_files=True)
+datas += collect_data_files("PyQt6", include_py_files=True)
 a = Analysis(
     [
         f'/app/airunner/src/airunner/main.py',
@@ -59,6 +58,7 @@ a = Analysis(
         "/usr/local/lib/python3.10/dist-packages/",
         "/usr/local/lib/python3.10/dist-packages/torch/lib",
         "/usr/local/lib/python3.10/dist-packages/tokenizers",
+        "/usr/local/lib/python3.10/dist-packages/tensorflow",
         "/usr/lib/x86_64-linux-gnu/",
     ],
     binaries=[
@@ -93,14 +93,12 @@ a = Analysis(
         "numpy",
         "PIL._tkinter_finder",
         "sympy",
-        "opencv-python",
+        "pytz",
     ],
     hookspath=[],
     hooksconfig={},
     runtime_hooks=[],
     excludes=[
-        "tcl",
-        "tcl8",
         "cmake",
         "cryptography",
         "email-validator",
@@ -159,16 +157,17 @@ coll = COLLECT(
     name=COLLECT_NAME
 )
 
+os.makedirs('/app/dist/airunner/images/', exist_ok=True)
+os.makedirs('/app/dist/airunner/diffusers/pipelines/stable_diffusion', exist_ok=True)
+os.makedirs('/app/dist/airunner/_internal/airunner/windows/main', exist_ok=True)
+
 # copy files for distribution
-shutil.copytree('/app/airunner/src/airunner/pyqt', '/app/dist/airunner/pyqt')
-shutil.copyfile('/app/airunner/linux.itch.toml', '/app/dist/airunner/.itch.toml')
-shutil.copytree('/app/airunner/src/airunner/src/icons', '/app/dist/airunner/src/icons')
+shutil.copyfile('./linux.itch.toml', '/app/dist/airunner/.itch.toml')
 shutil.copytree('/app/airunner/src/airunner/data', '/app/dist/airunner/data')
-shutil.copyfile('/app/airunner/src/airunner/src/icon_256.png', '/app/dist/airunner/src/icon_256.png')
-shutil.copyfile('/app/airunner/src/airunner/images/splashscreen.png', '/app/dist/airunner/images/splashscreen.png')
+#shutil.copyfile('src/airunner/images/icon_256.png', '/app/dist/airunner/src/icon_256.png')
+shutil.copyfile('src/airunner/images/splashscreen.png', '/app/dist/airunner/images/splashscreen.png')
 
 # copy sd config files
-os.makedirs('/dist/airunner/diffusers/pipelines/stable_diffusion', exist_ok=True)
 shutil.copyfile('/app/airunner/src/airunner/v1.yaml', '/app/dist/airunner/v1.yaml')
 shutil.copyfile('/app/airunner/src/airunner/v2.yaml', '/app/dist/airunner/v2.yaml')
 shutil.copyfile('/app/airunner/src/airunner/sd_xl_base.yaml', '/app/dist/airunner/sd_xl_base.yaml')

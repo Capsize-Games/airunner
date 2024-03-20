@@ -16,10 +16,8 @@ override_dh_auto_test:
 	# This line must be indented with a tab
 
 override_dh_auto_install:
-	# Manually specify installation of your PyInstaller binary
-	# This line must be indented with a tab
-	mkdir -p debian/airunner/usr/bin/
-	cp -R dist/airunner debian/airunner/usr/bin/
+	mkdir -p debian/airunner/usr/share/airunner/
+	cp -R dist/airunner debian/airunner/usr/share/airunner/
 
 override_dh_dwz:
     # Skip dh_dwz processing for PyInstaller binaries

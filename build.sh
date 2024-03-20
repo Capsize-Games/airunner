@@ -34,17 +34,17 @@ echo ""
 cp /app/setup.py ./dist/airunner/
 echo ""
 echo "============================================"
-echo "Copy /usr/local/lib/python3.10/dist-packages/Pillow-9.5.0.dist-info to ./dist/airunner/Pillow-9.5.0.dist-info"
+echo "Copy /usr/local/lib/python3.10/dist-packages/Pillow-10.2.0.dist-info to ./dist/airunner/Pillow-10.2.0.dist-info"
 echo "============================================"
 echo ""
-cp -R /usr/local/lib/python3.10/dist-packages/Pillow-9.5.0.dist-info ./dist/airunner/
-echo ""
-echo "============================================"
-echo "Deploying airunner to itch.io"
-echo "============================================"
-echo ""
-chown -R 1000:1000 dist
-LATEST_TAG=$(grep -oP '(?<=version=).*(?=,)' /app/airunner/setup.py | tr -d '"')
-echo "Latest tag: $LATEST_TAG"
-wget https://dl.itch.ovh/butler/linux-amd64/head/butler && chmod +x butler
-./butler push ./dist/airunner capsizegames/ai-runner:ubuntu --userversion $LATEST_TAG
+cp -R /usr/local/lib/python3.10/dist-packages/Pillow-10.2.0.dist-info ./dist/airunner/
+#echo ""
+#echo "============================================"
+#echo "Deploying airunner to itch.io"
+#echo "============================================"
+#echo ""
+#chown -R 1000:1000 dist
+#LATEST_TAG=$(grep -oP '(?<=version=).*(?=,)' /app/airunner/setup.py | tr -d '"')
+#echo "Latest tag: $LATEST_TAG"
+#wget https://dl.itch.ovh/butler/linux-amd64/head/butler && chmod +x butler
+#./butler push ./dist/airunner capsizegames/ai-runner:ubuntu --userversion $LATEST_TAG
