@@ -52,8 +52,7 @@ RUN pip install --upgrade pip
 RUN pip install --upgrade setuptools
 RUN pip install --upgrade wheel
 RUN pip install requests cmake
-RUN pip uninstall torch torchvision -y
-RUN pip install torch torchvision --index-url https://download.pytorch.org/whl/cu118 --upgrade
+RUN pip install torch torchvision torchaudio
 
 FROM install_requirements as fix_tcl
 USER root
@@ -76,6 +75,3 @@ COPY dobuild.py dobuild.py
 COPY build.sh build.sh
 COPY build.airunner.linux.prod.spec build.airunner.linux.prod.spec
 COPY setup.py setup.py
-
-FROM build_files as install_diffusers
-RUN pip install https://github.com/w4ffl35/diffusers/archive/refs/tags/v0.19.0-convert_from_ckpt_patch.zip
