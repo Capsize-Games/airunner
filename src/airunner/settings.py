@@ -509,3 +509,4 @@ ESPEAK_SETTINGS = {
     },
     "punctuation_modes": ["none", "all", "some"],
 }
+MIN_NUM_INFERENCE_STEPS_IMG2IMG = 3
