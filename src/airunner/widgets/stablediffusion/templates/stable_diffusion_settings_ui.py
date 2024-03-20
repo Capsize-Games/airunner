@@ -21,7 +21,7 @@ from PySide6.QtWidgets import (QApplication, QComboBox, QGridLayout, QHBoxLayout
 
 from airunner.widgets.seed.seed_widget import SeedWidget
 from airunner.widgets.slider.slider_widget import SliderWidget
-import resources_light_rc
+import airunner.resources_light_rc
 
 class Ui_stable_diffusion_settings_widget(object):
     def setupUi(self, stable_diffusion_settings_widget):
