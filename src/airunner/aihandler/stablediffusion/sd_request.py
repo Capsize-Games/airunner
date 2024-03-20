@@ -3,7 +3,7 @@ from PySide6.QtCore import QObject, QRect
 
 from airunner.enums import SDMode, GeneratorSection, Controlnet
 from airunner.mediator_mixin import MediatorMixin
-from airunner.settings import DEFAULT_SCHEDULER
+from airunner.settings import DEFAULT_SCHEDULER, MIN_NUM_INFERENCE_STEPS_IMG2IMG
 from airunner.utils import convert_base64_to_image
 from airunner.windows.main.settings_mixin import SettingsMixin
 
@@ -187,8 +187,8 @@ class SDRequest(
         if self.is_img2img:
             args["height"] = self.settings["working_height"]
             args["width"] = self.settings["working_width"]
-            if args["num_inference_steps"] < 3:
-                args["num_inference_steps"] = 3
+            if args["num_inference_steps"] < MIN_NUM_INFERENCE_STEPS_IMG2IMG:
+                args["num_inference_steps"] = MIN_NUM_INFERENCE_STEPS_IMG2IMG
 
         args["generator"] = self.generator
 
