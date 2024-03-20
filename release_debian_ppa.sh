@@ -1,6 +1,6 @@
 #!/bin/bash
 
-find dist -name '*.pyc' -delete
+sudo find dist -name '*.pyc' -delete
 
 # Extract airunner version from setup.py using Python and append ~dev
 AIRUNNER_VERSION=$(python3 -c "from distutils.core import run_setup; print(run_setup('setup.py', stop_after='init').get_version())")"~dev"
@@ -27,6 +27,15 @@ dch -v $AIRUNNER_VERSION-$DEBIAN_VERSION -D jammy MESSAGE
 # Build
 dpkg-buildpackage -D -sa
 
+# Commit changes
+dpkg-source --commit
+
 # Upload to PPA
 cd ..
-dput ppa:capsize/airunner airunner_$AIRUNNER_VERSION-$DEBIAN_VERSION"_source.changes"
+
+# Check if flag is passed
+if [ "$1" == "--dev" ]; then
+    dput ppa:capsize/airunner-dev airunner_$AIRUNNER_VERSION-$DEBIAN_VERSION"_source.changes"
+else
+    dput ppa:capsize/airunner airunner_$AIRUNNER_VERSION-$DEBIAN_VERSION"_source.changes"
+fi

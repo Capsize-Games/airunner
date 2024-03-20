@@ -58,12 +58,7 @@ FROM install_requirements as fix_tcl
 USER root
 RUN ln -s /usr/share/tcltk/tcl8.6 /usr/share/tcltk/tcl8
 
-FROM fix_tcl as install_apps
-RUN python3 -c "from accelerate.utils import write_basic_config; write_basic_config(mixed_precision='fp16')"
-RUN pip uninstall nvidia-cublas-cu11 nvidia-cublas-cu12 -y
-RUN pip uninstall xformers -y
-
-FROM install_apps as more_env
+FROM fix_tcl as more_env
 WORKDIR /app
 ENV PATH="/usr/local/lib/python3.10:/usr/local/lib/python3.10/bin:${PATH}"
 ENV PYTHONPATH="/usr/local/lib/python3.10:/usr/local/lib/python3.10/bin:${PYTHONPATH}"
