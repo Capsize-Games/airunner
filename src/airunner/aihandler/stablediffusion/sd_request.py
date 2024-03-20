@@ -183,10 +183,6 @@ class SDRequest(
         args.update(kwargs)
         args["callback_steps"] = self.callback_steps
         args["clip_skip"] = self.generator_settings.clip_skip
-        if self.cross_attention_kwargs_scale is not None:
-            args["cross_attention_kwargs"] = {
-                "scale": self.cross_attention_kwargs_scale
-            }
 
         if self.is_img2img:
             args["height"] = self.settings["working_height"]
