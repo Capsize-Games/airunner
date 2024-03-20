@@ -28,8 +28,8 @@ from airunner.widgets.generator_form.generator_form_widget import GeneratorForm
 from airunner.widgets.model_manager.model_manager_widget import ModelManagerWidget
 from airunner.widgets.stablediffusion.stable_diffusion_settings_widget import StableDiffusionSettingsWidget
 from airunner.widgets.upscale.upscale_widget import UpscaleWidget
-import resources_light_rc
-import resources_dark_rc
+import airunner.resources_light_rc
+import airunner.resources_dark_rc
 
 class Ui_MainWindow(object):
     def setupUi(self, MainWindow):
