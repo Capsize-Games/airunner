@@ -10,10 +10,27 @@ This is a stand alone function which:
 The function will run using the venv python interpreter
 """
 import os
+import re
 import subprocess
 from pathlib import Path
 
 from airunner.utils import get_venv_python_executable
+
+
+def adjust_resource_imports(input_file, output_file):
+    # Define the pattern to find the original import lines
+    pattern = re.compile(r'^import (.+_rc)$', re.MULTILINE)
+    # Define the replacement string, incorporating your namespace
+    replacement = r'import airunner.\1'
+
+    with open(input_file, 'r') as file:
+        content = file.read()
+
+    # Replace the import statements with the ones including your namespace
+    adjusted_content = re.sub(pattern, replacement, content)
+
+    with open(output_file, 'w') as file:
+        file.write(adjusted_content)
 
 
 def build_ui(path):
@@ -36,6 +53,8 @@ def build_ui(path):
             ],
             cwd=ui_file_dir,
         )
+
+        adjust_resource_imports(ui_file_py, ui_file_py)
 
 def generate_resources():
     print("Generating resources.py")
