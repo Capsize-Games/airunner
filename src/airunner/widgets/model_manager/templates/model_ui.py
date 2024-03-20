@@ -18,8 +18,8 @@ from PySide6.QtGui import (QBrush, QColor, QConicalGradient, QCursor,
 from PySide6.QtWidgets import (QApplication, QCheckBox, QGridLayout, QHBoxLayout,
     QHeaderView, QPushButton, QSizePolicy, QSpacerItem,
     QTableWidget, QTableWidgetItem, QVBoxLayout, QWidget)
-import resources_light_rc
-import resources_dark_rc
+import airunner.resources_light_rc
+import airunner.resources_dark_rc
 
 class Ui_model_widget(object):
     def setupUi(self, model_widget):
