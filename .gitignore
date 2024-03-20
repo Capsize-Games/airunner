@@ -23,3 +23,10 @@ src/airunner/scripts/realesrgan
 src/airunner/scripts/weights
 gfpgan
 test.json
+.pybuild
+.debhelper
+/debian/airunner/usr/share/
+/debian/airunner/DEBIAN/
+/debian/airunner.substvars
+/debian/debhelper-build-stamp
+/debian/files

@@ -18,61 +18,7 @@ No web server to run, additional requirements to install or technical knowledge 
 
 [Just download the compiled package](https://capsizegames.itch.io/ai-runner) and start generating AI Art!
 
----
-
 ![Screenshot from 2023-06-30 10-43-49](https://github.com/Capsize-Games/airunner/assets/25737761/72e0dd26-53ca-4d5c-8f07-b6327a59b50c)
-
-## 🔧 Installation
-
-### Compiled
-
-[Download the official build on itch.io](https://capsizegames.itch.io/ai-runner)!
-
-This is the compiled version of AI Runner which you can use without 
-installing any additional dependencies.
-
-### PyPi and Source
-
-#### Linux
-
-```bash
-sudo apt update
-sudo apt install airunner
-```
-
-#### Windows
-
-```bash
-pip install pypiwin32
-```
-
-#### PyPi
-
-If you want to install AI Runner using pip, you can do so using the following command:
-
-```bash
-pip install airunner
-```
-
-#### Source
-
-If you want to install AI Runner from source, you can do so using the following command:
-
-```bash
-git clone -b develop https://github.com/Capsize-Games/airunner.git
-cd airunner && pip install -e .
-```
-Run it with
-
-```bash
-cd src/airunner
-python main.py
-```
-
-[See the installation 
-wiki page for more information](https://github.com/Capsize-Games/airunner/wiki/Installation-instructions)
-
----
 
 ## ⭐ Features
 
@@ -109,6 +55,116 @@ large language models and AI image generators on your own hardware.
 | Fast load time, responsive interface                         |    ✅    |
 | Pure python - does not rely on a webserver                   |    ✅    |
 
+---
+
+## 🔧 Installation
+
+### Pre-Compiled
+
+[Download the official build on itch.io](https://capsizegames.itch.io/ai-runner)!
+
+This is the compiled version of AI Runner which you can use without 
+installing any additional dependencies.
+
+### Apt
+
+```bash
+sudo apt update
+sudo apt install airunner
+```
+
+### PyPi
+
+If you are on Windows, first install the following dependencies:
+```bash
+pip install pypiwin32
+```
+
+```bash
+pip install airunner
+```
+
+### Source
+
+If you want to install AI Runner from source, you can do so using the following command:
+
+```bash
+git clone -b develop https://github.com/Capsize-Games/airunner.git
+cd airunner && pip install -e .
+```
+
+---
+
+## Running AI Runner
+
+### Pre-compiled
+
+Unzip the AI Runner zip file which you downloaded from itch.io
+
+#### Linux
+
+```bash
+cd airunner
+./airunner
+```
+
+#### Windows
+
+```bash
+cd airunner
+airunner.exe
+```
+
+Alternatively, you can use the itch.io launcher application which simplifies the process of downloading and running AI Runner.
+
+---
+
+### Custom compiled
+
+If you have compiled AI Runner from source, you can run it using the following commands:
+
+```bash
+cd dist/airunner
+./airunner
+```
+
+### Apt
+
+```bash
+airunner
+```
+
+### PyPi
+
+```bash
+python3 -m airunner
+```
+
+### Source
+
+```bash
+cd src/airunner
+python main.py
+```
+
+### Docker
+
+Linux:
+
+```bash
+docker-compose up linux
+```
+
+Windows:
+
+```bash
+docker-compose up windows
+```
+
+[See the installation 
+wiki page for more information](https://github.com/Capsize-Games/airunner/wiki/Installation-instructions)
+
+---
 
 ### Requirements
 
@@ -128,30 +184,38 @@ Typically models are between 2.5gb to 8gb in size. The more models you download,
 
 ---
 
-### Compiling and running
+## Compiling
+
+Clone this repository
 
 ```bash
 git clone https://github.com/Capsize-Games/airunner.git
 cd airunner
+```
+
+### Build from source
+
+```bash
 pip install -e .
 pip install pyinstaller
 bash build.dev.sh
-cd dist/airunner
-./airunner
 ```
----
 
-### Unit tests
-
-Test coverage is currently low, but the existing tests can be run using the following command:
+### Build with Docker
 
 ```bash
-python -m unittest discover tests`
+docker-compose run build
 ```
 
 ---
 
-### release_debian_ppa.sh
+## Build for Debian
+
+Run the following script and follow the instructions.
+
+```bash
+bash release_debian_ppa.sh
+```
 
 This is a bash script that automates the process of packaging a Python project into a Debian package and uploading it to a Personal Package Archive (PPA). Here's a step-by-step breakdown of what the script does:
 
@@ -166,3 +230,13 @@ This is a bash script that automates the process of packaging a Python project i
 9. Uploads the Debian source package to the PPA. This is done by running the `dput` command with the PPA and the source package as arguments.
 
 Currently we are only releasing under a dev PPA, but we will switch to a stable PPA in the future.
+
+---
+
+## Unit tests
+
+Test coverage is currently low, but the existing tests can be run using the following command:
+
+```bash
+python -m unittest discover tests
+```

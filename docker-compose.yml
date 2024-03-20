@@ -1,4 +1,5 @@
 version: "3.6"
+
 services:
   linux:
     restart: always
@@ -24,3 +25,27 @@ services:
       - ./build:/app/build
     working_dir: /app
     runtime: nvidia
+
+  build:
+    container_name: airunner_build
+    build:
+      context: ./
+      dockerfile: ./Dockerfile # This assumes you have a separate Dockerfile for building
+    environment:
+      - BRANCH=master
+    volumes:
+      - ./:/app
+    working_dir: /app
+    command: build.sh
+
+  devbuild:
+    container_name: airunner_build
+    build:
+      context: ./
+      dockerfile: ./Dockerfile # This assumes you have a separate Dockerfile for building
+    environment:
+      - BRANCH=develop
+    volumes:
+      - ./:/app
+    working_dir: /app
+    command: build.sh
