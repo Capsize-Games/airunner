@@ -79,33 +79,36 @@ wiki page for more information](https://github.com/Capsize-Games/airunner/wiki/I
 AI Runner is a multi-modal AI application which allows you to run open-source 
 large language models and AI image generators on your own hardware.
 
-- Have conversations with with a chatbot using your voice
-- Text-to-speech
-- Speech-to-text
-- Vision-to-text
-- Text generation with large language models (LLMs)
-- Image generation using Stable Diffusion and Kandinsky
-- Draw and generate images in near real-time
-- Run multiple models at once
-- Easy setup - download and run. No need to install any requirements*
-- Run offline, locally on your own hardware!
-- Fast! Generate images in approximately 2 seconds using an RTX 2080s, 512x512 dimensions, 20 steps euler_a (approximately 10 seconds for 512x512 20 steps Euler A on 1080gtx). Also runs on CPU†
-- text-to-image
-- image-to-image
-- inpaint and outpaint
-- pix2pix
-- depth2img
-- controlnet
-- LoRA
-- textual embeddings
-- Drawing tools
-- Image filters
-- Dark mode
-- Infinite scrolling canvas - use outpainting to create artwork at any size you wish or expand existing images.
-- NSFW filter toggle
-- Standard Stable Diffusion settings
-- Fast load time, responsive interface
-- Pure python - does not rely on a webserver
+| Feature                                                      | Included |
+|--------------------------------------------------------------|:--------:|
+| Have conversations with a chatbot using your voice           |    ✅    |
+| Text-to-speech                                               |    ✅    |
+| Speech-to-text                                               |    ✅    |
+| Vision-to-text                                               |    ✅    |
+| Text generation with large language models (LLMs)            |    ✅    |
+| Image generation using Stable Diffusion and Kandinsky        |    ✅    |
+| Draw and generate images in near real-time                   |    ✅    |
+| Run multiple models at once                                  |    ✅    |
+| Easy setup - download and run. No need to install any requirements* | ✅ |
+| Run offline, locally on your own hardware!                   |    ✅    |
+| Fast! Generate images in approximately 2 seconds using an RTX 2080s | ✅ |
+| text-to-image                                                |    ✅    |
+| image-to-image                                               |    ✅    |
+| inpaint and outpaint                                         |    ✅    |
+| pix2pix                                                      |    ✅    |
+| depth2img                                                    |    ✅    |
+| controlnet                                                   |    ✅    |
+| LoRA                                                         |    ✅    |
+| textual embeddings                                           |    ✅    |
+| Drawing tools                                                |    ✅    |
+| Image filters                                                |    ✅    |
+| Dark mode                                                    |    ✅    |
+| Infinite scrolling canvas                                    |    ✅    |
+| NSFW filter toggle                                           |    ✅    |
+| Standard Stable Diffusion settings                           |    ✅    |
+| Fast load time, responsive interface                         |    ✅    |
+| Pure python - does not rely on a webserver                   |    ✅    |
+
 
 ### Requirements
 
@@ -122,32 +125,28 @@ Typically models are between 2.5gb to 8gb in size. The more models you download,
 
 [Instructions on how to use AI Runner can be found in the wiki](https://github.com/Capsize-Games/airunner/wiki/AI-Runner)
 
+
+---
+
+### Compiling and running
+
+```bash
+git clone https://github.com/Capsize-Games/airunner.git
+cd airunner
+pip install -e .
+pip install pyinstaller
+bash build.dev.sh
+cd dist/airunner
+./airunner
+```
 ---
 
 ### Unit tests
 
-Unit tests can be run using the following command:
-
-**All tests:**
-`python -m unittest discover tests`
-
-**Individual test:**
-`python -m unittest tests.test_canvas`
-
----
-
-### Build the code
-
-First install PyInstaller
+Test coverage is currently low, but the existing tests can be run using the following command:
 
 ```bash
-pip install pyinstaller
-```
-
-Then run the build script
-
-```bash
-bash build.dev.sh
+python -m unittest discover tests`
 ```
 
 ---
