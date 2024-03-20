@@ -2,6 +2,8 @@ import os
 import urllib.request
 import json
 
+BRANCH = os.environ.get("BRANCH", "master")
+
 
 def install_latest(repo, deps=True):
     url = f'https://api.github.com/repos/{repo}/releases/latest'
@@ -23,6 +25,6 @@ def clone(repo):
 # install repos
 clone("Capsize-Games/airunner")
 os.chdir("/app/airunner")
-os.system("git checkout master")
+os.system(f"git checkout {BRANCH}")
 os.system("git pull")
 os.system("python3 -m pip install .")
