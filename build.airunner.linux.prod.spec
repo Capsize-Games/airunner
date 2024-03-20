@@ -65,6 +65,7 @@ a = Analysis(
         ('/usr/local/lib/python3.10/dist-packages/nvidia/cudnn/lib/libcudnn_ops_infer.so.8', '.'),
         ('/usr/local/lib/python3.10/dist-packages/nvidia/cudnn/lib/libcudnn_cnn_infer.so.8', '.'),
         ('/usr/lib/x86_64-linux-gnu/libgstgl-1.0.so.0', '.'),
+        ('/usr/local/lib/python3.10/dist-packages/nvidia/cublas/lib/libcublas.so.12', '.')
     ],
     datas=datas,
     hiddenimports=[

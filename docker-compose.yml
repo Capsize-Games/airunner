@@ -33,10 +33,20 @@ services:
       dockerfile: ./Dockerfile # This assumes you have a separate Dockerfile for building
     environment:
       - BRANCH=master
+      - DEV_ENV=0
+      - AIRUNNER_ENVIRONMENT=prod
+      - AIRUNNER_OS=linux
+      - PYTORCH_CUDA_ALLOC_CONF=garbage_collection_threshold:0.9,max_split_size_mb:512
+      - NUMBA_CACHE_DIR=/tmp/numba_cache
+      - LD_LIBRARY_PATH=/usr/lib/python3.10:/usr/lib/x86_64-linux-gnu/:/usr/local/lib/:/usr/local/lib/python3.10:/usr/local/lib/python3.10/dist-packages
+      - DISABLE_TELEMETRY=1
+      - TCL_LIBDIR_PATH=/usr/lib/x86_64-linux-gnu/
+      - TK_LIBDIR_PATH=/usr/lib/x86_64-linux-gnu/
     volumes:
       - ./:/app
     working_dir: /app
-    command: build.sh
+    runtime: nvidia
+    command: /bin/bash build.sh
 
   devbuild:
     container_name: airunner_build
@@ -45,7 +55,17 @@ services:
       dockerfile: ./Dockerfile # This assumes you have a separate Dockerfile for building
     environment:
       - BRANCH=develop
+      - DEV_ENV=0
+      - AIRUNNER_ENVIRONMENT=prod
+      - AIRUNNER_OS=linux
+      - PYTORCH_CUDA_ALLOC_CONF=garbage_collection_threshold:0.9,max_split_size_mb:512
+      - NUMBA_CACHE_DIR=/tmp/numba_cache
+      - LD_LIBRARY_PATH=/usr/lib/python3.10:/usr/lib/x86_64-linux-gnu/:/usr/local/lib/:/usr/local/lib/python3.10:/usr/local/lib/python3.10/dist-packages
+      - DISABLE_TELEMETRY=1
+      - TCL_LIBDIR_PATH=/usr/lib/x86_64-linux-gnu/
+      - TK_LIBDIR_PATH=/usr/lib/x86_64-linux-gnu/
     volumes:
       - ./:/app
     working_dir: /app
-    command: build.sh
+    runtime: nvidia
+    command: /bin/bash build.sh

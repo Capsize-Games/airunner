@@ -10,6 +10,14 @@ echo ""
 python3 /app/dobuild.py
 echo ""
 echo "============================================"
+echo "Building airunner for windows"
+echo "============================================"
+echo ""
+python3 -c "from accelerate.utils import write_basic_config; write_basic_config(mixed_precision='fp16')"
+# python3 -m pip uninstall nvidia-cublas-cu11 nvidia-cublas-cu12 -y
+python3 -m pip uninstall xformers -y
+echo ""
+echo "============================================"
 echo "Build airunner for linux"
 echo "============================================"
 echo ""
@@ -32,12 +40,12 @@ echo "Copy setup.py to dist"
 echo "============================================"
 echo ""
 cp /app/setup.py ./dist/airunner/
-echo ""
-echo "============================================"
-echo "Copy /usr/local/lib/python3.10/dist-packages/Pillow-10.2.0.dist-info to ./dist/airunner/Pillow-10.2.0.dist-info"
-echo "============================================"
-echo ""
-cp -R /usr/local/lib/python3.10/dist-packages/Pillow-10.2.0.dist-info ./dist/airunner/
+#echo ""
+#echo "============================================"
+#echo "Copy /usr/local/lib/python3.10/dist-packages/Pillow-10.2.0.dist-info to ./dist/airunner/Pillow-10.2.0.dist-info"
+#echo "============================================"
+#echo ""
+#cp -R /usr/local/lib/python3.10/dist-packages/Pillow-10.2.0.dist-info ./dist/airunner/
 #echo ""
 #echo "============================================"
 #echo "Deploying airunner to itch.io"
