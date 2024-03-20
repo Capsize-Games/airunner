@@ -30,3 +30,4 @@ test.json
 /debian/airunner.substvars
 /debian/debhelper-build-stamp
 /debian/files
+.pc
