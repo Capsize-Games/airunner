@@ -203,8 +203,16 @@ bash build.dev.sh
 
 ### Build with Docker
 
+#### Production
+
 ```bash
 docker-compose run build
+```
+
+#### Develop
+
+```bash
+docker-compose run devbuild
 ```
 
 ---
