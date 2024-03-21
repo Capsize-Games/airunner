@@ -183,6 +183,12 @@ class CustomGraphicsView(
             # Clear the selection from the scene
             self.scene.clear_selection()
         self.show_active_grid_area()
+        self.emit_signal(
+            SignalCode.APPLICATION_ACTIVE_GRID_AREA_UPDATED,
+            {
+                "settings": self.settings
+            }
+        )
 
     def show_active_grid_area(self):
         # Create an ActiveGridArea object if it doesn't exist
@@ -298,7 +304,7 @@ class CustomGraphicsView(
         :return:
         """
         if self.settings["current_tool"] == CanvasToolName.SELECTION:
-            x, y = snap_to_grid(event.pos().x(), event.pos().y(), use_floor)
+            x, y = snap_to_grid(self.settings, event.pos().x(), event.pos().y(), use_floor)
         else:
             x = event.pos().x()
             y = event.pos().y()
