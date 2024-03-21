@@ -258,6 +258,11 @@ Currently we are only releasing under a dev PPA, but we will switch to a stable 
 
 ## 🔬 Unit tests
 
+Run a specific test
+```bash
+python -m unittest src/airunner/tests/test_draggable_pixmap.py
+```
+
 Test coverage is currently low, but the existing tests can be run using the following command:
 
 ```bash
@@ -269,7 +274,7 @@ python -m unittest discover tests
 Run tests with coverage tracking:
 
 ```bash
-coverage run --source=src/airunner --omit=__init__.py -m unittest discover src/airunner/tests
+coverage run --source=src/airunner --omit=__init__.py,*/GFPGAN/*,*/data/*,*/tests/*,*_ui.py -m unittest discover src/airunner/tests
 ```
 
 To see a report in the terminal, use:
