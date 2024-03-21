@@ -132,8 +132,6 @@ class MainWindow(
         self.ui.enable_controlnet.setChecked(self.settings["generator_settings"]["enable_controlnet"])
         self.ui.enable_controlnet.blockSignals(False)
 
-        print(self.settings["lora"])
-
     def keyPressEvent(self, event):
         super().keyPressEvent(event)
         self.handle_key_press(event.key)
