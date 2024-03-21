@@ -1,11 +1,10 @@
 from PIL.ImageQt import QImage
 
-from PySide6.QtCore import QRect, Slot
+from PySide6.QtCore import QRect
 from PySide6.QtGui import QBrush, QColor, QPen, QPixmap, QPainter
 from PySide6.QtWidgets import QGraphicsItem
 
 from airunner.enums import SignalCode
-from airunner.service_locator import ServiceLocator
 from airunner.widgets.canvas.draggables.draggable_pixmap import DraggablePixmap
 
 
@@ -24,7 +23,7 @@ class ActiveGridArea(DraggablePixmap):
         self._outer_border_pen: QPen = None
         self._border_color: QColor = None
         self._border_brush: QBrush = None
-        self.render_fill()
+        self.render_fill(None)
 
         super().__init__(self.pixmap)
 
@@ -43,7 +42,7 @@ class ActiveGridArea(DraggablePixmap):
 
     @property
     def rect(self):
-        settings = ServiceLocator.get("get_settings")()
+        settings = self.settings
         active_grid_settings = settings["active_grid_settings"]
         return QRect(
             active_grid_settings["pos_x"],
@@ -59,7 +58,7 @@ class ActiveGridArea(DraggablePixmap):
         )
 
     def render_fill(self, _message):
-        settings = ServiceLocator.get("get_settings")()
+        settings = self.settings
 
         if (
             self._current_width != self.rect.width() or
@@ -99,7 +98,7 @@ class ActiveGridArea(DraggablePixmap):
             self.pixmap = QPixmap.fromImage(self.image)
 
     def get_fill_color(self) -> QColor:
-        settings = ServiceLocator.get("get_settings")()
+        settings = self.settings
         render_fill = settings["active_grid_settings"]["render_fill"]
         if render_fill:
             fill_color = settings["generator_settings"]["active_grid_fill_color"]
@@ -124,7 +123,7 @@ class ActiveGridArea(DraggablePixmap):
         if painter is None:
             painter = QPainter(self.pixmap)
 
-        settings = ServiceLocator.get("get_settings")()
+        settings = self.settings
 
         if settings["active_grid_settings"]["enabled"]:
             render_border = settings["active_grid_settings"]["render_border"]
