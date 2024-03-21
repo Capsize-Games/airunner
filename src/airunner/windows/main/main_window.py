@@ -354,7 +354,7 @@ class MainWindow(
 
     @Slot()
     def action_show_model_manager(self):
-        print("TODO: show model manager")
+        self.model_manager_toggled(True)
 
     def action_show_image_browser(self):
         self.image_browser_dialog = QDialog()
@@ -709,14 +709,19 @@ class MainWindow(
         self.settings = settings
         self.activate_language_processing_section()
         self.set_all_section_buttons()
-    
+
     def model_manager_toggled(self, val):
         settings = self.settings
-        settings["mode"] = Mode.MODEL_MANAGER.value
+        settings["mode"] = Mode.MODEL_MANAGER.value if val else Mode.IMAGE.value
         self.settings = settings
         if val:
-            self.activate_model_manager_section()
             self.set_all_section_buttons()
+        self.activate_active_tab()
+
+    def activate_active_tab(self):
+        self.ui.center_tab.setCurrentIndex(
+            1 if self.settings["mode"] == Mode.MODEL_MANAGER.value else 0
+        )
     ###### End window handlers ######
 
     def show_update_message(self):
@@ -908,9 +913,6 @@ class MainWindow(
 
     def activate_language_processing_section(self):
         self.ui.mode_tab_widget.setCurrentIndex(1)
-    
-    def activate_model_manager_section(self):
-        self.ui.center_tab.setCurrentIndex(2)
 
     def initialize_tool_section_buttons(self):
         pass
