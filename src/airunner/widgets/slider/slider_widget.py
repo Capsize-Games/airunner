@@ -1,7 +1,7 @@
-from PySide6.QtCore import Qt, Slot
+from PySide6.QtCore import Qt
 from PySide6.QtWidgets import QLabel, QDoubleSpinBox
 
-from airunner.enums import SignalCode, ServiceCode
+from airunner.enums import SignalCode
 from airunner.widgets.base_widget import BaseWidget
 from airunner.widgets.slider.templates.slider_ui import Ui_slider_widget
 
@@ -104,10 +104,10 @@ class SliderWidget(BaseWidget):
         self.init()
 
     def settings_loaded(self, callback):
-        self.init(slider_callback=callback)
+        self.slider_callback = callback
     
     def init(self, **kwargs):
-        slider_callback = kwargs.get("slider_callback", self.property("slider_callback") or None)
+        slider_callback = kwargs.get("slider_callback", self.property("slider_callback") or self.slider_callback)
         slider_minimum = kwargs.get("slider_minimum", self.property("slider_minimum") or 0)
         slider_maximum = kwargs.get("slider_maximum", self.property("slider_maximum") or 100)
         spinbox_minimum = kwargs.get("spinbox_minimum", self.property("spinbox_minimum") or 0.0)
@@ -162,10 +162,8 @@ class SliderWidget(BaseWidget):
         self.label.setAlignment(Qt.AlignmentFlag.AlignCenter)
         self.label.setAttribute(Qt.WidgetAttribute.WA_TransparentForMouseEvents)
         self.label.setObjectName("slider_label")
-        #self.ui.slider.valueChanged.connect(lambda value: self.ui.slider_spinbox.setValue(value / self.slider_maximum))
         # add the label to the ui
         self.layout().addWidget(self.label, 0, 0, 1, 1)
-        # self.ui.slider_spinbox.lineEdit().hide()
         self.ui.slider_spinbox.setFixedWidth(50)
         self.ui.slider_spinbox.valueChanged.connect(self.handle_spinbox_change)
         self.ui.slider.valueChanged.connect(self.handle_slider_change)
@@ -259,10 +257,9 @@ class SliderWidget(BaseWidget):
         normalized = val / self.spinbox_maximum
         slider_val = normalized * self.slider_maximum
         self.ui.slider.setValue(round(slider_val))
-        # self.update_label()
 
     def handle_slider_change(self, val):
-        position = val#self.ui.slider.sliderPosition()
+        position = val
         single_step = self.ui.slider.singleStep()
         adjusted_value = round(position / single_step) * single_step
         if adjusted_value < self.slider_minimum:
@@ -277,24 +274,11 @@ class SliderWidget(BaseWidget):
         spinbox_val = round(spinbox_val, 2)
         self.ui.slider_spinbox.setValue(spinbox_val)
 
-        # self.update_label()
         if self.slider_callback:
             self.slider_callback(self.settings_property, adjusted_value)
 
     def update_value(self, val):
         self.ui.slider.setValue(int(val))
-
-        if self.display_as_float:
-            val = self.ui.slider_spinbox.value()
-
-        # self.update_label()
-
-    # def update_label(self):
-    #     if self.display_as_float:
-    #         val = f"{self.ui.slider_spinbox.value():.2f}"
-    #     else:
-    #         val = f"{int(self.ui.slider_spinbox.value())}"
-    #     self.label.setText(f"{self.label_text} {val}")
 
     def set_tick_value(self, val):
         """
