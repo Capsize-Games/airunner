@@ -233,6 +233,8 @@ class SignalCode(Enum):
     LINES_UPDATED_SIGNAL = "lines_updated_signal"
     DO_GENERATE_SIGNAL = "do_generate_signal"
 
+    UPSCALE_SIGNAL = "upscale_signal"
+
 
 class EngineResponseCode(Enum):
     STATUS = 100
@@ -255,6 +257,7 @@ class EngineRequestCode(Enum):
     GENERATE_IMAGE = 100
     GENERATE_TEXT = 200
     GENERATE_CAPTION = 300
+    UPSCALE = 400
 
 
 class Scheduler(Enum):
