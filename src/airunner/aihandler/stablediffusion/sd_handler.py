@@ -49,7 +49,6 @@ from airunner.aihandler.mixins.memory_efficient_mixin import MemoryEfficientMixi
 from airunner.aihandler.mixins.merge_mixin import MergeMixin
 from airunner.aihandler.mixins.scheduler_mixin import SchedulerMixin
 from airunner.settings import AIRUNNER_ENVIRONMENT
-from airunner.service_locator import ServiceLocator
 from airunner.settings import CONFIG_FILES
 from airunner.windows.main.lora_mixin import LoraMixin as LoraDataMixin
 from airunner.windows.main.embedding_mixin import EmbeddingMixin as EmbeddingDataMixin
@@ -320,7 +319,7 @@ class SDHandler(
     @property
     def model(self):
         name = self.settings["generator_settings"]["model"]
-        model = ServiceLocator.get("ai_model_by_name")(name)
+        model = self.ai_model_by_name(name)
         return model
 
     @property
@@ -378,6 +377,12 @@ class SDHandler(
             self.logger.debug("Getting controlnet image")
             self._controlnet_image = self.preprocess_for_controlnet(self.sd_request.drawing_pad_image)
         return self._controlnet_image
+
+    def ai_model_by_name(self, name):
+        try:
+            return [model for model in self.settings["ai_models"] if model["name"] == name][0]
+        except Exception as e:
+            self.logger.error(f"Error finding model by name: {name}")
 
     def preprocess_for_controlnet(self, image):
         controlnet = self.sd_request.generator_settings.controlnet_image_settings.controlnet
@@ -534,11 +539,8 @@ class SDHandler(
     def has_pipe(self) -> bool:
         return self.pipe is not None
 
-    def pipe_on_cpu(self) -> bool:
-        return self.pipe.device.type == "cpu"
-
     def is_pipe_on_cpu(self) -> bool:
-        return self.has_pipe() and self.pipe_on_cpu()
+        return self.has_pipe() and self.pipe.device.type == "cpu"
 
     def on_move_to_cpu(self, message: dict = None):
         message = message or {}
