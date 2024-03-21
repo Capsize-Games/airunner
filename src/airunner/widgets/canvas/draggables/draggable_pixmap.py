@@ -30,13 +30,19 @@ class DraggablePixmap(
         return tool
 
     def mouseMoveEvent(self, event):
-        if self.current_tool is not CanvasToolName.ACTIVE_GRID_AREA:
+        if self.current_tool not in [
+            CanvasToolName.ACTIVE_GRID_AREA,
+            CanvasToolName.SELECTION
+        ]:
             return
         super().mouseMoveEvent(event)
         self.snap_to_grid()
 
     def mouseReleaseEvent(self, event):
-        if self.current_tool is CanvasToolName.ACTIVE_GRID_AREA:
+        if self.current_tool in [
+            CanvasToolName.ACTIVE_GRID_AREA,
+            CanvasToolName.SELECTION
+        ]:
             self.snap_to_grid(save=True)
         super().mouseReleaseEvent(event)
 
