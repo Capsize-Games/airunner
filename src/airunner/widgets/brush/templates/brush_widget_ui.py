@@ -39,7 +39,6 @@ class Ui_brush_widget(object):
         self.controlnet_conditioning_scale.setProperty("slider_page_step", 2)
         self.controlnet_conditioning_scale.setProperty("spinbox_single_step", 0.100000000000000)
         self.controlnet_conditioning_scale.setProperty("spinbox_page_step", 0.200000000000000)
-        self.controlnet_conditioning_scale.setProperty("slider_callback", u"handle_value_change")
         self.controlnet_conditioning_scale.setProperty("settings_property", u"conditioning_scale")
         self.controlnet_conditioning_scale.setProperty("display_as_float", True)
 
@@ -60,7 +59,6 @@ class Ui_brush_widget(object):
         self.brush_size_slider.setProperty("slider_page_step", 10)
         self.brush_size_slider.setProperty("spinbox_single_step", 1)
         self.brush_size_slider.setProperty("spinbox_page_step", 10)
-        self.brush_size_slider.setProperty("slider_callback", u"handle_value_change")
         self.brush_size_slider.setProperty("settings_property", u"size")
         self.brush_size_slider.setProperty("display_as_float", False)
 
@@ -77,7 +75,6 @@ class Ui_brush_widget(object):
         self.controlnet_guidance_scale.setProperty("slider_page_step", 10)
         self.controlnet_guidance_scale.setProperty("spinbox_single_step", 0.100000000000000)
         self.controlnet_guidance_scale.setProperty("spinbox_page_step", 0.200000000000000)
-        self.controlnet_guidance_scale.setProperty("slider_callback", u"handle_value_change")
         self.controlnet_guidance_scale.setProperty("settings_property", u"guidance_scale")
         self.controlnet_guidance_scale.setProperty("display_as_float", True)
 
@@ -94,7 +91,6 @@ class Ui_brush_widget(object):
         self.strength_slider.setProperty("slider_page_step", 10)
         self.strength_slider.setProperty("spinbox_single_step", 0.100000000000000)
         self.strength_slider.setProperty("spinbox_page_step", 0.200000000000000)
-        self.strength_slider.setProperty("slider_callback", u"handle_value_change")
         self.strength_slider.setProperty("settings_property", u"strength")
         self.strength_slider.setProperty("display_as_float", True)
 
