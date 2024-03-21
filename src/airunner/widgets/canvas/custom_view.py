@@ -91,6 +91,8 @@ class CustomGraphicsView(
         self.drawing = False
 
     def draw_grid(self):
+        if self.canvas_type != CanvasType.IMAGE.value:
+            return
         self.scene.addItem(self.line_group)
 
     def clear_lines(self, _message):
@@ -191,6 +193,9 @@ class CustomGraphicsView(
         )
 
     def show_active_grid_area(self):
+        if self.canvas_type != CanvasType.IMAGE.value:
+            return
+
         # Create an ActiveGridArea object if it doesn't exist
         # and add it to the scene
         if not self.active_grid_area:
