@@ -385,7 +385,7 @@ class MainWindow(
 
     @Slot()
     def action_triggered_browse_ai_runner_path(self):
-        path = self.base_path
+        path = self.settings["path_settings"]["base_path"]
         if path == "":
             path = BASE_PATH
         self.show_path(path)
