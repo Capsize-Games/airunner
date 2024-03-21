@@ -126,7 +126,7 @@
               <property name="currentIndex">
                <number>0</number>
               </property>
-              <widget class="QWidget" name="tab_image">
+              <widget class="QWidget" name="canvas_tab">
                <attribute name="title">
                 <string>Canvas</string>
                </attribute>
@@ -173,7 +173,7 @@
                 </item>
                </layout>
               </widget>
-              <widget class="QWidget" name="tab">
+              <widget class="QWidget" name="model_manager_tab">
                <attribute name="title">
                 <string>Model Manager</string>
                </attribute>
