@@ -31,3 +31,4 @@ test.json
 /debian/debhelper-build-stamp
 /debian/files
 .pc
+htmlcov

@@ -318,6 +318,11 @@ class SettingsMixin:
                 silence_buffer_seconds=1.0,
                 chunk_duration=0.03,
             ),
+            upscale_settings=dict(
+                model="",
+                face_enhance=False,
+                upscale_amount=1,
+            ),
             schedulers=[
                 dict(
                     name="EULER_ANCESTRAL",

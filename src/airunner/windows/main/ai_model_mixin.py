@@ -22,8 +22,7 @@ class AIModelMixin:
             "ai_model_update", 
             "ai_model_get_by_filter", 
             "ai_model_names_by_section", 
-            "ai_models_by_category", 
-            "ai_model_by_name"
+            "ai_models_by_category",
         ]
 
         for service in services:
@@ -117,11 +116,5 @@ class AIModelMixin:
     def ai_models_by_category(self, category):
         return [model for model in self.settings["ai_models"] if model["category"] == category]
 
-    def ai_model_by_name(self, name):
-        try:
-            return [model for model in self.settings["ai_models"] if model["name"] == name][0]
-        except Exception as e:
-            self.logger.error(f"Error finding model by name: {name}")
-    
     def ai_model_get_all(self):
         return self.settings["ai_models"]

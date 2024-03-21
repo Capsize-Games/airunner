@@ -248,3 +248,25 @@ Test coverage is currently low, but the existing tests can be run using the foll
 ```bash
 python -m unittest discover tests
 ```
+
+### Test coverage
+
+Run tests with coverage tracking:
+
+```bash
+coverage run --source=src/airunner --omit=__init__.py -m unittest discover src/airunner/tests
+```
+
+To see a report in the terminal, use:
+
+```bash
+coverage report
+```
+
+For a more detailed HTML report, run:
+
+```bash
+coverage html
+```
+
+View results in `htmlcov/index.html`.
