@@ -86,6 +86,7 @@ class CustomGraphicsView(
         self.drawing = True
         self.set_scene_rect()
         self.draw_grid()
+        self.show_active_grid_area()
         self.update_scene()
         self.drawing = False
 
@@ -181,7 +182,9 @@ class CustomGraphicsView(
 
             # Clear the selection from the scene
             self.scene.clear_selection()
+        self.show_active_grid_area()
 
+    def show_active_grid_area(self):
         # Create an ActiveGridArea object if it doesn't exist
         # and add it to the scene
         if not self.active_grid_area:
