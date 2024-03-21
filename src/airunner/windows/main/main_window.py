@@ -306,9 +306,7 @@ class MainWindow(
 
     def closeEvent(self, event) -> None:
         self.logger.debug("Quitting")
-        self.worker_manager.stop()
         self.save_state()
-        self.worker_manager.stop()
         self.save_state()
         super().closeEvent(event)
 
