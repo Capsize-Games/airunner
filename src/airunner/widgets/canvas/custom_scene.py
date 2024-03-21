@@ -551,6 +551,7 @@ class CustomScene(
 
     def mouseMoveEvent(self, event):
         self.handle_cursor(event)
+        super(CustomScene, self).mouseMoveEvent(event)
 
     def leaveEvent(self, event):
         self.handle_cursor(event)
