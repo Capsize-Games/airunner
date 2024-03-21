@@ -47,10 +47,14 @@ class ActiveGridSettingsWidget(BaseWidget):
             settings[prop] = val
         self.settings = settings
 
-    def update_size(self):
-        settings = self.settings
-        self.ui.width_slider_widget.slider_maximum = settings["working_width"]
-        self.ui.height_slider_widget.slider_maximum = settings["working_height"]
+    def update_size(self, message: dict):
+        settings = message["settings"]
+        self.ui.width_slider_widget.blockSignals(True)
+        self.ui.height_slider_widget.blockSignals(True)
+        self.ui.width_slider_widget.set_slider_and_spinbox_values(settings["working_width"])
+        self.ui.height_slider_widget.set_slider_and_spinbox_values(settings["working_height"])
+        self.ui.width_slider_widget.blockSignals(False)
+        self.ui.height_slider_widget.blockSignals(False)
 
     def update_active_grid_settings(self, setting_key, checked):
         settings = self.settings

@@ -506,7 +506,7 @@ class CustomScene(
 
         self.emit_signal(SignalCode.CANVAS_ZOOM_LEVEL_CHANGED)
 
-    def handle_mouse_event(self, event, is_press_event):
+    def handle_mouse_event(self, event, is_press_event) -> bool:
         if event.button() == Qt.MouseButton.LeftButton:
             view = self.views()[0]
             pos = view.mapFromScene(event.scenePos())
@@ -514,39 +514,35 @@ class CustomScene(
                 self.settings["grid_settings"]["snap_to_grid"] and
                 self.settings["current_tool"] == CanvasToolName.SELECTION
             ):
-                x, y = snap_to_grid(pos.x(), pos.y(), False)
+                x, y = snap_to_grid(self.settings, pos.x(), pos.y(), False)
                 pos = QPoint(x, y)
                 if is_press_event:
                     self.selection_stop_pos = None
                     self.selection_start_pos = QPoint(pos.x(), pos.y())
                 else:
                     self.selection_stop_pos = QPoint(pos.x(), pos.y())
-                self.emit_signal(SignalCode.APPLICATION_ACTIVE_GRID_AREA_UPDATED)
                 self.emit_signal(SignalCode.CANVAS_DO_DRAW_SELECTION_AREA_SIGNAL)
+                return True
+        return False
 
-    def handle_left_mouse_press(self, event):
+    def handle_left_mouse_press(self, event) -> bool:
         self.start_pos = event.scenePos()
-        self.handle_mouse_event(event, True)
+        return self.handle_mouse_event(event, True)
 
-    def handle_left_mouse_release(self, event):
-        self.handle_mouse_event(event, False)
+    def handle_left_mouse_release(self, event) -> bool:
+        return self.handle_mouse_event(event, False)
 
     def mousePressEvent(self, event):
-        self.handle_left_mouse_press(event)
+        if not self.handle_left_mouse_press(event):
+            super(CustomScene, self).mousePressEvent(event)
         self.handle_cursor(event)
         self.last_pos = event.scenePos()
         self.update()
 
     def mouseReleaseEvent(self, event):
-        self.handle_left_mouse_release(event)
-        super(CustomScene, self).mouseReleaseEvent(event)
+        if not self.handle_left_mouse_release(event):
+            super(CustomScene, self).mouseReleaseEvent(event)
         self.handle_cursor(event)
-
-    def handle_cursor(self, event):
-        self.emit_signal(
-            SignalCode.CANVAS_UPDATE_CURSOR,
-            event
-        )
 
     def event(self, event):
         if type(event) == QEnterEvent:
@@ -555,8 +551,17 @@ class CustomScene(
 
     def mouseMoveEvent(self, event):
         self.handle_cursor(event)
-    
+        super(CustomScene, self).mouseMoveEvent(event)
+
     def leaveEvent(self, event):
-        self.setCursor(Qt.ArrowCursor)
+        self.handle_cursor(event)
         super(CustomScene, self).leaveEvent(event)
+
+    def handle_cursor(self, event):
+        self.emit_signal(
+            SignalCode.CANVAS_UPDATE_CURSOR,
+            {
+                "event": event
+            }
+        )
 
