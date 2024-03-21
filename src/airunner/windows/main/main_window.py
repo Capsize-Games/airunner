@@ -7,7 +7,7 @@ from functools import partial
 from PySide6 import QtGui
 from PySide6.QtCore import Slot, Signal
 from PySide6.QtGui import QGuiApplication
-from PySide6.QtWidgets import QApplication, QMainWindow
+from PySide6.QtWidgets import QApplication, QMainWindow, QDialog
 
 from airunner.aihandler.logger import Logger
 from airunner.settings import STATUS_ERROR_COLOR, STATUS_NORMAL_COLOR_LIGHT, STATUS_NORMAL_COLOR_DARK, \
@@ -20,6 +20,7 @@ from airunner.utils import get_version, default_hf_cache_dir, set_widget_state
 from airunner.widgets.status.status_widget import StatusWidget
 from airunner.windows.about.about import AboutWindow
 from airunner.windows.filter_window import FilterWindow
+from airunner.windows.image_browser.templates.image_browser_window_ui import Ui_image_browser_window
 from airunner.windows.image_window import ImageWindow
 from airunner.windows.main.ai_model_mixin import AIModelMixin
 from airunner.windows.main.controlnet_model_mixin import ControlnetModelMixin
@@ -355,9 +356,11 @@ class MainWindow(
     def action_show_model_manager(self):
         print("TODO: show model manager")
 
-    @Slot()
     def action_show_image_browser(self):
-        print("TODO: show image browser window")
+        self.image_browser_dialog = QDialog()
+        self.image_browser_ui = Ui_image_browser_window()
+        self.image_browser_ui.setupUi(self.image_browser_dialog)
+        self.image_browser_dialog.show()
 
     @Slot()
     def action_show_controlnet(self):
