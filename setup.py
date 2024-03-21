@@ -62,7 +62,9 @@ setup(
         "inflect==7.0.0",
         "tiktoken==0.6.0",
         "pycountry==23.12.11",
-        "pyttsx3==2.90"
+        "pyttsx3==2.90",
+        "mediapipe==0.10.11",
+        "coverage==7.4.4"
     ],
     dependency_links=[]
 )
