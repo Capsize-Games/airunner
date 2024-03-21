@@ -46,9 +46,6 @@
      <property name="label_text" stdset="0">
       <string>Controlnet Conditioning Scale</string>
      </property>
-     <property name="slider_callback" stdset="0">
-      <string notr="true">handle_value_change</string>
-     </property>
      <property name="settings_property" stdset="0">
       <string notr="true">conditioning_scale</string>
      </property>
@@ -102,9 +99,6 @@
      <property name="label_text" stdset="0">
       <string>Brush Size</string>
      </property>
-     <property name="slider_callback" stdset="0">
-      <string notr="true">handle_value_change</string>
-     </property>
      <property name="settings_property" stdset="0">
       <string notr="true">size</string>
      </property>
@@ -145,9 +139,6 @@
      <property name="label_text" stdset="0">
       <string>Controlnet Guidance Scale</string>
      </property>
-     <property name="slider_callback" stdset="0">
-      <string notr="true">handle_value_change</string>
-     </property>
      <property name="settings_property" stdset="0">
       <string notr="true">guidance_scale</string>
      </property>
@@ -187,9 +178,6 @@
      </property>
      <property name="label_text" stdset="0">
       <string>Strength</string>
-     </property>
-     <property name="slider_callback" stdset="0">
-      <string notr="true">handle_value_change</string>
      </property>
      <property name="settings_property" stdset="0">
       <string notr="true">strength</string>
