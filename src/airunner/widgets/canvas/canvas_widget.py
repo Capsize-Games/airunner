@@ -125,7 +125,8 @@ class CanvasWidget(BaseWidget):
         settings["drawing_pad_settings"]["enabled"] = val
         self.settings = settings
 
-    def on_canvas_update_cursor_signal(self, event):
+    def on_canvas_update_cursor_signal(self, message: dict):
+        event = message["event"]
         if self.settings["current_tool"] in (
             CanvasToolName.BRUSH,
             CanvasToolName.ERASER
@@ -135,16 +136,14 @@ class CanvasWidget(BaseWidget):
                 Qt.GlobalColor.transparent,
                 self.settings["brush_settings"]["size"],
             )
-            self.setCursor(cursor)
         elif self.settings["current_tool"] is CanvasToolName.ACTIVE_GRID_AREA:
-            # if event.buttons() == Qt.MouseButton.LeftButton:
-            #     cursor = Qt.CursorShape.ClosedHandCursor
-            # else:
-            #     cursor = Qt.CursorShape.OpenHandCursor
-            pass
+            if event.buttons() == Qt.MouseButton.LeftButton:
+                cursor = Qt.CursorShape.ClosedHandCursor
+            else:
+                cursor = Qt.CursorShape.OpenHandCursor
         else:
             cursor = Qt.CursorShape.ArrowCursor
-            self.setCursor(cursor)
+        self.setCursor(cursor)
 
     def on_update_canvas_signal(self, _ignore):
         self.update()
