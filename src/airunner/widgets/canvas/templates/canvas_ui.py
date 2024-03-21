@@ -24,7 +24,7 @@ class Ui_canvas(object):
     def setupUi(self, canvas):
         if not canvas.objectName():
             canvas.setObjectName(u"canvas")
-        canvas.resize(709, 787)
+        canvas.resize(709, 751)
         sizePolicy = QSizePolicy(QSizePolicy.Policy.Expanding, QSizePolicy.Policy.Expanding)
         sizePolicy.setHorizontalStretch(0)
         sizePolicy.setVerticalStretch(0)

@@ -293,13 +293,16 @@ class SDRequest(
         controlnet_image = self.controlnet_image
         if self.generator_settings.enable_controlnet and controlnet_image:
             extra_args = {**extra_args, **{
-                "control_image": controlnet_image,
+                #"control_image": controlnet_image,
                 "guess_mode": None,
                 "control_guidance_start": 0.0,
                 "control_guidance_end": 1.0,
                 "guidance_scale": self.generator_settings.controlnet_image_settings.guidance_scale,
                 "controlnet_conditioning_scale": self.generator_settings.controlnet_image_settings.conditioning_scale,
-                "controlnet": self.generator_settings.controlnet_image_settings.controlnet,
+                "controlnet": [
+                    "canny",
+                    self.generator_settings.controlnet_image_settings.controlnet
+                ],
             }}
         return extra_args
 

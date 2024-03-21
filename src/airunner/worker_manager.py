@@ -1,7 +1,7 @@
 import traceback
 import numpy as np
 
-from PySide6.QtCore import QObject, Signal, Slot
+from PySide6.QtCore import QObject, Signal
 from airunner.enums import SignalCode, EngineResponseCode
 from airunner.mediator_mixin import MediatorMixin
 from airunner.windows.main.settings_mixin import SettingsMixin
@@ -11,7 +11,6 @@ from airunner.workers.tts_generator_worker import TTSGeneratorWorker
 from airunner.workers.tts_vocalizer_worker import TTSVocalizerWorker
 from airunner.workers.llm_request_worker import LLMRequestWorker
 from airunner.workers.llm_generate_worker import LLMGenerateWorker
-from airunner.workers.engine_request_worker import EngineRequestWorker
 from airunner.workers.sd_worker import SDWorker
 from airunner.aihandler.logger import Logger
 from airunner.utils import clear_memory, create_worker
@@ -78,8 +77,6 @@ class WorkerManager(QObject, MediatorMixin, SettingsMixin):
 
         self.sd_worker = create_worker(SDWorker)
 
-        self.engine_request_worker = create_worker(EngineRequestWorker)
-
         if not disable_tts:
             self.tts_generator_worker = create_worker(TTSGeneratorWorker)
             self.tts_vocalizer_worker = create_worker(TTSVocalizerWorker)
@@ -111,7 +108,6 @@ class WorkerManager(QObject, MediatorMixin, SettingsMixin):
     def on_engine_cancel_signal(self, _ignore):
         self.logger.debug("Canceling")
         self.emit_signal(SignalCode.SD_CANCEL_SIGNAL)
-        self.engine_request_worker.cancel()
 
     def on_engine_stop_processing_queue_signal(self, _message):
         self.do_process_queue = False
@@ -199,9 +195,6 @@ class WorkerManager(QObject, MediatorMixin, SettingsMixin):
         else:
             self.emit_signal(SignalCode.LLM_REQUEST_SIGNAL, message)
 
-    def request_queue_size(self):
-        return self.engine_request_worker.queue.qsize()
-
     def do_listen(self):
         # self.stt_controller.do_listen()
         pass
@@ -227,7 +220,3 @@ class WorkerManager(QObject, MediatorMixin, SettingsMixin):
                 'tts_settings': self.settings["tts_settings"],
                 'is_end_of_message': is_end_of_message,
             })
-    
-    def stop(self):
-        self.logger.debug("Stopping")
-        self.engine_request_worker.stop()

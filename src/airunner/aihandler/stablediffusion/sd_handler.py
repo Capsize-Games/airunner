@@ -27,7 +27,8 @@ from diffusers.pipelines.stable_diffusion import StableDiffusionSafetyChecker
 from diffusers import (
     StableDiffusionControlNetPipeline,
     StableDiffusionControlNetImg2ImgPipeline,
-    StableDiffusionControlNetInpaintPipeline
+    StableDiffusionControlNetInpaintPipeline,
+
 )
 from transformers import AutoFeatureExtractor
 from airunner.aihandler.base_handler import BaseHandler
@@ -57,7 +58,6 @@ from airunner.windows.main.controlnet_model_mixin import ControlnetModelMixin
 from airunner.windows.main.ai_model_mixin import AIModelMixin
 from airunner.utils import clear_memory, random_seed, create_worker, get_torch_device
 
-#from airunner.scripts.realesrgan.main import RealESRGAN
 from airunner.workers.worker import Worker
 
 SKIP_RELOAD_CONSTS = (
@@ -559,7 +559,7 @@ class SDHandler(
             self.send_model_loading_message(self.current_model)
             if self.reload_model:
                 self.reset_applied_memory_settings()
-            if not self.sd_request.is_upscale and self.do_load or not self.initialized:
+            if self.do_load or not self.initialized:
                 self.load_model()
             self.reload_model = False
 
@@ -622,11 +622,15 @@ class SDHandler(
                 self.send_error("Unable to load feature extractor")
                 return None
 
+    @property
+    def use_safety_checker(self):
+        return self.settings["nsfw_filter"]
+
     def load_safety_checker(self):
-        if self.safety_checker is None and "path" in self.safety_checker_model:
+        if self.use_safety_checker and self.safety_checker is None and "path" in self.safety_checker_model:
             self.safety_checker = self.initialize_safety_checker()
 
-        if self.feature_extractor is None and "path" in self.safety_checker_model:
+        if self.use_safety_checker and self.feature_extractor is None and "path" in self.safety_checker_model:
             self.feature_extractor = self.initialize_feature_extractor()
 
     def do_sample(self):
@@ -853,31 +857,6 @@ class SDHandler(
         self.logger.debug("Unloading tokenizer")
         self.tokenizer = None
 
-    def process_upscale(self, data: dict):
-        self.logger.debug("Processing upscale")
-        image = self.sd_request.generator_settings.input_image
-        results = []
-        if image:
-            self.move_pipe_to_cpu()
-            results = RealESRGAN(
-                input=image,
-                output=None,
-                model_name='RealESRGAN_x4plus',
-                denoise_strength=self.denoise_strength,
-                face_enhance=self.face_enhance,
-            ).run()
-            clear_memory()
-        else:
-            self.log_error("No image found, unable to upscale")
-        # check if results is a list
-        if not isinstance(results, list):
-            return [results]
-        return results
-
-    def do_upscale(self, data):
-        images = self.process_upscale(data)
-        return self.image_handler(images, self.requested_data, None)
-
     def load_generator_arguments(self):
         requested_model = self.settings["generator_settings"]["model"]
         model_changed = (self.model is not None and self.model["name"] is not None and self.model["name"] != requested_model)
@@ -1046,8 +1025,8 @@ class SDHandler(
 
         self.do_set_seed = False
 
-        if self.sd_request.is_upscale:
-            return self.do_upscale(self.data)
+        # if self.sd_request.is_upscale:
+        #     return self.do_upscale(self.data)
 
         if not self.pipe:
             self.logger.error("pipe is None")
