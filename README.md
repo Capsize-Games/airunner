@@ -95,7 +95,7 @@ cd airunner && pip install -e .
 
 ---
 
-## Running AI Runner
+## 💿 Running AI Runner
 
 ### Pre-compiled
 
@@ -119,14 +119,14 @@ Alternatively, you can use the itch.io launcher application which simplifies the
 
 ---
 
-### Custom compiled
-
-If you have compiled AI Runner from source, you can run it using the following commands:
+### Compiled from source
 
 ```bash
 cd dist/airunner
 ./airunner
 ```
+
+---
 
 ### Apt
 
@@ -134,11 +134,15 @@ cd dist/airunner
 airunner
 ```
 
+---
+
 ### PyPi
 
 ```bash
 python3 -m airunner
 ```
+
+---
 
 ### Source
 
@@ -146,6 +150,8 @@ python3 -m airunner
 cd src/airunner
 python main.py
 ```
+
+---
 
 ### Docker
 
@@ -177,14 +183,14 @@ Typically models are between 2.5gb to 8gb in size. The more models you download,
 
 ---
 
-## Using AI Runner
+## ✏️ Using AI Runner
 
 [Instructions on how to use AI Runner can be found in the wiki](https://github.com/Capsize-Games/airunner/wiki/AI-Runner)
 
 
 ---
 
-## Compiling
+## 💻 Compiling AI Runner
 
 Clone this repository
 
@@ -217,7 +223,7 @@ docker-compose run devbuild
 
 ---
 
-## Build for Debian
+## 🐧 Build for Debian
 
 Run the following script and follow the instructions.
 
@@ -241,7 +247,7 @@ Currently we are only releasing under a dev PPA, but we will switch to a stable 
 
 ---
 
-## Unit tests
+## 🔬 Unit tests
 
 Test coverage is currently low, but the existing tests can be run using the following command:
 
