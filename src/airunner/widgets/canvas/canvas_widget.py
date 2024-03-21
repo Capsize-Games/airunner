@@ -164,7 +164,7 @@ class CanvasWidget(BaseWidget):
         if not draw_grid:
             return
 
-        #ServiceLocator.get(ServiceCode.CANVAS_REGISTER_LINE_DATA)(lines_data)
+        ServiceLocator.get(ServiceCode.CANVAS_REGISTER_LINE_DATA)(lines_data)
 
         self.do_draw(
             force_draw=force_draw,
