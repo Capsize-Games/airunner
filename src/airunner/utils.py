@@ -522,8 +522,7 @@ def stop_profiler(pr):
     pr.print_stats(sort="time")
 
 
-def snap_to_grid(x: int, y: int, use_floor: bool = True):
-    settings = ServiceLocator.get("get_settings")()
+def snap_to_grid(settings: dict, x: int, y: int, use_floor: bool = True):
     cell_size = settings["grid_settings"]["cell_size"]
     if settings["grid_settings"]["snap_to_grid"]:
         x_is_negative = x < 0
