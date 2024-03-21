@@ -274,7 +274,7 @@ python -m unittest discover tests
 Run tests with coverage tracking:
 
 ```bash
-coverage run --source=src/airunner --omit=__init__.py,*/GFPGAN/*,*/data/*,*/tests/*,*_ui.py -m unittest discover src/airunner/tests
+coverage run --source=src/airunner --omit=__init__.py,*/GFPGAN/*,*/data/*,*/tests/*,*_ui.py,*/enums.py,*/settings.py -m unittest discover src/airunner/tests
 ```
 
 To see a report in the terminal, use:
