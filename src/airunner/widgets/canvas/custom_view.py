@@ -59,7 +59,6 @@ class CustomGraphicsView(
         self.line_group = None
         self.last_pos = QPoint(0, 0)
         self.zoom_handler = ZoomHandler()
-        self.ui.controlnet_combobox.blockSignals(True)
 
     @property
     def canvas_type(self) -> str:
