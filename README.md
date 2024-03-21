@@ -20,6 +20,8 @@ No web server to run, additional requirements to install or technical knowledge 
 
 ![Screenshot from 2023-06-30 10-43-49](https://github.com/Capsize-Games/airunner/assets/25737761/72e0dd26-53ca-4d5c-8f07-b6327a59b50c)
 
+---
+
 ## ⭐ Features
 
 AI Runner is a multi-modal AI application which allows you to run open-source 
@@ -54,6 +56,22 @@ large language models and AI image generators on your own hardware.
 | Standard Stable Diffusion settings                           |    ✅    |
 | Fast load time, responsive interface                         |    ✅    |
 | Pure python - does not rely on a webserver                   |    ✅    |
+
+---
+
+## 💻 System Requirements
+
+#### Minimum system requirements
+
+- Cuda capable GPU
+- 6gb of RAM
+- 6gb of disc space to install AI Runner
+
+#### Recommended system specs
+
+- RTX 2080s or higher
+- 32gb of RAM
+- 100gb disc space
 
 ---
 
@@ -96,6 +114,8 @@ cd airunner && pip install -e .
 ---
 
 ## 💿 Running AI Runner
+
+There are many ways to run AI Runner, depending on your operating system and how you installed it.
 
 ### Pre-compiled
 
@@ -144,7 +164,7 @@ python3 -m airunner
 
 ---
 
-### Source
+### Uncompiled Source
 
 ```bash
 cd src/airunner
@@ -172,17 +192,6 @@ wiki page for more information](https://github.com/Capsize-Games/airunner/wiki/I
 
 ---
 
-### Requirements
-
-- Cuda capable GPU (RTX 2080s or higher recommended)
-- At least 8gb of RAM
-- at least 5.8gb of disc space to install AI Runner
-
-The core AI Runner  program takes approximately 5.8gb of disc space to install, however the size of each model varies. 
-Typically models are between 2.5gb to 8gb in size. The more models you download, the more disc space you will need.
-
----
-
 ## ✏️ Using AI Runner
 
 [Instructions on how to use AI Runner can be found in the wiki](https://github.com/Capsize-Games/airunner/wiki/AI-Runner)
@@ -190,7 +199,7 @@ Typically models are between 2.5gb to 8gb in size. The more models you download,
 
 ---
 
-## 💻 Compiling AI Runner
+## 💾 Compiling AI Runner
 
 Clone this repository
 
