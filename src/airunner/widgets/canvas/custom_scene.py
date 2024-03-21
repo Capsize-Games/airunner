@@ -16,6 +16,7 @@ from airunner.service_locator import ServiceLocator
 from airunner.settings import VALID_IMAGE_FILES
 from airunner.utils import snap_to_grid, convert_base64_to_image, convert_image_to_base64
 from airunner.widgets.canvas.clipboard_handler import ClipboardHandler
+from airunner.widgets.canvas.draggables.draggable_pixmap import DraggablePixmap
 from airunner.widgets.canvas.image_handler import ImageHandler
 from airunner.windows.main.settings_mixin import SettingsMixin
 
@@ -418,7 +419,7 @@ class CustomScene(
     def set_item(self):
         if self.image is not None:
             if self.item is NoneType:
-                self.item = QGraphicsPixmapItem(QPixmap.fromImage(self.image))
+                self.item = DraggablePixmap(QPixmap.fromImage(self.image))
                 self.addItem(self.item)
             else:
                 self.item.setPixmap(QPixmap.fromImage(self.image))
