@@ -103,21 +103,25 @@ class CausalLMTransformerBaseHandler(TokenizerHandler):
 
     def process_data(self, data):
         super().process_data(data)
-        self._username = data.get("username", "")
-        self._botname = data.get("botname", "")
-        self.bot_mood = data.get("bot_mood", "")
-        self.bot_personality = data.get("bot_personality", "")
-        self.use_personality = data.get("use_personality", False)
-        self.use_mood = data.get("use_mood", False)
-        self.use_guardrails = data.get("use_guardrails", False)
-        self.use_system_instructions = data.get("use_system_instructions", False)
-        self.assign_names = data.get("assign_names", False)
-        self.prompt_template = data.get("prompt_template", "")
-        self.guardrails_prompt = data.get("guardrails_prompt", "")
-        self.system_instructions = data.get("system_instructions", "")
-        self.batch_size = data.get("batch_size", 1)
+
+        current_bot = self.settings["llm_generator_settings"]["saved_chatbots"][
+            self.settings["llm_generator_settings"]["current_chatbot"]]
+
+        self._username = current_bot["username"]
+        self._botname = current_bot["botname"]
+        self.bot_mood = current_bot["bot_mood"]
+        self.bot_personality = current_bot["bot_personality"]
+        self.use_personality = current_bot["use_personality"]
+        self.use_mood = current_bot["use_mood"]
+        self.use_guardrails = current_bot["use_guardrails"]
+        self.use_system_instructions = current_bot["use_system_instructions"]
+        self.assign_names = current_bot["assign_names"]
+        self.prompt_template = current_bot["prompt_template"]
+        self.guardrails_prompt = current_bot["guardrails_prompt"]
+        self.system_instructions = current_bot["system_instructions"]
+        self.batch_size = self.settings["llm_generator_settings"]["batch_size"]
         self.vision_history = data.get("vision_history", [])
-        action = data.get("action", LLMActionType.CHAT.value)
+        action = self.settings["llm_generator_settings"]["action"]
         for action_type in LLMActionType:
             if action_type.value == action:
                 self.action = action_type
@@ -210,6 +214,8 @@ class CausalLMTransformerBaseHandler(TokenizerHandler):
         # self.user_evaluation = self.do_user_evaluation()
         #full_message = self.rag_stream()
         self.emit_signal(SignalCode.VISION_CAPTURE_LOCK_SIGNAL)
+
+        print("LLM ACTION", self.action)
 
         if self.action != LLMActionType.GENERATE_IMAGE:
             if self.settings["llm_generator_settings"]["use_tool_filter"]:

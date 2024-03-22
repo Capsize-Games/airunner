@@ -308,6 +308,7 @@ class SettingsMixin:
                 ),
                 embeddings_model_path="BAAI/bge-small-en-v1.5",
                 prompt_template="StableLM 2 Zephyr: Default Chatbot",
+                batch_size=1
             ),
             tts_settings=tts_settings_default,
             stt_settings=dict(
