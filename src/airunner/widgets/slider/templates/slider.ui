@@ -94,5 +94,42 @@
   </layout>
  </widget>
  <resources/>
- <connections/>
+ <connections>
+  <connection>
+   <sender>slider_spinbox</sender>
+   <signal>valueChanged(double)</signal>
+   <receiver>slider_widget</receiver>
+   <slot>handle_spinbox_change(double)</slot>
+   <hints>
+    <hint type="sourcelabel">
+     <x>216</x>
+     <y>48</y>
+    </hint>
+    <hint type="destinationlabel">
+     <x>165</x>
+     <y>-9</y>
+    </hint>
+   </hints>
+  </connection>
+  <connection>
+   <sender>slider</sender>
+   <signal>valueChanged(int)</signal>
+   <receiver>slider_widget</receiver>
+   <slot>handle_slider_change(int)</slot>
+   <hints>
+    <hint type="sourcelabel">
+     <x>90</x>
+     <y>46</y>
+    </hint>
+    <hint type="destinationlabel">
+     <x>68</x>
+     <y>23</y>
+    </hint>
+   </hints>
+  </connection>
+ </connections>
+ <slots>
+  <slot>handle_spinbox_change(double)</slot>
+  <slot>handle_slider_change(int)</slot>
+ </slots>
 </ui>
