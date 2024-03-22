@@ -44,8 +44,6 @@ class GeneratorSettings:
         self.clip_skip = data.get("clip_skip", 0)
         self.variation = data.get("variation", False)
         self.use_prompt_builder = data.get("use_prompt_builder", False)
-        self.active_grid_border_color = data.get("active_grid_border_color", "#00FF00")
-        self.active_grid_fill_color = data.get("active_grid_fill_color", "#FF0000")
         self.version = data.get("version", "SD Turbo")
         self.is_preset = data.get("is_preset", False)
         self.input_image = data.get("input_image", None)

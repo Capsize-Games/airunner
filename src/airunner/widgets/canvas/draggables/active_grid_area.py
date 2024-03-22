@@ -23,9 +23,9 @@ class ActiveGridArea(DraggablePixmap):
         self._outer_border_pen: QPen = None
         self._border_color: QColor = None
         self._border_brush: QBrush = None
-        self.render_fill(None)
 
-        super().__init__(self.pixmap)
+        super().__init__(QPixmap())
+        self.render_fill(None)
 
         painter = self.draw_border()
         super().paint(painter, None, None)
@@ -36,7 +36,7 @@ class ActiveGridArea(DraggablePixmap):
             True
         )
         self.register(
-            SignalCode.ACTIVE_GRID_SETTINGS_CHANGED_SIGNAL,
+            SignalCode.APPLICATION_SETTINGS_CHANGED_SIGNAL,
             self.render_fill
         )
 
@@ -47,8 +47,8 @@ class ActiveGridArea(DraggablePixmap):
         return QRect(
             active_grid_settings["pos_x"],
             active_grid_settings["pos_y"],
-            active_grid_settings["width"],
-            active_grid_settings["height"]
+            self.settings["working_width"],
+            self.settings["working_height"]
         )
 
     def update_position(self):
@@ -59,49 +59,31 @@ class ActiveGridArea(DraggablePixmap):
 
     def render_fill(self, _message):
         settings = self.settings
+        active_grid_settings = settings["active_grid_settings"]
 
-        if (
-            self._current_width != self.rect.width() or
-            self._current_height != self.rect.height() or
-            self._do_render_fill != settings["active_grid_settings"]["render_fill"] or
-            self._active_grid_settings_enabled != settings["active_grid_settings"]["enabled"]
-        ):
-            self._do_render_fill = settings["active_grid_settings"]["render_fill"]
-            self._current_width = self.rect.width()
-            self._current_height = self.rect.height()
-            self._active_grid_settings_enabled = settings["active_grid_settings"]["enabled"]
+        self._current_width = self.rect.width()
+        self._current_height = self.rect.height()
+        self._do_render_fill = active_grid_settings["render_fill"]
+        self._active_grid_settings_enabled = active_grid_settings["enabled"]
 
-            active_grid_settings = settings["active_grid_settings"]
-            render_fill = active_grid_settings["render_fill"] and active_grid_settings["enabled"]
+        width = abs(self.rect.width())
+        height = abs(self.rect.height())
 
-            fill_color = self.get_fill_color()
+        if not self.image:
+            self.image = QImage(width, height, QImage.Format.Format_ARGB32)
+        else:
+            self.image = self.image.scaled(width, height)
 
-            width = abs(self.rect.width())
-            height = abs(self.rect.height())
-
-            if not self.image:
-                self.image = QImage(
-                    width,
-                    height,
-                    QImage.Format.Format_ARGB32
-                )
-            else:
-                self.image = self.image.scaled(
-                    width,
-                    height
-                )
-
-            if render_fill:
-                self.image.fill(fill_color)
-            else:
-                self.image.fill(QColor(0, 0, 0, 1))
-            self.pixmap = QPixmap.fromImage(self.image)
+        fill_color = self.get_fill_color() if self._do_render_fill else QColor(0, 0, 0, 1)
+        self.image.fill(fill_color)
+        pixmap = QPixmap.fromImage(self.image)
+        self.setPixmap(pixmap)
 
     def get_fill_color(self) -> QColor:
         settings = self.settings
         render_fill = settings["active_grid_settings"]["render_fill"]
         if render_fill:
-            fill_color = settings["generator_settings"]["active_grid_fill_color"]
+            fill_color = settings["active_grid_settings"]["fill_color"]
             fill_color = QColor(fill_color)
             fill_opacity = settings["active_grid_settings"]["fill_opacity"]
             fill_opacity = max(1, fill_opacity)
@@ -135,7 +117,7 @@ class ActiveGridArea(DraggablePixmap):
                 abs(self.rect.width()),
                 abs(self.rect.height())
             )
-            border_color = QColor(settings["generator_settings"]["active_grid_border_color"])
+            border_color = QColor(settings["active_grid_settings"]["border_color"])
             border_color.setAlpha(settings["active_grid_settings"]["border_opacity"])
             self._border_pen = QPen(
                 border_color,

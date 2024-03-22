@@ -6,8 +6,8 @@
    <rect>
     <x>0</x>
     <y>0</y>
-    <width>445</width>
-    <height>326</height>
+    <width>664</width>
+    <height>478</height>
    </rect>
   </property>
   <property name="windowTitle">
@@ -39,7 +39,7 @@
         </property>
         <layout class="QGridLayout" name="gridLayout">
          <item row="0" column="0">
-          <widget class="QPushButton" name="pushButton">
+          <widget class="QPushButton" name="border_choose_color_button">
            <property name="text">
             <string>Choose Color</string>
            </property>
@@ -58,9 +58,6 @@
            </property>
            <property name="label_text" stdset="0">
             <string>Border Opacity</string>
-           </property>
-           <property name="slider_callback" stdset="0">
-            <string>handle_value_change</string>
            </property>
            <property name="settings_property" stdset="0">
             <string>border_opacity</string>
@@ -117,9 +114,6 @@
            <property name="label_text" stdset="0">
             <string>Fill Opacity</string>
            </property>
-           <property name="slider_callback" stdset="0">
-            <string>handle_value_change</string>
-           </property>
            <property name="settings_property" stdset="0">
             <string>fill_opacity</string>
            </property>
@@ -147,7 +141,7 @@
           </widget>
          </item>
          <item row="0" column="0" colspan="2">
-          <widget class="QPushButton" name="pushButton_2">
+          <widget class="QPushButton" name="fill_choose_color_button">
            <property name="text">
             <string>Choose Color</string>
            </property>
@@ -194,9 +188,6 @@
            <property name="spinbox_page_step" stdset="0">
             <number>64</number>
            </property>
-           <property name="slider_callback" stdset="0">
-            <string notr="true">handle_value_change</string>
-           </property>
            <property name="settings_property" stdset="0">
             <string notr="true">working_width</string>
            </property>
@@ -236,9 +227,6 @@
            </property>
            <property name="label_text" stdset="0">
             <string>Active Grid Height</string>
-           </property>
-           <property name="slider_callback" stdset="0">
-            <string notr="true">handle_value_change</string>
            </property>
            <property name="settings_property" stdset="0">
             <string>working_height</string>
@@ -302,8 +290,8 @@
    <slot>action_clicked_checkbox_toggle_active_grid_fill(bool)</slot>
    <hints>
     <hint type="sourcelabel">
-     <x>112</x>
-     <y>342</y>
+     <x>133</x>
+     <y>292</y>
     </hint>
     <hint type="destinationlabel">
      <x>141</x>
@@ -323,7 +311,39 @@
     </hint>
     <hint type="destinationlabel">
      <x>82</x>
-     <y>-15</y>
+     <y>0</y>
+    </hint>
+   </hints>
+  </connection>
+  <connection>
+   <sender>border_choose_color_button</sender>
+   <signal>clicked()</signal>
+   <receiver>active_grid_settings_widget</receiver>
+   <slot>action_choose_border_color_clicked()</slot>
+   <hints>
+    <hint type="sourcelabel">
+     <x>448</x>
+     <y>166</y>
+    </hint>
+    <hint type="destinationlabel">
+     <x>565</x>
+     <y>-16</y>
+    </hint>
+   </hints>
+  </connection>
+  <connection>
+   <sender>fill_choose_color_button</sender>
+   <signal>clicked()</signal>
+   <receiver>active_grid_settings_widget</receiver>
+   <slot>action_choose_fill_color_clicked()</slot>
+   <hints>
+    <hint type="sourcelabel">
+     <x>513</x>
+     <y>247</y>
+    </hint>
+    <hint type="destinationlabel">
+     <x>614</x>
+     <y>-3</y>
     </hint>
    </hints>
   </connection>
@@ -332,5 +352,7 @@
   <slot>action_clicked_checkbox_toggle_active_grid_border(bool)</slot>
   <slot>action_clicked_checkbox_toggle_active_grid_fill(bool)</slot>
   <slot>action_clicked_checkbox_toggle_active_grid_area(bool)</slot>
+  <slot>action_choose_border_color_clicked()</slot>
+  <slot>action_choose_fill_color_clicked()</slot>
  </slots>
 </ui>
