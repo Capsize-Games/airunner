@@ -69,8 +69,6 @@ class ActiveGridArea(DraggablePixmap):
         width = abs(self.rect.width())
         height = abs(self.rect.height())
 
-        print(width, height)
-
         if not self.image:
             self.image = QImage(width, height, QImage.Format.Format_ARGB32)
         else:
@@ -85,7 +83,7 @@ class ActiveGridArea(DraggablePixmap):
         settings = self.settings
         render_fill = settings["active_grid_settings"]["render_fill"]
         if render_fill:
-            fill_color = settings["generator_settings"]["active_grid_fill_color"]
+            fill_color = settings["active_grid_settings"]["fill_color"]
             fill_color = QColor(fill_color)
             fill_opacity = settings["active_grid_settings"]["fill_opacity"]
             fill_opacity = max(1, fill_opacity)
@@ -119,7 +117,7 @@ class ActiveGridArea(DraggablePixmap):
                 abs(self.rect.width()),
                 abs(self.rect.height())
             )
-            border_color = QColor(settings["generator_settings"]["active_grid_border_color"])
+            border_color = QColor(settings["active_grid_settings"]["border_color"])
             border_color.setAlpha(settings["active_grid_settings"]["border_opacity"])
             self._border_pen = QPen(
                 border_color,
