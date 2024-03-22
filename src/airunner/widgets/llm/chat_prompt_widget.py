@@ -146,6 +146,13 @@ class ChatPromptWidget(BaseWidget):
         #parsed_template = parse_template(prompt_template)
 
         current_bot = self.settings["llm_generator_settings"]["saved_chatbots"][self.settings["llm_generator_settings"]["current_chatbot"]]
+        self.add_message_to_conversation(
+            name=current_bot["username"],
+            message=self.prompt,
+            is_bot=False
+        )
+        self.clear_prompt()
+        self.start_progress_bar()
         self.emit_signal(
             SignalCode.LLM_TEXT_GENERATE_REQUEST_SIGNAL,
             {
@@ -183,34 +190,15 @@ class ChatPromptWidget(BaseWidget):
                         "top_k": llm_generator_settings["top_k"],
                         "eta_cutoff": llm_generator_settings['eta_cutoff'] / 100.0,
                         "seed": llm_generator_settings["do_sample"],
-                        "early_stopping": llm_generator_settings["early_stopping"],
+                        "early_stopping": llm_generator_settings["early_stopping"]
                     },
                     "image": image,
                     "callback": callback,
                     "tts_settings": self.settings["tts_settings"],
-                    "username": current_bot["username"],
-                    "botname": current_bot["botname"],
-                    "use_personality": current_bot["use_personality"],
-                    "use_mood": current_bot["use_mood"],
-                    "use_guardrails": current_bot["use_guardrails"],
-                    "use_system_instructions": current_bot["use_system_instructions"],
-                    "assign_names": current_bot["assign_names"],
-                    "bot_personality": current_bot["bot_personality"],
-                    "bot_mood": current_bot["bot_mood"],
-                    "prompt_template": current_bot["prompt_template"],
-                    "guardrails_prompt": current_bot["guardrails_prompt"],
-                    "system_instructions": current_bot["system_instructions"],
                     "vision_history": self.vision_history,
                 }
             }
         )
-        self.add_message_to_conversation(
-            name=current_bot["username"],
-            message=self.prompt, 
-            is_bot=False
-        )
-        self.clear_prompt()
-        self.start_progress_bar()
 
     def on_token_signal(self, val):
         self.handle_token_signal(val)
@@ -238,6 +226,7 @@ class ChatPromptWidget(BaseWidget):
 
     def llm_action_changed(self, val: str):
         settings = self.settings
+        print("SETTING LLM ACTION TO ", val)
         settings["llm_generator_settings"]["action"] = val
         self.settings = settings
 

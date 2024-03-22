@@ -12,7 +12,8 @@ from airunner.aihandler.logger import Logger
 from airunner.json_extractor import JSONExtractor
 from airunner.mediator_mixin import MediatorMixin
 from airunner.enums import SignalCode, LLMChatRole, LLMActionType, ImageCategory
-from airunner.utils import get_torch_device
+from airunner.utils import get_torch_device, clear_memory
+from airunner.windows.main.settings_mixin import SettingsMixin
 
 
 class ExternalConditionStoppingCriteria(StoppingCriteria):
@@ -24,9 +25,14 @@ class ExternalConditionStoppingCriteria(StoppingCriteria):
         return self.external_condition_callable()
 
 
-class AIRunnerAgent(QObject, MediatorMixin):
+class AIRunnerAgent(
+    QObject,
+    MediatorMixin,
+    SettingsMixin
+):
     def __init__(self, *args, **kwargs):
         MediatorMixin.__init__(self)
+        SettingsMixin.__init__(self)
         self.model = kwargs.pop("model", None)
         self.tokenizer = kwargs.pop("tokenizer", None)
         self.streamer = kwargs.pop("streamer", None)
@@ -62,6 +68,12 @@ class AIRunnerAgent(QObject, MediatorMixin):
         self.history = []
         self.thread = None
         self.do_interrupt = False
+
+    def unload(self):
+        self.model = None
+        self.tokenizer = None
+        self.thread = None
+        clear_memory()
 
     def interrupt_process(self):
         self.do_interrupt = True
@@ -254,7 +266,7 @@ class AIRunnerAgent(QObject, MediatorMixin):
             rendered_template = rendered_template.replace("{{ " + key + " }}", value)
         return rendered_template
 
-    def do_response(self):
+    def do_response(self, _message: dict):
         self.run(self.prompt, LLMActionType.CHAT)
 
     def run(self, prompt, action: LLMActionType, vision_history: list = []):
@@ -272,6 +284,7 @@ class AIRunnerAgent(QObject, MediatorMixin):
 
         if self.thread is not None:
             self.thread.join()
+
         self.emit_signal(SignalCode.UNBLOCK_TTS_GENERATOR_SIGNAL)
 
         stopping_criteria = ExternalConditionStoppingCriteria(self.do_interrupt_process)
