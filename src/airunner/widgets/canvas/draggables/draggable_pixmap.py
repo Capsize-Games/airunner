@@ -55,13 +55,11 @@ class DraggablePixmap(
         )
         x += self.last_pos.x()
         y += self.last_pos.y()
-        self.save = save
-        self.setPos(x, y)
-        self.save = False
+        self.setPos(x, y, save)
 
-    def setPos(self, x, y):
+    def setPos(self, x, y, save = True):
         super().setPos(x, y)
-        if self.save:
+        if save:
             if self.current_tool is CanvasToolName.ACTIVE_GRID_AREA:
                 settings = self.settings
                 active_grid_settings = settings["active_grid_settings"]
@@ -71,3 +69,7 @@ class DraggablePixmap(
 
     def paint(self, painter: QPainter, option, widget=None):
         painter.drawPixmap(self.pixmap.rect(), self.pixmap)
+
+    def setPixmap(self, pixmap):
+        self.pixmap = pixmap
+        super().setPixmap(pixmap)

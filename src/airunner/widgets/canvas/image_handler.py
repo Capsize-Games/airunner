@@ -1,7 +1,7 @@
 from PIL import ImageFilter, Image
-from PySide6.QtWidgets import QGraphicsPixmapItem
 
 from airunner.mediator_mixin import MediatorMixin
+from airunner.widgets.canvas.draggables.draggable_pixmap import DraggablePixmap
 from airunner.windows.main.settings_mixin import SettingsMixin
 
 
@@ -28,7 +28,7 @@ class ImageHandler(
     ):
         if image is None and scene_items is not None:
             for item in scene_items:
-                if isinstance(item, QGraphicsPixmapItem):
+                if isinstance(item, DraggablePixmap):
                     image = item.pixmap.toImage()
                     image.save(image_path)
         else:
