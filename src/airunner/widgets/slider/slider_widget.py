@@ -271,7 +271,6 @@ class SliderWidget(BaseWidget):
 
         spinbox_val = round(spinbox_val, 2)
         self.ui.slider_spinbox.blockSignals(True)
-        self.ui.slider_spinbox.update()
         self.ui.slider_spinbox.setValue(spinbox_val)
         self.ui.slider_spinbox.blockSignals(False)
 
