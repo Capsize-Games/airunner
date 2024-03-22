@@ -114,7 +114,6 @@ class SignalCode(Enum):
     CONTROLNET_EXPORT_IMAGE_SIGNAL = "controlnet_export_image_signal"
     CONTROLNET_IMPORT_IMAGE_SIGNAL = "controlnet_import_image_signal"
 
-    CLEAR_MEMORY_SIGNAL = "clear_memory_signal"
     CONTROLNET_IMAGE_GENERATED_SIGNAL = "controlnet_image_generated_signal"
 
     EMBEDDING_LOAD_FAILED_SIGNAL = "embedding_load_failed_signal"
@@ -158,12 +157,12 @@ class SignalCode(Enum):
     LLM_TEXT_STREAMED_SIGNAL = "llm_text_streamed_signal"
     LLM_REQUEST_WORKER_RESPONSE_SIGNAL = "LLMRequestWorker_response_signal"
     LLM_UNLOAD_SIGNAL = "llm_unload_signal"
+    LLM_UNLOADED_SIGNAL = "llm_unload_signal"
     LLM_REQUEST_SIGNAL = "llm_request_signal"
     LLM_TEXT_GENERATE_REQUEST_SIGNAL = "llm_text_generate_request_signal"
     LLM_TOKEN_SIGNAL = "llm_token_signal"
     LLM_RESPOND_TO_USER_SIGNAL = "llm_respond_to_user_signal"
     LLM_PROCESS_STT_AUDIO_SIGNAL = "llm_process_stt_audio"
-    LLM_UNLOADED_SIGNAL = "llm_unloaded_signal"
 
     LOG_ERROR_SIGNAL = "error_signal"
     LOG_WARNING_SIGNAL = "warning_signal"

@@ -59,13 +59,16 @@ class TransformerBaseHandler(BaseHandler):
         self._generator = None
         self.template = None
         self.image = None
-        self.use_saved_model = True
 
     @property
     def do_load_model(self):
         if self.model is None or self.current_model_path != self.model_path:
             return True
         return False
+
+    @property
+    def cache_llm_to_disk(self):
+        return self.settings["llm_generator_settings"]["cache_llm_to_disk"]
 
     def quantization_config(self):
         config = None
@@ -124,7 +127,7 @@ class TransformerBaseHandler(BaseHandler):
     def get_model_path(self, path):
         if self.do_quantize_model:
             local_path = self.get_model_cache_path(path)
-            if self.use_saved_model and os.path.exists(local_path):
+            if self.cache_llm_to_disk and os.path.exists(local_path):
                 return local_path
         return path
 
@@ -135,7 +138,6 @@ class TransformerBaseHandler(BaseHandler):
                 "hf_api_key_read_key",
                 ""
             )
-
 
         path = self.get_model_path(self.current_model_path)
 
@@ -153,7 +155,6 @@ class TransformerBaseHandler(BaseHandler):
 
         if path != self.current_model_path:
             params = {}
-
 
         try:
             self.model = self.auto_class_.from_pretrained(
@@ -173,20 +174,22 @@ class TransformerBaseHandler(BaseHandler):
             self.logger.error(f"Model not loaded from {path}")
             return
 
-        if self.do_quantize_model and self.use_saved_model:
+        if self.do_quantize_model and self.cache_llm_to_disk:
+            self.logger.debug("Saving quantized model to cache")
             cache_path = self.get_model_cache_path(self.current_model_path)
-            if self.model and self.use_saved_model and not os.path.exists(cache_path):
+            if self.model and self.cache_llm_to_disk and not os.path.exists(cache_path):
                 self.model.save_pretrained(cache_path)
 
     def load_tokenizer(self, local_files_only=None):
         pass
 
-    def unload(self):
+    def unload(self, do_clear_memory: bool = False):
         self._processing_request = False
         model_unloaded = self.unload_model()
         tokenizer_unloaded = self.unload_tokenizer()
         self.image = None
         if (
+            do_clear_memory or
             model_unloaded or
             tokenizer_unloaded
         ):
@@ -194,16 +197,14 @@ class TransformerBaseHandler(BaseHandler):
             clear_memory()
 
     def unload_tokenizer(self):
-        if self.tokenizer:
+        if self.tokenizer is not None:
             self.logger.debug("Unloading tokenizer")
-            del self.tokenizer
             self.tokenizer = None
             return True
 
     def unload_model(self):
-        if self.model:
+        if self.model is not None:
             self.logger.debug("Unloading model")
-            del self.model
             self.model = None
             return True
 
