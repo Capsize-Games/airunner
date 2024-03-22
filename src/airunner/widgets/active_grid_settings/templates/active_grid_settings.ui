@@ -59,9 +59,6 @@
            <property name="label_text" stdset="0">
             <string>Border Opacity</string>
            </property>
-           <property name="slider_callback" stdset="0">
-            <string>handle_value_change</string>
-           </property>
            <property name="settings_property" stdset="0">
             <string>border_opacity</string>
            </property>
@@ -116,9 +113,6 @@
            </property>
            <property name="label_text" stdset="0">
             <string>Fill Opacity</string>
-           </property>
-           <property name="slider_callback" stdset="0">
-            <string>handle_value_change</string>
            </property>
            <property name="settings_property" stdset="0">
             <string>fill_opacity</string>
@@ -194,9 +188,6 @@
            <property name="spinbox_page_step" stdset="0">
             <number>64</number>
            </property>
-           <property name="slider_callback" stdset="0">
-            <string notr="true">handle_value_change</string>
-           </property>
            <property name="settings_property" stdset="0">
             <string notr="true">working_width</string>
            </property>
@@ -236,9 +227,6 @@
            </property>
            <property name="label_text" stdset="0">
             <string>Active Grid Height</string>
-           </property>
-           <property name="slider_callback" stdset="0">
-            <string notr="true">handle_value_change</string>
            </property>
            <property name="settings_property" stdset="0">
             <string>working_height</string>
