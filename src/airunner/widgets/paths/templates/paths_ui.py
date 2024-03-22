@@ -213,7 +213,7 @@ class Ui_paths_form(object):
         self.widget.setProperty("title", QCoreApplication.translate("paths_form", u"LLM seq2seq path", None))
         self.widget.setProperty("description", QCoreApplication.translate("paths_form", u"Absolute path to the LLM seq2seq model directory", None))
         self.widget.setProperty("path_name", QCoreApplication.translate("paths_form", u"llm_seq2seq_model_path", None))
-        self.llm_txt2txt_path_widget.setProperty("title", QCoreApplication.translate("paths_form", u"LLM CausalLM path", None))
+        self.llm_txt2txt_path_widget.setProperty("title", QCoreApplication.translate("paths_form", u"LLM CasualLM path", None))
         self.llm_txt2txt_path_widget.setProperty("description", QCoreApplication.translate("paths_form", u"Absolute path to the LLM txt2txt model directory", None))
         self.llm_txt2txt_path_widget.setProperty("path_name", QCoreApplication.translate("paths_form", u"llm_casuallm_model_path", None))
         self.video_path_widget.setProperty("title", QCoreApplication.translate("paths_form", u"Video Path", None))
