@@ -60,8 +60,7 @@ class EmbeddingsContainerWidget(BaseWidget):
             }
         )
 
-    def on_get_all_embeddings_signal(self, message: dict):
-        embeddings = message["embeddings"]
+    def on_get_all_embeddings_signal(self, embeddings: dict):
         self.clear_embedding_widgets()
 
         for embedding in embeddings:
