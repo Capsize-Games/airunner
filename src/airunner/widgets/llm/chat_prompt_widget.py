@@ -183,7 +183,7 @@ class ChatPromptWidget(BaseWidget):
                         "top_k": llm_generator_settings["top_k"],
                         "eta_cutoff": llm_generator_settings['eta_cutoff'] / 100.0,
                         "seed": llm_generator_settings["do_sample"],
-                        "early_stopping": llm_generator_settings["early_stopping"],
+                        "early_stopping": llm_generator_settings["early_stopping"]
                     },
                     "image": image,
                     "callback": callback,
@@ -238,6 +238,7 @@ class ChatPromptWidget(BaseWidget):
 
     def llm_action_changed(self, val: str):
         settings = self.settings
+        print("SETTING LLM ACTION TO ", val)
         settings["llm_generator_settings"]["action"] = val
         self.settings = settings
 
