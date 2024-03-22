@@ -1,19 +1,14 @@
 import traceback
 
-from PySide6.QtCore import QSettings, QByteArray, QDataStream, QIODevice, Slot
+from PySide6.QtCore import QSettings, QByteArray, QDataStream, QIODevice
 
 from airunner.settings import (
     DEFAULT_BRUSH_PRIMARY_COLOR,
     DEFAULT_BRUSH_SECONDARY_COLOR,
-    DEFAULT_SCHEDULER, ORGANIZATION, APPLICATION_NAME, DEFAULT_SHORTCUTS
+    DEFAULT_SCHEDULER, ORGANIZATION, APPLICATION_NAME
 )
-from airunner.data.bootstrap.controlnet_bootstrap_data import controlnet_bootstrap_data
-from airunner.data.bootstrap.imagefilter_bootstrap_data import imagefilter_bootstrap_data
-from airunner.data.bootstrap.model_bootstrap_data import model_bootstrap_data
-from airunner.data.bootstrap.pipeline_bootstrap_data import pipeline_bootstrap_data
 from airunner.enums import Mode, SignalCode, CanvasToolName, LLMActionType, ImageGenerator, GeneratorSection, \
     ImageCategory, Controlnet
-from airunner.service_locator import ServiceLocator
 from airunner.settings import BASE_PATH, MALE, DEFAULT_MODELS, DEFAULT_MODELS_VERSION, LLM_TEMPLATES_VERSION
 from airunner.settings import DEFAULT_PATHS
 from airunner.settings import DEFAULT_CHATBOT
