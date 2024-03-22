@@ -1,4 +1,4 @@
-from PyQt6.QtWidgets import QColorDialog
+from PySide6.QtWidgets import QColorDialog
 
 from airunner.enums import SignalCode
 from airunner.widgets.active_grid_settings.templates.active_grid_settings_ui import Ui_active_grid_settings_widget
