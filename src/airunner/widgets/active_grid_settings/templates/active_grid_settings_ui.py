@@ -106,7 +106,6 @@ class Ui_active_grid_settings_widget(object):
         self.width_slider_widget.setProperty("slider_page_step", 64)
         self.width_slider_widget.setProperty("spinbox_single_step", 64)
         self.width_slider_widget.setProperty("spinbox_page_step", 64)
-        self.width_slider_widget.setProperty("slider_callback", u"handle_value_change")
         self.width_slider_widget.setProperty("settings_property", u"working_width")
         self.width_slider_widget.setProperty("display_as_float", False)
 
@@ -123,7 +122,6 @@ class Ui_active_grid_settings_widget(object):
         self.height_slider_widget.setProperty("slider_page_step", 64)
         self.height_slider_widget.setProperty("spinbox_single_step", 64)
         self.height_slider_widget.setProperty("spinbox_page_step", 64)
-        self.height_slider_widget.setProperty("slider_callback", u"handle_value_change")
         self.height_slider_widget.setProperty("display_as_float", False)
 
         self.verticalLayout.addWidget(self.height_slider_widget)
@@ -153,11 +151,9 @@ class Ui_active_grid_settings_widget(object):
         self.active_grid_border_groupbox.setTitle(QCoreApplication.translate("active_grid_settings_widget", u"Border", None))
         self.pushButton.setText(QCoreApplication.translate("active_grid_settings_widget", u"Choose Color", None))
         self.border_opacity_slider_widget.setProperty("label_text", QCoreApplication.translate("active_grid_settings_widget", u"Border Opacity", None))
-        self.border_opacity_slider_widget.setProperty("slider_callback", QCoreApplication.translate("active_grid_settings_widget", u"handle_value_change", None))
         self.border_opacity_slider_widget.setProperty("settings_property", QCoreApplication.translate("active_grid_settings_widget", u"border_opacity", None))
         self.active_grid_fill_groupbox.setTitle(QCoreApplication.translate("active_grid_settings_widget", u"Fill", None))
         self.fill_opacity_slider_widget.setProperty("label_text", QCoreApplication.translate("active_grid_settings_widget", u"Fill Opacity", None))
-        self.fill_opacity_slider_widget.setProperty("slider_callback", QCoreApplication.translate("active_grid_settings_widget", u"handle_value_change", None))
         self.fill_opacity_slider_widget.setProperty("settings_property", QCoreApplication.translate("active_grid_settings_widget", u"fill_opacity", None))
         self.pushButton_2.setText(QCoreApplication.translate("active_grid_settings_widget", u"Choose Color", None))
         self.groupBox_3.setTitle(QCoreApplication.translate("active_grid_settings_widget", u"Size", None))
