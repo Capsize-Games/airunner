@@ -55,12 +55,10 @@ class WorkerManager(QObject, MediatorMixin, SettingsMixin):
         self.do_process_queue = None
         self.logger = Logger(prefix=self.__class__.__name__)
         self.is_capturing_image = False
-        clear_memory()
         self.register(SignalCode.STT_HEAR_SIGNAL, self.on_hear_signal)
         self.register(SignalCode.ENGINE_CANCEL_SIGNAL, self.on_engine_cancel_signal)
         self.register(SignalCode.ENGINE_STOP_PROCESSING_QUEUE_SIGNAL, self.on_engine_stop_processing_queue_signal)
         self.register(SignalCode.ENGINE_START_PROCESSING_QUEUE_SIGNAL, self.on_engine_start_processing_queue_signal)
-        self.register(SignalCode.CLEAR_MEMORY_SIGNAL, self.on_clear_memory_signal)
         self.register(SignalCode.LOG_ERROR_SIGNAL, self.on_error_signal)
         self.register(SignalCode.LOG_WARNING_SIGNAL, self.on_warning_signal)
         self.register(SignalCode.LOG_STATUS_SIGNAL, self.on_status_signal)
@@ -169,9 +167,6 @@ class WorkerManager(QObject, MediatorMixin, SettingsMixin):
 
     def on_status_signal(self, message: dict):
         self.logger.debug(message)
-
-    def on_clear_memory_signal(self, _message):
-        clear_memory()
 
     def on_llm_text_streamed_signal(self, data: dict):
         try:
