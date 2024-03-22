@@ -2,7 +2,7 @@ import gc
 
 from PySide6.QtCore import Slot
 
-from airunner.aihandler.llm.casual_lm_transfformer_base_handler import CasualLMTransformerBaseHandler
+from airunner.aihandler.llm.casual_lm_transfformer_base_handler import CausalLMTransformerBaseHandler
 from airunner.settings import AVAILABLE_DTYPES
 from airunner.enums import SignalCode
 from airunner.workers.worker import Worker
@@ -12,7 +12,7 @@ class LLMGenerateWorker(Worker):
     llm = None
 
     def register_signals(self):
-        self.llm = CasualLMTransformerBaseHandler()
+        self.llm = CausalLMTransformerBaseHandler()
         self.register(SignalCode.LLM_REQUEST_WORKER_RESPONSE_SIGNAL, self.on_llm_request_worker_response_signal)
         self.register(SignalCode.LLM_UNLOAD_SIGNAL, self.on_unload_llm_signal)
 
@@ -52,4 +52,4 @@ class LLMGenerateWorker(Worker):
         self.llm.unload()
         del self.llm
         gc.collect()
-        self.llm = CasualLMTransformerBaseHandler()
+        self.llm = CausalLMTransformerBaseHandler()
