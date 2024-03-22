@@ -6,6 +6,8 @@ from typing import Optional
 import tomesd
 import torch
 
+from airunner.utils import clear_memory
+
 
 @dataclass
 class UNet2DConditionOutput:
@@ -212,11 +214,12 @@ class MemoryEfficientMixin:
         self.use_enable_sequential_cpu_offload = self.settings["memory_settings"]["use_enable_sequential_cpu_offload"]
         self.enable_model_cpu_offload = self.settings["memory_settings"]["enable_model_cpu_offload"]
 
-        if self.cuda_is_available and not self.settings["memory_settings"]["use_enable_sequential_cpu_offload"] and not self.settings["memory_settings"]["enable_model_cpu_offload"]:
+        if self.cuda_is_available and not self.use_enable_sequential_cpu_offload and not self.enable_model_cpu_offload:
             if not str(self.pipe.device).startswith("cuda"):
+                clear_memory()
                 self.logger.debug(f"Moving pipe to cuda (currently {self.pipe.device})")
                 try:
-                    self.pipe.to("cuda") if self.cuda_is_available else None
+                    self.pipe.to("cuda", self.data_type)
                 except NotImplementedError:
                     self.logger.warning("Not implemented error when moving to cuda")
             if hasattr(self.pipe, "controlnet") and self.pipe.controlnet is not None:
