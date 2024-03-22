@@ -1,6 +1,8 @@
 import gc
 
-from airunner.aihandler.llm.causal_lm_transfformer_base_handler import CausalLMTransformerBaseHandler
+from PySide6.QtCore import Slot
+
+from airunner.aihandler.llm.casual_lm_transfformer_base_handler import CausalLMTransformerBaseHandler
 from airunner.settings import AVAILABLE_DTYPES
 from airunner.enums import SignalCode
 from airunner.workers.worker import Worker
