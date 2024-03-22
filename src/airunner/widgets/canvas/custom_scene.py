@@ -230,6 +230,7 @@ class CustomScene(
         self.settings = settings
         q_image = ImageQt.ImageQt(image)
         self.item.setPixmap(QPixmap.fromImage(q_image))
+        self.item.setZValue(0)
         self.update()
 
     def current_active_image(self) -> Image:
