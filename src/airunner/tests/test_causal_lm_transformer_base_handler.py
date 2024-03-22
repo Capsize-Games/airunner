@@ -1,12 +1,12 @@
 import unittest
 from unittest.mock import MagicMock
-from airunner.aihandler.llm.casual_lm_transfformer_base_handler import CasualLMTransformerBaseHandler
+from airunner.aihandler.llm.casual_lm_transfformer_base_handler import CausalLMTransformerBaseHandler
 from airunner.enums import LLMActionType
 
 
 class TestCausalLMTransformerBaseHandler(unittest.TestCase):
     def setUp(self):
-        self.handler = CasualLMTransformerBaseHandler()
+        self.handler = CausalLMTransformerBaseHandler()
 
     def test_process_data(self):
         # Prepare test data

@@ -10,7 +10,7 @@ from airunner.aihandler.llm.tokenizer_handler import TokenizerHandler
 from airunner.enums import SignalCode, LLMToolName, LLMActionType
 
 
-class CasualLMTransformerBaseHandler(TokenizerHandler):
+class CausalLMTransformerBaseHandler(TokenizerHandler):
     auto_class_ = AutoModelForCausalLM
 
     def __init__(self, *args, **kwargs):
