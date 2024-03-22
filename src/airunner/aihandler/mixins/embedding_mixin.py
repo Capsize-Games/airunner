@@ -6,6 +6,7 @@ from airunner.enums import SignalCode
 class EmbeddingMixin:
     def __init__(self):
         self.embeds_loaded = None
+        self._available_embeddings = {}
 
     @property
     def available_embeddings(self):
@@ -17,9 +18,11 @@ class EmbeddingMixin:
         return self._available_embeddings
 
     def load_learned_embed_in_clip(self):
-        learned_embeds_path = self.embeddings_path
+        learned_embeds_path = self.settings["path_settings"]["embeddings_model_path"]
         if not os.path.exists(learned_embeds_path):
-            learned_embeds_path = os.path.join(self.model_base_path, "embeddings")
+            self.logger.warning("Embeddings path does not exist")
+            return
+
         if self.embeds_loaded:
             return
         embeddings_not_supported = False
