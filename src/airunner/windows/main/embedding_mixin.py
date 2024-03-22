@@ -56,7 +56,9 @@ class EmbeddingMixin:
                 embeddings.append(embedding)
         self.emit_signal(
             SignalCode.EMBEDDING_GET_ALL_RESULTS_SIGNAL,
-            embeddings
+            {
+                "embeddings": embeddings
+            }
         )
         return embeddings
 
@@ -93,5 +95,5 @@ class EmbeddingMixin:
                                 "trigger_word": ""
                             }
                             self.add_embedding(embedding)
-        self.delete_missing_embeddings()
+        self.delete_missing_embeddings({})
         self.get_embeddings()
