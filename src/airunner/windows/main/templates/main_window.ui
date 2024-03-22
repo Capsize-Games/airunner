@@ -124,7 +124,7 @@
                <string notr="true"/>
               </property>
               <property name="currentIndex">
-               <number>0</number>
+               <number>1</number>
               </property>
               <widget class="QWidget" name="canvas_tab">
                <attribute name="title">
@@ -202,7 +202,7 @@
           <widget class="QScrollArea" name="scrollArea">
            <property name="maximumSize">
             <size>
-             <width>450</width>
+             <width>16777215</width>
              <height>16777215</height>
             </size>
            </property>
@@ -259,7 +259,7 @@
                  <bool>false</bool>
                 </property>
                 <property name="currentIndex">
-                 <number>0</number>
+                 <number>4</number>
                 </property>
                 <widget class="QWidget" name="tab_pen">
                  <attribute name="title">
@@ -346,6 +346,16 @@
                   </property>
                   <item row="0" column="0">
                    <widget class="StableDiffusionSettingsWidget" name="widget" native="true"/>
+                  </item>
+                 </layout>
+                </widget>
+                <widget class="QWidget" name="tab">
+                 <attribute name="title">
+                  <string>LLM</string>
+                 </attribute>
+                 <layout class="QGridLayout" name="gridLayout_2">
+                  <item row="0" column="0">
+                   <widget class="LLMSettingsWidget" name="llm_preferences_widget" native="true"/>
                   </item>
                  </layout>
                 </widget>
@@ -2308,6 +2318,12 @@
    <class>UpscaleWidget</class>
    <extends>QWidget</extends>
    <header>airunner/widgets/upscale/upscale_widget</header>
+   <container>1</container>
+  </customwidget>
+  <customwidget>
+   <class>LLMSettingsWidget</class>
+   <extends>QWidget</extends>
+   <header>airunner/widgets/llm/llm_settings_widget</header>
    <container>1</container>
   </customwidget>
  </customwidgets>

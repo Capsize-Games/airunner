@@ -25,6 +25,7 @@ from airunner.widgets.active_grid_settings.active_grid_settings_widget import Ac
 from airunner.widgets.brush.brush_container_widget import BrushContainerWidget
 from airunner.widgets.canvas.canvas_widget import CanvasWidget
 from airunner.widgets.generator_form.generator_form_widget import GeneratorForm
+from airunner.widgets.llm.llm_settings_widget import LLMSettingsWidget
 from airunner.widgets.model_manager.model_manager_widget import ModelManagerWidget
 from airunner.widgets.stablediffusion.stable_diffusion_settings_widget import StableDiffusionSettingsWidget
 from airunner.widgets.upscale.upscale_widget import UpscaleWidget
@@ -363,7 +364,7 @@ class Ui_MainWindow(object):
         self.content_splitter.addWidget(self.canvas_widget)
         self.scrollArea = QScrollArea(self.content_splitter)
         self.scrollArea.setObjectName(u"scrollArea")
-        self.scrollArea.setMaximumSize(QSize(450, 16777215))
+        self.scrollArea.setMaximumSize(QSize(16777215, 16777215))
         self.scrollArea.setWidgetResizable(True)
         self.scrollAreaWidgetContents = QWidget()
         self.scrollAreaWidgetContents.setObjectName(u"scrollAreaWidgetContents")
@@ -424,6 +425,16 @@ class Ui_MainWindow(object):
         self.gridLayout_11.addWidget(self.widget, 0, 0, 1, 1)
 
         self.tool_tab_widget.addTab(self.tab_3, "")
+        self.tab = QWidget()
+        self.tab.setObjectName(u"tab")
+        self.gridLayout_2 = QGridLayout(self.tab)
+        self.gridLayout_2.setObjectName(u"gridLayout_2")
+        self.llm_preferences_widget = LLMSettingsWidget(self.tab)
+        self.llm_preferences_widget.setObjectName(u"llm_preferences_widget")
+
+        self.gridLayout_2.addWidget(self.llm_preferences_widget, 0, 0, 1, 1)
+
+        self.tool_tab_widget.addTab(self.tab, "")
         self.splitter.addWidget(self.tool_tab_widget)
 
         self.gridLayout.addWidget(self.splitter, 0, 0, 1, 1)
@@ -1057,8 +1068,8 @@ class Ui_MainWindow(object):
         self.enable_controlnet.toggled.connect(MainWindow.action_toggle_controlnet)
 
         self.mode_tab_widget.setCurrentIndex(0)
-        self.center_tab.setCurrentIndex(0)
-        self.tool_tab_widget.setCurrentIndex(0)
+        self.center_tab.setCurrentIndex(1)
+        self.tool_tab_widget.setCurrentIndex(4)
 
 
         QMetaObject.connectSlotsByName(MainWindow)
@@ -1265,6 +1276,7 @@ class Ui_MainWindow(object):
         self.tool_tab_widget.setTabText(self.tool_tab_widget.indexOf(self.tab_active_grid), QCoreApplication.translate("MainWindow", u"Active Grid", None))
         self.tool_tab_widget.setTabText(self.tool_tab_widget.indexOf(self.tab_2), QCoreApplication.translate("MainWindow", u"Upscale", None))
         self.tool_tab_widget.setTabText(self.tool_tab_widget.indexOf(self.tab_3), QCoreApplication.translate("MainWindow", u"StableDiffusion", None))
+        self.tool_tab_widget.setTabText(self.tool_tab_widget.indexOf(self.tab), QCoreApplication.translate("MainWindow", u"LLM", None))
 #if QT_CONFIG(tooltip)
         self.toggle_active_grid_area_button.setToolTip(QCoreApplication.translate("MainWindow", u"Active grid area selection tool", None))
 #endif // QT_CONFIG(tooltip)
