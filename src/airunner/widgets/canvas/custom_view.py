@@ -93,7 +93,8 @@ class CustomGraphicsView(
     def draw_grid(self):
         if self.canvas_type != CanvasType.IMAGE.value:
             return
-        self.scene.addItem(self.line_group)
+        if self.line_group is not None:
+            self.scene.addItem(self.line_group)
 
     def clear_lines(self, _message):
         self.remove_scene_item(self.line_group)
