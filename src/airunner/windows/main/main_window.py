@@ -7,7 +7,7 @@ from functools import partial
 from PySide6 import QtGui
 from PySide6.QtCore import Slot, Signal
 from PySide6.QtGui import QGuiApplication
-from PySide6.QtWidgets import QApplication, QMainWindow, QDialog
+from PySide6.QtWidgets import QApplication, QMainWindow, QDialog, QMessageBox, QCheckBox
 
 from airunner.aihandler.logger import Logger
 from airunner.settings import STATUS_ERROR_COLOR, STATUS_NORMAL_COLOR_LIGHT, STATUS_NORMAL_COLOR_DARK, \
@@ -16,7 +16,7 @@ from airunner.enums import Mode, SignalCode, CanvasToolName, WindowSection, Gene
 from airunner.mediator_mixin import MediatorMixin
 from airunner.resources_dark_rc import *
 from airunner.settings import BASE_PATH, DISCORD_LINK, BUG_REPORT_LINK, VULNERABILITY_REPORT_LINK
-from airunner.utils import get_version, default_hf_cache_dir, set_widget_state
+from airunner.utils import get_version, default_hf_cache_dir, set_widget_state, clear_memory
 from airunner.widgets.status.status_widget import StatusWidget
 from airunner.windows.about.about import AboutWindow
 from airunner.windows.filter_window import FilterWindow
@@ -496,7 +496,7 @@ class MainWindow(
         self.set_nsfw_filter_tooltip()
 
     def set_nsfw_filter_tooltip(self):
-        self.ui.nsfw_button.setToolTip(
+        self.ui.actionSafety_Checker.setToolTip(
             f"Click to {'enable' if not self.settings['nsfw_filter'] else 'disable'} NSFW filter"
         )
 
@@ -669,11 +669,59 @@ class MainWindow(
             self.ui.toggle_eraser_button.setChecked(False)
         self.toggle_tool(CanvasToolName.ACTIVE_GRID_AREA, active)
 
-    def action_toggle_nsfw_filter_triggered(self, val):
-        settings = self.settings
-        settings["nsfw_filter"] = val
-        self.settings = settings
-        self.toggle_nsfw_filter()
+    @Slot(bool)
+    def action_toggle_nsfw_filter_triggered(self, val: bool):
+        if val is False:
+            if self.settings["show_nsfw_warning"]:
+                """
+                Display a popup window which asks the user if they are sure they want to disable the NSFW filter
+                along with a checkbox that allows the user to disable the warning in the future.
+                """
+                self.show_nsfw_warning_popup()
+        else:
+            settings = self.settings
+            settings["nsfw_filter"] = val
+            self.settings = settings
+            self.toggle_nsfw_filter()
+
+    def show_nsfw_warning_popup(self):
+        msg_box = QMessageBox()
+        msg_box.setWindowTitle("Disable Safety Checker Warning")
+        msg_box.setText(
+            (
+                "WARNING\n\n"
+                "You are attempting to disable the safety checker (NSFW filter).\n"
+                "It is strongly recommended that you keep this enabled at all times.\n"
+                "The Safety Checker prevents potentially harmful content from being displayed.\n"
+                "Only disable it if you are sure the Image model you are using is not capable of generating harmful content.\n"
+                "Disabling the safety checker is intended as a last resort for continual false positives and as a research feature.\n"
+                "\n\n"
+                "Are you sure you want to disable the filter?"
+            )
+        )
+        msg_box.setStandardButtons(QMessageBox.Yes | QMessageBox.No)
+        msg_box.setDefaultButton(QMessageBox.No)
+
+        # Create a QCheckBox
+        checkbox = QCheckBox("Do not show this warning again")
+        # Add the checkbox to the message box
+        msg_box.setCheckBox(checkbox)
+
+        result = msg_box.exec()
+
+        if result == QMessageBox.Yes:
+            # User confirmed to disable the NSFW filter
+            # Update the settings accordingly
+            settings = self.settings
+            settings["nsfw_filter"] = False
+            # Update the show_nsfw_warning setting based on the checkbox state
+            settings["show_nsfw_warning"] = not checkbox.isChecked()
+            self.settings = settings
+            self.toggle_nsfw_filter()
+
+        self.ui.actionSafety_Checker.blockSignals(True)
+        self.ui.actionSafety_Checker.setChecked(self.settings["nsfw_filter"])
+        self.ui.actionSafety_Checker.blockSignals(False)
 
     def action_toggle_darkmode(self):
         self.set_stylesheet()
@@ -738,7 +786,6 @@ class MainWindow(
             ("setting-line-icon", "settings_button"),
             ("object-selected-icon", "toggle_active_grid_area_button"),
             ("select-svgrepo-com", "toggle_select_button"),
-            ("adult-sign-icon", "nsfw_button"),
         ]:
             self.set_icons(icon_data[0], icon_data[1], "dark" if self.settings["dark_mode_enabled"] else "light")
 
@@ -776,7 +823,9 @@ class MainWindow(
         set_widget_state(self.ui.toggle_grid_button, show_grid is True)
         set_widget_state(self.ui.ai_button, ai_mode)
 
-        set_widget_state(self.ui.nsfw_button, self.settings["nsfw_filter"])
+        self.ui.actionSafety_Checker.blockSignals(True)
+        self.ui.actionSafety_Checker.setChecked(self.settings["nsfw_filter"])
+        self.ui.actionSafety_Checker.blockSignals(False)
 
     def toggle_tool(self, tool: CanvasToolName, active: bool):
         if not active:
@@ -933,3 +982,15 @@ class MainWindow(
 
     def action_import_image_triggered(self):
         self.emit_signal(SignalCode.CANVAS_IMPORT_IMAGE_SIGNAL)
+
+    @Slot()
+    def action_unload_llm(self):
+        self.emit_signal(SignalCode.LLM_UNLOAD_SIGNAL)
+
+    @Slot()
+    def action_unload_sd(self):
+        self.emit_signal(SignalCode.SD_UNLOAD_SIGNAL)
+
+    @Slot()
+    def action_clear_memory(self):
+        clear_memory()

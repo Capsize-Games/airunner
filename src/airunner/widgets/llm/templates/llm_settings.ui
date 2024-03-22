@@ -138,6 +138,13 @@
           </property>
          </widget>
         </item>
+        <item>
+         <widget class="QCheckBox" name="cache_quantized_model_toggle">
+          <property name="text">
+           <string>Cache Quantized model to disk</string>
+          </property>
+         </widget>
+        </item>
        </layout>
       </item>
       <item row="8" column="0">
@@ -1003,7 +1010,7 @@
    <slot>do_sample_toggled(bool)</slot>
    <hints>
     <hint type="sourcelabel">
-     <x>736</x>
+     <x>494</x>
      <y>893</y>
     </hint>
     <hint type="destinationlabel">
@@ -1124,6 +1131,22 @@
     </hint>
    </hints>
   </connection>
+  <connection>
+   <sender>cache_quantized_model_toggle</sender>
+   <signal>toggled(bool)</signal>
+   <receiver>llm_settings_widget</receiver>
+   <slot>toggle_cache_quantized_model(bool)</slot>
+   <hints>
+    <hint type="sourcelabel">
+     <x>594</x>
+     <y>879</y>
+    </hint>
+    <hint type="destinationlabel">
+     <x>574</x>
+     <y>-10</y>
+    </hint>
+   </hints>
+  </connection>
  </connections>
  <slots>
   <slot>prompt_text_changed(QString)</slot>
@@ -1158,5 +1181,6 @@
   <slot>bot_personality_changed()</slot>
   <slot>enable_manual_tools()</slot>
   <slot>enable_automatic_tools()</slot>
+  <slot>toggle_cache_quantized_model(bool)</slot>
  </slots>
 </ui>

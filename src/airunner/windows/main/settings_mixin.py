@@ -148,6 +148,7 @@ class SettingsMixin:
             mode=Mode.IMAGE.value,
             autoload_sd=True,
             autoload_llm=False,
+            show_nsfw_warning=True,
             llm_templates={
                 "Stable Diffusion Prompt Template": dict(
                     name="Stable Diffusion Prompt Template",
@@ -308,7 +309,8 @@ class SettingsMixin:
                 ),
                 embeddings_model_path="BAAI/bge-small-en-v1.5",
                 prompt_template="StableLM 2 Zephyr: Default Chatbot",
-                batch_size=1
+                batch_size=1,
+                cache_llm_to_disk=True,
             ),
             tts_settings=tts_settings_default,
             stt_settings=dict(

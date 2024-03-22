@@ -113,6 +113,11 @@ class Ui_llm_settings_widget(object):
 
         self.horizontalLayout_6.addWidget(self.do_sample)
 
+        self.cache_quantized_model_toggle = QCheckBox(self.override_parameters)
+        self.cache_quantized_model_toggle.setObjectName(u"cache_quantized_model_toggle")
+
+        self.horizontalLayout_6.addWidget(self.cache_quantized_model_toggle)
+
 
         self.gridLayout_12.addLayout(self.horizontalLayout_6, 7, 0, 1, 1)
 
@@ -503,6 +508,7 @@ class Ui_llm_settings_widget(object):
         self.model_version.currentTextChanged.connect(llm_settings_widget.model_version_changed)
         self.manual_tools.clicked.connect(llm_settings_widget.enable_manual_tools)
         self.automatic_tools.clicked.connect(llm_settings_widget.enable_automatic_tools)
+        self.cache_quantized_model_toggle.toggled.connect(llm_settings_widget.toggle_cache_quantized_model)
 
         self.model_version.setCurrentIndex(-1)
 
@@ -524,6 +530,7 @@ class Ui_llm_settings_widget(object):
         self.override_parameters.setTitle(QCoreApplication.translate("llm_settings_widget", u"Override Prameters", None))
         self.early_stopping.setText(QCoreApplication.translate("llm_settings_widget", u"Early stopping", None))
         self.do_sample.setText(QCoreApplication.translate("llm_settings_widget", u"Do sample", None))
+        self.cache_quantized_model_toggle.setText(QCoreApplication.translate("llm_settings_widget", u"Cache Quantized model to disk", None))
         self.groupBox_24.setTitle(QCoreApplication.translate("llm_settings_widget", u"Length penalty", None))
         self.length_penalty.setProperty("settings_property", QCoreApplication.translate("llm_settings_widget", u"llm_generator_settings.length_penalty", None))
         self.length_penalty.setProperty("slider_callback", QCoreApplication.translate("llm_settings_widget", u"handle_value_change", None))

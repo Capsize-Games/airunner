@@ -1,6 +1,8 @@
 from transformers import LocalAgent as LocalAgentBase, StoppingCriteriaList
 from transformers.tools.agents import StopSequenceCriteria
 
+from airunner.utils import clear_memory
+
 
 class LocalAgent(LocalAgentBase):
     def __init__(self, *args, **kwargs):
@@ -39,3 +41,9 @@ class LocalAgent(LocalAgentBase):
             if result.endswith(stop_seq):
                 result = result[: -len(stop_seq)]
         return result
+
+    def unload(self):
+        self.model = None
+        self.tokenizer = None
+        clear_memory()
+

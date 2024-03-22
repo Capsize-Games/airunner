@@ -292,6 +292,16 @@ class Ui_MainWindow(object):
         self.enable_controlnet = QAction(MainWindow)
         self.enable_controlnet.setObjectName(u"enable_controlnet")
         self.enable_controlnet.setCheckable(True)
+        self.actionUnload_LLm = QAction(MainWindow)
+        self.actionUnload_LLm.setObjectName(u"actionUnload_LLm")
+        self.actionUnload_Image_model = QAction(MainWindow)
+        self.actionUnload_Image_model.setObjectName(u"actionUnload_Image_model")
+        self.actionClear_Memory = QAction(MainWindow)
+        self.actionClear_Memory.setObjectName(u"actionClear_Memory")
+        self.actionSafety_Checker = QAction(MainWindow)
+        self.actionSafety_Checker.setObjectName(u"actionSafety_Checker")
+        self.actionSafety_Checker.setCheckable(True)
+        self.actionSafety_Checker.setChecked(False)
         self.centralwidget = QWidget(MainWindow)
         self.centralwidget.setObjectName(u"centralwidget")
         self.centralwidget.setEnabled(True)
@@ -648,32 +658,12 @@ class Ui_MainWindow(object):
 
         self.verticalLayout.addWidget(self.line_8)
 
-        self.nsfw_button = QPushButton(self.button_menu)
-        self.nsfw_button.setObjectName(u"nsfw_button")
-        self.nsfw_button.setMinimumSize(QSize(50, 45))
-        self.nsfw_button.setCursor(QCursor(Qt.PointingHandCursor))
-        icon12 = QIcon()
-        icon12.addFile(u"../../../icons/light/adult-sign-icon.svg", QSize(), QIcon.Normal, QIcon.Off)
-        self.nsfw_button.setIcon(icon12)
-        self.nsfw_button.setIconSize(QSize(18, 18))
-        self.nsfw_button.setCheckable(True)
-        self.nsfw_button.setFlat(True)
-
-        self.verticalLayout.addWidget(self.nsfw_button)
-
-        self.line_6 = QFrame(self.button_menu)
-        self.line_6.setObjectName(u"line_6")
-        self.line_6.setFrameShape(QFrame.HLine)
-        self.line_6.setFrameShadow(QFrame.Sunken)
-
-        self.verticalLayout.addWidget(self.line_6)
-
         self.tts_button = QPushButton(self.button_menu)
         self.tts_button.setObjectName(u"tts_button")
         self.tts_button.setMinimumSize(QSize(50, 45))
         self.tts_button.setCursor(QCursor(Qt.PointingHandCursor))
-        icon13 = QIcon(QIcon.fromTheme(u"audio-volume-high"))
-        self.tts_button.setIcon(icon13)
+        icon12 = QIcon(QIcon.fromTheme(u"audio-volume-high"))
+        self.tts_button.setIcon(icon12)
         self.tts_button.setIconSize(QSize(32, 32))
         self.tts_button.setCheckable(True)
         self.tts_button.setFlat(True)
@@ -684,8 +674,8 @@ class Ui_MainWindow(object):
         self.v2t_button.setObjectName(u"v2t_button")
         self.v2t_button.setMinimumSize(QSize(50, 45))
         self.v2t_button.setCursor(QCursor(Qt.PointingHandCursor))
-        icon14 = QIcon(QIcon.fromTheme(u"audio-input-microphone"))
-        self.v2t_button.setIcon(icon14)
+        icon13 = QIcon(QIcon.fromTheme(u"audio-input-microphone"))
+        self.v2t_button.setIcon(icon13)
         self.v2t_button.setIconSize(QSize(18, 18))
         self.v2t_button.setCheckable(True)
         self.v2t_button.setFlat(True)
@@ -696,8 +686,8 @@ class Ui_MainWindow(object):
         self.ocr_button.setObjectName(u"ocr_button")
         self.ocr_button.setMinimumSize(QSize(50, 45))
         self.ocr_button.setCursor(QCursor(Qt.PointingHandCursor))
-        icon15 = QIcon(QIcon.fromTheme(u"camera-web"))
-        self.ocr_button.setIcon(icon15)
+        icon14 = QIcon(QIcon.fromTheme(u"camera-web"))
+        self.ocr_button.setIcon(icon14)
         self.ocr_button.setIconSize(QSize(16, 16))
         self.ocr_button.setCheckable(True)
         self.ocr_button.setFlat(True)
@@ -769,14 +759,14 @@ class Ui_MainWindow(object):
         self.file_new_button.setMinimumSize(QSize(36, 36))
         self.file_new_button.setMaximumSize(QSize(36, 36))
         self.file_new_button.setCursor(QCursor(Qt.PointingHandCursor))
-        icon16 = QIcon()
+        icon15 = QIcon()
         iconThemeName = u"document-new"
         if QIcon.hasThemeIcon(iconThemeName):
-            icon16 = QIcon.fromTheme(iconThemeName)
+            icon15 = QIcon.fromTheme(iconThemeName)
         else:
-            icon16.addFile(u"../../../../../../../../../../../../../../.designer/backup", QSize(), QIcon.Normal, QIcon.Off)
+            icon15.addFile(u"../../../../../../../../../../../../../../.designer/backup", QSize(), QIcon.Normal, QIcon.Off)
 
-        self.file_new_button.setIcon(icon16)
+        self.file_new_button.setIcon(icon15)
         self.file_new_button.setIconSize(QSize(24, 24))
         self.file_new_button.setFlat(True)
 
@@ -787,14 +777,14 @@ class Ui_MainWindow(object):
         self.open_button.setMinimumSize(QSize(36, 36))
         self.open_button.setMaximumSize(QSize(36, 36))
         self.open_button.setCursor(QCursor(Qt.PointingHandCursor))
-        icon17 = QIcon()
+        icon16 = QIcon()
         iconThemeName = u"document-open"
         if QIcon.hasThemeIcon(iconThemeName):
-            icon17 = QIcon.fromTheme(iconThemeName)
+            icon16 = QIcon.fromTheme(iconThemeName)
         else:
-            icon17.addFile(u"../../../../../../../../../../../../../../src/icons/034-folder.png", QSize(), QIcon.Normal, QIcon.Off)
+            icon16.addFile(u"../../../../../../../../../../../../../../src/icons/034-folder.png", QSize(), QIcon.Normal, QIcon.Off)
 
-        self.open_button.setIcon(icon17)
+        self.open_button.setIcon(icon16)
         self.open_button.setIconSize(QSize(24, 24))
         self.open_button.setFlat(True)
 
@@ -805,14 +795,14 @@ class Ui_MainWindow(object):
         self.save_button.setMinimumSize(QSize(36, 36))
         self.save_button.setMaximumSize(QSize(36, 36))
         self.save_button.setCursor(QCursor(Qt.PointingHandCursor))
-        icon18 = QIcon()
+        icon17 = QIcon()
         iconThemeName = u"document-save"
         if QIcon.hasThemeIcon(iconThemeName):
-            icon18 = QIcon.fromTheme(iconThemeName)
+            icon17 = QIcon.fromTheme(iconThemeName)
         else:
-            icon18.addFile(u"../../../../../../../../../../../../../../src/icons/033-diskette.png", QSize(), QIcon.Normal, QIcon.Off)
+            icon17.addFile(u"../../../../../../../../../../../../../../src/icons/033-diskette.png", QSize(), QIcon.Normal, QIcon.Off)
 
-        self.save_button.setIcon(icon18)
+        self.save_button.setIcon(icon17)
         self.save_button.setIconSize(QSize(24, 24))
         self.save_button.setFlat(True)
 
@@ -823,14 +813,14 @@ class Ui_MainWindow(object):
         self.export_button.setMinimumSize(QSize(36, 36))
         self.export_button.setMaximumSize(QSize(36, 36))
         self.export_button.setCursor(QCursor(Qt.PointingHandCursor))
-        icon19 = QIcon()
+        icon18 = QIcon()
         iconThemeName = u"document-send"
         if QIcon.hasThemeIcon(iconThemeName):
-            icon19 = QIcon.fromTheme(iconThemeName)
+            icon18 = QIcon.fromTheme(iconThemeName)
         else:
-            icon19.addFile(u"../../../../../../../../../../../../../../src/icons/export.png", QSize(), QIcon.Normal, QIcon.Off)
+            icon18.addFile(u"../../../../../../../../../../../../../../src/icons/export.png", QSize(), QIcon.Normal, QIcon.Off)
 
-        self.export_button.setIcon(icon19)
+        self.export_button.setIcon(icon18)
         self.export_button.setIconSize(QSize(24, 24))
         self.export_button.setFlat(True)
 
@@ -854,14 +844,14 @@ class Ui_MainWindow(object):
         self.undo_button.setMaximumSize(QSize(36, 36))
         self.undo_button.setCursor(QCursor(Qt.PointingHandCursor))
         self.undo_button.setStyleSheet(u"border-color: rgb(61, 56, 70);")
-        icon20 = QIcon()
+        icon19 = QIcon()
         iconThemeName = u"edit-undo"
         if QIcon.hasThemeIcon(iconThemeName):
-            icon20 = QIcon.fromTheme(iconThemeName)
+            icon19 = QIcon.fromTheme(iconThemeName)
         else:
-            icon20.addFile(u"../../../../../../../../../../../../../../.designer/backup", QSize(), QIcon.Normal, QIcon.Off)
+            icon19.addFile(u"../../../../../../../../../../../../../../.designer/backup", QSize(), QIcon.Normal, QIcon.Off)
 
-        self.undo_button.setIcon(icon20)
+        self.undo_button.setIcon(icon19)
         self.undo_button.setIconSize(QSize(24, 24))
         self.undo_button.setFlat(True)
 
@@ -875,14 +865,14 @@ class Ui_MainWindow(object):
         self.redo_button.setMaximumSize(QSize(36, 36))
         self.redo_button.setCursor(QCursor(Qt.PointingHandCursor))
         self.redo_button.setStyleSheet(u"border-color: rgb(61, 56, 70);")
-        icon21 = QIcon()
+        icon20 = QIcon()
         iconThemeName = u"edit-redo"
         if QIcon.hasThemeIcon(iconThemeName):
-            icon21 = QIcon.fromTheme(iconThemeName)
+            icon20 = QIcon.fromTheme(iconThemeName)
         else:
-            icon21.addFile(u"../../../../../../../../../../../../../../src/icons/008-redo.png", QSize(), QIcon.Normal, QIcon.Off)
+            icon20.addFile(u"../../../../../../../../../../../../../../src/icons/008-redo.png", QSize(), QIcon.Normal, QIcon.Off)
 
-        self.redo_button.setIcon(icon21)
+        self.redo_button.setIcon(icon20)
         self.redo_button.setIconSize(QSize(24, 24))
         self.redo_button.setFlat(True)
 
@@ -1004,6 +994,13 @@ class Ui_MainWindow(object):
         self.menuBrowse_Models_Path.addAction(self.actionTxt2vid)
         self.menuTools.addAction(self.actionImage_Browser)
         self.menuTools.addAction(self.actionModel_Manager_3)
+        self.menuTools.addSeparator()
+        self.menuTools.addAction(self.actionUnload_Image_model)
+        self.menuTools.addAction(self.actionUnload_LLm)
+        self.menuTools.addSeparator()
+        self.menuTools.addAction(self.actionClear_Memory)
+        self.menuTools.addSeparator()
+        self.menuTools.addAction(self.actionSafety_Checker)
 
         self.retranslateUi(MainWindow)
         self.actionHuggingface_Cache_manager.triggered.connect(MainWindow.action_show_hf_cache_manager)
@@ -1058,7 +1055,6 @@ class Ui_MainWindow(object):
         self.ocr_button.toggled.connect(MainWindow.ocr_button_toggled)
         self.actionReset_Settings_2.triggered.connect(MainWindow.action_reset_settings)
         self.toggle_select_button.toggled.connect(MainWindow.action_toggle_select)
-        self.nsfw_button.toggled.connect(MainWindow.action_toggle_nsfw_filter_triggered)
         self.actionImage_Browser.triggered.connect(MainWindow.action_show_image_browser)
         self.actionModel_Manager_3.triggered.connect(MainWindow.action_show_model_manager)
         self.drawingpad_import.triggered.connect(MainWindow.import_drawingpad_image)
@@ -1066,9 +1062,13 @@ class Ui_MainWindow(object):
         self.controlnet_import.triggered.connect(MainWindow.import_controlnet_image)
         self.controlnet_export.triggered.connect(MainWindow.export_controlnet_image)
         self.enable_controlnet.toggled.connect(MainWindow.action_toggle_controlnet)
+        self.actionUnload_LLm.triggered.connect(MainWindow.action_unload_llm)
+        self.actionUnload_Image_model.triggered.connect(MainWindow.action_unload_sd)
+        self.actionClear_Memory.triggered.connect(MainWindow.action_clear_memory)
+        self.actionSafety_Checker.toggled.connect(MainWindow.action_toggle_nsfw_filter_triggered)
 
         self.mode_tab_widget.setCurrentIndex(0)
-        self.center_tab.setCurrentIndex(1)
+        self.center_tab.setCurrentIndex(0)
         self.tool_tab_widget.setCurrentIndex(4)
 
 
@@ -1270,6 +1270,10 @@ class Ui_MainWindow(object):
         self.actionGenerate_while_drawing.setText(QCoreApplication.translate("MainWindow", u"Generate while drawing", None))
         self.actionOverlay_input_image.setText(QCoreApplication.translate("MainWindow", u"Overlay input image", None))
         self.enable_controlnet.setText(QCoreApplication.translate("MainWindow", u"Enabled", None))
+        self.actionUnload_LLm.setText(QCoreApplication.translate("MainWindow", u"Unload LLM", None))
+        self.actionUnload_Image_model.setText(QCoreApplication.translate("MainWindow", u"Unload Image model", None))
+        self.actionClear_Memory.setText(QCoreApplication.translate("MainWindow", u"Clear Memory", None))
+        self.actionSafety_Checker.setText(QCoreApplication.translate("MainWindow", u"Safety Checker", None))
         self.center_tab.setTabText(self.center_tab.indexOf(self.canvas_tab), QCoreApplication.translate("MainWindow", u"Canvas", None))
         self.center_tab.setTabText(self.center_tab.indexOf(self.model_manager_tab), QCoreApplication.translate("MainWindow", u"Model Manager", None))
         self.tool_tab_widget.setTabText(self.tool_tab_widget.indexOf(self.tab_pen), QCoreApplication.translate("MainWindow", u"Pen", None))
@@ -1310,7 +1314,6 @@ class Ui_MainWindow(object):
         self.settings_button.setToolTip(QCoreApplication.translate("MainWindow", u"AI Runner Settings", None))
 #endif // QT_CONFIG(tooltip)
         self.settings_button.setText("")
-        self.nsfw_button.setText("")
 #if QT_CONFIG(tooltip)
         self.tts_button.setToolTip(QCoreApplication.translate("MainWindow", u"Toggle Text to Speech", None))
 #endif // QT_CONFIG(tooltip)

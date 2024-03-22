@@ -474,7 +474,7 @@ class SDHandler(
     def is_pytorch_error(e) -> bool:
         return "PYTORCH_CUDA_ALLOC_CONF" in str(e)
 
-    def on_do_generate_signal(self, _message):
+    def on_do_generate_signal(self, _message: dict):
         self.do_generate = True
 
     def run(self):
@@ -723,15 +723,15 @@ class SDHandler(
                 self.log_error(e, "Something went wrong while generating image")
                 return None, None
 
-    def on_start_auto_image_generation_signal(self):
+    def on_start_auto_image_generation_signal(self, _message: dict):
         # self.sd_mode = SDMode.DRAWING
         # self.generator_sample()
         pass
 
-    def on_sd_cancel_signal(self, _message):
+    def on_sd_cancel_signal(self, _message: dict):
         print("on_sd_cancel_signal")
 
-    def on_stop_auto_image_generation_signal(self, _message):
+    def on_stop_auto_image_generation_signal(self, _message: dict):
         #self.sd_mode = SDMode.STANDARD
         pass
 
@@ -885,7 +885,7 @@ class SDHandler(
                 }
             )
         else:
-            print("NO CONTROLNET IMAGE GENERATED")
+            self.logger.info("Controlnet image not generated")
 
         self.data = self.sd_request(
             model_data=self.model,

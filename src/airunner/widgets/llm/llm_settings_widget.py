@@ -1,6 +1,7 @@
 """
 This class should be used to create a window widget for the LLM.
 """
+from PySide6.QtCore import Slot
 from PySide6.QtWidgets import QWidget
 
 from airunner.widgets.base_widget import BaseWidget
@@ -63,6 +64,7 @@ class LLMSettingsWidget(BaseWidget):
             self.ui.unload_model,
             self.ui.automatic_tools,
             self.ui.manual_tools,
+            self.ui.cache_quantized_model_toggle,
         ]
 
         for element in elements:
@@ -97,6 +99,7 @@ class LLMSettingsWidget(BaseWidget):
 
         self.ui.automatic_tools.setChecked(llm_generator_settings["use_tool_filter"])
         self.ui.manual_tools.setChecked(not llm_generator_settings["use_tool_filter"])
+        self.ui.cache_quantized_model_toggle.setChecked(llm_generator_settings["cache_llm_to_disk"])
 
         # get unique model names
         self.ui.model.clear()
@@ -287,4 +290,10 @@ class LLMSettingsWidget(BaseWidget):
     def enable_manual_tools(self):
         settings = self.settings
         settings["llm_generator_settings"]["use_tool_filter"] = False
+        self.settings = settings
+
+    @Slot(bool)
+    def toggle_cache_quantized_model(self, val: bool):
+        settings = self.settings
+        settings["llm_generator_settings"]["cache_llm_to_disk"] = val
         self.settings = settings

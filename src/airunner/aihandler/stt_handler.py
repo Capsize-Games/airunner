@@ -10,7 +10,7 @@ from airunner.enums import SignalCode
 class STTHandler(BaseHandler):
     listening = False
 
-    def on_process_audio(self, message: object):
+    def on_process_audio(self, message: dict):
         audio_data = message["audio_data"]
         with self.lock:
             fs = 16000

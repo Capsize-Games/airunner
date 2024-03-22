@@ -124,7 +124,7 @@
                <string notr="true"/>
               </property>
               <property name="currentIndex">
-               <number>1</number>
+               <number>0</number>
               </property>
               <widget class="QWidget" name="canvas_tab">
                <attribute name="title">
@@ -860,45 +860,6 @@
             </widget>
            </item>
            <item>
-            <widget class="QPushButton" name="nsfw_button">
-             <property name="minimumSize">
-              <size>
-               <width>50</width>
-               <height>45</height>
-              </size>
-             </property>
-             <property name="cursor">
-              <cursorShape>PointingHandCursor</cursorShape>
-             </property>
-             <property name="text">
-              <string/>
-             </property>
-             <property name="icon">
-              <iconset>
-               <normaloff>../../../icons/light/adult-sign-icon.svg</normaloff>../../../icons/light/adult-sign-icon.svg</iconset>
-             </property>
-             <property name="iconSize">
-              <size>
-               <width>18</width>
-               <height>18</height>
-              </size>
-             </property>
-             <property name="checkable">
-              <bool>true</bool>
-             </property>
-             <property name="flat">
-              <bool>true</bool>
-             </property>
-            </widget>
-           </item>
-           <item>
-            <widget class="Line" name="line_6">
-             <property name="orientation">
-              <enum>Qt::Horizontal</enum>
-             </property>
-            </widget>
-           </item>
-           <item>
             <widget class="QPushButton" name="tts_button">
              <property name="minimumSize">
               <size>
@@ -1573,6 +1534,13 @@
     </property>
     <addaction name="actionImage_Browser"/>
     <addaction name="actionModel_Manager_3"/>
+    <addaction name="separator"/>
+    <addaction name="actionUnload_Image_model"/>
+    <addaction name="actionUnload_LLm"/>
+    <addaction name="separator"/>
+    <addaction name="actionClear_Memory"/>
+    <addaction name="separator"/>
+    <addaction name="actionSafety_Checker"/>
    </widget>
    <addaction name="menuFile"/>
    <addaction name="menuEdit"/>
@@ -2274,6 +2242,32 @@
    </property>
    <property name="text">
     <string>Enabled</string>
+   </property>
+  </action>
+  <action name="actionUnload_LLm">
+   <property name="text">
+    <string>Unload LLM</string>
+   </property>
+  </action>
+  <action name="actionUnload_Image_model">
+   <property name="text">
+    <string>Unload Image model</string>
+   </property>
+  </action>
+  <action name="actionClear_Memory">
+   <property name="text">
+    <string>Clear Memory</string>
+   </property>
+  </action>
+  <action name="actionSafety_Checker">
+   <property name="checkable">
+    <bool>true</bool>
+   </property>
+   <property name="checked">
+    <bool>false</bool>
+   </property>
+   <property name="text">
+    <string>Safety Checker</string>
    </property>
   </action>
  </widget>
@@ -3165,22 +3159,6 @@
    </hints>
   </connection>
   <connection>
-   <sender>nsfw_button</sender>
-   <signal>toggled(bool)</signal>
-   <receiver>MainWindow</receiver>
-   <slot>action_toggle_nsfw_filter_triggered(bool)</slot>
-   <hints>
-    <hint type="sourcelabel">
-     <x>1083</x>
-     <y>646</y>
-    </hint>
-    <hint type="destinationlabel">
-     <x>776</x>
-     <y>0</y>
-    </hint>
-   </hints>
-  </connection>
-  <connection>
    <sender>actionImage_Browser</sender>
    <signal>triggered()</signal>
    <receiver>MainWindow</receiver>
@@ -3292,6 +3270,70 @@
     </hint>
    </hints>
   </connection>
+  <connection>
+   <sender>actionUnload_LLm</sender>
+   <signal>triggered()</signal>
+   <receiver>MainWindow</receiver>
+   <slot>action_unload_llm()</slot>
+   <hints>
+    <hint type="sourcelabel">
+     <x>-1</x>
+     <y>-1</y>
+    </hint>
+    <hint type="destinationlabel">
+     <x>561</x>
+     <y>451</y>
+    </hint>
+   </hints>
+  </connection>
+  <connection>
+   <sender>actionUnload_Image_model</sender>
+   <signal>triggered()</signal>
+   <receiver>MainWindow</receiver>
+   <slot>action_unload_sd()</slot>
+   <hints>
+    <hint type="sourcelabel">
+     <x>-1</x>
+     <y>-1</y>
+    </hint>
+    <hint type="destinationlabel">
+     <x>561</x>
+     <y>451</y>
+    </hint>
+   </hints>
+  </connection>
+  <connection>
+   <sender>actionClear_Memory</sender>
+   <signal>triggered()</signal>
+   <receiver>MainWindow</receiver>
+   <slot>action_clear_memory()</slot>
+   <hints>
+    <hint type="sourcelabel">
+     <x>-1</x>
+     <y>-1</y>
+    </hint>
+    <hint type="destinationlabel">
+     <x>561</x>
+     <y>451</y>
+    </hint>
+   </hints>
+  </connection>
+  <connection>
+   <sender>actionSafety_Checker</sender>
+   <signal>toggled(bool)</signal>
+   <receiver>MainWindow</receiver>
+   <slot>action_toggle_nsfw_filter_triggered(bool)</slot>
+   <hints>
+    <hint type="sourcelabel">
+     <x>1083</x>
+     <y>646</y>
+    </hint>
+    <hint type="destinationlabel">
+     <x>776</x>
+     <y>0</y>
+    </hint>
+   </hints>
+  </connection>
  </connections>
  <designerdata>
   <property name="gridDeltaX">
@@ -3391,5 +3433,8 @@
   <slot>export_controlnet_image()</slot>
   <slot>import_drawingpad_image()</slot>
   <slot>export_drawingpad_image()</slot>
+  <slot>action_unload_llm()</slot>
+  <slot>action_unload_sd()</slot>
+  <slot>action_clear_memory()</slot>
  </slots>
 </ui>
