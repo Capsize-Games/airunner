@@ -76,6 +76,7 @@ class StableDiffusionSettingsWidget(BaseWidget):
             val = GeneratorSection.OUTPAINT.value
         settings = self.settings
         settings["pipeline"] = val
+        settings["generator_settings"]["section"] = val
         self.settings = settings
         self.load_versions()
         self.load_models()
