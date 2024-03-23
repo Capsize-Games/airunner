@@ -6,8 +6,8 @@
    <rect>
     <x>0</x>
     <y>0</y>
-    <width>709</width>
-    <height>751</height>
+    <width>1140</width>
+    <height>742</height>
    </rect>
   </property>
   <property name="sizePolicy">
@@ -61,7 +61,7 @@
      <property name="styleSheet">
       <string notr="true"/>
      </property>
-     <layout class="QGridLayout" name="gridLayout_4">
+     <layout class="QGridLayout" name="gridLayout_6">
       <item row="0" column="0">
        <widget class="QSplitter" name="canvas_splitter">
         <property name="orientation">
@@ -118,16 +118,53 @@
           </layout>
          </widget>
         </widget>
-        <widget class="CustomGraphicsView" name="canvas_container">
-         <property name="verticalScrollBarPolicy">
-          <enum>Qt::ScrollBarAlwaysOff</enum>
+        <widget class="QSplitter" name="canvas_side_splitter_2">
+         <property name="orientation">
+          <enum>Qt::Vertical</enum>
          </property>
-         <property name="horizontalScrollBarPolicy">
-          <enum>Qt::ScrollBarAlwaysOff</enum>
-         </property>
-         <property name="canvas_type" stdset="0">
-          <string>image</string>
-         </property>
+         <widget class="QGroupBox" name="groupBox">
+          <property name="title">
+           <string>Main</string>
+          </property>
+          <layout class="QGridLayout" name="gridLayout_4">
+           <item row="0" column="0">
+            <widget class="CustomGraphicsView" name="canvas_container">
+             <property name="verticalScrollBarPolicy">
+              <enum>Qt::ScrollBarAlwaysOff</enum>
+             </property>
+             <property name="horizontalScrollBarPolicy">
+              <enum>Qt::ScrollBarAlwaysOff</enum>
+             </property>
+             <property name="canvas_type" stdset="0">
+              <string>image</string>
+             </property>
+            </widget>
+           </item>
+          </layout>
+         </widget>
+         <widget class="QGroupBox" name="groupBox_2">
+          <property name="title">
+           <string>Outpaint</string>
+          </property>
+          <property name="checkable">
+           <bool>true</bool>
+          </property>
+          <layout class="QGridLayout" name="gridLayout_5">
+           <item row="0" column="0">
+            <widget class="CustomGraphicsView" name="controlnet_2">
+             <property name="verticalScrollBarPolicy">
+              <enum>Qt::ScrollBarAlwaysOff</enum>
+             </property>
+             <property name="horizontalScrollBarPolicy">
+              <enum>Qt::ScrollBarAlwaysOff</enum>
+             </property>
+             <property name="canvas_type" stdset="0">
+              <string>outpaint</string>
+             </property>
+            </widget>
+           </item>
+          </layout>
+         </widget>
         </widget>
        </widget>
       </item>
@@ -181,7 +218,7 @@
     </hint>
     <hint type="destinationlabel">
      <x>167</x>
-     <y>-8</y>
+     <y>0</y>
     </hint>
    </hints>
   </connection>
@@ -197,7 +234,23 @@
     </hint>
     <hint type="destinationlabel">
      <x>46</x>
-     <y>-8</y>
+     <y>0</y>
+    </hint>
+   </hints>
+  </connection>
+  <connection>
+   <sender>groupBox_2</sender>
+   <signal>toggled(bool)</signal>
+   <receiver>canvas</receiver>
+   <slot>toggle_outpaint(bool)</slot>
+   <hints>
+    <hint type="sourcelabel">
+     <x>476</x>
+     <y>402</y>
+    </hint>
+    <hint type="destinationlabel">
+     <x>504</x>
+     <y>-7</y>
     </hint>
    </hints>
   </connection>
@@ -205,5 +258,6 @@
  <slots>
   <slot>toggle_controlnet(bool)</slot>
   <slot>toggle_drawing_pad(bool)</slot>
+  <slot>toggle_outpaint(bool)</slot>
  </slots>
 </ui>
