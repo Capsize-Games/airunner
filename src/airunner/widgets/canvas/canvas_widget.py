@@ -2,7 +2,7 @@ from typing import Optional
 
 from PIL import ImageFilter
 from PySide6 import QtWidgets
-from PySide6.QtCore import Qt, QPoint, QRect
+from PySide6.QtCore import Qt, QPoint, QRect, Slot
 
 from airunner.cursors.circle_brush import CircleCursor
 from airunner.enums import SignalCode, ServiceCode, CanvasToolName
@@ -79,6 +79,15 @@ class CanvasWidget(BaseWidget):
         self.ui.controlnet_groupbox.blockSignals(False)
         self.ui.drawing_pad_groupbox.blockSignals(False)
 
+        self.ui.canvas_side_splitter.splitterMoved.connect(self.sync_splitter_1)
+        self.ui.canvas_side_splitter_2.splitterMoved.connect(self.sync_splitter_2)
+
+    def sync_splitter_1(self, pos, index):
+        self.ui.canvas_side_splitter_2.setSizes(self.ui.canvas_side_splitter.sizes())
+
+    def sync_splitter_2(self, pos, index):
+        self.ui.canvas_side_splitter.setSizes(self.ui.canvas_side_splitter_2.sizes())
+
     @property
     def image_pivot_point(self):
         try:
@@ -115,14 +124,22 @@ class CanvasWidget(BaseWidget):
 
         return rect
 
-    def toggle_controlnet(self, val):
+    @Slot(bool)
+    def toggle_controlnet(self, val: bool):
         settings = self.settings
         settings["generator_settings"]["enable_controlnet"] = val
         self.settings = settings
 
-    def toggle_drawing_pad(self, val):
+    @Slot(bool)
+    def toggle_drawing_pad(self, val: bool):
         settings = self.settings
         settings["drawing_pad_settings"]["enabled"] = val
+        self.settings = settings
+
+    @Slot(bool)
+    def toggle_outpaint(self, val: bool):
+        settings = self.settings
+        settings["outpaint_settings"]["enabled"] = val
         self.settings = settings
 
     def on_canvas_update_cursor_signal(self, message: dict):

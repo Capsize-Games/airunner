@@ -259,7 +259,7 @@
                  <bool>false</bool>
                 </property>
                 <property name="currentIndex">
-                 <number>4</number>
+                 <number>0</number>
                 </property>
                 <widget class="QWidget" name="tab_pen">
                  <attribute name="title">
@@ -436,7 +436,7 @@
               <string/>
              </property>
              <property name="icon">
-              <iconset resource="../../../resources_light.qrc">
+              <iconset>
                <normaloff>:/icons/light/object-selected-icon.svg</normaloff>:/icons/light/object-selected-icon.svg</iconset>
              </property>
              <property name="iconSize">
@@ -477,7 +477,7 @@
               <string/>
              </property>
              <property name="icon">
-              <iconset resource="../../../resources_light.qrc">
+              <iconset>
                <normaloff>:/icons/light/select-svgrepo-com.svg</normaloff>:/icons/light/select-svgrepo-com.svg</iconset>
              </property>
              <property name="iconSize">
@@ -531,7 +531,7 @@
               <string/>
              </property>
              <property name="icon">
-              <iconset resource="../../../resources_light.qrc">
+              <iconset>
                <normaloff>:/icons/light/pencil-icon.svg</normaloff>:/icons/light/pencil-icon.svg</iconset>
              </property>
              <property name="iconSize">
@@ -578,7 +578,7 @@
               <string/>
              </property>
              <property name="icon">
-              <iconset resource="../../../resources_light.qrc">
+              <iconset>
                <normaloff>:/icons/light/eraser-icon.svg</normaloff>:/icons/light/eraser-icon.svg</iconset>
              </property>
              <property name="iconSize">
@@ -638,7 +638,7 @@
               <string/>
              </property>
              <property name="icon">
-              <iconset resource="../../../resources_light.qrc">
+              <iconset>
                <normaloff>:/icons/light/frame-grid-icon.svg</normaloff>:/icons/light/frame-grid-icon.svg</iconset>
              </property>
              <property name="iconSize">
@@ -685,7 +685,7 @@
               <string/>
              </property>
              <property name="icon">
-              <iconset resource="../../../resources_light.qrc">
+              <iconset>
                <normaloff>:/icons/light/circle-center-icon.svg</normaloff>:/icons/light/circle-center-icon.svg</iconset>
              </property>
              <property name="iconSize">
@@ -730,7 +730,7 @@
               <string/>
              </property>
              <property name="icon">
-              <iconset resource="../../../resources_light.qrc">
+              <iconset>
                <normaloff>:/icons/light/artificial-intelligence-ai-chip-icon.svg</normaloff>:/icons/light/artificial-intelligence-ai-chip-icon.svg</iconset>
              </property>
              <property name="iconSize">
@@ -784,7 +784,7 @@
               <string/>
              </property>
              <property name="icon">
-              <iconset resource="../../../resources_light.qrc">
+              <iconset>
                <normaloff>:/icons/light/tech-icon.svg</normaloff>:/icons/light/tech-icon.svg</iconset>
              </property>
              <property name="iconSize">
@@ -838,7 +838,7 @@
               <string/>
              </property>
              <property name="icon">
-              <iconset resource="../../../resources_light.qrc">
+              <iconset>
                <normaloff>:/icons/light/setting-line-icon.svg</normaloff>:/icons/light/setting-line-icon.svg</iconset>
              </property>
              <property name="iconSize">
@@ -1497,10 +1497,19 @@
      <addaction name="separator"/>
      <addaction name="enable_controlnet"/>
     </widget>
+    <widget class="QMenu" name="menuOutpaint">
+     <property name="title">
+      <string>Outpaint</string>
+     </property>
+     <addaction name="outpaint_import"/>
+     <addaction name="outpaint_export"/>
+     <addaction name="outpaint_enabled"/>
+    </widget>
     <addaction name="separator"/>
     <addaction name="menuCanvas_Image"/>
     <addaction name="menuDrawingpad"/>
     <addaction name="menuControlnet"/>
+    <addaction name="menuOutpaint"/>
     <addaction name="separator"/>
     <addaction name="actionGenerate_while_drawing"/>
    </widget>
@@ -1532,7 +1541,6 @@
     <property name="title">
      <string>Tools</string>
     </property>
-    <addaction name="actionImage_Browser"/>
     <addaction name="actionModel_Manager_3"/>
     <addaction name="separator"/>
     <addaction name="actionUnload_Image_model"/>
@@ -2268,6 +2276,24 @@
    </property>
    <property name="text">
     <string>Safety Checker</string>
+   </property>
+  </action>
+  <action name="outpaint_import">
+   <property name="text">
+    <string>Import</string>
+   </property>
+  </action>
+  <action name="outpaint_export">
+   <property name="text">
+    <string>Export</string>
+   </property>
+  </action>
+  <action name="outpaint_enabled">
+   <property name="checkable">
+    <bool>true</bool>
+   </property>
+   <property name="text">
+    <string>Enabled</string>
    </property>
   </action>
  </widget>
@@ -3086,7 +3112,7 @@
    <hints>
     <hint type="sourcelabel">
      <x>1108</x>
-     <y>740</y>
+     <y>680</y>
     </hint>
     <hint type="destinationlabel">
      <x>1122</x>
@@ -3102,7 +3128,7 @@
    <hints>
     <hint type="sourcelabel">
      <x>1108</x>
-     <y>791</y>
+     <y>731</y>
     </hint>
     <hint type="destinationlabel">
      <x>1122</x>
@@ -3118,7 +3144,7 @@
    <hints>
     <hint type="sourcelabel">
      <x>1108</x>
-     <y>842</y>
+     <y>782</y>
     </hint>
     <hint type="destinationlabel">
      <x>1122</x>
@@ -3325,12 +3351,60 @@
    <slot>action_toggle_nsfw_filter_triggered(bool)</slot>
    <hints>
     <hint type="sourcelabel">
-     <x>1083</x>
-     <y>646</y>
+     <x>-1</x>
+     <y>-1</y>
     </hint>
     <hint type="destinationlabel">
      <x>776</x>
      <y>0</y>
+    </hint>
+   </hints>
+  </connection>
+  <connection>
+   <sender>outpaint_export</sender>
+   <signal>triggered()</signal>
+   <receiver>MainWindow</receiver>
+   <slot>action_outpaint_export()</slot>
+   <hints>
+    <hint type="sourcelabel">
+     <x>-1</x>
+     <y>-1</y>
+    </hint>
+    <hint type="destinationlabel">
+     <x>561</x>
+     <y>451</y>
+    </hint>
+   </hints>
+  </connection>
+  <connection>
+   <sender>outpaint_enabled</sender>
+   <signal>toggled(bool)</signal>
+   <receiver>MainWindow</receiver>
+   <slot>action_outpaint_toggled(bool)</slot>
+   <hints>
+    <hint type="sourcelabel">
+     <x>-1</x>
+     <y>-1</y>
+    </hint>
+    <hint type="destinationlabel">
+     <x>561</x>
+     <y>451</y>
+    </hint>
+   </hints>
+  </connection>
+  <connection>
+   <sender>outpaint_import</sender>
+   <signal>triggered()</signal>
+   <receiver>MainWindow</receiver>
+   <slot>action_outpaint_import()</slot>
+   <hints>
+    <hint type="sourcelabel">
+     <x>-1</x>
+     <y>-1</y>
+    </hint>
+    <hint type="destinationlabel">
+     <x>561</x>
+     <y>451</y>
     </hint>
    </hints>
   </connection>
@@ -3427,7 +3501,6 @@
   <slot>ocr_button_toggled(bool)</slot>
   <slot>action_reset_settings()</slot>
   <slot>action_toggle_select(bool)</slot>
-  <slot>action_show_image_browser()</slot>
   <slot>action_toggle_controlnet(bool)</slot>
   <slot>import_controlnet_image()</slot>
   <slot>export_controlnet_image()</slot>
@@ -3436,5 +3509,8 @@
   <slot>action_unload_llm()</slot>
   <slot>action_unload_sd()</slot>
   <slot>action_clear_memory()</slot>
+  <slot>action_outpaint_toggled(bool)</slot>
+  <slot>action_outpaint_export()</slot>
+  <slot>action_outpaint_import()</slot>
  </slots>
 </ui>

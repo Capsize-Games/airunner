@@ -24,7 +24,7 @@ class Ui_canvas(object):
     def setupUi(self, canvas):
         if not canvas.objectName():
             canvas.setObjectName(u"canvas")
-        canvas.resize(709, 751)
+        canvas.resize(1140, 742)
         sizePolicy = QSizePolicy(QSizePolicy.Policy.Expanding, QSizePolicy.Policy.Expanding)
         sizePolicy.setHorizontalStretch(0)
         sizePolicy.setVerticalStretch(0)
@@ -42,8 +42,8 @@ class Ui_canvas(object):
         self.central_widget.setSizePolicy(sizePolicy)
         self.central_widget.setMinimumSize(QSize(200, 200))
         self.central_widget.setStyleSheet(u"")
-        self.gridLayout_4 = QGridLayout(self.central_widget)
-        self.gridLayout_4.setObjectName(u"gridLayout_4")
+        self.gridLayout_6 = QGridLayout(self.central_widget)
+        self.gridLayout_6.setObjectName(u"gridLayout_6")
         self.canvas_splitter = QSplitter(self.central_widget)
         self.canvas_splitter.setObjectName(u"canvas_splitter")
         self.canvas_splitter.setOrientation(Qt.Horizontal)
@@ -77,13 +77,37 @@ class Ui_canvas(object):
 
         self.canvas_side_splitter.addWidget(self.controlnet_groupbox)
         self.canvas_splitter.addWidget(self.canvas_side_splitter)
-        self.canvas_container = CustomGraphicsView(self.canvas_splitter)
+        self.canvas_side_splitter_2 = QSplitter(self.canvas_splitter)
+        self.canvas_side_splitter_2.setObjectName(u"canvas_side_splitter_2")
+        self.canvas_side_splitter_2.setOrientation(Qt.Vertical)
+        self.groupBox = QGroupBox(self.canvas_side_splitter_2)
+        self.groupBox.setObjectName(u"groupBox")
+        self.gridLayout_4 = QGridLayout(self.groupBox)
+        self.gridLayout_4.setObjectName(u"gridLayout_4")
+        self.canvas_container = CustomGraphicsView(self.groupBox)
         self.canvas_container.setObjectName(u"canvas_container")
         self.canvas_container.setVerticalScrollBarPolicy(Qt.ScrollBarAlwaysOff)
         self.canvas_container.setHorizontalScrollBarPolicy(Qt.ScrollBarAlwaysOff)
-        self.canvas_splitter.addWidget(self.canvas_container)
 
-        self.gridLayout_4.addWidget(self.canvas_splitter, 0, 0, 1, 1)
+        self.gridLayout_4.addWidget(self.canvas_container, 0, 0, 1, 1)
+
+        self.canvas_side_splitter_2.addWidget(self.groupBox)
+        self.groupBox_2 = QGroupBox(self.canvas_side_splitter_2)
+        self.groupBox_2.setObjectName(u"groupBox_2")
+        self.groupBox_2.setCheckable(True)
+        self.gridLayout_5 = QGridLayout(self.groupBox_2)
+        self.gridLayout_5.setObjectName(u"gridLayout_5")
+        self.controlnet_2 = CustomGraphicsView(self.groupBox_2)
+        self.controlnet_2.setObjectName(u"controlnet_2")
+        self.controlnet_2.setVerticalScrollBarPolicy(Qt.ScrollBarAlwaysOff)
+        self.controlnet_2.setHorizontalScrollBarPolicy(Qt.ScrollBarAlwaysOff)
+
+        self.gridLayout_5.addWidget(self.controlnet_2, 0, 0, 1, 1)
+
+        self.canvas_side_splitter_2.addWidget(self.groupBox_2)
+        self.canvas_splitter.addWidget(self.canvas_side_splitter_2)
+
+        self.gridLayout_6.addWidget(self.canvas_splitter, 0, 0, 1, 1)
 
         self.canvas_position = QLabel(self.central_widget)
         self.canvas_position.setObjectName(u"canvas_position")
@@ -98,7 +122,7 @@ class Ui_canvas(object):
         self.canvas_position.setStyleSheet(u"")
         self.canvas_position.setAlignment(Qt.AlignRight|Qt.AlignTrailing|Qt.AlignVCenter)
 
-        self.gridLayout_4.addWidget(self.canvas_position, 1, 0, 1, 1)
+        self.gridLayout_6.addWidget(self.canvas_position, 1, 0, 1, 1)
 
 
         self.gridLayout.addWidget(self.central_widget, 0, 0, 1, 1)
@@ -107,6 +131,7 @@ class Ui_canvas(object):
         self.retranslateUi(canvas)
         self.controlnet_groupbox.toggled.connect(canvas.toggle_controlnet)
         self.drawing_pad_groupbox.clicked.connect(canvas.toggle_drawing_pad)
+        self.groupBox_2.toggled.connect(canvas.toggle_outpaint)
 
         QMetaObject.connectSlotsByName(canvas)
     # setupUi
@@ -117,7 +142,10 @@ class Ui_canvas(object):
         self.drawing_pad.setProperty("canvas_type", QCoreApplication.translate("canvas", u"brush", None))
         self.controlnet_groupbox.setTitle(QCoreApplication.translate("canvas", u"Controlnet", None))
         self.controlnet.setProperty("canvas_type", QCoreApplication.translate("canvas", u"controlnet", None))
+        self.groupBox.setTitle(QCoreApplication.translate("canvas", u"Main", None))
         self.canvas_container.setProperty("canvas_type", QCoreApplication.translate("canvas", u"image", None))
+        self.groupBox_2.setTitle(QCoreApplication.translate("canvas", u"Outpaint", None))
+        self.controlnet_2.setProperty("canvas_type", QCoreApplication.translate("canvas", u"outpaint", None))
         self.canvas_position.setText(QCoreApplication.translate("canvas", u"TextLabel", None))
     # retranslateUi
 

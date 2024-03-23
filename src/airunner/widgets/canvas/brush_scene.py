@@ -31,13 +31,13 @@ class BrushScene(CustomScene):
 
     def register_signals(self):
         signals = [
-            (SignalCode.CANVAS_COPY_IMAGE_SIGNAL, self.on_canvas_copy_image_signal),
-            (SignalCode.CANVAS_CUT_IMAGE_SIGNAL, self.on_canvas_cut_image_signal),
             (SignalCode.CANVAS_ROTATE_90_CLOCKWISE_SIGNAL, self.on_canvas_rotate_90_clockwise_signal),
             (SignalCode.CANVAS_ROTATE_90_COUNTER_CLOCKWISE_SIGNAL, self.on_canvas_rotate_90_counter_clockwise_signal),
-            (SignalCode.CANVAS_PASTE_IMAGE_SIGNAL, self.paste_image_from_clipboard),
-            (SignalCode.CANVAS_EXPORT_IMAGE_SIGNAL, self.export_image),
-            (SignalCode.CANVAS_IMPORT_IMAGE_SIGNAL, self.import_image),
+            (SignalCode.BRUSH_COPY_IMAGE_SIGNAL, self.on_canvas_copy_image_signal),
+            (SignalCode.BRUSH_CUT_IMAGE_SIGNAL, self.on_canvas_cut_image_signal),
+            (SignalCode.BRUSH_PASTE_IMAGE_SIGNAL, self.paste_image_from_clipboard),
+            (SignalCode.BRUSH_EXPORT_IMAGE_SIGNAL, self.export_image),
+            (SignalCode.BRUSH_IMPORT_IMAGE_SIGNAL, self.import_image),
             (SignalCode.BRUSH_COLOR_CHANGED_SIGNAL, self.handle_brush_color_changed),
             (SignalCode.DRAWINGPAD_IMPORT_IMAGE_SIGNAL, self.import_image),
             (SignalCode.DRAWINGPAD_EXPORT_IMAGE_SIGNAL, self.export_image),

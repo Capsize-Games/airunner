@@ -422,6 +422,7 @@ class CanvasType(Enum):
     BRUSH = "brush"
     IMAGE = "image"
     CONTROLNET = "controlnet"
+    OUTPAINT = "outpaint"
 
 
 class Controlnet(Enum):
