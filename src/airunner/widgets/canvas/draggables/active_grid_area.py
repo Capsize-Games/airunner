@@ -4,7 +4,7 @@ from PySide6.QtCore import QRect
 from PySide6.QtGui import QBrush, QColor, QPen, QPixmap, QPainter
 from PySide6.QtWidgets import QGraphicsItem
 
-from airunner.enums import SignalCode
+from airunner.enums import SignalCode, CanvasToolName
 from airunner.widgets.canvas.draggables.draggable_pixmap import DraggablePixmap
 
 
@@ -150,3 +150,11 @@ class ActiveGridArea(DraggablePixmap):
 
     def mouseReleaseEvent(self, event):
         super().mouseReleaseEvent(event)
+        self.emit_signal(SignalCode.ACTIVE_GRID_AREA_MOVED_SIGNAL)
+
+    def mouseMoveEvent(self, event):
+        if self.current_tool not in [
+            CanvasToolName.ACTIVE_GRID_AREA,
+        ]:
+            return
+        super().mouseMoveEvent(event)

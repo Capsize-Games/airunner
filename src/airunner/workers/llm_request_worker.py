@@ -1,5 +1,3 @@
-from PySide6.QtCore import Slot
-
 from airunner.enums import SignalCode
 from airunner.workers.worker import Worker
 
