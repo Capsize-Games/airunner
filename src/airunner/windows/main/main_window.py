@@ -20,7 +20,6 @@ from airunner.utils import get_version, default_hf_cache_dir, set_widget_state, 
 from airunner.widgets.status.status_widget import StatusWidget
 from airunner.windows.about.about import AboutWindow
 from airunner.windows.filter_window import FilterWindow
-from airunner.windows.image_browser.templates.image_browser_window_ui import Ui_image_browser_window
 from airunner.windows.image_window import ImageWindow
 from airunner.windows.main.ai_model_mixin import AIModelMixin
 from airunner.windows.main.controlnet_model_mixin import ControlnetModelMixin
@@ -355,12 +354,6 @@ class MainWindow(
     @Slot()
     def action_show_model_manager(self):
         self.model_manager_toggled(True)
-
-    def action_show_image_browser(self):
-        self.image_browser_dialog = QDialog()
-        self.image_browser_ui = Ui_image_browser_window()
-        self.image_browser_ui.setupUi(self.image_browser_dialog)
-        self.image_browser_dialog.show()
 
     @Slot()
     def action_show_controlnet(self):
