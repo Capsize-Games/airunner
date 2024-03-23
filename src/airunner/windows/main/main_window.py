@@ -544,6 +544,8 @@ class MainWindow(
         settings["window_settings"]["chat_prompt_splitter"] = self.ui.generator_widget.ui.chat_prompt_widget.ui.chat_prompt_splitter.saveState()
         settings["window_settings"]["canvas_splitter"] = self.ui.canvas_widget_2.ui.canvas_splitter.saveState()
         settings["window_settings"]["canvas_side_splitter"] = self.ui.canvas_widget_2.ui.canvas_side_splitter.saveState()
+        settings["window_settings"][
+            "canvas_side_splitter_2"] = self.ui.canvas_widget_2.ui.canvas_side_splitter_2.saveState()
 
         self.settings = settings
         self.save_settings()
@@ -584,6 +586,9 @@ class MainWindow(
 
         if window_settings["canvas_side_splitter"] is not None:
             self.ui.canvas_widget_2.ui.canvas_side_splitter.restoreState(window_settings["canvas_side_splitter"])
+
+        if window_settings["canvas_side_splitter_2"] is not None:
+            self.ui.canvas_widget_2.ui.canvas_side_splitter_2.restoreState(window_settings["canvas_side_splitter"])
 
     ##### End window properties #####
     #################################
@@ -987,3 +992,17 @@ class MainWindow(
     @Slot()
     def action_clear_memory(self):
         clear_memory()
+
+    @Slot(bool)
+    def action_outpaint_toggled(self, val: bool):
+        settings = self.settings
+        settings["outpaint_settings"]["enabled"] = val
+        self.settings = settings
+
+    @Slot()
+    def action_outpaint_export(self):
+        self.emit_signal(SignalCode.OUTPAINT_EXPORT_SIGNAL)
+
+    @Slot()
+    def action_outpaint_import(self):
+        self.emit_signal(SignalCode.OUTPAINT_IMPORT_SIGNAL)

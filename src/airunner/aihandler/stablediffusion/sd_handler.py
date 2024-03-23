@@ -141,6 +141,7 @@ class SDHandler(
         self.current_negative_prompt = None
         self._model = None
         self.requested_data = None
+        self.generator_request_data = None
         self._allow_online_mode = None
         self.current_load_controlnet = False
         self.processor = None
@@ -474,8 +475,9 @@ class SDHandler(
     def is_pytorch_error(e) -> bool:
         return "PYTORCH_CUDA_ALLOC_CONF" in str(e)
 
-    def on_do_generate_signal(self, _message: dict):
+    def on_do_generate_signal(self, message: dict):
         self.do_generate = True
+        self.generator_request_data = message
 
     def run(self):
         self.do_set_seed = (
@@ -694,9 +696,12 @@ class SDHandler(
         :return:
         """
         if self.pipe:
+            data = self.data
+            for k, v in self.generator_request_data.items():
+                data[k] = v
             try:
                 return self.pipe(
-                    **self.data,
+                    **data,
                     callback_on_step_end=self.interrupt_callback
                 )
             except Exception as e:
@@ -903,40 +908,52 @@ class SDHandler(
             model_changed=model_changed,
             prompt_embeds=self.prompt_embeds,
             negative_prompt_embeds=self.negative_prompt_embeds,
-            controlnet_image=controlnet_image
+            controlnet_image=controlnet_image,
+            generator_request_data=self.generator_request_data
         )
         pipe = None
-        if self.pipe is None:
-            if self.sd_request.is_txt2img and not is_txt2img:
-                if is_img2img:
-                    pipe = self.img2img
-                elif is_outpaint:
-                    pipe = self.outpaint
-                if pipe is not None:
-                    pipeline_class_ = StableDiffusionPipeline
-                    if self.sd_request.generator_settings.enable_controlnet:
-                        pipeline_class_ = StableDiffusionControlNetPipeline
-                    self.pipe = pipeline_class_(**pipe.components)
-            elif self.sd_request.is_img2img and not is_img2img:
-                if is_txt2img:
-                    pipe = self.txt2img
-                elif is_outpaint:
-                    pipe = self.outpaint
-                if pipe is not None:
-                    pipeline_class_ = StableDiffusionImg2ImgPipeline
-                    if self.sd_request.generator_settings.enable_controlnet:
-                        pipeline_class_ = StableDiffusionControlNetImg2ImgPipeline
-                    self.pipe = pipeline_class_(**pipe.components)
-            elif self.sd_request.is_outpaint and not is_outpaint:
-                if is_txt2img:
-                    pipe = self.txt2img
-                elif is_img2img:
-                    pipe = self.img2img
-                if pipe is not None:
-                    pipeline_class_ = StableDiffusionInpaintPipeline
-                    if self.sd_request.generator_settings.enable_controlnet:
-                        pipeline_class_ = StableDiffusionControlNetInpaintPipeline
-                    self.pipe = pipeline_class_(**pipe.components)
+        pipeline_class_ = None
+
+        print("self.sd_request.is_outpaint", self.sd_request.is_outpaint, not is_outpaint)
+        print("self.sd_request.is_txt2img", self.sd_request.is_txt2img, not is_txt2img)
+
+        if self.sd_request.is_txt2img and not is_txt2img:
+            print("SETTING TXT2IMG PIPE")
+            if is_img2img:
+                pipe = self.img2img
+            elif is_outpaint:
+                pipe = self.outpaint
+            if pipe is not None:
+                pipeline_class_ = StableDiffusionPipeline
+                if self.sd_request.generator_settings.enable_controlnet:
+                    pipeline_class_ = StableDiffusionControlNetPipeline
+                self.pipe = pipeline_class_(**pipe.components)
+        elif self.sd_request.is_img2img and not is_img2img:
+            print("SETTING IMG2IMG PIPE")
+            if is_txt2img:
+                pipe = self.txt2img
+            elif is_outpaint:
+                pipe = self.outpaint
+            if pipe is not None:
+                pipeline_class_ = StableDiffusionImg2ImgPipeline
+                if self.sd_request.generator_settings.enable_controlnet:
+                    pipeline_class_ = StableDiffusionControlNetImg2ImgPipeline
+                self.pipe = pipeline_class_(**pipe.components)
+        elif self.sd_request.is_outpaint and not is_outpaint:
+            print("SETTING INPAINT PIPE")
+            if is_txt2img:
+                pipe = self.txt2img
+            elif is_img2img:
+                pipe = self.img2img
+            pipeline_class_ = StableDiffusionInpaintPipeline
+            if self.sd_request.generator_settings.enable_controlnet:
+                pipeline_class_ = StableDiffusionControlNetInpaintPipeline
+                print("USING StableDiffusionControlNetInpaintPipeline")
+            else:
+                print("USING StableDiffusionInpaintPipeline")
+
+        if pipe is not None and pipeline_class_ is not None:
+            self.pipe = pipeline_class_(**pipe.components)
 
         self.requested_data = self.data
         self.model_version = self.sd_request.generator_settings.version
@@ -1039,7 +1056,18 @@ class SDHandler(
 
         self.do_generate = False
 
+        is_txt2img  = self.sd_request.is_txt2img
+        is_outpaint = self.sd_request.is_outpaint
         is_img2img = self.sd_request.is_img2img
+
+        if not is_img2img and not is_outpaint:
+            is_txt2img = True
+
+        if is_img2img and (
+            "image" not in self.data or ("image" in self.data and self.data["image"] is None)
+        ):
+            self.data = self.sd_request.disable_img2img(self.data)
+            is_txt2img = True
 
         kwargs = dict(
             vae=self.pipe.vae,
@@ -1051,21 +1079,25 @@ class SDHandler(
             feature_extractor=self.feature_extractor
         )
 
-        if self.sd_request.is_img2img:
-            if "image" not in self.data or self.data["image"] is None:
-                self.data = self.sd_request.disable_img2img(self.data)
-                is_img2img = False
-                if self.sd_request.generator_settings.enable_controlnet:
-                    kwargs["controlnet"] = self.pipe.controlnet
-                    self.pipe = StableDiffusionControlNetPipeline(**kwargs)
-
-        if self.sd_request.generator_settings.enable_controlnet:
-            if "control_image" not in self.data or self.data["control_image"] is None:
-                self.data = self.sd_request.disable_controlnet(self.data)
-                if is_img2img:
-                    self.pipe = StableDiffusionImg2ImgPipeline(**kwargs)
-                else:
-                    self.pipe = StableDiffusionPipeline(**kwargs)
+        enable_controlnet = self.sd_request.generator_settings.enable_controlnet and "control_image" in self.data and self.data["control_image"] is not None
+        if is_txt2img:
+            if enable_controlnet:
+                kwargs["controlnet"] = self.pipe.controlnet
+                self.pipe = StableDiffusionControlNetPipeline(**kwargs)
+            else:
+                self.pipe = StableDiffusionPipeline(**kwargs)
+        elif is_img2img:
+            if enable_controlnet:
+                kwargs["controlnet"] = self.pipe.controlnet
+                self.pipe = StableDiffusionControlNetImg2ImgPipeline(**kwargs)
+            else:
+                self.pipe = StableDiffusionImg2ImgPipeline(**kwargs)
+        elif self.sd_request.is_outpaint:
+            if enable_controlnet:
+                kwargs["controlnet"] = self.pipe.controlnet
+                self.pipe = StableDiffusionControlNetInpaintPipeline(**kwargs)
+            else:
+                self.pipe = StableDiffusionInpaintPipeline(**kwargs)
 
         self.emit_signal(
             SignalCode.LOG_STATUS_SIGNAL,

@@ -1,6 +1,6 @@
 import traceback
 
-from PySide6.QtCore import QSettings, QByteArray, QDataStream, QIODevice, Slot
+from PySide6.QtCore import QSettings, QByteArray, QDataStream, QIODevice
 
 from airunner.settings import (
     DEFAULT_BRUSH_PRIMARY_COLOR,
@@ -13,7 +13,6 @@ from airunner.data.bootstrap.model_bootstrap_data import model_bootstrap_data
 from airunner.data.bootstrap.pipeline_bootstrap_data import pipeline_bootstrap_data
 from airunner.enums import Mode, SignalCode, CanvasToolName, LLMActionType, ImageGenerator, GeneratorSection, \
     ImageCategory, Controlnet
-from airunner.service_locator import ServiceLocator
 from airunner.settings import BASE_PATH, MALE, DEFAULT_MODELS, DEFAULT_MODELS_VERSION, LLM_TEMPLATES_VERSION
 from airunner.settings import DEFAULT_PATHS
 from airunner.settings import DEFAULT_CHATBOT
@@ -177,7 +176,8 @@ class SettingsMixin:
                 is_maximized=False,
                 is_fullscreen=False,
                 canvas_splitter=None,
-                canvas_side_splitter=None
+                canvas_side_splitter=None,
+                canvas_side_splitter_2=None
             ),
             memory_settings=dict(
                 use_last_channels=True,
@@ -194,11 +194,6 @@ class SettingsMixin:
                 tome_sd_ratio=600,
                 move_unused_model_to_cpu=False,
                 unload_unused_models=True,
-            ),
-            drawing_pad_settings=dict(
-                image=None,
-                mask=None,
-                enabled=True,
             ),
             grid_settings=dict(
                 cell_size=64,
@@ -257,9 +252,21 @@ class SettingsMixin:
             canvas_settings=dict(
                 pos_x=0,
                 pos_y=0,
+                mask=None,
                 image=None,
-                enable_automatic_drawing=True,
                 active_canvas="",
+            ),
+            controlnet_settings=dict(
+                image=None
+            ),
+            outpaint_settings=dict(
+                image=None,
+                enabled=True,
+            ),
+            drawing_pad_settings=dict(
+                image=None,
+                mask=None,
+                enabled=True,
             ),
             metadata_settings=dict(
                 image_export_metadata_prompt=True,
@@ -275,9 +282,6 @@ class SettingsMixin:
                 image_export_metadata_scheduler=True,
                 export_metadata=True,
                 import_metadata=True,
-            ),
-            controlnet_settings=dict(
-                image=None
             ),
             generator_settings=GENERATOR_SETTINGS,
             llm_generator_settings=dict(
