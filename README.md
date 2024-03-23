@@ -232,30 +232,6 @@ docker-compose run devbuild
 
 ---
 
-## 🐧 Build for Debian
-
-Run the following script and follow the instructions.
-
-```bash
-bash release_debian_ppa.sh
-```
-
-This is a bash script that automates the process of packaging a Python project into a Debian package and uploading it to a Personal Package Archive (PPA). Here's a step-by-step breakdown of what the script does:
-
-1. Extracts the version of the Python project (named `airunner`) from the `setup.py` file. This is done by running a Python command that imports the `run_setup` function from `distutils.core`, runs the `setup.py` file, and prints the version.
-2. Prompts the user to enter the Debian version and a commit message.
-3. Creates a temporary `.gitignore` file that does not include the `dist` directory. This is done by running the `grep` command with the `-v` option, which inverts the matching, so it matches lines that do not contain `dist`.
-4. Creates a tarball (archive file) of the current directory, excluding version control system directories and files specified in the temporary `.gitignore` file. The tarball is named `airunner_$AIRUNNER_VERSION.orig.tar.gz` and is placed in the parent directory.
-5. Removes the temporary `.gitignore` file.
-6. Updates the Debian changelog file with the new version and the commit message. This is done by running the `dch` command with the `-v` option to specify the version and the `-D` option to specify the distribution.
-7. Builds the Debian source package. This is done by running the `dpkg-buildpackage` command with the `-S` option to build a source package, the `-D` option to check build dependencies and conflicts, and the `-sa` option to include the original source.
-8. Changes the current directory to the parent directory.
-9. Uploads the Debian source package to the PPA. This is done by running the `dput` command with the PPA and the source package as arguments.
-
-Currently we are only releasing under a dev PPA, but we will switch to a stable PPA in the future.
-
----
-
 ## 🔬 Unit tests
 
 Run a specific test
