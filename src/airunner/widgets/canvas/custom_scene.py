@@ -5,7 +5,7 @@ import PIL
 from PIL import ImageQt, Image, ImageFilter
 from PIL.ImageQt import QImage
 from PySide6.QtCore import Qt, QPoint
-from PySide6.QtGui import QEnterEvent
+from PySide6.QtGui import QEnterEvent, QDragEnterEvent, QDropEvent, QImageReader, QDragMoveEvent
 from PySide6.QtGui import QPixmap, QPainter
 from PySide6.QtWidgets import QGraphicsScene, QGraphicsPixmapItem, QFileDialog
 
@@ -71,6 +71,20 @@ class CustomScene(
         self.image_handler = ImageHandler()
         ServiceLocator.register(ServiceCode.CURRENT_ACTIVE_IMAGE, self.current_active_image)
         self.register(SignalCode.CANVAS_CLEAR, self.on_canvas_clear_signal)
+
+    def dragEnterEvent(self, event: QDragEnterEvent):
+        if event.mimeData().hasUrls():
+            event.acceptProposedAction()
+
+    def dragMoveEvent(self, event: QDragMoveEvent):
+        if event.mimeData().hasUrls():
+            event.acceptProposedAction()
+
+    def dropEvent(self, event: QDropEvent):
+        for url in event.mimeData().urls():
+            path = url.toLocalFile()
+            if path.split('.')[-1].lower().encode() in QImageReader.supportedImageFormats():
+                self.load_image(path)
 
     @property
     def scene_is_active(self):

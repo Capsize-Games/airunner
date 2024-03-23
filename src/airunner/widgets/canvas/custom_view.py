@@ -13,6 +13,7 @@ from airunner.widgets.canvas.brush_scene import BrushScene
 from airunner.widgets.canvas.controlnet_scene import ControlnetScene
 from airunner.widgets.canvas.custom_scene import CustomScene
 from airunner.widgets.canvas.draggables.active_grid_area import ActiveGridArea
+from airunner.widgets.canvas.outpaint_scene import OutpaintScene
 from airunner.windows.main.settings_mixin import SettingsMixin
 from airunner.widgets.canvas.zoom_handler import ZoomHandler
 
@@ -265,6 +266,10 @@ class CustomGraphicsView(
             )
         elif self.canvas_type == CanvasType.CONTROLNET.value:
             self.scene = ControlnetScene(
+                self.canvas_type
+            )
+        elif self.canvas_type == CanvasType.OUTPAINT.value:
+            self.scene = OutpaintScene(
                 self.canvas_type
             )
         self.setScene(self.scene)
