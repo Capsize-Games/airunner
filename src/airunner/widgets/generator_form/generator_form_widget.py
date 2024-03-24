@@ -173,19 +173,25 @@ class GeneratorForm(BaseWidget):
             overlap_top = max(0, active_rect.top())
             overlap_bottom = min(self.settings["working_height"], active_rect.bottom())
 
+            crop_rect = (overlap_left, overlap_top, overlap_right, overlap_bottom)
+
             # Crop the image at the overlap position
-            cropped_image = image.crop(
-                (overlap_left, overlap_top, overlap_right, overlap_bottom))
+            cropped_image = image.crop(crop_rect)
 
             # Create a new black image of the same size as the input image
             new_image = Image.new('RGB', (self.settings["working_width"], self.settings["working_height"]), 'black')
 
             # Paste the cropped image to the top of the new image
-            new_image.paste(cropped_image, (0, 0))
+            position = (0, 0)
+            if active_rect.left() < 0:
+                position = (abs(active_rect.left()), 0)
+            if active_rect.top() < 0:
+                position = (0, abs(active_rect.top()))
+            new_image.paste(cropped_image, position)
 
             self.emit_signal(SignalCode.DO_GENERATE_SIGNAL, {
                 "mask_image": mask.convert("RGB"),
-                "image": image.convert("RGB")
+                "image": new_image.convert("RGB")
             })
         else:
             self.emit_signal(SignalCode.DO_GENERATE_SIGNAL)
