@@ -345,7 +345,6 @@ class SDRequest(
                 "guidance_scale": self.generator_settings.controlnet_image_settings.guidance_scale,
                 "controlnet_conditioning_scale": self.generator_settings.controlnet_image_settings.conditioning_scale,
                 "controlnet": [
-                    "canny",
                     self.generator_settings.controlnet_image_settings.controlnet
                 ],
             }}
