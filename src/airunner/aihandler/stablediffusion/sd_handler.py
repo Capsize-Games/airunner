@@ -384,7 +384,7 @@ class SDHandler(
         except Exception as e:
             self.logger.error(f"Error finding model by name: {name}")
 
-    def preprocess_for_controlnet(self, image):
+    def preprocess_for_controlnet(self, image, local_files_only=True):
         controlnet = self.sd_request.generator_settings.controlnet_image_settings.controlnet
         controlnet_item = self.controlnet_model_by_name(controlnet)
         controlnet_type = controlnet_item["name"]
@@ -392,7 +392,14 @@ class SDHandler(
         if self.current_controlnet_type != controlnet_type or not self.processor:
             self.logger.debug("Loading controlnet processor " + controlnet_type)
             self.current_controlnet_type = controlnet_type
-            self.processor = Processor(controlnet_type)
+            try:
+                self.processor = Processor(controlnet_type, local_files_only=local_files_only)
+            except Exception as e:
+                if "We couldn't connect to 'https://huggingface.co'" in str(e) and local_files_only is True:
+                    return self.preprocess_for_controlnet(image, local_files_only=False)
+                else:
+                    self.logger.error("Unable to load controlnet processor")
+            self.logger.debug("Processor loaded")
         if self.processor is not None and image is not None:
             self.logger.debug("Controlnet: Processing image")
             image = self.processor(image)
@@ -1130,13 +1137,12 @@ class SDHandler(
         self.controlnet_loaded = True
         return pipeline
 
-    def load_controlnet(self, local_files_only: bool = None):
+    def load_controlnet(self, local_files_only: bool = True):
         controlnet_name = self.settings["generator_settings"]["controlnet_image_settings"]["controlnet"]
         controlnet_model = self.controlnet_model_by_name(controlnet_name)
         self.logger.debug(f"Loading controlnet {self.controlnet_type} self.controlnet_model {controlnet_model}")
         self._controlnet = None
         self.current_controlnet_type = self.controlnet_type
-        local_files_only = self.local_files_only if local_files_only is None else local_files_only
         try:
             controlnet = ControlNetModel.from_pretrained(
                 controlnet_model["path"],
