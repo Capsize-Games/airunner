@@ -27,35 +27,36 @@ No web server to run, additional requirements to install or technical knowledge 
 AI Runner is a multi-modal AI application which allows you to run open-source 
 large language models and AI image generators on your own hardware.
 
-| Feature                                                      | Included |
-|--------------------------------------------------------------|:--------:|
-| Have conversations with a chatbot using your voice           |    ✅    |
-| Text-to-speech                                               |    ✅    |
-| Speech-to-text                                               |    ✅    |
-| Vision-to-text                                               |    ✅    |
-| Text generation with large language models (LLMs)            |    ✅    |
-| Image generation using Stable Diffusion and Kandinsky        |    ✅    |
-| Draw and generate images in near real-time                   |    ✅    |
-| Run multiple models at once                                  |    ✅    |
+| Feature                                                             | Included |
+|---------------------------------------------------------------------|:--------:|
+| Have conversations with a chatbot using your voice                  |    ✅    |
+| Text-to-speech                                                      |    ✅    |
+| Speech-to-text                                                      |    ✅    |
+| Vision-to-text                                                      |    ✅    |
+| Text generation with large language models (LLMs)                   |    ✅    |
+| Image generation using Stable Diffusion and Kandinsky               |    ✅    |
+| Draw and generate images in near real-time                          |    ✅    |
+| Run multiple models at once                                         |    ✅    |
 | Easy setup - download and run. No need to install any requirements* | ✅ |
-| Run offline, locally on your own hardware!                   |    ✅    |
+| Run offline, locally on your own hardware!                          |    ✅    |
 | Fast! Generate images in approximately 2 seconds using an RTX 2080s | ✅ |
-| text-to-image                                                |    ✅    |
-| image-to-image                                               |    ✅    |
-| inpaint and outpaint                                         |    ✅    |
-| pix2pix                                                      |    ✅    |
-| depth2img                                                    |    ✅    |
-| controlnet                                                   |    ✅    |
-| LoRA                                                         |    ✅    |
-| textual embeddings                                           |    ✅    |
-| Drawing tools                                                |    ✅    |
-| Image filters                                                |    ✅    |
-| Dark mode                                                    |    ✅    |
-| Infinite scrolling canvas                                    |    ✅    |
-| NSFW filter toggle                                           |    ✅    |
-| Standard Stable Diffusion settings                           |    ✅    |
-| Fast load time, responsive interface                         |    ✅    |
-| Pure python - does not rely on a webserver                   |    ✅    |
+| text-to-image                                                       |    ✅    |
+| image-to-image                                                      |    ✅    |
+| inpaint and outpaint                                                |    ✅    |
+| pix2pix                                                             |    ✅    |
+| depth2img                                                           |    ✅    |
+| controlnet                                                          |    ✅    |
+| LoRA                                                                |    ✅    |
+| textual embeddings                                                  |    ✅    |
+| Drawing tools                                                       |    ✅    |
+| Image filters                                                       |    ✅    |
+| Dark mode                                                           |    ✅    |
+| Infinite scrolling canvas                                           |    ✅    |
+| NSFW filter toggle                                                  |    ✅    |
+| NSFW guardrails to prevent harmful content                          |    ✅    |
+| Standard Stable Diffusion settings                                  |    ✅    |
+| Fast load time, responsive interface                                |    ✅    |
+| Pure python - does not rely on a webserver                          |    ✅    |
 
 ---
 
