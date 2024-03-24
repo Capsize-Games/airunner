@@ -1,9 +1,10 @@
 from PIL import Image
 from PySide6.QtCore import QObject, QRect
+from cryptography.fernet import Fernet
 
 from airunner.enums import SDMode, GeneratorSection, Controlnet
 from airunner.mediator_mixin import MediatorMixin
-from airunner.settings import DEFAULT_SCHEDULER, MIN_NUM_INFERENCE_STEPS_IMG2IMG
+from airunner.settings import DEFAULT_SCHEDULER, MIN_NUM_INFERENCE_STEPS_IMG2IMG, SD_GUARDRAILS_KEY, SD_GUARDRAILS
 from airunner.utils import convert_base64_to_image
 from airunner.windows.main.settings_mixin import SettingsMixin
 
@@ -24,7 +25,8 @@ class ControlnetImageSettings:
 
 
 class GeneratorSettings:
-    def __init__(self, **data):
+    def __init__(self, settings: dict):
+        data = settings["generator_settings"]
         self.prompt = data.get("prompt", "")
         self.negative_prompt = data.get("negative_prompt", "")
         self.steps = data.get("steps", 1)
@@ -52,6 +54,24 @@ class GeneratorSettings:
         self.controlnet_image_settings = self.controlnet_image_settings = ControlnetImageSettings(
             **data.get("controlnet_image_settings", {})
         )
+        prompt, negative_prompt = self.parse_prompt(settings["nsfw_filter"])
+        self.prompt = prompt
+        self.negative_prompt = negative_prompt
+
+    def parse_prompt(self, nsfw_filter_active: bool, prompt=None, negative_prompt=None):
+        prompt = prompt or self.prompt
+        negative_prompt = negative_prompt or self.prompt
+        cipher_suite = Fernet(SD_GUARDRAILS_KEY)
+        plain_text = cipher_suite.decrypt(SD_GUARDRAILS)
+        bad_words_list = plain_text.decode().split(",")
+        # Apply guardrails when nsfw_filter is disabled
+        if not nsfw_filter_active:
+            for word in bad_words_list:
+                if word in prompt:
+                    prompt = prompt.replace(word, "")
+                if word not in negative_prompt:
+                    negative_prompt += f" {word}"
+        return prompt, negative_prompt
 
 
 class MemorySettings:
@@ -108,7 +128,7 @@ class SDRequest(
         self.load_generator_settings()
 
     def load_generator_settings(self):
-        self.generator_settings = GeneratorSettings(**self.settings["generator_settings"])
+        self.generator_settings = GeneratorSettings(settings=self.settings)
         self.action_has_safety_checker = self.generator_settings.section not in [GeneratorSection.DEPTH2IMG.value]
 
     def initialize_prompt_embeds(self, prompt_embeds, negative_prompt_embeds, args: dict):
@@ -192,7 +212,6 @@ class SDRequest(
                     args["num_inference_steps"] = MIN_NUM_INFERENCE_STEPS_IMG2IMG
 
         args["generator"] = self.generator
-
         return args
 
     def prepare_args(

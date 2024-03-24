@@ -56,7 +56,6 @@ from airunner.windows.main.pipeline_mixin import PipelineMixin
 from airunner.windows.main.controlnet_model_mixin import ControlnetModelMixin
 from airunner.windows.main.ai_model_mixin import AIModelMixin
 from airunner.utils import clear_memory, random_seed, create_worker, get_torch_device
-
 from airunner.workers.worker import Worker
 
 SKIP_RELOAD_CONSTS = (
@@ -492,9 +491,14 @@ class SDHandler(
 
         cur_prompt = self.sd_request.generator_settings.prompt
         cur_neg_prompt = self.sd_request.generator_settings.negative_prompt
+        prompt, negative_prompt = self.sd_request.generator_settings.parse_prompt(
+            self.settings["nsfw_filter"],
+            self.settings["generator_settings"]["prompt"],
+            self.settings["generator_settings"]["negative_prompt"]
+        )
         if (
-            self.settings["generator_settings"]["prompt"] != cur_prompt or
-            self.settings["generator_settings"]["negative_prompt"] != cur_neg_prompt
+            prompt != cur_prompt or
+            negative_prompt != cur_neg_prompt
         ):
             self.latents = None
             self.latents_set = False
@@ -1208,7 +1212,7 @@ class SDHandler(
         self.current_load_controlnet = self.do_load_controlnet
 
         if self.pipe is None or self.reload_model:
-            self.logger.debug(f"Loading model from scratch {self.reload_model}")
+            self.logger.debug(f"Loading model from scratch {self.reload_model} for {self.sd_request.generator_settings.section}")
             self.reset_applied_memory_settings()
             self.send_model_loading_message(self.model_path)
 
@@ -1226,7 +1230,7 @@ class SDHandler(
                 except OSError as e:
                     self.handle_missing_files(self.sd_request.generator_settings.section)
             elif self.model is not None:
-                self.logger.debug(f"Loading model `{self.model['name']}` `{self.model_path}`")
+                self.logger.debug(f"Loading model `{self.model['name']}` `{self.model_path}` for {self.sd_request.generator_settings.section}")
                 scheduler = self.load_scheduler()
                 if scheduler:
                     kwargs["scheduler"] = scheduler
