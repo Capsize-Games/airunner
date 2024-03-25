@@ -312,7 +312,7 @@ class CustomGraphicsView(
         self.current_background_color = self.settings["grid_settings"]["canvas_color"]
         color = QColor(self.current_background_color)
         brush = QBrush(color)
-        self.setBackgroundBrush(brush)
+        self._scene.setBackgroundBrush(brush)
 
     def handle_mouse_event(self, original_mouse_event, event):
         if event.buttons() == Qt.MouseButton.MiddleButton:
