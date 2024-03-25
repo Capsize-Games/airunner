@@ -78,6 +78,12 @@ large language models and AI image generators on your own hardware.
 
 ## 🔧 Installation
 
+For emoji support on Ubuntu install the Noto Color Emoji font:
+
+```bash
+sudo apt install fonts-noto-color-emoji
+```
+
 ### Pre-Compiled
 
 [Download the official build on itch.io](https://capsizegames.itch.io/ai-runner)!
