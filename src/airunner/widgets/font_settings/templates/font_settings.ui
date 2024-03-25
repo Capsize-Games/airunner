@@ -1,0 +1,40 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<ui version="4.0">
+ <class>font_settings_widget</class>
+ <widget class="QWidget" name="font_settings_widget">
+  <property name="geometry">
+   <rect>
+    <x>0</x>
+    <y>0</y>
+    <width>512</width>
+    <height>341</height>
+   </rect>
+  </property>
+  <property name="windowTitle">
+   <string>Form</string>
+  </property>
+  <layout class="QGridLayout" name="gridLayout_2">
+   <item row="0" column="0">
+    <widget class="FontSettingWidget" name="widget" native="true">
+     <property name="section" stdset="0">
+      <string>chat</string>
+     </property>
+    </widget>
+   </item>
+  </layout>
+ </widget>
+ <customwidgets>
+  <customwidget>
+   <class>FontSettingWidget</class>
+   <extends>QWidget</extends>
+   <header>airunner/widgets/font_settings/font_setting_widget</header>
+   <container>1</container>
+  </customwidget>
+ </customwidgets>
+ <resources/>
+ <connections/>
+ <slots>
+  <slot>font_family_changed(QString)</slot>
+  <slot>size_changed(int)</slot>
+ </slots>
+</ui>

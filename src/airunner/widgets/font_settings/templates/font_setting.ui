@@ -1,0 +1,80 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<ui version="4.0">
+ <class>font_setting_widget</class>
+ <widget class="QWidget" name="font_setting_widget">
+  <property name="geometry">
+   <rect>
+    <x>0</x>
+    <y>0</y>
+    <width>400</width>
+    <height>300</height>
+   </rect>
+  </property>
+  <property name="windowTitle">
+   <string>Form</string>
+  </property>
+  <layout class="QGridLayout" name="gridLayout_4">
+   <item row="0" column="0">
+    <widget class="QGroupBox" name="section">
+     <property name="title">
+      <string>Section</string>
+     </property>
+     <layout class="QGridLayout" name="gridLayout">
+      <item row="0" column="0">
+       <widget class="QComboBox" name="font_family"/>
+      </item>
+      <item row="0" column="1">
+       <widget class="QSpinBox" name="size">
+        <property name="maximumSize">
+         <size>
+          <width>75</width>
+          <height>16777215</height>
+         </size>
+        </property>
+       </widget>
+      </item>
+     </layout>
+    </widget>
+   </item>
+  </layout>
+ </widget>
+ <resources/>
+ <connections>
+  <connection>
+   <sender>font_family</sender>
+   <signal>currentTextChanged(QString)</signal>
+   <receiver>font_setting_widget</receiver>
+   <slot>font_family_changed(QString)</slot>
+   <hints>
+    <hint type="sourcelabel">
+     <x>88</x>
+     <y>57</y>
+    </hint>
+    <hint type="destinationlabel">
+     <x>69</x>
+     <y>-10</y>
+    </hint>
+   </hints>
+  </connection>
+  <connection>
+   <sender>size</sender>
+   <signal>valueChanged(int)</signal>
+   <receiver>font_setting_widget</receiver>
+   <slot>size_changed(int)</slot>
+   <hints>
+    <hint type="sourcelabel">
+     <x>184</x>
+     <y>52</y>
+    </hint>
+    <hint type="destinationlabel">
+     <x>157</x>
+     <y>-10</y>
+    </hint>
+   </hints>
+  </connection>
+ </connections>
+ <slots>
+  <slot>font_family_changed(QString)</slot>
+  <slot>size_changed(int)</slot>
+ </slots>
+</ui>
