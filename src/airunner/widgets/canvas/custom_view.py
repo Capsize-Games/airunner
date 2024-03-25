@@ -29,19 +29,18 @@ class CustomGraphicsView(
         SettingsMixin.__init__(self)
         self.logger = Logger(prefix=self.__class__.__name__)
         self.scene = None
+        self.current_background_color = None
         self.active_grid_area = None
         self.do_draw_layers = True
         self.initialized = False
         self.drawing = False
         self.pixmaps = {}
         self.line_group = QGraphicsItemGroup()
-        self.resizeEvent = self.window_resized
         self.scene_is_active = False
 
         # register signal handlers
         signal_handlers = {
             SignalCode.APPLICATION_TOOL_CHANGED_SIGNAL: self.on_tool_changed_signal,
-            SignalCode.CANVAS_DO_RESIZE_SIGNAL: self.do_resize_canvas,
             SignalCode.CANVAS_ZOOM_LEVEL_CHANGED: self.on_zoom_level_changed_signal,
             SignalCode.SET_CANVAS_COLOR_SIGNAL: self.set_canvas_color,
             SignalCode.CANVAS_DO_DRAW_SELECTION_AREA_SIGNAL: self.draw_selected_area,
@@ -49,6 +48,7 @@ class CustomGraphicsView(
             SignalCode.CANVAS_CLEAR_LINES_SIGNAL: self.clear_lines,
             SignalCode.SCENE_DO_DRAW_SIGNAL: self.on_canvas_do_draw_signal,
             SignalCode.APPLICATION_MAIN_WINDOW_LOADED_SIGNAL: self.on_main_window_loaded_signal,
+            SignalCode.APPLICATION_SETTINGS_CHANGED_SIGNAL: self.on_application_settings_changed_signal
         }
         for k, v in signal_handlers.items():
             self.register(k, v)
@@ -74,6 +74,9 @@ class CustomGraphicsView(
             force_draw=data.get("force_draw", False),
             do_draw_layers=data.get("do_draw_layers", None)
         )
+
+    def on_application_settings_changed_signal(self, _message):
+        self.set_canvas_color()
 
     def do_draw(
         self,
@@ -205,24 +208,6 @@ class CustomGraphicsView(
             self.active_grid_area.setZValue(1)
             self.scene.addItem(self.active_grid_area)
 
-    def window_resized(self, event):
-        self.do_resize_canvas()
-
-    def do_resize_canvas(
-        self,
-        data: dict = None,
-    ):
-        data = {} if not data else data
-        kwargs = {
-            "settings": data.get("settings", self.settings),
-            "force_draw": data.get("force_draw", False),
-            "do_draw_layers": data.get("do_draw_layers", None),
-            "scene": data.get("scene", self.scene),
-            "line_group": data.get("line_group", self.line_group),
-            "view_size": data.get("view_size", self.viewport().size())
-        }
-        self.emit_signal(SignalCode.CANVAS_RESIZE_SIGNAL, kwargs)
-
     def on_zoom_level_changed_signal(self, _message):
         transform = self.zoom_handler.on_zoom_level_changed()
 
@@ -278,7 +263,10 @@ class CustomGraphicsView(
     def set_canvas_color(self, _message=None):
         if not self.scene:
             return
-        color = QColor(self.settings["grid_settings"]["canvas_color"])
+        if self.current_background_color == self.settings["grid_settings"]["canvas_color"]:
+            return
+        self.current_background_color = self.settings["grid_settings"]["canvas_color"]
+        color = QColor(self.current_background_color)
         brush = QBrush(color)
         self.scene.setBackgroundBrush(brush)
 
