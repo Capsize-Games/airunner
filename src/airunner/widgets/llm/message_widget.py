@@ -1,7 +1,8 @@
+from airunner.enums import SignalCode
 from airunner.widgets.base_widget import BaseWidget
 from airunner.widgets.llm.templates.message_ui import Ui_message
 
-from PySide6.QtGui import QTextCursor
+from PySide6.QtGui import QTextCursor, QFontDatabase, QFont
 from PySide6.QtWidgets import QTextEdit
 from PySide6.QtGui import QFontMetrics
 from PySide6.QtCore import Qt, QSize
@@ -26,8 +27,8 @@ class MessageWidget(BaseWidget):
         self.ui.content.setReadOnly(True)
         self.ui.content.insertPlainText(self.message)
         self.ui.content.document().contentsChanged.connect(self.sizeChange)
-        self.ui.content.sizeHint = self.sizeHint
-        self.ui.content.minimumSizeHint = self.minimumSizeHint
+        # self.ui.content.sizeHint = self.sizeHint
+        # self.ui.content.minimumSizeHint = self.minimumSizeHint
         name = self.name
         if self.is_bot:
             self.ui.bot_name.show()
@@ -42,10 +43,48 @@ class MessageWidget(BaseWidget):
 
         self.ui.content.setStyleSheet("border-radius: 5px; border: 5px solid #1f1f1f; background-color: #1f1f1f; color: #ffffff;")
 
-    def sizeChange(self):
+        self.register(SignalCode.APPLICATION_SETTINGS_CHANGED_SIGNAL, self.on_application_settings_changed_signal)
+        self.font_family = None
+        self.font_size = None
+        self.set_chat_font()
+
+    def on_application_settings_changed_signal(self, _message):
+        self.set_chat_font()
+
+    def set_chat_font(self):
+        print("set_chat_font")
+        if self.font_family != self.settings["font_settings"]["chat"]["font_family"] or self.font_size != \
+                self.settings["font_settings"]["chat"]["size"]:
+            self.font_family = self.settings["font_settings"]["chat"]["font_family"]
+            self.font_size = self.settings["font_settings"]["chat"]["size"]
+            print(f"Setting font family to {self.font_family} and size to {self.font_size}")
+
+            # Check if the font family is available
+            if self.font_family in QFontDatabase().families():
+                font = QFont(self.font_family, self.font_size)
+                font.setFamilies([
+                    self.font_family,
+                    "Noto Color Emoji",
+                ])
+                self.ui.content.setFont(font)
+            else:
+                print(f"Font family {self.font_family} is not available on your system.")
+        else:
+            print("Font family and size are the same as before. No changes made.")
+
+    def set_content_size(self):
         doc_height = self.ui.content.document().size().height()
-        self.setMinimumHeight(int(doc_height) + 25)
+        doc_width = self.ui.content.document().size().width()
+        self.setMinimumHeight(int(doc_height))
+        self.setMinimumWidth(int(doc_width))
+
+    def sizeChange(self):
+        self.set_content_size()
         self.textChanged.emit()
+
+    def resizeEvent(self, event):
+        self.set_content_size()
+        super().resizeEvent(event)
 
     def sizeHint(self):
         fm = QFontMetrics(self.font())
