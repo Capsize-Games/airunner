@@ -92,11 +92,8 @@ class SignalCode(Enum):
     SCENE_DO_DRAW_SIGNAL = "scene_do_draw_signal"
     SCENE_DO_UPDATE_IMAGE_SIGNAL = "scene_do_update_image_signal"
     CANVAS_CLEAR_LINES_SIGNAL = "canvas_clear_lines_signal"
-    CANVAS_RESIZE_WORKER_RESPONSE_SIGNAL = "CanvasResizeWorker_response_signal"
     CANVAS_HANDLE_LAYER_CLICK_SIGNAL = "canvas_handle_layer_click_signal"
     CANVAS_UPDATE_SIGNAL = "update_canvas_signal"
-    CANVAS_RESIZE_SIGNAL = "canvas_resize_signal"
-    CANVAS_DO_RESIZE_SIGNAL = "canvas_do_resize_signal"
     CANVAS_UPDATE_CURSOR = "canvas_update_cursor"
     CANVAS_ZOOM_LEVEL_CHANGED = "zoom_level_changed"
     CANVAS_CLEAR = "clear_canvas"
@@ -191,8 +188,6 @@ class SignalCode(Enum):
 
     LORA_ADD_SIGNAL = "add_lora_signal"
     LORA_UPDATE_SIGNAL = "update_lora_signal"
-
-    SCENE_RESIZE_SIGNAL = "scene_resize_signal"
 
     SET_CANVAS_COLOR_SIGNAL = "set_canvas_color_signal"
     UPDATE_SCENE_SIGNAL = "update_scene_signal"
