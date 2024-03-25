@@ -96,9 +96,7 @@ class SliderWidget(BaseWidget):
 
     def __init__(self, *args, **kwargs):
         super().__init__(*args, **kwargs)
-        self.label_text = None
         self.settings_property = None
-        self.label = None
         self.register(SignalCode.APPLICATION_MAIN_WINDOW_LOADED_SIGNAL, self.on_main_window_loaded_signal)
         self.ui.slider.sliderReleased.connect(self.handle_slider_release)
 
@@ -146,17 +144,13 @@ class SliderWidget(BaseWidget):
         self.spinbox_page_step = spinbox_page_step
         self.spinbox_minimum = spinbox_minimum
         self.spinbox_maximum = spinbox_maximum
-        self.label_text = label_text
         self.settings_property = settings_property
         self.display_as_float = display_as_float
         self.divide_by = divide_by
 
-        self.label = QLabel(f"{label_text}")
-        self.label.setAlignment(Qt.AlignmentFlag.AlignCenter)
-        self.label.setAttribute(Qt.WidgetAttribute.WA_TransparentForMouseEvents)
-        self.label.setObjectName("slider_label")
+        self.ui.groupBox.setTitle(label_text)
+
         # add the label to the ui
-        self.layout().addWidget(self.label, 0, 0, 1, 1)
         self.ui.slider_spinbox.setFixedWidth(50)
         self.set_slider_and_spinbox_values(current_value)
         if not self.display_as_float:
