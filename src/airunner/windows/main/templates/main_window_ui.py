@@ -26,7 +26,6 @@ from airunner.widgets.brush.brush_container_widget import BrushContainerWidget
 from airunner.widgets.canvas.canvas_widget import CanvasWidget
 from airunner.widgets.generator_form.generator_form_widget import GeneratorForm
 from airunner.widgets.llm.llm_settings_widget import LLMSettingsWidget
-from airunner.widgets.model_manager.model_manager_widget import ModelManagerWidget
 from airunner.widgets.stablediffusion.stable_diffusion_settings_widget import StableDiffusionSettingsWidget
 from airunner.widgets.upscale.upscale_widget import UpscaleWidget
 import airunner.resources_light_rc
@@ -36,7 +35,7 @@ class Ui_MainWindow(object):
     def setupUi(self, MainWindow):
         if not MainWindow.objectName():
             MainWindow.setObjectName(u"MainWindow")
-        MainWindow.resize(1123, 903)
+        MainWindow.resize(1137, 903)
         sizePolicy = QSizePolicy(QSizePolicy.Policy.MinimumExpanding, QSizePolicy.Policy.Preferred)
         sizePolicy.setHorizontalStretch(0)
         sizePolicy.setVerticalStretch(0)
@@ -309,6 +308,8 @@ class Ui_MainWindow(object):
         self.outpaint_enabled = QAction(MainWindow)
         self.outpaint_enabled.setObjectName(u"outpaint_enabled")
         self.outpaint_enabled.setCheckable(True)
+        self.actionModel_Manager_4 = QAction(MainWindow)
+        self.actionModel_Manager_4.setObjectName(u"actionModel_Manager_4")
         self.centralwidget = QWidget(MainWindow)
         self.centralwidget.setObjectName(u"centralwidget")
         self.centralwidget.setEnabled(True)
@@ -342,7 +343,7 @@ class Ui_MainWindow(object):
         self.scrollArea_3.setWidgetResizable(True)
         self.scrollAreaWidgetContents_3 = QWidget()
         self.scrollAreaWidgetContents_3.setObjectName(u"scrollAreaWidgetContents_3")
-        self.scrollAreaWidgetContents_3.setGeometry(QRect(0, 0, 1119, 46))
+        self.scrollAreaWidgetContents_3.setGeometry(QRect(0, 0, 1133, 46))
         self.horizontalLayout_2 = QHBoxLayout(self.scrollAreaWidgetContents_3)
         self.horizontalLayout_2.setSpacing(0)
         self.horizontalLayout_2.setObjectName(u"horizontalLayout_2")
@@ -530,7 +531,7 @@ class Ui_MainWindow(object):
         self.content_splitter.addWidget(self.generator_widget)
         self.canvas_widget = QWidget(self.content_splitter)
         self.canvas_widget.setObjectName(u"canvas_widget")
-        self.canvas_widget.setMinimumSize(QSize(512, 0))
+        self.canvas_widget.setMinimumSize(QSize(0, 0))
         self.gridLayout_5 = QGridLayout(self.canvas_widget)
         self.gridLayout_5.setObjectName(u"gridLayout_5")
         self.gridLayout_5.setContentsMargins(0, 0, 0, 0)
@@ -554,17 +555,6 @@ class Ui_MainWindow(object):
         self.gridLayout_4.addWidget(self.canvas_widget_2, 0, 0, 1, 1)
 
         self.center_tab.addTab(self.canvas_tab, "")
-        self.model_manager_tab = QWidget()
-        self.model_manager_tab.setObjectName(u"model_manager_tab")
-        self.gridLayout_7 = QGridLayout(self.model_manager_tab)
-        self.gridLayout_7.setObjectName(u"gridLayout_7")
-        self.gridLayout_7.setContentsMargins(0, 0, 0, 0)
-        self.model_manager = ModelManagerWidget(self.model_manager_tab)
-        self.model_manager.setObjectName(u"model_manager")
-
-        self.gridLayout_7.addWidget(self.model_manager, 0, 0, 1, 1)
-
-        self.center_tab.addTab(self.model_manager_tab, "")
 
         self.gridLayout_5.addWidget(self.center_tab, 0, 0, 1, 1)
 
@@ -575,7 +565,7 @@ class Ui_MainWindow(object):
         self.scrollArea.setWidgetResizable(True)
         self.scrollAreaWidgetContents = QWidget()
         self.scrollAreaWidgetContents.setObjectName(u"scrollAreaWidgetContents")
-        self.scrollAreaWidgetContents.setGeometry(QRect(0, 0, 347, 756))
+        self.scrollAreaWidgetContents.setGeometry(QRect(0, 0, 420, 756))
         self.gridLayout = QGridLayout(self.scrollAreaWidgetContents)
         self.gridLayout.setObjectName(u"gridLayout")
         self.gridLayout.setContentsMargins(0, 0, 0, 0)
@@ -905,7 +895,7 @@ class Ui_MainWindow(object):
         MainWindow.setCentralWidget(self.centralwidget)
         self.menubar = QMenuBar(MainWindow)
         self.menubar.setObjectName(u"menubar")
-        self.menubar.setGeometry(QRect(0, 0, 1123, 22))
+        self.menubar.setGeometry(QRect(0, 0, 1137, 22))
         font1 = QFont()
         font1.setPointSize(11)
         self.menubar.setFont(font1)
@@ -1291,6 +1281,7 @@ class Ui_MainWindow(object):
         self.outpaint_import.setText(QCoreApplication.translate("MainWindow", u"Import", None))
         self.outpaint_export.setText(QCoreApplication.translate("MainWindow", u"Export", None))
         self.outpaint_enabled.setText(QCoreApplication.translate("MainWindow", u"Enabled", None))
+        self.actionModel_Manager_4.setText(QCoreApplication.translate("MainWindow", u"Model Manager", None))
 #if QT_CONFIG(tooltip)
         self.file_new_button.setToolTip(QCoreApplication.translate("MainWindow", u"New", None))
 #endif // QT_CONFIG(tooltip)
@@ -1316,7 +1307,6 @@ class Ui_MainWindow(object):
 #endif // QT_CONFIG(tooltip)
         self.redo_button.setText("")
         self.center_tab.setTabText(self.center_tab.indexOf(self.canvas_tab), QCoreApplication.translate("MainWindow", u"Canvas", None))
-        self.center_tab.setTabText(self.center_tab.indexOf(self.model_manager_tab), QCoreApplication.translate("MainWindow", u"Model Manager", None))
         self.tool_tab_widget.setTabText(self.tool_tab_widget.indexOf(self.tab_pen), QCoreApplication.translate("MainWindow", u"Pen", None))
         self.tool_tab_widget.setTabText(self.tool_tab_widget.indexOf(self.tab_active_grid), QCoreApplication.translate("MainWindow", u"Active Grid", None))
         self.tool_tab_widget.setTabText(self.tool_tab_widget.indexOf(self.tab_2), QCoreApplication.translate("MainWindow", u"Upscale", None))
