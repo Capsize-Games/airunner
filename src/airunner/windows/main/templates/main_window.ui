@@ -7,8 +7,8 @@
    <rect>
     <x>0</x>
     <y>0</y>
-    <width>1137</width>
-    <height>903</height>
+    <width>841</width>
+    <height>783</height>
    </rect>
   </property>
   <property name="sizePolicy">
@@ -128,7 +128,7 @@
            <rect>
             <x>0</x>
             <y>0</y>
-            <width>1133</width>
+            <width>837</width>
             <height>46</height>
            </rect>
           </property>
@@ -615,8 +615,8 @@
              <rect>
               <x>0</x>
               <y>0</y>
-              <width>420</width>
-              <height>756</height>
+              <width>354</width>
+              <height>636</height>
              </rect>
             </property>
             <layout class="QGridLayout" name="gridLayout">
@@ -1156,60 +1156,6 @@
             </widget>
            </item>
            <item>
-            <widget class="QPushButton" name="model_manager_button">
-             <property name="sizePolicy">
-              <sizepolicy hsizetype="Maximum" vsizetype="MinimumExpanding">
-               <horstretch>0</horstretch>
-               <verstretch>0</verstretch>
-              </sizepolicy>
-             </property>
-             <property name="minimumSize">
-              <size>
-               <width>50</width>
-               <height>45</height>
-              </size>
-             </property>
-             <property name="maximumSize">
-              <size>
-               <width>50</width>
-               <height>45</height>
-              </size>
-             </property>
-             <property name="cursor">
-              <cursorShape>PointingHandCursor</cursorShape>
-             </property>
-             <property name="toolTip">
-              <string>Model manager</string>
-             </property>
-             <property name="text">
-              <string/>
-             </property>
-             <property name="icon">
-              <iconset resource="../../../resources_light.qrc">
-               <normaloff>:/icons/light/tech-icon.svg</normaloff>:/icons/light/tech-icon.svg</iconset>
-             </property>
-             <property name="iconSize">
-              <size>
-               <width>18</width>
-               <height>18</height>
-              </size>
-             </property>
-             <property name="checkable">
-              <bool>true</bool>
-             </property>
-             <property name="flat">
-              <bool>true</bool>
-             </property>
-            </widget>
-           </item>
-           <item>
-            <widget class="Line" name="line_5">
-             <property name="orientation">
-              <enum>Qt::Horizontal</enum>
-             </property>
-            </widget>
-           </item>
-           <item>
             <widget class="QPushButton" name="settings_button">
              <property name="sizePolicy">
               <sizepolicy hsizetype="Maximum" vsizetype="MinimumExpanding">
@@ -1389,7 +1335,7 @@
     <rect>
      <x>0</x>
      <y>0</y>
-     <width>1137</width>
+     <width>841</width>
      <height>22</height>
     </rect>
    </property>
@@ -3046,22 +2992,6 @@
     <hint type="destinationlabel">
      <x>1002</x>
      <y>86</y>
-    </hint>
-   </hints>
-  </connection>
-  <connection>
-   <sender>model_manager_button</sender>
-   <signal>toggled(bool)</signal>
-   <receiver>MainWindow</receiver>
-   <slot>model_manager_toggled(bool)</slot>
-   <hints>
-    <hint type="sourcelabel">
-     <x>1108</x>
-     <y>560</y>
-    </hint>
-    <hint type="destinationlabel">
-     <x>1021</x>
-     <y>0</y>
     </hint>
    </hints>
   </connection>
