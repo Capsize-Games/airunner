@@ -149,6 +149,10 @@ class SettingsMixin:
             autoload_sd=True,
             autoload_llm=False,
             show_nsfw_warning=True,
+            document_settings={
+                "width": 512,
+                "height": 512,
+            },
             font_settings={
                 "chat": {
                     "font_family": "Arial",
