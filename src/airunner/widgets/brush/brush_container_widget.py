@@ -23,30 +23,12 @@ class BrushContainerWidget(BaseWidget):
         self.ui.controlnet.setCurrentIndex(current_index)
         self.ui.controlnet.blockSignals(False)
         self.ui.toggle_auto_generate_while_drawing.blockSignals(True)
-        self.ui.toggle_auto_generate_while_drawing.setChecked(self.settings["canvas_settings"]["enable_automatic_drawing"])
+        self.ui.toggle_auto_generate_while_drawing.setChecked(self.settings["drawing_pad_settings"]["enable_automatic_drawing"])
         self.ui.toggle_auto_generate_while_drawing.blockSignals(False)
-
-        for k in [
-            "brush_size_slider",
-            "controlnet_conditioning_scale",
-            "controlnet_guidance_scale",
-            "strength_slider",
-        ]:
-            getattr(self.ui, k).settings_loaded(self.callback)
-
-    def callback(self, prop, val):
-        settings = self.settings
-        if prop in ["strength"]:
-            settings["generator_settings"][prop] = val
-        elif prop in ["conditioning_scale", "guidance_scale"]:
-            settings["generator_settings"]["controlnet_image_settings"][prop] = val
-        else:
-            settings["brush_settings"][prop] = val
-        self.settings = settings
 
     def toggle_auto_generate_while_drawing(self, val):
         settings = self.settings
-        settings["canvas_settings"]["enable_automatic_drawing"] = val
+        settings["drawing_pad_settings"]["enable_automatic_drawing"] = val
         self.settings = settings
 
     def color_button_clicked(self):

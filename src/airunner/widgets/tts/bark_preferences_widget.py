@@ -11,18 +11,6 @@ class BarkPreferencesWidget(BaseWidget):
         self.voices = VOICES
         self.initialize_form()
 
-        for k in [
-            "fine_temperature",
-            "coarse_temperature",
-            "semantic_temperature",
-        ]:
-            getattr(self.ui, k).settings_loaded(self.callback)
-
-    def callback(self, prop, val):
-        settings = self.settings
-        settings["tts_settings"]["bark"]["espeak"][prop] = val
-        self.settings = settings
-
     def initialize_form(self):
         elements = [
             self.ui.language_combobox,

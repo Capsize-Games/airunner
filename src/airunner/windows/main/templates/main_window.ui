@@ -3185,22 +3185,6 @@
    </hints>
   </connection>
   <connection>
-   <sender>actionImage_Browser</sender>
-   <signal>triggered()</signal>
-   <receiver>MainWindow</receiver>
-   <slot>action_show_image_browser()</slot>
-   <hints>
-    <hint type="sourcelabel">
-     <x>-1</x>
-     <y>-1</y>
-    </hint>
-    <hint type="destinationlabel">
-     <x>561</x>
-     <y>661</y>
-    </hint>
-   </hints>
-  </connection>
-  <connection>
    <sender>actionModel_Manager_3</sender>
    <signal>triggered()</signal>
    <receiver>MainWindow</receiver>

@@ -60,7 +60,7 @@
             <bool>true</bool>
            </property>
            <property name="settings_property" stdset="0">
-            <string>pitch</string>
+            <string>espeak.pitch</string>
            </property>
            <property name="slider_single_step" stdset="0">
             <number>1</number>
@@ -73,9 +73,6 @@
            </property>
            <property name="spinbox_page_step" stdset="0">
             <double>0.100000000000000</double>
-           </property>
-           <property name="slider_callback" stdset="0">
-            <string>handle_value_change</string>
            </property>
           </widget>
          </item>
@@ -153,7 +150,7 @@
             <bool>true</bool>
            </property>
            <property name="settings_property" stdset="0">
-            <string>volume</string>
+            <string>espeak.volume</string>
            </property>
            <property name="slider_single_step" stdset="0">
             <number>1</number>
@@ -166,9 +163,6 @@
            </property>
            <property name="spinbox_page_step" stdset="0">
             <double>0.100000000000000</double>
-           </property>
-           <property name="slider_callback" stdset="0">
-            <string>handle_value_change</string>
            </property>
           </widget>
          </item>
@@ -199,7 +193,7 @@
             <bool>true</bool>
            </property>
            <property name="settings_property" stdset="0">
-            <string>rate</string>
+            <string>espeak.rate</string>
            </property>
            <property name="slider_single_step" stdset="0">
             <number>1</number>
@@ -212,9 +206,6 @@
            </property>
            <property name="spinbox_page_step" stdset="0">
             <double>0.100000000000000</double>
-           </property>
-           <property name="slider_callback" stdset="0">
-            <string>handle_value_change</string>
            </property>
           </widget>
          </item>

@@ -97,9 +97,6 @@
        <property name="label_text" stdset="0">
         <string>DDIM ETA</string>
        </property>
-       <property name="slider_callback" stdset="0">
-        <string notr="true">handle_value_change</string>
-       </property>
        <property name="current_value" stdset="0">
         <number>1</number>
        </property>
@@ -139,9 +136,6 @@
        </property>
        <property name="label_text" stdset="0">
         <string>Frames</string>
-       </property>
-       <property name="slider_callback" stdset="0">
-        <string notr="true">handle_value_change</string>
        </property>
        <property name="current_value" stdset="0">
         <number>0</number>
@@ -209,7 +203,7 @@
       <string/>
      </property>
      <property name="icon">
-      <iconset resource="../../../resources_light.qrc">
+      <iconset>
        <normaloff>:/icons/light/exchange-refresh-icon.svg</normaloff>:/icons/light/exchange-refresh-icon.svg</iconset>
      </property>
     </widget>
@@ -259,9 +253,6 @@
        </property>
        <property name="label_text" stdset="0">
         <string>Steps</string>
-       </property>
-       <property name="slider_callback" stdset="0">
-        <string notr="true">handle_value_change</string>
        </property>
        <property name="current_value" stdset="0">
         <number>0</number>
@@ -321,9 +312,6 @@
        <property name="spinbox_page_step" stdset="0">
         <double>0.010000000000000</double>
        </property>
-       <property name="slider_callback" stdset="0">
-        <string notr="true">handle_value_change</string>
-       </property>
        <property name="settings_property" stdset="0">
         <string notr="true">generator_settings.scale</string>
        </property>
@@ -343,9 +331,6 @@
        </property>
        <property name="label_text" stdset="0">
         <string>Samples</string>
-       </property>
-       <property name="slider_callback" stdset="0">
-        <string notr="true">handle_value_change</string>
        </property>
        <property name="current_value" stdset="0">
         <number>0</number>
@@ -410,9 +395,6 @@
        </property>
        <property name="slider_minimum" stdset="0">
         <number>0</number>
-       </property>
-       <property name="slider_callback" stdset="0">
-        <string notr="true">handle_value_change</string>
        </property>
        <property name="settings_property" stdset="0">
         <string notr="true">generator_settings.clip_skip</string>
