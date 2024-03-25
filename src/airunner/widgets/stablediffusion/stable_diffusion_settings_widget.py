@@ -11,26 +11,6 @@ class StableDiffusionSettingsWidget(BaseWidget):
         self.register(SignalCode.APPLICATION_MODELS_CHANGED_SIGNAL, self.on_models_changed_signal)
         self.load_presets()
 
-        for k in [
-            "samples",
-            "clip_skip_slider_widget",
-            "ddim_eta_slider_widget",
-            "frames_slider_widget",
-            "steps_widget",
-            "scale_widget"
-        ]:
-            getattr(self.ui, k).settings_loaded(self.callback)
-
-    def callback(self, prop, val):
-        settings = self.settings
-        if prop in ["strength"]:
-            settings["generator_settings"][prop] = val
-        elif prop in ["conditioning_scale", "guidance_scale"]:
-            settings["generator_settings"]["controlnet_image_settings"][prop] = val
-        else:
-            settings["generator_settings"][prop] = val
-        self.settings = settings
-
     def load_presets(self):
         self.presets = self.settings["generator_settings"]["presets"]
 
@@ -76,6 +56,7 @@ class StableDiffusionSettingsWidget(BaseWidget):
             val = GeneratorSection.OUTPAINT.value
         settings = self.settings
         settings["pipeline"] = val
+        settings["generator_settings"]["section"] = val
         self.settings = settings
         self.load_versions()
         self.load_models()
