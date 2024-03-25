@@ -75,7 +75,7 @@ class MessageWidget(BaseWidget):
     def set_content_size(self):
         doc_height = self.ui.content.document().size().height()
         doc_width = self.ui.content.document().size().width()
-        self.setMinimumHeight(int(doc_height))
+        self.setMinimumHeight(int(doc_height) + 25)
         self.setMinimumWidth(int(doc_width))
 
     def sizeChange(self):
