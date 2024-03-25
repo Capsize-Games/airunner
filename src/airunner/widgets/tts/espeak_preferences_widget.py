@@ -44,18 +44,6 @@ class ESpeakPreferencesWidget(BaseWidget):
         for element in elements:
             element.blockSignals(False)
 
-        for k in [
-            "rate",
-            "pitch",
-            "volume"
-        ]:
-            getattr(self.ui, k).settings_loaded(self.callback)
-
-    def callback(self, prop, val):
-        settings = self.settings
-        settings["tts_settings"]["espeak"][prop] = val
-        self.settings = settings
-
     def language_changed(self, text):
         settings = self.settings
         settings["tts_settings"]["espeak"]["language"] = text

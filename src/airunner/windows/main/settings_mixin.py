@@ -267,6 +267,7 @@ class SettingsMixin:
                 image=None,
                 mask=None,
                 enabled=True,
+                enable_automatic_drawing=True
             ),
             metadata_settings=dict(
                 image_export_metadata_prompt=True,

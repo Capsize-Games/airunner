@@ -136,25 +136,6 @@ class LLMSettingsWidget(BaseWidget):
         for element in elements:
             element.blockSignals(False)
 
-        for k in [
-            "top_p",
-            "max_length",
-            "repetition_penalty",
-            "min_length",
-            "length_penalty",
-            "num_beams",
-            "ngram_size",
-            "temperature",
-            "sequences",
-            "top_k",
-        ]:
-            getattr(self.ui, k).settings_loaded(self.callback)
-
-    def callback(self, prop, val):
-        settings = self.settings
-        settings["llm_generator_settings"][prop] = val
-        self.settings = settings
-
     def model_text_changed(self, val):
         settings = self.settings
         settings["current_llm_generator"] = val

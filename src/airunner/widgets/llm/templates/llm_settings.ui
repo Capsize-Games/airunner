@@ -194,9 +194,6 @@
              <property name="spinbox_page_step" stdset="0">
               <double>0.100000000000000</double>
              </property>
-             <property name="slider_callback" stdset="0">
-              <string>handle_value_change</string>
-             </property>
             </widget>
            </item>
           </layout>
@@ -239,9 +236,6 @@
              </property>
              <property name="spinbox_page_step" stdset="0">
               <double>0.100000000000000</double>
-             </property>
-             <property name="slider_callback" stdset="0">
-              <string>handle_value_change</string>
              </property>
             </widget>
            </item>
@@ -290,9 +284,6 @@
              <property name="spinbox_page_step" stdset="0">
               <double>1.000000000000000</double>
              </property>
-             <property name="slider_callback" stdset="0">
-              <string>handle_value_change</string>
-             </property>
             </widget>
            </item>
           </layout>
@@ -335,9 +326,6 @@
              </property>
              <property name="spinbox_page_step" stdset="0">
               <double>0.100000000000000</double>
-             </property>
-             <property name="slider_callback" stdset="0">
-              <string>handle_value_change</string>
              </property>
             </widget>
            </item>
@@ -454,9 +442,6 @@
              <property name="spinbox_page_step" stdset="0">
               <double>10.000000000000000</double>
              </property>
-             <property name="slider_callback" stdset="0">
-              <string>handle_value_change</string>
-             </property>
             </widget>
            </item>
           </layout>
@@ -499,9 +484,6 @@
              </property>
              <property name="spinbox_page_step" stdset="0">
               <number>2556</number>
-             </property>
-             <property name="slider_callback" stdset="0">
-              <string>handle_value_change</string>
              </property>
             </widget>
            </item>
@@ -550,9 +532,6 @@
              <property name="spinbox_page_step" stdset="0">
               <double>0.100000000000000</double>
              </property>
-             <property name="slider_callback" stdset="0">
-              <string>handle_value_change</string>
-             </property>
             </widget>
            </item>
           </layout>
@@ -595,9 +574,6 @@
              </property>
              <property name="spinbox_page_step" stdset="0">
               <number>10</number>
-             </property>
-             <property name="slider_callback" stdset="0">
-              <string>handle_value_change</string>
              </property>
             </widget>
            </item>
@@ -646,9 +622,6 @@
              <property name="spinbox_page_step" stdset="0">
               <double>0.100000000000000</double>
              </property>
-             <property name="slider_callback" stdset="0">
-              <string>handle_value_change</string>
-             </property>
             </widget>
            </item>
           </layout>
@@ -691,9 +664,6 @@
              </property>
              <property name="spinbox_page_step" stdset="0">
               <number>2556</number>
-             </property>
-             <property name="slider_callback" stdset="0">
-              <string>handle_value_change</string>
              </property>
             </widget>
            </item>
