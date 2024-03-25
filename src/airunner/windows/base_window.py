@@ -1,8 +1,11 @@
 import os
 from PySide6.QtCore import Qt
 from PySide6.QtWidgets import QDialog
+
+from airunner.enums import SignalCode
 from airunner.mediator_mixin import MediatorMixin
 from airunner.service_locator import ServiceLocator
+from airunner.settings import DARK_THEME_NAME, LIGHT_THEME_NAME
 from airunner.windows.main.settings_mixin import SettingsMixin
 
 
@@ -39,8 +42,13 @@ class BaseWindow(
         """
         Sets the stylesheet for the application based on the current theme
         """
-        theme_name = "dark_theme" if self.settings["dark_mode_enabled"] else "light_theme"
-        here = os.path.dirname(os.path.realpath(__file__))
-        with open(os.path.join(here, "..", "styles", theme_name, "styles.qss"), "r") as f:
-            stylesheet = f.read()
-        self.setStyleSheet(stylesheet)
+        print("SET STYLESHEET")
+        if self.settings["override_system_theme"]:
+            theme_name = DARK_THEME_NAME if self.settings["dark_mode_enabled"] else LIGHT_THEME_NAME
+            here = os.path.dirname(os.path.realpath(__file__))
+            with open(os.path.join(here, "..", "styles", theme_name, "styles.qss"), "r") as f:
+                stylesheet = f.read()
+            self.setStyleSheet(stylesheet)
+        else:
+            self.setStyleSheet("")
+        self.update()
