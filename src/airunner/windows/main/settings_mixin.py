@@ -122,6 +122,7 @@ class SettingsMixin:
             resize_on_paste=True,
             image_to_new_layer=True,
             dark_mode_enabled=True,
+            override_system_theme=True,
             latest_version_check=True,
             app_version="",
             allow_online_mode=True,
@@ -148,6 +149,16 @@ class SettingsMixin:
             autoload_sd=True,
             autoload_llm=False,
             show_nsfw_warning=True,
+            font_settings={
+                "chat": {
+                    "font_family": "Arial",
+                    "font_size": 12,
+                },
+                "primary": {
+                    "font_family": "Arial",
+                    "font_size": 12,
+                }
+            },
             llm_templates={
                 "Stable Diffusion Prompt Template": dict(
                     name="Stable Diffusion Prompt Template",
