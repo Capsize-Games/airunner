@@ -1,6 +1,6 @@
 import traceback
 
-from PySide6.QtCore import QSettings, QByteArray, QDataStream, QIODevice, Slot
+from PySide6.QtCore import QSettings, QByteArray, QDataStream, QIODevice
 
 from airunner.settings import (
     DEFAULT_BRUSH_PRIMARY_COLOR,
@@ -13,7 +13,6 @@ from airunner.data.bootstrap.model_bootstrap_data import model_bootstrap_data
 from airunner.data.bootstrap.pipeline_bootstrap_data import pipeline_bootstrap_data
 from airunner.enums import Mode, SignalCode, CanvasToolName, LLMActionType, ImageGenerator, GeneratorSection, \
     ImageCategory, Controlnet
-from airunner.service_locator import ServiceLocator
 from airunner.settings import BASE_PATH, MALE, DEFAULT_MODELS, DEFAULT_MODELS_VERSION, LLM_TEMPLATES_VERSION
 from airunner.settings import DEFAULT_PATHS
 from airunner.settings import DEFAULT_CHATBOT
@@ -123,6 +122,7 @@ class SettingsMixin:
             resize_on_paste=True,
             image_to_new_layer=True,
             dark_mode_enabled=True,
+            override_system_theme=True,
             latest_version_check=True,
             app_version="",
             allow_online_mode=True,
@@ -149,6 +149,79 @@ class SettingsMixin:
             autoload_sd=True,
             autoload_llm=False,
             show_nsfw_warning=True,
+            document_settings={
+                "width": 512,
+                "height": 512,
+            },
+            font_settings={
+                "chat": {
+                    "font_family": "Arial",
+                    "font_size": 12,
+                },
+                "primary": {
+                    "font_family": "Arial",
+                    "font_size": 12,
+                }
+            },
+            prompt_templates=[
+                {
+                    "use_guardrails": True,
+                    "template_name": "image",
+                    "username": "User",
+                    "botname": "AIRunner",
+                    "guardrails": (
+                        "Avoid generating images that are illegal, "
+                        "harmful, or might be seen as offensive."
+                    ),
+                    "system": "\n".join([
+                        (
+                            "You are an image captioning expert. You will be given the "
+                            "description of an image. Your goal is to convert that "
+                            "description into a better, more fitting description which "
+                            "will capture the essence and the details of the image."
+                        ),
+                        (
+                            "You may ask the user for more details before "
+                            "proceeding. You may also ask the user to clarify the "
+                            "description if it is not clear."
+                        ),
+                        "------"
+                        "Examples:",
+                        "User: create an image of a cat in the woods",
+                        (
+                            "Assistant: A (fluffy, tabby cat)+ exploring the depths of "
+                            "an (enchanting forest). (well-lit), sunlight filters, "
+                            "professional portrait."
+                        ),
+                        "User: the chat should look like a superhero",
+                        (
+                            "Assistant: " "A (cat dressed in a superhero costume), "
+                            "standing in the (middle of a forest)."
+                        ),
+                        "------",
+                        "Use parentheses to indicate the most important details of the "
+                        "image. Add a plus sign after a word or parenthesis to add "
+                        "extra emphasis. More plus signs indicate more emphasis. Minus "
+                        "signs can be used to indicate less emphasis.",
+                        "You should describe the image type (professional photograph, "
+                        "portrait, illustration etc)",
+                        (
+                            "You should also describe the lighting (well-lit, dim, "
+                            "dark etc), "
+                            "the color, the composition and the mood."
+                        ),
+                        (
+                            "When returning prompts you must choose either "
+                            "\"art\" or \"photo\" and you absolutely must include "
+                            "the following JSON format:\n"
+                            "```json\n{\"prompt\": \"your prompt here\", \"type\": \"your type here\"}\n```\n"
+                            "You must **NEVER** deviate from that format. You must "
+                            "always return the prompt and type as JSON format. "
+                            "This is **MANDATORY**."
+                        )
+                    ])
+                },
+            ],
             llm_templates={
                 "Stable Diffusion Prompt Template": dict(
                     name="Stable Diffusion Prompt Template",
@@ -177,7 +250,8 @@ class SettingsMixin:
                 is_maximized=False,
                 is_fullscreen=False,
                 canvas_splitter=None,
-                canvas_side_splitter=None
+                canvas_side_splitter=None,
+                canvas_side_splitter_2=None
             ),
             memory_settings=dict(
                 use_last_channels=True,
@@ -194,11 +268,6 @@ class SettingsMixin:
                 tome_sd_ratio=600,
                 move_unused_model_to_cpu=False,
                 unload_unused_models=True,
-            ),
-            drawing_pad_settings=dict(
-                image=None,
-                mask=None,
-                enabled=True,
             ),
             grid_settings=dict(
                 cell_size=64,
@@ -257,9 +326,22 @@ class SettingsMixin:
             canvas_settings=dict(
                 pos_x=0,
                 pos_y=0,
+                mask=None,
                 image=None,
-                enable_automatic_drawing=True,
                 active_canvas="",
+            ),
+            controlnet_settings=dict(
+                image=None
+            ),
+            outpaint_settings=dict(
+                image=None,
+                enabled=True,
+            ),
+            drawing_pad_settings=dict(
+                image=None,
+                mask=None,
+                enabled=True,
+                enable_automatic_drawing=True
             ),
             metadata_settings=dict(
                 image_export_metadata_prompt=True,
@@ -275,9 +357,6 @@ class SettingsMixin:
                 image_export_metadata_scheduler=True,
                 export_metadata=True,
                 import_metadata=True,
-            ),
-            controlnet_settings=dict(
-                image=None
             ),
             generator_settings=GENERATOR_SETTINGS,
             llm_generator_settings=dict(

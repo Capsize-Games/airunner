@@ -16,19 +16,23 @@ from PySide6.QtGui import (QBrush, QColor, QConicalGradient, QCursor,
     QImage, QKeySequence, QLinearGradient, QPainter,
     QPalette, QPixmap, QRadialGradient, QTransform)
 from PySide6.QtWidgets import (QAbstractSpinBox, QApplication, QDoubleSpinBox, QGridLayout,
-    QSizePolicy, QSlider, QWidget)
+    QGroupBox, QSizePolicy, QSlider, QWidget)
 
 class Ui_slider_widget(object):
     def setupUi(self, slider_widget):
         if not slider_widget.objectName():
             slider_widget.setObjectName(u"slider_widget")
-        slider_widget.resize(242, 93)
+        slider_widget.resize(474, 64)
         slider_widget.setStyleSheet(u"")
         self.gridLayout = QGridLayout(slider_widget)
         self.gridLayout.setSpacing(0)
         self.gridLayout.setObjectName(u"gridLayout")
         self.gridLayout.setContentsMargins(0, 0, 0, 0)
-        self.slider = QSlider(slider_widget)
+        self.groupBox = QGroupBox(slider_widget)
+        self.groupBox.setObjectName(u"groupBox")
+        self.gridLayout_2 = QGridLayout(self.groupBox)
+        self.gridLayout_2.setObjectName(u"gridLayout_2")
+        self.slider = QSlider(self.groupBox)
         self.slider.setObjectName(u"slider")
         sizePolicy = QSizePolicy(QSizePolicy.Policy.Expanding, QSizePolicy.Policy.Preferred)
         sizePolicy.setHorizontalStretch(0)
@@ -41,25 +45,31 @@ class Ui_slider_widget(object):
         self.slider.setPageStep(1)
         self.slider.setOrientation(Qt.Horizontal)
 
-        self.gridLayout.addWidget(self.slider, 0, 0, 1, 1)
+        self.gridLayout_2.addWidget(self.slider, 0, 0, 1, 1)
 
-        self.slider_spinbox = QDoubleSpinBox(slider_widget)
+        self.slider_spinbox = QDoubleSpinBox(self.groupBox)
         self.slider_spinbox.setObjectName(u"slider_spinbox")
-        sizePolicy1 = QSizePolicy(QSizePolicy.Policy.Fixed, QSizePolicy.Policy.Fixed)
+        sizePolicy1 = QSizePolicy(QSizePolicy.Policy.Minimum, QSizePolicy.Policy.Fixed)
         sizePolicy1.setHorizontalStretch(0)
         sizePolicy1.setVerticalStretch(0)
         sizePolicy1.setHeightForWidth(self.slider_spinbox.sizePolicy().hasHeightForWidth())
         self.slider_spinbox.setSizePolicy(sizePolicy1)
+        self.slider_spinbox.setMinimumSize(QSize(75, 0))
+        self.slider_spinbox.setMaximumSize(QSize(75, 16777215))
         self.slider_spinbox.setStyleSheet(u"")
         self.slider_spinbox.setWrapping(False)
         self.slider_spinbox.setFrame(False)
         self.slider_spinbox.setAlignment(Qt.AlignCenter)
         self.slider_spinbox.setButtonSymbols(QAbstractSpinBox.UpDownArrows)
+        self.slider_spinbox.setKeyboardTracking(True)
         self.slider_spinbox.setProperty("showGroupSeparator", False)
         self.slider_spinbox.setMaximum(1.000000000000000)
         self.slider_spinbox.setSingleStep(0.010000000000000)
 
-        self.gridLayout.addWidget(self.slider_spinbox, 0, 1, 1, 1)
+        self.gridLayout_2.addWidget(self.slider_spinbox, 0, 1, 1, 1)
+
+
+        self.gridLayout.addWidget(self.groupBox, 0, 0, 1, 1)
 
 
         self.retranslateUi(slider_widget)
@@ -71,5 +81,6 @@ class Ui_slider_widget(object):
 
     def retranslateUi(self, slider_widget):
         slider_widget.setWindowTitle(QCoreApplication.translate("slider_widget", u"Form", None))
+        self.groupBox.setTitle(QCoreApplication.translate("slider_widget", u"GroupBox", None))
     # retranslateUi
 
