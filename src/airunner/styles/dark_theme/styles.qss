@@ -1,10 +1,17 @@
- QWidget {
+QWidget {
     background-color: #000;
     color: #C8C8C8;
     border-color: #C8C8C8;
-    border: none;
     margin: 0px;
     padding: 0px;
+}
+
+QDoubleSpinBox:disabled {
+    background-color: #222;
+}
+
+QDoubleSpinBox {
+    background-color: rgba(0, 132, 185, 50);
 }
 
 #generator_container,
@@ -196,11 +203,6 @@ QLabel#slider_label {
     font-size: 8pt;
     color: #C8C8C8;
     font-weight: bold;
-}
-QDoubleSpinBox {
-    background-color: rgba(0, 132, 185, 50);
-    border: 1px solid rgba(0, 132, 185, 255);
-    border-left: none;
 }
 
 GeneratorTabWidget#generator_widget QTabWidget::pane {
@@ -492,18 +494,12 @@ QWidget:disabled {
 }
 
 QSlider:disabled {
-    border-color: @line-dark-color;
     background-color: #000;
 }
 
 QSlider::handle:disabled {
     border-color: #666666;
     background-color: #666666;
-}
-
-QDoubleSpinBox:disabled {
-    background-color: #222;
-    border-color: #666666;
 }
 
 QTabWidget {

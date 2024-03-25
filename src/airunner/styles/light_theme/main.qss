@@ -2,7 +2,6 @@ QWidget {
     background-color: @light-color;
     color: @dark-color;
     border-color: @dark-color;
-    border: none;
     margin: 0px;
     padding: 0px;
 }
@@ -139,8 +138,6 @@ QLabel#slider_label {
 }
 QDoubleSpinBox {
 	background-color: @light-color;
-    border: 1px solid @primary-color;
-	border-left: none;
 	border-radius: 0px;
 	font-size: 8pt;
 }
