@@ -67,6 +67,8 @@ class MainWindow(
 
     def __init__(self, *args, **kwargs):
         self.ui = Ui_MainWindow()
+        self._override_system_theme = None
+        self._dark_mode_enabled = None
         self.update_popup = None
         self._document_path = None
         self.prompt = None
@@ -229,6 +231,10 @@ class MainWindow(
         self.register(SignalCode.ENABLE_ERASER_TOOL_SIGNAL, lambda _message: self.action_toggle_eraser(True))
         self.register(SignalCode.ENABLE_SELECTION_TOOL_SIGNAL, lambda _message: self.action_toggle_select(True))
         self.register(SignalCode.ENABLE_MOVE_TOOL_SIGNAL, lambda _message: self.action_toggle_active_grid_area(True))
+        self.register(SignalCode.APPLICATION_SETTINGS_CHANGED_SIGNAL, self.on_application_settings_changed_signal)
+
+    def on_application_settings_changed_signal(self, _message: dict):
+        self.set_stylesheet()
 
     def on_vision_captured_signal(self, data: dict):
         # Create the window if it doesn't exist
@@ -768,24 +774,37 @@ class MainWindow(
         """
         Sets the stylesheet for the application based on the current theme
         """
-        self.logger.debug("Setting stylesheet")
-        theme_name = DARK_THEME_NAME if self.settings["dark_mode_enabled"] else LIGHT_THEME_NAME
-        here = os.path.dirname(os.path.realpath(__file__))
-        with open(os.path.join(here, "..", "..", "styles", theme_name, "styles.qss"), "r") as f:
-            stylesheet = f.read()
-        self.setStyleSheet(stylesheet)
-        for icon_data in [
-            ("tech-icon", "model_manager_button"),
-            ("pencil-icon", "toggle_brush_button"),
-            ("eraser-icon", "toggle_eraser_button"),
-            ("frame-grid-icon", "toggle_grid_button"),
-            ("circle-center-icon", "focus_button"),
-            ("artificial-intelligence-ai-chip-icon", "ai_button"),
-            ("setting-line-icon", "settings_button"),
-            ("object-selected-icon", "toggle_active_grid_area_button"),
-            ("select-svgrepo-com", "toggle_select_button"),
-        ]:
-            self.set_icons(icon_data[0], icon_data[1], "dark" if self.settings["dark_mode_enabled"] else "light")
+        if (
+            self._override_system_theme is not self.settings["override_system_theme"] or
+            self._dark_mode_enabled is not self.settings["dark_mode_enabled"]
+        ):
+            self._override_system_theme = self.settings["override_system_theme"]
+            self._dark_mode_enabled = self.settings["dark_mode_enabled"]
+
+            if self._override_system_theme:
+                self.logger.debug("Setting stylesheet")
+                theme_name = DARK_THEME_NAME if self.settings["dark_mode_enabled"] else LIGHT_THEME_NAME
+                here = os.path.dirname(os.path.realpath(__file__))
+                with open(os.path.join(here, "..", "..", "styles", theme_name, "styles.qss"), "r") as f:
+                    stylesheet = f.read()
+                self.setStyleSheet(stylesheet)
+            else:
+                self.logger.debug("Using system theme")
+                self.setStyleSheet("")
+                self.emit_signal(SignalCode.APPLICATION_SETTINGS_CHANGED_SIGNAL)
+
+            for icon_data in [
+                ("tech-icon", "model_manager_button"),
+                ("pencil-icon", "toggle_brush_button"),
+                ("eraser-icon", "toggle_eraser_button"),
+                ("frame-grid-icon", "toggle_grid_button"),
+                ("circle-center-icon", "focus_button"),
+                ("artificial-intelligence-ai-chip-icon", "ai_button"),
+                ("setting-line-icon", "settings_button"),
+                ("object-selected-icon", "toggle_active_grid_area_button"),
+                ("select-svgrepo-com", "toggle_select_button"),
+            ]:
+                self.set_icons(icon_data[0], icon_data[1], "dark" if self.settings["dark_mode_enabled"] else "light")
 
     def showEvent(self, event):
         super().showEvent(event)
