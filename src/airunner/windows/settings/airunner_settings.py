@@ -7,6 +7,7 @@ from airunner.service_locator import ServiceLocator
 from airunner.widgets.api_token.api_token_widget import APITokenWidget
 from airunner.widgets.embeddings.embeddings_container_widget import EmbeddingsContainerWidget
 from airunner.widgets.export_preferences.export_preferences_widget import ExportPreferencesWidget
+from airunner.widgets.font_settings.font_settings_widget import FontSettingsWidget
 from airunner.widgets.grid_preferences.grid_preferences_widget import GridPreferencesWidget
 from airunner.widgets.image_generator_preferences.image_generator_preferences_widget import ImageGeneratorPreferencesWidget
 
@@ -228,11 +229,28 @@ class SettingsWindow(BaseWindow):
                         "description": "If enabled, AI Runner will use a dark theme."
                     },
                     {
+                        "name": "override_system_theme",
+                        "display_name": "Override System Theme",
+                        "checkable": True,
+                        "description": "If enabled, override the system theme with the selected theme."
+                    },
+                    {
                         "name": "check_for_updates",
                         "display_name": "Check for updates",
                         "checkable": True,
                         "description": "If enabled, AI Runner will check for updates on startup."
                     }
+                ]
+            },
+            {
+                "section": "Font Settings",
+                "files": [
+                    {
+                        "name": "font_settings",
+                        "display_name": "Fonts",
+                        "checkable": False,
+                        "description": "Change the default font settings for various sections of the application."
+                    },
                 ]
             },
             {
@@ -299,6 +317,8 @@ class SettingsWindow(BaseWindow):
                 checked = self.settings["image_to_new_layer"] is True
             elif name == "dark_mode":
                 checked = self.settings["dark_mode_enabled"]
+            elif name == "override_system_theme":
+                checked = self.settings["override_system_theme"]
             elif name == "check_for_updates":
                 checked = self.settings["latest_version_check"]
             elif name == "allow_online_mode":
@@ -334,6 +354,9 @@ class SettingsWindow(BaseWindow):
         elif name == "dark_mode":
             checked = item.checkState() == Qt.CheckState.Checked
             settings["dark_mode_enabled"] = checked
+        elif name == "override_system_theme":
+            checked = item.checkState() == Qt.CheckState.Checked
+            settings["override_system_theme"] = checked
         elif name == "check_for_updates":
             checked = item.checkState() == Qt.CheckState.Checked
             settings["latest_version_check"] = checked
@@ -365,7 +388,8 @@ class SettingsWindow(BaseWindow):
             "translation_preferences": TranslationPreferencesWidget,
             "tts_preferences": TTSPreferencesWidget,
             "bot_preferences": BotPreferencesWidget,
-            "llm_preferences": LLMSettingsWidget
+            "llm_preferences": LLMSettingsWidget,
+            "font_settings": FontSettingsWidget,
         }
         if name in widgets:
             widget_object = widgets[name]()
