@@ -39,22 +39,6 @@ class ActiveGridSettingsWidget(BaseWidget):
             SignalCode.APPLICATION_ACTIVE_GRID_AREA_UPDATED: self.update_size
         }
 
-        for k in [
-            "border_opacity_slider_widget",
-            "fill_opacity_slider_widget",
-            "width_slider_widget",
-            "height_slider_widget",
-        ]:
-            getattr(self.ui, k).settings_loaded(self.callback)
-
-    def callback(self, prop, val):
-        settings = self.settings
-        if prop in ["border_opacity", "fill_opacity"]:
-            settings["active_grid_settings"][prop] = val
-        else:
-            settings[prop] = val
-        self.settings = settings
-
     def update_size(self, message: dict):
         settings = message["settings"]
         self.ui.width_slider_widget.blockSignals(True)

@@ -3,7 +3,6 @@ from PySide6.QtWidgets import QSpacerItem, QSizePolicy
 from PySide6.QtCore import Qt
 
 from airunner.enums import SignalCode, ServiceCode, LLMActionType
-from airunner.utils import parse_template
 from airunner.widgets.base_widget import BaseWidget
 from airunner.widgets.llm.loading_widget import LoadingWidget
 from airunner.widgets.llm.templates.chat_prompt_ui import Ui_chat_prompt
@@ -51,7 +50,7 @@ class ChatPromptWidget(BaseWidget):
         if val != "[END]":
             text = self.ui.conversation.toPlainText()
             text += val
-            self.ui.conversation.setText(text)
+            self.ui.conversation.setPlainText(text)
         else:
             self.stop_progress_bar()
             self.generating = False

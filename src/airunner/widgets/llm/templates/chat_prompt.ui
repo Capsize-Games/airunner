@@ -6,7 +6,7 @@
    <rect>
     <x>0</x>
     <y>0</y>
-    <width>679</width>
+    <width>474</width>
     <height>1044</height>
    </rect>
   </property>
@@ -14,47 +14,6 @@
    <string>Form</string>
   </property>
   <layout class="QGridLayout" name="gridLayout">
-   <item row="3" column="0">
-    <layout class="QHBoxLayout" name="horizontalLayout_2">
-     <item>
-      <widget class="QPushButton" name="send_button">
-       <property name="toolTip">
-        <string>Send message</string>
-       </property>
-       <property name="text">
-        <string>Send</string>
-       </property>
-      </widget>
-     </item>
-     <item>
-      <widget class="QProgressBar" name="progressBar">
-       <property name="value">
-        <number>0</number>
-       </property>
-      </widget>
-     </item>
-     <item>
-      <widget class="QPushButton" name="pushButton">
-       <property name="text">
-        <string>Interrupt</string>
-       </property>
-      </widget>
-     </item>
-     <item>
-      <widget class="QPushButton" name="clear_conversatiion_button">
-       <property name="toolTip">
-        <string>Clear conversation</string>
-       </property>
-       <property name="text">
-        <string/>
-       </property>
-       <property name="icon">
-        <iconset theme="user-trash"/>
-       </property>
-      </widget>
-     </item>
-    </layout>
-   </item>
    <item row="1" column="0">
     <widget class="QSplitter" name="chat_prompt_splitter">
      <property name="orientation">
@@ -78,8 +37,8 @@
            <rect>
             <x>0</x>
             <y>0</y>
-            <width>659</width>
-            <height>479</height>
+            <width>454</width>
+            <height>423</height>
            </rect>
           </property>
           <layout class="QGridLayout" name="gridLayout_2">
@@ -97,6 +56,11 @@
            </property>
            <item row="0" column="0">
             <widget class="QTextEdit" name="conversation">
+             <property name="font">
+              <font>
+               <family>CCJoeKubert</family>
+              </font>
+             </property>
              <property name="readOnly">
               <bool>true</bool>
              </property>
@@ -130,8 +94,56 @@
      </widget>
     </widget>
    </item>
+   <item row="3" column="0">
+    <widget class="QPushButton" name="send_button">
+     <property name="toolTip">
+      <string>Send message</string>
+     </property>
+     <property name="text">
+      <string>Send</string>
+     </property>
+    </widget>
+   </item>
+   <item row="6" column="0">
+    <widget class="QProgressBar" name="progressBar">
+     <property name="value">
+      <number>0</number>
+     </property>
+    </widget>
+   </item>
+   <item row="4" column="0">
+    <widget class="QPushButton" name="pushButton">
+     <property name="text">
+      <string>Interrupt</string>
+     </property>
+    </widget>
+   </item>
    <item row="2" column="0">
-    <widget class="QComboBox" name="action"/>
+    <widget class="QComboBox" name="action">
+     <property name="sizeAdjustPolicy">
+      <enum>QComboBox::AdjustToMinimumContentsLengthWithIcon</enum>
+     </property>
+    </widget>
+   </item>
+   <item row="5" column="0">
+    <widget class="QPushButton" name="clear_conversatiion_button">
+     <property name="toolTip">
+      <string>Clear conversation</string>
+     </property>
+     <property name="text">
+      <string/>
+     </property>
+     <property name="icon">
+      <iconset theme="user-trash"/>
+     </property>
+    </widget>
+   </item>
+   <item row="0" column="0">
+    <widget class="QLabel" name="label">
+     <property name="text">
+      <string>TextLabel</string>
+     </property>
+    </widget>
    </item>
   </layout>
  </widget>
@@ -144,12 +156,12 @@
    <slot>prompt_text_changed()</slot>
    <hints>
     <hint type="sourcelabel">
-     <x>460</x>
-     <y>935</y>
+     <x>464</x>
+     <y>880</y>
     </hint>
     <hint type="destinationlabel">
      <x>161</x>
-     <y>-13</y>
+     <y>0</y>
     </hint>
    </hints>
   </connection>
@@ -160,8 +172,8 @@
    <slot>llm_action_changed(QString)</slot>
    <hints>
     <hint type="sourcelabel">
-     <x>178</x>
-     <y>989</y>
+     <x>187</x>
+     <y>911</y>
     </hint>
     <hint type="destinationlabel">
      <x>47</x>
@@ -176,11 +188,11 @@
    <slot>action_button_clicked_send()</slot>
    <hints>
     <hint type="sourcelabel">
-     <x>34</x>
-     <y>1023</y>
+     <x>43</x>
+     <y>942</y>
     </hint>
     <hint type="destinationlabel">
-     <x>-4</x>
+     <x>0</x>
      <y>922</y>
     </hint>
    </hints>
@@ -192,11 +204,11 @@
    <slot>action_button_clicked_clear_conversation()</slot>
    <hints>
     <hint type="sourcelabel">
-     <x>655</x>
-     <y>1021</y>
+     <x>464</x>
+     <y>1003</y>
     </hint>
     <hint type="destinationlabel">
-     <x>676</x>
+     <x>473</x>
      <y>1003</y>
     </hint>
    </hints>
@@ -208,12 +220,12 @@
    <slot>interrupt_button_clicked()</slot>
    <hints>
     <hint type="sourcelabel">
-     <x>605</x>
-     <y>1024</y>
+     <x>464</x>
+     <y>973</y>
     </hint>
     <hint type="destinationlabel">
-     <x>474</x>
-     <y>-8</y>
+     <x>473</x>
+     <y>0</y>
     </hint>
    </hints>
   </connection>

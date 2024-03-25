@@ -5,7 +5,7 @@ import PIL
 from PIL import ImageQt, Image, ImageFilter
 from PIL.ImageQt import QImage
 from PySide6.QtCore import Qt, QPoint
-from PySide6.QtGui import QEnterEvent
+from PySide6.QtGui import QEnterEvent, QDragEnterEvent, QDropEvent, QImageReader, QDragMoveEvent
 from PySide6.QtGui import QPixmap, QPainter
 from PySide6.QtWidgets import QGraphicsScene, QGraphicsPixmapItem, QFileDialog
 
@@ -72,6 +72,20 @@ class CustomScene(
         ServiceLocator.register(ServiceCode.CURRENT_ACTIVE_IMAGE, self.current_active_image)
         self.register(SignalCode.CANVAS_CLEAR, self.on_canvas_clear_signal)
 
+    def dragEnterEvent(self, event: QDragEnterEvent):
+        if event.mimeData().hasUrls():
+            event.acceptProposedAction()
+
+    def dragMoveEvent(self, event: QDragMoveEvent):
+        if event.mimeData().hasUrls():
+            event.acceptProposedAction()
+
+    def dropEvent(self, event: QDropEvent):
+        for url in event.mimeData().urls():
+            path = url.toLocalFile()
+            if path.split('.')[-1].lower().encode() in QImageReader.supportedImageFormats():
+                self.load_image(path)
+
     @property
     def scene_is_active(self):
         return self.canvas_type == self.settings["canvas_settings"]["active_canvas"]
@@ -90,7 +104,6 @@ class CustomScene(
             (SignalCode.CANVAS_PASTE_IMAGE_SIGNAL, self.paste_image_from_clipboard),
             (SignalCode.CANVAS_EXPORT_IMAGE_SIGNAL, self.export_image),
             (SignalCode.CANVAS_IMPORT_IMAGE_SIGNAL, self.import_image),
-            (SignalCode.SCENE_RESIZE_SIGNAL, self.resize),
             (SignalCode.CANVAS_CANCEL_FILTER_SIGNAL, self.cancel_filter),
             (SignalCode.CANVAS_PREVIEW_FILTER_SIGNAL, self.preview_filter),
             (SignalCode.CANVAS_LOAD_IMAGE_FROM_PATH_SIGNAL, self.on_load_image_from_path),
@@ -164,6 +177,8 @@ class CustomScene(
             self.add_image_to_scene(image)
 
     def resize_image(self, image: Image) -> Image:
+        if image is None:
+            return
         max_size = (self.settings["working_width"], self.settings["working_height"])
         image.thumbnail(max_size, PIL.Image.Resampling.BICUBIC)
         return image
@@ -431,23 +446,6 @@ class CustomScene(
     def clear_selection(self):
         self.selection_start_pos = None
         self.selection_stop_pos = None
-
-    def resize(self, message):
-        """
-        This function is triggered on canvas viewport resize.
-        It is used to resize the pixmap which is used for drawing on the canvas.
-
-        We are currently not using this function as it was causing issues
-        and may no longer be required.
-        :param size:
-        :return:
-        """
-        size = message["size"]
-        # self._target_size = size
-        # self._do_resize = True
-
-        # raise the self.item and self.image to the top
-        self.item.setZValue(1)
 
     def drawBackground(self, painter, rect):
         if self._do_resize:

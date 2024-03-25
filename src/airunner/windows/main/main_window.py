@@ -7,7 +7,7 @@ from functools import partial
 from PySide6 import QtGui
 from PySide6.QtCore import Slot, Signal
 from PySide6.QtGui import QGuiApplication
-from PySide6.QtWidgets import QApplication, QMainWindow, QDialog, QMessageBox, QCheckBox
+from PySide6.QtWidgets import QApplication, QMainWindow, QDialog, QMessageBox, QCheckBox, QVBoxLayout
 
 from airunner.aihandler.logger import Logger
 from airunner.settings import STATUS_ERROR_COLOR, STATUS_NORMAL_COLOR_LIGHT, STATUS_NORMAL_COLOR_DARK, \
@@ -17,10 +17,10 @@ from airunner.mediator_mixin import MediatorMixin
 from airunner.resources_dark_rc import *
 from airunner.settings import BASE_PATH, DISCORD_LINK, BUG_REPORT_LINK, VULNERABILITY_REPORT_LINK
 from airunner.utils import get_version, default_hf_cache_dir, set_widget_state, clear_memory
+from airunner.widgets.model_manager.model_manager_widget import ModelManagerWidget
 from airunner.widgets.status.status_widget import StatusWidget
 from airunner.windows.about.about import AboutWindow
 from airunner.windows.filter_window import FilterWindow
-from airunner.windows.image_browser.templates.image_browser_window_ui import Ui_image_browser_window
 from airunner.windows.image_window import ImageWindow
 from airunner.windows.main.ai_model_mixin import AIModelMixin
 from airunner.windows.main.controlnet_model_mixin import ControlnetModelMixin
@@ -68,6 +68,8 @@ class MainWindow(
 
     def __init__(self, *args, **kwargs):
         self.ui = Ui_MainWindow()
+        self._override_system_theme = None
+        self._dark_mode_enabled = None
         self.update_popup = None
         self._document_path = None
         self.prompt = None
@@ -230,6 +232,10 @@ class MainWindow(
         self.register(SignalCode.ENABLE_ERASER_TOOL_SIGNAL, lambda _message: self.action_toggle_eraser(True))
         self.register(SignalCode.ENABLE_SELECTION_TOOL_SIGNAL, lambda _message: self.action_toggle_select(True))
         self.register(SignalCode.ENABLE_MOVE_TOOL_SIGNAL, lambda _message: self.action_toggle_active_grid_area(True))
+        self.register(SignalCode.APPLICATION_SETTINGS_CHANGED_SIGNAL, self.on_application_settings_changed_signal)
+
+    def on_application_settings_changed_signal(self, _message: dict):
+        self.set_stylesheet()
 
     def on_vision_captured_signal(self, data: dict):
         # Create the window if it doesn't exist
@@ -267,7 +273,6 @@ class MainWindow(
         self.ui.tts_button.blockSignals(False)
         self.ui.v2t_button.blockSignals(False)
         self.logger.debug("Setting buttons")
-        self.set_all_section_buttons()
         self.initialize_tool_section_buttons()
 
     def do_listen(self):
@@ -354,13 +359,13 @@ class MainWindow(
 
     @Slot()
     def action_show_model_manager(self):
-        self.model_manager_toggled(True)
-
-    def action_show_image_browser(self):
-        self.image_browser_dialog = QDialog()
-        self.image_browser_ui = Ui_image_browser_window()
-        self.image_browser_ui.setupUi(self.image_browser_dialog)
-        self.image_browser_dialog.show()
+        self.dialog = QDialog()
+        self.dialog.setWindowTitle("Model Manager")
+        self.layout = QVBoxLayout()
+        self.model_manager_widget = ModelManagerWidget()
+        self.layout.addWidget(self.model_manager_widget)
+        self.dialog.setLayout(self.layout)
+        self.dialog.show()
 
     @Slot()
     def action_show_controlnet(self):
@@ -551,6 +556,8 @@ class MainWindow(
         settings["window_settings"]["chat_prompt_splitter"] = self.ui.generator_widget.ui.chat_prompt_widget.ui.chat_prompt_splitter.saveState()
         settings["window_settings"]["canvas_splitter"] = self.ui.canvas_widget_2.ui.canvas_splitter.saveState()
         settings["window_settings"]["canvas_side_splitter"] = self.ui.canvas_widget_2.ui.canvas_side_splitter.saveState()
+        settings["window_settings"][
+            "canvas_side_splitter_2"] = self.ui.canvas_widget_2.ui.canvas_side_splitter_2.saveState()
 
         self.settings = settings
         self.save_settings()
@@ -591,6 +598,9 @@ class MainWindow(
 
         if window_settings["canvas_side_splitter"] is not None:
             self.ui.canvas_widget_2.ui.canvas_side_splitter.restoreState(window_settings["canvas_side_splitter"])
+
+        if window_settings["canvas_side_splitter_2"] is not None:
+            self.ui.canvas_widget_2.ui.canvas_side_splitter_2.restoreState(window_settings["canvas_side_splitter"])
 
     ##### End window properties #####
     #################################
@@ -699,8 +709,8 @@ class MainWindow(
                 "Are you sure you want to disable the filter?"
             )
         )
-        msg_box.setStandardButtons(QMessageBox.Yes | QMessageBox.No)
-        msg_box.setDefaultButton(QMessageBox.No)
+        msg_box.setStandardButtons(QMessageBox.StandardButton.Yes | QMessageBox.StandardButton.No)
+        msg_box.setDefaultButton(QMessageBox.StandardButton.No)
 
         # Create a QCheckBox
         checkbox = QCheckBox("Do not show this warning again")
@@ -709,7 +719,7 @@ class MainWindow(
 
         result = msg_box.exec()
 
-        if result == QMessageBox.Yes:
+        if result == QMessageBox.StandardButton.Yes:
             # User confirmed to disable the NSFW filter
             # Update the settings accordingly
             settings = self.settings
@@ -731,27 +741,12 @@ class MainWindow(
         settings["mode"] = Mode.IMAGE.value
         self.settings = settings
         self.activate_image_generation_section()
-        self.set_all_section_buttons()
 
     def language_processing_toggled(self):
         settings = self.settings
         settings["mode"] = Mode.LANGUAGE_PROCESSOR.value
         self.settings = settings
         self.activate_language_processing_section()
-        self.set_all_section_buttons()
-
-    def model_manager_toggled(self, val):
-        settings = self.settings
-        settings["mode"] = Mode.MODEL_MANAGER.value if val else Mode.IMAGE.value
-        self.settings = settings
-        if val:
-            self.set_all_section_buttons()
-        self.activate_active_tab()
-
-    def activate_active_tab(self):
-        self.ui.center_tab.setCurrentIndex(
-            1 if self.settings["mode"] == Mode.MODEL_MANAGER.value else 0
-        )
     ###### End window handlers ######
 
     def show_update_message(self):
@@ -770,24 +765,36 @@ class MainWindow(
         """
         Sets the stylesheet for the application based on the current theme
         """
-        self.logger.debug("Setting stylesheet")
-        theme_name = DARK_THEME_NAME if self.settings["dark_mode_enabled"] else LIGHT_THEME_NAME
-        here = os.path.dirname(os.path.realpath(__file__))
-        with open(os.path.join(here, "..", "..", "styles", theme_name, "styles.qss"), "r") as f:
-            stylesheet = f.read()
-        self.setStyleSheet(stylesheet)
-        for icon_data in [
-            ("tech-icon", "model_manager_button"),
-            ("pencil-icon", "toggle_brush_button"),
-            ("eraser-icon", "toggle_eraser_button"),
-            ("frame-grid-icon", "toggle_grid_button"),
-            ("circle-center-icon", "focus_button"),
-            ("artificial-intelligence-ai-chip-icon", "ai_button"),
-            ("setting-line-icon", "settings_button"),
-            ("object-selected-icon", "toggle_active_grid_area_button"),
-            ("select-svgrepo-com", "toggle_select_button"),
-        ]:
-            self.set_icons(icon_data[0], icon_data[1], "dark" if self.settings["dark_mode_enabled"] else "light")
+        if (
+            self._override_system_theme is not self.settings["override_system_theme"] or
+            self._dark_mode_enabled is not self.settings["dark_mode_enabled"]
+        ):
+            self._override_system_theme = self.settings["override_system_theme"]
+            self._dark_mode_enabled = self.settings["dark_mode_enabled"]
+
+            if self._override_system_theme:
+                self.logger.debug("Setting stylesheet")
+                theme_name = DARK_THEME_NAME if self.settings["dark_mode_enabled"] else LIGHT_THEME_NAME
+                here = os.path.dirname(os.path.realpath(__file__))
+                with open(os.path.join(here, "..", "..", "styles", theme_name, "styles.qss"), "r") as f:
+                    stylesheet = f.read()
+                self.setStyleSheet(stylesheet)
+            else:
+                self.logger.debug("Using system theme")
+                self.setStyleSheet("")
+                self.emit_signal(SignalCode.APPLICATION_SETTINGS_CHANGED_SIGNAL)
+
+            for icon_data in [
+                ("pencil-icon", "toggle_brush_button"),
+                ("eraser-icon", "toggle_eraser_button"),
+                ("frame-grid-icon", "toggle_grid_button"),
+                ("circle-center-icon", "focus_button"),
+                ("artificial-intelligence-ai-chip-icon", "ai_button"),
+                ("setting-line-icon", "settings_button"),
+                ("object-selected-icon", "toggle_active_grid_area_button"),
+                ("select-svgrepo-com", "toggle_select_button"),
+            ]:
+                self.set_icons(icon_data[0], icon_data[1], "dark" if self.settings["dark_mode_enabled"] else "light")
 
     def showEvent(self, event):
         super().showEvent(event)
@@ -796,10 +803,6 @@ class MainWindow(
 
         self.initialize_window()
         self.initialize_default_buttons()
-        try:
-            self.prompt_builder.process_prompt()
-        except AttributeError:
-            pass
         self.initialize_filter_actions()
 
     def initialize_filter_actions(self):
@@ -905,18 +908,6 @@ class MainWindow(
     def handle_unknown(self, message):
         self.logger.error(f"Unknown message code: {message}")
 
-    def insert_into_prompt(self, text, negative_prompt=False):
-        prompt_widget = self.generator_tab_widget.data[self.current_generator][self.current_section]["prompt_widget"]
-        negative_prompt_widget = self.generator_tab_widget.data[self.current_generator][self.current_section]["negative_prompt_widget"]
-        if negative_prompt:
-            current_text = negative_prompt_widget.toPlainText()
-            text = f"{current_text}, {text}" if current_text != "" else text
-            negative_prompt_widget.setPlainText(text)
-        else:
-            current_text = prompt_widget.toPlainText()
-            text = f"{current_text}, {text}" if current_text != "" else text
-            prompt_widget.setPlainText(text)
-
     def clear_all_prompts(self):
         self.prompt = ""
         self.negative_prompt = ""
@@ -935,9 +926,6 @@ class MainWindow(
         widget.setChecked(val)
         if block_signals:
             widget.blockSignals(False)
-    
-    def set_all_section_buttons(self):
-        self.set_button_checked("model_manager", self.settings["mode"] == Mode.MODEL_MANAGER.value)
     
     def activate_image_generation_section(self):
         self.ui.mode_tab_widget.setCurrentIndex(0)
@@ -994,3 +982,17 @@ class MainWindow(
     @Slot()
     def action_clear_memory(self):
         clear_memory()
+
+    @Slot(bool)
+    def action_outpaint_toggled(self, val: bool):
+        settings = self.settings
+        settings["outpaint_settings"]["enabled"] = val
+        self.settings = settings
+
+    @Slot()
+    def action_outpaint_export(self):
+        self.emit_signal(SignalCode.OUTPAINT_EXPORT_SIGNAL)
+
+    @Slot()
+    def action_outpaint_import(self):
+        self.emit_signal(SignalCode.OUTPAINT_IMPORT_SIGNAL)

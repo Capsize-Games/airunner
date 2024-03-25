@@ -552,6 +552,7 @@ def convert_base64_to_image(base_64_image) -> Image:
     try:
         return Image.open(bytes_)
     except PIL.UnidentifiedImageError:
+        print("Unidentified Image Error")
         return base_64_image
 
 
