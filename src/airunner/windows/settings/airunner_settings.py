@@ -54,7 +54,6 @@ class SettingsWindow(BaseWindow):
         self.scroll_widget = None
         self.scroll_layout = None
         self.highlight_delegate = None
-        ServiceLocator.register(ServiceCode.GET_PREFERENCES_CALLBACK_FOR_SLIDER, self.get_callback_for_slider)
         self.emit_signal(SignalCode.APPLICATION_SETTINGS_LOADED_SIGNAL)
 
     def handle_value_change(self, attr_name, value=None, widget=None):
@@ -368,6 +367,7 @@ class SettingsWindow(BaseWindow):
         
         self.settings = settings
         self.show_content(section, display_name, name, description)
+        self.set_stylesheet()
 
     def show_content(self, section, display_name, name, description):
         # create a label widget
