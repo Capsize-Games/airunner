@@ -43,6 +43,17 @@ class Ui_generator_form(object):
         self.gridLayout_3 = QGridLayout(self.tab)
         self.gridLayout_3.setObjectName(u"gridLayout_3")
         self.gridLayout_3.setContentsMargins(8, 8, 8, 8)
+        self.generate_button = QPushButton(self.tab)
+        self.generate_button.setObjectName(u"generate_button")
+
+        self.gridLayout_3.addWidget(self.generate_button, 1, 0, 1, 1)
+
+        self.progress_bar = QProgressBar(self.tab)
+        self.progress_bar.setObjectName(u"progress_bar")
+        self.progress_bar.setValue(0)
+
+        self.gridLayout_3.addWidget(self.progress_bar, 3, 0, 1, 1)
+
         self.scrollArea = QScrollArea(self.tab)
         self.scrollArea.setObjectName(u"scrollArea")
         self.scrollArea.setFrameShape(QFrame.NoFrame)
@@ -50,7 +61,7 @@ class Ui_generator_form(object):
         self.scrollArea.setWidgetResizable(True)
         self.scrollAreaWidgetContents = QWidget()
         self.scrollAreaWidgetContents.setObjectName(u"scrollAreaWidgetContents")
-        self.scrollAreaWidgetContents.setGeometry(QRect(0, 0, 341, 904))
+        self.scrollAreaWidgetContents.setGeometry(QRect(0, 0, 341, 824))
         self.gridLayout = QGridLayout(self.scrollAreaWidgetContents)
         self.gridLayout.setObjectName(u"gridLayout")
         self.gridLayout.setContentsMargins(0, 0, 0, 0)
@@ -111,31 +122,15 @@ class Ui_generator_form(object):
 
         self.gridLayout.addWidget(self.splitter, 0, 1, 1, 1)
 
-        self.horizontalLayout_9 = QHBoxLayout()
-        self.horizontalLayout_9.setObjectName(u"horizontalLayout_9")
-        self.generate_button = QPushButton(self.scrollAreaWidgetContents)
-        self.generate_button.setObjectName(u"generate_button")
-
-        self.horizontalLayout_9.addWidget(self.generate_button)
-
-        self.progress_bar = QProgressBar(self.scrollAreaWidgetContents)
-        self.progress_bar.setObjectName(u"progress_bar")
-        self.progress_bar.setValue(0)
-
-        self.horizontalLayout_9.addWidget(self.progress_bar)
-
-        self.interrupt_button = QPushButton(self.scrollAreaWidgetContents)
-        self.interrupt_button.setObjectName(u"interrupt_button")
-        self.interrupt_button.setCursor(QCursor(Qt.PointingHandCursor))
-
-        self.horizontalLayout_9.addWidget(self.interrupt_button)
-
-
-        self.gridLayout.addLayout(self.horizontalLayout_9, 1, 1, 1, 1)
-
         self.scrollArea.setWidget(self.scrollAreaWidgetContents)
 
         self.gridLayout_3.addWidget(self.scrollArea, 0, 0, 1, 1)
+
+        self.interrupt_button = QPushButton(self.tab)
+        self.interrupt_button.setObjectName(u"interrupt_button")
+        self.interrupt_button.setCursor(QCursor(Qt.PointingHandCursor))
+
+        self.gridLayout_3.addWidget(self.interrupt_button, 2, 0, 1, 1)
 
         self.generator_form_tabs.addTab(self.tab, "")
         self.tab_2 = QWidget()
@@ -168,12 +163,12 @@ class Ui_generator_form(object):
 
     def retranslateUi(self, generator_form):
         generator_form.setWindowTitle(QCoreApplication.translate("generator_form", u"Form", None))
+        self.generate_button.setText(QCoreApplication.translate("generator_form", u"Generate", None))
         self.pushButton.setText(QCoreApplication.translate("generator_form", u"Save Prompts", None))
         self.label.setText(QCoreApplication.translate("generator_form", u"Prompt", None))
         self.prompt.setPlaceholderText(QCoreApplication.translate("generator_form", u"Enter a prompt...", None))
         self.label_2.setText(QCoreApplication.translate("generator_form", u"Negative Prompt", None))
         self.negative_prompt.setPlaceholderText(QCoreApplication.translate("generator_form", u"Enter a negative prompt...", None))
-        self.generate_button.setText(QCoreApplication.translate("generator_form", u"Generate", None))
         self.interrupt_button.setText(QCoreApplication.translate("generator_form", u"Interrupt", None))
         self.generator_form_tabs.setTabText(self.generator_form_tabs.indexOf(self.tab), QCoreApplication.translate("generator_form", u"Tab 1", None))
         self.generator_form_tabs.setTabText(self.generator_form_tabs.indexOf(self.tab_2), QCoreApplication.translate("generator_form", u"Tab 2", None))
