@@ -177,6 +177,8 @@ class CustomScene(
             self.add_image_to_scene(image)
 
     def resize_image(self, image: Image) -> Image:
+        if image is None:
+            return
         max_size = (self.settings["working_width"], self.settings["working_height"])
         image.thumbnail(max_size, PIL.Image.Resampling.BICUBIC)
         return image
