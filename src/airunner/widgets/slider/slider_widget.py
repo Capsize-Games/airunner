@@ -1,6 +1,6 @@
 from typing import Any, List
 
-from PySide6.QtCore import Qt
+from PySide6.QtCore import Qt, Slot
 from PySide6.QtWidgets import QLabel, QDoubleSpinBox
 
 from airunner.enums import SignalCode
@@ -237,6 +237,7 @@ class SliderWidget(BaseWidget):
         self.ui.slider.setValue(round(slider_val))
         self.ui.slider.blockSignals(False)
 
+    @Slot(int)
     def handle_slider_change(self, val):
         position = val
         single_step = self.ui.slider.singleStep()
@@ -255,6 +256,7 @@ class SliderWidget(BaseWidget):
         self.ui.slider_spinbox.setValue(spinbox_val)
         self.ui.slider_spinbox.blockSignals(False)
 
+    @Slot()
     def handle_slider_release(self):
         if self.slider_callback:
             self.slider_callback(self.settings_property, self.current_value)

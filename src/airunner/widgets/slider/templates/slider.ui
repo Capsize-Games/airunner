@@ -6,8 +6,8 @@
    <rect>
     <x>0</x>
     <y>0</y>
-    <width>242</width>
-    <height>93</height>
+    <width>474</width>
+    <height>20</height>
    </rect>
   </property>
   <property name="windowTitle">
@@ -60,10 +60,22 @@
    <item row="0" column="1">
     <widget class="QDoubleSpinBox" name="slider_spinbox">
      <property name="sizePolicy">
-      <sizepolicy hsizetype="Fixed" vsizetype="Fixed">
+      <sizepolicy hsizetype="Minimum" vsizetype="Fixed">
        <horstretch>0</horstretch>
        <verstretch>0</verstretch>
       </sizepolicy>
+     </property>
+     <property name="minimumSize">
+      <size>
+       <width>75</width>
+       <height>0</height>
+      </size>
+     </property>
+     <property name="maximumSize">
+      <size>
+       <width>75</width>
+       <height>16777215</height>
+      </size>
      </property>
      <property name="styleSheet">
       <string notr="true"/>
@@ -79,6 +91,9 @@
      </property>
      <property name="buttonSymbols">
       <enum>QAbstractSpinBox::UpDownArrows</enum>
+     </property>
+     <property name="keyboardTracking">
+      <bool>true</bool>
      </property>
      <property name="showGroupSeparator" stdset="0">
       <bool>false</bool>
