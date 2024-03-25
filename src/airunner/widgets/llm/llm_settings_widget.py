@@ -49,11 +49,6 @@ class LLMSettingsWidget(BaseWidget):
             self.ui.prompt_template,
             self.ui.model,
             self.ui.model_version,
-            self.ui.radio_button_2bit,
-            self.ui.radio_button_4bit,
-            self.ui.radio_button_8bit,
-            self.ui.radio_button_16bit,
-            self.ui.radio_button_32bit,
             self.ui.random_seed,
             self.ui.do_sample,
             self.ui.early_stopping,
@@ -89,11 +84,6 @@ class LLMSettingsWidget(BaseWidget):
         llm_generator_settings = self.settings["llm_generator_settings"]
 
         dtype = llm_generator_settings["dtype"]
-        self.ui.radio_button_2bit.setChecked(dtype == "2bit")
-        self.ui.radio_button_4bit.setChecked(dtype == "4bit")
-        self.ui.radio_button_8bit.setChecked(dtype == "8bit")
-        self.ui.radio_button_16bit.setChecked(dtype == "16bit")
-        self.ui.radio_button_32bit.setChecked(dtype == "32bit")
         self.set_dtype_by_gpu(llm_generator_settings["use_gpu"])
         self.set_dtype(dtype)
 
@@ -212,20 +202,25 @@ class LLMSettingsWidget(BaseWidget):
     def set_dtype_by_gpu(self, use_gpu):
         settings = self.settings
         dtype = settings["llm_generator_settings"]["dtype"]
-        if not use_gpu:            
+        if not use_gpu:
             if dtype in ["2bit", "4bit", "8bit"]:
-                self.ui.radio_button_16bit.setChecked(True)
-            self.ui.radio_button_2bit.setEnabled(False)
-            self.ui.radio_button_4bit.setEnabled(False)
-            self.ui.radio_button_8bit.setEnabled(False)
-            self.ui.radio_button_32bit.setEnabled(True)
+                dtype = "16bit"
         else:
-            self.ui.radio_button_2bit.setEnabled(True)
-            self.ui.radio_button_4bit.setEnabled(True)
-            self.ui.radio_button_8bit.setEnabled(True)
-            self.ui.radio_button_32bit.setEnabled(False)
             if dtype == "32bit":
-                self.ui.radio_button_16bit.setChecked(True)
+                dtype = "16bit"
+
+        self.ui.dtype_combobox.blockSignals(True)
+        if dtype == "2bit":
+            self.ui.dtype_combobox.setCurrentText("2-bit")
+        elif dtype == "4bit":
+            self.ui.dtype_combobox.setCurrentText("4-bit")
+        elif dtype == "8bit":
+            self.ui.dtype_combobox.setCurrentText("8-bit")
+        elif dtype == "16bit":
+            self.ui.dtype_combobox.setCurrentText("16-bit")
+        elif dtype == "32bit":
+            self.ui.dtype_combobox.setCurrentText("32-bit")
+        self.ui.dtype_combobox.blockSignals(False)
     
     def reset_settings_to_default_clicked(self):
         llm_generator_settings = self.settings["llm_generator_settings"]
