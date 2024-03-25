@@ -1,3 +1,5 @@
+from typing import Any, List
+
 from PySide6.QtCore import Qt
 from PySide6.QtWidgets import QLabel, QDoubleSpinBox
 
@@ -94,7 +96,6 @@ class SliderWidget(BaseWidget):
 
     def __init__(self, *args, **kwargs):
         super().__init__(*args, **kwargs)
-        self.slider_callback = None
         self.label_text = None
         self.settings_property = None
         self.label = None
@@ -103,9 +104,6 @@ class SliderWidget(BaseWidget):
     def on_main_window_loaded_signal(self, _message):
         self.init()
 
-    def settings_loaded(self, callback):
-        self.slider_callback = callback
-    
     def init(self, **kwargs):
         slider_callback = kwargs.get("slider_callback", self.property("slider_callback") or self.slider_callback)
         slider_minimum = kwargs.get("slider_minimum", self.property("slider_minimum") or 0)
@@ -172,7 +170,7 @@ class SliderWidget(BaseWidget):
             decimals = len(str(spinbox_single_step).split(".")[1])
             self.ui.slider_spinbox.setDecimals(2 if decimals < 2 else decimals)
 
-    def handle_value_change(self, attr_name, value=None, widget=None):
+    def slider_callback(self, attr_name, value=None, widget=None):
         """
         Slider widget callback - this is connected via dynamic properties in the
         qt widget. This function is then called when the value of a SliderWidget
@@ -223,12 +221,25 @@ class SliderWidget(BaseWidget):
 
         return data
 
+    def set_settings_value(self, settings_property: str, val: Any):
+        keys = settings_property.split(".")
+        self.settings = self._update_dict_recursively(self.settings, keys, val)
+
+    def _update_dict_recursively(self, data: dict, keys: List[str], val: Any) -> dict:
+        if len(keys) == 1:
+            data[keys[0]] = val
+            return data
+
+        key = keys[0]
+        if key not in data:
+            data[key] = {}
+
+        data[key] = self._update_dict_recursively(data[key], keys[1:], val)
+        return data
+
     def set_slider_and_spinbox_values(self, val):
         if val is None:
             val = 0
-
-        self.ui.slider.blockSignals(True)
-        self.ui.slider_spinbox.blockSignals(True)
 
         single_step = self.ui.slider.singleStep()
         adjusted_value = val
@@ -239,9 +250,11 @@ class SliderWidget(BaseWidget):
         normalized = adjusted_value / self.slider_maximum
         spinbox_val = normalized * self.spinbox_maximum
         spinbox_val = round(spinbox_val, 2)
+
+        self.ui.slider.blockSignals(True)
+        self.ui.slider_spinbox.blockSignals(True)
         self.ui.slider.setValue(int(val))
         self.ui.slider_spinbox.setValue(spinbox_val)
-
         self.ui.slider.blockSignals(False)
         self.ui.slider_spinbox.blockSignals(False)
 
@@ -276,9 +289,6 @@ class SliderWidget(BaseWidget):
 
         if self.slider_callback:
             self.slider_callback(self.settings_property, adjusted_value)
-
-    def update_value(self, val):
-        self.ui.slider.setValue(int(val))
 
     def set_tick_value(self, val):
         """
