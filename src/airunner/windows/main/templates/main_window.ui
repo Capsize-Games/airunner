@@ -7,7 +7,7 @@
    <rect>
     <x>0</x>
     <y>0</y>
-    <width>1123</width>
+    <width>1137</width>
     <height>903</height>
    </rect>
   </property>
@@ -128,7 +128,7 @@
            <rect>
             <x>0</x>
             <y>0</y>
-            <width>1119</width>
+            <width>1133</width>
             <height>46</height>
            </rect>
           </property>
@@ -524,7 +524,7 @@
           <widget class="QWidget" name="canvas_widget" native="true">
            <property name="minimumSize">
             <size>
-             <width>512</width>
+             <width>0</width>
              <height>0</height>
             </size>
            </property>
@@ -596,28 +596,6 @@
                 </item>
                </layout>
               </widget>
-              <widget class="QWidget" name="model_manager_tab">
-               <attribute name="title">
-                <string>Model Manager</string>
-               </attribute>
-               <layout class="QGridLayout" name="gridLayout_7">
-                <property name="leftMargin">
-                 <number>0</number>
-                </property>
-                <property name="topMargin">
-                 <number>0</number>
-                </property>
-                <property name="rightMargin">
-                 <number>0</number>
-                </property>
-                <property name="bottomMargin">
-                 <number>0</number>
-                </property>
-                <item row="0" column="0">
-                 <widget class="ModelManagerWidget" name="model_manager" native="true"/>
-                </item>
-               </layout>
-              </widget>
              </widget>
             </item>
            </layout>
@@ -637,7 +615,7 @@
              <rect>
               <x>0</x>
               <y>0</y>
-              <width>347</width>
+              <width>420</width>
               <height>756</height>
              </rect>
             </property>
@@ -859,7 +837,7 @@
               <string/>
              </property>
              <property name="icon">
-              <iconset>
+              <iconset resource="../../../resources_light.qrc">
                <normaloff>:/icons/light/object-selected-icon.svg</normaloff>:/icons/light/object-selected-icon.svg</iconset>
              </property>
              <property name="iconSize">
@@ -900,7 +878,7 @@
               <string/>
              </property>
              <property name="icon">
-              <iconset>
+              <iconset resource="../../../resources_light.qrc">
                <normaloff>:/icons/light/select-svgrepo-com.svg</normaloff>:/icons/light/select-svgrepo-com.svg</iconset>
              </property>
              <property name="iconSize">
@@ -954,7 +932,7 @@
               <string/>
              </property>
              <property name="icon">
-              <iconset>
+              <iconset resource="../../../resources_light.qrc">
                <normaloff>:/icons/light/pencil-icon.svg</normaloff>:/icons/light/pencil-icon.svg</iconset>
              </property>
              <property name="iconSize">
@@ -1001,7 +979,7 @@
               <string/>
              </property>
              <property name="icon">
-              <iconset>
+              <iconset resource="../../../resources_light.qrc">
                <normaloff>:/icons/light/eraser-icon.svg</normaloff>:/icons/light/eraser-icon.svg</iconset>
              </property>
              <property name="iconSize">
@@ -1061,7 +1039,7 @@
               <string/>
              </property>
              <property name="icon">
-              <iconset>
+              <iconset resource="../../../resources_light.qrc">
                <normaloff>:/icons/light/frame-grid-icon.svg</normaloff>:/icons/light/frame-grid-icon.svg</iconset>
              </property>
              <property name="iconSize">
@@ -1108,7 +1086,7 @@
               <string/>
              </property>
              <property name="icon">
-              <iconset>
+              <iconset resource="../../../resources_light.qrc">
                <normaloff>:/icons/light/circle-center-icon.svg</normaloff>:/icons/light/circle-center-icon.svg</iconset>
              </property>
              <property name="iconSize">
@@ -1153,7 +1131,7 @@
               <string/>
              </property>
              <property name="icon">
-              <iconset>
+              <iconset resource="../../../resources_light.qrc">
                <normaloff>:/icons/light/artificial-intelligence-ai-chip-icon.svg</normaloff>:/icons/light/artificial-intelligence-ai-chip-icon.svg</iconset>
              </property>
              <property name="iconSize">
@@ -1207,7 +1185,7 @@
               <string/>
              </property>
              <property name="icon">
-              <iconset>
+              <iconset resource="../../../resources_light.qrc">
                <normaloff>:/icons/light/tech-icon.svg</normaloff>:/icons/light/tech-icon.svg</iconset>
              </property>
              <property name="iconSize">
@@ -1261,7 +1239,7 @@
               <string/>
              </property>
              <property name="icon">
-              <iconset>
+              <iconset resource="../../../resources_light.qrc">
                <normaloff>:/icons/light/setting-line-icon.svg</normaloff>:/icons/light/setting-line-icon.svg</iconset>
              </property>
              <property name="iconSize">
@@ -1411,7 +1389,7 @@
     <rect>
      <x>0</x>
      <y>0</y>
-     <width>1123</width>
+     <width>1137</width>
      <height>22</height>
     </rect>
    </property>
@@ -2296,18 +2274,17 @@
     <string>Enabled</string>
    </property>
   </action>
+  <action name="actionModel_Manager_4">
+   <property name="text">
+    <string>Model Manager</string>
+   </property>
+  </action>
  </widget>
  <customwidgets>
   <customwidget>
    <class>GeneratorForm</class>
    <extends>QWidget</extends>
    <header>airunner/widgets/generator_form/generator_form_widget</header>
-   <container>1</container>
-  </customwidget>
-  <customwidget>
-   <class>ModelManagerWidget</class>
-   <extends>QWidget</extends>
-   <header>airunner/widgets/model_manager/model_manager_widget</header>
    <container>1</container>
   </customwidget>
   <customwidget>
