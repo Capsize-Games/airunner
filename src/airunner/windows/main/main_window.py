@@ -7,7 +7,7 @@ from functools import partial
 from PySide6 import QtGui
 from PySide6.QtCore import Slot, Signal
 from PySide6.QtGui import QGuiApplication
-from PySide6.QtWidgets import QApplication, QMainWindow, QDialog, QMessageBox, QCheckBox
+from PySide6.QtWidgets import QApplication, QMainWindow, QDialog, QMessageBox, QCheckBox, QVBoxLayout
 
 from airunner.aihandler.logger import Logger
 from airunner.settings import STATUS_ERROR_COLOR, STATUS_NORMAL_COLOR_LIGHT, STATUS_NORMAL_COLOR_DARK, \
@@ -17,6 +17,7 @@ from airunner.mediator_mixin import MediatorMixin
 from airunner.resources_dark_rc import *
 from airunner.settings import BASE_PATH, DISCORD_LINK, BUG_REPORT_LINK, VULNERABILITY_REPORT_LINK
 from airunner.utils import get_version, default_hf_cache_dir, set_widget_state, clear_memory
+from airunner.widgets.model_manager.model_manager_widget import ModelManagerWidget
 from airunner.widgets.status.status_widget import StatusWidget
 from airunner.windows.about.about import AboutWindow
 from airunner.windows.filter_window import FilterWindow
@@ -745,12 +746,13 @@ class MainWindow(
         self.set_all_section_buttons()
 
     def model_manager_toggled(self, val):
-        settings = self.settings
-        settings["mode"] = Mode.MODEL_MANAGER.value if val else Mode.IMAGE.value
-        self.settings = settings
-        if val:
-            self.set_all_section_buttons()
-        self.activate_active_tab()
+        self.dialog = QDialog()
+        self.dialog.setWindowTitle("Model Manager")
+        self.layout = QVBoxLayout()
+        self.model_manager_widget = ModelManagerWidget()
+        self.layout.addWidget(self.model_manager_widget)
+        self.dialog.setLayout(self.layout)
+        self.dialog.show()
 
     def activate_active_tab(self):
         self.ui.center_tab.setCurrentIndex(
@@ -794,7 +796,6 @@ class MainWindow(
                 self.emit_signal(SignalCode.APPLICATION_SETTINGS_CHANGED_SIGNAL)
 
             for icon_data in [
-                ("tech-icon", "model_manager_button"),
                 ("pencil-icon", "toggle_brush_button"),
                 ("eraser-icon", "toggle_eraser_button"),
                 ("frame-grid-icon", "toggle_grid_button"),
