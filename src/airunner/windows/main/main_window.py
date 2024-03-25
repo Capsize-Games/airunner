@@ -273,7 +273,6 @@ class MainWindow(
         self.ui.tts_button.blockSignals(False)
         self.ui.v2t_button.blockSignals(False)
         self.logger.debug("Setting buttons")
-        self.set_all_section_buttons()
         self.initialize_tool_section_buttons()
 
     def do_listen(self):
@@ -360,7 +359,13 @@ class MainWindow(
 
     @Slot()
     def action_show_model_manager(self):
-        self.model_manager_toggled(True)
+        self.dialog = QDialog()
+        self.dialog.setWindowTitle("Model Manager")
+        self.layout = QVBoxLayout()
+        self.model_manager_widget = ModelManagerWidget()
+        self.layout.addWidget(self.model_manager_widget)
+        self.dialog.setLayout(self.layout)
+        self.dialog.show()
 
     @Slot()
     def action_show_controlnet(self):
@@ -704,8 +709,8 @@ class MainWindow(
                 "Are you sure you want to disable the filter?"
             )
         )
-        msg_box.setStandardButtons(QMessageBox.Yes | QMessageBox.No)
-        msg_box.setDefaultButton(QMessageBox.No)
+        msg_box.setStandardButtons(QMessageBox.StandardButton.Yes | QMessageBox.StandardButton.No)
+        msg_box.setDefaultButton(QMessageBox.StandardButton.No)
 
         # Create a QCheckBox
         checkbox = QCheckBox("Do not show this warning again")
@@ -714,7 +719,7 @@ class MainWindow(
 
         result = msg_box.exec()
 
-        if result == QMessageBox.Yes:
+        if result == QMessageBox.StandardButton.Yes:
             # User confirmed to disable the NSFW filter
             # Update the settings accordingly
             settings = self.settings
@@ -736,28 +741,12 @@ class MainWindow(
         settings["mode"] = Mode.IMAGE.value
         self.settings = settings
         self.activate_image_generation_section()
-        self.set_all_section_buttons()
 
     def language_processing_toggled(self):
         settings = self.settings
         settings["mode"] = Mode.LANGUAGE_PROCESSOR.value
         self.settings = settings
         self.activate_language_processing_section()
-        self.set_all_section_buttons()
-
-    def model_manager_toggled(self, val):
-        self.dialog = QDialog()
-        self.dialog.setWindowTitle("Model Manager")
-        self.layout = QVBoxLayout()
-        self.model_manager_widget = ModelManagerWidget()
-        self.layout.addWidget(self.model_manager_widget)
-        self.dialog.setLayout(self.layout)
-        self.dialog.show()
-
-    def activate_active_tab(self):
-        self.ui.center_tab.setCurrentIndex(
-            1 if self.settings["mode"] == Mode.MODEL_MANAGER.value else 0
-        )
     ###### End window handlers ######
 
     def show_update_message(self):
@@ -814,10 +803,6 @@ class MainWindow(
 
         self.initialize_window()
         self.initialize_default_buttons()
-        try:
-            self.prompt_builder.process_prompt()
-        except AttributeError:
-            pass
         self.initialize_filter_actions()
 
     def initialize_filter_actions(self):
@@ -923,18 +908,6 @@ class MainWindow(
     def handle_unknown(self, message):
         self.logger.error(f"Unknown message code: {message}")
 
-    def insert_into_prompt(self, text, negative_prompt=False):
-        prompt_widget = self.generator_tab_widget.data[self.current_generator][self.current_section]["prompt_widget"]
-        negative_prompt_widget = self.generator_tab_widget.data[self.current_generator][self.current_section]["negative_prompt_widget"]
-        if negative_prompt:
-            current_text = negative_prompt_widget.toPlainText()
-            text = f"{current_text}, {text}" if current_text != "" else text
-            negative_prompt_widget.setPlainText(text)
-        else:
-            current_text = prompt_widget.toPlainText()
-            text = f"{current_text}, {text}" if current_text != "" else text
-            prompt_widget.setPlainText(text)
-
     def clear_all_prompts(self):
         self.prompt = ""
         self.negative_prompt = ""
@@ -953,9 +926,6 @@ class MainWindow(
         widget.setChecked(val)
         if block_signals:
             widget.blockSignals(False)
-    
-    def set_all_section_buttons(self):
-        self.set_button_checked("model_manager", self.settings["mode"] == Mode.MODEL_MANAGER.value)
     
     def activate_image_generation_section(self):
         self.ui.mode_tab_widget.setCurrentIndex(0)
