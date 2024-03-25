@@ -13,7 +13,6 @@ from airunner.widgets.canvas.clipboard_handler import ClipboardHandler
 from airunner.widgets.canvas.grid_handler import GridHandler
 from airunner.widgets.canvas.image_handler import ImageHandler
 from airunner.widgets.canvas.templates.canvas_ui import Ui_canvas
-from airunner.workers.canvas_resize_worker import CanvasResizeWorker
 from airunner.workers.image_data_worker import ImageDataWorker
 
 
@@ -46,8 +45,6 @@ class CanvasWidget(BaseWidget):
         self._canvas_settings = {}
         self._active_grid_settings = {}
 
-        self.ui.central_widget.resizeEvent = self.resizeEvent
-
         self.image_data_worker = None
         self.canvas_resize_worker = None
 
@@ -56,16 +53,13 @@ class CanvasWidget(BaseWidget):
             SignalCode.CANVAS_UPDATE_CURSOR: self.on_canvas_update_cursor_signal,
             SignalCode.CANVAS_DO_DRAW_SIGNAL: self.on_canvas_do_draw_signal,
             SignalCode.SD_IMAGE_DATA_WORKER_RESPONSE_SIGNAL: self.on_image_data_worker_response_signal,
-            SignalCode.CANVAS_RESIZE_WORKER_RESPONSE_SIGNAL: self.on_canvas_resize_worker_response_signal,
             SignalCode.CANVAS_UPDATE_SIGNAL: self.on_update_canvas_signal,
-            SignalCode.APPLICATION_SETTINGS_CHANGED_SIGNAL: self.on_application_settings_changed_signal,
             SignalCode.CANVAS_APPLY_FILTER_SIGNAL: self.apply_filter,
         }
 
         # Map class properties to worker classes
         self.worker_class_map = {
             "image_data_worker": ImageDataWorker,
-            "canvas_resize_worker": CanvasResizeWorker
         }
 
         self.image_handler = ImageHandler()
@@ -171,22 +165,6 @@ class CanvasWidget(BaseWidget):
     def on_canvas_do_draw_signal(self, force_draw: bool = False):
         self.do_draw(force_draw=force_draw)
 
-    def on_canvas_resize_worker_response_signal(self, data: dict):
-        force_draw = data["force_draw"]
-        do_draw_layers = data["do_draw_layers"]
-        lines_data = data["lines_data"]
-        self.emit_signal(SignalCode.CANVAS_CLEAR_LINES_SIGNAL)
-        draw_grid = self.settings["grid_settings"]["show_grid"]
-        if not draw_grid:
-            return
-
-        ServiceLocator.get(ServiceCode.CANVAS_REGISTER_LINE_DATA)(lines_data)
-
-        self.do_draw(
-            force_draw=force_draw,
-            do_draw_layers=do_draw_layers
-        )
-
     def on_image_data_worker_response_signal(self, message):
         self.emit_signal(SignalCode.APPLICATION_CLEAR_STATUS_MESSAGE_SIGNAL)
         self.emit_signal(SignalCode.APPLICATION_STOP_SD_PROGRESS_BAR_SIGNAL)
@@ -199,16 +177,6 @@ class CanvasWidget(BaseWidget):
                 SignalCode.APPLICATION_STATUS_INFO_SIGNAL,
                 f"Image generated to {path}"
             )
-
-    def on_application_settings_changed_signal(self, _message: dict):
-        if (
-            self.grid_settings_changed() or
-            self.active_grid_settings_changed() or
-            self.canvas_settings_changed()
-        ):
-            self.emit_signal(SignalCode.CANVAS_DO_RESIZE_SIGNAL, {
-                "force_draw": True
-            })
     
     def toggle_grid(self, val):
         self.do_draw()
@@ -263,16 +231,6 @@ class CanvasWidget(BaseWidget):
                     self._canvas_settings[k] = v
                     changed = True
         return changed
-
-    def resizeEvent(self, event):
-        if self.ui.canvas_container:
-            self.emit_signal(SignalCode.CANVAS_DO_RESIZE_SIGNAL)
-        self.emit_signal(
-            SignalCode.SCENE_RESIZE_SIGNAL,
-            {
-                "size": self.size()
-            }
-        )
 
     def showEvent(self, event):
         super().showEvent(event)

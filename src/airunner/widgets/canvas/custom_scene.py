@@ -104,7 +104,6 @@ class CustomScene(
             (SignalCode.CANVAS_PASTE_IMAGE_SIGNAL, self.paste_image_from_clipboard),
             (SignalCode.CANVAS_EXPORT_IMAGE_SIGNAL, self.export_image),
             (SignalCode.CANVAS_IMPORT_IMAGE_SIGNAL, self.import_image),
-            (SignalCode.SCENE_RESIZE_SIGNAL, self.resize),
             (SignalCode.CANVAS_CANCEL_FILTER_SIGNAL, self.cancel_filter),
             (SignalCode.CANVAS_PREVIEW_FILTER_SIGNAL, self.preview_filter),
             (SignalCode.CANVAS_LOAD_IMAGE_FROM_PATH_SIGNAL, self.on_load_image_from_path),
@@ -445,23 +444,6 @@ class CustomScene(
     def clear_selection(self):
         self.selection_start_pos = None
         self.selection_stop_pos = None
-
-    def resize(self, message):
-        """
-        This function is triggered on canvas viewport resize.
-        It is used to resize the pixmap which is used for drawing on the canvas.
-
-        We are currently not using this function as it was causing issues
-        and may no longer be required.
-        :param size:
-        :return:
-        """
-        size = message["size"]
-        # self._target_size = size
-        # self._do_resize = True
-
-        # raise the self.item and self.image to the top
-        self.item.setZValue(1)
 
     def drawBackground(self, painter, rect):
         if self._do_resize:
