@@ -60,7 +60,7 @@
             <string>Border Opacity</string>
            </property>
            <property name="settings_property" stdset="0">
-            <string>border_opacity</string>
+            <string>active_grid_settings.border_opacity</string>
            </property>
            <property name="display_as_float" stdset="0">
             <bool>true</bool>
@@ -115,7 +115,7 @@
             <string>Fill Opacity</string>
            </property>
            <property name="settings_property" stdset="0">
-            <string>fill_opacity</string>
+            <string>active_grid_settings.fill_opacity</string>
            </property>
            <property name="display_as_float" stdset="0">
             <bool>true</bool>
