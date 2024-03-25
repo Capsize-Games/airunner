@@ -22,8 +22,8 @@ class Ui_message(object):
     def setupUi(self, message):
         if not message.objectName():
             message.setObjectName(u"message")
-        message.resize(566, 902)
-        sizePolicy = QSizePolicy(QSizePolicy.Policy.Preferred, QSizePolicy.Policy.MinimumExpanding)
+        message.resize(418, 902)
+        sizePolicy = QSizePolicy(QSizePolicy.Policy.Expanding, QSizePolicy.Policy.MinimumExpanding)
         sizePolicy.setHorizontalStretch(0)
         sizePolicy.setVerticalStretch(0)
         sizePolicy.setHeightForWidth(message.sizePolicy().hasHeightForWidth())
@@ -41,7 +41,7 @@ class Ui_message(object):
 
         self.content = QTextEdit(message)
         self.content.setObjectName(u"content")
-        sizePolicy1 = QSizePolicy(QSizePolicy.Policy.Expanding, QSizePolicy.Policy.MinimumExpanding)
+        sizePolicy1 = QSizePolicy(QSizePolicy.Policy.MinimumExpanding, QSizePolicy.Policy.MinimumExpanding)
         sizePolicy1.setHorizontalStretch(0)
         sizePolicy1.setVerticalStretch(0)
         sizePolicy1.setHeightForWidth(self.content.sizePolicy().hasHeightForWidth())
