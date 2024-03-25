@@ -239,6 +239,12 @@ class SliderWidget(BaseWidget):
         if adjusted_value < self.slider_minimum:
             adjusted_value = self.slider_minimum
 
+        self.ui.slider.blockSignals(True)
+        self.ui.slider.setValue(adjusted_value)
+        self.ui.slider.blockSignals(False)
+
+        print(f"adjusted_value: {adjusted_value}")
+
         try:
             normalized = adjusted_value / self.slider_maximum
             spinbox_val = normalized * self.spinbox_maximum
