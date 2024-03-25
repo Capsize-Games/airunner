@@ -100,12 +100,12 @@ class SliderWidget(BaseWidget):
         self.settings_property = None
         self.label = None
         self.register(SignalCode.APPLICATION_MAIN_WINDOW_LOADED_SIGNAL, self.on_main_window_loaded_signal)
+        self.ui.slider.sliderReleased.connect(self.handle_slider_release)
 
     def on_main_window_loaded_signal(self, _message):
         self.init()
 
     def init(self, **kwargs):
-        slider_callback = kwargs.get("slider_callback", self.property("slider_callback") or self.slider_callback)
         slider_minimum = kwargs.get("slider_minimum", self.property("slider_minimum") or 0)
         slider_maximum = kwargs.get("slider_maximum", self.property("slider_maximum") or 100)
         spinbox_minimum = kwargs.get("spinbox_minimum", self.property("spinbox_minimum") or 0.0)
@@ -130,10 +130,6 @@ class SliderWidget(BaseWidget):
         if settings_property is not None:
             current_value = self.get_settings_value(settings_property)
 
-        # check if slider_callback is str
-        if isinstance(slider_callback, str):
-            slider_callback = self.handle_value_change
-
         # set slider and spinbox names
         if slider_name:
             self.ui.slider.setObjectName(slider_name)
@@ -141,7 +137,6 @@ class SliderWidget(BaseWidget):
         if spinbox_name:
             self.ui.slider_spinbox.setObjectName(spinbox_name)
 
-        self.slider_callback = slider_callback
         self.slider_maximum = slider_maximum
         self.slider_minimum = slider_minimum
         self.slider_tick_interval = slider_tick_interval
@@ -180,34 +175,7 @@ class SliderWidget(BaseWidget):
         :param widget: the widget that triggered the callback
         :return:
         """
-        if attr_name is None:
-            return
-
-        keys = attr_name.split(".")
-        if len(keys) > 0:
-            settings = self.settings
-
-            object_key = "settings"
-            property_key = None
-            sub_property_key = None
-            if len(keys) == 1:
-                property_key = keys[0]
-            elif len(keys) == 2:
-                object_key = keys[0]
-                property_key = keys[1]
-            elif len(keys) == 3:
-                object_key = keys[0]
-                property_key = keys[1]
-                sub_property_key = keys[2]
-
-            if property_key:
-                if object_key != "settings":
-                    settings[object_key][property_key] = value
-                    if sub_property_key and len(keys) == 3:
-                        settings[object_key][property_key][sub_property_key] = value
-                else:
-                    settings[property_key] = value
-            self.settings = settings
+        self.set_settings_value(attr_name, value)
 
     def get_settings_value(self, settings_property):
         keys = settings_property.split(".")
@@ -287,8 +255,9 @@ class SliderWidget(BaseWidget):
         self.ui.slider_spinbox.setValue(spinbox_val)
         self.ui.slider_spinbox.blockSignals(False)
 
+    def handle_slider_release(self):
         if self.slider_callback:
-            self.slider_callback(self.settings_property, adjusted_value)
+            self.slider_callback(self.settings_property, self.current_value)
 
     def set_tick_value(self, val):
         """
