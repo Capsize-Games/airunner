@@ -1,9 +1,10 @@
 from PIL import Image
 from PySide6.QtCore import QObject, QRect
+from cryptography.fernet import Fernet
 
 from airunner.enums import SDMode, GeneratorSection, Controlnet
 from airunner.mediator_mixin import MediatorMixin
-from airunner.settings import DEFAULT_SCHEDULER, MIN_NUM_INFERENCE_STEPS_IMG2IMG
+from airunner.settings import DEFAULT_SCHEDULER, MIN_NUM_INFERENCE_STEPS_IMG2IMG, SD_GUARDRAILS_KEY, SD_GUARDRAILS
 from airunner.utils import convert_base64_to_image
 from airunner.windows.main.settings_mixin import SettingsMixin
 
@@ -24,7 +25,8 @@ class ControlnetImageSettings:
 
 
 class GeneratorSettings:
-    def __init__(self, **data):
+    def __init__(self, settings: dict):
+        data = settings["generator_settings"]
         self.prompt = data.get("prompt", "")
         self.negative_prompt = data.get("negative_prompt", "")
         self.steps = data.get("steps", 1)
@@ -52,6 +54,24 @@ class GeneratorSettings:
         self.controlnet_image_settings = self.controlnet_image_settings = ControlnetImageSettings(
             **data.get("controlnet_image_settings", {})
         )
+        prompt, negative_prompt = self.parse_prompt(settings["nsfw_filter"])
+        self.prompt = prompt
+        self.negative_prompt = negative_prompt
+
+    def parse_prompt(self, nsfw_filter_active: bool, prompt=None, negative_prompt=None):
+        prompt = prompt or self.prompt
+        negative_prompt = negative_prompt or self.prompt
+        cipher_suite = Fernet(SD_GUARDRAILS_KEY)
+        plain_text = cipher_suite.decrypt(SD_GUARDRAILS)
+        bad_words_list = plain_text.decode().split(",")
+        # Apply guardrails when nsfw_filter is disabled
+        if not nsfw_filter_active:
+            for word in bad_words_list:
+                if word in prompt:
+                    prompt = prompt.replace(word, "")
+                if word not in negative_prompt:
+                    negative_prompt += f" {word}"
+        return prompt, negative_prompt
 
 
 class MemorySettings:
@@ -108,7 +128,7 @@ class SDRequest(
         self.load_generator_settings()
 
     def load_generator_settings(self):
-        self.generator_settings = GeneratorSettings(**self.settings["generator_settings"])
+        self.generator_settings = GeneratorSettings(settings=self.settings)
         self.action_has_safety_checker = self.generator_settings.section not in [GeneratorSection.DEPTH2IMG.value]
 
     def initialize_prompt_embeds(self, prompt_embeds, negative_prompt_embeds, args: dict):
@@ -139,7 +159,8 @@ class SDRequest(
         do_load=False,
         generator=None,
         model_changed=False,
-        controlnet_image=None
+        controlnet_image=None,
+        generator_request_data: dict = None,
     ) -> dict:
         self.model_data = model_data
         self.memory_settings = MemorySettings(**self.settings["memory_settings"])
@@ -163,7 +184,8 @@ class SDRequest(
             sd_mode=sd_mode,
             strength=strength,
             prompt_embeds=prompt_embeds,
-            negative_prompt_embeds=negative_prompt_embeds
+            negative_prompt_embeds=negative_prompt_embeds,
+            generator_request_data=generator_request_data
         )
 
         input_image = kwargs["image"] if "image" in kwargs else None
@@ -182,14 +204,14 @@ class SDRequest(
         args["callback_steps"] = self.callback_steps
         args["clip_skip"] = self.generator_settings.clip_skip
 
-        if self.is_img2img:
+        if self.is_img2img or self.is_depth2img or self.is_pix2pix or self.is_outpaint:
             args["height"] = self.settings["working_height"]
             args["width"] = self.settings["working_width"]
-            if args["num_inference_steps"] < MIN_NUM_INFERENCE_STEPS_IMG2IMG:
-                args["num_inference_steps"] = MIN_NUM_INFERENCE_STEPS_IMG2IMG
+            if self.is_img2img:
+                if args["num_inference_steps"] < MIN_NUM_INFERENCE_STEPS_IMG2IMG:
+                    args["num_inference_steps"] = MIN_NUM_INFERENCE_STEPS_IMG2IMG
 
         args["generator"] = self.generator
-
         return args
 
     def prepare_args(
@@ -204,6 +226,7 @@ class SDRequest(
         strength=None,
         prompt_embeds=None,
         negative_prompt_embeds=None,
+        generator_request_data=None
     ) -> dict:
         extra_options = {} if not extra_options else extra_options
 
@@ -227,7 +250,6 @@ class SDRequest(
         width = int(self.settings["working_width"])
         height = int(self.settings["working_height"])
         clip_skip = int(self.generator_settings.clip_skip)
-        self.mask = None
 
         args = {
             "action": self.generator_settings.section,
@@ -243,22 +265,30 @@ class SDRequest(
             args
         )
 
-        extra_args = self.prepare_extra_args()
+        extra_args = self.prepare_extra_args(generator_request_data)
 
         return {**args, **extra_args}
 
-    def prepare_extra_args(self):
+    def prepare_extra_args(self, generator_request_data):
         extra_args = {
         }
         width = int(self.settings["working_width"])
         height = int(self.settings["working_height"])
 
         image = None
-        base64image = self.settings["drawing_pad_settings"]["image"]
-        if base64image != "":
-            image = convert_base64_to_image(base64image)
-            if image is not None:
-                image = image.convert("RGB")
+        mask = None
+        if generator_request_data is not None:
+            if "image" in generator_request_data:
+                image = generator_request_data["image"]
+            if "mask" in generator_request_data:
+                mask = generator_request_data["mask"]
+
+        if image is None and not self.is_outpaint:
+            base64image = self.settings["drawing_pad_settings"]["image"]
+            if base64image != "":
+                image = convert_base64_to_image(base64image)
+                if image is not None:
+                    image = image.convert("RGB")
 
         if self.is_txt2img:
             extra_args = {**extra_args, **{
@@ -278,15 +308,32 @@ class SDRequest(
                 "image": image,
             }}
         elif self.is_outpaint:
-            mask = None
+            if image is None:
+                base64image = self.settings["canvas_settings"]["image"]
+                if base64image != "":
+                    image = convert_base64_to_image(base64image)
+                    if image is not None:
+                        image = image.convert("RGB")
+                    else:
+                        print("IMAGE IS NONE")
+            if mask is None:
+                base64image = self.settings["canvas_settings"]["mask"]
+                if base64image != "":
+                    mask = convert_base64_to_image(base64image)
+                    if mask is not None:
+                        mask = mask.convert("RGB")
+                    else:
+                        print("IMAGE IS NONE")
             extra_args = {**extra_args, **{
-                "mask_image": mask,
                 "width": self.generator_settings.width,
                 "height": self.generator_settings.height,
             }}
 
         if image is not None:
             extra_args["image"] = image
+
+        if mask is not None:
+            extra_args["mask_image"] = mask
 
         controlnet_image = self.controlnet_image
         if self.generator_settings.enable_controlnet and controlnet_image:
@@ -298,7 +345,6 @@ class SDRequest(
                 "guidance_scale": self.generator_settings.controlnet_image_settings.guidance_scale,
                 "controlnet_conditioning_scale": self.generator_settings.controlnet_image_settings.conditioning_scale,
                 "controlnet": [
-                    "canny",
                     self.generator_settings.controlnet_image_settings.controlnet
                 ],
             }}

@@ -64,7 +64,8 @@ setup(
         "pycountry==23.12.11",
         "pyttsx3==2.90",
         "mediapipe==0.10.11",
-        "coverage==7.4.4"
+        "coverage==7.4.4",
+        "cryptography==42.0.5"
     ],
     dependency_links=[]
 )

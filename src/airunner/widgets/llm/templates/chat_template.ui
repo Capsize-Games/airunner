@@ -1,0 +1,209 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<ui version="4.0">
+ <class>Form</class>
+ <widget class="QWidget" name="Form">
+  <property name="geometry">
+   <rect>
+    <x>0</x>
+    <y>0</y>
+    <width>574</width>
+    <height>640</height>
+   </rect>
+  </property>
+  <property name="windowTitle">
+   <string>Form</string>
+  </property>
+  <layout class="QGridLayout" name="gridLayout_3">
+   <item row="5" column="0">
+    <widget class="QGroupBox" name="groupBox">
+     <property name="title">
+      <string>User name</string>
+     </property>
+     <layout class="QGridLayout" name="gridLayout_2">
+      <item row="0" column="0">
+       <widget class="QLineEdit" name="user_name"/>
+      </item>
+     </layout>
+    </widget>
+   </item>
+   <item row="4" column="0">
+    <widget class="QGroupBox" name="groupBox_5">
+     <property name="title">
+      <string>Template name</string>
+     </property>
+     <layout class="QGridLayout" name="gridLayout_6">
+      <item row="0" column="0">
+       <widget class="QLineEdit" name="template_name"/>
+      </item>
+     </layout>
+    </widget>
+   </item>
+   <item row="6" column="0">
+    <widget class="QGroupBox" name="groupBox_4">
+     <property name="title">
+      <string>Bot name</string>
+     </property>
+     <layout class="QGridLayout" name="gridLayout_5">
+      <item row="0" column="0">
+       <widget class="QLineEdit" name="bot_name"/>
+      </item>
+     </layout>
+    </widget>
+   </item>
+   <item row="7" column="0">
+    <widget class="QGroupBox" name="groupBox_3">
+     <property name="toolTip">
+      <string>Toggle guardrails</string>
+     </property>
+     <property name="title">
+      <string>Guardrails</string>
+     </property>
+     <property name="checkable">
+      <bool>true</bool>
+     </property>
+     <layout class="QGridLayout" name="gridLayout_4">
+      <item row="0" column="0">
+       <widget class="QPlainTextEdit" name="guardrails"/>
+      </item>
+     </layout>
+    </widget>
+   </item>
+   <item row="0" column="0">
+    <layout class="QHBoxLayout" name="horizontalLayout">
+     <item>
+      <widget class="QComboBox" name="template_names"/>
+     </item>
+     <item>
+      <widget class="QPushButton" name="add_template_button">
+       <property name="text">
+        <string/>
+       </property>
+       <property name="icon">
+        <iconset theme="list-add"/>
+       </property>
+      </widget>
+     </item>
+    </layout>
+   </item>
+   <item row="8" column="0">
+    <widget class="QGroupBox" name="groupBox_2">
+     <property name="title">
+      <string>Instructions</string>
+     </property>
+     <layout class="QGridLayout" name="gridLayout">
+      <item row="0" column="0">
+       <widget class="QPlainTextEdit" name="instructions"/>
+      </item>
+     </layout>
+    </widget>
+   </item>
+  </layout>
+ </widget>
+ <resources/>
+ <connections>
+  <connection>
+   <sender>add_template_button</sender>
+   <signal>clicked()</signal>
+   <receiver>Form</receiver>
+   <slot>add_template()</slot>
+   <hints>
+    <hint type="sourcelabel">
+     <x>437</x>
+     <y>22</y>
+    </hint>
+    <hint type="destinationlabel">
+     <x>392</x>
+     <y>-5</y>
+    </hint>
+   </hints>
+  </connection>
+  <connection>
+   <sender>template_name</sender>
+   <signal>textChanged(QString)</signal>
+   <receiver>Form</receiver>
+   <slot>template_name_changed(QString)</slot>
+   <hints>
+    <hint type="sourcelabel">
+     <x>176</x>
+     <y>85</y>
+    </hint>
+    <hint type="destinationlabel">
+     <x>105</x>
+     <y>-6</y>
+    </hint>
+   </hints>
+  </connection>
+  <connection>
+   <sender>user_name</sender>
+   <signal>textChanged(QString)</signal>
+   <receiver>Form</receiver>
+   <slot>user_name_changed(QString)</slot>
+   <hints>
+    <hint type="sourcelabel">
+     <x>109</x>
+     <y>154</y>
+    </hint>
+    <hint type="destinationlabel">
+     <x>190</x>
+     <y>-9</y>
+    </hint>
+   </hints>
+  </connection>
+  <connection>
+   <sender>bot_name</sender>
+   <signal>textChanged(QString)</signal>
+   <receiver>Form</receiver>
+   <slot>bot_name_changed(QString)</slot>
+   <hints>
+    <hint type="sourcelabel">
+     <x>237</x>
+     <y>237</y>
+    </hint>
+    <hint type="destinationlabel">
+     <x>151</x>
+     <y>4</y>
+    </hint>
+   </hints>
+  </connection>
+  <connection>
+   <sender>guardrails</sender>
+   <signal>textChanged()</signal>
+   <receiver>Form</receiver>
+   <slot>guardrails_changed()</slot>
+   <hints>
+    <hint type="sourcelabel">
+     <x>188</x>
+     <y>351</y>
+    </hint>
+    <hint type="destinationlabel">
+     <x>0</x>
+     <y>28</y>
+    </hint>
+   </hints>
+  </connection>
+  <connection>
+   <sender>instructions</sender>
+   <signal>textChanged()</signal>
+   <receiver>Form</receiver>
+   <slot>instructions_changed()</slot>
+   <hints>
+    <hint type="sourcelabel">
+     <x>275</x>
+     <y>484</y>
+    </hint>
+    <hint type="destinationlabel">
+     <x>-1</x>
+     <y>341</y>
+    </hint>
+   </hints>
+  </connection>
+ </connections>
+ <slots>
+  <slot>add_template(QString)</slot>
+  <slot>template_name_changed(QString)</slot>
+  <slot>user_name_changed(QString)</slot>
+  <slot>bot_name_changed(QString)</slot>
+  <slot>guardrails_changed()</slot>
+  <slot>instructions_changed()</slot>
+ </slots>
+</ui>

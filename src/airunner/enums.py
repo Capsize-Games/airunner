@@ -74,6 +74,8 @@ class SignalCode(Enum):
     APPLICATION_STATUS_ERROR_SIGNAL = "status_error_signal"
     APPLICATION_TOOL_CHANGED_SIGNAL = "tool_changed_signal"
     APPLICATION_ACTIVE_GRID_AREA_UPDATED = "active_grid_area_updated"
+    ACTIVE_GRID_AREA_MOVED_SIGNAL = "active_grid_area_moved_signal"
+    MASK_GENERATOR_WORKER_RESPONSE_SIGNAL = "mask_generator_worker_response_signal"
 
     AUDIO_CAPTURE_WORKER_RESPONSE_SIGNAL = "AudioCaptureWorker_response_signal"
     AUDIO_PROCESSOR_WORKER_PROCESSED_SIGNAL = "AudioProcessorWorker_processed_audio"
@@ -90,11 +92,8 @@ class SignalCode(Enum):
     SCENE_DO_DRAW_SIGNAL = "scene_do_draw_signal"
     SCENE_DO_UPDATE_IMAGE_SIGNAL = "scene_do_update_image_signal"
     CANVAS_CLEAR_LINES_SIGNAL = "canvas_clear_lines_signal"
-    CANVAS_RESIZE_WORKER_RESPONSE_SIGNAL = "CanvasResizeWorker_response_signal"
     CANVAS_HANDLE_LAYER_CLICK_SIGNAL = "canvas_handle_layer_click_signal"
     CANVAS_UPDATE_SIGNAL = "update_canvas_signal"
-    CANVAS_RESIZE_SIGNAL = "canvas_resize_signal"
-    CANVAS_DO_RESIZE_SIGNAL = "canvas_do_resize_signal"
     CANVAS_UPDATE_CURSOR = "canvas_update_cursor"
     CANVAS_ZOOM_LEVEL_CHANGED = "zoom_level_changed"
     CANVAS_CLEAR = "clear_canvas"
@@ -113,6 +112,25 @@ class SignalCode(Enum):
     DRAWINGPAD_IMPORT_IMAGE_SIGNAL = "drawingpad_import_image_signal"
     CONTROLNET_EXPORT_IMAGE_SIGNAL = "controlnet_export_image_signal"
     CONTROLNET_IMPORT_IMAGE_SIGNAL = "controlnet_import_image_signal"
+    OUTPAINT_EXPORT_SIGNAL = "outpaint_export_image_signal"
+    OUTPAINT_IMPORT_SIGNAL = "outpaint_import_image_signal"
+    CONTROLNET_COPY_IMAGE_SIGNAL = "controlnet_copy_image_signal"
+    CONTROLNET_CUT_IMAGE_SIGNAL = "controlnet_cut_image_signal"
+    CONTROLNET_ROTATE_90_CLOCKWISE_SIGNAL = "controlnet_rotate_90_clockwise_signal"
+    CONTROLNET_ROTATE_90_COUNTER_CLOCKWISE_SIGNAL = "controlnet_rotate_90_counter_clockwise_signal"
+    CONTROLNET_PASTE_IMAGE_SIGNAL = "controlnet_paste_image_signal"
+    BRUSH_COPY_IMAGE_SIGNAL = "brush_copy_image_signal"
+    BRUSH_CUT_IMAGE_SIGNAL = "brush_cut_image_signal"
+    BRUSH_PASTE_IMAGE_SIGNAL = "brush_paste_image_signal"
+    BRUSH_EXPORT_IMAGE_SIGNAL = "brush_export_image_signal"
+    BRUSH_IMPORT_IMAGE_SIGNAL = "brush_import_image_signal"
+    OUTPAINT_COPY_IMAGE_SIGNAL = "outpaint_copy_image_signal"
+    OUTPAINT_CUT_IMAGE_SIGNAL = "outpaint_cut_image_signal"
+    OUTPAINT_ROTATE_90_CLOCKWISE_SIGNAL = "outpaint_rotate_90_clockwise_signal"
+    OUTPAINT_ROTATE_90_COUNTER_CLOCKWISE_SIGNAL = "outpaint_rotate_90_counter_clockwise_signal"
+    OUTPAINT_PASTE_IMAGE_SIGNAL = "outpaint_paste_image_signal"
+    OUTPAINT_EXPORT_IMAGE_SIGNAL = "outpaint_export_image_signal"
+    OUTPAINT_IMPORT_IMAGE_SIGNAL = "outpaint_import_image_signal"
 
     CONTROLNET_IMAGE_GENERATED_SIGNAL = "controlnet_image_generated_signal"
 
@@ -170,8 +188,6 @@ class SignalCode(Enum):
 
     LORA_ADD_SIGNAL = "add_lora_signal"
     LORA_UPDATE_SIGNAL = "update_lora_signal"
-
-    SCENE_RESIZE_SIGNAL = "scene_resize_signal"
 
     SET_CANVAS_COLOR_SIGNAL = "set_canvas_color_signal"
     UPDATE_SCENE_SIGNAL = "update_scene_signal"
@@ -401,6 +417,7 @@ class CanvasType(Enum):
     BRUSH = "brush"
     IMAGE = "image"
     CONTROLNET = "controlnet"
+    OUTPAINT = "outpaint"
 
 
 class Controlnet(Enum):

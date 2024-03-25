@@ -2,7 +2,7 @@ import os
 
 from PySide6.QtCore import Qt
 from PySide6 import QtCore
-from PySide6.QtWidgets import QSpacerItem, QSizePolicy
+from PySide6.QtWidgets import QSpacerItem, QSizePolicy, QWidget
 
 from airunner.settings import DEFAULT_SHORTCUTS
 from airunner.widgets.base_widget import BaseWidget
@@ -26,11 +26,13 @@ class KeyboardShortcutsWidget(BaseWidget):
         self.ui.scrollAreaWidgetContents.layout().addItem(self.spacer)
 
     def add_widget(self, key, value):
-        widget = Ui_keyboard_shortcut_widget()
-        widget.label.setText(key)
-        widget.line_edit.setText(value["text"])
-        widget.line_edit.mousePressEvent = lambda event: self.set_shortcut(key, widget.line_edit)
-        widget.line_edit.keyPressEvent = lambda event: self.get_shortcut(key, widget.line_edit, event)
+        widget = QWidget()
+        ui = Ui_keyboard_shortcut_widget()
+        ui.setupUi(widget)
+        ui.label.setText(key)
+        ui.line_edit.setText(value["text"])
+        ui.line_edit.mousePressEvent = lambda event: self.set_shortcut(key, ui.line_edit)
+        ui.line_edit.keyPressEvent = lambda event: self.get_shortcut(key, ui.line_edit, event)
         self.ui.scrollAreaWidgetContents.layout().addWidget(widget)
         return widget
 

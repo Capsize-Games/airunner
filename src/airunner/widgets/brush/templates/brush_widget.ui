@@ -47,7 +47,7 @@
       <string>Controlnet Conditioning Scale</string>
      </property>
      <property name="settings_property" stdset="0">
-      <string notr="true">conditioning_scale</string>
+      <string notr="true">generator_settings.controlnet_image_settings.conditioning_scale</string>
      </property>
      <property name="display_as_float" stdset="0">
       <bool>true</bool>
@@ -100,7 +100,7 @@
       <string>Brush Size</string>
      </property>
      <property name="settings_property" stdset="0">
-      <string notr="true">size</string>
+      <string notr="true">brush_settings.size</string>
      </property>
      <property name="display_as_float" stdset="0">
       <bool>false</bool>
@@ -140,7 +140,7 @@
       <string>Controlnet Guidance Scale</string>
      </property>
      <property name="settings_property" stdset="0">
-      <string notr="true">guidance_scale</string>
+      <string notr="true">generator_settings.controlnet_image_settings.guidance_scale</string>
      </property>
      <property name="display_as_float" stdset="0">
       <bool>true</bool>
@@ -180,7 +180,7 @@
       <string>Strength</string>
      </property>
      <property name="settings_property" stdset="0">
-      <string notr="true">strength</string>
+      <string notr="true">generator_settings.strength</string>
      </property>
      <property name="display_as_float" stdset="0">
       <bool>true</bool>

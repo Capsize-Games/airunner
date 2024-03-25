@@ -1,8 +1,9 @@
 from functools import partial
 
+from PySide6 import QtGui
 from PySide6.QtCore import QPointF, QPoint, Qt, QRect, QEvent
 from PySide6.QtGui import QMouseEvent, QColor, QBrush
-from PySide6.QtWidgets import QGraphicsView, QGraphicsItemGroup
+from PySide6.QtWidgets import QGraphicsView, QGraphicsItemGroup, QGraphicsLineItem
 
 from airunner.aihandler.logger import Logger
 from airunner.enums import CanvasToolName, SignalCode, CanvasType, ServiceCode
@@ -13,6 +14,7 @@ from airunner.widgets.canvas.brush_scene import BrushScene
 from airunner.widgets.canvas.controlnet_scene import ControlnetScene
 from airunner.widgets.canvas.custom_scene import CustomScene
 from airunner.widgets.canvas.draggables.active_grid_area import ActiveGridArea
+from airunner.widgets.canvas.outpaint_scene import OutpaintScene
 from airunner.windows.main.settings_mixin import SettingsMixin
 from airunner.widgets.canvas.zoom_handler import ZoomHandler
 
@@ -27,20 +29,19 @@ class CustomGraphicsView(
         MediatorMixin.__init__(self)
         SettingsMixin.__init__(self)
         self.logger = Logger(prefix=self.__class__.__name__)
-        self.scene = None
+        self._scene = None
+        self.current_background_color = None
         self.active_grid_area = None
         self.do_draw_layers = True
         self.initialized = False
         self.drawing = False
         self.pixmaps = {}
         self.line_group = QGraphicsItemGroup()
-        self.resizeEvent = self.window_resized
-        self.scene_is_active = False
+        self._scene_is_active = False
 
         # register signal handlers
         signal_handlers = {
             SignalCode.APPLICATION_TOOL_CHANGED_SIGNAL: self.on_tool_changed_signal,
-            SignalCode.CANVAS_DO_RESIZE_SIGNAL: self.do_resize_canvas,
             SignalCode.CANVAS_ZOOM_LEVEL_CHANGED: self.on_zoom_level_changed_signal,
             SignalCode.SET_CANVAS_COLOR_SIGNAL: self.set_canvas_color,
             SignalCode.CANVAS_DO_DRAW_SELECTION_AREA_SIGNAL: self.draw_selected_area,
@@ -48,6 +49,7 @@ class CustomGraphicsView(
             SignalCode.CANVAS_CLEAR_LINES_SIGNAL: self.clear_lines,
             SignalCode.SCENE_DO_DRAW_SIGNAL: self.on_canvas_do_draw_signal,
             SignalCode.APPLICATION_MAIN_WINDOW_LOADED_SIGNAL: self.on_main_window_loaded_signal,
+            SignalCode.APPLICATION_SETTINGS_CHANGED_SIGNAL: self.on_application_settings_changed_signal
         }
         for k, v in signal_handlers.items():
             self.register(k, v)
@@ -74,6 +76,13 @@ class CustomGraphicsView(
             do_draw_layers=data.get("do_draw_layers", None)
         )
 
+    def on_application_settings_changed_signal(self, _message):
+        self.set_canvas_color()
+        if self.settings["grid_settings"]["show_grid"]:
+            self.do_draw()
+        else:
+            self.clear_lines()
+
     def do_draw(
         self,
         force_draw: bool = False,
@@ -85,7 +94,10 @@ class CustomGraphicsView(
             return
         self.drawing = True
         self.set_scene_rect()
-        self.draw_grid()
+        if self.settings["grid_settings"]["show_grid"]:
+            self.draw_grid()
+        else:
+            self.clear_lines()
         self.show_active_grid_area()
         self.update_scene()
         self.drawing = False
@@ -93,17 +105,53 @@ class CustomGraphicsView(
     def draw_grid(self):
         if self.canvas_type != CanvasType.IMAGE.value:
             return
-        if self.line_group is not None:
-            self.scene.addItem(self.line_group)
 
-    def clear_lines(self, _message):
+        if self.line_group is None:
+            self.line_group = QGraphicsItemGroup()
+        if self.line_group.scene() != self._scene:
+            self._scene.addItem(self.line_group)
+
+        cell_size = self.settings["grid_settings"]["cell_size"]
+        scene_width = int(self._scene.width())
+        scene_height = int(self._scene.height())
+
+        num_vertical_lines = scene_width // cell_size + 1
+        num_horizontal_lines = scene_height // cell_size + 1
+
+        # Create or reuse vertical lines
+        for i in range(num_vertical_lines):
+            x = i * cell_size
+            if i < len(self.line_group.childItems()):
+                line = self.line_group.childItems()[i]
+                line.setLine(x, 0, x, scene_height)
+                line.setVisible(True)
+            else:
+                line = QGraphicsLineItem(x, 0, x, scene_height)
+                self.line_group.addToGroup(line)
+
+        # Create or reuse horizontal lines
+        for i in range(num_horizontal_lines):
+            y = i * cell_size
+            index = i + num_vertical_lines
+            if index < len(self.line_group.childItems()):
+                line = self.line_group.childItems()[index]
+                line.setLine(0, y, scene_width, y)
+                line.setVisible(True)
+            else:
+                line = QGraphicsLineItem(0, y, scene_width, y)
+                self.line_group.addToGroup(line)
+
+        # Hide unused lines
+        for i in range(num_vertical_lines + num_horizontal_lines, len(self.line_group.childItems())):
+            self.line_group.childItems()[i].setVisible(False)
+
+    def clear_lines(self, _message: dict = None):
         self.remove_scene_item(self.line_group)
-        self.line_group = QGraphicsItemGroup()
 
     def register_line_data(self, lines_data):
         for line_data in lines_data:
             try:
-                line = self.scene.addLine(*line_data)
+                line = self._scene.addLine(*line_data)
                 self.line_group.addToGroup(line)
             except TypeError as e:
                 self.logger.error(f"TypeError: {e}")
@@ -112,7 +160,7 @@ class CustomGraphicsView(
 
     def set_scene_rect(self):
         canvas_container_size = self.viewport().size()
-        self.scene.setSceneRect(
+        self._scene.setSceneRect(
             0,
             0,
             canvas_container_size.width(),
@@ -120,21 +168,21 @@ class CustomGraphicsView(
         )
 
     def update_scene(self, _message=None):
-        self.scene.update()
+        self._scene.update()
 
     def remove_scene_item(self, item):
         if item is None:
             return
-        if item.scene() == self.scene:
-            self.scene.removeItem(item)
+        if item.scene() == self._scene:
+            self._scene.removeItem(item)
 
     def draw_selected_area(self, _message):
         """
         Draw the selected active grid area container
         """
         # Handle any active selections
-        selection_start_pos = self.scene.selection_start_pos
-        selection_stop_pos = self.scene.selection_stop_pos
+        selection_start_pos = self._scene.selection_start_pos
+        selection_stop_pos = self._scene.selection_stop_pos
 
         # This will clear the active grid area while a selection is being made
         if selection_stop_pos is None and selection_start_pos is not None:
@@ -184,7 +232,7 @@ class CustomGraphicsView(
             self.settings = settings
 
             # Clear the selection from the scene
-            self.scene.clear_selection()
+            self._scene.clear_selection()
         self.show_active_grid_area()
         self.emit_signal(
             SignalCode.APPLICATION_ACTIVE_GRID_AREA_UPDATED,
@@ -202,25 +250,7 @@ class CustomGraphicsView(
         if not self.active_grid_area:
             self.active_grid_area = ActiveGridArea()
             self.active_grid_area.setZValue(1)
-            self.scene.addItem(self.active_grid_area)
-
-    def window_resized(self, event):
-        self.do_resize_canvas()
-
-    def do_resize_canvas(
-        self,
-        data: dict = None,
-    ):
-        data = {} if not data else data
-        kwargs = {
-            "settings": data.get("settings", self.settings),
-            "force_draw": data.get("force_draw", False),
-            "do_draw_layers": data.get("do_draw_layers", None),
-            "scene": data.get("scene", self.scene),
-            "line_group": data.get("line_group", self.line_group),
-            "view_size": data.get("view_size", self.viewport().size())
-        }
-        self.emit_signal(SignalCode.CANVAS_RESIZE_SIGNAL, kwargs)
+            self._scene.addItem(self.active_grid_area)
 
     def on_zoom_level_changed_signal(self, _message):
         transform = self.zoom_handler.on_zoom_level_changed()
@@ -253,29 +283,36 @@ class CustomGraphicsView(
         self.toggle_drag_mode()
 
     def create_scene(self):
-        if self.scene and self.scene.painter:
-            self.scene.painter.end()
+        if self._scene and self._scene.painter:
+            self._scene.painter.end()
         if self.canvas_type == CanvasType.IMAGE.value:
-            self.scene = CustomScene(
+            self._scene = CustomScene(
                 self.canvas_type
             )
         elif self.canvas_type == CanvasType.BRUSH.value:
-            self.scene = BrushScene(
+            self._scene = BrushScene(
                 self.canvas_type
             )
         elif self.canvas_type == CanvasType.CONTROLNET.value:
-            self.scene = ControlnetScene(
+            self._scene = ControlnetScene(
                 self.canvas_type
             )
-        self.setScene(self.scene)
+        elif self.canvas_type == CanvasType.OUTPAINT.value:
+            self._scene = OutpaintScene(
+                self.canvas_type
+            )
+        self.setScene(self._scene)
         self.set_canvas_color()
 
     def set_canvas_color(self, _message=None):
-        if not self.scene:
+        if not self._scene:
             return
-        color = QColor(self.settings["grid_settings"]["canvas_color"])
+        if self.current_background_color == self.settings["grid_settings"]["canvas_color"]:
+            return
+        self.current_background_color = self.settings["grid_settings"]["canvas_color"]
+        color = QColor(self.current_background_color)
         brush = QBrush(color)
-        self.scene.setBackgroundBrush(brush)
+        self._scene.setBackgroundBrush(brush)
 
     def handle_mouse_event(self, original_mouse_event, event):
         if event.buttons() == Qt.MouseButton.MiddleButton:
@@ -336,3 +373,9 @@ class CustomGraphicsView(
         self.settings = settings
         new_event = self.snap_to_grid(event)
         super().mousePressEvent(new_event)
+
+    def resizeEvent(self, event: QtGui.QResizeEvent) -> None:
+        super().resizeEvent(event)
+        #self.emit_signal(SignalCode.CANVAS_DO_DRAW_SIGNAL)
+        #self.toggle_drag_mode()
+        self.do_draw()

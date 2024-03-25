@@ -7,8 +7,8 @@
    <rect>
     <x>0</x>
     <y>0</y>
-    <width>1123</width>
-    <height>903</height>
+    <width>841</width>
+    <height>783</height>
    </rect>
   </property>
   <property name="sizePolicy">
@@ -70,6 +70,429 @@
     <property name="bottomMargin">
      <number>0</number>
     </property>
+    <item row="0" column="0">
+     <widget class="QFrame" name="header_widget">
+      <property name="enabled">
+       <bool>true</bool>
+      </property>
+      <property name="maximumSize">
+       <size>
+        <width>16777215</width>
+        <height>48</height>
+       </size>
+      </property>
+      <property name="frameShape">
+       <enum>QFrame::Panel</enum>
+      </property>
+      <property name="frameShadow">
+       <enum>QFrame::Raised</enum>
+      </property>
+      <layout class="QHBoxLayout" name="horizontalLayout">
+       <property name="spacing">
+        <number>0</number>
+       </property>
+       <property name="leftMargin">
+        <number>0</number>
+       </property>
+       <property name="topMargin">
+        <number>0</number>
+       </property>
+       <property name="rightMargin">
+        <number>0</number>
+       </property>
+       <property name="bottomMargin">
+        <number>0</number>
+       </property>
+       <item>
+        <widget class="QScrollArea" name="scrollArea_3">
+         <property name="frameShape">
+          <enum>QFrame::NoFrame</enum>
+         </property>
+         <property name="frameShadow">
+          <enum>QFrame::Sunken</enum>
+         </property>
+         <property name="midLineWidth">
+          <number>0</number>
+         </property>
+         <property name="verticalScrollBarPolicy">
+          <enum>Qt::ScrollBarAlwaysOff</enum>
+         </property>
+         <property name="horizontalScrollBarPolicy">
+          <enum>Qt::ScrollBarAsNeeded</enum>
+         </property>
+         <property name="widgetResizable">
+          <bool>true</bool>
+         </property>
+         <widget class="QWidget" name="scrollAreaWidgetContents_3">
+          <property name="geometry">
+           <rect>
+            <x>0</x>
+            <y>0</y>
+            <width>837</width>
+            <height>46</height>
+           </rect>
+          </property>
+          <layout class="QHBoxLayout" name="horizontalLayout_2">
+           <property name="spacing">
+            <number>0</number>
+           </property>
+           <property name="leftMargin">
+            <number>0</number>
+           </property>
+           <property name="topMargin">
+            <number>0</number>
+           </property>
+           <property name="rightMargin">
+            <number>0</number>
+           </property>
+           <property name="bottomMargin">
+            <number>0</number>
+           </property>
+           <item>
+            <widget class="QFrame" name="text_generator_header_tools">
+             <property name="frameShape">
+              <enum>QFrame::StyledPanel</enum>
+             </property>
+             <property name="frameShadow">
+              <enum>QFrame::Raised</enum>
+             </property>
+             <layout class="QHBoxLayout" name="horizontalLayout_5">
+              <property name="leftMargin">
+               <number>0</number>
+              </property>
+              <property name="topMargin">
+               <number>0</number>
+              </property>
+              <property name="rightMargin">
+               <number>0</number>
+              </property>
+              <property name="bottomMargin">
+               <number>0</number>
+              </property>
+             </layout>
+            </widget>
+           </item>
+           <item>
+            <widget class="QFrame" name="image_generator_header_tools">
+             <property name="frameShape">
+              <enum>QFrame::NoFrame</enum>
+             </property>
+             <property name="frameShadow">
+              <enum>QFrame::Sunken</enum>
+             </property>
+             <layout class="QHBoxLayout" name="horizontalLayout_4">
+              <property name="spacing">
+               <number>0</number>
+              </property>
+              <property name="leftMargin">
+               <number>0</number>
+              </property>
+              <property name="topMargin">
+               <number>0</number>
+              </property>
+              <property name="rightMargin">
+               <number>0</number>
+              </property>
+              <property name="bottomMargin">
+               <number>0</number>
+              </property>
+              <item>
+               <widget class="QWidget" name="image_generator_header_tool_buttons" native="true">
+                <layout class="QHBoxLayout" name="horizontalLayout_3">
+                 <property name="spacing">
+                  <number>6</number>
+                 </property>
+                 <property name="leftMargin">
+                  <number>6</number>
+                 </property>
+                 <property name="topMargin">
+                  <number>0</number>
+                 </property>
+                 <property name="rightMargin">
+                  <number>6</number>
+                 </property>
+                 <property name="bottomMargin">
+                  <number>0</number>
+                 </property>
+                 <item>
+                  <widget class="QPushButton" name="file_new_button">
+                   <property name="minimumSize">
+                    <size>
+                     <width>36</width>
+                     <height>36</height>
+                    </size>
+                   </property>
+                   <property name="maximumSize">
+                    <size>
+                     <width>36</width>
+                     <height>36</height>
+                    </size>
+                   </property>
+                   <property name="cursor">
+                    <cursorShape>PointingHandCursor</cursorShape>
+                   </property>
+                   <property name="toolTip">
+                    <string>New</string>
+                   </property>
+                   <property name="text">
+                    <string/>
+                   </property>
+                   <property name="icon">
+                    <iconset theme="document-new">
+                     <normaloff>../../../../../../../../../../../../../../.designer/backup</normaloff>../../../../../../../../../../../../../../.designer/backup</iconset>
+                   </property>
+                   <property name="iconSize">
+                    <size>
+                     <width>24</width>
+                     <height>24</height>
+                    </size>
+                   </property>
+                   <property name="flat">
+                    <bool>true</bool>
+                   </property>
+                  </widget>
+                 </item>
+                 <item>
+                  <widget class="QPushButton" name="open_button">
+                   <property name="minimumSize">
+                    <size>
+                     <width>36</width>
+                     <height>36</height>
+                    </size>
+                   </property>
+                   <property name="maximumSize">
+                    <size>
+                     <width>36</width>
+                     <height>36</height>
+                    </size>
+                   </property>
+                   <property name="cursor">
+                    <cursorShape>PointingHandCursor</cursorShape>
+                   </property>
+                   <property name="toolTip">
+                    <string>Open</string>
+                   </property>
+                   <property name="text">
+                    <string/>
+                   </property>
+                   <property name="icon">
+                    <iconset theme="document-open">
+                     <normaloff>../../../../../../../../../../../../../../src/icons/034-folder.png</normaloff>../../../../../../../../../../../../../../src/icons/034-folder.png</iconset>
+                   </property>
+                   <property name="iconSize">
+                    <size>
+                     <width>24</width>
+                     <height>24</height>
+                    </size>
+                   </property>
+                   <property name="flat">
+                    <bool>true</bool>
+                   </property>
+                  </widget>
+                 </item>
+                 <item>
+                  <widget class="QPushButton" name="save_button">
+                   <property name="minimumSize">
+                    <size>
+                     <width>36</width>
+                     <height>36</height>
+                    </size>
+                   </property>
+                   <property name="maximumSize">
+                    <size>
+                     <width>36</width>
+                     <height>36</height>
+                    </size>
+                   </property>
+                   <property name="cursor">
+                    <cursorShape>PointingHandCursor</cursorShape>
+                   </property>
+                   <property name="toolTip">
+                    <string>Save</string>
+                   </property>
+                   <property name="text">
+                    <string/>
+                   </property>
+                   <property name="icon">
+                    <iconset theme="document-save">
+                     <normaloff>../../../../../../../../../../../../../../src/icons/033-diskette.png</normaloff>../../../../../../../../../../../../../../src/icons/033-diskette.png</iconset>
+                   </property>
+                   <property name="iconSize">
+                    <size>
+                     <width>24</width>
+                     <height>24</height>
+                    </size>
+                   </property>
+                   <property name="flat">
+                    <bool>true</bool>
+                   </property>
+                  </widget>
+                 </item>
+                 <item>
+                  <widget class="QPushButton" name="export_button">
+                   <property name="minimumSize">
+                    <size>
+                     <width>36</width>
+                     <height>36</height>
+                    </size>
+                   </property>
+                   <property name="maximumSize">
+                    <size>
+                     <width>36</width>
+                     <height>36</height>
+                    </size>
+                   </property>
+                   <property name="cursor">
+                    <cursorShape>PointingHandCursor</cursorShape>
+                   </property>
+                   <property name="toolTip">
+                    <string>Export Image</string>
+                   </property>
+                   <property name="text">
+                    <string/>
+                   </property>
+                   <property name="icon">
+                    <iconset theme="document-send">
+                     <normaloff>../../../../../../../../../../../../../../src/icons/export.png</normaloff>../../../../../../../../../../../../../../src/icons/export.png</iconset>
+                   </property>
+                   <property name="iconSize">
+                    <size>
+                     <width>24</width>
+                     <height>24</height>
+                    </size>
+                   </property>
+                   <property name="flat">
+                    <bool>true</bool>
+                   </property>
+                  </widget>
+                 </item>
+                 <item>
+                  <widget class="Line" name="line_2">
+                   <property name="orientation">
+                    <enum>Qt::Vertical</enum>
+                   </property>
+                  </widget>
+                 </item>
+                 <item>
+                  <widget class="QPushButton" name="undo_button">
+                   <property name="sizePolicy">
+                    <sizepolicy hsizetype="Expanding" vsizetype="Expanding">
+                     <horstretch>0</horstretch>
+                     <verstretch>0</verstretch>
+                    </sizepolicy>
+                   </property>
+                   <property name="minimumSize">
+                    <size>
+                     <width>36</width>
+                     <height>36</height>
+                    </size>
+                   </property>
+                   <property name="maximumSize">
+                    <size>
+                     <width>36</width>
+                     <height>36</height>
+                    </size>
+                   </property>
+                   <property name="cursor">
+                    <cursorShape>PointingHandCursor</cursorShape>
+                   </property>
+                   <property name="toolTip">
+                    <string>Undo</string>
+                   </property>
+                   <property name="styleSheet">
+                    <string notr="true">border-color: rgb(61, 56, 70);</string>
+                   </property>
+                   <property name="text">
+                    <string/>
+                   </property>
+                   <property name="icon">
+                    <iconset theme="edit-undo">
+                     <normaloff>../../../../../../../../../../../../../../.designer/backup</normaloff>../../../../../../../../../../../../../../.designer/backup</iconset>
+                   </property>
+                   <property name="iconSize">
+                    <size>
+                     <width>24</width>
+                     <height>24</height>
+                    </size>
+                   </property>
+                   <property name="flat">
+                    <bool>true</bool>
+                   </property>
+                  </widget>
+                 </item>
+                 <item>
+                  <widget class="QPushButton" name="redo_button">
+                   <property name="sizePolicy">
+                    <sizepolicy hsizetype="Expanding" vsizetype="Expanding">
+                     <horstretch>0</horstretch>
+                     <verstretch>0</verstretch>
+                    </sizepolicy>
+                   </property>
+                   <property name="minimumSize">
+                    <size>
+                     <width>36</width>
+                     <height>36</height>
+                    </size>
+                   </property>
+                   <property name="maximumSize">
+                    <size>
+                     <width>36</width>
+                     <height>36</height>
+                    </size>
+                   </property>
+                   <property name="cursor">
+                    <cursorShape>PointingHandCursor</cursorShape>
+                   </property>
+                   <property name="toolTip">
+                    <string>Redo</string>
+                   </property>
+                   <property name="styleSheet">
+                    <string notr="true">border-color: rgb(61, 56, 70);</string>
+                   </property>
+                   <property name="text">
+                    <string/>
+                   </property>
+                   <property name="icon">
+                    <iconset theme="edit-redo">
+                     <normaloff>../../../../../../../../../../../../../../src/icons/008-redo.png</normaloff>../../../../../../../../../../../../../../src/icons/008-redo.png</iconset>
+                   </property>
+                   <property name="iconSize">
+                    <size>
+                     <width>24</width>
+                     <height>24</height>
+                    </size>
+                   </property>
+                   <property name="flat">
+                    <bool>true</bool>
+                   </property>
+                  </widget>
+                 </item>
+                 <item>
+                  <spacer name="horizontalSpacer">
+                   <property name="orientation">
+                    <enum>Qt::Horizontal</enum>
+                   </property>
+                   <property name="sizeHint" stdset="0">
+                    <size>
+                     <width>40</width>
+                     <height>20</height>
+                    </size>
+                   </property>
+                  </spacer>
+                 </item>
+                </layout>
+               </widget>
+              </item>
+             </layout>
+            </widget>
+           </item>
+          </layout>
+         </widget>
+        </widget>
+       </item>
+      </layout>
+     </widget>
+    </item>
     <item row="1" column="0">
      <widget class="QTabWidget" name="mode_tab_widget">
       <property name="autoFillBackground">
@@ -101,7 +524,7 @@
           <widget class="QWidget" name="canvas_widget" native="true">
            <property name="minimumSize">
             <size>
-             <width>512</width>
+             <width>0</width>
              <height>0</height>
             </size>
            </property>
@@ -173,28 +596,6 @@
                 </item>
                </layout>
               </widget>
-              <widget class="QWidget" name="model_manager_tab">
-               <attribute name="title">
-                <string>Model Manager</string>
-               </attribute>
-               <layout class="QGridLayout" name="gridLayout_7">
-                <property name="leftMargin">
-                 <number>0</number>
-                </property>
-                <property name="topMargin">
-                 <number>0</number>
-                </property>
-                <property name="rightMargin">
-                 <number>0</number>
-                </property>
-                <property name="bottomMargin">
-                 <number>0</number>
-                </property>
-                <item row="0" column="0">
-                 <widget class="ModelManagerWidget" name="model_manager" native="true"/>
-                </item>
-               </layout>
-              </widget>
              </widget>
             </item>
            </layout>
@@ -214,8 +615,8 @@
              <rect>
               <x>0</x>
               <y>0</y>
-              <width>347</width>
-              <height>756</height>
+              <width>354</width>
+              <height>636</height>
              </rect>
             </property>
             <layout class="QGridLayout" name="gridLayout">
@@ -259,7 +660,7 @@
                  <bool>false</bool>
                 </property>
                 <property name="currentIndex">
-                 <number>4</number>
+                 <number>0</number>
                 </property>
                 <widget class="QWidget" name="tab_pen">
                  <attribute name="title">
@@ -755,60 +1156,6 @@
             </widget>
            </item>
            <item>
-            <widget class="QPushButton" name="model_manager_button">
-             <property name="sizePolicy">
-              <sizepolicy hsizetype="Maximum" vsizetype="MinimumExpanding">
-               <horstretch>0</horstretch>
-               <verstretch>0</verstretch>
-              </sizepolicy>
-             </property>
-             <property name="minimumSize">
-              <size>
-               <width>50</width>
-               <height>45</height>
-              </size>
-             </property>
-             <property name="maximumSize">
-              <size>
-               <width>50</width>
-               <height>45</height>
-              </size>
-             </property>
-             <property name="cursor">
-              <cursorShape>PointingHandCursor</cursorShape>
-             </property>
-             <property name="toolTip">
-              <string>Model manager</string>
-             </property>
-             <property name="text">
-              <string/>
-             </property>
-             <property name="icon">
-              <iconset resource="../../../resources_light.qrc">
-               <normaloff>:/icons/light/tech-icon.svg</normaloff>:/icons/light/tech-icon.svg</iconset>
-             </property>
-             <property name="iconSize">
-              <size>
-               <width>18</width>
-               <height>18</height>
-              </size>
-             </property>
-             <property name="checkable">
-              <bool>true</bool>
-             </property>
-             <property name="flat">
-              <bool>true</bool>
-             </property>
-            </widget>
-           </item>
-           <item>
-            <widget class="Line" name="line_5">
-             <property name="orientation">
-              <enum>Qt::Horizontal</enum>
-             </property>
-            </widget>
-           </item>
-           <item>
             <widget class="QPushButton" name="settings_button">
              <property name="sizePolicy">
               <sizepolicy hsizetype="Maximum" vsizetype="MinimumExpanding">
@@ -981,429 +1328,6 @@
       </widget>
      </widget>
     </item>
-    <item row="0" column="0">
-     <widget class="QFrame" name="header_widget">
-      <property name="enabled">
-       <bool>true</bool>
-      </property>
-      <property name="maximumSize">
-       <size>
-        <width>16777215</width>
-        <height>48</height>
-       </size>
-      </property>
-      <property name="frameShape">
-       <enum>QFrame::Panel</enum>
-      </property>
-      <property name="frameShadow">
-       <enum>QFrame::Raised</enum>
-      </property>
-      <layout class="QHBoxLayout" name="horizontalLayout">
-       <property name="spacing">
-        <number>0</number>
-       </property>
-       <property name="leftMargin">
-        <number>0</number>
-       </property>
-       <property name="topMargin">
-        <number>0</number>
-       </property>
-       <property name="rightMargin">
-        <number>0</number>
-       </property>
-       <property name="bottomMargin">
-        <number>0</number>
-       </property>
-       <item>
-        <widget class="QScrollArea" name="scrollArea_3">
-         <property name="frameShape">
-          <enum>QFrame::NoFrame</enum>
-         </property>
-         <property name="frameShadow">
-          <enum>QFrame::Sunken</enum>
-         </property>
-         <property name="midLineWidth">
-          <number>0</number>
-         </property>
-         <property name="verticalScrollBarPolicy">
-          <enum>Qt::ScrollBarAlwaysOff</enum>
-         </property>
-         <property name="horizontalScrollBarPolicy">
-          <enum>Qt::ScrollBarAsNeeded</enum>
-         </property>
-         <property name="widgetResizable">
-          <bool>true</bool>
-         </property>
-         <widget class="QWidget" name="scrollAreaWidgetContents_3">
-          <property name="geometry">
-           <rect>
-            <x>0</x>
-            <y>0</y>
-            <width>1119</width>
-            <height>46</height>
-           </rect>
-          </property>
-          <layout class="QHBoxLayout" name="horizontalLayout_2">
-           <property name="spacing">
-            <number>0</number>
-           </property>
-           <property name="leftMargin">
-            <number>0</number>
-           </property>
-           <property name="topMargin">
-            <number>0</number>
-           </property>
-           <property name="rightMargin">
-            <number>0</number>
-           </property>
-           <property name="bottomMargin">
-            <number>0</number>
-           </property>
-           <item>
-            <widget class="QFrame" name="text_generator_header_tools">
-             <property name="frameShape">
-              <enum>QFrame::StyledPanel</enum>
-             </property>
-             <property name="frameShadow">
-              <enum>QFrame::Raised</enum>
-             </property>
-             <layout class="QHBoxLayout" name="horizontalLayout_5">
-              <property name="leftMargin">
-               <number>0</number>
-              </property>
-              <property name="topMargin">
-               <number>0</number>
-              </property>
-              <property name="rightMargin">
-               <number>0</number>
-              </property>
-              <property name="bottomMargin">
-               <number>0</number>
-              </property>
-             </layout>
-            </widget>
-           </item>
-           <item>
-            <widget class="QFrame" name="image_generator_header_tools">
-             <property name="frameShape">
-              <enum>QFrame::NoFrame</enum>
-             </property>
-             <property name="frameShadow">
-              <enum>QFrame::Sunken</enum>
-             </property>
-             <layout class="QHBoxLayout" name="horizontalLayout_4">
-              <property name="spacing">
-               <number>0</number>
-              </property>
-              <property name="leftMargin">
-               <number>0</number>
-              </property>
-              <property name="topMargin">
-               <number>0</number>
-              </property>
-              <property name="rightMargin">
-               <number>0</number>
-              </property>
-              <property name="bottomMargin">
-               <number>0</number>
-              </property>
-              <item>
-               <widget class="QWidget" name="image_generator_header_tool_buttons" native="true">
-                <layout class="QHBoxLayout" name="horizontalLayout_3">
-                 <property name="spacing">
-                  <number>6</number>
-                 </property>
-                 <property name="leftMargin">
-                  <number>6</number>
-                 </property>
-                 <property name="topMargin">
-                  <number>0</number>
-                 </property>
-                 <property name="rightMargin">
-                  <number>6</number>
-                 </property>
-                 <property name="bottomMargin">
-                  <number>0</number>
-                 </property>
-                 <item>
-                  <widget class="QPushButton" name="file_new_button">
-                   <property name="minimumSize">
-                    <size>
-                     <width>36</width>
-                     <height>36</height>
-                    </size>
-                   </property>
-                   <property name="maximumSize">
-                    <size>
-                     <width>36</width>
-                     <height>36</height>
-                    </size>
-                   </property>
-                   <property name="cursor">
-                    <cursorShape>PointingHandCursor</cursorShape>
-                   </property>
-                   <property name="toolTip">
-                    <string>New</string>
-                   </property>
-                   <property name="text">
-                    <string/>
-                   </property>
-                   <property name="icon">
-                    <iconset theme="document-new">
-                     <normaloff>../../../../../../../../../../../../../../.designer/backup</normaloff>../../../../../../../../../../../../../../.designer/backup</iconset>
-                   </property>
-                   <property name="iconSize">
-                    <size>
-                     <width>24</width>
-                     <height>24</height>
-                    </size>
-                   </property>
-                   <property name="flat">
-                    <bool>true</bool>
-                   </property>
-                  </widget>
-                 </item>
-                 <item>
-                  <widget class="QPushButton" name="open_button">
-                   <property name="minimumSize">
-                    <size>
-                     <width>36</width>
-                     <height>36</height>
-                    </size>
-                   </property>
-                   <property name="maximumSize">
-                    <size>
-                     <width>36</width>
-                     <height>36</height>
-                    </size>
-                   </property>
-                   <property name="cursor">
-                    <cursorShape>PointingHandCursor</cursorShape>
-                   </property>
-                   <property name="toolTip">
-                    <string>Open</string>
-                   </property>
-                   <property name="text">
-                    <string/>
-                   </property>
-                   <property name="icon">
-                    <iconset theme="document-open">
-                     <normaloff>../../../../../../../../../../../../../../src/icons/034-folder.png</normaloff>../../../../../../../../../../../../../../src/icons/034-folder.png</iconset>
-                   </property>
-                   <property name="iconSize">
-                    <size>
-                     <width>24</width>
-                     <height>24</height>
-                    </size>
-                   </property>
-                   <property name="flat">
-                    <bool>true</bool>
-                   </property>
-                  </widget>
-                 </item>
-                 <item>
-                  <widget class="QPushButton" name="save_button">
-                   <property name="minimumSize">
-                    <size>
-                     <width>36</width>
-                     <height>36</height>
-                    </size>
-                   </property>
-                   <property name="maximumSize">
-                    <size>
-                     <width>36</width>
-                     <height>36</height>
-                    </size>
-                   </property>
-                   <property name="cursor">
-                    <cursorShape>PointingHandCursor</cursorShape>
-                   </property>
-                   <property name="toolTip">
-                    <string>Save</string>
-                   </property>
-                   <property name="text">
-                    <string/>
-                   </property>
-                   <property name="icon">
-                    <iconset theme="document-save">
-                     <normaloff>../../../../../../../../../../../../../../src/icons/033-diskette.png</normaloff>../../../../../../../../../../../../../../src/icons/033-diskette.png</iconset>
-                   </property>
-                   <property name="iconSize">
-                    <size>
-                     <width>24</width>
-                     <height>24</height>
-                    </size>
-                   </property>
-                   <property name="flat">
-                    <bool>true</bool>
-                   </property>
-                  </widget>
-                 </item>
-                 <item>
-                  <widget class="QPushButton" name="export_button">
-                   <property name="minimumSize">
-                    <size>
-                     <width>36</width>
-                     <height>36</height>
-                    </size>
-                   </property>
-                   <property name="maximumSize">
-                    <size>
-                     <width>36</width>
-                     <height>36</height>
-                    </size>
-                   </property>
-                   <property name="cursor">
-                    <cursorShape>PointingHandCursor</cursorShape>
-                   </property>
-                   <property name="toolTip">
-                    <string>Export Image</string>
-                   </property>
-                   <property name="text">
-                    <string/>
-                   </property>
-                   <property name="icon">
-                    <iconset theme="document-send">
-                     <normaloff>../../../../../../../../../../../../../../src/icons/export.png</normaloff>../../../../../../../../../../../../../../src/icons/export.png</iconset>
-                   </property>
-                   <property name="iconSize">
-                    <size>
-                     <width>24</width>
-                     <height>24</height>
-                    </size>
-                   </property>
-                   <property name="flat">
-                    <bool>true</bool>
-                   </property>
-                  </widget>
-                 </item>
-                 <item>
-                  <widget class="Line" name="line_2">
-                   <property name="orientation">
-                    <enum>Qt::Vertical</enum>
-                   </property>
-                  </widget>
-                 </item>
-                 <item>
-                  <widget class="QPushButton" name="undo_button">
-                   <property name="sizePolicy">
-                    <sizepolicy hsizetype="Expanding" vsizetype="Expanding">
-                     <horstretch>0</horstretch>
-                     <verstretch>0</verstretch>
-                    </sizepolicy>
-                   </property>
-                   <property name="minimumSize">
-                    <size>
-                     <width>36</width>
-                     <height>36</height>
-                    </size>
-                   </property>
-                   <property name="maximumSize">
-                    <size>
-                     <width>36</width>
-                     <height>36</height>
-                    </size>
-                   </property>
-                   <property name="cursor">
-                    <cursorShape>PointingHandCursor</cursorShape>
-                   </property>
-                   <property name="toolTip">
-                    <string>Undo</string>
-                   </property>
-                   <property name="styleSheet">
-                    <string notr="true">border-color: rgb(61, 56, 70);</string>
-                   </property>
-                   <property name="text">
-                    <string/>
-                   </property>
-                   <property name="icon">
-                    <iconset theme="edit-undo">
-                     <normaloff>../../../../../../../../../../../../../../.designer/backup</normaloff>../../../../../../../../../../../../../../.designer/backup</iconset>
-                   </property>
-                   <property name="iconSize">
-                    <size>
-                     <width>24</width>
-                     <height>24</height>
-                    </size>
-                   </property>
-                   <property name="flat">
-                    <bool>true</bool>
-                   </property>
-                  </widget>
-                 </item>
-                 <item>
-                  <widget class="QPushButton" name="redo_button">
-                   <property name="sizePolicy">
-                    <sizepolicy hsizetype="Expanding" vsizetype="Expanding">
-                     <horstretch>0</horstretch>
-                     <verstretch>0</verstretch>
-                    </sizepolicy>
-                   </property>
-                   <property name="minimumSize">
-                    <size>
-                     <width>36</width>
-                     <height>36</height>
-                    </size>
-                   </property>
-                   <property name="maximumSize">
-                    <size>
-                     <width>36</width>
-                     <height>36</height>
-                    </size>
-                   </property>
-                   <property name="cursor">
-                    <cursorShape>PointingHandCursor</cursorShape>
-                   </property>
-                   <property name="toolTip">
-                    <string>Redo</string>
-                   </property>
-                   <property name="styleSheet">
-                    <string notr="true">border-color: rgb(61, 56, 70);</string>
-                   </property>
-                   <property name="text">
-                    <string/>
-                   </property>
-                   <property name="icon">
-                    <iconset theme="edit-redo">
-                     <normaloff>../../../../../../../../../../../../../../src/icons/008-redo.png</normaloff>../../../../../../../../../../../../../../src/icons/008-redo.png</iconset>
-                   </property>
-                   <property name="iconSize">
-                    <size>
-                     <width>24</width>
-                     <height>24</height>
-                    </size>
-                   </property>
-                   <property name="flat">
-                    <bool>true</bool>
-                   </property>
-                  </widget>
-                 </item>
-                 <item>
-                  <spacer name="horizontalSpacer">
-                   <property name="orientation">
-                    <enum>Qt::Horizontal</enum>
-                   </property>
-                   <property name="sizeHint" stdset="0">
-                    <size>
-                     <width>40</width>
-                     <height>20</height>
-                    </size>
-                   </property>
-                  </spacer>
-                 </item>
-                </layout>
-               </widget>
-              </item>
-             </layout>
-            </widget>
-           </item>
-          </layout>
-         </widget>
-        </widget>
-       </item>
-      </layout>
-     </widget>
-    </item>
    </layout>
   </widget>
   <widget class="QMenuBar" name="menubar">
@@ -1411,7 +1335,7 @@
     <rect>
      <x>0</x>
      <y>0</y>
-     <width>1123</width>
+     <width>841</width>
      <height>22</height>
     </rect>
    </property>
@@ -1497,10 +1421,19 @@
      <addaction name="separator"/>
      <addaction name="enable_controlnet"/>
     </widget>
+    <widget class="QMenu" name="menuOutpaint">
+     <property name="title">
+      <string>Outpaint</string>
+     </property>
+     <addaction name="outpaint_import"/>
+     <addaction name="outpaint_export"/>
+     <addaction name="outpaint_enabled"/>
+    </widget>
     <addaction name="separator"/>
     <addaction name="menuCanvas_Image"/>
     <addaction name="menuDrawingpad"/>
     <addaction name="menuControlnet"/>
+    <addaction name="menuOutpaint"/>
     <addaction name="separator"/>
     <addaction name="actionGenerate_while_drawing"/>
    </widget>
@@ -1532,7 +1465,6 @@
     <property name="title">
      <string>Tools</string>
     </property>
-    <addaction name="actionImage_Browser"/>
     <addaction name="actionModel_Manager_3"/>
     <addaction name="separator"/>
     <addaction name="actionUnload_Image_model"/>
@@ -2270,18 +2202,35 @@
     <string>Safety Checker</string>
    </property>
   </action>
+  <action name="outpaint_import">
+   <property name="text">
+    <string>Import</string>
+   </property>
+  </action>
+  <action name="outpaint_export">
+   <property name="text">
+    <string>Export</string>
+   </property>
+  </action>
+  <action name="outpaint_enabled">
+   <property name="checkable">
+    <bool>true</bool>
+   </property>
+   <property name="text">
+    <string>Enabled</string>
+   </property>
+  </action>
+  <action name="actionModel_Manager_4">
+   <property name="text">
+    <string>Model Manager</string>
+   </property>
+  </action>
  </widget>
  <customwidgets>
   <customwidget>
    <class>GeneratorForm</class>
    <extends>QWidget</extends>
    <header>airunner/widgets/generator_form/generator_form_widget</header>
-   <container>1</container>
-  </customwidget>
-  <customwidget>
-   <class>ModelManagerWidget</class>
-   <extends>QWidget</extends>
-   <header>airunner/widgets/model_manager/model_manager_widget</header>
    <container>1</container>
   </customwidget>
   <customwidget>
@@ -3047,22 +2996,6 @@
    </hints>
   </connection>
   <connection>
-   <sender>model_manager_button</sender>
-   <signal>toggled(bool)</signal>
-   <receiver>MainWindow</receiver>
-   <slot>model_manager_toggled(bool)</slot>
-   <hints>
-    <hint type="sourcelabel">
-     <x>1108</x>
-     <y>560</y>
-    </hint>
-    <hint type="destinationlabel">
-     <x>1021</x>
-     <y>0</y>
-    </hint>
-   </hints>
-  </connection>
-  <connection>
    <sender>actionStableDiffusion</sender>
    <signal>triggered()</signal>
    <receiver>MainWindow</receiver>
@@ -3086,7 +3019,7 @@
    <hints>
     <hint type="sourcelabel">
      <x>1108</x>
-     <y>740</y>
+     <y>680</y>
     </hint>
     <hint type="destinationlabel">
      <x>1122</x>
@@ -3102,7 +3035,7 @@
    <hints>
     <hint type="sourcelabel">
      <x>1108</x>
-     <y>791</y>
+     <y>731</y>
     </hint>
     <hint type="destinationlabel">
      <x>1122</x>
@@ -3118,7 +3051,7 @@
    <hints>
     <hint type="sourcelabel">
      <x>1108</x>
-     <y>842</y>
+     <y>782</y>
     </hint>
     <hint type="destinationlabel">
      <x>1122</x>
@@ -3155,22 +3088,6 @@
     <hint type="destinationlabel">
      <x>1122</x>
      <y>0</y>
-    </hint>
-   </hints>
-  </connection>
-  <connection>
-   <sender>actionImage_Browser</sender>
-   <signal>triggered()</signal>
-   <receiver>MainWindow</receiver>
-   <slot>action_show_image_browser()</slot>
-   <hints>
-    <hint type="sourcelabel">
-     <x>-1</x>
-     <y>-1</y>
-    </hint>
-    <hint type="destinationlabel">
-     <x>561</x>
-     <y>661</y>
     </hint>
    </hints>
   </connection>
@@ -3325,12 +3242,60 @@
    <slot>action_toggle_nsfw_filter_triggered(bool)</slot>
    <hints>
     <hint type="sourcelabel">
-     <x>1083</x>
-     <y>646</y>
+     <x>-1</x>
+     <y>-1</y>
     </hint>
     <hint type="destinationlabel">
      <x>776</x>
      <y>0</y>
+    </hint>
+   </hints>
+  </connection>
+  <connection>
+   <sender>outpaint_export</sender>
+   <signal>triggered()</signal>
+   <receiver>MainWindow</receiver>
+   <slot>action_outpaint_export()</slot>
+   <hints>
+    <hint type="sourcelabel">
+     <x>-1</x>
+     <y>-1</y>
+    </hint>
+    <hint type="destinationlabel">
+     <x>561</x>
+     <y>451</y>
+    </hint>
+   </hints>
+  </connection>
+  <connection>
+   <sender>outpaint_enabled</sender>
+   <signal>toggled(bool)</signal>
+   <receiver>MainWindow</receiver>
+   <slot>action_outpaint_toggled(bool)</slot>
+   <hints>
+    <hint type="sourcelabel">
+     <x>-1</x>
+     <y>-1</y>
+    </hint>
+    <hint type="destinationlabel">
+     <x>561</x>
+     <y>451</y>
+    </hint>
+   </hints>
+  </connection>
+  <connection>
+   <sender>outpaint_import</sender>
+   <signal>triggered()</signal>
+   <receiver>MainWindow</receiver>
+   <slot>action_outpaint_import()</slot>
+   <hints>
+    <hint type="sourcelabel">
+     <x>-1</x>
+     <y>-1</y>
+    </hint>
+    <hint type="destinationlabel">
+     <x>561</x>
+     <y>451</y>
     </hint>
    </hints>
   </connection>
@@ -3427,7 +3392,6 @@
   <slot>ocr_button_toggled(bool)</slot>
   <slot>action_reset_settings()</slot>
   <slot>action_toggle_select(bool)</slot>
-  <slot>action_show_image_browser()</slot>
   <slot>action_toggle_controlnet(bool)</slot>
   <slot>import_controlnet_image()</slot>
   <slot>export_controlnet_image()</slot>
@@ -3436,5 +3400,8 @@
   <slot>action_unload_llm()</slot>
   <slot>action_unload_sd()</slot>
   <slot>action_clear_memory()</slot>
+  <slot>action_outpaint_toggled(bool)</slot>
+  <slot>action_outpaint_export()</slot>
+  <slot>action_outpaint_import()</slot>
  </slots>
 </ui>

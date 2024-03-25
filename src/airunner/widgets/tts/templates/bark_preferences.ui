@@ -60,7 +60,7 @@
             <bool>true</bool>
            </property>
            <property name="settings_property" stdset="0">
-            <string>coarse_temperature</string>
+            <string>bark.coarse_temperature</string>
            </property>
            <property name="slider_single_step" stdset="0">
             <number>1</number>
@@ -73,9 +73,6 @@
            </property>
            <property name="spinbox_page_step" stdset="0">
             <double>0.100000000000000</double>
-           </property>
-           <property name="slider_callback" stdset="0">
-            <string>handle_value_change</string>
            </property>
           </widget>
          </item>
@@ -118,7 +115,7 @@
             <bool>true</bool>
            </property>
            <property name="settings_property" stdset="0">
-            <string>semantic_temperature</string>
+            <string>bark.semantic_temperature</string>
            </property>
            <property name="slider_single_step" stdset="0">
             <number>1</number>
@@ -131,9 +128,6 @@
            </property>
            <property name="spinbox_page_step" stdset="0">
             <double>0.100000000000000</double>
-           </property>
-           <property name="slider_callback" stdset="0">
-            <string>handle_value_change</string>
            </property>
           </widget>
          </item>
@@ -199,7 +193,7 @@
             <bool>true</bool>
            </property>
            <property name="settings_property" stdset="0">
-            <string>fine_temperature</string>
+            <string>bark.fine_temperature</string>
            </property>
            <property name="slider_single_step" stdset="0">
             <number>1</number>
@@ -212,9 +206,6 @@
            </property>
            <property name="spinbox_page_step" stdset="0">
             <double>0.100000000000000</double>
-           </property>
-           <property name="slider_callback" stdset="0">
-            <string>handle_value_change</string>
            </property>
           </widget>
          </item>

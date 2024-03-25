@@ -1,4 +1,6 @@
-from PySide6.QtCore import Qt
+from typing import Any, List
+
+from PySide6.QtCore import Qt, Slot
 from PySide6.QtWidgets import QLabel, QDoubleSpinBox
 
 from airunner.enums import SignalCode
@@ -94,20 +96,14 @@ class SliderWidget(BaseWidget):
 
     def __init__(self, *args, **kwargs):
         super().__init__(*args, **kwargs)
-        self.slider_callback = None
-        self.label_text = None
         self.settings_property = None
-        self.label = None
         self.register(SignalCode.APPLICATION_MAIN_WINDOW_LOADED_SIGNAL, self.on_main_window_loaded_signal)
+        self.ui.slider.sliderReleased.connect(self.handle_slider_release)
 
     def on_main_window_loaded_signal(self, _message):
         self.init()
 
-    def settings_loaded(self, callback):
-        self.slider_callback = callback
-    
     def init(self, **kwargs):
-        slider_callback = kwargs.get("slider_callback", self.property("slider_callback") or self.slider_callback)
         slider_minimum = kwargs.get("slider_minimum", self.property("slider_minimum") or 0)
         slider_maximum = kwargs.get("slider_maximum", self.property("slider_maximum") or 100)
         spinbox_minimum = kwargs.get("spinbox_minimum", self.property("spinbox_minimum") or 0.0)
@@ -132,10 +128,6 @@ class SliderWidget(BaseWidget):
         if settings_property is not None:
             current_value = self.get_settings_value(settings_property)
 
-        # check if slider_callback is str
-        if isinstance(slider_callback, str):
-            slider_callback = self.handle_value_change
-
         # set slider and spinbox names
         if slider_name:
             self.ui.slider.setObjectName(slider_name)
@@ -143,7 +135,6 @@ class SliderWidget(BaseWidget):
         if spinbox_name:
             self.ui.slider_spinbox.setObjectName(spinbox_name)
 
-        self.slider_callback = slider_callback
         self.slider_maximum = slider_maximum
         self.slider_minimum = slider_minimum
         self.slider_tick_interval = slider_tick_interval
@@ -153,17 +144,13 @@ class SliderWidget(BaseWidget):
         self.spinbox_page_step = spinbox_page_step
         self.spinbox_minimum = spinbox_minimum
         self.spinbox_maximum = spinbox_maximum
-        self.label_text = label_text
         self.settings_property = settings_property
         self.display_as_float = display_as_float
         self.divide_by = divide_by
 
-        self.label = QLabel(f"{label_text}")
-        self.label.setAlignment(Qt.AlignmentFlag.AlignCenter)
-        self.label.setAttribute(Qt.WidgetAttribute.WA_TransparentForMouseEvents)
-        self.label.setObjectName("slider_label")
+        self.ui.groupBox.setTitle(label_text)
+
         # add the label to the ui
-        self.layout().addWidget(self.label, 0, 0, 1, 1)
         self.ui.slider_spinbox.setFixedWidth(50)
         self.set_slider_and_spinbox_values(current_value)
         if not self.display_as_float:
@@ -172,7 +159,7 @@ class SliderWidget(BaseWidget):
             decimals = len(str(spinbox_single_step).split(".")[1])
             self.ui.slider_spinbox.setDecimals(2 if decimals < 2 else decimals)
 
-    def handle_value_change(self, attr_name, value=None, widget=None):
+    def slider_callback(self, attr_name, value=None, widget=None):
         """
         Slider widget callback - this is connected via dynamic properties in the
         qt widget. This function is then called when the value of a SliderWidget
@@ -182,34 +169,7 @@ class SliderWidget(BaseWidget):
         :param widget: the widget that triggered the callback
         :return:
         """
-        if attr_name is None:
-            return
-
-        keys = attr_name.split(".")
-        if len(keys) > 0:
-            settings = self.settings
-
-            object_key = "settings"
-            property_key = None
-            sub_property_key = None
-            if len(keys) == 1:
-                property_key = keys[0]
-            elif len(keys) == 2:
-                object_key = keys[0]
-                property_key = keys[1]
-            elif len(keys) == 3:
-                object_key = keys[0]
-                property_key = keys[1]
-                sub_property_key = keys[2]
-
-            if property_key:
-                if object_key != "settings":
-                    settings[object_key][property_key] = value
-                    if sub_property_key and len(keys) == 3:
-                        settings[object_key][property_key][sub_property_key] = value
-                else:
-                    settings[property_key] = value
-            self.settings = settings
+        self.set_settings_value(attr_name, value)
 
     def get_settings_value(self, settings_property):
         keys = settings_property.split(".")
@@ -223,12 +183,25 @@ class SliderWidget(BaseWidget):
 
         return data
 
+    def set_settings_value(self, settings_property: str, val: Any):
+        keys = settings_property.split(".")
+        self.settings = self._update_dict_recursively(self.settings, keys, val)
+
+    def _update_dict_recursively(self, data: dict, keys: List[str], val: Any) -> dict:
+        if len(keys) == 1:
+            data[keys[0]] = val
+            return data
+
+        key = keys[0]
+        if key not in data:
+            data[key] = {}
+
+        data[key] = self._update_dict_recursively(data[key], keys[1:], val)
+        return data
+
     def set_slider_and_spinbox_values(self, val):
         if val is None:
             val = 0
-
-        self.ui.slider.blockSignals(True)
-        self.ui.slider_spinbox.blockSignals(True)
 
         single_step = self.ui.slider.singleStep()
         adjusted_value = val
@@ -239,9 +212,11 @@ class SliderWidget(BaseWidget):
         normalized = adjusted_value / self.slider_maximum
         spinbox_val = normalized * self.spinbox_maximum
         spinbox_val = round(spinbox_val, 2)
+
+        self.ui.slider.blockSignals(True)
+        self.ui.slider_spinbox.blockSignals(True)
         self.ui.slider.setValue(int(val))
         self.ui.slider_spinbox.setValue(spinbox_val)
-
         self.ui.slider.blockSignals(False)
         self.ui.slider_spinbox.blockSignals(False)
 
@@ -256,12 +231,19 @@ class SliderWidget(BaseWidget):
         self.ui.slider.setValue(round(slider_val))
         self.ui.slider.blockSignals(False)
 
+    @Slot(int)
     def handle_slider_change(self, val):
         position = val
         single_step = self.ui.slider.singleStep()
         adjusted_value = round(position / single_step) * single_step
         if adjusted_value < self.slider_minimum:
             adjusted_value = self.slider_minimum
+
+        self.ui.slider.blockSignals(True)
+        self.ui.slider.setValue(adjusted_value)
+        self.ui.slider.blockSignals(False)
+
+        print(f"adjusted_value: {adjusted_value}")
 
         try:
             normalized = adjusted_value / self.slider_maximum
@@ -274,11 +256,10 @@ class SliderWidget(BaseWidget):
         self.ui.slider_spinbox.setValue(spinbox_val)
         self.ui.slider_spinbox.blockSignals(False)
 
+    @Slot()
+    def handle_slider_release(self):
         if self.slider_callback:
-            self.slider_callback(self.settings_property, adjusted_value)
-
-    def update_value(self, val):
-        self.ui.slider.setValue(int(val))
+            self.slider_callback(self.settings_property, self.current_value)
 
     def set_tick_value(self, val):
         """
