@@ -2,7 +2,7 @@ from types import NoneType
 from typing import Optional
 
 import PIL
-from PIL import ImageQt, Image, ImageFilter
+from PIL import ImageQt, Image, ImageFilter, ImageOps
 from PIL.ImageQt import QImage
 from PySide6.QtCore import Qt, QPoint
 from PySide6.QtGui import QEnterEvent, QDragEnterEvent, QDropEvent, QImageReader, QDragMoveEvent
@@ -99,8 +99,7 @@ class CustomScene(
             (SignalCode.CANVAS_COPY_IMAGE_SIGNAL, self.on_canvas_copy_image_signal),
             (SignalCode.CANVAS_CUT_IMAGE_SIGNAL, self.on_canvas_cut_image_signal),
             (SignalCode.CANVAS_ROTATE_90_CLOCKWISE_SIGNAL, self.on_canvas_rotate_90_clockwise_signal),
-            (SignalCode.CANVAS_ROTATE_90_COUNTER_CLOCKWISE_SIGNAL,
-            self.on_canvas_rotate_90_counter_clockwise_signal),
+            (SignalCode.CANVAS_ROTATE_90_COUNTER_CLOCKWISE_SIGNAL, self.on_canvas_rotate_90_counter_clockwise_signal),
             (SignalCode.CANVAS_PASTE_IMAGE_SIGNAL, self.paste_image_from_clipboard),
             (SignalCode.CANVAS_EXPORT_IMAGE_SIGNAL, self.export_image),
             (SignalCode.CANVAS_IMPORT_IMAGE_SIGNAL, self.import_image),
@@ -220,18 +219,24 @@ class CustomScene(
         self.load_image_from_object(image=filtered_image)
 
     def add_image_to_scene(
-        self,
-        image: Image,
-        is_outpaint: bool = False,
-        outpaint_box_rect: QPoint = None
+            self,
+            image: Image,
+            is_outpaint: bool = False,
+            outpaint_box_rect: QPoint = None,
+            border_size: int = 1,  # size of the border
+            border_color: tuple = (255, 0, 0, 255)  # color of the border in RGBA format
     ):
         """
         Adds a given image to the scene
         :param image_data: dict containing the image to be added to the scene
         :param is_outpaint: bool indicating if the image is an outpaint
         :param outpaint_box_rect: QPoint indicating the root point of the image
+        :param border_size: int indicating the size of the border
+        :param border_color: tuple indicating the color of the border
         :return:
         """
+        image = ImageOps.expand(image, border=border_size, fill=border_color)
+
         if is_outpaint:
             image, root_point, pivot_point = self.handle_outpaint(
                 outpaint_box_rect,
