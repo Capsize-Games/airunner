@@ -52,7 +52,7 @@ setup(
         "torchvision==0.17.1",
         "torchaudio==2.2.1",
         "auto-gptq==0.7.1",
-        "optimum==1.17.1",
+        "optimum==1.18.0",
         "bitsandbytes==0.43.0",
         "tomesd==0.1.3",
         "watchdog==4.0.0",
