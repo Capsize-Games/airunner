@@ -29,7 +29,7 @@ setup(
         "pip==24.0",
         "PySide6==6.6.2",
         "PySide6_Addons==6.6.2",
-        "PySide6_Essentials==6.6.2",
+        "PySide6_Essentials==6.6.3",
         "pyre-extensions==0.0.30",
         "lightning==2.2.1",
         "requests==2.31.0",
