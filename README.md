@@ -27,42 +27,41 @@ No web server to run, additional requirements to install or technical knowledge 
 AI Runner is a multi-modal AI application which allows you to run open-source 
 large language models and AI image generators on your own hardware.
 
-| Feature                                           | Description |
-|---------------------------------------------------|-------------|
+| Feature                                           | Description                                              |
+|---------------------------------------------------|----------------------------------------------------------|
 | 🗣️ **Communication**                             |
-| ✅ Voice-based chatbot conversations               | Have conversations with a chatbot using your voice |
-| ✅ Text-to-speech                                  | Convert text to spoken audio |
-| ✅ Speech-to-text                                  | Convert spoken audio to text |
-| ✅ Vision-to-text                                  | Extract text from images |
-| ✅ Text generation with LLMs                       | Generate text using large language models |
+| ✅ Voice-based chatbot conversations               | Have conversations with a chatbot using your voice       |
+| ✅ Text-to-speech                                  | Convert text to spoken audio                             |
+| ✅ Speech-to-text                                  | Convert spoken audio to text                             |
+| ✅ Vision-to-text                                  | Extract text from images                                 |
+| ✅ Text generation with LLMs                       | Generate text using large language models                |
 | 🎨 **Image Generation**                           |
-| ✅ Stable Diffusion (all versions)                 | Generate images using Stable Diffusion |
-| 🔜 Kandinsky                                      | Generate images using Kandinsky |
-| ✅ Near Real-Time Drawing                          | Draw and generate images in near real-time |
-| ✅ Text to Image (aka TextToImage / Txt2Img)       | Generate images from textual descriptions |
-| ✅ Image to Image (aka ImageToImage / Image2Image) | Generate images based on input images |
+| ✅ Stable Diffusion (all versions)                 | Generate images using Stable Diffusion                   |
+| 🔜 Kandinsky                                      | Generate images using Kandinsky                          |
+| ✅ Near Real-Time Drawing                          | Draw and generate images in near real-time               |
+| ✅ Text to Image (aka TextToImage / Txt2Img)       | Generate images from textual descriptions                |
+| ✅ Image to Image (aka ImageToImage / Image2Image) | Generate images based on input images                    |
 | 🖼️ **Image Manipulation**                        |
-| ✅ Inpaint and Outpaint                            | Modify parts of an image while maintaining context |
-| ✅ Pix2Pix                                         | Transform images from one domain to another |
-| ✅ Depth to Image (aka DepthToImage / Depth2Img)   | Generate images from depth maps |
-| ✅ Controlnet                                      | Control image generation with additional input |
-| ✅ LoRA                                            | Efficiently fine-tune models with LoRA |
-| ✅ Textual Embeddings                              | Use textual embeddings for image generation control |
-| 🔜 Upscale with GFPGAN                            | Use textual embeddings for image generation control |
+| ✅ Inpaint and Outpaint                            | Modify parts of an image while maintaining context       |
+| ✅ Pix2Pix                                         | Transform images from one domain to another              |
+| ✅ Depth to Image (aka DepthToImage / Depth2Img)   | Generate images from depth maps                          |
+| ✅ Controlnet                                      | Control image generation with additional input           |
+| ✅ LoRA                                            | Efficiently fine-tune models with LoRA                   |
+| ✅ Textual Embeddings                              | Use textual embeddings for image generation control      |
+| 🔜 Upscale with GFPGAN                            | Use textual embeddings for image generation control      |
 | 🔧 **Utility**                                    |
-| ✅ Easy setup*                                     | Download and run without installing requirements |
-| ✅ Run offline, locally                            | Run on your own hardware without internet |
-| ✅ Fast generation                                 | Generate images in ~2 seconds (RTX 2080s) |
-| ✅ Run multiple models at once                     | Utilize multiple models simultaneously |
-| ✅ Drawing tools                                   | Built-in tools for drawing and image manipulation |
-| ✅ Image filters                                   | Apply various filters to images |
+| ✅ Run offline, locally                            | Run on your own hardware without internet                |
+| ✅ Fast generation                                 | Generate images in ~2 seconds (RTX 2080s)                |
+| ✅ Run multiple models at once                     | Utilize multiple models simultaneously                   |
+| ✅ Drawing tools                                   | Built-in tools for drawing and image manipulation        |
+| ✅ Image filters                                   | Apply various filters to images                          |
 | ✅ Dark mode                                       | Comfortable viewing experience in low-light environments |
-| ✅ Infinite scrolling canvas                       | Seamlessly scroll through generated images |
-| ✅ NSFW filter toggle                              | Control the visibility of NSFW content |
-| ✅ NSFW guardrails                                 | Prevent generation of harmful content |
-| ✅ Standard Stable Diffusion settings              | Easily adjust standard Stable Diffusion parameters |
-| ✅ Fast load time, responsive interface            | Enjoy a smooth and responsive user experience |
-| ✅ Pure python                                     | No reliance on a webserver, pure python implementation |
+| ✅ Infinite scrolling canvas                       | Seamlessly scroll through generated images               |
+| ✅ NSFW filter toggle                              | Help control the visibility of NSFW content              |
+| ✅ NSFW guardrails                                 | Help prevent generation of harmful content               |
+| ✅ Standard Stable Diffusion settings              | Easily adjust standard Stable Diffusion parameters       |
+| ✅ Fast load time, responsive interface            | Enjoy a smooth and responsive user experience            |
+| ✅ Pure python                                     | No reliance on a webserver, pure python implementation   |
 
 ---
 
@@ -92,10 +91,10 @@ For emoji support on Ubuntu install the Noto Color Emoji font:
 sudo apt install fonts-noto-color-emoji
 ```
 
-Install `portaudio` and `libxcb-cursor`
+Install `portaudio`, `libxcb-cursor` and `espeak`
 
 ```bash
-sudo apt-get install libportaudio2 libxcb-cursor0
+sudo apt-get install libportaudio2 libxcb-cursor0 espeak
 ```
 
 ### PyPi
