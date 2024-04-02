@@ -329,6 +329,8 @@ class SettingsMixin:
                 mask=None,
                 image=None,
                 active_canvas="",
+                document_outline_color=(255, 0, 255, 144),
+                document_outline_width=2,
             ),
             controlnet_settings=dict(
                 image=None
