@@ -33,6 +33,7 @@ class BrushScene(CustomScene):
         signals = [
             (SignalCode.CANVAS_ROTATE_90_CLOCKWISE_SIGNAL, self.on_canvas_rotate_90_clockwise_signal),
             (SignalCode.CANVAS_ROTATE_90_COUNTER_CLOCKWISE_SIGNAL, self.on_canvas_rotate_90_counter_clockwise_signal),
+            (SignalCode.CANVAS_PASTE_IMAGE_SIGNAL, self.paste_image_from_clipboard),
             (SignalCode.BRUSH_COPY_IMAGE_SIGNAL, self.on_canvas_copy_image_signal),
             (SignalCode.BRUSH_CUT_IMAGE_SIGNAL, self.on_canvas_cut_image_signal),
             (SignalCode.BRUSH_PASTE_IMAGE_SIGNAL, self.paste_image_from_clipboard),
