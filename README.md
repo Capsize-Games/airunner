@@ -84,24 +84,18 @@ large language models and AI image generators on your own hardware.
 
 ## 🔧 Installation
 
+### Linux prerequisites
+
 For emoji support on Ubuntu install the Noto Color Emoji font:
 
 ```bash
 sudo apt install fonts-noto-color-emoji
 ```
 
-### Pre-Compiled
-
-[Download the official build on itch.io](https://capsizegames.itch.io/ai-runner)!
-
-This is the compiled version of AI Runner which you can use without 
-installing any additional dependencies.
-
-### Apt
+Install `portaudio` and `libxcb-cursor`
 
 ```bash
-sudo apt update
-sudo apt install airunner
+sudo apt-get install libportaudio2 libxcb-cursor0
 ```
 
 ### PyPi
@@ -122,6 +116,14 @@ If you want to install AI Runner from source, you can do so using the following 
 ```bash
 git clone -b develop https://github.com/Capsize-Games/airunner.git
 cd airunner && pip install -e .
+```
+
+----
+
+If you install from pypi or source, uninstall `opencv-python` (we use `opencv-python-headless` instead)
+
+```bash
+pip uninstall opencv-python
 ```
 
 ---
@@ -157,14 +159,6 @@ Alternatively, you can use the itch.io launcher application which simplifies the
 ```bash
 cd dist/airunner
 ./airunner
-```
-
----
-
-### Apt
-
-```bash
-airunner
 ```
 
 ---
