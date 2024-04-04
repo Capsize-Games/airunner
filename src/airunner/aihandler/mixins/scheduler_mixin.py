@@ -90,6 +90,17 @@ class SchedulerMixin:
                     f"Unable to load scheduler {scheduler_name} "
                     f"from {self.sd_request.generator_settings.model}"
                 )
+            except OSError as e:
+                if local_files_only:
+                    return self.load_scheduler(
+                        force_scheduler_name=scheduler_name,
+                        config=config,
+                        local_files_only=False
+                    )
+                self.logger.error(
+                    f"Unable to load scheduler {scheduler_name} "
+                    f"from {self.sd_request.generator_settings.model}"
+                )
         return self._scheduler
 
     def change_scheduler(self):
