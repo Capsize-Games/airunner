@@ -26,7 +26,7 @@ class Ui_import_model_widget(object):
     def setupUi(self, import_model_widget):
         if not import_model_widget.objectName():
             import_model_widget.setObjectName(u"import_model_widget")
-        import_model_widget.resize(255, 311)
+        import_model_widget.resize(255, 363)
         self.gridLayout_4 = QGridLayout(import_model_widget)
         self.gridLayout_4.setObjectName(u"gridLayout_4")
         self.import_form = QFrame(import_model_widget)
@@ -67,6 +67,13 @@ class Ui_import_model_widget(object):
         self.download_form.setFrameShadow(QFrame.Raised)
         self.gridLayout = QGridLayout(self.download_form)
         self.gridLayout.setObjectName(u"gridLayout")
+        self.download_progress_bar = QProgressBar(self.download_form)
+        self.download_progress_bar.setObjectName(u"download_progress_bar")
+        self.download_progress_bar.setFont(font)
+        self.download_progress_bar.setValue(0)
+
+        self.gridLayout.addWidget(self.download_progress_bar, 2, 0, 1, 1)
+
         self.downloading_label = QLabel(self.download_form)
         self.downloading_label.setObjectName(u"downloading_label")
         self.downloading_label.setFont(font)
@@ -77,14 +84,7 @@ class Ui_import_model_widget(object):
         self.cancel_download_button.setObjectName(u"cancel_download_button")
         self.cancel_download_button.setFont(font)
 
-        self.gridLayout.addWidget(self.cancel_download_button, 1, 0, 1, 1)
-
-        self.download_progress_bar = QProgressBar(self.download_form)
-        self.download_progress_bar.setObjectName(u"download_progress_bar")
-        self.download_progress_bar.setFont(font)
-        self.download_progress_bar.setValue(0)
-
-        self.gridLayout.addWidget(self.download_progress_bar, 2, 0, 1, 1)
+        self.gridLayout.addWidget(self.cancel_download_button, 3, 0, 1, 1)
 
 
         self.gridLayout_4.addWidget(self.download_form, 5, 0, 1, 1)
@@ -175,7 +175,28 @@ class Ui_import_model_widget(object):
 
         self.verticalSpacer = QSpacerItem(20, 40, QSizePolicy.Policy.Minimum, QSizePolicy.Policy.Expanding)
 
-        self.gridLayout_4.addItem(self.verticalSpacer, 6, 0, 1, 1)
+        self.gridLayout_4.addItem(self.verticalSpacer, 8, 0, 1, 1)
+
+        self.download_complete_form = QWidget(import_model_widget)
+        self.download_complete_form.setObjectName(u"download_complete_form")
+        self.download_complete = QGridLayout(self.download_complete_form)
+        self.download_complete.setObjectName(u"download_complete")
+        self.label = QLabel(self.download_complete_form)
+        self.label.setObjectName(u"label")
+        font4 = QFont()
+        font4.setBold(True)
+        self.label.setFont(font4)
+
+        self.download_complete.addWidget(self.label, 0, 0, 1, 1)
+
+        self.pushButton = QPushButton(self.download_complete_form)
+        self.pushButton.setObjectName(u"pushButton")
+        self.pushButton.setFont(font)
+
+        self.download_complete.addWidget(self.pushButton, 1, 0, 1, 1)
+
+
+        self.gridLayout_4.addWidget(self.download_complete_form, 7, 0, 1, 1)
 
 
         self.retranslateUi(import_model_widget)
@@ -183,6 +204,7 @@ class Ui_import_model_widget(object):
         self.cancel_download_save_button.clicked.connect(import_model_widget.action_clicked_button_cancel)
         self.cancel_download_button.clicked.connect(import_model_widget.action_clicked_button_cancel)
         self.import_button.clicked.connect(import_model_widget.action_clicked_button_import)
+        self.pushButton.clicked.connect(import_model_widget.action_download_complete_continue)
 
         QMetaObject.connectSlotsByName(import_model_widget)
     # setupUi
@@ -200,5 +222,7 @@ class Ui_import_model_widget(object):
         self.name.setText(QCoreApplication.translate("import_model_widget", u"TextLabel", None))
         self.creator.setText(QCoreApplication.translate("import_model_widget", u"TextLabel", None))
         self.nsfw_label.setText(QCoreApplication.translate("import_model_widget", u"NSFW", None))
+        self.label.setText(QCoreApplication.translate("import_model_widget", u"Download complete", None))
+        self.pushButton.setText(QCoreApplication.translate("import_model_widget", u"OK", None))
     # retranslateUi
 
