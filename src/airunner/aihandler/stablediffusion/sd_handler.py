@@ -826,7 +826,7 @@ class SDHandler(
                         image = images[i]
                         image = image.convert("RGBA")
                         draw = ImageDraw.Draw(image)
-                        font = ImageFont.truetype("arial", 15)
+                        font = ImageFont.truetype("/usr/share/fonts/truetype/dejavu/DejaVuSans-Bold.ttf", 15)
                         draw.text((0, 0), "NSFW", (255, 255, 255), font=font)
                         if do_base64:
                             img_byte_arr = io.BytesIO()
