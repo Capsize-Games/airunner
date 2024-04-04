@@ -74,7 +74,8 @@ class AIModelMixin:
         return [model for model in self.settings["ai_models"] if model["is_default"] == True and model["enabled"] == False]
 
     def on_ai_models_save_or_update_signal(self, data: dict):
-        new_models = data["models"]
+        print("on_ai_models_save_or_update_signal", data)
+        new_models = data.get("models", [])
         settings = self.settings
         default_models = model_bootstrap_data
         existing_models = settings["ai_models"]
