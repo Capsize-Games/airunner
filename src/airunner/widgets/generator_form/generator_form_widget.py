@@ -6,9 +6,10 @@ from PySide6.QtWidgets import QApplication
 
 from airunner.enums import SignalCode, GeneratorSection, ImageCategory
 from airunner.settings import PHOTO_REALISTIC_NEGATIVE_PROMPT, ILLUSTRATION_NEGATIVE_PROMPT
-from airunner.utils import convert_image_to_base64, convert_base64_to_image
+from airunner.utils import convert_image_to_base64, convert_base64_to_image, create_worker
 from airunner.widgets.base_widget import BaseWidget
 from airunner.widgets.generator_form.templates.generatorform_ui import Ui_generator_form
+from airunner.workers.model_scanner_worker import ModelScannerWorker
 
 
 class GeneratorForm(BaseWidget):
@@ -36,6 +37,9 @@ class GeneratorForm(BaseWidget):
             SignalCode.DO_GENERATE_IMAGE_FROM_IMAGE_SIGNAL: self.do_generate_image_from_image_signal_handler,
             SignalCode.SD_LOAD_PROMPT_SIGNAL: self.on_load_saved_stablediffuion_prompt_signal
         }
+
+        self.model_scanner_worker = create_worker(ModelScannerWorker)
+        self.model_scanner_worker.add_to_queue("scan_for_models")
 
     @property
     def is_txt2img(self):
