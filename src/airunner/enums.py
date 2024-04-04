@@ -194,6 +194,8 @@ class SignalCode(Enum):
     DRAW_GRID_SIGNAL = "draw_grid_signal"
     SET_SCENE_RECT_SIGNAL = "set_scene_rect_signal"
 
+    DOWNLOAD_COMPLETE = "scan_for_models"
+
     SD_IMAGE_GENERATE_REQUEST_SIGNAL = "image_generate_request_signal"
     SD_PROGRESS_SIGNAL = "progress_signal"
     SD_REQUEST_SIGNAL = "sd_request_signal"

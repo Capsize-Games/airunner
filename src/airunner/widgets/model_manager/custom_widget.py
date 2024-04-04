@@ -1,4 +1,4 @@
-from airunner.enums import ServiceCode
+from airunner.enums import ServiceCode, SignalCode
 from airunner.utils import create_worker
 from airunner.widgets.base_widget import BaseWidget
 from airunner.widgets.model_manager.model_widget import ModelWidget
@@ -20,11 +20,15 @@ class CustomModelWidget(BaseWidget):
         self.show_items_in_scrollarea()
         self.initialized = True
         self.model_scanner_worker = create_worker(ModelScannerWorker)
-        self.model_scanner_worker.add_to_queue("scan_for_models")
-    
+        self.scan_for_models()
+        self.register(SignalCode.DOWNLOAD_COMPLETE, self.scan_for_models)
+
     def action_button_clicked_scan_for_models(self):
+        self.scan_for_models()
+
+    def scan_for_models(self, data=None):
         self.model_scanner_worker.add_to_queue("scan_for_models")
-   
+
     def show_items_in_scrollarea(self, search=None):
         if self.spacer:
             self.ui.scrollAreaWidgetContents.layout().removeItem(self.spacer)
