@@ -7,6 +7,7 @@ from PySide6.QtWidgets import QWidget
 from airunner.aihandler.logger import Logger
 from airunner.mediator_mixin import MediatorMixin
 from airunner.service_locator import ServiceLocator
+from airunner.settings import DARK_THEME_NAME, LIGHT_THEME_NAME
 from airunner.utils import create_worker
 from airunner.windows.main.settings_mixin import SettingsMixin
 
@@ -204,3 +205,18 @@ class BaseWidget(
         if val is None:
             val = self.get_is_checked(element)
         print("TODO: finish this")
+
+    def set_stylesheet(self, ui=None):
+        """
+        Sets the stylesheet for the application based on the current theme
+        """
+        ui = ui or self
+        if self.settings["override_system_theme"]:
+            theme_name = DARK_THEME_NAME if self.settings["dark_mode_enabled"] else LIGHT_THEME_NAME
+            here = os.path.dirname(os.path.realpath(__file__))
+            with open(os.path.join(here, "..", "styles", theme_name, "styles.qss"), "r") as f:
+                stylesheet = f.read()
+            ui.setStyleSheet(stylesheet)
+        else:
+            ui.setStyleSheet("")
+        ui.update()

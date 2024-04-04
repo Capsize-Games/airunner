@@ -1,14 +1,22 @@
 import os
 
-import tqdm
 import requests
 from json.decoder import JSONDecodeError
-from airunner.aihandler.logger import Logger
+from PySide6.QtCore import QThread
+from airunner.aihandler.stablediffusion.download_worker import DownloadWorker
+from airunner.enums import SignalCode
+from airunner.mediator_mixin import MediatorMixin
 
 
-class DownloadCivitAI:
-    logger = Logger(prefix="DownloadCivitAI")
-    cancel_download = False
+class DownloadCivitAI(
+    MediatorMixin
+):
+    def __init__(self):
+        MediatorMixin.__init__(self)
+        super().__init__()
+        self.thread = None
+        self.worker = None
+        self.file_name = None
 
     @staticmethod
     def get_json(model_id):
@@ -26,27 +34,27 @@ class DownloadCivitAI:
         return json
 
     def download_model(self, url, file_name, size_kb, callback):
-        self.download_model_thread(url, file_name, size_kb, callback)
+        self.file_name = file_name
+        self.worker = DownloadWorker(url, file_name, size_kb)
+        self.thread = QThread()
 
-    def download_model_thread(self, url, file_name, size_kb, callback):
-        print("DOWNLOAD_MODEL_THREAD", file_name)
-        # use tqdm to show progress bar based on size
-        # convert size_kb to bytes
-        size_kb = size_kb * 1024
-        with tqdm.tqdm(total=size_kb, unit="B", unit_scale=True, unit_divisor=1024) as pbar:
-            with requests.get(url, stream=True) as r:
-                r.raise_for_status()
+        self.worker.moveToThread(self.thread)
 
-                dir_name = os.path.dirname(file_name)
-                if not os.path.exists(dir_name):
-                    os.makedirs(dir_name)
+        # Connect signals
+        self.worker.finished.connect(lambda: self.emit_signal(SignalCode.DOWNLOAD_COMPLETE))
+        self.worker.finished.connect(self.thread.quit)
+        self.worker.progress.connect(lambda current, total: callback(current, total))
+        self.worker.finished.connect(self.worker.deleteLater)
+        self.thread.finished.connect(self.thread.deleteLater)
+        self.thread.started.connect(self.worker.download)
+        self.thread.start()
 
-                with open(file_name, "wb") as f:
-                    for chunk in r.iter_content(chunk_size=8192):
-                        f.write(chunk)
-                        pbar.update(len(chunk))
-                        callback(pbar.n, pbar.total)
-                        if self.cancel_download:
-                            self.cancel_download = False
-                            break
+    def remove_file(self):
+        if os.path.exists(self.file_name):  # Check if the file exists and delete if so
+            os.remove(self.file_name)
+            print(f"Download of {self.file_name} was cancelled and the file has been deleted.")
 
+    def stop_download(self):
+        if self.worker:
+            self.worker.cancel()
+            self.remove_file()
