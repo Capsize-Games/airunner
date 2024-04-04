@@ -925,11 +925,7 @@ class SDHandler(
         pipe = None
         pipeline_class_ = None
 
-        print("self.sd_request.is_outpaint", self.sd_request.is_outpaint, not is_outpaint)
-        print("self.sd_request.is_txt2img", self.sd_request.is_txt2img, not is_txt2img)
-
         if self.sd_request.is_txt2img and not is_txt2img:
-            print("SETTING TXT2IMG PIPE")
             if is_img2img:
                 pipe = self.img2img
             elif is_outpaint:
@@ -940,7 +936,6 @@ class SDHandler(
                     pipeline_class_ = StableDiffusionControlNetPipeline
                 self.pipe = pipeline_class_(**pipe.components)
         elif self.sd_request.is_img2img and not is_img2img:
-            print("SETTING IMG2IMG PIPE")
             if is_txt2img:
                 pipe = self.txt2img
             elif is_outpaint:
@@ -951,7 +946,6 @@ class SDHandler(
                     pipeline_class_ = StableDiffusionControlNetImg2ImgPipeline
                 self.pipe = pipeline_class_(**pipe.components)
         elif self.sd_request.is_outpaint and not is_outpaint:
-            print("SETTING INPAINT PIPE")
             if is_txt2img:
                 pipe = self.txt2img
             elif is_img2img:
@@ -959,9 +953,6 @@ class SDHandler(
             pipeline_class_ = StableDiffusionInpaintPipeline
             if self.sd_request.generator_settings.enable_controlnet:
                 pipeline_class_ = StableDiffusionControlNetInpaintPipeline
-                print("USING StableDiffusionControlNetInpaintPipeline")
-            else:
-                print("USING StableDiffusionInpaintPipeline")
 
         if pipe is not None and pipeline_class_ is not None:
             self.pipe = pipeline_class_(**pipe.components)
@@ -1308,8 +1299,11 @@ class SDHandler(
                 )
         except Exception as e:
             self.logger.error(f"Failed to load model from ckpt: {e}")
-        pipe.safety_checker = self.safety_checker
-        pipe.feature_extractor = self.feature_extractor
+
+        if pipe is not None:
+            pipe.safety_checker = self.safety_checker
+            pipe.feature_extractor = self.feature_extractor
+
         return pipe
 
     def clear_controlnet(self):
