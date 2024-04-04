@@ -33,7 +33,6 @@ class ModelFormWidget(BaseWidget):
         self.ui.diffuser_model_version.setCurrentText(diffuser_model_version)
         self.ui.model_type.clear()
         self.ui.model_type.addItems(["Checkpoint", "LORA", "Embedding", "VAE", "Controlnet", "Pose"])
-        self.ui.pipeline_class_line_edit.setText(pipeline_class)
         self.ui.enabled.setChecked(True)
         self.ui.path_line_edit.setText(path)
 
@@ -42,17 +41,12 @@ class ModelFormWidget(BaseWidget):
             model_type = "Embedding"
         self.ui.model_type.setCurrentText(model_type)
 
-        # clear the table
-        self.ui.model_data_table.clearContents()
-        self.ui.model_data_table.setRowCount(5)
-        self.ui.model_data_table.setItem(0, 0, QtWidgets.QTableWidgetItem("POI"))
-        self.ui.model_data_table.setItem(1, 0, QtWidgets.QTableWidgetItem("Allow No Credit"))
-        self.ui.model_data_table.setItem(2, 0, QtWidgets.QTableWidgetItem("Allow Commercial Use"))
-        self.ui.model_data_table.setItem(3, 0, QtWidgets.QTableWidgetItem("Allow Derivatives"))
-        self.ui.model_data_table.setItem(4, 0, QtWidgets.QTableWidgetItem("Allow Different License"))
+        allowCommercialUse = model_data["allowCommercialUse"]
+        if type(allowCommercialUse) == list:
+            allowCommercialUse = ", ".join(allowCommercialUse)
 
-        self.ui.model_data_table.setItem(0, 1, QtWidgets.QTableWidgetItem(str(model_data["poi"])))
-        self.ui.model_data_table.setItem(1, 1, QtWidgets.QTableWidgetItem(str(model_data["allowNoCredit"])))
-        self.ui.model_data_table.setItem(2, 1, QtWidgets.QTableWidgetItem(str(model_data["allowCommercialUse"])))
-        self.ui.model_data_table.setItem(3, 1, QtWidgets.QTableWidgetItem(str(model_data["allowDerivatives"])))
-        self.ui.model_data_table.setItem(4, 1, QtWidgets.QTableWidgetItem(str(model_data["allowDifferentLicense"])))
+        self.ui.poi.setText(str(model_data["poi"]))
+        self.ui.require_credit.setText(str(model_data["allowNoCredit"]))
+        self.ui.allow_commercial_use.setText(str(allowCommercialUse))
+        self.ui.allow_derivatives.setText(str(model_data["allowDerivatives"]))
+        self.ui.allow_different_license.setText(str(model_data["allowDifferentLicense"]))

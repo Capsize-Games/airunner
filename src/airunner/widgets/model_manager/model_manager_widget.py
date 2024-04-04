@@ -1,23 +1,27 @@
+from PySide6.QtCore import Slot
 from PySide6.QtWidgets import QFileDialog
 
 from airunner.enums import SignalCode, ServiceCode
 from airunner.models.modeldata import ModelData
-from airunner.widgets.base_widget import BaseWidget
 from airunner.widgets.model_manager.templates.model_manager_ui import Ui_model_manager
+from airunner.windows.base_window import BaseWindow
 
 
-class ModelManagerWidget(BaseWidget):
-    widget_class_ = Ui_model_manager
+class ModelManagerWidget(BaseWindow):
     is_modal = True
-    current_model_form = None
-    model_widgets = {
-        "default": [],
-        "custom": []
-    }
-    is_civitai = False
-    current_model_data = None
-    _current_model_object = None
-    model_form = None
+    template_class_ = Ui_model_manager
+
+    def __init__(self):
+        super().__init__()
+        self.current_model_form = None
+        self.model_widgets = {
+            "default": [],
+            "custom": []
+        }
+        self.is_civitai = False
+        self.current_model_data = None
+        self._current_model_object = None
+        self.model_form = None
 
     @property
     def current_model_object(self):
@@ -36,7 +40,7 @@ class ModelManagerWidget(BaseWidget):
         self.toggle_model_form_frame(show=False)
 
     def cancel_download(self):
-        self.download_civit_ai.cancel_download = True
+        self.download_civit_ai.stop_download()
         self.reset_form()
 
     def toggle_model_download_form_elements_stage_1(self, show=False):
@@ -97,8 +101,9 @@ class ModelManagerWidget(BaseWidget):
     def add_new_model(self):
         self.save_model(self.current_model_object)
 
+    @Slot()
     def tab_changed(self, val):
-        print("tab_changed", val)
+        pass
 
     def models_changed(self, key, model, value):
         model["enabled"] = True
