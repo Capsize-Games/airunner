@@ -299,6 +299,9 @@ class MemoryEfficientMixin:
         self.tome_sd_applied = False
 
     def apply_memory_efficient_settings(self):
+        if self.pipe is None:
+            self.logger.debug("Pipe is None, skipping memory efficient settings")
+            return
         self.apply_last_channels()
         self.enable_memory_chunking()
         self.apply_vae_slicing()
