@@ -15,6 +15,7 @@ class ImportWidget(BaseWidget):
         self.download_civit_ai = None
         self.current_model_data = None
         self.is_civitai = None
+        self.register(SignalCode.DOWNLOAD_COMPLETE, self.show_download_complete)
         self.show_import_form()
 
     def action_clicked_button_import(self):
@@ -27,22 +28,34 @@ class ImportWidget(BaseWidget):
         self.download_civit_ai.stop_download()
         self.show_import_form()
 
+    def action_download_complete_continue(self):
+        self.show_import_form()
+
     def show_import_form(self):
         self.ui.import_form.show()
         self.ui.model_select_form.hide()
         self.ui.download_form.hide()
+        self.ui.download_complete_form.hide()
 
     def show_model_select_form(self):
         self.ui.import_form.hide()
         self.ui.model_select_form.show()
         self.ui.download_form.hide()
+        self.ui.download_complete_form.hide()
         self.import_models()
 
     def show_download_form(self):
         self.ui.import_form.hide()
         self.ui.model_select_form.hide()
         self.ui.download_form.show()
+        self.ui.download_complete_form.hide()
         self.download_model()
+
+    def show_download_complete(self, data=None):
+        self.ui.import_form.hide()
+        self.ui.model_select_form.hide()
+        self.ui.download_form.hide()
+        self.ui.download_complete_form.show()
     
     def download_model(self):
         self.download_civit_ai = DownloadCivitAI()
@@ -122,6 +135,7 @@ class ImportWidget(BaseWidget):
             pass
         
         self.logger.debug("starting download")
+        self.ui.downloading_label.setText(f"Downloading {name}")
         self.download_model_thread(download_url, file_path, size_kb)
         # self.thread = threading.Thread(target=self.download_model_thread, args=(download_url, file_path, size_kb))
         # self.thread.start()
