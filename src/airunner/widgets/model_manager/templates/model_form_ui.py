@@ -16,58 +16,138 @@ from PySide6.QtGui import (QBrush, QColor, QConicalGradient, QCursor,
     QImage, QKeySequence, QLinearGradient, QPainter,
     QPalette, QPixmap, QRadialGradient, QTransform)
 from PySide6.QtWidgets import (QApplication, QCheckBox, QComboBox, QFrame,
-    QGridLayout, QHeaderView, QLabel, QLineEdit,
-    QSizePolicy, QSpacerItem, QTableWidget, QTableWidgetItem,
-    QWidget)
+    QGridLayout, QHBoxLayout, QLabel, QLineEdit,
+    QSizePolicy, QSpacerItem, QWidget)
 
 class Ui_model_form_widget(object):
     def setupUi(self, model_form_widget):
         if not model_form_widget.objectName():
             model_form_widget.setObjectName(u"model_form_widget")
-        model_form_widget.resize(536, 514)
+        model_form_widget.resize(536, 688)
         self.gridLayout_3 = QGridLayout(model_form_widget)
         self.gridLayout_3.setObjectName(u"gridLayout_3")
-        self.gridLayout_3.setContentsMargins(0, 0, 0, 0)
+        self.horizontalLayout = QHBoxLayout()
+        self.horizontalLayout.setObjectName(u"horizontalLayout")
+        self.label_3 = QLabel(model_form_widget)
+        self.label_3.setObjectName(u"label_3")
+        font = QFont()
+        font.setBold(True)
+        self.label_3.setFont(font)
+
+        self.horizontalLayout.addWidget(self.label_3)
+
+        self.poi = QLabel(model_form_widget)
+        self.poi.setObjectName(u"poi")
+
+        self.horizontalLayout.addWidget(self.poi)
+
+
+        self.gridLayout_3.addLayout(self.horizontalLayout, 0, 0, 1, 1)
+
+        self.line_2 = QFrame(model_form_widget)
+        self.line_2.setObjectName(u"line_2")
+        self.line_2.setFrameShape(QFrame.HLine)
+        self.line_2.setFrameShadow(QFrame.Sunken)
+
+        self.gridLayout_3.addWidget(self.line_2, 1, 0, 1, 1)
+
+        self.horizontalLayout_2 = QHBoxLayout()
+        self.horizontalLayout_2.setObjectName(u"horizontalLayout_2")
+        self.label_9 = QLabel(model_form_widget)
+        self.label_9.setObjectName(u"label_9")
+        self.label_9.setFont(font)
+
+        self.horizontalLayout_2.addWidget(self.label_9)
+
+        self.require_credit = QLabel(model_form_widget)
+        self.require_credit.setObjectName(u"require_credit")
+
+        self.horizontalLayout_2.addWidget(self.require_credit)
+
+
+        self.gridLayout_3.addLayout(self.horizontalLayout_2, 2, 0, 1, 1)
+
+        self.line_3 = QFrame(model_form_widget)
+        self.line_3.setObjectName(u"line_3")
+        self.line_3.setFrameShape(QFrame.HLine)
+        self.line_3.setFrameShadow(QFrame.Sunken)
+
+        self.gridLayout_3.addWidget(self.line_3, 3, 0, 1, 1)
+
+        self.horizontalLayout_3 = QHBoxLayout()
+        self.horizontalLayout_3.setObjectName(u"horizontalLayout_3")
+        self.label_11 = QLabel(model_form_widget)
+        self.label_11.setObjectName(u"label_11")
+        self.label_11.setFont(font)
+
+        self.horizontalLayout_3.addWidget(self.label_11)
+
+        self.allow_commercial_use = QLabel(model_form_widget)
+        self.allow_commercial_use.setObjectName(u"allow_commercial_use")
+
+        self.horizontalLayout_3.addWidget(self.allow_commercial_use)
+
+
+        self.gridLayout_3.addLayout(self.horizontalLayout_3, 4, 0, 1, 1)
+
+        self.line_4 = QFrame(model_form_widget)
+        self.line_4.setObjectName(u"line_4")
+        self.line_4.setFrameShape(QFrame.HLine)
+        self.line_4.setFrameShadow(QFrame.Sunken)
+
+        self.gridLayout_3.addWidget(self.line_4, 5, 0, 1, 1)
+
+        self.horizontalLayout_4 = QHBoxLayout()
+        self.horizontalLayout_4.setObjectName(u"horizontalLayout_4")
+        self.label_14 = QLabel(model_form_widget)
+        self.label_14.setObjectName(u"label_14")
+        self.label_14.setFont(font)
+
+        self.horizontalLayout_4.addWidget(self.label_14)
+
+        self.allow_derivatives = QLabel(model_form_widget)
+        self.allow_derivatives.setObjectName(u"allow_derivatives")
+
+        self.horizontalLayout_4.addWidget(self.allow_derivatives)
+
+
+        self.gridLayout_3.addLayout(self.horizontalLayout_4, 6, 0, 1, 1)
+
+        self.line_5 = QFrame(model_form_widget)
+        self.line_5.setObjectName(u"line_5")
+        self.line_5.setFrameShape(QFrame.HLine)
+        self.line_5.setFrameShadow(QFrame.Sunken)
+
+        self.gridLayout_3.addWidget(self.line_5, 7, 0, 1, 1)
+
+        self.horizontalLayout_5 = QHBoxLayout()
+        self.horizontalLayout_5.setObjectName(u"horizontalLayout_5")
+        self.label_16 = QLabel(model_form_widget)
+        self.label_16.setObjectName(u"label_16")
+        self.label_16.setFont(font)
+
+        self.horizontalLayout_5.addWidget(self.label_16)
+
+        self.allow_different_license = QLabel(model_form_widget)
+        self.allow_different_license.setObjectName(u"allow_different_license")
+
+        self.horizontalLayout_5.addWidget(self.allow_different_license)
+
+
+        self.gridLayout_3.addLayout(self.horizontalLayout_5, 8, 0, 1, 1)
+
         self.line = QFrame(model_form_widget)
         self.line.setObjectName(u"line")
         self.line.setFrameShape(QFrame.HLine)
         self.line.setFrameShadow(QFrame.Sunken)
 
-        self.gridLayout_3.addWidget(self.line, 1, 0, 1, 1)
-
-        self.verticalSpacer = QSpacerItem(20, 40, QSizePolicy.Policy.Minimum, QSizePolicy.Policy.Expanding)
-
-        self.gridLayout_3.addItem(self.verticalSpacer, 12, 0, 1, 1)
-
-        self.model_data_table = QTableWidget(model_form_widget)
-        if (self.model_data_table.columnCount() < 1):
-            self.model_data_table.setColumnCount(1)
-        __qtablewidgetitem = QTableWidgetItem()
-        self.model_data_table.setHorizontalHeaderItem(0, __qtablewidgetitem)
-        if (self.model_data_table.rowCount() < 6):
-            self.model_data_table.setRowCount(6)
-        __qtablewidgetitem1 = QTableWidgetItem()
-        self.model_data_table.setVerticalHeaderItem(0, __qtablewidgetitem1)
-        __qtablewidgetitem2 = QTableWidgetItem()
-        self.model_data_table.setVerticalHeaderItem(1, __qtablewidgetitem2)
-        __qtablewidgetitem3 = QTableWidgetItem()
-        self.model_data_table.setVerticalHeaderItem(2, __qtablewidgetitem3)
-        __qtablewidgetitem4 = QTableWidgetItem()
-        self.model_data_table.setVerticalHeaderItem(3, __qtablewidgetitem4)
-        __qtablewidgetitem5 = QTableWidgetItem()
-        self.model_data_table.setVerticalHeaderItem(4, __qtablewidgetitem5)
-        __qtablewidgetitem6 = QTableWidgetItem()
-        self.model_data_table.setVerticalHeaderItem(5, __qtablewidgetitem6)
-        self.model_data_table.setObjectName(u"model_data_table")
-        self.model_data_table.horizontalHeader().setVisible(False)
-        self.model_data_table.verticalHeader().setVisible(True)
-
-        self.gridLayout_3.addWidget(self.model_data_table, 0, 0, 1, 1)
+        self.gridLayout_3.addWidget(self.line, 9, 0, 1, 1)
 
         self.label_6 = QLabel(model_form_widget)
         self.label_6.setObjectName(u"label_6")
+        self.label_6.setFont(font)
 
-        self.gridLayout_3.addWidget(self.label_6, 2, 0, 1, 1)
+        self.gridLayout_3.addWidget(self.label_6, 10, 0, 1, 1)
 
         self.frame = QFrame(model_form_widget)
         self.frame.setObjectName(u"frame")
@@ -77,24 +157,24 @@ class Ui_model_form_widget(object):
         self.gridLayout_4.setObjectName(u"gridLayout_4")
         self.model_name = QLineEdit(self.frame)
         self.model_name.setObjectName(u"model_name")
-        font = QFont()
-        font.setPointSize(8)
-        self.model_name.setFont(font)
+        font1 = QFont()
+        font1.setPointSize(8)
+        self.model_name.setFont(font1)
 
         self.gridLayout_4.addWidget(self.model_name, 1, 0, 1, 1)
 
         self.branch_line_edit = QLineEdit(self.frame)
         self.branch_line_edit.setObjectName(u"branch_line_edit")
-        self.branch_line_edit.setFont(font)
+        self.branch_line_edit.setFont(font1)
 
         self.gridLayout_4.addWidget(self.branch_line_edit, 5, 0, 1, 1)
 
         self.path_label = QLabel(self.frame)
         self.path_label.setObjectName(u"path_label")
-        font1 = QFont()
-        font1.setPointSize(8)
-        font1.setBold(True)
-        self.path_label.setFont(font1)
+        font2 = QFont()
+        font2.setPointSize(8)
+        font2.setBold(True)
+        self.path_label.setFont(font2)
 
         self.gridLayout_4.addWidget(self.path_label, 2, 0, 1, 1)
 
@@ -102,19 +182,19 @@ class Ui_model_form_widget(object):
         self.gridLayout_2.setObjectName(u"gridLayout_2")
         self.label_7 = QLabel(self.frame)
         self.label_7.setObjectName(u"label_7")
-        self.label_7.setFont(font1)
+        self.label_7.setFont(font2)
 
         self.gridLayout_2.addWidget(self.label_7, 0, 1, 1, 1)
 
         self.category = QComboBox(self.frame)
         self.category.setObjectName(u"category")
-        self.category.setFont(font)
+        self.category.setFont(font1)
 
         self.gridLayout_2.addWidget(self.category, 1, 0, 1, 1)
 
         self.label = QLabel(self.frame)
         self.label.setObjectName(u"label")
-        self.label.setFont(font1)
+        self.label.setFont(font2)
 
         self.gridLayout_2.addWidget(self.label, 0, 0, 1, 1)
 
@@ -125,13 +205,13 @@ class Ui_model_form_widget(object):
 
         self.diffuser_model_version = QComboBox(self.frame)
         self.diffuser_model_version.setObjectName(u"diffuser_model_version")
-        self.diffuser_model_version.setFont(font)
+        self.diffuser_model_version.setFont(font1)
 
         self.gridLayout_2.addWidget(self.diffuser_model_version, 1, 1, 1, 1)
 
         self.label_4 = QLabel(self.frame)
         self.label_4.setObjectName(u"label_4")
-        self.label_4.setFont(font1)
+        self.label_4.setFont(font2)
 
         self.gridLayout_2.addWidget(self.label_4, 0, 2, 1, 1)
 
@@ -140,7 +220,7 @@ class Ui_model_form_widget(object):
 
         self.path_line_edit = QLineEdit(self.frame)
         self.path_line_edit.setObjectName(u"path_line_edit")
-        self.path_line_edit.setFont(font)
+        self.path_line_edit.setFont(font1)
 
         self.gridLayout_4.addWidget(self.path_line_edit, 3, 0, 1, 1)
 
@@ -148,51 +228,43 @@ class Ui_model_form_widget(object):
         self.gridLayout.setObjectName(u"gridLayout")
         self.label_2 = QLabel(self.frame)
         self.label_2.setObjectName(u"label_2")
-        self.label_2.setFont(font1)
+        self.label_2.setFont(font2)
 
         self.gridLayout.addWidget(self.label_2, 0, 0, 1, 1)
 
-        self.label_3 = QLabel(self.frame)
-        self.label_3.setObjectName(u"label_3")
-        self.label_3.setFont(font1)
-
-        self.gridLayout.addWidget(self.label_3, 0, 1, 1, 1)
-
         self.pipeline_action = QComboBox(self.frame)
         self.pipeline_action.setObjectName(u"pipeline_action")
-        self.pipeline_action.setFont(font)
+        self.pipeline_action.setFont(font1)
 
         self.gridLayout.addWidget(self.pipeline_action, 1, 0, 1, 1)
-
-        self.pipeline_class_line_edit = QLineEdit(self.frame)
-        self.pipeline_class_line_edit.setObjectName(u"pipeline_class_line_edit")
-        self.pipeline_class_line_edit.setFont(font)
-
-        self.gridLayout.addWidget(self.pipeline_class_line_edit, 1, 1, 1, 1)
 
 
         self.gridLayout_4.addLayout(self.gridLayout, 7, 0, 1, 1)
 
         self.enabled = QCheckBox(self.frame)
         self.enabled.setObjectName(u"enabled")
-        self.enabled.setFont(font)
+        self.enabled.setFont(font1)
 
         self.gridLayout_4.addWidget(self.enabled, 8, 0, 1, 1)
 
         self.branch_label = QLabel(self.frame)
         self.branch_label.setObjectName(u"branch_label")
-        self.branch_label.setFont(font1)
+        self.branch_label.setFont(font2)
 
         self.gridLayout_4.addWidget(self.branch_label, 4, 0, 1, 1)
 
         self.label_5 = QLabel(self.frame)
         self.label_5.setObjectName(u"label_5")
-        self.label_5.setFont(font1)
+        self.label_5.setFont(font2)
 
         self.gridLayout_4.addWidget(self.label_5, 0, 0, 1, 1)
 
 
-        self.gridLayout_3.addWidget(self.frame, 5, 0, 1, 1)
+        self.gridLayout_3.addWidget(self.frame, 11, 0, 1, 1)
+
+        self.verticalSpacer = QSpacerItem(20, 40, QSizePolicy.Policy.Minimum, QSizePolicy.Policy.Expanding)
+
+        self.gridLayout_3.addItem(self.verticalSpacer, 12, 0, 1, 1)
 
 
         self.retranslateUi(model_form_widget)
@@ -202,18 +274,16 @@ class Ui_model_form_widget(object):
 
     def retranslateUi(self, model_form_widget):
         model_form_widget.setWindowTitle(QCoreApplication.translate("model_form_widget", u"Form", None))
-        ___qtablewidgetitem = self.model_data_table.horizontalHeaderItem(0)
-        ___qtablewidgetitem.setText(QCoreApplication.translate("model_form_widget", u"New Column", None));
-        ___qtablewidgetitem1 = self.model_data_table.verticalHeaderItem(1)
-        ___qtablewidgetitem1.setText(QCoreApplication.translate("model_form_widget", u"POI", None));
-        ___qtablewidgetitem2 = self.model_data_table.verticalHeaderItem(2)
-        ___qtablewidgetitem2.setText(QCoreApplication.translate("model_form_widget", u"Require Credit", None));
-        ___qtablewidgetitem3 = self.model_data_table.verticalHeaderItem(3)
-        ___qtablewidgetitem3.setText(QCoreApplication.translate("model_form_widget", u"Allow Commercial Use", None));
-        ___qtablewidgetitem4 = self.model_data_table.verticalHeaderItem(4)
-        ___qtablewidgetitem4.setText(QCoreApplication.translate("model_form_widget", u"Allow Derivatives", None));
-        ___qtablewidgetitem5 = self.model_data_table.verticalHeaderItem(5)
-        ___qtablewidgetitem5.setText(QCoreApplication.translate("model_form_widget", u"Allow Different License", None));
+        self.label_3.setText(QCoreApplication.translate("model_form_widget", u"POI", None))
+        self.poi.setText(QCoreApplication.translate("model_form_widget", u"POI Value", None))
+        self.label_9.setText(QCoreApplication.translate("model_form_widget", u"Require Credit", None))
+        self.require_credit.setText(QCoreApplication.translate("model_form_widget", u"Require credit value", None))
+        self.label_11.setText(QCoreApplication.translate("model_form_widget", u"Allow Commercial Use", None))
+        self.allow_commercial_use.setText(QCoreApplication.translate("model_form_widget", u"Allow commercial use value", None))
+        self.label_14.setText(QCoreApplication.translate("model_form_widget", u"Allow derivatives value", None))
+        self.allow_derivatives.setText(QCoreApplication.translate("model_form_widget", u"Allow Derivatives", None))
+        self.label_16.setText(QCoreApplication.translate("model_form_widget", u"Allow different license value", None))
+        self.allow_different_license.setText(QCoreApplication.translate("model_form_widget", u"Allow Different License", None))
         self.label_6.setText(QCoreApplication.translate("model_form_widget", u"Save Data", None))
         self.model_name.setPlaceholderText(QCoreApplication.translate("model_form_widget", u"Name", None))
         self.branch_line_edit.setPlaceholderText(QCoreApplication.translate("model_form_widget", u"Branch", None))
@@ -223,8 +293,6 @@ class Ui_model_form_widget(object):
         self.label_4.setText(QCoreApplication.translate("model_form_widget", u"Model Type", None))
         self.path_line_edit.setPlaceholderText(QCoreApplication.translate("model_form_widget", u"Path", None))
         self.label_2.setText(QCoreApplication.translate("model_form_widget", u"Pipeline Action", None))
-        self.label_3.setText(QCoreApplication.translate("model_form_widget", u"Pipeline Class", None))
-        self.pipeline_class_line_edit.setPlaceholderText(QCoreApplication.translate("model_form_widget", u"Pipeline class", None))
         self.enabled.setText(QCoreApplication.translate("model_form_widget", u"Enabled", None))
         self.branch_label.setText(QCoreApplication.translate("model_form_widget", u"Branch", None))
         self.label_5.setText(QCoreApplication.translate("model_form_widget", u"Name", None))

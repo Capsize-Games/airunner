@@ -24,6 +24,7 @@ class ImportWidget(BaseWidget):
         self.show_download_form()
 
     def action_clicked_button_cancel(self):
+        self.download_civit_ai.stop_download()
         self.show_import_form()
 
     def show_import_form(self):
@@ -32,7 +33,6 @@ class ImportWidget(BaseWidget):
         self.ui.download_form.hide()
 
     def show_model_select_form(self):
-        print("SHOW MODEL SELECT FORM")
         self.ui.import_form.hide()
         self.ui.model_select_form.show()
         self.ui.download_form.hide()
@@ -45,7 +45,6 @@ class ImportWidget(BaseWidget):
         self.download_model()
     
     def download_model(self):
-        print("DOWNLOAD MODEL")
         self.download_civit_ai = DownloadCivitAI()
 
         # get value from import_widget.model_choices
@@ -122,7 +121,7 @@ class ImportWidget(BaseWidget):
             # todo save poses here
             pass
         
-        print("starting download")
+        self.logger.debug("starting download")
         self.download_model_thread(download_url, file_path, size_kb)
         # self.thread = threading.Thread(target=self.download_model_thread, args=(download_url, file_path, size_kb))
         # self.thread.start()

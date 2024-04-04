@@ -26,7 +26,7 @@ class Ui_import_model_widget(object):
     def setupUi(self, import_model_widget):
         if not import_model_widget.objectName():
             import_model_widget.setObjectName(u"import_model_widget")
-        import_model_widget.resize(230, 311)
+        import_model_widget.resize(255, 311)
         self.gridLayout_4 = QGridLayout(import_model_widget)
         self.gridLayout_4.setObjectName(u"gridLayout_4")
         self.import_form = QFrame(import_model_widget)

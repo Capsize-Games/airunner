@@ -359,13 +359,15 @@ class MainWindow(
 
     @Slot()
     def action_show_model_manager(self):
-        self.dialog = QDialog()
-        self.dialog.setWindowTitle("Model Manager")
-        self.layout = QVBoxLayout()
-        self.model_manager_widget = ModelManagerWidget()
-        self.layout.addWidget(self.model_manager_widget)
-        self.dialog.setLayout(self.layout)
-        self.dialog.show()
+        ModelManagerWidget()
+        # self.dialog = QDialog()
+        # self.dialog.setWindowTitle("Model Manager")
+        # self.layout = QVBoxLayout()
+        # self.model_manager_widget = ModelManagerWidget()
+        # self.layout.addWidget(self.model_manager_widget)
+        # self.dialog.setLayout(self.layout)
+        # self.set_stylesheet(ui=self.dialog)
+        # self.dialog.show()
 
     @Slot()
     def action_show_controlnet(self):
@@ -761,7 +763,7 @@ class MainWindow(
     def refresh_styles(self):
         self.set_stylesheet()
 
-    def set_stylesheet(self):
+    def set_stylesheet(self, ui=None):
         """
         Sets the stylesheet for the application based on the current theme
         """
@@ -769,6 +771,7 @@ class MainWindow(
             self._override_system_theme is not self.settings["override_system_theme"] or
             self._dark_mode_enabled is not self.settings["dark_mode_enabled"]
         ):
+            ui = ui or self
             self._override_system_theme = self.settings["override_system_theme"]
             self._dark_mode_enabled = self.settings["dark_mode_enabled"]
 
@@ -778,10 +781,10 @@ class MainWindow(
                 here = os.path.dirname(os.path.realpath(__file__))
                 with open(os.path.join(here, "..", "..", "styles", theme_name, "styles.qss"), "r") as f:
                     stylesheet = f.read()
-                self.setStyleSheet(stylesheet)
+                ui.setStyleSheet(stylesheet)
             else:
                 self.logger.debug("Using system theme")
-                self.setStyleSheet("")
+                ui.setStyleSheet("")
                 self.emit_signal(SignalCode.APPLICATION_SETTINGS_CHANGED_SIGNAL)
 
             for icon_data in [
