@@ -1,6 +1,6 @@
 from urllib.parse import urlparse
 
-from airunner.enums import SignalCode
+from airunner.enums import SignalCode, ServiceCode
 from airunner.widgets.base_widget import BaseWidget
 from airunner.widgets.model_manager.templates.import_ui import Ui_import_model_widget
 from airunner.aihandler.stablediffusion.download_civitai import DownloadCivitAI
@@ -80,34 +80,38 @@ class ImportWidget(BaseWidget):
                 'is_default': False
             })
         elif model_type == "LORA":
-            lora_exists = session.query(Lora).filter_by(
-                name=name,
-                path=file_path,
-            ).first()
-            if not lora_exists:
-                new_lora = Lora(
-                    name=name,
-                    path=file_path,
-                    scale=1,
-                    enabled=True,
-                    loaded=False,
-                    trigger_word=trained_words,
-                )
-                session.add(new_lora)
+            # lora_exists = session.query(Lora).filter_by(
+            #     name=name,
+            #     path=file_path,
+            # ).first()
+            # if not lora_exists:
+            #     new_lora = Lora(
+            #         name=name,
+            #         path=file_path,
+            #         scale=1,
+            #         enabled=True,
+            #         loaded=False,
+            #         trigger_word=trained_words,
+            #     )
+            #     session.add(new_lora)
+            # TODO: handle loral
+            pass
         elif model_type == "TextualInversion":
-            name = file_path.split("/")[-1].split(".")[0]
-            embedding_exists = session.query(Embedding).filter_by(
-                name=name,
-                path=file_path,
-            ).first()
-            if not embedding_exists:                
-                new_embedding = Embedding(
-                    name=name,
-                    path=file_path,
-                    active=True,
-                    tags=trained_words,
-                )
-                session.add(new_embedding)
+            # name = file_path.split("/")[-1].split(".")[0]
+            # embedding_exists = session.query(Embedding).filter_by(
+            #     name=name,
+            #     path=file_path,
+            # ).first()
+            # if not embedding_exists:
+            #     new_embedding = Embedding(
+            #         name=name,
+            #         path=file_path,
+            #         active=True,
+            #         tags=trained_words,
+            #     )
+            #     session.add(new_embedding)
+            # TODO: handle textual inversion
+            pass
         elif model_type == "VAE":
             # todo save vae here
             pass
