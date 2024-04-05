@@ -163,8 +163,8 @@ class SettingsMixin:
                     "font_size": 12,
                 }
             },
-            prompt_templates=[
-                {
+            prompt_templates={
+                "image": {
                     "use_guardrails": True,
                     "template_name": "image",
                     "username": "User",
@@ -220,8 +220,8 @@ class SettingsMixin:
                             "This is **MANDATORY**."
                         )
                     ])
-                },
-            ],
+                }
+            },
             llm_templates={
                 "Stable Diffusion Prompt Template": dict(
                     name="Stable Diffusion Prompt Template",
