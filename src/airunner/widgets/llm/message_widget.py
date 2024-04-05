@@ -54,9 +54,9 @@ class MessageWidget(BaseWidget):
     def set_chat_font(self):
         print("set_chat_font")
         if self.font_family != self.settings["font_settings"]["chat"]["font_family"] or self.font_size != \
-                self.settings["font_settings"]["chat"]["size"]:
+                self.settings["font_settings"]["chat"]["font_size"]:
             self.font_family = self.settings["font_settings"]["chat"]["font_family"]
-            self.font_size = self.settings["font_settings"]["chat"]["size"]
+            self.font_size = self.settings["font_settings"]["chat"]["font_size"]
             print(f"Setting font family to {self.font_family} and size to {self.font_size}")
 
             # Check if the font family is available
