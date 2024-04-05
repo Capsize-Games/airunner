@@ -184,6 +184,9 @@ class SliderWidget(BaseWidget):
         return data
 
     def set_settings_value(self, settings_property: str, val: Any):
+        if settings_property is None:
+            self.logger.debug("settings_property is None")
+            return
         keys = settings_property.split(".")
         self.settings = self._update_dict_recursively(self.settings, keys, val)
 
@@ -226,10 +229,11 @@ class SliderWidget(BaseWidget):
 
     def handle_spinbox_change(self, val):
         normalized = val / self.spinbox_maximum
-        slider_val = normalized * self.slider_maximum
+        slider_val = round(normalized * self.slider_maximum)
         self.ui.slider.blockSignals(True)
-        self.ui.slider.setValue(round(slider_val))
+        self.ui.slider.setValue(slider_val)
         self.ui.slider.blockSignals(False)
+        self.slider_callback(self.settings_property, slider_val)
 
     @Slot(int)
     def handle_slider_change(self, val):
@@ -242,8 +246,6 @@ class SliderWidget(BaseWidget):
         self.ui.slider.blockSignals(True)
         self.ui.slider.setValue(adjusted_value)
         self.ui.slider.blockSignals(False)
-
-        print(f"adjusted_value: {adjusted_value}")
 
         try:
             normalized = adjusted_value / self.slider_maximum
