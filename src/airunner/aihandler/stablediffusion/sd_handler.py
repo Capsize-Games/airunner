@@ -399,6 +399,7 @@ class SDHandler(
                     return self.preprocess_for_controlnet(image, local_files_only=False)
                 else:
                     self.logger.error("Unable to load controlnet processor")
+                    self.logger.error(e)
             self.logger.debug("Processor loaded")
         if self.processor is not None and image is not None:
             self.logger.debug("Controlnet: Processing image")
