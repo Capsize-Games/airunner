@@ -24,8 +24,10 @@ class Ui_model_form_widget(object):
         if not model_form_widget.objectName():
             model_form_widget.setObjectName(u"model_form_widget")
         model_form_widget.resize(536, 688)
-        self.gridLayout_3 = QGridLayout(model_form_widget)
-        self.gridLayout_3.setObjectName(u"gridLayout_3")
+        self.gridLayout_5 = QGridLayout(model_form_widget)
+        self.gridLayout_5.setObjectName(u"gridLayout_5")
+        self.model_data = QGridLayout()
+        self.model_data.setObjectName(u"model_data")
         self.horizontalLayout = QHBoxLayout()
         self.horizontalLayout.setObjectName(u"horizontalLayout")
         self.label_3 = QLabel(model_form_widget)
@@ -42,14 +44,14 @@ class Ui_model_form_widget(object):
         self.horizontalLayout.addWidget(self.poi)
 
 
-        self.gridLayout_3.addLayout(self.horizontalLayout, 0, 0, 1, 1)
+        self.model_data.addLayout(self.horizontalLayout, 0, 0, 1, 1)
 
         self.line_2 = QFrame(model_form_widget)
         self.line_2.setObjectName(u"line_2")
         self.line_2.setFrameShape(QFrame.HLine)
         self.line_2.setFrameShadow(QFrame.Sunken)
 
-        self.gridLayout_3.addWidget(self.line_2, 1, 0, 1, 1)
+        self.model_data.addWidget(self.line_2, 1, 0, 1, 1)
 
         self.horizontalLayout_2 = QHBoxLayout()
         self.horizontalLayout_2.setObjectName(u"horizontalLayout_2")
@@ -65,14 +67,14 @@ class Ui_model_form_widget(object):
         self.horizontalLayout_2.addWidget(self.require_credit)
 
 
-        self.gridLayout_3.addLayout(self.horizontalLayout_2, 2, 0, 1, 1)
+        self.model_data.addLayout(self.horizontalLayout_2, 2, 0, 1, 1)
 
         self.line_3 = QFrame(model_form_widget)
         self.line_3.setObjectName(u"line_3")
         self.line_3.setFrameShape(QFrame.HLine)
         self.line_3.setFrameShadow(QFrame.Sunken)
 
-        self.gridLayout_3.addWidget(self.line_3, 3, 0, 1, 1)
+        self.model_data.addWidget(self.line_3, 3, 0, 1, 1)
 
         self.horizontalLayout_3 = QHBoxLayout()
         self.horizontalLayout_3.setObjectName(u"horizontalLayout_3")
@@ -88,14 +90,14 @@ class Ui_model_form_widget(object):
         self.horizontalLayout_3.addWidget(self.allow_commercial_use)
 
 
-        self.gridLayout_3.addLayout(self.horizontalLayout_3, 4, 0, 1, 1)
+        self.model_data.addLayout(self.horizontalLayout_3, 4, 0, 1, 1)
 
         self.line_4 = QFrame(model_form_widget)
         self.line_4.setObjectName(u"line_4")
         self.line_4.setFrameShape(QFrame.HLine)
         self.line_4.setFrameShadow(QFrame.Sunken)
 
-        self.gridLayout_3.addWidget(self.line_4, 5, 0, 1, 1)
+        self.model_data.addWidget(self.line_4, 5, 0, 1, 1)
 
         self.horizontalLayout_4 = QHBoxLayout()
         self.horizontalLayout_4.setObjectName(u"horizontalLayout_4")
@@ -111,14 +113,14 @@ class Ui_model_form_widget(object):
         self.horizontalLayout_4.addWidget(self.allow_derivatives)
 
 
-        self.gridLayout_3.addLayout(self.horizontalLayout_4, 6, 0, 1, 1)
+        self.model_data.addLayout(self.horizontalLayout_4, 6, 0, 1, 1)
 
         self.line_5 = QFrame(model_form_widget)
         self.line_5.setObjectName(u"line_5")
         self.line_5.setFrameShape(QFrame.HLine)
         self.line_5.setFrameShadow(QFrame.Sunken)
 
-        self.gridLayout_3.addWidget(self.line_5, 7, 0, 1, 1)
+        self.model_data.addWidget(self.line_5, 7, 0, 1, 1)
 
         self.horizontalLayout_5 = QHBoxLayout()
         self.horizontalLayout_5.setObjectName(u"horizontalLayout_5")
@@ -134,20 +136,23 @@ class Ui_model_form_widget(object):
         self.horizontalLayout_5.addWidget(self.allow_different_license)
 
 
-        self.gridLayout_3.addLayout(self.horizontalLayout_5, 8, 0, 1, 1)
+        self.model_data.addLayout(self.horizontalLayout_5, 8, 0, 1, 1)
+
+
+        self.gridLayout_5.addLayout(self.model_data, 0, 0, 1, 2)
 
         self.line = QFrame(model_form_widget)
         self.line.setObjectName(u"line")
         self.line.setFrameShape(QFrame.HLine)
         self.line.setFrameShadow(QFrame.Sunken)
 
-        self.gridLayout_3.addWidget(self.line, 9, 0, 1, 1)
+        self.gridLayout_5.addWidget(self.line, 1, 0, 1, 2)
 
         self.label_6 = QLabel(model_form_widget)
         self.label_6.setObjectName(u"label_6")
         self.label_6.setFont(font)
 
-        self.gridLayout_3.addWidget(self.label_6, 10, 0, 1, 1)
+        self.gridLayout_5.addWidget(self.label_6, 2, 0, 1, 1)
 
         self.frame = QFrame(model_form_widget)
         self.frame.setObjectName(u"frame")
@@ -260,11 +265,11 @@ class Ui_model_form_widget(object):
         self.gridLayout_4.addWidget(self.label_5, 0, 0, 1, 1)
 
 
-        self.gridLayout_3.addWidget(self.frame, 11, 0, 1, 1)
+        self.gridLayout_5.addWidget(self.frame, 3, 0, 1, 2)
 
         self.verticalSpacer = QSpacerItem(20, 40, QSizePolicy.Policy.Minimum, QSizePolicy.Policy.Expanding)
 
-        self.gridLayout_3.addItem(self.verticalSpacer, 12, 0, 1, 1)
+        self.gridLayout_5.addItem(self.verticalSpacer, 4, 1, 1, 1)
 
 
         self.retranslateUi(model_form_widget)
